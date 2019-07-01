@@ -1060,10 +1060,29 @@ typedef struct rend_encoded_v2_service_descriptor_t
  * introduction point.  See also rend_intro_point_t.unreachable_count. */
 #define MAX_INTRO_POINT_REACHABILITY_FAILURES 5
 
-/* expiration */
-/** The minimum and maximum number of distinct INTRODUCE2 cells which a
- * hidden service's introduction point will receive before it begins to
- * expire. */
+/** The minimum and maximum number of distinct INTRODUCE2 cells which an onion
+ *  service's introduction point will receive before it refreshes its
+ *  per-intro-point replay cache (which tracks the encrypted part of INTRO2).
+ *
+ *  The actual limit number is sampled uniformly between the minimum and
+ *  maximum.
+ *
+ *  This means that after the limit gets hit and the replay cache gets
+ *  refreshed, an attacker can succeed in replaying an INTRODUCE2 cell. We
+ *  believe that a small number of replays does not hurt an onion service.
+ *
+ *
+ *  Now, in terms of memory load, we can consider a replay cache to be a
+ *  digest256map_t. Each entry of a digest256map is composed by:
+ *   - a key (32 bytes)
+ *   - a void * (8 bytes)
+ *   - an HT_ENTRY (a pointer and an unsigned: 8+8 bytes)
+ *  For a total of about 56 bytes per entry (plus the replaycache headers
+ *  which we will consider free for the purposes of this calculation).
+ *
+ *  So if we cycle the replay cache after 150k to 300k introductions, this
+ *  means that the replay cache size will be between 8.4MB and 16.8MB.
+ */
 #define INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS 16384
 /* Double the minimum value so the interval is [min, min * 2]. */
 #define INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS \
