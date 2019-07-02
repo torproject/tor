@@ -3158,6 +3158,8 @@ extrainfo_dump_to_string_header_helper(
     ed_cert_line = tor_strdup("");
   }
 
+  /* This is the first chunk in the file. If the file is too big, other chunks
+   * are removed. So we must only add one chunk here. */
   tor_asprintf(&pre, "extra-info %s %s\n%spublished %s\n",
                extrainfo->nickname, identity,
                ed_cert_line,
@@ -3186,6 +3188,10 @@ extrainfo_dump_to_string_stats_helper(smartlist_t *chunks,
   const or_options_t *options = get_options();
   char *contents = NULL;
   time_t now = time(NULL);
+
+  /* If the file is too big, these chunks are removed, starting with the last
+   * chunk. So each chunk must be a complete line, and the file must be valid
+   * after each chunk. */
 
   /* Add information about the pluggable transports we support, even if we
    * are not publishing statistics. This information is needed by BridgeDB
@@ -3269,6 +3275,8 @@ extrainfo_dump_to_string_ed_sig_helper(
   char buf[ED25519_SIG_BASE64_LEN+1];
   int rv = -1;
 
+  /* These are two of the three final chunks in the file. If the file is too
+   * big, other chunks are removed. So we must only add two chunks here. */
   smartlist_add_strdup(chunks, "router-sig-ed25519 ");
   crypto_digest_smartlist_prefix(sha256_digest, DIGEST256_LEN,
                                  ED_DESC_SIGNATURE_PREFIX,
@@ -3362,17 +3370,21 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
       goto err;
   }
 
+  /* This is one of the three final chunks in the file. If the file is too big,
+   * other chunks are removed. So we must only add one chunk here. */
   smartlist_add_strdup(chunks, "router-signature\n");
   s = smartlist_join_strings(chunks, "", 0, NULL);
 
   while (strlen(s) > MAX_EXTRAINFO_UPLOAD_SIZE - DIROBJ_MAX_SIG_LEN) {
     /* So long as there are at least two chunks (one for the initial
      * extra-info line and one for the router-signature), we can keep removing
-     * things. */
-    if (smartlist_len(chunks) > 2) {
-      /* We remove the next-to-last element (remember, len-1 is the last
-         element), since we need to keep the router-signature element. */
-      int idx = smartlist_len(chunks) - 2;
+     * things. If emit_ed_sigs is true, we also keep 2 additional chunks at the
+     * end for the ed25519 signature. */
+    const int required_chunks = emit_ed_sigs ? 4 : 2;
+    if (smartlist_len(chunks) > required_chunks) {
+      /* We remove the next-to-last or 4th-last element (remember, len-1 is the
+       * last element), since we need to keep the router-signature elements. */
+      int idx = smartlist_len(chunks) - required_chunks;
       char *e = smartlist_get(chunks, idx);
       smartlist_del_keeporder(chunks, idx);
       log_warn(LD_GENERAL, "We just generated an extra-info descriptor "
