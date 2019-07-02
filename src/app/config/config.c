@@ -1899,6 +1899,15 @@ options_act(const or_options_t *old_options)
              "in a non-anonymous mode. It will provide NO ANONYMITY.");
   }
 
+  if (parse_outbound_addresses(options, 0, &msg) < 0) {
+    // LCOV_EXCL_START
+    log_warn(LD_BUG, "Failed parsing previously validated outbound "
+             "bind addresses: %s", msg);
+    tor_free(msg);
+    return -1;
+    // LCOV_EXCL_STOP
+  }
+
   /* If we are a bridge with a pluggable transport proxy but no
      Extended ORPort, inform the user that they are missing out. */
   if (server_mode(options) && options->ServerTransportPlugin &&
@@ -2109,15 +2118,6 @@ options_act(const or_options_t *old_options)
                      http_authenticator, strlen(http_authenticator),
                      DIGEST_SHA256);
     tor_free(http_authenticator);
-  }
-
-  if (parse_outbound_addresses(options, 0, &msg) < 0) {
-    // LCOV_EXCL_START
-    log_warn(LD_BUG, "Failed parsing previously validated outbound "
-             "bind addresses: %s", msg);
-    tor_free(msg);
-    return -1;
-    // LCOV_EXCL_STOP
   }
 
   config_maybe_load_geoip_files_(options, old_options);
