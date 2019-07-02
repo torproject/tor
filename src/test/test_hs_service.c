@@ -15,6 +15,7 @@
 #define HS_COMMON_PRIVATE
 #define HS_SERVICE_PRIVATE
 #define HS_INTROPOINT_PRIVATE
+#define HS_CELL_PRIVATE
 #define HS_CIRCUIT_PRIVATE
 #define MAINLOOP_PRIVATE
 #define NETWORKSTATUS_PRIVATE
@@ -22,6 +23,7 @@
 #define TOR_CHANNEL_INTERNAL_
 #define HS_CLIENT_PRIVATE
 #define CRYPT_PATH_PRIVATE
+#define REPLAYCACHE_PRIVATE
 
 #include "test/test.h"
 #include "test/test_helpers.h"
@@ -45,6 +47,8 @@
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/shared_random_state.h"
 #include "feature/dircommon/voting_schedule.h"
+#include "core/crypto/hs_ntor.h"
+#include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_client.h"
@@ -2177,6 +2181,180 @@ test_export_client_circuit_id(void *arg)
   tor_free(cp2);
 }
 
+/** Mock the launch rendezvous circuit function. We don't need to launch any
+ *  rendezvous circuits. */
+static void
+launch_rendezvous_point_circuit_mock(const hs_service_t *service,
+                                     const hs_service_intro_point_t *ip,
+                                     const hs_cell_introduce2_data_t *data)
+{
+  (void) service;
+  (void) ip;
+  (void) data;
+
+  return;
+}
+
+/** Mock the intro point replay cache ns parameters */
+static int32_t
+networkstatus_get_param_mock_replay_cache(const networkstatus_t *ns,
+                             const char *param_name, int32_t default_val,
+                             int32_t min_val, int32_t max_val)
+{
+  (void) ns;
+  (void) default_val;
+  (void) min_val;
+  (void) max_val;
+
+  if (!strcmp(param_name, "hs_intro_min_introduce2")) {
+    return 10;
+  } else if (!strcmp(param_name, "hs_intro_max_introduce2")) {
+    return 11;
+  } else {
+    return networkstatus_get_param__real(ns, param_name, default_val,
+                                         min_val, max_val);
+  }
+}
+
+/** Create a parseable INTRO2 cell. */
+static int
+helper_create_introduce2(hs_service_intro_point_t *ip,
+                         uint8_t *cell_out)
+{
+  static uint32_t rend_counter = 0;
+  hs_cell_introduce1_data_t intro1_data;
+  ssize_t payload_len;
+
+  intro1_data.is_legacy = 0;
+  intro1_data.auth_pk = &ip->auth_key_kp.pubkey;
+  intro1_data.enc_pk = &ip->enc_key_kp.pubkey;
+  intro1_data.onion_pk = &ip->onion_key;
+
+  uint8_t *subcred_tmp = tor_malloc_zero(DIGEST256_LEN);
+  intro1_data.subcredential = subcred_tmp;
+
+  uint8_t *rend_cookie_tmp = tor_malloc_zero(REND_COOKIE_LEN);
+  set_uint32(rend_cookie_tmp, rend_counter++);
+  intro1_data.rendezvous_cookie = rend_cookie_tmp;
+
+  curve25519_keypair_t *tmp_kp = tor_malloc_zero(sizeof(curve25519_keypair_t));
+  curve25519_keypair_generate(tmp_kp, 0);
+  intro1_data.client_kp = tmp_kp;
+
+  link_specifier_t *ls = link_specifier_new();
+  intro1_data.link_specifiers = smartlist_new();
+  smartlist_add(intro1_data.link_specifiers, ls);
+
+  /* The above is just the minimal information for a parseable INTRO1 cell */
+  payload_len = hs_cell_build_introduce1(&intro1_data, cell_out);
+
+  /* memory management */
+  tor_free(rend_cookie_tmp);
+  tor_free(tmp_kp);
+  smartlist_free(intro1_data.link_specifiers);
+  tor_free(subcred_tmp);
+
+  return (int) payload_len;
+}
+
+/** Mock function so that we don't need to setup proper link specifiers for our
+ *  nodes. */
+static smartlist_t *
+node_get_link_specifier_smartlist_mock(const node_t *node, bool direct_conn)
+{
+  (void) node;
+  (void) direct_conn;
+
+  /* pass NULL node for early exit */
+  return node_get_link_specifier_smartlist__real(NULL, 0);
+}
+
+/** Test that entries of the introduction point replay cache get wiped
+ *  properly. */
+static void
+test_intro_replay_cache_expiration(void *arg)
+{
+  int retval, i;
+
+  (void) arg;
+
+  hs_service_t *service = hs_service_new(get_options());
+  origin_circuit_t circ;
+  uint8_t subcredential[DIGEST256_LEN] = {0};
+
+  MOCK(launch_rendezvous_point_circuit, launch_rendezvous_point_circuit_mock);
+  /* We are mocking this because we want to wipe the replay cache after 10
+   * intro cells */
+  MOCK(networkstatus_get_param, networkstatus_get_param_mock_replay_cache);
+  MOCK(node_get_link_specifier_smartlist,
+       node_get_link_specifier_smartlist_mock);
+
+  memset(&circ, 0, sizeof(circ));
+
+  routerinfo_t ri;
+  memset(&ri, 0, sizeof(ri));
+  mock_node.ri = &ri;
+  mock_node.ri->onion_curve25519_pkey =
+    tor_malloc_zero(sizeof(curve25519_public_key_t));
+  *mock_node.ri->onion_curve25519_pkey->public_key = 1;
+
+  hs_service_intro_point_t *ip = helper_create_service_ip(&mock_node);
+
+  /* 1) First of all let's test that the replay cache works:
+   *
+   *    Send two intro2 cells with the same encrypted section and see that the
+   *    replay cache triggers.
+   */
+  uint8_t cell[RELAY_PAYLOAD_SIZE] = {0};
+  size_t cell_len;
+  cell_len = helper_create_introduce2(ip, cell);
+  tt_int_op(cell_len, OP_GE, 0);
+
+  retval = hs_circ_handle_introduce2(service, &circ, ip, subcredential,
+                                     cell, cell_len);
+  tt_int_op(retval, OP_EQ, 0);
+
+  tt_int_op(replaycache_size(ip->replay_cache), OP_EQ, 1);
+
+  /* Now send another INTRO2 with the same rend cookie and see that the replay
+   * cache triggers: */
+  setup_full_capture_of_logs(LOG_INFO);
+  retval = hs_circ_handle_introduce2(service, &circ, ip, subcredential,
+                                     cell, cell_len);
+  tt_int_op(retval, OP_EQ, -1);
+  expect_log_msg_containing("Possible replay detected!");
+  teardown_capture_of_logs();
+
+  /* 2) Now we want to test that our replaycache has a maximum intro2 limit.
+   *
+   * Start using a different rend cookie for every intro2 cell and send lots of
+   * them. */
+  for (i = 0 ; i < 9 ; i++) {
+    /* Send enough intro2 so that it doesn't expire */
+    retval = intro_point_should_expire(ip, approx_time());
+    tt_int_op(retval, OP_EQ, 0);
+
+    retval = helper_create_introduce2(ip, cell);
+    tt_int_op(retval, OP_GE, 0);
+
+    retval = hs_circ_handle_introduce2(service, &circ, ip, subcredential,
+                                       cell, cell_len);
+    tt_int_op(retval, OP_EQ, 0);
+  }
+
+  /* Check the contents of the replaycache */
+  tt_int_op(replaycache_size(ip->replay_cache), OP_EQ, 10);
+
+  /* That last intro2 should make it expire: */
+  retval = intro_point_should_expire(ip, approx_time());
+  tt_int_op(retval, OP_EQ, 1);
+
+ done:
+  tor_free(mock_node.ri->onion_curve25519_pkey);
+  hs_service_free(service);
+  service_intro_point_free(ip);
+}
+
 struct testcase_t hs_service_tests[] = {
   { "e2e_rend_circuit_setup", test_e2e_rend_circuit_setup, TT_FORK,
     NULL, NULL },
@@ -2220,6 +2398,8 @@ struct testcase_t hs_service_tests[] = {
     TT_FORK, NULL, NULL },
   { "export_client_circuit_id", test_export_client_circuit_id, TT_FORK,
     NULL, NULL },
+  { "intro_replay_cache_expiration", test_intro_replay_cache_expiration,
+    TT_FORK, NULL, NULL },
 
   END_OF_TESTCASES
 };

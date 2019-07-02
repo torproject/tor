@@ -367,10 +367,10 @@ get_service_anonymity_string(const hs_service_t *service)
  * success, a circuit identifier is attached to the circuit with the needed
  * data. This function will try to open a circuit for a maximum value of
  * MAX_REND_FAILURES then it will give up. */
-static void
-launch_rendezvous_point_circuit(const hs_service_t *service,
-                                const hs_service_intro_point_t *ip,
-                                const hs_cell_introduce2_data_t *data)
+MOCK_IMPL(STATIC void,
+launch_rendezvous_point_circuit,(const hs_service_t *service,
+                                 const hs_service_intro_point_t *ip,
+                                 const hs_cell_introduce2_data_t *data))
 {
   int circ_needs_uptime;
   time_t now = time(NULL);

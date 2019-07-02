@@ -54,7 +54,7 @@ typedef struct hs_service_intro_point_t {
    * object legacy flag is set. */
   uint8_t legacy_key_digest[DIGEST_LEN];
 
-  /* Amount of INTRODUCE2 cell accepted from this intro point. */
+  /* Amount of INTRODUCE2 cell accepted from this intro point for the */
   uint64_t introduce2_count;
 
   /* Maximum number of INTRODUCE2 cell this intro point should accept. */
