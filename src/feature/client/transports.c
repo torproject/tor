@@ -1439,6 +1439,37 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
    */
   smartlist_add_asprintf(envs, "TOR_PT_EXIT_ON_STDIN_CLOSE=1");
 
+  /* Specify which IPv4 and IPv6 addresses the PT should make its outgoing
+   * connections from. See: https://bugs.torproject.org/5304 for more
+   * information about this. */
+  {
+    /* Set TOR_PT_OUTBOUND_BIND_ADDRESS_V4. */
+    const tor_addr_t *ipv4_addr = managed_proxy_outbound_address(options,
+                                                                 AF_INET);
+
+    /* managed_proxy_outbound_address() only returns a non-NULL value if
+     * tor_addr_is_null() was false, which means we don't have to check that
+     * here. */
+    if (ipv4_addr) {
+      char *ipv4_addr_str = tor_addr_to_str_dup(ipv4_addr);
+      smartlist_add_asprintf(envs,
+                             "TOR_PT_OUTBOUND_BIND_ADDRESS_V4=%s",
+                             ipv4_addr_str);
+      tor_free(ipv4_addr_str);
+    }
+
+    /* Set TOR_PT_OUTBOUND_BIND_ADDRESS_V6. */
+    const tor_addr_t *ipv6_addr = managed_proxy_outbound_address(options,
+                                                                 AF_INET6);
+    if (ipv6_addr) {
+      char *ipv6_addr_str = tor_addr_to_str_dup(ipv6_addr);
+      smartlist_add_asprintf(envs,
+                             "TOR_PT_OUTBOUND_BIND_ADDRESS_V6=[%s]",
+                             ipv6_addr_str);
+      tor_free(ipv6_addr_str);
+    }
+  }
+
   SMARTLIST_FOREACH_BEGIN(envs, const char *, env_var) {
     set_environment_variable_in_smartlist(merged_env_vars, env_var,
                                           tor_free_, 1);
@@ -1901,4 +1932,47 @@ managed_proxy_severity_parse(const char *severity)
     return LOG_ERR;
 
   return -1;
+}
+
+/** Return the outbound address from the given <b>family</b>. Returns NULL if
+ * the user haven't specified a specific outbound address in either
+ * OutboundBindAddress or OutboundBindAddressPT. */
+STATIC const tor_addr_t *
+managed_proxy_outbound_address(const or_options_t *options, sa_family_t family)
+{
+  tor_assert(options);
+
+  const tor_addr_t *address = NULL;
+  int family_index;
+
+  switch (family) {
+  case AF_INET:
+    family_index = 0;
+    break;
+  case AF_INET6:
+    family_index = 1;
+    break;
+  default:
+    /* LCOV_EXCL_START */
+    tor_assert_unreached();
+    return NULL;
+    /* LCOV_EXCL_STOP */
+  }
+
+  /* We start by checking if the user specified an address in
+   * OutboundBindAddressPT. */
+  address = &options->OutboundBindAddresses[OUTBOUND_ADDR_PT][family_index];
+
+  if (! tor_addr_is_null(address))
+    return address;
+
+  /* We fallback to check if the user specified an address in
+   * OutboundBindAddress. */
+  address = &options->OutboundBindAddresses[OUTBOUND_ADDR_ANY][family_index];
+
+  if (! tor_addr_is_null(address))
+    return address;
+
+  /* The user have not specified a preference for outgoing connections. */
+  return NULL;
 }
