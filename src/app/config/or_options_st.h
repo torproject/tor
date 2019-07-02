@@ -30,6 +30,10 @@ typedef enum {
    * `OutboundBindAddressOR` configuration entry in torrc. */
   OUTBOUND_ADDR_OR,
 
+  /** Outbound IP address for PT connections. Controlled by the
+   * `OutboundBindAddressPT` configuration entry in torrc. */
+  OUTBOUND_ADDR_PT,
+
   /** Outbound IP address for both Exit and OR connections. Controlled by the
    * OutboundBindAddress configuration entry in torrc. This value is used as
    * fallback if the more specific OUTBOUND_ADDR_EXIT and OUTBOUND_ADDR_OR is
@@ -127,6 +131,8 @@ struct or_options_t {
   struct config_line_t *OutboundBindAddressOR;
   /** Local address to bind outbound exit sockets */
   struct config_line_t *OutboundBindAddressExit;
+  /** Local address to bind outbound PT sockets */
+  struct config_line_t *OutboundBindAddressPT;
   /** Addresses derived from the various OutboundBindAddress lines.
    * [][0] is IPv4, [][1] is IPv6
    */

@@ -549,6 +549,7 @@ static config_var_t option_vars_[] = {
   V(OutboundBindAddress,         LINELIST,   NULL),
   V(OutboundBindAddressOR,       LINELIST,   NULL),
   V(OutboundBindAddressExit,     LINELIST,   NULL),
+  V(OutboundBindAddressPT,       LINELIST,   NULL),
 
   OBSOLETE("PathBiasDisableRate"),
   V(PathBiasCircThreshold,       INT,      "-1"),
@@ -8323,7 +8324,8 @@ parse_outbound_address_lines(const config_line_t *lines, outbound_addr_t type,
                      "configured: %s",
                      family==AF_INET?" IPv4":(family==AF_INET6?" IPv6":""),
                      type==OUTBOUND_ADDR_OR?" OR":
-                     (type==OUTBOUND_ADDR_EXIT?" exit":""), lines->value);
+                     (type==OUTBOUND_ADDR_EXIT?" exit":
+                     (type==OUTBOUND_ADDR_PT?" PT":"")), lines->value);
       return -1;
     }
     lines = lines->next;
@@ -8360,6 +8362,12 @@ parse_outbound_addresses(or_options_t *options, int validate_only, char **msg)
   if (parse_outbound_address_lines(options->OutboundBindAddressExit,
                                    OUTBOUND_ADDR_EXIT, options, validate_only,
                                    msg)  < 0) {
+    goto err;
+  }
+
+  if (parse_outbound_address_lines(options->OutboundBindAddressPT,
+                                   OUTBOUND_ADDR_PT, options, validate_only,
+                                   msg) < 0) {
     goto err;
   }
 

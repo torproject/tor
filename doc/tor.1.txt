@@ -735,6 +735,17 @@ GENERAL OPTIONS
     This setting will be ignored
     for connections to the loopback addresses (127.0.0.0/8 and ::1).
 
+[[OutboundBindAddressPT]] **OutboundBindAddressPT** __IP__::
+    Request that pluggable transports makes all outbound connections
+    originate from the IP address specified. Because outgoing connections
+    are handled by the pluggable transport itself, it is not possible for
+    Tor to enforce whether the pluggable transport honors this option. This
+    option overrides **OutboundBindAddress** for the same IP version. This
+    option may be used twice, once with an IPv4 address and once with an
+    IPv6 address. IPv6 addresses should be wrapped in square brackets. This
+    setting will be ignored for connections to the loopback addresses
+    (127.0.0.0/8 and ::1).
+
 [[PidFile]] **PidFile** __FILE__::
     On startup, write our PID to FILE. On clean shutdown, remove
     FILE. Can not be changed while tor is running.
