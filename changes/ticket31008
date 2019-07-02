@@ -1,0 +1,3 @@
+  o Documentation (tor.1 man page):
+    - Fix typo -help to --help in tor.1 man page. Fixes bug 31008; bugfix on
+      0.2.2.9-alpha.
