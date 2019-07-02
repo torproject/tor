@@ -1,0 +1,6 @@
+  o Minor features (pluggable transports):
+    - Added option OutboundBindAddressPT to torrc. This option allows users to
+      specify which IPv4 and IPv6 address they want pluggable transports to use
+      for outgoing IP packets. Tor does not have a way to enforce that the pluggable
+      transport honors this option so each pluggable transport will have to
+      implement support for this feature. Closes ticket 5304.

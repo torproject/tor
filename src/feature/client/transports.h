@@ -149,6 +149,8 @@ STATIC void managed_proxy_stderr_callback(process_t *, const char *, size_t);
 STATIC bool managed_proxy_exit_callback(process_t *, process_exit_code_t);
 
 STATIC int managed_proxy_severity_parse(const char *);
+STATIC const tor_addr_t *managed_proxy_outbound_address(const or_options_t *,
+                                                        sa_family_t);
 
 #endif /* defined(PT_PRIVATE) */
 
