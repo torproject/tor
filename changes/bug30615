@@ -1,0 +1,3 @@
+  o Testing (probability distributions):
+    - Improve probability distribution unittests by testing the uniform
+      distribution using deterministic tests. Closes ticket 30615.
