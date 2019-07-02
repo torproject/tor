@@ -8348,7 +8348,7 @@ parse_outbound_addresses(or_options_t *options, int validate_only, char **msg)
   }
 
   if (parse_outbound_address_lines(options->OutboundBindAddress,
-                                   OUTBOUND_ADDR_EXIT_AND_OR, options,
+                                   OUTBOUND_ADDR_ANY, options,
                                    validate_only, msg) < 0) {
     goto err;
   }

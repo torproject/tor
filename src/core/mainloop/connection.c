@@ -2143,9 +2143,9 @@ conn_get_outbound_address(sa_family_t family,
       ext_addr = &options->OutboundBindAddresses[OUTBOUND_ADDR_EXIT]
                  [fam_index];
     } else if (!tor_addr_is_null(
-                 &options->OutboundBindAddresses[OUTBOUND_ADDR_EXIT_AND_OR]
+                 &options->OutboundBindAddresses[OUTBOUND_ADDR_ANY]
                  [fam_index])) {
-      ext_addr = &options->OutboundBindAddresses[OUTBOUND_ADDR_EXIT_AND_OR]
+      ext_addr = &options->OutboundBindAddresses[OUTBOUND_ADDR_ANY]
                  [fam_index];
     }
   } else { // All non-exit connections
@@ -2154,9 +2154,9 @@ conn_get_outbound_address(sa_family_t family,
       ext_addr = &options->OutboundBindAddresses[OUTBOUND_ADDR_OR]
                  [fam_index];
     } else if (!tor_addr_is_null(
-                 &options->OutboundBindAddresses[OUTBOUND_ADDR_EXIT_AND_OR]
+                 &options->OutboundBindAddresses[OUTBOUND_ADDR_ANY]
                  [fam_index])) {
-      ext_addr = &options->OutboundBindAddresses[OUTBOUND_ADDR_EXIT_AND_OR]
+      ext_addr = &options->OutboundBindAddresses[OUTBOUND_ADDR_ANY]
                  [fam_index];
     }
   }

@@ -20,7 +20,7 @@ struct smartlist_t;
 struct config_line_t;
 
 /** Enumeration of outbound address configuration types:
- * Exit-only, OR-only, or both */
+ * Exit-only, OR-only, PT-only, or any of them */
 typedef enum {
   /** Outbound IP address for Exit connections. Controlled by the
    * `OutboundBindAddressExit` configuration entry in torrc. */
@@ -34,11 +34,11 @@ typedef enum {
    * `OutboundBindAddressPT` configuration entry in torrc. */
   OUTBOUND_ADDR_PT,
 
-  /** Outbound IP address for both Exit and OR connections. Controlled by the
+  /** Outbound IP address for any outgoing connections. Controlled by the
    * OutboundBindAddress configuration entry in torrc. This value is used as
-   * fallback if the more specific OUTBOUND_ADDR_EXIT and OUTBOUND_ADDR_OR is
-   * unset. */
-  OUTBOUND_ADDR_EXIT_AND_OR,
+   * fallback if the more specific OUTBOUND_ADDR_EXIT, OUTBOUND_ADDR_OR, and
+   * OUTBOUND_ADDR_PT are unset. */
+  OUTBOUND_ADDR_ANY,
 
   /** Max value for this enum. Must be the last element in this enum. */
   OUTBOUND_ADDR_MAX
