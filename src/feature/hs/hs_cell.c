@@ -6,14 +6,16 @@
  * \brief Hidden service API for cell creation and handling.
  **/
 
+#define HS_CELL_PRIVATE
+
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/rend/rendservice.h"
 #include "feature/hs_common/replaycache.h"
 
-#include "feature/hs/hs_cell.h"
 #include "core/crypto/hs_ntor.h"
+#include "feature/hs/hs_cell.h"
 
 #include "core/or/origin_circuit_st.h"
 
