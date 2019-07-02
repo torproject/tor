@@ -21,9 +21,24 @@ struct config_line_t;
 
 /** Enumeration of outbound address configuration types:
  * Exit-only, OR-only, or both */
-typedef enum {OUTBOUND_ADDR_EXIT, OUTBOUND_ADDR_OR,
-              OUTBOUND_ADDR_EXIT_AND_OR,
-              OUTBOUND_ADDR_MAX} outbound_addr_t;
+typedef enum {
+  /** Outbound IP address for Exit connections. Controlled by the
+   * `OutboundBindAddressExit` configuration entry in torrc. */
+  OUTBOUND_ADDR_EXIT,
+
+  /** Outbound IP address for OR connections. Controlled by the
+   * `OutboundBindAddressOR` configuration entry in torrc. */
+  OUTBOUND_ADDR_OR,
+
+  /** Outbound IP address for both Exit and OR connections. Controlled by the
+   * OutboundBindAddress configuration entry in torrc. This value is used as
+   * fallback if the more specific OUTBOUND_ADDR_EXIT and OUTBOUND_ADDR_OR is
+   * unset. */
+  OUTBOUND_ADDR_EXIT_AND_OR,
+
+  /** Max value for this enum. Must be the last element in this enum. */
+  OUTBOUND_ADDR_MAX
+} outbound_addr_t;
 
 /** Configuration options for a Tor process. */
 struct or_options_t {
