@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * @file typedvar.h
+ * @file var_type_def_st.h
  * @brief Structure declarations for typedvar type definitions.
  *
  * This structure is used for defining new variable types.  If you are not
