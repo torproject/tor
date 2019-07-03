@@ -16,6 +16,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 
 #include "core/or/or.h"
+#include "core/or/channel.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "ht.h"
@@ -118,8 +119,16 @@ helper_create_intro_circuit(void)
   or_circuit_t *circ = or_circuit_new(0, NULL);
   tt_assert(circ);
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_OR);
+  circ->p_chan = tor_malloc_zero(sizeof(channel_t));
  done:
   return circ;
+}
+
+static void
+helper_free_intro_circuit(or_circuit_t *circ)
+{
+  tor_free(circ->p_chan);
+  circuit_free_(TO_CIRCUIT(circ));
 }
 
 static trn_cell_introduce1_t *
@@ -655,41 +664,47 @@ test_introduce1_suitable_circuit(void *arg)
 
   /* Valid suitable circuit. */
   {
-    circ = or_circuit_new(0, NULL);
-    circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_OR);
+    circ = helper_create_intro_circuit();
     ret = circuit_is_suitable_for_introduce1(circ);
-    circuit_free_(TO_CIRCUIT(circ));
+    helper_free_intro_circuit(circ);
     tt_int_op(ret, OP_EQ, 1);
   }
 
   /* Test if the circuit purpose safeguard works correctly. */
   {
-    circ = or_circuit_new(0, NULL);
+    circ = helper_create_intro_circuit();
     circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_INTRO_POINT);
     ret = circuit_is_suitable_for_introduce1(circ);
-    circuit_free_(TO_CIRCUIT(circ));
+    helper_free_intro_circuit(circ);
     tt_int_op(ret, OP_EQ, 0);
   }
 
   /* Test the non-edge circuit safeguard works correctly. */
   {
-    circ = or_circuit_new(0, NULL);
-    circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_OR);
+    circ = helper_create_intro_circuit();
     /* Bogus pointer, the check is against NULL on n_chan. */
     circ->base_.n_chan = (channel_t *) circ;
     ret = circuit_is_suitable_for_introduce1(circ);
-    circuit_free_(TO_CIRCUIT(circ));
+    helper_free_intro_circuit(circ);
     tt_int_op(ret, OP_EQ, 0);
   }
 
   /* Mangle the circuit a bit more so see if our only one INTRODUCE1 cell
    * limit works correctly. */
   {
-    circ = or_circuit_new(0, NULL);
-    circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_OR);
+    circ = helper_create_intro_circuit();
     circ->already_received_introduce1 = 1;
     ret = circuit_is_suitable_for_introduce1(circ);
-    circuit_free_(TO_CIRCUIT(circ));
+    helper_free_intro_circuit(circ);
+    tt_int_op(ret, OP_EQ, 0);
+  }
+
+  /* Single hop circuit should not be allowed. */
+  {
+    circ = helper_create_intro_circuit();
+    circ->p_chan->is_client = 1;
+    ret = circuit_is_suitable_for_introduce1(circ);
+    helper_free_intro_circuit(circ);
     tt_int_op(ret, OP_EQ, 0);
   }
 
@@ -809,7 +824,7 @@ test_received_introduce1_handling(void *arg)
     circ = helper_create_intro_circuit();
     ret = hs_intro_received_introduce1(circ, buf, DIGEST_LEN - 1);
     tt_int_op(ret, OP_EQ, -1);
-    circuit_free_(TO_CIRCUIT(circ));
+    helper_free_intro_circuit(circ);
   }
 
   /* We have a unit test only for the suitability of a circuit to receive an
@@ -822,7 +837,7 @@ test_received_introduce1_handling(void *arg)
     memset(test, 0, sizeof(test));
     ret = handle_introduce1(circ, test, sizeof(test));
     tor_free(circ->p_chan);
-    circuit_free_(TO_CIRCUIT(circ));
+    helper_free_intro_circuit(circ);
     tt_int_op(ret, OP_EQ, -1);
   }
 
@@ -847,8 +862,8 @@ test_received_introduce1_handling(void *arg)
     memcpy(auth_key.pubkey, cell_auth_key, ED25519_PUBKEY_LEN);
     hs_circuitmap_register_intro_circ_v3_relay_side(service_circ, &auth_key);
     ret = hs_intro_received_introduce1(circ, request, request_len);
-    circuit_free_(TO_CIRCUIT(circ));
-    circuit_free_(TO_CIRCUIT(service_circ));
+    helper_free_intro_circuit(circ);
+    helper_free_intro_circuit(service_circ);
     tt_int_op(ret, OP_EQ, 0);
   }
 
@@ -876,8 +891,8 @@ test_received_introduce1_handling(void *arg)
     memcpy(token, legacy_key_id, sizeof(token));
     hs_circuitmap_register_intro_circ_v2_relay_side(service_circ, token);
     ret = hs_intro_received_introduce1(circ, request, request_len);
-    circuit_free_(TO_CIRCUIT(circ));
-    circuit_free_(TO_CIRCUIT(service_circ));
+    helper_free_intro_circuit(circ);
+    helper_free_intro_circuit(service_circ);
     tt_int_op(ret, OP_EQ, 0);
   }
 
