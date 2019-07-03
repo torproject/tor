@@ -6072,6 +6072,14 @@ test_config_kvline_parse(void *arg)
   lines->value = tor_strdup("CD");
   enc = kvline_encode(lines, 0);
   tt_assert(!enc);
+  config_free_lines(lines);
+
+  config_line_append(&lines, "A", "B C");
+  enc = kvline_encode(lines, 0);
+  tt_assert(!enc);
+  enc = kvline_encode(lines, KV_RAW);
+  tt_assert(enc);
+  tt_str_op(enc, OP_EQ, "A=B C");
 
  done:
   config_free_lines(lines);

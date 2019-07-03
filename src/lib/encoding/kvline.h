@@ -19,6 +19,7 @@ struct config_line_t;
 #define KV_OMIT_KEYS (1u<<1)
 #define KV_OMIT_VALS (1u<<2)
 #define KV_QUOTED_QSTRING (1u<<3)
+#define KV_RAW       (1u<<4)
 
 struct config_line_t *kvline_parse(const char *line, unsigned flags);
 char *kvline_encode(const struct config_line_t *line, unsigned flags);
