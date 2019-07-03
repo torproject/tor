@@ -33,23 +33,14 @@ config_line_append(config_line_t **lst,
                    const char *key,
                    const char *val)
 {
+  tor_assert(lst);
+
   config_line_t *newline;
 
   newline = tor_malloc_zero(sizeof(config_line_t));
   newline->key = tor_strdup(key);
   newline->value = tor_strdup(val);
   newline->next = NULL;
-
-  config_line_append_line(lst, newline);
-}
-
-/** Helper: append <b>newline</b> to the end of <b>lst</b>. */
-void
-config_line_append_line(config_line_t **lst,
-                        config_line_t *newline)
-{
-  tor_assert(lst);
-
   while (*lst)
     lst = &((*lst)->next);
 
@@ -265,7 +256,7 @@ config_lines_dup_and_filter(const config_line_t *inp,
 /** Return true iff a and b contain identical keys and values in identical
  * order. */
 int
-config_lines_eq(const config_line_t *a, const config_line_t *b)
+config_lines_eq(config_line_t *a, config_line_t *b)
 {
   while (a && b) {
     if (strcasecmp(a->key, b->key) || strcmp(a->value, b->value))
