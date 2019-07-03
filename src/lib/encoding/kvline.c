@@ -29,11 +29,19 @@
 #include <string.h>
 
 /** Return true iff we need to quote and escape the string <b>s</b> to encode
- * it. */
+ * it.
+ *
+ * kvline_can_encode_lines() also uses this (with
+ * <b>as_keyless_val</b> true) to check whether a key would require
+ * quoting.
+ */
 static bool
 needs_escape(const char *s, bool as_keyless_val)
 {
   if (as_keyless_val && *s == 0)
+    return true;
+  /* Keyless values containing '=' need to be escaped. */
+  if (as_keyless_val && strchr(s, '='))
     return true;
 
   for (; *s; ++s) {
@@ -72,23 +80,16 @@ kvline_can_encode_lines(const config_line_t *line, unsigned flags)
 {
   for ( ; line; line = line->next) {
     const bool keyless = line_has_no_key(line);
-    if (keyless) {
-      if (! (flags & KV_OMIT_KEYS)) {
-        /* If KV_OMIT_KEYS is not set, we can't encode a line with no key. */
-        return false;
-      }
-      if (strchr(line->value, '=') && !( flags & KV_QUOTED)) {
-        /* We can't have a keyless value with = without quoting it. */
-        return false;
-      }
+    if (keyless && ! (flags & KV_OMIT_KEYS)) {
+      /* If KV_OMIT_KEYS is not set, we can't encode a line with no key. */
+      return false;
     }
 
     if (needs_escape(line->value, keyless) && ! (flags & KV_QUOTED)) {
       /* If KV_QUOTED is false, we can't encode a value that needs quotes. */
       return false;
     }
-    if (line->key && strlen(line->key) &&
-        (needs_escape(line->key, false) || strchr(line->key, '='))) {
+    if (!keyless && needs_escape(line->key, true)) {
       /* We can't handle keys that need quoting. */
       return false;
     }
@@ -142,9 +143,6 @@ kvline_encode(const config_line_t *line,
       k = line->key;
     } else {
       eq = "";
-      if (strchr(line->value, '=')) {
-        esc = true;
-      }
     }
 
     if ((flags & KV_OMIT_VALS) && line_has_no_val(line)) {
