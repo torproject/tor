@@ -1957,6 +1957,76 @@ test_getinfo_md_all(void *arg)
   return;
 }
 
+static smartlist_t *reply_strs;
+
+static void
+mock_control_write_reply_list(control_connection_t *conn, int code, int c,
+                              const char *s)
+{
+  (void)conn;
+  /* To make matching easier, don't append "\r\n" */
+  smartlist_add_asprintf(reply_strs, "%03d%c%s", code, c, s);
+}
+
+static void
+test_control_reply(void *arg)
+{
+  (void)arg;
+  smartlist_t *lines = smartlist_new();
+
+  MOCK(control_write_reply, mock_control_write_reply);
+
+  tor_free(reply_str);
+  control_reply_clear(lines);
+  control_reply_add_str(lines, 250, "FOO");
+  control_write_reply_lines(NULL, lines);
+  tt_str_op(reply_str, OP_EQ, "FOO");
+
+  tor_free(reply_str);
+  control_reply_clear(lines);
+  control_reply_add_done(lines);
+  control_write_reply_lines(NULL, lines);
+  tt_str_op(reply_str, OP_EQ, "OK");
+
+  tor_free(reply_str);
+  control_reply_clear(lines);
+  UNMOCK(control_write_reply);
+  MOCK(control_write_reply, mock_control_write_reply_list);
+  reply_strs = smartlist_new();
+  control_reply_add_1kv(lines, 250, 0, "A", "B");
+  control_reply_add_1kv(lines, 250, 0, "C", "D");
+  control_write_reply_lines(NULL, lines);
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 2);
+  tt_str_op((char *)smartlist_get(reply_strs, 0), OP_EQ, "250-A=B");
+  tt_str_op((char *)smartlist_get(reply_strs, 1), OP_EQ, "250 C=D");
+
+  control_reply_clear(lines);
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_clear(reply_strs);
+  control_reply_add_printf(lines, 250, "PROTOCOLINFO %d", 1);
+  control_reply_add_1kv(lines, 250, KV_OMIT_VALS|KV_RAW, "AUTH", "");
+  control_reply_append_kv(lines, "METHODS", "COOKIE");
+  control_reply_append_kv(lines, "COOKIEFILE", escaped("/tmp/cookie"));
+  control_reply_add_done(lines);
+  control_write_reply_lines(NULL, lines);
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 3);
+  tt_str_op((char *)smartlist_get(reply_strs, 0),
+            OP_EQ, "250-PROTOCOLINFO 1");
+  tt_str_op((char *)smartlist_get(reply_strs, 1),
+            OP_EQ, "250-AUTH METHODS=COOKIE COOKIEFILE=\"/tmp/cookie\"");
+  tt_str_op((char *)smartlist_get(reply_strs, 2),
+            OP_EQ, "250 OK");
+
+ done:
+  UNMOCK(control_write_reply);
+  tor_free(reply_str);
+  control_reply_free(lines);
+  if (reply_strs)
+    SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_free(reply_strs);
+  return;
+}
+
 #ifndef COCCI
 #define PARSER_TEST(type)                                             \
   { "parse/" #type, test_controller_parse_cmd, 0, &passthrough_setup, \
@@ -1989,5 +2059,6 @@ struct testcase_t controller_tests[] = {
   { "download_status_bridge", test_download_status_bridge, 0, NULL, NULL },
   { "current_time", test_current_time, 0, NULL, NULL },
   { "getinfo_md_all", test_getinfo_md_all, 0, NULL, NULL },
+  { "control_reply", test_control_reply, 0, NULL, NULL },
   END_OF_TESTCASES
 };
