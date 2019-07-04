@@ -289,26 +289,23 @@ handle_control_getconf(control_connection_t *conn,
   const smartlist_t *questions = args->args;
   smartlist_t *answers = smartlist_new();
   smartlist_t *unrecognized = smartlist_new();
-  char *msg = NULL;
-  size_t msg_len;
   const or_options_t *options = get_options();
-  int i, len;
 
   SMARTLIST_FOREACH_BEGIN(questions, const char *, q) {
     if (!option_is_recognized(q)) {
-      smartlist_add(unrecognized, (char*) q);
+      control_reply_add_printf(unrecognized, 552,
+                               "Unrecognized configuration key \"%s\"", q);
     } else {
       config_line_t *answer = option_get_assignment(options,q);
       if (!answer) {
         const char *name = option_get_canonical_name(q);
-        smartlist_add_asprintf(answers, "250-%s\r\n", name);
+        control_reply_add_1kv(answers, 250, KV_OMIT_VALS, name, "");
       }
 
       while (answer) {
         config_line_t *next;
-        smartlist_add_asprintf(answers, "250-%s=%s\r\n",
-                     answer->key, answer->value);
-
+        control_reply_add_1kv(answers, 250, KV_RAW, answer->key,
+                              answer->value);
         next = answer->next;
         tor_free(answer->key);
         tor_free(answer->value);
@@ -318,20 +315,10 @@ handle_control_getconf(control_connection_t *conn,
     }
   } SMARTLIST_FOREACH_END(q);
 
-  if ((len = smartlist_len(unrecognized))) {
-    for (i=0; i < len-1; ++i)
-      control_printf_midreply(conn, 552,
-                              "Unrecognized configuration key \"%s\"",
-                              (char*)smartlist_get(unrecognized, i));
-    control_printf_endreply(conn, 552,
-                            "Unrecognized configuration key \"%s\"",
-                            (char*)smartlist_get(unrecognized, len-1));
-  } else if ((len = smartlist_len(answers))) {
-    char *tmp = smartlist_get(answers, len-1);
-    tor_assert(strlen(tmp)>4);
-    tmp[3] = ' ';
-    msg = smartlist_join_strings(answers, "", 0, &msg_len);
-    connection_buf_add(msg, msg_len, TO_CONN(conn));
+  if (smartlist_len(unrecognized)) {
+    control_write_reply_lines(conn, unrecognized);
+  } else if (smartlist_len(answers)) {
+    control_write_reply_lines(conn, answers);
   } else {
     send_control_done(conn);
   }
@@ -339,8 +326,6 @@ handle_control_getconf(control_connection_t *conn,
   SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
   smartlist_free(answers);
   smartlist_free(unrecognized);
-
-  tor_free(msg);
 
   return 0;
 }
