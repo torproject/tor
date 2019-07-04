@@ -3833,6 +3833,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 
   if (! bcell.is_begindir) {
     /* Steal reference */
+    tor_assert(bcell.address);
     address = bcell.address;
     port = bcell.port;
 
