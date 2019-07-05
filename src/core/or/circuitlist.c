@@ -1072,7 +1072,7 @@ circuit_free_(circuit_t *circ)
    * circuit is closed. This is to avoid any code path that free registered
    * circuits without closing them before. This needs to be done before the
    * hs identifier is freed. */
-  hs_circ_cleanup(circ);
+  hs_circ_cleanup(circ, false);
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
@@ -2195,7 +2195,7 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
   }
 
   /* Notify the HS subsystem that this circuit is closing. */
-  hs_circ_cleanup(circ);
+  hs_circ_cleanup(circ, false);
 
   if (circuits_pending_close == NULL)
     circuits_pending_close = smartlist_new();
