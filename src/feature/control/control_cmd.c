@@ -293,6 +293,12 @@ handle_control_getconf(control_connection_t *conn,
   const or_options_t *options = get_options();
   int i, len;
 
+  if (smartlist_len(questions) == 0) {
+    control_printf_endreply(conn, 552,
+                            "No configuration keys provided");
+    return 0;
+  }
+
   SMARTLIST_FOREACH_BEGIN(questions, const char *, q) {
     if (!option_is_recognized(q)) {
       smartlist_add(unrecognized, (char*) q);

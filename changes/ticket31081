@@ -1,0 +1,3 @@
+  o Major features (controller protocol):
+    - Tor now responds with error message to GETCONF command without any
+      arguments. Resolves issue 31081.
