@@ -1517,7 +1517,7 @@ circpad_machine_spec_transitioned_to_end(circpad_machine_runtime_t *mi)
    * we can handle the case where this machine started while it was
    * the only machine that matched conditions, but *since* then more
    * "higher ranking" machines now match the conditions, and would
-   * be given a chance to take precidence over this one in
+   * be given a chance to take precedence over this one in
    * circpad_add_matching_machines().
    *
    * Returning to START or waiting forever in END would not give those
