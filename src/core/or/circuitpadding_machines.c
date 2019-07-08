@@ -406,7 +406,7 @@ circpad_machine_relay_hide_rend_circuits(smartlist_t *machines_sl)
   /* OBFUSCATE_CIRC_SETUP -> END transition when we send our first
    * padding packet and/or hit the state length (the state length is 1). */
   relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_END;
+      next_state[CIRCPAD_EVENT_PADDING_SENT] = CIRCPAD_STATE_END;
   relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
       next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
 
