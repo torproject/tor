@@ -106,8 +106,8 @@ typedef uint32_t circpad_delay_t;
  *
  * If any of these elements is set, then the circuit will be tested against
  * that specific condition. If an element is unset, then we don't test it.
- * (E.g. If neither NO_STREAMS or STREAMS are set, then we will not care
- * whether a circuit has streams attached when we apply a state machine)
+ * (E.g., if neither NO_STREAMS or STREAMS are set, then we will not care
+ * whether a circuit has streams attached when we apply a state machine.)
  *
  * The helper function circpad_circuit_state() converts circuit state
  * flags into this more compact representation.
