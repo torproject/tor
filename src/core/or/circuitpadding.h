@@ -79,7 +79,7 @@ typedef uint32_t circpad_delay_t;
  * An infinite padding cell delay means don't schedule any padding --
  * simply wait until a different event triggers a transition.
  *
- * This means that the maximum delay we can scedule is UINT32_MAX-1
+ * This means that the maximum delay we can schedule is UINT32_MAX-1
  * microseconds, or about 4300 seconds (1.25 hours).
  * XXX: Is this enough if we want to simulate light, intermittent
  * activity on an onion service?
