@@ -155,7 +155,6 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
   relay_machine->name = "relay_ip_circ";
 
   relay_machine->conditions.state_mask = CIRCPAD_CIRC_OPENED;
-  relay_machine->target_hopnum = 2;
 
   /* This is a relay-side machine */
   relay_machine->is_origin_side = 0;
@@ -387,7 +386,6 @@ circpad_machine_relay_hide_rend_circuits(smartlist_t *machines_sl)
   /* Only pad after the circuit has been built and pad to the middle */
   relay_machine->conditions.min_hops = 2;
   relay_machine->conditions.state_mask = CIRCPAD_CIRC_OPENED;
-  relay_machine->target_hopnum = 2;
 
   /* This is a relay-side machine */
   relay_machine->is_origin_side = 0;
