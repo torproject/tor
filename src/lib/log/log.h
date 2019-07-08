@@ -144,7 +144,8 @@ typedef struct log_severity_list_t {
 } log_severity_list_t;
 
 /** Callback type used for add_callback_log. */
-typedef void (*log_callback)(int severity, uint32_t domain, const char *msg);
+typedef void (*log_callback)(int severity, log_domain_mask_t domain,
+                             const char *msg);
 
 void init_logging(int disable_startup_queue);
 int parse_log_level(const char *level);
