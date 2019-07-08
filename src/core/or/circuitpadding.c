@@ -2308,7 +2308,7 @@ circpad_deliver_sent_relay_cell_events(circuit_t *circ,
     /* Optimization: The event for RELAY_COMMAND_DROP is sent directly
      * from circpad_send_padding_cell_for_callback(). This is to avoid
      * putting a cell_t and a relay_header_t on the stack repeatedly
-     * if we decide to send a long train of padidng cells back-to-back
+     * if we decide to send a long train of padding cells back-to-back
      * with 0 delay. So we do nothing here. */
     return;
   } else {
