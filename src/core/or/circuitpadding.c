@@ -17,7 +17,7 @@
  * Each padding type is described by a state machine (circpad_machine_spec_t),
  * which is also referred as a "padding machine" in this file.  Currently,
  * these state machines are hardcoded in the source code (e.g. see
- * circpad_circ_client_machine_init()), but in the future we will be able to
+ * circpad_machines_init()), but in the future we will be able to
  * serialize them in the torrc or the consensus.
  *
  * As specified by prop#254, clients can negotiate padding with relays by using
