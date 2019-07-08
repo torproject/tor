@@ -17,7 +17,7 @@
  * Each padding type is described by a state machine (circpad_machine_spec_t),
  * which is also referred as a "padding machine" in this file.  Currently,
  * these state machines are hardcoded in the source code (e.g. see
- * circpad_circ_client_machine_init()), but in the future we will be able to
+ * circpad_machines_init()), but in the future we will be able to
  * serialize them in the torrc or the consensus.
  *
  * As specified by prop#254, clients can negotiate padding with relays by using
@@ -552,11 +552,12 @@ circpad_distribution_sample_iat_delay(const circpad_state_t *state,
 }
 
 /**
- * Sample an expected time-until-next-packet delay from the histogram.
+ * Sample an expected time-until-next-packet delay from the histogram or
+ * probability distribution.
  *
- * The bin is chosen with probability proportional to the number
- * of tokens in each bin, and then a time value is chosen uniformly from
- * that bin's [start,end) time range.
+ * A bin of the histogram is chosen with probability proportional to the number
+ * of tokens in each bin, and then a time value is chosen uniformly from that
+ * bin's [start,end) time range.
  */
 STATIC circpad_delay_t
 circpad_machine_sample_delay(circpad_machine_runtime_t *mi)
@@ -655,12 +656,7 @@ circpad_machine_sample_delay(circpad_machine_runtime_t *mi)
 /**
  * Sample a value from the specified probability distribution.
  *
- * This performs inverse transform sampling
- * (https://en.wikipedia.org/wiki/Inverse_transform_sampling).
- *
- * XXX: These formulas were taken verbatim. Need a floating wizard
- * to check them for catastropic cancellation and other issues (teor?).
- * Also: is 32bits of double from [0.0,1.0) enough?
+ * Uses functions from src/lib/math/prob_distr.c .
  */
 static double
 circpad_distribution_sample(circpad_distribution_t dist)
@@ -744,6 +740,8 @@ circpad_distribution_sample(circpad_distribution_t dist)
 /**
  * Find the index of the first bin whose upper bound is
  * greater than the target, and that has tokens remaining.
+ *
+ * Used for histograms with token removal.
  */
 static circpad_hist_index_t
 circpad_machine_first_higher_index(const circpad_machine_runtime_t *mi,
@@ -766,6 +764,8 @@ circpad_machine_first_higher_index(const circpad_machine_runtime_t *mi,
 /**
  * Find the index of the first bin whose lower bound is lower or equal to
  * <b>target_bin_usec</b>, and that still has tokens remaining.
+ *
+ * Used for histograms with token removal.
  */
 static circpad_hist_index_t
 circpad_machine_first_lower_index(const circpad_machine_runtime_t *mi,
@@ -787,6 +787,8 @@ circpad_machine_first_lower_index(const circpad_machine_runtime_t *mi,
 /**
  * Remove a token from the first non-empty bin whose upper bound is
  * greater than the target.
+ *
+ * Used for histograms with token removal.
  */
 STATIC void
 circpad_machine_remove_higher_token(circpad_machine_runtime_t *mi,
@@ -808,6 +810,8 @@ circpad_machine_remove_higher_token(circpad_machine_runtime_t *mi,
 /**
  * Remove a token from the first non-empty bin whose upper bound is
  * lower than the target.
+ *
+ * Used for histograms with token removal.
  */
 STATIC void
 circpad_machine_remove_lower_token(circpad_machine_runtime_t *mi,
@@ -837,6 +841,8 @@ circpad_machine_remove_lower_token(circpad_machine_runtime_t *mi,
  * midpoint.
  *
  * If it is false, use bin index distance only.
+ *
+ * Used for histograms with token removal.
  */
 STATIC void
 circpad_machine_remove_closest_token(circpad_machine_runtime_t *mi,
@@ -919,6 +925,8 @@ circpad_machine_remove_closest_token(circpad_machine_runtime_t *mi,
  * Remove a token from the exact bin corresponding to the target.
  *
  * If it is empty, do nothing.
+ *
+ * Used for histograms with token removal.
  */
 static void
 circpad_machine_remove_exact(circpad_machine_runtime_t *mi,
@@ -1352,7 +1360,7 @@ circpad_machine_reached_padding_limit(circpad_machine_runtime_t *mi)
 
   /* If circpad_max_global_padding_pct is non-zero, and we've
    * sent more than the global padding cell limit, then check our
-   * gloabl tor process percentage limit on padding. */
+   * global tor process percentage limit on padding. */
   if (circpad_global_max_padding_percent &&
       circpad_global_padding_sent >= circpad_global_allowed_cells) {
     uint64_t total_cells = circpad_global_padding_sent +
@@ -1492,7 +1500,7 @@ circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
 /**
  * If the machine transitioned to the END state, we need
  * to check to see if it wants us to shut it down immediately.
- * If it does, then we need to send the appropate negotation commands
+ * If it does, then we need to send the appropiate negotiation commands
  * depending on which side it is.
  *
  * After this function is called, mi may point to freed memory. Do
@@ -1509,7 +1517,7 @@ circpad_machine_spec_transitioned_to_end(circpad_machine_runtime_t *mi)
    * we can handle the case where this machine started while it was
    * the only machine that matched conditions, but *since* then more
    * "higher ranking" machines now match the conditions, and would
-   * be given a chance to take precidence over this one in
+   * be given a chance to take precedence over this one in
    * circpad_add_matching_machines().
    *
    * Returning to START or waiting forever in END would not give those
@@ -1636,7 +1644,7 @@ circpad_estimate_circ_rtt_on_received(circuit_t *circ,
   if (CIRCUIT_IS_ORIGIN(circ) || mi->stop_rtt_update)
     return;
 
-  /* If we already have a last receieved packet time, that means we
+  /* If we already have a last received packet time, that means we
    * did not get a response before this packet. The RTT estimate
    * only makes sense if we do not have multiple packets on the
    * wire, so stop estimating if this is the second packet
@@ -2300,7 +2308,7 @@ circpad_deliver_sent_relay_cell_events(circuit_t *circ,
     /* Optimization: The event for RELAY_COMMAND_DROP is sent directly
      * from circpad_send_padding_cell_for_callback(). This is to avoid
      * putting a cell_t and a relay_header_t on the stack repeatedly
-     * if we decide to send a long train of padidng cells back-to-back
+     * if we decide to send a long train of padding cells back-to-back
      * with 0 delay. So we do nothing here. */
     return;
   } else {
