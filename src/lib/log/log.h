@@ -118,17 +118,17 @@
 #define LD_MESG      (1u<<29)
 #define N_LOGGING_DOMAINS 30
 
+#ifdef TOR_UNIT_TESTS
+/** This log message should not be intercepted by mock_saving_logv */
+#define LD_NO_MOCK (1u<<29)
+#endif
+
 /** This log message is not safe to send to a callback-based logger
  * immediately.  Used as a flag, not a log domain. */
 #define LD_NOCB (1u<<31)
 /** This log message should not include a function name, even if it otherwise
  * would. Used as a flag, not a log domain. */
 #define LD_NOFUNCNAME (1u<<30)
-
-#ifdef TOR_UNIT_TESTS
-/** This log message should not be intercepted by mock_saving_logv */
-#define LD_NO_MOCK (1u<<29)
-#endif
 
 /** Mask of zero or more log domains, OR'd together. */
 typedef uint32_t log_domain_mask_t;
