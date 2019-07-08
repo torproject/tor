@@ -1360,7 +1360,7 @@ circpad_machine_reached_padding_limit(circpad_machine_runtime_t *mi)
 
   /* If circpad_max_global_padding_pct is non-zero, and we've
    * sent more than the global padding cell limit, then check our
-   * gloabl tor process percentage limit on padding. */
+   * global tor process percentage limit on padding. */
   if (circpad_global_max_padding_percent &&
       circpad_global_padding_sent >= circpad_global_allowed_cells) {
     uint64_t total_cells = circpad_global_padding_sent +
