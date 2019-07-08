@@ -656,12 +656,7 @@ circpad_machine_sample_delay(circpad_machine_runtime_t *mi)
 /**
  * Sample a value from the specified probability distribution.
  *
- * This performs inverse transform sampling
- * (https://en.wikipedia.org/wiki/Inverse_transform_sampling).
- *
- * XXX: These formulas were taken verbatim. Need a floating wizard
- * to check them for catastropic cancellation and other issues (teor?).
- * Also: is 32bits of double from [0.0,1.0) enough?
+ * Uses functions from src/lib/math/prob_distr.c . 
  */
 static double
 circpad_distribution_sample(circpad_distribution_t dist)
