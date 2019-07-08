@@ -255,8 +255,9 @@ typedef struct circpad_distribution_t {
 typedef uint16_t circpad_statenum_t;
 #define  CIRCPAD_STATENUM_MAX   (UINT16_MAX)
 
-/** A histogram is used to sample padding delays given a machine state.  This
- *  constant defines the maximum histogram width (i.e. the max number of bins).
+/** A histogram can be used to sample padding delays given a machine state. 
+ * This constant defines the maximum histogram width (i.e. the max number of
+ * bins).
  *
  * The current limit is arbitrary and could be raised if there is a need,
  * however too many bins will be hard to serialize in the future.
@@ -272,13 +273,13 @@ typedef uint16_t circpad_statenum_t;
 /**
  * A state of a padding state machine. The information here are immutable and
  * represent the initial form of the state; it does not get updated as things
- * happen. The mutable information that gets updated in runtime are carried in
- * a circpad_machine_runtime_t.
+ * happen. The mutable information that gets updated in runtime are carried in a
+ * circpad_machine_runtime_t.
  *
- * This struct describes the histograms and parameters of a single
- * state in the adaptive padding machine. Instances of this struct
- * exist in global circpad machine definitions that come from torrc
- * or the consensus.
+ * This struct describes the histograms and/or probability distributions, as
+ * well as parameters of a single state in the adaptive padding machine.
+ * Instances of this struct exist in global circpad machine definitions that
+ * come from torrc or the consensus.
  */
 typedef struct circpad_state_t {
   /**
