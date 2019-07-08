@@ -1275,6 +1275,8 @@ static const char *domain_list[] = {
 
 CTASSERT(ARRAY_LENGTH(domain_list) == N_LOGGING_DOMAINS + 1);
 
+CTASSERT((UINT64_C(1)<<(N_LOGGING_DOMAINS-1)) < LOWEST_RESERVED_LD_FLAG_);
+
 /** Return a bitmask for the log domain for which <b>domain</b> is the name,
  * or 0 if there is no such name. */
 static log_domain_mask_t

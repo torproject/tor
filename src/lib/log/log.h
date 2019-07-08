@@ -118,6 +118,8 @@
 #define LD_MESG      (UINT64_C(1)<<29)
 #define N_LOGGING_DOMAINS 30
 
+/** First bit that is reserved in log_domain_mask_t for non-domain flags. */
+#define LOWEST_RESERVED_LD_FLAG_ (UINT64_C(1)<<61)
 #ifdef TOR_UNIT_TESTS
 /** This log message should not be intercepted by mock_saving_logv */
 #define LD_NO_MOCK (UINT64_C(1)<<61)
