@@ -12,11 +12,12 @@
 
 #include "orconfig.h"
 #include "lib/cc/compat_compiler.h"
+#include "lib/cc/torint.h"
 
-typedef void (*tor_log_fn)(int, unsigned, const char *fmt, ...)
+typedef void (*tor_log_fn)(int, uint64_t, const char *fmt, ...)
   CHECK_PRINTF(3,4);
 
-void log_backtrace_impl(int severity, int domain, const char *msg,
+void log_backtrace_impl(int severity, uint64_t domain, const char *msg,
                         tor_log_fn logger);
 int configure_backtrace_handler(const char *tor_version);
 void clean_up_backtrace_handler(void);
