@@ -1500,7 +1500,7 @@ circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
 /**
  * If the machine transitioned to the END state, we need
  * to check to see if it wants us to shut it down immediately.
- * If it does, then we need to send the appropate negotation commands
+ * If it does, then we need to send the appropiate negotiation commands
  * depending on which side it is.
  *
  * After this function is called, mi may point to freed memory. Do
