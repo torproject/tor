@@ -739,7 +739,9 @@ circpad_distribution_sample(circpad_distribution_t dist)
 
 /**
  * Find the index of the first bin whose upper bound is
- * greater than the target, and that has tokens remaining.
+ * greater than the target, and that has tokens remaining. 
+ * 
+ * Used for histograms with token removal.
  */
 static circpad_hist_index_t
 circpad_machine_first_higher_index(const circpad_machine_runtime_t *mi,
@@ -762,6 +764,8 @@ circpad_machine_first_higher_index(const circpad_machine_runtime_t *mi,
 /**
  * Find the index of the first bin whose lower bound is lower or equal to
  * <b>target_bin_usec</b>, and that still has tokens remaining.
+ * 
+ * Used for histograms with token removal.
  */
 static circpad_hist_index_t
 circpad_machine_first_lower_index(const circpad_machine_runtime_t *mi,
@@ -783,6 +787,8 @@ circpad_machine_first_lower_index(const circpad_machine_runtime_t *mi,
 /**
  * Remove a token from the first non-empty bin whose upper bound is
  * greater than the target.
+ * 
+ * Used for histograms with token removal.
  */
 STATIC void
 circpad_machine_remove_higher_token(circpad_machine_runtime_t *mi,
@@ -804,6 +810,8 @@ circpad_machine_remove_higher_token(circpad_machine_runtime_t *mi,
 /**
  * Remove a token from the first non-empty bin whose upper bound is
  * lower than the target.
+ * 
+ * Used for histograms with token removal.
  */
 STATIC void
 circpad_machine_remove_lower_token(circpad_machine_runtime_t *mi,
@@ -833,6 +841,8 @@ circpad_machine_remove_lower_token(circpad_machine_runtime_t *mi,
  * midpoint.
  *
  * If it is false, use bin index distance only.
+ * 
+ * Used for histograms with token removal.
  */
 STATIC void
 circpad_machine_remove_closest_token(circpad_machine_runtime_t *mi,
@@ -915,6 +925,8 @@ circpad_machine_remove_closest_token(circpad_machine_runtime_t *mi,
  * Remove a token from the exact bin corresponding to the target.
  *
  * If it is empty, do nothing.
+ * 
+ * Used for histograms with token removal.
  */
 static void
 circpad_machine_remove_exact(circpad_machine_runtime_t *mi,
