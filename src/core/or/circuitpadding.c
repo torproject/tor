@@ -1644,7 +1644,7 @@ circpad_estimate_circ_rtt_on_received(circuit_t *circ,
   if (CIRCUIT_IS_ORIGIN(circ) || mi->stop_rtt_update)
     return;
 
-  /* If we already have a last receieved packet time, that means we
+  /* If we already have a last received packet time, that means we
    * did not get a response before this packet. The RTT estimate
    * only makes sense if we do not have multiple packets on the
    * wire, so stop estimating if this is the second packet
