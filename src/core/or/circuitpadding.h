@@ -51,7 +51,7 @@ typedef enum {
   CIRCPAD_EVENT_INFINITY = 4,
   /* All histogram bins are empty (we are out of tokens) */
   CIRCPAD_EVENT_BINS_EMPTY = 5,
-  /* just a counter of the events above */
+  /* This state has used up its cell count */
   CIRCPAD_EVENT_LENGTH_COUNT = 6
 } circpad_event_t;
 #define CIRCPAD_NUM_EVENTS ((int)CIRCPAD_EVENT_LENGTH_COUNT+1)
