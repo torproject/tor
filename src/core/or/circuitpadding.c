@@ -552,11 +552,12 @@ circpad_distribution_sample_iat_delay(const circpad_state_t *state,
 }
 
 /**
- * Sample an expected time-until-next-packet delay from the histogram.
+ * Sample an expected time-until-next-packet delay from the histogram or
+ * probability distribution.
  *
- * The bin is chosen with probability proportional to the number
- * of tokens in each bin, and then a time value is chosen uniformly from
- * that bin's [start,end) time range.
+ * A bin of the histogram is chosen with probability proportional to the number
+ * of tokens in each bin, and then a time value is chosen uniformly from that
+ * bin's [start,end) time range.
  */
 STATIC circpad_delay_t
 circpad_machine_sample_delay(circpad_machine_runtime_t *mi)
