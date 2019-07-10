@@ -399,7 +399,7 @@ STATIC const node_t *
 get_node_from_intro_point(const hs_service_intro_point_t *ip);
 STATIC int can_service_launch_intro_circuit(hs_service_t *service,
                                             time_t now);
-STATIC int intro_point_should_expire(hs_service_intro_point_t *ip,
+STATIC int intro_point_should_expire(const hs_service_intro_point_t *ip,
                                      time_t now);
 STATIC void run_housekeeping_event(time_t now);
 STATIC void rotate_all_descriptors(time_t now);

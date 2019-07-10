@@ -2289,7 +2289,7 @@ update_all_descriptors_intro_points(time_t now)
 /* Return true iff the given intro point has expired that is it has been used
  * for too long or we've reached our max seen INTRODUCE2 cell. */
 STATIC int
-intro_point_should_expire(hs_service_intro_point_t *ip,
+intro_point_should_expire(const hs_service_intro_point_t *ip,
                           time_t now)
 {
   tor_assert(ip);
@@ -2509,6 +2509,8 @@ check_intro_point_replay_cache(hs_service_intro_point_t *ip)
 {
   if ((size_t) replaycache_size(ip->replay_cache) >=
       ip->replay_cache_max_introduce2) {
+    log_info(LD_GENERAL, "We just did %d intros. Refreshing replay cache.",
+             replaycache_size(ip->replay_cache));
     replaycache_free(ip->replay_cache);
     ip->replay_cache = replaycache_new(0, 0);
   }
