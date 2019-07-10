@@ -3899,6 +3899,8 @@ intro_point_should_expire_now(rend_intro_point_t *intro,
     /* This intro point has been used too many times. Cycle its replay cache */
     replaycache_free(intro->accepted_intro_rsa_parts);
     intro->accepted_intro_rsa_parts = replaycache_new(0, 0);
+    log_info(LD_GENERAL, "We did %d intros. Refreshing replay cache.",
+             replaycache_size(ip->replay_cache));
     return 1;
   }
 
