@@ -578,6 +578,7 @@ buf_add_vprintf(buf_t *buf, const char *format, va_list args)
   /* XXXX Faster implementations are easy enough, but let's optimize later */
   char *tmp;
   tor_vasprintf(&tmp, format, args);
+  tor_assert(tmp != NULL);
   buf_add(buf, tmp, strlen(tmp));
   tor_free(tmp);
 }
