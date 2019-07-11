@@ -293,6 +293,9 @@ struct origin_circuit_t {
    * to 2*CircuitsAvailableTimoeut. */
   int circuit_idle_timeout;
 
+  /** When did we send a ESTABLISH_RENDEZVOUS cell? */
+  struct timeval establish_rend_time;
+
 };
 
 #endif /* !defined(ORIGIN_CIRCUIT_ST_H) */

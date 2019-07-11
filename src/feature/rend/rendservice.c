@@ -3456,6 +3456,8 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   char hexcookie[9];
   int reason;
   const char *rend_cookie, *rend_pk_digest;
+  struct timeval rend1_time, rend_time_diff;
+  uint64_t msec_rend;
 
   tor_assert(circuit->base_.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
   tor_assert(circuit->cpath);
@@ -3536,6 +3538,14 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
     log_warn(LD_GENERAL, "Couldn't send RENDEZVOUS1 cell.");
     goto done;
   }
+
+  tor_gettimeofday(&rend1_time);
+  timersub(&rend1_time, &circuit->establish_rend_time, &rend_time_diff);
+  msec_rend = ((uint64_t)rend_time_diff.tv_sec)*1000 +
+              (rend_time_diff.tv_usec)/1000;
+  log_info(LD_REND, "Time between ESTABLISH_RENDEZVOUS and RENDEZVOUS1 cells "
+                    "for circuit %u is %lu ms",
+                    (unsigned) circuit->base_.n_circ_id, (long) msec_rend);
 
   crypto_dh_free(hop->rend_dh_handshake_state);
   hop->rend_dh_handshake_state = NULL;

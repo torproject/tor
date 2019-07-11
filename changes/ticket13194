@@ -1,0 +1,5 @@
+  o Minor features (onion services):
+    - Track the time in milliseconds between a ESTABLISH_RENDEZVOUS and
+      RENDEZVOUS1 control cell. This patch will allow us to measure the
+      performance and slowdowns of an onion service. Closes ticket 13194.
+      Patch by Neel Chauhan.

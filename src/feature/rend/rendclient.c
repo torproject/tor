@@ -102,6 +102,8 @@ rend_client_send_establish_rendezvous(origin_circuit_t *circ)
     return -1;
   }
 
+  tor_gettimeofday(&circ->establish_rend_time);
+
   return 0;
 }
 

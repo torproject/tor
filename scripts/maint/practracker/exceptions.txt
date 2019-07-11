@@ -239,7 +239,7 @@ problem function-size /src/feature/rend/rendmid.c:rend_mid_establish_intro_legac
 problem function-size /src/feature/rend/rendparse.c:rend_parse_v2_service_descriptor() 187
 problem function-size /src/feature/rend/rendparse.c:rend_decrypt_introduction_points() 104
 problem function-size /src/feature/rend/rendparse.c:rend_parse_introduction_points() 131
-problem file-size /src/feature/rend/rendservice.c 4511
+problem file-size /src/feature/rend/rendservice.c 4521
 problem function-size /src/feature/rend/rendservice.c:rend_service_prune_list_impl_() 107
 problem function-size /src/feature/rend/rendservice.c:rend_config_service() 164
 problem function-size /src/feature/rend/rendservice.c:rend_service_load_auth_keys() 178
@@ -247,7 +247,7 @@ problem function-size /src/feature/rend/rendservice.c:rend_service_receive_intro
 problem function-size /src/feature/rend/rendservice.c:rend_service_parse_intro_for_v3() 115
 problem function-size /src/feature/rend/rendservice.c:rend_service_decrypt_intro() 115
 problem function-size /src/feature/rend/rendservice.c:rend_service_intro_has_opened() 126
-problem function-size /src/feature/rend/rendservice.c:rend_service_rendezvous_has_opened() 117
+problem function-size /src/feature/rend/rendservice.c:rend_service_rendezvous_has_opened() 127
 problem function-size /src/feature/rend/rendservice.c:directory_post_to_hs_dir() 108
 problem function-size /src/feature/rend/rendservice.c:upload_service_descriptor() 111
 problem function-size /src/feature/rend/rendservice.c:rend_consider_services_intro_points() 170
