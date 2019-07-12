@@ -24,6 +24,7 @@
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/rend/rendservice.h"
+#include "feature/rend/rendcommon.h"
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
@@ -1267,5 +1268,35 @@ hs_circ_cleanup(circuit_t *circ)
    * where we can't register a new circuit for the same intro point. */
   if (circ->hs_token) {
     hs_circuitmap_remove_circuit(circ);
+  }
+}
+
+/* The given circuit will be repurposed so take the appropriate actions. A
+ * cleanup from the HS maps and of all HS related structures is done.
+ *
+ * Once this function returns, the circuit can be safely repurposed. */
+void
+hs_circ_repurpose(circuit_t *circ)
+{
+  origin_circuit_t *origin_circ;
+
+  tor_assert(circ);
+
+  /* Only repurposing an origin circuit is possible for HS. */
+  if (!CIRCUIT_IS_ORIGIN(circ)) {
+    return;
+  }
+  origin_circ = TO_ORIGIN_CIRCUIT(circ);
+
+  /* First, cleanup the circuit from the HS maps. */
+  hs_circ_cleanup(circ);
+
+  /* Depending on the version, different cleanup is done. */
+  if (origin_circ->rend_data) {
+    /* v2. */
+    rend_circ_cleanup(origin_circ);
+  } else if (origin_circ->hs_ident) {
+    /* v3. */
+    hs_ident_circuit_free(origin_circ->hs_ident);
   }
 }

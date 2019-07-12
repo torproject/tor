@@ -216,6 +216,7 @@ extern struct testcase_t geoip_tests[];
 extern struct testcase_t hs_tests[];
 extern struct testcase_t hs_cache[];
 extern struct testcase_t hs_cell_tests[];
+extern struct testcase_t hs_circ_tests[];
 extern struct testcase_t hs_common_tests[];
 extern struct testcase_t hs_config_tests[];
 extern struct testcase_t hs_control_tests[];
