@@ -369,7 +369,9 @@ endif
 
 check-best-practices:
 if USEPYTHON
-	$(PYTHON) $(top_srcdir)/scripts/maint/practracker/practracker.py $(top_srcdir)
+	@if test "$$TOR_DISABLE_PRACTRACKER" = ""; then \
+		$(PYTHON) $(top_srcdir)/scripts/maint/practracker/practracker.py $(top_srcdir); \
+	fi
 endif
 
 practracker-regen:

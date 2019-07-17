@@ -227,6 +227,9 @@ Please fix the problems if you can, and update the exceptions file
 ({}) if you can't.
 
 See doc/HACKING/HelpfulTools.md for more information on using practracker.\
+
+You can disable this message by setting the TOR_DISABLE_PRACTRACKER environment
+variable.
 """.format(found_new_issues, exceptions_file)
         print(new_issues_str)
 
