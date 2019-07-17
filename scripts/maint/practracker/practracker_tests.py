@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 """Some simple tests for practracker metrics"""
 
 import unittest
@@ -38,13 +40,13 @@ class TestFunctionLength(unittest.TestCase):
     def test_function_length(self):
         funcs = StringIO.StringIO(function_file)
         # All functions should have length 2
-        for name, lines in metrics.function_lines(funcs):
+        for name, lines in metrics.get_function_lines(funcs):
             self.assertEqual(name, "fun")
 
         funcs.seek(0)
 
-        for name, lines in metrics.function_lines(funcs):
-            self.assertEqual(lines, 2)
+        for name, lines in metrics.get_function_lines(funcs):
+            self.assertEqual(lines, 4)
 
 if __name__ == '__main__':
     unittest.main()

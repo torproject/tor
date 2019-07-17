@@ -31,6 +31,7 @@ def get_function_lines(f):
                             "DISABLE_GCC_WARNING", "DISABLE_GCC_WARNINGS"}
 
     in_function = False
+    found_openbrace = False
     for lineno, line in enumerate(f):
         if not in_function:
             # find the start of a function
@@ -41,10 +42,13 @@ def get_function_lines(f):
                     continue
                 func_start = lineno
                 in_function = True
-
+        elif not found_openbrace and line.startswith("{"):
+            found_openbrace = True
+            func_start = lineno
         else:
             # Find the end of a function
             if line.startswith("}"):
-                n_lines = lineno - func_start
+                n_lines = lineno - func_start + 1
                 in_function = False
+                found_openbrace = False
                 yield (func_name, n_lines)
