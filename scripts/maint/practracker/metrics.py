@@ -16,7 +16,7 @@ def get_include_count(f):
     """Get number of #include statements in the file"""
     include_count = 0
     for line in f:
-        if re.match(r' *# *include', line):
+        if re.match(r'\s*#\s*include', line):
             include_count += 1
     return include_count
 

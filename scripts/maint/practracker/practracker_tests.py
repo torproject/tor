@@ -48,5 +48,15 @@ class TestFunctionLength(unittest.TestCase):
         for name, lines in metrics.get_function_lines(funcs):
             self.assertEqual(lines, 4)
 
+class TestIncludeCount(unittest.TestCase):
+    def test_include_count(self):
+        f = StringIO.StringIO("""
+  #   include <abc.h>
+  #   include "def.h"
+#include "ghi.h"
+\t#\t include "jkl.h"
+""")
+        self.assertEqual(metrics.get_include_count(f),4)
+
 if __name__ == '__main__':
     unittest.main()
