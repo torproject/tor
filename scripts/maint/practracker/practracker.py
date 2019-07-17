@@ -54,25 +54,27 @@ else:
         return open(fname, 'r', encoding='utf-8')
 
 def consider_file_size(fname, f):
-    """Consider file size issues for 'f' and return True if a new issue was found"""
+    """Consider file size issues for 'f' and return the number of new issues was found"""
     file_size = metrics.get_file_len(f)
     if file_size > MAX_FILE_SIZE:
         p = problem.FileSizeProblem(fname, file_size)
-        return ProblemVault.register_problem(p)
-    return False
+        if ProblemVault.register_problem(p):
+            return 1
+    return 0
 
 def consider_includes(fname, f):
-    """Consider #include issues for 'f' and return True if a new issue was found"""
+    """Consider #include issues for 'f' and return the number of new issues found"""
     include_count = metrics.get_include_count(f)
 
     if include_count > MAX_INCLUDE_COUNT:
         p = problem.IncludeCountProblem(fname, include_count)
-        return ProblemVault.register_problem(p)
-    return False
+        if ProblemVault.register_problem(p):
+            return 1
+    return 0
 
 def consider_function_size(fname, f):
-    """Consider the function sizes for 'f' and return True if a new issue was found"""
-    found_new_issues = False
+    """Consider the function sizes for 'f' and return the number of new issues found."""
+    found_new_issues = 0
 
     for name, lines in metrics.get_function_lines(f):
         # Don't worry about functions within our limits
@@ -82,41 +84,42 @@ def consider_function_size(fname, f):
         # That's a big function! Issue a problem!
         canonical_function_name = "%s:%s()" % (fname, name)
         p = problem.FunctionSizeProblem(canonical_function_name, lines)
-        found_new_issues |= ProblemVault.register_problem(p)
+        if ProblemVault.register_problem(p):
+            found_new_issues += 1
 
     return found_new_issues
 
 #######################################################
 
 def consider_all_metrics(files_list):
-    """Consider metrics for all files, and return True if new issues were found"""
-    found_new_issues = False
+    """Consider metrics for all files, and return the number of new issues found."""
+    found_new_issues = 0
     for fname in files_list:
         with open_file(fname) as f:
-            found_new_issues |= consider_metrics_for_file(fname, f)
+            found_new_issues += consider_metrics_for_file(fname, f)
     return found_new_issues
 
 def consider_metrics_for_file(fname, f):
     """
     Consider the various metrics for file with filename 'fname' and file descriptor 'f'.
-    Return True if we found new issues.
+    Return the number of new issues found.
     """
     # Strip the useless part of the path
     if fname.startswith(TOR_TOPDIR):
         fname = fname[len(TOR_TOPDIR):]
 
-    found_new_issues = False
+    found_new_issues = 0
 
     # Get file length
-    found_new_issues |= consider_file_size(fname, f)
+    found_new_issues += consider_file_size(fname, f)
 
     # Consider number of #includes
     f.seek(0)
-    found_new_issues |= consider_includes(fname, f)
+    found_new_issues += consider_includes(fname, f)
 
     # Get function length
     f.seek(0)
-    found_new_issues |= consider_function_size(fname, f)
+    found_new_issues += consider_function_size(fname, f)
 
     return found_new_issues
 
@@ -201,13 +204,13 @@ def main(argv):
     # If new issues were found, try to give out some advice to the developer on how to resolve it.
     if found_new_issues and not args.regen:
         new_issues_str = """\
-FAILURE: practracker found new problems in the code: see warnings above.
+FAILURE: practracker found {} new problem(s) in the code: see warnings above.
 
 Please fix the problems if you can, and update the exceptions file
 ({}) if you can't.
 
 See doc/HACKING/HelpfulTools.md for more information on using practracker.\
-""".format(exceptions_file)
+""".format(found_new_issues, exceptions_file)
         print(new_issues_str)
 
     sys.exit(found_new_issues)
