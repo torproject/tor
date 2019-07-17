@@ -22,6 +22,9 @@ class ProblemVault(object):
     def __init__(self, exception_fname=None):
         # Exception dictionary: { problem.key() : Problem object }
         self.exceptions = {}
+        # Exception dictionary: maps key to the problem it was used to
+        # suppress.
+        self.used_exception_for = {}
 
         if exception_fname == None:
             return
@@ -71,8 +74,22 @@ class ProblemVault(object):
         if problem.is_worse_than(self.exceptions[problem.key()]):
             print(problem)
             return True
+        else:
+            self.used_exception_for[problem.key()] = problem
 
         return False
+
+    def list_overstrict_exceptions(self):
+        """Return an iterator of tuples containing (ex,prob) where ex is an
+           exceptions in this vault that are stricter than it needs to be, and
+           prob is the worst problem (if any) that it covered.
+        """
+        for k in self.exceptions:
+            e = self.exceptions[k]
+            p = self.used_exception_for.get(k)
+            if p is None or e.is_worse_than(p):
+                yield (e, p)
+
 
 class Problem(object):
     """

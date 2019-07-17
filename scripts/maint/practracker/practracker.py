@@ -56,6 +56,7 @@ else:
 def consider_file_size(fname, f):
     """Consider file size issues for 'f' and return the number of new issues was found"""
     file_size = metrics.get_file_len(f)
+
     if file_size > MAX_FILE_SIZE:
         p = problem.FileSizeProblem(fname, file_size)
         if ProblemVault.register_problem(p):
@@ -164,6 +165,8 @@ def main(argv):
     parser = argparse.ArgumentParser(prog=progname)
     parser.add_argument("--regen", action="store_true",
                         help="Regenerate the exceptions file")
+    parser.add_argument("--list-overstrict", action="store_true",
+                        help="List over-strict exceptions")
     parser.add_argument("--exceptions",
                         help="Override the location for the exceptions file")
     parser.add_argument("topdir", default=".", nargs="?",
@@ -212,6 +215,15 @@ Please fix the problems if you can, and update the exceptions file
 See doc/HACKING/HelpfulTools.md for more information on using practracker.\
 """.format(found_new_issues, exceptions_file)
         print(new_issues_str)
+
+    if args.list_overstrict:
+        def k_fn(tup):
+            return tup[0].key()
+        for (ex,p) in sorted(ProblemVault.list_overstrict_exceptions(), key=k_fn):
+            if p is None:
+                print(ex, "->", 0)
+            else:
+                print(ex, "->", p.metric_value)
 
     sys.exit(found_new_issues)
 
