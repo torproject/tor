@@ -90,6 +90,15 @@ class ProblemVault(object):
             if p is None or e.is_worse_than(p):
                 yield (e, p)
 
+    def set_tolerances(self, fns):
+        """Adjust the tolerances for the exceptions in this vault.  Takes
+           a map of problem type to a function that adjusts the permitted
+           function to its new maximum value."""
+        for k in self.exceptions:
+            ex = self.exceptions[k]
+            fn = fns.get(ex.problem_type)
+            if fn is not None:
+                ex.metric_value = fn(ex.metric_value)
 
 class Problem(object):
     """
@@ -99,13 +108,20 @@ class Problem(object):
     def __init__(self, problem_type, problem_location, metric_value):
         self.problem_location = problem_location
         self.metric_value = int(metric_value)
+        self.warning_threshold = self.metric_value
         self.problem_type = problem_type
 
     def is_worse_than(self, other_problem):
         """Return True if this is a worse problem than other_problem"""
         if self.metric_value > other_problem.metric_value:
             return True
+        elif self.metric_value > other_problem.warning_threshold:
+            self.warn()
         return False
+
+    def warn(self):
+        """Warn about this problem on stderr only."""
+        print("(warning) {}".format(self), file=sys.stderr)
 
     def key(self):
         """Generate a unique key that describes this problem that can be used as a dictionary key"""

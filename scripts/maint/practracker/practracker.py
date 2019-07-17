@@ -36,6 +36,13 @@ MAX_FUNCTION_SIZE = 100 # lines
 # Recommended number of #includes
 MAX_INCLUDE_COUNT = 50
 
+# Map from problem type to functions that adjust for tolerance
+TOLERANCE_FNS = {
+    'include-count': lambda n: int(n*1.1),
+    'function-size': lambda n: int(n*1.1),
+    'file-size': lambda n: int(n*1.02)
+}
+
 #######################################################
 
 # ProblemVault singleton
@@ -169,6 +176,8 @@ def main(argv):
                         help="List over-strict exceptions")
     parser.add_argument("--exceptions",
                         help="Override the location for the exceptions file")
+    parser.add_argument("--strict", action="store_true",
+                        help="Make all warnings into errors")
     parser.add_argument("topdir", default=".", nargs="?",
                         help="Top-level directory for the tor source")
     args = parser.parse_args(argv[1:])
@@ -195,6 +204,11 @@ def main(argv):
         ProblemVault = problem.ProblemVault()
     else:
         ProblemVault = problem.ProblemVault(exceptions_file)
+
+    # 2.1) Adjust the exceptions so that we warn only about small problems,
+    # and produce errors on big ones.
+    if not (args.regen or args.list_overstrict or args.strict):
+        ProblemVault.set_tolerances(TOLERANCE_FNS)
 
     # 3) Go through all the files and report problems if they are not exceptions
     found_new_issues = consider_all_metrics(files_list)
