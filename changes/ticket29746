@@ -1,0 +1,4 @@
+  o Minor bugfixes (best practices tracker):
+    - Fix a few issues in the best-practices script, including tests, tab
+      tolerance, error reporting, and directory-exclusion logic. Fixes bug
+      29746; bugfix on 0.4.1.1-alpha.
