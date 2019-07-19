@@ -1,0 +1,5 @@
+  o Minor bugfixes (ipv6):
+    - We check for private IPv6 address alongside their IPv4 equivilants
+      when authorities check descriptors and when relays extend. Previously,
+      we only checked for private IPv4 addresses in those places. Fixes bug
+      31088; bugfix on 0.4.1.1-alpha. Patch by Neel Chauhan.
