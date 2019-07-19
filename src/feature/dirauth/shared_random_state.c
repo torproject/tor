@@ -62,7 +62,7 @@ DUMMY_TYPECHECK_INSTANCE(sr_disk_state_t);
 static int
 disk_state_validate_cb(void *old_state, void *state, void *default_state,
                        int from_setconf, char **msg);
-static void disk_state_free_cb(void *);
+static void disk_state_free_cb(const config_mgr_t *mgr, void *);
 
 /* Array of variables that are saved to disk as a persistent state. */
 static const config_var_t state_vars[] = {
@@ -102,6 +102,19 @@ static const config_format_t state_format = {
   disk_state_free_cb,
   &state_extra_var,
 };
+
+/* Global configuration manager for the shared-random state file */
+static config_mgr_t *shared_random_state_mgr = NULL;
+
+/** Return the configuration manager for the shared-random state file. */
+static const config_mgr_t *
+get_srs_mgr(void)
+{
+  if (PREDICT_UNLIKELY(shared_random_state_mgr == NULL)) {
+    shared_random_state_mgr = config_mgr_new(&state_format);
+  }
+  return shared_random_state_mgr;
+}
 
 static void state_query_del_(sr_state_object_t obj_type, void *data);
 
@@ -264,7 +277,7 @@ disk_state_free_(sr_disk_state_t *state)
   if (state == NULL) {
     return;
   }
-  config_free(&state_format, state);
+  config_free(get_srs_mgr(), state);
 }
 
 /* Allocate a new disk state, initialize it and return it. */
@@ -280,7 +293,7 @@ disk_state_new(time_t now)
   new_state->ValidAfter = now;
 
   /* Init config format. */
-  config_init(&state_format, new_state);
+  config_init(get_srs_mgr(), new_state);
   return new_state;
 }
 
@@ -349,8 +362,9 @@ disk_state_validate_cb(void *old_state, void *state, void *default_state,
 }
 
 static void
-disk_state_free_cb(void *state)
+disk_state_free_cb(const config_mgr_t *mgr, void *state)
 {
+  (void)mgr;
   disk_state_free_(state);
 }
 
@@ -683,7 +697,7 @@ disk_state_load_from_disk_impl(const char *fname)
     }
 
     disk_state = disk_state_new(time(NULL));
-    config_assign(&state_format, disk_state, lines, 0, &errmsg);
+    config_assign(get_srs_mgr(), disk_state, lines, 0, &errmsg);
     config_free_lines(lines);
     if (errmsg) {
       log_warn(LD_DIR, "SR: Reading state error: %s", errmsg);
@@ -736,7 +750,7 @@ disk_state_save_to_disk(void)
   /* Make sure that our disk state is up to date with our memory state
    * before saving it to disk. */
   disk_state_update();
-  state = config_dump(&state_format, NULL, sr_disk_state, 0, 0);
+  state = config_dump(get_srs_mgr(), NULL, sr_disk_state, 0, 0);
   format_local_iso_time(tbuf, now);
   tor_asprintf(&content,
                "# Tor shared random state file last generated on %s "
@@ -1278,6 +1292,7 @@ sr_state_free_all(void)
   /* Nullify our global state. */
   sr_state = NULL;
   sr_disk_state = NULL;
+  config_mgr_free(shared_random_state_mgr);
 }
 
 /* Save our current state in memory to disk. */

@@ -37,13 +37,44 @@
 #include "lib/string/printf.h"
 #include "lib/string/util_string.h"
 
-static void config_reset(const config_format_t *fmt, void *options,
+static void config_reset(const config_mgr_t *fmt, void *options,
                          const config_var_t *var, int use_defaults);
+
+struct config_mgr_t {
+  /** The 'top-level' configuration format.  This one is used for legacy
+   * options that have not yet been assigned to different sub-modules.
+   *
+   * (NOTE: for now, this is the only config_format_t that a config_mgr_t
+   * contains.  A subsequent commit will add more. XXXX)
+   */
+  const config_format_t *toplevel;
+};
+
+/** Create a new config_mgr_t to manage a set of configuration objects to be
+ * wrapped under <b>toplevel_fmt</b>. */
+config_mgr_t *
+config_mgr_new(const config_format_t *toplevel_fmt)
+{
+  config_mgr_t *mgr = tor_malloc_zero(sizeof(config_mgr_t));
+  mgr->toplevel = toplevel_fmt;
+  return mgr;
+}
+
+/** Release all storage held in <b>mgr</b> */
+void
+config_mgr_free_(config_mgr_t *mgr)
+{
+  if (!mgr)
+    return;
+  memset(mgr, 0, sizeof(*mgr));
+  tor_free(mgr);
+}
 
 /** Allocate an empty configuration object of a given format type. */
 void *
-config_new(const config_format_t *fmt)
+config_new(const config_mgr_t *mgr)
 {
+  const config_format_t *fmt = mgr->toplevel;
   void *opts = tor_malloc_zero(fmt->size);
   struct_set_magic(opts, &fmt->magic);
   CONFIG_CHECK(fmt, opts);
@@ -60,9 +91,10 @@ config_new(const config_format_t *fmt)
  * apply abbreviations that work for the config file and the command line.
  * If <b>warn_obsolete</b> is set, warn about deprecated names. */
 const char *
-config_expand_abbrev(const config_format_t *fmt, const char *option,
+config_expand_abbrev(const config_mgr_t *mgr, const char *option,
                      int command_line, int warn_obsolete)
 {
+  const config_format_t *fmt = mgr->toplevel;
   int i;
   if (! fmt->abbrevs)
     return option;
@@ -90,8 +122,9 @@ config_expand_abbrev(const config_format_t *fmt, const char *option,
  * explaining why it is deprecated (which may be an empty string). Return NULL
  * if it is not deprecated. The <b>key</b> field must be fully expanded. */
 const char *
-config_find_deprecation(const config_format_t *fmt, const char *key)
+config_find_deprecation(const config_mgr_t *mgr, const char *key)
 {
+  const config_format_t *fmt = mgr->toplevel;
   if (BUG(fmt == NULL) || BUG(key == NULL))
     return NULL; // LCOV_EXCL_LINE
   if (fmt->deprecations == NULL)
@@ -112,8 +145,9 @@ config_find_deprecation(const config_format_t *fmt, const char *key)
  * NULL.
  */
 const config_var_t *
-config_find_option(const config_format_t *fmt, const char *key)
+config_find_option(const config_mgr_t *mgr, const char *key)
 {
+  const config_format_t *fmt = mgr->toplevel;
   int i;
   size_t keylen = strlen(key);
   if (!keylen)
@@ -139,8 +173,9 @@ config_find_option(const config_format_t *fmt, const char *key)
 
 /** Return the number of option entries in <b>fmt</b>. */
 static int
-config_count_options(const config_format_t *fmt)
+config_count_options(const config_mgr_t *mgr)
 {
+  const config_format_t *fmt = mgr->toplevel;
   int i;
   for (i=0; fmt->vars[i].member.name; ++i)
     ;
@@ -175,14 +210,15 @@ config_var_is_contained(const config_var_t *var)
  * Called from config_assign_line() and option_reset().
  */
 static int
-config_assign_value(const config_format_t *fmt, void *options,
+config_assign_value(const config_mgr_t *mgr, void *options,
                     config_line_t *c, char **msg)
 {
   const config_var_t *var;
+  const config_format_t *fmt = mgr->toplevel;
 
   CONFIG_CHECK(fmt, options);
 
-  var = config_find_option(fmt, c->key);
+  var = config_find_option(mgr, c->key);
   tor_assert(var);
   tor_assert(!strcmp(c->key, var->member.name));
 
@@ -192,9 +228,11 @@ config_assign_value(const config_format_t *fmt, void *options,
 /** Mark every linelist in <b>options</b> "fragile", so that fresh assignments
  * to it will replace old ones. */
 static void
-config_mark_lists_fragile(const config_format_t *fmt, void *options)
+config_mark_lists_fragile(const config_mgr_t *mgr, void *options)
 {
   int i;
+  const config_format_t *fmt = mgr->toplevel;
+
   tor_assert(fmt);
   tor_assert(options);
 
@@ -224,10 +262,11 @@ warn_deprecated_option(const char *what, const char *why)
  * Called from config_assign().
  */
 static int
-config_assign_line(const config_format_t *fmt, void *options,
+config_assign_line(const config_mgr_t *mgr, void *options,
                    config_line_t *c, unsigned flags,
                    bitarray_t *options_seen, char **msg)
 {
+  const config_format_t *fmt = mgr->toplevel;
   const unsigned use_defaults = flags & CAL_USE_DEFAULTS;
   const unsigned clear_first = flags & CAL_CLEAR_FIRST;
   const unsigned warn_deprecations = flags & CAL_WARN_DEPRECATIONS;
@@ -235,7 +274,7 @@ config_assign_line(const config_format_t *fmt, void *options,
 
   CONFIG_CHECK(fmt, options);
 
-  var = config_find_option(fmt, c->key);
+  var = config_find_option(mgr, c->key);
   if (!var) {
     if (fmt->extra) {
       void *lvalue = STRUCT_VAR_P(options, fmt->extra->offset);
@@ -258,7 +297,7 @@ config_assign_line(const config_format_t *fmt, void *options,
 
   const char *deprecation_msg;
   if (warn_deprecations &&
-      (deprecation_msg = config_find_deprecation(fmt, var->member.name))) {
+      (deprecation_msg = config_find_deprecation(mgr, var->member.name))) {
     warn_deprecated_option(var->member.name, deprecation_msg);
   }
 
@@ -271,14 +310,14 @@ config_assign_line(const config_format_t *fmt, void *options,
         log_warn(LD_CONFIG,
                  "Linelist option '%s' has no value. Skipping.", c->key);
       } else { /* not already cleared */
-        config_reset(fmt, options, var, use_defaults);
+        config_reset(mgr, options, var, use_defaults);
       }
     }
     return 0;
   } else if (c->command == CONFIG_LINE_CLEAR && !clear_first) {
     // XXXX This is unreachable, since a CLEAR line always has an
     // XXXX empty value.
-    config_reset(fmt, options, var, use_defaults); // LCOV_EXCL_LINE
+    config_reset(mgr, options, var, use_defaults); // LCOV_EXCL_LINE
   }
 
   if (options_seen && ! config_var_is_cumulative(var)) {
@@ -292,7 +331,7 @@ config_assign_line(const config_format_t *fmt, void *options,
     bitarray_set(options_seen, var_index);
   }
 
-  if (config_assign_value(fmt, options, c, msg) < 0)
+  if (config_assign_value(mgr, options, c, msg) < 0)
     return -2;
   return 0;
 }
@@ -300,18 +339,19 @@ config_assign_line(const config_format_t *fmt, void *options,
 /** Restore the option named <b>key</b> in options to its default value.
  * Called from config_assign(). */
 STATIC void
-config_reset_line(const config_format_t *fmt, void *options,
+config_reset_line(const config_mgr_t *mgr, void *options,
                   const char *key, int use_defaults)
 {
+  const config_format_t *fmt = mgr->toplevel;
   const config_var_t *var;
 
   CONFIG_CHECK(fmt, options);
 
-  var = config_find_option(fmt, key);
+  var = config_find_option(mgr, key);
   if (!var)
     return; /* give error on next pass. */
 
-  config_reset(fmt, options, var, use_defaults);
+  config_reset(mgr, options, var, use_defaults);
 }
 
 /** Return true iff value needs to be quoted and escaped to be used in
@@ -345,16 +385,18 @@ config_value_needs_escape(const char *value)
  * value needs to be quoted before it's put in a config file, quote and
  * escape that value. Return NULL if no such key exists. */
 config_line_t *
-config_get_assigned_option(const config_format_t *fmt, const void *options,
+config_get_assigned_option(const config_mgr_t *mgr, const void *options,
                            const char *key, int escape_val)
 {
   const config_var_t *var;
   config_line_t *result;
+  const config_format_t *fmt = mgr->toplevel;
+
   tor_assert(options && key);
 
   CONFIG_CHECK(fmt, options);
 
-  var = config_find_option(fmt, key);
+  var = config_find_option(mgr, key);
   if (!var) {
     log_warn(LD_CONFIG, "Unknown option '%s'.  Failing.", key);
     return NULL;
@@ -432,12 +474,13 @@ options_trial_assign() calls config_assign(1, 1)
     returns.
 */
 int
-config_assign(const config_format_t *fmt, void *options, config_line_t *list,
+config_assign(const config_mgr_t *mgr, void *options, config_line_t *list,
               unsigned config_assign_flags, char **msg)
 {
   config_line_t *p;
   bitarray_t *options_seen;
-  const int n_options = config_count_options(fmt);
+  const config_format_t *fmt = mgr->toplevel;
+  const int n_options = config_count_options(mgr);
   const unsigned clear_first = config_assign_flags & CAL_CLEAR_FIRST;
   const unsigned use_defaults = config_assign_flags & CAL_USE_DEFAULTS;
 
@@ -445,7 +488,7 @@ config_assign(const config_format_t *fmt, void *options, config_line_t *list,
 
   /* pass 1: normalize keys */
   for (p = list; p; p = p->next) {
-    const char *full = config_expand_abbrev(fmt, p->key, 0, 1);
+    const char *full = config_expand_abbrev(mgr, p->key, 0, 1);
     if (strcmp(full,p->key)) {
       tor_free(p->key);
       p->key = tor_strdup(full);
@@ -456,14 +499,14 @@ config_assign(const config_format_t *fmt, void *options, config_line_t *list,
    * mentioned config options, and maybe set to their defaults. */
   if (clear_first) {
     for (p = list; p; p = p->next)
-      config_reset_line(fmt, options, p->key, use_defaults);
+      config_reset_line(mgr, options, p->key, use_defaults);
   }
 
   options_seen = bitarray_init_zero(n_options);
   /* pass 3: assign. */
   while (list) {
     int r;
-    if ((r=config_assign_line(fmt, options, list, config_assign_flags,
+    if ((r=config_assign_line(mgr, options, list, config_assign_flags,
                               options_seen, msg))) {
       bitarray_free(options_seen);
       return r;
@@ -475,7 +518,7 @@ config_assign(const config_format_t *fmt, void *options, config_line_t *list,
   /** Now we're done assigning a group of options to the configuration.
    * Subsequent group assignments should _replace_ linelists, not extend
    * them. */
-  config_mark_lists_fragile(fmt, options);
+  config_mark_lists_fragile(mgr, options);
 
   return 0;
 }
@@ -483,12 +526,9 @@ config_assign(const config_format_t *fmt, void *options, config_line_t *list,
 /** Reset config option <b>var</b> to 0, 0.0, NULL, or the equivalent.
  * Called from config_reset() and config_free(). */
 static void
-config_clear(const config_format_t *fmt, void *options,
+config_clear(void *options,
              const config_var_t *var)
 {
-
-  (void)fmt; /* unused */
-
   struct_var_free(options, &var->member);
 }
 
@@ -496,20 +536,21 @@ config_clear(const config_format_t *fmt, void *options,
  * <b>use_defaults</b>, set it to its default value.
  * Called by config_init() and option_reset_line() and option_assign_line(). */
 static void
-config_reset(const config_format_t *fmt, void *options,
+config_reset(const config_mgr_t *mgr, void *options,
              const config_var_t *var, int use_defaults)
 {
+  const config_format_t *fmt = mgr->toplevel;
   config_line_t *c;
   char *msg = NULL;
   CONFIG_CHECK(fmt, options);
-  config_clear(fmt, options, var); /* clear it first */
+  config_clear(options, var); /* clear it first */
   if (!use_defaults)
     return; /* all done */
   if (var->initvalue) {
     c = tor_malloc_zero(sizeof(config_line_t));
     c->key = tor_strdup(var->member.name);
     c->value = tor_strdup(var->initvalue);
-    if (config_assign_value(fmt, options, c, &msg) < 0) {
+    if (config_assign_value(mgr, options, c, &msg) < 0) {
       // LCOV_EXCL_START
       log_warn(LD_BUG, "Failed to assign default: %s", msg);
       tor_free(msg); /* if this happens it's a bug */
@@ -521,9 +562,10 @@ config_reset(const config_format_t *fmt, void *options,
 
 /** Release storage held by <b>options</b>. */
 void
-config_free_(const config_format_t *fmt, void *options)
+config_free_(const config_mgr_t *mgr, void *options)
 {
   int i;
+  const config_format_t *fmt = mgr->toplevel;
 
   if (!options)
     return;
@@ -531,7 +573,7 @@ config_free_(const config_format_t *fmt, void *options)
   tor_assert(fmt);
 
   for (i=0; fmt->vars[i].member.name; ++i)
-    config_clear(fmt, options, &(fmt->vars[i]));
+    config_clear(options, &(fmt->vars[i]));
 
   if (fmt->extra) {
     config_line_t **linep = STRUCT_VAR_P(options, fmt->extra->offset);
@@ -545,14 +587,15 @@ config_free_(const config_format_t *fmt, void *options)
  * and <b>o2</b>.  Must not be called for LINELIST_S or OBSOLETE options.
  */
 int
-config_is_same(const config_format_t *fmt,
+config_is_same(const config_mgr_t *mgr,
                const void *o1, const void *o2,
                const char *name)
 {
+  const config_format_t *fmt = mgr->toplevel;
   CONFIG_CHECK(fmt, o1);
   CONFIG_CHECK(fmt, o2);
 
-  const config_var_t *var = config_find_option(fmt, name);
+  const config_var_t *var = config_find_option(mgr, name);
   if (!var) {
     return true;
   }
@@ -562,12 +605,13 @@ config_is_same(const config_format_t *fmt,
 
 /** Copy storage held by <b>old</b> into a new or_options_t and return it. */
 void *
-config_dup(const config_format_t *fmt, const void *old)
+config_dup(const config_mgr_t *mgr, const void *old)
 {
+  const config_format_t *fmt = mgr->toplevel;
   void *newopts;
   int i;
 
-  newopts = config_new(fmt);
+  newopts = config_new(mgr);
   for (i=0; fmt->vars[i].member.name; ++i) {
     if (config_var_is_contained(&fmt->vars[i])) {
       // Something else will copy this option, or it doesn't need copying.
@@ -586,9 +630,10 @@ config_dup(const config_format_t *fmt, const void *old)
 /** Set all vars in the configuration object <b>options</b> to their default
  * values. */
 void
-config_init(const config_format_t *fmt, void *options)
+config_init(const config_mgr_t *mgr, void *options)
 {
   int i;
+  const config_format_t *fmt = mgr->toplevel;
   const config_var_t *var;
   CONFIG_CHECK(fmt, options);
 
@@ -596,7 +641,7 @@ config_init(const config_format_t *fmt, void *options)
     var = &fmt->vars[i];
     if (!var->initvalue)
       continue; /* defaults to NULL or 0 */
-    config_reset(fmt, options, var, 1);
+    config_reset(mgr, options, var, 1);
   }
 }
 
@@ -605,11 +650,12 @@ config_init(const config_format_t *fmt, void *options)
  * Else, if comment_defaults, write default values as comments.
  */
 char *
-config_dump(const config_format_t *fmt, const void *default_options,
+config_dump(const config_mgr_t *mgr, const void *default_options,
             const void *options, int minimal,
             int comment_defaults)
 {
   smartlist_t *elements;
+  const config_format_t *fmt = mgr->toplevel;
   const void *defaults = default_options;
   void *defaults_tmp = NULL;
   config_line_t *line, *assigned;
@@ -618,8 +664,8 @@ config_dump(const config_format_t *fmt, const void *default_options,
   char *msg = NULL;
 
   if (defaults == NULL) {
-    defaults = defaults_tmp = config_new(fmt);
-    config_init(fmt, defaults_tmp);
+    defaults = defaults_tmp = config_new(mgr);
+    config_init(mgr, defaults_tmp);
   }
 
   /* XXX use a 1 here so we don't add a new log line while dumping */
@@ -643,15 +689,15 @@ config_dump(const config_format_t *fmt, const void *default_options,
     /* Don't save 'hidden' control variables. */
     if (fmt->vars[i].flags & CVFLAG_NODUMP)
       continue;
-    if (minimal && config_is_same(fmt, options, defaults,
+    if (minimal && config_is_same(mgr, options, defaults,
                                   fmt->vars[i].member.name))
       continue;
     else if (comment_defaults &&
-             config_is_same(fmt, options, defaults, fmt->vars[i].member.name))
+             config_is_same(mgr, options, defaults, fmt->vars[i].member.name))
       comment_option = 1;
 
     line = assigned =
-      config_get_assigned_option(fmt, options, fmt->vars[i].member.name, 1);
+      config_get_assigned_option(mgr, options, fmt->vars[i].member.name, 1);
 
     for (; line; line = line->next) {
       if (!strcmpstart(line->key, "__")) {
@@ -677,7 +723,7 @@ config_dump(const config_format_t *fmt, const void *default_options,
   SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
   smartlist_free(elements);
   if (defaults_tmp) {
-    fmt->free_fn(defaults_tmp);
+    fmt->free_fn(mgr, defaults_tmp);
   }
   return result;
 }
@@ -687,8 +733,9 @@ config_dump(const config_format_t *fmt, const void *default_options,
  * Return false otherwise.  Log errors at level <b>severity</b>.
  */
 bool
-config_check_ok(const config_format_t *fmt, const void *options, int severity)
+config_check_ok(const config_mgr_t *mgr, const void *options, int severity)
 {
+  const config_format_t *fmt = mgr->toplevel;
   bool all_ok = true;
   for (int i=0; fmt->vars[i].member.name; ++i) {
     if (!struct_var_ok(options, &fmt->vars[i].member)) {

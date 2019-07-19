@@ -843,7 +843,7 @@ static void config_maybe_load_geoip_files_(const or_options_t *options,
 static int options_validate_cb(void *old_options, void *options,
                                void *default_options,
                                int from_setconf, char **msg);
-static void options_free_cb(void *options);
+static void options_free_cb(const config_mgr_t *, void *options);
 static void cleanup_protocol_warning_severity_level(void);
 static void set_protocol_warning_severity_level(int warning_severity);
 
@@ -851,7 +851,7 @@ static void set_protocol_warning_severity_level(int warning_severity);
 #define OR_OPTIONS_MAGIC 9090909
 
 /** Configuration format for or_options_t. */
-STATIC const config_format_t options_format = {
+static const config_format_t options_format = {
   sizeof(or_options_t),
   {
    "or_options_t",
@@ -894,6 +894,19 @@ static smartlist_t *configured_ports = NULL;
 static int in_option_validation = 0;
 /* True iff we've initialized libevent */
 static int libevent_initialized = 0;
+
+/* A global configuration manager to handle all configuration objects. */
+static config_mgr_t *options_mgr = NULL;
+
+/** Return the global configuration manager object for torrc options. */
+STATIC const config_mgr_t *
+get_options_mgr(void)
+{
+  if (PREDICT_UNLIKELY(options_mgr == NULL)) {
+    options_mgr = config_mgr_new(&options_format);
+  }
+  return options_mgr;
+}
 
 /** Return the contents of our frontpage string, or NULL if not configured. */
 MOCK_IMPL(const char*,
@@ -977,14 +990,14 @@ set_options(or_options_t *new_val, char **msg)
   if (old_options && old_options != global_options) {
     elements = smartlist_new();
     for (i=0; options_format.vars[i].member.name; ++i) {
-      const config_var_t *var = &options_format.vars[i];
+      const config_var_t *var = &options_format.vars[i]; // XXXX 29211
       const char *var_name = var->member.name;
       if (config_var_is_contained(var)) {
         /* something else will check this var, or it doesn't need checking */
         continue;
       }
-      if (!config_is_same(&options_format, new_val, old_options, var_name)) {
-        line = config_get_assigned_option(&options_format, new_val,
+      if (!config_is_same(get_options_mgr(), new_val, old_options, var_name)) {
+        line = config_get_assigned_option(get_options_mgr(), new_val,
                                           var_name, 1);
 
         if (line) {
@@ -1046,7 +1059,7 @@ or_options_free_(or_options_t *options)
   tor_free(options->command_arg);
   tor_free(options->master_key_fname);
   config_free_lines(options->MyFamily);
-  config_free(&options_format, options);
+  config_free(get_options_mgr(), options);
 }
 
 /** Release all memory and resources held by global configuration structures.
@@ -1080,6 +1093,8 @@ config_free_all(void)
 
   have_parsed_cmdline = 0;
   libevent_initialized = 0;
+
+  config_mgr_free(options_mgr);
 }
 
 /** Make <b>address</b> -- a piece of information related to our operation as
@@ -2547,7 +2562,7 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
 
     param = tor_malloc_zero(sizeof(config_line_t));
     param->key = is_cmdline ? tor_strdup(argv[i]) :
-                   tor_strdup(config_expand_abbrev(&options_format, s, 1, 1));
+                 tor_strdup(config_expand_abbrev(get_options_mgr(), s, 1, 1));
     param->value = arg;
     param->command = command;
     param->next = NULL;
@@ -2573,7 +2588,7 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
 int
 option_is_recognized(const char *key)
 {
-  const config_var_t *var = config_find_option(&options_format, key);
+  const config_var_t *var = config_find_option(get_options_mgr(), key);
   return (var != NULL);
 }
 
@@ -2582,7 +2597,7 @@ option_is_recognized(const char *key)
 const char *
 option_get_canonical_name(const char *key)
 {
-  const config_var_t *var = config_find_option(&options_format, key);
+  const config_var_t *var = config_find_option(get_options_mgr(), key);
   return var ? var->member.name : NULL;
 }
 
@@ -2591,7 +2606,7 @@ option_get_canonical_name(const char *key)
 config_line_t *
 option_get_assignment(const or_options_t *options, const char *key)
 {
-  return config_get_assigned_option(&options_format, options, key, 1);
+  return config_get_assigned_option(get_options_mgr(), options, key, 1);
 }
 
 /** Try assigning <b>list</b> to the global options. You do this by duping
@@ -2607,9 +2622,9 @@ setopt_err_t
 options_trial_assign(config_line_t *list, unsigned flags, char **msg)
 {
   int r;
-  or_options_t *trial_options = config_dup(&options_format, get_options());
+  or_options_t *trial_options = config_dup(get_options_mgr(), get_options());
 
-  if ((r=config_assign(&options_format, trial_options,
+  if ((r=config_assign(get_options_mgr(), trial_options,
                        list, flags, msg)) < 0) {
     or_options_free(trial_options);
     return r;
@@ -2992,7 +3007,7 @@ is_local_addr, (const tor_addr_t *addr))
 or_options_t *
 options_new(void)
 {
-  return config_new(&options_format);
+  return config_new(get_options_mgr());
 }
 
 /** Set <b>options</b> to hold reasonable defaults for most options.
@@ -3000,10 +3015,10 @@ options_new(void)
 void
 options_init(or_options_t *options)
 {
-  config_init(&options_format, options);
+  config_init(get_options_mgr(), options);
   config_line_t *dflts = get_options_defaults();
   char *msg=NULL;
-  if (config_assign(&options_format, options, dflts,
+  if (config_assign(get_options_mgr(), options, dflts,
                     CAL_WARN_DEPRECATIONS, &msg)<0) {
     log_err(LD_BUG, "Unable to set default options: %s", msg);
     tor_free(msg);
@@ -3040,7 +3055,7 @@ options_dump(const or_options_t *options, int how_to_dump)
       return NULL;
   }
 
-  return config_dump(&options_format, use_defaults, options, minimal, 0);
+  return config_dump(get_options_mgr(), use_defaults, options, minimal, 0);
 }
 
 /** Return 0 if every element of sl is a string holding a decimal
@@ -3174,8 +3189,9 @@ options_validate_cb(void *old_options, void *options, void *default_options,
 
 /** Callback to free an or_options_t */
 static void
-options_free_cb(void *options)
+options_free_cb(const config_mgr_t *mgr, void *options)
 {
+  (void)mgr;
   or_options_free_(options);
 }
 
@@ -4435,7 +4451,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   STMT_BEGIN                                                            \
     if (!options->TestingTorNetwork &&                                  \
         !options->UsingTestNetworkDefaults_ &&                          \
-        !config_is_same(&options_format,options,                        \
+        !config_is_same(get_options_mgr(),options,                        \
                         default_options,#arg)) {                        \
       REJECT(#arg " may only be changed in testing Tor "                \
              "networks!");                                              \
@@ -5431,7 +5447,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
       err = SETOPT_ERR_PARSE;
       goto err;
     }
-    retval = config_assign(&options_format, newoptions, cl,
+    retval = config_assign(get_options_mgr(), newoptions, cl,
                            CAL_WARN_DEPRECATIONS, msg);
     config_free_lines(cl);
     if (retval < 0) {
@@ -5439,15 +5455,15 @@ options_init_from_string(const char *cf_defaults, const char *cf,
       goto err;
     }
     if (i==0)
-      newdefaultoptions = config_dup(&options_format, newoptions);
+      newdefaultoptions = config_dup(get_options_mgr(), newoptions);
   }
 
   if (newdefaultoptions == NULL) {
-    newdefaultoptions = config_dup(&options_format, global_default_options);
+    newdefaultoptions = config_dup(get_options_mgr(), global_default_options);
   }
 
   /* Go through command-line variables too */
-  retval = config_assign(&options_format, newoptions,
+  retval = config_assign(get_options_mgr(), newoptions,
                          global_cmdline_options, CAL_WARN_DEPRECATIONS, msg);
   if (retval < 0) {
     err = SETOPT_ERR_PARSE;

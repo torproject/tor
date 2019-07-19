@@ -39,8 +39,10 @@ typedef struct config_deprecation_t {
  * of arguments. */
 typedef int (*validate_fn_t)(void*,void*,void*,int,char**);
 
+struct config_mgr_t;
+
 /** Callback to free a configuration object. */
-typedef void (*free_cfg_fn_t)(void*);
+typedef void (*free_cfg_fn_t)(const struct config_mgr_t *mgr, void*);
 
 /** Information on the keys, value types, key-to-struct-member mappings,
  * variable descriptions, validation functions, and abbreviations for a
@@ -61,6 +63,19 @@ typedef struct config_format_t {
   const struct_member_t *extra;
 } config_format_t;
 
+/**
+ * A collection of config_format_t objects to describe several objects
+ * that are all configured with the same configuration file.
+ *
+ * (NOTE: for now, this only handles a single config_format_t.)
+ **/
+typedef struct config_mgr_t config_mgr_t;
+
+config_mgr_t *config_mgr_new(const config_format_t *toplevel_fmt);
+void config_mgr_free_(config_mgr_t *mgr);
+#define config_mgr_free(mgr) \
+  FREE_AND_NULL(config_mgr_t, config_mgr_free_, (mgr))
+
 /** Macro: assert that <b>cfg</b> has the right magic field for format
  * <b>fmt</b>. */
 #define CONFIG_CHECK(fmt, cfg) STMT_BEGIN                               \
@@ -72,34 +87,34 @@ typedef struct config_format_t {
 #define CAL_CLEAR_FIRST       (1u<<1)
 #define CAL_WARN_DEPRECATIONS (1u<<2)
 
-void *config_new(const config_format_t *fmt);
-void config_free_(const config_format_t *fmt, void *options);
-#define config_free(fmt, options) do {                \
-    config_free_((fmt), (options));                   \
+void *config_new(const config_mgr_t *fmt);
+void config_free_(const config_mgr_t *fmt, void *options);
+#define config_free(mgr, options) do {                \
+    config_free_((mgr), (options));                   \
     (options) = NULL;                                 \
   } while (0)
 
-struct config_line_t *config_get_assigned_option(const config_format_t *fmt,
+struct config_line_t *config_get_assigned_option(const config_mgr_t *mgr,
                                           const void *options, const char *key,
                                           int escape_val);
-int config_is_same(const config_format_t *fmt,
+int config_is_same(const config_mgr_t *fmt,
                    const void *o1, const void *o2,
                    const char *name);
-void config_init(const config_format_t *fmt, void *options);
-void *config_dup(const config_format_t *fmt, const void *old);
-char *config_dump(const config_format_t *fmt, const void *default_options,
+void config_init(const config_mgr_t *mgr, void *options);
+void *config_dup(const config_mgr_t *mgr, const void *old);
+char *config_dump(const config_mgr_t *mgr, const void *default_options,
                   const void *options, int minimal,
                   int comment_defaults);
-bool config_check_ok(const config_format_t *fmt, const void *options,
+bool config_check_ok(const config_mgr_t *mgr, const void *options,
                      int severity);
-int config_assign(const config_format_t *fmt, void *options,
+int config_assign(const config_mgr_t *mgr, void *options,
                   struct config_line_t *list,
                   unsigned flags, char **msg);
-const char *config_find_deprecation(const config_format_t *fmt,
+const char *config_find_deprecation(const config_mgr_t *mgr,
                                      const char *key);
-const config_var_t *config_find_option(const config_format_t *fmt,
+const config_var_t *config_find_option(const config_mgr_t *mgr,
                                        const char *key);
-const char *config_expand_abbrev(const config_format_t *fmt,
+const char *config_expand_abbrev(const config_mgr_t *mgr,
                                  const char *option,
                                  int command_line, int warn_obsolete);
 void warn_deprecated_option(const char *what, const char *why);
@@ -117,7 +132,7 @@ bool config_var_is_contained(const config_var_t *var);
 #define CFG_EQ_ROUTERSET(a,b,opt) routerset_equal((a)->opt, (b)->opt)
 
 #ifdef CONFPARSE_PRIVATE
-STATIC void config_reset_line(const config_format_t *fmt, void *options,
+STATIC void config_reset_line(const config_mgr_t *mgr, void *options,
                               const char *key, int use_defaults);
 #endif
 

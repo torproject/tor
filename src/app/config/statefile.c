@@ -145,7 +145,7 @@ static int or_state_validate_cb(void *old_options, void *options,
                                 void *default_options,
                                 int from_setconf, char **msg);
 
-static void or_state_free_cb(void *state);
+static void or_state_free_cb(const config_mgr_t *mgr, void *state);
 
 /** Magic value for or_state_t. */
 #define OR_STATE_MAGIC 0x57A73f57
@@ -173,6 +173,19 @@ static const config_format_t state_format = {
   or_state_free_cb,
   &state_extra_var,
 };
+
+/* A global configuration manager for state-file objects */
+static config_mgr_t *state_mgr = NULL;
+
+/** Return the configuration manager for state-file objects. */
+static const config_mgr_t *
+get_state_mgr(void)
+{
+  if (PREDICT_UNLIKELY(state_mgr == NULL)) {
+    state_mgr = config_mgr_new(&state_format);
+  }
+  return state_mgr;
+}
 
 /** Persistent serialized state. */
 static or_state_t *global_state = NULL;
@@ -269,8 +282,9 @@ or_state_validate_cb(void *old_state, void *state, void *default_state,
 }
 
 static void
-or_state_free_cb(void *state)
+or_state_free_cb(const config_mgr_t *mgr, void *state)
 {
+  (void)mgr;
   or_state_free_(state);
 }
 
@@ -298,7 +312,7 @@ or_state_set(or_state_t *new_state)
   char *err = NULL;
   int ret = 0;
   tor_assert(new_state);
-  config_free(&state_format, global_state);
+  config_free(get_state_mgr(), global_state);
   global_state = new_state;
   if (entry_guards_parse_state(global_state, 1, &err)<0) {
     log_warn(LD_GENERAL,"%s",err);
@@ -363,7 +377,7 @@ or_state_new(void)
 {
   or_state_t *new_state = tor_malloc_zero(sizeof(or_state_t));
   new_state->magic_ = OR_STATE_MAGIC;
-  config_init(&state_format, new_state);
+  config_init(get_state_mgr(), new_state);
 
   return new_state;
 }
@@ -404,7 +418,7 @@ or_state_load(void)
     int assign_retval;
     if (config_get_lines(contents, &lines, 0)<0)
       goto done;
-    assign_retval = config_assign(&state_format, new_state,
+    assign_retval = config_assign(get_state_mgr(), new_state,
                                   lines, 0, &errmsg);
     config_free_lines(lines);
     if (assign_retval<0)
@@ -431,7 +445,7 @@ or_state_load(void)
     or_state_save_broken(fname);
 
     tor_free(contents);
-    config_free(&state_format, new_state);
+    config_free(get_state_mgr(), new_state);
 
     new_state = or_state_new();
   } else if (contents) {
@@ -464,7 +478,7 @@ or_state_load(void)
   tor_free(fname);
   tor_free(contents);
   if (new_state)
-    config_free(&state_format, new_state);
+    config_free(get_state_mgr(), new_state);
 
   return r;
 }
@@ -517,7 +531,7 @@ or_state_save(time_t now)
   tor_free(global_state->TorVersion);
   tor_asprintf(&global_state->TorVersion, "Tor %s", get_version());
 
-  state = config_dump(&state_format, NULL, global_state, 1, 0);
+  state = config_dump(get_state_mgr(), NULL, global_state, 1, 0);
   format_local_iso_time(tbuf, now);
   tor_asprintf(&contents,
                "# Tor state file last generated on %s local time\n"
@@ -727,7 +741,7 @@ or_state_free_(or_state_t *state)
   if (!state)
     return;
 
-  config_free(&state_format, state);
+  config_free(get_state_mgr(), state);
 }
 
 void
@@ -735,4 +749,5 @@ or_state_free_all(void)
 {
   or_state_free(global_state);
   global_state = NULL;
+  config_mgr_free(state_mgr);
 }
