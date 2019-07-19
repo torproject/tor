@@ -16,6 +16,7 @@
 #include <stdarg.h>
 #include "lib/cc/torint.h"
 #include "lib/cc/compat_compiler.h"
+#include "lib/defs/logging_types.h"
 #include "lib/testsupport/testsupport.h"
 
 #ifdef HAVE_SYSLOG_H
@@ -131,9 +132,6 @@
 /** This log message should not include a function name, even if it otherwise
  * would. Used as a flag, not a log domain. */
 #define LD_NOFUNCNAME (UINT64_C(1)<<63)
-
-/** Mask of zero or more log domains, OR'd together. */
-typedef uint64_t log_domain_mask_t;
 
 /** Configures which severities are logged for each logging domain for a given
  * log target. */
