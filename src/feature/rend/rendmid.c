@@ -70,7 +70,8 @@ rend_mid_establish_intro_legacy(or_circuit_t *circ, const uint8_t *request,
     goto err;
   }
   if (tor_memneq(expected_digest, request+2+asn1len, DIGEST_LEN)) {
-    log_warn(LD_PROTOCOL, "Hash of session info was not as expected.");
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Hash of session info was not as expected.");
     reason = END_CIRC_REASON_TORPROTOCOL;
     goto err;
   }
@@ -116,7 +117,6 @@ rend_mid_establish_intro_legacy(or_circuit_t *circ, const uint8_t *request,
   /* Now, set up this circuit. */
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_INTRO_POINT);
   hs_circuitmap_register_intro_circ_v2_relay_side(circ, (uint8_t *)pk_digest);
-
   log_info(LD_REND,
            "Established introduction point on circuit %u for service %s",
            (unsigned) circ->p_circ_id, safe_str(serviceid));
