@@ -275,6 +275,15 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
     goto err;
   }
 
+  if (circ->already_received_establish_rendezvous) {
+    /* We error and close the circuit because it is not suitable for any kind
+     * of response or transmission as it's a violation of the protocol. */
+    goto err;
+  }
+  /* Mark the circuit that we got this cell. None are allowed after this as a
+   * DoS mitigation since one circuit with one client can hammer a service. */
+  circ->already_received_establish_rendezvous = 1;
+
   /* Acknowledge the request. */
   if (relay_send_command_from_edge(0,TO_CIRCUIT(circ),
                                    RELAY_COMMAND_RENDEZVOUS_ESTABLISHED,
@@ -327,6 +336,16 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
     reason = END_CIRC_REASON_TORPROTOCOL;
     goto err;
   }
+
+  if (circ->already_received_rendevous1) {
+    /* We error and close the circuit because it is not suitable for any kind
+     * of response or transmission as it's a violation of the protocol. */
+    reason = END_CIRC_REASON_TORPROTOCOL;
+    goto err;
+  }
+  /* Mark the circuit that we got this cell. None are allowed after this as a
+   * DoS mitigation since one circuit with one client can hammer a service. */
+  circ->already_received_rendevous1 = 1;
 
   base16_encode(hexid, sizeof(hexid), (const char*)request, 4);
 

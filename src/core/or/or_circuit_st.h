@@ -56,8 +56,17 @@ struct or_circuit_t {
    * to the specification? */
   unsigned int remaining_relay_early_cells : 4;
 
+  /* We have already received an ESTABLISH_INTRO cell on this circuit. */
+  unsigned int already_received_establish_intro : 1;
+
+  /* We have already received an ESTABLISH_RENDEZVOUS cell on this circuit. */
+  unsigned int already_received_establish_rendezvous : 1;
+
   /* We have already received an INTRODUCE1 cell on this circuit. */
   unsigned int already_received_introduce1 : 1;
+
+  /* We have already received an RENDEZVOUS1 cell on this circuit. */
+  unsigned int already_received_rendevous1 : 1;
 
   /** If set, this circuit carries HS traffic. Consider it in any HS
    *  statistics. */

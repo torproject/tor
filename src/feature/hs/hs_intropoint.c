@@ -319,6 +319,15 @@ hs_intro_received_establish_intro(or_circuit_t *circ, const uint8_t *request,
     goto err;
   }
 
+  if (circ->already_received_establish_intro) {
+    /* We error and close the circuit because it is not suitable for any kind
+     * of response or transmission as it's a violation of the protocol. */
+    goto err;
+  }
+  /* Mark the circuit that we got this cell. None are allowed after this as a
+   * DoS mitigation since one circuit with one client can hammer a service. */
+  circ->already_received_establish_intro = 1;
+
   /* Using the first byte of the cell, figure out the version of
    * ESTABLISH_INTRO and pass it to the appropriate cell handler */
   const uint8_t first_byte = request[0];
