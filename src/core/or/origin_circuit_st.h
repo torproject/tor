@@ -234,6 +234,19 @@ struct origin_circuit_t {
   /* XXXX NM This can get re-used after 2**32 circuits. */
   uint32_t global_identifier;
 
+  /* We have already received an INTRODUCE_ACK cell on this circuit. */
+  unsigned int already_received_introduce_ack : 1;
+
+  /* We have already received an RENDEZVOUS2 cell on this circuit. */
+  unsigned int already_received_rendevous2 : 1;
+
+  /* We have already received an INTRO_ESTABLISHED cell on this circuit. */
+  unsigned int already_received_intro_established : 1;
+
+  /* We have already received an RENDEZVOUS_ESTABLISHED cell on this
+   * circuit. */
+  unsigned int already_received_rendevous_established : 1;
+
   /** True if we have associated one stream to this circuit, thereby setting
    * the isolation parameters for this circuit.  Note that this doesn't
    * necessarily mean that we've <em>attached</em> any streams to the circuit:

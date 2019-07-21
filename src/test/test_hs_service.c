@@ -994,6 +994,7 @@ test_intro_established(void *arg)
                       &service->keys.identity_pk);
   /* No introduction point associated to it. */
   setup_full_capture_of_logs(LOG_WARN);
+  circ->already_received_intro_established = 0;
   ret = hs_service_receive_intro_established(circ, payload, sizeof(payload));
   tt_int_op(ret, OP_EQ, -1);
   expect_log_msg_containing("Introduction circuit established without an "
@@ -1010,6 +1011,7 @@ test_intro_established(void *arg)
   }
 
   /* Send an empty payload. INTRO_ESTABLISHED cells are basically zeroes. */
+  circ->already_received_intro_established = 0;
   ret = hs_service_receive_intro_established(circ, payload, sizeof(payload));
   tt_int_op(ret, OP_EQ, 0);
   tt_u64_op(ip->circuit_established, OP_EQ, 1);

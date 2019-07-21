@@ -1428,6 +1428,15 @@ hs_client_receive_rendezvous_acked(origin_circuit_t *circ,
     goto err;
   }
 
+  if (circ->already_received_rendevous_established) {
+    /* We error and close the circuit because it is not suitable for any kind
+     * of response or transmission as it's a violation of the protocol. */
+    goto err;
+  }
+  /* Mark the circuit that we got this cell. None are allowed after this as a
+   * DoS mitigation since one circuit with one client can hammer a service. */
+  circ->already_received_rendevous_established = 1;
+
   log_info(LD_REND, "Received an RENDEZVOUS_ESTABLISHED. This circuit is "
                     "now ready for rendezvous.");
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_REND_READY);
@@ -1767,9 +1776,17 @@ hs_client_receive_introduce_ack(origin_circuit_t *circ,
   if (TO_CIRCUIT(circ)->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
     log_warn(LD_PROTOCOL, "Unexpected INTRODUCE_ACK on circuit %u.",
              (unsigned int) TO_CIRCUIT(circ)->n_circ_id);
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
-    goto end;
+    goto err;
   }
+
+  if (circ->already_received_introduce_ack) {
+    /* We error and close the circuit because it is not suitable for any kind
+     * of response or transmission as it's a violation of the protocol. */
+    goto err;
+  }
+  /* Mark the circuit that we got this cell. None are allowed after this as a
+   * DoS mitigation since one circuit with one client can hammer a service. */
+  circ->already_received_introduce_ack = 1;
 
   ret = (circ->hs_ident) ? handle_introduce_ack(circ, payload, payload_len) :
                            rend_client_introduction_acked(circ, payload,
@@ -1777,6 +1794,9 @@ hs_client_receive_introduce_ack(origin_circuit_t *circ,
   /* For path bias: This circuit was used successfully. NACK or ACK counts. */
   pathbias_mark_use_success(circ);
 
+  goto end;
+ err:
+  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
  end:
   return ret;
 }
@@ -1800,9 +1820,17 @@ hs_client_receive_rendezvous2(origin_circuit_t *circ,
     log_warn(LD_PROTOCOL, "Unexpected RENDEZVOUS2 cell on circuit %u. "
                           "Closing circuit.",
              (unsigned int) TO_CIRCUIT(circ)->n_circ_id);
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
-    goto end;
+    goto err;
   }
+
+  if (circ->already_received_rendevous2) {
+    /* We error and close the circuit because it is not suitable for any kind
+     * of response or transmission as it's a violation of the protocol. */
+    goto err;
+  }
+  /* Mark the circuit that we got this cell. None are allowed after this as a
+   * DoS mitigation since one circuit with one client can hammer a service. */
+  circ->already_received_rendevous2 = 1;
 
   log_info(LD_REND, "Got RENDEZVOUS2 cell from hidden service on circuit %u.",
            TO_CIRCUIT(circ)->n_circ_id);
@@ -1810,6 +1838,9 @@ hs_client_receive_rendezvous2(origin_circuit_t *circ,
   ret = (circ->hs_ident) ? handle_rendezvous2(circ, payload, payload_len) :
                            rend_client_receive_rendezvous(circ, payload,
                                                           payload_len);
+  goto end;
+ err:
+  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
  end:
   return ret;
 }

@@ -3850,6 +3850,15 @@ hs_service_receive_intro_established(origin_circuit_t *circ,
     goto err;
   }
 
+  if (circ->already_received_intro_established) {
+    /* We error and close the circuit because it is not suitable for any kind
+     * of response or transmission as it's a violation of the protocol. */
+    goto err;
+  }
+  /* Mark the circuit that we got this cell. None are allowed after this as a
+   * DoS mitigation since one circuit with one client can hammer a service. */
+  circ->already_received_intro_established = 1;
+
   /* Handle both version. v2 uses rend_data and v3 uses the hs circuit
    * identifier hs_ident. Can't be both. */
   if (circ->hs_ident) {
