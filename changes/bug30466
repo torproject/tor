@@ -1,0 +1,5 @@
+  o Minor bugfixes (onion services):
+    - When establishing connections or circuit between onion service entries,
+      only allow one control cell for each type except for INTRODUCE2 cells.
+      Previously, we only allowed one of INTRODUCE1 but unlimited of everything
+      else. Fixes bug 30466; bugfix on 0.0.6. Patch by Neel Chauhan
