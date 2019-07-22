@@ -37,8 +37,38 @@
 #include "lib/string/printf.h"
 #include "lib/string/util_string.h"
 
+/**
+ * A managed_var_t is an internal wrapper around a config_var_t in
+ * a config_format_t structure.  It is used by config_mgr_t to
+ * keep track of which option goes with which structure. */
+typedef struct managed_var_t {
+  /**
+   * A pointer to the config_var_t for this option.
+   */
+  const config_var_t *cvar;
+  /**
+   * The index of the object in which this option is stored.  It is
+   * IDX_TOPLEVEL to indicate that the object is the top-level object.
+   **/
+  int object_idx;
+} managed_var_t;
+
 static void config_reset(const config_mgr_t *fmt, void *options,
-                         const config_var_t *var, int use_defaults);
+                         const managed_var_t *var, int use_defaults);
+static void config_mgr_register_fmt(config_mgr_t *mgr,
+                                    const config_format_t *fmt,
+                                    int object_idx);
+
+/** Release all storage held in a managed_var_t. */
+static void
+managed_var_free_(managed_var_t *mv)
+{
+  if (!mv)
+    return;
+  tor_free(mv);
+}
+#define managed_var_free(mv) \
+  FREE_AND_NULL(managed_var_t, managed_var_free_, (mv))
 
 struct config_mgr_t {
   /** The 'top-level' configuration format.  This one is used for legacy
@@ -48,7 +78,16 @@ struct config_mgr_t {
    * contains.  A subsequent commit will add more. XXXX)
    */
   const config_format_t *toplevel;
+  /** A smartlist of managed_var_t objects for all configuration formats. */
+  smartlist_t *all_vars;
+  /** A smartlist of config_abbrev_t objects for all abbreviations. These
+   * objects are */
+  smartlist_t *all_abbrevs;
+  /** A smartlist of config_deprecation_t for all configuration formats. */
+  smartlist_t *all_deprecations;
 };
+
+#define IDX_TOPLEVEL (-1)
 
 /** Create a new config_mgr_t to manage a set of configuration objects to be
  * wrapped under <b>toplevel_fmt</b>. */
@@ -57,7 +96,69 @@ config_mgr_new(const config_format_t *toplevel_fmt)
 {
   config_mgr_t *mgr = tor_malloc_zero(sizeof(config_mgr_t));
   mgr->toplevel = toplevel_fmt;
+  mgr->all_vars = smartlist_new();
+  mgr->all_abbrevs = smartlist_new();
+  mgr->all_deprecations = smartlist_new();
+
+  config_mgr_register_fmt(mgr, toplevel_fmt, IDX_TOPLEVEL);
   return mgr;
+}
+
+/** Add a config_format_t to a manager, with a specified (unique) index. */
+static void
+config_mgr_register_fmt(config_mgr_t *mgr,
+                        const config_format_t *fmt,
+                        int object_idx)
+{
+  int i;
+
+  /* register variables */
+  for (i = 0; fmt->vars[i].member.name; ++i) {
+    managed_var_t *mv = tor_malloc_zero(sizeof(managed_var_t));
+    mv->cvar = &fmt->vars[i];
+    mv->object_idx = object_idx;
+    smartlist_add(mgr->all_vars, mv);
+  }
+
+  /* register abbrevs */
+  if (fmt->abbrevs) {
+    for (i = 0; fmt->abbrevs[i].abbreviated; ++i) {
+      smartlist_add(mgr->all_abbrevs, (void*)&fmt->abbrevs[i]);
+    }
+  }
+
+  /* register deprecations. */
+  if (fmt->deprecations) {
+    const config_deprecation_t *d;
+    for (d = fmt->deprecations; d->name; ++d) {
+      smartlist_add(mgr->all_deprecations, (void*)d);
+    }
+  }
+}
+
+/**
+ * Return a pointer to the configuration object within <b>toplevel</b> whose
+ * index is <b>idx</b>.
+ *
+ * NOTE: XXXX Eventually, there will be multiple objects supported within the
+ * toplevel object.  For example, the or_options_t will contain pointers
+ * to configuration objects for other modules.  This function gets
+ * the sub-object for a particular modules.
+ */
+static void *
+config_mgr_get_obj_mutable(const config_mgr_t *mgr, void *toplevel, int idx)
+{
+  (void)mgr;
+  tor_assert(idx == IDX_TOPLEVEL); // nothing else is implemented yet XXXX
+  tor_assert(toplevel);
+  return toplevel;
+}
+
+/** As config_mgr_get_obj_mutable(), but return a const pointer. */
+static const void *
+config_mgr_get_obj(const config_mgr_t *mgr, const void *toplevel, int idx)
+{
+  return config_mgr_get_obj_mutable(mgr, (void*)toplevel, idx);
 }
 
 /** Release all storage held in <b>mgr</b> */
@@ -66,6 +167,10 @@ config_mgr_free_(config_mgr_t *mgr)
 {
   if (!mgr)
     return;
+  SMARTLIST_FOREACH(mgr->all_vars, managed_var_t *, mv, managed_var_free(mv));
+  smartlist_free(mgr->all_vars);
+  smartlist_free(mgr->all_abbrevs);
+  smartlist_free(mgr->all_deprecations);
   memset(mgr, 0, sizeof(*mgr));
   tor_free(mgr);
 }
@@ -94,27 +199,23 @@ const char *
 config_expand_abbrev(const config_mgr_t *mgr, const char *option,
                      int command_line, int warn_obsolete)
 {
-  const config_format_t *fmt = mgr->toplevel;
-  int i;
-  if (! fmt->abbrevs)
-    return option;
-  for (i=0; fmt->abbrevs[i].abbreviated; ++i) {
+  SMARTLIST_FOREACH_BEGIN(mgr->all_abbrevs, const config_abbrev_t *, abbrev) {
     /* Abbreviations are case insensitive. */
-    if (!strcasecmp(option,fmt->abbrevs[i].abbreviated) &&
-        (command_line || !fmt->abbrevs[i].commandline_only)) {
-      if (warn_obsolete && fmt->abbrevs[i].warn) {
+    if (!strcasecmp(option, abbrev->abbreviated) &&
+        (command_line || !abbrev->commandline_only)) {
+      if (warn_obsolete && abbrev->warn) {
         log_warn(LD_CONFIG,
                  "The configuration option '%s' is deprecated; "
                  "use '%s' instead.",
-                 fmt->abbrevs[i].abbreviated,
-                 fmt->abbrevs[i].full);
+                 abbrev->abbreviated,
+                 abbrev->full);
       }
       /* Keep going through the list in case we want to rewrite it more.
        * (We could imagine recursing here, but I don't want to get the
        * user into an infinite loop if we craft our list wrong.) */
-      option = fmt->abbrevs[i].full;
+      option = abbrev->full;
     }
-  }
+  } SMARTLIST_FOREACH_END(abbrev);
   return option;
 }
 
@@ -124,18 +225,66 @@ config_expand_abbrev(const config_mgr_t *mgr, const char *option,
 const char *
 config_find_deprecation(const config_mgr_t *mgr, const char *key)
 {
-  const config_format_t *fmt = mgr->toplevel;
-  if (BUG(fmt == NULL) || BUG(key == NULL))
+  if (BUG(mgr == NULL) || BUG(key == NULL))
     return NULL; // LCOV_EXCL_LINE
-  if (fmt->deprecations == NULL)
-    return NULL;
 
-  const config_deprecation_t *d;
-  for (d = fmt->deprecations; d->name; ++d) {
+  SMARTLIST_FOREACH_BEGIN(mgr->all_deprecations, const config_deprecation_t *,
+                          d) {
     if (!strcasecmp(d->name, key)) {
       return d->why_deprecated ? d->why_deprecated : "";
     }
-  }
+  } SMARTLIST_FOREACH_END(d);
+  return NULL;
+}
+
+/**
+ * Find the managed_var_t object for a variable whose name is <b>name</b>
+ * according to <b>mgr</b>.   Return that object, or NULL if none exists.
+ *
+ * If <b>allow_truncated</b> is true, then accept any variable whose
+ * name begins with <b>name</b>.
+ *
+ * If <b>idx_out</b> is not NULL, set *<b>idx_out</b> to the position of
+ * that variable within mgr-&gt;all_vars, or to -1 if the variable is
+ * not found.
+ */
+static const managed_var_t *
+config_mgr_find_var(const config_mgr_t *mgr,
+                    const char *key,
+                    bool allow_truncated, int *idx_out)
+{
+  const size_t keylen = strlen(key);
+  if (idx_out)
+    *idx_out = -1;
+
+  if (!keylen)
+    return NULL; /* if they say "--" on the command line, it's not an option */
+
+  /* First, check for an exact (case-insensitive) match */
+  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, const managed_var_t *, mv) {
+    if (!strcasecmp(mv->cvar->member.name, key)) {
+      if (idx_out)
+        *idx_out = mv_sl_idx;
+      return mv;
+    }
+  } SMARTLIST_FOREACH_END(mv);
+
+  if (!allow_truncated)
+    return NULL;
+
+  /* If none, check for an abbreviated match */
+  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, const managed_var_t *, mv) {
+    if (!strncasecmp(key, mv->cvar->member.name, keylen)) {
+      log_warn(LD_CONFIG, "The abbreviation '%s' is deprecated. "
+               "Please use '%s' instead",
+               key, mv->cvar->member.name);
+      if (idx_out)
+        *idx_out = mv_sl_idx;
+      return mv;
+    }
+  } SMARTLIST_FOREACH_END(mv);
+
+  /* Okay, unrecognized option */
   return NULL;
 }
 
@@ -147,39 +296,18 @@ config_find_deprecation(const config_mgr_t *mgr, const char *key)
 const config_var_t *
 config_find_option(const config_mgr_t *mgr, const char *key)
 {
-  const config_format_t *fmt = mgr->toplevel;
-  int i;
-  size_t keylen = strlen(key);
-  if (!keylen)
-    return NULL; /* if they say "--" on the command line, it's not an option */
-  /* First, check for an exact (case-insensitive) match */
-  for (i=0; fmt->vars[i].member.name; ++i) {
-    if (!strcasecmp(key, fmt->vars[i].member.name)) {
-      return &fmt->vars[i];
-    }
-  }
-  /* If none, check for an abbreviated match */
-  for (i=0; fmt->vars[i].member.name; ++i) {
-    if (!strncasecmp(key, fmt->vars[i].member.name, keylen)) {
-      log_warn(LD_CONFIG, "The abbreviation '%s' is deprecated. "
-               "Please use '%s' instead",
-               key, fmt->vars[i].member.name);
-      return &fmt->vars[i];
-    }
-  }
-  /* Okay, unrecognized option */
-  return NULL;
+  const managed_var_t *mv = config_mgr_find_var(mgr, key, true, NULL);
+  if (mv)
+    return mv->cvar;
+  else
+    return NULL;
 }
 
 /** Return the number of option entries in <b>fmt</b>. */
 static int
 config_count_options(const config_mgr_t *mgr)
 {
-  const config_format_t *fmt = mgr->toplevel;
-  int i;
-  for (i=0; fmt->vars[i].member.name; ++i)
-    ;
-  return i;
+  return smartlist_len(mgr->all_vars);
 }
 
 bool
@@ -213,16 +341,17 @@ static int
 config_assign_value(const config_mgr_t *mgr, void *options,
                     config_line_t *c, char **msg)
 {
-  const config_var_t *var;
+  const managed_var_t *var;
   const config_format_t *fmt = mgr->toplevel;
 
   CONFIG_CHECK(fmt, options);
 
-  var = config_find_option(mgr, c->key);
+  var = config_mgr_find_var(mgr, c->key, true, NULL);
   tor_assert(var);
-  tor_assert(!strcmp(c->key, var->member.name));
+  tor_assert(!strcmp(c->key, var->cvar->member.name));
+  void *object = config_mgr_get_obj_mutable(mgr, options, var->object_idx);
 
-  return struct_var_kvassign(options, c, msg, &var->member);
+  return struct_var_kvassign(object, c, msg, &var->cvar->member);
 }
 
 /** Mark every linelist in <b>options</b> "fragile", so that fresh assignments
@@ -230,16 +359,13 @@ config_assign_value(const config_mgr_t *mgr, void *options,
 static void
 config_mark_lists_fragile(const config_mgr_t *mgr, void *options)
 {
-  int i;
-  const config_format_t *fmt = mgr->toplevel;
-
-  tor_assert(fmt);
+  tor_assert(mgr);
   tor_assert(options);
 
-  for (i = 0; fmt->vars[i].member.name; ++i) {
-    const config_var_t *var = &fmt->vars[i];
-    struct_var_mark_fragile(options, &var->member);
-  }
+  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, const managed_var_t *, mv) {
+    void *object = config_mgr_get_obj_mutable(mgr, options, mv->object_idx);
+    struct_var_mark_fragile(object, &mv->cvar->member);
+  } SMARTLIST_FOREACH_END(mv);
 }
 
 void
@@ -270,12 +396,13 @@ config_assign_line(const config_mgr_t *mgr, void *options,
   const unsigned use_defaults = flags & CAL_USE_DEFAULTS;
   const unsigned clear_first = flags & CAL_CLEAR_FIRST;
   const unsigned warn_deprecations = flags & CAL_WARN_DEPRECATIONS;
-  const config_var_t *var;
+  const managed_var_t *mvar;
 
   CONFIG_CHECK(fmt, options);
 
-  var = config_find_option(mgr, c->key);
-  if (!var) {
+  int var_index = -1;
+  mvar = config_mgr_find_var(mgr, c->key, true, &var_index);
+  if (!mvar) {
     if (fmt->extra) {
       void *lvalue = STRUCT_VAR_P(options, fmt->extra->offset);
       log_info(LD_CONFIG,
@@ -289,44 +416,47 @@ config_assign_line(const config_mgr_t *mgr, void *options,
     }
   }
 
+  const config_var_t *cvar = mvar->cvar;
+  tor_assert(cvar);
+
   /* Put keyword into canonical case. */
-  if (strcmp(var->member.name, c->key)) {
+  if (strcmp(cvar->member.name, c->key)) {
     tor_free(c->key);
-    c->key = tor_strdup(var->member.name);
+    c->key = tor_strdup(cvar->member.name);
   }
 
   const char *deprecation_msg;
   if (warn_deprecations &&
-      (deprecation_msg = config_find_deprecation(mgr, var->member.name))) {
-    warn_deprecated_option(var->member.name, deprecation_msg);
+      (deprecation_msg = config_find_deprecation(mgr, cvar->member.name))) {
+    warn_deprecated_option(cvar->member.name, deprecation_msg);
   }
 
   if (!strlen(c->value)) {
     /* reset or clear it, then return */
     if (!clear_first) {
-      if (config_var_is_cumulative(var) && c->command != CONFIG_LINE_CLEAR) {
+      if (config_var_is_cumulative(cvar) && c->command != CONFIG_LINE_CLEAR) {
         /* We got an empty linelist from the torrc or command line.
            As a special case, call this an error. Warn and ignore. */
         log_warn(LD_CONFIG,
                  "Linelist option '%s' has no value. Skipping.", c->key);
       } else { /* not already cleared */
-        config_reset(mgr, options, var, use_defaults);
+        config_reset(mgr, options, mvar, use_defaults);
       }
     }
     return 0;
   } else if (c->command == CONFIG_LINE_CLEAR && !clear_first) {
     // XXXX This is unreachable, since a CLEAR line always has an
     // XXXX empty value.
-    config_reset(mgr, options, var, use_defaults); // LCOV_EXCL_LINE
+    config_reset(mgr, options, mvar, use_defaults); // LCOV_EXCL_LINE
   }
 
-  if (options_seen && ! config_var_is_cumulative(var)) {
+  if (options_seen && ! config_var_is_cumulative(cvar)) {
     /* We're tracking which options we've seen, and this option is not
      * supposed to occur more than once. */
-    int var_index = (int)(var - fmt->vars);
+    tor_assert(var_index >= 0);
     if (bitarray_is_set(options_seen, var_index)) {
       log_warn(LD_CONFIG, "Option '%s' used more than once; all but the last "
-               "value will be ignored.", var->member.name);
+               "value will be ignored.", cvar->member.name);
     }
     bitarray_set(options_seen, var_index);
   }
@@ -343,11 +473,11 @@ config_reset_line(const config_mgr_t *mgr, void *options,
                   const char *key, int use_defaults)
 {
   const config_format_t *fmt = mgr->toplevel;
-  const config_var_t *var;
+  const managed_var_t *var;
 
   CONFIG_CHECK(fmt, options);
 
-  var = config_find_option(mgr, key);
+  var = config_mgr_find_var(mgr, key, true, NULL);
   if (!var)
     return; /* give error on next pass. */
 
@@ -388,7 +518,7 @@ config_line_t *
 config_get_assigned_option(const config_mgr_t *mgr, const void *options,
                            const char *key, int escape_val)
 {
-  const config_var_t *var;
+  const managed_var_t *var;
   config_line_t *result;
   const config_format_t *fmt = mgr->toplevel;
 
@@ -396,13 +526,14 @@ config_get_assigned_option(const config_mgr_t *mgr, const void *options,
 
   CONFIG_CHECK(fmt, options);
 
-  var = config_find_option(mgr, key);
+  var = config_mgr_find_var(mgr, key, true, NULL);
   if (!var) {
     log_warn(LD_CONFIG, "Unknown option '%s'.  Failing.", key);
     return NULL;
   }
+  const void *object = config_mgr_get_obj(mgr, options, var->object_idx);
 
-  result = struct_var_kvencode(options, &var->member);
+  result = struct_var_kvencode(object, &var->cvar->member);
 
   if (escape_val) {
     config_line_t *line;
@@ -526,10 +657,10 @@ config_assign(const config_mgr_t *mgr, void *options, config_line_t *list,
 /** Reset config option <b>var</b> to 0, 0.0, NULL, or the equivalent.
  * Called from config_reset() and config_free(). */
 static void
-config_clear(void *options,
-             const config_var_t *var)
+config_clear(const config_mgr_t *mgr, void *options, const managed_var_t *var)
 {
-  struct_var_free(options, &var->member);
+  void *object = config_mgr_get_obj_mutable(mgr, options, var->object_idx);
+  struct_var_free(object, &var->cvar->member);
 }
 
 /** Clear the option indexed by <b>var</b> in <b>options</b>. Then if
@@ -537,19 +668,21 @@ config_clear(void *options,
  * Called by config_init() and option_reset_line() and option_assign_line(). */
 static void
 config_reset(const config_mgr_t *mgr, void *options,
-             const config_var_t *var, int use_defaults)
+             const managed_var_t *var, int use_defaults)
 {
   const config_format_t *fmt = mgr->toplevel;
   config_line_t *c;
   char *msg = NULL;
   CONFIG_CHECK(fmt, options);
-  config_clear(options, var); /* clear it first */
+  config_clear(mgr, options, var); /* clear it first */
+
   if (!use_defaults)
     return; /* all done */
-  if (var->initvalue) {
+
+  if (var->cvar->initvalue) {
     c = tor_malloc_zero(sizeof(config_line_t));
-    c->key = tor_strdup(var->member.name);
-    c->value = tor_strdup(var->initvalue);
+    c->key = tor_strdup(var->cvar->member.name);
+    c->value = tor_strdup(var->cvar->initvalue);
     if (config_assign_value(mgr, options, c, &msg) < 0) {
       // LCOV_EXCL_START
       log_warn(LD_BUG, "Failed to assign default: %s", msg);
@@ -564,7 +697,6 @@ config_reset(const config_mgr_t *mgr, void *options,
 void
 config_free_(const config_mgr_t *mgr, void *options)
 {
-  int i;
   const config_format_t *fmt = mgr->toplevel;
 
   if (!options)
@@ -572,8 +704,9 @@ config_free_(const config_mgr_t *mgr, void *options)
 
   tor_assert(fmt);
 
-  for (i=0; fmt->vars[i].member.name; ++i)
-    config_clear(options, &(fmt->vars[i]));
+  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, const managed_var_t *, mv) {
+    config_clear(mgr, options, mv);
+  } SMARTLIST_FOREACH_END(mv);
 
   if (fmt->extra) {
     config_line_t **linep = STRUCT_VAR_P(options, fmt->extra->offset);
@@ -595,36 +728,39 @@ config_is_same(const config_mgr_t *mgr,
   CONFIG_CHECK(fmt, o1);
   CONFIG_CHECK(fmt, o2);
 
-  const config_var_t *var = config_find_option(mgr, name);
+  const managed_var_t *var = config_mgr_find_var(mgr, name, true, NULL);
   if (!var) {
     return true;
   }
+  const void *obj1 = config_mgr_get_obj(mgr, o1, var->object_idx);
+  const void *obj2 = config_mgr_get_obj(mgr, o2, var->object_idx);
 
-  return struct_var_eq(o1, o2, &var->member);
+  return struct_var_eq(obj1, obj2, &var->cvar->member);
 }
 
 /** Copy storage held by <b>old</b> into a new or_options_t and return it. */
 void *
 config_dup(const config_mgr_t *mgr, const void *old)
 {
-  const config_format_t *fmt = mgr->toplevel;
   void *newopts;
-  int i;
 
   newopts = config_new(mgr);
-  for (i=0; fmt->vars[i].member.name; ++i) {
-    if (config_var_is_contained(&fmt->vars[i])) {
+  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, managed_var_t *, mv) {
+    if (config_var_is_contained(mv->cvar)) {
       // Something else will copy this option, or it doesn't need copying.
       continue;
     }
-    if (struct_var_copy(newopts, old, &fmt->vars[i].member) < 0) {
+    const void *oldobj = config_mgr_get_obj(mgr, old, mv->object_idx);
+    void *newobj = config_mgr_get_obj_mutable(mgr, newopts, mv->object_idx);
+    if (struct_var_copy(newobj, oldobj, &mv->cvar->member) < 0) {
       // LCOV_EXCL_START
       log_err(LD_BUG, "Unable to copy value for %s.",
-              fmt->vars[i].member.name);
+              mv->cvar->member.name);
       tor_assert_unreached();
       // LCOV_EXCL_STOP
     }
-  }
+  } SMARTLIST_FOREACH_END(mv);
+
   return newopts;
 }
 /** Set all vars in the configuration object <b>options</b> to their default
@@ -632,17 +768,14 @@ config_dup(const config_mgr_t *mgr, const void *old)
 void
 config_init(const config_mgr_t *mgr, void *options)
 {
-  int i;
   const config_format_t *fmt = mgr->toplevel;
-  const config_var_t *var;
   CONFIG_CHECK(fmt, options);
 
-  for (i=0; fmt->vars[i].member.name; ++i) {
-    var = &fmt->vars[i];
-    if (!var->initvalue)
+  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, const managed_var_t *, mv) {
+    if (!mv->cvar->initvalue)
       continue; /* defaults to NULL or 0 */
-    config_reset(mgr, options, var, 1);
-  }
+    config_reset(mgr, options, mv, 1);
+  } SMARTLIST_FOREACH_END(mv);
 }
 
 /** Allocate and return a new string holding the written-out values of the vars
@@ -654,13 +787,12 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
             const void *options, int minimal,
             int comment_defaults)
 {
-  smartlist_t *elements;
   const config_format_t *fmt = mgr->toplevel;
+  smartlist_t *elements;
   const void *defaults = default_options;
   void *defaults_tmp = NULL;
   config_line_t *line, *assigned;
   char *result;
-  int i;
   char *msg = NULL;
 
   if (defaults == NULL) {
@@ -680,24 +812,24 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
   }
 
   elements = smartlist_new();
-  for (i=0; fmt->vars[i].member.name; ++i) {
+  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, managed_var_t *, mv) {
     int comment_option = 0;
-    if (config_var_is_contained(&fmt->vars[i])) {
+    if (config_var_is_contained(mv->cvar)) {
       // Something else will dump this option, or it doesn't need dumping.
       continue;
     }
     /* Don't save 'hidden' control variables. */
-    if (fmt->vars[i].flags & CVFLAG_NODUMP)
+    if (mv->cvar->flags & CVFLAG_NODUMP)
       continue;
-    if (minimal && config_is_same(mgr, options, defaults,
-                                  fmt->vars[i].member.name))
+    const char *name = mv->cvar->member.name;
+    if (minimal && config_is_same(mgr, options, defaults, name))
       continue;
     else if (comment_defaults &&
-             config_is_same(mgr, options, defaults, fmt->vars[i].member.name))
+             config_is_same(mgr, options, defaults, name))
       comment_option = 1;
 
     line = assigned =
-      config_get_assigned_option(mgr, options, fmt->vars[i].member.name, 1);
+      config_get_assigned_option(mgr, options, name, 1);
 
     for (; line; line = line->next) {
       if (!strcmpstart(line->key, "__")) {
@@ -710,7 +842,7 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
                    line->key, line->value);
     }
     config_free_lines(assigned);
-  }
+  } SMARTLIST_FOREACH_END(mv);
 
   if (fmt->extra) {
     line = *(config_line_t**)STRUCT_VAR_P(options, fmt->extra->offset);
@@ -735,14 +867,15 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
 bool
 config_check_ok(const config_mgr_t *mgr, const void *options, int severity)
 {
-  const config_format_t *fmt = mgr->toplevel;
   bool all_ok = true;
-  for (int i=0; fmt->vars[i].member.name; ++i) {
-    if (!struct_var_ok(options, &fmt->vars[i].member)) {
+
+  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, const managed_var_t *, mv) {
+    if (!struct_var_ok(options, &mv->cvar->member)) {
       log_fn(severity, LD_BUG, "Invalid value for %s",
-             fmt->vars[i].member.name);
+             mv->cvar->member.name);
       all_ok = false;
     }
-  }
+  } SMARTLIST_FOREACH_END(mv);
+
   return all_ok;
 }
