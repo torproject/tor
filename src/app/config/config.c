@@ -2588,8 +2588,7 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
 int
 option_is_recognized(const char *key)
 {
-  const config_var_t *var = config_find_option(get_options_mgr(), key);
-  return (var != NULL);
+  return config_find_option_name(get_options_mgr(), key) != NULL;
 }
 
 /** Return the canonical name of a configuration option, or NULL
@@ -2597,8 +2596,7 @@ option_is_recognized(const char *key)
 const char *
 option_get_canonical_name(const char *key)
 {
-  const config_var_t *var = config_find_option(get_options_mgr(), key);
-  return var ? var->member.name : NULL;
+  return config_find_option_name(get_options_mgr(), key);
 }
 
 /** Return a canonical list of the options assigned for key.

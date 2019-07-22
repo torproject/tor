@@ -111,9 +111,9 @@ int config_assign(const config_mgr_t *mgr, void *options,
                   struct config_line_t *list,
                   unsigned flags, char **msg);
 const char *config_find_deprecation(const config_mgr_t *mgr,
-                                     const char *key);
-const config_var_t *config_find_option(const config_mgr_t *mgr,
-                                       const char *key);
+                                    const char *key);
+const char *config_find_option_name(const config_mgr_t *mgr,
+                                    const char *key);
 const char *config_expand_abbrev(const config_mgr_t *mgr,
                                  const char *option,
                                  int command_line, int warn_obsolete);

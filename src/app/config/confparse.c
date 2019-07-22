@@ -288,17 +288,17 @@ config_mgr_find_var(const config_mgr_t *mgr,
   return NULL;
 }
 
-/** If <b>key</b> is a configuration option, return the corresponding const
- * config_var_t.  Otherwise, if <b>key</b> is a non-standard abbreviation,
- * warn, and return the corresponding const config_var_t.  Otherwise return
- * NULL.
+/**
+ * If <b>key</b> is a name or an abbreviation configuration option, return
+ * the corresponding canonical name for it.  Warn if the abbreviation is
+ * non-standard.  Return NULL if the option does not exist.
  */
-const config_var_t *
-config_find_option(const config_mgr_t *mgr, const char *key)
+const char *
+config_find_option_name(const config_mgr_t *mgr, const char *key)
 {
   const managed_var_t *mv = config_mgr_find_var(mgr, key, true, NULL);
   if (mv)
-    return mv->cvar;
+    return mv->cvar->member.name;
   else
     return NULL;
 }
