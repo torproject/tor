@@ -75,6 +75,8 @@ config_mgr_t *config_mgr_new(const config_format_t *toplevel_fmt);
 void config_mgr_free_(config_mgr_t *mgr);
 #define config_mgr_free(mgr) \
   FREE_AND_NULL(config_mgr_t, config_mgr_free_, (mgr))
+struct smartlist_t *config_mgr_list_vars(const config_mgr_t *mgr);
+struct smartlist_t *config_mgr_list_deprecated_vars(const config_mgr_t *mgr);
 
 /** Macro: assert that <b>cfg</b> has the right magic field for format
  * <b>fmt</b>. */

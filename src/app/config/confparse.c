@@ -175,6 +175,31 @@ config_mgr_free_(config_mgr_t *mgr)
   tor_free(mgr);
 }
 
+/** Return a new smartlist_t containing a config_var_t for every variable that
+ * <b>mgr</b> knows about.  The elements of this smartlist do not need
+ * to be freed. */
+smartlist_t *
+config_mgr_list_vars(const config_mgr_t *mgr)
+{
+  smartlist_t *result = smartlist_new();
+  tor_assert(mgr);
+  SMARTLIST_FOREACH(mgr->all_vars, managed_var_t *, mv,
+                    smartlist_add(result, (void*) mv->cvar));
+  return result;
+}
+
+/** Return a new smartlist_t containing the names of all deprecated variables.
+ * The elements of this smartlist do not need to be freed. */
+smartlist_t *
+config_mgr_list_deprecated_vars(const config_mgr_t *mgr)
+{
+  smartlist_t *result = smartlist_new();
+  tor_assert(mgr);
+  SMARTLIST_FOREACH(mgr->all_deprecations, config_deprecation_t *, d,
+                    smartlist_add(result, &d->name));
+  return result;
+}
+
 /** Allocate an empty configuration object of a given format type. */
 void *
 config_new(const config_mgr_t *mgr)

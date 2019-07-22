@@ -2655,25 +2655,25 @@ print_usage(void)
 static void
 list_torrc_options(void)
 {
-  int i;
-  for (i = 0; option_vars_[i].member.name; ++i) {
-    const config_var_t *var = &option_vars_[i];
+  smartlist_t *vars = config_mgr_list_vars(get_options_mgr());
+  SMARTLIST_FOREACH_BEGIN(vars, const config_var_t *, var) {
     if (! config_var_is_settable(var)) {
       /* This variable cannot be set, or cannot be set by this name. */
       continue;
     }
     printf("%s\n", var->member.name);
-  }
+  } SMARTLIST_FOREACH_END(var);
+  smartlist_free(vars);
 }
 
 /** Print all deprecated but non-obsolete torrc options. */
 static void
 list_deprecated_options(void)
 {
-  const config_deprecation_t *d;
-  for (d = option_deprecation_notes_; d->name; ++d) {
-    printf("%s\n", d->name);
-  }
+  smartlist_t *deps = config_mgr_list_deprecated_vars(get_options_mgr());
+  SMARTLIST_FOREACH(deps, const char *, name,
+                    printf("%s\n", name));
+  smartlist_free(deps);
 }
 
 /** Print all compile-time modules and their enabled/disabled status. */
@@ -8125,34 +8125,34 @@ getinfo_helper_config(control_connection_t *conn,
   (void) errmsg;
   if (!strcmp(question, "config/names")) {
     smartlist_t *sl = smartlist_new();
-    int i;
-    for (i = 0; option_vars_[i].member.name; ++i) {
-      const config_var_t *var = &option_vars_[i];
+    smartlist_t *vars = config_mgr_list_vars(get_options_mgr());
+    SMARTLIST_FOREACH_BEGIN(vars, const config_var_t *, var) {
       /* don't tell controller about triple-underscore options */
-      if (option_vars_[i].flags & CVFLAG_INVISIBLE)
+      if (var->flags & CVFLAG_INVISIBLE)
         continue;
       const char *type = struct_var_get_typename(&var->member);
       if (!type)
         continue;
       smartlist_add_asprintf(sl, "%s %s\n",var->member.name,type);
-    }
+    } SMARTLIST_FOREACH_END(var);
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
+    smartlist_free(vars);
   } else if (!strcmp(question, "config/defaults")) {
     smartlist_t *sl = smartlist_new();
     int dirauth_lines_seen = 0, fallback_lines_seen = 0;
-    for (int i = 0; option_vars_[i].member.name; ++i) {
-      const config_var_t *var = &option_vars_[i];
+    smartlist_t *vars = config_mgr_list_vars(get_options_mgr());
+    SMARTLIST_FOREACH_BEGIN(vars, const config_var_t *, var) {
       if (var->initvalue != NULL) {
-        if (strcmp(option_vars_[i].member.name, "DirAuthority") == 0) {
+        if (strcmp(var->member.name, "DirAuthority") == 0) {
           /*
            * Count dirauth lines we have a default for; we'll use the
            * count later to decide whether to add the defaults manually
            */
           ++dirauth_lines_seen;
         }
-        if (strcmp(option_vars_[i].member.name, "FallbackDir") == 0) {
+        if (strcmp(var->member.name, "FallbackDir") == 0) {
           /*
            * Similarly count fallback lines, so that we can decided later
            * to add the defaults manually.
@@ -8163,7 +8163,8 @@ getinfo_helper_config(control_connection_t *conn,
         smartlist_add_asprintf(sl, "%s %s\n",var->member.name,val);
         tor_free(val);
       }
-    }
+    } SMARTLIST_FOREACH_END(var);
+    smartlist_free(vars);
 
     if (dirauth_lines_seen == 0) {
       /*
