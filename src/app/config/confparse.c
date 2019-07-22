@@ -200,6 +200,23 @@ config_mgr_list_deprecated_vars(const config_mgr_t *mgr)
   return result;
 }
 
+/** Assert that the magic fields in <b>options</b> and its subsidiary
+ * objects are all okay. */
+static void
+config_mgr_assert_magic_ok(const config_mgr_t *mgr,
+                           const void *options)
+{
+  tor_assert(mgr);
+  tor_assert(options);
+  struct_check_magic(options, &mgr->toplevel->magic);
+}
+
+/** Macro: assert that <b>cfg</b> has the right magic field for
+ * <b>mgr</b>. */
+#define CONFIG_CHECK(mgr, cfg) STMT_BEGIN                               \
+    config_mgr_assert_magic_ok((mgr), (cfg));                           \
+  STMT_END
+
 /** Allocate an empty configuration object of a given format type. */
 void *
 config_new(const config_mgr_t *mgr)
@@ -207,7 +224,7 @@ config_new(const config_mgr_t *mgr)
   const config_format_t *fmt = mgr->toplevel;
   void *opts = tor_malloc_zero(fmt->size);
   struct_set_magic(opts, &fmt->magic);
-  CONFIG_CHECK(fmt, opts);
+  CONFIG_CHECK(mgr, opts);
   return opts;
 }
 
@@ -367,9 +384,8 @@ config_assign_value(const config_mgr_t *mgr, void *options,
                     config_line_t *c, char **msg)
 {
   const managed_var_t *var;
-  const config_format_t *fmt = mgr->toplevel;
 
-  CONFIG_CHECK(fmt, options);
+  CONFIG_CHECK(mgr, options);
 
   var = config_mgr_find_var(mgr, c->key, true, NULL);
   tor_assert(var);
@@ -417,17 +433,17 @@ config_assign_line(const config_mgr_t *mgr, void *options,
                    config_line_t *c, unsigned flags,
                    bitarray_t *options_seen, char **msg)
 {
-  const config_format_t *fmt = mgr->toplevel;
   const unsigned use_defaults = flags & CAL_USE_DEFAULTS;
   const unsigned clear_first = flags & CAL_CLEAR_FIRST;
   const unsigned warn_deprecations = flags & CAL_WARN_DEPRECATIONS;
   const managed_var_t *mvar;
 
-  CONFIG_CHECK(fmt, options);
+  CONFIG_CHECK(mgr, options);
 
   int var_index = -1;
   mvar = config_mgr_find_var(mgr, c->key, true, &var_index);
   if (!mvar) {
+    const config_format_t *fmt = mgr->toplevel;
     if (fmt->extra) {
       void *lvalue = STRUCT_VAR_P(options, fmt->extra->offset);
       log_info(LD_CONFIG,
@@ -497,10 +513,9 @@ STATIC void
 config_reset_line(const config_mgr_t *mgr, void *options,
                   const char *key, int use_defaults)
 {
-  const config_format_t *fmt = mgr->toplevel;
   const managed_var_t *var;
 
-  CONFIG_CHECK(fmt, options);
+  CONFIG_CHECK(mgr, options);
 
   var = config_mgr_find_var(mgr, key, true, NULL);
   if (!var)
@@ -545,11 +560,10 @@ config_get_assigned_option(const config_mgr_t *mgr, const void *options,
 {
   const managed_var_t *var;
   config_line_t *result;
-  const config_format_t *fmt = mgr->toplevel;
 
   tor_assert(options && key);
 
-  CONFIG_CHECK(fmt, options);
+  CONFIG_CHECK(mgr, options);
 
   var = config_mgr_find_var(mgr, key, true, NULL);
   if (!var) {
@@ -635,12 +649,11 @@ config_assign(const config_mgr_t *mgr, void *options, config_line_t *list,
 {
   config_line_t *p;
   bitarray_t *options_seen;
-  const config_format_t *fmt = mgr->toplevel;
   const int n_options = config_count_options(mgr);
   const unsigned clear_first = config_assign_flags & CAL_CLEAR_FIRST;
   const unsigned use_defaults = config_assign_flags & CAL_USE_DEFAULTS;
 
-  CONFIG_CHECK(fmt, options);
+  CONFIG_CHECK(mgr, options);
 
   /* pass 1: normalize keys */
   for (p = list; p; p = p->next) {
@@ -695,10 +708,9 @@ static void
 config_reset(const config_mgr_t *mgr, void *options,
              const managed_var_t *var, int use_defaults)
 {
-  const config_format_t *fmt = mgr->toplevel;
   config_line_t *c;
   char *msg = NULL;
-  CONFIG_CHECK(fmt, options);
+  CONFIG_CHECK(mgr, options);
   config_clear(mgr, options, var); /* clear it first */
 
   if (!use_defaults)
@@ -749,9 +761,8 @@ config_is_same(const config_mgr_t *mgr,
                const void *o1, const void *o2,
                const char *name)
 {
-  const config_format_t *fmt = mgr->toplevel;
-  CONFIG_CHECK(fmt, o1);
-  CONFIG_CHECK(fmt, o2);
+  CONFIG_CHECK(mgr, o1);
+  CONFIG_CHECK(mgr, o2);
 
   const managed_var_t *var = config_mgr_find_var(mgr, name, true, NULL);
   if (!var) {
@@ -833,8 +844,7 @@ config_dup(const config_mgr_t *mgr, const void *old)
 void
 config_init(const config_mgr_t *mgr, void *options)
 {
-  const config_format_t *fmt = mgr->toplevel;
-  CONFIG_CHECK(fmt, options);
+  CONFIG_CHECK(mgr, options);
 
   SMARTLIST_FOREACH_BEGIN(mgr->all_vars, const managed_var_t *, mv) {
     if (!mv->cvar->initvalue)

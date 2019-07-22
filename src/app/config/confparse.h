@@ -78,13 +78,6 @@ void config_mgr_free_(config_mgr_t *mgr);
 struct smartlist_t *config_mgr_list_vars(const config_mgr_t *mgr);
 struct smartlist_t *config_mgr_list_deprecated_vars(const config_mgr_t *mgr);
 
-/** Macro: assert that <b>cfg</b> has the right magic field for format
- * <b>fmt</b>. */
-#define CONFIG_CHECK(fmt, cfg) STMT_BEGIN                               \
-    tor_assert(fmt);                                                    \
-    struct_check_magic((cfg), &fmt->magic);                             \
-  STMT_END
-
 #define CAL_USE_DEFAULTS      (1u<<0)
 #define CAL_CLEAR_FIRST       (1u<<1)
 #define CAL_WARN_DEPRECATIONS (1u<<2)
