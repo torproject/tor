@@ -100,6 +100,8 @@ struct config_line_t *config_get_assigned_option(const config_mgr_t *mgr,
 int config_is_same(const config_mgr_t *fmt,
                    const void *o1, const void *o2,
                    const char *name);
+struct config_line_t *config_get_changes(const config_mgr_t *mgr,
+                                  const void *options1, const void *options2);
 void config_init(const config_mgr_t *mgr, void *options);
 void *config_dup(const config_mgr_t *mgr, const void *old);
 char *config_dump(const config_mgr_t *mgr, const void *default_options,

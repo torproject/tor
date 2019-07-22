@@ -964,9 +964,6 @@ get_options_defaults(void)
 int
 set_options(or_options_t *new_val, char **msg)
 {
-  int i;
-  smartlist_t *elements;
-  config_line_t *line;
   or_options_t *old_options = global_options;
   global_options = new_val;
   /* Note that we pass the *old* options below, for comparison. It
@@ -988,35 +985,16 @@ set_options(or_options_t *new_val, char **msg)
   /* Issues a CONF_CHANGED event to notify controller of the change. If Tor is
    * just starting up then the old_options will be undefined. */
   if (old_options && old_options != global_options) {
-    elements = smartlist_new();
-    for (i=0; options_format.vars[i].member.name; ++i) {
-      const config_var_t *var = &options_format.vars[i]; // XXXX 29211
-      const char *var_name = var->member.name;
-      if (config_var_is_contained(var)) {
-        /* something else will check this var, or it doesn't need checking */
-        continue;
-      }
-      if (!config_is_same(get_options_mgr(), new_val, old_options, var_name)) {
-        line = config_get_assigned_option(get_options_mgr(), new_val,
-                                          var_name, 1);
-
-        if (line) {
-          config_line_t *next;
-          for (; line; line = next) {
-            next = line->next;
-            smartlist_add(elements, line->key);
-            smartlist_add(elements, line->value);
-            tor_free(line);
-          }
-        } else {
-          smartlist_add_strdup(elements, options_format.vars[i].member.name);
-          smartlist_add(elements, NULL);
-        }
-      }
+    smartlist_t *elements = smartlist_new();
+    config_line_t *changes =
+      config_get_changes(get_options_mgr(), old_options, new_val);
+    for (config_line_t *line = changes; line; line = line->next) {
+      smartlist_add(elements, line->key);
+      smartlist_add(elements, line->value);
     }
     control_event_conf_changed(elements);
-    SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
     smartlist_free(elements);
+    config_free_lines(changes);
   }
 
   if (old_options != global_options) {

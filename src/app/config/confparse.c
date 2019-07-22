@@ -738,6 +738,46 @@ config_is_same(const config_mgr_t *mgr,
   return struct_var_eq(obj1, obj2, &var->cvar->member);
 }
 
+/**
+ * Return a list of the options which have changed between <b>options1</b> and
+ * <b>options2</b>. If an option has reverted to its default value, it has a
+ * value entry of NULL.
+ **/
+config_line_t *
+config_get_changes(const config_mgr_t *mgr,
+                   const void *options1, const void *options2)
+{
+  config_line_t *result = NULL;
+  config_line_t **next = &result;
+  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, managed_var_t *, mv) {
+    if (config_var_is_contained(mv->cvar)) {
+      /* something else will check this var, or it doesn't need checking */
+      continue;
+    }
+    const void *obj1 = config_mgr_get_obj(mgr, options1, mv->object_idx);
+    const void *obj2 = config_mgr_get_obj(mgr, options2, mv->object_idx);
+
+    if (struct_var_eq(obj1, obj2, &mv->cvar->member)) {
+      continue;
+    }
+
+    const char *varname = mv->cvar->member.name;
+    config_line_t *line =
+      config_get_assigned_option(mgr, options2, varname, 1);
+
+    if (line) {
+      *next = line;
+    } else {
+      *next = tor_malloc_zero(sizeof(config_line_t));
+      (*next)->key = tor_strdup(varname);
+    }
+    while (*next)
+      next = &(*next)->next;
+  } SMARTLIST_FOREACH_END(mv);
+
+  return result;
+}
+
 /** Copy storage held by <b>old</b> into a new or_options_t and return it. */
 void *
 config_dup(const config_mgr_t *mgr, const void *old)
