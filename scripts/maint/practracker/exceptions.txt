@@ -84,7 +84,7 @@ problem function-size /src/core/or/circuitlist.c:circuit_about_to_free() 120
 problem function-size /src/core/or/circuitlist.c:circuits_handle_oom() 117
 problem function-size /src/core/or/circuitmux.c:circuitmux_set_policy() 109
 problem function-size /src/core/or/circuitmux.c:circuitmux_attach_circuit() 113
-problem file-size /src/core/or/circuitpadding.c 3006
+problem file-size /src/core/or/circuitpadding.c 3043
 problem function-size /src/core/or/circuitpadding.c:circpad_machine_schedule_padding() 107
 problem function-size /src/core/or/circuitpadding_machines.c:circpad_machine_relay_hide_intro_circuits() 103
 problem function-size /src/core/or/circuitpadding_machines.c:circpad_machine_client_hide_rend_circuits() 112
@@ -117,12 +117,12 @@ problem function-size /src/core/or/connection_or.c:connection_or_compute_authent
 problem file-size /src/core/or/policies.c 3249
 problem function-size /src/core/or/policies.c:policy_summarize() 107
 problem function-size /src/core/or/protover.c:protover_all_supported() 117
-problem file-size /src/core/or/relay.c 3244
+problem file-size /src/core/or/relay.c 3263
 problem function-size /src/core/or/relay.c:circuit_receive_relay_cell() 126
 problem function-size /src/core/or/relay.c:relay_send_command_from_edge_() 109
 problem function-size /src/core/or/relay.c:connection_ap_process_end_not_open() 192
 problem function-size /src/core/or/relay.c:connection_edge_process_relay_cell_not_open() 137
-problem function-size /src/core/or/relay.c:connection_edge_process_relay_cell() 428
+problem function-size /src/core/or/relay.c:handle_relay_cell_command() 369
 problem function-size /src/core/or/relay.c:connection_edge_package_raw_inbuf() 128
 problem function-size /src/core/or/relay.c:circuit_resume_edge_reading_helper() 146
 problem function-size /src/core/or/scheduler_kist.c:kist_scheduler_run() 171
