@@ -10,6 +10,7 @@
 
 #include "core/or/or.h"
 #include "app/config/config.h"
+#include "core/or/channel.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "core/or/relay.h"
@@ -543,6 +544,14 @@ circuit_is_suitable_for_introduce1(const or_circuit_t *circ)
            "Blocking multiple introductions on the same circuit. "
            "Someone might be trying to attack a hidden service through "
            "this relay.");
+    return 0;
+  }
+
+  /* Disallow single hop client circuit. */
+  if (circ->p_chan && channel_is_client(circ->p_chan)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Single hop client was rejected while trying to introduce. "
+           "Closing circuit.");
     return 0;
   }
 

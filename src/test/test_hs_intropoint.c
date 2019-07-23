@@ -16,6 +16,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 
 #include "core/or/or.h"
+#include "core/or/channel.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "ht.h"
@@ -693,6 +694,17 @@ test_introduce1_suitable_circuit(void *arg)
     tt_int_op(ret, OP_EQ, 0);
   }
 
+  /* Single hop circuit should not be allowed. */
+  {
+    circ = or_circuit_new(0, NULL);
+    circ->p_chan = tor_malloc_zero(sizeof(channel_t));
+    circ->p_chan->is_client = 1;
+    ret = circuit_is_suitable_for_introduce1(circ);
+    tor_free(circ->p_chan);
+    circuit_free_(TO_CIRCUIT(circ));
+    tt_int_op(ret, OP_EQ, 0);
+  }
+
  done:
   ;
 }
@@ -927,4 +939,3 @@ struct testcase_t hs_intropoint_tests[] = {
 
   END_OF_TESTCASES
 };
-
