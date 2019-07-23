@@ -548,7 +548,7 @@ circuit_is_suitable_for_introduce1(const or_circuit_t *circ)
   }
 
   /* Disallow single hop client circuit. */
-  if (channel_is_client(circ->p_chan)) {
+  if (circ->p_chan && channel_is_client(circ->p_chan)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Single hop client was rejected while trying to introduce. "
            "Closing circuit.");
