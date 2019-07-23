@@ -1762,7 +1762,7 @@ test_config_adding_dir_servers(void *arg)
   (void)arg;
 
   /* allocate options */
-  or_options_t *options = tor_malloc_zero(sizeof(or_options_t));
+  or_options_t *options = options_new();
 
   /* Allocate and populate configuration lines:
    *
@@ -3533,7 +3533,7 @@ test_config_default_dir_servers(void *arg)
   int fallback_count = 0;
 
   /* new set of options should stop fallback parsing */
-  opts = tor_malloc_zero(sizeof(or_options_t));
+  opts = options_new();
   opts->UseDefaultFallbackDirs = 0;
   /* set old_options to NULL to force dir update */
   consider_adding_dir_servers(opts, NULL);
@@ -3547,7 +3547,7 @@ test_config_default_dir_servers(void *arg)
   /* if we disable the default fallbacks, there must not be any extra */
   tt_assert(fallback_count == trusted_count);
 
-  opts = tor_malloc_zero(sizeof(or_options_t));
+  opts = options_new();
   opts->UseDefaultFallbackDirs = 1;
   consider_adding_dir_servers(opts, opts);
   trusted_count = smartlist_len(router_get_trusted_dir_servers());
@@ -3607,7 +3607,7 @@ test_config_directory_fetch(void *arg)
   (void)arg;
 
   /* Test Setup */
-  or_options_t *options = tor_malloc_zero(sizeof(or_options_t));
+  or_options_t *options = options_new();
   routerinfo_t routerinfo;
   memset(&routerinfo, 0, sizeof(routerinfo));
   mock_router_pick_published_address_result = -1;

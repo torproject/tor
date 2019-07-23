@@ -111,7 +111,7 @@ global_init(void)
   }
 
   /* set up the options. */
-  mock_options = tor_malloc_zero(sizeof(or_options_t));
+  mock_options = options_new();
   MOCK(get_options, mock_get_options);
 
   /* Make BUG() and nonfatal asserts crash */

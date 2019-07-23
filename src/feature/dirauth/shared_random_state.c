@@ -285,9 +285,8 @@ disk_state_free_(sr_disk_state_t *state)
 static sr_disk_state_t *
 disk_state_new(time_t now)
 {
-  sr_disk_state_t *new_state = tor_malloc_zero(sizeof(*new_state));
+  sr_disk_state_t *new_state = config_new(get_srs_mgr());
 
-  new_state->magic_ = SR_DISK_STATE_MAGIC;
   new_state->Version = SR_PROTO_VERSION;
   new_state->TorVersion = tor_strdup(get_version());
   new_state->ValidUntil = get_state_valid_until_time(now);
@@ -599,11 +598,12 @@ disk_state_reset(void)
   config_free_lines(sr_disk_state->ExtraLines);
   tor_free(sr_disk_state->TorVersion);
 
-  /* Clean up the struct */
-  memset(sr_disk_state, 0, sizeof(*sr_disk_state));
+  /* Clear other fields. */
+  sr_disk_state->ValidAfter = 0;
+  sr_disk_state->ValidUntil = 0;
+  sr_disk_state->Version = 0;
 
   /* Reset it with useful data */
-  sr_disk_state->magic_ = SR_DISK_STATE_MAGIC;
   sr_disk_state->TorVersion = tor_strdup(get_version());
 }
 

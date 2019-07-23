@@ -376,8 +376,7 @@ or_state_save_broken(char *fname)
 STATIC or_state_t *
 or_state_new(void)
 {
-  or_state_t *new_state = tor_malloc_zero(sizeof(or_state_t));
-  new_state->magic_ = OR_STATE_MAGIC;
+  or_state_t *new_state = config_new(get_state_mgr());
   config_init(get_state_mgr(), new_state);
 
   return new_state;

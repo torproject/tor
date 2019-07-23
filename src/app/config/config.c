@@ -5404,8 +5404,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   oldoptions = global_options; /* get_options unfortunately asserts if
                                   this is the first time we run*/
 
-  newoptions = tor_malloc_zero(sizeof(or_options_t));
-  newoptions->magic_ = OR_OPTIONS_MAGIC;
+  newoptions = options_new();
   options_init(newoptions);
   newoptions->command = command;
   newoptions->command_arg = command_arg ? tor_strdup(command_arg) : NULL;
