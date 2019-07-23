@@ -864,6 +864,7 @@ static const config_format_t options_format = {
   options_validate_cb,
   options_clear_cb,
   NULL,
+  offsetof(or_options_t, subconfigs_),
 };
 
 /*

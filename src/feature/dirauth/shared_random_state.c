@@ -100,6 +100,7 @@ static const config_format_t state_format = {
   disk_state_validate_cb,
   NULL,
   &state_extra_var,
+  -1,
 };
 
 /* Global configuration manager for the shared-random state file */

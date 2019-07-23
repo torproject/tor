@@ -170,6 +170,7 @@ static const config_format_t state_format = {
   or_state_validate_cb,
   NULL,
   &state_extra_var,
+  offsetof(or_state_t, substates_),
 };
 
 /* A global configuration manager for state-file objects */
