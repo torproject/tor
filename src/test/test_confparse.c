@@ -119,8 +119,6 @@ test_validate_cb(void *old_options, void *options, void *default_options,
   return 0;
 }
 
-static void test_free_cb(const config_mgr_t *mgr, void *options);
-
 #define TEST_MAGIC 0x1337
 
 static const config_format_t test_fmt = {
@@ -134,18 +132,9 @@ static const config_format_t test_fmt = {
   test_deprecation_notes,
   test_vars,
   test_validate_cb,
-  test_free_cb,
+  NULL,
   NULL,
 };
-
-static void
-test_free_cb(const config_mgr_t *mgr, void *options)
-{
-  if (!options)
-    return;
-
-  config_free(mgr, options);
-}
 
 /* Make sure that config_init sets everything to the right defaults. */
 static void
@@ -824,7 +813,7 @@ static config_format_t etest_fmt = {
   test_deprecation_notes,
   test_vars,
   test_validate_cb,
-  test_free_cb,
+  NULL,
   &extra,
 };
 

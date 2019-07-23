@@ -41,8 +41,8 @@ typedef int (*validate_fn_t)(void*,void*,void*,int,char**);
 
 struct config_mgr_t;
 
-/** Callback to free a configuration object. */
-typedef void (*free_cfg_fn_t)(const struct config_mgr_t *mgr, void*);
+/** Callback to clear all non-managed fields of a configuration object. */
+typedef void (*clear_cfg_fn_t)(const struct config_mgr_t *mgr, void*);
 
 /** Information on the keys, value types, key-to-struct-member mappings,
  * variable descriptions, validation functions, and abbreviations for a
@@ -57,7 +57,7 @@ typedef struct config_format_t {
                              * values, and where we stick them in the
                              * structure. */
   validate_fn_t validate_fn; /**< Function to validate config. */
-  free_cfg_fn_t free_fn; /**< Function to free the configuration. */
+  clear_cfg_fn_t clear_fn; /**< Function to clear the configuration. */
   /** If present, extra denotes a LINELIST variable for unrecognized
    * lines.  Otherwise, unrecognized lines are an error. */
   const struct_member_t *extra;
