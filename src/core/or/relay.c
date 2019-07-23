@@ -1584,12 +1584,10 @@ process_sendme_cell(const relay_header_t *rh, const cell_t *cell,
  *  unpacked by the parent function, and <b>optimistic_data</b> as set by the
  *  parent function.
  */
-static int
+STATIC int
 handle_relay_command(cell_t *cell, circuit_t *circ,
-                     edge_connection_t *conn,
-                     crypt_path_t *layer_hint,
-                     relay_header_t *rh,
-                     int optimistic_data)
+                     edge_connection_t *conn, crypt_path_t *layer_hint,
+                     relay_header_t *rh, int optimistic_data)
 {
   unsigned domain = layer_hint?LD_APP:LD_EXIT;
   int reason;
@@ -1614,6 +1612,8 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
   /* If this is a padding circuit we don't need to parse any other commands
    * than the padding ones. Just drop them to the floor. */
   if (circ->purpose == CIRCUIT_PURPOSE_C_CIRCUIT_PADDING) {
+    log_info(domain, "Ignored cell (%d) that arrived in padding circuit.",
+             rh->command);
     return 0;
   }
 
