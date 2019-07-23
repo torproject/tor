@@ -1576,81 +1576,23 @@ process_sendme_cell(const relay_header_t *rh, const cell_t *cell,
   return 0;
 }
 
-/** An incoming relay cell has arrived on circuit <b>circ</b>. If
- * <b>conn</b> is NULL this is a control cell, else <b>cell</b> is
- * destined for <b>conn</b>.
+/** A helper for connection_edge_process_relay_cell(): Actually handles the
+ *  cell that we received on the connection.
  *
- * If <b>layer_hint</b> is defined, then we're the origin of the
- * circuit, and it specifies the hop that packaged <b>cell</b>.
- *
- * Return -reason if you want to warn and tear down the circuit, else 0.
+ *  The arguments are the same as in the parent function
+ *  connection_edge_process_relay_cell(), plus the relay header <b>rh</b> as
+ *  unpacked by the parent function, and <b>optimistic_data</b> as set by the
+ *  parent function.
  */
-STATIC int
-connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
-                                   edge_connection_t *conn,
-                                   crypt_path_t *layer_hint)
+static int
+handle_relay_command(cell_t *cell, circuit_t *circ,
+                     edge_connection_t *conn,
+                     crypt_path_t *layer_hint,
+                     relay_header_t *rh,
+                     int optimistic_data)
 {
-  static int num_seen=0;
-  relay_header_t rh;
   unsigned domain = layer_hint?LD_APP:LD_EXIT;
   int reason;
-  int optimistic_data = 0; /* Set to 1 if we receive data on a stream
-                            * that's in the EXIT_CONN_STATE_RESOLVING
-                            * or EXIT_CONN_STATE_CONNECTING states. */
-
-  tor_assert(cell);
-  tor_assert(circ);
-
-  relay_header_unpack(&rh, cell->payload);
-//  log_fn(LOG_DEBUG,"command %d stream %d", rh.command, rh.stream_id);
-  num_seen++;
-  log_debug(domain, "Now seen %d relay cells here (command %d, stream %d).",
-            num_seen, rh.command, rh.stream_id);
-
-  if (rh.length > RELAY_PAYLOAD_SIZE) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Relay cell length field too long. Closing circuit.");
-    return - END_CIRC_REASON_TORPROTOCOL;
-  }
-
-  if (rh.stream_id == 0) {
-    switch (rh.command) {
-      case RELAY_COMMAND_BEGIN:
-      case RELAY_COMMAND_CONNECTED:
-      case RELAY_COMMAND_END:
-      case RELAY_COMMAND_RESOLVE:
-      case RELAY_COMMAND_RESOLVED:
-      case RELAY_COMMAND_BEGIN_DIR:
-        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Relay command %d with zero "
-               "stream_id. Dropping.", (int)rh.command);
-        return 0;
-      default:
-        ;
-    }
-  }
-
-  /* Tell circpad that we've received a recognized cell */
-  circpad_deliver_recognized_relay_cell_events(circ, rh.command, layer_hint);
-
-  /* either conn is NULL, in which case we've got a control cell, or else
-   * conn points to the recognized stream. */
-  if (conn && !connection_state_is_open(TO_CONN(conn))) {
-    if (conn->base_.type == CONN_TYPE_EXIT &&
-        (conn->base_.state == EXIT_CONN_STATE_CONNECTING ||
-         conn->base_.state == EXIT_CONN_STATE_RESOLVING) &&
-        rh.command == RELAY_COMMAND_DATA) {
-      /* Allow DATA cells to be delivered to an exit node in state
-       * EXIT_CONN_STATE_CONNECTING or EXIT_CONN_STATE_RESOLVING.
-       * This speeds up HTTP, for example. */
-      optimistic_data = 1;
-    } else if (rh.stream_id == 0 && rh.command == RELAY_COMMAND_DATA) {
-      log_warn(LD_BUG, "Somehow I had a connection that matched a "
-               "data cell with stream ID 0.");
-    } else {
-      return connection_edge_process_relay_cell_not_open(
-               &rh, cell, circ, conn, layer_hint);
-    }
-  }
 
   switch (rh.command) {
     case RELAY_COMMAND_DROP:
@@ -2016,6 +1958,85 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
          "a newer version of Tor? Dropping.",
          rh.command);
   return 0; /* for forward compatibility, don't kill the circuit */
+}
+
+/** An incoming relay cell has arrived on circuit <b>circ</b>. If
+ * <b>conn</b> is NULL this is a control cell, else <b>cell</b> is
+ * destined for <b>conn</b>.
+ *
+ * If <b>layer_hint</b> is defined, then we're the origin of the
+ * circuit, and it specifies the hop that packaged <b>cell</b>.
+ *
+ * Return -reason if you want to warn and tear down the circuit, else 0.
+ */
+STATIC int
+connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
+                                   edge_connection_t *conn,
+                                   crypt_path_t *layer_hint)
+{
+  static int num_seen=0;
+  relay_header_t rh;
+  unsigned domain = layer_hint?LD_APP:LD_EXIT;
+  int optimistic_data = 0; /* Set to 1 if we receive data on a stream
+                            * that's in the EXIT_CONN_STATE_RESOLVING
+                            * or EXIT_CONN_STATE_CONNECTING states. */
+
+  tor_assert(cell);
+  tor_assert(circ);
+
+  relay_header_unpack(&rh, cell->payload);
+//  log_fn(LOG_DEBUG,"command %d stream %d", rh.command, rh.stream_id);
+  num_seen++;
+  log_debug(domain, "Now seen %d relay cells here (command %d, stream %d).",
+            num_seen, rh.command, rh.stream_id);
+
+  if (rh.length > RELAY_PAYLOAD_SIZE) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Relay cell length field too long. Closing circuit.");
+    return - END_CIRC_REASON_TORPROTOCOL;
+  }
+
+  if (rh.stream_id == 0) {
+    switch (rh.command) {
+      case RELAY_COMMAND_BEGIN:
+      case RELAY_COMMAND_CONNECTED:
+      case RELAY_COMMAND_END:
+      case RELAY_COMMAND_RESOLVE:
+      case RELAY_COMMAND_RESOLVED:
+      case RELAY_COMMAND_BEGIN_DIR:
+        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Relay command %d with zero "
+               "stream_id. Dropping.", (int)rh.command);
+        return 0;
+      default:
+        ;
+    }
+  }
+
+  /* Tell circpad that we've received a recognized cell */
+  circpad_deliver_recognized_relay_cell_events(circ, rh.command, layer_hint);
+
+  /* either conn is NULL, in which case we've got a control cell, or else
+   * conn points to the recognized stream. */
+  if (conn && !connection_state_is_open(TO_CONN(conn))) {
+    if (conn->base_.type == CONN_TYPE_EXIT &&
+        (conn->base_.state == EXIT_CONN_STATE_CONNECTING ||
+         conn->base_.state == EXIT_CONN_STATE_RESOLVING) &&
+        rh.command == RELAY_COMMAND_DATA) {
+      /* Allow DATA cells to be delivered to an exit node in state
+       * EXIT_CONN_STATE_CONNECTING or EXIT_CONN_STATE_RESOLVING.
+       * This speeds up HTTP, for example. */
+      optimistic_data = 1;
+    } else if (rh.stream_id == 0 && rh.command == RELAY_COMMAND_DATA) {
+      log_warn(LD_BUG, "Somehow I had a connection that matched a "
+               "data cell with stream ID 0.");
+    } else {
+      return connection_edge_process_relay_cell_not_open(
+               &rh, cell, circ, conn, layer_hint);
+    }
+  }
+
+  return handle_relay_command(cell, circ, conn, layer_hint,
+                              rh, optimistic_data);
 }
 
 /** How many relay_data cells have we built, ever? */
