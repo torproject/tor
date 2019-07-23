@@ -158,7 +158,6 @@ test_confparse_init(void *arg)
   config_init(mgr, tst);
 
   // Make sure that options are initialized right. */
-  tt_uint_op(tst->magic, OP_EQ, TEST_MAGIC);
   tt_str_op(tst->s, OP_EQ, "hello");
   tt_ptr_op(tst->fn, OP_EQ, NULL);
   tt_int_op(tst->pos, OP_EQ, 0);

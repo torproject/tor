@@ -37,6 +37,8 @@
 #include "lib/string/printf.h"
 #include "lib/string/util_string.h"
 
+#include "ext/siphash.h"
+
 /**
  * A managed_var_t is an internal wrapper around a config_var_t in
  * a config_format_t structure.  It is used by config_mgr_t to
@@ -89,6 +91,12 @@ struct config_mgr_t {
    * added to it. A manager must be frozen before it can be used to construct
    * or manipulate objects. */
   bool frozen;
+  /** A replacement for the magic number of the toplevel object. We override
+   * that number to make it unique for this particular config_mgr_t, so that
+   * an object constructed with one mgr can't be used with another, even if
+   * those managers' contents are equal.
+   */
+  struct_magic_decl_t toplevel_magic;
 };
 
 #define IDX_TOPLEVEL (-1)
@@ -186,7 +194,16 @@ managed_var_cmp(const void **a, const void **b)
 void
 config_mgr_freeze(config_mgr_t *mgr)
 {
+  static uint64_t mgr_count = 0;
+
   smartlist_sort(mgr->all_vars, managed_var_cmp);
+  memcpy(&mgr->toplevel_magic, &mgr->toplevel->magic,
+         sizeof(struct_magic_decl_t));
+  uint64_t magic_input[3] = { mgr->toplevel_magic.magic_val,
+                              (uint64_t) (uintptr_t) mgr,
+                              ++mgr_count };
+  mgr->toplevel_magic.magic_val =
+    (uint32_t)siphash24g(magic_input, sizeof(magic_input));
   mgr->frozen = true;
 }
 
@@ -238,7 +255,7 @@ config_mgr_assert_magic_ok(const config_mgr_t *mgr,
   tor_assert(mgr);
   tor_assert(options);
   tor_assert(mgr->frozen);
-  struct_check_magic(options, &mgr->toplevel->magic);
+  struct_check_magic(options, &mgr->toplevel_magic);
 }
 
 /** Macro: assert that <b>cfg</b> has the right magic field for
@@ -254,7 +271,7 @@ config_new(const config_mgr_t *mgr)
   tor_assert(mgr->frozen);
   const config_format_t *fmt = mgr->toplevel;
   void *opts = tor_malloc_zero(fmt->size);
-  struct_set_magic(opts, &fmt->magic);
+  struct_set_magic(opts, &mgr->toplevel_magic);
   CONFIG_CHECK(mgr, opts);
   return opts;
 }
