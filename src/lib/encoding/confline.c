@@ -256,7 +256,7 @@ config_lines_dup_and_filter(const config_line_t *inp,
 /** Return true iff a and b contain identical keys and values in identical
  * order. */
 int
-config_lines_eq(config_line_t *a, config_line_t *b)
+config_lines_eq(const config_line_t *a, const config_line_t *b)
 {
   while (a && b) {
     if (strcasecmp(a->key, b->key) || strcmp(a->value, b->value))

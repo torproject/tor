@@ -13,70 +13,7 @@
 #ifndef TOR_CONFPARSE_H
 #define TOR_CONFPARSE_H
 
-/** Enumeration of types which option values can take */
-typedef enum config_type_t {
-  CONFIG_TYPE_STRING = 0,   /**< An arbitrary string. */
-  CONFIG_TYPE_FILENAME,     /**< A filename: some prefixes get expanded. */
-  CONFIG_TYPE_POSINT,         /**< A non-negative integer less than MAX_INT */
-  CONFIG_TYPE_INT,          /**< Any integer. */
-  CONFIG_TYPE_UINT64,       /**< A value in range 0..UINT64_MAX */
-  CONFIG_TYPE_INTERVAL,     /**< A number of seconds, with optional units*/
-  CONFIG_TYPE_MSEC_INTERVAL,/**< A number of milliseconds, with optional
-                              * units */
-  CONFIG_TYPE_MEMUNIT,      /**< A number of bytes, with optional units*/
-  CONFIG_TYPE_DOUBLE,       /**< A floating-point value */
-  CONFIG_TYPE_BOOL,         /**< A boolean value, expressed as 0 or 1. */
-  CONFIG_TYPE_AUTOBOOL,     /**< A boolean+auto value, expressed 0 for false,
-                             * 1 for true, and -1 for auto  */
-  CONFIG_TYPE_ISOTIME,      /**< An ISO-formatted time relative to UTC. */
-  CONFIG_TYPE_CSV,          /**< A list of strings, separated by commas and
-                              * optional whitespace. */
-  CONFIG_TYPE_CSV_INTERVAL, /**< A list of strings, separated by commas and
-                              * optional whitespace, representing intervals in
-                              * seconds, with optional units.  We allow
-                              * multiple values here for legacy reasons, but
-                              * ignore every value after the first. */
-  CONFIG_TYPE_LINELIST,     /**< Uninterpreted config lines */
-  CONFIG_TYPE_LINELIST_S,   /**< Uninterpreted, context-sensitive config lines,
-                             * mixed with other keywords. */
-  CONFIG_TYPE_LINELIST_V,   /**< Catch-all "virtual" option to summarize
-                             * context-sensitive config lines when fetching.
-                             */
-  CONFIG_TYPE_ROUTERSET,    /**< A list of router names, addrs, and fps,
-                             * parsed into a routerset_t. */
-  CONFIG_TYPE_OBSOLETE,     /**< Obsolete (ignored) option. */
-} config_type_t;
-
-#ifdef TOR_UNIT_TESTS
-/**
- * Union used when building in test mode typechecking the members of a type
- * used with confparse.c.  See CONF_CHECK_VAR_TYPE for a description of how
- * it is used. */
-typedef union {
-  char **STRING;
-  char **FILENAME;
-  int *POSINT; /* yes, really: Even though the confparse type is called
-              * "POSINT", it still uses the C int type -- it just enforces that
-              * the values are in range [0,INT_MAX].
-              */
-  uint64_t *UINT64;
-  int *INT;
-  int *PORT;
-  int *INTERVAL;
-  int *MSEC_INTERVAL;
-  uint64_t *MEMUNIT;
-  double *DOUBLE;
-  int *BOOL;
-  int *AUTOBOOL;
-  time_t *ISOTIME;
-  smartlist_t **CSV;
-  int *CSV_INTERVAL;
-  struct config_line_t **LINELIST;
-  struct config_line_t **LINELIST_S;
-  struct config_line_t **LINELIST_V;
-  routerset_t **ROUTERSET;
-} confparse_dummy_values_t;
-#endif /* defined(TOR_UNIT_TESTS) */
+#include "lib/conf/conftypes.h"
 
 /** An abbreviation for a configuration option allowed on the command line. */
 typedef struct config_abbrev_t {

@@ -26,12 +26,12 @@
 #include "app/config/confparse.h"
 #include "feature/nodelist/routerset.h"
 
+#include "lib/confmgt/unitparse.h"
 #include "lib/container/bitarray.h"
 #include "lib/encoding/confline.h"
 
-static uint64_t config_parse_memunit(const char *s, int *ok);
-static int config_parse_msec_interval(const char *s, int *ok);
-static int config_parse_interval(const char *s, int *ok);
+#include "lib/confmgt/typedvar.h"
+
 static void config_reset(const config_format_t *fmt, void *options,
                          const config_var_t *var, int use_defaults);
 
@@ -162,7 +162,6 @@ static int
 config_assign_value(const config_format_t *fmt, void *options,
                     config_line_t *c, char **msg)
 {
-  int i, ok;
   const config_var_t *var;
   void *lvalue;
 
@@ -170,144 +169,14 @@ config_assign_value(const config_format_t *fmt, void *options,
 
   var = config_find_option(fmt, c->key);
   tor_assert(var);
+  tor_assert(!strcmp(c->key, var->name));
 
   lvalue = STRUCT_VAR_P(options, var->var_offset);
 
-  switch (var->type) {
+  if (var->type == CONFIG_TYPE_ROUTERSET) {
+    // XXXX make the backend extensible so that we don't have to
+    // XXXX handle ROUTERSET specially.
 
-  case CONFIG_TYPE_INT:
-  case CONFIG_TYPE_POSINT:
-    i = (int)tor_parse_long(c->value, 10,
-                            var->type==CONFIG_TYPE_INT ? INT_MIN : 0,
-                            INT_MAX,
-                            &ok, NULL);
-    if (!ok) {
-      tor_asprintf(msg,
-          "Int keyword '%s %s' is malformed or out of bounds.",
-          c->key, c->value);
-      return -1;
-    }
-    *(int *)lvalue = i;
-    break;
-
-  case CONFIG_TYPE_UINT64: {
-    uint64_t u64 = tor_parse_uint64(c->value, 10,
-                                    0, UINT64_MAX, &ok, NULL);
-    if (!ok) {
-      tor_asprintf(msg,
-          "uint64 keyword '%s %s' is malformed or out of bounds.",
-          c->key, c->value);
-      return -1;
-    }
-    *(uint64_t *)lvalue = u64;
-    break;
-  }
-
-  case CONFIG_TYPE_CSV_INTERVAL: {
-    /* We used to have entire smartlists here.  But now that all of our
-     * download schedules use exponential backoff, only the first part
-     * matters. */
-    const char *comma = strchr(c->value, ',');
-    const char *val = c->value;
-    char *tmp = NULL;
-    if (comma) {
-      tmp = tor_strndup(c->value, comma - c->value);
-      val = tmp;
-    }
-
-    i = config_parse_interval(val, &ok);
-    if (!ok) {
-      tor_asprintf(msg,
-          "Interval '%s %s' is malformed or out of bounds.",
-          c->key, c->value);
-      tor_free(tmp);
-      return -1;
-    }
-    *(int *)lvalue = i;
-    tor_free(tmp);
-    break;
-  }
-
-  case CONFIG_TYPE_INTERVAL: {
-    i = config_parse_interval(c->value, &ok);
-    if (!ok) {
-      tor_asprintf(msg,
-          "Interval '%s %s' is malformed or out of bounds.",
-          c->key, c->value);
-      return -1;
-    }
-    *(int *)lvalue = i;
-    break;
-  }
-
-  case CONFIG_TYPE_MSEC_INTERVAL: {
-    i = config_parse_msec_interval(c->value, &ok);
-    if (!ok) {
-      tor_asprintf(msg,
-          "Msec interval '%s %s' is malformed or out of bounds.",
-          c->key, c->value);
-      return -1;
-    }
-    *(int *)lvalue = i;
-    break;
-  }
-
-  case CONFIG_TYPE_MEMUNIT: {
-    uint64_t u64 = config_parse_memunit(c->value, &ok);
-    if (!ok) {
-      tor_asprintf(msg,
-          "Value '%s %s' is malformed or out of bounds.",
-          c->key, c->value);
-      return -1;
-    }
-    *(uint64_t *)lvalue = u64;
-    break;
-  }
-
-  case CONFIG_TYPE_BOOL:
-    i = (int)tor_parse_long(c->value, 10, 0, 1, &ok, NULL);
-    if (!ok) {
-      tor_asprintf(msg,
-          "Boolean '%s %s' expects 0 or 1.",
-          c->key, c->value);
-      return -1;
-    }
-    *(int *)lvalue = i;
-    break;
-
-  case CONFIG_TYPE_AUTOBOOL:
-    if (!strcasecmp(c->value, "auto"))
-      *(int *)lvalue = -1;
-    else if (!strcmp(c->value, "0"))
-      *(int *)lvalue = 0;
-    else if (!strcmp(c->value, "1"))
-      *(int *)lvalue = 1;
-    else {
-      tor_asprintf(msg, "Boolean '%s %s' expects 0, 1, or 'auto'.",
-                   c->key, c->value);
-      return -1;
-    }
-    break;
-
-  case CONFIG_TYPE_STRING:
-  case CONFIG_TYPE_FILENAME:
-    tor_free(*(char **)lvalue);
-    *(char **)lvalue = tor_strdup(c->value);
-    break;
-
-  case CONFIG_TYPE_DOUBLE:
-    *(double *)lvalue = atof(c->value);
-    break;
-
-  case CONFIG_TYPE_ISOTIME:
-    if (parse_iso_time(c->value, (time_t *)lvalue)) {
-      tor_asprintf(msg,
-          "Invalid time '%s' for keyword '%s'", c->value, c->key);
-      return -1;
-    }
-    break;
-
-  case CONFIG_TYPE_ROUTERSET:
     if (*(routerset_t**)lvalue) {
       routerset_free(*(routerset_t**)lvalue);
     }
@@ -317,50 +186,10 @@ config_assign_value(const config_format_t *fmt, void *options,
                    c->value, c->key);
       return -1;
     }
-    break;
-
-  case CONFIG_TYPE_CSV:
-    if (*(smartlist_t**)lvalue) {
-      SMARTLIST_FOREACH(*(smartlist_t**)lvalue, char *, cp, tor_free(cp));
-      smartlist_clear(*(smartlist_t**)lvalue);
-    } else {
-      *(smartlist_t**)lvalue = smartlist_new();
-    }
-
-    smartlist_split_string(*(smartlist_t**)lvalue, c->value, ",",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-    break;
-
-  case CONFIG_TYPE_LINELIST:
-  case CONFIG_TYPE_LINELIST_S:
-    {
-      config_line_t *lastval = *(config_line_t**)lvalue;
-      if (lastval && lastval->fragile) {
-        if (c->command != CONFIG_LINE_APPEND) {
-          config_free_lines(lastval);
-          *(config_line_t**)lvalue = NULL;
-        } else {
-          lastval->fragile = 0;
-        }
-      }
-
-      config_line_append((config_line_t**)lvalue, c->key, c->value);
-    }
-    break;
-  case CONFIG_TYPE_OBSOLETE:
-    log_warn(LD_CONFIG, "Skipping obsolete configuration option '%s'", c->key);
-    break;
-  case CONFIG_TYPE_LINELIST_V:
-    tor_asprintf(msg,
-        "You may not provide a value for virtual option '%s'", c->key);
-    return -1;
-    // LCOV_EXCL_START
-  default:
-    tor_assert_unreached();
-    break;
-    // LCOV_EXCL_STOP
+    return 0;
   }
-  return 0;
+
+  return typed_var_kvassign(lvalue, c, msg, var->type);
 }
 
 /** Mark every linelist in <b>options</b> "fragile", so that fresh assignments
@@ -546,100 +375,15 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
   }
   value = STRUCT_VAR_P(options, var->var_offset);
 
-  result = tor_malloc_zero(sizeof(config_line_t));
-  result->key = tor_strdup(var->name);
-  switch (var->type)
-    {
-    case CONFIG_TYPE_STRING:
-    case CONFIG_TYPE_FILENAME:
-      if (*(char**)value) {
-        result->value = tor_strdup(*(char**)value);
-      } else {
-        tor_free(result->key);
-        tor_free(result);
-        return NULL;
-      }
-      break;
-    case CONFIG_TYPE_ISOTIME:
-      if (*(time_t*)value) {
-        result->value = tor_malloc(ISO_TIME_LEN+1);
-        format_iso_time(result->value, *(time_t*)value);
-      } else {
-        tor_free(result->key);
-        tor_free(result);
-      }
-      escape_val = 0; /* Can't need escape. */
-      break;
-    case CONFIG_TYPE_CSV_INTERVAL:
-    case CONFIG_TYPE_INTERVAL:
-    case CONFIG_TYPE_MSEC_INTERVAL:
-    case CONFIG_TYPE_POSINT:
-    case CONFIG_TYPE_INT:
-      /* This means every or_options_t uint or bool element
-       * needs to be an int. Not, say, a uint16_t or char. */
-      tor_asprintf(&result->value, "%d", *(int*)value);
-      escape_val = 0; /* Can't need escape. */
-      break;
-    case CONFIG_TYPE_UINT64: /* Fall through */
-    case CONFIG_TYPE_MEMUNIT:
-      tor_asprintf(&result->value, "%"PRIu64,
-                   (*(uint64_t*)value));
-      escape_val = 0; /* Can't need escape. */
-      break;
-    case CONFIG_TYPE_DOUBLE:
-      tor_asprintf(&result->value, "%f", *(double*)value);
-      escape_val = 0; /* Can't need escape. */
-      break;
-
-    case CONFIG_TYPE_AUTOBOOL:
-      if (*(int*)value == -1) {
-        result->value = tor_strdup("auto");
-        escape_val = 0;
-        break;
-      }
-      /* fall through */
-    case CONFIG_TYPE_BOOL:
-      result->value = tor_strdup(*(int*)value ? "1" : "0");
-      escape_val = 0; /* Can't need escape. */
-      break;
-    case CONFIG_TYPE_ROUTERSET:
-      result->value = routerset_to_string(*(routerset_t**)value);
-      break;
-    case CONFIG_TYPE_CSV:
-      if (*(smartlist_t**)value)
-        result->value =
-          smartlist_join_strings(*(smartlist_t**)value, ",", 0, NULL);
-      else
-        result->value = tor_strdup("");
-      break;
-    case CONFIG_TYPE_OBSOLETE:
-      log_fn(LOG_INFO, LD_CONFIG,
-             "You asked me for the value of an obsolete config option '%s'.",
-             key);
-      tor_free(result->key);
-      tor_free(result);
-      return NULL;
-    case CONFIG_TYPE_LINELIST_S:
-      tor_free(result->key);
-      tor_free(result);
-      result = config_lines_dup_and_filter(*(const config_line_t **)value,
-                                           key);
-      break;
-    case CONFIG_TYPE_LINELIST:
-    case CONFIG_TYPE_LINELIST_V:
-      tor_free(result->key);
-      tor_free(result);
-      result = config_lines_dup(*(const config_line_t**)value);
-      break;
-      // LCOV_EXCL_START
-    default:
-      tor_free(result->key);
-      tor_free(result);
-      log_warn(LD_BUG,"Unknown type %d for known key '%s'",
-               var->type, key);
-      return NULL;
-      // LCOV_EXCL_STOP
-    }
+  if (var->type == CONFIG_TYPE_ROUTERSET) {
+    // XXXX make the backend extensible so that we don't have to
+    // XXXX handle ROUTERSET specially.
+    result = tor_malloc_zero(sizeof(config_line_t));
+    result->key = tor_strdup(var->name);
+    result->value = routerset_to_string(*(routerset_t**)value);
+  } else {
+    result = typed_var_kvencode(var->name, value, var->type);
+  }
 
   if (escape_val) {
     config_line_t *line;
@@ -767,56 +511,17 @@ config_clear(const config_format_t *fmt, void *options,
 {
   void *lvalue = STRUCT_VAR_P(options, var->var_offset);
   (void)fmt; /* unused */
-  switch (var->type) {
-    case CONFIG_TYPE_STRING:
-    case CONFIG_TYPE_FILENAME:
-      tor_free(*(char**)lvalue);
-      break;
-    case CONFIG_TYPE_DOUBLE:
-      *(double*)lvalue = 0.0;
-      break;
-    case CONFIG_TYPE_ISOTIME:
-      *(time_t*)lvalue = 0;
-      break;
-    case CONFIG_TYPE_CSV_INTERVAL:
-    case CONFIG_TYPE_INTERVAL:
-    case CONFIG_TYPE_MSEC_INTERVAL:
-    case CONFIG_TYPE_POSINT:
-    case CONFIG_TYPE_INT:
-    case CONFIG_TYPE_BOOL:
-      *(int*)lvalue = 0;
-      break;
-    case CONFIG_TYPE_AUTOBOOL:
-      *(int*)lvalue = -1;
-      break;
-    case CONFIG_TYPE_UINT64:
-    case CONFIG_TYPE_MEMUNIT:
-      *(uint64_t*)lvalue = 0;
-      break;
-    case CONFIG_TYPE_ROUTERSET:
-      if (*(routerset_t**)lvalue) {
-        routerset_free(*(routerset_t**)lvalue);
-        *(routerset_t**)lvalue = NULL;
-      }
-      break;
-    case CONFIG_TYPE_CSV:
-      if (*(smartlist_t**)lvalue) {
-        SMARTLIST_FOREACH(*(smartlist_t **)lvalue, char *, cp, tor_free(cp));
-        smartlist_free(*(smartlist_t **)lvalue);
-        *(smartlist_t **)lvalue = NULL;
-      }
-      break;
-    case CONFIG_TYPE_LINELIST:
-    case CONFIG_TYPE_LINELIST_S:
-      config_free_lines(*(config_line_t **)lvalue);
-      *(config_line_t **)lvalue = NULL;
-      break;
-    case CONFIG_TYPE_LINELIST_V:
-      /* handled by linelist_s. */
-      break;
-    case CONFIG_TYPE_OBSOLETE:
-      break;
+  if (var->type == CONFIG_TYPE_ROUTERSET) {
+    // XXXX make the backend extensible so that we don't have to
+    // XXXX handle ROUTERSET specially.
+    if (*(routerset_t**)lvalue) {
+      routerset_free(*(routerset_t**)lvalue);
+      *(routerset_t**)lvalue = NULL;
+    }
+    return;
   }
+
+  typed_var_free(lvalue, var->type);
 }
 
 /** Clear the option indexed by <b>var</b> in <b>options</b>. Then if
@@ -1013,194 +718,4 @@ config_dump(const config_format_t *fmt, const void *default_options,
     fmt->free_fn(defaults_tmp);
   }
   return result;
-}
-
-/** Mapping from a unit name to a multiplier for converting that unit into a
- * base unit.  Used by config_parse_unit. */
-struct unit_table_t {
-  const char *unit; /**< The name of the unit */
-  uint64_t multiplier; /**< How many of the base unit appear in this unit */
-};
-
-/** Table to map the names of memory units to the number of bytes they
- * contain. */
-static struct unit_table_t memory_units[] = {
-  { "",          1 },
-  { "b",         1<< 0 },
-  { "byte",      1<< 0 },
-  { "bytes",     1<< 0 },
-  { "kb",        1<<10 },
-  { "kbyte",     1<<10 },
-  { "kbytes",    1<<10 },
-  { "kilobyte",  1<<10 },
-  { "kilobytes", 1<<10 },
-  { "kilobits",  1<<7  },
-  { "kilobit",   1<<7  },
-  { "kbits",     1<<7  },
-  { "kbit",      1<<7  },
-  { "m",         1<<20 },
-  { "mb",        1<<20 },
-  { "mbyte",     1<<20 },
-  { "mbytes",    1<<20 },
-  { "megabyte",  1<<20 },
-  { "megabytes", 1<<20 },
-  { "megabits",  1<<17 },
-  { "megabit",   1<<17 },
-  { "mbits",     1<<17 },
-  { "mbit",      1<<17 },
-  { "gb",        1<<30 },
-  { "gbyte",     1<<30 },
-  { "gbytes",    1<<30 },
-  { "gigabyte",  1<<30 },
-  { "gigabytes", 1<<30 },
-  { "gigabits",  1<<27 },
-  { "gigabit",   1<<27 },
-  { "gbits",     1<<27 },
-  { "gbit",      1<<27 },
-  { "tb",        UINT64_C(1)<<40 },
-  { "tbyte",     UINT64_C(1)<<40 },
-  { "tbytes",    UINT64_C(1)<<40 },
-  { "terabyte",  UINT64_C(1)<<40 },
-  { "terabytes", UINT64_C(1)<<40 },
-  { "terabits",  UINT64_C(1)<<37 },
-  { "terabit",   UINT64_C(1)<<37 },
-  { "tbits",     UINT64_C(1)<<37 },
-  { "tbit",      UINT64_C(1)<<37 },
-  { NULL, 0 },
-};
-
-/** Table to map the names of time units to the number of seconds they
- * contain. */
-static struct unit_table_t time_units[] = {
-  { "",         1 },
-  { "second",   1 },
-  { "seconds",  1 },
-  { "minute",   60 },
-  { "minutes",  60 },
-  { "hour",     60*60 },
-  { "hours",    60*60 },
-  { "day",      24*60*60 },
-  { "days",     24*60*60 },
-  { "week",     7*24*60*60 },
-  { "weeks",    7*24*60*60 },
-  { "month",    2629728, }, /* about 30.437 days */
-  { "months",   2629728, },
-  { NULL, 0 },
-};
-
-/** Table to map the names of time units to the number of milliseconds
- * they contain. */
-static struct unit_table_t time_msec_units[] = {
-  { "",         1 },
-  { "msec",     1 },
-  { "millisecond", 1 },
-  { "milliseconds", 1 },
-  { "second",   1000 },
-  { "seconds",  1000 },
-  { "minute",   60*1000 },
-  { "minutes",  60*1000 },
-  { "hour",     60*60*1000 },
-  { "hours",    60*60*1000 },
-  { "day",      24*60*60*1000 },
-  { "days",     24*60*60*1000 },
-  { "week",     7*24*60*60*1000 },
-  { "weeks",    7*24*60*60*1000 },
-  { NULL, 0 },
-};
-
-/** Parse a string <b>val</b> containing a number, zero or more
- * spaces, and an optional unit string.  If the unit appears in the
- * table <b>u</b>, then multiply the number by the unit multiplier.
- * On success, set *<b>ok</b> to 1 and return this product.
- * Otherwise, set *<b>ok</b> to 0.
- */
-static uint64_t
-config_parse_units(const char *val, struct unit_table_t *u, int *ok)
-{
-  uint64_t v = 0;
-  double d = 0;
-  int use_float = 0;
-  char *cp;
-
-  tor_assert(ok);
-
-  v = tor_parse_uint64(val, 10, 0, UINT64_MAX, ok, &cp);
-  if (!*ok || (cp && *cp == '.')) {
-    d = tor_parse_double(val, 0, (double)UINT64_MAX, ok, &cp);
-    if (!*ok)
-      goto done;
-    use_float = 1;
-  }
-
-  if (!cp) {
-    *ok = 1;
-    v = use_float ? ((uint64_t)d) :  v;
-    goto done;
-  }
-
-  cp = (char*) eat_whitespace(cp);
-
-  for ( ;u->unit;++u) {
-    if (!strcasecmp(u->unit, cp)) {
-      if (use_float)
-        v = (uint64_t)(u->multiplier * d);
-      else
-        v *= u->multiplier;
-      *ok = 1;
-      goto done;
-    }
-  }
-  log_warn(LD_CONFIG, "Unknown unit '%s'.", cp);
-  *ok = 0;
- done:
-
-  if (*ok)
-    return v;
-  else
-    return 0;
-}
-
-/** Parse a string in the format "number unit", where unit is a unit of
- * information (byte, KB, M, etc).  On success, set *<b>ok</b> to true
- * and return the number of bytes specified.  Otherwise, set
- * *<b>ok</b> to false and return 0. */
-static uint64_t
-config_parse_memunit(const char *s, int *ok)
-{
-  uint64_t u = config_parse_units(s, memory_units, ok);
-  return u;
-}
-
-/** Parse a string in the format "number unit", where unit is a unit of
- * time in milliseconds.  On success, set *<b>ok</b> to true and return
- * the number of milliseconds in the provided interval.  Otherwise, set
- * *<b>ok</b> to 0 and return -1. */
-static int
-config_parse_msec_interval(const char *s, int *ok)
-{
-  uint64_t r;
-  r = config_parse_units(s, time_msec_units, ok);
-  if (r > INT_MAX) {
-    log_warn(LD_CONFIG, "Msec interval '%s' is too long", s);
-    *ok = 0;
-    return -1;
-  }
-  return (int)r;
-}
-
-/** Parse a string in the format "number unit", where unit is a unit of time.
- * On success, set *<b>ok</b> to true and return the number of seconds in
- * the provided interval.  Otherwise, set *<b>ok</b> to 0 and return -1.
- */
-static int
-config_parse_interval(const char *s, int *ok)
-{
-  uint64_t r;
-  r = config_parse_units(s, time_units, ok);
-  if (r > INT_MAX) {
-    log_warn(LD_CONFIG, "Interval '%s' is too long", s);
-    *ok = 0;
-    return -1;
-  }
-  return (int)r;
 }

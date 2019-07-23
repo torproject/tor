@@ -258,13 +258,17 @@ test_options_validate(void *arg)
   WANT_ERR("BridgeRelay 1\nDirCache 0",
            "We're a bridge but DirCache is disabled.", PH_VALIDATE);
 
+  // XXXX We should replace this with a more full error message once #29211
+  // XXXX is done.  It is truncated for now because at the current stage
+  // XXXX of refactoring, we can't give a full error message like before.
   WANT_ERR_LOG("HeartbeatPeriod 21 snarks",
-               "Interval 'HeartbeatPeriod 21 snarks' is malformed or"
-               " out of bounds.", LOG_WARN, "Unknown unit 'snarks'.",
+               "malformed or out of bounds", LOG_WARN,
+               "Unknown unit 'snarks'.",
                PH_ASSIGN);
+  // XXXX As above.
   WANT_ERR_LOG("LogTimeGranularity 21 snarks",
-               "Msec interval 'LogTimeGranularity 21 snarks' is malformed or"
-               " out of bounds.", LOG_WARN, "Unknown unit 'snarks'.",
+               "malformed or out of bounds", LOG_WARN,
+               "Unknown unit 'snarks'.",
                PH_ASSIGN);
   OK("HeartbeatPeriod 1 hour", PH_VALIDATE);
   OK("LogTimeGranularity 100 milliseconds", PH_VALIDATE);

@@ -18,6 +18,8 @@
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 
+#include "lib/confmgt/unitparse.h"
+
 typedef struct test_struct_t {
   uint32_t magic;
   char *s;
@@ -469,9 +471,9 @@ static const badval_test_t bv_badcsvi2 =
   { "csv_interval cl,10\n", "malformed" };
 static const badval_test_t bv_nonoption = { "fnord 10\n", "Unknown option" };
 static const badval_test_t bv_badmem = { "mem 3 trits\n", "malformed" };
-static const badval_test_t bv_badbool = { "boolean 7\n", "expects 0 or 1" };
+static const badval_test_t bv_badbool = { "boolean 7\n", "Unrecognized value"};
 static const badval_test_t bv_badabool =
-  { "autobool 7\n", "expects 0, 1, or 'auto'" };
+  { "autobool 7\n", "Unrecognized value" };
 static const badval_test_t bv_badtime = { "time lunchtime\n", "Invalid time" };
 static const badval_test_t bv_virt = { "MixedLines 7\n", "virtual option" };
 static const badval_test_t bv_rs = { "Routerset 2.2.2.2.2\n", "Invalid" };
@@ -805,6 +807,65 @@ test_confparse_extra_lines(void *arg)
   config_free(&etest_fmt, tst);
 }
 
+static void
+test_confparse_unitparse(void *args)
+{
+  (void)args;
+  /* spot-check a few memunit values. */
+  int ok = 3;
+  tt_u64_op(config_parse_memunit("100 MB", &ok), OP_EQ, 100<<20);
+  tt_assert(ok);
+  tt_u64_op(config_parse_memunit("100 TB", &ok), OP_EQ, UINT64_C(100)<<40);
+  tt_assert(ok);
+  // This is a floating-point value, but note that 1.5 can be represented
+  // precisely.
+  tt_u64_op(config_parse_memunit("1.5 MB", &ok), OP_EQ, 3<<19);
+  tt_assert(ok);
+
+  /* Try some good intervals and msec intervals */
+  tt_int_op(config_parse_interval("2 days", &ok), OP_EQ, 48*3600);
+  tt_assert(ok);
+  tt_int_op(config_parse_interval("1.5 hour", &ok), OP_EQ, 5400);
+  tt_assert(ok);
+  tt_u64_op(config_parse_interval("1 minute", &ok), OP_EQ, 60);
+  tt_assert(ok);
+  tt_int_op(config_parse_msec_interval("2 days", &ok), OP_EQ, 48*3600*1000);
+  tt_assert(ok);
+  tt_int_op(config_parse_msec_interval("10 msec", &ok), OP_EQ, 10);
+  tt_assert(ok);
+
+  /* Try a couple of unitless values. */
+  tt_int_op(config_parse_interval("10", &ok), OP_EQ, 10);
+  tt_assert(ok);
+  tt_u64_op(config_parse_interval("15.0", &ok), OP_EQ, 15);
+  tt_assert(ok);
+
+  /* u64 overflow */
+  /* XXXX our implementation does not currently detect this. See bug 30920. */
+  /*
+  tt_u64_op(config_parse_memunit("20000000 TB", &ok), OP_EQ, 0);
+  tt_assert(!ok);
+  */
+
+  /* i32 overflow */
+  tt_int_op(config_parse_interval("1000 months", &ok), OP_EQ, -1);
+  tt_assert(!ok);
+  tt_int_op(config_parse_msec_interval("4 weeks", &ok), OP_EQ, -1);
+  tt_assert(!ok);
+
+  /* bad units */
+  tt_u64_op(config_parse_memunit("7 nybbles", &ok), OP_EQ, 0);
+  tt_assert(!ok);
+  // XXXX these next two should return -1 according to the documentation.
+  tt_int_op(config_parse_interval("7 cowznofski", &ok), OP_EQ, 0);
+  tt_assert(!ok);
+  tt_int_op(config_parse_msec_interval("1 kalpa", &ok), OP_EQ, 0);
+  tt_assert(!ok);
+
+ done:
+  ;
+}
+
 #define CONFPARSE_TEST(name, flags)                          \
   { #name, test_confparse_ ## name, flags, NULL, NULL }
 
@@ -838,5 +899,6 @@ struct testcase_t confparse_tests[] = {
   CONFPARSE_TEST(reassign_extend, 0),
   CONFPARSE_TEST(get_assigned, 0),
   CONFPARSE_TEST(extra_lines, 0),
+  CONFPARSE_TEST(unitparse, 0),
   END_OF_TESTCASES
 };
