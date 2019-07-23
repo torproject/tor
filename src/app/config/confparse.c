@@ -72,6 +72,36 @@ managed_var_free_(managed_var_t *mv)
 #define managed_var_free(mv) \
   FREE_AND_NULL(managed_var_t, managed_var_free_, (mv))
 
+struct config_suite_t {
+  /* NOTE: This object isn't implemented yet; it's just a placeholder
+   * to make sure we have our memory menagement right.
+   */
+  int foo;
+};
+
+/**
+ * Allocate a new empty config_suite_t.
+ **/
+static config_suite_t *
+config_suite_new(void)
+{
+  config_suite_t *suite = tor_malloc_zero(sizeof(config_suite_t));
+  return suite;
+}
+
+/** Release all storage held by a config_suite_t.  (Does not free
+ * any configuration objects it holds; the caller must do that first.) */
+static void
+config_suite_free_(config_suite_t *suite)
+{
+  if (!suite)
+    return;
+  tor_free(suite);
+}
+
+#define config_suite_free(suite) \
+  FREE_AND_NULL(config_suite_t, config_suite_free_, (suite))
+
 struct config_mgr_t {
   /** The 'top-level' configuration format.  This one is used for legacy
    * options that have not yet been assigned to different sub-modules.
@@ -150,6 +180,16 @@ config_mgr_register_fmt(config_mgr_t *mgr,
       smartlist_add(mgr->all_deprecations, (void*)d);
     }
   }
+}
+
+/** Return a pointer to the config_suite_t * pointer inside a
+ * configuration object; returns NULL if there is no such member. */
+static inline config_suite_t **
+config_mgr_get_suite_ptr(const config_mgr_t *mgr, void *toplevel)
+{
+  if (mgr->toplevel->config_suite_offset < 0)
+    return NULL;
+  return STRUCT_VAR_P(toplevel, mgr->toplevel->config_suite_offset);
 }
 
 /**
@@ -272,6 +312,10 @@ config_new(const config_mgr_t *mgr)
   const config_format_t *fmt = mgr->toplevel;
   void *opts = tor_malloc_zero(fmt->size);
   struct_set_magic(opts, &mgr->toplevel_magic);
+  config_suite_t **suitep = config_mgr_get_suite_ptr(mgr, opts);
+  if (suitep) {
+    *suitep = config_suite_new();
+  }
   CONFIG_CHECK(mgr, opts);
   return opts;
 }
@@ -802,6 +846,11 @@ config_free_(const config_mgr_t *mgr, void *options)
     config_free_lines(*linep);
     *linep = NULL;
   }
+
+  config_suite_t **suitep = config_mgr_get_suite_ptr(mgr, options);
+  if (suitep)
+    config_suite_free(*suitep);
+
   tor_free(options);
 }
 

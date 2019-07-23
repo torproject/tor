@@ -61,6 +61,9 @@ typedef struct config_format_t {
   /** If present, extra denotes a LINELIST variable for unrecognized
    * lines.  Otherwise, unrecognized lines are an error. */
   const struct_member_t *extra;
+  /** The position of a config_suite_t pointer within the toplevel object,
+   * or -1 if there is no such pointer. */
+  int config_suite_offset;
 } config_format_t;
 
 /**
@@ -78,6 +81,9 @@ void config_mgr_freeze(config_mgr_t *mgr);
   FREE_AND_NULL(config_mgr_t, config_mgr_free_, (mgr))
 struct smartlist_t *config_mgr_list_vars(const config_mgr_t *mgr);
 struct smartlist_t *config_mgr_list_deprecated_vars(const config_mgr_t *mgr);
+
+/** A collection of managed configuration objects. */
+typedef struct config_suite_t config_suite_t;
 
 #define CAL_USE_DEFAULTS      (1u<<0)
 #define CAL_CLEAR_FIRST       (1u<<1)

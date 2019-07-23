@@ -134,6 +134,7 @@ static const config_format_t test_fmt = {
   test_validate_cb,
   NULL,
   NULL,
+  -1,
 };
 
 /* Make sure that config_init sets everything to the right defaults. */
@@ -815,6 +816,7 @@ static config_format_t etest_fmt = {
   test_validate_cb,
   NULL,
   &extra,
+  -1,
 };
 
 /* Try out the feature where we can store unrecognized lines and dump them
