@@ -1596,17 +1596,15 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
 
   tor_assert(rh);
 
+  /* First pass the cell to the circuit padding subsystem, in case it's a
+   * padding cell or circuit that should be handled there. */
+  if (circpad_check_received_cell(cell, circ, layer_hint, rh) == 0) {
+    log_debug(domain, "Cell handled as circuit padding");
+    return 0;
+  }
+
+  /* Now handle all the other commands */
   switch (rh->command) {
-    case RELAY_COMMAND_DROP:
-      /* Already examined in circpad_deliver_recognized_relay_cell_events */
-      return 0;
-    case RELAY_COMMAND_PADDING_NEGOTIATE:
-      circpad_handle_padding_negotiate(circ, cell);
-      return 0;
-    case RELAY_COMMAND_PADDING_NEGOTIATED:
-      if (circpad_handle_padding_negotiated(circ, cell, layer_hint) == 0)
-        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
-      return 0;
     case RELAY_COMMAND_BEGIN:
     case RELAY_COMMAND_BEGIN_DIR:
       if (layer_hint &&
