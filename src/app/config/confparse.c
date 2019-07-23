@@ -169,6 +169,16 @@ config_mgr_get_obj(const config_mgr_t *mgr, const void *toplevel, int idx)
   return config_mgr_get_obj_mutable(mgr, (void*)toplevel, idx);
 }
 
+/** Sorting helper for smartlist of managed_var_t */
+static int
+managed_var_cmp(const void **a, const void **b)
+{
+  const managed_var_t *mv1 = *(const managed_var_t**)a;
+  const managed_var_t *mv2 = *(const managed_var_t**)b;
+
+  return strcasecmp(mv1->cvar->member.name, mv2->cvar->member.name);
+}
+
 /**
  * Mark a configuration manager as "frozen", so that no more formats can be
  * added, and so that it can be used for manipulating configuration objects.
@@ -176,6 +186,7 @@ config_mgr_get_obj(const config_mgr_t *mgr, const void *toplevel, int idx)
 void
 config_mgr_freeze(config_mgr_t *mgr)
 {
+  smartlist_sort(mgr->all_vars, managed_var_cmp);
   mgr->frozen = true;
 }
 

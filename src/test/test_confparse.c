@@ -527,78 +527,77 @@ test_confparse_dump(void *arg)
   /* Minimal version. */
   dumped = config_dump(mgr, NULL, tst, 1, 0);
   tt_str_op(dumped, OP_EQ,
-            "s this is a\n"
-            "fn /simple/test of the\n"
-            "pos 77\n"
-            "i 3\n"
-            "u64 1000000000000\n"
-            "interval 300\n"
-            "msec_interval 300000\n"
-            "mem 10\n"
-            "dbl 6.060842\n"
-            "boolean 1\n"
             "autobool 0\n"
-            "time 2019-06-14 13:58:51\n"
+            "boolean 1\n"
             "csv configuration,parsing,system\n"
             "csv_interval 10\n"
+            "dbl 6.060842\n"
+            "fn /simple/test of the\n"
+            "i 3\n"
+            "interval 300\n"
             "lines hello\n"
             "lines world\n"
+            "mem 10\n"
+            "VisibleLineB ABC\n"
             "LineTypeA i d\n"
             "LineTypeB i c\n"
+            "msec_interval 300000\n"
+            "pos 77\n"
             "routerset $FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\n"
-            "VisibleLineB ABC\n");
+            "s this is a\n"
+            "time 2019-06-14 13:58:51\n"
+            "u64 1000000000000\n");
 
-  /* Maximal */
   tor_free(dumped);
   dumped = config_dump(mgr, NULL, tst, 0, 0);
   tt_str_op(dumped, OP_EQ,
-            "s this is a\n"
-            "fn /simple/test of the\n"
-            "pos 77\n"
-            "i 3\n"
-            "deprecated_int 3\n"
-            "u64 1000000000000\n"
-            "interval 300\n"
-            "msec_interval 300000\n"
-            "mem 10\n"
-            "dbl 6.060842\n"
-            "boolean 1\n"
             "autobool 0\n"
-            "time 2019-06-14 13:58:51\n"
+            "boolean 1\n"
             "csv configuration,parsing,system\n"
             "csv_interval 10\n"
+            "dbl 6.060842\n"
+            "deprecated_int 3\n"
+            "fn /simple/test of the\n"
+            "i 3\n"
+            "interval 300\n"
             "lines hello\n"
             "lines world\n"
+            "mem 10\n"
+            "VisibleLineB ABC\n"
             "LineTypeA i d\n"
             "LineTypeB i c\n"
+            "msec_interval 300000\n"
+            "pos 77\n"
             "routerset $FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\n"
-            "VisibleLineB ABC\n");
+            "s this is a\n"
+            "time 2019-06-14 13:58:51\n"
+            "u64 1000000000000\n");
 
   /* commented */
   tor_free(dumped);
   dumped = config_dump(mgr, NULL, tst, 0, 1);
   tt_str_op(dumped, OP_EQ,
-            "s this is a\n"
-            "fn /simple/test of the\n"
-            "pos 77\n"
-            "i 3\n"
-            "# deprecated_int 3\n"
-            "u64 1000000000000\n"
-            "interval 300\n"
-            "msec_interval 300000\n"
-            "mem 10\n"
-            "dbl 6.060842\n"
-            "boolean 1\n"
             "autobool 0\n"
-            "time 2019-06-14 13:58:51\n"
+            "boolean 1\n"
             "csv configuration,parsing,system\n"
             "csv_interval 10\n"
+            "dbl 6.060842\n"
+            "# deprecated_int 3\n"
+            "fn /simple/test of the\n"
+            "i 3\n"
+            "interval 300\n"
             "lines hello\n"
             "lines world\n"
+            "mem 10\n"
+            "VisibleLineB ABC\n"
             "LineTypeA i d\n"
             "LineTypeB i c\n"
+            "msec_interval 300000\n"
+            "pos 77\n"
             "routerset $FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\n"
-                        "VisibleLineB ABC\n");
+            "s this is a\n"
+            "time 2019-06-14 13:58:51\n"
+            "u64 1000000000000\n");
 
  done:
   config_free(mgr, tst);
