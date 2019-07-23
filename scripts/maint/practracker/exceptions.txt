@@ -119,8 +119,9 @@ problem function-size /src/core/or/connection_or.c:connection_or_compute_authent
 problem file-size /src/core/or/policies.c 3249
 problem function-size /src/core/or/policies.c:policy_summarize() 107
 problem function-size /src/core/or/protover.c:protover_all_supported() 117
-problem file-size /src/core/or/relay.c 3244
+problem file-size /src/core/or/relay.c 3279
 problem function-size /src/core/or/relay.c:circuit_receive_relay_cell() 127
+problem function-size /src/core/or/relay.c:handle_relay_command() 387
 problem function-size /src/core/or/relay.c:relay_send_command_from_edge_() 112
 problem function-size /src/core/or/relay.c:connection_ap_process_end_not_open() 194
 problem function-size /src/core/or/relay.c:connection_edge_process_relay_cell_not_open() 139
