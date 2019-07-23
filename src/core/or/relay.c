@@ -1576,6 +1576,392 @@ process_sendme_cell(const relay_header_t *rh, const cell_t *cell,
   return 0;
 }
 
+/** A helper for connection_edge_process_relay_cell(): Actually handles the
+ *  cell that we received on the connection.
+ *
+ *  The arguments are the same as in the parent function
+ *  connection_edge_process_relay_cell(), plus the relay header <b>rh</b> as
+ *  unpacked by the parent function, and <b>optimistic_data</b> as set by the
+ *  parent function.
+ */
+static int
+handle_relay_command(cell_t *cell, circuit_t *circ,
+                     edge_connection_t *conn,
+                     crypt_path_t *layer_hint,
+                     relay_header_t *rh,
+                     int optimistic_data)
+{
+  unsigned domain = layer_hint?LD_APP:LD_EXIT;
+  int reason;
+
+  tor_assert(rh);
+
+  switch (rh->command) {
+    case RELAY_COMMAND_DROP:
+      /* Already examined in circpad_deliver_recognized_relay_cell_events */
+      return 0;
+    case RELAY_COMMAND_PADDING_NEGOTIATE:
+      circpad_handle_padding_negotiate(circ, cell);
+      return 0;
+    case RELAY_COMMAND_PADDING_NEGOTIATED:
+      if (circpad_handle_padding_negotiated(circ, cell, layer_hint) == 0)
+        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
+      return 0;
+    case RELAY_COMMAND_BEGIN:
+    case RELAY_COMMAND_BEGIN_DIR:
+      if (layer_hint &&
+          circ->purpose != CIRCUIT_PURPOSE_S_REND_JOINED) {
+        log_fn(LOG_PROTOCOL_WARN, LD_APP,
+               "Relay begin request unsupported at AP. Dropping.");
+        return 0;
+      }
+      if (circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED &&
+          layer_hint != TO_ORIGIN_CIRCUIT(circ)->cpath->prev) {
+        log_fn(LOG_PROTOCOL_WARN, LD_APP,
+               "Relay begin request to Hidden Service "
+               "from intermediary node. Dropping.");
+        return 0;
+      }
+      if (conn) {
+        log_fn(LOG_PROTOCOL_WARN, domain,
+               "Begin cell for known stream. Dropping.");
+        return 0;
+      }
+      if (rh->command == RELAY_COMMAND_BEGIN_DIR &&
+          circ->purpose != CIRCUIT_PURPOSE_S_REND_JOINED) {
+        /* Assign this circuit and its app-ward OR connection a unique ID,
+         * so that we can measure download times. The local edge and dir
+         * connection will be assigned the same ID when they are created
+         * and linked. */
+        static uint64_t next_id = 0;
+        circ->dirreq_id = ++next_id;
+        TO_OR_CIRCUIT(circ)->p_chan->dirreq_id = circ->dirreq_id;
+      }
+      return connection_exit_begin_conn(cell, circ);
+    case RELAY_COMMAND_DATA:
+      ++stats_n_data_cells_received;
+
+      /* Update our circuit-level deliver window that we received a DATA cell.
+       * If the deliver window goes below 0, we end the circuit and stream due
+       * to a protocol failure. */
+      if (sendme_circuit_data_received(circ, layer_hint) < 0) {
+        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+               "(relay data) circ deliver_window below 0. Killing.");
+        connection_edge_end_close(conn, END_STREAM_REASON_TORPROTOCOL);
+        return -END_CIRC_REASON_TORPROTOCOL;
+      }
+
+      /* Consider sending a circuit-level SENDME cell. */
+      sendme_circuit_consider_sending(circ, layer_hint);
+
+      if (rh->stream_id == 0) {
+        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Relay data cell with zero "
+               "stream_id. Dropping.");
+        return 0;
+      } else if (!conn) {
+        if (CIRCUIT_IS_ORIGIN(circ)) {
+          origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+          if (connection_half_edge_is_valid_data(ocirc->half_streams,
+                                                 rh->stream_id)) {
+            circuit_read_valid_data(ocirc, rh->length);
+            log_info(domain,
+                     "data cell on circ %u valid on half-closed "
+                     "stream id %d", ocirc->global_identifier, rh->stream_id);
+          }
+        }
+
+        log_info(domain,"data cell dropped, unknown stream (streamid %d).",
+                 rh->stream_id);
+        return 0;
+      }
+
+      /* Update our stream-level deliver window that we just received a DATA
+       * cell. Going below 0 means we have a protocol level error so the
+       * stream and circuit are closed. */
+
+      if (sendme_stream_data_received(conn) < 0) {
+        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+               "(relay data) conn deliver_window below 0. Killing.");
+        connection_edge_end_close(conn, END_STREAM_REASON_TORPROTOCOL);
+        return -END_CIRC_REASON_TORPROTOCOL;
+      }
+      /* Total all valid application bytes delivered */
+      if (CIRCUIT_IS_ORIGIN(circ) && rh->length > 0) {
+        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
+      }
+
+      stats_n_data_bytes_received += rh->length;
+      connection_buf_add((char*)(cell->payload + RELAY_HEADER_SIZE),
+                              rh->length, TO_CONN(conn));
+
+#ifdef MEASUREMENTS_21206
+      /* Count number of RELAY_DATA cells received on a linked directory
+       * connection. */
+      connection_t *linked_conn = TO_CONN(conn)->linked_conn;
+
+      if (linked_conn && linked_conn->type == CONN_TYPE_DIR) {
+        ++(TO_DIR_CONN(linked_conn)->data_cells_received);
+      }
+#endif /* defined(MEASUREMENTS_21206) */
+
+      if (!optimistic_data) {
+        /* Only send a SENDME if we're not getting optimistic data; otherwise
+         * a SENDME could arrive before the CONNECTED.
+         */
+        sendme_connection_edge_consider_sending(conn);
+      }
+
+      return 0;
+    case RELAY_COMMAND_END:
+      reason = rh->length > 0 ?
+        get_uint8(cell->payload+RELAY_HEADER_SIZE) : END_STREAM_REASON_MISC;
+      if (!conn) {
+        if (CIRCUIT_IS_ORIGIN(circ)) {
+          origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+          if (connection_half_edge_is_valid_end(ocirc->half_streams,
+                                                rh->stream_id)) {
+
+            circuit_read_valid_data(ocirc, rh->length);
+            log_info(domain,
+                     "end cell (%s) on circ %u valid on half-closed "
+                     "stream id %d",
+                     stream_end_reason_to_string(reason),
+                     ocirc->global_identifier, rh->stream_id);
+            return 0;
+          }
+        }
+        log_info(domain,"end cell (%s) dropped, unknown stream.",
+                 stream_end_reason_to_string(reason));
+        return 0;
+      }
+/* XXX add to this log_fn the exit node's nickname? */
+      log_info(domain,TOR_SOCKET_T_FORMAT": end cell (%s) for stream %d. "
+               "Removing stream.",
+               conn->base_.s,
+               stream_end_reason_to_string(reason),
+               conn->stream_id);
+      if (conn->base_.type == CONN_TYPE_AP) {
+        entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(conn);
+        if (entry_conn->socks_request &&
+            !entry_conn->socks_request->has_finished)
+          log_warn(LD_BUG,
+                   "open stream hasn't sent socks answer yet? Closing.");
+      }
+      /* We just *got* an end; no reason to send one. */
+      conn->edge_has_sent_end = 1;
+      if (!conn->end_reason)
+        conn->end_reason = reason | END_STREAM_REASON_FLAG_REMOTE;
+      if (!conn->base_.marked_for_close) {
+        /* only mark it if not already marked. it's possible to
+         * get the 'end' right around when the client hangs up on us. */
+        connection_mark_and_flush(TO_CONN(conn));
+
+        /* Total all valid application bytes delivered */
+        if (CIRCUIT_IS_ORIGIN(circ)) {
+          circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
+        }
+      }
+      return 0;
+    case RELAY_COMMAND_EXTEND:
+    case RELAY_COMMAND_EXTEND2: {
+      static uint64_t total_n_extend=0, total_nonearly=0;
+      total_n_extend++;
+      if (rh->stream_id) {
+        log_fn(LOG_PROTOCOL_WARN, domain,
+               "'extend' cell received for non-zero stream. Dropping.");
+        return 0;
+      }
+      if (cell->command != CELL_RELAY_EARLY &&
+          !networkstatus_get_param(NULL,"AllowNonearlyExtend",0,0,1)) {
+#define EARLY_WARNING_INTERVAL 3600
+        static ratelim_t early_warning_limit =
+          RATELIM_INIT(EARLY_WARNING_INTERVAL);
+        char *m;
+        if (cell->command == CELL_RELAY) {
+          ++total_nonearly;
+          if ((m = rate_limit_log(&early_warning_limit, approx_time()))) {
+            double percentage = ((double)total_nonearly)/total_n_extend;
+            percentage *= 100;
+            log_fn(LOG_PROTOCOL_WARN, domain, "EXTEND cell received, "
+                   "but not via RELAY_EARLY. Dropping.%s", m);
+            log_fn(LOG_PROTOCOL_WARN, domain, "  (We have dropped %.02f%% of "
+                   "all EXTEND cells for this reason)", percentage);
+            tor_free(m);
+          }
+        } else {
+          log_fn(LOG_WARN, domain,
+                 "EXTEND cell received, in a cell with type %d! Dropping.",
+                 cell->command);
+        }
+        return 0;
+      }
+      return circuit_extend(cell, circ);
+    }
+    case RELAY_COMMAND_EXTENDED:
+    case RELAY_COMMAND_EXTENDED2:
+      if (!layer_hint) {
+        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+               "'extended' unsupported at non-origin. Dropping.");
+        return 0;
+      }
+      log_debug(domain,"Got an extended cell! Yay.");
+      {
+        extended_cell_t extended_cell;
+        if (extended_cell_parse(&extended_cell, rh->command,
+                        (const uint8_t*)cell->payload+RELAY_HEADER_SIZE,
+                        rh->length)<0) {
+          log_warn(LD_PROTOCOL,
+                   "Can't parse EXTENDED cell; killing circuit.");
+          return -END_CIRC_REASON_TORPROTOCOL;
+        }
+        if ((reason = circuit_finish_handshake(TO_ORIGIN_CIRCUIT(circ),
+                                         &extended_cell.created_cell)) < 0) {
+          circuit_mark_for_close(circ, -reason);
+          return 0; /* We don't want to cause a warning, so we mark the circuit
+                     * here. */
+        }
+      }
+      if ((reason=circuit_send_next_onion_skin(TO_ORIGIN_CIRCUIT(circ)))<0) {
+        log_info(domain,"circuit_send_next_onion_skin() failed.");
+        return reason;
+      }
+      /* Total all valid bytes delivered. */
+      if (CIRCUIT_IS_ORIGIN(circ)) {
+        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
+      }
+      return 0;
+    case RELAY_COMMAND_TRUNCATE:
+      if (layer_hint) {
+        log_fn(LOG_PROTOCOL_WARN, LD_APP,
+               "'truncate' unsupported at origin. Dropping.");
+        return 0;
+      }
+      if (circ->n_hop) {
+        if (circ->n_chan)
+          log_warn(LD_BUG, "n_chan and n_hop set on the same circuit!");
+        extend_info_free(circ->n_hop);
+        circ->n_hop = NULL;
+        tor_free(circ->n_chan_create_cell);
+        circuit_set_state(circ, CIRCUIT_STATE_OPEN);
+      }
+      if (circ->n_chan) {
+        uint8_t trunc_reason = get_uint8(cell->payload + RELAY_HEADER_SIZE);
+        circuit_synchronize_written_or_bandwidth(circ, CIRCUIT_N_CHAN);
+        circuit_clear_cell_queue(circ, circ->n_chan);
+        channel_send_destroy(circ->n_circ_id, circ->n_chan,
+                             trunc_reason);
+        circuit_set_n_circid_chan(circ, 0, NULL);
+      }
+      log_debug(LD_EXIT, "Processed 'truncate', replying.");
+      {
+        char payload[1];
+        payload[0] = (char)END_CIRC_REASON_REQUESTED;
+        relay_send_command_from_edge(0, circ, RELAY_COMMAND_TRUNCATED,
+                                     payload, sizeof(payload), NULL);
+      }
+      return 0;
+    case RELAY_COMMAND_TRUNCATED:
+      if (!layer_hint) {
+        log_fn(LOG_PROTOCOL_WARN, LD_EXIT,
+               "'truncated' unsupported at non-origin. Dropping.");
+        return 0;
+      }
+
+      /* Count the truncated as valid, for completeness. The
+       * circuit is being torn down anyway, though.  */
+      if (CIRCUIT_IS_ORIGIN(circ)) {
+        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ),
+                                rh->length);
+      }
+      circuit_truncated(TO_ORIGIN_CIRCUIT(circ),
+                        get_uint8(cell->payload + RELAY_HEADER_SIZE));
+      return 0;
+    case RELAY_COMMAND_CONNECTED:
+      if (conn) {
+        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+               "'connected' unsupported while open. Closing circ.");
+        return -END_CIRC_REASON_TORPROTOCOL;
+      }
+
+      if (CIRCUIT_IS_ORIGIN(circ)) {
+        origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+        if (connection_half_edge_is_valid_connected(ocirc->half_streams,
+                                                    rh->stream_id)) {
+          circuit_read_valid_data(ocirc, rh->length);
+          log_info(domain,
+                   "connected cell on circ %u valid on half-closed "
+                   "stream id %d", ocirc->global_identifier, rh->stream_id);
+          return 0;
+        }
+      }
+
+      log_info(domain,
+               "'connected' received on circid %u for streamid %d, "
+               "no conn attached anymore. Ignoring.",
+               (unsigned)circ->n_circ_id, rh->stream_id);
+      return 0;
+    case RELAY_COMMAND_SENDME:
+      return process_sendme_cell(rh, cell, circ, conn, layer_hint, domain);
+    case RELAY_COMMAND_RESOLVE:
+      if (layer_hint) {
+        log_fn(LOG_PROTOCOL_WARN, LD_APP,
+               "resolve request unsupported at AP; dropping.");
+        return 0;
+      } else if (conn) {
+        log_fn(LOG_PROTOCOL_WARN, domain,
+               "resolve request for known stream; dropping.");
+        return 0;
+      } else if (circ->purpose != CIRCUIT_PURPOSE_OR) {
+        log_fn(LOG_PROTOCOL_WARN, domain,
+               "resolve request on circ with purpose %d; dropping",
+               circ->purpose);
+        return 0;
+      }
+      connection_exit_begin_resolve(cell, TO_OR_CIRCUIT(circ));
+      return 0;
+    case RELAY_COMMAND_RESOLVED:
+      if (conn) {
+        log_fn(LOG_PROTOCOL_WARN, domain,
+               "'resolved' unsupported while open. Closing circ.");
+        return -END_CIRC_REASON_TORPROTOCOL;
+      }
+
+      if (CIRCUIT_IS_ORIGIN(circ)) {
+        origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+        if (connection_half_edge_is_valid_resolved(ocirc->half_streams,
+                                                    rh->stream_id)) {
+          circuit_read_valid_data(ocirc, rh->length);
+          log_info(domain,
+                   "resolved cell on circ %u valid on half-closed "
+                   "stream id %d", ocirc->global_identifier, rh->stream_id);
+          return 0;
+        }
+      }
+
+      log_info(domain,
+               "'resolved' received, no conn attached anymore. Ignoring.");
+      return 0;
+    case RELAY_COMMAND_ESTABLISH_INTRO:
+    case RELAY_COMMAND_ESTABLISH_RENDEZVOUS:
+    case RELAY_COMMAND_INTRODUCE1:
+    case RELAY_COMMAND_INTRODUCE2:
+    case RELAY_COMMAND_INTRODUCE_ACK:
+    case RELAY_COMMAND_RENDEZVOUS1:
+    case RELAY_COMMAND_RENDEZVOUS2:
+    case RELAY_COMMAND_INTRO_ESTABLISHED:
+    case RELAY_COMMAND_RENDEZVOUS_ESTABLISHED:
+      rend_process_relay_cell(circ, layer_hint,
+                              rh->command, rh->length,
+                              cell->payload+RELAY_HEADER_SIZE);
+      return 0;
+  }
+  log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+         "Received unknown relay command %d. Perhaps the other side is using "
+         "a newer version of Tor? Dropping.",
+         rh->command);
+  return 0; /* for forward compatibility, don't kill the circuit */
+}
+
 /** An incoming relay cell has arrived on circuit <b>circ</b>. If
  * <b>conn</b> is NULL this is a control cell, else <b>cell</b> is
  * destined for <b>conn</b>.
@@ -1593,7 +1979,6 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   static int num_seen=0;
   relay_header_t rh;
   unsigned domain = layer_hint?LD_APP:LD_EXIT;
-  int reason;
   int optimistic_data = 0; /* Set to 1 if we receive data on a stream
                             * that's in the EXIT_CONN_STATE_RESOLVING
                             * or EXIT_CONN_STATE_CONNECTING states. */
@@ -1652,370 +2037,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     }
   }
 
-  switch (rh.command) {
-    case RELAY_COMMAND_DROP:
-      /* Already examined in circpad_deliver_recognized_relay_cell_events */
-      return 0;
-    case RELAY_COMMAND_PADDING_NEGOTIATE:
-      circpad_handle_padding_negotiate(circ, cell);
-      return 0;
-    case RELAY_COMMAND_PADDING_NEGOTIATED:
-      if (circpad_handle_padding_negotiated(circ, cell, layer_hint) == 0)
-        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
-      return 0;
-    case RELAY_COMMAND_BEGIN:
-    case RELAY_COMMAND_BEGIN_DIR:
-      if (layer_hint &&
-          circ->purpose != CIRCUIT_PURPOSE_S_REND_JOINED) {
-        log_fn(LOG_PROTOCOL_WARN, LD_APP,
-               "Relay begin request unsupported at AP. Dropping.");
-        return 0;
-      }
-      if (circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED &&
-          layer_hint != TO_ORIGIN_CIRCUIT(circ)->cpath->prev) {
-        log_fn(LOG_PROTOCOL_WARN, LD_APP,
-               "Relay begin request to Hidden Service "
-               "from intermediary node. Dropping.");
-        return 0;
-      }
-      if (conn) {
-        log_fn(LOG_PROTOCOL_WARN, domain,
-               "Begin cell for known stream. Dropping.");
-        return 0;
-      }
-      if (rh.command == RELAY_COMMAND_BEGIN_DIR &&
-          circ->purpose != CIRCUIT_PURPOSE_S_REND_JOINED) {
-        /* Assign this circuit and its app-ward OR connection a unique ID,
-         * so that we can measure download times. The local edge and dir
-         * connection will be assigned the same ID when they are created
-         * and linked. */
-        static uint64_t next_id = 0;
-        circ->dirreq_id = ++next_id;
-        TO_OR_CIRCUIT(circ)->p_chan->dirreq_id = circ->dirreq_id;
-      }
-      return connection_exit_begin_conn(cell, circ);
-    case RELAY_COMMAND_DATA:
-      ++stats_n_data_cells_received;
-
-      /* Update our circuit-level deliver window that we received a DATA cell.
-       * If the deliver window goes below 0, we end the circuit and stream due
-       * to a protocol failure. */
-      if (sendme_circuit_data_received(circ, layer_hint) < 0) {
-        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-               "(relay data) circ deliver_window below 0. Killing.");
-        connection_edge_end_close(conn, END_STREAM_REASON_TORPROTOCOL);
-        return -END_CIRC_REASON_TORPROTOCOL;
-      }
-
-      /* Consider sending a circuit-level SENDME cell. */
-      sendme_circuit_consider_sending(circ, layer_hint);
-
-      if (rh.stream_id == 0) {
-        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Relay data cell with zero "
-               "stream_id. Dropping.");
-        return 0;
-      } else if (!conn) {
-        if (CIRCUIT_IS_ORIGIN(circ)) {
-          origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-          if (connection_half_edge_is_valid_data(ocirc->half_streams,
-                                                 rh.stream_id)) {
-            circuit_read_valid_data(ocirc, rh.length);
-            log_info(domain,
-                     "data cell on circ %u valid on half-closed "
-                     "stream id %d", ocirc->global_identifier, rh.stream_id);
-          }
-        }
-
-        log_info(domain,"data cell dropped, unknown stream (streamid %d).",
-                 rh.stream_id);
-        return 0;
-      }
-
-      /* Update our stream-level deliver window that we just received a DATA
-       * cell. Going below 0 means we have a protocol level error so the
-       * stream and circuit are closed. */
-
-      if (sendme_stream_data_received(conn) < 0) {
-        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-               "(relay data) conn deliver_window below 0. Killing.");
-        connection_edge_end_close(conn, END_STREAM_REASON_TORPROTOCOL);
-        return -END_CIRC_REASON_TORPROTOCOL;
-      }
-      /* Total all valid application bytes delivered */
-      if (CIRCUIT_IS_ORIGIN(circ) && rh.length > 0) {
-        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
-      }
-
-      stats_n_data_bytes_received += rh.length;
-      connection_buf_add((char*)(cell->payload + RELAY_HEADER_SIZE),
-                              rh.length, TO_CONN(conn));
-
-#ifdef MEASUREMENTS_21206
-      /* Count number of RELAY_DATA cells received on a linked directory
-       * connection. */
-      connection_t *linked_conn = TO_CONN(conn)->linked_conn;
-
-      if (linked_conn && linked_conn->type == CONN_TYPE_DIR) {
-        ++(TO_DIR_CONN(linked_conn)->data_cells_received);
-      }
-#endif /* defined(MEASUREMENTS_21206) */
-
-      if (!optimistic_data) {
-        /* Only send a SENDME if we're not getting optimistic data; otherwise
-         * a SENDME could arrive before the CONNECTED.
-         */
-        sendme_connection_edge_consider_sending(conn);
-      }
-
-      return 0;
-    case RELAY_COMMAND_END:
-      reason = rh.length > 0 ?
-        get_uint8(cell->payload+RELAY_HEADER_SIZE) : END_STREAM_REASON_MISC;
-      if (!conn) {
-        if (CIRCUIT_IS_ORIGIN(circ)) {
-          origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-          if (connection_half_edge_is_valid_end(ocirc->half_streams,
-                                                rh.stream_id)) {
-
-            circuit_read_valid_data(ocirc, rh.length);
-            log_info(domain,
-                     "end cell (%s) on circ %u valid on half-closed "
-                     "stream id %d",
-                     stream_end_reason_to_string(reason),
-                     ocirc->global_identifier, rh.stream_id);
-            return 0;
-          }
-        }
-        log_info(domain,"end cell (%s) dropped, unknown stream.",
-                 stream_end_reason_to_string(reason));
-        return 0;
-      }
-/* XXX add to this log_fn the exit node's nickname? */
-      log_info(domain,TOR_SOCKET_T_FORMAT": end cell (%s) for stream %d. "
-               "Removing stream.",
-               conn->base_.s,
-               stream_end_reason_to_string(reason),
-               conn->stream_id);
-      if (conn->base_.type == CONN_TYPE_AP) {
-        entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(conn);
-        if (entry_conn->socks_request &&
-            !entry_conn->socks_request->has_finished)
-          log_warn(LD_BUG,
-                   "open stream hasn't sent socks answer yet? Closing.");
-      }
-      /* We just *got* an end; no reason to send one. */
-      conn->edge_has_sent_end = 1;
-      if (!conn->end_reason)
-        conn->end_reason = reason | END_STREAM_REASON_FLAG_REMOTE;
-      if (!conn->base_.marked_for_close) {
-        /* only mark it if not already marked. it's possible to
-         * get the 'end' right around when the client hangs up on us. */
-        connection_mark_and_flush(TO_CONN(conn));
-
-        /* Total all valid application bytes delivered */
-        if (CIRCUIT_IS_ORIGIN(circ)) {
-          circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
-        }
-      }
-      return 0;
-    case RELAY_COMMAND_EXTEND:
-    case RELAY_COMMAND_EXTEND2: {
-      static uint64_t total_n_extend=0, total_nonearly=0;
-      total_n_extend++;
-      if (rh.stream_id) {
-        log_fn(LOG_PROTOCOL_WARN, domain,
-               "'extend' cell received for non-zero stream. Dropping.");
-        return 0;
-      }
-      if (cell->command != CELL_RELAY_EARLY &&
-          !networkstatus_get_param(NULL,"AllowNonearlyExtend",0,0,1)) {
-#define EARLY_WARNING_INTERVAL 3600
-        static ratelim_t early_warning_limit =
-          RATELIM_INIT(EARLY_WARNING_INTERVAL);
-        char *m;
-        if (cell->command == CELL_RELAY) {
-          ++total_nonearly;
-          if ((m = rate_limit_log(&early_warning_limit, approx_time()))) {
-            double percentage = ((double)total_nonearly)/total_n_extend;
-            percentage *= 100;
-            log_fn(LOG_PROTOCOL_WARN, domain, "EXTEND cell received, "
-                   "but not via RELAY_EARLY. Dropping.%s", m);
-            log_fn(LOG_PROTOCOL_WARN, domain, "  (We have dropped %.02f%% of "
-                   "all EXTEND cells for this reason)", percentage);
-            tor_free(m);
-          }
-        } else {
-          log_fn(LOG_WARN, domain,
-                 "EXTEND cell received, in a cell with type %d! Dropping.",
-                 cell->command);
-        }
-        return 0;
-      }
-      return circuit_extend(cell, circ);
-    }
-    case RELAY_COMMAND_EXTENDED:
-    case RELAY_COMMAND_EXTENDED2:
-      if (!layer_hint) {
-        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-               "'extended' unsupported at non-origin. Dropping.");
-        return 0;
-      }
-      log_debug(domain,"Got an extended cell! Yay.");
-      {
-        extended_cell_t extended_cell;
-        if (extended_cell_parse(&extended_cell, rh.command,
-                        (const uint8_t*)cell->payload+RELAY_HEADER_SIZE,
-                        rh.length)<0) {
-          log_warn(LD_PROTOCOL,
-                   "Can't parse EXTENDED cell; killing circuit.");
-          return -END_CIRC_REASON_TORPROTOCOL;
-        }
-        if ((reason = circuit_finish_handshake(TO_ORIGIN_CIRCUIT(circ),
-                                         &extended_cell.created_cell)) < 0) {
-          circuit_mark_for_close(circ, -reason);
-          return 0; /* We don't want to cause a warning, so we mark the circuit
-                     * here. */
-        }
-      }
-      if ((reason=circuit_send_next_onion_skin(TO_ORIGIN_CIRCUIT(circ)))<0) {
-        log_info(domain,"circuit_send_next_onion_skin() failed.");
-        return reason;
-      }
-      /* Total all valid bytes delivered. */
-      if (CIRCUIT_IS_ORIGIN(circ)) {
-        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
-      }
-      return 0;
-    case RELAY_COMMAND_TRUNCATE:
-      if (layer_hint) {
-        log_fn(LOG_PROTOCOL_WARN, LD_APP,
-               "'truncate' unsupported at origin. Dropping.");
-        return 0;
-      }
-      if (circ->n_hop) {
-        if (circ->n_chan)
-          log_warn(LD_BUG, "n_chan and n_hop set on the same circuit!");
-        extend_info_free(circ->n_hop);
-        circ->n_hop = NULL;
-        tor_free(circ->n_chan_create_cell);
-        circuit_set_state(circ, CIRCUIT_STATE_OPEN);
-      }
-      if (circ->n_chan) {
-        uint8_t trunc_reason = get_uint8(cell->payload + RELAY_HEADER_SIZE);
-        circuit_synchronize_written_or_bandwidth(circ, CIRCUIT_N_CHAN);
-        circuit_clear_cell_queue(circ, circ->n_chan);
-        channel_send_destroy(circ->n_circ_id, circ->n_chan,
-                             trunc_reason);
-        circuit_set_n_circid_chan(circ, 0, NULL);
-      }
-      log_debug(LD_EXIT, "Processed 'truncate', replying.");
-      {
-        char payload[1];
-        payload[0] = (char)END_CIRC_REASON_REQUESTED;
-        relay_send_command_from_edge(0, circ, RELAY_COMMAND_TRUNCATED,
-                                     payload, sizeof(payload), NULL);
-      }
-      return 0;
-    case RELAY_COMMAND_TRUNCATED:
-      if (!layer_hint) {
-        log_fn(LOG_PROTOCOL_WARN, LD_EXIT,
-               "'truncated' unsupported at non-origin. Dropping.");
-        return 0;
-      }
-
-      /* Count the truncated as valid, for completeness. The
-       * circuit is being torn down anyway, though.  */
-      if (CIRCUIT_IS_ORIGIN(circ)) {
-        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ),
-                                rh.length);
-      }
-      circuit_truncated(TO_ORIGIN_CIRCUIT(circ),
-                        get_uint8(cell->payload + RELAY_HEADER_SIZE));
-      return 0;
-    case RELAY_COMMAND_CONNECTED:
-      if (conn) {
-        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-               "'connected' unsupported while open. Closing circ.");
-        return -END_CIRC_REASON_TORPROTOCOL;
-      }
-
-      if (CIRCUIT_IS_ORIGIN(circ)) {
-        origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-        if (connection_half_edge_is_valid_connected(ocirc->half_streams,
-                                                    rh.stream_id)) {
-          circuit_read_valid_data(ocirc, rh.length);
-          log_info(domain,
-                   "connected cell on circ %u valid on half-closed "
-                   "stream id %d", ocirc->global_identifier, rh.stream_id);
-          return 0;
-        }
-      }
-
-      log_info(domain,
-               "'connected' received on circid %u for streamid %d, "
-               "no conn attached anymore. Ignoring.",
-               (unsigned)circ->n_circ_id, rh.stream_id);
-      return 0;
-    case RELAY_COMMAND_SENDME:
-      return process_sendme_cell(&rh, cell, circ, conn, layer_hint, domain);
-    case RELAY_COMMAND_RESOLVE:
-      if (layer_hint) {
-        log_fn(LOG_PROTOCOL_WARN, LD_APP,
-               "resolve request unsupported at AP; dropping.");
-        return 0;
-      } else if (conn) {
-        log_fn(LOG_PROTOCOL_WARN, domain,
-               "resolve request for known stream; dropping.");
-        return 0;
-      } else if (circ->purpose != CIRCUIT_PURPOSE_OR) {
-        log_fn(LOG_PROTOCOL_WARN, domain,
-               "resolve request on circ with purpose %d; dropping",
-               circ->purpose);
-        return 0;
-      }
-      connection_exit_begin_resolve(cell, TO_OR_CIRCUIT(circ));
-      return 0;
-    case RELAY_COMMAND_RESOLVED:
-      if (conn) {
-        log_fn(LOG_PROTOCOL_WARN, domain,
-               "'resolved' unsupported while open. Closing circ.");
-        return -END_CIRC_REASON_TORPROTOCOL;
-      }
-
-      if (CIRCUIT_IS_ORIGIN(circ)) {
-        origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-        if (connection_half_edge_is_valid_resolved(ocirc->half_streams,
-                                                    rh.stream_id)) {
-          circuit_read_valid_data(ocirc, rh.length);
-          log_info(domain,
-                   "resolved cell on circ %u valid on half-closed "
-                   "stream id %d", ocirc->global_identifier, rh.stream_id);
-          return 0;
-        }
-      }
-
-      log_info(domain,
-               "'resolved' received, no conn attached anymore. Ignoring.");
-      return 0;
-    case RELAY_COMMAND_ESTABLISH_INTRO:
-    case RELAY_COMMAND_ESTABLISH_RENDEZVOUS:
-    case RELAY_COMMAND_INTRODUCE1:
-    case RELAY_COMMAND_INTRODUCE2:
-    case RELAY_COMMAND_INTRODUCE_ACK:
-    case RELAY_COMMAND_RENDEZVOUS1:
-    case RELAY_COMMAND_RENDEZVOUS2:
-    case RELAY_COMMAND_INTRO_ESTABLISHED:
-    case RELAY_COMMAND_RENDEZVOUS_ESTABLISHED:
-      rend_process_relay_cell(circ, layer_hint,
-                              rh.command, rh.length,
-                              cell->payload+RELAY_HEADER_SIZE);
-      return 0;
-  }
-  log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-         "Received unknown relay command %d. Perhaps the other side is using "
-         "a newer version of Tor? Dropping.",
-         rh.command);
-  return 0; /* for forward compatibility, don't kill the circuit */
+  return handle_relay_command(cell, circ, conn, layer_hint,
+                              &rh, optimistic_data);
 }
 
 /** How many relay_data cells have we built, ever? */
