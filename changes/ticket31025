@@ -1,0 +1,5 @@
+  o Minor bugfixes (coverity):
+    - In our siphash implementation, when building for coverity, use memcpy
+      in place of a switch statement, so that coverity can tell we are not
+      accessing out-of-bounds memory. Fixes bug 31025; bugfix on
+      0.2.8.1-alpha.  This is tracked as CID 1447293 and 1447295.
