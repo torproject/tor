@@ -789,6 +789,10 @@ config_free_(const config_mgr_t *mgr, void *options)
 
   tor_assert(fmt);
 
+  if (mgr->toplevel->clear_fn) {
+    mgr->toplevel->clear_fn(mgr, options);
+  }
+
   SMARTLIST_FOREACH_BEGIN(mgr->all_vars, const managed_var_t *, mv) {
     config_clear(mgr, options, mv);
   } SMARTLIST_FOREACH_END(mv);
@@ -977,9 +981,7 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
   result = smartlist_join_strings(elements, "", 0, NULL);
   SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
   smartlist_free(elements);
-  if (defaults_tmp) {
-    fmt->free_fn(mgr, defaults_tmp);
-  }
+  config_free(mgr, defaults_tmp);
   return result;
 }
 

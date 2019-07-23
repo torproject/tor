@@ -843,9 +843,9 @@ static void config_maybe_load_geoip_files_(const or_options_t *options,
 static int options_validate_cb(void *old_options, void *options,
                                void *default_options,
                                int from_setconf, char **msg);
-static void options_free_cb(const config_mgr_t *, void *options);
 static void cleanup_protocol_warning_severity_level(void);
 static void set_protocol_warning_severity_level(int warning_severity);
+static void options_clear_cb(const config_mgr_t *mgr, void *opts);
 
 /** Magic value for or_options_t. */
 #define OR_OPTIONS_MAGIC 9090909
@@ -862,8 +862,8 @@ static const config_format_t options_format = {
   option_deprecation_notes_,
   option_vars_,
   options_validate_cb,
-  options_free_cb,
-  NULL
+  options_clear_cb,
+  NULL,
 };
 
 /*
@@ -1011,11 +1011,11 @@ set_options(or_options_t *new_val, char **msg)
 
 /** Release additional memory allocated in options
  */
-STATIC void
-or_options_free_(or_options_t *options)
+static void
+options_clear_cb(const config_mgr_t *mgr, void *opts)
 {
-  if (!options)
-    return;
+  (void)mgr;
+  or_options_t *options = opts;
 
   routerset_free(options->ExcludeExitNodesUnion_);
   if (options->NodeFamilySets) {
@@ -1038,6 +1038,13 @@ or_options_free_(or_options_t *options)
   tor_free(options->command_arg);
   tor_free(options->master_key_fname);
   config_free_lines(options->MyFamily);
+}
+
+/** Release all memory allocated in options
+ */
+STATIC void
+or_options_free_(or_options_t *options)
+{
   config_free(get_options_mgr(), options);
 }
 
@@ -3162,14 +3169,6 @@ options_validate_cb(void *old_options, void *options, void *default_options,
                           from_setconf, msg);
   in_option_validation = 0;
   return rv;
-}
-
-/** Callback to free an or_options_t */
-static void
-options_free_cb(const config_mgr_t *mgr, void *options)
-{
-  (void)mgr;
-  or_options_free_(options);
 }
 
 #define REJECT(arg) \
