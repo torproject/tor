@@ -1596,6 +1596,8 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
 
   tor_assert(rh);
 
+  /* First handle the padding commands, since we want to ignore any other
+   * commands if this circuit is padding-specific. */
   switch (rh->command) {
     case RELAY_COMMAND_DROP:
       /* Already examined in circpad_deliver_recognized_relay_cell_events */
@@ -1607,6 +1609,16 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
       if (circpad_handle_padding_negotiated(circ, cell, layer_hint) == 0)
         circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
       return 0;
+  }
+
+  /* If this is a padding circuit we don't need to parse any other commands
+   * than the padding ones. Just drop them to the floor. */
+  if (circ->purpose == CIRCUIT_PURPOSE_C_CIRCUIT_PADDING) {
+    return 0;
+  }
+
+  /* Now handle all the other commands */
+  switch (rh->command) {
     case RELAY_COMMAND_BEGIN:
     case RELAY_COMMAND_BEGIN_DIR:
       if (layer_hint &&
