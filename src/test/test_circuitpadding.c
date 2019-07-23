@@ -4,9 +4,11 @@
 #define CIRCUITPADDING_MACHINES_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #define CRYPT_PATH_PRIVATE
+#define RELAY_PRIVATE
 
 #include "core/or/or.h"
 #include "test/test.h"
+#include "test/log_test_helpers.h"
 #include "lib/testsupport/testsupport.h"
 #include "core/or/connection_or.h"
 #include "core/or/channel.h"
@@ -3152,6 +3154,29 @@ test_circuitpadding_hs_machines(void *arg)
   UNMOCK(circpad_machine_schedule_padding);
 }
 
+/** Test that we effectively ignore non-padding cells in padding circuits. */
+static void
+test_circuitpadding_ignore_non_padding_cells(void *arg)
+{
+  int retval;
+  relay_header_t rh;
+
+  (void) arg;
+
+  client_side = (circuit_t *)origin_circuit_new();
+  client_side->purpose = CIRCUIT_PURPOSE_C_CIRCUIT_PADDING;
+
+  rh.command = RELAY_COMMAND_BEGIN;
+
+  setup_full_capture_of_logs(LOG_INFO);
+  retval = handle_relay_command(NULL, client_side, NULL, NULL, &rh, 0);
+  tt_int_op(retval, OP_EQ, 0);
+  expect_log_msg_containing("Ignored cell");
+
+ done:
+  ;
+}
+
 #define TEST_CIRCUITPADDING(name, flags) \
     { #name, test_##name, (flags), NULL, NULL }
 
@@ -3175,5 +3200,6 @@ struct testcase_t circuitpadding_tests[] = {
   TEST_CIRCUITPADDING(circuitpadding_token_removal_exact, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_manage_circuit_lifetime, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_hs_machines, TT_FORK),
+  TEST_CIRCUITPADDING(circuitpadding_ignore_non_padding_cells, TT_FORK),
   END_OF_TESTCASES
 };
