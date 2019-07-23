@@ -1594,7 +1594,9 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
   unsigned domain = layer_hint?LD_APP:LD_EXIT;
   int reason;
 
-  switch (rh.command) {
+  tor_assert(rh);
+
+  switch (rh->command) {
     case RELAY_COMMAND_DROP:
       /* Already examined in circpad_deliver_recognized_relay_cell_events */
       return 0;
@@ -1603,7 +1605,7 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
       return 0;
     case RELAY_COMMAND_PADDING_NEGOTIATED:
       if (circpad_handle_padding_negotiated(circ, cell, layer_hint) == 0)
-        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
+        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
       return 0;
     case RELAY_COMMAND_BEGIN:
     case RELAY_COMMAND_BEGIN_DIR:
@@ -1625,7 +1627,7 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
                "Begin cell for known stream. Dropping.");
         return 0;
       }
-      if (rh.command == RELAY_COMMAND_BEGIN_DIR &&
+      if (rh->command == RELAY_COMMAND_BEGIN_DIR &&
           circ->purpose != CIRCUIT_PURPOSE_S_REND_JOINED) {
         /* Assign this circuit and its app-ward OR connection a unique ID,
          * so that we can measure download times. The local edge and dir
@@ -1652,7 +1654,7 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
       /* Consider sending a circuit-level SENDME cell. */
       sendme_circuit_consider_sending(circ, layer_hint);
 
-      if (rh.stream_id == 0) {
+      if (rh->stream_id == 0) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Relay data cell with zero "
                "stream_id. Dropping.");
         return 0;
@@ -1660,16 +1662,16 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
         if (CIRCUIT_IS_ORIGIN(circ)) {
           origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
           if (connection_half_edge_is_valid_data(ocirc->half_streams,
-                                                 rh.stream_id)) {
-            circuit_read_valid_data(ocirc, rh.length);
+                                                 rh->stream_id)) {
+            circuit_read_valid_data(ocirc, rh->length);
             log_info(domain,
                      "data cell on circ %u valid on half-closed "
-                     "stream id %d", ocirc->global_identifier, rh.stream_id);
+                     "stream id %d", ocirc->global_identifier, rh->stream_id);
           }
         }
 
         log_info(domain,"data cell dropped, unknown stream (streamid %d).",
-                 rh.stream_id);
+                 rh->stream_id);
         return 0;
       }
 
@@ -1684,13 +1686,13 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
         return -END_CIRC_REASON_TORPROTOCOL;
       }
       /* Total all valid application bytes delivered */
-      if (CIRCUIT_IS_ORIGIN(circ) && rh.length > 0) {
-        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
+      if (CIRCUIT_IS_ORIGIN(circ) && rh->length > 0) {
+        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
       }
 
-      stats_n_data_bytes_received += rh.length;
+      stats_n_data_bytes_received += rh->length;
       connection_buf_add((char*)(cell->payload + RELAY_HEADER_SIZE),
-                              rh.length, TO_CONN(conn));
+                              rh->length, TO_CONN(conn));
 
 #ifdef MEASUREMENTS_21206
       /* Count number of RELAY_DATA cells received on a linked directory
@@ -1711,20 +1713,20 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
 
       return 0;
     case RELAY_COMMAND_END:
-      reason = rh.length > 0 ?
+      reason = rh->length > 0 ?
         get_uint8(cell->payload+RELAY_HEADER_SIZE) : END_STREAM_REASON_MISC;
       if (!conn) {
         if (CIRCUIT_IS_ORIGIN(circ)) {
           origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
           if (connection_half_edge_is_valid_end(ocirc->half_streams,
-                                                rh.stream_id)) {
+                                                rh->stream_id)) {
 
-            circuit_read_valid_data(ocirc, rh.length);
+            circuit_read_valid_data(ocirc, rh->length);
             log_info(domain,
                      "end cell (%s) on circ %u valid on half-closed "
                      "stream id %d",
                      stream_end_reason_to_string(reason),
-                     ocirc->global_identifier, rh.stream_id);
+                     ocirc->global_identifier, rh->stream_id);
             return 0;
           }
         }
@@ -1756,7 +1758,7 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
 
         /* Total all valid application bytes delivered */
         if (CIRCUIT_IS_ORIGIN(circ)) {
-          circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
+          circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
         }
       }
       return 0;
@@ -1764,7 +1766,7 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
     case RELAY_COMMAND_EXTEND2: {
       static uint64_t total_n_extend=0, total_nonearly=0;
       total_n_extend++;
-      if (rh.stream_id) {
+      if (rh->stream_id) {
         log_fn(LOG_PROTOCOL_WARN, domain,
                "'extend' cell received for non-zero stream. Dropping.");
         return 0;
@@ -1805,9 +1807,9 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
       log_debug(domain,"Got an extended cell! Yay.");
       {
         extended_cell_t extended_cell;
-        if (extended_cell_parse(&extended_cell, rh.command,
+        if (extended_cell_parse(&extended_cell, rh->command,
                         (const uint8_t*)cell->payload+RELAY_HEADER_SIZE,
-                        rh.length)<0) {
+                        rh->length)<0) {
           log_warn(LD_PROTOCOL,
                    "Can't parse EXTENDED cell; killing circuit.");
           return -END_CIRC_REASON_TORPROTOCOL;
@@ -1825,7 +1827,7 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
       }
       /* Total all valid bytes delivered. */
       if (CIRCUIT_IS_ORIGIN(circ)) {
-        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
+        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
       }
       return 0;
     case RELAY_COMMAND_TRUNCATE:
@@ -1869,7 +1871,7 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
        * circuit is being torn down anyway, though.  */
       if (CIRCUIT_IS_ORIGIN(circ)) {
         circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ),
-                                rh.length);
+                                rh->length);
       }
       circuit_truncated(TO_ORIGIN_CIRCUIT(circ),
                         get_uint8(cell->payload + RELAY_HEADER_SIZE));
@@ -1884,11 +1886,11 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
       if (CIRCUIT_IS_ORIGIN(circ)) {
         origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
         if (connection_half_edge_is_valid_connected(ocirc->half_streams,
-                                                    rh.stream_id)) {
-          circuit_read_valid_data(ocirc, rh.length);
+                                                    rh->stream_id)) {
+          circuit_read_valid_data(ocirc, rh->length);
           log_info(domain,
                    "connected cell on circ %u valid on half-closed "
-                   "stream id %d", ocirc->global_identifier, rh.stream_id);
+                   "stream id %d", ocirc->global_identifier, rh->stream_id);
           return 0;
         }
       }
@@ -1896,10 +1898,10 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
       log_info(domain,
                "'connected' received on circid %u for streamid %d, "
                "no conn attached anymore. Ignoring.",
-               (unsigned)circ->n_circ_id, rh.stream_id);
+               (unsigned)circ->n_circ_id, rh->stream_id);
       return 0;
     case RELAY_COMMAND_SENDME:
-      return process_sendme_cell(&rh, cell, circ, conn, layer_hint, domain);
+      return process_sendme_cell(rh, cell, circ, conn, layer_hint, domain);
     case RELAY_COMMAND_RESOLVE:
       if (layer_hint) {
         log_fn(LOG_PROTOCOL_WARN, LD_APP,
@@ -1927,11 +1929,11 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
       if (CIRCUIT_IS_ORIGIN(circ)) {
         origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
         if (connection_half_edge_is_valid_resolved(ocirc->half_streams,
-                                                    rh.stream_id)) {
-          circuit_read_valid_data(ocirc, rh.length);
+                                                    rh->stream_id)) {
+          circuit_read_valid_data(ocirc, rh->length);
           log_info(domain,
                    "resolved cell on circ %u valid on half-closed "
-                   "stream id %d", ocirc->global_identifier, rh.stream_id);
+                   "stream id %d", ocirc->global_identifier, rh->stream_id);
           return 0;
         }
       }
@@ -1949,14 +1951,14 @@ handle_relay_command(cell_t *cell, circuit_t *circ,
     case RELAY_COMMAND_INTRO_ESTABLISHED:
     case RELAY_COMMAND_RENDEZVOUS_ESTABLISHED:
       rend_process_relay_cell(circ, layer_hint,
-                              rh.command, rh.length,
+                              rh->command, rh->length,
                               cell->payload+RELAY_HEADER_SIZE);
       return 0;
   }
   log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
          "Received unknown relay command %d. Perhaps the other side is using "
          "a newer version of Tor? Dropping.",
-         rh.command);
+         rh->command);
   return 0; /* for forward compatibility, don't kill the circuit */
 }
 
@@ -2036,7 +2038,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   }
 
   return handle_relay_command(cell, circ, conn, layer_hint,
-                              rh, optimistic_data);
+                              &rh, optimistic_data);
 }
 
 /** How many relay_data cells have we built, ever? */
