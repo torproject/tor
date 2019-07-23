@@ -153,6 +153,7 @@ test_confparse_init(void *arg)
 {
   (void)arg;
   config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
   test_struct_t *tst = config_new(mgr);
   config_init(mgr, tst);
 
@@ -239,6 +240,7 @@ test_confparse_assign_simple(void *arg)
 {
   (void)arg;
   config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
   test_struct_t *tst = get_simple_config(mgr);
 
   tt_str_op(tst->s, OP_EQ, "this is a");
@@ -300,6 +302,7 @@ test_confparse_assign_obsolete(void *arg)
 {
   (void)arg;
   config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
   test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL;
@@ -330,6 +333,7 @@ test_confparse_assign_deprecated(void *arg)
 {
   (void)arg;
   config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
   test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL;
@@ -364,6 +368,7 @@ test_confparse_assign_replaced(void *arg)
 {
   (void)arg;
   config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
   test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL;
@@ -395,6 +400,7 @@ test_confparse_assign_emptystring(void *arg)
 {
   (void)arg;
   config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
   test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL;
@@ -423,6 +429,7 @@ test_confparse_assign_twice(void *arg)
 {
   (void)arg;
   config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
   test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL;
@@ -458,6 +465,7 @@ test_confparse_assign_badval(void *arg)
 {
   const badval_test_t *bt = arg;
   config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
   test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL;
@@ -512,6 +520,7 @@ test_confparse_dump(void *arg)
 {
   (void)arg;
   config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
   test_struct_t *tst = get_simple_config(mgr);
   char *dumped = NULL;
 
@@ -603,6 +612,7 @@ test_confparse_reset(void *arg)
 {
   (void)arg;
   config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
   test_struct_t *tst = get_simple_config(mgr);
 
   config_reset_line(mgr, tst, "interval", 0);
@@ -623,6 +633,7 @@ test_confparse_reassign(void *arg)
 {
   (void)arg;
   config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
   test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL, *rs = NULL;
@@ -679,6 +690,7 @@ test_confparse_reassign_extend(void *arg)
 {
   (void)arg;
   config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
   test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL;
@@ -738,6 +750,7 @@ test_confparse_get_assigned(void *arg)
   (void)arg;
 
   config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
   test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
 
@@ -824,6 +837,7 @@ test_confparse_extra_lines(void *arg)
 {
   (void)arg;
   config_mgr_t *mgr = config_mgr_new(&etest_fmt);
+  config_mgr_freeze(mgr);
   test_struct_t *tst = config_new(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL, *dump = NULL;
@@ -919,6 +933,7 @@ test_confparse_check_ok_fail(void *arg)
 {
   (void)arg;
   config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
   test_struct_t *tst = config_new(mgr);
   tst->pos = -10;
   tt_assert(! config_check_ok(mgr, tst, LOG_INFO));

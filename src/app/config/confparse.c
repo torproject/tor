@@ -85,6 +85,10 @@ struct config_mgr_t {
   smartlist_t *all_abbrevs;
   /** A smartlist of config_deprecation_t for all configuration formats. */
   smartlist_t *all_deprecations;
+  /** True if this manager has been frozen and cannot have any more formats
+   * added to it. A manager must be frozen before it can be used to construct
+   * or manipulate objects. */
+  bool frozen;
 };
 
 #define IDX_TOPLEVEL (-1)
@@ -111,6 +115,10 @@ config_mgr_register_fmt(config_mgr_t *mgr,
                         int object_idx)
 {
   int i;
+
+  tor_assertf(!mgr->frozen,
+              "Tried to add a format to a configuration manager after "
+              "it had been frozen.");
 
   /* register variables */
   for (i = 0; fmt->vars[i].member.name; ++i) {
@@ -161,6 +169,16 @@ config_mgr_get_obj(const config_mgr_t *mgr, const void *toplevel, int idx)
   return config_mgr_get_obj_mutable(mgr, (void*)toplevel, idx);
 }
 
+/**
+ * Mark a configuration manager as "frozen", so that no more formats can be
+ * added, and so that it can be used for manipulating configuration objects.
+ **/
+void
+config_mgr_freeze(config_mgr_t *mgr)
+{
+  mgr->frozen = true;
+}
+
 /** Release all storage held in <b>mgr</b> */
 void
 config_mgr_free_(config_mgr_t *mgr)
@@ -208,6 +226,7 @@ config_mgr_assert_magic_ok(const config_mgr_t *mgr,
 {
   tor_assert(mgr);
   tor_assert(options);
+  tor_assert(mgr->frozen);
   struct_check_magic(options, &mgr->toplevel->magic);
 }
 
@@ -221,6 +240,7 @@ config_mgr_assert_magic_ok(const config_mgr_t *mgr,
 void *
 config_new(const config_mgr_t *mgr)
 {
+  tor_assert(mgr->frozen);
   const config_format_t *fmt = mgr->toplevel;
   void *opts = tor_malloc_zero(fmt->size);
   struct_set_magic(opts, &fmt->magic);

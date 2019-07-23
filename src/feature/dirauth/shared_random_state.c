@@ -112,6 +112,7 @@ get_srs_mgr(void)
 {
   if (PREDICT_UNLIKELY(shared_random_state_mgr == NULL)) {
     shared_random_state_mgr = config_mgr_new(&state_format);
+    config_mgr_freeze(shared_random_state_mgr);
   }
   return shared_random_state_mgr;
 }

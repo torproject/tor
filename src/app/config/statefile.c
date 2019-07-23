@@ -183,6 +183,7 @@ get_state_mgr(void)
 {
   if (PREDICT_UNLIKELY(state_mgr == NULL)) {
     state_mgr = config_mgr_new(&state_format);
+    config_mgr_freeze(state_mgr);
   }
   return state_mgr;
 }
