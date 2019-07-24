@@ -73,10 +73,10 @@ managed_var_free_(managed_var_t *mv)
   FREE_AND_NULL(managed_var_t, managed_var_free_, (mv))
 
 struct config_suite_t {
-  /* NOTE: This object isn't implemented yet; it's just a placeholder
-   * to make sure we have our memory menagement right.
-   */
-  int foo;
+  /** A list of configuration objects managed by a given configuration
+   * manager. They are stored in the same order as the config_format_t
+   * objects in the manager's list of subformats. */
+  smartlist_t *configs;
 };
 
 /**
@@ -86,6 +86,7 @@ static config_suite_t *
 config_suite_new(void)
 {
   config_suite_t *suite = tor_malloc_zero(sizeof(config_suite_t));
+  suite->configs = smartlist_new();
   return suite;
 }
 
@@ -96,6 +97,7 @@ config_suite_free_(config_suite_t *suite)
 {
   if (!suite)
     return;
+  smartlist_free(suite->configs);
   tor_free(suite);
 }
 
@@ -110,6 +112,11 @@ struct config_mgr_t {
    * contains.  A subsequent commit will add more. XXXX)
    */
   const config_format_t *toplevel;
+  /**
+   * List of second-level configuration format objects that this manager
+   * also knows about.
+   */
+  smartlist_t *subconfigs;
   /** A smartlist of managed_var_t objects for all configuration formats. */
   smartlist_t *all_vars;
   /** A smartlist of config_abbrev_t objects for all abbreviations. These
@@ -137,12 +144,14 @@ config_mgr_t *
 config_mgr_new(const config_format_t *toplevel_fmt)
 {
   config_mgr_t *mgr = tor_malloc_zero(sizeof(config_mgr_t));
-  mgr->toplevel = toplevel_fmt;
+  mgr->subconfigs = smartlist_new();
   mgr->all_vars = smartlist_new();
   mgr->all_abbrevs = smartlist_new();
   mgr->all_deprecations = smartlist_new();
 
   config_mgr_register_fmt(mgr, toplevel_fmt, IDX_TOPLEVEL);
+  mgr->toplevel = toplevel_fmt;
+
   return mgr;
 }
 
@@ -157,6 +166,14 @@ config_mgr_register_fmt(config_mgr_t *mgr,
   tor_assertf(!mgr->frozen,
               "Tried to add a format to a configuration manager after "
               "it had been frozen.");
+
+  if (object_idx != IDX_TOPLEVEL) {
+    tor_assertf(fmt->config_suite_offset < 0,
+          "Tried to register a toplevel format in a non-toplevel position");
+  }
+  tor_assertf(fmt != mgr->toplevel &&
+              ! smartlist_contains(mgr->subconfigs, fmt),
+              "Tried to register an already-registered format.");
 
   /* register variables */
   for (i = 0; fmt->vars[i].member.name; ++i) {
@@ -182,6 +199,21 @@ config_mgr_register_fmt(config_mgr_t *mgr,
   }
 }
 
+/**
+ * Add a new format to this configuration object.  Asserts on failure.
+ *
+ **/
+int
+config_mgr_add_format(config_mgr_t *mgr,
+                      const config_format_t *fmt)
+{
+  tor_assert(mgr);
+  int idx = smartlist_len(mgr->subconfigs);
+  config_mgr_register_fmt(mgr, fmt, idx);
+  smartlist_add(mgr->subconfigs, (void *)fmt);
+  return idx;
+}
+
 /** Return a pointer to the config_suite_t * pointer inside a
  * configuration object; returns NULL if there is no such member. */
 static inline config_suite_t **
@@ -204,10 +236,19 @@ config_mgr_get_suite_ptr(const config_mgr_t *mgr, void *toplevel)
 static void *
 config_mgr_get_obj_mutable(const config_mgr_t *mgr, void *toplevel, int idx)
 {
-  (void)mgr;
-  tor_assert(idx == IDX_TOPLEVEL); // nothing else is implemented yet XXXX
+  tor_assert(mgr);
   tor_assert(toplevel);
-  return toplevel;
+  if (idx == IDX_TOPLEVEL)
+    return toplevel;
+
+  tor_assertf(idx >= 0 && idx < smartlist_len(mgr->subconfigs),
+              "Index %d is out of range.", idx);
+  config_suite_t **suite = config_mgr_get_suite_ptr(mgr, toplevel);
+  tor_assert(suite);
+  tor_assert(smartlist_len(mgr->subconfigs) ==
+             smartlist_len((*suite)->configs));
+
+  return smartlist_get((*suite)->configs, idx);
 }
 
 /** As config_mgr_get_obj_mutable(), but return a const pointer. */
@@ -257,6 +298,7 @@ config_mgr_free_(config_mgr_t *mgr)
   smartlist_free(mgr->all_vars);
   smartlist_free(mgr->all_abbrevs);
   smartlist_free(mgr->all_deprecations);
+  smartlist_free(mgr->subconfigs);
   memset(mgr, 0, sizeof(*mgr));
   tor_free(mgr);
 }
@@ -296,6 +338,20 @@ config_mgr_assert_magic_ok(const config_mgr_t *mgr,
   tor_assert(options);
   tor_assert(mgr->frozen);
   struct_check_magic(options, &mgr->toplevel_magic);
+
+  config_suite_t **suitep = config_mgr_get_suite_ptr(mgr, (void*)options);
+  if (suitep == NULL) {
+    tor_assert(smartlist_len(mgr->subconfigs) == 0);
+    return;
+  }
+
+  tor_assert(smartlist_len((*suitep)->configs) ==
+             smartlist_len(mgr->subconfigs));
+  SMARTLIST_FOREACH_BEGIN(mgr->subconfigs, const config_format_t *, fmt) {
+    void *obj = smartlist_get((*suitep)->configs, fmt_sl_idx);
+    tor_assert(obj);
+    struct_check_magic(obj, &fmt->magic);
+  } SMARTLIST_FOREACH_END(fmt);
 }
 
 /** Macro: assert that <b>cfg</b> has the right magic field for
@@ -309,12 +365,16 @@ void *
 config_new(const config_mgr_t *mgr)
 {
   tor_assert(mgr->frozen);
-  const config_format_t *fmt = mgr->toplevel;
-  void *opts = tor_malloc_zero(fmt->size);
+  void *opts = tor_malloc_zero(mgr->toplevel->size);
   struct_set_magic(opts, &mgr->toplevel_magic);
   config_suite_t **suitep = config_mgr_get_suite_ptr(mgr, opts);
   if (suitep) {
     *suitep = config_suite_new();
+    SMARTLIST_FOREACH_BEGIN(mgr->subconfigs, const config_format_t *, fmt) {
+      void *obj = tor_malloc_zero(fmt->size);
+      struct_set_magic(obj, &fmt->magic);
+      smartlist_add((*suitep)->configs, obj);
+    } SMARTLIST_FOREACH_END(fmt);
   }
   CONFIG_CHECK(mgr, opts);
   return opts;
@@ -826,30 +886,41 @@ config_reset(const config_mgr_t *mgr, void *options,
 void
 config_free_(const config_mgr_t *mgr, void *options)
 {
-  const config_format_t *fmt = mgr->toplevel;
-
   if (!options)
     return;
 
-  tor_assert(fmt);
+  tor_assert(mgr);
 
   if (mgr->toplevel->clear_fn) {
     mgr->toplevel->clear_fn(mgr, options);
+  }
+  config_suite_t **suitep = config_mgr_get_suite_ptr(mgr, options);
+  if (suitep) {
+    tor_assert(smartlist_len((*suitep)->configs) ==
+               smartlist_len(mgr->subconfigs));
+    SMARTLIST_FOREACH_BEGIN(mgr->subconfigs, const config_format_t *, fmt) {
+      void *obj = smartlist_get((*suitep)->configs, fmt_sl_idx);
+      if (fmt->clear_fn) {
+        fmt->clear_fn(mgr, obj);
+      }
+    } SMARTLIST_FOREACH_END(fmt);
   }
 
   SMARTLIST_FOREACH_BEGIN(mgr->all_vars, const managed_var_t *, mv) {
     config_clear(mgr, options, mv);
   } SMARTLIST_FOREACH_END(mv);
 
-  if (fmt->extra) {
-    config_line_t **linep = STRUCT_VAR_P(options, fmt->extra->offset);
+  if (mgr->toplevel->extra) {
+    config_line_t **linep = STRUCT_VAR_P(options,
+                                         mgr->toplevel->extra->offset);
     config_free_lines(*linep);
     *linep = NULL;
   }
 
-  config_suite_t **suitep = config_mgr_get_suite_ptr(mgr, options);
-  if (suitep)
+  if (suitep) {
+    SMARTLIST_FOREACH((*suitep)->configs, void *, obj, tor_free(obj));
     config_suite_free(*suitep);
+  }
 
   tor_free(options);
 }
