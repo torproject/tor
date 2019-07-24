@@ -1022,7 +1022,7 @@ flush_pending_log_callbacks(void)
   do {
     SMARTLIST_FOREACH_BEGIN(messages, pending_log_message_t *, msg) {
       const int severity = msg->severity;
-      const int domain = msg->domain;
+      const log_domain_mask_t domain = msg->domain;
       for (lf = logfiles; lf; lf = lf->next) {
         if (! lf->callback || lf->seems_dead ||
             ! (lf->severities->masks[SEVERITY_MASK_IDX(severity)] & domain)) {
@@ -1377,7 +1377,7 @@ parse_log_severity_config(const char **cfg_ptr,
             if (!strcmp(domain, "*")) {
               domains = ~0u;
             } else {
-              int d;
+              log_domain_mask_t d;
               int negate=0;
               if (*domain == '~') {
                 negate = 1;

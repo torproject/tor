@@ -31,7 +31,7 @@
 
 typedef struct {
   int severity;
-  uint32_t domain;
+  log_domain_mask_t domain;
   char *msg;
 } logmsg_t;
 
