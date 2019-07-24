@@ -1791,6 +1791,43 @@ circpad_cell_event_nonpadding_sent(circuit_t *on_circ)
   } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
 }
 
+/** Check if this cell or circuit are related to circuit padding and handle
+ *  them if so.  Return 0 if the cell was handled in this subsystem and does
+ *  not need any other consideration, otherwise return 1.
+ */
+int
+circpad_check_received_cell(cell_t *cell, circuit_t *circ,
+                            crypt_path_t *layer_hint,
+                            const relay_header_t *rh)
+{
+  unsigned domain = layer_hint?LD_APP:LD_EXIT;
+
+  /* First handle the padding commands, since we want to ignore any other
+   * commands if this circuit is padding-specific. */
+  switch (rh->command) {
+    case RELAY_COMMAND_DROP:
+      /* Already examined in circpad_deliver_recognized_relay_cell_events */
+      return 0;
+    case RELAY_COMMAND_PADDING_NEGOTIATE:
+      circpad_handle_padding_negotiate(circ, cell);
+      return 0;
+    case RELAY_COMMAND_PADDING_NEGOTIATED:
+      if (circpad_handle_padding_negotiated(circ, cell, layer_hint) == 0)
+        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
+      return 0;
+  }
+
+  /* If this is a padding circuit we don't need to parse any other commands
+   * than the padding ones. Just drop them to the floor. */
+  if (circ->purpose == CIRCUIT_PURPOSE_C_CIRCUIT_PADDING) {
+    log_info(domain, "Ignored cell (%d) that arrived in padding circuit.",
+             rh->command);
+    return 0;
+  }
+
+  return 1;
+}
+
 /**
  * A "non-padding" cell has been received by this endpoint. React
  * according to any padding state machines on the circuit.
