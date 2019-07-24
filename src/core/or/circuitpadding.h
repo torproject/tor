@@ -733,6 +733,10 @@ bool circpad_padding_negotiated(struct circuit_t *circ,
 
 circpad_purpose_mask_t circpad_circ_purpose_to_mask(uint8_t circ_purpose);
 
+int circpad_check_received_cell(cell_t *cell, circuit_t *circ,
+                                crypt_path_t *layer_hint,
+                                const relay_header_t *rh);
+
 MOCK_DECL(circpad_decision_t,
 circpad_machine_schedule_padding,(circpad_machine_runtime_t *));
 
