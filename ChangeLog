@@ -5,9 +5,9 @@ Changes in version 0.4.1.4-rc - 2019-07-??
 
   o Major bugfixes (circuit build, guard):
     - When considering upgrading circuits from "waiting for guard" to
-      "open", always ignore the ones that are mark for close. Else, we
-      can end up in the situation where a subsystem is notified of that
-      circuit opening but still marked for close leading to undesirable
+      "open", always ignore circuits that are marked for close. Otherwise,
+      we can end up in the situation where a subsystem is notified that
+      a closing circuits has just opened, leading to undesirable
       behavior. Fixes bug 30871; bugfix on 0.3.0.1-alpha.
 
   o Minor features (continuous integration):
@@ -24,10 +24,8 @@ Changes in version 0.4.1.4-rc - 2019-07-??
     - On relays, properly check that a padding machine is absent before
       logging a warn about it being absent. Fixes bug 30649; bugfix
       on 0.4.1.1-alpha.
-
-  o Minor bugfixes (circuitpadding):
     - Add two NULL checks in unreachable places to silence Coverity (CID
-      144729 and 1447291) and better future proof ourselves. Fixes bug
+      144729 and 1447291) and better future-proof ourselves. Fixes bug
       31024; bugfix on 0.4.1.1-alpha.
 
   o Minor bugfixes (crash on exit):
