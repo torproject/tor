@@ -25,15 +25,30 @@ Changes in version 0.4.1.4-rc - 2019-07-??
       logging a warn about it being absent. Fixes bug 30649; bugfix
       on 0.4.1.1-alpha.
 
+  o Minor bugfixes (circuitpadding):
+    - Add two NULL checks in unreachable places to silence Coverity (CID
+      144729 and 1447291) and better future proof ourselves. Fixes bug
+      31024; bugfix on 0.4.1.1-alpha.
+
   o Minor bugfixes (crash on exit):
     - Avoid a set of possible code paths that could use try to use freed
       memory in routerlist_free() while Tor was exiting. Fixes bug
       31003; bugfix on 0.1.2.2-alpha.
 
+  o Minor bugfixes (logging):
+    - Fix a conflict between the flag used for messaging-domain log
+      messages, and the LD_NO_MOCK testing flag. Fixes bug 31080; bugfix
+      on 0.4.1.1-alpha.
+
   o Minor bugfixes (memory leaks):
     - Fix a trivial memory leak when parsing an invalid value from a
       download schedule in the configuration. Fixes bug 30894; bugfix
       on 0.3.4.1-alpha.
+
+  o Code simplification and refactoring:
+    - Remove some dead code from circpad_machine_remove_token() to fix
+      some Coverity warnings (CID 1447298). Fixes bug 31027; bugfix
+      on 0.4.1.1-alpha.
 
 
 Changes in version 0.4.1.3-alpha - 2019-06-25
