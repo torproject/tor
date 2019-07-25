@@ -1287,7 +1287,7 @@ enable_control_logging(void)
 
 /** We got a log message: tell any interested control connections. */
 void
-control_event_logmsg(int severity, uint32_t domain, const char *msg)
+control_event_logmsg(int severity, log_domain_mask_t domain, const char *msg)
 {
   int event;
 
