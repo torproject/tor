@@ -158,19 +158,17 @@ static struct_member_t state_extra_var = {
 
 /** Configuration format for or_state_t. */
 static const config_format_t state_format = {
-  sizeof(or_state_t),
-  {
+  .size = sizeof(or_state_t),
+  .magic = {
    "or_state_t",
    OR_STATE_MAGIC,
    offsetof(or_state_t, magic_),
   },
-  state_abbrevs_,
-  NULL,
-  state_vars_,
-  or_state_validate_cb,
-  NULL,
-  &state_extra_var,
-  offsetof(or_state_t, substates_),
+  .abbrevs = state_abbrevs_,
+  .vars = state_vars_,
+  .validate_fn = or_state_validate_cb,
+  .extra = &state_extra_var,
+  .config_suite_offset = offsetof(or_state_t, substates_),
 };
 
 /* A global configuration manager for state-file objects */
