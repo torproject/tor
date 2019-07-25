@@ -864,19 +864,18 @@ static void options_clear_cb(const config_mgr_t *mgr, void *opts);
 
 /** Configuration format for or_options_t. */
 static const config_format_t options_format = {
-  sizeof(or_options_t),
-  {
+  .size = sizeof(or_options_t),
+  .magic = {
    "or_options_t",
    OR_OPTIONS_MAGIC,
    offsetof(or_options_t, magic_),
   },
-  option_abbrevs_,
-  option_deprecation_notes_,
-  option_vars_,
-  options_validate_cb,
-  options_clear_cb,
-  NULL,
-  offsetof(or_options_t, subconfigs_),
+  .abbrevs = option_abbrevs_,
+  .deprecations = option_deprecation_notes_,
+  .vars = option_vars_,
+  .validate_fn = options_validate_cb,
+  .clear_fn = options_clear_cb,
+  .config_suite_offset = offsetof(or_options_t, subconfigs_),
 };
 
 /*
