@@ -87,19 +87,16 @@ static const struct_member_t state_extra_var = {
 
 /** Configuration format of sr_disk_state_t. */
 static const config_format_t state_format = {
-  sizeof(sr_disk_state_t),
-  {
+  .size = sizeof(sr_disk_state_t),
+  .magic = {
    "sr_disk_state_t",
    SR_DISK_STATE_MAGIC,
    offsetof(sr_disk_state_t, magic_),
   },
-  NULL,
-  NULL,
-  state_vars,
-  disk_state_validate_cb,
-  NULL,
-  &state_extra_var,
-  -1,
+  .vars = state_vars,
+  .validate_fn = disk_state_validate_cb,
+  .extra = &state_extra_var,
+  .config_suite_offset = -1,
 };
 
 /** Global configuration manager for the shared-random state file */
