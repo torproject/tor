@@ -201,8 +201,9 @@ script:
   - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - if [[ "$DISTCHECK" == "" && "$TEST_STEM" == "" ]]; then make check; fi
-  ## Diagnostic for bug 29437: kill stem if it hangs for 15 minutes
-  - if [[ "$TEST_STEM" != "" ]]; then make src/app/tor; timelimit -p -t 540 -s USR1 -T 30 -S ABRT python3 "$STEM_SOURCE_DIR"/run_tests.py --tor src/app/tor --integ --log notice --target RUN_ALL; fi
+  ## Diagnostic for bug 29437: kill stem if it hangs for 9.5 minutes
+  ## Travis will kill the job after 10 minutes with no output
+  - if [[ "$TEST_STEM" != "" ]]; then make src/app/tor; timelimit -p -t 540 -s USR1 -T 30 -S ABRT python3 "$STEM_SOURCE_DIR"/run_tests.py --tor src/app/tor --integ --test control.controller --test control.base_controller --test process --log TRACE --log-file stem.log; fi
   - if [[ "$DISTCHECK" != "" && "$TEST_STEM" == "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
   ## If this build was one that produced coverage, upload it.
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p' || echo "Coverage failed"; fi
@@ -216,7 +217,8 @@ after_failure:
   ## `make distcheck` puts it somewhere different.
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-core || echo "make failed"; fi
-  - if [[ "$TEST_STEM" != "" ]]; then cat "$STEM_SOURCE_DIR"/test/data/tor_log || echo "cat failed"; fi
+  - if [[ "$TEST_STEM" != "" ]]; then tail -1000 "$STEM_SOURCE_DIR"/test/data/tor_log || echo "tail failed"; fi
+  - if [[ "$TEST_STEM" != "" ]]; then grep -v "SocketClosed" stem.log | tail -1000 || echo "grep | tail failed"; fi
 
 before_cache:
   ## Delete all gcov files.
