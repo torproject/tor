@@ -119,19 +119,17 @@ test_validate_cb(const void *old_options, void *options, char **msg)
 #define TEST_MAGIC 0x1337
 
 static const config_format_t test_fmt = {
-  sizeof(test_struct_t),
-  {
+  .size = sizeof(test_struct_t),
+  .magic = {
    "test_struct_t",
    TEST_MAGIC,
    offsetof(test_struct_t, magic),
   },
-  test_abbrevs,
-  test_deprecation_notes,
-  test_vars,
-  test_validate_cb,
-  NULL,
-  NULL,
-  -1,
+  .abbrevs = test_abbrevs,
+  .deprecations = test_deprecation_notes,
+  .vars = test_vars,
+  .validate_fn = test_validate_cb,
+  .config_suite_offset = -1,
 };
 
 /* Make sure that config_init sets everything to the right defaults. */
@@ -815,19 +813,18 @@ static struct_member_t extra = {
 };
 
 static config_format_t etest_fmt = {
-  sizeof(test_struct_t),
-  {
+  .size = sizeof(test_struct_t),
+  .magic = {
    "test_struct_t (with extra lines)",
    ETEST_MAGIC,
    offsetof(test_struct_t, magic),
   },
-  test_abbrevs,
-  test_deprecation_notes,
-  test_vars,
-  test_validate_cb,
-  NULL,
-  &extra,
-  -1,
+  .abbrevs = test_abbrevs,
+  .deprecations = test_deprecation_notes,
+  .vars = test_vars,
+  .validate_fn = test_validate_cb,
+  .extra = &extra,
+  .config_suite_offset = -1,
 };
 
 /* Try out the feature where we can store unrecognized lines and dump them
