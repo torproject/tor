@@ -674,6 +674,7 @@ test_options_validate__logs(void *ignored)
   tdata->opt->Logs = NULL;
   tdata->opt->RunAsDaemon = 0;
 
+  options_append_default_log_lines(tdata->opt);
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_str_op(tdata->opt->Logs->key, OP_EQ, "Log");
   tt_str_op(tdata->opt->Logs->value, OP_EQ, "notice stdout");
@@ -685,6 +686,7 @@ test_options_validate__logs(void *ignored)
   tdata->opt->Logs = NULL;
   tdata->opt->RunAsDaemon = 0;
   quiet_level = 1;
+  options_append_default_log_lines(tdata->opt);
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_str_op(tdata->opt->Logs->key, OP_EQ, "Log");
   tt_str_op(tdata->opt->Logs->value, OP_EQ, "warn stdout");
@@ -696,6 +698,7 @@ test_options_validate__logs(void *ignored)
   tdata->opt->Logs = NULL;
   tdata->opt->RunAsDaemon = 0;
   quiet_level = 2;
+  options_append_default_log_lines(tdata->opt);
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_assert(!tdata->opt->Logs);
   tor_free(msg);
@@ -714,6 +717,7 @@ test_options_validate__logs(void *ignored)
   tdata = get_options_test_data("");
   tdata->opt->Logs = NULL;
   tdata->opt->RunAsDaemon = 1;
+  options_append_default_log_lines(tdata->opt);
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_assert(!tdata->opt->Logs);
   tor_free(msg);
@@ -725,6 +729,7 @@ test_options_validate__logs(void *ignored)
   config_line_t *cl=NULL;
   config_get_lines("Log foo", &cl, 1);
   tdata->opt->Logs = cl;
+  options_append_default_log_lines(tdata->opt);
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op((intptr_t)tdata->opt->Logs, OP_EQ, (intptr_t)cl);
   tt_int_op(ret, OP_EQ, -1);

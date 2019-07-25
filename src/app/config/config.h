@@ -259,6 +259,7 @@ STATIC void port_cfg_free_(port_cfg_t *port);
 STATIC void or_options_free_(or_options_t *options);
 STATIC int options_validate_single_onion(or_options_t *options,
                                          char **msg);
+STATIC void options_append_default_log_lines(or_options_t *options);
 STATIC int options_validate(or_options_t *old_options,
                             or_options_t *options,
                             or_options_t *default_options,
