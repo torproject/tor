@@ -1,4 +1,0 @@
-  o Minor bugfixes (circuit padding):
-    - On relays, properly check that a padding machine is absent before
-      logging a warn about it being absent. Fixes bug 30649;
-      bugfix on 0.4.1.1-alpha.

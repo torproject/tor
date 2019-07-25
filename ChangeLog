@@ -1,3 +1,41 @@
+Changes in version 0.4.1.4-rc - 2019-07-??
+  Tor 0.4.1.4-rc fixes a few bugs from previous versions of Tor, and
+  updates to a new list of fallback directories. If no new bugs are
+  found, the next release in the 0.4.1.x serious should be stable.
+
+  o Major bugfixes (circuit build, guard):
+    - When considering upgrading circuits from "waiting for guard" to
+      "open", always ignore the ones that are mark for close. Else, we
+      can end up in the situation where a subsystem is notified of that
+      circuit opening but still marked for close leading to undesirable
+      behavior. Fixes bug 30871; bugfix on 0.3.0.1-alpha.
+
+  o Minor features (continuous integration):
+    - Our Travis configuration now uses Chutney to run some network
+      integration tests automatically. Closes ticket 29280.
+
+  o Minor features (fallback directory list):
+    - Replace the 157 fallbacks originally introduced in Tor 0.3.5.6-rc
+      in December 2018 (of which ~122 were still functional), with a
+      list of 148 fallbacks (70 new, 78 existing, 79 removed) generated
+      in June 2019. Closes ticket 28795.
+
+  o Minor bugfixes (circuit padding):
+    - On relays, properly check that a padding machine is absent before
+      logging a warn about it being absent. Fixes bug 30649; bugfix
+      on 0.4.1.1-alpha.
+
+  o Minor bugfixes (crash on exit):
+    - Avoid a set of possible code paths that could use try to use freed
+      memory in routerlist_free() while Tor was exiting. Fixes bug
+      31003; bugfix on 0.1.2.2-alpha.
+
+  o Minor bugfixes (memory leaks):
+    - Fix a trivial memory leak when parsing an invalid value from a
+      download schedule in the configuration. Fixes bug 30894; bugfix
+      on 0.3.4.1-alpha.
+
+
 Changes in version 0.4.1.3-alpha - 2019-06-25
   Tor 0.4.1.3-alpha resolves numerous bugs left over from the previous
   alpha, most of them from earlier release series.

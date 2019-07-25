@@ -1,4 +1,0 @@
-  o Minor bugfixes (memory leaks):
-    - Fix a trivial memory leak when parsing an invalid value
-      from a download schedule in the configuration. Fixes bug
-      30894; bugfix on 0.3.4.1-alpha.
