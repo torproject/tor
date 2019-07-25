@@ -1229,7 +1229,7 @@ add_default_fallback_dir_servers,(void))
  * user if we changed any dangerous ones.
  */
 static int
-validate_dir_servers(or_options_t *options, or_options_t *old_options)
+validate_dir_servers(or_options_t *options, const or_options_t *old_options)
 {
   config_line_t *cl;
 
@@ -3378,8 +3378,9 @@ options_append_default_log_lines(or_options_t *options)
  * if there are no logs defined.
  */
 STATIC int
-options_validate(or_options_t *old_options, or_options_t *options,
-                 or_options_t *default_options, int from_setconf, char **msg)
+options_validate(const or_options_t *old_options, or_options_t *options,
+                 const or_options_t *default_options, int from_setconf,
+                 char **msg)
 {
   (void)from_setconf;
   config_line_t *cl;
