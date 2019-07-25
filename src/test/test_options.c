@@ -31,14 +31,14 @@
 
 typedef struct {
   int severity;
-  uint32_t domain;
+  log_domain_mask_t domain;
   char *msg;
 } logmsg_t;
 
 static smartlist_t *messages = NULL;
 
 static void
-log_cback(int severity, uint32_t domain, const char *msg)
+log_cback(int severity, log_domain_mask_t domain, const char *msg)
 {
   logmsg_t *x = tor_malloc(sizeof(*x));
   x->severity = severity;
