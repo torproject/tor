@@ -1,0 +1,5 @@
+  o Minor bugfixes (onion services):
+    - When sending the INTRO cell for a v2 Onion Service, look at the failure
+      cache alongside timeout values to check if the intro point is marked
+      as failed. Previously, we only looked at if the relay timeout values.
+      Fixes bug 25568; bugfix on 0.1.0.1-rc. Patch by Neel Chauhan.

@@ -1112,7 +1112,7 @@ rend_client_any_intro_points_usable(const rend_cache_entry_t *entry)
   extend_info_t *extend_info =
     rend_client_get_random_intro_impl(entry, get_options()->StrictNodes, 0);
 
-  int rv = (extend_info != NULL);
+  int rv = (extend_info != NULL) && !(rend_cache_failure_check(entry->parsed));
 
   extend_info_free(extend_info);
   return rv;

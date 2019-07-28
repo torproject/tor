@@ -228,6 +228,23 @@ rend_cache_entry_free_void(void *p)
   rend_cache_entry_free_(p);
 }
 
+/** Check if a failure cache entry exists for the service ID in the given
+ * descriptor <b>desc</b>. */
+int
+rend_cache_failure_check(rend_service_descriptor_t *desc)
+{
+  char service_id[REND_SERVICE_ID_LEN_BASE32 + 1];
+
+  if (desc == NULL) {
+    return 0;
+  }
+  if (rend_get_service_id(desc->pk, service_id) < 0) {
+    return 0;
+  }
+
+  return strmap_get_lc(rend_cache_failure, service_id) != NULL;
+}
+
 /** Free all storage held by the service descriptor cache. */
 void
 rend_cache_free_all(void)
