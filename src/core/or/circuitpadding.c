@@ -138,6 +138,11 @@ static void
 circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx)
 {
   if (circ->padding_info[idx]) {
+    log_fn(LOG_INFO,LD_CIRC, "Freeing padding info idx %d on circuit %u (%d)",
+           idx, CIRCUIT_IS_ORIGIN(circ) ?
+             TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0,
+           circ->purpose);
+
     tor_free(circ->padding_info[idx]->histogram);
     timer_free(circ->padding_info[idx]->padding_timer);
     tor_free(circ->padding_info[idx]);
@@ -1512,6 +1517,12 @@ static void
 circpad_machine_spec_transitioned_to_end(circpad_machine_runtime_t *mi)
 {
   const circpad_machine_spec_t *machine = CIRCPAD_GET_MACHINE(mi);
+  circuit_t *on_circ = mi->on_circ;
+
+  log_fn(LOG_INFO,LD_CIRC, "Padding machine in end state on circuit %u (%d)",
+         CIRCUIT_IS_ORIGIN(on_circ) ?
+         TO_ORIGIN_CIRCUIT(on_circ)->global_identifier : 0,
+         on_circ->purpose);
 
   /*
    * We allow machines to shut down and delete themselves as opposed
@@ -1527,7 +1538,6 @@ circpad_machine_spec_transitioned_to_end(circpad_machine_runtime_t *mi)
    * here does.
    */
   if (machine->should_negotiate_end) {
-    circuit_t *on_circ = mi->on_circ;
     if (machine->is_origin_side) {
       /* We free the machine info here so that we can be replaced
        * by a different machine. But we must leave the padding_machine
@@ -2755,8 +2765,8 @@ circpad_negotiate_padding(origin_circuit_t *circ,
         &type)) < 0)
     return -1;
 
-  log_fn(LOG_INFO,LD_CIRC, "Negotiating padding on circuit %u (%d)",
-         circ->global_identifier, TO_CIRCUIT(circ)->purpose);
+  log_fn(LOG_INFO,LD_CIRC, "Negotiating padding on circuit %u (%d), command %d",
+         circ->global_identifier, TO_CIRCUIT(circ)->purpose, command);
 
   return circpad_send_command_to_hop(circ, target_hopnum,
                                      RELAY_COMMAND_PADDING_NEGOTIATE,
@@ -2887,7 +2897,8 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
   /* Verify this came from the expected hop */
   if (!circpad_padding_is_from_expected_hop(circ, layer_hint)) {
     log_fn(LOG_WARN, LD_CIRC,
-           "Padding negotiated cell from wrong hop!");
+           "Padding negotiated cell from wrong hop on circuit %u",
+             TO_ORIGIN_CIRCUIT(circ)->global_identifier);
     return -1;
   }
 
@@ -2914,7 +2925,9 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
     free_circ_machineinfos_with_machine_num(circ, negotiated->machine_type);
     TO_ORIGIN_CIRCUIT(circ)->padding_negotiation_failed = 1;
     log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
-           "Middle node did not accept our padding request.");
+           "Middle node did not accept our padding request on circuit %u (%d)",
+           TO_ORIGIN_CIRCUIT(circ)->global_identifier,
+           circ->purpose);
   }
 
   circpad_negotiated_free(negotiated);
