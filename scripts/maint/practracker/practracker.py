@@ -192,11 +192,11 @@ def main(argv):
     if args.regen:
         tmpname = exceptions_file + ".tmp"
         tmpfile = open(tmpname, "w")
-        sys.stdout = tmpfile
-        sys.stdout.write(HEADER)
+        problem_file = tmpfile
         ProblemVault = problem.ProblemVault()
     else:
         ProblemVault = problem.ProblemVault(exceptions_file)
+        problem_file = sys.stdout
 
     # 2.1) Adjust the exceptions so that we warn only about small problems,
     # and produce errors on big ones.
@@ -208,10 +208,11 @@ def main(argv):
     for item in filt.filter(consider_all_metrics(files_list)):
         status = ProblemVault.register_problem(item)
         if status == problem.STATUS_ERR:
-            print(item)
+            print(item, file=problem_file)
             found_new_issues += 1
         elif status == problem.STATUS_WARN:
-            item.warn()
+            # warnings always go to stdout.
+            print("(warning) {}".format(item))
 
     if args.regen:
         tmpfile.close()

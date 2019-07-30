@@ -145,10 +145,6 @@ class Item(object):
         else:
             return STATUS_OK
 
-    def warn(self):
-        """Warn about this problem on stderr only."""
-        print("(warning) {}".format(self), file=sys.stderr)
-
     def key(self):
         """Generate a unique key that describes this problem that can be used as a dictionary key"""
         # Item location is a filesystem path, so we need to normalize this
