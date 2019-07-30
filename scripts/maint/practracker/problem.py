@@ -13,6 +13,10 @@ import os.path
 import re
 import sys
 
+STATUS_ERR = 2
+STATUS_WARN = 1
+STATUS_OK = 0
+
 class ProblemVault(object):
     """
     Singleton where we store the various new problems we
@@ -60,24 +64,23 @@ class ProblemVault(object):
 
     def register_problem(self, problem):
         """
-        Register this problem to the problem value. Return True if it was a new
-        problem or it worsens an already existing problem.
+        Register this problem to the problem value. Return true if it was a new
+        problem or it worsens an already existing problem.  A true
+        value may be STATUS_ERR to indicate a hard violation, or STATUS_WARN
+        to indicate a warning.
         """
         # This is a new problem, print it
         if problem.key() not in self.exceptions:
-            print(problem)
-            return True
+            return STATUS_ERR
 
         # If it's an old problem, we don't warn if the situation got better
         # (e.g. we went from 4k LoC to 3k LoC), but we do warn if the
         # situation worsened (e.g. we went from 60 includes to 80).
-        if problem.is_worse_than(self.exceptions[problem.key()]):
-            print(problem)
-            return True
-        else:
+        status = problem.is_worse_than(self.exceptions[problem.key()])
+        if status == STATUS_OK:
             self.used_exception_for[problem.key()] = problem
 
-        return False
+        return status
 
     def list_overstrict_exceptions(self):
         """Return an iterator of tuples containing (ex,prob) where ex is an
@@ -130,12 +133,17 @@ class Item(object):
         self.problem_type = problem_type
 
     def is_worse_than(self, other_problem):
-        """Return True if this is a worse problem than other_problem"""
+        """Return STATUS_ERR if this is a worse problem than other_problem.
+           Return STATUS_WARN if it is a little worse, but falls within the
+           warning threshold.  Return STATUS_OK if this problem is not
+           at all worse than other_problem.
+        """
         if self.metric_value > other_problem.metric_value:
-            return True
+            return STATUS_ERR
         elif self.metric_value > other_problem.warning_threshold:
-            self.warn()
-        return False
+            return STATUS_WARN
+        else:
+            return STATUS_OK
 
     def warn(self):
         """Warn about this problem on stderr only."""

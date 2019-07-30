@@ -204,8 +204,12 @@ def main(argv):
     # 3) Go through all the files and report problems if they are not exceptions
     found_new_issues = 0
     for item in FILTER.filter(consider_all_metrics(files_list)):
-        if ProblemVault.register_problem(item):
+        status = ProblemVault.register_problem(item)
+        if status == problem.STATUS_ERR:
+            print(item)
             found_new_issues += 1
+        elif status == problem.STATUS_WARN:
+            item.warn()
 
     if args.regen:
         tmpfile.close()
