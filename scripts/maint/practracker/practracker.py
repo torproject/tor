@@ -36,6 +36,7 @@ MAX_FUNCTION_SIZE = 100 # lines
 # Recommended number of #includes
 MAX_INCLUDE_COUNT = 50
 
+
 # Map from problem type to functions that adjust for tolerance
 TOLERANCE_FNS = {
     'include-count': lambda n: int(n*1.1),
@@ -51,6 +52,12 @@ ProblemVault = None
 # The Tor source code topdir
 TOR_TOPDIR = None
 
+# ProblemFilter singleton.
+FILTER = problem.ProblemFilter()
+FILTER.addThreshold(problem.FileSizeItem("*", MAX_FILE_SIZE))
+FILTER.addThreshold(problem.IncludeCountItem("*", MAX_INCLUDE_COUNT))
+FILTER.addThreshold(problem.FunctionSizeItem("*", MAX_FUNCTION_SIZE))
+
 #######################################################
 
 if sys.version_info[0] <= 2:
@@ -61,75 +68,59 @@ else:
         return open(fname, 'r', encoding='utf-8')
 
 def consider_file_size(fname, f):
-    """Consider file size issues for 'f' and return the number of new issues was found"""
+    """Consider the size of 'f' and yield an FileSizeItem for it.
+    """
     file_size = metrics.get_file_len(f)
-
-    if file_size > MAX_FILE_SIZE:
-        p = problem.FileSizeItem(fname, file_size)
-        if ProblemVault.register_problem(p):
-            return 1
-    return 0
+    yield problem.FileSizeItem(fname, file_size)
 
 def consider_includes(fname, f):
-    """Consider #include issues for 'f' and return the number of new issues found"""
+    """Consider the #include count in for 'f' and yield an IncludeCountItem
+        for it.
+    """
     include_count = metrics.get_include_count(f)
 
-    if include_count > MAX_INCLUDE_COUNT:
-        p = problem.IncludeCountItem(fname, include_count)
-        if ProblemVault.register_problem(p):
-            return 1
-    return 0
+    yield problem.IncludeCountItem(fname, include_count)
 
 def consider_function_size(fname, f):
-    """Consider the function sizes for 'f' and return the number of new issues found."""
-    found_new_issues = 0
+    """yield a FunctionSizeItem for every function in f.
+    """
 
     for name, lines in metrics.get_function_lines(f):
-        # Don't worry about functions within our limits
-        if lines <= MAX_FUNCTION_SIZE:
-            continue
-
-        # That's a big function! Issue a problem!
         canonical_function_name = "%s:%s()" % (fname, name)
-        p = problem.FunctionSizeItem(canonical_function_name, lines)
-        if ProblemVault.register_problem(p):
-            found_new_issues += 1
-
-    return found_new_issues
+        yield problem.FunctionSizeItem(canonical_function_name, lines)
 
 #######################################################
 
 def consider_all_metrics(files_list):
-    """Consider metrics for all files, and return the number of new issues found."""
-    found_new_issues = 0
+    """Consider metrics for all files, and yield a sequence of problem.Item
+       object for those issues."""
     for fname in files_list:
         with open_file(fname) as f:
-            found_new_issues += consider_metrics_for_file(fname, f)
-    return found_new_issues
+            for item in consider_metrics_for_file(fname, f):
+                yield item
 
 def consider_metrics_for_file(fname, f):
     """
-    Consider the various metrics for file with filename 'fname' and file descriptor 'f'.
-    Return the number of new issues found.
+       Yield a sequence of problem.Item objects for all of the metrics in
+       'f'.
     """
     # Strip the useless part of the path
     if fname.startswith(TOR_TOPDIR):
         fname = fname[len(TOR_TOPDIR):]
 
-    found_new_issues = 0
-
     # Get file length
-    found_new_issues += consider_file_size(fname, f)
+    for item in consider_file_size(fname, f):
+        yield item
 
     # Consider number of #includes
     f.seek(0)
-    found_new_issues += consider_includes(fname, f)
+    for item in consider_includes(fname, f):
+        yield item
 
     # Get function length
     f.seek(0)
-    found_new_issues += consider_function_size(fname, f)
-
-    return found_new_issues
+    for item in consider_function_size(fname, f):
+        yield item
 
 HEADER="""\
 # Welcome to the exceptions file for Tor's best-practices tracker!
@@ -211,7 +202,10 @@ def main(argv):
         ProblemVault.set_tolerances(TOLERANCE_FNS)
 
     # 3) Go through all the files and report problems if they are not exceptions
-    found_new_issues = consider_all_metrics(files_list)
+    found_new_issues = 0
+    for item in FILTER.filter(consider_all_metrics(files_list)):
+        if ProblemVault.register_problem(item):
+            found_new_issues += 1
 
     if args.regen:
         tmpfile.close()

@@ -100,6 +100,24 @@ class ProblemVault(object):
             if fn is not None:
                 ex.metric_value = fn(ex.metric_value)
 
+class ProblemFilter(object):
+    def __init__(self):
+        self.thresholds = dict()
+
+    def addThreshold(self, item):
+        self.thresholds[item.get_type()] = item
+
+    def matches(self, item):
+        filt = self.thresholds.get(item.get_type(), None)
+        if filt is None:
+            return False
+        return item.is_worse_than(filt)
+
+    def filter(self, sequence):
+        for item in iter(sequence):
+            if self.matches(item):
+                yield item
+
 class Item(object):
     """
     A generic measurement about some aspect of our source code. See
@@ -132,6 +150,9 @@ class Item(object):
 
     def __str__(self):
         return "problem %s %s %s" % (self.problem_type, self.problem_location, self.metric_value)
+
+    def get_type(self):
+        return self.problem_type
 
 class FileSizeItem(Item):
     """
