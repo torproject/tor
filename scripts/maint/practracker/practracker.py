@@ -46,9 +46,6 @@ TOLERANCE_FNS = {
 
 #######################################################
 
-# ProblemVault singleton
-ProblemVault = None
-
 # The Tor source code topdir
 TOR_TOPDIR = None
 
@@ -185,8 +182,6 @@ def main(argv):
 
     # 2) Initialize problem vault and load an optional exceptions file so that
     # we don't warn about the past
-    global ProblemVault
-
     if args.regen:
         tmpname = exceptions_file + ".tmp"
         tmpfile = open(tmpname, "w")
