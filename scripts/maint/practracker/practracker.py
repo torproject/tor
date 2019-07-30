@@ -36,7 +36,6 @@ MAX_FUNCTION_SIZE = 100 # lines
 # Recommended number of #includes
 MAX_INCLUDE_COUNT = 50
 
-
 # Map from problem type to functions that adjust for tolerance
 TOLERANCE_FNS = {
     'include-count': lambda n: int(n*1.1),
@@ -48,12 +47,6 @@ TOLERANCE_FNS = {
 
 # The Tor source code topdir
 TOR_TOPDIR = None
-
-# ProblemFilter singleton.
-FILTER = problem.ProblemFilter()
-FILTER.addThreshold(problem.FileSizeItem("*", MAX_FILE_SIZE))
-FILTER.addThreshold(problem.IncludeCountItem("*", MAX_INCLUDE_COUNT))
-FILTER.addThreshold(problem.FunctionSizeItem("*", MAX_FUNCTION_SIZE))
 
 #######################################################
 
@@ -166,6 +159,14 @@ def main(argv):
                         help="Override the location for the exceptions file")
     parser.add_argument("--strict", action="store_true",
                         help="Make all warnings into errors")
+    parser.add_argument("--terse", action="store_true",
+                        help="Do not emit helpful instructions.")
+    parser.add_argument("--max-file-size", default=MAX_FILE_SIZE,
+                        help="Maximum lines per C file size")
+    parser.add_argument("--max-include-count", default=MAX_INCLUDE_COUNT,
+                        help="Maximum includes per C file")
+    parser.add_argument("--max-function-size", default=MAX_FUNCTION_SIZE,
+                        help="Maximum lines per function")
     parser.add_argument("topdir", default=".", nargs="?",
                         help="Top-level directory for the tor source")
     args = parser.parse_args(argv[1:])
@@ -176,6 +177,12 @@ def main(argv):
         exceptions_file = args.exceptions
     else:
         exceptions_file = os.path.join(TOR_TOPDIR, "scripts/maint/practracker", EXCEPTIONS_FNAME)
+
+    # 0) Configure our thresholds of "what is a problem actually"
+    filt = problem.ProblemFilter()
+    filt.addThreshold(problem.FileSizeItem("*", int(args.max_file_size)))
+    filt.addThreshold(problem.IncludeCountItem("*", int(args.max_include_count)))
+    filt.addThreshold(problem.FunctionSizeItem("*", int(args.max_function_size)))
 
     # 1) Get all the .c files we care about
     files_list = util.get_tor_c_files(TOR_TOPDIR)
@@ -198,7 +205,7 @@ def main(argv):
 
     # 3) Go through all the files and report problems if they are not exceptions
     found_new_issues = 0
-    for item in FILTER.filter(consider_all_metrics(files_list)):
+    for item in filt.filter(consider_all_metrics(files_list)):
         status = ProblemVault.register_problem(item)
         if status == problem.STATUS_ERR:
             print(item)
@@ -212,7 +219,7 @@ def main(argv):
         sys.exit(0)
 
     # If new issues were found, try to give out some advice to the developer on how to resolve it.
-    if found_new_issues and not args.regen:
+    if found_new_issues and not args.regen and not args.terse:
         new_issues_str = """\
 FAILURE: practracker found {} new problem(s) in the code: see warnings above.
 
