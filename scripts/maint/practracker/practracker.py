@@ -65,7 +65,7 @@ def consider_file_size(fname, f):
     file_size = metrics.get_file_len(f)
 
     if file_size > MAX_FILE_SIZE:
-        p = problem.FileSizeProblem(fname, file_size)
+        p = problem.FileSizeItem(fname, file_size)
         if ProblemVault.register_problem(p):
             return 1
     return 0
@@ -75,7 +75,7 @@ def consider_includes(fname, f):
     include_count = metrics.get_include_count(f)
 
     if include_count > MAX_INCLUDE_COUNT:
-        p = problem.IncludeCountProblem(fname, include_count)
+        p = problem.IncludeCountItem(fname, include_count)
         if ProblemVault.register_problem(p):
             return 1
     return 0
@@ -91,7 +91,7 @@ def consider_function_size(fname, f):
 
         # That's a big function! Issue a problem!
         canonical_function_name = "%s:%s()" % (fname, name)
-        p = problem.FunctionSizeProblem(canonical_function_name, lines)
+        p = problem.FunctionSizeItem(canonical_function_name, lines)
         if ProblemVault.register_problem(p):
             found_new_issues += 1
 
