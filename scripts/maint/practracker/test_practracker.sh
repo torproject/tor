@@ -29,6 +29,10 @@ run_practracker() {
         "${DATA}/" "$@";
 }
 
+echo "unit tests:"
+
+"${PYTHON:-python}" "${PRACTRACKER_DIR}/practracker_tests.py" || exit 1
+
 echo "ex0:"
 
 run_practracker --exceptions "${DATA}/ex0.txt" > "${TMPDIR}/ex0-received.txt"
