@@ -193,6 +193,7 @@ def main(argv):
         tmpname = exceptions_file + ".tmp"
         tmpfile = open(tmpname, "w")
         problem_file = tmpfile
+        problem_file.write(HEADER)
         ProblemVault = problem.ProblemVault()
     else:
         ProblemVault = problem.ProblemVault(exceptions_file)
