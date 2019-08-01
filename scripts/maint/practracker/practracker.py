@@ -153,7 +153,7 @@ def main(argv):
     parser = argparse.ArgumentParser(prog=progname)
     parser.add_argument("--regen", action="store_true",
                         help="Regenerate the exceptions file")
-    parser.add_argument("--list-overstrict", action="store_true",
+    parser.add_argument("--list-overbroad", action="store_true",
                         help="List over-strict exceptions")
     parser.add_argument("--exceptions",
                         help="Override the location for the exceptions file")
@@ -200,7 +200,7 @@ def main(argv):
 
     # 2.1) Adjust the exceptions so that we warn only about small problems,
     # and produce errors on big ones.
-    if not (args.regen or args.list_overstrict or args.strict):
+    if not (args.regen or args.list_overbroad or args.strict):
         ProblemVault.set_tolerances(TOLERANCE_FNS)
 
     # 3) Go through all the files and report problems if they are not exceptions
@@ -234,10 +234,10 @@ variable.
 """.format(found_new_issues, exceptions_file)
         print(new_issues_str)
 
-    if args.list_overstrict:
+    if args.list_overbroad:
         def k_fn(tup):
             return tup[0].key()
-        for (ex,p) in sorted(ProblemVault.list_overstrict_exceptions(), key=k_fn):
+        for (ex,p) in sorted(ProblemVault.list_overbroad_exceptions(), key=k_fn):
             if p is None:
                 print(ex, "->", 0)
             else:

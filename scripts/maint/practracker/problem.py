@@ -82,7 +82,7 @@ class ProblemVault(object):
 
         return status
 
-    def list_overstrict_exceptions(self):
+    def list_overbroad_exceptions(self):
         """Return an iterator of tuples containing (ex,prob) where ex is an
            exceptions in this vault that are stricter than it needs to be, and
            prob is the worst problem (if any) that it covered.
