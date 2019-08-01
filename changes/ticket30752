@@ -1,0 +1,6 @@
+  o Minor features (best practices tracker):
+    - Give a warning rather than an error when a practracker exception is
+      violated by a small amount; add a --list-overbroad option to
+      practracker that lists exceptions that are stricter than they need to
+      be, and provide an environment variable for disabling
+      practracker. Closes ticekt 30752.

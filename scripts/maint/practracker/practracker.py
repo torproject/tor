@@ -36,10 +36,14 @@ MAX_FUNCTION_SIZE = 100 # lines
 # Recommended number of #includes
 MAX_INCLUDE_COUNT = 50
 
-#######################################################
+# Map from problem type to functions that adjust for tolerance
+TOLERANCE_FNS = {
+    'include-count': lambda n: int(n*1.1),
+    'function-size': lambda n: int(n*1.1),
+    'file-size': lambda n: int(n*1.02)
+}
 
-# ProblemVault singleton
-ProblemVault = None
+#######################################################
 
 # The Tor source code topdir
 TOR_TOPDIR = None
@@ -54,71 +58,59 @@ else:
         return open(fname, 'r', encoding='utf-8')
 
 def consider_file_size(fname, f):
-    """Consider file size issues for 'f' and return True if a new issue was found"""
+    """Consider the size of 'f' and yield an FileSizeItem for it.
+    """
     file_size = metrics.get_file_len(f)
-    if file_size > MAX_FILE_SIZE:
-        p = problem.FileSizeProblem(fname, file_size)
-        return ProblemVault.register_problem(p)
-    return False
+    yield problem.FileSizeItem(fname, file_size)
 
 def consider_includes(fname, f):
-    """Consider #include issues for 'f' and return True if a new issue was found"""
+    """Consider the #include count in for 'f' and yield an IncludeCountItem
+        for it.
+    """
     include_count = metrics.get_include_count(f)
 
-    if include_count > MAX_INCLUDE_COUNT:
-        p = problem.IncludeCountProblem(fname, include_count)
-        return ProblemVault.register_problem(p)
-    return False
+    yield problem.IncludeCountItem(fname, include_count)
 
 def consider_function_size(fname, f):
-    """Consider the function sizes for 'f' and return True if a new issue was found"""
-    found_new_issues = False
+    """yield a FunctionSizeItem for every function in f.
+    """
 
     for name, lines in metrics.get_function_lines(f):
-        # Don't worry about functions within our limits
-        if lines <= MAX_FUNCTION_SIZE:
-            continue
-
-        # That's a big function! Issue a problem!
         canonical_function_name = "%s:%s()" % (fname, name)
-        p = problem.FunctionSizeProblem(canonical_function_name, lines)
-        found_new_issues |= ProblemVault.register_problem(p)
-
-    return found_new_issues
+        yield problem.FunctionSizeItem(canonical_function_name, lines)
 
 #######################################################
 
 def consider_all_metrics(files_list):
-    """Consider metrics for all files, and return True if new issues were found"""
-    found_new_issues = False
+    """Consider metrics for all files, and yield a sequence of problem.Item
+       object for those issues."""
     for fname in files_list:
         with open_file(fname) as f:
-            found_new_issues |= consider_metrics_for_file(fname, f)
-    return found_new_issues
+            for item in consider_metrics_for_file(fname, f):
+                yield item
 
 def consider_metrics_for_file(fname, f):
     """
-    Consider the various metrics for file with filename 'fname' and file descriptor 'f'.
-    Return True if we found new issues.
+       Yield a sequence of problem.Item objects for all of the metrics in
+       'f'.
     """
     # Strip the useless part of the path
     if fname.startswith(TOR_TOPDIR):
         fname = fname[len(TOR_TOPDIR):]
 
-    found_new_issues = False
-
     # Get file length
-    found_new_issues |= consider_file_size(fname, f)
+    for item in consider_file_size(fname, f):
+        yield item
 
     # Consider number of #includes
     f.seek(0)
-    found_new_issues |= consider_includes(fname, f)
+    for item in consider_includes(fname, f):
+        yield item
 
     # Get function length
     f.seek(0)
-    found_new_issues |= consider_function_size(fname, f)
-
-    return found_new_issues
+    for item in consider_function_size(fname, f):
+        yield item
 
 HEADER="""\
 # Welcome to the exceptions file for Tor's best-practices tracker!
@@ -161,8 +153,20 @@ def main(argv):
     parser = argparse.ArgumentParser(prog=progname)
     parser.add_argument("--regen", action="store_true",
                         help="Regenerate the exceptions file")
+    parser.add_argument("--list-overbroad", action="store_true",
+                        help="List over-strict exceptions")
     parser.add_argument("--exceptions",
                         help="Override the location for the exceptions file")
+    parser.add_argument("--strict", action="store_true",
+                        help="Make all warnings into errors")
+    parser.add_argument("--terse", action="store_true",
+                        help="Do not emit helpful instructions.")
+    parser.add_argument("--max-file-size", default=MAX_FILE_SIZE,
+                        help="Maximum lines per C file size")
+    parser.add_argument("--max-include-count", default=MAX_INCLUDE_COUNT,
+                        help="Maximum includes per C file")
+    parser.add_argument("--max-function-size", default=MAX_FUNCTION_SIZE,
+                        help="Maximum lines per function")
     parser.add_argument("topdir", default=".", nargs="?",
                         help="Top-level directory for the tor source")
     args = parser.parse_args(argv[1:])
@@ -174,24 +178,41 @@ def main(argv):
     else:
         exceptions_file = os.path.join(TOR_TOPDIR, "scripts/maint/practracker", EXCEPTIONS_FNAME)
 
+    # 0) Configure our thresholds of "what is a problem actually"
+    filt = problem.ProblemFilter()
+    filt.addThreshold(problem.FileSizeItem("*", int(args.max_file_size)))
+    filt.addThreshold(problem.IncludeCountItem("*", int(args.max_include_count)))
+    filt.addThreshold(problem.FunctionSizeItem("*", int(args.max_function_size)))
+
     # 1) Get all the .c files we care about
     files_list = util.get_tor_c_files(TOR_TOPDIR)
 
     # 2) Initialize problem vault and load an optional exceptions file so that
     # we don't warn about the past
-    global ProblemVault
-
     if args.regen:
         tmpname = exceptions_file + ".tmp"
         tmpfile = open(tmpname, "w")
-        sys.stdout = tmpfile
-        sys.stdout.write(HEADER)
+        problem_file = tmpfile
         ProblemVault = problem.ProblemVault()
     else:
         ProblemVault = problem.ProblemVault(exceptions_file)
+        problem_file = sys.stdout
+
+    # 2.1) Adjust the exceptions so that we warn only about small problems,
+    # and produce errors on big ones.
+    if not (args.regen or args.list_overbroad or args.strict):
+        ProblemVault.set_tolerances(TOLERANCE_FNS)
 
     # 3) Go through all the files and report problems if they are not exceptions
-    found_new_issues = consider_all_metrics(files_list)
+    found_new_issues = 0
+    for item in filt.filter(consider_all_metrics(files_list)):
+        status = ProblemVault.register_problem(item)
+        if status == problem.STATUS_ERR:
+            print(item, file=problem_file)
+            found_new_issues += 1
+        elif status == problem.STATUS_WARN:
+            # warnings always go to stdout.
+            print("(warning) {}".format(item))
 
     if args.regen:
         tmpfile.close()
@@ -199,18 +220,32 @@ def main(argv):
         sys.exit(0)
 
     # If new issues were found, try to give out some advice to the developer on how to resolve it.
-    if found_new_issues and not args.regen:
+    if found_new_issues and not args.regen and not args.terse:
         new_issues_str = """\
-FAILURE: practracker found new problems in the code: see warnings above.
+FAILURE: practracker found {} new problem(s) in the code: see warnings above.
 
 Please fix the problems if you can, and update the exceptions file
 ({}) if you can't.
 
 See doc/HACKING/HelpfulTools.md for more information on using practracker.\
-""".format(exceptions_file)
+
+You can disable this message by setting the TOR_DISABLE_PRACTRACKER environment
+variable.
+""".format(found_new_issues, exceptions_file)
         print(new_issues_str)
+
+    if args.list_overbroad:
+        def k_fn(tup):
+            return tup[0].key()
+        for (ex,p) in sorted(ProblemVault.list_overbroad_exceptions(), key=k_fn):
+            if p is None:
+                print(ex, "->", 0)
+            else:
+                print(ex, "->", p.metric_value)
 
     sys.exit(found_new_issues)
 
 if __name__ == '__main__':
+    if os.environ.get("TOR_DISABLE_PRACTRACKER"):
+        sys.exit(0)
     main(sys.argv)
