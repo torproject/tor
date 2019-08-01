@@ -246,4 +246,6 @@ variable.
     sys.exit(found_new_issues)
 
 if __name__ == '__main__':
+    if os.environ.get("TOR_DISABLE_PRACTRACKER"):
+        sys.exit(0)
     main(sys.argv)
