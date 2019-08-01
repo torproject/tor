@@ -28,6 +28,17 @@ run_practracker() {
         --max-include-count=0 --max-file-size=0 --max-function-size=0 --terse \
         "${DATA}/" "$@";
 }
+compare() {
+    # we can't use cmp because we need to use -b for windows
+    diff -b -u "$@" > "${TMPDIR}/test-diff"
+    if test -z "$(cat "${TMPDIR}"/test-diff)"; then
+        echo "OK"
+    else
+        cat "${TMPDIR}/test-diff"
+        echo "FAILED"
+        exit 1
+    fi
+}
 
 echo "unit tests:"
 
@@ -37,18 +48,10 @@ echo "ex0:"
 
 run_practracker --exceptions "${DATA}/ex0.txt" > "${TMPDIR}/ex0-received.txt"
 
-if cmp "${TMPDIR}/ex0-received.txt" "${DATA}/ex0-expected.txt" ; then
-    echo "  OK"
-else
-    exit 1
-fi
+compare "${TMPDIR}/ex0-received.txt" "${DATA}/ex0-expected.txt"
 
 echo "ex1:"
 
 run_practracker --exceptions "${DATA}/ex1.txt" > "${TMPDIR}/ex1-received.txt"
 
-if cmp "${TMPDIR}/ex1-received.txt" "${DATA}/ex1-expected.txt" ;then
-    echo "  OK"
-else
-    exit 1
-fi
+compare "${TMPDIR}/ex1-received.txt" "${DATA}/ex1-expected.txt"
