@@ -1614,7 +1614,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     logs_set_pending_callback_callback(control_event_logmsg_pending);
     control_adjust_event_log_severity();
     tor_free(severity);
-    tor_log_update_sigsafe_err_fds();
+    tor_log_update_safe_fds();
   }
   if (logs_initialized) {
     flush_log_messages_from_startup();

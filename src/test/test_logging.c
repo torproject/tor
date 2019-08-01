@@ -45,7 +45,7 @@ test_get_sigsafe_err_fds(void *arg)
   add_stream_log(&no_bug2, "dummy-3", 5);
   add_callback_log(&include_bug, dummy_cb_fn);
   close_temp_logs();
-  tor_log_update_sigsafe_err_fds();
+  tor_log_update_safe_fds();
 
   n = tor_log_get_sigsafe_err_fds(&fds);
   tt_int_op(n, OP_EQ, 2);
@@ -54,7 +54,7 @@ test_get_sigsafe_err_fds(void *arg)
 
   /* Allow STDOUT to replace STDERR. */
   add_stream_log(&include_bug, "dummy-4", STDOUT_FILENO);
-  tor_log_update_sigsafe_err_fds();
+  tor_log_update_safe_fds();
   n = tor_log_get_sigsafe_err_fds(&fds);
   tt_int_op(n, OP_EQ, 2);
   tt_int_op(fds[0], OP_EQ, 3);
@@ -62,7 +62,7 @@ test_get_sigsafe_err_fds(void *arg)
 
   /* But don't allow it to replace explicit STDERR. */
   add_stream_log(&include_bug, "dummy-5", STDERR_FILENO);
-  tor_log_update_sigsafe_err_fds();
+  tor_log_update_safe_fds();
   n = tor_log_get_sigsafe_err_fds(&fds);
   tt_int_op(n, OP_EQ, 3);
   tt_int_op(fds[0], OP_EQ, STDERR_FILENO);
@@ -76,7 +76,7 @@ test_get_sigsafe_err_fds(void *arg)
       add_stream_log(&include_bug, "x-dummy", i);
     }
   }
-  tor_log_update_sigsafe_err_fds();
+  tor_log_update_safe_fds();
   n = tor_log_get_sigsafe_err_fds(&fds);
   tt_int_op(n, OP_EQ, 8);
 
@@ -98,7 +98,7 @@ test_sigsafe_err(void *arg)
   init_logging(1);
   mark_logs_temp();
   open_and_add_file_log(&include_bug, fn, 0);
-  tor_log_update_sigsafe_err_fds();
+  tor_log_update_safe_fds();
   close_temp_logs();
 
   close(STDERR_FILENO);

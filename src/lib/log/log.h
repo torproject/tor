@@ -188,7 +188,7 @@ void truncate_logs(void);
 void tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
   CHECK_PRINTF(3,4);
 
-void tor_log_update_sigsafe_err_fds(void);
+void tor_log_update_safe_fds(void);
 
 struct smartlist_t;
 void tor_log_get_logfile_names(struct smartlist_t *out);

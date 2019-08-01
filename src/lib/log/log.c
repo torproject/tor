@@ -659,7 +659,7 @@ int_array_contains(const int *array, int n, int item)
 
 /** Function to call whenever the list of logs changes to get ready to log
  * from signal handlers. */
-void
+static void
 tor_log_update_sigsafe_err_fds(void)
 {
   const logfile_t *lf;
@@ -704,6 +704,14 @@ tor_log_update_sigsafe_err_fds(void)
   UNLOCK_LOGS();
 
   tor_log_set_sigsafe_err_fds(fds, n_fds);
+}
+
+/** Function to call whenever the list of logs changes, to update the lists
+ * of safe logging fds. */
+void
+tor_log_update_safe_fds(void)
+{
+  tor_log_update_sigsafe_err_fds();
 }
 
 /** Add to <b>out</b> a copy of every currently configured log file name. Used
