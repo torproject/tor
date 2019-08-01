@@ -371,7 +371,7 @@ endif
 
 check-best-practices:
 if USEPYTHON
-	@$(PYTHON) $(top_srcdir)/scripts/maint/practracker/practracker.py $(top_srcdir)
+	@$(PYTHON) $(top_srcdir)/scripts/maint/practracker/practracker.py $(top_srcdir) $(TOR_PRACTRACKER_OPTIONS)
 endif
 
 practracker-regen:
