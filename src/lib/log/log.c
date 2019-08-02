@@ -157,7 +157,7 @@ severity_to_android_log_priority(int severity)
 }
 #endif /* defined(HAVE_ANDROID_LOG_H) */
 
-/** A mutex to guard changes to logfiles and logging. */
+/** A recursive mutex to guard changes to logfiles and logging. */
 static tor_mutex_t log_mutex;
 /** True iff we have initialized log_mutex */
 static int log_mutex_initialized = 0;
@@ -208,7 +208,9 @@ static int pretty_fn_has_parens = 0;
  * logs to get configured. */
 #define MAX_STARTUP_MSG_LEN (1<<16)
 
-/** Lock the log_mutex to prevent others from changing the logfile_t list */
+/** Lock the log_mutex to prevent others from changing the logfile_t list.
+ * The log_mutex is recursive, so we can lock it multiple times in the same
+ * thread. */
 #define LOCK_LOGS() STMT_BEGIN                                          \
   raw_assert(log_mutex_initialized);                                    \
   tor_mutex_acquire(&log_mutex);                                        \
@@ -657,18 +659,32 @@ int_array_contains(const int *array, int n, int item)
   return 0;
 }
 
+typedef enum {
+  TOR_LOG_SAFE_ONLY_USE_CONFIGURED_FDS = 0,
+  TOR_LOG_SAFE_ALWAYS_INCLUDE_STDERR_FD = 1
+} tor_log_safe_stderr_fd_t;
+
 /** Helper function to call whenever the list of logs changes, to update the
  * list of signal safe error or control safe debug log file descriptors.
+ *
+ * Only include file descriptors that are logging at level <b>severity</b>,
+ * to the log domains in <b>domains</b>. Skip duplicate file descriptors.
+ *
+ * If include_stderr is TOR_LOG_SAFE_ALWAYS_INCLUDE_STDERR_FD, always include
+ * the stderr file descriptor in <b>fds_out</b>, even if it is not present
+ * in the configured logs. Skip stderr if stdout is in the configured logs.
  *
  * Returns the file descriptors in <b>fds_out</b>, and the number of file
  * descriptors in *<b>n_fds_out</b>. Returns at most <b>max_fds</b> file
  * descriptors. */
 static void
-tor_log_update_safe_fds_helper(int *fds_out, int *n_fds_out, int max_fds)
+tor_log_update_safe_fds_helper(tor_log_safe_stderr_fd_t include_stderr,
+                               int severity, log_domain_mask_t domains,
+                               int *fds_out, int *n_fds_out, int max_fds)
 {
   const logfile_t *lf;
   int found_real_stderr = 0;
-  int n_fds;
+  int n_fds = 0;
 
   /* Don't tor_assert inside log fns */
   raw_assert(fds_out);
@@ -676,21 +692,24 @@ tor_log_update_safe_fds_helper(int *fds_out, int *n_fds_out, int max_fds)
 
   LOCK_LOGS();
 
-  /* Reserve the first one for stderr. This is safe because when we daemonize,
-   * we dup2 /dev/null to stderr, */
-  fds_out[0] = STDERR_FILENO;
-  n_fds = 1;
+  if (include_stderr) {
+    /* Reserve the first one for stderr. This is safe because when we
+     * daemonize, we dup2 /dev/null to stderr. */
+    fds_out[0] = STDERR_FILENO;
+    n_fds = 1;
+  }
 
   for (lf = logfiles; lf; lf = lf->next) {
-     /* Don't try callback to the control port, or syslogs: We can't
-      * do them from a signal handler. Don't try stdout: we always do stderr.
+     /* Don't try callback to the control port, syslogs, android logs, or any
+      * other non-file descriptor log: We can't call arbitrary functions from a
+      * signal handler.
       */
     if (lf->is_temporary || logfile_is_external(lf)
         || lf->seems_dead || lf->fd < 0)
       continue;
-    if (lf->severities->masks[SEVERITY_MASK_IDX(LOG_ERR)] &
-        (LD_BUG|LD_GENERAL)) {
-      if (lf->fd == STDERR_FILENO)
+    if (lf->severities->masks[SEVERITY_MASK_IDX(severity)] &
+        (domains)) {
+      if (include_stderr && lf->fd == STDERR_FILENO)
         found_real_stderr = 1;
       /* Avoid duplicates */
       if (int_array_contains(fds_out, n_fds, lf->fd))
@@ -701,9 +720,12 @@ tor_log_update_safe_fds_helper(int *fds_out, int *n_fds_out, int max_fds)
     }
   }
 
-  if (!found_real_stderr &&
+  if (include_stderr && !found_real_stderr &&
       int_array_contains(fds_out, n_fds, STDOUT_FILENO)) {
-    /* Don't use a virtual stderr when we're also logging to stdout. */
+    /* Don't use a virtual stderr when we're also logging to stdout.
+     * If we reached max_fds logs, we'll now have (max_fds - 1) logs.
+     * That's ok, max_fds is large enough that most tor instances don't exceed
+     * it. */
     raw_assert(n_fds >= 2); /* Don't tor_assert inside log fns */
     fds_out[0] = fds_out[--n_fds];
   }
@@ -723,7 +745,9 @@ tor_log_update_sigsafe_err_fds(void)
   int fds[TOR_SIGSAFE_LOG_MAX_FDS];
   int n_fds = 0;
 
-  tor_log_update_safe_fds_helper(fds, &n_fds, TOR_SIGSAFE_LOG_MAX_FDS);
+  tor_log_update_safe_fds_helper(TOR_LOG_SAFE_ALWAYS_INCLUDE_STDERR_FD,
+                                 LOG_ERR, LD_BUG|LD_GENERAL,
+                                 fds, &n_fds, TOR_SIGSAFE_LOG_MAX_FDS);
   tor_log_set_sigsafe_err_fds(fds, n_fds);
 
   UNLOCK_LOGS();
