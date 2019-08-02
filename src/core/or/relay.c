@@ -1585,7 +1585,7 @@ process_sendme_cell(const relay_header_t *rh, const cell_t *cell,
  *  parent function.
  */
 STATIC int
-handle_relay_command(cell_t *cell, circuit_t *circ,
+handle_relay_cell_command(cell_t *cell, circuit_t *circ,
                      edge_connection_t *conn, crypt_path_t *layer_hint,
                      relay_header_t *rh, int optimistic_data)
 {
@@ -2033,7 +2033,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     }
   }
 
-  return handle_relay_command(cell, circ, conn, layer_hint,
+  return handle_relay_cell_command(cell, circ, conn, layer_hint,
                               &rh, optimistic_data);
 }
 
