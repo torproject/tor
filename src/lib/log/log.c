@@ -657,21 +657,28 @@ int_array_contains(const int *array, int n, int item)
   return 0;
 }
 
-/** Function to call whenever the list of logs changes to get ready to log
- * from signal handlers. */
+/** Helper function to call whenever the list of logs changes, to update the
+ * list of signal safe error or control safe debug log file descriptors.
+ *
+ * Returns the file descriptors in <b>fds_out</b>, and the number of file
+ * descriptors in *<b>n_fds_out</b>. Returns at most <b>max_fds</b> file
+ * descriptors. */
 static void
-tor_log_update_sigsafe_err_fds(void)
+tor_log_update_safe_fds_helper(int *fds_out, int *n_fds_out, int max_fds)
 {
   const logfile_t *lf;
   int found_real_stderr = 0;
-
-  int fds[TOR_SIGSAFE_LOG_MAX_FDS];
   int n_fds;
 
+  /* Don't tor_assert inside log fns */
+  raw_assert(fds_out);
+  raw_assert(n_fds_out);
+
   LOCK_LOGS();
+
   /* Reserve the first one for stderr. This is safe because when we daemonize,
    * we dup2 /dev/null to stderr, */
-  fds[0] = STDERR_FILENO;
+  fds_out[0] = STDERR_FILENO;
   n_fds = 1;
 
   for (lf = logfiles; lf; lf = lf->next) {
@@ -686,24 +693,40 @@ tor_log_update_sigsafe_err_fds(void)
       if (lf->fd == STDERR_FILENO)
         found_real_stderr = 1;
       /* Avoid duplicates */
-      if (int_array_contains(fds, n_fds, lf->fd))
+      if (int_array_contains(fds_out, n_fds, lf->fd))
         continue;
-      fds[n_fds++] = lf->fd;
-      if (n_fds == TOR_SIGSAFE_LOG_MAX_FDS)
+      fds_out[n_fds++] = lf->fd;
+      if (n_fds == max_fds)
         break;
     }
   }
 
   if (!found_real_stderr &&
-      int_array_contains(fds, n_fds, STDOUT_FILENO)) {
+      int_array_contains(fds_out, n_fds, STDOUT_FILENO)) {
     /* Don't use a virtual stderr when we're also logging to stdout. */
     raw_assert(n_fds >= 2); /* Don't tor_assert inside log fns */
-    fds[0] = fds[--n_fds];
+    fds_out[0] = fds_out[--n_fds];
   }
 
-  UNLOCK_LOGS();
+  *n_fds_out = n_fds;
 
+  UNLOCK_LOGS();
+}
+
+/** Function to call whenever the list of logs changes to get ready to log
+ * from signal handlers. */
+static void
+tor_log_update_sigsafe_err_fds(void)
+{
+  LOCK_LOGS();
+
+  int fds[TOR_SIGSAFE_LOG_MAX_FDS];
+  int n_fds = 0;
+
+  tor_log_update_safe_fds_helper(fds, &n_fds, TOR_SIGSAFE_LOG_MAX_FDS);
   tor_log_set_sigsafe_err_fds(fds, n_fds);
+
+  UNLOCK_LOGS();
 }
 
 /** Function to call whenever the list of logs changes, to update the lists
