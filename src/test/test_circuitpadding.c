@@ -3169,7 +3169,7 @@ test_circuitpadding_ignore_non_padding_cells(void *arg)
   rh.command = RELAY_COMMAND_BEGIN;
 
   setup_full_capture_of_logs(LOG_INFO);
-  retval = handle_relay_command(NULL, client_side, NULL, NULL, &rh, 0);
+  retval = handle_relay_cell_command(NULL, client_side, NULL, NULL, &rh, 0);
   tt_int_op(retval, OP_EQ, 0);
   expect_log_msg_containing("Ignored cell");
 
