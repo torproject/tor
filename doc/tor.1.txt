@@ -672,7 +672,13 @@ GENERAL OPTIONS
     a limited number of log files that are configured to log messages at error
     severity from the bug or general domains. They are never sent as syslogs,
     android logs, control port log events, or to any API-based log
-    destinations.
+    destinations. +
++
+    Control port message trace debug logs are never sent as control port log
+    events, to avoid modifying control output when debugging. They are sent to
+    the log files that are configured to log messages at debug severity from
+    the control domain. They are not currently sent as syslogs, android logs,
+    or to any API-based log destinations.
 
 [[Log2]] **Log** __minSeverity__[-__maxSeverity__] **file** __FILENAME__::
     As above, but send log messages to the listed filename. The

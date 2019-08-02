@@ -682,6 +682,8 @@ tor_log_update_safe_fds_helper(tor_log_safe_stderr_fd_t include_stderr,
                                int severity, log_domain_mask_t domains,
                                int *fds_out, int *n_fds_out, int max_fds)
 {
+  LOCK_LOGS();
+
   const logfile_t *lf;
   int found_real_stderr = 0;
   int n_fds = 0;
@@ -689,8 +691,6 @@ tor_log_update_safe_fds_helper(tor_log_safe_stderr_fd_t include_stderr,
   /* Don't tor_assert inside log fns */
   raw_assert(fds_out);
   raw_assert(n_fds_out);
-
-  LOCK_LOGS();
 
   if (include_stderr) {
     /* Reserve the first one for stderr. This is safe because when we
@@ -703,6 +703,9 @@ tor_log_update_safe_fds_helper(tor_log_safe_stderr_fd_t include_stderr,
      /* Don't try callback to the control port, syslogs, android logs, or any
       * other non-file descriptor log: We can't call arbitrary functions from a
       * signal handler.
+      * We could do syslogs, android logs, and any other non-file descriptor
+      * logs for control port debugging, but that's not necessary, and it would
+      * significantly complicate this code.
       */
     if (lf->is_temporary || logfile_is_external(lf)
         || lf->seems_dead || lf->fd < 0)
@@ -753,12 +756,55 @@ tor_log_update_sigsafe_err_fds(void)
   UNLOCK_LOGS();
 }
 
+/** Return the current number of logfiles. */
+static size_t
+tor_log_n_logfiles(void)
+{
+  LOCK_LOGS();
+
+  const logfile_t *lf;
+  size_t n_logfiles = 0;
+
+  for (lf = logfiles; lf; lf = lf->next)
+    n_logfiles++;
+
+  UNLOCK_LOGS();
+
+  return n_logfiles;
+}
+
+/** Function to call whenever the list of logs changes to get ready to log
+ * control port message trace debug logs. */
+static void
+tor_log_update_control_safe_debug_fds(void)
+{
+  LOCK_LOGS();
+
+  /* Unlike tor_log_update_sigsafe_err_fds(), we are allowed to call malloc().
+   */
+  size_t max_fds = tor_log_n_logfiles();
+  if (max_fds > INT_MAX)
+    max_fds = INT_MAX;
+  int *fds = tor_malloc(max_fds * sizeof(int));
+  int n_fds = 0;
+
+  tor_log_update_safe_fds_helper(TOR_LOG_SAFE_ONLY_USE_CONFIGURED_FDS,
+                                 LOG_DEBUG, LD_CONTROL,
+                                 fds, &n_fds, (int)max_fds);
+  /* tor_log_set_control_safe_debug_fds(fds, n_fds); */
+
+  tor_free(fds);
+
+  UNLOCK_LOGS();
+}
+
 /** Function to call whenever the list of logs changes, to update the lists
  * of safe logging fds. */
 void
 tor_log_update_safe_fds(void)
 {
   tor_log_update_sigsafe_err_fds();
+  tor_log_update_control_safe_debug_fds();
 }
 
 /** Add to <b>out</b> a copy of every currently configured log file name. Used
