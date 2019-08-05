@@ -83,6 +83,14 @@ def consider_function_size(fname, f):
         canonical_function_name = "%s:%s()" % (fname, name)
         yield problem.FunctionSizeItem(canonical_function_name, lines)
 
+def consider_include_violations(fname, real_fname, f):
+    n = 0
+    for item in includes.consider_include_rules(real_fname, f):
+        n += 1
+    if n:
+        yield problem.DependencyViolationItem(fname, n)
+
+
 #######################################################
 
 def consider_all_metrics(files_list):
@@ -119,12 +127,8 @@ def consider_metrics_for_file(fname, f):
 
     # Check for "upward" includes
     f.seek(0)
-    n = 0
-    for item in includes.consider_include_rules(real_fname, f):
-        n += 1
-    if n:
-        yield problem.DependencyViolationItem(fname, n)
-
+    for item in consider_include_violations(fname, real_fname, f):
+        yield item
 
 HEADER="""\
 # Welcome to the exceptions file for Tor's best-practices tracker!
