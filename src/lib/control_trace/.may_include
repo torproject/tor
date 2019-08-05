@@ -2,3 +2,5 @@ orconfig.h
 lib/control_trace/*.h
 lib/err/*.h
 lib/malloc/*.h
+lib/string/*.h
+lib/testsupport/*.h

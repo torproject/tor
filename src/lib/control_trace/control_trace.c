@@ -30,9 +30,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define CONTROL_TRACE_PRIVATE
 #include "lib/control_trace/control_trace.h"
 #include "lib/err/raw_log.h"
 #include "lib/malloc/malloc.h"
+#include "lib/string/printf.h"
+
+/* The prefix string for every control trace log */
+#define CONTROL_TRACE_PREFIX "Control Trace "
 
 /** Array of fds that we use to log control message debug traces.
  * Unlike crashes, which can happen at any time, we won't log any control
@@ -43,13 +48,75 @@ static int n_control_safe_log_fds = 0;
 
 /** Given a list of string arguments ending with a NULL, writes them
  * to our control message debug trace logs. */
-void
+STATIC void
 tor_log_debug_control_safe(const char *m, ...)
 {
   va_list ap;
   va_start(ap, m);
   tor_log_raw_ap(control_safe_log_fds, n_control_safe_log_fds, false, m, ap);
   va_end(ap);
+}
+
+/** Format a control connection pointer <b>conn</b> into an identifier for the
+ * connection, and return it as a newly allocated string.
+ *
+ * The returned string must be freed using tor_free(). */
+static char *
+tor_control_conn_to_str_dup(const control_connection_t *conn)
+{
+  char *conn_fmt = NULL;
+  int rv = 0;
+
+  rv = tor_asprintf(&conn_fmt, "Conn: %p", conn);
+  if (rv < 0 || (size_t)rv < strlen("Conn: 0xffffffff")) {
+    tor_free(conn_fmt);
+    return tor_strdup("Conn Formatting Error");
+  } else {
+    return conn_fmt;
+  }
+}
+
+/** Log a trace of a control message to the control-safe logs.
+ *
+ * Called when tor sends the control channel <b>conn</b> an event message
+ * <b>msg</b> of <b>type</b>.
+ *
+ * The pointer value of <b>conn</b> is used as an identifier in the logs.
+ *
+ * Low-level interface: use one of the typed functions/macros, rather than
+ * using this function directly. */
+void
+tor_log_debug_control_safe_message(const control_connection_t *conn,
+                                   const char *type, const char *msg)
+{
+  if (n_control_safe_log_fds) {
+    char *conn_fmt = tor_control_conn_to_str_dup(conn);
+    tor_log_debug_control_safe(CONTROL_TRACE_PREFIX,
+                               conn_fmt, ", ",
+                               type, ": ",
+                               "Content: '", msg, "'.");
+    tor_free(conn_fmt);
+  }
+}
+
+/** Log a trace of a control command to the control-safe logs.
+ *
+ * Called when the control channel <b>conn</b> sends tor a command string
+ * <b>cmd</b>, with arguments <b>args</b>.
+ *
+ * The pointer value of <b>conn</b> is used as an identifier in the logs. */
+void
+tor_log_debug_control_safe_command(const control_connection_t *conn,
+                                   const char *cmd, const char *args)
+{
+  if (n_control_safe_log_fds) {
+    char *conn_fmt = tor_control_conn_to_str_dup(conn);
+    tor_log_debug_control_safe(CONTROL_TRACE_PREFIX,
+                               conn_fmt, ", ",
+                               "Command: '", cmd, "', ",
+                               "Arguments: '", args, "'.");
+    tor_free(conn_fmt);
+  }
 }
 
 /** Set *<b>out</b> to a pointer to an array of the fds that we use to log
