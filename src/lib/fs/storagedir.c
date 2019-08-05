@@ -19,7 +19,7 @@
 #include "lib/fs/dir.h"
 #include "lib/fs/files.h"
 #include "lib/fs/mmap.h"
-#include "lib/log/escape.h"
+#include "lib/string/escape.h"
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"

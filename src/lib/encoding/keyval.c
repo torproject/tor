@@ -11,7 +11,7 @@
 
 #include "orconfig.h"
 #include "lib/encoding/keyval.h"
-#include "lib/log/escape.h"
+#include "lib/string/escape.h"
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 

@@ -44,7 +44,7 @@
 #include "lib/container/smartlist.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/log/log.h"
-#include "lib/log/escape.h"
+#include "lib/string/escape.h"
 #include "lib/malloc/malloc.h"
 #include "lib/net/inaddr.h"
 #include "lib/string/compat_ctype.h"

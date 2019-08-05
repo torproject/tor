@@ -16,7 +16,7 @@
 #include "lib/pubsub/pubsub_connect.h"
 #include "lib/pubsub/pubsub_publish.h"
 
-#include "lib/log/escape.h"
+#include "lib/string/escape.h"
 #include "lib/malloc/malloc.h"
 #include "lib/string/printf.h"
 

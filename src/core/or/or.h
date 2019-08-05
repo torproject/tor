@@ -47,7 +47,7 @@
 #include "lib/intmath/cmp.h"
 #include "lib/intmath/logic.h"
 #include "lib/intmath/muldiv.h"
-#include "lib/log/escape.h"
+#include "lib/string/escape.h"
 #include "lib/log/ratelim.h"
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"

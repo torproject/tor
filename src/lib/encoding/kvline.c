@@ -21,7 +21,7 @@
 #include "lib/string/compat_ctype.h"
 #include "lib/string/printf.h"
 #include "lib/string/util_string.h"
-#include "lib/log/escape.h"
+#include "lib/string/escape.h"
 #include "lib/log/util_bug.h"
 
 #include <stdbool.h>

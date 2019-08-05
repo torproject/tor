@@ -20,7 +20,7 @@
 #include "lib/confmgt/type_defs.h"
 #include "lib/confmgt/typedvar.h"
 #include "lib/encoding/confline.h"
-#include "lib/log/escape.h"
+#include "lib/string/escape.h"
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"

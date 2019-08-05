@@ -21,7 +21,7 @@
 #include "lib/log/util_bug.h"
 #include "lib/fs/files.h"
 
-#include "lib/log/escape.h"
+#include "lib/string/escape.h"
 #include "lib/log/log.h"
 #include "lib/encoding/binascii.h"
 #include "lib/encoding/pem.h"

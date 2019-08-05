@@ -8,7 +8,7 @@
  * \brief Escape untrusted strings before sending them to the log.
  **/
 
-#include "lib/log/escape.h"
+#include "lib/string/escape.h"
 #include "lib/err/torerr.h"
 #include "lib/string/compat_ctype.h"
 #include "lib/string/printf.h"

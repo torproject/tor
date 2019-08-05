@@ -36,7 +36,7 @@
 #include "lib/ctime/di_ops.h"
 #include "lib/encoding/binascii.h"
 #include "lib/fs/files.h"
-#include "lib/log/escape.h"
+#include "lib/string/escape.h"
 #include "lib/malloc/malloc.h"
 #include "lib/net/address.h" //????
 #include "lib/net/inaddr.h"

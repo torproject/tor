@@ -18,7 +18,7 @@
 #include "lib/container/smartlist.h"
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
-#include "lib/log/escape.h"
+#include "lib/string/escape.h"
 #include "lib/err/torerr.h"
 #include "lib/malloc/malloc.h"
 #include "lib/sandbox/sandbox.h"

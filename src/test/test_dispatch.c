@@ -10,7 +10,7 @@
 #include "lib/dispatch/dispatch_st.h"
 #include "lib/dispatch/msgtypes.h"
 
-#include "lib/log/escape.h"
+#include "lib/string/escape.h"
 #include "lib/malloc/malloc.h"
 #include "lib/string/printf.h"
 

@@ -15,7 +15,7 @@
 #include "lib/encoding/kvline.h"
 #include "lib/encoding/confline.h"
 #include "lib/malloc/malloc.h"
-#include "lib/log/escape.h"
+#include "lib/string/escape.h"
 #include "lib/log/util_bug.h"
 #include "lib/intmath/muldiv.h"
 

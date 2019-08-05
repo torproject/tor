@@ -8,7 +8,6 @@
 
 #include "orconfig.h"
 #include "lib/subsys/subsys.h"
-#include "lib/log/escape.h"
 #include "lib/log/log.h"
 #include "lib/log/log_sys.h"
 
@@ -23,7 +22,6 @@ static void
 subsys_logging_shutdown(void)
 {
   logs_free_all();
-  escaped(NULL);
 }
 
 const subsys_fns_t sys_logging = {

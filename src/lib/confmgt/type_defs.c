@@ -26,7 +26,7 @@
 #include "lib/container/smartlist.h"
 #include "lib/encoding/confline.h"
 #include "lib/encoding/time_fmt.h"
-#include "lib/log/escape.h"
+#include "lib/string/escape.h"
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"
