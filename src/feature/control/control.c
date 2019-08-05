@@ -341,6 +341,60 @@ static const char CONTROLPORT_IS_NOT_AN_HTTP_PROXY_MSG[] =
   "</body>\n"
   "</html>\n";
 
+/** Return an error on a control connection that tries to use the v0 protocol.
+ */
+static void
+connection_control_process_inbuf_v0_helper(control_connection_t *conn)
+{
+  /* Detect v0 commands and send a "no more v0" message. */
+  size_t body_len;
+  char buf[128];
+  set_uint16(buf+2, htons(0x0000)); /* type == error */
+  set_uint16(buf+4, htons(0x0001)); /* code == internal error */
+  strlcpy(buf+6, "The v0 control protocol is not supported by Tor 0.1.2.17 "
+          "and later; upgrade your controller.",
+          sizeof(buf)-6);
+  body_len = 2+strlen(buf+6)+2; /* code, msg, nul. */
+  set_uint16(buf+0, htons(body_len));
+  tor_log_debug_control_safe_protocol_error(conn, buf);
+  connection_buf_add(buf, 4+body_len, TO_CONN(conn));
+
+  connection_mark_and_flush(TO_CONN(conn));
+}
+
+/** Return an error on a control connection that tries to use HTTP.
+ */
+static void
+connection_control_process_inbuf_http_helper(control_connection_t *conn)
+{
+  tor_log_debug_control_safe_protocol_error(conn,
+      CONTROLPORT_IS_NOT_AN_HTTP_PROXY_MSG);
+  connection_write_str_to_buf(CONTROLPORT_IS_NOT_AN_HTTP_PROXY_MSG, conn);
+  log_notice(LD_CONTROL, "Received HTTP request on ControlPort");
+  connection_mark_and_flush(TO_CONN(conn));
+}
+
+/** Log an error and return 0 when a control connection tries to use the wrong
+ * protocol. */
+static bool
+connection_control_process_inbuf_protocol_is_valid(control_connection_t *conn)
+{
+  if (conn->base_.state == CONTROL_CONN_STATE_NEEDAUTH &&
+      peek_connection_has_control0_command(TO_CONN(conn))) {
+    connection_control_process_inbuf_v0_helper(conn);
+    return 0;
+  }
+
+  /* If the user has the HTTP proxy port and the control port confused. */
+  if (conn->base_.state == CONTROL_CONN_STATE_NEEDAUTH &&
+      peek_connection_has_http_command(TO_CONN(conn))) {
+    connection_control_process_inbuf_http_helper(conn);
+    return 0;
+  }
+
+  return 1;
+}
+
 /** Called when data has arrived on a v1 control connection: Try to fetch
  * commands from conn->inbuf, and execute them.
  */
@@ -361,33 +415,7 @@ connection_control_process_inbuf(control_connection_t *conn)
     conn->incoming_cmd_cur_len = 0;
   }
 
-  if (conn->base_.state == CONTROL_CONN_STATE_NEEDAUTH &&
-      peek_connection_has_control0_command(TO_CONN(conn))) {
-    /* Detect v0 commands and send a "no more v0" message. */
-    size_t body_len;
-    char buf[128];
-    set_uint16(buf+2, htons(0x0000)); /* type == error */
-    set_uint16(buf+4, htons(0x0001)); /* code == internal error */
-    strlcpy(buf+6, "The v0 control protocol is not supported by Tor 0.1.2.17 "
-            "and later; upgrade your controller.",
-            sizeof(buf)-6);
-    body_len = 2+strlen(buf+6)+2; /* code, msg, nul. */
-    set_uint16(buf+0, htons(body_len));
-    tor_log_debug_control_safe_protocol_error(conn, buf);
-    connection_buf_add(buf, 4+body_len, TO_CONN(conn));
-
-    connection_mark_and_flush(TO_CONN(conn));
-    return 0;
-  }
-
-  /* If the user has the HTTP proxy port and the control port confused. */
-  if (conn->base_.state == CONTROL_CONN_STATE_NEEDAUTH &&
-      peek_connection_has_http_command(TO_CONN(conn))) {
-    tor_log_debug_control_safe_protocol_error(conn,
-        CONTROLPORT_IS_NOT_AN_HTTP_PROXY_MSG);
-    connection_write_str_to_buf(CONTROLPORT_IS_NOT_AN_HTTP_PROXY_MSG, conn);
-    log_notice(LD_CONTROL, "Received HTTP request on ControlPort");
-    connection_mark_and_flush(TO_CONN(conn));
+  if (!connection_control_process_inbuf_protocol_is_valid(conn)) {
     return 0;
   }
 

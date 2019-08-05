@@ -139,7 +139,7 @@ problem function-size /src/feature/client/entrynodes.c:entry_guard_parse_from_st
 problem function-size /src/feature/client/transports.c:handle_proxy_line() 108
 problem function-size /src/feature/client/transports.c:parse_method_line_helper() 110
 problem function-size /src/feature/client/transports.c:create_managed_proxy_environment() 109
-problem function-size /src/feature/control/control.c:connection_control_process_inbuf() 136
+problem function-size /src/feature/control/control.c:connection_control_process_inbuf() 113
 problem function-size /src/feature/control/control_auth.c:handle_control_authenticate() 186
 problem function-size /src/feature/control/control_cmd.c:handle_control_extendcircuit() 150
 problem function-size /src/feature/control/control_cmd.c:handle_control_add_onion() 256
