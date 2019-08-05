@@ -40,7 +40,7 @@ typedef enum {
   REGISTER_SUCCESS_ALREADY_EXISTS,
   /* We successfuly registered these credentials, and also decrypted a cached
    * descriptor. */
-  REGISTER_SUCCESS_ALSO_DECRYPTED,
+  REGISTER_SUCCESS_AND_DECRYPTED,
   /* We failed to register these credentials, because of a bad HS address. */
   REGISTER_FAIL_BAD_ADDRESS,
 } hs_client_register_auth_status_t;
