@@ -23,9 +23,6 @@ import os
 import re
 import sys
 
-# Global: Have there been any errors?
-trouble = False
-
 if sys.version_info[0] <= 2:
     def open_file(fname):
         return open(fname, 'r')
@@ -34,13 +31,6 @@ else:
         return open(fname, 'r', encoding='utf-8')
 
 def warn(msg):
-    print(msg, file=sys.stderr)
-
-def err(msg):
-    """ Declare that an error has happened, and remember that there has
-        been an error. """
-    global trouble
-    trouble = True
     print(msg, file=sys.stderr)
 
 def fname_is_c(fname):
@@ -65,6 +55,14 @@ def pattern_is_normal(s):
             return True
     return False
 
+class Error(object):
+    def __init__(self, location, msg):
+        self.location = location
+        self.msg = msg
+
+    def __str__(self):
+        return "{} at {}".format(self.msg, self.location)
+
 class Rules(object):
     """ A 'Rules' object is the parsed version of a .may_include file. """
     def __init__(self, dirpath):
@@ -88,7 +86,7 @@ class Rules(object):
                 return True
         return False
 
-    def applyToLines(self, lines, context=""):
+    def applyToLines(self, lines, loc_prefix=""):
         lineno = 0
         for line in lines:
             lineno += 1
@@ -96,18 +94,19 @@ class Rules(object):
             if m:
                 include = m.group(1)
                 if not self.includeOk(include):
-                    err("Forbidden include of {} on line {}{}".format(
-                        include, lineno, context))
+                    yield Error("{}{}".format(loc_prefix,str(lineno)),
+                                "Forbidden include of {}".format(include))
 
     def applyToFile(self, fname):
         with open_file(fname) as f:
             #print(fname)
-            self.applyToLines(iter(f), " of {}".format(fname))
+            for error in self.applyToLines(iter(f), "{}:".format(fname)):
+                yield error
 
     def noteUnusedRules(self):
         for p in self.patterns:
             if p not in self.usedPatterns:
-                print("Pattern {} in {} was never used.".format(p, self.dirpath))
+                warn("Pattern {} in {} was never used.".format(p, self.dirpath))
 
     def getAllowedDirectories(self):
         allowed = []
@@ -145,6 +144,8 @@ def load_include_rules(fname):
     return result
 
 def get_all_include_rules():
+    """Return a list of all the Rules objects we have loaded so far,
+       sorted by their directory names."""
     return [ rules for (fname,rules) in
              sorted(include_rules_cache.items())
              if rules is not None ]
@@ -193,16 +194,29 @@ def toposort(graph, limit=100):
 
     return all_levels
 
+def consider_include_rules(fname):
+    dirpath = os.path.split(fname)[0]
+    rules_fname = os.path.join(dirpath, RULES_FNAME)
+    rules = load_include_rules(os.path.join(dirpath, RULES_FNAME))
+    if rules is None:
+        return
+
+    for err in rules.applyToFile(fname):
+        yield err
+
 if __name__ == '__main__':
     list_unused = False
     log_sorted_levels = False
 
+    trouble = False
+
     for dirpath, dirnames, fnames in os.walk("src"):
         for fname in fnames:
             if fname_is_c(fname):
-                rules = load_include_rules(os.path.join(dirpath, RULES_FNAME))
-                if rules is not None:
-                    rules.applyToFile(os.path.join(dirpath,fname))
+                fullpath = os.path.join(dirpath,fname)
+                for err in consider_include_rules(fullpath):
+                    print(err, file=sys.stderr)
+                    trouble = True
 
     if trouble:
         err(
