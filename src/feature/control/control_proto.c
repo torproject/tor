@@ -23,6 +23,8 @@
 #include "core/or/socks_request_st.h"
 #include "feature/control/control_connection_st.h"
 
+#include "lib/control_trace/control_trace.h"
+
 /** Append a NUL-terminated string <b>s</b> to the end of
  * <b>conn</b>-\>outbuf.
  */
@@ -30,6 +32,7 @@ void
 connection_write_str_to_buf(const char *s, control_connection_t *conn)
 {
   size_t len = strlen(s);
+  tor_log_debug_control_safe_reply_write(conn, s);
   connection_buf_add(s, len, TO_CONN(conn));
 }
 
@@ -51,6 +54,7 @@ connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
     tor_assert(0);
   }
 
+  tor_log_debug_control_safe_reply_printf(conn, buf);
   connection_buf_add(buf, (size_t)len, TO_CONN(conn));
 
   tor_free(buf);
@@ -272,6 +276,7 @@ control_write_data(control_connection_t *conn, const char *data)
   size_t esc_len;
 
   esc_len = write_escaped_data(data, strlen(data), &esc);
+  tor_log_debug_control_safe_reply_data(conn, esc);
   connection_buf_add(esc, esc_len, TO_CONN(conn));
   tor_free(esc);
 }

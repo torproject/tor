@@ -1,0 +1,3 @@
+  o Minor features (controller, logging):
+    - Add debug-level control message tracing for controller commands,
+      control events, and control replies. Closes ticket 30901.

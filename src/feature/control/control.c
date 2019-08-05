@@ -50,6 +50,8 @@
 #include "feature/control/control_proto.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendservice.h"
+
+#include "lib/control_trace/control_trace.h"
 #include "lib/evloop/procmon.h"
 
 #include "feature/control/control_connection_st.h"
@@ -371,6 +373,7 @@ connection_control_process_inbuf(control_connection_t *conn)
             sizeof(buf)-6);
     body_len = 2+strlen(buf+6)+2; /* code, msg, nul. */
     set_uint16(buf+0, htons(body_len));
+    tor_log_debug_control_safe_protocol_error(conn, buf);
     connection_buf_add(buf, 4+body_len, TO_CONN(conn));
 
     connection_mark_and_flush(TO_CONN(conn));
@@ -380,6 +383,8 @@ connection_control_process_inbuf(control_connection_t *conn)
   /* If the user has the HTTP proxy port and the control port confused. */
   if (conn->base_.state == CONTROL_CONN_STATE_NEEDAUTH &&
       peek_connection_has_http_command(TO_CONN(conn))) {
+    tor_log_debug_control_safe_protocol_error(conn,
+        CONTROLPORT_IS_NOT_AN_HTTP_PROXY_MSG);
     connection_write_str_to_buf(CONTROLPORT_IS_NOT_AN_HTTP_PROXY_MSG, conn);
     log_notice(LD_CONTROL, "Received HTTP request on ControlPort");
     connection_mark_and_flush(TO_CONN(conn));

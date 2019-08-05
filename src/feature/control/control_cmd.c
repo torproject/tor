@@ -37,6 +37,7 @@
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendparse.h"
 #include "feature/rend/rendservice.h"
+#include "lib/control_trace/control_trace.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/confline.h"
@@ -330,6 +331,7 @@ handle_control_getconf(control_connection_t *conn,
     tor_assert(strlen(tmp)>4);
     tmp[3] = ' ';
     msg = smartlist_join_strings(answers, "", 0, &msg_len);
+    tor_log_debug_control_safe_getconf_reply(conn, msg);
     connection_buf_add(msg, msg_len, TO_CONN(conn));
   } else {
     send_control_done(conn);
@@ -700,6 +702,7 @@ handle_control_mapaddress(control_connection_t *conn,
   if (smartlist_len(reply)) {
     ((char*)smartlist_get(reply,smartlist_len(reply)-1))[3] = ' ';
     r = smartlist_join_strings(reply, "\r\n", 1, &sz);
+    tor_log_debug_control_safe_mapaddress_reply(conn, r);
     connection_buf_add(r, sz, TO_CONN(conn));
     tor_free(r);
   } else {
@@ -2372,6 +2375,8 @@ handle_control_command(control_connection_t *conn,
   tor_assert(conn);
   tor_assert(args);
   tor_assert(args[cmd_data_len] == '\0');
+
+  tor_log_debug_control_safe_command(conn, conn->current_cmd, args);
 
   for (unsigned i = 0; i < N_CONTROL_COMMANDS; ++i) {
     const control_cmd_def_t *def = &CONTROL_COMMANDS[i];

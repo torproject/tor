@@ -37,6 +37,7 @@
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
 
+#include "lib/control_trace/control_trace.h"
 #include "lib/evloop/compat_libevent.h"
 
 static void flush_queued_events_cb(mainloop_event_t *event, void *arg);
@@ -489,6 +490,7 @@ queued_events_flush_all(int force)
     SMARTLIST_FOREACH_BEGIN(controllers, control_connection_t *,
                             control_conn) {
       if (control_conn->event_mask & bit) {
+        tor_log_debug_control_safe_event(control_conn, ev->msg);
         connection_buf_add(ev->msg, msg_len, TO_CONN(control_conn));
       }
     } SMARTLIST_FOREACH_END(control_conn);
