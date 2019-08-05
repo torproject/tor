@@ -9,8 +9,8 @@
  * @brief Header for lib/control_trace/control_trace.c
  **/
 
-#ifndef TOR_LIB_ERR_CONTROL_TRACE_H
-#define TOR_LIB_ERR_CONTROL_TRACE_H
+#ifndef TOR_LIB_CONTROL_TRACE_CONTROL_TRACE_H
+#define TOR_LIB_CONTROL_TRACE_CONTROL_TRACE_H
 
 #include "lib/testsupport/testsupport.h"
 
@@ -53,4 +53,4 @@ void tor_log_reset_control_safe_debug_fds(void);
 STATIC void tor_log_debug_control_safe(const char *m, ...);
 #endif
 
-#endif /* !defined(TOR_LIB_ERR_CONTROL_TRACE_H) */
+#endif /* !defined(TOR_LIB_CONTROL_TRACE_CONTROL_TRACE_H) */
