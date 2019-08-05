@@ -181,7 +181,7 @@ def main(argv):
     parser.add_argument("--regen", action="store_true",
                         help="Regenerate the exceptions file")
     parser.add_argument("--list-overbroad", action="store_true",
-                        help="List over-strict exceptions")
+                        help="List over-broad exceptions")
     parser.add_argument("--exceptions",
                         help="Override the location for the exceptions file")
     parser.add_argument("--strict", action="store_true",
