@@ -437,7 +437,9 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
   tor_addr_from_ipv4h(&addr, ri->addr);
 
   if (tor_addr_is_internal(&addr, 0) ||
-      tor_addr_is_internal(&ri->ipv6_addr, 0)) {
+      tor_addr_is_null(&addr) ||
+      tor_addr_is_internal(&ri->ipv6_addr, 0) ||
+      tor_addr_is_null(&ri->ipv6_addr)) {
     log_info(LD_DIRSERV,
              "Router %s published internal IP address. Refusing.",
              router_describe(ri));
