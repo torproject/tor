@@ -9,7 +9,7 @@
  **/
 
 #include "lib/log/escape.h"
-#include "lib/log/util_bug.h"
+#include "lib/err/torerr.h"
 #include "lib/string/compat_ctype.h"
 #include "lib/string/printf.h"
 #include "lib/malloc/malloc.h"
@@ -55,14 +55,14 @@ esc_for_log(const char *s)
     }
   }
 
-  tor_assert(len <= SSIZE_MAX);
+  raw_assert(len <= SSIZE_MAX);
 
   result = outp = tor_malloc(len);
   *outp++ = '\"';
   for (cp = s; *cp; ++cp) {
     /* This assertion should always succeed, since we will write at least
      * one char here, and two chars for closing quote and nul later */
-    tor_assert((outp-result) < (ssize_t)len-2);
+    raw_assert((outp-result) < (ssize_t)len-2);
     switch (*cp) {
       case '\\':
       case '\"':
@@ -86,7 +86,7 @@ esc_for_log(const char *s)
         if (TOR_ISPRINT(*cp) && ((uint8_t)*cp)<127) {
           *outp++ = *cp;
         } else {
-          tor_assert((outp-result) < (ssize_t)len-4);
+          raw_assert((outp-result) < (ssize_t)len-4);
           tor_snprintf(outp, 5, "\\%03o", (int)(uint8_t) *cp);
           outp += 4;
         }
@@ -94,7 +94,7 @@ esc_for_log(const char *s)
     }
   }
 
-  tor_assert((outp-result) <= (ssize_t)len-2);
+  raw_assert((outp-result) <= (ssize_t)len-2);
   *outp++ = '\"';
   *outp++ = 0;
 
