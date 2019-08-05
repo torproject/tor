@@ -25,6 +25,7 @@ import os, sys
 import metrics
 import util
 import problem
+import includes
 
 # The filename of the exceptions file (it should be placed in the practracker directory)
 EXCEPTIONS_FNAME = "./exceptions.txt"
@@ -35,12 +36,15 @@ MAX_FILE_SIZE = 3000 # lines
 MAX_FUNCTION_SIZE = 100 # lines
 # Recommended number of #includes
 MAX_INCLUDE_COUNT = 50
+# Recommended number of dependency violations
+MAX_DEP_VIOLATIONS = 0
 
 # Map from problem type to functions that adjust for tolerance
 TOLERANCE_FNS = {
     'include-count': lambda n: int(n*1.1),
     'function-size': lambda n: int(n*1.1),
-    'file-size': lambda n: int(n*1.02)
+    'file-size': lambda n: int(n*1.02),
+    'dependency-violation': lambda n: (n+2)
 }
 
 #######################################################
@@ -94,6 +98,7 @@ def consider_metrics_for_file(fname, f):
        Yield a sequence of problem.Item objects for all of the metrics in
        'f'.
     """
+    real_fname = fname
     # Strip the useless part of the path
     if fname.startswith(TOR_TOPDIR):
         fname = fname[len(TOR_TOPDIR):]
@@ -111,6 +116,13 @@ def consider_metrics_for_file(fname, f):
     f.seek(0)
     for item in consider_function_size(fname, f):
         yield item
+
+    n = 0
+    for item in includes.consider_include_rules(real_fname):
+        n += 1
+    if n:
+        yield problem.DependencyViolationItem(fname, n)
+
 
 HEADER="""\
 # Welcome to the exceptions file for Tor's best-practices tracker!
@@ -167,6 +179,8 @@ def main(argv):
                         help="Maximum includes per C file")
     parser.add_argument("--max-function-size", default=MAX_FUNCTION_SIZE,
                         help="Maximum lines per function")
+    parser.add_argument("--max-dependency-violations", default=MAX_DEP_VIOLATIONS,
+                        help="Maximum number of dependency violations to allow")
     parser.add_argument("topdir", default=".", nargs="?",
                         help="Top-level directory for the tor source")
     args = parser.parse_args(argv[1:])
@@ -183,6 +197,7 @@ def main(argv):
     filt.addThreshold(problem.FileSizeItem("*", int(args.max_file_size)))
     filt.addThreshold(problem.IncludeCountItem("*", int(args.max_include_count)))
     filt.addThreshold(problem.FunctionSizeItem("*", int(args.max_function_size)))
+    filt.addThreshold(problem.DependencyViolationItem("*", int(args.max_dependency_violations)))
 
     # 1) Get all the .c files we care about
     files_list = util.get_tor_c_files(TOR_TOPDIR)
