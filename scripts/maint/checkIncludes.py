@@ -134,48 +134,49 @@ def load_include_rules(fname):
             result.addPattern(line)
     return result
 
-list_unused = False
-log_sorted_levels = False
+if __name__ == '__main__':
+    list_unused = False
+    log_sorted_levels = False
 
-uses_dirs = { }
+    uses_dirs = { }
 
-for dirpath, dirnames, fnames in os.walk("src"):
-    if ".may_include" in fnames:
-        rules = load_include_rules(os.path.join(dirpath, RULES_FNAME))
-        for fname in fnames:
-            if fname_is_c(fname):
-                rules.applyToFile(os.path.join(dirpath,fname))
-        if list_unused:
-            rules.noteUnusedRules()
+    for dirpath, dirnames, fnames in os.walk("src"):
+        if ".may_include" in fnames:
+            rules = load_include_rules(os.path.join(dirpath, RULES_FNAME))
+            for fname in fnames:
+                if fname_is_c(fname):
+                    rules.applyToFile(os.path.join(dirpath,fname))
+            if list_unused:
+                rules.noteUnusedRules()
 
-        uses_dirs[rules.incpath] = rules.getAllowedDirectories()
+            uses_dirs[rules.incpath] = rules.getAllowedDirectories()
 
-if trouble:
-    err(
-"""To change which includes are allowed in a C file, edit the {}
-files in its enclosing directory.""".format(RULES_FNAME))
-    sys.exit(1)
+    if trouble:
+        err(
+    """To change which includes are allowed in a C file, edit the {}
+    files in its enclosing directory.""".format(RULES_FNAME))
+        sys.exit(1)
 
-all_levels = []
+    all_levels = []
 
-n = 0
-while uses_dirs:
-    n += 0
-    cur_level = []
-    for k in list(uses_dirs):
-        uses_dirs[k] = [ d for d in uses_dirs[k]
-                         if (d in uses_dirs and d != k)]
-        if uses_dirs[k] == []:
-            cur_level.append(k)
-    for k in cur_level:
-        del uses_dirs[k]
-    n += 1
-    if cur_level and log_sorted_levels:
-        print(n, cur_level)
-    if n > 100:
-        break
+    n = 0
+    while uses_dirs:
+        n += 0
+        cur_level = []
+        for k in list(uses_dirs):
+            uses_dirs[k] = [ d for d in uses_dirs[k]
+                             if (d in uses_dirs and d != k)]
+            if uses_dirs[k] == []:
+                cur_level.append(k)
+        for k in cur_level:
+            del uses_dirs[k]
+        n += 1
+        if cur_level and log_sorted_levels:
+            print(n, cur_level)
+        if n > 100:
+            break
 
-if uses_dirs:
-    print("There are circular .may_include dependencies in here somewhere:",
-          uses_dirs)
-    sys.exit(1)
+    if uses_dirs:
+        print("There are circular .may_include dependencies in here somewhere:",
+              uses_dirs)
+        sys.exit(1)
