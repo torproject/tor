@@ -1480,7 +1480,7 @@ hs_client_register_auth_credentials(hs_client_service_authorization_t *creds)
   /** Now that we set the new credentials, also try to decrypt any cached
    *  descriptors. */
   if (hs_cache_client_new_auth_parse(&service_identity_pk)) {
-    retval = REGISTER_SUCCESS_ALSO_DECRYPTED;
+    retval = REGISTER_SUCCESS_AND_DECRYPTED;
   }
 
   return retval;
