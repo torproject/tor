@@ -139,6 +139,50 @@ def load_include_rules(fname):
     include_rules_cache[fname] = result
     return result
 
+def remove_self_edges(graph):
+    """Takes a directed graph in as an adjacency mapping (a mapping from
+       node to a list of the nodes to which it connects).
+
+       Remove all edges from a node to itself."""
+
+    for k in list(graph):
+        graph[k] = [ d for d in graph[k] if d != k ]
+
+def toposort(graph, limit=100):
+    """Takes a directed graph in as an adjacency mapping (a mapping from
+       node to a list of the nodes to which it connects).  Tries to
+       perform a topological sort on the graph, arranging the nodes into
+       "levels", such that every member of each level is only reachable
+       by members of later levels.
+
+       Returns a list of the members of each level.
+
+       Modifies the input graph, removing every member that could be
+       sorted.  If the graph does not become empty, then it contains a
+       cycle.
+
+       "limit" is the max depth of the graph after which we give up trying
+       to sort it and conclude we have a cycle.
+    """
+    all_levels = []
+
+    n = 0
+    while graph:
+        n += 0
+        cur_level = []
+        all_levels.append(cur_level)
+        for k in list(graph):
+            graph[k] = [ d for d in graph[k] if d in graph ]
+            if graph[k] == []:
+                cur_level.append(k)
+        for k in cur_level:
+            del graph[k]
+        n += 1
+        if n > limit:
+            break
+
+    return all_levels
+
 if __name__ == '__main__':
     list_unused = False
     log_sorted_levels = False
@@ -162,24 +206,13 @@ if __name__ == '__main__':
     files in its enclosing directory.""".format(RULES_FNAME))
         sys.exit(1)
 
-    all_levels = []
+    remove_self_edges(uses_dirs)
+    all_levels = toposort(uses_dirs)
 
-    n = 0
-    while uses_dirs:
-        n += 0
-        cur_level = []
-        for k in list(uses_dirs):
-            uses_dirs[k] = [ d for d in uses_dirs[k]
-                             if (d in uses_dirs and d != k)]
-            if uses_dirs[k] == []:
-                cur_level.append(k)
-        for k in cur_level:
-            del uses_dirs[k]
-        n += 1
-        if cur_level and log_sorted_levels:
-            print(n, cur_level)
-        if n > 100:
-            break
+    if log_sorted_levels:
+        for (n, cur_level) in enumerate(all_levels):
+            if cur_level:
+                print(n, cur_level)
 
     if uses_dirs:
         print("There are circular .may_include dependencies in here somewhere:",
