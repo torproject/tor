@@ -51,7 +51,7 @@ parse_private_key_from_control_port(const char *client_privkey_str,
   if (base64_decode((char*)privkey->secret_key, sizeof(privkey->secret_key),
                     key_blob,
                    strlen(key_blob)) != sizeof(privkey->secret_key)) {
-    control_printf_endreply(conn, 512, "Failed to decode ED25519-V3 key");
+    control_printf_endreply(conn, 512, "Failed to decode x25519 private key");
     goto err;
   }
 
@@ -113,7 +113,10 @@ handle_control_onion_client_auth_add(control_connection_t *conn,
   /* Now let's parse the remaining arguments (variable size) */
   for (const config_line_t *line = args->kwargs; line; line = line->next) {
     if (!strcasecmp(line->key, "ClientName")) {
-      /* XXX apply length restriction? */
+      if (strlen(line->value) > HS_CLIENT_AUTH_MAX_NICKNAME_LENGTH) {
+        control_write_endreply(conn, 512, "Too big 'ClientName' argument");
+        goto err;
+      }
       creds->nickname = tor_strdup(line->value);
 
     } else if (!strcasecmpstart(line->key, "Flags")) {
@@ -137,16 +140,21 @@ handle_control_onion_client_auth_add(control_connection_t *conn,
   hs_client_register_auth_status_t register_status;
   /* Register the credential (register func takes ownership of cred.) */
   register_status = hs_client_register_auth_credentials(creds);
-  if (BUG(register_status == REGISTER_FAIL_BAD_ADDRESS)) {
+  switch (register_status) {
+  case REGISTER_FAIL_BAD_ADDRESS:
     /* It's a bug because the service addr has already been validated above */
     control_printf_endreply(conn, 512, "Invalid v3 address \"%s\"", hsaddress);
-  } else if (register_status == REGISTER_SUCCESS_ALREADY_EXISTS) {
+    break;
+  case REGISTER_SUCCESS_ALREADY_EXISTS:
     control_printf_endreply(conn, 251,"Client for onion existed and replaced");
-  } else if (register_status == REGISTER_SUCCESS_ALSO_DECRYPTED) {
+    break;
+  case REGISTER_SUCCESS_ALSO_DECRYPTED:
     control_printf_endreply(conn, 252,"Registered client and decrypted desc");
-  } else if (register_status == REGISTER_SUCCESS) {
+    break;
+  case REGISTER_SUCCESS:
     control_printf_endreply(conn, 250, "OK");
-  } else {
+    break;
+  default:
     tor_assert_nonfatal_unreached();
   }
 
@@ -195,14 +203,18 @@ handle_control_onion_client_auth_remove(control_connection_t *conn,
 
   hs_client_removal_auth_status_t removal_status;
   removal_status = hs_client_remove_auth_credentials(hsaddress);
-  if (BUG(removal_status == REMOVAL_BAD_ADDRESS)) {
+  switch (removal_status) {
+  case REMOVAL_BAD_ADDRESS:
     /* It's a bug because the service addr has already been validated above */
     control_printf_endreply(conn, 512, "Invalid v3 address \"%s\"",hsaddress);
-  } else if (removal_status == REMOVAL_SUCCESS_NOT_FOUND) {
+    break;
+  case REMOVAL_SUCCESS_NOT_FOUND:
     control_printf_endreply(conn, 251, "No credentials for \"%s\"",hsaddress);
-  } else if (removal_status == REMOVAL_SUCCESS) {
+    break;
+  case REMOVAL_SUCCESS:
     control_printf_endreply(conn, 250, "OK");
-  } else {
+    break;
+  default:
     tor_assert_nonfatal_unreached();
   }
 
