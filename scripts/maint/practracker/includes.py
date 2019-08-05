@@ -103,11 +103,9 @@ class Rules(object):
                                 "Forbidden include of {}".format(include),
                                 is_advisory=self.is_advisory)
 
-    def applyToFile(self, fname):
-        with open_file(fname) as f:
-            #print(fname)
-            for error in self.applyToLines(iter(f), "{}:".format(fname)):
-                yield error
+    def applyToFile(self, fname, f):
+        for error in self.applyToLines(iter(f), "{}:".format(fname)):
+            yield error
 
     def noteUnusedRules(self):
         for p in self.patterns:
@@ -200,14 +198,14 @@ def toposort(graph, limit=100):
 
     return all_levels
 
-def consider_include_rules(fname):
+def consider_include_rules(fname, f):
     dirpath = os.path.split(fname)[0]
     rules_fname = os.path.join(dirpath, RULES_FNAME)
     rules = load_include_rules(os.path.join(dirpath, RULES_FNAME))
     if rules is None:
         return
 
-    for err in rules.applyToFile(fname):
+    for err in rules.applyToFile(fname, f):
         yield err
 
     list_unused = False
@@ -221,8 +219,9 @@ def walk_c_files(topdir="src"):
         for fname in fnames:
             if fname_is_c(fname):
                 fullpath = os.path.join(dirpath,fname)
-                for err in consider_include_rules(fullpath):
-                    yield err
+                with open(fullpath) as f:
+                    for err in consider_include_rules(fullpath, f):
+                        yield err
 
 def run_check_includes(topdir, list_unused=False, log_sorted_levels=False,
                        list_advisories=False):

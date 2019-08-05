@@ -117,8 +117,10 @@ def consider_metrics_for_file(fname, f):
     for item in consider_function_size(fname, f):
         yield item
 
+    # Check for "upward" includes
+    f.seek(0)
     n = 0
-    for item in includes.consider_include_rules(real_fname):
+    for item in includes.consider_include_rules(real_fname, f):
         n += 1
     if n:
         yield problem.DependencyViolationItem(fname, n)
