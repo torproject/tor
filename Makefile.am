@@ -73,9 +73,9 @@ TOR_UTIL_LIBS = \
 # and tests)
 if UNITTESTS_ENABLED
 TOR_UTIL_TESTING_LIBS = \
-        src/lib/libtor-geoip-testing.a \
+	src/lib/libtor-geoip-testing.a \
 	src/lib/libtor-process-testing.a \
-        src/lib/libtor-buf-testing.a \
+	src/lib/libtor-buf-testing.a \
 	src/lib/libtor-confmgt-testing.a \
 	src/lib/libtor-pubsub-testing.a \
 	src/lib/libtor-dispatch-testing.a \
