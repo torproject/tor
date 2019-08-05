@@ -56,9 +56,10 @@ def pattern_is_normal(s):
     return False
 
 class Error(object):
-    def __init__(self, location, msg):
+    def __init__(self, location, msg, is_advisory=False):
         self.location = location
         self.msg = msg
+        self.is_advisory = is_advisory
 
     def __str__(self):
         return "{} at {}".format(self.msg, self.location)
@@ -73,8 +74,12 @@ class Rules(object):
             self.incpath = dirpath
         self.patterns = []
         self.usedPatterns = set()
+        self.is_advisory = False
 
     def addPattern(self, pattern):
+        if pattern == "!advisory":
+            self.is_advisory = True
+            return
         if not pattern_is_normal(pattern):
             warn("Unusual pattern {} in {}".format(pattern, self.dirpath))
         self.patterns.append(pattern)
@@ -95,7 +100,8 @@ class Rules(object):
                 include = m.group(1)
                 if not self.includeOk(include):
                     yield Error("{}{}".format(loc_prefix,str(lineno)),
-                                "Forbidden include of {}".format(include))
+                                "Forbidden include of {}".format(include),
+                                is_advisory=self.is_advisory)
 
     def applyToFile(self, fname):
         with open_file(fname) as f:
@@ -204,7 +210,6 @@ def consider_include_rules(fname):
     for err in rules.applyToFile(fname):
         yield err
 
-
     list_unused = False
     log_sorted_levels = False
 
@@ -219,12 +224,16 @@ def walk_c_files(topdir="src"):
                 for err in consider_include_rules(fullpath):
                     yield err
 
-def run_check_includes(topdir, list_unused=False, log_sorted_levels=False):
+def run_check_includes(topdir, list_unused=False, log_sorted_levels=False,
+                       list_advisories=False):
     trouble = False
 
     for err in walk_c_files(topdir):
+        if err.is_advisory and not list_advisories:
+            continue
         print(err, file=sys.stderr)
-        trouble = True
+        if not err.is_advisory:
+            trouble = True
 
     if trouble:
         err(
@@ -262,13 +271,16 @@ def main(argv):
                         help="Print a topologically sorted list of modules")
     parser.add_argument("--list-unused", action="store_true",
                         help="List unused lines in .may_include files.")
+    parser.add_argument("--list-advisories", action="store_true",
+                        help="List advisories as well as forbidden includes")
     parser.add_argument("topdir", default="src", nargs="?",
                         help="Top-level directory for the tor source")
     args = parser.parse_args(argv[1:])
 
     run_check_includes(topdir=args.topdir,
                        log_sorted_levels=args.toposort,
-                       list_unused=args.list_unused)
+                       list_unused=args.list_unused,
+                       list_advisories=args.list_advisories)
 
 if __name__ == '__main__':
     main(sys.argv)
