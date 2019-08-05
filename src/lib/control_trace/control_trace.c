@@ -123,13 +123,14 @@ void
 tor_log_set_control_safe_debug_fds(const int *fds, int n)
 {
   tor_free(control_safe_log_fds);
+  n_control_safe_log_fds = 0;
+
+  if (!fds || !n)
+    return;
+
   size_t byte_len = n * sizeof(int);
-  if (byte_len > 0) {
-    control_safe_log_fds = tor_malloc(byte_len);
-    memcpy(control_safe_log_fds, fds, byte_len);
-  } else {
-    control_safe_log_fds = NULL;
-  }
+  control_safe_log_fds = tor_malloc(byte_len);
+  memcpy(control_safe_log_fds, fds, byte_len);
   n_control_safe_log_fds = n;
 }
 
