@@ -429,6 +429,8 @@ connection_control_process_inbuf(control_connection_t *conn)
       r = connection_buf_get_line(TO_CONN(conn),
                               conn->incoming_cmd+conn->incoming_cmd_cur_len,
                               &data_len);
+      tor_log_debug_control_safe_command_read(conn,
+          conn->incoming_cmd+conn->incoming_cmd_cur_len);
       if (r == 0)
         /* Line not all here yet. Wait. */
         return 0;

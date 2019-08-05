@@ -2376,8 +2376,6 @@ handle_control_command(control_connection_t *conn,
   tor_assert(args);
   tor_assert(args[cmd_data_len] == '\0');
 
-  tor_log_debug_control_safe_command(conn, conn->current_cmd, args);
-
   for (unsigned i = 0; i < N_CONTROL_COMMANDS; ++i) {
     const control_cmd_def_t *def = &CONTROL_COMMANDS[i];
     if (!strcasecmp(conn->current_cmd, def->name)) {
