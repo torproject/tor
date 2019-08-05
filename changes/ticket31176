@@ -1,0 +1,5 @@
+  o Major features (developer tools):
+    - Our best-practices tracker now integrates with our include-checker tool
+      to keep track of the layering violations that we have not yet fixed.
+      We hope to reduce this number over time to improve Tor's modularity.
+      Closes ticket 31176.
