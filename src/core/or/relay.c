@@ -1686,7 +1686,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
    * - Mike
    */
   if (circ->purpose == CIRCUIT_PURPOSE_C_CIRCUIT_PADDING) {
-    log_info(LD_CIRC, "Ignored cell (%d) that arrived in padding circuit "
+    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
+           "Ignored cell (%d) that arrived in padding circuit "
                       " %u.", rh.command, CIRCUIT_IS_ORIGIN(circ) ?
                            TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
     return 0;
