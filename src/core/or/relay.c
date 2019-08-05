@@ -1663,6 +1663,17 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       if (circpad_handle_padding_negotiated(circ, cell, layer_hint) == 0)
         circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
       return 0;
+  }
+
+  /* If this is a padding circuit we don't need to parse any other commands
+   * than the padding ones. Just drop them to the floor. */
+  if (circ->purpose == CIRCUIT_PURPOSE_C_CIRCUIT_PADDING) {
+    log_info(domain, "Ignored cell (%d) that arrived in padding circuit.",
+             rh.command);
+    return 0;
+  }
+
+  switch (rh.command) {
     case RELAY_COMMAND_BEGIN:
     case RELAY_COMMAND_BEGIN_DIR:
       if (layer_hint &&
