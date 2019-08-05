@@ -204,19 +204,27 @@ def consider_include_rules(fname):
     for err in rules.applyToFile(fname):
         yield err
 
-if __name__ == '__main__':
+
     list_unused = False
     log_sorted_levels = False
 
-    trouble = False
+def walk_c_files(topdir="src"):
+    """Run through all c and h files under topdir, looking for
+       include-rule violations. Yield those violations."""
 
-    for dirpath, dirnames, fnames in os.walk("src"):
+    for dirpath, dirnames, fnames in os.walk(topdir):
         for fname in fnames:
             if fname_is_c(fname):
                 fullpath = os.path.join(dirpath,fname)
                 for err in consider_include_rules(fullpath):
-                    print(err, file=sys.stderr)
-                    trouble = True
+                    yield err
+
+def run_check_includes(topdir, list_unused=False, log_sorted_levels=False):
+    trouble = False
+
+    for err in walk_c_files(topdir):
+        print(err, file=sys.stderr)
+        trouble = True
 
     if trouble:
         err(
@@ -244,3 +252,23 @@ if __name__ == '__main__':
         print("There are circular .may_include dependencies in here somewhere:",
               uses_dirs)
         sys.exit(1)
+
+def main(argv):
+    import argparse
+
+    progname = argv[0]
+    parser = argparse.ArgumentParser(prog=progname)
+    parser.add_argument("--toposort", action="store_true",
+                        help="Print a topologically sorted list of modules")
+    parser.add_argument("--list-unused", action="store_true",
+                        help="List unused lines in .may_include files.")
+    parser.add_argument("topdir", default="src", nargs="?",
+                        help="Top-level directory for the tor source")
+    args = parser.parse_args(argv[1:])
+
+    run_check_includes(topdir=args.topdir,
+                       log_sorted_levels=args.toposort,
+                       list_unused=args.list_unused)
+
+if __name__ == '__main__':
+    main(sys.argv)
