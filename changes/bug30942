@@ -1,0 +1,4 @@
+  o Minor bugfixes (circuit padding):
+    - Ignore non-padding cells on padding circuits. This addresses various
+      warning messages from subsystems that were not expecting padding
+      circuits. Fixes bug 30942; bugfix on 0.4.1.1-alpha.
