@@ -1800,8 +1800,6 @@ circpad_check_received_cell(cell_t *cell, circuit_t *circ,
                             crypt_path_t *layer_hint,
                             const relay_header_t *rh)
 {
-  unsigned domain = layer_hint?LD_APP:LD_EXIT;
-
   /* First handle the padding commands, since we want to ignore any other
    * commands if this circuit is padding-specific. */
   switch (rh->command) {
