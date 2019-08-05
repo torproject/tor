@@ -123,8 +123,12 @@ class Rules(object):
 
         return allowed
 
+include_rules_cache = {}
+
 def load_include_rules(fname):
     """ Read a rules file from 'fname', and return it as a Rules object. """
+    if fname in include_rules_cache:
+        return include_rules_cache[fname]
     result = Rules(os.path.split(fname)[0])
     with open_file(fname) as f:
         for line in f:
@@ -132,6 +136,7 @@ def load_include_rules(fname):
             if line.startswith("#") or not line:
                 continue
             result.addPattern(line)
+    include_rules_cache[fname] = result
     return result
 
 if __name__ == '__main__':
