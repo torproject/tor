@@ -99,32 +99,9 @@ tor_log_debug_control_safe_message(const control_connection_t *conn,
     tor_log_debug_control_safe(CONTROL_TRACE_PREFIX,
                                conn_fmt, ", ",
                                type, ": ",
-                               "Content: ", escaped(msg), ".");
+                               "Content: ", escaped(msg), ".\n",
+                               NULL);
     tor_free(conn_fmt);
-  }
-}
-
-/** Log a trace of a control command to the control-safe logs.
- *
- * Called when the control channel <b>conn</b> sends tor a command string
- * <b>cmd</b>, with arguments <b>args</b>.
- *
- * The pointer value of <b>conn</b> is used as an identifier in the logs. */
-void
-tor_log_debug_control_safe_command(const control_connection_t *conn,
-                                   const char *cmd, const char *args)
-{
-  if (n_control_safe_log_fds) {
-    char *conn_fmt = tor_control_conn_to_str_dup(conn);
-    char *esc_cmd = esc_for_log(cmd);
-    char *esc_args = esc_for_log(args);
-    tor_log_debug_control_safe(CONTROL_TRACE_PREFIX,
-                               conn_fmt, ", ",
-                               "Command: ", esc_cmd, ", ",
-                               "Arguments: ", esc_args, ".");
-    tor_free(conn_fmt);
-    tor_free(esc_cmd);
-    tor_free(esc_args);
   }
 }
 

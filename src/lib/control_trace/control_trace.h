@@ -25,8 +25,8 @@ void tor_log_debug_control_safe_message(const control_connection_t *conn,
                                         const char *type, const char *msg);
 
 /* Control trace log typed functions/macros. */
-void tor_log_debug_control_safe_command(const control_connection_t *conn,
-                                        const char *cmd, const char *args);
+#define tor_log_debug_control_safe_command_read(conn, msg) \
+    tor_log_debug_control_safe_message(conn, "Command Read", msg)
 #define tor_log_debug_control_safe_reply_write(conn, msg) \
     tor_log_debug_control_safe_message(conn, "Reply Write", msg)
 #define tor_log_debug_control_safe_reply_printf(conn, msg) \
