@@ -1840,7 +1840,7 @@ circpad_check_received_cell(cell_t *cell, circuit_t *circ,
   if (circ->purpose == CIRCUIT_PURPOSE_C_CIRCUIT_PADDING) {
     log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
            "Ignored cell (%d) that arrived in padding circuit "
-                      " %u.", rh.command, CIRCUIT_IS_ORIGIN(circ) ?
+                      " %u.", rh->command, CIRCUIT_IS_ORIGIN(circ) ?
                            TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
 
     return 0;
