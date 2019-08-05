@@ -3,6 +3,7 @@ orconfig.h
 lib/cc/*.h
 lib/defs/*.h
 lib/smartlist_core/*.h
+lib/control_trace/*.h
 lib/err/*.h
 lib/fdio/*.h
 lib/intmath/*.h

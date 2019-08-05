@@ -6,6 +6,7 @@
 #include "orconfig.h"
 #include "core/or/or.h"
 #include "app/config/config.h"
+#include "lib/control_trace/control_trace.h"
 #include "lib/err/torerr.h"
 #include "lib/log/log.h"
 #include "test/test.h"
@@ -146,6 +147,94 @@ test_sigsafe_err(void *arg)
 }
 
 static void
+test_get_control_safe_debug_fds(void *arg)
+{
+  const int *fds;
+  int n;
+  log_severity_list_t debug, no_debug, no_control;
+  (void) arg;
+  init_logging(1);
+
+  n = tor_log_get_control_safe_debug_fds(&fds);
+  tt_int_op(n, OP_EQ, 0);
+
+  set_log_severity_config(LOG_DEBUG, LOG_ERR, &debug);
+  set_log_severity_config(LOG_INFO, LOG_ERR, &no_debug);
+  set_log_severity_config(LOG_DEBUG, LOG_INFO, &no_control);
+  no_control.masks[SEVERITY_MASK_IDX(LOG_DEBUG)] &= ~(LD_CONTROL);
+
+  /* Add some logs; make sure the output is as expected. */
+  mark_logs_temp();
+  add_stream_log(&debug, "dummy-1", 3);
+  add_stream_log(&no_debug, "dummy-2", 4);
+  add_stream_log(&no_control, "dummy-3", 5);
+  add_callback_log(&debug, dummy_cb_fn);
+  close_temp_logs();
+  tor_log_update_safe_fds();
+
+  n = tor_log_get_control_safe_debug_fds(&fds);
+  tt_int_op(n, OP_EQ, 1);
+  tt_int_op(fds[0], OP_EQ, 3);
+
+ done:
+  ;
+}
+
+static void
+test_control_safe_debug(void *arg)
+{
+  const char *fn=get_fname("control_safe_debug_log");
+  char *content=NULL;
+  log_severity_list_t debug;
+  smartlist_t *lines = smartlist_new();
+  (void)arg;
+
+  set_log_severity_config(LOG_DEBUG, LOG_ERR, &debug);
+
+  init_logging(1);
+  mark_logs_temp();
+  open_and_add_file_log(&debug, fn, 0);
+  tor_log_update_safe_fds();
+  close_temp_logs();
+
+  tor_log_debug_control_safe("Minimal.\n", NULL);
+
+  set_log_time_granularity(100*1000);
+  tor_log_debug_control_safe("Testing any ",
+                             "attempt to manually log ",
+                             "a control safe debug message.\n",
+                             NULL);
+  mark_logs_temp();
+  close_temp_logs();
+  content = read_file_to_str(fn, 0, NULL);
+
+  tt_ptr_op(content, OP_NE, NULL);
+  smartlist_split_string(lines, content, "\n", 0, 0);
+  tt_int_op(smartlist_len(lines), OP_GE, 2);
+
+  if (strstr(smartlist_get(lines, 0), "opening new log file")) {
+    void *item = smartlist_get(lines, 0);
+    smartlist_del_keeporder(lines, 0);
+    tor_free(item);
+  }
+
+  /* T=(timestamp) (trace log message) */
+  tt_assert(!strcmpstart(smartlist_get(lines, 0), "T="));
+  tt_assert(!strcmpend(smartlist_get(lines, 0), "Minimal."));
+  /* T=(timestamp, granularity 100s) (trace log message) */
+  tt_assert(!strcmpstart(smartlist_get(lines, 1), "T="));
+  tt_assert(strstr(smartlist_get(lines, 1), "00"));
+  tt_assert(!strcmpend(smartlist_get(lines, 1),
+            "Testing any attempt to manually log a control safe debug message."
+            ));
+
+ done:
+  tor_free(content);
+  SMARTLIST_FOREACH(lines, char *, x, tor_free(x));
+  smartlist_free(lines);
+}
+
+static void
 test_ratelim(void *arg)
 {
   (void) arg;
@@ -185,6 +274,9 @@ test_ratelim(void *arg)
 struct testcase_t logging_tests[] = {
   { "sigsafe_err_fds", test_get_sigsafe_err_fds, TT_FORK, NULL, NULL },
   { "sigsafe_err", test_sigsafe_err, TT_FORK, NULL, NULL },
+  { "control_safe_debug_fds", test_get_control_safe_debug_fds, TT_FORK,
+    NULL, NULL },
+  { "control_safe_debug", test_control_safe_debug, TT_FORK, NULL, NULL },
   { "ratelim", test_ratelim, 0, NULL, NULL },
   END_OF_TESTCASES
 };

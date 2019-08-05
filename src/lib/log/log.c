@@ -39,6 +39,7 @@
 #include "lib/smartlist_core/smartlist_core.h"
 #include "lib/smartlist_core/smartlist_foreach.h"
 #include "lib/smartlist_core/smartlist_split.h"
+#include "lib/control_trace/control_trace.h"
 #include "lib/err/raw_log.h"
 #include "lib/err/torerr.h"
 #include "lib/intmath/bits.h"
@@ -788,7 +789,7 @@ tor_log_update_control_safe_debug_fds(void)
   tor_log_update_safe_fds_helper(TOR_LOG_SAFE_ONLY_USE_CONFIGURED_FDS,
                                  LOG_DEBUG, LD_CONTROL,
                                  fds, &n_fds, (int)max_fds);
-  /* tor_log_set_control_safe_debug_fds(fds, n_fds); */
+  tor_log_set_control_safe_debug_fds(fds, n_fds);
 
   tor_free(fds);
 

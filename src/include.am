@@ -8,6 +8,7 @@ include src/lib/compress/include.am
 include src/lib/conf/include.am
 include src/lib/confmgt/include.am
 include src/lib/container/include.am
+include src/lib/control_trace/include.am
 include src/lib/crypt_ops/include.am
 include src/lib/defs/include.am
 include src/lib/dispatch/include.am
