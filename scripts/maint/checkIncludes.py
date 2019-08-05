@@ -126,9 +126,14 @@ class Rules(object):
 include_rules_cache = {}
 
 def load_include_rules(fname):
-    """ Read a rules file from 'fname', and return it as a Rules object. """
+    """ Read a rules file from 'fname', and return it as a Rules object.
+        Return 'None' if fname does not exist.
+    """
     if fname in include_rules_cache:
         return include_rules_cache[fname]
+    if not os.path.exists(fname):
+        include_rules_cache[fname] = None
+        return None
     result = Rules(os.path.split(fname)[0])
     with open_file(fname) as f:
         for line in f:
@@ -138,6 +143,11 @@ def load_include_rules(fname):
             result.addPattern(line)
     include_rules_cache[fname] = result
     return result
+
+def get_all_include_rules():
+    return [ rules for (fname,rules) in
+             sorted(include_rules_cache.items())
+             if rules is not None ]
 
 def remove_self_edges(graph):
     """Takes a directed graph in as an adjacency mapping (a mapping from
@@ -187,24 +197,26 @@ if __name__ == '__main__':
     list_unused = False
     log_sorted_levels = False
 
-    uses_dirs = { }
-
     for dirpath, dirnames, fnames in os.walk("src"):
-        if ".may_include" in fnames:
-            rules = load_include_rules(os.path.join(dirpath, RULES_FNAME))
-            for fname in fnames:
-                if fname_is_c(fname):
+        for fname in fnames:
+            if fname_is_c(fname):
+                rules = load_include_rules(os.path.join(dirpath, RULES_FNAME))
+                if rules is not None:
                     rules.applyToFile(os.path.join(dirpath,fname))
-            if list_unused:
-                rules.noteUnusedRules()
-
-            uses_dirs[rules.incpath] = rules.getAllowedDirectories()
 
     if trouble:
         err(
     """To change which includes are allowed in a C file, edit the {}
     files in its enclosing directory.""".format(RULES_FNAME))
         sys.exit(1)
+
+    if list_unused:
+        for rules in get_all_include_rules():
+            rules.noteUnusedRules()
+
+    uses_dirs = { }
+    for rules in get_all_include_rules():
+        uses_dirs[rules.incpath] = rules.getAllowedDirectories()
 
     remove_self_edges(uses_dirs)
     all_levels = toposort(uses_dirs)
