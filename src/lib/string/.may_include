@@ -5,6 +5,7 @@ lib/err/*.h
 lib/malloc/*.h
 lib/ctime/*.h
 lib/string/*.h
+lib/subsys/*.h
 
 ext/strlcat.c
 ext/strlcpy.c
