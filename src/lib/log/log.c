@@ -39,6 +39,7 @@
 #include "lib/smartlist_core/smartlist_core.h"
 #include "lib/smartlist_core/smartlist_foreach.h"
 #include "lib/smartlist_core/smartlist_split.h"
+#include "lib/err/raw_log.h"
 #include "lib/err/torerr.h"
 #include "lib/intmath/bits.h"
 #include "lib/string/compat_string.h"
@@ -281,7 +282,7 @@ void
 set_log_time_granularity(int granularity_msec)
 {
   log_time_granularity = granularity_msec;
-  tor_log_sigsafe_err_set_granularity(granularity_msec);
+  tor_log_raw_set_granularity(granularity_msec);
 }
 
 /** Helper: Write the standard prefix for log lines to a

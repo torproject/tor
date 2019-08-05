@@ -28,6 +28,7 @@
 #include "lib/compress/compress.h"
 #include "lib/compress/compress_zstd.h"
 #include "lib/encoding/keyval.h"
+#include "lib/err/raw_log.h"
 #include "lib/fdio/fdio.h"
 #include "lib/fs/winlib.h"
 #include "lib/process/env.h"
