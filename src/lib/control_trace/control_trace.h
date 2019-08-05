@@ -6,7 +6,7 @@
 
 /**
  * @file control_trace.h
- * @brief Header for lib/err/control_trace.c
+ * @brief Header for lib/control_trace/control_trace.c
  **/
 
 #ifndef TOR_LIB_ERR_CONTROL_TRACE_H
