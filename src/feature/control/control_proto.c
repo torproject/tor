@@ -174,7 +174,7 @@ send_control_done(control_connection_t *conn)
  * @param conn control connection
  * @param code numeric result code
  * @param c separator character, usually ' ', '-', or '+'
- * @param s string
+ * @param s string reply content
  */
 MOCK_IMPL(void,
 control_write_reply, (control_connection_t *conn, int code, int c,
