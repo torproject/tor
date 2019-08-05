@@ -148,7 +148,7 @@ handle_control_onion_client_auth_add(control_connection_t *conn,
   case REGISTER_SUCCESS_ALREADY_EXISTS:
     control_printf_endreply(conn, 251,"Client for onion existed and replaced");
     break;
-  case REGISTER_SUCCESS_ALSO_DECRYPTED:
+  case REGISTER_SUCCESS_AND_DECRYPTED:
     control_printf_endreply(conn, 252,"Registered client and decrypted desc");
     break;
   case REGISTER_SUCCESS:
