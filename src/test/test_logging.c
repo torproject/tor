@@ -127,10 +127,15 @@ test_sigsafe_err(void *arg)
 
   tt_assert(strstr(smartlist_get(lines, 0), "Say, this isn't too cool"));
   tt_str_op(smartlist_get(lines, 1), OP_EQ, "");
+  /* ===... T=(timestamp) */
   tt_assert(!strcmpstart(smartlist_get(lines, 2), "=============="));
+  tt_assert(strstr(smartlist_get(lines, 2), " T="));
   tt_assert(!strcmpstart(smartlist_get(lines, 3), "Minimal."));
   tt_str_op(smartlist_get(lines, 4), OP_EQ, "");
+  /* ===... T=(timestamp, granularity 100s) */
   tt_assert(!strcmpstart(smartlist_get(lines, 5), "=============="));
+  tt_assert(strstr(smartlist_get(lines, 5), " T="));
+  tt_assert(!strcmpend(smartlist_get(lines, 5), "00"));
   tt_str_op(smartlist_get(lines, 6), OP_EQ,
             "Testing any attempt to manually log from a signal.");
 
