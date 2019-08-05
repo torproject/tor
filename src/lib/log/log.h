@@ -296,4 +296,10 @@ MOCK_DECL(STATIC void, logv, (int severity, log_domain_mask_t domain,
     va_list ap) CHECK_PRINTF(5,0));
 #endif
 
+#if defined(LOG_PRIVATE) || defined(TOR_UNIT_TESTS)
+/** Given a severity, yields an index into log_severity_list_t.masks to use
+ * for that severity. */
+#define SEVERITY_MASK_IDX(sev) ((sev) - LOG_ERR)
+#endif
+
 #endif /* !defined(TOR_TORLOG_H) */

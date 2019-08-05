@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Use SEVERITY_MASK_IDX() to find the LOG_ERR mask index in the unit
+      tests, rather than using a hard-coded value. Closes ticket 31334.
