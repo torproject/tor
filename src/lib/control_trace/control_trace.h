@@ -48,6 +48,8 @@ void tor_log_set_control_safe_debug_fds(const int *fds, int n);
 void tor_log_reset_control_safe_debug_fds(void);
 
 #if defined(CONTROL_TRACE_PRIVATE) || defined(TOR_UNIT_TESTS)
+/* Do not use this function with unvalidated inputs: it outputs its arguments
+ * without escaping. */
 STATIC void tor_log_debug_control_safe(const char *m, ...);
 #endif
 

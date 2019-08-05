@@ -34,6 +34,7 @@
 #include "lib/control_trace/control_trace.h"
 #include "lib/err/raw_log.h"
 #include "lib/malloc/malloc.h"
+#include "lib/string/escape.h"
 #include "lib/string/printf.h"
 
 /* The prefix string for every control trace log */
@@ -47,7 +48,11 @@ static int *control_safe_log_fds = NULL;
 static int n_control_safe_log_fds = 0;
 
 /** Given a list of string arguments ending with a NULL, writes them
- * to our control message debug trace logs. */
+ * to our control message debug trace logs.
+ *
+ * This function does not escape its arguments, so it should only be used
+ * from the unit tests. Instead, use the tor_log_debug_control_safe_*()
+ * functions, which escape their arguments. */
 STATIC void
 tor_log_debug_control_safe(const char *m, ...)
 {
@@ -79,7 +84,7 @@ tor_control_conn_to_str_dup(const control_connection_t *conn)
 /** Log a trace of a control message to the control-safe logs.
  *
  * Called when tor sends the control channel <b>conn</b> an event message
- * <b>msg</b> of <b>type</b>.
+ * <b>msg</b> of <b>type</b>. Escapes unprintable characters in <b>msg</b>.
  *
  * The pointer value of <b>conn</b> is used as an identifier in the logs.
  *
@@ -94,7 +99,7 @@ tor_log_debug_control_safe_message(const control_connection_t *conn,
     tor_log_debug_control_safe(CONTROL_TRACE_PREFIX,
                                conn_fmt, ", ",
                                type, ": ",
-                               "Content: '", msg, "'.");
+                               "Content: ", escaped(msg), ".");
     tor_free(conn_fmt);
   }
 }
@@ -111,11 +116,15 @@ tor_log_debug_control_safe_command(const control_connection_t *conn,
 {
   if (n_control_safe_log_fds) {
     char *conn_fmt = tor_control_conn_to_str_dup(conn);
+    char *esc_cmd = esc_for_log(cmd);
+    char *esc_args = esc_for_log(args);
     tor_log_debug_control_safe(CONTROL_TRACE_PREFIX,
                                conn_fmt, ", ",
-                               "Command: '", cmd, "', ",
-                               "Arguments: '", args, "'.");
+                               "Command: ", esc_cmd, ", ",
+                               "Arguments: ", esc_args, ".");
     tor_free(conn_fmt);
+    tor_free(esc_cmd);
+    tor_free(esc_args);
   }
 }
 
