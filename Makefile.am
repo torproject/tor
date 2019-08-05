@@ -166,7 +166,7 @@ EXTRA_DIST+= \
 	Makefile.nmake					\
 	README						\
 	ReleaseNotes					\
-	scripts/maint/checkIncludes.py                  \
+	scripts/maint/practracker/includes.py           \
 	scripts/maint/checkSpace.pl \
 	scripts/maint/practracker
 
@@ -366,7 +366,7 @@ endif
 
 check-includes:
 if USEPYTHON
-	$(PYTHON) $(top_srcdir)/scripts/maint/checkIncludes.py
+	$(PYTHON) $(top_srcdir)/scripts/maint/practracker/includes.py
 endif
 
 check-best-practices:
