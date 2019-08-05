@@ -27,7 +27,9 @@ def get_function_lines(f):
 
     # Skip lines that look like they are defining functions with these
     # names: they aren't real function definitions.
-    REGEXP_CONFUSE_TERMS = {"MOCK_IMPL", "ENABLE_GCC_WARNINGS", "ENABLE_GCC_WARNING", "DUMMY_TYPECHECK_INSTANCE",
+    REGEXP_CONFUSE_TERMS = {"MOCK_IMPL", "MOCK_DECL", "HANDLE_DECL",
+                            "ENABLE_GCC_WARNINGS", "ENABLE_GCC_WARNING",
+                            "DUMMY_TYPECHECK_INSTANCE",
                             "DISABLE_GCC_WARNING", "DISABLE_GCC_WARNINGS"}
 
     in_function = False
