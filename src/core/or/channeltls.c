@@ -1664,7 +1664,19 @@ tor_addr_from_netinfo_addr(tor_addr_t *tor_addr,
 }
 
 /**
- * Process a 'netinfo' cell.
+ * Helper: compute the absolute value of a time_t.
+ *
+ * (we need this because labs() doesn't always work for time_t, since
+ * long can be shorter than time_t.)
+ */
+static inline time_t
+time_abs(time_t val)
+{
+  return (val < 0) ? -val : val;
+}
+
+/**
+ * Process a 'netinfo' cell
  *
  * This function is called to handle an incoming NETINFO cell; read and act
  * on its contents, and set the connection state to "open".
@@ -1679,7 +1691,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   time_t now = time(NULL);
   const routerinfo_t *me = router_get_my_routerinfo();
 
-  long apparent_skew = 0;
+  time_t apparent_skew = 0;
   tor_addr_t my_apparent_addr = TOR_ADDR_NULL;
   int started_here = 0;
   const char *identity_digest = NULL;
@@ -1765,7 +1777,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   my_addr_type = netinfo_addr_get_addr_type(my_addr);
   my_addr_len = netinfo_addr_get_len(my_addr);
 
-  if (labs(now - chan->conn->handshake_state->sent_versions_at) < 180) {
+  if ((now - chan->conn->handshake_state->sent_versions_at) < 180) {
     apparent_skew = now - timestamp;
   }
   /* We used to check:
@@ -1842,7 +1854,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   /* Act on apparent skew. */
   /** Warn when we get a netinfo skew with at least this value. */
 #define NETINFO_NOTICE_SKEW 3600
-  if (labs(apparent_skew) > NETINFO_NOTICE_SKEW &&
+  if (time_abs(apparent_skew) > NETINFO_NOTICE_SKEW &&
       (started_here ||
        connection_or_digest_is_known_relay(chan->conn->identity_digest))) {
     int trusted = router_digest_is_trusted_dir(chan->conn->identity_digest);
