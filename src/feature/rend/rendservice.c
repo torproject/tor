@@ -3894,7 +3894,8 @@ intro_point_should_expire_now(rend_intro_point_t *intro,
     return 0;
   }
 
-  if (replaycache_size(intro->accepted_intro_rsa_parts) >=
+  if (intro->accepted_intro_rsa_parts &&
+      replaycache_size(intro->accepted_intro_rsa_parts) >=
       intro->max_introductions) {
     /* This intro point has been used too many times. Cycle its replay cache */
     replaycache_free(intro->accepted_intro_rsa_parts);
