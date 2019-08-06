@@ -1584,6 +1584,18 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
 }
 
 /**
+ * Helper: compute the absolute value of a time_t.
+ *
+ * (we need this because labs() doesn't always work for time_t, since
+ * long can be shorter than time_t.)
+ */
+static inline time_t
+time_abs(time_t val)
+{
+  return (val < 0) ? -val : val;
+}
+
+/**
  * Process a 'netinfo' cell
  *
  * This function is called to handle an incoming NETINFO cell; read and act
@@ -1601,7 +1613,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   uint8_t n_other_addrs;
   time_t now = time(NULL);
 
-  long apparent_skew = 0;
+  time_t apparent_skew = 0;
   tor_addr_t my_apparent_addr = TOR_ADDR_NULL;
 
   tor_assert(cell);
@@ -1659,7 +1671,11 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 
   /* Decode the cell. */
   timestamp = ntohl(get_uint32(cell->payload));
-  if (labs(now - chan->conn->handshake_state->sent_versions_at) < 180) {
+  const time_t sent_versions_at =
+    chan->conn->handshake_state->sent_versions_at;
+  if (now > sent_versions_at && (now - sent_versions_at) < 180) {
+    /* If we have gotten the NETINFO cell reasonably soon after having
+     * sent our VERSIONS cell, maybe we can learn skew information from it. */
     apparent_skew = now - timestamp;
   }
 
@@ -1705,7 +1721,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   /* Act on apparent skew. */
   /** Warn when we get a netinfo skew with at least this value. */
 #define NETINFO_NOTICE_SKEW 3600
-  if (labs(apparent_skew) > NETINFO_NOTICE_SKEW &&
+  if (time_abs(apparent_skew) &&
       router_get_by_id_digest(chan->conn->identity_digest)) {
     int trusted = router_digest_is_trusted_dir(chan->conn->identity_digest);
     clock_skew_warning(TO_CONN(chan->conn), apparent_skew, trusted, LD_GENERAL,
@@ -2182,4 +2198,3 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
 
 #undef ERR
 }
-
