@@ -167,9 +167,22 @@ EXTRA_DIST+= \
 	README						\
 	ReleaseNotes					\
 	scripts/maint/checkIncludes.py                  \
-	scripts/maint/checkSpace.pl \
-	scripts/maint/practracker
-
+	scripts/maint/checkSpace.pl 			\
+	scripts/maint/practracker/exceptions.txt	\
+	scripts/maint/practracker/metrics.py		\
+	scripts/maint/practracker/practracker.py	\
+	scripts/maint/practracker/practracker_tests.py	\
+	scripts/maint/practracker/problem.py		\
+	scripts/maint/practracker/testdata/a.c		\
+	scripts/maint/practracker/testdata/b.c 		\
+	scripts/maint/practracker/testdata/ex0-expected.txt \
+	scripts/maint/practracker/testdata/ex0.txt 	\
+	scripts/maint/practracker/testdata/ex1-expected.txt \
+	scripts/maint/practracker/testdata/ex1.txt 	\
+	scripts/maint/practracker/testdata/ex.txt 	\
+	scripts/maint/practracker/testdata/not_c_file	\
+	scripts/maint/practracker/test_practracker.sh   \
+	scripts/maint/practracker/util.py
 
 ## This tells etags how to find mockable function definitions.
 AM_ETAGSFLAGS=--regex='{c}/MOCK_IMPL([^,]+,\W*\([a-zA-Z0-9_]+\)\W*,/\1/s'
