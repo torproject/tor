@@ -72,18 +72,11 @@ Changes in version 0.4.1.5 - 2019-08-20
       a closing circuit has just opened, leading to undesirable
       behavior. Fixes bug 30871; bugfix on 0.3.0.1-alpha.
 
-  o Major bugfixes (Onion service reachability):
+  o Major bugfixes (onion service reachability):
     - Properly clean up the introduction point map when circuits change
       purpose from onion service circuits to pathbias, measurement, or
       other circuit types. This should fix some service-side instances
       of introduction point failure. Fixes bug 29034; bugfix
-      on 0.3.2.1-alpha.
-
-  o Major bugfixes (onion service reachability):
-    - Properly clean up the introduction point map and associated state
-      when circuits change purpose from onion service circuits to
-      pathbias, measurement, or other circuit types. This may fix some
-      instances of introduction point failure. Fixes bug 29034; bugfix
       on 0.3.2.1-alpha.
 
   o Major bugfixes (onion service v3):
@@ -307,13 +300,9 @@ Changes in version 0.4.1.5 - 2019-08-20
     - Stop crashing after parsing an unknown descriptor purpose
       annotation. We think this bug can only be triggered by modifying a
       local file. Fixes bug 30781; bugfix on 0.2.0.8-alpha.
-
-  o Minor bugfixes (directory authority):
     - Move the "bandwidth-file-headers" line in directory authority
       votes so that it conforms to dir-spec.txt. Fixes bug 30316; bugfix
       on 0.3.5.1-alpha.
-
-  o Minor bugfixes (directory authority, ipv6):
     - Directory authorities with IPv6 support now always mark themselves
       as reachable via IPv6. Fixes bug 24338; bugfix on 0.4.0.2-alpha.
       Patch by Neel Chauhan.
@@ -337,12 +326,10 @@ Changes in version 0.4.1.5 - 2019-08-20
       missing, as the latter should be set too. Fixes bug 25110; bugfix
       on 0.3.3.1-alpha.
 
-  o Minor bugfixes (memory leak):
+  o Minor bugfixes (memory leaks):
     - Avoid a minor memory leak that could occur on relays when failing
       to create a "keys" directory. Fixes bug 30148; bugfix
       on 0.3.3.1-alpha.
-
-  o Minor bugfixes (memory leaks):
     - Fix a trivial memory leak when parsing an invalid value from a
       download schedule in the configuration. Fixes bug 30894; bugfix
       on 0.3.4.1-alpha.
