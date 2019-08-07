@@ -41,6 +41,7 @@
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/dirparse/routerparse.h"
 #include "feature/hibernate/hibernate.h"
+#include "feature/hs/hs_dos.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/routerlist.h"
@@ -636,6 +637,10 @@ tor_init(int argc, char *argv[])
 
   /* Initialize circuit padding to defaults+torrc until we get a consensus */
   circpad_machines_init();
+
+  /* Initialize hidden service DoS subsystem. We need to do this once the
+   * configuration object has been set because it can be accessed. */
+  hs_dos_init();
 
   /* Initialize predicted ports list after loading options */
   predicted_ports_init();

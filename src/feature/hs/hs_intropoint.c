@@ -25,9 +25,10 @@
 #include "trunnel/hs/cell_introduce1.h"
 
 #include "feature/hs/hs_circuitmap.h"
-#include "feature/hs/hs_descriptor.h"
-#include "feature/hs/hs_intropoint.h"
 #include "feature/hs/hs_common.h"
+#include "feature/hs/hs_descriptor.h"
+#include "feature/hs/hs_dos.h"
+#include "feature/hs/hs_intropoint.h"
 
 #include "core/or/or_circuit_st.h"
 
@@ -203,6 +204,9 @@ handle_verified_establish_intro_cell(or_circuit_t *circ,
   hs_circuitmap_register_intro_circ_v3_relay_side(circ, &auth_key);
   /* Repurpose this circuit into an intro circuit. */
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_INTRO_POINT);
+  /* Initialize the INTRODUCE2 token bucket for the rate limiting. */
+  token_bucket_ctr_init(&circ->introduce2_bucket, hs_dos_get_intro2_rate(),
+                        hs_dos_get_intro2_burst(), (uint32_t) approx_time());
 
   return 0;
 }
@@ -479,6 +483,20 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
       status = TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID;
       goto send_ack;
     }
+  }
+
+  /* Before sending, lets make sure this cell can be sent on the service
+   * circuit asking the DoS defenses. */
+  if (!hs_dos_can_send_intro2(service_circ)) {
+    char *msg;
+    static ratelim_t rlimit = RATELIM_INIT(5 * 60);
+    if ((msg = rate_limit_log(&rlimit, approx_time()))) {
+      log_info(LD_PROTOCOL, "Can't relay INTRODUCE1 v3 cell due to DoS "
+                            "limitations. Sending NACK to client.");
+      tor_free(msg);
+    }
+    status = TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID;
+    goto send_ack;
   }
 
   /* Relay the cell to the service on its intro circuit with an INTRODUCE2

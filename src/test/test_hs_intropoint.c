@@ -26,6 +26,7 @@
 #include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_common.h"
+#include "feature/hs/hs_dos.h"
 #include "feature/hs/hs_intropoint.h"
 #include "feature/hs/hs_service.h"
 
@@ -119,6 +120,8 @@ helper_create_intro_circuit(void)
   or_circuit_t *circ = or_circuit_new(0, NULL);
   tt_assert(circ);
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_OR);
+  token_bucket_ctr_init(&circ->introduce2_bucket, 100, 100,
+                        (uint32_t) approx_time());
  done:
   return circ;
 }
@@ -900,42 +903,63 @@ test_received_introduce1_handling(void *arg)
   UNMOCK(relay_send_command_from_edge_);
 }
 
+static void *
+hs_subsystem_setup_fn(const struct testcase_t *tc)
+{
+  (void) tc;
+
+  return NULL;
+}
+
+static int
+hs_subsystem_cleanup_fn(const struct testcase_t *tc, void *arg)
+{
+  (void) tc;
+  (void) arg;
+
+  return 1;
+}
+
+static struct testcase_setup_t test_setup = {
+  hs_subsystem_setup_fn, hs_subsystem_cleanup_fn
+};
+
 struct testcase_t hs_intropoint_tests[] = {
   { "intro_point_registration",
-    test_intro_point_registration, TT_FORK, NULL, NULL },
+    test_intro_point_registration, TT_FORK, NULL, &test_setup},
 
   { "receive_establish_intro_wrong_keytype",
-    test_establish_intro_wrong_keytype, TT_FORK, NULL, NULL },
+    test_establish_intro_wrong_keytype, TT_FORK, NULL, &test_setup},
 
   { "receive_establish_intro_wrong_keytype2",
-    test_establish_intro_wrong_keytype2, TT_FORK, NULL, NULL },
+    test_establish_intro_wrong_keytype2, TT_FORK, NULL, &test_setup},
 
   { "receive_establish_intro_wrong_purpose",
-    test_establish_intro_wrong_purpose, TT_FORK, NULL, NULL },
+    test_establish_intro_wrong_purpose, TT_FORK, NULL, &test_setup},
 
   { "receive_establish_intro_wrong_sig",
-    test_establish_intro_wrong_sig, TT_FORK, NULL, NULL },
+    test_establish_intro_wrong_sig, TT_FORK, NULL, &test_setup},
 
   { "receive_establish_intro_wrong_sig_len",
-    test_establish_intro_wrong_sig_len, TT_FORK, NULL, NULL },
+    test_establish_intro_wrong_sig_len, TT_FORK, NULL, &test_setup},
 
   { "receive_establish_intro_wrong_auth_key_len",
-    test_establish_intro_wrong_auth_key_len, TT_FORK, NULL, NULL },
+    test_establish_intro_wrong_auth_key_len, TT_FORK, NULL, &test_setup},
 
   { "receive_establish_intro_wrong_mac",
-    test_establish_intro_wrong_mac, TT_FORK, NULL, NULL },
+    test_establish_intro_wrong_mac, TT_FORK, NULL, &test_setup},
 
   { "introduce1_suitable_circuit",
-    test_introduce1_suitable_circuit, TT_FORK, NULL, NULL },
+    test_introduce1_suitable_circuit, TT_FORK, NULL, &test_setup},
 
   { "introduce1_is_legacy",
-    test_introduce1_is_legacy, TT_FORK, NULL, NULL },
+    test_introduce1_is_legacy, TT_FORK, NULL, &test_setup},
 
   { "introduce1_validation",
-    test_introduce1_validation, TT_FORK, NULL, NULL },
+    test_introduce1_validation, TT_FORK, NULL, &test_setup},
 
   { "received_introduce1_handling",
-    test_received_introduce1_handling, TT_FORK, NULL, NULL },
+    test_received_introduce1_handling, TT_FORK, NULL, &test_setup},
 
   END_OF_TESTCASES
 };
