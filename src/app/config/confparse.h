@@ -37,7 +37,7 @@ typedef struct config_deprecation_t {
 /** Type of a callback to validate whether a given configuration is
  * well-formed and consistent. See options_trial_assign() for documentation
  * of arguments. */
-typedef int (*validate_fn_t)(void*,void*,void*,int,char**);
+typedef int (*validate_fn_t)(const void*, void*, char**);
 
 struct config_mgr_t;
 

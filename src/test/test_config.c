@@ -912,7 +912,7 @@ test_config_fix_my_family(void *arg)
   options_init(defaults);
   options->MyFamily_lines = family;
 
-  options_validate(NULL, options, defaults, 0, &err) ;
+  options_validate(NULL, options, &err) ;
 
   if (err != NULL) {
     TT_FAIL(("options_validate failed: %s", err));
@@ -5569,7 +5569,6 @@ test_config_check_bridge_distribution_setting_not_a_bridge(void *arg)
 {
   or_options_t* options = get_options_mutable();
   or_options_t* old_options = options;
-  or_options_t* default_options = options;
   char* message = NULL;
   int ret;
 
@@ -5578,7 +5577,7 @@ test_config_check_bridge_distribution_setting_not_a_bridge(void *arg)
   options->BridgeRelay = 0;
   options->BridgeDistribution = (char*)("https");
 
-  ret = options_validate(old_options, options, default_options, 0, &message);
+  ret = options_validate(old_options, options, &message);
 
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(message, OP_EQ, "You set BridgeDistribution, but you "

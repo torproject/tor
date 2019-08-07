@@ -840,9 +840,8 @@ static int parse_outbound_addresses(or_options_t *options, int validate_only,
                                     char **msg);
 static void config_maybe_load_geoip_files_(const or_options_t *options,
                                            const or_options_t *old_options);
-static int options_validate_cb(void *old_options, void *options,
-                               void *default_options,
-                               int from_setconf, char **msg);
+static int options_validate_cb(const void *old_options, void *options,
+                               char **msg);
 static void cleanup_protocol_warning_severity_level(void);
 static void set_protocol_warning_severity_level(int warning_severity);
 static void options_clear_cb(const config_mgr_t *mgr, void *opts);
@@ -2619,8 +2618,7 @@ options_trial_assign(config_line_t *list, unsigned flags, char **msg)
 
   in_option_validation = 1;
 
-  if (options_validate(cur_options, trial_options,
-                       global_default_options, 1, msg) < 0) {
+  if (options_validate(cur_options, trial_options, msg) < 0) {
     or_options_free(trial_options);
     rv = SETOPT_ERR_PARSE; /*XXX make this a separate return value. */
     goto done;
@@ -3161,12 +3159,10 @@ compute_publishserverdescriptor(or_options_t *options)
 #define RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT (10)
 
 static int
-options_validate_cb(void *old_options, void *options, void *default_options,
-                    int from_setconf, char **msg)
+options_validate_cb(const void *old_options, void *options, char **msg)
 {
   in_option_validation = 1;
-  int rv = options_validate(old_options, options, default_options,
-                          from_setconf, msg);
+  int rv = options_validate(old_options, options, msg);
   in_option_validation = 0;
   return rv;
 }
@@ -3379,12 +3375,8 @@ options_append_default_log_lines(or_options_t *options)
  */
 STATIC int
 options_validate(const or_options_t *old_options, or_options_t *options,
-                 const or_options_t *default_options_ignore,
-                 int from_setconf,
                  char **msg)
 {
-  (void)from_setconf;
-  (void)default_options_ignore;
   config_line_t *cl;
   const char *uname = get_uname();
   int n_ports=0;
@@ -5481,8 +5473,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   options_append_default_log_lines(newoptions);
 
   /* Validate newoptions */
-  if (options_validate(oldoptions, newoptions, newdefaultoptions,
-                       0, msg) < 0) {
+  if (options_validate(oldoptions, newoptions, msg) < 0) {
     err = SETOPT_ERR_PARSE; /*XXX make this a separate return value.*/
     goto err;
   }

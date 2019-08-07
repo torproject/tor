@@ -141,9 +141,8 @@ static const config_var_t state_vars_[] = {
 
 static int or_state_validate(or_state_t *state, char **msg);
 
-static int or_state_validate_cb(void *old_options, void *options,
-                                void *default_options,
-                                int from_setconf, char **msg);
+static int or_state_validate_cb(const void *old_options, void *options,
+                                char **msg);
 
 /** Magic value for or_state_t. */
 #define OR_STATE_MAGIC 0x57A73f57
@@ -267,13 +266,11 @@ validate_transports_in_state(or_state_t *state)
 }
 
 static int
-or_state_validate_cb(void *old_state, void *state, void *default_state,
-                     int from_setconf, char **msg)
+or_state_validate_cb(const void *old_state, void *state,
+                     char **msg)
 {
   /* We don't use these; only options do. Still, we need to match that
    * signature. */
-  (void) from_setconf;
-  (void) default_state;
   (void) old_state;
 
   return or_state_validate(state, msg);
