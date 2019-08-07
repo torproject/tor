@@ -72,13 +72,6 @@ Changes in version 0.4.1.5 - 2019-08-20
       a closing circuit has just opened, leading to undesirable
       behavior. Fixes bug 30871; bugfix on 0.3.0.1-alpha.
 
-  o Major bugfixes (flow control, SENDME):
-    - Decrement the stream-level package window after packaging a cell.
-      Previously, it was done inside a log_debug() call, meaning that if
-      debug logs were not enabled, the decrement would never happen, and
-      thus the window would be out of sync with the other end point.
-      Fixes bug 30628; bugfix on 0.4.1.1-alpha.
-
   o Major bugfixes (Onion service reachability):
     - Properly clean up the introduction point map when circuits change
       purpose from onion service circuits to pathbias, measurement, or
@@ -251,15 +244,6 @@ Changes in version 0.4.1.5 - 2019-08-20
       being accepted. Fixes bug 22619; bugfix on 0.2.7.2-alpha.
 
   o Minor bugfixes (circuit padding):
-    - Ignore non-padding cells on padding circuits. This addresses
-      various warning messages from subsystems that were not expecting
-      padding circuits. Fixes bug 30942; bugfix on 0.4.1.1-alpha.
-    - On relays, properly check that a padding machine is absent before
-      logging a warning about it being absent. Fixes bug 30649; bugfix
-      on 0.4.1.1-alpha.
-    - Add two NULL checks in unreachable places to silence Coverity (CID
-      144729 and 1447291) and better future-proof ourselves. Fixes bug
-      31024; bugfix on 0.4.1.1-alpha.
     - Add a "CircuitPadding" torrc option to disable circuit padding.
       Fixes bug 28693; bugfix on 0.4.0.1-alpha.
     - Allow circuit padding machines to specify that they do not
@@ -309,14 +293,6 @@ Changes in version 0.4.1.5 - 2019-08-20
       distinguish an argument list from the first line of a multiline
       object. Fixes bug 29984; bugfix on 0.2.3.8-alpha.
 
-  o Minor bugfixes (controller):
-    - POSTDESCRIPTOR requests should work again. Previously, they were
-      broken if a "purpose=" flag was specified. Fixes bug 30580; bugfix
-      on 0.4.1.1-alpha.
-    - Repair the HSFETCH command so that it works again. Previously, it
-      expected a body when it shouldn't have. Fixes bug 30646; bugfix
-      on 0.4.1.1-alpha.
-
   o Minor bugfixes (crash on exit):
     - Avoid a set of possible code paths that could try to use freed
       memory in routerlist_free() while Tor was exiting. Fixes bug
@@ -342,11 +318,6 @@ Changes in version 0.4.1.5 - 2019-08-20
       as reachable via IPv6. Fixes bug 24338; bugfix on 0.4.0.2-alpha.
       Patch by Neel Chauhan.
 
-  o Minor bugfixes (distribution):
-    - Do not ship any temporary files found in the
-      scripts/maint/practracker directory. Fixes bug 31311; bugfix
-      on 0.4.1.1-alpha.
-
   o Minor bugfixes (documentation):
     - Improve the documentation for using MapAddress with ".exit". Fixes
       bug 30109; bugfix on 0.1.0.1-rc.
@@ -358,9 +329,6 @@ Changes in version 0.4.1.5 - 2019-08-20
       that contain whitespace. Fixes bug 29635; bugfix on 0.2.3.18-rc.
 
   o Minor bugfixes (logging):
-    - Fix a conflict between the flag used for messaging-domain log
-      messages, and the LD_NO_MOCK testing flag. Fixes bug 31080; bugfix
-      on 0.4.1.1-alpha.
     - Do not log a warning when running with an OpenSSL version other
       than the one Tor was compiled with, if the two versions should be
       compatible. Previously, we would warn whenever the version was
@@ -421,10 +389,6 @@ Changes in version 0.4.1.5 - 2019-08-20
       bugfix on 0.3.5.1-alpha.
 
   o Minor bugfixes (pluggable transports):
-    - When running as a bridge with pluggable transports, always publish
-      pluggable transport information in our extrainfo descriptor, even
-      if ExtraInfoStatistics is 0. This information is needed by
-      BridgeDB. Fixes bug 30956; bugfix on 0.4.1.1-alpha.
     - Tor now sets TOR_PT_EXIT_ON_STDIN_CLOSE=1 for client transports as
       well as servers. Fixes bug 25614; bugfix on 0.2.7.1-alpha.
 
@@ -451,13 +415,6 @@ Changes in version 0.4.1.5 - 2019-08-20
       is auto, act as if ExitRelay is 1. Previously, we would ignore
       IPv6Exit if ExitRelay was 0 or auto. Fixes bug 29613; bugfix on
       0.3.5.1-alpha. Patch by Neel Chauhan.
-
-  o Minor bugfixes (shutdown, libevent, memory safety):
-    - Avoid use-after-free bugs when shutting down, by making sure that
-      we shut down libevent only after shutting down all of its users.
-      We believe these are harmless in practice, since they only occur
-      on the shutdown path, and do not involve any attacker-controlled
-      data. Fixes bug 30629; bugfix on 0.4.1.1-alpha.
 
   o Minor bugfixes (static analysis):
     - Fix several spurious Coverity warnings about the unit tests, to
@@ -491,9 +448,6 @@ Changes in version 0.4.1.5 - 2019-08-20
       30151; bugfix on 0.4.0.1-alpha.
 
   o Code simplification and refactoring:
-    - Remove some dead code from circpad_machine_remove_token() to fix
-      some Coverity warnings (CID 1447298). Fixes bug 31027; bugfix
-      on 0.4.1.1-alpha.
     - Abstract out the low-level formatting of replies on the control
       port. Implements ticket 30007.
     - Add several assertions in an attempt to fix some Coverity
