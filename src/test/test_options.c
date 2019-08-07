@@ -388,11 +388,7 @@ fixed_get_uname(void)
 }
 
 #define TEST_OPTIONS_OLD_VALUES   "TestingV3AuthInitialVotingInterval 1800\n" \
-  "ClientBootstrapConsensusMaxInProgressTries 3\n" \
-  "TestingV3AuthInitialVoteDelay 300\n"   \
-  "TestingV3AuthInitialDistDelay 300\n" \
-  "TestingClientMaxIntervalWithoutRequest 600\n" \
-  "TestingDirConnectionMaxStall 600\n" \
+  "ClientBootstrapConsensusMaxInProgressTries 3\n"
 
 #define TEST_OPTIONS_DEFAULT_VALUES TEST_OPTIONS_OLD_VALUES \
   "MaxClientCircuitsPending 1\n"                                        \
@@ -429,12 +425,15 @@ get_options_test_data(const char *conf)
   result->old_opt = options_new();
   result->def_opt = options_new();
 
-  // XXX: Really, all of these options should be set to defaults
-  // with options_init(), but about a dozen tests break when I do that.
-  // Being kinda lame and just fixing the immedate breakage for now..
-  result->opt->ConnectionPadding = -1; // default must be "auto"
-  result->opt->DormantClientTimeout = 1800; // must be over 600.
-  result->opt->CircuitPadding = 1; // default must be "1"
+  options_init(result->opt);
+  options_init(result->old_opt);
+  options_init(result->def_opt);
+
+  /* Various of the tests below expect that unless explicitly set, these
+   * options will be invalid.  We override them for that reason. */
+  result->opt->ConnLimit = 0;
+  result->opt->MaxClientCircuitsPending = 0;
+  result->opt->KeepalivePeriod = 0;
 
   rv = config_get_lines(conf, &cl, 1);
   tt_int_op(rv, OP_EQ, 0);
@@ -1609,11 +1608,13 @@ test_options_validate__reachable_addresses(void *ignored)
                                 "ReachableDirAddresses *:81\n"
                                 "ReachableORAddresses *:444\n"
                                 "MaxClientCircuitsPending 1\n"
-                                "ConnLimit 1\n");
+                                "ConnLimit 1\n"
+                                "KeepalivePeriod 0\n");
+  SMARTLIST_FOREACH(tdata->opt->FirewallPorts, char *, cp, tor_free(cp));
+  smartlist_free(tdata->opt->FirewallPorts);
   tdata->opt->FirewallPorts = smartlist_new();
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  expect_log_entry();
   tt_str_op(tdata->opt->ReachableDirAddresses->value, OP_EQ, "*:81");
   tt_str_op(tdata->opt->ReachableORAddresses->value, OP_EQ, "*:444");
   tor_free(msg);
@@ -1644,7 +1645,6 @@ test_options_validate__reachable_addresses(void *ignored)
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  expect_log_entry();
   tt_str_op(tdata->opt->ReachableAddresses->value, OP_EQ, "*:82");
   tor_free(msg);
 
@@ -1915,6 +1915,7 @@ test_options_validate__safe_logging(void *ignored)
   int ret;
   char *msg;
   options_test_data_t *tdata = get_options_test_data(
+                                            "SafeLogging 0\n"
                                             "MaxClientCircuitsPending 1\n"
                                             "ConnLimit 1\n");
 
@@ -2422,6 +2423,7 @@ test_options_validate__circuits(void *ignored)
   free_options_test_data(tdata);
   mock_clean_saved_logs();
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
+                                "LearnCircuitBuildTimeout 0\n"
                                 "CircuitBuildTimeout 1\n"
                                 );
   options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);

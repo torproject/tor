@@ -3379,10 +3379,12 @@ options_append_default_log_lines(or_options_t *options)
  */
 STATIC int
 options_validate(const or_options_t *old_options, or_options_t *options,
-                 const or_options_t *default_options, int from_setconf,
+                 const or_options_t *default_options_ignore,
+                 int from_setconf,
                  char **msg)
 {
   (void)from_setconf;
+  (void)default_options_ignore;
   config_line_t *cl;
   const char *uname = get_uname();
   int n_ports=0;
@@ -4431,35 +4433,42 @@ options_validate(const or_options_t *old_options, or_options_t *options,
            "AlternateDirAuthority and AlternateBridgeAuthority configured.");
   }
 
+  {
+    or_options_t *default_options = options_new();
+    options_init(default_options);
 #define CHECK_DEFAULT(arg)                                              \
-  STMT_BEGIN                                                            \
-    if (!options->TestingTorNetwork &&                                  \
-        !options->UsingTestNetworkDefaults_ &&                          \
-        !config_is_same(get_options_mgr(),options,                        \
-                        default_options,#arg)) {                        \
-      REJECT(#arg " may only be changed in testing Tor "                \
-             "networks!");                                              \
-    } STMT_END
-  CHECK_DEFAULT(TestingV3AuthInitialVotingInterval);
-  CHECK_DEFAULT(TestingV3AuthInitialVoteDelay);
-  CHECK_DEFAULT(TestingV3AuthInitialDistDelay);
-  CHECK_DEFAULT(TestingV3AuthVotingStartOffset);
-  CHECK_DEFAULT(TestingAuthDirTimeToLearnReachability);
-  CHECK_DEFAULT(TestingEstimatedDescriptorPropagationTime);
-  CHECK_DEFAULT(TestingServerDownloadInitialDelay);
-  CHECK_DEFAULT(TestingClientDownloadInitialDelay);
-  CHECK_DEFAULT(TestingServerConsensusDownloadInitialDelay);
-  CHECK_DEFAULT(TestingClientConsensusDownloadInitialDelay);
-  CHECK_DEFAULT(TestingBridgeDownloadInitialDelay);
-  CHECK_DEFAULT(TestingBridgeBootstrapDownloadInitialDelay);
-  CHECK_DEFAULT(TestingClientMaxIntervalWithoutRequest);
-  CHECK_DEFAULT(TestingDirConnectionMaxStall);
-  CHECK_DEFAULT(TestingAuthKeyLifetime);
-  CHECK_DEFAULT(TestingLinkCertLifetime);
-  CHECK_DEFAULT(TestingSigningKeySlop);
-  CHECK_DEFAULT(TestingAuthKeySlop);
-  CHECK_DEFAULT(TestingLinkKeySlop);
+    STMT_BEGIN                                                          \
+      if (!options->TestingTorNetwork &&                                \
+          !options->UsingTestNetworkDefaults_ &&                        \
+          !config_is_same(get_options_mgr(),options,                    \
+                          default_options,#arg)) {                      \
+        or_options_free(default_options);                               \
+        REJECT(#arg " may only be changed in testing Tor "              \
+               "networks!");                                            \
+      } STMT_END
+    CHECK_DEFAULT(TestingV3AuthInitialVotingInterval);
+    CHECK_DEFAULT(TestingV3AuthInitialVoteDelay);
+    CHECK_DEFAULT(TestingV3AuthInitialDistDelay);
+    CHECK_DEFAULT(TestingV3AuthVotingStartOffset);
+    CHECK_DEFAULT(TestingAuthDirTimeToLearnReachability);
+    CHECK_DEFAULT(TestingEstimatedDescriptorPropagationTime);
+    CHECK_DEFAULT(TestingServerDownloadInitialDelay);
+    CHECK_DEFAULT(TestingClientDownloadInitialDelay);
+    CHECK_DEFAULT(TestingServerConsensusDownloadInitialDelay);
+    CHECK_DEFAULT(TestingClientConsensusDownloadInitialDelay);
+    CHECK_DEFAULT(TestingBridgeDownloadInitialDelay);
+    CHECK_DEFAULT(TestingBridgeBootstrapDownloadInitialDelay);
+    CHECK_DEFAULT(TestingClientMaxIntervalWithoutRequest);
+    CHECK_DEFAULT(TestingDirConnectionMaxStall);
+    CHECK_DEFAULT(TestingAuthKeyLifetime);
+    CHECK_DEFAULT(TestingLinkCertLifetime);
+    CHECK_DEFAULT(TestingSigningKeySlop);
+    CHECK_DEFAULT(TestingAuthKeySlop);
+    CHECK_DEFAULT(TestingLinkKeySlop);
 #undef CHECK_DEFAULT
+
+    or_options_free(default_options);
+  }
 
   if (!options->ClientDNSRejectInternalAddresses &&
       !(options->DirAuthorities ||
