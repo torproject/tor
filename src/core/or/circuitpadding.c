@@ -215,8 +215,14 @@ circpad_marked_circuit_for_padding(circuit_t *circ, int reason)
     }
 
     log_info(LD_CIRC, "Circuit %d is not marked for close because of a "
+<<<<<<< HEAD
              " pending padding machine.", CIRCUIT_IS_ORIGIN(circ) ?
              TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
+=======
+             "pending padding machine in index %d.",
+             CIRCUIT_IS_ORIGIN(circ) ?
+             TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0, i);
+>>>>>>> eb80f89022... Add controller circuit id to all relevant circpad loglines.
 
     /* If the machine has had no network events at all within the
      * last circpad_delay_t timespan, it's in some deadlock state.
@@ -227,10 +233,15 @@ circpad_marked_circuit_for_padding(circuit_t *circ, int reason)
     if (circ->padding_info[i]->last_cell_time_sec +
         (time_t)CIRCPAD_DELAY_MAX_SECS < approx_time()) {
       log_notice(LD_BUG, "Circuit %d was not marked for close because of a "
+<<<<<<< HEAD
                " pending padding machine for over an hour. Circuit is a %s",
+=======
+               "pending padding machine in index %d for over an hour. "
+               "Circuit is a %s",
+>>>>>>> eb80f89022... Add controller circuit id to all relevant circpad loglines.
                CIRCUIT_IS_ORIGIN(circ) ?
                TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0,
-               circuit_purpose_to_string(circ->purpose));
+               i, circuit_purpose_to_string(circ->purpose));
 
       return 0; // abort timer reached; mark the circuit for close now
     }
@@ -529,7 +540,9 @@ circpad_choose_state_length(circpad_machine_runtime_t *mi)
 
   mi->state_length = clamp_double_to_int64(length);
 
-  log_info(LD_CIRC, "State length sampled to %"PRIu64".", mi->state_length);
+  log_info(LD_CIRC, "State length sampled to %"PRIu64" for circuit %u",
+      mi->state_length, CIRCUIT_IS_ORIGIN(mi->on_circ) ?
+             TO_ORIGIN_CIRCUIT(mi->on_circ)->global_identifier : 0);
 }
 
 /**
@@ -1203,7 +1216,9 @@ circpad_send_padding_cell_for_callback(circpad_machine_runtime_t *mi)
   /* Make sure circuit didn't close on us */
   if (mi->on_circ->marked_for_close) {
     log_fn(LOG_INFO,LD_CIRC,
-           "Padding callback on a circuit marked for close. Ignoring.");
+           "Padding callback on circuit marked for close (%u). Ignoring.",
+         CIRCUIT_IS_ORIGIN(mi->on_circ) ?
+         TO_ORIGIN_CIRCUIT(mi->on_circ)->global_identifier : 0);
     return CIRCPAD_STATE_CHANGED;
   }
 
@@ -1414,7 +1429,9 @@ circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
   // Don't pad in end (but  also don't cancel any previously
   // scheduled padding either).
   if (mi->current_state == CIRCPAD_STATE_END) {
-    log_fn(LOG_INFO, LD_CIRC, "Padding end state");
+    log_fn(LOG_INFO, LD_CIRC, "Padding end state on circuit %u",
+         CIRCUIT_IS_ORIGIN(mi->on_circ) ?
+           TO_ORIGIN_CIRCUIT(mi->on_circ)->global_identifier : 0);
     return CIRCPAD_STATE_UNCHANGED;
   }
 
@@ -1454,7 +1471,9 @@ circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
   } else {
     mi->padding_scheduled_at_usec = 1;
   }
-  log_fn(LOG_INFO,LD_CIRC,"\tPadding in %u usec", in_usec);
+  log_fn(LOG_INFO,LD_CIRC,"\tPadding in %u usec on circuit %u", in_usec,
+       CIRCUIT_IS_ORIGIN(mi->on_circ) ?
+           TO_ORIGIN_CIRCUIT(mi->on_circ)->global_identifier : 0);
 
   // Don't schedule if we have infinite delay.
   if (in_usec == CIRCPAD_DELAY_INFINITE) {
@@ -1478,7 +1497,9 @@ circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
   timeout.tv_sec = in_usec/TOR_USEC_PER_SEC;
   timeout.tv_usec = (in_usec%TOR_USEC_PER_SEC);
 
-  log_fn(LOG_INFO, LD_CIRC, "\tPadding in %u sec, %u usec",
+  log_fn(LOG_INFO, LD_CIRC, "\tPadding circuit %u in %u sec, %u usec",
+     CIRCUIT_IS_ORIGIN(mi->on_circ) ?
+           TO_ORIGIN_CIRCUIT(mi->on_circ)->global_identifier : 0,
           (unsigned)timeout.tv_sec, (unsigned)timeout.tv_usec);
 
   if (mi->padding_timer) {
@@ -1595,7 +1616,9 @@ circpad_machine_spec_transition,(circpad_machine_runtime_t *mi,
      * a transition to itself. All non-specified events are ignored.
      */
     log_fn(LOG_INFO, LD_CIRC,
-           "Circpad machine %d transitioning from %u to %u",
+           "Circuit %u circpad machine %d transitioning from %u to %u",
+             CIRCUIT_IS_ORIGIN(mi->on_circ) ?
+             TO_ORIGIN_CIRCUIT(mi->on_circ)->global_identifier : 0,
            mi->machine_index, mi->current_state, s);
 
     /* If this is not the same state, switch and init tokens,
@@ -2094,7 +2117,10 @@ circpad_add_matching_machines(origin_circuit_t *on_circ,
         if (circpad_negotiate_padding(on_circ, machine->machine_num,
                                   machine->target_hopnum,
                                   CIRCPAD_COMMAND_START) < 0) {
-          log_info(LD_CIRC, "Padding not negotiated. Cleaning machine");
+          log_info(LD_CIRC,
+                   "Padding not negotiated. Cleaning machine from circuit %u",
+             CIRCUIT_IS_ORIGIN(circ) ?
+             TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
           circpad_circuit_machineinfo_free_idx(circ, i);
           circ->padding_machine[i] = NULL;
           on_circ->padding_negotiation_failed = 1;
@@ -2822,7 +2848,8 @@ circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell)
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
     log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
-           "Padding negotiate cell unsupported at origin.");
+           "Padding negotiate cell unsupported at origin (circuit %u)",
+           TO_ORIGIN_CIRCUIT(circ)->global_identifier);
     return -1;
   }
 
@@ -2898,13 +2925,15 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
   if (circpad_negotiated_parse(&negotiated, cell->payload+RELAY_HEADER_SIZE,
                                CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE) < 0) {
     log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
-          "Received malformed PADDING_NEGOTIATED cell; "
-          "dropping.");
+          "Received malformed PADDING_NEGOTIATED cell on circuit %u; "
+          "dropping.", TO_ORIGIN_CIRCUIT(circ)->global_identifier);
     return -1;
   }
 
   if (negotiated->command == CIRCPAD_COMMAND_STOP) {
-    log_info(LD_CIRC, "Received STOP command on PADDING_NEGOTIATED");
+    log_info(LD_CIRC,
+             "Received STOP command on PADDING_NEGOTIATED for circuit %u",
+             TO_ORIGIN_CIRCUIT(circ)->global_identifier);
     /* There may not be a padding_info here if we shut down the
      * machine in circpad_shutdown_old_machines(). Or, if
      * circpad_add_matching_matchines() added a new machine,
