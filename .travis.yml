@@ -39,7 +39,10 @@ matrix:
     ## We run coverage with hardening off, which seems like enough
     # - env: HARDENING_OPTIONS=""
     ## We check asciidoc with distcheck, to make sure we remove doc products
-    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS=""
+    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
+    # We also try running a hardened clang build with chutney on Linux.
+    - env: CHUTNEY="yes" SKIP_MAKE_CHECK="yes" CHUTNEY_ALLOW_FAILURES="2"
+      compiler: clang
 
   ## Uncomment to allow the build to report success (with non-required
   ## sub-builds continuing to run) if all required sub-builds have
@@ -122,10 +125,15 @@ install:
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then pip install --user cpp-coveralls; fi
   ## If we're on OSX, and using asciidoc, configure asciidoc
   - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export XML_CATALOG_FILES="/usr/local/etc/xml/catalog"; fi
-  ##
+  ## If we're running chutney, install it.
+  - if [[ "$CHUTNEY" != "" ]]; then git clone --depth 1 https://github.com/torproject/chutney.git ; export CHUTNEY_PATH="$(pwd)/chutney"; fi
   ## Finally, list installed package versions
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then dpkg-query --show; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew list --versions; fi
+  ## Get python version
+  - python --version
+  ## If we're running chutney, show the chutney commit
+  - if [[ "$CHUTNEY" != "" ]]; then pushd "$CHUTNEY_PATH"; git log -1 ; popd ; fi
 
 script:
   - ./autogen.sh
@@ -133,8 +141,9 @@ script:
   - echo "Configure flags are $CONFIGURE_FLAGS"
   - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
-  - if [[ "$DISTCHECK" == "" ]]; then make check; fi
+  - if [[ "$SKIP_MAKE_CHECK" == "" ]]; then make check; fi
   - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
+  - if [[ "$CHUTNEY" != "" ]]; then make test-network-all; fi
   ## If this build was one that produced coverage, upload it.
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p' || echo "Coverage failed"; fi
 
@@ -143,9 +152,10 @@ after_failure:
   ## But the log is too long for travis' rendered view, so tail it.
   - tail -1000 config.log || echo "tail failed"
   ## `make check` will leave a log file with more details of test failures.
-  - if [[ "$DISTCHECK" == "" ]]; then cat test-suite.log || echo "cat failed"; fi
+  - if [[ "$SKIP_MAKE_CHECK" == "" ]]; then cat test-suite.log || echo "cat failed"; fi
   ## `make distcheck` puts it somewhere different.
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
+  - if [[ "$CHUTNEY" != "" ]]; then ls test_network_log || echo "ls failed"; cat test_network_log/* || echo "cat failed"; fi
 
 before_cache:
   ## Delete all gcov files.
