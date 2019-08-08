@@ -2757,7 +2757,8 @@ circpad_negotiate_padding(origin_circuit_t *circ,
         &type)) < 0)
     return -1;
 
-  log_fn(LOG_INFO,LD_CIRC, "Negotiating padding on circuit %u (%d), command %d",
+  log_fn(LOG_INFO,LD_CIRC,
+         "Negotiating padding on circuit %u (%d), command %d",
          circ->global_identifier, TO_CIRCUIT(circ)->purpose, command);
 
   return circpad_send_command_to_hop(circ, target_hopnum,
