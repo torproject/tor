@@ -30,7 +30,7 @@ env:
     -
 
 matrix:
-  ## include creates builds with gcc, linux, sudo: false
+  ## include creates builds with gcc, linux
   include:
     ## We include a single coverage build with the best options for coverage
     - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
@@ -39,7 +39,10 @@ matrix:
     ## We run coverage with hardening off, which seems like enough
     # - env: HARDENING_OPTIONS=""
     ## We check asciidoc with distcheck, to make sure we remove doc products
-    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS=""
+    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
+    # We also try running a hardened clang build with chutney on Linux.
+    - env: CHUTNEY="yes" SKIP_MAKE_CHECK="yes" CHUTNEY_ALLOW_FAILURES="2"
+      compiler: clang
 
   ## Uncomment to allow the build to report success (with non-required
   ## sub-builds continuing to run) if all required sub-builds have
@@ -53,12 +56,6 @@ matrix:
   ## allow failures by env:
   ## https://docs.travis-ci.com/user/customizing-the-build#matching-jobs-with-allow_failures
   exclude:
-    ## Clang doesn't work in containerized builds, see below.
-    - compiler: clang
-      sudo: false
-    ## Non-containerized gcc are slow and redundant.
-    - compiler: gcc
-      sudo: required
     ## gcc on OSX is less useful, because the default compiler is clang.
     - compiler: gcc
       os: osx
@@ -67,20 +64,6 @@ matrix:
     - compiler: gcc
       os: linux
       env:
-
-## We don't need sudo. (The "apt:" stanza after this allows us to not need
-## sudo; otherwise, we would need it for getting dependencies.)
-##
-## But we use "sudo: required" to force non-containerized builds, working
-## around a Travis CI environment issue: clang LeakAnalyzer fails
-## because it requires ptrace and the containerized environment no
-## longer allows ptrace.
-## https://github.com/travis-ci/travis-ci/issues/9033
-##
-## In the matrix above, we exclude redundant combinations.
-sudo:
-  - false
-  - required
 
 ## (Linux only) Use the latest Linux image (Ubuntu Trusty)
 dist: trusty
@@ -142,10 +125,15 @@ install:
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then pip install --user cpp-coveralls; fi
   ## If we're on OSX, and using asciidoc, configure asciidoc
   - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export XML_CATALOG_FILES="/usr/local/etc/xml/catalog"; fi
-  ##
+  ## If we're running chutney, install it.
+  - if [[ "$CHUTNEY" != "" ]]; then git clone --depth 1 https://github.com/torproject/chutney.git ; export CHUTNEY_PATH="$(pwd)/chutney"; fi
   ## Finally, list installed package versions
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then dpkg-query --show; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew list --versions; fi
+  ## Get python version
+  - python --version
+  ## If we're running chutney, show the chutney commit
+  - if [[ "$CHUTNEY" != "" ]]; then pushd "$CHUTNEY_PATH"; git log -1 ; popd ; fi
 
 script:
   - ./autogen.sh
@@ -153,8 +141,9 @@ script:
   - echo "Configure flags are $CONFIGURE_FLAGS"
   - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
-  - if [[ "$DISTCHECK" == "" ]]; then make check; fi
+  - if [[ "$SKIP_MAKE_CHECK" == "" ]]; then make check; fi
   - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
+  - if [[ "$CHUTNEY" != "" ]]; then make test-network-all; fi
   ## If this build was one that produced coverage, upload it.
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p' || echo "Coverage failed"; fi
 
@@ -163,9 +152,10 @@ after_failure:
   ## But the log is too long for travis' rendered view, so tail it.
   - tail -1000 config.log || echo "tail failed"
   ## `make check` will leave a log file with more details of test failures.
-  - if [[ "$DISTCHECK" == "" ]]; then cat test-suite.log || echo "cat failed"; fi
+  - if [[ "$SKIP_MAKE_CHECK" == "" ]]; then cat test-suite.log || echo "cat failed"; fi
   ## `make distcheck` puts it somewhere different.
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
+  - if [[ "$CHUTNEY" != "" ]]; then ls test_network_log || echo "ls failed"; cat test_network_log/* || echo "cat failed"; fi
 
 before_cache:
   ## Delete all gcov files.
