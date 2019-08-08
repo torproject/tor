@@ -2888,7 +2888,7 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
 
   /* Verify this came from the expected hop */
   if (!circpad_padding_is_from_expected_hop(circ, layer_hint)) {
-    log_fn(LOG_WARN, LD_CIRC,
+    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
            "Padding negotiated cell from wrong hop on circuit %u",
              TO_ORIGIN_CIRCUIT(circ)->global_identifier);
     return -1;
