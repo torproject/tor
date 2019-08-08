@@ -48,9 +48,12 @@ matrix:
     ## We run rust and coverage with hardening off, which seems like enough
     # - env: HARDENING_OPTIONS=""
     ## We check asciidoc with distcheck, to make sure we remove doc products
-    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS=""
+    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
+    # We also try running a hardened clang build with chutney on Linux.
+    - env: CHUTNEY="yes" SKIP_MAKE_CHECK="yes" CHUTNEY_ALLOW_FAILURES="2"
+      compiler: clang
     # We clone our stem repo and run `make test-stem`
-    - env: TEST_STEM="yes"
+    - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
     ## Check rust online with distcheck, to make sure we remove rust products
     - env: DISTCHECK="yes" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
     ## Check disable module dirauth with and without rust
@@ -72,7 +75,7 @@ matrix:
   ## https://docs.travis-ci.com/user/customizing-the-build#matching-jobs-with-allow_failures
   allow_failures:
     ## test-stem sometimes hangs on Travis
-    - env: TEST_STEM="yes"
+    - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
 
   exclude:
     ## gcc on OSX is less useful, because the default compiler is clang.
@@ -173,6 +176,9 @@ install:
   - if [[ "$RUST_OPTIONS" != "" ]]; then source $HOME/.cargo/env; fi
   ## If we're testing rust builds in offline-mode, then set up our vendored dependencies
   - if [[ "$TOR_RUST_DEPENDENCIES" == "true" ]]; then export TOR_RUST_DEPENDENCIES=$PWD/src/ext/rust/crates; fi
+  ## If we're running chutney, install it.
+  - if [[ "$CHUTNEY" != "" ]]; then git clone --depth 1 https://github.com/torproject/chutney.git ; export CHUTNEY_PATH="$(pwd)/chutney"; fi
+  ## If we're running stem, install it.
   - if [[ "$TEST_STEM" != "" ]]; then git clone --depth 1 https://github.com/torproject/stem.git ; export STEM_SOURCE_DIR=`pwd`/stem; fi
   ##
   ## Finally, list installed package versions
@@ -185,6 +191,11 @@ install:
   - if [[ "$RUST_OPTIONS" != "" ]]; then rustup --version; fi
   - if [[ "$RUST_OPTIONS" != "" ]]; then rustc --version; fi
   - if [[ "$RUST_OPTIONS" != "" ]]; then cargo --version; fi
+  ## Get python version
+  - python --version
+  ## If we're running chutney, show the chutney commit
+  - if [[ "$CHUTNEY" != "" ]]; then pushd "$CHUTNEY_PATH"; git log -1 ; popd ; fi
+  ## If we're running stem, show the stem version and commit
   - if [[ "$TEST_STEM" != "" ]]; then pushd stem; python -c "from stem import stem; print(stem.__version__);"; git log -1; popd; fi
 
 script:
@@ -195,10 +206,11 @@ script:
   - echo "Configure flags are $CONFIGURE_FLAGS"
   - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
-  - if [[ "$DISTCHECK" == "" && "$TEST_STEM" == "" ]]; then make check; fi
+  - if [[ "$SKIP_MAKE_CHECK" == "" ]]; then make check; fi
+  - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
+  - if [[ "$CHUTNEY" != "" ]]; then make test-network-all; fi
   ## Diagnostic for bug 29437: kill stem if it hangs for 15 minutes
   - if [[ "$TEST_STEM" != "" ]]; then make src/app/tor; timelimit -p -t 540 -s USR1 -T 30 -S ABRT python3 "$STEM_SOURCE_DIR"/run_tests.py --tor src/app/tor --integ --log notice --target RUN_ALL; fi
-  - if [[ "$DISTCHECK" != "" && "$TEST_STEM" == "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
   ## If this build was one that produced coverage, upload it.
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p' || echo "Coverage failed"; fi
 
@@ -207,10 +219,11 @@ after_failure:
   ## But the log is too long for travis' rendered view, so tail it.
   - tail -1000 config.log || echo "tail failed"
   ## `make check` will leave a log file with more details of test failures.
-  - if [[ "$DISTCHECK" == "" ]]; then cat test-suite.log || echo "cat failed"; fi
+  - if [[ "$SKIP_MAKE_CHECK" == "" ]]; then cat test-suite.log || echo "cat failed"; fi
   ## `make distcheck` puts it somewhere different.
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-core || echo "make failed"; fi
+  - if [[ "$CHUTNEY" != "" ]]; then ls test_network_log || echo "ls failed"; cat test_network_log/* || echo "cat failed"; fi
   - if [[ "$TEST_STEM" != "" ]]; then cat "$STEM_SOURCE_DIR"/test/data/tor_log || echo "cat failed"; fi
 
 before_cache:
