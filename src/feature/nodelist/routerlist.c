@@ -2861,7 +2861,7 @@ int
 router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
 {
   time_t r1pub, r2pub;
-  long time_difference;
+  time_t time_difference;
   tor_assert(r1 && r2);
 
   /* r1 should be the one that was published first. */
@@ -2925,7 +2925,9 @@ router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
    * give or take some slop? */
   r1pub = r1->cache_info.published_on;
   r2pub = r2->cache_info.published_on;
-  time_difference = labs(r2->uptime - (r1->uptime + (r2pub - r1pub)));
+  time_difference = r2->uptime - (r1->uptime + (r2pub - r1pub));
+  if (time_difference < 0)
+    time_difference = - time_difference;
   if (time_difference > ROUTER_ALLOW_UPTIME_DRIFT &&
       time_difference > r1->uptime * .05 &&
       time_difference > r2->uptime * .05)
