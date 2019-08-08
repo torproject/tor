@@ -1,0 +1,6 @@
+  o Minor features (git scripts):
+    - Add a -t <test-branch-prefix> argument to git-merge-forward.sh and
+      git-push-all.sh, which makes these scripts create, merge forward, and
+      push test branches. Closes ticket 31314.
+    - Add a -r <remote-name> argument to git-push-all.sh, so the script can
+      push test branches to a personal remote. Closes ticket 31314.
