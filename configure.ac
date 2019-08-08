@@ -2519,3 +2519,118 @@ https://trac.torproject.org/projects/tor/wiki/doc/TorFragileHardening
 fi
 
 AC_OUTPUT
+
+#
+# Mini-report on what will be built.
+#
+
+PPRINT_INIT
+PPRINT_SET_INDENT(1)
+PPRINT_SET_TS(38)
+
+AS_ECHO
+AS_ECHO("${PPRINT_COLOR_BLDBLU}Tor $PACKAGE_VERSION $PPRINT_COLOR_RST")
+AS_ECHO
+
+PPRINT_SUBTITLE([Build Features])
+
+test "x$enable_gcc_warnings" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([GCC Warnings], $value)
+
+test "x$enable_fatal_warnings" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([GCC Fatal Warnings], $value)
+
+test "x$enable_coverage" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Code Coverage], $value)
+
+test "x$enable_rust" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Rust support], $value)
+
+test "x$enable_android" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Android support], $value)
+
+test "x$enable_systemd" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Systemd support], $value)
+
+AS_ECHO
+PPRINT_SUBTITLE([Static Build])
+
+test "x$enable_static_tor" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([tor], $value)
+
+if test "x$enable_static_libevent" = "xyes"; then
+  PPRINT_PROP_STRING([libevent], [$TOR_LIBDIR_libevent])
+else
+  PPRINT_PROP_BOOL([libevent], $value)
+fi
+
+if test "x$enable_static_openssl" = "xyes"; then
+  PPRINT_PROP_STRING([libssl], [$TOR_LIBDIR_openssl])
+else
+  PPRINT_PROP_BOOL([libssl], $value)
+fi
+
+if test "x$enable_static_zlib" = "xyes"; then
+  PPRINT_PROP_STRING([zlib1g], [$TOR_LIBDIR_zlib])
+else
+  PPRINT_PROP_BOOL([zlib1g], $value)
+fi
+
+AS_ECHO
+PPRINT_SUBTITLE([Security])
+
+test "x$enable_nss" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([libnss Support], $value)
+
+test "x$enable_seccomp" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([libseccomp Support], $value)
+
+test "x$enable_libscrypt" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([libscrypt support], $value)
+
+test "x$enable_fragile_hardening" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([libasan support], $value)
+
+test "x$enable_gcc_hardening" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([GCC Hardening], $value)
+
+test "x$enable_linker_hardening" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([Linker Hardening], $value)
+
+AS_ECHO
+PPRINT_SUBTITLE([Modules])
+
+test "x$enable_module_dirauth" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([Directory Authority], $value)
+
+AS_ECHO
+PPRINT_SUBTITLE([Documentation])
+
+test "x$enable_manpage" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([Man Pages], $value)
+
+test "x$enable_html_manual" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([HTML Manual], $value)
+
+AS_ECHO
+PPRINT_SUBTITLE([Tests])
+
+test "x$enable_unittests" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([Unit tests], $value)
+
+test "x$enable_asserts_in_tests" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Unit tests assert()], $value)
+
+test "x$enable_libfuzzer" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([libFuzzer support], $value)
+
+test "x$enable_oss_fuzz" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([OSS-Fuzz support], $value)
+
+AS_ECHO
+PPRINT_SUBTITLE([Install Directories])
+
+report_mandir="`eval eval echo $mandir`"
+PPRINT_PROP_STRING([Binaries], [$BINDIR])
+PPRINT_PROP_STRING([Configuration], [$CONFDIR])
+PPRINT_PROP_STRING([Man Pages], [$report_mandir])
