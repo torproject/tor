@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# Usage: git-push-all.sh
+# Usage: git-push-all.sh <git-opts>
 #        env vars: TOR_UPSTREAM_REMOTE_NAME=upstream TOR_PUSH_DELAY=0
-#        options: --no-atomic --dry-run (any other git push option)
+#        git-opts: --no-atomic --dry-run (any other git push option)
 #
 # TOR_PUSH_DELAY pushes the master and maint branches separately, so that CI
 # runs in a sensible order.
@@ -10,10 +10,20 @@
 
 set -e
 
+#################
+# Configuration #
+#################
+
+# Don't change this configuration - set the env vars in your .profile
+#
 # The upstream remote which git.torproject.org/tor.git points to.
 UPSTREAM_REMOTE=${TOR_UPSTREAM_REMOTE_NAME:-"upstream"}
 # Add a delay between pushes, so CI runs on the most important branches first
 PUSH_DELAY=${TOR_PUSH_DELAY:-0}
+
+########################
+# Git branches to push #
+########################
 
 PUSH_BRANCHES=$(echo \
   master \
@@ -22,6 +32,10 @@ PUSH_BRANCHES=$(echo \
   {release,maint}-0.3.5 \
   {release,maint}-0.2.9 \
   )
+
+###############
+# Entry point #
+###############
 
 if [ "$PUSH_DELAY" -le 0 ]; then
   echo "Pushing $PUSH_BRANCHES"

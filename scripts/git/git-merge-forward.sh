@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
-##############################
-# Configuration (change me!) #
-##############################
+#################
+# Configuration #
+#################
 
+# Don't change this configuration - set the env vars in your .profile
+#
 # The general setup that is suggested here is:
 #
 #   GIT_PATH = /home/<user>/git/
@@ -21,20 +23,23 @@ TOR_MASTER_NAME=${TOR_MASTER_NAME:-"tor"}
 # The worktrees location (directory).
 TOR_WKT_NAME=${TOR_WKT_NAME:-"tor-wkt"}
 
-#########################
-# End of configuration. #
-#########################
+##########################
+# Git branches to manage #
+##########################
+
+# The branches and worktrees need to be modified when there is a new branch,
+# and when an old branch is no longer supported.
 
 # Configuration of the branches that needs merging. The values are in order:
-#   (1) Branch name that we merge onto.
-#   (2) Branch name to merge from. In other words, this is merge into (1)
-#   (3) Full path of the git worktree.
+#   (0) current maint/release branch name
+#   (1) previous maint/release name to merge into (0)
+#   (2) Full path of the git worktree
 #
 # As an example:
-#   $ cd <PATH/TO/WORKTREE> (3)
-#   $ git checkout maint-0.3.5 (1)
+#   $ cd <PATH/TO/WORKTREE> (2)
+#   $ git checkout maint-0.3.5 (0)
 #   $ git pull
-#   $ git merge maint-0.3.4 (2)
+#   $ git merge maint-0.3.4 (1)
 #
 # First set of arrays are the maint-* branch and then the release-* branch.
 # New arrays need to be in the WORKTREE= array else they aren't considered.
@@ -65,9 +70,28 @@ ${RELEASE_040[0]}
 ${RELEASE_041[0]}
 EOF
 
-##########################
-# Git Worktree to manage #
-##########################
+#######################
+# Argument processing #
+#######################
+
+# Controlled by the -n option. The dry run option will just output the command
+# that would have been executed for each worktree.
+DRY_RUN=0
+
+while getopts "n" opt; do
+  case "$opt" in
+    n) DRY_RUN=1
+       echo "    *** DRY RUN MODE ***"
+       ;;
+    *)
+       exit 1
+       ;;
+  esac
+done
+
+###########################
+# Git worktrees to manage #
+###########################
 
 # List of all worktrees to work on. All defined above. Ordering is important.
 # Always the maint-* branch BEFORE then the release-*.
@@ -87,9 +111,9 @@ WORKTREE=(
 )
 COUNT=${#WORKTREE[@]}
 
-# Controlled by the -n option. The dry run option will just output the command
-# that would have been executed for each worktree.
-DRY_RUN=0
+#############
+# Constants #
+#############
 
 # Control characters
 CNRM=$'\x1b[0;0m'   # Clear color
@@ -150,7 +174,7 @@ function pull_branch
   fi
 }
 
-# Merge the given branch name ($2) into the current branch ($1).
+# Merge the given branch name ($1) into the current branch ($2).
 function merge_branch
 {
   local cmd="git merge --no-edit $1"
@@ -203,16 +227,6 @@ function fetch_origin
 # Entry point #
 ###############
 
-while getopts "n" opt; do
-  case "$opt" in
-    n) DRY_RUN=1
-       echo "    *** DRY DRUN MODE ***"
-       ;;
-    *)
-       ;;
-  esac
-done
-
 # First, fetch the origin.
 goto_repo "$ORIGIN_PATH"
 fetch_origin
@@ -231,6 +245,7 @@ for ((i=0; i<COUNT; i++)); do
   switch_branch "$current"
   # Update the current branch with an origin merge to get the latest.
   merge_branch_origin "$current"
-  # Merge the previous branch. Ex: merge maint-0.2.5 into maint-0.2.9.
+  # Example:
+  #   merge maint-0.2.9 into maint-0.3.5.
   merge_branch "$previous" "$current"
 done
