@@ -1,0 +1,7 @@
+  o Minor features (git scripts):
+    - Add a TOR_PUSH_DELAY variable to git-push-all.sh, which makes the script
+      push master and maint branches with a delay between each branch. These
+      delays trigger the CI jobs in a set order, which should show the most
+      likely failures first. Also make pushes atomic by default, and make
+      the script pass any command-line arguments to git push.
+      Closes ticket 29879.
