@@ -1,0 +1,3 @@
+  o Testing (continuous integration):
+    - In Travis, only run the stem tests that use a tor binary.
+      Closes ticket 30694.
