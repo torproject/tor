@@ -402,7 +402,7 @@ protover_get_supported_protocols(void)
 #endif
     "Microdesc=1-2 "
     "Relay=1-2 "
-    "Padding=1 "
+    "Padding=2 "
     "FlowCtrl=1";
 }
 
