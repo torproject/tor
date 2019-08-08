@@ -8,6 +8,8 @@ AC_INIT([tor],[0.4.2.0-alpha-dev])
 AC_CONFIG_SRCDIR([src/app/main/tor_main.c])
 AC_CONFIG_MACRO_DIR([m4])
 
+configure_flags="$*"
+
 # DO NOT EDIT THIS DEFINITION BY HAND UNLESS YOU KNOW WHAT YOU'RE DOING.
 #
 # The update_versions.py script updates this definition when the
@@ -2519,3 +2521,128 @@ https://trac.torproject.org/projects/tor/wiki/doc/TorFragileHardening
 fi
 
 AC_OUTPUT
+
+#
+# Mini-report on what will be built.
+#
+
+PPRINT_INIT
+PPRINT_SET_INDENT(1)
+PPRINT_SET_TS(65)
+
+AS_ECHO
+AS_ECHO("Tor Version: ${PPRINT_COLOR_BLDBLU}Tor $PACKAGE_VERSION $PPRINT_COLOR_RST")
+AS_ECHO
+
+PPRINT_SUBTITLE([Build Features])
+
+PPRINT_PROP_STRING([Compiler], [$CC])
+PPRINT_PROP_STRING([Host OS], [$host_os])
+AS_ECHO
+
+test "x$enable_gcc_warnings" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Verbose Warnings (--enable-gcc-warnings)], $value)
+
+test "x$enable_fatal_warnings" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Warnings are fatal (--enable-fatal-warnings)], $value)
+
+test "x$enable_rust" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Rust support (--enable-rust)], $value)
+
+test "x$enable_android" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Android support (--enable-android)], $value)
+
+test "x$enable_systemd" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Systemd support (--enable-systemd)], $value)
+
+AS_ECHO
+PPRINT_SUBTITLE([Static Build])
+
+test "x$enable_static_tor" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([tor (--enable-static-tor)], $value)
+
+if test "x$enable_static_libevent" = "xyes"; then
+  PPRINT_PROP_STRING([libevent], [$TOR_LIBDIR_libevent])
+else
+  PPRINT_PROP_BOOL([libevent (--enable-static-libevent)], $value)
+fi
+
+if test "x$enable_static_openssl" = "xyes"; then
+  PPRINT_PROP_STRING([libssl], [$TOR_LIBDIR_openssl])
+else
+  PPRINT_PROP_BOOL([libssl (--enable-static-openssl)], $value)
+fi
+
+if test "x$enable_static_zlib" = "xyes"; then
+  PPRINT_PROP_STRING([zlib1g], [$TOR_LIBDIR_zlib])
+else
+  PPRINT_PROP_BOOL([zlib1g (--enable-static-zlib)], $value)
+fi
+
+AS_ECHO
+PPRINT_SUBTITLE([Optional Libraries])
+
+test "x$enable_nss" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([libnss (--enable-nss)], $value)
+
+test "x$enable_seccomp" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([libseccomp (--disable-seccomp)], $value)
+
+test "x$enable_libscrypt" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([libscrypt (--disable-libscrypt)], $value)
+
+AS_ECHO
+PPRINT_SUBTITLE([Hardening])
+
+test "x$enable_gcc_hardening" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([Compiler Hardening (--disable-gcc-hardening)], $value)
+
+test "x$enable_linker_hardening" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([Linker Hardening (--disable-linker-hardening)], $value)
+
+test "x$enable_fragile_hardening" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Fragile Hardening (--enable-fragile-hardening, dev only)], $value)
+
+AS_ECHO
+PPRINT_SUBTITLE([Modules])
+
+test "x$enable_module_dirauth" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([Directory Authority (--disable-module-dirauth)], $value)
+
+AS_ECHO
+PPRINT_SUBTITLE([Documentation])
+
+test "x$enable_manpage" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([Man Pages (--disable-manpage)], $value)
+
+test "x$enable_html_manual" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([HTML Manual (--disable-html-manual)], $value)
+
+AS_ECHO
+PPRINT_SUBTITLE([Tests])
+
+test "x$enable_unittests" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([Unit tests (--disable-unittests)], $value)
+
+test "x$enable_asserts_in_tests" = "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([assert()s disabled (--disable-asserts-in-tests, dev only)], $value)
+
+test "x$enable_coverage" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Code Coverage (--enable-coverage)], $value)
+
+test "x$enable_libfuzzer" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([libFuzzer support (--enable-libfuzzer)], $value)
+
+test "x$enable_oss_fuzz" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([OSS-Fuzz support (--enable-oss-fuzz)], $value)
+
+AS_ECHO
+PPRINT_SUBTITLE([Install Directories])
+
+report_mandir="`eval eval echo $mandir`"
+PPRINT_PROP_STRING([Binaries], [$BINDIR])
+PPRINT_PROP_STRING([Configuration], [$CONFDIR])
+PPRINT_PROP_STRING([Man Pages], [$report_mandir])
+
+AS_ECHO
+AS_ECHO(["Configure Line: ./configure $configure_flags"])
