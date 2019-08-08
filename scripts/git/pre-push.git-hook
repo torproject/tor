@@ -28,10 +28,14 @@ if [ -x "$workdir/.git/hooks/pre-commit" ]; then
   fi
 fi
 
-if [ -e scripts/maint/practracker/practracker.py ]; then
-  if ! python3 ./scripts/maint/practracker/practracker.py "$workdir"; then
-    exit 1
-  fi
+PT_DIR=scripts/maint/practracker
+
+if [ -e "${PT_DIR}/practracker.py" ]; then
+    if [ -e "${PT_DIR}/.enable_practracker_in_hooks" ]; then
+        if ! python3 "${PT_DIR}/practracker.py" "$workdir"; then
+            exit 1
+        fi
+    fi
 fi
 
 remote="$1"
@@ -104,4 +108,3 @@ do
 done
 
 exit 0
-
