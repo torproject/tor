@@ -89,6 +89,7 @@ problem function-size /src/core/or/circuitmux.c:circuitmux_set_policy() 110
 problem function-size /src/core/or/circuitmux.c:circuitmux_attach_circuit() 114
 problem file-size /src/core/or/circuitpadding.c 3040
 problem function-size /src/core/or/circuitpadding.c:circpad_machine_schedule_padding() 107
+problem function-size /src/core/or/circuitpadding.c:circpad_machine_schedule_padding() 113 
 problem function-size /src/core/or/circuitpadding_machines.c:circpad_machine_relay_hide_intro_circuits() 104
 problem function-size /src/core/or/circuitpadding_machines.c:circpad_machine_client_hide_rend_circuits() 112
 problem function-size /src/core/or/circuitstats.c:circuit_build_times_parse_state() 124
@@ -285,3 +286,4 @@ problem function-size /src/tools/tor-gencert.c:parse_commandline() 111
 problem function-size /src/tools/tor-resolve.c:build_socks5_resolve_request() 104
 problem function-size /src/tools/tor-resolve.c:do_resolve() 174
 problem function-size /src/tools/tor-resolve.c:main() 112
+
