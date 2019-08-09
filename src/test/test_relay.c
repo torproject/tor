@@ -19,6 +19,8 @@
 static or_circuit_t * new_fake_orcirc(channel_t *nchan, channel_t *pchan);
 
 static void test_relay_append_cell_to_circuit_queue(void *arg);
+
+typedef struct bw_array_t bw_array_t;
 uint64_t find_largest_max(bw_array_t *b);
 void commit_max(bw_array_t *b);
 void advance_obs(bw_array_t *b);
