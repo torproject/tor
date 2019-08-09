@@ -109,13 +109,21 @@ DRY_RUN=0
 # <tbbn>_029, <tbbn>_035, ... , <tbbn>_master, and merge forward.
 TEST_BRANCH_PREFIX=
 
-while getopts "nt:" opt; do
+# Controlled by the -u option. The use existing option checks for existing
+# branches with the <test-branch-prefix>, and checks them out, rather than
+# creating a new branch.
+USE_EXISTING=0
+
+while getopts "nt:u" opt; do
   case "$opt" in
     n) DRY_RUN=1
        echo "    *** DRY RUN MODE ***"
        ;;
     t) TEST_BRANCH_PREFIX="$OPTARG"
        echo "    *** CREATING TEST BRANCHES: ${TEST_BRANCH_PREFIX}_nnn ***"
+       ;;
+    u) USE_EXISTING=1
+       echo "    *** USE EXISTING TEST BRANCHES MODE ***"
        ;;
     *)
        exit 1
@@ -230,6 +238,32 @@ function new_branch
   fi
 }
 
+# Switch to an existing branch, or checkout a new branch with the given
+# branch name.
+function switch_or_new_branch
+{
+  local cmd="git rev-parse --verify $1"
+  if [ $DRY_RUN -eq 0 ]; then
+    # Call switch_branch if there is a branch, or new_branch if there is not
+    msg=$( eval "$cmd" 2>&1 )
+    RET=$?
+    if [ $RET -eq 0 ]; then
+      # Branch: (commit id)
+      switch_branch "$1"
+    elif [ $RET -eq 128 ]; then
+      # Not a branch: "fatal: Needed a single revision"
+      new_branch "$1"
+    else
+      # Unexpected return value
+      validate_ret $RET "$msg"
+    fi
+  else
+    printf "\\n      %s\\n" "${IWTH}$cmd${CNRM}, then depending on the result:"
+    switch_branch "$1"
+    new_branch "$1"
+  fi
+}
+
 # Pull the given branch name.
 function pull_branch
 {
@@ -328,8 +362,14 @@ for ((i=0; i<COUNT; i++)); do
   # Go into the worktree to start merging.
   goto_repo "$repo_path"
   if [ "$test_current" ]; then
-    # Create a test branch from the currently checked-out branch/commit
-    new_branch "$test_current"
+    if [ $USE_EXISTING -eq 0 ]; then
+      # Create a test branch from the currently checked-out branch/commit
+      # Fail if it already exists
+      new_branch "$test_current"
+    else
+      # Switch if it exists, or create if it does not
+      switch_or_new_branch "$test_current"
+    fi
   fi
   # Checkout the current maint/release branch
   switch_branch "$current"
