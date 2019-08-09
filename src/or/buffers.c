@@ -1034,6 +1034,7 @@ buf_find_pos_of_char(char ch, buf_pos_t *out)
 static inline int
 buf_pos_inc(buf_pos_t *pos)
 {
+  tor_assert(pos->pos < INT_MAX - 1);
   ++pos->pos;
   if (pos->pos == (off_t)pos->chunk->datalen) {
     if (!pos->chunk->next)
@@ -1925,6 +1926,7 @@ buf_find_offset_of_char(buf_t *buf, char ch)
 {
   chunk_t *chunk;
   off_t offset = 0;
+  tor_assert(buf->datalen < INT_MAX);
   for (chunk = buf->head; chunk; chunk = chunk->next) {
     char *cp = memchr(chunk->data, ch, chunk->datalen);
     if (cp)
@@ -2044,6 +2046,7 @@ assert_buf_ok(buf_t *buf)
     for (ch = buf->head; ch; ch = ch->next) {
       total += ch->datalen;
       tor_assert(ch->datalen <= ch->memlen);
+      tor_assert(ch->datalen < INT_MAX);
       tor_assert(ch->data >= &ch->mem[0]);
       tor_assert(ch->data <= &ch->mem[0]+ch->memlen);
       if (ch->data == &ch->mem[0]+ch->memlen) {
@@ -2060,4 +2063,3 @@ assert_buf_ok(buf_t *buf)
     tor_assert(buf->datalen == total);
   }
 }
-
