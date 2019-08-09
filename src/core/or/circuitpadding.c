@@ -215,14 +215,9 @@ circpad_marked_circuit_for_padding(circuit_t *circ, int reason)
     }
 
     log_info(LD_CIRC, "Circuit %d is not marked for close because of a "
-<<<<<<< HEAD
-             " pending padding machine.", CIRCUIT_IS_ORIGIN(circ) ?
-             TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
-=======
              "pending padding machine in index %d.",
              CIRCUIT_IS_ORIGIN(circ) ?
              TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0, i);
->>>>>>> eb80f89022... Add controller circuit id to all relevant circpad loglines.
 
     /* If the machine has had no network events at all within the
      * last circpad_delay_t timespan, it's in some deadlock state.
@@ -233,12 +228,8 @@ circpad_marked_circuit_for_padding(circuit_t *circ, int reason)
     if (circ->padding_info[i]->last_cell_time_sec +
         (time_t)CIRCPAD_DELAY_MAX_SECS < approx_time()) {
       log_notice(LD_BUG, "Circuit %d was not marked for close because of a "
-<<<<<<< HEAD
-               " pending padding machine for over an hour. Circuit is a %s",
-=======
                "pending padding machine in index %d for over an hour. "
                "Circuit is a %s",
->>>>>>> eb80f89022... Add controller circuit id to all relevant circpad loglines.
                CIRCUIT_IS_ORIGIN(circ) ?
                TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0,
                i, circuit_purpose_to_string(circ->purpose));
