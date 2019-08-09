@@ -1,0 +1,3 @@
+  o Minor features (continuous integration):
+    - Use -k flag during on Travis and Appveyor to reduce CI roundtrips
+      developers have to make when fixing build issues. Closes issue 31372.
