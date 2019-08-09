@@ -4,3 +4,6 @@
       push test branches. Closes ticket 31314.
     - Add a -r <remote-name> argument to git-push-all.sh, so the script can
       push test branches to a personal remote. Closes ticket 31314.
+    - Add a -u argument to git-merge-forward.sh, so that the script can re-use
+      existing test branches after a merge failure and fix.
+      Closes ticket 31314.
