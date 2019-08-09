@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation warning):
+    - Fix a compilation warning on Windows about casting a function
+      pointer for GetTickCount64(). Fixes bug 31374; bugfix on
+      0.2.9.1-alpha.

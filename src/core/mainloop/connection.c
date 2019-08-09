@@ -3759,6 +3759,10 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
     if (conn->linked_conn) {
       result = buf_move_to_buf(conn->inbuf, conn->linked_conn->outbuf,
                                &conn->linked_conn->outbuf_flushlen);
+      if (BUG(result<0)) {
+        log_warn(LD_BUG, "reading from linked connection buffer failed.");
+        return -1;
+      }
     } else {
       result = 0;
     }
