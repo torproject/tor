@@ -88,6 +88,10 @@ COMMAND-LINE OPTIONS
     List all valid options that are scheduled to become obsolete in a
     future version. (This is a warning, not a promise.)
 
+[[opt-list-modules]] **--list-modules**::
+    For each optional module, list whether or not it has been compiled
+    into Tor.  (Any module not listed is not optional in this version of Tor.)
+
 [[opt-version]] **--version**::
     Display Tor version and exit.
 
