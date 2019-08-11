@@ -1,0 +1,6 @@
+  o Major bugfixes (NSS, relay):
+    - When running with NSS, disable TLS 1.2 ciphersuites that use SHA384
+      for their PRF. Due to an NSS bug, the TLS key exporters for these
+      ciphersuites don't work -- which caused relays to fail to handshake
+      with one another when these ciphersuites were enabled.
+      Fixes bug 29241; bugfix on 0.3.5.1-alpha.
