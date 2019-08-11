@@ -4568,16 +4568,14 @@ test_config_parse_port_config__ports__ports_given(void *data)
                           "127.0.0.44", 0, CL_PORT_NO_STREAM_OPTIONS);
   tt_int_op(ret, OP_EQ, -1);
 
-  // TODO: this seems wrong. Shouldn't it be the other way around?
-  // Potential bug.
-  // Test failure for a SessionGroup argument with valid value but with stream
-  // options allowed
+  // Test failure for a SessionGroup argument with valid value but with no
+  // stream options allowed
   config_free_lines(config_port_invalid); config_port_invalid = NULL;
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
   config_port_invalid = mock_config_line("DNSPort", "42 SessionGroup=123");
   ret = parse_port_config(slout, config_port_invalid, "DNS", 0,
-                          "127.0.0.44", 0, 0);
+                          "127.0.0.44", 0, CL_PORT_NO_STREAM_OPTIONS);
   tt_int_op(ret, OP_EQ, -1);
 
   // Test failure for more than one SessionGroup argument
@@ -4587,7 +4585,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   config_port_invalid = mock_config_line("DNSPort", "42 SessionGroup=123 "
                                          "SessionGroup=321");
   ret = parse_port_config(slout, config_port_invalid, "DNS", 0,
-                          "127.0.0.44", 0, CL_PORT_NO_STREAM_OPTIONS);
+                          "127.0.0.44", 0, 0);
   tt_int_op(ret, OP_EQ, -1);
 
   // Test success with a sessiongroup options
@@ -4596,7 +4594,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   smartlist_clear(slout);
   config_port_valid = mock_config_line("DNSPort", "42 SessionGroup=1111122");
   ret = parse_port_config(slout, config_port_valid, "DNS", 0,
-                          "127.0.0.44", 0, CL_PORT_NO_STREAM_OPTIONS);
+                          "127.0.0.44", 0, 0);
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(smartlist_len(slout), OP_EQ, 1);
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
