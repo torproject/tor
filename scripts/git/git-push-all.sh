@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-# Usage: git-push-all.sh -t <test-branch-prefix> -r <remote-name> <git-opts>
+# Usage: git-push-all.sh -t <test-branch-prefix> -r <remote-name>
+#                        -- <git-opts>
 #        env vars: TOR_UPSTREAM_REMOTE_NAME=upstream TOR_PUSH_DELAY=0
 #        git-opts: --no-atomic --dry-run (any other git push option)
 #
@@ -16,6 +17,8 @@ set -e
 
 # Don't change this configuration - set the env vars in your .profile
 #
+# git push command and default arguments
+GIT_PUSH=${TOR_GIT_PUSH:-"git push --atomic"}
 # The upstream remote which git.torproject.org/tor.git points to.
 # In test branch mode, override this setting with -r <remote-name>
 UPSTREAM_REMOTE=${TOR_UPSTREAM_REMOTE_NAME:-"upstream"}
@@ -46,10 +49,20 @@ while getopts ":r:t:" opt; do
        OPTIND=$[$OPTIND - 2]
        ;;
     *)
-       # Assume git push will handle the option
+       # Assume we're done with script arguments,
+       # and git push will handle the option
+       break
        ;;
   esac
 done
+
+# getopts doesn't allow "-" as an option character,
+# so we have to handle -- manually
+if [ "$1" = "--" ]; then
+  shift
+fi
+
+echo "Calling git push --atomic $@ <branches>"
 
 if [ "$TEST_BRANCH_PREFIX" ]; then
   if [ "$UPSTREAM_REMOTE" = ${TOR_UPSTREAM_REMOTE_NAME:-"upstream"} ]; then
@@ -95,9 +108,10 @@ fi
 ###############
 
 if [ "$PUSH_DELAY" -le 0 ]; then
-  echo "Pushing $PUSH_BRANCHES"
-  git push --atomic "$@" "$UPSTREAM_REMOTE" $PUSH_BRANCHES
+  # Push all the branches at the same time
+  $GIT_PUSH "$@" "$UPSTREAM_REMOTE" $PUSH_BRANCHES
 else
+  # Push the branches in optimal CI order, with a delay between each push
   PUSH_BRANCHES=`echo "$PUSH_BRANCHES" | tr " " "\n" | sort -V`
   MASTER_BRANCH=`echo "$PUSH_BRANCHES" | tr " " "\n" | grep master`
   if [ -z "$TEST_BRANCH_PREFIX" ]; then
@@ -114,13 +128,13 @@ else
     # No release branches
     RELEASE_BRANCHES=
   fi
-  git push "$@" "$UPSTREAM_REMOTE" $MASTER_BRANCH
+  $GIT_PUSH "$@" "$UPSTREAM_REMOTE" $MASTER_BRANCH
   sleep "$PUSH_DELAY"
   for b in $MAINT_BRANCHES; do
-    git push "$@" "$UPSTREAM_REMOTE" $b
+    $GIT_PUSH "$@" "$UPSTREAM_REMOTE" $b
     sleep "$PUSH_DELAY"
   done
   if [ "$RELEASE_BRANCHES" ]; then
-    git push --atomic "$@" "$UPSTREAM_REMOTE" $RELEASE_BRANCHES
+    $GIT_PUSH "$@" "$UPSTREAM_REMOTE" $RELEASE_BRANCHES
   fi
 fi

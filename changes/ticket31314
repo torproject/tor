@@ -7,3 +7,8 @@
     - Add a -u argument to git-merge-forward.sh, so that the script can re-use
       existing test branches after a merge failure and fix.
       Closes ticket 31314.
+    - Add a TOR_GIT_PUSH env var, which sets the default git push command and
+      arguments for git-push-all.sh. Closes ticket 31314.
+    - Add a "--" command-line argument, to
+      separate git-push-all.sh script arguments from arguments that are passed
+      through to git push. Closes ticket 31314.
