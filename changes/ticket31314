@@ -12,3 +12,7 @@
     - Add a "--" command-line argument, to
       separate git-push-all.sh script arguments from arguments that are passed
       through to git push. Closes ticket 31314.
+    - Skip pushing test branches that are the same as a remote
+      maint/release/master branch in git-push-all.sh by default. Add a -s
+      argument, so git-push-all.sh can push all test branches.
+      Closes ticket 31314.
