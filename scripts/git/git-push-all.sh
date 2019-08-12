@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Usage: git-push-all.sh -t <test-branch-prefix> -r <remote-name>
+# Usage: git-push-all.sh -t <test-branch-prefix> -r <remote-name> -s
 #                        -- <git-opts>
 #        env vars: TOR_UPSTREAM_REMOTE_NAME=upstream TOR_PUSH_DELAY=0
 #        git-opts: --no-atomic --dry-run (any other git push option)
@@ -24,6 +24,12 @@ GIT_PUSH=${TOR_GIT_PUSH:-"git push --atomic"}
 UPSTREAM_REMOTE=${TOR_UPSTREAM_REMOTE_NAME:-"upstream"}
 # Add a delay between pushes, so CI runs on the most important branches first
 PUSH_DELAY=${TOR_PUSH_DELAY:-0}
+# Push (1) or skip (0) branches that are the same as an upstream maint/master
+# branch. Push if you are testing the CI environment, skip if you are testing
+# the code in the branch.
+# Default: skip unchanged branches.
+# Inverted by the -s option.
+PUSH_SAME=${TOR_PUSH_SAME:-0}
 
 #######################
 # Argument processing #
@@ -41,6 +47,15 @@ while getopts ":r:t:" opt; do
        shift
        shift
        OPTIND=$[$OPTIND - 2]
+       ;;
+    s) PUSH_SAME=$[! "$PUSH_SAME" ]
+       if [ "$PUSH_SAME" -eq 0 ]; then
+         echo "    *** SKIPPING UNCHANGED TEST BRANCHES ***"
+       else
+         echo "    *** PUSHING UNCHANGED TEST BRANCHES ***"
+       fi
+       shift
+       OPTIND=$[$OPTIND - 1]
        ;;
     t) TEST_BRANCH_PREFIX="$OPTARG"
        echo "    *** PUSHING TEST BRANCHES: ${TEST_BRANCH_PREFIX}_nnn ***"
@@ -72,6 +87,18 @@ if [ "$TEST_BRANCH_PREFIX" ]; then
     exit 1
   fi
 fi
+
+################################
+# Git upstream remote branches #
+################################
+
+UPSTREAM_BRANCHES=`echo \
+  ${UPSTREAM_REMOTE}/master \
+  ${UPSTREAM_REMOTE}/{release,maint}-0.4.1 \
+  ${UPSTREAM_REMOTE}/{release,maint}-0.4.0 \
+  ${UPSTREAM_REMOTE}/{release,maint}-0.3.5 \
+  ${UPSTREAM_REMOTE}/{release,maint}-0.2.9 \
+  `
 
 ########################
 # Git branches to push #
@@ -106,6 +133,32 @@ fi
 ###############
 # Entry point #
 ###############
+
+# Skip the test branches that are the same as the upstream branches
+if [ "$PUSH_SAME" -eq 0 ]; then
+  NEW_PUSH_BRANCHES=
+  for b in $PUSH_BRANCHES; do
+    PUSH_COMMIT=`git rev-parse $b`
+    SKIP_UPSTREAM=
+    for u in $UPSTREAM_BRANCHES; do
+      UPSTREAM_COMMIT=`git rev-parse "$u"`
+      if [ "$PUSH_COMMIT" = "$UPSTREAM_COMMIT" ]; then
+        SKIP_UPSTREAM="$u"
+      fi
+    done
+    if [ "$SKIP_UPSTREAM" ]; then
+      printf "Skipping unchanged: %s remote: %s\n" \
+        "$b" "$SKIP_UPSTREAM"
+    else
+      if [ "$NEW_PUSH_BRANCHES" ]; then
+        NEW_PUSH_BRANCHES="${NEW_PUSH_BRANCHES} ${b}"
+      else
+        NEW_PUSH_BRANCHES="${b}"
+      fi
+    fi
+  done
+  PUSH_BRANCHES=${NEW_PUSH_BRANCHES}
+fi
 
 if [ "$PUSH_DELAY" -le 0 ]; then
   # Push all the branches at the same time
