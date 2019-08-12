@@ -492,6 +492,10 @@ service_intro_point_new(const node_t *node)
     }
   }
 
+  /* Flag if this intro point supports the INTRO2 dos defenses. */
+  ip->support_intro2_dos_defense =
+    node_supports_establish_intro_dos_extension(node);
+
   /* Finally, copy onion key from the node. */
   memcpy(&ip->onion_key, node_get_curve25519_onion_key(node),
          sizeof(ip->onion_key));

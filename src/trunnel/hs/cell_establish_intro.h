@@ -11,6 +11,8 @@
 struct trn_cell_extension_st;
 #define TRUNNEL_SHA3_256_LEN 32
 #define TRUNNEL_CELL_EXTENSION_TYPE_DOS 1
+#define TRUNNEL_DOS_PARAM_TYPE_INTRO2_RATE_PER_SEC 1
+#define TRUNNEL_DOS_PARAM_TYPE_INTRO2_BURST_PER_SEC 2
 #if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_TRN_CELL_EXTENSION_DOS_PARAM)
 struct trn_cell_extension_dos_param_st {
   uint8_t type;
