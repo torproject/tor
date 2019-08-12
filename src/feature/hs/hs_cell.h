@@ -79,6 +79,7 @@ typedef struct hs_cell_introduce2_data_t {
 
 /* Build cell API. */
 ssize_t hs_cell_build_establish_intro(const char *circ_nonce,
+                                      const hs_service_config_t *config,
                                       const hs_service_intro_point_t *ip,
                                       uint8_t *cell_out);
 ssize_t hs_cell_build_rendezvous1(const uint8_t *rendezvous_cookie,

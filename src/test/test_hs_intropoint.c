@@ -45,6 +45,9 @@ new_establish_intro_cell(const char *circ_nonce,
   uint8_t buf[RELAY_PAYLOAD_SIZE] = {0};
   trn_cell_establish_intro_t *cell = NULL;
   hs_service_intro_point_t *ip = NULL;
+  hs_service_config_t config;
+
+  memset(&config, 0, sizeof(config));
 
   /* Ensure that *cell_out is NULL such that we can use to check if we need to
    * free `cell` in case of an error. */
@@ -54,7 +57,7 @@ new_establish_intro_cell(const char *circ_nonce,
    * using this IP object. */
   ip = service_intro_point_new(NULL);
   tt_assert(ip);
-  cell_len = hs_cell_build_establish_intro(circ_nonce, ip, buf);
+  cell_len = hs_cell_build_establish_intro(circ_nonce, &config, ip, buf);
   tt_i64_op(cell_len, OP_GT, 0);
 
   cell_len = trn_cell_establish_intro_parse(&cell, buf, sizeof(buf));
@@ -75,12 +78,15 @@ new_establish_intro_encoded_cell(const char *circ_nonce, uint8_t *cell_out)
 {
   ssize_t cell_len = 0;
   hs_service_intro_point_t *ip = NULL;
+  hs_service_config_t config;
+
+  memset(&config, 0, sizeof(config));
 
   /* Auth key pair is generated in the constructor so we are all set for
    * using this IP object. */
   ip = service_intro_point_new(NULL);
   tt_assert(ip);
-  cell_len = hs_cell_build_establish_intro(circ_nonce, ip, cell_out);
+  cell_len = hs_cell_build_establish_intro(circ_nonce, &config, ip, cell_out);
   tt_i64_op(cell_len, OP_GT, 0);
 
  done:

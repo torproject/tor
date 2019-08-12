@@ -46,6 +46,10 @@ struct trn_cell_intro_established {
 
 const TRUNNEL_CELL_EXTENSION_TYPE_DOS = 0x01;
 
+/* DoS Parameter types. */
+const TRUNNEL_DOS_PARAM_TYPE_INTRO2_RATE_PER_SEC = 0x01;
+const TRUNNEL_DOS_PARAM_TYPE_INTRO2_BURST_PER_SEC = 0x02;
+
 /*
  * DoS Parameters Extension. See proposal 305 for more details.
  */

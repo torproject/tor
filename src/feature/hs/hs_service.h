@@ -76,6 +76,10 @@ typedef struct hs_service_intro_point_t {
    * circuit associated with this intro point has received. This is used to
    * prevent replay attacks. */
   replaycache_t *replay_cache;
+
+  /* Support the INTRO2 DoS defense. If set, the DoS extension described by
+   * proposal 305 is sent. */
+  unsigned int support_intro2_dos_defense : 1;
 } hs_service_intro_point_t;
 
 /* Object handling introduction points of a service. */
