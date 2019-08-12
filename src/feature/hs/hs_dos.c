@@ -46,11 +46,11 @@
 #define HS_DOS_INTRODUCE_ENABLED_DEFAULT 0
 
 /* Consensus parameters. */
-static uint32_t hs_dos_introduce_rate_per_sec =
+static uint32_t param_introduce_rate_per_sec =
   HS_DOS_INTRODUCE_DEFAULT_CELL_RATE_PER_SEC;
-static uint32_t hs_dos_introduce_burst_per_sec =
+static uint32_t param_introduce_burst_per_sec =
   HS_DOS_INTRODUCE_DEFAULT_CELL_BURST_PER_SEC;
-static uint32_t hs_dos_introduce_enabled =
+static uint32_t param_introduce_defense_enabled =
   HS_DOS_INTRODUCE_ENABLED_DEFAULT;
 
 static uint32_t
@@ -90,8 +90,8 @@ update_intro_circuits(void)
   SMARTLIST_FOREACH_BEGIN(intro_circs, circuit_t *, circ) {
     /* Adjust the rate/burst value that might have changed. */
     token_bucket_ctr_adjust(&TO_OR_CIRCUIT(circ)->introduce2_bucket,
-                            hs_dos_get_intro2_rate(),
-                            hs_dos_get_intro2_burst());
+                            hs_dos_get_intro2_rate_param(),
+                            hs_dos_get_intro2_burst_param());
   } SMARTLIST_FOREACH_END(circ);
 
   smartlist_free(intro_circs);
@@ -101,9 +101,9 @@ update_intro_circuits(void)
 static void
 set_consensus_parameters(const networkstatus_t *ns)
 {
-  hs_dos_introduce_rate_per_sec = get_param_rate_per_sec(ns);
-  hs_dos_introduce_burst_per_sec = get_param_burst_per_sec(ns);
-  hs_dos_introduce_enabled = get_param_intro_dos_enabled(ns);
+  param_introduce_rate_per_sec = get_param_rate_per_sec(ns);
+  param_introduce_burst_per_sec = get_param_burst_per_sec(ns);
+  param_introduce_defense_enabled = get_param_intro_dos_enabled(ns);
 
   /* The above might have changed which means we need to go through all
    * introduction circuits (relay side) and update the token buckets. */
@@ -114,18 +114,25 @@ set_consensus_parameters(const networkstatus_t *ns)
  * Public API.
  */
 
-/* Return the INTRODUCE2 cell rate per second. */
+/* Return the INTRODUCE2 cell rate per second (param or default). */
 uint32_t
-hs_dos_get_intro2_rate(void)
+hs_dos_get_intro2_rate_param(void)
 {
-  return hs_dos_introduce_rate_per_sec;
+  return param_introduce_rate_per_sec;
 }
 
-/* Return the INTRODUCE2 cell burst per second. */
+/* Return the INTRODUCE2 cell burst per second (param or default). */
 uint32_t
-hs_dos_get_intro2_burst(void)
+hs_dos_get_intro2_burst_param(void)
 {
-  return hs_dos_introduce_burst_per_sec;
+  return param_introduce_burst_per_sec;
+}
+
+/* Return the INTRODUCE2 DoS defense enabled flag (param or default). */
+unsigned int
+hs_dos_get_intro2_enabled_param(void)
+{
+  return (unsigned int) param_introduce_defense_enabled;
 }
 
 /* Called when the consensus has changed. We might have new consensus
@@ -150,7 +157,7 @@ hs_dos_can_send_intro2(or_circuit_t *s_intro_circ)
   tor_assert(s_intro_circ);
 
   /* Always allowed if the defense is disabled. */
-  if (!hs_dos_introduce_enabled) {
+  if (!param_introduce_defense_enabled) {
     return true;
   }
 
