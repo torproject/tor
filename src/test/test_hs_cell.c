@@ -38,11 +38,13 @@ test_gen_establish_intro_cell(void *arg)
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
      attempt to parse it. */
   {
+    hs_service_config_t config;
+    memset(&config, 0, sizeof(config));
     /* We only need the auth key pair here. */
     hs_service_intro_point_t *ip = service_intro_point_new(NULL);
     /* Auth key pair is generated in the constructor so we are all set for
      * using this IP object. */
-    ret = hs_cell_build_establish_intro(circ_nonce, ip, buf);
+    ret = hs_cell_build_establish_intro(circ_nonce, &config, ip, buf);
     service_intro_point_free(ip);
     tt_u64_op(ret, OP_GT, 0);
   }
@@ -97,6 +99,9 @@ test_gen_establish_intro_cell_bad(void *arg)
   trn_cell_establish_intro_t *cell = NULL;
   char circ_nonce[DIGEST_LEN] = {0};
   hs_service_intro_point_t *ip = NULL;
+  hs_service_config_t config;
+
+  memset(&config, 0, sizeof(config));
 
   MOCK(ed25519_sign_prefixed, mock_ed25519_sign_prefixed);
 
@@ -108,7 +113,7 @@ test_gen_establish_intro_cell_bad(void *arg)
   cell = trn_cell_establish_intro_new();
   tt_assert(cell);
   ip = service_intro_point_new(NULL);
-  cell_len = hs_cell_build_establish_intro(circ_nonce, ip, NULL);
+  cell_len = hs_cell_build_establish_intro(circ_nonce, &config, ip, NULL);
   service_intro_point_free(ip);
   expect_log_msg_containing("Unable to make signature for "
                             "ESTABLISH_INTRO cell.");
