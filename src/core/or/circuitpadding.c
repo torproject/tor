@@ -2696,8 +2696,9 @@ circpad_node_supports_padding(const node_t *node)
 {
   if (node->rs) {
     log_fn(LOG_INFO, LD_CIRC, "Checking padding: %s",
-           node->rs->pv.supports_padding ? "supported" : "unsupported");
-    return node->rs->pv.supports_padding;
+           node->rs->pv.supports_hs_setup_padding ?
+              "supported" : "unsupported");
+    return node->rs->pv.supports_hs_setup_padding;
   }
 
   log_fn(LOG_INFO, LD_CIRC, "Empty routerstatus in padding check");
