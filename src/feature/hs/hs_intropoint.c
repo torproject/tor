@@ -26,6 +26,7 @@
 
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_common.h"
+#include "feature/hs/hs_config.h"
 #include "feature/hs/hs_descriptor.h"
 #include "feature/hs/hs_dos.h"
 #include "feature/hs/hs_intropoint.h"
@@ -181,6 +182,110 @@ hs_intro_send_intro_established_cell,(or_circuit_t *circ))
   return ret;
 }
 
+static void
+handle_establish_intro_cell_dos_extension(
+                                const trn_cell_extension_field_t *field,
+                                or_circuit_t *circ)
+{
+  ssize_t ret;
+  uint64_t intro2_rate_per_sec = 0, intro2_burst_per_sec = 0;
+  trn_cell_extension_dos_t *dos = NULL;
+
+  tor_assert(field);
+  tor_assert(circ);
+
+  ret = trn_cell_extension_dos_parse(&dos,
+                 trn_cell_extension_field_getconstarray_field(field),
+                 trn_cell_extension_field_getlen_field(field));
+  if (ret < 0) {
+    goto end;
+  }
+
+  for (size_t i = 0; i < trn_cell_extension_dos_get_n_params(dos); i++) {
+    const trn_cell_extension_dos_param_t *param =
+      trn_cell_extension_dos_getconst_params(dos, i);
+    if (BUG(param == NULL)) {
+      goto end;
+    }
+
+    switch (trn_cell_extension_dos_param_get_type(param)) {
+    case TRUNNEL_DOS_PARAM_TYPE_INTRO2_RATE_PER_SEC:
+      intro2_rate_per_sec = trn_cell_extension_dos_param_get_value(param);
+      break;
+    case TRUNNEL_DOS_PARAM_TYPE_INTRO2_BURST_PER_SEC:
+      intro2_burst_per_sec = trn_cell_extension_dos_param_get_value(param);
+      break;
+    default:
+      goto end;
+    }
+  }
+
+  /* Validation. A value of 0 on either of them means the defenses are
+   * disabled so we ignore. */
+  if ((intro2_rate_per_sec > HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MAX ||
+       intro2_rate_per_sec <= HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN) ||
+      (intro2_burst_per_sec > HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX ||
+       intro2_burst_per_sec <= HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN) ||
+      (intro2_burst_per_sec < intro2_rate_per_sec)) {
+    circ->introduce2_dos_defense_enabled = 0;
+    log_info(LD_REND, "Intro point DoS defenses disabled due to bad values");
+  } else {
+    circ->introduce2_dos_defense_enabled = 1;
+
+    /* Initialize the INTRODUCE2 token bucket for the rate limiting. */
+    token_bucket_ctr_init(&circ->introduce2_bucket,
+                          (uint32_t) intro2_rate_per_sec,
+                          (uint32_t) intro2_burst_per_sec,
+                          (uint32_t) approx_time());
+    log_debug(LD_REND, "Intro point DoS defenses enabled. Rate is %" PRIu64
+                       " and Burst is %" PRIu64, intro2_rate_per_sec,
+                       intro2_burst_per_sec);
+  }
+
+ end:
+  trn_cell_extension_dos_free(dos);
+  return;
+}
+
+static void
+handle_establish_intro_cell_extensions(
+                            const trn_cell_establish_intro_t *parsed_cell,
+                            or_circuit_t *circ)
+{
+  const trn_cell_extension_t *extensions;
+
+  tor_assert(parsed_cell);
+  tor_assert(circ);
+
+  extensions = trn_cell_establish_intro_getconst_extensions(parsed_cell);
+  if (extensions == NULL) {
+    goto end;
+  }
+
+  /* Go over all extensions. */
+  for (size_t idx = 0; idx < trn_cell_extension_get_num(extensions); idx++) {
+    const trn_cell_extension_field_t *field =
+      trn_cell_extension_getconst_fields(extensions, idx);
+    if (BUG(field == NULL)) {
+      /* The number of extensions should match the number of fields. */
+      break;
+    }
+
+    switch (trn_cell_extension_field_get_field_type(field)) {
+    case TRUNNEL_CELL_EXTENSION_TYPE_DOS:
+      /* After this, the circuit should be set for DoS defenses. */
+      handle_establish_intro_cell_dos_extension(field, circ);
+      break;
+    default:
+      /* Unknown extension. Skip over. */
+      break;
+    }
+  }
+
+ end:
+  return;
+}
+
 /** We received an ESTABLISH_INTRO <b>parsed_cell</b> on <b>circ</b>. It's
  *  well-formed and passed our verifications. Perform appropriate actions to
  *  establish an intro point. */
@@ -193,6 +298,18 @@ handle_verified_establish_intro_cell(or_circuit_t *circ,
   get_auth_key_from_cell(&auth_key, RELAY_COMMAND_ESTABLISH_INTRO,
                          parsed_cell);
 
+  /* Initialize the INTRODUCE2 token bucket for the DoS defenses using the
+   * consensus/default values. We might get a cell extension that changes
+   * those but if we don't, the default or consensus parameters are used. */
+  circ->introduce2_dos_defense_enabled = hs_dos_get_intro2_enabled_param();
+  token_bucket_ctr_init(&circ->introduce2_bucket,
+                        hs_dos_get_intro2_rate_param(),
+                        hs_dos_get_intro2_burst_param(),
+                        (uint32_t) approx_time());
+
+  /* Handle cell extension if any. */
+  handle_establish_intro_cell_extensions(parsed_cell, circ);
+
   /* Then notify the hidden service that the intro point is established by
      sending an INTRO_ESTABLISHED cell */
   if (hs_intro_send_intro_established_cell(circ)) {
@@ -204,11 +321,6 @@ handle_verified_establish_intro_cell(or_circuit_t *circ,
   hs_circuitmap_register_intro_circ_v3_relay_side(circ, &auth_key);
   /* Repurpose this circuit into an intro circuit. */
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_INTRO_POINT);
-  /* Initialize the INTRODUCE2 token bucket for the rate limiting. */
-  token_bucket_ctr_init(&circ->introduce2_bucket,
-                        hs_dos_get_intro2_rate_param(),
-                        hs_dos_get_intro2_burst_param(),
-                        (uint32_t) approx_time());
 
   return 0;
 }
