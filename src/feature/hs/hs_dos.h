@@ -20,11 +20,12 @@ void hs_dos_init(void);
 /* Consensus. */
 void hs_dos_consensus_has_changed(const networkstatus_t *ns);
 
+/* Introduction Point. */
 bool hs_dos_can_send_intro2(or_circuit_t *s_intro_circ);
 
-/* Getters. */
-uint32_t hs_dos_get_intro2_rate(void);
-uint32_t hs_dos_get_intro2_burst(void);
+unsigned int hs_dos_get_intro2_enabled_param(void);
+uint32_t hs_dos_get_intro2_rate_param(void);
+uint32_t hs_dos_get_intro2_burst_param(void);
 
 #ifdef HS_DOS_PRIVATE
 

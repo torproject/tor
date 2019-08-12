@@ -205,8 +205,10 @@ handle_verified_establish_intro_cell(or_circuit_t *circ,
   /* Repurpose this circuit into an intro circuit. */
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_INTRO_POINT);
   /* Initialize the INTRODUCE2 token bucket for the rate limiting. */
-  token_bucket_ctr_init(&circ->introduce2_bucket, hs_dos_get_intro2_rate(),
-                        hs_dos_get_intro2_burst(), (uint32_t) approx_time());
+  token_bucket_ctr_init(&circ->introduce2_bucket,
+                        hs_dos_get_intro2_rate_param(),
+                        hs_dos_get_intro2_burst_param(),
+                        (uint32_t) approx_time());
 
   return 0;
 }
