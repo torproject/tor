@@ -156,8 +156,10 @@ hs_dos_can_send_intro2(or_circuit_t *s_intro_circ)
 {
   tor_assert(s_intro_circ);
 
-  /* Always allowed if the defense is disabled. */
-  if (!param_introduce_defense_enabled) {
+  /* Allow to send the cell if the DoS defenses are disabled on the circuit.
+   * This can be set by the consensus, the ESTABLISH_INTRO cell extension or
+   * the hardcoded values in tor code. */
+  if (!s_intro_circ->introduce2_dos_defense_enabled) {
     return true;
   }
 
