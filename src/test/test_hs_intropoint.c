@@ -26,6 +26,7 @@
 #include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_common.h"
+#include "feature/hs/hs_config.h"
 #include "feature/hs/hs_dos.h"
 #include "feature/hs/hs_intropoint.h"
 #include "feature/hs/hs_service.h"
@@ -909,6 +910,153 @@ test_received_introduce1_handling(void *arg)
   UNMOCK(relay_send_command_from_edge_);
 }
 
+static void
+test_received_establish_intro_dos_ext(void *arg)
+{
+  int ret;
+  ssize_t cell_len = 0;
+  uint8_t cell[RELAY_PAYLOAD_SIZE] = {0};
+  char circ_nonce[DIGEST_LEN] = {0};
+  hs_service_intro_point_t *ip = NULL;
+  hs_service_config_t config;
+  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
+
+  (void) arg;
+
+  MOCK(relay_send_command_from_edge_, mock_relay_send_command_from_edge);
+
+  hs_circuitmap_init();
+
+  /* Setup. */
+  crypto_rand(circ_nonce, sizeof(circ_nonce));
+  ip = service_intro_point_new(NULL);
+  tt_assert(ip);
+  ip->support_intro2_dos_defense = 1;
+  memset(&config, 0, sizeof(config));
+  config.has_dos_defense_enabled = 1;
+  config.intro_dos_rate_per_sec = 13;
+  config.intro_dos_burst_per_sec = 42;
+  helper_prepare_circ_for_intro(intro_circ, circ_nonce);
+  /* The INTRO2 bucket should be 0 at this point. */
+  tt_u64_op(token_bucket_ctr_get(&intro_circ->introduce2_bucket), OP_EQ, 0);
+  tt_u64_op(intro_circ->introduce2_bucket.cfg.rate, OP_EQ, 0);
+  tt_int_op(intro_circ->introduce2_bucket.cfg.burst, OP_EQ, 0);
+  tt_int_op(intro_circ->introduce2_dos_defense_enabled, OP_EQ, 0);
+
+  /* Case 1: Build encoded cell. Usable DoS parameters. */
+  cell_len = hs_cell_build_establish_intro(circ_nonce, &config, ip, cell);
+  tt_size_op(cell_len, OP_GT, 0);
+  /* Pass it to the intro point. */
+  ret = hs_intro_received_establish_intro(intro_circ, cell, cell_len);
+  tt_int_op(ret, OP_EQ, 0);
+  /* Should be set to the burst value. */
+  tt_u64_op(token_bucket_ctr_get(&intro_circ->introduce2_bucket), OP_EQ, 42);
+  /* Validate the config of the intro2 bucket. */
+  tt_u64_op(intro_circ->introduce2_bucket.cfg.rate, OP_EQ, 13);
+  tt_int_op(intro_circ->introduce2_bucket.cfg.burst, OP_EQ, 42);
+  tt_int_op(intro_circ->introduce2_dos_defense_enabled, OP_EQ, 1);
+
+  /* Need to reset the circuit in between test cases. */
+  circuit_free_(TO_CIRCUIT(intro_circ));
+  intro_circ = or_circuit_new(0,NULL);
+  helper_prepare_circ_for_intro(intro_circ, circ_nonce);
+
+  /* Case 2: Build encoded cell. Bad DoS parameters. */
+  config.has_dos_defense_enabled = 1;
+  config.intro_dos_rate_per_sec = UINT_MAX;
+  config.intro_dos_burst_per_sec = 13;
+  cell_len = hs_cell_build_establish_intro(circ_nonce, &config, ip, cell);
+  tt_size_op(cell_len, OP_GT, 0);
+  /* Pass it to the intro point. */
+  ret = hs_intro_received_establish_intro(intro_circ, cell, cell_len);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_u64_op(token_bucket_ctr_get(&intro_circ->introduce2_bucket), OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_DEFAULT);
+  tt_u64_op(intro_circ->introduce2_bucket.cfg.rate, OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_DEFAULT);
+  tt_int_op(intro_circ->introduce2_bucket.cfg.burst, OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_DEFAULT);
+  tt_int_op(intro_circ->introduce2_dos_defense_enabled, OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_DEFAULT);
+
+  /* Need to reset the circuit in between test cases. */
+  circuit_free_(TO_CIRCUIT(intro_circ));
+  intro_circ = or_circuit_new(0,NULL);
+  helper_prepare_circ_for_intro(intro_circ, circ_nonce);
+
+  /* Case 3: Build encoded cell. Burst is smaller than rate. Not allowed. */
+  config.has_dos_defense_enabled = 1;
+  config.intro_dos_rate_per_sec = 87;
+  config.intro_dos_burst_per_sec = 45;
+  cell_len = hs_cell_build_establish_intro(circ_nonce, &config, ip, cell);
+  tt_size_op(cell_len, OP_GT, 0);
+  /* Pass it to the intro point. */
+  ret = hs_intro_received_establish_intro(intro_circ, cell, cell_len);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_u64_op(token_bucket_ctr_get(&intro_circ->introduce2_bucket), OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_DEFAULT);
+  tt_u64_op(intro_circ->introduce2_bucket.cfg.rate, OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_DEFAULT);
+  tt_int_op(intro_circ->introduce2_bucket.cfg.burst, OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_DEFAULT);
+  tt_int_op(intro_circ->introduce2_dos_defense_enabled, OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_DEFAULT);
+
+  /* Need to reset the circuit in between test cases. */
+  circuit_free_(TO_CIRCUIT(intro_circ));
+  intro_circ = or_circuit_new(0,NULL);
+  helper_prepare_circ_for_intro(intro_circ, circ_nonce);
+
+  /* Case 4: Build encoded cell. Rate is 0 but burst is not 0. Disables the
+   * defense. */
+  config.has_dos_defense_enabled = 1;
+  config.intro_dos_rate_per_sec = 0;
+  config.intro_dos_burst_per_sec = 45;
+  cell_len = hs_cell_build_establish_intro(circ_nonce, &config, ip, cell);
+  tt_size_op(cell_len, OP_GT, 0);
+  /* Pass it to the intro point. */
+  ret = hs_intro_received_establish_intro(intro_circ, cell, cell_len);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_u64_op(token_bucket_ctr_get(&intro_circ->introduce2_bucket), OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_DEFAULT);
+  tt_u64_op(intro_circ->introduce2_bucket.cfg.rate, OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_DEFAULT);
+  tt_int_op(intro_circ->introduce2_bucket.cfg.burst, OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_DEFAULT);
+  tt_int_op(intro_circ->introduce2_dos_defense_enabled, OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_DEFAULT);
+
+  /* Need to reset the circuit in between test cases. */
+  circuit_free_(TO_CIRCUIT(intro_circ));
+  intro_circ = or_circuit_new(0,NULL);
+  helper_prepare_circ_for_intro(intro_circ, circ_nonce);
+
+  /* Case 5: Build encoded cell. Burst is 0 but rate is not 0. Disables the
+   * defense. */
+  config.has_dos_defense_enabled = 1;
+  config.intro_dos_rate_per_sec = 45;
+  config.intro_dos_burst_per_sec = 0;
+  cell_len = hs_cell_build_establish_intro(circ_nonce, &config, ip, cell);
+  tt_size_op(cell_len, OP_GT, 0);
+  /* Pass it to the intro point. */
+  ret = hs_intro_received_establish_intro(intro_circ, cell, cell_len);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_u64_op(token_bucket_ctr_get(&intro_circ->introduce2_bucket), OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_DEFAULT);
+  tt_u64_op(intro_circ->introduce2_bucket.cfg.rate, OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_DEFAULT);
+  tt_int_op(intro_circ->introduce2_bucket.cfg.burst, OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_DEFAULT);
+  tt_int_op(intro_circ->introduce2_dos_defense_enabled, OP_EQ,
+            HS_CONFIG_V3_DOS_DEFENSE_DEFAULT);
+
+ done:
+  circuit_free_(TO_CIRCUIT(intro_circ));
+  service_intro_point_free(ip);
+  hs_circuitmap_free_all();
+  UNMOCK(relay_send_command_from_edge_);
+}
+
 static void *
 hs_subsystem_setup_fn(const struct testcase_t *tc)
 {
@@ -966,6 +1114,9 @@ struct testcase_t hs_intropoint_tests[] = {
 
   { "received_introduce1_handling",
     test_received_introduce1_handling, TT_FORK, NULL, &test_setup},
+
+  { "received_establish_intro_dos_ext",
+    test_received_establish_intro_dos_ext, TT_FORK, NULL, &test_setup},
 
   END_OF_TESTCASES
 };
