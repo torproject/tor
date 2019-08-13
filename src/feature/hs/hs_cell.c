@@ -554,7 +554,7 @@ build_establish_intro_dos_extension(const hs_service_config_t *service_config,
 
 /* Allocate and build all the ESTABLISH_INTRO cell extension. The given
  * extensions pointer is always set to a valid cell extension object. */
-static trn_cell_extension_t *
+STATIC trn_cell_extension_t *
 build_establish_intro_extensions(const hs_service_config_t *service_config,
                                  const hs_service_intro_point_t *ip)
 {
