@@ -1244,16 +1244,15 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     return -1;
   }
 
-  if (!ec.orport_ipv4.port || tor_addr_is_null(&ec.orport_ipv4.addr)) {
+  if ((!ec.orport_ipv4.port || tor_addr_is_null(&ec.orport_ipv4.addr)) ||
+      (!ec.orport_ipv6.port || tor_addr_is_null(&ec.orport_ipv6.addr))) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Client asked me to extend to zero destination port or addr.");
     return -1;
   }
 
   if ((tor_addr_is_internal(&ec.orport_ipv4.addr, 0) ||
-       tor_addr_is_null(&ec.orport_ipv4.addr) ||
-       tor_addr_is_internal(&ec.orport_ipv6.addr, 0 ||
-       tor_addr_is_null(&ec.orport_ipv6.addr))) &&
+       tor_addr_is_internal(&ec.orport_ipv6.addr, 0)) ||
       !get_options()->ExtendAllowPrivateAddresses) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Client asked me to extend to a private address");
