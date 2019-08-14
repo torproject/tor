@@ -57,6 +57,7 @@ test_can_send_intro2(void *arg)
 
   /* Make that circuit a service intro point. */
   circuit_change_purpose(TO_CIRCUIT(or_circ), CIRCUIT_PURPOSE_INTRO_POINT);
+  or_circ->introduce2_dos_defense_enabled = 1;
   /* Initialize the INTRODUCE2 token bucket for the rate limiting. */
   token_bucket_ctr_init(&or_circ->introduce2_bucket,
                         hs_dos_get_intro2_rate_param(),
