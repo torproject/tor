@@ -428,7 +428,7 @@ dirserv_free_fingerprint_list(void)
 
 /** Return -1 if <b>ri</b> has a private or otherwise bad address,
  * unless we're configured to not care. Return 0 if all ok. */
-static int
+int
 dirserv_router_has_valid_address(routerinfo_t *ri)
 {
   tor_addr_t addr;
@@ -438,8 +438,8 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
 
   if (tor_addr_is_internal(&addr, 0) ||
       tor_addr_is_null(&addr) ||
-      tor_addr_is_internal(&ri->ipv6_addr, 0) ||
-      tor_addr_is_null(&ri->ipv6_addr)) {
+      (tor_addr_is_internal(&ri->ipv6_addr, 0) && /* Only check internal v6 */
+       !tor_addr_is_null(&ri->ipv6_addr))) {      /* on non-null addresses. */
     log_info(LD_DIRSERV,
              "Router %s published internal IP address. Refusing.",
              router_describe(ri));
