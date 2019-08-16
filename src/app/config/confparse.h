@@ -75,6 +75,8 @@ typedef struct config_format_t {
 typedef struct config_mgr_t config_mgr_t;
 
 config_mgr_t *config_mgr_new(const config_format_t *toplevel_fmt);
+int config_validate(const config_mgr_t *mgr,
+                    const void *oldval, void *newval, char **msg_out);
 void config_mgr_free_(config_mgr_t *mgr);
 int config_mgr_add_format(config_mgr_t *mgr,
                           const config_format_t *fmt);

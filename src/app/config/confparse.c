@@ -380,6 +380,55 @@ config_new(const config_mgr_t *mgr)
   return opts;
 }
 
+/**
+ * Helper: as config_validate(), but validate only a single format/object
+ * pair.
+*/
+static int
+config_validate_single(const config_format_t *fmt,
+                       const void *oldval,
+                       void *newval,
+                       char **msg_out)
+{
+  if (fmt->validate_fn) {
+    return fmt->validate_fn(oldval, newval, msg_out);
+  } else {
+    return 0;
+  }
+}
+
+/** Use <b>mgr</b> to check whether <b>newval</b> is a valid configuration.
+ * If <b>oldval</b> is present, check whether the transition from
+ * <b>oldval</b> to <b>newval</b> is valid.
+ *
+ * Some of the methods called here may update the values in <b>newval</b>,
+ * though in general they should only update derived fields rather than fields
+ * managed by a configuration format.
+ *
+ * On success, return 0.  On failure, return -1 and set *<b>msg_out</b> to a
+ * description of the problem.
+ */
+int
+config_validate(const config_mgr_t *mgr,
+                const void *oldval, void *newval, char **msg_out)
+{
+  if (config_validate_single(mgr->toplevel, oldval, newval, msg_out) < 0) {
+    return -1;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(mgr->subconfigs, const config_format_t *, fmt) {
+    const void *old_obj = NULL;
+    if (oldval)
+      old_obj = config_mgr_get_obj(mgr, oldval, fmt_sl_idx);
+    void *new_obj = config_mgr_get_obj_mutable(mgr, newval, fmt_sl_idx);
+    if (config_validate_single(fmt, old_obj, new_obj, msg_out) < 0) {
+      return -1;
+    }
+  } SMARTLIST_FOREACH_END(fmt);
+
+  return 0;
+}
+
 /*
  * Functions to parse config options
  */
@@ -1049,7 +1098,7 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
 
   /* XXX use a 1 here so we don't add a new log line while dumping */
   if (default_options == NULL) {
-    if (fmt->validate_fn(NULL, defaults_tmp, &msg) < 0) {
+    if (config_validate(mgr, NULL, defaults_tmp, &msg) < 0) {
       // LCOV_EXCL_START
       log_err(LD_BUG, "Failed to validate default config: %s", msg);
       tor_free(msg);
