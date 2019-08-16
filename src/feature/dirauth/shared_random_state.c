@@ -95,7 +95,7 @@ static const config_format_t state_format = {
    offsetof(sr_disk_state_t, magic_),
   },
   .vars = state_vars,
-  .validate_fn = disk_state_validate_cb,
+  .legacy_validate_fn = disk_state_validate_cb,
   .extra = &state_extra_var,
   .config_suite_offset = -1,
 };

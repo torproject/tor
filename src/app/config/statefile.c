@@ -165,7 +165,7 @@ static const config_format_t state_format = {
   },
   .abbrevs = state_abbrevs_,
   .vars = state_vars_,
-  .validate_fn = or_state_validate_cb,
+  .legacy_validate_fn = or_state_validate_cb,
   .extra = &state_extra_var,
   .config_suite_offset = offsetof(or_state_t, substates_),
 };

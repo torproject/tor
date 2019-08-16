@@ -860,7 +860,7 @@ static const config_format_t options_format = {
   .abbrevs = option_abbrevs_,
   .deprecations = option_deprecation_notes_,
   .vars = option_vars_,
-  .validate_fn = options_validate_cb,
+  .legacy_validate_fn = options_validate_cb,
   .clear_fn = options_clear_cb,
   .config_suite_offset = offsetof(or_options_t, subconfigs_),
 };
