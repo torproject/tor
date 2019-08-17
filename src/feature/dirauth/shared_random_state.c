@@ -309,11 +309,7 @@ disk_state_set(sr_disk_state_t *state)
 static int
 disk_state_validate_cb(const void *oldval, void *newval, char **msg)
 {
-  // when we start for the first time, we want to avoid this callback
-  // because it rejects the default values.
-  if (!oldval)
-    return 0;
-
+  (void)oldval;
   (void)msg;
   const sr_disk_state_t *state = newval;
   time_t now;
@@ -729,7 +725,9 @@ disk_state_save_to_disk(void)
   /* Make sure that our disk state is up to date with our memory state
    * before saving it to disk. */
   disk_state_update();
-  state = config_dump(get_srs_mgr(), NULL, sr_disk_state, 0, 0);
+  sr_disk_state_t *default_state = disk_state_new(0);
+  state = config_dump(get_srs_mgr(), default_state, sr_disk_state, 0, 0);
+  disk_state_free(default_state);
   format_local_iso_time(tbuf, now);
   tor_asprintf(&content,
                "# Tor shared random state file last generated on %s "
