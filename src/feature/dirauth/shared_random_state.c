@@ -59,8 +59,7 @@ DUMMY_TYPECHECK_INSTANCE(sr_disk_state_t);
 /* Our persistent state magic number. */
 #define SR_DISK_STATE_MAGIC 0x98AB1254
 
-static int disk_state_validate_cb(const void *old_state, void *state,
-                                  char **msg);
+static int disk_state_validate_cb(const void *state, smartlist_t *errs_out);
 
 /* Array of variables that are saved to disk as a persistent state. */
 static const config_var_t state_vars[] = {
@@ -94,7 +93,7 @@ static const config_format_t state_format = {
    offsetof(sr_disk_state_t, magic_),
   },
   .vars = state_vars,
-  .legacy_validate_fn = disk_state_validate_cb,
+  .validate_fn = disk_state_validate_cb,
   .extra = &state_extra_var,
   .config_suite_offset = -1,
 };
@@ -307,10 +306,8 @@ disk_state_set(sr_disk_state_t *state)
 /* Return -1 if the disk state is invalid (something in there that we can't or
  * shouldn't use). Return 0 if everything checks out. */
 static int
-disk_state_validate_cb(const void *oldval, void *newval, char **msg)
+disk_state_validate_cb(const void *newval, smartlist_t *errs)
 {
-  (void)oldval;
-  (void)msg;
   const sr_disk_state_t *state = newval;
   time_t now;
 
@@ -319,20 +316,22 @@ disk_state_validate_cb(const void *oldval, void *newval, char **msg)
   /* Do we support the protocol version in the state or is it 0 meaning
    * Version wasn't found in the state file or bad anyway ? */
   if (state->Version == 0 || state->Version > SR_PROTO_VERSION) {
+    smartlist_add_asprintf(errs, "Invalid version number %d", state->Version);
     goto invalid;
   }
 
   /* If the valid until time is before now, we shouldn't use that state. */
   now = time(NULL);
   if (state->ValidUntil < now) {
-    log_info(LD_DIR, "SR: Disk state has expired. Ignoring it.");
+    smartlist_add_strdup(errs, "SR: Disk state has expired. Ignoring it.");
     goto invalid;
   }
 
   /* Make sure we don't have a valid after time that is earlier than a valid
    * until time which would make things not work well. */
   if (state->ValidAfter >= state->ValidUntil) {
-    log_info(LD_DIR, "SR: Disk state valid after/until times are invalid.");
+    smartlist_add_strdup(errs,
+                      "SR: Disk state valid after/until times are invalid.");
     goto invalid;
   }
 
