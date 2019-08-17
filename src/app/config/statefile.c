@@ -141,8 +141,7 @@ static const config_var_t state_vars_[] = {
 
 static int or_state_validate(or_state_t *state);
 
-static int or_state_validate_cb(const void *old_options, void *options,
-                                char **msg);
+static int or_state_validate_cb(const void *, smartlist_t *);
 
 /** Magic value for or_state_t. */
 #define OR_STATE_MAGIC 0x57A73f57
@@ -165,7 +164,7 @@ static const config_format_t state_format = {
   },
   .abbrevs = state_abbrevs_,
   .vars = state_vars_,
-  .legacy_validate_fn = or_state_validate_cb,
+  .validate_fn = or_state_validate_cb,
   .extra = &state_extra_var,
   .config_suite_offset = offsetof(or_state_t, substates_),
 };
@@ -248,10 +247,10 @@ state_transport_line_is_valid(const char *line)
 /** Return 0 if all TransportProxy lines in <b>state</b> are well
  *  formed. Otherwise, return -1. */
 static int
-validate_transports_in_state(or_state_t *state)
+validate_transports_in_state(const or_state_t *state)
 {
   int broken = 0;
-  config_line_t *line;
+  const config_line_t *line;
 
   for (line = state->TransportProxies ; line ; line = line->next) {
     tor_assert(!strcmp(line->key, "TransportProxy"));
@@ -277,18 +276,23 @@ or_state_validate(or_state_t *state)
  * <b>state</b>.
  */
 static int
-or_state_validate_cb(const void *oldval, void *newval, char **msg)
+or_state_validate_cb(const void *newval, smartlist_t *errs)
 {
-  (void)oldval;
-  or_state_t *state = newval;
+  const or_state_t *state = newval;
+  char *msg = NULL;
+  int rv = 0;
 
-  if (entry_guards_parse_state(state, 0, msg)<0)
-    return -1;
+  if (entry_guards_parse_state(state, 0, &msg)<0) {
+    smartlist_add(errs, msg);
+    rv = -1;
+  }
 
-  if (validate_transports_in_state(state)<0)
-    return -1;
+  if (validate_transports_in_state(state)<0) {
+    smartlist_add_strdup(errs, "Error in transports in state file");
+    rv = -1;
+  }
 
-  return 0;
+  return rv;
 }
 
 /** Replace the current persistent state with <b>new_state</b> */

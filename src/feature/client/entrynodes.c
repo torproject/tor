@@ -3141,7 +3141,7 @@ entry_guards_update_guards_in_state(or_state_t *state)
  * check whether replacing would work.)
  */
 static int
-entry_guards_load_guards_from_state(or_state_t *state, int set)
+entry_guards_load_guards_from_state(const or_state_t *state, int set)
 {
   const config_line_t *line = state->Guard;
   int n_errors = 0;
@@ -3372,7 +3372,7 @@ pathbias_check_close_success_count(entry_guard_t *node)
  * describing the error, and return -1.
  */
 int
-entry_guards_parse_state(or_state_t *state, int set, char **msg)
+entry_guards_parse_state(const or_state_t *state, int set, char **msg)
 {
   entry_guards_dirty = 0;
   int r1 = entry_guards_load_guards_from_state(state, set);

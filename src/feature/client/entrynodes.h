@@ -600,7 +600,7 @@ int entry_list_is_constrained(const or_options_t *options);
 int guards_retry_optimistic(const or_options_t *options);
 int entry_guards_parse_state_for_guard_selection(
     guard_selection_t *gs, or_state_t *state, int set, char **msg);
-int entry_guards_parse_state(or_state_t *state, int set, char **msg);
+int entry_guards_parse_state(const or_state_t *state, int set, char **msg);
 void entry_guards_update_state(or_state_t *state);
 int getinfo_helper_entry_guards(control_connection_t *conn,
                                 const char *question, char **answer,
