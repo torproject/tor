@@ -139,7 +139,7 @@ static const config_var_t state_vars_[] = {
 #undef VAR
 #undef V
 
-static int or_state_validate(or_state_t *state, char **msg);
+static int or_state_validate(or_state_t *state);
 
 static int or_state_validate_cb(const void *old_options, void *options,
                                 char **msg);
@@ -266,14 +266,9 @@ validate_transports_in_state(or_state_t *state)
 }
 
 static int
-or_state_validate_cb(const void *old_state, void *state,
-                     char **msg)
+or_state_validate(or_state_t *state)
 {
-  /* We don't use these; only options do. Still, we need to match that
-   * signature. */
-  (void) old_state;
-
-  return or_state_validate(state, msg);
+  return config_validate(get_state_mgr(), NULL, state, NULL);
 }
 
 /** Return 0 if every setting in <b>state</b> is reasonable, and a
@@ -282,8 +277,11 @@ or_state_validate_cb(const void *old_state, void *state,
  * <b>state</b>.
  */
 static int
-or_state_validate(or_state_t *state, char **msg)
+or_state_validate_cb(const void *oldval, void *newval, char **msg)
 {
+  (void)oldval;
+  or_state_t *state = newval;
+
   if (entry_guards_parse_state(state, 0, msg)<0)
     return -1;
 
@@ -416,13 +414,8 @@ or_state_load(void)
     }
   }
 
-  if (!badstate && or_state_validate(new_state, &errmsg) < 0)
+  if (!badstate && or_state_validate(new_state) < 0)
     badstate = 1;
-
-  if (errmsg) {
-    log_warn(LD_GENERAL, "%s", errmsg);
-    tor_free(errmsg);
-  }
 
   if (badstate && !contents) {
     log_warn(LD_BUG, "Uh oh.  We couldn't even validate our own default state."

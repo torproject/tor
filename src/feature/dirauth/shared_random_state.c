@@ -59,9 +59,8 @@ DUMMY_TYPECHECK_INSTANCE(sr_disk_state_t);
 /* Our persistent state magic number. */
 #define SR_DISK_STATE_MAGIC 0x98AB1254
 
-static int
-disk_state_validate_cb(const void *old_state, void *state,
-                       char **msg);
+static int disk_state_validate_cb(const void *old_state, void *state,
+                                  char **msg);
 
 /* Array of variables that are saved to disk as a persistent state. */
 static const config_var_t state_vars[] = {
@@ -308,8 +307,15 @@ disk_state_set(sr_disk_state_t *state)
 /* Return -1 if the disk state is invalid (something in there that we can't or
  * shouldn't use). Return 0 if everything checks out. */
 static int
-disk_state_validate(const sr_disk_state_t *state)
+disk_state_validate_cb(const void *oldval, void *newval, char **msg)
 {
+  // when we start for the first time, we want to avoid this callback
+  // because it rejects the default values.
+  if (!oldval)
+    return 0;
+
+  (void)msg;
+  const sr_disk_state_t *state = newval;
   time_t now;
 
   tor_assert(state);
@@ -338,22 +344,6 @@ disk_state_validate(const sr_disk_state_t *state)
 
  invalid:
   return -1;
-}
-
-/* Validate the disk state (NOP for now). */
-static int
-disk_state_validate_cb(const void *old_state, void *state,
-                       char **msg)
-{
-  /* We don't use these; only options do. */
-  (void) old_state;
-
-  /* This is called by config_dump which is just before we are about to
-   * write it to disk. At that point, our global memory state has been
-   * copied to the disk state so it's fair to assume it's trustable. */
-  (void) state;
-  (void) msg;
-  return 0;
 }
 
 /* Parse the Commit line(s) in the disk state and translate them to the
@@ -697,7 +687,7 @@ disk_state_load_from_disk_impl(const char *fname)
 
   /* So far so good, we've loaded our state file into our disk state. Let's
    * validate it and then parse it. */
-  if (disk_state_validate(disk_state) < 0) {
+  if (config_validate(get_srs_mgr(), (void*)1, disk_state, NULL) < 0) {
     ret = -EINVAL;
     goto error;
   }

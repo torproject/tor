@@ -3158,15 +3158,6 @@ compute_publishserverdescriptor(or_options_t *options)
  * */
 #define RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT (10)
 
-static int
-options_validate_cb(const void *old_options, void *options, char **msg)
-{
-  in_option_validation = 1;
-  int rv = options_validate(old_options, options, msg);
-  in_option_validation = 0;
-  return rv;
-}
-
 #define REJECT(arg) \
   STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
 #if defined(__GNUC__) && __GNUC__ <= 3
@@ -3367,20 +3358,41 @@ options_append_default_log_lines(or_options_t *options)
  * normalizing the contents of <b>options</b>.
  *
  * On error, tor_strdup an error explanation into *<b>msg</b>.
- *
- * XXX
- * If <b>from_setconf</b>, we were called by the controller, and our
- * Log line should stay empty. If it's 0, then give us a default log
- * if there are no logs defined.
  */
 STATIC int
 options_validate(const or_options_t *old_options, or_options_t *options,
                  char **msg)
 {
+  ++in_option_validation;
+  smartlist_t *errs = smartlist_new();
+  int res = config_validate(get_options_mgr(), old_options, options, errs);
+  if (smartlist_len(errs)) {
+    // This function only handles one error for now.
+    *msg = smartlist_get(errs, 0);
+    smartlist_set(errs, 0, NULL); // prevent free.
+    SMARTLIST_FOREACH(errs, char *, s, tor_free(s));
+  } else {
+    *msg = NULL;
+  }
+  smartlist_free(errs);
+  --in_option_validation;
+  return res;
+}
+
+/**
+ * Implementation function for top-level options validation.
+ *
+ * On error, tor_strdup an error explanation into *<b>msg</b>.
+ */
+static int
+options_validate_cb(const void *oldval, void *newval, char **msg)
+{
   config_line_t *cl;
   const char *uname = get_uname();
   int n_ports=0;
   int world_writable_control_socket=0;
+  const or_options_t *old_options = oldval;
+  or_options_t *options = newval;
 
   tor_assert(msg);
   *msg = NULL;
