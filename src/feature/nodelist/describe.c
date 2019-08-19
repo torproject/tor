@@ -44,6 +44,13 @@ format_node_description(char *buf,
   if (!buf)
     return "<NULL BUFFER>";
 
+  memset(buf, 0, NODE_DESC_BUF_LEN);
+
+  if (!id_digest) {
+    memcpy(buf, "<NULL ID DIGEST>", 17);
+    return buf;
+  }
+
   buf[0] = '$';
   base16_encode(buf+1, HEX_DIGEST_LEN+1, id_digest, DIGEST_LEN);
   cp = buf+1+HEX_DIGEST_LEN;
@@ -122,6 +129,8 @@ node_describe(const node_t *node)
     nickname = node->ri->nickname;
     addr32h = node->ri->addr;
     ipv6_addr = &node->ri->ipv6_addr;
+  } else {
+    return "<null rs and ri>";
   }
 
   return format_node_description(buf,
@@ -179,6 +188,16 @@ extend_info_describe(const extend_info_t *ei)
 void
 router_get_verbose_nickname(char *buf, const routerinfo_t *router)
 {
+  if (!buf)
+    return;
+
+  memset(buf, 0, MAX_VERBOSE_NICKNAME_LEN+1);
+
+  if (!router) {
+    memcpy(buf, "<null>", 7);
+    return;
+  }
+
   buf[0] = '$';
   base16_encode(buf+1, HEX_DIGEST_LEN+1, router->cache_info.identity_digest,
                 DIGEST_LEN);
