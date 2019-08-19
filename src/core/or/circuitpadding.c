@@ -1824,8 +1824,6 @@ circpad_check_received_cell(cell_t *cell, circuit_t *circ,
                             crypt_path_t *layer_hint,
                             const relay_header_t *rh)
 {
-  unsigned domain = layer_hint?LD_APP:LD_EXIT;
-
   /* First handle the padding commands, since we want to ignore any other
    * commands if this circuit is padding-specific. */
   switch (rh->command) {
@@ -1842,10 +1840,30 @@ circpad_check_received_cell(cell_t *cell, circuit_t *circ,
   }
 
   /* If this is a padding circuit we don't need to parse any other commands
-   * than the padding ones. Just drop them to the floor. */
+   * than the padding ones. Just drop them to the floor.
+   *
+   * Note: we deliberately do not call circuit_read_valid_data() here. The
+   * vanguards addon (specifically the 'bandguards' component's dropped cell
+   * detection) will thus close this circuit, as it would for any other
+   * unexpected cell. However, default tor will *not* close the circuit.
+   *
+   * This is intentional. We are not yet certain that is it optimal to keep
+   * padding circuits open in cases like these, rather than closing them.
+   * We suspect that continuing to pad is optimal against a passive classifier,
+   * but as soon as the adversary is active (even as a client adversary) this
+   * might change.
+   *
+   * So as a way forward, we log the cell command and circuit number, to
+   * help us enumerate the most common instances of this in testing with
+   * vanguards, to see which are common enough to verify and handle
+   * properly.
+   * - Mike
+   */
   if (circ->purpose == CIRCUIT_PURPOSE_C_CIRCUIT_PADDING) {
-    log_info(domain, "Ignored cell (%d) that arrived in padding circuit.",
-             rh->command);
+    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
+           "Ignored cell (%d) that arrived in padding circuit "
+                      " %u.", rh->command, CIRCUIT_IS_ORIGIN(circ) ?
+                           TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
     return 0;
   }
 
