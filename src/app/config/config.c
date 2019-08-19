@@ -808,6 +808,9 @@ static const config_deprecation_t option_deprecation_notes_[] = {
 static char *get_windows_conf_root(void);
 #endif
 static int options_act_reversible(const or_options_t *old_options, char **msg);
+static int options_transition_check_cb(const void *oldval,
+                                       const void *newval,
+                                       smartlist_t *errs);
 static int options_transition_allowed(const or_options_t *old,
                                       const or_options_t *new,
                                       char **msg);
@@ -860,6 +863,7 @@ static const config_format_t options_format = {
   .abbrevs = option_abbrevs_,
   .deprecations = option_deprecation_notes_,
   .vars = option_vars_,
+  .transition_check_fn = options_transition_check_cb,
   .legacy_validate_fn = options_validate_cb,
   .clear_fn = options_clear_cb,
   .config_suite_offset = offsetof(or_options_t, subconfigs_),
@@ -2614,22 +2618,24 @@ options_trial_assign(config_line_t *list, unsigned flags, char **msg)
   }
 
   setopt_err_t rv;
+  config_validate_status_t status;
   or_options_t *cur_options = get_options_mutable();
 
   in_option_validation = 1;
-
-  if (options_validate(cur_options, trial_options, msg) < 0) {
-    or_options_free(trial_options);
-    rv = SETOPT_ERR_PARSE; /*XXX make this a separate return value. */
-    goto done;
-  }
-
-  if (options_transition_allowed(cur_options, trial_options, msg) < 0) {
-    or_options_free(trial_options);
-    rv = SETOPT_ERR_TRANSITION;
-    goto done;
-  }
+  status = options_validate(cur_options, trial_options, msg);
   in_option_validation = 0;
+  switch (status) {
+    case CFG_OK:
+      break;
+    case CFG_BAD_TRANSITION:
+      rv = SETOPT_ERR_TRANSITION;
+      goto done;
+    case CFG_BAD_VAL: /* falls through */
+    case CFG_INTERNAL_ERR: /* falls through */
+    default:
+      rv = SETOPT_ERR_PARSE; /*XXX make this a separate return value.*/
+      goto done;
+  }
 
   if (set_options(trial_options, msg)<0) {
     or_options_free(trial_options);
@@ -2640,7 +2646,8 @@ options_trial_assign(config_line_t *list, unsigned flags, char **msg)
   /* we liked it. put it in place. */
   rv = SETOPT_OK;
  done:
-  in_option_validation = 0;
+  log_notice(LD_GENERAL, "==== saying %d because status is %d", rv, status);
+
   return rv;
 }
 
@@ -3354,18 +3361,21 @@ options_append_default_log_lines(or_options_t *options)
 /** Return 0 if every setting in <b>options</b> is reasonable, is a
  * permissible transition from <b>old_options</b>, and none of the
  * testing-only settings differ from <b>default_options</b> unless in
- * testing mode.  Else return -1.  Should have no side effects, except for
- * normalizing the contents of <b>options</b>.
+ * testing mode.  Else return an error.
+ *
+ * Should have no side effects, except for normalizing the contents of
+ * <b>options</b>.
  *
  * On error, tor_strdup an error explanation into *<b>msg</b>.
  */
-STATIC int
+STATIC config_validate_status_t
 options_validate(const or_options_t *old_options, or_options_t *options,
                  char **msg)
 {
   ++in_option_validation;
   smartlist_t *errs = smartlist_new();
-  int res = config_validate(get_options_mgr(), old_options, options, errs);
+  config_validate_status_t res =
+    config_validate(get_options_mgr(), old_options, options, errs);
   if (smartlist_len(errs)) {
     // This function only handles one error for now.
     *msg = smartlist_get(errs, 0);
@@ -4733,6 +4743,21 @@ opt_streq(const char *s1, const char *s2)
   return 0 == strcmp_opt(s1, s2);
 }
 
+/** Wraps options_transition_allowed in expected API */
+static int
+options_transition_check_cb(const void *oldval,
+                              const void *newval,
+                              smartlist_t *errs)
+{
+  char *msg = NULL;
+  int rv = options_transition_allowed(oldval, newval, &msg);
+  log_notice(LD_GENERAL, "===== transition allowed = %d, msg = %s",
+             rv, msg?msg:"<null>");
+  if (msg)
+    smartlist_add(errs, msg);
+  return rv;
+}
+
 /** Check if any of the previous options have changed but aren't allowed to. */
 static int
 options_transition_allowed(const or_options_t *old,
@@ -5479,22 +5504,27 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   }
 
   newoptions->IncludeUsed = cf_has_include;
-  in_option_validation = 1;
   newoptions->FilesOpenedByIncludes = opened_files;
 
   options_append_default_log_lines(newoptions);
 
   /* Validate newoptions */
-  if (options_validate(oldoptions, newoptions, msg) < 0) {
-    err = SETOPT_ERR_PARSE; /*XXX make this a separate return value.*/
-    goto err;
-  }
-
-  if (options_transition_allowed(oldoptions, newoptions, msg) < 0) {
-    err = SETOPT_ERR_TRANSITION;
-    goto err;
-  }
+  config_validate_status_t status;
+  in_option_validation = 1;
+  status = options_validate(oldoptions, newoptions, msg);
   in_option_validation = 0;
+  switch (status) {
+    case CFG_OK:
+      break;
+    case CFG_BAD_TRANSITION:
+      err = SETOPT_ERR_TRANSITION;
+      goto err;
+    case CFG_BAD_VAL: /* falls through */
+    case CFG_INTERNAL_ERR: /* falls through */
+    default:
+      err = SETOPT_ERR_PARSE; /*XXX make this a separate return value.*/
+      goto err;
+  }
 
   if (set_options(newoptions, msg)) {
     err = SETOPT_ERR_SETTING;
@@ -5507,7 +5537,6 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   return SETOPT_OK;
 
  err:
-  in_option_validation = 0;
   if (opened_files) {
     SMARTLIST_FOREACH(opened_files, char *, f, tor_free(f));
     smartlist_free(opened_files);

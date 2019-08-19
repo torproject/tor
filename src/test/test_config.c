@@ -5435,6 +5435,9 @@ test_config_include_flag_both_without(void *data)
   tor_snprintf(conf_empty, sizeof(conf_empty),
                "DataDirectory %s\n",
                get_fname(NULL));
+  // Force config to its original state, so that it doesn't complain that
+  // this transition is forbidden.
+  config_free_all();
   // test with defaults-torrc and torrc without include
   int ret = options_init_from_string(conf_empty, conf_empty, CMD_RUN_UNITTESTS,
                                      NULL, &errmsg);
@@ -5472,6 +5475,10 @@ test_config_include_flag_torrc_only(void *data)
                get_fname(NULL));
   char conf_include[1000];
   tor_snprintf(conf_include, sizeof(conf_include), "%%include %s", path);
+
+  // Force config to its original state, so that it doesn't complain that
+  // this transition is forbidden.
+  config_free_all();
 
   // test with defaults-torrc without include and torrc with include
   int ret = options_init_from_string(conf_empty, conf_include,
@@ -5513,6 +5520,9 @@ test_config_include_flag_defaults_only(void *data)
   char conf_include[1000];
   tor_snprintf(conf_include, sizeof(conf_include), "%%include %s", path);
 
+  // Force config to its original state, so that it doesn't complain that
+  // this transition is forbidden.
+  config_free_all();
   // test with defaults-torrc with include and torrc without include
   int ret = options_init_from_string(conf_include, conf_empty,
                                      CMD_RUN_UNITTESTS, NULL, &errmsg);

@@ -422,11 +422,11 @@ get_options_test_data(const char *conf)
   config_line_t *cl=NULL;
   options_test_data_t *result = tor_malloc(sizeof(options_test_data_t));
   result->opt = options_new();
-  result->old_opt = options_new();
+  result->old_opt = NULL;
   result->def_opt = options_new();
 
   options_init(result->opt);
-  options_init(result->old_opt);
+  // options_init(result->old_opt);
   options_init(result->def_opt);
 
   /* Various of the tests below expect that unless explicitly set, these
