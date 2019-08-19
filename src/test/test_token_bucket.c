@@ -93,7 +93,7 @@ test_token_bucket_ctr_dec(void *arg)
 
   /* Keep underflowing shouldn't flag the bucket as empty. */
   tt_uint_op(false, OP_EQ, token_bucket_ctr_dec(&tb, BURST));
-  tt_int_op(tb.counter.bucket, OP_EQ, (int32_t) ((BURST + 1) * -1));
+  tt_int_op(tb.counter.bucket, OP_EQ, - (int32_t) (BURST + 1));
 
  done:
   ;
