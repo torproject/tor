@@ -1,0 +1,5 @@
+  o Minor features (git hooks):
+    - Our pre-push git hook now checks for a special file
+      before running practracker, so that it only runs on branches
+      that are based on master.
+      Closes ticket 30979.
