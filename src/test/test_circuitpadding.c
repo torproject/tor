@@ -92,10 +92,10 @@ static void
 nodes_init(void)
 {
   padding_node.rs = tor_malloc_zero(sizeof(routerstatus_t));
-  padding_node.rs->pv.supports_padding = 1;
+  padding_node.rs->pv.supports_hs_setup_padding = 1;
 
   non_padding_node.rs = tor_malloc_zero(sizeof(routerstatus_t));
-  non_padding_node.rs->pv.supports_padding = 0;
+  non_padding_node.rs->pv.supports_hs_setup_padding = 0;
 }
 
 static void
