@@ -28,8 +28,8 @@
 
 /** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
  * hold a human-readable description of a node with identity digest
- * <b>id_digest</b>, named-status <b>is_named</b>, nickname <b>nickname</b>,
- * and address <b>addr</b> or <b>addr32h</b>.
+ * <b>id_digest</b>, nickname <b>nickname</b>, and addresses <b>addr32h</b> and
+ * <b>addr</b>.
  *
  * The <b>nickname</b> and <b>addr</b> fields are optional and may be set to
  * NULL.  The <b>addr32h</b> field is optional and may be set to 0.
@@ -39,7 +39,6 @@
 static const char *
 format_node_description(char *buf,
                         const char *id_digest,
-                        int is_named,
                         const char *nickname,
                         const tor_addr_t *addr,
                         uint32_t addr32h)
@@ -53,7 +52,7 @@ format_node_description(char *buf,
   base16_encode(buf+1, HEX_DIGEST_LEN+1, id_digest, DIGEST_LEN);
   cp = buf+1+HEX_DIGEST_LEN;
   if (nickname) {
-    buf[1+HEX_DIGEST_LEN] = is_named ? '=' : '~';
+    buf[1+HEX_DIGEST_LEN] = '~';
     strlcpy(buf+1+HEX_DIGEST_LEN+1, nickname, MAX_NICKNAME_LEN+1);
     cp += strlen(cp);
   }
@@ -85,7 +84,6 @@ router_describe(const routerinfo_t *ri)
     return "<null>";
   return format_node_description(buf,
                                  ri->cache_info.identity_digest,
-                                 0,
                                  ri->nickname,
                                  NULL,
                                  ri->addr);
@@ -102,14 +100,12 @@ node_describe(const node_t *node)
   static char buf[NODE_DESC_BUF_LEN];
   const char *nickname = NULL;
   uint32_t addr32h = 0;
-  int is_named = 0;
 
   if (!node)
     return "<null>";
 
   if (node->rs) {
     nickname = node->rs->nickname;
-    is_named = node->rs->is_named;
     addr32h = node->rs->addr;
   } else if (node->ri) {
     nickname = node->ri->nickname;
@@ -118,7 +114,6 @@ node_describe(const node_t *node)
 
   return format_node_description(buf,
                                  node->identity,
-                                 is_named,
                                  nickname,
                                  NULL,
                                  addr32h);
@@ -138,7 +133,6 @@ routerstatus_describe(const routerstatus_t *rs)
     return "<null>";
   return format_node_description(buf,
                                  rs->identity_digest,
-                                 rs->is_named,
                                  rs->nickname,
                                  NULL,
                                  rs->addr);
@@ -158,7 +152,6 @@ extend_info_describe(const extend_info_t *ei)
     return "<null>";
   return format_node_description(buf,
                                  ei->identity_digest,
-                                 0,
                                  ei->nickname,
                                  &ei->addr,
                                  0);
