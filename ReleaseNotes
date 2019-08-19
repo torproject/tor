@@ -5,6 +5,10 @@ changes in each development snapshot, see the ChangeLog file.
 Changes in version 0.4.1.5 - 2019-08-20
   BLURB BLURB
 
+  o Directory authority changes:
+    - The directory authority "dizum" has a new IP address. Closes
+      ticket 31406.
+
   o Major features (circuit padding):
     - Onion service clients now add padding cells at the start of their
       INTRODUCE and RENDEZVOUS circuits, to make those circuits' traffic
@@ -98,6 +102,11 @@ Changes in version 0.4.1.5 - 2019-08-20
       we have not sent randomness already, we now leave some extra space
       at the end of a cell that we can fill with random bytes. Closes
       ticket 26846.
+
+  o Minor features (circuit padding logging):
+    - Demote noisy client-side warn logs about circuit padding to protocol
+      warnings. Add additional log messages and circuit ID fields to help
+      with bug 30992 and any other future issues.
 
   o Minor features (circuit padding):
     - We now use a fast PRNG when scheduling circuit padding. Part of
@@ -255,12 +264,27 @@ Changes in version 0.4.1.5 - 2019-08-20
       that do not use token removal or circuit RTT estimation. Fixes bug
       29085; bugfix on 0.4.0.1-alpha.
 
+  o Minor bugfixes (clock skew detection):
+    - Don't believe clock skew results from NETINFO cells that appear to
+      arrive before we sent the VERSIONS cells they are responding to.
+      Previously, we would accept them up to 3 minutes "in the past".
+      Fixes bug 31343; bugfix on 0.2.4.4-alpha.
+
   o Minor bugfixes (compatibility, standards compliance):
     - Fix a bug that would invoke undefined behavior on certain
       operating systems when trying to asprintf() a string exactly
       INT_MAX bytes long. We don't believe this is exploitable, but it's
       better to fix it anyway. Fixes bug 31001; bugfix on 0.2.2.11-alpha.
       Found and fixed by Tobias Stoeckmann.
+
+  o Minor bugfixes (compilation warning):
+    - Fix a compilation warning on Windows about casting a function
+      pointer for GetTickCount64(). Fixes bug 31374; bugfix on
+      0.2.9.1-alpha.
+
+  o Minor bugfixes (compilation):
+    - Avoid using labs() on time_t, which can cause compilation warnings
+      on 64-bit Windows builds.  Fixes bug 31343; bugfix on 0.2.4.4-alpha.
 
   o Minor bugfixes (compilation, unusual configurations):
     - Avoid failures when building with the ALL_BUGS_ARE_FATAL option
@@ -508,6 +532,12 @@ Changes in version 0.4.1.5 - 2019-08-20
     - In "make test-network-all", test IPv6-only v3 single onion
       services, using the chutney network single-onion-v23-ipv6-md.
       Closes ticket 27251.
+
+  o Testing (continuous integration):
+    - In Travis, make stem log a controller trace to the console. And tail
+      stem's tor log after failure. Closes ticket 30591.
+    - In Travis, only run the stem tests that use a tor binary.
+      Closes ticket 30694.
 
 
 Changes in version 0.4.0.5 - 2019-05-02

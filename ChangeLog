@@ -1,10 +1,33 @@
 Changes in version 0.4.1.5 - 2019-08-20
   BLURB HERE
 
+  o Directory authority changes:
+    - The directory authority "dizum" has a new IP address. Closes
+      ticket 31406.
+
+  o Minor features (circuit padding logging):
+    - Demote noisy client-side warn logs about circuit padding to
+      protocol warnings. Add additional log messages and circuit ID
+      fields to help with bug 30992 and any other future issues.
+
+  o Minor bugfixes (circuit padding negotiation):
+    - Bump the circuit padding protocol version to explicitly signify
+      that the HS setup machine support is finalized in 0.4.1.x-stable.
+      This also means that 0.4.1.x-alpha clients will not negotiate
+      padding with 0.4.1.x-stable relays, and 0.4.1.x-stable clients
+      will not negotiate padding with 0.4.1.x-alpha relays (or 0.4.0.x
+      relays). Fixes bug 31356; bugfix on 0.4.1.1-alpha.
+
   o Minor bugfixes (circuit padding):
     - Ignore non-padding cells on padding circuits. This addresses
       various warning messages from subsystems that were not expecting
       padding circuits. Fixes bug 30942; bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (clock skew detection):
+    - Don't believe clock skew results from NETINFO cells that appear to
+      arrive before we sent the VERSIONS cells they are responding to.
+      Previously, we would accept them up to 3 minutes "in the past".
+      Fixes bug 31343; bugfix on 0.2.4.4-alpha.
 
   o Minor bugfixes (compatibility, standards compliance):
     - Fix a bug that would invoke undefined behavior on certain
@@ -13,10 +36,25 @@ Changes in version 0.4.1.5 - 2019-08-20
       better to fix it anyway. Fixes bug 31001; bugfix on 0.2.2.11-alpha.
       Found and fixed by Tobias Stoeckmann.
 
+  o Minor bugfixes (compilation warning):
+    - Fix a compilation warning on Windows about casting a function
+      pointer for GetTickCount64(). Fixes bug 31374; bugfix
+      on 0.2.9.1-alpha.
+
+  o Minor bugfixes (compilation):
+    - Avoid using labs() on time_t, which can cause compilation warnings
+      on 64-bit Windows builds. Fixes bug 31343; bugfix on 0.2.4.4-alpha.
+
   o Minor bugfixes (distribution):
     - Do not ship any temporary files found in the
       scripts/maint/practracker directory. Fixes bug 31311; bugfix
       on 0.4.1.1-alpha.
+
+  o Testing (continuous integration):
+    - In Travis, make stem log a controller trace to the console. And
+      tail stem's tor log after failure. Closes ticket 30591.
+    - In Travis, only run the stem tests that use a tor binary. Closes
+      ticket 30694.
 
 
 Changes in version 0.4.1.4-rc - 2019-07-25

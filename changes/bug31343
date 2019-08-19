@@ -1,9 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Avoid using labs() on time_t, which can cause compilation warnings
-      on 64-bit Windows builds.  Fixes bug 31343; bugfix on 0.2.4.4-alpha.
-
-  o Minor bugfixes (clock skew detection):
-    - Don't believe clock skew results from NETINFO cells that appear to
-      arrive before the VERSIONS cells they are responding to were sent.
-      Previously, we would accept them up to 3 minutes "in the past".
-      Fixes bug 31343; bugfix on 0.2.4.4-alpha.
