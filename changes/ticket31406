@@ -1,0 +1,3 @@
+  o Minor features (directory authority):
+    - A new IP address the directory authority "dizum" has been changed. Closes
+      ticket 31406;
