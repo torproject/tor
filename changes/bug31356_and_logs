@@ -1,0 +1,8 @@
+  o Minor bugfixes (circuit padding negotiation):
+    - Bump circuit padding protover so that clients won't try to negotiate
+      circuit padding with 0.4.0 relays. Fixes bug 31356; bugfix on
+      0.4.1.1-alpha.
+  o Minor features (circuit padding logging):
+    - Demote noisy client-side warn log to a protocol warning. Add additional
+      log messages and circuit id fields to help with fixing bug 30992 and any
+      other future issues.
