@@ -167,6 +167,7 @@ test_upgrade_from_guard_wait(void *arg)
   tt_assert(!list);
 
  done:
+  smartlist_free(list);
   circuit_free(circ);
   entry_guard_free_(guard);
 }
