@@ -9,6 +9,8 @@
  * \brief Format short descriptions of relays.
  */
 
+#define DESCRIBE_PRIVATE
+
 #include "core/or/or.h"
 #include "feature/nodelist/describe.h"
 
@@ -16,15 +18,7 @@
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerstatus_st.h"
-
-/**
- * Longest allowed output of format_node_description, plus 1 character for
- * NUL.  This allows space for:
- * "$FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF~xxxxxxxxxxxxxxxxxxx at"
- * " [ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255]"
- * plus a terminating NUL.
- */
-#define NODE_DESC_BUF_LEN (MAX_VERBOSE_NICKNAME_LEN+4+TOR_ADDR_BUF_LEN)
+#include "feature/nodelist/microdesc_st.h"
 
 /** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
  * hold a human-readable description of a node with identity digest
@@ -32,11 +26,12 @@
  * <b>addr</b>.
  *
  * The <b>nickname</b> and <b>addr</b> fields are optional and may be set to
- * NULL.  The <b>addr32h</b> field is optional and may be set to 0.
+ * NULL or the null address.  The <b>addr32h</b> field is optional and may be
+ * set to 0.
  *
- * Return a pointer to the front of <b>buf</b>.
+ * Return a pointer to the front of <b>buf</b>, or a string constant on error.
  */
-static const char *
+STATIC const char *
 format_node_description(char *buf,
                         const char *id_digest,
                         const char *nickname,
@@ -44,6 +39,7 @@ format_node_description(char *buf,
                         uint32_t addr32h)
 {
   char *cp;
+  bool has_addr = addr && !tor_addr_is_null(addr);
 
   if (!buf)
     return "<NULL BUFFER>";
@@ -56,17 +52,24 @@ format_node_description(char *buf,
     strlcpy(buf+1+HEX_DIGEST_LEN+1, nickname, MAX_NICKNAME_LEN+1);
     cp += strlen(cp);
   }
-  if (addr32h || addr) {
+  if (addr32h || has_addr) {
     memcpy(cp, " at ", 4);
     cp += 4;
-    if (addr) {
-      tor_addr_to_str(cp, addr, TOR_ADDR_BUF_LEN, 0);
-    } else {
-      struct in_addr in;
-      in.s_addr = htonl(addr32h);
-      tor_inet_ntoa(&in, cp, INET_NTOA_BUF_LEN);
-    }
   }
+  if (addr32h) {
+    struct in_addr in;
+    in.s_addr = htonl(addr32h);
+    tor_inet_ntoa(&in, cp, INET_NTOA_BUF_LEN);
+    cp += strlen(cp);
+  }
+  if (addr32h && has_addr) {
+    memcpy(cp, " and ", 5);
+    cp += 5;
+  }
+  if (has_addr) {
+    tor_addr_to_str(cp, addr, TOR_ADDR_BUF_LEN, 1);
+  }
+
   return buf;
 }
 
@@ -85,7 +88,7 @@ router_describe(const routerinfo_t *ri)
   return format_node_description(buf,
                                  ri->cache_info.identity_digest,
                                  ri->nickname,
-                                 NULL,
+                                 &ri->ipv6_addr,
                                  ri->addr);
 }
 
@@ -100,6 +103,7 @@ node_describe(const node_t *node)
   static char buf[NODE_DESC_BUF_LEN];
   const char *nickname = NULL;
   uint32_t addr32h = 0;
+  const tor_addr_t *ipv6_addr = NULL;
 
   if (!node)
     return "<null>";
@@ -107,15 +111,23 @@ node_describe(const node_t *node)
   if (node->rs) {
     nickname = node->rs->nickname;
     addr32h = node->rs->addr;
+    ipv6_addr = &node->rs->ipv6_addr;
+    /* Support consensus versions less than 28, when IPv6 addresses were in
+     * microdescs. This code can be removed when 0.2.9 is no longer supported,
+     * and the MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC macro is removed. */
+    if (node->md && tor_addr_is_null(ipv6_addr)) {
+      ipv6_addr = &node->md->ipv6_addr;
+    }
   } else if (node->ri) {
     nickname = node->ri->nickname;
     addr32h = node->ri->addr;
+    ipv6_addr = &node->ri->ipv6_addr;
   }
 
   return format_node_description(buf,
                                  node->identity,
                                  nickname,
-                                 NULL,
+                                 ipv6_addr,
                                  addr32h);
 }
 
@@ -134,7 +146,7 @@ routerstatus_describe(const routerstatus_t *rs)
   return format_node_description(buf,
                                  rs->identity_digest,
                                  rs->nickname,
-                                 NULL,
+                                 &rs->ipv6_addr,
                                  rs->addr);
 }
 
