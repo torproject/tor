@@ -44,6 +44,8 @@ test_btrack_launch(void *arg)
 {
   orconn_state_msg_t conn;
   ocirc_chan_msg_t circ;
+  memset(&conn, 0, sizeof(conn));
+  memset(&circ, 0, sizeof(circ));
 
   (void)arg;
   conn.gid = 1;
@@ -93,6 +95,8 @@ test_btrack_delete(void *arg)
 {
   orconn_state_msg_t state;
   orconn_status_msg_t status;
+  memset(&state, 0, sizeof(state));
+  memset(&status, 0, sizeof(status));
 
   (void)arg;
   state.gid = 1;
