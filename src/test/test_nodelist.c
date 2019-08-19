@@ -76,7 +76,7 @@ test_nodelist_node_get_verbose_nickname_not_named(void *arg)
 }
 
 /** A node should be considered a directory server if it has an open dirport
- * of it accepts tunnelled directory requests.
+ * or it accepts tunnelled directory requests.
  */
 static void
 test_nodelist_node_is_dir(void *arg)
