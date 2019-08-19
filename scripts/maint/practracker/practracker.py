@@ -35,6 +35,10 @@ MAX_FILE_SIZE = 3000 # lines
 MAX_FUNCTION_SIZE = 100 # lines
 # Recommended number of #includes
 MAX_INCLUDE_COUNT = 50
+# Recommended file size for headers
+MAX_H_FILE_SIZE = 500
+# Recommended include count for headers
+MAX_H_INCLUDE_COUNT = 15
 
 # Map from problem type to functions that adjust for tolerance
 TOLERANCE_FNS = {
@@ -161,8 +165,12 @@ def main(argv):
                         help="Make all warnings into errors")
     parser.add_argument("--terse", action="store_true",
                         help="Do not emit helpful instructions.")
+    parser.add_argument("--max-h-file-size", default=MAX_H_FILE_SIZE,
+                        help="Maximum lines per .H file")
+    parser.add_argument("--max-h-include-count", default=MAX_H_INCLUDE_COUNT,
+                        help="Maximum includes per .H file")
     parser.add_argument("--max-file-size", default=MAX_FILE_SIZE,
-                        help="Maximum lines per C file size")
+                        help="Maximum lines per C file")
     parser.add_argument("--max-include-count", default=MAX_INCLUDE_COUNT,
                         help="Maximum includes per C file")
     parser.add_argument("--max-function-size", default=MAX_FUNCTION_SIZE,
@@ -180,9 +188,11 @@ def main(argv):
 
     # 0) Configure our thresholds of "what is a problem actually"
     filt = problem.ProblemFilter()
-    filt.addThreshold(problem.FileSizeItem("*", int(args.max_file_size)))
-    filt.addThreshold(problem.IncludeCountItem("*", int(args.max_include_count)))
-    filt.addThreshold(problem.FunctionSizeItem("*", int(args.max_function_size)))
+    filt.addThreshold(problem.FileSizeItem("*.c", int(args.max_file_size)))
+    filt.addThreshold(problem.IncludeCountItem("*.c", int(args.max_include_count)))
+    filt.addThreshold(problem.FileSizeItem("*.h", int(args.max_h_file_size)))
+    filt.addThreshold(problem.IncludeCountItem("*.h", int(args.max_h_include_count)))
+    filt.addThreshold(problem.FunctionSizeItem("*.c", int(args.max_function_size)))
 
     # 1) Get all the .c files we care about
     files_list = util.get_tor_c_files(TOR_TOPDIR)

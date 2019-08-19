@@ -45,6 +45,7 @@ problem function-size /src/app/config/config.c:parse_dir_fallback_line() 101
 problem function-size /src/app/config/config.c:parse_port_config() 446
 problem function-size /src/app/config/config.c:parse_ports() 168
 problem function-size /src/app/config/config.c:getinfo_helper_config() 113
+problem file-size /src/app/config/or_options_st.h 1112
 problem include-count /src/app/main/main.c 68
 problem function-size /src/app/main/main.c:dumpstats() 102
 problem function-size /src/app/main/main.c:tor_init() 137
@@ -67,6 +68,7 @@ problem include-count /src/core/mainloop/mainloop.c 63
 problem function-size /src/core/mainloop/mainloop.c:conn_close_if_marked() 108
 problem function-size /src/core/mainloop/mainloop.c:run_connection_housekeeping() 123
 problem file-size /src/core/or/channel.c 3487
+problem file-size /src/core/or/channel.h 780
 problem function-size /src/core/or/channeltls.c:channel_tls_handle_var_cell() 160
 problem function-size /src/core/or/channeltls.c:channel_tls_process_versions_cell() 170
 problem function-size /src/core/or/channeltls.c:channel_tls_process_netinfo_cell() 214
@@ -86,6 +88,7 @@ problem function-size /src/core/or/circuitmux.c:circuitmux_set_policy() 109
 problem function-size /src/core/or/circuitmux.c:circuitmux_attach_circuit() 113
 problem file-size /src/core/or/circuitpadding.c 3043
 problem function-size /src/core/or/circuitpadding.c:circpad_machine_schedule_padding() 107
+problem file-size /src/core/or/circuitpadding.h 809
 problem function-size /src/core/or/circuitpadding_machines.c:circpad_machine_relay_hide_intro_circuits() 103
 problem function-size /src/core/or/circuitpadding_machines.c:circpad_machine_client_hide_rend_circuits() 112
 problem function-size /src/core/or/circuitstats.c:circuit_build_times_parse_state() 123
@@ -114,6 +117,8 @@ problem include-count /src/core/or/connection_or.c 51
 problem function-size /src/core/or/connection_or.c:connection_or_group_set_badness_() 105
 problem function-size /src/core/or/connection_or.c:connection_or_client_learned_peer_id() 142
 problem function-size /src/core/or/connection_or.c:connection_or_compute_authenticate_cell_body() 231
+problem file-size /src/core/or/or.h 1103
+problem include-count /src/core/or/or.h 49
 problem file-size /src/core/or/policies.c 3249
 problem function-size /src/core/or/policies.c:policy_summarize() 107
 problem function-size /src/core/or/protover.c:protover_all_supported() 117
@@ -136,6 +141,7 @@ problem function-size /src/feature/client/dnsserv.c:evdns_server_callback() 153
 problem file-size /src/feature/client/entrynodes.c 3824
 problem function-size /src/feature/client/entrynodes.c:entry_guards_upgrade_waiting_circuits() 155
 problem function-size /src/feature/client/entrynodes.c:entry_guard_parse_from_state() 246
+problem file-size /src/feature/client/entrynodes.h 639
 problem function-size /src/feature/client/transports.c:handle_proxy_line() 108
 problem function-size /src/feature/client/transports.c:parse_method_line_helper() 110
 problem function-size /src/feature/client/transports.c:create_managed_proxy_environment() 109

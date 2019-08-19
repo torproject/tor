@@ -108,10 +108,11 @@ class ProblemFilter(object):
         self.thresholds = dict()
 
     def addThreshold(self, item):
-        self.thresholds[item.get_type()] = item
+        self.thresholds[(item.get_type(),item.get_file_type())] = item
 
     def matches(self, item):
-        filt = self.thresholds.get(item.get_type(), None)
+        key = (item.get_type(), item.get_file_type())
+        filt = self.thresholds.get(key, None)
         if filt is None:
             return False
         return item.is_worse_than(filt)
@@ -157,6 +158,12 @@ class Item(object):
 
     def get_type(self):
         return self.problem_type
+
+    def get_file_type(self):
+        if self.problem_location.endswith(".h"):
+            return "*.h"
+        else:
+            return "*.c"
 
 class FileSizeItem(Item):
     """
