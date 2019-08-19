@@ -265,8 +265,8 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
     if (cell_direction == CELL_DIRECTION_OUT) {
       ++stats_n_relay_cells_delivered;
       log_debug(LD_OR,"Sending away from origin.");
-      if ((reason = connection_edge_process_relay_cell(cell, circ, conn, NULL))
-          < 0) {
+      reason = connection_edge_process_relay_cell(cell, circ, conn, NULL);
+      if (reason < 0) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "connection_edge_process_relay_cell (away from origin) "
                "failed.");
@@ -276,8 +276,9 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
     if (cell_direction == CELL_DIRECTION_IN) {
       ++stats_n_relay_cells_delivered;
       log_debug(LD_OR,"Sending to origin.");
-      if ((reason = connection_edge_process_relay_cell(cell, circ, conn,
-                                                       layer_hint)) < 0) {
+      reason = connection_edge_process_relay_cell(cell, circ, conn,
+                                                  layer_hint);
+      if (reason < 0) {
         /* If a client is trying to connect to unknown hidden service port,
          * END_CIRC_AT_ORIGIN is sent back so we can then close the circuit.
          * Do not log warn as this is an expected behavior for a service. */
