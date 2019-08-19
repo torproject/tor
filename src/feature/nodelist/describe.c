@@ -11,7 +11,6 @@
 
 #include "core/or/or.h"
 #include "feature/nodelist/describe.h"
-#include "feature/nodelist/routerinfo.h"
 
 #include "core/or/extend_info_st.h"
 #include "feature/nodelist/node_st.h"

@@ -22,4 +22,6 @@ const char *node_describe(const struct node_t *node);
 const char *router_describe(const struct routerinfo_t *ri);
 const char *routerstatus_describe(const struct routerstatus_t *ri);
 
+void router_get_verbose_nickname(char *buf, const routerinfo_t *router);
+
 #endif /* !defined(TOR_DESCRIBE_H) */
