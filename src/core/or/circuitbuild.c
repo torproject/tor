@@ -1250,7 +1250,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     return -1;
   }
 
-  if (tor_addr_is_internal(&ec.orport_ipv4.addr, 0) ||
+  if (tor_addr_is_internal(&ec.orport_ipv4.addr, 0) &&
       !get_options()->ExtendAllowPrivateAddresses) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Client asked me to extend to a private address");
