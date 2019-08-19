@@ -3,7 +3,20 @@ release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
 Changes in version 0.4.1.5 - 2019-08-20
-  BLURB BLURB
+  This is the first stable release in the 0.4.1.x series. This series
+  adds experimental circuit-level padding, authenticated SENDME cells to
+  defend against certain attacks, and several performance improvements
+  to save on CPU consumption. It fixes bugs in bootstrapping and v3
+  onion services. It also includes numerous smaller features and
+  bugfixes on earlier versions.
+
+  Per our support policy, we will support the 0.4.1.x series for nine
+  months, or until three months after the release of a stable 0.4.2.x:
+  whichever is longer. If you need longer-term support, please stick
+  with 0.3.5.x, which will we plan to support until Feb 2022.
+
+  Below are the changes since 0.4.0.5. For a list of only the changes
+  since 0.4.1.4-rc, see the ChangeLog file.
 
   o Directory authority changes:
     - The directory authority "dizum" has a new IP address. Closes
