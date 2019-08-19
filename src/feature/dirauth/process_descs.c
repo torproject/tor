@@ -428,7 +428,7 @@ dirserv_free_fingerprint_list(void)
 
 /** Return -1 if <b>ri</b> has a private or otherwise bad address,
  * unless we're configured to not care. Return 0 if all ok. */
-int
+STATIC int
 dirserv_router_has_valid_address(routerinfo_t *ri)
 {
   tor_addr_t addr;
