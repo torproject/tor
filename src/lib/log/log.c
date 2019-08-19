@@ -1285,7 +1285,7 @@ parse_log_domain(const char *domain)
   int i;
   for (i=0; domain_list[i]; ++i) {
     if (!strcasecmp(domain, domain_list[i]))
-      return (1u<<i);
+      return (UINT64_C(1)<<i);
   }
   return 0;
 }
