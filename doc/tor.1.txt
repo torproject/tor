@@ -2973,7 +2973,7 @@ The following options are used to configure a hidden service.
 
 [[HiddenServiceExportCircuitID]] **HiddenServiceExportCircuitID** __protocol__::
    The onion service will use the given protocol to expose the global circuit
-   identifier of each inbound client circuit via the selected protocol. The only
+   identifier of each inbound client circuit. The only
    protocol supported right now \'haproxy'. This option is only for v3
    services. (Default: none) +
  +
@@ -2990,12 +2990,12 @@ The following options are used to configure a hidden service.
  +
       global_circuit_id = (0xAA << 24) + (0xBB << 16) + (0xCC << 8) + 0xDD; +
  +
-   In the case above, where the last 32-bit is 0xffffffff, the global circuit
+   In the case above, where the last 32-bits are 0xffffffff, the global circuit
    identifier would be 4294967295. You can use this value together with Tor's
-   control port where it is possible to terminate a circuit given the global
-   circuit identifier. For more information about this see controls-spec.txt. +
+   control port to terminate particular circuits using their global
+   circuit identifiers. For more information about this see control-spec.txt. +
  +
-   The HAProxy version 1 proxy protocol is described in detail at
+   The HAProxy version 1 protocol is described in detail at
    https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
 
 [[HiddenServiceMaxStreams]] **HiddenServiceMaxStreams** __N__::
