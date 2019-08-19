@@ -438,7 +438,7 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
 
   if (tor_addr_is_internal(&addr, 0) || tor_addr_is_null(&addr)) {
     log_info(LD_DIRSERV,
-             "Router %s published internal IP address. Refusing.",
+             "Router %s published internal IPv4 address. Refusing.",
              router_describe(ri));
     return -1; /* it's a private IP, we should reject it */
   }
@@ -447,7 +447,7 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
   if (tor_addr_is_internal(&ri->ipv6_addr, 0) &&
       !tor_addr_is_null(&ri->ipv6_addr)) {
     log_info(LD_DIRSERV,
-             "Router %s published internal IP address. Refusing.",
+             "Router %s published internal IPv6 address. Refusing.",
              router_describe(ri));
     return -1; /* it's a private IP, we should reject it */
   }
