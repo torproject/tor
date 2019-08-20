@@ -44,7 +44,7 @@ typed_var_assign_ex(void *target, const char *value, char **errmsg,
                     const var_type_def_t *def)
 {
   if (BUG(!def))
-    return -1;
+    return -1; // LCOV_EXCL_LINE
   // clear old value if needed.
   typed_var_free_ex(target, def);
 
@@ -67,7 +67,7 @@ typed_var_kvassign_ex(void *target, const config_line_t *line,
                       char **errmsg, const var_type_def_t *def)
 {
   if (BUG(!def))
-    return -1;
+    return -1; // LCOV_EXCL_LINE
 
   if (def->fns->kv_parse) {
     // We do _not_ free the old value here, since linelist options
@@ -86,7 +86,7 @@ void
 typed_var_free_ex(void *target, const var_type_def_t *def)
 {
   if (BUG(!def))
-    return;
+    return; // LCOV_EXCL_LINE
   if (def->fns->clear) {
     def->fns->clear(target, def->params);
   }
@@ -102,7 +102,7 @@ char *
 typed_var_encode_ex(const void *value, const var_type_def_t *def)
 {
   if (BUG(!def))
-    return NULL;
+    return NULL; // LCOV_EXCL_LINE
   tor_assert(def->fns->encode);
   return def->fns->encode(value, def->params);
 }
@@ -121,7 +121,7 @@ typed_var_kvencode_ex(const char *key, const void *value,
                       const var_type_def_t *def)
 {
   if (BUG(!def))
-    return NULL;
+    return NULL; // LCOV_EXCL_LINE
   if (def->fns->kv_encode) {
     return def->fns->kv_encode(key, value, def->params);
   }
@@ -145,7 +145,7 @@ int
 typed_var_copy_ex(void *dest, const void *src, const var_type_def_t *def)
 {
   if (BUG(!def))
-    return -1;
+    return -1; // LCOV_EXCL_LINE
   if (def->fns->copy) {
     // If we have been provided a copy fuction, use it.
     return def->fns->copy(dest, src, def);
@@ -160,8 +160,10 @@ typed_var_copy_ex(void *dest, const void *src, const var_type_def_t *def)
   char *err = NULL;
   int rv = typed_var_assign_ex(dest, enc, &err, def);
   if (BUG(rv < 0)) {
+    // LCOV_EXCL_START
     log_warn(LD_BUG, "Encoded value %s was not parseable as a %s: %s",
              escaped(enc), def->name, err?err:"");
+    // LCOV_EXCL_STOP
   }
   tor_free(err);
   tor_free(enc);
@@ -176,7 +178,7 @@ bool
 typed_var_eq_ex(const void *a, const void *b, const var_type_def_t *def)
 {
   if (BUG(!def))
-    return false;
+    return false; // LCOV_EXCL_LINE
 
   if (def->fns->eq) {
     // Use a provided eq function if we got one.
@@ -200,7 +202,7 @@ bool
 typed_var_ok_ex(const void *value, const var_type_def_t *def)
 {
   if (BUG(!def))
-    return false;
+    return false; // LCOV_EXCL_LINE
 
   if (def->fns->ok)
     return def->fns->ok(value, def->params);

@@ -48,15 +48,17 @@ typedef struct test_struct_t {
 
 static test_struct_t test_struct_t_dummy;
 
-#define VAR(name,conftype,member,initvalue)                             \
-  { name, CONFIG_TYPE_##conftype, offsetof(test_struct_t, member),      \
+#define VAR(varname,conftype,member,initvalue)                          \
+  { { .name = varname,                                                  \
+        .type = CONFIG_TYPE_##conftype,                                 \
+        .offset = offsetof(test_struct_t, member), },                   \
       initvalue CONF_TEST_MEMBERS(test_struct_t, conftype, member) }
 
 #define V(name,conftype,initvalue)                                      \
   VAR( #name, conftype, name, initvalue )
 
-#define OBSOLETE(name)                          \
-  { name, CONFIG_TYPE_OBSOLETE, 0, NULL, {.INT=NULL} }
+#define OBSOLETE(varname)                                               \
+  { { .name=varname, .type=CONFIG_TYPE_OBSOLETE }, NULL, {.INT=NULL} }
 
 static config_var_t test_vars[] = {
   V(s, STRING, "hello"),
@@ -79,7 +81,14 @@ static config_var_t test_vars[] = {
   VAR("LineTypeA", LINELIST_S, mixed_lines, NULL),
   VAR("LineTypeB", LINELIST_S, mixed_lines, NULL),
   OBSOLETE("obsolete"),
-  V(routerset, ROUTERSET, NULL),
+  {
+   { .name = "routerset",
+     .type = CONFIG_TYPE_ROUTERSET,
+     .type_def = &ROUTERSET_type_defn,
+     .offset = offsetof(test_struct_t, routerset),
+   },
+   NULL, {.INT=NULL}
+  },
   VAR("__HiddenInt", POSINT, hidden_int, "0"),
   VAR("MixedHiddenLines", LINELIST_V, mixed_hidden_lines, NULL),
   VAR("__HiddenLineA", LINELIST_S, mixed_hidden_lines, NULL),
@@ -122,8 +131,11 @@ static void test_free_cb(void *options);
 
 static config_format_t test_fmt = {
   sizeof(test_struct_t),
-  TEST_MAGIC,
-  offsetof(test_struct_t, magic),
+  {
+   "test_struct_t",
+   TEST_MAGIC,
+   offsetof(test_struct_t, magic),
+  },
   test_abbrevs,
   test_deprecation_notes,
   test_vars,
@@ -278,6 +290,8 @@ test_confparse_assign_simple(void *arg)
   tt_str_op(tst->mixed_hidden_lines->next->value, OP_EQ, "ABC");
   tt_assert(!tst->mixed_hidden_lines->next->next);
 
+  tt_assert(config_check_ok(&test_fmt, tst, LOG_ERR));
+
  done:
   config_free(&test_fmt, tst);
 }
@@ -331,6 +345,8 @@ test_confparse_assign_deprecated(void *arg)
   expect_single_log_msg_containing("This integer is deprecated.");
 
   tt_int_op(tst->deprecated_int, OP_EQ, 7);
+
+  tt_assert(config_check_ok(&test_fmt, tst, LOG_ERR));
 
  done:
   teardown_capture_of_logs();
@@ -477,6 +493,8 @@ static const badval_test_t bv_badabool =
 static const badval_test_t bv_badtime = { "time lunchtime\n", "Invalid time" };
 static const badval_test_t bv_virt = { "MixedLines 7\n", "virtual option" };
 static const badval_test_t bv_rs = { "Routerset 2.2.2.2.2\n", "Invalid" };
+static const badval_test_t bv_big_interval =
+  { "interval 1000 months", "too large" };
 
 /* Try config_dump(), and make sure it behaves correctly */
 static void
@@ -757,12 +775,19 @@ test_confparse_get_assigned(void *arg)
 /* Another variant, which accepts and stores unrecognized lines.*/
 #define ETEST_MAGIC 13371337
 
-static config_var_t extra = VAR("__extra", LINELIST, extra_lines, NULL);
+static struct_member_t extra = {
+  .name = "__extra",
+  .type = CONFIG_TYPE_LINELIST,
+  .offset = offsetof(test_struct_t, extra_lines),
+};
 
 static config_format_t etest_fmt = {
   sizeof(test_struct_t),
-  ETEST_MAGIC,
-  offsetof(test_struct_t, magic),
+  {
+   "test_struct_t (with extra lines)",
+   ETEST_MAGIC,
+   offsetof(test_struct_t, magic),
+  },
   test_abbrevs,
   test_deprecation_notes,
   test_vars,
@@ -866,6 +891,18 @@ test_confparse_unitparse(void *args)
   ;
 }
 
+static void
+test_confparse_check_ok_fail(void *arg)
+{
+  (void)arg;
+  test_struct_t *tst = config_new(&test_fmt);
+  tst->pos = -10;
+  tt_assert(! config_check_ok(&test_fmt, tst, LOG_INFO));
+
+ done:
+  config_free(&test_fmt, tst);
+}
+
 #define CONFPARSE_TEST(name, flags)                          \
   { #name, test_confparse_ ## name, flags, NULL, NULL }
 
@@ -893,6 +930,7 @@ struct testcase_t confparse_tests[] = {
   BADVAL_TEST(badtime),
   BADVAL_TEST(virt),
   BADVAL_TEST(rs),
+  BADVAL_TEST(big_interval),
   CONFPARSE_TEST(dump, 0),
   CONFPARSE_TEST(reset, 0),
   CONFPARSE_TEST(reassign, 0),
@@ -900,5 +938,6 @@ struct testcase_t confparse_tests[] = {
   CONFPARSE_TEST(get_assigned, 0),
   CONFPARSE_TEST(extra_lines, 0),
   CONFPARSE_TEST(unitparse, 0),
+  CONFPARSE_TEST(check_ok_fail, 0),
   END_OF_TESTCASES
 };

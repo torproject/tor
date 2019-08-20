@@ -29,8 +29,8 @@
 #
 # Remember: It is better to fix the problem than to add a new exception!
 
-problem file-size /src/app/config/config.c 8510
-problem include-count /src/app/config/config.c 87
+problem file-size /src/app/config/config.c 8518
+problem include-count /src/app/config/config.c 88
 problem function-size /src/app/config/config.c:options_act_reversible() 296
 problem function-size /src/app/config/config.c:options_act() 589
 problem function-size /src/app/config/config.c:resolve_my_address() 190
@@ -283,4 +283,3 @@ problem function-size /src/tools/tor-gencert.c:parse_commandline() 111
 problem function-size /src/tools/tor-resolve.c:build_socks5_resolve_request() 102
 problem function-size /src/tools/tor-resolve.c:do_resolve() 171
 problem function-size /src/tools/tor-resolve.c:main() 112
-

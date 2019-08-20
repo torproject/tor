@@ -63,7 +63,47 @@ typedef enum config_type_t {
   CONFIG_TYPE_ROUTERSET,    /**< A list of router names, addrs, and fps,
                              * parsed into a routerset_t. */
   CONFIG_TYPE_OBSOLETE,     /**< Obsolete (ignored) option. */
+  CONFIG_TYPE_EXTENDED,     /**< Extended type; definition will appear in
+                             * pointer. */
 } config_type_t;
+
+/* Forward delcaration for var_type_def_t, for extended types. */
+struct var_type_def_t;
+
+/** Structure to specify a named, typed member within a structure. */
+typedef struct struct_member_t {
+  /** Name of the field. */
+  const char *name;
+  /** Type of the field, according to the config_type_t enumeration.
+   *
+   * This value is CONFIG_TYPE_EXTENDED for any type not listed in
+   * config_type_t.
+   **/
+  config_type_t type;
+  /**
+   * Pointer to a type definition for the type of this field. Overrides
+   * <b>type</b> if not NULL.
+   **/
+  const struct var_type_def_t *type_def;
+  /**
+   * Offset of this field within the structure.  Compute this with
+   * offsetof(structure, fieldname).
+   **/
+  int offset;
+} struct_member_t;
+
+/**
+ * Structure to describe the location and preferred value of a "magic number"
+ * field within a structure.
+ *
+ * These 'magic numbers' are 32-bit values used to tag objects to make sure
+ * that they have the correct type.
+ */
+typedef struct struct_magic_decl_t {
+  const char *typename;
+  uint32_t magic_val;
+  int magic_offset;
+} struct_magic_decl_t;
 
 #ifdef TOR_UNIT_TESTS
 /**

@@ -34,6 +34,9 @@ n * Copyright (c) 2001-2004, Roger Dingledine.
 #include "feature/nodelist/nickname.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerset.h"
+#include "lib/conf/conftypes.h"
+#include "lib/confmgt/typedvar.h"
+#include "lib/encoding/confline.h"
 #include "lib/geoip/geoip.h"
 
 #include "core/or/addr_policy_st.h"
@@ -41,6 +44,7 @@ n * Copyright (c) 2001-2004, Roger Dingledine.
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerstatus_st.h"
+#include "lib/confmgt/var_type_def_st.h"
 
 /** Return a new empty routerset. */
 routerset_t *
@@ -461,3 +465,61 @@ routerset_free_(routerset_t *routerset)
   bitarray_free(routerset->countries);
   tor_free(routerset);
 }
+
+static int
+routerset_kv_parse(void *target, const config_line_t *line, char **errmsg,
+                  const void *params)
+{
+  (void)params;
+  routerset_t **p = (routerset_t**)target;
+  routerset_free(*p); // clear the old value, if any.
+  routerset_t *rs = routerset_new();
+  if (routerset_parse(rs, line->value, line->key) < 0) {
+    routerset_free(rs);
+    *errmsg = tor_strdup("Invalid router list.");
+    return -1;
+  } else {
+    *p = rs;
+    return 0;
+  }
+}
+
+static char *
+routerset_encode(const void *value, const void *params)
+{
+  (void)params;
+  const routerset_t **p = (const routerset_t**)value;
+  return routerset_to_string(*p);
+}
+
+static void
+routerset_clear(void *value, const void *params)
+{
+  (void)params;
+  routerset_t **p = (routerset_t**)value;
+  routerset_free(*p); // sets *p to NULL.
+}
+
+static int
+routerset_copy(void *dest, const void *src, const void *params)
+{
+  (void)params;
+  routerset_t **output = (routerset_t**)dest;
+  const routerset_t *input = *(routerset_t**)src;
+  routerset_free(*output); // sets *output to NULL
+  *output = routerset_new();
+  routerset_union(*output, input);
+  return 0;
+}
+
+static const var_type_fns_t routerset_type_fns = {
+  .kv_parse = routerset_kv_parse,
+  .encode = routerset_encode,
+  .clear = routerset_clear,
+  .copy = routerset_copy
+};
+
+const var_type_def_t ROUTERSET_type_defn = {
+  .name = "RouterList",
+  .fns = &routerset_type_fns
+};

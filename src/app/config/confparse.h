@@ -34,10 +34,8 @@ typedef struct config_deprecation_t {
 
 /** A variable allowed in the configuration file or on the command line. */
 typedef struct config_var_t {
-  const char *name; /**< The full keyword (case insensitive). */
-  config_type_t type; /**< How to interpret the type and turn it into a
-                       * value. */
-  off_t var_offset; /**< Offset of the corresponding member of or_options_t. */
+  struct_member_t member; /** A struct member corresponding to this
+                           * variable. */
   const char *initvalue; /**< String (or null) describing initial value. */
 
 #ifdef TOR_UNIT_TESTS
@@ -74,12 +72,12 @@ typedef struct config_var_t {
 #define CONF_TEST_MEMBERS(tp, conftype, member) \
   , CONF_CHECK_VAR_TYPE(tp, conftype, member)
 #define END_OF_CONFIG_VARS                                      \
-  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL, { .INT=NULL } }
+  { { .name = NULL }, NULL, { .INT=NULL } }
 #define DUMMY_TYPECHECK_INSTANCE(tp)            \
   static tp tp ## _dummy
 #else /* !(defined(TOR_UNIT_TESTS)) */
 #define CONF_TEST_MEMBERS(tp, conftype, member)
-#define END_OF_CONFIG_VARS { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
+#define END_OF_CONFIG_VARS { { .name = NULL, }, NULL }
 /* Repeatedly declarable incomplete struct to absorb redundant semicolons */
 #define DUMMY_TYPECHECK_INSTANCE(tp)            \
   struct tor_semicolon_eater
@@ -98,9 +96,7 @@ typedef void (*free_cfg_fn_t)(void*);
  * configuration or storage format. */
 typedef struct config_format_t {
   size_t size; /**< Size of the struct that everything gets parsed into. */
-  uint32_t magic; /**< Required 'magic value' to make sure we have a struct
-                   * of the right type. */
-  off_t magic_offset; /**< Offset of the magic value within the struct. */
+  struct_magic_decl_t magic; /**< Magic number info for this struct. */
   config_abbrev_t *abbrevs; /**< List of abbreviations that we expand when
                              * parsing this format. */
   const config_deprecation_t *deprecations; /** List of deprecated options */
@@ -108,17 +104,16 @@ typedef struct config_format_t {
                        * values, and where we stick them in the structure. */
   validate_fn_t validate_fn; /**< Function to validate config. */
   free_cfg_fn_t free_fn; /**< Function to free the configuration. */
-  /** If present, extra is a LINELIST variable for unrecognized
+  /** If present, extra denotes a LINELIST variable for unrecognized
    * lines.  Otherwise, unrecognized lines are an error. */
-  config_var_t *extra;
+  struct_member_t *extra;
 } config_format_t;
 
 /** Macro: assert that <b>cfg</b> has the right magic field for format
  * <b>fmt</b>. */
 #define CONFIG_CHECK(fmt, cfg) STMT_BEGIN                               \
-    tor_assert(fmt && cfg);                                             \
-    tor_assert((fmt)->magic ==                                          \
-               *(uint32_t*)STRUCT_VAR_P(cfg,fmt->magic_offset));        \
+    tor_assert(fmt);                                                    \
+    struct_check_magic((cfg), &fmt->magic);                             \
   STMT_END
 
 #define CAL_USE_DEFAULTS      (1u<<0)
@@ -143,6 +138,8 @@ void *config_dup(const config_format_t *fmt, const void *old);
 char *config_dump(const config_format_t *fmt, const void *default_options,
                   const void *options, int minimal,
                   int comment_defaults);
+bool config_check_ok(const config_format_t *fmt, const void *options,
+                     int severity);
 int config_assign(const config_format_t *fmt, void *options,
                   struct config_line_t *list,
                   unsigned flags, char **msg);
