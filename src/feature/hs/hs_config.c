@@ -374,6 +374,8 @@ config_service_v3(const config_line_t *line_,
         goto err;
       }
       dos_rate_per_sec = true;
+      log_info(LD_REND, "Service INTRO2 DoS defenses rate set to: %" PRIu32,
+               config->intro_dos_rate_per_sec);
       continue;
     }
     if (!strcasecmp(line->key, "HiddenServiceEnableIntroDoSBurstPerSec")) {
@@ -388,6 +390,8 @@ config_service_v3(const config_line_t *line_,
         goto err;
       }
       dos_burst_per_sec = true;
+      log_info(LD_REND, "Service INTRO2 DoS defenses burst set to: %" PRIu32,
+               config->intro_dos_burst_per_sec);
       continue;
     }
   }
