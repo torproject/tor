@@ -135,6 +135,21 @@ hs_dos_get_intro2_enabled_param(void)
   return (unsigned int) param_introduce_defense_enabled;
 }
 
+/* Initialize the INTRODUCE2 token bucket for the DoS defenses using the
+ * consensus/default values. We might get a cell extension that changes those
+ * later but if we don't, the default or consensus parameters are used. */
+void
+hs_dos_setup_default_intro2_defenses(or_circuit_t *circ)
+{
+  tor_assert(circ);
+
+  circ->introduce2_dos_defense_enabled = get_param_intro_dos_enabled(NULL);
+  token_bucket_ctr_init(&circ->introduce2_bucket,
+                        get_param_rate_per_sec(NULL),
+                        get_param_burst_per_sec(NULL),
+                        (uint32_t) approx_time());
+}
+
 /* Called when the consensus has changed. We might have new consensus
  * parameters to look at. */
 void

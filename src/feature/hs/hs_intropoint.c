@@ -298,14 +298,9 @@ handle_verified_establish_intro_cell(or_circuit_t *circ,
   get_auth_key_from_cell(&auth_key, RELAY_COMMAND_ESTABLISH_INTRO,
                          parsed_cell);
 
-  /* Initialize the INTRODUCE2 token bucket for the DoS defenses using the
-   * consensus/default values. We might get a cell extension that changes
-   * those but if we don't, the default or consensus parameters are used. */
-  circ->introduce2_dos_defense_enabled = hs_dos_get_intro2_enabled_param();
-  token_bucket_ctr_init(&circ->introduce2_bucket,
-                        hs_dos_get_intro2_rate_param(),
-                        hs_dos_get_intro2_burst_param(),
-                        (uint32_t) approx_time());
+  /* Setup INTRODUCE2 defenses on the circuit. Must be done before parsing the
+   * cell extension that can possibly change the defenses' values. */
+  hs_dos_setup_default_intro2_defenses(circ);
 
   /* Handle cell extension if any. */
   handle_establish_intro_cell_extensions(parsed_cell, circ);
