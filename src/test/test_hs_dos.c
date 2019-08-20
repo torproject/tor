@@ -9,6 +9,7 @@
 #define CIRCUITLIST_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #define HS_DOS_PRIVATE
+#define HS_INTROPOINT_PRIVATE
 
 #include "test/test.h"
 #include "test/test_helpers.h"
@@ -21,6 +22,7 @@
 #include "core/or/or_circuit_st.h"
 
 #include "feature/hs/hs_dos.h"
+#include "feature/hs/hs_intropoint.h"
 #include "feature/nodelist/networkstatus.h"
 
 static void
@@ -125,9 +127,50 @@ test_can_send_intro2(void *arg)
   free_mock_consensus();
 }
 
+static void
+test_validate_dos_extension_params(void *arg)
+{
+  bool ret;
+
+  (void) arg;
+
+  /* Validate the default values. */
+  ret = validate_cell_dos_extension_parameters(
+                                    get_intro2_rate_consensus_param(NULL),
+                                    get_intro2_burst_consensus_param(NULL));
+  tt_assert(ret);
+
+  /* Valid custom rate/burst. */
+  ret = validate_cell_dos_extension_parameters(17, 42);
+  tt_assert(ret);
+
+  /* Invalid rate. */
+  ret = validate_cell_dos_extension_parameters(UINT64_MAX, 42);
+  tt_assert(!ret);
+
+  /* Invalid burst. */
+  ret = validate_cell_dos_extension_parameters(42, UINT64_MAX);
+  tt_assert(!ret);
+
+  /* Value of 0 should return invalid so defenses can be disabled. */
+  ret = validate_cell_dos_extension_parameters(0, 42);
+  tt_assert(!ret);
+  ret = validate_cell_dos_extension_parameters(42, 0);
+  tt_assert(!ret);
+
+  /* Can't have burst smaller than rate. */
+  ret = validate_cell_dos_extension_parameters(42, 40);
+  tt_assert(!ret);
+
+ done:
+  return;
+}
+
 struct testcase_t hs_dos_tests[] = {
   { "can_send_intro2", test_can_send_intro2, TT_FORK,
     NULL, NULL },
+  { "validate_dos_extension_params", test_validate_dos_extension_params,
+    TT_FORK, NULL, NULL },
 
   END_OF_TESTCASES
 };

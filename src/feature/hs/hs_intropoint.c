@@ -182,6 +182,59 @@ hs_intro_send_intro_established_cell,(or_circuit_t *circ))
   return ret;
 }
 
+/* Validate the cell DoS extension parameters. Return true iff they've been
+ * bound check and can be used. Else return false. See proposal 305 for
+ * details and reasons about this validation. */
+STATIC bool
+validate_cell_dos_extension_parameters(uint64_t intro2_rate_per_sec,
+                                       uint64_t intro2_burst_per_sec)
+{
+  bool ret = false;
+
+  /* A value of 0 is valid in the sense that we accept it but we still disable
+   * the defenses so return false. */
+  if (intro2_rate_per_sec == 0 || intro2_burst_per_sec == 0) {
+    log_info(LD_REND, "Intro point DoS defenses parameter set to 0.");
+    goto end;
+  }
+
+  /* Bound check the received rate per second. MIN/MAX are inclusive. */
+  if (!(intro2_rate_per_sec <= HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX &&
+        intro2_rate_per_sec > HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN)) {
+    log_info(LD_REND, "Intro point DoS defenses rate per second is "
+                      "invalid. Received value: %" PRIu64,
+             intro2_rate_per_sec);
+    goto end;
+  }
+
+  /* Bound check the received burst per second. MIN/MAX are inclusive. */
+  if (!(intro2_burst_per_sec <= HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MAX &&
+        intro2_burst_per_sec > HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN)) {
+    log_info(LD_REND, "Intro point DoS defenses burst per second is "
+                      "invalid. Received value: %" PRIu64,
+             intro2_burst_per_sec);
+    goto end;
+  }
+
+  /* In a rate limiting scenario, burst can never be smaller than the rate. At
+   * best it can be equal. */
+  if (intro2_burst_per_sec < intro2_rate_per_sec) {
+    log_info(LD_REND, "Intro point DoS defenses burst is smaller than rate. "
+                      "Rate: %" PRIu64 " vs Burst: %" PRIu64,
+             intro2_rate_per_sec, intro2_burst_per_sec);
+    goto end;
+  }
+
+  /* Passing validation. */
+  ret = true;
+
+ end:
+  return ret;
+}
+
+/* Parse the cell DoS extension and apply defenses on the given circuit if
+ * validation passes. If the cell extension is malformed or contains unusable
+ * values, the DoS defenses is disabled on the circuit. */
 static void
 handle_establish_intro_cell_dos_extension(
                                 const trn_cell_extension_field_t *field,
@@ -220,33 +273,33 @@ handle_establish_intro_cell_dos_extension(
     }
   }
 
-  /* Validation. A value of 0 on either of them means the defenses are
-   * disabled so we ignore. */
-  if ((intro2_rate_per_sec > HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MAX ||
-       intro2_rate_per_sec <= HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN) ||
-      (intro2_burst_per_sec > HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX ||
-       intro2_burst_per_sec <= HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN) ||
-      (intro2_burst_per_sec < intro2_rate_per_sec)) {
+  /* If invalid, we disable the defense on the circuit. */
+  if (!validate_cell_dos_extension_parameters(intro2_rate_per_sec,
+                                              intro2_burst_per_sec)) {
     circ->introduce2_dos_defense_enabled = 0;
-    log_info(LD_REND, "Intro point DoS defenses disabled due to bad values");
-  } else {
-    circ->introduce2_dos_defense_enabled = 1;
-
-    /* Initialize the INTRODUCE2 token bucket for the rate limiting. */
-    token_bucket_ctr_init(&circ->introduce2_bucket,
-                          (uint32_t) intro2_rate_per_sec,
-                          (uint32_t) intro2_burst_per_sec,
-                          (uint32_t) approx_time());
-    log_debug(LD_REND, "Intro point DoS defenses enabled. Rate is %" PRIu64
-                       " and Burst is %" PRIu64, intro2_rate_per_sec,
-                       intro2_burst_per_sec);
+    log_info(LD_REND, "Disabling INTRO2 DoS defenses on circuit id %u",
+             circ->p_circ_id);
+    goto end;
   }
+
+  /* We passed validation, enable defenses and apply rate/burst. */
+  circ->introduce2_dos_defense_enabled = 1;
+
+  /* Initialize the INTRODUCE2 token bucket for the rate limiting. */
+  token_bucket_ctr_init(&circ->introduce2_bucket,
+                        (uint32_t) intro2_rate_per_sec,
+                        (uint32_t) intro2_burst_per_sec,
+                        (uint32_t) approx_time());
+  log_info(LD_REND, "Intro point DoS defenses enabled. Rate is %" PRIu64
+                    " and Burst is %" PRIu64,
+           intro2_rate_per_sec, intro2_burst_per_sec);
 
  end:
   trn_cell_extension_dos_free(dos);
   return;
 }
 
+/* Parse every cell extension in the given ESTABLISH_INTRO cell. */
 static void
 handle_establish_intro_cell_extensions(
                             const trn_cell_establish_intro_t *parsed_cell,
