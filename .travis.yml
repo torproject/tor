@@ -174,7 +174,7 @@ install:
   ## If we're using Rust, download rustup
   - if [[ "$RUST_OPTIONS" != "" ]]; then curl -Ssf -o rustup.sh https://sh.rustup.rs; fi
   ## Install the stable channels of rustc and cargo and setup our toolchain environment
-  - if [[ "$RUST_OPTIONS" != "" ]]; then sh rustup.sh -y --default-toolchain 1.29.0; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then sh rustup.sh -y --default-toolchain 1.31.0; fi
   - if [[ "$RUST_OPTIONS" != "" ]]; then source $HOME/.cargo/env; fi
   ## If we're testing rust builds in offline-mode, then set up our vendored dependencies
   - if [[ "$TOR_RUST_DEPENDENCIES" == "true" ]]; then export TOR_RUST_DEPENDENCIES=$PWD/src/ext/rust/crates; fi
