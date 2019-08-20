@@ -91,7 +91,7 @@ matrix:
     - compiler: gcc
       os: linux
       ## TOR_RUST_DEPENDENCIES is spelt RUST_DEPENDENCIES in 0.3.2
-      env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
+      env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
 
 ## (Linux only) Use the latest Linux image (Ubuntu Trusty)
 dist: trusty
