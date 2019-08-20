@@ -341,7 +341,7 @@ Changes in version 0.4.1.5 - 2019-08-20
       votes so that it conforms to dir-spec.txt. Fixes bug 30316; bugfix
       on 0.3.5.1-alpha.
     - Directory authorities with IPv6 support now always mark themselves
-      as reachable via IPv6. Fixes bug 24338; bugfix on 0.4.0.2-alpha.
+      as reachable via IPv6. Fixes bug 24338; bugfix on 0.2.4.1-alpha.
       Patch by Neel Chauhan.
 
   o Minor bugfixes (documentation):
@@ -387,7 +387,7 @@ Changes in version 0.4.1.5 - 2019-08-20
       Neel Chauhan.
     - When relaunching a circuit to a rendezvous service, mark the
       circuit as needing high-uptime routers as appropriate. Fixes bug
-      17357; bugfix on 0.4.0.2-alpha. Patch by Neel Chauhan.
+      17357; bugfix on 0.1.0.1-rc. Patch by Neel Chauhan.
     - Stop ignoring IPv6 link specifiers sent to v3 onion services.
       (IPv6 support for v3 onion services is still incomplete: see
       ticket 23493 for details.) Fixes bug 23588; bugfix on
@@ -911,7 +911,7 @@ Changes in version 0.4.0.5 - 2019-05-02
       we had added up the sum of all nodes with a descriptor, but that
       could cause us to build failing circuits when we had either too
       many bridges or not enough guard nodes. Fixes bug 25885; bugfix on
-      0.3.6.1-alpha. Patch by Neel Chauhan.
+      0.2.3.1-alpha. Patch by Neel Chauhan.
 
   o Minor bugfixes (IPv6):
     - Fix tor_ersatz_socketpair on IPv6-only systems. Previously, the
