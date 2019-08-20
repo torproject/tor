@@ -191,29 +191,28 @@ validate_cell_dos_extension_parameters(uint64_t intro2_rate_per_sec,
 {
   bool ret = false;
 
-  /* Bound checking the received rate per second. As per proposal 305, a
-   * value of 0 disabled the defenses regardless of the other parameters in
-   * the extension which is why we stop right away. */
-  if (intro2_rate_per_sec > HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX ||
-      intro2_rate_per_sec <= HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN) {
-    if (intro2_rate_per_sec != 0) {
-      log_info(LD_REND, "Intro point DoS defenses rate per second is "
-                        "invalid. Received value: %" PRIu64,
-               intro2_rate_per_sec);
-    }
+  /* A value of 0 is valid in the sense that we accept it but we still disable
+   * the defenses so return false. */
+  if (intro2_rate_per_sec == 0 || intro2_burst_per_sec == 0) {
+    log_info(LD_REND, "Intro point DoS defenses parameter set to 0.");
     goto end;
   }
 
-  /* Bound checking the received burst per second. As per proposal 305, a
-   * value of 0 disabled the defenses regardless of the other parameters in
-   * the extension which is why we stop right away. */
+  /* Bound check the received rate per second. */
+  if (intro2_rate_per_sec > HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX ||
+      intro2_rate_per_sec < HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN) {
+    log_info(LD_REND, "Intro point DoS defenses rate per second is "
+                      "invalid. Received value: %" PRIu64,
+             intro2_rate_per_sec);
+    goto end;
+  }
+
+  /* Bound check the received burst per second. */
   if (intro2_burst_per_sec > HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MAX ||
-      intro2_burst_per_sec <= HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN) {
-    if (intro2_burst_per_sec != 0) {
-      log_info(LD_REND, "Intro point DoS defenses burst per second is "
-                        "invalid. Received value: %" PRIu64,
-               intro2_burst_per_sec);
-    }
+      intro2_burst_per_sec < HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN) {
+    log_info(LD_REND, "Intro point DoS defenses burst per second is "
+                      "invalid. Received value: %" PRIu64,
+             intro2_burst_per_sec);
     goto end;
   }
 
