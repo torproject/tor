@@ -135,31 +135,31 @@ test_validate_dos_extension_params(void *arg)
   (void) arg;
 
   /* Validate the default values. */
-  ret = validate_cell_dos_extension_parameters(
-                                    get_intro2_rate_consensus_param(NULL),
-                                    get_intro2_burst_consensus_param(NULL));
+  ret = cell_dos_extension_parameters_are_valid(
+                                      get_intro2_rate_consensus_param(NULL),
+                                      get_intro2_burst_consensus_param(NULL));
   tt_assert(ret);
 
   /* Valid custom rate/burst. */
-  ret = validate_cell_dos_extension_parameters(17, 42);
+  ret = cell_dos_extension_parameters_are_valid(17, 42);
   tt_assert(ret);
 
   /* Invalid rate. */
-  ret = validate_cell_dos_extension_parameters(UINT64_MAX, 42);
+  ret = cell_dos_extension_parameters_are_valid(UINT64_MAX, 42);
   tt_assert(!ret);
 
   /* Invalid burst. */
-  ret = validate_cell_dos_extension_parameters(42, UINT64_MAX);
+  ret = cell_dos_extension_parameters_are_valid(42, UINT64_MAX);
   tt_assert(!ret);
 
   /* Value of 0 should return invalid so defenses can be disabled. */
-  ret = validate_cell_dos_extension_parameters(0, 42);
+  ret = cell_dos_extension_parameters_are_valid(0, 42);
   tt_assert(!ret);
-  ret = validate_cell_dos_extension_parameters(42, 0);
+  ret = cell_dos_extension_parameters_are_valid(42, 0);
   tt_assert(!ret);
 
   /* Can't have burst smaller than rate. */
-  ret = validate_cell_dos_extension_parameters(42, 40);
+  ret = cell_dos_extension_parameters_are_valid(42, 40);
   tt_assert(!ret);
 
  done:

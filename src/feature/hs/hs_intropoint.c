@@ -186,8 +186,8 @@ hs_intro_send_intro_established_cell,(or_circuit_t *circ))
  * bound check and can be used. Else return false. See proposal 305 for
  * details and reasons about this validation. */
 STATIC bool
-validate_cell_dos_extension_parameters(uint64_t intro2_rate_per_sec,
-                                       uint64_t intro2_burst_per_sec)
+cell_dos_extension_parameters_are_valid(uint64_t intro2_rate_per_sec,
+                                        uint64_t intro2_burst_per_sec)
 {
   bool ret = false;
 
@@ -277,8 +277,8 @@ handle_establish_intro_cell_dos_extension(
   }
 
   /* If invalid, we disable the defense on the circuit. */
-  if (!validate_cell_dos_extension_parameters(intro2_rate_per_sec,
-                                              intro2_burst_per_sec)) {
+  if (!cell_dos_extension_parameters_are_valid(intro2_rate_per_sec,
+                                               intro2_burst_per_sec)) {
     circ->introduce2_dos_defense_enabled = 0;
     log_info(LD_REND, "Disabling INTRO2 DoS defenses on circuit id %u",
              circ->p_circ_id);
