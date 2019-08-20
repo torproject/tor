@@ -3038,13 +3038,13 @@ The next section describes the per service options that can only be set
 
 [[HiddenServiceEnableIntroDoSRatePerSec]] **HiddenServiceEnableIntroDoSRatePerSec** __NUM__::
     The allowed client introduction rate per second at the introduction
-    point. If this option is 0, it is consider infinite and thus if
+    point. If this option is 0, it is considered infinite and thus if
     **HiddenServiceEnableIntroDoSDefense** is set, it then effectively
     disables the defenses. (Default: 25)
 
 [[HiddenServiceEnableIntroDoSBurstPerSec]] **HiddenServiceEnableIntroDoSBurstPerSec** __NUM__::
     The allowed client introduction burst per second at the introduction
-    point. If this option is 0, it is consider infinite and thus if
+    point. If this option is 0, it is considered infinite and thus if
     **HiddenServiceEnableIntroDoSDefense** is set, it then effectively
     disables the defenses. (Default: 200)
 
