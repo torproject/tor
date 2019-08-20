@@ -191,28 +191,40 @@ validate_cell_dos_extension_parameters(uint64_t intro2_rate_per_sec,
 {
   bool ret = false;
 
-  /* A value of 0 is valid in the sense that we accept it but we still disable
-   * the defenses so return false. */
-  if (intro2_rate_per_sec == 0 || intro2_burst_per_sec == 0) {
-    log_info(LD_REND, "Intro point DoS defenses parameter set to 0.");
+  /* Check that received value is not below the minimum. Don't check if minimum
+     is set to 0, since the param is a positive value and gcc will complain. */
+#if HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN > 0
+  if (intro2_rate_per_sec < HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN) {
+    log_fn(LOG_PROTOCOL_WARN, LD_REND,
+           "Intro point DoS defenses rate per second is "
+           "too small. Received value: %" PRIu64, intro2_rate_per_sec);
+    goto end;
+  }
+#endif
+
+  /* Check that received value is not above maximum */
+  if (intro2_rate_per_sec > HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX) {
+    log_fn(LOG_PROTOCOL_WARN, LD_REND,
+           "Intro point DoS defenses rate per second is "
+           "too big. Received value: %" PRIu64, intro2_rate_per_sec);
     goto end;
   }
 
-  /* Bound check the received rate per second. MIN/MAX are inclusive. */
-  if (!(intro2_rate_per_sec <= HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX &&
-        intro2_rate_per_sec > HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN)) {
-    log_info(LD_REND, "Intro point DoS defenses rate per second is "
-                      "invalid. Received value: %" PRIu64,
-             intro2_rate_per_sec);
+  /* Check that received value is not below the minimum */
+#if HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN > 0
+  if (intro2_burst_per_sec < HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN) {
+    log_fn(LOG_PROTOCOL_WARN, LD_REND,
+           "Intro point DoS defenses burst per second is "
+           "too small. Received value: %" PRIu64, intro2_burst_per_sec);
     goto end;
   }
+#endif
 
-  /* Bound check the received burst per second. MIN/MAX are inclusive. */
-  if (!(intro2_burst_per_sec <= HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MAX &&
-        intro2_burst_per_sec > HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN)) {
-    log_info(LD_REND, "Intro point DoS defenses burst per second is "
-                      "invalid. Received value: %" PRIu64,
-             intro2_burst_per_sec);
+  /* Check that received value is not above maximum */
+  if (intro2_burst_per_sec > HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MAX) {
+    log_fn(LOG_PROTOCOL_WARN, LD_REND,
+           "Intro point DoS defenses burst per second is "
+           "too big. Received value: %" PRIu64, intro2_burst_per_sec);
     goto end;
   }
 
@@ -271,6 +283,16 @@ handle_establish_intro_cell_dos_extension(
     default:
       goto end;
     }
+  }
+
+  /* A value of 0 is valid in the sense that we accept it but we still disable
+   * the defenses so return false. */
+  if (intro2_rate_per_sec == 0 || intro2_burst_per_sec == 0) {
+    log_info(LD_REND, "Intro point DoS defenses parameter set to 0. "
+                      "Disabling INTRO2 DoS defenses on circuit id %u",
+             circ->p_circ_id);
+    circ->introduce2_dos_defense_enabled = 0;
+    goto end;
   }
 
   /* If invalid, we disable the defense on the circuit. */
