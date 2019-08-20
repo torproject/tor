@@ -193,7 +193,7 @@ cell_dos_extension_parameters_are_valid(uint64_t intro2_rate_per_sec,
 
   /* Bound check the received rate per second. MIN/MAX are inclusive. */
   if (!(intro2_rate_per_sec <= HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX &&
-        intro2_rate_per_sec => HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN)) {
+        intro2_rate_per_sec > HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN)) {
     log_info(LD_REND, "Intro point DoS defenses rate per second is "
                       "invalid. Received value: %" PRIu64,
              intro2_rate_per_sec);
@@ -202,7 +202,7 @@ cell_dos_extension_parameters_are_valid(uint64_t intro2_rate_per_sec,
 
   /* Bound check the received burst per second. MIN/MAX are inclusive. */
   if (!(intro2_burst_per_sec <= HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MAX &&
-        intro2_burst_per_sec => HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN)) {
+        intro2_burst_per_sec > HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN)) {
     log_info(LD_REND, "Intro point DoS defenses burst per second is "
                       "invalid. Received value: %" PRIu64,
              intro2_burst_per_sec);
