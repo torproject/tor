@@ -46,14 +46,14 @@
 #define HS_DOS_INTRODUCE_ENABLED_DEFAULT 0
 
 /* Consensus parameters. */
-static uint32_t param_introduce_rate_per_sec =
+static uint32_t consensus_param_introduce_rate_per_sec =
   HS_DOS_INTRODUCE_DEFAULT_CELL_RATE_PER_SEC;
-static uint32_t param_introduce_burst_per_sec =
+static uint32_t consensus_param_introduce_burst_per_sec =
   HS_DOS_INTRODUCE_DEFAULT_CELL_BURST_PER_SEC;
-static uint32_t param_introduce_defense_enabled =
+static uint32_t consensus_param_introduce_defense_enabled =
   HS_DOS_INTRODUCE_ENABLED_DEFAULT;
 
-static uint32_t
+STATIC uint32_t
 get_intro2_enable_consensus_param(const networkstatus_t *ns)
 {
   return networkstatus_get_param(ns, "HiddenServiceEnableIntroDoSDefense",
@@ -61,7 +61,7 @@ get_intro2_enable_consensus_param(const networkstatus_t *ns)
 }
 
 /* Return the parameter for the introduction rate per sec. */
-static uint32_t
+STATIC uint32_t
 get_intro2_rate_consensus_param(const networkstatus_t *ns)
 {
   return networkstatus_get_param(ns, "HiddenServiceEnableIntroDoSRatePerSec",
@@ -70,7 +70,7 @@ get_intro2_rate_consensus_param(const networkstatus_t *ns)
 }
 
 /* Return the parameter for the introduction burst per sec. */
-static uint32_t
+STATIC uint32_t
 get_intro2_burst_consensus_param(const networkstatus_t *ns)
 {
   return networkstatus_get_param(ns, "HiddenServiceEnableIntroDoSBurstPerSec",
@@ -90,8 +90,8 @@ update_intro_circuits(void)
   SMARTLIST_FOREACH_BEGIN(intro_circs, circuit_t *, circ) {
     /* Adjust the rate/burst value that might have changed. */
     token_bucket_ctr_adjust(&TO_OR_CIRCUIT(circ)->introduce2_bucket,
-                            param_introduce_rate_per_sec,
-                            param_introduce_burst_per_sec);
+                            consensus_param_introduce_rate_per_sec,
+                            consensus_param_introduce_burst_per_sec);
   } SMARTLIST_FOREACH_END(circ);
 
   smartlist_free(intro_circs);
@@ -101,9 +101,12 @@ update_intro_circuits(void)
 static void
 set_consensus_parameters(const networkstatus_t *ns)
 {
-  param_introduce_rate_per_sec = get_intro2_rate_consensus_param(ns);
-  param_introduce_burst_per_sec = get_intro2_burst_consensus_param(ns);
-  param_introduce_defense_enabled = get_intro2_enable_consensus_param(ns);
+  consensus_param_introduce_rate_per_sec =
+    get_intro2_rate_consensus_param(ns);
+  consensus_param_introduce_burst_per_sec =
+    get_intro2_burst_consensus_param(ns);
+  consensus_param_introduce_defense_enabled =
+    get_intro2_enable_consensus_param(ns);
 
   /* The above might have changed which means we need to go through all
    * introduction circuits (relay side) and update the token buckets. */
@@ -114,27 +117,6 @@ set_consensus_parameters(const networkstatus_t *ns)
  * Public API.
  */
 
-/* Return the INTRODUCE2 cell rate per second (param or default). */
-uint32_t
-hs_dos_get_intro2_rate_param(void)
-{
-  return param_introduce_rate_per_sec;
-}
-
-/* Return the INTRODUCE2 cell burst per second (param or default). */
-uint32_t
-hs_dos_get_intro2_burst_param(void)
-{
-  return param_introduce_burst_per_sec;
-}
-
-/* Return the INTRODUCE2 DoS defense enabled flag (param or default). */
-unsigned int
-hs_dos_get_intro2_enabled_param(void)
-{
-  return (unsigned int) param_introduce_defense_enabled;
-}
-
 /* Initialize the INTRODUCE2 token bucket for the DoS defenses using the
  * consensus/default values. We might get a cell extension that changes those
  * later but if we don't, the default or consensus parameters are used. */
@@ -143,10 +125,11 @@ hs_dos_setup_default_intro2_defenses(or_circuit_t *circ)
 {
   tor_assert(circ);
 
-  circ->introduce2_dos_defense_enabled = param_introduce_defense_enabled;
+  circ->introduce2_dos_defense_enabled =
+    consensus_param_introduce_defense_enabled;
   token_bucket_ctr_init(&circ->introduce2_bucket,
-                        param_introduce_rate_per_sec,
-                        param_introduce_burst_per_sec,
+                        consensus_param_introduce_rate_per_sec,
+                        consensus_param_introduce_burst_per_sec,
                         (uint32_t) approx_time());
 }
 
