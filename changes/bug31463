@@ -1,0 +1,3 @@
+  o Minor bugfixes (rust):
+    - Correctly exclude a redundant rust build job in Travis. Fixes bug 31463;
+      bugfix on 0.3.5.4-alpha.
