@@ -31,7 +31,7 @@ Changes in version 0.4.1.5 - 2019-08-20
       circuits. This feature is only enabled when also supported by the
       circuit's middle node. (Clients may specify fixed middle nodes
       with the MiddleNodes option, and may force-disable this feature
-      with the CircuitPadding torrc.) Closes ticket 28634.
+      with the CircuitPadding option.) Closes ticket 28634.
 
   o Major features (code organization):
     - Tor now includes a generic publish-subscribe message-passing
