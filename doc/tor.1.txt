@@ -647,6 +647,22 @@ GENERAL OPTIONS
     in accordance to RFC 1929. Both username and password must be between 1 and
     255 characters.
 
+[[TCPProxy]] **TCPProxy** __protocol__ __host__:__port__::
+	Tor will use the given protocol to make all its OR (SSL) connections through
+	a TCP proxy on host:port, rather than connecting directly to servers. You may
+	want to set **FascistFirewall** to restrict the set of ports you might try to
+	connect to, if your proxy only allows connecting to certain ports. There is no
+	equivalent option for directory connections, because all Tor client versions
+	that support this option download directory documents via OR connections. +
++
+	The only protocol supported right now 'haproxy'. This option is only for
+	clients. (Default: none) +
++
+	The HAProxy version 1 proxy protocol is described in detail at
+	https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt +
++
+	Both source IP address and source port will be set to zero.
+
 [[UnixSocksGroupWritable]] **UnixSocksGroupWritable** **0**|**1**::
     If this option is set to 0, don't allow the filesystem group to read and
     write unix sockets (e.g. SocksPort unix:). If the option is set to 1, make
