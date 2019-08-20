@@ -64,7 +64,7 @@ Changes in version 0.4.1.5 - 2019-08-20
       on 0.4.1.1-alpha.
 
   o Testing (continuous integration):
-    - In Travis, make stem log a controller trace to the console. And
+    - In Travis, make stem log a controller trace to the console, and
       tail stem's tor log after failure. Closes ticket 30591.
     - In Travis, only run the stem tests that use a tor binary. Closes
       ticket 30694.
