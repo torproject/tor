@@ -45,7 +45,9 @@
  * introduction DoS defense. Disabled by default. */
 #define HS_DOS_INTRODUCE_ENABLED_DEFAULT 0
 
-/* Consensus parameters. */
+/* Consensus parameters. The ESTABLISH_INTRO DoS cell extension have higher
+ * priority than these values. If no extension is sent, these are used only by
+ * the introduction point. */
 static uint32_t consensus_param_introduce_rate_per_sec =
   HS_DOS_INTRODUCE_DEFAULT_CELL_RATE_PER_SEC;
 static uint32_t consensus_param_introduce_burst_per_sec =
