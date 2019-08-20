@@ -117,8 +117,7 @@ rend_mid_establish_intro_legacy(or_circuit_t *circ, const uint8_t *request,
   /* Now, set up this circuit. */
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_INTRO_POINT);
   hs_circuitmap_register_intro_circ_v2_relay_side(circ, (uint8_t *)pk_digest);
-  token_bucket_ctr_init(&circ->introduce2_bucket, hs_dos_get_intro2_rate(),
-                        hs_dos_get_intro2_burst(), (uint32_t) approx_time());
+  hs_dos_setup_default_intro2_defenses(circ);
 
   log_info(LD_REND,
            "Established introduction point on circuit %u for service %s",
