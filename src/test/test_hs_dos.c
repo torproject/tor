@@ -8,6 +8,7 @@
 
 #define CIRCUITLIST_PRIVATE
 #define NETWORKSTATUS_PRIVATE
+#define HS_DOS_PRIVATE
 
 #include "test/test.h"
 #include "test/test_helpers.h"
@@ -57,11 +58,8 @@ test_can_send_intro2(void *arg)
 
   /* Make that circuit a service intro point. */
   circuit_change_purpose(TO_CIRCUIT(or_circ), CIRCUIT_PURPOSE_INTRO_POINT);
+  hs_dos_setup_default_intro2_defenses(or_circ);
   or_circ->introduce2_dos_defense_enabled = 1;
-  /* Initialize the INTRODUCE2 token bucket for the rate limiting. */
-  token_bucket_ctr_init(&or_circ->introduce2_bucket,
-                        hs_dos_get_intro2_rate_param(),
-                        hs_dos_get_intro2_burst_param(), now);
 
   /* Brand new circuit, we should be able to send INTRODUCE2 cells. */
   tt_int_op(true, OP_EQ, hs_dos_can_send_intro2(or_circ));
@@ -73,13 +71,13 @@ test_can_send_intro2(void *arg)
     tt_int_op(true, OP_EQ, hs_dos_can_send_intro2(or_circ));
   }
   tt_uint_op(token_bucket_ctr_get(&or_circ->introduce2_bucket), OP_EQ,
-             hs_dos_get_intro2_burst_param() - 10);
+             get_intro2_burst_consensus_param(NULL) - 10);
 
   /* Fully refill the bucket minus 1 cell. */
   update_approx_time(++now);
   tt_int_op(true, OP_EQ, hs_dos_can_send_intro2(or_circ));
   tt_uint_op(token_bucket_ctr_get(&or_circ->introduce2_bucket), OP_EQ,
-             hs_dos_get_intro2_burst_param() - 1);
+             get_intro2_burst_consensus_param(NULL) - 1);
 
   /* Receive an INTRODUCE2 at each second. We should have the bucket full
    * since at every second it gets refilled. */
@@ -89,18 +87,18 @@ test_can_send_intro2(void *arg)
   }
   /* Last check if we can send the cell decrements the bucket so minus 1. */
   tt_uint_op(token_bucket_ctr_get(&or_circ->introduce2_bucket), OP_EQ,
-             hs_dos_get_intro2_burst_param() - 1);
+             get_intro2_burst_consensus_param(NULL) - 1);
 
   /* Manually reset bucket for next test. */
   token_bucket_ctr_reset(&or_circ->introduce2_bucket, now);
   tt_uint_op(token_bucket_ctr_get(&or_circ->introduce2_bucket), OP_EQ,
-             hs_dos_get_intro2_burst_param());
+             get_intro2_burst_consensus_param(NULL));
 
   /* Do a full burst in the current second which should empty the bucket and
    * we shouldn't be allowed to send one more cell after that. We go minus 1
    * cell else the very last check if we can send the INTRO2 cell returns
    * false because the bucket goes down to 0. */
-  for (uint32_t i = 0; i < hs_dos_get_intro2_burst_param() - 1; i++) {
+  for (uint32_t i = 0; i < get_intro2_burst_consensus_param(NULL) - 1; i++) {
     tt_int_op(true, OP_EQ, hs_dos_can_send_intro2(or_circ));
   }
   tt_uint_op(token_bucket_ctr_get(&or_circ->introduce2_bucket), OP_EQ, 1);
@@ -118,7 +116,7 @@ test_can_send_intro2(void *arg)
   update_approx_time(++now);
   tt_int_op(true, OP_EQ, hs_dos_can_send_intro2(or_circ));
   tt_uint_op(token_bucket_ctr_get(&or_circ->introduce2_bucket), OP_EQ,
-             hs_dos_get_intro2_rate_param() - 1);
+             get_intro2_rate_consensus_param(NULL) - 1);
 
  done:
   circuit_free_(TO_CIRCUIT(or_circ));
