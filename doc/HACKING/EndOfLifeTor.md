@@ -7,7 +7,7 @@ series reaches End of Life.  Note that they are _only_ for entire series that
 have reached their planned EOL: they do not apply to security-related
 deprecations of individual versions.
 
-=== 0. Preliminaries
+### 0. Preliminaries
 
 0. A few months before End of Life:
    Write a deprecation announcement.
@@ -17,7 +17,7 @@ deprecations of individual versions.
    Send the announcement to tor-announce, tor-talk, tor-relays, and the
    packagers.
 
-=== 1. On the day
+### 1. On the day
 
 1. Open tickets to remove the release from:
    - the jenkins builds
