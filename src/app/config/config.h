@@ -266,6 +266,8 @@ STATIC int options_validate(or_options_t *old_options,
 STATIC int parse_transport_line(const or_options_t *options,
                                 const char *line, int validate_only,
                                 int server);
+STATIC int parse_tcp_proxy_line(const char *line, or_options_t *options,
+                                char **msg);
 STATIC int consider_adding_dir_servers(const or_options_t *options,
                                        const or_options_t *old_options);
 STATIC void add_default_trusted_dir_authorities(dirinfo_type_t type);
