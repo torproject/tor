@@ -36,8 +36,8 @@ elif [ -d src/common ]; then
          src/tools/*.[ch]
 fi
 
-if test -e scripts/maint/checkIncludes.py; then
-    python scripts/maint/checkIncludes.py
+if test -e scripts/maint/practracker/includes.py; then
+    python scripts/maint/practracker/includes.py
 fi
 
 if [ -e scripts/maint/practracker/practracker.py ]; then

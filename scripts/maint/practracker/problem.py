@@ -198,6 +198,21 @@ class FunctionSizeItem(Item):
     def __init__(self, problem_location, metric_value):
         super(FunctionSizeItem, self).__init__("function-size", problem_location, metric_value)
 
+class DependencyViolationItem(Item):
+    """
+    Denotes a dependency violation in a .c or .h file.  A dependency violation
+    occurs when a file includes a file from some module that is not listed
+    in its .may_include file.
+
+    The 'problem_location' is the file that contains the problem.
+
+    The 'metric_value' is the number of forbidden includes.
+    """
+    def __init__(self, problem_location, metric_value):
+        super(DependencyViolationItem, self).__init__("dependency-violation",
+                                                      problem_location,
+                                                      metric_value)
+
 comment_re = re.compile(r'#.*$')
 
 def get_old_problem_from_exception_str(exception_str):
@@ -219,5 +234,7 @@ def get_old_problem_from_exception_str(exception_str):
         return IncludeCountItem(problem_location, metric_value)
     elif problem_type == "function-size":
         return FunctionSizeItem(problem_location, metric_value)
+    elif problem_type == "dependency-violation":
+        return DependencyViolationItem(problem_location, metric_value)
     else:
         raise ValueError("Unknown exception type {!r}".format(orig_str))

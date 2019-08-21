@@ -169,6 +169,7 @@ EXTRA_DIST+= \
 	scripts/maint/checkIncludes.py                  \
 	scripts/maint/checkSpace.pl 			\
 	scripts/maint/practracker/exceptions.txt	\
+	scripts/maint/practracker/includes.py		\
 	scripts/maint/practracker/metrics.py		\
 	scripts/maint/practracker/practracker.py	\
 	scripts/maint/practracker/practracker_tests.py	\
@@ -379,7 +380,7 @@ endif
 
 check-includes:
 if USEPYTHON
-	$(PYTHON) $(top_srcdir)/scripts/maint/checkIncludes.py
+	$(PYTHON) $(top_srcdir)/scripts/maint/practracker/includes.py
 endif
 
 check-best-practices:
