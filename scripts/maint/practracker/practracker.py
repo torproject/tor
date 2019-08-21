@@ -7,7 +7,8 @@ Go through the various .c files and collect metrics about them. If the metrics
 violate some of our best practices and they are not found in the optional
 exceptions file, then log a problem about them.
 
-We currently do metrics about file size, function size and number of includes.
+We currently do metrics about file size, function size and number of includes,
+for C files and headers.
 
 practracker.py should be run with its second argument pointing to the Tor
 top-level source directory like this:
@@ -143,8 +144,12 @@ HEADER="""\
 #
 # There are three kinds of problems that we recognize right now:
 #   function-size -- a function of more than {MAX_FUNCTION_SIZE} lines.
-#   file-size -- a file of more than {MAX_FILE_SIZE} lines.
-#   include-count -- a file with more than {MAX_INCLUDE_COUNT} #includes.
+#   file-size -- a C file of more than {MAX_FILE_SIZE} lines, or an H
+#      file with more than {MAX_H_FILE_SIZE} lines.
+#   include-count -- a C file with more than {MAX_INCLUDE_COUNT} #includes,
+       or an H file with more than {MAX_H_INCLUDE_COUNT} #includes.
+#   dependency-violation -- a file includes a header that it should
+#      not, according to an advisory .may_include file.
 #
 # Each line below represents a single exception that practracker should
 # _ignore_. Each line has four parts:
