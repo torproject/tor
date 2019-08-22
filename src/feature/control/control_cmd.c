@@ -1242,6 +1242,64 @@ static const control_cmd_syntax_t protocolinfo_syntax = {
   .max_args = UINT_MAX
 };
 
+/** Return a comma-separated list of authentication methods for
+    handle_control_protocolinfo().  Caller must free this string. */
+static char *
+get_authmethods(const or_options_t *options)
+{
+  int cookies = options->CookieAuthentication;
+  char *methods;
+  int passwd = (options->HashedControlPassword != NULL ||
+                options->HashedControlSessionPassword != NULL);
+  smartlist_t *mlist = smartlist_new();
+
+  if (cookies) {
+    smartlist_add(mlist, (char*)"COOKIE");
+    smartlist_add(mlist, (char*)"SAFECOOKIE");
+  }
+  if (passwd)
+    smartlist_add(mlist, (char*)"HASHEDPASSWORD");
+  if (!cookies && !passwd)
+    smartlist_add(mlist, (char*)"NULL");
+  methods = smartlist_join_strings(mlist, ",", 0, NULL);
+  smartlist_free(mlist);
+
+  return methods;
+}
+
+/** Return escaped cookie filename.  Caller must free this string.
+    Return NULL if cookie authentication is disabled. */
+static char *
+get_esc_cfile(const or_options_t *options)
+{
+  char *cfile = NULL, *abs_cfile = NULL, *esc_cfile = NULL;
+
+  if (!options->CookieAuthentication)
+    return NULL;
+
+  cfile = get_controller_cookie_file_name();
+  abs_cfile = make_path_absolute(cfile);
+  esc_cfile = esc_for_log(abs_cfile);
+  tor_free(cfile);
+  tor_free(abs_cfile);
+  return esc_cfile;
+}
+
+/** Send the auth methods lines of a PROTOCOLINFO reply. */
+static void
+send_authmethods(control_connection_t *conn)
+{
+  const or_options_t *options = get_options();
+  char *methods = get_authmethods(options);
+  char *esc_cfile = get_esc_cfile(options);
+
+  control_printf_midreply(conn, 250, "AUTH METHODS=%s%s%s", methods,
+                          esc_cfile ? " COOKIEFILE=" : "",
+                          esc_cfile ? esc_cfile : "");
+  tor_free(methods);
+  tor_free(esc_cfile);
+}
+
 /** Called when we get a PROTOCOLINFO command: send back a reply. */
 static int
 handle_control_protocolinfo(control_connection_t *conn,
@@ -1266,45 +1324,12 @@ handle_control_protocolinfo(control_connection_t *conn,
     /* Don't tolerate bad arguments when not authenticated. */
     if (!STATE_IS_OPEN(TO_CONN(conn)->state))
       connection_mark_for_close(TO_CONN(conn));
-    goto done;
-  } else {
-    const or_options_t *options = get_options();
-    int cookies = options->CookieAuthentication;
-    char *cfile = get_controller_cookie_file_name();
-    char *abs_cfile;
-    char *esc_cfile;
-    char *methods;
-    abs_cfile = make_path_absolute(cfile);
-    esc_cfile = esc_for_log(abs_cfile);
-    {
-      int passwd = (options->HashedControlPassword != NULL ||
-                    options->HashedControlSessionPassword != NULL);
-      smartlist_t *mlist = smartlist_new();
-      if (cookies) {
-        smartlist_add(mlist, (char*)"COOKIE");
-        smartlist_add(mlist, (char*)"SAFECOOKIE");
-      }
-      if (passwd)
-        smartlist_add(mlist, (char*)"HASHEDPASSWORD");
-      if (!cookies && !passwd)
-        smartlist_add(mlist, (char*)"NULL");
-      methods = smartlist_join_strings(mlist, ",", 0, NULL);
-      smartlist_free(mlist);
-    }
-
-    control_write_midreply(conn, 250, "PROTOCOLINFO 1");
-    control_printf_midreply(conn, 250, "AUTH METHODS=%s%s%s", methods,
-                            cookies?" COOKIEFILE=":"",
-                            cookies?esc_cfile:"");
-    control_printf_midreply(conn, 250, "VERSION Tor=%s", escaped(VERSION));
-    send_control_done(conn);
-
-    tor_free(methods);
-    tor_free(cfile);
-    tor_free(abs_cfile);
-    tor_free(esc_cfile);
+    return 0;
   }
- done:
+  control_write_midreply(conn, 250, "PROTOCOLINFO 1");
+  send_authmethods(conn);
+  control_printf_midreply(conn, 250, "VERSION Tor=%s", escaped(VERSION));
+  send_control_done(conn);
   return 0;
 }
 
