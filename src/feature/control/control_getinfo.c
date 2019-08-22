@@ -50,6 +50,7 @@
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
 #include "lib/version/torversion.h"
+#include "lib/encoding/kvline.h"
 
 #include "core/or/entry_connection_st.h"
 #include "core/or/or_connection_st.h"
@@ -1632,7 +1633,6 @@ handle_control_getinfo(control_connection_t *conn,
   smartlist_t *answers = smartlist_new();
   smartlist_t *unrecognized = smartlist_new();
   char *ans = NULL;
-  int i;
 
   SMARTLIST_FOREACH_BEGIN(questions, const char *, q) {
     const char *errmsg = NULL;
@@ -1644,43 +1644,32 @@ handle_control_getinfo(control_connection_t *conn,
       goto done;
     }
     if (!ans) {
-      if (errmsg) /* use provided error message */
-        smartlist_add_strdup(unrecognized, errmsg);
-      else /* use default error message */
-        smartlist_add_asprintf(unrecognized, "Unrecognized key \"%s\"", q);
+      if (errmsg) {
+        /* use provided error message */
+        control_reply_add_str(unrecognized, 552, errmsg);
+      } else {
+        /* use default error message */
+        control_reply_add_printf(unrecognized, 552,
+                                 "Unrecognized key \"%s\"", q);
+      }
     } else {
-      smartlist_add_strdup(answers, q);
-      smartlist_add(answers, ans);
+      control_reply_add_1kv(answers, 250, KV_RAW, q, ans);
     }
   } SMARTLIST_FOREACH_END(q);
 
-  if (smartlist_len(unrecognized)) {
-    /* control-spec section 2.3, mid-reply '-' or end of reply ' ' */
-    for (i=0; i < smartlist_len(unrecognized)-1; ++i)
-      control_write_midreply(conn, 552,
-                             (char *)smartlist_get(unrecognized, i));
+  control_reply_add_done(answers);
 
-    control_write_endreply(conn, 552, (char *)smartlist_get(unrecognized, i));
+  if (smartlist_len(unrecognized)) {
+    control_write_reply_lines(conn, unrecognized);
+    /* If there were any unrecognized queries, don't write real answers */
     goto done;
   }
 
-  for (i = 0; i < smartlist_len(answers); i += 2) {
-    char *k = smartlist_get(answers, i);
-    char *v = smartlist_get(answers, i+1);
-    if (!strchr(v, '\n') && !strchr(v, '\r')) {
-      control_printf_midreply(conn, 250, "%s=%s", k, v);
-    } else {
-      control_printf_datareply(conn, 250, "%s=", k);
-      control_write_data(conn, v);
-    }
-  }
-  send_control_done(conn);
+  control_write_reply_lines(conn, answers);
 
  done:
-  SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
-  smartlist_free(answers);
-  SMARTLIST_FOREACH(unrecognized, char *, cp, tor_free(cp));
-  smartlist_free(unrecognized);
+  control_reply_free(answers);
+  control_reply_free(unrecognized);
 
   return 0;
 }
