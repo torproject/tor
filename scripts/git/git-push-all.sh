@@ -20,13 +20,14 @@ set -e
 # git push command and default arguments
 GIT_PUSH=${TOR_GIT_PUSH:-"git push --atomic"}
 # The upstream remote which git.torproject.org/tor.git points to.
-# In test branch mode, override this setting with -r <remote-name>
-UPSTREAM_REMOTE=${TOR_UPSTREAM_REMOTE_NAME:-"upstream"}
+DEFAULT_UPSTREAM_REMOTE=${TOR_UPSTREAM_REMOTE_NAME:-"upstream"}
+# Push to a different upstream remote using -r <remote-name>
+UPSTREAM_REMOTE=${DEFAULT_UPSTREAM_REMOTE}
 # Add a delay between pushes, so CI runs on the most important branches first
 PUSH_DELAY=${TOR_PUSH_DELAY:-0}
-# Push (1) or skip (0) branches that are the same as an upstream maint/master
-# branch. Push if you are testing the CI environment, skip if you are testing
-# the code in the branch.
+# Push (1) or skip (0) test branches that are the same as an upstream
+# maint/master branch. Push if you are testing that the CI environment still
+# works on old code, skip if you are testing new code in the branch.
 # Default: skip unchanged branches.
 # Inverted by the -s option.
 PUSH_SAME=${TOR_PUSH_SAME:-0}
@@ -40,7 +41,7 @@ PUSH_SAME=${TOR_PUSH_SAME:-0}
 # <tbbn>_029, <tbbn>_035, ... , <tbbn>_master, and merge forward.
 TEST_BRANCH_PREFIX=
 
-while getopts ":r:t:" opt; do
+while getopts ":r:st:" opt; do
   case "$opt" in
     r) UPSTREAM_REMOTE="$OPTARG"
        echo "    *** PUSHING TO REMOTE: ${UPSTREAM_REMOTE} ***"
@@ -92,6 +93,17 @@ fi
 # Git upstream remote branches #
 ################################
 
+DEFAULT_UPSTREAM_BRANCHES=
+if [ "$DEFAULT_UPSTREAM_REMOTE" != "$UPSTREAM_REMOTE" ]; then
+  DEFAULT_UPSTREAM_BRANCHES=`echo \
+    ${DEFAULT_UPSTREAM_REMOTE}/master \
+    ${DEFAULT_UPSTREAM_REMOTE}/{release,maint}-0.4.1 \
+    ${DEFAULT_UPSTREAM_REMOTE}/{release,maint}-0.4.0 \
+    ${DEFAULT_UPSTREAM_REMOTE}/{release,maint}-0.3.5 \
+    ${DEFAULT_UPSTREAM_REMOTE}/{release,maint}-0.2.9 \
+    `
+fi
+
 UPSTREAM_BRANCHES=`echo \
   ${UPSTREAM_REMOTE}/master \
   ${UPSTREAM_REMOTE}/{release,maint}-0.4.1 \
@@ -135,12 +147,12 @@ fi
 ###############
 
 # Skip the test branches that are the same as the upstream branches
-if [ "$PUSH_SAME" -eq 0 ]; then
+if [ "$PUSH_SAME" -eq 0 -a "$TEST_BRANCH_PREFIX" ]; then
   NEW_PUSH_BRANCHES=
   for b in $PUSH_BRANCHES; do
     PUSH_COMMIT=`git rev-parse $b`
     SKIP_UPSTREAM=
-    for u in $UPSTREAM_BRANCHES; do
+    for u in $DEFAULT_UPSTREAM_BRANCHES $UPSTREAM_BRANCHES; do
       UPSTREAM_COMMIT=`git rev-parse "$u"`
       if [ "$PUSH_COMMIT" = "$UPSTREAM_COMMIT" ]; then
         SKIP_UPSTREAM="$u"
