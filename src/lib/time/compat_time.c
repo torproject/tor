@@ -239,6 +239,8 @@ static struct mach_timebase_info mach_time_info;
 static struct mach_timebase_info mach_time_info_msec_cvt;
 static int32_t mach_time_msec_cvt_threshold;
 static int monotime_shift = 0;
+static uint64_t monotime_coarse_stamp_cvt_ms_threshold;
+static uint64_t monotime_ms_cvt_coarse_stamp_threshold;
 
 static void
 monotime_init_internal(void)
@@ -269,6 +271,16 @@ monotime_init_internal(void)
     uint64_t ms_shift_tick = ms_shift_num / mach_time_info.denom;
     // requires that tor_log2(0) == 0.
     monotime_shift = tor_log2(ms_shift_tick);
+    // For any value above this amount, we should divide before multiplying,
+    // to avoid overflow.  For a value below this, we should multiply
+    // before dividing, to improve accuracy.
+    // Overflow can happen in monotime_coarse_stamp_units_to_approx_msec()
+    // when mach_time_info is 125/3, monotime_shift is 25, and
+    // units is > 128/125 * 2^33
+    monotime_coarse_stamp_cvt_ms_threshold = (
+      (UINT64_MAX / mach_time_info.numer) >> monotime_shift);
+    monotime_ms_cvt_coarse_stamp_threshold = (
+      (UINT64_MAX / ONE_MILLION) / mach_time_info.denom);
   }
   {
     // For converting ticks to milliseconds in a 32-bit-friendly way, we
@@ -860,17 +872,29 @@ uint64_t
 monotime_coarse_stamp_units_to_approx_msec(uint64_t units)
 {
   /* Recover as much precision as we can. */
-  uint64_t abstime_diff = (units << monotime_shift);
-  return (abstime_diff * mach_time_info.numer) /
-    (mach_time_info.denom * ONE_MILLION);
+  if (units <= monotime_coarse_stamp_cvt_ms_threshold) {
+    uint64_t abstime_diff = (units << monotime_shift);
+    return ((abstime_diff * mach_time_info.numer) /
+            ((uint64_t)mach_time_info.denom * ONE_MILLION));
+  } else {
+    uint64_t approx_part_calc = (
+      units / ((uint64_t)mach_time_info.denom * ONE_MILLION));
+    return (approx_part_calc * mach_time_info.numer) << monotime_shift;
+  }
 }
 uint64_t
 monotime_msec_to_approx_coarse_stamp_units(uint64_t msec)
 {
-  uint64_t abstime_val =
-    (((uint64_t)msec) * ONE_MILLION * mach_time_info.denom) /
-    mach_time_info.numer;
-  return abstime_val >> monotime_shift;
+  /* Preserve as much precision as we can. */
+  if (msec <= monotime_ms_cvt_coarse_stamp_threshold) {
+    uint64_t abstime_val = (
+      (msec * ONE_MILLION * mach_time_info.denom) / mach_time_info.numer);
+    return abstime_val >> monotime_shift;
+  } else {
+    uint64_t approx_part_calc = (
+      (msec / mach_time_info.numer) >> monotime_shift);
+    return approx_part_calc * ONE_MILLION * mach_time_info.denom;
+  }
 }
 #else
 uint64_t
