@@ -1,0 +1,3 @@
+  o Minor features (IPv6, logging):
+    - Log IPv6 addresses as well as IPv4 addresses, when describing
+      routerinfos, routerstatuses, and nodes. Closes ticket 21003.
