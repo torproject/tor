@@ -14,6 +14,8 @@
 #define TOR_CONFPARSE_H
 
 #include "lib/conf/conftypes.h"
+#include "lib/conf/confmacros.h"
+#include "lib/testsupport/testsupport.h"
 
 /** An abbreviation for a configuration option allowed on the command line. */
 typedef struct config_abbrev_t {
@@ -32,57 +34,6 @@ typedef struct config_deprecation_t {
  * you can abbreviate <b>tok</b>s as <b>tok</b>". */
 #define PLURAL(tok) { #tok, #tok "s", 0, 0 }
 
-/** A variable allowed in the configuration file or on the command line. */
-typedef struct config_var_t {
-  struct_member_t member; /** A struct member corresponding to this
-                           * variable. */
-  const char *initvalue; /**< String (or null) describing initial value. */
-
-#ifdef TOR_UNIT_TESTS
-  /** Used for compiler-magic to typecheck the corresponding field in the
-   * corresponding struct. Only used in unit test mode, at compile-time. */
-  confparse_dummy_values_t var_ptr_dummy;
-#endif
-} config_var_t;
-
-/* Macros to define extra members inside config_var_t fields, and at the
- * end of a list of them.
- */
-#ifdef TOR_UNIT_TESTS
-/* This is a somewhat magic type-checking macro for users of confparse.c.
- * It initializes a union member "confparse_dummy_values_t.conftype" with
- * the address of a static member "tp_dummy.member".   This
- * will give a compiler warning unless the member field is of the correct
- * type.
- *
- * (This warning is mandatory, because a type mismatch here violates the type
- * compatibility constraint for simple assignment, and requires a diagnostic,
- * according to the C spec.)
- *
- * For example, suppose you say:
- *     "CONF_CHECK_VAR_TYPE(or_options_t, STRING, Address)".
- * Then this macro will evaluate to:
- *     { .STRING = &or_options_t_dummy.Address }
- * And since confparse_dummy_values_t.STRING has type "char **", that
- * expression will create a warning unless or_options_t.Address also
- * has type "char *".
- */
-#define CONF_CHECK_VAR_TYPE(tp, conftype, member)       \
-  { . conftype = &tp ## _dummy . member }
-#define CONF_TEST_MEMBERS(tp, conftype, member) \
-  , CONF_CHECK_VAR_TYPE(tp, conftype, member)
-#define END_OF_CONFIG_VARS                                      \
-  { { .name = NULL }, NULL, { .INT=NULL } }
-#define DUMMY_TYPECHECK_INSTANCE(tp)            \
-  static tp tp ## _dummy
-#else /* !(defined(TOR_UNIT_TESTS)) */
-#define CONF_TEST_MEMBERS(tp, conftype, member)
-#define END_OF_CONFIG_VARS { { .name = NULL, }, NULL }
-/* Repeatedly declarable incomplete struct to absorb redundant semicolons */
-#define DUMMY_TYPECHECK_INSTANCE(tp)            \
-  struct tor_semicolon_eater
-#endif /* defined(TOR_UNIT_TESTS) */
-
 /** Type of a callback to validate whether a given configuration is
  * well-formed and consistent. See options_trial_assign() for documentation
  * of arguments. */
@@ -97,16 +48,17 @@ typedef void (*free_cfg_fn_t)(void*);
 typedef struct config_format_t {
   size_t size; /**< Size of the struct that everything gets parsed into. */
   struct_magic_decl_t magic; /**< Magic number info for this struct. */
-  config_abbrev_t *abbrevs; /**< List of abbreviations that we expand when
-                             * parsing this format. */
+  const config_abbrev_t *abbrevs; /**< List of abbreviations that we expand
+                             * when parsing this format. */
   const config_deprecation_t *deprecations; /** List of deprecated options */
-  config_var_t *vars; /**< List of variables we recognize, their default
-                       * values, and where we stick them in the structure. */
+  const config_var_t *vars; /**< List of variables we recognize, their default
+                             * values, and where we stick them in the
+                             * structure. */
   validate_fn_t validate_fn; /**< Function to validate config. */
   free_cfg_fn_t free_fn; /**< Function to free the configuration. */
   /** If present, extra denotes a LINELIST variable for unrecognized
    * lines.  Otherwise, unrecognized lines are an error. */
-  struct_member_t *extra;
+  const struct_member_t *extra;
 } config_format_t;
 
 /** Macro: assert that <b>cfg</b> has the right magic field for format
@@ -143,8 +95,6 @@ bool config_check_ok(const config_format_t *fmt, const void *options,
 int config_assign(const config_format_t *fmt, void *options,
                   struct config_line_t *list,
                   unsigned flags, char **msg);
-config_var_t *config_find_option_mutable(config_format_t *fmt,
-                                         const char *key);
 const char *config_find_deprecation(const config_format_t *fmt,
                                      const char *key);
 const config_var_t *config_find_option(const config_format_t *fmt,
@@ -153,6 +103,10 @@ const char *config_expand_abbrev(const config_format_t *fmt,
                                  const char *option,
                                  int command_line, int warn_obsolete);
 void warn_deprecated_option(const char *what, const char *why);
+
+bool config_var_is_cumulative(const config_var_t *var);
+bool config_var_is_settable(const config_var_t *var);
+bool config_var_is_contained(const config_var_t *var);
 
 /* Helper macros to compare an option across two configuration objects */
 #define CFG_EQ_BOOL(a,b,opt) ((a)->opt == (b)->opt)

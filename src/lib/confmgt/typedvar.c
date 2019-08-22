@@ -210,6 +210,51 @@ typed_var_ok_ex(const void *value, const var_type_def_t *def)
   return true;
 }
 
+/**
+ * Mark <b>value</b> -- a variable that ordinarily would be extended by
+ * assignment -- as "fragile", so that it will get replaced by the next
+ * assignment instead.
+ **/
+void
+typed_var_mark_fragile_ex(void *value, const var_type_def_t *def)
+{
+  if (BUG(!def)) {
+    return; // LCOV_EXCL_LINE
+  }
+
+  if (def->fns->mark_fragile)
+    def->fns->mark_fragile(value, def->params);
+}
+
+/**
+ * Return true iff multiple assignments to a variable will extend its
+ * value, rather than replacing it.
+ **/
+bool
+var_type_is_cumulative(const var_type_def_t *def)
+{
+  return def->is_cumulative;
+}
+
+/**
+ * Return true iff this variable type is always contained in another variable,
+ * and as such doesn't need to be dumped or copied independently.
+ **/
+bool
+var_type_is_contained(const var_type_def_t *def)
+{
+  return def->is_contained;
+}
+
+/**
+ * Return true iff this type can not be assigned directly by the user.
+ **/
+bool
+var_type_is_settable(const var_type_def_t *def)
+{
+  return ! def->is_unsettable;
+}
+
 /* =====
  * The functions below take a config_type_t instead of a var_type_def_t.
  * I'd like to deprecate them eventually and use var_type_def_t everywhere,

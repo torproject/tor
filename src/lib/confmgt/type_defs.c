@@ -620,12 +620,22 @@ linelist_copy(void *target, const void *value, const void *params)
   return 0;
 }
 
+static void
+linelist_mark_fragile(void *target, const void *params)
+{
+  (void)params;
+  config_line_t **ptr = (config_line_t **)target;
+  if (*ptr)
+    (*ptr)->fragile = 1;
+}
+
 static const var_type_fns_t linelist_fns = {
   .kv_parse = linelist_kv_parse,
   .kv_encode = linelist_kv_encode,
   .clear = linelist_clear,
   .eq = linelist_eq,
   .copy = linelist_copy,
+  .mark_fragile = linelist_mark_fragile,
 };
 
 static const var_type_fns_t linelist_v_fns = {
@@ -634,6 +644,7 @@ static const var_type_fns_t linelist_v_fns = {
   .clear = linelist_clear,
   .eq = linelist_eq,
   .copy = linelist_copy,
+  .mark_fragile = linelist_mark_fragile,
 };
 
 static const var_type_fns_t linelist_s_fns = {
@@ -690,26 +701,40 @@ static const var_type_fns_t ignore_fns = {
  * Table mapping conf_type_t values to var_type_def_t objects.
  **/
 static const var_type_def_t type_definitions_table[] = {
-  [CONFIG_TYPE_STRING] = { "String", &string_fns, NULL },
-  [CONFIG_TYPE_FILENAME] = { "Filename", &string_fns, NULL },
-  [CONFIG_TYPE_INT] = { "SignedInteger", &int_fns, &INT_PARSE_UNRESTRICTED },
-  [CONFIG_TYPE_POSINT] = { "Integer", &int_fns, &INT_PARSE_POSINT },
-  [CONFIG_TYPE_UINT64] = { "Integer", &uint64_fns, NULL, },
-  [CONFIG_TYPE_MEMUNIT] = { "DataSize", &memunit_fns, &memory_units },
-  [CONFIG_TYPE_INTERVAL] = { "TimeInterval", &interval_fns, &time_units },
-  [CONFIG_TYPE_MSEC_INTERVAL] = { "TimeMsecInterval", &interval_fns,
-                                  &time_msec_units },
-  [CONFIG_TYPE_DOUBLE] = { "Float", &double_fns, NULL },
-  [CONFIG_TYPE_BOOL] = { "Boolean", &enum_fns, &enum_table_bool },
-  [CONFIG_TYPE_AUTOBOOL] = { "Boolean+Auto", &enum_fns, &enum_table_autobool },
-  [CONFIG_TYPE_ISOTIME] = { "Time", &time_fns, NULL },
-  [CONFIG_TYPE_CSV] = { "CommaList", &csv_fns, NULL },
-  [CONFIG_TYPE_CSV_INTERVAL] = { "TimeInterval", &legacy_csv_interval_fns,
-                                 NULL },
-  [CONFIG_TYPE_LINELIST] = { "LineList", &linelist_fns, NULL },
-  [CONFIG_TYPE_LINELIST_S] = { "Dependent", &linelist_s_fns, NULL },
-  [CONFIG_TYPE_LINELIST_V] = { "Virtual", &linelist_v_fns, NULL },
-  [CONFIG_TYPE_OBSOLETE] = { "Obsolete", &ignore_fns, NULL }
+  [CONFIG_TYPE_STRING] = { .name="String", .fns=&string_fns },
+  [CONFIG_TYPE_FILENAME] = { .name="Filename", .fns=&string_fns },
+  [CONFIG_TYPE_INT] = { .name="SignedInteger", .fns=&int_fns,
+                        .params=&INT_PARSE_UNRESTRICTED },
+  [CONFIG_TYPE_POSINT] = { .name="Integer", .fns=&int_fns,
+                           .params=&INT_PARSE_POSINT },
+  [CONFIG_TYPE_UINT64] = { .name="Integer", .fns=&uint64_fns, },
+  [CONFIG_TYPE_MEMUNIT] = { .name="DataSize", .fns=&memunit_fns,
+                            .params=&memory_units },
+  [CONFIG_TYPE_INTERVAL] = { .name="TimeInterval", .fns=&interval_fns,
+                             .params=&time_units },
+  [CONFIG_TYPE_MSEC_INTERVAL] = { .name="TimeMsecInterval",
+                                  .fns=&interval_fns,
+                                  .params=&time_msec_units },
+  [CONFIG_TYPE_DOUBLE] = { .name="Float", .fns=&double_fns, },
+  [CONFIG_TYPE_BOOL] = { .name="Boolean", .fns=&enum_fns,
+                         .params=&enum_table_bool },
+  [CONFIG_TYPE_AUTOBOOL] = { .name="Boolean+Auto", .fns=&enum_fns,
+                             .params=&enum_table_autobool },
+  [CONFIG_TYPE_ISOTIME] = { .name="Time", .fns=&time_fns, },
+  [CONFIG_TYPE_CSV] = { .name="CommaList", .fns=&csv_fns, },
+  [CONFIG_TYPE_CSV_INTERVAL] = { .name="TimeInterval",
+                                 .fns=&legacy_csv_interval_fns, },
+  [CONFIG_TYPE_LINELIST] = { .name="LineList", .fns=&linelist_fns,
+                             .is_cumulative=true},
+  [CONFIG_TYPE_LINELIST_S] = { .name="Dependent", .fns=&linelist_s_fns,
+                               .is_cumulative=true,
+                               .is_contained=true, },
+  [CONFIG_TYPE_LINELIST_V] = { .name="Virtual", .fns=&linelist_v_fns,
+                               .is_cumulative=true,
+                               .is_unsettable=true },
+  [CONFIG_TYPE_OBSOLETE] = { .name="Obsolete", .fns=&ignore_fns,
+                             .is_unsettable=true,
+                             .is_contained=true, }
 };
 
 /**

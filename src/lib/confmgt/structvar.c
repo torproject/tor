@@ -202,6 +202,19 @@ struct_var_kvencode(const void *object, const struct_member_t *member)
 }
 
 /**
+ * Mark the field in <b>object</b> determined by <b>member</b> -- a variable
+ * that ordinarily would be extended by assignment -- as "fragile", so that it
+ * will get replaced by the next assignment instead.
+ */
+void
+struct_var_mark_fragile(void *object, const struct_member_t *member)
+{
+  void *p = struct_get_mptr(object, member);
+  const var_type_def_t *def = get_type_def(member);
+  return typed_var_mark_fragile_ex(p, def);
+}
+
+/**
  * Return the official name of this struct member.
  **/
 const char *
@@ -223,4 +236,28 @@ struct_var_get_typename(const struct_member_t *member)
   const var_type_def_t *def = get_type_def(member);
 
   return def ? def->name : NULL;
+}
+
+bool
+struct_var_is_cumulative(const struct_member_t *member)
+{
+  const var_type_def_t *def = get_type_def(member);
+
+  return def ? def->is_cumulative : false;
+}
+
+bool
+struct_var_is_settable(const struct_member_t *member)
+{
+  const var_type_def_t *def = get_type_def(member);
+
+  return def ? !def->is_unsettable : true;
+}
+
+bool
+struct_var_is_contained(const struct_member_t *member)
+{
+  const var_type_def_t *def = get_type_def(member);
+
+  return def ? def->is_contained : false;
 }

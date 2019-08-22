@@ -22,14 +22,20 @@
  */
 
 #define CONFPARSE_PRIVATE
-#include "core/or/or.h"
+#include "orconfig.h"
 #include "app/config/confparse.h"
-#include "feature/nodelist/routerset.h"
 
+#include "lib/confmgt/structvar.h"
 #include "lib/confmgt/unitparse.h"
 #include "lib/container/bitarray.h"
+#include "lib/container/smartlist.h"
 #include "lib/encoding/confline.h"
-#include "lib/confmgt/structvar.h"
+#include "lib/log/escape.h"
+#include "lib/log/log.h"
+#include "lib/log/util_bug.h"
+#include "lib/string/compat_ctype.h"
+#include "lib/string/printf.h"
+#include "lib/string/util_string.h"
 
 static void config_reset(const config_format_t *fmt, void *options,
                          const config_var_t *var, int use_defaults);
@@ -100,9 +106,13 @@ config_find_deprecation(const config_format_t *fmt, const char *key)
   return NULL;
 }
 
-/** As config_find_option, but return a non-const pointer. */
-config_var_t *
-config_find_option_mutable(config_format_t *fmt, const char *key)
+/** If <b>key</b> is a configuration option, return the corresponding const
+ * config_var_t.  Otherwise, if <b>key</b> is a non-standard abbreviation,
+ * warn, and return the corresponding const config_var_t.  Otherwise return
+ * NULL.
+ */
+const config_var_t *
+config_find_option(const config_format_t *fmt, const char *key)
 {
   int i;
   size_t keylen = strlen(key);
@@ -127,17 +137,6 @@ config_find_option_mutable(config_format_t *fmt, const char *key)
   return NULL;
 }
 
-/** If <b>key</b> is a configuration option, return the corresponding const
- * config_var_t.  Otherwise, if <b>key</b> is a non-standard abbreviation,
- * warn, and return the corresponding const config_var_t.  Otherwise return
- * NULL.
- */
-const config_var_t *
-config_find_option(const config_format_t *fmt, const char *key)
-{
-  return config_find_option_mutable((config_format_t*)fmt, key);
-}
-
 /** Return the number of option entries in <b>fmt</b>. */
 static int
 config_count_options(const config_format_t *fmt)
@@ -146,6 +145,24 @@ config_count_options(const config_format_t *fmt)
   for (i=0; fmt->vars[i].member.name; ++i)
     ;
   return i;
+}
+
+bool
+config_var_is_cumulative(const config_var_t *var)
+{
+  return struct_var_is_cumulative(&var->member);
+}
+bool
+config_var_is_settable(const config_var_t *var)
+{
+  if (var->flags & CVFLAG_OBSOLETE)
+    return false;
+  return struct_var_is_settable(&var->member);
+}
+bool
+config_var_is_contained(const config_var_t *var)
+{
+  return struct_var_is_contained(&var->member);
 }
 
 /*
@@ -183,14 +200,7 @@ config_mark_lists_fragile(const config_format_t *fmt, void *options)
 
   for (i = 0; fmt->vars[i].member.name; ++i) {
     const config_var_t *var = &fmt->vars[i];
-    config_line_t *list;
-    if (var->member.type != CONFIG_TYPE_LINELIST &&
-        var->member.type != CONFIG_TYPE_LINELIST_V)
-      continue;
-
-    list = *(config_line_t **)STRUCT_VAR_P(options, var->member.offset);
-    if (list)
-      list->fragile = 1;
+    struct_var_mark_fragile(options, &var->member);
   }
 }
 
@@ -255,9 +265,7 @@ config_assign_line(const config_format_t *fmt, void *options,
   if (!strlen(c->value)) {
     /* reset or clear it, then return */
     if (!clear_first) {
-      if ((var->member.type == CONFIG_TYPE_LINELIST ||
-           var->member.type == CONFIG_TYPE_LINELIST_S) &&
-          c->command != CONFIG_LINE_CLEAR) {
+      if (config_var_is_cumulative(var) && c->command != CONFIG_LINE_CLEAR) {
         /* We got an empty linelist from the torrc or command line.
            As a special case, call this an error. Warn and ignore. */
         log_warn(LD_CONFIG,
@@ -273,8 +281,7 @@ config_assign_line(const config_format_t *fmt, void *options,
     config_reset(fmt, options, var, use_defaults); // LCOV_EXCL_LINE
   }
 
-  if (options_seen && (var->member.type != CONFIG_TYPE_LINELIST &&
-                       var->member.type != CONFIG_TYPE_LINELIST_S)) {
+  if (options_seen && ! config_var_is_cumulative(var)) {
     /* We're tracking which options we've seen, and this option is not
      * supposed to occur more than once. */
     int var_index = (int)(var - fmt->vars);
@@ -562,10 +569,10 @@ config_dup(const config_format_t *fmt, const void *old)
 
   newopts = config_new(fmt);
   for (i=0; fmt->vars[i].member.name; ++i) {
-    if (fmt->vars[i].member.type == CONFIG_TYPE_LINELIST_S)
+    if (config_var_is_contained(&fmt->vars[i])) {
+      // Something else will copy this option, or it doesn't need copying.
       continue;
-    if (fmt->vars[i].member.type == CONFIG_TYPE_OBSOLETE)
-      continue;
+    }
     if (struct_var_copy(newopts, old, &fmt->vars[i].member) < 0) {
       // LCOV_EXCL_START
       log_err(LD_BUG, "Unable to copy value for %s.",
@@ -629,11 +636,12 @@ config_dump(const config_format_t *fmt, const void *default_options,
   elements = smartlist_new();
   for (i=0; fmt->vars[i].member.name; ++i) {
     int comment_option = 0;
-    if (fmt->vars[i].member.type == CONFIG_TYPE_OBSOLETE ||
-        fmt->vars[i].member.type == CONFIG_TYPE_LINELIST_S)
+    if (config_var_is_contained(&fmt->vars[i])) {
+      // Something else will dump this option, or it doesn't need dumping.
       continue;
+    }
     /* Don't save 'hidden' control variables. */
-    if (!strcmpstart(fmt->vars[i].member.name, "__"))
+    if (fmt->vars[i].flags & CVFLAG_NODUMP)
       continue;
     if (minimal && config_is_same(fmt, options, defaults,
                                   fmt->vars[i].member.name))

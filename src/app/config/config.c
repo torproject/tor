@@ -191,7 +191,7 @@ static const char unix_q_socket_prefix[] = "unix:\"";
 
 /** A list of abbreviations and aliases to map command-line options, obsolete
  * option names, or alternative option names, to their current values. */
-static config_abbrev_t option_abbrevs_[] = {
+static const config_abbrev_t option_abbrevs_[] = {
   PLURAL(AuthDirBadDirCC),
   PLURAL(AuthDirBadExitCC),
   PLURAL(AuthDirInvalidCC),
@@ -259,28 +259,19 @@ DUMMY_TYPECHECK_INSTANCE(or_options_t);
  * or_options_t.<b>member</b>"
  */
 #define VAR(varname,conftype,member,initvalue)                          \
-  { { .name = varname,                                                  \
-        .type = CONFIG_TYPE_ ## conftype,                               \
-        .offset = offsetof(or_options_t, member),                       \
-        },                                                              \
-      initvalue CONF_TEST_MEMBERS(or_options_t, conftype, member) }
-
-#ifdef TOR_UNIT_TESTS
-#define DUMMY_TEST_MEMBERS , {.INT=NULL}
-#else
-#define DUMMY_TEST_MEMBERS
-#endif
+  CONFIG_VAR_ETYPE(or_options_t, varname, conftype, member, 0, initvalue)
 
 /* As VAR, but uses a type definition in addition to a type enum. */
 #define VAR_D(varname,conftype,member,initvalue)                        \
-  { { .name = varname,                                                  \
-        .type = CONFIG_TYPE_ ## conftype,                               \
-        .type_def = &conftype ## _type_defn,                            \
-        .offset = offsetof(or_options_t, member),                       \
-        },                                                              \
-      initvalue DUMMY_TEST_MEMBERS }
+  CONFIG_VAR_DEFN(or_options_t, varname, conftype, member, 0, initvalue)
 
-/** As VAR, but the option name and member name are the same. */
+#define VAR_NODUMP(varname,conftype,member,initvalue)             \
+  CONFIG_VAR_ETYPE(or_options_t, varname, conftype, member,       \
+                   CVFLAG_NODUMP, initvalue)
+#define VAR_INVIS(varname,conftype,member,initvalue)              \
+  CONFIG_VAR_ETYPE(or_options_t, varname, conftype, member,       \
+                   CVFLAG_NODUMP|CVFLAG_INVISIBLE, initvalue)
+
 #define V(member,conftype,initvalue)            \
   VAR(#member, conftype, member, initvalue)
 
@@ -289,9 +280,7 @@ DUMMY_TYPECHECK_INSTANCE(or_options_t);
   VAR_D(#member, type, member, initvalue)
 
 /** An entry for config_vars: "The option <b>varname</b> is obsolete." */
-#define OBSOLETE(varname) \
-  { { .name = varname, .type = CONFIG_TYPE_OBSOLETE, }, NULL   \
-    DUMMY_TEST_MEMBERS }
+#define OBSOLETE(varname) CONFIG_VAR_OBSOLETE(varname)
 
 /**
  * Macro to declare *Port options.  Each one comes in three entries.
@@ -303,7 +292,7 @@ DUMMY_TYPECHECK_INSTANCE(or_options_t);
 #define VPORT(member)                                           \
   VAR(#member "Lines", LINELIST_V, member ## _lines, NULL),     \
   VAR(#member, LINELIST_S, member ## _lines, NULL),             \
-  VAR("__" #member, LINELIST_S, member ## _lines, NULL)
+  VAR_NODUMP("__" #member, LINELIST_S, member ## _lines, NULL)
 
 /** UINT64_MAX as a decimal string */
 #define UINT64_MAX_STRING "18446744073709551615"
@@ -312,7 +301,7 @@ DUMMY_TYPECHECK_INSTANCE(or_options_t);
  * abbreviations, order is significant, since the first matching option will
  * be chosen first.
  */
-static config_var_t option_vars_[] = {
+static const config_var_t option_vars_[] = {
   V(AccountingMax,               MEMUNIT,  "0 bytes"),
   VAR("AccountingRule",          STRING,   AccountingRule_option,  "max"),
   V(AccountingStart,             STRING,   NULL),
@@ -700,15 +689,17 @@ static config_var_t option_vars_[] = {
   V(WarnPlaintextPorts,          CSV,      "23,109,110,143"),
   OBSOLETE("UseFilteringSSLBufferevents"),
   OBSOLETE("__UseFilteringSSLBufferevents"),
-  VAR("__ReloadTorrcOnSIGHUP",   BOOL,  ReloadTorrcOnSIGHUP,      "1"),
-  VAR("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
-  VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
-  VAR("__DisableSignalHandlers", BOOL,  DisableSignalHandlers,    "0"),
-  VAR("__LeaveStreamsUnattached",BOOL,  LeaveStreamsUnattached,   "0"),
-  VAR("__HashedControlSessionPassword", LINELIST, HashedControlSessionPassword,
+  VAR_NODUMP("__ReloadTorrcOnSIGHUP",   BOOL,  ReloadTorrcOnSIGHUP,      "1"),
+  VAR_NODUMP("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
+  VAR_NODUMP("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
+  VAR_NODUMP("__DisableSignalHandlers", BOOL,  DisableSignalHandlers,    "0"),
+  VAR_NODUMP("__LeaveStreamsUnattached",BOOL,  LeaveStreamsUnattached,   "0"),
+  VAR_NODUMP("__HashedControlSessionPassword", LINELIST,
+             HashedControlSessionPassword,
       NULL),
-  VAR("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
-  VAR("__OwningControllerFD", UINT64, OwningControllerFD, UINT64_MAX_STRING),
+  VAR_NODUMP("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
+  VAR_NODUMP("__OwningControllerFD", UINT64, OwningControllerFD,
+             UINT64_MAX_STRING),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "96 hours"),
   V(TestingServerDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(TestingClientDownloadInitialDelay, CSV_INTERVAL, "0"),
@@ -761,50 +752,34 @@ static config_var_t option_vars_[] = {
   V(TestingDirAuthVoteGuardIsStrict,  BOOL,     "0"),
   V_D(TestingDirAuthVoteHSDir, ROUTERSET, NULL),
   V(TestingDirAuthVoteHSDirIsStrict,  BOOL,     "0"),
-  VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "0"),
+  VAR_INVIS("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_,
+            "0"),
 
   END_OF_CONFIG_VARS
 };
 
+/** List of default directory authorities */
+static const char *default_authorities[] = {
+#include "auth_dirs.inc"
+  NULL
+};
+
+/** List of fallback directory authorities. The list is generated by opt-in of
+ * relays that meet certain stability criteria.
+ */
+static const char *default_fallbacks[] = {
+#include "fallback_dirs.inc"
+  NULL
+};
+
 /** Override default values with these if the user sets the TestingTorNetwork
  * option. */
-static const config_var_t testing_tor_network_defaults[] = {
-  V(DirAllowPrivateAddresses,    BOOL,     "1"),
-  V(EnforceDistinctSubnets,      BOOL,     "0"),
-  V(AssumeReachable,             BOOL,     "1"),
-  V(AuthDirMaxServersPerAddr,    POSINT,     "0"),
-  V(ClientBootstrapConsensusAuthorityDownloadInitialDelay, CSV_INTERVAL, "0"),
-  V(ClientBootstrapConsensusFallbackDownloadInitialDelay, CSV_INTERVAL, "0"),
-  V(ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay, CSV_INTERVAL,
-    "0"),
-  V(ClientDNSRejectInternalAddresses, BOOL,"0"),
-  V(ClientRejectInternalAddresses, BOOL,   "0"),
-  V(CountPrivateBandwidth,       BOOL,     "1"),
-  V(ExitPolicyRejectPrivate,     BOOL,     "0"),
-  V(ExtendAllowPrivateAddresses, BOOL,     "1"),
-  V(V3AuthVotingInterval,        INTERVAL, "5 minutes"),
-  V(V3AuthVoteDelay,             INTERVAL, "20 seconds"),
-  V(V3AuthDistDelay,             INTERVAL, "20 seconds"),
-  V(TestingV3AuthInitialVotingInterval, INTERVAL, "150 seconds"),
-  V(TestingV3AuthInitialVoteDelay, INTERVAL, "20 seconds"),
-  V(TestingV3AuthInitialDistDelay, INTERVAL, "20 seconds"),
-  V(TestingAuthDirTimeToLearnReachability, INTERVAL, "0 minutes"),
-  V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "0 minutes"),
-  V(MinUptimeHidServDirectoryV2, INTERVAL, "0 minutes"),
-  V(TestingServerDownloadInitialDelay, CSV_INTERVAL, "0"),
-  V(TestingClientDownloadInitialDelay, CSV_INTERVAL, "0"),
-  V(TestingServerConsensusDownloadInitialDelay, CSV_INTERVAL, "0"),
-  V(TestingClientConsensusDownloadInitialDelay, CSV_INTERVAL, "0"),
-  V(TestingBridgeDownloadInitialDelay, CSV_INTERVAL, "10"),
-  V(TestingBridgeBootstrapDownloadInitialDelay, CSV_INTERVAL, "0"),
-  V(TestingClientMaxIntervalWithoutRequest, INTERVAL, "5 seconds"),
-  V(TestingDirConnectionMaxStall, INTERVAL, "30 seconds"),
-  V(TestingEnableConnBwEvent,    BOOL,     "1"),
-  V(TestingEnableCellStatsEvent, BOOL,     "1"),
-  VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "1"),
-  V(RendPostPeriod,              INTERVAL, "2 minutes"),
-
-  END_OF_CONFIG_VARS
+static const struct {
+  const char *k;
+  const char *v;
+} testing_tor_network_defaults[] = {
+#include "testnet.inc"
+  { NULL, NULL }
 };
 
 #undef VAR
@@ -876,7 +851,7 @@ static void set_protocol_warning_severity_level(int warning_severity);
 #define OR_OPTIONS_MAGIC 9090909
 
 /** Configuration format for or_options_t. */
-STATIC config_format_t options_format = {
+STATIC const config_format_t options_format = {
   sizeof(or_options_t),
   {
    "or_options_t",
@@ -943,6 +918,32 @@ get_options,(void))
   return get_options_mutable();
 }
 
+/**
+ * True iff we have noticed that this is a testing tor network, and we
+ * should use the corresponding defaults.
+ **/
+static bool testing_network_configured = false;
+
+/** Return a set of lines for any default options that we want to override
+ * from those set in our config_var_t values. */
+static config_line_t *
+get_options_defaults(void)
+{
+  int i;
+  config_line_t *result = NULL, **next = &result;
+
+  if (testing_network_configured) {
+    for (i = 0; testing_tor_network_defaults[i].k; ++i) {
+      config_line_append(next,
+                         testing_tor_network_defaults[i].k,
+                         testing_tor_network_defaults[i].v);
+      next = &(*next)->next;
+    }
+  }
+
+  return result;
+}
+
 /** Change the current global options to contain <b>new_val</b> instead of
  * their current value; take action based on the new value; free the old value
  * as necessary.  Returns 0 on success, -1 on failure.
@@ -978,8 +979,8 @@ set_options(or_options_t *new_val, char **msg)
     for (i=0; options_format.vars[i].member.name; ++i) {
       const config_var_t *var = &options_format.vars[i];
       const char *var_name = var->member.name;
-      if (var->member.type == CONFIG_TYPE_LINELIST_S ||
-          var->member.type == CONFIG_TYPE_OBSOLETE) {
+      if (config_var_is_contained(var)) {
+        /* something else will check this var, or it doesn't need checking */
         continue;
       }
       if (!config_is_same(&options_format, new_val, old_options, var_name)) {
@@ -1191,21 +1192,6 @@ cleanup_protocol_warning_severity_level(void)
 {
    atomic_counter_destroy(&protocol_warning_severity_level);
 }
-
-/** List of default directory authorities */
-
-static const char *default_authorities[] = {
-#include "auth_dirs.inc"
-  NULL
-};
-
-/** List of fallback directory authorities. The list is generated by opt-in of
- * relays that meet certain stability criteria.
- */
-static const char *default_fallbacks[] = {
-#include "fallback_dirs.inc"
-  NULL
-};
 
 /** Add the default directory authorities directly into the trusted dir list,
  * but only add them insofar as they share bits with <b>type</b>.
@@ -2681,9 +2667,10 @@ list_torrc_options(void)
   int i;
   for (i = 0; option_vars_[i].member.name; ++i) {
     const config_var_t *var = &option_vars_[i];
-    if (var->member.type == CONFIG_TYPE_OBSOLETE ||
-        var->member.type == CONFIG_TYPE_LINELIST_V)
+    if (! config_var_is_settable(var)) {
+      /* This variable cannot be set, or cannot be set by this name. */
       continue;
+    }
     printf("%s\n", var->member.name);
   }
 }
@@ -3014,6 +3001,16 @@ void
 options_init(or_options_t *options)
 {
   config_init(&options_format, options);
+  config_line_t *dflts = get_options_defaults();
+  char *msg=NULL;
+  if (config_assign(&options_format, options, dflts,
+                    CAL_WARN_DEPRECATIONS, &msg)<0) {
+    log_err(LD_BUG, "Unable to set default options: %s", msg);
+    tor_free(msg);
+    tor_assert_unreached();
+  }
+  config_free_lines(dflts);
+  tor_free(msg);
 }
 
 /** Return a string containing a possible configuration file that would give
@@ -5403,6 +5400,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
                          int command, const char *command_arg,
                          char **msg)
 {
+  bool retry = false;
   or_options_t *oldoptions, *newoptions, *newdefaultoptions=NULL;
   config_line_t *cl;
   int retval;
@@ -5460,73 +5458,12 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   newoptions->FilesOpenedByIncludes = opened_files;
 
   /* If this is a testing network configuration, change defaults
-   * for a list of dependent config options, re-initialize newoptions
-   * with the new defaults, and assign all options to it second time. */
-  if (newoptions->TestingTorNetwork) {
-    /* XXXX this is a bit of a kludge.  perhaps there's a better way to do
-     * this?  We could, for example, make the parsing algorithm do two passes
-     * over the configuration.  If it finds any "suite" options like
-     * TestingTorNetwork, it could change the defaults before its second pass.
-     * Not urgent so long as this seems to work, but at any sign of trouble,
-     * let's clean it up.  -NM */
-
-    /* Change defaults. */
-    for (int i = 0; testing_tor_network_defaults[i].member.name; ++i) {
-      const config_var_t *new_var = &testing_tor_network_defaults[i];
-      config_var_t *old_var =
-        config_find_option_mutable(&options_format, new_var->member.name);
-      tor_assert(new_var);
-      tor_assert(old_var);
-      old_var->initvalue = new_var->initvalue;
-
-      if ((config_find_deprecation(&options_format, new_var->member.name))) {
-        log_warn(LD_GENERAL, "Testing options override the deprecated "
-                 "option %s. Is that intentional?",
-                 new_var->member.name);
-      }
-    }
-
-    /* Clear newoptions and re-initialize them with new defaults. */
-    or_options_free(newoptions);
-    or_options_free(newdefaultoptions);
-    newdefaultoptions = NULL;
-    newoptions = tor_malloc_zero(sizeof(or_options_t));
-    newoptions->magic_ = OR_OPTIONS_MAGIC;
-    options_init(newoptions);
-    newoptions->command = command;
-    newoptions->command_arg = command_arg ? tor_strdup(command_arg) : NULL;
-
-    /* Assign all options a second time. */
-    opened_files = smartlist_new();
-    for (int i = 0; i < 2; ++i) {
-      const char *body = i==0 ? cf_defaults : cf;
-      if (!body)
-        continue;
-
-      /* get config lines, assign them */
-      retval = config_get_lines_include(body, &cl, 1,
-                                        body == cf ? &cf_has_include : NULL,
-                                        opened_files);
-      if (retval < 0) {
-        err = SETOPT_ERR_PARSE;
-        goto err;
-      }
-      retval = config_assign(&options_format, newoptions, cl, 0, msg);
-      config_free_lines(cl);
-      if (retval < 0) {
-        err = SETOPT_ERR_PARSE;
-        goto err;
-      }
-      if (i==0)
-        newdefaultoptions = config_dup(&options_format, newoptions);
-    }
-    /* Assign command-line variables a second time too */
-    retval = config_assign(&options_format, newoptions,
-                           global_cmdline_options, 0, msg);
-    if (retval < 0) {
-      err = SETOPT_ERR_PARSE;
-      goto err;
-    }
+   * for a list of dependent config options, and try this function again. */
+  if (newoptions->TestingTorNetwork && ! testing_network_configured) {
+    // retry with the testing defaults.
+    testing_network_configured = true;
+    retry = true;
+    goto err;
   }
 
   newoptions->IncludeUsed = cf_has_include;
@@ -5571,6 +5508,9 @@ options_init_from_string(const char *cf_defaults, const char *cf,
     tor_asprintf(msg, "Failed to parse/validate config: %s", old_msg);
     tor_free(old_msg);
   }
+  if (retry)
+    return options_init_from_string(cf_defaults, cf, command, command_arg,
+                                    msg);
   return err;
 }
 
@@ -8197,7 +8137,7 @@ getinfo_helper_config(control_connection_t *conn,
     for (i = 0; option_vars_[i].member.name; ++i) {
       const config_var_t *var = &option_vars_[i];
       /* don't tell controller about triple-underscore options */
-      if (!strncmp(option_vars_[i].member.name, "___", 3))
+      if (option_vars_[i].flags & CVFLAG_INVISIBLE)
         continue;
       const char *type = struct_var_get_typename(&var->member);
       if (!type)
