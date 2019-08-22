@@ -248,22 +248,39 @@ static void
 monotime_init_internal(void)
 {
   tor_assert(!monotime_initialized);
+  // Known values:
+  // 30/1 on PowerPC Mac OS X (unsupported: can't do constant-time crypto)
+  // 1/1 on x86_64 macOS
+  // 125/3 on ARM iOS
+  // Future devices may have different values.
   int r = mach_timebase_info(&mach_time_info);
   tor_assert(r == 0);
   tor_assert(mach_time_info.denom != 0);
 
+  /* We need to simplify this: future values may overflow the uint64_t.
+   * Apple's documentation includes a 1 billion / 6 million example:
+   * https://developer.apple.com/library/archive/qa/qa1643/_index.html */
+  simplify_fraction32(&mach_time_info.numer, &mach_time_info.denom);
+
   {
-    // approximate only.
-    uint64_t ns_per_tick = mach_time_info.numer / mach_time_info.denom;
-    uint64_t ms_per_tick = ns_per_tick * ONE_MILLION;
+    // approximate only
+    // we use monotime_shift to right-shift ticks to an approximate 32-bit
+    // millisecond timestamp
+    // we need to multiply the nanosecond per tick numerator by 1 million,
+    // so the right-shift "division" results in approximate milliseconds
+    // This multiplication will never overflow, because numer is 32-bit
+    uint64_t ms_shift_num = (uint64_t)mach_time_info.numer * ONE_MILLION;
+    uint64_t ms_shift_tick = ms_shift_num / mach_time_info.denom;
     // requires that tor_log2(0) == 0.
-    monotime_shift = tor_log2(ms_per_tick);
+    monotime_shift = tor_log2(ms_shift_tick);
   }
   {
     // For converting ticks to milliseconds in a 32-bit-friendly way, we
     // will first right-shift by 20, and then multiply by 2048/1953, since
     // (1<<20) * 1953/2048 is about 1e6.  We precompute a new numerator and
     // denominator here to avoid multiple multiplies.
+    tor_assert(mach_time_info.numer <= UINT32_MAX / 2048);
+    tor_assert(mach_time_info.denom <= UINT32_MAX / 1953);
     mach_time_info_msec_cvt.numer = mach_time_info.numer * 2048;
     mach_time_info_msec_cvt.denom = mach_time_info.denom * 1953;
     // For any value above this amount, we should divide before multiplying,
