@@ -1285,17 +1285,19 @@ get_esc_cfile(const or_options_t *options)
   return esc_cfile;
 }
 
-/** Send the auth methods lines of a PROTOCOLINFO reply. */
+/** Compose the auth methods line of a PROTOCOLINFO reply. */
 static void
-send_authmethods(control_connection_t *conn)
+add_authmethods(smartlist_t *reply)
 {
   const or_options_t *options = get_options();
   char *methods = get_authmethods(options);
   char *esc_cfile = get_esc_cfile(options);
 
-  control_printf_midreply(conn, 250, "AUTH METHODS=%s%s%s", methods,
-                          esc_cfile ? " COOKIEFILE=" : "",
-                          esc_cfile ? esc_cfile : "");
+  control_reply_add_str(reply, 250, "AUTH");
+  control_reply_append_kv(reply, "METHODS", methods);
+  if (esc_cfile)
+    control_reply_append_kv(reply, "COOKIEFILE", esc_cfile);
+
   tor_free(methods);
   tor_free(esc_cfile);
 }
@@ -1307,6 +1309,7 @@ handle_control_protocolinfo(control_connection_t *conn,
 {
   const char *bad_arg = NULL;
   const smartlist_t *args = cmd_args->args;
+  smartlist_t *reply = NULL;
 
   conn->have_sent_protocolinfo = 1;
 
@@ -1326,10 +1329,15 @@ handle_control_protocolinfo(control_connection_t *conn,
       connection_mark_for_close(TO_CONN(conn));
     return 0;
   }
-  control_write_midreply(conn, 250, "PROTOCOLINFO 1");
-  send_authmethods(conn);
-  control_printf_midreply(conn, 250, "VERSION Tor=%s", escaped(VERSION));
-  send_control_done(conn);
+  reply = smartlist_new();
+  control_reply_add_str(reply, 250, "PROTOCOLINFO 1");
+  add_authmethods(reply);
+  control_reply_add_str(reply, 250, "VERSION");
+  control_reply_append_kv(reply, "Tor", escaped(VERSION));
+  control_reply_add_done(reply);
+
+  control_write_reply_lines(conn, reply);
+  control_reply_free(reply);
   return 0;
 }
 
