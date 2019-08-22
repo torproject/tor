@@ -111,6 +111,7 @@
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
 #include "lib/compress/compress.h"
+#include "lib/confmgt/structvar.h"
 #include "lib/crypt_ops/crypto_init.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
@@ -253,22 +254,44 @@ static config_abbrev_t option_abbrevs_[] = {
  * members with CONF_CHECK_VAR_TYPE. */
 DUMMY_TYPECHECK_INSTANCE(or_options_t);
 
-/** An entry for config_vars: "The option <b>name</b> has type
+/** An entry for config_vars: "The option <b>varname</b> has type
  * CONFIG_TYPE_<b>conftype</b>, and corresponds to
  * or_options_t.<b>member</b>"
  */
-#define VAR(name,conftype,member,initvalue)                             \
-  { name, CONFIG_TYPE_ ## conftype, offsetof(or_options_t, member),     \
+#define VAR(varname,conftype,member,initvalue)                          \
+  { { .name = varname,                                                  \
+        .type = CONFIG_TYPE_ ## conftype,                               \
+        .offset = offsetof(or_options_t, member),                       \
+        },                                                              \
       initvalue CONF_TEST_MEMBERS(or_options_t, conftype, member) }
-/** As VAR, but the option name and member name are the same. */
-#define V(member,conftype,initvalue)                                    \
-  VAR(#member, conftype, member, initvalue)
-/** An entry for config_vars: "The option <b>name</b> is obsolete." */
+
 #ifdef TOR_UNIT_TESTS
-#define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL, {.INT=NULL} }
+#define DUMMY_TEST_MEMBERS , {.INT=NULL}
 #else
-#define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL }
+#define DUMMY_TEST_MEMBERS
 #endif
+
+/* As VAR, but uses a type definition in addition to a type enum. */
+#define VAR_D(varname,conftype,member,initvalue)                        \
+  { { .name = varname,                                                  \
+        .type = CONFIG_TYPE_ ## conftype,                               \
+        .type_def = &conftype ## _type_defn,                            \
+        .offset = offsetof(or_options_t, member),                       \
+        },                                                              \
+      initvalue DUMMY_TEST_MEMBERS }
+
+/** As VAR, but the option name and member name are the same. */
+#define V(member,conftype,initvalue)            \
+  VAR(#member, conftype, member, initvalue)
+
+/** As V, but uses a type definition instead of a type enum */
+#define V_D(member,type,initvalue)              \
+  VAR_D(#member, type, member, initvalue)
+
+/** An entry for config_vars: "The option <b>varname</b> is obsolete." */
+#define OBSOLETE(varname) \
+  { { .name = varname, .type = CONFIG_TYPE_OBSOLETE, }, NULL   \
+    DUMMY_TEST_MEMBERS }
 
 /**
  * Macro to declare *Port options.  Each one comes in three entries.
@@ -418,17 +441,17 @@ static config_var_t option_vars_[] = {
   V(TestingEnableCellStatsEvent, BOOL,     "0"),
   OBSOLETE("TestingEnableTbEmptyEvent"),
   V(EnforceDistinctSubnets,      BOOL,     "1"),
-  V(EntryNodes,                  ROUTERSET,   NULL),
+  V_D(EntryNodes,                ROUTERSET,   NULL),
   V(EntryStatistics,             BOOL,     "0"),
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "10 minutes"),
-  V(ExcludeNodes,                ROUTERSET, NULL),
-  V(ExcludeExitNodes,            ROUTERSET, NULL),
+  V_D(ExcludeNodes,              ROUTERSET, NULL),
+  V_D(ExcludeExitNodes,          ROUTERSET, NULL),
   OBSOLETE("ExcludeSingleHopRelays"),
-  V(ExitNodes,                   ROUTERSET, NULL),
+  V_D(ExitNodes,                 ROUTERSET, NULL),
   /* Researchers need a way to tell their clients to use specific
    * middles that they also control, to allow safe live-network
    * experimentation with new padding machines. */
-  V(MiddleNodes,                 ROUTERSET, NULL),
+  V_D(MiddleNodes,               ROUTERSET, NULL),
   V(ExitPolicy,                  LINELIST, NULL),
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
   V(ExitPolicyRejectLocalInterfaces, BOOL, "0"),
@@ -507,8 +530,8 @@ static config_var_t option_vars_[] = {
   V(Socks5ProxyPassword,         STRING,   NULL),
   VAR("KeyDirectory",            FILENAME, KeyDirectory_option, NULL),
   V(KeyDirectoryGroupReadable,   BOOL,     "0"),
-  VAR("HSLayer2Nodes",           ROUTERSET,  HSLayer2Nodes,  NULL),
-  VAR("HSLayer3Nodes",           ROUTERSET,  HSLayer3Nodes,  NULL),
+  VAR_D("HSLayer2Nodes",         ROUTERSET,  HSLayer2Nodes,  NULL),
+  VAR_D("HSLayer3Nodes",         ROUTERSET,  HSLayer3Nodes,  NULL),
   V(KeepalivePeriod,             INTERVAL, "5 minutes"),
   V(KeepBindCapabilities,            AUTOBOOL, "auto"),
   VAR("Log",                     LINELIST, Logs,             NULL),
@@ -732,11 +755,11 @@ static config_var_t option_vars_[] = {
   OBSOLETE("TestingDescriptorMaxDownloadTries"),
   OBSOLETE("TestingMicrodescMaxDownloadTries"),
   OBSOLETE("TestingCertMaxDownloadTries"),
-  V(TestingDirAuthVoteExit, ROUTERSET, NULL),
+  V_D(TestingDirAuthVoteExit, ROUTERSET, NULL),
   V(TestingDirAuthVoteExitIsStrict,  BOOL,     "0"),
-  V(TestingDirAuthVoteGuard, ROUTERSET, NULL),
+  V_D(TestingDirAuthVoteGuard, ROUTERSET, NULL),
   V(TestingDirAuthVoteGuardIsStrict,  BOOL,     "0"),
-  V(TestingDirAuthVoteHSDir, ROUTERSET, NULL),
+  V_D(TestingDirAuthVoteHSDir, ROUTERSET, NULL),
   V(TestingDirAuthVoteHSDirIsStrict,  BOOL,     "0"),
   VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "0"),
 
@@ -855,8 +878,11 @@ static void set_protocol_warning_severity_level(int warning_severity);
 /** Configuration format for or_options_t. */
 STATIC config_format_t options_format = {
   sizeof(or_options_t),
-  OR_OPTIONS_MAGIC,
-  offsetof(or_options_t, magic_),
+  {
+   "or_options_t",
+   OR_OPTIONS_MAGIC,
+   offsetof(or_options_t, magic_),
+  },
   option_abbrevs_,
   option_deprecation_notes_,
   option_vars_,
@@ -949,11 +975,11 @@ set_options(or_options_t *new_val, char **msg)
    * just starting up then the old_options will be undefined. */
   if (old_options && old_options != global_options) {
     elements = smartlist_new();
-    for (i=0; options_format.vars[i].name; ++i) {
+    for (i=0; options_format.vars[i].member.name; ++i) {
       const config_var_t *var = &options_format.vars[i];
-      const char *var_name = var->name;
-      if (var->type == CONFIG_TYPE_LINELIST_S ||
-          var->type == CONFIG_TYPE_OBSOLETE) {
+      const char *var_name = var->member.name;
+      if (var->member.type == CONFIG_TYPE_LINELIST_S ||
+          var->member.type == CONFIG_TYPE_OBSOLETE) {
         continue;
       }
       if (!config_is_same(&options_format, new_val, old_options, var_name)) {
@@ -969,7 +995,7 @@ set_options(or_options_t *new_val, char **msg)
             tor_free(line);
           }
         } else {
-          smartlist_add_strdup(elements, options_format.vars[i].name);
+          smartlist_add_strdup(elements, options_format.vars[i].member.name);
           smartlist_add(elements, NULL);
         }
       }
@@ -2571,7 +2597,7 @@ const char *
 option_get_canonical_name(const char *key)
 {
   const config_var_t *var = config_find_option(&options_format, key);
-  return var ? var->name : NULL;
+  return var ? var->member.name : NULL;
 }
 
 /** Return a canonical list of the options assigned for key.
@@ -2653,12 +2679,12 @@ static void
 list_torrc_options(void)
 {
   int i;
-  for (i = 0; option_vars_[i].name; ++i) {
+  for (i = 0; option_vars_[i].member.name; ++i) {
     const config_var_t *var = &option_vars_[i];
-    if (var->type == CONFIG_TYPE_OBSOLETE ||
-        var->type == CONFIG_TYPE_LINELIST_V)
+    if (var->member.type == CONFIG_TYPE_OBSOLETE ||
+        var->member.type == CONFIG_TYPE_LINELIST_V)
       continue;
-    printf("%s\n", var->name);
+    printf("%s\n", var->member.name);
   }
 }
 
@@ -5445,18 +5471,18 @@ options_init_from_string(const char *cf_defaults, const char *cf,
      * let's clean it up.  -NM */
 
     /* Change defaults. */
-    for (int i = 0; testing_tor_network_defaults[i].name; ++i) {
+    for (int i = 0; testing_tor_network_defaults[i].member.name; ++i) {
       const config_var_t *new_var = &testing_tor_network_defaults[i];
       config_var_t *old_var =
-          config_find_option_mutable(&options_format, new_var->name);
+        config_find_option_mutable(&options_format, new_var->member.name);
       tor_assert(new_var);
       tor_assert(old_var);
       old_var->initvalue = new_var->initvalue;
 
-      if ((config_find_deprecation(&options_format, new_var->name))) {
+      if ((config_find_deprecation(&options_format, new_var->member.name))) {
         log_warn(LD_GENERAL, "Testing options override the deprecated "
                  "option %s. Is that intentional?",
-                 new_var->name);
+                 new_var->member.name);
       }
     }
 
@@ -8168,41 +8194,15 @@ getinfo_helper_config(control_connection_t *conn,
   if (!strcmp(question, "config/names")) {
     smartlist_t *sl = smartlist_new();
     int i;
-    for (i = 0; option_vars_[i].name; ++i) {
+    for (i = 0; option_vars_[i].member.name; ++i) {
       const config_var_t *var = &option_vars_[i];
-      const char *type;
       /* don't tell controller about triple-underscore options */
-      if (!strncmp(option_vars_[i].name, "___", 3))
+      if (!strncmp(option_vars_[i].member.name, "___", 3))
         continue;
-      switch (var->type) {
-        case CONFIG_TYPE_STRING: type = "String"; break;
-        case CONFIG_TYPE_FILENAME: type = "Filename"; break;
-        case CONFIG_TYPE_POSINT: type = "Integer"; break;
-        case CONFIG_TYPE_UINT64: type = "Integer"; break;
-        case CONFIG_TYPE_INT: type = "SignedInteger"; break;
-        case CONFIG_TYPE_INTERVAL: type = "TimeInterval"; break;
-        case CONFIG_TYPE_MSEC_INTERVAL: type = "TimeMsecInterval"; break;
-        case CONFIG_TYPE_MEMUNIT: type = "DataSize"; break;
-        case CONFIG_TYPE_DOUBLE: type = "Float"; break;
-        case CONFIG_TYPE_BOOL: type = "Boolean"; break;
-        case CONFIG_TYPE_AUTOBOOL: type = "Boolean+Auto"; break;
-        case CONFIG_TYPE_ISOTIME: type = "Time"; break;
-        case CONFIG_TYPE_ROUTERSET: type = "RouterList"; break;
-        case CONFIG_TYPE_CSV: type = "CommaList"; break;
-        /* This type accepts more inputs than TimeInterval, but it ignores
-         * everything after the first entry, so we may as well pretend
-         * it's a TimeInterval. */
-        case CONFIG_TYPE_CSV_INTERVAL: type = "TimeInterval"; break;
-        case CONFIG_TYPE_LINELIST: type = "LineList"; break;
-        case CONFIG_TYPE_LINELIST_S: type = "Dependent"; break;
-        case CONFIG_TYPE_LINELIST_V: type = "Virtual"; break;
-        default:
-        case CONFIG_TYPE_OBSOLETE:
-          type = NULL; break;
-      }
+      const char *type = struct_var_get_typename(&var->member);
       if (!type)
         continue;
-      smartlist_add_asprintf(sl, "%s %s\n",var->name,type);
+      smartlist_add_asprintf(sl, "%s %s\n",var->member.name,type);
     }
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
@@ -8210,17 +8210,17 @@ getinfo_helper_config(control_connection_t *conn,
   } else if (!strcmp(question, "config/defaults")) {
     smartlist_t *sl = smartlist_new();
     int dirauth_lines_seen = 0, fallback_lines_seen = 0;
-    for (int i = 0; option_vars_[i].name; ++i) {
+    for (int i = 0; option_vars_[i].member.name; ++i) {
       const config_var_t *var = &option_vars_[i];
       if (var->initvalue != NULL) {
-        if (strcmp(option_vars_[i].name, "DirAuthority") == 0) {
+        if (strcmp(option_vars_[i].member.name, "DirAuthority") == 0) {
           /*
            * Count dirauth lines we have a default for; we'll use the
            * count later to decide whether to add the defaults manually
            */
           ++dirauth_lines_seen;
         }
-        if (strcmp(option_vars_[i].name, "FallbackDir") == 0) {
+        if (strcmp(option_vars_[i].member.name, "FallbackDir") == 0) {
           /*
            * Similarly count fallback lines, so that we can decided later
            * to add the defaults manually.
@@ -8228,7 +8228,7 @@ getinfo_helper_config(control_connection_t *conn,
           ++fallback_lines_seen;
         }
         char *val = esc_for_log(var->initvalue);
-        smartlist_add_asprintf(sl, "%s %s\n",var->name,val);
+        smartlist_add_asprintf(sl, "%s %s\n",var->member.name,val);
         tor_free(val);
       }
     }

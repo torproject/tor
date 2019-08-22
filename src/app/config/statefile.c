@@ -71,8 +71,10 @@ static config_abbrev_t state_abbrevs_[] = {
 DUMMY_TYPECHECK_INSTANCE(or_state_t);
 
 /*XXXX these next two are duplicates or near-duplicates from config.c */
-#define VAR(name,conftype,member,initvalue)                             \
-  { name, CONFIG_TYPE_ ## conftype, offsetof(or_state_t, member),       \
+#define VAR(varname,conftype,member,initvalue)                          \
+  { { .name = varname,                                                  \
+      .type = CONFIG_TYPE_ ## conftype,                                 \
+      .offset = offsetof(or_state_t, member), },                        \
       initvalue CONF_TEST_MEMBERS(or_state_t, conftype, member) }
 /** As VAR, but the option name and member name are the same. */
 #define V(member,conftype,initvalue)                                    \
@@ -155,16 +157,20 @@ static void or_state_free_cb(void *state);
 
 /** "Extra" variable in the state that receives lines we can't parse. This
  * lets us preserve options from versions of Tor newer than us. */
-static config_var_t state_extra_var = {
-  "__extra", CONFIG_TYPE_LINELIST, offsetof(or_state_t, ExtraLines), NULL
-  CONF_TEST_MEMBERS(or_state_t, LINELIST, ExtraLines)
+static struct_member_t state_extra_var = {
+  .name = "__extra",
+  .type = CONFIG_TYPE_LINELIST,
+  .offset = offsetof(or_state_t, ExtraLines),
 };
 
 /** Configuration format for or_state_t. */
 static const config_format_t state_format = {
   sizeof(or_state_t),
-  OR_STATE_MAGIC,
-  offsetof(or_state_t, magic_),
+  {
+   "or_state_t",
+   OR_STATE_MAGIC,
+   offsetof(or_state_t, magic_),
+  },
   state_abbrevs_,
   NULL,
   state_vars_,
