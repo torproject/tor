@@ -672,6 +672,52 @@ transport_is_needed_mock(const char *transport_name)
   return transport_is_needed_mock_return;
 }
 
+static void
+test_config_parse_tcp_proxy_line(void *arg)
+{
+  (void)arg;
+
+  int ret;
+  char *msg = NULL;
+  or_options_t *options = get_options_mutable();
+
+  /* Bad TCPProxy line - too short. */
+  ret = parse_tcp_proxy_line("haproxy", options, &msg);
+  /* Return error. */
+  tt_int_op(ret, OP_EQ, -1);
+  /* Correct error message. */
+  tt_str_op(msg, OP_EQ, "TCPProxy has no address/port. Please fix.");
+  /* Free error message. */
+  tor_free(msg);
+
+  /* Bad TCPProxy line - unsupported protocol. */
+  ret = parse_tcp_proxy_line("unsupported 95.216.163.36:443", options, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_str_op(msg, OP_EQ, "TCPProxy protocol is not supported. Currently the "
+                        "only supported protocol is 'haproxy'. Please fix.");
+  tor_free(msg);
+
+  /* Bad TCPProxy line - unparsable address/port. */
+  ret = parse_tcp_proxy_line("haproxy 95.216.163.36/443", options, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_str_op(msg, OP_EQ, "TCPProxy address/port failed to parse or resolve. "
+                        "Please fix.");
+  tor_free(msg);
+
+  /* Good TCPProxy line - ipv4. */
+  ret = parse_tcp_proxy_line("haproxy 95.216.163.36:443", options, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_ptr_op(msg, OP_EQ, NULL);
+  tt_int_op(options->TCPProxyProtocol, OP_EQ, TCP_PROXY_PROTOCOL_HAPROXY);
+  /* Correct the address. */
+  tt_assert(tor_addr_eq_ipv4h(&options->TCPProxyAddr, 0x5fd8a324));
+  tt_int_op(options->TCPProxyPort, OP_EQ, 443);
+  tor_free(msg);
+
+ done:
+  ;
+}
+
 /**
  * Test parsing for the ClientTransportPlugin and ServerTransportPlugin config
  * options.
@@ -6097,6 +6143,7 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(parse_bridge_line, 0),
   CONFIG_TEST(parse_transport_options_line, 0),
   CONFIG_TEST(parse_transport_plugin_line, TT_FORK),
+  CONFIG_TEST(parse_tcp_proxy_line, TT_FORK),
   CONFIG_TEST(check_or_create_data_subdir, TT_FORK),
   CONFIG_TEST(write_to_data_subdir, TT_FORK),
   CONFIG_TEST(fix_my_family, 0),
