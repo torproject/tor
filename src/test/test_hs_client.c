@@ -160,8 +160,7 @@ helper_get_circ_and_stream_for_test(origin_circuit_t **circ_out,
     or_circ->rend_data = rend_data_dup(conn_rend_data);
   } else {
     /* prop224: Setup hs ident on the circuit */
-    or_circ->hs_ident = hs_ident_circuit_new(&service_pk,
-                                             HS_IDENT_CIRCUIT_RENDEZVOUS);
+    or_circ->hs_ident = hs_ident_circuit_new(&service_pk);
   }
 
   TO_CIRCUIT(or_circ)->state = CIRCUIT_STATE_OPEN;
@@ -964,8 +963,7 @@ test_close_intro_circuits_new_desc(void *arg)
     const hs_desc_intro_point_t *ip =
       smartlist_get(desc1->encrypted_data.intro_points, 0);
     tt_assert(ip);
-    ocirc->hs_ident = hs_ident_circuit_new(&service_kp.pubkey,
-                                           HS_IDENT_CIRCUIT_INTRO);
+    ocirc->hs_ident = hs_ident_circuit_new(&service_kp.pubkey);
     ed25519_pubkey_copy(&ocirc->hs_ident->intro_auth_pk,
                         &ip->auth_key_cert->signed_key);
   }
@@ -1066,8 +1064,7 @@ test_close_intro_circuits_cache_clean(void *arg)
     const hs_desc_intro_point_t *ip =
       smartlist_get(desc1->encrypted_data.intro_points, 0);
     tt_assert(ip);
-    ocirc->hs_ident = hs_ident_circuit_new(&service_kp.pubkey,
-                                           HS_IDENT_CIRCUIT_INTRO);
+    ocirc->hs_ident = hs_ident_circuit_new(&service_kp.pubkey);
     ed25519_pubkey_copy(&ocirc->hs_ident->intro_auth_pk,
                         &ip->auth_key_cert->signed_key);
   }

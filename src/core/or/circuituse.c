@@ -2533,8 +2533,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
           circ->rend_data = rend_data_dup(edge_conn->rend_data);
         } else if (edge_conn->hs_ident) {
           circ->hs_ident =
-            hs_ident_circuit_new(&edge_conn->hs_ident->identity_pk,
-                                 HS_IDENT_CIRCUIT_INTRO);
+            hs_ident_circuit_new(&edge_conn->hs_ident->identity_pk);
         }
         if (circ->base_.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
             circ->base_.state == CIRCUIT_STATE_OPEN)

@@ -259,8 +259,7 @@ create_rp_circuit_identifier(const hs_service_t *service,
   tor_assert(server_pk);
   tor_assert(keys);
 
-  ident = hs_ident_circuit_new(&service->keys.identity_pk,
-                               HS_IDENT_CIRCUIT_RENDEZVOUS);
+  ident = hs_ident_circuit_new(&service->keys.identity_pk);
   /* Copy the RENDEZVOUS_COOKIE which is the unique identifier. */
   memcpy(ident->rendezvous_cookie, rendezvous_cookie,
          sizeof(ident->rendezvous_cookie));
@@ -294,8 +293,7 @@ create_intro_circuit_identifier(const hs_service_t *service,
   tor_assert(service);
   tor_assert(ip);
 
-  ident = hs_ident_circuit_new(&service->keys.identity_pk,
-                               HS_IDENT_CIRCUIT_INTRO);
+  ident = hs_ident_circuit_new(&service->keys.identity_pk);
   ed25519_pubkey_copy(&ident->intro_auth_pk, &ip->auth_key_kp.pubkey);
 
   return ident;
