@@ -2073,8 +2073,12 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
     int flags = CIRCLAUNCH_NEED_CAPACITY | CIRCLAUNCH_IS_INTERNAL;
     if (circ_needs_uptime) flags |= CIRCLAUNCH_NEED_UPTIME;
     /* A Single Onion Service only uses a direct connection if its
-     * firewall rules permit direct connections to the address. */
-    if (rend_service_use_direct_connection(options, rp)) {
+     * firewall rules permit direct connections to the address.
+     *
+     * We only use a one-hop path on the first attempt. If the first attempt
+     * fails, we use a 3-hop path for reachability / reliability.
+     * See the comment in rend_service_relauch_rendezvous() for details. */
+    if (rend_service_use_direct_connection(options, rp) && i == 0) {
       flags = flags | CIRCLAUNCH_ONEHOP_TUNNEL;
     }
     launched = circuit_launch_by_extend_info(
