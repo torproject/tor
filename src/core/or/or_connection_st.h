@@ -58,7 +58,7 @@ struct or_connection_t {
 
   /** True iff this is an outgoing connection. */
   unsigned int is_outgoing:1;
-  unsigned int proxy_type:2; /**< One of PROXY_NONE...PROXY_SOCKS5 */
+  unsigned int proxy_type:3; /**< One of PROXY_NONE...PROXY_HAPROXY */
   unsigned int wide_circ_ids:1;
   /** True iff this connection has had its bootstrap failure logged with
    * control_event_bootstrap_problem. */
