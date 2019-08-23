@@ -405,8 +405,12 @@ launch_rendezvous_point_circuit(const hs_service_t *service,
     if (circ_needs_uptime) {
       circ_flags |= CIRCLAUNCH_NEED_UPTIME;
     }
-    /* Firewall and policies are checked when getting the extend info. */
-    if (service->config.is_single_onion) {
+    /* Firewall and policies are checked when getting the extend info.
+     *
+     * We only use a one-hop path on the first attempt. If the first attempt
+     * fails, we use a 3-hop path for reachability / reliability.
+     * See the comment in retry_service_rendezvous_point() for details. */
+    if (service->config.is_single_onion && i == 0) {
       circ_flags |= CIRCLAUNCH_ONEHOP_TUNNEL;
     }
 
