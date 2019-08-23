@@ -775,8 +775,15 @@ hs_circ_launch_intro_point(hs_service_t *service,
   tor_assert(ei);
 
   /* Update circuit flags in case of a single onion service that requires a
-   * direct connection. */
-  if (service->config.is_single_onion) {
+   * direct connection.
+   *
+   * We only use a one-hop path on the first attempt. If the first attempt
+   * fails, we use a 3-hop path for reachability / reliability.
+   * (Unlike v2, retries is incremented by the caller before it calls this
+   * function.)
+   */
+  tor_assert_nonfatal(ip->circuit_retries > 0);
+  if (service->config.is_single_onion && ip->circuit_retries == 1) {
     circ_flags |= CIRCLAUNCH_ONEHOP_TUNNEL;
   }
 
