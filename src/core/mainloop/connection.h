@@ -75,8 +75,10 @@ struct buf_t;
 #define PROXY_SOCKS5_WANT_AUTH_RFC1929_OK 6
 /* We use a SOCKS5 proxy and we just sent our CONNECT command. */
 #define PROXY_SOCKS5_WANT_CONNECT_OK 7
+/* We use an HAPROXY proxy and we just sent the proxy header. */
+#define PROXY_HAPROXY_WAIT_FOR_FLUSH 8
 /* We use a proxy and we CONNECTed successfully!. */
-#define PROXY_CONNECTED 8
+#define PROXY_CONNECTED 9
 
 /** State for any listener connection. */
 #define LISTENER_STATE_READY 0

@@ -83,6 +83,7 @@
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
 #include "core/or/crypt_path.h"
+#include "core/proto/proto_haproxy.h"
 #include "core/proto/proto_http.h"
 #include "core/proto/proto_socks.h"
 #include "feature/client/dnsserv.h"
@@ -2317,7 +2318,11 @@ conn_get_proxy_type(const connection_t *conn)
     return PROXY_SOCKS4;
   else if (options->Socks5Proxy)
     return PROXY_SOCKS5;
-  else
+  else if (options->TCPProxy) {
+    /* The only supported protocol in TCPProxy is haproxy. */
+    tor_assert(options->TCPProxyProtocol == TCP_PROXY_PROTOCOL_HAPROXY);
+    return PROXY_HAPROXY;
+  } else
     return PROXY_NONE;
 }
 
@@ -2489,6 +2494,35 @@ connection_socks5_proxy_connect(connection_t *conn)
   return 0;
 }
 
+/** Write a proxy request of haproxy to conn for conn->addr:conn->port.
+ *
+ * Returns -1 if conn->addr is incompatible with the proxy protocol, and
+ * 0 otherwise.
+ */
+static int
+connection_haproxy_proxy_connect(connection_t *conn)
+{
+  int ret = 0;
+  tor_addr_port_t *addr_port = tor_addr_port_new(&conn->addr, conn->port);
+  char *buf = format_proxy_header_line(addr_port);
+
+  if (buf == NULL) {
+    ret = -1;
+    goto done;
+  }
+
+  connection_buf_add(buf, strlen(buf), conn);
+  /* In haproxy, we don't have to wait for the response, but we wait for ack.
+   * So we can set the state to be PROXY_HAPROXY_WAIT_FOR_FLUSH. */
+  conn->proxy_state = PROXY_HAPROXY_WAIT_FOR_FLUSH;
+
+  ret = 0;
+ done:
+  tor_free(buf);
+  tor_free(addr_port);
+  return ret;
+}
+
 /** Write a proxy request of <b>type</b> (socks4, socks5, https, haproxy)
  * to conn for conn->addr:conn->port, authenticating with the auth details
  * given in the configuration (if available). SOCKS 5 and HTTP CONNECT
@@ -2517,6 +2551,10 @@ connection_proxy_connect(connection_t *conn, int type)
 
     case PROXY_SOCKS5:
       ret = connection_socks5_proxy_connect(conn);
+      break;
+
+    case PROXY_HAPROXY:
+      ret = connection_haproxy_proxy_connect(conn);
       break;
 
     default:
@@ -5498,6 +5536,13 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
     *port = options->Socks5ProxyPort;
     *proxy_type = PROXY_SOCKS5;
     return 0;
+  } else if (options->TCPProxy) {
+    tor_addr_copy(addr, &options->TCPProxyAddr);
+    *port = options->TCPProxyPort;
+    /* The only supported protocol in TCPProxy is haproxy. */
+    tor_assert(options->TCPProxyProtocol == TCP_PROXY_PROTOCOL_HAPROXY);
+    *proxy_type = PROXY_HAPROXY;
+    return 0;
   }
 
   tor_addr_make_unspec(addr);
@@ -5535,6 +5580,7 @@ proxy_type_to_string(int proxy_type)
   case PROXY_CONNECT:   return "HTTP";
   case PROXY_SOCKS4:    return "SOCKS4";
   case PROXY_SOCKS5:    return "SOCKS5";
+  case PROXY_HAPROXY:   return "HAPROXY";
   case PROXY_PLUGGABLE: return "pluggable transports SOCKS";
   case PROXY_NONE:      return "NULL";
   default:              tor_assert(0);

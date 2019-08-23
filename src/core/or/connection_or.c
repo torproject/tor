@@ -726,6 +726,18 @@ connection_or_finished_flushing(or_connection_t *conn)
 
   switch (conn->base_.state) {
     case OR_CONN_STATE_PROXY_HANDSHAKING:
+      /* PROXY_HAPROXY gets connected by receiving an ack. */
+      if (conn->proxy_type == PROXY_HAPROXY) {
+        tor_assert(TO_CONN(conn)->proxy_state == PROXY_HAPROXY_WAIT_FOR_FLUSH);
+        TO_CONN(conn)->proxy_state = PROXY_CONNECTED;
+
+        if (connection_tls_start_handshake(conn, 0) < 0) {
+          /* TLS handshaking error of some kind. */
+          connection_or_close_for_error(conn, 0);
+          return -1;
+        }
+        break;
+      }
     case OR_CONN_STATE_OPEN:
     case OR_CONN_STATE_OR_HANDSHAKING_V2:
     case OR_CONN_STATE_OR_HANDSHAKING_V3:
@@ -765,8 +777,15 @@ connection_or_finished_connecting(or_connection_t *or_conn)
       return -1;
     }
 
-    connection_start_reading(conn);
     connection_or_change_state(or_conn, OR_CONN_STATE_PROXY_HANDSHAKING);
+
+    /* If the proxy type is haproxy, we don't have to wait for the response.
+     * We can start the TLS handshake immediately (but after all the outbound
+     * buffer is flushed). */
+    if (proxy_type != PROXY_HAPROXY) {
+      connection_start_reading(conn);
+    }
+
     return 0;
   }
 
