@@ -3041,8 +3041,15 @@ rend_service_launch_establish_intro(rend_service_t *service,
   extend_info_t *launch_ei = intro->extend_info;
   extend_info_t *direct_ei = NULL;
 
-  /* Are we in single onion mode? */
-  if (rend_service_allow_non_anonymous_connection(options)) {
+  /* Are we in single onion mode?
+   *
+   * We only use a one-hop path on the first attempt. If the first attempt
+   * fails, we use a 3-hop path for reachability / reliability.
+   * (Unlike v3, retries is incremented by the caller after it calls this
+   * function.)
+   */
+  if (rend_service_allow_non_anonymous_connection(options) &&
+      intro->circuit_retries == 0) {
     /* Do we have a descriptor for the node?
      * We've either just chosen it from the consensus, or we've just reviewed
      * our intro points to see which ones are still valid, and deleted the ones
