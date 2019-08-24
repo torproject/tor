@@ -49,7 +49,7 @@
 #define CONFIG_VAR_DEFN(structtype, varname, vartype, membername,       \
                         varflags, initval)                              \
   { .member =                                                           \
-      { .name = varname,                                                \
+    { .name = varname,                                                \
       .type = CONFIG_TYPE_EXTENDED,                                     \
       .type_def = &vartype ## _type_defn,                               \
       .offset = offsetof(structtype, membername),                       \
