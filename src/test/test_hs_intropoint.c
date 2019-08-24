@@ -903,6 +903,52 @@ test_received_introduce1_handling(void *arg)
   UNMOCK(relay_send_command_from_edge_);
 }
 
+static void
+test_dup_hs_intro_received_establish_intro(void *arg)
+{
+  int retval;
+  or_circuit_t *intro_circ = NULL;
+  char circ_nonce[DIGEST_LEN] = {0};
+  uint8_t cell_body[RELAY_PAYLOAD_SIZE];
+  ssize_t cell_len = 0;
+  trn_cell_establish_intro_t *cell = NULL;
+
+  (void) arg;
+
+  MOCK(hs_intro_send_intro_established_cell, mock_send_intro_established_cell);
+
+  hs_circuitmap_init();
+
+  intro_circ = or_circuit_new(0, NULL);
+  tt_assert(intro_circ);
+
+  /* Prepare the circuit for the incoming ESTABLISH_INTRO */
+  crypto_rand(circ_nonce, sizeof(circ_nonce));
+  helper_prepare_circ_for_intro(intro_circ, circ_nonce);
+
+  /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
+   * attempt to parse it. */
+  cell_len = new_establish_intro_cell(circ_nonce, &cell);
+  tt_i64_op(cell_len, OP_GT, 0);
+  tt_assert(cell);
+  cell_len = trn_cell_establish_intro_encode(cell_body, sizeof(cell_body),
+                                             cell);
+  tt_int_op(cell_len, OP_GT, 0);
+
+  /* Send the cell twice */
+  hs_intro_received_establish_intro(intro_circ, cell_body, (size_t) cell_len);
+  retval = hs_intro_received_establish_intro(intro_circ, cell_body,
+                                             (size_t) cell_len);
+  tt_int_op(retval, OP_EQ, -1);
+
+ done:
+  trn_cell_establish_intro_free(cell);
+  circuit_free_(TO_CIRCUIT(intro_circ));
+  test_circuitmap_free_all();
+
+  UNMOCK(hs_intro_send_intro_established_cell);
+}
+
 static void *
 hs_subsystem_setup_fn(const struct testcase_t *tc)
 {
@@ -960,6 +1006,9 @@ struct testcase_t hs_intropoint_tests[] = {
 
   { "received_introduce1_handling",
     test_received_introduce1_handling, TT_FORK, NULL, &test_setup},
+
+  { "dup_hs_intro_received_establish_intro",
+    test_dup_hs_intro_received_establish_intro, TT_FORK, NULL, &test_setup},
 
   END_OF_TESTCASES
 };
