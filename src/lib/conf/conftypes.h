@@ -112,12 +112,14 @@ typedef struct struct_magic_decl_t {
 #define CVFLAG_OBSOLETE  (1u<<0)
 /**
  * Flag to indicate that an option is undumpable. An undumpable option is
- * never saved to disk, and is prefixed with __.
+ * never saved to disk. For historical reasons it is prefixed with __ but
+ * not with ___.
  **/
 #define CVFLAG_NODUMP    (1u<<1)
 /**
  * Flag to indicate that an option is "invisible". An invisible option
  * is always undumpable, and we don't tell the controller about it.
+ * For historical reasons it is prefixed with ___.
  **/
 #define CVFLAG_INVISIBLE (1u<<2)
 
