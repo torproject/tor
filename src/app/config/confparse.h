@@ -107,6 +107,7 @@ void warn_deprecated_option(const char *what, const char *why);
 bool config_var_is_cumulative(const config_var_t *var);
 bool config_var_is_settable(const config_var_t *var);
 bool config_var_is_contained(const config_var_t *var);
+bool config_var_is_invisible(const config_var_t *var);
 
 /* Helper macros to compare an option across two configuration objects */
 #define CFG_EQ_BOOL(a,b,opt) ((a)->opt == (b)->opt)

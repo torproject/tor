@@ -8137,7 +8137,7 @@ getinfo_helper_config(control_connection_t *conn,
     for (i = 0; option_vars_[i].member.name; ++i) {
       const config_var_t *var = &option_vars_[i];
       /* don't tell controller about invisible options */
-      if (option_vars_[i].flags & CVFLAG_INVISIBLE)
+      if (config_var_is_invisible(var))
         continue;
       const char *type = struct_var_get_typename(&var->member);
       if (!type)

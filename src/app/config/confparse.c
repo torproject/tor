@@ -164,6 +164,11 @@ config_var_is_contained(const config_var_t *var)
 {
   return struct_var_is_contained(&var->member);
 }
+bool
+config_var_is_invisible(const config_var_t *var)
+{
+  return (var->flags & CVFLAG_INVISIBLE) != 0;
+}
 
 /*
  * Functions to assign config options.
