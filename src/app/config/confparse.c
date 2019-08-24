@@ -169,6 +169,11 @@ config_var_is_invisible(const config_var_t *var)
 {
   return (var->flags & CVFLAG_INVISIBLE) != 0;
 }
+bool
+config_var_is_dumpable(const config_var_t *var)
+{
+  return (var->flags & CVFLAG_NODUMP) == 0;
+}
 
 /*
  * Functions to assign config options.
@@ -646,7 +651,7 @@ config_dump(const config_format_t *fmt, const void *default_options,
       continue;
     }
     /* Don't save 'hidden' control variables. */
-    if (fmt->vars[i].flags & CVFLAG_NODUMP)
+    if (! config_var_is_dumpable(&fmt->vars[i]))
       continue;
     if (minimal && config_is_same(fmt, options, defaults,
                                   fmt->vars[i].member.name))
