@@ -1017,6 +1017,14 @@ test_intro_established(void *arg)
   tt_u64_op(ip->circuit_established, OP_EQ, 1);
   tt_int_op(TO_CIRCUIT(circ)->purpose, OP_EQ, CIRCUIT_PURPOSE_S_INTRO);
 
+  /* Send duplicate INTRO_ESTABLISHED cells. Should fail */
+  circ->already_received_intro_established = 0;
+  hs_service_receive_intro_established(circ, payload, sizeof(payload));
+  ret = hs_service_receive_intro_established(circ, payload, sizeof(payload));
+  tt_int_op(ret, OP_EQ, -1);
+  tt_u64_op(ip->circuit_established, OP_EQ, 1);
+  tt_int_op(TO_CIRCUIT(circ)->purpose, OP_EQ, CIRCUIT_PURPOSE_S_INTRO);
+
  done:
   if (circ)
     circuit_free_(TO_CIRCUIT(circ));
