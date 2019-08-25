@@ -18,6 +18,7 @@
 
 struct smartlist_t;
 struct config_line_t;
+struct config_suite_t;
 
 /** Enumeration of outbound address configuration types:
  * Exit-only, OR-only, or both */
@@ -1107,6 +1108,9 @@ struct or_options_t {
    * a possible previous dormant state.
    **/
   int DormantCanceledByStartup;
+
+  /**DOCDOC*/
+  struct config_suite_t *subconfigs_;
 };
 
 #endif /* !defined(TOR_OR_OPTIONS_ST_H) */
