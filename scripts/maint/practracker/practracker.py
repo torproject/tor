@@ -213,7 +213,8 @@ def main(argv):
     filt.addThreshold(problem.FileSizeItem("*.h", int(args.max_h_file_size)))
     filt.addThreshold(problem.IncludeCountItem("*.h", int(args.max_h_include_count)))
     filt.addThreshold(problem.FunctionSizeItem("*.c", int(args.max_function_size)))
-    filt.addThreshold(problem.DependencyViolationItem("*", int(args.max_dependency_violations)))
+    filt.addThreshold(problem.DependencyViolationItem("*.c", int(args.max_dependency_violations)))
+    filt.addThreshold(problem.DependencyViolationItem("*.h", int(args.max_dependency_violations)))
 
     # 1) Get all the .c files we care about
     files_list = util.get_tor_c_files(TOR_TOPDIR)
