@@ -306,7 +306,7 @@ config_mgr_free_(config_mgr_t *mgr)
 
 /** Return a new smartlist_t containing a config_var_t for every variable that
  * <b>mgr</b> knows about.  The elements of this smartlist do not need
- * to be freed. */
+ * to be freed; they have the same lifespan as <b>mgr</b>. */
 smartlist_t *
 config_mgr_list_vars(const config_mgr_t *mgr)
 {
@@ -318,7 +318,9 @@ config_mgr_list_vars(const config_mgr_t *mgr)
 }
 
 /** Return a new smartlist_t containing the names of all deprecated variables.
- * The elements of this smartlist do not need to be freed. */
+ * The elements of this smartlist do not need to be freed; they have the same
+ * lifespan as <b>mgr</b>.
+ */
 smartlist_t *
 config_mgr_list_deprecated_vars(const config_mgr_t *mgr)
 {
