@@ -59,9 +59,7 @@ DUMMY_TYPECHECK_INSTANCE(sr_disk_state_t);
 /* Our persistent state magic number. */
 #define SR_DISK_STATE_MAGIC 0x98AB1254
 
-static int
-disk_state_validate_cb(void *old_state, void *state, void *default_state,
-                       int from_setconf, char **msg);
+static int disk_state_validate_cb(const void *state, smartlist_t *errs_out);
 
 /* Array of variables that are saved to disk as a persistent state. */
 static const config_var_t state_vars[] = {
@@ -88,19 +86,16 @@ static const struct_member_t state_extra_var = {
 
 /* Configuration format of sr_disk_state_t. */
 static const config_format_t state_format = {
-  sizeof(sr_disk_state_t),
-  {
+  .size = sizeof(sr_disk_state_t),
+  .magic = {
    "sr_disk_state_t",
    SR_DISK_STATE_MAGIC,
    offsetof(sr_disk_state_t, magic_),
   },
-  NULL,
-  NULL,
-  state_vars,
-  disk_state_validate_cb,
-  NULL,
-  &state_extra_var,
-  -1,
+  .vars = state_vars,
+  .validate_fn = disk_state_validate_cb,
+  .extra = &state_extra_var,
+  .config_suite_offset = -1,
 };
 
 /* Global configuration manager for the shared-random state file */
@@ -311,8 +306,9 @@ disk_state_set(sr_disk_state_t *state)
 /* Return -1 if the disk state is invalid (something in there that we can't or
  * shouldn't use). Return 0 if everything checks out. */
 static int
-disk_state_validate(const sr_disk_state_t *state)
+disk_state_validate_cb(const void *newval, smartlist_t *errs)
 {
+  const sr_disk_state_t *state = newval;
   time_t now;
 
   tor_assert(state);
@@ -320,20 +316,22 @@ disk_state_validate(const sr_disk_state_t *state)
   /* Do we support the protocol version in the state or is it 0 meaning
    * Version wasn't found in the state file or bad anyway ? */
   if (state->Version == 0 || state->Version > SR_PROTO_VERSION) {
+    smartlist_add_asprintf(errs, "Invalid version number %d", state->Version);
     goto invalid;
   }
 
   /* If the valid until time is before now, we shouldn't use that state. */
   now = time(NULL);
   if (state->ValidUntil < now) {
-    log_info(LD_DIR, "SR: Disk state has expired. Ignoring it.");
+    smartlist_add_strdup(errs, "SR: Disk state has expired. Ignoring it.");
     goto invalid;
   }
 
   /* Make sure we don't have a valid after time that is earlier than a valid
    * until time which would make things not work well. */
   if (state->ValidAfter >= state->ValidUntil) {
-    log_info(LD_DIR, "SR: Disk state valid after/until times are invalid.");
+    smartlist_add_strdup(errs,
+                      "SR: Disk state valid after/until times are invalid.");
     goto invalid;
   }
 
@@ -341,24 +339,6 @@ disk_state_validate(const sr_disk_state_t *state)
 
  invalid:
   return -1;
-}
-
-/* Validate the disk state (NOP for now). */
-static int
-disk_state_validate_cb(void *old_state, void *state, void *default_state,
-                       int from_setconf, char **msg)
-{
-  /* We don't use these; only options do. */
-  (void) from_setconf;
-  (void) default_state;
-  (void) old_state;
-
-  /* This is called by config_dump which is just before we are about to
-   * write it to disk. At that point, our global memory state has been
-   * copied to the disk state so it's fair to assume it's trustable. */
-  (void) state;
-  (void) msg;
-  return 0;
 }
 
 /* Parse the Commit line(s) in the disk state and translate them to the
@@ -702,7 +682,7 @@ disk_state_load_from_disk_impl(const char *fname)
 
   /* So far so good, we've loaded our state file into our disk state. Let's
    * validate it and then parse it. */
-  if (disk_state_validate(disk_state) < 0) {
+  if (config_validate(get_srs_mgr(), (void*)1, disk_state, NULL) < 0) {
     ret = -EINVAL;
     goto error;
   }
@@ -744,7 +724,9 @@ disk_state_save_to_disk(void)
   /* Make sure that our disk state is up to date with our memory state
    * before saving it to disk. */
   disk_state_update();
-  state = config_dump(get_srs_mgr(), NULL, sr_disk_state, 0, 0);
+  sr_disk_state_t *default_state = disk_state_new(0);
+  state = config_dump(get_srs_mgr(), default_state, sr_disk_state, 0, 0);
+  disk_state_free(default_state);
   format_local_iso_time(tbuf, now);
   tor_asprintf(&content,
                "# Tor shared random state file last generated on %s "

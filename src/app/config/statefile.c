@@ -139,11 +139,9 @@ static const config_var_t state_vars_[] = {
 #undef VAR
 #undef V
 
-static int or_state_validate(or_state_t *state, char **msg);
+static int or_state_validate(or_state_t *state);
 
-static int or_state_validate_cb(void *old_options, void *options,
-                                void *default_options,
-                                int from_setconf, char **msg);
+static int or_state_validate_cb(const void *, smartlist_t *);
 
 /** Magic value for or_state_t. */
 #define OR_STATE_MAGIC 0x57A73f57
@@ -158,19 +156,17 @@ static struct_member_t state_extra_var = {
 
 /** Configuration format for or_state_t. */
 static const config_format_t state_format = {
-  sizeof(or_state_t),
-  {
+  .size = sizeof(or_state_t),
+  .magic = {
    "or_state_t",
    OR_STATE_MAGIC,
    offsetof(or_state_t, magic_),
   },
-  state_abbrevs_,
-  NULL,
-  state_vars_,
-  or_state_validate_cb,
-  NULL,
-  &state_extra_var,
-  offsetof(or_state_t, substates_),
+  .abbrevs = state_abbrevs_,
+  .vars = state_vars_,
+  .validate_fn = or_state_validate_cb,
+  .extra = &state_extra_var,
+  .config_suite_offset = offsetof(or_state_t, substates_),
 };
 
 /* A global configuration manager for state-file objects */
@@ -251,10 +247,10 @@ state_transport_line_is_valid(const char *line)
 /** Return 0 if all TransportProxy lines in <b>state</b> are well
  *  formed. Otherwise, return -1. */
 static int
-validate_transports_in_state(or_state_t *state)
+validate_transports_in_state(const or_state_t *state)
 {
   int broken = 0;
-  config_line_t *line;
+  const config_line_t *line;
 
   for (line = state->TransportProxies ; line ; line = line->next) {
     tor_assert(!strcmp(line->key, "TransportProxy"));
@@ -269,16 +265,9 @@ validate_transports_in_state(or_state_t *state)
 }
 
 static int
-or_state_validate_cb(void *old_state, void *state, void *default_state,
-                     int from_setconf, char **msg)
+or_state_validate(or_state_t *state)
 {
-  /* We don't use these; only options do. Still, we need to match that
-   * signature. */
-  (void) from_setconf;
-  (void) default_state;
-  (void) old_state;
-
-  return or_state_validate(state, msg);
+  return config_validate(get_state_mgr(), NULL, state, NULL);
 }
 
 /** Return 0 if every setting in <b>state</b> is reasonable, and a
@@ -287,15 +276,23 @@ or_state_validate_cb(void *old_state, void *state, void *default_state,
  * <b>state</b>.
  */
 static int
-or_state_validate(or_state_t *state, char **msg)
+or_state_validate_cb(const void *newval, smartlist_t *errs)
 {
-  if (entry_guards_parse_state(state, 0, msg)<0)
-    return -1;
+  const or_state_t *state = newval;
+  char *msg = NULL;
+  int rv = 0;
 
-  if (validate_transports_in_state(state)<0)
-    return -1;
+  if (entry_guards_parse_state(state, 0, &msg)<0) {
+    smartlist_add(errs, msg);
+    rv = -1;
+  }
 
-  return 0;
+  if (validate_transports_in_state(state)<0) {
+    smartlist_add_strdup(errs, "Error in transports in state file");
+    rv = -1;
+  }
+
+  return rv;
 }
 
 /** Replace the current persistent state with <b>new_state</b> */
@@ -421,13 +418,8 @@ or_state_load(void)
     }
   }
 
-  if (!badstate && or_state_validate(new_state, &errmsg) < 0)
+  if (!badstate && or_state_validate(new_state) < 0)
     badstate = 1;
-
-  if (errmsg) {
-    log_warn(LD_GENERAL, "%s", errmsg);
-    tor_free(errmsg);
-  }
 
   if (badstate && !contents) {
     log_warn(LD_BUG, "Uh oh.  We couldn't even validate our own default state."

@@ -33,8 +33,8 @@ problem file-size /src/app/config/config.c 8518
 problem include-count /src/app/config/config.c 89
 problem function-size /src/app/config/config.c:options_act_reversible() 296
 problem function-size /src/app/config/config.c:options_act() 589
-problem function-size /src/app/config/config.c:resolve_my_address() 190
-problem function-size /src/app/config/config.c:options_validate() 1209
+problem function-size /src/app/config/config.c:resolve_my_address() 192
+problem function-size /src/app/config/config.c:options_validate_cb() 1217
 problem function-size /src/app/config/config.c:options_init_from_torrc() 207
 problem function-size /src/app/config/config.c:options_init_from_string() 171
 problem function-size /src/app/config/config.c:options_init_logs() 145

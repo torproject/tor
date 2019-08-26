@@ -380,6 +380,104 @@ config_new(const config_mgr_t *mgr)
   return opts;
 }
 
+/**
+ * Helper: as config_validate(), but validate only a single format/object
+ * pair.
+*/
+static int
+config_validate_single(const config_format_t *fmt,
+                       const void *oldval,
+                       void *newval,
+                       smartlist_t *errs_out)
+{
+  int res = CFG_OK;
+  if (fmt->pre_derive_fn) {
+    if (fmt->pre_derive_fn(newval) < 0) {
+      smartlist_add_strdup(errs_out, "Pre-validation derivation failed");
+      return CFG_INTERNAL_ERR;
+    }
+  }
+
+  if (fmt->validate_fn) {
+    if (fmt->validate_fn(newval, errs_out) < 0) {
+      res = CFG_BAD_VAL;
+    }
+  }
+
+  if (fmt->legacy_validate_fn) {
+    char *msg = NULL;
+    if (fmt->legacy_validate_fn(oldval, newval, &msg) < 0) {
+      res = CFG_BAD_VAL;
+      if (msg)
+        smartlist_add(errs_out, msg);
+    }
+  }
+
+  if (res != CFG_OK)
+    return res;
+
+  if (fmt->transition_check_fn && oldval) {
+    if (fmt->transition_check_fn(oldval, newval, errs_out) < 0) {
+      return CFG_BAD_TRANSITION;
+    }
+  }
+
+  if (fmt->post_derive_fn) {
+    if (fmt->post_derive_fn(newval) < 0) {
+      smartlist_add_strdup(errs_out, "Post-validation function failed");
+      return CFG_INTERNAL_ERR;
+    }
+  }
+
+  return CFG_OK;
+}
+
+/** Use <b>mgr</b> to check whether <b>newval</b> is a valid configuration.
+ * If <b>oldval</b> is present, check whether the transition from
+ * <b>oldval</b> to <b>newval</b> is valid.
+ *
+ * Some of the methods called here may update the values in <b>newval</b>,
+ * though in general they should only update derived fields rather than fields
+ * managed by a configuration format.
+ *
+ * On success, return 0.  On failure, return -1 and add strings to
+ * <b>errs_out</b> describing the problems encountered.  If <b>errs_out</b> is
+ * NULL, messages are simply logged.
+ */
+config_validate_status_t
+config_validate(const config_mgr_t *mgr,
+                const void *oldval, void *newval, smartlist_t *errs_out)
+{
+  config_validate_status_t res = CFG_OK;
+  smartlist_t *errs_tmp = NULL;
+  if (!errs_out)
+    errs_out = errs_tmp = smartlist_new();
+
+  res = config_validate_single(mgr->toplevel, oldval, newval, errs_out);
+  if (res != CFG_OK)
+    goto done;
+
+  SMARTLIST_FOREACH_BEGIN(mgr->subconfigs, const config_format_t *, fmt) {
+    const void *old_obj = NULL;
+    if (oldval)
+      old_obj = config_mgr_get_obj(mgr, oldval, fmt_sl_idx);
+    void *new_obj = config_mgr_get_obj_mutable(mgr, newval, fmt_sl_idx);
+    res = config_validate_single(fmt, old_obj, new_obj, errs_out);
+    if (res != CFG_OK)
+      goto done;
+  } SMARTLIST_FOREACH_END(fmt);
+
+ done:
+  if (errs_tmp) {
+    SMARTLIST_FOREACH(errs_tmp, char *, msg, {
+        log_warn(LD_CONFIG, "%s", msg);
+        tor_free(msg);
+      });
+    smartlist_free(errs_tmp);
+  }
+  return res;
+}
+
 /*
  * Functions to parse config options
  */
@@ -1050,7 +1148,6 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
   void *defaults_tmp = NULL;
   config_line_t *line, *assigned;
   char *result;
-  char *msg = NULL;
 
   if (defaults == NULL) {
     defaults = defaults_tmp = config_new(mgr);
@@ -1059,10 +1156,9 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
 
   /* XXX use a 1 here so we don't add a new log line while dumping */
   if (default_options == NULL) {
-    if (fmt->validate_fn(NULL, defaults_tmp, defaults_tmp, 1, &msg) < 0) {
+    if (config_validate(mgr, NULL, defaults_tmp, NULL) < 0) {
       // LCOV_EXCL_START
-      log_err(LD_BUG, "Failed to validate default config: %s", msg);
-      tor_free(msg);
+      log_err(LD_BUG, "Failed to validate default config");
       tor_assert(0);
       // LCOV_EXCL_STOP
     }

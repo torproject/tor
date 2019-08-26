@@ -34,10 +34,36 @@ typedef struct config_deprecation_t {
  * you can abbreviate <b>tok</b>s as <b>tok</b>". */
 #define PLURAL(tok) { #tok, #tok "s", 0, 0 }
 
-/** Type of a callback to validate whether a given configuration is
- * well-formed and consistent. See options_trial_assign() for documentation
- * of arguments. */
-typedef int (*validate_fn_t)(void*,void*,void*,int,char**);
+/**
+ * Helper function for configuration formats: used to derive fields that
+ * can be detrmined before verifications.  Only this function and
+ * post_derive_fn_t are allowed to change the configuration object.
+ */
+typedef int (*pre_derive_fn_t)(void *);
+struct smartlist_t;
+/**
+ * Helper function for configuration formats: Check whether a configuration
+ * object is well-formed.  Store error strings in a provided list.
+ */
+typedef int (*validate_fn_t)(const void *, struct smartlist_t *);
+/**
+ * Helper function for configuration formats: check whether
+ * a given transition is allowed.  Store error strings in a provided list.
+ **/
+typedef int (*transition_check_fn_t)(const void *, const void *,
+                                     struct smartlist_t *);
+/**
+ * Helper function for configuration formats: used to derive fields after
+ * verification is complete.  Only this function and pre_derive_fn_t are
+ * allowed to change the configuration object.
+ **/
+typedef int (*post_derive_fn_t)(void *);
+
+/** Legacy helper function for configuration formats: combines pre_derive,
+ * validate, transition_ok, and post_derive steps.  In general,
+ * we should never make new functions of this type.
+ */
+typedef int (*legacy_validate_fn_t)(const void*, void*, char**);
 
 struct config_mgr_t;
 
@@ -56,7 +82,20 @@ typedef struct config_format_t {
   const config_var_t *vars; /**< List of variables we recognize, their default
                              * values, and where we stick them in the
                              * structure. */
-  validate_fn_t validate_fn; /**< Function to validate config. */
+
+  /** Function to derive fields before validation */
+  pre_derive_fn_t pre_derive_fn;
+  /** Function to validate a configuration state. */
+  validate_fn_t validate_fn;
+  /** Function to check whether one configuration state can change to
+   * another */
+  transition_check_fn_t transition_check_fn;
+  /** Function to derive fields after validation. */
+  post_derive_fn_t post_derive_fn;
+  /** Legacy function to validate config. Do not create new instances of
+   * this. */
+  legacy_validate_fn_t legacy_validate_fn;
+
   clear_cfg_fn_t clear_fn; /**< Function to clear the configuration. */
   /** If present, extra denotes a LINELIST variable for unrecognized
    * lines.  Otherwise, unrecognized lines are an error. */
@@ -75,6 +114,16 @@ typedef struct config_format_t {
 typedef struct config_mgr_t config_mgr_t;
 
 config_mgr_t *config_mgr_new(const config_format_t *toplevel_fmt);
+
+typedef enum {
+   CFG_OK = 0,
+   CFG_BAD_VAL = -1,
+   CFG_BAD_TRANSITION = -2,
+   CFG_INTERNAL_ERR = -3,
+} config_validate_status_t;
+config_validate_status_t config_validate(const config_mgr_t *mgr,
+                          const void *oldval, void *newval,
+                          struct smartlist_t *errs_out);
 void config_mgr_free_(config_mgr_t *mgr);
 int config_mgr_add_format(config_mgr_t *mgr,
                           const config_format_t *fmt);

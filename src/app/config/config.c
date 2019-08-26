@@ -808,6 +808,9 @@ static const config_deprecation_t option_deprecation_notes_[] = {
 static char *get_windows_conf_root(void);
 #endif
 static int options_act_reversible(const or_options_t *old_options, char **msg);
+static int options_transition_check_cb(const void *oldval,
+                                       const void *newval,
+                                       smartlist_t *errs);
 static int options_transition_allowed(const or_options_t *old,
                                       const or_options_t *new,
                                       char **msg);
@@ -840,9 +843,8 @@ static int parse_outbound_addresses(or_options_t *options, int validate_only,
                                     char **msg);
 static void config_maybe_load_geoip_files_(const or_options_t *options,
                                            const or_options_t *old_options);
-static int options_validate_cb(void *old_options, void *options,
-                               void *default_options,
-                               int from_setconf, char **msg);
+static int options_validate_cb(const void *old_options, void *options,
+                               char **msg);
 static void cleanup_protocol_warning_severity_level(void);
 static void set_protocol_warning_severity_level(int warning_severity);
 static void options_clear_cb(const config_mgr_t *mgr, void *opts);
@@ -852,19 +854,19 @@ static void options_clear_cb(const config_mgr_t *mgr, void *opts);
 
 /** Configuration format for or_options_t. */
 static const config_format_t options_format = {
-  sizeof(or_options_t),
-  {
+  .size = sizeof(or_options_t),
+  .magic = {
    "or_options_t",
    OR_OPTIONS_MAGIC,
    offsetof(or_options_t, magic_),
   },
-  option_abbrevs_,
-  option_deprecation_notes_,
-  option_vars_,
-  options_validate_cb,
-  options_clear_cb,
-  NULL,
-  offsetof(or_options_t, subconfigs_),
+  .abbrevs = option_abbrevs_,
+  .deprecations = option_deprecation_notes_,
+  .vars = option_vars_,
+  .transition_check_fn = options_transition_check_cb,
+  .legacy_validate_fn = options_validate_cb,
+  .clear_fn = options_clear_cb,
+  .config_suite_offset = offsetof(or_options_t, subconfigs_),
 };
 
 /*
@@ -1230,7 +1232,7 @@ add_default_fallback_dir_servers,(void))
  * user if we changed any dangerous ones.
  */
 static int
-validate_dir_servers(or_options_t *options, or_options_t *old_options)
+validate_dir_servers(or_options_t *options, const or_options_t *old_options)
 {
   config_line_t *cl;
 
@@ -2616,23 +2618,24 @@ options_trial_assign(config_line_t *list, unsigned flags, char **msg)
   }
 
   setopt_err_t rv;
+  config_validate_status_t status;
   or_options_t *cur_options = get_options_mutable();
 
   in_option_validation = 1;
-
-  if (options_validate(cur_options, trial_options,
-                       global_default_options, 1, msg) < 0) {
-    or_options_free(trial_options);
-    rv = SETOPT_ERR_PARSE; /*XXX make this a separate return value. */
-    goto done;
-  }
-
-  if (options_transition_allowed(cur_options, trial_options, msg) < 0) {
-    or_options_free(trial_options);
-    rv = SETOPT_ERR_TRANSITION;
-    goto done;
-  }
+  status = options_validate(cur_options, trial_options, msg);
   in_option_validation = 0;
+  switch (status) {
+    case CFG_OK:
+      break;
+    case CFG_BAD_TRANSITION:
+      rv = SETOPT_ERR_TRANSITION;
+      goto done;
+    case CFG_BAD_VAL: /* falls through */
+    case CFG_INTERNAL_ERR: /* falls through */
+    default:
+      rv = SETOPT_ERR_PARSE; /*XXX make this a separate return value.*/
+      goto done;
+  }
 
   if (set_options(trial_options, msg)<0) {
     or_options_free(trial_options);
@@ -2643,7 +2646,8 @@ options_trial_assign(config_line_t *list, unsigned flags, char **msg)
   /* we liked it. put it in place. */
   rv = SETOPT_OK;
  done:
-  in_option_validation = 0;
+  log_notice(LD_GENERAL, "==== saying %d because status is %d", rv, status);
+
   return rv;
 }
 
@@ -3161,17 +3165,6 @@ compute_publishserverdescriptor(or_options_t *options)
  * */
 #define RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT (10)
 
-static int
-options_validate_cb(void *old_options, void *options, void *default_options,
-                    int from_setconf, char **msg)
-{
-  in_option_validation = 1;
-  int rv = options_validate(old_options, options, default_options,
-                          from_setconf, msg);
-  in_option_validation = 0;
-  return rv;
-}
-
 #define REJECT(arg) \
   STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
 #if defined(__GNUC__) && __GNUC__ <= 3
@@ -3351,27 +3344,65 @@ options_validate_single_onion(or_options_t *options, char **msg)
   return 0;
 }
 
+/** Based on our quiet level, consider setting a default value for our log
+ * option. */
+STATIC void
+options_append_default_log_lines(or_options_t *options)
+{
+  /* Special case on first boot if no Log options are given. */
+  if (!options->Logs && !options->RunAsDaemon) {
+    if (quiet_level == 0)
+      config_line_append(&options->Logs, "Log", "notice stdout");
+    else if (quiet_level == 1)
+      config_line_append(&options->Logs, "Log", "warn stdout");
+  }
+}
+
 /** Return 0 if every setting in <b>options</b> is reasonable, is a
  * permissible transition from <b>old_options</b>, and none of the
  * testing-only settings differ from <b>default_options</b> unless in
- * testing mode.  Else return -1.  Should have no side effects, except for
- * normalizing the contents of <b>options</b>.
+ * testing mode.  Else return an error.
+ *
+ * Should have no side effects, except for normalizing the contents of
+ * <b>options</b>.
  *
  * On error, tor_strdup an error explanation into *<b>msg</b>.
- *
- * XXX
- * If <b>from_setconf</b>, we were called by the controller, and our
- * Log line should stay empty. If it's 0, then give us a default log
- * if there are no logs defined.
  */
-STATIC int
-options_validate(or_options_t *old_options, or_options_t *options,
-                 or_options_t *default_options, int from_setconf, char **msg)
+STATIC config_validate_status_t
+options_validate(const or_options_t *old_options, or_options_t *options,
+                 char **msg)
+{
+  ++in_option_validation;
+  smartlist_t *errs = smartlist_new();
+  config_validate_status_t res =
+    config_validate(get_options_mgr(), old_options, options, errs);
+  if (smartlist_len(errs)) {
+    // This function only handles one error for now.
+    *msg = smartlist_get(errs, 0);
+    smartlist_set(errs, 0, NULL); // prevent free.
+    SMARTLIST_FOREACH(errs, char *, s, tor_free(s));
+  } else {
+    *msg = NULL;
+  }
+  smartlist_free(errs);
+  --in_option_validation;
+  return res;
+}
+
+/**
+ * Implementation function for top-level options validation.
+ *
+ * On error, tor_strdup an error explanation into *<b>msg</b>.
+ */
+static int
+options_validate_cb(const void *oldval, void *newval, char **msg)
 {
   config_line_t *cl;
   const char *uname = get_uname();
   int n_ports=0;
   int world_writable_control_socket=0;
+  const or_options_t *old_options = oldval;
+  or_options_t *options = newval;
 
   tor_assert(msg);
   *msg = NULL;
@@ -3433,14 +3464,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("ContactInfo config option must be UTF-8.");
 
   check_network_configuration(server_mode(options));
-
-  /* Special case on first boot if no Log options are given. */
-  if (!options->Logs && !options->RunAsDaemon && !from_setconf) {
-    if (quiet_level == 0)
-      config_line_append(&options->Logs, "Log", "notice stdout");
-    else if (quiet_level == 1)
-      config_line_append(&options->Logs, "Log", "warn stdout");
-  }
 
   /* Validate the tor_log(s) */
   if (options_init_logs(old_options, options, 1)<0)
@@ -4424,35 +4447,42 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "AlternateDirAuthority and AlternateBridgeAuthority configured.");
   }
 
+  {
+    or_options_t *default_options = options_new();
+    options_init(default_options);
 #define CHECK_DEFAULT(arg)                                              \
-  STMT_BEGIN                                                            \
-    if (!options->TestingTorNetwork &&                                  \
-        !options->UsingTestNetworkDefaults_ &&                          \
-        !config_is_same(get_options_mgr(),options,                        \
-                        default_options,#arg)) {                        \
-      REJECT(#arg " may only be changed in testing Tor "                \
-             "networks!");                                              \
-    } STMT_END
-  CHECK_DEFAULT(TestingV3AuthInitialVotingInterval);
-  CHECK_DEFAULT(TestingV3AuthInitialVoteDelay);
-  CHECK_DEFAULT(TestingV3AuthInitialDistDelay);
-  CHECK_DEFAULT(TestingV3AuthVotingStartOffset);
-  CHECK_DEFAULT(TestingAuthDirTimeToLearnReachability);
-  CHECK_DEFAULT(TestingEstimatedDescriptorPropagationTime);
-  CHECK_DEFAULT(TestingServerDownloadInitialDelay);
-  CHECK_DEFAULT(TestingClientDownloadInitialDelay);
-  CHECK_DEFAULT(TestingServerConsensusDownloadInitialDelay);
-  CHECK_DEFAULT(TestingClientConsensusDownloadInitialDelay);
-  CHECK_DEFAULT(TestingBridgeDownloadInitialDelay);
-  CHECK_DEFAULT(TestingBridgeBootstrapDownloadInitialDelay);
-  CHECK_DEFAULT(TestingClientMaxIntervalWithoutRequest);
-  CHECK_DEFAULT(TestingDirConnectionMaxStall);
-  CHECK_DEFAULT(TestingAuthKeyLifetime);
-  CHECK_DEFAULT(TestingLinkCertLifetime);
-  CHECK_DEFAULT(TestingSigningKeySlop);
-  CHECK_DEFAULT(TestingAuthKeySlop);
-  CHECK_DEFAULT(TestingLinkKeySlop);
+    STMT_BEGIN                                                          \
+      if (!options->TestingTorNetwork &&                                \
+          !options->UsingTestNetworkDefaults_ &&                        \
+          !config_is_same(get_options_mgr(),options,                    \
+                          default_options,#arg)) {                      \
+        or_options_free(default_options);                               \
+        REJECT(#arg " may only be changed in testing Tor "              \
+               "networks!");                                            \
+      } STMT_END
+    CHECK_DEFAULT(TestingV3AuthInitialVotingInterval);
+    CHECK_DEFAULT(TestingV3AuthInitialVoteDelay);
+    CHECK_DEFAULT(TestingV3AuthInitialDistDelay);
+    CHECK_DEFAULT(TestingV3AuthVotingStartOffset);
+    CHECK_DEFAULT(TestingAuthDirTimeToLearnReachability);
+    CHECK_DEFAULT(TestingEstimatedDescriptorPropagationTime);
+    CHECK_DEFAULT(TestingServerDownloadInitialDelay);
+    CHECK_DEFAULT(TestingClientDownloadInitialDelay);
+    CHECK_DEFAULT(TestingServerConsensusDownloadInitialDelay);
+    CHECK_DEFAULT(TestingClientConsensusDownloadInitialDelay);
+    CHECK_DEFAULT(TestingBridgeDownloadInitialDelay);
+    CHECK_DEFAULT(TestingBridgeBootstrapDownloadInitialDelay);
+    CHECK_DEFAULT(TestingClientMaxIntervalWithoutRequest);
+    CHECK_DEFAULT(TestingDirConnectionMaxStall);
+    CHECK_DEFAULT(TestingAuthKeyLifetime);
+    CHECK_DEFAULT(TestingLinkCertLifetime);
+    CHECK_DEFAULT(TestingSigningKeySlop);
+    CHECK_DEFAULT(TestingAuthKeySlop);
+    CHECK_DEFAULT(TestingLinkKeySlop);
 #undef CHECK_DEFAULT
+
+    or_options_free(default_options);
+  }
 
   if (!options->ClientDNSRejectInternalAddresses &&
       !(options->DirAuthorities ||
@@ -4711,6 +4741,21 @@ static int
 opt_streq(const char *s1, const char *s2)
 {
   return 0 == strcmp_opt(s1, s2);
+}
+
+/** Wraps options_transition_allowed in expected API */
+static int
+options_transition_check_cb(const void *oldval,
+                              const void *newval,
+                              smartlist_t *errs)
+{
+  char *msg = NULL;
+  int rv = options_transition_allowed(oldval, newval, &msg);
+  log_notice(LD_GENERAL, "===== transition allowed = %d, msg = %s",
+             rv, msg?msg:"<null>");
+  if (msg)
+    smartlist_add(errs, msg);
+  return rv;
 }
 
 /** Check if any of the previous options have changed but aren't allowed to. */
@@ -5459,21 +5504,27 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   }
 
   newoptions->IncludeUsed = cf_has_include;
-  in_option_validation = 1;
   newoptions->FilesOpenedByIncludes = opened_files;
 
-  /* Validate newoptions */
-  if (options_validate(oldoptions, newoptions, newdefaultoptions,
-                       0, msg) < 0) {
-    err = SETOPT_ERR_PARSE; /*XXX make this a separate return value.*/
-    goto err;
-  }
+  options_append_default_log_lines(newoptions);
 
-  if (options_transition_allowed(oldoptions, newoptions, msg) < 0) {
-    err = SETOPT_ERR_TRANSITION;
-    goto err;
-  }
+  /* Validate newoptions */
+  config_validate_status_t status;
+  in_option_validation = 1;
+  status = options_validate(oldoptions, newoptions, msg);
   in_option_validation = 0;
+  switch (status) {
+    case CFG_OK:
+      break;
+    case CFG_BAD_TRANSITION:
+      err = SETOPT_ERR_TRANSITION;
+      goto err;
+    case CFG_BAD_VAL: /* falls through */
+    case CFG_INTERNAL_ERR: /* falls through */
+    default:
+      err = SETOPT_ERR_PARSE; /*XXX make this a separate return value.*/
+      goto err;
+  }
 
   if (set_options(newoptions, msg)) {
     err = SETOPT_ERR_SETTING;
@@ -5486,7 +5537,6 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   return SETOPT_OK;
 
  err:
-  in_option_validation = 0;
   if (opened_files) {
     SMARTLIST_FOREACH(opened_files, char *, f, tor_free(f));
     smartlist_free(opened_files);
