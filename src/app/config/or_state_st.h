@@ -96,7 +96,12 @@ struct or_state_t {
    * weren't.  "auto" on initial startup. */
   int Dormant;
 
-  /**DOCDOC*/
+  /**
+   * State objects for individual modules.
+   *
+   * Never access this field or its members directly: instead, use the module
+   * in question to get its relevant state object if you must.
+   */
   struct config_suite_t *substates_;
 };
 
