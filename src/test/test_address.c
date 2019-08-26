@@ -1246,7 +1246,7 @@ test_address_tor_node_in_same_network_family(void *ignored)
 }
 
 #define CHECK_RI_ADDR(addr_str, rv) STMT_BEGIN \
-    routerinfo_t *ri = tor_malloc_zero(sizeof(routerinfo_t)); \
+    ri = tor_malloc_zero(sizeof(routerinfo_t)); \
     tor_addr_t addr; \
     tor_addr_parse(&addr, addr_str); \
     ri->addr = tor_addr_to_ipv4h(&addr); \
@@ -1258,7 +1258,7 @@ test_address_tor_node_in_same_network_family(void *ignored)
 /* XXX: Here, we use a non-internal IPv4 as dirserv_router_has_valid_address()
  * will check internal/null IPv4 first. */
 #define CHECK_RI_ADDR6(addr_str, rv) STMT_BEGIN \
-    routerinfo_t *ri = tor_malloc_zero(sizeof(routerinfo_t)); \
+    ri = tor_malloc_zero(sizeof(routerinfo_t));   \
     ri->addr = 16777217; /* 1.0.0.1 */ \
     tor_addr_parse(&ri->ipv6_addr, addr_str); \
     tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, rv); \
@@ -1269,12 +1269,14 @@ static void
 test_address_dirserv_router_addr_private(void *ignored)
 {
   (void)ignored;
+  /* A stub routerinfo structure, with only its address fields set. */
+  routerinfo_t *ri = NULL;
   CHECK_RI_ADDR("1.0.0.1", 0);
   CHECK_RI_ADDR("10.0.0.1", -1);
   CHECK_RI_ADDR6("2600::1", 0);
   CHECK_RI_ADDR6("fe80::1", -1);
  done:
-  ;
+  tor_free(ri);
 }
 
 #define ADDRESS_TEST(name, flags) \
