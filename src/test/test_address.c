@@ -1248,10 +1248,10 @@ test_address_tor_node_in_same_network_family(void *ignored)
 #define CHECK_RI_ADDR(addr_str, rv) STMT_BEGIN \
     ri = tor_malloc_zero(sizeof(routerinfo_t)); \
     tor_addr_t addr; \
-    tor_addr_parse(&addr, addr_str); \
+    tor_addr_parse(&addr, (addr_str));   \
     ri->addr = tor_addr_to_ipv4h(&addr); \
     tor_addr_make_null(&ri->ipv6_addr, AF_INET6); \
-    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, rv); \
+    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, (rv));       \
     tor_free(ri); \
   STMT_END
 
@@ -1260,8 +1260,8 @@ test_address_tor_node_in_same_network_family(void *ignored)
 #define CHECK_RI_ADDR6(addr_str, rv) STMT_BEGIN \
     ri = tor_malloc_zero(sizeof(routerinfo_t));   \
     ri->addr = 16777217; /* 1.0.0.1 */ \
-    tor_addr_parse(&ri->ipv6_addr, addr_str); \
-    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, rv); \
+    tor_addr_parse(&ri->ipv6_addr, (addr_str));                         \
+    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, (rv));       \
     tor_free(ri); \
   STMT_END
 
