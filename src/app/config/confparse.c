@@ -119,8 +119,9 @@ struct config_mgr_t {
   smartlist_t *subconfigs;
   /** A smartlist of managed_var_t objects for all configuration formats. */
   smartlist_t *all_vars;
-  /** A smartlist of config_abbrev_t objects for all abbreviations. These
-   * objects are */
+  /** A smartlist of config_abbrev_t objects for all configuration
+   * formats. These objects are used to track synonyms and abbreviations for
+   * different configuration options. */
   smartlist_t *all_abbrevs;
   /** A smartlist of config_deprecation_t for all configuration formats. */
   smartlist_t *all_deprecations;
