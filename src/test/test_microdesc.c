@@ -648,6 +648,30 @@ static const char MD_PARSE_TEST_DATA[] =
   "ntor-onion-key k2yFqTU2vzMCQDEiE/j9UcEHxKrXMLpB3IL0or09sik=\n"
   "id rsa1024 2A8wYpHxnkKJ92orocvIQBzeHlE\n"
   "p6 allow 80\n"
+  /* Good 11: Normal, non-exit relay with ipv6 address */
+  "onion-key\n"
+  "-----BEGIN RSA PUBLIC KEY-----\n"
+  "MIGJAoGBAM7uUtq5F6h63QNYIvC+4NcWaD0DjtnrOORZMkdpJhinXUOwce3cD5Dj\n"
+  "sgdN1wJpWpTQMXJ2DssfSgmOVXETP7qJuZyRprxalQhaEATMDNJA/66Ml1jSO9mZ\n"
+  "+8Xb7m/4q778lNtkSbsvMaYD2Dq6k2QQ3kMhr9z8oUtX0XA23+pfAgMBAAE=\n"
+  "-----END RSA PUBLIC KEY-----\n"
+  "a [::1:2:3:4]:9090\n"
+  "a 18.0.0.1:9999\n"
+  "ntor-onion-key k2yFqTU2vzMCQDEiE/j9UcEHxKrXMLpB3IL0or09sik=\n"
+  "id rsa1024 2A8wYpHxnkKJ92orocvIQBzeHlE\n"
+  /* Good 12: Normal, exit relay with ipv6 address */
+  "onion-key\n"
+  "-----BEGIN RSA PUBLIC KEY-----\n"
+  "MIGJAoGBAM7uUtq5F6h63QNYIvC+4NcWaD0DjtnrOORZMkdpJhinXUOwce3cD5Dj\n"
+  "sgdN1wJpWpTQMXJ2DssfSgmOVXETP7qJuZyRprxalQhaEATMDNJA/66Ml1jSO9mZ\n"
+  "+8Xb7m/4q778lNtkSbsvMaYD2Dq6k2QQ3kMhr9z8oUtX0XA23+pfAgMBAAE=\n"
+  "-----END RSA PUBLIC KEY-----\n"
+  "a [::1:2:3:4]:9090\n"
+  "a 18.0.0.1:9999\n"
+  "ntor-onion-key k2yFqTU2vzMCQDEiE/j9UcEHxKrXMLpB3IL0or09sik=\n"
+  "p accept 20-23,43,53,79-81,88,110,143,194,220,389,443,464,531,543-544\n"
+  "id rsa1024 2A8wYpHxnkKJ92orocvIQBzeHlE\n"
+
   ;
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
 ENABLE_GCC_WARNING(overlength-strings)
@@ -665,7 +689,7 @@ test_md_parse(void *arg)
   smartlist_t *mds = microdescs_parse_from_string(MD_PARSE_TEST_DATA,
                                                   NULL, 1, SAVED_NOWHERE,
                                                   invalid);
-  tt_int_op(smartlist_len(mds), OP_EQ, 11);
+  tt_int_op(smartlist_len(mds), OP_EQ, 13);
   tt_int_op(smartlist_len(invalid), OP_EQ, 4);
 
   test_memeq_hex(smartlist_get(invalid,0),
@@ -711,6 +735,16 @@ test_md_parse(void *arg)
                  "21ca378fcb9ca193d354c51550b6d5e9");
   tt_assert(tor_addr_family(&md->ipv6_addr) == AF_INET6);
   tt_int_op(md->ipv6_orport, OP_EQ, 9090);
+
+  md = smartlist_get(mds, 11);
+  tt_assert(tor_addr_family(&md->ipv6_addr) == AF_INET6);
+  tt_int_op(md->ipv6_orport, OP_EQ, 9090);
+  tt_int_op(md->policy_is_reject_star, OP_EQ, 1);
+
+  md = smartlist_get(mds, 12);
+  tt_assert(tor_addr_family(&md->ipv6_addr) == AF_INET6);
+  tt_int_op(md->ipv6_orport, OP_EQ, 9090);
+  tt_int_op(md->policy_is_reject_star, OP_EQ, 0);
 
  done:
   SMARTLIST_FOREACH(mds, microdesc_t *, mdsc, microdesc_free(mdsc));
