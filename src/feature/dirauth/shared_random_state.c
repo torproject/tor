@@ -51,15 +51,11 @@ static const char dstate_cur_srv_key[] = "SharedRandCurrentValue";
  * members with CONF_CHECK_VAR_TYPE. */
 DUMMY_TYPECHECK_INSTANCE(sr_disk_state_t);
 
-/* These next two are duplicates or near-duplicates from config.c */
-#define VAR(varname, conftype, member, initvalue)                       \
-  { { .name = varname,                                                  \
-      .type = CONFIG_TYPE_ ## conftype,                                 \
-      .offset = offsetof(sr_disk_state_t, member), },                   \
-    initvalue CONF_TEST_MEMBERS(sr_disk_state_t, conftype, member) }
-/* As VAR, but the option name and member name are the same. */
-#define V(member, conftype, initvalue) \
+#define VAR(varname,conftype,member,initvalue)                          \
+  CONFIG_VAR_ETYPE(sr_disk_state_t, varname, conftype, member, 0, initvalue)
+#define V(member,conftype,initvalue)            \
   VAR(#member, conftype, member, initvalue)
+
 /* Our persistent state magic number. */
 #define SR_DISK_STATE_MAGIC 0x98AB1254
 
@@ -69,7 +65,7 @@ disk_state_validate_cb(void *old_state, void *state, void *default_state,
 static void disk_state_free_cb(void *);
 
 /* Array of variables that are saved to disk as a persistent state. */
-static config_var_t state_vars[] = {
+static const config_var_t state_vars[] = {
   V(Version,                    POSINT, "0"),
   V(TorVersion,                 STRING, NULL),
   V(ValidAfter,                 ISOTIME, NULL),
@@ -85,7 +81,7 @@ static config_var_t state_vars[] = {
 
 /* "Extra" variable in the state that receives lines we can't parse. This
  * lets us preserve options from versions of Tor newer than us. */
-static struct_member_t state_extra_var = {
+static const struct_member_t state_extra_var = {
   .name = "__extra",
   .type = CONFIG_TYPE_LINELIST,
   .offset = offsetof(sr_disk_state_t, ExtraLines),

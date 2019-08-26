@@ -248,7 +248,7 @@ int options_any_client_port_set(const or_options_t *options);
 
 STATIC int options_act(const or_options_t *old_options);
 #ifdef TOR_UNIT_TESTS
-extern struct config_format_t options_format;
+extern const struct config_format_t options_format;
 #endif
 
 STATIC port_cfg_t *port_cfg_new(size_t namelen);

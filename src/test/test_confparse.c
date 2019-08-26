@@ -49,18 +49,13 @@ typedef struct test_struct_t {
 static test_struct_t test_struct_t_dummy;
 
 #define VAR(varname,conftype,member,initvalue)                          \
-  { { .name = varname,                                                  \
-        .type = CONFIG_TYPE_##conftype,                                 \
-        .offset = offsetof(test_struct_t, member), },                   \
-      initvalue CONF_TEST_MEMBERS(test_struct_t, conftype, member) }
+  CONFIG_VAR_ETYPE(test_struct_t, varname, conftype, member, 0, initvalue)
+#define V(member,conftype,initvalue)            \
+  VAR(#member, conftype, member, initvalue)
+#define OBSOLETE(varname)                       \
+  CONFIG_VAR_OBSOLETE(varname)
 
-#define V(name,conftype,initvalue)                                      \
-  VAR( #name, conftype, name, initvalue )
-
-#define OBSOLETE(varname)                                               \
-  { { .name=varname, .type=CONFIG_TYPE_OBSOLETE }, NULL, {.INT=NULL} }
-
-static config_var_t test_vars[] = {
+static const config_var_t test_vars[] = {
   V(s, STRING, "hello"),
   V(fn, FILENAME, NULL),
   V(pos, POSINT, NULL),
@@ -82,12 +77,11 @@ static config_var_t test_vars[] = {
   VAR("LineTypeB", LINELIST_S, mixed_lines, NULL),
   OBSOLETE("obsolete"),
   {
-   { .name = "routerset",
-     .type = CONFIG_TYPE_ROUTERSET,
-     .type_def = &ROUTERSET_type_defn,
-     .offset = offsetof(test_struct_t, routerset),
-   },
-   NULL, {.INT=NULL}
+   .member = { .name = "routerset",
+               .type = CONFIG_TYPE_EXTENDED,
+               .type_def = &ROUTERSET_type_defn,
+               .offset = offsetof(test_struct_t, routerset),
+             },
   },
   VAR("__HiddenInt", POSINT, hidden_int, "0"),
   VAR("MixedHiddenLines", LINELIST_V, mixed_hidden_lines, NULL),
@@ -129,7 +123,7 @@ static void test_free_cb(void *options);
 
 #define TEST_MAGIC 0x1337
 
-static config_format_t test_fmt = {
+static const config_format_t test_fmt = {
   sizeof(test_struct_t),
   {
    "test_struct_t",

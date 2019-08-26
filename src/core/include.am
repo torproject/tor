@@ -437,9 +437,10 @@ noinst_HEADERS +=					\
 	src/feature/stats/rephist.h			\
 	src/feature/stats/predict_ports.h
 
-noinst_HEADERS +=			\
-	src/app/config/auth_dirs.inc	\
-	src/app/config/fallback_dirs.inc
+noinst_HEADERS +=				\
+	src/app/config/auth_dirs.inc		\
+	src/app/config/fallback_dirs.inc	\
+	src/app/config/testnet.inc
 
 # This may someday want to be an installed file?
 noinst_HEADERS += src/feature/api/tor_api.h

@@ -40,9 +40,14 @@ bool struct_var_eq(const void *a, const void *b,
                    const struct struct_member_t *member);
 bool struct_var_ok(const void *object,
                    const struct struct_member_t *member);
+void struct_var_mark_fragile(void *object,
+                             const struct struct_member_t *member);
 
 const char *struct_var_get_name(const struct struct_member_t *member);
 const char *struct_var_get_typename(const struct struct_member_t *member);
+bool struct_var_is_cumulative(const struct struct_member_t *member);
+bool struct_var_is_settable(const struct struct_member_t *member);
+bool struct_var_is_contained(const struct struct_member_t *member);
 
 int struct_var_kvassign(void *object, const struct config_line_t *line,
                         char **errmsg,
