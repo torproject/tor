@@ -4,7 +4,8 @@
 # tor git repo and make sure it has permission to execute.
 #
 # This is pre-commit git hook script that prevents commiting your changeset if
-# it fails our code formatting or changelog entry formatting checkers.
+# it fails our code formatting, changelog entry formatting, module include
+# rules, or best practices tracker.
 
 workdir=$(git rev-parse --show-toplevel)
 
@@ -40,6 +41,15 @@ if test -e scripts/maint/practracker/includes.py; then
     python scripts/maint/practracker/includes.py
 fi
 
-if [ -e scripts/maint/practracker/practracker.py ]; then
-  python3 ./scripts/maint/practracker/practracker.py "$workdir"
+# Only call practracker if ${PT_DIR}/.enable_practracker_in_hooks exists
+# We do this check so that we can enable practracker in hooks in master, and
+# disable it on maint branches
+PT_DIR=scripts/maint/practracker
+
+if [ -e "${PT_DIR}/practracker.py" ]; then
+    if [ -e "${PT_DIR}/.enable_practracker_in_hooks" ]; then
+        if ! python3 "${PT_DIR}/practracker.py" "$workdir"; then
+            exit 1
+        fi
+    fi
 fi
