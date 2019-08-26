@@ -1,0 +1,6 @@
+  o Code simplification and refactoring:
+    - Numerous simplifications in configuration-handling logic:
+      remove duplicated macro definitions, replace magical names
+      with flags, and refactor "TestingTorNetwork" to use the
+      same default-option logic as the rest of Tor.
+      Closes ticket 30935.
