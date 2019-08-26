@@ -1109,7 +1109,12 @@ struct or_options_t {
    **/
   int DormantCanceledByStartup;
 
-  /**DOCDOC*/
+  /**
+   * Configuration objects for individual modules.
+   *
+   * Never access this field or its members directly: instead, use the module
+   * in question to get its relevant configuration object.
+   */
   struct config_suite_t *subconfigs_;
 };
 
