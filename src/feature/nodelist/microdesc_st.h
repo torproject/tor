@@ -36,7 +36,7 @@ struct microdesc_t {
   /** Reference count: how many node_ts have a reference to this microdesc? */
   unsigned int held_by_nodes;
   /** True iff the exit policy for this router rejects everything. */
-  unsigned int policy_is_reject_star:1;
+  unsigned int policy_is_reject_star;
 
   /** If saved_location == SAVED_IN_CACHE, this field holds the offset of the
    * microdescriptor in the cache. */

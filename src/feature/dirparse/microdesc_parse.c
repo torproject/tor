@@ -92,8 +92,11 @@ find_start_of_next_microdesc(const char *s, const char *eos)
 #undef NEXT_LINE
 }
 
-#define POLICY_IS_REJECT_STAR(policy) (policy == NULL || (!policy && \
-                                       short_policy_is_reject_star(policy)))
+static inline int
+policy_is_reject_star_or_null(struct short_policy_t *policy)
+{
+  return !policy || short_policy_is_reject_star(policy);
+}
 
 /** Parse as many microdescriptors as are found from the string starting at
  * <b>s</b> and ending at <b>eos</b>.  If allow_annotations is set, read any
@@ -253,8 +256,8 @@ microdescs_parse_from_string(const char *s, const char *eos,
       md->ipv6_exit_policy = parse_short_policy(tok->args[0]);
     }
 
-    if (POLICY_IS_REJECT_STAR(md->exit_policy) &&
-        POLICY_IS_REJECT_STAR(md->ipv6_exit_policy)) {
+    if (policy_is_reject_star_or_null(md->exit_policy) &&
+        policy_is_reject_star_or_null(md->ipv6_exit_policy)) {
       md->policy_is_reject_star = 1;
     }
 
