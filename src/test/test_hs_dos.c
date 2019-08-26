@@ -143,6 +143,8 @@ test_validate_dos_extension_params(void *arg)
   /* Valid custom rate/burst. */
   ret = cell_dos_extension_parameters_are_valid(17, 42);
   tt_assert(ret);
+  ret = cell_dos_extension_parameters_are_valid(INT32_MAX, INT32_MAX);
+  tt_assert(ret);
 
   /* Invalid rate. */
   ret = cell_dos_extension_parameters_are_valid(UINT64_MAX, 42);
@@ -152,11 +154,9 @@ test_validate_dos_extension_params(void *arg)
   ret = cell_dos_extension_parameters_are_valid(42, UINT64_MAX);
   tt_assert(!ret);
 
-  /* Value of 0 should return invalid so defenses can be disabled. */
-  ret = cell_dos_extension_parameters_are_valid(0, 42);
-  tt_assert(!ret);
-  ret = cell_dos_extension_parameters_are_valid(42, 0);
-  tt_assert(!ret);
+  /* Value of 0 is valid (but should disable defenses) */
+  ret = cell_dos_extension_parameters_are_valid(0, 0);
+  tt_assert(ret);
 
   /* Can't have burst smaller than rate. */
   ret = cell_dos_extension_parameters_are_valid(42, 40);
