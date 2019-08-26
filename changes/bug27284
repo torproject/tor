@@ -1,0 +1,5 @@
+  o Minor bugfixes (ipv6):
+    - When parsing microdescriptors, we should check the IPv6 exit policy
+      alongside IPv4. Previously, we checked both exit policies for only
+      router info structures, while microdescriptors were IPv4-only. Fixes
+      bug 27284; bugfix on 0.2.3.1-alpha. Patch by Neel Chauhan.

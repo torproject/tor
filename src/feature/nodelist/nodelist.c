@@ -1424,8 +1424,7 @@ node_exit_policy_rejects_all(const node_t *node)
   if (node->ri)
     return node->ri->policy_is_reject_star;
   else if (node->md)
-    return node->md->exit_policy == NULL ||
-      short_policy_is_reject_star(node->md->exit_policy);
+    return node->md->policy_is_reject_star;
   else
     return 1;
 }
