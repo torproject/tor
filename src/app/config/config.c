@@ -8154,7 +8154,7 @@ getinfo_helper_config(control_connection_t *conn,
         }
         if (strcmp(var->member.name, "FallbackDir") == 0) {
           /*
-           * Similarly count fallback lines, so that we can decided later
+           * Similarly count fallback lines, so that we can decide later
            * to add the defaults manually.
            */
           ++fallback_lines_seen;
