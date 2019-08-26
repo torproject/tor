@@ -961,6 +961,9 @@ config_is_same(const config_mgr_t *mgr,
  * Return a list of the options which have changed between <b>options1</b> and
  * <b>options2</b>. If an option has reverted to its default value, it has a
  * value entry of NULL.
+ *
+ * <b>options1</b> and <b>options2</b> must be top-level configuration objects
+ * of the type managed by <b>mgr</b>.
  **/
 config_line_t *
 config_get_changes(const config_mgr_t *mgr,
