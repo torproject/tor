@@ -41,7 +41,13 @@ typedef int (*validate_fn_t)(void*,void*,void*,int,char**);
 
 struct config_mgr_t;
 
-/** Callback to clear all non-managed fields of a configuration object. */
+/**
+ * Callback to clear all non-managed fields of a configuration object.
+ *
+ * (Regular fields get cleared by config_reset(), but you might have fields
+ * in the object that do not correspond to configuration variables.  If those
+ * fields need to be cleared or freed, this is where to do it.)
+ */
 typedef void (*clear_cfg_fn_t)(const struct config_mgr_t *mgr, void*);
 
 /** Information on the keys, value types, key-to-struct-member mappings,
