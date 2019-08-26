@@ -1,0 +1,7 @@
+  o Code simplification and refactoring:
+    - Refactor our configuration-validation code to work uniformly
+      for all of its users, to allow configuration options to be
+      validated when spread across multiple objects,
+      and to isolate code that is allowed to
+      modify configuration objects.
+      Closes ticket 31241.
