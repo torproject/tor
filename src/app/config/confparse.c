@@ -232,7 +232,7 @@ config_mgr_get_suite_ptr(const config_mgr_t *mgr, void *toplevel)
  * NOTE: XXXX Eventually, there will be multiple objects supported within the
  * toplevel object.  For example, the or_options_t will contain pointers
  * to configuration objects for other modules.  This function gets
- * the sub-object for a particular modules.
+ * the sub-object for a particular module.
  */
 STATIC void *
 config_mgr_get_obj_mutable(const config_mgr_t *mgr, void *toplevel, int idx)
