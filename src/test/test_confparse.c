@@ -932,6 +932,74 @@ test_confparse_check_ok_fail(void *arg)
   config_mgr_free(mgr);
 }
 
+static void
+test_confparse_list_vars(void *arg)
+{
+  (void)arg;
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  smartlist_t *vars = config_mgr_list_vars(mgr);
+  smartlist_t *varnames = smartlist_new();
+  char *joined = NULL;
+
+  tt_assert(vars);
+  SMARTLIST_FOREACH(vars, config_var_t *, cv,
+                    smartlist_add(varnames, (void*)cv->member.name));
+  smartlist_sort_strings(varnames);
+  joined = smartlist_join_strings(varnames, "::", 0, NULL);
+  tt_str_op(joined, OP_EQ,
+            "LineTypeA::"
+            "LineTypeB::"
+            "MixedHiddenLines::"
+            "MixedLines::"
+            "VisibleLineB::"
+            "__HiddenInt::"
+            "__HiddenLineA::"
+            "autobool::"
+            "boolean::"
+            "csv::"
+            "csv_interval::"
+            "dbl::"
+            "deprecated_int::"
+            "fn::"
+            "i::"
+            "interval::"
+            "lines::"
+            "mem::"
+            "msec_interval::"
+            "obsolete::"
+            "pos::"
+            "routerset::"
+            "s::"
+            "time::"
+            "u64");
+
+ done:
+  tor_free(joined);
+  smartlist_free(varnames);
+  smartlist_free(vars);
+  config_mgr_free(mgr);
+}
+
+static void
+test_confparse_list_deprecated(void *arg)
+{
+  (void)arg;
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  smartlist_t *vars = config_mgr_list_deprecated_vars(mgr);
+  char *joined = NULL;
+
+  tt_assert(vars);
+  smartlist_sort_strings(vars);
+  joined = smartlist_join_strings(vars, "::", 0, NULL);
+
+  tt_str_op(joined, OP_EQ, "deprecated_int");
+
+ done:
+  tor_free(joined);
+  smartlist_free(vars);
+  config_mgr_free(mgr);
+}
+
 #define CONFPARSE_TEST(name, flags)                          \
   { #name, test_confparse_ ## name, flags, NULL, NULL }
 
@@ -968,5 +1036,7 @@ struct testcase_t confparse_tests[] = {
   CONFPARSE_TEST(extra_lines, 0),
   CONFPARSE_TEST(unitparse, 0),
   CONFPARSE_TEST(check_ok_fail, 0),
+  CONFPARSE_TEST(list_vars, 0),
+  CONFPARSE_TEST(list_deprecated, 0),
   END_OF_TESTCASES
 };

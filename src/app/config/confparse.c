@@ -327,7 +327,7 @@ config_mgr_list_deprecated_vars(const config_mgr_t *mgr)
   smartlist_t *result = smartlist_new();
   tor_assert(mgr);
   SMARTLIST_FOREACH(mgr->all_deprecations, config_deprecation_t *, d,
-                    smartlist_add(result, &d->name));
+                    smartlist_add(result, (char*)d->name));
   return result;
 }
 
