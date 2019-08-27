@@ -32,12 +32,14 @@ typedef struct {
   char *llamaname;
   int cuteness;
   uint32_t magic;
+  int eats_meat; /* deprecated; llamas are never carnivorous. */
 } llama_cfg_t;
 
 typedef struct {
   uint32_t magic;
   int fuzziness;
   char *alpacaname;
+  int n_wings; /* deprecated; alpacas don't have wings. */
 } alpaca_cfg_t;
 
 /*
@@ -62,6 +64,7 @@ static const config_var_t pasture_vars[] = {
 static const config_var_t llama_vars[] =
 {
   LV(llamaname, STRING, NULL),
+  LV(eats_meat, BOOL, NULL),
   LV(cuteness, POSINT, "100"),
   END_OF_CONFIG_VARS
 };
@@ -69,7 +72,24 @@ static const config_var_t alpaca_vars[] =
 {
   AV(alpacaname, STRING, NULL),
   AV(fuzziness, POSINT, "50"),
+  AV(n_wings, POSINT, "0"),
   END_OF_CONFIG_VARS
+};
+
+static config_deprecation_t llama_deprecations[] = {
+  { "eats_meat", "Llamas are herbivores." },
+  {NULL,NULL}
+};
+
+static config_deprecation_t alpaca_deprecations[] = {
+  { "n_wings", "Alpacas are quadrupeds." },
+  {NULL,NULL}
+};
+
+static config_abbrev_t llama_abbrevs[] = {
+  { "gracia", "cuteness", 0, 0 },
+  { "gentillesse", "cuteness", 0, 0 },
+  { NULL, NULL, 0, 0 },
 };
 
 static const config_format_t pasture_fmt = {
@@ -92,6 +112,8 @@ static const config_format_t llama_fmt = {
   },
   .vars = llama_vars,
   .config_suite_offset = -1,
+  .deprecations = llama_deprecations,
+  .abbrevs = llama_abbrevs,
 };
 
 static const config_format_t alpaca_fmt = {
@@ -103,6 +125,7 @@ static const config_format_t alpaca_fmt = {
   },
   .vars = alpaca_vars,
   .config_suite_offset = -1,
+  .deprecations = alpaca_deprecations,
 };
 
 static config_mgr_t *
@@ -125,9 +148,28 @@ test_confmgr_init(void *arg)
 {
   (void)arg;
   config_mgr_t *mgr = get_mgr(true);
+  smartlist_t *vars = NULL;
   tt_ptr_op(mgr, OP_NE, NULL);
 
+  vars = config_mgr_list_vars(mgr);
+  tt_int_op(smartlist_len(vars), OP_EQ, 8); // 8 vars total.
+
+  tt_str_op("cuteness", OP_EQ, config_find_option_name(mgr, "CUTENESS"));
+  tt_str_op("cuteness", OP_EQ, config_find_option_name(mgr, "GRACIA"));
+  smartlist_free(vars);
+
+  vars = config_mgr_list_deprecated_vars(mgr); // 2 deprecated vars.
+  tt_int_op(smartlist_len(vars), OP_EQ, 2);
+  tt_assert(smartlist_contains_string(vars, "eats_meat"));
+  tt_assert(smartlist_contains_string(vars, "n_wings"));
+
+  tt_str_op("Llamas are herbivores.", OP_EQ,
+            config_find_deprecation(mgr, "EATS_MEAT"));
+  tt_str_op("Alpacas are quadrupeds.", OP_EQ,
+            config_find_deprecation(mgr, "N_WINGS"));
+
  done:
+  smartlist_free(vars);
   config_mgr_free(mgr);
 }
 
