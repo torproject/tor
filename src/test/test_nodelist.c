@@ -10,11 +10,13 @@
 
 #include "core/or/or.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "feature/nodelist/describe.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodefamily.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/torcert.h"
 
+#include "core/or/extend_info_st.h"
 #include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/networkstatus_st.h"
 #include "feature/nodelist/node_st.h"
@@ -76,7 +78,7 @@ test_nodelist_node_get_verbose_nickname_not_named(void *arg)
 }
 
 /** A node should be considered a directory server if it has an open dirport
- * of it accepts tunnelled directory requests.
+ * or it accepts tunnelled directory requests.
  */
 static void
 test_nodelist_node_is_dir(void *arg)
@@ -640,6 +642,610 @@ test_nodelist_nodefamily_canonicalize(void *arg)
   tor_free(c);
 }
 
+/** format_node_description() should return
+ * "Fingerprint~Nickname at IPv4 and [IPv6]".
+ * The nickname and addresses are optional.
+ */
+static void
+test_nodelist_format_node_description(void *arg)
+{
+  char mock_digest[DIGEST_LEN];
+  char mock_nickname[MAX_NICKNAME_LEN+1];
+  tor_addr_t mock_null_ip;
+  tor_addr_t mock_ipv4;
+  tor_addr_t mock_ipv6;
+
+  char ndesc[NODE_DESC_BUF_LEN];
+  const char *rv = NULL;
+
+  (void) arg;
+
+  /* Clear variables */
+  memset(ndesc, 0, sizeof(ndesc));
+  memset(mock_digest, 0, sizeof(mock_digest));
+  memset(mock_nickname, 0, sizeof(mock_nickname));
+  memset(&mock_null_ip, 0, sizeof(mock_null_ip));
+  memset(&mock_ipv4, 0, sizeof(mock_ipv4));
+  memset(&mock_ipv6, 0, sizeof(mock_ipv6));
+
+  /* Set variables */
+  memcpy(mock_digest,
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA",
+         sizeof(mock_digest));
+  strlcpy(mock_nickname, "TestOR7890123456789", sizeof(mock_nickname));
+  tor_addr_parse(&mock_ipv4, "111.222.233.244");
+  tor_addr_parse(&mock_ipv6, "[1111:2222:3333:4444:5555:6666:7777:8888]");
+
+  /* Test function with variables */
+  rv = format_node_description(ndesc,
+                               mock_digest,
+                               NULL,
+                               NULL,
+                               0);
+  tt_ptr_op(rv, OP_EQ, ndesc);
+  tt_str_op(ndesc, OP_EQ, "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+
+  /* format node description should use ~ because named is deprecated */
+  rv = format_node_description(ndesc,
+                               mock_digest,
+                               mock_nickname,
+                               NULL,
+                               0);
+  tt_ptr_op(rv, OP_EQ, ndesc);
+  tt_str_op(ndesc, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~""TestOR7890123456789");
+
+  /* Try a null IP address, rather than NULL */
+  rv = format_node_description(ndesc,
+                               mock_digest,
+                               mock_nickname,
+                               &mock_null_ip,
+                               0);
+  tt_ptr_op(rv, OP_EQ, ndesc);
+  tt_str_op(ndesc, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789");
+
+  /* Try some real IP addresses */
+  rv = format_node_description(ndesc,
+                               mock_digest,
+                               NULL,
+                               &mock_ipv4,
+                               0);
+  tt_ptr_op(rv, OP_EQ, ndesc);
+  tt_str_op(ndesc, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA at 111.222.233.244");
+
+  rv = format_node_description(ndesc,
+                               mock_digest,
+                               mock_nickname,
+                               &mock_ipv6,
+                               0);
+  tt_ptr_op(rv, OP_EQ, ndesc);
+  tt_str_op(ndesc, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "[1111:2222:3333:4444:5555:6666:7777:8888]");
+
+  rv = format_node_description(ndesc,
+                               mock_digest,
+                               mock_nickname,
+                               &mock_ipv6,
+                               tor_addr_to_ipv4h(&mock_ipv4));
+  tt_ptr_op(rv, OP_EQ, ndesc);
+  tt_str_op(ndesc, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "111.222.233.244 and [1111:2222:3333:4444:5555:6666:7777:8888]");
+
+  /* test NULL handling */
+  rv = format_node_description(NULL, NULL, NULL, NULL, 0);
+  tt_str_op(rv, OP_EQ, "<NULL BUFFER>");
+
+  rv = format_node_description(ndesc, NULL, NULL, NULL, 0);
+  tt_ptr_op(rv, OP_EQ, ndesc);
+  tt_str_op(rv, OP_EQ, "<NULL ID DIGEST>");
+
+ done:
+  return;
+}
+
+/** router_describe() is a wrapper for format_node_description(), see that
+ * test for details.
+ *
+ * The routerinfo-only node_describe() tests are in this function,
+ * so we can re-use the same mocked variables.
+ */
+static void
+test_nodelist_router_describe(void *arg)
+{
+  char mock_nickname[MAX_NICKNAME_LEN+1];
+  tor_addr_t mock_ipv4;
+  routerinfo_t mock_ri_ipv4;
+  routerinfo_t mock_ri_ipv6;
+  routerinfo_t mock_ri_dual;
+
+  const char *rv = NULL;
+
+  (void) arg;
+
+  /* Clear variables */
+  memset(mock_nickname, 0, sizeof(mock_nickname));
+  memset(&mock_ipv4, 0, sizeof(mock_ipv4));
+  memset(&mock_ri_ipv4, 0, sizeof(mock_ri_ipv4));
+  memset(&mock_ri_ipv6, 0, sizeof(mock_ri_ipv6));
+  memset(&mock_ri_dual, 0, sizeof(mock_ri_dual));
+
+  /* Set up the dual-stack routerinfo */
+  memcpy(mock_ri_dual.cache_info.identity_digest,
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA",
+         sizeof(mock_ri_dual.cache_info.identity_digest));
+  strlcpy(mock_nickname, "TestOR7890123456789", sizeof(mock_nickname));
+  mock_ri_dual.nickname = mock_nickname;
+  tor_addr_parse(&mock_ipv4, "111.222.233.244");
+  mock_ri_dual.addr = tor_addr_to_ipv4h(&mock_ipv4);
+  tor_addr_parse(&mock_ri_dual.ipv6_addr,
+                 "[1111:2222:3333:4444:5555:6666:7777:8888]");
+
+  /* Create and modify the other routerinfos.
+   * mock_nickname is referenced from all 3 routerinfos.
+   * That's ok, all their memory is static. */
+  memcpy(&mock_ri_ipv4, &mock_ri_dual, sizeof(mock_ri_ipv4));
+  memcpy(&mock_ri_ipv6, &mock_ri_dual, sizeof(mock_ri_ipv6));
+  /* Clear the unnecessary addresses */
+  memset(&mock_ri_ipv4.ipv6_addr, 0, sizeof(mock_ri_ipv4.ipv6_addr));
+  mock_ri_ipv6.addr = 0;
+
+  /* We don't test the no-nickname and no-IP cases, because they're covered by
+   * format_node_description(), and we don't expect to see them in Tor code. */
+
+  /* Try some real IP addresses */
+  rv = router_describe(&mock_ri_ipv4);
+  tt_str_op(rv, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "111.222.233.244");
+
+  rv = router_describe(&mock_ri_ipv6);
+  tt_str_op(rv, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "[1111:2222:3333:4444:5555:6666:7777:8888]");
+
+  rv = router_describe(&mock_ri_dual);
+  tt_str_op(rv, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "111.222.233.244 and [1111:2222:3333:4444:5555:6666:7777:8888]");
+
+  /* test NULL handling */
+  rv = router_describe(NULL);
+  tt_str_op(rv, OP_EQ, "<null>");
+
+  /* Now test a node with only these routerinfos */
+  node_t mock_node;
+  memset(&mock_node, 0, sizeof(mock_node));
+  memcpy(mock_node.identity,
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA",
+         sizeof(mock_node.identity));
+
+  /* Try some real IP addresses */
+  mock_node.ri = &mock_ri_ipv4;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "111.222.233.244");
+
+  mock_node.ri = &mock_ri_ipv6;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "[1111:2222:3333:4444:5555:6666:7777:8888]");
+
+  mock_node.ri = &mock_ri_dual;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "111.222.233.244 and [1111:2222:3333:4444:5555:6666:7777:8888]");
+
+ done:
+  return;
+}
+
+/** node_describe() is a wrapper for format_node_description(), see that
+ * test for details.
+ *
+ * The routerinfo-only and routerstatus-only node_describe() tests are in
+ * test_nodelist_router_describe() and test_nodelist_routerstatus_describe(),
+ * so we can re-use their mocked variables.
+ */
+static void
+test_nodelist_node_describe(void *arg)
+{
+  char mock_nickname[MAX_NICKNAME_LEN+1];
+  tor_addr_t mock_ipv4;
+
+  const char *rv = NULL;
+
+  (void) arg;
+
+  /* Routerinfos */
+  routerinfo_t mock_ri_dual;
+
+  /* Clear variables */
+  memset(mock_nickname, 0, sizeof(mock_nickname));
+  memset(&mock_ipv4, 0, sizeof(mock_ipv4));
+  memset(&mock_ri_dual, 0, sizeof(mock_ri_dual));
+
+  /* Set up the dual-stack routerinfo */
+  memcpy(mock_ri_dual.cache_info.identity_digest,
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA",
+         sizeof(mock_ri_dual.cache_info.identity_digest));
+  strlcpy(mock_nickname, "TestOR7890123456789", sizeof(mock_nickname));
+  mock_ri_dual.nickname = mock_nickname;
+  tor_addr_parse(&mock_ipv4, "111.222.233.244");
+  mock_ri_dual.addr = tor_addr_to_ipv4h(&mock_ipv4);
+  tor_addr_parse(&mock_ri_dual.ipv6_addr,
+                 "[1111:2222:3333:4444:5555:6666:7777:8888]");
+
+  /* Routerstatuses */
+  routerstatus_t mock_rs_ipv4;
+  routerstatus_t mock_rs_dual;
+
+  /* Clear variables */
+  memset(&mock_ipv4, 0, sizeof(mock_ipv4));
+  memset(&mock_rs_ipv4, 0, sizeof(mock_rs_ipv4));
+  memset(&mock_rs_dual, 0, sizeof(mock_rs_dual));
+
+  /* Set up the dual-stack routerstatus */
+  memcpy(mock_rs_dual.identity_digest,
+         "\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB"
+         "\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB",
+         sizeof(mock_rs_dual.identity_digest));
+  strlcpy(mock_rs_dual.nickname, "Bbb",
+          sizeof(mock_rs_dual.nickname));
+  tor_addr_parse(&mock_ipv4, "2.2.2.2");
+  mock_rs_dual.addr = tor_addr_to_ipv4h(&mock_ipv4);
+  tor_addr_parse(&mock_rs_dual.ipv6_addr,
+                 "[bbbb::bbbb]");
+
+  /* Create and modify the other routerstatus. */
+  memcpy(&mock_rs_ipv4, &mock_rs_dual, sizeof(mock_rs_ipv4));
+  /* Clear the unnecessary IPv6 address */
+  memset(&mock_rs_ipv4.ipv6_addr, 0, sizeof(mock_rs_ipv4.ipv6_addr));
+
+  /* Microdescs */
+  microdesc_t mock_md_null;
+  microdesc_t mock_md_ipv6;
+
+  /* Clear variables */
+  memset(&mock_md_null, 0, sizeof(mock_md_null));
+  memset(&mock_md_ipv6, 0, sizeof(mock_md_ipv6));
+
+  /* Set up the microdesc */
+  tor_addr_parse(&mock_md_ipv6.ipv6_addr,
+                 "[eeee::6000:6000]");
+
+  /* Set up the node */
+  node_t mock_node;
+  memset(&mock_node, 0, sizeof(mock_node));
+  memcpy(mock_node.identity,
+         "\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC"
+         "\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC",
+         sizeof(mock_node.identity));
+
+  /* Test that the routerinfo and routerstatus work separately, but the
+   * identity comes from the node */
+  mock_node.ri = &mock_ri_dual;
+  mock_node.rs = NULL;
+  mock_node.md = NULL;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC~TestOR7890123456789 at "
+            "111.222.233.244 and [1111:2222:3333:4444:5555:6666:7777:8888]");
+
+  mock_node.ri = NULL;
+  mock_node.rs = &mock_rs_ipv4;
+  mock_node.md = NULL;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC~Bbb at "
+            "2.2.2.2");
+
+  mock_node.ri = NULL;
+  mock_node.rs = &mock_rs_dual;
+  mock_node.md = NULL;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC~Bbb at "
+            "2.2.2.2 and [bbbb::bbbb]");
+
+  /* Test that the routerstatus overrides the routerinfo */
+  mock_node.ri = &mock_ri_dual;
+  mock_node.rs = &mock_rs_ipv4;
+  mock_node.md = NULL;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC~Bbb at "
+            "2.2.2.2");
+
+  mock_node.ri = &mock_ri_dual;
+  mock_node.rs = &mock_rs_dual;
+  mock_node.md = NULL;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC~Bbb at "
+            "2.2.2.2 and [bbbb::bbbb]");
+
+  /* Test that the microdesc IPv6 is used if the routerinfo doesn't have IPv6
+   */
+  mock_node.ri = NULL;
+  mock_node.rs = &mock_rs_ipv4;
+  mock_node.md = &mock_md_ipv6;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC~Bbb at "
+            "2.2.2.2 and [eeee::6000:6000]");
+
+  mock_node.ri = NULL;
+  mock_node.rs = &mock_rs_ipv4;
+  mock_node.md = &mock_md_null;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC~Bbb at "
+            "2.2.2.2");
+
+  mock_node.ri = NULL;
+  mock_node.rs = &mock_rs_dual;
+  mock_node.md = &mock_md_ipv6;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC~Bbb at "
+            "2.2.2.2 and [bbbb::bbbb]");
+
+  mock_node.ri = NULL;
+  mock_node.rs = &mock_rs_dual;
+  mock_node.md = &mock_md_null;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC~Bbb at "
+            "2.2.2.2 and [bbbb::bbbb]");
+
+  /* Test that the routerinfo doesn't change the results above
+   */
+  mock_node.ri = &mock_ri_dual;
+  mock_node.rs = &mock_rs_ipv4;
+  mock_node.md = &mock_md_ipv6;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC~Bbb at "
+            "2.2.2.2 and [eeee::6000:6000]");
+
+  mock_node.ri = &mock_ri_dual;
+  mock_node.rs = &mock_rs_ipv4;
+  mock_node.md = &mock_md_null;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC~Bbb at "
+            "2.2.2.2");
+
+  mock_node.ri = &mock_ri_dual;
+  mock_node.rs = &mock_rs_dual;
+  mock_node.md = &mock_md_ipv6;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC~Bbb at "
+            "2.2.2.2 and [bbbb::bbbb]");
+
+  mock_node.ri = &mock_ri_dual;
+  mock_node.rs = &mock_rs_dual;
+  mock_node.md = &mock_md_null;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC~Bbb at "
+            "2.2.2.2 and [bbbb::bbbb]");
+
+  /* test NULL handling */
+  rv = node_describe(NULL);
+  tt_str_op(rv, OP_EQ, "<null>");
+
+  mock_node.ri = NULL;
+  mock_node.rs = NULL;
+  mock_node.md = NULL;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "<null rs and ri>");
+
+ done:
+  return;
+}
+
+/** routerstatus_describe() is a wrapper for format_node_description(), see
+ * that test for details.
+ *
+ * The routerstatus-only node_describe() tests are in this function,
+ * so we can re-use the same mocked variables.
+ */
+static void
+test_nodelist_routerstatus_describe(void *arg)
+{
+  tor_addr_t mock_ipv4;
+  routerstatus_t mock_rs_ipv4;
+  routerstatus_t mock_rs_ipv6;
+  routerstatus_t mock_rs_dual;
+
+  const char *rv = NULL;
+
+  (void) arg;
+
+  /* Clear variables */
+  memset(&mock_ipv4, 0, sizeof(mock_ipv4));
+  memset(&mock_rs_ipv4, 0, sizeof(mock_rs_ipv4));
+  memset(&mock_rs_ipv6, 0, sizeof(mock_rs_ipv6));
+  memset(&mock_rs_dual, 0, sizeof(mock_rs_dual));
+
+  /* Set up the dual-stack routerstatus */
+  memcpy(mock_rs_dual.identity_digest,
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA",
+         sizeof(mock_rs_dual.identity_digest));
+  strlcpy(mock_rs_dual.nickname, "TestOR7890123456789",
+          sizeof(mock_rs_dual.nickname));
+  tor_addr_parse(&mock_ipv4, "111.222.233.244");
+  mock_rs_dual.addr = tor_addr_to_ipv4h(&mock_ipv4);
+  tor_addr_parse(&mock_rs_dual.ipv6_addr,
+                 "[1111:2222:3333:4444:5555:6666:7777:8888]");
+
+  /* Create and modify the other routerstatuses. */
+  memcpy(&mock_rs_ipv4, &mock_rs_dual, sizeof(mock_rs_ipv4));
+  memcpy(&mock_rs_ipv6, &mock_rs_dual, sizeof(mock_rs_ipv6));
+  /* Clear the unnecessary addresses */
+  memset(&mock_rs_ipv4.ipv6_addr, 0, sizeof(mock_rs_ipv4.ipv6_addr));
+  mock_rs_ipv6.addr = 0;
+
+  /* We don't test the no-nickname and no-IP cases, because they're covered by
+   * format_node_description(), and we don't expect to see them in Tor code. */
+
+  /* Try some real IP addresses */
+  rv = routerstatus_describe(&mock_rs_ipv4);
+  tt_str_op(rv, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "111.222.233.244");
+
+  rv = routerstatus_describe(&mock_rs_ipv6);
+  tt_str_op(rv, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "[1111:2222:3333:4444:5555:6666:7777:8888]");
+
+  rv = routerstatus_describe(&mock_rs_dual);
+  tt_str_op(rv, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "111.222.233.244 and [1111:2222:3333:4444:5555:6666:7777:8888]");
+
+  /* test NULL handling */
+  rv = routerstatus_describe(NULL);
+  tt_str_op(rv, OP_EQ, "<null>");
+
+  /* Now test a node with only these routerstatuses */
+  node_t mock_node;
+  memset(&mock_node, 0, sizeof(mock_node));
+  memcpy(mock_node.identity,
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA",
+         sizeof(mock_node.identity));
+
+  /* Try some real IP addresses */
+  mock_node.rs = &mock_rs_ipv4;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "111.222.233.244");
+
+  mock_node.rs = &mock_rs_ipv6;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "[1111:2222:3333:4444:5555:6666:7777:8888]");
+
+  mock_node.rs = &mock_rs_dual;
+  rv = node_describe(&mock_node);
+  tt_str_op(rv, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "111.222.233.244 and [1111:2222:3333:4444:5555:6666:7777:8888]");
+
+ done:
+  return;
+}
+
+/** extend_info_describe() is a wrapper for format_node_description(), see
+ * that test for details.
+ */
+static void
+test_nodelist_extend_info_describe(void *arg)
+{
+  extend_info_t mock_ei_ipv4;
+  extend_info_t mock_ei_ipv6;
+
+  const char *rv = NULL;
+
+  (void) arg;
+
+  /* Clear variables */
+  memset(&mock_ei_ipv4, 0, sizeof(mock_ei_ipv4));
+  memset(&mock_ei_ipv6, 0, sizeof(mock_ei_ipv6));
+
+  /* Set up the IPv4 extend info */
+  memcpy(mock_ei_ipv4.identity_digest,
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA",
+         sizeof(mock_ei_ipv4.identity_digest));
+  strlcpy(mock_ei_ipv4.nickname, "TestOR7890123456789",
+          sizeof(mock_ei_ipv4.nickname));
+  tor_addr_parse(&mock_ei_ipv4.addr, "111.222.233.244");
+
+  /* Create and modify the other extend info. */
+  memcpy(&mock_ei_ipv6, &mock_ei_ipv4, sizeof(mock_ei_ipv6));
+  tor_addr_parse(&mock_ei_ipv6.addr,
+                 "[1111:2222:3333:4444:5555:6666:7777:8888]");
+
+  /* We don't test the no-nickname and no-IP cases, because they're covered by
+   * format_node_description(), and we don't expect to see them in Tor code. */
+
+  /* Try some real IP addresses */
+  rv = extend_info_describe(&mock_ei_ipv4);
+  tt_str_op(rv, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "111.222.233.244");
+
+  rv = extend_info_describe(&mock_ei_ipv6);
+  tt_str_op(rv, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
+            "[1111:2222:3333:4444:5555:6666:7777:8888]");
+
+  /* Extend infos only have one IP address, so there is no dual case */
+
+  /* test NULL handling */
+  rv = extend_info_describe(NULL);
+  tt_str_op(rv, OP_EQ, "<null>");
+
+ done:
+  return;
+}
+
+/** router_get_verbose_nickname() should return "Fingerprint~Nickname"
+ */
+static void
+test_nodelist_router_get_verbose_nickname(void *arg)
+{
+  routerinfo_t mock_ri;
+  char mock_nickname[MAX_NICKNAME_LEN+1];
+
+  char vname[MAX_VERBOSE_NICKNAME_LEN+1];
+
+  (void) arg;
+
+  memset(&mock_ri, 0, sizeof(routerinfo_t));
+  memset(mock_nickname, 0, sizeof(mock_nickname));
+  mock_ri.nickname = mock_nickname;
+
+  /* verbose nickname should use ~ because named is deprecated */
+  strlcpy(mock_nickname, "TestOR", sizeof(mock_nickname));
+  memcpy(mock_ri.cache_info.identity_digest,
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA",
+         DIGEST_LEN);
+  router_get_verbose_nickname(vname, &mock_ri);
+  tt_str_op(vname, OP_EQ, "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR");
+
+  /* test NULL router handling */
+  router_get_verbose_nickname(vname, NULL);
+  tt_str_op(vname, OP_EQ, "<null>");
+
+  router_get_verbose_nickname(NULL, &mock_ri);
+  router_get_verbose_nickname(NULL, NULL);
+
+ done:
+  return;
+}
+
 #define NODE(name, flags) \
   { #name, test_nodelist_##name, (flags), NULL, NULL }
 
@@ -654,5 +1260,11 @@ struct testcase_t nodelist_tests[] = {
   NODE(nickname_matches, 0),
   NODE(node_nodefamily, TT_FORK),
   NODE(nodefamily_canonicalize, 0),
+  NODE(format_node_description, 0),
+  NODE(router_describe, 0),
+  NODE(node_describe, 0),
+  NODE(routerstatus_describe, 0),
+  NODE(extend_info_describe, 0),
+  NODE(router_get_verbose_nickname, 0),
   END_OF_TESTCASES
 };

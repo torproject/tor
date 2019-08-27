@@ -26,9 +26,9 @@
 #include "feature/control/control_fmt.h"
 #include "feature/control/control_proto.h"
 #include "feature/dircommon/directory.h"
+#include "feature/nodelist/describe.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
-#include "feature/nodelist/routerinfo.h"
 
 #include "feature/control/control_connection_st.h"
 #include "core/or/entry_connection_st.h"
