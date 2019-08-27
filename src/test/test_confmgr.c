@@ -34,6 +34,8 @@ typedef struct {
   int cuteness;
   uint32_t magic;
   int eats_meat; /* deprecated; llamas are never carnivorous. */
+
+  char *description; // derived from other fields.
 } llama_cfg_t;
 
 typedef struct {
@@ -87,6 +89,16 @@ static config_deprecation_t alpaca_deprecations[] = {
   {NULL,NULL}
 };
 
+static int clear_llama_cfg_called = 0;
+static void
+clear_llama_cfg(const config_mgr_t *mgr, void *llamacfg)
+{
+  (void)mgr;
+  llama_cfg_t *lc = llamacfg;
+  tor_free(lc->description);
+  ++clear_llama_cfg_called;
+}
+
 static config_abbrev_t llama_abbrevs[] = {
   { "gracia", "cuteness", 0, 0 },
   { "gentillesse", "cuteness", 0, 0 },
@@ -115,6 +127,7 @@ static const config_format_t llama_fmt = {
   .config_suite_offset = -1,
   .deprecations = llama_deprecations,
   .abbrevs = llama_abbrevs,
+  .clear_fn = clear_llama_cfg,
 };
 
 static const config_format_t alpaca_fmt = {
@@ -249,6 +262,14 @@ test_confmgr_parse(void *arg)
   tt_str_op(ac->alpacaname, OP_EQ, "daphne");
   tt_int_op(lc->cuteness, OP_EQ, 42);
   tt_int_op(ac->fuzziness, OP_EQ, 50);
+
+  // We set the description for the llama here, so that the clear function
+  // can clear it.  (Later we can do this in a verification function.)
+  clear_llama_cfg_called = 0;
+  llama_cfg_t *mut_lc = config_mgr_get_obj_mutable(mgr, p, LLAMA_IDX);
+  mut_lc->description = tor_strdup("A llama named Hugo.");
+  config_free(mgr, p);
+  tt_int_op(clear_llama_cfg_called, OP_EQ, 1);
 
  done:
   config_free_lines(lines);
