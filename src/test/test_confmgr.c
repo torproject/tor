@@ -257,6 +257,41 @@ test_confmgr_parse(void *arg)
   tor_free(msg);
 }
 
+static void
+test_confmgr_dump(void *arg)
+{
+  (void)arg;
+  config_mgr_t *mgr = get_mgr(true);
+  pasture_cfg_t *p = config_new(mgr);
+  pasture_cfg_t *defaults = config_new(mgr);
+  config_line_t *lines = NULL;
+  char *msg = NULL;
+  char *s = NULL;
+
+  config_init(mgr, p); // set defaults.
+  config_init(mgr, defaults); // set defaults.
+
+  int r = config_get_lines(simple_pasture, &lines, 0);
+  tt_int_op(r, OP_EQ, 0);
+  r = config_assign(mgr, p, lines, 0, &msg);
+  tt_int_op(r, OP_EQ, 0);
+
+  s = config_dump(mgr, defaults, p, 1, 0);
+  tt_str_op("address 123 Camelid ave\n"
+            "alpacaname daphne\n"
+            "cuteness 42\n"
+            "llamaname hugo\n", OP_EQ, s);
+
+ done:
+  config_free_lines(lines);
+  config_free(mgr, p);
+  config_free(mgr, defaults);
+  config_mgr_free(mgr);
+
+  tor_free(msg);
+  tor_free(s);
+}
+
 #define CONFMGR_TEST(name, flags)                       \
   { #name, test_confmgr_ ## name, flags, NULL, NULL }
 
@@ -264,5 +299,6 @@ struct testcase_t confmgr_tests[] = {
   CONFMGR_TEST(init, 0),
   CONFMGR_TEST(magic, 0),
   CONFMGR_TEST(parse, 0),
+  CONFMGR_TEST(dump, 0),
   END_OF_TESTCASES
 };
