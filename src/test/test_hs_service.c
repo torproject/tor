@@ -171,8 +171,7 @@ test_e2e_rend_circuit_setup(void *arg)
     tt_int_op(0, OP_EQ, ed25519_secret_key_generate(&sk, 0));
     tt_int_op(0, OP_EQ, ed25519_public_key_generate(&service_pk, &sk));
 
-    or_circ->hs_ident = hs_ident_circuit_new(&service_pk,
-                                             HS_IDENT_CIRCUIT_RENDEZVOUS);
+    or_circ->hs_ident = hs_ident_circuit_new(&service_pk);
 
     TO_CIRCUIT(or_circ)->state = CIRCUIT_STATE_OPEN;
   }
@@ -1105,8 +1104,7 @@ test_closing_intro_circs(void *arg)
 
   /* Initialize intro circuit */
   intro_circ = origin_circuit_init(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, flags);
-  intro_circ->hs_ident = hs_ident_circuit_new(&service->keys.identity_pk,
-                                              HS_IDENT_CIRCUIT_INTRO);
+  intro_circ->hs_ident = hs_ident_circuit_new(&service->keys.identity_pk);
   /* Register circuit in the circuitmap . */
   hs_circuitmap_register_intro_circ_v3_service_side(intro_circ,
                                                     &ip->auth_key_kp.pubkey);
@@ -1132,8 +1130,7 @@ test_closing_intro_circs(void *arg)
   /* Now pretend that a new intro point circ was launched and opened. Check
    * that the intro point will be established correctly. */
   intro_circ = origin_circuit_init(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, flags);
-  intro_circ->hs_ident = hs_ident_circuit_new(&service->keys.identity_pk,
-                                              HS_IDENT_CIRCUIT_INTRO);
+  intro_circ->hs_ident = hs_ident_circuit_new(&service->keys.identity_pk);
   ed25519_pubkey_copy(&intro_circ->hs_ident->intro_auth_pk,
                       &ip->auth_key_kp.pubkey);
   /* Register circuit in the circuitmap . */
