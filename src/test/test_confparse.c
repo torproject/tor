@@ -1000,6 +1000,29 @@ test_confparse_list_deprecated(void *arg)
   config_mgr_free(mgr);
 }
 
+static void
+test_confparse_find_option_name(void *arg)
+{
+  (void)arg;
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+
+  // exact match
+  tt_str_op(config_find_option_name(mgr, "u64"), OP_EQ, "u64");
+  // case-insensitive match
+  tt_str_op(config_find_option_name(mgr, "S"), OP_EQ, "s");
+  tt_str_op(config_find_option_name(mgr, "linetypea"), OP_EQ, "LineTypeA");
+  // prefix match
+  tt_str_op(config_find_option_name(mgr, "deprec"), OP_EQ, "deprecated_int");
+  // explicit abbreviation
+  tt_str_op(config_find_option_name(mgr, "uint"), OP_EQ, "pos");
+  tt_str_op(config_find_option_name(mgr, "UINT"), OP_EQ, "pos");
+  // no match
+  tt_ptr_op(config_find_option_name(mgr, "absent"), OP_EQ, NULL);
+
+ done:
+  config_mgr_free(mgr);
+}
+
 #define CONFPARSE_TEST(name, flags)                          \
   { #name, test_confparse_ ## name, flags, NULL, NULL }
 
@@ -1038,5 +1061,6 @@ struct testcase_t confparse_tests[] = {
   CONFPARSE_TEST(check_ok_fail, 0),
   CONFPARSE_TEST(list_vars, 0),
   CONFPARSE_TEST(list_deprecated, 0),
+  CONFPARSE_TEST(find_option_name, 0),
   END_OF_TESTCASES
 };

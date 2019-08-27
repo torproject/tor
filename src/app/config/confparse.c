@@ -493,6 +493,7 @@ config_mgr_find_var(const config_mgr_t *mgr,
 const char *
 config_find_option_name(const config_mgr_t *mgr, const char *key)
 {
+  key = config_expand_abbrev(mgr, key, 0, 0);
   const managed_var_t *mv = config_mgr_find_var(mgr, key, true, NULL);
   if (mv)
     return mv->cvar->member.name;
