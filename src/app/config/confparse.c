@@ -234,7 +234,7 @@ config_mgr_get_suite_ptr(const config_mgr_t *mgr, void *toplevel)
  * to configuration objects for other modules.  This function gets
  * the sub-object for a particular modules.
  */
-static void *
+STATIC void *
 config_mgr_get_obj_mutable(const config_mgr_t *mgr, void *toplevel, int idx)
 {
   tor_assert(mgr);
@@ -253,7 +253,7 @@ config_mgr_get_obj_mutable(const config_mgr_t *mgr, void *toplevel, int idx)
 }
 
 /** As config_mgr_get_obj_mutable(), but return a const pointer. */
-static const void *
+STATIC const void *
 config_mgr_get_obj(const config_mgr_t *mgr, const void *toplevel, int idx)
 {
   return config_mgr_get_obj_mutable(mgr, (void*)toplevel, idx);

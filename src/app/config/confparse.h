@@ -148,6 +148,10 @@ bool config_var_is_dumpable(const config_var_t *var);
 #ifdef CONFPARSE_PRIVATE
 STATIC void config_reset_line(const config_mgr_t *mgr, void *options,
                               const char *key, int use_defaults);
+STATIC void *config_mgr_get_obj_mutable(const config_mgr_t *mgr,
+                                        void *toplevel, int idx);
+STATIC const void *config_mgr_get_obj(const config_mgr_t *mgr,
+                                       const void *toplevel, int idx);
 #endif
 
 #endif /* !defined(TOR_CONFPARSE_H) */
