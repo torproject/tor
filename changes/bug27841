@@ -1,0 +1,7 @@
+  o Minor bugfixes (onion services):
+    - On an intro point for a version 3 onion service, we do not close
+      an introduction circuit on an NACK. This lets the client decide
+      whether to reuse the circuit or discard it. Previously, we closed
+      intro circuits on NACKs. Fixes bug 27841; bugfix on 0.3.2.1-alpha.
+      Patch by Neel Chaunan
+
