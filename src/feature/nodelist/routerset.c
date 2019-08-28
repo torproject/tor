@@ -479,6 +479,10 @@ routerset_kv_parse(void *target, const config_line_t *line, char **errmsg,
     *errmsg = tor_strdup("Invalid router list.");
     return -1;
   } else {
+    if (routerset_is_empty(rs)) {
+      /* Represent empty sets as NULL. */
+      routerset_free(rs);
+    }
     *p = rs;
     return 0;
   }
@@ -507,8 +511,10 @@ routerset_copy(void *dest, const void *src, const void *params)
   routerset_t **output = (routerset_t**)dest;
   const routerset_t *input = *(routerset_t**)src;
   routerset_free(*output); // sets *output to NULL
-  *output = routerset_new();
-  routerset_union(*output, input);
+  if (! routerset_is_empty(input)) {
+    *output = routerset_new();
+    routerset_union(*output, input);
+  }
   return 0;
 }
 
