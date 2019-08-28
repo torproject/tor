@@ -119,8 +119,6 @@ test_validate_cb(void *old_options, void *options, void *default_options,
   return 0;
 }
 
-static void test_free_cb(void *options);
-
 #define TEST_MAGIC 0x1337
 
 static const config_format_t test_fmt = {
@@ -134,29 +132,22 @@ static const config_format_t test_fmt = {
   test_deprecation_notes,
   test_vars,
   test_validate_cb,
-  test_free_cb,
   NULL,
+  NULL,
+  -1,
 };
-
-static void
-test_free_cb(void *options)
-{
-  if (!options)
-    return;
-
-  config_free(&test_fmt, options);
-}
 
 /* Make sure that config_init sets everything to the right defaults. */
 static void
 test_confparse_init(void *arg)
 {
   (void)arg;
-  test_struct_t *tst = config_new(&test_fmt);
-  config_init(&test_fmt, tst);
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
+  test_struct_t *tst = config_new(mgr);
+  config_init(mgr, tst);
 
   // Make sure that options are initialized right. */
-  tt_uint_op(tst->magic, OP_EQ, TEST_MAGIC);
   tt_str_op(tst->s, OP_EQ, "hello");
   tt_ptr_op(tst->fn, OP_EQ, NULL);
   tt_int_op(tst->pos, OP_EQ, 0);
@@ -178,7 +169,8 @@ test_confparse_init(void *arg)
   tt_int_op(tst->hidden_int, OP_EQ, 0);
 
  done:
-  config_free(&test_fmt, tst);
+  config_free(mgr, tst);
+  config_mgr_free(mgr);
 }
 
 static const char simple_settings[] =
@@ -207,18 +199,18 @@ static const char simple_settings[] =
 
 /* Return a configuration object set up from simple_settings above. */
 static test_struct_t *
-get_simple_config(void)
+get_simple_config(const config_mgr_t *mgr)
 {
   test_struct_t *result = NULL;
-  test_struct_t *tst = config_new(&test_fmt);
+  test_struct_t *tst = config_new(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL;
 
-  config_init(&test_fmt, tst);
+  config_init(mgr, tst);
 
   int r = config_get_lines(simple_settings, &lines, 0);
   tt_int_op(r, OP_EQ, 0);
-  r = config_assign(&test_fmt, tst, lines, 0, &msg);
+  r = config_assign(mgr, tst, lines, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
 
@@ -227,7 +219,7 @@ get_simple_config(void)
  done:
   tor_free(msg);
   config_free_lines(lines);
-  config_free(&test_fmt, tst);
+  config_free(mgr, tst);
   return result;
 }
 
@@ -236,7 +228,9 @@ static void
 test_confparse_assign_simple(void *arg)
 {
   (void)arg;
-  test_struct_t *tst = get_simple_config();
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
+  test_struct_t *tst = get_simple_config(mgr);
 
   tt_str_op(tst->s, OP_EQ, "this is a");
   tt_str_op(tst->fn, OP_EQ, "/simple/test of the");
@@ -284,10 +278,11 @@ test_confparse_assign_simple(void *arg)
   tt_str_op(tst->mixed_hidden_lines->next->value, OP_EQ, "ABC");
   tt_assert(!tst->mixed_hidden_lines->next->next);
 
-  tt_assert(config_check_ok(&test_fmt, tst, LOG_ERR));
+  tt_assert(config_check_ok(mgr, tst, LOG_ERR));
 
  done:
-  config_free(&test_fmt, tst);
+  config_free(mgr, tst);
+  config_mgr_free(mgr);
 }
 
 /* Try to assign to an obsolete option, and make sure we get a warning. */
@@ -295,26 +290,29 @@ static void
 test_confparse_assign_obsolete(void *arg)
 {
   (void)arg;
-  test_struct_t *tst = config_new(&test_fmt);
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
+  test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL;
 
-  config_init(&test_fmt, tst);
+  config_init(mgr, tst);
 
   int r = config_get_lines("obsolete option here",
                            &lines, 0);
   tt_int_op(r, OP_EQ, 0);
   setup_capture_of_logs(LOG_WARN);
-  r = config_assign(&test_fmt, tst, lines, 0, &msg);
+  r = config_assign(mgr, tst, lines, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
   expect_single_log_msg_containing("Skipping obsolete configuration option");
 
  done:
   teardown_capture_of_logs();
-  config_free(&test_fmt, tst);
+  config_free(mgr, tst);
   config_free_lines(lines);
   tor_free(msg);
+  config_mgr_free(mgr);
 }
 
 /* Try to assign to an deprecated option, and make sure we get a warning
@@ -323,30 +321,33 @@ static void
 test_confparse_assign_deprecated(void *arg)
 {
   (void)arg;
-  test_struct_t *tst = config_new(&test_fmt);
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
+  test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL;
 
-  config_init(&test_fmt, tst);
+  config_init(mgr, tst);
 
   int r = config_get_lines("deprecated_int 7",
                            &lines, 0);
   tt_int_op(r, OP_EQ, 0);
   setup_capture_of_logs(LOG_WARN);
-  r = config_assign(&test_fmt, tst, lines, CAL_WARN_DEPRECATIONS, &msg);
+  r = config_assign(mgr, tst, lines, CAL_WARN_DEPRECATIONS, &msg);
   tt_int_op(r, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
   expect_single_log_msg_containing("This integer is deprecated.");
 
   tt_int_op(tst->deprecated_int, OP_EQ, 7);
 
-  tt_assert(config_check_ok(&test_fmt, tst, LOG_ERR));
+  tt_assert(config_check_ok(mgr, tst, LOG_ERR));
 
  done:
   teardown_capture_of_logs();
-  config_free(&test_fmt, tst);
+  config_free(mgr, tst);
   config_free_lines(lines);
   tor_free(msg);
+  config_mgr_free(mgr);
 }
 
 /* Try to re-assign an option name that has been depreacted in favor of
@@ -355,16 +356,18 @@ static void
 test_confparse_assign_replaced(void *arg)
 {
   (void)arg;
-  test_struct_t *tst = config_new(&test_fmt);
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
+  test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL;
 
-  config_init(&test_fmt, tst);
+  config_init(mgr, tst);
 
   int r = config_get_lines("float 1000\n", &lines, 0);
   tt_int_op(r, OP_EQ, 0);
   setup_capture_of_logs(LOG_WARN);
-  r = config_assign(&test_fmt, tst, lines, CAL_WARN_DEPRECATIONS, &msg);
+  r = config_assign(mgr, tst, lines, CAL_WARN_DEPRECATIONS, &msg);
   tt_int_op(r, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
   expect_single_log_msg_containing("use 'dbl' instead.");
@@ -374,9 +377,10 @@ test_confparse_assign_replaced(void *arg)
 
  done:
   teardown_capture_of_logs();
-  config_free(&test_fmt, tst);
+  config_free(mgr, tst);
   config_free_lines(lines);
   tor_free(msg);
+  config_mgr_free(mgr);
 }
 
 /* Try to set a linelist value with no option. */
@@ -384,25 +388,28 @@ static void
 test_confparse_assign_emptystring(void *arg)
 {
   (void)arg;
-  test_struct_t *tst = config_new(&test_fmt);
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
+  test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL;
 
-  config_init(&test_fmt, tst);
+  config_init(mgr, tst);
 
   int r = config_get_lines("lines\n", &lines, 0);
   tt_int_op(r, OP_EQ, 0);
   setup_capture_of_logs(LOG_WARN);
-  r = config_assign(&test_fmt, tst, lines, 0, &msg);
+  r = config_assign(mgr, tst, lines, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
   expect_single_log_msg_containing("has no value");
 
  done:
   teardown_capture_of_logs();
-  config_free(&test_fmt, tst);
+  config_free(mgr, tst);
   config_free_lines(lines);
   tor_free(msg);
+  config_mgr_free(mgr);
 }
 
 /* Try to set a the same option twice; make sure we get a warning. */
@@ -410,26 +417,29 @@ static void
 test_confparse_assign_twice(void *arg)
 {
   (void)arg;
-  test_struct_t *tst = config_new(&test_fmt);
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
+  test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL;
 
-  config_init(&test_fmt, tst);
+  config_init(mgr, tst);
 
   int r = config_get_lines("pos 10\n"
                            "pos 99\n", &lines, 0);
   tt_int_op(r, OP_EQ, 0);
   setup_capture_of_logs(LOG_WARN);
-  r = config_assign(&test_fmt, tst, lines, 0, &msg);
+  r = config_assign(mgr, tst, lines, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
   expect_single_log_msg_containing("used more than once");
 
  done:
   teardown_capture_of_logs();
-  config_free(&test_fmt, tst);
+  config_free(mgr, tst);
   config_free_lines(lines);
   tor_free(msg);
+  config_mgr_free(mgr);
 }
 
 typedef struct badval_test_t {
@@ -443,16 +453,18 @@ static void
 test_confparse_assign_badval(void *arg)
 {
   const badval_test_t *bt = arg;
-  test_struct_t *tst = config_new(&test_fmt);
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
+  test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL;
 
-  config_init(&test_fmt, tst);
+  config_init(mgr, tst);
 
   int r = config_get_lines(bt->cfg, &lines, 0);
   tt_int_op(r, OP_EQ, 0);
   setup_capture_of_logs(LOG_WARN);
-  r = config_assign(&test_fmt, tst, lines, 0, &msg);
+  r = config_assign(mgr, tst, lines, 0, &msg);
   tt_int_op(r, OP_LT, 0);
   tt_ptr_op(msg, OP_NE, NULL);
   if (! strstr(msg, bt->expect_msg)) {
@@ -461,9 +473,10 @@ test_confparse_assign_badval(void *arg)
 
  done:
   teardown_capture_of_logs();
-  config_free(&test_fmt, tst);
+  config_free(mgr, tst);
   config_free_lines(lines);
   tor_free(msg);
+  config_mgr_free(mgr);
 }
 
 /* Various arguments for badval test.
@@ -495,88 +508,90 @@ static void
 test_confparse_dump(void *arg)
 {
   (void)arg;
-  test_struct_t *tst = get_simple_config();
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
+  test_struct_t *tst = get_simple_config(mgr);
   char *dumped = NULL;
 
   /* Minimal version. */
-  dumped = config_dump(&test_fmt, NULL, tst, 1, 0);
+  dumped = config_dump(mgr, NULL, tst, 1, 0);
   tt_str_op(dumped, OP_EQ,
-            "s this is a\n"
-            "fn /simple/test of the\n"
-            "pos 77\n"
-            "i 3\n"
-            "u64 1000000000000\n"
-            "interval 300\n"
-            "msec_interval 300000\n"
-            "mem 10\n"
-            "dbl 6.060842\n"
-            "boolean 1\n"
             "autobool 0\n"
-            "time 2019-06-14 13:58:51\n"
+            "boolean 1\n"
             "csv configuration,parsing,system\n"
             "csv_interval 10\n"
+            "dbl 6.060842\n"
+            "fn /simple/test of the\n"
+            "i 3\n"
+            "interval 300\n"
             "lines hello\n"
             "lines world\n"
+            "mem 10\n"
+            "VisibleLineB ABC\n"
             "LineTypeA i d\n"
             "LineTypeB i c\n"
+            "msec_interval 300000\n"
+            "pos 77\n"
             "routerset $FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\n"
-            "VisibleLineB ABC\n");
+            "s this is a\n"
+            "time 2019-06-14 13:58:51\n"
+            "u64 1000000000000\n");
 
-  /* Maximal */
   tor_free(dumped);
-  dumped = config_dump(&test_fmt, NULL, tst, 0, 0);
+  dumped = config_dump(mgr, NULL, tst, 0, 0);
   tt_str_op(dumped, OP_EQ,
-            "s this is a\n"
-            "fn /simple/test of the\n"
-            "pos 77\n"
-            "i 3\n"
-            "deprecated_int 3\n"
-            "u64 1000000000000\n"
-            "interval 300\n"
-            "msec_interval 300000\n"
-            "mem 10\n"
-            "dbl 6.060842\n"
-            "boolean 1\n"
             "autobool 0\n"
-            "time 2019-06-14 13:58:51\n"
+            "boolean 1\n"
             "csv configuration,parsing,system\n"
             "csv_interval 10\n"
+            "dbl 6.060842\n"
+            "deprecated_int 3\n"
+            "fn /simple/test of the\n"
+            "i 3\n"
+            "interval 300\n"
             "lines hello\n"
             "lines world\n"
+            "mem 10\n"
+            "VisibleLineB ABC\n"
             "LineTypeA i d\n"
             "LineTypeB i c\n"
+            "msec_interval 300000\n"
+            "pos 77\n"
             "routerset $FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\n"
-            "VisibleLineB ABC\n");
+            "s this is a\n"
+            "time 2019-06-14 13:58:51\n"
+            "u64 1000000000000\n");
 
   /* commented */
   tor_free(dumped);
-  dumped = config_dump(&test_fmt, NULL, tst, 0, 1);
+  dumped = config_dump(mgr, NULL, tst, 0, 1);
   tt_str_op(dumped, OP_EQ,
-            "s this is a\n"
-            "fn /simple/test of the\n"
-            "pos 77\n"
-            "i 3\n"
-            "# deprecated_int 3\n"
-            "u64 1000000000000\n"
-            "interval 300\n"
-            "msec_interval 300000\n"
-            "mem 10\n"
-            "dbl 6.060842\n"
-            "boolean 1\n"
             "autobool 0\n"
-            "time 2019-06-14 13:58:51\n"
+            "boolean 1\n"
             "csv configuration,parsing,system\n"
             "csv_interval 10\n"
+            "dbl 6.060842\n"
+            "# deprecated_int 3\n"
+            "fn /simple/test of the\n"
+            "i 3\n"
+            "interval 300\n"
             "lines hello\n"
             "lines world\n"
+            "mem 10\n"
+            "VisibleLineB ABC\n"
             "LineTypeA i d\n"
             "LineTypeB i c\n"
+            "msec_interval 300000\n"
+            "pos 77\n"
             "routerset $FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\n"
-                        "VisibleLineB ABC\n");
+            "s this is a\n"
+            "time 2019-06-14 13:58:51\n"
+            "u64 1000000000000\n");
 
  done:
-  config_free(&test_fmt, tst);
+  config_free(mgr, tst);
   tor_free(dumped);
+  config_mgr_free(mgr);
 }
 
 /* Try confparse_reset_line(), and make sure it behaves correctly */
@@ -584,16 +599,19 @@ static void
 test_confparse_reset(void *arg)
 {
   (void)arg;
-  test_struct_t *tst = get_simple_config();
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
+  test_struct_t *tst = get_simple_config(mgr);
 
-  config_reset_line(&test_fmt, tst, "interval", 0);
+  config_reset_line(mgr, tst, "interval", 0);
   tt_int_op(tst->interval, OP_EQ, 0);
 
-  config_reset_line(&test_fmt, tst, "interval", 1);
+  config_reset_line(mgr, tst, "interval", 1);
   tt_int_op(tst->interval, OP_EQ, 10);
 
  done:
-  config_free(&test_fmt, tst);
+  config_free(mgr, tst);
+  config_mgr_free(mgr);
 }
 
 /* Try setting options a second time on a config object, and make sure
@@ -602,7 +620,9 @@ static void
 test_confparse_reassign(void *arg)
 {
   (void)arg;
-  test_struct_t *tst = get_simple_config();
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
+  test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL, *rs = NULL;
 
@@ -613,7 +633,7 @@ test_confparse_reassign(void *arg)
          "csv 14,15\n"
          "routerset 127.0.0.1\n",
          &lines, 0);
-  r = config_assign(&test_fmt, tst,lines, 0, &msg);
+  r = config_assign(mgr, tst,lines, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
 
@@ -633,7 +653,7 @@ test_confparse_reassign(void *arg)
   tt_str_op(rs, OP_EQ, "127.0.0.1");
 
   // Try again with the CLEAR_FIRST and USE_DEFAULTS flags
-  r = config_assign(&test_fmt, tst, lines,
+  r = config_assign(mgr, tst, lines,
                     CAL_CLEAR_FIRST|CAL_USE_DEFAULTS, &msg);
   tt_int_op(r, OP_EQ, 0);
 
@@ -644,10 +664,11 @@ test_confparse_reassign(void *arg)
   tt_int_op(tst->i, OP_EQ, 12);
 
  done:
-  config_free(&test_fmt, tst);
+  config_free(mgr, tst);
   config_free_lines(lines);
   tor_free(msg);
   tor_free(rs);
+  config_mgr_free(mgr);
 }
 
 /* Try setting options a second time on a config object, using the +foo
@@ -656,7 +677,9 @@ static void
 test_confparse_reassign_extend(void *arg)
 {
   (void)arg;
-  test_struct_t *tst = get_simple_config();
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
+  test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL;
 
@@ -664,7 +687,7 @@ test_confparse_reassign_extend(void *arg)
          "+lines 13\n",
          &lines, 1); // allow extended format.
   tt_int_op(r, OP_EQ, 0);
-  r = config_assign(&test_fmt, tst,lines, 0, &msg);
+  r = config_assign(mgr, tst,lines, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
 
@@ -684,27 +707,28 @@ test_confparse_reassign_extend(void *arg)
          "/lines\n",
          &lines, 1); // allow extended format.
   tt_int_op(r, OP_EQ, 0);
-  r = config_assign(&test_fmt, tst, lines, 0, &msg);
+  r = config_assign(mgr, tst, lines, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
   tt_assert(tst->lines == NULL);
   config_free_lines(lines);
 
-  config_free(&test_fmt, tst);
-  tst = get_simple_config();
+  config_free(mgr, tst);
+  tst = get_simple_config(mgr);
   r = config_get_lines(
          "/lines away!\n",
          &lines, 1); // allow extended format.
   tt_int_op(r, OP_EQ, 0);
-  r = config_assign(&test_fmt, tst, lines, 0, &msg);
+  r = config_assign(mgr, tst, lines, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
   tt_assert(tst->lines == NULL);
 
  done:
-  config_free(&test_fmt, tst);
+  config_free(mgr, tst);
   config_free_lines(lines);
   tor_free(msg);
+  config_mgr_free(mgr);
 }
 
 /* Test out confparse_get_assigned(). */
@@ -712,30 +736,33 @@ static void
 test_confparse_get_assigned(void *arg)
 {
   (void)arg;
-  test_struct_t *tst = get_simple_config();
+
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
+  test_struct_t *tst = get_simple_config(mgr);
   config_line_t *lines = NULL;
 
-  lines = config_get_assigned_option(&test_fmt, tst, "I", 1);
+  lines = config_get_assigned_option(mgr, tst, "I", 1);
   tt_assert(lines);
   tt_str_op(lines->key, OP_EQ, "i");
   tt_str_op(lines->value, OP_EQ, "3");
   tt_assert(lines->next == NULL);
   config_free_lines(lines);
 
-  lines = config_get_assigned_option(&test_fmt, tst, "s", 1);
+  lines = config_get_assigned_option(mgr, tst, "s", 1);
   tt_assert(lines);
   tt_str_op(lines->key, OP_EQ, "s");
   tt_str_op(lines->value, OP_EQ, "this is a");
   tt_assert(lines->next == NULL);
   config_free_lines(lines);
 
-  lines = config_get_assigned_option(&test_fmt, tst, "obsolete", 1);
+  lines = config_get_assigned_option(mgr, tst, "obsolete", 1);
   tt_assert(!lines);
 
-  lines = config_get_assigned_option(&test_fmt, tst, "nonesuch", 1);
+  lines = config_get_assigned_option(mgr, tst, "nonesuch", 1);
   tt_assert(!lines);
 
-  lines = config_get_assigned_option(&test_fmt, tst, "mixedlines", 1);
+  lines = config_get_assigned_option(mgr, tst, "mixedlines", 1);
   tt_assert(lines);
   tt_str_op(lines->key, OP_EQ, "LineTypeA");
   tt_str_op(lines->value, OP_EQ, "i d");
@@ -745,7 +772,7 @@ test_confparse_get_assigned(void *arg)
   tt_assert(lines->next->next == NULL);
   config_free_lines(lines);
 
-  lines = config_get_assigned_option(&test_fmt, tst, "linetypeb", 1);
+  lines = config_get_assigned_option(mgr, tst, "linetypeb", 1);
   tt_assert(lines);
   tt_str_op(lines->key, OP_EQ, "LineTypeB");
   tt_str_op(lines->value, OP_EQ, "i c");
@@ -754,7 +781,7 @@ test_confparse_get_assigned(void *arg)
 
   tor_free(tst->s);
   tst->s = tor_strdup("Hello\nWorld");
-  lines = config_get_assigned_option(&test_fmt, tst, "s", 1);
+  lines = config_get_assigned_option(mgr, tst, "s", 1);
   tt_assert(lines);
   tt_str_op(lines->key, OP_EQ, "s");
   tt_str_op(lines->value, OP_EQ, "\"Hello\\nWorld\"");
@@ -762,8 +789,9 @@ test_confparse_get_assigned(void *arg)
   config_free_lines(lines);
 
  done:
-  config_free(&test_fmt, tst);
+  config_free(mgr, tst);
   config_free_lines(lines);
+  config_mgr_free(mgr);
 }
 
 /* Another variant, which accepts and stores unrecognized lines.*/
@@ -786,8 +814,9 @@ static config_format_t etest_fmt = {
   test_deprecation_notes,
   test_vars,
   test_validate_cb,
-  test_free_cb,
+  NULL,
   &extra,
+  -1,
 };
 
 /* Try out the feature where we can store unrecognized lines and dump them
@@ -796,24 +825,26 @@ static void
 test_confparse_extra_lines(void *arg)
 {
   (void)arg;
-  test_struct_t *tst = config_new(&etest_fmt);
+  config_mgr_t *mgr = config_mgr_new(&etest_fmt);
+  config_mgr_freeze(mgr);
+  test_struct_t *tst = config_new(mgr);
   config_line_t *lines = NULL;
   char *msg = NULL, *dump = NULL;
 
-  config_init(&etest_fmt, tst);
+  config_init(mgr, tst);
 
   int r = config_get_lines(
       "unknotty addita\n"
       "pos 99\n"
       "wombat knish\n", &lines, 0);
   tt_int_op(r, OP_EQ, 0);
-  r = config_assign(&etest_fmt, tst, lines, 0, &msg);
+  r = config_assign(mgr, tst, lines, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
 
   tt_assert(tst->extra_lines);
 
-  dump = config_dump(&etest_fmt, NULL, tst, 1, 0);
+  dump = config_dump(mgr, NULL, tst, 1, 0);
   tt_str_op(dump, OP_EQ,
       "pos 99\n"
       "unknotty addita\n"
@@ -823,7 +854,8 @@ test_confparse_extra_lines(void *arg)
   tor_free(msg);
   tor_free(dump);
   config_free_lines(lines);
-  config_free(&etest_fmt, tst);
+  config_free(mgr, tst);
+  config_mgr_free(mgr);
 }
 
 static void
@@ -889,12 +921,106 @@ static void
 test_confparse_check_ok_fail(void *arg)
 {
   (void)arg;
-  test_struct_t *tst = config_new(&test_fmt);
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  config_mgr_freeze(mgr);
+  test_struct_t *tst = config_new(mgr);
   tst->pos = -10;
-  tt_assert(! config_check_ok(&test_fmt, tst, LOG_INFO));
+  tt_assert(! config_check_ok(mgr, tst, LOG_INFO));
 
  done:
-  config_free(&test_fmt, tst);
+  config_free(mgr, tst);
+  config_mgr_free(mgr);
+}
+
+static void
+test_confparse_list_vars(void *arg)
+{
+  (void)arg;
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  smartlist_t *vars = config_mgr_list_vars(mgr);
+  smartlist_t *varnames = smartlist_new();
+  char *joined = NULL;
+
+  tt_assert(vars);
+  SMARTLIST_FOREACH(vars, config_var_t *, cv,
+                    smartlist_add(varnames, (void*)cv->member.name));
+  smartlist_sort_strings(varnames);
+  joined = smartlist_join_strings(varnames, "::", 0, NULL);
+  tt_str_op(joined, OP_EQ,
+            "LineTypeA::"
+            "LineTypeB::"
+            "MixedHiddenLines::"
+            "MixedLines::"
+            "VisibleLineB::"
+            "__HiddenInt::"
+            "__HiddenLineA::"
+            "autobool::"
+            "boolean::"
+            "csv::"
+            "csv_interval::"
+            "dbl::"
+            "deprecated_int::"
+            "fn::"
+            "i::"
+            "interval::"
+            "lines::"
+            "mem::"
+            "msec_interval::"
+            "obsolete::"
+            "pos::"
+            "routerset::"
+            "s::"
+            "time::"
+            "u64");
+
+ done:
+  tor_free(joined);
+  smartlist_free(varnames);
+  smartlist_free(vars);
+  config_mgr_free(mgr);
+}
+
+static void
+test_confparse_list_deprecated(void *arg)
+{
+  (void)arg;
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+  smartlist_t *vars = config_mgr_list_deprecated_vars(mgr);
+  char *joined = NULL;
+
+  tt_assert(vars);
+  smartlist_sort_strings(vars);
+  joined = smartlist_join_strings(vars, "::", 0, NULL);
+
+  tt_str_op(joined, OP_EQ, "deprecated_int");
+
+ done:
+  tor_free(joined);
+  smartlist_free(vars);
+  config_mgr_free(mgr);
+}
+
+static void
+test_confparse_find_option_name(void *arg)
+{
+  (void)arg;
+  config_mgr_t *mgr = config_mgr_new(&test_fmt);
+
+  // exact match
+  tt_str_op(config_find_option_name(mgr, "u64"), OP_EQ, "u64");
+  // case-insensitive match
+  tt_str_op(config_find_option_name(mgr, "S"), OP_EQ, "s");
+  tt_str_op(config_find_option_name(mgr, "linetypea"), OP_EQ, "LineTypeA");
+  // prefix match
+  tt_str_op(config_find_option_name(mgr, "deprec"), OP_EQ, "deprecated_int");
+  // explicit abbreviation
+  tt_str_op(config_find_option_name(mgr, "uint"), OP_EQ, "pos");
+  tt_str_op(config_find_option_name(mgr, "UINT"), OP_EQ, "pos");
+  // no match
+  tt_ptr_op(config_find_option_name(mgr, "absent"), OP_EQ, NULL);
+
+ done:
+  config_mgr_free(mgr);
 }
 
 #define CONFPARSE_TEST(name, flags)                          \
@@ -933,5 +1059,8 @@ struct testcase_t confparse_tests[] = {
   CONFPARSE_TEST(extra_lines, 0),
   CONFPARSE_TEST(unitparse, 0),
   CONFPARSE_TEST(check_ok_fail, 0),
+  CONFPARSE_TEST(list_vars, 0),
+  CONFPARSE_TEST(list_deprecated, 0),
+  CONFPARSE_TEST(find_option_name, 0),
   END_OF_TESTCASES
 };
