@@ -38,6 +38,8 @@ int dirserv_would_reject_router(const routerstatus_t *rs);
 
 #ifdef TOR_UNIT_TESTS
 STATIC int dirserv_router_has_valid_address(routerinfo_t *ri);
+STATIC bool dirserv_rejects_tor_version(const char *platform,
+                                        const char **msg);
 #endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* !defined(TOR_RECV_UPLOADS_H) */
