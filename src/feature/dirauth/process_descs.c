@@ -310,6 +310,47 @@ dirserv_would_reject_router(const routerstatus_t *rs)
   return (res & FP_REJECT) != 0;
 }
 
+/**
+ * Check whether the platform string in <b>platform</b> describes a platform
+ * that, as a directory authority, we want to reject.  If it does, return
+ * true, and set *<b>msg</b> (if present) to a rejection message.  Otherwise
+ * return false.
+ */
+STATIC bool
+dirserv_rejects_tor_version(const char *platform,
+                            const char **msg)
+{
+  if (!platform)
+    return false;
+
+  static const char please_upgrade_string[] =
+    "Tor version is insecure or unsupported. Please upgrade!";
+
+  /* Versions before Tor 0.2.9 are unsupported. Versions between 0.2.9.0 and
+   * 0.2.9.4 suffer from bug #20499, where relays don't keep their consensus
+   * up to date */
+  if (!tor_version_as_new_as(platform,"0.2.9.5-alpha")) {
+    if (msg)
+      *msg = please_upgrade_string;
+    return true;
+  }
+
+  /* Series between Tor 0.3.0 and 0.3.4 inclusive are unsupported, and some
+   * have bug #27841, which makes them broken as intro points. Reject them.
+   *
+   * Also reject unstable versions of 0.3.5, since (as of this writing)
+   * they are almost none of the network. */
+  if (tor_version_as_new_as(platform,"0.3.0.0-alpha-dev") &&
+      !tor_version_as_new_as(platform,"0.3.5.7")) {
+    if (msg) {
+      *msg = please_upgrade_string;
+    }
+    return true;
+  }
+
+  return false;
+}
+
 /** Helper: As dirserv_router_get_status, but takes the router fingerprint
  * (hex, no spaces), nickname, address (used for logging only), IP address, OR
  * port and platform (logging only) as arguments.
@@ -342,22 +383,8 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
     }
   }
 
-  /* Versions before Tor 0.2.4.18-rc are too old to support, and are
-   * missing some important security fixes too. Disable them. */
-  if (platform && !tor_version_as_new_as(platform,"0.2.4.18-rc")) {
-    if (msg)
-      *msg = "Tor version is insecure or unsupported. Please upgrade!";
-    return FP_REJECT;
-  }
-
-  /* Tor 0.2.9.x where x<5 suffers from bug #20499, where relays don't
-   * keep their consensus up to date so they make bad guards.
-   * The simple fix is to just drop them from the network. */
-  if (platform &&
-      tor_version_as_new_as(platform,"0.2.9.0-alpha") &&
-      !tor_version_as_new_as(platform,"0.2.9.5-alpha")) {
-    if (msg)
-      *msg = "Tor version contains bug 20499. Please upgrade!";
+  /* Check whether the version is obsolete, broken, insecure, etc... */
+  if (platform && dirserv_rejects_tor_version(platform, msg)) {
     return FP_REJECT;
   }
 

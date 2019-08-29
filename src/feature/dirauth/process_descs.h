@@ -35,4 +35,9 @@ void dirserv_set_node_flags_from_authoritative_status(node_t *node,
 
 int dirserv_would_reject_router(const routerstatus_t *rs);
 
-#endif
+#ifdef TOR_UNIT_TESTS
+STATIC bool dirserv_rejects_tor_version(const char *platform,
+                                        const char **msg);
+#endif /* defined(TOR_UNIT_TESTS) */
+
+#endif /* !defined(TOR_PROCESS_DESCS_H) */
