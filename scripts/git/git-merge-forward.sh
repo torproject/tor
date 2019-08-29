@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
 
+# Usage: git-merge-forward.sh -n -t <test-branch-prefix> -u
+#        arguments:
+#          -n: dry run mode
+#          -t: test branch mode: create new branches from the commits checked
+#              out in each maint directory. Call these branches prefix_029,
+#              prefix_035, ... , prefix_master.
+#          -u: in test branch mode, if a prefix_* branch exists, skip creating
+#              that branch. Use after a merge error, to restart the merge
+#              forward at the first unmerged branch.
+#        env vars:
+#          See the Configuration section for env vars and their default values.
+
 #################
 # Configuration #
 #################

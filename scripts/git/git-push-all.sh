@@ -2,12 +2,25 @@
 
 # Usage: git-push-all.sh -t <test-branch-prefix> -r <remote-name> -s
 #                        -- <git-opts>
-#        env vars: TOR_UPSTREAM_REMOTE_NAME=upstream TOR_PUSH_DELAY=0
-#        git-opts: --no-atomic --dry-run (any other git push option)
-#
-# TOR_PUSH_DELAY pushes the master and maint branches separately, so that CI
-# runs in a sensible order.
-# push --atomic is the default when TOR_PUSH_DELAY=0, and for release branches.
+#        arguments:
+#          -t: test branch mode: Push test branches, rather than maint and
+#              release branches. Pushes the branches called prefix_029,
+#              prefix_035, ... , prefix_master.
+#          -r: push to remote-name, rather than $TOR_UPSTREAM_REMOTE_NAME.
+#          -s: push branches whose tips match upstream maint, release, or
+#              master branches. The default is to skip these branches. Use
+#              -s when testing for CI environment failures with old code.
+#          --: pass any other arguments to git, rather than the script.
+#        env vars:
+#          TOR_GIT_PUSH: the git push command and arguments
+#          TOR_UPSTREAM_REMOTE_NAME: the default upstream, overridden by -r
+#          TOR_PUSH_DELAY: pushes the master and maint branches separately,
+#                          so that CI runs in a sensible order.
+#          TOR_PUSH_SAME: push branches whose tips match upstream maint,
+#                         release, or master branches. Inverted by -s.
+#          See the Configuration section for env var default values.
+#        git-opts:
+#          --no-atomic --dry-run (and any other git push option)
 
 set -e
 
