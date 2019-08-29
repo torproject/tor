@@ -840,10 +840,15 @@ circuit_expire_building(void)
                  -1);
 
     circuit_log_path(LOG_INFO,LD_CIRC,TO_ORIGIN_CIRCUIT(victim));
-    if (victim->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT)
+    if (victim->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
       circuit_mark_for_close(victim, END_CIRC_REASON_MEASUREMENT_EXPIRED);
-    else
+    } else {
       circuit_mark_for_close(victim, END_CIRC_REASON_TIMEOUT);
+      if (victim->purpose >= CIRCUIT_PURPOSE_S_HS_MIN_ &&
+          victim->purpose <= CIRCUIT_PURPOSE_S_HS_MAX_) {
+        hs_service_circuit_timed_out(TO_ORIGIN_CIRCUIT(victim));
+      }
+    }
 
     pathbias_count_timeout(TO_ORIGIN_CIRCUIT(victim));
   } SMARTLIST_FOREACH_END(victim);

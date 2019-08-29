@@ -323,6 +323,7 @@ void hs_service_map_has_changed(void);
 void hs_service_dir_info_changed(void);
 void hs_service_run_scheduled_events(time_t now);
 void hs_service_circuit_has_opened(origin_circuit_t *circ);
+void hs_service_circuit_timed_out(const origin_circuit_t *circ);
 int hs_service_receive_intro_established(origin_circuit_t *circ,
                                          const uint8_t *payload,
                                          size_t payload_len);

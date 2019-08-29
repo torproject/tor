@@ -3404,6 +3404,29 @@ service_encode_descriptor(const hs_service_t *service,
   return ret;
 }
 
+/* An introduction circuit has timed out while building or waiting for an
+ * established introduction cell. */
+static void
+service_intro_circuit_timed_out(const origin_circuit_t *circ)
+{
+  hs_service_t *service = NULL;
+  hs_service_intro_point_t *ip = NULL;
+
+  tor_assert(circ);
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+             TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO);
+  tor_assert(circ->hs_ident);
+
+  /* Get the corresponding service and intro point. */
+  get_objects_from_ident(circ->hs_ident, &service, &ip, NULL);
+  /* Not having the service and intro point is a code flow problem. */
+  if (BUG(service == NULL) || BUG(ip == NULL)) {
+    return;
+  }
+  /* Remove intro from service's descriptor(s). */
+  service_intro_point_remove(service, ip);
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
@@ -3910,6 +3933,33 @@ hs_service_circuit_has_opened(origin_circuit_t *circ)
   default:
     tor_assert(0);
   }
+}
+
+/* Called when an hidden service building circuit has timed out. */
+void
+hs_service_circuit_timed_out(const origin_circuit_t *circ)
+{
+  tor_assert(circ);
+
+  /* Ignore v2 services. Scream loudly if no identifier. */
+  if (circ->rend_data || BUG(circ->hs_ident == NULL)) {
+    goto end;
+  }
+
+  log_info(LD_REND, "Circuit id %" PRIu32 " timed out for service %s",
+           circ->global_identifier,
+           safe_str_client(ed25519_fmt(&circ->hs_ident->identity_pk)));
+
+  switch (TO_CIRCUIT(circ)->purpose) {
+  case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
+    service_intro_circuit_timed_out(circ);
+    break;
+  default:
+    break;
+  }
+
+ end:
+  return;
 }
 
 /* Return the service version by looking at the key in the service directory.
