@@ -387,10 +387,7 @@ launch_rendezvous_point_circuit(const hs_service_t *service,
                                         &data->onion_pk,
                                         service->config.is_single_onion);
   if (info == NULL) {
-    /* We are done here, we can't extend to the rendezvous point.
-     * If you're running an IPv6-only v3 single onion service on 0.3.2 or with
-     * 0.3.2 clients, and somehow disable the option check, it will fail here.
-     */
+    /* We are done here, we can't extend to the rendezvous point. */
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
            "Not enough info to open a circuit to a rendezvous point for "
            "%s service %s.",
