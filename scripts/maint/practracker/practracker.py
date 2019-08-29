@@ -8,7 +8,7 @@ violate some of our best practices and they are not found in the optional
 exceptions file, then log a problem about them.
 
 We currently do metrics about file size, function size and number of includes,
-for C files and headers.
+for C source files and headers.
 
 practracker.py should be run with its second argument pointing to the Tor
 top-level source directory like this:
@@ -144,10 +144,10 @@ HEADER="""\
 #
 # There are three kinds of problems that we recognize right now:
 #   function-size -- a function of more than {MAX_FUNCTION_SIZE} lines.
-#   file-size -- a C file of more than {MAX_FILE_SIZE} lines, or an H
+#   file-size -- a .c file of more than {MAX_FILE_SIZE} lines, or a .h
 #      file with more than {MAX_H_FILE_SIZE} lines.
-#   include-count -- a C file with more than {MAX_INCLUDE_COUNT} #includes,
-       or an H file with more than {MAX_H_INCLUDE_COUNT} #includes.
+#   include-count -- a .c file with more than {MAX_INCLUDE_COUNT} #includes,
+       or a .h file with more than {MAX_H_INCLUDE_COUNT} #includes.
 #   dependency-violation -- a file includes a header that it should
 #      not, according to an advisory .may_include file.
 #
@@ -189,13 +189,13 @@ def main(argv):
     parser.add_argument("--terse", action="store_true",
                         help="Do not emit helpful instructions.")
     parser.add_argument("--max-h-file-size", default=MAX_H_FILE_SIZE,
-                        help="Maximum lines per .H file")
+                        help="Maximum lines per .h file")
     parser.add_argument("--max-h-include-count", default=MAX_H_INCLUDE_COUNT,
-                        help="Maximum includes per .H file")
+                        help="Maximum includes per .h file")
     parser.add_argument("--max-file-size", default=MAX_FILE_SIZE,
-                        help="Maximum lines per C file")
+                        help="Maximum lines per .c file")
     parser.add_argument("--max-include-count", default=MAX_INCLUDE_COUNT,
-                        help="Maximum includes per C file")
+                        help="Maximum includes per .c file")
     parser.add_argument("--max-function-size", default=MAX_FUNCTION_SIZE,
                         help="Maximum lines per function")
     parser.add_argument("--max-dependency-violations", default=MAX_DEP_VIOLATIONS,

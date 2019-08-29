@@ -212,7 +212,7 @@ def consider_include_rules(fname, f):
     log_sorted_levels = False
 
 def walk_c_files(topdir="src"):
-    """Run through all c and h files under topdir, looking for
+    """Run through all .c and .h files under topdir, looking for
        include-rule violations. Yield those violations."""
 
     for dirpath, dirnames, fnames in os.walk(topdir):

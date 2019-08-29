@@ -5,10 +5,10 @@ get worse.
 Right now, practracker looks for the following kinds of
 best-practices violations:
 
-  C files greater than 3000 lines long
-  H files greater than 500 lines long
-  C files with more than 50 includes
-  H files with more than 15 includes
+  .c files greater than 3000 lines long
+  .h files greater than 500 lines long
+  .c files with more than 50 includes
+  .h files with more than 15 includes
 
   All files that include a local header not listed in a .may_include
   file in the same directory, when that .may_include file has an
