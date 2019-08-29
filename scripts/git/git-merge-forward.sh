@@ -369,7 +369,7 @@ for ((i=0; i<COUNT; i++)); do
     fi
   fi
 
-  printf "%s Handling branch \\n" "$MARKER" "${BYEL}$target${CNRM}"
+  printf "%s Handling branch \\n" "$MARKER" "${BYEL}$target_current${CNRM}"
 
   # Go into the worktree to start merging.
   goto_repo "$repo_path"
