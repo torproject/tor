@@ -39,6 +39,9 @@ static inline int strcasecmp(const char *a, const char *b) {
  * appear to have a severe bug that can sometimes cause aborts in Tor.
  * Instead, use the non-checking variants.  This is sad.
  *
+ * (If --enable-fragile-hardening is passed to configure, we use the hardened
+ * variants, which do not suffer from this issue.)
+ *
  * See https://trac.torproject.org/projects/tor/ticket/15205
  */
 #undef strlcat
