@@ -171,7 +171,7 @@ fi
 if [ "$PUSH_SAME" -eq 0 -a "$TEST_BRANCH_PREFIX" ]; then
   NEW_PUSH_BRANCHES=
   for b in $PUSH_BRANCHES; do
-    PUSH_COMMIT=`git rev-parse $b`
+    PUSH_COMMIT=`git rev-parse "$b"`
     SKIP_UPSTREAM=
     for u in $DEFAULT_UPSTREAM_BRANCHES $UPSTREAM_BRANCHES; do
       UPSTREAM_COMMIT=`git rev-parse "$u"`

@@ -227,7 +227,7 @@ function validate_ret
 # Switch to the given branch name.
 function switch_branch
 {
-  local cmd="git checkout $1"
+  local cmd="git checkout '$1'"
   printf "  %s Switching branch to %s..." "$MARKER" "$1"
   if [ $DRY_RUN -eq 0 ]; then
     msg=$( eval "$cmd" 2>&1 )
@@ -240,7 +240,7 @@ function switch_branch
 # Checkout a new branch with the given branch name.
 function new_branch
 {
-  local cmd="git checkout -b $1"
+  local cmd="git checkout -b '$1'"
   printf "  %s Creating new branch %s..." "$MARKER" "$1"
   if [ $DRY_RUN -eq 0 ]; then
     msg=$( eval "$cmd" 2>&1 )
@@ -254,7 +254,7 @@ function new_branch
 # branch name.
 function switch_or_new_branch
 {
-  local cmd="git rev-parse --verify $1"
+  local cmd="git rev-parse --verify '$1'"
   if [ $DRY_RUN -eq 0 ]; then
     # Call switch_branch if there is a branch, or new_branch if there is not
     msg=$( eval "$cmd" 2>&1 )
@@ -292,7 +292,7 @@ function pull_branch
 # Merge the given branch name ($1) into the current branch ($2).
 function merge_branch
 {
-  local cmd="git merge --no-edit $1"
+  local cmd="git merge --no-edit '$1'"
   printf "  %s Merging branch %s into %s..." "$MARKER" "$1" "$2"
   if [ $DRY_RUN -eq 0 ]; then
     msg=$( eval "$cmd" 2>&1 )
@@ -305,7 +305,7 @@ function merge_branch
 # Pull the given branch name.
 function merge_branch_origin
 {
-  local cmd="git merge --ff-only origin/$1"
+  local cmd="git merge --ff-only 'origin/$1'"
   printf "  %s Merging branch origin/%s..." "$MARKER" "$1"
   if [ $DRY_RUN -eq 0 ]; then
     msg=$( eval "$cmd" 2>&1 )
