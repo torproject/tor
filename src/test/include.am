@@ -175,6 +175,7 @@ src_test_test_SOURCES += \
 	src/test/test_periodic_event.c \
 	src/test/test_policy.c \
 	src/test/test_process.c \
+	src/test/test_process_descs.c \
 	src/test/test_prob_distr.c \
 	src/test/test_procmon.c \
 	src/test/test_proto_http.c \
