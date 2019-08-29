@@ -44,11 +44,14 @@ struct config_mgr_t;
 /**
  * Callback to clear all non-managed fields of a configuration object.
  *
+ * <b>obj</b> is the configuration object whose non-managed fields should be
+ * cleared.
+ *
  * (Regular fields get cleared by config_reset(), but you might have fields
  * in the object that do not correspond to configuration variables.  If those
  * fields need to be cleared or freed, this is where to do it.)
  */
-typedef void (*clear_cfg_fn_t)(const struct config_mgr_t *mgr, void*);
+typedef void (*clear_cfg_fn_t)(const struct config_mgr_t *mgr, void *obj);
 
 /** Information on the keys, value types, key-to-struct-member mappings,
  * variable descriptions, validation functions, and abbreviations for a
