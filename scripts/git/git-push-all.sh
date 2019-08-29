@@ -60,22 +60,22 @@ while getopts ":r:st:" opt; do
        echo "    *** PUSHING TO REMOTE: ${UPSTREAM_REMOTE} ***"
        shift
        shift
-       OPTIND=$[$OPTIND - 2]
+       OPTIND=$((OPTIND - 2))
        ;;
-    s) PUSH_SAME=$[! "$PUSH_SAME" ]
+    s) PUSH_SAME=$((! PUSH_SAME))
        if [ "$PUSH_SAME" -eq 0 ]; then
          echo "    *** SKIPPING UNCHANGED TEST BRANCHES ***"
        else
          echo "    *** PUSHING UNCHANGED TEST BRANCHES ***"
        fi
        shift
-       OPTIND=$[$OPTIND - 1]
+       OPTIND=$((OPTIND - 1))
        ;;
     t) TEST_BRANCH_PREFIX="$OPTARG"
        echo "    *** PUSHING TEST BRANCHES: ${TEST_BRANCH_PREFIX}_nnn ***"
        shift
        shift
-       OPTIND=$[$OPTIND - 2]
+       OPTIND=$((OPTIND - 2))
        ;;
     *)
        # Assume we're done with script arguments,
@@ -91,10 +91,10 @@ if [ "$1" = "--" ]; then
   shift
 fi
 
-echo "Calling git push --atomic $@ <branches>"
+echo "Calling $GIT_PUSH" "$@" "<branches>"
 
 if [ "$TEST_BRANCH_PREFIX" ]; then
-  if [ "$UPSTREAM_REMOTE" = ${TOR_UPSTREAM_REMOTE_NAME:-"upstream"} ]; then
+  if [ "$UPSTREAM_REMOTE" = "${TOR_UPSTREAM_REMOTE_NAME:-upstream}" ]; then
     echo "Pushing test branches ${TEST_BRANCH_PREFIX}_nnn to " \
       "$UPSTREAM_REMOTE is not allowed."
     echo "Usage: $0 -r <remote-name> -t <test-branch-prefix> <git-opts>"
@@ -108,22 +108,22 @@ fi
 
 DEFAULT_UPSTREAM_BRANCHES=
 if [ "$DEFAULT_UPSTREAM_REMOTE" != "$UPSTREAM_REMOTE" ]; then
-  DEFAULT_UPSTREAM_BRANCHES=`echo \
-    ${DEFAULT_UPSTREAM_REMOTE}/master \
-    ${DEFAULT_UPSTREAM_REMOTE}/{release,maint}-0.4.1 \
-    ${DEFAULT_UPSTREAM_REMOTE}/{release,maint}-0.4.0 \
-    ${DEFAULT_UPSTREAM_REMOTE}/{release,maint}-0.3.5 \
-    ${DEFAULT_UPSTREAM_REMOTE}/{release,maint}-0.2.9 \
-    `
+  DEFAULT_UPSTREAM_BRANCHES=$(echo \
+    "$DEFAULT_UPSTREAM_REMOTE"/master \
+    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.4.1 \
+    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.4.0 \
+    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.3.5 \
+    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.2.9 \
+    )
 fi
 
-UPSTREAM_BRANCHES=`echo \
-  ${UPSTREAM_REMOTE}/master \
-  ${UPSTREAM_REMOTE}/{release,maint}-0.4.1 \
-  ${UPSTREAM_REMOTE}/{release,maint}-0.4.0 \
-  ${UPSTREAM_REMOTE}/{release,maint}-0.3.5 \
-  ${UPSTREAM_REMOTE}/{release,maint}-0.2.9 \
-  `
+UPSTREAM_BRANCHES=$(echo \
+  "$UPSTREAM_REMOTE"/master \
+  "$UPSTREAM_REMOTE"/{release,maint}-0.4.1 \
+  "$UPSTREAM_REMOTE"/{release,maint}-0.4.0 \
+  "$UPSTREAM_REMOTE"/{release,maint}-0.3.5 \
+  "$UPSTREAM_REMOTE"/{release,maint}-0.2.9 \
+  )
 
 ########################
 # Git branches to push #
@@ -154,13 +154,13 @@ else
   # Test branch mode: merge to maint only, and create a new branch for 0.2.9
   #
   # List of branches to push. Ordering is not important.
-  PUSH_BRANCHES=$(echo \
+  PUSH_BRANCHES=" \
     ${TEST_BRANCH_PREFIX}_master \
     ${TEST_BRANCH_PREFIX}_041 \
     ${TEST_BRANCH_PREFIX}_040 \
     ${TEST_BRANCH_PREFIX}_035 \
     ${TEST_BRANCH_PREFIX}_029 \
-    )
+    "
 fi
 
 ###############
@@ -168,13 +168,13 @@ fi
 ###############
 
 # Skip the test branches that are the same as the upstream branches
-if [ "$PUSH_SAME" -eq 0 -a "$TEST_BRANCH_PREFIX" ]; then
+if [ "$PUSH_SAME" -eq 0 ] && [ "$TEST_BRANCH_PREFIX" ]; then
   NEW_PUSH_BRANCHES=
   for b in $PUSH_BRANCHES; do
-    PUSH_COMMIT=`git rev-parse "$b"`
+    PUSH_COMMIT=$(git rev-parse "$b")
     SKIP_UPSTREAM=
     for u in $DEFAULT_UPSTREAM_BRANCHES $UPSTREAM_BRANCHES; do
-      UPSTREAM_COMMIT=`git rev-parse "$u"`
+      UPSTREAM_COMMIT=$(git rev-parse "$u")
       if [ "$PUSH_COMMIT" = "$UPSTREAM_COMMIT" ]; then
         SKIP_UPSTREAM="$u"
       fi
