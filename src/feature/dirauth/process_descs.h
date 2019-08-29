@@ -25,15 +25,35 @@ enum was_router_added_t dirserv_add_descriptor(routerinfo_t *ri,
                                                const char **msg,
                                                const char *source);
 
-int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
-                                   int complain,
-                                   int *valid_out);
 uint32_t dirserv_router_get_status(const routerinfo_t *router,
                                    const char **msg,
                                    int severity);
 void dirserv_set_node_flags_from_authoritative_status(node_t *node,
                                                       uint32_t authstatus);
 
+#ifdef HAVE_MODULE_DIRAUTH
 int dirserv_would_reject_router(const routerstatus_t *rs);
+int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
+                                   int complain,
+                                   int *valid_out);
+#else
+static inline int
+dirserv_would_reject_router(const routerstatus_t *rs)
+{
+  (void)rs;
+  return 0;
+}
+static inline int
+authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
+                               int complain,
+                               int *valid_out)
+{
+  (void)ri;
+  (void)msg;
+  (void)complain;
+  (void)valid_out;
+  return 0;
+}
+#endif
 
 #endif /* !defined(TOR_RECV_UPLOADS_H) */
