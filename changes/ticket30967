@@ -1,0 +1,6 @@
+  o Testing:
+    - When checking shell scripts, ignore any user-created directories.
+      Closes ticket 30967.
+  o Minor features (git scripts):
+    - Call the shellcheck script from the pre-commit hook.
+      Closes ticket 30967.
