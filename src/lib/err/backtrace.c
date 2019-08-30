@@ -261,6 +261,14 @@ dump_stack_symbols_to_error_fds(void)
 }
 #endif /* defined(NO_BACKTRACE_IMPL) */
 
+/** Return the tor version used for error messages on crashes.
+ * Signal-safe: returns a pointer to a static array. */
+const char *
+get_tor_backtrace_version(void)
+{
+  return bt_version;
+}
+
 /** Set up code to handle generating error messages on crashes. */
 int
 configure_backtrace_handler(const char *tor_version)

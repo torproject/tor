@@ -144,7 +144,8 @@ tor_raw_assertion_failed_msg_(const char *file, int line, const char *expr,
 {
   char linebuf[16];
   format_dec_number_sigsafe(line, linebuf, sizeof(linebuf));
-  tor_log_err_sigsafe("INTERNAL ERROR: Raw assertion failed at ",
+  tor_log_err_sigsafe("INTERNAL ERROR: Raw assertion failed in ",
+                      get_tor_backtrace_version(), " at ",
                       file, ":", linebuf, ": ", expr, NULL);
   if (msg) {
     tor_log_err_sigsafe_write(msg);
