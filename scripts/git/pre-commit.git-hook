@@ -53,3 +53,7 @@ if [ -e "${PT_DIR}/practracker.py" ]; then
         fi
     fi
 fi
+
+if [ -e scripts/maint/checkShellScripts.sh ]; then
+    scripts/maint/checkShellScripts.sh
+fi
