@@ -127,7 +127,7 @@ log_backtrace_impl(int severity, int domain, const char *msg,
   depth = backtrace(cb_buf, MAX_DEPTH);
   symbols = backtrace_symbols(cb_buf, (int)depth);
 
-  logger(severity, domain, "%s. Stack trace:", msg);
+  logger(severity, domain, "%s: %s. Stack trace:", bt_version, msg);
   if (!symbols) {
     /* LCOV_EXCL_START -- we can't provoke this. */
     logger(severity, domain, "    Unable to generate backtrace.");
@@ -240,7 +240,8 @@ void
 log_backtrace_impl(int severity, int domain, const char *msg,
                    tor_log_fn logger)
 {
-  logger(severity, domain, "%s. (Stack trace not available)", msg);
+  logger(severity, domain, "%s: %s. (Stack trace not available)",
+         bt_version, msg);
 }
 
 static int
