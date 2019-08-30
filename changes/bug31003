@@ -1,0 +1,4 @@
+  o Minor bugfixes (crash on exit):
+    - Avoid a set of possible code paths that could use try to use freed memory
+      in routerlist_free() while Tor was exiting.  Fixes bug 31003; bugfix on
+      0.1.2.2-alpha.
