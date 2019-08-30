@@ -68,10 +68,10 @@
 // Redundant with util.h, but doing it here so we can avoid that dependency.
 #define raw_free free
 
-#ifdef USE_BACKTRACE
 /** Version of Tor to report in backtrace messages. */
 static char bt_version[128] = "";
 
+#ifdef USE_BACKTRACE
 /** Largest stack depth to try to dump. */
 #define MAX_DEPTH 256
 /** Static allocation of stack to dump. This is static so we avoid stack
@@ -193,14 +193,11 @@ dump_stack_symbols_to_error_fds(void)
 /** Install signal handlers as needed so that when we crash, we produce a
  * useful stack trace. Return 0 on success, -errno on failure. */
 static int
-install_bt_handler(const char *software)
+install_bt_handler(void)
 {
   int trap_signals[] = { SIGSEGV, SIGILL, SIGFPE, SIGBUS, SIGSYS,
                          SIGIO, -1 };
   int i, rv=0;
-
-  strncpy(bt_version, software, sizeof(bt_version) - 1);
-  bt_version[sizeof(bt_version) - 1] = 0;
 
   struct sigaction sa;
 
@@ -247,9 +244,8 @@ log_backtrace_impl(int severity, int domain, const char *msg,
 }
 
 static int
-install_bt_handler(const char *software)
+install_bt_handler(void)
 {
-  (void) software;
   return 0;
 }
 
@@ -274,7 +270,10 @@ configure_backtrace_handler(const char *tor_version)
     snprintf(version, sizeof(version), "Tor %s", tor_version);
   }
 
-  return install_bt_handler(version);
+  strncpy(bt_version, version, sizeof(bt_version) - 1);
+  bt_version[sizeof(bt_version) - 1] = 0;
+
+  return install_bt_handler();
 }
 
 /** Perform end-of-process cleanup for code that generates error messages on
