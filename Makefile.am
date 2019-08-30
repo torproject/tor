@@ -239,9 +239,10 @@ test: all
 	$(top_builddir)/src/test/test
 
 shellcheck:
-        # Only use shellcheck if it is present
+	# Only use shellcheck if shellcheck is installed
+	# Check the directories that contain scripts that we can fix
 	if command -v shellcheck; then \
-                find "$(top_srcdir)" -name "*.sh" -not -path "$(top_srcdir)/src/ext/*" -not -path "$(top_srcdir)/src/rust/registry/*" -exec shellcheck {} +; \
+                find "$(top_srcdir)" -name "*.sh" -path "$(top_srcdir)/contrib/*" -path "$(top_srcdir)/doc/*" -path "$(top_srcdir)/scripts/*" -path "$(top_srcdir)/src/*" -not -path "$(top_srcdir)/src/ext/*" -not -path "$(top_srcdir)/src/rust/registry/*" -exec shellcheck {} +; \
 	        if [ -d "$(top_srcdir)/scripts/test" ]; then \
                         shellcheck $(top_srcdir)/scripts/test/cov-diff $(top_srcdir)/scripts/test/coverage; \
                 fi; \
