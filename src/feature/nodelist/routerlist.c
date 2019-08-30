@@ -954,20 +954,18 @@ routerlist_free_(routerlist_t *rl)
   smartlist_free(rl->routers);
   smartlist_free(rl->old_routers);
   if (rl->desc_store.mmap) {
-    int res = tor_munmap_file(routerlist->desc_store.mmap);
+    int res = tor_munmap_file(rl->desc_store.mmap);
     if (res != 0) {
       log_warn(LD_FS, "Failed to munmap routerlist->desc_store.mmap");
     }
   }
   if (rl->extrainfo_store.mmap) {
-    int res = tor_munmap_file(routerlist->extrainfo_store.mmap);
+    int res = tor_munmap_file(rl->extrainfo_store.mmap);
     if (res != 0) {
       log_warn(LD_FS, "Failed to munmap routerlist->extrainfo_store.mmap");
     }
   }
   tor_free(rl);
-
-  router_dir_info_changed();
 }
 
 /** Log information about how much memory is being used for routerlist,
@@ -1426,8 +1424,10 @@ routerlist_reparse_old(routerlist_t *rl, signed_descriptor_t *sd)
 void
 routerlist_free_all(void)
 {
-  routerlist_free(routerlist);
-  routerlist = NULL;
+  routerlist_t *rl = routerlist;
+  routerlist = NULL; // Prevent internals of routerlist_free() from using
+                     // routerlist.
+  routerlist_free(rl);
   dirlist_free_all();
   if (warned_nicknames) {
     SMARTLIST_FOREACH(warned_nicknames, char *, cp, tor_free(cp));
