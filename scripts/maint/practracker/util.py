@@ -22,23 +22,22 @@ def get_tor_c_files(tor_topdir, include_dirs=None):
     else:
         topdirs = [ os.path.join(tor_topdir, inc) for inc in include_dirs ]
 
-    # TO THE REVIEWER: I will fix this indentation shortly. -nm
     for topdir in topdirs:
-      for root, directories, filenames in os.walk(topdir):
-        # Remove all the directories that are excluded.
-        directories[:] = [ d for d in directories
-                           if _norm(os.path.join(root,d)) not in exclude_dirs ]
-        directories.sort()
-        filenames.sort()
-        for filename in filenames:
-            # We only care about .c and .h files
-            if not (filename.endswith(".c") or filename.endswith(".h")):
-                continue
-            if filename in EXCLUDE_FILES:
-                continue
+        for root, directories, filenames in os.walk(topdir):
+            # Remove all the directories that are excluded.
+            directories[:] = [ d for d in directories
+                               if _norm(os.path.join(root,d)) not in exclude_dirs ]
+            directories.sort()
+            filenames.sort()
+            for filename in filenames:
+                # We only care about .c and .h files
+                if not (filename.endswith(".c") or filename.endswith(".h")):
+                    continue
+                if filename in EXCLUDE_FILES:
+                    continue
 
-            full_path = os.path.join(root,filename)
+                full_path = os.path.join(root,filename)
 
-            files_list.append(full_path)
+                files_list.append(full_path)
 
     return files_list
