@@ -8,6 +8,7 @@ import re
 
 def get_file_len(f):
     """Get file length of file"""
+    i = -1
     for i, l in enumerate(f):
         pass
     return i + 1
