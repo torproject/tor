@@ -73,8 +73,8 @@
 #include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
 #include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
-#include "feature/dirauth/reachability.h"
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dircommon/directory.h"
@@ -104,9 +104,6 @@
 #include "lib/evloop/compat_libevent.h"
 
 #include <event2/event.h>
-
-#include "feature/dirauth/dirvote.h"
-#include "feature/dirauth/authmode.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/entry_connection_st.h"
@@ -757,7 +754,7 @@ tor_shutdown_event_loop_for_restart_cb(
   tor_event_free(tor_shutdown_event_loop_for_restart_event);
   tor_shutdown_event_loop_and_exit(0);
 }
-#endif
+#endif /* defined(ENABLE_RESTART_DEBUGGING) */
 
 /**
  * After finishing the current callback (if any), shut down the main loop,
@@ -1345,36 +1342,20 @@ static int periodic_events_initialized = 0;
 #define CALLBACK(name) \
   static int name ## _callback(time_t, const or_options_t *)
 CALLBACK(add_entropy);
-CALLBACK(check_authority_cert);
-CALLBACK(check_canonical_channels);
-CALLBACK(check_descriptor);
-CALLBACK(check_dns_honesty);
-CALLBACK(check_ed_keys);
 CALLBACK(check_expired_networkstatus);
-CALLBACK(check_for_reachability_bw);
-CALLBACK(check_onion_keys_expiry_time);
 CALLBACK(clean_caches);
 CALLBACK(clean_consdiffmgr);
-CALLBACK(dirvote);
-CALLBACK(downrate_stability);
-CALLBACK(expire_old_ciruits_serverside);
 CALLBACK(fetch_networkstatus);
 CALLBACK(heartbeat);
 CALLBACK(hs_service);
 CALLBACK(launch_descriptor_fetches);
-CALLBACK(launch_reachability_tests);
 CALLBACK(prune_old_routers);
-CALLBACK(reachability_warnings);
 CALLBACK(record_bridge_stats);
 CALLBACK(rend_cache_failure_clean);
 CALLBACK(reset_padding_counts);
-CALLBACK(retry_dns);
 CALLBACK(retry_listeners);
-CALLBACK(rotate_onion_key);
 CALLBACK(rotate_x509_certificate);
-CALLBACK(save_stability);
 CALLBACK(save_state);
-CALLBACK(write_bridge_ns);
 CALLBACK(write_stats_file);
 CALLBACK(control_per_second_events);
 CALLBACK(second_elapsed);
@@ -1386,7 +1367,7 @@ CALLBACK(second_elapsed);
   PERIODIC_EVENT(name, PERIODIC_EVENT_ROLE_ ## r, f)
 #define FL(name) (PERIODIC_EVENT_FLAG_ ## name)
 
-STATIC periodic_event_item_t periodic_events[] = {
+STATIC periodic_event_item_t mainloop_periodic_events[] = {
 
   /* Everyone needs to run these. They need to have very long timeouts for
    * that to be safe. */
@@ -1417,29 +1398,6 @@ STATIC periodic_event_item_t periodic_events[] = {
   CALLBACK(write_stats_file, NET_PARTICIPANT, FL(RUN_ON_DISABLE)),
   CALLBACK(prune_old_routers, NET_PARTICIPANT, FL(RUN_ON_DISABLE)),
 
-  /* Routers (bridge and relay) only. */
-  CALLBACK(check_descriptor, ROUTER, FL(NEED_NET)),
-  CALLBACK(check_ed_keys, ROUTER, 0),
-  CALLBACK(check_for_reachability_bw, ROUTER, FL(NEED_NET)),
-  CALLBACK(check_onion_keys_expiry_time, ROUTER, 0),
-  CALLBACK(expire_old_ciruits_serverside, ROUTER, FL(NEED_NET)),
-  CALLBACK(reachability_warnings, ROUTER, FL(NEED_NET)),
-  CALLBACK(retry_dns, ROUTER, 0),
-  CALLBACK(rotate_onion_key, ROUTER, 0),
-
-  /* Authorities (bridge and directory) only. */
-  CALLBACK(downrate_stability, AUTHORITIES, 0),
-  CALLBACK(launch_reachability_tests, AUTHORITIES, FL(NEED_NET)),
-  CALLBACK(save_stability, AUTHORITIES, 0),
-
-  /* Directory authority only. */
-  CALLBACK(check_authority_cert, DIRAUTH, 0),
-  CALLBACK(dirvote, DIRAUTH, FL(NEED_NET)),
-
-  /* Relay only. */
-  CALLBACK(check_canonical_channels, RELAY, FL(NEED_NET)),
-  CALLBACK(check_dns_honesty, RELAY, FL(NEED_NET)),
-
   /* Hidden Service service only. */
   CALLBACK(hs_service, HS_SERVICE, FL(NEED_NET)), // XXXX break this down more
 
@@ -1449,9 +1407,6 @@ STATIC periodic_event_item_t periodic_events[] = {
   /* Client only. */
   /* XXXX this could be restricted to CLIENT+NET_PARTICIPANT */
   CALLBACK(rend_cache_failure_clean, NET_PARTICIPANT, FL(RUN_ON_DISABLE)),
-
-  /* Bridge Authority only. */
-  CALLBACK(write_bridge_ns, BRIDGEAUTH, 0),
 
   /* Directory server only. */
   CALLBACK(clean_consdiffmgr, DIRSERVER, 0),
@@ -1468,8 +1423,6 @@ STATIC periodic_event_item_t periodic_events[] = {
  * implement particular callbacks.  We keep them separate here so that we
  * can access them by name.  We also keep them inside periodic_events[]
  * so that we can implement "reset all timers" in a reasonable way. */
-static periodic_event_item_t *check_descriptor_event=NULL;
-static periodic_event_item_t *dirvote_event=NULL;
 static periodic_event_item_t *fetch_networkstatus_event=NULL;
 static periodic_event_item_t *launch_descriptor_fetches_event=NULL;
 static periodic_event_item_t *check_dns_honesty_event=NULL;
@@ -1484,24 +1437,7 @@ static periodic_event_item_t *prune_old_routers_event=NULL;
 void
 reset_all_main_loop_timers(void)
 {
-  int i;
-  for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_reschedule(&periodic_events[i]);
-  }
-}
-
-/** Return the member of periodic_events[] whose name is <b>name</b>.
- * Return NULL if no such event is found.
- */
-static periodic_event_item_t *
-find_periodic_event(const char *name)
-{
-  int i;
-  for (i = 0; periodic_events[i].name; ++i) {
-    if (strcmp(name, periodic_events[i].name) == 0)
-      return &periodic_events[i];
-  }
-  return NULL;
+  periodic_events_reset_all();
 }
 
 /** Return a bitmask of the roles this tor instance is configured for using
@@ -1564,9 +1500,9 @@ initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
   rescan_periodic_events(get_options());
 }
 
-/** Set up all the members of periodic_events[], and configure them all to be
- * launched from a callback. */
-STATIC void
+/** Set up all the members of mainloop_periodic_events[], and configure them
+ * all to be launched from a callback. */
+void
 initialize_periodic_events(void)
 {
   if (periodic_events_initialized)
@@ -1574,37 +1510,31 @@ initialize_periodic_events(void)
 
   periodic_events_initialized = 1;
 
-  /* Set up all periodic events. We'll launch them by roles. */
-  int i;
-  for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_setup(&periodic_events[i]);
+  for (int i = 0; mainloop_periodic_events[i].name; ++i) {
+    periodic_events_register(&mainloop_periodic_events[i]);
   }
 
-#define NAMED_CALLBACK(name) \
-  STMT_BEGIN name ## _event = find_periodic_event( #name ); STMT_END
+  /* Set up all periodic events. We'll launch them by roles. */
 
-  NAMED_CALLBACK(check_descriptor);
+#define NAMED_CALLBACK(name) \
+  STMT_BEGIN name ## _event = periodic_events_find( #name ); STMT_END
+
   NAMED_CALLBACK(prune_old_routers);
-  NAMED_CALLBACK(dirvote);
   NAMED_CALLBACK(fetch_networkstatus);
   NAMED_CALLBACK(launch_descriptor_fetches);
   NAMED_CALLBACK(check_dns_honesty);
   NAMED_CALLBACK(save_state);
-
-  struct timeval one_second = { 1, 0 };
-  initialize_periodic_events_event = tor_evtimer_new(
-                  tor_libevent_get_base(),
-                  initialize_periodic_events_cb, NULL);
-  event_add(initialize_periodic_events_event, &one_second);
 }
 
 STATIC void
 teardown_periodic_events(void)
 {
-  int i;
-  for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_destroy(&periodic_events[i]);
-  }
+  periodic_events_disconnect_all();
+  fetch_networkstatus_event = NULL;
+  launch_descriptor_fetches_event = NULL;
+  check_dns_honesty_event = NULL;
+  save_state_event = NULL;
+  prune_old_routers_event = NULL;
   periodic_events_initialized = 0;
 }
 
@@ -1639,40 +1569,7 @@ rescan_periodic_events(const or_options_t *options)
 {
   tor_assert(options);
 
-  /* Avoid scanning the event list if we haven't initialized it yet. This is
-   * particularly useful for unit tests in order to avoid initializing main
-   * loop events everytime. */
-  if (!periodic_events_initialized) {
-    return;
-  }
-
-  int roles = get_my_roles(options);
-
-  for (int i = 0; periodic_events[i].name; ++i) {
-    periodic_event_item_t *item = &periodic_events[i];
-
-    int enable = !!(item->roles & roles);
-
-    /* Handle the event flags. */
-    if (net_is_disabled() &&
-        (item->flags & PERIODIC_EVENT_FLAG_NEED_NET)) {
-      enable = 0;
-    }
-
-    /* Enable the event if needed. It is safe to enable an event that was
-     * already enabled. Same goes for disabling it. */
-    if (enable) {
-      log_debug(LD_GENERAL, "Launching periodic event %s", item->name);
-      periodic_event_enable(item);
-    } else {
-      log_debug(LD_GENERAL, "Disabling periodic event %s", item->name);
-      if (item->flags & PERIODIC_EVENT_FLAG_RUN_ON_DISABLE) {
-        periodic_event_schedule_and_disable(item);
-      } else {
-        periodic_event_disable(item);
-      }
-    }
-  }
+  periodic_events_rescan_by_roles(get_my_roles(options), net_is_disabled());
 }
 
 /* We just got new options globally set, see if we need to enabled or disable
@@ -1680,26 +1577,7 @@ rescan_periodic_events(const or_options_t *options)
 void
 periodic_events_on_new_options(const or_options_t *options)
 {
-  /* Only if we've already initialized the events, rescan the list which will
-   * enable or disable events depending on our roles. This will be called at
-   * bootup and we don't want this function to initialize the events because
-   * they aren't set up at this stage. */
-  if (periodic_events_initialized) {
-    rescan_periodic_events(options);
-  }
-}
-
-/**
- * Update our schedule so that we'll check whether we need to update our
- * descriptor immediately, rather than after up to CHECK_DESCRIPTOR_INTERVAL
- * seconds.
- */
-void
-reschedule_descriptor_update_check(void)
-{
-  if (check_descriptor_event) {
-    periodic_event_reschedule(check_descriptor_event);
-  }
+  rescan_periodic_events(options);
 }
 
 /**
@@ -1767,29 +1645,6 @@ mainloop_schedule_shutdown(int delay_sec)
     scheduled_shutdown_ev = mainloop_event_new(scheduled_shutdown_cb, NULL);
   }
   mainloop_event_schedule(scheduled_shutdown_ev, &delay_tv);
-}
-
-#define LONGEST_TIMER_PERIOD (30 * 86400)
-/** Helper: Return the number of seconds between <b>now</b> and <b>next</b>,
- * clipped to the range [1 second, LONGEST_TIMER_PERIOD]. */
-static inline int
-safe_timer_diff(time_t now, time_t next)
-{
-  if (next > now) {
-    /* There were no computers at signed TIME_MIN (1902 on 32-bit systems),
-     * and nothing that could run Tor. It's a bug if 'next' is around then.
-     * On 64-bit systems with signed TIME_MIN, TIME_MIN is before the Big
-     * Bang. We cannot extrapolate past a singularity, but there was probably
-     * nothing that could run Tor then, either.
-     **/
-    tor_assert(next > TIME_MIN + LONGEST_TIMER_PERIOD);
-
-    if (next - LONGEST_TIMER_PERIOD > now)
-      return LONGEST_TIMER_PERIOD;
-    return (int)(next - now);
-  } else {
-    return 1;
-  }
 }
 
 /** Perform regular maintenance tasks.  This function gets run once per
@@ -1865,77 +1720,6 @@ second_elapsed_callback(time_t now, const or_options_t *options)
 
   /* Run again in a second. */
   return 1;
-}
-
-/* Periodic callback: rotate the onion keys after the period defined by the
- * "onion-key-rotation-days" consensus parameter, shut down and restart all
- * cpuworkers, and update our descriptor if necessary.
- */
-static int
-rotate_onion_key_callback(time_t now, const or_options_t *options)
-{
-  if (server_mode(options)) {
-    int onion_key_lifetime = get_onion_key_lifetime();
-    time_t rotation_time = get_onion_key_set_at()+onion_key_lifetime;
-    if (rotation_time > now) {
-      return ONION_KEY_CONSENSUS_CHECK_INTERVAL;
-    }
-
-    log_info(LD_GENERAL,"Rotating onion key.");
-    rotate_onion_key();
-    cpuworkers_rotate_keyinfo();
-    if (router_rebuild_descriptor(1)<0) {
-      log_info(LD_CONFIG, "Couldn't rebuild router descriptor");
-    }
-    if (advertised_server_mode() && !net_is_disabled())
-      router_upload_dir_desc_to_dirservers(0);
-    return ONION_KEY_CONSENSUS_CHECK_INTERVAL;
-  }
-  return PERIODIC_EVENT_NO_UPDATE;
-}
-
-/* Period callback: Check if our old onion keys are still valid after the
- * period of time defined by the consensus parameter
- * "onion-key-grace-period-days", otherwise expire them by setting them to
- * NULL.
- */
-static int
-check_onion_keys_expiry_time_callback(time_t now, const or_options_t *options)
-{
-  if (server_mode(options)) {
-    int onion_key_grace_period = get_onion_key_grace_period();
-    time_t expiry_time = get_onion_key_set_at()+onion_key_grace_period;
-    if (expiry_time > now) {
-      return ONION_KEY_CONSENSUS_CHECK_INTERVAL;
-    }
-
-    log_info(LD_GENERAL, "Expiring old onion keys.");
-    expire_old_onion_keys();
-    cpuworkers_rotate_keyinfo();
-    return ONION_KEY_CONSENSUS_CHECK_INTERVAL;
-  }
-
-  return PERIODIC_EVENT_NO_UPDATE;
-}
-
-/* Periodic callback: Every 30 seconds, check whether it's time to make new
- * Ed25519 subkeys.
- */
-static int
-check_ed_keys_callback(time_t now, const or_options_t *options)
-{
-  if (server_mode(options)) {
-    if (should_make_new_ed_keys(options, now)) {
-      int new_signing_key = load_ed_keys(options, now);
-      if (new_signing_key < 0 ||
-          generate_ed_link_cert(options, now, new_signing_key > 0)) {
-        log_err(LD_OR, "Unable to update Ed25519 keys!  Exiting.");
-        tor_shutdown_event_loop_and_exit(1);
-      }
-    }
-    return 30;
-  }
-  return PERIODIC_EVENT_NO_UPDATE;
 }
 
 /**
@@ -2061,102 +1845,6 @@ check_network_participation_callback(time_t now, const or_options_t *options)
 }
 
 /**
- * Periodic callback: if we're an authority, make sure we test
- * the routers on the network for reachability.
- */
-static int
-launch_reachability_tests_callback(time_t now, const or_options_t *options)
-{
-  if (authdir_mode_tests_reachability(options) &&
-      !net_is_disabled()) {
-    /* try to determine reachability of the other Tor relays */
-    dirserv_test_reachability(now);
-  }
-  return REACHABILITY_TEST_INTERVAL;
-}
-
-/**
- * Periodic callback: if we're an authority, discount the stability
- * information (and other rephist information) that's older.
- */
-static int
-downrate_stability_callback(time_t now, const or_options_t *options)
-{
-  (void)options;
-  /* 1d. Periodically, we discount older stability information so that new
-   * stability info counts more, and save the stability information to disk as
-   * appropriate. */
-  time_t next = rep_hist_downrate_old_runs(now);
-  return safe_timer_diff(now, next);
-}
-
-/**
- * Periodic callback: if we're an authority, record our measured stability
- * information from rephist in an mtbf file.
- */
-static int
-save_stability_callback(time_t now, const or_options_t *options)
-{
-  if (authdir_mode_tests_reachability(options)) {
-    if (rep_hist_record_mtbf_data(now, 1)<0) {
-      log_warn(LD_GENERAL, "Couldn't store mtbf data.");
-    }
-  }
-#define SAVE_STABILITY_INTERVAL (30*60)
-  return SAVE_STABILITY_INTERVAL;
-}
-
-/**
- * Periodic callback: if we're an authority, check on our authority
- * certificate (the one that authenticates our authority signing key).
- */
-static int
-check_authority_cert_callback(time_t now, const or_options_t *options)
-{
-  (void)now;
-  (void)options;
-  /* 1e. Periodically, if we're a v3 authority, we check whether our cert is
-   * close to expiring and warn the admin if it is. */
-  v3_authority_check_key_expiry();
-#define CHECK_V3_CERTIFICATE_INTERVAL (5*60)
-  return CHECK_V3_CERTIFICATE_INTERVAL;
-}
-
-/**
- * Scheduled callback: Run directory-authority voting functionality.
- *
- * The schedule is a bit complicated here, so dirvote_act() manages the
- * schedule itself.
- **/
-static int
-dirvote_callback(time_t now, const or_options_t *options)
-{
-  if (!authdir_mode_v3(options)) {
-    tor_assert_nonfatal_unreached();
-    return 3600;
-  }
-
-  time_t next = dirvote_act(options, now);
-  if (BUG(next == TIME_MAX)) {
-    /* This shouldn't be returned unless we called dirvote_act() without
-     * being an authority.  If it happens, maybe our configuration will
-     * fix itself in an hour or so? */
-    return 3600;
-  }
-  return safe_timer_diff(now, next);
-}
-
-/** Reschedule the directory-authority voting event.  Run this whenever the
- * schedule has changed. */
-void
-reschedule_dirvote(const or_options_t *options)
-{
-  if (periodic_events_initialized && authdir_mode_v3(options)) {
-    periodic_event_reschedule(dirvote_event);
-  }
-}
-
-/**
  * Periodic callback: If our consensus is too old, recalculate whether
  * we can actually use it.
  */
@@ -2254,17 +1942,6 @@ write_stats_file_callback(time_t now, const or_options_t *options)
   return safe_timer_diff(now, next_time_to_write_stats_files);
 }
 
-#define CHANNEL_CHECK_INTERVAL (60*60)
-static int
-check_canonical_channels_callback(time_t now, const or_options_t *options)
-{
-  (void)now;
-  if (public_server_mode(options))
-    channel_check_for_duplicates();
-
-  return CHANNEL_CHECK_INTERVAL;
-}
-
 static int
 reset_padding_counts_callback(time_t now, const or_options_t *options)
 {
@@ -2339,19 +2016,6 @@ rend_cache_failure_clean_callback(time_t now, const or_options_t *options)
 }
 
 /**
- * Periodic callback: If we're a server and initializing dns failed, retry.
- */
-static int
-retry_dns_callback(time_t now, const or_options_t *options)
-{
-  (void)now;
-#define RETRY_DNS_INTERVAL (10*60)
-  if (server_mode(options) && has_dns_init_failed())
-    dns_init();
-  return RETRY_DNS_INTERVAL;
-}
-
-/**
  * Periodic callback: prune routerlist of old information about Tor network.
  */
 static int
@@ -2370,71 +2034,6 @@ prune_old_routers_callback(time_t now, const or_options_t *options)
   }
 
   return ROUTERLIST_PRUNING_INTERVAL;
-}
-
-/** Periodic callback: consider rebuilding or and re-uploading our descriptor
- * (if we've passed our internal checks). */
-static int
-check_descriptor_callback(time_t now, const or_options_t *options)
-{
-/** How often do we check whether part of our router info has changed in a
- * way that would require an upload? That includes checking whether our IP
- * address has changed. */
-#define CHECK_DESCRIPTOR_INTERVAL (60)
-
-  (void)options;
-
-  /* 2b. Once per minute, regenerate and upload the descriptor if the old
-   * one is inaccurate. */
-  if (!net_is_disabled()) {
-    check_descriptor_bandwidth_changed(now);
-    check_descriptor_ipaddress_changed(now);
-    mark_my_descriptor_dirty_if_too_old(now);
-    consider_publishable_server(0);
-  }
-
-  return CHECK_DESCRIPTOR_INTERVAL;
-}
-
-/**
- * Periodic callback: check whether we're reachable (as a relay), and
- * whether our bandwidth has changed enough that we need to
- * publish a new descriptor.
- */
-static int
-check_for_reachability_bw_callback(time_t now, const or_options_t *options)
-{
-  /* XXXX This whole thing was stuck in the middle of what is now
-   * XXXX check_descriptor_callback.  I'm not sure it's right. */
-
-  static int dirport_reachability_count = 0;
-  /* also, check religiously for reachability, if it's within the first
-   * 20 minutes of our uptime. */
-  if (server_mode(options) &&
-      (have_completed_a_circuit() || !any_predicted_circuits(now)) &&
-      !net_is_disabled()) {
-    if (get_uptime() < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
-      router_do_reachability_checks(1, dirport_reachability_count==0);
-      if (++dirport_reachability_count > 5)
-        dirport_reachability_count = 0;
-      return 1;
-    } else {
-      /* If we haven't checked for 12 hours and our bandwidth estimate is
-       * low, do another bandwidth test. This is especially important for
-       * bridges, since they might go long periods without much use. */
-      const routerinfo_t *me = router_get_my_routerinfo();
-      static int first_time = 1;
-      if (!first_time && me &&
-          me->bandwidthcapacity < me->bandwidthrate &&
-          me->bandwidthcapacity < 51200) {
-        reset_bandwidth_test();
-      }
-      first_time = 0;
-#define BANDWIDTH_RECHECK_INTERVAL (12*60*60)
-      return BANDWIDTH_RECHECK_INTERVAL;
-    }
-  }
-  return CHECK_DESCRIPTOR_INTERVAL;
 }
 
 /**
@@ -2475,109 +2074,6 @@ retry_listeners_callback(time_t now, const or_options_t *options)
   if (!net_is_disabled()) {
     retry_all_listeners(NULL, 0);
     return 60;
-  }
-  return PERIODIC_EVENT_NO_UPDATE;
-}
-
-/**
- * Periodic callback: as a server, see if we have any old unused circuits
- * that should be expired */
-static int
-expire_old_ciruits_serverside_callback(time_t now, const or_options_t *options)
-{
-  (void)options;
-  /* every 11 seconds, so not usually the same second as other such events */
-  circuit_expire_old_circuits_serverside(now);
-  return 11;
-}
-
-/**
- * Callback: Send warnings if Tor doesn't find its ports reachable.
- */
-static int
-reachability_warnings_callback(time_t now, const or_options_t *options)
-{
-  (void) now;
-
-  if (get_uptime() < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
-    return (int)(TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT - get_uptime());
-  }
-
-  if (server_mode(options) &&
-      !net_is_disabled() &&
-      have_completed_a_circuit()) {
-    /* every 20 minutes, check and complain if necessary */
-    const routerinfo_t *me = router_get_my_routerinfo();
-    if (me && !check_whether_orport_reachable(options)) {
-      char *address = tor_dup_ip(me->addr);
-      log_warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that "
-               "its ORPort is reachable. Relays do not publish descriptors "
-               "until their ORPort and DirPort are reachable. Please check "
-               "your firewalls, ports, address, /etc/hosts file, etc.",
-               address, me->or_port);
-      control_event_server_status(LOG_WARN,
-                                  "REACHABILITY_FAILED ORADDRESS=%s:%d",
-                                  address, me->or_port);
-      tor_free(address);
-    }
-
-    if (me && !check_whether_dirport_reachable(options)) {
-      char *address = tor_dup_ip(me->addr);
-      log_warn(LD_CONFIG,
-               "Your server (%s:%d) has not managed to confirm that its "
-               "DirPort is reachable. Relays do not publish descriptors "
-               "until their ORPort and DirPort are reachable. Please check "
-               "your firewalls, ports, address, /etc/hosts file, etc.",
-               address, me->dir_port);
-      control_event_server_status(LOG_WARN,
-                                  "REACHABILITY_FAILED DIRADDRESS=%s:%d",
-                                  address, me->dir_port);
-      tor_free(address);
-    }
-  }
-
-  return TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT;
-}
-
-static int dns_honesty_first_time = 1;
-
-/**
- * Periodic event: if we're an exit, see if our DNS server is telling us
- * obvious lies.
- */
-static int
-check_dns_honesty_callback(time_t now, const or_options_t *options)
-{
-  (void)now;
-  /* 9. and if we're an exit node, check whether our DNS is telling stories
-   * to us. */
-  if (net_is_disabled() ||
-      ! public_server_mode(options) ||
-      router_my_exit_policy_is_reject_star())
-    return PERIODIC_EVENT_NO_UPDATE;
-
-  if (dns_honesty_first_time) {
-    /* Don't launch right when we start */
-    dns_honesty_first_time = 0;
-    return crypto_rand_int_range(60, 180);
-  }
-
-  dns_launch_correctness_checks();
-  return 12*3600 + crypto_rand_int(12*3600);
-}
-
-/**
- * Periodic callback: if we're the bridge authority, write a networkstatus
- * file to disk.
- */
-static int
-write_bridge_ns_callback(time_t now, const or_options_t *options)
-{
-  /* 10. write bridge networkstatus file to disk */
-  if (options->BridgeAuthoritativeDir) {
-    networkstatus_dump_bridge_status_to_file(now);
-#define BRIDGE_STATUSFILE_INTERVAL (30*60)
-     return BRIDGE_STATUSFILE_INTERVAL;
   }
   return PERIODIC_EVENT_NO_UPDATE;
 }
@@ -2797,8 +2293,7 @@ dns_servers_relaunch_checks(void)
 {
   if (server_mode(get_options())) {
     dns_reset_correctness_checks();
-    if (periodic_events_initialized) {
-      tor_assert(check_dns_honesty_event);
+    if (check_dns_honesty_event) {
       periodic_event_reschedule(check_dns_honesty_event);
     }
   }
@@ -2808,8 +2303,6 @@ dns_servers_relaunch_checks(void)
 void
 initialize_mainloop_events(void)
 {
-  initialize_periodic_events();
-
   if (!schedule_active_linked_connections_event) {
     schedule_active_linked_connections_event =
       mainloop_event_postloop_new(schedule_active_linked_connections_cb, NULL);
@@ -2827,8 +2320,16 @@ do_main_loop(void)
   /* initialize the periodic events first, so that code that depends on the
    * events being present does not assert.
    */
-  initialize_periodic_events();
+  tor_assert(periodic_events_initialized);
   initialize_mainloop_events();
+
+  periodic_events_connect_all();
+
+  struct timeval one_second = { 1, 0 };
+  initialize_periodic_events_event = tor_evtimer_new(
+                  tor_libevent_get_base(),
+                  initialize_periodic_events_cb, NULL);
+  event_add(initialize_periodic_events_event, &one_second);
 
 #ifdef HAVE_SYSTEMD_209
   uint64_t watchdog_delay;
@@ -2874,7 +2375,7 @@ do_main_loop(void)
       event_add(tor_shutdown_event_loop_for_restart_event, &restart_after);
     }
   }
-#endif
+#endif /* defined(ENABLE_RESTART_DEBUGGING) */
 
   return run_main_loop_until_done();
 }
@@ -3042,7 +2543,6 @@ tor_mainloop_free_all(void)
   can_complete_circuits = 0;
   quiet_level = 0;
   should_init_bridge_stats = 1;
-  dns_honesty_first_time = 1;
   heartbeat_callback_first_time = 1;
   current_second = 0;
   memset(&current_second_last_changed, 0,

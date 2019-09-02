@@ -8,7 +8,7 @@
 
 #include <stdbool.h>
 
-struct dispatch_connector_t;
+struct pubsub_connector_t;
 
 /**
  * A subsystem is a part of Tor that is initialized, shut down, configured,
@@ -58,7 +58,7 @@ typedef struct subsys_fns_t {
   /**
    * Connect a subsystem to the message dispatch system.
    **/
-  int (*add_pubsub)(struct dispatch_connector_t *);
+  int (*add_pubsub)(struct pubsub_connector_t *);
 
   /**
    * Perform any necessary pre-fork cleanup.  This function may not fail.
@@ -92,4 +92,4 @@ typedef struct subsys_fns_t {
  * less than this value. */
 #define SUBSYS_LEVEL_LIBS -10
 
-#endif
+#endif /* !defined(TOR_SUBSYS_T) */

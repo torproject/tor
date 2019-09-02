@@ -100,7 +100,7 @@
 #include "app/config/statefile.h"
 #include "core/or/connection_or.h"
 #include "feature/relay/ext_orport.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "lib/encoding/confline.h"
 #include "lib/encoding/kvline.h"
 
@@ -1424,11 +1424,6 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
     } else {
       smartlist_add_asprintf(envs, "TOR_PT_EXTENDED_SERVER_PORT=");
     }
-
-    /* All new versions of tor will keep stdin open, so PTs can use it
-     * as a reliable termination detection mechanism.
-     */
-    smartlist_add_asprintf(envs, "TOR_PT_EXIT_ON_STDIN_CLOSE=1");
   } else {
     /* If ClientTransportPlugin has a HTTPS/SOCKS proxy configured, set the
      * TOR_PT_PROXY line.
@@ -1438,6 +1433,11 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
       smartlist_add_asprintf(envs, "TOR_PT_PROXY=%s", mp->proxy_uri);
     }
   }
+
+  /* All new versions of tor will keep stdin open, so PTs can use it
+   * as a reliable termination detection mechanism.
+   */
+  smartlist_add_asprintf(envs, "TOR_PT_EXIT_ON_STDIN_CLOSE=1");
 
   SMARTLIST_FOREACH_BEGIN(envs, const char *, env_var) {
     set_environment_variable_in_smartlist(merged_env_vars, env_var,

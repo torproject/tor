@@ -33,6 +33,7 @@
 #include "lib/math/prob_distr.h"
 #include "lib/math/fp.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "test/rng_test_helpers.h"
 
 #include <float.h>
 #include <math.h>
@@ -1117,49 +1118,15 @@ test_psi_dist_sample(const struct dist *dist)
   }
 }
 
-/* This is the seed of the deterministic randomness */
-static uint8_t rng_seed[16];
-static crypto_xof_t *rng_xof = NULL;
-
-/** Initialize the seed of the deterministic randomness. */
 static void
-init_deterministic_rand(void)
+write_stochastic_warning(void)
 {
-  crypto_rand((char*)rng_seed, sizeof(rng_seed));
-  crypto_xof_free(rng_xof);
-  rng_xof = crypto_xof_new();
-  crypto_xof_add_bytes(rng_xof, rng_seed, sizeof(rng_seed));
-}
-
-static void
-teardown_deterministic_rand(void)
-{
-  crypto_xof_free(rng_xof);
-}
-
-static void
-dump_seed(void)
-{
-  printf("\n"
+  if (tinytest_cur_test_has_failed()) {
+    printf("\n"
          "NOTE: This is a stochastic test, and we expect it to fail from\n"
          "time to time, with some low probability. If you see it fail more\n"
-         "than one trial in 100, though, please tell us.\n\n"
-         "Seed: %s\n",
-         hex_str((const char*)rng_seed, sizeof(rng_seed)));
-}
-
-/** Produce deterministic randomness for the stochastic tests using the global
- *  deterministic_rand_counter seed
- *
- *  This function produces deterministic data over multiple calls iff it's
- *  called in the same call order with the same 'n' parameter (which is the
- *  case for the psi test). If not, outputs will deviate. */
-static void
-crypto_rand_deterministic(char *out, size_t n)
-{
-  /* Use a XOF to squeeze bytes out of that silly counter */
-  tor_assert(rng_xof);
-  crypto_xof_squeeze_bytes(rng_xof, (uint8_t*)out, n);
+         "than one trial in 100, though, please tell us.\n\n");
+  }
 }
 
 static void
@@ -1199,8 +1166,7 @@ test_stochastic_uniform(void *arg)
   };
   bool ok = true, tests_failed = true;
 
-  init_deterministic_rand();
-  MOCK(crypto_rand, crypto_rand_deterministic);
+  testing_enable_reproducible_rng();
 
   ok &= test_psi_dist_sample(&uniform01.base);
   ok &= test_psi_dist_sample(&uniform_pos.base);
@@ -1215,10 +1181,9 @@ test_stochastic_uniform(void *arg)
 
  done:
   if (tests_failed) {
-    dump_seed();
+    write_stochastic_warning();
   }
-  teardown_deterministic_rand();
-  UNMOCK(crypto_rand);
+  testing_disable_reproducible_rng();
 }
 
 static bool
@@ -1288,8 +1253,7 @@ test_stochastic_genpareto(void *arg)
   bool tests_failed = true;
   (void) arg;
 
-  init_deterministic_rand();
-  MOCK(crypto_rand, crypto_rand_deterministic);
+  testing_enable_reproducible_rng();
 
   ok = test_stochastic_genpareto_impl(0, 1, -0.25);
   tt_assert(ok);
@@ -1310,10 +1274,9 @@ test_stochastic_genpareto(void *arg)
 
  done:
   if (tests_failed) {
-    dump_seed();
+    write_stochastic_warning();
   }
-  teardown_deterministic_rand();
-  UNMOCK(crypto_rand);
+  testing_disable_reproducible_rng();
 }
 
 static void
@@ -1324,8 +1287,7 @@ test_stochastic_geometric(void *arg)
 
   (void) arg;
 
-  init_deterministic_rand();
-  MOCK(crypto_rand, crypto_rand_deterministic);
+  testing_enable_reproducible_rng();
 
   ok = test_stochastic_geometric_impl(0.1);
   tt_assert(ok);
@@ -1340,10 +1302,9 @@ test_stochastic_geometric(void *arg)
 
  done:
   if (tests_failed) {
-    dump_seed();
+    write_stochastic_warning();
   }
-  teardown_deterministic_rand();
-  UNMOCK(crypto_rand);
+  testing_disable_reproducible_rng();
 }
 
 static void
@@ -1353,8 +1314,7 @@ test_stochastic_logistic(void *arg)
   bool tests_failed = true;
   (void) arg;
 
-  init_deterministic_rand();
-  MOCK(crypto_rand, crypto_rand_deterministic);
+  testing_enable_reproducible_rng();
 
   ok = test_stochastic_logistic_impl(0, 1);
   tt_assert(ok);
@@ -1369,21 +1329,18 @@ test_stochastic_logistic(void *arg)
 
  done:
   if (tests_failed) {
-    dump_seed();
+    write_stochastic_warning();
   }
-  teardown_deterministic_rand();
-  UNMOCK(crypto_rand);
+  testing_disable_reproducible_rng();
 }
 
 static void
 test_stochastic_log_logistic(void *arg)
 {
   bool ok = 0;
-  bool tests_failed = true;
   (void) arg;
 
-  init_deterministic_rand();
-  MOCK(crypto_rand, crypto_rand_deterministic);
+  testing_enable_reproducible_rng();
 
   ok = test_stochastic_log_logistic_impl(1, 1);
   tt_assert(ok);
@@ -1394,25 +1351,18 @@ test_stochastic_log_logistic(void *arg)
   ok = test_stochastic_log_logistic_impl(exp(-10), 1e-2);
   tt_assert(ok);
 
-  tests_failed = false;
-
  done:
-  if (tests_failed) {
-    dump_seed();
-  }
-  teardown_deterministic_rand();
-  UNMOCK(crypto_rand);
+  write_stochastic_warning();
+  testing_disable_reproducible_rng();
 }
 
 static void
 test_stochastic_weibull(void *arg)
 {
   bool ok = 0;
-  bool tests_failed = true;
   (void) arg;
 
-  init_deterministic_rand();
-  MOCK(crypto_rand, crypto_rand_deterministic);
+  testing_enable_reproducible_rng();
 
   ok = test_stochastic_weibull_impl(1, 0.5);
   tt_assert(ok);
@@ -1425,13 +1375,9 @@ test_stochastic_weibull(void *arg)
   ok = test_stochastic_weibull_impl(10, 1);
   tt_assert(ok);
 
-  tests_failed = false;
-
  done:
-  if (tests_failed) {
-    dump_seed();
-  }
-  teardown_deterministic_rand();
+  write_stochastic_warning();
+  testing_disable_reproducible_rng();
   UNMOCK(crypto_rand);
 }
 

@@ -168,6 +168,8 @@ uptime-*.json
 /src/lib/libtor-crypt-ops-testing.a
 /src/lib/libtor-ctime.a
 /src/lib/libtor-ctime-testing.a
+/src/lib/libtor-dispatch.a
+/src/lib/libtor-dispatch-testing.a
 /src/lib/libtor-encoding.a
 /src/lib/libtor-encoding-testing.a
 /src/lib/libtor-evloop.a
@@ -200,6 +202,8 @@ uptime-*.json
 /src/lib/libtor-osinfo-testing.a
 /src/lib/libtor-process.a
 /src/lib/libtor-process-testing.a
+/src/lib/libtor-pubsub.a
+/src/lib/libtor-pubsub-testing.a
 /src/lib/libtor-sandbox.a
 /src/lib/libtor-sandbox-testing.a
 /src/lib/libtor-string.a

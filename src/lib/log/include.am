@@ -5,6 +5,7 @@ if UNITTESTS_ENABLED
 noinst_LIBRARIES += src/lib/libtor-log-testing.a
 endif
 
+# ADD_C_FILE: INSERT SOURCES HERE.
 src_lib_libtor_log_a_SOURCES =			\
 	src/lib/log/escape.c			\
 	src/lib/log/ratelim.c			\
@@ -21,6 +22,7 @@ src_lib_libtor_log_testing_a_SOURCES = \
 src_lib_libtor_log_testing_a_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
 src_lib_libtor_log_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
+# ADD_C_FILE: INSERT HEADERS HERE.
 noinst_HEADERS +=					\
 	src/lib/log/escape.h				\
 	src/lib/log/ratelim.h				\

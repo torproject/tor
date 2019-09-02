@@ -1,5 +1,0 @@
-  o Minor bugfix (continuous integration):
-    - Reset coverage state on disk after Travis CI has finished. This is being
-      done to prevent future gcda file merge errors which causes the test suite
-      for the process subsystem to fail. The process subsystem was introduced
-      in 0.4.0.1-alpha. Fixes bug 29036; bugfix on 0.2.9.15.

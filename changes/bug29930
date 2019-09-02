@@ -1,4 +1,0 @@
-  o Minor bugfixes (UI):
-    - Lower log level of unlink() errors during bootstrap. Fixes bug 29930;
-      bugfix on 0.4.0.1-alpha.
-

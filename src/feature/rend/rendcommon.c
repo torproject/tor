@@ -15,7 +15,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "app/config/config.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/hs/hs_client.h"
@@ -171,9 +171,10 @@ rend_compute_v2_desc_id(char *desc_id_out, const char *service_id,
   }
   /* Convert service ID to binary. */
   if (base32_decode(service_id_binary, REND_SERVICE_ID_LEN,
-                    service_id, REND_SERVICE_ID_LEN_BASE32) < 0) {
+                    service_id, REND_SERVICE_ID_LEN_BASE32) !=
+      REND_SERVICE_ID_LEN) {
     log_warn(LD_REND, "Could not compute v2 descriptor ID: "
-                      "Illegal characters in service ID: %s",
+                      "Illegal characters or wrong length for service ID: %s",
              safe_str_client(service_id));
     return -1;
   }

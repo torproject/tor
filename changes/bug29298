@@ -1,5 +1,0 @@
-  o Minor bugfixes (testing, circuit padding):
-    - Disabled unstable circuit padding unittest that was causing intermittent
-      test failures because of ill-defined small histogram. Such histograms
-      will be allowed again after 29298 is implemented. Fixes second case of
-      bug 29122; bugfix on 0.4.0.1-alpha.

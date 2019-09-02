@@ -339,7 +339,7 @@ tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len, int decorate)
       break;
     case AF_INET6:
       /* Shortest addr [ :: ] + \0 */
-      if (len < (3 + (decorate ? 2 : 0)))
+      if (len < (3u + (decorate ? 2 : 0)))
         return NULL;
 
       if (decorate)
@@ -2027,8 +2027,12 @@ string_is_valid_nonrfc_hostname(const char *string)
 
   smartlist_split_string(components,string,".",0,0);
 
-  if (BUG(smartlist_len(components) == 0))
-    return 0; // LCOV_EXCL_LINE should be impossible given the earlier checks.
+  if (BUG(smartlist_len(components) == 0)) {
+    // LCOV_EXCL_START should be impossible given the earlier checks.
+    smartlist_free(components);
+    return 0;
+    // LCOV_EXCL_STOP
+  }
 
   /* Allow a single terminating '.' used rarely to indicate domains
    * are FQDNs rather than relative. */

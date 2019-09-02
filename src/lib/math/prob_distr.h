@@ -19,10 +19,100 @@ struct dist {
   const struct dist_ops *ops;
 };
 
+/**
+ * Untyped initializer element for struct dist using the specified
+ * struct dist_ops pointer.  Don't actually use this directly -- use
+ * the type-specific macro built out of DIST_BASE_TYPED below -- but if
+ * you did use this directly, it would be something like:
+ *
+ *   struct weibull mydist = {
+ *     DIST_BASE(&weibull_ops),
+ *     .lambda = ...,
+ *     .k = ...,
+ *   };
+ *
+ * Note there is NO COMPILER FEEDBACK if you accidentally do something
+ * like
+ *
+ *   struct geometric mydist = {
+ *     DIST_BASE(&weibull_ops),
+ *     ...
+ *   };
+ */
 #define DIST_BASE(OPS)  { .ops = (OPS) }
-#define DIST_BASE_TYPED(OPS, OBJ, TYPE)                         \
-  DIST_BASE((OPS) + 0*sizeof(&(OBJ) - (const TYPE *)&(OBJ)))
 
+/** A compile-time type-checking macro for use with DIST_BASE_TYPED.
+ *
+ *  This macro works by checking that &OBJ is a pointer type that is the same
+ *  type (except for qualifiers) as (const TYPE *)&OBJ. It's a C constraint
+ *  violation (which requires a diagnostic) if two pointers are different types
+ *  and are subtracted. The sizeof() forces compile-time evaluation, and the
+ *  multiplication by zero is to discard the result of the sizeof() from the
+ *  expression.
+ *
+ *  We define this conditionally to suppress false positives from
+ *  Coverity, which gets confused by the sizeof business.
+ */
+#ifdef __COVERITY__
+#define TYPE_CHECK_OBJ(OPS, OBJ, TYPE) 0
+#else
+#define TYPE_CHECK_OBJ(OPS, OBJ, TYPE) \
+  (0*sizeof(&(OBJ) - (const TYPE *)&(OBJ)))
+#endif /* defined(__COVERITY__) */
+
+/**
+* Typed initializer element for struct dist using the specified struct
+* dist_ops pointer.  Don't actually use this directly -- use a
+* type-specific macro built out of it -- but if you did use this
+* directly, it would be something like:
+*
+*   struct weibull mydist = {
+*     DIST_BASE_TYPED(&weibull_ops, mydist, struct weibull),
+*     .lambda = ...,
+*     .k = ...,
+*   };
+*
+* If you want to define a distribution type, define a canonical set of
+* operations and define a type-specific initializer element like so:
+*
+*   struct foo {
+*     struct dist base;
+*     int omega;
+*     double tau;
+*     double phi;
+*   };
+*
+*   struct dist_ops foo_ops = ...;
+*
+*   #define FOO(OBJ) DIST_BASE_TYPED(&foo_ops, OBJ, struct foo)
+*
+* Then users can do:
+*
+*   struct foo mydist = {
+*     FOO(mydist),
+*     .omega = ...,
+*     .tau = ...,
+*     .phi = ...,
+*   };
+*
+* If you accidentally write
+*
+*   struct bar mydist = {
+*     FOO(mydist),
+*     ...
+*   };
+*
+* then the compiler will report a type mismatch in the sizeof
+* expression, which otherwise evaporates at runtime.
+*/
+#define DIST_BASE_TYPED(OPS, OBJ, TYPE)                         \
+  DIST_BASE((OPS) + TYPE_CHECK_OBJ(OPS,OBJ,TYPE))
+
+/**
+ * Generic operations on distributions.  These simply defer to the
+ * corresponding dist_ops function.  In the parlance of C++, these call
+ * virtual member functions.
+ */
 const char *dist_name(const struct dist *);
 double dist_sample(const struct dist *);
 double dist_cdf(const struct dist *, double x);
@@ -30,6 +120,11 @@ double dist_sf(const struct dist *, double x);
 double dist_icdf(const struct dist *, double p);
 double dist_isf(const struct dist *, double p);
 
+/**
+ * Set of operations on a potentially parametric family of
+ * distributions.  In the parlance of C++, this would be called a
+ * `vtable' and the members are virtual member functions.
+ */
 struct dist_ops {
   const char *name;
   double (*sample)(const struct dist *);
@@ -153,6 +248,6 @@ STATIC double icdf_genpareto(double p, double mu, double sigma, double xi);
 STATIC double isf_genpareto(double p, double mu, double sigma, double xi);
 STATIC double sample_genpareto(uint32_t s, double p0, double xi);
 
-#endif
+#endif /* defined(PROB_DISTR_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_PROB_DISTR_H) */

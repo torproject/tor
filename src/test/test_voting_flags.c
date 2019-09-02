@@ -60,7 +60,7 @@ check_result(flag_vote_test_cfg_t *c)
   bool result = false;
   routerstatus_t rs;
   memset(&rs, 0, sizeof(rs));
-  set_routerstatus_from_routerinfo(&rs, &c->node, &c->ri, c->now, 0);
+  dirauth_set_routerstatus_from_routerinfo(&rs, &c->node, &c->ri, c->now, 0);
 
   tt_i64_op(rs.published_on, OP_EQ, c->expected.published_on);
   tt_str_op(rs.nickname, OP_EQ, c->expected.nickname);

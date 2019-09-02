@@ -115,7 +115,7 @@ clean_backtrace(void **stack, size_t depth, const ucontext_t *ctx)
  * that with a backtrace log.  Send messages via the tor_log function at
  * logger". */
 void
-log_backtrace_impl(int severity, int domain, const char *msg,
+log_backtrace_impl(int severity, log_domain_mask_t domain, const char *msg,
                    tor_log_fn logger)
 {
   size_t depth;
@@ -240,7 +240,7 @@ remove_bt_handler(void)
 
 #ifdef NO_BACKTRACE_IMPL
 void
-log_backtrace_impl(int severity, int domain, const char *msg,
+log_backtrace_impl(int severity, log_domain_mask_t domain, const char *msg,
                    tor_log_fn logger)
 {
   logger(severity, domain, "%s. (Stack trace not available)", msg);

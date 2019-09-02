@@ -1,3 +1,0 @@
-  o Minor bugfixes (unit tests):
-    - Fix intermittent failures on an adaptive padding unittest. Fixes bug
-      29122; bugfix on 0.4.0.1-alpha

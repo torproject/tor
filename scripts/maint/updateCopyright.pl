@@ -1,7 +1,9 @@
 #!/usr/bin/perl -i -w -p
 
-$NEWYEAR=2019;
+@now = gmtime();
 
-s/Copyright(.*) (201[^9]), The Tor Project/Copyright$1 $2-${NEWYEAR}, The Tor Project/;
+$NEWYEAR=$now[5]+1900;
+
+s/Copyright([^-]*) (20[^-]*), The Tor Project/Copyright$1 $2-${NEWYEAR}, The Tor Project/;
 
 s/Copyright(.*)-(20..), The Tor Project/Copyright$1-${NEWYEAR}, The Tor Project/;

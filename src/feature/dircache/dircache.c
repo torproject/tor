@@ -1072,13 +1072,11 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
       if (compress_method != NO_METHOD) {
         conn->compress_state = tor_compress_new(1, compress_method,
                            choose_compression_level(estimated_len));
-        SMARTLIST_FOREACH(items, const char *, c,
-                 connection_buf_add_compress(c, strlen(c), conn, 0));
-        connection_buf_add_compress("", 0, conn, 1);
-      } else {
-        SMARTLIST_FOREACH(items, const char *, c,
-                         connection_buf_add(c, strlen(c), TO_CONN(conn)));
       }
+
+      SMARTLIST_FOREACH(items, const char *, c,
+                        connection_dir_buf_add(c, strlen(c), conn,
+                                               c_sl_idx == c_sl_len - 1));
     } else {
       SMARTLIST_FOREACH(dir_items, cached_dir_t *, d,
           connection_buf_add(compress_method != NO_METHOD ?
@@ -1329,19 +1327,13 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
     if (compress_method != NO_METHOD) {
       conn->compress_state = tor_compress_new(1, compress_method,
                                               choose_compression_level(len));
-      SMARTLIST_FOREACH(certs, authority_cert_t *, c,
-            connection_buf_add_compress(
-                c->cache_info.signed_descriptor_body,
-                c->cache_info.signed_descriptor_len,
-                conn, 0));
-      connection_buf_add_compress("", 0, conn, 1);
-    } else {
-      SMARTLIST_FOREACH(certs, authority_cert_t *, c,
-            connection_buf_add(c->cache_info.signed_descriptor_body,
-                                    c->cache_info.signed_descriptor_len,
-                                    TO_CONN(conn)));
     }
-  keys_done:
+
+    SMARTLIST_FOREACH(certs, authority_cert_t *, c,
+          connection_dir_buf_add(c->cache_info.signed_descriptor_body,
+                                 c->cache_info.signed_descriptor_len,
+                                 conn, c_sl_idx == c_sl_len - 1));
+ keys_done:
     smartlist_free(certs);
     goto done;
   }

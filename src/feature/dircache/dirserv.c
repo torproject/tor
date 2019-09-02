@@ -583,11 +583,9 @@ spooled_resource_flush_some(spooled_resource_t *spooled,
       /* Absent objects count as "done". */
       return SRFS_DONE;
     }
-    if (conn->compress_state) {
-      connection_buf_add_compress((const char*)body, bodylen, conn, 0);
-    } else {
-      connection_buf_add((const char*)body, bodylen, TO_CONN(conn));
-    }
+
+    connection_dir_buf_add((const char*)body, bodylen, conn, 0);
+
     return SRFS_DONE;
   } else {
     cached_dir_t *cached = spooled->cached_dir_ref;
@@ -622,14 +620,10 @@ spooled_resource_flush_some(spooled_resource_t *spooled,
     if (BUG(remaining < 0))
       return SRFS_ERR;
     ssize_t bytes = (ssize_t) MIN(DIRSERV_CACHED_DIR_CHUNK_SIZE, remaining);
-    if (conn->compress_state) {
-      connection_buf_add_compress(
-              ptr + spooled->cached_dir_offset,
-              bytes, conn, 0);
-    } else {
-      connection_buf_add(ptr + spooled->cached_dir_offset,
-                              bytes, TO_CONN(conn));
-    }
+
+    connection_dir_buf_add(ptr + spooled->cached_dir_offset,
+                           bytes, conn, 0);
+
     spooled->cached_dir_offset += bytes;
     if (spooled->cached_dir_offset >= (off_t)total_len) {
       return SRFS_DONE;

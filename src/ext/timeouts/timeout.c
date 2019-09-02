@@ -40,14 +40,14 @@
 
 #include "ext/tor_queue.h" /* TAILQ(3) */
 
-#include "timeout.h"
+#include "ext/timeouts/timeout.h"
 
 #ifndef TIMEOUT_DEBUG
 #define TIMEOUT_DEBUG 0
 #endif
 
 #if TIMEOUT_DEBUG - 0
-#include "timeout-debug.h"
+#include "ext/timeouts/timeout-debug.h"
 #endif
 
 #ifdef TIMEOUT_DISABLE_RELATIVE_ACCESS
@@ -141,7 +141,7 @@
 #define WHEEL_MASK (WHEEL_LEN - 1)
 #define TIMEOUT_MAX ((TIMEOUT_C(1) << (WHEEL_BIT * WHEEL_NUM)) - 1)
 
-#include "timeout-bitops.c"
+#include "ext/timeouts/timeout-bitops.c"
 
 #if WHEEL_BIT == 6
 #define ctz(n) ctz64(n)

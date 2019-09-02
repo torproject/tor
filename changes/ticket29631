@@ -1,4 +1,0 @@
-  o Minor bugfixes (Rust, protover):
-    - The Rust implementation of protover was missing the "Padding" value in
-      the translate function from C to Rust. Fixes bug 29631; bugfix on
-      0.4.0.1-alpha.

@@ -1,4 +1,0 @@
-  o Minor features (compilation):
-    - Compile correctly when OpenSSL is built with engine support
-      disabled, or with deprecated APIs disabled. Closes ticket
-      29026. Patches from "Mangix".

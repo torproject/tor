@@ -33,6 +33,7 @@
  */
 
 #define CRYPTO_RAND_FAST_PRIVATE
+#define CRYPTO_PRIVATE
 
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_cipher.h"
@@ -41,10 +42,28 @@
 #include "lib/intmath/cmp.h"
 #include "lib/cc/ctassert.h"
 #include "lib/malloc/map_anon.h"
+#include "lib/thread/threads.h"
 
 #include "lib/log/util_bug.h"
 
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #include <string.h>
+
+#ifdef NOINHERIT_CAN_FAIL
+#define CHECK_PID
+#endif
+
+#ifdef CHECK_PID
+#define PID_FIELD_LEN sizeof(pid_t)
+#else
+#define PID_FIELD_LEN 0
+#endif
 
 /* Alias for CRYPTO_FAST_RNG_SEED_LEN to make our code shorter.
  */
@@ -57,7 +76,7 @@
 /* The number of random bytes that we can yield to the user after each
  * time we fill a crypto_fast_rng_t's buffer.
  */
-#define BUFLEN (MAPLEN - 2*sizeof(uint16_t) - SEED_LEN)
+#define BUFLEN (MAPLEN - 2*sizeof(uint16_t) - SEED_LEN - PID_FIELD_LEN)
 
 /* The number of buffer refills after which we should fetch more
  * entropy from crypto_strongest_rand().
@@ -76,10 +95,20 @@ CTASSERT(KEY_BITS == 128 || KEY_BITS == 192 || KEY_BITS == 256);
 
 struct crypto_fast_rng_t {
   /** How many more fills does this buffer have before we should mix
-   * in the output of crypto_rand()? */
-  uint16_t n_till_reseed;
+   * in the output of crypto_strongest_rand()?
+   *
+   * This value may be negative if unit tests are enabled.  If so, it
+   * indicates that we should never mix in extra data from
+   * crypto_strongest_rand().
+   */
+  int16_t n_till_reseed;
   /** How many bytes are remaining in cbuf.bytes? */
   uint16_t bytes_left;
+#ifdef CHECK_PID
+  /** Which process owns this fast_rng?  If this value is zero, we do not
+   * need to test the owner. */
+  pid_t owner;
+#endif
   struct cbuf {
     /** The seed (key and IV) that we will use the next time that we refill
      * cbuf. */
@@ -122,23 +151,56 @@ crypto_fast_rng_new(void)
  * long.
  *
  * Note that this object is NOT thread-safe.  If you need a thread-safe
- * prng, use crypto_rand(), or wrap this in a mutex.
+ * prng, you should probably look at get_thread_fast_rng().  Alternatively,
+ * use crypto_rand(), wrap this in a mutex.
  **/
 crypto_fast_rng_t *
 crypto_fast_rng_new_from_seed(const uint8_t *seed)
 {
+  unsigned inherit = INHERIT_RES_KEEP;
   /* We try to allocate this object as securely as we can, to avoid
    * having it get dumped, swapped, or shared after fork.
    */
   crypto_fast_rng_t *result = tor_mmap_anonymous(sizeof(*result),
-                                ANONMAP_PRIVATE | ANONMAP_NOINHERIT);
-
+                                ANONMAP_PRIVATE | ANONMAP_NOINHERIT,
+                                &inherit);
   memcpy(result->buf.seed, seed, SEED_LEN);
   /* Causes an immediate refill once the user asks for data. */
   result->bytes_left = 0;
   result->n_till_reseed = RESEED_AFTER;
+#ifdef CHECK_PID
+  if (inherit == INHERIT_RES_KEEP) {
+    /* This value will neither be dropped nor zeroed after fork, so we need to
+     * check our pid to make sure we are not sharing it across a fork.  This
+     * can be expensive if the pid value isn't cached, sadly.
+     */
+    result->owner = getpid();
+  }
+#elif defined(_WIN32)
+  /* Windows can't fork(), so there's no need to noinherit. */
+#else
+  /* We decided above that noinherit would always do _something_. Assert here
+   * that we were correct. */
+  tor_assertf(inherit != INHERIT_RES_KEEP,
+              "We failed to create a non-inheritable memory region, even "
+              "though we believed such a failure to be impossible! This is "
+              "probably a bug in Tor support for your platform; please report "
+              "it.");
+#endif /* defined(CHECK_PID) || ... */
   return result;
 }
+
+#ifdef TOR_UNIT_TESTS
+/**
+ * Unit tests only: prevent a crypto_fast_rng_t from ever mixing in more
+ * entropy.
+ */
+void
+crypto_fast_rng_disable_reseed(crypto_fast_rng_t *rng)
+{
+  rng->n_till_reseed = -1;
+}
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /**
  * Helper: create a crypto_cipher_t object from SEED_LEN bytes of
@@ -152,6 +214,26 @@ cipher_from_seed(const uint8_t *seed)
 }
 
 /**
+ * Helper: mix additional entropy into <b>rng</b> by using our XOF to mix the
+ * old value for the seed with some additional bytes from
+ * crypto_strongest_rand().
+ **/
+static void
+crypto_fast_rng_add_entopy(crypto_fast_rng_t *rng)
+{
+  crypto_xof_t *xof = crypto_xof_new();
+  crypto_xof_add_bytes(xof, rng->buf.seed, SEED_LEN);
+  {
+    uint8_t seedbuf[SEED_LEN];
+    crypto_strongest_rand(seedbuf, SEED_LEN);
+    crypto_xof_add_bytes(xof, seedbuf, SEED_LEN);
+    memwipe(seedbuf, 0, SEED_LEN);
+  }
+  crypto_xof_squeeze_bytes(xof, rng->buf.seed, SEED_LEN);
+  crypto_xof_free(xof);
+}
+
+/**
  * Helper: refill the seed bytes and output buffer of <b>rng</b>, using
  * the input seed bytes as input (key and IV) for the stream cipher.
  *
@@ -161,22 +243,19 @@ cipher_from_seed(const uint8_t *seed)
 static void
 crypto_fast_rng_refill(crypto_fast_rng_t *rng)
 {
-  if (rng->n_till_reseed-- == 0) {
-    /* It's time to reseed the RNG.  We'll do this by using our XOF to mix the
-     * old value for the seed with some additional bytes from
-     * crypto_strongest_rand(). */
-    crypto_xof_t *xof = crypto_xof_new();
-    crypto_xof_add_bytes(xof, rng->buf.seed, SEED_LEN);
-    {
-      uint8_t seedbuf[SEED_LEN];
-      crypto_strongest_rand(seedbuf, SEED_LEN);
-      crypto_xof_add_bytes(xof, seedbuf, SEED_LEN);
-      memwipe(seedbuf, 0, SEED_LEN);
-    }
-    crypto_xof_squeeze_bytes(xof, rng->buf.seed, SEED_LEN);
-    crypto_xof_free(xof);
-
+  rng->n_till_reseed--;
+  if (rng->n_till_reseed == 0) {
+    /* It's time to reseed the RNG. */
+    crypto_fast_rng_add_entopy(rng);
     rng->n_till_reseed = RESEED_AFTER;
+  } else if (rng->n_till_reseed < 0) {
+#ifdef TOR_UNIT_TESTS
+    /* Reseeding is disabled for testing; never do it on this prng. */
+    rng->n_till_reseed = -1;
+#else
+    /* If testing is disabled, this shouldn't be able to become negative. */
+    tor_assert_unreached();
+#endif /* defined(TOR_UNIT_TESTS) */
   }
   /* Now fill rng->buf with output from our stream cipher, initialized from
    * that seed value. */
@@ -208,6 +287,27 @@ static void
 crypto_fast_rng_getbytes_impl(crypto_fast_rng_t *rng, uint8_t *out,
                               const size_t n)
 {
+#ifdef CHECK_PID
+  if (rng->owner) {
+    /* Note that we only need to do this check when we have owner set: that
+     * is, when our attempt to block inheriting failed, and the result was
+     * INHERIT_RES_KEEP.
+     *
+     * If the result was INHERIT_RES_DROP, then any attempt to access the rng
+     * memory after forking will crash.
+     *
+     * If the result was INHERIT_RES_ZERO, then forking will set the bytes_left
+     * and n_till_reseed fields to zero.  This function will call
+     * crypto_fast_rng_refill(), which will in turn reseed the PRNG.
+     *
+     * So we only need to do this test in the case when mmap_anonymous()
+     * returned INHERIT_KEEP.  We avoid doing it needlessly, since getpid() is
+     * often a system call, and that can be slow.
+     */
+    tor_assert(rng->owner == getpid());
+  }
+#endif /* defined(CHECK_PID) */
+
   size_t bytes_to_yield = n;
 
   while (bytes_to_yield) {
@@ -260,4 +360,80 @@ crypto_fast_rng_get_bytes_used_per_stream(void)
 {
   return BUFLEN;
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
+
+/**
+ * Thread-local instance for our fast RNG.
+ **/
+static tor_threadlocal_t thread_rng;
+
+/**
+ * Return a per-thread fast RNG, initializing it if necessary.
+ *
+ * You do not need to free this yourself.
+ *
+ * It is NOT safe to share this value across threads.
+ **/
+crypto_fast_rng_t *
+get_thread_fast_rng(void)
+{
+  crypto_fast_rng_t *rng = tor_threadlocal_get(&thread_rng);
+
+  if (PREDICT_UNLIKELY(rng == NULL)) {
+    rng = crypto_fast_rng_new();
+    tor_threadlocal_set(&thread_rng, rng);
+  }
+
+  return rng;
+}
+
+/**
+ * Used when a thread is exiting: free the per-thread fast RNG if needed.
+ * Invoked from the crypto subsystem's thread-cleanup code.
+ **/
+void
+destroy_thread_fast_rng(void)
+{
+  crypto_fast_rng_t *rng = tor_threadlocal_get(&thread_rng);
+  if (!rng)
+    return;
+  crypto_fast_rng_free(rng);
+  tor_threadlocal_set(&thread_rng, NULL);
+}
+
+#ifdef TOR_UNIT_TESTS
+/**
+ * Replace the current thread's rng with <b>rng</b>. For use by the
+ * unit tests only.  Returns the previous thread rng.
+ **/
+crypto_fast_rng_t *
+crypto_replace_thread_fast_rng(crypto_fast_rng_t *rng)
+{
+  crypto_fast_rng_t *old_rng =  tor_threadlocal_get(&thread_rng);
+  tor_threadlocal_set(&thread_rng, rng);
+  return old_rng;
+}
+#endif /* defined(TOR_UNIT_TESTS) */
+
+/**
+ * Initialize the global thread-local key that will be used to keep track
+ * of per-thread fast RNG instances.  Called from the crypto subsystem's
+ * initialization code.
+ **/
+void
+crypto_rand_fast_init(void)
+{
+  tor_threadlocal_init(&thread_rng);
+}
+
+/**
+ * Initialize the global thread-local key that will be used to keep track
+ * of per-thread fast RNG instances.  Called from the crypto subsystem's
+ * shutdown code.
+ **/
+void
+crypto_rand_fast_shutdown(void)
+{
+  destroy_thread_fast_rng();
+  tor_threadlocal_destroy(&thread_rng);
+}

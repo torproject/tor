@@ -1,3 +1,0 @@
-  o Minor features (testing):
-    - Treat all unexpected ERR and BUG messages as test failures.
-      Closes ticket 28668.

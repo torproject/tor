@@ -1,0 +1,6 @@
+  o Minor bugfixes (compatibility, standards compliance):
+    - Fix a bug that would invoke undefined behavior on certain operating
+      systems when trying to asprintf() a string exactly INT_MAX bytes
+      long. We don't believe this is exploitable, but it's better
+      to fix it anyway. Fixes bug 31001; bugfix on 0.2.2.11-alpha.
+      Found and fixed by Tobias Stoeckmann.

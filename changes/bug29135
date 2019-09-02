@@ -1,5 +1,0 @@
-  o Minor bugfixes (onion services, logging):
-    - In hs_cache_store_as_client() log an HSDesc we failed to parse at Debug
-      loglevel. Tor used to log it at Warning loglevel, which caused
-      very long log lines to appear for some users. Fixes bug 29135; bugfix on
-      0.3.2.1-alpha.

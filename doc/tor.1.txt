@@ -151,8 +151,8 @@ instance, you can tell Tor to start listening for SOCKS connections on port
 9999 by passing --SocksPort 9999 or SocksPort 9999 to it on the command line,
 or by putting "SocksPort 9999" in the configuration file.  You will need to
 quote options with spaces in them: if you want Tor to log all debugging
-messages to debug.log, you will probably need to say --Log 'debug file
-debug.log'.
+messages to debug.log, you will probably need to say **--Log** `"debug file
+debug.log"`.
 
 Options on the command line override those in configuration files. See the
 next section for more information.
@@ -683,7 +683,7 @@ GENERAL OPTIONS
     The currently recognized domains are: general, crypto, net, config, fs,
     protocol, mm, http, app, control, circ, rend, bug, dir, dirserv, or, edge,
     acct, hist, handshake, heartbeat, channel, sched, guard, consdiff, dos,
-    process, pt, and btrack.
+    process, pt, btrack, and mesg.
     Domain names are case-insensitive. +
  +
     For example, "`Log [handshake]debug [~net,~mm]info notice stdout`" sends
@@ -959,6 +959,20 @@ The following options are useful only for clients (that is, if
     this option. This option should be offered via the UI to mobile users
     for use where bandwidth may be expensive. (Default: 0)
 
+[[CircuitPadding]] **CircuitPadding** **0**|**1**::
+    If set to 0, Tor will not pad client circuits with additional cover
+    traffic. Only clients may set this option. This option should be offered
+    via the UI to mobile users for use where bandwidth may be expensive. If
+    set to 1, padding will be negotiated as per the consensus and relay
+    support (unlike ConnectionPadding, CircuitPadding cannot be force-enabled).
+    (Default: 1)
+
+[[ReducedCircuitPadding]] **ReducedCircuitPadding** **0**|**1**::
+    If set to 1, Tor will only use circuit padding algorithms that have low
+    overhead. Only clients may set this option. This option should be offered
+    via the UI to mobile users for use where bandwidth may be expensive.
+    (Default: 0)
+
 [[ExcludeNodes]] **ExcludeNodes** __node__,__node__,__...__::
     A list of identity fingerprints, country codes, and address
     patterns of nodes to avoid when building a circuit. Country codes are
@@ -1060,8 +1074,8 @@ The following options are useful only for clients (that is, if
 [[StrictNodes]] **StrictNodes** **0**|**1**::
     If StrictNodes is set to 1, Tor will treat solely the ExcludeNodes option
     as a requirement to follow for all the circuits you generate, even if
-    doing so will break functionality for you (StrictNodes applies to neither
-    ExcludeExitNodes nor to ExitNodes, nor to MiddleNodes).  If StrictNodes
+    doing so will break functionality for you (StrictNodes does not apply to
+    ExcludeExitNodes, ExitNodes, MiddleNodes, or MapAddress).  If StrictNodes
     is set to 0, Tor will still try to avoid nodes in the ExcludeNodes list,
     but it will err on the side of avoiding unexpected errors.
     Specifically, StrictNodes 0 tells Tor that it is okay to use an excluded
@@ -1157,7 +1171,9 @@ The following options are useful only for clients (that is, if
     "MapAddress \*.example.com \*.example.com.torserver.exit". (Note the
     leading "*." in each part of the directive.) You can also redirect all
     subdomains of a domain to a single address. For example, "MapAddress
-    *.example.com www.example.com". +
+    *.example.com www.example.com". If the specified exit is not available,
+    or the exit can not connect to the site, Tor will fail any connections
+    to the mapped address.+
  +
     NOTES:
 
@@ -1184,6 +1200,15 @@ The following options are useful only for clients (that is, if
 
     4. Using a wildcard to match only part of a string (as in *ample.com) is
     also invalid.
+
+    5. Tor maps hostnames and IP addresses separately. If you MapAddress
+       a DNS name, but use an IP address to connect, then Tor will ignore the
+       DNS name mapping.
+
+    6. MapAddress does not apply to redirects in the application protocol.
+       For example, HTTP redirects and alt-svc headers will ignore mappings
+       for the original address. You can use a wildcard mapping to handle
+       redirects within the same site.
 
 [[NewCircuitPeriod]] **NewCircuitPeriod** __NUM__::
     Every NUM seconds consider whether to build a new circuit. (Default: 30
@@ -1939,13 +1964,14 @@ is non-zero):
     exit according to the ExitPolicy option, the ReducedExitPolicy option,
     or the default ExitPolicy (if no other exit policy option is specified). +
  +
-    If ExitRelay is set to 0, no traffic is allowed to
-    exit, and the ExitPolicy and ReducedExitPolicy options are ignored. +
+    If ExitRelay is set to 0, no traffic is allowed to exit, and the
+    ExitPolicy, ReducedExitPolicy, and IPv6Exit options are ignored. +
  +
-    If ExitRelay is set to "auto", then Tor checks the ExitPolicy and
-    ReducedExitPolicy options. If either is set, Tor behaves as if ExitRelay
-    were set to 1. If neither exit policy option is set, Tor behaves as if
-    ExitRelay were set to 0. (Default: auto)
+    If ExitRelay is set to "auto", then Tor checks the ExitPolicy,
+    ReducedExitPolicy, and IPv6Exit options. If at least one of these options
+    is set, Tor behaves as if ExitRelay were set to 1. If none of these exit
+    policy options are set, Tor behaves as if ExitRelay were set to 0.
+    (Default: auto)
 
 [[ExitPolicy]] **ExitPolicy** __policy__,__policy__,__...__::
     Set an exit policy for this server. Each policy is of the form
@@ -2140,8 +2166,9 @@ is non-zero):
     (Default: 0)
 
 [[IPv6Exit]] **IPv6Exit** **0**|**1**::
-    If set, and we are an exit node, allow clients to use us for IPv6
-    traffic. (Default: 0)
+    If set, and we are an exit node, allow clients to use us for IPv6 traffic.
+    When this option is set and ExitRelay is auto, we act as if ExitRelay
+    is 1. (Default: 0)
 
 [[MaxOnionQueueDelay]] **MaxOnionQueueDelay** __NUM__ [**msec**|**second**]::
     If we have more onionskins queued for processing than we can process in
@@ -2341,7 +2368,8 @@ is non-zero):
     When this option is enabled and BridgeRelay is also enabled, and we have
     GeoIP data, Tor keeps a per-country count of how many client
     addresses have contacted it so that it can help the bridge authority guess
-    which countries have blocked access to it. (Default: 1)
+    which countries have blocked access to it. If ExtraInfoStatistics is
+    enabled, it will be published as part of extra-info document. (Default: 1)
 
 [[ServerDNSRandomizeCase]] **ServerDNSRandomizeCase** **0**|**1**::
     When this option is set, Tor sets the case of each character randomly in
@@ -2423,6 +2451,10 @@ is non-zero):
 [[ExtraInfoStatistics]] **ExtraInfoStatistics** **0**|**1**::
     When this option is enabled, Tor includes previously gathered statistics in
     its extra-info documents that it uploads to the directory authorities.
+    Disabling this option also removes bandwidth usage statistics, and
+    GeoIPFile and GeoIPv6File hashes from the extra-info file. Bridge
+    ServerTransportPlugin lines are always includes in the extra-info file,
+    because they are required by BridgeDB.
     (Default: 1)
 
 [[ExtendAllowPrivateAddresses]] **ExtendAllowPrivateAddresses** **0**|**1**::

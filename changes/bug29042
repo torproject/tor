@@ -1,5 +1,0 @@
-  o Minor bugfixes (logging):
-    - Log more information at "warning" level when unable to read a private
-      key; log more information ad "info" level when unable to read a public
-      key. We had warnings here before, but they were lost during our
-      NSS work. Fixes bug 29042; bugfix on 0.3.5.1-alpha.

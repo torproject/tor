@@ -49,12 +49,12 @@ DIRSERVERS="$DIRSERVERS 80.190.246.100:80"      # gabelmoo
 DIRSERVERS="$DIRSERVERS 194.109.206.212:80"     # dizum
 DIRSERVERS="$DIRSERVERS 213.73.91.31:80"        # dannenberg
 
-TMPFILE="`tempfile`"
+TMPFILE=$(mktemp)
 trap 'rm -f "$TMPFILE"' 0
 
 for dirserver in $DIRSERVERS; do
-	wget -q -O "$TMPFILE" "http://$dirserver/tor/keys/fp/$identity"
-	if [ "$?" = 0 ]; then
+	if wget -q -O "$TMPFILE" "http://$dirserver/tor/keys/fp/$identity"
+        then
 		break
 	else
 		cat /dev/null > "$TMPFILE"
@@ -74,10 +74,10 @@ now=$(date +%s)
 if [ "$now" -ge "$expiryunix" ]; then
 	echo "CRITICAL: Certificate expired $expirydate (authority $identity)."
 	exit 2
-elif [ "$(( $now + 7*24*60*60 ))" -ge "$expiryunix" ]; then
+elif [ "$(( now + 7*24*60*60 ))" -ge "$expiryunix" ]; then
 	echo "CRITICAL: Certificate expires $expirydate (authority $identity)."
 	exit 2
-elif [ "$(( $now + 30*24*60*60 ))" -ge "$expiryunix" ]; then
+elif [ "$(( now + 30*24*60*60 ))" -ge "$expiryunix" ]; then
 	echo "WARNING: Certificate expires $expirydate (authority $identity)."
 	exit 1
 else

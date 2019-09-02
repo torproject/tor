@@ -71,7 +71,7 @@ tor_memstr(const void *haystack, size_t hlen, const char *needle)
 
 /** Return true iff the 'len' bytes at 'mem' are all zero. */
 int
-tor_mem_is_zero(const char *mem, size_t len)
+fast_mem_is_zero(const char *mem, size_t len)
 {
   static const char ZERO[] = {
     0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -95,17 +95,14 @@ tor_mem_is_zero(const char *mem, size_t len)
 int
 tor_digest_is_zero(const char *digest)
 {
-  static const uint8_t ZERO_DIGEST[] = {
-    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
-  };
-  return tor_memeq(digest, ZERO_DIGEST, DIGEST_LEN);
+  return safe_mem_is_zero(digest, DIGEST_LEN);
 }
 
 /** Return true iff the DIGEST256_LEN bytes in digest are all zero. */
 int
 tor_digest256_is_zero(const char *digest)
 {
-  return tor_mem_is_zero(digest, DIGEST256_LEN);
+  return safe_mem_is_zero(digest, DIGEST256_LEN);
 }
 
 /** Remove from the string <b>s</b> every character which appears in

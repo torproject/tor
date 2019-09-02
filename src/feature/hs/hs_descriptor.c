@@ -324,12 +324,11 @@ encode_link_specifiers(const smartlist_t *specs)
 
   link_specifier_list_set_n_spec(lslist, smartlist_len(specs));
 
-  SMARTLIST_FOREACH_BEGIN(specs, const hs_desc_link_specifier_t *,
+  SMARTLIST_FOREACH_BEGIN(specs, const link_specifier_t *,
                           spec) {
-    link_specifier_t *ls = hs_desc_lspec_to_trunnel(spec);
-    if (ls) {
-      link_specifier_list_add_spec(lslist, ls);
-    }
+    link_specifier_t *ls = link_specifier_dup(spec);
+    tor_assert(ls);
+    link_specifier_list_add_spec(lslist, ls);
   } SMARTLIST_FOREACH_END(spec);
 
   {
@@ -404,9 +403,7 @@ encode_enc_key(const hs_desc_intro_point_t *ip)
   tor_assert(ip);
 
   /* Base64 encode the encryption key for the "enc-key" field. */
-  if (curve25519_public_to_base64(key_b64, &ip->enc_key) < 0) {
-    goto done;
-  }
+  curve25519_public_to_base64(key_b64, &ip->enc_key);
   if (tor_cert_encode_ed22519(ip->enc_key_cert, &encoded_cert) < 0) {
     goto done;
   }
@@ -422,7 +419,7 @@ encode_enc_key(const hs_desc_intro_point_t *ip)
 }
 
 /* Encode an introduction point onion key. Return a newly allocated string
- * with it. On failure, return NULL. */
+ * with it. Can not fail. */
 static char *
 encode_onion_key(const hs_desc_intro_point_t *ip)
 {
@@ -432,12 +429,9 @@ encode_onion_key(const hs_desc_intro_point_t *ip)
   tor_assert(ip);
 
   /* Base64 encode the encryption key for the "onion-key" field. */
-  if (curve25519_public_to_base64(key_b64, &ip->onion_key) < 0) {
-    goto done;
-  }
+  curve25519_public_to_base64(key_b64, &ip->onion_key);
   tor_asprintf(&encoded, "%s ntor %s", str_ip_onion_key, key_b64);
 
- done:
   return encoded;
 }
 
@@ -684,7 +678,7 @@ get_auth_client_str(const hs_desc_authorized_client_t *client)
   char encrypted_cookie_b64[HS_DESC_ENCRYPED_COOKIE_LEN * 2];
 
 #define ASSERT_AND_BASE64(field) STMT_BEGIN                        \
-  tor_assert(!tor_mem_is_zero((char *) client->field,              \
+  tor_assert(!fast_mem_is_zero((char *) client->field,              \
                               sizeof(client->field)));             \
   ret = base64_encode_nopad(field##_b64, sizeof(field##_b64),      \
                             client->field, sizeof(client->field)); \
@@ -798,8 +792,8 @@ get_inner_encrypted_layer_plaintext(const hs_descriptor_t *desc)
 /* Create the middle layer of the descriptor, which includes the client auth
  * data and the encrypted inner layer (provided as a base64 string at
  * <b>layer2_b64_ciphertext</b>). Return a newly-allocated string with the
- * layer plaintext, or NULL if an error occurred. It's the responsibility of
- * the caller to free the returned string. */
+ * layer plaintext. It's the responsibility of the caller to free the returned
+ * string. Can not fail. */
 static char *
 get_outer_encrypted_layer_plaintext(const hs_descriptor_t *desc,
                                     const char *layer2_b64_ciphertext)
@@ -815,13 +809,10 @@ get_outer_encrypted_layer_plaintext(const hs_descriptor_t *desc,
     const curve25519_public_key_t *ephemeral_pubkey;
 
     ephemeral_pubkey = &desc->superencrypted_data.auth_ephemeral_pubkey;
-    tor_assert(!tor_mem_is_zero((char *) ephemeral_pubkey->public_key,
+    tor_assert(!fast_mem_is_zero((char *) ephemeral_pubkey->public_key,
                                 CURVE25519_PUBKEY_LEN));
 
-    if (curve25519_public_to_base64(ephemeral_key_base64,
-                                    ephemeral_pubkey) < 0) {
-      goto done;
-    }
+    curve25519_public_to_base64(ephemeral_key_base64, ephemeral_pubkey);
     smartlist_add_asprintf(lines, "%s %s\n",
                            str_desc_auth_key, ephemeral_key_base64);
 
@@ -846,7 +837,6 @@ get_outer_encrypted_layer_plaintext(const hs_descriptor_t *desc,
 
   layer1_str = smartlist_join_strings(lines, "", 0, NULL);
 
- done:
   /* We need to memwipe all lines because it contains the ephemeral key */
   SMARTLIST_FOREACH(lines, char *, a, memwipe(a, 0, strlen(a)));
   SMARTLIST_FOREACH(lines, char *, a, tor_free(a));
@@ -1092,11 +1082,7 @@ desc_encode_v3(const hs_descriptor_t *desc,
       tor_free(encoded_str);
       goto err;
     }
-    if (ed25519_signature_to_base64(ed_sig_b64, &sig) < 0) {
-      log_warn(LD_BUG, "Can't base64 encode descriptor signature!");
-      tor_free(encoded_str);
-      goto err;
-    }
+    ed25519_signature_to_base64(ed_sig_b64, &sig);
     /* Create the signature line. */
     smartlist_add_asprintf(lines, "%s %s", str_signature, ed_sig_b64);
   }
@@ -1190,52 +1176,22 @@ decode_link_specifiers(const char *encoded)
   results = smartlist_new();
 
   for (i = 0; i < link_specifier_list_getlen_spec(specs); i++) {
-    hs_desc_link_specifier_t *hs_spec;
     link_specifier_t *ls = link_specifier_list_get_spec(specs, i);
-    tor_assert(ls);
-
-    hs_spec = tor_malloc_zero(sizeof(*hs_spec));
-    hs_spec->type = link_specifier_get_ls_type(ls);
-    switch (hs_spec->type) {
-    case LS_IPV4:
-      tor_addr_from_ipv4h(&hs_spec->u.ap.addr,
-                          link_specifier_get_un_ipv4_addr(ls));
-      hs_spec->u.ap.port = link_specifier_get_un_ipv4_port(ls);
-      break;
-    case LS_IPV6:
-      tor_addr_from_ipv6_bytes(&hs_spec->u.ap.addr, (const char *)
-                               link_specifier_getarray_un_ipv6_addr(ls));
-      hs_spec->u.ap.port = link_specifier_get_un_ipv6_port(ls);
-      break;
-    case LS_LEGACY_ID:
-      /* Both are known at compile time so let's make sure they are the same
-       * else we can copy memory out of bound. */
-      tor_assert(link_specifier_getlen_un_legacy_id(ls) ==
-                 sizeof(hs_spec->u.legacy_id));
-      memcpy(hs_spec->u.legacy_id, link_specifier_getarray_un_legacy_id(ls),
-             sizeof(hs_spec->u.legacy_id));
-      break;
-    case LS_ED25519_ID:
-      /* Both are known at compile time so let's make sure they are the same
-       * else we can copy memory out of bound. */
-      tor_assert(link_specifier_getlen_un_ed25519_id(ls) ==
-                 sizeof(hs_spec->u.ed25519_id));
-      memcpy(hs_spec->u.ed25519_id,
-             link_specifier_getconstarray_un_ed25519_id(ls),
-             sizeof(hs_spec->u.ed25519_id));
-      break;
-    default:
-      tor_free(hs_spec);
+    if (BUG(!ls)) {
       goto err;
     }
-
-    smartlist_add(results, hs_spec);
+    link_specifier_t *ls_dup = link_specifier_dup(ls);
+    if (BUG(!ls_dup)) {
+      goto err;
+    }
+    smartlist_add(results, ls_dup);
   }
 
   goto done;
  err:
   if (results) {
-    SMARTLIST_FOREACH(results, hs_desc_link_specifier_t *, s, tor_free(s));
+    SMARTLIST_FOREACH(results, link_specifier_t *, s,
+                      link_specifier_free(s));
     smartlist_free(results);
     results = NULL;
   }
@@ -1465,12 +1421,12 @@ decrypt_descriptor_cookie(const hs_descriptor_t *desc,
   tor_assert(desc);
   tor_assert(client);
   tor_assert(client_auth_sk);
-  tor_assert(!tor_mem_is_zero(
+  tor_assert(!fast_mem_is_zero(
         (char *) &desc->superencrypted_data.auth_ephemeral_pubkey,
         sizeof(desc->superencrypted_data.auth_ephemeral_pubkey)));
-  tor_assert(!tor_mem_is_zero((char *) client_auth_sk,
+  tor_assert(!fast_mem_is_zero((char *) client_auth_sk,
                               sizeof(*client_auth_sk)));
-  tor_assert(!tor_mem_is_zero((char *) desc->subcredential, DIGEST256_LEN));
+  tor_assert(!fast_mem_is_zero((char *) desc->subcredential, DIGEST256_LEN));
 
   /* Get the KEYS component to derive the CLIENT-ID and COOKIE-KEY. */
   keystream_length =
@@ -2012,6 +1968,7 @@ decode_intro_points(const hs_descriptor_t *desc,
   SMARTLIST_FOREACH(intro_points, char *, a, tor_free(a));
   smartlist_free(intro_points);
 }
+
 /* Return 1 iff the given base64 encoded signature in b64_sig from the encoded
  * descriptor in encoded_desc validates the descriptor content. */
 STATIC int
@@ -2615,7 +2572,7 @@ hs_desc_decode_descriptor(const char *encoded,
 
   /* Subcredentials are not optional. */
   if (BUG(!subcredential ||
-          tor_mem_is_zero((char*)subcredential, DIGEST256_LEN))) {
+          fast_mem_is_zero((char*)subcredential, DIGEST256_LEN))) {
     log_warn(LD_GENERAL, "Tried to decrypt without subcred. Impossible!");
     goto err;
   }
@@ -2878,8 +2835,8 @@ hs_desc_intro_point_free_(hs_desc_intro_point_t *ip)
     return;
   }
   if (ip->link_specifiers) {
-    SMARTLIST_FOREACH(ip->link_specifiers, hs_desc_link_specifier_t *,
-                      ls, hs_desc_link_specifier_free(ls));
+    SMARTLIST_FOREACH(ip->link_specifiers, link_specifier_t *,
+                      ls, link_specifier_free(ls));
     smartlist_free(ip->link_specifiers);
   }
   tor_cert_free(ip->auth_key_cert);
@@ -2928,13 +2885,13 @@ hs_desc_build_authorized_client(const uint8_t *subcredential,
   tor_assert(descriptor_cookie);
   tor_assert(client_out);
   tor_assert(subcredential);
-  tor_assert(!tor_mem_is_zero((char *) auth_ephemeral_sk,
+  tor_assert(!fast_mem_is_zero((char *) auth_ephemeral_sk,
                               sizeof(*auth_ephemeral_sk)));
-  tor_assert(!tor_mem_is_zero((char *) client_auth_pk,
+  tor_assert(!fast_mem_is_zero((char *) client_auth_pk,
                               sizeof(*client_auth_pk)));
-  tor_assert(!tor_mem_is_zero((char *) descriptor_cookie,
+  tor_assert(!fast_mem_is_zero((char *) descriptor_cookie,
                               HS_DESC_DESCRIPTOR_COOKIE_LEN));
-  tor_assert(!tor_mem_is_zero((char *) subcredential,
+  tor_assert(!fast_mem_is_zero((char *) subcredential,
                               DIGEST256_LEN));
 
   /* Get the KEYS part so we can derive the CLIENT-ID and COOKIE-KEY. */
@@ -2972,69 +2929,6 @@ hs_desc_authorized_client_free_(hs_desc_authorized_client_t *client)
   tor_free(client);
 }
 
-/* Free the given descriptor link specifier. */
-void
-hs_desc_link_specifier_free_(hs_desc_link_specifier_t *ls)
-{
-  if (ls == NULL) {
-    return;
-  }
-  tor_free(ls);
-}
-
-/* Return a newly allocated descriptor link specifier using the given extend
- * info and requested type. Return NULL on error. */
-hs_desc_link_specifier_t *
-hs_desc_link_specifier_new(const extend_info_t *info, uint8_t type)
-{
-  hs_desc_link_specifier_t *ls = NULL;
-
-  tor_assert(info);
-
-  ls = tor_malloc_zero(sizeof(*ls));
-  ls->type = type;
-  switch (ls->type) {
-  case LS_IPV4:
-    if (info->addr.family != AF_INET) {
-      goto err;
-    }
-    tor_addr_copy(&ls->u.ap.addr, &info->addr);
-    ls->u.ap.port = info->port;
-    break;
-  case LS_IPV6:
-    if (info->addr.family != AF_INET6) {
-      goto err;
-    }
-    tor_addr_copy(&ls->u.ap.addr, &info->addr);
-    ls->u.ap.port = info->port;
-    break;
-  case LS_LEGACY_ID:
-    /* Bug out if the identity digest is not set */
-    if (BUG(tor_mem_is_zero(info->identity_digest,
-                            sizeof(info->identity_digest)))) {
-      goto err;
-    }
-    memcpy(ls->u.legacy_id, info->identity_digest, sizeof(ls->u.legacy_id));
-    break;
-  case LS_ED25519_ID:
-    /* ed25519 keys are optional for intro points */
-    if (ed25519_public_key_is_zero(&info->ed_identity)) {
-      goto err;
-    }
-    memcpy(ls->u.ed25519_id, info->ed_identity.pubkey,
-           sizeof(ls->u.ed25519_id));
-    break;
-  default:
-    /* Unknown type is code flow error. */
-    tor_assert(0);
-  }
-
-  return ls;
- err:
-  tor_free(ls);
-  return NULL;
-}
-
 /* From the given descriptor, remove and free every introduction point. */
 void
 hs_descriptor_clear_intro_points(hs_descriptor_t *desc)
@@ -3049,60 +2943,4 @@ hs_descriptor_clear_intro_points(hs_descriptor_t *desc)
                       ip, hs_desc_intro_point_free(ip));
     smartlist_clear(ips);
   }
-}
-
-/* From a descriptor link specifier object spec, returned a newly allocated
- * link specifier object that is the encoded representation of spec. Return
- * NULL on error. */
-link_specifier_t *
-hs_desc_lspec_to_trunnel(const hs_desc_link_specifier_t *spec)
-{
-  tor_assert(spec);
-
-  link_specifier_t *ls = link_specifier_new();
-  link_specifier_set_ls_type(ls, spec->type);
-
-  switch (spec->type) {
-  case LS_IPV4:
-    link_specifier_set_un_ipv4_addr(ls,
-                                    tor_addr_to_ipv4h(&spec->u.ap.addr));
-    link_specifier_set_un_ipv4_port(ls, spec->u.ap.port);
-    /* Four bytes IPv4 and two bytes port. */
-    link_specifier_set_ls_len(ls, sizeof(spec->u.ap.addr.addr.in_addr) +
-                                  sizeof(spec->u.ap.port));
-    break;
-  case LS_IPV6:
-  {
-    size_t addr_len = link_specifier_getlen_un_ipv6_addr(ls);
-    const uint8_t *in6_addr = tor_addr_to_in6_addr8(&spec->u.ap.addr);
-    uint8_t *ipv6_array = link_specifier_getarray_un_ipv6_addr(ls);
-    memcpy(ipv6_array, in6_addr, addr_len);
-    link_specifier_set_un_ipv6_port(ls, spec->u.ap.port);
-    /* Sixteen bytes IPv6 and two bytes port. */
-    link_specifier_set_ls_len(ls, addr_len + sizeof(spec->u.ap.port));
-    break;
-  }
-  case LS_LEGACY_ID:
-  {
-    size_t legacy_id_len = link_specifier_getlen_un_legacy_id(ls);
-    uint8_t *legacy_id_array = link_specifier_getarray_un_legacy_id(ls);
-    memcpy(legacy_id_array, spec->u.legacy_id, legacy_id_len);
-    link_specifier_set_ls_len(ls, legacy_id_len);
-    break;
-  }
-  case LS_ED25519_ID:
-  {
-    size_t ed25519_id_len = link_specifier_getlen_un_ed25519_id(ls);
-    uint8_t *ed25519_id_array = link_specifier_getarray_un_ed25519_id(ls);
-    memcpy(ed25519_id_array, spec->u.ed25519_id, ed25519_id_len);
-    link_specifier_set_ls_len(ls, ed25519_id_len);
-    break;
-  }
-  default:
-    tor_assert_nonfatal_unreached();
-    link_specifier_free(ls);
-    ls = NULL;
-  }
-
-  return ls;
 }

@@ -1,4 +1,0 @@
-  o Minor features (dircache):
-    - When a directory authority is using a bandwidth file to obtain the
-      bandwidth values that will be included in the next vote, serve this
-      bandwidth file at /tor/status-vote/next/bandwidth. Closes ticket 21377.

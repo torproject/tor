@@ -1,0 +1,4 @@
+  o Minor bugfixes (directory authorities):
+    - Stop crashing after parsing an unknown descriptor purpose annotation.
+      We think this bug can only be triggered by modifying a local file.
+      Fixes bug 30781; bugfix on 0.2.0.8-alpha.

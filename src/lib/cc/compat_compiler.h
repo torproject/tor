@@ -217,4 +217,16 @@
 /** Macro: Yields the number of elements in array x. */
 #define ARRAY_LENGTH(x) ((sizeof(x)) / sizeof(x[0]))
 
-#endif /* !defined(TOR_COMPAT_H) */
+/**
+ * "Eat" a semicolon that somebody puts at the end of a top-level macro.
+ *
+ * Frequently, we want to declare a macro that people will use at file scope,
+ * and we want to allow people to put a semicolon after the macro.
+ *
+ * This declaration of a struct can be repeated any number of times, and takes
+ * a trailing semicolon afterwards.
+ **/
+#define EAT_SEMICOLON                                   \
+  struct dummy_semicolon_eater__
+
+#endif /* !defined(TOR_COMPAT_COMPILER_H) */

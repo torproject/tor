@@ -49,7 +49,7 @@
 #include "core/or/protover.h"
 #include "feature/client/bridges.h"
 #include "feature/client/entrynodes.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/process_descs.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/hs/hs_client.h"
@@ -944,7 +944,7 @@ nodelist_ensure_freshness(networkstatus_t *ns)
 /** Return a list of a node_t * for every node we know about.  The caller
  * MUST NOT modify the list. (You can set and clear flags in the nodes if
  * you must, but you must not add or remove nodes.) */
-MOCK_IMPL(smartlist_t *,
+MOCK_IMPL(const smartlist_t *,
 nodelist_get_list,(void))
 {
   init_nodelist();
@@ -1187,6 +1187,102 @@ node_get_rsa_id_digest(const node_t *node)
 {
   tor_assert(node);
   return (const uint8_t*)node->identity;
+}
+
+/* Returns a new smartlist with all possible link specifiers from node:
+ *  - legacy ID is mandatory thus MUST be present in node;
+ *  - include ed25519 link specifier if present in the node, and the node
+ *    supports ed25519 link authentication, and:
+ *    - if direct_conn is true, its link versions are compatible with us,
+ *    - if direct_conn is false, regardless of its link versions;
+ *  - include IPv4 link specifier, if the primary address is not IPv4, log a
+ *    BUG() warning, and return an empty smartlist;
+ *  - include IPv6 link specifier if present in the node.
+ *
+ * If node is NULL, returns an empty smartlist.
+ *
+ * The smartlist must be freed using link_specifier_smartlist_free(). */
+smartlist_t *
+node_get_link_specifier_smartlist(const node_t *node, bool direct_conn)
+{
+  link_specifier_t *ls;
+  tor_addr_port_t ap;
+  smartlist_t *lspecs = smartlist_new();
+
+  if (!node)
+    return lspecs;
+
+  /* Get the relay's IPv4 address. */
+  node_get_prim_orport(node, &ap);
+
+  /* We expect the node's primary address to be a valid IPv4 address.
+   * This conforms to the protocol, which requires either an IPv4 or IPv6
+   * address (or both). */
+  if (BUG(!tor_addr_is_v4(&ap.addr)) ||
+      BUG(!tor_addr_port_is_valid_ap(&ap, 0))) {
+    return lspecs;
+  }
+
+  ls = link_specifier_new();
+  link_specifier_set_ls_type(ls, LS_IPV4);
+  link_specifier_set_un_ipv4_addr(ls, tor_addr_to_ipv4h(&ap.addr));
+  link_specifier_set_un_ipv4_port(ls, ap.port);
+  /* Four bytes IPv4 and two bytes port. */
+  link_specifier_set_ls_len(ls, sizeof(ap.addr.addr.in_addr) +
+                            sizeof(ap.port));
+  smartlist_add(lspecs, ls);
+
+  /* Legacy ID is mandatory and will always be present in node. */
+  ls = link_specifier_new();
+  link_specifier_set_ls_type(ls, LS_LEGACY_ID);
+  memcpy(link_specifier_getarray_un_legacy_id(ls), node->identity,
+         link_specifier_getlen_un_legacy_id(ls));
+  link_specifier_set_ls_len(ls, link_specifier_getlen_un_legacy_id(ls));
+  smartlist_add(lspecs, ls);
+
+  /* ed25519 ID is only included if the node has it, and the node declares a
+   protocol version that supports ed25519 link authentication.
+   If direct_conn is true, we also require that the node's link version is
+   compatible with us. (Otherwise, we will be sending the ed25519 key
+   to another tor, which may support different link versions.) */
+  if (!ed25519_public_key_is_zero(&node->ed25519_id) &&
+      node_supports_ed25519_link_authentication(node, direct_conn)) {
+    ls = link_specifier_new();
+    link_specifier_set_ls_type(ls, LS_ED25519_ID);
+    memcpy(link_specifier_getarray_un_ed25519_id(ls), &node->ed25519_id,
+           link_specifier_getlen_un_ed25519_id(ls));
+    link_specifier_set_ls_len(ls, link_specifier_getlen_un_ed25519_id(ls));
+    smartlist_add(lspecs, ls);
+  }
+
+  /* Check for IPv6. If so, include it as well. */
+  if (node_has_ipv6_orport(node)) {
+    ls = link_specifier_new();
+    node_get_pref_ipv6_orport(node, &ap);
+    link_specifier_set_ls_type(ls, LS_IPV6);
+    size_t addr_len = link_specifier_getlen_un_ipv6_addr(ls);
+    const uint8_t *in6_addr = tor_addr_to_in6_addr8(&ap.addr);
+    uint8_t *ipv6_array = link_specifier_getarray_un_ipv6_addr(ls);
+    memcpy(ipv6_array, in6_addr, addr_len);
+    link_specifier_set_un_ipv6_port(ls, ap.port);
+    /* Sixteen bytes IPv6 and two bytes port. */
+    link_specifier_set_ls_len(ls, addr_len + sizeof(ap.port));
+    smartlist_add(lspecs, ls);
+  }
+
+  return lspecs;
+}
+
+/* Free a link specifier list. */
+void
+link_specifier_smartlist_free_(smartlist_t *ls_list)
+{
+  if (!ls_list)
+    return;
+
+  SMARTLIST_FOREACH(ls_list, link_specifier_t *, lspec,
+                    link_specifier_free(lspec));
+  smartlist_free(ls_list);
 }
 
 /** Return the nickname of <b>node</b>, or NULL if we can't find one. */
@@ -1763,7 +1859,7 @@ microdesc_has_curve25519_onion_key(const microdesc_t *md)
     return 0;
   }
 
-  if (tor_mem_is_zero((const char*)md->onion_curve25519_pkey->public_key,
+  if (fast_mem_is_zero((const char*)md->onion_curve25519_pkey->public_key,
                       CURVE25519_PUBKEY_LEN)) {
     return 0;
   }
@@ -1843,7 +1939,7 @@ node_set_country(node_t *node)
 void
 nodelist_refresh_countries(void)
 {
-  smartlist_t *nodes = nodelist_get_list();
+  const smartlist_t *nodes = nodelist_get_list();
   SMARTLIST_FOREACH(nodes, node_t *, node,
                     node_set_country(node));
 }

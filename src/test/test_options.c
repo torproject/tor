@@ -31,14 +31,14 @@
 
 typedef struct {
   int severity;
-  uint32_t domain;
+  log_domain_mask_t domain;
   char *msg;
 } logmsg_t;
 
 static smartlist_t *messages = NULL;
 
 static void
-log_cback(int severity, uint32_t domain, const char *msg)
+log_cback(int severity, log_domain_mask_t domain, const char *msg)
 {
   logmsg_t *x = tor_malloc(sizeof(*x));
   x->severity = severity;
@@ -430,6 +430,7 @@ get_options_test_data(const char *conf)
   // Being kinda lame and just fixing the immedate breakage for now..
   result->opt->ConnectionPadding = -1; // default must be "auto"
   result->opt->DormantClientTimeout = 1800; // must be over 600.
+  result->opt->CircuitPadding = 1; // default must be "1"
 
   rv = config_get_lines(conf, &cl, 1);
   tt_int_op(rv, OP_EQ, 0);

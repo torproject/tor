@@ -1,3 +1,0 @@
-  o Minor bugfixes (compilation, testing):
-    - Silence a compiler warning in test-memwipe.c on OpenBSD.  Fixes
-      bug 29145; bugfix on 0.2.9.3-alpha.  Patch from Kris Katterjohn.

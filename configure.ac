@@ -4,7 +4,7 @@ dnl Copyright (c) 2007-2019, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
 AC_PREREQ([2.63])
-AC_INIT([tor],[0.4.0.5-dev])
+AC_INIT([tor],[0.4.1.5-dev])
 AC_CONFIG_SRCDIR([src/app/main/tor_main.c])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -14,7 +14,7 @@ AC_CONFIG_MACRO_DIR([m4])
 # version number changes.  Tor uses it to make sure that it
 # only shuts down for missing "required protocols" when those protocols
 # are listed as required by a consensus after this date.
-AC_DEFINE(APPROX_RELEASE_DATE, ["2019-05-02"], # for 0.4.0.5-dev
+AC_DEFINE(APPROX_RELEASE_DATE, ["2019-08-20"], # for 0.4.1.5-dev
           [Approximate date when this software was released. (Updated when the version changes.)])
 
 # "foreign" means we don't follow GNU package layout standards
@@ -949,20 +949,23 @@ AC_CHECK_MEMBERS([struct ssl_method_st.get_cipher_by_char], , ,
 [#include <openssl/ssl.h>
 ])
 
+dnl OpenSSL functions which we might not have.  In theory, we could just
+dnl check the openssl version number, but in practice that gets pretty
+dnl confusing with LibreSSL, OpenSSL, and various distributions' patches
+dnl to them.
 AC_CHECK_FUNCS([ \
 		ERR_load_KDF_strings \
-		SSL_SESSION_get_master_key \
-		SSL_get_server_random \
-                SSL_get_client_ciphers \
-                SSL_get_client_random \
-                SSL_CTX_set1_groups_list \
+		EVP_PBE_scrypt \
+		EVP_sha3_256 \
 		SSL_CIPHER_find \
-                SSL_CTX_set_security_level \
-		TLS_method
+		SSL_CTX_set1_groups_list \
+		SSL_CTX_set_security_level \
+		SSL_SESSION_get_master_key \
+		SSL_get_client_ciphers \
+		SSL_get_client_random \
+		SSL_get_server_random \
+		TLS_method \
 	       ])
-
-dnl Check if OpenSSL has scrypt implementation.
-AC_CHECK_FUNCS([ EVP_PBE_scrypt ])
 
 dnl Check if OpenSSL structures are opaque
 AC_CHECK_MEMBERS([SSL.state], , ,
@@ -974,6 +977,15 @@ AC_CHECK_SIZEOF(SHA_CTX, , [AC_INCLUDES_DEFAULT()
 ])
 
 fi # enable_nss
+
+dnl We will someday make KECCAK_TINY optional, but for now we still need
+dnl it for SHAKE, since OpenSSL's SHAKE can't be squeezed more than
+dnl once.  See comment in the definition of crypto_xof_t.
+
+dnl AM_CONDITIONAL(BUILD_KECCAK_TINY,
+dnl   test "x$ac_cv_func_EVP_sha3_256" != "xyes")
+
+AM_CONDITIONAL(BUILD_KECCAK_TINY, true)
 
 dnl ======================================================================
 dnl Can we use KIST?
@@ -1593,6 +1605,7 @@ AC_CHECK_MEMBERS([struct timeval.tv_sec], , ,
 AC_CHECK_SIZEOF(char)
 AC_CHECK_SIZEOF(short)
 AC_CHECK_SIZEOF(int)
+AC_CHECK_SIZEOF(unsigned int)
 AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(__int64)
@@ -2444,9 +2457,7 @@ AC_CONFIG_FILES([
 	Doxyfile
 	Makefile
 	config.rust
-	contrib/dist/suse/tor.sh
 	contrib/operator-tools/tor.logrotate
-	contrib/dist/tor.sh
 	contrib/dist/torctl
 	contrib/dist/tor.service
 	src/config/torrc.sample

@@ -59,9 +59,6 @@ struct threadpool_s {
    * <b>p</b> is work[p]. */
   work_tailq_t work[WORKQUEUE_N_PRIORITIES];
 
-  /** Weak RNG, used to decide when to ignore priority. */
-  tor_weak_rng_t weak_rng;
-
   /** The current 'update generation' of the threadpool.  Any thread that is
    * at an earlier generation needs to run the update function. */
   unsigned generation;
@@ -238,7 +235,7 @@ worker_thread_extract_next_work(workerthread_t *thread)
     this_queue = &pool->work[i];
     if (!TOR_TAILQ_EMPTY(this_queue)) {
       queue = this_queue;
-      if (! tor_weak_random_one_in_n(&pool->weak_rng,
+      if (! crypto_fast_rng_one_in_n(get_thread_fast_rng(),
                                      thread->lower_priority_chance)) {
         /* Usually we'll just break now, so that we can get out of the loop
          * and use the queue where we found work. But with a small
@@ -554,11 +551,6 @@ threadpool_new(int n_threads,
   unsigned i;
   for (i = WORKQUEUE_PRIORITY_FIRST; i <= WORKQUEUE_PRIORITY_LAST; ++i) {
     TOR_TAILQ_INIT(&pool->work[i]);
-  }
-  {
-    unsigned seed;
-    crypto_rand((void*)&seed, sizeof(seed));
-    tor_init_weak_random(&pool->weak_rng, seed);
   }
 
   pool->new_thread_state_fn = new_thread_state_fn;

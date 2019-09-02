@@ -82,12 +82,14 @@
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
+#include "core/or/crypt_path.h"
 #include "core/proto/proto_http.h"
 #include "core/proto/proto_socks.h"
 #include "feature/client/dnsserv.h"
 #include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
 #include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dircommon/directory.h"
@@ -182,7 +184,7 @@ static const char *connection_proxy_state_to_string(int state);
 static int connection_read_https_proxy_response(connection_t *conn);
 static void connection_send_socks5_connect(connection_t *conn);
 static const char *proxy_type_to_string(int proxy_type);
-static int get_proxy_type(void);
+static int conn_get_proxy_type(const connection_t *conn);
 const tor_addr_t *conn_get_outbound_address(sa_family_t family,
                   const or_options_t *options, unsigned int conn_type);
 static void reenable_blocked_connection_init(const or_options_t *options);
@@ -696,6 +698,7 @@ connection_free_minimal(connection_t *conn)
     control_connection_t *control_conn = TO_CONTROL_CONN(conn);
     tor_free(control_conn->safecookie_client_hash);
     tor_free(control_conn->incoming_cmd);
+    tor_free(control_conn->current_cmd);
     if (control_conn->ephemeral_onion_services) {
       SMARTLIST_FOREACH(control_conn->ephemeral_onion_services, char *, cp, {
         memwipe(cp, 0, strlen(cp));
@@ -1473,7 +1476,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
         goto err;
       }
     }
-#endif /* __APPLE__ */
+#endif /* !defined(__APPLE__) */
 #endif /* defined(HAVE_SYS_UN_H) */
   } else {
     log_err(LD_BUG, "Got unexpected address family %d.",
@@ -1652,7 +1655,7 @@ check_sockaddr(const struct sockaddr *sa, int len, int level)
              len,(int)sizeof(struct sockaddr_in6));
       ok = 0;
     }
-    if (tor_mem_is_zero((void*)sin6->sin6_addr.s6_addr, 16) ||
+    if (fast_mem_is_zero((void*)sin6->sin6_addr.s6_addr, 16) ||
         sin6->sin6_port == 0) {
       log_fn(level, LD_NET,
              "Address for new connection has address/port equal to zero.");
@@ -2282,18 +2285,27 @@ connection_proxy_state_to_string(int state)
   return states[state];
 }
 
-/** Returns the global proxy type used by tor. Use this function for
- *  logging or high-level purposes, don't use it to fill the
+/** Returns the proxy type used by tor for a single connection, for
+ *  logging or high-level purposes. Don't use it to fill the
  *  <b>proxy_type</b> field of or_connection_t; use the actual proxy
  *  protocol instead.*/
 static int
-get_proxy_type(void)
+conn_get_proxy_type(const connection_t *conn)
 {
   const or_options_t *options = get_options();
 
-  if (options->ClientTransportPlugin)
-    return PROXY_PLUGGABLE;
-  else if (options->HTTPSProxy)
+  if (options->ClientTransportPlugin) {
+    /* If we have plugins configured *and* this addr/port is a known bridge
+     * with a transport, then we should be PROXY_PLUGGABLE. */
+    const transport_t *transport = NULL;
+    int r;
+    r = get_transport_by_bridge_addrport(&conn->addr, conn->port, &transport);
+    if (r == 0 && transport)
+      return PROXY_PLUGGABLE;
+  }
+
+  /* In all other cases, we're using a global proxy. */
+  if (options->HTTPSProxy)
     return PROXY_CONNECT;
   else if (options->Socks4Proxy)
     return PROXY_SOCKS4;
@@ -2380,7 +2392,7 @@ connection_proxy_connect(connection_t *conn, int type)
            arguments to transmit. If we do, compress all arguments to
            a single string in 'socks_args_string': */
 
-        if (get_proxy_type() == PROXY_PLUGGABLE) {
+        if (conn_get_proxy_type(conn) == PROXY_PLUGGABLE) {
           socks_args_string =
             pt_get_socks_args_for_proxy_addrport(&conn->addr, conn->port);
           if (socks_args_string)
@@ -2440,7 +2452,7 @@ connection_proxy_connect(connection_t *conn, int type)
          Socks5ProxyUsername or if we want to pass arguments to our
          pluggable transport proxy: */
       if ((options->Socks5ProxyUsername) ||
-          (get_proxy_type() == PROXY_PLUGGABLE &&
+          (conn_get_proxy_type(conn) == PROXY_PLUGGABLE &&
            (get_socks_args_by_bridge_addrport(&conn->addr, conn->port)))) {
       /* number of auth methods */
         buf[1] = 2;
@@ -2633,16 +2645,16 @@ connection_read_proxy_handshake(connection_t *conn)
         const char *user, *pass;
         char *socks_args_string = NULL;
 
-        if (get_proxy_type() == PROXY_PLUGGABLE) {
+        if (conn_get_proxy_type(conn) == PROXY_PLUGGABLE) {
           socks_args_string =
             pt_get_socks_args_for_proxy_addrport(&conn->addr, conn->port);
           if (!socks_args_string) {
-            log_warn(LD_NET, "Could not create SOCKS args string.");
+            log_warn(LD_NET, "Could not create SOCKS args string for PT.");
             ret = -1;
             break;
           }
 
-          log_debug(LD_NET, "SOCKS5 arguments: %s", socks_args_string);
+          log_debug(LD_NET, "PT SOCKS5 arguments: %s", socks_args_string);
           tor_assert(strlen(socks_args_string) > 0);
           tor_assert(strlen(socks_args_string) <= MAX_SOCKS5_AUTH_SIZE_TOTAL);
 
@@ -2844,7 +2856,7 @@ retry_listener_ports(smartlist_t *old_conns,
           SMARTLIST_DEL_CURRENT(old_conns, conn);
           break;
         }
-#endif
+#endif /* defined(ENABLE_LISTENER_REBIND) */
       }
     } SMARTLIST_FOREACH_END(wanted);
 
@@ -2946,7 +2958,7 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
                conn_type_to_string(old_conn->type), old_conn->address,
                old_conn->port, new_conn->address, new_conn->port);
   } SMARTLIST_FOREACH_END(r);
-#endif
+#endif /* defined(ENABLE_LISTENER_REBIND) */
 
   /* Any members that were still in 'listeners' don't correspond to
    * any configured port.  Kill 'em. */
@@ -3945,9 +3957,9 @@ update_send_buffer_size(tor_socket_t sock)
       &isb, sizeof(isb), &bytesReturned, NULL, NULL)) {
     setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&isb, sizeof(isb));
   }
-#else
+#else /* !(defined(_WIN32)) */
   (void) sock;
-#endif
+#endif /* defined(_WIN32) */
 }
 
 /** Try to flush more bytes onto <b>conn</b>-\>s.
@@ -5328,7 +5340,7 @@ assert_connection_ok(connection_t *conn, time_t now)
         tor_assert(entry_conn->socks_request->has_finished);
         if (!conn->marked_for_close) {
           tor_assert(ENTRY_TO_EDGE_CONN(entry_conn)->cpath_layer);
-          assert_cpath_layer_ok(ENTRY_TO_EDGE_CONN(entry_conn)->cpath_layer);
+          cpath_assert_layer_ok(ENTRY_TO_EDGE_CONN(entry_conn)->cpath_layer);
         }
       }
     }

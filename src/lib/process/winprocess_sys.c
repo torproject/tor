@@ -51,7 +51,7 @@ subsys_winprocess_initialize(void)
 
   return 0;
 }
-#else  /* !defined(_WIN32) */
+#else /* !(defined(_WIN32)) */
 #define WINPROCESS_SYS_ENABLED false
 #define subsys_winprocess_initialize NULL
 #endif /* defined(_WIN32) */

@@ -111,7 +111,7 @@ struct process_unix_t *process_get_unix_process(const process_t *process);
 #else
 struct process_win32_t;
 struct process_win32_t *process_get_win32_process(const process_t *process);
-#endif
+#endif /* !defined(_WIN32) */
 
 void process_write(process_t *process,
                    const uint8_t *data, size_t size);
@@ -140,6 +140,6 @@ STATIC void process_read_buffer(process_t *process,
 STATIC void process_read_lines(process_t *process,
                                buf_t *buffer,
                                process_read_callback_t callback);
-#endif /* defined(PROCESS_PRIVATE). */
+#endif /* defined(PROCESS_PRIVATE) */
 
-#endif /* defined(TOR_PROCESS_H). */
+#endif /* !defined(TOR_PROCESS_H) */

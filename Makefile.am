@@ -41,6 +41,8 @@ TOR_UTIL_LIBS = \
         src/lib/libtor-geoip.a \
 	src/lib/libtor-process.a \
         src/lib/libtor-buf.a \
+	src/lib/libtor-pubsub.a \
+	src/lib/libtor-dispatch.a \
 	src/lib/libtor-time.a \
 	src/lib/libtor-fs.a \
 	src/lib/libtor-encoding.a \
@@ -72,6 +74,8 @@ TOR_UTIL_TESTING_LIBS = \
         src/lib/libtor-geoip-testing.a \
 	src/lib/libtor-process-testing.a \
         src/lib/libtor-buf-testing.a \
+	src/lib/libtor-pubsub-testing.a \
+	src/lib/libtor-dispatch-testing.a \
 	src/lib/libtor-time-testing.a \
 	src/lib/libtor-fs-testing.a \
 	src/lib/libtor-encoding-testing.a \
@@ -161,7 +165,12 @@ EXTRA_DIST+= \
 	README						\
 	ReleaseNotes					\
 	scripts/maint/checkIncludes.py                  \
-	scripts/maint/checkSpace.pl
+	scripts/maint/checkSpace.pl 			\
+	scripts/maint/practracker/exceptions.txt	\
+	scripts/maint/practracker/metrics.py		\
+	scripts/maint/practracker/practracker.py	\
+	scripts/maint/practracker/problem.py		\
+	scripts/maint/practracker/util.py
 
 ## This tells etags how to find mockable function definitions.
 AM_ETAGSFLAGS=--regex='{c}/MOCK_IMPL([^,]+,\W*\([a-zA-Z0-9_]+\)\W*,/\1/s'
@@ -328,11 +337,8 @@ coverage-html-full: all
 	lcov --remove "$(HTML_COVER_DIR)/lcov.tmp" --rc lcov_branch_coverage=1 'test/*' 'ext/tinytest*' '/usr/*' --output-file "$(HTML_COVER_DIR)/lcov.info"
 	genhtml --branch-coverage -o "$(HTML_COVER_DIR)" "$(HTML_COVER_DIR)/lcov.info"
 
-# Avoid strlcpy.c, strlcat.c, aes.c, OpenBSD_malloc_Linux.c, sha256.c,
-# tinytest*.[ch]
-check-spaces:
-if USE_PERL
-	$(PERL) $(top_srcdir)/scripts/maint/checkSpace.pl -C \
+# For scripts: avoid src/ext and src/trunnel.
+OWNED_TOR_C_FILES=\
 		$(top_srcdir)/src/lib/*/*.[ch] \
 		$(top_srcdir)/src/core/*/*.[ch] \
 		$(top_srcdir)/src/feature/*/*.[ch] \
@@ -340,12 +346,25 @@ if USE_PERL
 		$(top_srcdir)/src/test/*.[ch] \
 		$(top_srcdir)/src/test/*/*.[ch] \
 		$(top_srcdir)/src/tools/*.[ch]
+
+check-spaces:
+if USE_PERL
+	$(PERL) $(top_srcdir)/scripts/maint/checkSpace.pl -C \
+		$(OWNED_TOR_C_FILES)
 endif
 
 check-includes:
 if USEPYTHON
 	$(PYTHON) $(top_srcdir)/scripts/maint/checkIncludes.py
 endif
+
+check-best-practices:
+if USEPYTHON
+	$(PYTHON) $(top_srcdir)/scripts/maint/practracker/practracker.py $(top_srcdir)
+endif
+
+practracker-regen:
+	$(PYTHON) $(top_srcdir)/scripts/maint/practracker/practracker.py --regen $(top_srcdir)
 
 check-docs: all
 	$(PERL) $(top_builddir)/scripts/maint/checkOptionDocs.pl
@@ -441,6 +460,25 @@ version:
 	   echo -n "git: " ;\
 	   (cd "$(top_srcdir)" && git rev-parse --short=16 HEAD); \
 	fi
+
+.PHONY: autostyle-ifdefs
+autostyle-ifdefs:
+	$(PYTHON) scripts/maint/annotate_ifdef_directives $(OWNED_TOR_C_FILES)
+
+.PHONY: autostyle-ifdefs
+autostyle-operators:
+	$(PERL) scripts/coccinelle/test-operator-cleanup $(OWNED_TOR_C_FILES)
+
+.PHONY: rectify-includes
+rectify-includes:
+	$(PYTHON) scripts/maint/rectify_include_paths.py
+
+.PHONY: update-copyright
+update-copyright:
+	$(PERL) scripts/maint/updateCopyright.pl $(OWNED_TOR_C_FILES)
+
+.PHONY: autostyle
+autostyle: update-versions rustfmt autostyle-ifdefs rectify-includes
 
 mostlyclean-local:
 	rm -f $(top_builddir)/src/*/*.gc{da,no} $(top_builddir)/src/*/*/*.gc{da,no}

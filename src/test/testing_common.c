@@ -12,6 +12,7 @@
 #include "orconfig.h"
 #include "core/or/or.h"
 #include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "app/config/config.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
@@ -242,7 +243,7 @@ tinytest_postfork(void)
 }
 
 static void
-log_callback_failure(int severity, uint32_t domain, const char *msg)
+log_callback_failure(int severity, log_domain_mask_t domain, const char *msg)
 {
   (void)msg;
   if (severity == LOG_ERR || (domain & LD_BUG)) {

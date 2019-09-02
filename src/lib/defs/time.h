@@ -20,4 +20,4 @@
 /* How many nanoseconds per millisecond */
 #define TOR_NSEC_PER_MSEC (1000*1000)
 
-#endif
+#endif /* !defined(TOR_TIME_DEFS_H) */

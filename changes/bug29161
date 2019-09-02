@@ -1,3 +1,0 @@
-  o Minor bugfixes (tests):
-    - Detect and suppress "bug" warnings from the util/time test on Windows.
-      Fixes bug 29161; bugfix on 0.2.9.3-alpha.

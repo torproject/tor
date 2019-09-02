@@ -1,4 +1,0 @@
-  o Minor features (developer tooling):
-    - Provide a git pre-commit hook that disallows commiting if we have any
-      failures in our code and changelog formatting checks. It is now available
-      in scripts/maint/pre-commit.git-hook. Implements feature 28976.

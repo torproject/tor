@@ -58,4 +58,4 @@ size_t base32_encoded_size(size_t srclen);
 void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 
-#endif /* !defined(TOR_UTIL_FORMAT_H) */
+#endif /* !defined(TOR_BINASCII_H) */

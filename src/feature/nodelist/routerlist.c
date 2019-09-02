@@ -67,7 +67,7 @@
 #include "core/mainloop/mainloop.h"
 #include "core/or/policies.h"
 #include "feature/client/bridges.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dirauth/process_descs.h"
 #include "feature/dirauth/reachability.h"
@@ -954,20 +954,18 @@ routerlist_free_(routerlist_t *rl)
   smartlist_free(rl->routers);
   smartlist_free(rl->old_routers);
   if (rl->desc_store.mmap) {
-    int res = tor_munmap_file(routerlist->desc_store.mmap);
+    int res = tor_munmap_file(rl->desc_store.mmap);
     if (res != 0) {
       log_warn(LD_FS, "Failed to munmap routerlist->desc_store.mmap");
     }
   }
   if (rl->extrainfo_store.mmap) {
-    int res = tor_munmap_file(routerlist->extrainfo_store.mmap);
+    int res = tor_munmap_file(rl->extrainfo_store.mmap);
     if (res != 0) {
       log_warn(LD_FS, "Failed to munmap routerlist->extrainfo_store.mmap");
     }
   }
   tor_free(rl);
-
-  router_dir_info_changed();
 }
 
 /** Log information about how much memory is being used for routerlist,
@@ -1426,8 +1424,10 @@ routerlist_reparse_old(routerlist_t *rl, signed_descriptor_t *sd)
 void
 routerlist_free_all(void)
 {
-  routerlist_free(routerlist);
-  routerlist = NULL;
+  routerlist_t *rl = routerlist;
+  routerlist = NULL; // Prevent internals of routerlist_free() from using
+                     // routerlist.
+  routerlist_free(rl);
   dirlist_free_all();
   if (warned_nicknames) {
     SMARTLIST_FOREACH(warned_nicknames, char *, cp, tor_free(cp));
@@ -1926,6 +1926,8 @@ routerlist_remove_old_routers(void)
 void
 routerlist_descriptors_added(smartlist_t *sl, int from_cache)
 {
+  // XXXX use pubsub mechanism here.
+
   tor_assert(sl);
   control_event_descriptors_changed(sl);
   SMARTLIST_FOREACH_BEGIN(sl, routerinfo_t *, ri) {
@@ -1933,7 +1935,9 @@ routerlist_descriptors_added(smartlist_t *sl, int from_cache)
       learned_bridge_descriptor(ri, from_cache);
     if (ri->needs_retest_if_added) {
       ri->needs_retest_if_added = 0;
+#ifdef HAVE_MODULE_DIRAUTH
       dirserv_single_reachability_test(approx_time(), ri);
+#endif
     }
   } SMARTLIST_FOREACH_END(ri);
 }
@@ -2856,7 +2860,7 @@ int
 router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
 {
   time_t r1pub, r2pub;
-  long time_difference;
+  time_t time_difference;
   tor_assert(r1 && r2);
 
   /* r1 should be the one that was published first. */
@@ -2920,7 +2924,9 @@ router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
    * give or take some slop? */
   r1pub = r1->cache_info.published_on;
   r2pub = r2->cache_info.published_on;
-  time_difference = labs(r2->uptime - (r1->uptime + (r2pub - r1pub)));
+  time_difference = r2->uptime - (r1->uptime + (r2pub - r1pub));
+  if (time_difference < 0)
+    time_difference = - time_difference;
   if (time_difference > ROUTER_ALLOW_UPTIME_DRIFT &&
       time_difference > r1->uptime * .05 &&
       time_difference > r2->uptime * .05)
@@ -2969,7 +2975,7 @@ routerinfo_incompatible_with_extrainfo(const crypto_pk_t *identity_pkey,
   digest256_matches = tor_memeq(ei->digest256,
                                 sd->extra_info_digest256, DIGEST256_LEN);
   digest256_matches |=
-    tor_mem_is_zero(sd->extra_info_digest256, DIGEST256_LEN);
+    fast_mem_is_zero(sd->extra_info_digest256, DIGEST256_LEN);
 
   /* The identity must match exactly to have been generated at the same time
    * by the same router. */
@@ -3053,7 +3059,7 @@ routerinfo_has_curve25519_onion_key(const routerinfo_t *ri)
     return 0;
   }
 
-  if (tor_mem_is_zero((const char*)ri->onion_curve25519_pkey->public_key,
+  if (fast_mem_is_zero((const char*)ri->onion_curve25519_pkey->public_key,
                       CURVE25519_PUBKEY_LEN)) {
     return 0;
   }

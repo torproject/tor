@@ -12,6 +12,7 @@
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "app/config/or_state_st.h"
+#include "test/rng_test_helpers.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
@@ -283,7 +284,7 @@ test_fast_handshake(void *arg)
   /* First, test an entire handshake. */
   memset(client_handshake, 0, sizeof(client_handshake));
   tt_int_op(0, OP_EQ, fast_onionskin_create(&state, client_handshake));
-  tt_assert(! tor_mem_is_zero((char*)client_handshake,
+  tt_assert(! fast_mem_is_zero((char*)client_handshake,
                               sizeof(client_handshake)));
 
   tt_int_op(0, OP_EQ,
@@ -354,18 +355,6 @@ test_onion_queues(void *arg)
   tor_free(onionskin);
 }
 
-static crypto_cipher_t *crypto_rand_aes_cipher = NULL;
-
-// Mock replacement for crypto_rand: Generates bytes from a provided AES_CTR
-// cipher in <b>crypto_rand_aes_cipher</b>.
-static void
-crypto_rand_deterministic_aes(char *out, size_t n)
-{
-  tor_assert(crypto_rand_aes_cipher);
-  memset(out, 0, n);
-  crypto_cipher_crypt_inplace(crypto_rand_aes_cipher, out, n);
-}
-
 static void
 test_circuit_timeout(void *arg)
 {
@@ -397,8 +386,7 @@ test_circuit_timeout(void *arg)
 
   // Use a deterministic RNG here, or else we'll get nondeterministic
   // coverage in some of the circuitstats functions.
-  MOCK(crypto_rand, crypto_rand_deterministic_aes);
-  crypto_rand_aes_cipher = crypto_cipher_new("xyzzyplughplover");
+  testing_enable_deterministic_rng();
 
   circuitbuild_running_unit_tests();
 #define timeout0 (build_time_t)(30*1000.0)
@@ -534,8 +522,8 @@ test_circuit_timeout(void *arg)
   circuit_build_times_free_timeouts(&final);
   or_state_free(state);
   teardown_periodic_events();
-  UNMOCK(crypto_rand);
-  crypto_cipher_free(crypto_rand_aes_cipher);
+
+  testing_disable_deterministic_rng();
 }
 
 /** Test encoding and parsing of rendezvous service descriptors. */
@@ -857,6 +845,7 @@ struct testgroup_t testgroups[] = {
   { "consdiff/", consdiff_tests },
   { "consdiffmgr/", consdiffmgr_tests },
   { "container/", container_tests },
+  { "container/namemap/", namemap_tests },
   { "control/", controller_tests },
   { "control/btrack/", btrack_tests },
   { "control/event/", controller_event_tests },
@@ -872,6 +861,7 @@ struct testgroup_t testgroups[] = {
   { "dir/voting/flags/", voting_flags_tests },
   { "dir/voting/schedule/", voting_schedule_tests },
   { "dir_handle_get/", dir_handle_get_tests },
+  { "dispatch/", dispatch_tests, },
   { "dns/", dns_tests },
   { "dos/", dos_tests },
   { "entryconn/", entryconn_tests },
@@ -909,6 +899,8 @@ struct testgroup_t testgroups[] = {
   { "proto/misc/", proto_misc_tests },
   { "protover/", protover_tests },
   { "pt/", pt_tests },
+  { "pubsub/build/", pubsub_build_tests },
+  { "pubsub/msg/", pubsub_msg_tests },
   { "relay/" , relay_tests },
   { "relaycell/", relaycell_tests },
   { "relaycrypt/", relaycrypt_tests },
@@ -919,6 +911,7 @@ struct testgroup_t testgroups[] = {
   { "routerlist/", routerlist_tests },
   { "routerset/" , routerset_tests },
   { "scheduler/", scheduler_tests },
+  { "sendme/", sendme_tests },
   { "shared-random/", sr_tests },
   { "socks/", socks_tests },
   { "status/" , status_tests },

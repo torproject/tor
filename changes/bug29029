@@ -1,5 +1,0 @@
-  o Minor bugfixes (logging, onion services):
-    - Stop logging "Tried to establish rendezvous on non-OR circuit..." as
-      a warning. Instead, log it as a protocol warning, because there is
-      nothing that relay operators can do to fix it. Fixes bug 29029;
-      bugfix on 0.2.5.7-rc.

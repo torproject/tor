@@ -165,4 +165,4 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
   }                                             \
   STMT_END
 
-#endif /* !defined(TOR_CONTAINER_H) */
+#endif /* !defined(TOR_SMARTLIST_H) */

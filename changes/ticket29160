@@ -1,4 +1,0 @@
-  o Minor bugfixes (tests):
-    - Do not log an error-level message if we fail to find an IPv6
-      network interface from the unit tests. Fixes bug 29160; bugfix on
-      0.2.7.3-rc.

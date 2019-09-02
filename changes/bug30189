@@ -1,4 +1,0 @@
-  o Minor bugfixes (compilation, unusual configuration):
-    - Avoid failures when building with ALL_BUGS_ARE_FAILED due to
-      missing declarations of abort(), and prevent other such failures
-      in the future. Fixes bug 30189; bugfix on 0.3.4.1-alpha.

@@ -86,15 +86,13 @@ b16_enc(const chunk_t *inp)
   return ch;
 }
 
-#if 0
 static chunk_t *
 b32_dec(const chunk_t *inp)
 {
   chunk_t *ch = chunk_new(inp->len);//XXXX
   int r = base32_decode((char *)ch->buf, ch->len, (char *)inp->buf, inp->len);
   if (r >= 0) {
-    ch->len = r; // XXXX we need some way to get the actual length of
-                 // XXXX the output here.
+    ch->len = r;
   } else {
     chunk_free(ch);
   }
@@ -108,7 +106,6 @@ b32_enc(const chunk_t *inp)
   ch->len = strlen((char *) ch->buf);
   return ch;
 }
-#endif
 
 static chunk_t *
 b64_dec(const chunk_t *inp)
@@ -222,10 +219,7 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
       ENCODE_ROUNDTRIP(b16_enc, b16_dec, chunk_free_);
       break;
     case 1:
-      /*
-        XXXX see notes above about our base-32 functions.
       ENCODE_ROUNDTRIP(b32_enc, b32_dec, chunk_free_);
-      */
       break;
     case 2:
       ENCODE_ROUNDTRIP(b64_enc, b64_dec, chunk_free_);
@@ -239,6 +233,18 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
       break;
     case 6:
       kv_flags = 0;
+      ENCODE_ROUNDTRIP(kv_enc, kv_dec, config_free_lines_);
+      break;
+    case 7:
+      kv_flags = KV_OMIT_VALS;
+      ENCODE_ROUNDTRIP(kv_enc, kv_dec, config_free_lines_);
+      break;
+    case 8:
+      kv_flags = KV_QUOTED;
+      ENCODE_ROUNDTRIP(kv_enc, kv_dec, config_free_lines_);
+      break;
+    case 9:
+      kv_flags = KV_QUOTED|KV_OMIT_VALS;
       ENCODE_ROUNDTRIP(kv_enc, kv_dec, config_free_lines_);
       break;
     }

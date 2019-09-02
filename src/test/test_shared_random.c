@@ -449,12 +449,12 @@ test_sr_commit(void *arg)
     /* We should have a reveal value. */
     tt_assert(commit_has_reveal_value(our_commit));
     /* We should have a random value. */
-    tt_assert(!tor_mem_is_zero((char *) our_commit->random_number,
+    tt_assert(!fast_mem_is_zero((char *) our_commit->random_number,
                                sizeof(our_commit->random_number)));
     /* Commit and reveal timestamp should be the same. */
     tt_u64_op(our_commit->commit_ts, OP_EQ, our_commit->reveal_ts);
     /* We should have a hashed reveal. */
-    tt_assert(!tor_mem_is_zero(our_commit->hashed_reveal,
+    tt_assert(!fast_mem_is_zero(our_commit->hashed_reveal,
                                sizeof(our_commit->hashed_reveal)));
     /* Do we have a valid encoded commit and reveal. Note the following only
      * tests if the generated values are correct. Their could be a bug in
@@ -1081,70 +1081,85 @@ test_sr_get_majority_srv_from_votes(void *arg)
   smartlist_free(votes);
 }
 
-/* Test utils that don't depend on authority state */
+/* Testing sr_srv_dup(). */
 static void
-test_utils_general(void *arg)
+test_sr_svr_dup(void *arg)
 {
-  (void) arg;
+  (void)arg;
 
-  /* Testing sr_srv_dup(). */
-  {
-    sr_srv_t *srv = NULL, *dup_srv = NULL;
-    const char *srv_value =
-      "1BDB7C3E973936E4D13A49F37C859B3DC69C429334CF9412E3FEF6399C52D47A";
-    srv = tor_malloc_zero(sizeof(*srv));
-    srv->num_reveals = 42;
-    memcpy(srv->value, srv_value, sizeof(srv->value));
-    dup_srv = sr_srv_dup(srv);
-    tt_assert(dup_srv);
-    tt_u64_op(dup_srv->num_reveals, OP_EQ, srv->num_reveals);
-    tt_mem_op(dup_srv->value, OP_EQ, srv->value, sizeof(srv->value));
-    tor_free(srv);
-    tor_free(dup_srv);
-  }
+  sr_srv_t *srv = NULL, *dup_srv = NULL;
+  const char *srv_value =
+    "1BDB7C3E973936E4D13A49F37C859B3DC69C429334CF9412E3FEF6399C52D47A";
+  srv = tor_malloc_zero(sizeof(*srv));
+  srv->num_reveals = 42;
+  memcpy(srv->value, srv_value, sizeof(srv->value));
+  dup_srv = sr_srv_dup(srv);
+  tt_assert(dup_srv);
+  tt_u64_op(dup_srv->num_reveals, OP_EQ, srv->num_reveals);
+  tt_mem_op(dup_srv->value, OP_EQ, srv->value, sizeof(srv->value));
 
-  /* Testing commitments_are_the_same(). Currently, the check is to test the
-   * value of the encoded commit so let's make sure that actually works. */
-  {
-    /* Payload of 57 bytes that is the length of sr_commit_t->encoded_commit.
-     * 56 bytes of payload and a NUL terminated byte at the end ('\x00')
-     * which comes down to SR_COMMIT_BASE64_LEN + 1. */
-    const char *payload =
-      "\x5d\xb9\x60\xb6\xcc\x51\x68\x52\x31\xd9\x88\x88\x71\x71\xe0\x30"
-      "\x59\x55\x7f\xcd\x61\xc0\x4b\x05\xb8\xcd\xc1\x48\xe9\xcd\x16\x1f"
-      "\x70\x15\x0c\xfc\xd3\x1a\x75\xd0\x93\x6c\xc4\xe0\x5c\xbe\xe2\x18"
-      "\xc7\xaf\x72\xb6\x7c\x9b\x52\x00";
-    sr_commit_t commit1, commit2;
-    memcpy(commit1.encoded_commit, payload, sizeof(commit1.encoded_commit));
-    memcpy(commit2.encoded_commit, payload, sizeof(commit2.encoded_commit));
-    tt_int_op(commitments_are_the_same(&commit1, &commit2), OP_EQ, 1);
-    /* Let's corrupt one of them. */
-    memset(commit1.encoded_commit, 'A', sizeof(commit1.encoded_commit));
-    tt_int_op(commitments_are_the_same(&commit1, &commit2), OP_EQ, 0);
-  }
+ done:
+  tor_free(srv);
+  tor_free(dup_srv);
+}
 
-  /* Testing commit_is_authoritative(). */
-  {
-    crypto_pk_t *k = crypto_pk_new();
-    char digest[DIGEST_LEN];
-    sr_commit_t commit;
+/* Testing commitments_are_the_same(). Currently, the check is to test the
+ * value of the encoded commit so let's make sure that actually works. */
+static void
+test_commitments_are_the_same(void *arg)
+{
+  (void)arg;
 
-    tt_assert(!crypto_pk_generate_key(k));
+  /* Payload of 57 bytes that is the length of sr_commit_t->encoded_commit.
+  * 56 bytes of payload and a NUL terminated byte at the end ('\x00')
+  * which comes down to SR_COMMIT_BASE64_LEN + 1. */
+  const char *payload =
+  "\x5d\xb9\x60\xb6\xcc\x51\x68\x52\x31\xd9\x88\x88\x71\x71\xe0\x30"
+  "\x59\x55\x7f\xcd\x61\xc0\x4b\x05\xb8\xcd\xc1\x48\xe9\xcd\x16\x1f"
+  "\x70\x15\x0c\xfc\xd3\x1a\x75\xd0\x93\x6c\xc4\xe0\x5c\xbe\xe2\x18"
+  "\xc7\xaf\x72\xb6\x7c\x9b\x52\x00";
+  sr_commit_t commit1, commit2;
+  memcpy(commit1.encoded_commit, payload, sizeof(commit1.encoded_commit));
+  memcpy(commit2.encoded_commit, payload, sizeof(commit2.encoded_commit));
+  tt_int_op(commitments_are_the_same(&commit1, &commit2), OP_EQ, 1);
+  /* Let's corrupt one of them. */
+  memset(commit1.encoded_commit, 'A', sizeof(commit1.encoded_commit));
+  tt_int_op(commitments_are_the_same(&commit1, &commit2), OP_EQ, 0);
 
-    tt_int_op(0, OP_EQ, crypto_pk_get_digest(k, digest));
-    memcpy(commit.rsa_identity, digest, sizeof(commit.rsa_identity));
-    tt_int_op(commit_is_authoritative(&commit, digest), OP_EQ, 1);
-    /* Change the pubkey. */
-    memset(commit.rsa_identity, 0, sizeof(commit.rsa_identity));
-    tt_int_op(commit_is_authoritative(&commit, digest), OP_EQ, 0);
-    crypto_pk_free(k);
-  }
+ done:
+  return;
+}
 
-  /* Testing get_phase_str(). */
-  {
-    tt_str_op(get_phase_str(SR_PHASE_REVEAL), OP_EQ, "reveal");
-    tt_str_op(get_phase_str(SR_PHASE_COMMIT), OP_EQ, "commit");
-  }
+/* Testing commit_is_authoritative(). */
+static void
+test_commit_is_authoritative(void *arg)
+{
+  (void)arg;
+
+  crypto_pk_t *k = crypto_pk_new();
+  char digest[DIGEST_LEN];
+  sr_commit_t commit;
+
+  tt_assert(!crypto_pk_generate_key(k));
+
+  tt_int_op(0, OP_EQ, crypto_pk_get_digest(k, digest));
+  memcpy(commit.rsa_identity, digest, sizeof(commit.rsa_identity));
+  tt_int_op(commit_is_authoritative(&commit, digest), OP_EQ, 1);
+  /* Change the pubkey. */
+  memset(commit.rsa_identity, 0, sizeof(commit.rsa_identity));
+  tt_int_op(commit_is_authoritative(&commit, digest), OP_EQ, 0);
+
+ done:
+  crypto_pk_free(k);
+}
+
+static void
+test_get_phase_str(void *arg)
+{
+  (void)arg;
+
+  tt_str_op(get_phase_str(SR_PHASE_REVEAL), OP_EQ, "reveal");
+  tt_str_op(get_phase_str(SR_PHASE_COMMIT), OP_EQ, "commit");
 
  done:
   return;
@@ -1352,7 +1367,7 @@ test_utils_auth(void *arg)
     sr_state_set_current_srv(sr_state_get_current_srv());
     sr_state_set_previous_srv(sr_state_get_previous_srv());
   }
-#endif
+#endif /* 0 */
 
  done:
   sr_state_free_all();
@@ -1649,7 +1664,12 @@ struct testcase_t sr_tests[] = {
   { "sr_compute_srv", test_sr_compute_srv, TT_FORK, NULL, NULL },
   { "sr_get_majority_srv_from_votes", test_sr_get_majority_srv_from_votes,
     TT_FORK, NULL, NULL },
-  { "utils_general", test_utils_general, TT_FORK, NULL, NULL },
+  { "sr_svr_dup", test_sr_svr_dup, TT_FORK, NULL, NULL },
+  { "commitments_are_the_same", test_commitments_are_the_same, TT_FORK, NULL,
+    NULL },
+  { "commit_is_authoritative", test_commit_is_authoritative, TT_FORK, NULL,
+    NULL },
+  { "get_phase_str", test_get_phase_str, TT_FORK, NULL, NULL },
   { "utils_auth", test_utils_auth, TT_FORK, NULL, NULL },
   { "state_transition", test_state_transition, TT_FORK, NULL, NULL },
   { "state_update", test_state_update, TT_FORK,

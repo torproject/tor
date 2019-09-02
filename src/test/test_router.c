@@ -100,6 +100,9 @@ test_router_dump_router_to_string_no_bridge_distribution_method(void *arg)
   router = (routerinfo_t*)router_get_my_routerinfo();
   tt_ptr_op(router, !=, NULL);
 
+  /* The real router_get_my_routerinfo() looks up onion_curve25519_pkey using
+   * get_current_curve25519_keypair(), but we don't initialise static data in
+   * this test. */
   router->onion_curve25519_pkey = &ntor_keypair.pubkey;
 
   /* Generate our server descriptor and ensure that the substring

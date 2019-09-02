@@ -1,4 +1,0 @@
-  o Minor bugfixes (build, compatibility):
-    - Update Cargo.lock file to match the version made by the latest
-      version of Rust, so that "make distcheck" will pass again.
-      Fixes bug 29244; bugfix on 0.3.3.4-alpha.

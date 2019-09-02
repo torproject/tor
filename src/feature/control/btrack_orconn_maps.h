@@ -7,6 +7,7 @@
  **/
 
 #ifndef TOR_BTRACK_ORCONN_MAPS_H
+#define TOR_BTRACK_ORCONN_MAPS_H
 
 void bto_delete(uint64_t);
 bt_orconn_t *bto_find_or_new(uint64_t, uint64_t);
@@ -14,4 +15,4 @@ bt_orconn_t *bto_find_or_new(uint64_t, uint64_t);
 void bto_init_maps(void);
 void bto_clear_maps(void);
 
-#endif  /* defined(TOR_BTRACK_ORCONN_MAPS_H) */
+#endif /* !defined(TOR_BTRACK_ORCONN_MAPS_H) */

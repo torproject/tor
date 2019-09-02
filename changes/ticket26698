@@ -1,4 +1,0 @@
-  o Minor features (directory authority):
-    - When a directory authority is using a bandwidth file to obtain the
-      bandwidth values, include the digest of the file in the vote.
-      Closes ticket 26698.

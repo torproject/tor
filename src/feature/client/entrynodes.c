@@ -128,7 +128,7 @@
 #include "feature/client/circpathbias.h"
 #include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/microdesc.h"
@@ -2611,6 +2611,10 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
     entry_guard_t *guard = entry_guard_handle_get(state->guard);
     if (!guard || guard->in_selection != gs)
       continue;
+    if (TO_CIRCUIT(circ)->marked_for_close) {
+      /* Don't consider any marked for close circuits. */
+      continue;
+    }
 
     smartlist_add(all_circuits, circ);
   } SMARTLIST_FOREACH_END(circ);
@@ -3300,6 +3304,9 @@ num_bridges_usable,(int use_maybe_reachable))
   }
 
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+    /* Not a bridge, or not one we are configured to be able to use. */
+    if (! guard->is_filtered_guard)
+      continue;
     /* Definitely not usable */
     if (guard->is_reachable == GUARD_REACHABLE_NO)
       continue;

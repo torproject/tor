@@ -50,7 +50,7 @@ new_establish_intro_cell(const char *circ_nonce,
 
   /* Auth key pair is generated in the constructor so we are all set for
    * using this IP object. */
-  ip = service_intro_point_new(NULL, 0, 0);
+  ip = service_intro_point_new(NULL);
   tt_assert(ip);
   cell_len = hs_cell_build_establish_intro(circ_nonce, ip, buf);
   tt_i64_op(cell_len, OP_GT, 0);
@@ -76,7 +76,7 @@ new_establish_intro_encoded_cell(const char *circ_nonce, uint8_t *cell_out)
 
   /* Auth key pair is generated in the constructor so we are all set for
    * using this IP object. */
-  ip = service_intro_point_new(NULL, 0, 0);
+  ip = service_intro_point_new(NULL);
   tt_assert(ip);
   cell_len = hs_cell_build_establish_intro(circ_nonce, ip, cell_out);
   tt_i64_op(cell_len, OP_GT, 0);

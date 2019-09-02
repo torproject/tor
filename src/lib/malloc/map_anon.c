@@ -50,12 +50,16 @@
 
 #ifdef INHERIT_ZERO
 #define FLAG_ZERO INHERIT_ZERO
+#elif defined(MAP_INHERIT_ZERO)
+#define FLAG_ZERO MAP_INHERIT_ZERO
 #endif
 #ifdef INHERIT_NONE
 #define FLAG_NOINHERIT INHERIT_NONE
 #elif defined(VM_INHERIT_NONE)
 #define FLAG_NOINHERIT VM_INHERIT_NONE
-#endif
+#elif defined(MAP_INHERIT_NONE)
+#define FLAG_NOINHERIT MAP_INHERIT_NONE
+#endif /* defined(INHERIT_NONE) || ... */
 
 #elif defined(HAVE_MADVISE)
 
@@ -68,6 +72,11 @@
 #define FLAG_NOINHERIT MADV_DONTFORK
 #endif
 
+#endif /* defined(HAVE_MINHERIT) || ... */
+
+#if defined(HAVE_MINHERIT) && !defined(FLAG_ZERO) && !defined(FLAG_NOINHERIT)
+#warn "minherit() is defined, but we couldn't find the right flag for it."
+#warn "This is probably a bug in Tor's support for this platform."
 #endif
 
 /**
@@ -87,7 +96,7 @@ lock_mem(void *mem, size_t sz)
   (void) sz;
 
   return 0;
-#endif
+#endif /* defined(_WIN32) || ... */
 }
 
 /**
@@ -104,7 +113,7 @@ nodump_mem(void *mem, size_t sz)
   (void) mem;
   (void) sz;
   return 0;
-#endif
+#endif /* defined(MADV_DONTDUMP) */
 }
 
 /**
@@ -113,22 +122,32 @@ nodump_mem(void *mem, size_t sz)
  * fork, and if that doesn't work, by having them unmapped after a fork.
  * Return 0 on success or if the facility is not available on this OS; return
  * -1 on failure.
+ *
+ * If we successfully make the memory uninheritable, adjust the value of
+ * *<b>inherit_result_out</b>.
  */
 static int
-noinherit_mem(void *mem, size_t sz)
+noinherit_mem(void *mem, size_t sz, inherit_res_t *inherit_result_out)
 {
 #ifdef FLAG_ZERO
   int r = MINHERIT(mem, sz, FLAG_ZERO);
-  if (r == 0)
+  if (r == 0) {
+    *inherit_result_out = INHERIT_RES_ZERO;
     return 0;
-#endif
+  }
+#endif /* defined(FLAG_ZERO) */
 #ifdef FLAG_NOINHERIT
-  return MINHERIT(mem, sz, FLAG_NOINHERIT);
-#else
+  int r2 = MINHERIT(mem, sz, FLAG_NOINHERIT);
+  if (r2 == 0) {
+    *inherit_result_out = INHERIT_RES_DROP;
+  }
+  return r2;
+#else /* !(defined(FLAG_NOINHERIT)) */
+  (void)inherit_result_out;
   (void)mem;
   (void)sz;
   return 0;
-#endif
+#endif /* defined(FLAG_NOINHERIT) */
 }
 
 /**
@@ -144,14 +163,25 @@ noinherit_mem(void *mem, size_t sz)
  * Memory returned from this function must be released with
  * tor_munmap_anonymous().
  *
+ * If <b>inherit_result_out</b> is non-NULL, set it to one of
+ * INHERIT_RES_KEEP, INHERIT_RES_DROP, or INHERIT_RES_ZERO, depending on the
+ * properties of the returned memory.
+ *
  * [Note: OS people use the word "anonymous" here to mean that the memory
  * isn't associated with any file. This has *nothing* to do with the kind of
  * anonymity that Tor is trying to provide.]
  */
 void *
-tor_mmap_anonymous(size_t sz, unsigned flags)
+tor_mmap_anonymous(size_t sz, unsigned flags,
+                   inherit_res_t *inherit_result_out)
 {
   void *ptr;
+  inherit_res_t itmp=0;
+  if (inherit_result_out == NULL) {
+    inherit_result_out = &itmp;
+  }
+  *inherit_result_out = INHERIT_RES_KEEP;
+
 #if defined(_WIN32)
   HANDLE mapping = CreateFileMapping(INVALID_HANDLE_VALUE,
                                      NULL, /*attributes*/
@@ -174,7 +204,7 @@ tor_mmap_anonymous(size_t sz, unsigned flags)
   raw_assert(ptr != NULL);
 #else
   ptr = tor_malloc_zero(sz);
-#endif
+#endif /* defined(_WIN32) || ... */
 
   if (flags & ANONMAP_PRIVATE) {
     int lock_result = lock_mem(ptr, sz);
@@ -184,7 +214,7 @@ tor_mmap_anonymous(size_t sz, unsigned flags)
   }
 
   if (flags & ANONMAP_NOINHERIT) {
-    int noinherit_result = noinherit_mem(ptr, sz);
+    int noinherit_result = noinherit_mem(ptr, sz, inherit_result_out);
     raw_assert(noinherit_result == 0);
   }
 
@@ -209,5 +239,5 @@ tor_munmap_anonymous(void *mapping, size_t sz)
 #else
   (void)sz;
   tor_free(mapping);
-#endif
+#endif /* defined(_WIN32) || ... */
 }
