@@ -25,6 +25,7 @@ DATA="${PRACTRACKER_DIR}/testdata"
 
 run_practracker() {
     "${PYTHON:-python}" "${PRACTRACKER_DIR}/practracker.py" \
+        --include-dir "" \
         --max-include-count=0 --max-file-size=0 --max-function-size=0 --terse \
         "${DATA}/" "$@";
 }
