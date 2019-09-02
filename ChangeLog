@@ -95,7 +95,7 @@ Changes in version 0.4.1.4-rc - 2019-07-25
   o Minor bugfixes (circuit padding):
     - On relays, properly check that a padding machine is absent before
       logging a warning about it being absent. Fixes bug 30649; bugfix
-      on 0.4.1.1-alpha.
+      on 0.4.0.1-alpha.
     - Add two NULL checks in unreachable places to silence Coverity (CID
       144729 and 1447291) and better future-proof ourselves. Fixes bug
       31024; bugfix on 0.4.1.1-alpha.
