@@ -338,9 +338,12 @@ dirserv_rejects_tor_version(const char *platform,
   }
 
   /* Series between Tor 0.3.0 and 0.3.4 inclusive are unsupported, and some
-   * have bug #27841, which makes them broken as intro points. Reject them. */
+   * have bug #27841, which makes them broken as intro points. Reject them.
+   *
+   * Also reject unstable versions of 0.3.5, since (as of this writing)
+   * they are almost none of the network. */
   if (tor_version_as_new_as(platform,"0.3.0.0-alpha-dev") &&
-      !tor_version_as_new_as(platform,"0.3.5.1-alpha")) {
+      !tor_version_as_new_as(platform,"0.3.5.7")) {
     if (msg) {
       *msg = "Tor version is insecure or unsupported. Please upgrade!";
     }
