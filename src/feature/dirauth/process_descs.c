@@ -328,12 +328,15 @@ dirserv_rejects_tor_version(const char *platform,
   if (!platform)
     return false;
 
+  static const char please_upgrade_string[] =
+    "Tor version is insecure or unsupported. Please upgrade!";
+
   /* Versions before Tor 0.2.9 are unsupported. Versions between 0.2.9.0 and
    * 0.2.9.5 suffer from bug #20499, where relays don't keep their consensus
    * up to date */
   if (!tor_version_as_new_as(platform,"0.2.9.5-alpha")) {
     if (msg)
-      *msg = "Tor version is insecure or unsupported. Please upgrade!";
+      *msg = please_upgrade_string;
     return true;
   }
 
@@ -345,7 +348,7 @@ dirserv_rejects_tor_version(const char *platform,
   if (tor_version_as_new_as(platform,"0.3.0.0-alpha-dev") &&
       !tor_version_as_new_as(platform,"0.3.5.7")) {
     if (msg) {
-      *msg = "Tor version is insecure or unsupported. Please upgrade!";
+      *msg = please_upgrade_string;
     }
     return true;
   }
