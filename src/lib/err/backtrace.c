@@ -276,11 +276,23 @@ configure_backtrace_handler(const char *tor_version)
   char version[128] = "Tor\0";
 
   if (tor_version) {
-    snprintf(version, sizeof(version), "Tor %s", tor_version);
+    int snp_rv = 0;
+    /* We can't use strlcat() here, because it is defined in
+     * string/compat_string.h on some platforms, and string uses torerr. */
+    snp_rv = snprintf(version, sizeof(version), "Tor %s", tor_version);
+    /* It's safe to call raw_assert() here, because raw_assert() does not
+     * call configure_backtrace_handler(). */
+    raw_assert(snp_rv < (int)sizeof(version));
+    raw_assert(snp_rv >= 0);
   }
 
-  strncpy(bt_version, version, sizeof(bt_version) - 1);
+  char *str_rv = NULL;
+  /* We can't use strlcpy() here, see the note about strlcat() above. */
+  str_rv = strncpy(bt_version, version, sizeof(bt_version) - 1);
+  /* We must terminate bt_version, then raw_assert(), because raw_assert()
+   * uses bt_version. */
   bt_version[sizeof(bt_version) - 1] = 0;
+  raw_assert(str_rv == bt_version);
 
   return install_bt_handler();
 }
