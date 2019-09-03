@@ -3405,7 +3405,10 @@ service_encode_descriptor(const hs_service_t *service,
 }
 
 /* An introduction circuit has timed out while building or waiting for an
- * established introduction cell. */
+ * established introduction cell.
+ *
+ * Remove the corresponding introduction point from the service map so it
+ * doesn't get put in the descriptor or considered usable by the service. */
 static void
 service_intro_circuit_timed_out(const origin_circuit_t *circ)
 {
@@ -3423,6 +3426,9 @@ service_intro_circuit_timed_out(const origin_circuit_t *circ)
   if (BUG(service == NULL) || BUG(ip == NULL)) {
     return;
   }
+  /* This IP can not have an established circuit. Scream loudly if so but
+   * proceed to remove it to recover. */
+  tor_assert_nonfatal(!ip->circuit_established);
   /* Remove intro from service's descriptor(s). */
   service_intro_point_remove(service, ip);
 }
