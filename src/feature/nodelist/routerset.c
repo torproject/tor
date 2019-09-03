@@ -466,6 +466,13 @@ routerset_free_(routerset_t *routerset)
   tor_free(routerset);
 }
 
+/**
+ * config helper: parse a routerset-typed variable.
+ *
+ * Takes as input as a single line in <b>line</b>; writes its results into a
+ * routerset_t** passed as <b>target</b>.  On success return 0; on failure
+ * return -1 and store an error message into *<b>errmsg</b>.
+ **/
 static int
 routerset_kv_parse(void *target, const config_line_t *line, char **errmsg,
                   const void *params)
@@ -479,11 +486,21 @@ routerset_kv_parse(void *target, const config_line_t *line, char **errmsg,
     *errmsg = tor_strdup("Invalid router list.");
     return -1;
   } else {
+    if (routerset_is_empty(rs)) {
+      /* Represent empty sets as NULL. */
+      routerset_free(rs);
+    }
     *p = rs;
     return 0;
   }
 }
 
+/**
+ * config helper: encode a routerset-typed variable.
+ *
+ * Return a newly allocated string containing the value of the
+ * routerset_t** passed as <b>value</b>.
+ */
 static char *
 routerset_encode(const void *value, const void *params)
 {
@@ -492,6 +509,11 @@ routerset_encode(const void *value, const void *params)
   return routerset_to_string(*p);
 }
 
+/**
+ * config helper: free and clear a routerset-typed variable.
+ *
+ * Clear the routerset_t** passed as <b>value</b>.
+ */
 static void
 routerset_clear(void *value, const void *params)
 {
@@ -500,6 +522,13 @@ routerset_clear(void *value, const void *params)
   routerset_free(*p); // sets *p to NULL.
 }
 
+/**
+ * config helper: copy a routerset-typed variable.
+ *
+ * Takes it input from a routerset_t** in <b>src</b>; writes its output to a
+ * routerset_t** in <b>dest</b>.  Returns 0 on success, -1 on (impossible)
+ * failure.
+ **/
 static int
 routerset_copy(void *dest, const void *src, const void *params)
 {
@@ -507,11 +536,16 @@ routerset_copy(void *dest, const void *src, const void *params)
   routerset_t **output = (routerset_t**)dest;
   const routerset_t *input = *(routerset_t**)src;
   routerset_free(*output); // sets *output to NULL
-  *output = routerset_new();
-  routerset_union(*output, input);
+  if (! routerset_is_empty(input)) {
+    *output = routerset_new();
+    routerset_union(*output, input);
+  }
   return 0;
 }
 
+/**
+ * Function table to implement a routerset_t-based configuration type.
+ **/
 static const var_type_fns_t routerset_type_fns = {
   .kv_parse = routerset_kv_parse,
   .encode = routerset_encode,
@@ -519,6 +553,15 @@ static const var_type_fns_t routerset_type_fns = {
   .copy = routerset_copy
 };
 
+/**
+ * Definition of a routerset_t-based configuration type.
+ *
+ * Values are mapped to and from strings using the format defined in
+ * routerset_parse(): nicknames, IP address patterns, and fingerprints--with
+ * optional space, separated by commas.
+ *
+ * Empty sets are represented as NULL.
+ **/
 const var_type_def_t ROUTERSET_type_defn = {
   .name = "RouterList",
   .fns = &routerset_type_fns
