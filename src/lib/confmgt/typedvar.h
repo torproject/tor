@@ -20,19 +20,6 @@ struct config_line_t;
 typedef struct var_type_fns_t var_type_fns_t;
 typedef struct var_type_def_t var_type_def_t;
 
-int typed_var_assign(void *target, const char *value, char **errmsg,
-                     enum config_type_t type);
-void typed_var_free(void *target, enum config_type_t type);
-char *typed_var_encode(const void *value, enum config_type_t type);
-int typed_var_copy(void *dest, const void *src, enum config_type_t type);
-bool typed_var_eq(const void *a, const void *b, enum config_type_t type);
-bool typed_var_ok(const void *value, enum config_type_t type);
-
-int typed_var_kvassign(void *target, const struct config_line_t *line,
-                       char **errmsg, enum config_type_t type);
-struct config_line_t *typed_var_kvencode(const char *key, const void *value,
-                                         enum config_type_t type);
-
 int typed_var_assign_ex(void *target, const char *value, char **errmsg,
                         const var_type_def_t *def);
 void typed_var_free_ex(void *target, const var_type_def_t *def);
