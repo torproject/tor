@@ -113,8 +113,28 @@ struct smartlist_t *config_mgr_list_deprecated_vars(const config_mgr_t *mgr);
 /** A collection of managed configuration objects. */
 typedef struct config_suite_t config_suite_t;
 
+/**
+ * Flag for config_assign: if set, then "resetting" an option changes it to
+ * its default value, as specified in the config_var_t.  Otherwise,
+ * "resetting" an option changes it to a type-dependent null value --
+ * typically 0 or NULL.
+ *
+ * (An option is "reset" when it is set to an empty value, or as described in
+ * CAL_CLEAR_FIRST).
+ **/
 #define CAL_USE_DEFAULTS      (1u<<0)
+/**
+ * Flag for config_assign: if set, then we reset every provided config
+ * option before we set it.
+ *
+ * For example, if this flag is not set, then passing a multi-line option to
+ * config_assign will cause any previous value to be extended. But if this
+ * flag is set, then a multi-line option will replace any previous value.
+ **/
 #define CAL_CLEAR_FIRST       (1u<<1)
+/**
+ * Flag for config_assign: if set, we warn about deprecated options.
+ **/
 #define CAL_WARN_DEPRECATIONS (1u<<2)
 
 void *config_new(const config_mgr_t *fmt);
