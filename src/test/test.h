@@ -197,6 +197,7 @@ extern struct testcase_t circuitstats_tests[];
 extern struct testcase_t circuituse_tests[];
 extern struct testcase_t compat_libevent_tests[];
 extern struct testcase_t config_tests[];
+extern struct testcase_t confmgr_tests[];
 extern struct testcase_t confparse_tests[];
 extern struct testcase_t connection_tests[];
 extern struct testcase_t conscache_tests[];

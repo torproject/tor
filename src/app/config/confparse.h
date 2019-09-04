@@ -39,8 +39,19 @@ typedef struct config_deprecation_t {
  * of arguments. */
 typedef int (*validate_fn_t)(void*,void*,void*,int,char**);
 
-/** Callback to free a configuration object. */
-typedef void (*free_cfg_fn_t)(void*);
+struct config_mgr_t;
+
+/**
+ * Callback to clear all non-managed fields of a configuration object.
+ *
+ * <b>obj</b> is the configuration object whose non-managed fields should be
+ * cleared.
+ *
+ * (Regular fields get cleared by config_reset(), but you might have fields
+ * in the object that do not correspond to configuration variables.  If those
+ * fields need to be cleared or freed, this is where to do it.)
+ */
+typedef void (*clear_cfg_fn_t)(const struct config_mgr_t *mgr, void *obj);
 
 /** Information on the keys, value types, key-to-struct-member mappings,
  * variable descriptions, validation functions, and abbreviations for a
@@ -55,51 +66,70 @@ typedef struct config_format_t {
                              * values, and where we stick them in the
                              * structure. */
   validate_fn_t validate_fn; /**< Function to validate config. */
-  free_cfg_fn_t free_fn; /**< Function to free the configuration. */
+  clear_cfg_fn_t clear_fn; /**< Function to clear the configuration. */
   /** If present, extra denotes a LINELIST variable for unrecognized
    * lines.  Otherwise, unrecognized lines are an error. */
   const struct_member_t *extra;
+  /** The position of a config_suite_t pointer within the toplevel object,
+   * or -1 if there is no such pointer. */
+  int config_suite_offset;
 } config_format_t;
 
-/** Macro: assert that <b>cfg</b> has the right magic field for format
- * <b>fmt</b>. */
-#define CONFIG_CHECK(fmt, cfg) STMT_BEGIN                               \
-    tor_assert(fmt);                                                    \
-    struct_check_magic((cfg), &fmt->magic);                             \
-  STMT_END
+/**
+ * A collection of config_format_t objects to describe several objects
+ * that are all configured with the same configuration file.
+ *
+ * (NOTE: for now, this only handles a single config_format_t.)
+ **/
+typedef struct config_mgr_t config_mgr_t;
+
+config_mgr_t *config_mgr_new(const config_format_t *toplevel_fmt);
+void config_mgr_free_(config_mgr_t *mgr);
+int config_mgr_add_format(config_mgr_t *mgr,
+                          const config_format_t *fmt);
+void config_mgr_freeze(config_mgr_t *mgr);
+#define config_mgr_free(mgr) \
+  FREE_AND_NULL(config_mgr_t, config_mgr_free_, (mgr))
+struct smartlist_t *config_mgr_list_vars(const config_mgr_t *mgr);
+struct smartlist_t *config_mgr_list_deprecated_vars(const config_mgr_t *mgr);
+
+/** A collection of managed configuration objects. */
+typedef struct config_suite_t config_suite_t;
 
 #define CAL_USE_DEFAULTS      (1u<<0)
 #define CAL_CLEAR_FIRST       (1u<<1)
 #define CAL_WARN_DEPRECATIONS (1u<<2)
 
-void *config_new(const config_format_t *fmt);
-void config_free_(const config_format_t *fmt, void *options);
-#define config_free(fmt, options) do {                \
-    config_free_((fmt), (options));                   \
+void *config_new(const config_mgr_t *fmt);
+void config_free_(const config_mgr_t *fmt, void *options);
+#define config_free(mgr, options) do {                \
+    config_free_((mgr), (options));                   \
     (options) = NULL;                                 \
   } while (0)
 
-struct config_line_t *config_get_assigned_option(const config_format_t *fmt,
+struct config_line_t *config_get_assigned_option(const config_mgr_t *mgr,
                                           const void *options, const char *key,
                                           int escape_val);
-int config_is_same(const config_format_t *fmt,
+int config_is_same(const config_mgr_t *fmt,
                    const void *o1, const void *o2,
                    const char *name);
-void config_init(const config_format_t *fmt, void *options);
-void *config_dup(const config_format_t *fmt, const void *old);
-char *config_dump(const config_format_t *fmt, const void *default_options,
+struct config_line_t *config_get_changes(const config_mgr_t *mgr,
+                                  const void *options1, const void *options2);
+void config_init(const config_mgr_t *mgr, void *options);
+void *config_dup(const config_mgr_t *mgr, const void *old);
+char *config_dump(const config_mgr_t *mgr, const void *default_options,
                   const void *options, int minimal,
                   int comment_defaults);
-bool config_check_ok(const config_format_t *fmt, const void *options,
+bool config_check_ok(const config_mgr_t *mgr, const void *options,
                      int severity);
-int config_assign(const config_format_t *fmt, void *options,
+int config_assign(const config_mgr_t *mgr, void *options,
                   struct config_line_t *list,
                   unsigned flags, char **msg);
-const char *config_find_deprecation(const config_format_t *fmt,
-                                     const char *key);
-const config_var_t *config_find_option(const config_format_t *fmt,
-                                       const char *key);
-const char *config_expand_abbrev(const config_format_t *fmt,
+const char *config_find_deprecation(const config_mgr_t *mgr,
+                                    const char *key);
+const char *config_find_option_name(const config_mgr_t *mgr,
+                                    const char *key);
+const char *config_expand_abbrev(const config_mgr_t *mgr,
                                  const char *option,
                                  int command_line, int warn_obsolete);
 void warn_deprecated_option(const char *what, const char *why);
@@ -119,8 +149,12 @@ bool config_var_is_dumpable(const config_var_t *var);
 #define CFG_EQ_ROUTERSET(a,b,opt) routerset_equal((a)->opt, (b)->opt)
 
 #ifdef CONFPARSE_PRIVATE
-STATIC void config_reset_line(const config_format_t *fmt, void *options,
+STATIC void config_reset_line(const config_mgr_t *mgr, void *options,
                               const char *key, int use_defaults);
+STATIC void *config_mgr_get_obj_mutable(const config_mgr_t *mgr,
+                                        void *toplevel, int idx);
+STATIC const void *config_mgr_get_obj(const config_mgr_t *mgr,
+                                       const void *toplevel, int idx);
 #endif
 
 #endif /* !defined(TOR_CONFPARSE_H) */

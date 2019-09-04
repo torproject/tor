@@ -840,6 +840,7 @@ struct testgroup_t testgroups[] = {
   { "circuituse/", circuituse_tests },
   { "compat/libevent/", compat_libevent_tests },
   { "config/", config_tests },
+  { "config/mgr/", confmgr_tests },
   { "config/parse/", confparse_tests },
   { "connection/", connection_tests },
   { "conscache/", conscache_tests },
