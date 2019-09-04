@@ -103,7 +103,7 @@ struct_var_assign(void *object, const char *value, char **errmsg,
   void *p = struct_get_mptr(object, member);
   const var_type_def_t *def = get_type_def(member);
 
-  return typed_var_assign_ex(p, value, errmsg, def);
+  return typed_var_assign(p, value, errmsg, def);
 }
 
 /**
@@ -116,7 +116,7 @@ struct_var_free(void *object, const struct_member_t *member)
   void *p = struct_get_mptr(object, member);
   const var_type_def_t *def = get_type_def(member);
 
-  typed_var_free_ex(p, def);
+  typed_var_free(p, def);
 }
 
 /**
@@ -129,7 +129,7 @@ struct_var_encode(const void *object, const struct_member_t *member)
   const void *p = struct_get_ptr(object, member);
   const var_type_def_t *def = get_type_def(member);
 
-  return typed_var_encode_ex(p, def);
+  return typed_var_encode(p, def);
 }
 
 /**
@@ -143,7 +143,7 @@ struct_var_copy(void *dest, const void *src, const struct_member_t *member)
   const void *p_src = struct_get_ptr(src, member);
   const var_type_def_t *def = get_type_def(member);
 
-  return typed_var_copy_ex(p_dest, p_src, def);
+  return typed_var_copy(p_dest, p_src, def);
 }
 
 /**
@@ -157,7 +157,7 @@ struct_var_eq(const void *a, const void *b, const struct_member_t *member)
   const void *p_b = struct_get_ptr(b, member);
   const var_type_def_t *def = get_type_def(member);
 
-  return typed_var_eq_ex(p_a, p_b, def);
+  return typed_var_eq(p_a, p_b, def);
 }
 
 /**
@@ -170,7 +170,7 @@ struct_var_ok(const void *object, const struct_member_t *member)
   const void *p = struct_get_ptr(object, member);
   const var_type_def_t *def = get_type_def(member);
 
-  return typed_var_ok_ex(p, def);
+  return typed_var_ok(p, def);
 }
 
 /**
@@ -185,7 +185,7 @@ struct_var_kvassign(void *object, const struct config_line_t *line,
   void *p = struct_get_mptr(object, member);
   const var_type_def_t *def = get_type_def(member);
 
-  return typed_var_kvassign_ex(p, line, errmsg, def);
+  return typed_var_kvassign(p, line, errmsg, def);
 }
 
 /**
@@ -198,7 +198,7 @@ struct_var_kvencode(const void *object, const struct_member_t *member)
   const void *p = struct_get_ptr(object, member);
   const var_type_def_t *def = get_type_def(member);
 
-  return typed_var_kvencode_ex(member->name, p, def);
+  return typed_var_kvencode(member->name, p, def);
 }
 
 /**
@@ -211,7 +211,7 @@ struct_var_mark_fragile(void *object, const struct_member_t *member)
 {
   void *p = struct_get_mptr(object, member);
   const var_type_def_t *def = get_type_def(member);
-  return typed_var_mark_fragile_ex(p, def);
+  return typed_var_mark_fragile(p, def);
 }
 
 /**
