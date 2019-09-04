@@ -100,8 +100,12 @@ typedef struct struct_member_t {
  * that they have the correct type.
  */
 typedef struct struct_magic_decl_t {
+  /** The name of the structure */
   const char *typename;
+  /** A value used to recognize instances of this structure. */
   uint32_t magic_val;
+  /** The location within the structure at which we expect to find
+   * <b>magic_val</b>. */
   int magic_offset;
 } struct_magic_decl_t;
 
