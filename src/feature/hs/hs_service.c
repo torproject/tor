@@ -3416,8 +3416,7 @@ service_intro_circuit_timed_out(const origin_circuit_t *circ)
   hs_service_intro_point_t *ip = NULL;
 
   tor_assert(circ);
-  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
-             TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO);
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
   tor_assert(circ->hs_ident);
 
   /* Get the corresponding service and intro point. */
