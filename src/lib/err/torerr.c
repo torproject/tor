@@ -111,6 +111,12 @@ tor_log_get_sigsafe_err_fds(const int **out)
  * other emergency condition. Ignore any beyond the first
  * TOR_SIGSAFE_LOG_MAX_FDS.
  *
+ * These fds must remain open even after the log module has shut down. (And
+ * they should remain open even while logs are being reconfigured.) Therefore,
+ * any fds closed by the log module should be dup()ed, and the duplicate fd
+ * should be given to the err module in fds. In particular, the log module
+ * owns file log fds, but does not own stdio log fds.
+ *
  * If fds is NULL or n is 0, clears the list of error fds.
  */
 void
