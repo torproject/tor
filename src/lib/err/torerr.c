@@ -208,6 +208,18 @@ tor_raw_assertion_failed_msg_(const char *file, int line, const char *expr,
   dump_stack_symbols_to_error_fds();
 }
 
+/**
+ * Call the abort() function to kill the current process with a fatal
+ * error. But first, close the raw error file descriptors, so error messages
+ * are written before process termination.
+ **/
+void
+tor_raw_abort_(void)
+{
+  tor_log_close_sigsafe_err_fds();
+  abort();
+}
+
 /* As format_{hex,dex}_number_sigsafe, but takes a <b>radix</b> argument
  * in range 2..16 inclusive. */
 static int
@@ -242,7 +254,7 @@ format_number_sigsafe(unsigned long x, char *buf, int buf_len,
     unsigned digit = (unsigned) (x % radix);
     if (cp <= buf) {
       /* Not tor_assert(); see above. */
-      abort();
+      tor_raw_abort_();
     }
     --cp;
     *cp = "0123456789ABCDEF"[digit];
@@ -251,7 +263,7 @@ format_number_sigsafe(unsigned long x, char *buf, int buf_len,
 
   /* NOT tor_assert; see above. */
   if (cp != buf) {
-    abort(); // LCOV_EXCL_LINE
+    tor_raw_abort_(); // LCOV_EXCL_LINE
   }
 
   return len;
