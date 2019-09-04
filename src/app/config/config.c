@@ -843,15 +843,15 @@ static void config_maybe_load_geoip_files_(const or_options_t *options,
 static int options_validate_cb(void *old_options, void *options,
                                void *default_options,
                                int from_setconf, char **msg);
-static void options_free_cb(void *options);
 static void cleanup_protocol_warning_severity_level(void);
 static void set_protocol_warning_severity_level(int warning_severity);
+static void options_clear_cb(const config_mgr_t *mgr, void *opts);
 
 /** Magic value for or_options_t. */
 #define OR_OPTIONS_MAGIC 9090909
 
 /** Configuration format for or_options_t. */
-STATIC const config_format_t options_format = {
+static const config_format_t options_format = {
   sizeof(or_options_t),
   {
    "or_options_t",
@@ -862,8 +862,9 @@ STATIC const config_format_t options_format = {
   option_deprecation_notes_,
   option_vars_,
   options_validate_cb,
-  options_free_cb,
-  NULL
+  options_clear_cb,
+  NULL,
+  offsetof(or_options_t, subconfigs_),
 };
 
 /*
@@ -894,6 +895,20 @@ static smartlist_t *configured_ports = NULL;
 static int in_option_validation = 0;
 /* True iff we've initialized libevent */
 static int libevent_initialized = 0;
+
+/* A global configuration manager to handle all configuration objects. */
+static config_mgr_t *options_mgr = NULL;
+
+/** Return the global configuration manager object for torrc options. */
+STATIC const config_mgr_t *
+get_options_mgr(void)
+{
+  if (PREDICT_UNLIKELY(options_mgr == NULL)) {
+    options_mgr = config_mgr_new(&options_format);
+    config_mgr_freeze(options_mgr);
+  }
+  return options_mgr;
+}
 
 /** Return the contents of our frontpage string, or NULL if not configured. */
 MOCK_IMPL(const char*,
@@ -951,9 +966,6 @@ get_options_defaults(void)
 int
 set_options(or_options_t *new_val, char **msg)
 {
-  int i;
-  smartlist_t *elements;
-  config_line_t *line;
   or_options_t *old_options = global_options;
   global_options = new_val;
   /* Note that we pass the *old* options below, for comparison. It
@@ -975,35 +987,16 @@ set_options(or_options_t *new_val, char **msg)
   /* Issues a CONF_CHANGED event to notify controller of the change. If Tor is
    * just starting up then the old_options will be undefined. */
   if (old_options && old_options != global_options) {
-    elements = smartlist_new();
-    for (i=0; options_format.vars[i].member.name; ++i) {
-      const config_var_t *var = &options_format.vars[i];
-      const char *var_name = var->member.name;
-      if (config_var_is_contained(var)) {
-        /* something else will check this var, or it doesn't need checking */
-        continue;
-      }
-      if (!config_is_same(&options_format, new_val, old_options, var_name)) {
-        line = config_get_assigned_option(&options_format, new_val,
-                                          var_name, 1);
-
-        if (line) {
-          config_line_t *next;
-          for (; line; line = next) {
-            next = line->next;
-            smartlist_add(elements, line->key);
-            smartlist_add(elements, line->value);
-            tor_free(line);
-          }
-        } else {
-          smartlist_add_strdup(elements, options_format.vars[i].member.name);
-          smartlist_add(elements, NULL);
-        }
-      }
+    smartlist_t *elements = smartlist_new();
+    config_line_t *changes =
+      config_get_changes(get_options_mgr(), old_options, new_val);
+    for (config_line_t *line = changes; line; line = line->next) {
+      smartlist_add(elements, line->key);
+      smartlist_add(elements, line->value);
     }
     control_event_conf_changed(elements);
-    SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
     smartlist_free(elements);
+    config_free_lines(changes);
   }
 
   if (old_options != global_options) {
@@ -1019,11 +1012,11 @@ set_options(or_options_t *new_val, char **msg)
 
 /** Release additional memory allocated in options
  */
-STATIC void
-or_options_free_(or_options_t *options)
+static void
+options_clear_cb(const config_mgr_t *mgr, void *opts)
 {
-  if (!options)
-    return;
+  (void)mgr;
+  or_options_t *options = opts;
 
   routerset_free(options->ExcludeExitNodesUnion_);
   if (options->NodeFamilySets) {
@@ -1046,7 +1039,14 @@ or_options_free_(or_options_t *options)
   tor_free(options->command_arg);
   tor_free(options->master_key_fname);
   config_free_lines(options->MyFamily);
-  config_free(&options_format, options);
+}
+
+/** Release all memory allocated in options
+ */
+STATIC void
+or_options_free_(or_options_t *options)
+{
+  config_free(get_options_mgr(), options);
 }
 
 /** Release all memory and resources held by global configuration structures.
@@ -1080,6 +1080,8 @@ config_free_all(void)
 
   have_parsed_cmdline = 0;
   libevent_initialized = 0;
+
+  config_mgr_free(options_mgr);
 }
 
 /** Make <b>address</b> -- a piece of information related to our operation as
@@ -2547,7 +2549,7 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
 
     param = tor_malloc_zero(sizeof(config_line_t));
     param->key = is_cmdline ? tor_strdup(argv[i]) :
-                   tor_strdup(config_expand_abbrev(&options_format, s, 1, 1));
+                 tor_strdup(config_expand_abbrev(get_options_mgr(), s, 1, 1));
     param->value = arg;
     param->command = command;
     param->next = NULL;
@@ -2573,8 +2575,7 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
 int
 option_is_recognized(const char *key)
 {
-  const config_var_t *var = config_find_option(&options_format, key);
-  return (var != NULL);
+  return config_find_option_name(get_options_mgr(), key) != NULL;
 }
 
 /** Return the canonical name of a configuration option, or NULL
@@ -2582,8 +2583,7 @@ option_is_recognized(const char *key)
 const char *
 option_get_canonical_name(const char *key)
 {
-  const config_var_t *var = config_find_option(&options_format, key);
-  return var ? var->member.name : NULL;
+  return config_find_option_name(get_options_mgr(), key);
 }
 
 /** Return a canonical list of the options assigned for key.
@@ -2591,7 +2591,7 @@ option_get_canonical_name(const char *key)
 config_line_t *
 option_get_assignment(const or_options_t *options, const char *key)
 {
-  return config_get_assigned_option(&options_format, options, key, 1);
+  return config_get_assigned_option(get_options_mgr(), options, key, 1);
 }
 
 /** Try assigning <b>list</b> to the global options. You do this by duping
@@ -2607,9 +2607,9 @@ setopt_err_t
 options_trial_assign(config_line_t *list, unsigned flags, char **msg)
 {
   int r;
-  or_options_t *trial_options = config_dup(&options_format, get_options());
+  or_options_t *trial_options = config_dup(get_options_mgr(), get_options());
 
-  if ((r=config_assign(&options_format, trial_options,
+  if ((r=config_assign(get_options_mgr(), trial_options,
                        list, flags, msg)) < 0) {
     or_options_free(trial_options);
     return r;
@@ -2664,25 +2664,25 @@ print_usage(void)
 static void
 list_torrc_options(void)
 {
-  int i;
-  for (i = 0; option_vars_[i].member.name; ++i) {
-    const config_var_t *var = &option_vars_[i];
+  smartlist_t *vars = config_mgr_list_vars(get_options_mgr());
+  SMARTLIST_FOREACH_BEGIN(vars, const config_var_t *, var) {
     if (! config_var_is_settable(var)) {
       /* This variable cannot be set, or cannot be set by this name. */
       continue;
     }
     printf("%s\n", var->member.name);
-  }
+  } SMARTLIST_FOREACH_END(var);
+  smartlist_free(vars);
 }
 
 /** Print all deprecated but non-obsolete torrc options. */
 static void
 list_deprecated_options(void)
 {
-  const config_deprecation_t *d;
-  for (d = option_deprecation_notes_; d->name; ++d) {
-    printf("%s\n", d->name);
-  }
+  smartlist_t *deps = config_mgr_list_deprecated_vars(get_options_mgr());
+  SMARTLIST_FOREACH(deps, const char *, name,
+                    printf("%s\n", name));
+  smartlist_free(deps);
 }
 
 /** Print all compile-time modules and their enabled/disabled status. */
@@ -2992,7 +2992,7 @@ is_local_addr, (const tor_addr_t *addr))
 or_options_t *
 options_new(void)
 {
-  return config_new(&options_format);
+  return config_new(get_options_mgr());
 }
 
 /** Set <b>options</b> to hold reasonable defaults for most options.
@@ -3000,10 +3000,10 @@ options_new(void)
 void
 options_init(or_options_t *options)
 {
-  config_init(&options_format, options);
+  config_init(get_options_mgr(), options);
   config_line_t *dflts = get_options_defaults();
   char *msg=NULL;
-  if (config_assign(&options_format, options, dflts,
+  if (config_assign(get_options_mgr(), options, dflts,
                     CAL_WARN_DEPRECATIONS, &msg)<0) {
     log_err(LD_BUG, "Unable to set default options: %s", msg);
     tor_free(msg);
@@ -3040,7 +3040,7 @@ options_dump(const or_options_t *options, int how_to_dump)
       return NULL;
   }
 
-  return config_dump(&options_format, use_defaults, options, minimal, 0);
+  return config_dump(get_options_mgr(), use_defaults, options, minimal, 0);
 }
 
 /** Return 0 if every element of sl is a string holding a decimal
@@ -3170,13 +3170,6 @@ options_validate_cb(void *old_options, void *options, void *default_options,
                           from_setconf, msg);
   in_option_validation = 0;
   return rv;
-}
-
-/** Callback to free an or_options_t */
-static void
-options_free_cb(void *options)
-{
-  or_options_free_(options);
 }
 
 #define REJECT(arg) \
@@ -4435,7 +4428,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   STMT_BEGIN                                                            \
     if (!options->TestingTorNetwork &&                                  \
         !options->UsingTestNetworkDefaults_ &&                          \
-        !config_is_same(&options_format,options,                        \
+        !config_is_same(get_options_mgr(),options,                        \
                         default_options,#arg)) {                        \
       REJECT(#arg " may only be changed in testing Tor "                \
              "networks!");                                              \
@@ -5411,8 +5404,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   oldoptions = global_options; /* get_options unfortunately asserts if
                                   this is the first time we run*/
 
-  newoptions = tor_malloc_zero(sizeof(or_options_t));
-  newoptions->magic_ = OR_OPTIONS_MAGIC;
+  newoptions = options_new();
   options_init(newoptions);
   newoptions->command = command;
   newoptions->command_arg = command_arg ? tor_strdup(command_arg) : NULL;
@@ -5431,7 +5423,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
       err = SETOPT_ERR_PARSE;
       goto err;
     }
-    retval = config_assign(&options_format, newoptions, cl,
+    retval = config_assign(get_options_mgr(), newoptions, cl,
                            CAL_WARN_DEPRECATIONS, msg);
     config_free_lines(cl);
     if (retval < 0) {
@@ -5439,15 +5431,15 @@ options_init_from_string(const char *cf_defaults, const char *cf,
       goto err;
     }
     if (i==0)
-      newdefaultoptions = config_dup(&options_format, newoptions);
+      newdefaultoptions = config_dup(get_options_mgr(), newoptions);
   }
 
   if (newdefaultoptions == NULL) {
-    newdefaultoptions = config_dup(&options_format, global_default_options);
+    newdefaultoptions = config_dup(get_options_mgr(), global_default_options);
   }
 
   /* Go through command-line variables too */
-  retval = config_assign(&options_format, newoptions,
+  retval = config_assign(get_options_mgr(), newoptions,
                          global_cmdline_options, CAL_WARN_DEPRECATIONS, msg);
   if (retval < 0) {
     err = SETOPT_ERR_PARSE;
@@ -8133,9 +8125,8 @@ getinfo_helper_config(control_connection_t *conn,
   (void) errmsg;
   if (!strcmp(question, "config/names")) {
     smartlist_t *sl = smartlist_new();
-    int i;
-    for (i = 0; option_vars_[i].member.name; ++i) {
-      const config_var_t *var = &option_vars_[i];
+    smartlist_t *vars = config_mgr_list_vars(get_options_mgr());
+    SMARTLIST_FOREACH_BEGIN(vars, const config_var_t *, var) {
       /* don't tell controller about invisible options */
       if (config_var_is_invisible(var))
         continue;
@@ -8143,26 +8134,27 @@ getinfo_helper_config(control_connection_t *conn,
       if (!type)
         continue;
       smartlist_add_asprintf(sl, "%s %s\n",var->member.name,type);
-    }
+    } SMARTLIST_FOREACH_END(var);
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
+    smartlist_free(vars);
   } else if (!strcmp(question, "config/defaults")) {
     smartlist_t *sl = smartlist_new();
     int dirauth_lines_seen = 0, fallback_lines_seen = 0;
-    for (int i = 0; option_vars_[i].member.name; ++i) {
-      const config_var_t *var = &option_vars_[i];
+    smartlist_t *vars = config_mgr_list_vars(get_options_mgr());
+    SMARTLIST_FOREACH_BEGIN(vars, const config_var_t *, var) {
       if (var->initvalue != NULL) {
-        if (strcmp(option_vars_[i].member.name, "DirAuthority") == 0) {
+        if (strcmp(var->member.name, "DirAuthority") == 0) {
           /*
            * Count dirauth lines we have a default for; we'll use the
            * count later to decide whether to add the defaults manually
            */
           ++dirauth_lines_seen;
         }
-        if (strcmp(option_vars_[i].member.name, "FallbackDir") == 0) {
+        if (strcmp(var->member.name, "FallbackDir") == 0) {
           /*
-           * Similarly count fallback lines, so that we can decided later
+           * Similarly count fallback lines, so that we can decide later
            * to add the defaults manually.
            */
           ++fallback_lines_seen;
@@ -8171,7 +8163,8 @@ getinfo_helper_config(control_connection_t *conn,
         smartlist_add_asprintf(sl, "%s %s\n",var->member.name,val);
         tor_free(val);
       }
-    }
+    } SMARTLIST_FOREACH_END(var);
+    smartlist_free(vars);
 
     if (dirauth_lines_seen == 0) {
       /*

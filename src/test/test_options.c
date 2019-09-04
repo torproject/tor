@@ -96,7 +96,7 @@ clear_log_messages(void)
     opt->command = CMD_RUN_TOR;              \
     options_init(opt);                       \
                                              \
-    dflt = config_dup(&options_format, opt); \
+    dflt = config_dup(get_options_mgr(), opt); \
     clear_log_messages();                    \
   } while (0)
 
@@ -196,7 +196,7 @@ test_options_validate_impl(const char *configuration,
   if (r)
     goto done;
 
-  r = config_assign(&options_format, opt, cl, 0, &msg);
+  r = config_assign(get_options_mgr(), opt, cl, 0, &msg);
   if (phase == PH_ASSIGN) {
     if (test_options_checkmsgs(configuration, expect_errmsg,
                                expect_log_severity,
@@ -304,7 +304,7 @@ test_have_enough_mem_for_dircache(void *arg)
   r = config_get_lines(configuration, &cl, 1);
   tt_int_op(r, OP_EQ, 0);
 
-  r = config_assign(&options_format, opt, cl, 0, &msg);
+  r = config_assign(get_options_mgr(), opt, cl, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
 
   /* 300 MB RAM available, DirCache enabled */
@@ -327,7 +327,7 @@ test_have_enough_mem_for_dircache(void *arg)
   r = config_get_lines(configuration, &cl, 1);
   tt_int_op(r, OP_EQ, 0);
 
-  r = config_assign(&options_format, opt, cl, 0, &msg);
+  r = config_assign(get_options_mgr(), opt, cl, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
 
   /* 300 MB RAM available, DirCache enabled, Bridge */
@@ -350,7 +350,7 @@ test_have_enough_mem_for_dircache(void *arg)
   r = config_get_lines(configuration, &cl, 1);
   tt_int_op(r, OP_EQ, 0);
 
-  r = config_assign(&options_format, opt, cl, 0, &msg);
+  r = config_assign(get_options_mgr(), opt, cl, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
 
   /* 200 MB RAM available, DirCache disabled */
@@ -438,7 +438,7 @@ get_options_test_data(const char *conf)
 
   rv = config_get_lines(conf, &cl, 1);
   tt_int_op(rv, OP_EQ, 0);
-  rv = config_assign(&options_format, result->opt, cl, 0, &msg);
+  rv = config_assign(get_options_mgr(), result->opt, cl, 0, &msg);
   if (msg) {
     /* Display the parse error message by comparing it with an empty string */
     tt_str_op(msg, OP_EQ, "");
@@ -449,7 +449,7 @@ get_options_test_data(const char *conf)
   result->opt->TokenBucketRefillInterval = 1;
   rv = config_get_lines(TEST_OPTIONS_OLD_VALUES, &cl, 1);
   tt_int_op(rv, OP_EQ, 0);
-  rv = config_assign(&options_format, result->def_opt, cl, 0, &msg);
+  rv = config_assign(get_options_mgr(), result->def_opt, cl, 0, &msg);
   if (msg) {
     /* Display the parse error message by comparing it with an empty string */
     tt_str_op(msg, OP_EQ, "");

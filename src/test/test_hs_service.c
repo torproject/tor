@@ -1178,7 +1178,7 @@ test_introduce2(void *arg)
   MOCK(get_or_state,
        get_or_state_replacement);
 
-  dummy_state = tor_malloc_zero(sizeof(or_state_t));
+  dummy_state = or_state_new();
 
   circ = helper_create_origin_circuit(CIRCUIT_PURPOSE_S_INTRO, flags);
   tt_assert(circ);
@@ -1343,7 +1343,7 @@ test_rotate_descriptors(void *arg)
 
   (void) arg;
 
-  dummy_state = tor_malloc_zero(sizeof(or_state_t));
+  dummy_state = or_state_new();
 
   hs_init();
   MOCK(get_or_state, get_or_state_replacement);
@@ -1460,7 +1460,7 @@ test_build_update_descriptors(void *arg)
   MOCK(networkstatus_get_live_consensus,
        mock_networkstatus_get_live_consensus);
 
-  dummy_state = tor_malloc_zero(sizeof(or_state_t));
+  dummy_state = or_state_new();
 
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 03:00:00 UTC",
                            &mock_ns.valid_after);
@@ -1691,7 +1691,7 @@ test_build_descriptors(void *arg)
   MOCK(networkstatus_get_live_consensus,
        mock_networkstatus_get_live_consensus);
 
-  dummy_state = tor_malloc_zero(sizeof(or_state_t));
+  dummy_state = or_state_new();
 
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 03:00:00 UTC",
                            &mock_ns.valid_after);
@@ -1792,7 +1792,7 @@ test_upload_descriptors(void *arg)
   MOCK(networkstatus_get_live_consensus,
        mock_networkstatus_get_live_consensus);
 
-  dummy_state = tor_malloc_zero(sizeof(or_state_t));
+  dummy_state = or_state_new();
 
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
                            &mock_ns.valid_after);
