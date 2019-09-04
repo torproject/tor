@@ -610,7 +610,7 @@ test_confparse_reset(void *arg)
   tt_int_op(tst->interval, OP_EQ, 10);
 
   tt_ptr_op(tst->routerset, OP_NE, NULL);
-  config_reset_line(&test_fmt, tst, "routerset", 0);
+  config_reset_line(mgr, tst, "routerset", 0);
   tt_ptr_op(tst->routerset, OP_EQ, NULL);
 
  done:
