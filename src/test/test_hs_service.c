@@ -2172,6 +2172,50 @@ test_export_client_circuit_id(void *arg)
   tor_free(cp2);
 }
 
+static void
+test_circ_timeout(void *arg)
+{
+  hs_service_t *service = NULL;
+  hs_service_intro_point_t *ip = NULL, *query;
+  origin_circuit_t *circ = NULL;
+
+  (void) arg;
+
+  hs_init();
+
+  /* Create service and add an introduction point to it. */
+  service = helper_create_service();
+  tt_assert(service);
+  ip = helper_create_service_ip();
+  tt_assert(ip);
+  /* Add intro point and validate. */
+  service_intro_point_add(service->desc_current->intro_points.map, ip);
+  tt_int_op(digest256map_size(service->desc_current->intro_points.map),
+            OP_EQ, 1);
+  query = service_intro_point_find(service, &ip->auth_key_kp.pubkey);
+  tt_mem_op(query, OP_EQ, ip, sizeof(hs_service_intro_point_t));
+
+  /* Create circuit and update its identifier. */
+  circ = helper_create_origin_circuit(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO,
+                                      CIRCUIT_STATE_OPEN);
+  tt_assert(circ);
+  /* Copy service identity key into the HS identifier. */
+  ed25519_pubkey_copy(&circ->hs_ident->identity_pk,
+                      &service->keys.identity_pk);
+  /* Copy intro point auth key into the HS identifier. */
+  ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
+                      &ip->auth_key_kp.pubkey);
+
+  /* Time out the circuit. It should remove the introduction point. */
+  hs_service_circuit_timed_out(circ);
+  tt_int_op(digest256map_size(service->desc_current->intro_points.map),
+            OP_EQ, 0);
+
+ done:
+  circuit_free_(TO_CIRCUIT(circ));
+  hs_service_free(service);
+}
+
 struct testcase_t hs_service_tests[] = {
   { "e2e_rend_circuit_setup", test_e2e_rend_circuit_setup, TT_FORK,
     NULL, NULL },
@@ -2214,6 +2258,8 @@ struct testcase_t hs_service_tests[] = {
   { "authorized_client_config_equal", test_authorized_client_config_equal,
     TT_FORK, NULL, NULL },
   { "export_client_circuit_id", test_export_client_circuit_id, TT_FORK,
+    NULL, NULL },
+  { "circ_timeout", test_circ_timeout, TT_FORK,
     NULL, NULL },
 
   END_OF_TESTCASES
