@@ -190,13 +190,15 @@ dump_stack_symbols_to_error_fds(void)
     backtrace_symbols_fd(cb_buf, (int)depth, fds[i]);
 }
 
+/* The signals that we want our backtrace handler to trap */
+static int trap_signals[] = { SIGSEGV, SIGILL, SIGFPE, SIGBUS, SIGSYS,
+  SIGIO, -1 };
+
 /** Install signal handlers as needed so that when we crash, we produce a
  * useful stack trace. Return 0 on success, -errno on failure. */
 static int
 install_bt_handler(const char *software)
 {
-  int trap_signals[] = { SIGSEGV, SIGILL, SIGFPE, SIGBUS, SIGSYS,
-                         SIGIO, -1 };
   int i, rv=0;
 
   strncpy(bt_version, software, sizeof(bt_version) - 1);
@@ -235,6 +237,19 @@ install_bt_handler(const char *software)
 static void
 remove_bt_handler(void)
 {
+  int i;
+
+  struct sigaction sa;
+
+  memset(&sa, 0, sizeof(sa));
+  sa.sa_handler = SIG_DFL;
+  sigfillset(&sa.sa_mask);
+
+  for (i = 0; trap_signals[i] >= 0; ++i) {
+    /* remove_bt_handler() is called on shutdown, from low-level code.
+     * It's not a fatal error, so we just ignore it. */
+    (void)sigaction(trap_signals[i], &sa, NULL);
+  }
 }
 #endif /* defined(USE_BACKTRACE) */
 
