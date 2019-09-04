@@ -834,6 +834,23 @@ logs_free_all(void)
    * that happened between here and the end of execution. */
 }
 
+/** Close signal-safe log files. */
+void
+logs_close_minimal(void)
+{
+  logfile_t *victim, *next;
+  /* We can't lock the logs in a signal handler, or deallocate memory */
+  next = logfiles;
+  logfiles = NULL;
+  while (next) {
+    victim = next;
+    next = next->next;
+    if (victim->needs_close) {
+      close_log(victim);
+    }
+  }
+}
+
 /** Remove and free the log entry <b>victim</b> from the linked-list
  * logfiles (it is probably present, but it might not be due to thread
  * racing issues). After this function is called, the caller shouldn't
@@ -865,6 +882,8 @@ static void
 close_log(logfile_t *victim)
 {
   if (victim->needs_close && victim->fd >= 0) {
+    /* We can't do anything useful here if close() fails: we're shutting
+     * down logging, and the err module only does fatal errors. */
     close(victim->fd);
     victim->fd = -1;
   } else if (victim->is_syslog) {

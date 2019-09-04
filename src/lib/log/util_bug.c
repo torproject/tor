@@ -11,6 +11,7 @@
 #include "lib/log/util_bug.h"
 #include "lib/log/log.h"
 #include "lib/err/backtrace.h"
+#include "lib/err/torerr.h"
 #ifdef TOR_UNIT_TESTS
 #include "lib/smartlist_core/smartlist_core.h"
 #include "lib/smartlist_core/smartlist_foreach.h"
@@ -161,16 +162,18 @@ tor_bug_occurred_(const char *fname, unsigned int line,
 }
 
 /**
- * Call the abort() function to kill the current process with a fatal
- * error.
+ * Call the tor_raw_abort_() function to close raw logs, then kill the current
+ * process with a fatal error. But first, close the file-based log file
+ * descriptors, so error messages are written before process termination.
  *
  * (This is a separate function so that we declare it in util_bug.h without
- * including stdlib in all the users of util_bug.h)
+ * including torerr.h in all the users of util_bug.h)
  **/
 void
 tor_abort_(void)
 {
-  abort();
+  logs_close_minimal();
+  tor_raw_abort_();
 }
 
 #ifdef _WIN32
