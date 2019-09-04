@@ -168,6 +168,7 @@ EXTRA_DIST+= \
 	ReleaseNotes					\
 	scripts/maint/checkIncludes.py                  \
 	scripts/maint/checkSpace.pl 			\
+	scripts/maint/practracker/README                \
 	scripts/maint/practracker/exceptions.txt	\
 	scripts/maint/practracker/includes.py		\
 	scripts/maint/practracker/metrics.py		\
