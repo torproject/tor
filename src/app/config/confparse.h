@@ -51,10 +51,28 @@ typedef struct config_deprecation_t {
  **/
 #define PLURAL(tok) { #tok, #tok "s", 0, 0 }
 
-/** Type of a callback to validate whether a given configuration is
- * well-formed and consistent. See options_trial_assign() for documentation
- * of arguments. */
-typedef int (*validate_fn_t)(void*,void*,void*,int,char**);
+/**
+ * Type of a callback to validate whether a given configuration is
+ * well-formed and consistent.
+ *
+ * The configuration to validate is passed as <b>newval</b>. The previous
+ * configuration, if any, is provided in <b>oldval</b>.  The
+ * <b>default_val</b> argument receives a configuration object initialized
+ * with default values for all its fields.  The <b>from_setconf</b> argument
+ * is true iff the input comes from a SETCONF controller command.
+ *
+ * On success, return 0.  On failure, set *<b>msg_out</b> to a newly allocated
+ * error message, and return -1.
+ *
+ * REFACTORING NOTE: Currently, this callback type is only used from inside
+ * config_dump(); later in our refactoring, it will be cleaned up and used
+ * more generally.
+ */
+typedef int (*validate_fn_t)(void *oldval,
+                             void *newval,
+                             void *default_val,
+                             int from_setconf,
+                             char **msg_out);
 
 struct config_mgr_t;
 
