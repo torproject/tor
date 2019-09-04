@@ -227,8 +227,7 @@ format_number_sigsafe(unsigned long x, char *buf, int buf_len,
  * does not guarantee that an int is wider than a char (an int must be at
  * least 16 bits but it is permitted for a char to be that wide as well), we
  * can't assume a signed int is sufficient to accommodate an unsigned char.
- * Thus, format_helper_exit_status() will still need to emit any require '-'
- * on its own.
+ * Thus, callers will still need to add any required '-' to the final string.
  *
  * For most purposes, you'd want to use tor_snprintf("%x") instead of this
  * function; it's designed to be used in code paths where you can't call
