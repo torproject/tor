@@ -578,6 +578,10 @@ config_mark_lists_fragile(const config_mgr_t *mgr, void *options)
   } SMARTLIST_FOREACH_END(mv);
 }
 
+/**
+ * Log a warning that declaring that the option called <b>what</b>
+ * is deprecated because of the reason in <b>why</b>.
+ **/
 void
 warn_deprecated_option(const char *what, const char *why)
 {
