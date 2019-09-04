@@ -1,0 +1,5 @@
+  o Minor features (debugging):
+    - Log a nonfatal assertion failure if we encounter a configuration
+      line whose command is "CLEAR" but which has a nonempty value.
+      This should be impossible, according to the rules of our
+      configuration line parsing. Closes ticket 31529.
