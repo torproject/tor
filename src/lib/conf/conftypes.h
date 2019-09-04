@@ -63,8 +63,17 @@ typedef enum config_type_t {
                              * context-sensitive config lines when fetching.
                              */
   CONFIG_TYPE_OBSOLETE,     /**< Obsolete (ignored) option. */
-  CONFIG_TYPE_EXTENDED,     /**< Extended type; definition will appear in
-                             * pointer. */
+  /**
+   * Extended type: definition appears in the <b>type_def</b> pointer
+   * of the corresponding struct_member_t.
+   *
+   * For some types, we cannot define them as particular values of this
+   * enumeration, since those types are abstractions defined at a higher level
+   * than this module.  (For example, parsing a routerset_t is higher-level
+   * than this module.)  To handle this, we use CONFIG_TYPE_EXTENDED for those
+   * types, and give a definition for them in the struct_member_t.type_def.
+   **/
+  CONFIG_TYPE_EXTENDED,
 } config_type_t;
 
 /* Forward delcaration for var_type_def_t, for extended types. */
@@ -74,15 +83,26 @@ struct var_type_def_t;
 typedef struct struct_member_t {
   /** Name of the field. */
   const char *name;
-  /** Type of the field, according to the config_type_t enumeration.
+  /**
+   * Type of the field, according to the config_type_t enumeration.
    *
-   * This value is CONFIG_TYPE_EXTENDED for any type not listed in
-   * config_type_t.
+   * For any type not otherwise listed in config_type_t, this field's value
+   * should be CONFIG_TYPE_EXTENDED.  When it is, the <b>type_def</b> pointer
+   * must be set.
    **/
+  /*
+   * NOTE: In future refactoring, we might remove this field entirely, along
+   * with its corresponding enumeration.  In that case, we will require that
+   * type_def be set in all cases. If we do, we will also need a new mechanism
+   * to enforce consistency between configuration variable types and their
+   * corresponding structures, since our current design in
+   * lib/conf/conftesting.h won't work any more.
+   */
   config_type_t type;
   /**
    * Pointer to a type definition for the type of this field. Overrides
-   * <b>type</b> if not NULL.
+   * <b>type</b> if it is not NULL.  Must be set when <b>type</b> is
+   * CONFIG_TYPE_EXTENDED.
    **/
   const struct var_type_def_t *type_def;
   /**
