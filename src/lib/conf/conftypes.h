@@ -33,6 +33,8 @@
 #include "lib/conf/conftesting.h"
 #endif
 
+#include <stddef.h>
+
 /** Enumeration of types which option values can take */
 typedef enum config_type_t {
   CONFIG_TYPE_STRING = 0,   /**< An arbitrary string. */
@@ -89,7 +91,7 @@ typedef struct struct_member_t {
    * Offset of this field within the structure.  Compute this with
    * offsetof(structure, fieldname).
    **/
-  int offset;
+  ptrdiff_t offset;
 } struct_member_t;
 
 /**
@@ -102,7 +104,7 @@ typedef struct struct_member_t {
 typedef struct struct_magic_decl_t {
   const char *typename;
   uint32_t magic_val;
-  int magic_offset;
+  ptrdiff_t magic_offset;
 } struct_magic_decl_t;
 
 /**

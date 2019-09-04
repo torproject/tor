@@ -72,7 +72,7 @@ typedef struct config_format_t {
   const struct_member_t *extra;
   /** The position of a config_suite_t pointer within the toplevel object,
    * or -1 if there is no such pointer. */
-  int config_suite_offset;
+  ptrdiff_t config_suite_offset;
 } config_format_t;
 
 /**
