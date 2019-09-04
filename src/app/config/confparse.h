@@ -17,21 +17,38 @@
 #include "lib/conf/confmacros.h"
 #include "lib/testsupport/testsupport.h"
 
-/** An abbreviation for a configuration option allowed on the command line. */
+/**
+ * An abbreviation or alias for a configuration option.
+ **/
 typedef struct config_abbrev_t {
+  /** The option name as abbreviated.  Not case-sensitive. */
   const char *abbreviated;
+  /** The full name of the option. Not case-sensitive. */
   const char *full;
+  /** True if this abbreviation should only be allowed on the command line. */
   int commandline_only;
+  /** True if we should warn whenever this abbreviation is used. */
   int warn;
 } config_abbrev_t;
 
+/**
+ * A note that a configuration option is deprecated, with an explanation why.
+ */
 typedef struct config_deprecation_t {
+  /** The option that is deprecated. */
   const char *name;
+  /** A user-facing string explaining why the option is deprecated. */
   const char *why_deprecated;
 } config_deprecation_t;
 
-/* Handy macro for declaring "In the config file or on the command line,
- * you can abbreviate <b>tok</b>s as <b>tok</b>". */
+/**
+ * Handy macro for declaring "In the config file or on the command line, you
+ * can abbreviate <b>tok</b>s as <b>tok</b>". Used inside an array of
+ * config_abbrev_t.
+ *
+ * For example, to declare "NumCpu" as an abbreviation for "NumCPUs",
+ * you can say PLURAL(NumCpu).
+ **/
 #define PLURAL(tok) { #tok, #tok "s", 0, 0 }
 
 /** Type of a callback to validate whether a given configuration is
