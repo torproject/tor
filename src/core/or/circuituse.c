@@ -73,6 +73,26 @@
 STATIC void circuit_expire_old_circuits_clientside(void);
 static void circuit_increment_failure_count(void);
 
+/* Return true iff the circuit purpose is for an onion service excluding
+ * client, only service side. */
+static inline int
+circuit_purpose_is_hs_service(uint8_t purpose)
+{
+  /* Service-side purpose */
+  return (purpose >= CIRCUIT_PURPOSE_S_HS_MIN_ &&
+          purpose <= CIRCUIT_PURPOSE_S_HS_MAX_);
+}
+
+/* Return true iff the circuit purpose is for an onion service client
+ * excluding service side. */
+static inline int
+circuit_purpose_is_hs_client(uint8_t purpose)
+{
+  /* Client-side purpose */
+  return (purpose >= CIRCUIT_PURPOSE_C_HS_MIN_ &&
+          purpose <= CIRCUIT_PURPOSE_C_HS_MAX_);
+}
+
 /** Check whether the hidden service destination of the stream at
  *  <b>edge_conn</b> is the same as the destination of the circuit at
  *  <b>origin_circ</b>. */
@@ -844,8 +864,7 @@ circuit_expire_building(void)
       circuit_mark_for_close(victim, END_CIRC_REASON_MEASUREMENT_EXPIRED);
     } else {
       circuit_mark_for_close(victim, END_CIRC_REASON_TIMEOUT);
-      if (victim->purpose >= CIRCUIT_PURPOSE_S_HS_MIN_ &&
-          victim->purpose <= CIRCUIT_PURPOSE_S_HS_MAX_) {
+      if (circuit_purpose_is_hs_service(victim->purpose)) {
         hs_service_circuit_timed_out(TO_ORIGIN_CIRCUIT(victim));
       }
     }
@@ -1969,23 +1988,12 @@ have_enough_path_info(int need_exit)
 int
 circuit_purpose_is_hidden_service(uint8_t purpose)
 {
-   if (purpose == CIRCUIT_PURPOSE_HS_VANGUARDS) {
-     return 1;
-   }
+  if (purpose == CIRCUIT_PURPOSE_HS_VANGUARDS) {
+    return 1;
+  }
 
-   /* Client-side purpose */
-   if (purpose >= CIRCUIT_PURPOSE_C_HS_MIN_ &&
-       purpose <= CIRCUIT_PURPOSE_C_HS_MAX_) {
-     return 1;
-   }
-
-   /* Service-side purpose */
-   if (purpose >= CIRCUIT_PURPOSE_S_HS_MIN_ &&
-       purpose <= CIRCUIT_PURPOSE_S_HS_MAX_) {
-     return 1;
-   }
-
-   return 0;
+  return circuit_purpose_is_hs_client(purpose) ||
+         circuit_purpose_is_hs_service(purpose);
 }
 
 /**
