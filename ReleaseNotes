@@ -83,6 +83,9 @@ Changes in version 0.4.1.5 - 2019-08-20
       of bug 29875; bugfix on 0.3.0.1-alpha.
 
   o Major bugfixes (circuit build, guard):
+    - On relays, properly check that a padding machine is absent before
+      logging a warning about it being absent. Fixes bug 30649; bugfix
+      on 0.4.0.1-alpha.
     - When considering upgrading circuits from "waiting for guard" to
       "open", always ignore circuits that are marked for close. Otherwise,
       we can end up in the situation where a subsystem is notified that
