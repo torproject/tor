@@ -171,22 +171,6 @@ typedef struct struct_magic_decl_t {
 
 /* Aliases for old individual options. These will get removed soon. */
 #define CVFLAG_NODUMP     CFLG_NODUMP
-#define VTFLAG_CUMULATIVE CFLG_NOREPLACE
-#define VTFLAG_UNSETTABLE CFLG_NOSET
-
-/**
- * Set of flags to make a variable "derived" -- so that inspecting this
- * variable inspects part of another, and changing this variable changes part
- * of another.
- *
- * Derived variables require special handling in several ways: they do not
- * need to be copied independently when we are copying a config object, since
- * copying the variable they are derived from copies them too.  Similarly,
- * they do not need to be compared independently when listing changes, since
- * comparing the variable that they are derived from compares them too.
- **/
-#define VTFLAG_CONTAINED \
-  (CFLG_NOCOPY | CFLG_NOCMP | CFLG_NODUMP)
 
 /** Set of options to make a flag invisible. */
 #define CVFLAG_INVISIBLE  \
