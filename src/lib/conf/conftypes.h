@@ -153,20 +153,20 @@ typedef struct struct_magic_decl_t {
  * Flag for var_type_def_t.
  * Set iff a variable of this type can never be set directly by name.
  **/
-#define VTFLAG_UNSETTABLE (1u<<0)
+#define VTFLAG_UNSETTABLE (1u<<3)
 /**
  * Flag for var_type_def_t.
  * Set iff a variable of this type is always contained in another
  * variable, and as such doesn't need to be dumped or copied
  * independently.
  **/
-#define VTFLAG_CONTAINED (1u<<1)
+#define VTFLAG_CONTAINED (1u<<4)
 /**
  * Flag for var_type_def_t.
  * Set iff a variable of this type can be set more than once without
  * destroying older values. Such variables should implement "mark_fragile".
  */
-#define VTFLAG_CUMULATIVE (1u<<2)
+#define VTFLAG_CUMULATIVE (1u<<5)
 
 /** A variable allowed in the configuration file or on the command line. */
 typedef struct config_var_t {
