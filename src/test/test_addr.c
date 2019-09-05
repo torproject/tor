@@ -731,10 +731,6 @@ test_addr_ip6_helpers(void *arg)
 #define TEST_ADDR_PARSE_FMT(addr_str, expect_family, fmt_decorated, \
                             expect_str) \
   STMT_BEGIN \
-    int r; \
-    tor_addr_t addr; \
-    char buf[TOR_ADDR_BUF_LEN]; \
-    const char *sv; \
     r = tor_addr_parse(&addr, addr_str); \
     tt_int_op(r, OP_EQ, expect_family); \
     sv = tor_addr_to_str(buf, &addr, sizeof(buf), fmt_decorated); \
@@ -747,8 +743,6 @@ test_addr_ip6_helpers(void *arg)
  */
 #define TEST_ADDR_PARSE_XFAIL(addr_str) \
   STMT_BEGIN \
-    int r; \
-    tor_addr_t addr; \
     r = tor_addr_parse(&addr, addr_str); \
     tt_int_op(r, OP_EQ, -1); \
     tt_assert(tor_addr_is_null(&addr)); \
@@ -762,11 +756,6 @@ test_addr_ip6_helpers(void *arg)
 #define TEST_ADDR_PORT_PARSE_FMT(addr_port_str, default_port, expect_family, \
                                  fmt_decorated, expect_str, expect_port) \
   STMT_BEGIN \
-    int r; \
-    tor_addr_t addr; \
-    uint16_t port; \
-    char buf[TOR_ADDR_BUF_LEN]; \
-    const char *sv; \
     r = tor_addr_port_parse(LOG_DEBUG, addr_port_str, &addr, &port, \
                             default_port); \
     tt_int_op(r, OP_EQ, 0); \
@@ -783,9 +772,6 @@ test_addr_ip6_helpers(void *arg)
  */
 #define TEST_ADDR_PORT_PARSE_XFAIL(addr_port_str, default_port) \
   STMT_BEGIN \
-    int r; \
-    tor_addr_t addr; \
-    uint16_t port; \
     r = tor_addr_port_parse(LOG_DEBUG, addr_port_str, &addr, &port, \
                             default_port); \
     tt_int_op(r, OP_EQ, -1); \
@@ -799,8 +785,6 @@ test_addr_ip6_helpers(void *arg)
  */
 #define TEST_ADDR_V4_LOOKUP_HOSTNAME(addr_str, expect_str) \
   STMT_BEGIN \
-    int r; \
-    uint32_t addr32h; \
     r = tor_lookup_hostname(addr_str, &addr32h); \
     tt_int_op(r, OP_EQ, 0); \
     tt_str_op(fmt_addr32(addr32h), OP_EQ, expect_str); \
@@ -812,8 +796,6 @@ test_addr_ip6_helpers(void *arg)
  */
 #define TEST_ADDR_V4_LOOKUP_XFAIL(bad_str) \
   STMT_BEGIN \
-    int r; \
-    uint32_t addr32h; \
     r = tor_lookup_hostname(bad_str, &addr32h); \
     tt_int_op(r, OP_EQ, -1); \
     tt_int_op(addr32h, OP_EQ, 0); \
@@ -828,8 +810,6 @@ test_addr_ip6_helpers(void *arg)
  */
 #define TEST_HOST_V4_LOOKUP(host_str) \
   STMT_BEGIN \
-    int r; \
-    uint32_t addr32h; \
     r = tor_lookup_hostname(host_str, &addr32h); \
     tt_int_op(r, OP_GE, -1); \
     tt_int_op(r, OP_LE, 1); \
@@ -845,10 +825,6 @@ test_addr_ip6_helpers(void *arg)
 #define TEST_ADDR_LOOKUP_FMT(addr_str, require_family, expect_family, \
                              fmt_decorated, expect_str) \
   STMT_BEGIN \
-    int r; \
-    tor_addr_t addr; \
-    char buf[TOR_ADDR_BUF_LEN]; \
-    const char *sv; \
     r = tor_addr_lookup(addr_str, require_family, &addr); \
     tt_int_op(r, OP_EQ, 0); \
     tt_int_op(tor_addr_family(&addr), OP_EQ, expect_family); \
@@ -863,8 +839,6 @@ test_addr_ip6_helpers(void *arg)
  */
 #define TEST_ADDR_LOOKUP_XFAIL(bad_str, require_family) \
   STMT_BEGIN \
-    int r; \
-    tor_addr_t addr; \
     r = tor_addr_lookup(bad_str, require_family, &addr); \
     tt_int_op(r, OP_EQ, -1); \
     tt_assert(tor_addr_is_null(&addr)); \
@@ -879,8 +853,6 @@ test_addr_ip6_helpers(void *arg)
  */
 #define TEST_HOST_LOOKUP(host_str, require_family) \
   STMT_BEGIN \
-    int r; \
-    tor_addr_t addr; \
     r = tor_addr_lookup(host_str, require_family, &addr); \
     tt_int_op(r, OP_GE, -1); \
     tt_int_op(r, OP_LE, 1); \
@@ -897,11 +869,6 @@ test_addr_ip6_helpers(void *arg)
 #define TEST_ADDR_PORT_LOOKUP_FMT(addr_port_str, expect_family, \
                                   fmt_decorated, expect_str, expect_port) \
   STMT_BEGIN \
-    int r; \
-    tor_addr_t addr; \
-    uint16_t port; \
-    char buf[TOR_ADDR_BUF_LEN]; \
-    const char *sv; \
     r = tor_addr_port_lookup(addr_port_str, &addr, &port); \
     tt_int_op(r, OP_EQ, 0); \
     tt_int_op(tor_addr_family(&addr), OP_EQ, expect_family); \
@@ -918,9 +885,6 @@ test_addr_ip6_helpers(void *arg)
  */
 #define TEST_ADDR_PORT_LOOKUP_XFAIL(bad_str) \
   STMT_BEGIN \
-    int r; \
-    tor_addr_t addr; \
-    uint16_t port; \
     r = tor_addr_port_lookup(bad_str, &addr, &port); \
     tt_int_op(r, OP_EQ, -1); \
     tt_assert(tor_addr_is_null(&addr)); \
@@ -939,9 +903,6 @@ test_addr_ip6_helpers(void *arg)
  */
 #define TEST_HOST_PORT_LOOKUP(host_port_str, expect_success_port) \
   STMT_BEGIN \
-    int r; \
-    tor_addr_t addr; \
-    uint16_t port; \
     r = tor_addr_port_lookup(host_port_str, &addr, &port); \
     tt_int_op(r, OP_GE, -1); \
     tt_int_op(r, OP_LE, 0); \
@@ -1166,6 +1127,13 @@ test_addr_ip6_helpers(void *arg)
 static void
 test_addr_parse(void *arg)
 {
+  int r;
+  tor_addr_t addr;
+  uint16_t port;
+  const char *sv;
+  uint32_t addr32h;
+  char buf[TOR_ADDR_BUF_LEN];
+
   (void)arg;
 
   /* Correct calls. */
