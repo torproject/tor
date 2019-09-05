@@ -203,6 +203,9 @@ config_mgr_register_fmt(config_mgr_t *mgr,
 /**
  * Add a new format to this configuration object.  Asserts on failure.
  *
+ * Returns an internal "index" value used to identify this format within
+ * all of those formats contained in <b>mgr</b>.  This index value
+ * should not generally be used outside of this module.
  **/
 int
 config_mgr_add_format(config_mgr_t *mgr,
@@ -575,6 +578,12 @@ config_mark_lists_fragile(const config_mgr_t *mgr, void *options)
   } SMARTLIST_FOREACH_END(mv);
 }
 
+/**
+ * Log a warning that declaring that the option called <b>what</b>
+ * is deprecated because of the reason in <b>why</b>.
+ *
+ * (Both arguments must be non-NULL.)
+ **/
 void
 warn_deprecated_option(const char *what, const char *why)
 {

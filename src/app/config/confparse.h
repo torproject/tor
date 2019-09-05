@@ -17,27 +17,62 @@
 #include "lib/conf/confmacros.h"
 #include "lib/testsupport/testsupport.h"
 
-/** An abbreviation for a configuration option allowed on the command line. */
+/**
+ * An abbreviation or alias for a configuration option.
+ **/
 typedef struct config_abbrev_t {
+  /** The option name as abbreviated.  Not case-sensitive. */
   const char *abbreviated;
+  /** The full name of the option. Not case-sensitive. */
   const char *full;
+  /** True if this abbreviation should only be allowed on the command line. */
   int commandline_only;
+  /** True if we should warn whenever this abbreviation is used. */
   int warn;
 } config_abbrev_t;
 
+/**
+ * A note that a configuration option is deprecated, with an explanation why.
+ */
 typedef struct config_deprecation_t {
+  /** The option that is deprecated. */
   const char *name;
+  /** A user-facing string explaining why the option is deprecated. */
   const char *why_deprecated;
 } config_deprecation_t;
 
-/* Handy macro for declaring "In the config file or on the command line,
- * you can abbreviate <b>tok</b>s as <b>tok</b>". */
+/**
+ * Handy macro for declaring "In the config file or on the command line, you
+ * can abbreviate <b>tok</b>s as <b>tok</b>". Used inside an array of
+ * config_abbrev_t.
+ *
+ * For example, to declare "NumCpu" as an abbreviation for "NumCPUs",
+ * you can say PLURAL(NumCpu).
+ **/
 #define PLURAL(tok) { #tok, #tok "s", 0, 0 }
 
-/** Type of a callback to validate whether a given configuration is
- * well-formed and consistent. See options_trial_assign() for documentation
- * of arguments. */
-typedef int (*validate_fn_t)(void*,void*,void*,int,char**);
+/**
+ * Type of a callback to validate whether a given configuration is
+ * well-formed and consistent.
+ *
+ * The configuration to validate is passed as <b>newval</b>. The previous
+ * configuration, if any, is provided in <b>oldval</b>.  The
+ * <b>default_val</b> argument receives a configuration object initialized
+ * with default values for all its fields.  The <b>from_setconf</b> argument
+ * is true iff the input comes from a SETCONF controller command.
+ *
+ * On success, return 0.  On failure, set *<b>msg_out</b> to a newly allocated
+ * error message, and return -1.
+ *
+ * REFACTORING NOTE: Currently, this callback type is only used from inside
+ * config_dump(); later in our refactoring, it will be cleaned up and used
+ * more generally.
+ */
+typedef int (*validate_fn_t)(void *oldval,
+                             void *newval,
+                             void *default_val,
+                             int from_setconf,
+                             char **msg_out);
 
 struct config_mgr_t;
 
@@ -96,8 +131,28 @@ struct smartlist_t *config_mgr_list_deprecated_vars(const config_mgr_t *mgr);
 /** A collection of managed configuration objects. */
 typedef struct config_suite_t config_suite_t;
 
+/**
+ * Flag for config_assign: if set, then "resetting" an option changes it to
+ * its default value, as specified in the config_var_t.  Otherwise,
+ * "resetting" an option changes it to a type-dependent null value --
+ * typically 0 or NULL.
+ *
+ * (An option is "reset" when it is set to an empty value, or as described in
+ * CAL_CLEAR_FIRST).
+ **/
 #define CAL_USE_DEFAULTS      (1u<<0)
+/**
+ * Flag for config_assign: if set, then we reset every provided config
+ * option before we set it.
+ *
+ * For example, if this flag is not set, then passing a multi-line option to
+ * config_assign will cause any previous value to be extended. But if this
+ * flag is set, then a multi-line option will replace any previous value.
+ **/
 #define CAL_CLEAR_FIRST       (1u<<1)
+/**
+ * Flag for config_assign: if set, we warn about deprecated options.
+ **/
 #define CAL_WARN_DEPRECATIONS (1u<<2)
 
 void *config_new(const config_mgr_t *fmt);
