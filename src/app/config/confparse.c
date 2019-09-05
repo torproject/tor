@@ -581,6 +581,8 @@ config_mark_lists_fragile(const config_mgr_t *mgr, void *options)
 /**
  * Log a warning that declaring that the option called <b>what</b>
  * is deprecated because of the reason in <b>why</b>.
+ *
+ * (Both arguments must be non-NULL.)
  **/
 void
 warn_deprecated_option(const char *what, const char *why)
