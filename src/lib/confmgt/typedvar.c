@@ -225,32 +225,3 @@ typed_var_mark_fragile(void *value, const var_type_def_t *def)
   if (def->fns->mark_fragile)
     def->fns->mark_fragile(value, def->params);
 }
-
-/**
- * Return true iff multiple assignments to a variable will extend its
- * value, rather than replacing it.
- **/
-bool
-var_type_is_cumulative(const var_type_def_t *def)
-{
-  return (def->flags & VTFLAG_CUMULATIVE) != 0;
-}
-
-/**
- * Return true iff this variable type is always contained in another variable,
- * and as such doesn't need to be dumped or copied independently.
- **/
-bool
-var_type_is_contained(const var_type_def_t *def)
-{
-  return (def->flags & VTFLAG_CONTAINED) != 0;
-}
-
-/**
- * Return true iff this type can not be assigned directly by the user.
- **/
-bool
-var_type_is_settable(const var_type_def_t *def)
-{
-  return (def->flags & VTFLAG_UNSETTABLE) == 0;
-}

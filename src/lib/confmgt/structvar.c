@@ -238,26 +238,11 @@ struct_var_get_typename(const struct_member_t *member)
   return def ? def->name : NULL;
 }
 
-bool
-struct_var_is_cumulative(const struct_member_t *member)
+/** Return all of the flags set for this struct member. */
+unsigned
+struct_var_get_flags(const struct_member_t *member)
 {
   const var_type_def_t *def = get_type_def(member);
 
-  return def ? var_type_is_cumulative(def) : false;
-}
-
-bool
-struct_var_is_settable(const struct_member_t *member)
-{
-  const var_type_def_t *def = get_type_def(member);
-
-  return def ? var_type_is_settable(def) : true;
-}
-
-bool
-struct_var_is_contained(const struct_member_t *member)
-{
-  const var_type_def_t *def = get_type_def(member);
-
-  return def ? var_type_is_contained(def) : false;
+  return def ? def->flags : 0;
 }

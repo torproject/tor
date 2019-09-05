@@ -512,6 +512,18 @@ config_count_options(const config_mgr_t *mgr)
 }
 
 /**
+ * Return true iff at least one bit from <b>flag</b> is set on <b>var</b>,
+ * either in <b>var</b>'s flags, or on the flags of its type.
+ **/
+static bool
+config_var_has_flag(const config_var_t *var, unsigned flag)
+{
+  unsigned have_flags = var->flags | struct_var_get_flags(&var->member);
+
+  return (have_flags & flag) != 0;
+}
+
+/**
  * Return true if assigning a value to <b>var</b> replaces the previous
  * value.  Return false if assigning a value to <b>var</b> appends
  * to the previous value.
@@ -519,7 +531,7 @@ config_count_options(const config_mgr_t *mgr)
 static bool
 config_var_is_replaced_on_set(const config_var_t *var)
 {
-  return ! struct_var_is_cumulative(&var->member);
+  return ! config_var_has_flag(var, VTFLAG_CUMULATIVE);
 }
 
 /**
@@ -529,9 +541,7 @@ config_var_is_replaced_on_set(const config_var_t *var)
 bool
 config_var_is_settable(const config_var_t *var)
 {
-  if (var->flags & CVFLAG_OBSOLETE)
-    return false;
-  return struct_var_is_settable(&var->member);
+  return ! config_var_has_flag(var, CVFLAG_OBSOLETE | VTFLAG_UNSETTABLE);
 }
 
 /**
@@ -545,7 +555,7 @@ config_var_is_gettable(const config_var_t *var)
    * have compatibility effects.  For now, let's leave them along.
    */
 
-  // return (var->flags & (CVFLAG_OBSOLETE|CFGLAGS_INVISIBLE)) == 0;
+  // return ! config_var_has_flag(var, CVFLAG_OBSOLETE|CFGLAGS_INVISIBLE);
   (void)var;
   return true;
 }
@@ -564,7 +574,7 @@ config_var_is_gettable(const config_var_t *var)
 static bool
 config_var_is_derived(const config_var_t *var)
 {
-  return struct_var_is_contained(&var->member);
+  return config_var_has_flag(var, VTFLAG_CONTAINED);
 }
 
 /**
@@ -602,7 +612,7 @@ config_var_needs_copy(const config_var_t *var)
 bool
 config_var_is_listable(const config_var_t *var)
 {
-  return (var->flags & CVFLAG_INVISIBLE) == 0;
+  return ! config_var_has_flag(var, CVFLAG_INVISIBLE);
 }
 
 /**
@@ -615,10 +625,7 @@ config_var_is_listable(const config_var_t *var)
 static bool
 config_var_is_dumpable(const config_var_t *var)
 {
-  if (config_var_is_derived(var)) {
-    return false;
-  }
-  return (var->flags & CVFLAG_NODUMP) == 0;
+  return ! config_var_has_flag(var, VTFLAG_CONTAINED | CVFLAG_NODUMP);
 }
 
 /*
