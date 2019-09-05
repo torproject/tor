@@ -190,7 +190,6 @@ const char *config_expand_abbrev(const config_mgr_t *mgr,
 void warn_deprecated_option(const char *what, const char *why);
 
 bool config_var_is_settable(const config_var_t *var);
-bool config_var_is_contained(const config_var_t *var);
 bool config_var_is_listable(const config_var_t *var);
 bool config_var_is_dumpable(const config_var_t *var);
 
