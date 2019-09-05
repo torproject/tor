@@ -550,13 +550,52 @@ config_var_is_gettable(const config_var_t *var)
   return true;
 }
 
-bool
-config_var_is_contained(const config_var_t *var)
+/**
+ * Return true iff this is variable is "derived" from another -- that is,
+ * inspecting this variable inspects part of another, and changing this
+ * variable changes part of another.
+ *
+ * Derived variables require special handling in several ways: they do not
+ * need to be copied independently when we are copying a config object, since
+ * copying the variable they are derived from copies them too.  Similarly,
+ * they do not need to be compared independently when listing changes, since
+ * comparing the variable that they are derived from compares them too.
+ **/
+static bool
+config_var_is_derived(const config_var_t *var)
 {
   return struct_var_is_contained(&var->member);
 }
 
 /**
+ * Return true iff we need to check <b>var</b> for changes when we are
+ * comparing config options for changes.
+ *
+ * A false result might mean that the variable is a derived variable, and that
+ * comparing the variable it derives from compares this one too-- or it might
+ * mean that there is no data to compare.
+ **/
+static bool
+config_var_should_list_changes(const config_var_t *var)
+{
+  return ! config_var_is_derived(var);
+}
+
+/**
+ * Return true iff we need to copy the data for <b>var</b> when we are
+ * copying a config option.
+ *
+ * A false option might mean that the variable is a derived variable, and that
+ * copying the variable it derives from copies it-- or it might mean that
+ * there is no data to copy.
+ **/
+static bool
+config_var_needs_copy(const config_var_t *var)
+{
+  return ! config_var_is_derived(var);
+}
+
+/**h
  * Return true iff variable <b>var</b> should appear on list of variables
  * given to the controller or the CLI.
  **/
@@ -576,6 +615,9 @@ config_var_is_listable(const config_var_t *var)
 bool
 config_var_is_dumpable(const config_var_t *var)
 {
+  if (config_var_is_derived(var)) {
+    return false;
+  }
   return (var->flags & CVFLAG_NODUMP) == 0;
 }
 
@@ -1035,7 +1077,7 @@ config_get_changes(const config_mgr_t *mgr,
   config_line_t *result = NULL;
   config_line_t **next = &result;
   SMARTLIST_FOREACH_BEGIN(mgr->all_vars, managed_var_t *, mv) {
-    if (config_var_is_contained(mv->cvar)) {
+    if (! config_var_should_list_changes(mv->cvar)) {
       /* something else will check this var, or it doesn't need checking */
       continue;
     }
@@ -1071,7 +1113,7 @@ config_dup(const config_mgr_t *mgr, const void *old)
 
   newopts = config_new(mgr);
   SMARTLIST_FOREACH_BEGIN(mgr->all_vars, managed_var_t *, mv) {
-    if (config_var_is_contained(mv->cvar)) {
+    if (! config_var_needs_copy(mv->cvar)) {
       // Something else will copy this option, or it doesn't need copying.
       continue;
     }
@@ -1138,10 +1180,6 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
   elements = smartlist_new();
   SMARTLIST_FOREACH_BEGIN(mgr->all_vars, managed_var_t *, mv) {
     int comment_option = 0;
-    if (config_var_is_contained(mv->cvar)) {
-      // Something else will dump this option, or it doesn't need dumping.
-      continue;
-    }
     /* Don't save 'hidden' control variables. */
     if (! config_var_is_dumpable(mv->cvar))
       continue;
