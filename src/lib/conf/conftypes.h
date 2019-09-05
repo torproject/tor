@@ -132,41 +132,70 @@ typedef struct struct_magic_decl_t {
 } struct_magic_decl_t;
 
 /**
- * Flag to indicate that an option is obsolete. Any attempt to set or
- * fetch this option should produce a warning.
- **/
-#define CVFLAG_OBSOLETE  (1u<<0)
-/**
  * Flag to indicate that an option is undumpable. An undumpable option is
- * never saved to disk. For historical reasons it is prefixed with __ but
- * not with ___.
+ * never saved to disk.
+ *
+ * For historical reasons it is prefixed with __ but not with ___.
  **/
-#define CVFLAG_NODUMP    (1u<<1)
+#define CFLG_NODUMP    (1u<<0)
 /**
  * Flag to indicate that an option is "invisible". An invisible option
  * is always undumpable, and we don't tell the controller about it.
  * For historical reasons it is prefixed with ___.
  **/
-#define CVFLAG_INVISIBLE (1u<<2)
+#define CFLG_NOLIST (1u<<1)
 
 /**
  * Flag for var_type_def_t.
  * Set iff a variable of this type can never be set directly by name.
  **/
-#define VTFLAG_UNSETTABLE (1u<<3)
+#define CFLG_NOSET (1u<<2)
 /**
  * Flag for var_type_def_t.
- * Set iff a variable of this type is always contained in another
- * variable, and as such doesn't need to be dumped or copied
- * independently.
+ * Set iff a variable of this type is does not need to be copied when copying
+ * the structure that contains it.
  **/
-#define VTFLAG_CONTAINED (1u<<4)
+#define CFLG_NOCOPY (1u<<3)
+/**
+ * Flag for var_type_def_t.
+ * Set iff a variable of this type does not need to be compared when comparing
+ * two objects that contain it.
+ **/
+#define CFLG_NOCMP (1u<<4)
 /**
  * Flag for var_type_def_t.
  * Set iff a variable of this type can be set more than once without
  * destroying older values. Such variables should implement "mark_fragile".
  */
-#define VTFLAG_CUMULATIVE (1u<<5)
+#define CFLG_NOREPLACE    (1u<<5)
+
+/* Aliases for old individual options. These will get removed soon. */
+#define CVFLAG_NODUMP     CFLG_NODUMP
+#define VTFLAG_CUMULATIVE CFLG_NOREPLACE
+#define VTFLAG_UNSETTABLE CFLG_NOSET
+
+/**
+ * Set of flags to make a variable "derived" -- so that inspecting this
+ * variable inspects part of another, and changing this variable changes part
+ * of another.
+ *
+ * Derived variables require special handling in several ways: they do not
+ * need to be copied independently when we are copying a config object, since
+ * copying the variable they are derived from copies them too.  Similarly,
+ * they do not need to be compared independently when listing changes, since
+ * comparing the variable that they are derived from compares them too.
+ **/
+#define VTFLAG_CONTAINED \
+  (CFLG_NOCOPY | CFLG_NOCMP | CFLG_NODUMP)
+
+/** Set of options to make a flag invisible. */
+#define CVFLAG_INVISIBLE  \
+  (CFLG_NODUMP | CFLG_NOSET | CFLG_NOLIST)
+/**
+ * Set of flags to indicate that a configuration option is obsolete.
+ **/
+#define CVFLAG_OBSOLETE \
+  (CFLG_NOSET | CFLG_NOLIST | CFLG_NODUMP | CFLG_NOCOPY | CFLG_NOCMP)
 
 /** A variable allowed in the configuration file or on the command line. */
 typedef struct config_var_t {

@@ -531,7 +531,7 @@ config_var_has_flag(const config_var_t *var, unsigned flag)
 static bool
 config_var_is_replaced_on_set(const config_var_t *var)
 {
-  return ! config_var_has_flag(var, VTFLAG_CUMULATIVE);
+  return ! config_var_has_flag(var, CFLG_NOREPLACE);
 }
 
 /**
@@ -541,7 +541,7 @@ config_var_is_replaced_on_set(const config_var_t *var)
 bool
 config_var_is_settable(const config_var_t *var)
 {
-  return ! config_var_has_flag(var, CVFLAG_OBSOLETE | VTFLAG_UNSETTABLE);
+  return ! config_var_has_flag(var, CFLG_NOSET);
 }
 
 /**
@@ -561,23 +561,6 @@ config_var_is_gettable(const config_var_t *var)
 }
 
 /**
- * Return true iff this is variable is "derived" from another -- that is,
- * inspecting this variable inspects part of another, and changing this
- * variable changes part of another.
- *
- * Derived variables require special handling in several ways: they do not
- * need to be copied independently when we are copying a config object, since
- * copying the variable they are derived from copies them too.  Similarly,
- * they do not need to be compared independently when listing changes, since
- * comparing the variable that they are derived from compares them too.
- **/
-static bool
-config_var_is_derived(const config_var_t *var)
-{
-  return config_var_has_flag(var, VTFLAG_CONTAINED);
-}
-
-/**
  * Return true iff we need to check <b>var</b> for changes when we are
  * comparing config options for changes.
  *
@@ -588,7 +571,7 @@ config_var_is_derived(const config_var_t *var)
 static bool
 config_var_should_list_changes(const config_var_t *var)
 {
-  return ! config_var_is_derived(var);
+  return ! config_var_has_flag(var, CFLG_NOCMP);
 }
 
 /**
@@ -602,7 +585,7 @@ config_var_should_list_changes(const config_var_t *var)
 static bool
 config_var_needs_copy(const config_var_t *var)
 {
-  return ! config_var_is_derived(var);
+  return ! config_var_has_flag(var, CFLG_NOCOPY);
 }
 
 /**h
@@ -612,7 +595,7 @@ config_var_needs_copy(const config_var_t *var)
 bool
 config_var_is_listable(const config_var_t *var)
 {
-  return ! config_var_has_flag(var, CVFLAG_INVISIBLE);
+  return ! config_var_has_flag(var, CFLG_NOLIST);
 }
 
 /**
@@ -625,7 +608,7 @@ config_var_is_listable(const config_var_t *var)
 static bool
 config_var_is_dumpable(const config_var_t *var)
 {
-  return ! config_var_has_flag(var, VTFLAG_CONTAINED | CVFLAG_NODUMP);
+  return ! config_var_has_flag(var, CFLG_NODUMP);
 }
 
 /*
