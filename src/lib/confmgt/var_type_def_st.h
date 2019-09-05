@@ -134,6 +134,25 @@ struct var_type_fns_t {
 };
 
 /**
+ * Flag for var_type_def_t.
+ * Set iff a variable of this type can never be set directly by name.
+ **/
+#define VTFLAG_UNSETTABLE (1u<<0)
+/**
+ * Flag for var_type_def_t.
+ * Set iff a variable of this type is always contained in another
+ * variable, and as such doesn't need to be dumped or copied
+ * independently.
+ **/
+#define VTFLAG_CONTAINED (1u<<1)
+/**
+ * Flag for var_type_def_t.
+ * Set iff a variable of this type can be set more than once without
+ * destroying older values. Such variables should implement "mark_fragile".
+ */
+#define VTFLAG_CUMULATIVE (1u<<2)
+
+/**
  * A structure describing a type that can be manipulated with the typedvar_*
  * functions.
  **/
@@ -151,17 +170,11 @@ struct var_type_def_t {
    * calling the functions in this type's function table.
    */
   const void *params;
-
-  /** True iff a variable of this type can never be set directly by name. */
-  bool is_unsettable;
-  /** True iff a variable of this type is always contained in another
-   * variable, and as such doesn't need to be dumped or copied
-   * independently. */
-  bool is_contained;
-  /** True iff a variable of this type can be set more than once without
-   * destroying older values. Such variables should implement "mark_fragile".
-   */
-  bool is_cumulative;
+  /**
+   * A bitwise OR of one or more VTFLAG_* values, describing properties
+   * for all values of this type.
+   **/
+  unsigned flags;
 };
 
 #endif /* !defined(TOR_LIB_CONFMGT_VAR_TYPE_DEF_ST_H) */

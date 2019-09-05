@@ -233,7 +233,7 @@ typed_var_mark_fragile(void *value, const var_type_def_t *def)
 bool
 var_type_is_cumulative(const var_type_def_t *def)
 {
-  return def->is_cumulative;
+  return (def->flags & VTFLAG_CUMULATIVE) != 0;
 }
 
 /**
@@ -243,7 +243,7 @@ var_type_is_cumulative(const var_type_def_t *def)
 bool
 var_type_is_contained(const var_type_def_t *def)
 {
-  return def->is_contained;
+  return (def->flags & VTFLAG_CONTAINED) != 0;
 }
 
 /**
@@ -252,5 +252,5 @@ var_type_is_contained(const var_type_def_t *def)
 bool
 var_type_is_settable(const var_type_def_t *def)
 {
-  return ! def->is_unsettable;
+  return (def->flags & VTFLAG_UNSETTABLE) == 0;
 }
