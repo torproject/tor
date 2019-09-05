@@ -1123,9 +1123,8 @@ test_addr_ip6_helpers(void *arg)
     TEST_ADDR_LOOKUP_XFAIL(host_port_str, AF_INET6); \
   STMT_END
 
-/** Test tor_addr_parse() and tor_addr_port_parse(). */
 static void
-test_addr_parse(void *arg)
+test_addr_parse_canonical(void *arg)
 {
   int r;
   tor_addr_t addr;
@@ -1153,6 +1152,22 @@ test_addr_parse(void *arg)
   TEST_ADDR_V6_PARSE_CANONICAL("::", 0);
   TEST_ADDR_V6_PARSE_CANONICAL("2::", 0);
   TEST_ADDR_V6_PARSE_CANONICAL("11:22:33:44:55:66:77:88", 0);
+ done:
+  ;
+}
+
+/** Test tor_addr_parse() and tor_addr_port_parse(). */
+static void
+test_addr_parse(void *arg)
+{
+  int r;
+  tor_addr_t addr;
+  uint16_t port;
+  const char *sv;
+  uint32_t addr32h;
+  char buf[TOR_ADDR_BUF_LEN];
+
+  (void)arg;
 
   /* IPv6-mapped IPv4 addresses. Tor doesn't really use these. */
   TEST_ADDR_V6_PARSE("11:22:33:44:55:66:1.2.3.4", 0,
@@ -1637,6 +1652,7 @@ struct testcase_t addr_tests[] = {
   ADDR_LEGACY(basic),
   ADDR_LEGACY(ip6_helpers),
   ADDR_LEGACY(parse),
+  ADDR_LEGACY(parse_canonical),
   { "virtaddr", test_virtaddrmap, 0, NULL, NULL },
   { "virtaddr_persist", test_virtaddrmap_persist, TT_FORK, NULL, NULL },
   { "localname", test_addr_localname, 0, NULL, NULL },
