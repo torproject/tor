@@ -1,0 +1,7 @@
+  o Minor bugfixes (onion services):
+    - When we launch an intro circuit for a v3 onion service, reject intro
+      points circuits that retried more than the maximum of three times.
+      Previously, we allowed intro points that tried more than thrice to
+      launch and they got killed in cleanup_intro_points() even if they
+      succeeded. Fixes bug 31652; bugfix on 0.3.2.1-alpha. Patch by Neel
+      Chauhan.

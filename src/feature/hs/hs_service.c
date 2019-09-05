@@ -2612,10 +2612,14 @@ launch_intro_point_circuits(hs_service_t *service)
         ei = get_extend_info_from_intro_point(ip, 0);
       }
 
-      if (ei == NULL) {
-        /* This is possible if we can get a node_t but not the extend info out
-         * of it. In this case, we remove the intro point and a new one will
-         * be picked at the next main loop callback. */
+      /* We remove the intro point if:
+       * - We can get a node_t but not the extend info out of it.
+       * - The intro point has retried the circuit more than
+       *   MAX_INTRO_POINT_CIRCUIT_RETRIES times
+       * In this case, we remove the intro point and a new one will be picked
+       * at the next main loop callback. */
+      if (ei == NULL ||
+          ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES) {
         MAP_DEL_CURRENT(key);
         service_intro_point_free(ip);
         continue;
