@@ -614,7 +614,7 @@ config_var_is_listable(const config_var_t *var)
  * This option may be set because a variable is hidden, or because it is
  * derived from another variable which will already be written out.
  **/
-bool
+static bool
 config_var_is_dumpable(const config_var_t *var)
 {
   if (config_var_is_derived(var)) {
