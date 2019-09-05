@@ -168,6 +168,7 @@ EXTRA_DIST+= \
 	ReleaseNotes					\
 	scripts/maint/checkIncludes.py                  \
 	scripts/maint/checkSpace.pl 			\
+	scripts/maint/checkShellScripts.sh			\
 	scripts/maint/practracker/README                \
 	scripts/maint/practracker/exceptions.txt	\
 	scripts/maint/practracker/includes.py		\
@@ -239,22 +240,7 @@ test: all
 	$(top_builddir)/src/test/test
 
 shellcheck:
-        # Only use shellcheck if it is present
-	if command -v shellcheck; then \
-                find "$(top_srcdir)" -name "*.sh" -not -path "$(top_srcdir)/src/ext/*" -not -path "$(top_srcdir)/src/rust/registry/*" -exec shellcheck {} +; \
-	        if [ -d "$(top_srcdir)/scripts/test" ]; then \
-                        shellcheck $(top_srcdir)/scripts/test/cov-diff $(top_srcdir)/scripts/test/coverage; \
-                fi; \
-                if [ -e "$(top_srcdir)/contrib/dirauth-tools/nagios-check-tor-authority-cert" ]; then \
-                        shellcheck "$(top_srcdir)/contrib/dirauth-tools/nagios-check-tor-authority-cert"; \
-                fi; \
-                if [ -e "$(top_srcdir)/contrib/client-tools/torify" ]; then \
-                        shellcheck "$(top_srcdir)/contrib/client-tools/torify"; \
-                fi; \
-                if [ -d "$(top_srcdir)/scripts/git" ]; then \
-                        shellcheck $(top_srcdir)/scripts/git/*.git-hook; \
-                fi; \
-	fi
+	$(top_srcdir)/scripts/maint/checkShellScripts.sh
 
 check-local: check-spaces check-changes check-includes check-best-practices shellcheck
 
