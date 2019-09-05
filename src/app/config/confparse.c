@@ -534,6 +534,22 @@ config_var_is_settable(const config_var_t *var)
   return struct_var_is_settable(&var->member);
 }
 
+/**
+ * Return true iff the controller is allowed to fetch this variable.
+ **/
+static bool
+config_var_is_gettable(const config_var_t *var)
+{
+  /* Arguably, invisible or obsolete options should not be gettable.  However,
+   * they have been gettable for a long time, and making them ungettable could
+   * have compatibility effects.  For now, let's leave them along.
+   */
+
+  // return (var->flags & (CVFLAG_OBSOLETE|CFGLAGS_INVISIBLE)) == 0;
+  (void)var;
+  return true;
+}
+
 bool
 config_var_is_contained(const config_var_t *var)
 {
@@ -773,6 +789,11 @@ config_get_assigned_option(const config_mgr_t *mgr, const void *options,
   var = config_mgr_find_var(mgr, key, true, NULL);
   if (!var) {
     log_warn(LD_CONFIG, "Unknown option '%s'.  Failing.", key);
+    return NULL;
+  }
+  if (! config_var_is_gettable(var->cvar)) {
+    log_warn(LD_CONFIG, "Option '%s' is obsolete or unfetchable. Failing.",
+             key);
     return NULL;
   }
   const void *object = config_mgr_get_obj(mgr, options, var->object_idx);
