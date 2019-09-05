@@ -652,9 +652,14 @@ config_assign_line(const config_mgr_t *mgr, void *options,
     }
     return 0;
   } else if (c->command == CONFIG_LINE_CLEAR && !clear_first) {
-    // XXXX This is unreachable, since a CLEAR line always has an
-    // XXXX empty value.
-    config_reset(mgr, options, mvar, use_defaults); // LCOV_EXCL_LINE
+    // This block is unreachable, since a CLEAR line always has an
+    // empty value, and so will trigger be handled by the previous
+    // "if (!strlen(c->value))" block.
+
+    // LCOV_EXCL_START
+    tor_assert_nonfatal_unreached();
+    config_reset(mgr, options, mvar, use_defaults);
+    // LCOV_EXCL_STOP
   }
 
   if (options_seen && ! config_var_is_cumulative(cvar)) {
