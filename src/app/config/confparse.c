@@ -511,11 +511,17 @@ config_count_options(const config_mgr_t *mgr)
   return smartlist_len(mgr->all_vars);
 }
 
-bool
-config_var_is_cumulative(const config_var_t *var)
+/**
+ * Return true if assigning a value to <b>var</b> replaces the previous
+ * value.  Return false if assigning a value to <b>var</b> appends
+ * to the previous value.
+ **/
+static bool
+config_var_is_replaced_on_set(const config_var_t *var)
 {
-  return struct_var_is_cumulative(&var->member);
+  return ! struct_var_is_cumulative(&var->member);
 }
+
 bool
 config_var_is_settable(const config_var_t *var)
 {
@@ -650,7 +656,8 @@ config_assign_line(const config_mgr_t *mgr, void *options,
   if (!strlen(c->value)) {
     /* reset or clear it, then return */
     if (!clear_first) {
-      if (config_var_is_cumulative(cvar) && c->command != CONFIG_LINE_CLEAR) {
+      if (! config_var_is_replaced_on_set(cvar) &&
+          c->command != CONFIG_LINE_CLEAR) {
         /* We got an empty linelist from the torrc or command line.
            As a special case, call this an error. Warn and ignore. */
         log_warn(LD_CONFIG,
@@ -671,7 +678,7 @@ config_assign_line(const config_mgr_t *mgr, void *options,
     // LCOV_EXCL_STOP
   }
 
-  if (options_seen && ! config_var_is_cumulative(cvar)) {
+  if (options_seen && config_var_is_replaced_on_set(cvar)) {
     /* We're tracking which options we've seen, and this option is not
      * supposed to occur more than once. */
     tor_assert(var_index >= 0);
