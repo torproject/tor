@@ -40,13 +40,13 @@
  * string holding an error message, and return -1.
  **/
 int
-typed_var_assign_ex(void *target, const char *value, char **errmsg,
+typed_var_assign(void *target, const char *value, char **errmsg,
                     const var_type_def_t *def)
 {
   if (BUG(!def))
     return -1; // LCOV_EXCL_LINE
   // clear old value if needed.
-  typed_var_free_ex(target, def);
+  typed_var_free(target, def);
 
   tor_assert(def->fns->parse);
   return def->fns->parse(target, value, errmsg, def->params);
@@ -55,7 +55,7 @@ typed_var_assign_ex(void *target, const char *value, char **errmsg,
 /**
  * Try to parse a single line from the head of<b>line</b> that encodes an
  * object of the type defined in <b>def</b>. On success and failure, behave as
- * typed_var_assign_ex().
+ * typed_var_assign().
  *
  * All types for which keys are significant should use this function.
  *
@@ -63,7 +63,7 @@ typed_var_assign_ex(void *target, const char *value, char **errmsg,
  * only the first one is handled by this function.
  **/
 int
-typed_var_kvassign_ex(void *target, const config_line_t *line,
+typed_var_kvassign(void *target, const config_line_t *line,
                       char **errmsg, const var_type_def_t *def)
 {
   if (BUG(!def))
@@ -75,7 +75,7 @@ typed_var_kvassign_ex(void *target, const config_line_t *line,
     return def->fns->kv_parse(target, line, errmsg, def->params);
   }
 
-  return typed_var_assign_ex(target, line->value, errmsg, def);
+  return typed_var_assign(target, line->value, errmsg, def);
 }
 
 /**
@@ -83,7 +83,7 @@ typed_var_kvassign_ex(void *target, const config_line_t *line,
  * <b>def</b>, and set <b>target</b> to a reasonable default.
  **/
 void
-typed_var_free_ex(void *target, const var_type_def_t *def)
+typed_var_free(void *target, const var_type_def_t *def)
 {
   if (BUG(!def))
     return; // LCOV_EXCL_LINE
@@ -99,7 +99,7 @@ typed_var_free_ex(void *target, const var_type_def_t *def)
  * Returns NULL if this option has a NULL value, or on internal error.
  **/
 char *
-typed_var_encode_ex(const void *value, const var_type_def_t *def)
+typed_var_encode(const void *value, const var_type_def_t *def)
 {
   if (BUG(!def))
     return NULL; // LCOV_EXCL_LINE
@@ -108,7 +108,7 @@ typed_var_encode_ex(const void *value, const var_type_def_t *def)
 }
 
 /**
- * As typed_var_encode_ex(), but returns a newly allocated config_line_t
+ * As typed_var_encode(), but returns a newly allocated config_line_t
  * object.  The provided <b>key</b> is used as the key of the lines, unless
  * the type is one (line a linelist) that encodes its own keys.
  *
@@ -117,7 +117,7 @@ typed_var_encode_ex(const void *value, const var_type_def_t *def)
  * Returns NULL if there are no lines to encode, or on internal error.
  */
 config_line_t *
-typed_var_kvencode_ex(const char *key, const void *value,
+typed_var_kvencode(const char *key, const void *value,
                       const var_type_def_t *def)
 {
   if (BUG(!def))
@@ -125,7 +125,7 @@ typed_var_kvencode_ex(const char *key, const void *value,
   if (def->fns->kv_encode) {
     return def->fns->kv_encode(key, value, def->params);
   }
-  char *encoded_value = typed_var_encode_ex(value, def);
+  char *encoded_value = typed_var_encode(value, def);
   if (!encoded_value)
     return NULL;
 
@@ -142,7 +142,7 @@ typed_var_kvencode_ex(const char *key, const void *value,
  * Return 0 on success, and -1 on failure.
  **/
 int
-typed_var_copy_ex(void *dest, const void *src, const var_type_def_t *def)
+typed_var_copy(void *dest, const void *src, const var_type_def_t *def)
 {
   if (BUG(!def))
     return -1; // LCOV_EXCL_LINE
@@ -152,13 +152,13 @@ typed_var_copy_ex(void *dest, const void *src, const var_type_def_t *def)
   }
 
   // Otherwise, encode 'src' and parse the result into 'def'.
-  char *enc = typed_var_encode_ex(src, def);
+  char *enc = typed_var_encode(src, def);
   if (!enc) {
-    typed_var_free_ex(dest, def);
+    typed_var_free(dest, def);
     return 0;
   }
   char *err = NULL;
-  int rv = typed_var_assign_ex(dest, enc, &err, def);
+  int rv = typed_var_assign(dest, enc, &err, def);
   if (BUG(rv < 0)) {
     // LCOV_EXCL_START
     log_warn(LD_BUG, "Encoded value %s was not parseable as a %s: %s",
@@ -175,7 +175,7 @@ typed_var_copy_ex(void *dest, const void *src, const var_type_def_t *def)
  * Both types must be as defined by <b>def</b>.
  **/
 bool
-typed_var_eq_ex(const void *a, const void *b, const var_type_def_t *def)
+typed_var_eq(const void *a, const void *b, const var_type_def_t *def)
 {
   if (BUG(!def))
     return false; // LCOV_EXCL_LINE
@@ -186,8 +186,8 @@ typed_var_eq_ex(const void *a, const void *b, const var_type_def_t *def)
   }
 
   // Otherwise, encode the values and compare them.
-  char *enc_a = typed_var_encode_ex(a, def);
-  char *enc_b = typed_var_encode_ex(b, def);
+  char *enc_a = typed_var_encode(a, def);
+  char *enc_b = typed_var_encode(b, def);
   bool eq = !strcmp_opt(enc_a,enc_b);
   tor_free(enc_a);
   tor_free(enc_b);
@@ -199,7 +199,7 @@ typed_var_eq_ex(const void *a, const void *b, const var_type_def_t *def)
  * type definition in <b>def</b>.
  */
 bool
-typed_var_ok_ex(const void *value, const var_type_def_t *def)
+typed_var_ok(const void *value, const var_type_def_t *def)
 {
   if (BUG(!def))
     return false; // LCOV_EXCL_LINE
@@ -216,7 +216,7 @@ typed_var_ok_ex(const void *value, const var_type_def_t *def)
  * assignment instead.
  **/
 void
-typed_var_mark_fragile_ex(void *value, const var_type_def_t *def)
+typed_var_mark_fragile(void *value, const var_type_def_t *def)
 {
   if (BUG(!def)) {
     return; // LCOV_EXCL_LINE
@@ -253,100 +253,4 @@ bool
 var_type_is_settable(const var_type_def_t *def)
 {
   return ! def->is_unsettable;
-}
-
-/* =====
- * The functions below take a config_type_t instead of a var_type_def_t.
- * I'd like to deprecate them eventually and use var_type_def_t everywhere,
- * but for now they make migration easier.
- * ===== */
-
-/**
- * As typed_var_assign_ex(), but look up the definition of the configuration
- * type from a provided config_type_t enum.
- */
-int
-typed_var_assign(void *target, const char *value, char **errmsg,
-                 config_type_t type)
-{
-  const var_type_def_t *def = lookup_type_def(type);
-  return typed_var_assign_ex(target, value, errmsg, def);
-}
-
-/**
- * As typed_var_kvassign_ex(), but look up the definition of the configuration
- * type from a provided config_type_t enum.
- */
-int
-typed_var_kvassign(void *target, const config_line_t *line, char **errmsg,
-                   config_type_t type)
-{
-  const var_type_def_t *def = lookup_type_def(type);
-  return typed_var_kvassign_ex(target, line, errmsg, def);
-}
-
-/**
- * As typed_var_free_ex(), but look up the definition of the configuration
- * type from a provided config_type_t enum.
- */
-void
-typed_var_free(void *target, config_type_t type)
-{
-  const var_type_def_t *def = lookup_type_def(type);
-  return typed_var_free_ex(target, def);
-}
-
-/**
- * As typed_var_encode_ex(), but look up the definition of the configuration
- * type from a provided config_type_t enum.
- */
-char *
-typed_var_encode(const void *value, config_type_t type)
-{
-  const var_type_def_t *def = lookup_type_def(type);
-  return typed_var_encode_ex(value, def);
-}
-
-/**
- * As typed_var_kvencode_ex(), but look up the definition of the configuration
- * type from a provided config_type_t enum.
- */
-config_line_t *
-typed_var_kvencode(const char *key, const void *value, config_type_t type)
-{
-  const var_type_def_t *def = lookup_type_def(type);
-  return typed_var_kvencode_ex(key, value, def);
-}
-
-/**
- * As typed_var_copy_ex(), but look up the definition of the configuration type
- * from a provided config_type_t enum.
- */
-int
-typed_var_copy(void *dest, const void *src, config_type_t type)
-{
-  const var_type_def_t *def = lookup_type_def(type);
-  return typed_var_copy_ex(dest, src, def);
-}
-
-/**
- * As typed_var_eq_ex(), but look up the definition of the configuration type
- * from a provided config_type_t enum.
- */
-bool
-typed_var_eq(const void *a, const void *b, config_type_t type)
-{
-  const var_type_def_t *def = lookup_type_def(type);
-  return typed_var_eq_ex(a, b, def);
-}
-
-/**
- * As typed_var_ok_ex(), but look up the definition of the configuration type
- * from a provided config_type_t enum.
- */
-bool
-typed_var_ok(const void *value, config_type_t type)
-{
-  const var_type_def_t *def = lookup_type_def(type);
-  return typed_var_ok_ex(value, def);
 }
