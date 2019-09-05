@@ -267,10 +267,10 @@ DUMMY_TYPECHECK_INSTANCE(or_options_t);
 
 #define VAR_NODUMP(varname,conftype,member,initvalue)             \
   CONFIG_VAR_ETYPE(or_options_t, varname, conftype, member,       \
-                   CVFLAG_NODUMP, initvalue)
+                   CFLG_NODUMP, initvalue)
 #define VAR_INVIS(varname,conftype,member,initvalue)              \
   CONFIG_VAR_ETYPE(or_options_t, varname, conftype, member,       \
-                   CVFLAG_NODUMP|CVFLAG_INVISIBLE, initvalue)
+                   CFLG_NODUMP | CFLG_NOSET | CFLG_NOLIST, initvalue)
 
 #define V(member,conftype,initvalue)            \
   VAR(#member, conftype, member, initvalue)

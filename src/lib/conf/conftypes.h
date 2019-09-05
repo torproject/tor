@@ -169,18 +169,6 @@ typedef struct struct_magic_decl_t {
  */
 #define CFLG_NOREPLACE    (1u<<5)
 
-/* Aliases for old individual options. These will get removed soon. */
-#define CVFLAG_NODUMP     CFLG_NODUMP
-
-/** Set of options to make a flag invisible. */
-#define CVFLAG_INVISIBLE  \
-  (CFLG_NODUMP | CFLG_NOSET | CFLG_NOLIST)
-/**
- * Set of flags to indicate that a configuration option is obsolete.
- **/
-#define CVFLAG_OBSOLETE \
-  (CFLG_NOSET | CFLG_NOLIST | CFLG_NODUMP | CFLG_NOCOPY | CFLG_NOCMP)
-
 /** A variable allowed in the configuration file or on the command line. */
 typedef struct config_var_t {
   struct_member_t member; /** A struct member corresponding to this
