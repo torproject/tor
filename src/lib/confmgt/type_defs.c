@@ -725,16 +725,13 @@ static const var_type_def_t type_definitions_table[] = {
   [CONFIG_TYPE_CSV_INTERVAL] = { .name="TimeInterval",
                                  .fns=&legacy_csv_interval_fns, },
   [CONFIG_TYPE_LINELIST] = { .name="LineList", .fns=&linelist_fns,
-                             .is_cumulative=true},
+                             .flags=VTFLAG_CUMULATIVE },
   [CONFIG_TYPE_LINELIST_S] = { .name="Dependent", .fns=&linelist_s_fns,
-                               .is_cumulative=true,
-                               .is_contained=true, },
+                               .flags=VTFLAG_CUMULATIVE|VTFLAG_CONTAINED },
   [CONFIG_TYPE_LINELIST_V] = { .name="Virtual", .fns=&linelist_v_fns,
-                               .is_cumulative=true,
-                               .is_unsettable=true },
+                               .flags=VTFLAG_CUMULATIVE|VTFLAG_UNSETTABLE },
   [CONFIG_TYPE_OBSOLETE] = { .name="Obsolete", .fns=&ignore_fns,
-                             .is_unsettable=true,
-                             .is_contained=true, }
+                             .flags=VTFLAG_CONTAINED|VTFLAG_UNSETTABLE }
 };
 
 /**
