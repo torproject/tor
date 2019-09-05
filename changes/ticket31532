@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Use the ptrdiff_t type consistently for expressing variable offsets and
+      pointer differences.  Previously we incorrectly (but harmlessly) used
+      int and sometimes off_t for these cases.  Closes ticket 31532.
