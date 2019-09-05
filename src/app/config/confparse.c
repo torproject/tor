@@ -522,6 +522,10 @@ config_var_is_replaced_on_set(const config_var_t *var)
   return ! struct_var_is_cumulative(&var->member);
 }
 
+/**
+ * Return true iff <b>var</b> may be assigned by name (e.g., via the
+ * CLI, the configuration files, or the controller API).
+ **/
 bool
 config_var_is_settable(const config_var_t *var)
 {
@@ -529,6 +533,7 @@ config_var_is_settable(const config_var_t *var)
     return false;
   return struct_var_is_settable(&var->member);
 }
+
 bool
 config_var_is_contained(const config_var_t *var)
 {
@@ -545,6 +550,14 @@ config_var_is_listable(const config_var_t *var)
   return (var->flags & CVFLAG_INVISIBLE) == 0;
 }
 
+/**
+ * Return true iff variable <b>var</b> should be written out when we
+ * are writing our configuration to disk, to a controller, or via the
+ * --dump-config command.
+ *
+ * This option may be set because a variable is hidden, or because it is
+ * derived from another variable which will already be written out.
+ **/
 bool
 config_var_is_dumpable(const config_var_t *var)
 {
