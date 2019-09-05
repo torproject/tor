@@ -534,11 +534,17 @@ config_var_is_contained(const config_var_t *var)
 {
   return struct_var_is_contained(&var->member);
 }
+
+/**
+ * Return true iff variable <b>var</b> should appear on list of variables
+ * given to the controller or the CLI.
+ **/
 bool
-config_var_is_invisible(const config_var_t *var)
+config_var_is_listable(const config_var_t *var)
 {
-  return (var->flags & CVFLAG_INVISIBLE) != 0;
+  return (var->flags & CVFLAG_INVISIBLE) == 0;
 }
+
 bool
 config_var_is_dumpable(const config_var_t *var)
 {

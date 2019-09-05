@@ -8128,7 +8128,7 @@ getinfo_helper_config(control_connection_t *conn,
     smartlist_t *vars = config_mgr_list_vars(get_options_mgr());
     SMARTLIST_FOREACH_BEGIN(vars, const config_var_t *, var) {
       /* don't tell controller about invisible options */
-      if (config_var_is_invisible(var))
+      if (! config_var_is_listable(var))
         continue;
       const char *type = struct_var_get_typename(&var->member);
       if (!type)
