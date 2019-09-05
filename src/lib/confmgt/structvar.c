@@ -243,7 +243,7 @@ struct_var_is_cumulative(const struct_member_t *member)
 {
   const var_type_def_t *def = get_type_def(member);
 
-  return def ? def->is_cumulative : false;
+  return def ? var_type_is_cumulative(def) : false;
 }
 
 bool
@@ -251,7 +251,7 @@ struct_var_is_settable(const struct_member_t *member)
 {
   const var_type_def_t *def = get_type_def(member);
 
-  return def ? !def->is_unsettable : true;
+  return def ? var_type_is_settable(def) : true;
 }
 
 bool
@@ -259,5 +259,5 @@ struct_var_is_contained(const struct_member_t *member)
 {
   const var_type_def_t *def = get_type_def(member);
 
-  return def ? def->is_contained : false;
+  return def ? var_type_is_contained(def) : false;
 }
