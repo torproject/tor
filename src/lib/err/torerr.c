@@ -126,9 +126,12 @@ tor_log_set_sigsafe_err_fds(const int *fds, int n)
     n = TOR_SIGSAFE_LOG_MAX_FDS;
   }
 
-  /* Clear the entire array. There's a race condition here: err logs are
-   * disabled while the array is cleared. But that's better than accessing a
-   * partially written array. */
+  /* Clear the entire array. This code mitigates against some race conditions,
+   * but there are still some races here:
+   * - err logs are disabled while the array is cleared, and
+   * - a thread can read the old value of n_sigsafe_log_fds, then read a
+   *   partially written array.
+   * We could fix these races using atomics, but atomics use the err module. */
   n_sigsafe_log_fds = 0;
   memset(sigsafe_log_fds, 0, sizeof(sigsafe_log_fds));
   if (fds && n > 0) {
