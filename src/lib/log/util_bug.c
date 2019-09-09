@@ -172,7 +172,7 @@ tor_bug_occurred_(const char *fname, unsigned int line,
 void
 tor_abort_(void)
 {
-  logs_close_minimal();
+  logs_close_sigsafe();
   tor_raw_abort_();
 }
 

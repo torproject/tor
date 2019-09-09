@@ -225,6 +225,7 @@ int log_global_min_severity_ = LOG_NOTICE;
 
 static void delete_log(logfile_t *victim);
 static void close_log(logfile_t *victim);
+static void close_log_sigsafe(logfile_t *victim);
 
 static char *domain_to_string(log_domain_mask_t domain,
                              char *buf, size_t buflen);
@@ -834,19 +835,26 @@ logs_free_all(void)
    * that happened between here and the end of execution. */
 }
 
-/** Close signal-safe log files. */
+/** Close signal-safe log files.
+ * Closing the log files makes the process and OS flush log buffers.
+ *
+ * This function is safe to call from a signal handler. It should only be
+ * called when shutting down the log or err modules. It is currenly called
+ * by the err module, when terminating the process on an abnormal condition.
+ */
 void
-logs_close_minimal(void)
+logs_close_sigsafe(void)
 {
   logfile_t *victim, *next;
-  /* We can't lock the logs in a signal handler, or deallocate memory */
+  /* We can't LOCK_LOGS() in a signal handler, because it may call
+   * signal-unsafe functions. And we can't deallocate memory, either. */
   next = logfiles;
   logfiles = NULL;
   while (next) {
     victim = next;
     next = next->next;
     if (victim->needs_close) {
-      close_log(victim);
+      close_log_sigsafe(victim);
     }
   }
 }
@@ -877,15 +885,26 @@ delete_log(logfile_t *victim)
 }
 
 /** Helper: release system resources (but not memory) held by a single
- * logfile_t. */
+ * signal-safe logfile_t. If the log's resources can not be released in
+ * a signal handler, does nothing. */
 static void
-close_log(logfile_t *victim)
+close_log_sigsafe(logfile_t *victim)
 {
   if (victim->needs_close && victim->fd >= 0) {
     /* We can't do anything useful here if close() fails: we're shutting
      * down logging, and the err module only does fatal errors. */
     close(victim->fd);
     victim->fd = -1;
+  }
+}
+
+/** Helper: release system resources (but not memory) held by a single
+ * logfile_t. */
+static void
+close_log(logfile_t *victim)
+{
+  if (victim->needs_close) {
+    close_log_sigsafe(victim);
   } else if (victim->is_syslog) {
 #ifdef HAVE_SYSLOG_H
     if (--syslog_count == 0) {
