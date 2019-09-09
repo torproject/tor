@@ -98,6 +98,31 @@ policy_is_reject_star_or_null(struct short_policy_t *policy)
   return !policy || short_policy_is_reject_star(policy);
 }
 
+/**
+ * Return a human-readable description of a given saved_location_t.
+ * Never returns NULL.
+ **/
+static const char *
+saved_location_to_string(saved_location_t where)
+{
+  const char *location;
+  switch (where) {
+    case SAVED_NOWHERE:
+      location = "download or generated string";
+      break;
+    case SAVED_IN_CACHE:
+      location = "cache";
+      break;
+    case SAVED_IN_JOURNAL:
+      location = "journal";
+      break;
+    default:
+      location = "unknown location";
+      break;
+  }
+  return location;
+}
+
 /** Parse as many microdescriptors as are found from the string starting at
  * <b>s</b> and ending at <b>eos</b>.  If allow_annotations is set, read any
  * annotations we recognize and ignore ones we don't.
@@ -166,22 +191,8 @@ microdescs_parse_from_string(const char *s, const char *eos,
 
     if (tokenize_string(area, s, start_of_next_microdesc, tokens,
                         microdesc_token_table, flags)) {
-      const char *location;
-      switch (where) {
-        case SAVED_NOWHERE:
-          location = "download or generated string";
-          break;
-        case SAVED_IN_CACHE:
-          location = "cache";
-          break;
-        case SAVED_IN_JOURNAL:
-          location = "journal";
-          break;
-        default:
-          location = "unknown location";
-          break;
-      }
-      log_warn(LD_DIR, "Unparseable microdescriptor found in %s", location);
+      log_warn(LD_DIR, "Unparseable microdescriptor found in %s",
+               saved_location_to_string(where));
       goto next;
     }
 
