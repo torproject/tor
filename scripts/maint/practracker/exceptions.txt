@@ -227,7 +227,6 @@ problem function-size /src/feature/dirclient/dirclient.c:handle_response_fetch_c
 problem function-size /src/feature/dircommon/consdiff.c:gen_ed_diff() 203
 problem function-size /src/feature/dircommon/consdiff.c:apply_ed_diff() 158
 problem function-size /src/feature/dirparse/authcert_parse.c:authority_cert_parse_from_string() 181
-problem function-size /src/feature/dirparse/microdesc_parse.c:microdescs_parse_from_string() 166
 problem function-size /src/feature/dirparse/ns_parse.c:routerstatus_parse_entry_from_string() 280
 problem function-size /src/feature/dirparse/ns_parse.c:networkstatus_verify_bw_weights() 389
 problem function-size /src/feature/dirparse/ns_parse.c:networkstatus_parse_vote_from_string() 635
