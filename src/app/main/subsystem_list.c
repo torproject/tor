@@ -39,11 +39,14 @@
 const subsys_fns_t *tor_subsystems[] = {
   &sys_winprocess,
   &sys_torerr,
+
   &sys_wallclock,
   &sys_threads,
   &sys_logging,
+
   &sys_time,
   &sys_network,
+
   &sys_compress,
   &sys_crypto,
   &sys_tortls,
