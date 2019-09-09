@@ -162,61 +162,26 @@ microdesc_extract_body(microdesc_t *md,
   return no_onion_key ? -1 : 0;
 }
 
-/** Parse as many microdescriptors as are found from the string starting at
- * <b>s</b> and ending at <b>eos</b>.  If allow_annotations is set, read any
- * annotations we recognize and ignore ones we don't.
+/**
+ * Parse a microdescriptor which begins at <b>s</b> and ends at
+ * <b>start_of_next_microdesc.  Store its fields into <b>md</b>.  Use
+ * <b>where</b> for generating log information.  If <b>allow_annotations</b>
+ * is true, then one or more annotations may precede the microdescriptor body
+ * proper.  Use <b>area</b> for memory management, clearing it when done.
  *
- * If <b>saved_location</b> isn't SAVED_IN_CACHE, make a local copy of each
- * descriptor in the body field of each microdesc_t.
- *
- * Return all newly parsed microdescriptors in a newly allocated
- * smartlist_t. If <b>invalid_disgests_out</b> is provided, add a SHA256
- * microdesc digest to it for every microdesc that we found to be badly
- * formed. (This may cause duplicates) */
-smartlist_t *
-microdescs_parse_from_string(const char *s, const char *eos,
-                             int allow_annotations,
-                             saved_location_t where,
-                             smartlist_t *invalid_digests_out)
+ * On success, return 0; otherwise return -1.
+ **/
+static int
+microdesc_parse_fields(microdesc_t *md,
+                       memarea_t *area,
+                       const char *s, const char *start_of_next_microdesc,
+                       int allow_annotations,
+                       saved_location_t where)
 {
-  smartlist_t *tokens;
-  smartlist_t *result;
-  microdesc_t *md = NULL;
-  memarea_t *area;
-  const char *start = s;
-  const char *start_of_next_microdesc;
+  smartlist_t *tokens = smartlist_new();
+  int rv = -1;
   int flags = allow_annotations ? TS_ANNOTATIONS_OK : 0;
-
   directory_token_t *tok;
-
-  if (!eos)
-    eos = s + strlen(s);
-
-  s = eat_whitespace_eos(s, eos);
-  area = memarea_new();
-  result = smartlist_new();
-  tokens = smartlist_new();
-
-  while (s < eos) {
-    int okay = 0;
-
-    start_of_next_microdesc = find_start_of_next_microdesc(s, eos);
-    if (!start_of_next_microdesc)
-      start_of_next_microdesc = eos;
-
-    md = tor_malloc_zero(sizeof(microdesc_t));
-    uint8_t md_digest[DIGEST256_LEN];
-    {
-      int body_not_found = microdesc_extract_body(md, start, s,
-                                                  start_of_next_microdesc,
-                                                  where) < 0;
-
-      memcpy(md_digest, md->digest, DIGEST256_LEN);
-      if (body_not_found) {
-        log_fn(LOG_PROTOCOL_WARN, LD_DIR, "Malformed or truncated descriptor");
-        goto next;
-      }
-    }
 
     if (tokenize_string(area, s, start_of_next_microdesc, tokens,
                         microdesc_token_table, flags)) {
@@ -301,10 +266,74 @@ microdescs_parse_from_string(const char *s, const char *eos,
       md->policy_is_reject_star = 1;
     }
 
-    smartlist_add(result, md);
-    okay = 1;
+    rv = 0;
+ next: // todo: rename this label.
 
-    md = NULL;
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
+    memarea_clear(area);
+    smartlist_free(tokens);
+
+    return rv;
+}
+
+/** Parse as many microdescriptors as are found from the string starting at
+ * <b>s</b> and ending at <b>eos</b>.  If allow_annotations is set, read any
+ * annotations we recognize and ignore ones we don't.
+ *
+ * If <b>saved_location</b> isn't SAVED_IN_CACHE, make a local copy of each
+ * descriptor in the body field of each microdesc_t.
+ *
+ * Return all newly parsed microdescriptors in a newly allocated
+ * smartlist_t. If <b>invalid_disgests_out</b> is provided, add a SHA256
+ * microdesc digest to it for every microdesc that we found to be badly
+ * formed. (This may cause duplicates) */
+smartlist_t *
+microdescs_parse_from_string(const char *s, const char *eos,
+                             int allow_annotations,
+                             saved_location_t where,
+                             smartlist_t *invalid_digests_out)
+{
+  smartlist_t *result;
+  microdesc_t *md = NULL;
+  memarea_t *area;
+  const char *start = s;
+  const char *start_of_next_microdesc;
+
+  if (!eos)
+    eos = s + strlen(s);
+
+  s = eat_whitespace_eos(s, eos);
+  area = memarea_new();
+  result = smartlist_new();
+
+  while (s < eos) {
+    int okay = 0;
+
+    start_of_next_microdesc = find_start_of_next_microdesc(s, eos);
+    if (!start_of_next_microdesc)
+      start_of_next_microdesc = eos;
+
+    md = tor_malloc_zero(sizeof(microdesc_t));
+    uint8_t md_digest[DIGEST256_LEN];
+    {
+      int body_not_found = microdesc_extract_body(md, start, s,
+                                                  start_of_next_microdesc,
+                                                  where) < 0;
+
+      memcpy(md_digest, md->digest, DIGEST256_LEN);
+      if (body_not_found) {
+        log_fn(LOG_PROTOCOL_WARN, LD_DIR, "Malformed or truncated descriptor");
+        goto next;
+      }
+    }
+
+    if (microdesc_parse_fields(md, area, s, start_of_next_microdesc,
+                               allow_annotations, where) == 0) {
+      smartlist_add(result, md);
+      md = NULL; // prevent free
+      okay = 1;
+    }
+
   next:
     if (! okay && invalid_digests_out) {
       smartlist_add(invalid_digests_out,
@@ -312,16 +341,10 @@ microdescs_parse_from_string(const char *s, const char *eos,
     }
     microdesc_free(md);
     md = NULL;
-
-    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
-    memarea_clear(area);
-    smartlist_clear(tokens);
     s = start_of_next_microdesc;
   }
 
-  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   memarea_drop_all(area);
-  smartlist_free(tokens);
 
   return result;
 }
