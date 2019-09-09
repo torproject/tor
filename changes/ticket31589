@@ -1,0 +1,2 @@
+  o Code simplification and refactoring (onion services):
+    - Interface for function `decrypt_desc_layer` cleaned up. Closes ticket 31589.

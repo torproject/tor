@@ -276,6 +276,7 @@ void hs_desc_authorized_client_free_(hs_desc_authorized_client_t *client);
                 hs_desc_authorized_client_free_, (client))
 
 hs_desc_authorized_client_t *hs_desc_build_fake_authorized_client(void);
+
 void hs_desc_build_authorized_client(const uint8_t *subcredential,
                                      const curve25519_public_key_t *
                                      client_auth_pk,
@@ -308,10 +309,8 @@ STATIC int desc_sig_is_valid(const char *b64_sig,
                              const char *encoded_desc, size_t encoded_len);
 
 MOCK_DECL(STATIC size_t, decrypt_desc_layer,(const hs_descriptor_t *desc,
-                                             const uint8_t *encrypted_blob,
-                                             size_t encrypted_blob_size,
                                              const uint8_t *descriptor_cookie,
-                                             int is_superencrypted_layer,
+                                             bool is_superencrypted_layer,
                                              char **decrypted_out));
 
 #endif /* defined(HS_DESCRIPTOR_PRIVATE) */
