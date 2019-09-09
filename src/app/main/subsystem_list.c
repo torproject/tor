@@ -52,13 +52,13 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_ocirc_event,
   &sys_btrack,
 
-  &sys_mainloop, /* 5 */
-  &sys_or, /* 20 */
+  &sys_mainloop,
+  &sys_or,
 
-  &sys_relay, /* 50 */
+  &sys_relay,
 
 #ifdef HAVE_MODULE_DIRAUTH
-  &sys_dirauth, /* 70 */
+  &sys_dirauth,
 #endif
 };
 
