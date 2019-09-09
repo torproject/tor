@@ -27,9 +27,6 @@
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_SYSCTL_H
-#include <sys/sysctl.h>
-#endif
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
@@ -68,6 +65,11 @@
 #endif
 #ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
+#endif
+
+/* Now deprecated in Linux GLIBC */
+#if defined(HAVE_SYS_SYSCTL_H) && !defined(_WIN32) && !defined(__linux__)
+#include <sys/sysctl.h>
 #endif
 
 #ifdef _WIN32
