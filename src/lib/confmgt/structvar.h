@@ -28,12 +28,8 @@ void *struct_get_mptr(void *object,
 const void *struct_get_ptr(const void *object,
                            const struct struct_member_t *member);
 
-int struct_var_assign(void *object, const char *value, char **errmsg,
-                      const struct struct_member_t *member);
 void struct_var_free(void *object,
                      const struct struct_member_t *member);
-char *struct_var_encode(const void *object,
-                        const struct struct_member_t *member);
 int struct_var_copy(void *dest, const void *src,
                     const struct struct_member_t *member);
 bool struct_var_eq(const void *a, const void *b,

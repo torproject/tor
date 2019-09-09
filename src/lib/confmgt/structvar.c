@@ -93,20 +93,6 @@ get_type_def(const struct_member_t *member)
 }
 
 /**
- * (As typed_var_assign, but assign a value to the member of <b>object</b>
- * defined by <b>member</b>.)
- **/
-int
-struct_var_assign(void *object, const char *value, char **errmsg,
-                  const struct_member_t *member)
-{
-  void *p = struct_get_mptr(object, member);
-  const var_type_def_t *def = get_type_def(member);
-
-  return typed_var_assign(p, value, errmsg, def);
-}
-
-/**
  * (As typed_var_free, but free and clear the member of <b>object</b> defined
  * by <b>member</b>.)
  **/
@@ -117,19 +103,6 @@ struct_var_free(void *object, const struct_member_t *member)
   const var_type_def_t *def = get_type_def(member);
 
   typed_var_free(p, def);
-}
-
-/**
- * (As typed_var_encode, but encode the member of <b>object</b> defined
- * by <b>member</b>.)
- **/
-char *
-struct_var_encode(const void *object, const struct_member_t *member)
-{
-  const void *p = struct_get_ptr(object, member);
-  const var_type_def_t *def = get_type_def(member);
-
-  return typed_var_encode(p, def);
 }
 
 /**
