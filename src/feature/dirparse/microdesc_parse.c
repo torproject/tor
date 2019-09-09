@@ -187,13 +187,13 @@ microdesc_parse_fields(microdesc_t *md,
                       microdesc_token_table, flags)) {
     log_warn(LD_DIR, "Unparseable microdescriptor found in %s",
              saved_location_to_string(where));
-    goto next;
+    goto err;
   }
 
   if ((tok = find_opt_by_keyword(tokens, A_LAST_LISTED))) {
     if (parse_iso_time(tok->args[0], &md->last_listed)) {
       log_warn(LD_DIR, "Bad last-listed time in microdescriptor");
-      goto next;
+      goto err;
     }
   }
 
@@ -201,7 +201,7 @@ microdesc_parse_fields(microdesc_t *md,
   if (!crypto_pk_public_exponent_ok(tok->key)) {
     log_warn(LD_DIR,
              "Relay's onion key had invalid exponent.");
-    goto next;
+    goto err;
   }
   md->onion_pkey = tor_memdup(tok->object_body, tok->object_size);
   md->onion_pkey_len = tok->object_size;
@@ -212,7 +212,7 @@ microdesc_parse_fields(microdesc_t *md,
     tor_assert(tok->n_args >= 1);
     if (curve25519_public_from_base64(&k, tok->args[0]) < 0) {
       log_warn(LD_DIR, "Bogus ntor-onion-key in microdesc");
-      goto next;
+      goto err;
     }
     md->onion_curve25519_pkey =
       tor_memdup(&k, sizeof(curve25519_public_key_t));
@@ -226,13 +226,13 @@ microdesc_parse_fields(microdesc_t *md,
         if (md->ed25519_identity_pkey) {
           log_warn(LD_DIR, "Extra ed25519 key in microdesc");
           smartlist_free(id_lines);
-          goto next;
+          goto err;
         }
         ed25519_public_key_t k;
         if (ed25519_public_from_base64(&k, t->args[1])<0) {
           log_warn(LD_DIR, "Bogus ed25519 key in microdesc");
           smartlist_free(id_lines);
-          goto next;
+          goto err;
         }
         md->ed25519_identity_pkey = tor_memdup(&k, sizeof(k));
       }
@@ -267,7 +267,7 @@ microdesc_parse_fields(microdesc_t *md,
   }
 
   rv = 0;
- next: // todo: rename this label.
+ err:
 
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   memarea_clear(area);
