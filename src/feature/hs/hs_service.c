@@ -242,6 +242,9 @@ set_service_default_config(hs_service_config_t *c,
   c->is_single_onion = 0;
   c->dir_group_readable = 0;
   c->is_ephemeral = 0;
+  c->has_dos_defense_enabled = HS_CONFIG_V3_DOS_DEFENSE_DEFAULT;
+  c->intro_dos_rate_per_sec = HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_DEFAULT;
+  c->intro_dos_burst_per_sec = HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_DEFAULT;
 }
 
 /* From a service configuration object config, clear everything from it
@@ -488,6 +491,10 @@ service_intro_point_new(const node_t *node)
       goto err;
     }
   }
+
+  /* Flag if this intro point supports the INTRO2 dos defenses. */
+  ip->support_intro2_dos_defense =
+    node_supports_establish_intro_dos_extension(node);
 
   /* Finally, copy onion key from the node. */
   memcpy(&ip->onion_key, node_get_curve25519_onion_key(node),

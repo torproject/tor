@@ -45,24 +45,26 @@
  * introduction DoS defense. Disabled by default. */
 #define HS_DOS_INTRODUCE_ENABLED_DEFAULT 0
 
-/* Consensus parameters. */
-static uint32_t hs_dos_introduce_rate_per_sec =
+/* Consensus parameters. The ESTABLISH_INTRO DoS cell extension have higher
+ * priority than these values. If no extension is sent, these are used only by
+ * the introduction point. */
+static uint32_t consensus_param_introduce_rate_per_sec =
   HS_DOS_INTRODUCE_DEFAULT_CELL_RATE_PER_SEC;
-static uint32_t hs_dos_introduce_burst_per_sec =
+static uint32_t consensus_param_introduce_burst_per_sec =
   HS_DOS_INTRODUCE_DEFAULT_CELL_BURST_PER_SEC;
-static uint32_t hs_dos_introduce_enabled =
+static uint32_t consensus_param_introduce_defense_enabled =
   HS_DOS_INTRODUCE_ENABLED_DEFAULT;
 
-static uint32_t
-get_param_intro_dos_enabled(const networkstatus_t *ns)
+STATIC uint32_t
+get_intro2_enable_consensus_param(const networkstatus_t *ns)
 {
   return networkstatus_get_param(ns, "HiddenServiceEnableIntroDoSDefense",
                                  HS_DOS_INTRODUCE_ENABLED_DEFAULT, 0, 1);
 }
 
 /* Return the parameter for the introduction rate per sec. */
-static uint32_t
-get_param_rate_per_sec(const networkstatus_t *ns)
+STATIC uint32_t
+get_intro2_rate_consensus_param(const networkstatus_t *ns)
 {
   return networkstatus_get_param(ns, "HiddenServiceEnableIntroDoSRatePerSec",
                                  HS_DOS_INTRODUCE_DEFAULT_CELL_RATE_PER_SEC,
@@ -70,8 +72,8 @@ get_param_rate_per_sec(const networkstatus_t *ns)
 }
 
 /* Return the parameter for the introduction burst per sec. */
-static uint32_t
-get_param_burst_per_sec(const networkstatus_t *ns)
+STATIC uint32_t
+get_intro2_burst_consensus_param(const networkstatus_t *ns)
 {
   return networkstatus_get_param(ns, "HiddenServiceEnableIntroDoSBurstPerSec",
                                  HS_DOS_INTRODUCE_DEFAULT_CELL_BURST_PER_SEC,
@@ -88,10 +90,13 @@ update_intro_circuits(void)
   smartlist_t *intro_circs = hs_circuitmap_get_all_intro_circ_relay_side();
 
   SMARTLIST_FOREACH_BEGIN(intro_circs, circuit_t *, circ) {
+    /* Defenses might have been enabled or disabled. */
+    TO_OR_CIRCUIT(circ)->introduce2_dos_defense_enabled =
+      consensus_param_introduce_defense_enabled;
     /* Adjust the rate/burst value that might have changed. */
     token_bucket_ctr_adjust(&TO_OR_CIRCUIT(circ)->introduce2_bucket,
-                            hs_dos_get_intro2_rate(),
-                            hs_dos_get_intro2_burst());
+                            consensus_param_introduce_rate_per_sec,
+                            consensus_param_introduce_burst_per_sec);
   } SMARTLIST_FOREACH_END(circ);
 
   smartlist_free(intro_circs);
@@ -101,9 +106,12 @@ update_intro_circuits(void)
 static void
 set_consensus_parameters(const networkstatus_t *ns)
 {
-  hs_dos_introduce_rate_per_sec = get_param_rate_per_sec(ns);
-  hs_dos_introduce_burst_per_sec = get_param_burst_per_sec(ns);
-  hs_dos_introduce_enabled = get_param_intro_dos_enabled(ns);
+  consensus_param_introduce_rate_per_sec =
+    get_intro2_rate_consensus_param(ns);
+  consensus_param_introduce_burst_per_sec =
+    get_intro2_burst_consensus_param(ns);
+  consensus_param_introduce_defense_enabled =
+    get_intro2_enable_consensus_param(ns);
 
   /* The above might have changed which means we need to go through all
    * introduction circuits (relay side) and update the token buckets. */
@@ -114,18 +122,20 @@ set_consensus_parameters(const networkstatus_t *ns)
  * Public API.
  */
 
-/* Return the INTRODUCE2 cell rate per second. */
-uint32_t
-hs_dos_get_intro2_rate(void)
+/* Initialize the INTRODUCE2 token bucket for the DoS defenses using the
+ * consensus/default values. We might get a cell extension that changes those
+ * later but if we don't, the default or consensus parameters are used. */
+void
+hs_dos_setup_default_intro2_defenses(or_circuit_t *circ)
 {
-  return hs_dos_introduce_rate_per_sec;
-}
+  tor_assert(circ);
 
-/* Return the INTRODUCE2 cell burst per second. */
-uint32_t
-hs_dos_get_intro2_burst(void)
-{
-  return hs_dos_introduce_burst_per_sec;
+  circ->introduce2_dos_defense_enabled =
+    consensus_param_introduce_defense_enabled;
+  token_bucket_ctr_init(&circ->introduce2_bucket,
+                        consensus_param_introduce_rate_per_sec,
+                        consensus_param_introduce_burst_per_sec,
+                        (uint32_t) approx_time());
 }
 
 /* Called when the consensus has changed. We might have new consensus
@@ -149,8 +159,10 @@ hs_dos_can_send_intro2(or_circuit_t *s_intro_circ)
 {
   tor_assert(s_intro_circ);
 
-  /* Always allowed if the defense is disabled. */
-  if (!hs_dos_introduce_enabled) {
+  /* Allow to send the cell if the DoS defenses are disabled on the circuit.
+   * This can be set by the consensus, the ESTABLISH_INTRO cell extension or
+   * the hardcoded values in tor code. */
+  if (!s_intro_circ->introduce2_dos_defense_enabled) {
     return true;
   }
 

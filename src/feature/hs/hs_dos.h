@@ -20,15 +20,17 @@ void hs_dos_init(void);
 /* Consensus. */
 void hs_dos_consensus_has_changed(const networkstatus_t *ns);
 
+/* Introduction Point. */
 bool hs_dos_can_send_intro2(or_circuit_t *s_intro_circ);
-
-/* Getters. */
-uint32_t hs_dos_get_intro2_rate(void);
-uint32_t hs_dos_get_intro2_burst(void);
+void hs_dos_setup_default_intro2_defenses(or_circuit_t *circ);
 
 #ifdef HS_DOS_PRIVATE
 
 #ifdef TOR_UNIT_TESTS
+
+STATIC uint32_t get_intro2_enable_consensus_param(const networkstatus_t *ns);
+STATIC uint32_t get_intro2_rate_consensus_param(const networkstatus_t *ns);
+STATIC uint32_t get_intro2_burst_consensus_param(const networkstatus_t *ns);
 
 #endif /* define(TOR_UNIT_TESTS) */
 

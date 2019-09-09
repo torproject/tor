@@ -39,3 +39,26 @@ struct trn_cell_intro_established {
   /* Extension(s). Reserved fields. */
   struct trn_cell_extension extensions;
 };
+
+/*
+ * ESTABLISH_INTRO cell extensions.
+ */
+
+const TRUNNEL_CELL_EXTENSION_TYPE_DOS = 0x01;
+
+/* DoS Parameter types. */
+const TRUNNEL_DOS_PARAM_TYPE_INTRO2_RATE_PER_SEC = 0x01;
+const TRUNNEL_DOS_PARAM_TYPE_INTRO2_BURST_PER_SEC = 0x02;
+
+/*
+ * DoS Parameters Extension. See proposal 305 for more details.
+ */
+struct trn_cell_extension_dos_param {
+  u8 type;
+  u64 value;
+};
+
+struct trn_cell_extension_dos {
+  u8 n_params;
+  struct trn_cell_extension_dos_param params[n_params];
+};

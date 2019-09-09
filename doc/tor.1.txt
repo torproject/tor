@@ -2915,7 +2915,13 @@ on the public Tor network.
 HIDDEN SERVICE OPTIONS
 ----------------------
 
-The following options are used to configure a hidden service.
+The following options are used to configure a hidden service. Some options
+apply per service and some apply for the whole tor instance.
+
+The next section describes the per service options that can only be set
+**after** the **HiddenServiceDir** directive
+
+**PER SERVICE OPTIONS:**
 
 [[HiddenServiceDir]] **HiddenServiceDir** __DIRECTORY__::
     Store data files for a hidden service in DIRECTORY. Every hidden service
@@ -2940,12 +2946,6 @@ The following options are used to configure a hidden service.
     You may also have multiple lines with  the same VIRTPORT: when a user
     connects to that VIRTPORT, one of the TARGETs from those lines will be
     chosen at random. Note that address-port pairs have to be comma-separated.
-
-[[PublishHidServDescriptors]] **PublishHidServDescriptors** **0**|**1**::
-    If set to 0, Tor will run any hidden services you configure, but it won't
-    advertise them to the rendezvous directory. This option is only useful if
-    you're using a Tor controller that handles hidserv publishing for you.
-    (Default: 1)
 
 [[HiddenServiceVersion]] **HiddenServiceVersion** **2**|**3**::
     A list of rendezvous service descriptor versions to publish for the hidden
@@ -3024,6 +3024,38 @@ The following options are used to configure a hidden service.
 [[HiddenServiceNumIntroductionPoints]] **HiddenServiceNumIntroductionPoints** __NUM__::
     Number of introduction points the hidden service will have. You can't
     have more than 10 for v2 service and 20 for v3. (Default: 3)
+
+[[HiddenServiceEnableIntroDoSDefense]] **HiddenServiceEnableIntroDoSDefense** **0**|**1**::
+    Enable DoS defense at the intropoint level. When this is enabled, the
+    rate and burst parameter (see below) will be sent to the intro point which
+    will then use them to apply rate limiting for introduction request to this
+    service.
+  +
+    The introduction point honors the consensus parameters except if this is
+    specifically set by the service operator using this option. The service
+    never looks at the consensus parameters in order to enable or disable this
+    defense. (Default: 0)
+
+[[HiddenServiceEnableIntroDoSRatePerSec]] **HiddenServiceEnableIntroDoSRatePerSec** __NUM__::
+    The allowed client introduction rate per second at the introduction
+    point. If this option is 0, it is considered infinite and thus if
+    **HiddenServiceEnableIntroDoSDefense** is set, it then effectively
+    disables the defenses. (Default: 25)
+
+[[HiddenServiceEnableIntroDoSBurstPerSec]] **HiddenServiceEnableIntroDoSBurstPerSec** __NUM__::
+    The allowed client introduction burst per second at the introduction
+    point. If this option is 0, it is considered infinite and thus if
+    **HiddenServiceEnableIntroDoSDefense** is set, it then effectively
+    disables the defenses. (Default: 200)
+
+
+**PER INSTANCE OPTIONS:**
+
+[[PublishHidServDescriptors]] **PublishHidServDescriptors** **0**|**1**::
+    If set to 0, Tor will run any hidden services you configure, but it won't
+    advertise them to the rendezvous directory. This option is only useful if
+    you're using a Tor controller that handles hidserv publishing for you.
+    (Default: 1)
 
 [[HiddenServiceSingleHopMode]] **HiddenServiceSingleHopMode** **0**|**1**::
     **Experimental - Non Anonymous** Hidden Services on a tor instance in
