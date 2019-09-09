@@ -123,6 +123,45 @@ saved_location_to_string(saved_location_t where)
   return location;
 }
 
+/**
+ * Given a microdescriptor stored in <b>where</b> which starts at <b>s</b>,
+ * which ends at <b>start_of_next_microdescriptor</b>, and which is located
+ * within a larger document beginning at <b>start</b>: Fill in the body,
+ * bodylen, bodylen, saved_location, off, and digest fields of <b>md</b> as
+ * appropriate.
+ *
+ * The body field will be an alias within <b>s</b> if <b>saved_location</b>
+ * is SAVED_IN_CACHE, and will be copied into body and nul-terminated
+ * otherwise.
+ **/
+static int
+microdesc_extract_body(microdesc_t *md,
+                       const char *start,
+                       const char *s, const char *start_of_next_microdesc,
+                       saved_location_t where)
+{
+  const int copy_body = (where != SAVED_IN_CACHE);
+
+      const char *cp = tor_memstr(s, start_of_next_microdesc-s,
+                                  "onion-key");
+      const int no_onion_key = (cp == NULL);
+      if (no_onion_key) {
+        cp = s; /* So that we have *some* junk to put in the body */
+      }
+
+      md->bodylen = start_of_next_microdesc - cp;
+      md->saved_location = where;
+      if (copy_body)
+        md->body = tor_memdup_nulterm(cp, md->bodylen);
+      else
+        md->body = (char*)cp;
+      md->off = cp - start;
+
+      crypto_digest256(md->digest, md->body, md->bodylen, DIGEST_SHA256);
+
+      return no_onion_key ? -1 : 0;
+}
+
 /** Parse as many microdescriptors as are found from the string starting at
  * <b>s</b> and ending at <b>eos</b>.  If allow_annotations is set, read any
  * annotations we recognize and ignore ones we don't.
@@ -147,7 +186,6 @@ microdescs_parse_from_string(const char *s, const char *eos,
   const char *start = s;
   const char *start_of_next_microdesc;
   int flags = allow_annotations ? TS_ANNOTATIONS_OK : 0;
-  const int copy_body = (where != SAVED_IN_CACHE);
 
   directory_token_t *tok;
 
@@ -169,23 +207,12 @@ microdescs_parse_from_string(const char *s, const char *eos,
     md = tor_malloc_zero(sizeof(microdesc_t));
     uint8_t md_digest[DIGEST256_LEN];
     {
-      const char *cp = tor_memstr(s, start_of_next_microdesc-s,
-                                  "onion-key");
-      const int no_onion_key = (cp == NULL);
-      if (no_onion_key) {
-        cp = s; /* So that we have *some* junk to put in the body */
-      }
+      int body_not_found = microdesc_extract_body(md, start, s,
+                                                  start_of_next_microdesc,
+                                                  where) < 0;
 
-      md->bodylen = start_of_next_microdesc - cp;
-      md->saved_location = where;
-      if (copy_body)
-        md->body = tor_memdup_nulterm(cp, md->bodylen);
-      else
-        md->body = (char*)cp;
-      md->off = cp - start;
-      crypto_digest256(md->digest, md->body, md->bodylen, DIGEST_SHA256);
       memcpy(md_digest, md->digest, DIGEST256_LEN);
-      if (no_onion_key) {
+      if (body_not_found) {
         log_fn(LOG_PROTOCOL_WARN, LD_DIR, "Malformed or truncated descriptor");
         goto next;
       }
