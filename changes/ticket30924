@@ -1,0 +1,6 @@
+  o Major features (onion service v3, denial of service):
+    - Add onion service introduction denial of service defenses. They consist of
+      rate limiting client introduction at the intro point using parameters that
+      can be sent by the service within the ESTABLISH_INTRO cell. If the cell
+      extension for this is not used, the intro point will honor the consensus
+      parameters. Closes ticket 30924.

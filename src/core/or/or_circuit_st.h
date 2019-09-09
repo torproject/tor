@@ -72,6 +72,10 @@ struct or_circuit_t {
    * buffer stats to disk. */
   uint64_t total_cell_waiting_time;
 
+  /** If set, the DoS defenses are enabled on this circuit meaning that the
+   * introduce2_bucket is initialized and used. */
+  unsigned int introduce2_dos_defense_enabled : 1;
+
   /** INTRODUCE2 cell bucket controlling how much can go on this circuit. Only
    * used if this is a service introduction circuit at the intro point
    * (purpose = CIRCUIT_PURPOSE_INTRO_POINT). */
