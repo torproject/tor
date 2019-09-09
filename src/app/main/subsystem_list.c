@@ -53,7 +53,7 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_ocirc_event,
   &sys_btrack,
 
-  &sys_evloop, /* -20 */
+  &sys_evloop,
 
   &sys_mainloop,
   &sys_or,
