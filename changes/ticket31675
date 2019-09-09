@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Refactor the microdescs_parse_from_string() function into smaller
+      pieces, for better comprehensibility.  Closes ticket 31675.
