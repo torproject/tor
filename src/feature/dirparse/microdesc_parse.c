@@ -142,24 +142,24 @@ microdesc_extract_body(microdesc_t *md,
 {
   const int copy_body = (where != SAVED_IN_CACHE);
 
-      const char *cp = tor_memstr(s, start_of_next_microdesc-s,
-                                  "onion-key");
-      const int no_onion_key = (cp == NULL);
-      if (no_onion_key) {
-        cp = s; /* So that we have *some* junk to put in the body */
-      }
+  const char *cp = tor_memstr(s, start_of_next_microdesc-s, "onion-key");
 
-      md->bodylen = start_of_next_microdesc - cp;
-      md->saved_location = where;
-      if (copy_body)
-        md->body = tor_memdup_nulterm(cp, md->bodylen);
-      else
-        md->body = (char*)cp;
-      md->off = cp - start;
+  const int no_onion_key = (cp == NULL);
+  if (no_onion_key) {
+    cp = s; /* So that we have *some* junk to put in the body */
+  }
 
-      crypto_digest256(md->digest, md->body, md->bodylen, DIGEST_SHA256);
+  md->bodylen = start_of_next_microdesc - cp;
+  md->saved_location = where;
+  if (copy_body)
+    md->body = tor_memdup_nulterm(cp, md->bodylen);
+  else
+    md->body = (char*)cp;
+  md->off = cp - start;
 
-      return no_onion_key ? -1 : 0;
+  crypto_digest256(md->digest, md->body, md->bodylen, DIGEST_SHA256);
+
+  return no_onion_key ? -1 : 0;
 }
 
 /** Parse as many microdescriptors as are found from the string starting at
