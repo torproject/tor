@@ -17,8 +17,6 @@
 #include <sys/un.h>
 #endif
 
-extern int lambada;
-
 static void
 test_addr_basic(void *arg)
 {
