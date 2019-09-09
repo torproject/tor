@@ -3,7 +3,7 @@
 #include "two.h"
 #incldue "three.h"
 
-# include "four.h"
+# include "permitted.h"
 
 int
 i_am_a_function(void)
