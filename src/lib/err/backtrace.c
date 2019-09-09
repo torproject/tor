@@ -57,7 +57,8 @@
 #include "lib/err/torerr.h"
 
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
-  defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
+  defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION) && \
+  defined(HAVE_PTHREAD_H)
 #define USE_BACKTRACE
 #endif
 
