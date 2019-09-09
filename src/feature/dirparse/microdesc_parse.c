@@ -183,97 +183,97 @@ microdesc_parse_fields(microdesc_t *md,
   int flags = allow_annotations ? TS_ANNOTATIONS_OK : 0;
   directory_token_t *tok;
 
-    if (tokenize_string(area, s, start_of_next_microdesc, tokens,
-                        microdesc_token_table, flags)) {
-      log_warn(LD_DIR, "Unparseable microdescriptor found in %s",
-               saved_location_to_string(where));
+  if (tokenize_string(area, s, start_of_next_microdesc, tokens,
+                      microdesc_token_table, flags)) {
+    log_warn(LD_DIR, "Unparseable microdescriptor found in %s",
+             saved_location_to_string(where));
+    goto next;
+  }
+
+  if ((tok = find_opt_by_keyword(tokens, A_LAST_LISTED))) {
+    if (parse_iso_time(tok->args[0], &md->last_listed)) {
+      log_warn(LD_DIR, "Bad last-listed time in microdescriptor");
       goto next;
     }
+  }
 
-    if ((tok = find_opt_by_keyword(tokens, A_LAST_LISTED))) {
-      if (parse_iso_time(tok->args[0], &md->last_listed)) {
-        log_warn(LD_DIR, "Bad last-listed time in microdescriptor");
-        goto next;
-      }
-    }
+  tok = find_by_keyword(tokens, K_ONION_KEY);
+  if (!crypto_pk_public_exponent_ok(tok->key)) {
+    log_warn(LD_DIR,
+             "Relay's onion key had invalid exponent.");
+    goto next;
+  }
+  md->onion_pkey = tor_memdup(tok->object_body, tok->object_size);
+  md->onion_pkey_len = tok->object_size;
+  crypto_pk_free(tok->key);
 
-    tok = find_by_keyword(tokens, K_ONION_KEY);
-    if (!crypto_pk_public_exponent_ok(tok->key)) {
-      log_warn(LD_DIR,
-               "Relay's onion key had invalid exponent.");
+  if ((tok = find_opt_by_keyword(tokens, K_ONION_KEY_NTOR))) {
+    curve25519_public_key_t k;
+    tor_assert(tok->n_args >= 1);
+    if (curve25519_public_from_base64(&k, tok->args[0]) < 0) {
+      log_warn(LD_DIR, "Bogus ntor-onion-key in microdesc");
       goto next;
     }
-    md->onion_pkey = tor_memdup(tok->object_body, tok->object_size);
-    md->onion_pkey_len = tok->object_size;
-    crypto_pk_free(tok->key);
+    md->onion_curve25519_pkey =
+      tor_memdup(&k, sizeof(curve25519_public_key_t));
+  }
 
-    if ((tok = find_opt_by_keyword(tokens, K_ONION_KEY_NTOR))) {
-      curve25519_public_key_t k;
-      tor_assert(tok->n_args >= 1);
-      if (curve25519_public_from_base64(&k, tok->args[0]) < 0) {
-        log_warn(LD_DIR, "Bogus ntor-onion-key in microdesc");
-        goto next;
-      }
-      md->onion_curve25519_pkey =
-        tor_memdup(&k, sizeof(curve25519_public_key_t));
-    }
-
-    smartlist_t *id_lines = find_all_by_keyword(tokens, K_ID);
-    if (id_lines) {
-      SMARTLIST_FOREACH_BEGIN(id_lines, directory_token_t *, t) {
-        tor_assert(t->n_args >= 2);
-        if (!strcmp(t->args[0], "ed25519")) {
-          if (md->ed25519_identity_pkey) {
-            log_warn(LD_DIR, "Extra ed25519 key in microdesc");
-            smartlist_free(id_lines);
-            goto next;
-          }
-          ed25519_public_key_t k;
-          if (ed25519_public_from_base64(&k, t->args[1])<0) {
-            log_warn(LD_DIR, "Bogus ed25519 key in microdesc");
-            smartlist_free(id_lines);
-            goto next;
-          }
-          md->ed25519_identity_pkey = tor_memdup(&k, sizeof(k));
+  smartlist_t *id_lines = find_all_by_keyword(tokens, K_ID);
+  if (id_lines) {
+    SMARTLIST_FOREACH_BEGIN(id_lines, directory_token_t *, t) {
+      tor_assert(t->n_args >= 2);
+      if (!strcmp(t->args[0], "ed25519")) {
+        if (md->ed25519_identity_pkey) {
+          log_warn(LD_DIR, "Extra ed25519 key in microdesc");
+          smartlist_free(id_lines);
+          goto next;
         }
-      } SMARTLIST_FOREACH_END(t);
-      smartlist_free(id_lines);
-    }
-
-    {
-      smartlist_t *a_lines = find_all_by_keyword(tokens, K_A);
-      if (a_lines) {
-        find_single_ipv6_orport(a_lines, &md->ipv6_addr, &md->ipv6_orport);
-        smartlist_free(a_lines);
+        ed25519_public_key_t k;
+        if (ed25519_public_from_base64(&k, t->args[1])<0) {
+          log_warn(LD_DIR, "Bogus ed25519 key in microdesc");
+          smartlist_free(id_lines);
+          goto next;
+        }
+        md->ed25519_identity_pkey = tor_memdup(&k, sizeof(k));
       }
-    }
+    } SMARTLIST_FOREACH_END(t);
+    smartlist_free(id_lines);
+  }
 
-    if ((tok = find_opt_by_keyword(tokens, K_FAMILY))) {
-      md->family = nodefamily_parse(tok->args[0],
-                                    NULL,
-                                    NF_WARN_MALFORMED);
+  {
+    smartlist_t *a_lines = find_all_by_keyword(tokens, K_A);
+    if (a_lines) {
+      find_single_ipv6_orport(a_lines, &md->ipv6_addr, &md->ipv6_orport);
+      smartlist_free(a_lines);
     }
+  }
 
-    if ((tok = find_opt_by_keyword(tokens, K_P))) {
-      md->exit_policy = parse_short_policy(tok->args[0]);
-    }
-    if ((tok = find_opt_by_keyword(tokens, K_P6))) {
-      md->ipv6_exit_policy = parse_short_policy(tok->args[0]);
-    }
+  if ((tok = find_opt_by_keyword(tokens, K_FAMILY))) {
+    md->family = nodefamily_parse(tok->args[0],
+                                  NULL,
+                                  NF_WARN_MALFORMED);
+  }
 
-    if (policy_is_reject_star_or_null(md->exit_policy) &&
-        policy_is_reject_star_or_null(md->ipv6_exit_policy)) {
-      md->policy_is_reject_star = 1;
-    }
+  if ((tok = find_opt_by_keyword(tokens, K_P))) {
+    md->exit_policy = parse_short_policy(tok->args[0]);
+  }
+  if ((tok = find_opt_by_keyword(tokens, K_P6))) {
+    md->ipv6_exit_policy = parse_short_policy(tok->args[0]);
+  }
 
-    rv = 0;
+  if (policy_is_reject_star_or_null(md->exit_policy) &&
+      policy_is_reject_star_or_null(md->ipv6_exit_policy)) {
+    md->policy_is_reject_star = 1;
+  }
+
+  rv = 0;
  next: // todo: rename this label.
 
-    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
-    memarea_clear(area);
-    smartlist_free(tokens);
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
+  memarea_clear(area);
+  smartlist_free(tokens);
 
-    return rv;
+  return rv;
 }
 
 /** Parse as many microdescriptors as are found from the string starting at
