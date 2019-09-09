@@ -167,6 +167,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
       start_of_next_microdesc = eos;
 
     md = tor_malloc_zero(sizeof(microdesc_t));
+    uint8_t md_digest[DIGEST256_LEN];
     {
       const char *cp = tor_memstr(s, start_of_next_microdesc-s,
                                   "onion-key");
@@ -183,6 +184,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
         md->body = (char*)cp;
       md->off = cp - start;
       crypto_digest256(md->digest, md->body, md->bodylen, DIGEST_SHA256);
+      memcpy(md_digest, md->digest, DIGEST256_LEN);
       if (no_onion_key) {
         log_fn(LOG_PROTOCOL_WARN, LD_DIR, "Malformed or truncated descriptor");
         goto next;
@@ -279,7 +281,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
   next:
     if (! okay && invalid_digests_out) {
       smartlist_add(invalid_digests_out,
-                    tor_memdup(md->digest, DIGEST256_LEN));
+                    tor_memdup(md_digest, DIGEST256_LEN));
     }
     microdesc_free(md);
     md = NULL;
