@@ -552,7 +552,7 @@ config_var_is_gettable(const config_var_t *var)
 {
   /* Arguably, invisible or obsolete options should not be gettable.  However,
    * they have been gettable for a long time, and making them ungettable could
-   * have compatibility effects.  For now, let's leave them along.
+   * have compatibility effects.  For now, let's leave them alone.
    */
 
   // return ! config_var_has_flag(var, CVFLAG_OBSOLETE|CFGLAGS_INVISIBLE);
