@@ -2360,11 +2360,13 @@ cleanup_intro_points(hs_service_t *service, time_t now)
       const node_t *node = get_node_from_intro_point(ip);
       int has_expired = intro_point_should_expire(ip, now);
 
-      /* We cleanup an intro point if it has expired or if we do not know the
-       * node_t anymore (removed from our latest consensus) or if we've
-       * reached the maximum number of retry with a non existing circuit. */
+      /* We cleanup an intro point if it has expired or if we do not know
+       * the node_t anymore (removed from our latest consensus) or if we've
+       * reached the maximum number of retry with a non existing circuit
+       * and don't have any established circuits. */
       if (has_expired || node == NULL ||
-          ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES) {
+          (ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES &&
+           !ip->circuit_established)) {
         log_info(LD_REND, "Intro point %s%s (retried: %u times). "
                           "Removing it.",
                  describe_intro_point(ip),
