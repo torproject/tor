@@ -239,7 +239,7 @@ struct_var_get_typename(const struct_member_t *member)
 }
 
 /** Return all of the flags set for this struct member. */
-unsigned
+uint32_t
 struct_var_get_flags(const struct_member_t *member)
 {
   const var_type_def_t *def = get_type_def(member);

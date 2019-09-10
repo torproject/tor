@@ -516,9 +516,9 @@ config_count_options(const config_mgr_t *mgr)
  * either in <b>var</b>'s flags, or on the flags of its type.
  **/
 static bool
-config_var_has_flag(const config_var_t *var, unsigned flag)
+config_var_has_flag(const config_var_t *var, uint32_t flag)
 {
-  unsigned have_flags = var->flags | struct_var_get_flags(&var->member);
+  uint32_t have_flags = var->flags | struct_var_get_flags(&var->member);
 
   return (have_flags & flag) != 0;
 }
