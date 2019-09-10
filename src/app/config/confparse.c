@@ -600,7 +600,8 @@ config_var_is_listable(const config_var_t *var)
 
 /**
  * Return true iff variable <b>var</b> should be written out when we
- * are writing our configuration to disk or controller.
+ * are writing our configuration to disk, to a controller, or via the
+ * --dump-config command.
  *
  * This option may be set because a variable is hidden, or because it is
  * derived from another variable which will already be written out.
