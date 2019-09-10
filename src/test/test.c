@@ -899,6 +899,7 @@ struct testgroup_t testgroups[] = {
   { "prob_distr/", prob_distr_tests },
   { "procmon/", procmon_tests },
   { "process/", process_tests },
+  { "proto/haproxy/", proto_haproxy_tests },
   { "proto/http/", proto_http_tests },
   { "proto/misc/", proto_misc_tests },
   { "protover/", protover_tests },

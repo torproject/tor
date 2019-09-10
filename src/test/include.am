@@ -182,6 +182,7 @@ src_test_test_SOURCES += \
 	src/test/test_process_descs.c \
 	src/test/test_prob_distr.c \
 	src/test/test_procmon.c \
+	src/test/test_proto_haproxy.c \
 	src/test/test_proto_http.c \
 	src/test/test_proto_misc.c \
 	src/test/test_protover.c \
