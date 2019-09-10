@@ -1300,6 +1300,7 @@ test_service_event(void *arg)
               OP_EQ, 1);
     /* Remove the IP object at once for the next test. */
     ip->circuit_retries = MAX_INTRO_POINT_CIRCUIT_RETRIES + 1;
+    ip->circuit_established = 0;
     run_housekeeping_event(now);
     tt_int_op(digest256map_size(service->desc_current->intro_points.map),
               OP_EQ, 0);
