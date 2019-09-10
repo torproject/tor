@@ -2666,6 +2666,9 @@ list_torrc_options(void)
 {
   smartlist_t *vars = config_mgr_list_vars(get_options_mgr());
   SMARTLIST_FOREACH_BEGIN(vars, const config_var_t *, var) {
+    /* Possibly this should check listable, rather than (or in addition to)
+     * settable. See ticket 31654.
+     */
     if (! config_var_is_settable(var)) {
       /* This variable cannot be set, or cannot be set by this name. */
       continue;
@@ -2680,6 +2683,8 @@ static void
 list_deprecated_options(void)
 {
   smartlist_t *deps = config_mgr_list_deprecated_vars(get_options_mgr());
+  /* Possibly this should check whether the variables are listable,
+   * but currently it does not.  See ticket 31654. */
   SMARTLIST_FOREACH(deps, const char *, name,
                     printf("%s\n", name));
   smartlist_free(deps);
@@ -8142,6 +8147,8 @@ getinfo_helper_config(control_connection_t *conn,
   } else if (!strcmp(question, "config/defaults")) {
     smartlist_t *sl = smartlist_new();
     int dirauth_lines_seen = 0, fallback_lines_seen = 0;
+    /* Possibly this should check whether the variables are listable,
+     * but currently it does not.  See ticket 31654. */
     smartlist_t *vars = config_mgr_list_vars(get_options_mgr());
     SMARTLIST_FOREACH_BEGIN(vars, const config_var_t *, var) {
       if (var->initvalue != NULL) {
