@@ -1,2 +1,7 @@
   o Minor feature (configure, build system):
     - The standard __ANDROID__ macro is now used for platform detection.
+    - --enable-android provides the standard, minimal build configuration
+      for creating Tor binaries to run either as a shared library or a daemon.
+      It enables PIC, disables system torrc, systemd, and all doc generation.
+      This flag is not required to build for Android.
+      Closes ticket 31882.

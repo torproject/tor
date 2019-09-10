@@ -97,6 +97,20 @@ else
             [Defined if we're building with OpenSSL or LibreSSL])
 fi
 
+dnl Enable minimal, standard Android build
+AC_ARG_ENABLE(android,
+     AS_HELP_STRING(--enable-android, [setup build for Android exeutable/shared library]))
+
+if test "x$enable_android" = "xyes"; then
+  asciidoc=false
+  enable_html_manual=no
+  enable_manpage=no
+  enable_pic=yes
+  enable_system_torrc=no
+  enable_tool_name_check=no
+  have_systemd=no
+fi
+
 if test "$enable_static_tor" = "yes"; then
   enable_static_libevent="yes";
   enable_static_openssl="yes";
@@ -126,7 +140,7 @@ AC_ARG_ENABLE(asciidoc,
         "yes") asciidoc=true ;;
         "no")  asciidoc=false ;;
         *) AC_MSG_ERROR(bad value for --disable-asciidoc) ;;
-      esac], [asciidoc=true])
+      esac], [test "x$asciidoc" = "xtrue" && asciidoc=true])
 
 # systemd notify support
 AC_ARG_ENABLE(systemd,
@@ -236,19 +250,12 @@ if test x$enable_event_tracing_debug = xyes; then
   AC_DEFINE([TOR_EVENT_TRACING_ENABLED], [1], [Compile the event tracing instrumentation])
 fi
 
-dnl Enable Android only features.
-AC_ARG_ENABLE(android,
-     AS_HELP_STRING(--enable-android, [build with Android features enabled]))
-AM_CONDITIONAL([USE_ANDROID], [test "x$enable_android" = "xyes"])
-
-if test "x$enable_android" = "xyes"; then
-  AC_DEFINE([USE_ANDROID], [1], [Compile with Android specific features enabled])
-
-  dnl Check if the Android log library is available.
-  AC_CHECK_HEADERS([android/log.h])
-  AC_SEARCH_LIBS(__android_log_write, [log])
-
-fi
+dnl Enable Android only standard libs
+case "$host" in
+    *android*)
+	AC_CHECK_LIB([log], [__android_log_write], [LIBS="-llog $LIBS"])
+	;;
+esac
 
 dnl ---
 dnl Tor modules options. These options are namespaced with --disable-module-XXX
