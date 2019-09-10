@@ -237,3 +237,23 @@ ubuntu_xenial:
   image: ubuntu:xenial
   <<: *debian-template
   <<: *test-template
+
+
+archlinux:
+  image: archlinux/base
+  <<: *artifacts-template
+  before_script:
+    - pacman --sync --sysupgrade --refresh --noconfirm
+        autoconf
+        automake
+        gcc
+        glibc
+        grep
+        libevent
+        libseccomp
+        make
+        openssl
+        pkg-config
+        xz
+        zlib
+  <<: *test-template
