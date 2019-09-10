@@ -51,12 +51,13 @@ test_pe_initialize(void *arg)
    * need to run the main loop and then wait for a second delaying the unit
    * tests. Instead, we'll test the callback work indepedently elsewhere. */
   initialize_periodic_events();
+  periodic_events_connect_all();
   set_network_participation(false);
   rescan_periodic_events(get_options());
 
   /* Validate that all events have been set up. */
-  for (int i = 0; periodic_events[i].name; ++i) {
-    periodic_event_item_t *item = &periodic_events[i];
+  for (int i = 0; mainloop_periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &mainloop_periodic_events[i];
     tt_assert(item->ev);
     tt_assert(item->fn);
     tt_u64_op(item->last_action_time, OP_EQ, 0);
@@ -89,8 +90,8 @@ test_pe_launch(void *arg)
   /* Hack: We'll set a dumb fn() of each events so they don't get called when
    * dispatching them. We just want to test the state of the callbacks, not
    * the whole code path. */
-  for (int i = 0; periodic_events[i].name; ++i) {
-    periodic_event_item_t *item = &periodic_events[i];
+  for (int i = 0; mainloop_periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &mainloop_periodic_events[i];
     item->fn = dumb_event_fn;
   }
 
@@ -107,17 +108,18 @@ test_pe_launch(void *arg)
     periodic_event_item_t *item = &periodic_events[i];
     tt_int_op(periodic_event_is_enabled(item), OP_EQ, 0);
   }
-#endif
+#endif /* 0 */
 
   initialize_periodic_events();
+  periodic_events_connect_all();
 
   /* Now that we've initialized, rescan the list to launch. */
   periodic_events_on_new_options(options);
 
   int mask = PERIODIC_EVENT_ROLE_CLIENT|PERIODIC_EVENT_ROLE_ALL|
     PERIODIC_EVENT_ROLE_NET_PARTICIPANT;
-  for (int i = 0; periodic_events[i].name; ++i) {
-    periodic_event_item_t *item = &periodic_events[i];
+  for (int i = 0; mainloop_periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &mainloop_periodic_events[i];
     int should_be_enabled = !!(item->roles & mask);
     tt_int_op(periodic_event_is_enabled(item), OP_EQ, should_be_enabled);
     // enabled or not, the event has not yet been run.
@@ -134,8 +136,8 @@ test_pe_launch(void *arg)
              PERIODIC_EVENT_ROLE_RELAY|PERIODIC_EVENT_ROLE_DIRSERVER|
              PERIODIC_EVENT_ROLE_ALL|PERIODIC_EVENT_ROLE_NET_PARTICIPANT);
 
-  for (int i = 0; periodic_events[i].name; ++i) {
-    periodic_event_item_t *item = &periodic_events[i];
+  for (int i = 0; mainloop_periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &mainloop_periodic_events[i];
     /* Only Client role should be disabled. */
     if (item->roles == PERIODIC_EVENT_ROLE_CLIENT) {
       tt_int_op(periodic_event_is_enabled(item), OP_EQ, 0);
@@ -156,8 +158,8 @@ test_pe_launch(void *arg)
   set_network_participation(false);
   periodic_events_on_new_options(options);
 
-  for (int i = 0; periodic_events[i].name; ++i) {
-    periodic_event_item_t *item = &periodic_events[i];
+  for (int i = 0; mainloop_periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &mainloop_periodic_events[i];
     int should_be_enabled = (item->roles & PERIODIC_EVENT_ROLE_ALL) &&
       !(item->flags & PERIODIC_EVENT_FLAG_NEED_NET);
     tt_int_op(periodic_event_is_enabled(item), OP_EQ, should_be_enabled);
@@ -177,8 +179,8 @@ test_pe_launch(void *arg)
    * trigger a rescan of the event disabling the HS service event. */
   to_remove = &service;
 
-  for (int i = 0; periodic_events[i].name; ++i) {
-    periodic_event_item_t *item = &periodic_events[i];
+  for (int i = 0; mainloop_periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &mainloop_periodic_events[i];
     tt_int_op(periodic_event_is_enabled(item), OP_EQ,
               (item->roles != PERIODIC_EVENT_ROLE_CONTROLEV));
   }
@@ -300,12 +302,13 @@ test_pe_hs_service(void *arg)
   consider_hibernation(time(NULL));
   /* Initialize the events so we can enable them */
   initialize_periodic_events();
+  periodic_events_connect_all();
 
   /* Hack: We'll set a dumb fn() of each events so they don't get called when
    * dispatching them. We just want to test the state of the callbacks, not
    * the whole code path. */
-  for (int i = 0; periodic_events[i].name; ++i) {
-    periodic_event_item_t *item = &periodic_events[i];
+  for (int i = 0; mainloop_periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &mainloop_periodic_events[i];
     item->fn = dumb_event_fn;
   }
 
@@ -318,8 +321,8 @@ test_pe_hs_service(void *arg)
    * trigger a rescan of the event disabling the HS service event. */
   to_remove = &service;
 
-  for (int i = 0; periodic_events[i].name; ++i) {
-    periodic_event_item_t *item = &periodic_events[i];
+  for (int i = 0; mainloop_periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &mainloop_periodic_events[i];
     if (item->roles & PERIODIC_EVENT_ROLE_HS_SERVICE) {
       tt_int_op(periodic_event_is_enabled(item), OP_EQ, 1);
     }
@@ -329,8 +332,8 @@ test_pe_hs_service(void *arg)
   /* Remove the service from the global map, it should trigger a rescan and
    * disable the HS service events. */
   remove_service(get_hs_service_map(), &service);
-  for (int i = 0; periodic_events[i].name; ++i) {
-    periodic_event_item_t *item = &periodic_events[i];
+  for (int i = 0; mainloop_periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &mainloop_periodic_events[i];
     if (item->roles & PERIODIC_EVENT_ROLE_HS_SERVICE) {
       tt_int_op(periodic_event_is_enabled(item), OP_EQ, 0);
     }

@@ -1,0 +1,10 @@
+  o Minor bugfixes (networking, IP addresses):
+    - When parsing addreses via Tor's internal DNS lookup API, reject IPv4
+      addresses in square brackets, and accept IPv6 addresses in square
+      brackets. This change completes the work started in 23082, making
+      address parsing consistent between tor's internal DNS lookup and address
+      parsing APIs. Fixes bug 30721; bugfix on 0.2.1.5-alpha.
+    - When parsing addreses via Tor's internal address:port parsing and
+      DNS lookup APIs, require IPv6 addresses with ports to have square
+      brackets. But allow IPv6 addresses without ports, whether or not they
+      have square brackets. Fixes bug 30721; bugfix on 0.2.1.5-alpha.

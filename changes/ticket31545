@@ -1,0 +1,5 @@
+  o Code simplification and refactoring:
+    - Rewrite format_node_description() and router_get_verbose_nickname() to
+      use strlcpy() and strlcat(). The previous implementation used memcpy()
+      and pointer arithmetic, which was error-prone.
+      Closes ticket 31545. This is CID 1452819.

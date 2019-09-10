@@ -104,4 +104,4 @@ struct networkstatus_t {
   uint8_t bw_file_digest256[DIGEST256_LEN];
 };
 
-#endif
+#endif /* !defined(NETWORKSTATUS_ST_H) */

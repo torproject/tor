@@ -31,4 +31,4 @@ int buf_read_from_pipe(struct buf_t *buf, int fd, size_t at_most,
 int buf_flush_to_pipe(struct buf_t *buf, int fd, size_t sz,
                       size_t *buf_flushlen);
 
-#endif /* !defined(TOR_BUFFERS_H) */
+#endif /* !defined(TOR_BUFFERS_NET_H) */

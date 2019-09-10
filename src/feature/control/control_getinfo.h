@@ -12,8 +12,12 @@
 #ifndef TOR_CONTROL_GETINFO_H
 #define TOR_CONTROL_GETINFO_H
 
-int handle_control_getinfo(control_connection_t *conn, uint32_t len,
-                           const char *body);
+struct control_cmd_syntax_t;
+struct control_cmd_args_t;
+extern const struct control_cmd_syntax_t getinfo_syntax;
+
+int handle_control_getinfo(control_connection_t *conn,
+                           const struct control_cmd_args_t *args);
 
 #ifdef CONTROL_GETINFO_PRIVATE
 STATIC int getinfo_helper_onions(
@@ -54,4 +58,4 @@ STATIC int getinfo_helper_current_time(
     const char **errmsg);
 #endif /* defined(CONTROL_GETINFO_PRIVATE) */
 
-#endif /* !defined(TOR_CONTROL_GETINFO) */
+#endif /* !defined(TOR_CONTROL_GETINFO_H) */

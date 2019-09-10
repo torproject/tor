@@ -1,6 +1,7 @@
 /* Copyright (c) 2016-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 #define CRYPTO_ED25519_PRIVATE
+#define CONFIG_PRIVATE
 #include "orconfig.h"
 #include "core/or/or.h"
 #include "app/main/subsysmgr.h"
@@ -111,7 +112,7 @@ global_init(void)
   }
 
   /* set up the options. */
-  mock_options = tor_malloc_zero(sizeof(or_options_t));
+  mock_options = options_new();
   MOCK(get_options, mock_get_options);
 
   /* Make BUG() and nonfatal asserts crash */
@@ -137,7 +138,7 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
   return fuzz_main(Data, Size);
 }
 
-#else /* Not LLVM_FUZZ, so AFL. */
+#else /* !(defined(LLVM_FUZZ)) */
 
 int
 main(int argc, char **argv)
@@ -189,9 +190,9 @@ main(int argc, char **argv)
   if (fuzz_cleanup() < 0)
     abort();
 
-  tor_free(mock_options);
+  or_options_free(mock_options);
   UNMOCK(get_options);
   return 0;
 }
 
-#endif
+#endif /* defined(LLVM_FUZZ) */

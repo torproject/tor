@@ -31,14 +31,14 @@
 
 typedef struct {
   int severity;
-  uint32_t domain;
+  log_domain_mask_t domain;
   char *msg;
 } logmsg_t;
 
 static smartlist_t *messages = NULL;
 
 static void
-log_cback(int severity, uint32_t domain, const char *msg)
+log_cback(int severity, log_domain_mask_t domain, const char *msg)
 {
   logmsg_t *x = tor_malloc(sizeof(*x));
   x->severity = severity;
@@ -96,7 +96,7 @@ clear_log_messages(void)
     opt->command = CMD_RUN_TOR;              \
     options_init(opt);                       \
                                              \
-    dflt = config_dup(&options_format, opt); \
+    dflt = config_dup(get_options_mgr(), opt); \
     clear_log_messages();                    \
   } while (0)
 
@@ -196,7 +196,7 @@ test_options_validate_impl(const char *configuration,
   if (r)
     goto done;
 
-  r = config_assign(&options_format, opt, cl, 0, &msg);
+  r = config_assign(get_options_mgr(), opt, cl, 0, &msg);
   if (phase == PH_ASSIGN) {
     if (test_options_checkmsgs(configuration, expect_errmsg,
                                expect_log_severity,
@@ -258,13 +258,17 @@ test_options_validate(void *arg)
   WANT_ERR("BridgeRelay 1\nDirCache 0",
            "We're a bridge but DirCache is disabled.", PH_VALIDATE);
 
+  // XXXX We should replace this with a more full error message once #29211
+  // XXXX is done.  It is truncated for now because at the current stage
+  // XXXX of refactoring, we can't give a full error message like before.
   WANT_ERR_LOG("HeartbeatPeriod 21 snarks",
-               "Interval 'HeartbeatPeriod 21 snarks' is malformed or"
-               " out of bounds.", LOG_WARN, "Unknown unit 'snarks'.",
+               "malformed or out of bounds", LOG_WARN,
+               "Unknown unit 'snarks'.",
                PH_ASSIGN);
+  // XXXX As above.
   WANT_ERR_LOG("LogTimeGranularity 21 snarks",
-               "Msec interval 'LogTimeGranularity 21 snarks' is malformed or"
-               " out of bounds.", LOG_WARN, "Unknown unit 'snarks'.",
+               "malformed or out of bounds", LOG_WARN,
+               "Unknown unit 'snarks'.",
                PH_ASSIGN);
   OK("HeartbeatPeriod 1 hour", PH_VALIDATE);
   OK("LogTimeGranularity 100 milliseconds", PH_VALIDATE);
@@ -300,7 +304,7 @@ test_have_enough_mem_for_dircache(void *arg)
   r = config_get_lines(configuration, &cl, 1);
   tt_int_op(r, OP_EQ, 0);
 
-  r = config_assign(&options_format, opt, cl, 0, &msg);
+  r = config_assign(get_options_mgr(), opt, cl, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
 
   /* 300 MB RAM available, DirCache enabled */
@@ -323,7 +327,7 @@ test_have_enough_mem_for_dircache(void *arg)
   r = config_get_lines(configuration, &cl, 1);
   tt_int_op(r, OP_EQ, 0);
 
-  r = config_assign(&options_format, opt, cl, 0, &msg);
+  r = config_assign(get_options_mgr(), opt, cl, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
 
   /* 300 MB RAM available, DirCache enabled, Bridge */
@@ -346,7 +350,7 @@ test_have_enough_mem_for_dircache(void *arg)
   r = config_get_lines(configuration, &cl, 1);
   tt_int_op(r, OP_EQ, 0);
 
-  r = config_assign(&options_format, opt, cl, 0, &msg);
+  r = config_assign(get_options_mgr(), opt, cl, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
 
   /* 200 MB RAM available, DirCache disabled */
@@ -430,10 +434,11 @@ get_options_test_data(const char *conf)
   // Being kinda lame and just fixing the immedate breakage for now..
   result->opt->ConnectionPadding = -1; // default must be "auto"
   result->opt->DormantClientTimeout = 1800; // must be over 600.
+  result->opt->CircuitPadding = 1; // default must be "1"
 
   rv = config_get_lines(conf, &cl, 1);
   tt_int_op(rv, OP_EQ, 0);
-  rv = config_assign(&options_format, result->opt, cl, 0, &msg);
+  rv = config_assign(get_options_mgr(), result->opt, cl, 0, &msg);
   if (msg) {
     /* Display the parse error message by comparing it with an empty string */
     tt_str_op(msg, OP_EQ, "");
@@ -444,7 +449,7 @@ get_options_test_data(const char *conf)
   result->opt->TokenBucketRefillInterval = 1;
   rv = config_get_lines(TEST_OPTIONS_OLD_VALUES, &cl, 1);
   tt_int_op(rv, OP_EQ, 0);
-  rv = config_assign(&options_format, result->def_opt, cl, 0, &msg);
+  rv = config_assign(get_options_mgr(), result->def_opt, cl, 0, &msg);
   if (msg) {
     /* Display the parse error message by comparing it with an empty string */
     tt_str_op(msg, OP_EQ, "");
@@ -1337,29 +1342,6 @@ test_options_validate__token_bucket(void *ignored)
   tor_free(msg);
 
  done:
-  free_options_test_data(tdata);
-  tor_free(msg);
-}
-
-static void
-test_options_validate__recommended_packages(void *ignored)
-{
-  (void)ignored;
-  int ret;
-  char *msg;
-  setup_capture_of_logs(LOG_WARN);
-  options_test_data_t *tdata = get_options_test_data(
-            "RecommendedPackages foo 1.2 http://foo.com sha1=123123123123\n"
-            "RecommendedPackages invalid-package-line\n");
-
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  expect_no_log_msg("Invalid RecommendedPackage line "
-            "invalid-package-line will be ignored\n");
-
- done:
-  escaped(NULL); // This will free the leaking memory from the previous escaped
-  teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -4199,7 +4181,6 @@ struct testcase_t options_tests[] = {
   LOCAL_VALIDATE_TEST(exclude_nodes),
   LOCAL_VALIDATE_TEST(node_families),
   LOCAL_VALIDATE_TEST(token_bucket),
-  LOCAL_VALIDATE_TEST(recommended_packages),
   LOCAL_VALIDATE_TEST(fetch_dir),
   LOCAL_VALIDATE_TEST(conn_limit),
   LOCAL_VALIDATE_TEST(paths_needed),

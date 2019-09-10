@@ -16,6 +16,10 @@ def fail(msg):
     logging.error('FAIL')
     sys.exit(msg)
 
+def skip(msg):
+    logging.warning('SKIP: {}'.format(msg))
+    sys.exit(77)
+
 def try_connecting_to_socksport():
     socks_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     e = socks_socket.connect_ex(('127.0.0.1', socks_port))
@@ -66,6 +70,9 @@ if sys.hexversion < 0x02070000:
 if sys.hexversion > 0x03000000 and sys.hexversion < 0x03010000:
     fail("ERROR: unsupported Python3 version (should be >= 3.1)")
 
+if 'TOR_SKIP_TEST_REBIND' in os.environ:
+    skip('$TOR_SKIP_TEST_REBIND is set')
+
 control_port = pick_random_port()
 socks_port = pick_random_port()
 
@@ -83,13 +90,21 @@ if not os.path.exists(sys.argv[2]):
 tor_path = sys.argv[1]
 data_dir = sys.argv[2]
 
+empty_torrc_path = os.path.join(data_dir, 'empty_torrc')
+open(empty_torrc_path, 'w').close()
+empty_defaults_torrc_path = os.path.join(data_dir, 'empty_defaults_torrc')
+open(empty_defaults_torrc_path, 'w').close()
+
 tor_process = subprocess.Popen([tor_path,
                                '-DataDirectory', data_dir,
                                '-ControlPort', '127.0.0.1:{}'.format(control_port),
                                '-SOCKSPort', '127.0.0.1:{}'.format(socks_port),
                                '-Log', 'debug stdout',
                                '-LogTimeGranularity', '1',
-                               '-FetchServerDescriptors', '0'],
+                               '-FetchServerDescriptors', '0',
+                               '-f', empty_torrc_path,
+                               '--defaults-torrc', empty_defaults_torrc_path,
+                               ],
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
 

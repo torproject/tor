@@ -403,9 +403,7 @@ encode_enc_key(const hs_desc_intro_point_t *ip)
   tor_assert(ip);
 
   /* Base64 encode the encryption key for the "enc-key" field. */
-  if (curve25519_public_to_base64(key_b64, &ip->enc_key) < 0) {
-    goto done;
-  }
+  curve25519_public_to_base64(key_b64, &ip->enc_key);
   if (tor_cert_encode_ed22519(ip->enc_key_cert, &encoded_cert) < 0) {
     goto done;
   }
@@ -421,7 +419,7 @@ encode_enc_key(const hs_desc_intro_point_t *ip)
 }
 
 /* Encode an introduction point onion key. Return a newly allocated string
- * with it. On failure, return NULL. */
+ * with it. Can not fail. */
 static char *
 encode_onion_key(const hs_desc_intro_point_t *ip)
 {
@@ -431,12 +429,9 @@ encode_onion_key(const hs_desc_intro_point_t *ip)
   tor_assert(ip);
 
   /* Base64 encode the encryption key for the "onion-key" field. */
-  if (curve25519_public_to_base64(key_b64, &ip->onion_key) < 0) {
-    goto done;
-  }
+  curve25519_public_to_base64(key_b64, &ip->onion_key);
   tor_asprintf(&encoded, "%s ntor %s", str_ip_onion_key, key_b64);
 
- done:
   return encoded;
 }
 
@@ -683,7 +678,7 @@ get_auth_client_str(const hs_desc_authorized_client_t *client)
   char encrypted_cookie_b64[HS_DESC_ENCRYPED_COOKIE_LEN * 2];
 
 #define ASSERT_AND_BASE64(field) STMT_BEGIN                        \
-  tor_assert(!tor_mem_is_zero((char *) client->field,              \
+  tor_assert(!fast_mem_is_zero((char *) client->field,              \
                               sizeof(client->field)));             \
   ret = base64_encode_nopad(field##_b64, sizeof(field##_b64),      \
                             client->field, sizeof(client->field)); \
@@ -797,8 +792,8 @@ get_inner_encrypted_layer_plaintext(const hs_descriptor_t *desc)
 /* Create the middle layer of the descriptor, which includes the client auth
  * data and the encrypted inner layer (provided as a base64 string at
  * <b>layer2_b64_ciphertext</b>). Return a newly-allocated string with the
- * layer plaintext, or NULL if an error occurred. It's the responsibility of
- * the caller to free the returned string. */
+ * layer plaintext. It's the responsibility of the caller to free the returned
+ * string. Can not fail. */
 static char *
 get_outer_encrypted_layer_plaintext(const hs_descriptor_t *desc,
                                     const char *layer2_b64_ciphertext)
@@ -814,13 +809,10 @@ get_outer_encrypted_layer_plaintext(const hs_descriptor_t *desc,
     const curve25519_public_key_t *ephemeral_pubkey;
 
     ephemeral_pubkey = &desc->superencrypted_data.auth_ephemeral_pubkey;
-    tor_assert(!tor_mem_is_zero((char *) ephemeral_pubkey->public_key,
+    tor_assert(!fast_mem_is_zero((char *) ephemeral_pubkey->public_key,
                                 CURVE25519_PUBKEY_LEN));
 
-    if (curve25519_public_to_base64(ephemeral_key_base64,
-                                    ephemeral_pubkey) < 0) {
-      goto done;
-    }
+    curve25519_public_to_base64(ephemeral_key_base64, ephemeral_pubkey);
     smartlist_add_asprintf(lines, "%s %s\n",
                            str_desc_auth_key, ephemeral_key_base64);
 
@@ -845,7 +837,6 @@ get_outer_encrypted_layer_plaintext(const hs_descriptor_t *desc,
 
   layer1_str = smartlist_join_strings(lines, "", 0, NULL);
 
- done:
   /* We need to memwipe all lines because it contains the ephemeral key */
   SMARTLIST_FOREACH(lines, char *, a, memwipe(a, 0, strlen(a)));
   SMARTLIST_FOREACH(lines, char *, a, tor_free(a));
@@ -1091,11 +1082,7 @@ desc_encode_v3(const hs_descriptor_t *desc,
       tor_free(encoded_str);
       goto err;
     }
-    if (ed25519_signature_to_base64(ed_sig_b64, &sig) < 0) {
-      log_warn(LD_BUG, "Can't base64 encode descriptor signature!");
-      tor_free(encoded_str);
-      goto err;
-    }
+    ed25519_signature_to_base64(ed_sig_b64, &sig);
     /* Create the signature line. */
     smartlist_add_asprintf(lines, "%s %s", str_signature, ed_sig_b64);
   }
@@ -1434,12 +1421,12 @@ decrypt_descriptor_cookie(const hs_descriptor_t *desc,
   tor_assert(desc);
   tor_assert(client);
   tor_assert(client_auth_sk);
-  tor_assert(!tor_mem_is_zero(
+  tor_assert(!fast_mem_is_zero(
         (char *) &desc->superencrypted_data.auth_ephemeral_pubkey,
         sizeof(desc->superencrypted_data.auth_ephemeral_pubkey)));
-  tor_assert(!tor_mem_is_zero((char *) client_auth_sk,
+  tor_assert(!fast_mem_is_zero((char *) client_auth_sk,
                               sizeof(*client_auth_sk)));
-  tor_assert(!tor_mem_is_zero((char *) desc->subcredential, DIGEST256_LEN));
+  tor_assert(!fast_mem_is_zero((char *) desc->subcredential, DIGEST256_LEN));
 
   /* Get the KEYS component to derive the CLIENT-ID and COOKIE-KEY. */
   keystream_length =
@@ -1981,6 +1968,7 @@ decode_intro_points(const hs_descriptor_t *desc,
   SMARTLIST_FOREACH(intro_points, char *, a, tor_free(a));
   smartlist_free(intro_points);
 }
+
 /* Return 1 iff the given base64 encoded signature in b64_sig from the encoded
  * descriptor in encoded_desc validates the descriptor content. */
 STATIC int
@@ -2584,7 +2572,7 @@ hs_desc_decode_descriptor(const char *encoded,
 
   /* Subcredentials are not optional. */
   if (BUG(!subcredential ||
-          tor_mem_is_zero((char*)subcredential, DIGEST256_LEN))) {
+          fast_mem_is_zero((char*)subcredential, DIGEST256_LEN))) {
     log_warn(LD_GENERAL, "Tried to decrypt without subcred. Impossible!");
     goto err;
   }
@@ -2897,13 +2885,13 @@ hs_desc_build_authorized_client(const uint8_t *subcredential,
   tor_assert(descriptor_cookie);
   tor_assert(client_out);
   tor_assert(subcredential);
-  tor_assert(!tor_mem_is_zero((char *) auth_ephemeral_sk,
+  tor_assert(!fast_mem_is_zero((char *) auth_ephemeral_sk,
                               sizeof(*auth_ephemeral_sk)));
-  tor_assert(!tor_mem_is_zero((char *) client_auth_pk,
+  tor_assert(!fast_mem_is_zero((char *) client_auth_pk,
                               sizeof(*client_auth_pk)));
-  tor_assert(!tor_mem_is_zero((char *) descriptor_cookie,
+  tor_assert(!fast_mem_is_zero((char *) descriptor_cookie,
                               HS_DESC_DESCRIPTOR_COOKIE_LEN));
-  tor_assert(!tor_mem_is_zero((char *) subcredential,
+  tor_assert(!fast_mem_is_zero((char *) subcredential,
                               DIGEST256_LEN));
 
   /* Get the KEYS part so we can derive the CLIENT-ID and COOKIE-KEY. */

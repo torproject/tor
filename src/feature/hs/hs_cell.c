@@ -161,11 +161,12 @@ parse_introduce2_encrypted(const uint8_t *decrypted_data,
   }
 
   if (trn_cell_introduce_encrypted_get_onion_key_type(enc_cell) !=
-      HS_CELL_ONION_KEY_TYPE_NTOR) {
+      TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR) {
     log_info(LD_REND, "INTRODUCE2 onion key type is invalid. Got %u but "
                       "expected %u on circuit %u for service %s",
              trn_cell_introduce_encrypted_get_onion_key_type(enc_cell),
-             HS_CELL_ONION_KEY_TYPE_NTOR, TO_CIRCUIT(circ)->n_circ_id,
+             TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR,
+             TO_CIRCUIT(circ)->n_circ_id,
              safe_str_client(service->onion_address));
     goto err;
   }
@@ -258,7 +259,7 @@ introduce1_set_encrypted_onion_key(trn_cell_introduce_encrypted_t *cell,
   tor_assert(onion_pk);
   /* There is only one possible key type for a non legacy cell. */
   trn_cell_introduce_encrypted_set_onion_key_type(cell,
-                                                  HS_CELL_ONION_KEY_TYPE_NTOR);
+                                   TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR);
   trn_cell_introduce_encrypted_set_onion_key_len(cell, CURVE25519_PUBKEY_LEN);
   trn_cell_introduce_encrypted_setlen_onion_key(cell, CURVE25519_PUBKEY_LEN);
   memcpy(trn_cell_introduce_encrypted_getarray_onion_key(cell), onion_pk,
@@ -442,7 +443,8 @@ introduce1_set_auth_key(trn_cell_introduce1_t *cell,
   tor_assert(cell);
   tor_assert(data);
   /* There is only one possible type for a non legacy cell. */
-  trn_cell_introduce1_set_auth_key_type(cell, HS_INTRO_AUTH_KEY_TYPE_ED25519);
+  trn_cell_introduce1_set_auth_key_type(cell,
+                                   TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519);
   trn_cell_introduce1_set_auth_key_len(cell, ED25519_PUBKEY_LEN);
   trn_cell_introduce1_setlen_auth_key(cell, ED25519_PUBKEY_LEN);
   memcpy(trn_cell_introduce1_getarray_auth_key(cell),
@@ -471,9 +473,109 @@ introduce1_set_legacy_id(trn_cell_introduce1_t *cell,
   }
 }
 
+/* Build and add to the given DoS cell extension the given parameter type and
+ * value. */
+static void
+build_establish_intro_dos_param(trn_cell_extension_dos_t *dos_ext,
+                                uint8_t param_type, uint64_t param_value)
+{
+  trn_cell_extension_dos_param_t *dos_param =
+    trn_cell_extension_dos_param_new();
+
+  /* Extra safety. We should never send an unknown parameter type. */
+  tor_assert(param_type == TRUNNEL_DOS_PARAM_TYPE_INTRO2_RATE_PER_SEC ||
+             param_type == TRUNNEL_DOS_PARAM_TYPE_INTRO2_BURST_PER_SEC);
+
+  trn_cell_extension_dos_param_set_type(dos_param, param_type);
+  trn_cell_extension_dos_param_set_value(dos_param, param_value);
+  trn_cell_extension_dos_add_params(dos_ext, dos_param);
+
+  /* Not freeing the trunnel object because it is now owned by dos_ext. */
+}
+
+/* Build the DoS defense cell extension and put it in the given extensions
+ * object. This can't fail. */
+static void
+build_establish_intro_dos_extension(const hs_service_config_t *service_config,
+                                    trn_cell_extension_t *extensions)
+{
+  ssize_t ret, dos_ext_encoded_len;
+  uint8_t *field_array;
+  trn_cell_extension_field_t *field;
+  trn_cell_extension_dos_t *dos_ext;
+
+  tor_assert(service_config);
+  tor_assert(extensions);
+
+  /* We are creating a cell extension field of the type DoS. */
+  field = trn_cell_extension_field_new();
+  trn_cell_extension_field_set_field_type(field,
+                                          TRUNNEL_CELL_EXTENSION_TYPE_DOS);
+
+  /* Build DoS extension field. We will put in two parameters. */
+  dos_ext = trn_cell_extension_dos_new();
+  trn_cell_extension_dos_set_n_params(dos_ext, 2);
+
+  /* Build DoS parameter INTRO2 rate per second. */
+  build_establish_intro_dos_param(dos_ext,
+                                  TRUNNEL_DOS_PARAM_TYPE_INTRO2_RATE_PER_SEC,
+                                  service_config->intro_dos_rate_per_sec);
+  /* Build DoS parameter INTRO2 burst per second. */
+  build_establish_intro_dos_param(dos_ext,
+                                  TRUNNEL_DOS_PARAM_TYPE_INTRO2_BURST_PER_SEC,
+                                  service_config->intro_dos_burst_per_sec);
+
+  /* Set the field with the encoded DoS extension. */
+  dos_ext_encoded_len = trn_cell_extension_dos_encoded_len(dos_ext);
+  /* Set length field and the field array size length. */
+  trn_cell_extension_field_set_field_len(field, dos_ext_encoded_len);
+  trn_cell_extension_field_setlen_field(field, dos_ext_encoded_len);
+  /* Encode the DoS extension into the cell extension field. */
+  field_array = trn_cell_extension_field_getarray_field(field);
+  ret = trn_cell_extension_dos_encode(field_array,
+                 trn_cell_extension_field_getlen_field(field), dos_ext);
+  tor_assert(ret == dos_ext_encoded_len);
+
+  /* Finally, encode field into the cell extension. */
+  trn_cell_extension_add_fields(extensions, field);
+
+  /* We've just add an extension field to the cell extensions so increment the
+   * total number. */
+  trn_cell_extension_set_num(extensions,
+                             trn_cell_extension_get_num(extensions) + 1);
+
+  /* Cleanup. DoS extension has been encoded at this point. */
+  trn_cell_extension_dos_free(dos_ext);
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
+
+/* Allocate and build all the ESTABLISH_INTRO cell extension. The given
+ * extensions pointer is always set to a valid cell extension object. */
+STATIC trn_cell_extension_t *
+build_establish_intro_extensions(const hs_service_config_t *service_config,
+                                 const hs_service_intro_point_t *ip)
+{
+  trn_cell_extension_t *extensions;
+
+  tor_assert(service_config);
+  tor_assert(ip);
+
+  extensions = trn_cell_extension_new();
+  trn_cell_extension_set_num(extensions, 0);
+
+  /* If the defense has been enabled service side (by the operator with a
+   * torrc option) and the intro point does support it. */
+  if (service_config->has_dos_defense_enabled &&
+      ip->support_intro2_dos_defense) {
+    /* This function takes care to increment the number of extensions. */
+    build_establish_intro_dos_extension(service_config, extensions);
+  }
+
+  return extensions;
+}
 
 /* Build an ESTABLISH_INTRO cell with the given circuit nonce and intro point
  * object. The encoded cell is put in cell_out that MUST at least be of the
@@ -482,15 +584,17 @@ introduce1_set_legacy_id(trn_cell_introduce1_t *cell,
  * legacy cell creation. */
 ssize_t
 hs_cell_build_establish_intro(const char *circ_nonce,
+                              const hs_service_config_t *service_config,
                               const hs_service_intro_point_t *ip,
                               uint8_t *cell_out)
 {
   ssize_t cell_len = -1;
   uint16_t sig_len = ED25519_SIG_LEN;
-  trn_cell_extension_t *ext;
   trn_cell_establish_intro_t *cell = NULL;
+  trn_cell_extension_t *extensions;
 
   tor_assert(circ_nonce);
+  tor_assert(service_config);
   tor_assert(ip);
 
   /* Quickly handle the legacy IP. */
@@ -503,11 +607,12 @@ hs_cell_build_establish_intro(const char *circ_nonce,
     goto done;
   }
 
+  /* Build the extensions, if any. */
+  extensions = build_establish_intro_extensions(service_config, ip);
+
   /* Set extension data. None used here. */
-  ext = trn_cell_extension_new();
-  trn_cell_extension_set_num(ext, 0);
   cell = trn_cell_establish_intro_new();
-  trn_cell_establish_intro_set_extensions(cell, ext);
+  trn_cell_establish_intro_set_extensions(cell, extensions);
   /* Set signature size. Array is then allocated in the cell. We need to do
    * this early so we can use trunnel API to get the signature length. */
   trn_cell_establish_intro_set_sig_len(cell, sig_len);
@@ -515,7 +620,7 @@ hs_cell_build_establish_intro(const char *circ_nonce,
 
   /* Set AUTH_KEY_TYPE: 2 means ed25519 */
   trn_cell_establish_intro_set_auth_key_type(cell,
-                                             HS_INTRO_AUTH_KEY_TYPE_ED25519);
+                                    TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519);
 
   /* Set AUTH_KEY and AUTH_KEY_LEN field. Must also set byte-length of
    * AUTH_KEY to match */
@@ -889,9 +994,9 @@ hs_cell_parse_introduce_ack(const uint8_t *payload, size_t payload_len)
    * do a special case. */
   if (payload_len <= 1) {
     if (payload_len == 0) {
-      ret = HS_CELL_INTRO_ACK_SUCCESS;
+      ret = TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS;
     } else {
-      ret = HS_CELL_INTRO_ACK_FAILURE;
+      ret = TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID;
     }
     goto end;
   }

@@ -944,7 +944,7 @@ nodelist_ensure_freshness(networkstatus_t *ns)
 /** Return a list of a node_t * for every node we know about.  The caller
  * MUST NOT modify the list. (You can set and clear flags in the nodes if
  * you must, but you must not add or remove nodes.) */
-MOCK_IMPL(smartlist_t *,
+MOCK_IMPL(const smartlist_t *,
 nodelist_get_list,(void))
 {
   init_nodelist();
@@ -1106,7 +1106,7 @@ node_ed25519_id_matches(const node_t *node, const ed25519_public_key_t *id)
 /** Dummy object that should be unreturnable.  Used to ensure that
  * node_get_protover_summary_flags() always returns non-NULL. */
 static const protover_summary_flags_t zero_protover_flags = {
-  0,0,0,0,0,0,0,0
+  0,0,0,0,0,0,0,0,0
 };
 
 /** Return the protover_summary_flags for a given node. */
@@ -1164,6 +1164,17 @@ node_supports_ed25519_hs_intro(const node_t *node)
   tor_assert(node);
 
   return node_get_protover_summary_flags(node)->supports_ed25519_hs_intro;
+}
+
+/** Return true iff <b>node</b> supports the DoS ESTABLISH_INTRO cell
+ * extenstion. */
+int
+node_supports_establish_intro_dos_extension(const node_t *node)
+{
+  tor_assert(node);
+
+  return node_get_protover_summary_flags(node)->
+                           supports_establish_intro_dos_extension;
 }
 
 /** Return true iff <b>node</b> supports to be a rendezvous point for hidden
@@ -1424,8 +1435,7 @@ node_exit_policy_rejects_all(const node_t *node)
   if (node->ri)
     return node->ri->policy_is_reject_star;
   else if (node->md)
-    return node->md->exit_policy == NULL ||
-      short_policy_is_reject_star(node->md->exit_policy);
+    return node->md->policy_is_reject_star;
   else
     return 1;
 }
@@ -1859,7 +1869,7 @@ microdesc_has_curve25519_onion_key(const microdesc_t *md)
     return 0;
   }
 
-  if (tor_mem_is_zero((const char*)md->onion_curve25519_pkey->public_key,
+  if (fast_mem_is_zero((const char*)md->onion_curve25519_pkey->public_key,
                       CURVE25519_PUBKEY_LEN)) {
     return 0;
   }
@@ -1939,7 +1949,7 @@ node_set_country(node_t *node)
 void
 nodelist_refresh_countries(void)
 {
-  smartlist_t *nodes = nodelist_get_list();
+  const smartlist_t *nodes = nodelist_get_list();
   SMARTLIST_FOREACH(nodes, node_t *, node,
                     node_set_country(node));
 }

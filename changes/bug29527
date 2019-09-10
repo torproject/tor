@@ -1,5 +1,0 @@
-  o Minor features (circuit padding):
-    - Stop warning about undefined behavior in the probability distribution
-      tests. Float division by zero may technically be undefined behaviour in
-      C, but it's well-defined in IEEE 754. Partial backport of 29298.
-      Closes ticket 29527; bugfix on 0.4.0.1-alpha.

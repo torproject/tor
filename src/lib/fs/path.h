@@ -48,4 +48,4 @@ struct smartlist_t *get_files_in_folder(HANDLE handle,
                                         bool use_fullpath);
 #endif /* defined(_WIN32) */
 
-#endif
+#endif /* !defined(TOR_PATH_H) */

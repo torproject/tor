@@ -1,0 +1,3 @@
+  o Minor features (tests):
+    - Add integration tests to make sure that practracker gives the outputs
+      we expect. Closes ticket 31477.

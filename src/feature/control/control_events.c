@@ -24,10 +24,11 @@
 #include "feature/control/control.h"
 #include "feature/control/control_events.h"
 #include "feature/control/control_fmt.h"
+#include "feature/control/control_proto.h"
 #include "feature/dircommon/directory.h"
+#include "feature/nodelist/describe.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
-#include "feature/nodelist/routerinfo.h"
 
 #include "feature/control/control_connection_st.h"
 #include "core/or/entry_connection_st.h"
@@ -1286,7 +1287,7 @@ enable_control_logging(void)
 
 /** We got a log message: tell any interested control connections. */
 void
-control_event_logmsg(int severity, uint32_t domain, const char *msg)
+control_event_logmsg(int severity, log_domain_mask_t domain, const char *msg)
 {
   int event;
 

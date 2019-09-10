@@ -162,6 +162,8 @@ uptime-*.json
 /src/lib/libtor-buf-testing.a
 /src/lib/libtor-compress.a
 /src/lib/libtor-compress-testing.a
+/src/lib/libtor-confmgt.a
+/src/lib/libtor-confmgt-testing.a
 /src/lib/libtor-container.a
 /src/lib/libtor-container-testing.a
 /src/lib/libtor-crypt-ops.a

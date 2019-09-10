@@ -80,10 +80,10 @@
     tor__assert_tmp_value__;                    \
   } )
 #define ASSERT_PREDICT_LIKELY_(e) ASSERT_PREDICT_UNLIKELY_(e)
-#else
+#else /* !(defined(TOR_UNIT_TESTS) && defined(__GNUC__)) */
 #define ASSERT_PREDICT_UNLIKELY_(e) PREDICT_UNLIKELY(e)
 #define ASSERT_PREDICT_LIKELY_(e) PREDICT_LIKELY(e)
-#endif
+#endif /* defined(TOR_UNIT_TESTS) && defined(__GNUC__) */
 
 /* Sometimes we don't want to use assertions during branch coverage tests; it
  * leads to tons of unreached branches which in reality are only assertions we
@@ -96,7 +96,7 @@
   (void)(a);                                                            \
   (void)(fmt);                                                          \
   STMT_END
-#else
+#else /* !(defined(TOR_UNIT_TESTS) && ... */
 /** Like assert(3), but send assertion failures to the log as well as to
  * stderr. */
 #define tor_assert(expr) tor_assertf(expr, NULL)
@@ -106,7 +106,7 @@
   } else {                                                              \
     tor_assertion_failed_(SHORT_FILE__, __LINE__, __func__, #expr,      \
                           fmt, ##__VA_ARGS__);                          \
-    abort();                                                            \
+    tor_abort_();                                                        \
   } STMT_END
 #endif /* defined(TOR_UNIT_TESTS) && defined(DISABLE_ASSERTS_IN_UNIT_TESTS) */
 
@@ -114,7 +114,7 @@
   STMT_BEGIN {                                                  \
     tor_assertion_failed_(SHORT_FILE__, __LINE__, __func__,     \
                           "line should be unreached", NULL);    \
-    abort();                                                    \
+    tor_abort_();                                               \
   } STMT_END
 
 /* Non-fatal bug assertions. The "unreached" variants mean "this line should
@@ -143,13 +143,14 @@
 #ifdef ALL_BUGS_ARE_FATAL
 #define tor_assert_nonfatal_unreached() tor_assert(0)
 #define tor_assert_nonfatal(cond) tor_assert((cond))
-#define tor_assertf_nonfatal(cond, fmt, ...) tor_assertf(cond, fmt, ...)
+#define tor_assertf_nonfatal(cond, fmt, ...)    \
+  tor_assertf(cond, fmt, ##__VA_ARGS__)
 #define tor_assert_nonfatal_unreached_once() tor_assert(0)
 #define tor_assert_nonfatal_once(cond) tor_assert((cond))
 #define BUG(cond)                                                       \
   (ASSERT_PREDICT_UNLIKELY_(cond) ?                                     \
-   (tor_assertion_failed_(SHORT_FILE__,__LINE__,__func__,"!("#cond")"), \
-    abort(), 1)                                                         \
+   (tor_assertion_failed_(SHORT_FILE__,__LINE__,__func__,"!("#cond")",NULL), \
+    tor_abort_(), 1)                                                    \
    : 0)
 #elif defined(TOR_UNIT_TESTS) && defined(DISABLE_ASSERTS_IN_UNIT_TESTS)
 #define tor_assert_nonfatal_unreached() STMT_NIL
@@ -245,6 +246,8 @@ void tor_assertion_failed_(const char *fname, unsigned int line,
 void tor_bug_occurred_(const char *fname, unsigned int line,
                        const char *func, const char *expr,
                        int once, const char *fmt, ...);
+
+void tor_abort_(void) ATTR_NORETURN;
 
 #ifdef _WIN32
 #define SHORT_FILE__ (tor_fix_source_file(__FILE__))

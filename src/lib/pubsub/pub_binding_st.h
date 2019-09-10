@@ -35,4 +35,4 @@ typedef struct pub_binding_t {
   msg_t msg_template;
 } pub_binding_t;
 
-#endif
+#endif /* !defined(TOR_PUB_BINDING_ST_H) */

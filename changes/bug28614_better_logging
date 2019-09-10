@@ -1,6 +1,0 @@
-  o Minor bugfixes (logging):
-    - On Windows, when errors cause us to reload a consensus from disk, tell
-      the user that we are retrying at log level "notice". Previously we only
-      logged this information at "info", which was confusing because the
-      errors themselves were logged at "warning". Improves previous fix for
-      28614.  Fixes bug 30004; bugfix on 0.4.0.2-alpha.

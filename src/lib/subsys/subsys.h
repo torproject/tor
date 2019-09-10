@@ -92,4 +92,4 @@ typedef struct subsys_fns_t {
  * less than this value. */
 #define SUBSYS_LEVEL_LIBS -10
 
-#endif
+#endif /* !defined(TOR_SUBSYS_T) */

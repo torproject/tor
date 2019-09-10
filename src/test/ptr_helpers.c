@@ -3,7 +3,7 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "ptr_helpers.h"
+#include "test/ptr_helpers.h"
 
 /**
  * Cast <b> (inptr_t value) to a void pointer.

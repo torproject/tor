@@ -1,0 +1,4 @@
+  o Minor bugfixes (sendme, code structure):
+    - Rename the trunnel SENDME file definition from sendme.trunnel to
+      sendme_cell.trunnel to avoid having twice sendme.{c|h} in the repository.
+      Fixes bug 30769; bugfix on 0.4.1.1-alpha.

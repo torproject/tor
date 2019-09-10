@@ -154,14 +154,21 @@ tor_raw_assertion_failed_msg_(const char *file, int line, const char *expr,
 {
   char linebuf[16];
   format_dec_number_sigsafe(line, linebuf, sizeof(linebuf));
-  tor_log_err_sigsafe("INTERNAL ERROR: Raw assertion failed at ",
-                      file, ":", linebuf, ": ", expr, NULL);
+  tor_log_err_sigsafe("INTERNAL ERROR: Raw assertion failed in ",
+                      get_tor_backtrace_version(), " at ",
+                      file, ":", linebuf, ": ", expr, "\n", NULL);
   if (msg) {
     tor_log_err_sigsafe_write(msg);
     tor_log_err_sigsafe_write("\n");
   }
 
   dump_stack_symbols_to_error_fds();
+
+  /* Some platforms (macOS, maybe others?) can swallow the last write before an
+   * abort. This issue is probably caused by a race condition between write
+   * buffer cache flushing, and process termination. So we write an extra
+   * newline, to make sure that the message always gets through. */
+  tor_log_err_sigsafe_write("\n");
 }
 
 /* As format_{hex,dex}_number_sigsafe, but takes a <b>radix</b> argument
@@ -227,8 +234,7 @@ format_number_sigsafe(unsigned long x, char *buf, int buf_len,
  * does not guarantee that an int is wider than a char (an int must be at
  * least 16 bits but it is permitted for a char to be that wide as well), we
  * can't assume a signed int is sufficient to accommodate an unsigned char.
- * Thus, format_helper_exit_status() will still need to emit any require '-'
- * on its own.
+ * Thus, callers will still need to add any required '-' to the final string.
  *
  * For most purposes, you'd want to use tor_snprintf("%x") instead of this
  * function; it's designed to be used in code paths where you can't call

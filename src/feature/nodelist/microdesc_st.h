@@ -33,6 +33,8 @@ struct microdesc_t {
   unsigned int no_save : 1;
   /** If true, this microdesc has an entry in the microdesc_map */
   unsigned int held_in_map : 1;
+  /** True iff the exit policy for this router rejects everything. */
+  unsigned int policy_is_reject_star : 1;
   /** Reference count: how many node_ts have a reference to this microdesc? */
   unsigned int held_by_nodes;
 
@@ -78,4 +80,4 @@ struct microdesc_t {
   struct short_policy_t *ipv6_exit_policy;
 };
 
-#endif
+#endif /* !defined(MICRODESC_ST_H) */

@@ -1,3 +1,0 @@
-  o Minor features (developer tools):
-    - Add a script to check that each header has a well-formed and unique
-      guard marco. Closes ticket 29756.

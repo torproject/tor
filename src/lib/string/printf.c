@@ -117,8 +117,8 @@ tor_vasprintf(char **strp, const char *fmt, va_list args)
     *strp = NULL;
     return -1;
   }
-  strp_tmp = tor_malloc(len + 1);
-  r = _vsnprintf(strp_tmp, len+1, fmt, args);
+  strp_tmp = tor_malloc((size_t)len + 1);
+  r = _vsnprintf(strp_tmp, (size_t)len+1, fmt, args);
   if (r != len) {
     tor_free(strp_tmp);
     *strp = NULL;
@@ -131,21 +131,31 @@ tor_vasprintf(char **strp, const char *fmt, va_list args)
    * characters we need.  We give it a try on a short buffer first, since
    * it might be nice to avoid the second vsnprintf call.
    */
+  /* XXXX This code spent a number of years broken (see bug 30651). It is
+   * possible that no Tor users actually run on systems without vasprintf() or
+   * _vscprintf(). If so, we should consider removing this code. */
   char buf[128];
   int len, r;
   va_list tmp_args;
   va_copy(tmp_args, args);
-  /* vsnprintf() was properly checked but tor_vsnprintf() available so
-   * why not use it? */
-  len = tor_vsnprintf(buf, sizeof(buf), fmt, tmp_args);
+  /* Use vsnprintf to retrieve needed length.  tor_vsnprintf() is not an
+   * option here because it will simply return -1 if buf is not large enough
+   * to hold the complete string.
+   */
+  len = vsnprintf(buf, sizeof(buf), fmt, tmp_args);
   va_end(tmp_args);
+  buf[sizeof(buf) - 1] = '\0';
+  if (len < 0) {
+    *strp = NULL;
+    return -1;
+  }
   if (len < (int)sizeof(buf)) {
     *strp = tor_strdup(buf);
     return len;
   }
-  strp_tmp = tor_malloc(len+1);
+  strp_tmp = tor_malloc((size_t)len+1);
   /* use of tor_vsnprintf() will ensure string is null terminated */
-  r = tor_vsnprintf(strp_tmp, len+1, fmt, args);
+  r = tor_vsnprintf(strp_tmp, (size_t)len+1, fmt, args);
   if (r != len) {
     tor_free(strp_tmp);
     *strp = NULL;

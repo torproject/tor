@@ -1,3 +1,0 @@
-  o Minor bugfixes (testing, v3 onion services):
-    - Fix some incorrect code in the v3 onion service unit tests.
-      Fixes bug 29243; bugfix on 0.3.2.1-alpha.

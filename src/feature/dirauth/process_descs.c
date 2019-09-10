@@ -216,9 +216,14 @@ dirserv_load_fingerprint_file(void)
 
 #define DISABLE_DISABLING_ED25519
 
-/** Check whether <b>router</b> has a nickname/identity key combination that
- * we recognize from the fingerprint list, or an IP we automatically act on
- * according to our configuration.  Return the appropriate router status.
+/** Check whether <b>router</b> has:
+ * - a nickname/identity key combination that we recognize from the fingerprint
+ *   list,
+ * - an IP we automatically act on according to our configuration,
+ * - an appropriate version, and
+ * - matching pinned keys.
+ *
+ * Return the appropriate router status.
  *
  * If the status is 'FP_REJECT' and <b>msg</b> is provided, set
  * *<b>msg</b> to an explanation of why. */
@@ -236,7 +241,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
     return FP_REJECT;
   }
 
-  /* Check for the more usual versions to reject a router first. */
+  /* Check for the more common reasons to reject a router first. */
   const uint32_t r = dirserv_get_status_impl(d, router->nickname,
                                              router->addr, router->or_port,
                                              router->platform, msg, severity);
@@ -423,7 +428,7 @@ dirserv_free_fingerprint_list(void)
 
 /** Return -1 if <b>ri</b> has a private or otherwise bad address,
  * unless we're configured to not care. Return 0 if all ok. */
-static int
+STATIC int
 dirserv_router_has_valid_address(routerinfo_t *ri)
 {
   tor_addr_t addr;
@@ -431,12 +436,22 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
     return 0; /* whatever it is, we're fine with it */
   tor_addr_from_ipv4h(&addr, ri->addr);
 
-  if (tor_addr_is_internal(&addr, 0)) {
+  if (tor_addr_is_internal(&addr, 0) || tor_addr_is_null(&addr)) {
     log_info(LD_DIRSERV,
-             "Router %s published internal IP address. Refusing.",
+             "Router %s published internal IPv4 address. Refusing.",
              router_describe(ri));
     return -1; /* it's a private IP, we should reject it */
   }
+  /* We only check internal v6 on non-null addresses because we do not require
+   * IPv6 and null IPv6 is normal. */
+  if (tor_addr_is_internal(&ri->ipv6_addr, 0) &&
+      !tor_addr_is_null(&ri->ipv6_addr)) {
+    log_info(LD_DIRSERV,
+             "Router %s published internal IPv6 address. Refusing.",
+             router_describe(ri));
+    return -1; /* it's a private IP, we should reject it */
+  }
+
   return 0;
 }
 
@@ -535,7 +550,7 @@ dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
   int general = purpose == ROUTER_PURPOSE_GENERAL;
   tor_assert(msg);
 
-  r=ROUTER_ADDED_SUCCESSFULLY; /*Least severe return value. */
+  r=ROUTER_ADDED_SUCCESSFULLY; /* Least severe return value. */
 
   if (!string_is_utf8_no_bom(desc, desclen)) {
     *msg = "descriptor(s) or extrainfo(s) not valid UTF-8 or had BOM.";
@@ -551,9 +566,7 @@ dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
                    !general ? router_purpose_to_string(purpose) : "",
                    !general ? "\n" : "")<0) {
     *msg = "Couldn't format annotations";
-    /* XXX Not cool: we return -1 below, but (was_router_added_t)-1 is
-     * ROUTER_BAD_EI, which isn't what's gone wrong here. :( */
-    return -1;
+    return ROUTER_AUTHDIR_BUG_ANNOTATIONS;
   }
 
   s = desc;

@@ -1,0 +1,4 @@
+  o Minor bugfixes (operator tools):
+    - Make tor-print-ed-signing-cert(1) print certificate expiration date in
+      RFC 1123 and UNIX timestamp formats, to make output machine readable.
+      Fixes bug 31012; bugfix on 0.3.5.1-alpha.

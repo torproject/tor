@@ -1,7 +1,0 @@
-  o Minor bugfixes (onion services):
-    - If we are relaunching a circuit to a rendevous service in
-      rend_service_relaunch_rendezvous() and hs_service_requires_uptime_circ()
-      is true, the CIRCLAUNCH_NEED_UPTIME flag is added to the circuit.
-      Previously, we only set this flag when we received a INTRODUCE2
-      cell in rend_service_receive_introduction(). Fixes bug 17357;
-      bugfix on 0.4.0.2-alpha. Patch by Neel Chauhan

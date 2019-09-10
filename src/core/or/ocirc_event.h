@@ -12,6 +12,7 @@
 #include <stdbool.h>
 
 #include "lib/cc/torint.h"
+#include "lib/pubsub/pubsub.h"
 
 /** Used to indicate the type of a circuit event passed to the controller.
  * The various types are defined in control-spec.txt */
@@ -30,6 +31,8 @@ typedef struct ocirc_state_msg_t {
   bool onehop;        /**< one-hop circuit? */
 } ocirc_state_msg_t;
 
+DECLARE_MESSAGE(ocirc_state, ocirc_state, ocirc_state_msg_t *);
+
 /**
  * Message when a channel gets associated to a circuit.
  *
@@ -44,6 +47,8 @@ typedef struct ocirc_chan_msg_t {
   bool onehop;                  /**< one-hop circuit? */
 } ocirc_chan_msg_t;
 
+DECLARE_MESSAGE(ocirc_chan, ocirc_chan, ocirc_chan_msg_t *);
+
 /**
  * Message for origin circuit status event
  *
@@ -56,34 +61,12 @@ typedef struct ocirc_cevent_msg_t {
   bool onehop;                  /**< one-hop circuit? */
 } ocirc_cevent_msg_t;
 
-/** Discriminant values for origin circuit event message */
-typedef enum ocirc_msgtype_t {
-  OCIRC_MSGTYPE_STATE,
-  OCIRC_MSGTYPE_CHAN,
-  OCIRC_MSGTYPE_CEVENT,
-} ocirc_msgtype_t;
-
-/** Discriminated union for the actual message */
-typedef struct ocirc_event_msg_t {
-  int type;
-  union {
-    ocirc_state_msg_t state;
-    ocirc_chan_msg_t chan;
-    ocirc_cevent_msg_t cevent;
-  } u;
-} ocirc_event_msg_t;
-
-/**
- * Receiver function pointer for origin circuit subscribers
- *
- * This function gets called synchronously by the publisher.
- **/
-typedef void (*ocirc_event_rcvr_t)(const ocirc_event_msg_t *);
-
-void ocirc_event_subscribe(ocirc_event_rcvr_t fn);
+DECLARE_MESSAGE(ocirc_cevent, ocirc_cevent, ocirc_cevent_msg_t *);
 
 #ifdef OCIRC_EVENT_PRIVATE
-void ocirc_event_publish(const ocirc_event_msg_t *msg);
+void ocirc_state_publish(ocirc_state_msg_t *msg);
+void ocirc_chan_publish(ocirc_chan_msg_t *msg);
+void ocirc_cevent_publish(ocirc_cevent_msg_t *msg);
 #endif
 
-#endif  /* defined(TOR_OCIRC_EVENT_STATE_H) */
+#endif /* !defined(TOR_OCIRC_EVENT_H) */

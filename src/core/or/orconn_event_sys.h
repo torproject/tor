@@ -9,4 +9,4 @@
 
 extern const struct subsys_fns_t sys_orconn_event;
 
-#endif  /* defined(TOR_ORCONN_SYS_H) */
+#endif /* !defined(TOR_ORCONN_EVENT_SYS_H) */

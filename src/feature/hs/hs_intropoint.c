@@ -10,6 +10,7 @@
 
 #include "core/or/or.h"
 #include "app/config/config.h"
+#include "core/or/channel.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "core/or/relay.h"
@@ -24,9 +25,11 @@
 #include "trunnel/hs/cell_introduce1.h"
 
 #include "feature/hs/hs_circuitmap.h"
-#include "feature/hs/hs_descriptor.h"
-#include "feature/hs/hs_intropoint.h"
 #include "feature/hs/hs_common.h"
+#include "feature/hs/hs_config.h"
+#include "feature/hs/hs_descriptor.h"
+#include "feature/hs/hs_dos.h"
+#include "feature/hs/hs_intropoint.h"
 
 #include "core/or/or_circuit_st.h"
 
@@ -78,7 +81,7 @@ verify_establish_intro_cell(const trn_cell_establish_intro_t *cell,
   /* We only reach this function if the first byte of the cell is 0x02 which
    * means that auth_key_type is of ed25519 type, hence this check should
    * always pass. See hs_intro_received_establish_intro().  */
-  if (BUG(cell->auth_key_type != HS_INTRO_AUTH_KEY_TYPE_ED25519)) {
+  if (BUG(cell->auth_key_type != TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519)) {
     return -1;
   }
 
@@ -179,6 +182,185 @@ hs_intro_send_intro_established_cell,(or_circuit_t *circ))
   return ret;
 }
 
+/* Validate the cell DoS extension parameters. Return true iff they've been
+ * bound check and can be used. Else return false. See proposal 305 for
+ * details and reasons about this validation. */
+STATIC bool
+cell_dos_extension_parameters_are_valid(uint64_t intro2_rate_per_sec,
+                                        uint64_t intro2_burst_per_sec)
+{
+  bool ret = false;
+
+  /* Check that received value is not below the minimum. Don't check if minimum
+     is set to 0, since the param is a positive value and gcc will complain. */
+#if HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN > 0
+  if (intro2_rate_per_sec < HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN) {
+    log_fn(LOG_PROTOCOL_WARN, LD_REND,
+           "Intro point DoS defenses rate per second is "
+           "too small. Received value: %" PRIu64, intro2_rate_per_sec);
+    goto end;
+  }
+#endif
+
+  /* Check that received value is not above maximum */
+  if (intro2_rate_per_sec > HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX) {
+    log_fn(LOG_PROTOCOL_WARN, LD_REND,
+           "Intro point DoS defenses rate per second is "
+           "too big. Received value: %" PRIu64, intro2_rate_per_sec);
+    goto end;
+  }
+
+  /* Check that received value is not below the minimum */
+#if HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN > 0
+  if (intro2_burst_per_sec < HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN) {
+    log_fn(LOG_PROTOCOL_WARN, LD_REND,
+           "Intro point DoS defenses burst per second is "
+           "too small. Received value: %" PRIu64, intro2_burst_per_sec);
+    goto end;
+  }
+#endif
+
+  /* Check that received value is not above maximum */
+  if (intro2_burst_per_sec > HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MAX) {
+    log_fn(LOG_PROTOCOL_WARN, LD_REND,
+           "Intro point DoS defenses burst per second is "
+           "too big. Received value: %" PRIu64, intro2_burst_per_sec);
+    goto end;
+  }
+
+  /* In a rate limiting scenario, burst can never be smaller than the rate. At
+   * best it can be equal. */
+  if (intro2_burst_per_sec < intro2_rate_per_sec) {
+    log_info(LD_REND, "Intro point DoS defenses burst is smaller than rate. "
+                      "Rate: %" PRIu64 " vs Burst: %" PRIu64,
+             intro2_rate_per_sec, intro2_burst_per_sec);
+    goto end;
+  }
+
+  /* Passing validation. */
+  ret = true;
+
+ end:
+  return ret;
+}
+
+/* Parse the cell DoS extension and apply defenses on the given circuit if
+ * validation passes. If the cell extension is malformed or contains unusable
+ * values, the DoS defenses is disabled on the circuit. */
+static void
+handle_establish_intro_cell_dos_extension(
+                                const trn_cell_extension_field_t *field,
+                                or_circuit_t *circ)
+{
+  ssize_t ret;
+  uint64_t intro2_rate_per_sec = 0, intro2_burst_per_sec = 0;
+  trn_cell_extension_dos_t *dos = NULL;
+
+  tor_assert(field);
+  tor_assert(circ);
+
+  ret = trn_cell_extension_dos_parse(&dos,
+                 trn_cell_extension_field_getconstarray_field(field),
+                 trn_cell_extension_field_getlen_field(field));
+  if (ret < 0) {
+    goto end;
+  }
+
+  for (size_t i = 0; i < trn_cell_extension_dos_get_n_params(dos); i++) {
+    const trn_cell_extension_dos_param_t *param =
+      trn_cell_extension_dos_getconst_params(dos, i);
+    if (BUG(param == NULL)) {
+      goto end;
+    }
+
+    switch (trn_cell_extension_dos_param_get_type(param)) {
+    case TRUNNEL_DOS_PARAM_TYPE_INTRO2_RATE_PER_SEC:
+      intro2_rate_per_sec = trn_cell_extension_dos_param_get_value(param);
+      break;
+    case TRUNNEL_DOS_PARAM_TYPE_INTRO2_BURST_PER_SEC:
+      intro2_burst_per_sec = trn_cell_extension_dos_param_get_value(param);
+      break;
+    default:
+      goto end;
+    }
+  }
+
+  /* A value of 0 is valid in the sense that we accept it but we still disable
+   * the defenses so return false. */
+  if (intro2_rate_per_sec == 0 || intro2_burst_per_sec == 0) {
+    log_info(LD_REND, "Intro point DoS defenses parameter set to 0. "
+                      "Disabling INTRO2 DoS defenses on circuit id %u",
+             circ->p_circ_id);
+    circ->introduce2_dos_defense_enabled = 0;
+    goto end;
+  }
+
+  /* If invalid, we disable the defense on the circuit. */
+  if (!cell_dos_extension_parameters_are_valid(intro2_rate_per_sec,
+                                               intro2_burst_per_sec)) {
+    circ->introduce2_dos_defense_enabled = 0;
+    log_info(LD_REND, "Disabling INTRO2 DoS defenses on circuit id %u",
+             circ->p_circ_id);
+    goto end;
+  }
+
+  /* We passed validation, enable defenses and apply rate/burst. */
+  circ->introduce2_dos_defense_enabled = 1;
+
+  /* Initialize the INTRODUCE2 token bucket for the rate limiting. */
+  token_bucket_ctr_init(&circ->introduce2_bucket,
+                        (uint32_t) intro2_rate_per_sec,
+                        (uint32_t) intro2_burst_per_sec,
+                        (uint32_t) approx_time());
+  log_info(LD_REND, "Intro point DoS defenses enabled. Rate is %" PRIu64
+                    " and Burst is %" PRIu64,
+           intro2_rate_per_sec, intro2_burst_per_sec);
+
+ end:
+  trn_cell_extension_dos_free(dos);
+  return;
+}
+
+/* Parse every cell extension in the given ESTABLISH_INTRO cell. */
+static void
+handle_establish_intro_cell_extensions(
+                            const trn_cell_establish_intro_t *parsed_cell,
+                            or_circuit_t *circ)
+{
+  const trn_cell_extension_t *extensions;
+
+  tor_assert(parsed_cell);
+  tor_assert(circ);
+
+  extensions = trn_cell_establish_intro_getconst_extensions(parsed_cell);
+  if (extensions == NULL) {
+    goto end;
+  }
+
+  /* Go over all extensions. */
+  for (size_t idx = 0; idx < trn_cell_extension_get_num(extensions); idx++) {
+    const trn_cell_extension_field_t *field =
+      trn_cell_extension_getconst_fields(extensions, idx);
+    if (BUG(field == NULL)) {
+      /* The number of extensions should match the number of fields. */
+      break;
+    }
+
+    switch (trn_cell_extension_field_get_field_type(field)) {
+    case TRUNNEL_CELL_EXTENSION_TYPE_DOS:
+      /* After this, the circuit should be set for DoS defenses. */
+      handle_establish_intro_cell_dos_extension(field, circ);
+      break;
+    default:
+      /* Unknown extension. Skip over. */
+      break;
+    }
+  }
+
+ end:
+  return;
+}
+
 /** We received an ESTABLISH_INTRO <b>parsed_cell</b> on <b>circ</b>. It's
  *  well-formed and passed our verifications. Perform appropriate actions to
  *  establish an intro point. */
@@ -190,6 +372,13 @@ handle_verified_establish_intro_cell(or_circuit_t *circ,
   ed25519_public_key_t auth_key;
   get_auth_key_from_cell(&auth_key, RELAY_COMMAND_ESTABLISH_INTRO,
                          parsed_cell);
+
+  /* Setup INTRODUCE2 defenses on the circuit. Must be done before parsing the
+   * cell extension that can possibly change the defenses' values. */
+  hs_dos_setup_default_intro2_defenses(circ);
+
+  /* Handle cell extension if any. */
+  handle_establish_intro_cell_extensions(parsed_cell, circ);
 
   /* Then notify the hidden service that the intro point is established by
      sending an INTRO_ESTABLISHED cell */
@@ -318,10 +507,10 @@ hs_intro_received_establish_intro(or_circuit_t *circ, const uint8_t *request,
    * ESTABLISH_INTRO and pass it to the appropriate cell handler */
   const uint8_t first_byte = request[0];
   switch (first_byte) {
-    case HS_INTRO_AUTH_KEY_TYPE_LEGACY0:
-    case HS_INTRO_AUTH_KEY_TYPE_LEGACY1:
+    case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0:
+    case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1:
       return rend_mid_establish_intro_legacy(circ, request, request_len);
-    case HS_INTRO_AUTH_KEY_TYPE_ED25519:
+    case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519:
       return handle_establish_intro(circ, request, request_len);
     default:
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
@@ -339,7 +528,7 @@ hs_intro_received_establish_intro(or_circuit_t *circ, const uint8_t *request,
  * Return 0 on success else a negative value on error which will close the
  * circuit. */
 static int
-send_introduce_ack_cell(or_circuit_t *circ, hs_intro_ack_status_t status)
+send_introduce_ack_cell(or_circuit_t *circ, uint16_t status)
 {
   int ret = -1;
   uint8_t *encoded_cell = NULL;
@@ -392,14 +581,14 @@ validate_introduce1_parsed_cell(const trn_cell_introduce1_t *cell)
    * safety net here. The legacy ID must be zeroes in this case. */
   legacy_key_id_len = trn_cell_introduce1_getlen_legacy_key_id(cell);
   legacy_key_id = trn_cell_introduce1_getconstarray_legacy_key_id(cell);
-  if (BUG(!tor_mem_is_zero((char *) legacy_key_id, legacy_key_id_len))) {
+  if (BUG(!fast_mem_is_zero((char *) legacy_key_id, legacy_key_id_len))) {
     goto invalid;
   }
 
   /* The auth key of an INTRODUCE1 should be of type ed25519 thus leading to a
    * known fixed length as well. */
   if (trn_cell_introduce1_get_auth_key_type(cell) !=
-      HS_INTRO_AUTH_KEY_TYPE_ED25519) {
+      TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Rejecting invalid INTRODUCE1 cell auth key type. "
            "Responding with NACK.");
@@ -436,7 +625,7 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
   int ret = -1;
   or_circuit_t *service_circ;
   trn_cell_introduce1_t *parsed_cell;
-  hs_intro_ack_status_t status = HS_INTRO_ACK_STATUS_SUCCESS;
+  uint16_t status = TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS;
 
   tor_assert(client_circ);
   tor_assert(request);
@@ -451,14 +640,14 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
            "Rejecting %s INTRODUCE1 cell. Responding with NACK.",
            cell_size == -1 ? "invalid" : "truncated");
     /* Inform client that the INTRODUCE1 has a bad format. */
-    status = HS_INTRO_ACK_STATUS_BAD_FORMAT;
+    status = TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT;
     goto send_ack;
   }
 
   /* Once parsed validate the cell format. */
   if (validate_introduce1_parsed_cell(parsed_cell) < 0) {
     /* Inform client that the INTRODUCE1 has bad format. */
-    status = HS_INTRO_ACK_STATUS_BAD_FORMAT;
+    status = TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT;
     goto send_ack;
   }
 
@@ -475,9 +664,23 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
                         "Responding with NACK.",
                safe_str(b64_key), client_circ->p_circ_id);
       /* Inform the client that we don't know the requested service ID. */
-      status = HS_INTRO_ACK_STATUS_UNKNOWN_ID;
+      status = TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID;
       goto send_ack;
     }
+  }
+
+  /* Before sending, lets make sure this cell can be sent on the service
+   * circuit asking the DoS defenses. */
+  if (!hs_dos_can_send_intro2(service_circ)) {
+    char *msg;
+    static ratelim_t rlimit = RATELIM_INIT(5 * 60);
+    if ((msg = rate_limit_log(&rlimit, approx_time()))) {
+      log_info(LD_PROTOCOL, "Can't relay INTRODUCE1 v3 cell due to DoS "
+                            "limitations. Sending NACK to client.");
+      tor_free(msg);
+    }
+    status = TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID;
+    goto send_ack;
   }
 
   /* Relay the cell to the service on its intro circuit with an INTRODUCE2
@@ -486,13 +689,14 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
                                    RELAY_COMMAND_INTRODUCE2,
                                    (char *) request, request_len, NULL)) {
     log_warn(LD_PROTOCOL, "Unable to send INTRODUCE2 cell to the service.");
-    /* Inform the client that we can't relay the cell. */
-    status = HS_INTRO_ACK_STATUS_CANT_RELAY;
+    /* Inform the client that we can't relay the cell. Use the unknown ID
+     * status code since it means that we do not know the service. */
+    status = TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID;
     goto send_ack;
   }
 
   /* Success! Send an INTRODUCE_ACK success status onto the client circuit. */
-  status = HS_INTRO_ACK_STATUS_SUCCESS;
+  status = TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS;
   ret = 0;
 
  send_ack:
@@ -517,7 +721,7 @@ introduce1_cell_is_legacy(const uint8_t *request)
 
   /* If the first 20 bytes of the cell (DIGEST_LEN) are NOT zeroes, it
    * indicates a legacy cell (v2). */
-  if (!tor_mem_is_zero((const char *) request, DIGEST_LEN)) {
+  if (!fast_mem_is_zero((const char *) request, DIGEST_LEN)) {
     /* Legacy cell. */
     return 1;
   }
@@ -542,6 +746,14 @@ circuit_is_suitable_for_introduce1(const or_circuit_t *circ)
            "Blocking multiple introductions on the same circuit. "
            "Someone might be trying to attack a hidden service through "
            "this relay.");
+    return 0;
+  }
+
+  /* Disallow single hop client circuit. */
+  if (circ->p_chan && channel_is_client(circ->p_chan)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Single hop client was rejected while trying to introduce. "
+           "Closing circuit.");
     return 0;
   }
 

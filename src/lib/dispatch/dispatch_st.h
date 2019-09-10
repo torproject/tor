@@ -103,6 +103,6 @@ struct dispatch_t {
   dispatch_typefns_t *typefns;
 };
 
-#endif
+#endif /* defined(DISPATCH_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_DISPATCH_ST_H) */

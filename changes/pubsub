@@ -1,5 +1,0 @@
-  o Major features (code organization):
-    - Tor now includes a generic publish-subscribe message-passing subsystem
-      that we can use to organize intermodule dependencies.  We hope to use
-      this to reduce dependencies between modules that don't need to be
-      related, and to generally simplify our codebase. Closes ticket 28226.

@@ -87,6 +87,13 @@ uint64_t siphash24(const void *src, unsigned long src_sz, const struct sipkey *k
 		v0 ^= mi;
 	}
 
+#ifdef __COVERITY__
+	{
+		uint64_t mi = 0;
+		memcpy(&mi, m+i, (src_sz-blocks));
+		last7 = _le64toh(mi) | (uint64_t)(src_sz & 0xff) << 56;
+	}
+#else
 	switch (src_sz - blocks) {
 		case 7: last7 |= (uint64_t)m[i + 6] << 48; /* Falls through. */
 		case 6: last7 |= (uint64_t)m[i + 5] << 40; /* Falls through. */
@@ -98,6 +105,7 @@ uint64_t siphash24(const void *src, unsigned long src_sz, const struct sipkey *k
 		case 0:
 		default:;
 	}
+#endif
 	v3 ^= last7;
 	DOUBLE_ROUND(v0,v1,v2,v3);
 	v0 ^= last7;

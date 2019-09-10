@@ -1,4 +1,0 @@
-  o Minor features (performance):
-    - Use OpenSSL's implementations of SHA3 when available (in OpenSSL 1.1.1
-      and later), since they tend to be faster than tiny-keccak. Closes
-      ticket 28837.

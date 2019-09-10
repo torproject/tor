@@ -1,4 +1,0 @@
-  o Minor features (controller):
-    - Add onion service version 3 support to HSFETCH. Previously, only
-      version 2 onion services were supported. Closes ticket 25417.
-      Patch by Neel Chauhan

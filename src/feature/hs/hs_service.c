@@ -242,6 +242,9 @@ set_service_default_config(hs_service_config_t *c,
   c->is_single_onion = 0;
   c->dir_group_readable = 0;
   c->is_ephemeral = 0;
+  c->has_dos_defense_enabled = HS_CONFIG_V3_DOS_DEFENSE_DEFAULT;
+  c->intro_dos_rate_per_sec = HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_DEFAULT;
+  c->intro_dos_burst_per_sec = HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_DEFAULT;
 }
 
 /* From a service configuration object config, clear everything from it
@@ -488,6 +491,10 @@ service_intro_point_new(const node_t *node)
       goto err;
     }
   }
+
+  /* Flag if this intro point supports the INTRO2 dos defenses. */
+  ip->support_intro2_dos_defense =
+    node_supports_establish_intro_dos_extension(node);
 
   /* Finally, copy onion key from the node. */
   memcpy(&ip->onion_key, node_get_curve25519_onion_key(node),
@@ -1229,16 +1236,16 @@ load_client_keys(hs_service_t *service)
     client_key_file_path = hs_path_from_filename(client_keys_dir_path,
                                                  filename);
     client_key_str = read_file_to_str(client_key_file_path, 0, NULL);
-    /* Free immediately after using it. */
-    tor_free(client_key_file_path);
 
     /* If we cannot read the file, continue with the next file. */
-    if (!client_key_str)  {
+    if (!client_key_str) {
       log_warn(LD_REND, "Client authorization file %s can't be read. "
                         "Corrupted or verify permission? Ignoring.",
                client_key_file_path);
+      tor_free(client_key_file_path);
       continue;
     }
+    tor_free(client_key_file_path);
 
     client = parse_authorized_client(client_key_str);
     /* Wipe and free immediately after using it. */
@@ -1746,7 +1753,7 @@ build_service_desc_superencrypted(const hs_service_t *service,
          sizeof(curve25519_public_key_t));
 
   /* Test that subcred is not zero because we might use it below */
-  if (BUG(tor_mem_is_zero((char*)desc->desc->subcredential, DIGEST256_LEN))) {
+  if (BUG(fast_mem_is_zero((char*)desc->desc->subcredential, DIGEST256_LEN))) {
     return -1;
   }
 
@@ -1812,9 +1819,9 @@ build_service_desc_plaintext(const hs_service_t *service,
 
   tor_assert(service);
   tor_assert(desc);
-  tor_assert(!tor_mem_is_zero((char *) &desc->blinded_kp,
+  tor_assert(!fast_mem_is_zero((char *) &desc->blinded_kp,
                               sizeof(desc->blinded_kp)));
-  tor_assert(!tor_mem_is_zero((char *) &desc->signing_kp,
+  tor_assert(!fast_mem_is_zero((char *) &desc->signing_kp,
                               sizeof(desc->signing_kp)));
 
   /* Set the subcredential. */
@@ -1864,7 +1871,7 @@ build_service_desc_keys(const hs_service_t *service,
   ed25519_keypair_t kp;
 
   tor_assert(desc);
-  tor_assert(!tor_mem_is_zero((char *) &service->keys.identity_pk,
+  tor_assert(!fast_mem_is_zero((char *) &service->keys.identity_pk,
              ED25519_PUBKEY_LEN));
 
   /* XXX: Support offline key feature (#18098). */
@@ -2071,6 +2078,7 @@ build_all_descriptors(time_t now)
 static hs_service_intro_point_t *
 pick_intro_point(unsigned int direct_conn, smartlist_t *exclude_nodes)
 {
+  const or_options_t *options = get_options();
   const node_t *node;
   hs_service_intro_point_t *ip = NULL;
   /* Normal 3-hop introduction point flags. */
@@ -2078,11 +2086,19 @@ pick_intro_point(unsigned int direct_conn, smartlist_t *exclude_nodes)
   /* Single onion flags. */
   router_crn_flags_t direct_flags = flags | CRN_PREF_ADDR | CRN_DIRECT_CONN;
 
-  node = router_choose_random_node(exclude_nodes, get_options()->ExcludeNodes,
+  node = router_choose_random_node(exclude_nodes, options->ExcludeNodes,
                                    direct_conn ? direct_flags : flags);
-  /* Unable to find a node. When looking for a node for a direct connection,
-   * we could try a 3-hop path instead. We'll add support for this in a later
-   * release. */
+
+  /* If we are in single onion mode, retry node selection for a 3-hop
+   * path */
+  if (direct_conn && !node) {
+    log_info(LD_REND,
+             "Unable to find an intro point that we can connect to "
+             "directly, falling back to a 3-hop path.");
+    node = router_choose_random_node(exclude_nodes, options->ExcludeNodes,
+                                     flags);
+  }
+
   if (!node) {
     goto err;
   }
@@ -2583,7 +2599,7 @@ launch_intro_point_circuits(hs_service_t *service)
    * circuits using the current map. */
   FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
     /* Keep a ref on if we need a direct connection. We use this often. */
-    unsigned int direct_conn = service->config.is_single_onion;
+    bool direct_conn = service->config.is_single_onion;
 
     DIGEST256MAP_FOREACH_MODIFY(desc->intro_points.map, key,
                                 hs_service_intro_point_t *, ip) {
@@ -2594,8 +2610,15 @@ launch_intro_point_circuits(hs_service_t *service)
       if (hs_circ_service_get_intro_circ(ip)) {
         continue;
       }
-
       ei = get_extend_info_from_intro_point(ip, direct_conn);
+
+      /* If we can't connect directly to the intro point, get an extend_info
+       * for a multi-hop path instead. */
+      if (ei == NULL && direct_conn) {
+        direct_conn = false;
+        ei = get_extend_info_from_intro_point(ip, 0);
+      }
+
       if (ei == NULL) {
         /* This is possible if we can get a node_t but not the extend info out
          * of it. In this case, we remove the intro point and a new one will
@@ -2607,7 +2630,7 @@ launch_intro_point_circuits(hs_service_t *service)
 
       /* Launch a circuit to the intro point. */
       ip->circuit_retries++;
-      if (hs_circ_launch_intro_point(service, ip, ei) < 0) {
+      if (hs_circ_launch_intro_point(service, ip, ei, direct_conn) < 0) {
         log_info(LD_REND, "Unable to launch intro circuit to node %s "
                           "for service %s.",
                  safe_str_client(extend_info_describe(ei)),

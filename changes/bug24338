@@ -1,4 +1,0 @@
-  o Minor bugfixes (dirauth, ipv6):
-    - If we are a durauth with IPv6 and are marking relays as running, mark
-      ourselves as reachable on IPv6. Fixes bug 24338; bugfix on 0.4.0.2-alpha.
-      Patch by Neel Chauhan

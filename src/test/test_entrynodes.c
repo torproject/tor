@@ -5,6 +5,7 @@
 
 #define CIRCUITLIST_PRIVATE
 #define CIRCUITBUILD_PRIVATE
+#define CONFIG_PRIVATE
 #define STATEFILE_PRIVATE
 #define ENTRYNODES_PRIVATE
 #define ROUTERLIST_PRIVATE
@@ -67,7 +68,7 @@ static networkstatus_t *dummy_consensus = NULL;
 
 static smartlist_t *big_fake_net_nodes = NULL;
 
-static smartlist_t *
+static const smartlist_t *
 bfn_mock_nodelist_get_list(void)
 {
   return big_fake_net_nodes;
@@ -197,10 +198,11 @@ big_fake_network_setup(const struct testcase_t *testcase)
       n->md->exit_policy = parse_short_policy("accept 443");
     }
 
+    n->nodelist_idx = smartlist_len(big_fake_net_nodes);
     smartlist_add(big_fake_net_nodes, n);
   }
 
-  dummy_state = tor_malloc_zero(sizeof(or_state_t));
+  dummy_state = or_state_new();
   dummy_consensus = tor_malloc_zero(sizeof(networkstatus_t));
   if (reasonably_future_consensus) {
     /* Make the dummy consensus valid in 6 hours, and expiring in 7 hours. */
@@ -234,12 +236,12 @@ mock_randomize_time_no_randomization(time_t a, time_t b)
   return a;
 }
 
-static or_options_t mocked_options;
+static or_options_t *mocked_options;
 
 static const or_options_t *
 mock_get_options(void)
 {
-  return &mocked_options;
+  return mocked_options;
 }
 
 #define TEST_IPV4_ADDR "123.45.67.89"
@@ -258,7 +260,7 @@ test_node_preferred_orport(void *arg)
   tor_addr_port_t ap;
 
   /* Setup options */
-  memset(&mocked_options, 0, sizeof(mocked_options));
+  mocked_options = options_new();
   /* We don't test ClientPreferIPv6ORPort here, because it's used in
    * nodelist_set_consensus to setup node.ipv6_preferred, which we set
    * directly. */
@@ -281,8 +283,8 @@ test_node_preferred_orport(void *arg)
 
   /* Check the preferred address is IPv4 if we're only using IPv4, regardless
    * of whether we prefer it or not */
-  mocked_options.ClientUseIPv4 = 1;
-  mocked_options.ClientUseIPv6 = 0;
+  mocked_options->ClientUseIPv4 = 1;
+  mocked_options->ClientUseIPv6 = 0;
   node.ipv6_preferred = 0;
   node_get_pref_orport(&node, &ap);
   tt_assert(tor_addr_eq(&ap.addr, &ipv4_addr));
@@ -295,8 +297,8 @@ test_node_preferred_orport(void *arg)
 
   /* Check the preferred address is IPv4 if we're using IPv4 and IPv6, but
    * don't prefer the IPv6 address */
-  mocked_options.ClientUseIPv4 = 1;
-  mocked_options.ClientUseIPv6 = 1;
+  mocked_options->ClientUseIPv4 = 1;
+  mocked_options->ClientUseIPv6 = 1;
   node.ipv6_preferred = 0;
   node_get_pref_orport(&node, &ap);
   tt_assert(tor_addr_eq(&ap.addr, &ipv4_addr));
@@ -304,28 +306,29 @@ test_node_preferred_orport(void *arg)
 
   /* Check the preferred address is IPv6 if we prefer it and
    * ClientUseIPv6 is 1, regardless of ClientUseIPv4 */
-  mocked_options.ClientUseIPv4 = 1;
-  mocked_options.ClientUseIPv6 = 1;
+  mocked_options->ClientUseIPv4 = 1;
+  mocked_options->ClientUseIPv6 = 1;
   node.ipv6_preferred = 1;
   node_get_pref_orport(&node, &ap);
   tt_assert(tor_addr_eq(&ap.addr, &ipv6_addr));
   tt_assert(ap.port == ipv6_port);
 
-  mocked_options.ClientUseIPv4 = 0;
+  mocked_options->ClientUseIPv4 = 0;
   node_get_pref_orport(&node, &ap);
   tt_assert(tor_addr_eq(&ap.addr, &ipv6_addr));
   tt_assert(ap.port == ipv6_port);
 
   /* Check the preferred address is IPv6 if we don't prefer it, but
    * ClientUseIPv4 is 0 */
-  mocked_options.ClientUseIPv4 = 0;
-  mocked_options.ClientUseIPv6 = 1;
-  node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(&mocked_options);
+  mocked_options->ClientUseIPv4 = 0;
+  mocked_options->ClientUseIPv6 = 1;
+  node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(mocked_options);
   node_get_pref_orport(&node, &ap);
   tt_assert(tor_addr_eq(&ap.addr, &ipv6_addr));
   tt_assert(ap.port == ipv6_port);
 
  done:
+  or_options_free(mocked_options);
   UNMOCK(get_options);
 }
 

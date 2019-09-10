@@ -21,6 +21,7 @@
 #include "test/hs_test_helpers.h"
 #include "test/test_helpers.h"
 #include "test/log_test_helpers.h"
+#include "test/rng_test_helpers.h"
 
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
 DISABLE_GCC_WARNING(overlength-strings)
@@ -29,13 +30,6 @@ DISABLE_GCC_WARNING(overlength-strings)
 #endif
 #include "test_hs_descriptor.inc"
 ENABLE_GCC_WARNING(overlength-strings)
-
-/* Mock function to fill all bytes with 1 */
-static void
-mock_crypto_strongest_rand(uint8_t *out, size_t out_len)
-{
-  memset(out, 1, out_len);
-}
 
 /* Test certificate encoding put in a descriptor. */
 static void
@@ -132,7 +126,7 @@ test_descriptor_padding(void *arg)
     tt_assert(padded_plaintext);
     tor_free(plaintext);
     /* Make sure our padding has been zeroed. */
-    tt_int_op(tor_mem_is_zero((char *) padded_plaintext + plaintext_len,
+    tt_int_op(fast_mem_is_zero((char *) padded_plaintext + plaintext_len,
                               padded_len - plaintext_len), OP_EQ, 1);
     tor_free(padded_plaintext);
     /* Never never have a padded length smaller than the plaintext. */
@@ -149,7 +143,7 @@ test_descriptor_padding(void *arg)
     tt_assert(padded_plaintext);
     tor_free(plaintext);
     /* Make sure our padding has been zeroed. */
-    tt_int_op(tor_mem_is_zero((char *) padded_plaintext + plaintext_len,
+    tt_int_op(fast_mem_is_zero((char *) padded_plaintext + plaintext_len,
                               padded_len - plaintext_len), OP_EQ, 1);
     tor_free(padded_plaintext);
     /* Never never have a padded length smaller than the plaintext. */
@@ -166,7 +160,7 @@ test_descriptor_padding(void *arg)
     tt_assert(padded_plaintext);
     tor_free(plaintext);
     /* Make sure our padding has been zeroed. */
-    tt_int_op(tor_mem_is_zero((char *) padded_plaintext + plaintext_len,
+    tt_int_op(fast_mem_is_zero((char *) padded_plaintext + plaintext_len,
                               padded_len - plaintext_len), OP_EQ, 1);
     tor_free(padded_plaintext);
     /* Never never have a padded length smaller than the plaintext. */
@@ -739,8 +733,7 @@ test_desc_signature(void *arg)
   ret = ed25519_sign_prefixed(&sig, (const uint8_t *) data, strlen(data),
                               "Tor onion service descriptor sig v3", &kp);
   tt_int_op(ret, OP_EQ, 0);
-  ret = ed25519_signature_to_base64(sig_b64, &sig);
-  tt_int_op(ret, OP_EQ, 0);
+  ed25519_signature_to_base64(sig_b64, &sig);
   /* Build the descriptor that should be valid. */
   tor_asprintf(&desc, "%ssignature %s\n", data, sig_b64);
   ret = desc_sig_is_valid(sig_b64, &kp.pubkey, desc, strlen(desc));
@@ -800,7 +793,7 @@ test_build_authorized_client(void *arg)
                 client_pubkey_b16,
                 strlen(client_pubkey_b16));
 
-  MOCK(crypto_strongest_rand_, mock_crypto_strongest_rand);
+  testing_enable_prefilled_rng("\x01", 1);
 
   hs_desc_build_authorized_client(subcredential,
                                   &client_auth_pk, &auth_ephemeral_sk,
@@ -816,7 +809,7 @@ test_build_authorized_client(void *arg)
  done:
   tor_free(desc_client);
   tor_free(mem_op_hex_tmp);
-  UNMOCK(crypto_strongest_rand_);
+  testing_disable_prefilled_rng();
 }
 
 struct testcase_t hs_descriptor[] = {

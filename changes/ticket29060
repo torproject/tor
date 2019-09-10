@@ -1,2 +1,0 @@
-  o Code simplification and refactoring (shell scripts):
-    - Fix shellcheck warnings in test-network.sh. Resolves issue 29060.

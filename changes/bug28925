@@ -1,4 +1,0 @@
-  o Minor bugfixes (bootstrap reporting):
-    - During bootstrap reporting, correctly distinguish pluggable
-      transports from plain proxies. Fixes bug 28925; bugfix on
-      0.4.0.1-alpha.

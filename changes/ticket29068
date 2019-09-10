@@ -1,2 +1,0 @@
-  o Code simplification and refactoring (shell scripts):
-    - Fix shellcheck warnings in zero_length_keys.sh. Resolves issue 29068.

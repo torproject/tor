@@ -52,4 +52,4 @@ int dir_common_construct_vote_3(networkstatus_t **vote,
                         networkstatus_t **vote_out, int *n_vrs, time_t now,
                         int clear_rl);
 
-#endif
+#endif /* !defined(TOR_TEST_DIR_COMMON_H) */

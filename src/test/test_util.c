@@ -15,7 +15,7 @@
 #include "lib/buf/buffers.h"
 #include "app/config/config.h"
 #include "feature/control/control.h"
-#include "feature/control/control_fmt.h"
+#include "feature/control/control_proto.h"
 #include "feature/client/transports.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
@@ -2088,14 +2088,14 @@ test_util_strmisc(void *arg)
   /* Test mem_is_zero */
   memset(buf,0,128);
   buf[128] = 'x';
-  tt_assert(tor_mem_is_zero(buf, 10));
-  tt_assert(tor_mem_is_zero(buf, 20));
-  tt_assert(tor_mem_is_zero(buf, 128));
-  tt_assert(!tor_mem_is_zero(buf, 129));
+  tt_assert(fast_mem_is_zero(buf, 10));
+  tt_assert(fast_mem_is_zero(buf, 20));
+  tt_assert(fast_mem_is_zero(buf, 128));
+  tt_assert(!fast_mem_is_zero(buf, 129));
   buf[60] = (char)255;
-  tt_assert(!tor_mem_is_zero(buf, 128));
+  tt_assert(!fast_mem_is_zero(buf, 128));
   buf[0] = (char)1;
-  tt_assert(!tor_mem_is_zero(buf, 10));
+  tt_assert(!fast_mem_is_zero(buf, 10));
 
   /* Test 'escaped' */
   tt_ptr_op(escaped(NULL), OP_EQ, NULL);
@@ -3790,7 +3790,7 @@ test_util_memarea(void *arg)
   tt_int_op(((uintptr_t)p3) % sizeof(void*),OP_EQ, 0);
   tt_assert(!memarea_owns_ptr(area, p3+8192));
   tt_assert(!memarea_owns_ptr(area, p3+30));
-  tt_assert(tor_mem_is_zero(p2, 52));
+  tt_assert(fast_mem_is_zero(p2, 52));
   /* Make sure we don't overalign. */
   p1 = memarea_alloc(area, 1);
   p2 = memarea_alloc(area, 1);
@@ -5803,6 +5803,13 @@ test_util_socketpair(void *arg)
     tt_skip();
   }
 #endif /* defined(__FreeBSD__) */
+#ifdef ENETUNREACH
+  if (ersatz && socketpair_result == -ENETUNREACH) {
+    /* We can also fail with -ENETUNREACH if we have no network stack at
+     * all. */
+    tt_skip();
+  }
+#endif
   tt_int_op(0, OP_EQ, socketpair_result);
 
   tt_assert(SOCKET_OK(fds[0]));
@@ -6520,9 +6527,9 @@ test_util_log_mallinfo(void *arg)
   } else {
     tt_u64_op(mem1, OP_LT, mem2);
   }
-#else
+#else /* !(defined(HAVE_MALLINFO)) */
   tt_skip();
-#endif
+#endif /* defined(HAVE_MALLINFO) */
  done:
   teardown_capture_of_logs();
   tor_free(log1);
@@ -6579,7 +6586,7 @@ test_util_map_anon_nofork(void *arg)
   tt_skip();
  done:
   ;
-#else
+#else /* !(defined(_WIN32)) */
   /* We have the right OS support.  We're going to try marking the buffer as
    * either zero-on-fork or as drop-on-fork, whichever is supported.  Then we
    * will fork and send a byte back to the parent process.  This will either
@@ -6640,7 +6647,7 @@ test_util_map_anon_nofork(void *arg)
      * implemented. */
     tt_skip();
   }
-#endif
+#endif /* !defined(NOINHERIT_CAN_FAIL) */
 
  done:
   tor_munmap_anonymous(ptr, sz);
@@ -6650,7 +6657,7 @@ test_util_map_anon_nofork(void *arg)
   if (pipefd[1] >= 0) {
     close(pipefd[1]);
   }
-#endif
+#endif /* defined(_WIN32) */
 }
 
 #define UTIL_LEGACY(name)                                               \

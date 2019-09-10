@@ -1,3 +1,0 @@
-  o Code simplification and refactoring (shell scripts):
-    - Fix test_workqueue_*.sh scripts to silence shellcheck SC2086
-      warnings. Fixes issue 29067.

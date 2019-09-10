@@ -1,5 +1,0 @@
-  o Minor features (debugging):
-    - Introduce tor_assertf() and tor_assertf_nonfatal() to enable logging of
-      additional information during assert failure. Now we can use format
-      strings to include pieces of information that are relevant for trouble
-      shooting. Resolves ticket 29662.

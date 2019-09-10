@@ -28,6 +28,7 @@
 #include "feature/control/control_events.h"
 #include "feature/control/control_fmt.h"
 #include "feature/control/control_getinfo.h"
+#include "feature/control/control_proto.h"
 #include "feature/control/fmt_serverstatus.h"
 #include "feature/control/getinfo_geoip.h"
 #include "feature/dircache/dirserv.h"
@@ -55,6 +56,7 @@
 #include "core/or/origin_circuit_st.h"
 #include "core/or/socks_request_st.h"
 #include "feature/control/control_connection_st.h"
+#include "feature/control/control_cmd_args_st.h"
 #include "feature/dircache/cached_dir_st.h"
 #include "feature/nodelist/extrainfo_st.h"
 #include "feature/nodelist/microdesc_st.h"
@@ -1584,28 +1586,29 @@ handle_getinfo_helper(control_connection_t *control_conn,
   return 0; /* unrecognized */
 }
 
+const control_cmd_syntax_t getinfo_syntax = {
+  .max_args = UINT_MAX,
+};
+
 /** Called when we receive a GETINFO command.  Try to fetch all requested
  * information, and reply with information or error message. */
 int
-handle_control_getinfo(control_connection_t *conn, uint32_t len,
-                       const char *body)
+handle_control_getinfo(control_connection_t *conn,
+                       const control_cmd_args_t *args)
 {
-  smartlist_t *questions = smartlist_new();
+  const smartlist_t *questions = args->args;
   smartlist_t *answers = smartlist_new();
   smartlist_t *unrecognized = smartlist_new();
   char *ans = NULL;
   int i;
-  (void) len; /* body is NUL-terminated, so it's safe to ignore the length. */
 
-  smartlist_split_string(questions, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH_BEGIN(questions, const char *, q) {
     const char *errmsg = NULL;
 
     if (handle_getinfo_helper(conn, q, &ans, &errmsg) < 0) {
       if (!errmsg)
         errmsg = "Internal error";
-      connection_printf_to_buf(conn, "551 %s\r\n", errmsg);
+      control_write_endreply(conn, 551, errmsg);
       goto done;
     }
     if (!ans) {
@@ -1622,13 +1625,10 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
   if (smartlist_len(unrecognized)) {
     /* control-spec section 2.3, mid-reply '-' or end of reply ' ' */
     for (i=0; i < smartlist_len(unrecognized)-1; ++i)
-      connection_printf_to_buf(conn,
-                               "552-%s\r\n",
-                               (char *)smartlist_get(unrecognized, i));
-
-    connection_printf_to_buf(conn,
-                             "552 %s\r\n",
+      control_write_midreply(conn, 552,
                              (char *)smartlist_get(unrecognized, i));
+
+    control_write_endreply(conn, 552, (char *)smartlist_get(unrecognized, i));
     goto done;
   }
 
@@ -1636,25 +1636,17 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
     char *k = smartlist_get(answers, i);
     char *v = smartlist_get(answers, i+1);
     if (!strchr(v, '\n') && !strchr(v, '\r')) {
-      connection_printf_to_buf(conn, "250-%s=", k);
-      connection_write_str_to_buf(v, conn);
-      connection_write_str_to_buf("\r\n", conn);
+      control_printf_midreply(conn, 250, "%s=%s", k, v);
     } else {
-      char *esc = NULL;
-      size_t esc_len;
-      esc_len = write_escaped_data(v, strlen(v), &esc);
-      connection_printf_to_buf(conn, "250+%s=\r\n", k);
-      connection_buf_add(esc, esc_len, TO_CONN(conn));
-      tor_free(esc);
+      control_printf_datareply(conn, 250, "%s=", k);
+      control_write_data(conn, v);
     }
   }
-  connection_write_str_to_buf("250 OK\r\n", conn);
+  send_control_done(conn);
 
  done:
   SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
   smartlist_free(answers);
-  SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
-  smartlist_free(questions);
   SMARTLIST_FOREACH(unrecognized, char *, cp, tor_free(cp));
   smartlist_free(unrecognized);
 

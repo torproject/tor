@@ -70,7 +70,7 @@
 #include "core/or/origin_circuit_st.h"
 #include "core/or/socks_request_st.h"
 
-static void circuit_expire_old_circuits_clientside(void);
+STATIC void circuit_expire_old_circuits_clientside(void);
 static void circuit_increment_failure_count(void);
 
 /** Check whether the hidden service destination of the stream at
@@ -178,7 +178,6 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
       purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
       purpose == CIRCUIT_PURPOSE_C_HSDIR_GET) {
     tor_addr_t addr;
-    const int family = tor_addr_parse(&addr, conn->socks_request->address);
     if (!exitnode && !build_state->onehop_tunnel) {
       log_debug(LD_CIRC,"Not considering circuit with unknown router.");
       return 0; /* this circuit is screwed and doesn't know it yet,
@@ -199,6 +198,8 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
           return 0; /* this is a circuit to somewhere else */
         if (tor_digest_is_zero(digest)) {
           /* we don't know the digest; have to compare addr:port */
+          const int family = tor_addr_parse(&addr,
+                                            conn->socks_request->address);
           if (family < 0 ||
               !tor_addr_eq(&build_state->chosen_exit->addr, &addr) ||
               build_state->chosen_exit->port != conn->socks_request->port)
@@ -211,12 +212,14 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
         return 0;
       }
     }
-    if (origin_circ->prepend_policy && family != -1) {
-      int r = compare_tor_addr_to_addr_policy(&addr,
-                                              conn->socks_request->port,
-                                              origin_circ->prepend_policy);
-      if (r == ADDR_POLICY_REJECTED)
-        return 0;
+    if (origin_circ->prepend_policy) {
+      if (tor_addr_parse(&addr, conn->socks_request->address) != -1) {
+        int r = compare_tor_addr_to_addr_policy(&addr,
+                                                conn->socks_request->port,
+                                                origin_circ->prepend_policy);
+        if (r == ADDR_POLICY_REJECTED)
+          return 0;
+      }
     }
     if (exitnode && !connection_ap_can_use_exit(conn, exitnode)) {
       /* can't exit from this router */
@@ -1471,7 +1474,7 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
 /** Find each circuit that has been unused for too long, or dirty
  * for too long and has no streams on it: mark it for close.
  */
-static void
+STATIC void
 circuit_expire_old_circuits_clientside(void)
 {
   struct timeval cutoff, now;
@@ -1511,6 +1514,7 @@ circuit_expire_old_circuits_clientside(void)
                 circ->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT ||
                 circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
                 circ->purpose == CIRCUIT_PURPOSE_TESTING ||
+                circ->purpose == CIRCUIT_PURPOSE_C_CIRCUIT_PADDING ||
                 (circ->purpose >= CIRCUIT_PURPOSE_C_INTRODUCING &&
                 circ->purpose <= CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) ||
                 circ->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
@@ -2529,8 +2533,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
           circ->rend_data = rend_data_dup(edge_conn->rend_data);
         } else if (edge_conn->hs_ident) {
           circ->hs_ident =
-            hs_ident_circuit_new(&edge_conn->hs_ident->identity_pk,
-                                 HS_IDENT_CIRCUIT_INTRO);
+            hs_ident_circuit_new(&edge_conn->hs_ident->identity_pk);
         }
         if (circ->base_.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
             circ->base_.state == CIRCUIT_STATE_OPEN)
@@ -3078,6 +3081,12 @@ circuit_change_purpose(circuit_t *circ, uint8_t new_purpose)
               circ->purpose,
               circuit_purpose_to_string(new_purpose),
               new_purpose);
+
+    /* Take specific actions if we are repurposing a hidden service circuit. */
+    if (circuit_purpose_is_hidden_service(circ->purpose) &&
+        !circuit_purpose_is_hidden_service(new_purpose)) {
+      hs_circ_cleanup(circ);
+    }
   }
 
   old_purpose = circ->purpose;

@@ -15,7 +15,7 @@
 #endif
 
 static void
-dummy_cb_fn(int severity, uint32_t domain, const char *msg)
+dummy_cb_fn(int severity, log_domain_mask_t domain, const char *msg)
 {
   (void)severity; (void)domain; (void)msg;
 }

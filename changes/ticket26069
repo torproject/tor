@@ -1,2 +1,0 @@
-  o Code simplification and refactoring (shell scripts):
-    - Cleanup autogen.sh to silence shellcheck warnings. Closes ticket 26069.

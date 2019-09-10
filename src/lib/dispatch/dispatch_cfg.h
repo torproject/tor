@@ -36,4 +36,4 @@ int dcfg_add_recv(dispatch_cfg_t *cfg, message_id_t msg,
 
 void dcfg_free_(dispatch_cfg_t *cfg);
 
-#endif
+#endif /* !defined(TOR_DISPATCH_CFG_H) */

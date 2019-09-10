@@ -15,4 +15,4 @@ uint32_t hs_stats_get_n_introduce2_v2_cells(void);
 void hs_stats_note_service_rendezvous_launch(void);
 uint32_t hs_stats_get_n_rendezvous_launches(void);
 
-#endif
+#endif /* !defined(TOR_HS_STATS_H) */

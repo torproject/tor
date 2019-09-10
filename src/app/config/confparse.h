@@ -13,214 +13,187 @@
 #ifndef TOR_CONFPARSE_H
 #define TOR_CONFPARSE_H
 
-/** Enumeration of types which option values can take */
-typedef enum config_type_t {
-  CONFIG_TYPE_STRING = 0,   /**< An arbitrary string. */
-  CONFIG_TYPE_FILENAME,     /**< A filename: some prefixes get expanded. */
-  CONFIG_TYPE_UINT,         /**< A non-negative integer less than MAX_INT */
-  CONFIG_TYPE_INT,          /**< Any integer. */
-  CONFIG_TYPE_UINT64,       /**< A value in range 0..UINT64_MAX */
-  CONFIG_TYPE_PORT,         /**< A port from 1...65535, 0 for "not set", or
-                             * "auto".  */
-  CONFIG_TYPE_INTERVAL,     /**< A number of seconds, with optional units*/
-  CONFIG_TYPE_MSEC_INTERVAL,/**< A number of milliseconds, with optional
-                              * units */
-  CONFIG_TYPE_MEMUNIT,      /**< A number of bytes, with optional units*/
-  CONFIG_TYPE_DOUBLE,       /**< A floating-point value */
-  CONFIG_TYPE_BOOL,         /**< A boolean value, expressed as 0 or 1. */
-  CONFIG_TYPE_AUTOBOOL,     /**< A boolean+auto value, expressed 0 for false,
-                             * 1 for true, and -1 for auto  */
-  CONFIG_TYPE_ISOTIME,      /**< An ISO-formatted time relative to UTC. */
-  CONFIG_TYPE_CSV,          /**< A list of strings, separated by commas and
-                              * optional whitespace. */
-  CONFIG_TYPE_CSV_INTERVAL, /**< A list of strings, separated by commas and
-                              * optional whitespace, representing intervals in
-                              * seconds, with optional units.  We allow
-                              * multiple values here for legacy reasons, but
-                              * ignore every value after the first. */
-  CONFIG_TYPE_LINELIST,     /**< Uninterpreted config lines */
-  CONFIG_TYPE_LINELIST_S,   /**< Uninterpreted, context-sensitive config lines,
-                             * mixed with other keywords. */
-  CONFIG_TYPE_LINELIST_V,   /**< Catch-all "virtual" option to summarize
-                             * context-sensitive config lines when fetching.
-                             */
-  CONFIG_TYPE_ROUTERSET,    /**< A list of router names, addrs, and fps,
-                             * parsed into a routerset_t. */
-  CONFIG_TYPE_OBSOLETE,     /**< Obsolete (ignored) option. */
-} config_type_t;
+#include "lib/conf/conftypes.h"
+#include "lib/conf/confmacros.h"
+#include "lib/testsupport/testsupport.h"
 
-#ifdef TOR_UNIT_TESTS
 /**
- * Union used when building in test mode typechecking the members of a type
- * used with confparse.c.  See CONF_CHECK_VAR_TYPE for a description of how
- * it is used. */
-typedef union {
-  char **STRING;
-  char **FILENAME;
-  int *UINT; /* yes, really: Even though the confparse type is called
-              * "UINT", it still uses the C int type -- it just enforces that
-              * the values are in range [0,INT_MAX].
-              */
-  uint64_t *UINT64;
-  int *INT;
-  int *PORT;
-  int *INTERVAL;
-  int *MSEC_INTERVAL;
-  uint64_t *MEMUNIT;
-  double *DOUBLE;
-  int *BOOL;
-  int *AUTOBOOL;
-  time_t *ISOTIME;
-  smartlist_t **CSV;
-  int *CSV_INTERVAL;
-  struct config_line_t **LINELIST;
-  struct config_line_t **LINELIST_S;
-  struct config_line_t **LINELIST_V;
-  routerset_t **ROUTERSET;
-} confparse_dummy_values_t;
-#endif /* defined(TOR_UNIT_TESTS) */
-
-/** An abbreviation for a configuration option allowed on the command line. */
+ * An abbreviation or alias for a configuration option.
+ **/
 typedef struct config_abbrev_t {
+  /** The option name as abbreviated.  Not case-sensitive. */
   const char *abbreviated;
+  /** The full name of the option. Not case-sensitive. */
   const char *full;
+  /** True if this abbreviation should only be allowed on the command line. */
   int commandline_only;
+  /** True if we should warn whenever this abbreviation is used. */
   int warn;
 } config_abbrev_t;
 
+/**
+ * A note that a configuration option is deprecated, with an explanation why.
+ */
 typedef struct config_deprecation_t {
+  /** The option that is deprecated. */
   const char *name;
+  /** A user-facing string explaining why the option is deprecated. */
   const char *why_deprecated;
 } config_deprecation_t;
 
-/* Handy macro for declaring "In the config file or on the command line,
- * you can abbreviate <b>tok</b>s as <b>tok</b>". */
+/**
+ * Handy macro for declaring "In the config file or on the command line, you
+ * can abbreviate <b>tok</b>s as <b>tok</b>". Used inside an array of
+ * config_abbrev_t.
+ *
+ * For example, to declare "NumCpu" as an abbreviation for "NumCPUs",
+ * you can say PLURAL(NumCpu).
+ **/
 #define PLURAL(tok) { #tok, #tok "s", 0, 0 }
 
-/** A variable allowed in the configuration file or on the command line. */
-typedef struct config_var_t {
-  const char *name; /**< The full keyword (case insensitive). */
-  config_type_t type; /**< How to interpret the type and turn it into a
-                       * value. */
-  off_t var_offset; /**< Offset of the corresponding member of or_options_t. */
-  const char *initvalue; /**< String (or null) describing initial value. */
-
-#ifdef TOR_UNIT_TESTS
-  /** Used for compiler-magic to typecheck the corresponding field in the
-   * corresponding struct. Only used in unit test mode, at compile-time. */
-  confparse_dummy_values_t var_ptr_dummy;
-#endif
-} config_var_t;
-
-/* Macros to define extra members inside config_var_t fields, and at the
- * end of a list of them.
- */
-#ifdef TOR_UNIT_TESTS
-/* This is a somewhat magic type-checking macro for users of confparse.c.
- * It initializes a union member "confparse_dummy_values_t.conftype" with
- * the address of a static member "tp_dummy.member".   This
- * will give a compiler warning unless the member field is of the correct
- * type.
+/**
+ * Type of a callback to validate whether a given configuration is
+ * well-formed and consistent.
  *
- * (This warning is mandatory, because a type mismatch here violates the type
- * compatibility constraint for simple assignment, and requires a diagnostic,
- * according to the C spec.)
+ * The configuration to validate is passed as <b>newval</b>. The previous
+ * configuration, if any, is provided in <b>oldval</b>.  The
+ * <b>default_val</b> argument receives a configuration object initialized
+ * with default values for all its fields.  The <b>from_setconf</b> argument
+ * is true iff the input comes from a SETCONF controller command.
  *
- * For example, suppose you say:
- *     "CONF_CHECK_VAR_TYPE(or_options_t, STRING, Address)".
- * Then this macro will evaluate to:
- *     { .STRING = &or_options_t_dummy.Address }
- * And since confparse_dummy_values_t.STRING has type "char **", that
- * expression will create a warning unless or_options_t.Address also
- * has type "char *".
+ * On success, return 0.  On failure, set *<b>msg_out</b> to a newly allocated
+ * error message, and return -1.
+ *
+ * REFACTORING NOTE: Currently, this callback type is only used from inside
+ * config_dump(); later in our refactoring, it will be cleaned up and used
+ * more generally.
  */
-#define CONF_CHECK_VAR_TYPE(tp, conftype, member)       \
-  { . conftype = &tp ## _dummy . member }
-#define CONF_TEST_MEMBERS(tp, conftype, member) \
-  , CONF_CHECK_VAR_TYPE(tp, conftype, member)
-#define END_OF_CONFIG_VARS                                      \
-  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL, { .INT=NULL } }
-#define DUMMY_TYPECHECK_INSTANCE(tp)            \
-  static tp tp ## _dummy
-#else /* !(defined(TOR_UNIT_TESTS)) */
-#define CONF_TEST_MEMBERS(tp, conftype, member)
-#define END_OF_CONFIG_VARS { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
-/* Repeatedly declarable incomplete struct to absorb redundant semicolons */
-#define DUMMY_TYPECHECK_INSTANCE(tp)            \
-  struct tor_semicolon_eater
-#endif /* defined(TOR_UNIT_TESTS) */
+typedef int (*validate_fn_t)(void *oldval,
+                             void *newval,
+                             void *default_val,
+                             int from_setconf,
+                             char **msg_out);
 
-/** Type of a callback to validate whether a given configuration is
- * well-formed and consistent. See options_trial_assign() for documentation
- * of arguments. */
-typedef int (*validate_fn_t)(void*,void*,void*,int,char**);
+struct config_mgr_t;
 
-/** Callback to free a configuration object. */
-typedef void (*free_cfg_fn_t)(void*);
+/**
+ * Callback to clear all non-managed fields of a configuration object.
+ *
+ * <b>obj</b> is the configuration object whose non-managed fields should be
+ * cleared.
+ *
+ * (Regular fields get cleared by config_reset(), but you might have fields
+ * in the object that do not correspond to configuration variables.  If those
+ * fields need to be cleared or freed, this is where to do it.)
+ */
+typedef void (*clear_cfg_fn_t)(const struct config_mgr_t *mgr, void *obj);
 
 /** Information on the keys, value types, key-to-struct-member mappings,
  * variable descriptions, validation functions, and abbreviations for a
  * configuration or storage format. */
 typedef struct config_format_t {
   size_t size; /**< Size of the struct that everything gets parsed into. */
-  uint32_t magic; /**< Required 'magic value' to make sure we have a struct
-                   * of the right type. */
-  off_t magic_offset; /**< Offset of the magic value within the struct. */
-  config_abbrev_t *abbrevs; /**< List of abbreviations that we expand when
-                             * parsing this format. */
+  struct_magic_decl_t magic; /**< Magic number info for this struct. */
+  const config_abbrev_t *abbrevs; /**< List of abbreviations that we expand
+                             * when parsing this format. */
   const config_deprecation_t *deprecations; /** List of deprecated options */
-  config_var_t *vars; /**< List of variables we recognize, their default
-                       * values, and where we stick them in the structure. */
+  const config_var_t *vars; /**< List of variables we recognize, their default
+                             * values, and where we stick them in the
+                             * structure. */
   validate_fn_t validate_fn; /**< Function to validate config. */
-  free_cfg_fn_t free_fn; /**< Function to free the configuration. */
-  /** If present, extra is a LINELIST variable for unrecognized
+  clear_cfg_fn_t clear_fn; /**< Function to clear the configuration. */
+  /** If present, extra denotes a LINELIST variable for unrecognized
    * lines.  Otherwise, unrecognized lines are an error. */
-  config_var_t *extra;
+  const struct_member_t *extra;
+  /** The position of a config_suite_t pointer within the toplevel object,
+   * or -1 if there is no such pointer. */
+  ptrdiff_t config_suite_offset;
 } config_format_t;
 
-/** Macro: assert that <b>cfg</b> has the right magic field for format
- * <b>fmt</b>. */
-#define CONFIG_CHECK(fmt, cfg) STMT_BEGIN                               \
-    tor_assert(fmt && cfg);                                             \
-    tor_assert((fmt)->magic ==                                          \
-               *(uint32_t*)STRUCT_VAR_P(cfg,fmt->magic_offset));        \
-  STMT_END
+/**
+ * A collection of config_format_t objects to describe several objects
+ * that are all configured with the same configuration file.
+ *
+ * (NOTE: for now, this only handles a single config_format_t.)
+ **/
+typedef struct config_mgr_t config_mgr_t;
 
+config_mgr_t *config_mgr_new(const config_format_t *toplevel_fmt);
+void config_mgr_free_(config_mgr_t *mgr);
+int config_mgr_add_format(config_mgr_t *mgr,
+                          const config_format_t *fmt);
+void config_mgr_freeze(config_mgr_t *mgr);
+#define config_mgr_free(mgr) \
+  FREE_AND_NULL(config_mgr_t, config_mgr_free_, (mgr))
+struct smartlist_t *config_mgr_list_vars(const config_mgr_t *mgr);
+struct smartlist_t *config_mgr_list_deprecated_vars(const config_mgr_t *mgr);
+
+/** A collection of managed configuration objects. */
+typedef struct config_suite_t config_suite_t;
+
+/**
+ * Flag for config_assign: if set, then "resetting" an option changes it to
+ * its default value, as specified in the config_var_t.  Otherwise,
+ * "resetting" an option changes it to a type-dependent null value --
+ * typically 0 or NULL.
+ *
+ * (An option is "reset" when it is set to an empty value, or as described in
+ * CAL_CLEAR_FIRST).
+ **/
 #define CAL_USE_DEFAULTS      (1u<<0)
+/**
+ * Flag for config_assign: if set, then we reset every provided config
+ * option before we set it.
+ *
+ * For example, if this flag is not set, then passing a multi-line option to
+ * config_assign will cause any previous value to be extended. But if this
+ * flag is set, then a multi-line option will replace any previous value.
+ **/
 #define CAL_CLEAR_FIRST       (1u<<1)
+/**
+ * Flag for config_assign: if set, we warn about deprecated options.
+ **/
 #define CAL_WARN_DEPRECATIONS (1u<<2)
 
-void *config_new(const config_format_t *fmt);
-void config_free_(const config_format_t *fmt, void *options);
-#define config_free(fmt, options) do {                \
-    config_free_((fmt), (options));                   \
+void *config_new(const config_mgr_t *fmt);
+void config_free_(const config_mgr_t *fmt, void *options);
+#define config_free(mgr, options) do {                \
+    config_free_((mgr), (options));                   \
     (options) = NULL;                                 \
   } while (0)
 
-struct config_line_t *config_get_assigned_option(const config_format_t *fmt,
+struct config_line_t *config_get_assigned_option(const config_mgr_t *mgr,
                                           const void *options, const char *key,
                                           int escape_val);
-int config_is_same(const config_format_t *fmt,
+int config_is_same(const config_mgr_t *fmt,
                    const void *o1, const void *o2,
                    const char *name);
-void config_init(const config_format_t *fmt, void *options);
-void *config_dup(const config_format_t *fmt, const void *old);
-char *config_dump(const config_format_t *fmt, const void *default_options,
+struct config_line_t *config_get_changes(const config_mgr_t *mgr,
+                                  const void *options1, const void *options2);
+void config_init(const config_mgr_t *mgr, void *options);
+void *config_dup(const config_mgr_t *mgr, const void *old);
+char *config_dump(const config_mgr_t *mgr, const void *default_options,
                   const void *options, int minimal,
                   int comment_defaults);
-int config_assign(const config_format_t *fmt, void *options,
+bool config_check_ok(const config_mgr_t *mgr, const void *options,
+                     int severity);
+int config_assign(const config_mgr_t *mgr, void *options,
                   struct config_line_t *list,
                   unsigned flags, char **msg);
-config_var_t *config_find_option_mutable(config_format_t *fmt,
-                                         const char *key);
-const char *config_find_deprecation(const config_format_t *fmt,
-                                     const char *key);
-const config_var_t *config_find_option(const config_format_t *fmt,
-                                       const char *key);
-const char *config_expand_abbrev(const config_format_t *fmt,
+const char *config_find_deprecation(const config_mgr_t *mgr,
+                                    const char *key);
+const char *config_find_option_name(const config_mgr_t *mgr,
+                                    const char *key);
+const char *config_expand_abbrev(const config_mgr_t *mgr,
                                  const char *option,
                                  int command_line, int warn_obsolete);
 void warn_deprecated_option(const char *what, const char *why);
+
+bool config_var_is_cumulative(const config_var_t *var);
+bool config_var_is_settable(const config_var_t *var);
+bool config_var_is_contained(const config_var_t *var);
+bool config_var_is_invisible(const config_var_t *var);
+bool config_var_is_dumpable(const config_var_t *var);
 
 /* Helper macros to compare an option across two configuration objects */
 #define CFG_EQ_BOOL(a,b,opt) ((a)->opt == (b)->opt)
@@ -229,5 +202,14 @@ void warn_deprecated_option(const char *what, const char *why);
 #define CFG_EQ_SMARTLIST(a,b,opt) smartlist_strings_eq((a)->opt, (b)->opt)
 #define CFG_EQ_LINELIST(a,b,opt) config_lines_eq((a)->opt, (b)->opt)
 #define CFG_EQ_ROUTERSET(a,b,opt) routerset_equal((a)->opt, (b)->opt)
+
+#ifdef CONFPARSE_PRIVATE
+STATIC void config_reset_line(const config_mgr_t *mgr, void *options,
+                              const char *key, int use_defaults);
+STATIC void *config_mgr_get_obj_mutable(const config_mgr_t *mgr,
+                                        void *toplevel, int idx);
+STATIC const void *config_mgr_get_obj(const config_mgr_t *mgr,
+                                       const void *toplevel, int idx);
+#endif
 
 #endif /* !defined(TOR_CONFPARSE_H) */

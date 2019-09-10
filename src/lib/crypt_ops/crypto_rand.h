@@ -87,12 +87,16 @@ crypto_fast_rng_t *get_thread_fast_rng(void);
 void destroy_thread_fast_rng(void);
 void crypto_rand_fast_init(void);
 void crypto_rand_fast_shutdown(void);
-#endif
+#endif /* defined(CRYPTO_PRIVATE) */
 
 #if defined(TOR_UNIT_TESTS)
 /* Used for white-box testing */
 size_t crypto_fast_rng_get_bytes_used_per_stream(void);
-#endif
+/* For deterministic prng implementations */
+void crypto_fast_rng_disable_reseed(crypto_fast_rng_t *rng);
+/* To override the prng for testing. */
+crypto_fast_rng_t *crypto_replace_thread_fast_rng(crypto_fast_rng_t *rng);
+#endif /* defined(TOR_UNIT_TESTS) */
 
 #ifdef CRYPTO_RAND_PRIVATE
 

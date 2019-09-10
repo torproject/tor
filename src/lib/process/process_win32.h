@@ -90,8 +90,8 @@ STATIC bool process_win32_handle_read_completion(process_win32_handle_t *,
 
 STATIC char *format_win_cmdline_argument(const char *arg);
 STATIC char *tor_join_win_cmdline(const char *argv[]);
-#endif /* defined(PROCESS_WIN32_PRIVATE). */
+#endif /* defined(PROCESS_WIN32_PRIVATE) */
 
-#endif /* ! defined(_WIN32). */
+#endif /* defined(_WIN32) */
 
-#endif /* defined(TOR_PROCESS_WIN32_H). */
+#endif /* !defined(TOR_PROCESS_WIN32_H) */

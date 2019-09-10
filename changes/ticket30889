@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Eliminate some uses of lower-level control reply abstractions,
+      primarily in the onion_helper functions. Closes ticket 30889.

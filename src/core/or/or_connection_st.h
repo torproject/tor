@@ -91,4 +91,4 @@ struct or_connection_t {
   uint64_t bytes_xmitted, bytes_xmitted_by_tls;
 };
 
-#endif
+#endif /* !defined(OR_CONNECTION_ST_H) */

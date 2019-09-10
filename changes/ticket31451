@@ -1,0 +1,4 @@
+  o Minor bugfixes (logging):
+    - Fix a code issue that would have broken our parsing of log
+      domains as soon as we had 33 of them.  Fortunately, we still
+      only have 29.  Fixes bug 31451; bugfix on 0.4.1.4-rc.

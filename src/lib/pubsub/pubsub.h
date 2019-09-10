@@ -86,4 +86,4 @@
 #include "lib/pubsub/pubsub_macros.h"
 #include "lib/pubsub/pubsub_publish.h"
 
-#endif
+#endif /* !defined(TOR_PUBSUB_PUBSUB_H) */

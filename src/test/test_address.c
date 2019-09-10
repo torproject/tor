@@ -24,6 +24,7 @@
 #endif /* defined(HAVE_IFCONF_TO_SMARTLIST) */
 
 #include "core/or/or.h"
+#include "feature/dirauth/process_descs.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/nodelist.h"
@@ -1244,6 +1245,40 @@ test_address_tor_node_in_same_network_family(void *ignored)
   helper_free_mock_node(node_b);
 }
 
+#define CHECK_RI_ADDR(addr_str, rv) STMT_BEGIN \
+    ri = tor_malloc_zero(sizeof(routerinfo_t)); \
+    tor_addr_t addr; \
+    tor_addr_parse(&addr, (addr_str));   \
+    ri->addr = tor_addr_to_ipv4h(&addr); \
+    tor_addr_make_null(&ri->ipv6_addr, AF_INET6); \
+    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, (rv));       \
+    tor_free(ri); \
+  STMT_END
+
+/* XXX: Here, we use a non-internal IPv4 as dirserv_router_has_valid_address()
+ * will check internal/null IPv4 first. */
+#define CHECK_RI_ADDR6(addr_str, rv) STMT_BEGIN \
+    ri = tor_malloc_zero(sizeof(routerinfo_t));   \
+    ri->addr = 16777217; /* 1.0.0.1 */ \
+    tor_addr_parse(&ri->ipv6_addr, (addr_str));                         \
+    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, (rv));       \
+    tor_free(ri); \
+  STMT_END
+
+static void
+test_address_dirserv_router_addr_private(void *ignored)
+{
+  (void)ignored;
+  /* A stub routerinfo structure, with only its address fields set. */
+  routerinfo_t *ri = NULL;
+  CHECK_RI_ADDR("1.0.0.1", 0);
+  CHECK_RI_ADDR("10.0.0.1", -1);
+  CHECK_RI_ADDR6("2600::1", 0);
+  CHECK_RI_ADDR6("fe80::1", -1);
+ done:
+  tor_free(ri);
+}
+
 #define ADDRESS_TEST(name, flags) \
   { #name, test_address_ ## name, flags, NULL, NULL }
 
@@ -1277,5 +1312,6 @@ struct testcase_t address_tests[] = {
   ADDRESS_TEST(tor_addr_eq_ipv4h, 0),
   ADDRESS_TEST(tor_addr_in_same_network_family, 0),
   ADDRESS_TEST(tor_node_in_same_network_family, 0),
+  ADDRESS_TEST(dirserv_router_addr_private, 0),
   END_OF_TESTCASES
 };

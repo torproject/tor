@@ -15,6 +15,7 @@
 #include "core/or/circuituse.h"
 #include "core/or/policies.h"
 #include "core/or/relay.h"
+#include "core/or/crypt_path.h"
 #include "feature/client/circpathbias.h"
 #include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_circuit.h"
@@ -89,7 +90,7 @@ create_rend_cpath(const uint8_t *ntor_key_seed, size_t seed_len,
   cpath = tor_malloc_zero(sizeof(crypt_path_t));
   cpath->magic = CRYPT_PATH_MAGIC;
 
-  if (circuit_init_cpath_crypto(cpath, (char*)keys, sizeof(keys),
+  if (cpath_init_circuit_crypto(cpath, (char*)keys, sizeof(keys),
                                 is_service_side, 1) < 0) {
     tor_free(cpath);
     goto err;
@@ -126,7 +127,7 @@ create_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
     goto err;
   }
   /* ... and set up cpath. */
-  if (circuit_init_cpath_crypto(hop,
+  if (cpath_init_circuit_crypto(hop,
                                 keys+DIGEST_LEN, sizeof(keys)-DIGEST_LEN,
                                 0, 0) < 0)
     goto err;
@@ -177,7 +178,7 @@ finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
   circ->hs_circ_has_timed_out = 0;
 
   /* Append the hop to the cpath of this circuit */
-  onion_append_to_cpath(&circ->cpath, hop);
+  cpath_extend_linked_list(&circ->cpath, hop);
 
   /* In legacy code, 'pending_final_cpath' points to the final hop we just
    * appended to the cpath. We set the original pointer to NULL so that we
@@ -258,8 +259,7 @@ create_rp_circuit_identifier(const hs_service_t *service,
   tor_assert(server_pk);
   tor_assert(keys);
 
-  ident = hs_ident_circuit_new(&service->keys.identity_pk,
-                               HS_IDENT_CIRCUIT_RENDEZVOUS);
+  ident = hs_ident_circuit_new(&service->keys.identity_pk);
   /* Copy the RENDEZVOUS_COOKIE which is the unique identifier. */
   memcpy(ident->rendezvous_cookie, rendezvous_cookie,
          sizeof(ident->rendezvous_cookie));
@@ -293,8 +293,7 @@ create_intro_circuit_identifier(const hs_service_t *service,
   tor_assert(service);
   tor_assert(ip);
 
-  ident = hs_ident_circuit_new(&service->keys.identity_pk,
-                               HS_IDENT_CIRCUIT_INTRO);
+  ident = hs_ident_circuit_new(&service->keys.identity_pk);
   ed25519_pubkey_copy(&ident->intro_auth_pk, &ip->auth_key_kp.pubkey);
 
   return ident;
@@ -318,7 +317,7 @@ send_establish_intro(const hs_service_t *service,
 
   /* Encode establish intro cell. */
   cell_len = hs_cell_build_establish_intro(circ->cpath->prev->rend_circ_nonce,
-                                           ip, payload);
+                                           &service->config, ip, payload);
   if (cell_len < 0) {
     log_warn(LD_REND, "Unable to encode ESTABLISH_INTRO cell for service %s "
                       "on circuit %u. Closing circuit.",
@@ -388,10 +387,7 @@ launch_rendezvous_point_circuit(const hs_service_t *service,
                                         &data->onion_pk,
                                         service->config.is_single_onion);
   if (info == NULL) {
-    /* We are done here, we can't extend to the rendezvous point.
-     * If you're running an IPv6-only v3 single onion service on 0.3.2 or with
-     * 0.3.2 clients, and somehow disable the option check, it will fail here.
-     */
+    /* We are done here, we can't extend to the rendezvous point. */
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
            "Not enough info to open a circuit to a rendezvous point for "
            "%s service %s.",
@@ -405,8 +401,12 @@ launch_rendezvous_point_circuit(const hs_service_t *service,
     if (circ_needs_uptime) {
       circ_flags |= CIRCLAUNCH_NEED_UPTIME;
     }
-    /* Firewall and policies are checked when getting the extend info. */
-    if (service->config.is_single_onion) {
+    /* Firewall and policies are checked when getting the extend info.
+     *
+     * We only use a one-hop path on the first attempt. If the first attempt
+     * fails, we use a 3-hop path for reachability / reliability.
+     * See the comment in retry_service_rendezvous_point() for details. */
+    if (service->config.is_single_onion && i == 0) {
       circ_flags |= CIRCLAUNCH_ONEHOP_TUNNEL;
     }
 
@@ -678,13 +678,16 @@ hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ)
 }
 
 /* For a given service and a service intro point, launch a circuit to the
- * extend info ei. If the service is a single onion, a one-hop circuit will be
- * requested. Return 0 if the circuit was successfully launched and tagged
+ * extend info ei. If the service is a single onion, and direct_conn is true,
+ * a one-hop circuit will be requested.
+ *
+ * Return 0 if the circuit was successfully launched and tagged
  * with the correct identifier. On error, a negative value is returned. */
 int
 hs_circ_launch_intro_point(hs_service_t *service,
                            const hs_service_intro_point_t *ip,
-                           extend_info_t *ei)
+                           extend_info_t *ei,
+                           bool direct_conn)
 {
   /* Standard flags for introduction circuit. */
   int ret = -1, circ_flags = CIRCLAUNCH_NEED_UPTIME | CIRCLAUNCH_IS_INTERNAL;
@@ -696,7 +699,16 @@ hs_circ_launch_intro_point(hs_service_t *service,
 
   /* Update circuit flags in case of a single onion service that requires a
    * direct connection. */
-  if (service->config.is_single_onion) {
+  tor_assert_nonfatal(ip->circuit_retries > 0);
+  /* Only single onion services can make direct conns */
+  if (BUG(!service->config.is_single_onion && direct_conn)) {
+    goto end;
+  }
+  /* We only use a one-hop path on the first attempt. If the first attempt
+   * fails, we use a 3-hop path for reachability / reliability.
+   * (Unlike v2, retries is incremented by the caller before it calls this
+   * function.) */
+  if (direct_conn && ip->circuit_retries == 1) {
     circ_flags |= CIRCLAUNCH_ONEHOP_TUNNEL;
   }
 

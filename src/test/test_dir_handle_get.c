@@ -479,8 +479,7 @@ static or_options_t *mock_options = NULL;
 static void
 init_mock_options(void)
 {
-  mock_options = tor_malloc(sizeof(or_options_t));
-  memset(mock_options, 0, sizeof(or_options_t));
+  mock_options = options_new();
   mock_options->TestingTorNetwork = 1;
   mock_options->DataDirectory = tor_strdup(get_fname_rnd("datadir_tmp"));
   mock_options->CacheDirectory = tor_strdup(mock_options->DataDirectory);
@@ -2526,7 +2525,7 @@ test_dir_handle_get_status_vote_next_bandwidth(void* data)
 
   /* Check cache lifetime */
   char expbuf[RFC1123_TIME_LEN+1];
-  time_t now = time(NULL);
+  time_t now = approx_time();
   /* BANDWIDTH_CACHE_LIFETIME is defined in dircache.c. */
   format_rfc1123_time(expbuf, (time_t)(now + 30*60));
   char *expires = NULL;

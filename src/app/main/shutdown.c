@@ -18,7 +18,6 @@
 #include "app/main/shutdown.h"
 #include "app/main/subsysmgr.h"
 #include "core/mainloop/connection.h"
-#include "core/mainloop/mainloop.h"
 #include "core/mainloop/mainloop_pubsub.h"
 #include "core/or/channeltls.h"
 #include "core/or/circuitlist.h"
@@ -26,10 +25,7 @@
 #include "core/or/circuitpadding.h"
 #include "core/or/connection_edge.h"
 #include "core/or/dos.h"
-#include "core/or/policies.h"
-#include "core/or/protover.h"
 #include "core/or/scheduler.h"
-#include "core/or/versions.h"
 #include "feature/client/addressmap.h"
 #include "feature/client/bridges.h"
 #include "feature/client/entrynodes.h"
@@ -37,10 +33,6 @@
 #include "feature/control/control.h"
 #include "feature/control/control_auth.h"
 #include "feature/dirauth/authmode.h"
-#include "feature/dirauth/bwauth.h"
-#include "feature/dirauth/dirvote.h"
-#include "feature/dirauth/keypin.h"
-#include "feature/dirauth/process_descs.h"
 #include "feature/dirauth/shared_random.h"
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/dircache/dirserv.h"
@@ -52,17 +44,13 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/relay/dns.h"
 #include "feature/relay/ext_orport.h"
-#include "feature/relay/onion_queue.h"
-#include "feature/relay/routerkeys.h"
 #include "feature/rend/rendcache.h"
 #include "feature/rend/rendclient.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/rephist.h"
 #include "lib/evloop/compat_libevent.h"
 #include "lib/geoip/geoip.h"
-#include "src/feature/relay/router.h"
 
 void evdns_shutdown(int);
 
@@ -99,7 +87,6 @@ tor_cleanup(void)
     }
     if (authdir_mode_tests_reachability(options))
       rep_hist_record_mtbf_data(now, 0);
-    keypin_close_journal();
   }
 
   timers_shutdown();
@@ -126,18 +113,13 @@ tor_free_all(int postfork)
   }
   geoip_free_all();
   geoip_stats_free_all();
-  dirvote_free_all();
   routerlist_free_all();
   networkstatus_free_all();
   addressmap_free_all();
-  dirserv_free_fingerprint_list();
   dirserv_free_all();
-  dirserv_clear_measured_bw_cache();
   rend_cache_free_all();
   rend_service_authorization_free_all();
   rep_hist_free_all();
-  dns_free_all();
-  clear_pending_onions();
   circuit_free_all();
   circpad_machines_free();
   entry_guards_free_all();
@@ -150,23 +132,18 @@ tor_free_all(int postfork)
   nodelist_free_all();
   microdesc_free_all();
   routerparse_free_all();
-  ext_orport_free_all();
   control_free_all();
-  protover_free_all();
   bridges_free_all();
   consdiffmgr_free_all();
   hs_free_all();
   dos_free_all();
   circuitmux_ewma_free_all();
   accounting_free_all();
-  protover_summary_cache_free_all();
+  circpad_free_all();
 
   if (!postfork) {
     config_free_all();
     or_state_free_all();
-    router_free_all();
-    routerkeys_free_all();
-    policies_free_all();
   }
   if (!postfork) {
 #ifndef _WIN32
@@ -176,12 +153,10 @@ tor_free_all(int postfork)
   /* stuff in main.c */
 
   tor_mainloop_disconnect_pubsub();
-  tor_mainloop_free_all();
 
   if (!postfork) {
     release_lockfile();
   }
-  tor_libevent_free_all();
 
   subsystems_shutdown();
 

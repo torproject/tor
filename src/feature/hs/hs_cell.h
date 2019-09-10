@@ -16,19 +16,6 @@
  * 3.2.2 of the specification). Below this value, the cell must be padded. */
 #define HS_CELL_INTRODUCE1_MIN_SIZE 246
 
-/* Status code of an INTRODUCE_ACK cell. */
-typedef enum {
-  HS_CELL_INTRO_ACK_SUCCESS = 0x0000, /* Cell relayed to service. */
-  HS_CELL_INTRO_ACK_FAILURE = 0x0001, /* Service ID not recognized */
-  HS_CELL_INTRO_ACK_BADFMT  = 0x0002, /* Bad message format */
-  HS_CELL_INTRO_ACK_NORELAY = 0x0003, /* Can't relay cell to service */
-} hs_cell_introd_ack_status_t;
-
-/* Onion key type found in the INTRODUCE1 cell. */
-typedef enum {
-  HS_CELL_ONION_KEY_TYPE_NTOR = 1,
-} hs_cell_onion_key_type_t;
-
 /* This data structure contains data that we need to build an INTRODUCE1 cell
  * used by the INTRODUCE1 build function. */
 typedef struct hs_cell_introduce1_data_t {
@@ -92,6 +79,7 @@ typedef struct hs_cell_introduce2_data_t {
 
 /* Build cell API. */
 ssize_t hs_cell_build_establish_intro(const char *circ_nonce,
+                                      const hs_service_config_t *config,
                                       const hs_service_intro_point_t *ip,
                                       uint8_t *cell_out);
 ssize_t hs_cell_build_rendezvous1(const uint8_t *rendezvous_cookie,
@@ -117,6 +105,16 @@ int hs_cell_parse_rendezvous2(const uint8_t *payload, size_t payload_len,
 
 /* Util API. */
 void hs_cell_introduce1_data_clear(hs_cell_introduce1_data_t *data);
+
+#ifdef TOR_UNIT_TESTS
+
+#include "trunnel/hs/cell_common.h"
+
+STATIC trn_cell_extension_t *
+build_establish_intro_extensions(const hs_service_config_t *service_config,
+                                 const hs_service_intro_point_t *ip);
+
+#endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* !defined(TOR_HS_CELL_H) */
 

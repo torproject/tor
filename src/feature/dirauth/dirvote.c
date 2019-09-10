@@ -220,7 +220,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                           networkstatus_t *v3_ns)
 {
   smartlist_t *chunks = smartlist_new();
-  char *packages = NULL;
   char fingerprint[FINGERPRINT_LEN+1];
   char digest[DIGEST_LEN];
   uint32_t addr;
@@ -245,19 +244,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
   server_versions_line = format_line_if_present("server-versions",
                                                 v3_ns->server_versions);
   protocols_lines = format_protocols_lines_for_vote(v3_ns);
-
-  if (v3_ns->package_lines) {
-    smartlist_t *tmp = smartlist_new();
-    SMARTLIST_FOREACH(v3_ns->package_lines, const char *, p,
-                      if (validate_recommended_package_line(p))
-                        smartlist_add_asprintf(tmp, "package %s\n", p));
-    smartlist_sort_strings(tmp);
-    packages = smartlist_join_strings(tmp, "", 0, NULL);
-    SMARTLIST_FOREACH(tmp, char *, cp, tor_free(cp));
-    smartlist_free(tmp);
-  } else {
-    packages = tor_strdup("");
-  }
 
     /* Get shared random commitments/reveals line(s). */
   shared_random_vote_str = sr_get_string_for_vote();
@@ -344,15 +330,14 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  "voting-delay %d %d\n"
                  "%s%s" /* versions */
                  "%s" /* protocols */
-                 "%s" /* packages */
                  "known-flags %s\n"
                  "flag-thresholds %s\n"
                  "params %s\n"
+                 "%s" /* bandwidth file headers */
+                 "%s" /* bandwidth file digest */
                  "dir-source %s %s %s %s %d %d\n"
                  "contact %s\n"
                  "%s" /* shared randomness information */
-                 "%s" /* bandwidth file headers */
-                 "%s" /* bandwidth file */
                  ,
                  v3_ns->type == NS_TYPE_VOTE ? "vote" : "opinion",
                  methods,
@@ -361,18 +346,16 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  client_versions_line,
                  server_versions_line,
                  protocols_lines,
-                 packages,
                  flags,
                  flag_thresholds,
                  params,
+                 bw_headers_line ? bw_headers_line : "",
+                 bw_file_digest ? bw_file_digest: "",
                  voter->nickname, fingerprint, voter->address,
                  fmt_addr32(addr), voter->dir_port, voter->or_port,
                  voter->contact,
                  shared_random_vote_str ?
-                           shared_random_vote_str : "",
-                 bw_headers_line ?
-                           bw_headers_line : "",
-                 bw_file_digest ? bw_file_digest: "");
+                           shared_random_vote_str : "");
 
     tor_free(params);
     tor_free(flags);
@@ -461,7 +444,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
   tor_free(client_versions_line);
   tor_free(server_versions_line);
   tor_free(protocols_lines);
-  tor_free(packages);
 
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_free(chunks);
@@ -2599,7 +2581,7 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
       return -1;
     }
     for (alg = DIGEST_SHA1; alg < N_COMMON_DIGEST_ALGORITHMS; ++alg) {
-      if (!tor_mem_is_zero(digests->d[alg], DIGEST256_LEN)) {
+      if (!fast_mem_is_zero(digests->d[alg], DIGEST256_LEN)) {
         if (fast_memeq(target->digests.d[alg], digests->d[alg],
                        DIGEST256_LEN)) {
           ++n_matches;
@@ -2795,7 +2777,7 @@ networkstatus_get_detached_signatures(smartlist_t *consensuses)
       char d[HEX_DIGEST256_LEN+1];
       const char *alg_name =
         crypto_digest_algorithm_get_name(alg);
-      if (tor_mem_is_zero(ns->digests.d[alg], DIGEST256_LEN))
+      if (fast_mem_is_zero(ns->digests.d[alg], DIGEST256_LEN))
         continue;
       base16_encode(d, sizeof(d), ns->digests.d[alg], DIGEST256_LEN);
       smartlist_add_asprintf(elements, "additional-digest %s %s %s\n",
@@ -3914,8 +3896,7 @@ dirvote_format_microdesc_vote_line(char *out_buf, size_t out_buf_len,
                                ",");
   tor_assert(microdesc_consensus_methods);
 
-  if (digest256_to_base64(d64, md->digest)<0)
-    goto out;
+  digest256_to_base64(d64, md->digest);
 
   if (tor_snprintf(out_buf, out_buf_len, "m %s sha256=%s\n",
                    microdesc_consensus_methods, d64)<0)
@@ -4546,8 +4527,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
-      set_routerstatus_from_routerinfo(rs, node, ri, now,
-                                       listbadexits);
+      dirauth_set_routerstatus_from_routerinfo(rs, node, ri, now,
+                                               listbadexits);
 
       if (ri->cache_info.signing_key_cert) {
         memcpy(vrs->ed25519_id,
@@ -4669,15 +4650,6 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                                v3_out->recommended_relay_protocols, NULL));
   tor_assert_nonfatal(protover_all_supported(
                                v3_out->recommended_client_protocols, NULL));
-
-  v3_out->package_lines = smartlist_new();
-  {
-    config_line_t *cl;
-    for (cl = get_options()->RecommendedPackages; cl; cl = cl->next) {
-      if (validate_recommended_package_line(cl->value))
-        smartlist_add_strdup(v3_out->package_lines, cl->value);
-    }
-  }
 
   v3_out->known_flags = smartlist_new();
   smartlist_split_string(v3_out->known_flags,

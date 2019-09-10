@@ -1,4 +1,0 @@
-  o Minor bugfixes (python):
-    - Stop assuming that /usr/bin/python3 exists. For scripts that work with
-      python2, use /usr/bin/python. Otherwise, use /usr/bin/env python3.
-      Fixes bug 29913; bugfix on 0.2.5.3-alpha.

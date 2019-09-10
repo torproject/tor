@@ -1,3 +1,0 @@
-  o Code simplification and refactoring (shell scripts):
-    - Fix shellcheck warnings in nagios-check-tor-authority-cert script.
-      Resolves issue 29071.

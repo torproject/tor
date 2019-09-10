@@ -155,7 +155,7 @@ severity_to_android_log_priority(int severity)
       // LCOV_EXCL_STOP
   }
 }
-#endif // HAVE_ANDROID_LOG_H.
+#endif /* defined(HAVE_ANDROID_LOG_H) */
 
 /** A mutex to guard changes to logfiles and logging. */
 static tor_mutex_t log_mutex;
@@ -1022,7 +1022,7 @@ flush_pending_log_callbacks(void)
   do {
     SMARTLIST_FOREACH_BEGIN(messages, pending_log_message_t *, msg) {
       const int severity = msg->severity;
-      const int domain = msg->domain;
+      const log_domain_mask_t domain = msg->domain;
       for (lf = logfiles; lf; lf = lf->next) {
         if (! lf->callback || lf->seems_dead ||
             ! (lf->severities->masks[SEVERITY_MASK_IDX(severity)] & domain)) {
@@ -1233,7 +1233,7 @@ add_android_log(const log_severity_list_t *severity,
   UNLOCK_LOGS();
   return 0;
 }
-#endif // HAVE_ANDROID_LOG_H.
+#endif /* defined(HAVE_ANDROID_LOG_H) */
 
 /** If <b>level</b> is a valid log severity, return the corresponding
  * numeric value.  Otherwise, return -1. */
@@ -1275,6 +1275,8 @@ static const char *domain_list[] = {
 
 CTASSERT(ARRAY_LENGTH(domain_list) == N_LOGGING_DOMAINS + 1);
 
+CTASSERT((UINT64_C(1)<<(N_LOGGING_DOMAINS-1)) < LOWEST_RESERVED_LD_FLAG_);
+
 /** Return a bitmask for the log domain for which <b>domain</b> is the name,
  * or 0 if there is no such name. */
 static log_domain_mask_t
@@ -1283,7 +1285,7 @@ parse_log_domain(const char *domain)
   int i;
   for (i=0; domain_list[i]; ++i) {
     if (!strcasecmp(domain, domain_list[i]))
-      return (1u<<i);
+      return (UINT64_C(1)<<i);
   }
   return 0;
 }
@@ -1375,7 +1377,7 @@ parse_log_severity_config(const char **cfg_ptr,
             if (!strcmp(domain, "*")) {
               domains = ~0u;
             } else {
-              int d;
+              log_domain_mask_t d;
               int negate=0;
               if (*domain == '~') {
                 negate = 1;

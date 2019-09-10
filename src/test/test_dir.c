@@ -995,9 +995,7 @@ test_dir_formats_rsa_ed25519(void *arg)
   smartlist_add_strdup(chunks, "master-key-ed25519 ");
   {
     char k[ED25519_BASE64_LEN+1];
-    tt_int_op(ed25519_public_to_base64(k,
-                          &r2->cache_info.signing_key_cert->signing_key),
-              OP_GE, 0);
+    ed25519_public_to_base64(k, &r2->cache_info.signing_key_cert->signing_key);
     smartlist_add_strdup(chunks, k);
     smartlist_add_strdup(chunks, "\n");
   }

@@ -22,4 +22,4 @@ struct dispatch_cfg_t {
   struct smartlist_t *recv_by_msg;
 };
 
-#endif
+#endif /* !defined(TOR_DISPATCH_CFG_ST_H) */

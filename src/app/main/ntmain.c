@@ -608,6 +608,7 @@ nt_service_install(int argc, char **argv)
                             &sidUse) == 0) {
     /* XXXX For some reason, the above test segfaults. Fix that. */
     printf("User \"%s\" doesn't seem to exist.\n", user_acct);
+    tor_free(command);
     return -1;
   } else {
     printf("Will try to install service as user \"%s\".\n", user_acct);

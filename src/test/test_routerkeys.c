@@ -399,7 +399,7 @@ test_routerkeys_ed_key_init_split(void *arg)
   tt_assert(kp2 != NULL);
   tt_assert(cert == NULL);
   tt_mem_op(&kp1->pubkey, OP_EQ, &kp2->pubkey, sizeof(kp2->pubkey));
-  tt_assert(tor_mem_is_zero((char*)kp2->seckey.seckey,
+  tt_assert(fast_mem_is_zero((char*)kp2->seckey.seckey,
                             sizeof(kp2->seckey.seckey)));
   ed25519_keypair_free(kp2); kp2 = NULL;
 
@@ -409,7 +409,7 @@ test_routerkeys_ed_key_init_split(void *arg)
   tt_assert(kp2 != NULL);
   tt_assert(cert == NULL);
   tt_mem_op(&kp1->pubkey, OP_EQ, &kp2->pubkey, sizeof(kp2->pubkey));
-  tt_assert(tor_mem_is_zero((char*)kp2->seckey.seckey,
+  tt_assert(fast_mem_is_zero((char*)kp2->seckey.seckey,
                             sizeof(kp2->seckey.seckey)));
   ed25519_keypair_free(kp2); kp2 = NULL;
 

@@ -55,4 +55,4 @@ STATIC void dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
 STATIC void dirserv_expire_measured_bw_cache(time_t now);
 #endif /* defined(BWAUTH_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_BWAUTH_H) */

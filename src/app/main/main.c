@@ -41,6 +41,7 @@
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/dirparse/routerparse.h"
 #include "feature/hibernate/hibernate.h"
+#include "feature/hs/hs_dos.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/routerlist.h"
@@ -561,6 +562,7 @@ tor_init(int argc, char *argv[])
       if (!strcmp(cl->key, "--version") || !strcmp(cl->key, "--digests") ||
           !strcmp(cl->key, "--list-torrc-options") ||
           !strcmp(cl->key, "--library-versions") ||
+          !strcmp(cl->key, "--list-modules") ||
           !strcmp(cl->key, "--hash-password") ||
           !strcmp(cl->key, "-h") || !strcmp(cl->key, "--help")) {
         if (quiet < 1)
@@ -636,6 +638,10 @@ tor_init(int argc, char *argv[])
   /* Initialize circuit padding to defaults+torrc until we get a consensus */
   circpad_machines_init();
 
+  /* Initialize hidden service DoS subsystem. We need to do this once the
+   * configuration object has been set because it can be accessed. */
+  hs_dos_init();
+
   /* Initialize predicted ports list after loading options */
   predicted_ports_init();
 
@@ -650,10 +656,6 @@ tor_init(int argc, char *argv[])
                          options->AccelDir)) {
     log_err(LD_BUG, "Unable to initialize OpenSSL. Exiting.");
     return -1;
-  }
-
-  if (tor_init_libevent_rng() < 0) {
-    log_warn(LD_NET, "Problem initializing libevent RNG.");
   }
 
   /* Scan/clean unparseable descriptors; after reading config */
@@ -1260,6 +1262,8 @@ pubsub_connect(void)
     /* XXXX For each pubsub channel, its delivery strategy should be set at
      * this XXXX point, using tor_mainloop_set_delivery_strategy().
      */
+    tor_mainloop_set_delivery_strategy("orconn", DELIV_IMMEDIATE);
+    tor_mainloop_set_delivery_strategy("ocirc", DELIV_IMMEDIATE);
   }
 }
 

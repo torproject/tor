@@ -449,12 +449,12 @@ test_sr_commit(void *arg)
     /* We should have a reveal value. */
     tt_assert(commit_has_reveal_value(our_commit));
     /* We should have a random value. */
-    tt_assert(!tor_mem_is_zero((char *) our_commit->random_number,
+    tt_assert(!fast_mem_is_zero((char *) our_commit->random_number,
                                sizeof(our_commit->random_number)));
     /* Commit and reveal timestamp should be the same. */
     tt_u64_op(our_commit->commit_ts, OP_EQ, our_commit->reveal_ts);
     /* We should have a hashed reveal. */
-    tt_assert(!tor_mem_is_zero(our_commit->hashed_reveal,
+    tt_assert(!fast_mem_is_zero(our_commit->hashed_reveal,
                                sizeof(our_commit->hashed_reveal)));
     /* Do we have a valid encoded commit and reveal. Note the following only
      * tests if the generated values are correct. Their could be a bug in
@@ -1367,7 +1367,7 @@ test_utils_auth(void *arg)
     sr_state_set_current_srv(sr_state_get_current_srv());
     sr_state_set_previous_srv(sr_state_get_previous_srv());
   }
-#endif
+#endif /* 0 */
 
  done:
   sr_state_free_all();

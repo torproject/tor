@@ -21,7 +21,7 @@
  * tests. */
 #define STATIC
 #define EXTERN(type, name) extern type name;
-#else
+#else /* !(defined(TOR_UNIT_TESTS)) */
 #define STATIC static
 #define EXTERN(type, name)
 #endif /* defined(TOR_UNIT_TESTS) */

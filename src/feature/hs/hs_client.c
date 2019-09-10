@@ -47,6 +47,8 @@
  * public key to hs_client_service_authorization_t *. */
 static digest256map_t *client_auths = NULL;
 
+#include "trunnel/hs/cell_introduce1.h"
+
 /* Return a human-readable string for the client fetch status code. */
 static const char *
 fetch_status_to_string(hs_client_fetch_status_t status)
@@ -165,9 +167,7 @@ purge_hid_serv_request(const ed25519_public_key_t *identity_pk)
    * some point and we don't care about those anymore. */
   hs_build_blinded_pubkey(identity_pk, NULL, 0,
                           hs_get_time_period_num(0), &blinded_pk);
-  if (BUG(ed25519_public_to_base64(base64_blinded_pk, &blinded_pk) < 0)) {
-    return;
-  }
+  ed25519_public_to_base64(base64_blinded_pk, &blinded_pk);
   /* Purge last hidden service request from cache for this blinded key. */
   hs_purge_hid_serv_from_last_hid_serv_requests(base64_blinded_pk);
 }
@@ -354,7 +354,6 @@ directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
   ed25519_public_key_t blinded_pubkey;
   char base64_blinded_pubkey[ED25519_BASE64_LEN + 1];
   hs_ident_dir_conn_t hs_conn_dir_ident;
-  int retval;
 
   tor_assert(hsdir);
   tor_assert(onion_identity_pk);
@@ -363,10 +362,7 @@ directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
   hs_build_blinded_pubkey(onion_identity_pk, NULL, 0,
                           current_time_period, &blinded_pubkey);
   /* ...and base64 it. */
-  retval = ed25519_public_to_base64(base64_blinded_pubkey, &blinded_pubkey);
-  if (BUG(retval < 0)) {
-    return HS_CLIENT_FETCH_ERROR;
-  }
+  ed25519_public_to_base64(base64_blinded_pubkey, &blinded_pubkey);
 
   /* Copy onion pk to a dir_ident so that we attach it to the dir conn */
   hs_ident_dir_conn_init(onion_identity_pk, &blinded_pubkey,
@@ -405,7 +401,6 @@ directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
 STATIC routerstatus_t *
 pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
 {
-  int retval;
   char base64_blinded_pubkey[ED25519_BASE64_LEN + 1];
   uint64_t current_time_period = hs_get_time_period_num(0);
   smartlist_t *responsible_hsdirs = NULL;
@@ -418,10 +413,7 @@ pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
   hs_build_blinded_pubkey(onion_identity_pk, NULL, 0,
                           current_time_period, &blinded_pubkey);
   /* ...and base64 it. */
-  retval = ed25519_public_to_base64(base64_blinded_pubkey, &blinded_pubkey);
-  if (BUG(retval < 0)) {
-    return NULL;
-  }
+  ed25519_public_to_base64(base64_blinded_pubkey, &blinded_pubkey);
 
   /* Get responsible hsdirs of service for this time period */
   responsible_hsdirs = smartlist_new();
@@ -434,7 +426,7 @@ pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
 
   /* Pick an HSDir from the responsible ones. The ownership of
    * responsible_hsdirs is given to this function so no need to free it. */
-  hsdir_rs = hs_pick_hsdir(responsible_hsdirs, base64_blinded_pubkey);
+  hsdir_rs = hs_pick_hsdir(responsible_hsdirs, base64_blinded_pubkey, NULL);
 
   return hsdir_rs;
 }
@@ -707,7 +699,7 @@ setup_intro_circ_auth_key(origin_circuit_t *circ)
   }
 
   /* Reaching this point means we didn't find any intro point for this circuit
-   * which is not suppose to happen. */
+   * which is not supposed to happen. */
   tor_assert_nonfatal_unreached();
 
  end:
@@ -1076,22 +1068,20 @@ handle_introduce_ack(origin_circuit_t *circ, const uint8_t *payload,
 
   status = hs_cell_parse_introduce_ack(payload, payload_len);
   switch (status) {
-  case HS_CELL_INTRO_ACK_SUCCESS:
+  case TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS:
     ret = 0;
     handle_introduce_ack_success(circ);
     goto end;
-  case HS_CELL_INTRO_ACK_FAILURE:
-  case HS_CELL_INTRO_ACK_BADFMT:
-  case HS_CELL_INTRO_ACK_NORELAY:
+  case TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID:
+  case TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT:
+  /* It is possible that the intro point can send us an unknown status code
+   * for the NACK that we do not know about like a new code for instance.
+   * Just fallthrough so we can note down the NACK and re-extend. */
+  default:
     handle_introduce_ack_bad(circ, status);
     /* We are going to see if we have to close the circuits (IP and RP) or we
      * can re-extend to a new intro point. */
     ret = close_or_reextend_intro_circ(circ);
-    break;
-  default:
-    log_info(LD_PROTOCOL, "Unknown INTRODUCE_ACK status code %u from %s",
-        status,
-        safe_str_client(extend_info_describe(circ->build_state->chosen_exit)));
     break;
   }
 

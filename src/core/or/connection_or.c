@@ -414,13 +414,12 @@ void
 connection_or_event_status(or_connection_t *conn, or_conn_status_event_t tp,
                            int reason)
 {
-  orconn_event_msg_t msg;
+  orconn_status_msg_t *msg = tor_malloc(sizeof(*msg));
 
-  msg.type = ORCONN_MSGTYPE_STATUS;
-  msg.u.status.gid = conn->base_.global_identifier;
-  msg.u.status.status = tp;
-  msg.u.status.reason = reason;
-  orconn_event_publish(&msg);
+  msg->gid = conn->base_.global_identifier;
+  msg->status = tp;
+  msg->reason = reason;
+  orconn_status_publish(msg);
   control_event_or_conn_status(conn, tp, reason);
 }
 
@@ -433,26 +432,25 @@ connection_or_event_status(or_connection_t *conn, or_conn_status_event_t tp,
 static void
 connection_or_state_publish(const or_connection_t *conn, uint8_t state)
 {
-  orconn_event_msg_t msg;
+  orconn_state_msg_t *msg = tor_malloc(sizeof(*msg));
 
-  msg.type = ORCONN_MSGTYPE_STATE;
-  msg.u.state.gid = conn->base_.global_identifier;
+  msg->gid = conn->base_.global_identifier;
   if (conn->is_pt) {
     /* Do extra decoding because conn->proxy_type indicates the proxy
      * protocol that tor uses to talk with the transport plugin,
      * instead of PROXY_PLUGGABLE. */
     tor_assert_nonfatal(conn->proxy_type != PROXY_NONE);
-    msg.u.state.proxy_type = PROXY_PLUGGABLE;
+    msg->proxy_type = PROXY_PLUGGABLE;
   } else {
-    msg.u.state.proxy_type = conn->proxy_type;
+    msg->proxy_type = conn->proxy_type;
   }
-  msg.u.state.state = state;
+  msg->state = state;
   if (conn->chan) {
-    msg.u.state.chan = TLS_CHAN_TO_BASE(conn->chan)->global_identifier;
+    msg->chan = TLS_CHAN_TO_BASE(conn->chan)->global_identifier;
   } else {
-    msg.u.state.chan = 0;
+    msg->chan = 0;
   }
-  orconn_event_publish(&msg);
+  orconn_state_publish(msg);
 }
 
 /** Call this to change or_connection_t states, so the owning channel_tls_t can
@@ -2308,6 +2306,8 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
 
   cell_pack(&networkcell, cell, conn->wide_circ_ids);
 
+  /* We need to count padding cells from this non-packed code path
+   * since they are sent via chan->write_cell() (which is not packed) */
   rep_hist_padding_count_write(PADDING_TYPE_TOTAL);
   if (cell->command == CELL_PADDING)
     rep_hist_padding_count_write(PADDING_TYPE_CELL);
@@ -2318,7 +2318,7 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
   if (conn->chan) {
     channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));
 
-    if (TLS_CHAN_TO_BASE(conn->chan)->currently_padding) {
+    if (TLS_CHAN_TO_BASE(conn->chan)->padding_enabled) {
       rep_hist_padding_count_write(PADDING_TYPE_ENABLED_TOTAL);
       if (cell->command == CELL_PADDING)
         rep_hist_padding_count_write(PADDING_TYPE_ENABLED_CELL);
@@ -2348,6 +2348,7 @@ connection_or_write_var_cell_to_buf,(const var_cell_t *cell,
   if (conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
     or_handshake_state_record_var_cell(conn, conn->handshake_state, cell, 0);
 
+  rep_hist_padding_count_write(PADDING_TYPE_TOTAL);
   /* Touch the channel's active timestamp if there is one */
   if (conn->chan)
     channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));

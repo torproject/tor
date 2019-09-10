@@ -1,0 +1,6 @@
+  o Minor bugfixes (v3 single onion services):
+    - Always retry v3 single onion service intro and rend circuits with a
+      3-hop path. Previously, v3 single onion services used a 3-hop path
+      when rend circuits were retried after a remote or delayed failure,
+      but a 1-hop path for immediate retries. Fixes bug 23818;
+      bugfix on 0.3.2.1-alpha.

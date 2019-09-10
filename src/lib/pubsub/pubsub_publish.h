@@ -12,4 +12,4 @@ struct pub_binding_t;
 
 int pubsub_pub_(const struct pub_binding_t *pub, msg_aux_data_t auxdata);
 
-#endif
+#endif /* !defined(TOR_PUBSUB_PUBLISH_H) */

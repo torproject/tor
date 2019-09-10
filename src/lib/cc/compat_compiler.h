@@ -195,7 +195,7 @@
  * structure <b>st</b>.  Example:
  * <pre>
  *   struct a { int foo; int bar; } x;
- *   off_t bar_offset = offsetof(struct a, bar);
+ *   ptrdiff_t bar_offset = offsetof(struct a, bar);
  *   int *bar_p = STRUCT_VAR_P(&x, bar_offset);
  *   *bar_p = 3;
  * </pre>
@@ -229,4 +229,4 @@
 #define EAT_SEMICOLON                                   \
   struct dummy_semicolon_eater__
 
-#endif /* !defined(TOR_COMPAT_H) */
+#endif /* !defined(TOR_COMPAT_COMPILER_H) */

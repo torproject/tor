@@ -1,0 +1,5 @@
+  o Minor features (configuration):
+    - The configuration code has been extended to allow splitting
+      configuration data across multiple objects. Previously, all
+      configuration data needed to be kept in a single object, which
+      tended to become bloated.  Closes ticket 31240.

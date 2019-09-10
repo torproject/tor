@@ -7,6 +7,7 @@
 #define BUFFERS_PRIVATE
 
 #include "core/or/or.h"
+#include "tinytest.h"
 
 const char *get_yesterday_date_str(void);
 
@@ -32,6 +33,11 @@ or_options_t *helper_parse_options(const char *conf);
 int create_test_directory_structure(const char *parent_dir);
 
 extern const char TEST_DESCRIPTORS[];
+
+void *helper_setup_pubsub(const struct testcase_t *);
+int helper_cleanup_pubsub(const struct testcase_t *, void *);
+
+extern const struct testcase_setup_t helper_pubsub_setup;
 
 #endif /* !defined(TOR_TEST_HELPERS_H) */
 
