@@ -535,8 +535,8 @@ config_var_is_replaced_on_set(const config_var_t *var)
 }
 
 /**
- * Return true iff the user or controller is allowed to assign to this
- * variable by name.
+ * Return true iff <b>var</b> may be assigned by name (e.g., via the
+ * CLI, the configuration files, or the controller API).
  **/
 bool
 config_var_is_settable(const config_var_t *var)
