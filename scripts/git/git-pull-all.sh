@@ -21,11 +21,11 @@ TOR_MASTER_NAME=${TOR_MASTER_NAME:-"tor"}
 # The worktrees location (directory).
 TOR_WKT_NAME=${TOR_WKT_NAME:-"tor-wkt"}
 
-#########################
-# End of configuration. #
-#########################
+##########################
+# Git branches to manage #
+##########################
 
-# Configuration of the branches that needs merging. The values are in order:
+# Configuration of the branches that need pulling. The values are in order:
 #   (1) Branch name to pull (update).
 #   (2) Full path of the git worktree.
 #
@@ -65,9 +65,9 @@ ${RELEASE_040[0]}
 ${RELEASE_041[0]}
 EOF
 
-##########################
-# Git Worktree to manage #
-##########################
+###########################
+# Git worktrees to manage #
+###########################
 
 # List of all worktrees to work on. All defined above. Ordering is important.
 # Always the maint-* branch first then the release-*.
@@ -91,6 +91,10 @@ COUNT=${#WORKTREE[@]}
 # Controlled by the -n option. The dry run option will just output the command
 # that would have been executed for each worktree.
 DRY_RUN=0
+
+#############
+# Constants #
+#############
 
 # Control characters
 CNRM=$'\x1b[0;0m'   # Clear color
