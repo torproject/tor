@@ -589,9 +589,9 @@ config_var_needs_copy(const config_var_t *var)
   return ! config_var_has_flag(var, CFLG_NOCOPY);
 }
 
-/**h
- * Return true iff variable <b>var</b> should appear on list of variables
- * given to the controller or the CLI.
+/**
+ * Return true iff variable <b>var</b> should appear on list of variable
+ * names given to the controller or the CLI.
  **/
 bool
 config_var_is_listable(const config_var_t *var)
