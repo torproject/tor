@@ -99,9 +99,9 @@ if [ "$1" = "--" ]; then
 fi
 
 if [ "$TEST_BRANCH_PREFIX" ]; then
-  if [ "$UPSTREAM_REMOTE" = "${TOR_UPSTREAM_REMOTE_NAME:-upstream}" ]; then
+  if [ "$UPSTREAM_REMOTE" = "$DEFAULT_UPSTREAM_REMOTE" ]; then
     echo "Pushing test branches ${TEST_BRANCH_PREFIX}_nnn to " \
-      "$UPSTREAM_REMOTE is not allowed."
+      "the default remote $DEFAULT_UPSTREAM_REMOTE is not allowed."
     echo "Usage: $0 -r <remote-name> -t <test-branch-prefix> <git-opts>"
     exit 1
   fi
