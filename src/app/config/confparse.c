@@ -545,7 +545,8 @@ config_var_is_settable(const config_var_t *var)
 }
 
 /**
- * Return true iff the controller is allowed to fetch this variable.
+ * Return true iff the controller is allowed to fetch the value of
+ * <b>var</b>.
  **/
 static bool
 config_var_is_gettable(const config_var_t *var)
