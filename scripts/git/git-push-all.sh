@@ -30,6 +30,13 @@ set -e
 
 # Don't change this configuration - set the env vars in your .profile
 #
+# The tor master git repository directory from which all the worktree have
+# been created.
+TOR_MASTER_NAME=${TOR_MASTER_NAME:-"tor"}
+# Which directory do we push from?
+if [ "$TOR_FULL_GIT_PATH" ]; then
+  TOR_GIT_PUSH_PATH=${TOR_GIT_PUSH_PATH:-"$TOR_FULL_GIT_PATH/$TOR_MASTER_NAME"}
+fi
 # git push command and default arguments
 GIT_PUSH=${TOR_GIT_PUSH:-"git push --atomic"}
 # The upstream remote which git.torproject.org/tor.git points to.
@@ -91,8 +98,6 @@ if [ "$1" = "--" ]; then
   shift
 fi
 
-echo "Calling $GIT_PUSH" "$@" "<branches>"
-
 if [ "$TEST_BRANCH_PREFIX" ]; then
   if [ "$UPSTREAM_REMOTE" = "${TOR_UPSTREAM_REMOTE_NAME:-upstream}" ]; then
     echo "Pushing test branches ${TEST_BRANCH_PREFIX}_nnn to " \
@@ -101,6 +106,15 @@ if [ "$TEST_BRANCH_PREFIX" ]; then
     exit 1
   fi
 fi
+
+if [ "$TOR_GIT_PUSH_PATH" ]; then
+  echo "Changing to $GIT_PUSH_PATH before pushing"
+  cd "$TOR_GIT_PUSH_PATH"
+else
+  echo "Pushing from the current directory"
+fi
+
+echo "Calling $GIT_PUSH" "$@" "<branches>"
 
 ################################
 # Git upstream remote branches #
