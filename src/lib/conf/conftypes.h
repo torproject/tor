@@ -179,6 +179,12 @@ typedef struct struct_magic_decl_t {
  */
 #define CFLG_NOREPLACE    (1u<<5)
 
+/**
+ * A group of flags that should be set on all obsolete options and types.
+ **/
+#define CFLG_GROUP_OBSOLETE \
+  (CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP|CFLG_NOSET|CFLG_NOLIST)
+
 /** A variable allowed in the configuration file or on the command line. */
 typedef struct config_var_t {
   struct_member_t member; /** A struct member corresponding to this
