@@ -155,7 +155,7 @@ struct var_type_def_t {
    * A bitwise OR of one or more VTFLAG_* values, describing properties
    * for all values of this type.
    **/
-  unsigned flags;
+  uint32_t flags;
 };
 
 #endif /* !defined(TOR_LIB_CONFMGT_VAR_TYPE_DEF_ST_H) */
