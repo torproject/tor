@@ -283,9 +283,16 @@ double_parse(void *target, const char *value, char **errmsg,
   (void)params;
   (void)errmsg;
   double *v = (double*)target;
-  // XXXX This is the preexisting behavior, but we should detect errors here.
-  *v = atof(value);
-  return 0;
+  char *endptr=NULL;
+  *v = strtod(value, &endptr);
+  if (endptr == value || *endptr != '\0') {
+    // Either there are no converted characters, or there were some characters
+    // that didn't get converted.
+    tor_asprintf(errmsg, "Could not convert %s to a number.", escaped(value));
+    return -1;
+  } else {
+    return 0;
+  }
 }
 
 static char *

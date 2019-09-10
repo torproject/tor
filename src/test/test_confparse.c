@@ -488,6 +488,8 @@ test_confparse_assign_badval(void *arg)
 static const badval_test_t bv_notint = { "pos X\n", "malformed" };
 static const badval_test_t bv_negint = { "pos -10\n", "out of bounds" };
 static const badval_test_t bv_badu64 = { "u64 u64\n", "malformed" };
+static const badval_test_t bv_dbl1 = { "dbl xxx\n", "Could not convert" };
+static const badval_test_t bv_dbl2 = { "dbl 1.0 xx\n", "Could not convert" };
 static const badval_test_t bv_badcsvi1 =
   { "csv_interval 10 wl\n", "malformed" };
 static const badval_test_t bv_badcsvi2 =
@@ -1045,6 +1047,8 @@ struct testcase_t confparse_tests[] = {
   BADVAL_TEST(notint),
   BADVAL_TEST(negint),
   BADVAL_TEST(badu64),
+  BADVAL_TEST(dbl1),
+  BADVAL_TEST(dbl2),
   BADVAL_TEST(badcsvi1),
   BADVAL_TEST(badcsvi2),
   BADVAL_TEST(nonoption),
