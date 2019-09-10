@@ -61,8 +61,7 @@
 
 #define CONFIG_VAR_OBSOLETE(varname)            \
   { .member = { .name = varname, .type = CONFIG_TYPE_OBSOLETE },        \
-    .flags = CFLG_NOSET | CFLG_NOLIST | CFLG_NODUMP | CFLG_NOCOPY |     \
-             CFLG_NOCMP                                                 \
+    .flags = CFLG_GROUP_OBSOLETE                                        \
   }
 
 #endif /* !defined(TOR_LIB_CONF_CONFMACROS_H) */

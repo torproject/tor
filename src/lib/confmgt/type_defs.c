@@ -739,7 +739,7 @@ static const var_type_def_t type_definitions_table[] = {
                                .flags=CFLG_NOREPLACE|CFLG_NOSET },
   [CONFIG_TYPE_OBSOLETE] = {
          .name="Obsolete", .fns=&ignore_fns,
-         .flags=CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP|CFLG_NOSET|CFLG_NOLIST
+         .flags=CFLG_GROUP_OBSOLETE,
   }
 };
 
