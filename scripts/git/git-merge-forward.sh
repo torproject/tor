@@ -1,31 +1,47 @@
 #!/usr/bin/env bash
 
-# Usage: git-merge-forward.sh -n -t <test-branch-prefix> -u
-#        arguments:
-#          -n: dry run mode
-#          -t: test branch mode: create new branches from the commits checked
-#              out in each maint directory. Call these branches prefix_029,
-#              prefix_035, ... , prefix_master.
-#          -u: in test branch mode, if a prefix_* branch exists, skip creating
-#              that branch. Use after a merge error, to restart the merge
-#              forward at the first unmerged branch.
-#        env vars:
-#          See the Configuration section for env vars and their default values.
+SCRIPT_NAME=`basename $0`
+
+function usage()
+{
+  echo "$SCRIPT_NAME [-h] [-n] [-t <test-branch-prefix> [-u]]"
+  echo
+  echo "  arguments:"
+  echo "   -h: show this help text"
+  echo "   -n: dry run mode"
+  echo "       (default: run commands)"
+  echo "   -t: test branch mode: create new branches from the commits checked"
+  echo "       out in each maint directory. Call these branches prefix_029,"
+  echo "       prefix_035, ... , prefix_master."
+  echo "       (default: merge forward maint-*, release-*, and master)"
+  echo "   -u: in test branch mode, if a prefix_* branch already exists,"
+  echo "       skip creating that branch. Use after a merge error, to"
+  echo "       restart the merge forward at the first unmerged branch."
+  echo "       (default: if a prefix_* branch already exists, fail and exit)"
+  echo
+  echo " env vars:"
+  echo "   required:"
+  echo "   TOR_FULL_GIT_PATH: where the git repository directories reside."
+  echo "       You must set this env var, we recommend \$HOME/git/"
+  echo "       (default: fail if this env var is not set;"
+  echo "       current: $GIT_PATH)"
+  echo
+  echo "   optional:"
+  echo "   TOR_MASTER: the name of the directory containing the tor.git clone"
+  echo "       The tor master git directory is \$GIT_PATH/\$TOR_MASTER"
+  echo "       (default: tor; current: $TOR_MASTER_NAME)"
+  echo "   TOR_WKT_NAME: the name of the directory containing the tor"
+  echo "       worktrees. The tor worktrees are:"
+  echo "       \$GIT_PATH/\$TOR_WKT_NAME/{maint-*,release-*}"
+  echo "       (default: tor-wkt; current: $TOR_WKT_NAME)"
+  echo "   we recommend that you set these env vars in your ~/.profile"
+}
 
 #################
 # Configuration #
 #################
 
 # Don't change this configuration - set the env vars in your .profile
-#
-# The general setup that is suggested here is:
-#
-#   GIT_PATH = /home/<user>/git/
-#     ... where the git repository directories resides.
-#   TOR_MASTER_NAME = "tor"
-#     ... which means that tor.git was cloned in /home/<user>/git/tor
-#   TOR_WKT_NAME = "tor-wkt"
-#     ... which means that the tor worktrees are in /home/<user>/git/tor-wkt
 
 # Where are all those git repositories?
 GIT_PATH=${TOR_FULL_GIT_PATH:-"FULL_PATH_TO_GIT_REPOSITORY_DIRECTORY"}
@@ -126,8 +142,11 @@ TEST_BRANCH_PREFIX=
 # creating a new branch.
 USE_EXISTING=0
 
-while getopts "nt:u" opt; do
+while getopts "hnt:u" opt; do
   case "$opt" in
+    h) usage
+       exit 0
+       ;;
     n) DRY_RUN=1
        echo "    *** DRY RUN MODE ***"
        ;;
@@ -138,6 +157,8 @@ while getopts "nt:u" opt; do
        echo "    *** USE EXISTING TEST BRANCHES MODE ***"
        ;;
     *)
+       echo
+       usage
        exit 1
        ;;
   esac

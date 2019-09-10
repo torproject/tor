@@ -1,26 +1,65 @@
 #!/usr/bin/env bash
 
-# Usage: git-push-all.sh -t <test-branch-prefix> -r <remote-name> -s
-#                        -- <git-opts>
-#        arguments:
-#          -t: test branch mode: Push test branches, rather than maint and
-#              release branches. Pushes the branches called prefix_029,
-#              prefix_035, ... , prefix_master.
-#          -r: push to remote-name, rather than $TOR_UPSTREAM_REMOTE_NAME.
-#          -s: push branches whose tips match upstream maint, release, or
-#              master branches. The default is to skip these branches. Use
-#              -s when testing for CI environment failures with old code.
-#          --: pass any other arguments to git, rather than the script.
-#        env vars:
-#          TOR_GIT_PUSH: the git push command and arguments
-#          TOR_UPSTREAM_REMOTE_NAME: the default upstream, overridden by -r
-#          TOR_PUSH_DELAY: pushes the master and maint branches separately,
-#                          so that CI runs in a sensible order.
-#          TOR_PUSH_SAME: push branches whose tips match upstream maint,
-#                         release, or master branches. Inverted by -s.
-#          See the Configuration section for env var default values.
-#        git-opts:
-#          --no-atomic --dry-run (and any other git push option)
+SCRIPT_NAME=`basename $0`
+
+function usage()
+{
+  if [ "$TOR_PUSH_SAME" ]; then
+    CURRENT_PUSH_SAME="push"
+  else
+    CURRENT_PUSH_SAME="skip"
+  fi
+
+  echo "$SCRIPT_NAME [-h] [-r <remote-name> [-t <test-branch-prefix>]] [-s]"
+  # The next line looks misaligned, but it lines up in the output
+  echo "                [-- [-n] [--no-atomic] <git push options>]"
+  echo
+  echo "  arguments:"
+  echo "   -h: show this help text"
+  echo "   -n: dry run mode"
+  echo "       (default: run commands)"
+  echo "   -r: push to remote-name, rather than the default upstream remote."
+  echo "       (default: $DEFAULT_UPSTREAM_REMOTE, current: $UPSTREAM_REMOTE)"
+  echo "   -t: test branch mode: push test branches to remote-name. Pushes"
+  echo "       branches prefix_029, prefix_035, ... , prefix_master."
+  echo "       (default: push maint-*, release-*, and master)"
+  echo "   -s: push branches whose tips match upstream maint, release, or"
+  echo "       master branches. The default is to skip these branches,"
+  echo "       because they do not contain any new code. Use -s to test for"
+  echo "       CI environment failures, using code that previously passed CI."
+  echo "       (default: skip; current: $CURRENT_PUSH_SAME matching branches)"
+  echo "   --: pass further arguments to git push."
+  echo "       (default: git push --atomic, current: $GIT_PUSH)"
+  echo
+  echo " env vars:"
+  echo "   optional:"
+  echo "   TOR_GIT_PUSH_PATH: change to this directory before pushing."
+  echo "       (default: if \$TOR_FULL_GIT_PATH is set,"
+  echo "       use \$TOR_FULL_GIT_PATH/\$TOR_MASTER;"
+  echo "       Otherwise, use the current directory for pushes;"
+  echo "       current: $TOR_GIT_PUSH_PATH)"
+  echo "   TOR_FULL_GIT_PATH: where the git repository directories reside."
+  echo "       We recommend using \$HOME/git/."
+  echo "       (default: use the current directory for pushes;"
+  echo "       current: $TOR_FULL_GIT_PATH)"
+  echo "   TOR_MASTER: the name of the directory containing the tor.git clone"
+  echo "       The tor master git directory is \$GIT_PATH/\$TOR_MASTER"
+  echo "       (default: tor; current: $TOR_MASTER_NAME)"
+  echo
+  echo "   TOR_UPSTREAM_REMOTE_NAME: the default upstream remote."
+  echo "       Overridden by -r."
+  echo "       (default: upstream; current: $UPSTREAM_REMOTE)"
+  echo "   TOR_GIT_PUSH: the git push command and default arguments."
+  echo "       Overridden by <git push options> after --."
+  echo "       (default: git push --atomic; current: $GIT_PUSH)"
+  echo "   TOR_PUSH_SAME: push branches whose tips match upstream maint,"
+  echo "       release, or master branches. Inverted by -s."
+  echo "       (default: skip; current: $CURRENT_PUSH_SAME matching branches)"
+  echo "   TOR_PUSH_DELAY: pushes the master and maint branches separately,"
+  echo "       so that CI runs in a sensible order."
+  echo "       (default: push all branches immediately; current: $PUSH_DELAY)"
+  echo "   we recommend that you set these env vars in your ~/.profile"
+}
 
 set -e
 
@@ -61,8 +100,11 @@ PUSH_SAME=${TOR_PUSH_SAME:-0}
 # <tbbn>_029, <tbbn>_035, ... , <tbbn>_master, and merge forward.
 TEST_BRANCH_PREFIX=
 
-while getopts ":r:st:" opt; do
+while getopts ":hr:st:" opt; do
   case "$opt" in
+    h) usage
+       exit 0
+       ;;
     r) UPSTREAM_REMOTE="$OPTARG"
        echo "    *** PUSHING TO REMOTE: ${UPSTREAM_REMOTE} ***"
        shift
@@ -102,7 +144,8 @@ if [ "$TEST_BRANCH_PREFIX" ]; then
   if [ "$UPSTREAM_REMOTE" = "$DEFAULT_UPSTREAM_REMOTE" ]; then
     echo "Pushing test branches ${TEST_BRANCH_PREFIX}_nnn to " \
       "the default remote $DEFAULT_UPSTREAM_REMOTE is not allowed."
-    echo "Usage: $0 -r <remote-name> -t <test-branch-prefix> <git-opts>"
+    echo
+    usage
     exit 1
   fi
 fi
