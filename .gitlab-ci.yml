@@ -198,6 +198,21 @@ android r20 22 default armeabi-v7a:
   <<: *android-template
 
 
+asciidoc:
+  image: debian:testing-slim
+  <<: *debian-template
+  script:
+    - apt-get install asciidoc docbook-xml docbook-xsl xmlto
+    - ./autogen.sh
+    - ./configure --enable-asciidoc --disable-module-dirauth --disable-unittests
+    - make install
+    - test -e /usr/local/share/man/man1/tor.1
+    - test -e /usr/local/share/man/man1/tor-gencert.1
+    - test -e /usr/local/share/man/man1/tor-resolve.1
+    - test -e /usr/local/share/man/man1/torify.1
+    - test -e /usr/local/share/man/man1/tor-print-ed-signing-cert.1
+
+
 debian_testing:
   image: debian:testing
   <<: *debian-template
