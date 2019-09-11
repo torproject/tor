@@ -9,7 +9,6 @@ endif
 # ADD_C_FILE: INSERT SOURCES HERE.
 LIBTOR_APP_A_SOURCES = 				\
 	src/app/config/config.c			\
-	src/app/config/confparse.c		\
 	src/app/config/statefile.c		\
 	src/app/main/main.c			\
 	src/app/main/shutdown.c			\
@@ -214,7 +213,6 @@ src_core_libtor_app_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 # ADD_C_FILE: INSERT HEADERS HERE.
 noinst_HEADERS +=					\
 	src/app/config/config.h				\
-	src/app/config/confparse.h			\
 	src/app/config/or_options_st.h			\
 	src/app/config/or_state_st.h			\
 	src/app/config/statefile.h			\
