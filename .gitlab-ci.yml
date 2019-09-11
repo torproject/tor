@@ -257,3 +257,47 @@ archlinux:
         xz
         zlib
   <<: *test-template
+
+
+alpine:
+  image: alpine:3.7
+  <<: *artifacts-template
+  before_script:
+    - apk add --no-cache
+        autoconf
+        automake
+        bash
+        build-base
+        gcc
+        libevent-dev
+        libseccomp-dev
+        make
+        openssl-dev
+        python
+        sed
+        xz-dev
+        zlib-dev
+    - sed -i '/<sys\/fcntl.h>/d' src/lib/crypt_ops/crypto_rand.c
+  <<: *test-template
+
+fedora_latest:
+  image: fedora:latest
+  <<: *artifacts-template
+  before_script:
+    # tricks to hopefully make runs more reliable
+    - echo "timeout=600" >> /etc/dnf/dnf.conf
+    - echo "retries=50" >> /etc/dnf/dnf.conf
+    - echo "keepcache=True" >> /etc/dnf/dnf.conf
+
+    - dnf -y update || dnf -y update
+    - dnf -y install @development-tools
+        automake
+        diffutils
+        libevent-devel
+        libscrypt-devel
+        libseccomp-devel
+        openssl-devel
+        python
+        xz-devel
+        zlib-devel
+  <<: *test-template
