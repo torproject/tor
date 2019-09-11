@@ -1982,8 +1982,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
     *hs_version = HS_VERSION_THREE;
   } else if (!strcasecmp(key_type_new, key_type)) {
     /* "NEW:<Algorithm>" - Generating a new key, blob as algorithm. */
-    if (!strcasecmp(key_type_rsa1024, key_blob) ||
-        !strcasecmp(key_type_best, key_blob)) {
+    if (!strcasecmp(key_type_rsa1024, key_blob)) {
       /* "RSA1024", RSA 1024 bit, also currently "BEST" by default. */
       pk = crypto_pk_new();
       if (crypto_pk_generate_key(pk)) {
@@ -2002,7 +2001,9 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
       }
       decoded_key->v2 = pk;
       *hs_version = HS_VERSION_TWO;
-    } else if (!strcasecmp(key_type_ed25519_v3, key_blob)) {
+    } else if (!strcasecmp(key_type_ed25519_v3, key_blob) ||
+               !strcasecmp(key_type_best, key_blob)) {
+      /* "ED25519-V3", ed25519 key, also currently "BEST" by default. */
       ed25519_secret_key_t *sk = tor_malloc_zero(sizeof(*sk));
       if (ed25519_secret_key_generate(sk, 1) < 0) {
         tor_free(sk);
