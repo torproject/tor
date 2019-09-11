@@ -200,6 +200,9 @@ def main(argv):
                         help="Maximum lines per function")
     parser.add_argument("--max-dependency-violations", default=MAX_DEP_VIOLATIONS,
                         help="Maximum number of dependency violations to allow")
+    parser.add_argument("--include-dir", action="append",
+                        default=["src"],
+                        help="A directory (under topdir) to search for source")
     parser.add_argument("topdir", default=".", nargs="?",
                         help="Top-level directory for the tor source")
     args = parser.parse_args(argv[1:])
@@ -222,7 +225,7 @@ def main(argv):
     filt.addThreshold(problem.DependencyViolationItem("*.h", int(args.max_dependency_violations)))
 
     # 1) Get all the .c files we care about
-    files_list = util.get_tor_c_files(TOR_TOPDIR)
+    files_list = util.get_tor_c_files(TOR_TOPDIR, args.include_dir)
 
     # 2) Initialize problem vault and load an optional exceptions file so that
     # we don't warn about the past

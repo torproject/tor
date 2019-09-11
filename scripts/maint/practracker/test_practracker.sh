@@ -25,9 +25,13 @@ DATA="${PRACTRACKER_DIR}/testdata"
 
 run_practracker() {
     "${PYTHON:-python}" "${PRACTRACKER_DIR}/practracker.py" \
-        --max-include-count=0 --max-file-size=0 \
-        --max-h-include-count=0 --max-h-file-size=0 \
-        --max-function-size=0 --terse \
+        --include-dir "" \
+        --max-file-size=0 \
+        --max-function-size=0 \
+        --max-h-file-size=0 \
+        --max-h-include-count=0 \
+        --max-include-count=0 \
+        --terse \
         "${DATA}/" "$@";
 }
 compare() {
