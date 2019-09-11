@@ -33,33 +33,38 @@
 
 /**
  * Global list of the subsystems in Tor, in the order of their initialization.
+ * Want to know the exact level numbers?
+ * We'll implement a level dump command in #31614.
  **/
 const subsys_fns_t *tor_subsystems[] = {
-  &sys_winprocess, /* -100 */
-  &sys_torerr, /* -100 */
-  &sys_wallclock, /* -99 */
-  &sys_threads, /* -95 */
-  &sys_logging, /* -90 */
-  &sys_time, /* -90 */
-  &sys_network, /* -90 */
-  &sys_compress, /* -70 */
-  &sys_crypto, /* -60 */
-  &sys_tortls, /* -50 */
-  &sys_process, /* -35 */
+  &sys_winprocess,
+  &sys_torerr,
 
-  &sys_orconn_event, /* -33 */
-  &sys_ocirc_event, /* -32 */
-  &sys_btrack, /* -30 */
+  &sys_wallclock,
+  &sys_threads,
+  &sys_logging,
 
-  &sys_evloop, /* -20 */
+  &sys_time,
+  &sys_network,
 
-  &sys_mainloop, /* 5 */
-  &sys_or, /* 20 */
+  &sys_compress,
+  &sys_crypto,
+  &sys_tortls,
+  &sys_process,
 
-  &sys_relay, /* 50 */
+  &sys_orconn_event,
+  &sys_ocirc_event,
+  &sys_btrack,
+
+  &sys_evloop,
+
+  &sys_mainloop,
+  &sys_or,
+
+  &sys_relay,
 
 #ifdef HAVE_MODULE_DIRAUTH
-  &sys_dirauth, /* 70 */
+  &sys_dirauth,
 #endif
 };
 
