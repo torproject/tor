@@ -16,7 +16,7 @@
 
 #include "lib/buf/buffers.h"
 #include "app/config/config.h"
-#include "app/config/confparse.h"
+#include "lib/confmgt/confparse.h"
 #include "app/main/subsysmgr.h"
 #include "core/mainloop/connection.h"
 #include "lib/crypt_ops/crypto_rand.h"

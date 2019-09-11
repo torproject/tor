@@ -12,7 +12,7 @@
 
 #include "core/or/or.h"
 #include "app/config/config.h"
-#include "app/config/confparse.h"
+#include "lib/confmgt/confparse.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/nodelist/networkstatus.h"

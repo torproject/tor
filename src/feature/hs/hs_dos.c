@@ -29,7 +29,7 @@
 
 #include "lib/evloop/token_bucket.h"
 
-#include "hs_dos.h"
+#include "feature/hs/hs_dos.h"
 
 /* Default value of the allowed INTRODUCE2 cell rate per second. Above that
  * value per second, the introduction is denied. */

@@ -90,7 +90,7 @@
 #include "core/or/or.h"
 #include "feature/dirauth/shared_random.h"
 #include "app/config/config.h"
-#include "app/config/confparse.h"
+#include "lib/confmgt/confparse.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/nodelist/networkstatus.h"

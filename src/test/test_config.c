@@ -16,7 +16,7 @@
 #include "core/or/circuitmux_ewma.h"
 #include "core/or/circuitbuild.h"
 #include "app/config/config.h"
-#include "app/config/confparse.h"
+#include "lib/confmgt/confparse.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
 #include "test/test.h"

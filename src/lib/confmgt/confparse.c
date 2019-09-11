@@ -23,7 +23,7 @@
 
 #define CONFPARSE_PRIVATE
 #include "orconfig.h"
-#include "app/config/confparse.h"
+#include "lib/confmgt/confparse.h"
 
 #include "lib/confmgt/structvar.h"
 #include "lib/confmgt/unitparse.h"
