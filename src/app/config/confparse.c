@@ -511,32 +511,112 @@ config_count_options(const config_mgr_t *mgr)
   return smartlist_len(mgr->all_vars);
 }
 
-bool
-config_var_is_cumulative(const config_var_t *var)
+/**
+ * Return true iff at least one bit from <b>flag</b> is set on <b>var</b>,
+ * either in <b>var</b>'s flags, or on the flags of its type.
+ **/
+static bool
+config_var_has_flag(const config_var_t *var, uint32_t flag)
 {
-  return struct_var_is_cumulative(&var->member);
+  uint32_t have_flags = var->flags | struct_var_get_flags(&var->member);
+
+  return (have_flags & flag) != 0;
 }
+
+/**
+ * Return true if assigning a value to <b>var</b> replaces the previous
+ * value.  Return false if assigning a value to <b>var</b> appends
+ * to the previous value.
+ **/
+static bool
+config_var_is_replaced_on_set(const config_var_t *var)
+{
+  return ! config_var_has_flag(var, CFLG_NOREPLACE);
+}
+
+/**
+ * Return true iff <b>var</b> may be assigned by name (e.g., via the
+ * CLI, the configuration files, or the controller API).
+ **/
 bool
 config_var_is_settable(const config_var_t *var)
 {
-  if (var->flags & CVFLAG_OBSOLETE)
-    return false;
-  return struct_var_is_settable(&var->member);
+  return ! config_var_has_flag(var, CFLG_NOSET);
 }
-bool
-config_var_is_contained(const config_var_t *var)
+
+/**
+ * Return true iff the controller is allowed to fetch the value of
+ * <b>var</b>.
+ **/
+static bool
+config_var_is_gettable(const config_var_t *var)
 {
-  return struct_var_is_contained(&var->member);
+  /* Arguably, invisible or obsolete options should not be gettable.  However,
+   * they have been gettable for a long time, and making them ungettable could
+   * have compatibility effects.  For now, let's leave them alone.
+   */
+
+  // return ! config_var_has_flag(var, CVFLAG_OBSOLETE|CFGLAGS_INVISIBLE);
+  (void)var;
+  return true;
 }
-bool
-config_var_is_invisible(const config_var_t *var)
+
+/**
+ * Return true iff we need to check <b>var</b> for changes when we are
+ * comparing config options for changes.
+ *
+ * A false result might mean that the variable is a derived variable, and that
+ * comparing the variable it derives from compares this one too-- or it might
+ * mean that there is no data to compare.
+ **/
+static bool
+config_var_should_list_changes(const config_var_t *var)
 {
-  return (var->flags & CVFLAG_INVISIBLE) != 0;
+  return ! config_var_has_flag(var, CFLG_NOCMP);
 }
+
+/**
+ * Return true iff we need to copy the data for <b>var</b> when we are
+ * copying a config option.
+ *
+ * A false option might mean that the variable is a derived variable, and that
+ * copying the variable it derives from copies it-- or it might mean that
+ * there is no data to copy.
+ **/
+static bool
+config_var_needs_copy(const config_var_t *var)
+{
+  return ! config_var_has_flag(var, CFLG_NOCOPY);
+}
+
+/**
+ * Return true iff variable <b>var</b> should appear on list of variable
+ * names given to the controller or the CLI.
+ *
+ * (Note that this option is imperfectly obeyed. The
+ * --list-torrc-options command looks at the "settable" flag, whereas
+ * "GETINFO config/defaults" and "list_deprecated_*()" do not filter
+ * their results. It would be good for consistency to try to converge
+ * these behaviors in the future.)
+ **/
 bool
+config_var_is_listable(const config_var_t *var)
+{
+  return ! config_var_has_flag(var, CFLG_NOLIST);
+}
+
+/**
+ * Return true iff variable <b>var</b> should be written out when we
+ * are writing our configuration to disk, to a controller, or via the
+ * --dump-config command.
+ *
+ * This option may be set because a variable is hidden, or because it is
+ * derived from another variable which will already be written out.
+ **/
+static bool
 config_var_is_dumpable(const config_var_t *var)
 {
-  return (var->flags & CVFLAG_NODUMP) == 0;
+  return ! config_var_has_flag(var, CFLG_NODUMP);
 }
 
 /*
@@ -650,7 +730,8 @@ config_assign_line(const config_mgr_t *mgr, void *options,
   if (!strlen(c->value)) {
     /* reset or clear it, then return */
     if (!clear_first) {
-      if (config_var_is_cumulative(cvar) && c->command != CONFIG_LINE_CLEAR) {
+      if (! config_var_is_replaced_on_set(cvar) &&
+          c->command != CONFIG_LINE_CLEAR) {
         /* We got an empty linelist from the torrc or command line.
            As a special case, call this an error. Warn and ignore. */
         log_warn(LD_CONFIG,
@@ -671,7 +752,7 @@ config_assign_line(const config_mgr_t *mgr, void *options,
     // LCOV_EXCL_STOP
   }
 
-  if (options_seen && ! config_var_is_cumulative(cvar)) {
+  if (options_seen && config_var_is_replaced_on_set(cvar)) {
     /* We're tracking which options we've seen, and this option is not
      * supposed to occur more than once. */
     tor_assert(var_index >= 0);
@@ -748,6 +829,11 @@ config_get_assigned_option(const config_mgr_t *mgr, const void *options,
   var = config_mgr_find_var(mgr, key, true, NULL);
   if (!var) {
     log_warn(LD_CONFIG, "Unknown option '%s'.  Failing.", key);
+    return NULL;
+  }
+  if (! config_var_is_gettable(var->cvar)) {
+    log_warn(LD_CONFIG, "Option '%s' is obsolete or unfetchable. Failing.",
+             key);
     return NULL;
   }
   const void *object = config_mgr_get_obj(mgr, options, var->object_idx);
@@ -989,7 +1075,7 @@ config_get_changes(const config_mgr_t *mgr,
   config_line_t *result = NULL;
   config_line_t **next = &result;
   SMARTLIST_FOREACH_BEGIN(mgr->all_vars, managed_var_t *, mv) {
-    if (config_var_is_contained(mv->cvar)) {
+    if (! config_var_should_list_changes(mv->cvar)) {
       /* something else will check this var, or it doesn't need checking */
       continue;
     }
@@ -1025,7 +1111,7 @@ config_dup(const config_mgr_t *mgr, const void *old)
 
   newopts = config_new(mgr);
   SMARTLIST_FOREACH_BEGIN(mgr->all_vars, managed_var_t *, mv) {
-    if (config_var_is_contained(mv->cvar)) {
+    if (! config_var_needs_copy(mv->cvar)) {
       // Something else will copy this option, or it doesn't need copying.
       continue;
     }
@@ -1092,10 +1178,6 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
   elements = smartlist_new();
   SMARTLIST_FOREACH_BEGIN(mgr->all_vars, managed_var_t *, mv) {
     int comment_option = 0;
-    if (config_var_is_contained(mv->cvar)) {
-      // Something else will dump this option, or it doesn't need dumping.
-      continue;
-    }
     /* Don't save 'hidden' control variables. */
     if (! config_var_is_dumpable(mv->cvar))
       continue;

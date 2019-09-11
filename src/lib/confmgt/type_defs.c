@@ -725,16 +725,22 @@ static const var_type_def_t type_definitions_table[] = {
   [CONFIG_TYPE_CSV_INTERVAL] = { .name="TimeInterval",
                                  .fns=&legacy_csv_interval_fns, },
   [CONFIG_TYPE_LINELIST] = { .name="LineList", .fns=&linelist_fns,
-                             .is_cumulative=true},
+                             .flags=CFLG_NOREPLACE },
+  /*
+   * A "linelist_s" is a derived view of a linelist_v: inspecting
+   * it gets part of a linelist_v, and setting it adds to the linelist_v.
+   */
   [CONFIG_TYPE_LINELIST_S] = { .name="Dependent", .fns=&linelist_s_fns,
-                               .is_cumulative=true,
-                               .is_contained=true, },
+                               .flags=CFLG_NOREPLACE|
+                               /* The operations we disable here are
+                                * handled by the linelist_v. */
+                               CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP },
   [CONFIG_TYPE_LINELIST_V] = { .name="Virtual", .fns=&linelist_v_fns,
-                               .is_cumulative=true,
-                               .is_unsettable=true },
-  [CONFIG_TYPE_OBSOLETE] = { .name="Obsolete", .fns=&ignore_fns,
-                             .is_unsettable=true,
-                             .is_contained=true, }
+                               .flags=CFLG_NOREPLACE|CFLG_NOSET },
+  [CONFIG_TYPE_OBSOLETE] = {
+         .name="Obsolete", .fns=&ignore_fns,
+         .flags=CFLG_GROUP_OBSOLETE,
+  }
 };
 
 /**

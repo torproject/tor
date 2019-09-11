@@ -35,8 +35,4 @@ struct config_line_t *typed_var_kvencode(const char *key, const void *value,
 
 void typed_var_mark_fragile(void *value, const var_type_def_t *def);
 
-bool var_type_is_cumulative(const var_type_def_t *def);
-bool var_type_is_contained(const var_type_def_t *def);
-bool var_type_is_settable(const var_type_def_t *def);
-
 #endif /* !defined(TOR_LIB_CONFMGT_TYPEDVAR_H) */

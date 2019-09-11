@@ -5983,6 +5983,31 @@ test_config_kvline_parse(void *arg)
   tor_free(enc);
 }
 
+static void
+test_config_getinfo_config_names(void *arg)
+{
+  (void)arg;
+  char *answer = NULL;
+  const char *error = NULL;
+  int rv;
+
+  rv = getinfo_helper_config(NULL, "config/names", &answer, &error);
+  tt_int_op(rv, OP_EQ, 0);
+  tt_ptr_op(error, OP_EQ, NULL);
+
+  // ContactInfo should be listed.
+  tt_assert(strstr(answer, "\nContactInfo String\n"));
+
+  // V1AuthoritativeDirectory should not be listed, since it is obsolete.
+  tt_assert(! strstr(answer, "V1AuthoritativeDirectory"));
+
+  // ___UsingTestNetworkDefaults should not be listed, since it is invisible.
+  tt_assert(! strstr(answer, "UsingTestNetworkDefaults"));
+
+ done:
+  tor_free(answer);
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
@@ -6035,5 +6060,6 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(compute_max_mem_in_queues, 0),
   CONFIG_TEST(extended_fmt, 0),
   CONFIG_TEST(kvline_parse, 0),
+  CONFIG_TEST(getinfo_config_names, 0),
   END_OF_TESTCASES
 };

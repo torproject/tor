@@ -132,22 +132,58 @@ typedef struct struct_magic_decl_t {
 } struct_magic_decl_t;
 
 /**
- * Flag to indicate that an option is obsolete. Any attempt to set or
- * fetch this option should produce a warning.
+ * Flag to indicate that an option or type is "undumpable". An
+ * undumpable option is never saved to disk.
+ *
+ * For historical reasons its name is usually is prefixed with __.
  **/
-#define CVFLAG_OBSOLETE  (1u<<0)
+#define CFLG_NODUMP    (1u<<0)
 /**
- * Flag to indicate that an option is undumpable. An undumpable option is
- * never saved to disk. For historical reasons it is prefixed with __ but
- * not with ___.
+ * Flag to indicate that an option or type is "unlisted".
+ *
+ * We don't tell the controller about unlisted options when it asks for a
+ * list of them.
  **/
-#define CVFLAG_NODUMP    (1u<<1)
+#define CFLG_NOLIST (1u<<1)
 /**
- * Flag to indicate that an option is "invisible". An invisible option
- * is always undumpable, and we don't tell the controller about it.
- * For historical reasons it is prefixed with ___.
+ * Flag to indicate that an option or type is "unsettable".
+ *
+ * An unsettable option can never be set directly by name.
  **/
-#define CVFLAG_INVISIBLE (1u<<2)
+#define CFLG_NOSET (1u<<2)
+/**
+ * Flag to indicate that an option or type does not need to be copied when
+ * copying the structure that contains it.
+ *
+ * (Usually, if an option does not need to be copied, then either it contains
+ * no data, or the data that it does contain is completely contained within
+ * another option.)
+ **/
+#define CFLG_NOCOPY (1u<<3)
+/**
+ * Flag to indicate that an option or type does not need to be compared
+ * when telling the controller about the differences between two
+ * configurations.
+ *
+ * (Usually, if an option does not need to be compared, then either it
+ * contains no data, or the data that it does contain is completely contained
+ * within another option.)
+ **/
+#define CFLG_NOCMP (1u<<4)
+/**
+ * Flag to indicate that an option or type should not be replaced when setting
+ * it.
+ *
+ * For most options, setting them replaces their old value.  For some options,
+ * however, setting them appends to their old value.
+ */
+#define CFLG_NOREPLACE    (1u<<5)
+
+/**
+ * A group of flags that should be set on all obsolete options and types.
+ **/
+#define CFLG_GROUP_OBSOLETE \
+  (CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP|CFLG_NOSET|CFLG_NOLIST)
 
 /** A variable allowed in the configuration file or on the command line. */
 typedef struct config_var_t {
