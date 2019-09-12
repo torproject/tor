@@ -4,7 +4,7 @@
 #include "core/or/or.h"
 
 #include "test/test.h"
-#include "test_helpers.h"
+#include "test/test_helpers.h"
 #include "test/log_test_helpers.h"
 
 #define OCIRC_EVENT_PRIVATE

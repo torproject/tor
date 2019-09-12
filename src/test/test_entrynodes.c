@@ -18,7 +18,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuitbuild.h"
 #include "app/config/config.h"
-#include "app/config/confparse.h"
+#include "lib/confmgt/confparse.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "feature/dircommon/directory.h"
 #include "feature/dirclient/dirclient.h"

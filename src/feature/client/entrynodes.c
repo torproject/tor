@@ -114,7 +114,7 @@
 
 #include "core/or/or.h"
 #include "app/config/config.h"
-#include "app/config/confparse.h"
+#include "lib/confmgt/confparse.h"
 #include "app/config/statefile.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"

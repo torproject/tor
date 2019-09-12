@@ -32,7 +32,7 @@
 #include "core/or/or.h"
 #include "core/or/circuitstats.h"
 #include "app/config/config.h"
-#include "app/config/confparse.h"
+#include "lib/confmgt/confparse.h"
 #include "core/mainloop/mainloop.h"
 #include "core/mainloop/netstatus.h"
 #include "core/mainloop/connection.h"

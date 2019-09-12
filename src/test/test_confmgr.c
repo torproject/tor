@@ -13,7 +13,7 @@
 
 #include "core/or/or.h"
 #include "lib/encoding/confline.h"
-#include "app/config/confparse.h"
+#include "lib/confmgt/confparse.h"
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 
