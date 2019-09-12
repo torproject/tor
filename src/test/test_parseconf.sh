@@ -52,7 +52,7 @@ fi
 # make a safe space for temporary files
 DATA_DIR=$(mktemp -d -t tor_parseconf_tests.XXXXXX)
 trap 'rm -rf "$DATA_DIR"' 0
-echo "" > "${DATA_DIR}/EMPTY" || die "Couldn't create empty file."
+touch "${DATA_DIR}/EMPTY" || die "Couldn't create empty file."
 
 # This is where we look for examples
 EXAMPLEDIR="$(dirname "$0")"/conf_examples
