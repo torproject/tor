@@ -4,12 +4,22 @@
 
 # Integration test script for verifying that Tor configurations are parsed as
 # we expect.
+#
+# Valid configurations are tested with --dump-config, which parses and
+# validates the configuration before writing it out.  We then make sure that
+# the result is what we expect, before parsing and dumping it again to make
+# sure that there is no change.
+#
+# Invalid configurations are tested with --verify-config, which parses
+# and validates the configuration. We capture its output and make sure that
+# it contains the error message we expect.
 
 # This script looks for its test cases as individual directories in
 # src/test/conf_examples/.  Each test may have these files:
 #
-# torrc -- Required. This file is passed to Tor on the command line with
-#      the "-f" flag.
+# torrc -- Usually needed. This file is passed to Tor on the command line
+#      with the "-f" flag. (If you omit it, you'll test Tor's behavior when
+#      it receives a nonexistent configuration file.)
 #
 # torrc.defaults -- Optional. If present, it is passed to Tor on the command
 #      line with the --defaults-torrc option. If this file is absent, an empty
@@ -20,12 +30,12 @@
 #
 # expected -- If this file is present, then it should be the expected result of
 #      "--dump-config short" for this test case.  Either "expected" or "error"
-#      must be present, or the test will not run.
+#      must be present, or the test will be skipped.
 #
 # error -- If this file is present, then it contains a regex that must be
 #      matched by some line in the output of "--verify-config", which must
 #      fail.  Either "expected" or "error" must be present, or the test will
-#      not run.
+#      be skipped.
 
 umask 077
 set -e
@@ -113,7 +123,7 @@ for dir in "${EXAMPLEDIR}"/*; do
         fi
 
     elif test -f "${dir}/error"; then
-        # This case should succeed: run verify-config and see if it does.
+        # This case should fail: run verify-config and see if it does.
 
         "${TOR_BINARY}" --verify-config \
                         -f "${dir}"/torrc \
