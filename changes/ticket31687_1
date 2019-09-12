@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation):
+    - Suppress spurious float-conversion warnings from GCC when calling
+      floating-point classifier functions on FreeBSD.  Fixes part of bug
+      31687; bugfix on 0.3.1.5-alpha.
