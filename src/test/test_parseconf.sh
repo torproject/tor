@@ -108,6 +108,7 @@ for dir in "${EXAMPLEDIR}"/*; do
             "${TOR_BINARY}" -f "${DATA_DIR}/output.${testname}" \
                             --defaults-torrc "${DATA_DIR}/empty" \
                             --dump-config short \
+                            | "${FILTER}" \
                             > "${DATA_DIR}/output_2.${testname}" \
                         || die "Failure: Tor exited on round-trip."
 
