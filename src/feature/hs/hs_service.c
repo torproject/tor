@@ -2366,7 +2366,7 @@ cleanup_intro_points(hs_service_t *service, time_t now)
        * and don't have any established circuits. */
       if (has_expired || node == NULL ||
           (ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES &&
-           !ip->circuit_established)) {
+           hs_circ_service_get_intro_circ(ip))) {
         log_info(LD_REND, "Intro point %s%s (retried: %u times). "
                           "Removing it.",
                  describe_intro_point(ip),
