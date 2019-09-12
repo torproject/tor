@@ -71,6 +71,11 @@ else
 fi
 
 for dir in "${EXAMPLEDIR}"/*; do
+    if ! test -d "${dir}"; then
+       # Only count directories.
+       continue
+    fi
+
     testname="$(basename "${dir}")"
     # We use printf since "echo -n" is not standard
     printf "%s: " "$testname"
