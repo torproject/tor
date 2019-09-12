@@ -28,14 +28,14 @@
 # cmdline -- Optional. If present, it contains command-line arguments that
 #      will be passed to Tor.
 #
-# expected -- If this file is present, then it should be the expected result of
-#      "--dump-config short" for this test case.  Either "expected" or "error"
-#      must be present, or the test will be skipped.
+# expected -- If this file is present, then it should be the expected result
+#      of "--dump-config short" for this test case.  Exactly one of
+#      "expected" or "error" must be present, or the test will fail.
 #
 # error -- If this file is present, then it contains a regex that must be
 #      matched by some line in the output of "--verify-config", which must
-#      fail.  Either "expected" or "error" must be present, or the test will
-#      be skipped.
+#      fail. Exactly one of "expected" or "error" must be present, or the
+#      test will fail.
 
 umask 077
 set -e
@@ -92,6 +92,12 @@ for dir in "${EXAMPLEDIR}"/*; do
     fi
 
     if test -f "${dir}/expected"; then
+        if test -f "${dir}/error"; then
+            echo "FAIL: Found both ${dir}/expected and ${dir}/error."
+            echo "(Only one of these files should exist.)"
+            exit 1
+        fi
+
         # This case should succeed: run dump-config and see if it does.
 
         "${TOR_BINARY}" -f "${dir}"/torrc \
@@ -144,9 +150,11 @@ for dir in "${EXAMPLEDIR}"/*; do
         fi
 
     else
-        # This case is not actually configured with an expectation.
+        # This case is not actually configured with a success or a failure.
+        # call that an error.
 
-        echo "SKIP"
+        echo "FAIL: Did not find ${dir}/expected or ${dir}/error."
+        exit 1
     fi
 
 done
