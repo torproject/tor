@@ -64,15 +64,11 @@ case "$(uname -s)" in
     *) WINDOWS=0;;
 esac
 
-# on Windows, we need to use diff -b because of line-ending issues; otherwise,
-# we should use diff so that we detect whitespace changes.
-diffcmd() {
-    if test "$WINDOWS" = 1; then
-        diff -b "$@"
-    else
-        diff "$@"
-    fi
-}
+if test "$WINDOWS" = 1; then
+    FILTER="dos2unix"
+else
+    FILTER="cat"
+fi
 
 for dir in "${EXAMPLEDIR}"/*; do
     testname="$(basename "${dir}")"
@@ -104,10 +100,10 @@ for dir in "${EXAMPLEDIR}"/*; do
                         --defaults-torrc "${DEFAULTS}" \
                         --dump-config short \
                         ${CMDLINE} \
-                        > "${DATA_DIR}/output.${testname}" \
+                        | "${FILTER}" > "${DATA_DIR}/output.${testname}" \
                         || die "Failure: Tor exited."
 
-        if diffcmd "${dir}/expected" "${DATA_DIR}/output.${testname}">/dev/null ; then
+        if cmp "${dir}/expected" "${DATA_DIR}/output.${testname}">/dev/null ; then
             # Check round-trip.
             "${TOR_BINARY}" -f "${DATA_DIR}/output.${testname}" \
                             --defaults-torrc "${DATA_DIR}/empty" \
@@ -124,7 +120,7 @@ for dir in "${EXAMPLEDIR}"/*; do
             echo "OK"
         else
             echo "FAIL"
-            diffcmd -u "${dir}/expected" "${DATA_DIR}/output.${testname}"
+            diff -u "${dir}/expected" "${DATA_DIR}/output.${testname}"
             exit 1
         fi
 
