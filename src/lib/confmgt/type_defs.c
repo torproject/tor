@@ -37,6 +37,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include <errno.h>
 
 //////
 // CONFIG_TYPE_STRING
@@ -284,15 +285,23 @@ double_parse(void *target, const char *value, char **errmsg,
   (void)errmsg;
   double *v = (double*)target;
   char *endptr=NULL;
+  errno = 0;
   *v = strtod(value, &endptr);
   if (endptr == value || *endptr != '\0') {
     // Either there are no converted characters, or there were some characters
     // that didn't get converted.
     tor_asprintf(errmsg, "Could not convert %s to a number.", escaped(value));
     return -1;
-  } else {
-    return 0;
   }
+  if (errno == ERANGE) {
+    // strtod will set errno to ERANGE on underflow or overflow.
+    bool underflow = -.00001 < *v && *v < .00001;
+    tor_asprintf(errmsg,
+                 "%s is too %s to express as a floating-point number.",
+                 escaped(value), underflow ? "small" : "large");
+    return -1;
+  }
+  return 0;
 }
 
 static char *
