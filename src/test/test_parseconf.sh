@@ -145,11 +145,18 @@ for dir in "${EXAMPLEDIR}"/*; do
             echo "OK"
         else
             echo "FAIL"
+            if test "$(wc -c < "${DATA_DIR}/output.${testname}")" = 0; then
+                # There was no output -- probably we failed.
+                "${TOR_BINARY}" -f "./torrc" \
+                                --defaults-torrc "${DEFAULTS}" \
+                                --verify-config \
+                                ${CMDLINE} || true
+            fi
             diff -u "./expected" "${DATA_DIR}/output.${testname}"
             exit 1
         fi
 
-    elif test -f "./error"; then
+   elif test -f "./error"; then
         # This case should fail: run verify-config and see if it does.
 
         "${TOR_BINARY}" --verify-config \
