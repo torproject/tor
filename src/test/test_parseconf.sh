@@ -51,7 +51,6 @@ abspath() {
         dir="$(dirname "$f")"
         base="/$(basename "$f")"
     fi
-    echo "$dir    $base" 1>2
     dir="$(cd "$dir" && pwd)"
     echo "$dir$base"
 }
