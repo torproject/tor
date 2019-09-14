@@ -41,6 +41,21 @@ umask 077
 set -e
 die() { echo "$1" >&2 ; exit 5; }
 
+# emulate realpath(), in case coreutils or equivalent is not installed.
+abspath() {
+    f=$@
+    if [ -d "$f" ]; then
+        dir="$f"
+        base=""
+    else
+        dir="$(dirname "$f")"
+        base="/$(basename "$f")"
+    fi
+    echo "$dir    $base" 1>2
+    dir="$(cd "$dir" && pwd)"
+    echo "$dir$base"
+}
+
 # find the tor binary
 if [ $# -ge 1 ]; then
   TOR_BINARY="${1}"
@@ -49,7 +64,7 @@ else
   TOR_BINARY="${TESTING_TOR_BINARY:-./src/app/tor}"
 fi
 
-TOR_BINARY="$(realpath "$TOR_BINARY")"
+TOR_BINARY="$(abspath "$TOR_BINARY")"
 
 # make a safe space for temporary files
 DATA_DIR=$(mktemp -d -t tor_parseconf_tests.XXXXXX)
