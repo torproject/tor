@@ -32,8 +32,6 @@ ConstrainedSockSize 10240
 ContactInfo long_config@example.com
 ControlPortFileGroupReadable 1
 ControlPort 9058
-ControlSocket /socket/control
-ControlSocketsGroupWritable 1
 CookieAuthentication 1
 CookieAuthFile /control/cookie
 CookieAuthFileGroupReadable 1
