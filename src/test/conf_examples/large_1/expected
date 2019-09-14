@@ -84,7 +84,6 @@ GeoIPExcludeUnknown 1
 GeoIPFile /geoip
 GuardfractionFile /gff
 GuardLifetime 691200
-HardwareAccel 1
 HeartbeatPeriod 2700
 IPv6Exit 1
 KeepalivePeriod 540
