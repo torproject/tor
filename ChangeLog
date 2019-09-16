@@ -219,6 +219,9 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
       Fixes bug 30840; bugfix on 0.4.0.1-alpha.
     - Stop hard-coding the tor master branch name and worktree path in
       the git scripts. Fixes bug 30841; bugfix on 0.4.0.1-alpha.
+    - Allow git-push-all.sh to be run from any directory. Previously,
+      the script only worked if run from an upstream worktree directory.
+      Closes ticket 31678.
 
   o Minor bugfixes (guards):
     - When tor is missing descriptors for some primary entry guards,

@@ -1,4 +1,0 @@
-  o Minor features (git scripts):
-    - Allow git-push-all.sh to be run from any directory. Previously, the
-      script only worked if run from an upstream worktree directory.
-      Closes ticket 31678.
