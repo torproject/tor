@@ -1,17 +1,39 @@
 #!/usr/bin/env bash
 
-##################################
-# User configuration (change me) #
-##################################
+SCRIPT_NAME=`basename $0`
 
-# The general setup that is suggested here is:
-#
-#   GIT_PATH = /home/<user>/git/
-#     ... where the git repository directories resides.
-#   TOR_MASTER_NAME = "tor"
-#     ... which means that tor.git was cloned in /home/<user>/git/tor
-#   TOR_WKT_NAME = "tor-wkt"
-#     ... which means that the tor worktrees are in /home/<user>/git/tor-wkt
+function usage()
+{
+  echo "$SCRIPT_NAME [-h] [-n]"
+  echo
+  echo "  arguments:"
+  echo "   -h: show this help text"
+  echo "   -n: dry run mode"
+  echo "       (default: run commands)"
+  echo
+  echo " env vars:"
+  echo "   required:"
+  echo "   TOR_FULL_GIT_PATH: where the git repository directories reside."
+  echo "       You must set this env var, we recommend \$HOME/git/"
+  echo "       (default: fail if this env var is not set;"
+  echo "       current: $GIT_PATH)"
+  echo
+  echo "   optional:"
+  echo "   TOR_MASTER: the name of the directory containing the tor.git clone"
+  echo "       The tor master git directory is \$GIT_PATH/\$TOR_MASTER"
+  echo "       (default: tor; current: $TOR_MASTER_NAME)"
+  echo "   TOR_WKT_NAME: the name of the directory containing the tor"
+  echo "       worktrees. The tor worktrees are:"
+  echo "       \$GIT_PATH/\$TOR_WKT_NAME/{maint-*,release-*}"
+  echo "       (default: tor-wkt; current: $TOR_WKT_NAME)"
+  echo "   we recommend that you set these env vars in your ~/.profile"
+}
+
+#################
+# Configuration #
+#################
+
+# Don't change this configuration - set the env vars in your .profile
 
 # Where are all those git repositories?
 GIT_PATH=${TOR_FULL_GIT_PATH:-"FULL_PATH_TO_GIT_REPOSITORY_DIRECTORY"}
@@ -21,11 +43,11 @@ TOR_MASTER_NAME=${TOR_MASTER_NAME:-"tor"}
 # The worktrees location (directory).
 TOR_WKT_NAME=${TOR_WKT_NAME:-"tor-wkt"}
 
-#########################
-# End of configuration. #
-#########################
+##########################
+# Git branches to manage #
+##########################
 
-# Configuration of the branches that needs merging. The values are in order:
+# Configuration of the branches that need pulling. The values are in order:
 #   (1) Branch name to pull (update).
 #   (2) Full path of the git worktree.
 #
@@ -65,9 +87,9 @@ ${RELEASE_040[0]}
 ${RELEASE_041[0]}
 EOF
 
-##########################
-# Git Worktree to manage #
-##########################
+###########################
+# Git worktrees to manage #
+###########################
 
 # List of all worktrees to work on. All defined above. Ordering is important.
 # Always the maint-* branch first then the release-*.
@@ -88,9 +110,33 @@ WORKTREE=(
 )
 COUNT=${#WORKTREE[@]}
 
+#######################
+# Argument processing #
+#######################
+
 # Controlled by the -n option. The dry run option will just output the command
 # that would have been executed for each worktree.
 DRY_RUN=0
+
+while getopts "hn" opt; do
+  case "$opt" in
+    h) usage
+       exit 0
+       ;;
+    n) DRY_RUN=1
+       echo "    *** DRY DRUN MODE ***"
+       ;;
+    *)
+       echo
+       usage
+       exit 1
+       ;;
+  esac
+done
+
+#############
+# Constants #
+#############
 
 # Control characters
 CNRM=$'\x1b[0;0m'   # Clear color
@@ -190,16 +236,6 @@ function fetch_tor_github
 ###############
 # Entry point #
 ###############
-
-while getopts "n" opt; do
-  case "$opt" in
-    n) DRY_RUN=1
-       echo "    *** DRY DRUN MODE ***"
-       ;;
-    *)
-       ;;
-  esac
-done
 
 # First, fetch tor-github.
 goto_repo "$ORIGIN_PATH"
