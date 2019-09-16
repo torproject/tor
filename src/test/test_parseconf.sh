@@ -43,7 +43,7 @@ die() { echo "$1" >&2 ; exit 5; }
 
 # emulate realpath(), in case coreutils or equivalent is not installed.
 abspath() {
-    f=$@
+    f="$*"
     if [ -d "$f" ]; then
         dir="$f"
         base=""
