@@ -39,7 +39,6 @@
 
 umask 077
 set -e
-die() { echo "$1" >&2 ; exit 5; }
 
 # emulate realpath(), in case coreutils or equivalent is not installed.
 abspath() {
@@ -68,7 +67,6 @@ TOR_BINARY="$(abspath "$TOR_BINARY")"
 # make a safe space for temporary files
 DATA_DIR=$(mktemp -d -t tor_parseconf_tests.XXXXXX)
 trap 'rm -rf "$DATA_DIR"' 0
-touch "${DATA_DIR}/EMPTY" || die "Couldn't create empty file."
 
 # This is where we look for examples
 EXAMPLEDIR="$(dirname "$0")"/conf_examples
@@ -92,11 +90,15 @@ else
     EXITCODE=1
 fi
 
+die() { echo "$1" >&2 ; exit "$EXITCODE"; }
+
 if test "$WINDOWS" = 1; then
     FILTER="dos2unix"
 else
     FILTER="cat"
 fi
+
+touch "${DATA_DIR}/EMPTY" || die "Couldn't create empty file."
 
 for dir in "${EXAMPLEDIR}"/*; do
     if ! test -d "${dir}"; then
