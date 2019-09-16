@@ -325,6 +325,42 @@ getinfo_helper_current_time(control_connection_t *control_conn,
   return 0;
 }
 
+/** GETINFO helper for dumping different consensus flavors
+ * returns: 0 on success -1 on error. */
+STATIC int
+getinfo_helper_current_consensus(consensus_flavor_t flavor,
+                                 char** answer,
+                                 const char** errmsg)
+{
+  const char *flavor_name = networkstatus_get_flavor_name(flavor);
+  if (!strcmp(flavor_name, "??")) {
+    *errmsg = "Could not open cached consensus. "
+      "Make sure FetchUselessDescriptors is set to 1.";
+    return -1;
+  }
+  if (we_want_to_fetch_flavor(get_options(), flavor)) {
+    /** Check from the cache */
+    const cached_dir_t *consensus = dirserv_get_consensus(flavor_name);
+    if (consensus) {
+      *answer = tor_strdup(consensus->dir);
+    }
+  }
+  if (!*answer) { /* try loading it from disk */
+
+    tor_mmap_t *mapped = networkstatus_map_cached_consensus(flavor_name);
+    if (mapped) {
+      *answer = tor_memdup_nulterm(mapped->data, mapped->size);
+      tor_munmap_file(mapped);
+    }
+    if (!*answer) { /* generate an error */
+      *errmsg = "Could not open cached consensus. "
+        "Make sure FetchUselessDescriptors is set to 1.";
+      return -1;
+    }
+  }
+  return 0;
+}
+
 /** Implementation helper for GETINFO: knows the answers for questions about
  * directory information. */
 STATIC int
@@ -576,23 +612,18 @@ getinfo_helper_dir(control_connection_t *control_conn,
     smartlist_free(descs);
   } else if (!strcmpstart(question, "dir/status/")) {
     *answer = tor_strdup("");
-  } else if (!strcmp(question, "dir/status-vote/current/consensus")) { /* v3 */
-    if (we_want_to_fetch_flavor(get_options(), FLAV_NS)) {
-      const cached_dir_t *consensus = dirserv_get_consensus("ns");
-      if (consensus)
-        *answer = tor_strdup(consensus->dir);
+  } else if (!strcmp(question, "dir/status-vote/current/consensus")) {
+    int consensus_result = getinfo_helper_current_consensus(FLAV_NS,
+                                                            answer, errmsg);
+    if (consensus_result == -1) {
+      return -1;
     }
-    if (!*answer) { /* try loading it from disk */
-      tor_mmap_t *mapped = networkstatus_map_cached_consensus("ns");
-      if (mapped) {
-        *answer = tor_memdup_nulterm(mapped->data, mapped->size);
-        tor_munmap_file(mapped);
-      }
-      if (!*answer) { /* generate an error */
-        *errmsg = "Could not open cached consensus. "
-          "Make sure FetchUselessDescriptors is set to 1.";
-        return -1;
-      }
+  } else if (!strcmp(question,
+                     "dir/status-vote/current/consensus-microdesc")) {
+    int consensus_result = getinfo_helper_current_consensus(FLAV_MICRODESC,
+                                                            answer, errmsg);
+    if (consensus_result == -1) {
+      return -1;
     }
   } else if (!strcmp(question, "network-status")) { /* v1 */
     static int network_status_warned = 0;
@@ -1513,6 +1544,8 @@ static const getinfo_item_t getinfo_items[] = {
          "v2 networkstatus docs as retrieved from a DirPort."),
   ITEM("dir/status-vote/current/consensus", dir,
        "v3 Networkstatus consensus as retrieved from a DirPort."),
+  ITEM("dir/status-vote/current/consensus-microdesc", dir,
+       "v3 Microdescriptors consensus as retrieved from a DirPort."),
   ITEM("exit-policy/default", policies,
        "The default value appended to the configured exit policy."),
   ITEM("exit-policy/reject-private/default", policies,

@@ -16,6 +16,9 @@
 
 void networkstatus_reset_warnings(void);
 void networkstatus_reset_download_failures(void);
+MOCK_DECL(char *,networkstatus_get_cache_fname,(int flav,
+                                                const char *flavorname,
+                                                int unverified_consensus));
 tor_mmap_t *networkstatus_map_cached_consensus(const char *flavorname);
 int router_reload_consensus_networkstatus(void);
 void routerstatus_free_(routerstatus_t *rs);
