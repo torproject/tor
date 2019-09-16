@@ -2,16 +2,6 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
   This is the first alpha release in the 0.4.2.x series. BLURB
   BLURB BLURB.
 
-  o New system requirements (build system):
-    - Do not include the deprecated <sys/sysctl.h> on Linux or Windows
-      system. Closes 31673;
-
-  o Major features (developer tools):
-    - Our best-practices tracker now integrates with our include-checker
-      tool to keep track of the layering violations that we have not yet
-      fixed. We hope to reduce this number over time to improve Tor's
-      modularity. Closes ticket 31176.
-
   o Major features (onion service v3, denial of service):
     - Add onion service introduction denial of service defenses. They
       consist of rate limiting client introduction at the intro point
@@ -41,7 +31,7 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
 
   o Minor feature (onion service v3):
     - Do not allow single hop client to fetch or post an HS descriptor
-      from an HSDir. Closes ticket 24964;
+      from an HSDir. Closes ticket 24964.
 
   o Minor feature (onion service):
     - Disallow single hop clients to introduce directly at the
@@ -55,6 +45,10 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
       ticket 30687.
 
   o Minor features (best practices tracker):
+    - Our best-practices tracker now integrates with our include-checker
+      tool to keep track of the layering violations that we have not yet
+      fixed. We hope to reduce this number over time to improve Tor's
+      modularity. Closes ticket 31176.
     - Add a TOR_PRACTRACKER_OPTIONS variable for passing arguments to
       practracker from the environment. We may want this for continuous
       integration. Closes ticket 31309.
@@ -133,13 +127,6 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
     - Log IPv6 addresses as well as IPv4 addresses, when describing
       routerinfos, routerstatuses, and nodes. Closes ticket 21003.
 
-  o Minor features (recommended packages):
-    - No longer include recommended packages in votes as detailed in
-      proposal 301. The RecommendedPackages torrc option is deprecated
-      and will no longer have any effect. "package" lines will still be
-      considered when computing consensuses for consensus methods that
-      include them. Fixes ticket 29738.
-
   o Minor features (stem tests):
     - Change "make test-stem" so it only runs the stem tests that use
       tor. This change makes test-stem faster and more reliable. Closes
@@ -153,8 +140,6 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
       /Option flags. Closes ticket 31637.
     - Improve test coverage for our existing configuration parsing and
       management API. Closes ticket 30893.
-
-  o Minor features (tests):
     - Add integration tests to make sure that practracker gives the
       outputs we expect. Closes ticket 31477.
     - The practracker tests are now run as part of the Tor test suite.
@@ -164,6 +149,15 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
     - Fix a few issues in the best-practices script, including tests,
       tab tolerance, error reporting, and directory-exclusion logic.
       Fixes bug 29746; bugfix on 0.4.1.1-alpha.
+    - When running check-best-practices, only consider files in the src
+      subdirectory. Previously we had recursively considered all
+      subdirectories, which made us get confused by the temporary
+      directories made by "make distcheck". Fixes bug 31578; bugfix
+      on 0.4.1.1-alpha.
+
+  o Minor bugfixes (build system):
+    - Do not include the deprecated <sys/sysctl.h> on Linux or Windows
+      system. Fixes bug 31673; bugfix on 0.2.5.4-alpha.
 
   o Minor bugfixes (chutney, makefiles, documentation):
     - "make test-network-all" shows the warnings from each test-
@@ -184,18 +178,14 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
       were ignored and treated as zero. Fixes bug 31475; bugfix
       on 0.0.1.
 
-  o Minor bugfixes (coverity compliance):
+  o Minor bugfixes (coverity):
     - Add an assertion when parsing a BEGIN cell so that coverity can be
       sure that we are not about to dereference a NULL address. Fixes
       bug 31026; bugfix on 0.2.4.7-alpha. This is CID 1447296.
-
-  o Minor bugfixes (coverity):
     - In our siphash implementation, when building for coverity, use
       memcpy in place of a switch statement, so that coverity can tell
       we are not accessing out-of-bounds memory. Fixes bug 31025; bugfix
       on 0.2.8.1-alpha. This is tracked as CID 1447293 and 1447295.
-
-  o Minor bugfixes (coverity, tests):
     - Fix several coverity warnings from our unit tests. Fixes bug
       31030; bugfix on 0.2.4.1-alpha, 0.3.2.1-alpha, and 0.4.0.1-alpha.
 
@@ -293,13 +283,6 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
       date in RFC 1123 and UNIX timestamp formats, to make output
       machine readable. Fixes bug 31012; bugfix on 0.3.5.1-alpha.
 
-  o Minor bugfixes (practracker):
-    - When running check-best-practices, only consider files in the src
-      subdirectory. Previously we had recursively considered all
-      subdirectories, which made us get confused by the temporary
-      directories made by "make distcheck". Fixes bug 31578; bugfix
-      on 0.4.1.1-alpha.
-
   o Minor bugfixes (rust):
     - Correctly exclude a redundant rust build job in Travis. Fixes bug
       31463; bugfix on 0.3.5.4-alpha.
@@ -393,6 +376,11 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
       themselves. Closes ticket 31089.
 
   o Removed features:
+    - No longer include recommended packages in votes as detailed in
+      proposal 301. The RecommendedPackages torrc option is deprecated
+      and will no longer have any effect. "package" lines will still be
+      considered when computing consensuses for consensus methods that
+      include them. Closes ticket 29738.
     - Remove torctl.in from contrib/dist directory. Resolves
       ticket 30550.
 
