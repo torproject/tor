@@ -15,9 +15,7 @@ import time
 
 def topdir_file(name):
     """Strip opening "src" from a filename"""
-    if name.startswith("src/"):
-        name = name[4:]
-    return name
+    return os.path.relpath(name, './src')
 
 def guard_macro(name):
     """Return the guard macro that should be used for the header file 'name'.
