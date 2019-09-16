@@ -166,7 +166,7 @@ for dir in "${EXAMPLEDIR}"/*; do
                                 --verify-config \
                                 ${CMDLINE} || true
             fi
-            diff -u "./expected" "${DATA_DIR}/output.${testname}"
+            diff -u "./expected" "${DATA_DIR}/output.${testname}" || /bin/true
             exit $EXITCODE
         fi
 
