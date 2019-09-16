@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Lower another layer of object management from confparse.c to
-      a more general tool.  Now typed structure members are accessible
-      via an abstract type. Implements ticket 30914.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (git hooks):
-    - Remove a duplicate call to practracker from the pre-push hook.
-      The pre-push hook already calls the pre-commit hook, which calls
-      practracker. Fixes bug 31462; bugfix on 0.4.1.1-alpha.

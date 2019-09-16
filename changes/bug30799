@@ -1,4 +1,0 @@
-  o Minor bugfixes (memory management):
-    - Stop leaking a small amount of memory in nt_service_install(), in
-      unreachable code. Fixes bug 30799; bugfix on 0.2.0.7-alpha.
-      Patch by Xiaoyin Liu.

@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Move our backend logic for working with configuration and state
-      files into a lower-level library, since in no longer depends on
-      any tor-specific functionality. Closes ticket 31626.

@@ -1,4 +1,0 @@
-  o Minor features (build system):
-    - Add --disable-manpage and --disable-html-manual options to configure
-      script. This will enable shortening build times by not building
-      documentation. Resolves issue 19381.

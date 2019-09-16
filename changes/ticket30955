@@ -1,3 +1,0 @@
-  o Documentation (hard-coded directories):
-    - Improve the documentation for the DirAuthority and FallbackDir torrc
-      options. Closes ticket 30955.

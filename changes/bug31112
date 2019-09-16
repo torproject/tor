@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Various simplifications and minor improvements to the circuit padding
-      machines. Patch by Tobias Pulls. Closes tickets 31112 and 31098.

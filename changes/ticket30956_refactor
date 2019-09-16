@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Split extrainfo_dump_to_string() into smaller functions.
-      Closes ticket 30956.

@@ -1,3 +1,0 @@
-  o Documentation:
-    - Include an example usage for IPv6 ORPort in our sample torrc.
-      Closes ticket 31320; patch from Ali Raheem.

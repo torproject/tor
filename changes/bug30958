@@ -1,5 +1,0 @@
-  o Minor bugfixes (statistics):
-    - Stop removing the ed25519 signature if the extra info file is too big.
-      If the signature data was removed, but the keyword was kept, this could
-      result in an unparseable extra info file. Fixes bug 30958;
-      bugfix on 0.2.7.2-alpha.

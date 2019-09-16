@@ -1,5 +1,0 @@
-  o Minor bugfixes (subsystems):
-    - Make the subsystem init order match the subsystem module dependencies.
-      Call windows process security APIs as early as possible. Init log before
-      network and time, so that network and time can use logging.
-      Fixes bug 31615; bugfix on 0.4.0.1-alpha.

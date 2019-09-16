@@ -1,5 +1,0 @@
-  o Minor bugfixes (coverity compliance):
-    - Add an assertion when parsing a BEGIN cell so that coverity can be sure
-      that we are not about to dereference a NULL address.
-      Fixes bug 31026; bugfix on 0.2.4.7-alpha.  This is CID
-      1447296.

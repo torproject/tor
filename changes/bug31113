@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Improve documentation in circuit padding subsystem. Patch by Tobias
-      Pulls. Closes ticket 31113.

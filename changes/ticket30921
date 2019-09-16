@@ -1,5 +1,0 @@
-  o Minor bugfixes (onion service v3):
-    - When purging the client descriptor cache, always also close any
-      introduction point circuits associated with it. This avoids picking those
-      when connecting to them later while not having the descriptor to complete
-      the introduction. Fixes bug 30921; bugfix on 0.3.2.1-alpha.

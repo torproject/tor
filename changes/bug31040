@@ -1,3 +1,0 @@
-  o Minor bugfixes (developer tooling):
-    - Only log git script changes in post-merge script when merge was to the
-      master branch. Fixes bug 31040; bugfix on 0.4.1.1-alpha.

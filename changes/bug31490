@@ -1,6 +1,0 @@
-  o Minor bugfixes (onion services):
-    - In the hs_ident_circuit_t data structure, remove the unused field
-      circuit_type and the respective argument in hs_ident_circuit_new().
-      This field is set by clients (for introduction) and services (for
-      introduction and rendezvous) but is never used afterwards. Fixes
-      bug 31490; bugfix on 0.3.2.1-alpha. Patch by Neel Chauhan.

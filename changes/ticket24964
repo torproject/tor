@@ -1,4 +1,0 @@
-  o Minor feature (onion service v3):
-    - Do not allow single hop client to fetch or post an HS descriptor from an
-      HSDir. Closes ticket 24964;
-

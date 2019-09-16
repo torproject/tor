@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Use the subsystems mechanism to manage the main event loop code.
-      Closes ticket 30806.

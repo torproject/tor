@@ -1,3 +1,0 @@
-  o Minor features (development tools):
-    - Our best-practices tracker now looks at headers as well as
-      C files. Closes ticket 31175.

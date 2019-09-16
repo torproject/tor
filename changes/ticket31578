@@ -1,6 +1,0 @@
-  o Minor bugfixes (practracker):
-    - When running check-best-practices, only consider files in the
-      src subdirectory.  Previously we had recursively considered
-      all subdirectories, which made us get confused by the
-      temporary directories made by "make distcheck".  Fixes bug
-      31578; bugfix on 0.4.1.1-alpha.

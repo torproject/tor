@@ -1,3 +1,0 @@
-  o Minor bugfixes (coverity, tests):
-    - Fix several coverity warnings from our unit tests. Fixes bug 31030;
-      bugfix on 0.2.4.1-alpha, 0.3.2.1-alpha, and 0.4.0.1-alpha.

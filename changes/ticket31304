@@ -1,3 +1,0 @@
-  o Minor features (tests):
-    - The practracker tests are now run as part of the Tor test suite.
-      Closes ticket 31304.

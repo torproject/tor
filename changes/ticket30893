@@ -1,3 +1,0 @@
-  o Minor features (testing):
-    - Improve test coverage for our existing configuration parsing and
-      management API. Closes ticket 30893.

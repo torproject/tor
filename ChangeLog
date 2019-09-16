@@ -1,3 +1,405 @@
+Changes in version 0.4.2.1-alpha - 2019-09-??
+
+  o Major features (developer tools):
+    - Our best-practices tracker now integrates with our include-checker tool
+      to keep track of the layering violations that we have not yet fixed.
+      We hope to reduce this number over time to improve Tor's modularity.
+      Closes ticket 31176.
+
+  o Major features (onion service v3, denial of service):
+    - Add onion service introduction denial of service defenses. They consist of
+      rate limiting client introduction at the intro point using parameters that
+      can be sent by the service within the ESTABLISH_INTRO cell. If the cell
+      extension for this is not used, the intro point will honor the consensus
+      parameters. Closes ticket 30924.
+
+  o Major bugfixes (circuit build, guard):
+    - When considering upgrading circuits from "waiting for guard" to "open",
+      always ignore the ones that are mark for close. Else, we can end up in
+      the situation where a subsystem is notified of that circuit opening but
+      still marked for close leading to undesirable behavior. Fixes bug 30871;
+      bugfix on 0.3.0.1-alpha.
+
+  o Major bugfixes (crash, android):
+    - Tolerate systems (including some Android installations) where madvise
+      and MADV_DONTDUMP are available at build-time, but not at run time.
+      Previously, these systems would notice a failed syscall and abort.
+      Fixes bug 31570; bugfix on 0.4.1.1-alpha.
+
+  o Major bugfixes (crash, Linux):
+    - Tolerate systems (including some Linux installations) where madvise
+      and/or MADV_DONTFORK are available at build-time, but not at run time.
+      Previously, these systems would notice a failed syscall and abort.
+      Fixes bug 31696; bugfix on 0.4.1.1-alpha.
+
+  o Minor feature (onion service v3):
+    - Do not allow single hop client to fetch or post an HS descriptor from an
+      HSDir. Closes ticket 24964;
+
+  o Minor feature (onion service):
+    - Disallow single hop clients to introduce directly at the introduction
+      point. We've removed Tor2web a while back and rendezvous are blocked at
+      the relays. This is to remove load off the network from spammy clients.
+      Close ticket 24963.
+
+  o Minor feature (token bucket):
+    - Implement a generic token bucket that uses a single counter. This will be
+      useful for the anti-DoS onion service work. Closes ticket 30687.
+
+  o Minor features (best practices tracker):
+    - Add a TOR_PRACTRACKER_OPTIONS variable for passing arguments
+      to practracker from the environment. We may want this for
+      continuous integration. Closes ticket 31309.
+    - Give a warning rather than an error when a practracker exception is
+      violated by a small amount; add a --list-overbroad option to
+      practracker that lists exceptions that are stricter than they need to
+      be, and provide an environment variable for disabling
+      practracker. Closes ticekt 30752.
+
+  o Minor features (build system):
+    - Add --disable-manpage and --disable-html-manual options to configure
+      script. This will enable shortening build times by not building
+      documentation. Resolves issue 19381.
+
+  o Minor features (compilation):
+    - Log a more useful error message when we are compiling and one of the
+      compile-time hardening options we have selected can be linked but
+      not executed. Closes ticket 27530.
+
+  o Minor features (configuration):
+    - The configuration code has been extended to allow splitting
+      configuration data across multiple objects. Previously, all
+      configuration data needed to be kept in a single object, which
+      tended to become bloated.  Closes ticket 31240.
+
+  o Minor features (continuous integration):
+    - When running CI builds on Travis, put some random data in ~/.torrc,
+      to make sure no tests are dependent on default Tor configuration.
+      Resolves issue 30102.
+
+  o Minor features (debugging):
+    - Log a nonfatal assertion failure if we encounter a configuration
+      line whose command is "CLEAR" but which has a nonempty value.
+      This should be impossible, according to the rules of our
+      configuration line parsing. Closes ticket 31529.
+
+  o Minor features (development tools):
+    - Our best-practices tracker now looks at headers as well as
+      C files. Closes ticket 31175.
+
+  o Minor features (git hooks):
+    - Our pre-commit git hook now checks for a special file
+      before running practracker, so that practracker only runs on branches
+      that are based on master. Since the pre-push hook calls the pre-commit
+      hook, practracker will also only run before pushes of branches based
+      on master.
+      Closes ticket 30979.
+
+  o Minor features (git scripts):
+    - Add a "--" command-line argument, to
+      separate git-push-all.sh script arguments from arguments that are passed
+      through to git push. Closes ticket 31314.
+    - Add a -r <remote-name> argument to git-push-all.sh, so the script can
+      push test branches to a personal remote. Closes ticket 31314.
+    - Add a -t <test-branch-prefix> argument to git-merge-forward.sh and
+      git-push-all.sh, which makes these scripts create, merge forward, and
+      push test branches. Closes ticket 31314.
+    - Add a -u argument to git-merge-forward.sh, so that the script can re-use
+      existing test branches after a merge failure and fix.
+      Closes ticket 31314.
+    - Add a TOR_GIT_PUSH env var, which sets the default git push command and
+      arguments for git-push-all.sh. Closes ticket 31314.
+    - Add a TOR_PUSH_DELAY variable to git-push-all.sh, which makes the script
+      push master and maint branches with a delay between each branch. These
+      delays trigger the CI jobs in a set order, which should show the most
+      likely failures first. Also make pushes atomic by default, and make
+      the script pass any command-line arguments to git push.
+      Closes ticket 29879.
+    - Call the shellcheck script from the pre-commit hook.
+      Closes ticket 30967.
+    - Skip pushing test branches that are the same as a remote
+      maint/release/master branch in git-push-all.sh by default. Add a -s
+      argument, so git-push-all.sh can push all test branches.
+      Closes ticket 31314.
+
+  o Minor features (IPv6, logging):
+    - Log IPv6 addresses as well as IPv4 addresses, when describing
+      routerinfos, routerstatuses, and nodes. Closes ticket 21003.
+
+  o Minor features (recommended packages):
+    - No longer include recommended packages in votes as detailed in proposal
+      301. The RecommendedPackages torrc option is deprecated and will no
+      longer have any effect. "package" lines will still be considered when
+      computing consensuses for consensus methods that include them. Fixes
+      ticket 29738.
+
+  o Minor features (stem tests):
+    - Change "make test-stem" so it only runs the stem tests that use tor.
+      This change makes test-stem faster and more reliable.
+      Closes ticket 31554.
+
+  o Minor features (testing):
+    - Add a script to invoke "tor --dump-config" and "tor --verify-config"
+      with various configuration options, and see whether tor's resulting
+      configuration or error messages are what we expect. Use it for
+      integration testing of our +Option and /Option flags.
+      Closes ticket 31637.
+    - Improve test coverage for our existing configuration parsing and
+      management API. Closes ticket 30893.
+
+  o Minor features (tests):
+    - Add integration tests to make sure that practracker gives the outputs
+      we expect. Closes ticket 31477.
+    - The practracker tests are now run as part of the Tor test suite.
+      Closes ticket 31304.
+
+  o Minor bugfixes (best practices tracker):
+    - Fix a few issues in the best-practices script, including tests, tab
+      tolerance, error reporting, and directory-exclusion logic. Fixes bug
+      29746; bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (chutney, makefiles, documentation):
+    - "make test-network-all" shows the warnings from each test-network.sh
+      run on the console, so developers see new warnings early. Improve the
+      documentation for this feature, and rename a Makefile variable so the
+      code is self-documenting. Fixes bug 30455; bugfix on 0.3.0.4-rc.
+
+  o Minor bugfixes (compilation):
+    - Add more stub functions to fix compilation on Android with LTO, when
+      --disable-module-dirauth is used. Previously, these compilation
+      settings would make the compiler look for functions that didn't exist.
+      Fixes bug 31552; bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (configuration):
+    - Invalid floating-point values in the configuration file are now
+      detected treated as errors in the configuration. Previously, they
+      were ignored and treated as zero. Fixes bug 31475; bugfix on
+      0.0.1.
+
+  o Minor bugfixes (coverity compliance):
+    - Add an assertion when parsing a BEGIN cell so that coverity can be sure
+      that we are not about to dereference a NULL address.
+      Fixes bug 31026; bugfix on 0.2.4.7-alpha.  This is CID
+      1447296.
+
+  o Minor bugfixes (coverity):
+    - In our siphash implementation, when building for coverity, use memcpy
+      in place of a switch statement, so that coverity can tell we are not
+      accessing out-of-bounds memory. Fixes bug 31025; bugfix on
+      0.2.8.1-alpha.  This is tracked as CID 1447293 and 1447295.
+
+  o Minor bugfixes (coverity, tests):
+    - Fix several coverity warnings from our unit tests. Fixes bug 31030;
+      bugfix on 0.2.4.1-alpha, 0.3.2.1-alpha, and 0.4.0.1-alpha.
+
+  o Minor bugfixes (developer tooling):
+    - Only log git script changes in post-merge script when merge was to the
+      master branch. Fixes bug 31040; bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (directory authorities):
+    - Return a distinct status when formatting annotations fails.
+      Fixes bug 30780; bugfix on 0.2.0.8-alpha.
+
+  o Minor bugfixes (error handling):
+    - On abort, try harder to flush the output buffers of log messages. On
+      some platforms (macOS), log messages can be discarded when the process
+      terminates. Fixes bug 31571; bugfix on 0.3.5.1-alpha.
+    - Report the tor version whenever an assertion fails. Previously, we only
+      reported the Tor version on some crashes, and some non-fatal assertions.
+      Fixes bug 31571; bugfix on 0.3.5.1-alpha.
+    - When tor aborts due to an error, close log file descriptors before
+      aborting. Closing the logs makes some OSes flush log file buffers,
+      rather than deleting buffered log lines. Fixes bug 31594;
+      bugfix on 0.2.5.2-alpha.
+
+  o Minor bugfixes (git hooks):
+    - Remove a duplicate call to practracker from the pre-push hook.
+      The pre-push hook already calls the pre-commit hook, which calls
+      practracker. Fixes bug 31462; bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (git scripts):
+    - Stop hard-coding the bash path in the git scripts. Some OSes don't
+      have bash in /usr/bin, others have an ancient bash at this path.
+      Fixes bug 30840; bugfix on 0.4.0.1-alpha.
+    - Stop hard-coding the tor master branch name and worktree path in the
+      git scripts. Fixes bug 30841; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (guards):
+    - When tor is missing descriptors for some primary entry guards, make the
+      log message less alarming. It's normal for descriptors to expire, as long
+      as tor fetches new ones soon after. Fixes bug 31657;
+      bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (ipv6):
+    - We check for private IPv6 address alongside their IPv4 equivalents when
+      authorities check descriptors. Previously, we only checked for private
+      IPv4 addresses. Fixes bug 31088; bugfix on 0.2.3.21-rc. Patch by Neel
+      Chauhan.
+    - When parsing microdescriptors, we should check the IPv6 exit policy
+      alongside IPv4. Previously, we checked both exit policies for only
+      router info structures, while microdescriptors were IPv4-only. Fixes
+      bug 27284; bugfix on 0.2.3.1-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (logging):
+    - Change log level of message "Hash of session info was not as expected"
+      to LOG_PROTOCOL_WARN. Fixes bug 12399; bugfix on 0.1.1.10-alpha.
+    - Fix a code issue that would have broken our parsing of log
+      domains as soon as we had 33 of them.  Fortunately, we still
+      only have 29.  Fixes bug 31451; bugfix on 0.4.1.4-rc.
+
+  o Minor bugfixes (memory management):
+    - Stop leaking a small amount of memory in nt_service_install(), in
+      unreachable code. Fixes bug 30799; bugfix on 0.2.0.7-alpha.
+      Patch by Xiaoyin Liu.
+
+  o Minor bugfixes (networking, IP addresses):
+    - When parsing addreses via Tor's internal DNS lookup API, reject IPv4
+      addresses in square brackets, and accept IPv6 addresses in square
+      brackets. This change completes the work started in 23082, making
+      address parsing consistent between tor's internal DNS lookup and address
+      parsing APIs. Fixes bug 30721; bugfix on 0.2.1.5-alpha.
+    - When parsing addreses via Tor's internal address:port parsing and
+      DNS lookup APIs, require IPv6 addresses with ports to have square
+      brackets. But allow IPv6 addresses without ports, whether or not they
+      have square brackets. Fixes bug 30721; bugfix on 0.2.1.5-alpha.
+
+  o Minor bugfixes (onion service v3):
+    - When purging the client descriptor cache, always also close any
+      introduction point circuits associated with it. This avoids picking those
+      when connecting to them later while not having the descriptor to complete
+      the introduction. Fixes bug 30921; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (onion services):
+    - In the hs_ident_circuit_t data structure, remove the unused field
+      circuit_type and the respective argument in hs_ident_circuit_new().
+      This field is set by clients (for introduction) and services (for
+      introduction and rendezvous) but is never used afterwards. Fixes
+      bug 31490; bugfix on 0.3.2.1-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (operator tools):
+    - Make tor-print-ed-signing-cert(1) print certificate expiration date in
+      RFC 1123 and UNIX timestamp formats, to make output machine readable.
+      Fixes bug 31012; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (practracker):
+    - When running check-best-practices, only consider files in the
+      src subdirectory.  Previously we had recursively considered
+      all subdirectories, which made us get confused by the
+      temporary directories made by "make distcheck".  Fixes bug
+      31578; bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (rust):
+    - Correctly exclude a redundant rust build job in Travis. Fixes bug 31463;
+      bugfix on 0.3.5.4-alpha.
+    - Raise the minimum rustc version to 1.31.0, as checked by configure
+      and CI. Fixes bug 31442; bugfix on 0.3.5.4-alpha.
+
+  o Minor bugfixes (sendme, code structure):
+    - Rename the trunnel SENDME file definition from sendme.trunnel to
+      sendme_cell.trunnel to avoid having twice sendme.{c|h} in the repository.
+      Fixes bug 30769; bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (statistics):
+    - Stop removing the ed25519 signature if the extra info file is too big.
+      If the signature data was removed, but the keyword was kept, this could
+      result in an unparseable extra info file. Fixes bug 30958;
+      bugfix on 0.2.7.2-alpha.
+
+  o Minor bugfixes (subsystems):
+    - Make the subsystem init order match the subsystem module dependencies.
+      Call windows process security APIs as early as possible. Init log before
+      network and time, so that network and time can use logging.
+      Fixes bug 31615; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Teach the util/socketpair_ersatz test to work correctly when we
+      have no network stack configured. Fixes bug 30804; bugfix on
+      0.2.5.1-alpha.
+
+  o Minor bugfixes (v2 single onion services):
+    - Always retry v2 single onion service intro and rend circuits with a
+      3-hop path. Previously, v2 single onion services used a 3-hop path
+      when rend circuits were retried after a remote or delayed failure,
+      but a 1-hop path for immediate retries. Fixes bug 23818;
+      bugfix on 0.2.9.3-alpha.
+
+  o Minor bugfixes (v3 single onion services):
+    - Always retry v3 single onion service intro and rend circuits with a
+      3-hop path. Previously, v3 single onion services used a 3-hop path
+      when rend circuits were retried after a remote or delayed failure,
+      but a 1-hop path for immediate retries. Fixes bug 23818;
+      bugfix on 0.3.2.1-alpha.
+    - Make v3 single onion services fall back to a 3-hop intro, when there
+      all intro points are unreachable via a 1-hop path. Previously, v3
+      single onion services failed when all intro nodes were unreachable
+      via a 1-hop path. Fixes bug 23507; bugfix on 0.3.2.1-alpha.
+
+  o Code simplification and refactoring:
+    - Eliminate some uses of lower-level control reply abstractions,
+      primarily in the onion_helper functions. Closes ticket 30889.
+    - Extract our variable manipulation code from confparse.c to a new
+      lower-level typedvar.h module. Closes ticket 30864.
+    - Improve documentation in circuit padding subsystem. Patch by Tobias
+      Pulls. Closes ticket 31113.
+    - Lower another layer of object management from confparse.c to
+      a more general tool.  Now typed structure members are accessible
+      via an abstract type. Implements ticket 30914.
+    - Move our backend logic for working with configuration and state
+      files into a lower-level library, since in no longer depends on
+      any tor-specific functionality. Closes ticket 31626.
+    - Numerous simplifications in configuration-handling logic:
+      remove duplicated macro definitions, replace magical names
+      with flags, and refactor "TestingTorNetwork" to use the
+      same default-option logic as the rest of Tor.
+      Closes ticket 30935.
+    - Replace our ad-hoc set of flags for configuration variables and
+      configuration variable types with fine-grained orthogonal flags
+      corresponding to the actual behavior we want. Closes ticket 31625.
+    - Rework bootstrap tracking to use the new publish-subscribe
+      subsystem. Closes ticket 29976.
+    - Rewrite format_node_description() and router_get_verbose_nickname() to
+      use strlcpy() and strlcat(). The previous implementation used memcpy()
+      and pointer arithmetic, which was error-prone.
+      Closes ticket 31545. This is CID 1452819.
+    - Split extrainfo_dump_to_string() into smaller functions.
+      Closes ticket 30956.
+    - Use the ptrdiff_t type consistently for expressing variable offsets and
+      pointer differences.  Previously we incorrectly (but harmlessly) used
+      int and sometimes off_t for these cases.  Closes ticket 31532.
+    - Use the subsystems mechanism to manage the main event loop code.
+      Closes ticket 30806.
+    - Various simplifications and minor improvements to the circuit padding
+      machines. Patch by Tobias Pulls. Closes tickets 31112 and 31098.
+
+  o Documentation (hard-coded directories):
+    - Improve the documentation for the DirAuthority and FallbackDir torrc
+      options. Closes ticket 30955.
+
+  o Documentation (tor.1 man page):
+    - Fix typo -help to --help in tor.1 man page. Fixes bug 31008; bugfix on
+      0.2.2.9-alpha.
+
+  o Documentation:
+    - Include an example usage for IPv6 ORPort in our sample torrc.
+      Closes ticket 31320; patch from Ali Raheem.
+    - Use RFC 2397 data URL scheme to embed image into tor-exit-notice.html
+      so that operators would no longer have to host it themselves.
+      Closes ticket 31089.
+
+  o New system requirements (build system):
+    - Do not include the deprecated <sys/sysctl.h> on Linux or Windows system.
+      Closes 31673;
+
+  o Removed features:
+    - Remove torctl.in from contrib/dist directory. Resolves ticket 30550.
+
+  o Testing:
+    - Run shellcheck for all non-third-party shell scripts that are shipped
+      with Tor. Closes ticket 29533.
+    - When checking shell scripts, ignore any user-created directories.
+      Closes ticket 30967.
+
+
 Changes in version 0.4.1.5 - 2019-08-20
   This is the first stable release in the 0.4.1.x series. This series
   adds experimental circuit-level padding, authenticated SENDME cells to

@@ -1,6 +1,0 @@
-  o Minor features (recommended packages):
-    - No longer include recommended packages in votes as detailed in proposal
-      301. The RecommendedPackages torrc option is deprecated and will no
-      longer have any effect. "package" lines will still be considered when
-      computing consensuses for consensus methods that include them. Fixes
-      ticket 29738.

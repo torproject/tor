@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Replace our ad-hoc set of flags for configuration variables and
-      configuration variable types with fine-grained orthogonal flags
-      corresponding to the actual behavior we want. Closes ticket 31625.

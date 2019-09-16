@@ -1,4 +1,0 @@
-  o Minor features (continuous integration):
-    - When running CI builds on Travis, put some random data in ~/.torrc,
-      to make sure no tests are dependent on default Tor configuration.
-      Resolves issue 30102.

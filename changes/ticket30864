@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Extract our variable manipulation code from confparse.c to a new
-      lower-level typedvar.h module. Closes ticket 30864.

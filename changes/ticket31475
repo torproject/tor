@@ -1,5 +1,0 @@
-  o Minor bugfixes (configuration):
-    - Invalid floating-point values in the configuration file are now
-      detected treated as errors in the configuration. Previously, they
-      were ignored and treated as zero. Fixes bug 31475; bugfix on
-      0.0.1.
