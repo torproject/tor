@@ -1,0 +1,6 @@
+  o Minor features (testing):
+    - Add a script to invoke "tor --dump-config" and "tor --verify-config"
+      with various configuration options, and see whether tor's resulting
+      configuration or error messages are what we expect. Use it for
+      integration testing of our +Option and /Option flags.
+      Closes ticket 31637.
