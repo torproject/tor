@@ -32,14 +32,14 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
 
   o Minor features (best practices tracker):
     - Our best-practices tracker now integrates with our include-checker
-      tool to keep track of how many layering violations that we have
-      not yet fixed. We hope to reduce this number over time to improve
-      Tor's modularity. Closes ticket 31176.
+      tool to keep track of how many layering violations we have not yet
+      fixed. We hope to reduce this number over time to improve Tor's
+      modularity. Closes ticket 31176.
     - Add a TOR_PRACTRACKER_OPTIONS variable for passing arguments to
       practracker from the environment. We may want this for continuous
       integration. Closes ticket 31309.
     - Give a warning rather than an error when a practracker exception
-      is violated by a small amount; add a --list-overbroad option to
+      is violated by a small amount, add a --list-overbroad option to
       practracker that lists exceptions that are stricter than they need
       to be, and provide an environment variable for disabling
       practracker. Closes ticket 30752.
@@ -112,13 +112,13 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
       routerinfos, routerstatuses, and nodes. Closes ticket 21003.
 
   o Minor features (onion service v3):
-    - Do not allow single hop client to fetch or post an HS descriptor
+    - Do not allow single hop clients to fetch or post an HS descriptor
       from an HSDir. Closes ticket 24964.
 
   o Minor features (onion service):
     - Disallow single-hop clients at the introduction point. We've
       removed Tor2web support a while back and single-hop rendezvous
-      ttempts are blocked at the relays. This change should remove load
+      attempts are blocked at the relays. This change should remove load
       off the network from spammy clients. Close ticket 24963.
 
   o Minor features (stem tests):
@@ -227,7 +227,7 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
       31657; bugfix on 0.3.3.1-alpha.
 
   o Minor bugfixes (ipv6):
-    - We check for private IPv6 address alongside their IPv4 equivalents
+    - Check for private IPv6 addresses alongside their IPv4 equivalents
       when authorities check descriptors. Previously, we only checked
       for private IPv4 addresses. Fixes bug 31088; bugfix on
       0.2.3.21-rc. Patch by Neel Chauhan.
@@ -266,8 +266,8 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
   o Minor bugfixes (onion service v3):
     - When purging the client descriptor cache, close any introduction
       point circuits associated with purged cache entries. This avoids
-      picking those circuits later when connecting to them later. Fixes
-      bug 30921; bugfix on 0.3.2.1-alpha.
+      picking those circuits later when connecting to the same
+      introduction points. Fixes bug 30921; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (onion services):
     - In the hs_ident_circuit_t data structure, remove the unused field
@@ -361,7 +361,7 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
       more general tool. Now typed structure members are accessible via
       an abstract type. Implements ticket 30914.
     - Move our backend logic for working with configuration and state
-      files into a lower-level library, since in no longer depends on
+      files into a lower-level library, since it no longer depends on
       any tor-specific functionality. Closes ticket 31626.
     - Numerous simplifications in configuration-handling logic: remove
       duplicated macro definitions, replace magical names with flags,
