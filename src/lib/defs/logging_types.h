@@ -20,4 +20,4 @@
 /** Mask of zero or more log domains, OR'd together. */
 typedef uint64_t log_domain_mask_t;
 
-#endif
+#endif /* !defined(TOR_LOGGING_TYPES_H) */

@@ -32,7 +32,7 @@ STATIC uint32_t get_intro2_enable_consensus_param(const networkstatus_t *ns);
 STATIC uint32_t get_intro2_rate_consensus_param(const networkstatus_t *ns);
 STATIC uint32_t get_intro2_burst_consensus_param(const networkstatus_t *ns);
 
-#endif /* define(TOR_UNIT_TESTS) */
+#endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(HS_DOS_PRIVATE) */
 

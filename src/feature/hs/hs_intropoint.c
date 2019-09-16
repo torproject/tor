@@ -200,7 +200,7 @@ cell_dos_extension_parameters_are_valid(uint64_t intro2_rate_per_sec,
            "too small. Received value: %" PRIu64, intro2_rate_per_sec);
     goto end;
   }
-#endif
+#endif /* HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN > 0 */
 
   /* Check that received value is not above maximum */
   if (intro2_rate_per_sec > HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX) {
@@ -218,7 +218,7 @@ cell_dos_extension_parameters_are_valid(uint64_t intro2_rate_per_sec,
            "too small. Received value: %" PRIu64, intro2_burst_per_sec);
     goto end;
   }
-#endif
+#endif /* HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN > 0 */
 
   /* Check that received value is not above maximum */
   if (intro2_burst_per_sec > HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MAX) {

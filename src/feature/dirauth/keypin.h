@@ -29,7 +29,7 @@ keypin_load_journal(const char *fname)
   (void)fname;
   return 0;
 }
-#endif
+#endif /* defined(HAVE_MODULE_DIRAUTH) */
 void keypin_clear(void);
 int keypin_check_lone_rsa(const uint8_t *rsa_id_digest);
 

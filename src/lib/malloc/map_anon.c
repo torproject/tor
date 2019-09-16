@@ -122,7 +122,7 @@ nodump_mem(void *mem, size_t sz)
                         NULL);
     return -1;
   }
-#else
+#else /* !(defined(MADV_DONTDUMP)) */
   (void) mem;
   (void) sz;
   return 0;
@@ -170,12 +170,12 @@ noinherit_mem(void *mem, size_t sz, inherit_res_t *inherit_result_out)
                         NULL);
     return -1;
   }
-#else
+#else /* !(defined(FLAG_ZERO) || defined(FLAG_NOINHERIT)) */
   (void)inherit_result_out;
   (void)mem;
   (void)sz;
   return 0;
-#endif
+#endif /* defined(FLAG_ZERO) || defined(FLAG_NOINHERIT) */
 }
 
 /**

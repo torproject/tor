@@ -5405,7 +5405,7 @@ test_util_socketpair(void *arg)
      * all. */
     tt_skip();
   }
-#endif
+#endif /* defined(ENETUNREACH) */
   tt_int_op(0, OP_EQ, socketpair_result);
 
   tt_assert(SOCKET_OK(fds[0]));

@@ -207,6 +207,6 @@ STATIC void *config_mgr_get_obj_mutable(const config_mgr_t *mgr,
                                         void *toplevel, int idx);
 STATIC const void *config_mgr_get_obj(const config_mgr_t *mgr,
                                        const void *toplevel, int idx);
-#endif
+#endif /* defined(CONFPARSE_PRIVATE) */
 
 #endif /* !defined(TOR_CONFPARSE_H) */
