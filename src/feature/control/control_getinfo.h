@@ -48,6 +48,9 @@ STATIC int getinfo_helper_downloads(
     control_connection_t *control_conn,
     const char *question, char **answer,
     const char **errmsg);
+STATIC int getinfo_helper_current_consensus(
+    const char *question, char **answer,
+    const char **errmsg);
 STATIC int getinfo_helper_dir(
     control_connection_t *control_conn,
     const char *question, char **answer,

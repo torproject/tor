@@ -1,0 +1,2 @@
+  o Minor features (onion services):
+    - GETINFO dir/status-vote/current/consensus-microdesc dumps microdesc consensus. Closes ticket 31684.
