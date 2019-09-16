@@ -21,7 +21,7 @@ if command -v realpath ; then
     HERE=$(dirname "$(realpath "$0")")
 else
     HERE=$(dirname "$0")
-    if [ ! -d "$HERE" ]; then
+    if [ ! -d "$HERE" ] || [ "$HERE" = "." ]; then
         HERE=$(dirname "$PWD/$0")
     fi
 fi
@@ -31,6 +31,7 @@ TOPLEVEL=$(dirname "$(dirname "$HERE")")
 if [ ! -d "$TOPLEVEL/src" ]; then
     printf "Error: Couldn't find src directory in expected location: %s\\n" \
         "$TOPLEVEL/src"
+    exit 1
 fi
 
 # Check *.sh scripts, but ignore the ones that we can't fix
