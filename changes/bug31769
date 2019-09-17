@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation):
+    - Remove the "-Wextra-semi" flag from our builds when using GCC: only
+      clang supports it for C, and recent versions of GCC have started to warn
+      about it. Fixes bug 31769; bugfix on 0.2.9.1-alpha.

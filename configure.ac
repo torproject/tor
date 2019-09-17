@@ -1737,7 +1737,6 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wexplicit-ownership-type
      -Wextern-initializer
      -Wextra
-     -Wextra-semi
      -Wextra-tokens
      -Wflexible-array-extensions
      -Wfloat-conversion
@@ -1883,6 +1882,12 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wvla-extension
      -Wzero-length-array
   ], [ TOR_CHECK_CFLAGS([warning_flag]) ])
+
+  if test "$have_clang" = 1; then
+    # Only check this flag on Clang.  GCC has it now, but generates a
+    # warning if we use it in C.  Thanks, GCC!
+    TOR_CHECK_CFLAGS([-Wextra-semi])
+  fi
 
 dnl    We should re-enable this in some later version.  Clang doesn't
 dnl    mind, but it causes trouble with GCC.
