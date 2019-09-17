@@ -170,6 +170,9 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
       Previously, these compilation settings would make the compiler
       look for functions that didn't exist. Fixes bug 31552; bugfix
       on 0.4.1.1-alpha.
+    - Suppress spurious float-conversion warnings from GCC when calling
+      floating-point classifier functions on FreeBSD.  Fixes part of bug
+      31687; bugfix on 0.3.1.5-alpha.
 
   o Minor bugfixes (configuration):
     - Invalid floating-point values in the configuration file are now
@@ -207,6 +210,12 @@ Changes in version 0.4.2.1-alpha - 2019-09-??
       aborting. Closing the logs makes some OSes flush log file buffers,
       rather than deleting buffered log lines. Fixes bug 31594; bugfix
       on 0.2.5.2-alpha.
+
+  o Minor bugfixes (FreeBSD, PF-based proxy, IPv6):
+    - When extracting an IPv6 address from a PF-based proxy, verify
+      that we are actually configured to receive an IPv6 address,
+      and log an internal error if not. Fixes part of bug 31687;
+      bugfix on 0.2.3.4-alpha.
 
   o Minor bugfixes (git hooks):
     - Remove a duplicate call to practracker from the pre-push hook. The
