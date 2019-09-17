@@ -2560,8 +2560,11 @@ destination_from_pf(entry_connection_t *conn, socks_request_t *req)
   } else if (proxy_sa->sa_family == AF_INET6) {
     struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)proxy_sa;
     pnl.af = AF_INET6;
-    memcpy(&pnl.saddr.v6, tor_addr_to_in6(&ENTRY_TO_CONN(conn)->addr),
-           sizeof(struct in6_addr));
+    const struct in6_addr *dest_in6 =
+      tor_addr_to_in6(&ENTRY_TO_CONN(conn)->addr);
+    if (BUG(!dest_in6))
+      return -1;
+    memcpy(&pnl.saddr.v6, dest_in6, sizeof(struct in6_addr));
     pnl.sport = htons(ENTRY_TO_CONN(conn)->port);
     memcpy(&pnl.daddr.v6, &sin6->sin6_addr, sizeof(struct in6_addr));
     pnl.dport = sin6->sin6_port;
