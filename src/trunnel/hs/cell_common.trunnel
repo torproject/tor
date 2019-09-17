@@ -1,0 +1,12 @@
+/* This file contains common data structure that cells use. */
+
+struct trn_cell_extension_fields {
+  u8 field_type;
+  u8 field_len;
+  u8 field[field_len];
+};
+
+struct trn_cell_extension {
+  u8 num;
+  struct trn_cell_extension_fields fields[num];
+};

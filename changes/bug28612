@@ -1,0 +1,4 @@
+  o Minor bugfixes (windows services):
+    - Make Tor start correctly as an NT service again: previously it
+      was broken by refactoring.  Fixes bug 28612; bugfix on 0.3.5.3-alpha.
+      

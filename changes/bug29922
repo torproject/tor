@@ -1,0 +1,4 @@
+  o Minor bugfixes (testing, windows):
+    - Fix a test failure caused by an unexpected bug warning in
+      our test for tor_gmtime_r(-1). Fixes bug 29922;
+      bugfix on 0.2.9.3-alpha.

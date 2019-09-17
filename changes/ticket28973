@@ -1,0 +1,6 @@
+  o Minor features (OpenSSL bug workaround):
+    - Work around a bug in OpenSSL 1.1.1a, which prevented the TLS 1.3
+      key export function from handling long labels.  When this bug
+      is detected, Tor will disable TLS 1.3.  We recommend upgrading to
+      a version of OpenSSL without this bug when it becomes available.
+      Closes ticket 28973.

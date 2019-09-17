@@ -1,4 +1,0 @@
-  o Minor bugfixes (testing):
-    - Revise the "conditionvar_timeout" test so that it succeeds even
-      on heavily loaded systems where the test threads are not scheduled
-      within 200 msec. Fixes bug 27073; bugfix on 0.2.6.3-alpha.

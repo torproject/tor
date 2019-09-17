@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2014-2015, The Tor Project, Inc
+# Copyright 2014-2019, The Tor Project, Inc
 # See LICENSE for licensing information
 
 """
@@ -32,8 +32,7 @@ def curve25519ToEd25519(c, sign):
     return encodepoint([x,y])
 
 def blindESK(esk, param):
-    h = H("Derive temporary signing key" + param)
-    mult = 2**(b-2) + sum(2**i * bit(h,i) for i in range(3,b-2))
+    mult = 2**(b-2) + sum(2**i * bit(param,i) for i in range(3,b-2))
     s = decodeint(esk[:32])
     s_prime = (s * mult) % ell
     k = esk[32:]
@@ -42,8 +41,7 @@ def blindESK(esk, param):
     return encodeint(s_prime) + k_prime
 
 def blindPK(pk, param):
-    h = H("Derive temporary signing key" + param)
-    mult = 2**(b-2) + sum(2**i * bit(h,i) for i in range(3,b-2))
+    mult = 2**(b-2) + sum(2**i * bit(param,i) for i in range(3,b-2))
     P = decodepoint(pk)
     return encodepoint(scalarmult(P, mult))
 
@@ -68,6 +66,11 @@ def signatureWithESK(m,h,pk):
 
 def newSK():
     return os.urandom(32)
+
+def random_scalar(entropy_f): # 0..L-1 inclusive
+    # reduce the bias to a safe level by generating 256 extra bits
+    oversized = int(binascii.hexlify(entropy_f(32+32)), 16)
+    return oversized % ell
 
 # ------------------------------------------------------------
 
@@ -125,6 +128,31 @@ class SelfTest(unittest.TestCase):
         self.assertEquals(bpk, bpk2)
 
         self._testSignatures(besk, bpk)
+
+    def testIdentity(self):
+        # Base point:
+        # B is the unique point (x, 4/5) \in E for which x is positive
+        By = 4 * inv(5)
+        Bx = xrecover(By)
+        B = [Bx % q,By % q]
+
+        # Get identity E by doing: E = l*B, where l is the group order
+        identity = scalarmult(B, ell)
+
+        # Get identity E by doing: E = l*A, where A is a random point
+        sk = newSK()
+        pk = decodepoint(publickey(sk))
+        identity2 = scalarmult(pk, ell)
+
+        # Check that identities match
+        assert(identity == identity2)
+        # Check that identity is the point (0,1)
+        assert(identity == [0L,1L])
+
+        # Check identity element: a*E = E, where a is a random scalar
+        scalar = random_scalar(os.urandom)
+        result = scalarmult(identity, scalar)
+        assert(result == identity == identity2)
 
 # ------------------------------------------------------------
 

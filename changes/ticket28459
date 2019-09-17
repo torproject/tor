@@ -1,0 +1,4 @@
+  o Minor features (continuous integration, Windows):
+    - Always show the configure and test logs, and upload them as build
+      artifacts, when building for Windows using Appveyor CI.
+      Implements 28459.

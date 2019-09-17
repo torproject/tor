@@ -1,0 +1,6 @@
+  o Minor bugfixes (connection, relay):
+    - Avoid a wrong BUG() stacktrace in case a closing connection is being held
+      open because the write side is rate limited but not the read side. Now,
+      the connection read side is simply shutdown instead of kept open until tor
+      is able to flush the connection and then fully close it. Fixes bug 27750;
+      bugfix on 0.3.4.1-alpha.

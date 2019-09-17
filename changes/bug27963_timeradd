@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation, opensolaris):
+    - Add a missing include to compat_pthreads.c, to fix compilation
+      on OpenSolaris and its descendants. Fixes bug 27963; bugfix
+      on 0.3.5.1-alpha.

@@ -1,0 +1,9 @@
+orconfig.h
+
+lib/cc/*.h
+lib/log/*.h
+lib/term/*.h
+lib/malloc/*.h
+
+# From src/ext
+tor_readpassphrase.h

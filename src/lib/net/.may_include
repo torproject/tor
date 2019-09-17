@@ -1,0 +1,15 @@
+orconfig.h
+siphash.h
+ht.h
+
+lib/arch/*.h
+lib/cc/*.h
+lib/container/*.h
+lib/ctime/*.h
+lib/err/*.h
+lib/lock/*.h
+lib/log/*.h
+lib/net/*.h
+lib/string/*.h
+lib/testsupport/*.h
+lib/malloc/*.h

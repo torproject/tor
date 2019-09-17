@@ -26,3 +26,9 @@ if ($excluding or $exclude_this) {
   s{^\s*\#\#+:}{        x:};
   s{^   (\s*)(\d+):}{$1!!!$2:};
 }
+
+if (eof and $excluding) {
+    warn "Runaway LCOV_EXCL_START in $ARGV";
+    $excluding = 0;
+}
+

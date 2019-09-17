@@ -1,0 +1,4 @@
+  o Minor bugfixes (restart-in-process, boostrap):
+    - Add missing resets of bootstrap tracking state when shutting
+      down (regression caused by ticket 27169).  Fixes bug 28524;
+      bugfix on 0.3.5.1-alpha.

@@ -1,0 +1,3 @@
+  o Minor bugfixes (compilation):
+    - Fix a pair of missing headers on OpenBSD. Fixes bug 28303;
+      bugfix on 0.3.5.1-alpha. Patch from  Kris Katterjohn.

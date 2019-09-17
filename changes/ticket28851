@@ -1,0 +1,4 @@
+  o Minor features (performance):
+    - Stop re-validating our hardcoded Diffie-Hellman parameters on every
+      startup. Doing this wasted time and cycles, especially on low-powered
+      devices. Closes ticket 28851.

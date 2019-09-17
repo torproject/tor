@@ -1,0 +1,5 @@
+  o Minor bugfixes (relay shutdown, systemd):
+    - Notify systemd of ShutdownWaitLength so it can be set to longer than
+      systemd's TimeoutStopSec. In tor's systemd service file, set
+      TimeoutSec to 60 seconds, to allow tor some time to shut down.
+      Fixes bug 28113; bugfix on 0.2.6.2-alpha.

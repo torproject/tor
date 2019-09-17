@@ -1,0 +1,41 @@
+/*
+ * This contains the definition of the ESTABLISH_INTRO and INTRO_ESTABLISHED
+ * cell for onion service version 3 and onward. The following format is
+ * specified in proposal 224 section 3.1.
+ */
+
+extern struct trn_cell_extension;
+
+const TRUNNEL_SHA3_256_LEN = 32;
+
+/* ESTABLISH_INTRO payload. See details in section 3.1.1 */
+struct trn_cell_establish_intro {
+  /* Indicate the start of the handshake authentication data. */
+  @ptr start_cell;
+
+  /* Authentication key material. */
+  u8 auth_key_type IN [0x00, 0x01, 0x02];
+  u16 auth_key_len;
+  u8 auth_key[auth_key_len];
+
+  /* Extension(s). Reserved fields. */
+  struct trn_cell_extension extensions;
+  @ptr end_mac_fields;
+
+  /* Handshake MAC. */
+  u8 handshake_mac[TRUNNEL_SHA3_256_LEN];
+
+  /* Signature */
+  /* Indicate the end of the handshake authentication data. */
+  @ptr end_sig_fields;
+  u16 sig_len;
+  u8 sig[sig_len];
+};
+
+/* INTRO_ESTABLISHED payload which is an acknowledge of the ESTABLISH_INTRO
+ * cell. For legacy node, this payload is empty so the following only applies
+ * to version >= 3. */
+struct trn_cell_intro_established {
+  /* Extension(s). Reserved fields. */
+  struct trn_cell_extension extensions;
+};

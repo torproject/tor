@@ -1,6 +1,0 @@
-  o Minor bugfixes (testing):
-    - If a unit test running in a subprocess exits abnormally or with a
-      nonzero status code, treat the test as having failed, even if
-      the test reported success. Without this fix, memory leaks don't cause
-      cause the tests to fail, even with LeakSanitizer. Fixes bug 27658;
-      bugfix on 0.2.2.4-alpha.

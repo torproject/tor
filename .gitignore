@@ -3,6 +3,7 @@
 .#*
 *~
 *.swp
+*.swo
 # C stuff
 *.o
 *.obj
@@ -18,6 +19,8 @@
 .dirstamp
 *.trs
 *.log
+# Calltool stuff
+.*.graph
 # Stuff made by our makefiles
 *.bak
 # Python droppings
@@ -38,9 +41,11 @@ uptime-*.json
 /Makefile
 /Makefile.in
 /aclocal.m4
+/ar-lib
 /autom4te.cache
 /build-stamp
 /compile
+/config.rust
 /configure
 /Doxyfile
 /orconfig.h
@@ -51,6 +56,7 @@ uptime-*.json
 /config.guess
 /config.sub
 /conftest*
+/link_rust.sh
 /micro-revision.*
 /patch-stamp
 /stamp-h
@@ -66,7 +72,11 @@ uptime-*.json
 /mkinstalldirs
 /Tor*Bundle.dmg
 /tor-*-win32.exe
+/warning_flags
+
 /coverage_html/
+/callgraph/
+
 
 # /contrib/
 /contrib/dist/tor.sh
@@ -94,11 +104,6 @@ uptime-*.json
 /doc/tor.html
 /doc/tor.html.in
 /doc/tor.1.xml
-/doc/tor-fw-helper.1
-/doc/tor-fw-helper.1.in
-/doc/tor-fw-helper.html
-/doc/tor-fw-helper.html.in
-/doc/tor-fw-helper.1.xml
 /doc/tor-gencert.1
 /doc/tor-gencert.1.in
 /doc/tor-gencert.html
@@ -114,6 +119,11 @@ uptime-*.json
 /doc/torify.html
 /doc/torify.html.in
 /doc/torify.1.xml
+/doc/tor-print-ed-signing-cert.1
+/doc/tor-print-ed-signing-cert.1.in
+/doc/tor-print-ed-signing-cert.html
+/doc/tor-print-ed-signing-cert.html.in
+/doc/tor-print-ed-signing-cert.1.xml
 
 # /doc/spec/
 /doc/spec/Makefile
@@ -127,23 +137,8 @@ uptime-*.json
 /src/Makefile
 /src/Makefile.in
 
-# /src/common/
-/src/common/Makefile
-/src/common/Makefile.in
-/src/common/libor.a
-/src/common/libor-testing.a
-/src/common/libor.lib
-/src/common/libor-ctime.a
-/src/common/libor-ctime-testing.a
-/src/common/libor-ctime.lib
-/src/common/libor-crypto.a
-/src/common/libor-crypto-testing.a
-/src/common/libor-crypto.lib
-/src/common/libor-event.a
-/src/common/libor-event-testing.a
-/src/common/libor-event.lib
-/src/common/libcurve25519_donna.a
-/src/common/libcurve25519_donna.lib
+# /src/trace
+/src/trace/libor-trace.a
 
 # /src/config/
 /src/config/Makefile
@@ -161,16 +156,81 @@ uptime-*.json
 /src/ext/keccak-tiny/libkeccak-tiny.a
 /src/ext/keccak-tiny/libkeccak-tiny.lib
 
-# /src/or/
-/src/or/Makefile
-/src/or/Makefile.in
-/src/or/tor
-/src/or/tor.exe
-/src/or/tor-cov
-/src/or/tor-cov.exe
-/src/or/libtor.a
-/src/or/libtor-testing.a
-/src/or/libtor.lib
+# /src/lib
+/src/lib/libcurve25519_donna.a
+/src/lib/libtor-compress.a
+/src/lib/libtor-compress-testing.a
+/src/lib/libtor-container.a
+/src/lib/libtor-container-testing.a
+/src/lib/libtor-crypt-ops.a
+/src/lib/libtor-crypt-ops-testing.a
+/src/lib/libtor-ctime.a
+/src/lib/libtor-ctime-testing.a
+/src/lib/libtor-encoding.a
+/src/lib/libtor-encoding-testing.a
+/src/lib/libtor-evloop.a
+/src/lib/libtor-evloop-testing.a
+/src/lib/libtor-err.a
+/src/lib/libtor-err-testing.a
+/src/lib/libtor-fdio.a
+/src/lib/libtor-fdio-testing.a
+/src/lib/libtor-fs.a
+/src/lib/libtor-fs-testing.a
+/src/lib/libtor-geoip.a
+/src/lib/libtor-geoip-testing.a
+/src/lib/libtor-intmath.a
+/src/lib/libtor-intmath-testing.a
+/src/lib/libtor-lock.a
+/src/lib/libtor-lock-testing.a
+/src/lib/libtor-log.a
+/src/lib/libtor-log-testing.a
+/src/lib/libtor-malloc.a
+/src/lib/libtor-malloc-testing.a
+/src/lib/libtor-math.a
+/src/lib/libtor-math-testing.a
+/src/lib/libtor-memarea.a
+/src/lib/libtor-memarea-testing.a
+/src/lib/libtor-meminfo.a
+/src/lib/libtor-meminfo-testing.a
+/src/lib/libtor-net.a
+/src/lib/libtor-net-testing.a
+/src/lib/libtor-osinfo.a
+/src/lib/libtor-osinfo-testing.a
+/src/lib/libtor-process.a
+/src/lib/libtor-process-testing.a
+/src/lib/libtor-sandbox.a
+/src/lib/libtor-sandbox-testing.a
+/src/lib/libtor-string.a
+/src/lib/libtor-string-testing.a
+/src/lib/libtor-smartlist-core.a
+/src/lib/libtor-smartlist-core-testing.a
+/src/lib/libtor-term.a
+/src/lib/libtor-term-testing.a
+/src/lib/libtor-thread.a
+/src/lib/libtor-thread-testing.a
+/src/lib/libtor-time.a
+/src/lib/libtor-time-testing.a
+/src/lib/libtor-tls.a
+/src/lib/libtor-tls-testing.a
+/src/lib/libtor-trace.a
+/src/lib/libtor-wallclock.a
+/src/lib/libtor-wallclock-testing.a
+
+# /src/tor
+/src/core/libtor-app.a
+/src/core/libtor-app-testing.a
+
+# /src/app
+/src/app/tor
+/src/app/tor.exe
+/src/app/tor-cov
+/src/app/tor-cov.exe
+
+# /src/rust
+/src/rust/.cargo/config
+/src/rust/.cargo/registry
+/src/rust/target
+/src/rust/registry
 
 # /src/test
 /src/test/Makefile
@@ -183,6 +243,7 @@ uptime-*.json
 /src/test/test-child
 /src/test/test-memwipe
 /src/test/test-ntor-cl
+/src/test/test-hs-ntor-cl
 /src/test/test-switch-id
 /src/test/test-timers
 /src/test/test_workqueue
@@ -191,16 +252,24 @@ uptime-*.json
 /src/test/test-bt-cl.exe
 /src/test/test-child.exe
 /src/test/test-ntor-cl.exe
+/src/test/test-hs-ntor-cl.exe
 /src/test/test-memwipe.exe
 /src/test/test-switch-id.exe
 /src/test/test-timers.exe
 /src/test/test_workqueue.exe
 
+# /src/test/fuzz
+/src/test/fuzz/fuzz-*
+/src/test/fuzz/lf-fuzz-*
+
 # /src/tools/
+/src/tools/libtorrunner.a
 /src/tools/tor-checkkey
 /src/tools/tor-resolve
 /src/tools/tor-cov-resolve
 /src/tools/tor-gencert
+/src/tools/tor-print-ed-signing-cert
+/src/tools/tor-print-ed-signing-cert.exe
 /src/tools/tor-cov-gencert
 /src/tools/tor-checkkey.exe
 /src/tools/tor-resolve.exe
@@ -213,12 +282,6 @@ uptime-*.json
 # /src/trunnel/
 /src/trunnel/libor-trunnel-testing.a
 /src/trunnel/libor-trunnel.a
-
-# /src/tools/tor-fw-helper/
-/src/tools/tor-fw-helper/tor-fw-helper
-/src/tools/tor-fw-helper/tor-fw-helper.exe
-/src/tools/tor-fw-helper/Makefile
-/src/tools/tor-fw-helper/Makefile.in
 
 # /src/win32/
 /src/win32/Makefile

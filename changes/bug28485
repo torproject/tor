@@ -1,0 +1,3 @@
+  o Minor bugfixes (compilation):
+    - Add missing dependency on libgdi32.dll for tor-print-ed-signing-cert.exe
+      on Windows. Fixes bug 28485; bugfix on 0.3.5.1-alpha.

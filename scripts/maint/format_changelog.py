@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright (c) 2014-2015, The Tor Project, Inc.
+# Copyright (c) 2014-2019, The Tor Project, Inc.
 # See LICENSE for licensing information
 #
 # This script reformats a section of the changelog to wrap everything to
@@ -205,6 +205,8 @@ def head_score(s):
         score = -300
     elif lw.startswith("deprecated version"):
         score = -200
+    elif lw.startswith("directory auth"):
+        score = -150
     elif (('new' in lw and 'requirement' in lw) or
           ('new' in lw and 'dependenc' in lw) or
           ('build' in lw and 'requirement' in lw) or

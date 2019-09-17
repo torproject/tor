@@ -1,0 +1,5 @@
+  o Minor bugfix (IPv6):
+    Fix tor_ersatz_socketpair on IPv6-only systems.  Previously,
+    the IPv6 socket was bound using an address family of AF_INET
+    instead of AF_INET6.  Fixes bug 28995; bugfix on 0.3.5.1-alpha.
+    Patch from Kris Katterjohn.

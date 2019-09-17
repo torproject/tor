@@ -1,0 +1,4 @@
+  o Documentation (hidden service manpage, sandbox):
+    - Document in the man page that changing ClientOnionAuthDir value or
+      adding a new file in the directory will not work at runtime upon sending
+      a HUP if Sandbox 1. Closes ticket 28128.

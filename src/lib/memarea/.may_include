@@ -1,0 +1,7 @@
+orconfig.h
+lib/arch/*.h
+lib/cc/*.h
+lib/container/*.h
+lib/log/*.h
+lib/malloc/*.h
+lib/memarea/*.h

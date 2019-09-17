@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # coding=utf-8
-# Copyright 2011-2015, The Tor Project, Inc
+# Copyright 2011-2019, The Tor Project, Inc
 # original version by Arturo Filastò
 # See LICENSE for licensing information
 
@@ -127,9 +127,9 @@ for k, v in enabled_ciphers.items():
 #oSSLinclude = ('/usr/include/openssl/ssl3.h', '/usr/include/openssl/ssl.h',
 #               '/usr/include/openssl/ssl2.h', '/usr/include/openssl/ssl23.h',
 #               '/usr/include/openssl/tls1.h')
-oSSLinclude = ('ssl/ssl3.h', 'ssl/ssl.h',
-               'ssl/ssl2.h', 'ssl/ssl23.h',
-               'ssl/tls1.h')
+oSSLinclude = ['ssl3.h', 'ssl.h'
+               'ssl2.h', 'ssl23.h',
+               'tls1.h']
 
 #####
 # This reads the hex code for the ciphers that are used by firefox.
@@ -155,9 +155,12 @@ for x in used_ciphers:
 openssl_macro_by_hex = {}
 all_openssl_macros = {}
 for fl in oSSLinclude:
-    fp = open(ossl(fl), 'r')
+    fname = ossl("include/openssl/"+fl)
+    if not os.path.exists(fname):
+        continue
+    fp = open(fname, 'r')
     for line in fp.readlines():
-        m = re.match('#define\s+(\S+)\s+(\S+)', line)
+        m = re.match('# *define\s+(\S+)\s+(\S+)', line)
         if m:
             value,key = m.groups()
             if key.startswith('0x') and "_CK_" in value:

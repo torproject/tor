@@ -1,0 +1,4 @@
+  o Major bugfixes (networking):
+    - Gracefully handle empty username/password fields in SOCKS5
+      username/password auth messsage and allow SOCKS5 handshake to
+      continue. Fixes bug 29175; bugfix on 0.3.5.1-alpha.

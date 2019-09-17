@@ -4,25 +4,49 @@ Useful tools
 These aren't strictly necessary for hacking on Tor, but they can help track
 down bugs.
 
+Travis/Appveyor CI
+------------------
+It's CI.
+
+Looks like this:
+* https://travis-ci.org/torproject/tor
+* https://ci.appveyor.com/project/torproject/tor
+
+Travis builds and runs tests on Linux, and eventually macOS (#24629).
+Appveyor builds and runs tests on Windows (using Windows Services for Linux).
+
+Runs automatically on Pull Requests sent to torproject/tor. You can set it up
+for your fork to build commits outside of PRs too:
+
+1. sign up for GitHub: https://github.com/join
+2. fork https://github.com/torproject/tor:
+   https://help.github.com/articles/fork-a-repo/
+3. follow https://docs.travis-ci.com/user/getting-started/#To-get-started-with-Travis-CI.
+   skip steps involving `.travis.yml` (we already have one).
+4. go to https://ci.appveyor.com/login , log in with github, and select
+   "NEW PROJECT"
+
+Builds should show up on the web at travis-ci.com and on IRC at #tor-ci on
+OFTC. If they don't, ask #tor-dev (also on OFTC).
+
 Jenkins
 -------
 
-    https://jenkins.torproject.org
+It's CI/builders. Looks like this: https://jenkins.torproject.org
 
-Dmalloc
--------
+Runs automatically on commits merged to git.torproject.org. We CI the
+master branch and all supported tor versions. We also build nightly debian
+packages from master.
 
-The dmalloc library will keep track of memory allocation, so you can find out
-if we're leaking memory, doing any double-frees, or so on.
+Builds Linux and Windows cross-compilation. Runs Linux tests.
 
-    dmalloc -l -/dmalloc.log
-    (run the commands it tells you)
-    ./configure --with-dmalloc
+Builds should show up on the web at jenkins.torproject.org and on IRC at
+#tor-bots on OFTC. If they don't, ask #tor-dev (also on OFTC).
 
 Valgrind
 --------
 
-    valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
+    valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/app/tor
 
 (Note that if you get a zillion openssl warnings, you will also need to
 pass `--undef-value-errors=no` to valgrind, or rebuild your openssl
@@ -111,14 +135,18 @@ Running gcov for unit test coverage
 
 (On OSX, you'll need to start with `--enable-coverage CC=clang`.)
 
-Then, look at the .gcov files in `coverage-output`.  '-' before a line means
-that the compiler generated no code for that line.  '######' means that the
-line was never reached.  Lines with numbers were called that number of times.
-
 If that doesn't work:
 
    * Try configuring Tor with `--disable-gcc-hardening`
    * You might need to run `make clean` after you run `./configure`.
+
+Then, look at the .gcov files in `coverage-output`.  '-' before a line means
+that the compiler generated no code for that line.  '######' means that the
+line was never reached.  Lines with numbers were called that number of times.
+
+For more details about how to read gcov output, see the [Invoking
+gcov](https://gcc.gnu.org/onlinedocs/gcc/Invoking-Gcov.html) chapter
+of the GCC manual.
 
 If you make changes to Tor and want to get another set of coverage results,
 you can run `make reset-gcov` to clear the intermediary gcov output.
@@ -128,9 +156,13 @@ a meaningful diff between them, you can run:
 
     ./scripts/test/cov-diff coverage-output1 coverage-output2 | less
 
-In this diff, any lines that were visited at least once will have coverage
-"1".  This lets you inspect what you (probably) really want to know: which
-untested lines were changed?  Are there any new untested lines?
+In this diff, any lines that were visited at least once will have coverage "1",
+and line numbers are deleted.  This lets you inspect what you (probably) really
+want to know: which untested lines were changed?  Are there any new untested
+lines?
+
+If you run ./scripts/test/cov-exclude, it marks excluded unreached
+lines with 'x', and excluded reached lines with '!!!'.
 
 Running integration tests
 -------------------------
@@ -141,6 +173,12 @@ run `make test-network`.
 
 We also have scripts to run integration tests using Stem.  To try them, set
 `STEM_SOURCE_DIR` to your Stem source directory, and run `test-stem`.
+
+Profiling Tor
+-------------
+
+Ongoing notes about Tor profiling can be found at
+https://pad.riseup.net/p/profiling-tor
 
 Profiling Tor with oprofile
 ---------------------------
@@ -168,20 +206,62 @@ Here are some basic instructions
    * `opreport -l that_dir/*`
  - Profit
 
+Profiling Tor with perf
+-----------------------
+
+This works with a running Tor, and requires root.
+
+1. Decide how long you want to profile for. Start with (say) 30 seconds. If that
+   works, try again with longer times.
+
+2. Find the PID of your running tor process.
+
+3. Run `perf record --call-graph dwarf -p <PID> sleep <SECONDS>`
+
+   (You may need to do this as root.)
+
+   You might need to add `-e cpu-clock` as an option to the perf record line
+   above, if you are on an older CPU without access to hardware profiling
+   events, or in a VM, or something.
+
+4. Now you have a perf.data file. Have a look at it with `perf report
+   --no-children --sort symbol,dso` or `perf report --no-children --sort
+   symbol,dso --stdio --header`. How does it look?
+
+5a. Once you have a nice big perf.data file, you can compress it, encrypt it,
+    and send it to your favorite Tor developers.
+
+5b. Or maybe you'd rather not send a nice big perf.data file. Who knows what's
+    in that!? It's kinda scary. To generate a less scary file, you can use `perf
+    report -g > <FILENAME>.out`. Then you can compress that and put it somewhere
+    public.
+
+Profiling Tor with gperftools aka Google-performance-tools
+----------------------------------------------------------
+
+This should work on nearly any unixy system. It doesn't seem to be compatible
+with RunAsDaemon though.
+
+Beforehand, install google-perftools.
+
+1. You need to rebuild Tor, hack the linking steps to add `-lprofiler` to the
+   libs. You can do this by adding `LIBS=-lprofiler` when you call `./configure`.
+
+Now you can run Tor with profiling enabled, and use the pprof utility to look at
+performance! See the gperftools manual for more info, but basically:
+
+2. Run `env CPUPROFILE=/tmp/profile src/app/tor -f <path/torrc>`. The profile file
+   is not written to until Tor finishes execuction.
+
+3. Run `pprof src/app/tor /tm/profile` to start the REPL.
+
 Generating and analyzing a callgraph
 ------------------------------------
 
-1. Run `./scripts/maint/generate_callgraph.sh`.  This will generate a
-   bunch of files in a new ./callgraph directory.
+0. Build Tor on linux or mac, ideally with -O0 or -fno-inline.
 
-2. Run `./scripts/maint/analyze_callgraph.py callgraph/src/*/*`.  This
-   will do a lot of graph operations and then dump out a new
-   `callgraph.pkl` file, containing data in Python's 'pickle' format.
-
-3. Run `./scripts/maint/display_callgraph.py`.  It will display:
-    - the number of functions reachable from each function.
-    - all strongly-connnected components in the Tor callgraph
-    - the largest bottlenecks in the largest SCC in the Tor callgraph.
+1. Clone 'https://gitweb.torproject.org/user/nickm/calltool.git/' .
+   Follow the README in that repository.
 
 Note that currently the callgraph generator can't detect calls that pass
 through function pointers.

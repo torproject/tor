@@ -1,5 +1,0 @@
-  o Minor bugfixes (unit test, monotonic time):
-    - Bump a gap of 1msec to 10msec used in the monotonic time test that makes
-      sure the nsec/usec/msec time read are synchronized. This change was
-      needed to accommodate slow system like armel or when the clock_gettime()
-      is not a VDSO on the running kernel. Fixes bug 25113; bugfix on 0.2.9.1.

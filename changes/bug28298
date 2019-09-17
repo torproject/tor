@@ -1,0 +1,4 @@
+  o Minor bugfixes (configuration):
+    - Resume refusing to start with relative file paths and RunAsDaemon
+      set (regression from the fix for bug 22731). Fixes bug 28298;
+      bugfix on 0.3.3.1-alpha.

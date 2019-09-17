@@ -1,4 +1,4 @@
-all: tor-resolve.exe tor-gencert.exe
+all: tor-resolve.exe tor-gencert.exe tor-print-ed-signing-cert.exe
 
 CFLAGS = /I ..\win32 /I ..\..\..\build-alpha\include /I ..\common /I ..\or
 
@@ -14,6 +14,9 @@ tor-gencert.exe: tor-gencert.obj
 
 tor-resolve.exe: tor-resolve.obj
 	$(CC) $(CFLAGS) $(LIBS) ..\common\*.lib tor-resolve.obj
+
+tor-print-ed-signing-cert.exe: tor-print-ed-signing-cert.obj
+	$(CC) $(CFLAGS) $(LIBS) ..\common\*.lib tor-print-ed-signing-cert.obj
 
 clean:
 	del *.obj *.lib *.exe

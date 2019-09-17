@@ -1,29 +1,30 @@
-/* Copyright (c) 2014-2016, The Tor Project, Inc. */
+/* Copyright (c) 2014-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or.h"
 #define CIRCUITBUILD_PRIVATE
-#include "circuitbuild.h"
-#include "circuitlist.h"
-#include "rephist.h"
-#include "channeltls.h"
 #define RELAY_PRIVATE
-#include "relay.h"
+#define REPHIST_PRIVATE
+#include "core/or/or.h"
+#include "core/or/circuitbuild.h"
+#include "core/or/circuitlist.h"
+#include "core/or/channeltls.h"
+#include "feature/stats/rephist.h"
+#include "core/or/relay.h"
+#include "feature/stats/rephist.h"
+#include "lib/container/order.h"
 /* For init/free stuff */
-#include "scheduler.h"
+#include "core/or/scheduler.h"
+
+#include "core/or/cell_st.h"
+#include "core/or/or_circuit_st.h"
 
 /* Test suite stuff */
-#include "test.h"
-#include "fakechans.h"
+#include "test/test.h"
+#include "test/fakechans.h"
 
 static or_circuit_t * new_fake_orcirc(channel_t *nchan, channel_t *pchan);
 
 static void test_relay_append_cell_to_circuit_queue(void *arg);
-
-typedef struct bw_array_t bw_array_t;
-uint64_t find_largest_max(bw_array_t *b);
-void commit_max(bw_array_t *b);
-void advance_obs(bw_array_t *b);
 
 static or_circuit_t *
 new_fake_orcirc(channel_t *nchan, channel_t *pchan)
@@ -50,16 +51,17 @@ new_fake_orcirc(channel_t *nchan, channel_t *pchan)
   circ->deliver_window = CIRCWINDOW_START_MAX;
   circ->n_chan_create_cell = NULL;
 
-  /* for assert_circ_ok */
-  orcirc->p_crypto = (void*)1;
-  orcirc->n_crypto = (void*)1;
-  orcirc->n_digest = (void*)1;
-  orcirc->p_digest = (void*)1;
-
   circuit_set_p_circid_chan(orcirc, get_unique_circ_id_by_chan(pchan), pchan);
   cell_queue_init(&(orcirc->p_chan_cells));
 
   return orcirc;
+}
+
+static void
+assert_circuit_ok_mock(const circuit_t *c)
+{
+  (void) c;
+  return;
 }
 
 static void
@@ -79,10 +81,6 @@ test_relay_close_circuit(void *arg)
   pchan = new_fake_channel();
   tt_assert(pchan);
 
-  /* We'll need chans with working cmuxes */
-  nchan->cmux = circuitmux_alloc();
-  pchan->cmux = circuitmux_alloc();
-
   /* Make a fake orcirc */
   orcirc = new_fake_orcirc(nchan, pchan);
   tt_assert(orcirc);
@@ -97,6 +95,8 @@ test_relay_close_circuit(void *arg)
 
   MOCK(scheduler_channel_has_waiting_cells,
        scheduler_channel_has_waiting_cells_mock);
+  MOCK(assert_circuit_ok,
+       assert_circuit_ok_mock);
 
   /* Append it */
   old_count = get_mock_scheduler_has_waiting_cells_count();
@@ -148,6 +148,7 @@ test_relay_close_circuit(void *arg)
   tor_free(orcirc);
   free_fake_channel(nchan);
   free_fake_channel(pchan);
+  UNMOCK(assert_circuit_ok);
 
   return;
 }
@@ -169,10 +170,6 @@ test_relay_append_cell_to_circuit_queue(void *arg)
   pchan = new_fake_channel();
   tt_assert(pchan);
 
-  /* We'll need chans with working cmuxes */
-  nchan->cmux = circuitmux_alloc();
-  pchan->cmux = circuitmux_alloc();
-
   /* Make a fake orcirc */
   orcirc = new_fake_orcirc(nchan, pchan);
   tt_assert(orcirc);
@@ -193,14 +190,14 @@ test_relay_append_cell_to_circuit_queue(void *arg)
   append_cell_to_circuit_queue(TO_CIRCUIT(orcirc), nchan, cell,
                                CELL_DIRECTION_OUT, 0);
   new_count = get_mock_scheduler_has_waiting_cells_count();
-  tt_int_op(new_count, ==, old_count + 1);
+  tt_int_op(new_count, OP_EQ, old_count + 1);
 
   /* Now try the reverse direction */
   old_count = get_mock_scheduler_has_waiting_cells_count();
   append_cell_to_circuit_queue(TO_CIRCUIT(orcirc), pchan, cell,
                                CELL_DIRECTION_IN, 0);
   new_count = get_mock_scheduler_has_waiting_cells_count();
-  tt_int_op(new_count, ==, old_count + 1);
+  tt_int_op(new_count, OP_EQ, old_count + 1);
 
   UNMOCK(scheduler_channel_has_waiting_cells);
 

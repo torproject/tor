@@ -1,0 +1,17 @@
+const CHANNELPADDING_COMMAND_STOP = 1;
+const CHANNELPADDING_COMMAND_START = 2;
+
+/* This command tells the relay to alter its min and max netflow
+   timeout range values, and send padding at that rate (resuming
+   if stopped). */
+struct channelpadding_negotiate {
+  u8 version IN [0];
+  u8 command IN [CHANNELPADDING_COMMAND_START, CHANNELPADDING_COMMAND_STOP];
+
+  /* Min must not be lower than the current consensus parameter
+     nf_ito_low. */
+  u16 ito_low_ms;
+
+  /* Max must not be lower than ito_low_ms */
+  u16 ito_high_ms;
+};

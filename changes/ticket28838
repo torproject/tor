@@ -1,0 +1,8 @@
+  o Minor features (performance):
+    - Remove about 96% of the work from the function that we run at
+      startup to test our curve25519_basepoint implementation.  Since
+      this function has yet to find an actual failure, we'll only
+      run it for 8 iterations instead of 200. Based on our profile
+      information, this change should save around 8% of our startup
+      time on typical desktops, and may have a similar effect on
+      other platforms.  Closes ticket 28838.

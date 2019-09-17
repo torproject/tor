@@ -1,0 +1,4 @@
+  o Minor bugfixes (continuous integration, Windows):
+    - Stop using an external OpenSSL install, and stop installing MSYS2
+      packages, when building using mingw on Appveyor Windows CI.
+      Fixes bug 28399; bugfix on 0.3.4.1-alpha.

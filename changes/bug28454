@@ -1,0 +1,4 @@
+  o Minor bugfixes (continuous integration, Windows):
+    - Manually configure the zstd compiler options, when building using
+      mingw on Appveyor Windows CI. The MSYS2 mingw zstd package does not
+      come with a pkg-config file. Fixes bug 28454; bugfix on 0.3.4.1-alpha.

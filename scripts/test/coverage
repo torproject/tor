@@ -7,14 +7,14 @@
 
 dst=$1
 
-for fn in src/or/*.c src/common/*.c; do
+for fn in src/core/*/*.c src/feature/*/*.c src/app/*/*.c src/lib/*/*.c; do
     BN=`basename $fn`
     DN=`dirname $fn`
     F=`echo $BN | sed -e 's/\.c$//;'`
     GC="${BN}.gcov"
     # Figure out the object file names
-    ONS=`echo ${DN}/src_*-${F}.o`
-    ONS_WILDCARD_LITERAL="${DN}/src_*-${F}.o"
+    ONS=$(echo "${DN}"/*testing_a-"${F}".o)
+    ONS_WILDCARD_LITERAL="${DN}/*testing_a-${F}.o"
     # If the wildcard didn't expand, no files
     if [ "$ONS" != "${ONS_WILDCARD_LITERAL}" ]
     then
@@ -29,7 +29,7 @@ for fn in src/or/*.c src/common/*.c; do
           gcov -o $on $fn
           if [ -e $GC ]
           then
-            if [ -n $dst ]
+            if [ -d "$dst" ]
             then
               mv $GC $dst/$GC
             fi

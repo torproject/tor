@@ -231,7 +231,8 @@ main(int c, char **v)
 	int result = 0;
 
 	for (i = 0; i <= 63; ++i) {
-		uint64_t x = 1 << i;
+		uint64_t x = 1;
+		x <<= i;
 		if (!check(x))
 			result = 1;
 		--x;

@@ -1,0 +1,3 @@
+  o Minor bugfixes (testing):
+    - Avoid hangs and race conditions in test_rebind.py.
+      Fixes bug 27968; bugfix on 0.3.5.1-alpha.

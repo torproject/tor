@@ -1,0 +1,4 @@
+  o Minor bugfixes (Linux seccomp2 sandbox):
+    - Permit the "shutdown()" system call, which is apparently
+      used by OpenSSL under some circumstances. Fixes bug 28183;
+      bugfix on 0.2.5.1-alpha.

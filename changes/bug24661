@@ -1,0 +1,3 @@
+  o Minor bugfixes (client, guard selection):
+    - When Tor's consensus has expired, but is still reasonably live, use it
+      to select guards. Fixes bug 24661; bugfix on 0.3.0.1-alpha.

@@ -1,0 +1,10 @@
+orconfig.h
+lib/cc/*.h
+lib/defs/*.h
+lib/err/*.h
+lib/malloc/*.h
+lib/ctime/*.h
+lib/string/*.h
+
+strlcat.c
+strlcpy.c

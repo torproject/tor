@@ -1,0 +1,8 @@
+  o Major bugfixes (compilation, rust):
+    - Rust tests can now build and run successfully with the
+      --enable-fragile-hardening option enabled.
+      Doing this currently requires the rust beta channel; it will
+      be possible with stable rust as of rust version 1.31 is out.
+      Patch from Alex Crichton.
+      Fixes bugs 27272, 27273, and 27274.
+      Bugfix on 0.3.1.1-alpha.

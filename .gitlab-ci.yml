@@ -1,0 +1,45 @@
+before_script:
+    - apt-get update -qq
+    - apt-get upgrade -qy
+
+build:
+  script:
+    - apt-get install -qy --fix-missing automake build-essential
+      libevent-dev libssl-dev zlib1g-dev
+      libseccomp-dev liblzma-dev libscrypt-dev
+    - ./autogen.sh
+    - ./configure --disable-asciidoc --enable-fatal-warnings
+      --disable-silent-rules
+    - make check || (e=$?; cat test-suite.log; exit $e)
+    - make install
+
+update:
+  only:
+    - schedules
+  script: 
+    - "apt-get install -y --fix-missing git openssh-client"
+    
+    # Run ssh-agent (inside the build environment)
+    - eval $(ssh-agent -s)
+
+    # Add the SSH key stored in SSH_PRIVATE_KEY variable to the agent store
+    - ssh-add <(echo "$DEPLOY_KEY")
+
+    # For Docker builds disable host key checking. Be aware that by adding that
+    # you are susceptible to man-in-the-middle attacks.
+    # WARNING: Use this only with the Docker executor, if you use it with shell
+    # you will overwrite your user's SSH config.
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    # In order to properly check the server's host key, assuming you created the
+    # SSH_SERVER_HOSTKEYS variable previously, uncomment the following two lines
+    # instead.
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo "$SSH_SERVER_HOSTKEYS" > ~/.ssh/known_hosts'
+    - echo "merging from torgit"
+    - git config --global user.email "labadmin@oniongit.eu"
+    - git config --global user.name "gitadmin"
+    - "mkdir tor"
+    - "cd tor" 
+    - git clone --bare https://git.torproject.org/tor.git
+    - git push --mirror git@oniongit.eu:network/tor.git

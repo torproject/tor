@@ -30,6 +30,12 @@ orconfig.h files.
 Testing scripts
 ---------------
 
+test/chutney-git-bisect.sh -- a git bisect run script that bisects using
+chutney. The script builds tor and tor-gencert, then runs chutney. The script
+takes optional arguments for out-of-tree builds, and specific chutney network
+flavours. You should copy this script before using it with git bisect, so that
+it doesn't change (or disappear) during bisection.
+
 test/cov-blame -- Mash up the results of gcov with git blame.  Mainly useful
 to find out who has been writing untested code.
 

@@ -1,0 +1,5 @@
+  o Minor bugfixes (rust, directory authority):
+    - Fix an API mismatch in the rust implementation of
+      protover_compute_vote(). This bug could have caused crashes on any
+      directory authorities running Tor with Rust (which we do not yet
+      recommend). Fixes bug 27741; bugfix on 0.3.3.6.

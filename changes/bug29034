@@ -1,0 +1,5 @@
+  o Major bugfixes (Onion service reachability):
+    - Properly clean up the introduction point map when circuits change purpose
+      from onion service circuits to pathbias, measurement, or other circuit types.
+      This should fix some service-side instances of introduction point failure.
+      Fixes bug 29034; bugfix on 0.3.2.1-alpha.

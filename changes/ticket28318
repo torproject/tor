@@ -1,0 +1,3 @@
+  o Minor features (Windows, continuous integration):
+    - Build tor on Windows Server 2012 R2 and Windows Server 2016 using
+      Appveyor's CI. Closes ticket 28318.

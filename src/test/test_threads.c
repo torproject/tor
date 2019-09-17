@@ -1,12 +1,12 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2016, The Tor Project, Inc. */
+ * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "or.h"
-#include "compat_threads.h"
-#include "test.h"
+#include "core/or/or.h"
+#include "lib/thread/threads.h"
+#include "test/test.h"
 
 /** mutex for thread test to stop the threads hitting data at the same time. */
 static tor_mutex_t *thread_test_mutex_ = NULL;
@@ -139,8 +139,8 @@ test_threads_basic(void *arg)
               !strcmp(strmap_get(thread_test_strmap_, "thread 2"),
                       strmap_get(thread_test_strmap_, "last to run")));
 
-  tt_int_op(thread_fns_failed, ==, 0);
-  tt_int_op(thread_fn_tid1, !=, thread_fn_tid2);
+  tt_int_op(thread_fns_failed, OP_EQ, 0);
+  tt_int_op(thread_fn_tid1, OP_NE, thread_fn_tid2);
 
  done:
   tor_free(s1);
@@ -283,15 +283,15 @@ test_threads_conditionvar(void *arg)
   SPIN();
   tor_mutex_release(ti->mutex);
 
-  tt_int_op(ti->value, ==, 1337);
+  tt_int_op(ti->value, OP_EQ, 1337);
   if (!timeout) {
-    tt_int_op(ti->n_shutdown, ==, 4);
+    tt_int_op(ti->n_shutdown, OP_EQ, 4);
   } else {
     const int GIVE_UP_AFTER_SEC = 30;
     SPIN_UNTIL((ti->n_timeouts == 2 ||
                 time(NULL) >= started_at + GIVE_UP_AFTER_SEC), 10);
-    tt_int_op(ti->n_shutdown, ==, 2);
-    tt_int_op(ti->n_timeouts, ==, 2);
+    tt_int_op(ti->n_shutdown, OP_EQ, 2);
+    tt_int_op(ti->n_timeouts, OP_EQ, 2);
     tor_mutex_release(ti->mutex);
   }
 

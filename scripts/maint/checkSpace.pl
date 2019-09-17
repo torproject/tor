@@ -1,48 +1,68 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
-if ($ARGV[0] =~ /^-/) {
-    $lang = shift @ARGV;
-    $C = ($lang eq '-C');
-#    $TXT = ($lang eq '-txt');
+use strict;
+use warnings;
+
+my $found = 0;
+sub msg {
+  $found = 1;
+  print "$_[0]";
 }
 
-for $fn (@ARGV) {
+my $C = 0;
+
+if ($ARGV[0] =~ /^-/) {
+    my $lang = shift @ARGV;
+    $C = ($lang eq '-C');
+}
+
+our %basenames = ();
+
+for my $fn (@ARGV) {
     open(F, "$fn");
-    $lastnil = 0;
-    $lastline = "";
-    $incomment = 0;
+    my $lastnil = 0;
+    my $lastline = "";
+    my $incomment = 0;
+    my $in_func_head = 0;
+    my $basename = $fn;
+    $basename =~ s#.*/##;
+    if ($basenames{$basename}) {
+        msg "Duplicate fnames: $fn and $basenames{$basename}.\n";
+    } else {
+        $basenames{$basename} = $fn;
+    }
     while (<F>) {
         ## Warn about windows-style newlines.
-	#    (We insist on lines that end with a single LF character, not
-	#    CR LF.)
+        #    (We insist on lines that end with a single LF character, not
+        #    CR LF.)
         if (/\r/) {
-            print "       CR:$fn:$.\n";
+            msg "       CR:$fn:$.\n";
         }
         ## Warn about tabs.
-	#    (We only use spaces)
+        #    (We only use spaces)
         if (/\t/) {
-            print "      TAB:$fn:$.\n";
+            msg "      TAB:$fn:$.\n";
         }
         ## Warn about labels that don't have a space in front of them
-	#    (We indent every label at least one space)
+        #    (We indent every label at least one space)
         if (/^[a-zA-Z_][a-zA-Z_0-9]*:/) {
-            print "nosplabel:$fn:$.\n";
+            msg "nosplabel:$fn:$.\n";
         }
         ## Warn about trailing whitespace.
-	#    (We don't allow whitespace at the end of the line; make your
-	#    editor highlight it for you so you can stop adding it in.)
+        #    (We don't allow whitespace at the end of the line; make your
+        #    editor highlight it for you so you can stop adding it in.)
         if (/ +$/) {
-            print "Space\@EOL:$fn:$.\n";
+            msg "Space\@EOL:$fn:$.\n";
         }
         ## Warn about control keywords without following space.
-	#    (We put a space after every 'if', 'while', 'for', 'switch', etc)
+        #    (We put a space after every 'if', 'while', 'for', 'switch', etc)
         if ($C && /\s(?:if|while|for|switch)\(/) {
-            print "      KW(:$fn:$.\n";
+            msg "      KW(:$fn:$.\n";
         }
         ## Warn about #else #if instead of #elif.
         #    (We only allow #elif)
         if (($lastline =~ /^\# *else/) and ($_ =~ /^\# *if/)) {
-            print " #else#if:$fn:$.\n";
+            msg " #else#if:$fn:$.\n";
         }
         ## Warn about some K&R violations
         #    (We use K&R-style C, where open braces go on the same line as
@@ -53,23 +73,23 @@ for $fn (@ARGV) {
         #            other stuff;
         #          }
         if (/^\s+\{/ and $lastline =~ /^\s*(if|while|for|else if)/ and
-	    $lastline !~ /\{$/) {
-            print "non-K&R {:$fn:$.\n";
-	}
+            $lastline !~ /\{$/) {
+            msg "non-K&R {:$fn:$.\n";
+        }
         if (/^\s*else/ and $lastline =~ /\}$/) {
-	    print "  }\\nelse:$fn:$.\n";
-	}
+            msg "  }\\nelse:$fn:$.\n";
+        }
         $lastline = $_;
         ## Warn about unnecessary empty lines.
         #   (Don't put an empty line before a line that contains nothing
         #   but a closing brace.)
         if ($lastnil && /^\s*}\n/) {
-            print "  UnnecNL:$fn:$.\n";
+            msg "  UnnecNL:$fn:$.\n";
         }
         ## Warn about multiple empty lines.
         #   (At most one blank line in a row.)
         if ($lastnil && /^$/) {
-            print " DoubleNL:$fn:$.\n";
+            msg " DoubleNL:$fn:$.\n";
         } elsif (/^$/) {
             $lastnil = 1;
         } else {
@@ -79,7 +99,7 @@ for $fn (@ARGV) {
         ## accept double-line lines.
         #   (Don't make lines wider than 80 characters, including newline.)
         if (/^.{80}/) {
-            print "     Wide:$fn:$.\n";
+            msg "     Wide:$fn:$.\n";
         }
         ### Juju to skip over comments and strings, since the tests
         ### we're about to do are okay there.
@@ -102,48 +122,52 @@ for $fn (@ARGV) {
             s!"(?:[^\"]+|\\.)*"!"X"!g;
             next if /^\#/;
             ## Warn about C++-style comments.
-	    #   (Use C style comments only.)
+            #   (Use C style comments only.)
             if (m!//!) {
-                #    print "       //:$fn:$.\n";
+                #    msg "       //:$fn:$.\n";
                 s!//.*!!;
             }
             ## Warn about unquoted braces preceded by non-space.
-	    #   (No character except a space should come before a {)
+            #   (No character except a space should come before a {)
             if (/([^\s'])\{/) {
-                print "       $1\{:$fn:$.\n";
+                msg "       $1\{:$fn:$.\n";
+            }
+            ## Warn about double semi-colons at the end of a line.
+            if (/;;$/) {
+                msg "       double semi-colons at the end of $. in $fn\n"
             }
             ## Warn about multiple internal spaces.
             #if (/[^\s,:]\s{2,}[^\s\\=]/) {
-            #    print "     X  X:$fn:$.\n";
+            #    msg "     X  X:$fn:$.\n";
             #}
             ## Warn about { with stuff after.
             #s/\s+$//;
             #if (/\{[^\}\\]+$/) {
-            #    print "     {X:$fn:$.\n";
+            #    msg "     {X:$fn:$.\n";
             #}
             ## Warn about function calls with space before parens.
-	    #   (Don't put a space between the name of a function and its
-	    #   arguments.)
+            #   (Don't put a space between the name of a function and its
+            #   arguments.)
             if (/(\w+)\s\(([A-Z]*)/) {
                 if ($1 ne "if" and $1 ne "while" and $1 ne "for" and
                     $1 ne "switch" and $1 ne "return" and $1 ne "int" and
                     $1 ne "elsif" and $1 ne "WINAPI" and $2 ne "WINAPI" and
                     $1 ne "void" and $1 ne "__attribute__" and $1 ne "op" and
-                    $1 ne "size_t" and $1 ne "double" and
+                    $1 ne "size_t" and $1 ne "double" and $1 ne "uint64_t" and
                     $1 ne "workqueue_reply_t") {
-                    print "     fn ():$fn:$.\n";
+                    msg "     fn ():$fn:$.\n";
                 }
             }
             ## Warn about functions not declared at start of line.
-	    #    (When you're declaring functions, put "static" and "const"
-	    #    and the return type on one line, and the function name at
-	    #    the start of a new line.)
+            #    (When you're declaring functions, put "static" and "const"
+            #    and the return type on one line, and the function name at
+            #    the start of a new line.)
             if ($in_func_head ||
                 ($fn !~ /\.h$/ && /^[a-zA-Z0-9_]/ &&
                  ! /^(?:const |static )*(?:typedef|struct|union)[^\(]*$/ &&
                  ! /= *\{$/ && ! /;$/)) {
                 if (/.\{$/){
-                    print "fn() {:$fn:$.\n";
+                    msg "fn() {:$fn:$.\n";
                     $in_func_head = 0;
                 } elsif (/^\S[^\(]* +\**[a-zA-Z0-9_]+\(/) {
                     $in_func_head = -1; # started with tp fn
@@ -151,31 +175,33 @@ for $fn (@ARGV) {
                     $in_func_head = 0;
                 } elsif (/\{/) {
                     if ($in_func_head == -1) {
-                        print "tp fn():$fn:$.\n";
+                        msg "tp fn():$fn:$.\n";
                     }
                     $in_func_head = 0;
                 }
             }
 
-	    ## Check for forbidden functions except when they are
-	    # explicitly permitted
-	    if (/\bassert\(/ && not /assert OK/) {
-		print "assert :$fn:$.   (use tor_assert)\n";
-	    }
-	    if (/\bmemcmp\(/ && not /memcmp OK/) {
-		print "memcmp :$fn:$.   (use {tor,fast}_mem{eq,neq,cmp}\n";
-	    }
-	    # always forbidden.
-	    if (not / OVERRIDE /) {
-		if (/\bstrcat\(/ or /\bstrcpy\(/ or /\bsprintf\(/) {
-		    print "$& :$fn:$.\n";
-		}
-		if (/\bmalloc\(/ or /\bfree\(/ or /\brealloc\(/ or
-		    /\bstrdup\(/ or /\bstrndup\(/ or /\bcalloc\(/) {
-		    print "$& :$fn:$.    (use tor_malloc, tor_free, etc)\n";
-		}
-	    }
+            ## Check for forbidden functions except when they are
+            # explicitly permitted
+            if (/\bassert\(/ && not /assert OK/) {
+                msg "assert :$fn:$.   (use tor_assert)\n";
+            }
+            if (/\bmemcmp\(/ && not /memcmp OK/) {
+                msg "memcmp :$fn:$.   (use {tor,fast}_mem{eq,neq,cmp}\n";
+            }
+            # always forbidden.
+            if (not /\ OVERRIDE\ /) {
+                if (/\bstrcat\(/ or /\bstrcpy\(/ or /\bsprintf\(/) {
+                    msg "$& :$fn:$.\n";
+                }
+                if (/\bmalloc\(/ or /\bfree\(/ or /\brealloc\(/ or
+                    /\bstrdup\(/ or /\bstrndup\(/ or /\bcalloc\(/) {
+                    msg "$& :$fn:$.    (use tor_malloc, tor_free, etc)\n";
+                }
+            }
         }
     }
     close(F);
 }
+
+exit $found;

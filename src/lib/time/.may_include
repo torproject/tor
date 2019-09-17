@@ -1,0 +1,11 @@
+orconfig.h
+
+lib/cc/*.h
+lib/err/*.h
+lib/intmath/*.h
+lib/log/*.h
+lib/time/*.h
+lib/wallclock/*.h
+
+# For load_windows_system_lib.
+lib/fs/winlib.h

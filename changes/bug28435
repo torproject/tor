@@ -1,0 +1,3 @@
+  o Minor bugfixes (documentation):
+    - Make Doxygen work again after the 0.3.5 source tree moves.
+      Fixes bug 28435; bugfix on 0.3.5.1-alpha.

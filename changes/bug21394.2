@@ -1,7 +1,0 @@
-  o Minor bugfix (Exit node DNS retries):
-    - Re-attempt timed-out DNS queries 3 times before failure, since our
-      timeout is 5 seconds for them, but clients wait 10-15. Also allow
-      slightly more timeouts per resolver before giving up on it in the
-      case where an exit has multiple resolvers configured. Fixes bug 21394;
-      bugfix on 0.3.1.9.
-

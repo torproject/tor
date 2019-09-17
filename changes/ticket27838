@@ -1,0 +1,4 @@
+  o Minor bugfixes (hidden service v3):
+    - Build the service descriptor signing key certificate before uploading so
+      we always have a fresh one leaving no chances for it to expire service
+      side. Fixes bug 27838; bugfix on 0.3.2.1-alpha.

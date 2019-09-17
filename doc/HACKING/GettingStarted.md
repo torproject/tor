@@ -11,8 +11,9 @@ whole Tor ecosystem.)
 
 
 If you are looking for a more bare-bones, less user-friendly information
-dump of important information, you might like reading doc/HACKING
-instead.  You should probably read it before you write your first patch.
+dump of important information, you might like reading the "torguts"
+documents linked to below. You should probably read it before you write
+your first patch.
 
 
 Required background

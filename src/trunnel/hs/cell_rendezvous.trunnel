@@ -1,0 +1,29 @@
+/*
+ * This contains the definition of the RENDEZVOUS1/2 cell for onion service
+ * version 3 and onward. The following format is specified in proposal 224
+ * section 4.2.
+ */
+
+/* Rendezvous cookie length. */
+const TRUNNEL_REND_COOKIE_LEN = 20;
+/* The HANDSHAKE_INFO field layout is as follow:
+ *    SERVER_PK   [PK_PUBKEY_LEN bytes]
+ *    AUTH        [MAC_LEN bytes]
+ * This means, the size is 32 bytes + 32 bytes. */
+const TRUNNEL_HANDSHAKE_INFO_LEN = 64;
+
+/* RENDEZVOUS1 payload. See details in section 4.2. */
+struct trn_cell_rendezvous1 {
+  /* The RENDEZVOUS_COOKIE field. */
+  u8 rendezvous_cookie[TRUNNEL_REND_COOKIE_LEN];
+  
+  /* The HANDSHAKE_INFO field which has a variable length depending on the
+   * handshake type used. */
+  u8 handshake_info[];
+};
+
+/* RENDEZVOUS2 payload. See details in section 4.2. */
+struct trn_cell_rendezvous2 {
+  /* The HANDSHAKE_INFO field. */
+  u8 handshake_info[TRUNNEL_HANDSHAKE_INFO_LEN];
+};

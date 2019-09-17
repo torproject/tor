@@ -1,5 +1,0 @@
-  o Minor bugfixes (controller, reliability):
-    - Avoid a (nonfatal) assertion failure when extending a one-hop circuit
-      from the controller to become a multihop circuit. Fixes bug 24903;
-      bugfix on 0.2.5.2-alpha.
-

@@ -1,0 +1,6 @@
+  o Minor bugfixes (logging):
+    - Rework rep_hist_log_link_protocol_counts() to iterate through all link
+      protocol versions when logging incoming/outgoing connection counts. Tor
+      no longer skips version 5 and we don't have to remember to update this
+      function when new link protocol version is developed. Fixes bug 28920;
+      bugfix on 0.2.6.10.

@@ -1,0 +1,5 @@
+  o Minor bugfixes (testing):
+    - Use a separate DataDirectory for the test_rebind script.
+      Previously, this script would run using the default DataDirectory,
+      and sometimes fail. Fixes bug 28562; bugfix on 0.3.5.1-alpha.
+      Patch from Taylor R Campbell.
