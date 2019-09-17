@@ -32,22 +32,25 @@
     - grep tor_lzma_state_size_precalc src/app/tor
     - make install
 
+.apt-template: &apt-template |
+      export LC_ALL=C.UTF-8
+      echo Etc/UTC > /etc/timezone
+      echo 'quiet "1";' \
+           'APT::Install-Recommends "0";' \
+           'APT::Install-Suggests "0";' \
+           'APT::Acquire::Retries "20";' \
+           'APT::Get::Assume-Yes "true";' \
+           'Dpkg::Use-Pty "0";' \
+        >> /etc/apt/apt.conf.d/99gitlab
+      apt-get update
+      apt-get dist-upgrade
+
 .debian-template: &debian-template
   <<: *artifacts-template
   variables:
     DEBIAN_FRONTEND: noninteractive
   before_script:
-    - export LC_ALL=C.UTF-8
-    - echo Etc/UTC > /etc/timezone
-    - echo 'quiet "1";'
-           'APT::Install-Recommends "0";'
-           'APT::Install-Suggests "0";'
-           'APT::Acquire::Retries "20";'
-           'APT::Get::Assume-Yes "true";'
-           'Dpkg::Use-Pty "0";'
-        >> /etc/apt/apt.conf.d/99gitlab
-    - apt-get update
-    - apt-get dist-upgrade
+    - *apt-template
     - apt-get install
         automake
         build-essential
@@ -61,6 +64,79 @@
         zlib1g-dev
   after_script:
     - echo "Download debug artifacts from https://gitlab.com/${CI_PROJECT_PATH}/-/jobs"
+
+
+.android-template: &android-template
+  image: debian:buster
+  variables:
+    DEBIAN_FRONTEND: noninteractive
+  before_script:
+    - *apt-template
+    - apt-get install autoconf automake ca-certificates curl gzip make libtinfo5 libtool pkg-config tar unzip
+  script:
+    - ABI=aarch64
+    - host_triplet=${ABI}-linux-android
+    - platform=21
+    - ndk=android-ndk-`echo $CI_JOB_NAME | awk '{print $2}'`
+    - ndkzip=${ndk}-linux-x86_64.zip
+    - curl --silent http://dl.google.com/android/repository/${ndkzip} > $ndkzip
+    - unzip -q $ndkzip
+    - export ANDROID_NDK_HOME=`pwd`/$ndk
+    - export PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+    - export CC=${host_triplet}${platform}-clang
+
+    - mkdir -p external
+    - export EXTERNAL_ROOT=`pwd`/external
+
+    # if using an old NDK, then more configuration is needed
+    - if ! which $CC; then
+        export CC="${host_triplet}-gcc --sysroot=$ANDROID_NDK_HOME/platforms/android-$platform/arch-arm64 -isystem $ANDROID_NDK_HOME/sysroot/usr/include/$host_triplet -isystem $ANDROID_NDK_HOME/sysroot/usr/include";
+        export CFLAGS=-D__ANDROID_API__=$platform
+        export PATH=$ANDROID_NDK_HOME/toolchains/${ABI}-linux-android-4.9/prebuilt/linux-x86_64/bin:$PATH;
+      fi
+
+    - mkdir openssl
+    - curl --silent --location https://github.com/openssl/openssl/archive/OpenSSL_1_1_1d.tar.gz
+        | tar -xz --directory=openssl --strip-components=1
+    - cd openssl
+    - ./Configure no-shared android-arm64 -D__ANDROID_API__=$platform
+        --prefix=$EXTERNAL_ROOT --openssldir=$EXTERNAL_ROOT
+    - make install_dev
+    - cd ..
+
+    - mkdir libevent
+    - curl --silent --location https://github.com/libevent/libevent/archive/release-2.1.11-stable.tar.gz
+        | tar -xz --directory=libevent --strip-components=1
+    - cd libevent
+    - ./autogen.sh
+    - ./configure
+        --host="${host_triplet}"
+        --disable-libevent-regress
+        --disable-samples
+        --disable-shared
+        --prefix=$EXTERNAL_ROOT
+    - make install
+    - cd ..
+
+    - ./autogen.sh
+    - ./configure
+        --host="$host_triplet"
+        --enable-android
+        --enable-static-libevent --with-libevent-dir=$EXTERNAL_ROOT
+        --enable-static-openssl --with-openssl-dir=$EXTERNAL_ROOT
+        --prefix=$EXTERNAL_ROOT
+
+    - grep -E '^# *define +ENABLE_OPENSSL +1$' orconfig.h
+    - grep -E '^# *define +HAVE_TLS_METHOD +1$' orconfig.h
+
+    - make install
+
+android r17b:
+  <<: *android-template
+
+android r20:
+  <<: *android-template
+
 
 debian_testing:
   image: debian:testing
