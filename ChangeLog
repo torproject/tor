@@ -1,4 +1,4 @@
-Changes in version 0.4.2.1-alpha - 2019-09-??
+Changes in version 0.4.2.1-alpha - 2019-09-17
   This is the first alpha release in the 0.4.2.x series. It adds new
   defenses for denial-of-service attacks against onion services. It also
   includes numerous kinds of bugfixes and refactoring to help improve
