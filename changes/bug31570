@@ -1,0 +1,5 @@
+  o Major bugfixes (crash, android):
+    - Tolerate systems (including some Android installations) where madvise
+      and MADV_DONTDUMP are available at build-time, but not at run time.
+      Previously, these systems would notice a failed syscall and abort.
+      Fixes bug 31570; bugfix on 0.4.1.1-alpha.
