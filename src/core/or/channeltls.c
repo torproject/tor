@@ -1027,6 +1027,16 @@ channel_tls_time_process_cell(cell_t *cell, channel_tls_t *chan, int *time,
 }
 #endif /* defined(KEEP_TIMING_STATS) */
 
+#ifdef KEEP_TIMING_STATS
+#define PROCESS_CELL(tp, cl, cn) STMT_BEGIN {                   \
+    ++num ## tp;                                                \
+    channel_tls_time_process_cell(cl, cn, & tp ## time ,            \
+                             channel_tls_process_ ## tp ## _cell);  \
+    } STMT_END
+#else /* !(defined(KEEP_TIMING_STATS)) */
+#define PROCESS_CELL(tp, cl, cn) channel_tls_process_ ## tp ## _cell(cl, cn)
+#endif /* defined(KEEP_TIMING_STATS) */
+
 /**
  * Handle an incoming cell on a channel_tls_t.
  *
@@ -1045,16 +1055,6 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
 {
   channel_tls_t *chan;
   int handshaking;
-
-#ifdef KEEP_TIMING_STATS
-#define PROCESS_CELL(tp, cl, cn) STMT_BEGIN {                   \
-    ++num ## tp;                                                \
-    channel_tls_time_process_cell(cl, cn, & tp ## time ,            \
-                             channel_tls_process_ ## tp ## _cell);  \
-    } STMT_END
-#else /* !(defined(KEEP_TIMING_STATS)) */
-#define PROCESS_CELL(tp, cl, cn) channel_tls_process_ ## tp ## _cell(cl, cn)
-#endif /* defined(KEEP_TIMING_STATS) */
 
   tor_assert(cell);
   tor_assert(conn);
@@ -1327,6 +1327,8 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
       break;
   }
 }
+
+#undef PROCESS_CELL
 
 /**
  * Update channel marks after connection_or.c has changed an address.
