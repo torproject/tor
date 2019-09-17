@@ -1073,7 +1073,8 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
     return;
 
   /* Reject all but VERSIONS and NETINFO when handshaking. */
-  /* (VERSIONS should actually be impossible; it's variable-length.) */
+  /* (VERSIONS actually indicates a protocol warning: it's variable-length,
+   * so if it reaches this function, we're on a v1 connection.) */
   if (handshaking && cell->command != CELL_VERSIONS &&
       cell->command != CELL_NETINFO) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
