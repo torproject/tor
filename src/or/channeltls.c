@@ -1098,7 +1098,15 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
       /* do nothing */
       break;
     case CELL_VERSIONS:
-      tor_fragile_assert();
+      /* A VERSIONS cell should always be a variable-length cell, and
+       * so should never reach this function (which handles constant-sized
+       * cells). But if the connection is using the (obsolete) v1 link
+       * protocol, all cells will be treated as constant-sized, and so
+       * it's possible we'll reach this code.
+       */
+      log_fn(LOG_PROTOCOL_WARN, LD_CHANNEL,
+             "Received unexpected VERSIONS cell on a channel using link "
+             "protocol %d; ignoring.", conn->link_proto);
       break;
     case CELL_NETINFO:
       ++stats_n_netinfo_cells_processed;
