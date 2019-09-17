@@ -111,7 +111,17 @@ static int
 nodump_mem(void *mem, size_t sz)
 {
 #if defined(MADV_DONTDUMP)
-  return madvise(mem, sz, MADV_DONTDUMP);
+  int rv = madvise(mem, sz, MADV_DONTDUMP);
+  if (rv == 0) {
+    return 0;
+  } else if (errno == ENOSYS || errno == EINVAL) {
+    return 0; // syscall not supported, or flag not supported.
+  } else {
+    tor_log_err_sigsafe("Unexpected error from madvise: ",
+                        strerror(errno),
+                        NULL);
+    return -1;
+  }
 #else
   (void) mem;
   (void) sz;
