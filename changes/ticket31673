@@ -1,0 +1,3 @@
+  o New system requirements (build system):
+    - Do not include the deprecated <sys/sysctl.h> on Linux or Windows system.
+      Closes 31673;
