@@ -1,5 +1,0 @@
-  o Major bugfixes (crash, Linux):
-    - Tolerate systems (including some Linux installations) where madvise
-      and/or MADV_DONTFORK are available at build-time, but not at run time.
-      Previously, these systems would notice a failed syscall and abort.
-      Fixes bug 31696; bugfix on 0.4.1.1-alpha.
