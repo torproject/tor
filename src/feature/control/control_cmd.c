@@ -639,7 +639,9 @@ address_is_invalid_mapaddress_target(const char *addr)
 }
 
 static const control_cmd_syntax_t mapaddress_syntax = {
-  .max_args=1,
+  // no positional arguments are expected
+  .max_args=0,
+  // an arbitrary number of K=V entries are supported.
   .accept_keywords=true,
 };
 
