@@ -77,8 +77,10 @@ class ProblemVault(object):
         # (e.g. we went from 4k LoC to 3k LoC), but we do warn if the
         # situation worsened (e.g. we went from 60 includes to 80).
         status = problem.is_worse_than(self.exceptions[problem.key()])
-        if status == STATUS_OK:
-            self.used_exception_for[problem.key()] = problem
+
+        # Remember that we used this exception, so that we can later
+        # determine whether the exception was overbroad.
+        self.used_exception_for[problem.key()] = problem
 
         return status
 
