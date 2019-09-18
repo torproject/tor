@@ -2329,8 +2329,13 @@ intro_point_should_expire(const hs_service_intro_point_t *ip,
 static inline int
 can_retry_intro_point(hs_service_intro_point_t *ip)
 {
-return ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES &&
-       (!ip->circuit_established || hs_circ_service_get_intro_circ(ip));
+  /* If we have gone over the number of retried circuits, make sure we don't
+   * already have an established circuit. */
+  if (ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES) {
+    return !ip->circuit_established || hs_circ_service_get_intro_circ(ip);
+  }
+  /* Otherwise, return 0. */
+  return 0;
 }
 
 /* Go over the given set of intro points for each service and remove any
