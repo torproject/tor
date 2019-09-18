@@ -906,11 +906,22 @@ test_confparse_unitparse(void *args)
   tt_assert(ok);
 
   /* u64 overflow */
-  /* XXXX our implementation does not currently detect this. See bug 30920. */
-  /*
   tt_u64_op(config_parse_memunit("20000000 TB", &ok), OP_EQ, 0);
   tt_assert(!ok);
-  */
+  // This test fails the double check as the float representing 15000000.5 TB
+  // is greater than (double) INT64_MAX
+  tt_u64_op(config_parse_memunit("15000000.5 TB", &ok), OP_EQ, 0);
+  tt_assert(!ok);
+  // 8388608.1 TB passes double check because it falls in the same float
+  // value as (double)INT64_MAX (which is 2^63) due to precision.
+  // But will fail the int check because the unsigned representation of
+  // the float, which is 2^63, is strictly greater than INT64_MAX (2^63-1)
+  tt_u64_op(config_parse_memunit("8388608.1 TB", &ok), OP_EQ, 0);
+  tt_assert(!ok);
+
+  /* negative float */
+  tt_u64_op(config_parse_memunit("-1.5 GB", &ok), OP_EQ, 0);
+  tt_assert(!ok);
 
   /* i32 overflow */
   tt_int_op(config_parse_interval("1000 months", &ok), OP_EQ, -1);
