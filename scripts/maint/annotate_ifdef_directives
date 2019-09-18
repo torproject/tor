@@ -29,6 +29,12 @@ LINE_OBVIOUSNESS_LIMIT = 4
 class Problem(Exception):
     pass
 
+def commented_line(fmt, argument):
+    """
+    Return fmt%argument, for use as a commented line.
+    """
+    return fmt % argument
+
 def uncomment(s):
     """
     Remove existing trailing comments from an #else or #endif line.
@@ -83,7 +89,8 @@ def translate(f_in, f_out):
                 raise Problem("Unexpected #%s on %d"% (command,lineno))
             if (len(cur_level) == 1 and command == 'else' and
                 lineno > cur_level[0][2] + LINE_OBVIOUSNESS_LIMIT):
-                f_out.write("#else /* !(%s) */\n"%cur_level[0][1])
+                f_out.write(commented_line("#else /* !(%s) */\n",
+                                           cur_level[0][1]))
             else:
                 f_out.write(line)
             cur_level.append((command, rest, lineno))
@@ -96,9 +103,11 @@ def translate(f_in, f_out):
                 f_out.write(line)
             elif len(cur_level) == 1 or (
                     len(cur_level) == 2 and cur_level[1][0] == 'else'):
-                f_out.write("#endif /* %s */\n"%cur_level[0][1])
+                f_out.write(commented_line("#endif /* %s */\n",
+                                           cur_level[0][1]))
             else:
-                f_out.write("#endif /* %s || ... */\n"%cur_level[0][1])
+                f_out.write(commented_line("#endif /* %s || ... */\n",
+                                           cur_level[0][1]))
             cur_level = stack.pop()
     if len(stack) or cur_level != whole_file:
         raise Problem("Missing #endif")
