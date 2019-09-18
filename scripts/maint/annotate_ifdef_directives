@@ -54,6 +54,46 @@ def commented_line(fmt, argument, maxwidth=LINE_WIDTH):
         assert len(result) <= maxwidth
         return result
 
+def negate(expr):
+    """Return a negated version of expr; try to avoid double-negation.
+
+    We usually wrap expressions in parentheses and add a "!".
+    >>> negate("A && B")
+    '!(A && B)'
+
+    But if we recognize the expression as negated, we can restore it.
+    >>> negate(negate("A && B"))
+    'A && B'
+
+    The same applies for defined(FOO).
+    >>> negate("defined(FOO)")
+    '!defined(FOO)'
+    >>> negate(negate("defined(FOO)"))
+    'defined(FOO)'
+
+    Internal parentheses don't confuse us:
+    >>> negate("!(FOO) && !(BAR)")
+    '!(!(FOO) && !(BAR))'
+
+    """
+    expr = expr.strip()
+    # See whether we match !(...), with no intervening close-parens.
+    m = re.match(r'^!\s*\(([^\)]*)\)$', expr)
+    if m:
+        return m.group(1)
+
+
+    # See whether we match !?defined(...), with no intervening close-parens.
+    m = re.match(r'^(!?)\s*(defined\([^\)]*\))$', expr)
+    if m:
+        if m.group(1) == "!":
+            prefix = ""
+        else:
+            prefix = "!"
+        return prefix + m.group(2)
+
+    return "!(%s)" % expr
+
 def uncomment(s):
     """
     Remove existing trailing comments from an #else or #endif line.
@@ -108,8 +148,8 @@ def translate(f_in, f_out):
                 raise Problem("Unexpected #%s on %d"% (command,lineno))
             if (len(cur_level) == 1 and command == 'else' and
                 lineno > cur_level[0][2] + LINE_OBVIOUSNESS_LIMIT):
-                f_out.write(commented_line("#else /* !(%s) */\n",
-                                           cur_level[0][1]))
+                f_out.write(commented_line("#else /* %s */\n",
+                                           negate(cur_level[0][1])))
             else:
                 f_out.write(line)
             cur_level.append((command, rest, lineno))
