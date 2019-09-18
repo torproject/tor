@@ -262,7 +262,7 @@ check_private_dir,(const char *dirname, cpd_check_t check,
     }
   }
   close(fd);
-#else /* !(!defined(_WIN32)) */
+#else /* defined(_WIN32) */
   /* Win32 case: we can't open() a directory. */
   (void)effective_user;
 

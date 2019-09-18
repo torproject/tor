@@ -75,7 +75,7 @@ clamp_double_to_int64(double number)
 */
 #define PROBLEMATIC_FLOAT_CONVERSION_WARNING
 DISABLE_GCC_WARNING(float-conversion)
-#endif /* defined(MINGW_ANY) && GCC_VERSION >= 409 */
+#endif /* (defined(MINGW_ANY)||defined(__FreeBSD__)) && GCC_VERSION >= 409 */
 
 /*
   With clang 4.0 we apparently run into "double promotion" warnings here,

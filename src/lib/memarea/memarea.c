@@ -315,7 +315,7 @@ memarea_assert_ok(memarea_t *area)
   }
 }
 
-#else /* !(!defined(DISABLE_MEMORY_SENTINELS)) */
+#else /* defined(DISABLE_MEMORY_SENTINELS) */
 
 struct memarea_t {
   smartlist_t *pieces;

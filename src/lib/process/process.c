@@ -513,7 +513,7 @@ process_get_unix_process(const process_t *process)
   tor_assert(process->unix_process);
   return process->unix_process;
 }
-#else /* !(!defined(_WIN32)) */
+#else /* defined(_WIN32) */
 /** Get the internal handle for Windows backend. */
 process_win32_t *
 process_get_win32_process(const process_t *process)

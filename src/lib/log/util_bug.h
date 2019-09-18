@@ -96,7 +96,7 @@
   (void)(a);                                                            \
   (void)(fmt);                                                          \
   STMT_END
-#else /* !(defined(TOR_UNIT_TESTS) && ... */
+#else /* !(defined(TOR_UNIT_TESTS) && defined(DISABLE_ASSERTS_IN_UNIT_TES... */
 /** Like assert(3), but send assertion failures to the log as well as to
  * stderr. */
 #define tor_assert(expr) tor_assertf(expr, NULL)
