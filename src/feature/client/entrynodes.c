@@ -3765,7 +3765,8 @@ guard_selection_get_err_str_if_dir_info_missing(guard_selection_t *gs,
 
   /* otherwise return a helpful error string */
   tor_asprintf(&ret_str, "We're missing descriptors for %d/%d of our "
-               "primary entry guards (total %sdescriptors: %d/%d).",
+               "primary entry guards (total %sdescriptors: %d/%d). "
+               "That's ok. We will try to fetch missing descriptors soon.",
                n_missing_descriptors, num_primary_to_check,
                using_mds?"micro":"", num_present, num_usable);
 
