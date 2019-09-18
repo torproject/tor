@@ -296,6 +296,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
   char d[DIGEST_LEN];
   const int key_pinning = get_options()->AuthDirPinKeys;
   uint32_t r;
+  ed25519_public_key_t *signing_key = NULL;
 
   if (crypto_pk_get_digest(router->identity_pkey, d)) {
     log_warn(LD_BUG,"Error computing fingerprint");
@@ -307,14 +308,11 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
   /* First, check for the more common reasons to reject a router. */
   if (router->cache_info.signing_key_cert) {
     /* This has an ed25519 identity key. */
-    r = dirserv_get_status_impl(d,
-        &router->cache_info.signing_key_cert->signing_key, router->nickname,
-        router->addr, router->or_port, router->platform, msg, severity);
-  } else {
-    r = dirserv_get_status_impl(d, NULL, router->nickname, router->addr,
-                                router->or_port, router->platform, msg,
-                                severity);
+    signing_key = &router->cache_info.signing_key_cert->signing_key;
   }
+  r = dirserv_get_status_impl(d, signing_key, router->nickname, router->addr,
+                              router->or_port, router->platform, msg,
+                              severity);
 
   if (r)
     return r;
