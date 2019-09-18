@@ -286,7 +286,8 @@ construct_ntor_key_map(void)
                     tor_memdup(&curve25519_onion_key,
                                sizeof(curve25519_keypair_t)));
   }
-  if (!tor_mem_is_zero((const char*)last_pk, CURVE25519_PUBKEY_LEN)) {
+  if (!tor_mem_is_zero((const char*)last_pk, CURVE25519_PUBKEY_LEN) &&
+      tor_memneq(cur_pk, last_pk, CURVE25519_PUBKEY_LEN)) {
     dimap_add_entry(&m, last_pk,
                     tor_memdup(&last_curve25519_onion_key,
                                sizeof(curve25519_keypair_t)));
