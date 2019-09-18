@@ -33,6 +33,17 @@ Changes in version 0.4.1.6 - 2019-09-??
       floating-point classifier functions on FreeBSD. Fixes part of bug
       31687; bugfix on 0.3.1.5-alpha.
 
+  o Minor bugfixes (controller protocol):
+    - Fix the MAPADDRESS controller command to accept one or more
+      arguments. Previously, it required two or more arguments, and ignored
+      the first. Fixes bug 31772; bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (guards, backport from 0.4.2.1-alpha):
+    - When tor is missing descriptors for some primary entry guards,
+      make the log message less alarming. It's normal for descriptors to
+      expire, as long as tor fetches new ones soon after. Fixes bug
+      31657; bugfix on 0.3.3.1-alpha.
+
   o Minor bugfixes (logging, backport from 0.4.2.1-alpha):
     - Change log level of message "Hash of session info was not as
       expected" to LOG_PROTOCOL_WARN. Fixes bug 12399; bugfix
@@ -59,6 +70,11 @@ Changes in version 0.4.1.6 - 2019-09-??
       intro points are unreachable via a 1-hop path. Previously, v3
       single onion services failed when all intro nodes were unreachable
       via a 1-hop path. Fixes bug 23507; bugfix on 0.3.2.1-alpha.
+
+  o Documentation (backport from 0.4.2.1-alpha):
+    - Use RFC 2397 data URL scheme to embed an image into tor-exit-
+      notice.html so that operators no longer have to host it
+      themselves. Closes ticket 31089.
 
 
 Changes in version 0.4.1.5 - 2019-08-20
