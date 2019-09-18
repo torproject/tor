@@ -41,3 +41,10 @@ def get_tor_c_files(tor_topdir, include_dirs=None):
                 files_list.append(full_path)
 
     return files_list
+
+class NullFile:
+    """A file-like object that we can us to suppress output."""
+    def __init__(self):
+        pass
+    def write(self, s):
+        pass

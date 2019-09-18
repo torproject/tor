@@ -224,6 +224,11 @@ def main(argv):
     filt.addThreshold(problem.DependencyViolationItem("*.c", int(args.max_dependency_violations)))
     filt.addThreshold(problem.DependencyViolationItem("*.h", int(args.max_dependency_violations)))
 
+    if args.list_overbroad and args.regen:
+        print("Cannot use --regen with --list-overbroad",
+              file=sys.stderr)
+        sys.exit(1)
+
     # 1) Get all the .c files we care about
     files_list = util.get_tor_c_files(TOR_TOPDIR, args.include_dir)
 
@@ -238,6 +243,10 @@ def main(argv):
     else:
         ProblemVault = problem.ProblemVault(exceptions_file)
         problem_file = sys.stdout
+
+    if args.list_overbroad:
+        # If we're listing overbroad exceptions, don't list problems.
+        problem_file = util.NullFile()
 
     # 2.1) Adjust the exceptions so that we warn only about small problems,
     # and produce errors on big ones.
