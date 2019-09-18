@@ -2,21 +2,54 @@
 # Copyright (c) 2017-2019, The Tor Project, Inc.
 # See LICENSE for licensing information
 
+# This script iterates over a list of C files. For each file, it looks at the
+# #if/#else C macros, and annotates them with comments explaining what they
+# match.
+#
+# For example, it replaces this:
+#
+#  #ifdef HAVE_OCELOT
+#   // 500 lines of ocelot code
+#  #endif
+#
+# with this:
+#
+#  #ifdef HAVE_OCELOT
+#   // 500 lines of ocelot code
+#  #endif /* defined(HAVE_OCELOT) */
+#
+# Note that only #else and #endif lines are annotated.  Existing comments
+# on those lines are removed.
+
 import re
 
+# Any block with fewer than this many lines does not need annotations.
 LINE_OBVIOUSNESS_LIMIT = 4
 
 class Problem(Exception):
     pass
 
 def uncomment(s):
+    """
+    Remove existing trailing comments from an #else or #endif line.
+    """
     s = re.sub(r'//.*','',s)
     s = re.sub(r'/\*.*','',s)
     return s.strip()
 
 def translate(f_in, f_out):
-    whole_file = []
+    """
+    Read a file from f_in, and write its annotated version to f_out.
+    """
+    # A stack listing our current if/else state.  Each member of the stack
+    # is a list of directives.  Each directive is a 3-tuple of
+    #    (command, rest, lineno)
+    # where "command" is one of if/ifdef/ifndef/else/elif, and where
+    # "rest" is an expression in a format suitable for use with #if, and where
+    # lineno is the line number where the directive occurred.
     stack = []
+    # the stack element corresponding to the top level of the file.
+    whole_file = []
     cur_level = whole_file
     lineno = 0
     for line in f_in:
@@ -24,6 +57,7 @@ def translate(f_in, f_out):
         m = re.match(r'\s*#\s*(if|ifdef|ifndef|else|endif|elif)\b\s*(.*)',
                      line)
         if not m:
+            # no directive, so we can just write it out.
             f_out.write(line)
             continue
         command,rest = m.groups()
@@ -43,6 +77,8 @@ def translate(f_in, f_out):
             cur_level = new_level
             f_out.write(line)
         elif command in ("else", "elif"):
+            # We stay at the same level on the stack.  If we have an #else,
+            # we comment it.
             if len(cur_level) == 0 or cur_level[-1][0] == 'else':
                 raise Problem("Unexpected #%s on %d"% (command,lineno))
             if (len(cur_level) == 1 and command == 'else' and
@@ -52,6 +88,7 @@ def translate(f_in, f_out):
                 f_out.write(line)
             cur_level.append((command, rest, lineno))
         else:
+            # We pop one element on the stack, and comment an endif.
             assert command == 'endif'
             if len(stack) == 0:
                 raise Problem("Unmatched #%s on %s"% (command,lineno))
@@ -71,4 +108,3 @@ for fn in sys.argv[1:]:
     with open(fn+"_OUT", 'w') as output_file:
         translate(open(fn, 'r'), output_file)
     os.rename(fn+"_OUT", fn)
-
