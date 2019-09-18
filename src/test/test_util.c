@@ -33,6 +33,7 @@
 #include "lib/process/env.h"
 #include "lib/process/pidfile.h"
 #include "lib/intmath/weakrng.h"
+#include "lib/intmath/muldiv.h"
 #include "lib/thread/numcpus.h"
 #include "lib/math/fp.h"
 #include "lib/math/laplace.h"
@@ -5972,6 +5973,14 @@ test_util_nowrap_math(void *arg)
   tt_u64_op(UINT32_MAX, OP_EQ, tor_add_u32_nowrap(UINT32_MAX-1, 2));
   tt_u64_op(UINT32_MAX, OP_EQ, tor_add_u32_nowrap(2, UINT32_MAX-1));
   tt_u64_op(UINT32_MAX, OP_EQ, tor_add_u32_nowrap(UINT32_MAX, UINT32_MAX));
+
+  tt_u64_op(0, OP_EQ, tor_mul_u64_nowrap(0, 0));
+  tt_u64_op(1, OP_EQ, tor_mul_u64_nowrap(1, 1));
+  tt_u64_op(2, OP_EQ, tor_mul_u64_nowrap(2, 1));
+  tt_u64_op(4, OP_EQ, tor_mul_u64_nowrap(2, 2));
+  tt_u64_op(UINT64_MAX, OP_EQ, tor_mul_u64_nowrap(UINT64_MAX, 1));
+  tt_u64_op(UINT64_MAX, OP_EQ, tor_mul_u64_nowrap(2, UINT64_MAX));
+  tt_u64_op(UINT64_MAX, OP_EQ, tor_mul_u64_nowrap(UINT64_MAX, UINT64_MAX));
 
  done:
   ;
