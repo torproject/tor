@@ -2326,8 +2326,8 @@ intro_point_should_expire(const hs_service_intro_point_t *ip,
 
 /* Return if we can retry the intro point for the service defined in <b>ip</b>.
  */
-static inline int
-can_retry_intro_point(hs_service_intro_point_t *ip)
+static inline bool
+should_not_retry_intro_point(hs_service_intro_point_t *ip)
 {
   /* If we have gone over the number of retried circuits, make sure we don't
    * already have an established circuit. */
@@ -2378,7 +2378,7 @@ cleanup_intro_points(hs_service_t *service, time_t now)
        * the node_t anymore (removed from our latest consensus) or if we've
        * reached the maximum number of retry with a non existing circuit
        * and don't have any established circuits. */
-      if (has_expired || node == NULL || can_retry_intro_point(ip)) {
+      if (has_expired || node == NULL || should_not_retry_intro_point(ip)) {
         log_info(LD_REND, "Intro point %s%s (retried: %u times). "
                           "Removing it.",
                  describe_intro_point(ip),
