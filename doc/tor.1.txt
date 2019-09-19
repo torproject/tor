@@ -1956,10 +1956,6 @@ is non-zero):
     would like its bridge address to be given out. Set it to "none" if
     you want BridgeDB to avoid distributing your bridge address, or "any" to
     let BridgeDB decide. (Default: any)
- +
-    Note: as of Oct 2017, the BridgeDB part of this option is not yet
-    implemented.  Until BridgeDB is updated to obey this option, your
-    bridge will make this request, but it will not (yet) be obeyed.
 
 [[ContactInfo]] **ContactInfo** __email_address__::
     Administrative contact information for this relay or bridge. This line
