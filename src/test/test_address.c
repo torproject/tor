@@ -1245,25 +1245,29 @@ test_address_tor_node_in_same_network_family(void *ignored)
   helper_free_mock_node(node_b);
 }
 
-#define CHECK_RI_ADDR(addr_str, rv) STMT_BEGIN \
+/* Test dirserv_router_has_valid_address() on a stub routerinfo, with only its
+ * address fields set. Use IPv4 ipv4_addr_str and IPv6 ipv6_addr_str.
+ * Fail if it does not return rv. */
+#define TEST_ROUTER_VALID_ADDRESS_HELPER(ipv4_addr_str, ipv6_addr_str, rv) \
+  STMT_BEGIN \
     ri = tor_malloc_zero(sizeof(routerinfo_t)); \
     tor_addr_t addr; \
-    tor_addr_parse(&addr, (addr_str));   \
+    tor_addr_parse(&addr, (ipv4_addr_str));   \
     ri->addr = tor_addr_to_ipv4h(&addr); \
-    tor_addr_make_null(&ri->ipv6_addr, AF_INET6); \
-    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, (rv));       \
+    tor_addr_parse(&ri->ipv6_addr, (ipv6_addr_str)); \
+    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, (rv)); \
     tor_free(ri); \
   STMT_END
 
-/* XXX: Here, we use a non-internal IPv4 as dirserv_router_has_valid_address()
- * will check internal/null IPv4 first. */
-#define CHECK_RI_ADDR6(addr_str, rv) STMT_BEGIN \
-    ri = tor_malloc_zero(sizeof(routerinfo_t));   \
-    ri->addr = 16777217; /* 1.0.0.1 */ \
-    tor_addr_parse(&ri->ipv6_addr, (addr_str));                         \
-    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, (rv));       \
-    tor_free(ri); \
-  STMT_END
+/* Like TEST_ROUTER_VALID_ADDRESS_HELPER(), but always passes a null
+ * IPv6 address. */
+#define CHECK_RI_ADDR(ipv4_addr_str, rv) \
+  TEST_ROUTER_VALID_ADDRESS_HELPER(ipv4_addr_str, "::", rv)
+
+/* Like TEST_ROUTER_VALID_ADDRESS_HELPER(), but always passes a non-internal
+ * IPv4 address, so that the IPv6 check is reached. */
+#define CHECK_RI_ADDR6(ipv6_addr_str, rv) \
+  TEST_ROUTER_VALID_ADDRESS_HELPER("1.0.0.1", ipv6_addr_str, rv)
 
 static void
 test_address_dirserv_router_addr_private(void *ignored)
@@ -1281,14 +1285,7 @@ test_address_dirserv_router_addr_private(void *ignored)
   /* Null addresses */
   /* IPv4 null fails, regardless of IPv6 */
   CHECK_RI_ADDR("0.0.0.0", -1);
-
-  {
-    ri = tor_malloc_zero(sizeof(routerinfo_t));
-    ri->addr = 0; /* 0.0.0.0 */
-    tor_addr_parse(&ri->ipv6_addr, "::");
-    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, -1);
-    tor_free(ri);
-  }
+  TEST_ROUTER_VALID_ADDRESS_HELPER("0.0.0.0", "::", -1);
 
   /* IPv6 null succeeds, because IPv4 is not null */
   CHECK_RI_ADDR6("::", 0);
