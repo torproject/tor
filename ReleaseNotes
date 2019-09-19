@@ -2,6 +2,85 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.1.6 - 2019-09-19
+  This release backports several bugfixes to improve stability and
+  correctness.  Anyone experiencing build problems or crashes with 0.4.1.5,
+  or experiencing reliability issues with single onion services, should
+  upgrade.
+
+  o Major bugfixes (crash, Linux, Android, backport from 0.4.2.1-alpha):
+    - Tolerate systems (including some Android installations) where
+      madvise and MADV_DONTDUMP are available at build-time, but not at
+      run time. Previously, these systems would notice a failed syscall
+      and abort. Fixes bug 31570; bugfix on 0.4.1.1-alpha.
+    - Tolerate systems (including some Linux installations) where
+      madvise and/or MADV_DONTFORK are available at build-time, but not
+      at run time. Previously, these systems would notice a failed
+      syscall and abort. Fixes bug 31696; bugfix on 0.4.1.1-alpha.
+
+  o Minor features (stem tests, backport from 0.4.2.1-alpha):
+    - Change "make test-stem" so it only runs the stem tests that use
+      tor. This change makes test-stem faster and more reliable. Closes
+      ticket 31554.
+
+  o Minor bugfixes (build system, backport form 0.4.2.1-alpha):
+    - Do not include the deprecated <sys/sysctl.h> on Linux or Windows
+      systems. Fixes bug 31673; bugfix on 0.2.5.4-alpha.
+
+  o Minor bugfixes (compilation, backport from 0.4.2.1-alpha):
+    - Add more stub functions to fix compilation on Android with link-
+      time optimization when --disable-module-dirauth is used.
+      Previously, these compilation settings would make the compiler
+      look for functions that didn't exist. Fixes bug 31552; bugfix
+      on 0.4.1.1-alpha.
+    - Suppress spurious float-conversion warnings from GCC when calling
+      floating-point classifier functions on FreeBSD. Fixes part of bug
+      31687; bugfix on 0.3.1.5-alpha.
+
+  o Minor bugfixes (controller protocol):
+    - Fix the MAPADDRESS controller command to accept one or more
+      arguments. Previously, it required two or more arguments, and ignored
+      the first. Fixes bug 31772; bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (guards, backport from 0.4.2.1-alpha):
+    - When tor is missing descriptors for some primary entry guards,
+      make the log message less alarming. It's normal for descriptors to
+      expire, as long as tor fetches new ones soon after. Fixes bug
+      31657; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (logging, backport from 0.4.2.1-alpha):
+    - Change log level of message "Hash of session info was not as
+      expected" to LOG_PROTOCOL_WARN. Fixes bug 12399; bugfix
+      on 0.1.1.10-alpha.
+
+  o Minor bugfixes (rust, backport from 0.4.2.1-alpha):
+    - Correctly exclude a redundant rust build job in Travis. Fixes bug
+      31463; bugfix on 0.3.5.4-alpha.
+
+  o Minor bugfixes (v2 single onion services, backport from 0.4.2.1-alpha):
+    - Always retry v2 single onion service intro and rend circuits with
+      a 3-hop path. Previously, v2 single onion services used a 3-hop
+      path when rendezvous circuits were retried after a remote or
+      delayed failure, but a 1-hop path for immediate retries. Fixes bug
+      23818; bugfix on 0.2.9.3-alpha.
+
+  o Minor bugfixes (v3 single onion services, backport from 0.4.2.1-alpha):
+    - Always retry v3 single onion service intro and rend circuits with
+      a 3-hop path. Previously, v3 single onion services used a 3-hop
+      path when rend circuits were retried after a remote or delayed
+      failure, but a 1-hop path for immediate retries. Fixes bug 23818;
+      bugfix on 0.3.2.1-alpha.
+    - Make v3 single onion services fall back to a 3-hop intro, when all
+      intro points are unreachable via a 1-hop path. Previously, v3
+      single onion services failed when all intro nodes were unreachable
+      via a 1-hop path. Fixes bug 23507; bugfix on 0.3.2.1-alpha.
+
+  o Documentation (backport from 0.4.2.1-alpha):
+    - Use RFC 2397 data URL scheme to embed an image into tor-exit-
+      notice.html so that operators no longer have to host it
+      themselves. Closes ticket 31089.
+
+
 Changes in version 0.4.1.5 - 2019-08-20
   This is the first stable release in the 0.4.1.x series. This series
   adds experimental circuit-level padding, authenticated SENDME cells to
