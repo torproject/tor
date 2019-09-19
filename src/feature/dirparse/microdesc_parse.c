@@ -140,11 +140,11 @@ microdesc_extract_body(microdesc_t *md,
                        const char *s, const char *start_of_next_microdesc,
                        saved_location_t where)
 {
-  const int copy_body = (where != SAVED_IN_CACHE);
+  const bool copy_body = (where != SAVED_IN_CACHE);
 
   const char *cp = tor_memstr(s, start_of_next_microdesc-s, "onion-key");
 
-  const int no_onion_key = (cp == NULL);
+  const bool no_onion_key = (cp == NULL);
   if (no_onion_key) {
     cp = s; /* So that we have *some* junk to put in the body */
   }
@@ -307,7 +307,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
   result = smartlist_new();
 
   while (s < eos) {
-    int okay = 0;
+   bool okay = false;
 
     start_of_next_microdesc = find_start_of_next_microdesc(s, eos);
     if (!start_of_next_microdesc)
@@ -316,9 +316,10 @@ microdescs_parse_from_string(const char *s, const char *eos,
     md = tor_malloc_zero(sizeof(microdesc_t));
     uint8_t md_digest[DIGEST256_LEN];
     {
-      int body_not_found = microdesc_extract_body(md, start, s,
-                                                  start_of_next_microdesc,
-                                                  where) < 0;
+      const bool body_not_found =
+        microdesc_extract_body(md, start, s,
+                               start_of_next_microdesc,
+                               where) < 0;
 
       memcpy(md_digest, md->digest, DIGEST256_LEN);
       if (body_not_found) {
@@ -331,7 +332,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
                                allow_annotations, where) == 0) {
       smartlist_add(result, md);
       md = NULL; // prevent free
-      okay = 1;
+      okay = true;
     }
 
   next:
