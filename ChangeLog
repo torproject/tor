@@ -1,4 +1,4 @@
-Changes in version 0.4.1.6 - 2019-09-??
+Changes in version 0.4.1.6 - 2019-09-19
   This release backports several bugfixes to improve stability and
   correctness.  Anyone experiencing build problems or crashes with 0.4.1.5,
   or experiencing reliability issues with single onion services, should
