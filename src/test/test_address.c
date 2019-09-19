@@ -1271,10 +1271,44 @@ test_address_dirserv_router_addr_private(void *ignored)
   (void)ignored;
   /* A stub routerinfo structure, with only its address fields set. */
   routerinfo_t *ri = NULL;
+
   CHECK_RI_ADDR("1.0.0.1", 0);
   CHECK_RI_ADDR("10.0.0.1", -1);
+
   CHECK_RI_ADDR6("2600::1", 0);
   CHECK_RI_ADDR6("fe80::1", -1);
+
+  /* Null addresses */
+  /* IPv4 null fails, regardless of IPv6 */
+  CHECK_RI_ADDR("0.0.0.0", -1);
+
+  {
+    ri = tor_malloc_zero(sizeof(routerinfo_t));
+    ri->addr = 0; /* 0.0.0.0 */
+    tor_addr_parse(&ri->ipv6_addr, "::");
+    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, -1);
+    tor_free(ri);
+  }
+
+  /* IPv6 null succeeds, because IPv4 is not null */
+  CHECK_RI_ADDR6("::", 0);
+
+  /* Byte-zeroed null addresses */
+  /* IPv4 null fails, regardless of IPv6 */
+  {
+    ri = tor_malloc_zero(sizeof(routerinfo_t));
+    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, -1);
+    tor_free(ri);
+  }
+
+  /* IPv6 null succeeds, because IPv4 is not internal */
+  {
+    ri = tor_malloc_zero(sizeof(routerinfo_t));
+    ri->addr = 16777217; /* 1.0.0.1 */
+    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, 0);
+    tor_free(ri);
+  }
+
  done:
   tor_free(ri);
 }
