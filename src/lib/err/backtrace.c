@@ -251,6 +251,10 @@ remove_bt_handler(void)
      * It's not a fatal error, so we just ignore it. */
     (void)sigaction(trap_signals[i], &sa, NULL);
   }
+
+  /* cb_buf_mutex is statically initialised, so we can not destroy it.
+   * If we destroy it, and then re-initialise tor, all our backtraces will
+   * fail. */
 }
 #endif /* defined(USE_BACKTRACE) */
 
