@@ -165,6 +165,84 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
   return rv;
 }
 
+/** Allocate and return a description of <b>conn</b>'s current status. */
+char *
+entry_connection_describe_status_for_controller(entry_connection_t *conn)
+{
+  char *rv;
+  smartlist_t *descparts = smartlist_new();
+
+  if (conn->socks_request != NULL) {
+    // Show username and/or password if available; used by IsolateSOCKSAuth.
+    if (conn->socks_request->usernamelen > 0) {
+      char* username_escaped = esc_for_log_len(conn->socks_request->username,
+                                 (size_t) conn->socks_request->usernamelen);
+      smartlist_add_asprintf(descparts, "SOCKS_USERNAME=%s",
+                             username_escaped);
+      tor_free(username_escaped);
+    }
+    if (conn->socks_request->passwordlen > 0) {
+      char* password_escaped = esc_for_log_len(conn->socks_request->password,
+                                 (size_t) conn->socks_request->passwordlen);
+      smartlist_add_asprintf(descparts, "SOCKS_PASSWORD=%s",
+                             password_escaped);
+      tor_free(password_escaped);
+    }
+
+    const char *client_protocol;
+    // Show the client protocol; used by IsolateClientProtocol.
+    switch (conn->socks_request->listener_type)
+      {
+      case CONN_TYPE_AP_LISTENER:
+        switch (conn->socks_request->socks_version)
+          {
+          case 4: client_protocol = "SOCKS4"; break;
+          case 5: client_protocol = "SOCKS5"; break;
+          default: client_protocol = "UNKNOWN";
+          }
+        break;
+      case CONN_TYPE_AP_TRANS_LISTENER: client_protocol = "TRANS"; break;
+      case CONN_TYPE_AP_NATD_LISTENER: client_protocol = "NATD"; break;
+      case CONN_TYPE_AP_DNS_LISTENER: client_protocol = "DNS"; break;
+      default: client_protocol = "UNKNOWN";
+      }
+    smartlist_add_asprintf(descparts, "CLIENT_PROTOCOL=%s",
+                           client_protocol);
+  }
+
+  // Show newnym epoch; used for stream isolation when NEWNYM is used.
+  smartlist_add_asprintf(descparts, "NYM_EPOCH=%u",
+                         conn->nym_epoch);
+
+  // Show session group; used for stream isolation of multiple listener ports.
+  smartlist_add_asprintf(descparts, "SESSION_GROUP=%d",
+                         conn->entry_cfg.session_group);
+
+  // Show isolation flags.
+  smartlist_add_asprintf(descparts, "ISO_DESTPORT=%d",
+                         (conn->entry_cfg.isolation_flags &
+                          ISO_DESTPORT) ? 1 : 0);
+  smartlist_add_asprintf(descparts, "ISO_DESTADDR=%d",
+                         (conn->entry_cfg.isolation_flags &
+                          ISO_DESTADDR) ? 1 : 0);
+  smartlist_add_asprintf(descparts, "ISO_SOCKSAUTH=%d",
+                         (conn->entry_cfg.isolation_flags &
+                          ISO_SOCKSAUTH) ? 1 : 0);
+  smartlist_add_asprintf(descparts, "ISO_CLIENTPROTO=%d",
+                         (conn->entry_cfg.isolation_flags &
+                          ISO_CLIENTPROTO) ? 1 : 0);
+  smartlist_add_asprintf(descparts, "ISO_CLIENTADDR=%d",
+                         (conn->entry_cfg.isolation_flags &
+                          ISO_CLIENTADDR) ? 1 : 0);
+
+  rv = smartlist_join_strings(descparts, " ", 0, NULL);
+
+  SMARTLIST_FOREACH(descparts, char *, cp, tor_free(cp));
+  smartlist_free(descparts);
+
+  return rv;
+}
+
 /** Return a longname the node whose identity is <b>id_digest</b>. If
  * node_get_by_id() returns NULL, base 16 encoding of <b>id_digest</b> is
  * returned instead.
