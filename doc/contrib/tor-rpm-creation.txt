@@ -4,7 +4,7 @@ The process used to create the official rpms is as follows:
 
 You'll need to install libevent headers, usually located in package named
 libevent-devel. Alternatively, you could download latest libevent from
-http://libevent.org/ but that shouldn't be necessary.
+https://libevent.org/ but that shouldn't be necessary.
 
 Download and Extract the latest tor source code from
 https://www.torproject.org/download

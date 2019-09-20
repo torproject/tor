@@ -210,10 +210,10 @@ Here are some additional bits of advice and rules:
    > 
    > * Data races
    > * Dereferencing a null/dangling raw pointer
-   > * Reads of [undef](http://llvm.org/docs/LangRef.html#undefined-values)
+   > * Reads of [undef](https://llvm.org/docs/LangRef.html#undefined-values)
    >   (uninitialized) memory
    > * Breaking the
-   >   [pointer aliasing rules](http://llvm.org/docs/LangRef.html#pointer-aliasing-rules)
+   >   [pointer aliasing rules](https://llvm.org/docs/LangRef.html#pointer-aliasing-rules)
    >   with raw pointers (a subset of the rules used by C)
    > * `&mut T` and `&T` follow LLVM’s scoped noalias model, except if the `&T`
    >   contains an `UnsafeCell<U>`. Unsafe code must not violate these aliasing

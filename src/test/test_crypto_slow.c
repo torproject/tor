@@ -342,7 +342,7 @@ test_crypto_scrypt_vectors(void *arg)
 #endif
 
   /* Test vectors from
-     http://tools.ietf.org/html/draft-josefsson-scrypt-kdf-00 section 11.
+     https://tools.ietf.org/html/draft-josefsson-scrypt-kdf-00 section 11.
 
      Note that the names of 'r' and 'N' are switched in that section. Or
      possibly in libscrypt.

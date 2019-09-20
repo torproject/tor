@@ -972,7 +972,7 @@ circuit_build_times_update_state(const circuit_build_times_t *cbt,
 /**
  * Shuffle the build times array.
  *
- * Adapted from http://en.wikipedia.org/wiki/Fisher-Yates_shuffle
+ * Adapted from https://en.wikipedia.org/wiki/Fisher-Yates_shuffle
  */
 static void
 circuit_build_times_shuffle_and_store_array(circuit_build_times_t *cbt,
@@ -1183,7 +1183,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
 
 /**
  * Estimates the Xm and Alpha parameters using
- * http://en.wikipedia.org/wiki/Pareto_distribution#Parameter_estimation
+ * https://en.wikipedia.org/wiki/Pareto_distribution#Parameter_estimation
  *
  * The notable difference is that we use mode instead of min to estimate Xm.
  * This is because our distribution is frechet-like. We claim this is
@@ -1198,7 +1198,7 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
   int n=0,i=0,abandoned_count=0;
   build_time_t max_time=0;
 
-  /* http://en.wikipedia.org/wiki/Pareto_distribution#Parameter_estimation */
+  /* https://en.wikipedia.org/wiki/Pareto_distribution#Parameter_estimation */
   /* We sort of cheat here and make our samples slightly more pareto-like
    * and less frechet-like. */
   cbt->Xm = circuit_build_times_get_xm(cbt);
@@ -1270,9 +1270,9 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
  * We use it to calculate the timeout and also to generate synthetic
  * values of time for circuits that timeout before completion.
  *
- * See http://en.wikipedia.org/wiki/Quantile_function,
- * http://en.wikipedia.org/wiki/Inverse_transform_sampling and
- * http://en.wikipedia.org/wiki/Pareto_distribution#Generating_a_
+ * See https://en.wikipedia.org/wiki/Quantile_function,
+ * https://en.wikipedia.org/wiki/Inverse_transform_sampling and
+ * https://en.wikipedia.org/wiki/Pareto_distribution#Generating_a_
  *     random_sample_from_Pareto_distribution
  * That's right. I'll cite wikipedia all day long.
  *

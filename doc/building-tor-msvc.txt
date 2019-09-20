@@ -11,15 +11,15 @@ Requirements:
 -------------
 
  * Visual Studio 2010
-    http://go.microsoft.com/fwlink/?LinkId=323467
+    https://go.microsoft.com/fwlink/?LinkId=323467
  * CMake 2.8.12.2
-    http://www.cmake.org/download/
+    https://www.cmake.org/download/
  * Perl 5.16
-    http://www.activestate.com/activeperl/downloads
+    https://www.activestate.com/activeperl/downloads
  * Latest stable OpenSSL tarball
     https://www.openssl.org/source/
  * Latest stable zlib tarball
-    http://zlib.net/
+    https://zlib.net/
  * Latest stable libevent Libevent tarball
     https://github.com/libevent/libevent/releases
 

@@ -1,6 +1,6 @@
 # clang sanitizer special case list
-# syntax specified in http://clang.llvm.org/docs/SanitizerSpecialCaseList.html
-# for more info see http://clang.llvm.org/docs/AddressSanitizer.html
+# syntax specified in https://clang.llvm.org/docs/SanitizerSpecialCaseList.html
+# for more info see https://clang.llvm.org/docs/AddressSanitizer.html
 
 #
 # Tor notes: This file is obsolete!

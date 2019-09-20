@@ -9,7 +9,7 @@
 #
 #   You should have received a copy of the CC0 legalcode along with this
 #   work in doc/cc0.txt.  If not, see
-#      <http://creativecommons.org/publicdomain/zero/1.0/>.
+#      <https://creativecommons.org/publicdomain/zero/1.0/>.
 
 #  Nick Mathewson is responsible for this kludge, but takes no
 #  responsibility for it.

@@ -42,7 +42,7 @@
  * circuit scheduler. It was supposed to prioritize circuits across many
  * channels, but wasn't effective. It is preserved in scheduler_vanilla.c.
  *
- * [0]: http://www.robgjansen.com/publications/kist-sec2014.pdf
+ * [0]: https://www.robgjansen.com/publications/kist-sec2014.pdf
  *
  * Then we actually got around to implementing KIST for real. We decided to
  * modularize the scheduler so new ones can be implemented. You can find KIST

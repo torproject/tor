@@ -336,7 +336,7 @@ General advice:
 
 For additional useful advice (and a little bit of background), see
 [What Every Programmer Should Know About Floating-Point
-Arithmetic](http://floating-point-gui.de/).
+Arithmetic](https://floating-point-gui.de/).
 
 A list of notable (and surprising) facts about floating point
 arithmetic is at [Floating-point
