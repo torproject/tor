@@ -1,0 +1,4 @@
+  o Major bugfixes (torrc):
+    - Fix configuration files in a %included folder containing a 
+      configuration file with only comments or whitespace being
+      ignored. Fixes bug 31408; bugfix on 0.4.0.5.
