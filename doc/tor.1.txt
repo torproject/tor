@@ -3521,13 +3521,13 @@ __DataDirectory__**/hashed-fingerprint**::
 
 __DataDirectory__**/approved-routers**::
     Only used by authoritative directory servers. This file lists
-    the status of routers by their identity fingerprint.
-    Each line lists a status and a fingerprint separated by
-    whitespace. See your **fingerprint** file in the __DataDirectory__ for an
-    example line. If the status is **!reject** then descriptors from the
-    given identity (fingerprint) are rejected by this server. If it is
-    **!invalid** then descriptors are accepted but marked in the directory as
-    not valid, that is, not recommended.
+    the status and a fingerprint/pubkey. Each line lists a status and a
+    fingerprint separated by whitespace. See your **fingerprint** file in the
+    __DataDirectory__ for an example fingerprint line. If the status is
+    **!reject** then descriptors from the given identity (fingerprint/pubkey)
+    are rejected by this server. If it is **!invalid** then descriptors
+    are accepted but marked in the directory as not valid, that is, not 
+    recommended.
 
 __DataDirectory__**/v3-status-votes**::
     Only for v3 authoritative directory servers. This file contains
