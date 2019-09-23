@@ -125,9 +125,10 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
   return 0;
 }
 static inline int
-dirserv_add_own_fingerprint(crypto_pk_t *pk)
+dirserv_add_own_fingerprint(crypto_pk_t *pk, const ed25519_public_key_t *edkey)
 {
   (void)pk;
+  (void)edkey;
   return 0;
 }
 static inline uint32_t
