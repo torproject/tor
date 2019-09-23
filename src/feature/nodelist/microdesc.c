@@ -940,8 +940,8 @@ microdesc_free_all(void)
 
 /** If there is a microdescriptor in <b>cache</b> whose sha256 digest is
  * <b>d</b>, return it.  Otherwise return NULL. */
-microdesc_t *
-microdesc_cache_lookup_by_digest256(microdesc_cache_t *cache, const char *d)
+MOCK_IMPL(microdesc_t *,
+microdesc_cache_lookup_by_digest256, (microdesc_cache_t *cache, const char *d))
 {
   microdesc_t *md, search;
   if (!cache)

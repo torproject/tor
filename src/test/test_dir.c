@@ -50,6 +50,7 @@
 #include "feature/hibernate/hibernate.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"
+#include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nickname.h"
 #include "feature/nodelist/node_select.h"
@@ -78,6 +79,7 @@
 #include "feature/nodelist/authority_cert_st.h"
 #include "feature/nodelist/document_signature_st.h"
 #include "feature/nodelist/extrainfo_st.h"
+#include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/networkstatus_st.h"
 #include "feature/nodelist/networkstatus_voter_info_st.h"
 #include "feature/dirauth/ns_detached_signatures_st.h"
@@ -7417,6 +7419,17 @@ test_dir_dirserv_router_get_status(void *arg)
   routerinfo_free(ri);
 }
 
+static microdesc_t *fixed_md = NULL;
+
+static microdesc_t *
+fixed_microdesc_cache_lookup_by_digest256(microdesc_cache_t *cache,
+                                          const char *d)
+{
+  (void) cache;
+  (void) d;
+  return fixed_md;
+}
+
 static void
 test_dir_dirserv_would_reject_router(void *arg)
 {
@@ -7440,10 +7453,15 @@ test_dir_dirserv_would_reject_router(void *arg)
   ed25519_secret_key_from_seed(&kp.seckey,
                           (const uint8_t*)"YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
   ed25519_public_key_generate(&kp.pubkey, &kp.seckey);
-  rs.ed25519_signing_key = tor_malloc_zero(sizeof(ed25519_public_key_t));
-  ed25519_pubkey_copy(rs.ed25519_signing_key, &kp.pubkey);
 
   base16_encode(fp, HEX_DIGEST_LEN + 1, rs.identity_digest, DIGEST_LEN);
+
+  /* Setup the fake microdescriptor. */
+  fixed_md = tor_malloc_zero(sizeof(microdesc_t));
+  fixed_md->ed25519_identity_pkey = tor_malloc(sizeof(ed25519_public_key_t));
+  ed25519_pubkey_copy(fixed_md->ed25519_identity_pkey, &kp.pubkey);
+  MOCK(microdesc_cache_lookup_by_digest256,
+       fixed_microdesc_cache_lookup_by_digest256);
 
   /* Try an empty fingerprint list */
   tt_assert(!dirserv_would_reject_router(&rs));
@@ -7471,8 +7489,10 @@ test_dir_dirserv_would_reject_router(void *arg)
   RESET_FP_LIST(list);
 
  done:
-  tor_free(rs.ed25519_signing_key);
   dirserv_free_fingerprint_list();
+  UNMOCK(microdesc_cache_lookup_by_digest256);
+  tor_free(fixed_md->ed25519_identity_pkey);
+  tor_free(fixed_md);
 }
 
 static void

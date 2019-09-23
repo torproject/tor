@@ -25,6 +25,7 @@
 #include "feature/dirclient/dlstatus.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/describe.h"
+#include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerinfo.h"
@@ -36,6 +37,7 @@
 #include "core/or/tor_version_st.h"
 #include "feature/nodelist/extrainfo_st.h"
 #include "feature/nodelist/node_st.h"
+#include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerstatus_st.h"
 
@@ -376,10 +378,12 @@ int
 dirserv_would_reject_router(const routerstatus_t *rs)
 {
   uint32_t res;
+  microdesc_t *md = microdesc_cache_lookup_by_digest256(NULL,
+                                                        rs->descriptor_digest);
 
-  res = dirserv_get_status_impl(rs->identity_digest,
-                                rs->ed25519_signing_key, rs->nickname,
-                                rs->addr, rs->or_port, NULL, NULL, LOG_DEBUG);
+  res = dirserv_get_status_impl(rs->identity_digest, md->ed25519_identity_pkey,
+                                rs->nickname, rs->addr, rs->or_port, NULL,
+                                NULL, LOG_DEBUG);
 
   return (res & FP_REJECT) != 0;
 }

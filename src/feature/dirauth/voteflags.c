@@ -590,15 +590,6 @@ dirauth_set_routerstatus_from_routerinfo(routerstatus_t *rs,
   /* Override rs->is_bad_exit */
   rs->is_bad_exit = listbadexits && node->is_bad_exit;
 
-  /* Check for an ed25519 signing key. */
-  if (ri->cache_info.signing_key_cert) {
-    rs->ed25519_signing_key = tor_malloc_zero(sizeof(ed25519_public_key_t));
-    ed25519_pubkey_copy(rs->ed25519_signing_key,
-                        &ri->cache_info.signing_key_cert->signing_key);
-  } else {
-    rs->ed25519_signing_key = NULL;
-  }
-
   /* Set rs->is_staledesc. */
   rs->is_staledesc =
     (ri->cache_info.published_on + DESC_IS_STALE_INTERVAL) < now;

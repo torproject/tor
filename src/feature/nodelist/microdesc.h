@@ -29,8 +29,8 @@ int microdesc_cache_rebuild(microdesc_cache_t *cache, int force);
 int microdesc_cache_reload(microdesc_cache_t *cache);
 void microdesc_cache_clear(microdesc_cache_t *cache);
 
-microdesc_t *microdesc_cache_lookup_by_digest256(microdesc_cache_t *cache,
-                                                 const char *d);
+MOCK_DECL(microdesc_t *, microdesc_cache_lookup_by_digest256, 
+                         (microdesc_cache_t *cache, const char *d));
 
 smartlist_t *microdesc_list_missing_digest256(networkstatus_t *ns,
                                               microdesc_cache_t *cache,
