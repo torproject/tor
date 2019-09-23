@@ -69,7 +69,8 @@ enum was_router_added_t dirserv_add_descriptor(routerinfo_t *ri,
                                                const char **msg,
                                                const char *source);
 
-int dirserv_would_reject_router(const routerstatus_t *rs);
+int dirserv_would_reject_router(const routerstatus_t *rs,
+                                const vote_routerstatus_t *vrs);
 int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
                                    int complain,
                                    int *valid_out);

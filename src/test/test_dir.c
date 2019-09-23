@@ -7419,22 +7419,12 @@ test_dir_dirserv_router_get_status(void *arg)
   routerinfo_free(ri);
 }
 
-static microdesc_t *fixed_md = NULL;
-
-static microdesc_t *
-fixed_microdesc_cache_lookup_by_digest256(microdesc_cache_t *cache,
-                                          const char *d)
-{
-  (void) cache;
-  (void) d;
-  return fixed_md;
-}
-
 static void
 test_dir_dirserv_would_reject_router(void *arg)
 {
   authdir_config_t *list;
   routerstatus_t rs;
+  vote_routerstatus_t vrs;
   ed25519_keypair_t kp;
   char fp[HEX_DIGEST_LEN+1];
 
@@ -7456,43 +7446,36 @@ test_dir_dirserv_would_reject_router(void *arg)
 
   base16_encode(fp, HEX_DIGEST_LEN + 1, rs.identity_digest, DIGEST_LEN);
 
-  /* Setup the fake microdescriptor. */
-  fixed_md = tor_malloc_zero(sizeof(microdesc_t));
-  fixed_md->ed25519_identity_pkey = tor_malloc(sizeof(ed25519_public_key_t));
-  ed25519_pubkey_copy(fixed_md->ed25519_identity_pkey, &kp.pubkey);
-  MOCK(microdesc_cache_lookup_by_digest256,
-       fixed_microdesc_cache_lookup_by_digest256);
+  /* Setup the vote_routerstatus_t. */
+  memcpy(vrs.ed25519_id, &kp.pubkey, ED25519_PUBKEY_LEN);
 
   /* Try an empty fingerprint list */
-  tt_assert(!dirserv_would_reject_router(&rs));
+  tt_assert(!dirserv_would_reject_router(&rs, &vrs));
   RESET_FP_LIST(list);
 
-  tt_assert(!dirserv_would_reject_router(&rs));
+  tt_assert(!dirserv_would_reject_router(&rs, &vrs));
   RESET_FP_LIST(list);
 
   /* Try an accepted router */
   add_rsa_fingerprint_to_dir(fp, list, 0);
-  tt_assert(!dirserv_would_reject_router(&rs));
+  tt_assert(!dirserv_would_reject_router(&rs, &vrs));
   RESET_FP_LIST(list);
 
   add_ed25519_to_dir(&kp.pubkey, list, 0);
-  tt_assert(!dirserv_would_reject_router(&rs));
+  tt_assert(!dirserv_would_reject_router(&rs, &vrs));
   RESET_FP_LIST(list);
 
   /* Try a rejected router */
   add_rsa_fingerprint_to_dir(fp, list, FP_REJECT);
-  tt_assert(dirserv_would_reject_router(&rs));
+  tt_assert(dirserv_would_reject_router(&rs, &vrs));
   RESET_FP_LIST(list);
 
   add_ed25519_to_dir(&kp.pubkey, list, FP_REJECT);
-  tt_assert(dirserv_would_reject_router(&rs));
+  tt_assert(dirserv_would_reject_router(&rs, &vrs));
   RESET_FP_LIST(list);
 
  done:
   dirserv_free_fingerprint_list();
-  UNMOCK(microdesc_cache_lookup_by_digest256);
-  tor_free(fixed_md->ed25519_identity_pkey);
-  tor_free(fixed_md);
 }
 
 static void

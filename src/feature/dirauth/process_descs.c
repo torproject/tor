@@ -40,6 +40,7 @@
 #include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerstatus_st.h"
+#include "feature/nodelist/vote_routerstatus_st.h"
 
 #include "lib/encoding/confline.h"
 #include "lib/crypt_ops/crypto_format.h"
@@ -375,15 +376,15 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
 /** Return true if there is no point in downloading the router described by
  * <b>rs</b> because this directory would reject it. */
 int
-dirserv_would_reject_router(const routerstatus_t *rs)
+dirserv_would_reject_router(const routerstatus_t *rs,
+                            const vote_routerstatus_t *vrs)
 {
   uint32_t res;
-  microdesc_t *md = microdesc_cache_lookup_by_digest256(NULL,
-                                                        rs->descriptor_digest);
+  struct ed25519_public_key_t pk;
+  memcpy(&pk.pubkey, vrs->ed25519_id, ED25519_PUBKEY_LEN);
 
-  res = dirserv_get_status_impl(rs->identity_digest, md->ed25519_identity_pkey,
-                                rs->nickname, rs->addr, rs->or_port, NULL,
-                                NULL, LOG_DEBUG);
+  res = dirserv_get_status_impl(rs->identity_digest, &pk, rs->nickname,
+                                rs->addr, rs->or_port, NULL, NULL, LOG_DEBUG);
 
   return (res & FP_REJECT) != 0;
 }
