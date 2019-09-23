@@ -2127,7 +2127,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
      *
      * We only use a one-hop path on the first attempt. If the first attempt
      * fails, we use a 3-hop path for reachability / reliability.
-     * See the comment in rend_service_relauch_rendezvous() for details. */
+     * See the comment in rend_service_relaunch_rendezvous() for details. */
     if (rend_service_use_direct_connection(options, rp) && i == 0) {
       flags = flags | CIRCLAUNCH_ONEHOP_TUNNEL;
     }
