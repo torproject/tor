@@ -2586,7 +2586,8 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
         ++n_delayed; /* Not ready for retry. */
         continue;
       }
-      if (authdir && dirserv_would_reject_router(rs)) {
+      if (authdir && dirserv_would_reject_router(rs,
+                                                 (vote_routerstatus_t *)rsp)) {
         ++n_would_reject;
         continue; /* We would throw it out immediately. */
       }
