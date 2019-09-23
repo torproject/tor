@@ -111,9 +111,11 @@ dirserv_add_descriptor(routerinfo_t *ri,
   return (enum was_router_added_t)0;
 }
 static inline int
-dirserv_would_reject_router(const routerstatus_t *rs)
+dirserv_would_reject_router(const routerstatus_t *rs,
+                            const vote_routerstatus_t *vrs)
 {
   (void)rs;
+  (void)vrs;
   return 0;
 }
 static inline int
