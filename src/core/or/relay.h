@@ -99,6 +99,11 @@ circid_t packed_cell_get_circid(const packed_cell_t *cell, int wide_circ_ids);
 uint8_t packed_cell_get_command(const packed_cell_t *cell, int wide_circ_ids);
 
 #ifdef RELAY_PRIVATE
+STATIC int
+handle_relay_cell_command(cell_t *cell, circuit_t *circ,
+                     edge_connection_t *conn, crypt_path_t *layer_hint,
+                     relay_header_t *rh, int optimistic_data);
+
 STATIC int connected_cell_parse(const relay_header_t *rh, const cell_t *cell,
                          tor_addr_t *addr_out, int *ttl_out);
 /** An address-and-ttl tuple as yielded by resolved_cell_parse */

@@ -119,7 +119,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   char tmp[RELAY_PAYLOAD_SIZE];
   rend_cache_entry_t *entry = NULL;
   crypt_path_t *cpath;
-  off_t dh_offset;
+  ptrdiff_t dh_offset;
   crypto_pk_t *intro_key = NULL;
   int status = 0;
   const char *onion_address;

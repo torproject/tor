@@ -27,13 +27,19 @@ subsys_torerr_initialize(void)
 static void
 subsys_torerr_shutdown(void)
 {
-  tor_log_reset_sigsafe_err_fds();
+  /* Stop handling signals with backtraces, then close the logs. */
   clean_up_backtrace_handler();
+  /* We can't log any log messages after this point: we've closed all the log
+   * fds, including stdio. */
+  tor_log_close_sigsafe_err_fds();
 }
 
 const subsys_fns_t sys_torerr = {
   .name = "err",
-  .level = -100,
+  /* Low-level error handling is a diagnostic feature, we want it to init
+   * right after windows process security, and shutdown last.
+   * (Security never shuts down.) */
+  .level = -99,
   .supported = true,
   .initialize = subsys_torerr_initialize,
   .shutdown = subsys_torerr_shutdown

@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
 # git pre-push hook script to:
+# 0) Call the pre-commit hook, if it is available
 # 1) prevent "fixup!" and "squash!" commit from ending up in master, release-*
 #    or maint-*
 # 2) Disallow pushing branches other than master, release-*
-#    and maint-* to origin (e.g. gitweb.torproject.org).
+#    and maint-* to origin (e.g. gitweb.torproject.org)
 #
 # To install this script, copy it into .git/hooks/pre-push path in your
 # local copy of git repository. Make sure it has permission to execute.
@@ -21,6 +22,11 @@ z40=0000000000000000000000000000000000000000
 
 upstream_name=${TOR_UPSTREAM_REMOTE_NAME:-"upstream"}
 
+# Are you adding a new check to the git hooks?
+#  - Common checks belong in the pre-commit hook
+#  - Push-only checks belong in the pre-push hook
+#
+# Call the pre-commit hook for the common checks, if it is executable.
 workdir=$(git rev-parse --show-toplevel)
 if [ -x "$workdir/.git/hooks/pre-commit" ]; then
   if ! "$workdir"/.git/hooks/pre-commit; then
@@ -28,14 +34,7 @@ if [ -x "$workdir/.git/hooks/pre-commit" ]; then
   fi
 fi
 
-if [ -e scripts/maint/practracker/practracker.py ]; then
-  if ! python3 ./scripts/maint/practracker/practracker.py "$workdir"; then
-    exit 1
-  fi
-fi
-
 remote="$1"
-remote_loc="$2"
 
 remote_name=$(git remote --verbose | grep "$2" | awk '{print $1}' | head -n 1)
 
@@ -105,4 +104,3 @@ do
 done
 
 exit 0
-

@@ -37,6 +37,7 @@
 #include "feature/hs/hs_config.h"
 #include "feature/hs/hs_ident.h"
 #include "feature/hs/hs_cache.h"
+#include "feature/rend/rendcache.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuitbuild.h"
 #include "core/mainloop/connection.h"
@@ -159,8 +160,7 @@ helper_get_circ_and_stream_for_test(origin_circuit_t **circ_out,
     or_circ->rend_data = rend_data_dup(conn_rend_data);
   } else {
     /* prop224: Setup hs ident on the circuit */
-    or_circ->hs_ident = hs_ident_circuit_new(&service_pk,
-                                             HS_IDENT_CIRCUIT_RENDEZVOUS);
+    or_circ->hs_ident = hs_ident_circuit_new(&service_pk);
   }
 
   TO_CIRCUIT(or_circ)->state = CIRCUIT_STATE_OPEN;
@@ -963,8 +963,7 @@ test_close_intro_circuits_new_desc(void *arg)
     const hs_desc_intro_point_t *ip =
       smartlist_get(desc1->encrypted_data.intro_points, 0);
     tt_assert(ip);
-    ocirc->hs_ident = hs_ident_circuit_new(&service_kp.pubkey,
-                                           HS_IDENT_CIRCUIT_INTRO);
+    ocirc->hs_ident = hs_ident_circuit_new(&service_kp.pubkey);
     ed25519_pubkey_copy(&ocirc->hs_ident->intro_auth_pk,
                         &ip->auth_key_cert->signed_key);
   }
@@ -1007,6 +1006,91 @@ test_close_intro_circuits_new_desc(void *arg)
   UNMOCK(networkstatus_get_live_consensus);
 }
 
+static void
+test_close_intro_circuits_cache_clean(void *arg)
+{
+  int ret;
+  ed25519_keypair_t service_kp;
+  circuit_t *circ = NULL;
+  origin_circuit_t *ocirc = NULL;
+  hs_descriptor_t *desc1 = NULL;
+
+  (void) arg;
+
+  hs_init();
+  rend_cache_init();
+
+  /* This is needed because of the client cache expiration timestamp is based
+   * on having a consensus. See cached_client_descriptor_has_expired(). */
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+
+  /* Set consensus time */
+  parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+                     &mock_ns.valid_after);
+  parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
+                     &mock_ns.fresh_until);
+  parse_rfc1123_time("Sat, 26 Oct 1985 16:00:00 UTC",
+                     &mock_ns.valid_until);
+
+  /* Generate service keypair */
+  tt_int_op(0, OP_EQ, ed25519_keypair_generate(&service_kp, 0));
+
+  /* Create and add to the global list a dummy client introduction circuits.
+   * We'll then make sure the hs_ident is attached to a dummy descriptor. */
+  circ = dummy_origin_circuit_new(0);
+  tt_assert(circ);
+  circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
+  ocirc = TO_ORIGIN_CIRCUIT(circ);
+
+  /* Build the first descriptor and cache it. */
+  {
+    char *encoded;
+    desc1 = hs_helper_build_hs_desc_with_ip(&service_kp);
+    tt_assert(desc1);
+    ret = hs_desc_encode_descriptor(desc1, &service_kp, NULL, &encoded);
+    tt_int_op(ret, OP_EQ, 0);
+    tt_assert(encoded);
+
+    /* Store it */
+    ret = hs_cache_store_as_client(encoded, &service_kp.pubkey);
+    tt_int_op(ret, OP_EQ, 0);
+    tor_free(encoded);
+    tt_assert(hs_cache_lookup_as_client(&service_kp.pubkey));
+  }
+
+  /* We'll pick one introduction point and associate it with the circuit. */
+  {
+    const hs_desc_intro_point_t *ip =
+      smartlist_get(desc1->encrypted_data.intro_points, 0);
+    tt_assert(ip);
+    ocirc->hs_ident = hs_ident_circuit_new(&service_kp.pubkey);
+    ed25519_pubkey_copy(&ocirc->hs_ident->intro_auth_pk,
+                        &ip->auth_key_cert->signed_key);
+  }
+
+  /* Before we are about to clean up the intro circuits, make sure it is
+   * actually there. */
+  tt_assert(circuit_get_next_intro_circ(NULL, true));
+
+  /* Cleanup the client cache. The ns valid after time is what decides if the
+   * descriptor has expired so put it in the future enough (72h) so we are
+   * sure to always expire. */
+  mock_ns.valid_after = approx_time() + (72 * 24 * 60 * 60);
+  hs_cache_clean_as_client(0);
+
+  /* Once stored, our intro circuit should be closed because it is related to
+   * an old introduction point that doesn't exists anymore. */
+  tt_assert(!circuit_get_next_intro_circ(NULL, true));
+
+ done:
+  circuit_free(circ);
+  hs_descriptor_free(desc1);
+  hs_free_all();
+  rend_cache_free_all();
+  UNMOCK(networkstatus_get_live_consensus);
+}
+
 struct testcase_t hs_client_tests[] = {
   { "e2e_rend_circuit_setup_legacy", test_e2e_rend_circuit_setup_legacy,
     TT_FORK, NULL, NULL },
@@ -1025,6 +1109,8 @@ struct testcase_t hs_client_tests[] = {
   { "desc_has_arrived_cleanup", test_desc_has_arrived_cleanup,
     TT_FORK, NULL, NULL },
   { "close_intro_circuits_new_desc", test_close_intro_circuits_new_desc,
+    TT_FORK, NULL, NULL },
+  { "close_intro_circuits_cache_clean", test_close_intro_circuits_cache_clean,
     TT_FORK, NULL, NULL },
 
   END_OF_TESTCASES

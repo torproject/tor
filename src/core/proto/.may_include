@@ -1,0 +1,10 @@
+!advisory
+
+orconfig.h
+
+lib/crypt_ops/*.h
+lib/buf/*.h
+
+trunnel/*.h
+
+core/proto/*.h

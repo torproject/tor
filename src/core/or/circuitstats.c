@@ -29,7 +29,7 @@
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitstats.h"
 #include "app/config/config.h"
-#include "app/config/confparse.h"
+#include "lib/confmgt/confparse.h"
 #include "feature/control/control_events.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "core/mainloop/mainloop.h"

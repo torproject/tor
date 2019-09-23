@@ -16,7 +16,7 @@
 #include "core/or/circuitmux_ewma.h"
 #include "core/or/circuitbuild.h"
 #include "app/config/config.h"
-#include "app/config/confparse.h"
+#include "lib/confmgt/confparse.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
 #include "test/test.h"
@@ -1755,6 +1755,18 @@ add_default_fallback_dir_servers_known_default(void)
   n_add_default_fallback_dir_servers_known_default++;
 }
 
+/* Helper for test_config_adding_dir_servers(), which should be
+ * refactored: clear the fields in the options which the options object
+ * does not really own. */
+static void
+ads_clear_helper(or_options_t *options)
+{
+  options->DirAuthorities = NULL;
+  options->AlternateBridgeAuthority = NULL;
+  options->AlternateDirAuthority = NULL;
+  options->FallbackDir = NULL;
+}
+
 /* Test all the different combinations of adding dir servers */
 static void
 test_config_adding_dir_servers(void *arg)
@@ -1762,7 +1774,7 @@ test_config_adding_dir_servers(void *arg)
   (void)arg;
 
   /* allocate options */
-  or_options_t *options = tor_malloc_zero(sizeof(or_options_t));
+  or_options_t *options = options_new();
 
   /* Allocate and populate configuration lines:
    *
@@ -1885,7 +1897,9 @@ test_config_adding_dir_servers(void *arg)
     n_add_default_fallback_dir_servers_known_default = 0;
 
     /* clear options*/
-    memset(options, 0, sizeof(or_options_t));
+    ads_clear_helper(options);
+    or_options_free(options);
+    options = options_new();
 
     /* clear any previous dir servers:
      consider_adding_dir_servers() should do this anyway */
@@ -1967,7 +1981,9 @@ test_config_adding_dir_servers(void *arg)
     n_add_default_fallback_dir_servers_known_default = 0;
 
     /* clear options*/
-    memset(options, 0, sizeof(or_options_t));
+    ads_clear_helper(options);
+    or_options_free(options);
+    options = options_new();
 
     /* clear any previous dir servers:
      consider_adding_dir_servers() should do this anyway */
@@ -2108,7 +2124,9 @@ test_config_adding_dir_servers(void *arg)
     n_add_default_fallback_dir_servers_known_default = 0;
 
     /* clear options*/
-    memset(options, 0, sizeof(or_options_t));
+    ads_clear_helper(options);
+    or_options_free(options);
+    options = options_new();
 
     /* clear any previous dir servers:
      consider_adding_dir_servers() should do this anyway */
@@ -2249,7 +2267,9 @@ test_config_adding_dir_servers(void *arg)
     n_add_default_fallback_dir_servers_known_default = 0;
 
     /* clear options*/
-    memset(options, 0, sizeof(or_options_t));
+    ads_clear_helper(options);
+    or_options_free(options);
+    options = options_new();
 
     /* clear any previous dir servers:
      consider_adding_dir_servers() should do this anyway */
@@ -2391,7 +2411,9 @@ test_config_adding_dir_servers(void *arg)
     n_add_default_fallback_dir_servers_known_default = 0;
 
     /* clear options*/
-    memset(options, 0, sizeof(or_options_t));
+    ads_clear_helper(options);
+    or_options_free(options);
+    options = options_new();
 
     /* clear any previous dir servers:
      consider_adding_dir_servers() should do this anyway */
@@ -2543,7 +2565,9 @@ test_config_adding_dir_servers(void *arg)
     n_add_default_fallback_dir_servers_known_default = 0;
 
     /* clear options*/
-    memset(options, 0, sizeof(or_options_t));
+    ads_clear_helper(options);
+    or_options_free(options);
+    options = options_new();
 
     /* clear any previous dir servers:
      consider_adding_dir_servers() should do this anyway */
@@ -2697,7 +2721,9 @@ test_config_adding_dir_servers(void *arg)
     n_add_default_fallback_dir_servers_known_default = 0;
 
     /* clear options*/
-    memset(options, 0, sizeof(or_options_t));
+    ads_clear_helper(options);
+    or_options_free(options);
+    options = options_new();
 
     /* clear any previous dir servers:
      consider_adding_dir_servers() should do this anyway */
@@ -2860,7 +2886,9 @@ test_config_adding_dir_servers(void *arg)
     n_add_default_fallback_dir_servers_known_default = 0;
 
     /* clear options*/
-    memset(options, 0, sizeof(or_options_t));
+    ads_clear_helper(options);
+    or_options_free(options);
+    options = options_new();
 
     /* clear any previous dir servers:
      consider_adding_dir_servers() should do this anyway */
@@ -3017,7 +3045,9 @@ test_config_adding_dir_servers(void *arg)
     n_add_default_fallback_dir_servers_known_default = 0;
 
     /* clear options*/
-    memset(options, 0, sizeof(or_options_t));
+    ads_clear_helper(options);
+    or_options_free(options);
+    options = options_new();
 
     /* clear any previous dir servers:
      consider_adding_dir_servers() should do this anyway */
@@ -3183,7 +3213,9 @@ test_config_adding_dir_servers(void *arg)
     n_add_default_fallback_dir_servers_known_default = 0;
 
     /* clear options*/
-    memset(options, 0, sizeof(or_options_t));
+    ads_clear_helper(options);
+    or_options_free(options);
+    options = options_new();
 
     /* clear any previous dir servers:
      consider_adding_dir_servers() should do this anyway */
@@ -3346,7 +3378,9 @@ test_config_adding_dir_servers(void *arg)
     n_add_default_fallback_dir_servers_known_default = 0;
 
     /* clear options*/
-    memset(options, 0, sizeof(or_options_t));
+    ads_clear_helper(options);
+    or_options_free(options);
+    options = options_new();
 
     /* clear any previous dir servers:
      consider_adding_dir_servers() should do this anyway */
@@ -3515,10 +3549,7 @@ test_config_adding_dir_servers(void *arg)
   tor_free(test_fallback_directory->value);
   tor_free(test_fallback_directory);
 
-  options->DirAuthorities = NULL;
-  options->AlternateBridgeAuthority = NULL;
-  options->AlternateDirAuthority = NULL;
-  options->FallbackDir = NULL;
+  ads_clear_helper(options);
   or_options_free(options);
 
   UNMOCK(add_default_fallback_dir_servers);
@@ -3533,7 +3564,7 @@ test_config_default_dir_servers(void *arg)
   int fallback_count = 0;
 
   /* new set of options should stop fallback parsing */
-  opts = tor_malloc_zero(sizeof(or_options_t));
+  opts = options_new();
   opts->UseDefaultFallbackDirs = 0;
   /* set old_options to NULL to force dir update */
   consider_adding_dir_servers(opts, NULL);
@@ -3547,7 +3578,7 @@ test_config_default_dir_servers(void *arg)
   /* if we disable the default fallbacks, there must not be any extra */
   tt_assert(fallback_count == trusted_count);
 
-  opts = tor_malloc_zero(sizeof(or_options_t));
+  opts = options_new();
   opts->UseDefaultFallbackDirs = 1;
   consider_adding_dir_servers(opts, opts);
   trusted_count = smartlist_len(router_get_trusted_dir_servers());
@@ -3607,7 +3638,7 @@ test_config_directory_fetch(void *arg)
   (void)arg;
 
   /* Test Setup */
-  or_options_t *options = tor_malloc_zero(sizeof(or_options_t));
+  or_options_t *options = options_new();
   routerinfo_t routerinfo;
   memset(&routerinfo, 0, sizeof(routerinfo));
   mock_router_pick_published_address_result = -1;
@@ -3619,9 +3650,10 @@ test_config_directory_fetch(void *arg)
        mock_router_my_exit_policy_is_reject_star);
   MOCK(advertised_server_mode, mock_advertised_server_mode);
   MOCK(router_get_my_routerinfo, mock_router_get_my_routerinfo);
+  or_options_free(options);
+  options = options_new();
 
   /* Clients can use multiple directory mirrors for bootstrap */
-  memset(options, 0, sizeof(or_options_t));
   options->ClientOnly = 1;
   tt_assert(server_mode(options) == 0);
   tt_assert(public_server_mode(options) == 0);
@@ -3630,7 +3662,8 @@ test_config_directory_fetch(void *arg)
             OP_EQ, 1);
 
   /* Bridge Clients can use multiple directory mirrors for bootstrap */
-  memset(options, 0, sizeof(or_options_t));
+  or_options_free(options);
+  options = options_new();
   options->UseBridges = 1;
   tt_assert(server_mode(options) == 0);
   tt_assert(public_server_mode(options) == 0);
@@ -3640,7 +3673,8 @@ test_config_directory_fetch(void *arg)
 
   /* Bridge Relays (Bridges) must act like clients, and use multiple
    * directory mirrors for bootstrap */
-  memset(options, 0, sizeof(or_options_t));
+  or_options_free(options);
+  options = options_new();
   options->BridgeRelay = 1;
   options->ORPort_set = 1;
   tt_assert(server_mode(options) == 1);
@@ -3651,7 +3685,8 @@ test_config_directory_fetch(void *arg)
 
   /* Clients set to FetchDirInfoEarly must fetch it from the authorities,
    * but can use multiple authorities for bootstrap */
-  memset(options, 0, sizeof(or_options_t));
+  or_options_free(options);
+  options = options_new();
   options->FetchDirInfoEarly = 1;
   tt_assert(server_mode(options) == 0);
   tt_assert(public_server_mode(options) == 0);
@@ -3662,7 +3697,8 @@ test_config_directory_fetch(void *arg)
   /* OR servers only fetch the consensus from the authorities when they don't
    * know their own address, but never use multiple directories for bootstrap
    */
-  memset(options, 0, sizeof(or_options_t));
+  or_options_free(options);
+  options = options_new();
   options->ORPort_set = 1;
 
   mock_router_pick_published_address_result = -1;
@@ -3682,7 +3718,8 @@ test_config_directory_fetch(void *arg)
   /* Exit OR servers only fetch the consensus from the authorities when they
    * refuse unknown exits, but never use multiple directories for bootstrap
    */
-  memset(options, 0, sizeof(or_options_t));
+  or_options_free(options);
+  options = options_new();
   options->ORPort_set = 1;
   options->ExitRelay = 1;
   mock_router_pick_published_address_result = 0;
@@ -3712,7 +3749,8 @@ test_config_directory_fetch(void *arg)
    * advertising their dirport, and never use multiple directories for
    * bootstrap. This only applies if they are also OR servers.
    * (We don't care much about the behaviour of non-OR directory servers.) */
-  memset(options, 0, sizeof(or_options_t));
+  or_options_free(options);
+  options = options_new();
   options->DirPort_set = 1;
   options->ORPort_set = 1;
   options->DirCache = 1;
@@ -3766,7 +3804,7 @@ test_config_directory_fetch(void *arg)
             OP_EQ, 0);
 
  done:
-  tor_free(options);
+  or_options_free(options);
   UNMOCK(router_pick_published_address);
   UNMOCK(router_get_my_routerinfo);
   UNMOCK(advertised_server_mode);
@@ -5945,6 +5983,31 @@ test_config_kvline_parse(void *arg)
   tor_free(enc);
 }
 
+static void
+test_config_getinfo_config_names(void *arg)
+{
+  (void)arg;
+  char *answer = NULL;
+  const char *error = NULL;
+  int rv;
+
+  rv = getinfo_helper_config(NULL, "config/names", &answer, &error);
+  tt_int_op(rv, OP_EQ, 0);
+  tt_ptr_op(error, OP_EQ, NULL);
+
+  // ContactInfo should be listed.
+  tt_assert(strstr(answer, "\nContactInfo String\n"));
+
+  // V1AuthoritativeDirectory should not be listed, since it is obsolete.
+  tt_assert(! strstr(answer, "V1AuthoritativeDirectory"));
+
+  // ___UsingTestNetworkDefaults should not be listed, since it is invisible.
+  tt_assert(! strstr(answer, "UsingTestNetworkDefaults"));
+
+ done:
+  tor_free(answer);
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
@@ -5997,5 +6060,6 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(compute_max_mem_in_queues, 0),
   CONFIG_TEST(extended_fmt, 0),
   CONFIG_TEST(kvline_parse, 0),
+  CONFIG_TEST(getinfo_config_names, 0),
   END_OF_TESTCASES
 };

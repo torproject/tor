@@ -4,7 +4,7 @@ dnl Copyright (c) 2007-2019, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
 AC_PREREQ([2.63])
-AC_INIT([tor],[0.4.2.0-alpha-dev])
+AC_INIT([tor],[0.4.2.1-alpha-dev])
 AC_CONFIG_SRCDIR([src/app/main/tor_main.c])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -14,7 +14,7 @@ AC_CONFIG_MACRO_DIR([m4])
 # version number changes.  Tor uses it to make sure that it
 # only shuts down for missing "required protocols" when those protocols
 # are listed as required by a consensus after this date.
-AC_DEFINE(APPROX_RELEASE_DATE, ["2019-06-10"], # for 0.4.2.0-alpha-dev
+AC_DEFINE(APPROX_RELEASE_DATE, ["2019-09-17"], # for 0.4.2.1-alpha-dev
           [Approximate date when this software was released. (Updated when the version changes.)])
 
 # "foreign" means we don't follow GNU package layout standards
@@ -104,6 +104,12 @@ if test "$enable_memory_sentinels" = "no"; then
   AC_DEFINE(DISABLE_MEMORY_SENTINELS, 1,
            [Defined if we're turning off memory safety code to look for bugs])
 fi
+
+AC_ARG_ENABLE(manpage,
+              AS_HELP_STRING(--disable-manpage, [Disable manpage generation.]))
+
+AC_ARG_ENABLE(html-manual,
+              AS_HELP_STRING(--disable-html-manual, [Disable HTML documentation.]))
 
 AC_ARG_ENABLE(asciidoc,
      AS_HELP_STRING(--disable-asciidoc, [don't use asciidoc (disables building of manpages)]),
@@ -299,6 +305,8 @@ AC_PATH_PROG([ASCIIDOC], [asciidoc], none)
 AC_PATH_PROGS([A2X], [a2x a2x.py], none)
 
 AM_CONDITIONAL(USE_ASCIIDOC, test "x$asciidoc" = "xtrue")
+AM_CONDITIONAL(BUILD_MANPAGE, [test "x$enable_manpage" != "xno"])
+AM_CONDITIONAL(BUILD_HTML_DOCS, [test "x$enable_html_manual" != "xno"])
 
 AM_PROG_CC_C_O
 AC_PROG_CC_C99
@@ -550,8 +558,8 @@ if test "x$enable_rust" = "xyes"; then
   if test "x$RUSTC_VERSION_MAJOR" = "x" -o "x$RUSTC_VERSION_MINOR" = "x"; then
     AC_MSG_ERROR([rustc version couldn't be identified])
   fi
-  if test "$RUSTC_VERSION_MAJOR" -lt 2 -a "$RUSTC_VERSION_MINOR" -lt 14; then
-    AC_MSG_ERROR([rustc must be at least version 1.14])
+  if test "$RUSTC_VERSION_MAJOR" -lt 2 -a "$RUSTC_VERSION_MINOR" -lt 31; then
+    AC_MSG_ERROR([rustc must be at least version 1.31.0])
   fi
   AC_MSG_RESULT([$RUSTC_VERSION])
 fi

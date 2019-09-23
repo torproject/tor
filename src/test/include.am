@@ -23,7 +23,9 @@ TESTSCRIPTS = \
 	src/test/test_workqueue_pipe.sh \
 	src/test/test_workqueue_pipe2.sh \
 	src/test/test_workqueue_socketpair.sh \
-	src/test/test_switch_id.sh
+	src/test/test_switch_id.sh \
+	src/test/test_cmdline.sh \
+	src/test/test_parseconf.sh
 
 if USE_RUST
 TESTSCRIPTS += \
@@ -31,7 +33,11 @@ TESTSCRIPTS += \
 endif
 
 if USEPYTHON
-TESTSCRIPTS += src/test/test_ntor.sh src/test/test_hs_ntor.sh src/test/test_bt.sh
+TESTSCRIPTS += \
+	src/test/test_ntor.sh \
+	src/test/test_hs_ntor.sh \
+	src/test/test_bt.sh \
+	scripts/maint/practracker/test_practracker.sh
 
 if COVERAGE_ENABLED
 # ...
@@ -120,6 +126,8 @@ src_test_test_SOURCES += \
 	src/test/test_circuitstats.c \
 	src/test/test_compat_libevent.c \
 	src/test/test_config.c \
+	src/test/test_confmgr.c \
+	src/test/test_confparse.c \
 	src/test/test_connection.c \
 	src/test/test_conscache.c \
 	src/test/test_consdiff.c \
@@ -153,6 +161,7 @@ src_test_test_SOURCES += \
 	src/test/test_handles.c \
 	src/test/test_hs_cache.c \
 	src/test/test_hs_descriptor.c \
+	src/test/test_hs_dos.c \
 	src/test/test_introduce.c \
 	src/test/test_keypin.c \
 	src/test/test_link_handshake.c \
@@ -405,7 +414,9 @@ EXTRA_DIST += \
 	src/test/test_workqueue_efd2.sh \
 	src/test/test_workqueue_pipe.sh \
 	src/test/test_workqueue_pipe2.sh \
-	src/test/test_workqueue_socketpair.sh
+	src/test/test_workqueue_socketpair.sh \
+	src/test/test_cmdline.sh \
+	src/test/test_parseconf.sh
 
 test-rust:
 	$(TESTS_ENVIRONMENT) "$(abs_top_srcdir)/src/test/test_rust.sh"

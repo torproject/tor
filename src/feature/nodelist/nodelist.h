@@ -76,6 +76,7 @@ int node_supports_ed25519_link_authentication(const node_t *node,
 int node_supports_v3_hsdir(const node_t *node);
 int node_supports_ed25519_hs_intro(const node_t *node);
 int node_supports_v3_rendezvous_point(const node_t *node);
+int node_supports_establish_intro_dos_extension(const node_t *node);
 const uint8_t *node_get_rsa_id_digest(const node_t *node);
 smartlist_t *node_get_link_specifier_smartlist(const node_t *node,
                                                bool direct_conn);

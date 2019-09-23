@@ -429,6 +429,7 @@ static void
 test_cntev_orconn_state(void *arg)
 {
   orconn_state_msg_t conn;
+  memset(&conn, 0, sizeof(conn));
 
   (void)arg;
   MOCK(queue_control_event_string, mock_queue_control_event_string);
@@ -468,6 +469,7 @@ static void
 test_cntev_orconn_state_pt(void *arg)
 {
   orconn_state_msg_t conn;
+  memset(&conn, 0, sizeof(conn));
 
   (void)arg;
   MOCK(queue_control_event_string, mock_queue_control_event_string);
@@ -503,6 +505,7 @@ static void
 test_cntev_orconn_state_proxy(void *arg)
 {
   orconn_state_msg_t conn;
+  memset(&conn, 0, sizeof(conn));
 
   (void)arg;
   MOCK(queue_control_event_string, mock_queue_control_event_string);

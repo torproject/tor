@@ -125,8 +125,8 @@ class AutomakeChunk:
               Y     \
               Z
         """
-        self.prespace = "\t"
-        self.postspace = "\t\t"
+        prespace = "\t"
+        postspace = "\t\t"
         for lineno, line in enumerate(self.lines):
             m = re.match(r'(\s+)(\S+)(\s+)\\', line)
             if not m:
@@ -135,7 +135,7 @@ class AutomakeChunk:
             if fname > member:
                 self.insert_before(lineno, member, prespace, postspace)
                 return
-        self.insert_at_end(member)
+        self.insert_at_end(member, prespace, postspace)
 
     def insert_before(self, lineno, member, prespace, postspace):
         self.lines.insert(lineno,

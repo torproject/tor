@@ -1,4 +1,0 @@
-  o Minor bugfixes (testing):
-    - Teach the util/socketpair_ersatz test to work correctly when we
-      have no network stack configured. Fixes bug 30804; bugfix on
-      0.2.5.1-alpha.

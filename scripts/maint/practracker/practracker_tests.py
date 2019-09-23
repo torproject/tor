@@ -1,8 +1,15 @@
+#!/usr/bin/python
+
 """Some simple tests for practracker metrics"""
 
 import unittest
 
-import StringIO
+try:
+    # python 2 names the module this way...
+    from StringIO import StringIO
+except ImportError:
+    # python 3 names the module this way.
+    from io import StringIO
 
 import metrics
 
@@ -36,15 +43,25 @@ fun,(
 
 class TestFunctionLength(unittest.TestCase):
     def test_function_length(self):
-        funcs = StringIO.StringIO(function_file)
+        funcs = StringIO(function_file)
         # All functions should have length 2
-        for name, lines in metrics.function_lines(funcs):
+        for name, lines in metrics.get_function_lines(funcs):
             self.assertEqual(name, "fun")
 
         funcs.seek(0)
 
-        for name, lines in metrics.function_lines(funcs):
-            self.assertEqual(lines, 2)
+        for name, lines in metrics.get_function_lines(funcs):
+            self.assertEqual(lines, 4)
+
+class TestIncludeCount(unittest.TestCase):
+    def test_include_count(self):
+        f = StringIO("""
+  #   include <abc.h>
+  #   include "def.h"
+#include "ghi.h"
+\t#\t include "jkl.h"
+""")
+        self.assertEqual(metrics.get_include_count(f),4)
 
 if __name__ == '__main__':
     unittest.main()

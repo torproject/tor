@@ -11,7 +11,7 @@
 #define PROCESS_PRIVATE
 #include "core/or/or.h"
 #include "app/config/config.h"
-#include "app/config/confparse.h"
+#include "lib/confmgt/confparse.h"
 #include "feature/control/control.h"
 #include "feature/control/control_events.h"
 #include "feature/client/transports.h"
@@ -352,7 +352,7 @@ test_pt_configure_proxy(void *arg)
   managed_proxy_t *mp = NULL;
   (void) arg;
 
-  dummy_state = tor_malloc_zero(sizeof(or_state_t));
+  dummy_state = or_state_new();
 
   MOCK(process_read_stdout, process_read_stdout_replacement);
   MOCK(get_or_state,

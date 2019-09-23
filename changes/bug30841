@@ -1,3 +1,0 @@
-  o Minor bugfixes (git scripts):
-    - Stop hard-coding the tor master branch name and worktree path in the
-      git scripts. Fixes bug 30841; bugfix on 0.4.0.1-alpha.

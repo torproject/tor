@@ -91,10 +91,11 @@ STATIC int add_onion_helper_keyarg(const char *arg, int discard_pk,
                                    const char **key_new_alg_out,
                                    char **key_new_blob_out,
                                    add_onion_secret_key_t *decoded_key,
-                                   int *hs_version, char **err_msg_out);
+                                   int *hs_version,
+                                   control_connection_t *conn);
 
 STATIC rend_authorized_client_t *add_onion_helper_clientauth(const char *arg,
-                                   int *created, char **err_msg_out);
+                                   int *created, control_connection_t *conn);
 
 STATIC control_cmd_args_t *control_cmd_parse_args(
                                    const char *command,

@@ -1,0 +1,4 @@
+  o Minor bugfixes (controller protocol):
+    - Fix the MAPADDRESS controller command to accept one or more
+      arguments. Previously, it required two or more arguments, and ignored
+      the first. Fixes bug 31772; bugfix on 0.4.1.1-alpha.

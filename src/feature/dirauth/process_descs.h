@@ -58,7 +58,8 @@ int dirserv_load_fingerprint_file(void);
 void dirserv_free_fingerprint_list(void);
 int dirserv_add_own_fingerprint(crypto_pk_t *pk,
                                 const ed25519_public_key_t *edkey);
-
+#ifdef HAVE_MODULE_DIRAUTH
+int dirserv_load_fingerprint_file(void);
 enum was_router_added_t dirserv_add_multiple_descriptors(
                                      const char *desc, size_t desclen,
                                      uint8_t purpose,
@@ -68,6 +69,7 @@ enum was_router_added_t dirserv_add_descriptor(routerinfo_t *ri,
                                                const char **msg,
                                                const char *source);
 
+int dirserv_would_reject_router(const routerstatus_t *rs);
 int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
                                    int complain,
                                    int *valid_out);
@@ -76,7 +78,79 @@ uint32_t dirserv_router_get_status(const routerinfo_t *router,
                                    int severity);
 void dirserv_set_node_flags_from_authoritative_status(node_t *node,
                                                       uint32_t authstatus);
+#else /* !(defined(HAVE_MODULE_DIRAUTH)) */
+static inline int
+dirserv_load_fingerprint_file(void)
+{
+  return 0;
+}
+static inline enum was_router_added_t
+dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
+                                 uint8_t purpose,
+                                 const char *source,
+                                 const char **msg)
+{
+  (void)desc;
+  (void)desclen;
+  (void)purpose;
+  (void)source;
+  (void)msg;
+  return (enum was_router_added_t)0;
+}
+static inline enum was_router_added_t
+dirserv_add_descriptor(routerinfo_t *ri,
+                       const char **msg,
+                       const char *source)
+{
+  (void)ri;
+  (void)msg;
+  (void)source;
+  return (enum was_router_added_t)0;
+}
+static inline int
+dirserv_would_reject_router(const routerstatus_t *rs)
+{
+  (void)rs;
+  return 0;
+}
+static inline int
+authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
+                               int complain,
+                               int *valid_out)
+{
+  (void)ri;
+  (void)msg;
+  (void)complain;
+  (void)valid_out;
+  return 0;
+}
+static inline int
+dirserv_add_own_fingerprint(crypto_pk_t *pk)
+{
+  (void)pk;
+  return 0;
+}
+static inline uint32_t
+dirserv_router_get_status(const routerinfo_t *router,
+                          const char **msg,
+                          int severity)
+{
+  (void)router;
+  (void)msg;
+  (void)severity;
+  return 0;
+}
+static inline void
+dirserv_set_node_flags_from_authoritative_status(node_t *node,
+                                                 uint32_t authstatus)
+{
+  (void)node;
+  (void)authstatus;
+}
+#endif /* defined(HAVE_MODULE_DIRAUTH) */
 
-int dirserv_would_reject_router(const routerstatus_t *rs);
+#ifdef TOR_UNIT_TESTS
+STATIC int dirserv_router_has_valid_address(routerinfo_t *ri);
+#endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* !defined(TOR_RECV_UPLOADS_H) */

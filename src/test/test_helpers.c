@@ -16,7 +16,7 @@
 
 #include "lib/buf/buffers.h"
 #include "app/config/config.h"
-#include "app/config/confparse.h"
+#include "lib/confmgt/confparse.h"
 #include "app/main/subsysmgr.h"
 #include "core/mainloop/connection.h"
 #include "lib/crypt_ops/crypto_rand.h"
@@ -295,7 +295,7 @@ helper_parse_options(const char *conf)
   if (ret != 0) {
     goto done;
   }
-  ret = config_assign(&options_format, opt, line, 0, &msg);
+  ret = config_assign(get_options_mgr(), opt, line, 0, &msg);
   if (ret != 0) {
     goto done;
   }

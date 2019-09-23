@@ -37,7 +37,7 @@ Project's website.
 
 COMMAND-LINE OPTIONS
 --------------------
-[[opt-h]] **-h**, **-help**::
+[[opt-h]] **-h**, **--help**::
     Display a short help message and exit.
 
 [[opt-f]] **-f** __FILE__::
@@ -447,13 +447,18 @@ GENERAL OPTIONS
     setting for DataDirectoryGroupReadable when the CacheDirectory is the
     same as the DataDirectory, and 0 otherwise. (Default: auto)
 
-[[FallbackDir]] **FallbackDir** __ipv4address__:__port__ orport=__port__ id=__fingerprint__ [weight=__num__] [ipv6=**[**__ipv6address__**]**:__orport__]::
-    When we're unable to connect to any directory cache for directory info
-    (usually because we don't know about any yet) we try a directory authority.
-    Clients also simultaneously try a FallbackDir, to avoid hangs on client
-    startup if a directory authority is down. Clients retry FallbackDirs more
-    often than directory authorities, to reduce the load on the directory
-    authorities.
+[[FallbackDir]] **FallbackDir** __ipv4address__:__dirport__ orport=__orport__ id=__fingerprint__ [weight=__num__] [ipv6=**[**__ipv6address__**]**:__orport__]::
+    When tor is unable to connect to any directory cache for directory info
+    (usually because it doesn't know about any yet) it tries a hard-coded
+    directory. Relays try one directory authority at a time. Clients try
+    multiple directory authorities and FallbackDirs, to avoid hangs on
+    startup if a hard-coded directory is down. Clients wait for a few seconds
+    between each attempt, and retry FallbackDirs more often than directory
+    authorities, to reduce the load on the directory authorities.  +
+ +
+    FallbackDirs should be stable relays with stable IP addresses, ports,
+    and identity keys. They must have a DirPort. +
+ +
     By default, the directory authorities are also FallbackDirs. Specifying a
     FallbackDir replaces Tor's default hard-coded FallbackDirs (if any).
     (See the **DirAuthority** entry for an explanation of each flag.)
@@ -463,30 +468,30 @@ GENERAL OPTIONS
     FallbackDir line is present, it replaces the hard-coded FallbackDirs,
     regardless of the value of UseDefaultFallbackDirs.) (Default: 1)
 
-[[DirAuthority]] **DirAuthority** [__nickname__] [**flags**] __ipv4address__:__port__ __fingerprint__::
+[[DirAuthority]] **DirAuthority** [__nickname__] [**flags**] __ipv4address__:__dirport__ __fingerprint__::
     Use a nonstandard authoritative directory server at the provided address
     and port, with the specified key fingerprint. This option can be repeated
     many times, for multiple authoritative directory servers. Flags are
     separated by spaces, and determine what kind of an authority this directory
     is. By default, an authority is not authoritative for any directory style
-    or version unless an appropriate flag is given.
+    or version unless an appropriate flag is given. +
+ +
     Tor will use this authority as a bridge authoritative directory if the
-    "bridge" flag is set. If a flag "orport=**port**" is given, Tor will use the
-    given port when opening encrypted tunnels to the dirserver. If a flag
-    "weight=**num**" is given, then the directory server is chosen randomly
-    with probability proportional to that weight (default 1.0). If a
+    "bridge" flag is set. If a flag "orport=**orport**" is given, Tor will
+    use the given port when opening encrypted tunnels to the dirserver. If a
+    flag "weight=**num**" is given, then the directory server is chosen
+    randomly with probability proportional to that weight (default 1.0). If a
     flag "v3ident=**fp**" is given, the dirserver is a v3 directory authority
     whose v3 long-term signing key has the fingerprint **fp**. Lastly,
     if an "ipv6=**[**__ipv6address__**]**:__orport__" flag is present, then
-    the directory
-    authority is listening for IPv6 connections on the indicated IPv6 address
-    and OR Port. +
+    the directory authority is listening for IPv6 connections on the
+    indicated IPv6 address and OR Port. +
  +
     Tor will contact the authority at __ipv4address__ to
-    download directory documents. The provided __port__ value is a dirport;
-    clients ignore this in favor of the specified "orport=" value.  If an
-    IPv6 ORPort is supplied, Tor will
-    also download directory documents at the IPv6 ORPort. +
+    download directory documents. Clients always use the ORPort. Relays
+    usually use the DirPort, but will use the ORPort in some circumstances.
+    If an IPv6 ORPort is supplied, clients will also download directory
+    documents at the IPv6 ORPort, if they are configured to use IPv6. +
  +
     If no **DirAuthority** line is given, Tor will use the default directory
     authorities. NOTE: this option is intended for setting up a private Tor
@@ -2451,8 +2456,10 @@ is non-zero):
 [[ExtraInfoStatistics]] **ExtraInfoStatistics** **0**|**1**::
     When this option is enabled, Tor includes previously gathered statistics in
     its extra-info documents that it uploads to the directory authorities.
-    Disabling this option also disables bandwidth usage statistics, GeoIPFile
-    hashes, and ServerTransportPlugin lists in the extra-info file.
+    Disabling this option also removes bandwidth usage statistics, and
+    GeoIPFile and GeoIPv6File hashes from the extra-info file. Bridge
+    ServerTransportPlugin lines are always includes in the extra-info file,
+    because they are required by BridgeDB.
     (Default: 1)
 
 [[ExtendAllowPrivateAddresses]] **ExtendAllowPrivateAddresses** **0**|**1**::
@@ -2908,7 +2915,13 @@ on the public Tor network.
 HIDDEN SERVICE OPTIONS
 ----------------------
 
-The following options are used to configure a hidden service.
+The following options are used to configure a hidden service. Some options
+apply per service and some apply for the whole tor instance.
+
+The next section describes the per service options that can only be set
+**after** the **HiddenServiceDir** directive
+
+**PER SERVICE OPTIONS:**
 
 [[HiddenServiceDir]] **HiddenServiceDir** __DIRECTORY__::
     Store data files for a hidden service in DIRECTORY. Every hidden service
@@ -2933,12 +2946,6 @@ The following options are used to configure a hidden service.
     You may also have multiple lines with  the same VIRTPORT: when a user
     connects to that VIRTPORT, one of the TARGETs from those lines will be
     chosen at random. Note that address-port pairs have to be comma-separated.
-
-[[PublishHidServDescriptors]] **PublishHidServDescriptors** **0**|**1**::
-    If set to 0, Tor will run any hidden services you configure, but it won't
-    advertise them to the rendezvous directory. This option is only useful if
-    you're using a Tor controller that handles hidserv publishing for you.
-    (Default: 1)
 
 [[HiddenServiceVersion]] **HiddenServiceVersion** **2**|**3**::
     A list of rendezvous service descriptor versions to publish for the hidden
@@ -2966,7 +2973,7 @@ The following options are used to configure a hidden service.
 
 [[HiddenServiceExportCircuitID]] **HiddenServiceExportCircuitID** __protocol__::
    The onion service will use the given protocol to expose the global circuit
-   identifier of each inbound client circuit via the selected protocol. The only
+   identifier of each inbound client circuit. The only
    protocol supported right now \'haproxy'. This option is only for v3
    services. (Default: none) +
  +
@@ -2983,12 +2990,12 @@ The following options are used to configure a hidden service.
  +
       global_circuit_id = (0xAA << 24) + (0xBB << 16) + (0xCC << 8) + 0xDD; +
  +
-   In the case above, where the last 32-bit is 0xffffffff, the global circuit
+   In the case above, where the last 32-bits are 0xffffffff, the global circuit
    identifier would be 4294967295. You can use this value together with Tor's
-   control port where it is possible to terminate a circuit given the global
-   circuit identifier. For more information about this see controls-spec.txt. +
+   control port to terminate particular circuits using their global
+   circuit identifiers. For more information about this see control-spec.txt. +
  +
-   The HAProxy version 1 proxy protocol is described in detail at
+   The HAProxy version 1 protocol is described in detail at
    https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
 
 [[HiddenServiceMaxStreams]] **HiddenServiceMaxStreams** __N__::
@@ -3017,6 +3024,38 @@ The following options are used to configure a hidden service.
 [[HiddenServiceNumIntroductionPoints]] **HiddenServiceNumIntroductionPoints** __NUM__::
     Number of introduction points the hidden service will have. You can't
     have more than 10 for v2 service and 20 for v3. (Default: 3)
+
+[[HiddenServiceEnableIntroDoSDefense]] **HiddenServiceEnableIntroDoSDefense** **0**|**1**::
+    Enable DoS defense at the intropoint level. When this is enabled, the
+    rate and burst parameter (see below) will be sent to the intro point which
+    will then use them to apply rate limiting for introduction request to this
+    service.
+  +
+    The introduction point honors the consensus parameters except if this is
+    specifically set by the service operator using this option. The service
+    never looks at the consensus parameters in order to enable or disable this
+    defense. (Default: 0)
+
+[[HiddenServiceEnableIntroDoSRatePerSec]] **HiddenServiceEnableIntroDoSRatePerSec** __NUM__::
+    The allowed client introduction rate per second at the introduction
+    point. If this option is 0, it is considered infinite and thus if
+    **HiddenServiceEnableIntroDoSDefense** is set, it then effectively
+    disables the defenses. (Default: 25)
+
+[[HiddenServiceEnableIntroDoSBurstPerSec]] **HiddenServiceEnableIntroDoSBurstPerSec** __NUM__::
+    The allowed client introduction burst per second at the introduction
+    point. If this option is 0, it is considered infinite and thus if
+    **HiddenServiceEnableIntroDoSDefense** is set, it then effectively
+    disables the defenses. (Default: 200)
+
+
+**PER INSTANCE OPTIONS:**
+
+[[PublishHidServDescriptors]] **PublishHidServDescriptors** **0**|**1**::
+    If set to 0, Tor will run any hidden services you configure, but it won't
+    advertise them to the rendezvous directory. This option is only useful if
+    you're using a Tor controller that handles hidserv publishing for you.
+    (Default: 1)
 
 [[HiddenServiceSingleHopMode]] **HiddenServiceSingleHopMode** **0**|**1**::
     **Experimental - Non Anonymous** Hidden Services on a tor instance in

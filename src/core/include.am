@@ -9,7 +9,6 @@ endif
 # ADD_C_FILE: INSERT SOURCES HERE.
 LIBTOR_APP_A_SOURCES = 				\
 	src/app/config/config.c			\
-	src/app/config/confparse.c		\
 	src/app/config/statefile.c		\
 	src/app/main/main.c			\
 	src/app/main/shutdown.c			\
@@ -117,6 +116,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/hs/hs_config.c		\
 	src/feature/hs/hs_control.c		\
 	src/feature/hs/hs_descriptor.c		\
+	src/feature/hs/hs_dos.c			\
 	src/feature/hs/hs_ident.c		\
 	src/feature/hs/hs_intropoint.c		\
 	src/feature/hs/hs_service.c		\
@@ -213,7 +213,6 @@ src_core_libtor_app_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 # ADD_C_FILE: INSERT HEADERS HERE.
 noinst_HEADERS +=					\
 	src/app/config/config.h				\
-	src/app/config/confparse.h			\
 	src/app/config/or_options_st.h			\
 	src/app/config/or_state_st.h			\
 	src/app/config/statefile.h			\
@@ -374,6 +373,7 @@ noinst_HEADERS +=					\
 	src/feature/hs/hs_config.h			\
 	src/feature/hs/hs_control.h			\
 	src/feature/hs/hs_descriptor.h			\
+	src/feature/hs/hs_dos.h				\
 	src/feature/hs/hs_ident.h			\
 	src/feature/hs/hs_intropoint.h			\
 	src/feature/hs/hs_service.h			\
@@ -435,9 +435,10 @@ noinst_HEADERS +=					\
 	src/feature/stats/rephist.h			\
 	src/feature/stats/predict_ports.h
 
-noinst_HEADERS +=			\
-	src/app/config/auth_dirs.inc	\
-	src/app/config/fallback_dirs.inc
+noinst_HEADERS +=				\
+	src/app/config/auth_dirs.inc		\
+	src/app/config/fallback_dirs.inc	\
+	src/app/config/testnet.inc
 
 # This may someday want to be an installed file?
 noinst_HEADERS += src/feature/api/tor_api.h

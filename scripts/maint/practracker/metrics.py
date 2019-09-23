@@ -8,6 +8,7 @@ import re
 
 def get_file_len(f):
     """Get file length of file"""
+    i = -1
     for i, l in enumerate(f):
         pass
     return i + 1
@@ -16,7 +17,7 @@ def get_include_count(f):
     """Get number of #include statements in the file"""
     include_count = 0
     for line in f:
-        if re.match(r' *# *include', line):
+        if re.match(r'\s*#\s*include', line):
             include_count += 1
     return include_count
 
@@ -27,10 +28,13 @@ def get_function_lines(f):
 
     # Skip lines that look like they are defining functions with these
     # names: they aren't real function definitions.
-    REGEXP_CONFUSE_TERMS = {"MOCK_IMPL", "ENABLE_GCC_WARNINGS", "ENABLE_GCC_WARNING", "DUMMY_TYPECHECK_INSTANCE",
+    REGEXP_CONFUSE_TERMS = {"MOCK_IMPL", "MOCK_DECL", "HANDLE_DECL",
+                            "ENABLE_GCC_WARNINGS", "ENABLE_GCC_WARNING",
+                            "DUMMY_TYPECHECK_INSTANCE",
                             "DISABLE_GCC_WARNING", "DISABLE_GCC_WARNINGS"}
 
     in_function = False
+    found_openbrace = False
     for lineno, line in enumerate(f):
         if not in_function:
             # find the start of a function
@@ -41,10 +45,13 @@ def get_function_lines(f):
                     continue
                 func_start = lineno
                 in_function = True
-
+        elif not found_openbrace and line.startswith("{"):
+            found_openbrace = True
+            func_start = lineno
         else:
             # Find the end of a function
             if line.startswith("}"):
-                n_lines = lineno - func_start
+                n_lines = lineno - func_start + 1
                 in_function = False
+                found_openbrace = False
                 yield (func_name, n_lines)
