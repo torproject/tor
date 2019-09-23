@@ -58,8 +58,6 @@ authdir_config_t *authdir_return_fingerprint_list(void);
 #endif /* defined(PROCESS_DESCS_PRIVATE) || defined(TOR_UNIT_TESTS) */
 
 void dirserv_free_fingerprint_list(void);
-int dirserv_add_own_fingerprint(crypto_pk_t *pk,
-                                const ed25519_public_key_t *edkey);
 #ifdef HAVE_MODULE_DIRAUTH
 int dirserv_load_fingerprint_file(void);
 enum was_router_added_t dirserv_add_multiple_descriptors(
@@ -76,6 +74,8 @@ int dirserv_would_reject_router(const routerstatus_t *rs,
 int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
                                    int complain,
                                    int *valid_out);
+int dirserv_add_own_fingerprint(crypto_pk_t *pk,
+                                const ed25519_public_key_t *edkey);
 uint32_t dirserv_router_get_status(const routerinfo_t *router,
                                    const char **msg,
                                    int severity);
