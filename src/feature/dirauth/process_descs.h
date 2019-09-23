@@ -12,6 +12,9 @@
 #ifndef TOR_RECV_UPLOADS_H
 #define TOR_RECV_UPLOADS_H
 
+// for was_router_added_t.
+#include "feature/nodelist/routerlist.h"
+
 #include "src/lib/crypt_ops/crypto_ed25519.h"
 
 struct authdir_config_t;
