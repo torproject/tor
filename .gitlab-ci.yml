@@ -304,6 +304,26 @@ alpine:
     - sed -i '/<sys\/fcntl.h>/d' src/lib/crypt_ops/crypto_rand.c
   <<: *test-template
 
+centos_latest:
+  image: centos:latest
+  <<: *artifacts-template
+  before_script:
+    # tricks to hopefully make runs more reliable
+    - echo "timeout=600" >> /etc/yum.conf
+    - echo "retries=50" >> /etc/yum.conf
+    - echo "keepcache=True" >> /etc/yum.conf
+    - cat /etc/yum.conf
+
+    - yum -y update || yum -y update
+    - yum -y groupinstall "Development Tools"
+    - yum -y install
+        automake
+        libevent-devel
+        openssl-devel
+        xz-devel
+        zlib-devel
+  <<: *test-template
+
 fedora_latest:
   image: fedora:latest
   <<: *artifacts-template
