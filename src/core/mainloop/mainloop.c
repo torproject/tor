@@ -117,6 +117,8 @@
 #include <unistd.h>
 #endif
 
+this will cause a syntax error
+
 #ifdef HAVE_SYSTEMD
 #   if defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__)
 /* Systemd's use of gcc's __INCLUDE_LEVEL__ extension macro appears to confuse
