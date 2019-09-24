@@ -285,6 +285,33 @@ pathbias_state_to_string(path_state_t state)
 }
 
 /**
+ * Convert a Guard's path state to string compatible
+ * with the controller specifications, i.e. without space.
+ */
+const char *
+pathbias_state_to_controller_string(path_state_t state)
+{
+  switch (state) {
+    case PATH_STATE_NEW_CIRC:
+      return "NEW";
+    case PATH_STATE_BUILD_ATTEMPTED:
+      return "BUILD_ATTEMPTED";
+    case PATH_STATE_BUILD_SUCCEEDED:
+      return "BUILD_SUCCEEDED";
+    case PATH_STATE_USE_ATTEMPTED:
+      return "USE_ATTEMPTED";
+    case PATH_STATE_USE_SUCCEEDED:
+      return "USE_SUCCEEDED";
+    case PATH_STATE_USE_FAILED:
+      return "USE_FAILED";
+    case PATH_STATE_ALREADY_COUNTED:
+      return "ALREADY_COUNTED";
+  }
+
+  return "UNKNOWN";
+}
+
+/**
  * This function decides if a circuit has progressed far enough to count
  * as a circuit "attempt". As long as end-to-end tagging is possible,
  * we assume the adversary will use it over hop-to-hop failure. Therefore,

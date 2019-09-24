@@ -690,6 +690,7 @@ struct testgroup_t testgroups[] = {
   { "control/", controller_tests },
   { "control/btrack/", btrack_tests },
   { "control/event/", controller_event_tests },
+  { "control/fmt/", controller_fmt_tests },
   { "crypto/", crypto_tests },
   { "crypto/ope/", crypto_ope_tests },
 #ifdef ENABLE_OPENSSL

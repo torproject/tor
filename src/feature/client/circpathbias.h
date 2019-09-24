@@ -25,5 +25,6 @@ void pathbias_count_use_attempt(origin_circuit_t *circ);
 void pathbias_mark_use_success(origin_circuit_t *circ);
 void pathbias_mark_use_rollback(origin_circuit_t *circ);
 const char *pathbias_state_to_string(enum path_state_t state);
+const char *pathbias_state_to_controller_string(enum path_state_t state);
 
 #endif /* !defined(TOR_CIRCPATHBIAS_H) */

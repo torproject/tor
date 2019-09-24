@@ -7,6 +7,7 @@
  * \brief Formatting functions for controller data.
  */
 
+#include "core/or/addr_policy_st.h"
 #include "core/or/or.h"
 
 #include "core/mainloop/connection.h"
@@ -23,6 +24,7 @@
 #include "core/or/origin_circuit_st.h"
 #include "core/or/socks_request_st.h"
 #include "feature/control/control_connection_st.h"
+#include "feature/client/circpathbias.h"
 
 /** Given an AP connection <b>conn</b> and a <b>len</b>-character buffer
  * <b>buf</b>, determine the address:port combination requested on
@@ -157,6 +159,10 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
     tor_free(socks_password_escaped);
   }
 
+  // Add more verbose description for a circuit.
+  circuit_extend_status_for_controller(circ, descparts);
+
+  // Finalize report
   rv = smartlist_join_strings(descparts, " ", 0, NULL);
 
   SMARTLIST_FOREACH(descparts, char *, cp, tor_free(cp));
@@ -256,6 +262,77 @@ entry_connection_describe_status_for_controller(const entry_connection_t *conn)
   smartlist_free(descparts);
 
   return rv;
+}
+
+/**
+ * Extends the description of a <b>circ</b>'s status.
+ */
+void
+circuit_extend_status_for_controller(const origin_circuit_t *circ,
+                                     smartlist_t *descparts)
+{
+  // Supplementary data
+  smartlist_add_asprintf(descparts, "UNUSABLE_FOR_NEW_CONNS=%u",
+                         circ->unusable_for_new_conns);
+  smartlist_add_asprintf(descparts, "IDLE_TIMEOUT=%d",
+                         circ->circuit_idle_timeout);
+  smartlist_add_asprintf(descparts, "EARLY_CELLS_SENT=%u",
+                         circ->relay_early_cells_sent);
+  smartlist_add_asprintf(descparts, "REMAINING_RELAY_EARLY_CELLS=%u",
+                         circ->remaining_relay_early_cells);
+  smartlist_add_asprintf(descparts, "PADDING_NEGOTIATION_FAILED=%u",
+                         circ->padding_negotiation_failed);
+  smartlist_add_asprintf(descparts, "PATH_STATE=%s",
+                         pathbias_state_to_controller_string(circ->path_state)
+  );
+  smartlist_add_asprintf(descparts, "HAS_RELAXED_TIMEOUT=%u",
+                         circ->relaxed_timeout);
+  smartlist_add_asprintf(descparts, "IS_ANCIENT=%u", circ->is_ancient);
+  smartlist_add_asprintf(descparts, "HAS_OPENED=%u", circ->has_opened);
+  smartlist_add_asprintf(descparts, "HS_HAS_TIMED_OUT=%u",
+                         circ->hs_circ_has_timed_out);
+
+  // Prepend policy data
+  smartlist_t *prepend_policy = smartlist_new();
+  if (circ->prepend_policy != NULL) {
+    SMARTLIST_FOREACH(circ->prepend_policy, addr_policy_t *, policy, {
+      smartlist_add(prepend_policy, addr_policy_to_controller_string(policy));
+    });
+  }
+  if (smartlist_len(prepend_policy)) {
+    char *prepend_policy_joined = smartlist_join_strings(prepend_policy,
+                                                         ",", 0, NULL);
+    smartlist_add_asprintf(descparts, "PREPEND_POLICY=%s",
+                           prepend_policy_joined);
+    tor_free(prepend_policy_joined);
+  }
+
+  SMARTLIST_FOREACH(prepend_policy, char *, cp, tor_free(cp));
+  smartlist_free(prepend_policy);
+}
+
+/** Generate a String representing the given address policy.
+ *
+ * The String syntax is as follow:
+ * "[ACCEPT|REJECT]_address:portMin-portMax"
+ */
+char *
+addr_policy_to_controller_string(addr_policy_t *policy)
+{
+  const char *acceptance;
+  char *result = NULL;
+  if (policy->policy_type == ADDR_POLICY_ACCEPT) {
+    acceptance = "ACCEPT";
+  } else {
+    acceptance = "REJECT";
+  }
+
+  char addr_str[TOR_ADDR_BUF_LEN];
+  tor_addr_to_str(addr_str, &policy->addr, sizeof(addr_str), 1);
+  tor_asprintf(&result, "%s_%s:%d-%d",
+               acceptance, addr_str, policy->prt_min, policy->prt_max);
+
+  return result;
 }
 
 /** Return a longname the node whose identity is <b>id_digest</b>. If

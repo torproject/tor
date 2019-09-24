@@ -115,6 +115,7 @@ extern struct testcase_t consdiff_tests[];
 extern struct testcase_t consdiffmgr_tests[];
 extern struct testcase_t container_tests[];
 extern struct testcase_t controller_event_tests[];
+extern struct testcase_t controller_fmt_tests[];
 extern struct testcase_t controller_tests[];
 extern struct testcase_t crypto_ope_tests[];
 extern struct testcase_t crypto_openssl_tests[];

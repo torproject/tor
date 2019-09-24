@@ -20,6 +20,11 @@ char *circuit_describe_status_for_controller(origin_circuit_t *circ);
 char *entry_connection_describe_status_for_controller(const
                                                      entry_connection_t *conn);
 
+void circuit_extend_status_for_controller(const origin_circuit_t *circ,
+                                          smartlist_t *descparts);
+
+char *addr_policy_to_controller_string(addr_policy_t *policy);
+
 MOCK_DECL(const char *, node_describe_longname_by_id,(const char *id_digest));
 
 #endif /* !defined(TOR_CONTROL_FMT_H) */
