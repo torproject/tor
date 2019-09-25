@@ -1,0 +1,7 @@
+  o Minor features (maintenance scripts):
+    - Add a coccinelle script to detect bugs caused by incrementing or
+      decrementing a variable inside a call to log_debug().  Since
+      log_debug() is a macro whose arguments are conditionally evaluated, it
+      is usually an error to do this. One such bug was 30628, in which SENDME
+      cells were miscounted by a decrement operator inside a log_debug()
+      call.  Closes ticket 30743.
