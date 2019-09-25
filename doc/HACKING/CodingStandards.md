@@ -212,6 +212,8 @@ deviations from our C whitespace style.  Generally, we use:
    - No space between a function name and an opening paren. `puts(x)`, not
      `puts (x)`.
    - Function declarations at the start of the line.
+   - Use `void foo(void)` to declare a function with no arguments.
+   - Use `const` for new APIs.
 
 If you use an editor that has plugins for editorconfig.org, the file
 `.editorconfig` will help you to conform this coding style.
@@ -240,8 +242,21 @@ old C functions.  Use `strlcat`, `strlcpy`, or `tor_snprintf/tor_asprintf` inste
 We don't call `memcmp()` directly.  Use `fast_memeq()`, `fast_memneq()`,
 `tor_memeq()`, or `tor_memneq()` for most purposes.
 
-Also see a longer list of functions to avoid in:
-https://people.torproject.org/~nickm/tor-auto/internal/this-not-that.html
+Don't call `assert()` directly. For hard asserts, use `tor_assert()`. For
+soft asserts, use `tor_assert_nonfatal()` or `BUG()`. If you need to print
+debug information in assert error message, consider using `tor_assertf()` and
+`tor_assertf_nonfatal()`.
+
+Don't use `toupper()` and `tolower()` functions. Use `TOR_TOUPPER` and
+`TOR_TOLOWER` macros instead. Similarly, use `TOR_ISALPHA`, `TOR_ISALNUM` et.
+al. instead of `isalpha()`, `isalnum()`, etc.
+
+When allocating new string to be added to a smartlist, use
+`smartlist_add_asprintf()` to do both at once.
+
+Avoid calling BSD socket functions directly. Use portable wrappers to work
+with sockets and socket addresses. Also, sockets should be of type
+`tor_socket_t`.
 
 What code can use what other code?
 ----------------------------------
@@ -331,8 +346,15 @@ definitions when necessary.)
 Assignment operators shouldn't nest inside other expressions.  (You can
 ignore this inside macro definitions when necessary.)
 
-Functions not to write
-----------------------
+Binary data and wire formats
+----------------------------
+
+Use pointer to `char` when representing NUL-terminated string. To represent
+arbitrary binary data, use pointer to `uint8_t`.
+
+Refrain from attempting to encode integers by casting their pointers to byte
+arrays. Use something like `set_uint32()`/`get_uint32()` instead and don't
+forget about endianness.
 
 Try to never hand-write new code to parse or generate binary
 formats. Instead, use trunnel if at all possible.  See
@@ -450,6 +472,9 @@ to use it as a function callback), define it with a name like
     {
       abc_free_(obj);
     }
+
+When deallocating, don't say e.g. `if (x) tor_free(x)`. The convention is to
+have deallocators do nothing when NULL pointer is passed.
 
 
 Doxygen comment conventions
