@@ -687,8 +687,9 @@ tor_log_update_sigsafe_err_fds(void)
   n_fds = 1;
 
   for (lf = logfiles; lf; lf = lf->next) {
-     /* Don't try callback to the control port, or syslogs: We can't
-      * do them from a signal handler. Don't try stdout: we always do stderr.
+     /* Don't try callback to the control port, syslogs, android logs, or any
+      * other non-file descriptor log: We can't call arbitrary functions from a
+      * signal handler.
       */
     if (lf->is_temporary || logfile_is_external(lf)
         || lf->seems_dead || lf->fd < 0)
@@ -720,7 +721,10 @@ tor_log_update_sigsafe_err_fds(void)
 
   if (!found_real_stderr &&
       int_array_contains(log_fds, n_fds, STDOUT_FILENO)) {
-    /* Don't use a virtual stderr when we're also logging to stdout. */
+    /* Don't use a virtual stderr when we're also logging to stdout.
+     * If we reached max_fds logs, we'll now have (max_fds - 1) logs.
+     * That's ok, max_fds is large enough that most tor instances don't exceed
+     * it. */
     raw_assert(n_fds >= 2); /* Don't tor_assert inside log fns */
     --n_fds;
     log_fds[0] = log_fds[n_fds];
