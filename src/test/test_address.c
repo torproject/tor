@@ -24,6 +24,7 @@
 #endif /* defined(HAVE_IFCONF_TO_SMARTLIST) */
 
 #include "core/or/or.h"
+#include "app/config/config.h"
 #include "feature/dirauth/process_descs.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/node_st.h"
@@ -1245,42 +1246,95 @@ test_address_tor_node_in_same_network_family(void *ignored)
   helper_free_mock_node(node_b);
 }
 
-#define CHECK_RI_ADDR(addr_str, rv) STMT_BEGIN \
+static or_options_t mock_options;
+
+static const or_options_t *
+mock_get_options(void)
+{
+  return &mock_options;
+}
+
+/* Test dirserv_router_has_valid_address() on a stub routerinfo, with only its
+ * address fields set. Use IPv4 ipv4_addr_str and IPv6 ipv6_addr_str.
+ * Fail if it does not return rv. */
+#define TEST_ROUTER_VALID_ADDRESS_HELPER(ipv4_addr_str, ipv6_addr_str, rv) \
+  STMT_BEGIN \
     ri = tor_malloc_zero(sizeof(routerinfo_t)); \
     tor_addr_t addr; \
-    tor_addr_parse(&addr, (addr_str));   \
+    tor_addr_parse(&addr, (ipv4_addr_str));   \
     ri->addr = tor_addr_to_ipv4h(&addr); \
-    tor_addr_make_null(&ri->ipv6_addr, AF_INET6); \
-    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, (rv));       \
+    tor_addr_parse(&ri->ipv6_addr, (ipv6_addr_str)); \
+    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, (rv)); \
     tor_free(ri); \
   STMT_END
 
-/* XXX: Here, we use a non-internal IPv4 as dirserv_router_has_valid_address()
- * will check internal/null IPv4 first. */
-#define CHECK_RI_ADDR6(addr_str, rv) STMT_BEGIN \
-    ri = tor_malloc_zero(sizeof(routerinfo_t));   \
-    ri->addr = 16777217; /* 1.0.0.1 */ \
-    tor_addr_parse(&ri->ipv6_addr, (addr_str));                         \
-    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, (rv));       \
-    tor_free(ri); \
-  STMT_END
+/* Like TEST_ROUTER_VALID_ADDRESS_HELPER(), but always passes a null
+ * IPv6 address. */
+#define CHECK_RI_ADDR(ipv4_addr_str, rv) \
+  TEST_ROUTER_VALID_ADDRESS_HELPER(ipv4_addr_str, "::", rv)
+
+/* Like TEST_ROUTER_VALID_ADDRESS_HELPER(), but always passes a non-internal
+ * IPv4 address, so that the IPv6 check is reached. */
+#define CHECK_RI_ADDR6(ipv6_addr_str, rv) \
+  TEST_ROUTER_VALID_ADDRESS_HELPER("1.0.0.1", ipv6_addr_str, rv)
 
 static void
-test_address_dirserv_router_addr_private(void *ignored)
+test_address_dirserv_router_addr_private(void *opt_dir_allow_private)
 {
-  (void)ignored;
   /* A stub routerinfo structure, with only its address fields set. */
   routerinfo_t *ri = NULL;
+  /* The expected return value for private addresses.
+   * Modified if DirAllowPrivateAddresses is 1. */
+  int private_rv = -1;
+
+  memset(&mock_options, 0, sizeof(or_options_t));
+  MOCK(get_options, mock_get_options);
+
+  if (opt_dir_allow_private) {
+    mock_options.DirAllowPrivateAddresses = 1;
+    private_rv = 0;
+  }
+
   CHECK_RI_ADDR("1.0.0.1", 0);
-  CHECK_RI_ADDR("10.0.0.1", -1);
+  CHECK_RI_ADDR("10.0.0.1", private_rv);
+
   CHECK_RI_ADDR6("2600::1", 0);
-  CHECK_RI_ADDR6("fe80::1", -1);
+  CHECK_RI_ADDR6("fe80::1", private_rv);
+
+  /* Null addresses */
+  /* IPv4 null fails, regardless of IPv6 */
+  CHECK_RI_ADDR("0.0.0.0", private_rv);
+  TEST_ROUTER_VALID_ADDRESS_HELPER("0.0.0.0", "::", private_rv);
+
+  /* IPv6 null succeeds, because IPv4 is not null */
+  CHECK_RI_ADDR6("::", 0);
+
+  /* Byte-zeroed null addresses */
+  /* IPv4 null fails, regardless of IPv6 */
+  {
+    ri = tor_malloc_zero(sizeof(routerinfo_t));
+    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, private_rv);
+    tor_free(ri);
+  }
+
+  /* IPv6 null succeeds, because IPv4 is not internal */
+  {
+    ri = tor_malloc_zero(sizeof(routerinfo_t));
+    ri->addr = 16777217; /* 1.0.0.1 */
+    tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, 0);
+    tor_free(ri);
+  }
+
  done:
   tor_free(ri);
+  UNMOCK(get_options);
 }
 
 #define ADDRESS_TEST(name, flags) \
   { #name, test_address_ ## name, flags, NULL, NULL }
+#define ADDRESS_TEST_STR_ARG(name, flags, str_arg) \
+  { #name "/" str_arg, test_address_ ## name, flags, &passthrough_setup, \
+    (void *)(str_arg) }
 
 struct testcase_t address_tests[] = {
   ADDRESS_TEST(udp_socket_trick_whitebox, TT_FORK),
@@ -1313,5 +1367,6 @@ struct testcase_t address_tests[] = {
   ADDRESS_TEST(tor_addr_in_same_network_family, 0),
   ADDRESS_TEST(tor_node_in_same_network_family, 0),
   ADDRESS_TEST(dirserv_router_addr_private, 0),
+  ADDRESS_TEST_STR_ARG(dirserv_router_addr_private, 0, "allow_private"),
   END_OF_TESTCASES
 };
