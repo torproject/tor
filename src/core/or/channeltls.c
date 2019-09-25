@@ -1027,6 +1027,16 @@ channel_tls_time_process_cell(cell_t *cell, channel_tls_t *chan, int *time,
 }
 #endif /* defined(KEEP_TIMING_STATS) */
 
+#ifdef KEEP_TIMING_STATS
+#define PROCESS_CELL(tp, cl, cn) STMT_BEGIN {                   \
+    ++num ## tp;                                                \
+    channel_tls_time_process_cell(cl, cn, & tp ## time ,            \
+                             channel_tls_process_ ## tp ## _cell);  \
+    } STMT_END
+#else /* !(defined(KEEP_TIMING_STATS)) */
+#define PROCESS_CELL(tp, cl, cn) channel_tls_process_ ## tp ## _cell(cl, cn)
+#endif /* defined(KEEP_TIMING_STATS) */
+
 /**
  * Handle an incoming cell on a channel_tls_t.
  *
@@ -1046,16 +1056,6 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
   channel_tls_t *chan;
   int handshaking;
 
-#ifdef KEEP_TIMING_STATS
-#define PROCESS_CELL(tp, cl, cn) STMT_BEGIN {                   \
-    ++num ## tp;                                                \
-    channel_tls_time_process_cell(cl, cn, & tp ## time ,            \
-                             channel_tls_process_ ## tp ## _cell);  \
-    } STMT_END
-#else /* !(defined(KEEP_TIMING_STATS)) */
-#define PROCESS_CELL(tp, cl, cn) channel_tls_process_ ## tp ## _cell(cl, cn)
-#endif /* defined(KEEP_TIMING_STATS) */
-
   tor_assert(cell);
   tor_assert(conn);
 
@@ -1073,7 +1073,8 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
     return;
 
   /* Reject all but VERSIONS and NETINFO when handshaking. */
-  /* (VERSIONS should actually be impossible; it's variable-length.) */
+  /* (VERSIONS actually indicates a protocol warning: it's variable-length,
+   * so if it reaches this function, we're on a v1 connection.) */
   if (handshaking && cell->command != CELL_VERSIONS &&
       cell->command != CELL_NETINFO) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
@@ -1106,7 +1107,15 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
       /* do nothing */
       break;
     case CELL_VERSIONS:
-      tor_fragile_assert();
+      /* A VERSIONS cell should always be a variable-length cell, and
+       * so should never reach this function (which handles constant-sized
+       * cells). But if the connection is using the (obsolete) v1 link
+       * protocol, all cells will be treated as constant-sized, and so
+       * it's possible we'll reach this code.
+       */
+      log_fn(LOG_PROTOCOL_WARN, LD_CHANNEL,
+             "Received unexpected VERSIONS cell on a channel using link "
+             "protocol %d; ignoring.", conn->link_proto);
       break;
     case CELL_NETINFO:
       ++stats_n_netinfo_cells_processed;
@@ -1319,6 +1328,8 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
       break;
   }
 }
+
+#undef PROCESS_CELL
 
 /**
  * Update channel marks after connection_or.c has changed an address.
