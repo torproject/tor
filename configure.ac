@@ -251,7 +251,7 @@ m4_define(MODULES, dirauth)
 dnl Directory Authority module.
 AC_ARG_ENABLE([module-dirauth],
               AS_HELP_STRING([--disable-module-dirauth],
-                             [Do not build tor with the dirauth module]),
+                             [Build tor without the Directory Authority module: tor can not run as an authority]),
               [], dnl Action if-given
               AC_DEFINE([HAVE_MODULE_DIRAUTH], [1],
                         [Compile with Directory Authority feature support]))
