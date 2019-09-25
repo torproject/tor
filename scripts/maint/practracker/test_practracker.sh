@@ -61,3 +61,9 @@ echo "ex1:"
 run_practracker --exceptions "${DATA}/ex1.txt" > "${TMPDIR}/ex1-received.txt"
 
 compare "${TMPDIR}/ex1-received.txt" "${DATA}/ex1-expected.txt"
+
+echo "ex1.overbroad:"
+
+run_practracker --exceptions "${DATA}/ex1.txt" --list-overbroad > "${TMPDIR}/ex1-overbroad-received.txt"
+
+compare "${TMPDIR}/ex1-overbroad-received.txt" "${DATA}/ex1-overbroad-expected.txt"
