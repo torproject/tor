@@ -1,2 +1,6 @@
   o Minor features (onion services):
-    - GETINFO dir/status-vote/current/consensus-microdesc dumps microdesc consensus. Closes ticket 31684.
+    - Implement a new GETINFO command to fetch microdescriptor consensus. Closes ticket 31684.
+
+  o Code simplification and refactoring (onion services):
+    - Create a helper function that can fetch network status or microdesc consensuses.
+

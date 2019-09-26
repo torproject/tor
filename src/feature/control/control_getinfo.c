@@ -325,38 +325,28 @@ getinfo_helper_current_time(control_connection_t *control_conn,
   return 0;
 }
 
-/**
- * Switch between microdesc vs networkstatus descriptor dumps
- * Assumes that question would be either:
- * - dir/status-vote/current/consensus-microdesc
- * or
- * - dir/status-vote/current/consensus
- */
+/** GETINFO helper for dumping different consensus flavors
+ * returns: 0 on success -1 on error. */
 STATIC int
-getinfo_helper_current_consensus(const char* question,
-                          char** answer,
-                          const char** errmsg)
+getinfo_helper_current_consensus(int flavor,
+                                 char** answer,
+                                 const char** errmsg)
 {
-  // Ensures question contains a request for
-  // ns or microdesc consensus
-  if (
-      strcmp(question, "dir/status-vote/current/consensus") &&
-      strcmp(question, "dir/status-vote/current/consensus-microdesc")) {
-    return 0;
+  const char *flavor_name = networkstatus_get_flavor_name(flavor);
+  if (!strcmp(flavor_name, "")) {
+    *errmsg = "Could not open cached consensus. "
+      "Make sure FetchUselessDescriptors is set to 1.";
+    return -1;
   }
-
-  const char* consensus_type = !strcmp(
-     question, "dir/status-vote/current/consensus-microdesc"
-  ) ? "microdesc" : "ns";
-
-  if (we_want_to_fetch_flavor(get_options(), FLAV_NS)) {
-    const cached_dir_t *consensus = dirserv_get_consensus(consensus_type);
+  if (we_want_to_fetch_flavor(get_options(), flavor)) {
+    /** Check from the cache */
+    const cached_dir_t *consensus = dirserv_get_consensus(flavor_name);
     if (consensus) {
       *answer = tor_strdup(consensus->dir);
     }
   }
   if (!*answer) { /* try loading it from disk */
-    tor_mmap_t *mapped = networkstatus_map_cached_consensus(consensus_type);
+    tor_mmap_t *mapped = networkstatus_map_cached_consensus(flavor_name);
     if (mapped) {
       *answer = tor_memdup_nulterm(mapped->data, mapped->size);
       tor_munmap_file(mapped);
@@ -364,8 +354,8 @@ getinfo_helper_current_consensus(const char* question,
     if (!*answer) { /* generate an error */
       *errmsg = "Could not open cached consensus. "
         "Make sure FetchUselessDescriptors is set to 1.";
-       return -1;
-   }
+      return -1;
+    }
   }
   return 0;
 }
@@ -622,16 +612,19 @@ getinfo_helper_dir(control_connection_t *control_conn,
     smartlist_free(descs);
   } else if (!strcmpstart(question, "dir/status/")) {
     *answer = tor_strdup("");
-  } else if (-1 == getinfo_helper_current_consensus(
-                                                    question,
-                                                    answer,
-                                                    errmsg))
-  {
-    /**
-     * answer is set by getinfo_helper_current_consensus
-     * if the question matches
-     */
-    return -1;
+  } else if (!strcmp(question, "dir/status-vote/current/consensus")) {
+    int consensus_result = getinfo_helper_current_consensus(FLAV_NS,
+                                                            answer, errmsg);
+    if (consensus_result == -1) {
+      return -1;
+    }
+  } else if (!strcmp(question,
+                     "dir/status-vote/current/consensus-microdesc")) {
+    int consensus_result = getinfo_helper_current_consensus(FLAV_MICRODESC,
+                                                            answer, errmsg);
+    if (consensus_result == -1) {
+        return -1;
+      }
   } else if (!strcmp(question, "network-status")) { /* v1 */
     static int network_status_warned = 0;
     if (!network_status_warned) {

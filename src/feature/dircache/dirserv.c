@@ -259,8 +259,9 @@ dirserv_set_cached_consensus_networkstatus(const char *networkstatus,
 
 /** Return the latest downloaded consensus networkstatus in encoded, signed,
  * optionally compressed format, suitable for sending to clients. */
-cached_dir_t *
-dirserv_get_consensus(const char *flavor_name)
+MOCK_IMPL(cached_dir_t *,
+          dirserv_get_consensus,
+          (const char *flavor_name))
 {
   if (!cached_consensuses)
     return NULL;
