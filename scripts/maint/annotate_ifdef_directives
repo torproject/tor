@@ -35,7 +35,41 @@ LINE_WIDTH=80
 class Problem(Exception):
     pass
 
+def close_parens_needed(expr):
+    """Return the number of left-parentheses needed to make 'expr'
+       balanced.
+    """
+    return expr.count("(") - expr.count(")")
+
+def truncate_expression(expr, new_width):
+    """Given a parenthesized C expression in 'expr', try to return a new
+       expression that is similar to 'expr', but no more than 'new_width'
+       characters long.
+
+       Try to return an expression with balanced parentheses.
+    """
+    if len(expr) <= new_width:
+        # The expression is already short enough.
+        return expr
+
+    ellipsis = "..."
+
+    # Start this at the minimum that we might truncate.
+    n_to_remove = len(expr) + len(ellipsis) - new_width
+
+    # Try removing characters, one by one, until we get something where
+    # re-balancing the parentheses still fits within the limit.
+    while n_to_remove < len(expr):
+        truncated = expr[:-n_to_remove] + ellipsis
+        truncated += ")" * close_parens_needed(truncated)
+        if len(truncated) <= new_width:
+            return truncated
+        n_to_remove += 1
+
+    return ellipsis
+
 def commented_line(fmt, argument, maxwidth=LINE_WIDTH):
+
     """
     Return fmt%argument, for use as a commented line.  If the line would
     be longer than maxwidth, truncate argument.
@@ -49,14 +83,10 @@ def commented_line(fmt, argument, maxwidth=LINE_WIDTH):
     if len(result) <= maxwidth:
         return result
     else:
-        # figure out how much we need to truncate by to fit the argument,
-        # plus an ellipsis.
-        ellipsis = "..."
-        result = fmt % (argument + ellipsis)
-        overrun = len(result) - maxwidth
-        truncated_argument = argument[:-overrun] + ellipsis
-
-        result = fmt % truncated_argument
+        # How long can we let the argument be?  Try filling in the
+        # format with an empty argument to find out.
+        max_arg_width = maxwidth - len(fmt % "")
+        result = fmt % truncate_expression(argument, max_arg_width)
         assert len(result) <= maxwidth
         return result
 
