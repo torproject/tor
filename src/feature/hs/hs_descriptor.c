@@ -1477,10 +1477,8 @@ decrypt_descriptor_cookie(const hs_descriptor_t *desc,
  */
 MOCK_IMPL(STATIC size_t,
 decrypt_desc_layer,(const hs_descriptor_t *desc,
-                    const uint8_t *encrypted_blob,
-                    size_t encrypted_blob_size,
                     const uint8_t *descriptor_cookie,
-                    int is_superencrypted_layer,
+                    bool is_superencrypted_layer,
                     char **decrypted_out))
 {
   uint8_t *decrypted = NULL;
@@ -1490,6 +1488,12 @@ decrypt_desc_layer,(const hs_descriptor_t *desc,
   uint8_t mac_key[DIGEST256_LEN], our_mac[DIGEST256_LEN];
   const uint8_t *salt, *encrypted, *desc_mac;
   size_t encrypted_len, result_len = 0;
+  const uint8_t *encrypted_blob = (is_superencrypted_layer)
+    ? desc->plaintext_data.superencrypted_blob
+    : desc->superencrypted_data.encrypted_blob;
+  size_t encrypted_blob_size = (is_superencrypted_layer)
+    ? desc->plaintext_data.superencrypted_blob_size
+    : desc->superencrypted_data.encrypted_blob_size;
 
   tor_assert(decrypted_out);
   tor_assert(desc);
@@ -1603,9 +1607,8 @@ desc_decrypt_superencrypted(const hs_descriptor_t *desc, char **decrypted_out)
   tor_assert(decrypted_out);
 
   superencrypted_len = decrypt_desc_layer(desc,
-                                 desc->plaintext_data.superencrypted_blob,
-                                 desc->plaintext_data.superencrypted_blob_size,
-                                 NULL, 1, &superencrypted_plaintext);
+                                          NULL,
+                                          true, &superencrypted_plaintext);
 
   if (!superencrypted_len) {
     log_warn(LD_REND, "Decrypting superencrypted desc failed.");
@@ -1654,9 +1657,9 @@ desc_decrypt_encrypted(const hs_descriptor_t *desc,
   }
 
   encrypted_len = decrypt_desc_layer(desc,
-                                 desc->superencrypted_data.encrypted_blob,
-                                 desc->superencrypted_data.encrypted_blob_size,
-                                 descriptor_cookie, 0, &encrypted_plaintext);
+                                     descriptor_cookie,
+                                     false, &encrypted_plaintext);
+
   if (!encrypted_len) {
     goto err;
   }

@@ -243,7 +243,7 @@ problem function-size /src/feature/hs/hs_common.c:hs_get_responsible_hsdirs() 10
 problem function-size /src/feature/hs/hs_config.c:config_service_v3() 107
 problem function-size /src/feature/hs/hs_config.c:config_generic_service() 138
 problem function-size /src/feature/hs/hs_descriptor.c:desc_encode_v3() 101
-problem function-size /src/feature/hs/hs_descriptor.c:decrypt_desc_layer() 105
+problem function-size /src/feature/hs/hs_descriptor.c:decrypt_desc_layer() 111
 problem function-size /src/feature/hs/hs_descriptor.c:decode_introduction_point() 122
 problem function-size /src/feature/hs/hs_descriptor.c:desc_decode_superencrypted_v3() 107
 problem function-size /src/feature/hs/hs_descriptor.c:desc_decode_encrypted_v3() 107
