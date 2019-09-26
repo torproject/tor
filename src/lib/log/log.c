@@ -628,6 +628,10 @@ void
 tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
 {
   va_list ap;
+
+  /* check that domain is composed of known domains and flags */
+  raw_assert((domain & (LD_ALL_DOMAINS|LD_ALL_FLAGS)) == domain);
+
   if (severity > log_global_min_severity_)
     return;
   va_start(ap,format);
@@ -927,7 +931,7 @@ set_log_severity_config(int loglevelMin, int loglevelMax,
   raw_assert(loglevelMax >= LOG_ERR && loglevelMax <= LOG_DEBUG);
   memset(severity_out, 0, sizeof(log_severity_list_t));
   for (i = loglevelMin; i >= loglevelMax; --i) {
-    severity_out->masks[SEVERITY_MASK_IDX(i)] = ~0u;
+    severity_out->masks[SEVERITY_MASK_IDX(i)] = LD_ALL_DOMAINS;
   }
 }
 
@@ -1421,7 +1425,7 @@ parse_log_severity_config(const char **cfg_ptr,
     const char *dash, *space;
     char *sev_lo, *sev_hi;
     int low, high, i;
-    log_domain_mask_t domains = ~0u;
+    log_domain_mask_t domains = LD_ALL_DOMAINS;
 
     if (*cfg == '[') {
       int err = 0;
@@ -1439,7 +1443,7 @@ parse_log_severity_config(const char **cfg_ptr,
       tor_free(domains_str);
       SMARTLIST_FOREACH_BEGIN(domains_list, const char *, domain) {
             if (!strcmp(domain, "*")) {
-              domains = ~0u;
+              domains = LD_ALL_DOMAINS;
             } else {
               log_domain_mask_t d;
               int negate=0;
@@ -1535,7 +1539,7 @@ switch_logs_debug(void)
   LOCK_LOGS();
   for (lf = logfiles; lf; lf=lf->next) {
     for (i = LOG_DEBUG; i >= LOG_ERR; --i)
-      lf->severities->masks[SEVERITY_MASK_IDX(i)] = ~0u;
+      lf->severities->masks[SEVERITY_MASK_IDX(i)] = LD_ALL_DOMAINS;
   }
   log_global_min_severity_ = get_min_log_level();
   UNLOCK_LOGS();
