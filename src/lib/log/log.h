@@ -117,10 +117,21 @@
 #define LD_BTRACK    (UINT64_C(1)<<28)
 /** Message-passing backend. */
 #define LD_MESG      (UINT64_C(1)<<29)
-#define N_LOGGING_DOMAINS 30
 
+/** The number of log domains. */
+#define N_LOGGING_DOMAINS 30
+/** The highest log domain */
+#define HIGHEST_RESERVED_LD_DOMAIN_ (UINT64_C(1)<<(N_LOGGING_DOMAINS - 1))
+/** All log domains. */
+#define LD_ALL_DOMAINS ((~(UINT64_C(0)))>>(64 - N_LOGGING_DOMAINS))
+
+/** The number of log flags. */
+#define N_LOGGING_FLAGS 3
 /** First bit that is reserved in log_domain_mask_t for non-domain flags. */
-#define LOWEST_RESERVED_LD_FLAG_ (UINT64_C(1)<<61)
+#define LOWEST_RESERVED_LD_FLAG_ (UINT64_C(1)<<(64 - N_LOGGING_FLAGS))
+/** All log flags. */
+#define LD_ALL_FLAGS ((~(UINT64_C(0)))<<(64 - N_LOGGING_FLAGS))
+
 #ifdef TOR_UNIT_TESTS
 /** This log message should not be intercepted by mock_saving_logv */
 #define LD_NO_MOCK (UINT64_C(1)<<61)
