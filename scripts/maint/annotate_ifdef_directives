@@ -26,7 +26,10 @@ import re
 # Any block with fewer than this many lines does not need annotations.
 LINE_OBVIOUSNESS_LIMIT = 4
 
-# Maximum line width.
+# Maximum line width.  This includes a terminating newline character.
+#
+# (This is the maximum before encoding, so that if the the operating system
+# uses multiple characers to encode newline, that's still okay.)
 LINE_WIDTH=80
 
 class Problem(Exception):
@@ -38,7 +41,10 @@ def commented_line(fmt, argument, maxwidth=LINE_WIDTH):
     be longer than maxwidth, truncate argument.
 
     Requires that fmt%"..." will fit into maxwidth characters.
+
+    Requires that fmt ends with a newline.
     """
+    assert fmt.endswith("\n")
     result = fmt % argument
     if len(result) <= maxwidth:
         return result
