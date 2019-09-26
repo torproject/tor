@@ -5,14 +5,12 @@ cache:
 
 compiler:
   - gcc
-  - clang
 
 os:
   - linux
-  - osx
 
-## The build matrix in the following stanza expands into builds for each
-## OS and compiler.
+## We don't use the build matrix cross-product, because it makes too many jobs
+## Instead, we list each job under matrix: include:
 env:
   global:
     ## The Travis CI environment allows us two cores, so let's use both.
@@ -23,15 +21,17 @@ env:
     ## We turn off asciidoc by default, because it's slow
     - ASCIIDOC_OPTIONS="--disable-asciidoc"
   matrix:
-    ## We want to use each build option at least once
-    ##
-    ## We don't list default variable values, because we set the defaults
-    ## in global (or the default is unset)
+    ## This matrix entry is required, but it doesn't actually create any jobs
     -
 
 matrix:
-  ## include creates builds with gcc, linux
+  ## include creates builds with gcc, linux, unless we override those defaults
   include:
+    ## gcc is the default compiler for most jobs, so we want a clang Linux job
+    - compiler: clang
+    ## clang is the default macOS compiler, so we use it for the macOS job
+    - compiler: clang
+      os: osx
     ## We include a single coverage build with the best options for coverage
     - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
     ## We only want to check these build option combinations once
@@ -52,18 +52,11 @@ matrix:
   ## https://github.com/travis-ci/travis-ci/issues/1696
   # fast_finish: true
 
-  ## Careful! We use global envs, which makes it hard to exclude or
-  ## allow failures by env:
+  ## Careful! We use global envs, which makes it hard to allow failures by env:
   ## https://docs.travis-ci.com/user/customizing-the-build#matching-jobs-with-allow_failures
-  exclude:
-    ## gcc on OSX is less useful, because the default compiler is clang.
-    - compiler: gcc
-      os: osx
-    ## gcc on Linux with no env is redundant, because all the custom builds use
-    ## gcc on Linux
-    - compiler: gcc
-      os: linux
-      env:
+  # allow_failures:
+  #   - compiler: gcc
+  #     os: linux
 
 ## (Linux only) Use the latest Linux image (Ubuntu Trusty)
 dist: trusty
