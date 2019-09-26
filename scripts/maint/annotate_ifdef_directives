@@ -274,14 +274,16 @@ def translate(f_in, f_out):
     if len(stack) or cur_level != whole_file:
         raise Problem("Missing #endif")
 
-import sys,os
+if __name__ == '__main__':
 
-if sys.argv[1] == "--self-test":
-    import doctest
-    doctest.testmod()
-    sys.exit(0)
+    import sys,os
 
-for fn in sys.argv[1:]:
-    with open(fn+"_OUT", 'w') as output_file:
-        translate(open(fn, 'r'), output_file)
-    os.rename(fn+"_OUT", fn)
+    if sys.argv[1] == "--self-test":
+        import doctest
+        doctest.testmod()
+        sys.exit(0)
+
+    for fn in sys.argv[1:]:
+        with open(fn+"_OUT", 'w') as output_file:
+            translate(open(fn, 'r'), output_file)
+        os.rename(fn+"_OUT", fn)
