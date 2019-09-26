@@ -1,0 +1,3 @@
+  o Testing:
+    - Remove some redundant Travis CI jobs, to speed up CI.
+      Closes ticket 31859.

@@ -27,8 +27,6 @@ env:
 matrix:
   ## include creates builds with gcc, linux, unless we override those defaults
   include:
-    ## gcc is the default compiler for most jobs, so we want a clang Linux job
-    - compiler: clang
     ## clang is the default macOS compiler, so we use it for the macOS job
     - compiler: clang
       os: osx
