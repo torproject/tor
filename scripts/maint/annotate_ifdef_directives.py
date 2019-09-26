@@ -144,6 +144,18 @@ def commented_line(fmt, argument, maxwidth=LINE_WIDTH):
     >>> commented_line("#endif /* %s */\n", "((1+2) && defined(FOO))", 32)
     '#endif /* ((1+2) && defi...) */\n'
 
+
+    The default line limit is 80 characters including the newline:
+
+    >>> long_argument = "long " * 100
+    >>> long_line = commented_line("#endif /* %s */\n", long_argument)
+    >>> len(long_line)
+    80
+
+    >>> long_line[:40]
+    '#endif /* long long long long long long '
+    >>> long_line[40:]
+    'long long long long long long lon... */\n'
     """
     assert fmt.endswith("\n")
     result = fmt % argument
