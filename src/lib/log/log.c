@@ -584,8 +584,7 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
   /* check that severity is sane.  Overrunning the masks array leads to
    * interesting and hard to diagnose effects */
   raw_assert(severity >= LOG_ERR && severity <= LOG_DEBUG);
-  /* check that we've initialised the log mutex before we try to lock it */
-  raw_assert(log_mutex_initialized);
+
   LOCK_LOGS();
 
   if ((! (domain & LD_NOCB)) && pending_cb_messages
@@ -866,9 +865,6 @@ logs_close_sigsafe(void)
  * logfiles (it is probably present, but it might not be due to thread
  * racing issues). After this function is called, the caller shouldn't
  * refer to <b>victim</b> anymore.
- *
- * Long-term, we need to do something about races in the log subsystem
- * in general. See bug 222 for more details.
  */
 static void
 delete_log(logfile_t *victim)
