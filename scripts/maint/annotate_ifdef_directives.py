@@ -156,6 +156,22 @@ def commented_line(fmt, argument, maxwidth=LINE_WIDTH):
     '#endif /* long long long long long long '
     >>> long_line[40:]
     'long long long long long long lon... */\n'
+
+    If a line works out to being 80 characters naturally, it isn't truncated,
+    and no ellipsis is added.
+
+    >>> medium_argument = "a"*66
+    >>> medium_line = commented_line("#endif /* %s */\n", medium_argument)
+    >>> len(medium_line)
+    80
+    >>> "..." in medium_line
+    False
+    >>> medium_line[:40]
+    '#endif /* aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    >>> medium_line[40:]
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa */\n'
+
+
     """
     assert fmt.endswith("\n")
     result = fmt % argument
