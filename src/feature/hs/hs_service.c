@@ -2325,8 +2325,7 @@ intro_point_should_expire(const hs_service_intro_point_t *ip,
 }
 
 /* Return if we should remove the intro point for the service defined in
- * <b>ip</b>.
- */
+ * <b>ip</b>. */
 static inline bool
 should_remove_intro_point(hs_service_intro_point_t *ip)
 {
