@@ -478,7 +478,7 @@ version:
 
 .PHONY: autostyle-ifdefs
 autostyle-ifdefs:
-	$(PYTHON) scripts/maint/annotate_ifdef_directives $(OWNED_TOR_C_FILES)
+	$(PYTHON) scripts/maint/annotate_ifdef_directives.py $(OWNED_TOR_C_FILES)
 
 .PHONY: autostyle-ifdefs
 autostyle-operators:

@@ -376,7 +376,7 @@ switch_id(const char *user, const unsigned flags)
 #endif /* defined(__linux__) && defined(HAVE_SYS_PRCTL_H) && ... */
   return 0;
 
-#else /* !(!defined(_WIN32)) */
+#else /* defined(_WIN32) */
   (void)user;
   (void)flags;
 

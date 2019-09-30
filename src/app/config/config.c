@@ -1455,7 +1455,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
                       "on this OS/with this build.");
     goto rollback;
   }
-#else /* !(!defined(HAVE_SYS_UN_H)) */
+#else /* defined(HAVE_SYS_UN_H) */
   if (options->ControlSocketsGroupWritable && !options->ControlSocket) {
     *msg = tor_strdup("Setting ControlSocketGroupWritable without setting"
                       "a ControlSocket makes no sense.");
@@ -5101,7 +5101,7 @@ find_torrc_filename(config_line_t *cmd_arg,
       } else {
         fname = dflt ? tor_strdup(dflt) : NULL;
       }
-#else /* !(!defined(_WIN32)) */
+#else /* defined(_WIN32) */
       fname = dflt ? tor_strdup(dflt) : NULL;
 #endif /* !defined(_WIN32) */
     }
@@ -8425,7 +8425,7 @@ init_cookie_authentication(const char *fname, const char *header,
       log_warn(LD_FS,"Unable to make %s group-readable.", escaped(fname));
     }
   }
-#else /* !(!defined(_WIN32)) */
+#else /* defined(_WIN32) */
   (void) group_readable;
 #endif /* !defined(_WIN32) */
 

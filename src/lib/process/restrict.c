@@ -214,7 +214,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
     return -1;
   }
   limit = MAX_CONNECTIONS;
-#else /* !(!defined(HAVE_GETRLIMIT)) */
+#else /* defined(HAVE_GETRLIMIT) */
   struct rlimit rlim;
 
   if (getrlimit(RLIMIT_NOFILE, &rlim) != 0) {
