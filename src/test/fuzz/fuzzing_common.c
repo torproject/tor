@@ -167,7 +167,7 @@ main(int argc, char **argv)
     memset(&s, 0, sizeof(s));
     set_log_severity_config(loglevel, LOG_ERR, &s);
     /* ALWAYS log bug warnings. */
-    s.masks[LOG_WARN-LOG_ERR] |= LD_BUG;
+    s.masks[SEVERITY_MASK_IDX(LOG_WARN)] |= LD_BUG;
     add_stream_log(&s, "", fileno(stdout));
   }
 

@@ -54,9 +54,9 @@ setup_log_callback(void)
 {
   log_severity_list_t lst;
   memset(&lst, 0, sizeof(lst));
-  lst.masks[LOG_ERR - LOG_ERR] = ~0;
-  lst.masks[LOG_WARN - LOG_ERR] = ~0;
-  lst.masks[LOG_NOTICE - LOG_ERR] = ~0;
+  lst.masks[SEVERITY_MASK_IDX(LOG_ERR)] = ~0;
+  lst.masks[SEVERITY_MASK_IDX(LOG_WARN)] = ~0;
+  lst.masks[SEVERITY_MASK_IDX(LOG_NOTICE)] = ~0;
   add_callback_log(&lst, log_cback);
   mark_logs_temp();
 }
