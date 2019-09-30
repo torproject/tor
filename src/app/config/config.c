@@ -2499,6 +2499,9 @@ static const struct {
     .command=CMD_IMMEDIATE },
   { .name="--nt-service" },
   { .name="-nt-service" },
+  { .name="--dbg-dump-subsystem-list",
+    .command=CMD_IMMEDIATE,
+    .quiet=QUIET_HUSH },
   { .name=NULL },
 };
 
@@ -4602,6 +4605,10 @@ options_init_from_torrc(int argc, char **argv)
   if (config_line_find(cmdline_only_options, "--list-deprecated-options")) {
     /* For validating whether what we have deprecated really exists. */
     list_deprecated_options();
+    return 1;
+  }
+  if (config_line_find(cmdline_only_options, "--dbg-dump-subsystem-list")) {
+    subsystems_dump_list();
     return 1;
   }
 
