@@ -56,7 +56,6 @@
 
 #define EXPOSE_CLEAN_BACKTRACE
 #include "lib/err/backtrace.h"
-#include "lib/err/torerr.h"
 
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION) && \
