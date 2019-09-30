@@ -1197,7 +1197,11 @@ init_protocol_warning_severity_level(void)
 static void
 cleanup_protocol_warning_severity_level(void)
 {
-   atomic_counter_destroy(&protocol_warning_severity_level);
+  /* Destroying a locked mutex is undefined behaviour. This mutex may be
+   * locked, because multiple threads can access it. But we need to destroy
+   * it, otherwise re-initialisation will trigger undefined behaviour.
+   * See #31735 for details. */
+  atomic_counter_destroy(&protocol_warning_severity_level);
 }
 
 /** Add the default directory authorities directly into the trusted dir list,
