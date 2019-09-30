@@ -48,7 +48,7 @@ void tor_free_(void *mem);
     raw_free(*tor_free__tmpvar);                               \
     *tor_free__tmpvar=NULL;                                    \
   STMT_END
-#else /* !(defined(__GNUC__)) */
+#else /* !defined(__GNUC__) */
 #define tor_free(p) STMT_BEGIN                                 \
   raw_free(p);                                                 \
   (p)=NULL;                                                    \

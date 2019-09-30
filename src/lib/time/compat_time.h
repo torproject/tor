@@ -259,7 +259,7 @@ void monotime_coarse_get(monotime_coarse_t *out);
 uint64_t monotime_coarse_absolute_nsec(void);
 uint64_t monotime_coarse_absolute_usec(void);
 uint64_t monotime_coarse_absolute_msec(void);
-#else /* !(defined(MONOTIME_COARSE_FN_IS_DIFFERENT)) */
+#else /* !defined(MONOTIME_COARSE_FN_IS_DIFFERENT) */
 #define monotime_coarse_get monotime_get
 #define monotime_coarse_absolute_nsec monotime_absolute_nsec
 #define monotime_coarse_absolute_usec monotime_absolute_usec
@@ -304,7 +304,7 @@ void monotime_coarse_zero(monotime_coarse_t *out);
 int monotime_coarse_is_zero(const monotime_coarse_t *val);
 void monotime_coarse_add_msec(monotime_coarse_t *out,
                               const monotime_coarse_t *val, uint32_t msec);
-#else /* !(defined(MONOTIME_COARSE_TYPE_IS_DIFFERENT)) */
+#else /* !defined(MONOTIME_COARSE_TYPE_IS_DIFFERENT) */
 #define monotime_coarse_diff_nsec monotime_diff_nsec
 #define monotime_coarse_diff_usec monotime_diff_usec
 #define monotime_coarse_diff_msec monotime_diff_msec

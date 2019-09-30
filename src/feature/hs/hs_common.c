@@ -86,7 +86,7 @@ set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)
   return 0;
 }
 
-#else /* !(defined(HAVE_SYS_UN_H)) */
+#else /* !defined(HAVE_SYS_UN_H) */
 
 static int
 set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)

@@ -204,7 +204,7 @@ crypto_openssl_early_init(void)
                      OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
                      OPENSSL_INIT_ADD_ALL_CIPHERS |
                      OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
-#else /* !(defined(OPENSSL_1_1_API)) */
+#else /* !defined(OPENSSL_1_1_API) */
     ERR_load_crypto_strings();
     OpenSSL_add_all_algorithms();
 #endif /* defined(OPENSSL_1_1_API) */

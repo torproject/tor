@@ -38,7 +38,7 @@ uint32_t dirserv_router_get_status(const routerinfo_t *router,
                                    int severity);
 void dirserv_set_node_flags_from_authoritative_status(node_t *node,
                                                       uint32_t authstatus);
-#else /* !(defined(HAVE_MODULE_DIRAUTH)) */
+#else /* !defined(HAVE_MODULE_DIRAUTH) */
 static inline int
 dirserv_load_fingerprint_file(void)
 {

@@ -42,7 +42,7 @@ int tor_getaddrinfo(const char *name, const char *servname,
                         struct addrinfo **res);
 void tor_freeaddrinfo(struct addrinfo *addrinfo);
 void tor_free_getaddrinfo_cache(void);
-#else /* !(defined(USE_SANDBOX_GETADDRINFO)) */
+#else /* !defined(USE_SANDBOX_GETADDRINFO) */
 #define tor_getaddrinfo(name, servname, hints, res)  \
   getaddrinfo((name),(servname), (hints),(res))
 #define tor_add_addrinfo(name) \

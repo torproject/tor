@@ -93,7 +93,7 @@ tor_zstd_get_version_str(void)
                           ZSTD_versionNumber());
 
   return version_str;
-#else /* !(defined(HAVE_ZSTD)) */
+#else /* !defined(HAVE_ZSTD) */
   return NULL;
 #endif /* defined(HAVE_ZSTD) */
 }
@@ -317,7 +317,7 @@ tor_zstd_compress_new(int compress,
   tor_free(result);
   return NULL;
   // LCOV_EXCL_STOP
-#else /* !(defined(HAVE_ZSTD)) */
+#else /* !defined(HAVE_ZSTD) */
   (void)compress;
   (void)method;
   (void)level;
@@ -454,7 +454,7 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
       return TOR_COMPRESS_OK;
   }
 
-#else /* !(defined(HAVE_ZSTD)) */
+#else /* !defined(HAVE_ZSTD) */
   (void)state;
   (void)out;
   (void)out_len;

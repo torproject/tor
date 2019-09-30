@@ -149,7 +149,7 @@ struct crypto_xof_t {
    * outside the tests yet.
    */
   EVP_MD_CTX *ctx;
-#else /* !(defined(OPENSSL_HAS_SHAKE3_EVP)) */
+#else /* !defined(OPENSSL_HAS_SHAKE3_EVP) */
   keccak_state s;
 #endif /* defined(OPENSSL_HAS_SHAKE3_EVP) */
 };
@@ -169,7 +169,7 @@ crypto_xof_new(void)
   tor_assert(xof->ctx);
   int r = EVP_DigestInit(xof->ctx, EVP_shake256());
   tor_assert(r == 1);
-#else /* !(defined(OPENSSL_HAS_SHAKE256)) */
+#else /* !defined(OPENSSL_HAS_SHAKE256) */
   keccak_xof_init(&xof->s, 256);
 #endif /* defined(OPENSSL_HAS_SHAKE256) */
   return xof;
@@ -236,7 +236,7 @@ crypto_xof(uint8_t *output, size_t output_len,
   r = EVP_DigestFinalXOF(ctx, output, output_len);
   tor_assert(r == 1);
   EVP_MD_CTX_free(ctx);
-#else /* !(defined(OPENSSL_HAS_SHA3)) */
+#else /* !defined(OPENSSL_HAS_SHA3) */
   crypto_xof_t *xof = crypto_xof_new();
   crypto_xof_add_bytes(xof, input, input_len);
   crypto_xof_squeeze_bytes(xof, output, output_len);

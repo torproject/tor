@@ -444,7 +444,7 @@ libc_uses_openat_for_everything(void)
     return 1;
   else
     return 0;
-#else /* !(defined(CHECK_LIBC_VERSION)) */
+#else /* !defined(CHECK_LIBC_VERSION) */
   return 0;
 #endif /* defined(CHECK_LIBC_VERSION) */
 }

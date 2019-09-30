@@ -532,7 +532,7 @@ logfile_deliver(logfile_t *lf, const char *buf, size_t msg_len,
     if (m != msg_after_prefix) {
       tor_free(m);
     }
-#else /* !(defined(MAXLINE)) */
+#else /* !defined(MAXLINE) */
     /* We have syslog but not MAXLINE.  That's promising! */
     syslog(severity, "%s", msg_after_prefix);
 #endif /* defined(MAXLINE) */

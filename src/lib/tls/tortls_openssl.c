@@ -657,7 +657,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
     if (r < 0)
       goto error;
   }
-#else /* !(defined(SSL_CTX_set1_groups_list) || defined(HAVE_SSL_CTX_SET1... */
+#else /* !(defined(SSL_CTX_set1_groups_list) || defined(HAVE_SSL_CTX_SE...)) */
   if (! is_client) {
     int nid;
     EC_KEY *ec_key;
@@ -673,7 +673,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
       SSL_CTX_set_tmp_ecdh(result->ctx, ec_key);
     EC_KEY_free(ec_key);
   }
-#endif /* defined(SSL_CTX_set1_groups_list) || defined(HAVE_SSL_CTX_SET1_... */
+#endif /* defined(SSL_CTX_set1_groups_list) || defined(HAVE_SSL_CTX_SET1...) */
   SSL_CTX_set_verify(result->ctx, SSL_VERIFY_PEER,
                      always_accept_verify_cb);
   /* let us realloc bufs that we're writing from */
@@ -764,7 +764,7 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
       tor_assert((SSL_CIPHER_get_id(c) & 0xffff) == cipher);
     return c != NULL;
   }
-#else /* !(defined(HAVE_SSL_CIPHER_FIND)) */
+#else /* !defined(HAVE_SSL_CIPHER_FIND) */
 
 # if defined(HAVE_STRUCT_SSL_METHOD_ST_GET_CIPHER_BY_CHAR)
   if (m && m->get_cipher_by_char) {

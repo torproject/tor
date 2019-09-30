@@ -1923,7 +1923,7 @@ test_crypto_curve25519_impl(void *arg)
                                 "e0544770bc7de853b38f9100489e3e79";
   const char e1e2k_expected[] = "cd6e8269104eb5aaee886bd2071fba88"
                                 "bd13861475516bc2cd2b6e005e805064";
-#else /* !(defined(SLOW_CURVE25519_TEST)) */
+#else /* !defined(SLOW_CURVE25519_TEST) */
   const int loop_max=200;
   const char e1_expected[]    = "bc7112cde03f97ef7008cad1bdc56be3"
                                 "c6a1037d74cceb3712e9206871dcf654";

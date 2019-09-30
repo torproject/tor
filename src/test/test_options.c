@@ -1172,7 +1172,7 @@ test_options_validate__transproxy(void *ignored)
   // Assert that a test has run for some TransProxyType
   tt_assert(tdata);
 
-#else /* !(defined(USE_TRANSPARENT)) */
+#else /* !defined(USE_TRANSPARENT) */
   tdata = get_options_test_data("TransPort 127.0.0.1:555\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);

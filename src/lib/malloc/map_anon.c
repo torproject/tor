@@ -122,7 +122,7 @@ nodump_mem(void *mem, size_t sz)
                         NULL);
     return -1;
   }
-#else /* !(defined(MADV_DONTDUMP)) */
+#else /* !defined(MADV_DONTDUMP) */
   (void) mem;
   (void) sz;
   return 0;

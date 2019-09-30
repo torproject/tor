@@ -110,7 +110,7 @@ int sr_init(int save_to_disk);
 void sr_save_and_cleanup(void);
 void sr_act_post_consensus(const networkstatus_t *consensus);
 
-#else /* !(defined(HAVE_MODULE_DIRAUTH)) */
+#else /* !defined(HAVE_MODULE_DIRAUTH) */
 
 static inline int
 sr_init(int save_to_disk)

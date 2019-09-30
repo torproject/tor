@@ -1192,7 +1192,7 @@ make_win32_socket_exclusive(tor_socket_t sock)
     return -1;
   }
   return 0;
-#else /* !(defined(SO_EXCLUSIVEADDRUSE)) */
+#else /* !defined(SO_EXCLUSIVEADDRUSE) */
   (void) sock;
   return 0;
 #endif /* defined(SO_EXCLUSIVEADDRUSE) */
@@ -3957,7 +3957,7 @@ update_send_buffer_size(tor_socket_t sock)
       &isb, sizeof(isb), &bytesReturned, NULL, NULL)) {
     setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&isb, sizeof(isb));
   }
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
   (void) sock;
 #endif /* defined(_WIN32) */
 }

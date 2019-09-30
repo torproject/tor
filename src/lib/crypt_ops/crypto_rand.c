@@ -248,7 +248,7 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
   (void)out;
   (void)out_len;
   return -1;
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
   static const char *filenames[] = {
     "/dev/srandom", "/dev/urandom", "/dev/random", NULL
   };
@@ -520,7 +520,7 @@ crypto_rand_unmocked(char *to, size_t n)
 
 #undef BUFLEN
   }
-#else /* !(defined(ENABLE_NSS)) */
+#else /* !defined(ENABLE_NSS) */
   int r = RAND_bytes((unsigned char*)to, (int)n);
   /* We consider a PRNG failure non-survivable. Let's assert so that we get a
    * stack trace about where it happened.

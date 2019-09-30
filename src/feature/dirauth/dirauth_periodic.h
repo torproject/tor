@@ -12,7 +12,7 @@
 void dirauth_register_periodic_events(void);
 void reschedule_dirvote(const or_options_t *options);
 
-#else /* !(defined(HAVE_MODULE_DIRAUTH)) */
+#else /* !defined(HAVE_MODULE_DIRAUTH) */
 
 static inline void
 reschedule_dirvote(const or_options_t *options)

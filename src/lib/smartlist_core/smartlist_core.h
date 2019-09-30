@@ -77,7 +77,7 @@ static inline void smartlist_set(smartlist_t *sl, int idx, void *val) {
   raw_assert(sl->num_used > idx);
   sl->list[idx] = val;
 }
-#else /* !(defined(DEBUG_SMARTLIST)) */
+#else /* !defined(DEBUG_SMARTLIST) */
 #define smartlist_len(sl) ((sl)->num_used)
 #define smartlist_get(sl, idx) ((sl)->list[idx])
 #define smartlist_set(sl, idx, val) ((sl)->list[idx] = (val))

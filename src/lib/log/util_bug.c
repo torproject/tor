@@ -64,7 +64,7 @@ tor_set_failed_assertion_callback(void (*fn)(void))
 {
   failed_assertion_cb = fn;
 }
-#else /* !(defined(TOR_UNIT_TESTS)) */
+#else /* !defined(TOR_UNIT_TESTS) */
 #define capturing_bugs() (0)
 #define add_captured_bug(s) do { } while (0)
 #endif /* defined(TOR_UNIT_TESTS) */

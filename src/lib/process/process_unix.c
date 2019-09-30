@@ -199,7 +199,7 @@ process_unix_exec(process_t *process)
                "Cannot find maximum file descriptor, assuming: %d", max_fd);
     }
   }
-#else /* !(defined(_SC_OPEN_MAX)) */
+#else /* !defined(_SC_OPEN_MAX) */
   max_fd = DEFAULT_MAX_FD;
 #endif /* defined(_SC_OPEN_MAX) */
 

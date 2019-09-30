@@ -22,7 +22,7 @@
 #include <windows.h>
 #define socket_errno() (WSAGetLastError())
 #define SOCKET_EPROTONOSUPPORT WSAEPROTONOSUPPORT
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
 #define closesocket(x) close(x)
 #define socket_errno() (errno)
 #define SOCKET_EPROTONOSUPPORT EPROTONOSUPPORT

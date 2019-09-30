@@ -303,7 +303,7 @@ pathbias_is_new_circ_attempt(origin_circuit_t *circ)
   return circ->cpath &&
          circ->cpath->next != circ->cpath &&
          circ->cpath->next->state == CPATH_STATE_AWAITING_KEYS;
-#else /* !(defined(N2N_TAGGING_IS_POSSIBLE)) */
+#else /* !defined(N2N_TAGGING_IS_POSSIBLE) */
   /* If tagging attacks are no longer possible, we probably want to
    * count bias from the first hop. However, one could argue that
    * timing-based tagging is still more useful than per-hop failure.

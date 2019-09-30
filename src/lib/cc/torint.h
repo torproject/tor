@@ -96,7 +96,7 @@ typedef int32_t ssize_t;
 #  else
 #    define TOR_PRIuSZ PRIu32
 #  endif
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
 #  define TOR_PRIuSZ "zu"
 #endif /* defined(_WIN32) */
 
@@ -106,7 +106,7 @@ typedef int32_t ssize_t;
 #  else
 #    define TOR_PRIdSZ PRId32
 #  endif
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
 #  define TOR_PRIdSZ "zd"
 #endif /* defined(_WIN32) */
 

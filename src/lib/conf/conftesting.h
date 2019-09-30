@@ -73,7 +73,7 @@ typedef union {
 #define DUMMY_TYPECHECK_INSTANCE(tp)            \
   static tp tp ## _dummy
 
-#else /* !(defined(TOR_UNIT_TESTS)) */
+#else /* !defined(TOR_UNIT_TESTS) */
 
 #define CONF_TEST_MEMBERS(tp, conftype, member)
 /* Repeatedly declarable incomplete struct to absorb redundant semicolons */

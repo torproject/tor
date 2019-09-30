@@ -82,7 +82,7 @@
 #    define ENABLE_GCC_WARNING(warningopt) \
          PRAGMA_DIAGNOSTIC_(warning PRAGMA_JOIN_STRINGIFY_(-W,warningopt))
 #endif /* defined(__clang__) || GCC_VERSION >= 406 */
-#else /* !(defined(__GNUC__)) */
+#else /* !defined(__GNUC__) */
 /* not gcc at all */
 # define DISABLE_GCC_WARNING(warning)
 # define ENABLE_GCC_WARNING(warning)

@@ -468,7 +468,7 @@ pk_generate_internal(int bits)
   *idxp += crypto_rand_int_range(1,3);
   *idxp %= n_pregen;
   return crypto_pk_dup_key(pregen_array[*idxp]);
-#else /* !(defined(USE_PREGENERATED_RSA_KEYS)) */
+#else /* !defined(USE_PREGENERATED_RSA_KEYS) */
   crypto_pk_t *result;
   int res;
   result = crypto_pk_new();

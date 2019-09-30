@@ -123,7 +123,7 @@ ssize_t compat_getdelim_(char **lineptr, size_t *n, int delim, FILE *stream);
  */
 #define tor_getdelim(lineptr, n, delim, stream) \
   getdelim((lineptr), (n), (delim), (stream))
-#else /* !(defined(HAVE_GETDELIM)) */
+#else /* !defined(HAVE_GETDELIM) */
 #define tor_getdelim(lineptr, n, delim, stream) \
   compat_getdelim_((lineptr), (n), (delim), (stream))
 #endif /* defined(HAVE_GETDELIM) */
@@ -137,7 +137,7 @@ ssize_t compat_getdelim_(char **lineptr, size_t *n, int delim, FILE *stream);
  */
 #define tor_getline(lineptr, n, stream) \
   getline((lineptr), (n), (stream))
-#else /* !(defined(HAVE_GETLINE)) */
+#else /* !defined(HAVE_GETLINE) */
 #define tor_getline(lineptr, n, stream) \
   tor_getdelim((lineptr), (n), '\n', (stream))
 #endif /* defined(HAVE_GETLINE) */

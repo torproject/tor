@@ -22,7 +22,7 @@ test_protover_parse(void *arg)
   tt_skip();
  done:
   ;
-#else /* !(defined(HAVE_RUST)) */
+#else /* !defined(HAVE_RUST) */
   char *re_encoded = NULL;
 
   const char *orig = "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900";

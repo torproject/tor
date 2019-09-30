@@ -107,7 +107,7 @@ typedef struct atomic_counter_t {
   atomic_size_t val;
 } atomic_counter_t;
 #define ATOMIC_LINKAGE static
-#else /* !(defined(HAVE_WORKING_STDATOMIC)) */
+#else /* !defined(HAVE_WORKING_STDATOMIC) */
 typedef struct atomic_counter_t {
   tor_mutex_t mutex;
   size_t val;
@@ -172,7 +172,7 @@ atomic_counter_exchange(atomic_counter_t *counter, size_t newval)
   return atomic_exchange(&counter->val, newval);
 }
 
-#else /* !(defined(HAVE_WORKING_STDATOMIC)) */
+#else /* !defined(HAVE_WORKING_STDATOMIC) */
 #endif /* defined(HAVE_WORKING_STDATOMIC) */
 
 #endif /* !defined(TOR_COMPAT_THREADS_H) */

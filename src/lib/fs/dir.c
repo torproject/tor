@@ -347,7 +347,7 @@ tor_listdir, (const char *dirname))
   }
   FindClose(handle);
   tor_free(pattern);
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
   const char *prot_dname = sandbox_intern_string(dirname);
   DIR *d;
   struct dirent *de;

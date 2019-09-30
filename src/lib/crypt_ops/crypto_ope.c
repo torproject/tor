@@ -57,7 +57,7 @@ ope_val_from_le(ope_val_t x)
     ((x) >> 8) |
     (((x)&0xff) << 8);
 }
-#else /* !(defined(WORDS_BIGENDIAN)) */
+#else /* !defined(WORDS_BIGENDIAN) */
 #define ope_val_from_le(x) (x)
 #endif /* defined(WORDS_BIGENDIAN) */
 

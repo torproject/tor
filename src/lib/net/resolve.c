@@ -118,7 +118,7 @@ tor_addr_lookup_host_getaddrinfo(const char *name,
   return (err == EAI_AGAIN) ? 1 : -1;
 }
 
-#else /* !(defined(HAVE_GETADDRINFO)) */
+#else /* !defined(HAVE_GETADDRINFO) */
 
 /* Host lookup helper for tor_addr_lookup(), which calls getaddrinfo().
  * Used when gethostbyname() is not available on this system.
@@ -506,7 +506,7 @@ tor_make_getaddrinfo_cache_active(void)
 {
   sandbox_getaddrinfo_is_active = 1;
 }
-#else /* !(defined(USE_SANDBOX_GETADDRINFO)) */
+#else /* !defined(USE_SANDBOX_GETADDRINFO) */
 void
 sandbox_disable_getaddrinfo_cache(void)
 {

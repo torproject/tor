@@ -138,7 +138,7 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
   return fuzz_main(Data, Size);
 }
 
-#else /* !(defined(LLVM_FUZZ)) */
+#else /* !defined(LLVM_FUZZ) */
 
 int
 main(int argc, char **argv)

@@ -129,7 +129,7 @@ tor_ntohll(uint64_t a)
 {
   return a;
 }
-#else /* !(defined(WORDS_BIGENDIAN)) */
+#else /* !defined(WORDS_BIGENDIAN) */
 static inline uint16_t
 tor_htons(uint16_t a)
 {

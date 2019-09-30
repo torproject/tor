@@ -34,7 +34,7 @@
 #include "lib/trace/debug.h"
 #endif
 
-#else /* !(defined(TOR_EVENT_TRACING_ENABLED)) */
+#else /* !defined(TOR_EVENT_TRACING_ENABLED) */
 
 /* Reaching this point, we NOP every event declaration because event tracing
  * is not been enabled at compile time. */

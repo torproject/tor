@@ -267,7 +267,7 @@ select_scheduler(void)
           log_notice(LD_SCHED, "Scheduler type KIST has been disabled by "
                                "the consensus or no kernel support.");
         }
-#else /* !(defined(HAVE_KIST_SUPPORT)) */
+#else /* !defined(HAVE_KIST_SUPPORT) */
         log_info(LD_SCHED, "Scheduler type KIST not built in");
 #endif /* defined(HAVE_KIST_SUPPORT) */
         continue;

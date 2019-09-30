@@ -6123,7 +6123,7 @@ test_util_log_mallinfo(void *arg)
   } else {
     tt_u64_op(mem1, OP_LT, mem2);
   }
-#else /* !(defined(HAVE_MALLINFO)) */
+#else /* !defined(HAVE_MALLINFO) */
   tt_skip();
 #endif /* defined(HAVE_MALLINFO) */
  done:
@@ -6182,7 +6182,7 @@ test_util_map_anon_nofork(void *arg)
   tt_skip();
  done:
   ;
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
   /* We have the right OS support.  We're going to try marking the buffer as
    * either zero-on-fork or as drop-on-fork, whichever is supported.  Then we
    * will fork and send a byte back to the parent process.  This will either

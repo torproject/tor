@@ -833,7 +833,7 @@ monotime_coarse_absolute_msec(void)
 {
   return monotime_coarse_absolute_nsec() / ONE_MILLION;
 }
-#else /* !(defined(MONOTIME_COARSE_FN_IS_DIFFERENT)) */
+#else /* !defined(MONOTIME_COARSE_FN_IS_DIFFERENT) */
 #define initialized_at_coarse initialized_at
 #endif /* defined(MONOTIME_COARSE_FN_IS_DIFFERENT) */
 
@@ -865,7 +865,7 @@ monotime_msec_to_approx_coarse_stamp_units(uint64_t msec)
     mach_time_info.numer;
   return abstime_val >> monotime_shift;
 }
-#else /* !(defined(__APPLE__)) */
+#else /* !defined(__APPLE__) */
 uint64_t
 monotime_coarse_stamp_units_to_approx_msec(uint64_t units)
 {

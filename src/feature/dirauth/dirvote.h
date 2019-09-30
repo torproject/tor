@@ -128,7 +128,7 @@ struct config_line_t;
 char *format_recommended_version_list(const struct config_line_t *line,
                                       int warn);
 
-#else /* !(defined(HAVE_MODULE_DIRAUTH)) */
+#else /* !defined(HAVE_MODULE_DIRAUTH) */
 
 static inline time_t
 dirvote_act(const or_options_t *options, time_t now)

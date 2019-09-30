@@ -1224,7 +1224,7 @@ connection_ap_rescan_and_attach_pending(void)
     entry_conn->marked_pending_circ_line = 0;   \
     entry_conn->marked_pending_circ_file = 0;   \
   } while (0)
-#else /* !(defined(DEBUGGING_17659)) */
+#else /* !defined(DEBUGGING_17659) */
 #define UNMARK() do { } while (0)
 #endif /* defined(DEBUGGING_17659) */
 

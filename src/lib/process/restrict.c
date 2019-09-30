@@ -152,7 +152,7 @@ tor_mlockall(void)
                            "pages: %s", strerror(errno));
     return -1;
   }
-#else /* !(defined(HAVE_UNIX_MLOCKALL)) */
+#else /* !defined(HAVE_UNIX_MLOCKALL) */
   log_warn(LD_GENERAL, "Unable to lock memory pages. mlockall() unsupported?");
   return -1;
 #endif /* defined(HAVE_UNIX_MLOCKALL) */

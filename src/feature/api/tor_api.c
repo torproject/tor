@@ -40,7 +40,7 @@
 #define raw_socketpair tor_ersatz_socketpair
 #define raw_closesocket closesocket
 #define snprintf _snprintf
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
 #define raw_socketpair socketpair
 #define raw_closesocket close
 #endif /* defined(_WIN32) */

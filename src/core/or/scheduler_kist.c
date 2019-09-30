@@ -104,7 +104,7 @@ static unsigned int kist_lite_mode = 0;
  * changed and it doesn't recognized the values passed to the syscalls needed
  * by KIST. In that case, fallback to the naive approach. */
 static unsigned int kist_no_kernel_support = 0;
-#else /* !(defined(HAVE_KIST_SUPPORT)) */
+#else /* !defined(HAVE_KIST_SUPPORT) */
 static unsigned int kist_lite_mode = 1;
 #endif /* defined(HAVE_KIST_SUPPORT) */
 
@@ -298,7 +298,7 @@ update_socket_info_impl, (socket_table_ent_t *ent))
   }
   return;
 
-#else /* !(defined(HAVE_KIST_SUPPORT)) */
+#else /* !defined(HAVE_KIST_SUPPORT) */
   goto fallback;
 #endif /* defined(HAVE_KIST_SUPPORT) */
 
@@ -833,7 +833,7 @@ scheduler_can_use_kist(void)
   return run_interval > 0;
 }
 
-#else /* !(defined(HAVE_KIST_SUPPORT)) */
+#else /* !defined(HAVE_KIST_SUPPORT) */
 
 int
 scheduler_can_use_kist(void)

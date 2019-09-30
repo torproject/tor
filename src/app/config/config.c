@@ -3518,7 +3518,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
       REJECT("Cannot use TransProxyType without any valid TransPort.");
     }
   }
-#else /* !(defined(USE_TRANSPARENT)) */
+#else /* !defined(USE_TRANSPARENT) */
   if (options->TransPort_set)
     REJECT("TransPort is disabled in this build.");
 #endif /* defined(USE_TRANSPARENT) */
@@ -7795,7 +7795,7 @@ get_data_directory(const char *val)
   } else {
     return tor_strdup(get_windows_conf_root());
   }
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
   const char *d = val;
   if (!d)
     d = "~/.tor";
@@ -8341,7 +8341,7 @@ config_load_geoip_file_(sa_family_t family,
   }
   r = geoip_load_file(family, fname, severity);
   tor_free(free_fname);
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
   (void)default_fname;
   r = geoip_load_file(family, fname, severity);
 #endif /* defined(_WIN32) */

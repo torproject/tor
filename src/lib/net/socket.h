@@ -92,7 +92,7 @@ ssize_t read_all_from_socket(tor_socket_t fd, char *buf, size_t count);
 #define ERRNO_IS_EINTR(e)            ((e) == WSAEINTR || 0)
 int tor_socket_errno(tor_socket_t sock);
 const char *tor_socket_strerror(int e);
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
 #define SOCK_ERRNO(e) e
 #if EAGAIN == EWOULDBLOCK
 /* || 0 is for -Wparentheses-equality (-Wall?) appeasement under clang */

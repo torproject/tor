@@ -26,7 +26,7 @@ void dump_desc_init(void);
   log_debug(LD_MM, "Area for %s has %lu allocated; using %lu.",   \
             name, (unsigned long)alloc, (unsigned long)used);     \
   STMT_END
-#else /* !(defined(DEBUG_AREA_ALLOC)) */
+#else /* !defined(DEBUG_AREA_ALLOC) */
 #define DUMP_AREA(a,name) STMT_NIL
 #endif /* defined(DEBUG_AREA_ALLOC) */
 

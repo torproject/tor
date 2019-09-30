@@ -105,7 +105,7 @@ clean_backtrace(void **stack, size_t depth, const ucontext_t *ctx)
     return;
 
   stack[n] = (void*) ctx->PC_FROM_UCONTEXT;
-#else /* !(defined(PC_FROM_UCONTEXT)) */
+#else /* !defined(PC_FROM_UCONTEXT) */
   (void) depth;
   (void) ctx;
   (void) stack;

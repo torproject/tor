@@ -212,7 +212,7 @@ crypto_digest_new_internal(digest_algorithm_t algorithm)
         return NULL;
       }
       break;
-#else /* !(defined(OPENSSL_HAS_SHA3)) */
+#else /* !defined(OPENSSL_HAS_SHA3) */
     case DIGEST_SHA3_256:
       keccak_digest_init(&r->d.sha3, 256);
       break;
@@ -310,7 +310,7 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
       tor_assert(r);
   }
       break;
-#else /* !(defined(OPENSSL_HAS_SHA3)) */
+#else /* !defined(OPENSSL_HAS_SHA3) */
     case DIGEST_SHA3_256: /* FALLSTHROUGH */
     case DIGEST_SHA3_512:
       keccak_digest_update(&digest->d.sha3, (const uint8_t *)data, len);
@@ -354,7 +354,7 @@ crypto_digest_get_digest(crypto_digest_t *digest,
     EVP_MD_CTX_free(tmp);
     tor_assert(res == 1);
     goto done;
-#else /* !(defined(OPENSSL_HAS_SHA3)) */
+#else /* !defined(OPENSSL_HAS_SHA3) */
     /* Tiny-Keccak handles copying into a temporary ctx, and also can handle
      * short output buffers by truncating appropriately. */
     keccak_digest_sum(&digest->d.sha3, (uint8_t *)out, out_len);
