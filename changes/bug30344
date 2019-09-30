@@ -1,0 +1,4 @@
+  o Minor bugfixes (connection):
+    - Avoid reading data from closed connections, which can cause needless
+      loops in libevent and infinite loops in Shadow. Fixes bug 30344; bugfix
+      on 0.1.1.1-alpha.
