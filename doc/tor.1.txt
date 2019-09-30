@@ -184,7 +184,14 @@ The following options in this section are only recognized on the
     signing key certificate and will output, both in the logs as well
     as to stdout, the signing key certificate's expiration time in
     ISO-8601 format.  For example, the output sent to stdout will be
-    of the form: "signing-cert-expiry: 2017-07-25 08:30:15 UTC"
+    of the form: "signing-cert-expiry: 2017-07-25 08:30:15 UTC"h
+
+[[opt-dbg]] **--dbg-**...::
+    Tor may support other options beginning with the string "dbg". These
+    are intended for use by developers to debug and test Tor. They are
+    not supported or guaranteed to be stable, and you should probably
+    not use them.
+
 
 [[conf-format]]
 == THE CONFIGURATION FILE FORMAT
