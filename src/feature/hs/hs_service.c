@@ -2329,13 +2329,22 @@ intro_point_should_expire(const hs_service_intro_point_t *ip,
 static inline bool
 should_remove_intro_point(hs_service_intro_point_t *ip)
 {
-  /* If we have an established intro point circuit in <b>ip</b>, or are in the
-   * process of building or establishing one, return false. */
-  if (ip->circuit_established || hs_circ_service_get_intro_circ(ip)) {
+  /* Have we retried too many times? */
+  bool over_max_retries = (ip->circuit_retries >
+                           MAX_INTRO_POINT_CIRCUIT_RETRIES);
+
+  /* If we have an established intro point circuit in <b>ip</b>, return
+   * false. */
+  if (ip->circuit_established) {
     return false;
   }
+  /* If we are in the process of building or establishing one and have retried
+   * too many times, return true. */
+  if (hs_circ_service_get_intro_circ(ip) && over_max_retries) {
+    return true;
+  }
   /* Returns true if we have gone over the number of retried circuits. */
-  return (ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES);
+  return over_max_retries;
 }
 
 /* Go over the given set of intro points for each service and remove any
