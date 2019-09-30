@@ -100,6 +100,18 @@ test_script:
 
 on_finish:
 - ps: >-
+    <# if we failed before install:, these functions won't be defined #>
+    Function Execute-Command ($commandPath)
+    {
+        & $commandPath $args 2>&1
+        if ( $LastExitCode -ne 0 ) {
+            $host.SetShouldExit( $LastExitCode )
+        }
+    }
+    Function Execute-Bash ()
+    {
+        Execute-Command 'c:\msys64\usr\bin\bash' '-e' '-c' $args
+    }
     if ($env:compiler -eq "mingw") {
             <# use the MSYS2 user binaries to archive failures #>
             $oldpath = ${env:Path} -split ';'
