@@ -294,6 +294,19 @@ subsystems_thread_cleanup(void)
 }
 
 /**
+ * Dump a human- and machine-readable list of all the subsystems to stdout,
+ * in their initialization order, prefixed with their level.
+ **/
+void
+subsystems_dump_list(void)
+{
+  for (unsigned i = 0; i < n_tor_subsystems - 1; ++i) {
+    const subsys_fns_t *sys = tor_subsystems[i];
+    printf("% 4d\t%s\n", sys->level, sys->name);
+  }
+}
+
+/**
  * Register all subsystem-declared options formats in <b>mgr</b>.
  *
  * Return 0 on success, -1 on failure.
