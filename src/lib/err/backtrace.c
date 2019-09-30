@@ -52,6 +52,8 @@
 #include <pthread.h>
 #endif
 
+#include "lib/cc/ctassert.h"
+
 #define EXPOSE_CLEAN_BACKTRACE
 #include "lib/err/backtrace.h"
 #include "lib/err/torerr.h"
@@ -73,14 +75,39 @@
 static char bt_version[128] = "";
 
 #ifdef USE_BACKTRACE
+
 /** Largest stack depth to try to dump. */
 #define MAX_DEPTH 256
-/** Static allocation of stack to dump. This is static so we avoid stack
- * pressure. */
-static void *cb_buf[MAX_DEPTH];
+/** The size of the callback buffer, so we can clear it in unlock_cb_buf(). */
+#define SIZEOF_CB_BUF (MAX_DEPTH * sizeof(void *))
 /** Protects cb_buf from concurrent access. Pthreads, since this code
  * is Unix-only, and since this code needs to be lowest-level. */
 static pthread_mutex_t cb_buf_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/** Lock and return a static stack pointer buffer that can hold up to
+ *  MAX_DEPTH function pointers. */
+static void *
+lock_cb_buf(void)
+{
+  /* Lock the mutex first, before even declaring the buffer. */
+  pthread_mutex_lock(&cb_buf_mutex);
+
+  /** Static allocation of stack to dump. This is static so we avoid stack
+   * pressure. */
+  static void *cb_buf[MAX_DEPTH];
+  CTASSERT(SIZEOF_CB_BUF == sizeof(cb_buf));
+  memset(cb_buf, 0, SIZEOF_CB_BUF);
+
+  return cb_buf;
+}
+
+/** Unlock the static stack pointer buffer. */
+static void
+unlock_cb_buf(void *cb_buf)
+{
+  memset(cb_buf, 0, SIZEOF_CB_BUF);
+  pthread_mutex_unlock(&cb_buf_mutex);
+}
 
 /** Change a stacktrace in <b>stack</b> of depth <b>depth</b> so that it will
  * log the correct function from which a signal was received with context
@@ -123,7 +150,7 @@ log_backtrace_impl(int severity, log_domain_mask_t domain, const char *msg,
   char **symbols;
   size_t i;
 
-  pthread_mutex_lock(&cb_buf_mutex);
+  void *cb_buf = lock_cb_buf();
 
   depth = backtrace(cb_buf, MAX_DEPTH);
   symbols = backtrace_symbols(cb_buf, (int)depth);
@@ -141,7 +168,7 @@ log_backtrace_impl(int severity, log_domain_mask_t domain, const char *msg,
   raw_free(symbols);
 
  done:
-  pthread_mutex_unlock(&cb_buf_mutex);
+  unlock_cb_buf(cb_buf);
 }
 
 static void crash_handler(int sig, siginfo_t *si, void *ctx_)
@@ -156,6 +183,8 @@ crash_handler(int sig, siginfo_t *si, void *ctx_)
   ucontext_t *ctx = (ucontext_t *) ctx_;
   int n_fds, i;
   const int *fds = NULL;
+
+  void *cb_buf = lock_cb_buf();
 
   (void) si;
 
@@ -173,6 +202,8 @@ crash_handler(int sig, siginfo_t *si, void *ctx_)
   for (i=0; i < n_fds; ++i)
     backtrace_symbols_fd(cb_buf, (int)depth, fds[i]);
 
+  unlock_cb_buf(cb_buf);
+
   tor_raw_abort_();
 }
 
@@ -184,11 +215,15 @@ dump_stack_symbols_to_error_fds(void)
   const int *fds = NULL;
   size_t depth;
 
+  void *cb_buf = lock_cb_buf();
+
   depth = backtrace(cb_buf, MAX_DEPTH);
 
   n_fds = tor_log_get_sigsafe_err_fds(&fds);
   for (i=0; i < n_fds; ++i)
     backtrace_symbols_fd(cb_buf, (int)depth, fds[i]);
+
+  unlock_cb_buf(cb_buf);
 }
 
 /* The signals that we want our backtrace handler to trap */
@@ -222,10 +257,12 @@ install_bt_handler(void)
      * libc has pre-loaded the symbols we need to dump things, so that later
      * reads won't be denied by the sandbox code */
     char **symbols;
+    void *cb_buf = lock_cb_buf();
     size_t depth = backtrace(cb_buf, MAX_DEPTH);
     symbols = backtrace_symbols(cb_buf, (int) depth);
     if (symbols)
       raw_free(symbols);
+    unlock_cb_buf(cb_buf);
   }
 
   return rv;
