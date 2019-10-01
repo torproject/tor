@@ -34,7 +34,7 @@ max_in_u16_sl(const smartlist_t *sl, int dflt)
   SMARTLIST_FOREACH_BEGIN(sl, uint16_t *, u) {
     if (!maxptr)
       maxptr = u;
-    else if (*u > *maxptr)
+    else if (u && *u > *maxptr)
       maxptr = u;
   } SMARTLIST_FOREACH_END(u);
 
