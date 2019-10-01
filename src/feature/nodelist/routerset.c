@@ -473,6 +473,13 @@ routerset_free_(routerset_t *routerset)
  * routerset_t** passed as <b>target</b>.  On success return 0; on failure
  * return -1 and store an error message into *<b>errmsg</b>.
  **/
+/*
+ * Warning: For this type, the default value (NULL) and "" are sometimes
+ * considered different values.  That is generally risky, and best avoided for
+ * other types in the future.  For cases where we want the default to be "all
+ * routers" (like EntryNodes) we should add a new routerset value indicating
+ * "all routers" (see #31908)
+ */
 static int
 routerset_kv_parse(void *target, const config_line_t *line, char **errmsg,
                   const void *params)

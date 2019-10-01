@@ -44,6 +44,10 @@
 // CONFIG_TYPE_FILENAME
 //
 // These two types are the same for now, but they have different names.
+//
+// Warning: For this type, the default value (NULL) and "" are considered
+// different values.  That is generally risky, and best avoided for other
+// types in the future.
 //////
 
 static int

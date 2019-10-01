@@ -39,6 +39,12 @@ struct config_line_t;
  * All functions here take a <b>params</b> argument, whose value
  * is determined by the type definition.  Two types may have the
  * same functions, but differ only in parameters.
+ *
+ * Implementation considerations: If "" encodes a valid value for a type, try
+ * to make sure that it encodes the same thing as the default value for the
+ * type (that is, the value that is set by config_clear() or memset(0)). If
+ * this is not the case, you need to make extra certain that your parse/encode
+ * implementations preserve the NULL/"" distinction.
  **/
 struct var_type_fns_t {
   /**
