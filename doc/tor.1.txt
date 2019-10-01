@@ -1142,7 +1142,7 @@ The following options are useful only for clients (that is, if
     information) to port 80.
 
 [[HidServAuth]] **HidServAuth** __onion-address__ __auth-cookie__ [__service-name__]::
-    Client authorization for a hidden service. Valid onion addresses contain 16
+    Client authorization for a v2 hidden service. Valid onion addresses contain 16
     characters in a-z2-7 plus ".onion", and valid auth cookies contain 22
     characters in A-Za-z0-9+/. The service name is only used for internal
     purposes, e.g., for Tor controllers. This option may be used multiple times
@@ -2961,7 +2961,7 @@ The next section describes the per service options that can only be set
     service. Currently, versions 2 and 3 are supported. (Default: 3)
 
 [[HiddenServiceAuthorizeClient]] **HiddenServiceAuthorizeClient** __auth-type__ __client-name__,__client-name__,__...__::
-    If configured, the hidden service is accessible for authorized clients
+    If configured, the v2 hidden service is accessible for authorized clients
     only. The auth-type can either be \'basic' for a general-purpose
     authorization protocol or \'stealth' for a less scalable protocol that also
     hides service activity from unauthorized clients. Only clients that are
@@ -3105,31 +3105,42 @@ Client Authorization
 
 (Version 3 only)
 
-To configure client authorization on the service side, the
-"<HiddenServiceDir>/authorized_clients/" directory needs to exist. Each file
-in that directory should be suffixed with ".auth" (i.e. "alice.auth"; the
-file name is irrelevant) and its content format MUST be:
+Service side:
 
-        <auth-type>:<key-type>:<base32-encoded-public-key>
+  To configure client authorization on the service side, the
+  "<HiddenServiceDir>/authorized_clients/" directory needs to exist. Each file
+  in that directory should be suffixed with ".auth" (i.e. "alice.auth"; the
+  file name is irrelevant) and its content format MUST be:
 
-The supported <auth-type> are: "descriptor". The supported <key-type> are:
-"x25519". The <base32-encoded-public-key> is the base32 representation of
-the raw key bytes only (32 bytes for x25519).
+          <auth-type>:<key-type>:<base32-encoded-public-key>
 
-Each file MUST contain one line only. Any malformed file will be
-ignored. Client authorization will only be enabled for the service if tor
-successfully loads at least one authorization file.
+  The supported <auth-type> are: "descriptor". The supported <key-type> are:
+  "x25519". The <base32-encoded-public-key> is the base32 representation of
+  the raw key bytes only (32 bytes for x25519).
 
-Note that once you've configured client authorization, anyone else with the
-address won't be able to access it from this point on. If no authorization is
-configured, the service will be accessible to anyone with the onion address.
+  Each file MUST contain one line only. Any malformed file will be
+  ignored. Client authorization will only be enabled for the service if tor
+  successfully loads at least one authorization file.
 
-Revoking a client can be done by removing their ".auth" file, however the
-revocation will be in effect only after the tor process gets restarted even if
-a SIGHUP takes place.
+  Note that once you've configured client authorization, anyone else with the
+  address won't be able to access it from this point on. If no authorization is
+  configured, the service will be accessible to anyone with the onion address.
 
-See the Appendix G in the rend-spec-v3.txt file of
-https://spec.torproject.org/[torspec] for more information.
+  Revoking a client can be done by removing their ".auth" file, however the
+  revocation will be in effect only after the tor process gets restarted even if
+  a SIGHUP takes place.
+
+Client side:
+
+  To access a v3 onion service with client authorization as a client, make sure
+  you have ClientOnionAuthDir set in your torrc. Then, in the
+  <ClientOnionAuthDir> directory, create an .auth_private file for the onion
+  service corresponding to this key (i.e. 'bob_onion.auth_private').  The
+  contents of the <ClientOnionAuthDir>/<user>.auth_private file should look like:
+
+      <56-char-onion-addr-without-.onion-part>:descriptor:x25519:<x25519 private key in base32>
+
+For more information, please see https://2019.www.torproject.org/docs/tor-onion-service.html.en#ClientAuthorization .
 
 TESTING NETWORK OPTIONS
 -----------------------
