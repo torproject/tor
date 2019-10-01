@@ -37,25 +37,30 @@ matrix:
     ## We run basic tests on macOS
     - compiler: clang
       os: osx
+    ## We check NSS
+    ## NSS is a fast job, clang is slower on Linux, so we do NSS clang
+    - env: NSS_OPTIONS="--enable-nss"
+      compiler: clang
     ## We run chutney on Linux, because it's faster than chutney on macOS
     - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
-    ## We check asciidoc with distcheck, to make sure we remove doc products
-    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
     ## We include a single coverage build with the best options for coverage
     - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
-    ## We run chutney on macOS, because macOS Travis has IPv6
-    - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
-      os: osx
-    ## We clone our stem repo and run `make test-stem`
-    - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
+    ## We run rust on Linux, because it's faster than rust on macOS
+    ## We check rust offline
+    - env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
+    ## We check asciidoc with distcheck, to make sure we remove doc products
+    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
     ## We check disable module dirauth
     - env: MODULES_OPTIONS="--disable-module-dirauth"
     ## We run rust on macOS, because we have seen macOS rust failures before
     - env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
       compiler: clang
       os: osx
-    ## We check NSS
-    - env: NSS_OPTIONS="--enable-nss"
+    ## We run chutney on macOS, because macOS Travis has IPv6
+    - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
+      os: osx
+    ## We clone our stem repo and run `make test-stem`
+    - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
 
   ## Allow the build to report success (with non-required sub-builds
   ## continuing to run) if all required sub-builds have succeeded.
@@ -64,9 +69,12 @@ matrix:
   ## Careful! We use global envs, which makes it hard to allow failures by env:
   ## https://docs.travis-ci.com/user/customizing-the-build#matching-jobs-with-allow_failures
   allow_failures:
-    ## macOS chutney is very slow, so we let the build finish before it's done
-    ## We'd like to fast finish, but still eventually show failures.
-    ## But Travis doesn't have that option.
+    ## macOS rust and chutney are very slow, so we let the build finish before
+    ## they are done.  We'd like to fast finish, but still eventually show
+    ## any failures in the build status. But Travis doesn't have that ability.
+    - env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
+      compiler: clang
+      os: osx
     - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
       os: osx
     ## test-stem sometimes hangs on Travis
