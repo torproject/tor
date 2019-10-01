@@ -46,14 +46,15 @@ matrix:
     ## We run chutney on macOS, because macOS Travis has IPv6
     - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
       os: osx
-    # We clone our stem repo and run `make test-stem`
+    ## We clone our stem repo and run `make test-stem`
     - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
-    ## Check rust online with distcheck, to make sure we remove rust products
-    - env: DISTCHECK="yes" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
-    ## Check disable module dirauth with and without rust
-    - env: MODULES_OPTIONS="--disable-module-dirauth" RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
+    ## We check disable module dirauth
     - env: MODULES_OPTIONS="--disable-module-dirauth"
-    ## Check NSS
+    ## We run rust on macOS, because we have seen macOS rust failures before
+    - env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
+      compiler: clang
+      os: osx
+    ## We check NSS
     - env: NSS_OPTIONS="--enable-nss"
 
   ## Allow the build to report success (with non-required sub-builds
