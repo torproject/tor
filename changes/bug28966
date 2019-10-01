@@ -1,0 +1,4 @@
+  o Minor features (onion services v3):
+    - Assist users who try to setup v2 client authorization in v3 onion
+      services by pointing them to the right documentation. Closes ticket
+      28966.
