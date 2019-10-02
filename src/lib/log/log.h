@@ -139,10 +139,10 @@
 
 /** This log message is not safe to send to a callback-based logger
  * immediately.  Used as a flag, not a log domain. */
-#define LD_NOCB (UINT64_C(1)<<62)
+#define LD_DEFER_CB (UINT64_C(1)<<62)
 /** This log message should not include a function name, even if it otherwise
  * would. Used as a flag, not a log domain. */
-#define LD_NOFUNCNAME (UINT64_C(1)<<63)
+#define LD_NO_FUNCNAME (UINT64_C(1)<<63)
 
 /** Configures which severities are logged for each logging domain for a given
  * log target. */

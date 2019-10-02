@@ -113,12 +113,12 @@ should_log_function_name(log_domain_mask_t domain, int severity)
     case LOG_DEBUG:
     case LOG_INFO:
       /* All debugging messages occur in interesting places. */
-      return (domain & LD_NOFUNCNAME) == 0;
+      return (domain & LD_NO_FUNCNAME) == 0;
     case LOG_NOTICE:
     case LOG_WARN:
     case LOG_ERR:
       /* We care about places where bugs occur. */
-      return (domain & (LD_BUG|LD_NOFUNCNAME)) == LD_BUG;
+      return (domain & (LD_BUG|LD_NO_FUNCNAME)) == LD_BUG;
     default:
       /* Call raw_assert, not tor_assert, since tor_assert calls
        * log on failure. */
@@ -543,7 +543,7 @@ logfile_deliver(logfile_t *lf, const char *buf, size_t msg_len,
     __android_log_write(priority, lf->android_tag, msg_after_prefix);
 #endif // HAVE_ANDROID_LOG_H.
   } else if (lf->callback) {
-    if (domain & LD_NOCB) {
+    if (domain & LD_DEFER_CB) {
       if (!*callbacks_deferred && pending_cb_messages) {
         smartlist_add(pending_cb_messages,
             pending_log_message_new(severity,domain,NULL,msg_after_prefix));
@@ -587,7 +587,7 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
 
   LOCK_LOGS();
 
-  if ((! (domain & LD_NOCB)) && pending_cb_messages
+  if ((! (domain & LD_DEFER_CB)) && pending_cb_messages
       && smartlist_len(pending_cb_messages))
     flush_pending_log_callbacks();
 
@@ -1069,7 +1069,7 @@ change_callback_log_severity(int loglevelMin, int loglevelMax,
   UNLOCK_LOGS();
 }
 
-/** If there are any log messages that were generated with LD_NOCB waiting to
+/** If there are any log messages that were generated with LD_DEFER_CB waiting to
  * be sent to callback-based loggers, send them now. */
 void
 flush_pending_log_callbacks(void)

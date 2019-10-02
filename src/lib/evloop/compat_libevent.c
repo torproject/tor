@@ -36,19 +36,19 @@ libevent_logging_callback(int severity, const char *msg)
   }
   switch (severity) {
     case _EVENT_LOG_DEBUG:
-      log_debug(LD_NOCB|LD_NET, "Message from libevent: %s", buf);
+      log_debug(LD_DEFER_CB|LD_NET, "Message from libevent: %s", buf);
       break;
     case _EVENT_LOG_MSG:
-      log_info(LD_NOCB|LD_NET, "Message from libevent: %s", buf);
+      log_info(LD_DEFER_CB|LD_NET, "Message from libevent: %s", buf);
       break;
     case _EVENT_LOG_WARN:
-      log_warn(LD_NOCB|LD_GENERAL, "Warning from libevent: %s", buf);
+      log_warn(LD_DEFER_CB|LD_GENERAL, "Warning from libevent: %s", buf);
       break;
     case _EVENT_LOG_ERR:
-      log_err(LD_NOCB|LD_GENERAL, "Error from libevent: %s", buf);
+      log_err(LD_DEFER_CB|LD_GENERAL, "Error from libevent: %s", buf);
       break;
     default:
-      log_warn(LD_NOCB|LD_GENERAL, "Message [%d] from libevent: %s",
+      log_warn(LD_DEFER_CB|LD_GENERAL, "Message [%d] from libevent: %s",
           severity, buf);
       break;
   }
