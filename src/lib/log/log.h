@@ -126,7 +126,7 @@
 #define LD_ALL_DOMAINS ((~(UINT64_C(0)))>>(64 - N_LOGGING_DOMAINS))
 
 /** The number of log flags. */
-#define N_LOGGING_FLAGS 3
+#define N_LOGGING_FLAGS 4
 /** First bit that is reserved in log_domain_mask_t for non-domain flags. */
 #define LOWEST_RESERVED_LD_FLAG_ (UINT64_C(1)<<(64 - N_LOGGING_FLAGS))
 /** All log flags. */
@@ -135,9 +135,13 @@
 #ifdef TOR_UNIT_TESTS
 /** This log message should not be intercepted by mock_saving_logv.
  * Used as a flag, not a log domain. */
-#define LD_NO_MOCK (UINT64_C(1)<<61)
+#define LD_NO_MOCK (UINT64_C(1)<<60)
 #endif
 
+/** This log message is not safe to send to a callback-based logger, now or in
+ * the future. It should only be sent to non-callback logs. Overrides
+ * LD_DEFER_CB. Used as a flag, not a log domain. */
+#define LD_SKIP_CB (UINT64_C(1)<<61)
 /** This log message is not safe to send to a callback-based logger
  * immediately. But it should be sent next time callback-based logging is
  * available. Used as a flag, not a log domain. */
