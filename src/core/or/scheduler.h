@@ -101,8 +101,14 @@ typedef struct scheduler_s {
  * These are variables/constants that all of Tor should be able to see.
  *****************************************************************************/
 
-/* Default interval that KIST runs (in ms). */
-#define KIST_SCHED_RUN_INTERVAL_DEFAULT 10
+/* Default interval that KIST runs (in ms). Client and relays have different
+ * values due to bug detailled in #29427. We still kep an initialization value
+ * but it gets overwritten as soon as options are parsed or a consensus is
+ * loaded/received. */
+#define KIST_SCHED_RUN_INTERVAL_CLIENT_DEFAULT 2
+#define KIST_SCHED_RUN_INTERVAL_RELAY_DEFAULT  10
+#define KIST_SCHED_RUN_INTERVAL_DEFAULT_INIT   10
+
 /* Minimum interval that KIST runs. This value disables KIST. */
 #define KIST_SCHED_RUN_INTERVAL_MIN 0
 /* Maximum interval that KIST runs (in ms). */

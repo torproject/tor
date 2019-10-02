@@ -8,6 +8,7 @@
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "feature/nodelist/networkstatus.h"
+#include "feature/relay/routermode.h"
 #define TOR_CHANNEL_INTERNAL_
 #include "core/or/channel.h"
 #include "core/or/channeltls.h"
@@ -94,7 +95,7 @@ static monotime_t scheduler_last_run;
  */
 static double sock_buf_size_factor = 1.0;
 /* How often the scheduler runs. */
-STATIC int sched_run_interval = KIST_SCHED_RUN_INTERVAL_DEFAULT;
+STATIC int sched_run_interval = KIST_SCHED_RUN_INTERVAL_DEFAULT_INIT;
 
 #ifdef HAVE_KIST_SUPPORT
 /* Indicate if KIST lite mode is on or off. We can disable it at runtime.
@@ -514,7 +515,7 @@ kist_scheduler_init(void)
    * interface.
    *
    * One side effect is that the first scheduler run will be at the next tick
-   * that is in now + 10 msec (KIST_SCHED_RUN_INTERVAL_DEFAULT) by default. */
+   * that is in now + KIST_SCHED_RUN_INTERVAL_DEFAULT_INIT msec by default. */
   monotime_get(&scheduler_last_run);
 
   kist_scheduler_on_new_options();
@@ -522,8 +523,8 @@ kist_scheduler_init(void)
     log_warn(LD_SCHED, "We are initing the KIST scheduler and noticed the "
              "KISTSchedRunInterval is telling us to not use KIST. That's "
              "weird! We'll continue using KIST, but at %" PRId32 "ms.",
-             KIST_SCHED_RUN_INTERVAL_DEFAULT);
-    sched_run_interval = KIST_SCHED_RUN_INTERVAL_DEFAULT;
+             KIST_SCHED_RUN_INTERVAL_DEFAULT_INIT);
+    sched_run_interval = KIST_SCHED_RUN_INTERVAL_DEFAULT_INIT;
   }
 }
 
@@ -776,6 +777,7 @@ int
 kist_scheduler_run_interval(void)
 {
   int run_interval = get_options()->KISTSchedRunInterval;
+  int32_t default_value;
 
   if (run_interval != 0) {
     log_debug(LD_SCHED, "Found KISTSchedRunInterval=%" PRId32 " in torrc. "
@@ -785,10 +787,16 @@ kist_scheduler_run_interval(void)
 
   log_debug(LD_SCHED, "KISTSchedRunInterval=0, turning to the consensus.");
 
+  /* Due to #29427, relay and bridge get a different default value from
+   * client (which includes onion service). */
+  default_value = KIST_SCHED_RUN_INTERVAL_CLIENT_DEFAULT;
+  if (server_mode(get_options())) {
+    default_value = KIST_SCHED_RUN_INTERVAL_RELAY_DEFAULT;
+  }
+
   /* Will either be the consensus value or the default. Note that 0 can be
    * returned which means the consensus wants us to NOT use KIST. */
-  return networkstatus_get_param(NULL, "KISTSchedRunInterval",
-                                 KIST_SCHED_RUN_INTERVAL_DEFAULT,
+  return networkstatus_get_param(NULL, "KISTSchedRunInterval", default_value,
                                  KIST_SCHED_RUN_INTERVAL_MIN,
                                  KIST_SCHED_RUN_INTERVAL_MAX);
 }

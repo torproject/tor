@@ -1,0 +1,7 @@
+  o Major bugfixes (cell scheduler, KIST):
+    - Only for clients (which includes onion services), set the KIST cell
+      scheduler interval to 2msec instead of 10msece which is the default
+      value for relays. Client are often single socket so this change will
+      make them not sleep even though data could be sent on the wire. This is
+      a partial fix to a bigger architectural problem. Fixes bug 29427; bugfix
+      on 0.3.2.2-alpha.
