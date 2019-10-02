@@ -133,12 +133,14 @@
 #define LD_ALL_FLAGS ((~(UINT64_C(0)))<<(64 - N_LOGGING_FLAGS))
 
 #ifdef TOR_UNIT_TESTS
-/** This log message should not be intercepted by mock_saving_logv */
+/** This log message should not be intercepted by mock_saving_logv.
+ * Used as a flag, not a log domain. */
 #define LD_NO_MOCK (UINT64_C(1)<<61)
 #endif
 
 /** This log message is not safe to send to a callback-based logger
- * immediately.  Used as a flag, not a log domain. */
+ * immediately. But it should be sent next time callback-based logging is
+ * available. Used as a flag, not a log domain. */
 #define LD_DEFER_CB (UINT64_C(1)<<62)
 /** This log message should not include a function name, even if it otherwise
  * would. Used as a flag, not a log domain. */
