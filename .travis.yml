@@ -74,7 +74,7 @@ matrix:
     ## macOS rust and chutney are very slow, so we let the build finish before
     ## they are done.  We'd like to fast finish, but still eventually show
     ## any failures in the build status. But Travis doesn't have that ability.
-    - env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
+    - env: RUST_VERSION="nightly" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
       compiler: clang
       os: osx
     - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
