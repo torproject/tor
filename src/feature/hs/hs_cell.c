@@ -499,7 +499,8 @@ static void
 build_establish_intro_dos_extension(const hs_service_config_t *service_config,
                                     trn_cell_extension_t *extensions)
 {
-  ssize_t ret, dos_ext_encoded_len;
+  ssize_t ret;
+  size_t dos_ext_encoded_len;
   uint8_t *field_array;
   trn_cell_extension_field_t *field;
   trn_cell_extension_dos_t *dos_ext;
@@ -526,7 +527,9 @@ build_establish_intro_dos_extension(const hs_service_config_t *service_config,
                                   service_config->intro_dos_burst_per_sec);
 
   /* Set the field with the encoded DoS extension. */
-  dos_ext_encoded_len = trn_cell_extension_dos_encoded_len(dos_ext);
+  ret = trn_cell_extension_dos_encoded_len(dos_ext);
+  tor_assert(ret > 0);
+  dos_ext_encoded_len = ret;
   /* Set length field and the field array size length. */
   trn_cell_extension_field_set_field_len(field, dos_ext_encoded_len);
   trn_cell_extension_field_setlen_field(field, dos_ext_encoded_len);
@@ -534,7 +537,7 @@ build_establish_intro_dos_extension(const hs_service_config_t *service_config,
   field_array = trn_cell_extension_field_getarray_field(field);
   ret = trn_cell_extension_dos_encode(field_array,
                  trn_cell_extension_field_getlen_field(field), dos_ext);
-  tor_assert(ret == dos_ext_encoded_len);
+  tor_assert(ret == (ssize_t) dos_ext_encoded_len);
 
   /* Finally, encode field into the cell extension. */
   trn_cell_extension_add_fields(extensions, field);
