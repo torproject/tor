@@ -1069,8 +1069,8 @@ change_callback_log_severity(int loglevelMin, int loglevelMax,
   UNLOCK_LOGS();
 }
 
-/** If there are any log messages that were generated with LD_DEFER_CB waiting to
- * be sent to callback-based loggers, send them now. */
+/** If there are any log messages that were generated with LD_DEFER_CB waiting
+ *  to be sent to callback-based loggers, send them now. */
 void
 flush_pending_log_callbacks(void)
 {
