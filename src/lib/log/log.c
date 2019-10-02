@@ -755,7 +755,7 @@ tor_log_get_logfile_names(smartlist_t *out)
 
 /** Implementation of the log_fn backend, used when we have
  * variadic macros. All arguments are as for log_fn, except for
- * <b>fn</b>, which is the name of the calling functions. */
+ * <b>fn</b>, which is the name of the calling function. */
 void
 log_fn_(int severity, log_domain_mask_t domain, const char *fn,
         const char *format, ...)
