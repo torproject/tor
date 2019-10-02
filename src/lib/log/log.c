@@ -543,7 +543,9 @@ logfile_deliver(logfile_t *lf, const char *buf, size_t msg_len,
     __android_log_write(priority, lf->android_tag, msg_after_prefix);
 #endif // HAVE_ANDROID_LOG_H.
   } else if (lf->callback) {
-    if (domain & LD_DEFER_CB) {
+    if (domain & LD_SKIP_CB) {
+      /* Skip callback-based loggers when sending this log message. */
+    } else if (domain & LD_DEFER_CB) {
       if (!*callbacks_deferred && pending_cb_messages) {
         smartlist_add(pending_cb_messages,
             pending_log_message_new(severity,domain,NULL,msg_after_prefix));
@@ -1089,6 +1091,8 @@ flush_pending_log_callbacks(void)
     SMARTLIST_FOREACH_BEGIN(messages, pending_log_message_t *, msg) {
       const int severity = msg->severity;
       const log_domain_mask_t domain = msg->domain;
+      /* If a log message is skipping callbacks, it should not be deferred. */
+      raw_assert(!(domain & LD_SKIP_CB));
       for (lf = logfiles; lf; lf = lf->next) {
         if (! lf->callback || lf->seems_dead ||
             ! (lf->severities->masks[SEVERITY_MASK_IDX(severity)] & domain)) {
