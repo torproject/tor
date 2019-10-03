@@ -167,7 +167,7 @@ if test "x$have_systemd" = "xyes"; then
     TOR_SYSTEMD_CFLAGS="${SYSTEMD_CFLAGS}"
     TOR_SYSTEMD_LIBS="${SYSTEMD_LIBS}"
     PKG_CHECK_MODULES(LIBSYSTEMD209, [libsystemd >= 209],
-         [AC_DEFINE(HAVE_SYSTEMD_209,1,[Have systemd v209 or more])], [])
+         [AC_DEFINE(HAVE_SYSTEMD_209,1,[Have systemd v209 or greater])], [])
 fi
 AC_SUBST(TOR_SYSTEMD_CFLAGS)
 AC_SUBST(TOR_SYSTEMD_LIBS)
