@@ -4,161 +4,150 @@
 // Learn asciidoc on http://www.methods.co.nz/asciidoc/userguide.html
 :man source:   Tor
 :man manual:   Tor Manual
-TOR(1)
-======
 
-NAME
-----
-tor - The second-generation onion router
+= The Tor Manual
 
-
-SYNOPSIS
---------
-**tor** [__OPTION__ __value__]...
-
-DESCRIPTION
------------
-Tor is a connection-oriented anonymizing communication
+Tor, the second-generation onion router, is a connection-oriented, anonymizing communication
 service. Users choose a source-routed path through a set of nodes, and
-negotiate a "virtual circuit" through the network, in which each node
-knows its predecessor and successor, but no others. Traffic flowing down
+negotiate a "virtual circuit" through the network in which each node
+knows only its predecessor and successor nodes, and not any other node. Traffic flowing down
 the circuit is unwrapped by a symmetric key at each node, which reveals
-the downstream node. +
+the downstream node. Basically, Tor provides a distributed network of servers or relays ("onion routers").
+Users bounce their TCP streams, including web traffic, ftp, ssh, etc., around the
+network, while recipients, observers, and even the relays find it difficult to track the source of the stream.
 
-Basically, Tor provides a distributed network of servers or relays ("onion routers").
-Users bounce their TCP streams -- web traffic, ftp, ssh, etc. -- around the
-network, and recipients, observers, and even the relays themselves have
-difficulty tracking the source of the stream.
-
-By default, **tor** will act as a client only.  To help the network
+[NOTE]
+By default, tor acts as a client only. To help the network
 by providing bandwidth as a relay, change the **ORPort** configuration
-option -- see below.  Please also consult the documentation on the Tor
+option as mentioned below.  Also, refer to the documentation on the Tor
 Project's website.
 
-COMMAND-LINE OPTIONS
---------------------
-[[opt-h]] **-h**, **--help**::
-    Display a short help message and exit.
+== Overview
 
-[[opt-f]] **-f** __FILE__::
-    Specify a new configuration file to contain further Tor configuration
-    options OR pass *-* to make Tor read its configuration from standard
-    input. (Default: @CONFDIR@/torrc, or $HOME/.torrc if that file is not
-    found)
+== Command-Line Options +
 
-[[opt-allow-missing-torrc]] **--allow-missing-torrc**::
-    Do not require that configuration file specified by **-f** exist if
-    default torrc can be accessed.
+Tor has a powerful command-line interface. This section lists optional arguments you can
+specify at the command line using the `tor` command. +
 
-[[opt-defaults-torrc]] **--defaults-torrc** __FILE__::
-    Specify a file in which to find default values for Tor options.  The
-    contents of this file are overridden by those in the regular
+NOTE: Options on the command line override those in configuration files.
+See <<Configuration Options>> for more information.
+
+Other options can be specified on the command-line in the format --_option
+value_, _option value_, or in a configuration file.  For
+instance, you can tell Tor to start listening for SOCKS connections on port
+9999 by passing `--SocksPort 9999` or `SocksPort 9999` on the command line,
+or by specifying `SocksPort 9999` in the configuration file.  Quote options with spaces in them. For instance, if you want Tor to log all debugging
+messages to `debug.log`, you must specify `--Log "debug file
+debug.log"`.
+
+[[opt-h]] `**-h**`, `**--help**`::
+Displays a short help message and exits.
+
+[[opt-f]] `**-f** __FILE__`::
+Specifies a new configuration file to contain further Tor configuration
+options, or pass *-* for Tor to read its configuration from standard
+input. (Default: `**@CONFDIR@/torrc**`, or `**$HOME/.torrc**` if that file is not
+found)
+
+[[opt-allow-missing-torrc]] `**--allow-missing-torrc**`::
+If the default torrc can be accessed, this option does not require the configuration file specified by `**-f**` to exist.
+
+[[opt-defaults-torrc]] `**--defaults-torrc** __FILE__`::
+Specifies a file in which to find default values for Tor options.  The
+    content of this file is overridden by those in the regular
     configuration file, and by those on the command line. (Default:
-    @CONFDIR@/torrc-defaults.)
+    `**@CONFDIR@/torrc-defaults**`.)
 
-[[opt-ignore-missing-torrc]] **--ignore-missing-torrc**::
-    Specifies that Tor should treat a missing torrc file as though it
+[[opt-ignore-missing-torrc]] `**--ignore-missing-torrc**`::
+  Specifies that Tor should treat a missing torrc file as though it
     were empty. Ordinarily, Tor does this for missing default torrc files,
     but not for those specified on the command line.
 
-[[opt-hash-password]] **--hash-password** __PASSWORD__::
+[[opt-hash-password]] `**--hash-password** __PASSWORD__`::
     Generates a hashed password for control port access.
 
-[[opt-list-fingerprint]] **--list-fingerprint**::
-    Generate your keys and output your nickname and fingerprint.
+[[opt-list-fingerprint]] `**--list-fingerprint**`::
+    Generates your keys and returns your nickname and fingerprint.
 
-[[opt-verify-config]] **--verify-config**::
-    Verify the configuration file is valid.
+[[opt-verify-config]] `**--verify-config**`::
+    Verifies if the configuration file is valid.
 
-[[opt-serviceinstall]] **--service install** [**--options** __command-line options__]::
-    Install an instance of Tor as a Windows service, with the provided
+[[opt-serviceinstall]] `**--service install** [**--options** __command-line options__]`::
+    Installs an instance of Tor as a Windows service, with the provided
     command-line options. Current instructions can be found at
-    https://www.torproject.org/docs/faq#NTService
+    https://www.torproject.org/docs/faq#NTService.
 
-[[opt-service]] **--service** **remove**|**start**|**stop**::
-    Remove, start, or stop a configured Tor Windows service.
+[[opt-service]] `**--service** **remove**|**start**|**stop**`::
+    Removes, starts, or stops a configured Tor Windows service.
 
-[[opt-nt-service]] **--nt-service**::
+[[opt-nt-service]]`**--nt-service**`::
     Used internally to implement a Windows service.
 
-[[opt-list-torrc-options]] **--list-torrc-options**::
-    List all valid options.
+[[opt-list-torrc-options]] `**--list-torrc-options**`::
+    Lists all valid options.
 
-[[opt-list-deprecated-options]] **--list-deprecated-options**::
-    List all valid options that are scheduled to become obsolete in a
+[[opt-list-deprecated-options]] `**--list-deprecated-options**`::
+    Lists all valid options that are scheduled to become obsolete in a
     future version. (This is a warning, not a promise.)
 
-[[opt-list-modules]] **--list-modules**::
-    For each optional module, list whether or not it has been compiled
-    into Tor.  (Any module not listed is not optional in this version of Tor.)
+[[opt-list-modules]] `**--list-modules**`::
+ Lists whether each optional module has been compiled
+    into Tor. (Any module not listed is not optional in this version of Tor.)
 
-[[opt-version]] **--version**::
-    Display Tor version and exit. The output is a single line of the format
-    "Tor version [version number]."  (The version number format
-    is as specified in version-spec.txt.)
+[[opt-version]] `**--version**`::
+    Displays Tor version and exits. The output is a single line in the format
+    `Tor version [version number]`. The version number format
+    is as specified in `version-spec.txt`.
 
-[[opt-quiet]] **--quiet**|**--hush**::
-    Override the default console log.  By default, Tor starts out logging
-    messages at level "notice" and higher to the console.  It stops doing so
+[[opt-quiet]] `**--quiet**|**--hush**`::
+    By default, Tor starts out logging messages at level "notice" and higher to the console.
+    It stops doing so
     after it parses its configuration, if the configuration tells it to log
-    anywhere else.  You can override this behavior with the **--hush** option,
-    which tells Tor to only send warnings and errors to the console, or with
-    the **--quiet** option, which tells Tor not to log to the console at all.
+    anywhere else. These options overrides the default console log behavior. Use the **--hush** option
+    if you want Tor to log only warnings and errors to the console, or use
+    the **--quiet** option if you want Tor not to log to the console at all.
 
-[[opt-keygen]] **--keygen** [**--newpass**]::
-   Running "tor --keygen" creates a new ed25519 master identity key for a
-   relay, or only a fresh temporary signing key and certificate, if you
-   already have a master key.  Optionally you can encrypt the master identity
-   key with a passphrase: Tor will ask you for one. If you don't want to
-   encrypt the master key, just don't enter any passphrase when asked. +
- +
-   The **--newpass** option should be used with --keygen only when you need
-   to add, change, or remove a passphrase on an existing ed25519 master
-   identity key. You will be prompted for the old passphase (if any),
-   and the new passphrase (if any). +
- +
-   When generating a master key, you will probably want to use
-   **--DataDirectory** to control where the keys
-   and certificates will be stored, and **--SigningKeyLifetime** to
-   control their lifetimes.  Their behavior is as documented in the
-   server options section below.  (You must have write access to the specified
-   DataDirectory.) +
- +
-   To use the generated files, you must copy them to the DataDirectory/keys
-   directory of your Tor daemon, and make sure that they are owned by the
-   user actually running the Tor daemon on your system.
+[[opt-keygen]] `**--keygen** [**--newpass**]`::
+   Running `tor --keygen` creates a new ed25519 master identity key for a
+   relay, or only a fresh temporary signing key and certificate if you
+   already have a master key.  Optionally, you can encrypt the master identity
+   key with a passphrase. When Tor asks you for a passphrase and you don't want to
+   encrypt the master key, don't enter any passphrase when asked. +
+    Use the `--newpass` option with `--keygen` only when you want
+    to add, change, or remove a passphrase on an existing ed25519 master
+    identity key. You will be prompted for the old passphase (if any),
+    and the new passphrase (if any). +
 
-**--passphrase-fd** __FILEDES__::
-    Filedescriptor to read the passphrase from.  Note that unlike with the
-    tor-gencert program, the entire file contents are read and used as
+NOTE: When generating a master key, you may want to use
+**--DataDirectory** to control where the keys
+and certificates will be stored, and **--SigningKeyLifetime** to
+control their lifetimes. To know their behavior, see
+server options. You must have write access to the specified
+DataDirectory. +
+ To use the generated files, you must copy them to the `DataDirectory/keys`
+directory of your Tor daemon, and ensure that they are owned by the
+user actually running the Tor daemon on your system.
+
+
+`**--passphrase-fd** __FILEDES__`::
+    File descriptor to read the passphrase from.  Note that unlike the
+    `tor-gencert` program, the entire file content is read and used as
     the passphrase, including any trailing newlines.
-    Default: read from the terminal.
+    If the file descriptor is not specified, the passphrase is read from the terminal by default.
 
-[[opt-key-expiration]] **--key-expiration** [**purpose**]::
+[[opt-key-expiration]] `**--key-expiration** [**purpose**]`::
     The **purpose** specifies which type of key certificate to determine
     the expiration of.  The only currently recognised **purpose** is
     "sign". +
- +
-    Running "tor --key-expiration sign" will attempt to find your signing
-    key certificate and will output, both in the logs as well as to stdout,
+    Running `tor --key-expiration sign` attempts to find your signing
+    key certificate and returns, both in the logs as well as to stdout,
     the signing key certificate's expiration time in ISO-8601 format.
-    For example, the output sent to stdout will be of the form:
-    "signing-cert-expiry: 2017-07-25 08:30:15 UTC"
+    For example, the output sent to stdout will be in the format: +
+    ``signing-cert-expiry: 2017-07-25 08:30:15 UTC``
 
-Other options can be specified on the command-line in the format "--option
-value", in the format "option value", or in a configuration file.  For
-instance, you can tell Tor to start listening for SOCKS connections on port
-9999 by passing --SocksPort 9999 or SocksPort 9999 to it on the command line,
-or by putting "SocksPort 9999" in the configuration file.  You will need to
-quote options with spaces in them: if you want Tor to log all debugging
-messages to debug.log, you will probably need to say **--Log** `"debug file
-debug.log"`.
 
-Options on the command line override those in configuration files. See the
-next section for more information.
 
-THE CONFIGURATION FILE FORMAT
------------------------------
+== Configuration Options
 
 All configuration options in a configuration are written on a single line by
 default.  They take the form of an option name and a value, or an option name
@@ -196,8 +185,7 @@ command line that you want no SocksPorts at all.  To do that, prefix the
 option name with a forward slash (/).  You can use the plus sign (+) and the
 forward slash (/) in the configuration file and on the command line.
 
-GENERAL OPTIONS
----------------
+=== General Options
 
 [[BandwidthRate]] **BandwidthRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     A token bucket limits the average incoming bandwidth usage on this node
@@ -885,8 +873,7 @@ GENERAL OPTIONS
     If KIST is used in Schedulers, this is a multiplier of the per-socket
     limit calculation of the KIST algorithm. (Default: 1.0)
 
-CLIENT OPTIONS
---------------
+=== Client Options
 
 The following options are useful only for clients (that is, if
 **SocksPort**, **HTTPTunnelPort**, **TransPort**, **DNSPort**, or
@@ -1907,8 +1894,7 @@ The following options are useful only for clients (that is, if
     is launched for some other reason (for example, by a startup
     process, or by an application that launches itself on every login.)
 
-SERVER OPTIONS
---------------
+=== Server Options
 
 The following options are useful only for servers (that is, if ORPort
 is non-zero):
@@ -2516,8 +2502,7 @@ is non-zero):
     changed for a given amount of time.  (Default: 24 hours)
 
 
-DIRECTORY SERVER OPTIONS
-------------------------
+=== Directory Server Options
 
 The following options are useful only for directory servers. (Relays with
 enough bandwidth automatically become directory servers; see DirCache for
@@ -2562,8 +2547,7 @@ details.)
     (Default: 0)
 
 
-DENIAL OF SERVICE MITIGATION OPTIONS
-------------------------------------
+=== Denial of Service Mitigation Options
 
 Tor has three built-in mitigation options that can be individually
 enabled/disabled and fine-tuned, but by default Tor directory authorities will
@@ -2692,8 +2676,7 @@ Denial of Service mitigation subsystem described above.
     (Default: auto)
 
 
-DIRECTORY AUTHORITY SERVER OPTIONS
-----------------------------------
+=== Directory Authority Server Options
 
 The following options enable operation as a directory authority, and
 control how Tor behaves as a directory authority.  You should not need
@@ -2912,16 +2895,9 @@ on the public Tor network.
     before it will treat advertised bandwidths as wholly
     unreliable. (Default: 500)
 
-HIDDEN SERVICE OPTIONS
-----------------------
+=== Hidden Service Options
 
-The following options are used to configure a hidden service. Some options
-apply per service and some apply for the whole tor instance.
-
-The next section describes the per service options that can only be set
-**after** the **HiddenServiceDir** directive
-
-**PER SERVICE OPTIONS:**
+The following options are used to configure a hidden service.
 
 [[HiddenServiceDir]] **HiddenServiceDir** __DIRECTORY__::
     Store data files for a hidden service in DIRECTORY. Every hidden service
@@ -2946,6 +2922,12 @@ The next section describes the per service options that can only be set
     You may also have multiple lines with  the same VIRTPORT: when a user
     connects to that VIRTPORT, one of the TARGETs from those lines will be
     chosen at random. Note that address-port pairs have to be comma-separated.
+
+[[PublishHidServDescriptors]] **PublishHidServDescriptors** **0**|**1**::
+    If set to 0, Tor will run any hidden services you configure, but it won't
+    advertise them to the rendezvous directory. This option is only useful if
+    you're using a Tor controller that handles hidserv publishing for you.
+    (Default: 1)
 
 [[HiddenServiceVersion]] **HiddenServiceVersion** **2**|**3**::
     A list of rendezvous service descriptor versions to publish for the hidden
@@ -2973,7 +2955,7 @@ The next section describes the per service options that can only be set
 
 [[HiddenServiceExportCircuitID]] **HiddenServiceExportCircuitID** __protocol__::
    The onion service will use the given protocol to expose the global circuit
-   identifier of each inbound client circuit. The only
+   identifier of each inbound client circuit via the selected protocol. The only
    protocol supported right now \'haproxy'. This option is only for v3
    services. (Default: none) +
  +
@@ -2990,12 +2972,12 @@ The next section describes the per service options that can only be set
  +
       global_circuit_id = (0xAA << 24) + (0xBB << 16) + (0xCC << 8) + 0xDD; +
  +
-   In the case above, where the last 32-bits are 0xffffffff, the global circuit
+   In the case above, where the last 32-bit is 0xffffffff, the global circuit
    identifier would be 4294967295. You can use this value together with Tor's
-   control port to terminate particular circuits using their global
-   circuit identifiers. For more information about this see control-spec.txt. +
+   control port where it is possible to terminate a circuit given the global
+   circuit identifier. For more information about this see controls-spec.txt. +
  +
-   The HAProxy version 1 protocol is described in detail at
+   The HAProxy version 1 proxy protocol is described in detail at
    https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
 
 [[HiddenServiceMaxStreams]] **HiddenServiceMaxStreams** __N__::
@@ -3024,38 +3006,6 @@ The next section describes the per service options that can only be set
 [[HiddenServiceNumIntroductionPoints]] **HiddenServiceNumIntroductionPoints** __NUM__::
     Number of introduction points the hidden service will have. You can't
     have more than 10 for v2 service and 20 for v3. (Default: 3)
-
-[[HiddenServiceEnableIntroDoSDefense]] **HiddenServiceEnableIntroDoSDefense** **0**|**1**::
-    Enable DoS defense at the intropoint level. When this is enabled, the
-    rate and burst parameter (see below) will be sent to the intro point which
-    will then use them to apply rate limiting for introduction request to this
-    service.
-  +
-    The introduction point honors the consensus parameters except if this is
-    specifically set by the service operator using this option. The service
-    never looks at the consensus parameters in order to enable or disable this
-    defense. (Default: 0)
-
-[[HiddenServiceEnableIntroDoSRatePerSec]] **HiddenServiceEnableIntroDoSRatePerSec** __NUM__::
-    The allowed client introduction rate per second at the introduction
-    point. If this option is 0, it is considered infinite and thus if
-    **HiddenServiceEnableIntroDoSDefense** is set, it then effectively
-    disables the defenses. (Default: 25)
-
-[[HiddenServiceEnableIntroDoSBurstPerSec]] **HiddenServiceEnableIntroDoSBurstPerSec** __NUM__::
-    The allowed client introduction burst per second at the introduction
-    point. If this option is 0, it is considered infinite and thus if
-    **HiddenServiceEnableIntroDoSDefense** is set, it then effectively
-    disables the defenses. (Default: 200)
-
-
-**PER INSTANCE OPTIONS:**
-
-[[PublishHidServDescriptors]] **PublishHidServDescriptors** **0**|**1**::
-    If set to 0, Tor will run any hidden services you configure, but it won't
-    advertise them to the rendezvous directory. This option is only useful if
-    you're using a Tor controller that handles hidserv publishing for you.
-    (Default: 1)
 
 [[HiddenServiceSingleHopMode]] **HiddenServiceSingleHopMode** **0**|**1**::
     **Experimental - Non Anonymous** Hidden Services on a tor instance in
@@ -3091,8 +3041,7 @@ The next section describes the per service options that can only be set
     including setting SOCKSPort to "0". Can not be changed while tor is
     running. (Default: 0)
 
-Client Authorization
---------------------
+=== Client Authorization
 
 (Version 3 only)
 
@@ -3122,8 +3071,7 @@ a SIGHUP takes place.
 See the Appendix G in the rend-spec-v3.txt file of
 https://spec.torproject.org/[torspec] for more information.
 
-TESTING NETWORK OPTIONS
------------------------
+=== Testing Network Options
 
 The following options are used for running a testing Tor network.
 
@@ -3322,8 +3270,7 @@ The following options are used for running a testing Tor network.
     we replace it and issue a new key?
     (Default: 3 hours for link and auth; 1 day for signing.)
 
-NON-PERSISTENT OPTIONS
-----------------------
+=== Non-Persistent Options
 
 These options are not saved to the torrc file by the "SAVECONF" controller
 command.  Other options of this type are documented in control-spec.txt,
@@ -3335,13 +3282,16 @@ section 5.4. End-users should mostly ignore them.
     torrc file by the controller's SAVECONF command.
 
 
-SIGNALS
--------
+== References
+This section includes the reference information for tor's signals,
+ configuration files, and contains links for more information.
+
+=== Signals
 
 Tor catches the following signals:
 
 [[SIGTERM]] **SIGTERM**::
-    Tor will catch this, clean up and sync to disk if necessary, and exit.
+    Tor will catch this, clean up, and sync to disk if necessary, and exit.
 
 [[SIGINT]] **SIGINT**::
     Tor clients behave as with SIGTERM; but Tor servers will do a controlled
@@ -3369,260 +3319,260 @@ Tor catches the following signals:
 [[SIGXFSZ]] **SIGXFSZ**::
     If this signal exists on your platform, Tor catches and ignores it.
 
-FILES
------
+=== Files
+This section contains information about Tor's configuration files.
 
-**@CONFDIR@/torrc**::
-    The configuration file, which contains "option value" pairs.
+[%header,cols=2*]
+|===
+|File Location
+|Description
 
-**$HOME/.torrc**::
-    Fallback location for torrc, if @CONFDIR@/torrc is not found.
+|`**@CONFDIR@/torrc**`
+|Contains _option-value_ pairs.
 
-**@LOCALSTATEDIR@/lib/tor/**::
-    The tor process stores keys and other data here.
+|`**$HOME/.torrc**`
+|Fallback location for `**torrc**`, if `**@CONFDIR@/torrc**` is not found.
+
+|`**@LOCALSTATEDIR@/lib/tor/**`
+|The Tor process stores keys and other data in this file.
+
+|`**__CacheDirectory__/cached-certs**`
+|Contains downloaded directory key certificates that are used to
+verify authenticity of documents generated by the Tor directory authorities.
+
+|`**__CacheDirectory__/cached-consensus**` and/or `**cached-microdesc-consensus**`
+|The most recent consensus network status document we've downloaded.
+
+|`**__CacheDirectory__/cached-descriptors**` and `**cached-descriptors.new**`
+|  These files contain the downloaded router statuses. Some routers may appear more
+  than once; if so, the most recently published descriptor is used. Lines
+  beginning with `@-signs` are annotations that contain more information about
+  a given router. The `**.new**` file is an append-only journal; when it gets
+  too large, all entries are merged into a new cached-descriptors file.
+
+|`**__CacheDirectory__/cached-extrainfo**` and `**cached-extrainfo.new**`
+|  Similar to `**cached-descriptors**`, but holds optionally-downloaded "extra-info"
+documents. Relays use these documents to send inessential information
+about statistics, bandwidth history, and network health to the
+authorities. They aren't fetched by default. See the DownloadExtraInfo
+option for more information.
+
+|`**__CacheDirectory__/cached-microdescs**` and `**cached-microdescs.new**`
+|These files hold downloaded microdescriptors.  Lines beginning with
+`@-signs` are annotations that contain more information about a given
+router. The `**.new**` file is an append-only journal; when it gets too
+large, all entries are merged into a new cached-microdescs file.
+
+|`**__DataDirectory__/state**`
+| Contains a set of persistent key-value mappings. These include: +
+          - the current entry guards and their status. +
+          - the current bandwidth accounting values. +
+          - when the file was last written +
+          - what version of Tor generated the state file +
+          - a short history of bandwidth usage, as produced in the server
+          descriptors.
+
+|`**__DataDirectory__/sr-state**`
+| _Authority only_. This file is used to record information about the current
+  status of the shared-random-value voting state.
+
+|`**__CacheDirectory__/diff-cache**`
+|_Directory cache only_. Holds older consensuses and diffs from oldest
+ to the most recent consensus of each type compressed
+in various ways. Each file contains a set of key-value arguments
+describing its contents, followed by a single NUL byte, followed by the
+main file contents.
+
+|`**__DataDirectory__/bw_accounting**`
+|This file
+is obsolete and the data is now stored in the `**\state**` file instead. Used to track bandwidth accounting values (when the current period starts
+and ends; how much has been read and written so far this period).
+
+|`**__DataDirectory__/control_auth_cookie**`
+| This file can be used only when cookie authentication is enabled. Used for cookie authentication with the controller. Location can be
+  overridden by the `CookieAuthFile` configuration option. Regenerated on startup. See
+  control-spec.txt in https://spec.torproject.org/[torspec] for details.
+
+|`**__DataDirectory__/lock**`
+|This file is used to prevent two Tor instances from using the same data
+directory. If access to this file is locked, data directory is already
+in use by Tor.
+
+|`**__DataDirectory__/key-pinning-journal**`
+| Used by authorities. A line-based file that records mappings between
+  RSA1024 and Ed25519 identity keys. Authorities enforce
+  these mappings, so that once a relay has picked an Ed25519 key, stealing
+  or factoring the RSA1024 key will no longer let an attacker impersonate
+  the relay.
+
+|`**__KeyDirectory__/authority_identity_key**`
+|A v3 directory authority's master identity key, used to authenticate its
+signing key. Tor doesn't use this while it's running. The tor-gencert
+program uses this. If you're running an authority, you should keep this
+key offline, and not put it in this file.
+
+|`**__KeyDirectory__/authority_certificate**`
+|Only directory authorities use this file. A v3 directory authority's certificate which authenticates the authority's
+current vote- and consensus-signing key using its master identity key.
+
+|`**__KeyDirectory__/authority_signing_key**`
+|Only directory authorities use this file. A v3 directory authority's signing key that is used to sign votes and consensuses.
+Corresponds to the
+**authority_certificate** cert.
+
+|`**__KeyDirectory__/legacy_certificate**`
+|As authority_certificate; used only when `V3AuthUseLegacyKey` is set.
+See documentation for V3AuthUseLegacyKey.
+
+|`**__KeyDirectory__/legacy_signing_key**`
+|As authority_signing_key: used only when `V3AuthUseLegacyKey` is set.
+See documentation for V3AuthUseLegacyKey.
+
+|`**__KeyDirectory__/secret_id_key**`
+|A relay's RSA1024 permanent identity key, including private and public
+components. Used to sign router descriptors, and to sign other keys.
+
+|`**__KeyDirectory__/ed25519_master_id_public_key**`
+|The public part of a relay's Ed25519 permanent identity key.
+
+|`**__KeyDirectory__/ed25519_master_id_secret_key**`
+|The private part of a relay's Ed25519 permanent identity key.  This key
+is used to sign the medium-term ed25519 signing key.  This file can be
+kept offline or encrypted. If so, Tor will not be able to generate
+new signing keys automatically; you'll need to use `tor --keygen` to do
+so.
+
+|`**__KeyDirectory__/ed25519_signing_secret_key**`
+|The private and public components of a relay's medium-term Ed25519 signing
+key. This key is authenticated by the Ed25519 master key, which in turn
+authenticates other keys (and router descriptors).
+
+|`**__KeyDirectory__/ed25519_signing_cert**`
+|The certificate which authenticates "ed25519_signing_secret_key" as
+having been signed by the Ed25519 master key.
+
+|`**__KeyDirectory__/secret_onion_key**` and `**secret_onion_key.old**`
+|A relay's RSA1024 short-term onion key. Used to decrypt old-style ("TAP")
+circuit extension requests. The `**.old**` file holds the previously
+generated key, which the relay uses to handle any requests that were
+made by clients that didn't have the new one.
+
+|`**__KeyDirectory__/secret_onion_key_ntor**` and `**secret_onion_key_ntor.old**`
+|A relay's Curve25519 short-term onion key. Used to handle modern ("ntor")
+circuit extension requests. The `**.old**` file holds the previously
+generated key, which the relay uses to handle any requests that were
+made by clients that didn't have the new one.
+
+|`**__DataDirectory__/fingerprint**`
+|Only used by servers. Contains the fingerprint of the server's identity key.
+
+|`**__DataDirectory__/hashed-fingerprint**`
+|Only used by bridges. Contains the hashed fingerprint of the bridge's
+  identity key. (That is, the hash of the hash of the identity key.)
+
+|`**__DataDirectory__/approved-routers**`
+| Only used by authoritative directory servers. This file lists
+the status of routers by their identity fingerprint.
+Each line lists a status and a fingerprint separated by
+whitespace. See your `**fingerprint**` file in the __DataDirectory__ for an
+example line. If the status is **!reject**, then the descriptors from the
+given identity (fingerprint) are rejected by this server. If it is
+**!invalid**, then the descriptors are accepted but marked in the directory as
+not valid, that is, not recommended.
+
+|`**__DataDirectory__/v3-status-votes**`
+|Only for v3 authoritative directory servers. This file contains
+status votes from all the authoritative directory servers.
+
+|`**__CacheDirectory__/unverified-consensus**`
+|Contains a network consensus document that has been downloaded,
+but which we didn't have the right certificates to check yet
+
+|`**__CacheDirectory__/unverified-microdesc-consensus**`
+|Contains a microdescriptor-flavored network consensus document
+that has been downloaded, but which we didn't have the right certificates
+to check yet.
+
+|`**__DataDirectory__/unparseable-desc**`
+| Onion server descriptors that Tor was unable to parse are dumped to this
+  file. Only used for debugging.
+
+|`**__DataDirectory__/router-stability**`
+|  Only used by authoritative directory servers. Tracks measurements for
+  router mean-time-between-failures so that authorities have a fair idea of
+  how to set their Stable flags.
+
+|`**__DataDirectory__/stats/dirreq-stats**`
+| Only used by directory caches and authorities. This file is used to
+  collect directory request statistics.
+
+|`**__DataDirectory__/stats/entry-stats**`
+|Only used by servers. This file is used to collect incoming connection
+statistics by Tor entry nodes.
+
+|`**__DataDirectory__/stats/bridge-stats**`
+|Only used by servers. This file is used to collect incoming connection
+statistics by Tor bridges.
+
+|`**__DataDirectory__/stats/exit-stats**`
+| Only used by servers. This file is used to collect outgoing connection
+  statistics by Tor exit routers.
+
+|`**__DataDirectory__/stats/buffer-stats**`
+|Only used by servers. This file is used to collect buffer usage
+history.
+
+|`**__DataDirectory__/stats/conn-stats**`
+|Only used by servers. This file is used to collect approximate connection
+history (number of active connections over time).
+
+|`**__DataDirectory__/stats/hidserv-stats**`
+|Only used by servers. This file is used to collect approximate counts
+of what fraction of the traffic is hidden service rendezvous traffic, and
+approximately how many hidden services the relay has seen.
+
+|`**__DataDirectory__/networkstatus-bridges**`
+|Only used by authoritative bridge directories. Contains information
+about bridges that have self-reported themselves to the bridge
+authority.
+
+|`**__DataDirectory__/approved-routers**`
+|_Authorities only_. This file is used to configure which relays are
+known to be valid, invalid, and so forth.
+
+|`**__HiddenServiceDirectory__/hostname**`
+| The <base32-encoded-fingerprint>.onion domain name for this hidden service.
+  If the hidden service is restricted to authorized clients only, this file
+  also contains authorization data for all clients. +
+  NOTE: The clients will ignore any extra subdomains prepended to a hidden
+  service hostname. Suppose you have "xyz.onion" as your hostname, you
+  can ask your clients to connect to "www.xyz.onion" or "irc.xyz.onion"
+  for virtual-hosting purposes.
 
 
-__CacheDirectory__**/cached-certs**::
-    This file holds downloaded directory key certificates that are used to
-    verify authenticity of documents generated by Tor directory authorities.
+|`**__HiddenServiceDirectory__/private_key**`
+| Contains the private key for this hidden service.
 
-__CacheDirectory__**/cached-consensus** and/or **cached-microdesc-consensus**::
-    The most recent consensus network status document we've downloaded.
+|`**__HiddenServiceDirectory__/client_keys**`
+|Contains authorization data for a hidden service that is only accessible by
+authorized clients.
 
-__CacheDirectory__**/cached-descriptors** and **cached-descriptors.new**::
-    These files hold downloaded router statuses. Some routers may appear more
-    than once; if so, the most recently published descriptor is used. Lines
-    beginning with @-signs are annotations that contain more information about
-    a given router. The ".new" file is an append-only journal; when it gets
-    too large, all entries are merged into a new cached-descriptors file.
+|`**__HiddenServiceDirectory__/onion_service_non_anonymous**`
+|This file is present if a hidden service key was created in
+**HiddenServiceNonAnonymousMode**.
+|===
 
-__CacheDirectory__**/cached-extrainfo** and **cached-extrainfo.new**::
-   As "cached-descriptors", but holds optionally-downloaded "extra-info"
-   documents. Relays use these documents to send inessential information
-   about statistics, bandwidth history, and network health to the
-   authorities. They aren't fetched by default; see the DownloadExtraInfo
-   option for more info.
+=== See Also
 
-__CacheDirectory__**/cached-microdescs** and **cached-microdescs.new**::
-    These files hold downloaded microdescriptors.  Lines beginning with
-    @-signs are annotations that contain more information about a given
-    router. The ".new" file is an append-only journal; when it gets too
-    large, all entries are merged into a new cached-microdescs file.
+For more information, refer to the Tor project at https://www.torproject.org/
+and the Tor spec at https://spec.torproject.org. See also **torsocks**(1) and **torify**(1).
 
-__DataDirectory__**/state**::
-    A set of persistent key-value mappings. These are documented in
-    the file. These include:
-            - The current entry guards and their status.
-            - The current bandwidth accounting values.
-            - When the file was last written
-            - What version of Tor generated the state file
-            - A short history of bandwidth usage, as produced in the server
-            descriptors.
 
-__DataDirectory__**/sr-state**::
-    Authority only. State file used to record information about the current
-    status of the shared-random-value voting state.
+=== Bugs
 
-__CacheDirectory__**/diff-cache**::
-    Directory cache only. Holds older consensuses, and diffs from older
-    consensuses to the most recent consensus of each type, compressed
-    in various ways. Each file contains a set of key-value arguments
-    describing its contents, followed by a single NUL byte, followed by the
-    main file contents.
 
-__DataDirectory__**/bw_accounting**::
-    Used to track bandwidth accounting values (when the current period starts
-    and ends; how much has been read and written so far this period). This file
-    is obsolete, and the data is now stored in the \'state' file instead.
+Since Tor is still under development, there may be plenty of bugs. Please report them at https://trac.torproject.org/.
 
-__DataDirectory__**/control_auth_cookie**::
-    Used for cookie authentication with the controller. Location can be
-    overridden by the CookieAuthFile config option. Regenerated on startup. See
-    control-spec.txt in https://spec.torproject.org/[torspec] for details.
-    Only used when cookie authentication is enabled.
+=== Authors
 
-__DataDirectory__**/lock**::
-    This file is used to prevent two Tor instances from using same data
-    directory. If access to this file is locked, data directory is already
-    in use by Tor.
-
-__DataDirectory__**/key-pinning-journal**::
-    Used by authorities. A line-based file that records mappings between
-    RSA1024 identity keys and Ed25519 identity keys. Authorities enforce
-    these mappings, so that once a relay has picked an Ed25519 key, stealing
-    or factoring the RSA1024 key will no longer let an attacker impersonate
-    the relay.
-
-__KeyDirectory__**/authority_identity_key**::
-    A v3 directory authority's master identity key, used to authenticate its
-    signing key. Tor doesn't use this while it's running. The tor-gencert
-    program uses this. If you're running an authority, you should keep this
-    key offline, and not actually put it here.
-
-__KeyDirectory__**/authority_certificate**::
-    A v3 directory authority's certificate, which authenticates the authority's
-    current vote- and consensus-signing key using its master identity key.
-    Only directory authorities use this file.
-
-__KeyDirectory__**/authority_signing_key**::
-    A v3 directory authority's signing key, used to sign votes and consensuses.
-    Only directory authorities use this file.  Corresponds to the
-    **authority_certificate** cert.
-
-__KeyDirectory__**/legacy_certificate**::
-    As authority_certificate: used only when V3AuthUseLegacyKey is set.
-    See documentation for V3AuthUseLegacyKey.
-
-__KeyDirectory__**/legacy_signing_key**::
-    As authority_signing_key: used only when V3AuthUseLegacyKey is set.
-    See documentation for V3AuthUseLegacyKey.
-
-__KeyDirectory__**/secret_id_key**::
-    A relay's RSA1024 permanent identity key, including private and public
-    components.  Used to sign router descriptors, and to sign other keys.
-
-__KeyDirectory__**/ed25519_master_id_public_key**::
-    The public part of a relay's Ed25519 permanent identity key.
-
-__KeyDirectory__**/ed25519_master_id_secret_key**::
-    The private part of a relay's Ed25519 permanent identity key.  This key
-    is used to sign the medium-term ed25519 signing key.  This file can be
-    kept offline, or kept encrypted. If so, Tor will not be able to generate
-    new signing keys itself; you'll need to use tor --keygen yourself to do
-    so.
-
-__KeyDirectory__**/ed25519_signing_secret_key**::
-    The private and public components of a relay's medium-term Ed25519 signing
-    key. This key is authenticated by the Ed25519 master key, in turn
-    authenticates other keys (and router descriptors).
-
-__KeyDirectory__**/ed25519_signing_cert**::
-    The certificate which authenticates "ed25519_signing_secret_key" as
-    having been signed by the Ed25519 master key.
-
-__KeyDirectory__**/secret_onion_key** and **secret_onion_key.old**::
-    A relay's RSA1024 short-term onion key. Used to decrypt old-style ("TAP")
-    circuit extension requests. The ".old" file holds the previously
-    generated key, which the relay uses to handle any requests that were
-    made by clients that didn't have the new one.
-
-__KeyDirectory__**/secret_onion_key_ntor** and **secret_onion_key_ntor.old**::
-    A relay's Curve25519 short-term onion key. Used to handle modern ("ntor")
-    circuit extension requests. The ".old" file holds the previously
-    generated key, which the relay uses to handle any requests that were
-    made by clients that didn't have the new one.
-
-__DataDirectory__**/fingerprint**::
-    Only used by servers. Holds the fingerprint of the server's identity key.
-
-__DataDirectory__**/hashed-fingerprint**::
-    Only used by bridges. Holds the hashed fingerprint of the bridge's
-    identity key. (That is, the hash of the hash of the identity key.)
-
-__DataDirectory__**/approved-routers**::
-    Only used by authoritative directory servers. This file lists
-    the status of routers by their identity fingerprint.
-    Each line lists a status and a fingerprint separated by
-    whitespace. See your **fingerprint** file in the __DataDirectory__ for an
-    example line. If the status is **!reject** then descriptors from the
-    given identity (fingerprint) are rejected by this server. If it is
-    **!invalid** then descriptors are accepted but marked in the directory as
-    not valid, that is, not recommended.
-
-__DataDirectory__**/v3-status-votes**::
-    Only for v3 authoritative directory servers. This file contains
-    status votes from all the authoritative directory servers.
-
-__CacheDirectory__**/unverified-consensus**::
-    This file contains a network consensus document that has been downloaded,
-    but which we didn't have the right certificates to check yet.
-
-__CacheDirectory__**/unverified-microdesc-consensus**::
-    This file contains a microdescriptor-flavored network consensus document
-    that has been downloaded, but which we didn't have the right certificates
-    to check yet.
-
-__DataDirectory__**/unparseable-desc**::
-    Onion server descriptors that Tor was unable to parse are dumped to this
-    file. Only used for debugging.
-
-__DataDirectory__**/router-stability**::
-    Only used by authoritative directory servers. Tracks measurements for
-    router mean-time-between-failures so that authorities have a good idea of
-    how to set their Stable flags.
-
-__DataDirectory__**/stats/dirreq-stats**::
-    Only used by directory caches and authorities. This file is used to
-    collect directory request statistics.
-
-__DataDirectory__**/stats/entry-stats**::
-    Only used by servers. This file is used to collect incoming connection
-    statistics by Tor entry nodes.
-
-__DataDirectory__**/stats/bridge-stats**::
-    Only used by servers. This file is used to collect incoming connection
-    statistics by Tor bridges.
-
-__DataDirectory__**/stats/exit-stats**::
-    Only used by servers. This file is used to collect outgoing connection
-    statistics by Tor exit routers.
-
-__DataDirectory__**/stats/buffer-stats**::
-    Only used by servers. This file is used to collect buffer usage
-    history.
-
-__DataDirectory__**/stats/conn-stats**::
-    Only used by servers. This file is used to collect approximate connection
-    history (number of active connections over time).
-
-__DataDirectory__**/stats/hidserv-stats**::
-    Only used by servers. This file is used to collect approximate counts
-    of what fraction of the traffic is hidden service rendezvous traffic, and
-    approximately how many hidden services the relay has seen.
-
-__DataDirectory__**/networkstatus-bridges**::
-    Only used by authoritative bridge directories. Contains information
-    about bridges that have self-reported themselves to the bridge
-    authority.
-
-__DataDirectory__**/approved-routers**::
-    Authorities only. This file is used to configure which relays are
-    known to be valid, invalid, and so forth.
-
-__HiddenServiceDirectory__**/hostname**::
-    The <base32-encoded-fingerprint>.onion domain name for this hidden service.
-    If the hidden service is restricted to authorized clients only, this file
-    also contains authorization data for all clients.
- +
-    Note that clients will ignore any extra subdomains prepended to a hidden
-    service hostname. So if you have "xyz.onion" as your hostname, you
-    can tell clients to connect to "www.xyz.onion" or "irc.xyz.onion"
-    for virtual-hosting purposes.
-
-__HiddenServiceDirectory__**/private_key**::
-    The private key for this hidden service.
-
-__HiddenServiceDirectory__**/client_keys**::
-    Authorization data for a hidden service that is only accessible by
-    authorized clients.
-
-__HiddenServiceDirectory__**/onion_service_non_anonymous**::
-    This file is present if a hidden service key was created in
-    **HiddenServiceNonAnonymousMode**.
-
-SEE ALSO
---------
-**torsocks**(1), **torify**(1) +
-
-**https://www.torproject.org/**
-
-**torspec: https://spec.torproject.org **
-
-BUGS
-----
-
-Plenty, probably. Tor is still in development. Please report them at https://trac.torproject.org/.
-
-AUTHORS
--------
 Roger Dingledine [arma at mit.edu], Nick Mathewson [nickm at alum.mit.edu].
