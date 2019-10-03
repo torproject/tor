@@ -584,8 +584,7 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
   /* check that severity is sane.  Overrunning the masks array leads to
    * interesting and hard to diagnose effects */
   raw_assert(severity >= LOG_ERR && severity <= LOG_DEBUG);
-  /* check that we've initialised the log mutex before we try to lock it */
-  raw_assert(log_mutex_initialized);
+
   LOCK_LOGS();
 
   if ((! (domain & LD_NOCB)) && pending_cb_messages
@@ -629,6 +628,10 @@ void
 tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
 {
   va_list ap;
+
+  /* check that domain is composed of known domains and flags */
+  raw_assert((domain & (LD_ALL_DOMAINS|LD_ALL_FLAGS)) == domain);
+
   if (severity > log_global_min_severity_)
     return;
   va_start(ap,format);
@@ -866,9 +869,6 @@ logs_close_sigsafe(void)
  * logfiles (it is probably present, but it might not be due to thread
  * racing issues). After this function is called, the caller shouldn't
  * refer to <b>victim</b> anymore.
- *
- * Long-term, we need to do something about races in the log subsystem
- * in general. See bug 222 for more details.
  */
 static void
 delete_log(logfile_t *victim)
@@ -931,7 +931,7 @@ set_log_severity_config(int loglevelMin, int loglevelMax,
   raw_assert(loglevelMax >= LOG_ERR && loglevelMax <= LOG_DEBUG);
   memset(severity_out, 0, sizeof(log_severity_list_t));
   for (i = loglevelMin; i >= loglevelMax; --i) {
-    severity_out->masks[SEVERITY_MASK_IDX(i)] = ~0u;
+    severity_out->masks[SEVERITY_MASK_IDX(i)] = LD_ALL_DOMAINS;
   }
 }
 
@@ -1341,7 +1341,9 @@ static const char *domain_list[] = {
 
 CTASSERT(ARRAY_LENGTH(domain_list) == N_LOGGING_DOMAINS + 1);
 
-CTASSERT((UINT64_C(1)<<(N_LOGGING_DOMAINS-1)) < LOWEST_RESERVED_LD_FLAG_);
+CTASSERT(HIGHEST_RESERVED_LD_DOMAIN_ < LD_ALL_DOMAINS);
+CTASSERT(LD_ALL_DOMAINS < LOWEST_RESERVED_LD_FLAG_);
+CTASSERT(LOWEST_RESERVED_LD_FLAG_ < LD_ALL_FLAGS);
 
 /** Return a bitmask for the log domain for which <b>domain</b> is the name,
  * or 0 if there is no such name. */
@@ -1423,7 +1425,7 @@ parse_log_severity_config(const char **cfg_ptr,
     const char *dash, *space;
     char *sev_lo, *sev_hi;
     int low, high, i;
-    log_domain_mask_t domains = ~0u;
+    log_domain_mask_t domains = LD_ALL_DOMAINS;
 
     if (*cfg == '[') {
       int err = 0;
@@ -1441,7 +1443,7 @@ parse_log_severity_config(const char **cfg_ptr,
       tor_free(domains_str);
       SMARTLIST_FOREACH_BEGIN(domains_list, const char *, domain) {
             if (!strcmp(domain, "*")) {
-              domains = ~0u;
+              domains = LD_ALL_DOMAINS;
             } else {
               log_domain_mask_t d;
               int negate=0;
@@ -1537,7 +1539,7 @@ switch_logs_debug(void)
   LOCK_LOGS();
   for (lf = logfiles; lf; lf=lf->next) {
     for (i = LOG_DEBUG; i >= LOG_ERR; --i)
-      lf->severities->masks[SEVERITY_MASK_IDX(i)] = ~0u;
+      lf->severities->masks[SEVERITY_MASK_IDX(i)] = LD_ALL_DOMAINS;
   }
   log_global_min_severity_ = get_min_log_level();
   UNLOCK_LOGS();

@@ -1,0 +1,3 @@
+  o Minor bugfixes (logging):
+    - When initialising log domain masks, only set known log domains.
+      Fixes bug 31854; bugfix on 0.2.1.1-alpha.
