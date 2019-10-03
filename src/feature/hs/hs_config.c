@@ -253,6 +253,16 @@ config_has_invalid_options(const config_line_t *line_,
                             "version %" PRIu32 " of service in %s",
                  opt, service->config.version,
                  service->config.directory_path);
+
+        if (!strcasecmp(line->key, "HiddenServiceAuthorizeClient")) {
+          /* Special case this v2 option so that we can offer alternatives.
+           * If more such special cases appear, it would be good to
+           * generalize the exception mechanism here. */
+          log_warn(LD_CONFIG, "For v3 onion service client authorization, "
+                   "please read the 'CLIENT AUTHORIZATION' section in the "
+                   "manual.");
+        }
+
         ret = 1;
         /* Continue the loop so we can find all possible options. */
         continue;
