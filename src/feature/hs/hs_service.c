@@ -1691,8 +1691,8 @@ build_desc_intro_points(const hs_service_t *service,
        * because their circuit has not opened and they haven't been removed
        * yet even though we have enough intro circuits.
        *
-       * XXX: Due to #31561, it can stay in that list until rotation so this
-       * check prevents to publish an intro point without a circuit. */
+       * Due to #31561, it can stay in that list until rotation so this check
+       * prevents to publish an intro point without a circuit. */
       continue;
     }
     hs_desc_intro_point_t *desc_ip = hs_desc_intro_point_new();
