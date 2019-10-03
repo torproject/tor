@@ -6190,7 +6190,7 @@ test_util_map_anon_nofork(void *arg)
   tor_munmap_anonymous(ptr, sz);
   ptr = tor_mmap_anonymous(sz, ANONMAP_NOINHERIT, &inherit);
   tt_ptr_op(ptr, OP_NE, 0);
-  memset(ptr, TEST_VALUE, sz);
+  memset(ptr, (uint8_t)TEST_VALUE, sz);
 
   tt_int_op(0, OP_EQ, pipe(pipefd));
   pid_t child = fork();
