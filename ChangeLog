@@ -8,28 +8,28 @@ Changes in version 0.4.2.2-alpha - 2019-10-0?
 
   o Major bugfixes (torrc):
     - Stop ignoring torrc options after an %include directive, when the
-      included directory ends with a file that does not contain any config
-      options. (But does contain comments or whitespace.)
-      Fixes bug 31408; bugfix on 0.3.1.1-alpha.
+      included directory ends with a file that does not contain any
+      config options. (But does contain comments or whitespace.) Fixes
+      bug 31408; bugfix on 0.3.1.1-alpha.
 
   o Minor features (authority):
     - Directory authorities now reject relays running all currently
-      deprecated release series.  The currently supported release series
-      are: 0.2.9, 0.3.5, 0.4.0, 0.4.1, and 0.4.2.  Closes ticket 31549.
+      deprecated release series. The currently supported release series
+      are: 0.2.9, 0.3.5, 0.4.0, 0.4.1, and 0.4.2. Closes ticket 31549.
 
   o Minor features (auto-formatting scripts):
-    - When annotating C macros, never generate a line that our check-spaces
-      script would reject. Closes ticket 31759.
+    - When annotating C macros, never generate a line that our check-
+      spaces script would reject. Closes ticket 31759.
     - When annotating C macros, try to remove cases of double-negation.
       Closes ticket 31779.
 
   o Minor features (continuous integration):
-    - When building on Appveyor, pass the "-k" flag to make, so that
-      we are informed of all compilation failures, not just the first
-      one or two. Closes part of ticket 31372.
-    - When building on Travis, pass the "-k" flag to make, so that
-      we are informed of all compilation failures, not just the first
-      one or two. Closes part of ticket 31372.
+    - When building on Appveyor, pass the "-k" flag to make, so that we
+      are informed of all compilation failures, not just the first one
+      or two. Closes part of ticket 31372.
+    - When building on Travis, pass the "-k" flag to make, so that we
+      are informed of all compilation failures, not just the first one
+      or two. Closes part of ticket 31372.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the October 1 2019 Maxmind GeoLite2
@@ -37,40 +37,40 @@ Changes in version 0.4.2.2-alpha - 2019-10-0?
 
   o Minor features (maintenance scripts):
     - Add a coccinelle script to detect bugs caused by incrementing or
-      decrementing a variable inside a call to log_debug().  Since
-      log_debug() is a macro whose arguments are conditionally evaluated, it
-      is usually an error to do this. One such bug was 30628, in which SENDME
-      cells were miscounted by a decrement operator inside a log_debug()
-      call.  Closes ticket 30743.
+      decrementing a variable inside a call to log_debug(). Since
+      log_debug() is a macro whose arguments are conditionally
+      evaluated, it is usually an error to do this. One such bug was
+      30628, in which SENDME cells were miscounted by a decrement
+      operator inside a log_debug() call. Closes ticket 30743.
 
   o Minor features (onion services v3):
     - Assist users who try to setup v2 client authorization in v3 onion
-      services by pointing them to the right documentation. Closes ticket
-      28966.
+      services by pointing them to the right documentation. Closes
+      ticket 28966.
 
   o Minor bugfixes (Appveyor CI):
-    - Avoid spurious errors when Appveyor CI fails before the install step.
-      Fixes bug 31884; bugfix on 0.3.4.2-alpha.
+    - Avoid spurious errors when Appveyor CI fails before the install
+      step. Fixes bug 31884; bugfix on 0.3.4.2-alpha.
 
   o Minor bugfixes (best practices tracker):
-    - When listing overbroad exceptions, do not also list problems,
-      and do not list insufficiently broad exceptions. Fixes bug 31338;
+    - When listing overbroad exceptions, do not also list problems, and
+      do not list insufficiently broad exceptions. Fixes bug 31338;
       bugfix on 0.4.2.1-alpha.
 
   o Minor bugfixes (controller protocol):
     - Fix the MAPADDRESS controller command to accept one or more
-      arguments. Previously, it required two or more arguments, and ignored
-      the first. Fixes bug 31772; bugfix on 0.4.1.1-alpha.
+      arguments. Previously, it required two or more arguments, and
+      ignored the first. Fixes bug 31772; bugfix on 0.4.1.1-alpha.
 
   o Minor bugfixes (logging):
-    - Add a missing check for HAVE_PTHREAD_H, because the backtrace code uses
-      mutexes. Fixes bug 31614; bugfix on 0.2.5.2-alpha.
-    - Disable backtrace signal handlers when shutting down tor.
-      Fixes bug 31614; bugfix on 0.2.5.2-alpha.
-    - Rate-limit our the logging message about the obsolete .exit notation.
-      Previously, there was no limit on this warning, which could potentially
-      be triggered many times by a hostile website. Fixes bug 31466;
-      bugfix on 0.2.2.1-alpha.
+    - Add a missing check for HAVE_PTHREAD_H, because the backtrace code
+      uses mutexes. Fixes bug 31614; bugfix on 0.2.5.2-alpha.
+    - Disable backtrace signal handlers when shutting down tor. Fixes
+      bug 31614; bugfix on 0.2.5.2-alpha.
+    - Rate-limit our the logging message about the obsolete .exit
+      notation. Previously, there was no limit on this warning, which
+      could potentially be triggered many times by a hostile website.
+      Fixes bug 31466; bugfix on 0.2.2.1-alpha.
     - When initialising log domain masks, only set known log domains.
       Fixes bug 31854; bugfix on 0.2.1.1-alpha.
 
@@ -81,43 +81,45 @@ Changes in version 0.4.2.2-alpha - 2019-10-0?
 
   o Minor bugfixes (modules):
     - Explain what the optional Directory Authority module is, and what
-      happens when it is disabled. Fixes bug 31825; bugfix on 0.3.4.1-alpha.
+      happens when it is disabled. Fixes bug 31825; bugfix
+      on 0.3.4.1-alpha.
 
   o Minor bugfixes (multithreading):
-    - Avoid some undefined behaviour when freeing mutexes.
-      Fixes bug 31736; bugfix on 0.0.7.
+    - Avoid some undefined behaviour when freeing mutexes. Fixes bug
+      31736; bugfix on 0.0.7.
 
   o Minor bugfixes (relay):
     - Avoid crashing when starting with a corrupt keys directory where
-      the old ntor key and the new ntor key are identical. Fixes bug 30916;
-      bugfix on 0.2.4.8-alpha.
+      the old ntor key and the new ntor key are identical. Fixes bug
+      30916; bugfix on 0.2.4.8-alpha.
 
   o Minor bugfixes (tests, SunOS):
-    - Avoid a map_anon_nofork test failure due to a signed/unsigned integer
-      comparison. Fixes bug 31897; bugfix on 0.4.1.1-alpha.
-
-  o Code simplification and refactoring (onion services):
-    - Interface for function `decrypt_desc_layer` cleaned up. Closes ticket 31589.
+    - Avoid a map_anon_nofork test failure due to a signed/unsigned
+      integer comparison. Fixes bug 31897; bugfix on 0.4.1.1-alpha.
 
   o Code simplification and refactoring:
-    - Refactor connection_control_process_inbuf() to reduce the size of a
-      practracker exception. Closes ticket 31840.
+    - Refactor connection_control_process_inbuf() to reduce the size of
+      a practracker exception. Closes ticket 31840.
     - Refactor the microdescs_parse_from_string() function into smaller
-      pieces, for better comprehensibility.  Closes ticket 31675.
+      pieces, for better comprehensibility. Closes ticket 31675.
     - Use SEVERITY_MASK_IDX() to find the LOG_* mask indexes in the unit
-      tests and fuzzers, rather than using hard-coded values.
-      Closes ticket 31334.
+      tests and fuzzers, rather than using hard-coded values. Closes
+      ticket 31334.
 
   o Documentation:
-    - Document the signal-safe logging behaviour in the tor man page. Also
-      add some comments to the relevant functions. Closes ticket 31839.
-    - Explain why we can't destroy the backtrace buffer mutex. Explain why
-      we don't need to destroy the log mutex.
-      Closes ticket 31736.
+    - Document the signal-safe logging behaviour in the tor man page.
+      Also add some comments to the relevant functions. Closes
+      ticket 31839.
+    - Explain why we can't destroy the backtrace buffer mutex. Explain
+      why we don't need to destroy the log mutex. Closes ticket 31736.
     - The Tor source code repository now includes a (somewhat dated)
       description of Tor's modular architecture, in doc/HACKING/design.
       This is based on the old "tor-guts.git" repository, which we are
-      adopting and superseding.  Closes ticket 31849.
+      adopting and superseding. Closes ticket 31849.
+
+  o Code simplification and refactoring (onion services):
+    - Interface for function `decrypt_desc_layer` cleaned up. Closes
+      ticket 31589.
 
 
 Changes in version 0.4.1.6 - 2019-09-19
