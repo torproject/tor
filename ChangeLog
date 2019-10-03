@@ -1,4 +1,4 @@
-Changes in version 0.4.2.2-alpha - 2019-10-0?
+Changes in version 0.4.2.2-alpha - 2019-10-07
   This release fixes several bugs from the previous alpha release, and
   from earlier versions. It also includes a change in authorities, so
   that they begin to reject the currently unsupported release series.
