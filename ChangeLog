@@ -1,21 +1,21 @@
 Changes in version 0.4.2.2-alpha - 2019-10-0?
   This release fixes several bugs from the previous alpha release.
 
+  o Major features (directory authorities):
+    - Directory authorities now reject relays running all currently
+      deprecated release series. The currently supported release series
+      are: 0.2.9, 0.3.5, 0.4.0, 0.4.1, and 0.4.2. Closes ticket 31549.
+
   o Major bugfixes (embedded Tor):
     - Avoid a possible crash when restarting Tor in embedded mode and
       enabling a different set of publish/subscribe messages. Fixes bug
       31898; bugfix on 0.4.1.1-alpha.
 
-  o Major bugfixes (torrc):
+  o Major bugfixes (torrc parsing):
     - Stop ignoring torrc options after an %include directive, when the
       included directory ends with a file that does not contain any
       config options. (But does contain comments or whitespace.) Fixes
       bug 31408; bugfix on 0.3.1.1-alpha.
-
-  o Minor features (authority):
-    - Directory authorities now reject relays running all currently
-      deprecated release series. The currently supported release series
-      are: 0.2.9, 0.3.5, 0.4.0, 0.4.1, and 0.4.2. Closes ticket 31549.
 
   o Minor features (auto-formatting scripts):
     - When annotating C macros, never generate a line that our check-
@@ -48,7 +48,7 @@ Changes in version 0.4.2.2-alpha - 2019-10-0?
       services by pointing them to the right documentation. Closes
       ticket 28966.
 
-  o Minor bugfixes (Appveyor CI):
+  o Minor bugfixes (Appveyor continuous integration):
     - Avoid spurious errors when Appveyor CI fails before the install
       step. Fixes bug 31884; bugfix on 0.3.4.2-alpha.
 
@@ -105,6 +105,8 @@ Changes in version 0.4.2.2-alpha - 2019-10-0?
     - Use SEVERITY_MASK_IDX() to find the LOG_* mask indexes in the unit
       tests and fuzzers, rather than using hard-coded values. Closes
       ticket 31334.
+    - Interface for function `decrypt_desc_layer` cleaned up. Closes
+      ticket 31589.
 
   o Documentation:
     - Document the signal-safe logging behaviour in the tor man page.
@@ -116,10 +118,6 @@ Changes in version 0.4.2.2-alpha - 2019-10-0?
       description of Tor's modular architecture, in doc/HACKING/design.
       This is based on the old "tor-guts.git" repository, which we are
       adopting and superseding. Closes ticket 31849.
-
-  o Code simplification and refactoring (onion services):
-    - Interface for function `decrypt_desc_layer` cleaned up. Closes
-      ticket 31589.
 
 
 Changes in version 0.4.1.6 - 2019-09-19
