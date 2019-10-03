@@ -71,9 +71,9 @@ tor_lookup_hostname,(const char *name, uint32_t *addr))
  * See tor_addr_lookup() for details.
  */
 static int
-tor_addr_lookup_host_getaddrinfo(const char *name,
-                                 uint16_t family,
-                                 tor_addr_t *addr)
+tor_addr_lookup_host_impl(const char *name,
+                          uint16_t family,
+                          tor_addr_t *addr)
 {
   int err;
   struct addrinfo *res=NULL, *res_p;
@@ -120,15 +120,17 @@ tor_addr_lookup_host_getaddrinfo(const char *name,
 
 #else /* !defined(HAVE_GETADDRINFO) */
 
-/* Host lookup helper for tor_addr_lookup(), which calls getaddrinfo().
- * Used when gethostbyname() is not available on this system.
+/* Host lookup helper for tor_addr_lookup(), which calls gethostbyname().
+ * Used when getaddrinfo() is not available on this system.
  *
  * See tor_addr_lookup() for details.
  */
 static int
-tor_addr_lookup_host_gethostbyname(const char *name,
-                                   tor_addr_t *addr)
+tor_addr_lookup_host_impl(const char *name,
+                          uint16_t family,
+                          tor_addr_t *addr)
 {
+  (void) family;
   struct hostent *ent;
   int err;
 #ifdef HAVE_GETHOSTBYNAME_R_6_ARG
@@ -215,13 +217,8 @@ tor_addr_lookup,(const char *name, uint16_t family, tor_addr_t *addr))
   } else {
     /* Clear the address after a failed tor_addr_parse(). */
     memset(addr, 0, sizeof(tor_addr_t));
-#ifdef HAVE_GETADDRINFO
-    result = tor_addr_lookup_host_getaddrinfo(name, family, addr);
+    result = tor_addr_lookup_host_impl(name, family, addr);
     goto done;
-#else /* !(defined(HAVE_GETADDRINFO)) */
-    result = tor_addr_lookup_host_gethostbyname(name, addr);
-    goto done;
-#endif /* defined(HAVE_GETADDRINFO) */
   }
 
  /* If we weren't successful, and haven't already set the result,
