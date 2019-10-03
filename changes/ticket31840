@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Refactor connection_control_process_inbuf() to reduce the size of a
-      practracker exception. Closes ticket 31840.

@@ -1,5 +1,0 @@
-  o Minor features (auto-formatting scripts):
-    - When annotating C macros, never generate a line that our check-spaces
-      script would reject. Closes ticket 31759.
-    - When annotating C macros, try to remove cases of double-negation.
-      Closes ticket 31779.

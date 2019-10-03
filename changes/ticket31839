@@ -1,3 +1,0 @@
-  o Documentation:
-    - Document the signal-safe logging behaviour in the tor man page. Also
-      add some comments to the relevant functions. Closes ticket 31839.

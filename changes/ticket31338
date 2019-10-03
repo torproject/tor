@@ -1,4 +1,0 @@
-  o Minor bugfixes (best practices tracker):
-    - When listing overbroad exceptions, do not also list problems,
-      and do not list insufficiently broad exceptions. Fixes bug 31338;
-      bugfix on 0.4.2.1-alpha.

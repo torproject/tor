@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Use SEVERITY_MASK_IDX() to find the LOG_* mask indexes in the unit
-      tests and fuzzers, rather than using hard-coded values.
-      Closes ticket 31334.

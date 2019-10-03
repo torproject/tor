@@ -1,5 +1,0 @@
-  o Documentation:
-    - The Tor source code repository now includes a (somewhat dated)
-      description of Tor's modular architecture, in doc/HACKING/design.
-      This is based on the old "tor-guts.git" repository, which we are
-      adopting and superseding.  Closes ticket 31849.

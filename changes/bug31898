@@ -1,4 +1,0 @@
-  o Major bugfixes (embedded Tor):
-    - Avoid a possible crash when restarting Tor in embedded mode and
-      enabling a different set of publish/subscribe messages. Fixes bug
-      31898; bugfix on 0.4.1.1-alpha.
