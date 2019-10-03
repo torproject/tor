@@ -1,5 +1,7 @@
 Changes in version 0.4.2.2-alpha - 2019-10-0?
-  This release fixes several bugs from the previous alpha release.
+  This release fixes several bugs from the previous alpha release, and
+  from earlier versions. It also includes a change in authorities, so
+  that they begin to reject the currently unsupported release series.
 
   o Major features (directory authorities):
     - Directory authorities now reject relays running all currently
@@ -14,7 +16,7 @@ Changes in version 0.4.2.2-alpha - 2019-10-0?
   o Major bugfixes (torrc parsing):
     - Stop ignoring torrc options after an %include directive, when the
       included directory ends with a file that does not contain any
-      config options. (But does contain comments or whitespace.) Fixes
+      config options (but does contain comments or whitespace). Fixes
       bug 31408; bugfix on 0.3.1.1-alpha.
 
   o Minor features (auto-formatting scripts):
@@ -24,19 +26,16 @@ Changes in version 0.4.2.2-alpha - 2019-10-0?
       Closes ticket 31779.
 
   o Minor features (continuous integration):
-    - When building on Appveyor, pass the "-k" flag to make, so that we
-      are informed of all compilation failures, not just the first one
-      or two. Closes part of ticket 31372.
-    - When building on Travis, pass the "-k" flag to make, so that we
-      are informed of all compilation failures, not just the first one
-      or two. Closes part of ticket 31372.
+    - When building on Appveyor and Travis, pass the "-k" flag to make,
+      so that we are informed of all compilation failures, not just the
+      first one or two. Closes ticket 31372.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the October 1 2019 Maxmind GeoLite2
       Country database. Closes ticket 31931.
 
   o Minor features (maintenance scripts):
-    - Add a coccinelle script to detect bugs caused by incrementing or
+    - Add a Coccinelle script to detect bugs caused by incrementing or
       decrementing a variable inside a call to log_debug(). Since
       log_debug() is a macro whose arguments are conditionally
       evaluated, it is usually an error to do this. One such bug was
