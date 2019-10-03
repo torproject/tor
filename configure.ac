@@ -29,6 +29,13 @@ AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
 
 PKG_PROG_PKG_CONFIG
+if test "x$PKG_CONFIG" = "x" ; then
+    pkg_config_user_action="install pkg-config, and check the PKG_CONFIG_PATH environment variable."
+    AC_MSG_NOTICE([Some libraries need pkg-config, including systemd, nss, lzma, zstd, and custom mallocs.])
+    AC_MSG_NOTICE([To use those libraries, $pkg_config_user_action])
+else
+    pkg_config_user_action="check the PKG_CONFIG_PATH environment variable."
+fi
 
 AC_ARG_ENABLE(openbsd-malloc,
    AS_HELP_STRING(--enable-openbsd-malloc, [use malloc code from OpenBSD.  Linux only. Deprecated: see --with-malloc]))
@@ -166,7 +173,7 @@ AC_SUBST(TOR_SYSTEMD_CFLAGS)
 AC_SUBST(TOR_SYSTEMD_LIBS)
 
 if test "x$enable_systemd" = "xyes" -a "x$have_systemd" != "xyes" ; then
-    AC_MSG_ERROR([Explicitly requested systemd support, but systemd not found])
+    AC_MSG_ERROR([Explicitly requested systemd support, but systemd not found, $pkg_config_user_action])
 fi
 
 case "$host" in
@@ -870,7 +877,7 @@ if test "x$enable_nss" = "xyes"; then
   PKG_CHECK_MODULES(NSS,
      [nss],
      [have_nss=yes],
-     [have_nss=no; AC_MSG_ERROR([You asked for NSS but I can't find it.])])
+     [have_nss=no; AC_MSG_ERROR([You asked for NSS but I can't find it, $pkg_config_user_action])])
   AC_SUBST(NSS_CFLAGS)
   AC_SUBST(NSS_LIBS)
 fi
@@ -1076,7 +1083,7 @@ else
                       have_lzma=no)
 
     if test "x$have_lzma" = "xno" ; then
-        AC_MSG_WARN([Unable to find liblzma.])
+        AC_MSG_WARN([Unable to find liblzma, $pkg_config_user_action])
     fi
 fi
 
@@ -1108,7 +1115,7 @@ else
                       have_zstd=no)
 
     if test "x$have_zstd" = "xno" ; then
-        AC_MSG_WARN([Unable to find libzstd.])
+        AC_MSG_WARN([Unable to find libzstd, $pkg_config_user_action])
     fi
 fi
 
@@ -1915,7 +1922,7 @@ AS_CASE([$malloc],
 			have_tcmalloc=no)
 
       if test "x$have_tcmalloc" = "xno" ; then
-          AC_MSG_ERROR([Unable to find tcmalloc requested by --with-malloc.])
+          AC_MSG_ERROR([Unable to find tcmalloc requested by --with-malloc, $pkg_config_user_action])
       fi
 
       CFLAGS="$CFLAGS $TCMALLOC_CFLAGS"
@@ -1929,7 +1936,7 @@ AS_CASE([$malloc],
 			have_jemalloc=no)
 
       if test "x$have_tcmalloc" = "xno" ; then
-          AC_MSG_ERROR([Unable to find jemalloc requested by --with-malloc.])
+          AC_MSG_ERROR([Unable to find jemalloc requested by --with-malloc, $pkg_config_user_action])
       fi
 
       CFLAGS="$CFLAGS $JEMALLOC_CFLAGS"
