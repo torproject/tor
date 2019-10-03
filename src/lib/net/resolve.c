@@ -8,6 +8,7 @@
  * \brief Use the libc DNS resolver to convert hostnames into addresses.
  **/
 
+#define RESOLVE_PRIVATE
 #include "lib/net/resolve.h"
 
 #include "lib/net/address.h"
@@ -70,10 +71,10 @@ tor_lookup_hostname,(const char *name, uint32_t *addr))
  *
  * See tor_addr_lookup() for details.
  */
-static int
-tor_addr_lookup_host_impl(const char *name,
+MOCK_IMPL(STATIC int,
+tor_addr_lookup_host_impl,(const char *name,
                           uint16_t family,
-                          tor_addr_t *addr)
+                          tor_addr_t *addr))
 {
   int err;
   struct addrinfo *res=NULL, *res_p;
@@ -125,10 +126,10 @@ tor_addr_lookup_host_impl(const char *name,
  *
  * See tor_addr_lookup() for details.
  */
-static int
-tor_addr_lookup_host_impl(const char *name,
+MOCK_IMPL(STATIC int,
+tor_addr_lookup_host_impl,(const char *name,
                           uint16_t family,
-                          tor_addr_t *addr)
+                           tor_addr_t *addr))
 {
   (void) family;
   struct hostent *ent;
@@ -172,7 +173,6 @@ tor_addr_lookup_host_impl(const char *name,
   return (err == TRY_AGAIN) ? 1 : -1;
 #endif
 }
-
 #endif /* defined(HAVE_GETADDRINFO) */
 
 /** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
