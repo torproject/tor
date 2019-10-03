@@ -253,6 +253,7 @@ extern struct testcase_t prob_distr_tests[];
 extern struct testcase_t slow_stochastic_prob_distr_tests[];
 extern struct testcase_t procmon_tests[];
 extern struct testcase_t process_tests[];
+extern struct testcase_t process_descs_tests[];
 extern struct testcase_t proto_http_tests[];
 extern struct testcase_t proto_misc_tests[];
 extern struct testcase_t protover_tests[];

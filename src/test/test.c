@@ -859,6 +859,7 @@ struct testgroup_t testgroups[] = {
   { "crypto/pem/", pem_tests },
   { "crypto/rng/", crypto_rng_tests },
   { "dir/", dir_tests },
+  { "dir/auth/process_descs/", process_descs_tests },
   { "dir/md/", microdesc_tests },
   { "dir/voting/flags/", voting_flags_tests },
   { "dir/voting/schedule/", voting_schedule_tests },
