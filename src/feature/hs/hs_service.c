@@ -3428,8 +3428,9 @@ service_intro_circuit_timed_out(const origin_circuit_t *circ)
   /* This IP can not have an established circuit. Scream loudly if so but
    * proceed to remove it to recover. */
   tor_assert_nonfatal(!ip->circuit_established);
-  /* Remove intro from service's descriptor(s). */
+  /* Remove and free intro from service's descriptor(s). */
   service_intro_point_remove(service, ip);
+  service_intro_point_free(ip);
 }
 
 /* ========== */
