@@ -234,6 +234,9 @@ process_win32_exec(process_t *process)
     CloseHandle(stdin_pipe_read);
     CloseHandle(stdin_pipe_write);
 
+    /* Notify our process to ensure the exit handler is called. */
+    process_notify_event_exit(process, 0);
+
     return PROCESS_STATUS_ERROR;
   }
 
