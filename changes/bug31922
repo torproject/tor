@@ -1,0 +1,4 @@
+  o Minor bugfixes (configuration):
+    - When pkg-config is not installed, or a library that depends on
+      pkg-config is not found, tell the user what to do to fix the
+      problem. Fixes bug 31922; bugfix on 0.3.1.1-alpha.
