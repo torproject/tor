@@ -243,8 +243,22 @@ test_add_onion_helper_keyarg_v3(void *arg)
   tor_free(pk.v3); pk.v3 = NULL;
   tor_free(key_new_blob);
 
+  /* Test "BEST" key generation (Assumes BEST = ED25519-V3). */
+  tor_free(pk.v3); pk.v3 = NULL;
+  tor_free(key_new_blob);
+  ret = add_onion_helper_keyarg("NEW:BEST", 0, &key_new_alg, &key_new_blob,
+                                &pk, &hs_version, NULL);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(hs_version, OP_EQ, HS_VERSION_THREE);
+  tt_assert(pk.v3);
+  tt_str_op(key_new_alg, OP_EQ, "ED25519-V3");
+  tt_assert(key_new_blob);
+  tt_ptr_op(reply_str, OP_EQ, NULL);
+
   /* Test discarding the private key. */
   tor_free(reply_str);
+  tor_free(pk.v3); pk.v3 = NULL;
+  tor_free(key_new_blob);
   ret = add_onion_helper_keyarg("NEW:ED25519-V3", 1, &key_new_alg,
                                 &key_new_blob, &pk, &hs_version,
                                 NULL);
@@ -323,22 +337,10 @@ test_add_onion_helper_keyarg_v2(void *arg)
   tt_assert(key_new_blob);
   tt_ptr_op(reply_str, OP_EQ, NULL);
 
-  /* Test "BEST" key generation (Assumes BEST = RSA1024). */
-  crypto_pk_free(pk.v2); pk.v2 = NULL;
-  tor_free(key_new_blob);
-  ret = add_onion_helper_keyarg("NEW:BEST", 0, &key_new_alg, &key_new_blob,
-                                &pk, &hs_version, NULL);
-  tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(hs_version, OP_EQ, HS_VERSION_TWO);
-  tt_assert(pk.v2);
-  tt_str_op(key_new_alg, OP_EQ, "RSA1024");
-  tt_assert(key_new_blob);
-  tt_ptr_op(reply_str, OP_EQ, NULL);
-
   /* Test discarding the private key. */
   crypto_pk_free(pk.v2); pk.v2 = NULL;
   tor_free(key_new_blob);
-  ret = add_onion_helper_keyarg("NEW:BEST", 1, &key_new_alg, &key_new_blob,
+  ret = add_onion_helper_keyarg("NEW:RSA1024", 1, &key_new_alg, &key_new_blob,
                                &pk, &hs_version, NULL);
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(hs_version, OP_EQ, HS_VERSION_TWO);
