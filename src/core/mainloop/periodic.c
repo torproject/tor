@@ -155,6 +155,7 @@ periodic_event_disconnect(periodic_event_item_t *event)
     return;
   mainloop_event_free(event->ev);
   event->last_action_time = 0;
+  event->enabled = 0;
 }
 
 /** Enable the given event by setting its "enabled" flag and scheduling it to
