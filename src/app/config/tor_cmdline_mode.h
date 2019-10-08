@@ -16,7 +16,7 @@
  * Enumeration to describe which command Tor is running.  These commands
  * are controlled by command-line options.
  **/
-typedef enum tor_cmdline_mode_t {
+typedef enum {
   CMD_RUN_TOR=0, /**< The default: run Tor as a daemon. */
   CMD_LIST_FINGERPRINT, /**< Running --list-fingerprint. */
   CMD_HASH_PASSWORD, /**< Running --hash-password. */
@@ -24,6 +24,8 @@ typedef enum tor_cmdline_mode_t {
   CMD_DUMP_CONFIG, /**< Running --dump-config. */
   CMD_KEYGEN, /**< Running --keygen */
   CMD_KEY_EXPIRATION, /**< Running --key-expiration */
+  CMD_OTHER, /**< Special value: indicates a command that is handled
+              * immediately during configuration processing. */
   CMD_RUN_UNITTESTS, /**< Special value: indicates that we have entered
                       * the Tor code from the unit tests, not from the
                       * regular Tor binary at all. */

@@ -204,6 +204,10 @@ typedef struct {
   /** List of other options, to be handled by the general Tor configuration
       system. */
   struct config_line_t *other_opts;
+  /** Subcommand that Tor has been told to run */
+  tor_cmdline_mode_t command;
+  /** Argument for the command mode, if any. */
+  const char *command_arg;
 } parsed_cmdline_t;
 
 parsed_cmdline_t *config_parse_commandline(int argc, char **argv,
