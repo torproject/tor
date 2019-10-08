@@ -547,40 +547,22 @@ tor_init(int argc, char *argv[])
   hs_init();
 
   {
-  /* We search for the "quiet" option first, since it decides whether we
-   * will log anything at all to the command line. */
+    /* We check for the "quiet"/"hush" settings first, since they decide
+       whether we log anything at all to stdout. */
     parsed_cmdline_t *cmdline;
-    const config_line_t *cl = NULL;
     cmdline = config_parse_commandline(argc, argv, 1);
-    if (cmdline != NULL) {
-      cl = cmdline->cmdline_opts;
-    }
-    for (; cl; cl = cl->next) {
-      if (!strcmp(cl->key, "--hush"))
-        quiet = 1;
-      if (!strcmp(cl->key, "--quiet") ||
-          !strcmp(cl->key, "--dump-config"))
-        quiet = 2;
-      /* The following options imply --hush */
-      if (!strcmp(cl->key, "--version") || !strcmp(cl->key, "--digests") ||
-          !strcmp(cl->key, "--list-torrc-options") ||
-          !strcmp(cl->key, "--library-versions") ||
-          !strcmp(cl->key, "--list-modules") ||
-          !strcmp(cl->key, "--hash-password") ||
-          !strcmp(cl->key, "-h") || !strcmp(cl->key, "--help")) {
-        if (quiet < 1)
-          quiet = 1;
-      }
-    }
+    if (cmdline)
+      quiet = cmdline->quiet_level;
     parsed_cmdline_free(cmdline);
   }
 
  /* give it somewhere to log to initially */
   switch (quiet) {
     case 2:
-      /* no initial logging */
+      /* --quiet: no initial logging */
       break;
     case 1:
+      /* --hush: log at warning or higher. */
       add_temp_log(LOG_WARN);
       break;
     default:

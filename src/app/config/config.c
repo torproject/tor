@@ -2459,6 +2459,8 @@ static const struct {
   takes_argument_t takes_argument;
   /** If not CMD_RUN_TOR, what should Tor do when it starts? */
   tor_cmdline_mode_t command;
+  /** If nonzero, set the quiet level to this. 1 is "hush", 2 is "quiet" */
+  int quiet;
 } CMDLINE_ONLY_OPTIONS[] = {
   { .name="-f",
     .takes_argument=ARGUMENT_NECESSARY },
@@ -2467,10 +2469,12 @@ static const struct {
     .takes_argument=ARGUMENT_NECESSARY },
   { .name="--hash-password",
     .takes_argument=ARGUMENT_NECESSARY,
-    .command=CMD_HASH_PASSWORD },
+    .command=CMD_HASH_PASSWORD,
+    .quiet=1  },
   { .name="--dump-config",
     .takes_argument=ARGUMENT_OPTIONAL,
-    .command=CMD_DUMP_CONFIG },
+    .command=CMD_DUMP_CONFIG,
+    .quiet=2 },
   { .name="--list-fingerprint",
     .command=CMD_LIST_FINGERPRINT },
   { .name="--keygen",
@@ -2485,20 +2489,28 @@ static const struct {
   { .name="--verify-config",
     .command=CMD_VERIFY_CONFIG },
   { .name="--ignore-missing-torrc" },
-  { .name="--quiet" },
-  { .name="--hush" },
+  { .name="--quiet",
+    .quiet=2 },
+  { .name="--hush",
+    .quiet=1 },
   { .name="--version",
-    .command=CMD_OTHER },
+    .command=CMD_OTHER,
+    .quiet=1 },
   { .name="--list-modules",
-    .command=CMD_OTHER },
+    .command=CMD_OTHER,
+    .quiet=1 },
   { .name="--library-versions",
-    .command=CMD_OTHER },
+    .command=CMD_OTHER,
+    .quiet=1 },
   { .name="-h",
-    .command=CMD_OTHER },
+    .command=CMD_OTHER,
+    .quiet=1 },
   { .name="--help",
-    .command=CMD_OTHER },
+    .command=CMD_OTHER,
+    .quiet=1  },
   { .name="--list-torrc-options",
-    .command=CMD_OTHER },
+    .command=CMD_OTHER,
+    .quiet=1 },
   { .name="--list-deprecated-options",
     .command=CMD_OTHER },
   { .name="--nt-service" },
@@ -2537,6 +2549,9 @@ config_parse_commandline(int argc, char **argv, int ignore_errors)
           is_a_command = true;
           result->command = CMDLINE_ONLY_OPTIONS[j].command;
         }
+        int quiet = CMDLINE_ONLY_OPTIONS[j].quiet;
+        if (quiet > result->quiet_level)
+          result->quiet_level = quiet;
         break;
       }
     }
