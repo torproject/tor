@@ -5060,12 +5060,12 @@ normalize_nickname_list(config_line_t **normalized_out,
  * filename if it doesn't exist.
  */
 static char *
-find_torrc_filename(config_line_t *cmd_arg,
+find_torrc_filename(const config_line_t *cmd_arg,
                     int defaults_file,
                     int *using_default_fname, int *ignore_missing_torrc)
 {
   char *fname=NULL;
-  config_line_t *p_index;
+  const config_line_t *p_index;
   const char *fname_opt = defaults_file ? "--defaults-torrc" : "-f";
   const char *ignore_opt = defaults_file ? NULL : "--ignore-missing-torrc";
 
@@ -5144,7 +5144,7 @@ load_torrc_from_stdin(void)
  * Return the contents of the file on success, and NULL on failure.
  */
 static char *
-load_torrc_from_disk(config_line_t *cmd_arg, int defaults_file)
+load_torrc_from_disk(const config_line_t *cmd_arg, int defaults_file)
 {
   char *fname=NULL;
   char *cf = NULL;
