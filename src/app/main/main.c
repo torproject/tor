@@ -1357,6 +1357,7 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
     result = do_dump_config();
     break;
   case CMD_RUN_UNITTESTS: /* only set by test.c */
+  case CMD_OTHER: /* Handled in config.c */
   default:
     log_warn(LD_BUG,"Illegal command number %d: internal error.",
              get_options()->command);
