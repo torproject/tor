@@ -885,12 +885,8 @@ static or_options_t *global_default_options = NULL;
 static char *torrc_fname = NULL;
 /** Name of the most recently read torrc-defaults file.*/
 static char *torrc_defaults_fname = NULL;
-/** Configuration options set by command line. */
-static config_line_t *global_cmdline_options = NULL;
-/** Non-configuration options set by the command line */
-static config_line_t *global_cmdline_only_options = NULL;
-/** Boolean: Have we parsed the command line? */
-static int have_parsed_cmdline = 0;
+/** Result of parsing the command line. */
+static parsed_cmdline_t *global_cmdline = NULL;
 /** Contents of most recently read DirPortFrontPage file. */
 static char *global_dirfrontpagecontents = NULL;
 /** List of port_cfg_t for all configured ports. */
@@ -1064,11 +1060,7 @@ config_free_all(void)
   or_options_free(global_default_options);
   global_default_options = NULL;
 
-  config_free_lines(global_cmdline_options);
-  global_cmdline_options = NULL;
-
-  config_free_lines(global_cmdline_only_options);
-  global_cmdline_only_options = NULL;
+  parsed_cmdline_free(global_cmdline);
 
   if (configured_ports) {
     SMARTLIST_FOREACH(configured_ports,
@@ -1083,7 +1075,6 @@ config_free_all(void)
 
   cleanup_protocol_warning_severity_level();
 
-  have_parsed_cmdline = 0;
   libevent_initialized = 0;
 
   config_mgr_free(options_mgr);
@@ -2459,8 +2450,12 @@ typedef enum {
   ARGUMENT_OPTIONAL = 2
 } takes_argument_t;
 
+/** Table describing arguments that Tor accepts on the command line,
+ * other than those that are the same as in torrc. */
 static const struct {
+  /** The string that the user has to provide. */
   const char *name;
+  /** Does this option accept an argument? */
   takes_argument_t takes_argument;
 } CMDLINE_ONLY_OPTIONS[] = {
   { .name="-f",
@@ -2497,22 +2492,20 @@ static const struct {
 };
 
 /** Helper: Read a list of configuration options from the command line.  If
- * successful, or if ignore_errors is set, put them in *<b>result</b>, put the
- * commandline-only options in *<b>cmdline_result</b>, and return 0;
- * otherwise, return -1 and leave *<b>result</b> and <b>cmdline_result</b>
- * alone. */
-int
-config_parse_commandline(int argc, char **argv, int ignore_errors,
-                         config_line_t **result,
-                         config_line_t **cmdline_result)
+ * successful, return a newly allocated parsed_cmdline_t; otherwise return
+ * NULL.
+ *
+ * If <b>ignore_errors</b> is set, try to recover from all recoverable
+ * errors and return the best command line we can.
+ */
+parsed_cmdline_t *
+config_parse_commandline(int argc, char **argv, int ignore_errors)
 {
+  parsed_cmdline_t *result = tor_malloc_zero(sizeof(parsed_cmdline_t));
   config_line_t *param = NULL;
 
-  config_line_t *front = NULL;
-  config_line_t **new = &front;
-
-  config_line_t *front_cmdline = NULL;
-  config_line_t **new_cmdline = &front_cmdline;
+  config_line_t **new_cmdline = &result->cmdline_opts;
+  config_line_t **new = &result->other_opts;
 
   char *s, *arg;
   int i = 1;
@@ -2557,9 +2550,8 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
       } else {
         log_warn(LD_CONFIG,"Command-line option '%s' with no value. Failing.",
             argv[i]);
-        config_free_lines(front);
-        config_free_lines(front_cmdline);
-        return -1;
+        parsed_cmdline_free(result);
+        return NULL;
       }
     } else if (want_arg == ARGUMENT_OPTIONAL && is_last) {
       arg = tor_strdup("");
@@ -2587,9 +2579,19 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
 
     i += want_arg ? 2 : 1;
   }
-  *cmdline_result = front_cmdline;
-  *result = front;
-  return 0;
+
+  return result;
+}
+
+/** Release all storage held by <b>cmdline</b>. */
+void
+parsed_cmdline_free_(parsed_cmdline_t *cmdline)
+{
+  if (!cmdline)
+    return;
+  config_free_lines(cmdline->cmdline_opts);
+  config_free_lines(cmdline->other_opts);
+  tor_free(cmdline);
 }
 
 /** Return true iff key is a valid configuration option. */
@@ -5199,24 +5201,20 @@ int
 options_init_from_torrc(int argc, char **argv)
 {
   char *cf=NULL, *cf_defaults=NULL;
-  int command;
   int retval = -1;
-  char *command_arg = NULL;
   char *errmsg=NULL;
-  config_line_t *p_index = NULL;
-  config_line_t *cmdline_only_options = NULL;
+  const config_line_t *cmdline_only_options;
 
   /* Go through command-line variables */
-  if (! have_parsed_cmdline) {
+  if (global_cmdline == NULL) {
     /* Or we could redo the list every time we pass this place.
      * It does not really matter */
-    if (config_parse_commandline(argc, argv, 0, &global_cmdline_options,
-                                 &global_cmdline_only_options) < 0) {
+    global_cmdline = config_parse_commandline(argc, argv, 0);
+    if (global_cmdline == NULL) {
       goto err;
     }
-    have_parsed_cmdline = 1;
   }
-  cmdline_only_options = global_cmdline_only_options;
+  cmdline_only_options = global_cmdline->cmdline_opts;
 
   if (config_line_find(cmdline_only_options, "-h") ||
       config_line_find(cmdline_only_options, "--help")) {
@@ -5465,8 +5463,15 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   }
 
   /* Go through command-line variables too */
-  retval = config_assign(get_options_mgr(), newoptions,
-                         global_cmdline_options, CAL_WARN_DEPRECATIONS, msg);
+  {
+    config_line_t *other_opts = NULL;
+    if (global_cmdline) {
+      other_opts = global_cmdline->other_opts;
+    }
+    retval = config_assign(get_options_mgr(), newoptions,
+                           other_opts,
+                           CAL_WARN_DEPRECATIONS, msg);
+  }
   if (retval < 0) {
     err = SETOPT_ERR_PARSE;
     goto err;

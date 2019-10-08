@@ -549,10 +549,13 @@ tor_init(int argc, char *argv[])
   {
   /* We search for the "quiet" option first, since it decides whether we
    * will log anything at all to the command line. */
-    config_line_t *opts = NULL, *cmdline_opts = NULL;
-    const config_line_t *cl;
-    (void) config_parse_commandline(argc, argv, 1, &opts, &cmdline_opts);
-    for (cl = cmdline_opts; cl; cl = cl->next) {
+    parsed_cmdline_t *cmdline;
+    const config_line_t *cl = NULL;
+    cmdline = config_parse_commandline(argc, argv, 1);
+    if (cmdline != NULL) {
+      cl = cmdline->cmdline_opts;
+    }
+    for (; cl; cl = cl->next) {
       if (!strcmp(cl->key, "--hush"))
         quiet = 1;
       if (!strcmp(cl->key, "--quiet") ||
@@ -569,8 +572,7 @@ tor_init(int argc, char *argv[])
           quiet = 1;
       }
     }
-    config_free_lines(opts);
-    config_free_lines(cmdline_opts);
+    parsed_cmdline_free(cmdline);
   }
 
  /* give it somewhere to log to initially */
