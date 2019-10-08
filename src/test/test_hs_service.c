@@ -674,9 +674,11 @@ test_service_intro_point(void *arg)
 
   (void) arg;
 
+  update_approx_time(1481621834);
+
   /* Test simple creation of an object. */
   {
-    time_t now = time(NULL);
+    time_t now = approx_time();
     ip = helper_create_service_ip();
     tt_assert(ip);
     /* Make sure the authentication keypair is not zeroes. */
