@@ -495,7 +495,7 @@ build_establish_intro_dos_param(trn_cell_extension_dos_t *dos_ext,
 
 /* Build the DoS defense cell extension and put it in the given extensions
  * object. This can't fail. */
-static void
+static int
 build_establish_intro_dos_extension(const hs_service_config_t *service_config,
                                     trn_cell_extension_t *extensions)
 {
@@ -528,7 +528,9 @@ build_establish_intro_dos_extension(const hs_service_config_t *service_config,
 
   /* Set the field with the encoded DoS extension. */
   ret = trn_cell_extension_dos_encoded_len(dos_ext);
-  tor_assert(ret > 0);
+  if (BUG(ret <= 0)) {
+    return -1;
+  }
   dos_ext_encoded_len = ret;
   /* Set length field and the field array size length. */
   trn_cell_extension_field_set_field_len(field, dos_ext_encoded_len);
@@ -537,6 +539,9 @@ build_establish_intro_dos_extension(const hs_service_config_t *service_config,
   field_array = trn_cell_extension_field_getarray_field(field);
   ret = trn_cell_extension_dos_encode(field_array,
                  trn_cell_extension_field_getlen_field(field), dos_ext);
+  if (BUG(ret <= 0)) {
+    return -1;
+  }
   tor_assert(ret == (ssize_t) dos_ext_encoded_len);
 
   /* Finally, encode field into the cell extension. */
@@ -549,6 +554,8 @@ build_establish_intro_dos_extension(const hs_service_config_t *service_config,
 
   /* Cleanup. DoS extension has been encoded at this point. */
   trn_cell_extension_dos_free(dos_ext);
+
+  return 0;
 }
 
 /* ========== */
@@ -561,6 +568,7 @@ STATIC trn_cell_extension_t *
 build_establish_intro_extensions(const hs_service_config_t *service_config,
                                  const hs_service_intro_point_t *ip)
 {
+  int ret;
   trn_cell_extension_t *extensions;
 
   tor_assert(service_config);
@@ -574,9 +582,14 @@ build_establish_intro_extensions(const hs_service_config_t *service_config,
   if (service_config->has_dos_defense_enabled &&
       ip->support_intro2_dos_defense) {
     /* This function takes care to increment the number of extensions. */
-    build_establish_intro_dos_extension(service_config, extensions);
+    ret = build_establish_intro_dos_extension(service_config, extensions);
+    if (ret < 0) {
+      /* Return no extensions on error. */
+      goto end;
+    }
   }
 
+ end:
   return extensions;
 }
 
