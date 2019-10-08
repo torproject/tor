@@ -15,6 +15,7 @@
 
 #include "lib/cc/torint.h"
 #include "lib/net/address.h"
+#include "app/config/tor_cmdline_mode.h"
 
 struct smartlist_t;
 struct config_line_t;
@@ -31,12 +32,7 @@ struct or_options_t {
   uint32_t magic_;
 
   /** What should the tor process actually do? */
-  enum {
-    CMD_RUN_TOR=0, CMD_LIST_FINGERPRINT, CMD_HASH_PASSWORD,
-    CMD_VERIFY_CONFIG, CMD_RUN_UNITTESTS, CMD_DUMP_CONFIG,
-    CMD_KEYGEN,
-    CMD_KEY_EXPIRATION,
-  } command;
+  tor_cmdline_mode_t command;
   char *command_arg; /**< Argument for command-line option. */
 
   struct config_line_t *Logs; /**< New-style list of configuration lines
