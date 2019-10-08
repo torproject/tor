@@ -96,6 +96,10 @@ circuit_purpose_is_hs_service(uint8_t purpose)
 static int
 circuit_purpose_is_hs_client(uint8_t purpose)
 {
+  if (purpose == CIRCUIT_PURPOSE_HS_VANGUARDS) {
+    return 1;
+  }
+
   /* Client-side purpose */
   return (purpose >= CIRCUIT_PURPOSE_C_HS_MIN_ &&
           purpose <= CIRCUIT_PURPOSE_C_HS_MAX_);
