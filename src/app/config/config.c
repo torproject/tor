@@ -2448,7 +2448,7 @@ options_act(const or_options_t *old_options)
 }
 
 typedef enum {
-  TAKES_NO_ARGUMENT = 0,
+  ARGUMENT_NONE = 0,
   ARGUMENT_NECESSARY = 1,
   ARGUMENT_OPTIONAL = 2
 } takes_argument_t;
@@ -2458,29 +2458,29 @@ static const struct {
   takes_argument_t takes_argument;
 } CMDLINE_ONLY_OPTIONS[] = {
   { "-f",                     ARGUMENT_NECESSARY },
-  { "--allow-missing-torrc",  TAKES_NO_ARGUMENT },
+  { "--allow-missing-torrc",  ARGUMENT_NONE },
   { "--defaults-torrc",       ARGUMENT_NECESSARY },
   { "--hash-password",        ARGUMENT_NECESSARY },
   { "--dump-config",          ARGUMENT_OPTIONAL },
-  { "--list-fingerprint",     TAKES_NO_ARGUMENT },
-  { "--keygen",               TAKES_NO_ARGUMENT },
+  { "--list-fingerprint",     ARGUMENT_NONE },
+  { "--keygen",               ARGUMENT_NONE },
   { "--key-expiration",       ARGUMENT_OPTIONAL },
-  { "--newpass",              TAKES_NO_ARGUMENT },
-  { "--no-passphrase",        TAKES_NO_ARGUMENT },
+  { "--newpass",              ARGUMENT_NONE },
+  { "--no-passphrase",        ARGUMENT_NONE },
   { "--passphrase-fd",        ARGUMENT_NECESSARY },
-  { "--verify-config",        TAKES_NO_ARGUMENT },
-  { "--ignore-missing-torrc", TAKES_NO_ARGUMENT },
-  { "--quiet",                TAKES_NO_ARGUMENT },
-  { "--hush",                 TAKES_NO_ARGUMENT },
-  { "--version",              TAKES_NO_ARGUMENT },
-  { "--list-modules",         TAKES_NO_ARGUMENT },
-  { "--library-versions",     TAKES_NO_ARGUMENT },
-  { "-h",                     TAKES_NO_ARGUMENT },
-  { "--help",                 TAKES_NO_ARGUMENT },
-  { "--list-torrc-options",   TAKES_NO_ARGUMENT },
-  { "--list-deprecated-options",TAKES_NO_ARGUMENT },
-  { "--nt-service",           TAKES_NO_ARGUMENT },
-  { "-nt-service",            TAKES_NO_ARGUMENT },
+  { "--verify-config",        ARGUMENT_NONE },
+  { "--ignore-missing-torrc", ARGUMENT_NONE },
+  { "--quiet",                ARGUMENT_NONE },
+  { "--hush",                 ARGUMENT_NONE },
+  { "--version",              ARGUMENT_NONE },
+  { "--list-modules",         ARGUMENT_NONE },
+  { "--library-versions",     ARGUMENT_NONE },
+  { "-h",                     ARGUMENT_NONE },
+  { "--help",                 ARGUMENT_NONE },
+  { "--list-torrc-options",   ARGUMENT_NONE },
+  { "--list-deprecated-options",ARGUMENT_NONE },
+  { "--nt-service",           ARGUMENT_NONE },
+  { "-nt-service",            ARGUMENT_NONE },
   { NULL, 0 },
 };
 
@@ -2552,7 +2552,7 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
     } else if (want_arg == ARGUMENT_OPTIONAL && is_last) {
       arg = tor_strdup("");
     } else {
-      arg = (want_arg != TAKES_NO_ARGUMENT) ? tor_strdup(argv[i+1]) :
+      arg = (want_arg != ARGUMENT_NONE) ? tor_strdup(argv[i+1]) :
                                               tor_strdup("");
     }
 
