@@ -2447,9 +2447,15 @@ options_act(const or_options_t *old_options)
   return 0;
 }
 
+/**
+ * Enumeration to describe the syntax for a command-line option.
+ **/
 typedef enum {
+  /** Describe an option that does not take an argument. */
   ARGUMENT_NONE = 0,
+  /** Describes an option that takes a single argument. */
   ARGUMENT_NECESSARY = 1,
+  /** Describes an option that takes a single optinal argument. */
   ARGUMENT_OPTIONAL = 2
 } takes_argument_t;
 
