@@ -907,8 +907,8 @@ connection_mark_for_close_(connection_t *conn, int line, const char *file)
  * controlling channel has been notified (e.g. with
  * connection_or_notify_error()), or you actually are the
  * connection_or_close_for_error() or connection_or_close_normally() function.
- * For all other cases, use connection_mark_and_flush() instead, which checks
- * for or_connection_t properly, instead.  See below.
+ * For all other cases, use connection_mark_and_flush() which checks for
+ * or_connection_t properly, instead.  See below.
  *
  * We want to keep this function simple and quick, since it can be called from
  * quite deep in the call chain, and hence it should avoid having side-effects
