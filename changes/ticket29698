@@ -1,0 +1,4 @@
+  o Minor bugfixes (cell scheduler):
+    - Fix rare edge cases where a channel had an improper circuit prioritization
+      before being scheduled. Fixes bug 29698; bugfix on 0.3.2.1-alpha.
+
