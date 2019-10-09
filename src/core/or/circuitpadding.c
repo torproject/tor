@@ -116,6 +116,7 @@ STATIC smartlist_t *origin_padding_machines = NULL;
  *  runtime and as long as circuits are alive. */
 STATIC smartlist_t *relay_padding_machines = NULL;
 
+#ifndef COCCI
 /** Loop over the current padding state machines using <b>loop_var</b> as the
  *  loop variable. */
 #define FOR_EACH_CIRCUIT_MACHINE_BEGIN(loop_var)                         \
@@ -130,6 +131,7 @@ STATIC smartlist_t *relay_padding_machines = NULL;
   if (!(circ)->padding_info[loop_var])                           \
     continue;
 #define FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END } STMT_END ;
+#endif
 
 /**
  * Free the machineinfo at an index

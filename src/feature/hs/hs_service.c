@@ -67,6 +67,7 @@
 #include <unistd.h>
 #endif
 
+#ifndef COCCI
 /* Helper macro. Iterate over every service in the global map. The var is the
  * name of the service pointer. */
 #define FOR_EACH_SERVICE_BEGIN(var)                          \
@@ -88,6 +89,7 @@
                                 (var = service->desc_next);      \
       if (var == NULL) continue;
 #define FOR_EACH_DESCRIPTOR_END } STMT_END ;
+#endif
 
 /* Onion service directory file names. */
 static const char fname_keyfile_prefix[] = "hs_ed25519";
