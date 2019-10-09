@@ -356,6 +356,29 @@ set_scheduler(void)
   }
 }
 
+/** Add given channel to the pending list. Before doing so, this will also
+ * touch the channel in order to update its policy, if need be. */
+static void
+channel_pending_add(channel_t *chan)
+{
+  tor_assert(chan);
+
+  /* Bail if this channel heap index indicate it is already in the list. */
+  if (SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
+    return;
+  }
+
+  /* Touch channel to update policy. This channel is about to be scheduled. */
+  circuitmux_touch(chan->cmux);
+
+  /* Set state to pending now. */
+  scheduler_set_channel_state(chan, SCHED_CHAN_PENDING);
+
+  /* Add to pending list. */
+  smartlist_pqueue_add(channels_pending, scheduler_compare_channels,
+                       offsetof(channel_t, sched_heap_idx), chan);
+}
+
 /*****************************************************************************
  * Scheduling system private function definitions
  *
@@ -556,13 +579,8 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
      * the other lists.  It has waiting cells now, so it goes to
      * channels_pending.
      */
-    scheduler_set_channel_state(chan, SCHED_CHAN_PENDING);
-    if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
-      smartlist_pqueue_add(channels_pending,
-                           scheduler_compare_channels,
-                           offsetof(channel_t, sched_heap_idx),
-                           chan);
-    }
+    channel_pending_add(chan);
+
     /* If we made a channel pending, we potentially have scheduling work to
      * do. */
     the_scheduler->schedule();
@@ -680,13 +698,8 @@ scheduler_channel_wants_writes(channel_t *chan)
     /*
      * It can write now, so it goes to channels_pending.
      */
-    scheduler_set_channel_state(chan, SCHED_CHAN_PENDING);
-    if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
-      smartlist_pqueue_add(channels_pending,
-                           scheduler_compare_channels,
-                           offsetof(channel_t, sched_heap_idx),
-                           chan);
-    }
+    channel_pending_add(chan);
+
     /* We just made a channel pending, we have scheduling work to do. */
     the_scheduler->schedule();
   } else {
@@ -757,6 +770,10 @@ scheduler_touch_channel(channel_t *chan)
                             scheduler_compare_channels,
                             offsetof(channel_t, sched_heap_idx),
                             chan);
+
+    /* Don't call channel_pending_add() because the EWMA subsystem is
+     * sometimes not initialized in a test and this function is meant to
+     * simply change the position in the queue. */
     smartlist_pqueue_add(channels_pending,
                          scheduler_compare_channels,
                          offsetof(channel_t, sched_heap_idx),
