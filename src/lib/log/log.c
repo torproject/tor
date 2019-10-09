@@ -526,7 +526,7 @@ logfile_deliver(logfile_t *lf, const char *buf, size_t msg_len,
      * pass them, and some very old ones do not detect overflow so well.
      * Regrettably, they call their maximum line length MAXLINE. */
 #if MAXLINE < 64
-#warn "MAXLINE is a very low number; it might not be from syslog.h after all"
+#warning "MAXLINE is a very low number; it might not be from syslog.h."
 #endif
     char *m = msg_after_prefix;
     if (msg_len >= MAXLINE)
