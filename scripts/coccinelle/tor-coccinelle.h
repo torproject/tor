@@ -22,6 +22,7 @@
 #define CHECK_PRINTF(a, b)
 #define CHECK_SCANF(a, b)
 #define STATIC static
+#define EXTERN(a,b) extern a b;
 
 #define STMT_BEGIN do {
 #define STMT_END } while (0)
