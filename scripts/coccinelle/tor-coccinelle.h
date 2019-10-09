@@ -17,6 +17,7 @@
  * syntactically valid C.
  */
 
+#define MOCK_DECL(a, b, c) a b c
 #define MOCK_IMPL(a, b, c) a b c
 #define CHECK_PRINTF(a, b)
 #define STATIC static
