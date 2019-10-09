@@ -40,3 +40,7 @@
 #define HT_INITIALIZER() { }
 #define X509 struct x509_st
 #define STACK_OF(x) struct foo_stack_t
+#define TOR_TAILQ_HEAD(a,b) struct tailq_head
+#define TOR_TAILQ_ENTRY(a) struct tailq_entry
+#define TOR_SIMPLEQ_HEAD(a,b) struct simpleq_entry
+#define TOR_SIMPLEQ_ENTRY(a) struct simpleq_entry
