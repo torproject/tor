@@ -32,6 +32,8 @@
 #define ATTR_CONST
 #define ATTR_MALLOC
 #define ATTR_WUR
+#define DISABLE_GCC_WARNING(x)
+#define ENABLE_GCC_WARNING(x)
 
 #define HT_ENTRY(x) void *
 #define HT_HEAD(a,b) struct ht_head
