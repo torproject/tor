@@ -44,3 +44,6 @@
 #define TOR_TAILQ_ENTRY(a) struct tailq_entry
 #define TOR_SIMPLEQ_HEAD(a,b) struct simpleq_entry
 #define TOR_SIMPLEQ_ENTRY(a) struct simpleq_entry
+
+#define NS_DECL(a, b, c) a b c
+#define NS(a) a
