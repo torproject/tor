@@ -26,7 +26,7 @@
     PERIODIC_EVENT(name,                          \
                    PERIODIC_EVENT_ROLE_##roles,   \
                    flags)
-#endif
+#endif /* !defined(COCCI) */
 
 #define FL(name) (PERIODIC_EVENT_FLAG_ ## name)
 

@@ -131,7 +131,7 @@ STATIC smartlist_t *relay_padding_machines = NULL;
   if (!(circ)->padding_info[loop_var])                           \
     continue;
 #define FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END } STMT_END ;
-#endif
+#endif /* !defined(COCCI) */
 
 /**
  * Free the machineinfo at an index

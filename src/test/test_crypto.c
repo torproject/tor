@@ -2982,7 +2982,7 @@ test_crypto_failure_modes(void *arg)
 #define ED25519_TEST(name, fl)                  \
   ED25519_TEST_ONE(name, (fl), "donna"),        \
   ED25519_TEST_ONE(name, (fl), "ref10")
-#endif
+#endif /* !defined(COCCI) */
 
 struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(formats),

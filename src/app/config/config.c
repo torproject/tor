@@ -191,7 +191,7 @@ static const char unix_q_socket_prefix[] = "unix:\"";
   { #name "DownloadSchedule", #name "DownloadInitialDelay", 0, 1 }
 #else
 #define DOWNLOAD_SCHEDULE(name) { NULL, NULL, 0, 1 }
-#endif
+#endif /* !defined(COCCI) */
 
 /** A list of abbreviations and aliases to map command-line options, obsolete
  * option names, or alternative option names, to their current values. */

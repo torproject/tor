@@ -129,7 +129,7 @@ test_controller_parse_cmd(void *arg)
   { &syntax,                                     \
       ARRAY_LENGTH(array),                       \
       array }
-#endif
+#endif /* !defined(COCCI) */
 
 static const parser_testcase_t one_to_three_tests[] = {
    ERR("", "Need at least 1 argument(s)"),

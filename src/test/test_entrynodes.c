@@ -3062,7 +3062,7 @@ static const struct testcase_setup_t upgrade_circuits = {
     &upgrade_circuits, (void*)(arg REASONABLY_FUTURE) }, \
   { #name "_reasonably_past", test_entry_guard_ ## name, TT_FORK, \
     &upgrade_circuits, (void*)(arg REASONABLY_PAST) }
-#endif
+#endif /* !defined(COCCI) */
 
 struct testcase_t entrynodes_tests[] = {
   NO_PREFIX_TEST(node_preferred_orport),

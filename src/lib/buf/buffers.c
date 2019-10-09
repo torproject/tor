@@ -110,7 +110,7 @@
     memset(a,0,SENTINEL_LEN);                                           \
   } while (0)
 #endif /* defined(DISABLE_MEMORY_SENTINELS) */
-#endif
+#endif /* !defined(COCCI) */
 
 /** Move all bytes stored in <b>chunk</b> to the front of <b>chunk</b>->mem,
  * to free up space at the end. */

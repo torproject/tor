@@ -317,7 +317,7 @@ test_util_write_chunks_to_file(void *arg)
             _TFE(a, b, tm_min ); \
             _TFE(a, b, tm_sec ); \
           TT_STMT_END
-#endif
+#endif /* !defined(COCCI) */
 
 static void
 test_util_time(void *arg)
@@ -6284,7 +6284,7 @@ test_util_map_anon_nofork(void *arg)
   { "compress_dos/" #name, test_util_decompress_dos, 0,                 \
     &compress_setup,                                                    \
     (char*)(identifier) }
-#endif
+#endif /* !defined(COCCI) */
 
 #ifdef _WIN32
 #define UTIL_TEST_NO_WIN(n, f) { #n, NULL, TT_SKIP, NULL, NULL }

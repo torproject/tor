@@ -89,7 +89,7 @@
                                 (var = service->desc_next);      \
       if (var == NULL) continue;
 #define FOR_EACH_DESCRIPTOR_END } STMT_END ;
-#endif
+#endif /* !defined(COCCI) */
 
 /* Onion service directory file names. */
 static const char fname_keyfile_prefix[] = "hs_ed25519";

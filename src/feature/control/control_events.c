@@ -1672,7 +1672,7 @@ control_event_status(int type, int severity, const char *format, va_list args)
     r = control_event_status((event), (sev), format, ap);       \
     va_end(ap);                                                 \
   } while (0)
-#endif
+#endif /* !defined(COCCI) */
 
 /** Format and send an EVENT_STATUS_GENERAL event whose main text is obtained
  * by formatting the arguments using the printf-style <b>format</b>. */

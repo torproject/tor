@@ -65,7 +65,7 @@
   tt_assert_test_fmt_type(a,b,#a" "#op" "#b,int64_t,(val1_ op val2_),  \
     int64_t, "%"PRId64,                                                \
     {print_ = (int64_t) value_;}, {}, TT_EXIT_TEST_FUNCTION)
-#endif
+#endif /* !defined(COCCI) */
 
 /**
  * Declare that the test is done, even though no tt___op() calls were made.
@@ -164,7 +164,7 @@ void free_pregenerated_keys(void);
       NULL,  \
       NULL,  \
   }
-#endif
+#endif /* !defined(COCCI) */
 
 #define NS(name) US_CONCAT_3_(NS_MODULE, NS_SUBMODULE, name)
 #define NS_FULL(module, submodule, name) US_CONCAT_3_(module, submodule, name)
@@ -175,7 +175,7 @@ void free_pregenerated_keys(void);
     extern int CALLED(mock_fn);        \
     static retval NS(mock_fn) args; int CALLED(mock_fn) = 0
 #define NS_MOCK(name) MOCK(name, NS(name))
-#endif
+#endif /* !defined(COCCI) */
 #define NS_UNMOCK(name) UNMOCK(name)
 
 extern const struct testcase_setup_t passthrough_setup;

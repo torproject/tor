@@ -21,7 +21,7 @@
  **/
 #define END_OF_CONFIG_VARS                                      \
   { .member = { .name = NULL } DUMMY_CONF_TEST_MEMBERS }
-#endif
+#endif /* !defined(COCCI) */
 
 /**
  * Declare a config_var_t as a member named <b>membername</b> of the structure
