@@ -69,6 +69,7 @@
   } while (0)
 #endif /* !defined(timersub) */
 
+#ifndef COCCI
 #ifndef timercmp
 /** Replacement for timercmp on platforms that do not have it: returns true
  * iff the relational operator "op" makes the expression tv1 op tv2 true.
@@ -82,5 +83,6 @@
    ((tv1)->tv_usec op (tv2)->tv_usec) :         \
    ((tv1)->tv_sec op (tv2)->tv_sec))
 #endif /* !defined(timercmp) */
+#endif
 
 #endif /* !defined(TOR_TIMEVAL_H) */
