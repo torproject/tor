@@ -17,6 +17,8 @@
 #include "feature/nodelist/networkstatus.h"
 #define SCHEDULER_PRIVATE_
 #include "core/or/scheduler.h"
+#define CIRCUITMUX_EWMA_PRIVATE
+#include "core/or/circuitmux_ewma.h"
 
 /* Test suite stuff */
 #include "test/test.h"
@@ -798,8 +800,6 @@ test_scheduler_loop_kist(void *arg)
   tt_assert(ch3);
   ch3->magic = TLS_CHAN_MAGIC;
   ch3->state = CHANNEL_STATE_OPEN;
-  circuitmux_free(ch3->cmux);
-  ch3->cmux = circuitmux_alloc();
   channel_register(ch3);
   tt_assert(ch3->registered);
 
@@ -1265,17 +1265,44 @@ test_scheduler_kist_pending_list(void *arg)
   UNMOCK(channel_should_write_to_kernel);
 }
 
+static void *
+sched_setup_test(const struct testcase_t *tc)
+{
+  static int whatever;
+
+  (void) tc;
+
+  cell_ewma_initialize_ticks();
+  return &whatever;
+}
+
+static int
+sched_cleanup_test(const struct testcase_t *tc, void *ptr)
+{
+  (void) tc;
+  (void) ptr;
+
+  return 1;
+}
+
+static struct testcase_setup_t sched_test_setup = {
+  .setup_fn = sched_setup_test,
+  .cleanup_fn = sched_cleanup_test,
+};
+
+#define TEST_SCHED(name) \
+  { #name, test_scheduler_##name, TT_FORK, &sched_test_setup, NULL }
+
 struct testcase_t scheduler_tests[] = {
-  { "compare_channels", test_scheduler_compare_channels,
-    TT_FORK, NULL, NULL },
-  { "channel_states", test_scheduler_channel_states, TT_FORK, NULL, NULL },
-  { "initfree", test_scheduler_initfree, TT_FORK, NULL, NULL },
-  { "loop_vanilla", test_scheduler_loop_vanilla, TT_FORK, NULL, NULL },
-  { "loop_kist", test_scheduler_loop_kist, TT_FORK, NULL, NULL },
-  { "ns_changed", test_scheduler_ns_changed, TT_FORK, NULL, NULL},
-  { "should_use_kist", test_scheduler_can_use_kist, TT_FORK, NULL, NULL },
-  { "kist_pending_list", test_scheduler_kist_pending_list, TT_FORK,
-    NULL, NULL },
+  TEST_SCHED(can_use_kist),
+  TEST_SCHED(channel_states),
+  TEST_SCHED(compare_channels),
+  TEST_SCHED(initfree),
+  TEST_SCHED(kist_pending_list),
+  TEST_SCHED(loop_kist),
+  TEST_SCHED(loop_vanilla),
+  TEST_SCHED(ns_changed),
+
   END_OF_TESTCASES
 };
 
