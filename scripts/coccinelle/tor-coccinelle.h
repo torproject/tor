@@ -37,6 +37,8 @@
 #define DISABLE_GCC_WARNING(x)
 #define ENABLE_GCC_WARNING(x)
 
+#define HANDLE_DECL(a,b,c)
+#define HANDLE_IMPL(a,b,c)
 #define HT_ENTRY(x) void *
 #define HT_HEAD(a,b) struct ht_head
 #define HT_INITIALIZER() { }
