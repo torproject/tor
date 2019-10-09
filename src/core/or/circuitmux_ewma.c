@@ -236,7 +236,8 @@ circuitmux_policy_t ewma_policy = {
   /*.notify_set_n_cells =*/ NULL, /* EWMA doesn't need this */
   /*.notify_xmit_cells =*/ ewma_notify_xmit_cells,
   /*.pick_active_circuit =*/ ewma_pick_active_circuit,
-  /*.cmp_cmux =*/ ewma_cmp_cmux
+  /*.cmp_cmux =*/ ewma_cmp_cmux,
+  /*.touch = */ NULL,
 };
 
 /** Have we initialized the ewma tick-counting logic? */
