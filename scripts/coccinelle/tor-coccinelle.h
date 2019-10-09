@@ -35,6 +35,6 @@
 
 #define HT_ENTRY(x) void *
 #define HT_HEAD(a,b) struct ht_head
-#define HT_INITIALIZER { }
+#define HT_INITIALIZER() { }
 #define X509 struct x509_st
 #define STACK_OF(x) struct foo_stack_t
