@@ -53,3 +53,5 @@
 
 #define NS_DECL(a, b, c) a b c
 #define NS(a) a
+
+#define EAT_SEMICOLON extern int dummy__;
