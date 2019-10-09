@@ -23,8 +23,10 @@
 #include <syslog.h>
 #define LOG_WARN LOG_WARNING
 #if LOG_DEBUG < LOG_ERR
+#ifndef COCCI
 #error "Your syslog.h thinks high numbers are more important.  " \
        "We aren't prepared to deal with that."
+#endif
 #endif
 #else /* !defined(HAVE_SYSLOG_H) */
 /* Note: Syslog's logging code refers to priorities, with 0 being the most

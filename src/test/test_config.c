@@ -3815,7 +3815,9 @@ static void
 test_config_default_fallback_dirs(void *arg)
 {
   const char *fallback[] = {
+#ifndef COCCI
 #include "app/config/fallback_dirs.inc"
+#endif
     NULL
   };
 

@@ -304,6 +304,7 @@ test_util_write_chunks_to_file(void *arg)
   tor_free(temp_str);
 }
 
+#ifndef COCCI
 #define _TFE(a, b, f)  tt_int_op((a).f, OP_EQ, (b).f)
 /** test the minimum set of struct tm fields needed for a unique epoch value
  * this is also the set we use to test tor_timegm */
@@ -316,6 +317,7 @@ test_util_write_chunks_to_file(void *arg)
             _TFE(a, b, tm_min ); \
             _TFE(a, b, tm_sec ); \
           TT_STMT_END
+#endif
 
 static void
 test_util_time(void *arg)
@@ -6257,6 +6259,7 @@ test_util_map_anon_nofork(void *arg)
 #endif /* defined(_WIN32) */
 }
 
+#ifndef COCCI
 #define UTIL_LEGACY(name)                                               \
   { #name, test_util_ ## name , 0, NULL, NULL }
 
@@ -6281,6 +6284,7 @@ test_util_map_anon_nofork(void *arg)
   { "compress_dos/" #name, test_util_decompress_dos, 0,                 \
     &compress_setup,                                                    \
     (char*)(identifier) }
+#endif
 
 #ifdef _WIN32
 #define UTIL_TEST_NO_WIN(n, f) { #n, NULL, TT_SKIP, NULL, NULL }

@@ -186,8 +186,12 @@ static const char unix_q_socket_prefix[] = "unix:\"";
 
 /** macro to help with the bulk rename of *DownloadSchedule to
  * *DowloadInitialDelay . */
+#ifndef COCCI
 #define DOWNLOAD_SCHEDULE(name) \
   { #name "DownloadSchedule", #name "DownloadInitialDelay", 0, 1 }
+#else
+#define DOWNLOAD_SCHEDULE(name) { NULL, NULL, 0, 1 }
+#endif
 
 /** A list of abbreviations and aliases to map command-line options, obsolete
  * option names, or alternative option names, to their current values. */
@@ -765,7 +769,9 @@ static const config_var_t option_vars_[] = {
 
 /** List of default directory authorities */
 static const char *default_authorities[] = {
+#ifndef COCCI
 #include "auth_dirs.inc"
+#endif
   NULL
 };
 
@@ -773,8 +779,10 @@ static const char *default_authorities[] = {
  * relays that meet certain stability criteria.
  */
 static const char *default_fallbacks[] = {
+#ifndef COCCI
 #include "fallback_dirs.inc"
-  NULL
+#endif
+   NULL
 };
 
 /** Override default values with these if the user sets the TestingTorNetwork
@@ -783,7 +791,9 @@ static const struct {
   const char *k;
   const char *v;
 } testing_tor_network_defaults[] = {
+#ifndef COCCI
 #include "testnet.inc"
+#endif
   { NULL, NULL }
 };
 

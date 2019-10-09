@@ -12,7 +12,9 @@
 #ifndef TOR_LIB_CONF_CONFTESTING_H
 #define TOR_LIB_CONF_CONFTESTING_H
 
+#ifndef COCCI
 #ifdef TOR_UNIT_TESTS
+#define USE_CONF_TESTING
 /**
  * Union used when building in test mode typechecking the members of a type
  * used with confparse.c.  See CONF_CHECK_VAR_TYPE for a description of how
@@ -41,12 +43,10 @@ typedef union {
   // XXXX this doesn't belong at this level of abstraction.
   struct routerset_t **ROUTERSET;
 } confparse_dummy_values_t;
-#endif /* defined(TOR_UNIT_TESTS) */
 
 /* Macros to define extra members inside config_var_t fields, and at the
  * end of a list of them.
  */
-#ifdef TOR_UNIT_TESTS
 /* This is a somewhat magic type-checking macro for users of confparse.c.
  * It initializes a union member "confparse_dummy_values_t.conftype" with
  * the address of a static member "tp_dummy.member".   This
@@ -72,9 +72,10 @@ typedef union {
 #define DUMMY_CONF_TEST_MEMBERS , .var_ptr_dummy={ .INT=NULL }
 #define DUMMY_TYPECHECK_INSTANCE(tp)            \
   static tp tp ## _dummy
+#endif
+#endif
 
-#else /* !defined(TOR_UNIT_TESTS) */
-
+#ifndef USE_CONF_TESTING
 #define CONF_TEST_MEMBERS(tp, conftype, member)
 /* Repeatedly declarable incomplete struct to absorb redundant semicolons */
 #define DUMMY_TYPECHECK_INSTANCE(tp)            \

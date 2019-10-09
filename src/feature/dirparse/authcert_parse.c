@@ -16,7 +16,9 @@
 
 /** List of tokens recognized in V3 authority certificates. */
 static token_rule_t dir_key_certificate_table[] = {
+#ifndef COCCI
 #include "feature/dirparse/authcert_members.i"
+#endif
   T1("fingerprint",      K_FINGERPRINT,              CONCAT_ARGS, NO_OBJ ),
   END_OF_TABLE
 };

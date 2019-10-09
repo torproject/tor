@@ -1392,7 +1392,7 @@ get_interface_addresses_win32(int severity, sa_family_t family)
 
 /* This is defined on Mac OS X */
 #ifndef _SIZEOF_ADDR_IFREQ
-#define _SIZEOF_ADDR_IFREQ sizeof
+#define _SIZEOF_ADDR_IFREQ(x) sizeof(x)
 #endif
 
 /* Free ifc->ifc_buf safely. */
