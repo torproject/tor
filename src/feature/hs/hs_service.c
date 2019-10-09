@@ -2333,15 +2333,70 @@ intro_point_should_expire(const hs_service_intro_point_t *ip,
   return 1;
 }
 
-/* Go over the given set of intro points for each service and remove any
- * invalid ones. The conditions for removal are:
+/* Return true iff we should remove the intro point ip from its service.
  *
- *    - The node doesn't exists anymore (not in consensus)
- *                          OR
- *    - The intro point maximum circuit retry count has been reached and no
- *      circuit can be found associated with it.
- *                          OR
- *    - The intro point has expired and we should pick a new one.
+ * We remove an intro point from the service descriptor list if one of
+ * these criteria is met:
+ *    - It has expired (either in INTRO2 count or in time).
+ *    - No node was found (fell off the consensus).
+ *    - We are over the maximum amount of retries.
+ *
+ * If an established or pending circuit is found for the given ip object, this
+ * return false indicating it should not be removed. */
+static bool
+should_remove_intro_point(hs_service_intro_point_t *ip, time_t now)
+{
+  bool ret = false;
+
+  tor_assert(ip);
+
+  /* Any one of the following needs to be True to furfill the criteria to
+   * remove an intro point. */
+  bool has_no_retries = (ip->circuit_retries >
+                         MAX_INTRO_POINT_CIRCUIT_RETRIES);
+  bool has_no_node = (get_node_from_intro_point(ip) == NULL);
+  bool has_expired = intro_point_should_expire(ip, now);
+
+  /* If the node fell off the consensus or the IP has expired, we have to
+   * remove it now. */
+  if (has_no_node || has_expired) {
+    ret = true;
+    goto end;
+  }
+
+  /* Pass this point, even though we might be over the retry limit, we check
+   * if a circuit (established or pending) exists. In that case, we should not
+   * remove it because it might simply be valid and opened at the previous
+   * scheduled event for the last retry. */
+
+  /* Did we established already? */
+  if (ip->circuit_established) {
+    goto end;
+  }
+  /* Do we simply have an existing circuit regardless of its state? */
+  if (hs_circ_service_get_intro_circ(ip)) {
+    goto end;
+  }
+
+  /* Getting here means we have _no_ circuits so then return if we have any
+   * remaining retries. */
+  ret = has_no_retries;
+
+ end:
+  /* Meaningful log in case we are about to remove the IP. */
+  if (ret) {
+    log_info(LD_REND, "Intro point %s%s (retried: %u times). "
+                      "Removing it.",
+             describe_intro_point(ip),
+             has_expired ? " has expired" :
+               (has_no_node) ?  " fell off the consensus" : "",
+             ip->circuit_retries);
+  }
+  return ret;
+}
+
+/* Go over the given set of intro points for each service and remove any
+ * invalid ones.
  *
  * If an intro point is removed, the circuit (if any) is immediately close.
  * If a circuit can't be found, the intro point is kept if it hasn't reached
@@ -2366,21 +2421,7 @@ cleanup_intro_points(hs_service_t *service, time_t now)
      * valid and remove any of them that aren't. */
     DIGEST256MAP_FOREACH_MODIFY(desc->intro_points.map, key,
                                 hs_service_intro_point_t *, ip) {
-      const node_t *node = get_node_from_intro_point(ip);
-      int has_expired = intro_point_should_expire(ip, now);
-
-      /* We cleanup an intro point if it has expired or if we do not know the
-       * node_t anymore (removed from our latest consensus) or if we've
-       * reached the maximum number of retry with a non existing circuit. */
-      if (has_expired || node == NULL ||
-          ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES) {
-        log_info(LD_REND, "Intro point %s%s (retried: %u times). "
-                          "Removing it.",
-                 describe_intro_point(ip),
-                 has_expired ? " has expired" :
-                    (node == NULL) ?  " fell off the consensus" : "",
-                 ip->circuit_retries);
-
+      if (should_remove_intro_point(ip, now)) {
         /* We've retried too many times, remember it as a failed intro point
          * so we don't pick it up again for INTRO_CIRC_RETRY_PERIOD sec. */
         if (ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES) {
