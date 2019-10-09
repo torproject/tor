@@ -1662,8 +1662,10 @@ test_addr_rfc6598(void *arg)
   ;
 }
 
+#ifndef COCCI
 #define ADDR_LEGACY(name)                                               \
   { #name, test_addr_ ## name , 0, NULL, NULL }
+#endif
 
 struct testcase_t addr_tests[] = {
   ADDR_LEGACY(basic),

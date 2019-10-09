@@ -3038,6 +3038,7 @@ static const struct testcase_setup_t upgrade_circuits = {
   upgrade_circuits_setup, upgrade_circuits_cleanup
 };
 
+#ifndef COCCI
 #define NO_PREFIX_TEST(name) \
   { #name, test_ ## name, 0, NULL, NULL }
 
@@ -3060,6 +3061,7 @@ static const struct testcase_setup_t upgrade_circuits = {
     &upgrade_circuits, (void*)(arg REASONABLY_FUTURE) }, \
   { #name "_reasonably_past", test_entry_guard_ ## name, TT_FORK, \
     &upgrade_circuits, (void*)(arg REASONABLY_PAST) }
+#endif
 
 struct testcase_t entrynodes_tests[] = {
   NO_PREFIX_TEST(node_preferred_orport),

@@ -4163,8 +4163,10 @@ test_options_validate__accel(void *ignored)
   tor_free(msg);
 }
 
+#ifndef COCCI
 #define LOCAL_VALIDATE_TEST(name) \
   { "validate__" #name, test_options_validate__ ## name, TT_FORK, NULL, NULL }
+#endif
 
 struct testcase_t options_tests[] = {
   { "validate", test_options_validate, TT_FORK, NULL, NULL },

@@ -7210,6 +7210,7 @@ test_dir_format_versions_list(void *arg)
   teardown_capture_of_logs();
 }
 
+#ifndef COCCI
 #define DIR_LEGACY(name)                             \
   { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
 
@@ -7219,6 +7220,7 @@ test_dir_format_versions_list(void *arg)
 /* where arg is a string constant */
 #define DIR_ARG(name,flags,arg)                      \
   { #name "_" arg, test_dir_##name, (flags), &passthrough_setup, (void*) arg }
+#endif
 
 struct testcase_t dir_tests[] = {
   DIR_LEGACY(nicknames),

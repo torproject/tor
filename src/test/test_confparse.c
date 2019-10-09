@@ -1027,12 +1027,14 @@ test_confparse_find_option_name(void *arg)
   config_mgr_free(mgr);
 }
 
+#ifndef COCCI
 #define CONFPARSE_TEST(name, flags)                          \
   { #name, test_confparse_ ## name, flags, NULL, NULL }
 
 #define BADVAL_TEST(name)                               \
   { "badval_" #name, test_confparse_assign_badval, 0,   \
       &passthrough_setup, (void*)&bv_ ## name }
+#endif
 
 struct testcase_t confparse_tests[] = {
   CONFPARSE_TEST(init, 0),
