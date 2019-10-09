@@ -20,6 +20,7 @@
 #define MOCK_DECL(a, b, c) a b c
 #define MOCK_IMPL(a, b, c) a b c
 #define CHECK_PRINTF(a, b)
+#define CHECK_SCANF(a, b)
 #define STATIC static
 
 #define STMT_BEGIN do {
