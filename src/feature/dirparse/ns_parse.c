@@ -84,7 +84,9 @@ static token_rule_t networkstatus_token_table[] = {
   T01("required-relay-protocols",    K_REQUIRED_RELAY_PROTOCOLS,
       CONCAT_ARGS, NO_OBJ ),
 
+#ifndef COCCI
 #include "feature/dirparse/authcert_members.i"
+#endif
 
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T1( "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
