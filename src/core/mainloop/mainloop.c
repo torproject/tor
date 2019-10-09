@@ -1363,8 +1363,10 @@ CALLBACK(second_elapsed);
 #undef CALLBACK
 
 /* Now we declare an array of periodic_event_item_t for each periodic event */
-#define CALLBACK(name, r, f) \
+#ifndef COCCI
+#define CALLBACK(name, r, f)                            \
   PERIODIC_EVENT(name, PERIODIC_EVENT_ROLE_ ## r, f)
+#endif
 #define FL(name) (PERIODIC_EVENT_FLAG_ ## name)
 
 STATIC periodic_event_item_t mainloop_periodic_events[] = {
