@@ -28,7 +28,9 @@ struct namemap_t {
   struct smartlist_t *names;
 };
 
+#ifndef COCCI
 /** Macro to initialize a namemap. */
 #define NAMEMAP_INIT() { HT_INITIALIZER(), NULL }
+#endif
 
 #endif /* !defined(NAMEMAP_ST_H) */
