@@ -51,6 +51,7 @@ test_addr_basic(void *arg)
   ;
 }
 
+#ifndef COCCI
 #define test_op_ip6_(a,op,b,e1,e2)                               \
   STMT_BEGIN                                                     \
   tt_assert_test_fmt_type(a,b,e1" "#op" "e2,struct in6_addr*,    \
@@ -68,6 +69,7 @@ test_addr_basic(void *arg)
     TT_EXIT_TEST_FUNCTION                                        \
   );                                                             \
   STMT_END
+#endif
 
 /** Helper: Assert that two strings both decode as IPv6 addresses with
  * tor_inet_pton(), and both decode to the same address. */
@@ -110,6 +112,7 @@ test_addr_basic(void *arg)
       TT_DIE(("%s was not internal", a));                      \
   STMT_END
 
+#ifndef COCCI
 /** Helper: Assert that <b>a</b> and <b>b</b>, when parsed by
  * tor_inet_pton(), give addresses that compare in the order defined by
  * <b>op</b> with tor_addr_compare(). */
@@ -134,6 +137,7 @@ test_addr_basic(void *arg)
       TT_DIE(("Failed: tor_addr_compare_masked(%s,%s,%d) %s 0", \
               a, b, m, #op));                                   \
   STMT_END
+#endif
 
 /** Helper: assert that <b>xx</b> is parseable as a masked IPv6 address with
  * ports by tor_parse_mask_addr_ports(), with family <b>f</b>, IP address
