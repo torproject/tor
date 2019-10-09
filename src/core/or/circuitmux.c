@@ -1283,3 +1283,20 @@ circuitmux_compare_muxes, (circuitmux_t *cmux_1, circuitmux_t *cmux_2))
   }
 }
 
+/**
+ * Touch the circuitmux so its policy can be updated at this point in time.
+ */
+void
+circuitmux_touch(circuitmux_t *cmux)
+{
+  tor_assert(cmux);
+
+  /* Not suppose to happen. Sream loudly if so. */
+  if (BUG(!cmux->policy)) {
+    return;
+  }
+
+  if (cmux->policy->touch) {
+    cmux->policy->touch(cmux->policy_data);
+  }
+}
