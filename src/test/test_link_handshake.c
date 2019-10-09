@@ -1492,6 +1492,7 @@ AUTHENTICATE_FAIL(missing_ed_auth,
                     "authentication certificate";
                 })
 
+#ifndef COCCI
 #define TEST_RSA(name, flags)                                           \
   { #name , test_link_handshake_ ## name, (flags),                      \
       &passthrough_setup, (void*)"RSA" }
@@ -1527,6 +1528,7 @@ AUTHENTICATE_FAIL(missing_ed_auth,
 #define TEST_AUTHENTICATE_ED(name)                                      \
   { "authenticate/" #name "_ed25519" , test_link_handshake_auth_ ## name, \
       TT_FORK, &setup_authenticate, (void*)3 }
+#endif
 
 struct testcase_t link_handshake_tests[] = {
   TEST_RSA(certs_ok, TT_FORK),
