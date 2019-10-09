@@ -57,4 +57,7 @@
 #define NS_DECL(a, b, c) a b c
 #define NS(a) a
 
+#define CONF_TEST_MEMBERS(a,b,c)
+#define DUMMY_CONF_TEST_MEMBERS
+
 #define EAT_SEMICOLON extern int dummy__;
