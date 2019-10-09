@@ -1,3 +1,22 @@
+/* Copyright (c) 2001 Matej Pfajfar.
+ * Copyright (c) 2001-2004, Roger Dingledine.
+ * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
+ * Copyright (c) 2007-2019, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
+
+/*
+ * This file looks like a C header, but its purpose is a bit different.
+ *
+ * We never include it from our real C files; we only tell Coccinelle
+ * about it in apply.sh.
+ *
+ * It tells the Coccinelle semantic patching tool how to understand
+ * things that would otherwise not be good C syntax, or which would
+ * otherwise not make sense to it as C.  It doesn't need to produce
+ * semantically equivalent C, or even correct C: it only has to produce
+ * syntactically valid C.
+ */
+
 #define MOCK_IMPL(a, b, c) a b c
 #define CHECK_PRINTF(a, b)
 #define STATIC static
