@@ -5805,14 +5805,14 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
       }
 
       if (!strcasecmp(smartlist_get(elts, 0), "android")) {
-#ifdef HAVE_ANDROID_LOG_H
+#ifdef __ANDROID__
         if (!validate_only) {
           add_android_log(severity, options->AndroidIdentityTag);
         }
 #else
         log_warn(LD_CONFIG, "Android logging is not supported"
                             " on this system. Sorry.");
-#endif /* defined(HAVE_ANDROID_LOG_H) */
+#endif /* defined(__ANDROID__) */
         goto cleanup;
       }
     }

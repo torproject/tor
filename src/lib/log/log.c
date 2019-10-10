@@ -51,9 +51,9 @@
 #include "lib/fdio/fdio.h"
 #include "lib/cc/ctassert.h"
 
-#ifdef HAVE_ANDROID_LOG_H
+#ifdef __ANDROID__
 #include <android/log.h>
-#endif // HAVE_ANDROID_LOG_H.
+#endif // __ANDROID__
 
 /** @{ */
 /** The string we stick at the end of a log message when it is too long,
@@ -126,7 +126,7 @@ should_log_function_name(log_domain_mask_t domain, int severity)
   }
 }
 
-#ifdef HAVE_ANDROID_LOG_H
+#ifdef __ANDROID__
 /** Helper function to convert Tor's log severity into the matching
  * Android log priority.
  */
@@ -151,7 +151,7 @@ severity_to_android_log_priority(int severity)
       // LCOV_EXCL_STOP
   }
 }
-#endif /* defined(HAVE_ANDROID_LOG_H) */
+#endif /* defined(__ANDROID__) */
 
 /** A mutex to guard changes to logfiles and logging. */
 static tor_mutex_t log_mutex;
@@ -538,10 +538,10 @@ logfile_deliver(logfile_t *lf, const char *buf, size_t msg_len,
 #endif /* defined(MAXLINE) */
 #endif /* defined(HAVE_SYSLOG_H) */
   } else if (lf->is_android) {
-#ifdef HAVE_ANDROID_LOG_H
+#ifdef __ANDROID__
     int priority = severity_to_android_log_priority(severity);
     __android_log_write(priority, lf->android_tag, msg_after_prefix);
-#endif // HAVE_ANDROID_LOG_H.
+#endif // __ANDROID__
   } else if (lf->callback) {
     if (domain & LD_NOCB) {
       if (!*callbacks_deferred && pending_cb_messages) {
@@ -1265,7 +1265,7 @@ add_syslog_log(const log_severity_list_t *severity,
 }
 #endif /* defined(HAVE_SYSLOG_H) */
 
-#ifdef HAVE_ANDROID_LOG_H
+#ifdef __ANDROID__
 /**
  * Add a log handler to send messages to the Android platform log facility.
  */
@@ -1296,7 +1296,7 @@ add_android_log(const log_severity_list_t *severity,
   UNLOCK_LOGS();
   return 0;
 }
-#endif /* defined(HAVE_ANDROID_LOG_H) */
+#endif /* defined(__ANDROID__) */
 
 /** If <b>level</b> is a valid log severity, return the corresponding
  * numeric value.  Otherwise, return -1. */
