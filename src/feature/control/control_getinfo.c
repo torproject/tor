@@ -328,12 +328,12 @@ getinfo_helper_current_time(control_connection_t *control_conn,
 /** GETINFO helper for dumping different consensus flavors
  * returns: 0 on success -1 on error. */
 STATIC int
-getinfo_helper_current_consensus(int flavor,
+getinfo_helper_current_consensus(consensus_flavor_t flavor,
                                  char** answer,
                                  const char** errmsg)
 {
   const char *flavor_name = networkstatus_get_flavor_name(flavor);
-  if (!strcmp(flavor_name, "")) {
+  if (!strcmp(flavor_name, "??")) {
     *errmsg = "Could not open cached consensus. "
       "Make sure FetchUselessDescriptors is set to 1.";
     return -1;

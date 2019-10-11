@@ -49,7 +49,7 @@ STATIC int getinfo_helper_downloads(
     const char *question, char **answer,
     const char **errmsg);
 STATIC int getinfo_helper_current_consensus(
-    int flavor,
+    consensus_flavor_t flavor,
     char **answer,
     const char **errmsg);
 STATIC int getinfo_helper_dir(
