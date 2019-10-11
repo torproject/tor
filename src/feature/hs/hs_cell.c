@@ -494,7 +494,8 @@ build_establish_intro_dos_param(trn_cell_extension_dos_t *dos_ext,
 }
 
 /* Build the DoS defense cell extension and put it in the given extensions
- * object. This can't fail. */
+ * object. Return 0 on success, -1 on failure.  (Right now, failure is only
+ * possible if there is a bug.) */
 static int
 build_establish_intro_dos_extension(const hs_service_config_t *service_config,
                                     trn_cell_extension_t *extensions)
@@ -1075,4 +1076,3 @@ hs_cell_introduce1_data_clear(hs_cell_introduce1_data_t *data)
   /* The data object has no ownership of any members. */
   memwipe(data, 0, sizeof(hs_cell_introduce1_data_t));
 }
-
