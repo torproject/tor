@@ -56,38 +56,38 @@ will be scheduled.
 The codebase is divided into a few top-level subdirectories, each of
 which contains several sub-modules.
 
-   src/ext -- Code maintained elsewhere that we include in the Tor
-   source distribution.
+   * `src/ext` -- Code maintained elsewhere that we include in the Tor
+     source distribution.
 
-   src/lib -- Lower-level utility code, not necessarily tor-specific.
+   * src/lib` -- Lower-level utility code, not necessarily tor-specific.
 
-   src/trunnel -- Automatically generated code (from the Trunnel)
-   tool: used to parse and encode binary formats.
+   * `src/trunnel` -- Automatically generated code (from the Trunnel
+     tool): used to parse and encode binary formats.
 
-   src/core -- Networking code that is implements the central parts of
+   * `src/core` -- Networking code that is implements the central parts of
    the Tor protocol and main loop.
 
-   src/feature -- Aspects of Tor (like directory management, running a
+   * `src/feature` -- Aspects of Tor (like directory management, running a
    relay, running a directory authorities, managing a list of nodes,
    running and using onion services) that are built on top of the
    mainloop code.
 
-   src/app -- Highest-level functionality; responsible for setting up
-   and configuring the Tor project, making sure all the lower-level
+   * `src/app` -- Highest-level functionality; responsible for setting up
+   and configuring the Tor daemon, making sure all the lower-level
    modules start up when required, and so on.
 
-   src/tools -- Binaries other than Tor that we produce.  Currently this
+   * `src/tools` -- Binaries other than Tor that we produce.  Currently this
    is tor-resolve, tor-gencert, and the tor_runner.o helper module.
 
-   src/test -- unit tests, regression tests, and a few integration
+   * `src/test` -- unit tests, regression tests, and a few integration
    tests.
 
-In theory, the above parts of the codebase are sorted from highest-level
-to lowest-level, where high-level code is only allowed to invoke
-lower-level code, and lower-level code never includes or depends on code
-of a higher level.  In practice, this refactoring is incomplete: The
-modules in src/lib are well-factored, but there are many "upward
-dependencies" in src/core and src/feature.  We aim to eliminate those
+In theory, the above parts of the codebase are sorted from highest-level to
+lowest-level, where high-level code is only allowed to invoke lower-level
+code, and lower-level code never includes or depends on code of a higher
+level.  In practice, this refactoring is incomplete: The modules in `src/lib`
+are well-factored, but there are many layer violations ("upward
+dependencies") in `src/core` and `src/feature`.  We aim to eliminate those
 over time.
 
 ### Some key high-level abstractions ###
