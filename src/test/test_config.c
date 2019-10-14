@@ -45,6 +45,7 @@
 #include "app/config/statefile.h"
 
 #include "test/test_helpers.h"
+#include "test/resolve_test_helpers.h"
 
 #include "feature/dirclient/dir_server_st.h"
 #include "core/or/port_cfg_st.h"
@@ -4068,6 +4069,8 @@ test_config_parse_port_config__ports__ports_given(void *data)
 
   slout = smartlist_new();
 
+  mock_hostname_resolver();
+
   // Test error when encounters an invalid Port specification
   config_port_invalid = mock_config_line("DNSPort", "");
   ret = parse_port_config(NULL, config_port_invalid, "DNS", 0, NULL,
@@ -4764,6 +4767,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
 #endif /* defined(_WIN32) */
 
  done:
+  unmock_hostname_resolver();
   if (slout)
     SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_free(slout);

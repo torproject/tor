@@ -1,0 +1,5 @@
+  o Minor features (testing):
+    - When running tests that attempt to look up hostname, replace the libc
+      name lookup functions with ones that do not actually touch the network.
+      This way, the tests complete more quickly in the presence of a slow or
+      missing DNS resolver. Closes ticket 31841.

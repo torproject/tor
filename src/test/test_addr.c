@@ -12,6 +12,7 @@
 #include "test/log_test_helpers.h"
 #include "lib/net/resolve.h"
 #include "test/rng_test_helpers.h"
+#include "test/resolve_test_helpers.h"
 
 #ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
@@ -1160,6 +1161,7 @@ test_addr_parse_canonical(void *arg)
 static void
 test_addr_parse(void *arg)
 {
+
   int r;
   tor_addr_t addr;
   uint16_t port;
@@ -1168,6 +1170,8 @@ test_addr_parse(void *arg)
   char buf[TOR_ADDR_BUF_LEN];
 
   (void)arg;
+
+  mock_hostname_resolver();
 
   /* IPv6-mapped IPv4 addresses. Tor doesn't really use these. */
   TEST_ADDR_V6_PARSE("11:22:33:44:55:66:1.2.3.4", 0,
@@ -1273,7 +1277,7 @@ test_addr_parse(void *arg)
                            "11:22::88",99);
 
  done:
-  ;
+  unmock_hostname_resolver();
 }
 
 static void

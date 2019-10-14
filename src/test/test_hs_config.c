@@ -12,6 +12,7 @@
 #include "test/test.h"
 #include "test/test_helpers.h"
 #include "test/log_test_helpers.h"
+#include "test/resolve_test_helpers.h"
 
 #include "app/config/config.h"
 #include "feature/hs/hs_common.h"
@@ -272,6 +273,7 @@ test_valid_service_v2(void *arg)
   int ret;
 
   (void) arg;
+  mock_hostname_resolver();
 
   /* Valid complex configuration. Basic client authorization. */
   {
@@ -314,7 +316,7 @@ test_valid_service_v2(void *arg)
   }
 
  done:
-  ;
+  unmock_hostname_resolver();
 }
 
 static void
@@ -392,6 +394,7 @@ test_valid_service_v3(void *arg)
   int ret;
 
   (void) arg;
+  mock_hostname_resolver();
 
   /* Valid complex configuration. */
   {
@@ -448,7 +451,7 @@ test_valid_service_v3(void *arg)
   }
 
  done:
-  ;
+  unmock_hostname_resolver();
 }
 
 static void
@@ -623,4 +626,3 @@ struct testcase_t hs_config_tests[] = {
 
   END_OF_TESTCASES
 };
-
