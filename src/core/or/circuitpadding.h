@@ -301,7 +301,7 @@ typedef struct circpad_state_t {
    *         |    |    |     |     |         |               |
    *         |    |    |     |     |         |               |
    *       0 +----+----+-----+-----+---------+---------------+
-   *         0   100  200   350   500      1000              ∞  microseconds
+   *         0   100  200   350   500      1000             inf  microseconds
    *
    * would be specified the following way:
    *    histogram_len = 6;
