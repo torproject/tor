@@ -5,18 +5,20 @@ This document describes the general structure of the Tor codebase, how
 it fits together, what functionality is available for extending Tor,
 and gives some notes on how Tor got that way.
 
-Tor remains a work in progress: We've been working on it for more than a
-decade, and we've learned a lot about good coding since we first
+Tor remains a work in progress: We've been working on it for nearly two
+decades, and we've learned a lot about good coding since we first
 started.  This means, however, that some of the older pieces of Tor will
-have some "code smell" in them that could sure stand a brisk
+have some "code smell" in them that could stand a brisk
 refactoring.  So when I describe a piece of code, I'll sometimes give a
 note on how it got that way, and whether I still think that's a good
 idea.
 
 The first drafts of this document were written in the Summer and Fall of
 2015, when Tor 0.2.6 was the most recent stable version, and Tor 0.2.7
-was under development.  If you're reading this far in the future, some
-things may have changed.  Caveat haxxor!
+was under development.  There is a revision in progress (as of late
+2019), to bring it up to pace with Tor as of version 0.4.2.  If you're
+reading this far in the future, some things may have changed.  Caveat
+haxxor!
 
 This document is not an overview of the Tor protocol.  For that, see the
 design paper and the specifications at https://spec.torproject.org/ .
@@ -24,8 +26,6 @@ design paper and the specifications at https://spec.torproject.org/ .
 For more information about Tor's coding standards and some helpful
 development tools, see doc/HACKING in the Tor repository.
 
-For more information about writing tests, see doc/HACKING/WritingTests.txt
-in the Tor repository.
 
 ### The very high level ###
 
@@ -36,35 +36,59 @@ same codebase: the Tor process will run as a client, relay, or authority
 depending on its configuration.
 
 Tor has a few major dependencies, including Libevent (used to tell which
-sockets are readable and writable), OpenSSL (used for many encryption
+sockets are readable and writable), OpenSSL or NSS (used for many encryption
 functions, and to implement the TLS protocol), and zlib (used to
 compress and uncompress directory information).
 
 Most of Tor's work today is done in a single event-driven main thread.
 Tor also spawns one or more worker threads to handle CPU-intensive
-tasks.  (Right now, this only includes circuit encryption.)
+tasks.  (Right now, this only includes circuit encryption and the more
+expensive compression algorithms.)
 
 On startup, Tor initializes its libraries, reads and responds to its
 configuration files, and launches a main event loop.  At first, the only
 events that Tor listens for are a few signals (like TERM and HUP), and
 one or more listener sockets (for different kinds of incoming
-connections).  Tor also configures a timer function to run once per
-second to handle periodic events.  As Tor runs over time, other events
-will open, and new events will be scheduled.
+connections).  Tor also configures several timers to handle periodic
+events.  As Tor runs over time, other events will open, and new events
+will be scheduled.
 
-The codebase is divided into a few main subdirectories:
-
-   src/common -- utility functions, not necessarily tor-specific.
-
-   src/or -- implements the Tor protocols.
-
-   src/test -- unit and regression tests
+The codebase is divided into a few top-level subdirectories, each of
+which contains several sub-modules.
 
    src/ext -- Code maintained elsewhere that we include in the Tor
    source distribution.
 
-   src/trunnel -- automatically generated code (from the Trunnel)
+   src/lib -- Lower-level utility code, not necessarily tor-specific.
+
+   src/trunnel -- Automatically generated code (from the Trunnel)
    tool: used to parse and encode binary formats.
+
+   src/core -- Networking code that is implements the central parts of
+   the Tor protocol and main loop.
+
+   src/feature -- Aspects of Tor (like directory management, running a
+   relay, running a directory authorities, managing a list of nodes,
+   running and using onion services) that are built on top of the
+   mainloop code.
+
+   src/app -- Highest-level functionality; responsible for setting up
+   and configuring the Tor project, making sure all the lower-level
+   modules start up when required, and so on.
+
+   src/tools -- Binaries other than Tor that we produce.  Currently this
+   is tor-resolve, tor-gencert, and the tor_runner.o helper module.
+
+   src/test -- unit tests, regression tests, and a few integration
+   tests.
+
+In theory, the above parts of the codebase are sorted from highest-level
+to lowest-level, where high-level code is only allowed to invoke
+lower-level code, and lower-level code never includes or depends on code
+of a higher level.  In practice, this refactoring is incomplete: The
+modules in src/lib are well-factored, but there are many "upward
+dependencies" in src/core and src/feature.  We aim to eliminate those
+over time.
 
 ### Some key high-level abstractions ###
 
@@ -94,31 +118,26 @@ If we switch to other strategies in the future, we'll have more
 connection types.
 
 A 'Node' is a view of a Tor instance's current knowledge and opinions
-about a Tor relay orbridge.
+about a Tor relay or bridge.
 
 ### The rest of this document. ###
 
 > **Note**: This section describes the eventual organization of this
 > document, which is not yet complete.
 
-We'll begin with an overview of the various utility functions available
-in Tor's 'common' directory.  Knowing about these is key to writing
-portable, simple code in Tor.
+We'll begin with an overview of the facilities provided by the modules
+in src/lib.  Knowing about these is key to writing portable, simple code
+in Tor.
+
+Then we'll move on to a discussion of how parts of the Tor codebase are
+initialized, finalized, configured, and managed.
 
 Then we'll go on and talk about the main data-flow of the Tor network:
 how Tor generates and responds to network traffic.  This will occupy a
 chapter for the main overview, with other chapters for special topics.
 
-After that, we'll mention the main modules in Tor, and describe the
-function of each.
-
-We'll cover the directory subsystem next: how Tor learns about other
-relays, and how relays advertise themselves.
-
-Then we'll cover a few specialized modules, such as hidden services,
-sandboxing, hibernation, accounting, statistics, guards, path
-generation, pluggable transports, and how they integrate with the rest of Tor.
+After that, we'll mention the main modules in src/features and describe the
+functions of each.
 
 We'll close with a meandering overview of important pending issues in
 the Tor codebase, and how they affect the future of the Tor software.
-
