@@ -102,6 +102,7 @@ src_test_test_SOURCES += \
 	src/test/log_test_helpers.c \
 	src/test/hs_test_helpers.c \
 	src/test/rend_test_helpers.c \
+	src/test/resolve_test_helpers.c \
 	src/test/rng_test_helpers.c \
 	src/test/test.c \
 	src/test/test_accounting.c \
@@ -341,6 +342,7 @@ noinst_HEADERS+= \
 	src/test/hs_test_helpers.h \
 	src/test/log_test_helpers.h \
 	src/test/rend_test_helpers.h \
+	src/test/resolve_test_helpers.h \
 	src/test/rng_test_helpers.h \
 	src/test/test.h \
 	src/test/ptr_helpers.h \

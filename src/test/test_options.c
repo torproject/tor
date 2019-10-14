@@ -14,6 +14,7 @@
 #include "feature/nodelist/routerset.h"
 #include "core/mainloop/mainloop.h"
 #include "test/log_test_helpers.h"
+#include "test/resolve_test_helpers.h"
 
 #include "lib/sandbox/sandbox.h"
 #include "lib/memarea/memarea.h"
@@ -241,6 +242,7 @@ test_options_validate(void *arg)
   (void)arg;
   setup_log_callback();
   sandbox_disable_getaddrinfo_cache();
+  mock_hostname_resolver();
 
   WANT_ERR("ExtORPort 500000", "Invalid ExtORPort", PH_VALIDATE);
 
@@ -282,6 +284,7 @@ test_options_validate(void *arg)
 
   close_temp_logs();
   clear_log_messages();
+  unmock_hostname_resolver();
   return;
 }
 
