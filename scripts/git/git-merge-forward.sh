@@ -333,7 +333,7 @@ function merge_branch
   fi
 }
 
-# Pull the given branch name.
+# Merge origin/(branch name) into the current branch.
 function merge_branch_origin
 {
   local cmd="git merge --ff-only 'origin/$1'"
