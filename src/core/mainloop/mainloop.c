@@ -1580,6 +1580,7 @@ teardown_periodic_events(void)
 {
   int i;
   for (i = 0; periodic_events[i].name; ++i) {
+    periodic_event_disable(&periodic_events[i]);
     periodic_event_destroy(&periodic_events[i]);
   }
   periodic_events_initialized = 0;
