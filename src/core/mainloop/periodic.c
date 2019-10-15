@@ -330,6 +330,7 @@ periodic_events_disconnect_all(void)
     return;
 
   SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
+    periodic_event_disable(item);
     periodic_event_disconnect(item);
   } SMARTLIST_FOREACH_END(item);
 
