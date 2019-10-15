@@ -44,6 +44,8 @@
 #define WORKQUEUE_PRIORITY_LAST WQ_PRI_LOW
 #define WORKQUEUE_N_PRIORITIES (((int) WORKQUEUE_PRIORITY_LAST)+1)
 
+static void worker_thread_wrapper(void *thread_) ATTR_NORETURN;
+
 TOR_TAILQ_HEAD(work_tailq_t, workqueue_entry_s);
 typedef struct work_tailq_t work_tailq_t;
 
@@ -318,6 +320,17 @@ worker_thread_main(void *thread_)
   }
 }
 
+/**
+ * Wrapper for the main worker thread function, but makes sure to properly
+ * exit after it returns.
+ */
+static void
+worker_thread_wrapper(void *thread_)
+{
+  worker_thread_main(thread_);
+  spawn_exit();
+}
+
 /** Put a reply on the reply queue.  The reply must not currently be on
  * any thread's work queue. */
 static void
@@ -348,7 +361,7 @@ workerthread_new(int32_t lower_priority_chance,
   thr->in_pool = pool;
   thr->lower_priority_chance = lower_priority_chance;
 
-  if (spawn_func(worker_thread_main, thr) < 0) {
+  if (spawn_func(worker_thread_wrapper, thr) < 0) {
     //LCOV_EXCL_START
     tor_assert_nonfatal_unreached();
     log_err(LD_GENERAL, "Can't launch worker thread.");
