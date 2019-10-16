@@ -29,10 +29,10 @@ static int cached_client_descriptor_has_expired(time_t now,
 
 /********************** Directory HS cache ******************/
 
-/* Directory descriptor cache. Map indexed by blinded key. */
+/** Directory descriptor cache. Map indexed by blinded key. */
 static digest256map_t *hs_cache_v3_dir;
 
-/* Remove a given descriptor from our cache. */
+/** Remove a given descriptor from our cache. */
 static void
 remove_v3_desc_as_dir(const hs_cache_dir_descriptor_t *desc)
 {
@@ -40,7 +40,7 @@ remove_v3_desc_as_dir(const hs_cache_dir_descriptor_t *desc)
   digest256map_remove(hs_cache_v3_dir, desc->key);
 }
 
-/* Store a given descriptor in our cache. */
+/** Store a given descriptor in our cache. */
 static void
 store_v3_desc_as_dir(hs_cache_dir_descriptor_t *desc)
 {
@@ -48,7 +48,7 @@ store_v3_desc_as_dir(hs_cache_dir_descriptor_t *desc)
   digest256map_set(hs_cache_v3_dir, desc->key, desc);
 }
 
-/* Query our cache and return the entry or NULL if not found. */
+/** Query our cache and return the entry or NULL if not found. */
 static hs_cache_dir_descriptor_t *
 lookup_v3_desc_as_dir(const uint8_t *key)
 {
@@ -59,7 +59,7 @@ lookup_v3_desc_as_dir(const uint8_t *key)
 #define cache_dir_desc_free(val) \
   FREE_AND_NULL(hs_cache_dir_descriptor_t, cache_dir_desc_free_, (val))
 
-/* Free a directory descriptor object. */
+/** Free a directory descriptor object. */
 static void
 cache_dir_desc_free_(hs_cache_dir_descriptor_t *desc)
 {
@@ -71,7 +71,7 @@ cache_dir_desc_free_(hs_cache_dir_descriptor_t *desc)
   tor_free(desc);
 }
 
-/* Helper function: Use by the free all function using the digest256map
+/** Helper function: Use by the free all function using the digest256map
  * interface to cache entries. */
 static void
 cache_dir_desc_free_void(void *ptr)
@@ -79,7 +79,7 @@ cache_dir_desc_free_void(void *ptr)
   cache_dir_desc_free_(ptr);
 }
 
-/* Create a new directory cache descriptor object from a encoded descriptor.
+/** Create a new directory cache descriptor object from a encoded descriptor.
  * On success, return the heap-allocated cache object, otherwise return NULL if
  * we can't decode the descriptor. */
 static hs_cache_dir_descriptor_t *
@@ -109,7 +109,7 @@ cache_dir_desc_new(const char *desc)
   return NULL;
 }
 
-/* Return the size of a cache entry in bytes. */
+/** Return the size of a cache entry in bytes. */
 static size_t
 cache_get_dir_entry_size(const hs_cache_dir_descriptor_t *entry)
 {
@@ -117,7 +117,7 @@ cache_get_dir_entry_size(const hs_cache_dir_descriptor_t *entry)
           + strlen(entry->encoded_desc));
 }
 
-/* Try to store a valid version 3 descriptor in the directory cache. Return 0
+/** Try to store a valid version 3 descriptor in the directory cache. Return 0
  * on success else a negative value is returned indicating that we have a
  * newer version in our cache. On error, caller is responsible to free the
  * given descriptor desc. */
@@ -167,7 +167,7 @@ cache_store_v3_as_dir(hs_cache_dir_descriptor_t *desc)
   return -1;
 }
 
-/* Using the query which is the base64 encoded blinded key of a version 3
+/** Using the query which is the base64 encoded blinded key of a version 3
  * descriptor, lookup in our directory cache the entry. If found, 1 is
  * returned and desc_out is populated with a newly allocated string being the
  * encoded descriptor. If not found, 0 is returned and desc_out is untouched.
@@ -202,7 +202,7 @@ cache_lookup_v3_as_dir(const char *query, const char **desc_out)
   return -1;
 }
 
-/* Clean the v3 cache by removing any entry that has expired using the
+/** Clean the v3 cache by removing any entry that has expired using the
  * <b>global_cutoff</b> value. If <b>global_cutoff</b> is 0, the cleaning
  * process will use the lifetime found in the plaintext data section. Return
  * the number of bytes cleaned. */
@@ -252,7 +252,7 @@ cache_clean_v3_as_dir(time_t now, time_t global_cutoff)
   return bytes_removed;
 }
 
-/* Given an encoded descriptor, store it in the directory cache depending on
+/** Given an encoded descriptor, store it in the directory cache depending on
  * which version it is. Return a negative value on error. On success, 0 is
  * returned. */
 int
@@ -287,7 +287,7 @@ hs_cache_store_as_dir(const char *desc)
   return -1;
 }
 
-/* Using the query, lookup in our directory cache the entry. If found, 1 is
+/** Using the query, lookup in our directory cache the entry. If found, 1 is
  * returned and desc_out is populated with a newly allocated string being
  * the encoded descriptor. If not found, 0 is returned and desc_out is
  * untouched. On error, a negative value is returned and desc_out is
@@ -312,7 +312,7 @@ hs_cache_lookup_as_dir(uint32_t version, const char *query,
   return found;
 }
 
-/* Clean all directory caches using the current time now. */
+/** Clean all directory caches using the current time now. */
 void
 hs_cache_clean_as_dir(time_t now)
 {
@@ -329,15 +329,15 @@ hs_cache_clean_as_dir(time_t now)
 
 /********************** Client-side HS cache ******************/
 
-/* Client-side HS descriptor cache. Map indexed by service identity key. */
+/** Client-side HS descriptor cache. Map indexed by service identity key. */
 static digest256map_t *hs_cache_v3_client;
 
-/* Client-side introduction point state cache. Map indexed by service public
+/** Client-side introduction point state cache. Map indexed by service public
  * identity key (onion address). It contains hs_cache_client_intro_state_t
  * objects all related to a specific service. */
 static digest256map_t *hs_cache_client_intro_state;
 
-/* Return the size of a client cache entry in bytes. */
+/** Return the size of a client cache entry in bytes. */
 static size_t
 cache_get_client_entry_size(const hs_cache_client_descriptor_t *entry)
 {
@@ -345,7 +345,7 @@ cache_get_client_entry_size(const hs_cache_client_descriptor_t *entry)
          strlen(entry->encoded_desc) + hs_desc_obj_size(entry->desc);
 }
 
-/* Remove a given descriptor from our cache. */
+/** Remove a given descriptor from our cache. */
 static void
 remove_v3_desc_as_client(const hs_cache_client_descriptor_t *desc)
 {
@@ -355,7 +355,7 @@ remove_v3_desc_as_client(const hs_cache_client_descriptor_t *desc)
   rend_cache_decrement_allocation(cache_get_client_entry_size(desc));
 }
 
-/* Store a given descriptor in our cache. */
+/** Store a given descriptor in our cache. */
 static void
 store_v3_desc_as_client(hs_cache_client_descriptor_t *desc)
 {
@@ -365,7 +365,7 @@ store_v3_desc_as_client(hs_cache_client_descriptor_t *desc)
   rend_cache_increment_allocation(cache_get_client_entry_size(desc));
 }
 
-/* Query our cache and return the entry or NULL if not found or if expired. */
+/** Query our cache and return the entry or NULL if not found or if expired. */
 STATIC hs_cache_client_descriptor_t *
 lookup_v3_desc_as_client(const uint8_t *key)
 {
@@ -388,7 +388,7 @@ lookup_v3_desc_as_client(const uint8_t *key)
   return cached_desc;
 }
 
-/* Parse the encoded descriptor in <b>desc_str</b> using
+/** Parse the encoded descriptor in <b>desc_str</b> using
  * <b>service_identity_pk<b> to decrypt it first.
  *
  * If everything goes well, allocate and return a new
@@ -448,7 +448,7 @@ cache_client_desc_free_void(void *ptr)
   cache_client_desc_free(desc);
 }
 
-/* Return a newly allocated and initialized hs_cache_intro_state_t object. */
+/** Return a newly allocated and initialized hs_cache_intro_state_t object. */
 static hs_cache_intro_state_t *
 cache_intro_state_new(void)
 {
@@ -460,21 +460,21 @@ cache_intro_state_new(void)
 #define cache_intro_state_free(val) \
   FREE_AND_NULL(hs_cache_intro_state_t, cache_intro_state_free_, (val))
 
-/* Free an hs_cache_intro_state_t object. */
+/** Free an hs_cache_intro_state_t object. */
 static void
 cache_intro_state_free_(hs_cache_intro_state_t *state)
 {
   tor_free(state);
 }
 
-/* Helper function: used by the free all function. */
+/** Helper function: used by the free all function. */
 static void
 cache_intro_state_free_void(void *state)
 {
   cache_intro_state_free_(state);
 }
 
-/* Return a newly allocated and initialized hs_cache_client_intro_state_t
+/** Return a newly allocated and initialized hs_cache_client_intro_state_t
  * object. */
 static hs_cache_client_intro_state_t *
 cache_client_intro_state_new(void)
@@ -488,7 +488,7 @@ cache_client_intro_state_new(void)
   FREE_AND_NULL(hs_cache_client_intro_state_t,          \
                 cache_client_intro_state_free_, (val))
 
-/* Free a cache_client_intro_state object. */
+/** Free a cache_client_intro_state object. */
 static void
 cache_client_intro_state_free_(hs_cache_client_intro_state_t *cache)
 {
@@ -499,14 +499,14 @@ cache_client_intro_state_free_(hs_cache_client_intro_state_t *cache)
   tor_free(cache);
 }
 
-/* Helper function: used by the free all function. */
+/** Helper function: used by the free all function. */
 static void
 cache_client_intro_state_free_void(void *entry)
 {
   cache_client_intro_state_free_(entry);
 }
 
-/* For the given service identity key service_pk and an introduction
+/** For the given service identity key service_pk and an introduction
  * authentication key auth_key, lookup the intro state object. Return 1 if
  * found and put it in entry if not NULL. Return 0 if not found and entry is
  * untouched. */
@@ -541,7 +541,7 @@ cache_client_intro_state_lookup(const ed25519_public_key_t *service_pk,
   return 0;
 }
 
-/* Note the given failure in state. */
+/** Note the given failure in state. */
 static void
 cache_client_intro_state_note(hs_cache_intro_state_t *state,
                               rend_intro_point_failure_t failure)
@@ -563,7 +563,7 @@ cache_client_intro_state_note(hs_cache_intro_state_t *state,
   }
 }
 
-/* For the given service identity key service_pk and an introduction
+/** For the given service identity key service_pk and an introduction
  * authentication key auth_key, add an entry in the client intro state cache
  * If no entry exists for the service, it will create one. If state is non
  * NULL, it will point to the new intro state entry. */
@@ -597,7 +597,7 @@ cache_client_intro_state_add(const ed25519_public_key_t *service_pk,
   }
 }
 
-/* Remove every intro point state entry from cache that has been created
+/** Remove every intro point state entry from cache that has been created
  * before or at the cutoff. */
 static void
 cache_client_intro_state_clean(time_t cutoff,
@@ -614,7 +614,7 @@ cache_client_intro_state_clean(time_t cutoff,
   } DIGEST256MAP_FOREACH_END;
 }
 
-/* Return true iff no intro points are in this cache. */
+/** Return true iff no intro points are in this cache. */
 static int
 cache_client_intro_state_is_empty(const hs_cache_client_intro_state_t *cache)
 {
@@ -664,7 +664,7 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
   return 0;
 }
 
-/* Return true iff the cached client descriptor at <b>cached_desc</b has
+/** Return true iff the cached client descriptor at <b>cached_desc</b has
  * expired. */
 static int
 cached_client_descriptor_has_expired(time_t now,
@@ -687,7 +687,7 @@ cached_client_descriptor_has_expired(time_t now,
   return 0;
 }
 
-/* clean the client cache using now as the current time. Return the total size
+/** clean the client cache using now as the current time. Return the total size
  * of removed bytes from the cache. */
 static size_t
 cache_clean_v3_as_client(time_t now)
@@ -800,7 +800,7 @@ hs_cache_store_as_client(const char *desc_str,
   return -1;
 }
 
-/* Clean all client caches using the current time now. */
+/** Clean all client caches using the current time now. */
 void
 hs_cache_clean_as_client(time_t now)
 {
@@ -811,7 +811,7 @@ hs_cache_clean_as_client(time_t now)
   cache_clean_v3_as_client(now);
 }
 
-/* Purge the client descriptor cache. */
+/** Purge the client descriptor cache. */
 void
 hs_cache_purge_as_client(void)
 {
@@ -828,7 +828,7 @@ hs_cache_purge_as_client(void)
   log_info(LD_REND, "Hidden service client descriptor cache purged.");
 }
 
-/* For a given service identity public key and an introduction authentication
+/** For a given service identity public key and an introduction authentication
  * key, note the given failure in the client intro state cache. */
 void
 hs_cache_client_intro_state_note(const ed25519_public_key_t *service_pk,
@@ -850,7 +850,7 @@ hs_cache_client_intro_state_note(const ed25519_public_key_t *service_pk,
   cache_client_intro_state_note(entry, failure);
 }
 
-/* For a given service identity public key and an introduction authentication
+/** For a given service identity public key and an introduction authentication
  * key, return true iff it is present in the failure cache. */
 const hs_cache_intro_state_t *
 hs_cache_client_intro_state_find(const ed25519_public_key_t *service_pk,
@@ -861,7 +861,7 @@ hs_cache_client_intro_state_find(const ed25519_public_key_t *service_pk,
   return state;
 }
 
-/* Cleanup the client introduction state cache. */
+/** Cleanup the client introduction state cache. */
 void
 hs_cache_client_intro_state_clean(time_t now)
 {
@@ -881,7 +881,7 @@ hs_cache_client_intro_state_clean(time_t now)
   } DIGEST256MAP_FOREACH_END;
 }
 
-/* Purge the client introduction state cache. */
+/** Purge the client introduction state cache. */
 void
 hs_cache_client_intro_state_purge(void)
 {
@@ -897,7 +897,7 @@ hs_cache_client_intro_state_purge(void)
 
 /**************** Generics *********************************/
 
-/* Do a round of OOM cleanup on all directory caches. Return the amount of
+/** Do a round of OOM cleanup on all directory caches. Return the amount of
  * removed bytes. It is possible that the returned value is lower than
  * min_remove_bytes if the caches get emptied out so the caller should be
  * aware of this. */
@@ -951,7 +951,7 @@ hs_cache_handle_oom(time_t now, size_t min_remove_bytes)
   return bytes_removed;
 }
 
-/* Return the maximum size of a v3 HS descriptor. */
+/** Return the maximum size of a v3 HS descriptor. */
 unsigned int
 hs_cache_get_max_descriptor_size(void)
 {
@@ -960,7 +960,7 @@ hs_cache_get_max_descriptor_size(void)
                                             HS_DESC_MAX_LEN, 1, INT32_MAX);
 }
 
-/* Initialize the hidden service cache subsystem. */
+/** Initialize the hidden service cache subsystem. */
 void
 hs_cache_init(void)
 {
@@ -975,7 +975,7 @@ hs_cache_init(void)
   hs_cache_client_intro_state = digest256map_new();
 }
 
-/* Cleanup the hidden service cache subsystem. */
+/** Cleanup the hidden service cache subsystem. */
 void
 hs_cache_free_all(void)
 {
