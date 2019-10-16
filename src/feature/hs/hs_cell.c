@@ -24,7 +24,7 @@
 #include "trunnel/hs/cell_introduce1.h"
 #include "trunnel/hs/cell_rendezvous.h"
 
-/* Compute the MAC of an INTRODUCE cell in mac_out. The encoded_cell param is
+/** Compute the MAC of an INTRODUCE cell in mac_out. The encoded_cell param is
  * the cell content up to the ENCRYPTED section of length encoded_cell_len.
  * The encrypted param is the start of the ENCRYPTED section of length
  * encrypted_len. The mac_key is the key needed for the computation of the MAC
@@ -67,7 +67,7 @@ compute_introduce_mac(const uint8_t *encoded_cell, size_t encoded_cell_len,
   memwipe(mac_msg, 0, sizeof(mac_msg));
 }
 
-/* From a set of keys, subcredential and the ENCRYPTED section of an
+/** From a set of keys, subcredential and the ENCRYPTED section of an
  * INTRODUCE2 cell, return a newly allocated intro cell keys structure.
  * Finally, the client public key is copied in client_pk. On error, return
  * NULL. */
@@ -101,7 +101,7 @@ get_introduce2_key_material(const ed25519_public_key_t *auth_key,
   return keys;
 }
 
-/* Using the given encryption key, decrypt the encrypted_section of length
+/** Using the given encryption key, decrypt the encrypted_section of length
  * encrypted_section_len of an INTRODUCE2 cell and return a newly allocated
  * buffer containing the decrypted data. On decryption failure, NULL is
  * returned. */
@@ -136,7 +136,7 @@ decrypt_introduce2(const uint8_t *enc_key, const uint8_t *encrypted_section,
   return decrypted;
 }
 
-/* Given a pointer to the decrypted data of the ENCRYPTED section of an
+/** Given a pointer to the decrypted data of the ENCRYPTED section of an
  * INTRODUCE2 cell of length decrypted_len, parse and validate the cell
  * content. Return a newly allocated cell structure or NULL on error. The
  * circuit and service object are only used for logging purposes. */
@@ -188,7 +188,7 @@ parse_introduce2_encrypted(const uint8_t *decrypted_data,
   return NULL;
 }
 
-/* Build a legacy ESTABLISH_INTRO cell with the given circuit nonce and RSA
+/** Build a legacy ESTABLISH_INTRO cell with the given circuit nonce and RSA
  * encryption key. The encoded cell is put in cell_out that MUST at least be
  * of the size of RELAY_PAYLOAD_SIZE. Return the encoded cell length on
  * success else a negative value and cell_out is untouched. */
@@ -210,7 +210,7 @@ build_legacy_establish_intro(const char *circ_nonce, crypto_pk_t *enc_key,
   return cell_len;
 }
 
-/* Parse an INTRODUCE2 cell from payload of size payload_len for the given
+/** Parse an INTRODUCE2 cell from payload of size payload_len for the given
  * service and circuit which are used only for logging purposes. The resulting
  * parsed cell is put in cell_ptr_out.
  *
@@ -249,7 +249,7 @@ parse_introduce2_cell(const hs_service_t *service,
   return -1;
 }
 
-/* Set the onion public key onion_pk in cell, the encrypted section of an
+/** Set the onion public key onion_pk in cell, the encrypted section of an
  * INTRODUCE1 cell. */
 static void
 introduce1_set_encrypted_onion_key(trn_cell_introduce_encrypted_t *cell,
@@ -266,7 +266,7 @@ introduce1_set_encrypted_onion_key(trn_cell_introduce_encrypted_t *cell,
          trn_cell_introduce_encrypted_getlen_onion_key(cell));
 }
 
-/* Set the link specifiers in lspecs in cell, the encrypted section of an
+/** Set the link specifiers in lspecs in cell, the encrypted section of an
  * INTRODUCE1 cell. */
 static void
 introduce1_set_encrypted_link_spec(trn_cell_introduce_encrypted_t *cell,
@@ -286,7 +286,7 @@ introduce1_set_encrypted_link_spec(trn_cell_introduce_encrypted_t *cell,
                     trn_cell_introduce_encrypted_add_nspecs(cell, ls));
 }
 
-/* Set padding in the enc_cell only if needed that is the total length of both
+/** Set padding in the enc_cell only if needed that is the total length of both
  * sections are below the mininum required for an INTRODUCE1 cell. */
 static void
 introduce1_set_encrypted_padding(const trn_cell_introduce1_t *cell,
@@ -306,7 +306,7 @@ introduce1_set_encrypted_padding(const trn_cell_introduce1_t *cell,
   }
 }
 
-/* Encrypt the ENCRYPTED payload and encode it in the cell using the enc_cell
+/** Encrypt the ENCRYPTED payload and encode it in the cell using the enc_cell
  * and the INTRODUCE1 data.
  *
  * This can't fail but it is very important that the caller sets every field
@@ -394,7 +394,7 @@ introduce1_encrypt_and_encode(trn_cell_introduce1_t *cell,
   tor_free(encrypted);
 }
 
-/* Using the INTRODUCE1 data, setup the ENCRYPTED section in cell. This means
+/** Using the INTRODUCE1 data, setup the ENCRYPTED section in cell. This means
  * set it, encrypt it and encode it. */
 static void
 introduce1_set_encrypted(trn_cell_introduce1_t *cell,
@@ -435,7 +435,7 @@ introduce1_set_encrypted(trn_cell_introduce1_t *cell,
   trn_cell_introduce_encrypted_free(enc_cell);
 }
 
-/* Set the authentication key in the INTRODUCE1 cell from the given data. */
+/** Set the authentication key in the INTRODUCE1 cell from the given data. */
 static void
 introduce1_set_auth_key(trn_cell_introduce1_t *cell,
                         const hs_cell_introduce1_data_t *data)
@@ -451,7 +451,7 @@ introduce1_set_auth_key(trn_cell_introduce1_t *cell,
          data->auth_pk->pubkey, trn_cell_introduce1_getlen_auth_key(cell));
 }
 
-/* Set the legacy ID field in the INTRODUCE1 cell from the given data. */
+/** Set the legacy ID field in the INTRODUCE1 cell from the given data. */
 static void
 introduce1_set_legacy_id(trn_cell_introduce1_t *cell,
                          const hs_cell_introduce1_data_t *data)
@@ -473,7 +473,7 @@ introduce1_set_legacy_id(trn_cell_introduce1_t *cell,
   }
 }
 
-/* Build and add to the given DoS cell extension the given parameter type and
+/** Build and add to the given DoS cell extension the given parameter type and
  * value. */
 static void
 build_establish_intro_dos_param(trn_cell_extension_dos_t *dos_ext,
@@ -493,7 +493,7 @@ build_establish_intro_dos_param(trn_cell_extension_dos_t *dos_ext,
   /* Not freeing the trunnel object because it is now owned by dos_ext. */
 }
 
-/* Build the DoS defense cell extension and put it in the given extensions
+/** Build the DoS defense cell extension and put it in the given extensions
  * object. Return 0 on success, -1 on failure.  (Right now, failure is only
  * possible if there is a bug.) */
 static int
@@ -563,7 +563,7 @@ build_establish_intro_dos_extension(const hs_service_config_t *service_config,
 /* Public API */
 /* ========== */
 
-/* Allocate and build all the ESTABLISH_INTRO cell extension. The given
+/** Allocate and build all the ESTABLISH_INTRO cell extension. The given
  * extensions pointer is always set to a valid cell extension object. */
 STATIC trn_cell_extension_t *
 build_establish_intro_extensions(const hs_service_config_t *service_config,
@@ -594,7 +594,7 @@ build_establish_intro_extensions(const hs_service_config_t *service_config,
   return extensions;
 }
 
-/* Build an ESTABLISH_INTRO cell with the given circuit nonce and intro point
+/** Build an ESTABLISH_INTRO cell with the given circuit nonce and intro point
  * object. The encoded cell is put in cell_out that MUST at least be of the
  * size of RELAY_PAYLOAD_SIZE. Return the encoded cell length on success else
  * a negative value and cell_out is untouched. This function also supports
@@ -720,7 +720,7 @@ hs_cell_build_establish_intro(const char *circ_nonce,
   return cell_len;
 }
 
-/* Parse the INTRO_ESTABLISHED cell in the payload of size payload_len. If we
+/** Parse the INTRO_ESTABLISHED cell in the payload of size payload_len. If we
  * are successful at parsing it, return the length of the parsed cell else a
  * negative value on error. */
 ssize_t
@@ -742,7 +742,7 @@ hs_cell_parse_intro_established(const uint8_t *payload, size_t payload_len)
   return ret;
 }
 
-/* Parse the INTRODUCE2 cell using data which contains everything we need to
+/** Parse the INTRODUCE2 cell using data which contains everything we need to
  * do so and contains the destination buffers of information we extract and
  * compute from the cell. Return 0 on success else a negative value. The
  * service and circ are only used for logging purposes. */
@@ -903,7 +903,7 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
   return ret;
 }
 
-/* Build a RENDEZVOUS1 cell with the given rendezvous cookie and handshake
+/** Build a RENDEZVOUS1 cell with the given rendezvous cookie and handshake
  * info. The encoded cell is put in cell_out and the length of the data is
  * returned. This can't fail. */
 ssize_t
@@ -937,7 +937,7 @@ hs_cell_build_rendezvous1(const uint8_t *rendezvous_cookie,
   return cell_len;
 }
 
-/* Build an INTRODUCE1 cell from the given data. The encoded cell is put in
+/** Build an INTRODUCE1 cell from the given data. The encoded cell is put in
  * cell_out which must be of at least size RELAY_PAYLOAD_SIZE. On success, the
  * encoded length is returned else a negative value and the content of
  * cell_out should be ignored. */
@@ -978,7 +978,7 @@ hs_cell_build_introduce1(const hs_cell_introduce1_data_t *data,
   return cell_len;
 }
 
-/* Build an ESTABLISH_RENDEZVOUS cell from the given rendezvous_cookie. The
+/** Build an ESTABLISH_RENDEZVOUS cell from the given rendezvous_cookie. The
  * encoded cell is put in cell_out which must be of at least
  * RELAY_PAYLOAD_SIZE. On success, the encoded length is returned and the
  * caller should clear up the content of the cell.
@@ -995,7 +995,7 @@ hs_cell_build_establish_rendezvous(const uint8_t *rendezvous_cookie,
   return HS_REND_COOKIE_LEN;
 }
 
-/* Handle an INTRODUCE_ACK cell encoded in payload of length payload_len.
+/** Handle an INTRODUCE_ACK cell encoded in payload of length payload_len.
  * Return the status code on success else a negative value if the cell as not
  * decodable. */
 int
@@ -1030,7 +1030,7 @@ hs_cell_parse_introduce_ack(const uint8_t *payload, size_t payload_len)
   return ret;
 }
 
-/* Handle a RENDEZVOUS2 cell encoded in payload of length payload_len. On
+/** Handle a RENDEZVOUS2 cell encoded in payload of length payload_len. On
  * success, handshake_info contains the data in the HANDSHAKE_INFO field, and
  * 0 is returned. On error, a negative value is returned. */
 int
@@ -1062,7 +1062,7 @@ hs_cell_parse_rendezvous2(const uint8_t *payload, size_t payload_len,
   return ret;
 }
 
-/* Clear the given INTRODUCE1 data structure data. */
+/** Clear the given INTRODUCE1 data structure data. */
 void
 hs_cell_introduce1_data_clear(hs_cell_introduce1_data_t *data)
 {
