@@ -89,6 +89,22 @@ setup_directory(void)
                  (int)getpid(), rnd32);
     r = mkdir(temp_dir);
   }
+#elif defined(__ANDROID__)
+  /* tor might not like the default perms, so create a subdir */
+  tor_snprintf(temp_dir, sizeof(temp_dir),
+               "/data/local/tmp/tor_%d_%d_%s",
+               (int) getuid(), (int) getpid(), rnd32);
+  r = mkdir(temp_dir, 6770);
+  if (r) {
+    fprintf(stderr, "Can't create directory %s:", temp_dir);
+    perror("");
+    exit(1);
+  }
+  tor_snprintf(temp_dir, sizeof(temp_dir),
+               "/data/local/tmp/tor_%d_%d_%s/test_%d_%d_%s",
+               (int) getuid(), (int) getpid(), rnd32,
+               (int) getuid(), (int) getpid(), rnd32);
+  r = mkdir(temp_dir, 6770);
 #else /* !defined(_WIN32) */
   tor_snprintf(temp_dir, sizeof(temp_dir), "/tmp/tor_test_%d_%s",
                (int) getpid(), rnd32);
