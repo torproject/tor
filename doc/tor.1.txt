@@ -211,10 +211,14 @@ GENERAL OPTIONS
     Note that this option, and other bandwidth-limiting options, apply to TCP
     data only: They do not count TCP headers or DNS traffic. +
  +
+    Tor uses powers of two, not powers of ten, so 1 GByte is
+    1024*1024*1024 bytes as opposed to 1 billion bytes. +
+ +
     With this option, and in other options that take arguments in bytes,
     KBytes, and so on, other formats are also supported. Notably, "KBytes" can
     also be written as "kilobytes" or "kb"; "MBytes" can be written as
     "megabytes" or "MB"; "kbits" can be written as "kilobits"; and so forth.
+    Case doesn't matter.
     Tor also accepts "byte" and "bit" in the singular.
     The prefixes "tera" and "T" are also recognized.
     If no units are given, we default to bytes.
@@ -2292,9 +2296,9 @@ is non-zero):
     using a given calculation rule (see: AccountingStart, AccountingRule).
     Useful if you need to stay under a specific bandwidth. By default, the
     number used for calculation is the max of either the bytes sent or
-    received. For example, with AccountingMax set to 1 GByte, a server
-    could send 900 MBytes and receive 800 MBytes and continue running.
-    It will only hibernate once one of the two reaches 1 GByte. This can
+    received. For example, with AccountingMax set to 1 TByte, a server
+    could send 900 GBytes and receive 800 GBytes and continue running.
+    It will only hibernate once one of the two reaches 1 TByte. This can
     be changed to use the sum of the both bytes received and sent by setting
     the AccountingRule option to "sum" (total bandwidth in/out). When the
     number of bytes remaining gets low, Tor will stop accepting new connections
@@ -2305,7 +2309,12 @@ is non-zero):
     enabling hibernation is preferable to setting a low bandwidth, since
     it provides users with a collection of fast servers that are up some
     of the time, which is more useful than a set of slow servers that are
-    always "available".
+    always "available". +
+ +
+    Note that (as also described in the Bandwidth section) Tor uses
+    powers of two, not powers of ten: 1 GByte is 1024*1024*1024, not
+    one billion. Be careful: some internet service providers might count
+    GBytes differently.
 
 [[AccountingRule]] **AccountingRule** **sum**|**max**|**in**|**out**::
     How we determine when our AccountingMax has been reached (when we
