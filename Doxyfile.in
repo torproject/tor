@@ -2107,7 +2107,9 @@ INCLUDE_FILE_PATTERNS  =
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
 PREDEFINED             = "MOCK_IMPL(a,b,c)=a b c" \
-                         "MOCK_DECL(a,b,c)=a b c"
+                         "MOCK_DECL(a,b,c)=a b c" \
+                         __attribute__(x)=
+
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The
