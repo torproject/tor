@@ -6,8 +6,12 @@
 #
 # There are three kinds of problems that we recognize right now:
 #   function-size -- a function of more than 100 lines.
-#   file-size -- a file of more than 3000 lines.
-#   include-count -- a file with more than 50 #includes.
+#   file-size -- a .c file of more than 3000 lines, or a .h
+#      file with more than 500 lines.
+#   include-count -- a .c file with more than 50 #includes,
+#      or a .h file with more than 15 #includes.
+#   dependency-violation -- a file includes a header that it should
+#      not, according to an advisory .may_include file.
 #
 # Each line below represents a single exception that practracker should
 # _ignore_. Each line has four parts:
@@ -29,14 +33,14 @@
 #
 # Remember: It is better to fix the problem than to add a new exception!
 
-problem file-size /src/app/config/config.c 8518
+problem file-size /src/app/config/config.c 8459
 problem include-count /src/app/config/config.c 89
 problem function-size /src/app/config/config.c:options_act_reversible() 296
 problem function-size /src/app/config/config.c:options_act() 589
 problem function-size /src/app/config/config.c:resolve_my_address() 190
 problem function-size /src/app/config/config.c:options_validate() 1209
 problem function-size /src/app/config/config.c:options_init_from_torrc() 207
-problem function-size /src/app/config/config.c:options_init_from_string() 171
+problem function-size /src/app/config/config.c:options_init_from_string() 113
 problem function-size /src/app/config/config.c:options_init_logs() 145
 problem function-size /src/app/config/config.c:parse_bridge_line() 104
 problem function-size /src/app/config/config.c:parse_transport_line() 189
@@ -44,7 +48,7 @@ problem function-size /src/app/config/config.c:parse_dir_authority_line() 150
 problem function-size /src/app/config/config.c:parse_dir_fallback_line() 101
 problem function-size /src/app/config/config.c:parse_port_config() 446
 problem function-size /src/app/config/config.c:parse_ports() 168
-problem file-size /src/app/config/or_options_st.h 1112
+problem file-size /src/app/config/or_options_st.h 1121
 problem include-count /src/app/main/main.c 68
 problem function-size /src/app/main/main.c:dumpstats() 102
 problem function-size /src/app/main/main.c:tor_init() 137
@@ -52,11 +56,12 @@ problem function-size /src/app/main/main.c:sandbox_init_filter() 291
 problem function-size /src/app/main/main.c:run_tor_main_loop() 105
 problem function-size /src/app/main/ntmain.c:nt_service_install() 126
 problem dependency-violation /src/core/crypto/hs_ntor.c 1
+problem dependency-violation /src/core/crypto/hs_ntor.h 1
 problem dependency-violation /src/core/crypto/onion_crypto.c 5
 problem dependency-violation /src/core/crypto/onion_fast.c 1
 problem dependency-violation /src/core/crypto/onion_tap.c 3
 problem dependency-violation /src/core/crypto/relay_crypto.c 9
-problem file-size /src/core/mainloop/connection.c 5569
+problem file-size /src/core/mainloop/connection.c 5575
 problem include-count /src/core/mainloop/connection.c 62
 problem function-size /src/core/mainloop/connection.c:connection_free_minimal() 185
 problem function-size /src/core/mainloop/connection.c:connection_listener_new() 324
@@ -79,9 +84,11 @@ problem dependency-violation /src/core/mainloop/mainloop_sys.c 1
 problem dependency-violation /src/core/mainloop/netstatus.c 4
 problem dependency-violation /src/core/mainloop/periodic.c 2
 problem dependency-violation /src/core/or/address_set.c 1
+problem dependency-violation /src/core/or/cell_queue_st.h 1
 problem file-size /src/core/or/channel.c 3487
 problem dependency-violation /src/core/or/channel.c 9
 problem file-size /src/core/or/channel.h 780
+problem dependency-violation /src/core/or/channel.h 1
 problem dependency-violation /src/core/or/channelpadding.c 6
 problem function-size /src/core/or/channeltls.c:channel_tls_handle_var_cell() 160
 problem function-size /src/core/or/channeltls.c:channel_tls_process_versions_cell() 170
@@ -101,6 +108,7 @@ problem function-size /src/core/or/circuitlist.c:circuit_find_to_cannibalize() 1
 problem function-size /src/core/or/circuitlist.c:circuit_about_to_free() 120
 problem function-size /src/core/or/circuitlist.c:circuits_handle_oom() 117
 problem dependency-violation /src/core/or/circuitlist.c 19
+problem dependency-violation /src/core/or/circuitlist.h 1
 problem function-size /src/core/or/circuitmux.c:circuitmux_set_policy() 109
 problem function-size /src/core/or/circuitmux.c:circuitmux_attach_circuit() 113
 problem dependency-violation /src/core/or/circuitmux_ewma.c 2
@@ -113,22 +121,22 @@ problem function-size /src/core/or/circuitpadding_machines.c:circpad_machine_cli
 problem dependency-violation /src/core/or/circuitpadding_machines.c 1
 problem function-size /src/core/or/circuitstats.c:circuit_build_times_parse_state() 123
 problem dependency-violation /src/core/or/circuitstats.c 11
-problem file-size /src/core/or/circuituse.c 3162
+problem file-size /src/core/or/circuituse.c 3161
 problem function-size /src/core/or/circuituse.c:circuit_is_acceptable() 128
 problem function-size /src/core/or/circuituse.c:circuit_expire_building() 394
 problem function-size /src/core/or/circuituse.c:circuit_log_ancient_one_hop_circuits() 126
 problem function-size /src/core/or/circuituse.c:circuit_build_failed() 149
 problem function-size /src/core/or/circuituse.c:circuit_launch_by_extend_info() 108
-problem function-size /src/core/or/circuituse.c:circuit_get_open_circ_or_launch() 352
+problem function-size /src/core/or/circuituse.c:circuit_get_open_circ_or_launch() 351
 problem function-size /src/core/or/circuituse.c:connection_ap_handshake_attach_circuit() 244
 problem dependency-violation /src/core/or/circuituse.c 23
 problem function-size /src/core/or/command.c:command_process_create_cell() 156
 problem function-size /src/core/or/command.c:command_process_relay_cell() 132
 problem dependency-violation /src/core/or/command.c 8
-problem file-size /src/core/or/connection_edge.c 4596
+problem file-size /src/core/or/connection_edge.c 4601
 problem include-count /src/core/or/connection_edge.c 65
 problem function-size /src/core/or/connection_edge.c:connection_ap_expire_beginning() 117
-problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_rewrite() 191
+problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_rewrite() 193
 problem function-size /src/core/or/connection_edge.c:connection_ap_handle_onion() 185
 problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_rewrite_and_attach() 421
 problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_send_begin() 111
@@ -136,6 +144,7 @@ problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_soc
 problem function-size /src/core/or/connection_edge.c:connection_exit_begin_conn() 185
 problem function-size /src/core/or/connection_edge.c:connection_exit_connect() 102
 problem dependency-violation /src/core/or/connection_edge.c 27
+problem dependency-violation /src/core/or/connection_edge.h 1
 problem file-size /src/core/or/connection_or.c 3122
 problem include-count /src/core/or/connection_or.c 51
 problem function-size /src/core/or/connection_or.c:connection_or_group_set_badness_() 105
@@ -146,6 +155,7 @@ problem dependency-violation /src/core/or/dos.c 5
 problem dependency-violation /src/core/or/onion.c 2
 problem file-size /src/core/or/or.h 1107
 problem include-count /src/core/or/or.h 49
+problem dependency-violation /src/core/or/or.h 1
 problem dependency-violation /src/core/or/or_periodic.c 1
 problem file-size /src/core/or/policies.c 3249
 problem function-size /src/core/or/policies.c:policy_summarize() 107
@@ -179,7 +189,7 @@ problem function-size /src/feature/client/addressmap.c:addressmap_rewrite() 109
 problem function-size /src/feature/client/bridges.c:rewrite_node_address_for_bridge() 126
 problem function-size /src/feature/client/circpathbias.c:pathbias_measure_close_rate() 108
 problem function-size /src/feature/client/dnsserv.c:evdns_server_callback() 153
-problem file-size /src/feature/client/entrynodes.c 3824
+problem file-size /src/feature/client/entrynodes.c 3825
 problem function-size /src/feature/client/entrynodes.c:entry_guards_upgrade_waiting_circuits() 155
 problem function-size /src/feature/client/entrynodes.c:entry_guard_parse_from_state() 246
 problem file-size /src/feature/client/entrynodes.h 639
@@ -190,7 +200,7 @@ problem function-size /src/feature/control/control.c:connection_control_process_
 problem function-size /src/feature/control/control_auth.c:handle_control_authenticate() 186
 problem function-size /src/feature/control/control_cmd.c:handle_control_extendcircuit() 150
 problem function-size /src/feature/control/control_cmd.c:handle_control_add_onion() 256
-problem function-size /src/feature/control/control_cmd.c:add_onion_helper_keyarg() 116
+problem function-size /src/feature/control/control_cmd.c:add_onion_helper_keyarg() 117
 problem function-size /src/feature/control/control_events.c:control_event_stream_status() 118
 problem include-count /src/feature/control/control_getinfo.c 54
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_misc() 108
@@ -247,7 +257,7 @@ problem function-size /src/feature/hs/hs_descriptor.c:decrypt_desc_layer() 111
 problem function-size /src/feature/hs/hs_descriptor.c:decode_introduction_point() 122
 problem function-size /src/feature/hs/hs_descriptor.c:desc_decode_superencrypted_v3() 107
 problem function-size /src/feature/hs/hs_descriptor.c:desc_decode_encrypted_v3() 107
-problem file-size /src/feature/hs/hs_service.c 4116
+problem file-size /src/feature/hs/hs_service.c 4182
 problem function-size /src/feature/keymgt/loadkey.c:ed_key_init_from_file() 326
 problem function-size /src/feature/nodelist/authcert.c:trusted_dirs_load_certs_from_string() 123
 problem function-size /src/feature/nodelist/authcert.c:authority_certs_fetch_missing() 295
@@ -269,7 +279,7 @@ problem function-size /src/feature/nodelist/routerlist.c:update_extrainfo_downlo
 problem function-size /src/feature/relay/dns.c:dns_resolve_impl() 131
 problem function-size /src/feature/relay/dns.c:configure_nameservers() 161
 problem function-size /src/feature/relay/dns.c:evdns_callback() 108
-problem file-size /src/feature/relay/router.c 3522
+problem file-size /src/feature/relay/router.c 3524
 problem include-count /src/feature/relay/router.c 56
 problem function-size /src/feature/relay/router.c:init_keys() 252
 problem function-size /src/feature/relay/router.c:get_my_declared_family() 114
@@ -279,14 +289,14 @@ problem function-size /src/feature/relay/routerkeys.c:load_ed_keys() 294
 problem function-size /src/feature/rend/rendcache.c:rend_cache_store_v2_desc_as_client() 190
 problem function-size /src/feature/rend/rendclient.c:rend_client_send_introduction() 219
 problem function-size /src/feature/rend/rendcommon.c:rend_encode_v2_descriptors() 221
-problem function-size /src/feature/rend/rendmid.c:rend_mid_establish_intro_legacy() 104
+problem function-size /src/feature/rend/rendmid.c:rend_mid_establish_intro_legacy() 105
 problem function-size /src/feature/rend/rendparse.c:rend_parse_v2_service_descriptor() 181
 problem function-size /src/feature/rend/rendparse.c:rend_parse_introduction_points() 129
-problem file-size /src/feature/rend/rendservice.c 4511
+problem file-size /src/feature/rend/rendservice.c 4522
 problem function-size /src/feature/rend/rendservice.c:rend_service_prune_list_impl_() 107
 problem function-size /src/feature/rend/rendservice.c:rend_config_service() 162
 problem function-size /src/feature/rend/rendservice.c:rend_service_load_auth_keys() 178
-problem function-size /src/feature/rend/rendservice.c:rend_service_receive_introduction() 330
+problem function-size /src/feature/rend/rendservice.c:rend_service_receive_introduction() 334
 problem function-size /src/feature/rend/rendservice.c:rend_service_parse_intro_for_v3() 111
 problem function-size /src/feature/rend/rendservice.c:rend_service_decrypt_intro() 112
 problem function-size /src/feature/rend/rendservice.c:rend_service_intro_has_opened() 126
@@ -324,12 +334,3 @@ problem function-size /src/tools/tor-gencert.c:parse_commandline() 111
 problem function-size /src/tools/tor-resolve.c:build_socks5_resolve_request() 102
 problem function-size /src/tools/tor-resolve.c:do_resolve() 171
 problem function-size /src/tools/tor-resolve.c:main() 112
-
-problem dependency-violation /scripts/maint/practracker/testdata/a.c 3
-problem dependency-violation /scripts/maint/practracker/testdata/header.h 3
-problem dependency-violation /src/core/crypto/hs_ntor.h 1
-problem dependency-violation /src/core/or/cell_queue_st.h 1
-problem dependency-violation /src/core/or/channel.h 1
-problem dependency-violation /src/core/or/circuitlist.h 1
-problem dependency-violation /src/core/or/connection_edge.h 1
-problem dependency-violation /src/core/or/or.h 1
