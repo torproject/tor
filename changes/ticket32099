@@ -1,0 +1,4 @@
+  o Removed features:
+    - Our Doxygen configuration no longer generates LaTeX output.  The
+      reference manual produced by doing this was over 4000 pages long,
+      and generally unusable.  Closes ticket 32099.
