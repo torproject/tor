@@ -2446,7 +2446,7 @@ typedef enum {
   ARGUMENT_NONE = 0,
   /** Describes an option that takes a single argument. */
   ARGUMENT_NECESSARY = 1,
-  /** Describes an option that takes a single optinal argument. */
+  /** Describes an option that takes a single optional argument. */
   ARGUMENT_OPTIONAL = 2
 } takes_argument_t;
 
