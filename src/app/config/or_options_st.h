@@ -854,7 +854,7 @@ struct or_options_t {
    * to make this false. */
   int ReloadTorrcOnSIGHUP;
 
-  /* The main parameter for picking circuits within a connection.
+  /** The main parameter for picking circuits within a connection.
    *
    * If this value is positive, when picking a cell to relay on a connection,
    * we always relay from the circuit whose weighted cell count is lowest.
@@ -1050,7 +1050,7 @@ struct or_options_t {
   /** The list of scheduler type string ordered by priority that is first one
    * has to be tried first. Default: KIST,KISTLite,Vanilla */
   struct smartlist_t *Schedulers;
-  /* An ordered list of scheduler_types mapped from Schedulers. */
+  /** An ordered list of scheduler_types mapped from Schedulers. */
   struct smartlist_t *SchedulerTypes_;
 
   /** List of files that were opened by %include in torrc and torrc-defaults */
