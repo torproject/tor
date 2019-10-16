@@ -2520,7 +2520,11 @@ static const struct {
 
 /** Helper: Read a list of configuration options from the command line.  If
  * successful, return a newly allocated parsed_cmdline_t; otherwise return
- * NULL. */
+ * NULL.
+ *
+ * If <b>ignore_errors</b> is set, try to recover from all recoverable
+ * errors and return the best command line we can.
+ */
 parsed_cmdline_t *
 config_parse_commandline(int argc, char **argv, int ignore_errors)
 {
