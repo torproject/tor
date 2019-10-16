@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file consdiffmsr.c
+ * \file consdiffmgr.c
  *
  * \brief consensus diff manager functions
  *

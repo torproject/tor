@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file threads_sys.h
+ * \file thread_sys.h
  * \brief Declare subsystem object for threads library
  **/
 

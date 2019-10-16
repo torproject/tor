@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file or_state_t
+ * \file or_state_st.h
  *
  * \brief The or_state_t structure, which represents Tor's state file.
  */

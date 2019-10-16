@@ -5,8 +5,8 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file rend_parse.h
- * \brief Header file for rend_parse.c.
+ * \file rendparse.h
+ * \brief Header file for rendparse.c.
  **/
 
 #ifndef TOR_REND_PARSE_H

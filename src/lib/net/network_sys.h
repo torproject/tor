@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file log_network.h
+ * \file network_sys.h
  * \brief Declare subsystem object for the network module.
  **/
 

@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file crypto_dh_nss.h
+ * \file crypto_dh_nss.c
  *
  * \brief NSS implementation of Diffie-Hellman over Z_p.
  **/

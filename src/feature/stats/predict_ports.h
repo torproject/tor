@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file predict_portst.h
+ * \file predict_ports.h
  * \brief Header file for predict_ports.c.
  **/
 

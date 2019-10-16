@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file log_crypto.h
+ * \file crypto_sys.h
  * \brief Declare subsystem object for the crypto module.
  **/
 
