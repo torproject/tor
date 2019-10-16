@@ -21,92 +21,92 @@
 /* Trunnel */
 #include "trunnel/hs/cell_establish_intro.h"
 
-/* When loading and configuring a service, this is the default version it will
+/** When loading and configuring a service, this is the default version it will
  * be configured for as it is possible that no HiddenServiceVersion is
  * present. */
 #define HS_SERVICE_DEFAULT_VERSION HS_VERSION_THREE
 
-/* As described in the specification, service publishes their next descriptor
+/** As described in the specification, service publishes their next descriptor
  * at a random time between those two values (in seconds). */
 #define HS_SERVICE_NEXT_UPLOAD_TIME_MIN (60 * 60)
 #define HS_SERVICE_NEXT_UPLOAD_TIME_MAX (120 * 60)
 
-/* Service side introduction point. */
+/** Service side introduction point. */
 typedef struct hs_service_intro_point_t {
-  /* Top level intropoint "shared" data between client/service. */
+  /** Top level intropoint "shared" data between client/service. */
   hs_intropoint_t base;
 
-  /* Onion key of the introduction point used to extend to it for the ntor
+  /** Onion key of the introduction point used to extend to it for the ntor
    * handshake. */
   curve25519_public_key_t onion_key;
 
-  /* Authentication keypair used to create the authentication certificate
+  /** Authentication keypair used to create the authentication certificate
    * which is published in the descriptor. */
   ed25519_keypair_t auth_key_kp;
 
-  /* Encryption keypair for the "ntor" type. */
+  /** Encryption keypair for the "ntor" type. */
   curve25519_keypair_t enc_key_kp;
 
-  /* Legacy key if that intro point doesn't support v3. This should be used if
+  /** Legacy key if that intro point doesn't support v3. This should be used if
    * the base object legacy flag is set. */
   crypto_pk_t *legacy_key;
-  /* Legacy key SHA1 public key digest. This should be used only if the base
+  /** Legacy key SHA1 public key digest. This should be used only if the base
    * object legacy flag is set. */
   uint8_t legacy_key_digest[DIGEST_LEN];
 
-  /* Amount of INTRODUCE2 cell accepted from this intro point. */
+  /** Amount of INTRODUCE2 cell accepted from this intro point. */
   uint64_t introduce2_count;
 
-  /* Maximum number of INTRODUCE2 cell this intro point should accept. */
+  /** Maximum number of INTRODUCE2 cell this intro point should accept. */
   uint64_t introduce2_max;
 
-  /* The time at which this intro point should expire and stop being used. */
+  /** The time at which this intro point should expire and stop being used. */
   time_t time_to_expire;
 
-  /* The amount of circuit creation we've made to this intro point. This is
+  /** The amount of circuit creation we've made to this intro point. This is
    * incremented every time we do a circuit relaunch on this intro point which
    * is triggered when the circuit dies but the node is still in the
    * consensus. After MAX_INTRO_POINT_CIRCUIT_RETRIES, we give up on it. */
   uint32_t circuit_retries;
 
-  /* Set if this intro point has an established circuit. */
+  /** Set if this intro point has an established circuit. */
   unsigned int circuit_established : 1;
 
-  /* Replay cache recording the encrypted part of an INTRODUCE2 cell that the
+  /** Replay cache recording the encrypted part of an INTRODUCE2 cell that the
    * circuit associated with this intro point has received. This is used to
    * prevent replay attacks. */
   replaycache_t *replay_cache;
 
-  /* Support the INTRO2 DoS defense. If set, the DoS extension described by
+  /** Support the INTRO2 DoS defense. If set, the DoS extension described by
    * proposal 305 is sent. */
   unsigned int support_intro2_dos_defense : 1;
 } hs_service_intro_point_t;
 
-/* Object handling introduction points of a service. */
+/** Object handling introduction points of a service. */
 typedef struct hs_service_intropoints_t {
-  /* The time at which we've started our retry period to build circuits. We
+  /** The time at which we've started our retry period to build circuits. We
    * don't want to stress circuit creation so we can only retry for a certain
    * time and then after we stop and wait. */
   time_t retry_period_started;
 
-  /* Number of circuit we've launched during a single retry period. */
+  /** Number of circuit we've launched during a single retry period. */
   unsigned int num_circuits_launched;
 
-  /* Contains the current hs_service_intro_point_t objects indexed by
+  /** Contains the current hs_service_intro_point_t objects indexed by
    * authentication public key. */
   digest256map_t *map;
 
-  /* Contains node's identity key digest that were introduction point for this
+  /** Contains node's identity key digest that were introduction point for this
    * descriptor but were retried to many times. We keep those so we avoid
    * re-picking them over and over for a circuit retry period.
    * XXX: Once we have #22173, change this to only use ed25519 identity. */
   digestmap_t *failed_id;
 } hs_service_intropoints_t;
 
-/* Representation of a service descriptor.
+/** Representation of a service descriptor.
  *
  * Some elements of the descriptor are mutable whereas others are immutable:
-
+ *
  * Immutable elements are initialized once when the descriptor is built (when
  * service descriptors gets rotated). This means that these elements are
  * initialized once and then they don't change for the lifetime of the
@@ -121,40 +121,42 @@ typedef struct hs_service_intropoints_t {
  * update_service_descriptor_intro_points().
  */
 typedef struct hs_service_descriptor_t {
-  /* Immutable: Client authorization ephemeral keypair. */
+  /** Immutable: Client authorization ephemeral keypair. */
   curve25519_keypair_t auth_ephemeral_kp;
 
-  /* Immutable: Descriptor cookie used to encrypt the descriptor, when the
+  /** Immutable: Descriptor cookie used to encrypt the descriptor, when the
    * client authorization is enabled */
   uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
 
-  /* Immutable: Descriptor signing keypair. */
+  /** Immutable: Descriptor signing keypair. */
   ed25519_keypair_t signing_kp;
 
-  /* Immutable: Blinded keypair derived from the master identity public key. */
+  /** Immutable: Blinded keypair derived from the master identity public
+   * key. */
   ed25519_keypair_t blinded_kp;
 
-  /* Immutable: The time period number this descriptor has been created for. */
+  /** Immutable: The time period number this descriptor has been created
+   * for. */
   uint64_t time_period_num;
 
   /** Immutable: The OPE cipher for encrypting revision counters for this
    *  descriptor.  Tied to the descriptor blinded key. */
   struct crypto_ope_t *ope_cipher;
 
-  /* Mutable: Decoded descriptor. This object is used for encoding when the
+  /** Mutable: Decoded descriptor. This object is used for encoding when the
    * service publishes the descriptor. */
   hs_descriptor_t *desc;
 
-  /* Mutable: When is the next time when we should upload the descriptor. */
+  /** Mutable: When is the next time when we should upload the descriptor. */
   time_t next_upload_time;
 
-  /* Mutable: Introduction points assign to this descriptor which contains
+  /** Mutable: Introduction points assign to this descriptor which contains
    * hs_service_intropoints_t object indexed by authentication key (the RSA key
    * if the node is legacy). */
   hs_service_intropoints_t intro_points;
 
-  /* Mutable: True iff we have missing intro points for this descriptor because
-   * we couldn't pick any nodes. */
+  /** Mutable: True iff we have missing intro points for this descriptor
+   * because we couldn't pick any nodes. */
   unsigned int missing_intro_points : 1;
 
   /** Mutable: List of the responsible HSDirs (their b64ed identity digest)
@@ -164,20 +166,20 @@ typedef struct hs_service_descriptor_t {
   smartlist_t *previous_hsdirs;
 } hs_service_descriptor_t;
 
-/* Service key material. */
+/** Service key material. */
 typedef struct hs_service_keys_t {
-  /* Master identify public key. */
+  /** Master identify public key. */
   ed25519_public_key_t identity_pk;
-  /* Master identity private key. */
+  /** Master identity private key. */
   ed25519_secret_key_t identity_sk;
-  /* True iff the key is kept offline which means the identity_sk MUST not be
+  /** True iff the key is kept offline which means the identity_sk MUST not be
    * used in that case. */
   unsigned int is_identify_key_offline : 1;
 } hs_service_keys_t;
 
 /** Service side configuration of client authorization. */
 typedef struct hs_service_authorized_client_t {
-  /* The client auth public key used to encrypt the descriptor cookie. */
+  /** The client auth public key used to encrypt the descriptor cookie. */
   curve25519_public_key_t client_pk;
 } hs_service_authorized_client_t;
 
@@ -190,60 +192,60 @@ typedef enum {
   HS_CIRCUIT_ID_PROTOCOL_HAPROXY
 } hs_circuit_id_protocol_t;
 
-/* Service configuration. The following are set from the torrc options either
+/** Service configuration. The following are set from the torrc options either
  * set by the configuration file or by the control port. Nothing else should
  * change those values. */
 typedef struct hs_service_config_t {
-  /* Protocol version of the service. Specified by HiddenServiceVersion
+  /** Protocol version of the service. Specified by HiddenServiceVersion
    * option. */
   uint32_t version;
 
-  /* Have we explicitly set HiddenServiceVersion? */
+  /** Have we explicitly set HiddenServiceVersion? */
   unsigned int hs_version_explicitly_set : 1;
 
-  /* List of rend_service_port_config_t */
+  /** List of rend_service_port_config_t */
   smartlist_t *ports;
 
-  /* Path on the filesystem where the service persistent data is stored. NULL
+  /** Path on the filesystem where the service persistent data is stored. NULL
    * if the service is ephemeral. Specified by HiddenServiceDir option. */
   char *directory_path;
 
-  /* The maximum number of simultaneous streams per rendezvous circuit that
+  /** The maximum number of simultaneous streams per rendezvous circuit that
    * are allowed to be created. No limit if 0. Specified by
    * HiddenServiceMaxStreams option. */
   uint64_t max_streams_per_rdv_circuit;
 
-  /* If true, we close circuits that exceed the max_streams_per_rdv_circuit
+  /** If true, we close circuits that exceed the max_streams_per_rdv_circuit
    * limit. Specified by HiddenServiceMaxStreamsCloseCircuit option. */
   unsigned int max_streams_close_circuit : 1;
 
-  /* How many introduction points this service has. Specified by
+  /** How many introduction points this service has. Specified by
    * HiddenServiceNumIntroductionPoints option. */
   unsigned int num_intro_points;
 
-  /* True iff the client auth is enabled. */
+  /** True iff the client auth is enabled. */
   unsigned int is_client_auth_enabled : 1;
 
-  /* List of hs_service_authorized_client_t's of clients that may access this
+  /** List of hs_service_authorized_client_t's of clients that may access this
    * service. Specified by HiddenServiceAuthorizeClient option. */
   smartlist_t *clients;
 
-  /* True iff we allow request made on unknown ports. Specified by
+  /** True iff we allow request made on unknown ports. Specified by
    * HiddenServiceAllowUnknownPorts option. */
   unsigned int allow_unknown_ports : 1;
 
-  /* If true, this service is a Single Onion Service. Specified by
+  /** If true, this service is a Single Onion Service. Specified by
    * HiddenServiceSingleHopMode and HiddenServiceNonAnonymousMode options. */
   unsigned int is_single_onion : 1;
 
-  /* If true, allow group read permissions on the directory_path. Specified by
+  /** If true, allow group read permissions on the directory_path. Specified by
    * HiddenServiceDirGroupReadable option. */
   unsigned int dir_group_readable : 1;
 
-  /* Is this service ephemeral? */
+  /** Is this service ephemeral? */
   unsigned int is_ephemeral : 1;
 
-  /* Does this service export the circuit ID of its clients? */
+  /** Does this service export the circuit ID of its clients? */
   hs_circuit_id_protocol_t circuit_id_protocol;
 
   /* DoS defenses. For the ESTABLISH_INTRO cell extension. */
@@ -252,58 +254,58 @@ typedef struct hs_service_config_t {
   uint32_t intro_dos_burst_per_sec;
 } hs_service_config_t;
 
-/* Service state. */
+/** Service state. */
 typedef struct hs_service_state_t {
-  /* The time at which we've started our retry period to build circuits. We
+  /** The time at which we've started our retry period to build circuits. We
    * don't want to stress circuit creation so we can only retry for a certain
    * time and then after we stop and wait. */
   time_t intro_circ_retry_started_time;
 
-  /* Number of circuit we've launched during a single retry period. This
+  /** Number of circuit we've launched during a single retry period. This
    * should never go over MAX_INTRO_CIRCS_PER_PERIOD. */
   unsigned int num_intro_circ_launched;
 
-  /* Replay cache tracking the REND_COOKIE found in INTRODUCE2 cell to detect
+  /** Replay cache tracking the REND_COOKIE found in INTRODUCE2 cell to detect
    * repeats. Clients may send INTRODUCE1 cells for the same rendezvous point
    * through two or more different introduction points; when they do, this
    * keeps us from launching multiple simultaneous attempts to connect to the
    * same rend point. */
   replaycache_t *replay_cache_rend_cookie;
 
-  /* When is the next time we should rotate our descriptors. This is has to be
+  /** When is the next time we should rotate our descriptors. This is has to be
    * done at the start time of the next SRV protocol run. */
   time_t next_rotation_time;
 } hs_service_state_t;
 
-/* Representation of a service running on this tor instance. */
+/** Representation of a service running on this tor instance. */
 typedef struct hs_service_t {
-  /* Onion address base32 encoded and NUL terminated. We keep it for logging
+  /** Onion address base32 encoded and NUL terminated. We keep it for logging
    * purposes so we don't have to build it everytime. */
   char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
 
-  /* Hashtable node: use to look up the service by its master public identity
+  /** Hashtable node: use to look up the service by its master public identity
    * key in the service global map. */
   HT_ENTRY(hs_service_t) hs_service_node;
 
-  /* Service state which contains various flags and counters. */
+  /** Service state which contains various flags and counters. */
   hs_service_state_t state;
 
-  /* Key material of the service. */
+  /** Key material of the service. */
   hs_service_keys_t keys;
 
-  /* Configuration of the service. */
+  /** Configuration of the service. */
   hs_service_config_t config;
 
-  /* Current descriptor. */
+  /** Current descriptor. */
   hs_service_descriptor_t *desc_current;
-  /* Next descriptor. */
+  /** Next descriptor. */
   hs_service_descriptor_t *desc_next;
 
   /* XXX: Credential (client auth.) #20700. */
 
 } hs_service_t;
 
-/* For the service global hash map, we define a specific type for it which
+/** For the service global hash map, we define a specific type for it which
  * will make it safe to use and specific to some controlled parameters such as
  * the hashing function and how to compare services. */
 typedef HT_HEAD(hs_service_ht, hs_service_t) hs_service_ht;
