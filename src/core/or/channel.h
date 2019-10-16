@@ -48,7 +48,7 @@ typedef enum {
 /* channel states for channel_t */
 
 typedef enum {
-  /*
+  /**
    * Closed state - channel is inactive
    *
    * Permitted transitions from:
@@ -57,7 +57,7 @@ typedef enum {
    *   - CHANNEL_STATE_OPENING
    */
   CHANNEL_STATE_CLOSED = 0,
-  /*
+  /**
    * Opening state - channel is trying to connect
    *
    * Permitted transitions from:
@@ -68,7 +68,7 @@ typedef enum {
    *   - CHANNEL_STATE_OPEN
    */
   CHANNEL_STATE_OPENING,
-  /*
+  /**
    * Open state - channel is active and ready for use
    *
    * Permitted transitions from:
@@ -80,7 +80,7 @@ typedef enum {
    *   - CHANNEL_STATE_MAINT
    */
   CHANNEL_STATE_OPEN,
-  /*
+  /**
    * Maintenance state - channel is temporarily offline for subclass specific
    *   maintenance activities such as TLS renegotiation.
    *
@@ -92,7 +92,7 @@ typedef enum {
    *   - CHANNEL_STATE_OPEN
    */
   CHANNEL_STATE_MAINT,
-  /*
+  /**
    * Closing state - channel is shutting down
    *
    * Permitted transitions from:
@@ -103,7 +103,7 @@ typedef enum {
    *   - CHANNEL_STATE_ERROR
    */
   CHANNEL_STATE_CLOSING,
-  /*
+  /**
    * Error state - channel has experienced a permanent error
    *
    * Permitted transitions from:
@@ -115,7 +115,7 @@ typedef enum {
    *   - None
    */
   CHANNEL_STATE_ERROR,
-  /*
+  /**
    * Placeholder for maximum state value
    */
   CHANNEL_STATE_LAST
@@ -124,7 +124,7 @@ typedef enum {
 /* channel listener states for channel_listener_t */
 
 typedef enum {
-  /*
+  /**
    * Closed state - channel listener is inactive
    *
    * Permitted transitions from:
@@ -133,7 +133,7 @@ typedef enum {
    *   - CHANNEL_LISTENER_STATE_LISTENING
    */
   CHANNEL_LISTENER_STATE_CLOSED = 0,
-  /*
+  /**
    * Listening state - channel listener is listening for incoming
    * connections
    *
@@ -144,7 +144,7 @@ typedef enum {
    *   - CHANNEL_LISTENER_STATE_ERROR
    */
   CHANNEL_LISTENER_STATE_LISTENING,
-  /*
+  /**
    * Closing state - channel listener is shutting down
    *
    * Permitted transitions from:
@@ -154,7 +154,7 @@ typedef enum {
    *   - CHANNEL_LISTENER_STATE_ERROR
    */
   CHANNEL_LISTENER_STATE_CLOSING,
-  /*
+  /**
    * Error state - channel listener has experienced a permanent error
    *
    * Permitted transitions from:
@@ -164,7 +164,7 @@ typedef enum {
    *   - None
    */
   CHANNEL_LISTENER_STATE_ERROR,
-  /*
+  /**
    * Placeholder for maximum state value
    */
   CHANNEL_LISTENER_STATE_LAST
@@ -267,21 +267,21 @@ struct channel_s {
 
   /** State variable for use by the scheduler */
   enum {
-    /*
+    /**
      * The channel is not open, or it has a full output buffer but no queued
      * cells.
      */
     SCHED_CHAN_IDLE = 0,
-    /*
+    /**
      * The channel has space on its output buffer to write, but no queued
      * cells.
      */
     SCHED_CHAN_WAITING_FOR_CELLS,
-    /*
+    /**
      * The scheduler has queued cells but no output buffer space to write.
      */
     SCHED_CHAN_WAITING_TO_WRITE,
-    /*
+    /**
      * The scheduler has both queued cells and output buffer space, and is
      * eligible for the scheduler loop.
      */
@@ -444,9 +444,9 @@ struct channel_s {
   ratelim_t last_warned_circ_ids_exhausted;
 
   /** Channel timestamps for cell channels */
-  time_t timestamp_client; /* Client used this, according to relay.c */
-  time_t timestamp_recv; /* Cell received from lower layer */
-  time_t timestamp_xmit; /* Cell sent to lower layer */
+  time_t timestamp_client; /*(< Client used this, according to relay.c */
+  time_t timestamp_recv; /**< Cell received from lower layer */
+  time_t timestamp_xmit; /**< Cell sent to lower layer */
 
   /** Timestamp for run_connection_housekeeping(). We update this once a
    * second when we run housekeeping and find a circuit on this channel, and
@@ -458,16 +458,17 @@ struct channel_s {
    * distinct namespace. */
   uint64_t dirreq_id;
 
-  /** Channel counters for cell channels */
+  /** Channel counters for cells and bytes we have received. */
   uint64_t n_cells_recved, n_bytes_recved;
+  /** Channel counters for cells and bytes we have sent. */
   uint64_t n_cells_xmitted, n_bytes_xmitted;
 };
 
 struct channel_listener_s {
-  /* Current channel listener state */
+  /** Current channel listener state */
   channel_listener_state_t state;
 
-  /* Globally unique ID number for a channel over the lifetime of a Tor
+  /** Globally unique ID number for a channel over the lifetime of a Tor
    * process.
    */
   uint64_t global_identifier;
