@@ -340,7 +340,7 @@ nt_service_main(void)
                "or --key-expiration) in NT service.");
         break;
       case CMD_RUN_UNITTESTS:
-      case CMD_OTHER:
+      case CMD_IMMEDIATE:
       default:
         log_err(LD_CONFIG, "Illegal command number %d: internal error.",
                 get_options()->command);

@@ -24,8 +24,8 @@ typedef enum {
   CMD_DUMP_CONFIG, /**< Running --dump-config. */
   CMD_KEYGEN, /**< Running --keygen */
   CMD_KEY_EXPIRATION, /**< Running --key-expiration */
-  CMD_OTHER, /**< Special value: indicates a command that is handled
-              * immediately during configuration processing. */
+  CMD_IMMEDIATE, /**< Special value: indicates a command that is handled
+                  * immediately during configuration processing. */
   CMD_RUN_UNITTESTS, /**< Special value: indicates that we have entered
                       * the Tor code from the unit tests, not from the
                       * regular Tor binary at all. */
