@@ -147,7 +147,7 @@ HEADER="""\
 #   file-size -- a .c file of more than {MAX_FILE_SIZE} lines, or a .h
 #      file with more than {MAX_H_FILE_SIZE} lines.
 #   include-count -- a .c file with more than {MAX_INCLUDE_COUNT} #includes,
-       or a .h file with more than {MAX_H_INCLUDE_COUNT} #includes.
+#      or a .h file with more than {MAX_H_INCLUDE_COUNT} #includes.
 #   dependency-violation -- a file includes a header that it should
 #      not, according to an advisory .may_include file.
 #
