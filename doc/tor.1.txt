@@ -715,7 +715,7 @@ GENERAL OPTIONS
     in separate files by hash, up to the specified size in total.  Note that
     only files logged during the lifetime of this Tor process count toward the
     total; this is intended to be used to debug problems without opening live
-    servers to resource exhaustion attacks. (Default: 10 MB)
+    servers to resource exhaustion attacks. (Default: 10 MBytes)
 
 [[OutboundBindAddress]] **OutboundBindAddress** __IP__::
     Make all outbound connections originate from the IP address specified. This
@@ -2479,7 +2479,7 @@ is non-zero):
     option can create security issues; you should probably leave it off.
     (Default: 0)
 
-[[MaxMemInQueues]] **MaxMemInQueues**  __N__ **bytes**|**KB**|**MB**|**GB**::
+[[MaxMemInQueues]] **MaxMemInQueues**  __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
     This option configures a threshold above which Tor will assume that it
     needs to stop queueing or buffering data because it's about to run out of
     memory.  If it hits this threshold, it will begin killing circuits until
@@ -3320,7 +3320,7 @@ The following options are used for running a testing Tor network.
 [[TestingMinExitFlagThreshold]] **TestingMinExitFlagThreshold**  __N__ **KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     Sets a lower-bound for assigning an exit flag when running as an
     authority on a testing network. Overrides the usual default lower bound
-    of 4 KB. (Default: 0)
+    of 4 KBytes. (Default: 0)
 
 [[TestingLinkCertLifetime]] **TestingLinkCertLifetime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**|**months**::
     Overrides the default lifetime for the certificates used to authenticate
