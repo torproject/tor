@@ -5,8 +5,6 @@
  * \file circuitpadding_machines.c
  * \brief Circuit padding state machines
  *
- * \detail
- *
  * Introduce circuit padding machines that will be used by Tor circuits, as
  * specified by proposal 302 "Hiding onion service clients using padding".
  *

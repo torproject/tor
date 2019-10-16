@@ -178,8 +178,8 @@ clz32(uint32_t x)
 
 /**
  * Compute the logistic function: f(x) = 1/(1 + e^{-x}) = e^x/(1 + e^x).
- * Maps a log-odds-space probability in [-\infty, +\infty] into a direct-space
- * probability in [0,1].  Inverse of logit.
+ * Maps a log-odds-space probability in [-infinity, +infinity] into a
+ * direct-space probability in [0,1].  Inverse of logit.
  *
  * Ill-conditioned for large x; the identity logistic(-x) = 1 -
  * logistic(x) and the function logistichalf(x) = logistic(x) - 1/2 may
@@ -266,7 +266,7 @@ logistic(double x)
 /**
  * Compute the logit function: log p/(1 - p).  Defined on [0,1].  Maps
  * a direct-space probability in [0,1] to a log-odds-space probability
- * in [-\infty, +\infty].  Inverse of logistic.
+ * in [-infinity, +infinity].  Inverse of logistic.
  *
  * Ill-conditioned near 1/2 and 1; the identity logit(1 - p) =
  * -logit(p) and the function logithalf(p0) = logit(1/2 + p0) may help
@@ -488,7 +488,7 @@ random_uniform_01(void)
 /* Functions for specific probability distributions start here: */
 
 /*
- * Logistic(mu, sigma) distribution, supported on (-\infty,+\infty)
+ * Logistic(mu, sigma) distribution, supported on (-infinity,+infinity)
  *
  * This is the uniform distribution on [0,1] mapped into log-odds
  * space, scaled by sigma and translated by mu.
@@ -546,7 +546,7 @@ isf_logistic(double p, double mu, double sigma)
 }
 
 /*
- * LogLogistic(alpha, beta) distribution, supported on (0, +\infty).
+ * LogLogistic(alpha, beta) distribution, supported on (0, +infinity).
  *
  * This is the uniform distribution on [0,1] mapped into odds space,
  * scaled by positive alpha and shaped by positive beta.
@@ -687,7 +687,7 @@ isf_log_logistic(double p, double alpha, double beta)
 }
 
 /*
- * Weibull(lambda, k) distribution, supported on (0, +\infty).
+ * Weibull(lambda, k) distribution, supported on (0, +infinity).
  *
  * pdf(x) = (k/lambda) (x/lambda)^{k - 1} e^{-(x/lambda)^k}
  * cdf(x) = 1 - e^{-(x/lambda)^k}
@@ -753,7 +753,7 @@ isf_weibull(double p, double lambda, double k)
 }
 
 /*
- * GeneralizedPareto(mu, sigma, xi), supported on (mu, +\infty) for
+ * GeneralizedPareto(mu, sigma, xi), supported on (mu, +infinity) for
  * nonnegative xi, or (mu, mu - sigma/xi) for negative xi.
  *
  * Samples:
@@ -793,19 +793,19 @@ cdf_genpareto(double x, double mu, double sigma, double xi)
 
   /*
    * log(1 + xi x_0)/xi
-   * = (-1/xi) \sum_{n=1}^\infty (-xi x_0)^n/n
-   * = (-1/xi) (-xi x_0 + \sum_{n=2}^\infty (-xi x_0)^n/n)
-   * = x_0 - (1/xi) \sum_{n=2}^\infty (-xi x_0)^n/n
-   * = x_0 - x_0 \sum_{n=2}^\infty (-xi x_0)^{n-1}/n
+   * = (-1/xi) \sum_{n=1}^infinity (-xi x_0)^n/n
+   * = (-1/xi) (-xi x_0 + \sum_{n=2}^infinity (-xi x_0)^n/n)
+   * = x_0 - (1/xi) \sum_{n=2}^infinity (-xi x_0)^n/n
+   * = x_0 - x_0 \sum_{n=2}^infinity (-xi x_0)^{n-1}/n
    * = x_0 (1 - d),
    *
-   * where d = \sum_{n=2}^\infty (-xi x_0)^{n-1}/n.  If |xi| <
+   * where d = \sum_{n=2}^infinity (-xi x_0)^{n-1}/n.  If |xi| <
    * eps/4|x_0|, then
    *
-   * |d| <= \sum_{n=2}^\infty (eps/4)^{n-1}/n
-   *     <= \sum_{n=2}^\infty (eps/4)^{n-1}
-   *      = \sum_{n=1}^\infty (eps/4)^n
-   *      = (eps/4) \sum_{n=0}^\infty (eps/4)^n
+   * |d| <= \sum_{n=2}^infinity (eps/4)^{n-1}/n
+   *     <= \sum_{n=2}^infinity (eps/4)^{n-1}
+   *      = \sum_{n=1}^infinity (eps/4)^n
+   *      = (eps/4) \sum_{n=0}^infinity (eps/4)^n
    *      = (eps/4)/(1 - eps/4)
    *      < eps/2
    *
@@ -855,20 +855,20 @@ icdf_genpareto(double p, double mu, double sigma, double xi)
    * for xi near zero (note f(xi) --> -log U as xi --> 0), write
    * the absolutely convergent Taylor expansion
    *
-   * f(xi) = (1/xi)*(-xi log U + \sum_{n=2}^\infty (-xi log U)^n/n!
-   *       = -log U + (1/xi)*\sum_{n=2}^\infty (-xi log U)^n/n!
-   *       = -log U + \sum_{n=2}^\infty xi^{n-1} (-log U)^n/n!
-   *       = -log U - log U \sum_{n=2}^\infty (-xi log U)^{n-1}/n!
-   *       = -log U (1 + \sum_{n=2}^\infty (-xi log U)^{n-1}/n!).
+   * f(xi) = (1/xi)*(-xi log U + \sum_{n=2}^infinity (-xi log U)^n/n!
+   *       = -log U + (1/xi)*\sum_{n=2}^infinity (-xi log U)^n/n!
+   *       = -log U + \sum_{n=2}^infinity xi^{n-1} (-log U)^n/n!
+   *       = -log U - log U \sum_{n=2}^infinity (-xi log U)^{n-1}/n!
+   *       = -log U (1 + \sum_{n=2}^infinity (-xi log U)^{n-1}/n!).
    *
-   * Let d = \sum_{n=2}^\infty (-xi log U)^{n-1}/n!.  What do we
+   * Let d = \sum_{n=2}^infinity (-xi log U)^{n-1}/n!.  What do we
    * lose if we discard it and use -log U as an approximation to
    * f(xi)?  If |xi| < eps/-4log U, then
    *
-   * |d| <= \sum_{n=2}^\infty |xi log U|^{n-1}/n!
-   *     <= \sum_{n=2}^\infty (eps/4)^{n-1}/n!
-   *     <= \sum_{n=1}^\infty (eps/4)^n
-   *      = (eps/4) \sum_{n=0}^\infty (eps/4)^n
+   * |d| <= \sum_{n=2}^infinity |xi log U|^{n-1}/n!
+   *     <= \sum_{n=2}^infinity (eps/4)^{n-1}/n!
+   *     <= \sum_{n=1}^infinity (eps/4)^n
+   *      = (eps/4) \sum_{n=0}^infinity (eps/4)^n
    *      = (eps/4)/(1 - eps/4)
    *      < eps/2,
    *
@@ -1098,10 +1098,10 @@ sample_logistic(uint32_t s, double t, double p0)
    * We carve up the interval (0, 1) into subregions to compute
    * the inverse CDF precisely:
    *
-   * A = (0, 1/(1 + e)] ---> (-\infty, -1]
+   * A = (0, 1/(1 + e)] ---> (-infinity, -1]
    * B = [1/(1 + e), 1/2] ---> [-1, 0]
    * C = [1/2, 1 - 1/(1 + e)] ---> [0, 1]
-   * D = [1 - 1/(1 + e), 1) ---> [1, +\infty)
+   * D = [1 - 1/(1 + e), 1) ---> [1, +infinity)
    *
    * Cases D and C are mirror images of cases A and B,
    * respectively, so we choose between them by the sign chosen
@@ -1234,19 +1234,19 @@ sample_genpareto(uint32_t s, double p0, double xi)
    * Write f(xi) = (e^{xi x} - 1)/xi for xi near zero as the
    * absolutely convergent Taylor series
    *
-   * f(x) = (1/xi) (xi x + \sum_{n=2}^\infty (xi x)^n/n!)
-   *      = x + (1/xi) \sum_{n=2}^\inty (xi x)^n/n!
-   *      = x + \sum_{n=2}^\infty xi^{n-1} x^n/n!
-   *      = x + x \sum_{n=2}^\infty (xi x)^{n-1}/n!
-   *      = x (1 + \sum_{n=2}^\infty (xi x)^{n-1}/n!).
+   * f(x) = (1/xi) (xi x + \sum_{n=2}^infinity (xi x)^n/n!)
+   *      = x + (1/xi) \sum_{n=2}^infinity (xi x)^n/n!
+   *      = x + \sum_{n=2}^infinity xi^{n-1} x^n/n!
+   *      = x + x \sum_{n=2}^infinity (xi x)^{n-1}/n!
+   *      = x (1 + \sum_{n=2}^infinity (xi x)^{n-1}/n!).
    *
-   * d = \sum_{n=2}^\infty (xi x)^{n-1}/n! is the relative error
+   * d = \sum_{n=2}^infinity (xi x)^{n-1}/n! is the relative error
    * of f(x) from x.  If |xi| < eps/4x, then
    *
-   * |d| <= \sum_{n=2}^\infty |xi x|^{n-1}/n!
-   *     <= \sum_{n=2}^\infty (eps/4)^{n-1}/n!
-   *     <= \sum_{n=1}^\infty (eps/4)
-   *      = (eps/4) \sum_{n=0}^\infty (eps/4)^n
+   * |d| <= \sum_{n=2}^infinity |xi x|^{n-1}/n!
+   *     <= \sum_{n=2}^infinity (eps/4)^{n-1}/n!
+   *     <= \sum_{n=1}^infinity (eps/4)
+   *      = (eps/4) \sum_{n=0}^infinity (eps/4)^n
    *      = (eps/4)/(1 - eps/4)
    *      < eps/2,
    *

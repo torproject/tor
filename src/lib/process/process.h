@@ -35,8 +35,8 @@ typedef enum {
 const char *process_status_to_string(process_status_t status);
 
 typedef enum {
-  /** Pass complete \n-terminated lines to the
-   *  callback (with the \n or \r\n removed). */
+  /** Pass complete newline-terminated lines to the
+   *  callback (with the LF or CRLF removed). */
   PROCESS_PROTOCOL_LINE,
 
   /** Pass the raw response from read() to the callback. */
