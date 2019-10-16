@@ -102,7 +102,7 @@
 #define str_desc_auth_client "auth-client"
 #define str_encrypted "encrypted"
 
-/* Authentication supported types. */
+/** Authentication supported types. */
 static const struct {
   hs_desc_auth_type_t type;
   const char *identifier;
@@ -112,7 +112,7 @@ static const struct {
   { 0, NULL }
 };
 
-/* Descriptor ruleset. */
+/** Descriptor ruleset. */
 static token_rule_t hs_desc_v3_token_table[] = {
   T1_START(str_hs_desc, R_HS_DESCRIPTOR, EQ(1), NO_OBJ),
   T1(str_lifetime, R3_DESC_LIFETIME, EQ(1), NO_OBJ),
@@ -123,7 +123,7 @@ static token_rule_t hs_desc_v3_token_table[] = {
   END_OF_TABLE
 };
 
-/* Descriptor ruleset for the superencrypted section. */
+/** Descriptor ruleset for the superencrypted section. */
 static token_rule_t hs_desc_superencrypted_v3_token_table[] = {
   T1_START(str_desc_auth_type, R3_DESC_AUTH_TYPE, GE(1), NO_OBJ),
   T1(str_desc_auth_key, R3_DESC_AUTH_KEY, GE(1), NO_OBJ),
@@ -132,7 +132,7 @@ static token_rule_t hs_desc_superencrypted_v3_token_table[] = {
   END_OF_TABLE
 };
 
-/* Descriptor ruleset for the encrypted section. */
+/** Descriptor ruleset for the encrypted section. */
 static token_rule_t hs_desc_encrypted_v3_token_table[] = {
   T1_START(str_create2_formats, R3_CREATE2_FORMATS, CONCAT_ARGS, NO_OBJ),
   T01(str_intro_auth_required, R3_INTRO_AUTH_REQUIRED, ARGS, NO_OBJ),
@@ -140,7 +140,7 @@ static token_rule_t hs_desc_encrypted_v3_token_table[] = {
   END_OF_TABLE
 };
 
-/* Descriptor ruleset for the introduction points section. */
+/** Descriptor ruleset for the introduction points section. */
 static token_rule_t hs_desc_intro_point_v3_token_table[] = {
   T1_START(str_intro_point, R3_INTRODUCTION_POINT, EQ(1), NO_OBJ),
   T1N(str_ip_onion_key, R3_INTRO_ONION_KEY, GE(2), OBJ_OK),
@@ -152,7 +152,7 @@ static token_rule_t hs_desc_intro_point_v3_token_table[] = {
   END_OF_TABLE
 };
 
-/* Using a key, salt and encrypted payload, build a MAC and put it in mac_out.
+/** Using a key, salt and encrypted payload, build a MAC and put it in mac_out.
  * We use SHA3-256 for the MAC computation.
  * This function can't fail. */
 static void
@@ -184,7 +184,7 @@ build_mac(const uint8_t *mac_key, size_t mac_key_len,
   crypto_digest_free(digest);
 }
 
-/* Using a secret data and a given decriptor object, build the secret
+/** Using a secret data and a given decriptor object, build the secret
  * input needed for the KDF.
  *
  * secret_input = SECRET_DATA | subcredential | INT_8(revision_counter)
@@ -224,7 +224,7 @@ build_secret_input(const hs_descriptor_t *desc,
   return secret_input_len;
 }
 
-/* Do the KDF construction and put the resulting data in key_out which is of
+/** Do the KDF construction and put the resulting data in key_out which is of
  * key_out_len length. It uses SHAKE-256 as specified in the spec. */
 static void
 build_kdf_key(const hs_descriptor_t *desc,
@@ -269,7 +269,7 @@ build_kdf_key(const hs_descriptor_t *desc,
   tor_free(secret_input);
 }
 
-/* Using the given descriptor, secret data, and salt, run it through our
+/** Using the given descriptor, secret data, and salt, run it through our
  * KDF function and then extract a secret key in key_out, the IV in iv_out
  * and MAC in mac_out. This function can't fail. */
 static void
@@ -308,7 +308,7 @@ build_secret_key_iv_mac(const hs_descriptor_t *desc,
 
 /* === ENCODING === */
 
-/* Encode the given link specifier objects into a newly allocated string.
+/** Encode the given link specifier objects into a newly allocated string.
  * This can't fail so caller can always assume a valid string being
  * returned. */
 STATIC char *
@@ -355,7 +355,7 @@ encode_link_specifiers(const smartlist_t *specs)
   return encoded_b64;
 }
 
-/* Encode an introduction point legacy key and certificate. Return a newly
+/** Encode an introduction point legacy key and certificate. Return a newly
  * allocated string with it. On failure, return NULL. */
 static char *
 encode_legacy_key(const hs_desc_intro_point_t *ip)
@@ -392,7 +392,7 @@ encode_legacy_key(const hs_desc_intro_point_t *ip)
   return encoded;
 }
 
-/* Encode an introduction point encryption key and certificate. Return a newly
+/** Encode an introduction point encryption key and certificate. Return a newly
  * allocated string with it. On failure, return NULL. */
 static char *
 encode_enc_key(const hs_desc_intro_point_t *ip)
@@ -418,7 +418,7 @@ encode_enc_key(const hs_desc_intro_point_t *ip)
   return encoded;
 }
 
-/* Encode an introduction point onion key. Return a newly allocated string
+/** Encode an introduction point onion key. Return a newly allocated string
  * with it. Can not fail. */
 static char *
 encode_onion_key(const hs_desc_intro_point_t *ip)
@@ -435,7 +435,7 @@ encode_onion_key(const hs_desc_intro_point_t *ip)
   return encoded;
 }
 
-/* Encode an introduction point object and return a newly allocated string
+/** Encode an introduction point object and return a newly allocated string
  * with it. On failure, return NULL. */
 static char *
 encode_intro_point(const ed25519_public_key_t *sig_key,
@@ -505,7 +505,7 @@ encode_intro_point(const ed25519_public_key_t *sig_key,
   return encoded_ip;
 }
 
-/* Given a source length, return the new size including padding for the
+/** Given a source length, return the new size including padding for the
  * plaintext encryption. */
 static size_t
 compute_padded_plaintext_length(size_t plaintext_len)
@@ -525,7 +525,7 @@ compute_padded_plaintext_length(size_t plaintext_len)
   return plaintext_padded_len;
 }
 
-/* Given a buffer, pad it up to the encrypted section padding requirement. Set
+/** Given a buffer, pad it up to the encrypted section padding requirement. Set
  * the newly allocated string in padded_out and return the length of the
  * padded buffer. */
 STATIC size_t
@@ -548,7 +548,7 @@ build_plaintext_padding(const char *plaintext, size_t plaintext_len,
   return padded_len;
 }
 
-/* Using a key, IV and plaintext data of length plaintext_len, create the
+/** Using a key, IV and plaintext data of length plaintext_len, create the
  * encrypted section by encrypting it and setting encrypted_out with the
  * data. Return size of the encrypted data buffer. */
 static size_t
@@ -593,7 +593,7 @@ build_encrypted(const uint8_t *key, const uint8_t *iv, const char *plaintext,
   return encrypted_len;
 }
 
-/* Encrypt the given <b>plaintext</b> buffer using <b>desc</b> and
+/** Encrypt the given <b>plaintext</b> buffer using <b>desc</b> and
  * <b>secret_data</b> to get the keys. Set encrypted_out with the encrypted
  * data and return the length of it. <b>is_superencrypted_layer</b> is set
  * if this is the outer encrypted layer of the descriptor. */
@@ -663,7 +663,7 @@ encrypt_descriptor_data(const hs_descriptor_t *desc,
   return final_blob_len;
 }
 
-/* Create and return a string containing a client-auth entry. It's the
+/** Create and return a string containing a client-auth entry. It's the
  * responsibility of the caller to free the returned string. This function
  * will never fail. */
 static char *
@@ -733,7 +733,7 @@ get_all_auth_client_lines(const hs_descriptor_t *desc)
   return auth_client_lines_str;
 }
 
-/* Create the inner layer of the descriptor (which includes the intro points,
+/** Create the inner layer of the descriptor (which includes the intro points,
  * etc.). Return a newly-allocated string with the layer plaintext, or NULL if
  * an error occurred. It's the responsibility of the caller to free the
  * returned string. */
@@ -789,7 +789,7 @@ get_inner_encrypted_layer_plaintext(const hs_descriptor_t *desc)
   return encoded_str;
 }
 
-/* Create the middle layer of the descriptor, which includes the client auth
+/** Create the middle layer of the descriptor, which includes the client auth
  * data and the encrypted inner layer (provided as a base64 string at
  * <b>layer2_b64_ciphertext</b>). Return a newly-allocated string with the
  * layer plaintext. It's the responsibility of the caller to free the returned
@@ -845,7 +845,7 @@ get_outer_encrypted_layer_plaintext(const hs_descriptor_t *desc,
   return layer1_str;
 }
 
-/* Encrypt <b>encoded_str</b> into an encrypted blob and then base64 it before
+/** Encrypt <b>encoded_str</b> into an encrypted blob and then base64 it before
  * returning it. <b>desc</b> is provided to derive the encryption
  * keys. <b>secret_data</b> is also proved to derive the encryption keys.
  * <b>is_superencrypted_layer</b> is set if <b>encoded_str</b> is the
@@ -878,7 +878,7 @@ encrypt_desc_data_and_base64(const hs_descriptor_t *desc,
   return enc_b64;
 }
 
-/* Generate the secret data which is used to encrypt/decrypt the descriptor.
+/** Generate the secret data which is used to encrypt/decrypt the descriptor.
  *
  * SECRET_DATA = blinded-public-key
  * SECRET_DATA = blinded-public-key | descriptor_cookie
@@ -925,7 +925,7 @@ build_secret_data(const ed25519_public_key_t *blinded_pubkey,
   return secret_data_len;
 }
 
-/* Generate and encode the superencrypted portion of <b>desc</b>. This also
+/** Generate and encode the superencrypted portion of <b>desc</b>. This also
  * involves generating the encrypted portion of the descriptor, and performing
  * the superencryption. A newly allocated NUL-terminated string pointer
  * containing the encrypted encoded blob is put in encrypted_blob_out. Return 0
@@ -999,7 +999,7 @@ encode_superencrypted_data(const hs_descriptor_t *desc,
   return ret;
 }
 
-/* Encode a v3 HS descriptor. Return 0 on success and set encoded_out to the
+/** Encode a v3 HS descriptor. Return 0 on success and set encoded_out to the
  * newly allocated string of the encoded descriptor. On error, -1 is returned
  * and encoded_out is untouched. */
 static int
@@ -1111,7 +1111,7 @@ desc_encode_v3(const hs_descriptor_t *desc,
 
 /* === DECODING === */
 
-/* Given the token tok for an auth client, decode it as
+/** Given the token tok for an auth client, decode it as
  * hs_desc_authorized_client_t. tok->args MUST contain at least 3 elements
  * Return 0 on success else -1 on failure. */
 static int
@@ -1147,7 +1147,7 @@ decode_auth_client(const directory_token_t *tok,
   return ret;
 }
 
-/* Given an encoded string of the link specifiers, return a newly allocated
+/** Given an encoded string of the link specifiers, return a newly allocated
  * list of decoded link specifiers. Return NULL on error. */
 STATIC smartlist_t *
 decode_link_specifiers(const char *encoded)
@@ -1201,7 +1201,7 @@ decode_link_specifiers(const char *encoded)
   return results;
 }
 
-/* Given a list of authentication types, decode it and put it in the encrypted
+/** Given a list of authentication types, decode it and put it in the encrypted
  * data section. Return 1 if we at least know one of the type or 0 if we know
  * none of them. */
 static int
@@ -1229,7 +1229,7 @@ decode_auth_type(hs_desc_encrypted_data_t *desc, const char *list)
   return match;
 }
 
-/* Parse a space-delimited list of integers representing CREATE2 formats into
+/** Parse a space-delimited list of integers representing CREATE2 formats into
  * the bitfield in hs_desc_encrypted_data_t. Ignore unrecognized values. */
 static void
 decode_create2_list(hs_desc_encrypted_data_t *desc, const char *list)
@@ -1263,7 +1263,7 @@ decode_create2_list(hs_desc_encrypted_data_t *desc, const char *list)
   smartlist_free(tokens);
 }
 
-/* Given a certificate, validate the certificate for certain conditions which
+/** Given a certificate, validate the certificate for certain conditions which
  * are if the given type matches the cert's one, if the signing key is
  * included and if the that key was actually used to sign the certificate.
  *
@@ -1300,7 +1300,7 @@ cert_is_valid(tor_cert_t *cert, uint8_t type, const char *log_obj_type)
   return 0;
 }
 
-/* Given some binary data, try to parse it to get a certificate object. If we
+/** Given some binary data, try to parse it to get a certificate object. If we
  * have a valid cert, validate it using the given wanted type. On error, print
  * a log using the err_msg has the certificate identifier adding semantic to
  * the log and cert_out is set to NULL. On success, 0 is returned and cert_out
@@ -1337,7 +1337,7 @@ cert_parse_and_validate(tor_cert_t **cert_out, const char *data,
   return -1;
 }
 
-/* Return true iff the given length of the encrypted data of a descriptor
+/** Return true iff the given length of the encrypted data of a descriptor
  * passes validation. */
 STATIC int
 encrypted_data_length_is_valid(size_t len)
@@ -1356,7 +1356,7 @@ encrypted_data_length_is_valid(size_t len)
   return 0;
 }
 
-/* Build the KEYS component for the authorized client computation. The format
+/** Build the KEYS component for the authorized client computation. The format
  * of the construction is:
  *
  *    SECRET_SEED = x25519(sk, pk)
@@ -1400,7 +1400,7 @@ build_descriptor_cookie_keys(const uint8_t *subcredential,
   return keystream_len;
 }
 
-/* Decrypt the descriptor cookie given the descriptor, the auth client,
+/** Decrypt the descriptor cookie given the descriptor, the auth client,
  * and the client secret key. On sucess, return 0 and a newly allocated
  * descriptor cookie descriptor_cookie_out. On error or if the client id
  * is invalid, return -1 and descriptor_cookie_out is set to
@@ -1592,7 +1592,7 @@ decrypt_desc_layer,(const hs_descriptor_t *desc,
   return result_len;
 }
 
-/* Decrypt the superencrypted section of the descriptor using the given
+/** Decrypt the superencrypted section of the descriptor using the given
  * descriptor object <b>desc</b>. A newly allocated NUL terminated string is
  * put in decrypted_out which contains the superencrypted layer of the
  * descriptor. Return the length of decrypted_out on success else 0 is
@@ -1624,7 +1624,7 @@ desc_decrypt_superencrypted(const hs_descriptor_t *desc, char **decrypted_out)
   return superencrypted_len;
 }
 
-/* Decrypt the encrypted section of the descriptor using the given descriptor
+/** Decrypt the encrypted section of the descriptor using the given descriptor
  * object <b>desc</b>. A newly allocated NUL terminated string is put in
  * decrypted_out which contains the encrypted layer of the descriptor.
  * Return the length of decrypted_out on success else 0 is returned and
@@ -1677,7 +1677,7 @@ desc_decrypt_encrypted(const hs_descriptor_t *desc,
   return encrypted_len;
 }
 
-/* Given the token tok for an intro point legacy key, the list of tokens, the
+/** Given the token tok for an intro point legacy key, the list of tokens, the
  * introduction point ip being decoded and the descriptor desc from which it
  * comes from, decode the legacy key and set the intro point object. Return 0
  * on success else -1 on failure. */
@@ -1735,7 +1735,7 @@ decode_intro_legacy_key(const directory_token_t *tok,
   return -1;
 }
 
-/* Dig into the descriptor <b>tokens</b> to find the onion key we should use
+/** Dig into the descriptor <b>tokens</b> to find the onion key we should use
  * for this intro point, and set it into <b>onion_key_out</b>. Return 0 if it
  * was found and well-formed, otherwise return -1 in case of errors. */
 static int
@@ -1779,7 +1779,7 @@ set_intro_point_onion_key(curve25519_public_key_t *onion_key_out,
   return retval;
 }
 
-/* Given the start of a section and the end of it, decode a single
+/** Given the start of a section and the end of it, decode a single
  * introduction point from that section. Return a newly allocated introduction
  * point object containing the decoded data. Return NULL if the section can't
  * be decoded. */
@@ -1908,7 +1908,7 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
   return ip;
 }
 
-/* Given a descriptor string at <b>data</b>, decode all possible introduction
+/** Given a descriptor string at <b>data</b>, decode all possible introduction
  * points that we can find. Add the introduction point object to desc_enc as we
  * find them. This function can't fail and it is possible that zero
  * introduction points can be decoded. */
@@ -1972,7 +1972,7 @@ decode_intro_points(const hs_descriptor_t *desc,
   smartlist_free(intro_points);
 }
 
-/* Return 1 iff the given base64 encoded signature in b64_sig from the encoded
+/** Return 1 iff the given base64 encoded signature in b64_sig from the encoded
  * descriptor in encoded_desc validates the descriptor content. */
 STATIC int
 desc_sig_is_valid(const char *b64_sig,
@@ -2031,7 +2031,7 @@ desc_sig_is_valid(const char *b64_sig,
   return ret;
 }
 
-/* Decode descriptor plaintext data for version 3. Given a list of tokens, an
+/** Decode descriptor plaintext data for version 3. Given a list of tokens, an
  * allocated plaintext object that will be populated and the encoded
  * descriptor with its length. The last one is needed for signature
  * verification. Unknown tokens are simply ignored so this won't error on
@@ -2134,7 +2134,7 @@ desc_decode_plaintext_v3(smartlist_t *tokens,
   return -1;
 }
 
-/* Decode the version 3 superencrypted section of the given descriptor desc.
+/** Decode the version 3 superencrypted section of the given descriptor desc.
  * The desc_superencrypted_out will be populated with the decoded data.
  * Return 0 on success else -1. */
 static int
@@ -2249,7 +2249,7 @@ desc_decode_superencrypted_v3(const hs_descriptor_t *desc,
   return ret;
 }
 
-/* Decode the version 3 encrypted section of the given descriptor desc. The
+/** Decode the version 3 encrypted section of the given descriptor desc. The
  * desc_encrypted_out will be populated with the decoded data. Return 0 on
  * success else -1. */
 static int
@@ -2364,7 +2364,7 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
   return ret;
 }
 
-/* Table of encrypted decode function version specific. The function are
+/** Table of encrypted decode function version specific. The function are
  * indexed by the version number so v3 callback is at index 3 in the array. */
 static int
   (*decode_encrypted_handlers[])(
@@ -2376,7 +2376,7 @@ static int
   desc_decode_encrypted_v3,
 };
 
-/* Decode the encrypted data section of the given descriptor and store the
+/** Decode the encrypted data section of the given descriptor and store the
  * data in the given encrypted data object. Return 0 on success else a
  * negative value on error. */
 int
@@ -2417,7 +2417,7 @@ hs_desc_decode_encrypted(const hs_descriptor_t *desc,
   return ret;
 }
 
-/* Table of superencrypted decode function version specific. The function are
+/** Table of superencrypted decode function version specific. The function are
  * indexed by the version number so v3 callback is at index 3 in the array. */
 static int
   (*decode_superencrypted_handlers[])(
@@ -2428,9 +2428,9 @@ static int
   desc_decode_superencrypted_v3,
 };
 
-/* Decode the superencrypted data section of the given descriptor and store the
- * data in the given superencrypted data object. Return 0 on success else a
- * negative value on error. */
+/** Decode the superencrypted data section of the given descriptor and store
+ * the data in the given superencrypted data object. Return 0 on success else
+ * a negative value on error. */
 int
 hs_desc_decode_superencrypted(const hs_descriptor_t *desc,
                               hs_desc_superencrypted_data_t *
@@ -2468,7 +2468,7 @@ hs_desc_decode_superencrypted(const hs_descriptor_t *desc,
   return ret;
 }
 
-/* Table of plaintext decode function version specific. The function are
+/** Table of plaintext decode function version specific. The function are
  * indexed by the version number so v3 callback is at index 3 in the array. */
 static int
   (*decode_plaintext_handlers[])(
@@ -2481,7 +2481,7 @@ static int
   desc_decode_plaintext_v3,
 };
 
-/* Fully decode the given descriptor plaintext and store the data in the
+/** Fully decode the given descriptor plaintext and store the data in the
  * plaintext data object. Returns 0 on success else a negative value. */
 int
 hs_desc_decode_plaintext(const char *encoded,
@@ -2554,7 +2554,7 @@ hs_desc_decode_plaintext(const char *encoded,
   return ret;
 }
 
-/* Fully decode an encoded descriptor and set a newly allocated descriptor
+/** Fully decode an encoded descriptor and set a newly allocated descriptor
  * object in desc_out.  Client secret key is used to decrypt the "encrypted"
  * section if not NULL else it's ignored.
  *
@@ -2614,7 +2614,7 @@ hs_desc_decode_descriptor(const char *encoded,
   return ret;
 }
 
-/* Table of encode function version specific. The functions are indexed by the
+/** Table of encode function version specific. The functions are indexed by the
  * version number so v3 callback is at index 3 in the array. */
 static int
   (*encode_handlers[])(
@@ -2627,7 +2627,7 @@ static int
   desc_encode_v3,
 };
 
-/* Encode the given descriptor desc including signing with the given key pair
+/** Encode the given descriptor desc including signing with the given key pair
  * signing_kp and encrypting with the given descriptor cookie.
  *
  * If the client authorization is enabled, descriptor_cookie must be the same
@@ -2684,7 +2684,7 @@ hs_desc_encode_descriptor,(const hs_descriptor_t *desc,
   return ret;
 }
 
-/* Free the content of the plaintext section of a descriptor. */
+/** Free the content of the plaintext section of a descriptor. */
 void
 hs_desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc)
 {
@@ -2700,7 +2700,7 @@ hs_desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc)
   memwipe(desc, 0, sizeof(*desc));
 }
 
-/* Free the content of the superencrypted section of a descriptor. */
+/** Free the content of the superencrypted section of a descriptor. */
 void
 hs_desc_superencrypted_data_free_contents(hs_desc_superencrypted_data_t *desc)
 {
@@ -2720,7 +2720,7 @@ hs_desc_superencrypted_data_free_contents(hs_desc_superencrypted_data_t *desc)
   memwipe(desc, 0, sizeof(*desc));
 }
 
-/* Free the content of the encrypted section of a descriptor. */
+/** Free the content of the encrypted section of a descriptor. */
 void
 hs_desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
 {
@@ -2740,7 +2740,7 @@ hs_desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
   memwipe(desc, 0, sizeof(*desc));
 }
 
-/* Free the descriptor plaintext data object. */
+/** Free the descriptor plaintext data object. */
 void
 hs_desc_plaintext_data_free_(hs_desc_plaintext_data_t *desc)
 {
@@ -2748,7 +2748,7 @@ hs_desc_plaintext_data_free_(hs_desc_plaintext_data_t *desc)
   tor_free(desc);
 }
 
-/* Free the descriptor plaintext data object. */
+/** Free the descriptor plaintext data object. */
 void
 hs_desc_superencrypted_data_free_(hs_desc_superencrypted_data_t *desc)
 {
@@ -2756,7 +2756,7 @@ hs_desc_superencrypted_data_free_(hs_desc_superencrypted_data_t *desc)
   tor_free(desc);
 }
 
-/* Free the descriptor encrypted data object. */
+/** Free the descriptor encrypted data object. */
 void
 hs_desc_encrypted_data_free_(hs_desc_encrypted_data_t *desc)
 {
@@ -2764,7 +2764,7 @@ hs_desc_encrypted_data_free_(hs_desc_encrypted_data_t *desc)
   tor_free(desc);
 }
 
-/* Free the given descriptor object. */
+/** Free the given descriptor object. */
 void
 hs_descriptor_free_(hs_descriptor_t *desc)
 {
@@ -2778,7 +2778,7 @@ hs_descriptor_free_(hs_descriptor_t *desc)
   tor_free(desc);
 }
 
-/* Return the size in bytes of the given plaintext data object. A sizeof() is
+/** Return the size in bytes of the given plaintext data object. A sizeof() is
  * not enough because the object contains pointers and the encrypted blob.
  * This is particularly useful for our OOM subsystem that tracks the HSDir
  * cache size for instance. */
@@ -2790,7 +2790,7 @@ hs_desc_plaintext_obj_size(const hs_desc_plaintext_data_t *data)
           data->superencrypted_blob_size);
 }
 
-/* Return the size in bytes of the given encrypted data object. Used by OOM
+/** Return the size in bytes of the given encrypted data object. Used by OOM
  * subsystem. */
 static size_t
 hs_desc_encrypted_obj_size(const hs_desc_encrypted_data_t *data)
@@ -2810,7 +2810,7 @@ hs_desc_encrypted_obj_size(const hs_desc_encrypted_data_t *data)
   return sizeof(*data) + intro_size;
 }
 
-/* Return the size in bytes of the given descriptor object. Used by OOM
+/** Return the size in bytes of the given descriptor object. Used by OOM
  * subsystem. */
   size_t
 hs_desc_obj_size(const hs_descriptor_t *data)
@@ -2821,7 +2821,7 @@ hs_desc_obj_size(const hs_descriptor_t *data)
           sizeof(data->subcredential));
 }
 
-/* Return a newly allocated descriptor intro point. */
+/** Return a newly allocated descriptor intro point. */
 hs_desc_intro_point_t *
 hs_desc_intro_point_new(void)
 {
@@ -2830,7 +2830,7 @@ hs_desc_intro_point_new(void)
   return ip;
 }
 
-/* Free a descriptor intro point object. */
+/** Free a descriptor intro point object. */
 void
 hs_desc_intro_point_free_(hs_desc_intro_point_t *ip)
 {
@@ -2849,7 +2849,7 @@ hs_desc_intro_point_free_(hs_desc_intro_point_t *ip)
   tor_free(ip);
 }
 
-/* Allocate and build a new fake client info for the descriptor. Return a
+/** Allocate and build a new fake client info for the descriptor. Return a
  * newly allocated object. This can't fail. */
 hs_desc_authorized_client_t *
 hs_desc_build_fake_authorized_client(void)
@@ -2867,7 +2867,7 @@ hs_desc_build_fake_authorized_client(void)
   return client_auth;
 }
 
-/* Using the service's subcredential, client public key, auth ephemeral secret
+/** Using the service's subcredential, client public key, auth ephemeral secret
  * key, and descriptor cookie, build the auth client so we can then encode the
  * descriptor for publication. client_out must be already allocated. */
 void
@@ -2925,14 +2925,14 @@ hs_desc_build_authorized_client(const uint8_t *subcredential,
   crypto_cipher_free(cipher);
 }
 
-/* Free an authoriezd client object. */
+/** Free an authoriezd client object. */
 void
 hs_desc_authorized_client_free_(hs_desc_authorized_client_t *client)
 {
   tor_free(client);
 }
 
-/* From the given descriptor, remove and free every introduction point. */
+/** From the given descriptor, remove and free every introduction point. */
 void
 hs_descriptor_clear_intro_points(hs_descriptor_t *desc)
 {
