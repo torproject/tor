@@ -5490,9 +5490,13 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   }
 
   /* Go through command-line variables too */
-  if (global_cmdline) {
+  {
+    config_line_t *other_opts = NULL;
+    if (global_cmdline) {
+      other_opts = global_cmdline->other_opts;
+    }
     retval = config_assign(get_options_mgr(), newoptions,
-                           global_cmdline->other_opts,
+                           other_opts,
                            CAL_WARN_DEPRECATIONS, msg);
   }
   if (retval < 0) {
