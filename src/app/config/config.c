@@ -2494,25 +2494,25 @@ static const struct {
   { .name="--hush",
     .quiet=1 },
   { .name="--version",
-    .command=CMD_OTHER,
+    .command=CMD_IMMEDIATE,
     .quiet=1 },
   { .name="--list-modules",
-    .command=CMD_OTHER,
+    .command=CMD_IMMEDIATE,
     .quiet=1 },
   { .name="--library-versions",
-    .command=CMD_OTHER,
+    .command=CMD_IMMEDIATE,
     .quiet=1 },
   { .name="-h",
-    .command=CMD_OTHER,
+    .command=CMD_IMMEDIATE,
     .quiet=1 },
   { .name="--help",
-    .command=CMD_OTHER,
+    .command=CMD_IMMEDIATE,
     .quiet=1  },
   { .name="--list-torrc-options",
-    .command=CMD_OTHER,
+    .command=CMD_IMMEDIATE,
     .quiet=1 },
   { .name="--list-deprecated-options",
-    .command=CMD_OTHER },
+    .command=CMD_IMMEDIATE },
   { .name="--nt-service" },
   { .name="-nt-service" },
   { .name=NULL },
@@ -5321,8 +5321,8 @@ options_init_from_torrc(int argc, char **argv)
 
   int command = global_cmdline->command;
   const char *command_arg = global_cmdline->command_arg;
-  /* "Other" has already been handled by this point. */
-  tor_assert(command != CMD_OTHER);
+  /* "immediate" has already been handled by this point. */
+  tor_assert(command != CMD_IMMEDIATE);
 
   if (command == CMD_HASH_PASSWORD) {
     cf_defaults = tor_strdup("");
