@@ -2470,11 +2470,11 @@ static const struct {
   { .name="--hash-password",
     .takes_argument=ARGUMENT_NECESSARY,
     .command=CMD_HASH_PASSWORD,
-    .quiet=1  },
+    .quiet=QUIET_HUSH  },
   { .name="--dump-config",
     .takes_argument=ARGUMENT_OPTIONAL,
     .command=CMD_DUMP_CONFIG,
-    .quiet=2 },
+    .quiet=QUIET_SILENT },
   { .name="--list-fingerprint",
     .command=CMD_LIST_FINGERPRINT },
   { .name="--keygen",
@@ -2490,27 +2490,27 @@ static const struct {
     .command=CMD_VERIFY_CONFIG },
   { .name="--ignore-missing-torrc" },
   { .name="--quiet",
-    .quiet=2 },
+    .quiet=QUIET_SILENT },
   { .name="--hush",
-    .quiet=1 },
+    .quiet=QUIET_HUSH },
   { .name="--version",
     .command=CMD_IMMEDIATE,
-    .quiet=1 },
+    .quiet=QUIET_HUSH },
   { .name="--list-modules",
     .command=CMD_IMMEDIATE,
-    .quiet=1 },
+    .quiet=QUIET_HUSH },
   { .name="--library-versions",
     .command=CMD_IMMEDIATE,
-    .quiet=1 },
+    .quiet=QUIET_HUSH },
   { .name="-h",
     .command=CMD_IMMEDIATE,
-    .quiet=1 },
+    .quiet=QUIET_HUSH },
   { .name="--help",
     .command=CMD_IMMEDIATE,
-    .quiet=1  },
+    .quiet=QUIET_HUSH  },
   { .name="--list-torrc-options",
     .command=CMD_IMMEDIATE,
-    .quiet=1 },
+    .quiet=QUIET_HUSH },
   { .name="--list-deprecated-options",
     .command=CMD_IMMEDIATE },
   { .name="--nt-service" },
@@ -2553,7 +2553,7 @@ config_parse_commandline(int argc, char **argv, int ignore_errors)
           is_a_command = true;
           result->command = CMDLINE_ONLY_OPTIONS[j].command;
         }
-        int quiet = CMDLINE_ONLY_OPTIONS[j].quiet;
+        quiet_level_t quiet = CMDLINE_ONLY_OPTIONS[j].quiet;
         if (quiet > result->quiet_level)
           result->quiet_level = quiet;
         break;
