@@ -67,22 +67,30 @@
 
 
 .android-template: &android-template
-  image: debian:buster
+  image: registry.gitlab.com/fdroid/ci-images-client:latest
   variables:
     DEBIAN_FRONTEND: noninteractive
   before_script:
     - *apt-template
-    - apt-get install autoconf automake ca-certificates curl gzip make libtinfo5 libtool pkg-config tar unzip
+    - apt-get install autoconf automake ca-certificates curl gzip make libtinfo5 libtool pkg-config tar unzip wget
   script:
-    - ABI=aarch64
-    - host_triplet=${ABI}-linux-android
-    - platform=21
     - ndk=android-ndk-`echo $CI_JOB_NAME | awk '{print $2}'`
     - ndkzip=${ndk}-linux-x86_64.zip
     - curl --silent http://dl.google.com/android/repository/${ndkzip} > $ndkzip
     - unzip -q $ndkzip
     - export ANDROID_NDK_HOME=`pwd`/$ndk
     - export PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+
+    - export ABI=`echo $CI_JOB_NAME | awk '{print $5}'`
+    - test $ABI = "armeabi-v7a"
+        && { host_triplet=armv7a-linux-androideabi; alt_triplet=arm-linux-androideabi; arch=arm; path_triplet=$alt_triplet; }
+    - test $ABI = "arm64-v8a"
+        && { host_triplet=aarch64-linux-androideabi; alt_triplet=$host_triplet; arch=arm64; path_triplet=$host_triplet; }
+    - test $ABI = "x86"
+        && { host_triplet=i686-linux-android; alt_triplet=$host_triplet; arch=$ABI; path_triplet=$ABI; }
+    - test $ABI = "x86_64"
+        && { host_triplet=$ABI-linux-android; alt_triplet=$host_triplet; arch=$ABI; path_triplet=$ABI; }
+    - platform=21
     - export CC=${host_triplet}${platform}-clang
 
     - mkdir -p external
@@ -90,16 +98,16 @@
 
     # if using an old NDK, then more configuration is needed
     - if ! which $CC; then
-        export CC="${host_triplet}-gcc --sysroot=$ANDROID_NDK_HOME/platforms/android-$platform/arch-arm64 -isystem $ANDROID_NDK_HOME/sysroot/usr/include/$host_triplet -isystem $ANDROID_NDK_HOME/sysroot/usr/include";
+        export CC="${alt_triplet}-gcc --sysroot=$ANDROID_NDK_HOME/platforms/android-$platform/arch-$arch -isystem $ANDROID_NDK_HOME/sysroot/usr/include/$alt_triplet -isystem $ANDROID_NDK_HOME/sysroot/usr/include";
         export CFLAGS=-D__ANDROID_API__=$platform
-        export PATH=$ANDROID_NDK_HOME/toolchains/${ABI}-linux-android-4.9/prebuilt/linux-x86_64/bin:$PATH;
+        export PATH=$ANDROID_NDK_HOME/toolchains/${alt_triplet}-4.9/prebuilt/linux-x86_64/bin:$PATH;
       fi
 
     - mkdir openssl
     - curl --silent --location https://github.com/openssl/openssl/archive/OpenSSL_1_1_1d.tar.gz
         | tar -xz --directory=openssl --strip-components=1
     - cd openssl
-    - ./Configure no-shared android-arm64 -D__ANDROID_API__=$platform
+    - ./Configure no-shared android-$arch -D__ANDROID_API__=$platform
         --prefix=$EXTERNAL_ROOT --openssldir=$EXTERNAL_ROOT
     - make install_dev
     - cd ..
@@ -110,7 +118,7 @@
     - cd libevent
     - ./autogen.sh
     - ./configure
-        --host="${host_triplet}"
+        --host="${alt_triplet}"
         --disable-libevent-regress
         --disable-samples
         --disable-shared
@@ -131,10 +139,62 @@
 
     - make install
 
-android r17b:
+    - export AVD_SDK=`echo $CI_JOB_NAME | awk '{print $3}'`
+    - export AVD_TAG=`echo $CI_JOB_NAME | awk '{print $4}'`
+    - export AVD_PACKAGE="system-images;android-${AVD_SDK};${AVD_TAG};${ABI}"
+    - echo $AVD_PACKAGE
+    - emulator -accel-check || true
+    - rm -rf $ANDROID_HOME/emulator;
+    - wget -q http://dl.google.com/android/repository/emulator-linux-5264690.zip;
+    - echo "48c1cda2bdf3095d9d9d5c010fbfb3d6d673e3ea  emulator-linux-5264690.zip" | sha1sum -c;
+    - unzip -qq -d $ANDROID_HOME emulator-linux-5264690.zip;
+    - grep -v '^License' $ANDROID_HOME/tools/source.properties
+    - echo y | sdkmanager "platforms;android-$AVD_SDK" > /dev/null
+    - if ! avdmanager list avd | grep "Name. avd$AVD_SDK$"; then
+          set -x;
+          rm -rf ~/.android/avd  $ANDROID_HOME/system-images;
+          echo y | sdkmanager "$AVD_PACKAGE" > /dev/null;
+          echo no | avdmanager create avd --name avd$AVD_SDK --tag "$AVD_TAG" --package "$AVD_PACKAGE" --sdcard 64M --device "Nexus 5";
+          export RAMSIZE="`sed -n 's,^MemAvailable:[^0-9]*\([0-9][0-9]*\)[^0-9]*$,\1,p' /proc/meminfo`";
+          if [ $RAMSIZE -le 2048 ]; then
+              sed -i '/^hw\.ramSize\s*=.*/d' ~/.android/avd/*.avd/config.ini;
+              echo "hw.ramSize=1024" >> ~/.android/avd/*.avd/config.ini;
+          fi;
+          avdmanager list avd;
+          set +x;
+      fi
+    - grep -v '^License' $ANDROID_HOME/system-images/android-$AVD_SDK/$AVD_TAG/$ABI/source.properties
+    - adb start-server
+    - ls -l ~/.android
+    - emulator -version
+    - emulator -avd avd$AVD_SDK
+        -no-audio
+        -no-snapstorage
+        -no-window
+        -skip-adb-auth
+        -verbose
+        -wipe-data
+        &
+    - wait-for-emulator
+    - adb devices
+    - adb shell input keyevent 82 &
+
+    # adb shell on older emulators didn't pass the return value, so we need tricks
+    # https://stackoverflow.com/a/58452689
+    - EXITVALUE=0
+    - cd src/test
+    - for f in test test-memwipe test-slow; do
+        printf "\n\n------------------------------------------\n$f\n";
+        adb -e push $f /data/local/tmp/;
+        adb -e shell "cd /data/local/tmp; ./$f"'; echo -n $? > '"$f.result";
+        test `adb -e shell "cat /data/local/tmp/$f.result"` = "0" || EXITVALUE=1;
+      done
+    - exit $EXITVALUE
+
+android r17b 22 default armeabi-v7a:
   <<: *android-template
 
-android r20:
+android r20 22 default armeabi-v7a:
   <<: *android-template
 
 
