@@ -13,31 +13,31 @@
 #include "feature/hs/hs_descriptor.h"
 #include "feature/hs/hs_ident.h"
 
-/* Status code of a descriptor fetch request. */
+/** Status code of a descriptor fetch request. */
 typedef enum {
-  /* Something internally went wrong. */
+  /** Something internally went wrong. */
   HS_CLIENT_FETCH_ERROR        = -1,
-  /* The fetch request has been launched successfully. */
+  /** The fetch request has been launched successfully. */
   HS_CLIENT_FETCH_LAUNCHED     = 0,
-  /* We already have a usable descriptor. No fetch. */
+  /** We already have a usable descriptor. No fetch. */
   HS_CLIENT_FETCH_HAVE_DESC    = 1,
-  /* No more HSDir available to query. */
+  /** No more HSDir available to query. */
   HS_CLIENT_FETCH_NO_HSDIRS    = 2,
-  /* The fetch request is not allowed. */
+  /** The fetch request is not allowed. */
   HS_CLIENT_FETCH_NOT_ALLOWED  = 3,
-  /* We are missing information to be able to launch a request. */
+  /** We are missing information to be able to launch a request. */
   HS_CLIENT_FETCH_MISSING_INFO = 4,
-  /* There is a pending fetch for the requested service. */
+  /** There is a pending fetch for the requested service. */
   HS_CLIENT_FETCH_PENDING      = 5,
 } hs_client_fetch_status_t;
 
 /** Client-side configuration of authorization for a service. */
 typedef struct hs_client_service_authorization_t {
-  /* An curve25519 secret key used to compute decryption keys that
+  /** An curve25519 secret key used to compute decryption keys that
    * allow the client to decrypt the hidden service descriptor. */
   curve25519_secret_key_t enc_seckey;
 
-  /* An onion address that is used to connect to the onion service. */
+  /** An onion address that is used to connect to the onion service. */
   char onion_address[HS_SERVICE_ADDR_LEN_BASE32+1];
 } hs_client_service_authorization_t;
 
@@ -120,4 +120,3 @@ STATIC digest256map_t *get_hs_client_auths_map(void);
 #endif /* defined(HS_CLIENT_PRIVATE) */
 
 #endif /* !defined(TOR_HS_CLIENT_H) */
-
