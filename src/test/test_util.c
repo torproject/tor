@@ -5653,7 +5653,7 @@ test_util_touch_file(void *arg)
   ;
 }
 
-#ifndef _WIN32
+#if !(defined(_WIN32) || defined (__ANDROID__))
 static void
 test_util_pwdb(void *arg)
 {
@@ -5725,7 +5725,7 @@ test_util_pwdb(void *arg)
   tor_free(dir);
   teardown_capture_of_logs();
 }
-#endif /* !defined(_WIN32) */
+#endif /* !(defined(_WIN32) || defined (__ANDROID__)) */
 
 static void
 test_util_calloc_check(void *arg)
@@ -6295,6 +6295,10 @@ test_util_map_anon_nofork(void *arg)
 #ifdef _WIN32
 #define UTIL_TEST_NO_WIN(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
 #define UTIL_TEST_WIN_ONLY(n, f) UTIL_TEST(n, (f))
+#define UTIL_LEGACY_NO_WIN(n) UTIL_TEST_NO_WIN(n, 0)
+#elif defined(__ANDROID__)
+#define UTIL_TEST_NO_WIN(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
+#define UTIL_TEST_WIN_ONLY(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
 #define UTIL_LEGACY_NO_WIN(n) UTIL_TEST_NO_WIN(n, 0)
 #else
 #define UTIL_TEST_NO_WIN(n, f) UTIL_TEST(n, (f))
