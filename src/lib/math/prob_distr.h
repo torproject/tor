@@ -66,41 +66,41 @@ struct dist {
 * type-specific macro built out of it -- but if you did use this
 * directly, it would be something like:
 *
-*   struct weibull mydist = {
-*     DIST_BASE_TYPED(&weibull_ops, mydist, struct weibull),
-*     .lambda = ...,
-*     .k = ...,
-*   };
+*     struct weibull mydist = {
+*       DIST_BASE_TYPED(&weibull_ops, mydist, struct weibull),
+*       .lambda = ...,
+*       .k = ...,
+*     };
 *
 * If you want to define a distribution type, define a canonical set of
 * operations and define a type-specific initializer element like so:
 *
-*   struct foo {
-*     struct dist base;
-*     int omega;
-*     double tau;
-*     double phi;
-*   };
+*     struct foo {
+*       struct dist base;
+*       int omega;
+*       double tau;
+*       double phi;
+*     };
 *
-*   struct dist_ops foo_ops = ...;
+*     struct dist_ops foo_ops = ...;
 *
-*   #define FOO(OBJ) DIST_BASE_TYPED(&foo_ops, OBJ, struct foo)
+*     #define FOO(OBJ) DIST_BASE_TYPED(&foo_ops, OBJ, struct foo)
 *
 * Then users can do:
 *
-*   struct foo mydist = {
-*     FOO(mydist),
-*     .omega = ...,
-*     .tau = ...,
-*     .phi = ...,
-*   };
+*     struct foo mydist = {
+*       FOO(mydist),
+*       .omega = ...,
+*       .tau = ...,
+*       .phi = ...,
+*     };
 *
 * If you accidentally write
 *
-*   struct bar mydist = {
-*     FOO(mydist),
-*     ...
-*   };
+*     struct bar mydist = {
+*       FOO(mydist),
+*       ...
+*     };
 *
 * then the compiler will report a type mismatch in the sizeof
 * expression, which otherwise evaporates at runtime.

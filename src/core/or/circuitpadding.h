@@ -388,7 +388,7 @@ typedef struct circpad_state_t {
    *
    * States are allowed to transition to themselves, which means re-schedule
    * a new padding timer. They are also allowed to temporarily "transition"
-   * to the "IGNORE" and "CANCEL" pseudo-states. See #defines below
+   * to the "IGNORE" and "CANCEL" pseudo-states. See defines below
    * for details on state behavior and meaning.
    */
   circpad_statenum_t next_state[CIRCPAD_NUM_EVENTS];
