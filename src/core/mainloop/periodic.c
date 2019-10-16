@@ -39,7 +39,7 @@ static const int MAX_INTERVAL = 10 * 365 * 86400;
 
 /**
  * Global list of periodic events that have been registered with
- * <b>periodic_event_register</a>.
+ * <b>periodic_event_register</b>.
  **/
 static smartlist_t *the_periodic_events = NULL;
 

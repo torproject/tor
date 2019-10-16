@@ -570,7 +570,7 @@ find_next_router_line(const smartlist_t *cons,
 /** Pre-process a consensus in <b>cons</b> (represented as a list of cdline_t)
  * to remove the signatures from it.  If the footer is removed, return a
  * cdline_t containing a delete command to delete the footer, allocated in
- * <b>area</>.  If no footer is removed, return NULL.
+ * <b>area</b>.  If no footer is removed, return NULL.
  *
  * We remove the signatures here because they are not themselves signed, and
  * as such there might be different encodings for them.

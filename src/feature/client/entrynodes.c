@@ -1038,7 +1038,7 @@ get_max_sample_size(guard_selection_t *gs,
  * Return a smartlist of the all the guards that are not currently
  * members of the sample (GUARDS - SAMPLED_GUARDS).  The elements of
  * this list are node_t pointers in the non-bridge case, and
- * bridge_info_t pointers in the bridge case.  Set *<b>n_guards_out/b>
+ * bridge_info_t pointers in the bridge case.  Set *<b>n_guards_out</b>
  * to the number of guards that we found in GUARDS, including those
  * that were already sampled.
  */

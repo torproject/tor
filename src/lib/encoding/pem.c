@@ -42,7 +42,7 @@ pem_encoded_size(size_t src_len, const char *objtype)
 
 /**
  * PEM-encode the <b>srclen</b>-byte object at <b>src</b> into the
- * <b>destlen<\b>-byte buffer at <b>dest</b>, tagging it with <b>objtype</b>.
+ * <b>destlen</b>-byte buffer at <b>dest</b>, tagging it with <b>objtype</b>.
  * Return 0 on success and -1 on failure.
  */
 int

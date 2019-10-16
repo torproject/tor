@@ -1293,7 +1293,7 @@ typedef struct compressed_result_t {
 
 /**
  * Compress the bytestring <b>input</b> of length <b>len</b> using the
- * <n>n_methods</b> compression methods listed in the array <b>methods</b>.
+ * <b>n_methods</b> compression methods listed in the array <b>methods</b>.
  *
  * For each successful compression, set the fields in the <b>results_out</b>
  * array in the position corresponding to the compression method. Use

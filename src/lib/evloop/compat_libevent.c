@@ -422,7 +422,7 @@ mainloop_event_activate(mainloop_event_t *event)
  *
  * If the event is scheduled for a different time, cancel it and run
  * after this delay instead.  If the event is currently pending to run
- * <em>now</b>, has no effect.
+ * <b>now</b>, has no effect.
  *
  * Do not call this function with <b>tv</b> == NULL -- use
  * mainloop_event_activate() instead.

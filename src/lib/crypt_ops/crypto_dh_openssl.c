@@ -103,7 +103,7 @@ crypto_validate_dh_params(const BIGNUM *p, const BIGNUM *g)
 #endif /* 0 */
 
 /**
- * Helper: convert <b>hex<b> to a bignum, and return it.  Assert that the
+ * Helper: convert <b>hex</b> to a bignum, and return it.  Assert that the
  * operation was successful.
  */
 static BIGNUM *

@@ -33,7 +33,7 @@
 /** Try to read an RSA key from <b>fname</b>.  If <b>fname</b> doesn't exist
  * and <b>generate</b> is true, create a new RSA key and save it in
  * <b>fname</b>.  Return the read/created key, or NULL on error.  Log all
- * errors at level <b>severity</b>. If <b>created_out/b> is non-NULL and a
+ * errors at level <b>severity</b>. If <b>created_out</b> is non-NULL and a
  * new key was created, set *<b>created_out</b> to true.
  */
 crypto_pk_t *
