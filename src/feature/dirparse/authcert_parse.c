@@ -13,10 +13,11 @@
 #include "lib/memarea/memarea.h"
 
 #include "feature/nodelist/authority_cert_st.h"
+#include "feature/dirparse/authcert_members.h"
 
 /** List of tokens recognized in V3 authority certificates. */
 static token_rule_t dir_key_certificate_table[] = {
-#include "feature/dirparse/authcert_members.i"
+  AUTHCERT_MEMBERS,
   T1("fingerprint",      K_FINGERPRINT,              CONCAT_ARGS, NO_OBJ ),
   END_OF_TABLE
 };
