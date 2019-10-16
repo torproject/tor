@@ -17,7 +17,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "siphash.h"
 
-/* Wrap our hash function to have the signature that the bloom filter
+/** Wrap our hash function to have the signature that the bloom filter
  * needs. */
 static uint64_t
 bloomfilt_addr_hash(const struct sipkey *key,
