@@ -353,7 +353,7 @@ noinst_HEADERS +=					\
 	src/feature/dircommon/fp_pair.h			\
 	src/feature/dircommon/vote_timing_st.h		\
 	src/feature/dircommon/voting_schedule.h		\
-	src/feature/dirparse/authcert_members.i		\
+	src/feature/dirparse/authcert_members.h		\
 	src/feature/dirparse/authcert_parse.h		\
 	src/feature/dirparse/microdesc_parse.h		\
 	src/feature/dirparse/ns_parse.h			\
