@@ -12,14 +12,12 @@ cache:
 
 compiler:
   - gcc
-  - clang
 
 os:
   - linux
-  - osx
 
-## The build matrix in the following stanza expands into builds for each
-## OS and compiler.
+## We don't use the build matrix cross-product, because it makes too many jobs
+## Instead, we list each job under matrix: include:
 env:
   global:
     ## The Travis CI environment allows us two cores, so let's use both.
@@ -30,68 +28,57 @@ env:
     ## We turn off asciidoc by default, because it's slow
     - ASCIIDOC_OPTIONS="--disable-asciidoc"
   matrix:
-    ## We want to use each build option at least once
-    ##
-    ## We don't list default variable values, because we set the defaults
-    ## in global (or the default is unset)
+    ## This matrix entry is required, but it doesn't actually create any jobs
     -
-    ## TOR_RUST_DEPENDENCIES is spelt RUST_DEPENDENCIES in 0.3.2
-    - RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
 
 matrix:
-  ## include creates builds with gcc, linux
+  ## include creates builds with gcc, linux, unless we override those defaults
   include:
+    ## We run basic tests on macOS
+    - compiler: clang
+      os: osx
+    ## We check NSS
+    ## NSS is a fast job, clang is slower on Linux, so we do NSS clang
+    - env: NSS_OPTIONS="--enable-nss"
+      compiler: clang
+    ## We run chutney on Linux, because it's faster than chutney on macOS
+    - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
     ## We include a single coverage build with the best options for coverage
     - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
-    ## We only want to check these build option combinations once
-    ## (they shouldn't vary by compiler or OS)
-    ## We run rust and coverage with hardening off, which seems like enough
-    # - env: HARDENING_OPTIONS=""
+    ## We run rust on Linux, because it's faster than rust on macOS
+    ## We check rust offline
+    - env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
     ## We check asciidoc with distcheck, to make sure we remove doc products
     - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
-    # We also try running a hardened clang build with chutney on Linux.
-    - env: CHUTNEY="yes" SKIP_MAKE_CHECK="yes" CHUTNEY_ALLOW_FAILURES="2"
-      compiler: clang
-    # We clone our stem repo and run `make test-stem`
-    - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
-    ## Check rust online with distcheck, to make sure we remove rust products
-    - env: DISTCHECK="yes" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
-    ## Check disable module dirauth with and without rust
-    - env: MODULES_OPTIONS="--disable-module-dirauth" RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
+    ## We check disable module dirauth
     - env: MODULES_OPTIONS="--disable-module-dirauth"
-    ## Check NSS
-    - env: NSS_OPTIONS="--enable-nss"
+    ## We run rust on macOS, because we have seen macOS rust failures before
+    - env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
+      compiler: clang
+      os: osx
+    ## We run chutney on macOS, because macOS Travis has IPv6
+    - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
+      os: osx
+    ## We clone our stem repo and run `make test-stem`
+    - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
 
-  ## Uncomment to allow the build to report success (with non-required
-  ## sub-builds continuing to run) if all required sub-builds have
-  ## succeeded.  This is somewhat buggy currently: it can cause
-  ## duplicate notifications and prematurely report success if a
-  ## single sub-build has succeeded.  See
-  ## https://github.com/travis-ci/travis-ci/issues/1696
-  # fast_finish: true
+  ## Allow the build to report success (with non-required sub-builds
+  ## continuing to run) if all required sub-builds have succeeded.
+  fast_finish: true
 
-  ## Careful! We use global envs, which makes it hard to exclude or
-  ## allow failures by env:
+  ## Careful! We use global envs, which makes it hard to allow failures by env:
   ## https://docs.travis-ci.com/user/customizing-the-build#matching-jobs-with-allow_failures
   allow_failures:
+    ## macOS rust and chutney are very slow, so we let the build finish before
+    ## they are done.  We'd like to fast finish, but still eventually show
+    ## any failures in the build status. But Travis doesn't have that ability.
+    - env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
+      compiler: clang
+      os: osx
+    - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
+      os: osx
     ## test-stem sometimes hangs on Travis
     - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
-
-  exclude:
-    ## gcc on OSX is less useful, because the default compiler is clang.
-    - compiler: gcc
-      os: osx
-    ## gcc on Linux with no env is redundant, because all the custom builds use
-    ## gcc on Linux
-    - compiler: gcc
-      os: linux
-      env:
-    ## offline rust builds for gcc on Linux are redundant, because we do an
-    ## online rust build for gcc on Linux
-    - compiler: gcc
-      os: linux
-      ## TOR_RUST_DEPENDENCIES is spelt RUST_DEPENDENCIES in 0.3.2
-      env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
 
 ## (Linux only) Use the latest Linux image (Ubuntu Trusty)
 dist: trusty
