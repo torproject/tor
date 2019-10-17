@@ -1374,6 +1374,44 @@ The following options are useful only for clients (that is, if
         one. You can disable this behavior, so that Tor will select "No
         authentication" when IsolateSOCKSAuth is disabled, or when this
         option is set.
+    **ExtendedErrors**;;
+        Return extended error code in the SOCKS reply. So far, the possible
+        errors are:
+
+          X'F0' Onion Service Descriptor Can Not be Found
+
+            The requested onion service descriptor can't be found on the
+            hashring and thus not reachable by the client.
+
+          X'F1' Onion Service Descriptor Is Invalid
+
+            The requested onion service descriptor can't be parsed or
+            signature validation failed.
+
+          X'F2' Onion Service Introduction Failed
+
+            Client failed to introduce to the service meaning the descriptor
+            was found but the service is not connected anymore to the
+            introduction point. The service has likely changed its descriptor
+            or is not running.
+
+          X'F3' Onion Service Rendezvous Failed
+
+            Client failed to rendezvous with the service which means that the
+            client is unable to finalize the connection.
+
+          X'F4' Onion Service Missing Client Authorization
+
+            Client was able to download the requested onion service descriptor
+            but is unable to decrypt its content because it is missing client
+            authorization information.
+
+          X'F5' Onion Service Wrong Client Authorization
+
+            Client was able to download the requested onion service descriptor
+            but is unable to decrypt its content using the client
+            authorization information it has. This means the client access
+            were revoked.
 
 // Anchor only for formatting, not visible in the man page.
 [[SocksPortFlagsMisc]]::
