@@ -1553,6 +1553,102 @@ consider_plaintext_ports(entry_connection_t *conn, uint16_t port)
   return 0;
 }
 
+/** Parse the given hostname in address. Returns true if the parsing was
+ * successful and type_out contains the type of the hostname. Else, false is
+ * returned which means it was not recognized and type_out is set to
+ * BAD_HOSTNAME.
+ *
+ * The possible recognized forms are (where true is returned):
+ *
+ *  If address is of the form "y.onion" with a well-formed handle y:
+ *     Put a NUL after y, lower-case it, and return ONION_V2_HOSTNAME or
+ *     ONION_V3_HOSTNAME depending on the HS version.
+ *
+ *  If address is of the form "x.y.onion" with a well-formed handle x:
+ *     Drop "x.", put a NUL after y, lower-case it, and return
+ *     ONION_V2_HOSTNAME or ONION_V3_HOSTNAME depending on the HS version.
+ *
+ * If address is of the form "y.onion" with a badly-formed handle y:
+ *     Return BAD_HOSTNAME and log a message.
+ *
+ * If address is of the form "y.exit":
+ *     Put a NUL after y and return EXIT_HOSTNAME.
+ *
+ * Otherwise:
+ *     Return NORMAL_HOSTNAME and change nothing.
+ */
+STATIC bool
+parse_extended_hostname(char *address, hostname_type_t *type_out)
+{
+  char *s;
+  char *q;
+  char query[HS_SERVICE_ADDR_LEN_BASE32+1];
+
+  s = strrchr(address,'.');
+  if (!s) {
+    *type_out = NORMAL_HOSTNAME; /* no dot, thus normal */
+    goto success;
+  }
+  if (!strcmp(s+1,"exit")) {
+    *s = 0; /* NUL-terminate it */
+    *type_out = EXIT_HOSTNAME; /* .exit */
+    goto success;
+  }
+  if (strcmp(s+1,"onion")) {
+    *type_out = NORMAL_HOSTNAME; /* neither .exit nor .onion, thus normal */
+    goto success;
+  }
+
+  /* so it is .onion */
+  *s = 0; /* NUL-terminate it */
+  /* locate a 'sub-domain' component, in order to remove it */
+  q = strrchr(address, '.');
+  if (q == address) {
+    *type_out = BAD_HOSTNAME;
+    goto failed; /* reject sub-domain, as DNS does */
+  }
+  q = (NULL == q) ? address : q + 1;
+  if (strlcpy(query, q, HS_SERVICE_ADDR_LEN_BASE32+1) >=
+      HS_SERVICE_ADDR_LEN_BASE32+1) {
+    *type_out = BAD_HOSTNAME;
+    goto failed;
+  }
+  if (q != address) {
+    memmove(address, q, strlen(q) + 1 /* also get \0 */);
+  }
+  /* v2 onion address check. */
+  if (strlen(query) == REND_SERVICE_ID_LEN_BASE32) {
+    *type_out = ONION_V2_HOSTNAME;
+    if (rend_valid_v2_service_id(query)) {
+      goto success;
+    }
+    goto failed;
+  }
+
+  /* v3 onion address check. */
+  if (strlen(query) == HS_SERVICE_ADDR_LEN_BASE32) {
+    *type_out = ONION_V3_HOSTNAME;
+    if (hs_address_is_valid(query)) {
+      goto success;
+    }
+    goto failed;
+  }
+
+  /* Reaching this point, nothing was recognized. */
+  *type_out = BAD_HOSTNAME;
+  goto failed;
+
+ success:
+  return true;
+ failed:
+  /* otherwise, return to previous state and return 0 */
+  *s = '.';
+  log_warn(LD_APP, "Invalid %shostname %s; rejecting",
+      (*type_out == (ONION_V2_HOSTNAME || ONION_V3_HOSTNAME) ? "onion " : ""),
+      safe_str_client(address));
+  return false;
+}
+
 /** How many times do we try connecting with an exit configured via
  * TrackHostExits before concluding that it won't work any more and trying a
  * different one? */
@@ -2020,16 +2116,15 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   const int automap = rr.automap;
   const addressmap_entry_source_t exit_source = rr.exit_source;
 
-  /* Now, we parse the address to see if it's an .onion or .exit or
-   * other special address.
-   */
-  const hostname_type_t addresstype = parse_extended_hostname(socks->address);
-
   /* Now see whether the hostname is bogus.  This could happen because of an
    * onion hostname whose format we don't recognize. */
-  if (addresstype == BAD_HOSTNAME) {
+  hostname_type_t addresstype;
+  if (!parse_extended_hostname(socks->address, &addresstype)) {
     control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                 escaped(socks->address));
+    if (addresstype == ONION_V3_HOSTNAME) {
+      conn->socks_request->socks_extended_error_code = SOCKS5_HS_IS_INVALID;
+    }
     connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
     return -1;
   }
@@ -4310,68 +4405,6 @@ connection_ap_can_use_exit(const entry_connection_t *conn,
   }
 
   return 1;
-}
-
-/** If address is of the form "y.onion" with a well-formed handle y:
- *     Put a NUL after y, lower-case it, and return ONION_V2_HOSTNAME or
- *     ONION_V3_HOSTNAME depending on the HS version.
- *
- *  If address is of the form "x.y.onion" with a well-formed handle x:
- *     Drop "x.", put a NUL after y, lower-case it, and return
- *     ONION_V2_HOSTNAME or ONION_V3_HOSTNAME depending on the HS version.
- *
- * If address is of the form "y.onion" with a badly-formed handle y:
- *     Return BAD_HOSTNAME and log a message.
- *
- * If address is of the form "y.exit":
- *     Put a NUL after y and return EXIT_HOSTNAME.
- *
- * Otherwise:
- *     Return NORMAL_HOSTNAME and change nothing.
- */
-hostname_type_t
-parse_extended_hostname(char *address)
-{
-    char *s;
-    char *q;
-    char query[HS_SERVICE_ADDR_LEN_BASE32+1];
-
-    s = strrchr(address,'.');
-    if (!s)
-      return NORMAL_HOSTNAME; /* no dot, thus normal */
-    if (!strcmp(s+1,"exit")) {
-      *s = 0; /* NUL-terminate it */
-      return EXIT_HOSTNAME; /* .exit */
-    }
-    if (strcmp(s+1,"onion"))
-      return NORMAL_HOSTNAME; /* neither .exit nor .onion, thus normal */
-
-    /* so it is .onion */
-    *s = 0; /* NUL-terminate it */
-    /* locate a 'sub-domain' component, in order to remove it */
-    q = strrchr(address, '.');
-    if (q == address) {
-      goto failed; /* reject sub-domain, as DNS does */
-    }
-    q = (NULL == q) ? address : q + 1;
-    if (strlcpy(query, q, HS_SERVICE_ADDR_LEN_BASE32+1) >=
-        HS_SERVICE_ADDR_LEN_BASE32+1)
-      goto failed;
-    if (q != address) {
-      memmove(address, q, strlen(q) + 1 /* also get \0 */);
-    }
-    if (rend_valid_v2_service_id(query)) {
-      return ONION_V2_HOSTNAME; /* success */
-    }
-    if (hs_address_is_valid(query)) {
-      return ONION_V3_HOSTNAME;
-    }
- failed:
-    /* otherwise, return to previous state and return 0 */
-    *s = '.';
-    log_warn(LD_APP, "Invalid onion hostname %s; rejecting",
-             safe_str_client(address));
-    return BAD_HOSTNAME;
 }
 
 /** Return true iff the (possibly NULL) <b>alen</b>-byte chunk of memory at
