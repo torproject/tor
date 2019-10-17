@@ -260,11 +260,11 @@ m4_define(MODULES, dirauth)
 dnl Directory Authority module.
 AC_ARG_ENABLE([module-dirauth],
               AS_HELP_STRING([--disable-module-dirauth],
-                             [Build tor without the Directory Authority module: tor can not run as a directory authority or bridge authority]),
-              [], dnl Action if-given
-              AC_DEFINE([HAVE_MODULE_DIRAUTH], [1],
-                        [Compile with Directory Authority feature support]))
-AM_CONDITIONAL(BUILD_MODULE_DIRAUTH, [test "x$enable_module_dirauth" != "xno"])
+                             [Build tor without the Directory Authority module: tor can not run as a directory authority or bridge authority]))
+AM_CONDITIONAL(BUILD_MODULE_DIRAUTH,[test "x$enable_module_dirauth" != "xno"])
+AM_COND_IF(BUILD_MODULE_DIRAUTH,
+           AC_DEFINE([HAVE_MODULE_DIRAUTH], [1],
+                     [Compile with Directory Authority feature support]))
 
 dnl Helper variables.
 TOR_MODULES_ALL_ENABLED=
