@@ -114,8 +114,10 @@ typedef struct hs_cache_client_descriptor_t {
    * using the next blinded key of the service. */
   time_t expiration_ts;
 
-  /** The cached descriptor, this object is the owner. It can't be NULL. A
-   * cache object without a valid descriptor is not possible. */
+  /** The cached decoded descriptor, this object is the owner. This can be
+   * NULL if the descriptor couldn't be decoded due to missing or bad client
+   * authorization. It can be decoded later from the encoded_desc object if
+   * the proper client authorization is given tor. */
   hs_descriptor_t *desc;
 
   /** Encoded descriptor in string form. Can't be NULL. */
