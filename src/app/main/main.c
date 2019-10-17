@@ -13,6 +13,7 @@
 
 #include "app/config/config.h"
 #include "app/config/statefile.h"
+#include "app/config/quiet_level.h"
 #include "app/main/main.h"
 #include "app/main/ntmain.h"
 #include "app/main/shutdown.h"
@@ -110,11 +111,11 @@ static void process_signal(int sig);
 
 /********* START VARIABLES **********/
 
-/** Decides our behavior when no logs are configured/before any
- * logs have been configured.  For 0, we log notice to stdout as normal.
- * For 1, we log warnings only.  For 2, we log nothing.
+/** Decides our behavior when no logs are configured/before any logs have been
+ * configured.  For QUIET_NONE, we log notice to stdout as normal.  For
+ * QUIET_HUSH, we log warnings only.  For QUIET_SILENT, we log nothing.
  */
-int quiet_level = 0;
+quiet_level_t quiet_level = 0;
 
 /********* END VARIABLES ************/
 
@@ -528,7 +529,7 @@ int
 tor_init(int argc, char *argv[])
 {
   char progname[256];
-  int quiet = 0;
+  quiet_level_t quiet = QUIET_NONE;
 
   time_of_process_start = time(NULL);
   tor_init_connection_lists();
@@ -558,13 +559,14 @@ tor_init(int argc, char *argv[])
 
  /* give it somewhere to log to initially */
   switch (quiet) {
-    case 2:
+    case QUIET_SILENT:
       /* --quiet: no initial logging */
       break;
-    case 1:
+    case QUIET_HUSH:
       /* --hush: log at warning or higher. */
       add_temp_log(LOG_WARN);
       break;
+    case QUIET_NONE: /* fall through */
     default:
       add_temp_log(LOG_NOTICE);
   }
@@ -1331,7 +1333,7 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
     result = 0;
     break;
   case CMD_VERIFY_CONFIG:
-    if (quiet_level == 0)
+    if (quiet_level == QUIET_NONE)
       printf("Configuration was valid\n");
     result = 0;
     break;

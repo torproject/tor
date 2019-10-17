@@ -14,6 +14,7 @@
 
 #include "app/config/or_options_st.h"
 #include "lib/testsupport/testsupport.h"
+#include "app/config/quiet_level.h"
 
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(DARWIN)
 #define KERNEL_MAY_SUPPORT_IPFW
@@ -208,9 +209,8 @@ typedef struct {
   tor_cmdline_mode_t command;
   /** Argument for the command mode, if any. */
   const char *command_arg;
-  /** How quiet have we been told to be?  1 for "hush", and 2 for "quiet".
-   */
-  int quiet_level;
+  /** How quiet have we been told to be? */
+  quiet_level_t quiet_level;
 } parsed_cmdline_t;
 
 parsed_cmdline_t *config_parse_commandline(int argc, char **argv,
