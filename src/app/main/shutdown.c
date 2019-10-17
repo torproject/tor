@@ -158,6 +158,7 @@ tor_free_all(int postfork)
     release_lockfile();
   }
 
+  subsystems_thread_cleanup();
   subsystems_shutdown();
 
   /* Stuff in util.c and address.c*/
