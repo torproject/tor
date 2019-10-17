@@ -309,6 +309,8 @@ STATIC uint64_t compute_real_max_mem_in_queues(const uint64_t val,
 STATIC int open_and_add_file_log(const log_severity_list_t *severity,
                                  const char *fname,
                                  int truncate_log);
+STATIC int options_init_logs(const or_options_t *old_options,
+                             or_options_t *options, int validate_only);
 
 #endif /* defined(CONFIG_PRIVATE) */
 
