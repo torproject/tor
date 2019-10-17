@@ -1,0 +1,3 @@
+  o Testing:
+    - Simplify the Travis CI build matrix, and optimise for build time.
+      Closes ticket 31859.
