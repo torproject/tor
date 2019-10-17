@@ -678,8 +678,7 @@ test_options_validate__logs(void *ignored)
   tdata->opt->RunAsDaemon = 0;
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_str_op(tdata->opt->Logs->key, OP_EQ, "Log");
-  tt_str_op(tdata->opt->Logs->value, OP_EQ, "notice stdout");
+  tt_assert(!tdata->opt->Logs);
   tor_free(msg);
   tt_int_op(ret, OP_EQ, -1);
 
@@ -689,8 +688,7 @@ test_options_validate__logs(void *ignored)
   tdata->opt->RunAsDaemon = 0;
   quiet_level = 1;
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_str_op(tdata->opt->Logs->key, OP_EQ, "Log");
-  tt_str_op(tdata->opt->Logs->value, OP_EQ, "warn stdout");
+  tt_assert(!tdata->opt->Logs);
   tor_free(msg);
   tt_int_op(ret, OP_EQ, -1);
 
