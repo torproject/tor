@@ -14,6 +14,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/app/main/shutdown.c			\
 	src/app/main/subsystem_list.c		\
 	src/app/main/subsysmgr.c		\
+	src/app/main/tor_threads.c		\
 	src/core/crypto/hs_ntor.c		\
 	src/core/crypto/onion_crypto.c		\
 	src/core/crypto/onion_fast.c		\
@@ -220,6 +221,7 @@ noinst_HEADERS +=					\
 	src/app/main/ntmain.h				\
 	src/app/main/shutdown.h 			\
 	src/app/main/subsysmgr.h			\
+	src/app/main/tor_threads.h			\
 	src/core/crypto/hs_ntor.h			\
 	src/core/crypto/onion_crypto.h	        	\
 	src/core/crypto/onion_fast.h			\

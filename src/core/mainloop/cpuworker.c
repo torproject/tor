@@ -33,6 +33,7 @@
 #include "lib/evloop/workqueue.h"
 #include "core/crypto/onion_crypto.h"
 #include "lib/thread/threads.h"
+#include "app/main/tor_threads.h"
 
 #include "core/or/or_circuit_st.h"
 
@@ -99,7 +100,7 @@ cpu_init(void)
                                 worker_state_new,
                                 worker_state_free_void,
                                 NULL,
-                                spawn_func);
+                                start_tor_thread);
 
     int r = threadpool_register_reply_event(threadpool, NULL);
 
