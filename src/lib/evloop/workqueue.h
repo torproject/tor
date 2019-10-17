@@ -58,7 +58,8 @@ threadpool_t *threadpool_new(int n_threads,
                              void *(*new_thread_state_fn)(void*),
                              void (*free_thread_state_fn)(void*),
                              void *arg,
-                             int (*thread_spawn_fn)(void (*func)(void *), void *data));
+                             int (*thread_spawn_fn)
+                                 (void (*func)(void *), void *data));
 replyqueue_t *threadpool_get_replyqueue(threadpool_t *tp);
 
 replyqueue_t *replyqueue_new(uint32_t alertsocks_flags);
