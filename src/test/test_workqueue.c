@@ -405,7 +405,7 @@ main(int argc, char **argv)
 
   tor_assert(rq);
   tp = threadpool_new(opt_n_threads,
-                      rq, new_state, free_state, NULL);
+                      rq, new_state, free_state, NULL, spawn_func);
   tor_assert(tp);
 
   crypto_seed_weak_rng(&weak_rng);

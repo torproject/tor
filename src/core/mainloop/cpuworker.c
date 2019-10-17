@@ -32,6 +32,7 @@
 #include "feature/relay/router.h"
 #include "lib/evloop/workqueue.h"
 #include "core/crypto/onion_crypto.h"
+#include "lib/thread/threads.h"
 
 #include "core/or/or_circuit_st.h"
 
@@ -97,7 +98,8 @@ cpu_init(void)
                                 replyqueue,
                                 worker_state_new,
                                 worker_state_free_void,
-                                NULL);
+                                NULL,
+                                spawn_func);
 
     int r = threadpool_register_reply_event(threadpool, NULL);
 

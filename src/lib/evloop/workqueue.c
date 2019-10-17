@@ -85,6 +85,9 @@ struct threadpool_s {
   void *(*new_thread_state_fn)(void*);
   void (*free_thread_state_fn)(void*);
   void *new_thread_state_arg;
+
+  /** Function to start a thread. Should return a negative number on error. */
+  int (*thread_spawn_fn)(void (*func)(void *), void *data);
 };
 
 /** Used to put a workqueue_priority_t value into a bitfield. */
@@ -348,7 +351,8 @@ workerthread_new(int32_t lower_priority_chance,
   thr->in_pool = pool;
   thr->lower_priority_chance = lower_priority_chance;
 
-  if (spawn_func(worker_thread_main, thr) < 0) {
+  tor_assert(pool->thread_spawn_fn != NULL);
+  if (pool->thread_spawn_fn(worker_thread_main, thr) < 0) {
     //LCOV_EXCL_START
     tor_assert_nonfatal_unreached();
     log_err(LD_GENERAL, "Can't launch worker thread.");
@@ -542,7 +546,8 @@ threadpool_new(int n_threads,
                replyqueue_t *replyqueue,
                void *(*new_thread_state_fn)(void*),
                void (*free_thread_state_fn)(void*),
-               void *arg)
+               void *arg,
+               int (*thread_spawn_fn)(void (*func)(void *), void *data))
 {
   threadpool_t *pool;
   pool = tor_malloc_zero(sizeof(threadpool_t));
@@ -556,6 +561,7 @@ threadpool_new(int n_threads,
   pool->new_thread_state_fn = new_thread_state_fn;
   pool->new_thread_state_arg = arg;
   pool->free_thread_state_fn = free_thread_state_fn;
+  pool->thread_spawn_fn = thread_spawn_fn;
   pool->reply_queue = replyqueue;
 
   if (threadpool_start_threads(pool, n_threads) < 0) {
