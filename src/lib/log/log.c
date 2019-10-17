@@ -995,18 +995,16 @@ logs_set_domain_logging(int enabled)
   UNLOCK_LOGS();
 }
 
-/** Add a log handler to receive messages during startup (before the real
- * logs are initialized).
+/** Add a log handler to accept messages when no other log is configured.
  */
 void
-add_temp_log(int min_severity)
+add_default_log(int min_severity)
 {
   log_severity_list_t *s = tor_malloc_zero(sizeof(log_severity_list_t));
   set_log_severity_config(min_severity, LOG_ERR, s);
   LOCK_LOGS();
-  add_stream_log_impl(s, "<temp>", fileno(stdout));
+  add_stream_log_impl(s, "<default>", fileno(stdout));
   tor_free(s);
-  logfiles->is_temporary = 1;
   UNLOCK_LOGS();
 }
 
@@ -1149,8 +1147,7 @@ flush_log_messages_from_startup(void)
   UNLOCK_LOGS();
 }
 
-/** Close any log handlers added by add_temp_log() or marked by
- * mark_logs_temp(). */
+/** Close any log handlers marked by mark_logs_temp(). */
 void
 close_temp_logs(void)
 {

@@ -564,11 +564,11 @@ tor_init(int argc, char *argv[])
       break;
     case QUIET_HUSH:
       /* --hush: log at warning or higher. */
-      add_temp_log(LOG_WARN);
+      add_default_log(LOG_WARN);
       break;
     case QUIET_NONE: /* fall through */
     default:
-      add_temp_log(LOG_NOTICE);
+      add_default_log(LOG_NOTICE);
   }
   quiet_level = quiet;
 
