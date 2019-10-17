@@ -1,0 +1,3 @@
+  o Minor feature (configure, build system):
+    - Output enabled/disabled features at the end of the configure process in a
+      pleasing way. Closes ticket 31373.
