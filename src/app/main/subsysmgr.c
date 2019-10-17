@@ -231,6 +231,27 @@ subsystems_postfork(void)
 }
 
 /**
+ * Run thread-init code on all subsystems that declare any
+ **/
+void
+subsystems_thread_init(void)
+{
+  check_and_setup();
+
+  for (int i = (int)n_tor_subsystems - 1; i >= 0; --i) {
+    const subsys_fns_t *sys = tor_subsystems[i];
+    if (!sys->supported)
+      continue;
+    if (! sys_initialized[i])
+      continue;
+    if (sys->thread_init) {
+      log_debug(LD_GENERAL, "Thread init: %s", sys->name);
+      sys->thread_init();
+    }
+  }
+}
+
+/**
  * Run thread-cleanup code on all subsystems that declare any
  **/
 void

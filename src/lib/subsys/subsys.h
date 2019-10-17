@@ -71,6 +71,12 @@ typedef struct subsys_fns_t {
   void (*postfork)(void);
 
   /**
+   * Initialize any thread-local resources held by this subsystem. Called
+   * after the subsystem's global components are initialized.
+   */
+  void (*thread_init)(void);
+
+  /**
    * Free any thread-local resources held by this subsystem. Called before
    * the thread exits.
    */
