@@ -238,7 +238,7 @@ subsystems_thread_init(void)
 {
   check_and_setup();
 
-  for (int i = (int)n_tor_subsystems - 1; i >= 0; --i) {
+  for (unsigned i = 0; i < n_tor_subsystems; ++i) {
     const subsys_fns_t *sys = tor_subsystems[i];
     if (!sys->supported)
       continue;
