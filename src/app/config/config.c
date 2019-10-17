@@ -885,12 +885,8 @@ static or_options_t *global_default_options = NULL;
 static char *torrc_fname = NULL;
 /** Name of the most recently read torrc-defaults file.*/
 static char *torrc_defaults_fname = NULL;
-/** Configuration options set by command line. */
-static config_line_t *global_cmdline_options = NULL;
-/** Non-configuration options set by the command line */
-static config_line_t *global_cmdline_only_options = NULL;
-/** Boolean: Have we parsed the command line? */
-static int have_parsed_cmdline = 0;
+/** Result of parsing the command line. */
+static parsed_cmdline_t *global_cmdline = NULL;
 /** Contents of most recently read DirPortFrontPage file. */
 static char *global_dirfrontpagecontents = NULL;
 /** List of port_cfg_t for all configured ports. */
@@ -1064,11 +1060,7 @@ config_free_all(void)
   or_options_free(global_default_options);
   global_default_options = NULL;
 
-  config_free_lines(global_cmdline_options);
-  global_cmdline_options = NULL;
-
-  config_free_lines(global_cmdline_only_options);
-  global_cmdline_only_options = NULL;
+  parsed_cmdline_free(global_cmdline);
 
   if (configured_ports) {
     SMARTLIST_FOREACH(configured_ports,
@@ -1083,7 +1075,6 @@ config_free_all(void)
 
   cleanup_protocol_warning_severity_level();
 
-  have_parsed_cmdline = 0;
   libevent_initialized = 0;
 
   config_mgr_free(options_mgr);
@@ -2447,60 +2438,102 @@ options_act(const or_options_t *old_options)
   return 0;
 }
 
+/**
+ * Enumeration to describe the syntax for a command-line option.
+ **/
 typedef enum {
-  TAKES_NO_ARGUMENT = 0,
+  /** Describe an option that does not take an argument. */
+  ARGUMENT_NONE = 0,
+  /** Describes an option that takes a single argument. */
   ARGUMENT_NECESSARY = 1,
+  /** Describes an option that takes a single optional argument. */
   ARGUMENT_OPTIONAL = 2
 } takes_argument_t;
 
+/** Table describing arguments that Tor accepts on the command line,
+ * other than those that are the same as in torrc. */
 static const struct {
+  /** The string that the user has to provide. */
   const char *name;
+  /** Does this option accept an argument? */
   takes_argument_t takes_argument;
+  /** If not CMD_RUN_TOR, what should Tor do when it starts? */
+  tor_cmdline_mode_t command;
+  /** If nonzero, set the quiet level to this. 1 is "hush", 2 is "quiet" */
+  int quiet;
 } CMDLINE_ONLY_OPTIONS[] = {
-  { "-f",                     ARGUMENT_NECESSARY },
-  { "--allow-missing-torrc",  TAKES_NO_ARGUMENT },
-  { "--defaults-torrc",       ARGUMENT_NECESSARY },
-  { "--hash-password",        ARGUMENT_NECESSARY },
-  { "--dump-config",          ARGUMENT_OPTIONAL },
-  { "--list-fingerprint",     TAKES_NO_ARGUMENT },
-  { "--keygen",               TAKES_NO_ARGUMENT },
-  { "--key-expiration",       ARGUMENT_OPTIONAL },
-  { "--newpass",              TAKES_NO_ARGUMENT },
-  { "--no-passphrase",        TAKES_NO_ARGUMENT },
-  { "--passphrase-fd",        ARGUMENT_NECESSARY },
-  { "--verify-config",        TAKES_NO_ARGUMENT },
-  { "--ignore-missing-torrc", TAKES_NO_ARGUMENT },
-  { "--quiet",                TAKES_NO_ARGUMENT },
-  { "--hush",                 TAKES_NO_ARGUMENT },
-  { "--version",              TAKES_NO_ARGUMENT },
-  { "--list-modules",         TAKES_NO_ARGUMENT },
-  { "--library-versions",     TAKES_NO_ARGUMENT },
-  { "-h",                     TAKES_NO_ARGUMENT },
-  { "--help",                 TAKES_NO_ARGUMENT },
-  { "--list-torrc-options",   TAKES_NO_ARGUMENT },
-  { "--list-deprecated-options",TAKES_NO_ARGUMENT },
-  { "--nt-service",           TAKES_NO_ARGUMENT },
-  { "-nt-service",            TAKES_NO_ARGUMENT },
-  { NULL, 0 },
+  { .name="-f",
+    .takes_argument=ARGUMENT_NECESSARY },
+  { .name="--allow-missing-torrc" },
+  { .name="--defaults-torrc",
+    .takes_argument=ARGUMENT_NECESSARY },
+  { .name="--hash-password",
+    .takes_argument=ARGUMENT_NECESSARY,
+    .command=CMD_HASH_PASSWORD,
+    .quiet=QUIET_HUSH  },
+  { .name="--dump-config",
+    .takes_argument=ARGUMENT_OPTIONAL,
+    .command=CMD_DUMP_CONFIG,
+    .quiet=QUIET_SILENT },
+  { .name="--list-fingerprint",
+    .command=CMD_LIST_FINGERPRINT },
+  { .name="--keygen",
+    .command=CMD_KEYGEN },
+  { .name="--key-expiration",
+    .takes_argument=ARGUMENT_OPTIONAL,
+    .command=CMD_KEY_EXPIRATION },
+  { .name="--newpass" },
+  { .name="--no-passphrase" },
+  { .name="--passphrase-fd",
+    .takes_argument=ARGUMENT_NECESSARY },
+  { .name="--verify-config",
+    .command=CMD_VERIFY_CONFIG },
+  { .name="--ignore-missing-torrc" },
+  { .name="--quiet",
+    .quiet=QUIET_SILENT },
+  { .name="--hush",
+    .quiet=QUIET_HUSH },
+  { .name="--version",
+    .command=CMD_IMMEDIATE,
+    .quiet=QUIET_HUSH },
+  { .name="--list-modules",
+    .command=CMD_IMMEDIATE,
+    .quiet=QUIET_HUSH },
+  { .name="--library-versions",
+    .command=CMD_IMMEDIATE,
+    .quiet=QUIET_HUSH },
+  { .name="-h",
+    .command=CMD_IMMEDIATE,
+    .quiet=QUIET_HUSH },
+  { .name="--help",
+    .command=CMD_IMMEDIATE,
+    .quiet=QUIET_HUSH  },
+  { .name="--list-torrc-options",
+    .command=CMD_IMMEDIATE,
+    .quiet=QUIET_HUSH },
+  { .name="--list-deprecated-options",
+    .command=CMD_IMMEDIATE },
+  { .name="--nt-service" },
+  { .name="-nt-service" },
+  { .name=NULL },
 };
 
 /** Helper: Read a list of configuration options from the command line.  If
- * successful, or if ignore_errors is set, put them in *<b>result</b>, put the
- * commandline-only options in *<b>cmdline_result</b>, and return 0;
- * otherwise, return -1 and leave *<b>result</b> and <b>cmdline_result</b>
- * alone. */
-int
-config_parse_commandline(int argc, char **argv, int ignore_errors,
-                         config_line_t **result,
-                         config_line_t **cmdline_result)
+ * successful, return a newly allocated parsed_cmdline_t; otherwise return
+ * NULL.
+ *
+ * If <b>ignore_errors</b> is set, try to recover from all recoverable
+ * errors and return the best command line we can.
+ */
+parsed_cmdline_t *
+config_parse_commandline(int argc, char **argv, int ignore_errors)
 {
+  parsed_cmdline_t *result = tor_malloc_zero(sizeof(parsed_cmdline_t));
+  result->command = CMD_RUN_TOR;
   config_line_t *param = NULL;
 
-  config_line_t *front = NULL;
-  config_line_t **new = &front;
-
-  config_line_t *front_cmdline = NULL;
-  config_line_t **new_cmdline = &front_cmdline;
+  config_line_t **new_cmdline = &result->cmdline_opts;
+  config_line_t **new = &result->other_opts;
 
   char *s, *arg;
   int i = 1;
@@ -2510,11 +2543,19 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
     takes_argument_t want_arg = ARGUMENT_NECESSARY;
     int is_cmdline = 0;
     int j;
+    bool is_a_command = false;
 
     for (j = 0; CMDLINE_ONLY_OPTIONS[j].name != NULL; ++j) {
       if (!strcmp(argv[i], CMDLINE_ONLY_OPTIONS[j].name)) {
         is_cmdline = 1;
         want_arg = CMDLINE_ONLY_OPTIONS[j].takes_argument;
+        if (CMDLINE_ONLY_OPTIONS[j].command != CMD_RUN_TOR) {
+          is_a_command = true;
+          result->command = CMDLINE_ONLY_OPTIONS[j].command;
+        }
+        quiet_level_t quiet = CMDLINE_ONLY_OPTIONS[j].quiet;
+        if (quiet > result->quiet_level)
+          result->quiet_level = quiet;
         break;
       }
     }
@@ -2545,14 +2586,13 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
       } else {
         log_warn(LD_CONFIG,"Command-line option '%s' with no value. Failing.",
             argv[i]);
-        config_free_lines(front);
-        config_free_lines(front_cmdline);
-        return -1;
+        parsed_cmdline_free(result);
+        return NULL;
       }
     } else if (want_arg == ARGUMENT_OPTIONAL && is_last) {
       arg = tor_strdup("");
     } else {
-      arg = (want_arg != TAKES_NO_ARGUMENT) ? tor_strdup(argv[i+1]) :
+      arg = (want_arg != ARGUMENT_NONE) ? tor_strdup(argv[i+1]) :
                                               tor_strdup("");
     }
 
@@ -2565,6 +2605,10 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
     log_debug(LD_CONFIG, "command line: parsed keyword '%s', value '%s'",
         param->key, param->value);
 
+    if (is_a_command) {
+      result->command_arg = param->value;
+    }
+
     if (is_cmdline) {
       *new_cmdline = param;
       new_cmdline = &((*new_cmdline)->next);
@@ -2575,9 +2619,19 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
 
     i += want_arg ? 2 : 1;
   }
-  *cmdline_result = front_cmdline;
-  *result = front;
-  return 0;
+
+  return result;
+}
+
+/** Release all storage held by <b>cmdline</b>. */
+void
+parsed_cmdline_free_(parsed_cmdline_t *cmdline)
+{
+  if (!cmdline)
+    return;
+  config_free_lines(cmdline->cmdline_opts);
+  config_free_lines(cmdline->other_opts);
+  tor_free(cmdline);
 }
 
 /** Return true iff key is a valid configuration option. */
@@ -3006,7 +3060,9 @@ is_local_addr, (const tor_addr_t *addr))
 or_options_t *
 options_new(void)
 {
-  return config_new(get_options_mgr());
+  or_options_t *options = config_new(get_options_mgr());
+  options->command = CMD_RUN_TOR;
+  return options;
 }
 
 /** Set <b>options</b> to hold reasonable defaults for most options.
@@ -5048,12 +5104,12 @@ normalize_nickname_list(config_line_t **normalized_out,
  * filename if it doesn't exist.
  */
 static char *
-find_torrc_filename(config_line_t *cmd_arg,
+find_torrc_filename(const config_line_t *cmd_arg,
                     int defaults_file,
                     int *using_default_fname, int *ignore_missing_torrc)
 {
   char *fname=NULL;
-  config_line_t *p_index;
+  const config_line_t *p_index;
   const char *fname_opt = defaults_file ? "--defaults-torrc" : "-f";
   const char *ignore_opt = defaults_file ? NULL : "--ignore-missing-torrc";
 
@@ -5132,7 +5188,7 @@ load_torrc_from_stdin(void)
  * Return the contents of the file on success, and NULL on failure.
  */
 static char *
-load_torrc_from_disk(config_line_t *cmd_arg, int defaults_file)
+load_torrc_from_disk(const config_line_t *cmd_arg, int defaults_file)
 {
   char *fname=NULL;
   char *cf = NULL;
@@ -5187,24 +5243,20 @@ int
 options_init_from_torrc(int argc, char **argv)
 {
   char *cf=NULL, *cf_defaults=NULL;
-  int command;
   int retval = -1;
-  char *command_arg = NULL;
   char *errmsg=NULL;
-  config_line_t *p_index = NULL;
-  config_line_t *cmdline_only_options = NULL;
+  const config_line_t *cmdline_only_options;
 
   /* Go through command-line variables */
-  if (! have_parsed_cmdline) {
+  if (global_cmdline == NULL) {
     /* Or we could redo the list every time we pass this place.
      * It does not really matter */
-    if (config_parse_commandline(argc, argv, 0, &global_cmdline_options,
-                                 &global_cmdline_only_options) < 0) {
+    global_cmdline = config_parse_commandline(argc, argv, 0);
+    if (global_cmdline == NULL) {
       goto err;
     }
-    have_parsed_cmdline = 1;
   }
-  cmdline_only_options = global_cmdline_only_options;
+  cmdline_only_options = global_cmdline->cmdline_opts;
 
   if (config_line_find(cmdline_only_options, "-h") ||
       config_line_find(cmdline_only_options, "--help")) {
@@ -5267,25 +5319,10 @@ options_init_from_torrc(int argc, char **argv)
     return 1;
   }
 
-  command = CMD_RUN_TOR;
-  for (p_index = cmdline_only_options; p_index; p_index = p_index->next) {
-    if (!strcmp(p_index->key,"--keygen")) {
-      command = CMD_KEYGEN;
-    } else if (!strcmp(p_index->key, "--key-expiration")) {
-      command = CMD_KEY_EXPIRATION;
-      command_arg = p_index->value;
-    } else if (!strcmp(p_index->key,"--list-fingerprint")) {
-      command = CMD_LIST_FINGERPRINT;
-    } else if (!strcmp(p_index->key, "--hash-password")) {
-      command = CMD_HASH_PASSWORD;
-      command_arg = p_index->value;
-    } else if (!strcmp(p_index->key, "--dump-config")) {
-      command = CMD_DUMP_CONFIG;
-      command_arg = p_index->value;
-    } else if (!strcmp(p_index->key, "--verify-config")) {
-      command = CMD_VERIFY_CONFIG;
-    }
-  }
+  int command = global_cmdline->command;
+  const char *command_arg = global_cmdline->command_arg;
+  /* "immediate" has already been handled by this point. */
+  tor_assert(command != CMD_IMMEDIATE);
 
   if (command == CMD_HASH_PASSWORD) {
     cf_defaults = tor_strdup("");
@@ -5453,8 +5490,15 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   }
 
   /* Go through command-line variables too */
-  retval = config_assign(get_options_mgr(), newoptions,
-                         global_cmdline_options, CAL_WARN_DEPRECATIONS, msg);
+  {
+    config_line_t *other_opts = NULL;
+    if (global_cmdline) {
+      other_opts = global_cmdline->other_opts;
+    }
+    retval = config_assign(get_options_mgr(), newoptions,
+                           other_opts,
+                           CAL_WARN_DEPRECATIONS, msg);
+  }
   if (retval < 0) {
     err = SETOPT_ERR_PARSE;
     goto err;

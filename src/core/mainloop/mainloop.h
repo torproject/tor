@@ -94,7 +94,6 @@ void tor_mainloop_free_all(void);
 struct token_bucket_rw_t;
 
 extern time_t time_of_process_start;
-extern int quiet_level;
 extern struct token_bucket_rw_t global_bucket;
 extern struct token_bucket_rw_t global_relayed_bucket;
 

@@ -14,6 +14,7 @@
 
 #include "app/config/or_options_st.h"
 #include "lib/testsupport/testsupport.h"
+#include "app/config/quiet_level.h"
 
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(DARWIN)
 #define KERNEL_MAY_SUPPORT_IPFW
@@ -197,9 +198,26 @@ int init_cookie_authentication(const char *fname, const char *header,
 
 or_options_t *options_new(void);
 
-int config_parse_commandline(int argc, char **argv, int ignore_errors,
-                             struct config_line_t **result,
-                             struct config_line_t **cmdline_result);
+/** Options settings parsed from the command-line. */
+typedef struct {
+  /** List of options that can only be set from the command-line */
+  struct config_line_t *cmdline_opts;
+  /** List of other options, to be handled by the general Tor configuration
+      system. */
+  struct config_line_t *other_opts;
+  /** Subcommand that Tor has been told to run */
+  tor_cmdline_mode_t command;
+  /** Argument for the command mode, if any. */
+  const char *command_arg;
+  /** How quiet have we been told to be? */
+  quiet_level_t quiet_level;
+} parsed_cmdline_t;
+
+parsed_cmdline_t *config_parse_commandline(int argc, char **argv,
+                                           int ignore_errors);
+void parsed_cmdline_free_(parsed_cmdline_t *cmdline);
+#define parsed_cmdline_free(c) \
+  FREE_AND_NULL(parsed_cmdline_t, parsed_cmdline_free_, (c))
 
 void config_register_addressmaps(const or_options_t *options);
 /* XXXX move to connection_edge.h */

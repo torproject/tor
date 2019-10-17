@@ -13,6 +13,7 @@
 
 #include "app/config/config.h"
 #include "app/config/statefile.h"
+#include "app/config/quiet_level.h"
 #include "app/main/main.h"
 #include "app/main/ntmain.h"
 #include "app/main/shutdown.h"
@@ -110,11 +111,11 @@ static void process_signal(int sig);
 
 /********* START VARIABLES **********/
 
-/** Decides our behavior when no logs are configured/before any
- * logs have been configured.  For 0, we log notice to stdout as normal.
- * For 1, we log warnings only.  For 2, we log nothing.
+/** Decides our behavior when no logs are configured/before any logs have been
+ * configured.  For QUIET_NONE, we log notice to stdout as normal.  For
+ * QUIET_HUSH, we log warnings only.  For QUIET_SILENT, we log nothing.
  */
-int quiet_level = 0;
+quiet_level_t quiet_level = 0;
 
 /********* END VARIABLES ************/
 
@@ -528,7 +529,7 @@ int
 tor_init(int argc, char *argv[])
 {
   char progname[256];
-  int quiet = 0;
+  quiet_level_t quiet = QUIET_NONE;
 
   time_of_process_start = time(NULL);
   tor_init_connection_lists();
@@ -547,40 +548,25 @@ tor_init(int argc, char *argv[])
   hs_init();
 
   {
-  /* We search for the "quiet" option first, since it decides whether we
-   * will log anything at all to the command line. */
-    config_line_t *opts = NULL, *cmdline_opts = NULL;
-    const config_line_t *cl;
-    (void) config_parse_commandline(argc, argv, 1, &opts, &cmdline_opts);
-    for (cl = cmdline_opts; cl; cl = cl->next) {
-      if (!strcmp(cl->key, "--hush"))
-        quiet = 1;
-      if (!strcmp(cl->key, "--quiet") ||
-          !strcmp(cl->key, "--dump-config"))
-        quiet = 2;
-      /* The following options imply --hush */
-      if (!strcmp(cl->key, "--version") || !strcmp(cl->key, "--digests") ||
-          !strcmp(cl->key, "--list-torrc-options") ||
-          !strcmp(cl->key, "--library-versions") ||
-          !strcmp(cl->key, "--list-modules") ||
-          !strcmp(cl->key, "--hash-password") ||
-          !strcmp(cl->key, "-h") || !strcmp(cl->key, "--help")) {
-        if (quiet < 1)
-          quiet = 1;
-      }
-    }
-    config_free_lines(opts);
-    config_free_lines(cmdline_opts);
+    /* We check for the "quiet"/"hush" settings first, since they decide
+       whether we log anything at all to stdout. */
+    parsed_cmdline_t *cmdline;
+    cmdline = config_parse_commandline(argc, argv, 1);
+    if (cmdline)
+      quiet = cmdline->quiet_level;
+    parsed_cmdline_free(cmdline);
   }
 
  /* give it somewhere to log to initially */
   switch (quiet) {
-    case 2:
-      /* no initial logging */
+    case QUIET_SILENT:
+      /* --quiet: no initial logging */
       break;
-    case 1:
+    case QUIET_HUSH:
+      /* --hush: log at warning or higher. */
       add_temp_log(LOG_WARN);
       break;
+    case QUIET_NONE: /* fall through */
     default:
       add_temp_log(LOG_NOTICE);
   }
@@ -1347,7 +1333,7 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
     result = 0;
     break;
   case CMD_VERIFY_CONFIG:
-    if (quiet_level == 0)
+    if (quiet_level == QUIET_NONE)
       printf("Configuration was valid\n");
     result = 0;
     break;
@@ -1355,6 +1341,7 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
     result = do_dump_config();
     break;
   case CMD_RUN_UNITTESTS: /* only set by test.c */
+  case CMD_IMMEDIATE: /* Handled in config.c */
   default:
     log_warn(LD_BUG,"Illegal command number %d: internal error.",
              get_options()->command);

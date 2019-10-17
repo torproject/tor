@@ -215,7 +215,9 @@ noinst_HEADERS +=					\
 	src/app/config/config.h				\
 	src/app/config/or_options_st.h			\
 	src/app/config/or_state_st.h			\
+	src/app/config/quiet_level.h			\
 	src/app/config/statefile.h			\
+	src/app/config/tor_cmdline_mode.h		\
 	src/app/main/main.h				\
 	src/app/main/ntmain.h				\
 	src/app/main/shutdown.h 			\
