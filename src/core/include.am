@@ -9,6 +9,7 @@ endif
 # ADD_C_FILE: INSERT SOURCES HERE.
 LIBTOR_APP_A_SOURCES = 				\
 	src/app/config/config.c			\
+	src/app/config/quiet_level.c		\
 	src/app/config/statefile.c		\
 	src/app/main/main.c			\
 	src/app/main/shutdown.c			\

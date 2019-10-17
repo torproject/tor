@@ -25,4 +25,6 @@ typedef enum {
 /** How quietly should Tor log at startup? */
 extern quiet_level_t quiet_level;
 
+void add_default_log_for_quiet_level(quiet_level_t quiet);
+
 #endif /* !defined(QUIET_LEVEL_H) */
