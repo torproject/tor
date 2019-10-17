@@ -3428,20 +3428,17 @@ options_validate_single_onion(or_options_t *options, char **msg)
  * normalizing the contents of <b>options</b>.
  *
  * On error, tor_strdup an error explanation into *<b>msg</b>.
- *
- * XXX
- * If <b>from_setconf</b>, we were called by the controller, and our
- * Log line should stay empty. If it's 0, then give us a default log
- * if there are no logs defined.
  */
 STATIC int
 options_validate(or_options_t *old_options, or_options_t *options,
-                 or_options_t *default_options, int from_setconf, char **msg)
+                 or_options_t *default_options, int from_setconf_unused,
+                 char **msg)
 {
   config_line_t *cl;
   const char *uname = get_uname();
   int n_ports=0;
   int world_writable_control_socket=0;
+  (void)from_setconf_unused; /* 29211 TODO: Remove this from the API. */
 
   tor_assert(msg);
   *msg = NULL;
@@ -3503,14 +3500,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("ContactInfo config option must be UTF-8.");
 
   check_network_configuration(server_mode(options));
-
-  /* Special case on first boot if no Log options are given. */
-  if (!options->Logs && !options->RunAsDaemon && !from_setconf) {
-    if (quiet_level == 0)
-      config_line_append(&options->Logs, "Log", "notice stdout");
-    else if (quiet_level == 1)
-      config_line_append(&options->Logs, "Log", "warn stdout");
-  }
 
   /* Validate the tor_log(s) */
   if (options_init_logs(old_options, options, 1)<0)
@@ -5732,6 +5721,12 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
 
   ok = 1;
   elts = smartlist_new();
+
+  if (options->Logs == NULL && !run_as_daemon && !validate_only) {
+    /* When no logs are given, the default behavior is to log nothing (if
+       RunAsDaemon is set) or to log based on the quiet level otherwise. */
+    add_default_log_for_quiet_level(quiet_level);
+  }
 
   for (opt = options->Logs; opt; opt = opt->next) {
     log_severity_list_t *severity;
