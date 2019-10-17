@@ -101,7 +101,7 @@ MAINT_041=( "maint-0.4.1" "maint-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.1" \
 MAINT_042=( "maint-0.4.2" "maint-0.4.1" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.2" \
     "_042" "_041")
 MAINT_MASTER=( "master" "maint-0.4.2" "$GIT_PATH/$TOR_MASTER_NAME" \
-    "_master" "_041")
+    "_master" "_042")
 
 RELEASE_029=( "release-0.2.9" "maint-0.2.9" "$GIT_PATH/$TOR_WKT_NAME/release-0.2.9" )
 RELEASE_035=( "release-0.3.5" "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/release-0.3.5" )
@@ -333,7 +333,7 @@ function merge_branch
   fi
 }
 
-# Pull the given branch name.
+# Merge origin/(branch name) into the current branch.
 function merge_branch_origin
 {
   local cmd="git merge --ff-only 'origin/$1'"
