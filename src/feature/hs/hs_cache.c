@@ -389,7 +389,7 @@ lookup_v3_desc_as_client(const uint8_t *key)
 }
 
 /** Parse the encoded descriptor in <b>desc_str</b> using
- * <b>service_identity_pk<b> to decrypt it first.
+ * <b>service_identity_pk</b> to decrypt it first.
  *
  * If everything goes well, allocate and return a new
  * hs_cache_client_descriptor_t object. In case of error, return NULL. */
@@ -664,7 +664,7 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
   return 0;
 }
 
-/** Return true iff the cached client descriptor at <b>cached_desc</b has
+/** Return true iff the cached client descriptor at <b>cached_desc</b> has
  * expired. */
 static int
 cached_client_descriptor_has_expired(time_t now,
