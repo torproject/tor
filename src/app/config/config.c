@@ -836,8 +836,6 @@ static int check_server_ports(const smartlist_t *ports,
 static int validate_data_directories(or_options_t *options);
 static int write_configuration_file(const char *fname,
                                     const or_options_t *options);
-static int options_init_logs(const or_options_t *old_options,
-                             or_options_t *options, int validate_only);
 
 static void init_libevent(const or_options_t *options);
 static int opt_streq(const char *s1, const char *s2);
@@ -5676,7 +5674,7 @@ open_and_add_file_log(const log_severity_list_t *severity,
 /**
  * Initialize the logs based on the configuration file.
  */
-static int
+STATIC int
 options_init_logs(const or_options_t *old_options, or_options_t *options,
                   int validate_only)
 {
