@@ -260,11 +260,11 @@ m4_define(MODULES, dirauth)
 dnl Directory Authority module.
 AC_ARG_ENABLE([module-dirauth],
               AS_HELP_STRING([--disable-module-dirauth],
-                             [Build tor without the Directory Authority module: tor can not run as an authority]),
-              [], dnl Action if-given
-              AC_DEFINE([HAVE_MODULE_DIRAUTH], [1],
-                        [Compile with Directory Authority feature support]))
-AM_CONDITIONAL(BUILD_MODULE_DIRAUTH, [test "x$enable_module_dirauth" != "xno"])
+                             [Build tor without the Directory Authority module: tor can not run as a directory authority or bridge authority]))
+AM_CONDITIONAL(BUILD_MODULE_DIRAUTH,[test "x$enable_module_dirauth" != "xno"])
+AM_COND_IF(BUILD_MODULE_DIRAUTH,
+           AC_DEFINE([HAVE_MODULE_DIRAUTH], [1],
+                     [Compile with Directory Authority feature support]))
 
 dnl Helper variables.
 TOR_MODULES_ALL_ENABLED=
@@ -1896,8 +1896,7 @@ if test "$tor_cv_uint8_uchar" = "no"; then
 fi
 
 AC_ARG_WITH(tcmalloc,
-AS_HELP_STRING(--with-tcmalloc, [use tcmalloc memory allocation library. Deprecated; see --with-malloc]),
-[ tcmalloc=yes ], [ tcmalloc=no ])
+AS_HELP_STRING(--with-tcmalloc, [use tcmalloc memory allocation library. Deprecated; see --with-malloc]))
 
 default_malloc=system
 
@@ -1906,7 +1905,7 @@ if test "x$enable_openbsd_malloc" = "xyes" ; then
   default_malloc=openbsd
 fi
 
-if test "x$tcmalloc" = "xyes"; then
+if test "x$with_tcmalloc" = "xyes"; then
   AC_MSG_NOTICE([The --with-tcmalloc argument is deprecated; use --with-malloc=tcmalloc instead.])
   default_malloc=tcmalloc
 fi
@@ -1937,7 +1936,7 @@ AS_CASE([$malloc],
 			have_jemalloc=yes,
 			have_jemalloc=no)
 
-      if test "x$have_tcmalloc" = "xno" ; then
+      if test "x$have_jemalloc" = "xno" ; then
           AC_MSG_ERROR([Unable to find jemalloc requested by --with-malloc, $pkg_config_user_action, or set JEMALLOC_CFLAGS and JEMALLOC_LIBS.])
       fi
 
