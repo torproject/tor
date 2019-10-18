@@ -503,8 +503,8 @@ build_establish_intro_dos_extension(const hs_service_config_t *service_config,
   ssize_t ret;
   size_t dos_ext_encoded_len;
   uint8_t *field_array;
-  trn_cell_extension_field_t *field;
-  trn_cell_extension_dos_t *dos_ext;
+  trn_cell_extension_field_t *field = NULL;
+  trn_cell_extension_dos_t *dos_ext = NULL;
 
   tor_assert(service_config);
   tor_assert(extensions);
@@ -530,7 +530,7 @@ build_establish_intro_dos_extension(const hs_service_config_t *service_config,
   /* Set the field with the encoded DoS extension. */
   ret = trn_cell_extension_dos_encoded_len(dos_ext);
   if (BUG(ret <= 0)) {
-    return -1;
+    goto err;
   }
   dos_ext_encoded_len = ret;
   /* Set length field and the field array size length. */
@@ -541,7 +541,7 @@ build_establish_intro_dos_extension(const hs_service_config_t *service_config,
   ret = trn_cell_extension_dos_encode(field_array,
                  trn_cell_extension_field_getlen_field(field), dos_ext);
   if (BUG(ret <= 0)) {
-    return -1;
+    goto err;
   }
   tor_assert(ret == (ssize_t) dos_ext_encoded_len);
 
@@ -557,6 +557,11 @@ build_establish_intro_dos_extension(const hs_service_config_t *service_config,
   trn_cell_extension_dos_free(dos_ext);
 
   return 0;
+
+ err:
+  trn_cell_extension_field_free(field);
+  trn_cell_extension_dos_free(dos_ext);
+  return -1;
 }
 
 /* ========== */
