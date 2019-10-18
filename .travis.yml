@@ -54,6 +54,8 @@ matrix:
     - env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
     ## We check asciidoc with distcheck, to make sure we remove doc products
     - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
+    ## We check disable module relay
+    - env: MODULES_OPTIONS="--disable-module-relay"
     ## We check disable module dirauth
     - env: MODULES_OPTIONS="--disable-module-dirauth"
     ## We run rust on macOS, because we have seen macOS rust failures before
