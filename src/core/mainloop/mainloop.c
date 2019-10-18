@@ -71,6 +71,7 @@
 #include "feature/client/bridges.h"
 #include "feature/client/dnsserv.h"
 #include "feature/client/entrynodes.h"
+#include "feature/client/proxymode.h"
 #include "feature/client/transports.h"
 #include "feature/control/control.h"
 #include "feature/control/control_events.h"
