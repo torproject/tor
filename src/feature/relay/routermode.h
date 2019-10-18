@@ -12,6 +12,8 @@
 #ifndef TOR_ROUTERMODE_H
 #define TOR_ROUTERMODE_H
 
+#ifdef HAVE_MODULE_RELAY
+
 int dir_server_mode(const or_options_t *options);
 
 MOCK_DECL(int, server_mode, (const or_options_t *options));
@@ -19,5 +21,22 @@ MOCK_DECL(int, public_server_mode, (const or_options_t *options));
 MOCK_DECL(int, advertised_server_mode, (void));
 
 void set_server_advertised(int s);
+
+/* Is the relay module enabled? */
+#define have_module_relay() (1)
+
+#else
+
+#define dir_server_mode(options) (((void)(options)),0)
+#define server_mode(options) (((void)(options)),0)
+#define public_server_mode(options) (((void)(options)),0)
+#define advertised_server_mode() (0)
+
+/* We shouldn't be publishing descriptors when relay mode is disabled. */
+#define set_server_advertised(s) tor_assert_nonfatal(!(s))
+
+#define have_module_relay() (0)
+
+#endif
 
 #endif /* !defined(TOR_ROUTERMODE_H) */
