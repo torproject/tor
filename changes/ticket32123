@@ -1,0 +1,5 @@
+  o Major features (build system):
+    - Create an optional relay module, which can be disabled using the
+      --disable-module-relay configure option. When it is set, also disable
+      the dirauth module. Add a minimal implemention, which disables the
+      relay and dircache modes in tor. Closes ticket 32123.
