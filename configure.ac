@@ -1894,8 +1894,7 @@ if test "$tor_cv_uint8_uchar" = "no"; then
 fi
 
 AC_ARG_WITH(tcmalloc,
-AS_HELP_STRING(--with-tcmalloc, [use tcmalloc memory allocation library. Deprecated; see --with-malloc]),
-[ tcmalloc=yes ], [ tcmalloc=no ])
+AS_HELP_STRING(--with-tcmalloc, [use tcmalloc memory allocation library. Deprecated; see --with-malloc]))
 
 default_malloc=system
 
@@ -1904,7 +1903,7 @@ if test "x$enable_openbsd_malloc" = "xyes" ; then
   default_malloc=openbsd
 fi
 
-if test "x$tcmalloc" = "xyes"; then
+if test "x$with_tcmalloc" = "xyes"; then
   AC_MSG_NOTICE([The --with-tcmalloc argument is deprecated; use --with-malloc=tcmalloc instead.])
   default_malloc=tcmalloc
 fi
