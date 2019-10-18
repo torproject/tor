@@ -17,7 +17,6 @@ int dir_server_mode(const or_options_t *options);
 MOCK_DECL(int, server_mode, (const or_options_t *options));
 MOCK_DECL(int, public_server_mode, (const or_options_t *options));
 MOCK_DECL(int, advertised_server_mode, (void));
-int proxy_mode(const or_options_t *options);
 
 void set_server_advertised(int s);
 
