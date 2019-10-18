@@ -1936,7 +1936,7 @@ AS_CASE([$malloc],
 			have_jemalloc=yes,
 			have_jemalloc=no)
 
-      if test "x$have_tcmalloc" = "xno" ; then
+      if test "x$have_jemalloc" = "xno" ; then
           AC_MSG_ERROR([Unable to find jemalloc requested by --with-malloc, $pkg_config_user_action, or set JEMALLOC_CFLAGS and JEMALLOC_LIBS.])
       fi
 
