@@ -311,7 +311,7 @@ problem function-size /src/lib/net/inaddr.c:tor_inet_pton() 107
 problem function-size /src/lib/net/socketpair.c:tor_ersatz_socketpair() 102
 problem function-size /src/lib/osinfo/uname.c:get_uname() 116
 problem function-size /src/lib/process/process_unix.c:process_unix_exec() 220
-problem function-size /src/lib/process/process_win32.c:process_win32_exec() 133
+problem function-size /src/lib/process/process_win32.c:process_win32_exec() 151
 problem function-size /src/lib/process/process_win32.c:process_win32_create_pipe() 109
 problem function-size /src/lib/process/restrict.c:set_max_file_descriptors() 102
 problem function-size /src/lib/process/setuid.c:switch_id() 156
