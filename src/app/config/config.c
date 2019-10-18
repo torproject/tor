@@ -2757,6 +2757,7 @@ list_deprecated_options(void)
 static void
 list_enabled_modules(void)
 {
+  printf("%s: %s\n", "relay", have_module_relay() ? "yes" : "no");
   printf("%s: %s\n", "dirauth", have_module_dirauth() ? "yes" : "no");
 }
 
