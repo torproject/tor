@@ -1,0 +1,7 @@
+  o Minor bugfixes (build system):
+    - Stop failing when jemalloc is requested, but tcmalloc is not found.
+      Fixes bug 32124; bugfix on 0.3.5.1-alpha.
+    - Interpret --disable-module-dirauth=no correctly.
+      Fixes bug 32124; bugfix on 0.3.4.1-alpha.
+    - Interpret --with-tcmalloc=no correctly.
+      Fixes bug 32124; bugfix on 0.2.0.20-rc.
