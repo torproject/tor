@@ -323,7 +323,7 @@ noinst_HEADERS +=					\
 	src/feature/control/fmt_serverstatus.h		\
 	src/feature/control/getinfo_geoip.h		\
 	src/feature/dirauth/authmode.h			\
-        src/feature/dirauth/bridgeauth.h		\
+	src/feature/dirauth/bridgeauth.h		\
 	src/feature/dirauth/bwauth.h			\
 	src/feature/dirauth/dirauth_periodic.h		\
 	src/feature/dirauth/dirauth_sys.h		\
