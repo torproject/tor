@@ -372,6 +372,8 @@ assert_identity_keys_ok(void)
   }
 }
 
+#ifdef HAVE_MODULE_RELAY
+
 /** Returns the current server identity key; requires that the key has
  * been set, and that we are running as a Tor server.
  */
@@ -383,6 +385,8 @@ get_server_identity_key,(void))
   assert_identity_keys_ok();
   return server_identitykey;
 }
+
+#endif
 
 /** Return true iff we are a server and the server identity key
  * has been set. */
