@@ -64,6 +64,9 @@ fi
 
 TOR_BINARY="$(abspath "$TOR_BINARY")"
 
+TOR_MODULES_DISABLED="$("$TOR_BINARY" --list-modules | grep ": no" \
+                        | cut -d ":" -f1 | sort | tr "\n" "_")"
+
 # make a safe space for temporary files
 DATA_DIR=$(mktemp -d -t tor_parseconf_tests.XXXXXX)
 trap 'rm -rf "$DATA_DIR"' 0
@@ -125,12 +128,30 @@ for dir in "${EXAMPLEDIR}"/*; do
         CMDLINE=""
     fi
 
-    if test -f "./expected"; then
-        if test -f "./error"; then
-            echo "FAIL: Found both ${dir}/expected and ${dir}/error."
-            echo "(Only one of these files should exist.)"
-            exit $EXITCODE
+    # If tor has some modules disabled, search for a custom result file for
+    # the disabled modules
+    for prefix in "$TOR_MODULES_DISABLED" ""; do
+
+        if test -f "./${prefix}expected"; then
+
+            # Check for broken configs
+            if test -f "./${prefix}error"; then
+                echo "FAIL: Found both ${dir}/${prefix}expected"
+                echo "and ${dir}/${prefix}error."
+                echo "(Only one of these files should exist.)"
+                exit $EXITCODE
+            fi
+
+            EXPECTED="./${prefix}expected"
+            break
+
+        elif test -f "./${prefix}error"; then
+            ERROR="./${prefix}error"
+            break
         fi
+    done
+
+    if test -f "$EXPECTED"; then
 
         # This case should succeed: run dump-config and see if it does.
 
@@ -141,7 +162,7 @@ for dir in "${EXAMPLEDIR}"/*; do
                         | "${FILTER}" > "${DATA_DIR}/output.${testname}" \
                         || die "Failure: Tor exited."
 
-        if cmp "./expected" "${DATA_DIR}/output.${testname}">/dev/null ; then
+        if cmp "$EXPECTED" "${DATA_DIR}/output.${testname}">/dev/null ; then
             # Check round-trip.
             "${TOR_BINARY}" -f "${DATA_DIR}/output.${testname}" \
                             --defaults-torrc "${DATA_DIR}/empty" \
@@ -166,11 +187,11 @@ for dir in "${EXAMPLEDIR}"/*; do
                                 --verify-config \
                                 ${CMDLINE} || true
             fi
-            diff -u "./expected" "${DATA_DIR}/output.${testname}" || /bin/true
+            diff -u "$EXPECTED" "${DATA_DIR}/output.${testname}" || /bin/true
             exit $EXITCODE
         fi
 
-   elif test -f "./error"; then
+   elif test -f "$ERROR"; then
         # This case should fail: run verify-config and see if it does.
 
         "${TOR_BINARY}" --verify-config \
@@ -180,7 +201,7 @@ for dir in "${EXAMPLEDIR}"/*; do
                         > "${DATA_DIR}/output.${testname}" \
                         && die "Failure: Tor did not report an error."
 
-        expect_err="$(cat ./error)"
+        expect_err="$(cat $ERROR)"
         if grep "${expect_err}" "${DATA_DIR}/output.${testname}" >/dev/null; then
             echo "OK"
         else
@@ -195,7 +216,7 @@ for dir in "${EXAMPLEDIR}"/*; do
         # This case is not actually configured with a success or a failure.
         # call that an error.
 
-        echo "FAIL: Did not find ${dir}/expected or ${dir}/error."
+        echo "FAIL: Did not find ${dir}/*expected or ${dir}/*error."
         exit $EXITCODE
     fi
 
