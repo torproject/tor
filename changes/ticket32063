@@ -1,0 +1,3 @@
+  o Minor bugfixes (hs-v3, memory leak):
+    - Fix memory leak in unlikely error code path when encoding HS DoS establish
+      intro extension cell. Fixes bug 32063; bugfix on 0.4.2.1-alpha.
