@@ -3999,7 +3999,7 @@ remove_invalid_intro_points(rend_service_t *service,
        * accounted for when considiring uploading a descriptor. */
       intro->circuit_established = 0;
 
-      /* Node is gone or we've reached our maximum circuit creationg retry
+      /* Node is gone or we've reached our maximum circuit creation retry
        * count, clean up everything, we'll find a new one. */
       if (node == NULL ||
           intro->circuit_retries >= MAX_INTRO_POINT_CIRCUIT_RETRIES) {

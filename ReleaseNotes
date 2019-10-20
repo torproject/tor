@@ -3469,7 +3469,7 @@ Changes in version 0.3.4.8 - 2018-09-10
     - Remove duplicate code in parse_{c,s}method_line and bootstrap
       their functionalities into a single function. Fixes bug 6236;
       bugfix on 0.2.3.6-alpha.
-    - We remove the PortForwsrding and PortForwardingHelper options,
+    - We remove the PortForwarding and PortForwardingHelper options,
       related functions, and the port_forwarding tests. These options
       were used by the now-deprecated Vidalia to help ordinary users
       become Tor relays or bridges. Closes ticket 25409. Patch by

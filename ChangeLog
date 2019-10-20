@@ -5300,7 +5300,7 @@ Changes in version 0.3.4.1-alpha - 2018-05-17
     - Remove duplicate code in parse_{c,s}method_line and bootstrap
       their functionalities into a single function. Fixes bug 6236;
       bugfix on 0.2.3.6-alpha.
-    - We remove the PortForwsrding and PortForwardingHelper options,
+    - We remove the PortForwarding and PortForwardingHelper options,
       related functions, and the port_forwarding tests. These options
       were used by the now-deprecated Vidalia to help ordinary users
       become Tor relays or bridges. Closes ticket 25409. Patch by
@@ -11902,7 +11902,7 @@ Changes in version 0.2.9.3-alpha - 2016-09-23
       HiddenServiceNonAnonymousMode options. When both are set to 1,
       every hidden service on a Tor instance becomes a non-anonymous
       Single Onion Service. Single Onions make one-hop (direct)
-      connections to their introduction and renzedvous points. One-hop
+      connections to their introduction and rendezvous points. One-hop
       circuits make Single Onion servers easily locatable, but clients
       remain location-anonymous. This is compatible with the existing
       hidden service implementation, and works on the current tor
@@ -12405,13 +12405,12 @@ Changes in version 0.2.9.1-alpha - 2016-08-08
       needless crash bugs. Closes ticket 18613.
 
   o Minor features (performance):
-    - Changer the "optimistic data" extension from "off by default" to
+    - Change the "optimistic data" extension from "off by default" to
       "on by default". The default was ordinarily overridden by a
       consensus option, but when clients were bootstrapping for the
       first time, they would not have a consensus to get the option
-      from. Changing this default When fetching a consensus for the
-      first time, use optimistic data. This saves a round-trip during
-      startup. Closes ticket 18815.
+      from. Changing this default saves a round-trip during startup.
+      Closes ticket 18815.
 
   o Minor features (relay, usability):
     - When the directory authorities refuse a bad relay's descriptor,
