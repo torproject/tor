@@ -2461,8 +2461,8 @@ compute_frac_paths_available(const networkstatus_t *consensus,
   log_debug(LD_NET,
             "%s: %d present, %d usable",
             "mid",
-            np,
-            nu);
+            *num_present_out,
+            *num_usable_out);
 
   if (options->EntryNodes) {
     count_usable_descriptors(&np, &nu, guards, consensus, now,
