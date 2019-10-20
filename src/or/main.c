@@ -1603,15 +1603,17 @@ rescan_periodic_events(const or_options_t *options)
   for (int i = 0; periodic_events[i].name; ++i) {
     periodic_event_item_t *item = &periodic_events[i];
 
+    int enable = !!(item->roles & roles);
+
     /* Handle the event flags. */
     if (net_is_disabled() &&
         (item->flags & PERIODIC_EVENT_FLAG_NEED_NET)) {
-      continue;
+      enable = 0;
     }
 
     /* Enable the event if needed. It is safe to enable an event that was
      * already enabled. Same goes for disabling it. */
-    if (item->roles & roles) {
+    if (enable) {
       log_debug(LD_GENERAL, "Launching periodic event %s", item->name);
       periodic_event_enable(item);
     } else {
@@ -4325,4 +4327,3 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
   tor_cleanup();
   return result;
 }
-
