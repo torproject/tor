@@ -85,7 +85,7 @@ static pthread_mutex_t cb_buf_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /** Lock and return a static stack pointer buffer that can hold up to
  *  MAX_DEPTH function pointers. */
-static void *
+static void **
 lock_cb_buf(void)
 {
   /* Lock the mutex first, before even declaring the buffer. */
@@ -102,7 +102,7 @@ lock_cb_buf(void)
 
 /** Unlock the static stack pointer buffer. */
 static void
-unlock_cb_buf(void *cb_buf)
+unlock_cb_buf(void **cb_buf)
 {
   memset(cb_buf, 0, SIZEOF_CB_BUF);
   pthread_mutex_unlock(&cb_buf_mutex);
@@ -149,7 +149,7 @@ log_backtrace_impl(int severity, log_domain_mask_t domain, const char *msg,
   char **symbols;
   size_t i;
 
-  void *cb_buf = lock_cb_buf();
+  void **cb_buf = lock_cb_buf();
 
   depth = backtrace(cb_buf, MAX_DEPTH);
   symbols = backtrace_symbols(cb_buf, (int)depth);
@@ -183,7 +183,7 @@ crash_handler(int sig, siginfo_t *si, void *ctx_)
   int n_fds, i;
   const int *fds = NULL;
 
-  void *cb_buf = lock_cb_buf();
+  void **cb_buf = lock_cb_buf();
 
   (void) si;
 
@@ -214,7 +214,7 @@ dump_stack_symbols_to_error_fds(void)
   const int *fds = NULL;
   size_t depth;
 
-  void *cb_buf = lock_cb_buf();
+  void **cb_buf = lock_cb_buf();
 
   depth = backtrace(cb_buf, MAX_DEPTH);
 
@@ -256,7 +256,7 @@ install_bt_handler(void)
      * libc has pre-loaded the symbols we need to dump things, so that later
      * reads won't be denied by the sandbox code */
     char **symbols;
-    void *cb_buf = lock_cb_buf();
+    void **cb_buf = lock_cb_buf();
     size_t depth = backtrace(cb_buf, MAX_DEPTH);
     symbols = backtrace_symbols(cb_buf, (int) depth);
     if (symbols)
