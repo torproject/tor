@@ -22,6 +22,7 @@ MOCK_DECL(int, advertised_server_mode, (void));
 
 void set_server_advertised(int s);
 
+/* Is the relay module enabled? */
 #define have_module_relay() (1)
 
 #else
