@@ -815,7 +815,7 @@ hibernate_soft_limit_reached(void)
    * We want to stop accepting connections when ALL of the following are true:
    *   - We expect to use up the remaining bytes in under 3 hours
    *   - We have used up 95% of our bytes.
-   *   - We have less than 500MBytes of bytes left.
+   *   - We have less than 500MBytes left.
    */
   uint64_t soft_limit = (uint64_t) (acct_max * SOFT_LIM_PCT);
   if (acct_max > SOFT_LIM_BYTES && acct_max - SOFT_LIM_BYTES > soft_limit) {
