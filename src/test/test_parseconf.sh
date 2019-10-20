@@ -36,6 +36,27 @@
 #      matched by some line in the output of "--verify-config", which must
 #      fail. Exactly one of "expected" or "error" must be present, or the
 #      test will fail.
+#
+# {expected,error}_no_${TOR_MODULES_DISABLED} -- If this file is present,
+#      then the outcome is different when some modules are disabled. If there
+#      is no result file matching the exact list of disabled modules, the
+#      standard result file is used.
+#
+#      For example:
+#      A test that succeeds, regardless of any disabled modules:
+#       - expected
+#      A test that has a different result if the relay module is disabled
+#      (but the same result if just the dirauth module is disabled):
+#       - expected
+#       - expected_no_relay_dirauth
+#      A test that fails if the dirauth module is disabled:
+#       - expected
+#       - error_no_dirauth
+#       - error_no_relay_dirauth
+#      (Disabling the relay module also disables dirauth module. But we don't
+#      want to encode that knowledge in this test script, so we supply a
+#      separate result file for every combination of disabled modules that
+#      has a different result.)
 
 umask 077
 set -e
@@ -65,7 +86,7 @@ fi
 TOR_BINARY="$(abspath "$TOR_BINARY")"
 
 TOR_MODULES_DISABLED="$("$TOR_BINARY" --list-modules | grep ": no" \
-                        | cut -d ":" -f1 | sort | tr "\n" "_")"
+                        | cut -d ":" -f1 | sort | tr "\n" "_" | head -c -1)"
 
 # make a safe space for temporary files
 DATA_DIR=$(mktemp -d -t tor_parseconf_tests.XXXXXX)
@@ -130,23 +151,23 @@ for dir in "${EXAMPLEDIR}"/*; do
 
     # If tor has some modules disabled, search for a custom result file for
     # the disabled modules
-    for prefix in "$TOR_MODULES_DISABLED" ""; do
+    for suffix in "_no_$TOR_MODULES_DISABLED" ""; do
 
-        if test -f "./${prefix}expected"; then
+        if test -f "./expected${suffix}"; then
 
             # Check for broken configs
-            if test -f "./${prefix}error"; then
-                echo "FAIL: Found both ${dir}/${prefix}expected"
-                echo "and ${dir}/${prefix}error."
+            if test -f "./error${suffix}"; then
+                echo "FAIL: Found both ${dir}/expected${suffix}"
+                echo "and ${dir}/error${suffix}."
                 echo "(Only one of these files should exist.)"
                 exit $EXITCODE
             fi
 
-            EXPECTED="./${prefix}expected"
+            EXPECTED="./expected${suffix}"
             break
 
-        elif test -f "./${prefix}error"; then
-            ERROR="./${prefix}error"
+        elif test -f "./error${suffix}"; then
+            ERROR="./error${suffix}"
             break
         fi
     done
