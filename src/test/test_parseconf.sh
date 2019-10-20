@@ -86,7 +86,9 @@ fi
 TOR_BINARY="$(abspath "$TOR_BINARY")"
 
 TOR_MODULES_DISABLED="$("$TOR_BINARY" --list-modules | grep ": no" \
-                        | cut -d ":" -f1 | sort | tr "\n" "_" | head -c -1)"
+                        | cut -d ":" -f1 | sort | tr "\n" "_")"
+# Remove the last underscore, if there is one
+TOR_MODULES_DISABLED=${TOR_MODULES_DISABLED%_}
 
 # make a safe space for temporary files
 DATA_DIR=$(mktemp -d -t tor_parseconf_tests.XXXXXX)
