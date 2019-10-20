@@ -67,7 +67,7 @@ static hibernate_state_t hibernate_state = HIBERNATE_STATE_INITIAL;
 /** If are hibernating, when do we plan to wake up? Set to 0 if we
  * aren't hibernating. */
 static time_t hibernate_end_time = 0;
-/** If we are shutting down, when do we plan finally exit? Set to 0 if we
+/** If we are shutting down, when do we plan to finally exit? Set to 0 if we
  * aren't shutting down. (This is obsolete; scheduled shutdowns are supposed
  * to happen from mainloop_schedule_shutdown() now.) */
 static time_t shutdown_time = 0;
@@ -562,7 +562,7 @@ time_to_record_bandwidth_usage(time_t now)
   /* Note every 600 sec */
 #define NOTE_INTERVAL (600)
   /* Or every 20 megabytes */
-#define NOTE_BYTES 20*(1024*1024)
+#define NOTE_BYTES (20*1024*1024)
   static uint64_t last_read_bytes_noted = 0;
   static uint64_t last_written_bytes_noted = 0;
   static time_t last_time_noted = 0;
@@ -815,7 +815,7 @@ hibernate_soft_limit_reached(void)
    * We want to stop accepting connections when ALL of the following are true:
    *   - We expect to use up the remaining bytes in under 3 hours
    *   - We have used up 95% of our bytes.
-   *   - We have less than 500MB of bytes left.
+   *   - We have less than 500MBytes of bytes left.
    */
   uint64_t soft_limit = (uint64_t) (acct_max * SOFT_LIM_PCT);
   if (acct_max > SOFT_LIM_BYTES && acct_max - SOFT_LIM_BYTES > soft_limit) {
