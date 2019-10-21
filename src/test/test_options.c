@@ -498,7 +498,7 @@ test_options_validate__uname_for_server(void *ignored)
   fixed_get_uname_result = "Windows 2000";
   mock_clean_saved_logs();
   options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  expect_no_log_entry();
+  expect_no_log_msg("Tor is running as a server, but you ");
   tor_free(msg);
 
  done:
@@ -692,7 +692,12 @@ test_options_validate__logs(void *ignored)
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_assert(!tdata->opt->Logs);
   tor_free(msg);
+#ifdef _WIN32
+  /* Can't RunAsDaemon on Windows. */
+  tt_int_op(ret, OP_EQ, -1);
+#else
   tt_int_op(ret, OP_EQ, 0);
+#endif
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("");
@@ -1417,7 +1422,7 @@ test_options_validate__paths_needed(void *ignored)
   tt_int_op(ret, OP_EQ, 0);
   tt_assert(tdata->opt->PathsNeededToBuildCircuits > 0.90 &&
             tdata->opt->PathsNeededToBuildCircuits < 0.92);
-  expect_no_log_entry();
+  expect_no_log_msg_containing("PathsNeededToBuildCircuits");
   tor_free(msg);
 
  done:
