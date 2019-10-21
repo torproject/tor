@@ -316,13 +316,7 @@ test_conn_download_status_teardown(const struct testcase_t *tc, void *arg)
 static void *
 test_conn_proxy_connect_setup(const struct testcase_t *tc)
 {
-  tcp_proxy_protocol_t proxy_type = (tcp_proxy_protocol_t)tc->setup_data;
-  switch (proxy_type) {
-    case TCP_PROXY_PROTOCOL_HAPROXY:
-      return test_conn_get_proxy_or_connection(PROXY_HAPROXY);
-    default:
-      return NULL;
-  }
+  return test_conn_get_proxy_or_connection(*(unsigned int *)tc->setup_data);
 }
 
 static int
@@ -818,6 +812,25 @@ test_conn_download_status(void *arg)
   /* the teardown function removes all the connections in the global list*/;
 }
 
+static void
+test_conn_https_proxy_connect(void *arg)
+{
+  size_t sz;
+  char *buf = NULL;
+  or_connection_t *conn = arg;
+
+  MOCK(connection_or_change_state, mock_connection_or_change_state);
+
+  tt_int_op(conn->base_.proxy_state, OP_EQ, PROXY_HTTPS_WANT_CONNECT_OK);
+
+  buf = buf_get_contents(conn->base_.outbuf, &sz);
+  tt_str_op(buf, OP_EQ, "CONNECT 127.0.0.1:12345 HTTP/1.0\r\n\r\n");
+
+ done:
+  UNMOCK(connection_or_change_state);
+  tor_free(buf);
+}
+
 static int handshake_start_called = 0;
 
 static int
@@ -957,6 +970,9 @@ test_failed_orconn_tracker(void *arg)
 #define CONNECTION_TESTCASE_ARG(name, fork, setup, arg)                  \
   { #name "_" #arg, test_conn_##name, fork, &setup, (void *)arg }
 
+static const unsigned int PROXY_CONNECT_ARG = PROXY_CONNECT;
+static const unsigned int PROXY_HAPROXY_ARG = PROXY_HAPROXY;
+
 struct testcase_t connection_tests[] = {
   CONNECTION_TESTCASE(get_basic, TT_FORK, test_conn_get_basic_st),
   CONNECTION_TESTCASE(get_rend,  TT_FORK, test_conn_get_rend_st),
@@ -966,9 +982,12 @@ struct testcase_t connection_tests[] = {
                           test_conn_download_status_st, FLAV_MICRODESC),
   CONNECTION_TESTCASE_ARG(download_status,       TT_FORK,
                           test_conn_download_status_st, FLAV_NS),
+
+  CONNECTION_TESTCASE_ARG(https_proxy_connect,   TT_FORK,
+                          test_conn_proxy_connect_st, &PROXY_CONNECT_ARG),
   CONNECTION_TESTCASE_ARG(haproxy_proxy_connect, TT_FORK,
-                          test_conn_proxy_connect_st,
-                          TCP_PROXY_PROTOCOL_HAPROXY),
+                          test_conn_proxy_connect_st, &PROXY_HAPROXY_ARG),
+
 //CONNECTION_TESTCASE(func_suffix, TT_FORK, setup_func_pair),
   { "failed_orconn_tracker", test_failed_orconn_tracker, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
