@@ -2179,8 +2179,8 @@ circpad_add_matching_machines(origin_circuit_t *on_circ,
           circ->padding_machine[i] = NULL;
           on_circ->padding_negotiation_failed = 1;
         } else {
-          /* Success. Don't try any more machines */
-          return;
+          /* Success. Don't try any more machines on this index */
+          break;
         }
       }
     } SMARTLIST_FOREACH_END(machine);
