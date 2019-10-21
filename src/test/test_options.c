@@ -391,7 +391,7 @@ fixed_get_uname(void)
 }
 
 #define TEST_OPTIONS_DEFAULT_VALUES                                     \
-  "ConnLimit 1\n"
+  ""
 
 typedef struct {
   or_options_t *old_opt;
@@ -415,12 +415,6 @@ get_options_test_data(const char *conf)
   options_init(result->opt);
   options_init(result->old_opt);
   options_init(result->def_opt);
-
-  /* Various of the tests below expect that unless explicitly set, these
-   * options will be invalid.  We override them for that reason.
-   *
-   * Later in this branch, I will remove these one by one. */
-  result->opt->ConnLimit = 0;
 
   rv = config_get_lines(conf, &cl, 1);
   tt_int_op(rv, OP_EQ, 0);
@@ -596,15 +590,13 @@ test_options_validate__nickname(void *ignored)
   free_options_test_data(tdata);
   tdata = get_options_test_data("Nickname AMoreValidNick");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "ConnLimit must be greater than 0, but was set to 0");
+  tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("DataDirectory /tmp/somewhere");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "ConnLimit must be greater than 0, but was set to 0");
+  tt_int_op(ret, OP_EQ, 0);
 
  done:
   free_options_test_data(tdata);
@@ -623,7 +615,7 @@ test_options_validate__contactinfo(void *ignored)
   tdata->opt->ContactInfo = NULL;
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   expect_log_msg(
             "Your ContactInfo config option is not"
             " set. Please consider setting it, so we can contact you if your"
@@ -635,7 +627,7 @@ test_options_validate__contactinfo(void *ignored)
                                 "ContactInfo hella@example.org");
   mock_clean_saved_logs();
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
             "Your ContactInfo config option is not"
             " set. Please consider setting it, so we can contact you if your"
@@ -664,7 +656,7 @@ test_options_validate__logs(void *ignored)
   tt_str_op(tdata->opt->Logs->key, OP_EQ, "Log");
   tt_str_op(tdata->opt->Logs->value, OP_EQ, "notice stdout");
   tor_free(msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("");
@@ -675,7 +667,7 @@ test_options_validate__logs(void *ignored)
   tt_str_op(tdata->opt->Logs->key, OP_EQ, "Log");
   tt_str_op(tdata->opt->Logs->value, OP_EQ, "warn stdout");
   tor_free(msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("");
@@ -685,7 +677,7 @@ test_options_validate__logs(void *ignored)
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_assert(!tdata->opt->Logs);
   tor_free(msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("");
@@ -694,7 +686,7 @@ test_options_validate__logs(void *ignored)
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 1, &msg);
   tt_assert(!tdata->opt->Logs);
   tor_free(msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("");
@@ -703,7 +695,7 @@ test_options_validate__logs(void *ignored)
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_assert(!tdata->opt->Logs);
   tor_free(msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("");
@@ -1063,7 +1055,7 @@ test_options_validate__transproxy(void *ignored)
   tdata = get_options_test_data("TransProxyType default\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   tt_int_op(tdata->opt->TransProxyType_parsed, OP_EQ, TPT_DEFAULT);
   tor_free(msg);
 
@@ -1130,28 +1122,24 @@ test_options_validate__transproxy(void *ignored)
   tdata = get_options_test_data("TransProxyType tproxy\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "ConnLimit must be greater than 0, but was set to 0");
+  tt_int_op(ret, OP_EQ, 0);
 #elif defined(KERNEL_MAY_SUPPORT_IPFW)
   tdata = get_options_test_data("TransProxyType ipfw\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "ConnLimit must be greater than 0, but was set to 0");
+  tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 #elif defined(OpenBSD)
   tdata = get_options_test_data("TransProxyType pf-divert\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "ConnLimit must be greater than 0, but was set to 0");
+  tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 #elif defined(__NetBSD__)
   tdata = get_options_test_data("TransProxyType default\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "ConnLimit must be greater than 0, but was set to 0");
+  tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 #endif /* defined(__linux__) || ... */
 
@@ -1197,7 +1185,7 @@ test_options_validate__exclude_nodes(void *ignored)
                                                   "ExcludeExitNodes {us}\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   tt_int_op(smartlist_len(tdata->opt->ExcludeExitNodesUnion_->list), OP_EQ, 1);
   tt_str_op((char *)
             (smartlist_get(tdata->opt->ExcludeExitNodesUnion_->list, 0)),
@@ -1207,7 +1195,7 @@ test_options_validate__exclude_nodes(void *ignored)
   free_options_test_data(tdata);
   tdata = get_options_test_data("ExcludeNodes {cn}\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   tt_int_op(smartlist_len(tdata->opt->ExcludeExitNodesUnion_->list), OP_EQ, 1);
   tt_str_op((char *)
             (smartlist_get(tdata->opt->ExcludeExitNodesUnion_->list, 0)),
@@ -1218,7 +1206,7 @@ test_options_validate__exclude_nodes(void *ignored)
   tdata = get_options_test_data("ExcludeNodes {cn}\n"
                                 "ExcludeExitNodes {us} {cn}\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   tt_int_op(smartlist_len(tdata->opt->ExcludeExitNodesUnion_->list), OP_EQ, 2);
   tt_str_op((char *)
             (smartlist_get(tdata->opt->ExcludeExitNodesUnion_->list, 0)),
@@ -1233,7 +1221,7 @@ test_options_validate__exclude_nodes(void *ignored)
                                 "StrictNodes 1\n");
   mock_clean_saved_logs();
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   expect_log_msg(
             "You have asked to exclude certain relays from all positions "
             "in your circuits. Expect hidden services and other Tor "
@@ -1244,7 +1232,7 @@ test_options_validate__exclude_nodes(void *ignored)
   tdata = get_options_test_data("ExcludeNodes {cn}\n");
   mock_clean_saved_logs();
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
             "You have asked to exclude certain relays from all positions "
             "in your circuits. Expect hidden services and other Tor "
@@ -1269,7 +1257,7 @@ test_options_validate__node_families(void *ignored)
                                      "NodeFamily somewhere\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   tt_assert(tdata->opt->NodeFamilySets);
   tt_int_op(smartlist_len(tdata->opt->NodeFamilySets), OP_EQ, 2);
   tt_str_op((char *)(smartlist_get(
@@ -1287,7 +1275,7 @@ test_options_validate__node_families(void *ignored)
   tdata = get_options_test_data("");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   tt_assert(!tdata->opt->NodeFamilySets);
   tor_free(msg);
 
@@ -1353,9 +1341,7 @@ test_options_validate__fetch_dir(void *ignored)
                                 "FetchDirInfoEarly 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_NE, "FetchDirInfoExtraEarly requires that you"
-            " also set FetchDirInfoEarly");
+  tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
  done:
