@@ -1545,7 +1545,7 @@ static const getinfo_item_t getinfo_items[] = {
   ITEM("dir/status-vote/current/consensus", dir,
        "v3 Networkstatus consensus as retrieved from a DirPort."),
   ITEM("dir/status-vote/current/consensus-microdesc", dir,
-       "v3 Microdescriptors consensus as retrieved from a DirPort."),
+       "v3 Microdescriptor consensus as retrieved from a DirPort."),
   ITEM("exit-policy/default", policies,
        "The default value appended to the configured exit policy."),
   ITEM("exit-policy/reject-private/default", policies,
