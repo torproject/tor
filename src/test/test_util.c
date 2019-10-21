@@ -6205,6 +6205,11 @@ test_util_monotonic_time(void *arg)
     uint64_t ms = monotime_coarse_stamp_units_to_approx_msec(units);
     tt_u64_op(ms, OP_GE, 4950);
     tt_u64_op(ms, OP_LT, 5050);
+    /* Test that repeated conversions don't drift */
+    uint64_t rep_units = monotime_msec_to_approx_coarse_stamp_units(ms);
+    uint64_t rep_ms = monotime_coarse_stamp_units_to_approx_msec(rep_units);
+    tt_u64_op(rep_units, OP_EQ, units);
+    tt_u64_op(rep_ms, OP_EQ, ms);
   }
 
  done:
