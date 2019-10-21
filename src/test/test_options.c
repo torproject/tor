@@ -392,7 +392,6 @@ fixed_get_uname(void)
 
 #define TEST_OPTIONS_DEFAULT_VALUES                                     \
   "MaxClientCircuitsPending 1\n"                                        \
-  "KeepAlivePeriod 1\n"                                                 \
   "ConnLimit 1\n"
 
 typedef struct {
@@ -424,7 +423,6 @@ get_options_test_data(const char *conf)
    * Later in this branch, I will remove these one by one. */
   result->opt->ConnLimit = 0;
   result->opt->MaxClientCircuitsPending = 0;
-  result->opt->KeepalivePeriod = 0;
 
   rv = config_get_lines(conf, &cl, 1);
   tt_int_op(rv, OP_EQ, 0);
@@ -1487,8 +1485,7 @@ test_options_validate__max_client_circuits(void *ignored)
                                 "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "KeepalivePeriod option must be positive.");
+  tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
  done:
@@ -1557,8 +1554,7 @@ test_options_validate__ports(void *ignored)
                                 "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "KeepalivePeriod option must be positive.");
+  tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
  done:
@@ -1900,8 +1896,7 @@ test_options_validate__entry_nodes(void *ignored)
                                 "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "KeepalivePeriod option must be positive.");
+  tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
  done:
@@ -1922,7 +1917,7 @@ test_options_validate__safe_logging(void *ignored)
                                             "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   tt_int_op(tdata->opt->SafeLogging_, OP_EQ, SAFELOG_SCRUB_NONE);
   tor_free(msg);
 
@@ -1932,7 +1927,7 @@ test_options_validate__safe_logging(void *ignored)
                                 "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   tt_int_op(tdata->opt->SafeLogging_, OP_EQ, SAFELOG_SCRUB_NONE);
   tor_free(msg);
 
@@ -1942,7 +1937,7 @@ test_options_validate__safe_logging(void *ignored)
                                 "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   tt_int_op(tdata->opt->SafeLogging_, OP_EQ, SAFELOG_SCRUB_RELAY);
   tor_free(msg);
 
@@ -1952,7 +1947,7 @@ test_options_validate__safe_logging(void *ignored)
                                 "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   tt_int_op(tdata->opt->SafeLogging_, OP_EQ, SAFELOG_SCRUB_ALL);
   tor_free(msg);
 
