@@ -391,7 +391,6 @@ fixed_get_uname(void)
 }
 
 #define TEST_OPTIONS_DEFAULT_VALUES                                     \
-  "MaxClientCircuitsPending 1\n"                                        \
   "ConnLimit 1\n"
 
 typedef struct {
@@ -422,7 +421,6 @@ get_options_test_data(const char *conf)
    *
    * Later in this branch, I will remove these one by one. */
   result->opt->ConnLimit = 0;
-  result->opt->MaxClientCircuitsPending = 0;
 
   rv = config_get_lines(conf, &cl, 1);
   tt_int_op(rv, OP_EQ, 0);
@@ -1383,9 +1381,7 @@ test_options_validate__conn_limit(void *ignored)
   tdata = get_options_test_data("ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "MaxClientCircuitsPending must be between 1 and 1024, "
-            "but was set to 0");
+  tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
  done:
@@ -1412,7 +1408,7 @@ test_options_validate__paths_needed(void *ignored)
                                       "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   tt_assert(tdata->opt->PathsNeededToBuildCircuits > 0.24 &&
             tdata->opt->PathsNeededToBuildCircuits < 0.26);
   expect_log_msg("PathsNeededToBuildCircuits is too low. "
@@ -1425,7 +1421,7 @@ test_options_validate__paths_needed(void *ignored)
                                 "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   tt_assert(tdata->opt->PathsNeededToBuildCircuits > 0.94 &&
             tdata->opt->PathsNeededToBuildCircuits < 0.96);
   expect_log_msg("PathsNeededToBuildCircuits is "
@@ -1438,7 +1434,7 @@ test_options_validate__paths_needed(void *ignored)
                                 "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
   tt_assert(tdata->opt->PathsNeededToBuildCircuits > 0.90 &&
             tdata->opt->PathsNeededToBuildCircuits < 0.92);
   expect_no_log_entry();
