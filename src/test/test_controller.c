@@ -1752,7 +1752,6 @@ test_getinfo_helper_current_consensus_from_file(void *arg)
 
   (void)arg;
 
-  setup_bridge_mocks();
   MOCK(tor_mmap_file, mock_tor_mmap_file);
   MOCK(tor_munmap_file, mock_tor_munmap_file);
 
@@ -1774,7 +1773,6 @@ test_getinfo_helper_current_consensus_from_file(void *arg)
   errmsg = NULL;
 
  done:
-  clear_bridge_mocks();
   tor_free(answer);
   UNMOCK(tor_mmap_file);
   UNMOCK(tor_munmap_file);
@@ -1791,9 +1789,7 @@ test_getinfo_helper_current_consensus_from_cache(void *arg)
   const char *errmsg = NULL;
 
   (void)arg;
-  setup_bridge_mocks();
   or_options_t *options = get_options_mutable();
-  int previous_fetch_value = options->FetchUselessDescriptors;
   options->FetchUselessDescriptors = 1;
   MOCK(dirserv_get_consensus, mock_dirserv_get_consensus);
 
@@ -1817,10 +1813,9 @@ test_getinfo_helper_current_consensus_from_cache(void *arg)
   tor_free(mock_microdesc_consensus_cache->dir);
   tor_free(answer);
   errmsg = NULL;
-  options->FetchUselessDescriptors = previous_fetch_value;
 
  done:
-  clear_bridge_mocks();
+  options->FetchUselessDescriptors = 0;
   tor_free(answer);
   tor_free(mock_microdesc_consensus_cache);
   UNMOCK(dirserv_get_consensus);
