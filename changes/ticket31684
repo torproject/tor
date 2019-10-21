@@ -1,0 +1,6 @@
+  o Minor features (controller):
+    - Implement a new GETINFO command to fetch microdescriptor consensus.
+      Closes ticket 31684.
+  o Code simplification and refactoring (controller):
+    - Create a helper function that can fetch network status or microdesc
+      consensuses. Closes ticket 31684.

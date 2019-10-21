@@ -27,6 +27,7 @@
 #include "feature/dirclient/download_status_st.h"
 #include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/node_st.h"
+#include "feature/dircache/dirserv.c"
 
 typedef struct {
   const char *input;
@@ -1691,6 +1692,138 @@ test_download_status_bridge(void *arg)
   return;
 }
 
+/** Mock cached consensus */
+static cached_dir_t *mock_ns_consensus_cache;
+static cached_dir_t *mock_microdesc_consensus_cache;
+
+/**  Mock the function that retrieves consensus from cache. These use a
+ * global variable so that they can be cleared from within the test.
+ * The actual code retains the pointer to the consensus data, but
+ * we are doing this here, to prevent memory leaks
+ * from within the tests */
+static cached_dir_t *
+mock_dirserv_get_consensus(const char *flavor_name)
+{
+  if (!strcmp(flavor_name, "ns")) {
+    mock_ns_consensus_cache = tor_malloc_zero(sizeof(cached_dir_t));
+    mock_ns_consensus_cache->dir = tor_strdup("mock_ns_consensus");
+    return mock_ns_consensus_cache;
+  } else {
+    mock_microdesc_consensus_cache = tor_malloc_zero(sizeof(cached_dir_t));
+    mock_microdesc_consensus_cache->dir = tor_strdup(
+                                            "mock_microdesc_consensus");
+    return mock_microdesc_consensus_cache;
+  }
+}
+
+/** Mock the function that retrieves consensuses
+ *  from a files in the directory. */
+static tor_mmap_t *
+mock_tor_mmap_file(const char* filename)
+{
+  tor_mmap_t *res;
+  res = tor_malloc_zero(sizeof(tor_mmap_t));
+  if (strstr(filename, "cached-consensus") != NULL) {
+    res->data = "mock_ns_consensus";
+  } else if (strstr(filename, "cached-microdesc-consensus") != NULL) {
+    res->data = "mock_microdesc_consensus";
+  } else {
+    res->data = ".";
+  }
+  res->size = strlen(res->data);
+  return res;
+}
+
+/** Mock the function that clears file data
+ * loaded into the memory */
+static int
+mock_tor_munmap_file(tor_mmap_t *handle)
+{
+  tor_free(handle);
+  return 0;
+}
+
+static void
+test_getinfo_helper_current_consensus_from_file(void *arg)
+{
+  /* We just need one of these to pass, it doesn't matter what's in it */
+  control_connection_t dummy;
+  /* Get results out */
+  char *answer = NULL;
+  const char *errmsg = NULL;
+
+  (void)arg;
+
+  MOCK(tor_mmap_file, mock_tor_mmap_file);
+  MOCK(tor_munmap_file, mock_tor_munmap_file);
+
+  getinfo_helper_dir(&dummy,
+                     "dir/status-vote/current/consensus",
+                     &answer,
+                     &errmsg);
+  tt_str_op(answer, OP_EQ, "mock_ns_consensus");
+  tt_ptr_op(errmsg, OP_EQ, NULL);
+  tor_free(answer);
+  errmsg = NULL;
+
+  getinfo_helper_dir(&dummy,
+                     "dir/status-vote/current/consensus-microdesc",
+                     &answer,
+                     &errmsg);
+  tt_str_op(answer, OP_EQ, "mock_microdesc_consensus");
+  tt_ptr_op(errmsg, OP_EQ, NULL);
+  errmsg = NULL;
+
+ done:
+  tor_free(answer);
+  UNMOCK(tor_mmap_file);
+  UNMOCK(tor_munmap_file);
+  return;
+}
+
+static void
+test_getinfo_helper_current_consensus_from_cache(void *arg)
+{
+  /* We just need one of these to pass, it doesn't matter what's in it */
+  control_connection_t dummy;
+  /* Get results out */
+  char *answer = NULL;
+  const char *errmsg = NULL;
+
+  (void)arg;
+  or_options_t *options = get_options_mutable();
+  options->FetchUselessDescriptors = 1;
+  MOCK(dirserv_get_consensus, mock_dirserv_get_consensus);
+
+  getinfo_helper_dir(&dummy,
+                     "dir/status-vote/current/consensus",
+                     &answer,
+                     &errmsg);
+  tt_str_op(answer, OP_EQ, "mock_ns_consensus");
+  tt_ptr_op(errmsg, OP_EQ, NULL);
+  tor_free(answer);
+  tor_free(mock_ns_consensus_cache->dir);
+  tor_free(mock_ns_consensus_cache);
+  errmsg = NULL;
+
+  getinfo_helper_dir(&dummy,
+                     "dir/status-vote/current/consensus-microdesc",
+                     &answer,
+                     &errmsg);
+  tt_str_op(answer, OP_EQ, "mock_microdesc_consensus");
+  tt_ptr_op(errmsg, OP_EQ, NULL);
+  tor_free(mock_microdesc_consensus_cache->dir);
+  tor_free(answer);
+  errmsg = NULL;
+
+ done:
+  options->FetchUselessDescriptors = 0;
+  tor_free(answer);
+  tor_free(mock_microdesc_consensus_cache);
+  UNMOCK(dirserv_get_consensus);
+  return;
+}
+
 /** Set timeval to a mock date and time. This is necessary
  * to make tor_gettimeofday() mockable. */
 static void
@@ -1840,6 +1973,10 @@ struct testcase_t controller_tests[] = {
     NULL },
   { "download_status_consensus", test_download_status_consensus, 0, NULL,
     NULL },
+  {"getinfo_helper_current_consensus_from_cache",
+   test_getinfo_helper_current_consensus_from_cache, 0, NULL, NULL },
+  {"getinfo_helper_current_consensus_from_file",
+   test_getinfo_helper_current_consensus_from_file, 0, NULL, NULL },
   { "download_status_cert", test_download_status_cert, 0, NULL,
     NULL },
   { "download_status_desc", test_download_status_desc, 0, NULL, NULL },
