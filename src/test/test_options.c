@@ -1390,8 +1390,7 @@ test_options_validate__paths_needed(void *ignored)
 
   setup_capture_of_logs(LOG_WARN);
   options_test_data_t *tdata = get_options_test_data(
-                                      "PathsNeededToBuildCircuits 0.1\n"
-                                      "ConnLimit 1\n");
+                                      "PathsNeededToBuildCircuits 0.1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1403,8 +1402,7 @@ test_options_validate__paths_needed(void *ignored)
 
   free_options_test_data(tdata);
   mock_clean_saved_logs();
-  tdata = get_options_test_data("PathsNeededToBuildCircuits 0.99\n"
-                                "ConnLimit 1\n");
+  tdata = get_options_test_data("PathsNeededToBuildCircuits 0.99\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1416,8 +1414,7 @@ test_options_validate__paths_needed(void *ignored)
 
   free_options_test_data(tdata);
   mock_clean_saved_logs();
-  tdata = get_options_test_data("PathsNeededToBuildCircuits 0.91\n"
-                                "ConnLimit 1\n");
+  tdata = get_options_test_data("PathsNeededToBuildCircuits 0.91\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1443,8 +1440,7 @@ test_options_validate__max_client_circuits(void *ignored)
   int ret;
   char *msg;
   options_test_data_t *tdata = get_options_test_data(
-                                           "MaxClientCircuitsPending 0\n"
-                                           "ConnLimit 1\n");
+                                             "MaxClientCircuitsPending 0\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1453,8 +1449,7 @@ test_options_validate__max_client_circuits(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("MaxClientCircuitsPending 1025\n"
-                                "ConnLimit 1\n");
+  tdata = get_options_test_data("MaxClientCircuitsPending 1025\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1463,8 +1458,7 @@ test_options_validate__max_client_circuits(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("MaxClientCircuitsPending 1\n"
-                                "ConnLimit 1\n");
+  tdata = get_options_test_data("MaxClientCircuitsPending 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1481,9 +1475,7 @@ test_options_validate__ports(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
-  options_test_data_t *tdata = get_options_test_data(
-                                      "FirewallPorts 65537\n"
-                                      "ConnLimit 1\n");
+  options_test_data_t *tdata = get_options_test_data("FirewallPorts 65537\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1492,8 +1484,7 @@ test_options_validate__ports(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("FirewallPorts 1\n"
-                                "LongLivedPorts 124444\n"
-                                "ConnLimit 1\n");
+                                "LongLivedPorts 124444\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1503,8 +1494,7 @@ test_options_validate__ports(void *ignored)
   free_options_test_data(tdata);
   tdata = get_options_test_data("FirewallPorts 1\n"
                                 "LongLivedPorts 2\n"
-                                "RejectPlaintextPorts 112233\n"
-                                "ConnLimit 1\n");
+                                "RejectPlaintextPorts 112233\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1515,8 +1505,7 @@ test_options_validate__ports(void *ignored)
   tdata = get_options_test_data("FirewallPorts 1\n"
                                 "LongLivedPorts 2\n"
                                 "RejectPlaintextPorts 3\n"
-                                "WarnPlaintextPorts 65536\n"
-                                "ConnLimit 1\n");
+                                "WarnPlaintextPorts 65536\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1527,8 +1516,7 @@ test_options_validate__ports(void *ignored)
   tdata = get_options_test_data("FirewallPorts 1\n"
                                 "LongLivedPorts 2\n"
                                 "RejectPlaintextPorts 3\n"
-                                "WarnPlaintextPorts 4\n"
-                                "ConnLimit 1\n");
+                                "WarnPlaintextPorts 4\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1546,9 +1534,7 @@ test_options_validate__reachable_addresses(void *ignored)
   int ret;
   char *msg;
   setup_capture_of_logs(LOG_NOTICE);
-  options_test_data_t *tdata = get_options_test_data(
-                                     "FascistFirewall 1\n"
-                                     "ConnLimit 1\n");
+  options_test_data_t *tdata = get_options_test_data("FascistFirewall 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1564,8 +1550,7 @@ test_options_validate__reachable_addresses(void *ignored)
   mock_clean_saved_logs();
   tdata = get_options_test_data("FascistFirewall 1\n"
                                 "ReachableDirAddresses *:81\n"
-                                "ReachableORAddresses *:444\n"
-                                "ConnLimit 1\n");
+                                "ReachableORAddresses *:444\n");
   tdata->opt->FirewallPorts = smartlist_new();
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1581,8 +1566,7 @@ test_options_validate__reachable_addresses(void *ignored)
   free_options_test_data(tdata);
   mock_clean_saved_logs();
   tdata = get_options_test_data("FascistFirewall 1\n"
-                                "FirewallPort 123\n"
-                                "ConnLimit 1\n");
+                                "FirewallPort 123\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1597,8 +1581,7 @@ test_options_validate__reachable_addresses(void *ignored)
   tdata = get_options_test_data("FascistFirewall 1\n"
                                 "ReachableAddresses *:82\n"
                                 "ReachableAddresses *:83\n"
-                                "ReachableAddresses reject *:*\n"
-                                "ConnLimit 1\n");
+                                "ReachableAddresses reject *:*\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1613,8 +1596,7 @@ test_options_validate__reachable_addresses(void *ignored)
   free_options_test_data(tdata);
   mock_clean_saved_logs();
   tdata = get_options_test_data("FascistFirewall 1\n"
-                                "ReachableAddresses *:82\n"
-                                "ConnLimit 1\n");
+                                "ReachableAddresses *:82\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1627,8 +1609,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ReachableAddresses *:82\n"
-                                "ORPort 127.0.0.1:5555\n"
-                                "ConnLimit 1\n");
+                                "ORPort 127.0.0.1:5555\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1637,8 +1618,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ReachableORAddresses *:82\n"
-                                "ORPort 127.0.0.1:5555\n"
-                                "ConnLimit 1\n");
+                                "ORPort 127.0.0.1:5555\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1647,8 +1627,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ReachableDirAddresses *:82\n"
-                                "ORPort 127.0.0.1:5555\n"
-                                "ConnLimit 1\n");
+                                "ORPort 127.0.0.1:5555\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1657,8 +1636,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ClientUseIPv4 0\n"
-                                "ORPort 127.0.0.1:5555\n"
-                                "ConnLimit 1\n");
+                                "ORPort 127.0.0.1:5555\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1754,8 +1732,7 @@ test_options_validate__use_bridges(void *ignored)
   options_test_data_t *tdata = get_options_test_data(
                                    "UseBridges 1\n"
                                    "ClientUseIPv4 1\n"
-                                   "ORPort 127.0.0.1:5555\n"
-                                   "ConnLimit 1\n");
+                                   "ORPort 127.0.0.1:5555\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1764,8 +1741,7 @@ test_options_validate__use_bridges(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("UseBridges 1\n"
-                                "ConnLimit 1\n");
+  tdata = get_options_test_data("UseBridges 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1776,8 +1752,7 @@ test_options_validate__use_bridges(void *ignored)
   NS_MOCK(geoip_get_country);
   free_options_test_data(tdata);
   tdata = get_options_test_data("UseBridges 1\n"
-                                "EntryNodes {cn}\n"
-                                "ConnLimit 1\n");
+                                "EntryNodes {cn}\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1835,8 +1810,7 @@ test_options_validate__entry_nodes(void *ignored)
   NS_MOCK(geoip_get_country);
   options_test_data_t *tdata = get_options_test_data(
                                          "EntryNodes {cn}\n"
-                                         "UseEntryGuards 0\n"
-                                         "ConnLimit 1\n");
+                                         "UseEntryGuards 0\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1846,8 +1820,7 @@ test_options_validate__entry_nodes(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("EntryNodes {cn}\n"
-                                "UseEntryGuards 1\n"
-                                "ConnLimit 1\n");
+                                "UseEntryGuards 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1865,9 +1838,7 @@ test_options_validate__safe_logging(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
-  options_test_data_t *tdata = get_options_test_data(
-                                            "SafeLogging 0\n"
-                                            "ConnLimit 1\n");
+  options_test_data_t *tdata = get_options_test_data("SafeLogging 0\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1875,8 +1846,7 @@ test_options_validate__safe_logging(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("SafeLogging 0\n"
-                                "ConnLimit 1\n");
+  tdata = get_options_test_data("SafeLogging 0\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1884,8 +1854,7 @@ test_options_validate__safe_logging(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("SafeLogging Relay\n"
-                                "ConnLimit 1\n");
+  tdata = get_options_test_data("SafeLogging Relay\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1893,8 +1862,7 @@ test_options_validate__safe_logging(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("SafeLogging 1\n"
-                                "ConnLimit 1\n");
+  tdata = get_options_test_data("SafeLogging 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1902,8 +1870,7 @@ test_options_validate__safe_logging(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("SafeLogging stuffy\n"
-                                "ConnLimit 1\n");
+  tdata = get_options_test_data("SafeLogging stuffy\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
