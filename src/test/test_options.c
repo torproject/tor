@@ -1572,7 +1572,6 @@ test_options_validate__reachable_addresses(void *ignored)
   options_test_data_t *tdata = get_options_test_data(
                                      "FascistFirewall 1\n"
                                      "MaxClientCircuitsPending 1\n"
-                                     "KeepalivePeriod 1\n"
                                      "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -1591,7 +1590,6 @@ test_options_validate__reachable_addresses(void *ignored)
                                 "ReachableDirAddresses *:81\n"
                                 "ReachableORAddresses *:444\n"
                                 "MaxClientCircuitsPending 1\n"
-                                "KeepalivePeriod 1\n"
                                 "ConnLimit 1\n");
   tdata->opt->FirewallPorts = smartlist_new();
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -1610,7 +1608,6 @@ test_options_validate__reachable_addresses(void *ignored)
   tdata = get_options_test_data("FascistFirewall 1\n"
                                 "FirewallPort 123\n"
                                 "MaxClientCircuitsPending 1\n"
-                                "KeepalivePeriod 1\n"
                                 "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -1628,7 +1625,6 @@ test_options_validate__reachable_addresses(void *ignored)
                                 "ReachableAddresses *:83\n"
                                 "ReachableAddresses reject *:*\n"
                                 "MaxClientCircuitsPending 1\n"
-                                "KeepalivePeriod 1\n"
                                 "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -1646,7 +1642,6 @@ test_options_validate__reachable_addresses(void *ignored)
   tdata = get_options_test_data("FascistFirewall 1\n"
                                 "ReachableAddresses *:82\n"
                                 "MaxClientCircuitsPending 1\n"
-                                "KeepalivePeriod 1\n"
                                 "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -1662,7 +1657,6 @@ test_options_validate__reachable_addresses(void *ignored)
   tdata = get_options_test_data("ReachableAddresses *:82\n"
                                 "ORPort 127.0.0.1:5555\n"
                                 "MaxClientCircuitsPending 1\n"
-                                "KeepalivePeriod 1\n"
                                 "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -1674,7 +1668,6 @@ test_options_validate__reachable_addresses(void *ignored)
   tdata = get_options_test_data("ReachableORAddresses *:82\n"
                                 "ORPort 127.0.0.1:5555\n"
                                 "MaxClientCircuitsPending 1\n"
-                                "KeepalivePeriod 1\n"
                                 "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -1686,7 +1679,6 @@ test_options_validate__reachable_addresses(void *ignored)
   tdata = get_options_test_data("ReachableDirAddresses *:82\n"
                                 "ORPort 127.0.0.1:5555\n"
                                 "MaxClientCircuitsPending 1\n"
-                                "KeepalivePeriod 1\n"
                                 "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -1698,7 +1690,6 @@ test_options_validate__reachable_addresses(void *ignored)
   tdata = get_options_test_data("ClientUseIPv4 0\n"
                                 "ORPort 127.0.0.1:5555\n"
                                 "MaxClientCircuitsPending 1\n"
-                                "KeepalivePeriod 1\n"
                                 "ConnLimit 1\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
