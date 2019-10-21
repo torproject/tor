@@ -5720,7 +5720,7 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
   ok = 1;
   elts = smartlist_new();
 
-  if (options->Logs == NULL && !run_as_daemon) {
+  if (options->Logs == NULL && !run_as_daemon && !validate_only) {
     /* When no logs are given, the default behavior is to log nothing (if
        RunAsDaemon is set) or to log based on the quiet level otherwise. */
     add_default_log_for_quiet_level(quiet_level);
