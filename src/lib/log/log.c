@@ -276,8 +276,8 @@ static int log_time_granularity = 1;
 
 /** Define log time granularity for all logs to be <b>granularity_msec</b>
  * milliseconds. */
-void
-set_log_time_granularity(int granularity_msec)
+MOCK_IMPL(void,
+set_log_time_granularity,(int granularity_msec))
 {
   log_time_granularity = granularity_msec;
   tor_log_sigsafe_err_set_granularity(granularity_msec);
@@ -937,9 +937,9 @@ set_log_severity_config(int loglevelMin, int loglevelMax,
 
 /** Add a log handler named <b>name</b> to send all messages in <b>severity</b>
  * to <b>fd</b>. Copies <b>severity</b>. Helper: does no locking. */
-static void
-add_stream_log_impl(const log_severity_list_t *severity,
-                    const char *name, int fd)
+MOCK_IMPL(STATIC void,
+add_stream_log_impl,(const log_severity_list_t *severity,
+                     const char *name, int fd))
 {
   logfile_t *lf;
   lf = tor_malloc_zero(sizeof(logfile_t));
@@ -1199,10 +1199,10 @@ mark_logs_temp(void)
  * opening the logfile failed, -1 is returned and errno is set appropriately
  * (by open(2)).  Takes ownership of fd.
  */
-int
-add_file_log(const log_severity_list_t *severity,
-             const char *filename,
-             int fd)
+MOCK_IMPL(int,
+add_file_log,(const log_severity_list_t *severity,
+              const char *filename,
+              int fd))
 {
   logfile_t *lf;
 

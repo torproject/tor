@@ -163,11 +163,11 @@ int parse_log_severity_config(const char **cfg,
                               log_severity_list_t *severity_out);
 void set_log_severity_config(int minSeverity, int maxSeverity,
                              log_severity_list_t *severity_out);
-void add_stream_log(const log_severity_list_t *severity, const char *name,
-                    int fd);
-int add_file_log(const log_severity_list_t *severity,
-                 const char *filename,
-                 int fd);
+void add_stream_log(const log_severity_list_t *severity,
+                    const char *name, int fd);
+MOCK_DECL(int, add_file_log,(const log_severity_list_t *severity,
+                             const char *filename,
+                             int fd));
 
 #ifdef HAVE_SYSLOG_H
 int add_syslog_log(const log_severity_list_t *severity,
@@ -194,7 +194,7 @@ void change_callback_log_severity(int loglevelMin, int loglevelMax,
 void flush_pending_log_callbacks(void);
 void flush_log_messages_from_startup(void);
 void log_set_application_name(const char *name);
-void set_log_time_granularity(int granularity_msec);
+MOCK_DECL(void, set_log_time_granularity,(int granularity_msec));
 void truncate_logs(void);
 
 void tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
@@ -306,6 +306,8 @@ extern const log_domain_mask_t LD_GENERAL_;
 MOCK_DECL(STATIC void, logv, (int severity, log_domain_mask_t domain,
     const char *funcname, const char *suffix, const char *format,
     va_list ap) CHECK_PRINTF(5,0));
+MOCK_DECL(STATIC void, add_stream_log_impl,(
+         const log_severity_list_t *severity, const char *name, int fd));
 #endif
 
 #if defined(LOG_PRIVATE) || defined(TOR_UNIT_TESTS)
