@@ -5290,26 +5290,31 @@ test_util_mathlog(void *arg)
   ;
 }
 
+/** Check that calling simplify_fraction64() with test_num/test_denom
+ * results in expect_num/expect_denom. */
+#define TEST_SIMPLIFY_FRACTION(test_num, test_denom,       \
+                               expect_num, expect_denom)   \
+  STMT_BEGIN                                               \
+    uint64_t a,b;                                          \
+    a = test_num; b = test_denom;                          \
+    simplify_fraction64(&a,&b);                            \
+    tt_u64_op(a, OP_EQ, expect_num);                       \
+    tt_u64_op(b, OP_EQ, expect_denom);                     \
+  STMT_END
+
 static void
 test_util_fraction(void *arg)
 {
-  uint64_t a,b;
   (void)arg;
 
-  a = 99; b = 30;
-  simplify_fraction64(&a,&b);
-  tt_u64_op(a, OP_EQ, 33);
-  tt_u64_op(b, OP_EQ, 10);
+  TEST_SIMPLIFY_FRACTION(99, 30,
+                         33, 10);
 
-  a = 3000000; b = 10000000;
-  simplify_fraction64(&a,&b);
-  tt_u64_op(a, OP_EQ, 3);
-  tt_u64_op(b, OP_EQ, 10);
+  TEST_SIMPLIFY_FRACTION(3000000, 10000000,
+                         3, 10);
 
-  a = 0; b = 15;
-  simplify_fraction64(&a,&b);
-  tt_u64_op(a, OP_EQ, 0);
-  tt_u64_op(b, OP_EQ, 1);
+  TEST_SIMPLIFY_FRACTION(0, 15,
+                         0, 1);
 
  done:
   ;
