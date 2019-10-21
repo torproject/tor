@@ -134,6 +134,13 @@ void connection_or_group_set_badness_(smartlist_t *group, int force);
 #ifdef CONNECTION_OR_PRIVATE
 STATIC int should_connect_to_relay(const or_connection_t *or_conn);
 STATIC void note_or_connect_failed(const or_connection_t *or_conn);
+
+/*
+ * Call this when changing connection state, so notifications to the owning
+ * channel can be handled.
+ */
+MOCK_DECL(STATIC void,connection_or_change_state,
+          (or_connection_t *conn, uint8_t state));
 #endif
 
 #ifdef TOR_UNIT_TESTS

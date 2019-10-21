@@ -95,13 +95,6 @@ static unsigned int
 connection_or_is_bad_for_new_circs(or_connection_t *or_conn);
 static void connection_or_mark_bad_for_new_circs(or_connection_t *or_conn);
 
-/*
- * Call this when changing connection state, so notifications to the owning
- * channel can be handled.
- */
-
-static void connection_or_change_state(or_connection_t *conn, uint8_t state);
-
 static void connection_or_check_canonicity(or_connection_t *conn,
                                            int started_here);
 
@@ -457,8 +450,8 @@ connection_or_state_publish(const or_connection_t *conn, uint8_t state)
  * be notified.
  */
 
-static void
-connection_or_change_state(or_connection_t *conn, uint8_t state)
+MOCK_IMPL(STATIC void,
+connection_or_change_state,(or_connection_t *conn, uint8_t state))
 {
   tor_assert(conn);
 
