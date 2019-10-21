@@ -3623,16 +3623,16 @@ __HiddenServiceDirectory__/**`onion_service_non_anonymous`**::
 
 SEE ALSO
 --------
-**torsocks**(1), **torify**(1) +
 
-**https://www.torproject.org/**
-
-**torspec: https://spec.torproject.org **
+For more information, refer to the Tor project at https://www.torproject.org/
+and the Tor spec at https://spec.torproject.org. See also **torsocks**(1) and
+**torify**(1).
 
 BUGS
 ----
 
-Plenty, probably. Tor is still in development. Please report them at https://trac.torproject.org/.
+Because Tor is still under development, there may be plenty of bugs. Please
+report them at https://trac.torproject.org/.
 
 AUTHORS
 -------
