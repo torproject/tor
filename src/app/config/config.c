@@ -3330,6 +3330,10 @@ options_validate_scheduler(or_options_t *options, char **msg)
            "can be used or set at least one value.");
   }
   /* Ok, we do have scheduler types, validate them. */
+  if (options->SchedulerTypes_) {
+    SMARTLIST_FOREACH(options->SchedulerTypes_, int *, iptr, tor_free(iptr));
+    smartlist_free(options->SchedulerTypes_);
+  }
   options->SchedulerTypes_ = smartlist_new();
   SMARTLIST_FOREACH_BEGIN(options->Schedulers, const char *, type) {
     int *sched_type;
