@@ -1553,7 +1553,9 @@ test_options_validate__reachable_addresses(void *ignored)
   tdata = get_options_test_data("FascistFirewall 1\n"
                                 "ReachableDirAddresses *:81\n"
                                 "ReachableORAddresses *:444\n");
-  tdata->opt->FirewallPorts = smartlist_new();
+  tt_assert(tdata->opt->FirewallPorts);
+  SMARTLIST_FOREACH(tdata->opt->FirewallPorts, char *, cp, tor_free(cp));
+  smartlist_clear(tdata->opt->FirewallPorts);
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
 #if 0
