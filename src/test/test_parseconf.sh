@@ -36,6 +36,27 @@
 #      matched by some line in the output of "--verify-config", which must
 #      fail. Exactly one of "expected" or "error" must be present, or the
 #      test will fail.
+#
+# {expected,error}_no_${TOR_MODULES_DISABLED} -- If this file is present,
+#      then the outcome is different when some modules are disabled. If there
+#      is no result file matching the exact list of disabled modules, the
+#      standard result file is used.
+#
+#      For example:
+#      A test that succeeds, regardless of any disabled modules:
+#       - expected
+#      A test that has a different result if the relay module is disabled
+#      (but the same result if just the dirauth module is disabled):
+#       - expected
+#       - expected_no_relay_dirauth
+#      A test that fails if the dirauth module is disabled:
+#       - expected
+#       - error_no_dirauth
+#       - error_no_relay_dirauth
+#      (Disabling the relay module also disables dirauth module. But we don't
+#      want to encode that knowledge in this test script, so we supply a
+#      separate result file for every combination of disabled modules that
+#      has a different result.)
 
 umask 077
 set -e
@@ -63,6 +84,11 @@ else
 fi
 
 TOR_BINARY="$(abspath "$TOR_BINARY")"
+
+TOR_MODULES_DISABLED="$("$TOR_BINARY" --list-modules | grep ": no" \
+                        | cut -d ":" -f1 | sort | tr "\n" "_")"
+# Remove the last underscore, if there is one
+TOR_MODULES_DISABLED=${TOR_MODULES_DISABLED%_}
 
 # make a safe space for temporary files
 DATA_DIR=$(mktemp -d -t tor_parseconf_tests.XXXXXX)
@@ -125,12 +151,30 @@ for dir in "${EXAMPLEDIR}"/*; do
         CMDLINE=""
     fi
 
-    if test -f "./expected"; then
-        if test -f "./error"; then
-            echo "FAIL: Found both ${dir}/expected and ${dir}/error."
-            echo "(Only one of these files should exist.)"
-            exit $EXITCODE
+    # If tor has some modules disabled, search for a custom result file for
+    # the disabled modules
+    for suffix in "_no_$TOR_MODULES_DISABLED" ""; do
+
+        if test -f "./expected${suffix}"; then
+
+            # Check for broken configs
+            if test -f "./error${suffix}"; then
+                echo "FAIL: Found both ${dir}/expected${suffix}"
+                echo "and ${dir}/error${suffix}."
+                echo "(Only one of these files should exist.)"
+                exit $EXITCODE
+            fi
+
+            EXPECTED="./expected${suffix}"
+            break
+
+        elif test -f "./error${suffix}"; then
+            ERROR="./error${suffix}"
+            break
         fi
+    done
+
+    if test -f "$EXPECTED"; then
 
         # This case should succeed: run dump-config and see if it does.
 
@@ -141,7 +185,7 @@ for dir in "${EXAMPLEDIR}"/*; do
                         | "${FILTER}" > "${DATA_DIR}/output.${testname}" \
                         || die "Failure: Tor exited."
 
-        if cmp "./expected" "${DATA_DIR}/output.${testname}">/dev/null ; then
+        if cmp "$EXPECTED" "${DATA_DIR}/output.${testname}">/dev/null ; then
             # Check round-trip.
             "${TOR_BINARY}" -f "${DATA_DIR}/output.${testname}" \
                             --defaults-torrc "${DATA_DIR}/empty" \
@@ -166,11 +210,11 @@ for dir in "${EXAMPLEDIR}"/*; do
                                 --verify-config \
                                 ${CMDLINE} || true
             fi
-            diff -u "./expected" "${DATA_DIR}/output.${testname}" || /bin/true
+            diff -u "$EXPECTED" "${DATA_DIR}/output.${testname}" || /bin/true
             exit $EXITCODE
         fi
 
-   elif test -f "./error"; then
+   elif test -f "$ERROR"; then
         # This case should fail: run verify-config and see if it does.
 
         "${TOR_BINARY}" --verify-config \
@@ -180,7 +224,7 @@ for dir in "${EXAMPLEDIR}"/*; do
                         > "${DATA_DIR}/output.${testname}" \
                         && die "Failure: Tor did not report an error."
 
-        expect_err="$(cat ./error)"
+        expect_err="$(cat $ERROR)"
         if grep "${expect_err}" "${DATA_DIR}/output.${testname}" >/dev/null; then
             echo "OK"
         else
@@ -195,7 +239,7 @@ for dir in "${EXAMPLEDIR}"/*; do
         # This case is not actually configured with a success or a failure.
         # call that an error.
 
-        echo "FAIL: Did not find ${dir}/expected or ${dir}/error."
+        echo "FAIL: Did not find ${dir}/*expected or ${dir}/*error."
         exit $EXITCODE
     fi
 

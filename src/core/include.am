@@ -71,6 +71,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/client/circpathbias.c	\
 	src/feature/client/dnsserv.c		\
 	src/feature/client/entrynodes.c		\
+	src/feature/client/proxymode.c		\
 	src/feature/client/transports.c		\
 	src/feature/control/btrack.c		\
 	src/feature/control/btrack_circuit.c	\
@@ -145,7 +146,6 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/relay/relay_sys.c		\
 	src/feature/relay/router.c		\
 	src/feature/relay/routerkeys.c		\
-	src/feature/relay/routermode.c		\
 	src/feature/relay/selftest.c		\
 	src/feature/rend/rendcache.c		\
 	src/feature/rend/rendclient.c		\
@@ -169,6 +169,10 @@ endif
 #
 LIBTOR_APP_TESTING_A_SOURCES = $(LIBTOR_APP_A_SOURCES)
 
+# The Relay module.
+MODULE_RELAY_SOURCES = 					    \
+	src/feature/relay/routermode.c
+
 # The Directory Authority module.
 MODULE_DIRAUTH_SOURCES = 					\
 	src/feature/dirauth/authmode.c				\
@@ -188,6 +192,10 @@ MODULE_DIRAUTH_SOURCES = 					\
 	src/feature/dirauth/shared_random_state.c		\
 	src/feature/dirauth/voteflags.c
 
+if BUILD_MODULE_RELAY
+LIBTOR_APP_A_SOURCES += $(MODULE_RELAY_SOURCES)
+endif
+
 if BUILD_MODULE_DIRAUTH
 LIBTOR_APP_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)
 endif
@@ -196,6 +204,7 @@ src_core_libtor_app_a_SOURCES = $(LIBTOR_APP_A_SOURCES)
 if UNITTESTS_ENABLED
 
 # Add the sources of the modules that are needed for tests to work here.
+LIBTOR_APP_TESTING_A_SOURCES += $(MODULE_RELAY_SOURCES)
 LIBTOR_APP_TESTING_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)
 
 src_core_libtor_app_testing_a_SOURCES = $(LIBTOR_APP_TESTING_A_SOURCES)
@@ -305,6 +314,7 @@ noinst_HEADERS +=					\
 	src/feature/client/circpathbias.h		\
 	src/feature/client/dnsserv.h			\
 	src/feature/client/entrynodes.h			\
+	src/feature/client/proxymode.h			\
 	src/feature/client/transports.h			\
 	src/feature/control/btrack_circuit.h		\
 	src/feature/control/btrack_orconn.h		\

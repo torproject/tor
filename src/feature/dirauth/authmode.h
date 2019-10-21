@@ -27,6 +27,7 @@ authdir_mode_v3(const or_options_t *options)
   return authdir_mode(options) && options->V3AuthoritativeDir != 0;
 }
 
+/* Is the dirauth module enabled? */
 #define have_module_dirauth() (1)
 
 #else /* !defined(HAVE_MODULE_DIRAUTH) */

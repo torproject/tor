@@ -28,7 +28,10 @@ else
   TOR_BINARY="${TESTING_TOR_BINARY}"
 fi
 
-
+if "$TOR_BINARY" --list-modules | grep -q "relay: no"; then
+  echo "This test requires the relay module. Skipping." >&2
+  exit 77
+fi
 
   if [ $# -ge 1 ]; then
       dflt=0

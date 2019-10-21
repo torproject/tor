@@ -255,13 +255,22 @@ dnl Tor modules options. These options are namespaced with --disable-module-XXX
 dnl ---
 
 dnl All our modules.
-m4_define(MODULES, dirauth)
+m4_define(MODULES, relay dirauth)
+
+dnl Relay module.
+AC_ARG_ENABLE([module-relay],
+              AS_HELP_STRING([--disable-module-relay],
+                             [Build tor without the Relay modules: tor can not run as a relay, bridge, or authority. Implies --disable-module-dirauth]))
+AM_CONDITIONAL(BUILD_MODULE_RELAY, [test "x$enable_module_relay" != "xno"])
+AM_COND_IF(BUILD_MODULE_RELAY,
+           AC_DEFINE([HAVE_MODULE_RELAY], [1],
+                     [Compile with Relay feature support]))
 
 dnl Directory Authority module.
 AC_ARG_ENABLE([module-dirauth],
               AS_HELP_STRING([--disable-module-dirauth],
                              [Build tor without the Directory Authority module: tor can not run as a directory authority or bridge authority]))
-AM_CONDITIONAL(BUILD_MODULE_DIRAUTH,[test "x$enable_module_dirauth" != "xno"])
+AM_CONDITIONAL(BUILD_MODULE_DIRAUTH,[test "x$enable_module_dirauth" != "xno" && test "x$enable_module_relay" != "xno"])
 AM_COND_IF(BUILD_MODULE_DIRAUTH,
            AC_DEFINE([HAVE_MODULE_DIRAUTH], [1],
                      [Compile with Directory Authority feature support]))

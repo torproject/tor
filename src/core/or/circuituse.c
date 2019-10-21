@@ -42,6 +42,7 @@
 #include "feature/client/bridges.h"
 #include "feature/client/circpathbias.h"
 #include "feature/client/entrynodes.h"
+#include "feature/client/proxymode.h"
 #include "feature/control/control_events.h"
 #include "feature/dircommon/directory.h"
 #include "feature/hs/hs_circuit.h"
