@@ -333,9 +333,8 @@ getinfo_helper_current_consensus(consensus_flavor_t flavor,
                                  const char** errmsg)
 {
   const char *flavor_name = networkstatus_get_flavor_name(flavor);
-  if (!strcmp(flavor_name, "??")) {
-    *errmsg = "Could not open cached consensus. "
-      "Make sure FetchUselessDescriptors is set to 1.";
+  if (BUG(!strcmp(flavor_name, "??"))) {
+    *errmsg = "Internal error: unrecognized flavor name.";
     return -1;
   }
   if (we_want_to_fetch_flavor(get_options(), flavor)) {
@@ -615,14 +614,14 @@ getinfo_helper_dir(control_connection_t *control_conn,
   } else if (!strcmp(question, "dir/status-vote/current/consensus")) {
     int consensus_result = getinfo_helper_current_consensus(FLAV_NS,
                                                             answer, errmsg);
-    if (consensus_result == -1) {
+    if (consensus_result < 0) {
       return -1;
     }
   } else if (!strcmp(question,
                      "dir/status-vote/current/consensus-microdesc")) {
     int consensus_result = getinfo_helper_current_consensus(FLAV_MICRODESC,
                                                             answer, errmsg);
-    if (consensus_result == -1) {
+    if (consensus_result < 0) {
       return -1;
     }
   } else if (!strcmp(question, "network-status")) { /* v1 */
