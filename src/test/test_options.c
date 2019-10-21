@@ -390,24 +390,10 @@ fixed_get_uname(void)
   return fixed_get_uname_result;
 }
 
-#define TEST_OPTIONS_OLD_VALUES   "TestingV3AuthInitialVotingInterval 1800\n" \
-  "ClientBootstrapConsensusMaxInProgressTries 3\n"
-
-#define TEST_OPTIONS_DEFAULT_VALUES TEST_OPTIONS_OLD_VALUES \
+#define TEST_OPTIONS_DEFAULT_VALUES                                     \
   "MaxClientCircuitsPending 1\n"                                        \
-  "RendPostPeriod 1000\n"                                               \
   "KeepAlivePeriod 1\n"                                                 \
-  "ConnLimit 1\n"                                                       \
-  "V3AuthVotingInterval 300\n"                                          \
-  "V3AuthVoteDelay 20\n"                                                \
-  "V3AuthDistDelay 20\n"                                                \
-  "V3AuthNIntervalsValid 3\n"                                           \
-  "ClientUseIPv4 1\n"                                                   \
-  "VirtualAddrNetworkIPv4 127.192.0.0/10\n"                             \
-  "VirtualAddrNetworkIPv6 [FE80::]/10\n"                                \
-  "UseEntryGuards 1\n"                                                  \
-  "Schedulers Vanilla\n"                                                \
-  "ClientDNSRejectInternalAddresses 1\n"
+  "ConnLimit 1\n"
 
 typedef struct {
   or_options_t *old_opt;
@@ -451,7 +437,7 @@ get_options_test_data(const char *conf)
   config_free_lines(cl);
   result->opt->LogTimeGranularity = 1;
   result->opt->TokenBucketRefillInterval = 1;
-  rv = config_get_lines(TEST_OPTIONS_OLD_VALUES, &cl, 1);
+  rv = config_get_lines("", &cl, 1);
   tt_int_op(rv, OP_EQ, 0);
   rv = config_assign(get_options_mgr(), result->def_opt, cl, 0, &msg);
   if (msg) {
