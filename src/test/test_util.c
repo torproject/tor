@@ -5361,13 +5361,77 @@ test_util_fraction(void *arg)
 {
   (void)arg;
 
+  /* Fractions that simplify: >1; =1; (0,1); 0 */
+
+  /* 6700417 is the largest prime factor of UINT64_MAX */
+  TEST_SIMPLIFY_FRACTION64(        UINT64_MAX, 6700417,
+                           UINT64_MAX/6700417,       1);
+
+  /* 65537 is the largest prime factor of UINT32_MAX */
+  TEST_SIMPLIFY_FRACTION(      UINT32_MAX, 65537,
+                         UINT32_MAX/65537,     1);
+
   TEST_SIMPLIFY_FRACTION(99, 30,
                          33, 10);
 
+  TEST_SIMPLIFY_FRACTION64(UINT64_MAX, UINT64_MAX,
+                                    1,          1);
+
+  TEST_SIMPLIFY_FRACTION(UINT32_MAX, UINT32_MAX,
+                                  1,          1);
+
+  TEST_SIMPLIFY_FRACTION(31, 31,
+                          1,  1);
+
+  /* We don't need to test the max cases here, because we test inverses. */
+
   TEST_SIMPLIFY_FRACTION(3000000, 10000000,
-                         3, 10);
+                               3,       10);
+
+  TEST_SIMPLIFY_FRACTION64(0, UINT64_MAX,
+                           0,          1);
+
+  TEST_SIMPLIFY_FRACTION(0, UINT32_MAX,
+                         0,          1);
 
   TEST_SIMPLIFY_FRACTION(0, 15,
+                         0,  1);
+
+  /* Fractions that don't simplify: >1; =1; (0,1); 0 */
+
+  TEST_SIMPLIFY_FRACTION64(UINT64_MAX, 1,
+                           UINT64_MAX, 1);
+
+  TEST_SIMPLIFY_FRACTION(UINT32_MAX, 1,
+                         UINT32_MAX, 1);
+
+  /* INT32_MAX just happens to be prime, and not one of the factors of
+   * UINT64_MAX or UINT32_MAX. */
+  TEST_SIMPLIFY_FRACTION64(UINT64_MAX, INT32_MAX,
+                           UINT64_MAX, INT32_MAX);
+
+  TEST_SIMPLIFY_FRACTION(UINT32_MAX, INT32_MAX,
+                         UINT32_MAX, INT32_MAX);
+
+  /* UINT64_MAX and INT64_MAX don't have any common factors. */
+  TEST_SIMPLIFY_FRACTION64(UINT64_MAX, INT64_MAX,
+                           UINT64_MAX, INT64_MAX);
+
+  TEST_SIMPLIFY_FRACTION(60, 1,
+                         60, 1);
+
+  TEST_SIMPLIFY_FRACTION(7, 3,
+                         7, 3);
+
+  TEST_SIMPLIFY_FRACTION(1, 1,
+                         1, 1);
+
+  /* We don't need to test the max cases here, because we test inverses. */
+
+  TEST_SIMPLIFY_FRACTION(2, 3,
+                         2, 3);
+
+  TEST_SIMPLIFY_FRACTION(0, 1,
                          0, 1);
 
  done:
