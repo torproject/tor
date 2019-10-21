@@ -5290,10 +5290,37 @@ test_util_mathlog(void *arg)
   ;
 }
 
+/** Check that calling simplify_fraction32() with test_num/test_denom
+ * results in expect_num/expect_denom. */
+#define TEST_SIMPLIFY_F32_HELPER(test_num, test_denom,     \
+                                 expect_num, expect_denom) \
+  STMT_BEGIN                                               \
+    uint32_t a,b;                                          \
+    a = test_num; b = test_denom;                          \
+    simplify_fraction32(&a,&b);                            \
+    tt_int_op(a, OP_EQ, expect_num);                       \
+    tt_int_op(b, OP_EQ, expect_denom);                     \
+  STMT_END
+
+/** Check that calling simplify_fraction32() with test_num/test_denom
+ * results in expect_num/expect_denom.
+ * If test_num is not zero, also check that the inverse fraction simplifies
+ * to the inverse of the expected result. */
+#define TEST_SIMPLIFY_FRACTION32(test_num, test_denom,     \
+                                 expect_num, expect_denom) \
+  STMT_BEGIN                                               \
+    TEST_SIMPLIFY_F32_HELPER(test_num, test_denom,         \
+                             expect_num, expect_denom);    \
+    if (test_num != 0) {                                   \
+      TEST_SIMPLIFY_F32_HELPER(test_denom, test_num,       \
+                               expect_denom, expect_num);  \
+    }                                                      \
+  STMT_END
+
 /** Check that calling simplify_fraction64() with test_num/test_denom
  * results in expect_num/expect_denom. */
-#define TEST_SIMPLIFY_FRACTION(test_num, test_denom,       \
-                               expect_num, expect_denom)   \
+#define TEST_SIMPLIFY_F64_HELPER(test_num, test_denom,     \
+                                 expect_num, expect_denom) \
   STMT_BEGIN                                               \
     uint64_t a,b;                                          \
     a = test_num; b = test_denom;                          \
@@ -5302,6 +5329,33 @@ test_util_mathlog(void *arg)
     tt_u64_op(b, OP_EQ, expect_denom);                     \
   STMT_END
 
+/** Check that calling simplify_fraction64() with test_num/test_denom
+ * results in expect_num/expect_denom.
+ * If test_num is not zero, also check that the inverse fraction simplifies
+ * to the inverse of the expected result. */
+#define TEST_SIMPLIFY_FRACTION64(test_num, test_denom,     \
+                                 expect_num, expect_denom) \
+  STMT_BEGIN                                               \
+    TEST_SIMPLIFY_F64_HELPER(test_num, test_denom,         \
+                             expect_num, expect_denom);    \
+    if (test_num != 0) {                                   \
+      TEST_SIMPLIFY_F64_HELPER(test_denom, test_num,       \
+                               expect_denom, expect_num);  \
+    }                                                      \
+  STMT_END
+
+/** Check that calling simplify_fraction32() and simplify_fraction64() with
+ * test_num/test_denom results in expect_num/expect_denom.
+ * If test_num is not zero, also check that the inverse fraction simplifies
+ * to the inverse of the expected result. */
+#define TEST_SIMPLIFY_FRACTION(test_num, test_denom,       \
+                               expect_num, expect_denom)   \
+  TEST_SIMPLIFY_FRACTION32(test_num, test_denom,           \
+                           expect_num, expect_denom);      \
+  TEST_SIMPLIFY_FRACTION64(test_num, test_denom,           \
+                           expect_num, expect_denom);
+
+/* Test simplify_fraction32() and simplify_fraction64(). */
 static void
 test_util_fraction(void *arg)
 {
