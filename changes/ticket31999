@@ -1,0 +1,6 @@
+  o Code simplification and refactoring:
+    - Our default log (which ordinarily sends NOTICE-level message to
+      standard output) is now handled in a more logical manner. Previously,
+      we replaced the configured log options if they were empty.
+      Now, we interpret an empty set of log options as meaning "use the
+      default log". Closes ticket 31999.
