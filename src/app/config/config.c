@@ -5672,22 +5672,14 @@ open_and_add_file_log(const log_severity_list_t *severity,
 }
 
 /**
- * Initialize the logs based on the configuration file.
- */
-STATIC int
-options_init_logs(const or_options_t *old_options, or_options_t *options,
-                  int validate_only)
+ * Try to set our global log granularity from `options->LogGranularity`,
+ * adjusting it as needed so that we are an even divisor of a second, or an
+ * even multiple of seconds. Return 0 on success, -1 on failure.
+ **/
+static int
+options_init_log_granularity(const or_options_t *options,
+                             int validate_only)
 {
-  config_line_t *opt;
-  int ok;
-  smartlist_t *elts;
-  int run_as_daemon =
-#ifdef _WIN32
-               0;
-#else
-               options->RunAsDaemon;
-#endif
-
   if (options->LogTimeGranularity <= 0) {
     log_warn(LD_CONFIG, "Log time granularity '%d' has to be positive.",
              options->LogTimeGranularity);
@@ -5716,6 +5708,29 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
     if (!validate_only)
       set_log_time_granularity(options->LogTimeGranularity);
   }
+
+  return 0;
+}
+
+/**
+ * Initialize the logs based on the configuration file.
+ */
+STATIC int
+options_init_logs(const or_options_t *old_options, or_options_t *options,
+                  int validate_only)
+{
+  config_line_t *opt;
+  int ok;
+  smartlist_t *elts;
+  int run_as_daemon =
+#ifdef _WIN32
+               0;
+#else
+               options->RunAsDaemon;
+#endif
+
+  if (options_init_log_granularity(options, validate_only) < 0)
+    return -1;
 
   ok = 1;
   elts = smartlist_new();
