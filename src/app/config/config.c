@@ -2681,7 +2681,7 @@ options_trial_assign(config_line_t *list, unsigned flags, char **msg)
   in_option_validation = 1;
 
   if (options_validate(cur_options, trial_options,
-                       global_default_options, 1, msg) < 0) {
+                       msg) < 0) {
     or_options_free(trial_options);
     rv = SETOPT_ERR_PARSE; /*XXX make this a separate return value. */
     goto done;
@@ -3233,7 +3233,7 @@ static int
 options_validate_cb(void *old_options, void *options, char **msg)
 {
   in_option_validation = 1;
-  int rv = options_validate(old_options, options, NULL, 0, msg);
+  int rv = options_validate(old_options, options, msg);
   in_option_validation = 0;
   return rv;
 }
@@ -5515,8 +5515,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   newoptions->FilesOpenedByIncludes = opened_files;
 
   /* Validate newoptions */
-  if (options_validate(oldoptions, newoptions, newdefaultoptions,
-                       0, msg) < 0) {
+  if (options_validate(oldoptions, newoptions, msg) < 0) {
     err = SETOPT_ERR_PARSE; /*XXX make this a separate return value.*/
     goto err;
   }
