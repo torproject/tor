@@ -9,6 +9,7 @@
  * \brief Code to construct a dispatch_t from a dispatch_cfg_t.
  **/
 
+#define DISPATCH_NEW_PRIVATE
 #define DISPATCH_PRIVATE
 #include "orconfig.h"
 
@@ -26,14 +27,14 @@
 
 /** Given a smartlist full of (possibly NULL) pointers to uint16_t values,
  * return the largest value, or dflt if the list is empty. */
-static int
-max_in_sl(const smartlist_t *sl, int dflt)
+STATIC int
+max_in_u16_sl(const smartlist_t *sl, int dflt)
 {
   uint16_t *maxptr = NULL;
   SMARTLIST_FOREACH_BEGIN(sl, uint16_t *, u) {
     if (!maxptr)
       maxptr = u;
-    else if (*u > *maxptr)
+    else if (u && *u > *maxptr)
       maxptr = u;
   } SMARTLIST_FOREACH_END(u);
 
@@ -118,11 +119,12 @@ dispatch_new(const dispatch_cfg_t *cfg)
                             smartlist_len(cfg->recv_by_msg)) + 1;
 
   /* Any channel that any message has counts towards the number of channels. */
-  const size_t n_chans = (size_t) MAX(1, max_in_sl(cfg->chan_by_msg,0)) + 1;
+  const size_t n_chans = (size_t)
+    MAX(1, max_in_u16_sl(cfg->chan_by_msg,0)) + 1;
 
   /* Any type that a message has, or that has functions, counts towards
    * the number of types. */
-  const size_t n_types = (size_t) MAX(max_in_sl(cfg->type_by_msg,0),
+  const size_t n_types = (size_t) MAX(max_in_u16_sl(cfg->type_by_msg,0),
                                       smartlist_len(cfg->fns_by_type)) + 1;
 
   d->n_msgs = n_msgs;

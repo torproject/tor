@@ -1,6 +1,7 @@
 /* Copyright (c) 2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define DISPATCH_NEW_PRIVATE
 #define DISPATCH_PRIVATE
 
 #include "test/test.h"
@@ -18,6 +19,33 @@
 #include <string.h>
 
 static dispatch_t *dispatcher_in_use=NULL;
+
+static void
+test_dispatch_max_in_u16_sl(void *arg)
+{
+  (void)arg;
+  smartlist_t *sl = smartlist_new();
+  uint16_t nums[] = { 10, 20, 30 };
+  tt_int_op(-1, OP_EQ, max_in_u16_sl(sl, -1));
+
+  smartlist_add(sl, NULL);
+  tt_int_op(-1, OP_EQ, max_in_u16_sl(sl, -1));
+
+  smartlist_add(sl, &nums[1]);
+  tt_int_op(20, OP_EQ, max_in_u16_sl(sl, -1));
+
+  smartlist_add(sl, &nums[0]);
+  tt_int_op(20, OP_EQ, max_in_u16_sl(sl, -1));
+
+  smartlist_add(sl, NULL);
+  tt_int_op(20, OP_EQ, max_in_u16_sl(sl, -1));
+
+  smartlist_add(sl, &nums[2]);
+  tt_int_op(30, OP_EQ, max_in_u16_sl(sl, -1));
+
+ done:
+  smartlist_free(sl);
+}
 
 /* Construct an empty dispatch_t. */
 static void
@@ -240,6 +268,7 @@ test_dispatch_bad_type_setup(void *arg)
   { #name, test_dispatch_ ## name, TT_FORK, NULL, NULL }
 
 struct testcase_t dispatch_tests[] = {
+  T(max_in_u16_sl),
   T(empty),
   T(simple),
   T(no_recipient),
