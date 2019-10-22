@@ -117,6 +117,31 @@ test_cmux_compute_ticks(void *arg)
   ;
 }
 
+static void
+test_cmux_allocate(void *arg)
+{
+  circuitmux_t *cmux = NULL;
+
+  (void) arg;
+
+  cmux = circuitmux_alloc();
+  tt_assert(cmux);
+  tt_assert(cmux->chanid_circid_map);
+  tt_int_op(HT_SIZE(cmux->chanid_circid_map), OP_EQ, 0);
+  tt_uint_op(cmux->n_circuits, OP_EQ, 0);
+  tt_uint_op(cmux->n_active_circuits, OP_EQ, 0);
+  tt_uint_op(cmux->n_cells, OP_EQ, 0);
+  tt_uint_op(cmux->last_cell_was_destroy, OP_EQ, 0);
+  tt_int_op(cmux->destroy_ctr, OP_EQ, 0);
+  tt_ptr_op(cmux->policy, OP_EQ, NULL);
+  tt_ptr_op(cmux->policy_data, OP_EQ, NULL);
+
+  tt_assert(TOR_SIMPLEQ_EMPTY(&cmux->destroy_cell_queue.head));
+
+ done:
+  circuitmux_free(cmux);
+}
+
 static void *
 cmux_setup_test(const struct testcase_t *tc)
 {
@@ -148,6 +173,10 @@ static struct testcase_setup_t cmux_test_setup = {
   { #name, test_cmux_##name, TT_FORK, &cmux_test_setup, NULL }
 
 struct testcase_t circuitmux_tests[] = {
+  /* Test circuitmux_t object */
+  TEST_CMUX(allocate),
+
+  /* Misc. */
   TEST_CMUX(compute_ticks),
   TEST_CMUX(destroy_cell_queue),
 
