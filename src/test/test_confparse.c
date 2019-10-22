@@ -1044,7 +1044,7 @@ test_confparse_find_option_name(void *arg)
 #define BADVAL_TEST(name)                               \
   { "badval_" #name, test_confparse_assign_badval, 0,   \
       &passthrough_setup, (void*)&bv_ ## name }
-#endif
+#endif /* !defined(COCCI) */
 
 struct testcase_t confparse_tests[] = {
   CONFPARSE_TEST(init, 0),

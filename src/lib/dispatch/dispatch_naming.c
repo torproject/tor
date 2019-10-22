@@ -57,7 +57,7 @@ dispatch_naming_init(void)
     return namemap_get_size(&type##_id_map);                            \
   }                                                                     \
   EAT_SEMICOLON
-#endif
+#endif /* !defined(COCCI) */
 
 DECLARE_ID_MAP_FNS(message);
 DECLARE_ID_MAP_FNS(channel);

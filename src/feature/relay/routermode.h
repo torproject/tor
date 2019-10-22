@@ -25,7 +25,7 @@ void set_server_advertised(int s);
 /** Is the relay module enabled? */
 #define have_module_relay() (1)
 
-#else
+#else /* !defined(HAVE_MODULE_RELAY) */
 
 #define dir_server_mode(options) (((void)(options)),0)
 #define server_mode(options) (((void)(options)),0)
@@ -37,6 +37,6 @@ void set_server_advertised(int s);
 
 #define have_module_relay() (0)
 
-#endif
+#endif /* defined(HAVE_MODULE_RELAY) */
 
 #endif /* !defined(TOR_ROUTERMODE_H) */

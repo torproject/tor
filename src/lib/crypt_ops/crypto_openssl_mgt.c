@@ -126,7 +126,7 @@ crypto_openssl_get_header_version_str(void)
 #error "OpenSSL has been built without thread support. Tor requires an \
  OpenSSL library with thread support enabled."
 #endif
-#endif
+#endif /* !defined(COCCI) */
 
 #ifndef NEW_THREAD_API
 /** Helper: OpenSSL uses this callback to manipulate mutexes. */

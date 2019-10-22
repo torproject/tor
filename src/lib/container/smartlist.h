@@ -166,6 +166,6 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
 #define SMARTLIST_FOREACH_JOIN_END(var1, var2)  \
   }                                             \
   STMT_END
-#endif
+#endif /* !defined(COCCI) */
 
 #endif /* !defined(TOR_SMARTLIST_H) */

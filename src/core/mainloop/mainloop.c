@@ -1379,7 +1379,7 @@ CALLBACK(second_elapsed);
 #define CALLBACK(name, r, f)                            \
   PERIODIC_EVENT(name, PERIODIC_EVENT_ROLE_ ## r, f)
 #define FL(name) (PERIODIC_EVENT_FLAG_ ## name)
-#endif
+#endif /* !defined(COCCI) */
 
 STATIC periodic_event_item_t mainloop_periodic_events[] = {
 

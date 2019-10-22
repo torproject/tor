@@ -696,7 +696,7 @@ test_options_validate__logs(void *ignored)
   tt_int_op(ret, OP_EQ, -1);
 #else
   tt_int_op(ret, OP_EQ, 0);
-#endif
+#endif /* defined(_WIN32) */
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("");

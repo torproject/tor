@@ -26,4 +26,4 @@
                                                      NO_ARGS,     NEED_OBJ),\
   T01("dir-address",     K_DIR_ADDRESS,              GE(1),       NO_OBJ)
 
-#endif
+#endif /* !defined(TOR_AUTHCERT_MEMBERS_H) */

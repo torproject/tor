@@ -24,5 +24,5 @@ const char tor_bug_suffix[] = " (on Tor " VERSION
   " "
 #include "micro-revision.i"
 #endif
-#endif
+#endif /* !defined(COCCI) */
   ")";

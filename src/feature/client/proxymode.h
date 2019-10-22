@@ -14,4 +14,4 @@
 
 int proxy_mode(const or_options_t *options);
 
-#endif
+#endif /* !defined(TOR_PROXYMODE_H) */

@@ -83,6 +83,6 @@
    ((tv1)->tv_usec op (tv2)->tv_usec) :         \
    ((tv1)->tv_sec op (tv2)->tv_sec))
 #endif /* !defined(timercmp) */
-#endif
+#endif /* !defined(COCCI) */
 
 #endif /* !defined(TOR_TIMEVAL_H) */

@@ -109,7 +109,7 @@ typedef struct atomic_counter_t {
 #ifndef COCCI
 #define ATOMIC_LINKAGE static
 #endif
-#else /* !(defined(HAVE_WORKING_STDATOMIC)) */
+#else /* !defined(HAVE_WORKING_STDATOMIC) */
 typedef struct atomic_counter_t {
   tor_mutex_t mutex;
   size_t val;

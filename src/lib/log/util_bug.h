@@ -225,7 +225,7 @@
         1))                                                             \
       : 0)
 #endif /* defined(__GNUC__) */
-#endif
+#endif /* !defined(COCCI) */
 
 #define IF_BUG_ONCE_VARNAME_(a)               \
   warning_logged_on_ ## a ## __

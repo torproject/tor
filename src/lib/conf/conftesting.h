@@ -72,8 +72,8 @@ typedef union {
 #define DUMMY_CONF_TEST_MEMBERS , .var_ptr_dummy={ .INT=NULL }
 #define DUMMY_TYPECHECK_INSTANCE(tp)            \
   static tp tp ## _dummy
-#endif
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
+#endif /* !defined(COCCI) */
 
 #ifndef USE_CONF_TESTING
 #define CONF_TEST_MEMBERS(tp, conftype, member)
@@ -82,6 +82,6 @@ typedef union {
   struct tor_semicolon_eater
 #define DUMMY_CONF_TEST_MEMBERS
 
-#endif /* defined(TOR_UNIT_TESTS) */
+#endif /* !defined(USE_CONF_TESTING) */
 
 #endif /* !defined(TOR_LIB_CONF_CONFTESTING_H) */

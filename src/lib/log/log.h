@@ -27,8 +27,8 @@
 #error "Your syslog.h thinks high numbers are more important.  " \
        "We aren't prepared to deal with that."
 #endif
-#endif
-#else /* !(defined(HAVE_SYSLOG_H)) */
+#endif /* LOG_DEBUG < LOG_ERR */
+#else /* !defined(HAVE_SYSLOG_H) */
 /* Note: Syslog's logging code refers to priorities, with 0 being the most
  * important.  Thus, all our comparisons needed to be reversed when we added
  * syslog support.
@@ -310,7 +310,7 @@ MOCK_DECL(STATIC void, logv, (int severity, log_domain_mask_t domain,
     va_list ap) CHECK_PRINTF(5,0));
 MOCK_DECL(STATIC void, add_stream_log_impl,(
          const log_severity_list_t *severity, const char *name, int fd));
-#endif
+#endif /* defined(LOG_PRIVATE) */
 
 #if defined(LOG_PRIVATE) || defined(TOR_UNIT_TESTS)
 /** Given a severity, yields an index into log_severity_list_t.masks to use

@@ -2281,7 +2281,7 @@ typedef struct control_cmd_def_t {
       0,                                        \
       &obsolete_syntax,                         \
   }
-#endif
+#endif /* !defined(COCCI) */
 
 /**
  * An array defining all the recognized controller commands.
