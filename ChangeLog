@@ -3,21 +3,24 @@ Changes in version 0.4.2.3-alpha - 2019-10-??
   from earlier versions of Tor.
 
   o Major bugfixes (v3 onion services):
-    - Make onion service always use the exact amount of configured intro
-      points (or less due to node exlusion). Before, a service could
-      sometimes pick more intro points than configured with the
-      HiddenServiceNumIntroductionPoints option. Fixes bug 31548; bugfix
+    - Onion services now always use the exact number of intro points
+      configured with the HiddenServiceNumIntroductionPoints option (or
+      fewer if nodes are excluded). Before, a service could sometimes
+      pick more intro points than configured. Fixes bug 31548; bugfix
       on 0.3.2.1-alpha.
 
   o Minor feature (onion services, control port):
-    - The ADD_ONION key blob keyword "BEST" now defaults from RSA1024
-      (v2) to ED25519-V3 (v3). Closes ticket 29669.
+    - The ADD_ONION key blob keyword "BEST" now defaults to ED25519-V3
+      (v3) onion services. Previously it defaulted to RSA1024 (v2).
+      Closes ticket 29669.
 
   o Minor features (testing):
-    - When running tests that attempt to look up hostname, replace the
+    - When running tests that attempt to look up hostnames, replace the
       libc name lookup functions with ones that do not actually touch
       the network. This way, the tests complete more quickly in the
       presence of a slow or missing DNS resolver. Closes ticket 31841.
+
+  o Minor features (testing, continuous integration):
     - Disable all but one Travis CI macOS build, to mitigate slow
       scheduling of Travis macOS jobs. Closes ticket 32177.
     - Run the chutney IPv6 networks as part of Travis CI. Closes
@@ -28,9 +31,9 @@ Changes in version 0.4.2.3-alpha - 2019-10-??
       Appveyor builds. Closes ticket 32086.
 
   o Minor bugfixes (build system):
-    - Interpret --disable-module-dirauth=no correctly. Fixes bug 32124;
-      bugfix on 0.3.4.1-alpha.
-    - Interpret --with-tcmalloc=no correctly. Fixes bug 32124; bugfix
+    - Interpret "--disable-module-dirauth=no" correctly. Fixes bug
+      32124; bugfix on 0.3.4.1-alpha.
+    - Interpret "--with-tcmalloc=no" correctly. Fixes bug 32124; bugfix
       on 0.2.0.20-rc.
     - Stop failing when jemalloc is requested, but tcmalloc is not
       found. Fixes bug 32124; bugfix on 0.3.5.1-alpha.
@@ -39,28 +42,28 @@ Changes in version 0.4.2.3-alpha - 2019-10-??
       problem. Fixes bug 31922; bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (connections):
-    - Avoid reading data from closed connections, which can cause
-      needless loops in libevent and infinite loops in Shadow. Fixes bug
+    - Avoid trying to read data from closed connections, which can cause
+      needless loops in Libevent and infinite loops in Shadow. Fixes bug
       30344; bugfix on 0.1.1.1-alpha.
 
   o Minor bugfixes (error handling):
     - Always lock the backtrace buffer before it is used. Fixes bug
       31734; bugfix on 0.2.5.3-alpha.
 
-  o Minor bugfixes (mainloop, periodic events):
-    - Periodic events enabled flag was not unset properly when shutting
-      down tor cleanly. This had the side effect to not re-enable
-      periodic events when tor_api.h is used to relaunch tor after a
-      shutdown. Fixes bug 32058; bugfix on 0.3.3.1-alpha.
+  o Minor bugfixes (mainloop, periodic events, in-process API):
+    - Reset the periodic events' "enabled" flag when Tor is shut down
+      cleanly. Previously, this flag was left on, which caused periodic
+      events not to be to not re-enabled when Tor was relaunched in-
+      process with tor_api.h after a shutdown. Fixes bug 32058; bugfix
+      on 0.3.3.1-alpha.
 
   o Minor bugfixes (process management):
-    - Remove overly strict assertions that triggers when a pluggable
-      transport is spawned in an unsuccessful manner. Fixes bug 31091;
-      bugfix on 0.4.0.1-alpha.
-    - Remove assertion in the Unix process backend. This assertion would
-      trigger when a new process is spawned where the executable is not
-      found leading to a stack trace from the child process. Fixes bug
-      31810; bugfix on 0.4.0.1-alpha.
+    - Remove overly strict assertions that triggered when a pluggable
+      transport fails to launch. Fixes bug 31091; bugfix
+      on 0.4.0.1-alpha.
+    - Remove an assertion in the Unix process backend. This assertion
+      would trigger when a we failed to find the executable for a child
+      process. Fixes bug 31810; bugfix on 0.4.0.1-alpha.
 
   o Minor bugfixes (testing):
     - Avoid intermittent test failures due to a test that had relied on
@@ -72,19 +75,20 @@ Changes in version 0.4.2.3-alpha - 2019-10-??
       Fixes bug 31837; bugfix on 0.3.5.1-alpha.
 
   o Minor bugfixes (tls, logging):
-    - Log TLS read buffer length bugs once, rather than filling the logs
-      with similar warnings. Fixes bug 31939; bugfix on 0.3.0.4-rc.
+    - Log bugs about the TLS read buffer's length only once, rather than
+      filling the logs with similar warnings. Fixes bug 31939; bugfix
+      on 0.3.0.4-rc.
 
   o Minor bugfixes (v3 onion services):
     - Fix an implicit conversion from ssize_t to size_t discovered by
       Coverity. Fixes bug 31682; bugfix on 0.4.2.1-alpha.
-    - Fix memory leak in unlikely error code path when encoding HS DoS
-      establish intro extension cell. Fixes bug 32063; bugfix
+    - Fix a memory leak in an unlikely error code path when encoding HS
+      DoS establish intro extension cell. Fixes bug 32063; bugfix
       on 0.4.2.1-alpha.
-    - When we clean up intro circuits for a v3 onion service, don't
-      remove circuits that have an established or pending circuit even
-      if ran out of retries. This way, we don't cleanup the circuit of
-      the last retry. Fixes bug 31652; bugfix on 0.3.2.1-alpha.
+    - When cleaning up intro circuits for a v3 onion service, don't
+      remove circuits that have an established or pending circuit, even
+      if they ran out of retries. This way, we don't remove a circuit on
+      its last retry. Fixes bug 31652; bugfix on 0.3.2.1-alpha.
 
   o Documentation:
     - Correct the description of "GuardLifetime". Fixes bug 31189;
