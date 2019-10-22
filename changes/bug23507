@@ -1,0 +1,5 @@
+  o Minor bugfixes (v3 single onion services):
+    - Make v3 single onion services fall back to a 3-hop intro, when there
+      all intro points are unreachable via a 1-hop path. Previously, v3
+      single onion services failed when all intro nodes were unreachable
+      via a 1-hop path. Fixes bug 23507; bugfix on 0.3.2.1-alpha.
