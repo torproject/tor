@@ -68,7 +68,7 @@ typedef struct config_deprecation_t {
  * config_dump(); later in our refactoring, it will be cleaned up and used
  * more generally.
  */
-typedef int (*validate_fn_t)(void *oldval,
+typedef int (*validate_fn_t)(const void *oldval,
                              void *newval,
                              char **msg_out);
 

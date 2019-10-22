@@ -60,7 +60,7 @@ DUMMY_TYPECHECK_INSTANCE(sr_disk_state_t);
 #define SR_DISK_STATE_MAGIC 0x98AB1254
 
 static int
-disk_state_validate_cb(void *old_state, void *state, char **msg);
+disk_state_validate_cb(const void *old_state, void *state, char **msg);
 
 /** Array of variables that are saved to disk as a persistent state. */
 static const config_var_t state_vars[] = {
@@ -344,7 +344,7 @@ disk_state_validate(const sr_disk_state_t *state)
 
 /** Validate the disk state (NOP for now). */
 static int
-disk_state_validate_cb(void *old_state, void *state, char **msg)
+disk_state_validate_cb(const void *old_state, void *state, char **msg)
 {
   /* We don't use these; only options do. */
   (void) old_state;

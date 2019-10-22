@@ -843,7 +843,7 @@ static int parse_outbound_addresses(or_options_t *options, int validate_only,
                                     char **msg);
 static void config_maybe_load_geoip_files_(const or_options_t *options,
                                            const or_options_t *old_options);
-static int options_validate_cb(void *old_options, void *options,
+static int options_validate_cb(const void *old_options, void *options,
                                char **msg);
 static void cleanup_protocol_warning_severity_level(void);
 static void set_protocol_warning_severity_level(int warning_severity);
@@ -1227,7 +1227,8 @@ add_default_fallback_dir_servers,(void))
  * user if we changed any dangerous ones.
  */
 static int
-validate_dir_servers(or_options_t *options, or_options_t *old_options)
+validate_dir_servers(const or_options_t *options,
+                     const or_options_t *old_options)
 {
   config_line_t *cl;
 
@@ -3230,7 +3231,7 @@ compute_publishserverdescriptor(or_options_t *options)
 #define RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT (10)
 
 static int
-options_validate_cb(void *old_options, void *options, char **msg)
+options_validate_cb(const void *old_options, void *options, char **msg)
 {
   in_option_validation = 1;
   int rv = options_validate(old_options, options, msg);
@@ -3430,7 +3431,7 @@ options_validate_single_onion(or_options_t *options, char **msg)
  * On error, tor_strdup an error explanation into *<b>msg</b>.
  */
 STATIC int
-options_validate(or_options_t *old_options, or_options_t *options,
+options_validate(const or_options_t *old_options, or_options_t *options,
                  char **msg)
 {
   config_line_t *cl;
