@@ -92,14 +92,11 @@ clear_log_messages(void)
   messages = NULL;
 }
 
-#define setup_options(opt,dflt)              \
+#define setup_options(opt)                   \
   do {                                       \
     opt = options_new();                     \
     opt->command = CMD_RUN_TOR;              \
     options_init(opt);                       \
-                                             \
-    dflt = config_dup(get_options_mgr(), opt); \
-    clear_log_messages();                    \
   } while (0)
 
 #define VALID_DIR_AUTH "DirAuthority dizum orport=443 v3ident=E8A9C45"  \
@@ -181,12 +178,11 @@ test_options_validate_impl(const char *configuration,
                            int phase)
 {
   or_options_t *opt=NULL;
-  or_options_t *dflt;
   config_line_t *cl=NULL;
   char *msg=NULL;
   int r;
 
-  setup_options(opt, dflt);
+  setup_options(opt);
 
   r = config_get_lines(configuration, &cl, 1);
   if (phase == PH_GETLINES) {
@@ -223,7 +219,6 @@ test_options_validate_impl(const char *configuration,
   policies_free_all();
   config_free_lines(cl);
   or_options_free(opt);
-  or_options_free(dflt);
   tor_free(msg);
   clear_log_messages();
 }
@@ -295,15 +290,13 @@ test_have_enough_mem_for_dircache(void *arg)
 {
   (void)arg;
   or_options_t *opt=NULL;
-  or_options_t *dflt=NULL;
   config_line_t *cl=NULL;
   char *msg=NULL;
   int r;
   const char *configuration = "ORPort 8080\nDirCache 1", *expect_errmsg;
 
-  setup_options(opt, dflt);
+  setup_options(opt);
   setup_log_callback();
-  (void)dflt;
 
   r = config_get_lines(configuration, &cl, 1);
   tt_int_op(r, OP_EQ, 0);
@@ -377,7 +370,6 @@ test_have_enough_mem_for_dircache(void *arg)
  done:
   if (msg)
     tor_free(msg);
-  or_options_free(dflt);
   or_options_free(opt);
   config_free_lines(cl);
   return;
