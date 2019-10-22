@@ -10,7 +10,7 @@
 # and replaces them with our OP_* equivalents.
 #
 # Some macros that take operators are our tt_int_op() testing macro, and the
-# standard timercmp() macor.  Coccinelle can't handle their syntax, however,
+# standard timercmp() macro.  Coccinelle can't handle their syntax, however,
 # unless we give them their operators as a macro too.
 
 next if m#^ */\*# or m#^ *\* #;
