@@ -12,6 +12,8 @@
 #ifndef DESTROY_CELL_QUEUE_ST_H
 #define DESTROY_CELL_QUEUE_ST_H
 
+#include "core/or/cell_queue_st.h"
+
 /** A single queued destroy cell. */
 struct destroy_cell_t {
   TOR_SIMPLEQ_ENTRY(destroy_cell_t) next;
