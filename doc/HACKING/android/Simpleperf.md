@@ -85,8 +85,7 @@ was spend on the call.
   found in the `app_data` directory. The `torrc` can be found in the `app_bin/`
   directory.
 
-- You can enable logging in Tor via the syslog (or android) log
-  mechanism with:
+- You can enable logging to Android's logcat using the syslog mechanism:
 
       $ adb shell
       (device):/ $ run-as org.torproject.android

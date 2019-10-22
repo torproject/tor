@@ -661,9 +661,10 @@ GENERAL OPTIONS
     every NUM seconds on open connections that are in use. (Default: 5 minutes)
 
 [[Log]] **Log** __minSeverity__[-__maxSeverity__] **stderr**|**stdout**|**syslog**::
+
     Send all messages between __minSeverity__ and __maxSeverity__ to the standard
-    output stream, the standard error stream, or to the system log. (The
-    "syslog" value is only supported on Unix.) Recognized severity levels are
+    output stream, the standard error stream, or to the system log. (The "syslog"
+    value is not supported Windows or iOS). Recognized severity levels are
     debug, info, notice, warn, and err. We advise using "notice" in most cases,
     since anything more verbose may provide sensitive information to an
     attacker who obtains the logs. If only one severity level is given, all
@@ -675,8 +676,13 @@ GENERAL OPTIONS
     Signal-safe logs are always sent to stderr or stdout. They are also sent to
     a limited number of log files that are configured to log messages at error
     severity from the bug or general domains. They are never sent as syslogs,
-    android logs, control port log events, or to any API-based log
-    destinations.
+    Android logcat messages, control port log events, or to any API-based log
+    destinations. +
+ +
+    If tor is running as a shared library on Android, only "syslog" is available.
+    Native code have "stderr" and "stdout" piped to /dev/null by the Android OS.
+    Early errors like port conflicts with **ControlPort**, **SocksPort**, etc. will
+    not be logged, since the logging is added later.
 
 [[Log2]] **Log** __minSeverity__[-__maxSeverity__] **file** __FILENAME__::
     As above, but send log messages to the listed filename. The
