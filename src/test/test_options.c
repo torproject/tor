@@ -386,7 +386,6 @@ fixed_get_uname(void)
 typedef struct {
   or_options_t *old_opt;
   or_options_t *opt;
-  or_options_t *def_opt;
 } options_test_data_t;
 
 static void free_options_test_data(options_test_data_t *td);
@@ -400,11 +399,9 @@ get_options_test_data(const char *conf)
   options_test_data_t *result = tor_malloc(sizeof(options_test_data_t));
   result->opt = options_new();
   result->old_opt = options_new();
-  result->def_opt = options_new();
 
   options_init(result->opt);
   options_init(result->old_opt);
-  options_init(result->def_opt);
 
   rv = config_get_lines(conf, &cl, 1);
   tt_int_op(rv, OP_EQ, 0);
@@ -418,12 +415,6 @@ get_options_test_data(const char *conf)
   result->opt->LogTimeGranularity = 1;
   result->opt->TokenBucketRefillInterval = 1;
   rv = config_get_lines("", &cl, 1);
-  tt_int_op(rv, OP_EQ, 0);
-  rv = config_assign(get_options_mgr(), result->def_opt, cl, 0, &msg);
-  if (msg) {
-    /* Display the parse error message by comparing it with an empty string */
-    tt_str_op(msg, OP_EQ, "");
-  }
   tt_int_op(rv, OP_EQ, 0);
 
  done:
@@ -444,7 +435,6 @@ free_options_test_data(options_test_data_t *td)
   if (!td) return;
   or_options_free(td->old_opt);
   or_options_free(td->opt);
-  or_options_free(td->def_opt);
   tor_free(td);
 }
 
