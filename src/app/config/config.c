@@ -186,8 +186,12 @@ static const char unix_q_socket_prefix[] = "unix:\"";
 
 /** macro to help with the bulk rename of *DownloadSchedule to
  * *DowloadInitialDelay . */
+#ifndef COCCI
 #define DOWNLOAD_SCHEDULE(name) \
   { #name "DownloadSchedule", #name "DownloadInitialDelay", 0, 1 }
+#else
+#define DOWNLOAD_SCHEDULE(name) { NULL, NULL, 0, 1 }
+#endif
 
 /** A list of abbreviations and aliases to map command-line options, obsolete
  * option names, or alternative option names, to their current values. */
