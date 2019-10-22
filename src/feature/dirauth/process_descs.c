@@ -316,7 +316,7 @@ dirserv_would_reject_router(const routerstatus_t *rs)
  * true, and set *<b>msg</b> (if present) to a rejection message.  Otherwise
  * return false.
  */
-STATIC bool
+static bool
 dirserv_rejects_tor_version(const char *platform,
                             const char **msg)
 {
