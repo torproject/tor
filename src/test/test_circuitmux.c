@@ -15,6 +15,7 @@
 #include "core/or/scheduler.h"
 
 #include "test/fakechans.h"
+#include "test/fakecircs.h"
 #include "test/test.h"
 
 #include <math.h>
@@ -142,6 +143,296 @@ test_cmux_allocate(void *arg)
   circuitmux_free(cmux);
 }
 
+static void
+test_cmux_attach_circuit(void *arg)
+{
+  circuit_t *circ = NULL;
+  or_circuit_t *orcirc = NULL;
+  channel_t *pchan = NULL, *nchan = NULL;
+  cell_direction_t cdir;
+  unsigned int n_cells;
+
+  (void) arg;
+
+  pchan = new_fake_channel();
+  tt_assert(pchan);
+  nchan = new_fake_channel();
+  tt_assert(nchan);
+
+  orcirc = new_fake_orcirc(nchan, pchan);
+  tt_assert(orcirc);
+  circ = TO_CIRCUIT(orcirc);
+
+  /* While assigning a new circuit IDs, the circuitmux_attach_circuit() is
+   * called for a new channel on the circuit. This means, we should now have
+   * the created circuit attached on both the pchan and nchan cmux. */
+  tt_uint_op(circuitmux_num_circuits(pchan->cmux), OP_EQ, 1);
+  tt_uint_op(circuitmux_num_circuits(nchan->cmux), OP_EQ, 1);
+
+  /* There should be _no_ active circuit due to no queued cells. */
+  tt_uint_op(circuitmux_num_active_circuits(pchan->cmux), OP_EQ, 0);
+  tt_uint_op(circuitmux_num_active_circuits(nchan->cmux), OP_EQ, 0);
+
+  /* Circuit should not be active on the cmux. */
+  tt_int_op(circuitmux_is_circuit_active(pchan->cmux, circ), OP_EQ, 0);
+  tt_int_op(circuitmux_is_circuit_active(nchan->cmux, circ), OP_EQ, 0);
+
+  /* Not active so no cells. */
+  n_cells = circuitmux_num_cells_for_circuit(pchan->cmux, circ);
+  tt_uint_op(n_cells, OP_EQ, 0);
+  n_cells = circuitmux_num_cells(pchan->cmux);
+  tt_uint_op(n_cells, OP_EQ, 0);
+  n_cells = circuitmux_num_cells_for_circuit(nchan->cmux, circ);
+  tt_uint_op(n_cells, OP_EQ, 0);
+  n_cells = circuitmux_num_cells(nchan->cmux);
+  tt_uint_op(n_cells, OP_EQ, 0);
+
+  /* So it should be attached :) */
+  tt_int_op(circuitmux_is_circuit_attached(pchan->cmux, circ), OP_EQ, 1);
+  tt_int_op(circuitmux_is_circuit_attached(nchan->cmux, circ), OP_EQ, 1);
+
+  /* Query the chanid<->circid map in the cmux subsytem with what we just
+   * created and validate the cell direction. */
+  cdir = circuitmux_attached_circuit_direction(pchan->cmux, circ);
+  tt_int_op(cdir, OP_EQ, CELL_DIRECTION_IN);
+  cdir = circuitmux_attached_circuit_direction(nchan->cmux, circ);
+  tt_int_op(cdir, OP_EQ, CELL_DIRECTION_OUT);
+
+  /*
+   * We'll activate->deactivate->activate to test all code paths of
+   * circuitmux_set_num_cells().
+   */
+
+  /* Activate circuit. */
+  circuitmux_set_num_cells(pchan->cmux, circ, 4);
+  tt_int_op(circuitmux_is_circuit_active(pchan->cmux, circ), OP_EQ, 1);
+
+  /* Deactivate. */
+  circuitmux_clear_num_cells(pchan->cmux, circ);
+  tt_int_op(circuitmux_is_circuit_active(pchan->cmux, circ), OP_EQ, 0);
+  tt_uint_op(circuitmux_num_cells_for_circuit(pchan->cmux, circ), OP_EQ, 0);
+
+  /* Re-activate. */
+  circuitmux_set_num_cells(pchan->cmux, circ, 4);
+  tt_int_op(circuitmux_is_circuit_active(pchan->cmux, circ), OP_EQ, 1);
+
+  /* Once re-attached, it should become inactive because the circuit has no
+   * cells while the chanid<->circid object has some. The attach code will
+   * reset the count on the cmux for that circuit:
+   *
+   * if (chanid_circid_muxinfo_t->muxinfo.cell_count > 0 && cell_count == 0) {
+   */
+  circuitmux_attach_circuit(pchan->cmux, circ, CELL_DIRECTION_IN);
+  n_cells = circuitmux_num_cells_for_circuit(pchan->cmux, circ);
+  tt_uint_op(n_cells, OP_EQ, 0);
+  tt_int_op(circuitmux_is_circuit_active(pchan->cmux, circ), OP_EQ, 0);
+  tt_uint_op(circuitmux_num_active_circuits(pchan->cmux), OP_EQ, 0);
+
+  /* Lets queue a cell on the circuit now so it becomes active when
+   * re-attaching:
+   *
+   * else if (chanid_circid_muxinfo_t->muxinfo.cell_count == 0 &&
+   *          cell_count > 0) {
+   */
+  orcirc->p_chan_cells.n = 1;
+  circuitmux_attach_circuit(pchan->cmux, circ, CELL_DIRECTION_IN);
+  tt_int_op(circuitmux_is_circuit_active(pchan->cmux, circ), OP_EQ, 1);
+
+ done:
+  free_fake_orcirc(orcirc);
+  free_fake_channel(pchan);
+  free_fake_channel(nchan);
+}
+
+static void
+test_cmux_detach_circuit(void *arg)
+{
+  circuit_t *circ = NULL;
+  or_circuit_t *orcirc = NULL;
+  channel_t *pchan = NULL, *nchan = NULL;
+
+  (void) arg;
+
+  pchan = new_fake_channel();
+  tt_assert(pchan);
+  nchan = new_fake_channel();
+  tt_assert(nchan);
+
+  orcirc = new_fake_orcirc(nchan, pchan);
+  tt_assert(orcirc);
+  circ = TO_CIRCUIT(orcirc);
+
+  /* While assigning a new circuit IDs, the circuitmux_attach_circuit() is
+   * called for a new channel on the circuit. This means, we should now have
+   * the created circuit attached on both the pchan and nchan cmux. */
+  tt_uint_op(circuitmux_num_circuits(pchan->cmux), OP_EQ, 1);
+  tt_uint_op(circuitmux_num_circuits(nchan->cmux), OP_EQ, 1);
+  tt_int_op(circuitmux_is_circuit_attached(pchan->cmux, circ), OP_EQ, 1);
+  tt_int_op(circuitmux_is_circuit_attached(nchan->cmux, circ), OP_EQ, 1);
+
+  /* Now, detach the circuit from pchan and then nchan. */
+  circuitmux_detach_circuit(pchan->cmux, circ);
+  tt_uint_op(circuitmux_num_circuits(pchan->cmux), OP_EQ, 0);
+  tt_int_op(circuitmux_is_circuit_attached(pchan->cmux, circ), OP_EQ, 0);
+  circuitmux_detach_circuit(nchan->cmux, circ);
+  tt_uint_op(circuitmux_num_circuits(nchan->cmux), OP_EQ, 0);
+  tt_int_op(circuitmux_is_circuit_attached(nchan->cmux, circ), OP_EQ, 0);
+
+ done:
+  free_fake_orcirc(orcirc);
+  free_fake_channel(pchan);
+  free_fake_channel(nchan);
+}
+
+static void
+test_cmux_detach_all_circuits(void *arg)
+{
+  circuit_t *circ = NULL;
+  or_circuit_t *orcirc = NULL;
+  channel_t *pchan = NULL, *nchan = NULL;
+  smartlist_t *detached_out = smartlist_new();
+
+  (void) arg;
+
+  /* Channels need to be registered in order for the detach all circuit
+   * function to find them. */
+  pchan = new_fake_channel();
+  tt_assert(pchan);
+  channel_register(pchan);
+  nchan = new_fake_channel();
+  tt_assert(nchan);
+  channel_register(nchan);
+
+  orcirc = new_fake_orcirc(nchan, pchan);
+  tt_assert(orcirc);
+  circ = TO_CIRCUIT(orcirc);
+
+  /* Just make sure it is attached. */
+  tt_uint_op(circuitmux_num_circuits(pchan->cmux), OP_EQ, 1);
+  tt_uint_op(circuitmux_num_circuits(nchan->cmux), OP_EQ, 1);
+  tt_int_op(circuitmux_is_circuit_attached(pchan->cmux, circ), OP_EQ, 1);
+  tt_int_op(circuitmux_is_circuit_attached(nchan->cmux, circ), OP_EQ, 1);
+
+  /* Queue some cells so we can test if the circuit becomes inactive on the
+   * cmux after the mass detach. */
+  circuitmux_set_num_cells(pchan->cmux, circ, 4);
+  circuitmux_set_num_cells(nchan->cmux, circ, 4);
+
+  /* Detach all on pchan and then nchan. */
+  circuitmux_detach_all_circuits(pchan->cmux, detached_out);
+  tt_uint_op(circuitmux_num_circuits(pchan->cmux), OP_EQ, 0);
+  tt_int_op(circuitmux_is_circuit_attached(pchan->cmux, circ), OP_EQ, 0);
+  tt_int_op(circuitmux_is_circuit_active(pchan->cmux, circ), OP_EQ, 0);
+  tt_int_op(smartlist_len(detached_out), OP_EQ, 1);
+  circuitmux_detach_all_circuits(nchan->cmux, NULL);
+  tt_uint_op(circuitmux_num_circuits(nchan->cmux), OP_EQ, 0);
+  tt_int_op(circuitmux_is_circuit_attached(nchan->cmux, circ), OP_EQ, 0);
+  tt_int_op(circuitmux_is_circuit_active(nchan->cmux, circ), OP_EQ, 0);
+
+ done:
+  smartlist_free(detached_out);
+  free_fake_orcirc(orcirc);
+  free_fake_channel(pchan);
+  free_fake_channel(nchan);
+}
+
+static void
+test_cmux_policy(void *arg)
+{
+  circuit_t *circ = NULL;
+  or_circuit_t *orcirc = NULL;
+  channel_t *pchan = NULL, *nchan = NULL;
+
+  (void) arg;
+
+  pchan = new_fake_channel();
+  tt_assert(pchan);
+  channel_register(pchan);
+  nchan = new_fake_channel();
+  tt_assert(nchan);
+  channel_register(nchan);
+
+  orcirc = new_fake_orcirc(nchan, pchan);
+  tt_assert(orcirc);
+  circ = TO_CIRCUIT(orcirc);
+
+  /* Confirm we have the EWMA policy by default for new channels. */
+  tt_ptr_op(circuitmux_get_policy(pchan->cmux), OP_EQ, &ewma_policy);
+  tt_ptr_op(circuitmux_get_policy(nchan->cmux), OP_EQ, &ewma_policy);
+
+  /* Putting cell on the cmux means will make the notify policy code path to
+   * trigger. */
+  circuitmux_set_num_cells(pchan->cmux, circ, 4);
+
+  /* Clear it out. */
+  circuitmux_clear_policy(pchan->cmux);
+
+  /* Set back the EWMA policy. */
+  circuitmux_set_policy(pchan->cmux, &ewma_policy);
+
+ done:
+  free_fake_orcirc(orcirc);
+  free_fake_channel(pchan);
+  free_fake_channel(nchan);
+}
+
+static void
+test_cmux_xmit_cell(void *arg)
+{
+  circuit_t *circ = NULL;
+  or_circuit_t *orcirc = NULL;
+  channel_t *pchan = NULL, *nchan = NULL;
+
+  (void) arg;
+
+  pchan = new_fake_channel();
+  tt_assert(pchan);
+  nchan = new_fake_channel();
+  tt_assert(nchan);
+
+  orcirc = new_fake_orcirc(nchan, pchan);
+  tt_assert(orcirc);
+  circ = TO_CIRCUIT(orcirc);
+
+  /* Queue 4 cells on the circuit. */
+  circuitmux_set_num_cells(pchan->cmux, circ, 4);
+  tt_uint_op(circuitmux_num_cells_for_circuit(pchan->cmux, circ), OP_EQ, 4);
+  tt_uint_op(circuitmux_num_cells(pchan->cmux), OP_EQ, 4);
+  tt_int_op(circuitmux_is_circuit_active(pchan->cmux, circ), OP_EQ, 1);
+  tt_uint_op(circuitmux_num_active_circuits(pchan->cmux), OP_EQ, 1);
+
+  /* Emit the first cell. Circuit should still be active. */
+  circuitmux_notify_xmit_cells(pchan->cmux, circ, 1);
+  tt_uint_op(circuitmux_num_cells(pchan->cmux), OP_EQ, 3);
+  tt_uint_op(circuitmux_num_cells_for_circuit(pchan->cmux, circ), OP_EQ, 3);
+  tt_int_op(circuitmux_is_circuit_active(pchan->cmux, circ), OP_EQ, 1);
+  tt_uint_op(circuitmux_num_active_circuits(pchan->cmux), OP_EQ, 1);
+
+  /* Emit the last 3 cells. Circuit should become inactive. */
+  circuitmux_notify_xmit_cells(pchan->cmux, circ, 3);
+  tt_uint_op(circuitmux_num_cells(pchan->cmux), OP_EQ, 0);
+  tt_uint_op(circuitmux_num_cells_for_circuit(pchan->cmux, circ), OP_EQ, 0);
+  tt_int_op(circuitmux_is_circuit_active(pchan->cmux, circ), OP_EQ, 0);
+  tt_uint_op(circuitmux_num_active_circuits(pchan->cmux), OP_EQ, 0);
+
+  /* Queue a DESTROY cell. */
+  pchan->has_queued_writes = mock_has_queued_writes_true;
+  circuitmux_append_destroy_cell(pchan, pchan->cmux, orcirc->p_circ_id, 0);
+  tt_int_op(pchan->cmux->destroy_ctr, OP_EQ, 1);
+  tt_int_op(pchan->cmux->destroy_cell_queue.n, OP_EQ, 1);
+  tt_int_op(circuitmux_count_queued_destroy_cells(pchan, pchan->cmux),
+            OP_EQ, 1);
+
+  /* Emit the DESTROY cell. */
+  circuitmux_notify_xmit_destroy(pchan->cmux);
+  tt_int_op(pchan->cmux->destroy_ctr, OP_EQ, 0);
+
+ done:
+  free_fake_orcirc(orcirc);
+  free_fake_channel(pchan);
+  free_fake_channel(nchan);
+}
+
 static void *
 cmux_setup_test(const struct testcase_t *tc)
 {
@@ -175,6 +466,11 @@ static struct testcase_setup_t cmux_test_setup = {
 struct testcase_t circuitmux_tests[] = {
   /* Test circuitmux_t object */
   TEST_CMUX(allocate),
+  TEST_CMUX(attach_circuit),
+  TEST_CMUX(detach_circuit),
+  TEST_CMUX(detach_all_circuits),
+  TEST_CMUX(policy),
+  TEST_CMUX(xmit_cell),
 
   /* Misc. */
   TEST_CMUX(compute_ticks),
