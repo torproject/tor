@@ -5,39 +5,22 @@
 #define CIRCUITMUX_PRIVATE
 #define CIRCUITMUX_EWMA_PRIVATE
 #define RELAY_PRIVATE
+
 #include "core/or/or.h"
 #include "core/or/channel.h"
 #include "core/or/circuitmux.h"
 #include "core/or/circuitmux_ewma.h"
+#include "core/or/destroy_cell_queue_st.h"
 #include "core/or/relay.h"
 #include "core/or/scheduler.h"
-#include "test/test.h"
 
-#include "core/or/destroy_cell_queue_st.h"
+#include "test/fakechans.h"
+#include "test/test.h"
 
 #include <math.h>
 
-/**
- * MOCKED functions.
- */
-static void
-scheduler_release_channel_mock(channel_t *chan)
-{
-  (void) chan;
-  return;
-}
-
-/* XXXX duplicated function from test_circuitlist.c */
-static channel_t *
-new_fake_channel(void)
-{
-  channel_t *chan = tor_malloc_zero(sizeof(channel_t));
-  channel_init(chan);
-  return chan;
-}
-
 static int
-has_queued_writes(channel_t *c)
+mock_has_queued_writes_true(channel_t *c)
 {
   (void) c;
   return 1;
@@ -58,12 +41,10 @@ test_cmux_destroy_cell_queue(void *arg)
 
   (void) arg;
 
-  cmux = circuitmux_alloc();
-  tt_assert(cmux);
   ch = new_fake_channel();
-  circuitmux_set_policy(cmux, &ewma_policy);
-  ch->has_queued_writes = has_queued_writes;
+  ch->has_queued_writes = mock_has_queued_writes_true;
   ch->wide_circ_ids = 1;
+  cmux = ch->cmux;
 
   circ = circuitmux_get_first_active_circuit(cmux, &cq);
   tt_ptr_op(circ, OP_EQ, NULL);
@@ -88,8 +69,7 @@ test_cmux_destroy_cell_queue(void *arg)
   tt_int_op(circuitmux_num_cells(cmux), OP_EQ, 2);
 
  done:
-  circuitmux_free(cmux);
-  channel_free(ch);
+  free_fake_channel(ch);
   packed_cell_free(pc);
   tor_free(dc);
 
