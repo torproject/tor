@@ -8,6 +8,7 @@
 #define TOR_DISPATCH_CFG_H
 
 #include "lib/dispatch/msgtypes.h"
+#include "lib/testsupport/testsupport.h"
 
 /**
  * A "dispatch_cfg" is the configuration used to set up a dispatcher.
@@ -35,5 +36,10 @@ int dcfg_add_recv(dispatch_cfg_t *cfg, message_id_t msg,
   FREE_AND_NULL(dispatch_cfg_t, dcfg_free_, (cfg))
 
 void dcfg_free_(dispatch_cfg_t *cfg);
+
+#ifdef DISPATCH_NEW_PRIVATE
+struct smartlist_t;
+STATIC int max_in_u16_sl(const struct smartlist_t *sl, int dflt);
+#endif
 
 #endif /* !defined(TOR_DISPATCH_CFG_H) */
