@@ -272,6 +272,9 @@ main(int c, const char **v)
 
   control_initialize_event_queue();
 
+  /* Don't add default logs; the tests manage their own. */
+  quiet_level = QUIET_SILENT;
+
   for (i_out = i = 1; i < c; ++i) {
     if (!strcmp(v[i], "--warn")) {
       loglevel = LOG_WARN;

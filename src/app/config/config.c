@@ -836,8 +836,6 @@ static int check_server_ports(const smartlist_t *ports,
 static int validate_data_directories(or_options_t *options);
 static int write_configuration_file(const char *fname,
                                     const or_options_t *options);
-static int options_init_logs(const or_options_t *old_options,
-                             or_options_t *options, int validate_only);
 
 static void init_libevent(const or_options_t *options);
 static int opt_streq(const char *s1, const char *s2);
@@ -3429,20 +3427,17 @@ options_validate_single_onion(or_options_t *options, char **msg)
  * normalizing the contents of <b>options</b>.
  *
  * On error, tor_strdup an error explanation into *<b>msg</b>.
- *
- * XXX
- * If <b>from_setconf</b>, we were called by the controller, and our
- * Log line should stay empty. If it's 0, then give us a default log
- * if there are no logs defined.
  */
 STATIC int
 options_validate(or_options_t *old_options, or_options_t *options,
-                 or_options_t *default_options, int from_setconf, char **msg)
+                 or_options_t *default_options, int from_setconf_unused,
+                 char **msg)
 {
   config_line_t *cl;
   const char *uname = get_uname();
   int n_ports=0;
   int world_writable_control_socket=0;
+  (void)from_setconf_unused; /* 29211 TODO: Remove this from the API. */
 
   tor_assert(msg);
   *msg = NULL;
@@ -3504,14 +3499,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("ContactInfo config option must be UTF-8.");
 
   check_network_configuration(server_mode(options));
-
-  /* Special case on first boot if no Log options are given. */
-  if (!options->Logs && !options->RunAsDaemon && !from_setconf) {
-    if (quiet_level == 0)
-      config_line_append(&options->Logs, "Log", "notice stdout");
-    else if (quiet_level == 1)
-      config_line_append(&options->Logs, "Log", "warn stdout");
-  }
 
   /* Validate the tor_log(s) */
   if (options_init_logs(old_options, options, 1)<0)
@@ -5686,22 +5673,14 @@ open_and_add_file_log(const log_severity_list_t *severity,
 }
 
 /**
- * Initialize the logs based on the configuration file.
- */
+ * Try to set our global log granularity from `options->LogGranularity`,
+ * adjusting it as needed so that we are an even divisor of a second, or an
+ * even multiple of seconds. Return 0 on success, -1 on failure.
+ **/
 static int
-options_init_logs(const or_options_t *old_options, or_options_t *options,
-                  int validate_only)
+options_init_log_granularity(const or_options_t *options,
+                             int validate_only)
 {
-  config_line_t *opt;
-  int ok;
-  smartlist_t *elts;
-  int run_as_daemon =
-#ifdef _WIN32
-               0;
-#else
-               options->RunAsDaemon;
-#endif
-
   if (options->LogTimeGranularity <= 0) {
     log_warn(LD_CONFIG, "Log time granularity '%d' has to be positive.",
              options->LogTimeGranularity);
@@ -5731,8 +5710,37 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
       set_log_time_granularity(options->LogTimeGranularity);
   }
 
+  return 0;
+}
+
+/**
+ * Initialize the logs based on the configuration file.
+ */
+STATIC int
+options_init_logs(const or_options_t *old_options, or_options_t *options,
+                  int validate_only)
+{
+  config_line_t *opt;
+  int ok;
+  smartlist_t *elts;
+  int run_as_daemon =
+#ifdef _WIN32
+               0;
+#else
+               options->RunAsDaemon;
+#endif
+
+  if (options_init_log_granularity(options, validate_only) < 0)
+    return -1;
+
   ok = 1;
   elts = smartlist_new();
+
+  if (options->Logs == NULL && !run_as_daemon && !validate_only) {
+    /* When no logs are given, the default behavior is to log nothing (if
+       RunAsDaemon is set) or to log based on the quiet level otherwise. */
+    add_default_log_for_quiet_level(quiet_level);
+  }
 
   for (opt = options->Logs; opt; opt = opt->next) {
     log_severity_list_t *severity;

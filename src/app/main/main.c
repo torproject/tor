@@ -109,16 +109,6 @@ static void dumpmemusage(int severity);
 static void dumpstats(int severity); /* log stats */
 static void process_signal(int sig);
 
-/********* START VARIABLES **********/
-
-/** Decides our behavior when no logs are configured/before any logs have been
- * configured.  For QUIET_NONE, we log notice to stdout as normal.  For
- * QUIET_HUSH, we log warnings only.  For QUIET_SILENT, we log nothing.
- */
-quiet_level_t quiet_level = 0;
-
-/********* END VARIABLES ************/
-
 /** Called when we get a SIGHUP: reload configuration files and keys,
  * retry all connections, and so on. */
 static int
@@ -558,18 +548,7 @@ tor_init(int argc, char *argv[])
   }
 
  /* give it somewhere to log to initially */
-  switch (quiet) {
-    case QUIET_SILENT:
-      /* --quiet: no initial logging */
-      break;
-    case QUIET_HUSH:
-      /* --hush: log at warning or higher. */
-      add_temp_log(LOG_WARN);
-      break;
-    case QUIET_NONE: /* fall through */
-    default:
-      add_temp_log(LOG_NOTICE);
-  }
+  add_default_log_for_quiet_level(quiet);
   quiet_level = quiet;
 
   {

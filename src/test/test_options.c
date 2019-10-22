@@ -4,6 +4,7 @@
 /* See LICENSE for licensing information */
 
 #define CONFIG_PRIVATE
+#define LOG_PRIVATE
 #include "core/or/or.h"
 #include "lib/confmgt/confparse.h"
 #include "app/config/config.h"
@@ -678,8 +679,7 @@ test_options_validate__logs(void *ignored)
   tdata->opt->RunAsDaemon = 0;
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_str_op(tdata->opt->Logs->key, OP_EQ, "Log");
-  tt_str_op(tdata->opt->Logs->value, OP_EQ, "notice stdout");
+  tt_assert(!tdata->opt->Logs);
   tor_free(msg);
   tt_int_op(ret, OP_EQ, -1);
 
@@ -689,8 +689,7 @@ test_options_validate__logs(void *ignored)
   tdata->opt->RunAsDaemon = 0;
   quiet_level = 1;
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_str_op(tdata->opt->Logs->key, OP_EQ, "Log");
-  tt_str_op(tdata->opt->Logs->value, OP_EQ, "warn stdout");
+  tt_assert(!tdata->opt->Logs);
   tor_free(msg);
   tt_int_op(ret, OP_EQ, -1);
 
@@ -4166,6 +4165,191 @@ test_options_validate__accel(void *ignored)
   tor_free(msg);
 }
 
+static int mocked_granularity;
+
+static void
+mock_set_log_time_granularity(int g)
+{
+  mocked_granularity = g;
+}
+
+static void
+test_options_init_logs_granularity(void *arg)
+{
+  options_test_data_t *tdata = get_options_test_data("");
+  int rv;
+  (void) arg;
+
+  MOCK(set_log_time_granularity, mock_set_log_time_granularity);
+
+  /* Reasonable value. */
+  tdata->opt->LogTimeGranularity = 100;
+  mocked_granularity = -1;
+  rv = options_init_logs(NULL, tdata->opt, 0);
+  tt_int_op(rv, OP_EQ, 0);
+  tt_int_op(mocked_granularity, OP_EQ, 100);
+
+  /* Doesn't divide 1000. */
+  tdata->opt->LogTimeGranularity = 249;
+  mocked_granularity = -1;
+  rv = options_init_logs(NULL, tdata->opt, 0);
+  tt_int_op(rv, OP_EQ, 0);
+  tt_int_op(mocked_granularity, OP_EQ, 250);
+
+  /* Doesn't divide 1000. */
+  tdata->opt->LogTimeGranularity = 3;
+  mocked_granularity = -1;
+  rv = options_init_logs(NULL, tdata->opt, 0);
+  tt_int_op(rv, OP_EQ, 0);
+  tt_int_op(mocked_granularity, OP_EQ, 4);
+
+  /* Not a multiple of 1000. */
+  tdata->opt->LogTimeGranularity = 1500;
+  mocked_granularity = -1;
+  rv = options_init_logs(NULL, tdata->opt, 0);
+  tt_int_op(rv, OP_EQ, 0);
+  tt_int_op(mocked_granularity, OP_EQ, 2000);
+
+  /* Reasonable value. */
+  tdata->opt->LogTimeGranularity = 3000;
+  mocked_granularity = -1;
+  rv = options_init_logs(NULL, tdata->opt, 0);
+  tt_int_op(rv, OP_EQ, 0);
+  tt_int_op(mocked_granularity, OP_EQ, 3000);
+
+  /* Negative. (Shouldn't be allowed by rest of config parsing.) */
+  tdata->opt->LogTimeGranularity = -1;
+  mocked_granularity = -1;
+  rv = options_init_logs(NULL, tdata->opt, 0);
+  tt_int_op(rv, OP_EQ, -1);
+
+  /* Very big */
+  tdata->opt->LogTimeGranularity = 3600 * 1000;
+  mocked_granularity = -1;
+  rv = options_init_logs(NULL, tdata->opt, 0);
+  tt_int_op(rv, OP_EQ, 0);
+  tt_int_op(mocked_granularity, OP_EQ, 3600 * 1000);
+
+ done:
+  free_options_test_data(tdata);
+  UNMOCK(set_log_time_granularity);
+}
+
+typedef struct {
+  char *name;
+  log_severity_list_t sev;
+  int fd;
+  bool stream;
+} added_log_t;
+
+static smartlist_t *added_logs = NULL;
+
+static void
+mock_add_stream_log_impl(const log_severity_list_t *sev, const char *name,
+                         int fd)
+{
+  added_log_t *a = tor_malloc_zero(sizeof(added_log_t));
+  a->name = tor_strdup(name);
+  memcpy(&a->sev, sev, sizeof(log_severity_list_t));
+  a->fd = fd;
+  a->stream = true;
+  smartlist_add(added_logs, a);
+}
+
+static int
+mock_add_file_log(const log_severity_list_t *sev, const char *name, int fd)
+{
+  added_log_t *a = tor_malloc_zero(sizeof(added_log_t));
+  a->name = tor_strdup(name);
+  memcpy(&a->sev, sev, sizeof(log_severity_list_t));
+  a->fd = fd;
+  smartlist_add(added_logs, a);
+  return 0;
+}
+
+static void
+clear_added_logs(void)
+{
+  SMARTLIST_FOREACH(added_logs, added_log_t *, a,
+                    { tor_free(a->name); tor_free(a); });
+  smartlist_clear(added_logs);
+}
+
+static void
+test_options_init_logs_quiet(void *arg)
+{
+  (void)arg;
+  char *cfg = NULL;
+  options_test_data_t *tdata = get_options_test_data("");
+  char *fn1 = tor_strdup(get_fname_rnd("log"));
+  const added_log_t *a;
+  int rv;
+  tdata->opt->RunAsDaemon = 0;
+
+  added_logs = smartlist_new();
+  MOCK(add_stream_log_impl, mock_add_stream_log_impl);
+  MOCK(add_file_log, mock_add_file_log);
+
+  tt_ptr_op(tdata->opt->Logs, OP_EQ, NULL);
+
+  /* First, try with no configured logs, and make sure that our configured
+     logs match the quiet level. */
+  quiet_level = QUIET_SILENT;
+  rv = options_init_logs(NULL, tdata->opt, 0);
+  tt_int_op(rv, OP_EQ, 0);
+  tt_int_op(smartlist_len(added_logs), OP_EQ, 0);
+
+  quiet_level = QUIET_HUSH;
+  rv = options_init_logs(NULL, tdata->opt, 0);
+  tt_int_op(rv, OP_EQ, 0);
+  tt_int_op(smartlist_len(added_logs), OP_EQ, 1);
+  a = smartlist_get(added_logs, 0);
+  tt_assert(a);
+  tt_assert(a->stream);
+  tt_int_op(a->fd, OP_EQ, fileno(stdout));
+  tt_int_op(a->sev.masks[LOG_INFO-LOG_ERR], OP_EQ, 0);
+  tt_int_op(a->sev.masks[LOG_NOTICE-LOG_ERR], OP_EQ, 0);
+  tt_int_op(a->sev.masks[LOG_WARN-LOG_ERR], OP_EQ, LD_ALL_DOMAINS);
+  clear_added_logs();
+
+  quiet_level = QUIET_NONE;
+  rv = options_init_logs(NULL, tdata->opt, 0);
+  tt_int_op(rv, OP_EQ, 0);
+  tt_int_op(smartlist_len(added_logs), OP_EQ, 1);
+  a = smartlist_get(added_logs, 0);
+  tt_assert(a);
+  tt_assert(a->stream);
+  tt_int_op(a->fd, OP_EQ, fileno(stdout));
+  tt_int_op(a->sev.masks[LOG_INFO-LOG_ERR], OP_EQ, 0);
+  tt_int_op(a->sev.masks[LOG_NOTICE-LOG_ERR], OP_EQ, LD_ALL_DOMAINS);
+  tt_int_op(a->sev.masks[LOG_WARN-LOG_ERR], OP_EQ, LD_ALL_DOMAINS);
+  clear_added_logs();
+
+  /* Make sure that adding a configured log makes the default logs go away. */
+  tor_asprintf(&cfg, "Log info file %s\n", fn1);
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(cfg);
+  rv = options_init_logs(NULL, tdata->opt, 0);
+  tt_int_op(rv, OP_EQ, 0);
+  tt_int_op(smartlist_len(added_logs), OP_EQ, 1);
+  a = smartlist_get(added_logs, 0);
+  tt_assert(a);
+  tt_assert(! a->stream);
+  tt_int_op(a->fd, OP_NE, fileno(stdout));
+  tt_int_op(a->sev.masks[LOG_INFO-LOG_ERR], OP_EQ, LD_ALL_DOMAINS);
+  tt_int_op(a->sev.masks[LOG_NOTICE-LOG_ERR], OP_EQ, LD_ALL_DOMAINS);
+  tt_int_op(a->sev.masks[LOG_WARN-LOG_ERR], OP_EQ, LD_ALL_DOMAINS);
+
+ done:
+  free_options_test_data(tdata);
+  tor_free(fn1);
+  tor_free(cfg);
+  clear_added_logs();
+  smartlist_free(added_logs);
+  UNMOCK(add_stream_log_impl);
+  UNMOCK(add_file_log);
+}
+
 #define LOCAL_VALIDATE_TEST(name) \
   { "validate__" #name, test_options_validate__ ## name, TT_FORK, NULL, NULL }
 
@@ -4213,5 +4397,9 @@ struct testcase_t options_tests[] = {
   LOCAL_VALIDATE_TEST(virtual_addr),
   LOCAL_VALIDATE_TEST(testing_options),
   LOCAL_VALIDATE_TEST(accel),
+  { "init_logs/granularity", test_options_init_logs_granularity, TT_FORK,
+    NULL, NULL },
+  { "init_logs/quiet", test_options_init_logs_quiet, TT_FORK,
+    NULL, NULL },
   END_OF_TESTCASES              /*  */
 };
