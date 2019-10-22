@@ -3431,15 +3431,12 @@ options_validate_single_onion(or_options_t *options, char **msg)
  */
 STATIC int
 options_validate(or_options_t *old_options, or_options_t *options,
-                 or_options_t *default_options_unused, int from_setconf_unused,
                  char **msg)
 {
   config_line_t *cl;
   const char *uname = get_uname();
   int n_ports=0;
   int world_writable_control_socket=0;
-  (void)from_setconf_unused; /* 29211 TODO: Remove this from the API. */
-  (void)default_options_unused; /* 29211 TODO: Remove this from the API. */
 
   tor_assert(msg);
   *msg = NULL;
