@@ -1,0 +1,4 @@
+  o Minor features (authority):
+    - Directory authorities now reject relays running all currently
+      deprecated release series.  The currently supported release series
+      are: 0.2.9, 0.3.5, 0.4.0, 0.4.1, and 0.4.2.  Closes ticket 31549.
