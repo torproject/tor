@@ -4494,7 +4494,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
       or_options_free(dflt_options);                                    \
       REJECT(#arg " may only be changed in testing Tor "                \
              "networks!");                                              \
-  } STMT_END
+    }                                                                   \
+  STMT_END
 
   /* Check for options that can only be changed from the defaults in testing
      networks.  */

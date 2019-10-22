@@ -635,7 +635,6 @@ setup_dir_formats_options(const char *arg, or_options_t *options)
 STMT_BEGIN \
   tt_assert(r1); \
   tt_assert(rp1); \
-\
   tt_int_op(rp1->addr,OP_EQ, r1->addr); \
   tt_int_op(rp1->or_port,OP_EQ, r1->or_port); \
   tt_int_op(rp1->dir_port,OP_EQ, r1->dir_port); \

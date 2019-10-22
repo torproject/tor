@@ -147,7 +147,7 @@ router_pick_dirserver_generic(smartlist_t *sourcelist,
       try_ip_pref = 0;                                                        \
       goto retry_label;                                                       \
     }                                                                         \
-  STMT_END                                                                    \
+  STMT_END
 
 /* Common retry code for router_pick_directory_server_impl and
  * router_pick_trusteddirserver_impl. Retry without excluding nodes, but with
