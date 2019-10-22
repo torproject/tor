@@ -3434,7 +3434,7 @@ options_validate_single_onion(or_options_t *options, char **msg)
  */
 STATIC int
 options_validate(or_options_t *old_options, or_options_t *options,
-                 or_options_t *default_options, int from_setconf_unused,
+                 or_options_t *default_options_unused, int from_setconf_unused,
                  char **msg)
 {
   config_line_t *cl;
@@ -3442,6 +3442,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   int n_ports=0;
   int world_writable_control_socket=0;
   (void)from_setconf_unused; /* 29211 TODO: Remove this from the API. */
+  (void)default_options_unused; /* 29211 TODO: Remove this from the API. */
 
   tor_assert(msg);
   *msg = NULL;
@@ -4486,12 +4487,17 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "AlternateDirAuthority and AlternateBridgeAuthority configured.");
   }
 
+  /* Check for options that can only be changed from the defaults in testing
+     networks.  */
+  or_options_t *dflt_options = options_new();
+  options_init(dflt_options);
 #define CHECK_DEFAULT(arg)                                              \
   STMT_BEGIN                                                            \
     if (!options->TestingTorNetwork &&                                  \
         !options->UsingTestNetworkDefaults_ &&                          \
-        !config_is_same(get_options_mgr(),options,                        \
-                        default_options,#arg)) {                        \
+        !config_is_same(get_options_mgr(),options,                      \
+                        dflt_options,#arg)) {                           \
+      or_options_free(dflt_options);                                    \
       REJECT(#arg " may only be changed in testing Tor "                \
              "networks!");                                              \
     } STMT_END
@@ -4515,6 +4521,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   CHECK_DEFAULT(TestingAuthKeySlop);
   CHECK_DEFAULT(TestingLinkKeySlop);
 #undef CHECK_DEFAULT
+  or_options_free(dflt_options);
 
   if (!options->ClientDNSRejectInternalAddresses &&
       !(options->DirAuthorities ||
