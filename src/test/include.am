@@ -99,6 +99,7 @@ if UNITTESTS_ENABLED
 
 # ADD_C_FILE: INSERT SOURCES HERE.
 src_test_test_SOURCES += \
+	src/test/fakecircs.c \
 	src/test/log_test_helpers.c \
 	src/test/hs_test_helpers.c \
 	src/test/rend_test_helpers.c \
@@ -339,6 +340,7 @@ src_test_test_timers_LDFLAGS = $(src_test_test_LDFLAGS)
 # ADD_C_FILE: INSERT HEADERS HERE.
 noinst_HEADERS+= \
 	src/test/fakechans.h \
+	src/test/fakecircs.h \
 	src/test/hs_test_helpers.h \
 	src/test/log_test_helpers.h \
 	src/test/rend_test_helpers.h \
