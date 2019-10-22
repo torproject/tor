@@ -1,0 +1,5 @@
+  o Minor bugfixes (logging):
+    - Rate-limit our the logging message about the obsolete .exit notation.
+      Previously, there was no limit on this warning, which could potentially
+      be triggered many times by a hostile website. Fixes bug 31466;
+      bugfix on 0.2.2.1-alpha.
