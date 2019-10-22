@@ -1,0 +1,3 @@
+  o Minor features (defense in depth):
+    - Add additional sanity checks around tor_vasprintf() usage in case the
+      function returns an error. Patch by Tobias Stoeckmann. Fixes ticket 31147.

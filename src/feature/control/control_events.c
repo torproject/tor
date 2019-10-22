@@ -1653,7 +1653,10 @@ control_event_status(int type, int severity, const char *format, va_list args)
     log_warn(LD_BUG, "Format string too long.");
     return -1;
   }
-  tor_vasprintf(&user_buf, format, args);
+  if (tor_vasprintf(&user_buf, format, args)<0) {
+    log_warn(LD_BUG, "Failed to create user buffer.");
+    return -1;
+  }
 
   send_control_event(type,  "%s %s\r\n", format_buf, user_buf);
   tor_free(user_buf);

@@ -550,6 +550,7 @@ process_vprintf(process_t *process,
   char *data;
 
   size = tor_vasprintf(&data, format, args);
+  tor_assert(data != NULL);
   process_write(process, (uint8_t *)data, size);
   tor_free(data);
 }
