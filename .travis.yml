@@ -59,12 +59,14 @@ matrix:
     ## We check disable module dirauth
     - env: MODULES_OPTIONS="--disable-module-dirauth"
     ## We run rust on macOS, because we have seen macOS rust failures before
-    - env: RUST_VERSION="nightly" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
-      compiler: clang
-      os: osx
+    # Disabled due to slow Travis macOS builds, see #32177
+    #- env: RUST_VERSION="nightly" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
+    #  compiler: clang
+    #  os: osx
     ## We run chutney on macOS, because macOS Travis has IPv6
-    - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
-      os: osx
+    # Disabled due to slow Travis macOS builds, see #32177
+    #- env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
+    #  os: osx
     ## We clone our stem repo and run `make test-stem`
     - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
 
