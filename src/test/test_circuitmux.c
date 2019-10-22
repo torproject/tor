@@ -17,6 +17,16 @@
 
 #include <math.h>
 
+/**
+ * MOCKED functions.
+ */
+static void
+scheduler_release_channel_mock(channel_t *chan)
+{
+  (void) chan;
+  return;
+}
+
 /* XXXX duplicated function from test_circuitlist.c */
 static channel_t *
 new_fake_channel(void)
@@ -44,7 +54,7 @@ test_cmux_destroy_cell_queue(void *arg)
   packed_cell_t *pc = NULL;
   destroy_cell_t *dc = NULL;
 
-  scheduler_init();
+  MOCK(scheduler_release_channel, scheduler_release_channel_mock);
 
   (void) arg;
 
@@ -82,6 +92,8 @@ test_cmux_destroy_cell_queue(void *arg)
   channel_free(ch);
   packed_cell_free(pc);
   tor_free(dc);
+
+  UNMOCK(scheduler_release_channel);
 }
 
 static void
@@ -125,9 +137,40 @@ test_cmux_compute_ticks(void *arg)
   ;
 }
 
+static void *
+cmux_setup_test(const struct testcase_t *tc)
+{
+  static int whatever;
+
+  (void) tc;
+
+  cell_ewma_initialize_ticks();
+  return &whatever;
+}
+
+static int
+cmux_cleanup_test(const struct testcase_t *tc, void *ptr)
+{
+  (void) tc;
+  (void) ptr;
+
+  circuitmux_ewma_free_all();
+
+  return 1;
+}
+
+static struct testcase_setup_t cmux_test_setup = {
+  .setup_fn = cmux_setup_test,
+  .cleanup_fn = cmux_cleanup_test,
+};
+
+#define TEST_CMUX(name) \
+  { #name, test_cmux_##name, TT_FORK, &cmux_test_setup, NULL }
+
 struct testcase_t circuitmux_tests[] = {
-  { "destroy_cell_queue", test_cmux_destroy_cell_queue, TT_FORK, NULL, NULL },
-  { "compute_ticks", test_cmux_compute_ticks, TT_FORK, NULL, NULL },
+  TEST_CMUX(compute_ticks),
+  TEST_CMUX(destroy_cell_queue),
+
   END_OF_TESTCASES
 };
 
