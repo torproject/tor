@@ -906,11 +906,9 @@ test_config_fix_my_family(void *arg)
   family3->next = NULL;
 
   or_options_t* options = options_new();
-  or_options_t* defaults = options_new();
   (void) arg;
 
   options_init(options);
-  options_init(defaults);
   options->MyFamily_lines = family;
 
   options_validate(NULL, options, &err) ;
@@ -935,7 +933,6 @@ test_config_fix_my_family(void *arg)
  done:
   tor_free(err);
   or_options_free(options);
-  or_options_free(defaults);
 }
 
 static int n_hostname_01010101 = 0;
@@ -5640,7 +5637,6 @@ test_config_check_bridge_distribution_setting_not_a_bridge(void *arg)
 {
   or_options_t* options = get_options_mutable();
   or_options_t* old_options = options;
-  or_options_t* default_options = options;
   char* message = NULL;
   int ret;
 
