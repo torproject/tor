@@ -173,6 +173,7 @@ void logs_set_domain_logging(int enabled);
 int get_min_log_level(void);
 void switch_logs_debug(void);
 void logs_free_all(void);
+void logs_close_sigsafe(void);
 void add_temp_log(int min_severity);
 void close_temp_logs(void);
 void rollback_log_changes(void);
