@@ -20,8 +20,10 @@ os:
 ## Instead, we list each job under matrix: include:
 env:
   global:
-    ## The Travis CI environment allows us two cores, so let's use both.
-    - MAKEFLAGS="-j 2"
+    ## The Travis CI environment allows us two cores, so let's use both.  Also,
+    ## let's use the "-k" flag so that we get all of the compilation failures,
+    ## not just the first one.
+    - MAKEFLAGS="-k -j 2"
     ## We turn on hardening by default
     ## Also known as --enable-fragile-hardening in 0.3.0.3-alpha and later
     - HARDENING_OPTIONS="--enable-expensive-hardening"

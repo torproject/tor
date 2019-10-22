@@ -1,0 +1,3 @@
+  o Minor bugfixes (logging):
+    - Change log level of message "Hash of session info was not as expected"
+      to LOG_PROTOCOL_WARN. Fixes bug 12399; bugfix on 0.1.1.10-alpha.
