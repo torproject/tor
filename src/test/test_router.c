@@ -92,13 +92,13 @@ test_router_dump_router_to_string_no_bridge_distribution_method(void *arg)
   options->BridgeRelay = 1;
 
   /* Generate keys which router_dump_router_to_string() expects to exist. */
-  tt_int_op(0, ==, curve25519_keypair_generate(&ntor_keypair, 0));
-  tt_int_op(0, ==, ed25519_keypair_generate(&signing_keypair, 0));
+  tt_int_op(0, OP_EQ, curve25519_keypair_generate(&ntor_keypair, 0));
+  tt_int_op(0, OP_EQ, ed25519_keypair_generate(&signing_keypair, 0));
 
   /* Set up part of our routerinfo_t so that we don't trigger any other
    * assertions in router_dump_router_to_string(). */
   router = (routerinfo_t*)router_get_my_routerinfo();
-  tt_ptr_op(router, !=, NULL);
+  tt_ptr_op(router, OP_NE, NULL);
 
   /* The real router_get_my_routerinfo() looks up onion_curve25519_pkey using
    * get_current_curve25519_keypair(), but we don't initialise static data in
@@ -115,9 +115,9 @@ test_router_dump_router_to_string_no_bridge_distribution_method(void *arg)
                                       &ntor_keypair,
                                       &signing_keypair);
   crypto_pk_free(onion_pkey);
-  tt_ptr_op(desc, !=, NULL);
+  tt_ptr_op(desc, OP_NE, NULL);
   found = strstr(desc, needle);
-  tt_ptr_op(found, !=, NULL);
+  tt_ptr_op(found, OP_NE, NULL);
 
  done:
   NS_UNMOCK(router_get_my_routerinfo);

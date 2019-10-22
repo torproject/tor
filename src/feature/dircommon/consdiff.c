@@ -530,10 +530,12 @@ typedef struct router_id_iterator_t {
   cdline_t hash;
 } router_id_iterator_t;
 
+#ifndef COCCI
 /**
  * Initializer for a router_id_iterator_t.
  */
 #define ROUTER_ID_ITERATOR_INIT { { NULL, 0 }, { NULL, 0 } }
+#endif
 
 /** Given an index *<b>idxp</b> into the consensus at <b>cons</b>, advance
  * the index to the next router line ("r ...") in the consensus, or to

@@ -18,11 +18,13 @@
 
 #include "core/mainloop/periodic.h"
 
+#ifndef COCCI
 #define DECLARE_EVENT(name, roles, flags)         \
   static periodic_event_item_t name ## _event =   \
     PERIODIC_EVENT(name,                          \
                    PERIODIC_EVENT_ROLE_##roles,   \
                    flags)
+#endif
 
 #define FL(name) (PERIODIC_EVENT_FLAG_##name)
 

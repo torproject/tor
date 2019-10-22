@@ -1349,9 +1349,11 @@ get_signewnym_epoch(void)
 static int periodic_events_initialized = 0;
 
 /* Declare all the timer callback functions... */
+#ifndef COCCI
 #undef CALLBACK
 #define CALLBACK(name) \
   static int name ## _callback(time_t, const or_options_t *)
+
 CALLBACK(add_entropy);
 CALLBACK(check_expired_networkstatus);
 CALLBACK(clean_caches);
@@ -1374,9 +1376,10 @@ CALLBACK(second_elapsed);
 #undef CALLBACK
 
 /* Now we declare an array of periodic_event_item_t for each periodic event */
-#define CALLBACK(name, r, f) \
+#define CALLBACK(name, r, f)                            \
   PERIODIC_EVENT(name, PERIODIC_EVENT_ROLE_ ## r, f)
 #define FL(name) (PERIODIC_EVENT_FLAG_ ## name)
+#endif
 
 STATIC periodic_event_item_t mainloop_periodic_events[] = {
 
@@ -1427,8 +1430,10 @@ STATIC periodic_event_item_t mainloop_periodic_events[] = {
 
   END_OF_PERIODIC_EVENTS
 };
+#ifndef COCCI
 #undef CALLBACK
 #undef FL
+#endif
 
 /* These are pointers to members of periodic_events[] that are used to
  * implement particular callbacks.  We keep them separate here so that we
@@ -1527,8 +1532,10 @@ initialize_periodic_events(void)
 
   /* Set up all periodic events. We'll launch them by roles. */
 
+#ifndef COCCI
 #define NAMED_CALLBACK(name) \
   STMT_BEGIN name ## _event = periodic_events_find( #name ); STMT_END
+#endif
 
   NAMED_CALLBACK(prune_old_routers);
   NAMED_CALLBACK(fetch_networkstatus);

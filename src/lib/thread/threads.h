@@ -106,8 +106,10 @@ void tor_threadlocal_set(tor_threadlocal_t *threadlocal, void *value);
 typedef struct atomic_counter_t {
   atomic_size_t val;
 } atomic_counter_t;
+#ifndef COCCI
 #define ATOMIC_LINKAGE static
-#else /* !defined(HAVE_WORKING_STDATOMIC) */
+#endif
+#else /* !(defined(HAVE_WORKING_STDATOMIC)) */
 typedef struct atomic_counter_t {
   tor_mutex_t mutex;
   size_t val;

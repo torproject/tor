@@ -2248,6 +2248,7 @@ typedef struct control_cmd_def_t {
  */
 #define CMD_FL_WIPE (1u<<0)
 
+#ifndef COCCI
 /** Macro: declare a command with a one-line argument, a given set of flags,
  * and a syntax definition.
  **/
@@ -2280,6 +2281,7 @@ typedef struct control_cmd_def_t {
       0,                                        \
       &obsolete_syntax,                         \
   }
+#endif
 
 /**
  * An array defining all the recognized controller commands.
