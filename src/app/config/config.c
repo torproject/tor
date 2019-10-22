@@ -782,7 +782,7 @@ static const char *default_fallbacks[] = {
 #ifndef COCCI
 #include "fallback_dirs.inc"
 #endif
-   NULL
+  NULL
 };
 
 /** Override default values with these if the user sets the TestingTorNetwork
