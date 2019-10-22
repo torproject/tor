@@ -1961,7 +1961,7 @@ test_options_validate__testing(void *ignored)
   STMT_BEGIN                                                \
     free_options_test_data(tdata);                          \
   tdata = get_options_test_data(#varname " " #varval "\n"); \
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);\
+  ret = options_validate(tdata->old_opt, tdata->opt, &msg); \
   tt_str_op(msg, OP_EQ, \
             #varname " may only be changed in testing Tor networks!");  \
   tt_int_op(ret, OP_EQ, -1);                                            \
@@ -1972,7 +1972,7 @@ test_options_validate__testing(void *ignored)
                                 VALID_DIR_AUTH                          \
                                 "TestingTorNetwork 1\n");               \
                                                                         \
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);\
+  ret = options_validate(tdata->old_opt, tdata->opt, &msg);             \
   if (msg) { \
     tt_str_op(msg, OP_NE, \
               #varname " may only be changed in testing Tor networks!"); \
@@ -1983,7 +1983,7 @@ test_options_validate__testing(void *ignored)
   tdata = get_options_test_data(#varname " " #varval "\n"           \
                                 "___UsingTestNetworkDefaults 1\n"); \
                                                                         \
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);\
+  ret = options_validate(tdata->old_opt, tdata->opt, &msg);\
   if (msg) { \
     tt_str_op(msg, OP_NE, \
               #varname " may only be changed in testing Tor networks!"); \
@@ -2127,7 +2127,7 @@ test_options_validate__bandwidth(void *ignored)
   STMT_BEGIN                                                \
   free_options_test_data(tdata); \
   tdata = get_options_test_data(#p " 3Gb\n"); \
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);\
+  ret = options_validate(tdata->old_opt, tdata->opt, &msg);     \
   tt_int_op(ret, OP_EQ, -1); \
   tt_mem_op(msg, OP_EQ, #p " (3221225471) must be at most 2147483647", 40); \
   tor_free(msg); \
@@ -3717,7 +3717,7 @@ test_options_validate__testing_options(void *ignored)
                                 "TestingTorNetwork 1\n"                 \
                                 );                                      \
   tdata->opt-> name = low_val;                                       \
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);\
+  ret = options_validate(tdata->old_opt, tdata->opt,  &msg);            \
   tt_int_op(ret, OP_EQ, -1);                                            \
   tt_str_op(msg, OP_EQ, #name " " err_low);                \
   tor_free(msg); \
@@ -3728,7 +3728,7 @@ test_options_validate__testing_options(void *ignored)
                                 );                                      \
   tdata->opt->  name = high_val;                                      \
   mock_clean_saved_logs();                                              \
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);\
+  ret = options_validate(tdata->old_opt, tdata->opt,  &msg);            \
   tt_int_op(ret, OP_EQ, 0);                                             \
   expect_log_msg( #name " is insanely high.\n"); \
   tor_free(msg); \
