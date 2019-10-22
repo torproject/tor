@@ -1,3 +1,0 @@
-  o Minor bugfixes (hidden service v3, coverity):
-    - Fix an implicit conversion from ssize_t to size_t discovered by Coverity.
-      Fixes bug 31682; bugfix on 0.4.2.1-alpha.

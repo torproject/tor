@@ -1,3 +1,0 @@
-  o Minor bugfixes (error handling):
-    - Always lock the backtrace buffer before it is used.
-      Fixes bug 31734; bugfix on 0.2.5.3-alpha.

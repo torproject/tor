@@ -1,3 +1,0 @@
-  o Minor feature (hidden service, control port):
-    - The ADD_ONION key blob keyword "BEST" now defaults from RSA1024 (v2) to
-      ED25519-V3 (v3). Closes ticket 29669.
