@@ -3434,7 +3434,7 @@ options_validate_single_onion(or_options_t *options, char **msg)
  */
 STATIC int
 options_validate(or_options_t *old_options, or_options_t *options,
-                 or_options_t *default_options, int from_setconf_unused,
+                 or_options_t *default_options_unused, int from_setconf_unused,
                  char **msg)
 {
   config_line_t *cl;
@@ -3442,6 +3442,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   int n_ports=0;
   int world_writable_control_socket=0;
   (void)from_setconf_unused; /* 29211 TODO: Remove this from the API. */
+  (void)default_options_unused; /* 29211 TODO: Remove this from the API. */
 
   tor_assert(msg);
   *msg = NULL;
@@ -4488,32 +4489,39 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
 #define CHECK_DEFAULT(arg)                                              \
   STMT_BEGIN                                                            \
-    if (!options->TestingTorNetwork &&                                  \
-        !options->UsingTestNetworkDefaults_ &&                          \
-        !config_is_same(get_options_mgr(),options,                        \
-                        default_options,#arg)) {                        \
+    if (!config_is_same(get_options_mgr(),options,                      \
+                        dflt_options,#arg)) {                           \
+      or_options_free(dflt_options);                                    \
       REJECT(#arg " may only be changed in testing Tor "                \
              "networks!");                                              \
-    } STMT_END
-  CHECK_DEFAULT(TestingV3AuthInitialVotingInterval);
-  CHECK_DEFAULT(TestingV3AuthInitialVoteDelay);
-  CHECK_DEFAULT(TestingV3AuthInitialDistDelay);
-  CHECK_DEFAULT(TestingV3AuthVotingStartOffset);
-  CHECK_DEFAULT(TestingAuthDirTimeToLearnReachability);
-  CHECK_DEFAULT(TestingEstimatedDescriptorPropagationTime);
-  CHECK_DEFAULT(TestingServerDownloadInitialDelay);
-  CHECK_DEFAULT(TestingClientDownloadInitialDelay);
-  CHECK_DEFAULT(TestingServerConsensusDownloadInitialDelay);
-  CHECK_DEFAULT(TestingClientConsensusDownloadInitialDelay);
-  CHECK_DEFAULT(TestingBridgeDownloadInitialDelay);
-  CHECK_DEFAULT(TestingBridgeBootstrapDownloadInitialDelay);
-  CHECK_DEFAULT(TestingClientMaxIntervalWithoutRequest);
-  CHECK_DEFAULT(TestingDirConnectionMaxStall);
-  CHECK_DEFAULT(TestingAuthKeyLifetime);
-  CHECK_DEFAULT(TestingLinkCertLifetime);
-  CHECK_DEFAULT(TestingSigningKeySlop);
-  CHECK_DEFAULT(TestingAuthKeySlop);
-  CHECK_DEFAULT(TestingLinkKeySlop);
+  } STMT_END
+
+  /* Check for options that can only be changed from the defaults in testing
+     networks.  */
+  if (! options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
+    or_options_t *dflt_options = options_new();
+    options_init(dflt_options);
+    CHECK_DEFAULT(TestingV3AuthInitialVotingInterval);
+    CHECK_DEFAULT(TestingV3AuthInitialVoteDelay);
+    CHECK_DEFAULT(TestingV3AuthInitialDistDelay);
+    CHECK_DEFAULT(TestingV3AuthVotingStartOffset);
+    CHECK_DEFAULT(TestingAuthDirTimeToLearnReachability);
+    CHECK_DEFAULT(TestingEstimatedDescriptorPropagationTime);
+    CHECK_DEFAULT(TestingServerDownloadInitialDelay);
+    CHECK_DEFAULT(TestingClientDownloadInitialDelay);
+    CHECK_DEFAULT(TestingServerConsensusDownloadInitialDelay);
+    CHECK_DEFAULT(TestingClientConsensusDownloadInitialDelay);
+    CHECK_DEFAULT(TestingBridgeDownloadInitialDelay);
+    CHECK_DEFAULT(TestingBridgeBootstrapDownloadInitialDelay);
+    CHECK_DEFAULT(TestingClientMaxIntervalWithoutRequest);
+    CHECK_DEFAULT(TestingDirConnectionMaxStall);
+    CHECK_DEFAULT(TestingAuthKeyLifetime);
+    CHECK_DEFAULT(TestingLinkCertLifetime);
+    CHECK_DEFAULT(TestingSigningKeySlop);
+    CHECK_DEFAULT(TestingAuthKeySlop);
+    CHECK_DEFAULT(TestingLinkKeySlop);
+    or_options_free(dflt_options);
+  }
 #undef CHECK_DEFAULT
 
   if (!options->ClientDNSRejectInternalAddresses &&
