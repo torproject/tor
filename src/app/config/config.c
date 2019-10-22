@@ -844,8 +844,7 @@ static int parse_outbound_addresses(or_options_t *options, int validate_only,
 static void config_maybe_load_geoip_files_(const or_options_t *options,
                                            const or_options_t *old_options);
 static int options_validate_cb(void *old_options, void *options,
-                               void *default_options,
-                               int from_setconf, char **msg);
+                               char **msg);
 static void cleanup_protocol_warning_severity_level(void);
 static void set_protocol_warning_severity_level(int warning_severity);
 static void options_clear_cb(const config_mgr_t *mgr, void *opts);
@@ -3231,12 +3230,10 @@ compute_publishserverdescriptor(or_options_t *options)
 #define RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT (10)
 
 static int
-options_validate_cb(void *old_options, void *options, void *default_options,
-                    int from_setconf, char **msg)
+options_validate_cb(void *old_options, void *options, char **msg)
 {
   in_option_validation = 1;
-  int rv = options_validate(old_options, options, default_options,
-                          from_setconf, msg);
+  int rv = options_validate(old_options, options, NULL, 0, msg);
   in_option_validation = 0;
   return rv;
 }
