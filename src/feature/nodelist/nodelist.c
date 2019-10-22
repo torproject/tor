@@ -2451,7 +2451,7 @@ compute_frac_paths_available(const networkstatus_t *consensus,
   double f_path = 0.0;
   /* Used to determine whether there are any exits with descriptors */
   int np = 0;
-  /* Used to determine whether there are any exits with in the consensus */
+  /* Used to determine whether there are any exits in the consensus */
   int nu = 0;
   const int authdir = authdir_mode_v3(options);
 
