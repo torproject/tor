@@ -83,8 +83,8 @@ build_script:
              # configure its flags. liblzma just works.
              #>
             Execute-Bash "ZSTD_CFLAGS='-L/${env:compiler_path}/include' ZSTD_LIBS='-L/${env:compiler_path}/lib -lzstd' ../configure --prefix=/${env:compiler_path} --build=${env:target} --host=${env:target} --with-openssl-dir=/${env:compiler_path} --disable-asciidoc --enable-fatal-warnings ${env:hardening}"
-            Execute-Bash "V=1 make -j2"
-            Execute-Bash "V=1 make -j2 install"
+            Execute-Bash "V=1 make -k -j2"
+            Execute-Bash "V=1 make -k -j2 install"
      }
 
 test_script:
@@ -95,7 +95,7 @@ test_script:
             $buildpath = @("C:\msys64\${env:compiler_path}\bin") + $oldpath
             $env:Path = $buildpath -join ';'
             Set-Location "${env:build}"
-            Execute-Bash "VERBOSE=1 make -j2 check"
+            Execute-Bash "VERBOSE=1 make -k -j2 check"
     }
 
 on_finish:
