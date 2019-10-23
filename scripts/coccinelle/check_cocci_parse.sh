@@ -1,8 +1,11 @@
 #!/bin/sh
 
 # If we have coccinelle installed, run try_parse.sh on every filename passed
-# as an argument. Uses the default coccinelle exceptions file, if
-# $TOR_COCCI_EXCEPTIONS_FILE is not set.
+# as an argument. If no filenames are supplied, scan a standard Tor 0.3.5 or
+# later directory layout.
+#
+# Uses the default coccinelle exceptions file, or $TOR_COCCI_EXCEPTIONS_FILE,
+# if it is set.
 #
 # Use TOR_COCCI_EXCEPTIONS_FILE=/dev/null check_cocci_parse.sh to disable
 # the default exception file.
@@ -23,8 +26,21 @@ if ! command -v spatch; then
     exit "$exitcode"
 fi
 
-"$try_parse" "$@"
-exitcode=$?
+if test $# -ge 1 ; then
+  "$try_parse" "$@"
+  exitcode=$?
+else
+  # This is the layout in 0.3.5
+  "$try_parse" \
+    src/lib/*/*.[ch] \
+    src/core/*/*.[ch] \
+    src/feature/*/*.[ch] \
+    src/app/*/*.[ch] \
+    src/test/*.[ch] \
+    src/test/*/*.[ch] \
+    src/tools/*.[ch]
+  exitcode=$?
+fi
 
 if test "$exitcode" != 0 ; then
     echo "Please fix these cocci parsing errors in the above files"
