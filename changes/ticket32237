@@ -1,0 +1,5 @@
+  o Minor features (developer tools):
+    - Add a rename_c_identifiers.py tool to rename a bunch of C
+      identifiers at once, and generate a well-formed commit message
+      describing the change. This should help with refactoring. Closes
+      ticket 32237.
