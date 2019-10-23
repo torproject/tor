@@ -19,6 +19,7 @@ fi
 
 if [ -d src/lib ]; then
     # This is the layout in 0.3.5
+    # There are two copies of this list in this file
     perl scripts/maint/checkSpace.pl -C \
          src/lib/*/*.[ch] \
          src/core/*/*.[ch] \
@@ -56,4 +57,17 @@ fi
 
 if [ -e scripts/maint/checkShellScripts.sh ]; then
     scripts/maint/checkShellScripts.sh
+fi
+
+if [ -e scripts/coccinelle/check_cocci_parse.sh ]; then
+    # This is the layout in 0.3.5
+    # There are two copies of this list in this file
+    VERBOSE=1 scripts/coccinelle/check_cocci_parse.sh \
+         src/lib/*/*.[ch] \
+         src/core/*/*.[ch] \
+         src/feature/*/*.[ch] \
+         src/app/*/*.[ch] \
+         src/test/*.[ch] \
+         src/test/*/*.[ch] \
+         src/tools/*.[ch]
 fi
