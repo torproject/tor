@@ -3252,7 +3252,9 @@ STATIC int
 options_validate(const or_options_t *old_options, or_options_t *options,
                  char **msg)
 {
-  return config_validate(get_options_mgr(), old_options, options, msg);
+  validation_status_t vs;
+  vs = config_validate(get_options_mgr(), old_options, options, msg);
+  return vs < 0 ? -1 : 0;
 }
 
 #define REJECT(arg) \
