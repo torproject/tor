@@ -1148,10 +1148,11 @@ config_init(const config_mgr_t *mgr, void *options)
  * in order to set ancillary data.  If `old_options` is provided, make sure
  * that the transition from `old_options` to `options` is permitted.
  *
- * On success return 0; on failure set *msg_out to a newly allocated string
- * explaining what is wrong, and return -1.
+ * On success return VSTAT_OK; on failure set *msg_out to a newly allocated
+ * string explaining what is wrong, and return a different validation_status_t
+ * to describe which step failed.
  **/
-static int
+static validation_status_t
 config_validate_single(const config_format_t *fmt,
                        const void *old_options, void *options,
                        char **msg_out)
@@ -1159,13 +1160,37 @@ config_validate_single(const config_format_t *fmt,
   tor_assert(fmt);
   tor_assert(options);
 
-  if (fmt->legacy_validate_fn) {
-    if (fmt->legacy_validate_fn(old_options, options, msg_out) < 0) {
-      return -1;
+  if (fmt->pre_normalize_fn) {
+    if (fmt->pre_normalize_fn(options, msg_out) < 0) {
+      return VSTAT_PRE_NORMALIZE_ERR;
     }
   }
 
-  return 0;
+  if (fmt->legacy_validate_fn) {
+    if (fmt->legacy_validate_fn(old_options, options, msg_out) < 0) {
+      return VSTAT_LEGACY_ERR;
+    }
+  }
+
+  if (fmt->validate_fn) {
+    if (fmt->validate_fn(options, msg_out) < 0) {
+      return VSTAT_VALIDATE_ERR;
+    }
+  }
+
+  if (fmt->check_transition_fn && old_options) {
+    if (fmt->check_transition_fn(old_options, options, msg_out) < 0) {
+      return VSTAT_TRANSITION_ERR;
+    }
+  }
+
+  if (fmt->post_normalize_fn) {
+    if (fmt->post_normalize_fn(options, msg_out) < 0) {
+      return VSTAT_POST_NORMALIZE_ERR;
+    }
+  }
+
+  return VSTAT_OK;
 }
 
 /**
@@ -1174,15 +1199,16 @@ config_validate_single(const config_format_t *fmt,
  * set ancillary data.  If `old_options` is provided, make sure that the
  * transition from `old_options` to `options` is permitted.
  *
- * On success return 0; on failure set *msg_out to a newly allocated string
- * explaining what is wrong, and return -1.
+ * On success return VSTAT_OK; on failure set *msg_out to a newly allocated
+ * string explaining what is wrong, and return a different validation_status_t
+ * to describe which step failed.
  **/
-int
+validation_status_t
 config_validate(const config_mgr_t *mgr,
                 const void *old_options, void *options,
                 char **msg_out)
 {
-  int rv;
+  validation_status_t rv;
   CONFIG_CHECK(mgr, options);
   if (old_options) {
     CONFIG_CHECK(mgr, old_options);
@@ -1212,7 +1238,7 @@ config_validate(const config_mgr_t *mgr,
   if (rv < 0)
     return rv;
 
-  return 0;
+  return VSTAT_OK;
 }
 
 /** Allocate and return a new string holding the written-out values of the vars
