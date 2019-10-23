@@ -43,8 +43,9 @@ else
 fi
 
 if test "$exitcode" != 0 ; then
-    echo "Please fix these cocci parsing errors"
-    echo "Try using test-operator-cleanup or 'make autostyle-operators'"
+    echo "Please fix these cocci parsing errors in the above files"
+    echo "Set VERBOSE=1 for more details"
+    echo "Try running test-operator-cleanup or 'make autostyle-operators'"
     echo "As a last resort, you can modify scripts/coccinelle/exceptions.txt"
 fi
 
