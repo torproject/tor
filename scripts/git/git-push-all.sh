@@ -29,6 +29,8 @@ function usage()
   echo "       CI environment failures, using code that previously passed CI."
   echo "       (default: skip; current: $CURRENT_PUSH_SAME matching branches)"
   echo "   --: pass further arguments to git push."
+  echo "       All unrecognised arguments are passed to git push, but complex"
+  echo "       arguments before -- may be mangled by getopt."
   echo "       (default: git push --atomic, current: $GIT_PUSH)"
   echo
   echo " env vars:"
@@ -127,9 +129,11 @@ while getopts ":hr:st:" opt; do
        OPTIND=$((OPTIND - 2))
        ;;
     *)
-       # Assume we're done with script arguments,
-       # and git push will handle the option
-       break
+       # Make git push handle the option
+       # This might mangle options with spaces, use -- for complex options
+       GIT_PUSH="$GIT_PUSH $1"
+       shift
+       OPTIND=$((OPTIND - 1))
        ;;
   esac
 done
