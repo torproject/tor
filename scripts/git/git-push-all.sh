@@ -233,20 +233,31 @@ fi
 # Entry point #
 ###############
 
-# Skip the test branches that are the same as the upstream branches
-if [ "$PUSH_SAME" -eq 0 ] && [ "$TEST_BRANCH_PREFIX" ]; then
+if [ "$TEST_BRANCH_PREFIX" ]; then
+  # Skip the test branches that are the same as the default or current
+  # upstream branches (they have already been tested)
+  UPSTREAM_SKIP_SAME_AS="$UPSTREAM_BRANCHES $DEFAULT_UPSTREAM_BRANCHES"
+else
+  # Skip the local maint-*, release-*, master branches that are the same as the
+  # current upstream branches, but ignore the default upstream
+  # (we want to update a non-default remote, even if it matches the default)
+  UPSTREAM_SKIP_SAME_AS="$UPSTREAM_BRANCHES"
+fi
+
+# Skip branches that match the relevant upstream(s)
+if [ "$PUSH_SAME" -eq 0 ]; then
   NEW_PUSH_BRANCHES=
   for b in $PUSH_BRANCHES; do
     PUSH_COMMIT=$(git rev-parse "$b")
     SKIP_UPSTREAM=
-    for u in $DEFAULT_UPSTREAM_BRANCHES $UPSTREAM_BRANCHES; do
+    for u in $UPSTREAM_SKIP_SAME_AS; do
       UPSTREAM_COMMIT=$(git rev-parse "$u")
       if [ "$PUSH_COMMIT" = "$UPSTREAM_COMMIT" ]; then
         SKIP_UPSTREAM="$u"
       fi
     done
     if [ "$SKIP_UPSTREAM" ]; then
-      printf "Skipping unchanged: %s remote: %s\n" \
+      printf "Skipping unchanged: %s matching remote: %s\n" \
         "$b" "$SKIP_UPSTREAM"
     else
       if [ "$NEW_PUSH_BRANCHES" ]; then
@@ -257,6 +268,12 @@ if [ "$PUSH_SAME" -eq 0 ] && [ "$TEST_BRANCH_PREFIX" ]; then
     fi
   done
   PUSH_BRANCHES=${NEW_PUSH_BRANCHES}
+fi
+
+if [ ! "$PUSH_BRANCHES" ]; then
+  echo "No branches to push!"
+  # We expect the rest of the script to run without errors, even if there
+  # are no branches
 fi
 
 if [ "$PUSH_DELAY" -le 0 ]; then
@@ -271,20 +288,32 @@ if [ "$PUSH_DELAY" -le 0 ]; then
 else
   # Push the branches in optimal CI order, with a delay between each push
   PUSH_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\n" | sort -V)
-  MASTER_BRANCH=$(echo "$PUSH_BRANCHES" | tr " " "\n" | grep master)
+  MASTER_BRANCH=$(echo "$PUSH_BRANCHES" | tr " " "\n" | grep master) \
+      || true # Skipped master branch
   if [ -z "$TEST_BRANCH_PREFIX" ]; then
-    MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\n" | grep maint)
+    MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\n" | grep maint) \
+        || true # Skipped all maint branches
     RELEASE_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\n" | grep release | \
-      tr "\n" " ")
-    printf "Pushing with %ss delays, so CI runs in this order:\n%s\n%s\n%s\n" \
-      "$PUSH_DELAY" "$MASTER_BRANCH" "$MAINT_BRANCHES" "$RELEASE_BRANCHES"
+      tr "\n" " ") || true # Skipped all release branches
   else
     # Actually test branches based on maint branches
-    MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\n" | grep -v master)
-    printf "Pushing with %ss delays, so CI runs in this order:\n%s\n%s\n" \
-      "$PUSH_DELAY" "$MASTER_BRANCH" "$MAINT_BRANCHES"
+    MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\n" | grep -v master) \
+        || true # Skipped all maint test branches
     # No release branches
     RELEASE_BRANCHES=
+  fi
+  if [ "$MASTER_BRANCH" ] || [ "$MAINT_BRANCHES" ] \
+      || [ "$RELEASE_BRANCHES" ]; then
+    printf "Pushing with %ss delays, so CI runs in this order:\n" "$PUSH_DELAY"
+    if [ "$MASTER_BRANCH" ]; then
+      printf "%s\n" "$MASTER_BRANCH"
+    fi
+    if [ "$MAINT_BRANCHES" ]; then
+      printf "%s\n" "$MAINT_BRANCHES"
+    fi
+    if [ "$RELEASE_BRANCHES" ]; then
+      printf "%s\n" "$RELEASE_BRANCHES"
+    fi
   fi
   $GIT_PUSH "$@" "$UPSTREAM_REMOTE" "$MASTER_BRANCH"
   sleep "$PUSH_DELAY"
