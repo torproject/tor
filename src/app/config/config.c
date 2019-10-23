@@ -843,9 +843,8 @@ static int parse_outbound_addresses(or_options_t *options, int validate_only,
                                     char **msg);
 static void config_maybe_load_geoip_files_(const or_options_t *options,
                                            const or_options_t *old_options);
-static int options_validate_cb(void *old_options, void *options,
-                               void *default_options,
-                               int from_setconf, char **msg);
+static int options_validate_cb(const void *old_options, void *options,
+                               char **msg);
 static void cleanup_protocol_warning_severity_level(void);
 static void set_protocol_warning_severity_level(int warning_severity);
 static void options_clear_cb(const config_mgr_t *mgr, void *opts);
@@ -1228,7 +1227,8 @@ add_default_fallback_dir_servers,(void))
  * user if we changed any dangerous ones.
  */
 static int
-validate_dir_servers(or_options_t *options, or_options_t *old_options)
+validate_dir_servers(const or_options_t *options,
+                     const or_options_t *old_options)
 {
   config_line_t *cl;
 
@@ -2682,7 +2682,7 @@ options_trial_assign(config_line_t *list, unsigned flags, char **msg)
   in_option_validation = 1;
 
   if (options_validate(cur_options, trial_options,
-                       global_default_options, 1, msg) < 0) {
+                       msg) < 0) {
     or_options_free(trial_options);
     rv = SETOPT_ERR_PARSE; /*XXX make this a separate return value. */
     goto done;
@@ -3231,12 +3231,10 @@ compute_publishserverdescriptor(or_options_t *options)
 #define RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT (10)
 
 static int
-options_validate_cb(void *old_options, void *options, void *default_options,
-                    int from_setconf, char **msg)
+options_validate_cb(const void *old_options, void *options, char **msg)
 {
   in_option_validation = 1;
-  int rv = options_validate(old_options, options, default_options,
-                          from_setconf, msg);
+  int rv = options_validate(old_options, options, msg);
   in_option_validation = 0;
   return rv;
 }
@@ -3433,16 +3431,13 @@ options_validate_single_onion(or_options_t *options, char **msg)
  * On error, tor_strdup an error explanation into *<b>msg</b>.
  */
 STATIC int
-options_validate(or_options_t *old_options, or_options_t *options,
-                 or_options_t *default_options_unused, int from_setconf_unused,
+options_validate(const or_options_t *old_options, or_options_t *options,
                  char **msg)
 {
   config_line_t *cl;
   const char *uname = get_uname();
   int n_ports=0;
   int world_writable_control_socket=0;
-  (void)from_setconf_unused; /* 29211 TODO: Remove this from the API. */
-  (void)default_options_unused; /* 29211 TODO: Remove this from the API. */
 
   tor_assert(msg);
   *msg = NULL;
@@ -5522,8 +5517,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   newoptions->FilesOpenedByIncludes = opened_files;
 
   /* Validate newoptions */
-  if (options_validate(oldoptions, newoptions, newdefaultoptions,
-                       0, msg) < 0) {
+  if (options_validate(oldoptions, newoptions, msg) < 0) {
     err = SETOPT_ERR_PARSE; /*XXX make this a separate return value.*/
     goto err;
   }

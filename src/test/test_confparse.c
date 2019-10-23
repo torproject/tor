@@ -103,12 +103,9 @@ static config_deprecation_t test_deprecation_notes[] = {
 };
 
 static int
-test_validate_cb(void *old_options, void *options, void *default_options,
-                 int from_setconf, char **msg)
+test_validate_cb(const void *old_options, void *options, char **msg)
 {
   (void)old_options;
-  (void)default_options;
-  (void)from_setconf;
   (void)msg;
   test_struct_t *ts = options;
 

@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Remove some unused arguments from the options_validate() function,
+      to simplify our code and tests. Closes ticket 32187.
