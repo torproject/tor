@@ -151,7 +151,7 @@ if [ "$TEST_BRANCH_PREFIX" ]; then
 fi
 
 if [ "$TOR_GIT_PUSH_PATH" ]; then
-  echo "Changing to $GIT_PUSH_PATH before pushing"
+  echo "Changing to $TOR_GIT_PUSH_PATH before pushing"
   cd "$TOR_GIT_PUSH_PATH"
 else
   echo "Pushing from the current directory"
