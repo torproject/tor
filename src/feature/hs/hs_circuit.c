@@ -637,6 +637,27 @@ hs_circ_service_get_intro_circ(const hs_service_intro_point_t *ip)
   }
 }
 
+/* Return an introduction point established circuit matching the given intro
+ * point object. The circuit purpose has to be CIRCUIT_PURPOSE_S_INTRO. NULL
+ * is returned is no such circuit can be found. */
+origin_circuit_t *
+hs_circ_service_get_established_intro_circ(const hs_service_intro_point_t *ip)
+{
+  origin_circuit_t *circ;
+
+  tor_assert(ip);
+
+  if (ip->base.is_only_legacy) {
+    circ = hs_circuitmap_get_intro_circ_v2_service_side(ip->legacy_key_digest);
+  } else {
+    circ = hs_circuitmap_get_intro_circ_v3_service_side(
+                                        &ip->auth_key_kp.pubkey);
+  }
+
+  /* Only return circuit if it is established. */
+  return (TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO) ? circ : NULL;
+}
+
 /* Called when we fail building a rendezvous circuit at some point other than
  * the last hop: launches a new circuit to the same rendezvous point. This
  * supports legacy service.
