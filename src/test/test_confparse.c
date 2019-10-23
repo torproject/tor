@@ -128,7 +128,7 @@ static const config_format_t test_fmt = {
   .abbrevs = test_abbrevs,
   .deprecations = test_deprecation_notes,
   .vars = test_vars,
-  .validate_fn = test_validate_cb,
+  .legacy_validate_fn = test_validate_cb,
   .config_suite_offset = -1,
 };
 
@@ -822,7 +822,7 @@ static config_format_t etest_fmt = {
   .abbrevs = test_abbrevs,
   .deprecations = test_deprecation_notes,
   .vars = test_vars,
-  .validate_fn = test_validate_cb,
+  .legacy_validate_fn = test_validate_cb,
   .extra = &extra,
   .config_suite_offset = -1,
 };
