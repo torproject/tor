@@ -384,7 +384,6 @@ fixed_get_uname(void)
 }
 
 typedef struct {
-  or_options_t *old_opt;
   or_options_t *opt;
 } options_test_data_t;
 
@@ -398,10 +397,8 @@ get_options_test_data(const char *conf)
   config_line_t *cl=NULL;
   options_test_data_t *result = tor_malloc(sizeof(options_test_data_t));
   result->opt = options_new();
-  result->old_opt = options_new();
 
   options_init(result->opt);
-  options_init(result->old_opt);
 
   rv = config_get_lines(conf, &cl, 1);
   tt_int_op(rv, OP_EQ, 0);
@@ -433,7 +430,6 @@ static void
 free_options_test_data(options_test_data_t *td)
 {
   if (!td) return;
-  or_options_free(td->old_opt);
   or_options_free(td->opt);
   tor_free(td);
 }
