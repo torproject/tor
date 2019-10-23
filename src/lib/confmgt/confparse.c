@@ -1142,6 +1142,79 @@ config_init(const config_mgr_t *mgr, void *options)
   } SMARTLIST_FOREACH_END(mv);
 }
 
+/**
+ * Normalize and validate a single object `options` within a configuration
+ * suite, according to its format.  `options` may be modified as appropriate
+ * in order to set ancillary data.  If `old_options` is provided, make sure
+ * that the transition from `old_options` to `options` is permitted.
+ *
+ * On success return 0; on failure set *msg_out to a newly allocated string
+ * explaining what is wrong, and return -1.
+ **/
+static int
+config_validate_single(const config_format_t *fmt,
+                       const void *old_options, void *options,
+                       char **msg_out)
+{
+  tor_assert(fmt);
+  tor_assert(options);
+
+  if (fmt->legacy_validate_fn) {
+    if (fmt->legacy_validate_fn(old_options, options, msg_out) < 0) {
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Normalize and validate all the options in configuration object `options`
+ * and its sub-objects. `options` may be modified as appropriate in order to
+ * set ancillary data.  If `old_options` is provided, make sure that the
+ * transition from `old_options` to `options` is permitted.
+ *
+ * On success return 0; on failure set *msg_out to a newly allocated string
+ * explaining what is wrong, and return -1.
+ **/
+int
+config_validate(const config_mgr_t *mgr,
+                const void *old_options, void *options,
+                char **msg_out)
+{
+  int rv;
+  CONFIG_CHECK(mgr, options);
+  if (old_options) {
+    CONFIG_CHECK(mgr, old_options);
+  }
+
+  config_suite_t **suitep_new = config_mgr_get_suite_ptr(mgr, options);
+  config_suite_t **suitep_old = NULL;
+  if (old_options)
+    suitep_old = config_mgr_get_suite_ptr(mgr, (void*) old_options);
+
+  /* Validate the sub-objects */
+  if (suitep_new) {
+    SMARTLIST_FOREACH_BEGIN(mgr->subconfigs, const config_format_t *, fmt) {
+      void *obj = smartlist_get((*suitep_new)->configs, fmt_sl_idx);
+      const void *obj_old=NULL;
+      if (suitep_old)
+        obj_old = smartlist_get((*suitep_old)->configs, fmt_sl_idx);
+
+      rv = config_validate_single(fmt, obj_old, obj, msg_out);
+      if (rv < 0)
+        return rv;
+    } SMARTLIST_FOREACH_END(fmt);
+  }
+
+  /* Validate the top-level object. */
+  rv = config_validate_single(mgr->toplevel, old_options, options, msg_out);
+  if (rv < 0)
+    return rv;
+
+  return 0;
+}
+
 /** Allocate and return a new string holding the written-out values of the vars
  * in 'options'.  If 'minimal', do not write out any default-valued vars.
  * Else, if comment_defaults, write default values as comments.
