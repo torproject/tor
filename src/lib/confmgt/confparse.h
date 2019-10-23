@@ -169,6 +169,9 @@ int config_is_same(const config_mgr_t *fmt,
 struct config_line_t *config_get_changes(const config_mgr_t *mgr,
                                   const void *options1, const void *options2);
 void config_init(const config_mgr_t *mgr, void *options);
+int config_validate(const config_mgr_t *mgr,
+                    const void *old_options, void *options,
+                    char **msg_out);
 void *config_dup(const config_mgr_t *mgr, const void *old);
 char *config_dump(const config_mgr_t *mgr, const void *default_options,
                   const void *options, int minimal,
