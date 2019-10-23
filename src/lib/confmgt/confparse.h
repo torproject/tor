@@ -52,25 +52,59 @@ typedef struct config_deprecation_t {
 #define PLURAL(tok) { #tok, #tok "s", 0, 0 }
 
 /**
- * Type of a callback to validate whether a given configuration is
+ * Validation function: verify whether a configuation object is well-formed
+ * and consistent.
+ *
+ * On success, return 0.  On failure, set <b>msg_out</b> to a newly allocated
+ * string containing an error message, and return -1. */
+typedef int (*validate_fn_t)(const void *value, char **msg_out);
+/**
+ * Validation function: verify whether a configuration object (`value`) is an
+ * allowable value given the previous configuration value (`old_value`).
+ *
+ * On success, return 0.  On failure, set <b>msg_out</b> to a newly allocated
+ * string containing an error message, and return -1. */
+typedef int (*check_transition_fn_t)(const void *old_value, const void *value,
+                                     char **msg_out);
+/**
+ * Validation function: normalize members of `value`, and compute derived
+ * members.
+ *
+ * This function is called before any other validation of `value`, and must
+ * not assume that validate_fn or check_transition_fn has passed.
+ *
+ * On success, return 0.  On failure, set <b>msg_out</b> to a newly allocated
+ * string containing an error message, and return -1. */
+typedef int (*pre_normalize_fn_t)(void *value, char **msg_out);
+/**
+ * Validation function: normalize members of `value`, and compute derived
+ * members.
+ *
+ * This function is called after validation of `value`, and may
+ * assume that validate_fn or check_transition_fn has passed.
+ *
+ * On success, return 0.  On failure, set <b>msg_out</b> to a newly allocated
+ * string containing an error message, and return -1. */
+typedef int (*post_normalize_fn_t)(void *value, char **msg_out);
+
+/**
+ * Legacy function to validate whether a given configuration is
  * well-formed and consistent.
  *
  * The configuration to validate is passed as <b>newval</b>. The previous
- * configuration, if any, is provided in <b>oldval</b>.  The
- * <b>default_val</b> argument receives a configuration object initialized
- * with default values for all its fields.  The <b>from_setconf</b> argument
- * is true iff the input comes from a SETCONF controller command.
+ * configuration, if any, is provided in <b>oldval</b>.
+ *
+ * This API is deprecated, since it mixes the responsibilities of
+ * pre_normalize_fn_t, post_normalize_fn_t, validate_fn_t, and
+ * check_transition_fn_t.  No new instances of this function type should
+ * be written.
  *
  * On success, return 0.  On failure, set *<b>msg_out</b> to a newly allocated
  * error message, and return -1.
- *
- * REFACTORING NOTE: Currently, this callback type is only used from inside
- * config_dump(); later in our refactoring, it will be cleaned up and used
- * more generally.
  */
 typedef int (*legacy_validate_fn_t)(const void *oldval,
-                             void *newval,
-                             char **msg_out);
+                                    void *newval,
+                                    char **msg_out);
 
 struct config_mgr_t;
 
@@ -98,7 +132,18 @@ typedef struct config_format_t {
   const config_var_t *vars; /**< List of variables we recognize, their default
                              * values, and where we stick them in the
                              * structure. */
-  legacy_validate_fn_t legacy_validate_fn; /**< Function to validate config. */
+
+  /** Early-stage normalization callback. Invoked by config_validate(). */
+  pre_normalize_fn_t pre_normalize_fn;
+  /** Configuration validation function. Invoked by config_validate(). */
+  validate_fn_t validate_fn;
+    /** Legacy validation function. Invoked by config_validate(). */
+  legacy_validate_fn_t legacy_validate_fn;
+  /** Transition checking function. Invoked by config_validate(). */
+  check_transition_fn_t check_transition_fn;
+  /** Late-stage normalization callback. Invoked by config_validate(). */
+  post_normalize_fn_t post_normalize_fn;
+
   clear_cfg_fn_t clear_fn; /**< Function to clear the configuration. */
   /** If present, extra denotes a LINELIST variable for unrecognized
    * lines.  Otherwise, unrecognized lines are an error. */
@@ -169,9 +214,20 @@ int config_is_same(const config_mgr_t *fmt,
 struct config_line_t *config_get_changes(const config_mgr_t *mgr,
                                   const void *options1, const void *options2);
 void config_init(const config_mgr_t *mgr, void *options);
-int config_validate(const config_mgr_t *mgr,
-                    const void *old_options, void *options,
-                    char **msg_out);
+
+/** An enumeration to report which validation step failed. */
+typedef enum {
+  VSTAT_PRE_NORMALIZE_ERR = -5,
+  VSTAT_VALIDATE_ERR = -4,
+  VSTAT_LEGACY_ERR = -3,
+  VSTAT_TRANSITION_ERR = -2,
+  VSTAT_POST_NORMALIZE_ERR = -1,
+  VSTAT_OK = 0,
+} validation_status_t;
+
+validation_status_t config_validate(const config_mgr_t *mgr,
+                                    const void *old_options, void *options,
+                                    char **msg_out);
 void *config_dup(const config_mgr_t *mgr, const void *old);
 char *config_dump(const config_mgr_t *mgr, const void *default_options,
                   const void *options, int minimal,
