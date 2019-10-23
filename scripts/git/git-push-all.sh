@@ -315,12 +315,15 @@ else
       printf "%s\n" "$RELEASE_BRANCHES"
     fi
   fi
-  $GIT_PUSH "$@" "$UPSTREAM_REMOTE" "$MASTER_BRANCH"
-  sleep "$PUSH_DELAY"
   # shellcheck disable=SC2086
-  for b in $MAINT_BRANCHES; do
+  for b in $MASTER_BRANCH $MAINT_BRANCHES; do
     $GIT_PUSH "$@" "$UPSTREAM_REMOTE" "$b"
-    sleep "$PUSH_DELAY"
+    # If we are pushing more than one branch, delay.
+    # In the unlikely scenario where we are pushing maint without master,
+    # or maint without release, there may be an extra delay
+    if [ "$MAINT_BRANCHES" ] || [ "$RELEASE_BRANCHES" ]; then
+      sleep "$PUSH_DELAY"
+    fi
   done
   if [ "$RELEASE_BRANCHES" ]; then
     # shellcheck disable=SC2086
