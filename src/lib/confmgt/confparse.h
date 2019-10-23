@@ -68,7 +68,7 @@ typedef struct config_deprecation_t {
  * config_dump(); later in our refactoring, it will be cleaned up and used
  * more generally.
  */
-typedef int (*validate_fn_t)(const void *oldval,
+typedef int (*legacy_validate_fn_t)(const void *oldval,
                              void *newval,
                              char **msg_out);
 
@@ -98,7 +98,7 @@ typedef struct config_format_t {
   const config_var_t *vars; /**< List of variables we recognize, their default
                              * values, and where we stick them in the
                              * structure. */
-  validate_fn_t validate_fn; /**< Function to validate config. */
+  legacy_validate_fn_t legacy_validate_fn; /**< Function to validate config. */
   clear_cfg_fn_t clear_fn; /**< Function to clear the configuration. */
   /** If present, extra denotes a LINELIST variable for unrecognized
    * lines.  Otherwise, unrecognized lines are an error. */
