@@ -1239,7 +1239,7 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
 
   /* XXX use a 1 here so we don't add a new log line while dumping */
   if (default_options == NULL) {
-    if (fmt->legacy_validate_fn(NULL, defaults_tmp, &msg) < 0) {
+    if (config_validate(mgr, NULL, defaults_tmp, &msg) < 0) {
       // LCOV_EXCL_START
       log_err(LD_BUG, "Failed to validate default config: %s", msg);
       tor_free(msg);

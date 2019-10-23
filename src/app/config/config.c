@@ -3239,13 +3239,20 @@ compute_publishserverdescriptor(or_options_t *options)
  * */
 #define RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT (10)
 
-static int
-options_validate_cb(const void *old_options, void *options, char **msg)
+/**
+ * Return 0 if every setting in <b>options</b> is reasonable, is a
+ * permissible transition from <b>old_options</b>, and none of the
+ * testing-only settings differ from <b>default_options</b> unless in
+ * testing mode.  Else return -1.  Should have no side effects, except for
+ * normalizing the contents of <b>options</b>.
+ *
+ * On error, tor_strdup an error explanation into *<b>msg</b>.
+ */
+STATIC int
+options_validate(const or_options_t *old_options, or_options_t *options,
+                 char **msg)
 {
-  in_option_validation = 1;
-  int rv = options_validate(old_options, options, msg);
-  in_option_validation = 0;
-  return rv;
+  return config_validate(get_options_mgr(), old_options, options, msg);
 }
 
 #define REJECT(arg) \
@@ -3431,18 +3438,16 @@ options_validate_single_onion(or_options_t *options, char **msg)
   return 0;
 }
 
-/** Return 0 if every setting in <b>options</b> is reasonable, is a
- * permissible transition from <b>old_options</b>, and none of the
- * testing-only settings differ from <b>default_options</b> unless in
- * testing mode.  Else return -1.  Should have no side effects, except for
- * normalizing the contents of <b>options</b>.
- *
- * On error, tor_strdup an error explanation into *<b>msg</b>.
+/**
+ * Legacy validation/normalization callback for or_options_t.  See
+ * legacy_validate_fn_t for more information.
  */
-STATIC int
-options_validate(const or_options_t *old_options, or_options_t *options,
-                 char **msg)
+static int
+options_validate_cb(const void *old_options_, void *options_, char **msg)
 {
+  const or_options_t *old_options = old_options_;
+  or_options_t *options = options_;
+
   config_line_t *cl;
   const char *uname = get_uname();
   int n_ports=0;

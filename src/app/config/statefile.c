@@ -265,16 +265,6 @@ validate_transports_in_state(or_state_t *state)
   return 0;
 }
 
-static int
-or_state_validate_cb(const void *old_state, void *state, char **msg)
-{
-  /* We don't use these; only options do. Still, we need to match that
-   * signature. */
-  (void) old_state;
-
-  return or_state_validate(state, msg);
-}
-
 /** Return 0 if every setting in <b>state</b> is reasonable, and a
  * permissible transition from <b>old_state</b>.  Else warn and return -1.
  * Should have no side effects, except for normalizing the contents of
@@ -283,6 +273,22 @@ or_state_validate_cb(const void *old_state, void *state, char **msg)
 static int
 or_state_validate(or_state_t *state, char **msg)
 {
+  return config_validate(get_state_mgr(), NULL, state, msg);
+}
+
+/**
+ * Legacy validation/normalization callback for or_state_t.  See
+ * legacy_validate_fn_t for more information.
+ */
+static int
+or_state_validate_cb(const void *old_state, void *state_, char **msg)
+{
+  /* There is not a meaningful concept of a state-to-state transition,
+   * since we do not reload the state after we start. */
+  (void) old_state;
+
+  or_state_t *state = state_;
+
   if (entry_guards_parse_state(state, 0, msg)<0)
     return -1;
 
