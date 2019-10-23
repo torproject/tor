@@ -19,6 +19,7 @@ fi
 
 if [ -d src/lib ]; then
     # This is the layout in 0.3.5
+    # There are two copies of this list in this file
     perl scripts/maint/checkSpace.pl -C \
          src/lib/*/*.[ch] \
          src/core/*/*.[ch] \
@@ -56,4 +57,44 @@ fi
 
 if [ -e scripts/maint/checkShellScripts.sh ]; then
     scripts/maint/checkShellScripts.sh
+fi
+
+if [ -e scripts/coccinelle/check_cocci_parse.sh ]; then
+
+    if [ $# -eq 0 ]; then
+        # When called in pre-commit, check the files modified in this commit
+        CHECK_FILTER="git diff --cached --name-only --diff-filter=ACMR"
+        # Use the owned tor source layout from 0.3.5 to filter the changed
+        # files.
+        # (There are two copies of this list in this file.)
+        CHECK_FILES="$($CHECK_FILTER \
+                          src/lib/*/*.[ch] \
+                          src/core/*/*.[ch] \
+                          src/feature/*/*.[ch] \
+                          src/app/*/*.[ch] \
+                          src/test/*.[ch] \
+                          src/test/*/*.[ch] \
+                          src/tools/*.[ch] \
+                      )"
+    fi
+
+    if [ "${CHECK_FILES:-$*}" ]; then
+        printf "Modified files:\n%s\n" "${CHECK_FILES:-$*}"
+
+        # Run a verbose cocci parse check on the changed files
+        # (spatch is slow, so we don't want to check all the files.)
+        if [ $# -eq 0 ]; then
+            # pre-commit: use $CHECK_FILES, fails on spaces in file names
+            #
+            # We want word splitting here, because file names are space
+            # separated
+            # shellcheck disable=SC2086
+            VERBOSE=1 scripts/coccinelle/check_cocci_parse.sh \
+                      $CHECK_FILES
+        else
+            # pre-push: use "$@" to preserve spaces in arguments
+            VERBOSE=1 scripts/coccinelle/check_cocci_parse.sh \
+                      "$@"
+        fi
+    fi
 fi
