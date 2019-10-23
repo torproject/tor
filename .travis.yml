@@ -109,6 +109,8 @@ addons:
       - libseccomp-dev
       ## zstd doesn't exist in Ubuntu Trusty
       #- libzstd
+      ## Optional build dependencies
+      - coccinelle
       - shellcheck
       ## Conditional build dependencies
       ## Always installed, so we don't need sudo
@@ -138,6 +140,7 @@ addons:
       - pkg-config
       ## Optional build dependencies
       - ccache
+      - coccinelle
       - shellcheck
       ## Conditional build dependencies
       ## Always installed, because manual brew installs are hard to get right
@@ -194,6 +197,9 @@ install:
   - if [[ "$CHUTNEY" != "" ]]; then pushd "$CHUTNEY_PATH"; git log -1 ; popd ; fi
   ## If we're running stem, show the stem version and commit
   - if [[ "$TEST_STEM" != "" ]]; then pushd stem; python -c "from stem import stem; print(stem.__version__);"; git log -1; popd; fi
+  ## Get the coccinelle version
+  ## Installs are unreliable on macOS, so we just rely on brew list --versions
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then spatch --version; fi
   ## We don't want Tor tests to depend on default configuration file at
   ## ~/.torrc. So we put some random bytes in there, to make sure we get build
   ## failures in case Tor is reading it during CI jobs.
