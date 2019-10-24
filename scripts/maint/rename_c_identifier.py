@@ -54,6 +54,8 @@ def list_c_files(topdir=TOPDIR):
        True
        >>> "src/core/mainloop/twiddledeedoo.c" in lst
        False
+       >>> "micro-revision.i" in lst
+       False
     """
     proc = subprocess.Popen(
         ["git", "ls-tree", "--name-only", "-r", "HEAD", topdir],
