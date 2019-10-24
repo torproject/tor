@@ -3629,9 +3629,9 @@ __HiddenServiceDirectory__/**`onion_service_non_anonymous`**::
 SEE ALSO
 --------
 
-For more information, refer to the Tor project at https://www.torproject.org/
-and the Tor spec at https://spec.torproject.org. See also **torsocks**(1) and
-**torify**(1).
+For more information, refer to the Tor Project website at
+https://www.torproject.org/ and the Tor specifications at
+https://spec.torproject.org. See also **torsocks**(1) and **torify**(1).
 
 BUGS
 ----
