@@ -20,7 +20,8 @@ import subprocess
 import sys
 import tempfile
 
-TOPDIR="src"
+TOPDIR = "src"
+
 
 def is_c_file(fn):
     """
@@ -41,7 +42,8 @@ def is_c_file(fn):
     if fn.startswith("."):
         return False
     ext = os.path.splitext(fn)[1]
-    return ext in {".c",".h",".i","inc"}
+    return ext in {".c", ".h", ".i", "inc"}
+
 
 def list_c_files(topdir=TOPDIR):
     """
@@ -62,6 +64,7 @@ def list_c_files(topdir=TOPDIR):
         if is_c_file(line):
             yield line
 
+
 class Rewriter:
     """
        A rewriter applies a series of word-by-word replacements, in
@@ -75,13 +78,14 @@ class Rewriter:
        >>> R.get_count()
        3
     """
+
     def __init__(self, replacements):
         """Make a new Rewriter. Takes a sequence of pairs of
            (from_id, to_id), where from_id is an identifier to replace,
            and to_id is its replacement.
         """
-        self._patterns = [ ]
-        for id1,id2 in replacements:
+        self._patterns = []
+        for id1, id2 in replacements:
             pat = re.compile(r"\b{}\b".format(re.escape(id1)))
             self._patterns.append((pat, id2))
 
@@ -90,7 +94,7 @@ class Rewriter:
     def apply(self, line):
         """Return `line` as transformed by this rewriter."""
         for pat, ident in self._patterns:
-            line,count = pat.subn(ident, line)
+            line, count = pat.subn(ident, line)
             self._count += count
         return line
 
@@ -98,6 +102,7 @@ class Rewriter:
         """Return the number of identifiers that this rewriter has
            rewritten."""
         return self._count
+
 
 def rewrite_files(files, rewriter):
     """
@@ -107,15 +112,16 @@ def rewrite_files(files, rewriter):
     for line in fileinput.input(files, inplace=True):
         sys.stdout.write(rewriter.apply(line))
 
+
 def make_commit_msg(pairs, no_verify):
     """Return a commit message to explain what was replaced by the provided
        arguments.
     """
-    script = [ "./scripts/maint/rename_c_identifier.py" ]
+    script = ["./scripts/maint/rename_c_identifier.py"]
     for id1, id2 in pairs:
         qid1 = shlex.quote(id1)
         qid2 = shlex.quote(id2)
-        script.append("        {} {}".format(qid1,qid2))
+        script.append("        {} {}".format(qid1, qid2))
     script = " \\\n".join(script)
 
     if len(pairs) == 1:
@@ -139,6 +145,7 @@ The commiter should be sure to fix them up in a subsequent commit.
 
     return msg
 
+
 def commit(pairs, no_verify=False):
     """Try to commit the current git state, generating the commit message as
        appropriate.  If `no_verify` is True, pass the --no-verify argument to
@@ -150,7 +157,7 @@ def commit(pairs, no_verify=False):
 
     fname = None
     try:
-        with tempfile.NamedTemporaryFile(mode="w",delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
             fname = f.name
             f.write(make_commit_msg(pairs, no_verify))
         s = subprocess.run(["git", "commit", "-a", "-F", fname, "--edit"]+args)
@@ -164,6 +171,7 @@ def commit(pairs, no_verify=False):
 
     return True
 
+
 def any_uncommitted_changes():
     """Return True if git says there are any uncommitted changes in the current
        working tree; false otherwise.
@@ -171,8 +179,9 @@ def any_uncommitted_changes():
     s = subprocess.run(["git", "diff-index", "--quiet", "HEAD"])
     return s.returncode != 0
 
-DESC="Replace one identifier with another throughout our source."
-EXAMPLES="""\
+
+DESC = "Replace one identifier with another throughout our source."
+EXAMPLES = """\
 Examples:
 
    rename_c_identifier.py set_ctrl_id set_controller_id
@@ -184,18 +193,19 @@ Examples:
    rename_c_identifier.py a b c d
       (Replace "a" with "b", and "c" with "d".)"""
 
+
 def revert_changes():
     """Tell git to revert all the changes in the current working tree.
     """
-    print('Reverting changes.',file=sys.stderr)
+    print('Reverting changes.', file=sys.stderr)
     subprocess.run(["git", "checkout", "--quiet", TOPDIR])
+
 
 def main(argv):
     import argparse
     parser = argparse.ArgumentParser(description=DESC, epilog=EXAMPLES,
-              # prevent re-wrapping the examples
-              formatter_class=argparse.RawDescriptionHelpFormatter)
-
+                                     # prevent re-wrapping the examples
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument("--commit", action='store_true',
                         help="Generate a Git commit.")
@@ -209,7 +219,7 @@ def main(argv):
     args = parser.parse_args(argv[1:])
 
     if len(args.more) % 2 != 0:
-        print("I require an even number of identifiers.",file=sys.stderr)
+        print("I require an even number of identifiers.", file=sys.stderr)
         return 1
 
     if any_uncommitted_changes():
@@ -219,7 +229,7 @@ def main(argv):
     pairs = []
     print("renaming {} to {}".format(args.from_id, args.to_id))
     pairs.append((args.from_id, args.to_id))
-    for idx in range(0,len(args.more),2):
+    for idx in range(0, len(args.more), 2):
         id1 = args.more[idx]
         id2 = args.more[idx+1]
         print("renaming {} to {}".format(id1, id2))
@@ -234,6 +244,7 @@ def main(argv):
 
     if args.commit:
         commit(pairs, args.no_verify)
+
 
 if __name__ == '__main__':
     main(sys.argv)
