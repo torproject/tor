@@ -155,6 +155,10 @@ def commit(pairs, no_verify=False):
     if no_verify:
         args.append("--no-verify")
 
+    # We have to use a try block to delete the temporary file here, since we
+    # are using tempfile with delete=False. We have to use delete=False,
+    # since otherwise we are not guaranteed to be able to give the file to
+    # git for it to open.
     fname = None
     try:
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
