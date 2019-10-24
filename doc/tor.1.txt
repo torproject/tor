@@ -68,13 +68,13 @@ The following options in this section are only recognized on the
 
 [[opt-f]] **-f** __FILE__::
     Specify a new configuration file to contain further Tor configuration
-    options OR pass *-* to make Tor read its configuration from standard
+    options, or pass *-* to make Tor read its configuration from standard
     input. (Default: @CONFDIR@/torrc, or $HOME/.torrc if that file is not
     found)
 
 [[opt-allow-missing-torrc]] **--allow-missing-torrc**::
-    Do not require that configuration file specified by **-f** exist if
-    default torrc can be accessed.
+    Allow the configuration file specified by **-f** to be missing, if
+    the defaults-torrc file (see below) is accessible.
 
 [[opt-defaults-torrc]] **--defaults-torrc** __FILE__::
     Specify a file in which to find default values for Tor options.  The
@@ -83,18 +83,18 @@ The following options in this section are only recognized on the
     @CONFDIR@/torrc-defaults.)
 
 [[opt-ignore-missing-torrc]] **--ignore-missing-torrc**::
-    Specifies that Tor should treat a missing torrc file as though it
+    Specify that Tor should treat a missing torrc file as though it
     were empty. Ordinarily, Tor does this for missing default torrc files,
     but not for those specified on the command line.
 
 [[opt-hash-password]] **--hash-password** __PASSWORD__::
-    Generates a hashed password for control port access.
+    Generate a hashed password for control port access.
 
 [[opt-list-fingerprint]] **--list-fingerprint**::
     Generate your keys and output your nickname and fingerprint.
 
 [[opt-verify-config]] **--verify-config**::
-    Verify the configuration file is valid.
+    Verify whether the configuration file is valid.
 
 [[opt-serviceinstall]] **--service install** [**--options** __command-line options__]::
     Install an instance of Tor as a Windows service, with the provided
@@ -115,8 +115,8 @@ The following options in this section are only recognized on the
     future version. (This is a warning, not a promise.)
 
 [[opt-list-modules]] **--list-modules**::
-    For each optional module, list whether or not it has been compiled
-    into Tor.  (Any module not listed is not optional in this version of Tor.)
+    List whether each optional module has been compiled into Tor.
+    (Any module not listed is not optional in this version of Tor.)
 
 [[opt-version]] **--version**::
     Display Tor version and exit. The output is a single line of the format
@@ -124,41 +124,46 @@ The following options in this section are only recognized on the
     is as specified in version-spec.txt.)
 
 [[opt-quiet]] **--quiet**|**--hush**::
-    Override the default console log.  By default, Tor starts out logging
-    messages at level "notice" and higher to the console.  It stops doing so
-    after it parses its configuration, if the configuration tells it to log
-    anywhere else.  You can override this behavior with the **--hush** option,
-    which tells Tor to only send warnings and errors to the console, or with
-    the **--quiet** option, which tells Tor not to log to the console at all.
+    Override the default console logging behavior.  By default, Tor
+    starts out logging messages at level "notice" and higher to the
+    console.  It stops doing so after it parses its configuration, if
+    the configuration tells it to log anywhere else.  These options
+    override the default console logging behavior.  Use the **--hush**
+    option if you want Tor to log only warnings and errors to the
+    console, or use the **--quiet** option if you want Tor not to log
+    to the console at all.
 
 [[opt-keygen]] **--keygen** [**--newpass**]::
-   Running "tor --keygen" creates a new ed25519 master identity key for a
-   relay, or only a fresh temporary signing key and certificate, if you
-   already have a master key.  Optionally you can encrypt the master identity
-   key with a passphrase: Tor will ask you for one. If you don't want to
-   encrypt the master key, just don't enter any passphrase when asked. +
+    Running "tor --keygen" creates a new ed25519 master identity key
+    for a relay, or only a fresh temporary signing key and
+    certificate, if you already have a master key.  Optionally, you
+    can encrypt the master identity key with a passphrase.  When Tor
+    asks you for a passphrase and you don't want to encrypt the master
+    key, just don't enter any passphrase when asked. +
  +
-   The **--newpass** option should be used with --keygen only when you need
-   to add, change, or remove a passphrase on an existing ed25519 master
-   identity key. You will be prompted for the old passphase (if any),
-   and the new passphrase (if any). +
- +
-   When generating a master key, you will probably want to use
-   **--DataDirectory** to control where the keys
-   and certificates will be stored, and **--SigningKeyLifetime** to
-   control their lifetimes.  Their behavior is as documented in the
-   server options section below.  (You must have write access to the specified
-   DataDirectory.) +
- +
-   To use the generated files, you must copy them to the DataDirectory/keys
-   directory of your Tor daemon, and make sure that they are owned by the
-   user actually running the Tor daemon on your system.
+    Use the **--newpass** option with --keygen only when you need to
+    add, change, or remove a passphrase on an existing ed25519 master
+    identity key. You will be prompted for the old passphase (if any),
+    and the new passphrase (if any).
++
+[NOTE]
+When generating a master key, you may want to use **--DataDirectory**
+to control where the keys and certificates will be stored, and
+**--SigningKeyLifetime** to control their lifetimes.  See the server
+options section to learn more about the behavior of these options.
+You must have write access to the specified DataDirectory.
++
+To use the generated files, you must copy them to the
+DataDirectory/keys directory of your Tor daemon, and make sure that
+they are owned by the user actually running the Tor daemon on your
+system.
 
 **--passphrase-fd** __FILEDES__::
-    Filedescriptor to read the passphrase from.  Note that unlike with the
+    File descriptor to read the passphrase from.  Note that unlike with the
     tor-gencert program, the entire file contents are read and used as
     the passphrase, including any trailing newlines.
-    Default: read from the terminal.
+    If the file descriptor is not specified, the passphrase is read
+    from the terminal by default.
 
 [[opt-key-expiration]] **--key-expiration** [**purpose**]::
     The **purpose** specifies which type of key certificate to determine
