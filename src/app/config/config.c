@@ -823,9 +823,9 @@ static const config_deprecation_t option_deprecation_notes_[] = {
 static char *get_windows_conf_root(void);
 #endif
 static int options_act_reversible(const or_options_t *old_options, char **msg);
-static int options_transition_allowed(const or_options_t *old,
-                                      const or_options_t *new,
-                                      char **msg);
+static int options_check_transition_cb(const void *old,
+                                       const void *new,
+                                       char **msg);
 static int options_transition_affects_workers(
       const or_options_t *old_options, const or_options_t *new_options);
 static int options_transition_affects_descriptor(
@@ -877,6 +877,7 @@ static const config_format_t options_format = {
   .deprecations = option_deprecation_notes_,
   .vars = option_vars_,
   .legacy_validate_fn = options_validate_cb,
+  .check_transition_fn = options_check_transition_cb,
   .clear_fn = options_clear_cb,
   .config_suite_offset = offsetof(or_options_t, subconfigs_),
 };
@@ -3240,11 +3241,6 @@ options_validate_and_set(const or_options_t *old_options,
     rv = SETOPT_ERR_PARSE;
     goto err;
   }
-
-  if (options_transition_allowed(old_options, new_options, msg_out) < 0) {
-    rv = SETOPT_ERR_TRANSITION;
-    goto err;
-  }
   in_option_validation = 0;
 
   if (set_options(new_options, msg_out)) {
@@ -4821,11 +4817,14 @@ opt_streq(const char *s1, const char *s2)
 
 /** Check if any of the previous options have changed but aren't allowed to. */
 static int
-options_transition_allowed(const or_options_t *old,
-                           const or_options_t *new_val,
-                           char **msg)
+options_check_transition_cb(const void *old_,
+                            const void *new_val_,
+                            char **msg)
 {
-  if (!old)
+  const or_options_t *old = old_;
+  const or_options_t *new_val = new_val_;
+
+  if (BUG(!old))
     return 0;
 
 #define BAD_CHANGE_TO(opt, how) do {                                    \
