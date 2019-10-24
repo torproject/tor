@@ -1,5 +1,0 @@
-  o Minor features (documentation):
-    - Make clear in the man page, in both the bandwidth section and the
-      accountingmax section, that Tor counts in powers of two, not
-      powers of ten: 1 GByte is 1024*1024*1024 bytes, not one billion
-      bytes. Resolves ticket 32106.

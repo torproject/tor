@@ -2,6 +2,15 @@ Changes in version 0.4.2.3-alpha - 2019-10-??
   This release fixes several bugs from the previous alpha release, and
   from earlier versions of Tor.
 
+  o Major bugfixes (relay):
+    - Relays now respect their AccountingMax bandwidth again. When
+      relays entered "soft" hibernation (which typically starts when
+      we've hit 90% of our AccountingMax), we had stopped checking
+      whether we should enter hard hibernation. Soft hibernation refuses
+      new connections and new circuits, but the existing circuits can
+      continue, meaning that relays could have exceeded their configured
+      AccountingMax. Fixes bug 32108; bugfix on 0.4.0.1-alpha.
+
   o Major bugfixes (v3 onion services):
     - Onion services now always use the exact number of intro points
       configured with the HiddenServiceNumIntroductionPoints option (or
@@ -93,6 +102,10 @@ Changes in version 0.4.2.3-alpha - 2019-10-??
   o Documentation:
     - Correct the description of "GuardLifetime". Fixes bug 31189;
       bugfix on 0.3.0.1-alpha.
+    - Make clear in the man page, in both the bandwidth section and the
+      accountingmax section, that Tor counts in powers of two, not
+      powers of ten: 1 GByte is 1024*1024*1024 bytes, not one billion
+      bytes. Resolves ticket 32106.
 
 
 Changes in version 0.4.2.2-alpha - 2019-10-07
