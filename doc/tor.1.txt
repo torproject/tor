@@ -63,118 +63,120 @@ FORMAT>>** for more information.
 The following options in this section are only recognized on the
 **`tor`** command line, not in a configuration file.
 
-[[opt-h]] **-h**, **--help**::
+[[opt-h]] **`-h`**, **`--help`**::
     Display a short help message and exit.
 
-[[opt-f]] **-f** __FILE__::
+[[opt-f]] **`-f`** __FILE__::
     Specify a new configuration file to contain further Tor configuration
     options, or pass *-* to make Tor read its configuration from standard
-    input. (Default: @CONFDIR@/torrc, or $HOME/.torrc if that file is not
-    found)
+    input. (Default: **`@CONFDIR@/torrc`**, or **`$HOME/.torrc`** if
+    that file is not found)
 
-[[opt-allow-missing-torrc]] **--allow-missing-torrc**::
-    Allow the configuration file specified by **-f** to be missing, if
-    the defaults-torrc file (see below) is accessible.
+[[opt-allow-missing-torrc]] **`--allow-missing-torrc`**::
+    Allow the configuration file specified by **`-f`** to be missing,
+    if the defaults-torrc file (see below) is accessible.
 
-[[opt-defaults-torrc]] **--defaults-torrc** __FILE__::
+[[opt-defaults-torrc]] **`--defaults-torrc`** __FILE__::
     Specify a file in which to find default values for Tor options.  The
     contents of this file are overridden by those in the regular
     configuration file, and by those on the command line. (Default:
-    @CONFDIR@/torrc-defaults.)
+    **`@CONFDIR@/torrc-defaults`**.)
 
-[[opt-ignore-missing-torrc]] **--ignore-missing-torrc**::
+[[opt-ignore-missing-torrc]] **`--ignore-missing-torrc`**::
     Specify that Tor should treat a missing torrc file as though it
     were empty. Ordinarily, Tor does this for missing default torrc files,
     but not for those specified on the command line.
 
-[[opt-hash-password]] **--hash-password** __PASSWORD__::
+[[opt-hash-password]] **`--hash-password`** __PASSWORD__::
     Generate a hashed password for control port access.
 
-[[opt-list-fingerprint]] **--list-fingerprint**::
+[[opt-list-fingerprint]] **`--list-fingerprint`**::
     Generate your keys and output your nickname and fingerprint.
 
-[[opt-verify-config]] **--verify-config**::
+[[opt-verify-config]] **`--verify-config`**::
     Verify whether the configuration file is valid.
 
-[[opt-serviceinstall]] **--service install** [**--options** __command-line options__]::
+[[opt-serviceinstall]] **`--service install`** [**`--options`** __command-line options__]::
     Install an instance of Tor as a Windows service, with the provided
     command-line options. Current instructions can be found at
     https://www.torproject.org/docs/faq#NTService
 
-[[opt-service]] **--service** **remove**|**start**|**stop**::
+[[opt-service]] **`--service`** **`remove`**|**`start`**|**`stop`**::
     Remove, start, or stop a configured Tor Windows service.
 
-[[opt-nt-service]] **--nt-service**::
+[[opt-nt-service]] **`--nt-service`**::
     Used internally to implement a Windows service.
 
-[[opt-list-torrc-options]] **--list-torrc-options**::
+[[opt-list-torrc-options]] **`--list-torrc-options`**::
     List all valid options.
 
-[[opt-list-deprecated-options]] **--list-deprecated-options**::
+[[opt-list-deprecated-options]] **`--list-deprecated-options`**::
     List all valid options that are scheduled to become obsolete in a
     future version. (This is a warning, not a promise.)
 
-[[opt-list-modules]] **--list-modules**::
+[[opt-list-modules]] **`--list-modules`**::
     List whether each optional module has been compiled into Tor.
     (Any module not listed is not optional in this version of Tor.)
 
-[[opt-version]] **--version**::
+[[opt-version]] **`--version`**::
     Display Tor version and exit. The output is a single line of the format
     "Tor version [version number]."  (The version number format
     is as specified in version-spec.txt.)
 
-[[opt-quiet]] **--quiet**|**--hush**::
+[[opt-quiet]] **`--quiet`**|**`--hush`**::
     Override the default console logging behavior.  By default, Tor
     starts out logging messages at level "notice" and higher to the
     console.  It stops doing so after it parses its configuration, if
     the configuration tells it to log anywhere else.  These options
-    override the default console logging behavior.  Use the **--hush**
-    option if you want Tor to log only warnings and errors to the
-    console, or use the **--quiet** option if you want Tor not to log
-    to the console at all.
+    override the default console logging behavior.  Use the
+    **`--hush`** option if you want Tor to log only warnings and
+    errors to the console, or use the **`--quiet`** option if you want
+    Tor not to log to the console at all.
 
-[[opt-keygen]] **--keygen** [**--newpass**]::
-    Running "tor --keygen" creates a new ed25519 master identity key
+[[opt-keygen]] **`--keygen`** [**`--newpass`**]::
+    Running **`tor --keygen`** creates a new ed25519 master identity key
     for a relay, or only a fresh temporary signing key and
     certificate, if you already have a master key.  Optionally, you
     can encrypt the master identity key with a passphrase.  When Tor
     asks you for a passphrase and you don't want to encrypt the master
     key, just don't enter any passphrase when asked. +
  +
-    Use the **--newpass** option with --keygen only when you need to
-    add, change, or remove a passphrase on an existing ed25519 master
-    identity key. You will be prompted for the old passphase (if any),
-    and the new passphrase (if any).
+    Use the **`--newpass`** option with **`--keygen`** only when you
+    need to add, change, or remove a passphrase on an existing ed25519
+    master identity key. You will be prompted for the old passphase
+    (if any), and the new passphrase (if any).
 +
 [NOTE]
-When generating a master key, you may want to use **--DataDirectory**
-to control where the keys and certificates will be stored, and
-**--SigningKeyLifetime** to control their lifetimes.  See the server
-options section to learn more about the behavior of these options.
-You must have write access to the specified DataDirectory.
+    When generating a master key, you may want to use
+    **`--DataDirectory`** to control where the keys and certificates
+    will be stored, and **`--SigningKeyLifetime`** to control their
+    lifetimes.  See the server options section to learn more about the
+    behavior of these options.  You must have write access to the
+    specified DataDirectory.
 +
-To use the generated files, you must copy them to the
-DataDirectory/keys directory of your Tor daemon, and make sure that
-they are owned by the user actually running the Tor daemon on your
-system.
+[normal]
+    To use the generated files, you must copy them to the
+    __DataDirectory__/**`keys`** directory of your Tor daemon, and
+    make sure that they are owned by the user actually running the Tor
+    daemon on your system.
 
-**--passphrase-fd** __FILEDES__::
+**`--passphrase-fd`** __FILEDES__::
     File descriptor to read the passphrase from.  Note that unlike with the
     tor-gencert program, the entire file contents are read and used as
     the passphrase, including any trailing newlines.
     If the file descriptor is not specified, the passphrase is read
     from the terminal by default.
 
-[[opt-key-expiration]] **--key-expiration** [**purpose**]::
-    The **purpose** specifies which type of key certificate to determine
-    the expiration of.  The only currently recognised **purpose** is
+[[opt-key-expiration]] **`--key-expiration`** [__purpose__]::
+    The __purpose__ specifies which type of key certificate to determine
+    the expiration of.  The only currently recognised __purpose__ is
     "sign". +
  +
-    Running "tor --key-expiration sign" will attempt to find your signing
-    key certificate and will output, both in the logs as well as to stdout,
-    the signing key certificate's expiration time in ISO-8601 format.
-    For example, the output sent to stdout will be of the form:
-    "signing-cert-expiry: 2017-07-25 08:30:15 UTC"
+    Running **`tor --key-expiration sign`** will attempt to find your
+    signing key certificate and will output, both in the logs as well
+    as to stdout, the signing key certificate's expiration time in
+    ISO-8601 format.  For example, the output sent to stdout will be
+    of the form: "signing-cert-expiry: 2017-07-25 08:30:15 UTC"
 
 [[conf-format]]
 THE CONFIGURATION FILE FORMAT
