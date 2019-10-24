@@ -682,8 +682,12 @@ setup_intro_circ_auth_key(origin_circuit_t *circ)
   tor_assert(circ);
 
   desc = hs_cache_lookup_as_client(&circ->hs_ident->identity_pk);
-  if (BUG(desc == NULL)) {
-    /* Opening intro circuit without the descriptor is no good... */
+  if (desc == NULL) {
+    /* There is a very small race window between the opening of this circuit
+     * and the client descriptor cache that gets purged (NEWNYM) or the
+     * cleaned up because it expired. Mark the circuit for close so a new
+     * descriptor fetch can occur. */
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
     goto end;
   }
 

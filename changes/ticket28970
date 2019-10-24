@@ -1,0 +1,6 @@
+  o Minor bugfixes (clietn, hidden service v3):
+    - Fix a BUG() assertion that occurs within a very small race window between
+      a client intro circuit opens and its descriptor that gets cleaned up from
+      the cache. The circuit is now closed which will trigger a re-fetch of the
+      descriptor and continue the HS connection. Fixes bug 28970; bugfix on
+      0.3.2.1-alpha.
