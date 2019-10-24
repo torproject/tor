@@ -37,6 +37,29 @@ Project's website.
 
 COMMAND-LINE OPTIONS
 --------------------
+
+Tor has a powerful command-line interface. This section lists optional
+arguments you can specify at the command line using the **`tor`**
+command.
+
+Configuration options can be specified on the command line in the
+format **`--`**_OptionName_ _OptionValue_, on the command line in the
+format _OptionName_ _OptionValue_, or in a configuration file.  For
+instance, you can tell Tor to start listening for SOCKS connections on
+port 9999 by passing either **`--SocksPort 9999`** or **`SocksPort
+9999`** on the command line, or by specifying **`SocksPort 9999`** in
+the configuration file.  On the command line, quote option values that
+contain spaces. For instance, if you want Tor to log all debugging
+messages to **`debug.log`**, you must specify **`--Log "debug file
+debug.log"`**.
+
+NOTE: Configuration options on the command line override those in
+configuration files.  See **<<conf-format,THE CONFIGURATION FILE
+FORMAT>>** for more information.
+
+The following options in this section are only recognized on the
+**`tor`** command line, not in a configuration file.
+
 [[opt-h]] **-h**, **--help**::
     Display a short help message and exit.
 
@@ -145,18 +168,7 @@ COMMAND-LINE OPTIONS
     For example, the output sent to stdout will be of the form:
     "signing-cert-expiry: 2017-07-25 08:30:15 UTC"
 
-Other options can be specified on the command-line in the format "--option
-value", in the format "option value", or in a configuration file.  For
-instance, you can tell Tor to start listening for SOCKS connections on port
-9999 by passing --SocksPort 9999 or SocksPort 9999 to it on the command line,
-or by putting "SocksPort 9999" in the configuration file.  You will need to
-quote options with spaces in them: if you want Tor to log all debugging
-messages to debug.log, you will probably need to say **--Log** `"debug file
-debug.log"`.
-
-Options on the command line override those in configuration files. See the
-next section for more information.
-
+[[conf-format]]
 THE CONFIGURATION FILE FORMAT
 -----------------------------
 
