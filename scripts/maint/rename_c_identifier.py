@@ -171,6 +171,19 @@ def any_uncommitted_changes():
     s = subprocess.run(["git", "diff-index", "--quiet", "HEAD"])
     return s.returncode != 0
 
+DESC="Replace one identifier with another throughout our source."
+EXAMPLES="""\
+Examples:
+
+   rename_c_identifier.py set_ctrl_id set_controller_id
+      (Replaces every occurrence of "set_ctrl_id" with "set_controller_id".)
+
+   rename_c_identifier.py --commit set_ctrl_id set_controller_id
+      (As above, but also generate a git commit with an appropriate message.)
+
+   rename_c_identifier.py a b c d
+      (Replace "a" with "b", and "c" with "d".)"""
+
 def revert_changes():
     """Tell git to revert all the changes in the current working tree.
     """
@@ -179,9 +192,15 @@ def revert_changes():
 
 def main(argv):
     import argparse
-    parser = argparse.ArgumentParser(description="Rename a C identifier.")
-    parser.add_argument("--no-verify", action='store_true')
-    parser.add_argument("--commit", action='store_true')
+    parser = argparse.ArgumentParser(description=DESC, epilog=EXAMPLES,
+              # prevent re-wrapping the examples
+              formatter_class=argparse.RawDescriptionHelpFormatter)
+
+
+    parser.add_argument("--commit", action='store_true',
+                        help="Generate a Git commit.")
+    parser.add_argument("--no-verify", action='store_true',
+                        help="Tell Git not to run its pre-commit hooks.")
     parser.add_argument("from_id", type=str,  help="Original identifier")
     parser.add_argument("to_id", type=str, help="New identifier")
     parser.add_argument("more", type=str, nargs=argparse.REMAINDER,
