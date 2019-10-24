@@ -18,22 +18,25 @@ SYNOPSIS
 
 DESCRIPTION
 -----------
-Tor is a connection-oriented anonymizing communication
-service. Users choose a source-routed path through a set of nodes, and
-negotiate a "virtual circuit" through the network, in which each node
-knows its predecessor and successor, but no others. Traffic flowing down
-the circuit is unwrapped by a symmetric key at each node, which reveals
-the downstream node. +
 
-Basically, Tor provides a distributed network of servers or relays ("onion routers").
-Users bounce their TCP streams -- web traffic, ftp, ssh, etc. -- around the
-network, and recipients, observers, and even the relays themselves have
-difficulty tracking the source of the stream.
+Tor is a connection-oriented anonymizing communication service. Users
+choose a source-routed path through a set of nodes, and negotiate a
+"virtual circuit" through the network. Each node in a virtual circuit
+knows its predecessor and successor nodes, but no other nodes. Traffic
+flowing down the circuit is unwrapped by a symmetric key at each node,
+which reveals the downstream node. +
 
-By default, **tor** will act as a client only.  To help the network
-by providing bandwidth as a relay, change the **ORPort** configuration
-option -- see below.  Please also consult the documentation on the Tor
-Project's website.
+Basically, Tor provides a distributed network of servers or relays
+("onion routers").  Users bounce their TCP streams, including web
+traffic, ftp, ssh, etc., around the network, so that recipients,
+observers, and even the relays themselves have difficulty tracking the
+source of the stream.
+
+[NOTE]
+By default, **tor** acts as a client only.  To help the network by
+providing bandwidth as a relay, change the **ORPort** configuration
+option as mentioned below.  Please also consult the documentation on
+the Tor Project's website.
 
 COMMAND-LINE OPTIONS
 --------------------
