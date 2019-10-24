@@ -42,7 +42,7 @@ def is_c_file(fn):
     if fn.startswith("."):
         return False
     ext = os.path.splitext(fn)[1]
-    return ext in {".c", ".h", ".i", "inc"}
+    return ext in {".c", ".h", ".i", ".inc"}
 
 
 def list_c_files(topdir=TOPDIR):
