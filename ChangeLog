@@ -1,4 +1,4 @@
-Changes in version 0.4.2.3-alpha - 2019-10-??
+Changes in version 0.4.2.3-alpha - 2019-10-24
   This release fixes several bugs from the previous alpha release, and
   from earlier versions of Tor.
 
@@ -19,7 +19,7 @@ Changes in version 0.4.2.3-alpha - 2019-10-??
       on 0.3.2.1-alpha.
 
   o Minor feature (onion services, control port):
-    - The ADD_ONION key blob keyword "BEST" now defaults to ED25519-V3
+    - The ADD_ONION command's keyword "BEST" now defaults to ED25519-V3
       (v3) onion services. Previously it defaulted to RSA1024 (v2).
       Closes ticket 29669.
 
@@ -62,16 +62,16 @@ Changes in version 0.4.2.3-alpha - 2019-10-??
   o Minor bugfixes (mainloop, periodic events, in-process API):
     - Reset the periodic events' "enabled" flag when Tor is shut down
       cleanly. Previously, this flag was left on, which caused periodic
-      events not to be to not re-enabled when Tor was relaunched in-
-      process with tor_api.h after a shutdown. Fixes bug 32058; bugfix
+      events not to be re-enabled when Tor was relaunched in-process
+      with tor_api.h after a shutdown. Fixes bug 32058; bugfix
       on 0.3.3.1-alpha.
 
   o Minor bugfixes (process management):
     - Remove overly strict assertions that triggered when a pluggable
-      transport fails to launch. Fixes bug 31091; bugfix
+      transport failed to launch. Fixes bug 31091; bugfix
       on 0.4.0.1-alpha.
     - Remove an assertion in the Unix process backend. This assertion
-      would trigger when a we failed to find the executable for a child
+      would trigger when we failed to find the executable for a child
       process. Fixes bug 31810; bugfix on 0.4.0.1-alpha.
 
   o Minor bugfixes (testing):
@@ -103,7 +103,7 @@ Changes in version 0.4.2.3-alpha - 2019-10-??
     - Correct the description of "GuardLifetime". Fixes bug 31189;
       bugfix on 0.3.0.1-alpha.
     - Make clear in the man page, in both the bandwidth section and the
-      accountingmax section, that Tor counts in powers of two, not
+      AccountingMax section, that Tor counts in powers of two, not
       powers of ten: 1 GByte is 1024*1024*1024 bytes, not one billion
       bytes. Resolves ticket 32106.
 
