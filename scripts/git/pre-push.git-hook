@@ -58,12 +58,13 @@ do
 			range="$remote_sha..$local_sha"
 		fi
 
-        # Call the pre-commit hook for the common checks, if it is executable.
-        # Use the owned tor source layout from 0.3.5 to filter the changed
-        # files.
-        if [ -x "$workdir/scripts/git/pre-commit.git-hook" ]; then
-            CHECK_FILES="$(git diff --name-only --diff-filter=ACMR \
-                               "$range" \
+        # Call the pre-commit hook for the common checks, if it is executable
+        # Only check the files newly modified in this branch
+        CHECK_FILTER="git diff --name-only --diff-filter=ACMR $range"
+        # Use the appropriate owned tor source list to filter the changed files
+        if [ -d src/lib ]; then
+            # This is the layout in 0.3.5
+            CHECK_FILES="$($CHECK_FILTER \
                                src/lib/*/*.[ch] \
                                src/core/*/*.[ch] \
                                src/feature/*/*.[ch] \
@@ -72,13 +73,21 @@ do
                                src/test/*/*.[ch] \
                                src/tools/*.[ch] \
                           )"
+        elif [ -d src/common ]; then
+            # This was the layout before 0.3.5
+            CHECK_FILES="$($CHECK_FILTER \
+                               src/common/*/*.[ch] \
+                               src/or/*/*.[ch] \
+                               src/test/*.[ch] \
+                               src/test/*/*.[ch] \
+                               src/tools/*.[ch]
+                          )"
+        fi
 
-            # We want word splitting here, because file names are space
-            # separated
-            # shellcheck disable=SC2086
-            if ! "$workdir/"scripts/git/pre-commit.git-hook $CHECK_FILES; then
-                exit 1
-            fi
+        # We want word splitting here, because file names are space separated
+        # shellcheck disable=SC2086
+        if ! "$workdir/"scripts/git/pre-commit.git-hook $CHECK_FILES; then
+            exit 1
         fi
 
         if [[ "$remote_name" != "$upstream_name" ]]; then

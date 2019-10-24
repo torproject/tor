@@ -13,30 +13,60 @@ cd "$workdir" || exit 1
 
 set -e
 
+if [ $# -eq 0 ]; then
+    # When called in pre-commit, check the files modified in this commit
+    CHECK_FILTER="git diff --cached --name-only --diff-filter=ACMR"
+    # Use the appropriate owned tor source list to filter the changed files
+    if [ -d src/lib ]; then
+        # This is the layout in 0.3.5
+        CHECK_FILES="$($CHECK_FILTER \
+                           src/lib/*/*.[ch] \
+                           src/core/*/*.[ch] \
+                           src/feature/*/*.[ch] \
+                           src/app/*/*.[ch] \
+                           src/test/*.[ch] \
+                           src/test/*/*.[ch] \
+                           src/tools/*.[ch] \
+                      )"
+    elif [ -d src/common ]; then
+        # This was the layout before 0.3.5
+        CHECK_FILES="$($CHECK_FILTER \
+                           src/common/*/*.[ch] \
+                           src/or/*/*.[ch] \
+                           src/test/*.[ch] \
+                           src/test/*/*.[ch] \
+                           src/tools/*.[ch]
+                      )"
+    fi
+else
+    # When called in pre-push, concatenate the argument array
+    # Fails on special characters in file names
+    CHECK_FILES="$*"
+fi
+
+## General File Checks
+
 if [ -n "$(ls ./changes/)" ]; then
     python scripts/maint/lintChanges.py ./changes/*
 fi
 
-if [ -d src/lib ]; then
-    # This is the layout in 0.3.5
-    # There are two copies of this list in this file
-    perl scripts/maint/checkSpace.pl -C \
-         src/lib/*/*.[ch] \
-         src/core/*/*.[ch] \
-         src/feature/*/*.[ch] \
-         src/app/*/*.[ch] \
-         src/test/*.[ch] \
-         src/test/*/*.[ch] \
-         src/tools/*.[ch]
-elif [ -d src/common ]; then
-    # This was the layout before 0.3.5
-    perl scripts/maint/checkSpace.pl -C \
-         src/common/*/*.[ch] \
-         src/or/*/*.[ch] \
-         src/test/*.[ch] \
-         src/test/*/*.[ch] \
-         src/tools/*.[ch]
+if [ -e scripts/maint/checkShellScripts.sh ]; then
+    scripts/maint/checkShellScripts.sh
 fi
+
+if [ ! "$CHECK_FILES" ]; then
+    echo "No modified tor-owned source files, skipping further checks"
+    exit 0
+fi
+
+## Owned Source File Checks
+
+printf "Modified tor-owned source files:\n%s\n" "$CHECK_FILES"
+
+# We want word splitting here, because file names are space separated
+# shellcheck disable=SC2086
+perl scripts/maint/checkSpace.pl -C \
+     $CHECK_FILES
 
 if test -e scripts/maint/practracker/includes.py; then
     python scripts/maint/practracker/includes.py
@@ -55,46 +85,13 @@ if [ -e "${PT_DIR}/practracker.py" ]; then
     fi
 fi
 
-if [ -e scripts/maint/checkShellScripts.sh ]; then
-    scripts/maint/checkShellScripts.sh
-fi
-
 if [ -e scripts/coccinelle/check_cocci_parse.sh ]; then
 
-    if [ $# -eq 0 ]; then
-        # When called in pre-commit, check the files modified in this commit
-        CHECK_FILTER="git diff --cached --name-only --diff-filter=ACMR"
-        # Use the owned tor source layout from 0.3.5 to filter the changed
-        # files.
-        # (There are two copies of this list in this file.)
-        CHECK_FILES="$($CHECK_FILTER \
-                          src/lib/*/*.[ch] \
-                          src/core/*/*.[ch] \
-                          src/feature/*/*.[ch] \
-                          src/app/*/*.[ch] \
-                          src/test/*.[ch] \
-                          src/test/*/*.[ch] \
-                          src/tools/*.[ch] \
-                      )"
-    fi
-
-    if [ "${CHECK_FILES:-$*}" ]; then
-        printf "Modified files:\n%s\n" "${CHECK_FILES:-$*}"
-
-        # Run a verbose cocci parse check on the changed files
-        # (spatch is slow, so we don't want to check all the files.)
-        if [ $# -eq 0 ]; then
-            # pre-commit: use $CHECK_FILES, fails on spaces in file names
-            #
-            # We want word splitting here, because file names are space
-            # separated
-            # shellcheck disable=SC2086
-            VERBOSE=1 scripts/coccinelle/check_cocci_parse.sh \
-                      $CHECK_FILES
-        else
-            # pre-push: use "$@" to preserve spaces in arguments
-            VERBOSE=1 scripts/coccinelle/check_cocci_parse.sh \
-                      "$@"
-        fi
-    fi
+    # Run a verbose cocci parse check on the changed files
+    # (spatch is slow, so we don't want to check all the files.)
+    #
+    # We want word splitting here, because file names are space separated
+    # shellcheck disable=SC2086
+    VERBOSE=1 scripts/coccinelle/check_cocci_parse.sh \
+              $CHECK_FILES
 fi
