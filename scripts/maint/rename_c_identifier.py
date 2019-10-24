@@ -70,7 +70,11 @@ def list_c_files(topdir=TOPDIR):
 class Rewriter:
     """
        A rewriter applies a series of word-by-word replacements, in
-       sequence.  Replacements only happen at word boundaries.
+       sequence.  Replacements only happen at "word boundaries",
+       as determined by the \\b regular expression marker.
+
+       ("A word is defined as a sequence of alphanumeric or underscore
+       characters", according to the documentation.)
 
        >>> R = Rewriter([("magic", "secret"), ("words", "codes")])
        >>> R.apply("The magic words are rambunctious bluejay")
@@ -79,6 +83,7 @@ class Rewriter:
        'The magical codes are rambunctious bluejay'
        >>> R.get_count()
        3
+
     """
 
     def __init__(self, replacements):
