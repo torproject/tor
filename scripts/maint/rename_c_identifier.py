@@ -227,7 +227,7 @@ def main(argv):
         return 1
 
     pairs = []
-    print("renaming {} to {}".format(args.from_id, args.to_id))
+    print("renaming {} to {}".format(args.from_id, args.to_id), file=sys.stderr)
     pairs.append((args.from_id, args.to_id))
     for idx in range(0, len(args.more), 2):
         id1 = args.more[idx]
