@@ -2624,6 +2624,9 @@ PPRINT_SUBTITLE([Modules])
 test "x$enable_module_dirauth" != "xno" && value=1 || value=0
 PPRINT_PROP_BOOL([Directory Authority (--disable-module-dirauth)], $value)
 
+test "x$enable_module_relay" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([Relay (--disable-module-relay)], $value)
+
 AS_ECHO
 PPRINT_SUBTITLE([Documentation])
 
