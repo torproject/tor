@@ -212,7 +212,8 @@ connection_dir_is_anonymous(const dir_connection_t *dir_conn)
    * be closed or marked for close. */
   if (linked_conn == NULL || linked_conn->magic != EDGE_CONNECTION_MAGIC ||
       conn->linked_conn_is_closed || conn->linked_conn->marked_for_close) {
-    log_info(LD_DIR, "Rejected HSDir request: not linked to edge");
+    log_debug(LD_DIR, "Directory connection is not anonymous: "
+                      "not linked to edge");
     return false;
   }
 
@@ -221,7 +222,8 @@ connection_dir_is_anonymous(const dir_connection_t *dir_conn)
 
   /* Can't be a circuit we initiated and without a circuit, no channel. */
   if (circ == NULL || CIRCUIT_IS_ORIGIN(circ)) {
-    log_info(LD_DIR, "Rejected HSDir request: not on OR circuit");
+    log_debug(LD_DIR, "Directory connection is not anonymous: "
+                      "not on OR circuit");
     return false;
   }
 
@@ -230,6 +232,8 @@ connection_dir_is_anonymous(const dir_connection_t *dir_conn)
    * not continue so return that it is not anonymous since we can not know for
    * sure if it is. */
   if (circ->marked_for_close) {
+    log_debug(LD_DIR, "Directory connection is not anonymous: "
+                      "circuit marked for close");
     return false;
   }
 
@@ -237,7 +241,8 @@ connection_dir_is_anonymous(const dir_connection_t *dir_conn)
    * BUG() because if the circuit is not mark for close, we ought to have a
    * p_chan else we have a code flow issue. */
   if (BUG(CONST_TO_OR_CIRCUIT(circ)->p_chan == NULL)) {
-    log_info(LD_DIR, "Rejected HSDir request: no p_chan");
+    log_debug(LD_DIR, "Directory connection is not anonymous: "
+                      "no p_chan on circuit");
     return false;
   }
 
