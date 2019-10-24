@@ -1393,7 +1393,8 @@ handle_get_hs_descriptor_v3(dir_connection_t *conn,
   /* Reject non anonymous dir connections (which also tests if encrypted). We
    * do not allow single hop clients to query an HSDir. */
   if (!connection_dir_is_anonymous(conn)) {
-    write_short_http_response(conn, 404, "Not found");
+    write_short_http_response(conn, 503,
+                              "Rejecting single hop HS v3 descriptor request");
     goto done;
   }
 
@@ -1636,7 +1637,12 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
   /* Handle HS descriptor publish request. We force an anonymous connection
    * (which also tests for encrypted). We do not allow single-hop client to
    * post a descriptor onto an HSDir. */
-  if (connection_dir_is_anonymous(conn) && !strcmpstart(url, "/tor/hs/")) {
+  if (!strcmpstart(url, "/tor/hs/")) {
+    if (!connection_dir_is_anonymous(conn)) {
+      write_short_http_response(conn, 503,
+                                "Rejecting single hop HS descriptor post");
+      goto done;
+    }
     const char *msg = "HS descriptor stored successfully.";
 
     /* We most probably have a publish request for an HS descriptor. */
