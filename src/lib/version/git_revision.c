@@ -11,14 +11,18 @@
  * src/core/include.am, and is usually right.
  */
 const char tor_git_revision[] =
+#ifndef COCCI
 #ifndef _MSC_VER
 #include "micro-revision.i"
+#endif
 #endif
   "";
 
 const char tor_bug_suffix[] = " (on Tor " VERSION
+#ifndef COCCI
 #ifndef _MSC_VER
   " "
 #include "micro-revision.i"
 #endif
+#endif /* !defined(COCCI) */
   ")";

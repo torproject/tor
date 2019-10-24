@@ -678,7 +678,7 @@ test_options_validate__logs(void *ignored)
   tt_int_op(ret, OP_EQ, -1);
 #else
   tt_int_op(ret, OP_EQ, 0);
-#endif
+#endif /* defined(_WIN32) */
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("");
@@ -4049,8 +4049,10 @@ test_options_init_logs_quiet(void *arg)
   UNMOCK(add_file_log);
 }
 
+#ifndef COCCI
 #define LOCAL_VALIDATE_TEST(name) \
   { "validate__" #name, test_options_validate__ ## name, TT_FORK, NULL, NULL }
+#endif
 
 struct testcase_t options_tests[] = {
   { "validate", test_options_validate, TT_FORK, NULL, NULL },

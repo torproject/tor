@@ -56,13 +56,15 @@ struct timeout_cb {
 /*
  * These definitions are for timeouts.c  and timeouts.h.
  */
-#ifdef __GNUC__
+#ifdef COCCI
+#define TIMEOUT_PUBLIC
+#elif defined(__GNUC__)
 /* We're not exposing any of the functions outside this file. */
 #define TIMEOUT_PUBLIC __attribute__((__unused__)) static
 #else
 /* We're not exposing any of the functions outside this file. */
 #define TIMEOUT_PUBLIC static
-#endif /* defined(__GNUC__) */
+#endif /* defined(COCCI) || ... */
 /* We're not using periodic events. */
 #define TIMEOUT_DISABLE_INTERVALS
 /* We always know the global_timeouts object, so we don't need each timeout

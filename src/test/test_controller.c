@@ -120,6 +120,7 @@ test_controller_parse_cmd(void *arg)
   control_cmd_args_free(result);
 }
 
+#ifndef COCCI
 #define OK(inp, out) \
   { inp "\r\n", out, NULL }
 #define ERR(inp, err) \
@@ -129,6 +130,7 @@ test_controller_parse_cmd(void *arg)
   { &syntax,                                     \
       ARRAY_LENGTH(array),                       \
       array }
+#endif /* !defined(COCCI) */
 
 static const parser_testcase_t one_to_three_tests[] = {
    ERR("", "Need at least 1 argument(s)"),
@@ -1953,9 +1955,11 @@ test_getinfo_md_all(void *arg)
   return;
 }
 
+#ifndef COCCI
 #define PARSER_TEST(type)                                             \
   { "parse/" #type, test_controller_parse_cmd, 0, &passthrough_setup, \
       (void*)&parse_ ## type ## _params }
+#endif
 
 struct testcase_t controller_tests[] = {
   PARSER_TEST(one_to_three),

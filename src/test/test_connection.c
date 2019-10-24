@@ -881,12 +881,14 @@ test_failed_orconn_tracker(void *arg)
   ;
 }
 
+#ifndef COCCI
 #define CONNECTION_TESTCASE(name, fork, setup)                           \
   { #name, test_conn_##name, fork, &setup, NULL }
 
 /* where arg is an expression (constant, variable, compound expression) */
 #define CONNECTION_TESTCASE_ARG(name, fork, setup, arg)                  \
   { #name "_" #arg, test_conn_##name, fork, &setup, (void *)arg }
+#endif /* !defined(COCCI) */
 
 struct testcase_t connection_tests[] = {
   CONNECTION_TESTCASE(get_basic, TT_FORK, test_conn_get_basic_st),

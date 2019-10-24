@@ -78,8 +78,8 @@
 #endif /* defined(HAVE_MINHERIT) || ... */
 
 #if defined(HAVE_MINHERIT) && !defined(FLAG_ZERO) && !defined(FLAG_NOINHERIT)
-#warn "minherit() is defined, but we couldn't find the right flag for it."
-#warn "This is probably a bug in Tor's support for this platform."
+#warning "minherit() is defined, but we couldn't find the right flag for it."
+#warning "This is probably a bug in Tor's support for this platform."
 #endif
 
 /**

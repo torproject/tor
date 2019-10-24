@@ -386,7 +386,7 @@ get_server_identity_key,(void))
   return server_identitykey;
 }
 
-#endif
+#endif /* defined(HAVE_MODULE_RELAY) */
 
 /** Return true iff we are a server and the server identity key
  * has been set. */

@@ -92,6 +92,7 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
                               size_t join_len, int terminate, size_t *len_out)
   ATTR_MALLOC;
 
+#ifndef COCCI
 /* Helper: Given two lists of items, possibly of different types, such that
  * both lists are sorted on some common field (as determined by a comparison
  * expression <b>cmpexpr</b>), and such that one list (<b>sl1</b>) has no
@@ -165,5 +166,6 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
 #define SMARTLIST_FOREACH_JOIN_END(var1, var2)  \
   }                                             \
   STMT_END
+#endif /* !defined(COCCI) */
 
 #endif /* !defined(TOR_SMARTLIST_H) */
