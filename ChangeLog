@@ -1,3 +1,113 @@
+Changes in version 0.4.2.3-alpha - 2019-10-24
+  This release fixes several bugs from the previous alpha release, and
+  from earlier versions of Tor.
+
+  o Major bugfixes (relay):
+    - Relays now respect their AccountingMax bandwidth again. When
+      relays entered "soft" hibernation (which typically starts when
+      we've hit 90% of our AccountingMax), we had stopped checking
+      whether we should enter hard hibernation. Soft hibernation refuses
+      new connections and new circuits, but the existing circuits can
+      continue, meaning that relays could have exceeded their configured
+      AccountingMax. Fixes bug 32108; bugfix on 0.4.0.1-alpha.
+
+  o Major bugfixes (v3 onion services):
+    - Onion services now always use the exact number of intro points
+      configured with the HiddenServiceNumIntroductionPoints option (or
+      fewer if nodes are excluded). Before, a service could sometimes
+      pick more intro points than configured. Fixes bug 31548; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor feature (onion services, control port):
+    - The ADD_ONION command's keyword "BEST" now defaults to ED25519-V3
+      (v3) onion services. Previously it defaulted to RSA1024 (v2).
+      Closes ticket 29669.
+
+  o Minor features (testing):
+    - When running tests that attempt to look up hostnames, replace the
+      libc name lookup functions with ones that do not actually touch
+      the network. This way, the tests complete more quickly in the
+      presence of a slow or missing DNS resolver. Closes ticket 31841.
+
+  o Minor features (testing, continuous integration):
+    - Disable all but one Travis CI macOS build, to mitigate slow
+      scheduling of Travis macOS jobs. Closes ticket 32177.
+    - Run the chutney IPv6 networks as part of Travis CI. Closes
+      ticket 30860.
+    - Simplify the Travis CI build matrix, and optimise for build time.
+      Closes ticket 31859.
+    - Use Windows Server 2019 instead of Windows Server 2016 in our
+      Appveyor builds. Closes ticket 32086.
+
+  o Minor bugfixes (build system):
+    - Interpret "--disable-module-dirauth=no" correctly. Fixes bug
+      32124; bugfix on 0.3.4.1-alpha.
+    - Interpret "--with-tcmalloc=no" correctly. Fixes bug 32124; bugfix
+      on 0.2.0.20-rc.
+    - Stop failing when jemalloc is requested, but tcmalloc is not
+      found. Fixes bug 32124; bugfix on 0.3.5.1-alpha.
+    - When pkg-config is not installed, or a library that depends on
+      pkg-config is not found, tell the user what to do to fix the
+      problem. Fixes bug 31922; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (connections):
+    - Avoid trying to read data from closed connections, which can cause
+      needless loops in Libevent and infinite loops in Shadow. Fixes bug
+      30344; bugfix on 0.1.1.1-alpha.
+
+  o Minor bugfixes (error handling):
+    - Always lock the backtrace buffer before it is used. Fixes bug
+      31734; bugfix on 0.2.5.3-alpha.
+
+  o Minor bugfixes (mainloop, periodic events, in-process API):
+    - Reset the periodic events' "enabled" flag when Tor is shut down
+      cleanly. Previously, this flag was left on, which caused periodic
+      events not to be re-enabled when Tor was relaunched in-process
+      with tor_api.h after a shutdown. Fixes bug 32058; bugfix
+      on 0.3.3.1-alpha.
+
+  o Minor bugfixes (process management):
+    - Remove overly strict assertions that triggered when a pluggable
+      transport failed to launch. Fixes bug 31091; bugfix
+      on 0.4.0.1-alpha.
+    - Remove an assertion in the Unix process backend. This assertion
+      would trigger when we failed to find the executable for a child
+      process. Fixes bug 31810; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Avoid intermittent test failures due to a test that had relied on
+      inconsistent timing sources. Fixes bug 31995; bugfix
+      on 0.3.1.3-alpha.
+    - When testing port rebinding, don't busy-wait for tor to log.
+      Instead, actually sleep for a short time before polling again.
+      Also improve the formatting of control commands and log messages.
+      Fixes bug 31837; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (tls, logging):
+    - Log bugs about the TLS read buffer's length only once, rather than
+      filling the logs with similar warnings. Fixes bug 31939; bugfix
+      on 0.3.0.4-rc.
+
+  o Minor bugfixes (v3 onion services):
+    - Fix an implicit conversion from ssize_t to size_t discovered by
+      Coverity. Fixes bug 31682; bugfix on 0.4.2.1-alpha.
+    - Fix a memory leak in an unlikely error code path when encoding HS
+      DoS establish intro extension cell. Fixes bug 32063; bugfix
+      on 0.4.2.1-alpha.
+    - When cleaning up intro circuits for a v3 onion service, don't
+      remove circuits that have an established or pending circuit, even
+      if they ran out of retries. This way, we don't remove a circuit on
+      its last retry. Fixes bug 31652; bugfix on 0.3.2.1-alpha.
+
+  o Documentation:
+    - Correct the description of "GuardLifetime". Fixes bug 31189;
+      bugfix on 0.3.0.1-alpha.
+    - Make clear in the man page, in both the bandwidth section and the
+      AccountingMax section, that Tor counts in powers of two, not
+      powers of ten: 1 GByte is 1024*1024*1024 bytes, not one billion
+      bytes. Resolves ticket 32106.
+
+
 Changes in version 0.4.2.2-alpha - 2019-10-07
   This release fixes several bugs from the previous alpha release, and
   from earlier versions. It also includes a change in authorities, so
