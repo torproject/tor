@@ -858,6 +858,9 @@ static int options_validate_cb(const void *old_options, void *options,
 static void cleanup_protocol_warning_severity_level(void);
 static void set_protocol_warning_severity_level(int warning_severity);
 static void options_clear_cb(const config_mgr_t *mgr, void *opts);
+static setopt_err_t options_validate_and_set(const or_options_t *old_options,
+                                             or_options_t *new_options,
+                                             char **msg_out);
 
 /** Magic value for or_options_t. */
 #define OR_OPTIONS_MAGIC 9090909
@@ -2684,37 +2687,9 @@ options_trial_assign(config_line_t *list, unsigned flags, char **msg)
     or_options_free(trial_options);
     return r;
   }
+  const or_options_t *cur_options = get_options();
 
-  setopt_err_t rv;
-  or_options_t *cur_options = get_options_mutable();
-
-  in_option_validation = 1;
-
-  if (options_validate(cur_options, trial_options,
-                       msg) < 0) {
-    or_options_free(trial_options);
-    rv = SETOPT_ERR_PARSE; /*XXX make this a separate return value. */
-    goto done;
-  }
-
-  if (options_transition_allowed(cur_options, trial_options, msg) < 0) {
-    or_options_free(trial_options);
-    rv = SETOPT_ERR_TRANSITION;
-    goto done;
-  }
-  in_option_validation = 0;
-
-  if (set_options(trial_options, msg)<0) {
-    or_options_free(trial_options);
-    rv = SETOPT_ERR_SETTING;
-    goto done;
-  }
-
-  /* we liked it. put it in place. */
-  rv = SETOPT_OK;
- done:
-  in_option_validation = 0;
-  return rv;
+  return options_validate_and_set(cur_options, trial_options, msg);
 }
 
 /** Print a usage message for tor. */
@@ -3240,6 +3215,54 @@ compute_publishserverdescriptor(or_options_t *options)
 #define RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT (10)
 
 /**
+ * Validate <b>new_options</b>.  If it is valid, and it is a reasonable
+ * replacement for <b>old_options</b>, replace the previous value of the
+ * global options, and return return SETOPT_OK.
+ *
+ * If it is not valid, then free <b>new_options</b>, set *<b>msg_out</b> to a
+ * newly allocated error message, and return an error code.
+ */
+static setopt_err_t
+options_validate_and_set(const or_options_t *old_options,
+                         or_options_t *new_options,
+                         char **msg_out)
+{
+  setopt_err_t rv;
+  validation_status_t vs;
+
+  in_option_validation = 1;
+  vs = config_validate(get_options_mgr(), old_options, new_options, msg_out);
+
+  if (vs == VSTAT_TRANSITION_ERR) {
+    rv = SETOPT_ERR_TRANSITION;
+    goto err;
+  } else if (vs < 0) {
+    rv = SETOPT_ERR_PARSE;
+    goto err;
+  }
+
+  if (options_transition_allowed(old_options, new_options, msg_out) < 0) {
+    rv = SETOPT_ERR_TRANSITION;
+    goto err;
+  }
+  in_option_validation = 0;
+
+  if (set_options(new_options, msg_out)) {
+    rv = SETOPT_ERR_SETTING;
+    goto err;
+  }
+
+  rv = SETOPT_OK;
+  new_options = NULL; /* prevent free */
+ err:
+  in_option_validation = 0;
+  tor_assert(new_options == NULL || rv != SETOPT_OK);
+  or_options_free(new_options);
+  return rv;
+}
+
+#ifdef TOR_UNIT_TESTS
+/**
  * Return 0 if every setting in <b>options</b> is reasonable, is a
  * permissible transition from <b>old_options</b>, and none of the
  * testing-only settings differ from <b>default_options</b> unless in
@@ -3248,7 +3271,7 @@ compute_publishserverdescriptor(or_options_t *options)
  *
  * On error, tor_strdup an error explanation into *<b>msg</b>.
  */
-STATIC int
+int
 options_validate(const or_options_t *old_options, or_options_t *options,
                  char **msg)
 {
@@ -3256,6 +3279,7 @@ options_validate(const or_options_t *old_options, or_options_t *options,
   vs = config_validate(get_options_mgr(), old_options, options, msg);
   return vs < 0 ? -1 : 0;
 }
+#endif
 
 #define REJECT(arg) \
   STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
@@ -5529,25 +5553,12 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   }
 
   newoptions->IncludeUsed = cf_has_include;
-  in_option_validation = 1;
   newoptions->FilesOpenedByIncludes = opened_files;
+  opened_files = NULL; // prevent double-free.
 
-  /* Validate newoptions */
-  if (options_validate(oldoptions, newoptions, msg) < 0) {
-    err = SETOPT_ERR_PARSE; /*XXX make this a separate return value.*/
+  err = options_validate_and_set(oldoptions, newoptions, msg);
+  if (err < 0)
     goto err;
-  }
-
-  if (options_transition_allowed(oldoptions, newoptions, msg) < 0) {
-    err = SETOPT_ERR_TRANSITION;
-    goto err;
-  }
-  in_option_validation = 0;
-
-  if (set_options(newoptions, msg)) {
-    err = SETOPT_ERR_SETTING;
-    goto err; /* frees and replaces old options */
-  }
 
   or_options_free(global_default_options);
   global_default_options = newdefaultoptions;
@@ -5560,9 +5571,6 @@ options_init_from_string(const char *cf_defaults, const char *cf,
     SMARTLIST_FOREACH(opened_files, char *, f, tor_free(f));
     smartlist_free(opened_files);
   }
-  // may have been set to opened_files, avoid double free
-  newoptions->FilesOpenedByIncludes = NULL;
-  or_options_free(newoptions);
   or_options_free(newdefaultoptions);
   if (*msg) {
     char *old_msg = *msg;
