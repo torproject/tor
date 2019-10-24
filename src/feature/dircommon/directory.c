@@ -225,7 +225,17 @@ connection_dir_is_anonymous(const dir_connection_t *dir_conn)
     return false;
   }
 
-  /* Get the previous channel to learn if it is a client or relay link. */
+  /* It is possible that the circuit was closed because one of the channel was
+   * closed or a DESTROY cell was received. Either way, this connection can
+   * not continue so return that it is not anonymous since we can not know for
+   * sure if it is. */
+  if (circ->marked_for_close) {
+    return false;
+  }
+
+  /* Get the previous channel to learn if it is a client or relay link. We
+   * BUG() because if the circuit is not mark for close, we ought to have a
+   * p_chan else we have a code flow issue. */
   if (BUG(CONST_TO_OR_CIRCUIT(circ)->p_chan == NULL)) {
     log_info(LD_DIR, "Rejected HSDir request: no p_chan");
     return false;
