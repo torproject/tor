@@ -264,7 +264,9 @@ int options_any_client_port_set(const or_options_t *options);
 #define CL_PORT_IS_UNIXSOCKET (1u<<6)
 #define CL_PORT_DFLT_GROUP_WRITABLE (1u<<7)
 
-STATIC int options_act(const or_options_t *old_options);
+MOCK_DECL(STATIC int, options_act,(const or_options_t *old_options));
+MOCK_DECL(STATIC int, options_act_reversible,(const or_options_t *old_options,
+                                             char **msg));
 struct config_mgr_t;
 STATIC const struct config_mgr_t *get_options_mgr(void);
 
