@@ -921,6 +921,10 @@ get_options_mgr(void)
   return options_mgr;
 }
 
+#define CHECK_OPTIONS_MAGIC(opt) STMT_BEGIN                      \
+    config_check_toplevel_magic(get_options_mgr(), (opt));       \
+  STMT_END
+
 /** Return the contents of our frontpage string, or NULL if not configured. */
 MOCK_IMPL(const char*,
 get_dirportfrontpage, (void))
@@ -1027,6 +1031,7 @@ static void
 options_clear_cb(const config_mgr_t *mgr, void *opts)
 {
   (void)mgr;
+  CHECK_OPTIONS_MAGIC(opts);
   or_options_t *options = opts;
 
   routerset_free(options->ExcludeExitNodesUnion_);
@@ -3467,6 +3472,9 @@ options_validate_single_onion(or_options_t *options, char **msg)
 static int
 options_validate_cb(const void *old_options_, void *options_, char **msg)
 {
+  if (old_options_)
+    CHECK_OPTIONS_MAGIC(old_options_);
+  CHECK_OPTIONS_MAGIC(options_);
   const or_options_t *old_options = old_options_;
   or_options_t *options = options_;
 
@@ -4821,6 +4829,9 @@ options_check_transition_cb(const void *old_,
                             const void *new_val_,
                             char **msg)
 {
+  CHECK_OPTIONS_MAGIC(old_);
+  CHECK_OPTIONS_MAGIC(new_val_);
+
   const or_options_t *old = old_;
   const or_options_t *new_val = new_val_;
 
