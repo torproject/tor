@@ -334,6 +334,17 @@ config_mgr_list_deprecated_vars(const config_mgr_t *mgr)
   return result;
 }
 
+/**
+ * Check the magic number on <b>object</b> to make sure it's a valid toplevel
+ * object, created with <b>mgr</b>.  Exit with an assertion if it isn't.
+ **/
+void
+config_check_toplevel_magic(const config_mgr_t *mgr,
+                            const void *object)
+{
+  struct_check_magic(object, &mgr->toplevel_magic);
+}
+
 /** Assert that the magic fields in <b>options</b> and its subsidiary
  * objects are all okay. */
 static void

@@ -232,6 +232,8 @@ void *config_dup(const config_mgr_t *mgr, const void *old);
 char *config_dump(const config_mgr_t *mgr, const void *default_options,
                   const void *options, int minimal,
                   int comment_defaults);
+void config_check_toplevel_magic(const config_mgr_t *mgr,
+                                 const void *object);
 bool config_check_ok(const config_mgr_t *mgr, const void *options,
                      int severity);
 int config_assign(const config_mgr_t *mgr, void *options,
