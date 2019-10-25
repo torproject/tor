@@ -47,6 +47,14 @@ matrix:
       compiler: clang
     ## We run chutney on Linux, because it's faster than chutney on macOS
     - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
+      ## (Linux only) Use an older Linux image (Ubuntu Trusty)
+      ## The Xenial and Bionic images cause permissions issues for chutney,
+      ## this is a workaround, until we fix #32240.
+      dist: trusty
+    ## We check asciidoc with distcheck, to make sure we remove doc products
+    ## We use Linux clang, because there are no other Linux clang jobs
+    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
+      compiler: clang
     ## We include a single coverage build with the best options for coverage
     - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS="" TOR_TEST_RNG_SEED="636f766572616765"
     ## We run rust on Linux, because it's faster than rust on macOS
@@ -88,8 +96,8 @@ matrix:
     ## test-stem sometimes hangs on Travis
     - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
 
-## (Linux only) Use the latest Linux image (Ubuntu Trusty)
-dist: trusty
+## (Linux only) Use a recent Linux image (Ubuntu Bionic)
+dist: bionic
 
 ## Download our dependencies
 addons:
