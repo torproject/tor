@@ -16,91 +16,110 @@
 # The following sample script was used as starting point:
 # https://github.com/git/git/blob/master/templates/hooks--pre-push.sample
 
+# Are you adding a new check to the git hooks?
+#  - Common checks belong in the pre-commit hook
+#  - Push-only checks belong in the pre-push hook
+
 echo "Running pre-push hook"
 
 z40=0000000000000000000000000000000000000000
 
 upstream_name=${TOR_UPSTREAM_REMOTE_NAME:-"upstream"}
 
-# Are you adding a new check to the git hooks?
-#  - Common checks belong in the pre-commit hook
-#  - Push-only checks belong in the pre-push hook
-#
-# Call the pre-commit hook for the common checks, if it is executable.
 workdir=$(git rev-parse --show-toplevel)
-if [ -x "$workdir/.git/hooks/pre-commit" ]; then
-  if ! "$workdir"/.git/hooks/pre-commit; then
-    exit 1
-  fi
-fi
 
 remote="$1"
-
 remote_name=$(git remote --verbose | grep "$2" | awk '{print $1}' | head -n 1)
 
-if [[ "$remote_name" != "$upstream_name" ]]; then
-  echo "Not pushing to upstream - refraining from further checks"
-  exit 0
-fi
 
 ref_is_upstream_branch() {
-        if [ "$1" == "refs/heads/master" ] ||
-                [[ "$1" == refs/heads/release-* ]] ||
-                [[ "$1" == refs/heads/maint-* ]]
-        then
-                return 1
-        fi
+    if [ "$1" == "refs/heads/master" ] ||
+        [[ "$1" == refs/heads/release-* ]] ||
+        [[ "$1" == refs/heads/maint-* ]]; then
+        return 1
+    fi
 }
 
 # shellcheck disable=SC2034
 while read -r local_ref local_sha remote_ref remote_sha
 do
-	if [ "$local_sha" = $z40 ]
-	then
-		# Handle delete
-		:
-	else
-		if [ "$remote_sha" = $z40 ]
-		then
-			# New branch, examine all commits
-			range="$local_sha"
-		else
-			# Update to existing branch, examine new commits
-			range="$remote_sha..$local_sha"
-		fi
+    if [ "$local_sha" = $z40 ]; then
+        # Handle delete
+        :
+    else
+        if [ "$remote_sha" = $z40 ]; then
+            # New branch, examine commits not in master
+            range="master...$local_sha"
+        else
+            # Update to existing branch, examine new commits
+            range="$remote_sha..$local_sha"
+        fi
 
-                if (ref_is_upstream_branch "$local_ref" == 0 ||
-                        ref_is_upstream_branch "$remote_ref"  == 0) &&
-                        [ "$local_ref" != "$remote_ref" ]
-                then
-                        if [ "$remote" == "origin" ]
-                        then
-                                echo >&2 "Not pushing: $local_ref to $remote_ref"
-			        echo >&2 "If you really want to push this, use --no-verify."
-                                exit 1
-                        else
-                                continue
-                        fi
-                fi
+        # Call the pre-commit hook for the common checks, if it is executable
+        # Only check the files newly modified in this branch
+        CHECK_FILTER="git diff --name-only --diff-filter=ACMR $range"
+        # Use the appropriate owned tor source list to filter the changed files
+        if [ -d src/lib ]; then
+            # This is the layout in 0.3.5
+            CHECK_FILES="$($CHECK_FILTER \
+                               src/lib/*/*.[ch] \
+                               src/core/*/*.[ch] \
+                               src/feature/*/*.[ch] \
+                               src/app/*/*.[ch] \
+                               src/test/*.[ch] \
+                               src/test/*/*.[ch] \
+                               src/tools/*.[ch] \
+                          )"
+        elif [ -d src/common ]; then
+            # This was the layout before 0.3.5
+            CHECK_FILES="$($CHECK_FILTER \
+                               src/common/*/*.[ch] \
+                               src/or/*/*.[ch] \
+                               src/test/*.[ch] \
+                               src/test/*/*.[ch] \
+                               src/tools/*.[ch]
+                          )"
+        fi
 
-                # Check for fixup! commit
-                commit=$(git rev-list -n 1 --grep '^fixup!' "$range")
-		if [ -n "$commit" ]
-		then
-			echo >&2 "Found fixup! commit in $local_ref, not pushing"
-			echo >&2 "If you really want to push this, use --no-verify."
-			exit 1
-		fi
+        # We want word splitting here, because file names are space separated
+        # shellcheck disable=SC2086
+        if ! "$workdir/"scripts/git/pre-commit.git-hook $CHECK_FILES; then
+            exit 1
+        fi
 
-                # Check for squash! commit
-                commit=$(git rev-list -n 1 --grep '^squash!' "$range")
-		if [ -n "$commit" ]
-		then
-			echo >&2 "Found squash! commit in $local_ref, not pushing"
-			echo >&2 "If you really want to push this, use --no-verify."
-			exit 1
-		fi
-	fi
+        if [[ "$remote_name" != "$upstream_name" ]]; then
+            echo "Not pushing to upstream - refraining from further checks"
+            continue
+        fi
+
+        if (ref_is_upstream_branch "$local_ref" == 0 ||
+                ref_is_upstream_branch "$remote_ref"  == 0) &&
+            [ "$local_ref" != "$remote_ref" ]; then
+            if [ "$remote" == "origin" ]; then
+                echo >&2 "Not pushing: $local_ref to $remote_ref"
+                echo >&2 "If you really want to push this, use --no-verify."
+                exit 1
+            else
+                continue
+            fi
+        fi
+
+        # Check for fixup! commit
+        commit=$(git rev-list -n 1 --grep '^fixup!' "$range")
+        if [ -n "$commit" ]; then
+            echo >&2 "Found fixup! commit in $local_ref, not pushing"
+            echo >&2 "If you really want to push this, use --no-verify."
+            exit 1
+        fi
+
+        # Check for squash! commit
+        commit=$(git rev-list -n 1 --grep '^squash!' "$range")
+        if [ -n "$commit" ]; then
+            echo >&2 "Found squash! commit in $local_ref, not pushing"
+            echo >&2 "If you really want to push this, use --no-verify."
+            exit 1
+        fi
+    fi
 done
 
 exit 0
