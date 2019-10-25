@@ -184,6 +184,10 @@ get_state_mgr(void)
   return state_mgr;
 }
 
+#define CHECK_STATE_MAGIC(s) STMT_BEGIN                        \
+    config_check_toplevel_magic(get_state_mgr(), (s));         \
+  STMT_END
+
 /** Persistent serialized state. */
 static or_state_t *global_state = NULL;
 
@@ -286,6 +290,7 @@ or_state_validate_cb(const void *old_state, void *state_, char **msg)
   /* There is not a meaningful concept of a state-to-state transition,
    * since we do not reload the state after we start. */
   (void) old_state;
+  CHECK_STATE_MAGIC(state_);
 
   or_state_t *state = state_;
 
