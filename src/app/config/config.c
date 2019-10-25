@@ -822,7 +822,7 @@ static const config_deprecation_t option_deprecation_notes_[] = {
 #ifdef _WIN32
 static char *get_windows_conf_root(void);
 #endif
-static int options_act_reversible(const or_options_t *old_options, char **msg);
+
 static int options_check_transition_cb(const void *old,
                                        const void *new,
                                        char **msg);
@@ -1428,8 +1428,8 @@ static int have_low_ports = -1;
  *
  * Return 0 if all goes well, return -1 if things went badly.
  */
-static int
-options_act_reversible(const or_options_t *old_options, char **msg)
+MOCK_IMPL(STATIC int,
+options_act_reversible,(const or_options_t *old_options, char **msg))
 {
   smartlist_t *new_listeners = smartlist_new();
   or_options_t *options = get_options_mutable();
@@ -1857,8 +1857,8 @@ options_transition_affects_dirauth_timing(const or_options_t *old_options,
  * Note: We haven't moved all the "act on new configuration" logic
  * here yet.  Some is still in do_hup() and other places.
  */
-STATIC int
-options_act(const or_options_t *old_options)
+MOCK_IMPL(STATIC int,
+options_act,(const or_options_t *old_options))
 {
   config_line_t *cl;
   or_options_t *options = get_options_mutable();
