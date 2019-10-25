@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 #
 # Copyright (c) 2001 Matej Pfajfar.
 # Copyright (c) 2001-2004, Roger Dingledine.
