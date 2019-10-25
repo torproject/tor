@@ -4045,6 +4045,87 @@ test_options_init_logs_quiet(void *arg)
   UNMOCK(add_file_log);
 }
 
+static int mock_options_act_status = 0;
+static int
+mock_options_act(const or_options_t *old_options)
+{
+  (void)old_options;
+  return mock_options_act_status;
+}
+static int
+mock_options_act_reversible(const or_options_t *old_options, char **msg_out)
+{
+  (void)old_options;
+  (void)msg_out;
+  return 0;
+}
+
+static void
+test_options_trial_assign(void *arg)
+{
+  (void)arg;
+  setopt_err_t v;
+  config_line_t *lines = NULL;
+  char *msg = NULL;
+  int r;
+
+  // replace options_act*() so that we don't actually launch tor here.
+  MOCK(options_act, mock_options_act);
+  MOCK(options_act_reversible, mock_options_act_reversible);
+
+  // Try assigning nothing; that should work.
+  v = options_trial_assign(lines, 0, &msg);
+  if (msg)
+    puts(msg);
+  tt_ptr_op(msg, OP_EQ, NULL);
+  tt_int_op(v, OP_EQ, SETOPT_OK);
+
+  // Assigning a nickname is okay
+  r = config_get_lines("Nickname Hemiramphinae", &lines, 0);
+  tt_int_op(r, OP_EQ, 0);
+  v = options_trial_assign(lines, 0, &msg);
+  tt_ptr_op(msg, OP_EQ, NULL);
+  tt_int_op(v, OP_EQ, SETOPT_OK);
+  tt_str_op(get_options()->Nickname, OP_EQ, "Hemiramphinae");
+  config_free_lines(lines);
+
+  // We can't change the User; that's a transition error.
+  r = config_get_lines("User Heraclitus", &lines, 0);
+  tt_int_op(r, OP_EQ, 0);
+  v = options_trial_assign(lines, 0, &msg);
+  tt_int_op(v, OP_EQ, SETOPT_ERR_TRANSITION);
+  tt_str_op(msg, OP_EQ,  "While Tor is running, changing User is not allowed");
+  tor_free(msg);
+  config_free_lines(lines);
+
+  // We can't set the ORPort to nonsense: that's a validation error.
+  r = config_get_lines("ORPort fractabling planished", &lines, 0);
+  tt_int_op(r, OP_EQ, 0);
+  v = options_trial_assign(lines, 0, &msg);
+  tt_int_op(v, OP_EQ, SETOPT_ERR_PARSE); // (same error code for now)
+  tt_str_op(msg, OP_EQ, "Invalid ORPort configuration");
+  tor_free(msg);
+  config_free_lines(lines);
+
+  // We can't set UseBridges to a non-boolean: that's a parse error.
+  r = config_get_lines("UseBridges ambidextrous", &lines, 0);
+  tt_int_op(r, OP_EQ, 0);
+  v = options_trial_assign(lines, 0, &msg);
+  tt_int_op(v, OP_EQ, SETOPT_ERR_PARSE);
+  tt_str_op(msg, OP_EQ, "Unrecognized value ambidextrous.");
+  tor_free(msg);
+  config_free_lines(lines);
+
+  // this didn't change.
+  tt_str_op(get_options()->Nickname, OP_EQ, "Hemiramphinae");
+
+ done:
+  config_free_lines(lines);
+  tor_free(msg);
+  UNMOCK(options_act);
+  UNMOCK(options_act_reversible);
+}
+
 #define LOCAL_VALIDATE_TEST(name) \
   { "validate__" #name, test_options_validate__ ## name, TT_FORK, NULL, NULL }
 
@@ -4096,5 +4177,6 @@ struct testcase_t options_tests[] = {
     NULL, NULL },
   { "init_logs/quiet", test_options_init_logs_quiet, TT_FORK,
     NULL, NULL },
+  { "trial_assign", test_options_trial_assign, TT_FORK, NULL, NULL },
   END_OF_TESTCASES              /*  */
 };
