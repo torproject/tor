@@ -4006,9 +4006,9 @@ test_options_init_logs_quiet(void *arg)
   tt_assert(a);
   tt_assert(a->stream);
   tt_int_op(a->fd, OP_EQ, fileno(stdout));
-  tt_u64_op(a->sev.masks[LOG_INFO-LOG_ERR], OP_EQ, 0);
-  tt_u64_op(a->sev.masks[LOG_NOTICE-LOG_ERR], OP_EQ, 0);
-  tt_u64_op(a->sev.masks[LOG_WARN-LOG_ERR], OP_EQ, LD_ALL_DOMAINS);
+  tt_u64_op(a->sev.masks[SEVERITY_MASK_IDX(LOG_INFO)], OP_EQ, 0);
+  tt_u64_op(a->sev.masks[SEVERITY_MASK_IDX(LOG_NOTICE)], OP_EQ, 0);
+  tt_u64_op(a->sev.masks[SEVERITY_MASK_IDX(LOG_WARN)], OP_EQ, LD_ALL_DOMAINS);
   clear_added_logs();
 
   quiet_level = QUIET_NONE;
@@ -4019,9 +4019,10 @@ test_options_init_logs_quiet(void *arg)
   tt_assert(a);
   tt_assert(a->stream);
   tt_int_op(a->fd, OP_EQ, fileno(stdout));
-  tt_u64_op(a->sev.masks[LOG_INFO-LOG_ERR], OP_EQ, 0);
-  tt_u64_op(a->sev.masks[LOG_NOTICE-LOG_ERR], OP_EQ, LD_ALL_DOMAINS);
-  tt_u64_op(a->sev.masks[LOG_WARN-LOG_ERR], OP_EQ, LD_ALL_DOMAINS);
+  tt_u64_op(a->sev.masks[SEVERITY_MASK_IDX(LOG_INFO)], OP_EQ, 0);
+  tt_u64_op(a->sev.masks[SEVERITY_MASK_IDX(LOG_NOTICE)], OP_EQ,
+            LD_ALL_DOMAINS);
+  tt_u64_op(a->sev.masks[SEVERITY_MASK_IDX(LOG_WARN)], OP_EQ, LD_ALL_DOMAINS);
   clear_added_logs();
 
   /* Make sure that adding a configured log makes the default logs go away. */
@@ -4035,9 +4036,10 @@ test_options_init_logs_quiet(void *arg)
   tt_assert(a);
   tt_assert(! a->stream);
   tt_int_op(a->fd, OP_NE, fileno(stdout));
-  tt_u64_op(a->sev.masks[LOG_INFO-LOG_ERR], OP_EQ, LD_ALL_DOMAINS);
-  tt_u64_op(a->sev.masks[LOG_NOTICE-LOG_ERR], OP_EQ, LD_ALL_DOMAINS);
-  tt_u64_op(a->sev.masks[LOG_WARN-LOG_ERR], OP_EQ, LD_ALL_DOMAINS);
+  tt_u64_op(a->sev.masks[SEVERITY_MASK_IDX(LOG_INFO)], OP_EQ, LD_ALL_DOMAINS);
+  tt_u64_op(a->sev.masks[SEVERITY_MASK_IDX(LOG_NOTICE)], OP_EQ,
+            LD_ALL_DOMAINS);
+  tt_u64_op(a->sev.masks[SEVERITY_MASK_IDX(LOG_WARN)], OP_EQ, LD_ALL_DOMAINS);
 
  done:
   free_options_test_data(tdata);
