@@ -1,0 +1,5 @@
+  o Minor features (configuration validation):
+    - Configuration validation can now be done by per-module callbacks,
+      rather than a global validation function.  This will let us reduce the
+      size of config.c and some of its more cumbersome functions.  Closes
+      ticket 31241.
