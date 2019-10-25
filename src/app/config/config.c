@@ -822,10 +822,10 @@ static const config_deprecation_t option_deprecation_notes_[] = {
 #ifdef _WIN32
 static char *get_windows_conf_root(void);
 #endif
-static int options_act_reversible(const or_options_t *old_options, char **msg);
-static int options_transition_allowed(const or_options_t *old,
-                                      const or_options_t *new,
-                                      char **msg);
+
+static int options_check_transition_cb(const void *old,
+                                       const void *new,
+                                       char **msg);
 static int options_transition_affects_workers(
       const or_options_t *old_options, const or_options_t *new_options);
 static int options_transition_affects_descriptor(
@@ -858,25 +858,28 @@ static int options_validate_cb(const void *old_options, void *options,
 static void cleanup_protocol_warning_severity_level(void);
 static void set_protocol_warning_severity_level(int warning_severity);
 static void options_clear_cb(const config_mgr_t *mgr, void *opts);
+static setopt_err_t options_validate_and_set(const or_options_t *old_options,
+                                             or_options_t *new_options,
+                                             char **msg_out);
 
 /** Magic value for or_options_t. */
 #define OR_OPTIONS_MAGIC 9090909
 
 /** Configuration format for or_options_t. */
 static const config_format_t options_format = {
-  sizeof(or_options_t),
-  {
+  .size = sizeof(or_options_t),
+  .magic = {
    "or_options_t",
    OR_OPTIONS_MAGIC,
    offsetof(or_options_t, magic_),
   },
-  option_abbrevs_,
-  option_deprecation_notes_,
-  option_vars_,
-  options_validate_cb,
-  options_clear_cb,
-  NULL,
-  offsetof(or_options_t, subconfigs_),
+  .abbrevs = option_abbrevs_,
+  .deprecations = option_deprecation_notes_,
+  .vars = option_vars_,
+  .legacy_validate_fn = options_validate_cb,
+  .check_transition_fn = options_check_transition_cb,
+  .clear_fn = options_clear_cb,
+  .config_suite_offset = offsetof(or_options_t, subconfigs_),
 };
 
 /*
@@ -917,6 +920,10 @@ get_options_mgr(void)
   }
   return options_mgr;
 }
+
+#define CHECK_OPTIONS_MAGIC(opt) STMT_BEGIN                      \
+    config_check_toplevel_magic(get_options_mgr(), (opt));       \
+  STMT_END
 
 /** Return the contents of our frontpage string, or NULL if not configured. */
 MOCK_IMPL(const char*,
@@ -1024,6 +1031,7 @@ static void
 options_clear_cb(const config_mgr_t *mgr, void *opts)
 {
   (void)mgr;
+  CHECK_OPTIONS_MAGIC(opts);
   or_options_t *options = opts;
 
   routerset_free(options->ExcludeExitNodesUnion_);
@@ -1425,8 +1433,8 @@ static int have_low_ports = -1;
  *
  * Return 0 if all goes well, return -1 if things went badly.
  */
-static int
-options_act_reversible(const or_options_t *old_options, char **msg)
+MOCK_IMPL(STATIC int,
+options_act_reversible,(const or_options_t *old_options, char **msg))
 {
   smartlist_t *new_listeners = smartlist_new();
   or_options_t *options = get_options_mutable();
@@ -1854,8 +1862,8 @@ options_transition_affects_dirauth_timing(const or_options_t *old_options,
  * Note: We haven't moved all the "act on new configuration" logic
  * here yet.  Some is still in do_hup() and other places.
  */
-STATIC int
-options_act(const or_options_t *old_options)
+MOCK_IMPL(STATIC int,
+options_act,(const or_options_t *old_options))
 {
   config_line_t *cl;
   or_options_t *options = get_options_mutable();
@@ -2685,37 +2693,9 @@ options_trial_assign(config_line_t *list, unsigned flags, char **msg)
     or_options_free(trial_options);
     return r;
   }
+  const or_options_t *cur_options = get_options();
 
-  setopt_err_t rv;
-  or_options_t *cur_options = get_options_mutable();
-
-  in_option_validation = 1;
-
-  if (options_validate(cur_options, trial_options,
-                       msg) < 0) {
-    or_options_free(trial_options);
-    rv = SETOPT_ERR_PARSE; /*XXX make this a separate return value. */
-    goto done;
-  }
-
-  if (options_transition_allowed(cur_options, trial_options, msg) < 0) {
-    or_options_free(trial_options);
-    rv = SETOPT_ERR_TRANSITION;
-    goto done;
-  }
-  in_option_validation = 0;
-
-  if (set_options(trial_options, msg)<0) {
-    or_options_free(trial_options);
-    rv = SETOPT_ERR_SETTING;
-    goto done;
-  }
-
-  /* we liked it. put it in place. */
-  rv = SETOPT_OK;
- done:
-  in_option_validation = 0;
-  return rv;
+  return options_validate_and_set(cur_options, trial_options, msg);
 }
 
 /** Print a usage message for tor. */
@@ -3240,14 +3220,67 @@ compute_publishserverdescriptor(or_options_t *options)
  * */
 #define RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT (10)
 
-static int
-options_validate_cb(const void *old_options, void *options, char **msg)
+/**
+ * Validate <b>new_options</b>.  If it is valid, and it is a reasonable
+ * replacement for <b>old_options</b>, replace the previous value of the
+ * global options, and return return SETOPT_OK.
+ *
+ * If it is not valid, then free <b>new_options</b>, set *<b>msg_out</b> to a
+ * newly allocated error message, and return an error code.
+ */
+static setopt_err_t
+options_validate_and_set(const or_options_t *old_options,
+                         or_options_t *new_options,
+                         char **msg_out)
 {
+  setopt_err_t rv;
+  validation_status_t vs;
+
   in_option_validation = 1;
-  int rv = options_validate(old_options, options, msg);
+  vs = config_validate(get_options_mgr(), old_options, new_options, msg_out);
+
+  if (vs == VSTAT_TRANSITION_ERR) {
+    rv = SETOPT_ERR_TRANSITION;
+    goto err;
+  } else if (vs < 0) {
+    rv = SETOPT_ERR_PARSE;
+    goto err;
+  }
   in_option_validation = 0;
+
+  if (set_options(new_options, msg_out)) {
+    rv = SETOPT_ERR_SETTING;
+    goto err;
+  }
+
+  rv = SETOPT_OK;
+  new_options = NULL; /* prevent free */
+ err:
+  in_option_validation = 0;
+  tor_assert(new_options == NULL || rv != SETOPT_OK);
+  or_options_free(new_options);
   return rv;
 }
+
+#ifdef TOR_UNIT_TESTS
+/**
+ * Return 0 if every setting in <b>options</b> is reasonable, is a
+ * permissible transition from <b>old_options</b>, and none of the
+ * testing-only settings differ from <b>default_options</b> unless in
+ * testing mode.  Else return -1.  Should have no side effects, except for
+ * normalizing the contents of <b>options</b>.
+ *
+ * On error, tor_strdup an error explanation into *<b>msg</b>.
+ */
+int
+options_validate(const or_options_t *old_options, or_options_t *options,
+                 char **msg)
+{
+  validation_status_t vs;
+  vs = config_validate(get_options_mgr(), old_options, options, msg);
+  return vs < 0 ? -1 : 0;
+}
+#endif
 
 #define REJECT(arg) \
   STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
@@ -3432,18 +3465,19 @@ options_validate_single_onion(or_options_t *options, char **msg)
   return 0;
 }
 
-/** Return 0 if every setting in <b>options</b> is reasonable, is a
- * permissible transition from <b>old_options</b>, and none of the
- * testing-only settings differ from <b>default_options</b> unless in
- * testing mode.  Else return -1.  Should have no side effects, except for
- * normalizing the contents of <b>options</b>.
- *
- * On error, tor_strdup an error explanation into *<b>msg</b>.
+/**
+ * Legacy validation/normalization callback for or_options_t.  See
+ * legacy_validate_fn_t for more information.
  */
-STATIC int
-options_validate(const or_options_t *old_options, or_options_t *options,
-                 char **msg)
+static int
+options_validate_cb(const void *old_options_, void *options_, char **msg)
 {
+  if (old_options_)
+    CHECK_OPTIONS_MAGIC(old_options_);
+  CHECK_OPTIONS_MAGIC(options_);
+  const or_options_t *old_options = old_options_;
+  or_options_t *options = options_;
+
   config_line_t *cl;
   const char *uname = get_uname();
   int n_ports=0;
@@ -4791,11 +4825,17 @@ opt_streq(const char *s1, const char *s2)
 
 /** Check if any of the previous options have changed but aren't allowed to. */
 static int
-options_transition_allowed(const or_options_t *old,
-                           const or_options_t *new_val,
-                           char **msg)
+options_check_transition_cb(const void *old_,
+                            const void *new_val_,
+                            char **msg)
 {
-  if (!old)
+  CHECK_OPTIONS_MAGIC(old_);
+  CHECK_OPTIONS_MAGIC(new_val_);
+
+  const or_options_t *old = old_;
+  const or_options_t *new_val = new_val_;
+
+  if (BUG(!old))
     return 0;
 
 #define BAD_CHANGE_TO(opt, how) do {                                    \
@@ -5523,25 +5563,12 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   }
 
   newoptions->IncludeUsed = cf_has_include;
-  in_option_validation = 1;
   newoptions->FilesOpenedByIncludes = opened_files;
+  opened_files = NULL; // prevent double-free.
 
-  /* Validate newoptions */
-  if (options_validate(oldoptions, newoptions, msg) < 0) {
-    err = SETOPT_ERR_PARSE; /*XXX make this a separate return value.*/
+  err = options_validate_and_set(oldoptions, newoptions, msg);
+  if (err < 0)
     goto err;
-  }
-
-  if (options_transition_allowed(oldoptions, newoptions, msg) < 0) {
-    err = SETOPT_ERR_TRANSITION;
-    goto err;
-  }
-  in_option_validation = 0;
-
-  if (set_options(newoptions, msg)) {
-    err = SETOPT_ERR_SETTING;
-    goto err; /* frees and replaces old options */
-  }
 
   or_options_free(global_default_options);
   global_default_options = newdefaultoptions;
@@ -5554,9 +5581,6 @@ options_init_from_string(const char *cf_defaults, const char *cf,
     SMARTLIST_FOREACH(opened_files, char *, f, tor_free(f));
     smartlist_free(opened_files);
   }
-  // may have been set to opened_files, avoid double free
-  newoptions->FilesOpenedByIncludes = NULL;
-  or_options_free(newoptions);
   or_options_free(newdefaultoptions);
   if (*msg) {
     char *old_msg = *msg;

@@ -59,9 +59,6 @@ DUMMY_TYPECHECK_INSTANCE(sr_disk_state_t);
 /** Our persistent state magic number. */
 #define SR_DISK_STATE_MAGIC 0x98AB1254
 
-static int
-disk_state_validate_cb(const void *old_state, void *state, char **msg);
-
 /** Array of variables that are saved to disk as a persistent state. */
 static const config_var_t state_vars[] = {
   V(Version,                    POSINT, "0"),
@@ -87,19 +84,15 @@ static const struct_member_t state_extra_var = {
 
 /** Configuration format of sr_disk_state_t. */
 static const config_format_t state_format = {
-  sizeof(sr_disk_state_t),
-  {
+  .size = sizeof(sr_disk_state_t),
+  .magic = {
    "sr_disk_state_t",
    SR_DISK_STATE_MAGIC,
    offsetof(sr_disk_state_t, magic_),
   },
-  NULL,
-  NULL,
-  state_vars,
-  disk_state_validate_cb,
-  NULL,
-  &state_extra_var,
-  -1,
+  .vars = state_vars,
+  .extra = &state_extra_var,
+  .config_suite_offset = -1,
 };
 
 /** Global configuration manager for the shared-random state file */
@@ -340,21 +333,6 @@ disk_state_validate(const sr_disk_state_t *state)
 
  invalid:
   return -1;
-}
-
-/** Validate the disk state (NOP for now). */
-static int
-disk_state_validate_cb(const void *old_state, void *state, char **msg)
-{
-  /* We don't use these; only options do. */
-  (void) old_state;
-
-  /* This is called by config_dump which is just before we are about to
-   * write it to disk. At that point, our global memory state has been
-   * copied to the disk state so it's fair to assume it's trustable. */
-  (void) state;
-  (void) msg;
-  return 0;
 }
 
 /** Parse the Commit line(s) in the disk state and translate them to the

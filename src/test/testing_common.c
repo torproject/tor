@@ -326,6 +326,7 @@ main(int c, const char **v)
   initialize_mainloop_events();
   options_init(options);
   options->DataDirectory = tor_strdup(temp_dir);
+  options->DataDirectory_option = tor_strdup(temp_dir);
   tor_asprintf(&options->KeyDirectory, "%s"PATH_SEPARATOR"keys",
                options->DataDirectory);
   options->CacheDirectory = tor_strdup(temp_dir);

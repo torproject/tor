@@ -264,7 +264,9 @@ int options_any_client_port_set(const or_options_t *options);
 #define CL_PORT_IS_UNIXSOCKET (1u<<6)
 #define CL_PORT_DFLT_GROUP_WRITABLE (1u<<7)
 
-STATIC int options_act(const or_options_t *old_options);
+MOCK_DECL(STATIC int, options_act,(const or_options_t *old_options));
+MOCK_DECL(STATIC int, options_act_reversible,(const or_options_t *old_options,
+                                             char **msg));
 struct config_mgr_t;
 STATIC const struct config_mgr_t *get_options_mgr(void);
 
@@ -277,9 +279,6 @@ STATIC void port_cfg_free_(port_cfg_t *port);
 STATIC void or_options_free_(or_options_t *options);
 STATIC int options_validate_single_onion(or_options_t *options,
                                          char **msg);
-STATIC int options_validate(const or_options_t *old_options,
-                            or_options_t *options,
-                            char **msg);
 STATIC int parse_transport_line(const or_options_t *options,
                                 const char *line, int validate_only,
                                 int server);
@@ -310,6 +309,12 @@ STATIC int open_and_add_file_log(const log_severity_list_t *severity,
                                  int truncate_log);
 STATIC int options_init_logs(const or_options_t *old_options,
                              or_options_t *options, int validate_only);
+
+#ifdef TOR_UNIT_TESTS
+int options_validate(const or_options_t *old_options,
+                     or_options_t *options,
+                     char **msg);
+#endif
 
 #endif /* defined(CONFIG_PRIVATE) */
 

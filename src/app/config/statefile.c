@@ -157,19 +157,17 @@ static struct_member_t state_extra_var = {
 
 /** Configuration format for or_state_t. */
 static const config_format_t state_format = {
-  sizeof(or_state_t),
-  {
+  .size = sizeof(or_state_t),
+  .magic = {
    "or_state_t",
    OR_STATE_MAGIC,
    offsetof(or_state_t, magic_),
   },
-  state_abbrevs_,
-  NULL,
-  state_vars_,
-  or_state_validate_cb,
-  NULL,
-  &state_extra_var,
-  offsetof(or_state_t, substates_),
+  .abbrevs = state_abbrevs_,
+  .vars = state_vars_,
+  .legacy_validate_fn = or_state_validate_cb,
+  .extra = &state_extra_var,
+  .config_suite_offset = offsetof(or_state_t, substates_),
 };
 
 /* A global configuration manager for state-file objects */
@@ -185,6 +183,10 @@ get_state_mgr(void)
   }
   return state_mgr;
 }
+
+#define CHECK_STATE_MAGIC(s) STMT_BEGIN                        \
+    config_check_toplevel_magic(get_state_mgr(), (s));         \
+  STMT_END
 
 /** Persistent serialized state. */
 static or_state_t *global_state = NULL;
@@ -267,16 +269,6 @@ validate_transports_in_state(or_state_t *state)
   return 0;
 }
 
-static int
-or_state_validate_cb(const void *old_state, void *state, char **msg)
-{
-  /* We don't use these; only options do. Still, we need to match that
-   * signature. */
-  (void) old_state;
-
-  return or_state_validate(state, msg);
-}
-
 /** Return 0 if every setting in <b>state</b> is reasonable, and a
  * permissible transition from <b>old_state</b>.  Else warn and return -1.
  * Should have no side effects, except for normalizing the contents of
@@ -285,6 +277,23 @@ or_state_validate_cb(const void *old_state, void *state, char **msg)
 static int
 or_state_validate(or_state_t *state, char **msg)
 {
+  return config_validate(get_state_mgr(), NULL, state, msg);
+}
+
+/**
+ * Legacy validation/normalization callback for or_state_t.  See
+ * legacy_validate_fn_t for more information.
+ */
+static int
+or_state_validate_cb(const void *old_state, void *state_, char **msg)
+{
+  /* There is not a meaningful concept of a state-to-state transition,
+   * since we do not reload the state after we start. */
+  (void) old_state;
+  CHECK_STATE_MAGIC(state_);
+
+  or_state_t *state = state_;
+
   if (entry_guards_parse_state(state, 0, msg)<0)
     return -1;
 

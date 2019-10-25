@@ -334,6 +334,17 @@ config_mgr_list_deprecated_vars(const config_mgr_t *mgr)
   return result;
 }
 
+/**
+ * Check the magic number on <b>object</b> to make sure it's a valid toplevel
+ * object, created with <b>mgr</b>.  Exit with an assertion if it isn't.
+ **/
+void
+config_check_toplevel_magic(const config_mgr_t *mgr,
+                            const void *object)
+{
+  struct_check_magic(object, &mgr->toplevel_magic);
+}
+
 /** Assert that the magic fields in <b>options</b> and its subsidiary
  * objects are all okay. */
 static void
@@ -1142,6 +1153,105 @@ config_init(const config_mgr_t *mgr, void *options)
   } SMARTLIST_FOREACH_END(mv);
 }
 
+/**
+ * Normalize and validate a single object `options` within a configuration
+ * suite, according to its format.  `options` may be modified as appropriate
+ * in order to set ancillary data.  If `old_options` is provided, make sure
+ * that the transition from `old_options` to `options` is permitted.
+ *
+ * On success return VSTAT_OK; on failure set *msg_out to a newly allocated
+ * string explaining what is wrong, and return a different validation_status_t
+ * to describe which step failed.
+ **/
+static validation_status_t
+config_validate_single(const config_format_t *fmt,
+                       const void *old_options, void *options,
+                       char **msg_out)
+{
+  tor_assert(fmt);
+  tor_assert(options);
+
+  if (fmt->pre_normalize_fn) {
+    if (fmt->pre_normalize_fn(options, msg_out) < 0) {
+      return VSTAT_PRE_NORMALIZE_ERR;
+    }
+  }
+
+  if (fmt->legacy_validate_fn) {
+    if (fmt->legacy_validate_fn(old_options, options, msg_out) < 0) {
+      return VSTAT_LEGACY_ERR;
+    }
+  }
+
+  if (fmt->validate_fn) {
+    if (fmt->validate_fn(options, msg_out) < 0) {
+      return VSTAT_VALIDATE_ERR;
+    }
+  }
+
+  if (fmt->check_transition_fn && old_options) {
+    if (fmt->check_transition_fn(old_options, options, msg_out) < 0) {
+      return VSTAT_TRANSITION_ERR;
+    }
+  }
+
+  if (fmt->post_normalize_fn) {
+    if (fmt->post_normalize_fn(options, msg_out) < 0) {
+      return VSTAT_POST_NORMALIZE_ERR;
+    }
+  }
+
+  return VSTAT_OK;
+}
+
+/**
+ * Normalize and validate all the options in configuration object `options`
+ * and its sub-objects. `options` may be modified as appropriate in order to
+ * set ancillary data.  If `old_options` is provided, make sure that the
+ * transition from `old_options` to `options` is permitted.
+ *
+ * On success return VSTAT_OK; on failure set *msg_out to a newly allocated
+ * string explaining what is wrong, and return a different validation_status_t
+ * to describe which step failed.
+ **/
+validation_status_t
+config_validate(const config_mgr_t *mgr,
+                const void *old_options, void *options,
+                char **msg_out)
+{
+  validation_status_t rv;
+  CONFIG_CHECK(mgr, options);
+  if (old_options) {
+    CONFIG_CHECK(mgr, old_options);
+  }
+
+  config_suite_t **suitep_new = config_mgr_get_suite_ptr(mgr, options);
+  config_suite_t **suitep_old = NULL;
+  if (old_options)
+    suitep_old = config_mgr_get_suite_ptr(mgr, (void*) old_options);
+
+  /* Validate the sub-objects */
+  if (suitep_new) {
+    SMARTLIST_FOREACH_BEGIN(mgr->subconfigs, const config_format_t *, fmt) {
+      void *obj = smartlist_get((*suitep_new)->configs, fmt_sl_idx);
+      const void *obj_old=NULL;
+      if (suitep_old)
+        obj_old = smartlist_get((*suitep_old)->configs, fmt_sl_idx);
+
+      rv = config_validate_single(fmt, obj_old, obj, msg_out);
+      if (rv < 0)
+        return rv;
+    } SMARTLIST_FOREACH_END(fmt);
+  }
+
+  /* Validate the top-level object. */
+  rv = config_validate_single(mgr->toplevel, old_options, options, msg_out);
+  if (rv < 0)
+    return rv;
+
+  return VSTAT_OK;
+}
+
 /** Allocate and return a new string holding the written-out values of the vars
  * in 'options'.  If 'minimal', do not write out any default-valued vars.
  * Else, if comment_defaults, write default values as comments.
@@ -1166,7 +1276,7 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
 
   /* XXX use a 1 here so we don't add a new log line while dumping */
   if (default_options == NULL) {
-    if (fmt->validate_fn(NULL, defaults_tmp, &msg) < 0) {
+    if (config_validate(mgr, NULL, defaults_tmp, &msg) < 0) {
       // LCOV_EXCL_START
       log_err(LD_BUG, "Failed to validate default config: %s", msg);
       tor_free(msg);
