@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file proto_socks.h
+ * @brief Header for proto_socks.c
+ **/
+
 #ifndef TOR_PROTO_SOCKS_H
 #define TOR_PROTO_SOCKS_H
 
