@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file or_handshake_certs_st.h
+ * @brief OR handshake certs structure
+ **/
+
 #ifndef OR_HANDSHAKE_CERTS_ST
 #define OR_HANDSHAKE_CERTS_ST
 

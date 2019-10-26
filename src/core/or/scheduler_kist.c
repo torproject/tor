@@ -1,6 +1,11 @@
 /* Copyright (c) 2017-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file scheduler_kist.c
+ * @brief Implements the KIST cell scheduler.
+ **/
+
 #define SCHEDULER_KIST_PRIVATE
 
 #include "core/or/or.h"

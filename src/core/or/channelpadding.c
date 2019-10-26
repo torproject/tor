@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file channelpadding.c
+ * @brief Link-level padding code.
+ **/
+
 /* TOR_CHANNEL_INTERNAL_ define needed for an O(1) implementation of
  * channelpadding_channel_to_channelinfo() */
 #define TOR_CHANNEL_INTERNAL_

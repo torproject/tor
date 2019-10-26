@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file half_edge_st.h
+ * @brief Half-open connection structure.
+ **/
+
 #ifndef HALF_EDGE_ST_H
 #define HALF_EDGE_ST_H
 
@@ -31,4 +36,3 @@ typedef struct half_edge_t {
 } half_edge_t;
 
 #endif /* !defined(HALF_EDGE_ST_H) */
-

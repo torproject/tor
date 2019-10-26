@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file origin_circuit_st.h
+ * @brief Origin circuit structure.
+ **/
+
 #ifndef ORIGIN_CIRCUIT_ST_H
 #define ORIGIN_CIRCUIT_ST_H
 

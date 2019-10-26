@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file cpath_build_state_st.h
+ * @brief Circuit-build-stse structure
+ **/
+
 #ifndef CIRCUIT_BUILD_STATE_ST_ST_H
 #define CIRCUIT_BUILD_STATE_ST_ST_H
 
@@ -35,4 +40,3 @@ struct cpath_build_state_t {
 };
 
 #endif /* !defined(CIRCUIT_BUILD_STATE_ST_ST_H) */
-

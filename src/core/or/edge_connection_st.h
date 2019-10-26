@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file edge_connection_st.h
+ * @brief Edge-connection structure.
+ **/
+
 #ifndef EDGE_CONNECTION_ST_H
 #define EDGE_CONNECTION_ST_H
 
@@ -74,4 +79,3 @@ struct edge_connection_t {
 };
 
 #endif /* !defined(EDGE_CONNECTION_ST_H) */
-
