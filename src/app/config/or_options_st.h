@@ -536,12 +536,8 @@ struct or_options_t {
                          * protocol, is it a warn or an info in our logs? */
   int TestSocks; /**< Boolean: when we get a socks connection, do we loudly
                   * log whether it was DNS-leaking or not? */
-  int HardwareAccel; /**< Boolean: Should we enable OpenSSL hardware
-                      * acceleration where available? */
   /** Token Bucket Refill resolution in milliseconds. */
   int TokenBucketRefillInterval;
-  char *AccelName; /**< Optional hardware acceleration engine name. */
-  char *AccelDir; /**< Optional hardware acceleration engine search dir. */
 
   /** Boolean: Do we try to enter from a smallish number
    * of fixed nodes? */
