@@ -45,7 +45,7 @@
   }
 
 /**
- * As CONFIG_VAR_XTYPE, but declares a value using an extension type whose
+ * As CONFIG_VAR_ETYPE, but declares a value using an extension type whose
  * type definition is <b>vartype</b>_type_defn.
  **/
 #define CONFIG_VAR_DEFN(structtype, varname, vartype, membername,       \
@@ -61,6 +61,9 @@
     CONF_TEST_MEMBERS(structtype, vartype, membername)                  \
   }
 
+/**
+ * Declare an obsolete configuration variable with a given name.
+ **/
 #define CONFIG_VAR_OBSOLETE(varname)            \
   { .member = { .name = varname, .type = CONFIG_TYPE_OBSOLETE },        \
     .flags = CFLG_GROUP_OBSOLETE                                        \
