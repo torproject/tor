@@ -1,6 +1,11 @@
 /* Copyright (c) 2017-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file conscache.c
+ * @brief Consensus and diff on-disk cache.
+ **/
+
 #include "core/or/or.h"
 
 #include "app/config/config.h"

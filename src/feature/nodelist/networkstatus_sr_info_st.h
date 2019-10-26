@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file networkstatus_sr_info_st.h
+ * @brief Shared-randomness structure.
+ **/
+
 #ifndef NETWORKSTATUS_SR_INFO_ST_H
 #define NETWORKSTATUS_SR_INFO_ST_H
 
@@ -20,4 +25,3 @@ struct networkstatus_sr_info_t {
 };
 
 #endif /* !defined(NETWORKSTATUS_SR_INFO_ST_H) */
-

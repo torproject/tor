@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file hsdir_index_st.h
+ * @brief HS directory index structure
+ **/
+
 #ifndef HSDIR_INDEX_ST_H
 #define HSDIR_INDEX_ST_H
 
@@ -21,4 +26,3 @@ struct hsdir_index_t {
 };
 
 #endif /* !defined(HSDIR_INDEX_ST_H) */
-

@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file document_signature_st.h
+ * @brief Authority signature structure
+ **/
+
 #ifndef DOCUMENT_SIGNATURE_ST_H
 #define DOCUMENT_SIGNATURE_ST_H
 
@@ -26,4 +31,3 @@ struct document_signature_t {
 };
 
 #endif /* !defined(DOCUMENT_SIGNATURE_ST_H) */
-

@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file rend_intro_point_st.h
+ * @brief v2 hidden service introduction point structure.
+ **/
+
 #ifndef REND_INTRO_POINT_ST_H
 #define REND_INTRO_POINT_ST_H
 

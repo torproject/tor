@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file ext_orport.h
+ * @brief Header for ext_orport.c
+ **/
+
 #ifndef EXT_ORPORT_H
 #define EXT_ORPORT_H
 

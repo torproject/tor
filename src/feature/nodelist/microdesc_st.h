@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file microdesc_st.h
+ * @brief Microdescriptor structure
+ **/
+
 #ifndef MICRODESC_ST_H
 #define MICRODESC_ST_H
 

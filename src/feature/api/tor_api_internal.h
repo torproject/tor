@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file tor_api_internal.h
+ * @brief Internal declarations for in-process Tor API.
+ **/
+
 #ifndef TOR_API_INTERNAL_H
 #define TOR_API_INTERNAL_H
 

@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file dircache.c
+ * @brief Cache directories and serve them to clients.
+ **/
+
 #define DIRCACHE_PRIVATE
 
 #include "core/or/or.h"

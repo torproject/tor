@@ -1,6 +1,11 @@
 /* Copyright (c) 2017-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file conscache.h
+ * @brief Header for conscache.c
+ **/
+
 #ifndef TOR_CONSCACHE_H
 #define TOR_CONSCACHE_H
 

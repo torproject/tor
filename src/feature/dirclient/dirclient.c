@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file dirclient.c
+ * @brief Download directory information
+ **/
+
 #define DIRCLIENT_PRIVATE
 
 #include "core/or/or.h"

@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file routermode.c
+ * @brief Check if we're running as a relay/cache.
+ **/
+
 #include "core/or/or.h"
 
 #include "app/config/config.h"

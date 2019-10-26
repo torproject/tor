@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file proxymode.c
+ * @brief Determine whether we are trying to be a proxy.
+ **/
+
 #include "core/or/or.h"
 
 #include "app/config/config.h"

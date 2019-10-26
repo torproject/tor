@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file unparseable.c
+ * @brief Dump unparseable objects to disk.
+ **/
+
 #define UNPARSEABLE_PRIVATE
 
 #include "core/or/or.h"

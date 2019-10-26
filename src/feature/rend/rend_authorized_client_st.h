@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file rend_authorized_client_st.h
+ * @brief Hidden-service authorized client structure.
+ **/
+
 #ifndef REND_AUTHORIZED_CLIENT_ST_H
 #define REND_AUTHORIZED_CLIENT_ST_H
 
@@ -15,4 +20,3 @@ struct rend_authorized_client_t {
 };
 
 #endif /* !defined(REND_AUTHORIZED_CLIENT_ST_H) */
-

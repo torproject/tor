@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file dlstatus.c
+ * @brief Track status and retry schedule of a downloadable object.
+ **/
+
 #define DLSTATUS_PRIVATE
 
 #include "core/or/or.h"
