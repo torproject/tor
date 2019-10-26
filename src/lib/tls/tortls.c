@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file tortls.c
+ * @brief Shared functionality for our TLS backends.
+ **/
+
 #define TORTLS_PRIVATE
 #define TOR_X509_PRIVATE
 #include "lib/tls/x509.h"

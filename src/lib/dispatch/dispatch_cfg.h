@@ -7,6 +7,11 @@
 #ifndef TOR_DISPATCH_CFG_H
 #define TOR_DISPATCH_CFG_H
 
+/**
+ * @file dispatch_cfg.h
+ * @brief Header for distpach_cfg.c
+ **/
+
 #include "lib/dispatch/msgtypes.h"
 #include "lib/testsupport/testsupport.h"
 

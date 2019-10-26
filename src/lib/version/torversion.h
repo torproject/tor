@@ -6,6 +6,11 @@
 #ifndef TOR_VERSION_H
 #define TOR_VERSION_H
 
+/**
+ * @file torversion.h
+ * @brief Header for version.c.
+ **/
+
 const char *get_version(void);
 const char *get_short_version(void);
 

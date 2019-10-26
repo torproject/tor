@@ -6,6 +6,14 @@
 #ifndef TOR_TORTLS_ST_H
 #define TOR_TORTLS_ST_H
 
+/**
+ * @file tortls_st.h
+ * @brief Structure declarations for internal TLS types.
+ *
+ * These should generally be treated as opaque outside of the
+ * lib/tls module.
+ **/
+
 #include "lib/net/socket.h"
 
 #define TOR_TLS_MAGIC 0x71571571

@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file country.h
+ * @brief Country type for geoip.
+ **/
+
 #ifndef TOR_COUNTRY_H
 #define TOR_COUNTRY_H
 

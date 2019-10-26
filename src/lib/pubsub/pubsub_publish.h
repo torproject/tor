@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file pubsub_publish.h
+ * @brief Header for pubsub_publish.c
+ **/
+
 #ifndef TOR_PUBSUB_PUBLISH_H
 #define TOR_PUBSUB_PUBLISH_H
 

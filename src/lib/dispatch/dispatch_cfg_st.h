@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file dispatch_cfg_st.h
+ * @brief Declarations for dispatch-configuration types.
+ **/
+
 #ifndef TOR_DISPATCH_CFG_ST_H
 #define TOR_DISPATCH_CFG_ST_H
 
