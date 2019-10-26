@@ -3,6 +3,14 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file subsysmgr.c
+ * @brief Manager for Tor's subsystems.
+ *
+ * This code is responsible for initializing, configuring, and shutting
+ * down all of Tor's individual subsystems.
+ **/
+
 #include "orconfig.h"
 #include "app/main/subsysmgr.h"
 

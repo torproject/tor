@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file subsystem_list.c
+ * @brief List of Tor's subsystems.
+ **/
+
 #include "orconfig.h"
 #include "app/main/subsysmgr.h"
 #include "lib/cc/compat_compiler.h"

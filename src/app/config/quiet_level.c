@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file quiet_level.c
+ * @brief Code to handle default logging level (quiet/hush/normal).
+ **/
+
 #include "orconfig.h"
 #include "lib/log/log.h"
 #include "app/config/quiet_level.h"
