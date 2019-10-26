@@ -1318,6 +1318,16 @@ control_event_logmsg(int severity, log_domain_mask_t domain, const char *msg)
       for (cp = b; *cp; ++cp)
         if (*cp == '\r' || *cp == '\n')
           *cp = ' ';
+
+      /* Remove trailing spaces */
+      for (--cp; *cp == ' ' && cp >= b; --cp)
+        *cp = '\0';
+
+      if ( cp == b ){
+        ++disable_log_messages;
+        tor_assert_nonfatal(*b);
+        --disable_log_messages;
+      }
     }
     switch (severity) {
       case LOG_DEBUG: s = "DEBUG"; break;
