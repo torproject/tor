@@ -11,7 +11,7 @@
 #define PROCESS_PRIVATE
 #include "core/or/or.h"
 #include "app/config/config.h"
-#include "lib/confmgt/confparse.h"
+#include "lib/confmgt/confmgt.h"
 #include "feature/control/control.h"
 #include "feature/control/control_events.h"
 #include "feature/client/transports.h"

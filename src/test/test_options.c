@@ -6,7 +6,7 @@
 #define CONFIG_PRIVATE
 #define LOG_PRIVATE
 #include "core/or/or.h"
-#include "lib/confmgt/confparse.h"
+#include "lib/confmgt/confmgt.h"
 #include "app/config/config.h"
 #include "test/test.h"
 #include "lib/geoip/geoip.h"

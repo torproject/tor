@@ -17,7 +17,7 @@
 #define USE_CONF_TESTING
 /**
  * Union used when building in test mode typechecking the members of a type
- * used with confparse.c.  See CONF_CHECK_VAR_TYPE for a description of how
+ * used with confmgt.c.  See CONF_CHECK_VAR_TYPE for a description of how
  * it is used. */
 typedef union {
   char **STRING;
@@ -47,7 +47,7 @@ typedef union {
 /* Macros to define extra members inside config_var_t fields, and at the
  * end of a list of them.
  */
-/* This is a somewhat magic type-checking macro for users of confparse.c.
+/* This is a somewhat magic type-checking macro for users of confmgt.c.
  * It initializes a union member "confparse_dummy_values_t.conftype" with
  * the address of a static member "tp_dummy.member".   This
  * will give a compiler warning unless the member field is of the correct

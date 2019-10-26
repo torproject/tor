@@ -13,7 +13,7 @@
 
 #include "core/or/or.h"
 #include "app/config/config.h"
-#include "lib/confmgt/confparse.h"
+#include "lib/confmgt/confmgt.h"
 #include "app/main/main.h"
 #include "core/mainloop/connection.h"
 #include "core/or/circuitbuild.h"
@@ -590,7 +590,7 @@ control_setconf_helper(control_connection_t *conn,
   const unsigned flags =
     CAL_CLEAR_FIRST | (use_defaults ? CAL_USE_DEFAULTS : 0);
 
-  // We need a copy here, since confparse.c wants to canonicalize cases.
+  // We need a copy here, since confmgt.c wants to canonicalize cases.
   config_line_t *lines = config_lines_dup(args->kwargs);
 
   opt_err = options_trial_assign(lines, flags, &errstring);

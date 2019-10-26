@@ -12,7 +12,7 @@
  *
  * This 'state' file is a typed key-value store that allows multiple
  * entries for the same key.  It follows the same metaformat as described
- * in confparse.c, and uses the same code to read and write itself.
+ * in confmgt.c, and uses the same code to read and write itself.
  *
  * The state file is most suitable for small values that don't change too
  * frequently.  For values that become very large, we typically use a separate
@@ -32,7 +32,7 @@
 #include "core/or/or.h"
 #include "core/or/circuitstats.h"
 #include "app/config/config.h"
-#include "lib/confmgt/confparse.h"
+#include "lib/confmgt/confmgt.h"
 #include "core/mainloop/mainloop.h"
 #include "core/mainloop/netstatus.h"
 #include "core/mainloop/connection.h"

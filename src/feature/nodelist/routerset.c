@@ -17,7 +17,7 @@
  *
  * Routersets are typically used for user-specified restrictions, and
  * are created by invoking routerset_new and routerset_parse from
- * config.c and confparse.c.  To use a routerset, invoke one of
+ * config.c and confmgt.c.  To use a routerset, invoke one of
  * routerset_contains_...() functions , or use
  * routerstatus_get_all_nodes() / routerstatus_subtract_nodes() to
  * manipulate a smartlist of node_t pointers.

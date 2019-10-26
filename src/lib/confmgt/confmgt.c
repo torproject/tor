@@ -21,9 +21,9 @@
  * specified, and a linked list of key-value pairs.
  */
 
-#define CONFPARSE_PRIVATE
+#define CONFMGT_PRIVATE
 #include "orconfig.h"
-#include "lib/confmgt/confparse.h"
+#include "lib/confmgt/confmgt.h"
 
 #include "lib/confmgt/structvar.h"
 #include "lib/confmgt/unitparse.h"

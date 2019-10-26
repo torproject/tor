@@ -4,16 +4,16 @@
 /* See LICENSE for licensing information */
 
 /*
- * Tests for confparse.c's features that support multiple configuration
+ * Tests for confmgt.c's features that support multiple configuration
  * formats and configuration objects.
  */
 
-#define CONFPARSE_PRIVATE
+#define CONFMGT_PRIVATE
 #include "orconfig.h"
 
 #include "core/or/or.h"
 #include "lib/encoding/confline.h"
-#include "lib/confmgt/confparse.h"
+#include "lib/confmgt/confmgt.h"
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 

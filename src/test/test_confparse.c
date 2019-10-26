@@ -4,17 +4,17 @@
 /* See LICENSE for licensing information */
 
 /*
- * Tests for confparse.c module that we use to parse various
+ * Tests for confmgt.c module that we use to parse various
  * configuration/state file types.
  */
 
-#define CONFPARSE_PRIVATE
+#define CONFMGT_PRIVATE
 #include "orconfig.h"
 
 #include "core/or/or.h"
 #include "lib/encoding/confline.h"
 #include "feature/nodelist/routerset.h"
-#include "lib/confmgt/confparse.h"
+#include "lib/confmgt/confmgt.h"
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 
