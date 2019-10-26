@@ -1,0 +1,3 @@
+  o Minor bugfixes (logging):
+    - Remove trailing whitespaces from control event log messages. Fixes bug
+      32178.
