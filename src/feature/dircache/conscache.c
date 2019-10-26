@@ -251,7 +251,7 @@ consensus_cache_find_first(consensus_cache_t *cache,
 }
 
 /**
- * Given a <b>cache</b>, add every entry to <b>out<b> for which
+ * Given a <b>cache</b>, add every entry to <b>out</b> for which
  * <b>key</b>=<b>value</b>.  If <b>key</b> is NULL, add every entry.
  *
  * Do not add any entry that has been marked for removal.

@@ -565,7 +565,7 @@ parse_one_diff_hash(uint8_t *digest, const char *hex, const char *location,
 }
 
 /** If there is an X-Or-Diff-From-Consensus header included in <b>headers</b>,
- * set <b>digest_out<b> to a new smartlist containing every 256-bit
+ * set <b>digest_out</b> to a new smartlist containing every 256-bit
  * hex-encoded digest listed in that header and return 0.  Otherwise return
  * -1.  */
 static int
@@ -1384,7 +1384,7 @@ handle_get_hs_descriptor_v2(dir_connection_t *conn,
   return 0;
 }
 
-/** Helper function for GET /tor/hs/3/<z>. Only for version 3.
+/** Helper function for GET `/tor/hs/3/...`. Only for version 3.
  */
 STATIC int
 handle_get_hs_descriptor_v3(dir_connection_t *conn,
