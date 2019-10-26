@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file confparse.c
+ * \file confmgt.c
  *
  * \brief Back-end for parsing and generating key-value files, used to
  *   implement the torrc file format and the state file.
