@@ -8,6 +8,7 @@ endif
 # ADD_C_FILE: INSERT SOURCES HERE.
 src_lib_libtor_crypt_ops_a_SOURCES =			\
 	src/lib/crypt_ops/crypto_cipher.c		\
+	src/lib/crypt_ops/crypto_conf.c		\
 	src/lib/crypt_ops/crypto_curve25519.c		\
 	src/lib/crypt_ops/crypto_dh.c			\
 	src/lib/crypt_ops/crypto_digest.c		\
@@ -57,6 +58,7 @@ src_lib_libtor_crypt_ops_testing_a_CFLAGS = \
 noinst_HEADERS +=					\
 	src/lib/crypt_ops/aes.h				\
 	src/lib/crypt_ops/compat_openssl.h		\
+	src/lib/crypt_ops/crypto_conf.h			\
 	src/lib/crypt_ops/crypto_curve25519.h		\
 	src/lib/crypt_ops/crypto_dh.h			\
 	src/lib/crypt_ops/crypto_digest.h		\
@@ -68,6 +70,8 @@ noinst_HEADERS +=					\
 	src/lib/crypt_ops/crypto_nss_mgt.h		\
 	src/lib/crypt_ops/crypto_openssl_mgt.h		\
 	src/lib/crypt_ops/crypto_ope.h          	\
+	src/lib/crypt_ops/crypto_options.inc		\
+	src/lib/crypt_ops/crypto_options_st.h		\
 	src/lib/crypt_ops/crypto_pwbox.h		\
 	src/lib/crypt_ops/crypto_rand.h			\
 	src/lib/crypt_ops/crypto_rsa.h			\
