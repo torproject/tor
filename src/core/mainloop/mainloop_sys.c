@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file mainloop_sys.c
+ * @brief Declare the "mainloop" subsystem.
+ **/
+
 #include "core/or/or.h"
 #include "core/mainloop/mainloop_sys.h"
 #include "core/mainloop/mainloop.h"

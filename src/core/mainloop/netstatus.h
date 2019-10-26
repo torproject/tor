@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file netstatus.h
+ * @brief Header for netstatus.c
+ **/
+
 #ifndef TOR_NETSTATUS_H
 #define TOR_NETSTATUS_H
 

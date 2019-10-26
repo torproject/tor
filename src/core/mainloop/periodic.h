@@ -1,6 +1,11 @@
 /* Copyright (c) 2015-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file periodic.h
+ * @brief Header for periodic.c
+ **/
+
 #ifndef TOR_PERIODIC_H
 #define TOR_PERIODIC_H
 

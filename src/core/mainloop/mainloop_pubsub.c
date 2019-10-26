@@ -4,6 +4,15 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file mainloop_pubsub.c
+ * @brief Connect the publish-subscribe code to the main-loop.
+ *
+ * This module is responsible for instantiating all the channels used by the
+ * publish-subscribe code, and making sure that each one's messages are
+ * processed when appropriate.
+ **/
+
 #include "orconfig.h"
 
 #include "core/or/or.h"
