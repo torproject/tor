@@ -17,7 +17,7 @@ int write_stream_target_to_buf(entry_connection_t *conn, char *buf,
 void orconn_target_get_name(char *buf, size_t len,
                             or_connection_t *conn);
 char *circuit_describe_status_for_controller(origin_circuit_t *circ);
-char *entry_connection_describe_status_for_controller(
+char *entry_connection_describe_status_for_controller(const
                                                      entry_connection_t *conn);
 
 MOCK_DECL(const char *, node_describe_longname_by_id,(const char *id_digest));

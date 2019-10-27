@@ -167,7 +167,7 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
 
 /** Allocate and return a description of <b>conn</b>'s current status. */
 char *
-entry_connection_describe_status_for_controller(entry_connection_t *conn)
+entry_connection_describe_status_for_controller(const entry_connection_t *conn)
 {
   char *rv;
   smartlist_t *descparts = smartlist_new();
