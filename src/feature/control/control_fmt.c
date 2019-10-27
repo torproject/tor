@@ -219,21 +219,34 @@ entry_connection_describe_status_for_controller(entry_connection_t *conn)
                          conn->entry_cfg.session_group);
 
   // Show isolation flags.
-  smartlist_add_asprintf(descparts, "ISO_DESTPORT=%d",
-                         (conn->entry_cfg.isolation_flags &
-                          ISO_DESTPORT) ? 1 : 0);
-  smartlist_add_asprintf(descparts, "ISO_DESTADDR=%d",
-                         (conn->entry_cfg.isolation_flags &
-                          ISO_DESTADDR) ? 1 : 0);
-  smartlist_add_asprintf(descparts, "ISO_SOCKSAUTH=%d",
-                         (conn->entry_cfg.isolation_flags &
-                          ISO_SOCKSAUTH) ? 1 : 0);
-  smartlist_add_asprintf(descparts, "ISO_CLIENTPROTO=%d",
-                         (conn->entry_cfg.isolation_flags &
-                          ISO_CLIENTPROTO) ? 1 : 0);
-  smartlist_add_asprintf(descparts, "ISO_CLIENTADDR=%d",
-                         (conn->entry_cfg.isolation_flags &
-                          ISO_CLIENTADDR) ? 1 : 0);
+  smartlist_t *isoflaglist = smartlist_new();
+  char *isoflaglist_joined;
+  if (conn->entry_cfg.isolation_flags & ISO_DESTPORT) {
+    smartlist_add(isoflaglist, (void *)"DESTPORT");
+  }
+  if (conn->entry_cfg.isolation_flags & ISO_DESTADDR) {
+    smartlist_add(isoflaglist, (void *)"DESTADDR");
+  }
+  if (conn->entry_cfg.isolation_flags & ISO_SOCKSAUTH) {
+    smartlist_add(isoflaglist, (void *)"SOCKS_USERNAME");
+    smartlist_add(isoflaglist, (void *)"SOCKS_PASSWORD");
+  }
+  if (conn->entry_cfg.isolation_flags & ISO_CLIENTPROTO) {
+    smartlist_add(isoflaglist, (void *)"CLIENT_PROTOCOL");
+  }
+  if (conn->entry_cfg.isolation_flags & ISO_CLIENTADDR) {
+    smartlist_add(isoflaglist, (void *)"CLIENTADDR");
+  }
+  if (conn->entry_cfg.isolation_flags & ISO_SESSIONGRP) {
+    smartlist_add(isoflaglist, (void *)"SESSION_GROUP");
+  }
+  if (conn->entry_cfg.isolation_flags & ISO_NYM_EPOCH) {
+    smartlist_add(isoflaglist, (void *)"NYM_EPOCH");
+  }
+  isoflaglist_joined = smartlist_join_strings(isoflaglist, ",", 0, NULL);
+  smartlist_add_asprintf(descparts, "ISO_FIELDS=%s", isoflaglist_joined);
+  tor_free(isoflaglist_joined);
+  smartlist_free(isoflaglist);
 
   rv = smartlist_join_strings(descparts, " ", 0, NULL);
 
