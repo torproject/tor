@@ -316,7 +316,7 @@ OPTIMIZE_OUTPUT_SLICE  = NO
 # Note that for custom extensions you also need to set FILE_PATTERNS otherwise
 # the files are not read by doxygen.
 
-EXTENSION_MAPPING      =
+EXTENSION_MAPPING      = inc=C
 
 # If the MARKDOWN_SUPPORT tag is enabled then doxygen pre-processes all comments
 # according to the Markdown format, which allows for more readable
@@ -845,7 +845,8 @@ INPUT_ENCODING         = UTF-8
 # *.f, *.for, *.tcl, *.vhd, *.vhdl, *.ucf, *.qsf and *.ice.
 
 FILE_PATTERNS          = *.c \
-                         *.h
+                         *.h \
+                         *.inc
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
@@ -2108,7 +2109,10 @@ INCLUDE_FILE_PATTERNS  =
 
 PREDEFINED             = "MOCK_IMPL(a,b,c)=a b c" \
                          "MOCK_DECL(a,b,c)=a b c" \
-                         __attribute__(x)=
+                         __attribute__(x)= \
+                         "BEGIN_CONF_STRUCT(x)=struct x {" \
+                         "END_CONF_STRUCT(x)=};" \
+                         "CONF_VAR(a,b,c,d)=b a;"
 
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
