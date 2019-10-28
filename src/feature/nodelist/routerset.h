@@ -4,7 +4,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file routerlist.h
+ * \file routerset.h
  * \brief Header file for routerset.c
  **/
 
