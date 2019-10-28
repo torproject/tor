@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file addressmap.h
+ * @brief Header for addressmap.c
+ **/
+
 #ifndef TOR_ADDRESSMAP_H
 #define TOR_ADDRESSMAP_H
 
@@ -62,4 +67,3 @@ STATIC void get_random_virtual_addr(const virtual_addr_conf_t *conf,
 #endif /* defined(ADDRESSMAP_PRIVATE) */
 
 #endif /* !defined(TOR_ADDRESSMAP_H) */
-

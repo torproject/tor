@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file connection_st.h
+ * @brief Base connection structure.
+ **/
+
 #ifndef CONNECTION_ST_H
 #define CONNECTION_ST_H
 

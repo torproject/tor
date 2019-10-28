@@ -10,6 +10,11 @@
 #include <stdio.h>
 #include <string.h>
 
+/**
+ * @file version.c
+ * @brief Functions to get the version of Tor.
+ **/
+
 /** A shorter version of this Tor process's version, for export in our router
  *  descriptor.  (Does not include the git version, if any.) */
 static const char the_short_tor_version[] =

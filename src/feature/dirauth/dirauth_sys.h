@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file dirauth_sys.h
+ * @brief Header for dirauth_sys.c
+ **/
+
 #ifndef DIRAUTH_SYS_H
 #define DIRAUTH_SYS_H
 

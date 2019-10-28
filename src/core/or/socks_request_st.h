@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file socks_request_st.h
+ * @brief Client request structure.
+ **/
+
 #ifndef SOCKS_REQUEST_ST_H
 #define SOCKS_REQUEST_ST_H
 

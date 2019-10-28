@@ -6,6 +6,11 @@
 #ifndef NAMEMAP_ST_H
 #define NAMEMAP_ST_H
 
+/**
+ * @file namemap_st.h
+ * @brief Internal declarations for namemap structure.
+ **/
+
 #include "lib/cc/compat_compiler.h"
 #include "ext/ht.h"
 

@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file proto_http.c
+ * @brief Parse a subset of the HTTP protocol.
+ **/
+
 #define PROTO_HTTP_PRIVATE
 #include "core/or/or.h"
 #include "lib/buf/buffers.h"
@@ -168,4 +173,3 @@ buf_http_find_content_length(const char *headers, size_t headerlen,
 
   return ok ? 1 : -1;
 }
-

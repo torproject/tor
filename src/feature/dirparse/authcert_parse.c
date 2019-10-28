@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file authcert_parse.c
+ * @brief Authority certificate parsing.
+ **/
+
 #include "core/or/or.h"
 #include "feature/dirparse/authcert_parse.h"
 #include "feature/dirparse/parsecommon.h"

@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file bridgeauth.h
+ * @brief Header for bridgeauth.c
+ **/
+
 #ifndef TOR_DIRAUTH_BRIDGEAUTH_H
 #define TOR_DIRAUTH_BRIDGEAUTH_H
 

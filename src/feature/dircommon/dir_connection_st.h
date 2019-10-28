@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file dir_connection_st.h
+ * @brief Client/server directory connection structure.
+ **/
+
 #ifndef DIR_CONNECTION_ST_H
 #define DIR_CONNECTION_ST_H
 

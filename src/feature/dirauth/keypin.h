@@ -1,6 +1,11 @@
 /* Copyright (c) 2014-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file keypin.h
+ * @brief Header for keypin.c
+ **/
+
 #ifndef TOR_KEYPIN_H
 #define TOR_KEYPIN_H
 

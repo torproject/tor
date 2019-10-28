@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file networkstatus_st.h
+ * @brief Networkstatus consensus/vote structure.
+ **/
+
 #ifndef NETWORKSTATUS_ST_H
 #define NETWORKSTATUS_ST_H
 

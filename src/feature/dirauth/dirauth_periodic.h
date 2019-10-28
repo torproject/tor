@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file dirauth_periodic.h
+ * @brief Header for dirauth_periodic.c
+ **/
+
 #ifndef DIRVOTE_PERIODIC_H
 #define DIRVOTE_PERIODIC_H
 

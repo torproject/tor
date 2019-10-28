@@ -1,6 +1,11 @@
 /* Copyright (c) 2018-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file crypto_ope.h
+ * @brief header for crypto_ope.c
+ **/
+
 #ifndef CRYPTO_OPE_H
 #define CRYPTO_OPE_H
 

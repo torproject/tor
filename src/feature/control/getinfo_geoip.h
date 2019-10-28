@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file getinfo_geoip.h
+ * @brief Header for getinfo_geoip.c
+ **/
+
 #ifndef TOR_GETINFO_GEOIP_H
 #define TOR_GETINFO_GEOIP_H
 

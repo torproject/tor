@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file destroy_cell_queue_st.h
+ * @brief Destroy-cell queue structures
+ **/
+
 #ifndef DESTROY_CELL_QUEUE_ST_H
 #define DESTROY_CELL_QUEUE_ST_H
 
@@ -24,4 +29,3 @@ struct destroy_cell_queue_t {
 };
 
 #endif /* !defined(DESTROY_CELL_QUEUE_ST_H) */
-

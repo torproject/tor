@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file node_st.h
+ * @brief Node information structure.
+ **/
+
 #ifndef NODE_ST_H
 #define NODE_ST_H
 

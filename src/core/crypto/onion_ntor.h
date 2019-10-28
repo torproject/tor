@@ -1,6 +1,11 @@
 /* Copyright (c) 2012-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file onion_ntor.h
+ * @brief Header for onion_ntor.c
+ **/
+
 #ifndef TOR_ONION_NTOR_H
 #define TOR_ONION_NTOR_H
 

@@ -1,6 +1,11 @@
 /* Copyright (c) 2017-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file scheduler_vanilla.c
+ * @brief "Vanilla" (pre-KIST) cell scheduler code.
+ **/
+
 #include "core/or/or.h"
 #include "app/config/config.h"
 #define TOR_CHANNEL_INTERNAL_
@@ -172,4 +177,3 @@ get_vanilla_scheduler(void)
 {
   return &vanilla_scheduler;
 }
-

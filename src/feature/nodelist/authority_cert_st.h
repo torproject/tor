@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file authority_cert_st.h
+ * @brief Authority certificate structure.
+ **/
+
 #ifndef AUTHORITY_CERT_ST_H
 #define AUTHORITY_CERT_ST_H
 
@@ -29,4 +34,3 @@ struct authority_cert_t {
 };
 
 #endif /* !defined(AUTHORITY_CERT_ST_H) */
-

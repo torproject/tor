@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file crypt_path_st.h
+ * @brief Path structures for origin circuits.
+ **/
+
 #ifndef CRYPT_PATH_ST_H
 #define CRYPT_PATH_ST_H
 

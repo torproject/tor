@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file dir_server_st.h
+ * @brief Trusted/fallback directory server structure.
+ **/
+
 #ifndef DIR_SERVER_ST_H
 #define DIR_SERVER_ST_H
 

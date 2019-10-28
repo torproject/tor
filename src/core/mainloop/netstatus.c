@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file netstatus.c
+ * @brief Track whether the network is disabled, dormant, etc.
+ **/
+
 #include "core/or/or.h"
 #include "core/mainloop/netstatus.h"
 #include "core/mainloop/mainloop.h"

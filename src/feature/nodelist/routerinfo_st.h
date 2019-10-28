@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file routerinfo_st.h
+ * @brief Router descriptor structure.
+ **/
+
 #ifndef ROUTERINFO_ST_H
 #define ROUTERINFO_ST_H
 

@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file subsysmgr.h
+ * @brief Header for subsysmgr.c
+ **/
+
 #ifndef TOR_SUBSYSMGR_T
 #define TOR_SUBSYSMGR_T
 

@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file subsys.h
+ * @brief Types used to declare a subsystem.
+ **/
+
 #ifndef TOR_SUBSYS_T
 #define TOR_SUBSYS_T
 

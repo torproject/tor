@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file entry_port_cfg_st.h
+ * @brief Configuration structure for client ports.
+ **/
+
 #ifndef ENTRY_PORT_CFG_ST_H
 #define ENTRY_PORT_CFG_ST_H
 
@@ -51,4 +56,3 @@ struct entry_port_cfg_t {
 };
 
 #endif /* !defined(ENTRY_PORT_CFG_ST_H) */
-

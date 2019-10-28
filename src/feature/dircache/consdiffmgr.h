@@ -1,6 +1,11 @@
 /* Copyright (c) 2017-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file consdiffmgr.h
+ * @brief Header for consdiffmgr.c
+ **/
+
 #ifndef TOR_CONSDIFFMGR_H
 #define TOR_CONSDIFFMGR_H
 

@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file proto_ext_or.h
+ * @brief Header for proto_ext_or.c
+ **/
+
 #ifndef TOR_PROTO_EXT_OR_H
 #define TOR_PROTO_EXT_OR_H
 

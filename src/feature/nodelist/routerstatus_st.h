@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file routerstatus_st.h
+ * @brief Routerstatus (consensus entry) structure
+ **/
+
 #ifndef ROUTERSTATUS_ST_H
 #define ROUTERSTATUS_ST_H
 
@@ -79,4 +84,3 @@ struct routerstatus_t {
 };
 
 #endif /* !defined(ROUTERSTATUS_ST_H) */
-

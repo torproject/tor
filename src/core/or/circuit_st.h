@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file circuit_st.h
+ * @brief Base circuit structure.
+ **/
+
 #ifndef CIRCUIT_ST_H
 #define CIRCUIT_ST_H
 

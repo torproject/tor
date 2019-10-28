@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file rend_service_descriptor_st.h
+ * @brief Parsed v2 HS descriptor structure.
+ **/
+
 #ifndef REND_SERVICE_DESCRIPTOR_ST_H
 #define REND_SERVICE_DESCRIPTOR_ST_H
 
@@ -31,4 +36,3 @@ struct rend_service_descriptor_t {
 };
 
 #endif /* !defined(REND_SERVICE_DESCRIPTOR_ST_H) */
-

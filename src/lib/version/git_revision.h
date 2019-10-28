@@ -6,6 +6,11 @@
 #ifndef TOR_GIT_REVISION_H
 #define TOR_GIT_REVISION_H
 
+/**
+ * @file git_revision.h
+ * @brief Header for git_revision.c
+ **/
+
 extern const char tor_git_revision[];
 extern const char tor_bug_suffix[];
 

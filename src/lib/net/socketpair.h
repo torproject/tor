@@ -6,6 +6,11 @@
 #ifndef TOR_SOCKETPAIR_H
 #define TOR_SOCKETPAIR_H
 
+/**
+ * @file socketpair.h
+ * @brief Header for socketpair.c
+ **/
+
 #include "orconfig.h"
 #include "lib/testsupport/testsupport.h"
 #include "lib/net/nettypes.h"

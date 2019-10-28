@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file cell_queue_st.h
+ * @brief Cell queue structures
+ **/
+
 #ifndef PACKED_CELL_ST_H
 #define PACKED_CELL_ST_H
 

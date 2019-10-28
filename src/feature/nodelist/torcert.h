@@ -1,6 +1,11 @@
 /* Copyright (c) 2014-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file torcert.h
+ * @brief Header for torcert.c
+ **/
+
 #ifndef TORCERT_H_INCLUDED
 #define TORCERT_H_INCLUDED
 

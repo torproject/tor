@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file or_connection_st.h
+ * @brief OR connection structure.
+ **/
+
 #ifndef OR_CONNECTION_ST_H
 #define OR_CONNECTION_ST_H
 

@@ -1,6 +1,11 @@
 /* Copyright (c) 2016-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file shared_random_state.h
+ * @brief Header for shared_random_state.c
+ **/
+
 #ifndef TOR_SHARED_RANDOM_STATE_H
 #define TOR_SHARED_RANDOM_STATE_H
 

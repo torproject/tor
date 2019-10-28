@@ -1,6 +1,11 @@
 /* Copyright (c) 2017-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file hs_ntor.h
+ * @brief Header for hs_ntor.c
+ **/
+
 #ifndef TOR_HS_NTOR_H
 #define TOR_HS_NTOR_H
 

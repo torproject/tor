@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file dispatch_naming.c
+ * @brief Name-to-ID maps for our message dispatch system.
+ **/
+
 #include "orconfig.h"
 
 #include "lib/cc/compat_compiler.h"

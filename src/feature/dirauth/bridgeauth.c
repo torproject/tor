@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file bridgeauth.c
+ * @brief Bridge authority code
+ **/
+
 #include "core/or/or.h"
 #include "feature/dirauth/bridgeauth.h"
 #include "feature/dirauth/voteflags.h"

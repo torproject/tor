@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file addr_policy_st.h
+ * @brief Address policy structures.
+ **/
+
 #ifndef TOR_ADDR_POLICY_ST_H
 #define TOR_ADDR_POLICY_ST_H
 

@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file proto_socks.c
+ * @brief Implementations for SOCKS4 and SOCKS5 protocols.
+ **/
+
 #include "core/or/or.h"
 #include "feature/client/addressmap.h"
 #include "lib/buf/buffers.h"
@@ -105,7 +110,7 @@ socks_request_free_(socks_request_t *req)
 /**
  * Parse a single SOCKS4 request from buffer <b>raw_data</b> of length
  * <b>datalen</b> and update relevant fields of <b>req</b>. If SOCKS4a
- * request is detected, set <b>*is_socks4a<b> to true. Set <b>*drain_out</b>
+ * request is detected, set <b>*is_socks4a</b> to true. Set <b>*drain_out</b>
  * to number of bytes we parsed so far.
  *
  * Return SOCKS_RESULT_DONE if parsing succeeded, SOCKS_RESULT_INVALID if

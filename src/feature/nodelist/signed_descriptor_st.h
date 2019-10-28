@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file signed_descriptor_st.h
+ * @brief Descriptor/extrainfo signature structure
+ **/
+
 #ifndef SIGNED_DESCRIPTOR_ST_H
 #define SIGNED_DESCRIPTOR_ST_H
 
@@ -58,4 +63,3 @@ struct signed_descriptor_t {
 };
 
 #endif /* !defined(SIGNED_DESCRIPTOR_ST_H) */
-
