@@ -106,16 +106,16 @@ options_validate_dirauth_mode(const or_options_t *old_options,
     if (options->GuardfractionFile && !old_options) {
       dirserv_read_guardfraction_file(options->GuardfractionFile, NULL);
     }
+
+    if (!options->DirPort_set)
+      REJECT("Running as authoritative directory, but no DirPort set.");
+
+    if (!options->ORPort_set)
+      REJECT("Running as authoritative directory, but no ORPort set.");
+
+    if (options->ClientOnly)
+      REJECT("Running as authoritative directory, but ClientOnly also set.");
   }
-
-  if (options->AuthoritativeDir && !options->DirPort_set)
-    REJECT("Running as authoritative directory, but no DirPort set.");
-
-  if (options->AuthoritativeDir && !options->ORPort_set)
-    REJECT("Running as authoritative directory, but no ORPort set.");
-
-  if (options->AuthoritativeDir && options->ClientOnly)
-    REJECT("Running as authoritative directory, but ClientOnly also set.");
 
   return 0;
 }
