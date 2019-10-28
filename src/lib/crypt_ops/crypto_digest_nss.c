@@ -44,7 +44,11 @@ digest_alg_to_nss_oid(digest_algorithm_t alg)
   }
 }
 
-/* Helper: get an unkeyed digest via pk11wrap */
+/** Helper: Compute an unkeyed digest of the <b>msg_len</b> bytes at
+ * <b>msg</b>, using the digest algorithm specified by <b>alg</b>.
+ * Store the result in the <b>len_out</b>-byte buffer at <b>digest</b>.
+ * Return the number of bytes written on success, and -1 on failure.
+ **/
 static int
 digest_nss_internal(SECOidTag alg,
                     char *digest, unsigned len_out,
@@ -557,4 +561,3 @@ crypto_hmac_sha256(char *hmac_out,
 
   tor_assert(ok);
 }
-

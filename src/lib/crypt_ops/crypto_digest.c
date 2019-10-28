@@ -150,6 +150,9 @@ struct crypto_xof_t {
    */
   EVP_MD_CTX *ctx;
 #else /* !defined(OPENSSL_HAS_SHAKE3_EVP) */
+  /**
+   * State of the Keccak sponge for the SHAKE-256 computation.
+   **/
   keccak_state s;
 #endif /* defined(OPENSSL_HAS_SHAKE3_EVP) */
 };

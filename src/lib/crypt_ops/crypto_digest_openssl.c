@@ -147,9 +147,9 @@ crypto_digest_get_algorithm(crypto_digest_t *digest)
 static size_t
 crypto_digest_alloc_bytes(digest_algorithm_t alg)
 {
-  /* Helper: returns the number of bytes in the 'f' field of 'st' */
+  /** Helper: returns the number of bytes in the 'f' field of 'st' */
 #define STRUCT_FIELD_SIZE(st, f) (sizeof( ((st*)0)->f ))
-  /* Gives the length of crypto_digest_t through the end of the field 'd' */
+  /** Gives the length of crypto_digest_t through the end of the field 'd' */
 #define END_OF_FIELD(f) (offsetof(crypto_digest_t, f) + \
                          STRUCT_FIELD_SIZE(crypto_digest_t, f))
   switch (alg) {
@@ -519,4 +519,3 @@ crypto_hmac_sha256(char *hmac_out,
             (unsigned char*)hmac_out, NULL);
   tor_assert(rv);
 }
-
