@@ -30,6 +30,7 @@ if test $# -ge 1 ; then
   "$try_parse" "$@"
   exitcode=$?
 else
+  cd "$top" || exit 1
   # This is the layout in 0.3.5
   "$try_parse" \
     src/lib/*/*.[ch] \

@@ -28,6 +28,8 @@ upstream_name=${TOR_UPSTREAM_REMOTE_NAME:-"upstream"}
 
 workdir=$(git rev-parse --show-toplevel)
 
+cd "$workdir" || exit 1
+
 remote="$1"
 remote_name=$(git remote --verbose | grep "$2" | awk '{print $1}' | head -n 1)
 
@@ -83,7 +85,7 @@ do
 
         # We want word splitting here, because file names are space separated
         # shellcheck disable=SC2086
-        if ! "$workdir/"scripts/git/pre-commit.git-hook $CHECK_FILES; then
+        if ! scripts/git/pre-commit.git-hook $CHECK_FILES ; then
             exit 1
         fi
 
