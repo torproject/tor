@@ -89,6 +89,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/control/control_proto.c	\
 	src/feature/control/fmt_serverstatus.c  \
 	src/feature/control/getinfo_geoip.c	\
+	src/feature/dirauth/dirauth_config.c	\
 	src/feature/dircache/conscache.c	\
 	src/feature/dircache/consdiffmgr.c	\
 	src/feature/dircache/dircache.c		\
@@ -336,6 +337,7 @@ noinst_HEADERS +=					\
 	src/feature/dirauth/authmode.h			\
 	src/feature/dirauth/bridgeauth.h		\
 	src/feature/dirauth/bwauth.h			\
+	src/feature/dirauth/dirauth_config.h		\
 	src/feature/dirauth/dirauth_periodic.h		\
 	src/feature/dirauth/dirauth_sys.h		\
 	src/feature/dirauth/dircollate.h		\
