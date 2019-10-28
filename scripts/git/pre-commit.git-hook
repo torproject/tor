@@ -61,7 +61,7 @@ fi
 
 ## Owned Source File Checks
 
-printf "Modified tor-owned source files:\n%s\n" "$CHECK_FILES"
+printf "Modified tor-owned source files:\\n%s\\n" "$CHECK_FILES"
 
 # We want word splitting here, because file names are space separated
 # shellcheck disable=SC2086
