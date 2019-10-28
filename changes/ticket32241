@@ -1,0 +1,2 @@
+  o Testing (continuous integration):
+    - In Travis, use Xcode 11.2 on macOS 10.14. Closes ticket 32241.
