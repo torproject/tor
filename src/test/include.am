@@ -123,6 +123,7 @@ src_test_test_SOURCES += \
 	src/test/test_checkdir.c \
 	src/test/test_circuitlist.c \
 	src/test/test_circuitmux.c \
+	src/test/test_circuitmux_ewma.c \
 	src/test/test_circuitbuild.c \
 	src/test/test_circuituse.c \
 	src/test/test_circuitstats.c \
