@@ -142,26 +142,8 @@ options_validate_dirauth_schedule(const or_options_t *old_options,
 
   if (options->V3AuthVoteDelay + options->V3AuthDistDelay >=
       options->V3AuthVotingInterval/2) {
-    /*
-    This doesn't work, but it seems like it should:
-     what code is preventing the interval being less than twice the lead-up?
-    if (options->TestingTorNetwork) {
-      if (options->V3AuthVoteDelay + options->V3AuthDistDelay >=
-          options->V3AuthVotingInterval) {
-        REJECT("V3AuthVoteDelay plus V3AuthDistDelay must be less than "
-               "V3AuthVotingInterval");
-      } else {
-        COMPLAIN("V3AuthVoteDelay plus V3AuthDistDelay is more than half "
-                 "V3AuthVotingInterval. This may lead to "
-                 "consensus instability, particularly if clocks drift.");
-      }
-    } else {
-     */
-      REJECT("V3AuthVoteDelay plus V3AuthDistDelay must be less than half "
-             "V3AuthVotingInterval");
-    /*
-    }
-     */
+    REJECT("V3AuthVoteDelay plus V3AuthDistDelay must be less than half "
+           "V3AuthVotingInterval");
   }
 
   if (options->V3AuthVoteDelay < MIN_VOTE_SECONDS) {
