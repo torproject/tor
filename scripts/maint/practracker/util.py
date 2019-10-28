@@ -33,6 +33,9 @@ def get_tor_c_files(tor_topdir, include_dirs=None):
                 # We only care about .c and .h files
                 if not (filename.endswith(".c") or filename.endswith(".h")):
                     continue
+                # Avoid editor temporary files
+                if filename.startswith("."):
+                    continue
                 if filename in EXCLUDE_FILES:
                     continue
 
