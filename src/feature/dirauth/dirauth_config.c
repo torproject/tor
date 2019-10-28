@@ -75,14 +75,12 @@ options_validate_dirauth_mode(const or_options_t *old_options,
       REJECT("Versioning authoritative dir servers must set "
              "Recommended*Versions.");
 
-#ifdef HAVE_MODULE_DIRAUTH
     char *t;
     /* Call these functions to produce warnings only. */
     t = format_recommended_version_list(options->RecommendedClientVersions, 1);
     tor_free(t);
     t = format_recommended_version_list(options->RecommendedServerVersions, 1);
     tor_free(t);
-#endif /* defined(HAVE_MODULE_DIRAUTH) */
 
     if (options->UseEntryGuards) {
       log_info(LD_CONFIG, "Authoritative directory servers can't set "
@@ -98,7 +96,7 @@ options_validate_dirauth_mode(const or_options_t *old_options,
           options->V3AuthoritativeDir))
       REJECT("AuthoritativeDir is set, but none of "
              "(Bridge/V3)AuthoritativeDir is set.");
-#ifdef HAVE_MODULE_DIRAUTH
+
     /* If we have a v3bandwidthsfile and it's broken, complain on startup */
     if (options->V3BandwidthsFile && !old_options) {
       dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL, NULL,
@@ -108,9 +106,6 @@ options_validate_dirauth_mode(const or_options_t *old_options,
     if (options->GuardfractionFile && !old_options) {
       dirserv_read_guardfraction_file(options->GuardfractionFile, NULL);
     }
-#else
-    (void)old_options;
-#endif /* defined(HAVE_MODULE_DIRAUTH) */
   }
 
   if (options->AuthoritativeDir && !options->DirPort_set)
@@ -283,7 +278,7 @@ options_validate_dirauth_testing(const or_options_t *old_options,
  * Return true if changing the configuration from <b>old</b> to <b>new</b>
  * affects the timing of the voting subsystem
  */
-int
+static int
 options_transition_affects_dirauth_timing(const or_options_t *old_options,
                                           const or_options_t *new_options)
 {

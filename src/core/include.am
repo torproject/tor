@@ -89,7 +89,6 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/control/control_proto.c	\
 	src/feature/control/fmt_serverstatus.c  \
 	src/feature/control/getinfo_geoip.c	\
-	src/feature/dirauth/dirauth_config.c	\
 	src/feature/dircache/conscache.c	\
 	src/feature/dircache/consdiffmgr.c	\
 	src/feature/dircache/dircache.c		\
@@ -180,6 +179,7 @@ MODULE_DIRAUTH_SOURCES = 					\
 	src/feature/dirauth/authmode.c				\
 	src/feature/dirauth/bridgeauth.c			\
 	src/feature/dirauth/bwauth.c				\
+	src/feature/dirauth/dirauth_config.c			\
 	src/feature/dirauth/dirauth_periodic.c			\
 	src/feature/dirauth/dirauth_sys.c			\
 	src/feature/dirauth/dircollate.c			\
