@@ -1,0 +1,2 @@
+  o Testing (circuit, EWMA):
+    - Add unit tests for circuitmux and EWMA subsystems. Closes ticket 32196.
