@@ -6,6 +6,7 @@
 #include "orconfig.h"
 
 #define CONFIG_PRIVATE
+#define RELAY_CONFIG_PRIVATE
 #define PT_PRIVATE
 #define ROUTERSET_PRIVATE
 #include "core/or/or.h"
@@ -16,6 +17,7 @@
 #include "core/or/circuitmux_ewma.h"
 #include "core/or/circuitbuild.h"
 #include "app/config/config.h"
+#include "feature/relay/relay_config.h"
 #include "lib/confmgt/confmgt.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"

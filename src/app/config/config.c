@@ -827,9 +827,6 @@ static int options_transition_affects_workers(
       const or_options_t *old_options, const or_options_t *new_options);
 static int options_transition_affects_descriptor(
       const or_options_t *old_options, const or_options_t *new_options);
-static int normalize_nickname_list(config_line_t **normalized_out,
-                                   const config_line_t *lst, const char *name,
-                                   char **msg);
 static char *get_bindaddr_from_transport_listen_line(const char *line,
                                                      const char *transport);
 static int parse_ports(or_options_t *options, int validate_only,
@@ -3112,48 +3109,6 @@ ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg)
   return 0;
 }
 
-/** Parse an authority type from <b>options</b>-\>PublishServerDescriptor
- * and write it to <b>options</b>-\>PublishServerDescriptor_. Treat "1"
- * as "v3" unless BridgeRelay is 1, in which case treat it as "bridge".
- * Treat "0" as "".
- * Return 0 on success or -1 if not a recognized authority type (in which
- * case the value of PublishServerDescriptor_ is undefined). */
-static int
-compute_publishserverdescriptor(or_options_t *options)
-{
-  smartlist_t *list = options->PublishServerDescriptor;
-  dirinfo_type_t *auth = &options->PublishServerDescriptor_;
-  *auth = NO_DIRINFO;
-  if (!list) /* empty list, answer is none */
-    return 0;
-  SMARTLIST_FOREACH_BEGIN(list, const char *, string) {
-    if (!strcasecmp(string, "v1"))
-      log_warn(LD_CONFIG, "PublishServerDescriptor v1 has no effect, because "
-                          "there are no v1 directory authorities anymore.");
-    else if (!strcmp(string, "1"))
-      if (options->BridgeRelay)
-        *auth |= BRIDGE_DIRINFO;
-      else
-        *auth |= V3_DIRINFO;
-    else if (!strcasecmp(string, "v2"))
-      log_warn(LD_CONFIG, "PublishServerDescriptor v2 has no effect, because "
-                          "there are no v2 directory authorities anymore.");
-    else if (!strcasecmp(string, "v3"))
-      *auth |= V3_DIRINFO;
-    else if (!strcasecmp(string, "bridge"))
-      *auth |= BRIDGE_DIRINFO;
-    else if (!strcasecmp(string, "hidserv"))
-      log_warn(LD_CONFIG,
-               "PublishServerDescriptor hidserv is invalid. See "
-               "PublishHidServDescriptors.");
-    else if (!strcasecmp(string, "") || !strcmp(string, "0"))
-      /* no authority */;
-    else
-      return -1;
-  } SMARTLIST_FOREACH_END(string);
-  return 0;
-}
-
 /** Lowest allowable value for RendPostPeriod; if this is too low, hidden
  * services can overload the directory system. */
 #define MIN_REND_POST_PERIOD (10*60)
@@ -3445,7 +3400,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   or_options_t *options = options_;
 
   config_line_t *cl;
-  const char *uname = get_uname();
   int n_ports=0;
   int world_writable_control_socket=0;
 
@@ -3462,15 +3416,8 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
    * Always use the value of UseEntryGuards, not UseEntryGuards_option. */
   options->UseEntryGuards = options->UseEntryGuards_option;
 
-  if (server_mode(options) &&
-      (!strcmpstart(uname, "Windows 95") ||
-       !strcmpstart(uname, "Windows 98") ||
-       !strcmpstart(uname, "Windows Me"))) {
-    log_warn(LD_CONFIG, "Tor is running as a server, but you are "
-        "running %s; this probably won't work. See "
-        "https://www.torproject.org/docs/faq.html#BestOSForRelay "
-        "for details.", uname);
-  }
+  if (options_validate_relay_os(old_options, options, msg) < 0)
+    return -1;
 
   if (parse_outbound_addresses(options, 1, msg) < 0)
     return -1;
@@ -3486,27 +3433,8 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
            "with relative paths.");
   }
 
-  if (options->Nickname == NULL) {
-    if (server_mode(options)) {
-      options->Nickname = tor_strdup(UNNAMED_ROUTER_NICKNAME);
-    }
-  } else {
-    if (!is_legal_nickname(options->Nickname)) {
-      tor_asprintf(msg,
-          "Nickname '%s', nicknames must be between 1 and 19 characters "
-          "inclusive, and must contain only the characters [a-zA-Z0-9].",
-          options->Nickname);
-      return -1;
-    }
-  }
-
-  if (server_mode(options) && !options->ContactInfo)
-    log_notice(LD_CONFIG, "Your ContactInfo config option is not set. "
-        "Please consider setting it, so we can contact you if your server is "
-        "misconfigured or something else goes wrong.");
-  const char *ContactInfo = options->ContactInfo;
-  if (ContactInfo && !string_is_utf8(ContactInfo, strlen(ContactInfo)))
-    REJECT("ContactInfo config option must be UTF-8.");
+  if (options_validate_relay_info(old_options, options, msg) < 0)
+    return -1;
 
   check_network_configuration(server_mode(options));
 
@@ -3746,51 +3674,11 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
     return -1;
   }
 
-  if (compute_publishserverdescriptor(options) < 0) {
-    tor_asprintf(msg, "Unrecognized value in PublishServerDescriptor");
+  if (options_validate_publish_server(old_options, options, msg) < 0)
     return -1;
-  }
 
-  if ((options->BridgeRelay
-        || options->PublishServerDescriptor_ & BRIDGE_DIRINFO)
-      && (options->PublishServerDescriptor_ & V3_DIRINFO)) {
-    REJECT("Bridges are not supposed to publish router descriptors to the "
-           "directory authorities. Please correct your "
-           "PublishServerDescriptor line.");
-  }
-
-  if (options->BridgeRelay && options->DirPort_set) {
-    log_warn(LD_CONFIG, "Can't set a DirPort on a bridge relay; disabling "
-             "DirPort");
-    config_free_lines(options->DirPort_lines);
-    options->DirPort_lines = NULL;
-    options->DirPort_set = 0;
-  }
-
-  if (server_mode(options) && options->ConnectionPadding != -1) {
-    REJECT("Relays must use 'auto' for the ConnectionPadding setting.");
-  }
-
-  if (server_mode(options) && options->ReducedConnectionPadding != 0) {
-    REJECT("Relays cannot set ReducedConnectionPadding. ");
-  }
-
-  if (server_mode(options) && options->CircuitPadding == 0) {
-    REJECT("Relays cannot set CircuitPadding to 0. ");
-  }
-
-  if (server_mode(options) && options->ReducedCircuitPadding == 1) {
-    REJECT("Relays cannot set ReducedCircuitPadding. ");
-  }
-
-  if (options->BridgeDistribution) {
-    if (!options->BridgeRelay) {
-      REJECT("You set BridgeDistribution, but you didn't set BridgeRelay!");
-    }
-    if (check_bridge_distribution_setting(options->BridgeDistribution) < 0) {
-      REJECT("Invalid BridgeDistribution value.");
-    }
-  }
+  if (options_validate_relay_padding(old_options, options, msg) < 0)
+    return -1;
 
   if (options->MinUptimeHidServDirectoryV2 < 0) {
     log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
@@ -4003,38 +3891,8 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (options->RelayBandwidthBurst && !options->RelayBandwidthRate)
     options->RelayBandwidthRate = options->RelayBandwidthBurst;
 
-  if (server_mode(options)) {
-    const unsigned required_min_bw =
-      public_server_mode(options) ?
-       RELAY_REQUIRED_MIN_BANDWIDTH : BRIDGE_REQUIRED_MIN_BANDWIDTH;
-    const char * const optbridge =
-      public_server_mode(options) ? "" : "bridge ";
-    if (options->BandwidthRate < required_min_bw) {
-      tor_asprintf(msg,
-                       "BandwidthRate is set to %d bytes/second. "
-                       "For %sservers, it must be at least %u.",
-                       (int)options->BandwidthRate, optbridge,
-                       required_min_bw);
-      return -1;
-    } else if (options->MaxAdvertisedBandwidth <
-               required_min_bw/2) {
-      tor_asprintf(msg,
-                       "MaxAdvertisedBandwidth is set to %d bytes/second. "
-                       "For %sservers, it must be at least %u.",
-                       (int)options->MaxAdvertisedBandwidth, optbridge,
-                       required_min_bw/2);
-      return -1;
-    }
-    if (options->RelayBandwidthRate &&
-      options->RelayBandwidthRate < required_min_bw) {
-      tor_asprintf(msg,
-                       "RelayBandwidthRate is set to %d bytes/second. "
-                       "For %sservers, it must be at least %u.",
-                       (int)options->RelayBandwidthRate, optbridge,
-                       required_min_bw);
-      return -1;
-    }
-  }
+  if (options_validate_relay_bandwidth(old_options, options, msg) < 0)
+    return -1;
 
   if (options->RelayBandwidthRate > options->RelayBandwidthBurst)
     REJECT("RelayBandwidthBurst must be at least equal "
@@ -4081,23 +3939,8 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
       REJECT("AccountingRule must be 'sum', 'max', 'in', or 'out'");
   }
 
-  if (options->DirPort_set && !options->DirCache) {
-    REJECT("DirPort configured but DirCache disabled. DirPort requires "
-           "DirCache.");
-  }
-
-  if (options->BridgeRelay && !options->DirCache) {
-    REJECT("We're a bridge but DirCache is disabled. BridgeRelay requires "
-           "DirCache.");
-  }
-
-  if (server_mode(options)) {
-    char *dircache_msg = NULL;
-    if (have_enough_mem_for_dircache(options, 0, &dircache_msg)) {
-      log_warn(LD_CONFIG, "%s", dircache_msg);
-      tor_free(dircache_msg);
-    }
-  }
+  if (options_validate_relay_mode(old_options, options, msg) < 0)
+    return -1;
 
   if (options->HTTPProxy) { /* parse it now */
     if (tor_addr_port_lookup(options->HTTPProxy,
@@ -4227,19 +4070,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
              "have it group-readable.");
   }
 
-  if (options->MyFamily_lines && options->BridgeRelay) {
-    log_warn(LD_CONFIG, "Listing a family for a bridge relay is not "
-             "supported: it can reveal bridge fingerprints to censors. "
-             "You should also make sure you aren't listing this bridge's "
-             "fingerprint in any other MyFamily.");
-  }
-  if (options->MyFamily_lines && !options->ContactInfo) {
-    log_warn(LD_CONFIG, "MyFamily is set but ContactInfo is not configured. "
-             "ContactInfo should always be set when MyFamily option is too.");
-  }
-  if (normalize_nickname_list(&options->MyFamily,
-                              options->MyFamily_lines, "MyFamily", msg))
-    return -1;
   for (cl = options->NodeFamilies; cl; cl = cl->next) {
     routerset_t *rs = routerset_new();
     if (routerset_parse(rs, cl->value, cl->key)) {
@@ -4471,22 +4301,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (options->AccelDir && !options->AccelName)
     REJECT("Can't use hardware crypto accelerator dir without engine name.");
 
-  if (options->PublishServerDescriptor)
-    SMARTLIST_FOREACH(options->PublishServerDescriptor, const char *, pubdes, {
-      if (!strcmp(pubdes, "1") || !strcmp(pubdes, "0"))
-        if (smartlist_len(options->PublishServerDescriptor) > 1) {
-          COMPLAIN("You have passed a list of multiple arguments to the "
-                   "PublishServerDescriptor option that includes 0 or 1. "
-                   "0 or 1 should only be used as the sole argument. "
-                   "This configuration will be rejected in a future release.");
-          break;
-        }
-    });
-
-  if (options->BridgeRelay == 1 && ! options->ORPort_set)
-      REJECT("BridgeRelay is 1, ORPort is not set. This is an invalid "
-             "combination.");
-
   if (options_validate_scheduler(options, msg) < 0) {
     return -1;
   }
@@ -4577,50 +4391,6 @@ compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
     return val;
   }
 }
-
-/* If we have less than 300 MB suggest disabling dircache */
-#define DIRCACHE_MIN_MEM_MB 300
-#define DIRCACHE_MIN_MEM_BYTES (DIRCACHE_MIN_MEM_MB*ONE_MEGABYTE)
-#define STRINGIFY(val) #val
-
-/** Create a warning message for emitting if we are a dircache but may not have
- * enough system memory, or if we are not a dircache but probably should be.
- * Return -1 when a message is returned in *msg*, else return 0. */
-STATIC int
-have_enough_mem_for_dircache(const or_options_t *options, size_t total_mem,
-                             char **msg)
-{
-  *msg = NULL;
-  /* XXX We should possibly be looking at MaxMemInQueues here
-   * unconditionally.  Or we should believe total_mem unconditionally. */
-  if (total_mem == 0) {
-    if (get_total_system_memory(&total_mem) < 0) {
-      total_mem = options->MaxMemInQueues >= SIZE_MAX ?
-        SIZE_MAX : (size_t)options->MaxMemInQueues;
-    }
-  }
-  if (options->DirCache) {
-    if (total_mem < DIRCACHE_MIN_MEM_BYTES) {
-      if (options->BridgeRelay) {
-        tor_asprintf(msg, "Running a Bridge with less than %d MB of memory "
-                       "is not recommended.", DIRCACHE_MIN_MEM_MB);
-      } else {
-        tor_asprintf(msg, "Being a directory cache (default) with less than "
-                       "%d MB of memory is not recommended and may consume "
-                       "most of the available resources. Consider disabling "
-                       "this functionality by setting the DirCache option "
-                       "to 0.", DIRCACHE_MIN_MEM_MB);
-      }
-    }
-  } else {
-    if (total_mem >= DIRCACHE_MIN_MEM_BYTES) {
-      *msg = tor_strdup("DirCache is disabled and we are configured as a "
-               "relay. We will not become a Guard.");
-    }
-  }
-  return *msg == NULL ? 0 : -1;
-}
-#undef STRINGIFY
 
 /** Helper: return true iff s1 and s2 are both NULL, or both non-NULL
  * equal strings. */
@@ -4864,85 +4634,6 @@ get_default_conf_file(int defaults_file)
 #else
   return defaults_file ? CONFDIR "/torrc-defaults" : CONFDIR "/torrc";
 #endif /* defined(DISABLE_SYSTEM_TORRC) || ... */
-}
-
-/** Verify whether lst is a list of strings containing valid-looking
- * comma-separated nicknames, or NULL. Will normalise <b>lst</b> to prefix '$'
- * to any nickname or fingerprint that needs it. Also splits comma-separated
- * list elements into multiple elements. Return 0 on success.
- * Warn and return -1 on failure.
- */
-static int
-normalize_nickname_list(config_line_t **normalized_out,
-                        const config_line_t *lst, const char *name,
-                        char **msg)
-{
-  if (!lst)
-    return 0;
-
-  config_line_t *new_nicknames = NULL;
-  config_line_t **new_nicknames_next = &new_nicknames;
-
-  const config_line_t *cl;
-  for (cl = lst; cl; cl = cl->next) {
-    const char *line = cl->value;
-    if (!line)
-      continue;
-
-    int valid_line = 1;
-    smartlist_t *sl = smartlist_new();
-    smartlist_split_string(sl, line, ",",
-      SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK|SPLIT_STRIP_SPACE, 0);
-    SMARTLIST_FOREACH_BEGIN(sl, char *, s)
-    {
-      char *normalized = NULL;
-      if (!is_legal_nickname_or_hexdigest(s)) {
-        // check if first char is dollar
-        if (s[0] != '$') {
-          // Try again but with a dollar symbol prepended
-          char *prepended;
-          tor_asprintf(&prepended, "$%s", s);
-
-          if (is_legal_nickname_or_hexdigest(prepended)) {
-            // The nickname is valid when it's prepended, set it as the
-            // normalized version
-            normalized = prepended;
-          } else {
-            // Still not valid, free and fallback to error message
-            tor_free(prepended);
-          }
-        }
-
-        if (!normalized) {
-          tor_asprintf(msg, "Invalid nickname '%s' in %s line", s, name);
-          valid_line = 0;
-          break;
-        }
-      } else {
-        normalized = tor_strdup(s);
-      }
-
-      config_line_t *next = tor_malloc_zero(sizeof(*next));
-      next->key = tor_strdup(cl->key);
-      next->value = normalized;
-      next->next = NULL;
-
-      *new_nicknames_next = next;
-      new_nicknames_next = &next->next;
-    } SMARTLIST_FOREACH_END(s);
-
-    SMARTLIST_FOREACH(sl, char *, s, tor_free(s));
-    smartlist_free(sl);
-
-    if (!valid_line) {
-      config_free_lines(new_nicknames);
-      return -1;
-    }
-  }
-
-  *normalized_out = new_nicknames;
-
-  return 0;
 }
 
 /** Learn config file name from command line arguments, or use the default.
@@ -6669,55 +6360,6 @@ warn_client_dns_cache(const char *option, int disabling)
       "an IP address, cacheing that address would make you visit "
       "an address of the attacker's choice every time you connected "
       "to your destination.");
-}
-
-/**
- * Validate the configured bridge distribution method from a BridgeDistribution
- * config line.
- *
- * The input <b>bd</b>, is a string taken from the BridgeDistribution config
- * line (if present).  If the option wasn't set, return 0 immediately.  The
- * BridgeDistribution option is then validated.  Currently valid, recognised
- * options are:
- *
- * - "none"
- * - "any"
- * - "https"
- * - "email"
- * - "moat"
- * - "hyphae"
- *
- * If the option string is unrecognised, a warning will be logged and 0 is
- * returned.  If the option string contains an invalid character, -1 is
- * returned.
- **/
-STATIC int
-check_bridge_distribution_setting(const char *bd)
-{
-  if (bd == NULL)
-    return 0;
-
-  const char *RECOGNIZED[] = {
-    "none", "any", "https", "email", "moat", "hyphae"
-  };
-  unsigned i;
-  for (i = 0; i < ARRAY_LENGTH(RECOGNIZED); ++i) {
-    if (!strcmp(bd, RECOGNIZED[i]))
-      return 0;
-  }
-
-  const char *cp = bd;
-  //  Method = (KeywordChar | "_") +
-  while (TOR_ISALNUM(*cp) || *cp == '-' || *cp == '_')
-    ++cp;
-
-  if (*cp == 0) {
-    log_warn(LD_CONFIG, "Unrecognized BridgeDistribution value %s. I'll "
-           "assume you know what you are doing...", escaped(bd));
-    return 0; // we reached the end of the string; all is well
-  } else {
-    return -1; // we found a bad character in the string.
-  }
 }
 
 /**

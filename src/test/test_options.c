@@ -4,10 +4,12 @@
 /* See LICENSE for licensing information */
 
 #define CONFIG_PRIVATE
+#define RELAY_CONFIG_PRIVATE
 #define LOG_PRIVATE
 #include "core/or/or.h"
 #include "lib/confmgt/confmgt.h"
 #include "app/config/config.h"
+#include "feature/relay/relay_config.h"
 #include "test/test.h"
 #include "lib/geoip/geoip.h"
 
