@@ -1109,13 +1109,12 @@ rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
 int
 rend_client_any_intro_points_usable(const rend_cache_entry_t *entry)
 {
-  extend_info_t *extend_info =
-    rend_client_get_random_intro_impl(entry, get_options()->StrictNodes, 0);
+  if (!rend_cache_failure_check(entry->parsed)) {
+    return 0;
+  }
 
-  int rv = (extend_info != NULL) && !(rend_cache_failure_check(entry->parsed));
-
-  extend_info_free(extend_info);
-  return rv;
+  return rend_client_get_random_intro_impl(entry,
+                                        get_options()->StrictNodes, 0) != NULL;
 }
 
 /** Client-side authorizations for hidden services; map of onion address to

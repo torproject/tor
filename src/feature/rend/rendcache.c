@@ -242,7 +242,15 @@ rend_cache_failure_check(rend_service_descriptor_t *desc)
     return 0;
   }
 
-  return strmap_get_lc(rend_cache_failure, service_id) != NULL;
+  SMARTLIST_FOREACH_BEGIN(desc->intro_nodes, rend_intro_point_t *, intro) {
+    rend_cache_failure_intro_t *entry;
+    if (cache_failure_intro_lookup((const uint8_t *)
+                                   intro->extend_info->identity_digest,
+                                   service_id, &entry)) {
+      return 1;
+    }
+  }  SMARTLIST_FOREACH_END(intro);
+  return 0;
 }
 
 /** Free all storage held by the service descriptor cache. */
