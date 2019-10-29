@@ -35,6 +35,7 @@
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/torcert.h"
 #include "feature/relay/dns.h"
+#include "feature/relay/relay_config.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
 #include "feature/relay/routermode.h"

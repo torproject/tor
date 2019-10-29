@@ -1747,32 +1747,6 @@ options_need_geoip_info(const or_options_t *options, const char **reason_out)
   return bridge_usage || routerset_usage;
 }
 
-/** Return the bandwidthrate that we are going to report to the authorities
- * based on the config options. */
-uint32_t
-get_effective_bwrate(const or_options_t *options)
-{
-  uint64_t bw = options->BandwidthRate;
-  if (bw > options->MaxAdvertisedBandwidth)
-    bw = options->MaxAdvertisedBandwidth;
-  if (options->RelayBandwidthRate > 0 && bw > options->RelayBandwidthRate)
-    bw = options->RelayBandwidthRate;
-  /* ensure_bandwidth_cap() makes sure that this cast can't overflow. */
-  return (uint32_t)bw;
-}
-
-/** Return the bandwidthburst that we are going to report to the authorities
- * based on the config options. */
-uint32_t
-get_effective_bwburst(const or_options_t *options)
-{
-  uint64_t bw = options->BandwidthBurst;
-  if (options->RelayBandwidthBurst > 0 && bw > options->RelayBandwidthBurst)
-    bw = options->RelayBandwidthBurst;
-  /* ensure_bandwidth_cap() makes sure that this cast can't overflow. */
-  return (uint32_t)bw;
-}
-
 /* Used in the various options_transition_affects* functions. */
 #define YES_IF_CHANGED_BOOL(opt) \
   if (!CFG_EQ_BOOL(old_options, new_options, opt)) return 1;
@@ -3091,7 +3065,7 @@ validate_ports_csv(smartlist_t *sl, const char *name, char **msg)
  * a complaint into *<b>msg</b> using string <b>desc</b>, and return -1.
  * Else return 0.
  */
-static int
+int
 ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg)
 {
   if (*value > ROUTER_MAX_DECLARED_BANDWIDTH) {
@@ -3418,6 +3392,7 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (options_validate_relay_os(old_options, options, msg) < 0)
     return -1;
 
+  /* 31851: OutboundBindAddressExit is unused in client mode */
   if (parse_outbound_addresses(options, 1, msg) < 0)
     return -1;
 
@@ -3426,6 +3401,7 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
 
   /* need to check for relative paths after we populate
    * options->DataDirectory (just above). */
+  /* 31851: some paths are unused in client mode */
   if (warn_about_relative_paths(options) && options->RunAsDaemon) {
     REJECT("You have specified at least one relative path (see above) "
            "with the RunAsDaemon option. RunAsDaemon is not compatible "
@@ -3435,6 +3411,7 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (options_validate_relay_info(old_options, options, msg) < 0)
     return -1;
 
+  /* 31851: this function is currently a no-op in client mode */
   check_network_configuration(server_mode(options));
 
   /* Validate the tor_log(s) */
@@ -3447,13 +3424,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
     if (resolve_my_address(LOG_WARN, options, &tmp, NULL, NULL) < 0)
       REJECT("Failed to resolve/guess local address. See logs for details.");
   }
-
-  if (server_mode(options) && options->RendConfigLines)
-    log_warn(LD_CONFIG,
-        "Tor is currently configured as a relay and a hidden service. "
-        "That's not very secure: you should probably run your hidden service "
-        "in a separate Tor process, at least -- see "
-        "https://trac.torproject.org/8742");
 
   /* XXXX require that the only port not be DirPort? */
   /* XXXX require that at least one port be listened-upon. */
@@ -3863,21 +3833,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (ensure_bandwidth_cap(&options->BandwidthBurst,
                            "BandwidthBurst", msg) < 0)
     return -1;
-  if (ensure_bandwidth_cap(&options->MaxAdvertisedBandwidth,
-                           "MaxAdvertisedBandwidth", msg) < 0)
-    return -1;
-  if (ensure_bandwidth_cap(&options->RelayBandwidthRate,
-                           "RelayBandwidthRate", msg) < 0)
-    return -1;
-  if (ensure_bandwidth_cap(&options->RelayBandwidthBurst,
-                           "RelayBandwidthBurst", msg) < 0)
-    return -1;
-  if (ensure_bandwidth_cap(&options->PerConnBWRate,
-                           "PerConnBWRate", msg) < 0)
-    return -1;
-  if (ensure_bandwidth_cap(&options->PerConnBWBurst,
-                           "PerConnBWBurst", msg) < 0)
-    return -1;
   if (ensure_bandwidth_cap(&options->AuthDirFastGuarantee,
                            "AuthDirFastGuarantee", msg) < 0)
     return -1;
@@ -3885,58 +3840,15 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
                            "AuthDirGuardBWGuarantee", msg) < 0)
     return -1;
 
-  if (options->RelayBandwidthRate && !options->RelayBandwidthBurst)
-    options->RelayBandwidthBurst = options->RelayBandwidthRate;
-  if (options->RelayBandwidthBurst && !options->RelayBandwidthRate)
-    options->RelayBandwidthRate = options->RelayBandwidthBurst;
 
   if (options_validate_relay_bandwidth(old_options, options, msg) < 0)
     return -1;
 
-  if (options->RelayBandwidthRate > options->RelayBandwidthBurst)
-    REJECT("RelayBandwidthBurst must be at least equal "
-           "to RelayBandwidthRate.");
-
   if (options->BandwidthRate > options->BandwidthBurst)
     REJECT("BandwidthBurst must be at least equal to BandwidthRate.");
 
-  /* if they set relaybandwidth* really high but left bandwidth*
-   * at the default, raise the defaults. */
-  if (options->RelayBandwidthRate > options->BandwidthRate)
-    options->BandwidthRate = options->RelayBandwidthRate;
-  if (options->RelayBandwidthBurst > options->BandwidthBurst)
-    options->BandwidthBurst = options->RelayBandwidthBurst;
-
-  if (accounting_parse_options(options, 1)<0)
-    REJECT("Failed to parse accounting options. See logs for details.");
-
-  if (options->AccountingMax) {
-    if (options->RendConfigLines && server_mode(options)) {
-      log_warn(LD_CONFIG, "Using accounting with a hidden service and an "
-               "ORPort is risky: your hidden service(s) and your public "
-               "address will all turn off at the same time, which may alert "
-               "observers that they are being run by the same party.");
-    } else if (config_count_key(options->RendConfigLines,
-                                "HiddenServiceDir") > 1) {
-      log_warn(LD_CONFIG, "Using accounting with multiple hidden services is "
-               "risky: they will all turn off at the same time, which may "
-               "alert observers that they are being run by the same party.");
-    }
-  }
-
-  options->AccountingRule = ACCT_MAX;
-  if (options->AccountingRule_option) {
-    if (!strcmp(options->AccountingRule_option, "sum"))
-      options->AccountingRule = ACCT_SUM;
-    else if (!strcmp(options->AccountingRule_option, "max"))
-      options->AccountingRule = ACCT_MAX;
-    else if (!strcmp(options->AccountingRule_option, "in"))
-      options->AccountingRule = ACCT_IN;
-    else if (!strcmp(options->AccountingRule_option, "out"))
-      options->AccountingRule = ACCT_OUT;
-    else
-      REJECT("AccountingRule must be 'sum', 'max', 'in', or 'out'");
-  }
+  if (options_validate_relay_accounting(old_options, options, msg) < 0)
+    return -1;
 
   if (options_validate_relay_mode(old_options, options, msg) < 0)
     return -1;
@@ -4122,14 +4034,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
           MIN_CONSTRAINED_TCP_BUFFER, MAX_CONSTRAINED_TCP_BUFFER);
       return -1;
     }
-    if (options->DirPort_set) {
-      /* Providing cached directory entries while system TCP buffers are scarce
-       * will exacerbate the socket errors.  Suggest that this be disabled. */
-      COMPLAIN("You have requested constrained socket buffers while also "
-               "serving directory entries via DirPort.  It is strongly "
-               "suggested that you disable serving directory requests when "
-               "system TCP buffer resources are scarce.");
-    }
   }
 
   if (options_validate_dirauth_schedule(old_options, options, msg) < 0)
@@ -4174,6 +4078,7 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (! options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
     or_options_t *dflt_options = options_new();
     options_init(dflt_options);
+    /* 31851: some of these options are dirauth or relay only */
     CHECK_DEFAULT(TestingV3AuthInitialVotingInterval);
     CHECK_DEFAULT(TestingV3AuthInitialVoteDelay);
     CHECK_DEFAULT(TestingV3AuthInitialDistDelay);
@@ -4201,13 +4106,9 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
       !(options->DirAuthorities ||
         (options->AlternateDirAuthority && options->AlternateBridgeAuthority)))
     REJECT("ClientDNSRejectInternalAddresses used for default network.");
-  if (options->SigningKeyLifetime < options->TestingSigningKeySlop*2)
-    REJECT("SigningKeyLifetime is too short.");
-  if (options->TestingLinkCertLifetime < options->TestingAuthKeySlop*2)
-    REJECT("LinkCertLifetime is too short.");
-  if (options->TestingAuthKeyLifetime < options->TestingLinkKeySlop*2)
-    REJECT("TestingAuthKeyLifetime is too short.");
 
+  if (options_validate_relay_testing(old_options, options, msg) < 0)
+    return -1;
   if (options_validate_dirauth_testing(old_options, options, msg) < 0)
     return -1;
 

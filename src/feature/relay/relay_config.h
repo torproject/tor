@@ -44,10 +44,20 @@ int options_validate_relay_padding(const or_options_t *old_options,
 int options_validate_relay_bandwidth(const or_options_t *old_options,
                                      or_options_t *options,
                                      char **msg);
+uint32_t get_effective_bwrate(const or_options_t *options);
+uint32_t get_effective_bwburst(const or_options_t *options);
+
+int options_validate_relay_accounting(const or_options_t *old_options,
+                                      or_options_t *options,
+                                      char **msg);
 
 int options_validate_relay_mode(const or_options_t *old_options,
                                 or_options_t *options,
                                 char **msg);
+
+int options_validate_relay_testing(const or_options_t *old_options,
+                                   or_options_t *options,
+                                   char **msg);
 
 #ifdef RELAY_CONFIG_PRIVATE
 

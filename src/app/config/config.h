@@ -189,9 +189,6 @@ int getinfo_helper_config(control_connection_t *conn,
                           const char *question, char **answer,
                           const char **errmsg);
 
-uint32_t get_effective_bwrate(const or_options_t *options);
-uint32_t get_effective_bwburst(const or_options_t *options);
-
 int init_cookie_authentication(const char *fname, const char *header,
                                int cookie_len, int group_readable,
                                uint8_t **cookie_out, int *cookie_is_set_out);
@@ -277,6 +274,7 @@ int count_real_listeners(const smartlist_t *ports,
 int parse_transport_line(const or_options_t *options,
                          const char *line, int validate_only,
                          int server);
+int ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg);
 
 #ifdef CONFIG_PRIVATE
 
