@@ -711,7 +711,7 @@ count_desc_circuit_established(const hs_service_descriptor_t *desc)
 
   DIGEST256MAP_FOREACH(desc->intro_points.map, key,
                        const hs_service_intro_point_t *, ip) {
-    count += ip->circuit_established;
+    count += !!hs_circ_service_get_established_intro_circ(ip);
   } DIGEST256MAP_FOREACH_END;
 
   return count;
@@ -1662,7 +1662,7 @@ build_desc_intro_points(const hs_service_t *service,
 
   DIGEST256MAP_FOREACH(desc->intro_points.map, key,
                        const hs_service_intro_point_t *, ip) {
-    if (!ip->circuit_established) {
+    if (!hs_circ_service_get_established_intro_circ(ip)) {
       /* Ignore un-established intro points. They can linger in that list
        * because their circuit has not opened and they haven't been removed
        * yet even though we have enough intro circuits.
@@ -2372,10 +2372,6 @@ should_remove_intro_point(hs_service_intro_point_t *ip, time_t now)
    * remove it because it might simply be valid and opened at the previous
    * scheduled event for the last retry. */
 
-  /* Did we established already? */
-  if (ip->circuit_established) {
-    goto end;
-  }
   /* Do we simply have an existing circuit regardless of its state? */
   if (hs_circ_service_get_intro_circ(ip)) {
     goto end;
@@ -3328,11 +3324,6 @@ service_handle_intro_established(origin_circuit_t *circ,
     goto err;
   }
 
-  /* Flag that we have an established circuit for this intro point. This value
-   * is what indicates the upload scheduled event if we are ready to build the
-   * intro point into the descriptor and upload. */
-  ip->circuit_established = 1;
-
   log_info(LD_REND, "Successfully received an INTRO_ESTABLISHED cell "
                     "on circuit %u for service %s",
            TO_CIRCUIT(circ)->n_circ_id,
@@ -3726,10 +3717,6 @@ hs_service_intro_circ_has_closed(origin_circuit_t *circ)
   }
   /* Can't have an intro point object without a descriptor. */
   tor_assert(desc);
-
-  /* Circuit disappeared so make sure the intro point is updated. By
-   * keeping the object in the descriptor, we'll be able to retry. */
-  ip->circuit_established = 0;
 
  end:
   return;

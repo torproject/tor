@@ -69,9 +69,6 @@ typedef struct hs_service_intro_point_t {
    * consensus. After MAX_INTRO_POINT_CIRCUIT_RETRIES, we give up on it. */
   uint32_t circuit_retries;
 
-  /** Set if this intro point has an established circuit. */
-  unsigned int circuit_established : 1;
-
   /** Replay cache recording the encrypted part of an INTRODUCE2 cell that the
    * circuit associated with this intro point has received. This is used to
    * prevent replay attacks. */

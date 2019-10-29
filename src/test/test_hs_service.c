@@ -1013,7 +1013,6 @@ test_intro_established(void *arg)
   /* Send an empty payload. INTRO_ESTABLISHED cells are basically zeroes. */
   ret = hs_service_receive_intro_established(circ, payload, sizeof(payload));
   tt_int_op(ret, OP_EQ, 0);
-  tt_u64_op(ip->circuit_established, OP_EQ, 1);
   tt_int_op(TO_CIRCUIT(circ)->purpose, OP_EQ, CIRCUIT_PURPOSE_S_INTRO);
 
  done:
@@ -1296,18 +1295,11 @@ test_service_event(void *arg)
      * descriptor map so we can retry it. */
     ip = helper_create_service_ip();
     service_intro_point_add(service->desc_current->intro_points.map, ip);
-    ip->circuit_established = 1;  /* We'll test that, it MUST be 0 after. */
-    run_housekeeping_event(now);
-    tt_int_op(digest256map_size(service->desc_current->intro_points.map),
-              OP_EQ, 1);
-    /* No removal if we have an established circuit after retries. */
-    ip->circuit_retries = MAX_INTRO_POINT_CIRCUIT_RETRIES + 1;
     run_housekeeping_event(now);
     tt_int_op(digest256map_size(service->desc_current->intro_points.map),
               OP_EQ, 1);
     /* Remove the IP object at once for the next test. */
     ip->circuit_retries = MAX_INTRO_POINT_CIRCUIT_RETRIES + 1;
-    ip->circuit_established = 0;
     run_housekeeping_event(now);
     tt_int_op(digest256map_size(service->desc_current->intro_points.map),
               OP_EQ, 0);
