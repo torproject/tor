@@ -61,6 +61,11 @@ options_validate_dirauth_mode(const or_options_t *old_options,
     return -1;
 
   if (options->AuthoritativeDir) {
+    /* confirm that our address isn't broken, so we can complain now */
+    uint32_t tmp;
+    if (resolve_my_address(LOG_WARN, options, &tmp, NULL, NULL) < 0)
+      REJECT("Failed to resolve/guess local address. See logs for details.");
+
     if (!options->ContactInfo && !options->TestingTorNetwork)
       REJECT("Authoritative directory servers must set ContactInfo");
     if (!options->RecommendedClientVersions)
@@ -116,6 +121,46 @@ options_validate_dirauth_mode(const or_options_t *old_options,
     if (options->ClientOnly)
       REJECT("Running as authoritative directory, but ClientOnly also set.");
   }
+
+  /* 31851: the tests expect us to validate these options, even when we are
+   * not in authority mode. */
+  if (options->MinUptimeHidServDirectoryV2 < 0) {
+    log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
+             "least 0 seconds. Changing to 0.");
+    options->MinUptimeHidServDirectoryV2 = 0;
+  }
+
+  return 0;
+}
+
+/**
+ * Legacy validation/normalization function for the dirauth bandwidth options
+ * in options. Uses old_options as the previous options.
+ *
+ * Returns 0 on success, returns -1 and sets *msg to a newly allocated string
+ * on error.
+ */
+int
+options_validate_dirauth_bandwidth(const or_options_t *old_options,
+                                   or_options_t *options,
+                                   char **msg)
+{
+  (void)old_options;
+
+  if (BUG(!options))
+    return -1;
+
+  if (BUG(!msg))
+    return -1;
+
+  /* 31851: the tests expect us to validate these options, even when we are
+   * not in authority mode. */
+  if (ensure_bandwidth_cap(&options->AuthDirFastGuarantee,
+                           "AuthDirFastGuarantee", msg) < 0)
+    return -1;
+  if (ensure_bandwidth_cap(&options->AuthDirGuardBWGuarantee,
+                           "AuthDirGuardBWGuarantee", msg) < 0)
+    return -1;
 
   return 0;
 }

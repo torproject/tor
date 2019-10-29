@@ -3418,13 +3418,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (options_init_logs(old_options, options, 1)<0)
     REJECT("Failed to validate Log options. See logs for details.");
 
-  if (authdir_mode(options)) {
-    /* confirm that our address isn't broken, so we can complain now */
-    uint32_t tmp;
-    if (resolve_my_address(LOG_WARN, options, &tmp, NULL, NULL) < 0)
-      REJECT("Failed to resolve/guess local address. See logs for details.");
-  }
-
   /* XXXX require that the only port not be DirPort? */
   /* XXXX require that at least one port be listened-upon. */
   if (n_ports == 0 && !options->RendConfigLines)
@@ -3649,12 +3642,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (options_validate_relay_padding(old_options, options, msg) < 0)
     return -1;
 
-  if (options->MinUptimeHidServDirectoryV2 < 0) {
-    log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
-                        "least 0 seconds. Changing to 0.");
-    options->MinUptimeHidServDirectoryV2 = 0;
-  }
-
   const int min_rendpostperiod =
     options->TestingTorNetwork ?
     MIN_REND_POST_PERIOD_TESTING : MIN_REND_POST_PERIOD;
@@ -3833,15 +3820,10 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (ensure_bandwidth_cap(&options->BandwidthBurst,
                            "BandwidthBurst", msg) < 0)
     return -1;
-  if (ensure_bandwidth_cap(&options->AuthDirFastGuarantee,
-                           "AuthDirFastGuarantee", msg) < 0)
-    return -1;
-  if (ensure_bandwidth_cap(&options->AuthDirGuardBWGuarantee,
-                           "AuthDirGuardBWGuarantee", msg) < 0)
-    return -1;
-
 
   if (options_validate_relay_bandwidth(old_options, options, msg) < 0)
+    return -1;
+  if (options_validate_dirauth_bandwidth(old_options, options, msg) < 0)
     return -1;
 
   if (options->BandwidthRate > options->BandwidthBurst)
