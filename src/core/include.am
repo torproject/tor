@@ -149,6 +149,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/relay/router.c		\
 	src/feature/relay/routerkeys.c		\
 	src/feature/relay/selftest.c		\
+	src/feature/relay/transport_config.c		\
 	src/feature/rend/rendcache.c		\
 	src/feature/rend/rendclient.c		\
 	src/feature/rend/rendcommon.c		\
@@ -438,6 +439,7 @@ noinst_HEADERS +=					\
 	src/feature/relay/routerkeys.h			\
 	src/feature/relay/routermode.h			\
 	src/feature/relay/selftest.h			\
+	src/feature/relay/transport_config.h	\
 	src/feature/rend/rend_authorized_client_st.h	\
 	src/feature/rend/rend_encoded_v2_service_descriptor_st.h	\
 	src/feature/rend/rend_intro_point_st.h		\

@@ -32,6 +32,7 @@
 #include "core/or/or.h"
 #include "core/or/circuitstats.h"
 #include "app/config/config.h"
+#include "feature/relay/transport_config.h"
 #include "lib/confmgt/confmgt.h"
 #include "core/mainloop/mainloop.h"
 #include "core/mainloop/netstatus.h"

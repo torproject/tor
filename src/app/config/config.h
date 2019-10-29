@@ -192,8 +192,6 @@ int getinfo_helper_config(control_connection_t *conn,
 uint32_t get_effective_bwrate(const or_options_t *options);
 uint32_t get_effective_bwburst(const or_options_t *options);
 
-char *get_transport_bindaddr_from_config(const char *transport);
-
 int init_cookie_authentication(const char *fname, const char *header,
                                int cookie_len, int group_readable,
                                uint8_t **cookie_out, int *cookie_is_set_out);
@@ -248,9 +246,6 @@ void bridge_line_free_(bridge_line_t *bridge_line);
 #define bridge_line_free(line) \
   FREE_AND_NULL(bridge_line_t, bridge_line_free_, (line))
 bridge_line_t *parse_bridge_line(const char *line);
-smartlist_t *get_options_from_transport_options_line(const char *line,
-                                                     const char *transport);
-smartlist_t *get_options_for_server_transport(const char *transport);
 
 /* Port helper functions. */
 int options_any_client_port_set(const or_options_t *options);
@@ -279,6 +274,9 @@ void port_cfg_free_(port_cfg_t *port);
 int count_real_listeners(const smartlist_t *ports,
                          int listenertype,
                          int count_sockets);
+int parse_transport_line(const or_options_t *options,
+                         const char *line, int validate_only,
+                         int server);
 
 #ifdef CONFIG_PRIVATE
 
@@ -293,9 +291,6 @@ STATIC const struct config_mgr_t *get_options_mgr(void);
 STATIC void or_options_free_(or_options_t *options);
 STATIC int options_validate_single_onion(or_options_t *options,
                                          char **msg);
-STATIC int parse_transport_line(const or_options_t *options,
-                                const char *line, int validate_only,
-                                int server);
 STATIC int consider_adding_dir_servers(const or_options_t *options,
                                        const or_options_t *old_options);
 STATIC void add_default_trusted_dir_authorities(dirinfo_type_t type);

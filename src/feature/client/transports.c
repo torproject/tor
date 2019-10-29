@@ -97,6 +97,8 @@
 #include "core/or/circuitbuild.h"
 #include "feature/client/transports.h"
 #include "feature/relay/router.h"
+/* 31851: split the server transport code out of the client module */
+#include "feature/relay/transport_config.h"
 #include "app/config/statefile.h"
 #include "core/or/connection_or.h"
 #include "feature/relay/ext_orport.h"

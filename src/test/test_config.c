@@ -18,6 +18,7 @@
 #include "core/or/circuitbuild.h"
 #include "app/config/config.h"
 #include "feature/relay/relay_config.h"
+#include "feature/relay/transport_config.h"
 #include "lib/confmgt/confmgt.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
