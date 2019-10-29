@@ -32,7 +32,7 @@
  *
  * Additionally, you might need to edit these places too:
  * <ul>
- *   <li>options_validate() below, in case you want to reject some possible
+ *   <li>options_validate_cb() below, in case you want to reject some possible
  *       values of the new configuration option.
  *   <li>options_transition_allowed() below, in case you need to
  *       forbid some or all changes in the option while Tor is
