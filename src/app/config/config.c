@@ -102,6 +102,7 @@
 #include "feature/relay/dns.h"
 #include "feature/relay/ext_orport.h"
 #include "feature/relay/routermode.h"
+#include "feature/relay/relay_config.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendservice.h"
 #include "lib/geoip/geoip.h"
@@ -834,9 +835,6 @@ static char *get_bindaddr_from_transport_listen_line(const char *line,
 static int parse_ports(or_options_t *options, int validate_only,
                               char **msg_out, int *n_ports_out,
                               int *world_writable_control_socket);
-static int check_server_ports(const smartlist_t *ports,
-                              const or_options_t *options,
-                              int *num_low_ports_out);
 static int validate_data_directories(or_options_t *options);
 static int write_configuration_file(const char *fname,
                                     const or_options_t *options);
@@ -6492,7 +6490,7 @@ parse_dir_fallback_line(const char *line,
 }
 
 /** Allocate and return a new port_cfg_t with reasonable defaults. */
-STATIC port_cfg_t *
+port_cfg_t *
 port_cfg_new(size_t namelen)
 {
   tor_assert(namelen <= SIZE_T_CEILING - sizeof(port_cfg_t) - 1);
@@ -6506,7 +6504,7 @@ port_cfg_new(size_t namelen)
 }
 
 /** Free all storage held in <b>port</b> */
-STATIC void
+void
 port_cfg_free_(port_cfg_t *port)
 {
   tor_free(port);
@@ -6752,7 +6750,7 @@ check_bridge_distribution_setting(const char *bd)
  * <b>out</b> for every port that the client should listen on.  Return 0
  * on success, -1 on failure.
  */
-STATIC int
+int
 parse_port_config(smartlist_t *out,
                   const config_line_t *ports,
                   const char *portname,
@@ -7210,7 +7208,7 @@ parse_port_config(smartlist_t *out,
 /** Return the number of ports which are actually going to listen with type
  * <b>listenertype</b>.  Do not count no_listen ports.  Only count unix
  * sockets if count_sockets is true. */
-static int
+int
 count_real_listeners(const smartlist_t *ports, int listenertype,
                      int count_sockets)
 {
@@ -7319,40 +7317,9 @@ parse_ports(or_options_t *options, int validate_only,
       goto err;
     }
   }
-  if (! options->ClientOnly) {
-    if (parse_port_config(ports,
-                          options->ORPort_lines,
-                          "OR", CONN_TYPE_OR_LISTENER,
-                          "0.0.0.0", 0,
-                          CL_PORT_SERVER_OPTIONS) < 0) {
-      *msg = tor_strdup("Invalid ORPort configuration");
-      goto err;
-    }
-    if (parse_port_config(ports,
-                          options->ExtORPort_lines,
-                          "ExtOR", CONN_TYPE_EXT_OR_LISTENER,
-                          "127.0.0.1", 0,
-                          CL_PORT_SERVER_OPTIONS|CL_PORT_WARN_NONLOCAL) < 0) {
-      *msg = tor_strdup("Invalid ExtORPort configuration");
-      goto err;
-    }
-    if (parse_port_config(ports,
-                          options->DirPort_lines,
-                          "Dir", CONN_TYPE_DIR_LISTENER,
-                          "0.0.0.0", 0,
-                          CL_PORT_SERVER_OPTIONS) < 0) {
-      *msg = tor_strdup("Invalid DirPort configuration");
-      goto err;
-    }
-  }
 
-  int n_low_ports = 0;
-  if (check_server_ports(ports, options, &n_low_ports) < 0) {
-    *msg = tor_strdup("Misconfigured server ports");
+  if (parse_ports_relay(options, msg, ports, &have_low_ports) < 0)
     goto err;
-  }
-  if (have_low_ports < 0)
-    have_low_ports = (n_low_ports > 0);
 
   *n_ports_out = smartlist_len(ports);
 
@@ -7360,8 +7327,7 @@ parse_ports(or_options_t *options, int validate_only,
 
   /* Update the *Port_set options.  The !! here is to force a boolean out of
      an integer. */
-  options->ORPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_OR_LISTENER, 0);
+  update_port_set_relay(options, ports);
   options->SocksPort_set =
     !! count_real_listeners(ports, CONN_TYPE_AP_LISTENER, 1);
   options->TransPort_set =
@@ -7373,12 +7339,8 @@ parse_ports(or_options_t *options, int validate_only,
   /* Use options->ControlSocket to test if a control socket is set */
   options->ControlPort_set =
     !! count_real_listeners(ports, CONN_TYPE_CONTROL_LISTENER, 0);
-  options->DirPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_DIR_LISTENER, 0);
   options->DNSPort_set =
     !! count_real_listeners(ports, CONN_TYPE_AP_DNS_LISTENER, 1);
-  options->ExtORPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_EXT_OR_LISTENER, 0);
 
   if (world_writable_control_socket) {
     SMARTLIST_FOREACH(ports, port_cfg_t *, p,
@@ -7409,7 +7371,7 @@ parse_ports(or_options_t *options, int validate_only,
 }
 
 /* Does port bind to IPv4? */
-static int
+int
 port_binds_ipv4(const port_cfg_t *port)
 {
   return tor_addr_family(&port->addr) == AF_INET ||
@@ -7418,100 +7380,12 @@ port_binds_ipv4(const port_cfg_t *port)
 }
 
 /* Does port bind to IPv6? */
-static int
+int
 port_binds_ipv6(const port_cfg_t *port)
 {
   return tor_addr_family(&port->addr) == AF_INET6 ||
          (tor_addr_family(&port->addr) == AF_UNSPEC
           && !port->server_cfg.bind_ipv4_only);
-}
-
-/** Given a list of <b>port_cfg_t</b> in <b>ports</b>, check them for internal
- * consistency and warn as appropriate.  Set *<b>n_low_ports_out</b> to the
- * number of sub-1024 ports we will be binding. */
-static int
-check_server_ports(const smartlist_t *ports,
-                   const or_options_t *options,
-                   int *n_low_ports_out)
-{
-  int n_orport_advertised = 0;
-  int n_orport_advertised_ipv4 = 0;
-  int n_orport_listeners = 0;
-  int n_dirport_advertised = 0;
-  int n_dirport_listeners = 0;
-  int n_low_port = 0;
-  int r = 0;
-
-  SMARTLIST_FOREACH_BEGIN(ports, const port_cfg_t *, port) {
-    if (port->type == CONN_TYPE_DIR_LISTENER) {
-      if (! port->server_cfg.no_advertise)
-        ++n_dirport_advertised;
-      if (! port->server_cfg.no_listen)
-        ++n_dirport_listeners;
-    } else if (port->type == CONN_TYPE_OR_LISTENER) {
-      if (! port->server_cfg.no_advertise) {
-        ++n_orport_advertised;
-        if (port_binds_ipv4(port))
-          ++n_orport_advertised_ipv4;
-      }
-      if (! port->server_cfg.no_listen)
-        ++n_orport_listeners;
-    } else {
-      continue;
-    }
-#ifndef _WIN32
-    if (!port->server_cfg.no_listen && port->port < 1024)
-      ++n_low_port;
-#endif
-  } SMARTLIST_FOREACH_END(port);
-
-  if (n_orport_advertised && !n_orport_listeners) {
-    log_warn(LD_CONFIG, "We are advertising an ORPort, but not actually "
-             "listening on one.");
-    r = -1;
-  }
-  if (n_orport_listeners && !n_orport_advertised) {
-    log_warn(LD_CONFIG, "We are listening on an ORPort, but not advertising "
-             "any ORPorts. This will keep us from building a %s "
-             "descriptor, and make us impossible to use.",
-             options->BridgeRelay ? "bridge" : "router");
-    r = -1;
-  }
-  if (n_dirport_advertised && !n_dirport_listeners) {
-    log_warn(LD_CONFIG, "We are advertising a DirPort, but not actually "
-             "listening on one.");
-    r = -1;
-  }
-  if (n_dirport_advertised > 1) {
-    log_warn(LD_CONFIG, "Can't advertise more than one DirPort.");
-    r = -1;
-  }
-  if (n_orport_advertised && !n_orport_advertised_ipv4 &&
-      !options->BridgeRelay) {
-    log_warn(LD_CONFIG, "Configured public relay to listen only on an IPv6 "
-             "address. Tor needs to listen on an IPv4 address too.");
-    r = -1;
-  }
-
-  if (n_low_port && options->AccountingMax &&
-      (!have_capability_support() || options->KeepBindCapabilities == 0)) {
-    const char *extra = "";
-    if (options->KeepBindCapabilities == 0 && have_capability_support())
-      extra = ", and you have disabled KeepBindCapabilities.";
-    log_warn(LD_CONFIG,
-          "You have set AccountingMax to use hibernation. You have also "
-          "chosen a low DirPort or OrPort%s."
-          "This combination can make Tor stop "
-          "working when it tries to re-attach the port after a period of "
-          "hibernation. Please choose a different port or turn off "
-          "hibernation unless you know this combination will work on your "
-          "platform.", extra);
-  }
-
-  if (n_low_ports_out)
-    *n_low_ports_out = n_low_port;
-
-  return r;
 }
 
 /** Return a list of port_cfg_t for client ports parsed from the
