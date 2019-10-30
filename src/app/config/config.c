@@ -3324,25 +3324,20 @@ warn_about_relative_paths(or_options_t *options)
 {
   tor_assert(options);
   int n = 0;
+  const config_mgr_t *mgr = get_options_mgr();
 
-  n += warn_if_option_path_is_relative("CookieAuthFile",
-                                       options->CookieAuthFile);
-  n += warn_if_option_path_is_relative("ExtORPortCookieAuthFile",
-                                       options->ExtORPortCookieAuthFile);
-  n += warn_if_option_path_is_relative("DirPortFrontPage",
-                                       options->DirPortFrontPage);
-  n += warn_if_option_path_is_relative("V3BandwidthsFile",
-                                       options->V3BandwidthsFile);
-  n += warn_if_option_path_is_relative("ControlPortWriteToFile",
-                                       options->ControlPortWriteToFile);
-  n += warn_if_option_path_is_relative("GeoIPFile",options->GeoIPFile);
-  n += warn_if_option_path_is_relative("GeoIPv6File",options->GeoIPv6File);
-  n += warn_if_option_path_is_relative("Log",options->DebugLogFile);
-  n += warn_if_option_path_is_relative("AccelDir",options->AccelDir);
-  n += warn_if_option_path_is_relative("DataDirectory",options->DataDirectory);
-  n += warn_if_option_path_is_relative("PidFile",options->PidFile);
-  n += warn_if_option_path_is_relative("ClientOnionAuthDir",
-                                        options->ClientOnionAuthDir);
+  smartlist_t *vars = config_mgr_list_vars(mgr);
+  SMARTLIST_FOREACH_BEGIN(vars, const config_var_t *, cv) {
+    config_line_t *line;
+    if (cv->member.type != CONFIG_TYPE_FILENAME)
+      continue;
+    const char *name = cv->member.name;
+    line = config_get_assigned_option(mgr, options, name, 0);
+    if (line)
+      n += warn_if_option_path_is_relative(name, line->value);
+    config_free_lines(line);
+  } SMARTLIST_FOREACH_END(cv);
+  smartlist_free(vars);
 
   for (config_line_t *hs_line = options->RendConfigLines; hs_line;
        hs_line = hs_line->next) {
