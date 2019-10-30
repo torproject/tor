@@ -316,6 +316,9 @@ or_state_set(or_state_t *new_state)
   tor_assert(new_state);
   config_free(get_state_mgr(), global_state);
   global_state = new_state;
+  if (subsystems_set_state(get_state_mgr(), global_state) < 0) {
+    ret = -1;
+  }
   if (entry_guards_parse_state(global_state, 1, &err)<0) {
     log_warn(LD_GENERAL,"%s",err);
     tor_free(err);
@@ -519,6 +522,7 @@ or_state_save(time_t now)
 
   /* Call everything else that might dirty the state even more, in order
    * to avoid redundant writes. */
+  (void) subsystems_flush_state(get_state_mgr(), global_state);
   entry_guards_update_state(global_state);
   rep_hist_update_state(global_state);
   circuit_build_times_update_state(get_circuit_build_times(), global_state);
