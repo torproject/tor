@@ -22,7 +22,8 @@
  *
  * To add new items to the torrc, there are a minimum of three places to edit:
  * <ul>
- *   <li>The or_options_t structure in or.h, where the options are stored.
+ *   <li>The or_options_t structure in or_options_st.h, where the options are
+ *       stored.
  *   <li>The option_vars_ array below in this module, which configures
  *       the names of the torrc options, their types, their multiplicities,
  *       and their mappings to fields in or_options_t.
