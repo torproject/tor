@@ -1984,6 +1984,45 @@ circuit_purpose_is_hidden_service(uint8_t purpose)
    return 0;
 }
 
+/** Retrun true iff the given circuit is an HS client circuit. */
+bool
+circuit_is_hs_client(const circuit_t *circ)
+{
+  return (circ->purpose >= CIRCUIT_PURPOSE_C_HS_MIN_ &&
+          circ->purpose <= CIRCUIT_PURPOSE_C_HS_MAX_);
+}
+
+/** Retrun true iff the given circuit is an HS service circuit. */
+bool
+circuit_is_hs_service(const circuit_t *circ)
+{
+  return (circ->purpose >= CIRCUIT_PURPOSE_S_HS_MIN_ &&
+          circ->purpose <= CIRCUIT_PURPOSE_S_HS_MAX_);
+}
+
+/** Retrun true iff the given circuit is an HS Vanguards circuit. */
+bool
+circuit_is_hs_vanguards(const circuit_t *circ)
+{
+  return (circ->purpose == CIRCUIT_PURPOSE_HS_VANGUARDS);
+}
+
+/** Retrun true iff the given circuit is an HS v2 circuit. */
+bool
+circuit_is_hs_v2(const circuit_t *circ)
+{
+  return (CIRCUIT_IS_ORIGIN(circ) &&
+          (CONST_TO_ORIGIN_CIRCUIT(circ)->rend_data != NULL));
+}
+
+/** Retrun true iff the given circuit is an HS v3 circuit. */
+bool
+circuit_is_hs_v3(const circuit_t *circ)
+{
+  return (CIRCUIT_IS_ORIGIN(circ) &&
+          (CONST_TO_ORIGIN_CIRCUIT(circ)->hs_ident != NULL));
+}
+
 /**
  * Return true if this circuit purpose should use vanguards
  * or pinned Layer2 or Layer3 guards.

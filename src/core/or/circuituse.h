@@ -64,6 +64,14 @@ int hostname_in_track_host_exits(const or_options_t *options,
 void mark_circuit_unusable_for_new_conns(origin_circuit_t *circ);
 
 int circuit_purpose_is_hidden_service(uint8_t);
+
+/* Series of helper functions for hidden services. */
+bool circuit_is_hs_client(const circuit_t *circ);
+bool circuit_is_hs_service(const circuit_t *circ);
+bool circuit_is_hs_vanguards(const circuit_t *circ);
+bool circuit_is_hs_v2(const circuit_t *circ);
+bool circuit_is_hs_v3(const circuit_t *circ);
+
 int circuit_should_use_vanguards(uint8_t);
 void circuit_sent_valid_data(origin_circuit_t *circ, uint16_t relay_body_len);
 void circuit_read_valid_data(origin_circuit_t *circ, uint16_t relay_body_len);
