@@ -182,8 +182,6 @@ char *get_first_listener_addrport_string(int listener_type);
 int options_need_geoip_info(const or_options_t *options,
                             const char **reason_out);
 
-smartlist_t *get_list_of_ports_to_forward(void);
-
 int getinfo_helper_config(control_connection_t *conn,
                           const char *question, char **answer,
                           const char **errmsg);
