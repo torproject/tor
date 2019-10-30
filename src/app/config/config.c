@@ -929,6 +929,8 @@ get_options_mgr(void)
 {
   if (PREDICT_UNLIKELY(options_mgr == NULL)) {
     options_mgr = config_mgr_new(&options_format);
+    int rv = subsystems_register_options_formats(options_mgr);
+    tor_assert(rv == 0);
     config_mgr_freeze(options_mgr);
   }
   return options_mgr;

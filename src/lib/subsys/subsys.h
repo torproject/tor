@@ -14,6 +14,7 @@
 #include <stdbool.h>
 
 struct pubsub_connector_t;
+struct config_format_t;
 
 /**
  * A subsystem is a part of Tor that is initialized, shut down, configured,
@@ -87,6 +88,18 @@ typedef struct subsys_fns_t {
    * This function is not allowed to fail.
    **/
   void (*shutdown)(void);
+
+  /**
+   * A config_format_t describing all of the torrc fields owned by this
+   * subsystem.
+   **/
+  const struct config_format_t *options_format;
+
+  /**
+   * A config_format_t describing all of the .tor/state fields owned by this
+   * subsystem.
+   **/
+  const struct config_format_t *state_format;
 
 } subsys_fns_t;
 
