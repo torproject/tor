@@ -61,6 +61,7 @@ int hs_client_send_introduce1(origin_circuit_t *intro_circ,
                               origin_circuit_t *rend_circ);
 
 void hs_client_circuit_has_opened(origin_circuit_t *circ);
+void hs_client_circuit_cleanup(const circuit_t *circ);
 
 int hs_client_receive_rendezvous_acked(origin_circuit_t *circ,
                                        const uint8_t *payload,

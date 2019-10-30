@@ -20,6 +20,7 @@
 #include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_circuitmap.h"
+#include "feature/hs/hs_client.h"
 #include "feature/hs/hs_ident.h"
 #include "feature/hs/hs_service.h"
 #include "feature/nodelist/describe.h"
@@ -619,6 +620,39 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
   return ret;
 }
 
+/** Helper: cleanup function for client circuit. This is for every HS version.
+ * It is called from hs_circ_cleanup() entry point. */
+static void
+cleanup_client_circ(circuit_t *circ)
+{
+  tor_assert(circ);
+
+  if (circuit_is_hs_v2(circ)) {
+    rend_client_circuit_cleanup(circ);
+  } else if (circuit_is_hs_v3(circ)) {
+    hs_client_circuit_cleanup(circ);
+  }
+  /* It is possible the circuit has an HS purpose but no identifier (rend_data
+   * or hs_ident). Thus possible that this passess through. */
+}
+
+/** Helper: cleanup function for service circuit. This is for every HS
+ * version. It is called from hs_circ_cleanup() entry point. */
+static void
+cleanup_service_circ(circuit_t *circ)
+{
+  tor_assert(circ);
+
+  if (circuit_is_hs_v3(circ)) {
+    /* If it's a service-side intro circ, notify the HS subsystem for the
+     * intro point circuit closing so it can be dealt with cleanly. */
+    if (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+        circ->purpose == CIRCUIT_PURPOSE_S_INTRO) {
+      hs_service_intro_circ_has_closed(TO_ORIGIN_CIRCUIT(circ));
+    }
+  }
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
@@ -1206,21 +1240,14 @@ hs_circ_cleanup(circuit_t *circ)
 {
   tor_assert(circ);
 
-  /* v2 specific circuits. */
-  if (circuit_is_hs_v2(circ)) {
-    if (circuit_is_hs_client(circ)) {
-      rend_client_circuit_cleanup(circ);
-    }
+  if (circuit_is_hs_client(circ)) {
+    cleanup_client_circ(circ);
+  } else if (circuit_is_hs_service(circ)) {
+    cleanup_service_circ(circ);
   }
 
-  /* From this point on, it is v3 specific. */
-
-  /* If it's a service-side intro circ, notify the HS subsystem for the intro
-   * point circuit closing so it can be dealt with cleanly. */
-  if (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
-      circ->purpose == CIRCUIT_PURPOSE_S_INTRO) {
-    hs_service_intro_circ_has_closed(TO_ORIGIN_CIRCUIT(circ));
-  }
+  /* Actions that MUST happen for every circuits regardless of what was done
+   * on it before. */
 
   /* Clear HS circuitmap token for this circ (if any). Very important to be
    * done after the HS subsystem has been notified of the close else the
