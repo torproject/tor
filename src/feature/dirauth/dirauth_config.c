@@ -21,6 +21,7 @@
 #include "app/config/config.h"
 
 #include "feature/dircommon/voting_schedule.h"
+#include "feature/stats/rephist.h"
 
 #include "feature/dirauth/authmode.h"
 #include "feature/dirauth/bwauth.h"
@@ -349,6 +350,78 @@ options_act_dirauth(const or_options_t *old_options)
       reschedule_dirvote(options);
     }
   }
+
+  return 0;
+}
+
+/** Fetch the active option list, and take dirauth mtbf actions based on it.
+ * All of the things we do should survive being done repeatedly.  If present,
+ * <b>old_options</b> contains the previous value of the options.
+ *
+ * Must be called immediately after a successful or_state_load().
+ *
+ * Return 0 if all goes well, return -1 if it's time to die.
+ *
+ * Note: We haven't moved all the "act on new configuration" logic
+ * into the options_act* functions yet.  Some is still in do_hup() and other
+ * places.
+ */
+int
+options_act_dirauth_mtbf(const or_options_t *old_options)
+{
+  (void)old_options;
+
+  const or_options_t *options = get_options();
+  int running_tor = options->command == CMD_RUN_TOR;
+
+  /* Load dirauth state */
+  if (running_tor) {
+    rep_hist_load_mtbf_data(time(NULL));
+  }
+
+  return 0;
+}
+
+/** Fetch the active option list, and take dirauth statistics actions based
+ * on it. All of the things we do should survive being done repeatedly. If
+ * present, <b>old_options</b> contains the previous value of the options.
+ *
+ * Sets <b>*print_notice_out</b> if we enabled stats, and need to print
+ * a stats log using options_act_relay_stats_msg().
+ *
+ * Return 0 if all goes well, return -1 if it's time to die.
+ *
+ * Note: We haven't moved all the "act on new configuration" logic
+ * into the options_act* functions yet.  Some is still in do_hup() and other
+ * places.
+ */
+int
+options_act_dirauth_stats(const or_options_t *old_options,
+                          bool *print_notice_out)
+{
+  if (BUG(!print_notice_out))
+    return -1;
+
+  const or_options_t *options = get_options();
+
+  if (options->BridgeAuthoritativeDir) {
+    time_t now = time(NULL);
+    int print_notice = 0;
+
+    if ((!old_options || !old_options->BridgeAuthoritativeDir) &&
+        options->BridgeAuthoritativeDir) {
+      rep_hist_desc_stats_init(now);
+      print_notice = 1;
+    }
+    if (print_notice)
+      *print_notice_out = 1;
+  }
+
+  /* If we used to have statistics enabled but we just disabled them,
+     stop gathering them.  */
+  if (old_options && old_options->BridgeAuthoritativeDir &&
+      !options->BridgeAuthoritativeDir)
+    rep_hist_desc_stats_term();
 
   return 0;
 }

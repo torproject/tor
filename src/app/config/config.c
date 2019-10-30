@@ -106,7 +106,6 @@
 #include "feature/rend/rendservice.h"
 #include "lib/geoip/geoip.h"
 #include "feature/stats/geoip_stats.h"
-#include "feature/stats/rephist.h"
 #include "lib/compress/compress.h"
 #include "lib/confmgt/structvar.h"
 #include "lib/crypt_ops/crypto_init.h"
@@ -1897,7 +1896,8 @@ options_act,(const or_options_t *old_options))
   if (! or_state_loaded() && running_tor) {
     if (or_state_load())
       return -1;
-    rep_hist_load_mtbf_data(time(NULL));
+    if (options_act_dirauth_mtbf(options) < 0)
+      return -1;
   }
 
   /* 31851: some of the code in these functions is relay-only */
@@ -2131,20 +2131,9 @@ options_act,(const or_options_t *old_options))
   }
 
   bool print_notice = 0;
-  if (options->BridgeAuthoritativeDir) {
-    time_t now = time(NULL);
-
-    if ((!old_options || !old_options->BridgeAuthoritativeDir) &&
-        options->BridgeAuthoritativeDir) {
-      rep_hist_desc_stats_init(now);
-      print_notice = 1;
-    }
-
-  if (old_options && old_options->BridgeAuthoritativeDir &&
-      !options->BridgeAuthoritativeDir)
-    rep_hist_desc_stats_term();
-
   if (options_act_relay_stats(old_options, &print_notice) < 0)
+    return -1;
+  if (options_act_dirauth_stats(old_options, &print_notice) < 0)
     return -1;
   if (print_notice)
     options_act_relay_stats_msg();

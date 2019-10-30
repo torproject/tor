@@ -16,6 +16,8 @@ typedef struct or_options_t or_options_t;
 
 #ifdef HAVE_MODULE_DIRAUTH
 
+#include "lib/cc/torint.h"
+
 int options_validate_dirauth_mode(const or_options_t *old_options,
                                   or_options_t *options,
                                   char **msg);
@@ -33,6 +35,9 @@ int options_validate_dirauth_testing(const or_options_t *old_options,
                                      char **msg);
 
 int options_act_dirauth(const or_options_t *old_options);
+int options_act_dirauth_mtbf(const or_options_t *old_options);
+int options_act_dirauth_stats(const or_options_t *old_options,
+                              bool *print_notice_out);
 
 #else
 
@@ -74,6 +79,12 @@ options_validate_dirauth_mode(const or_options_t *old_options,
 
 #define options_act_dirauth(old_options) \
   (((void)(old_options)),0)
+
+#define options_act_dirauth_mtbf(old_options) \
+  (((void)(old_options)),0)
+
+#define options_act_dirauth_stats(old_options, print_notice_out) \
+  (((void)(old_options)),((void)(print_notice_out)),0)
 
 #endif /* defined(HAVE_MODULE_DIRAUTH) */
 
