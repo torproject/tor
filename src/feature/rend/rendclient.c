@@ -1249,3 +1249,51 @@ rend_parse_service_authorization(const or_options_t *options,
   }
   return res;
 }
+
+/** The given circuit is being freed. Take appropriate action if it is of
+ * interest to the client subsystem. */
+void
+rend_client_circuit_cleanup(circuit_t *circ)
+{
+  int reason = circ->marked_for_close_reason;
+  int orig_reason = circ->marked_for_close_orig_reason;
+
+  tor_assert(circ);
+
+  if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
+    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+    int timed_out = (reason == END_CIRC_REASON_TIMEOUT);
+    tor_assert(circ->state == CIRCUIT_STATE_OPEN);
+    tor_assert(ocirc->build_state->chosen_exit);
+    if (orig_reason != END_CIRC_REASON_IP_NOW_REDUNDANT &&
+        ocirc->rend_data) {
+      /* treat this like getting a nack from it */
+      log_info(LD_REND, "Failed intro circ %s to %s (awaiting ack). %s",
+          safe_str_client(rend_data_get_address(ocirc->rend_data)),
+          safe_str_client(build_state_get_exit_nickname(ocirc->build_state)),
+          timed_out ? "Recording timeout." : "Removing from descriptor.");
+      rend_client_report_intro_point_failure(ocirc->build_state->chosen_exit,
+                                             ocirc->rend_data,
+                                             timed_out ?
+                                             INTRO_POINT_FAILURE_TIMEOUT :
+                                             INTRO_POINT_FAILURE_GENERIC);
+    }
+  } else if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCING &&
+             reason != END_CIRC_REASON_TIMEOUT) {
+    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+    if (ocirc->build_state->chosen_exit && ocirc->rend_data) {
+      if (orig_reason != END_CIRC_REASON_IP_NOW_REDUNDANT &&
+          ocirc->rend_data) {
+        log_info(LD_REND, "Failed intro circ %s to %s "
+            "(building circuit to intro point). "
+            "Marking intro point as possibly unreachable.",
+            safe_str_client(rend_data_get_address(ocirc->rend_data)),
+            safe_str_client(build_state_get_exit_nickname(
+                                              ocirc->build_state)));
+        rend_client_report_intro_point_failure(ocirc->build_state->chosen_exit,
+                                              ocirc->rend_data,
+                                              INTRO_POINT_FAILURE_UNREACHABLE);
+      }
+    }
+  }
+}
