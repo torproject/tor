@@ -31,4 +31,8 @@ void subsystems_prefork(void);
 void subsystems_postfork(void);
 void subsystems_thread_cleanup(void);
 
+struct config_mgr_t;
+int subsystems_register_options_formats(struct config_mgr_t *mgr);
+int subsystems_register_state_formats(struct config_mgr_t *mgr);
+
 #endif /* !defined(TOR_SUBSYSMGR_T) */
