@@ -111,6 +111,27 @@ get_effective_bwburst(const or_options_t *options)
   return (uint32_t)bw;
 }
 
+/** Warn for every Extended ORPort port in <b>ports</b> that is on a
+ *  publicly routable address. */
+void
+warn_nonlocal_ext_orports(const smartlist_t *ports, const char *portname)
+{
+  SMARTLIST_FOREACH_BEGIN(ports, const port_cfg_t *, port) {
+    if (port->type != CONN_TYPE_EXT_OR_LISTENER)
+      continue;
+    if (port->is_unix_addr)
+      continue;
+    /* XXX maybe warn even if address is RFC1918? */
+    if (!tor_addr_is_internal(&port->addr, 1)) {
+      log_warn(LD_CONFIG, "You specified a public address '%s' for %sPort. "
+               "This is not advised; this address is supposed to only be "
+               "exposed on localhost so that your pluggable transport "
+               "proxies can connect to it.",
+               fmt_addrport(&port->addr, port->port), portname);
+    }
+  } SMARTLIST_FOREACH_END(port);
+}
+
 /** Given a list of <b>port_cfg_t</b> in <b>ports</b>, check them for internal
  * consistency and warn as appropriate.  On Unix-based OSes, set
  * *<b>n_low_ports_out</b> to the number of sub-1024 ports we will be

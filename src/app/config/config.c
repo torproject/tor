@@ -5632,27 +5632,6 @@ warn_nonlocal_client_ports(const smartlist_t *ports,
   } SMARTLIST_FOREACH_END(port);
 }
 
-/** Warn for every Extended ORPort port in <b>ports</b> that is on a
- *  publicly routable address. */
-static void
-warn_nonlocal_ext_orports(const smartlist_t *ports, const char *portname)
-{
-  SMARTLIST_FOREACH_BEGIN(ports, const port_cfg_t *, port) {
-    if (port->type != CONN_TYPE_EXT_OR_LISTENER)
-      continue;
-    if (port->is_unix_addr)
-      continue;
-    /* XXX maybe warn even if address is RFC1918? */
-    if (!tor_addr_is_internal(&port->addr, 1)) {
-      log_warn(LD_CONFIG, "You specified a public address '%s' for %sPort. "
-               "This is not advised; this address is supposed to only be "
-               "exposed on localhost so that your pluggable transport "
-               "proxies can connect to it.",
-               fmt_addrport(&port->addr, port->port), portname);
-    }
-  } SMARTLIST_FOREACH_END(port);
-}
-
 /** Given a list of port_cfg_t in <b>ports</b>, warn if any controller port
  * there is listening on any non-loopback address.  If <b>forbid_nonlocal</b>
  * is true, then emit a stronger warning and remove the port from the list.

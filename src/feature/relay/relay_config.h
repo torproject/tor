@@ -24,6 +24,9 @@ void relay_config_free_all(void);
 uint32_t get_effective_bwrate(const or_options_t *options);
 uint32_t get_effective_bwburst(const or_options_t *options);
 
+void warn_nonlocal_ext_orports(const smartlist_t *ports,
+                               const char *portname);
+
 int parse_ports_relay(or_options_t *options,
                       char **msg,
                       smartlist_t *ports_out,
