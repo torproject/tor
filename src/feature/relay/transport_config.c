@@ -11,6 +11,7 @@
  **/
 
 #include "orconfig.h"
+#define RELAY_TRANSPORT_CONFIG_PRIVATE
 #include "feature/relay/transport_config.h"
 
 #include "lib/encoding/confline.h"
@@ -111,7 +112,7 @@ get_transport_bindaddr_from_config(const char *transport)
  *
  *  The returned smartlist and its strings are allocated on the heap
  *  and it's the responsibility of the caller to free it. */
-smartlist_t *
+STATIC smartlist_t *
 get_options_from_transport_options_line(const char *line,const char *transport)
 {
   smartlist_t *items = smartlist_new();

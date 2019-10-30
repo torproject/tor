@@ -7,6 +7,7 @@
 
 #define CONFIG_PRIVATE
 #define RELAY_CONFIG_PRIVATE
+#define RELAY_TRANSPORT_CONFIG_PRIVATE
 #define PT_PRIVATE
 #define ROUTERSET_PRIVATE
 #include "core/or/or.h"

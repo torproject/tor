@@ -12,12 +12,12 @@
 #ifndef TOR_FEATURE_RELAY_TRANSPORT_CONFIG_H
 #define TOR_FEATURE_RELAY_TRANSPORT_CONFIG_H
 
+#include "lib/testsupport/testsupport.h"
+
 typedef struct or_options_t or_options_t;
 typedef struct smartlist_t smartlist_t;
 
 char *get_transport_bindaddr_from_config(const char *transport);
-smartlist_t *get_options_from_transport_options_line(const char *line,
-                                                     const char *transport);
 smartlist_t *get_options_for_server_transport(const char *transport);
 
 int options_validate_server_transport(const or_options_t *old_options,
@@ -25,5 +25,13 @@ int options_validate_server_transport(const or_options_t *old_options,
                                       char **msg);
 
 int options_act_server_transport(const or_options_t *old_options);
+
+#ifdef RELAY_TRANSPORT_CONFIG_PRIVATE
+
+STATIC smartlist_t *get_options_from_transport_options_line(
+                      const char *line,
+                      const char *transport);
+
+#endif
 
 #endif /* !defined(TOR_FEATURE_RELAY_TRANSPORT_CONFIG_H) */
