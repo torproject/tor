@@ -17,6 +17,7 @@
 
 #include "orconfig.h"
 #include "lib/conf/conftypes.h"
+#include "lib/conf/confdecl.h"
 #include "lib/confmgt/typedvar.h"
 #include "lib/confmgt/type_defs.h"
 #include "lib/confmgt/unitparse.h"
@@ -717,50 +718,86 @@ static const var_type_fns_t ignore_fns = {
   .encode = ignore_encode,
 };
 
+const var_type_def_t STRING_type_defn = {
+  .name="String", .fns=&string_fns };
+const var_type_def_t FILENAME_type_defn = {
+  .name="Filename", .fns=&string_fns };
+const var_type_def_t INT_type_defn = {
+  .name="SignedInteger", .fns=&int_fns,
+  .params=&INT_PARSE_UNRESTRICTED };
+const var_type_def_t POSINT_type_defn = {
+  .name="Integer", .fns=&int_fns,
+  .params=&INT_PARSE_POSINT };
+const var_type_def_t UINT64_type_defn = {
+  .name="Integer", .fns=&uint64_fns, };
+const var_type_def_t MEMUNIT_type_defn = {
+  .name="DataSize", .fns=&memunit_fns,
+  .params=&memory_units };
+const var_type_def_t INTERVAL_type_defn = {
+  .name="TimeInterval", .fns=&interval_fns,
+  .params=&time_units };
+const var_type_def_t MSEC_INTERVAL_type_defn = {
+  .name="TimeMsecInterval",
+  .fns=&interval_fns,
+  .params=&time_msec_units };
+const var_type_def_t DOUBLE_type_defn = {
+  .name="Float", .fns=&double_fns, };
+const var_type_def_t BOOL_type_defn = {
+  .name="Boolean", .fns=&enum_fns,
+  .params=&enum_table_bool };
+const var_type_def_t AUTOBOOL_type_defn = {
+  .name="Boolean+Auto", .fns=&enum_fns,
+  .params=&enum_table_autobool };
+const var_type_def_t ISOTIME_type_defn = {
+  .name="Time", .fns=&time_fns, };
+const var_type_def_t CSV_type_defn = {
+  .name="CommaList", .fns=&csv_fns, };
+const var_type_def_t CSV_INTERVAL_type_defn = {
+  .name="TimeInterval",
+  .fns=&legacy_csv_interval_fns, };
+const var_type_def_t LINELIST_type_defn = {
+  .name="LineList", .fns=&linelist_fns,
+  .flags=CFLG_NOREPLACE };
+/*
+ * A "linelist_s" is a derived view of a linelist_v: inspecting
+ * it gets part of a linelist_v, and setting it adds to the linelist_v.
+ */
+const var_type_def_t LINELIST_S_type_defn = {
+  .name="Dependent", .fns=&linelist_s_fns,
+  .flags=CFLG_NOREPLACE|
+  /* The operations we disable here are
+   * handled by the linelist_v. */
+  CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP };
+const var_type_def_t LINELIST_V_type_defn = {
+  .name="Virtual", .fns=&linelist_v_fns,
+  .flags=CFLG_NOREPLACE|CFLG_NOSET };
+const var_type_def_t OBSOLETE_type_defn = {
+  .name="Obsolete", .fns=&ignore_fns,
+  .flags=CFLG_GROUP_OBSOLETE,
+};
+
 /**
  * Table mapping conf_type_t values to var_type_def_t objects.
  **/
-static const var_type_def_t type_definitions_table[] = {
-  [CONFIG_TYPE_STRING] = { .name="String", .fns=&string_fns },
-  [CONFIG_TYPE_FILENAME] = { .name="Filename", .fns=&string_fns },
-  [CONFIG_TYPE_INT] = { .name="SignedInteger", .fns=&int_fns,
-                        .params=&INT_PARSE_UNRESTRICTED },
-  [CONFIG_TYPE_POSINT] = { .name="Integer", .fns=&int_fns,
-                           .params=&INT_PARSE_POSINT },
-  [CONFIG_TYPE_UINT64] = { .name="Integer", .fns=&uint64_fns, },
-  [CONFIG_TYPE_MEMUNIT] = { .name="DataSize", .fns=&memunit_fns,
-                            .params=&memory_units },
-  [CONFIG_TYPE_INTERVAL] = { .name="TimeInterval", .fns=&interval_fns,
-                             .params=&time_units },
-  [CONFIG_TYPE_MSEC_INTERVAL] = { .name="TimeMsecInterval",
-                                  .fns=&interval_fns,
-                                  .params=&time_msec_units },
-  [CONFIG_TYPE_DOUBLE] = { .name="Float", .fns=&double_fns, },
-  [CONFIG_TYPE_BOOL] = { .name="Boolean", .fns=&enum_fns,
-                         .params=&enum_table_bool },
-  [CONFIG_TYPE_AUTOBOOL] = { .name="Boolean+Auto", .fns=&enum_fns,
-                             .params=&enum_table_autobool },
-  [CONFIG_TYPE_ISOTIME] = { .name="Time", .fns=&time_fns, },
-  [CONFIG_TYPE_CSV] = { .name="CommaList", .fns=&csv_fns, },
-  [CONFIG_TYPE_CSV_INTERVAL] = { .name="TimeInterval",
-                                 .fns=&legacy_csv_interval_fns, },
-  [CONFIG_TYPE_LINELIST] = { .name="LineList", .fns=&linelist_fns,
-                             .flags=CFLG_NOREPLACE },
-  /*
-   * A "linelist_s" is a derived view of a linelist_v: inspecting
-   * it gets part of a linelist_v, and setting it adds to the linelist_v.
-   */
-  [CONFIG_TYPE_LINELIST_S] = { .name="Dependent", .fns=&linelist_s_fns,
-                               .flags=CFLG_NOREPLACE|
-                               /* The operations we disable here are
-                                * handled by the linelist_v. */
-                               CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP },
-  [CONFIG_TYPE_LINELIST_V] = { .name="Virtual", .fns=&linelist_v_fns,
-                               .flags=CFLG_NOREPLACE|CFLG_NOSET },
-  [CONFIG_TYPE_OBSOLETE] = {
-         .name="Obsolete", .fns=&ignore_fns,
-         .flags=CFLG_GROUP_OBSOLETE,
-  }
+static const var_type_def_t *type_definitions_table[] = {
+  [CONFIG_TYPE_STRING] = &STRING_type_defn,
+  [CONFIG_TYPE_FILENAME] = &FILENAME_type_defn,
+  [CONFIG_TYPE_INT] = &INT_type_defn,
+  [CONFIG_TYPE_POSINT] = &POSINT_type_defn,
+  [CONFIG_TYPE_UINT64] = &UINT64_type_defn,
+  [CONFIG_TYPE_MEMUNIT] = &MEMUNIT_type_defn,
+  [CONFIG_TYPE_INTERVAL] = &INTERVAL_type_defn,
+  [CONFIG_TYPE_MSEC_INTERVAL] = &MSEC_INTERVAL_type_defn,
+  [CONFIG_TYPE_DOUBLE] = &DOUBLE_type_defn,
+  [CONFIG_TYPE_BOOL] = &BOOL_type_defn,
+  [CONFIG_TYPE_AUTOBOOL] = &AUTOBOOL_type_defn,
+  [CONFIG_TYPE_ISOTIME] = &ISOTIME_type_defn,
+  [CONFIG_TYPE_CSV] = &CSV_type_defn,
+  [CONFIG_TYPE_CSV_INTERVAL] = &CSV_INTERVAL_type_defn,
+  [CONFIG_TYPE_LINELIST] = &LINELIST_type_defn,
+  [CONFIG_TYPE_LINELIST_S] = &LINELIST_S_type_defn,
+  [CONFIG_TYPE_LINELIST_V] = &LINELIST_V_type_defn,
+  [CONFIG_TYPE_OBSOLETE] = &OBSOLETE_type_defn,
 };
 
 /**
@@ -774,5 +811,5 @@ lookup_type_def(config_type_t type)
   tor_assert(t >= 0);
   if (t >= (int)ARRAY_LENGTH(type_definitions_table))
     return NULL;
-  return &type_definitions_table[t];
+  return type_definitions_table[t];
 }
