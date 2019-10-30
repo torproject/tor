@@ -143,13 +143,11 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/relay/dns.c			\
 	src/feature/relay/ext_orport.c		\
 	src/feature/relay/onion_queue.c		\
-	src/feature/relay/relay_config.c	\
 	src/feature/relay/relay_periodic.c	\
 	src/feature/relay/relay_sys.c		\
 	src/feature/relay/router.c		\
 	src/feature/relay/routerkeys.c		\
 	src/feature/relay/selftest.c		\
-	src/feature/relay/transport_config.c		\
 	src/feature/rend/rendcache.c		\
 	src/feature/rend/rendclient.c		\
 	src/feature/rend/rendcommon.c		\
@@ -173,11 +171,13 @@ endif
 LIBTOR_APP_TESTING_A_SOURCES = $(LIBTOR_APP_A_SOURCES)
 
 # The Relay module.
-MODULE_RELAY_SOURCES = 					    \
-	src/feature/relay/routermode.c
+MODULE_RELAY_SOURCES = 						\
+	src/feature/relay/routermode.c				\
+	src/feature/relay/relay_config.c			\
+	src/feature/relay/transport_config.c
 
 # The Directory Authority module.
-MODULE_DIRAUTH_SOURCES = 					\
+MODULE_DIRAUTH_SOURCES =					\
 	src/feature/dirauth/authmode.c				\
 	src/feature/dirauth/bridgeauth.c			\
 	src/feature/dirauth/bwauth.c				\

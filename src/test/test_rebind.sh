@@ -12,6 +12,11 @@ if test "$UNAME_OS" = 'CYGWIN' || \
   fi
 fi
 
+if "${TESTING_TOR_BINARY}" --list-modules | grep -q "relay: no"; then
+  echo "This test requires the relay module. Skipping." >&2
+  exit 77
+fi
+
 tmpdir=
 clean () {
   if [ -n "$tmpdir" ] && [ -d "$tmpdir" ]; then
