@@ -45,6 +45,7 @@
 #include "feature/relay/routermode.h"
 #include "lib/sandbox/sandbox.h"
 #include "app/config/statefile.h"
+#include "app/main/subsysmgr.h"
 #include "lib/encoding/confline.h"
 #include "lib/net/resolve.h"
 #include "lib/version/torversion.h"
@@ -180,6 +181,8 @@ get_state_mgr(void)
 {
   if (PREDICT_UNLIKELY(state_mgr == NULL)) {
     state_mgr = config_mgr_new(&state_format);
+    int rv = subsystems_register_state_formats(state_mgr);
+    tor_assert(rv == 0);
     config_mgr_freeze(state_mgr);
   }
   return state_mgr;

@@ -14,10 +14,12 @@
 #include "orconfig.h"
 #include "app/main/subsysmgr.h"
 
+#include "lib/confmgt/confmgt.h"
 #include "lib/dispatch/dispatch_naming.h"
 #include "lib/dispatch/msgtypes.h"
 #include "lib/err/torerr.h"
 #include "lib/log/log.h"
+#include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"
 #include "lib/pubsub/pubsub_build.h"
 #include "lib/pubsub/pubsub_connect.h"
@@ -37,6 +39,10 @@ static bool subsystem_array_validated = false;
 typedef struct subsys_status_t {
   /** True if the given subsystem is initialized. */
   bool initialized;
+  /** Index for this subsystem's options object, or -1 for none. */
+  int options_idx;
+  /** Index for this subsystem's state object, or -1 for none. */
+  int state_idx;
 } subsys_status_t;
 
 /** An overestimate of the number of subsystems. */
@@ -47,6 +53,18 @@ typedef struct subsys_status_t {
  * dynamically allocate in this module.)
  **/
 static subsys_status_t sys_status[N_SYS_STATUS];
+
+/** Set <b>status</b> to a default (not set-up) state. */
+static void
+subsys_status_clear(subsys_status_t *status)
+{
+  if (!status)
+    return;
+  memset(status, 0, sizeof(*status));
+  status->initialized = false;
+  status->state_idx = -1;
+  status->options_idx = -1;
+}
 
 /**
  * Exit with a raw assertion if the subsystems list is inconsistent;
@@ -77,6 +95,8 @@ check_and_setup(void)
               sys->name, i, sys->level, last_level);
       raw_assert_unreached_msg("There is a bug in subsystem_list.c");
     }
+    subsys_status_clear(&sys_status[i]);
+
     last_level = sys->level;
   }
 
@@ -202,7 +222,7 @@ subsystems_shutdown_downto(int target_level)
       log_debug(LD_GENERAL, "Shutting down %s", sys->name);
       sys->shutdown();
     }
-    sys_status[i].initialized = false;
+    subsys_status_clear(&sys_status[i]);
   }
 }
 
@@ -267,4 +287,50 @@ subsystems_thread_cleanup(void)
       sys->thread_cleanup();
     }
   }
+}
+
+/**
+ * Register all subsystem-declared options formats in <b>mgr</b>.
+ *
+ * Return 0 on success, -1 on failure.
+ **/
+int
+subsystems_register_options_formats(config_mgr_t *mgr)
+{
+  tor_assert(mgr);
+  check_and_setup();
+
+  for (unsigned i = 0; i < n_tor_subsystems; ++i) {
+    const subsys_fns_t *sys = tor_subsystems[i];
+    if (sys->options_format) {
+      int options_idx = config_mgr_add_format(mgr, sys->options_format);
+      sys_status[i].options_idx = options_idx;
+      log_debug(LD_CONFIG, "Added options format for %s with index %d",
+                sys->name, options_idx);
+    }
+  }
+  return 0;
+}
+
+/**
+ * Register all subsystem-declared state formats in <b>mgr</b>.
+ *
+ * Return 0 on success, -1 on failure.
+ **/
+int
+subsystems_register_state_formats(config_mgr_t *mgr)
+{
+  tor_assert(mgr);
+  check_and_setup();
+
+  for (unsigned i = 0; i < n_tor_subsystems; ++i) {
+    const subsys_fns_t *sys = tor_subsystems[i];
+    if (sys->state_format) {
+      int state_idx = config_mgr_add_format(mgr, sys->state_format);
+      sys_status[i].state_idx = state_idx;
+      log_debug(LD_CONFIG, "Added state format for %s with index %d",
+                sys->name, state_idx);
+    }
+  }
+  return 0;
 }
