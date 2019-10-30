@@ -1154,6 +1154,41 @@ config_init(const config_mgr_t *mgr, void *options)
 }
 
 /**
+ * Helper for config_validate_single: see whether any immutable option
+ * has changed between old_options and new_options.
+ *
+ * On success return 0; on failure set *msg_out to a newly allocated
+ * string explaining what is wrong, and return -1.
+ */
+static int
+config_check_immutable_flags(const config_format_t *fmt,
+                             const void *old_options,
+                             const void *new_options,
+                             char **msg_out)
+{
+  tor_assert(fmt);
+  tor_assert(new_options);
+  if (BUG(! old_options))
+    return 0;
+
+  unsigned i;
+  for (i = 0; fmt->vars[i].member.name; ++i) {
+    const config_var_t *v = &fmt->vars[i];
+    if (! config_var_has_flag(v, CFLG_IMMUTABLE))
+      continue;
+
+    if (! struct_var_eq(old_options, new_options, &v->member)) {
+      tor_asprintf(msg_out,
+                   "While Tor is running, changing %s is not allowed",
+                   v->member.name);
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
+/**
  * Normalize and validate a single object `options` within a configuration
  * suite, according to its format.  `options` may be modified as appropriate
  * in order to set ancillary data.  If `old_options` is provided, make sure
@@ -1189,9 +1224,15 @@ config_validate_single(const config_format_t *fmt,
     }
   }
 
-  if (fmt->check_transition_fn && old_options) {
-    if (fmt->check_transition_fn(old_options, options, msg_out) < 0) {
+  if (old_options) {
+    if (config_check_immutable_flags(fmt, old_options, options, msg_out) < 0) {
       return VSTAT_TRANSITION_ERR;
+    }
+
+    if (fmt->check_transition_fn) {
+      if (fmt->check_transition_fn(old_options, options, msg_out) < 0) {
+        return VSTAT_TRANSITION_ERR;
+      }
     }
   }
 

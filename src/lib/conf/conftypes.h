@@ -178,6 +178,11 @@ typedef struct struct_magic_decl_t {
  * however, setting them appends to their old value.
  */
 #define CFLG_NOREPLACE    (1u<<5)
+/**
+ * Flag to indicate that an option or type cannot be changed while Tor is
+ * running.
+ **/
+#define CFLG_IMMUTABLE (1u<<6)
 
 /**
  * A group of flags that should be set on all obsolete options and types.
