@@ -147,6 +147,9 @@ static int any_opened_circs_cached_val = 0;
 
 /********* END VARIABLES ************/
 
+/* Implement circuit handle helpers. */
+HANDLE_IMPL(circuit, circuit_t,)
+
 or_circuit_t *
 TO_OR_CIRCUIT(circuit_t *x)
 {
@@ -1246,6 +1249,9 @@ circuit_free_(circuit_t *circ)
 
   /* Free any circuit padding structures */
   circpad_circuit_free_all_machineinfos(circ);
+
+  /* Clear all dangling handle references. */
+  circuit_handles_clear(circ);
 
   if (should_free) {
     memwipe(mem, 0xAA, memlen); /* poison memory */

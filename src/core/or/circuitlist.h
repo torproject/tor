@@ -12,6 +12,7 @@
 #ifndef TOR_CIRCUITLIST_H
 #define TOR_CIRCUITLIST_H
 
+#include "lib/container/handles.h"
 #include "lib/testsupport/testsupport.h"
 #include "feature/hs/hs_ident.h"
 #include "core/or/ocirc_event.h"
@@ -241,6 +242,11 @@ MOCK_DECL(void, channel_note_destroy_not_pending,
           (channel_t *chan, circid_t id));
 
 smartlist_t *circuit_find_circuits_to_upgrade_from_guard_wait(void);
+
+/* Declare the handle helpers */
+HANDLE_DECL(circuit, circuit_t, )
+#define circuit_handle_free(h)    \
+    FREE_AND_NULL(circuit_handle_t, circuit_handle_free_, (h))
 
 #ifdef CIRCUITLIST_PRIVATE
 STATIC void circuit_free_(circuit_t *circ);
