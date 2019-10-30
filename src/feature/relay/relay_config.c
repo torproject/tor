@@ -1044,8 +1044,8 @@ options_act_relay(const or_options_t *old_options)
   /* We want to reinit keys as needed before we do much of anything else:
      keys are important, and other things can depend on them. */
   if (transition_affects_workers ||
-      (options->V3AuthoritativeDir && (!old_options ||
-                                       !old_options->V3AuthoritativeDir))) {
+      (authdir_mode_v3(options) && (!old_options ||
+                                    !authdir_mode_v3(old_options)))) {
     if (init_keys() < 0) {
       log_warn(LD_BUG,"Error initializing keys; exiting");
       return -1;
