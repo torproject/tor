@@ -1522,6 +1522,55 @@ get_hs_client_auths_map(void)
 /* Public API */
 /* ========== */
 
+/** Called when a circuit was just cleaned up. This is done right before the
+ * circuit is freed. */
+void
+hs_client_circuit_cleanup(const circuit_t *circ)
+{
+  bool has_timed_out;
+  rend_intro_point_failure_t failure = INTRO_POINT_FAILURE_GENERIC;
+  const origin_circuit_t *orig_circ = NULL;
+
+  tor_assert(circ);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
+
+  orig_circ = CONST_TO_ORIGIN_CIRCUIT(circ);
+
+  has_timed_out =
+    (circ->marked_for_close_orig_reason == END_CIRC_REASON_TIMEOUT);
+  if (has_timed_out) {
+    failure = INTRO_POINT_FAILURE_TIMEOUT;
+  }
+
+  switch (circ->purpose) {
+  case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
+    log_info(LD_REND, "Failed v3 intro circ for service %s to intro point %s "
+                      "(awaiting ACK). Failure code: %d",
+        safe_str_client(ed25519_fmt(&orig_circ->hs_ident->identity_pk)),
+        safe_str_client(build_state_get_exit_nickname(orig_circ->build_state)),
+        failure);
+    hs_cache_client_intro_state_note(&orig_circ->hs_ident->identity_pk,
+                                     &orig_circ->hs_ident->intro_auth_pk,
+                                     failure);
+    break;
+  case CIRCUIT_PURPOSE_C_INTRODUCING:
+    if (has_timed_out || !orig_circ->build_state) {
+      break;
+    }
+    failure = INTRO_POINT_FAILURE_UNREACHABLE;
+    log_info(LD_REND, "Failed v3 intro circ for service %s to intro point %s "
+                      "(while building circuit). Marking as unreachable.",
+       safe_str_client(ed25519_fmt(&orig_circ->hs_ident->identity_pk)),
+       safe_str_client(build_state_get_exit_nickname(orig_circ->build_state)));
+    hs_cache_client_intro_state_note(&orig_circ->hs_ident->identity_pk,
+                                     &orig_circ->hs_ident->intro_auth_pk,
+                                     failure);
+    break;
+  default:
+    break;
+  }
+}
+
 /** A circuit just finished connecting to a hidden service that the stream
  *  <b>conn</b> has been waiting for. Let the HS subsystem know about this. */
 void
