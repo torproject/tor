@@ -123,13 +123,14 @@ bool config_var_is_listable(const config_var_t *var);
 #define CFG_EQ_LINELIST(a,b,opt) config_lines_eq((a)->opt, (b)->opt)
 #define CFG_EQ_ROUTERSET(a,b,opt) routerset_equal((a)->opt, (b)->opt)
 
+void *config_mgr_get_obj_mutable(const config_mgr_t *mgr,
+                                 void *toplevel, int idx);
+const void *config_mgr_get_obj(const config_mgr_t *mgr,
+                               const void *toplevel, int idx);
+
 #ifdef CONFMGT_PRIVATE
 STATIC void config_reset_line(const config_mgr_t *mgr, void *options,
                               const char *key, int use_defaults);
-STATIC void *config_mgr_get_obj_mutable(const config_mgr_t *mgr,
-                                        void *toplevel, int idx);
-STATIC const void *config_mgr_get_obj(const config_mgr_t *mgr,
-                                       const void *toplevel, int idx);
 #endif /* defined(CONFMGT_PRIVATE) */
 
 #endif /* !defined(TOR_CONFMGT_H) */
