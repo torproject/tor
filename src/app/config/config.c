@@ -975,7 +975,8 @@ set_options(or_options_t *new_val, char **msg)
     global_options = old_options;
     return -1;
   }
-  if (options_act(old_options) < 0) { /* acting on the options failed. die. */
+  if (subsystems_set_options(get_options_mgr(), new_val) < 0 ||
+      options_act(old_options) < 0) { /* acting on the options failed. die. */
     if (! tor_event_loop_shutdown_is_pending()) {
       log_err(LD_BUG,
               "Acting on config options left us in a broken state. Dying.");

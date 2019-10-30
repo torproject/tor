@@ -334,3 +334,79 @@ subsystems_register_state_formats(config_mgr_t *mgr)
   }
   return 0;
 }
+
+/**
+ * Call all appropriate set_options() methods to tell the various subsystems
+ * about a new set of torrc options.  Return 0 on success, -1 on
+ * nonrecoverable failure.
+ **/
+int
+subsystems_set_options(const config_mgr_t *mgr, struct or_options_t *options)
+{
+  /* XXXX This does not yet handle reversible option assignment; I'll
+   * do that later in this branch. */
+
+  for (unsigned i = 0; i < n_tor_subsystems; ++i) {
+    const subsys_fns_t *sys = tor_subsystems[i];
+    if (sys_status[i].options_idx >= 0 && sys->set_options) {
+      void *obj = config_mgr_get_obj_mutable(mgr, options,
+                                             sys_status[i].options_idx);
+      int rv = sys->set_options(obj);
+      if (rv < 0) {
+        log_err(LD_CONFIG, "Error when handling option for %s; "
+                "cannot proceed.", sys->name);
+        return -1;
+      }
+    }
+  }
+  return 0;
+}
+
+/**
+ * Call all appropriate set_state() methods to tell the various subsystems
+ * about an initial DataDir/state file.  Return 0 on success, -1 on
+ * nonrecoverable failure.
+ **/
+int
+subsystems_set_state(const config_mgr_t *mgr, struct or_state_t *state)
+{
+  for (unsigned i = 0; i < n_tor_subsystems; ++i) {
+    const subsys_fns_t *sys = tor_subsystems[i];
+    if (sys_status[i].state_idx >= 0 && sys->set_state) {
+      void *obj = config_mgr_get_obj_mutable(mgr, state,
+                                             sys_status[i].state_idx);
+      int rv = sys->set_state(obj);
+      if (rv < 0) {
+        log_err(LD_CONFIG, "Error when handling state for %s; "
+                "cannot proceed.", sys->name);
+        return -1;
+      }
+    }
+  }
+  return 0;
+}
+
+/**
+ * Call all appropriate flush_state() methods to tell the various subsystems
+ * to update the state objects in <b>state</b>.  Return 0 on success,
+ * -1 on failure.
+ **/
+int
+subsystems_flush_state(const config_mgr_t *mgr, struct or_state_t *state)
+{
+  int result = 0;
+  for (unsigned i = 0; i < n_tor_subsystems; ++i) {
+    const subsys_fns_t *sys = tor_subsystems[i];
+    if (sys_status[i].state_idx >= 0 && sys->flush_state) {
+      void *obj = config_mgr_get_obj_mutable(mgr, state,
+                                             sys_status[i].state_idx);
+      int rv = sys->flush_state(obj);
+      if (rv < 0) {
+        log_warn(LD_CONFIG, "Error when flushing state to state object for %s",
+                sys->name);
+        result = -1;
+      }
+    }
+  }
+  return result;
+}
