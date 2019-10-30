@@ -1865,19 +1865,6 @@ options_act,(const or_options_t *old_options))
              "in a non-anonymous mode. It will provide NO ANONYMITY.");
   }
 
-  /* If we are a bridge with a pluggable transport proxy but no
-     Extended ORPort, inform the user that they are missing out. */
-  if (server_mode(options) && options->ServerTransportPlugin &&
-      !options->ExtORPort_lines) {
-    log_notice(LD_CONFIG, "We use pluggable transports but the Extended "
-               "ORPort is disabled. Tor and your pluggable transports proxy "
-               "communicate with each other via the Extended ORPort so it "
-               "is suggested you enable it: it will also allow your Bridge "
-               "to collect statistics about its clients that use pluggable "
-               "transports. Please enable it using the ExtORPort torrc option "
-               "(e.g. set 'ExtORPort auto').");
-  }
-
   if (options->Bridges) {
     mark_bridge_list();
     for (cl = options->Bridges; cl; cl = cl->next) {
@@ -1930,13 +1917,7 @@ options_act,(const or_options_t *old_options))
     rep_hist_load_mtbf_data(time(NULL));
   }
 
-  /* If we have an ExtORPort, initialize its auth cookie. */
-  if (running_tor &&
-      init_ext_or_cookie_authentication(!!options->ExtORPort_lines) < 0) {
-    log_warn(LD_CONFIG,"Error creating Extended ORPort cookie file.");
-    return -1;
-  }
-
+  /* 31851: some of the code in these functions is relay-only */
   mark_transport_list();
   pt_prepare_proxy_list_for_config_read();
   if (!options->DisableNetwork) {
@@ -1952,20 +1933,11 @@ options_act,(const or_options_t *old_options))
         }
       }
     }
-
-    if (options->ServerTransportPlugin && server_mode(options)) {
-      for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
-        if (parse_transport_line(options, cl->value, 0, 1) < 0) {
-          // LCOV_EXCL_START
-          log_warn(LD_BUG,
-                   "Previously validated ServerTransportPlugin line "
-                   "could not be added!");
-          return -1;
-          // LCOV_EXCL_STOP
-        }
-      }
-    }
   }
+
+  if (options_act_server_transport(old_options) < 0)
+    return -1;
+
   sweep_transport_list();
   sweep_proxy_list();
 

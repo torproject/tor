@@ -245,3 +245,60 @@ options_validate_server_transport(const or_options_t *old_options,
 
   return 0;
 }
+
+/** Fetch the active option list, and take server pluggable transport actions
+ * based on it. All of the things we do should survive being done repeatedly.
+ * If present, <b>old_options</b> contains the previous value of the options.
+ *
+ * Return 0 if all goes well, return -1 if it's time to die.
+ *
+ * Note: We haven't moved all the "act on new configuration" logic
+ * into the options_act* functions yet.  Some is still in do_hup() and other
+ * places.
+ */
+int
+options_act_server_transport(const or_options_t *old_options)
+{
+  (void)old_options;
+
+  config_line_t *cl;
+  const or_options_t *options = get_options();
+  int running_tor = options->command == CMD_RUN_TOR;
+
+  /* If we are a bridge with a pluggable transport proxy but no
+     Extended ORPort, inform the user that they are missing out. */
+  if (server_mode(options) && options->ServerTransportPlugin &&
+      !options->ExtORPort_lines) {
+    log_notice(LD_CONFIG, "We use pluggable transports but the Extended "
+               "ORPort is disabled. Tor and your pluggable transports proxy "
+               "communicate with each other via the Extended ORPort so it "
+               "is suggested you enable it: it will also allow your Bridge "
+               "to collect statistics about its clients that use pluggable "
+               "transports. Please enable it using the ExtORPort torrc option "
+               "(e.g. set 'ExtORPort auto').");
+  }
+
+  /* If we have an ExtORPort, initialize its auth cookie. */
+  if (running_tor &&
+      init_ext_or_cookie_authentication(!!options->ExtORPort_lines) < 0) {
+    log_warn(LD_CONFIG,"Error creating Extended ORPort cookie file.");
+    return -1;
+  }
+
+  if (!options->DisableNetwork) {
+    if (options->ServerTransportPlugin && server_mode(options)) {
+      for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
+        if (parse_transport_line(options, cl->value, 0, 1) < 0) {
+          // LCOV_EXCL_START
+          log_warn(LD_BUG,
+                   "Previously validated ServerTransportPlugin line "
+                   "could not be added!");
+          return -1;
+          // LCOV_EXCL_STOP
+        }
+      }
+    }
+  }
+
+  return 0;
+}

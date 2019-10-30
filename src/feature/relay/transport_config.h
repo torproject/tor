@@ -24,4 +24,6 @@ int options_validate_server_transport(const or_options_t *old_options,
                                       or_options_t *options,
                                       char **msg);
 
+int options_act_server_transport(const or_options_t *old_options);
+
 #endif /* !defined(TOR_FEATURE_RELAY_TRANSPORT_CONFIG_H) */
