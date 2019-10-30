@@ -1002,6 +1002,7 @@ test_options_validate__relay_with_hidden_services(void *ignored)
 {
   (void)ignored;
   char *msg;
+  int ret;
   setup_capture_of_logs(LOG_DEBUG);
   options_test_data_t *tdata = get_options_test_data(
                                   "ORPort 127.0.0.1:5555\n"
@@ -1010,7 +1011,8 @@ test_options_validate__relay_with_hidden_services(void *ignored)
                                   "HiddenServicePort 80 127.0.0.1:8080\n"
                                                      );
 
-  options_validate(NULL, tdata->opt, &msg);
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
   expect_log_msg(
             "Tor is currently configured as a relay and a hidden service. "
             "That's not very secure: you should probably run your hidden servi"
@@ -1023,27 +1025,25 @@ test_options_validate__relay_with_hidden_services(void *ignored)
   tor_free(msg);
 }
 
-// TODO: it doesn't seem possible to hit the case of having no port lines at
-// all, since there will be a default created for SocksPort
-/* static void */
-/* test_options_validate__ports(void *ignored) */
-/* { */
-/*   (void)ignored; */
-/*   int ret; */
-/*   char *msg; */
-/*   setup_capture_of_logs(LOG_WARN); */
-/*   options_test_data_t *tdata = get_options_test_data(""); */
-/*   ret = options_validate(NULL, tdata->opt, */
-/*                          tdata->def_opt, 0, &msg); */
-/*   expect_log_msg("SocksPort, TransPort, NATDPort, DNSPort, and ORPort " */
-/*           "are all undefined, and there aren't any hidden services " */
-/*           "configured. " */
-/*           " Tor will still run, but probably won't do anything.\n"); */
-/*  done: */
-/*   teardown_capture_of_logs(); */
-/*   free_options_test_data(tdata); */
-/*   tor_free(msg); */
-/* } */
+static void
+test_options_validate__listen_ports(void *ignored)
+{
+  (void)ignored;
+  int ret;
+  char *msg;
+  setup_capture_of_logs(LOG_WARN);
+  options_test_data_t *tdata = get_options_test_data("SOCKSPort 0");
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  expect_log_msg("SocksPort, TransPort, NATDPort, DNSPort, and ORPort "
+                 "are all undefined, and there aren't any hidden services "
+                 "configured. "
+                 " Tor will still run, but probably won't do anything.\n");
+ done:
+  teardown_capture_of_logs();
+  free_options_test_data(tdata);
+  tor_free(msg);
+}
 
 static void
 test_options_validate__transproxy(void *ignored)
@@ -2559,6 +2559,20 @@ test_options_validate__accounting(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(tdata->opt->AccountingRule, OP_EQ, ACCT_MAX);
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data("AccountingRule in\n");
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(tdata->opt->AccountingRule, OP_EQ, ACCT_IN);
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data("AccountingRule out\n");
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(tdata->opt->AccountingRule, OP_EQ, ACCT_OUT);
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -4299,6 +4313,7 @@ struct testcase_t options_tests[] = {
   LOCAL_VALIDATE_TEST(logs),
   LOCAL_VALIDATE_TEST(authdir),
   LOCAL_VALIDATE_TEST(relay_with_hidden_services),
+  LOCAL_VALIDATE_TEST(listen_ports),
   LOCAL_VALIDATE_TEST(transproxy),
   LOCAL_VALIDATE_TEST(exclude_nodes),
   LOCAL_VALIDATE_TEST(node_families),
