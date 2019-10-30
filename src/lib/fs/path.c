@@ -258,7 +258,7 @@ alloc_getcwd(void)
  * Return a newly allocated string, which may be a duplicate of <b>fname</b>.
  */
 char *
-make_path_absolute(char *fname)
+make_path_absolute(const char *fname)
 {
 #ifdef _WIN32
   char *absfname_malloced = _fullpath(NULL, fname, 1);

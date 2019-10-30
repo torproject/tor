@@ -25,6 +25,6 @@ char *expand_filename(const char *filename);
 int path_is_relative(const char *filename);
 void clean_fname_for_stat(char *name);
 int get_parent_directory(char *fname);
-char *make_path_absolute(char *fname);
+char *make_path_absolute(const char *fname);
 
 #endif /* !defined(TOR_PATH_H) */

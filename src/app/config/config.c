@@ -3303,7 +3303,7 @@ options_validate(const or_options_t *old_options, or_options_t *options,
  */
 static int
 warn_if_option_path_is_relative(const char *option,
-                                char *filepath)
+                                const char *filepath)
 {
   if (filepath && path_is_relative(filepath)) {
     char *abs_path = make_path_absolute(filepath);
@@ -3321,7 +3321,7 @@ warn_if_option_path_is_relative(const char *option,
  * Return 1 if there were relative paths; 0 otherwise.
  */
 static int
-warn_about_relative_paths(or_options_t *options)
+warn_about_relative_paths(const or_options_t *options)
 {
   tor_assert(options);
   int n = 0;
