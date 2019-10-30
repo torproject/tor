@@ -32,11 +32,21 @@
 static bool subsystem_array_validated = false;
 
 /**
+ * Runtime status of a single subsystem.
+ **/
+typedef struct subsys_status_t {
+  /** True if the given subsystem is initialized. */
+  bool initialized;
+} subsys_status_t;
+
+/** An overestimate of the number of subsystems. */
+#define N_SYS_STATUS 128
+/**
  * True if a given subsystem is initialized.  Expand this array if there
  * are more than this number of subsystems.  (We'd rather not
  * dynamically allocate in this module.)
  **/
-static bool sys_initialized[128];
+static subsys_status_t sys_status[N_SYS_STATUS];
 
 /**
  * Exit with a raw assertion if the subsystems list is inconsistent;
@@ -48,8 +58,8 @@ check_and_setup(void)
   if (subsystem_array_validated)
     return;
 
-  raw_assert(ARRAY_LENGTH(sys_initialized) >= n_tor_subsystems);
-  memset(sys_initialized, 0, sizeof(sys_initialized));
+  raw_assert(ARRAY_LENGTH(sys_status) >= n_tor_subsystems);
+  memset(sys_status, 0, sizeof(sys_status));
 
   int last_level = MIN_SUBSYS_LEVEL;
 
@@ -97,7 +107,7 @@ subsystems_init_upto(int target_level)
       continue;
     if (sys->level > target_level)
       break;
-    if (sys_initialized[i])
+    if (sys_status[i].initialized)
       continue;
     int r = 0;
     if (sys->initialize) {
@@ -112,7 +122,7 @@ subsystems_init_upto(int target_level)
               sys->name, i);
       raw_assert_unreached_msg("A subsystem couldn't be initialized.");
     }
-    sys_initialized[i] = true;
+    sys_status[i].initialized = true;
   }
 
   return 0;
@@ -132,7 +142,7 @@ subsystems_add_pubsub_upto(pubsub_builder_t *builder,
       continue;
     if (sys->level > target_level)
       break;
-    if (! sys_initialized[i])
+    if (! sys_status[i].initialized)
       continue;
     int r = 0;
     if (sys->add_pubsub) {
@@ -186,13 +196,13 @@ subsystems_shutdown_downto(int target_level)
       continue;
     if (sys->level <= target_level)
       break;
-    if (! sys_initialized[i])
+    if (! sys_status[i].initialized)
       continue;
     if (sys->shutdown) {
       log_debug(LD_GENERAL, "Shutting down %s", sys->name);
       sys->shutdown();
     }
-    sys_initialized[i] = false;
+    sys_status[i].initialized = false;
   }
 }
 
@@ -208,7 +218,7 @@ subsystems_prefork(void)
     const subsys_fns_t *sys = tor_subsystems[i];
     if (!sys->supported)
       continue;
-    if (! sys_initialized[i])
+    if (! sys_status[i].initialized)
       continue;
     if (sys->prefork) {
       log_debug(LD_GENERAL, "Pre-fork: %s", sys->name);
@@ -229,7 +239,7 @@ subsystems_postfork(void)
     const subsys_fns_t *sys = tor_subsystems[i];
     if (!sys->supported)
       continue;
-    if (! sys_initialized[i])
+    if (! sys_status[i].initialized)
       continue;
     if (sys->postfork) {
       log_debug(LD_GENERAL, "Post-fork: %s", sys->name);
@@ -250,7 +260,7 @@ subsystems_thread_cleanup(void)
     const subsys_fns_t *sys = tor_subsystems[i];
     if (!sys->supported)
       continue;
-    if (! sys_initialized[i])
+    if (! sys_status[i].initialized)
       continue;
     if (sys->thread_cleanup) {
       log_debug(LD_GENERAL, "Thread cleanup: %s", sys->name);
