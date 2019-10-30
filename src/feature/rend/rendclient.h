@@ -47,5 +47,7 @@ rend_service_authorization_t *rend_client_lookup_service_authorization(
                                                 const char *onion_address);
 void rend_service_authorization_free_all(void);
 
+void rend_client_circuit_cleanup(circuit_t *circ);
+
 #endif /* !defined(TOR_RENDCLIENT_H) */
 
