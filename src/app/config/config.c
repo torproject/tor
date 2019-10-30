@@ -40,9 +40,11 @@
  *       running.
  *   <li>options_transition_affects_workers(), in case changes in the option
  *       might require Tor to relaunch or reconfigure its worker threads.
+ *       (This function is now in the relay module.)
  *   <li>options_transition_affects_descriptor(), in case changes in the
  *       option might require a Tor relay to build and publish a new server
  *       descriptor.
+ *       (This function is now in the relay module.)
  *   <li>options_act() and/or options_act_reversible(), in case there's some
  *       action that needs to be taken immediately based on the option's
  *       value.
@@ -67,17 +69,14 @@
 #include "app/main/main.h"
 #include "app/main/subsysmgr.h"
 #include "core/mainloop/connection.h"
-#include "core/mainloop/cpuworker.h"
 #include "core/mainloop/mainloop.h"
 #include "core/mainloop/netstatus.h"
 #include "core/or/channel.h"
-#include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuitmux.h"
 #include "core/or/circuitmux_ewma.h"
 #include "core/or/circuitstats.h"
 #include "core/or/connection_edge.h"
-#include "core/or/connection_or.h"
 #include "core/or/dos.h"
 #include "core/or/policies.h"
 #include "core/or/relay.h"
@@ -89,7 +88,6 @@
 #include "feature/control/control.h"
 #include "feature/control/control_auth.h"
 #include "feature/control/control_events.h"
-#include "feature/dircache/consdiffmgr.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_config.h"
@@ -108,7 +106,6 @@
 #include "feature/rend/rendservice.h"
 #include "lib/geoip/geoip.h"
 #include "feature/stats/geoip_stats.h"
-#include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
 #include "lib/compress/compress.h"
 #include "lib/confmgt/structvar.h"
@@ -824,10 +821,6 @@ static char *get_windows_conf_root(void);
 static int options_check_transition_cb(const void *old,
                                        const void *new,
                                        char **msg);
-static int options_transition_affects_workers(
-      const or_options_t *old_options, const or_options_t *new_options);
-static int options_transition_affects_descriptor(
-      const or_options_t *old_options, const or_options_t *new_options);
 static int parse_ports(or_options_t *options, int validate_only,
                               char **msg_out, int *n_ports_out,
                               int *world_writable_control_socket);
@@ -885,8 +878,6 @@ static char *torrc_fname = NULL;
 static char *torrc_defaults_fname = NULL;
 /** Result of parsing the command line. */
 static parsed_cmdline_t *global_cmdline = NULL;
-/** Contents of most recently read DirPortFrontPage file. */
-static char *global_dirfrontpagecontents = NULL;
 /** List of port_cfg_t for all configured ports. */
 static smartlist_t *configured_ports = NULL;
 /** True iff we're currently validating options, and any calls to
@@ -912,13 +903,6 @@ get_options_mgr(void)
 #define CHECK_OPTIONS_MAGIC(opt) STMT_BEGIN                      \
     config_check_toplevel_magic(get_options_mgr(), (opt));       \
   STMT_END
-
-/** Return the contents of our frontpage string, or NULL if not configured. */
-MOCK_IMPL(const char*,
-get_dirportfrontpage, (void))
-{
-  return global_dirfrontpagecontents;
-}
 
 /** Returns the currently configured options. */
 MOCK_IMPL(or_options_t *,
@@ -1074,7 +1058,6 @@ config_free_all(void)
 
   tor_free(torrc_fname);
   tor_free(torrc_defaults_fname);
-  tor_free(global_dirfrontpagecontents);
 
   cleanup_protocol_warning_severity_level();
 
@@ -1497,6 +1480,7 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
     }
 
     /* Adjust the port configuration so we can launch listeners. */
+    /* 31851: some ports are relay-only */
     if (parse_ports(options, 0, msg, &n_ports, NULL)) {
       if (!*msg)
         *msg = tor_strdup("Unexpected problem parsing port config");
@@ -1510,6 +1494,7 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
      * ports under 1024.)  We don't want to rebind if we're hibernating or
      * shutting down. If networking is disabled, this will close all but the
      * control listeners, but disable those. */
+    /* 31851: some listeners are relay-only */
     if (!we_are_hibernating()) {
       if (retry_all_listeners(new_listeners, options->DisableNetwork) < 0) {
         *msg = tor_strdup("Failed to bind one of the listener ports.");
@@ -1806,8 +1791,6 @@ options_act,(const or_options_t *old_options))
   or_options_t *options = get_options_mutable();
   int running_tor = options->command == CMD_RUN_TOR;
   char *msg=NULL;
-  const int transition_affects_workers =
-    old_options && options_transition_affects_workers(old_options, options);
   const int transition_affects_guards =
     old_options && options_transition_affects_guards(old_options, options);
 
@@ -1958,16 +1941,8 @@ options_act,(const or_options_t *old_options))
     finish_daemon(options->DataDirectory);
   }
 
-  /* We want to reinit keys as needed before we do much of anything else:
-     keys are important, and other things can depend on them. */
-  if (transition_affects_workers ||
-      (options->V3AuthoritativeDir && (!old_options ||
-                                       !old_options->V3AuthoritativeDir))) {
-    if (init_keys() < 0) {
-      log_warn(LD_BUG,"Error initializing keys; exiting");
-      return -1;
-    }
-  }
+  if (options_act_relay(old_options) < 0)
+    return -1;
 
   /* Write our PID to the PID file. If we do not have write permissions we
    * will log a warning and exit. */
@@ -1991,15 +1966,6 @@ options_act,(const or_options_t *old_options))
     return -1;
   }
 
-  if (server_mode(options)) {
-    static int cdm_initialized = 0;
-    if (cdm_initialized == 0) {
-      cdm_initialized = 1;
-      consdiffmgr_configure(NULL);
-      consdiffmgr_validate();
-    }
-  }
-
   if (init_control_cookie_authentication(options->CookieAuthentication) < 0) {
     log_warn(LD_CONFIG,"Error creating control cookie authentication file.");
     return -1;
@@ -2017,15 +1983,8 @@ options_act,(const or_options_t *old_options))
    * might be a change of scheduler or parameter. */
   scheduler_conf_changed();
 
-  /* Set up accounting */
-  if (accounting_parse_options(options, 0)<0) {
-    // LCOV_EXCL_START
-    log_warn(LD_BUG,"Error in previously validated accounting options");
+  if (options_act_relay_accounting(old_options) < 0)
     return -1;
-    // LCOV_EXCL_STOP
-  }
-  if (accounting_is_enabled(options))
-    configure_accounting(time(NULL));
 
   /* Change the cell EWMA settings */
   cmux_ewma_set_options(options, networkstatus_get_latest_consensus());
@@ -2049,6 +2008,7 @@ options_act,(const or_options_t *old_options))
     tor_free(http_authenticator);
   }
 
+  /* 31851: OutboundBindAddressExit is relay-only */
   if (parse_outbound_addresses(options, 0, &msg) < 0) {
     // LCOV_EXCL_START
     log_warn(LD_BUG, "Failed parsing previously validated outbound "
@@ -2135,65 +2095,17 @@ options_act,(const or_options_t *old_options))
     if (revise_automap_entries)
       addressmap_clear_invalid_automaps(options);
 
-/* How long should we delay counting bridge stats after becoming a bridge?
- * We use this so we don't count clients who used our bridge thinking it is
- * a relay. If you change this, don't forget to change the log message
- * below. It's 4 hours (the time it takes to stop being used by clients)
- * plus some extra time for clock skew. */
-#define RELAY_BRIDGE_STATS_DELAY (6 * 60 * 60)
+    if (options_act_bridge_stats(old_options) < 0)
+      return -1;
 
-    if (! bool_eq(options->BridgeRelay, old_options->BridgeRelay)) {
-      int was_relay = 0;
-      if (options->BridgeRelay) {
-        time_t int_start = time(NULL);
-        if (config_lines_eq(old_options->ORPort_lines,options->ORPort_lines)) {
-          int_start += RELAY_BRIDGE_STATS_DELAY;
-          was_relay = 1;
-        }
-        geoip_bridge_stats_init(int_start);
-        log_info(LD_CONFIG, "We are acting as a bridge now.  Starting new "
-                 "GeoIP stats interval%s.", was_relay ? " in 6 "
-                 "hours from now" : "");
-      } else {
-        geoip_bridge_stats_term();
-        log_info(LD_GENERAL, "We are no longer acting as a bridge.  "
-                 "Forgetting GeoIP stats.");
-      }
-    }
+    if (dns_reset())
+      return -1;
 
-    if (transition_affects_workers) {
-      log_info(LD_GENERAL,
-               "Worker-related options changed. Rotating workers.");
-      const int server_mode_turned_on =
-        server_mode(options) && !server_mode(old_options);
-      const int dir_server_mode_turned_on =
-        dir_server_mode(options) && !dir_server_mode(old_options);
-
-      if (server_mode_turned_on || dir_server_mode_turned_on) {
-        cpu_init();
-      }
-
-      if (server_mode_turned_on) {
-        ip_address_changed(0);
-        if (have_completed_a_circuit() || !any_predicted_circuits(time(NULL)))
-          inform_testing_reachability();
-      }
-      cpuworkers_rotate_keyinfo();
-      if (dns_reset())
-        return -1;
-    } else {
-      if (dns_reset())
-        return -1;
-    }
-
-    if (options->PerConnBWRate != old_options->PerConnBWRate ||
-        options->PerConnBWBurst != old_options->PerConnBWBurst)
-      connection_or_update_token_buckets(get_connection_array(), options);
+    if (options_act_relay_bandwidth(old_options) < 0)
+      return -1;
 
     if (options->BandwidthRate != old_options->BandwidthRate ||
-        options->BandwidthBurst != old_options->BandwidthBurst ||
-        options->RelayBandwidthRate != old_options->RelayBandwidthRate ||
-        options->RelayBandwidthBurst != old_options->RelayBandwidthBurst)
+        options->BandwidthBurst != old_options->BandwidthBurst)
       connection_bucket_adjust(options);
 
     if (options->MainloopStats != old_options->MainloopStats) {
@@ -2201,121 +2113,44 @@ options_act,(const or_options_t *old_options))
     }
   }
 
+  /* 31851: These options are relay-only, but we need to disable them if we
+   * are in client mode. In 29211, we will disable all relay options in
+   * client mode. */
   /* Only collect directory-request statistics on relays and bridges. */
   options->DirReqStatistics = options->DirReqStatistics_option &&
     server_mode(options);
   options->HiddenServiceStatistics =
     options->HiddenServiceStatistics_option && server_mode(options);
 
-  if (options->CellStatistics || options->DirReqStatistics ||
-      options->EntryStatistics || options->ExitPortStatistics ||
-      options->ConnDirectionStatistics ||
-      options->HiddenServiceStatistics ||
-      options->BridgeAuthoritativeDir) {
+  /* Only collect other relay-only statistics on relays. */
+  if (!public_server_mode(options)) {
+    options->CellStatistics = 0;
+    options->EntryStatistics = 0;
+    options->ConnDirectionStatistics = 0;
+    options->ExitPortStatistics = 0;
+  }
+
+  bool print_notice = 0;
+  if (options->BridgeAuthoritativeDir) {
     time_t now = time(NULL);
-    int print_notice = 0;
 
-    /* Only collect other relay-only statistics on relays. */
-    if (!public_server_mode(options)) {
-      options->CellStatistics = 0;
-      options->EntryStatistics = 0;
-      options->ConnDirectionStatistics = 0;
-      options->ExitPortStatistics = 0;
-    }
-
-    if ((!old_options || !old_options->CellStatistics) &&
-        options->CellStatistics) {
-      rep_hist_buffer_stats_init(now);
-      print_notice = 1;
-    }
-    if ((!old_options || !old_options->DirReqStatistics) &&
-        options->DirReqStatistics) {
-      if (geoip_is_loaded(AF_INET)) {
-        geoip_dirreq_stats_init(now);
-        print_notice = 1;
-      } else {
-        /* disable statistics collection since we have no geoip file */
-        options->DirReqStatistics = 0;
-        if (options->ORPort_set)
-          log_notice(LD_CONFIG, "Configured to measure directory request "
-                                "statistics, but no GeoIP database found. "
-                                "Please specify a GeoIP database using the "
-                                "GeoIPFile option.");
-      }
-    }
-    if ((!old_options || !old_options->EntryStatistics) &&
-        options->EntryStatistics && !should_record_bridge_info(options)) {
-      /* If we get here, we've started recording bridge info when we didn't
-       * do so before.  Note that "should_record_bridge_info()" will
-       * always be false at this point, because of the earlier block
-       * that cleared EntryStatistics when public_server_mode() was false.
-       * We're leaving it in as defensive programming. */
-      if (geoip_is_loaded(AF_INET) || geoip_is_loaded(AF_INET6)) {
-        geoip_entry_stats_init(now);
-        print_notice = 1;
-      } else {
-        options->EntryStatistics = 0;
-        log_notice(LD_CONFIG, "Configured to measure entry node "
-                              "statistics, but no GeoIP database found. "
-                              "Please specify a GeoIP database using the "
-                              "GeoIPFile option.");
-      }
-    }
-    if ((!old_options || !old_options->ExitPortStatistics) &&
-        options->ExitPortStatistics) {
-      rep_hist_exit_stats_init(now);
-      print_notice = 1;
-    }
-    if ((!old_options || !old_options->ConnDirectionStatistics) &&
-        options->ConnDirectionStatistics) {
-      rep_hist_conn_stats_init(now);
-    }
-    if ((!old_options || !old_options->HiddenServiceStatistics) &&
-        options->HiddenServiceStatistics) {
-      log_info(LD_CONFIG, "Configured to measure hidden service statistics.");
-      rep_hist_hs_stats_init(now);
-    }
     if ((!old_options || !old_options->BridgeAuthoritativeDir) &&
         options->BridgeAuthoritativeDir) {
       rep_hist_desc_stats_init(now);
       print_notice = 1;
     }
-    if (print_notice)
-        log_notice(LD_CONFIG, "Configured to measure statistics. Look for "
-                "the *-stats files that will first be written to the "
-                 "data directory in 24 hours from now.");
-  }
 
-  /* If we used to have statistics enabled but we just disabled them,
-     stop gathering them.  */
-  if (old_options && old_options->CellStatistics &&
-      !options->CellStatistics)
-    rep_hist_buffer_stats_term();
-  if (old_options && old_options->DirReqStatistics &&
-      !options->DirReqStatistics)
-    geoip_dirreq_stats_term();
-  if (old_options && old_options->EntryStatistics &&
-      !options->EntryStatistics)
-    geoip_entry_stats_term();
-  if (old_options && old_options->HiddenServiceStatistics &&
-      !options->HiddenServiceStatistics)
-    rep_hist_hs_stats_term();
-  if (old_options && old_options->ExitPortStatistics &&
-      !options->ExitPortStatistics)
-    rep_hist_exit_stats_term();
-  if (old_options && old_options->ConnDirectionStatistics &&
-      !options->ConnDirectionStatistics)
-    rep_hist_conn_stats_term();
   if (old_options && old_options->BridgeAuthoritativeDir &&
       !options->BridgeAuthoritativeDir)
     rep_hist_desc_stats_term();
 
-  /* Since our options changed, we might need to regenerate and upload our
-   * server descriptor.
-   */
-  if (!old_options ||
-      options_transition_affects_descriptor(old_options, options))
-    mark_my_descriptor_dirty("config change");
+  if (options_act_relay_stats(old_options, &print_notice) < 0)
+    return -1;
+  if (print_notice)
+    options_act_relay_stats_msg();
+
+  if (options_act_relay_desc(old_options) < 0)
+    return -1;
 
   if (options_act_dirauth(old_options) < 0)
     return -1;
@@ -2335,29 +2170,10 @@ options_act,(const or_options_t *old_options))
     }
   }
 
-  /* DoS mitigation subsystem only applies to public relay. */
-  if (public_server_mode(options)) {
-    /* If we are configured as a relay, initialize the subsystem. Even on HUP,
-     * this is safe to call as it will load data from the current options
-     * or/and the consensus. */
-    dos_init();
-  } else if (old_options && public_server_mode(old_options)) {
-    /* Going from relay to non relay, clean it up. */
-    dos_free_all();
-  }
-
-  /* Load the webpage we're going to serve every time someone asks for '/' on
-     our DirPort. */
-  tor_free(global_dirfrontpagecontents);
-  if (options->DirPortFrontPage) {
-    global_dirfrontpagecontents =
-      read_file_to_str(options->DirPortFrontPage, 0, NULL);
-    if (!global_dirfrontpagecontents) {
-      log_warn(LD_CONFIG,
-               "DirPortFrontPage file '%s' not found. Continuing anyway.",
-               options->DirPortFrontPage);
-    }
-  }
+  if (options_act_relay_dos(old_options) < 0)
+    return -1;
+  if (options_act_relay_dir(old_options) < 0)
+    return -1;
 
   return 0;
 }
@@ -3373,7 +3189,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
 
   /* need to check for relative paths after we populate
    * options->DataDirectory (just above). */
-  /* 31851: some paths are unused in client mode */
   if (warn_about_relative_paths(options) && options->RunAsDaemon) {
     REJECT("You have specified at least one relative path (see above) "
            "with the RunAsDaemon option. RunAsDaemon is not compatible "
@@ -4300,71 +4115,6 @@ options_check_transition_cb(const void *old_,
 #undef NO_CHANGE_BOOL
 #undef NO_CHANGE_INT
 #undef NO_CHANGE_STRING
-  return 0;
-}
-
-/** Return 1 if any change from <b>old_options</b> to <b>new_options</b>
- * will require us to rotate the CPU and DNS workers; else return 0. */
-static int
-options_transition_affects_workers(const or_options_t *old_options,
-                                   const or_options_t *new_options)
-{
-  YES_IF_CHANGED_STRING(DataDirectory);
-  YES_IF_CHANGED_INT(NumCPUs);
-  YES_IF_CHANGED_LINELIST(ORPort_lines);
-  YES_IF_CHANGED_BOOL(ServerDNSSearchDomains);
-  YES_IF_CHANGED_BOOL(SafeLogging_);
-  YES_IF_CHANGED_BOOL(ClientOnly);
-  YES_IF_CHANGED_BOOL(LogMessageDomains);
-  YES_IF_CHANGED_LINELIST(Logs);
-
-  if (server_mode(old_options) != server_mode(new_options) ||
-      public_server_mode(old_options) != public_server_mode(new_options) ||
-      dir_server_mode(old_options) != dir_server_mode(new_options))
-    return 1;
-
-  /* Nothing that changed matters. */
-  return 0;
-}
-
-/** Return 1 if any change from <b>old_options</b> to <b>new_options</b>
- * will require us to generate a new descriptor; else return 0. */
-static int
-options_transition_affects_descriptor(const or_options_t *old_options,
-                                      const or_options_t *new_options)
-{
-  /* XXX We can be smarter here. If your DirPort isn't being
-   * published and you just turned it off, no need to republish. Etc. */
-
-  YES_IF_CHANGED_STRING(DataDirectory);
-  YES_IF_CHANGED_STRING(Nickname);
-  YES_IF_CHANGED_STRING(Address);
-  YES_IF_CHANGED_LINELIST(ExitPolicy);
-  YES_IF_CHANGED_BOOL(ExitRelay);
-  YES_IF_CHANGED_BOOL(ExitPolicyRejectPrivate);
-  YES_IF_CHANGED_BOOL(ExitPolicyRejectLocalInterfaces);
-  YES_IF_CHANGED_BOOL(IPv6Exit);
-  YES_IF_CHANGED_LINELIST(ORPort_lines);
-  YES_IF_CHANGED_LINELIST(DirPort_lines);
-  YES_IF_CHANGED_LINELIST(DirPort_lines);
-  YES_IF_CHANGED_BOOL(ClientOnly);
-  YES_IF_CHANGED_BOOL(DisableNetwork);
-  YES_IF_CHANGED_BOOL(PublishServerDescriptor_);
-  YES_IF_CHANGED_STRING(ContactInfo);
-  YES_IF_CHANGED_STRING(BridgeDistribution);
-  YES_IF_CHANGED_LINELIST(MyFamily);
-  YES_IF_CHANGED_STRING(AccountingStart);
-  YES_IF_CHANGED_INT(AccountingMax);
-  YES_IF_CHANGED_INT(AccountingRule);
-  YES_IF_CHANGED_BOOL(DirCache);
-  YES_IF_CHANGED_BOOL(AssumeReachable);
-
-  if (get_effective_bwrate(old_options) != get_effective_bwrate(new_options) ||
-      get_effective_bwburst(old_options) !=
-        get_effective_bwburst(new_options) ||
-      public_server_mode(old_options) != public_server_mode(new_options))
-    return 1;
-
   return 0;
 }
 

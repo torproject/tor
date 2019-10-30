@@ -20,6 +20,7 @@
 #include "lib/compress/compress.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendcache.h"
+#include "feature/relay/relay_config.h"
 #include "feature/relay/router.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"

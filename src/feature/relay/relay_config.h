@@ -18,6 +18,12 @@
 typedef struct or_options_t or_options_t;
 typedef struct smartlist_t smartlist_t;
 
+MOCK_DECL(const char*, get_dirportfrontpage, (void));
+void relay_config_free_all(void);
+
+uint32_t get_effective_bwrate(const or_options_t *options);
+uint32_t get_effective_bwburst(const or_options_t *options);
+
 int parse_ports_relay(or_options_t *options,
                       char **msg,
                       smartlist_t *ports_out,
@@ -44,8 +50,6 @@ int options_validate_relay_padding(const or_options_t *old_options,
 int options_validate_relay_bandwidth(const or_options_t *old_options,
                                      or_options_t *options,
                                      char **msg);
-uint32_t get_effective_bwrate(const or_options_t *options);
-uint32_t get_effective_bwburst(const or_options_t *options);
 
 int options_validate_relay_accounting(const or_options_t *old_options,
                                       or_options_t *options,
@@ -58,6 +62,18 @@ int options_validate_relay_mode(const or_options_t *old_options,
 int options_validate_relay_testing(const or_options_t *old_options,
                                    or_options_t *options,
                                    char **msg);
+
+int options_act_relay(const or_options_t *old_options);
+int options_act_relay_accounting(const or_options_t *old_options);
+int options_act_relay_bandwidth(const or_options_t *old_options);
+int options_act_bridge_stats(const or_options_t *old_options);
+int options_act_relay_stats(const or_options_t *old_options,
+                            bool *print_notice_out);
+void options_act_relay_stats_msg(void);
+
+int options_act_relay_desc(const or_options_t *old_options);
+int options_act_relay_dos(const or_options_t *old_options);
+int options_act_relay_dir(const or_options_t *old_options);
 
 #ifdef RELAY_CONFIG_PRIVATE
 

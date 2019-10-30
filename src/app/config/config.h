@@ -31,7 +31,6 @@
 #define MAX_DEFAULT_MEMORY_QUEUE_SIZE (UINT64_C(2) << 30)
 #endif
 
-MOCK_DECL(const char*, get_dirportfrontpage, (void));
 MOCK_DECL(const or_options_t *, get_options, (void));
 MOCK_DECL(or_options_t *, get_options_mutable, (void));
 int set_options(or_options_t *new_val, char **msg);

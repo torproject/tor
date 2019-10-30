@@ -14,8 +14,10 @@
 #include "feature/relay/relay_config.h"
 
 #include "lib/encoding/confline.h"
+#include "lib/confmgt/confmgt.h"
 
 #include "lib/container/smartlist.h"
+#include "lib/geoip/geoip.h"
 #include "lib/meminfo/meminfo.h"
 #include "lib/osinfo/uname.h"
 #include "lib/process/setuid.h"
@@ -25,13 +27,26 @@
 #include "app/config/config.h"
 
 #include "core/mainloop/connection.h"
+#include "core/mainloop/cpuworker.h"
+#include "core/mainloop/mainloop.h"
+#include "core/or/circuitbuild.h"
+#include "core/or/connection_or.h"
 #include "core/or/port_cfg_st.h"
 
 #include "feature/hibernate/hibernate.h"
 #include "feature/nodelist/nickname.h"
+#include "feature/stats/geoip_stats.h"
+#include "feature/stats/predict_ports.h"
+#include "feature/stats/rephist.h"
 
+#include "feature/dirauth/authmode.h"
+
+#include "feature/dircache/consdiffmgr.h"
 #include "feature/relay/dns.h"
 #include "feature/relay/routermode.h"
+
+/** Contents of most recently read DirPortFrontPage file. */
+static char *global_dirfrontpagecontents = NULL;
 
 /* Copied from config.c, we will refactor later in 29211. */
 #define REJECT(arg) \
@@ -43,6 +58,58 @@
 #define COMPLAIN(args, ...)                                     \
   STMT_BEGIN log_warn(LD_CONFIG, args, ##__VA_ARGS__); STMT_END
 #endif /* defined(__GNUC__) && __GNUC__ <= 3 */
+
+/* Used in the various options_transition_affects* functions. */
+#define YES_IF_CHANGED_BOOL(opt) \
+  if (!CFG_EQ_BOOL(old_options, new_options, opt)) return 1;
+#define YES_IF_CHANGED_INT(opt) \
+  if (!CFG_EQ_INT(old_options, new_options, opt)) return 1;
+#define YES_IF_CHANGED_STRING(opt) \
+  if (!CFG_EQ_STRING(old_options, new_options, opt)) return 1;
+#define YES_IF_CHANGED_LINELIST(opt) \
+  if (!CFG_EQ_LINELIST(old_options, new_options, opt)) return 1;
+
+/** Return the contents of our frontpage string, or NULL if not configured. */
+MOCK_IMPL(const char*,
+get_dirportfrontpage, (void))
+{
+  return global_dirfrontpagecontents;
+}
+
+/** Release all memory and resources held by global relay configuration
+ * structures.
+ */
+void
+relay_config_free_all(void)
+{
+  tor_free(global_dirfrontpagecontents);
+}
+
+/** Return the bandwidthrate that we are going to report to the authorities
+ * based on the config options. */
+uint32_t
+get_effective_bwrate(const or_options_t *options)
+{
+  uint64_t bw = options->BandwidthRate;
+  if (bw > options->MaxAdvertisedBandwidth)
+    bw = options->MaxAdvertisedBandwidth;
+  if (options->RelayBandwidthRate > 0 && bw > options->RelayBandwidthRate)
+    bw = options->RelayBandwidthRate;
+  /* ensure_bandwidth_cap() makes sure that this cast can't overflow. */
+  return (uint32_t)bw;
+}
+
+/** Return the bandwidthburst that we are going to report to the authorities
+ * based on the config options. */
+uint32_t
+get_effective_bwburst(const or_options_t *options)
+{
+  uint64_t bw = options->BandwidthBurst;
+  if (options->RelayBandwidthBurst > 0 && bw > options->RelayBandwidthBurst)
+    bw = options->RelayBandwidthBurst;
+  /* ensure_bandwidth_cap() makes sure that this cast can't overflow. */
+  return (uint32_t)bw;
+}
 
 /** Given a list of <b>port_cfg_t</b> in <b>ports</b>, check them for internal
  * consistency and warn as appropriate.  On Unix-based OSes, set
@@ -595,32 +662,6 @@ options_validate_relay_bandwidth(const or_options_t *old_options,
   return 0;
 }
 
-/** Return the bandwidthrate that we are going to report to the authorities
- * based on the config options. */
-uint32_t
-get_effective_bwrate(const or_options_t *options)
-{
-  uint64_t bw = options->BandwidthRate;
-  if (bw > options->MaxAdvertisedBandwidth)
-    bw = options->MaxAdvertisedBandwidth;
-  if (options->RelayBandwidthRate > 0 && bw > options->RelayBandwidthRate)
-    bw = options->RelayBandwidthRate;
-  /* ensure_bandwidth_cap() makes sure that this cast can't overflow. */
-  return (uint32_t)bw;
-}
-
-/** Return the bandwidthburst that we are going to report to the authorities
- * based on the config options. */
-uint32_t
-get_effective_bwburst(const or_options_t *options)
-{
-  uint64_t bw = options->BandwidthBurst;
-  if (options->RelayBandwidthBurst > 0 && bw > options->RelayBandwidthBurst)
-    bw = options->RelayBandwidthBurst;
-  /* ensure_bandwidth_cap() makes sure that this cast can't overflow. */
-  return (uint32_t)bw;
-}
-
 /**
  * Legacy validation/normalization function for the relay bandwidth accounting
  * options. Uses old_options as the previous options.
@@ -913,6 +954,451 @@ options_validate_relay_testing(const or_options_t *old_options,
     REJECT("LinkCertLifetime is too short.");
   if (options->TestingAuthKeyLifetime < options->TestingLinkKeySlop*2)
     REJECT("TestingAuthKeyLifetime is too short.");
+
+  return 0;
+}
+
+/** Return 1 if any change from <b>old_options</b> to <b>new_options</b>
+ * will require us to rotate the CPU and DNS workers; else return 0. */
+static int
+options_transition_affects_workers(const or_options_t *old_options,
+                                   const or_options_t *new_options)
+{
+  YES_IF_CHANGED_STRING(DataDirectory);
+  YES_IF_CHANGED_INT(NumCPUs);
+  YES_IF_CHANGED_LINELIST(ORPort_lines);
+  YES_IF_CHANGED_BOOL(ServerDNSSearchDomains);
+  YES_IF_CHANGED_BOOL(SafeLogging_);
+  YES_IF_CHANGED_BOOL(ClientOnly);
+  YES_IF_CHANGED_BOOL(LogMessageDomains);
+  YES_IF_CHANGED_LINELIST(Logs);
+
+  if (server_mode(old_options) != server_mode(new_options) ||
+      public_server_mode(old_options) != public_server_mode(new_options) ||
+      dir_server_mode(old_options) != dir_server_mode(new_options))
+    return 1;
+
+  /* Nothing that changed matters. */
+  return 0;
+}
+
+/** Return 1 if any change from <b>old_options</b> to <b>new_options</b>
+ * will require us to generate a new descriptor; else return 0. */
+static int
+options_transition_affects_descriptor(const or_options_t *old_options,
+                                      const or_options_t *new_options)
+{
+  /* XXX We can be smarter here. If your DirPort isn't being
+   * published and you just turned it off, no need to republish. Etc. */
+
+  YES_IF_CHANGED_STRING(DataDirectory);
+  YES_IF_CHANGED_STRING(Nickname);
+  YES_IF_CHANGED_STRING(Address);
+  YES_IF_CHANGED_LINELIST(ExitPolicy);
+  YES_IF_CHANGED_BOOL(ExitRelay);
+  YES_IF_CHANGED_BOOL(ExitPolicyRejectPrivate);
+  YES_IF_CHANGED_BOOL(ExitPolicyRejectLocalInterfaces);
+  YES_IF_CHANGED_BOOL(IPv6Exit);
+  YES_IF_CHANGED_LINELIST(ORPort_lines);
+  YES_IF_CHANGED_LINELIST(DirPort_lines);
+  YES_IF_CHANGED_LINELIST(DirPort_lines);
+  YES_IF_CHANGED_BOOL(ClientOnly);
+  YES_IF_CHANGED_BOOL(DisableNetwork);
+  YES_IF_CHANGED_BOOL(PublishServerDescriptor_);
+  YES_IF_CHANGED_STRING(ContactInfo);
+  YES_IF_CHANGED_STRING(BridgeDistribution);
+  YES_IF_CHANGED_LINELIST(MyFamily);
+  YES_IF_CHANGED_STRING(AccountingStart);
+  YES_IF_CHANGED_INT(AccountingMax);
+  YES_IF_CHANGED_INT(AccountingRule);
+  YES_IF_CHANGED_BOOL(DirCache);
+  YES_IF_CHANGED_BOOL(AssumeReachable);
+
+  if (get_effective_bwrate(old_options) != get_effective_bwrate(new_options) ||
+      get_effective_bwburst(old_options) !=
+        get_effective_bwburst(new_options) ||
+      public_server_mode(old_options) != public_server_mode(new_options))
+    return 1;
+
+  return 0;
+}
+
+/** Fetch the active option list, and take relay actions based on it. All of
+ * the things we do should survive being done repeatedly.  If present,
+ * <b>old_options</b> contains the previous value of the options.
+ *
+ * Return 0 if all goes well, return -1 if it's time to die.
+ *
+ * Note: We haven't moved all the "act on new configuration" logic
+ * into the options_act* functions yet.  Some is still in do_hup() and other
+ * places.
+ */
+int
+options_act_relay(const or_options_t *old_options)
+{
+  const or_options_t *options = get_options();
+
+  const int transition_affects_workers =
+    old_options && options_transition_affects_workers(old_options, options);
+
+  /* We want to reinit keys as needed before we do much of anything else:
+     keys are important, and other things can depend on them. */
+  if (transition_affects_workers ||
+      (options->V3AuthoritativeDir && (!old_options ||
+                                       !old_options->V3AuthoritativeDir))) {
+    if (init_keys() < 0) {
+      log_warn(LD_BUG,"Error initializing keys; exiting");
+      return -1;
+    }
+  }
+
+  if (server_mode(options)) {
+    static int cdm_initialized = 0;
+    if (cdm_initialized == 0) {
+      cdm_initialized = 1;
+      consdiffmgr_configure(NULL);
+      consdiffmgr_validate();
+    }
+  }
+
+  /* Check for transitions that need action. */
+  if (old_options) {
+    if (transition_affects_workers) {
+      log_info(LD_GENERAL,
+               "Worker-related options changed. Rotating workers.");
+      const int server_mode_turned_on =
+        server_mode(options) && !server_mode(old_options);
+      const int dir_server_mode_turned_on =
+        dir_server_mode(options) && !dir_server_mode(old_options);
+
+      if (server_mode_turned_on || dir_server_mode_turned_on) {
+        cpu_init();
+      }
+
+      if (server_mode_turned_on) {
+        ip_address_changed(0);
+        if (have_completed_a_circuit() || !any_predicted_circuits(time(NULL)))
+          inform_testing_reachability();
+      }
+      cpuworkers_rotate_keyinfo();
+    }
+  }
+
+  return 0;
+}
+
+/** Fetch the active option list, and take relay accounting actions based on
+ * it. All of the things we do should survive being done repeatedly. If
+ * present, <b>old_options</b> contains the previous value of the options.
+ *
+ * Return 0 if all goes well, return -1 if it's time to die.
+ *
+ * Note: We haven't moved all the "act on new configuration" logic
+ * into the options_act* functions yet.  Some is still in do_hup() and other
+ * places.
+ */
+int
+options_act_relay_accounting(const or_options_t *old_options)
+{
+  (void)old_options;
+
+  const or_options_t *options = get_options();
+
+  /* Set up accounting */
+  if (accounting_parse_options(options, 0)<0) {
+    // LCOV_EXCL_START
+    log_warn(LD_BUG,"Error in previously validated accounting options");
+    return -1;
+    // LCOV_EXCL_STOP
+  }
+  if (accounting_is_enabled(options))
+    configure_accounting(time(NULL));
+
+  return 0;
+}
+
+/** Fetch the active option list, and take relay bandwidth actions based on
+ * it. All of the things we do should survive being done repeatedly. If
+ * present, <b>old_options</b> contains the previous value of the options.
+ *
+ * Return 0 if all goes well, return -1 if it's time to die.
+ *
+ * Note: We haven't moved all the "act on new configuration" logic
+ * into the options_act* functions yet.  Some is still in do_hup() and other
+ * places.
+ */
+int
+options_act_relay_bandwidth(const or_options_t *old_options)
+{
+  const or_options_t *options = get_options();
+
+  /* Check for transitions that need action. */
+  if (old_options) {
+    if (options->PerConnBWRate != old_options->PerConnBWRate ||
+        options->PerConnBWBurst != old_options->PerConnBWBurst)
+      connection_or_update_token_buckets(get_connection_array(), options);
+
+    if (options->RelayBandwidthRate != old_options->RelayBandwidthRate ||
+        options->RelayBandwidthBurst != old_options->RelayBandwidthBurst)
+      connection_bucket_adjust(options);
+  }
+
+  return 0;
+}
+
+/** Fetch the active option list, and take bridge statistics actions based on
+ * it. All of the things we do should survive being done repeatedly. If
+ * present, <b>old_options</b> contains the previous value of the options.
+ *
+ * Return 0 if all goes well, return -1 if it's time to die.
+ *
+ * Note: We haven't moved all the "act on new configuration" logic
+ * into the options_act* functions yet.  Some is still in do_hup() and other
+ * places.
+ */
+int
+options_act_bridge_stats(const or_options_t *old_options)
+{
+  const or_options_t *options = get_options();
+
+/* How long should we delay counting bridge stats after becoming a bridge?
+ * We use this so we don't count clients who used our bridge thinking it is
+ * a relay. If you change this, don't forget to change the log message
+ * below. It's 4 hours (the time it takes to stop being used by clients)
+ * plus some extra time for clock skew. */
+#define RELAY_BRIDGE_STATS_DELAY (6 * 60 * 60)
+
+  /* Check for transitions that need action. */
+  if (old_options) {
+    if (! bool_eq(options->BridgeRelay, old_options->BridgeRelay)) {
+      int was_relay = 0;
+      if (options->BridgeRelay) {
+        time_t int_start = time(NULL);
+        if (config_lines_eq(old_options->ORPort_lines,options->ORPort_lines)) {
+          int_start += RELAY_BRIDGE_STATS_DELAY;
+          was_relay = 1;
+        }
+        geoip_bridge_stats_init(int_start);
+        log_info(LD_CONFIG, "We are acting as a bridge now.  Starting new "
+                 "GeoIP stats interval%s.", was_relay ? " in 6 "
+                 "hours from now" : "");
+      } else {
+        geoip_bridge_stats_term();
+        log_info(LD_GENERAL, "We are no longer acting as a bridge.  "
+                 "Forgetting GeoIP stats.");
+      }
+    }
+  }
+
+  return 0;
+}
+
+/** Fetch the active option list, and take relay statistics actions based on
+ * it. All of the things we do should survive being done repeatedly. If
+ * present, <b>old_options</b> contains the previous value of the options.
+ *
+ * Sets <b>*print_notice_out</b> if we enabled stats, and need to print
+ * a stats log using options_act_relay_stats_msg().
+ *
+ * If loading the GeoIP file failed, sets DirReqStatistics and
+ * EntryStatistics to 0. This breaks the normalization/act ordering
+ * introduced in 29211.
+ *
+ * Return 0 if all goes well, return -1 if it's time to die.
+ *
+ * Note: We haven't moved all the "act on new configuration" logic
+ * into the options_act* functions yet.  Some is still in do_hup() and other
+ * places.
+ */
+int
+options_act_relay_stats(const or_options_t *old_options,
+                        bool *print_notice_out)
+{
+  if (BUG(!print_notice_out))
+    return -1;
+
+  or_options_t *options = get_options_mutable();
+
+  if (options->CellStatistics || options->DirReqStatistics ||
+      options->EntryStatistics || options->ExitPortStatistics ||
+      options->ConnDirectionStatistics ||
+      options->HiddenServiceStatistics) {
+    time_t now = time(NULL);
+    int print_notice = 0;
+
+    if ((!old_options || !old_options->CellStatistics) &&
+        options->CellStatistics) {
+      rep_hist_buffer_stats_init(now);
+      print_notice = 1;
+    }
+    if ((!old_options || !old_options->DirReqStatistics) &&
+        options->DirReqStatistics) {
+      if (geoip_is_loaded(AF_INET)) {
+        geoip_dirreq_stats_init(now);
+        print_notice = 1;
+      } else {
+        /* disable statistics collection since we have no geoip file */
+        /* 29211: refactor to avoid the normalisation/act inversion */
+        options->DirReqStatistics = 0;
+        if (options->ORPort_set)
+          log_notice(LD_CONFIG, "Configured to measure directory request "
+                                "statistics, but no GeoIP database found. "
+                                "Please specify a GeoIP database using the "
+                                "GeoIPFile option.");
+      }
+    }
+    if ((!old_options || !old_options->EntryStatistics) &&
+        options->EntryStatistics && !should_record_bridge_info(options)) {
+      /* If we get here, we've started recording bridge info when we didn't
+       * do so before.  Note that "should_record_bridge_info()" will
+       * always be false at this point, because of the earlier block
+       * that cleared EntryStatistics when public_server_mode() was false.
+       * We're leaving it in as defensive programming. */
+      if (geoip_is_loaded(AF_INET) || geoip_is_loaded(AF_INET6)) {
+        geoip_entry_stats_init(now);
+        print_notice = 1;
+      } else {
+        options->EntryStatistics = 0;
+        log_notice(LD_CONFIG, "Configured to measure entry node "
+                              "statistics, but no GeoIP database found. "
+                              "Please specify a GeoIP database using the "
+                              "GeoIPFile option.");
+      }
+    }
+    if ((!old_options || !old_options->ExitPortStatistics) &&
+        options->ExitPortStatistics) {
+      rep_hist_exit_stats_init(now);
+      print_notice = 1;
+    }
+    if ((!old_options || !old_options->ConnDirectionStatistics) &&
+        options->ConnDirectionStatistics) {
+      rep_hist_conn_stats_init(now);
+    }
+    if ((!old_options || !old_options->HiddenServiceStatistics) &&
+        options->HiddenServiceStatistics) {
+      log_info(LD_CONFIG, "Configured to measure hidden service statistics.");
+      rep_hist_hs_stats_init(now);
+    }
+    if (print_notice)
+      *print_notice_out = 1;
+  }
+
+  /* If we used to have statistics enabled but we just disabled them,
+     stop gathering them.  */
+  if (old_options && old_options->CellStatistics &&
+      !options->CellStatistics)
+    rep_hist_buffer_stats_term();
+  if (old_options && old_options->DirReqStatistics &&
+      !options->DirReqStatistics)
+    geoip_dirreq_stats_term();
+  if (old_options && old_options->EntryStatistics &&
+      !options->EntryStatistics)
+    geoip_entry_stats_term();
+  if (old_options && old_options->HiddenServiceStatistics &&
+      !options->HiddenServiceStatistics)
+    rep_hist_hs_stats_term();
+  if (old_options && old_options->ExitPortStatistics &&
+      !options->ExitPortStatistics)
+    rep_hist_exit_stats_term();
+  if (old_options && old_options->ConnDirectionStatistics &&
+      !options->ConnDirectionStatistics)
+    rep_hist_conn_stats_term();
+
+  return 0;
+}
+
+/** Print a notice about relay/dirauth stats being enabled. */
+void
+options_act_relay_stats_msg(void)
+{
+  log_notice(LD_CONFIG, "Configured to measure statistics. Look for "
+             "the *-stats files that will first be written to the "
+             "data directory in 24 hours from now.");
+}
+
+/** Fetch the active option list, and take relay descriptor actions based on
+ * it. All of the things we do should survive being done repeatedly. If
+ * present, <b>old_options</b> contains the previous value of the options.
+ *
+ * Return 0 if all goes well, return -1 if it's time to die.
+ *
+ * Note: We haven't moved all the "act on new configuration" logic
+ * into the options_act* functions yet.  Some is still in do_hup() and other
+ * places.
+ */
+int
+options_act_relay_desc(const or_options_t *old_options)
+{
+  const or_options_t *options = get_options();
+
+  /* Since our options changed, we might need to regenerate and upload our
+   * server descriptor.
+   */
+  if (!old_options ||
+      options_transition_affects_descriptor(old_options, options))
+    mark_my_descriptor_dirty("config change");
+
+  return 0;
+}
+
+/** Fetch the active option list, and take relay DoS actions based on
+ * it. All of the things we do should survive being done repeatedly. If
+ * present, <b>old_options</b> contains the previous value of the options.
+ *
+ * Return 0 if all goes well, return -1 if it's time to die.
+ *
+ * Note: We haven't moved all the "act on new configuration" logic
+ * into the options_act* functions yet.  Some is still in do_hup() and other
+ * places.
+ */
+int
+options_act_relay_dos(const or_options_t *old_options)
+{
+  const or_options_t *options = get_options();
+
+  /* DoS mitigation subsystem only applies to public relay. */
+  if (public_server_mode(options)) {
+    /* If we are configured as a relay, initialize the subsystem. Even on HUP,
+     * this is safe to call as it will load data from the current options
+     * or/and the consensus. */
+    dos_init();
+  } else if (old_options && public_server_mode(old_options)) {
+    /* Going from relay to non relay, clean it up. */
+    dos_free_all();
+  }
+
+  return 0;
+}
+
+/** Fetch the active option list, and take dirport actions based on
+ * it. All of the things we do should survive being done repeatedly. If
+ * present, <b>old_options</b> contains the previous value of the options.
+ *
+ * Return 0 if all goes well, return -1 if it's time to die.
+ *
+ * Note: We haven't moved all the "act on new configuration" logic
+ * into the options_act* functions yet.  Some is still in do_hup() and other
+ * places.
+ */
+int
+options_act_relay_dir(const or_options_t *old_options)
+{
+  (void)old_options;
+
+  const or_options_t *options = get_options();
+
+  /* Load the webpage we're going to serve every time someone asks for '/' on
+     our DirPort. */
+  tor_free(global_dirfrontpagecontents);
+  if (options->DirPortFrontPage) {
+    global_dirfrontpagecontents =
+      read_file_to_str(options->DirPortFrontPage, 0, NULL);
+    if (!global_dirfrontpagecontents) {
+      log_warn(LD_CONFIG,
+               "DirPortFrontPage file '%s' not found. Continuing anyway.",
+               options->DirPortFrontPage);
+    }
+  }
 
   return 0;
 }
