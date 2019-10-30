@@ -151,6 +151,8 @@ for dir in "${EXAMPLEDIR}"/*; do
         CMDLINE=""
     fi
 
+    EXPECTED=
+    ERROR=
     # If tor has some modules disabled, search for a custom result file for
     # the disabled modules
     for suffix in "_no_$TOR_MODULES_DISABLED" ""; do
