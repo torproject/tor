@@ -255,7 +255,8 @@ alloc_getcwd(void)
 #endif /* !defined(_WIN32) */
 
 /** Expand possibly relative path <b>fname</b> to an absolute path.
- * Return a newly allocated string, possibly equal to <b>fname</b>. */
+ * Return a newly allocated string, which may be a duplicate of <b>fname</b>.
+ */
 char *
 make_path_absolute(char *fname)
 {
