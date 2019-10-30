@@ -14,8 +14,11 @@
 #define ROUTERSET_PRIVATE
 #include "feature/nodelist/routerset.h"
 #include "core/mainloop/mainloop.h"
+#include "app/main/subsysmgr.h"
 #include "test/log_test_helpers.h"
 #include "test/resolve_test_helpers.h"
+#include "lib/crypt_ops/crypto_options_st.h"
+#include "lib/crypt_ops/crypto_sys.h"
 
 #include "lib/sandbox/sandbox.h"
 #include "lib/memarea/memarea.h"
@@ -3816,6 +3819,14 @@ test_options_validate__testing_options(void *ignored)
   tor_free(msg);
 }
 
+static crypto_options_t *
+get_crypto_options(or_options_t *opt)
+{
+  int idx = subsystems_get_options_idx(&sys_crypto);
+  tor_assert(idx >= 0);
+  return config_mgr_get_obj_mutable(get_options_mgr(), opt, idx);
+}
+
 static void
 test_options_validate__accel(void *ignored)
 {
@@ -3828,15 +3839,15 @@ test_options_validate__accel(void *ignored)
   tdata = get_options_test_data("AccelName foo\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(tdata->opt->HardwareAccel, OP_EQ, 1);
+  tt_int_op(get_crypto_options(tdata->opt)->HardwareAccel, OP_EQ, 1);
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("AccelName foo\n");
-  tdata->opt->HardwareAccel = 2;
+  get_crypto_options(tdata->opt)->HardwareAccel = 2;
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(tdata->opt->HardwareAccel, OP_EQ, 2);
+  tt_int_op(get_crypto_options(tdata->opt)->HardwareAccel, OP_EQ, 2);
   tor_free(msg);
 
   free_options_test_data(tdata);

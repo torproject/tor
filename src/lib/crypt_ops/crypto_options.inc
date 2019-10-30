@@ -8,12 +8,12 @@
 BEGIN_CONF_STRUCT(crypto_options_t)
 
 /** Should we enable extra OpenSSL hardware acceleration (where available)?  */
-CONF_VAR(HardwareAccel, BOOL, 0, "0")
+CONF_VAR(HardwareAccel, BOOL, CFLG_IMMUTABLE, "0")
 
 /** Optional OpenSSL hardware-acceleration engine name */
-CONF_VAR(AccelName, STRING, 0, NULL)
+CONF_VAR(AccelName, STRING, CFLG_IMMUTABLE, NULL)
 
 /** Optional OpenSSL hardware-acceleration engine search directory. */
-CONF_VAR(AccelDir, FILENAME, 0, NULL)
+CONF_VAR(AccelDir, FILENAME, CFLG_IMMUTABLE, NULL)
 
 END_CONF_STRUCT(crypto_options_t)

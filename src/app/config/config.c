@@ -493,11 +493,8 @@ static const config_var_t option_vars_[] = {
 #endif /* defined(_WIN32) */
   OBSOLETE("Group"),
   V(GuardLifetime,               INTERVAL, "0 minutes"),
-  V_IMMUTABLE(HardwareAccel,     BOOL,     "0"),
   V(HeartbeatPeriod,             INTERVAL, "6 hours"),
   V(MainloopStats,               BOOL,     "0"),
-  V_IMMUTABLE(AccelName,         STRING,   NULL),
-  V_IMMUTABLE(AccelDir,          FILENAME, NULL),
   V(HashedControlPassword,       LINELIST, NULL),
   OBSOLETE("HidServDirectoryV2"),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
@@ -4669,11 +4666,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
                         "therefore only advised if you are building a "
                         "testing Tor network!");
   }
-
-  if (options->AccelName && !options->HardwareAccel)
-    options->HardwareAccel = 1;
-  if (options->AccelDir && !options->AccelName)
-    REJECT("Can't use hardware crypto accelerator dir without engine name.");
 
   if (options->PublishServerDescriptor)
     SMARTLIST_FOREACH(options->PublishServerDescriptor, const char *, pubdes, {

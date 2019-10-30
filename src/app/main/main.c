@@ -592,9 +592,6 @@ tor_init(int argc, char *argv[])
     return 1;
   }
 
-  /* The options are now initialised */
-  const or_options_t *options = get_options();
-
   /* Initialize channelpadding and circpad parameters to defaults
    * until we get a consensus */
   channelpadding_new_consensus_params(NULL);
@@ -615,13 +612,6 @@ tor_init(int argc, char *argv[])
     log_warn(LD_GENERAL,"You are running Tor as root. You don't need to, "
              "and you probably shouldn't.");
 #endif
-
-  if (crypto_global_init(options->HardwareAccel,
-                         options->AccelName,
-                         options->AccelDir)) {
-    log_err(LD_BUG, "Unable to initialize OpenSSL. Exiting.");
-    return -1;
-  }
 
   /* Scan/clean unparseable descriptors; after reading config */
   routerparse_init();

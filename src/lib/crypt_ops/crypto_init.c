@@ -23,6 +23,9 @@
 #include "lib/crypt_ops/crypto_nss_mgt.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_sys.h"
+#include "lib/crypt_ops/crypto_options_st.h"
+#include "lib/conf/conftypes.h"
+#include "lib/log/util_bug.h"
 
 #include "lib/subsys/subsys.h"
 
@@ -252,6 +255,69 @@ subsys_crypto_thread_cleanup(void)
   crypto_thread_cleanup();
 }
 
+#define CRYPTO_OPTIONS_MAGIC 0x68757368
+
+static int
+crypto_options_prenormalize(void *arg, char **msg_out)
+{
+  crypto_options_t *opt = arg;
+  tor_assert(opt->magic == CRYPTO_OPTIONS_MAGIC);
+  (void)msg_out;
+
+  // TODO: It would be cleaner to remove this code, but right now the
+  // tests depend on it.
+  if (opt->AccelName && !opt->HardwareAccel)
+    opt->HardwareAccel = 1;
+
+  return 0;
+}
+
+static int
+crypto_options_validate(const void *arg, char **msg_out)
+{
+  const crypto_options_t *opt = arg;
+  tor_assert(opt->magic == CRYPTO_OPTIONS_MAGIC);
+  tor_assert(msg_out);
+
+  if (opt->AccelDir && !opt->AccelName) {
+    *msg_out = tor_strdup("Can't use hardware crypto accelerator dir "
+                          "without engine name.");
+    return -1;
+  }
+
+  return 0;
+}
+
+#define CONF_CONTEXT LL_TABLE
+#include "lib/crypt_ops/crypto_options.inc"
+#undef CONF_CONTEXT
+
+static const config_format_t crypto_options_fmt = {
+  .size = sizeof(crypto_options_t),
+  .magic = { "crypto_options_t",
+             CRYPTO_OPTIONS_MAGIC,
+             offsetof(crypto_options_t, magic) },
+  .vars = crypto_options_t_vars,
+  .pre_normalize_fn = crypto_options_prenormalize,
+  .validate_fn = crypto_options_validate,
+  .config_suite_offset = -1,
+};
+
+static int
+crypto_set_options(void *arg)
+{
+  const crypto_options_t *options = arg;
+  // This call already checks for crypto_global_initialized_, so it
+  // will only initialize the subsystem the first time it's called.
+  if (crypto_global_init(options->HardwareAccel,
+                         options->AccelName,
+                         options->AccelDir)) {
+    log_err(LD_BUG, "Unable to initialize the crypto subsystem. Exiting.");
+    return -1;
+  }
+  return 0;
+}
+
 const struct subsys_fns_t sys_crypto = {
   .name = "crypto",
   .supported = true,
@@ -261,4 +327,7 @@ const struct subsys_fns_t sys_crypto = {
   .prefork = subsys_crypto_prefork,
   .postfork = subsys_crypto_postfork,
   .thread_cleanup = subsys_crypto_thread_cleanup,
+
+  .options_format = &crypto_options_fmt,
+  .set_options = crypto_set_options,
 };
