@@ -67,19 +67,15 @@ options_validate_dirauth_mode(const or_options_t *old_options,
 
 #define options_validate_dirauth_bandwidth(old_options, options, msg) \
   (((void)(old_options)),((void)(options)),((void)(msg)),0)
-
 #define options_validate_dirauth_schedule(old_options, options, msg) \
   (((void)(old_options)),((void)(options)),((void)(msg)),0)
-
 #define options_validate_dirauth_testing(old_options, options, msg) \
   (((void)(old_options)),((void)(options)),((void)(msg)),0)
-
 #define options_validate_dirauth_testing(old_options, options, msg) \
   (((void)(old_options)),((void)(options)),((void)(msg)),0)
 
 #define options_act_dirauth(old_options) \
   (((void)(old_options)),0)
-
 #define options_act_dirauth_mtbf(old_options) \
   (((void)(old_options)),0)
 

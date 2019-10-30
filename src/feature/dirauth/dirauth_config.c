@@ -61,70 +61,69 @@ options_validate_dirauth_mode(const or_options_t *old_options,
   if (BUG(!msg))
     return -1;
 
-  if (options->AuthoritativeDir) {
-    /* confirm that our address isn't broken, so we can complain now */
-    uint32_t tmp;
-    if (resolve_my_address(LOG_WARN, options, &tmp, NULL, NULL) < 0)
-      REJECT("Failed to resolve/guess local address. See logs for details.");
+  if (!authdir_mode(options))
+    return 0;
 
-    if (!options->ContactInfo && !options->TestingTorNetwork)
-      REJECT("Authoritative directory servers must set ContactInfo");
-    if (!options->RecommendedClientVersions)
-      options->RecommendedClientVersions =
-        config_lines_dup(options->RecommendedVersions);
-    if (!options->RecommendedServerVersions)
-      options->RecommendedServerVersions =
-        config_lines_dup(options->RecommendedVersions);
-    if (options->VersioningAuthoritativeDir &&
-        (!options->RecommendedClientVersions ||
-         !options->RecommendedServerVersions))
-      REJECT("Versioning authoritative dir servers must set "
-             "Recommended*Versions.");
+  /* confirm that our address isn't broken, so we can complain now */
+  uint32_t tmp;
+  if (resolve_my_address(LOG_WARN, options, &tmp, NULL, NULL) < 0)
+    REJECT("Failed to resolve/guess local address. See logs for details.");
 
-    char *t;
-    /* Call these functions to produce warnings only. */
-    t = format_recommended_version_list(options->RecommendedClientVersions, 1);
-    tor_free(t);
-    t = format_recommended_version_list(options->RecommendedServerVersions, 1);
-    tor_free(t);
+  if (!options->ContactInfo && !options->TestingTorNetwork)
+    REJECT("Authoritative directory servers must set ContactInfo");
+  if (!options->RecommendedClientVersions)
+    options->RecommendedClientVersions =
+      config_lines_dup(options->RecommendedVersions);
+  if (!options->RecommendedServerVersions)
+    options->RecommendedServerVersions =
+      config_lines_dup(options->RecommendedVersions);
+  if (options->VersioningAuthoritativeDir &&
+      (!options->RecommendedClientVersions ||
+       !options->RecommendedServerVersions))
+    REJECT("Versioning authoritative dir servers must set "
+           "Recommended*Versions.");
 
-    if (options->UseEntryGuards) {
-      log_info(LD_CONFIG, "Authoritative directory servers can't set "
-               "UseEntryGuards. Disabling.");
-      options->UseEntryGuards = 0;
-    }
-    if (!options->DownloadExtraInfo && authdir_mode_v3(options)) {
-      log_info(LD_CONFIG, "Authoritative directories always try to download "
-               "extra-info documents. Setting DownloadExtraInfo.");
-      options->DownloadExtraInfo = 1;
-    }
-    if (!(options->BridgeAuthoritativeDir ||
-          options->V3AuthoritativeDir))
-      REJECT("AuthoritativeDir is set, but none of "
-             "(Bridge/V3)AuthoritativeDir is set.");
+  char *t;
+  /* Call these functions to produce warnings only. */
+  t = format_recommended_version_list(options->RecommendedClientVersions, 1);
+  tor_free(t);
+  t = format_recommended_version_list(options->RecommendedServerVersions, 1);
+  tor_free(t);
 
-    /* If we have a v3bandwidthsfile and it's broken, complain on startup */
-    if (options->V3BandwidthsFile && !old_options) {
-      dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL, NULL,
-                                       NULL);
-    }
-    /* same for guardfraction file */
-    if (options->GuardfractionFile && !old_options) {
-      dirserv_read_guardfraction_file(options->GuardfractionFile, NULL);
-    }
+  if (options->UseEntryGuards) {
+    log_info(LD_CONFIG, "Authoritative directory servers can't set "
+             "UseEntryGuards. Disabling.");
+    options->UseEntryGuards = 0;
+  }
+  if (!options->DownloadExtraInfo && authdir_mode_v3(options)) {
+    log_info(LD_CONFIG, "Authoritative directories always try to download "
+             "extra-info documents. Setting DownloadExtraInfo.");
+    options->DownloadExtraInfo = 1;
+  }
+  if (!(options->BridgeAuthoritativeDir ||
+        options->V3AuthoritativeDir))
+    REJECT("AuthoritativeDir is set, but none of "
+           "(Bridge/V3)AuthoritativeDir is set.");
 
-    if (!options->DirPort_set)
-      REJECT("Running as authoritative directory, but no DirPort set.");
-
-    if (!options->ORPort_set)
-      REJECT("Running as authoritative directory, but no ORPort set.");
-
-    if (options->ClientOnly)
-      REJECT("Running as authoritative directory, but ClientOnly also set.");
+  /* If we have a v3bandwidthsfile and it's broken, complain on startup */
+  if (options->V3BandwidthsFile && !old_options) {
+    dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL, NULL,
+                                     NULL);
+  }
+  /* same for guardfraction file */
+  if (options->GuardfractionFile && !old_options) {
+    dirserv_read_guardfraction_file(options->GuardfractionFile, NULL);
   }
 
-  /* 31851: the tests expect us to validate these options, even when we are
-   * not in authority mode. */
+  if (!options->DirPort_set)
+    REJECT("Running as authoritative directory, but no DirPort set.");
+
+  if (!options->ORPort_set)
+    REJECT("Running as authoritative directory, but no ORPort set.");
+
+  if (options->ClientOnly)
+    REJECT("Running as authoritative directory, but ClientOnly also set.");
+
   if (options->MinUptimeHidServDirectoryV2 < 0) {
     log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
              "least 0 seconds. Changing to 0.");
@@ -154,8 +153,9 @@ options_validate_dirauth_bandwidth(const or_options_t *old_options,
   if (BUG(!msg))
     return -1;
 
-  /* 31851: the tests expect us to validate these options, even when we are
-   * not in authority mode. */
+  if (!authdir_mode(options))
+    return 0;
+
   if (ensure_bandwidth_cap(&options->AuthDirFastGuarantee,
                            "AuthDirFastGuarantee", msg) < 0)
     return -1;
@@ -185,6 +185,9 @@ options_validate_dirauth_schedule(const or_options_t *old_options,
 
   if (BUG(!msg))
     return -1;
+
+  if (!authdir_mode_v3(options))
+    return 0;
 
   if (options->V3AuthVoteDelay + options->V3AuthDistDelay >=
       options->V3AuthVotingInterval/2) {
@@ -224,7 +227,8 @@ options_validate_dirauth_schedule(const or_options_t *old_options,
   if (options->V3AuthVotingInterval < MIN_VOTE_INTERVAL) {
     if (options->TestingTorNetwork) {
       if (options->V3AuthVotingInterval < MIN_VOTE_INTERVAL_TESTING) {
-        REJECT("V3AuthVotingInterval is insanely low.");
+        /* Unreachable, covered by earlier checks */
+        REJECT("V3AuthVotingInterval is insanely low."); /* LCOV_EXCL_LINE */
       } else {
         COMPLAIN("V3AuthVotingInterval is very low. "
                  "This may lead to failure to synchronise for a consensus.");
@@ -261,6 +265,18 @@ options_validate_dirauth_testing(const or_options_t *old_options,
   if (BUG(!msg))
     return -1;
 
+  if (!authdir_mode(options))
+    return 0;
+
+  if (options->TestingAuthDirTimeToLearnReachability < 0) {
+    REJECT("TestingAuthDirTimeToLearnReachability must be non-negative.");
+  } else if (options->TestingAuthDirTimeToLearnReachability > 2*60*60) {
+    COMPLAIN("TestingAuthDirTimeToLearnReachability is insanely high.");
+  }
+
+  if (!authdir_mode_v3(options))
+    return 0;
+
   if (options->TestingV3AuthInitialVotingInterval
       < MIN_VOTE_INTERVAL_TESTING_INITIAL) {
     REJECT("TestingV3AuthInitialVotingInterval is insanely low.");
@@ -293,12 +309,6 @@ options_validate_dirauth_testing(const or_options_t *old_options,
     REJECT("TestingV3AuthVotingStartOffset must be non-negative.");
   }
 
-  if (options->TestingAuthDirTimeToLearnReachability < 0) {
-    REJECT("TestingAuthDirTimeToLearnReachability must be non-negative.");
-  } else if (options->TestingAuthDirTimeToLearnReachability > 2*60*60) {
-    COMPLAIN("TestingAuthDirTimeToLearnReachability is insanely high.");
-  }
-
   return 0;
 }
 
@@ -317,6 +327,7 @@ options_transition_affects_dirauth_timing(const or_options_t *old_options,
     return 1;
   if (! authdir_mode_v3(new_options))
     return 0;
+
   YES_IF_CHANGED_INT(V3AuthVotingInterval);
   YES_IF_CHANGED_INT(V3AuthVoteDelay);
   YES_IF_CHANGED_INT(V3AuthDistDelay);
@@ -374,6 +385,9 @@ options_act_dirauth_mtbf(const or_options_t *old_options)
   const or_options_t *options = get_options();
   int running_tor = options->command == CMD_RUN_TOR;
 
+  if (!authdir_mode(options))
+    return 0;
+
   /* Load dirauth state */
   if (running_tor) {
     rep_hist_load_mtbf_data(time(NULL));
@@ -404,12 +418,11 @@ options_act_dirauth_stats(const or_options_t *old_options,
 
   const or_options_t *options = get_options();
 
-  if (options->BridgeAuthoritativeDir) {
+  if (authdir_mode_bridge(options)) {
     time_t now = time(NULL);
     int print_notice = 0;
 
-    if ((!old_options || !old_options->BridgeAuthoritativeDir) &&
-        options->BridgeAuthoritativeDir) {
+    if (!old_options || !authdir_mode_bridge(old_options)) {
       rep_hist_desc_stats_init(now);
       print_notice = 1;
     }
@@ -419,8 +432,8 @@ options_act_dirauth_stats(const or_options_t *old_options,
 
   /* If we used to have statistics enabled but we just disabled them,
      stop gathering them.  */
-  if (old_options && old_options->BridgeAuthoritativeDir &&
-      !options->BridgeAuthoritativeDir)
+  if (old_options && authdir_mode_bridge(old_options) &&
+      !authdir_mode_bridge(options))
     rep_hist_desc_stats_term();
 
   return 0;
