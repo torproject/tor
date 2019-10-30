@@ -39,6 +39,11 @@
  * The two above snippets will define a structure called `module_options_t`
  * with appropriate members, and a table of config_var_t objects called
  * `module_options_t_vars[]`.
+ *
+ * For lower-level modules, you can say `#define CONF_TABLE LL_TABLE`, and get
+ * a table definition suitable for use in modules that are at a lower level
+ * than lib/confmgt.  Note that the types for these tables cannot include any
+ * extended types.
  **/
 
 #ifndef TOR_LIB_CONF_CONFDECL_H
@@ -98,6 +103,31 @@
    { .name = #varname,                                          \
      .type = CONFIG_TYPE_EXTENDED,                              \
      .type_def = &vartype ## _type_defn,                        \
+     .offset=offsetof(config_var_reference__obj, varname),      \
+   },                                                           \
+   .flags = varflags,                                           \
+   .initvalue = initval                                         \
+  },
+/**@}*/
+
+/**
+ * @defgroup LL_TABLE_MACROS Internal macros: low-level table definitions.
+ * Implementation helpers: the regular confdecl macros expand to these
+ * when CONF_CONTEXT is defined to LL_TABLE.  Don't use them directly.
+ * @{*/
+#define BEGIN_CONF_STRUCT__LL_TABLE(structname)                         \
+  /* We use this typedef so we can refer to the config type */          \
+  /* without having its name as a macro argument to CONF_VAR. */        \
+  typedef struct structname config_var_reference__obj;  \
+  static const config_var_t structname##_vars[] = {
+#define END_CONF_STRUCT__LL_TABLE(structname)   \
+  { .member = { .name = NULL } }                \
+    };
+#define CONF_VAR__LL_TABLE(varname, vartype, varflags, initval) \
+  {                                                             \
+   .member =                                                    \
+   { .name = #varname,                                          \
+     .type = CONFIG_TYPE_ ## vartype,                           \
      .offset=offsetof(config_var_reference__obj, varname),      \
    },                                                           \
    .flags = varflags,                                           \
