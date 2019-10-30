@@ -85,6 +85,8 @@ fi
 
 TOR_BINARY="$(abspath "$TOR_BINARY")"
 
+echo "TOR BINARY IS ${TOR_BINARY}"
+
 TOR_MODULES_DISABLED="$("$TOR_BINARY" --list-modules | grep ": no" \
                         | cut -d ":" -f1 | sort | tr "\n" "_")"
 # Remove the last underscore, if there is one

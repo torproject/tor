@@ -1,0 +1,4 @@
+  o Minor bugfixes (test):
+    - Use the same code to find the tor binary in all of our test scripts.
+      This change makes sure we are always using the coverage binary, when
+      coverage is enabled. Fixes bug 32368; bugfix on 0.2.7.3-rc.
