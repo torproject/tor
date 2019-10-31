@@ -621,16 +621,16 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
 }
 
 /** Helper: cleanup function for client circuit. This is for every HS version.
- * It is called from hs_circ_cleanup() entry point. */
+ * It is called from hs_circ_cleanup_on_free() entry point. */
 static void
-cleanup_client_circ(circuit_t *circ)
+cleanup_on_free_client_circ(circuit_t *circ)
 {
   tor_assert(circ);
 
   if (circuit_is_hs_v2(circ)) {
-    rend_client_circuit_cleanup(circ);
+    rend_client_circuit_cleanup_on_free(circ);
   } else if (circuit_is_hs_v3(circ)) {
-    hs_client_circuit_cleanup(circ);
+    hs_client_circuit_cleanup_on_free(circ);
   }
   /* It is possible the circuit has an HS purpose but no identifier (rend_data
    * or hs_ident). Thus possible that this passess through. */
@@ -1215,20 +1215,17 @@ hs_circ_send_establish_rendezvous(origin_circuit_t *circ)
   return -1;
 }
 
-/** We are about to close or free this <b>circ</b>. Clean it up from any
- * related HS data structures. This function can be called multiple times
- * safely for the same circuit. */
+/** We are about to close this <b>circ</b>. Clean it up from any related HS
+ * data structures. This function can be called multiple times safely for the
+ * same circuit. */
 void
-hs_circ_cleanup(circuit_t *circ)
+hs_circ_cleanup_on_close(circuit_t *circ)
 {
   tor_assert(circ);
 
-  if (circuit_purpose_is_hs_client(circ->purpose)) {
-    cleanup_client_circ(circ);
-  }
-
-  /* Actions that MUST happen for every circuits regardless of what was done
-   * on it before. */
+  /* NOTE: Following code must remain light and fast. The circuit close
+   * function has to remain very fast since it is called as part of multiple
+   * main loop event. */
 
   /* Clear HS circuitmap token for this circ (if any). Very important to be
    * done after the HS subsystem has been notified of the close else the
@@ -1238,6 +1235,44 @@ hs_circ_cleanup(circuit_t *circ)
    * circuit is good as dead. We can't rely on removing it in the circuit
    * free() function because we open a race window between the close and free
    * where we can't register a new circuit for the same intro point. */
+  if (circ->hs_token) {
+    hs_circuitmap_remove_circuit(circ);
+  }
+}
+
+/** We are about to free this <b>circ</b>. Clean it up from any related HS
+ * data structures. This function can be called multiple times safely for the
+ * same circuit. */
+void
+hs_circ_cleanup_on_free(circuit_t *circ)
+{
+  tor_assert(circ);
+
+  /* NOTE: Bulk of the work of cleaning up a circuit is done here. */
+
+  if (circuit_purpose_is_hs_client(circ->purpose)) {
+    cleanup_on_free_client_circ(circ);
+  }
+
+  /* We have no assurance that the given HS circuit has been closed before and
+   * thus removed from the HS map. This actually happens in unit tests. */
+  if (circ->hs_token) {
+    hs_circuitmap_remove_circuit(circ);
+  }
+}
+
+/** We are about to repurpose this <b>circ</b>. Clean it up from any related
+ * HS data structures. This function can be called multiple times safely for
+ * the same circuit. */
+void
+hs_circ_cleanup_on_repurpose(circuit_t *circ)
+{
+  tor_assert(circ);
+
+  /* On repurpose, we simply remove it from the circuit map but we do not do
+   * the on_free actions since we don't treat a repurpose as something we need
+   * to report in the client cache failure. */
+
   if (circ->hs_token) {
     hs_circuitmap_remove_circuit(circ);
   }

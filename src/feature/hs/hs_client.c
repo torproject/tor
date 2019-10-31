@@ -1525,7 +1525,7 @@ get_hs_client_auths_map(void)
 /** Called when a circuit was just cleaned up. This is done right before the
  * circuit is freed. */
 void
-hs_client_circuit_cleanup(const circuit_t *circ)
+hs_client_circuit_cleanup_on_free(const circuit_t *circ)
 {
   bool has_timed_out;
   rend_intro_point_failure_t failure = INTRO_POINT_FAILURE_GENERIC;
