@@ -506,5 +506,5 @@ for ((i=0; i<COUNT; i++)); do
 done
 
 echo
-echo "Remember to copy the git hooks from tor/git/hooks/*.git-hook to"
+echo "Remember to copy the git hooks from tor/scripts/git/*.git-hook to"
 echo "$ORIGIN_PATH/.git/hooks/*"
