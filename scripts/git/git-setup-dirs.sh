@@ -42,6 +42,14 @@ function usage()
   echo "       (current: $GITHUB_PUSH)"
   echo "   TOR_EXTRA_CLONE_ARGS: extra arguments to git clone"
   echo "       (current: $TOR_EXTRA_CLONE_ARGS)"
+  echo "   TOR_EXTRA_REMOTE_NAME: the name of an extra remote"
+  echo "       This remote is not pulled by this script or git-pull-all.sh."
+  echo "       This remote is not pushed by git-push-all.sh."
+  echo "       (current: $TOR_EXTRA_REMOTE_NAME)"
+  echo "   TOR_EXTRA_REMOTE_PULL: the extra remote pull URL."
+  echo "       (current: $TOR_EXTRA_REMOTE_PULL)"
+  echo "   TOR_EXTRA_REMOTE_PUSH: the extra remote push URL"
+  echo "       (current: $TOR_EXTRA_REMOTE_PUSH)"
   echo "   we recommend that you set these env vars in your ~/.profile"
 }
 
@@ -509,6 +517,17 @@ set_remote_push "tor-github" "$GITHUB_PUSH"
 set_tor_github_pr_fetch_config
 # Now fetch them all
 fetch_remote "tor-github"
+
+# Extra remote
+if [ "$TOR_EXTRA_REMOTE_NAME" ]; then
+  printf "%s Setting up remote %s\\n" "$MARKER" \
+    "${BYEL}$TOR_EXTRA_REMOTE_NAME${CNRM}"
+  # Add remote
+  add_remote "$TOR_EXTRA_REMOTE_NAME" "$TOR_EXTRA_REMOTE_PULL"
+  set_remote_push "$TOR_EXTRA_REMOTE_NAME" "$TOR_EXTRA_REMOTE_PUSH"
+  # But leave it to the user to decide if they want to fetch it
+  #fetch_remote "$TOR_EXTRA_REMOTE_NAME"
+fi
 
 # Go over all configured worktree.
 for ((i=0; i<COUNT; i++)); do
