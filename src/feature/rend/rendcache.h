@@ -80,6 +80,8 @@ int rend_cache_store_v2_desc_as_client(const char *desc,
                                        rend_cache_entry_t **entry);
 size_t rend_cache_get_total_allocation(void);
 
+bool rend_cache_intro_failure_exists(const char *service_id,
+                                     const uint8_t *intro_identity);
 void rend_cache_intro_failure_note(rend_intro_point_failure_t failure,
                                    const uint8_t *identity,
                                    const char *service_id);

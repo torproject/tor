@@ -1048,18 +1048,29 @@ rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
   const or_options_t *options = get_options();
   smartlist_t *usable_nodes;
   int n_excluded = 0;
+  char service_id[REND_SERVICE_ID_LEN_BASE32 + 1];
 
   /* We'll keep a separate list of the usable nodes.  If this becomes empty,
    * no nodes are usable.  */
   usable_nodes = smartlist_new();
   smartlist_add_all(usable_nodes, entry->parsed->intro_nodes);
 
+  /* Get service ID so we can use it to query the failure cache. If we fail to
+   * parse it, this cache entry is no good. */
+  if (BUG(rend_get_service_id(entry->parsed->pk, service_id) < 0)) {
+    return NULL;
+  }
+
   /* Remove the intro points that have timed out during this HS
    * connection attempt from our list of usable nodes. */
-  SMARTLIST_FOREACH(usable_nodes, rend_intro_point_t *, ip,
-                    if (ip->timed_out) {
-                      SMARTLIST_DEL_CURRENT(usable_nodes, ip);
-                    });
+  SMARTLIST_FOREACH_BEGIN(usable_nodes, const rend_intro_point_t *, ip) {
+    bool failed_intro =
+      rend_cache_intro_failure_exists(service_id,
+                       (const uint8_t *) ip->extend_info->identity_digest);
+    if (ip->timed_out || failed_intro) {
+      SMARTLIST_DEL_CURRENT(usable_nodes, ip);
+    };
+  } SMARTLIST_FOREACH_END(ip);
 
  again:
   if (smartlist_len(usable_nodes) == 0) {

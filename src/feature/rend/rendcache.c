@@ -228,6 +228,17 @@ rend_cache_entry_free_void(void *p)
   rend_cache_entry_free_(p);
 }
 
+/** Check if a failure cache entry exists for the given intro point. */
+bool
+rend_cache_intro_failure_exists(const char *service_id,
+                                const uint8_t *intro_identity)
+{
+  tor_assert(service_id);
+  tor_assert(intro_identity);
+
+  return cache_failure_intro_lookup(intro_identity, service_id, NULL);
+}
+
 /** Free all storage held by the service descriptor cache. */
 void
 rend_cache_free_all(void)
