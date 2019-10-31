@@ -1254,7 +1254,7 @@ rend_parse_service_authorization(const or_options_t *options,
 /** The given circuit is being freed. Take appropriate action if it is of
  * interest to the client subsystem. */
 void
-rend_client_circuit_cleanup(const circuit_t *circ)
+rend_client_circuit_cleanup_on_free(const circuit_t *circ)
 {
   int reason, orig_reason;
   bool has_timed_out, ip_is_redundant;

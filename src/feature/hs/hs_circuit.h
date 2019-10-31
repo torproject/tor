@@ -14,8 +14,10 @@
 
 #include "feature/hs/hs_service.h"
 
-/* Cleanup function when the circuit is closed or/and freed. */
-void hs_circ_cleanup(circuit_t *circ);
+/* Cleanup function when the circuit is closed or freed. */
+void hs_circ_cleanup_on_close(circuit_t *circ);
+void hs_circ_cleanup_on_free(circuit_t *circ);
+void hs_circ_cleanup_on_repurpose(circuit_t *circ);
 
 /* Circuit API. */
 int hs_circ_service_intro_has_opened(hs_service_t *service,
