@@ -55,7 +55,6 @@
 #include "core/crypto/onion_fast.h"
 #include "core/crypto/onion_tap.h"
 #include "core/or/policies.h"
-#include "feature/stats/rephist.h"
 #include "app/config/statefile.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 
@@ -639,166 +638,6 @@ test_rend_fns(void *arg)
   tor_free(intro_points_encrypted);
 }
 
-/** Run unit tests for stats code. */
-static void
-test_stats(void *arg)
-{
-  time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
-  char *s = NULL;
-  int i;
-
-  /* Start with testing exit port statistics; we shouldn't collect exit
-   * stats without initializing them. */
-  (void)arg;
-  rep_hist_note_exit_stream_opened(80);
-  rep_hist_note_exit_bytes(80, 100, 10000);
-  s = rep_hist_format_exit_stats(now + 86400);
-  tt_ptr_op(s, OP_EQ, NULL);
-
-  /* Initialize stats, note some streams and bytes, and generate history
-   * string. */
-  rep_hist_exit_stats_init(now);
-  rep_hist_note_exit_stream_opened(80);
-  rep_hist_note_exit_bytes(80, 100, 10000);
-  rep_hist_note_exit_stream_opened(443);
-  rep_hist_note_exit_bytes(443, 100, 10000);
-  rep_hist_note_exit_bytes(443, 100, 10000);
-  s = rep_hist_format_exit_stats(now + 86400);
-  tt_str_op("exit-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-             "exit-kibibytes-written 80=1,443=1,other=0\n"
-             "exit-kibibytes-read 80=10,443=20,other=0\n"
-             "exit-streams-opened 80=4,443=4,other=0\n",OP_EQ, s);
-  tor_free(s);
-
-  /* Add a few bytes on 10 more ports and ensure that only the top 10
-   * ports are contained in the history string. */
-  for (i = 50; i < 60; i++) {
-    rep_hist_note_exit_bytes(i, i, i);
-    rep_hist_note_exit_stream_opened(i);
-  }
-  s = rep_hist_format_exit_stats(now + 86400);
-  tt_str_op("exit-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-             "exit-kibibytes-written 52=1,53=1,54=1,55=1,56=1,57=1,58=1,"
-             "59=1,80=1,443=1,other=1\n"
-             "exit-kibibytes-read 52=1,53=1,54=1,55=1,56=1,57=1,58=1,"
-             "59=1,80=10,443=20,other=1\n"
-             "exit-streams-opened 52=4,53=4,54=4,55=4,56=4,57=4,58=4,"
-             "59=4,80=4,443=4,other=4\n",OP_EQ, s);
-  tor_free(s);
-
-  /* Stop collecting stats, add some bytes, and ensure we don't generate
-   * a history string. */
-  rep_hist_exit_stats_term();
-  rep_hist_note_exit_bytes(80, 100, 10000);
-  s = rep_hist_format_exit_stats(now + 86400);
-  tt_ptr_op(s, OP_EQ, NULL);
-
-  /* Re-start stats, add some bytes, reset stats, and see what history we
-   * get when observing no streams or bytes at all. */
-  rep_hist_exit_stats_init(now);
-  rep_hist_note_exit_stream_opened(80);
-  rep_hist_note_exit_bytes(80, 100, 10000);
-  rep_hist_reset_exit_stats(now);
-  s = rep_hist_format_exit_stats(now + 86400);
-  tt_str_op("exit-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-             "exit-kibibytes-written other=0\n"
-             "exit-kibibytes-read other=0\n"
-             "exit-streams-opened other=0\n",OP_EQ, s);
-  tor_free(s);
-
-  /* Continue with testing connection statistics; we shouldn't collect
-   * conn stats without initializing them. */
-  rep_hist_note_or_conn_bytes(1, 20, 400, now);
-  s = rep_hist_format_conn_stats(now + 86400);
-  tt_ptr_op(s, OP_EQ, NULL);
-
-  /* Initialize stats, note bytes, and generate history string. */
-  rep_hist_conn_stats_init(now);
-  rep_hist_note_or_conn_bytes(1, 30000, 400000, now);
-  rep_hist_note_or_conn_bytes(1, 30000, 400000, now + 5);
-  rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 10);
-  rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 15);
-  s = rep_hist_format_conn_stats(now + 86400);
-  tt_str_op("conn-bi-direct 2010-08-12 13:27:30 (86400 s) 0,0,1,0\n",OP_EQ, s);
-  tor_free(s);
-
-  /* Stop collecting stats, add some bytes, and ensure we don't generate
-   * a history string. */
-  rep_hist_conn_stats_term();
-  rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 15);
-  s = rep_hist_format_conn_stats(now + 86400);
-  tt_ptr_op(s, OP_EQ, NULL);
-
-  /* Re-start stats, add some bytes, reset stats, and see what history we
-   * get when observing no bytes at all. */
-  rep_hist_conn_stats_init(now);
-  rep_hist_note_or_conn_bytes(1, 30000, 400000, now);
-  rep_hist_note_or_conn_bytes(1, 30000, 400000, now + 5);
-  rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 10);
-  rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 15);
-  rep_hist_reset_conn_stats(now);
-  s = rep_hist_format_conn_stats(now + 86400);
-  tt_str_op("conn-bi-direct 2010-08-12 13:27:30 (86400 s) 0,0,0,0\n",OP_EQ, s);
-  tor_free(s);
-
-  /* Continue with testing buffer statistics; we shouldn't collect buffer
-   * stats without initializing them. */
-  rep_hist_add_buffer_stats(2.0, 2.0, 20);
-  s = rep_hist_format_buffer_stats(now + 86400);
-  tt_ptr_op(s, OP_EQ, NULL);
-
-  /* Initialize stats, add statistics for a single circuit, and generate
-   * the history string. */
-  rep_hist_buffer_stats_init(now);
-  rep_hist_add_buffer_stats(2.0, 2.0, 20);
-  s = rep_hist_format_buffer_stats(now + 86400);
-  tt_str_op("cell-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-             "cell-processed-cells 20,0,0,0,0,0,0,0,0,0\n"
-             "cell-queued-cells 2.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,"
-                               "0.00,0.00\n"
-             "cell-time-in-queue 2,0,0,0,0,0,0,0,0,0\n"
-             "cell-circuits-per-decile 1\n",OP_EQ, s);
-  tor_free(s);
-
-  /* Add nineteen more circuit statistics to the one that's already in the
-   * history to see that the math works correctly. */
-  for (i = 21; i < 30; i++)
-    rep_hist_add_buffer_stats(2.0, 2.0, i);
-  for (i = 20; i < 30; i++)
-    rep_hist_add_buffer_stats(3.5, 3.5, i);
-  s = rep_hist_format_buffer_stats(now + 86400);
-  tt_str_op("cell-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-             "cell-processed-cells 29,28,27,26,25,24,23,22,21,20\n"
-             "cell-queued-cells 2.75,2.75,2.75,2.75,2.75,2.75,2.75,2.75,"
-                               "2.75,2.75\n"
-             "cell-time-in-queue 3,3,3,3,3,3,3,3,3,3\n"
-             "cell-circuits-per-decile 2\n",OP_EQ, s);
-  tor_free(s);
-
-  /* Stop collecting stats, add statistics for one circuit, and ensure we
-   * don't generate a history string. */
-  rep_hist_buffer_stats_term();
-  rep_hist_add_buffer_stats(2.0, 2.0, 20);
-  s = rep_hist_format_buffer_stats(now + 86400);
-  tt_ptr_op(s, OP_EQ, NULL);
-
-  /* Re-start stats, add statistics for one circuit, reset stats, and make
-   * sure that the history has all zeros. */
-  rep_hist_buffer_stats_init(now);
-  rep_hist_add_buffer_stats(2.0, 2.0, 20);
-  rep_hist_reset_buffer_stats(now);
-  s = rep_hist_format_buffer_stats(now + 86400);
-  tt_str_op("cell-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-             "cell-processed-cells 0,0,0,0,0,0,0,0,0,0\n"
-             "cell-queued-cells 0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,"
-                               "0.00,0.00\n"
-             "cell-time-in-queue 0,0,0,0,0,0,0,0,0,0\n"
-             "cell-circuits-per-decile 0\n",OP_EQ, s);
-
- done:
-  tor_free(s);
-}
-
 #define ENT(name)                                                       \
   { #name, test_ ## name , 0, NULL, NULL }
 #define FORK(name)                                                      \
@@ -812,7 +651,6 @@ static struct testcase_t test_array[] = {
   { "fast_handshake", test_fast_handshake, 0, NULL, NULL },
   FORK(circuit_timeout),
   FORK(rend_fns),
-  FORK(stats),
 
   END_OF_TESTCASES
 };
@@ -918,6 +756,7 @@ struct testgroup_t testgroups[] = {
   { "sendme/", sendme_tests },
   { "shared-random/", sr_tests },
   { "socks/", socks_tests },
+  { "stats/", stats_tests },
   { "status/" , status_tests },
   { "storagedir/", storagedir_tests },
   { "token_bucket/", token_bucket_tests },
