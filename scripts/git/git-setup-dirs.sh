@@ -254,6 +254,25 @@ function make_directory
   fi
 }
 
+# Create a symlink from the first argument to the second argument
+# If the link already exists: fail if $USE_EXISTING is 0, otherwise skip.
+function make_symlink
+{
+  local cmd="ln -s '$1' '$2'"
+  printf "  %s Creating symlink from %s to %s..." "$MARKER" "$1" "$2"
+  local check_cmd="[ ! -e '$2' ]"
+  msg=$( eval "$check_cmd" 2>&1 )
+  if validate_ret_skip $? "File already exists."; then
+    return
+  fi
+  if [ $DRY_RUN -eq 0 ]; then
+    msg=$( eval "$cmd" 2>&1 )
+    validate_ret $? "$msg"
+  else
+    printf "\\n      %s\\n" "${IWTH}$cmd${CNRM}"
+  fi
+}
+
 # Go into the directory or repository, even if $DRY_RUN is non-zero.
 # If the directory does not exist, fail and log an error.
 # Otherwise, silently succeed.
@@ -496,7 +515,12 @@ for ((i=0; i<COUNT; i++)); do
 
   printf "%s Handling branch %s\\n" "$MARKER" "${BYEL}$branch${CNRM}"
   # We cloned the repository, and master is the default branch
-  if [ "$branch" != "master" ]; then
+  if [ "$branch" = "master" ]; then
+    if [ "$TOR_MASTER_NAME" != "master" ]; then
+      # Set up a master link in the worktree directory
+      make_symlink "$repo_path" "$GIT_PATH/$TOR_WKT_NAME/master"
+    fi
+  else
     # git makes worktree directories if they don't exist
     add_worktree "origin/$branch" "$repo_path"
   fi
