@@ -1,0 +1,7 @@
+  o Minor features (git scripts):
+    - Make git-setup-dirs.sh create a master symlink in the worktree directory.
+      Closes ticket 32347.
+    - Add TOR_EXTRA_CLONE_ARGS to git-setup-dirs.sh for git clone
+      customisation. Closes ticket 32347.
+    - Add TOR_EXTRA_REMOTE_* to git-setup-dirs.sh for a custom extra remote.
+      Closes ticket 32347.
