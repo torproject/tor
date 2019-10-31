@@ -42,7 +42,7 @@
 #include "feature/stats/rephist.h"
 #include "app/config/statefile.h"
 
-/** Run unit tests for stats code. */
+/** Run unit tests for some stats code. */
 static void
 test_stats(void *arg)
 {
@@ -202,6 +202,49 @@ test_stats(void *arg)
   tor_free(s);
 }
 
+/** Run unit tests the mtbf stats code. */
+static void
+test_rephist_mtbf(void *arg)
+{
+  (void)arg;
+
+  time_t now = 1572500000; /* 2010-10-31 05:33:20 UTC */
+  time_t far_future = MAX(now, time(NULL)) + 365*24*60*60;
+  int r;
+
+  /* Make a temporary datadir for these tests */
+  char *ddir_fname = tor_strdup(get_fname_rnd("datadir_mtbf"));
+  tor_free(get_options_mutable()->DataDirectory);
+  get_options_mutable()->DataDirectory = tor_strdup(ddir_fname);
+  check_private_dir(ddir_fname, CPD_CREATE, NULL);
+
+  rep_history_clean(far_future);
+
+  /* No data */
+
+  r = rep_hist_load_mtbf_data(now);
+  tt_int_op(r, OP_EQ, -1);
+  rep_history_clean(far_future);
+
+  /* Blank data */
+
+  r = rep_hist_record_mtbf_data(now, 0);
+  tt_int_op(r, OP_EQ, 0);
+  r = rep_hist_load_mtbf_data(now);
+  tt_int_op(r, OP_EQ, 0);
+  rep_history_clean(far_future);
+
+  r = rep_hist_record_mtbf_data(now, 1);
+  tt_int_op(r, OP_EQ, 0);
+  r = rep_hist_load_mtbf_data(now);
+  tt_int_op(r, OP_EQ, 0);
+  rep_history_clean(far_future);
+
+ done:
+  rep_history_clean(far_future);
+  tor_free(ddir_fname);
+}
+
 #define ENT(name)                                                       \
   { #name, test_ ## name , 0, NULL, NULL }
 #define FORK(name)                                                      \
@@ -209,6 +252,7 @@ test_stats(void *arg)
 
 struct testcase_t stats_tests[] = {
   FORK(stats),
+  ENT(rephist_mtbf),
 
   END_OF_TESTCASES
 };
