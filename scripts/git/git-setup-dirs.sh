@@ -71,7 +71,7 @@ if [ "$DEFAULT_UPSTREAM_REMOTE" != "origin" ]; then
 fi
 # GitHub repositories
 GITHUB_PULL=${TOR_GITHUB_PULL:-"https://github.com/torproject/tor.git"}
-GITHUB_PUSH=${TOR_GITHUB_PUSH:-"No pushes to GitHub"}
+GITHUB_PUSH=${TOR_GITHUB_PUSH:-"No_Pushing_To_GitHub"}
 
 ##########################
 # Git branches to manage #
