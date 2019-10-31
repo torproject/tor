@@ -1091,6 +1091,113 @@ test_close_intro_circuits_cache_clean(void *arg)
   UNMOCK(networkstatus_get_live_consensus);
 }
 
+static void
+test_close_intro_circuit_failure(void *arg)
+{
+  char digest[DIGEST_LEN];
+  circuit_t *circ = NULL;
+  ed25519_keypair_t service_kp, intro_kp;
+  origin_circuit_t *ocirc = NULL;
+  tor_addr_t addr;
+  const hs_cache_intro_state_t *entry;
+
+  (void) arg;
+
+  hs_init();
+
+  /* Generate service keypair */
+  tt_int_op(0, OP_EQ, ed25519_keypair_generate(&service_kp, 0));
+  tt_int_op(0, OP_EQ, ed25519_keypair_generate(&intro_kp, 0));
+
+  /* Create and add to the global list a dummy client introduction circuit at
+   * the ACK WAIT state. */
+  circ = dummy_origin_circuit_new(0);
+  tt_assert(circ);
+  circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT;
+  ocirc = TO_ORIGIN_CIRCUIT(circ);
+  ocirc->hs_ident = hs_ident_circuit_new(&service_kp.pubkey);
+  ocirc->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
+  /* Code path will log this exit so build it. */
+  ocirc->build_state->chosen_exit = extend_info_new("TestNickname", digest,
+                                                    NULL, NULL, NULL, &addr,
+                                                    4242);
+  ed25519_pubkey_copy(&ocirc->hs_ident->intro_auth_pk, &intro_kp.pubkey);
+
+  /* We'll make for close the circuit for a timeout failure. It should _NOT_
+   * end up in the failure cache just yet. We do that on free() only. */
+  circuit_mark_for_close(circ, END_CIRC_REASON_TIMEOUT);
+  tt_assert(!hs_cache_client_intro_state_find(&service_kp.pubkey,
+                                              &intro_kp.pubkey));
+  /* Time to free. It should get removed. */
+  circuit_free(circ);
+  entry = hs_cache_client_intro_state_find(&service_kp.pubkey,
+                                           &intro_kp.pubkey);
+  tt_assert(entry);
+  tt_uint_op(entry->timed_out, OP_EQ, 1);
+  hs_cache_client_intro_state_purge();
+
+  /* Again, create and add to the global list a dummy client introduction
+   * circuit at the INTRODUCING state. */
+  circ = dummy_origin_circuit_new(0);
+  tt_assert(circ);
+  circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
+  ocirc = TO_ORIGIN_CIRCUIT(circ);
+  ocirc->hs_ident = hs_ident_circuit_new(&service_kp.pubkey);
+  ocirc->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
+  /* Code path will log this exit so build it. */
+  ocirc->build_state->chosen_exit = extend_info_new("TestNickname", digest,
+                                                    NULL, NULL, NULL, &addr,
+                                                    4242);
+  ed25519_pubkey_copy(&ocirc->hs_ident->intro_auth_pk, &intro_kp.pubkey);
+
+  /* On free, we should get an unreachable failure. */
+  circuit_free(circ);
+  entry = hs_cache_client_intro_state_find(&service_kp.pubkey,
+                                           &intro_kp.pubkey);
+  tt_assert(entry);
+  tt_uint_op(entry->unreachable_count, OP_EQ, 1);
+  hs_cache_client_intro_state_purge();
+
+  /* Again, create and add to the global list a dummy client introduction
+   * circuit at the INTRODUCING state but we'll close it for timeout. It
+   * should not be noted as a timeout failure. */
+  circ = dummy_origin_circuit_new(0);
+  tt_assert(circ);
+  circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
+  ocirc = TO_ORIGIN_CIRCUIT(circ);
+  ocirc->hs_ident = hs_ident_circuit_new(&service_kp.pubkey);
+  ocirc->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
+  /* Code path will log this exit so build it. */
+  ocirc->build_state->chosen_exit = extend_info_new("TestNickname", digest,
+                                                    NULL, NULL, NULL, &addr,
+                                                    4242);
+  ed25519_pubkey_copy(&ocirc->hs_ident->intro_auth_pk, &intro_kp.pubkey);
+
+  circuit_mark_for_close(circ, END_CIRC_REASON_TIMEOUT);
+  circuit_free(circ);
+  tt_assert(!hs_cache_client_intro_state_find(&service_kp.pubkey,
+                                              &intro_kp.pubkey));
+
+  /* Again, create and add to the global list a dummy client introduction
+   * circuit at the INTRODUCING state but without a chosen_exit. In theory, it
+   * can not happen but we'll make sure it doesn't end up in the failure cache
+   * anyway. */
+  circ = dummy_origin_circuit_new(0);
+  tt_assert(circ);
+  circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
+  ocirc = TO_ORIGIN_CIRCUIT(circ);
+  ocirc->hs_ident = hs_ident_circuit_new(&service_kp.pubkey);
+  ed25519_pubkey_copy(&ocirc->hs_ident->intro_auth_pk, &intro_kp.pubkey);
+
+  circuit_free(circ);
+  tt_assert(!hs_cache_client_intro_state_find(&service_kp.pubkey,
+                                              &intro_kp.pubkey));
+
+ done:
+  circuit_free(circ);
+  hs_free_all();
+}
+
 struct testcase_t hs_client_tests[] = {
   { "e2e_rend_circuit_setup_legacy", test_e2e_rend_circuit_setup_legacy,
     TT_FORK, NULL, NULL },
@@ -1107,6 +1214,8 @@ struct testcase_t hs_client_tests[] = {
   { "config_client_authorization", test_config_client_authorization,
     TT_FORK, NULL, NULL },
   { "desc_has_arrived_cleanup", test_desc_has_arrived_cleanup,
+    TT_FORK, NULL, NULL },
+  { "close_intro_circuit_failure", test_close_intro_circuit_failure,
     TT_FORK, NULL, NULL },
   { "close_intro_circuits_new_desc", test_close_intro_circuits_new_desc,
     TT_FORK, NULL, NULL },
