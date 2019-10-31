@@ -242,6 +242,7 @@ parse_ports_relay(or_options_t *options,
 {
   int retval = -1;
   smartlist_t *ports = smartlist_new();
+  int n_low_ports = 0;
 
   if (BUG(!options))
     goto err;
@@ -255,40 +256,40 @@ parse_ports_relay(or_options_t *options,
   if (BUG(!have_low_ports_out))
     goto err;
 
-  if (! options->ClientOnly) {
-    if (parse_port_config(ports,
-                          options->ORPort_lines,
-                          "OR", CONN_TYPE_OR_LISTENER,
-                          "0.0.0.0", 0,
-                          CL_PORT_SERVER_OPTIONS) < 0) {
-      *msg = tor_strdup("Invalid ORPort configuration");
-      goto err;
-    }
-    if (parse_port_config(ports,
-                          options->ExtORPort_lines,
-                          "ExtOR", CONN_TYPE_EXT_OR_LISTENER,
-                          "127.0.0.1", 0,
-                          CL_PORT_SERVER_OPTIONS|CL_PORT_WARN_NONLOCAL) < 0) {
-      *msg = tor_strdup("Invalid ExtORPort configuration");
-      goto err;
-    }
-    if (parse_port_config(ports,
-                          options->DirPort_lines,
-                          "Dir", CONN_TYPE_DIR_LISTENER,
-                          "0.0.0.0", 0,
-                          CL_PORT_SERVER_OPTIONS) < 0) {
-      *msg = tor_strdup("Invalid DirPort configuration");
-      goto err;
-    }
+  if (options->ClientOnly) {
+    retval = 0;
+    goto err;
   }
 
-  int n_low_ports = 0;
+  if (parse_port_config(ports,
+                        options->ORPort_lines,
+                        "OR", CONN_TYPE_OR_LISTENER,
+                        "0.0.0.0", 0,
+                        CL_PORT_SERVER_OPTIONS) < 0) {
+    *msg = tor_strdup("Invalid ORPort configuration");
+    goto err;
+  }
+  if (parse_port_config(ports,
+                        options->ExtORPort_lines,
+                        "ExtOR", CONN_TYPE_EXT_OR_LISTENER,
+                        "127.0.0.1", 0,
+                        CL_PORT_SERVER_OPTIONS|CL_PORT_WARN_NONLOCAL) < 0) {
+    *msg = tor_strdup("Invalid ExtORPort configuration");
+    goto err;
+  }
+  if (parse_port_config(ports,
+                        options->DirPort_lines,
+                        "Dir", CONN_TYPE_DIR_LISTENER,
+                        "0.0.0.0", 0,
+                        CL_PORT_SERVER_OPTIONS) < 0) {
+    *msg = tor_strdup("Invalid DirPort configuration");
+    goto err;
+  }
+
   if (check_server_ports(ports, options, &n_low_ports) < 0) {
     *msg = tor_strdup("Misconfigured server ports");
     goto err;
   }
-  if (*have_low_ports_out < 0)
-    *have_low_ports_out = (n_low_ports > 0);
 
   smartlist_add_all(ports_out, ports);
   smartlist_free(ports);
@@ -296,6 +297,8 @@ parse_ports_relay(or_options_t *options,
   retval = 0;
 
  err:
+  if (*have_low_ports_out < 0)
+    *have_low_ports_out = (n_low_ports > 0);
   if (ports) {
     SMARTLIST_FOREACH(ports, port_cfg_t *, p, port_cfg_free(p));
     smartlist_free(ports);
@@ -312,6 +315,9 @@ update_port_set_relay(or_options_t *options,
     return;
 
   if (BUG(!ports))
+    return;
+
+  if (options->ClientOnly)
     return;
 
   /* Update the relay *Port_set options.  The !! here is to force a boolean
@@ -343,12 +349,14 @@ options_validate_relay_os(const or_options_t *old_options,
   if (BUG(!msg))
     return -1;
 
+  if (!server_mode(options))
+    return 0;
+
   const char *uname = get_uname();
 
-  if (server_mode(options) &&
-      (!strcmpstart(uname, "Windows 95") ||
-       !strcmpstart(uname, "Windows 98") ||
-       !strcmpstart(uname, "Windows Me"))) {
+  if (!strcmpstart(uname, "Windows 95") ||
+      !strcmpstart(uname, "Windows 98") ||
+      !strcmpstart(uname, "Windows Me")) {
     log_warn(LD_CONFIG, "Tor is running as a server, but you are "
         "running %s; this probably won't work. See "
         "https://www.torproject.org/docs/faq.html#BestOSForRelay "
@@ -572,19 +580,22 @@ options_validate_relay_padding(const or_options_t *old_options,
   if (BUG(!msg))
     return -1;
 
-  if (server_mode(options) && options->ConnectionPadding != -1) {
+  if (!server_mode(options))
+    return 0;
+
+  if (options->ConnectionPadding != -1) {
     REJECT("Relays must use 'auto' for the ConnectionPadding setting.");
   }
 
-  if (server_mode(options) && options->ReducedConnectionPadding != 0) {
+  if (options->ReducedConnectionPadding != 0) {
     REJECT("Relays cannot set ReducedConnectionPadding. ");
   }
 
-  if (server_mode(options) && options->CircuitPadding == 0) {
+  if (options->CircuitPadding == 0) {
     REJECT("Relays cannot set CircuitPadding to 0. ");
   }
 
-  if (server_mode(options) && options->ReducedCircuitPadding == 1) {
+  if (options->ReducedCircuitPadding == 1) {
     REJECT("Relays cannot set ReducedCircuitPadding. ");
   }
 
@@ -1407,6 +1418,9 @@ options_act_relay_dir(const or_options_t *old_options)
   (void)old_options;
 
   const or_options_t *options = get_options();
+
+  if (!public_server_mode(options))
+    return 0;
 
   /* Load the webpage we're going to serve every time someone asks for '/' on
      our DirPort. */
