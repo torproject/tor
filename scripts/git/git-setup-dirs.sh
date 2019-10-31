@@ -40,6 +40,8 @@ function usage()
   echo "       (current: $GITHUB_PULL)"
   echo "   TOR_GITHUB_PUSH: the tor-github remote push URL"
   echo "       (current: $GITHUB_PUSH)"
+  echo "   TOR_EXTRA_CLONE_ARGS: extra arguments to git clone"
+  echo "       (current: $TOR_EXTRA_CLONE_ARGS)"
   echo "   we recommend that you set these env vars in your ~/.profile"
 }
 
@@ -288,7 +290,7 @@ function goto_dir
 # If the directory already exists: fail if $USE_EXISTING is 0, otherwise skip.
 function clone_repo
 {
-  local cmd="git clone '$1' '$2'"
+  local cmd="git clone $TOR_EXTRA_CLONE_ARGS '$1' '$2'"
   printf "  %s Cloning %s into %s..." "$MARKER" "$1" "$2"
   local check_cmd="[ ! -d '$2' ]"
   msg=$( eval "$check_cmd" 2>&1 )
