@@ -19,12 +19,12 @@
 typedef struct or_options_t or_options_t;
 typedef struct smartlist_t smartlist_t;
 
-char *get_transport_bindaddr_from_config(const char *transport);
-smartlist_t *get_options_for_server_transport(const char *transport);
-
 int options_validate_server_transport(const or_options_t *old_options,
                                       or_options_t *options,
                                       char **msg);
+
+char *get_transport_bindaddr_from_config(const char *transport);
+smartlist_t *get_options_for_server_transport(const char *transport);
 
 int options_act_server_transport(const or_options_t *old_options);
 
@@ -37,6 +37,36 @@ STATIC smartlist_t *get_options_from_transport_options_line(
 #endif
 
 #else
+
+/** When tor is compiled with the relay module disabled, it can't be
+ * configured with server pluggable transports.
+ *
+ * Returns -1 and sets msg to a newly allocated string, if ExtORPort,
+ * ServerTransportPlugin, ServerTransportListenAddr, or
+ * ServerTransportOptions are set in options. Otherwise returns 0. */
+static inline int
+options_validate_server_transport(const or_options_t *old_options,
+                                  or_options_t *options,
+                                  char **msg)
+{
+  (void)old_options;
+
+  /* These ExtORPort checks are too strict, and will reject valid configs
+   * that disable ports, like "ExtORPort 0". */
+  if (options->ServerTransportPlugin ||
+      options->ServerTransportListenAddr ||
+      options->ServerTransportOptions ||
+      options->ExtORPort_lines) {
+    /* REJECT() this configuration */
+    *msg = tor_strdup("This tor was built with relay mode disabled. "
+                      "It can not be configured with an ExtORPort, "
+                      "a ServerTransportPlugin, a ServerTransportListenAddr, "
+                      "or ServerTransportOptions.");
+    return -1;
+  }
+
+  return 0;
+}
 
 #define get_transport_bindaddr_from_config(transport) \
   (((void)(transport)),NULL)
