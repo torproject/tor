@@ -623,14 +623,14 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
 /** Helper: cleanup function for client circuit. This is for every HS version.
  * It is called from hs_circ_cleanup() entry point. */
 static void
-cleanup_client_circ(circuit_t *circ)
+cleanup_client_circ(circuit_t *circ, hs_circ_cleanup_type_t type)
 {
   tor_assert(circ);
 
   if (circuit_is_hs_v2(circ)) {
-    rend_client_circuit_cleanup(circ);
+    rend_client_circuit_cleanup(circ, type);
   } else if (circuit_is_hs_v3(circ)) {
-    hs_client_circuit_cleanup(circ);
+    hs_client_circuit_cleanup(circ, type);
   }
   /* It is possible the circuit has an HS purpose but no identifier (rend_data
    * or hs_ident). Thus possible that this passess through. */
@@ -639,15 +639,16 @@ cleanup_client_circ(circuit_t *circ)
 /** Helper: cleanup function for service circuit. This is for every HS
  * version. It is called from hs_circ_cleanup() entry point. */
 static void
-cleanup_service_circ(circuit_t *circ)
+cleanup_service_circ(circuit_t *circ, hs_circ_cleanup_type_t type)
 {
   tor_assert(circ);
 
   if (circuit_is_hs_v3(circ)) {
     /* If it's a service-side intro circ, notify the HS subsystem for the
      * intro point circuit closing so it can be dealt with cleanly. */
-    if (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
-        circ->purpose == CIRCUIT_PURPOSE_S_INTRO) {
+    if (type == HS_CIRC_CLEANUP_ON_CLOSE &&
+        (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+         circ->purpose == CIRCUIT_PURPOSE_S_INTRO)) {
       hs_service_intro_circ_has_closed(TO_ORIGIN_CIRCUIT(circ));
     }
   }
@@ -1236,14 +1237,14 @@ hs_circ_send_establish_rendezvous(origin_circuit_t *circ)
  * related HS data structures. This function can be called multiple times
  * safely for the same circuit. */
 void
-hs_circ_cleanup(circuit_t *circ)
+hs_circ_cleanup(circuit_t *circ, hs_circ_cleanup_type_t type)
 {
   tor_assert(circ);
 
   if (circuit_is_hs_client(circ)) {
-    cleanup_client_circ(circ);
+    cleanup_client_circ(circ, type);
   } else if (circuit_is_hs_service(circ)) {
-    cleanup_service_circ(circ);
+    cleanup_service_circ(circ, type);
   }
 
   /* Actions that MUST happen for every circuits regardless of what was done

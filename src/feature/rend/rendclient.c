@@ -1253,7 +1253,7 @@ rend_parse_service_authorization(const or_options_t *options,
 /** The given circuit is being freed. Take appropriate action if it is of
  * interest to the client subsystem. */
 void
-rend_client_circuit_cleanup(const circuit_t *circ)
+rend_client_circuit_cleanup(const circuit_t *circ, hs_circ_cleanup_type_t type)
 {
   int reason, orig_reason;
   bool has_timed_out, ip_is_redundant;
@@ -1261,6 +1261,12 @@ rend_client_circuit_cleanup(const circuit_t *circ)
 
   tor_assert(circ);
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
+
+  /* Only cleanup on free() since the following code is CPU intensive and
+   * should not be done within the circuit close code path or repurpose. */
+  if (type != HS_CIRC_CLEANUP_ON_FREE) {
+    return;
+  }
 
   reason = circ->marked_for_close_reason;
   orig_reason = circ->marked_for_close_orig_reason;

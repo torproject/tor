@@ -1242,7 +1242,7 @@ find_client_auth(const ed25519_public_key_t *service_identity_pk)
 /** Called when a circuit was just cleaned up. This is done right before the
  * circuit is freed. */
 void
-hs_client_circuit_cleanup(const circuit_t *circ)
+hs_client_circuit_cleanup(const circuit_t *circ, hs_circ_cleanup_type_t type)
 {
   bool has_timed_out;
   rend_intro_point_failure_t failure = INTRO_POINT_FAILURE_GENERIC;
@@ -1250,6 +1250,12 @@ hs_client_circuit_cleanup(const circuit_t *circ)
 
   tor_assert(circ);
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
+
+  /* The following code should not be executed on close or repurpose since it
+   * can be CPU intensive. Circuit close is part of tor fast path. */
+  if (type != HS_CIRC_CLEANUP_ON_FREE) {
+    return;
+  }
 
   orig_circ = CONST_TO_ORIGIN_CIRCUIT(circ);
 

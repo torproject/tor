@@ -14,8 +14,15 @@
 
 #include "feature/hs/hs_service.h"
 
+/** Type of circuit cleanup. Either on close or on free. */
+typedef enum hs_circ_cleanup_type_t {
+  HS_CIRC_CLEANUP_ON_CLOSE     = 1,
+  HS_CIRC_CLEANUP_ON_FREE      = 2,
+  HS_CIRC_CLEANUP_ON_REPURPOSE = 3,
+} hs_circ_cleanup_type_t;
+
 /* Cleanup function when the circuit is closed or/and freed. */
-void hs_circ_cleanup(circuit_t *circ);
+void hs_circ_cleanup(circuit_t *circ, hs_circ_cleanup_type_t type);
 
 /* Circuit API. */
 int hs_circ_service_intro_has_opened(hs_service_t *service,
