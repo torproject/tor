@@ -3316,7 +3316,7 @@ warn_if_option_path_is_relative(const char *option,
 }
 
 /** Scan <b>options</b> for occurrences of relative file/directory
- * path and log a warning whenever it is found.
+ * paths and log a warning whenever one is found.
  *
  * Return 1 if there were relative paths; 0 otherwise.
  */
@@ -4824,7 +4824,7 @@ opt_streq(const char *s1, const char *s2)
   return 0 == strcmp_opt(s1, s2);
 }
 
-/** Check if any of the previous options have changed but aren't allowed to. */
+/** Check if any config options have changed but aren't allowed to. */
 static int
 options_check_transition_cb(const void *old_,
                             const void *new_val_,
