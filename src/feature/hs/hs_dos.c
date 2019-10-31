@@ -206,6 +206,13 @@ hs_dos_can_send_intro2(or_circuit_t *s_intro_circ)
   return true;
 }
 
+/* Return rolling count of rejected INTRO2. */
+uint64_t
+hs_dos_get_intro2_rejected_count(void)
+{
+  return intro2_rejected_count;
+}
+
 /* Initialize the onion service Denial of Service subsystem. */
 void
 hs_dos_init(void)
