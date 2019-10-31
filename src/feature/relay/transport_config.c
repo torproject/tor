@@ -40,7 +40,8 @@
  *  The returned string is allocated on the heap and it's the
  *  responsibility of the caller to free it. */
 static char *
-get_bindaddr_from_transport_listen_line(const char *line,const char *transport)
+get_bindaddr_from_transport_listen_line(const char *line,
+                                        const char *transport)
 {
   smartlist_t *items = NULL;
   const char *parsed_transport = NULL;
@@ -113,10 +114,11 @@ get_transport_bindaddr_from_config(const char *transport)
  *  The returned smartlist and its strings are allocated on the heap
  *  and it's the responsibility of the caller to free it. */
 STATIC smartlist_t *
-get_options_from_transport_options_line(const char *line,const char *transport)
+get_options_from_transport_options_line(const char *line,
+                                        const char *transport)
 {
   smartlist_t *items = smartlist_new();
-  smartlist_t *options = smartlist_new();
+  smartlist_t *pt_options = smartlist_new();
   const char *parsed_transport = NULL;
 
   smartlist_split_string(items, line, NULL,
@@ -143,22 +145,22 @@ get_options_from_transport_options_line(const char *line,const char *transport)
     }
 
     /* add it to the options smartlist */
-    smartlist_add_strdup(options, option);
+    smartlist_add_strdup(pt_options, option);
     log_debug(LD_CONFIG, "Added %s to the list of options", escaped(option));
   } SMARTLIST_FOREACH_END(option);
 
   goto done;
 
  err:
-  SMARTLIST_FOREACH(options, char*, s, tor_free(s));
-  smartlist_free(options);
-  options = NULL;
+  SMARTLIST_FOREACH(pt_options, char*, s, tor_free(s));
+  smartlist_free(pt_options);
+  pt_options = NULL;
 
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
 
-  return options;
+  return pt_options;
 }
 
 /** Given the name of a pluggable transport in <b>transport</b>, check
@@ -203,16 +205,22 @@ options_validate_server_transport(const or_options_t *old_options,
 
   config_line_t *cl;
 
-  for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
-    if (parse_transport_line(options, cl->value, 1, 1) < 0)
-      REJECT("Invalid server transport line. See logs for details.");
-  }
-
   if (options->ServerTransportPlugin && !server_mode(options)) {
     log_notice(LD_GENERAL, "Tor is not configured as a relay but you specified"
                " a ServerTransportPlugin line (%s). The ServerTransportPlugin "
                "line will be ignored.",
                escaped(options->ServerTransportPlugin->value));
+  }
+
+  if (options->ServerTransportListenAddr && !options->ServerTransportPlugin) {
+    log_notice(LD_GENERAL, "You need at least a single managed-proxy to "
+               "specify a transport listen address. The "
+               "ServerTransportListenAddr line will be ignored.");
+  }
+
+  for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
+    if (parse_transport_line(options, cl->value, 1, 1) < 0)
+      REJECT("Invalid server transport line. See logs for details.");
   }
 
   for (cl = options->ServerTransportListenAddr; cl; cl = cl->next) {
@@ -223,12 +231,6 @@ options_validate_server_transport(const or_options_t *old_options,
     if (!bindaddr)
       REJECT("ServerTransportListenAddr did not parse. See logs for details.");
     tor_free(bindaddr);
-  }
-
-  if (options->ServerTransportListenAddr && !options->ServerTransportPlugin) {
-    log_notice(LD_GENERAL, "You need at least a single managed-proxy to "
-               "specify a transport listen address. The "
-               "ServerTransportListenAddr line will be ignored.");
   }
 
   for (cl = options->ServerTransportOptions; cl; cl = cl->next) {
@@ -268,7 +270,7 @@ options_act_server_transport(const or_options_t *old_options)
 
   /* If we are a bridge with a pluggable transport proxy but no
      Extended ORPort, inform the user that they are missing out. */
-  if (server_mode(options) && options->ServerTransportPlugin &&
+  if (options->ServerTransportPlugin &&
       !options->ExtORPort_lines) {
     log_notice(LD_CONFIG, "We use pluggable transports but the Extended "
                "ORPort is disabled. Tor and your pluggable transports proxy "
@@ -287,7 +289,7 @@ options_act_server_transport(const or_options_t *old_options)
   }
 
   if (!options->DisableNetwork) {
-    if (options->ServerTransportPlugin && server_mode(options)) {
+    if (options->ServerTransportPlugin) {
       for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
         if (parse_transport_line(options, cl->value, 0, 1) < 0) {
           // LCOV_EXCL_START
