@@ -1,0 +1,5 @@
+# Relay tests
+# Options from relay/relay_config.c
+# Try a valid minimal non-directory cache config
+ORPort 1
+DirCache 0
