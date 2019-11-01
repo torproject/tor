@@ -69,25 +69,19 @@
  *     made to attach all existing circuits to the new policy.
  **/
 
+#define CIRCUITMUX_PRIVATE
+
 #include "core/or/or.h"
 #include "core/or/channel.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuitmux.h"
 #include "core/or/relay.h"
 
-#include "core/or/cell_queue_st.h"
-#include "core/or/destroy_cell_queue_st.h"
 #include "core/or/or_circuit_st.h"
 
 /*
  * Private typedefs for circuitmux.c
  */
-
-/*
- * Map of muxinfos for circuitmux_t to use; struct is defined below (name
- * of struct must match HT_HEAD line).
- */
-typedef struct chanid_circid_muxinfo_map chanid_circid_muxinfo_map_t;
 
 /*
  * Hash table entry (yeah, calling it chanid_circid_muxinfo_s seems to
@@ -101,49 +95,6 @@ typedef struct chanid_circid_muxinfo_t chanid_circid_muxinfo_t;
  */
 
 typedef struct circuit_muxinfo_s circuit_muxinfo_t;
-
-/*
- * Structures for circuitmux.c
- */
-
-struct circuitmux_s {
-  /* Keep count of attached, active circuits */
-  unsigned int n_circuits, n_active_circuits;
-
-  /* Total number of queued cells on all circuits */
-  unsigned int n_cells;
-
-  /*
-   * Map from (channel ID, circuit ID) pairs to circuit_muxinfo_t
-   */
-  chanid_circid_muxinfo_map_t *chanid_circid_map;
-
-  /** List of queued destroy cells */
-  destroy_cell_queue_t destroy_cell_queue;
-  /** Boolean: True iff the last cell to circuitmux_get_first_active_circuit
-   * returned the destroy queue. Used to force alternation between
-   * destroy/non-destroy cells.
-   *
-   * XXXX There is no reason to think that alternating is a particularly good
-   * approach -- it's just designed to prevent destroys from starving other
-   * cells completely.
-   */
-  unsigned int last_cell_was_destroy : 1;
-  /** Destroy counter: increment this when a destroy gets queued, decrement
-   * when we unqueue it, so we can test to make sure they don't starve.
-   */
-  int64_t destroy_ctr;
-
-  /*
-   * Circuitmux policy; if this is non-NULL, it can override the built-
-   * in round-robin active circuits behavior.  This is how EWMA works in
-   * the new circuitmux_t world.
-   */
-  const circuitmux_policy_t *policy;
-
-  /* Policy-specific data */
-  circuitmux_policy_data_t *policy_data;
-};
 
 /*
  * This struct holds whatever we want to store per attached circuit on a
@@ -220,9 +171,6 @@ chanid_circid_entry_hash(chanid_circid_muxinfo_t *a)
             ((unsigned int)((a->chan_id >> 32) & 0xffffffff)) ^
             ((unsigned int)(a->chan_id & 0xffffffff)));
 }
-
-/* Declare the struct chanid_circid_muxinfo_map type */
-HT_HEAD(chanid_circid_muxinfo_map, chanid_circid_muxinfo_t);
 
 /* Emit a bunch of hash table stuff */
 HT_PROTOTYPE(chanid_circid_muxinfo_map, chanid_circid_muxinfo_t, node,

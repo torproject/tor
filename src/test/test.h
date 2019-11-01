@@ -199,6 +199,7 @@ extern struct testcase_t checkdir_tests[];
 extern struct testcase_t circuitbuild_tests[];
 extern struct testcase_t circuitlist_tests[];
 extern struct testcase_t circuitmux_tests[];
+extern struct testcase_t circuitmux_ewma_tests[];
 extern struct testcase_t circuitstats_tests[];
 extern struct testcase_t circuituse_tests[];
 extern struct testcase_t compat_libevent_tests[];
