@@ -1307,9 +1307,10 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
          */
         continue;
       }
-      smartlist_add_asprintf(elements, "%s%s %s\n",
+      int value_exists = line->value && *(line->value);
+      smartlist_add_asprintf(elements, "%s%s%s%s\n",
                    comment_option ? "# " : "",
-                   line->key, line->value);
+                   line->key, value_exists ? " " : "", line->value);
     }
     config_free_lines(assigned);
   } SMARTLIST_FOREACH_END(mv);
@@ -1317,7 +1318,9 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
   if (fmt->extra) {
     line = *(config_line_t**)STRUCT_VAR_P(options, fmt->extra->offset);
     for (; line; line = line->next) {
-      smartlist_add_asprintf(elements, "%s %s\n", line->key, line->value);
+      int value_exists = line->value && *(line->value);
+      smartlist_add_asprintf(elements, "%s%s%s\n",
+                             line->key, value_exists ? " " : "", line->value);
     }
   }
 
