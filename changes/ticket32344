@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Immutability is now implemented as a flag on individual configuration
+      options rather than as part of the option-transition checking
+      code.  Closes ticket 32344.
