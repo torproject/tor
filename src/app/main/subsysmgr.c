@@ -335,6 +335,54 @@ subsystems_register_state_formats(config_mgr_t *mgr)
   return 0;
 }
 
+#ifdef TOR_UNIT_TESTS
+/**
+ * Helper: look up the index for <b>sys</b>.  Return -1 if the subsystem
+ * is not recognized.
+ **/
+static int
+subsys_get_idx(const subsys_fns_t *sys)
+{
+  for (unsigned i = 0; i < n_tor_subsystems; ++i) {
+    if (sys == tor_subsystems[i])
+      return (int)i;
+  }
+  return -1;
+}
+
+/**
+ * Return the current state-manager's index for any state held by the
+ * subsystem <b>sys</b>.  If <b>sys</b> has no options, return -1.
+ *
+ * Using raw indices can be error-prone: only do this from the unit
+ * tests. If you need a way to access another subsystem's configuration,
+ * that subsystem should provide access functions.
+ **/
+int
+subsystems_get_options_idx(const subsys_fns_t *sys)
+{
+  int i = subsys_get_idx(sys);
+  tor_assert(i >= 0);
+  return sys_status[i].options_idx;
+}
+
+/**
+ * Return the current state-manager's index for any state held by the
+ * subsystem <b>sys</b>.  If <b>sys</b> has no state, return -1.
+ *
+ * Using raw indices can be error-prone: only do this from the unit
+ * tests.  If you need a way to access another subsystem's state
+ * that subsystem should provide access functions.
+ **/
+int
+subsystems_get_state_idx(const subsys_fns_t *sys)
+{
+  int i = subsys_get_idx(sys);
+  tor_assert(i >= 0);
+  return sys_status[i].state_idx;
+}
+#endif
+
 /**
  * Call all appropriate set_options() methods to tell the various subsystems
  * about a new set of torrc options.  Return 0 on success, -1 on
