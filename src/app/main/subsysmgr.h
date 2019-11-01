@@ -43,4 +43,9 @@ int subsystems_set_state(const struct config_mgr_t *mgr,
 int subsystems_flush_state(const struct config_mgr_t *mgr,
                            struct or_state_t *state);
 
+#ifdef TOR_UNIT_TESTS
+int subsystems_get_options_idx(const subsys_fns_t *sys);
+int subsystems_get_state_idx(const subsys_fns_t *sys);
+#endif
+
 #endif /* !defined(TOR_SUBSYSMGR_T) */
