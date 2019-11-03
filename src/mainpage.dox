@@ -1,0 +1,11 @@
+/**
+@mainpage Tor source reference
+
+@section intro Getting to know Tor
+
+Welcome to the Tor source code documentation!  Here we have documentation for
+nearly every function, type, and module in the Tor source code.  The high-level
+documentation is a work in progress.  For now, have a look at the source code
+overview in doc/HACKING/design.
+
+**/
