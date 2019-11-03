@@ -201,7 +201,7 @@ problem function-size /src/feature/control/control_auth.c:handle_control_authent
 problem function-size /src/feature/control/control_cmd.c:handle_control_extendcircuit() 150
 problem function-size /src/feature/control/control_cmd.c:handle_control_add_onion() 256
 problem function-size /src/feature/control/control_cmd.c:add_onion_helper_keyarg() 117
-problem function-size /src/feature/control/control_events.c:control_event_stream_status() 118
+problem function-size /src/feature/control/control_events.c:control_event_stream_status() 124
 problem include-count /src/feature/control/control_getinfo.c 54
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_misc() 108
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_dir() 302
