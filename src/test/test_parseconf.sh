@@ -163,9 +163,9 @@ for dir in "${EXAMPLEDIR}"/*; do
 
             # Check for broken configs
             if test -f "./error${suffix}"; then
-                echo "FAIL: Found both ${dir}/expected${suffix}"
-                echo "and ${dir}/error${suffix}."
-                echo "(Only one of these files should exist.)"
+                echo "FAIL: Found both ${dir}/expected${suffix}" >&2
+                echo "and ${dir}/error${suffix}." >&2
+                echo "(Only one of these files should exist.)" >&2
                 exit $EXITCODE
             fi
 
@@ -200,13 +200,13 @@ for dir in "${EXAMPLEDIR}"/*; do
 
             if ! cmp "${DATA_DIR}/output.${testname}" \
                  "${DATA_DIR}/output_2.${testname}"; then
-                echo "Failure: did not match on round-trip."
+                echo "Failure: did not match on round-trip." >&2
                 exit $EXITCODE
             fi
 
             echo "OK"
         else
-            echo "FAIL"
+            echo "FAIL" >&2
             if test "$(wc -c < "${DATA_DIR}/output.${testname}")" = 0; then
                 # There was no output -- probably we failed.
                 "${TOR_BINARY}" -f "./torrc" \
@@ -214,12 +214,20 @@ for dir in "${EXAMPLEDIR}"/*; do
                                 --verify-config \
                                 ${CMDLINE} || true
             fi
-            diff -u "$EXPECTED" "${DATA_DIR}/output.${testname}" || /bin/true
+            echo "Failure: did not match." >&2
+            diff -u "$EXPECTED" "${DATA_DIR}/output.${testname}" >&2 \
+                || /bin/true
             exit $EXITCODE
         fi
 
    elif test -f "$ERROR"; then
         # This case should fail: run verify-config and see if it does.
+
+        if ! test -s "$ERROR"; then
+            echo "FAIL: error file '$ERROR' is empty." >&2
+            echo "Empty error files match any output." >&2
+            exit $EXITCODE
+        fi
 
         "${TOR_BINARY}" --verify-config \
                         -f ./torrc \
@@ -232,10 +240,10 @@ for dir in "${EXAMPLEDIR}"/*; do
         if grep "${expect_err}" "${DATA_DIR}/output.${testname}" >/dev/null; then
             echo "OK"
         else
-            echo "FAIL"
-            echo "Expected error: ${expect_err}"
-            echo "Tor said:"
-            cat "${DATA_DIR}/output.${testname}"
+            echo "FAIL" >&2
+            echo "Expected error: ${expect_err}" >&2
+            echo "Tor said:" >&2
+            cat "${DATA_DIR}/output.${testname}" >&2
             exit $EXITCODE
         fi
 
@@ -243,7 +251,7 @@ for dir in "${EXAMPLEDIR}"/*; do
         # This case is not actually configured with a success or a failure.
         # call that an error.
 
-        echo "FAIL: Did not find ${dir}/*expected or ${dir}/*error."
+        echo "FAIL: Did not find ${dir}/*expected or ${dir}/*error." >&2
         exit $EXITCODE
     fi
 
