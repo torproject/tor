@@ -1,4 +1,6 @@
 /**
 @dir /feature/dirauth
-@brief feature/dirauth
+@brief feature/dirauth: Directory authority implementation.
+
+This module handles running Tor as a directory authority.
 **/
