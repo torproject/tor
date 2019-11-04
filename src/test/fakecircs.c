@@ -84,5 +84,9 @@ free_fake_orcirc(or_circuit_t *orcirc)
     circuitmux_detach_circuit(circ->n_chan->cmux, circ);
   }
 
+  /* Clear any cells. */
+  cell_queue_clear(&orcirc->p_chan_cells);
+  cell_queue_clear(&circ->n_chan_cells);
+
   tor_free_(circ);
 }

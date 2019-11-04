@@ -19,10 +19,17 @@
 #include "core/or/scheduler.h"
 #define CIRCUITMUX_EWMA_PRIVATE
 #include "core/or/circuitmux_ewma.h"
+#define CIRCUITLIST_PRIVATE
+#include "core/or/circuitlist.h"
+
+#include "lib/crypt_ops/crypto_rand.h"
+#include "core/or/cell_st.h"
+#include "core/or/relay.h"
 
 /* Test suite stuff */
 #include "test/test.h"
 #include "test/fakechans.h"
+#include "test/fakecircs.h"
 
 /* Shamelessly stolen from compat_libevent.c */
 #define V(major, minor, patch) \
@@ -1265,6 +1272,83 @@ test_scheduler_kist_pending_list(void *arg)
   UNMOCK(channel_should_write_to_kernel);
 }
 
+static void
+put_cells_on_circuit(circuit_t *circ, int n_cells)
+{
+  for (int i = 0; i < n_cells; ++i) {
+    cell_t cell;
+    crypto_rand((void *) &cell, sizeof(cell));
+    append_cell_to_circuit_queue(circ, circ->n_chan, &cell,
+                                 CELL_DIRECTION_OUT, 0);
+  }
+}
+
+static void
+test_scheduler_prioritization(void *arg)
+{
+  or_circuit_t *loud_circ = NULL, *quiet_circ = NULL;
+  channel_t *pchan = NULL, *nchan = NULL;
+
+  (void) arg;
+
+#ifndef HAVE_KIST_SUPPORT
+  return;
+#endif
+
+  /* Mocking a series of scheduler function to control the flow of the
+   * scheduler loop to test every use cases and assess the pending list. */
+  MOCK(get_options, mock_get_options);
+  MOCK(channel_flush_some_cells, channel_flush_some_cells_mock_var);
+  MOCK(channel_more_to_flush, channel_more_to_flush_mock_var);
+  MOCK(update_socket_info_impl, update_socket_info_impl_mock_var);
+  MOCK(channel_write_to_kernel, channel_write_to_kernel_mock);
+  MOCK(channel_should_write_to_kernel, channel_should_write_to_kernel_mock);
+
+  /* We will put a lot of cells on a circuit so this will avoid the OOM
+   * killing it. */
+  mocked_options.MaxMemInQueues = INT_MAX;
+  /* Setup options so we're sure about what sched we are running */
+  mocked_options.KISTSchedRunInterval = 10;
+  set_scheduler_options(SCHEDULER_KIST);
+
+  /* Init scheduler. */
+  scheduler_init();
+
+  /* Create fake channels. */
+  pchan = new_fake_channel();
+  tt_assert(pchan);
+  channel_register(pchan);
+  nchan = new_fake_channel();
+  tt_assert(nchan);
+  channel_register(nchan);
+  pchan->magic = nchan->magic = TLS_CHAN_MAGIC;
+
+  /* Create loud and quiet circuits. Attached them on the channels we have. */
+  loud_circ = new_fake_orcirc(nchan, pchan);
+  tt_assert(loud_circ);
+  quiet_circ = new_fake_orcirc(nchan, pchan);
+  tt_assert(quiet_circ);
+
+  /* Queue 1000 cells on loud circuit. */
+  put_cells_on_circuit(TO_CIRCUIT(loud_circ), 1000);
+  /* Queue 1 cell on quiet circuit. */
+  put_cells_on_circuit(TO_CIRCUIT(quiet_circ), 1);
+
+ done:
+  free_fake_orcirc(loud_circ);
+  free_fake_orcirc(quiet_circ);
+  free_fake_channel(pchan);
+  free_fake_channel(nchan);
+  scheduler_free_all();
+
+  UNMOCK(get_options);
+  UNMOCK(channel_flush_some_cells);
+  UNMOCK(channel_more_to_flush);
+  UNMOCK(update_socket_info_impl);
+  UNMOCK(channel_write_to_kernel);
+  UNMOCK(channel_should_write_to_kernel);
+}
+
 static void *
 sched_setup_test(const struct testcase_t *tc)
 {
@@ -1302,6 +1386,7 @@ struct testcase_t scheduler_tests[] = {
   TEST_SCHED(loop_kist),
   TEST_SCHED(loop_vanilla),
   TEST_SCHED(ns_changed),
+  TEST_SCHED(prioritization),
 
   END_OF_TESTCASES
 };
