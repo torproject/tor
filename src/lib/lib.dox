@@ -1,4 +1,8 @@
 /**
 @dir lib
-@brief lib
+@brief lib: low-level functionality.
+
+The "lib" directory contains low-level functionality, most of it not
+necessarily Tor-specific.
+
 **/

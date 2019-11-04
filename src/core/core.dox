@@ -1,4 +1,8 @@
 /**
 @dir core
-@brief core
+@brief core: main loop and onion routing functionality
+
+The "core" directory has the central protocols for Tor, which every
+client and relay must implement in order to perform onion routing.
+
 **/
