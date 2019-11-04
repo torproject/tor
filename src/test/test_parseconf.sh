@@ -216,7 +216,7 @@ for dir in "${EXAMPLEDIR}"/*; do
             fi
             echo "Failure: did not match." >&2
             diff -u "$EXPECTED" "${DATA_DIR}/output.${testname}" >&2 \
-                || /bin/true
+                || true
             exit $EXITCODE
         fi
 
