@@ -1,5 +1,5 @@
 /**
-@dir lib/dispatch
+@dir /lib/dispatch
 @brief lib/dispatch: In-process message delivery.
 
 This module provides a general in-process "message dispatch" system in which

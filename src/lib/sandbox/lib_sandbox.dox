@@ -1,5 +1,5 @@
 /**
-@dir lib/sandbox
+@dir /lib/sandbox
 @brief lib/sandbox Linux seccomp2-based sandbox.
 
 This module uses Linux's seccomp2 facility via the

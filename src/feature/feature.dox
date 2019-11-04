@@ -1,5 +1,5 @@
 /**
-@dir feature
+@dir /feature
 @brief feature: domain-specific modules
 
 The "feature" directory has modules that Tor uses only for a particular

@@ -1,5 +1,5 @@
 /**
-@dir lib/malloc
+@dir /lib/malloc
 @brief lib/malloc: Wrappers and utilities for memory management.
 
 **/

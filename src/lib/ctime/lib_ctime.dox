@@ -1,5 +1,5 @@
 /**
-@dir lib/ctime
+@dir /lib/ctime
 @brief lib/ctime: Constant-time code to avoid side-channels.
 
 This module contains constant-time implementations of various

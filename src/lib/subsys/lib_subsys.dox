@@ -1,5 +1,5 @@
 /**
-@dir lib/subsys
+@dir /lib/subsys
 @brief lib/subsys: Types for declaring a "subsystem".
 
 ## Subsystems in Tor

@@ -1,5 +1,5 @@
 /**
-@dir lib/wallclock
+@dir /lib/wallclock
 @brief lib/wallclock: Inspect and manipulate the current time.
 
 This module handles our concept of "what time is it" or "what time does the

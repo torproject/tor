@@ -1,5 +1,5 @@
 /**
-@dir core
+@dir /core
 @brief core: main loop and onion routing functionality
 
 The "core" directory has the central protocols for Tor, which every

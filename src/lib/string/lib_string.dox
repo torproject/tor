@@ -1,5 +1,5 @@
 /**
-@dir lib/string
+@dir /lib/string
 @brief lib/string: Low-level string manipulation.
 
 We have a number of compatibility functions here: some are for handling

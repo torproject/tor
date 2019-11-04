@@ -1,5 +1,5 @@
 /**
-@dir lib/err
+@dir /lib/err
 @brief lib/err: Lowest-level error handling code.
 
 This module is responsible for generating stack traces, handling raw

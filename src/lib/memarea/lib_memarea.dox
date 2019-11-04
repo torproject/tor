@@ -1,5 +1,5 @@
 /**
-@dir lib/memarea
+@dir /lib/memarea
 @brief lib/memarea A fast arena-style allocator.
 
 This module has a fast "arena" style allocator, where memory is freed all at

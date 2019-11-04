@@ -1,5 +1,5 @@
 /**
-@dir lib/osinfo
+@dir /lib/osinfo
 @brief lib/osinfo: For inspecting the OS version and capabilities.
 
 In general, we use this module when we're telling the user what operating

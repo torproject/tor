@@ -1,5 +1,5 @@
 /**
-@dir lib/container
+@dir /lib/container
 @brief lib/container: Hash tables, dynamic arrays, bit arrays, etc.
 
 **/

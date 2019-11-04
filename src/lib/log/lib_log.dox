@@ -1,5 +1,5 @@
 /**
-@dir lib/log
+@dir /lib/log
 @brief lib/log: Log messages to files, syslogs, etc.
 
 You can think of this as the logical "midpoint" of the
