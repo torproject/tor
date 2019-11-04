@@ -6,7 +6,7 @@ This module provides a general in-process "message dispatch" system in which
 typed messages are sent on channels. The dispatch.h header has far more
 information.
 
-It is used by by \ref src/lib/pubsub "lib/pubsub" to implement our general
+It is used by by \refdir{lib/pubsub} to implement our general
 inter-module publish/subscribe system.
 
 This is not a fancy multi-threaded many-to-many dispatcher as you may be used
