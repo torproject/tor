@@ -1,8 +1,151 @@
 /**
-@dir lib
+@dir /lib
 @brief lib: low-level functionality.
 
-The "lib" directory contains low-level functionality, most of it not
-necessarily Tor-specific.
+The "lib" directory contains low-level functionality.  In general, this
+code is not necessarily Tor-specific, but is instead possibly useful for
+other applications.
+
+The modules in `lib` are currently well-factored: each one depends
+only on lower-level modules.  You can see an up-to-date list of the
+modules, sorted from lowest to highest level, by running
+`./scripts/maint/practracker/includes.py --toposort`.
+
+As of this writing, the library modules are (from lowest to highest
+level):
+
+   - \ref src/lib/cc "lib/cc" -- Macros for managing the C compiler and
+     language.
+
+   - \ref src/lib/version "lib/version" -- Holds the current version of Tor.
+
+   - \ref src/lib/testsupport "lib/testsupport" -- Helpers for making
+     test-only code, and test mocking support.
+
+   - \ref src/lib/defs "lib/defs" -- Lowest-level constants.
+
+   - \ref src/lib/subsys "lib/subsys" -- Types used for declaring a
+     "subsystem". (_A subsystem is a module with support for initialization,
+     shutdown, configuration, and so on._)
+
+   - \ref src/lib/conf "lib/conf" -- For declaring configuration options.
+
+   - \ref src/lib/arch "lib/arch" -- For handling differences in CPU
+     architecture.
+
+   - \ref src/lib/err "lib/err" -- Lowest-level error handling code.
+
+   - \ref src/lib/malloc "lib/malloc" -- Memory management.
+     management.
+
+   - \ref src/lib/intmath "lib/intmath" -- Integer mathematics.
+
+   - \ref src/lib/fdio "lib/fdio" -- For
+      reading and writing n file descriptors.
+
+   - \ref src/lib/lock "lib/lock" -- Simple locking support.
+      (_Lower-level than the rest of the threading code._)
+
+   - \ref src/lib/ctime "lib/ctime" -- Constant-time code to avoid
+     side-channels.
+
+   - \ref src/lib/string "lib/string" -- Low-level string manipulation.
+
+   - \ref src/lib/wallclock "lib/wallclock" --
+     For inspecting and manipulating the current (UTC) time.
+
+   - \ref src/lib/osinfo "lib/osinfo" -- For inspecting the OS version
+     and capabilities.
+
+   - \ref src/lib/smartlist_core "lib/smartlist_core" -- The bare-bones
+     pieces of our dynamic array ("smartlist") implementation.
+
+   - \ref src/lib/log "lib/log" -- Log messages to files, syslogs, etc.
+
+   - \ref src/lib/container "lib/container" -- General purpose containers,
+     including dynamic arrays ("smartlists"), hashtables, bit arrays,
+     etc.
+
+   - \ref src/lib/trace "lib/trace" -- A general-purpose API
+     function-tracing functionality Tor.  (_Currently not much used._)
+
+   - \ref src/lib/thread "lib/thread" -- Threading compatibility and utility
+     functionality, other than low-level locks (which are in \ref
+     src/lib/lock "lib/lock") and workqueue/threadpool code (which belongs
+     in \ref src/lib/evloop "lib/evloop").
+
+   - \ref src/lib/term "lib/term" -- Terminal manipulation
+     (like reading a password from the user).
+
+   - \ref src/lib/memarea "lib/memarea" -- A fast
+     "arena" style allocator, where the data is freed all at once.
+
+   - \ref src/lib/encoding "lib/encoding" -- Encoding
+     data in various formats, datatypes, and transformations.
+
+   - \ref src/lib/dispatch "lib/dispatch" -- A general-purpose in-process
+     message delivery system.
+
+   - \ref src/lib/sandbox "lib/sandbox" -- Our Linux seccomp2 sandbox
+     implementation.
+
+   - \ref src/lib/pubsub "lib/pubsub" -- Code and macros to implement our
+     publish/subscribe message passing system.
+
+   - \ref src/lib/fs "lib/fs" -- Utility and compatibility code for
+     manipulating files, filenames, directories, and so on.
+
+   - \ref src/lib/confmgt "lib/confmgt" -- Code to parse, encode, and
+     manipulate our configuration files, state files, and so forth.
+
+   - \ref src/lib/crypt_ops "lib/crypt_ops" -- Cryptographic operations. This
+     module contains wrappers around the cryptographic libraries that we
+     support, and implementations for some higher-level cryptographic
+     constructions that we use.
+
+   - \ref src/lib/meminfo "lib/meminfo" -- Functions for inspecting our
+     memory usage, if the malloc implementation exposes that to us.
+
+   - \ref src/lib/time "lib/time" -- Higher level time functions, including
+     fine-gained and monotonic timers.
+
+   - \ref src/lib/math "lib/math" -- Floating-point mathematical utilities,
+     including compatibility code, and probability distributions.
+
+   - \ref src/lib/buf "lib/buf" -- A general purpose queued buffer
+     implementation, similar to the BSD kernel's "mbuf" structure.
+
+   - \ref src/lib/net "lib/net" -- Networking code, including address
+     manipulation, compatibility wrappers,
+
+   - \ref src/lib/compress "lib/compress" -- A compatibility wrapper around
+     several compression libraries, currently including zlib, zstd, and lzma.
+
+   - \ref src/lib/geoip "lib/geoip" -- Utilities to manage geoip (IP to
+      country) lookups and formats.
+
+   - \ref src/lib/tls "lib/tls" -- Compatibility wrappers around the library
+     (NSS or OpenSSL, depending on configuration) that Tor uses to implement
+     the TLS link security protocol.
+
+   - \ref src/lib/evloop "lib/evloop" -- Tools to manage the event loop and
+     related functionality, in order to implement asynchronous networking,
+     timers, periodic events, and other scheduling tasks.
+
+   - \ref src/lib/process "lib/process" -- Utilities and compatibility code
+     to launch and manage subprocesses.
+
+### What belongs in lib?
+
+In general, if you can imagine some program wanting the functionality
+you're writing, even if that program had nothing to do with Tor, your
+functionality belongs in lib.
+
+If it falls into one of the existing "lib" categories, your
+functionality belongs in lib.
+
+If you are using platform-specific `ifdef`s to manage compatibility
+issues among platforms, you should probably consider whether you can
+put your code into lib.
 
 **/
