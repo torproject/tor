@@ -118,7 +118,9 @@ else
     EXITCODE=1
 fi
 
-die() { echo "$1" >&2 ; exit "$EXITCODE"; }
+FINAL_EXIT=0
+
+die() { echo "$1" >&2 ; FINAL_EXIT=$EXITCODE; }
 
 if test "$WINDOWS" = 1; then
     FILTER="dos2unix"
@@ -166,7 +168,7 @@ for dir in "${EXAMPLEDIR}"/*; do
                 echo "FAIL: Found both ${dir}/expected${suffix}" >&2
                 echo "and ${dir}/error${suffix}." >&2
                 echo "(Only one of these files should exist.)" >&2
-                exit $EXITCODE
+                FINAL_EXIT=$EXITCODE
             fi
 
             EXPECTED="./expected${suffix}"
@@ -201,7 +203,7 @@ for dir in "${EXAMPLEDIR}"/*; do
             if ! cmp "${DATA_DIR}/output.${testname}" \
                  "${DATA_DIR}/output_2.${testname}"; then
                 echo "FAIL: did not match on round-trip." >&2
-                exit $EXITCODE
+                FINAL_EXIT=$EXITCODE
             fi
 
             echo "OK"
@@ -217,7 +219,7 @@ for dir in "${EXAMPLEDIR}"/*; do
             echo "FAIL: did not match." >&2
             diff -u "$EXPECTED" "${DATA_DIR}/output.${testname}" >&2 \
                 || true
-            exit $EXITCODE
+            FINAL_EXIT=$EXITCODE
         fi
 
    elif test -f "$ERROR"; then
@@ -226,7 +228,7 @@ for dir in "${EXAMPLEDIR}"/*; do
         if ! test -s "$ERROR"; then
             echo "FAIL: error file '$ERROR' is empty." >&2
             echo "Empty error files match any output." >&2
-            exit $EXITCODE
+            FINAL_EXIT=$EXITCODE
         fi
 
         "${TOR_BINARY}" --verify-config \
@@ -244,7 +246,7 @@ for dir in "${EXAMPLEDIR}"/*; do
             echo "Expected error: ${expect_err}" >&2
             echo "Tor said:" >&2
             cat "${DATA_DIR}/output.${testname}" >&2
-            exit $EXITCODE
+            FINAL_EXIT=$EXITCODE
         fi
 
     else
@@ -252,9 +254,11 @@ for dir in "${EXAMPLEDIR}"/*; do
         # call that an error.
 
         echo "FAIL: Did not find ${dir}/*expected or ${dir}/*error." >&2
-        exit $EXITCODE
+        FINAL_EXIT=$EXITCODE
     fi
 
     cd "${PREV_DIR}"
 
 done
+
+exit $FINAL_EXIT
