@@ -187,7 +187,7 @@ for dir in "${EXAMPLEDIR}"/*; do
                         --dump-config short \
                         ${CMDLINE} \
                         | "${FILTER}" > "${DATA_DIR}/output.${testname}" \
-                        || die "Failure: Tor exited."
+                        || die "FAIL: Tor exited."
 
         if cmp "$EXPECTED" "${DATA_DIR}/output.${testname}">/dev/null ; then
             # Check round-trip.
@@ -196,11 +196,11 @@ for dir in "${EXAMPLEDIR}"/*; do
                             --dump-config short \
                             | "${FILTER}" \
                             > "${DATA_DIR}/output_2.${testname}" \
-                        || die "Failure: Tor exited on round-trip."
+                        || die "FAIL: Tor exited on round-trip."
 
             if ! cmp "${DATA_DIR}/output.${testname}" \
                  "${DATA_DIR}/output_2.${testname}"; then
-                echo "Failure: did not match on round-trip." >&2
+                echo "FAIL: did not match on round-trip." >&2
                 exit $EXITCODE
             fi
 
@@ -214,7 +214,7 @@ for dir in "${EXAMPLEDIR}"/*; do
                                 --verify-config \
                                 ${CMDLINE} || true
             fi
-            echo "Failure: did not match." >&2
+            echo "FAIL: did not match." >&2
             diff -u "$EXPECTED" "${DATA_DIR}/output.${testname}" >&2 \
                 || true
             exit $EXITCODE
@@ -234,7 +234,7 @@ for dir in "${EXAMPLEDIR}"/*; do
                         --defaults-torrc "${DEFAULTS}" \
                         ${CMDLINE} \
                         > "${DATA_DIR}/output.${testname}" \
-                        && die "Failure: Tor did not report an error."
+                        && die "FAIL: Tor did not report an error."
 
         expect_err="$(cat $ERROR)"
         if grep "${expect_err}" "${DATA_DIR}/output.${testname}" >/dev/null; then
