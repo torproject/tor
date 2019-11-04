@@ -1,4 +1,12 @@
 /**
 @dir /lib/crypt_ops
-@brief lib/crypt_ops
+@brief lib/crypt_ops: Cryptographic operations.
+
+This module contains wrappers around the cryptographic libraries that we
+support, and implementations for some higher-level cryptographic
+constructions that we use.
+
+It wraps our two major cryptographic backends (OpenSSL or NSS, as configured
+by the user), and also wraps other cryptographic code in src/ext.
+
 **/

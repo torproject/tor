@@ -69,10 +69,7 @@ level):
    - \refdir{lib/trace} -- A general-purpose API
      function-tracing functionality Tor.  (_Currently not much used._)
 
-   - \refdir{lib/thread} -- Threading compatibility and utility
-     functionality, other than low-level locks (which are in
-     \refdir{lib/lock} and workqueue/threadpool code (which belongs
-     in \refdir{lib/evloop}.)
+   - \refdir{lib/thread} -- Mid-level Threading.
 
    - \refdir{lib/term} -- Terminal manipulation
      (like reading a password from the user).
@@ -89,19 +86,13 @@ level):
    - \refdir{lib/sandbox} -- Our Linux seccomp2 sandbox
      implementation.
 
-   - \refdir{lib/pubsub} -- Code and macros to implement our
-     publish/subscribe message passing system.
+   - \refdir{lib/pubsub} -- A publish/subscribe message passing system.
 
-   - \refdir{lib/fs} -- Utility and compatibility code for
-     manipulating files, filenames, directories, and so on.
+   - \refdir{lib/fs} -- Files, filenames, directories, etc.
 
-   - \refdir{lib/confmgt} -- Code to parse, encode, and
-     manipulate our configuration files, state files, and so forth.
+   - \refdir{lib/confmgt} -- Parse, encode, and manipulate onfiguration files.
 
-   - \refdir{lib/crypt_ops} -- Cryptographic operations. This
-     module contains wrappers around the cryptographic libraries that we
-     support, and implementations for some higher-level cryptographic
-     constructions that we use.
+   - \refdir{lib/crypt_ops} -- Cryptographic operations.
 
    - \refdir{lib/meminfo} -- Functions for inspecting our
      memory usage, if the malloc implementation exposes that to us.
@@ -109,31 +100,22 @@ level):
    - \refdir{lib/time} -- Higher level time functions, including
      fine-gained and monotonic timers.
 
-   - \refdir{lib/math} -- Floating-point mathematical utilities,
-     including compatibility code, and probability distributions.
+   - \refdir{lib/math} -- Floating-point mathematical utilities.
 
-   - \refdir{lib/buf} -- A general purpose queued buffer
-     implementation, similar to the BSD kernel's "mbuf" structure.
+   - \refdir{lib/buf} -- An efficient byte queue.
 
    - \refdir{lib/net} -- Networking code, including address
-     manipulation, compatibility wrappers,
+     manipulation, compatibility wrappers, etc.
 
-   - \refdir{lib/compress} -- A compatibility wrapper around
-     several compression libraries, currently including zlib, zstd, and lzma.
+   - \refdir{lib/compress} -- Wraps several compression libraries.
 
-   - \refdir{lib/geoip} -- Utilities to manage geoip (IP to
-      country) lookups and formats.
+   - \refdir{lib/geoip} -- IP-to-country mapping.
 
-   - \refdir{lib/tls} -- Compatibility wrappers around the library
-     (NSS or OpenSSL, depending on configuration) that Tor uses to implement
-     the TLS link security protocol.
+   - \refdir{lib/tls} -- TLS library wrappers.
 
-   - \refdir{lib/evloop} -- Tools to manage the event loop and
-     related functionality, in order to implement asynchronous networking,
-     timers, periodic events, and other scheduling tasks.
+   - \refdir{lib/evloop} -- Low-level event-loop.
 
-   - \refdir{lib/process} -- Utilities and compatibility code
-     to launch and manage subprocesses.
+   - \refdir{lib/process} -- Launch and manage subprocesses.
 
 ### What belongs in lib?
 

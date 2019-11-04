@@ -7,6 +7,7 @@ world agree it is?"  Generally, if you want something derived from UTC, this
 is the module for you.
 
 For versions of the time that are more local, more monotonic, or more
-accurate, see \refdir{lib/time}
+accurate, see \refdir{lib/time}.  For parsing and encoding times and dates,
+see \refdir{lib/encoding}.
 
 **/

@@ -1,6 +1,6 @@
 /**
 @dir /lib/sandbox
-@brief lib/sandbox Linux seccomp2-based sandbox.
+@brief lib/sandbox: Linux seccomp2-based sandbox.
 
 This module uses Linux's seccomp2 facility via the
 [`libseccomp` library](https://github.com/seccomp/libseccomp), to restrict
