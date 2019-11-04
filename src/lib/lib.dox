@@ -70,9 +70,9 @@ level):
      function-tracing functionality Tor.  (_Currently not much used._)
 
    - \refdir{lib/thread} -- Threading compatibility and utility
-     functionality, other than low-level locks (which are in \ref
-     src/lib/lock "lib/lock") and workqueue/threadpool code (which belongs
-     in \refdir{lib/evloop}
+     functionality, other than low-level locks (which are in
+     \refdir{lib/lock} and workqueue/threadpool code (which belongs
+     in \refdir{lib/evloop}.)
 
    - \refdir{lib/term} -- Terminal manipulation
      (like reading a password from the user).
