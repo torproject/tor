@@ -185,6 +185,59 @@ test_cmux_ewma_policy_data(void *arg)
   ewma_policy.free_cmux_data(&cmux, pol_data);
 }
 
+static void
+test_cmux_ewma_touch(void *arg)
+{
+  circuitmux_t cmux; /* garbage */
+  circuitmux_policy_data_t *pol_data = NULL;
+  circuit_t circ; /* garbage */
+  circuitmux_policy_circ_data_t *circ_data = NULL;
+  ewma_policy_data_t *ewma_pol_data;
+  ewma_policy_circ_data_t *ewma_data;
+  unsigned int last_tick = 0, last_recalibrated = 0;
+
+  (void) arg;
+
+  pol_data = ewma_policy.alloc_cmux_data(&cmux);
+  tt_assert(pol_data);
+  circ_data = ewma_policy.alloc_circ_data(&cmux, pol_data, &circ,
+                                          CELL_DIRECTION_OUT, 42);
+  tt_assert(circ_data);
+  ewma_pol_data = TO_EWMA_POL_DATA(pol_data);
+  ewma_data = TO_EWMA_POL_CIRC_DATA(circ_data);
+
+  /* Currently, notify_circ_active() ignores cmux and circ. They can not be
+   * NULL so it is fine to pass garbage. Make circuit active. */
+  ewma_policy.notify_circ_active(&cmux, pol_data, &circ, circ_data);
+
+  /* Move back in time the last time we calibrated so we scale the active
+   * circuit when emitting a cell. */
+  ewma_pol_data->active_circuit_pqueue_last_recalibrated -= 100;
+  ewma_data->cell_ewma.last_adjusted_tick =
+    ewma_pol_data->active_circuit_pqueue_last_recalibrated;
+
+  /* Grab last adjusted tick. */
+  last_tick = ewma_data->cell_ewma.last_adjusted_tick;
+  last_recalibrated = ewma_pol_data->active_circuit_pqueue_last_recalibrated;
+
+  /* Touch policy data. */
+  ewma_policy.touch(pol_data);
+
+  /* After the touch, our new adjusted tick should be more than before since
+   * the touch() scales the active circuits. */
+  tt_uint_op(last_tick, OP_LT, ewma_data->cell_ewma.last_adjusted_tick);
+  tt_uint_op(last_recalibrated, OP_LT,
+             ewma_pol_data->active_circuit_pqueue_last_recalibrated);
+  /* Last recalibrated tick of the policy data should be the same as the EWMA
+   * cell last adjusted tick since they just been scaled. */
+  tt_uint_op(ewma_pol_data->active_circuit_pqueue_last_recalibrated, OP_EQ,
+             ewma_data->cell_ewma.last_adjusted_tick);
+
+ done:
+  ewma_policy.free_circ_data(&cmux, pol_data, &circ, circ_data);
+  ewma_policy.free_cmux_data(&cmux, pol_data);
+}
+
 static void *
 cmux_ewma_setup_test(const struct testcase_t *tc)
 {
@@ -222,6 +275,7 @@ struct testcase_t circuitmux_ewma_tests[] = {
   TEST_CMUX_EWMA(policy_data),
   TEST_CMUX_EWMA(policy_circ_data),
   TEST_CMUX_EWMA(notify_circ),
+  TEST_CMUX_EWMA(touch),
   TEST_CMUX_EWMA(xmit_cell),
 
   END_OF_TESTCASES
