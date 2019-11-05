@@ -1,0 +1,4 @@
+  o Minor bugfixes (configuration):
+    - Avoid changing the user's value of HardwareAccel as stored by SAVECONF,
+      when AccelName is set but HardwareAccel is not.
+      Fixes bug 32382; bugfix on 0.2.2.1-alpha.

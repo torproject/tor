@@ -258,24 +258,6 @@ subsys_crypto_thread_cleanup(void)
 /** Magic number for crypto_options_t. */
 #define CRYPTO_OPTIONS_MAGIC 0x68757368
 
-/** Invoked before validating crypto options: makes sure that if
- * AccelName is set, HardwareAccel is turned on.
- **/
-static int
-crypto_options_prenormalize(void *arg, char **msg_out)
-{
-  crypto_options_t *opt = arg;
-  tor_assert(opt->magic == CRYPTO_OPTIONS_MAGIC);
-  (void)msg_out;
-
-  // TODO: It would be cleaner to remove this code, but right now the
-  // tests depend on it.
-  if (opt->AccelName && !opt->HardwareAccel)
-    opt->HardwareAccel = 1;
-
-  return 0;
-}
-
 /**
  * Return 0 if <b>arg</b> is a valid crypto_options_t.  Otherwise return -1
  * and set *<b>msg_out</b> to a freshly allocated error string.
@@ -310,7 +292,6 @@ static const config_format_t crypto_options_fmt = {
              CRYPTO_OPTIONS_MAGIC,
              offsetof(crypto_options_t, magic) },
   .vars = crypto_options_t_vars,
-  .pre_normalize_fn = crypto_options_prenormalize,
   .validate_fn = crypto_options_validate,
   .config_suite_offset = -1,
 };
@@ -322,9 +303,11 @@ static int
 crypto_set_options(void *arg)
 {
   const crypto_options_t *options = arg;
+  const bool hardware_accel = options->HardwareAccel || options->AccelName;
+
   // This call already checks for crypto_global_initialized_, so it
   // will only initialize the subsystem the first time it's called.
-  if (crypto_global_init(options->HardwareAccel,
+  if (crypto_global_init(hardware_accel,
                          options->AccelName,
                          options->AccelDir)) {
     log_err(LD_BUG, "Unable to initialize the crypto subsystem. Exiting.");
