@@ -90,7 +90,7 @@ get_bindaddr_from_transport_listen_line(const char *line,
  *  it to listen on a specific port. Return a <address:port> string if
  *  so, otherwise NULL. */
 char *
-get_transport_bindaddr_from_config(const char *transport)
+pt_get_bindaddr_from_config(const char *transport)
 {
   config_line_t *cl;
   const or_options_t *options = get_options();
@@ -168,7 +168,7 @@ get_options_from_transport_options_line(const char *line,
  *  parameters to the pluggable transport. Return a smartlist
  *  containing the parameters, otherwise NULL. */
 smartlist_t *
-get_options_for_server_transport(const char *transport)
+pt_get_options_for_server_transport(const char *transport)
 {
   config_line_t *cl;
   const or_options_t *options = get_options();
@@ -219,7 +219,7 @@ options_validate_server_transport(const or_options_t *old_options,
   }
 
   for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
-    if (parse_transport_line(options, cl->value, 1, 1) < 0)
+    if (pt_parse_transport_line(options, cl->value, 1, 1) < 0)
       REJECT("Invalid server transport line. See logs for details.");
   }
 
@@ -291,7 +291,7 @@ options_act_server_transport(const or_options_t *old_options)
   if (!options->DisableNetwork) {
     if (options->ServerTransportPlugin) {
       for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
-        if (parse_transport_line(options, cl->value, 0, 1) < 0) {
+        if (pt_parse_transport_line(options, cl->value, 0, 1) < 0) {
           // LCOV_EXCL_START
           log_warn(LD_BUG,
                    "Previously validated ServerTransportPlugin line "

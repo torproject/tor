@@ -119,7 +119,7 @@ test_dir_handle_get_v1_command_not_found(void *data)
   conn = new_dir_conn();
 
   // no frontpage configured
-  tt_ptr_op(get_dirportfrontpage(), OP_EQ, NULL);
+  tt_ptr_op(relay_get_dirportfrontpage(), OP_EQ, NULL);
 
   /* V1 path */
   tt_int_op(directory_handle_command_get(conn, GET("/tor/"), NULL, 0),
@@ -153,9 +153,9 @@ test_dir_handle_get_v1_command(void *data)
   (void) data;
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
-  MOCK(get_dirportfrontpage, mock_get_dirportfrontpage);
+  MOCK(relay_get_dirportfrontpage, mock_get_dirportfrontpage);
 
-  exp_body = get_dirportfrontpage();
+  exp_body = relay_get_dirportfrontpage();
   body_len = strlen(exp_body);
 
   conn = new_dir_conn();
@@ -178,7 +178,7 @@ test_dir_handle_get_v1_command(void *data)
 
   done:
     UNMOCK(connection_write_to_buf_impl_);
-    UNMOCK(get_dirportfrontpage);
+    UNMOCK(relay_get_dirportfrontpage);
     connection_free_minimal(TO_CONN(conn));
     tor_free(header);
     tor_free(body);

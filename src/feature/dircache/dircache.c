@@ -479,7 +479,7 @@ static int
 handle_get_frontpage(dir_connection_t *conn, const get_handler_args_t *args)
 {
   (void) args; /* unused */
-  const char *frontpage = get_dirportfrontpage();
+  const char *frontpage = relay_get_dirportfrontpage();
 
   if (frontpage) {
     size_t dlen;

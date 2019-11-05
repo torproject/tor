@@ -1906,7 +1906,7 @@ options_act,(const or_options_t *old_options))
   if (!options->DisableNetwork) {
     if (options->ClientTransportPlugin) {
       for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
-        if (parse_transport_line(options, cl->value, 0, 0) < 0) {
+        if (pt_parse_transport_line(options, cl->value, 0, 0) < 0) {
           // LCOV_EXCL_START
           log_warn(LD_BUG,
                    "Previously validated ClientTransportPlugin line "
@@ -2843,7 +2843,7 @@ validate_ports_csv(smartlist_t *sl, const char *name, char **msg)
  * Else return 0.
  */
 int
-ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg)
+config_ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg)
 {
   if (*value > ROUTER_MAX_DECLARED_BANDWIDTH) {
     /* This handles an understandable special case where somebody says "2gb"
@@ -3590,10 +3590,10 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (options->KeepalivePeriod < 1)
     REJECT("KeepalivePeriod option must be positive.");
 
-  if (ensure_bandwidth_cap(&options->BandwidthRate,
+  if (config_ensure_bandwidth_cap(&options->BandwidthRate,
                            "BandwidthRate", msg) < 0)
     return -1;
-  if (ensure_bandwidth_cap(&options->BandwidthBurst,
+  if (config_ensure_bandwidth_cap(&options->BandwidthBurst,
                            "BandwidthBurst", msg) < 0)
     return -1;
 
@@ -3773,7 +3773,7 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   }
 
   for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
-    if (parse_transport_line(options, cl->value, 1, 0) < 0)
+    if (pt_parse_transport_line(options, cl->value, 1, 0) < 0)
       REJECT("Invalid client transport line. See logs for details.");
   }
 
@@ -5120,7 +5120,7 @@ parse_bridge_line(const char *line)
  * - If it's a managed proxy line, launch the managed proxy.
  */
 int
-parse_transport_line(const or_options_t *options,
+pt_parse_transport_line(const or_options_t *options,
                      const char *line, int validate_only,
                      int server)
 {
@@ -5775,7 +5775,7 @@ warn_client_dns_cache(const char *option, int disabling)
  * on success, -1 on failure.
  */
 int
-parse_port_config(smartlist_t *out,
+port_parse_config(smartlist_t *out,
                   const config_line_t *ports,
                   const char *portname,
                   int listener_type,
@@ -6208,7 +6208,7 @@ parse_port_config(smartlist_t *out,
     if (is_control)
       warn_nonlocal_controller_ports(out, forbid_nonlocal);
     else if (is_ext_orport)
-      warn_nonlocal_ext_orports(out, portname);
+      port_warn_nonlocal_ext_orports(out, portname);
     else
       warn_nonlocal_client_ports(out, portname, listener_type);
   }
@@ -6233,7 +6233,7 @@ parse_port_config(smartlist_t *out,
  * <b>listenertype</b>.  Do not count no_listen ports.  Only count unix
  * sockets if count_sockets is true. */
 int
-count_real_listeners(const smartlist_t *ports, int listenertype,
+port_count_real_listeners(const smartlist_t *ports, int listenertype,
                      int count_sockets)
 {
   int n = 0;
@@ -6271,7 +6271,7 @@ parse_ports(or_options_t *options, int validate_only,
 
   const unsigned gw_flag = options->UnixSocksGroupWritable ?
     CL_PORT_DFLT_GROUP_WRITABLE : 0;
-  if (parse_port_config(ports,
+  if (port_parse_config(ports,
              options->SocksPort_lines,
              "Socks", CONN_TYPE_AP_LISTENER,
              "127.0.0.1", 9050,
@@ -6280,7 +6280,7 @@ parse_ports(or_options_t *options, int validate_only,
     *msg = tor_strdup("Invalid SocksPort configuration");
     goto err;
   }
-  if (parse_port_config(ports,
+  if (port_parse_config(ports,
                         options->DNSPort_lines,
                         "DNS", CONN_TYPE_AP_DNS_LISTENER,
                         "127.0.0.1", 0,
@@ -6288,7 +6288,7 @@ parse_ports(or_options_t *options, int validate_only,
     *msg = tor_strdup("Invalid DNSPort configuration");
     goto err;
   }
-  if (parse_port_config(ports,
+  if (port_parse_config(ports,
                         options->TransPort_lines,
                         "Trans", CONN_TYPE_AP_TRANS_LISTENER,
                         "127.0.0.1", 0,
@@ -6296,7 +6296,7 @@ parse_ports(or_options_t *options, int validate_only,
     *msg = tor_strdup("Invalid TransPort configuration");
     goto err;
   }
-  if (parse_port_config(ports,
+  if (port_parse_config(ports,
                         options->NATDPort_lines,
                         "NATD", CONN_TYPE_AP_NATD_LISTENER,
                         "127.0.0.1", 0,
@@ -6304,7 +6304,7 @@ parse_ports(or_options_t *options, int validate_only,
     *msg = tor_strdup("Invalid NatdPort configuration");
     goto err;
   }
-  if (parse_port_config(ports,
+  if (port_parse_config(ports,
                         options->HTTPTunnelPort_lines,
                         "HTTP Tunnel", CONN_TYPE_AP_HTTP_CONNECT_LISTENER,
                         "127.0.0.1", 0,
@@ -6324,7 +6324,7 @@ parse_ports(or_options_t *options, int validate_only,
     if (options->ControlSocketsGroupWritable)
       control_port_flags |= CL_PORT_DFLT_GROUP_WRITABLE;
 
-    if (parse_port_config(ports,
+    if (port_parse_config(ports,
                           options->ControlPort_lines,
                           "Control", CONN_TYPE_CONTROL_LISTENER,
                           "127.0.0.1", 0,
@@ -6333,7 +6333,7 @@ parse_ports(or_options_t *options, int validate_only,
       goto err;
     }
 
-    if (parse_port_config(ports, options->ControlSocket,
+    if (port_parse_config(ports, options->ControlSocket,
                           "ControlSocket",
                           CONN_TYPE_CONTROL_LISTENER, NULL, 0,
                           control_port_flags | CL_PORT_IS_UNIXSOCKET) < 0) {
@@ -6342,7 +6342,7 @@ parse_ports(or_options_t *options, int validate_only,
     }
   }
 
-  if (parse_ports_relay(options, msg, ports, &have_low_ports) < 0)
+  if (port_parse_ports_relay(options, msg, ports, &have_low_ports) < 0)
     goto err;
 
   *n_ports_out = smartlist_len(ports);
@@ -6351,20 +6351,20 @@ parse_ports(or_options_t *options, int validate_only,
 
   /* Update the *Port_set options.  The !! here is to force a boolean out of
      an integer. */
-  update_port_set_relay(options, ports);
+  port_update_port_set_relay(options, ports);
   options->SocksPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_AP_LISTENER, 1);
+    !! port_count_real_listeners(ports, CONN_TYPE_AP_LISTENER, 1);
   options->TransPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_AP_TRANS_LISTENER, 1);
+    !! port_count_real_listeners(ports, CONN_TYPE_AP_TRANS_LISTENER, 1);
   options->NATDPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_AP_NATD_LISTENER, 1);
+    !! port_count_real_listeners(ports, CONN_TYPE_AP_NATD_LISTENER, 1);
   options->HTTPTunnelPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_AP_HTTP_CONNECT_LISTENER, 1);
+    !! port_count_real_listeners(ports, CONN_TYPE_AP_HTTP_CONNECT_LISTENER, 1);
   /* Use options->ControlSocket to test if a control socket is set */
   options->ControlPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_CONTROL_LISTENER, 0);
+    !! port_count_real_listeners(ports, CONN_TYPE_CONTROL_LISTENER, 0);
   options->DNSPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_AP_DNS_LISTENER, 1);
+    !! port_count_real_listeners(ports, CONN_TYPE_AP_DNS_LISTENER, 1);
 
   if (world_writable_control_socket) {
     SMARTLIST_FOREACH(ports, port_cfg_t *, p,

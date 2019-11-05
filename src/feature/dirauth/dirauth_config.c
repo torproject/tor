@@ -156,10 +156,10 @@ options_validate_dirauth_bandwidth(const or_options_t *old_options,
   if (!authdir_mode(options))
     return 0;
 
-  if (ensure_bandwidth_cap(&options->AuthDirFastGuarantee,
+  if (config_ensure_bandwidth_cap(&options->AuthDirFastGuarantee,
                            "AuthDirFastGuarantee", msg) < 0)
     return -1;
-  if (ensure_bandwidth_cap(&options->AuthDirGuardBWGuarantee,
+  if (config_ensure_bandwidth_cap(&options->AuthDirGuardBWGuarantee,
                            "AuthDirGuardBWGuarantee", msg) < 0)
     return -1;
 

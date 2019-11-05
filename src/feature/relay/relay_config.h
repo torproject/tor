@@ -25,20 +25,20 @@ int options_validate_relay_mode(const or_options_t *old_options,
                                 or_options_t *options,
                                 char **msg);
 
-MOCK_DECL(const char*, get_dirportfrontpage, (void));
+MOCK_DECL(const char*, relay_get_dirportfrontpage, (void));
 void relay_config_free_all(void);
 
-uint32_t get_effective_bwrate(const or_options_t *options);
-uint32_t get_effective_bwburst(const or_options_t *options);
+uint32_t relay_get_effective_bwrate(const or_options_t *options);
+uint32_t relay_get_effective_bwburst(const or_options_t *options);
 
-void warn_nonlocal_ext_orports(const smartlist_t *ports,
+void port_warn_nonlocal_ext_orports(const smartlist_t *ports,
                                const char *portname);
 
-int parse_ports_relay(or_options_t *options,
+int port_parse_ports_relay(or_options_t *options,
                       char **msg,
                       smartlist_t *ports_out,
                       int *have_low_ports_out);
-void update_port_set_relay(or_options_t *options,
+void port_update_port_set_relay(or_options_t *options,
                            const smartlist_t *ports);
 
 int options_validate_relay_os(const or_options_t *old_options,
@@ -128,23 +128,23 @@ options_validate_relay_mode(const or_options_t *old_options,
   return 0;
 }
 
-#define get_dirportfrontpage() \
+#define relay_get_dirportfrontpage() \
   (NULL)
 #define relay_config_free_all() \
   STMT_BEGIN STMT_END
 
-#define get_effective_bwrate(options) \
+#define relay_get_effective_bwrate(options) \
   (((void)(options)),0)
-#define get_effective_bwburst(options) \
+#define relay_get_effective_bwburst(options) \
   (((void)(options)),0)
 
-#define warn_nonlocal_ext_orports(ports, portname) \
+#define port_warn_nonlocal_ext_orports(ports, portname) \
   (((void)(ports)),((void)(portname)))
 
-#define parse_ports_relay(options, msg, ports_out, have_low_ports_out) \
+#define port_parse_ports_relay(options, msg, ports_out, have_low_ports_out) \
   (((void)(options)),((void)(msg)),((void)(ports_out)), \
    ((void)(have_low_ports_out)),0)
-#define update_port_set_relay(options, ports) \
+#define port_update_port_set_relay(options, ports) \
   (((void)(options)),((void)(ports)))
 
 #define options_validate_relay_os(old_options, options, msg) \

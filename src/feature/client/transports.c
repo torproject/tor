@@ -1281,7 +1281,7 @@ get_transport_options_for_server_proxy(const managed_proxy_t *mp)
       string. */
   SMARTLIST_FOREACH_BEGIN(mp->transports_to_launch, const char *, transport) {
     smartlist_t *options_tmp_sl = NULL;
-    options_tmp_sl = get_options_for_server_transport(transport);
+    options_tmp_sl = pt_get_options_for_server_transport(transport);
     if (!options_tmp_sl)
       continue;
 

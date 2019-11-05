@@ -71,7 +71,7 @@ static char *global_dirfrontpagecontents = NULL;
 
 /** Return the contents of our frontpage string, or NULL if not configured. */
 MOCK_IMPL(const char*,
-get_dirportfrontpage, (void))
+relay_get_dirportfrontpage, (void))
 {
   return global_dirfrontpagecontents;
 }
@@ -88,33 +88,33 @@ relay_config_free_all(void)
 /** Return the bandwidthrate that we are going to report to the authorities
  * based on the config options. */
 uint32_t
-get_effective_bwrate(const or_options_t *options)
+relay_get_effective_bwrate(const or_options_t *options)
 {
   uint64_t bw = options->BandwidthRate;
   if (bw > options->MaxAdvertisedBandwidth)
     bw = options->MaxAdvertisedBandwidth;
   if (options->RelayBandwidthRate > 0 && bw > options->RelayBandwidthRate)
     bw = options->RelayBandwidthRate;
-  /* ensure_bandwidth_cap() makes sure that this cast can't overflow. */
+  /* config_ensure_bandwidth_cap() makes sure that this cast can't overflow. */
   return (uint32_t)bw;
 }
 
 /** Return the bandwidthburst that we are going to report to the authorities
  * based on the config options. */
 uint32_t
-get_effective_bwburst(const or_options_t *options)
+relay_get_effective_bwburst(const or_options_t *options)
 {
   uint64_t bw = options->BandwidthBurst;
   if (options->RelayBandwidthBurst > 0 && bw > options->RelayBandwidthBurst)
     bw = options->RelayBandwidthBurst;
-  /* ensure_bandwidth_cap() makes sure that this cast can't overflow. */
+  /* config_ensure_bandwidth_cap() makes sure that this cast can't overflow. */
   return (uint32_t)bw;
 }
 
 /** Warn for every Extended ORPort port in <b>ports</b> that is on a
  *  publicly routable address. */
 void
-warn_nonlocal_ext_orports(const smartlist_t *ports, const char *portname)
+port_warn_nonlocal_ext_orports(const smartlist_t *ports, const char *portname)
 {
   SMARTLIST_FOREACH_BEGIN(ports, const port_cfg_t *, port) {
     if (port->type != CONN_TYPE_EXT_OR_LISTENER)
@@ -235,7 +235,7 @@ check_server_ports(const smartlist_t *ports,
  * of the problem and return -1.
  **/
 int
-parse_ports_relay(or_options_t *options,
+port_parse_ports_relay(or_options_t *options,
                   char **msg,
                   smartlist_t *ports_out,
                   int *have_low_ports_out)
@@ -261,7 +261,7 @@ parse_ports_relay(or_options_t *options,
     goto err;
   }
 
-  if (parse_port_config(ports,
+  if (port_parse_config(ports,
                         options->ORPort_lines,
                         "OR", CONN_TYPE_OR_LISTENER,
                         "0.0.0.0", 0,
@@ -269,7 +269,7 @@ parse_ports_relay(or_options_t *options,
     *msg = tor_strdup("Invalid ORPort configuration");
     goto err;
   }
-  if (parse_port_config(ports,
+  if (port_parse_config(ports,
                         options->ExtORPort_lines,
                         "ExtOR", CONN_TYPE_EXT_OR_LISTENER,
                         "127.0.0.1", 0,
@@ -277,7 +277,7 @@ parse_ports_relay(or_options_t *options,
     *msg = tor_strdup("Invalid ExtORPort configuration");
     goto err;
   }
-  if (parse_port_config(ports,
+  if (port_parse_config(ports,
                         options->DirPort_lines,
                         "Dir", CONN_TYPE_DIR_LISTENER,
                         "0.0.0.0", 0,
@@ -308,7 +308,7 @@ parse_ports_relay(or_options_t *options,
 
 /** Update the relay *Port_set values in <b>options</b> from <b>ports</b>. */
 void
-update_port_set_relay(or_options_t *options,
+port_update_port_set_relay(or_options_t *options,
                       const smartlist_t *ports)
 {
   if (BUG(!options))
@@ -323,11 +323,11 @@ update_port_set_relay(or_options_t *options,
   /* Update the relay *Port_set options.  The !! here is to force a boolean
    * out of an integer. */
   options->ORPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_OR_LISTENER, 0);
+    !! port_count_real_listeners(ports, CONN_TYPE_OR_LISTENER, 0);
   options->DirPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_DIR_LISTENER, 0);
+    !! port_count_real_listeners(ports, CONN_TYPE_DIR_LISTENER, 0);
   options->ExtORPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_EXT_OR_LISTENER, 0);
+    !! port_count_real_listeners(ports, CONN_TYPE_EXT_OR_LISTENER, 0);
 }
 
 /**
@@ -624,19 +624,19 @@ options_validate_relay_bandwidth(const or_options_t *old_options,
 
   /* 31851: the tests expect us to validate bandwidths, even when we are not
   * in relay mode. */
-  if (ensure_bandwidth_cap(&options->MaxAdvertisedBandwidth,
+  if (config_ensure_bandwidth_cap(&options->MaxAdvertisedBandwidth,
                            "MaxAdvertisedBandwidth", msg) < 0)
     return -1;
-  if (ensure_bandwidth_cap(&options->RelayBandwidthRate,
+  if (config_ensure_bandwidth_cap(&options->RelayBandwidthRate,
                            "RelayBandwidthRate", msg) < 0)
     return -1;
-  if (ensure_bandwidth_cap(&options->RelayBandwidthBurst,
+  if (config_ensure_bandwidth_cap(&options->RelayBandwidthBurst,
                            "RelayBandwidthBurst", msg) < 0)
     return -1;
-  if (ensure_bandwidth_cap(&options->PerConnBWRate,
+  if (config_ensure_bandwidth_cap(&options->PerConnBWRate,
                            "PerConnBWRate", msg) < 0)
     return -1;
-  if (ensure_bandwidth_cap(&options->PerConnBWBurst,
+  if (config_ensure_bandwidth_cap(&options->PerConnBWBurst,
                            "PerConnBWBurst", msg) < 0)
     return -1;
 
@@ -1046,9 +1046,9 @@ options_transition_affects_descriptor(const or_options_t *old_options,
   YES_IF_CHANGED_BOOL(DirCache);
   YES_IF_CHANGED_BOOL(AssumeReachable);
 
-  if (get_effective_bwrate(old_options) != get_effective_bwrate(new_options) ||
-      get_effective_bwburst(old_options) !=
-        get_effective_bwburst(new_options) ||
+  if (relay_get_effective_bwrate(old_options) != relay_get_effective_bwrate(new_options) ||
+      relay_get_effective_bwburst(old_options) !=
+        relay_get_effective_bwburst(new_options) ||
       public_server_mode(old_options) != public_server_mode(new_options))
     return 1;
 

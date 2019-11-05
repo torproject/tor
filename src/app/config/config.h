@@ -243,7 +243,7 @@ bridge_line_t *parse_bridge_line(const char *line);
 
 /* Port helper functions. */
 int options_any_client_port_set(const or_options_t *options);
-int parse_port_config(smartlist_t *out,
+int port_parse_config(smartlist_t *out,
                       const struct config_line_t *ports,
                       const char *portname,
                       int listener_type,
@@ -265,13 +265,13 @@ port_cfg_t *port_cfg_new(size_t namelen);
   FREE_AND_NULL(port_cfg_t, port_cfg_free_, (port))
 void port_cfg_free_(port_cfg_t *port);
 
-int count_real_listeners(const smartlist_t *ports,
+int port_count_real_listeners(const smartlist_t *ports,
                          int listenertype,
                          int count_sockets);
-int parse_transport_line(const or_options_t *options,
+int pt_parse_transport_line(const or_options_t *options,
                          const char *line, int validate_only,
                          int server);
-int ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg);
+int config_ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg);
 
 #ifdef CONFIG_PRIVATE
 

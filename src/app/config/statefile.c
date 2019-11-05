@@ -639,7 +639,7 @@ get_stored_bindaddr_for_server_transport(const char *transport)
   {
     /* See if the user explicitly asked for a specific listening
        address for this transport. */
-    char *conf_bindaddr = get_transport_bindaddr_from_config(transport);
+    char *conf_bindaddr = pt_get_bindaddr_from_config(transport);
     if (conf_bindaddr)
       return conf_bindaddr;
   }

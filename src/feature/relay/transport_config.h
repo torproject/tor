@@ -23,8 +23,8 @@ int options_validate_server_transport(const or_options_t *old_options,
                                       or_options_t *options,
                                       char **msg);
 
-char *get_transport_bindaddr_from_config(const char *transport);
-smartlist_t *get_options_for_server_transport(const char *transport);
+char *pt_get_bindaddr_from_config(const char *transport);
+smartlist_t *pt_get_options_for_server_transport(const char *transport);
 
 int options_act_server_transport(const or_options_t *old_options);
 
@@ -68,11 +68,11 @@ options_validate_server_transport(const or_options_t *old_options,
   return 0;
 }
 
-#define get_transport_bindaddr_from_config(transport) \
+#define pt_get_bindaddr_from_config(transport) \
   (((void)(transport)),NULL)
 
 /* 31851: called from client/transports.c, but only from server code */
-#define get_options_for_server_transport(transport) \
+#define pt_get_options_for_server_transport(transport) \
   (((void)(transport)),NULL)
 
 #define options_validate_server_transport(old_options, options, msg) \
