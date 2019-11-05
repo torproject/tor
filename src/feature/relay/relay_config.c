@@ -1046,7 +1046,8 @@ options_transition_affects_descriptor(const or_options_t *old_options,
   YES_IF_CHANGED_BOOL(DirCache);
   YES_IF_CHANGED_BOOL(AssumeReachable);
 
-  if (relay_get_effective_bwrate(old_options) != relay_get_effective_bwrate(new_options) ||
+  if (relay_get_effective_bwrate(old_options) !=
+        relay_get_effective_bwrate(new_options) ||
       relay_get_effective_bwburst(old_options) !=
         relay_get_effective_bwburst(new_options) ||
       public_server_mode(old_options) != public_server_mode(new_options))
