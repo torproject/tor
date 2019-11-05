@@ -33,15 +33,19 @@
  **/
 static bool subsystem_array_validated = false;
 
+/** Index value indicating that a subsystem has no options/state object, and
+ * so that object does not have an index. */
+#define IDX_NONE (-1)
+
 /**
  * Runtime status of a single subsystem.
  **/
 typedef struct subsys_status_t {
   /** True if the given subsystem is initialized. */
   bool initialized;
-  /** Index for this subsystem's options object, or -1 for none. */
+  /** Index for this subsystem's options object, or IDX_NONE for none. */
   int options_idx;
-  /** Index for this subsystem's state object, or -1 for none. */
+  /** Index for this subsystem's state object, or IDX_NONE for none. */
   int state_idx;
 } subsys_status_t;
 
@@ -62,8 +66,8 @@ subsys_status_clear(subsys_status_t *status)
     return;
   memset(status, 0, sizeof(*status));
   status->initialized = false;
-  status->state_idx = -1;
-  status->options_idx = -1;
+  status->state_idx = IDX_NONE;
+  status->options_idx = IDX_NONE;
 }
 
 /**
