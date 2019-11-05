@@ -12,6 +12,7 @@
 #include "core/or/or.h"
 #include "core/mainloop/netstatus.h"
 #include "core/mainloop/mainloop.h"
+#include "core/mainloop/mainloop_state_st.h"
 #include "app/config/config.h"
 #include "feature/hibernate/hibernate.h"
 
@@ -115,7 +116,7 @@ is_participating_on_network(void)
  * Update 'state' with the last time at which we were active on the network.
  **/
 void
-netstatus_flush_to_state(or_state_t *state, time_t now)
+netstatus_flush_to_state(mainloop_state_t *state, time_t now)
 {
   state->Dormant = ! participating_on_network;
   if (participating_on_network) {
@@ -130,7 +131,7 @@ netstatus_flush_to_state(or_state_t *state, time_t now)
  * Update our current view of network participation from an or_state_t object.
  **/
 void
-netstatus_load_from_state(const or_state_t *state, time_t now)
+netstatus_load_from_state(const mainloop_state_t *state, time_t now)
 {
   time_t last_activity;
   if (state->Dormant == -1) { // Initial setup.

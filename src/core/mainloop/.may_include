@@ -2,6 +2,7 @@
 
 orconfig.h
 
+lib/conf/*.h
 lib/container/*.h
 lib/dispatch/*.h
 lib/evloop/*.h
@@ -18,3 +19,4 @@ lib/sandbox/*.h
 lib/compress/*.h
 
 core/mainloop/*.h
+core/mainloop/*.inc
