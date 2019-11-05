@@ -171,14 +171,17 @@ endif
 LIBTOR_APP_TESTING_A_SOURCES = $(LIBTOR_APP_A_SOURCES)
 
 # The Relay module.
-MODULE_RELAY_SOURCES = 					    \
-	src/feature/relay/routermode.c
+MODULE_RELAY_SOURCES = 						\
+	src/feature/relay/routermode.c				\
+	src/feature/relay/relay_config.c			\
+	src/feature/relay/transport_config.c
 
 # The Directory Authority module.
-MODULE_DIRAUTH_SOURCES = 					\
+MODULE_DIRAUTH_SOURCES =					\
 	src/feature/dirauth/authmode.c				\
 	src/feature/dirauth/bridgeauth.c			\
 	src/feature/dirauth/bwauth.c				\
+	src/feature/dirauth/dirauth_config.c			\
 	src/feature/dirauth/dirauth_periodic.c			\
 	src/feature/dirauth/dirauth_sys.c			\
 	src/feature/dirauth/dircollate.c			\
@@ -336,6 +339,7 @@ noinst_HEADERS +=					\
 	src/feature/dirauth/authmode.h			\
 	src/feature/dirauth/bridgeauth.h		\
 	src/feature/dirauth/bwauth.h			\
+	src/feature/dirauth/dirauth_config.h		\
 	src/feature/dirauth/dirauth_periodic.h		\
 	src/feature/dirauth/dirauth_sys.h		\
 	src/feature/dirauth/dircollate.h		\
@@ -428,12 +432,14 @@ noinst_HEADERS +=					\
 	src/feature/relay/dns_structs.h			\
 	src/feature/relay/ext_orport.h			\
 	src/feature/relay/onion_queue.h			\
+	src/feature/relay/relay_config.h		\
 	src/feature/relay/relay_periodic.h		\
 	src/feature/relay/relay_sys.h			\
 	src/feature/relay/router.h			\
 	src/feature/relay/routerkeys.h			\
 	src/feature/relay/routermode.h			\
 	src/feature/relay/selftest.h			\
+	src/feature/relay/transport_config.h	\
 	src/feature/rend/rend_authorized_client_st.h	\
 	src/feature/rend/rend_encoded_v2_service_descriptor_st.h	\
 	src/feature/rend/rend_intro_point_st.h		\

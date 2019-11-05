@@ -203,6 +203,7 @@ src_test_test_SOURCES += \
 	src/test/test_sendme.c \
 	src/test/test_shared_random.c \
 	src/test/test_socks.c \
+	src/test/test_stats.c \
 	src/test/test_status.c \
 	src/test/test_storagedir.c \
 	src/test/test_threads.c \

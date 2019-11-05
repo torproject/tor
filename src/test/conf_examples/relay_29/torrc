@@ -1,0 +1,5 @@
+# Relay tests
+# Options from relay/relay_config.c
+# MyFamily normalisation: empty MyFamily
+ORPort 1
+MyFamily

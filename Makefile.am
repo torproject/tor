@@ -488,19 +488,19 @@ version:
 
 .PHONY: autostyle-ifdefs
 autostyle-ifdefs:
-	$(PYTHON) scripts/maint/annotate_ifdef_directives.py $(OWNED_TOR_C_FILES)
+	$(PYTHON) $(top_srcdir)/scripts/maint/annotate_ifdef_directives.py $(OWNED_TOR_C_FILES)
 
 .PHONY: autostyle-ifdefs
 autostyle-operators:
-	$(PERL) scripts/coccinelle/test-operator-cleanup $(OWNED_TOR_C_FILES)
+	$(PERL) $(top_srcdir)/scripts/coccinelle/test-operator-cleanup $(OWNED_TOR_C_FILES)
 
 .PHONY: rectify-includes
 rectify-includes:
-	$(PYTHON) scripts/maint/rectify_include_paths.py
+	$(PYTHON) $(top_srcdir)/scripts/maint/rectify_include_paths.py
 
 .PHONY: update-copyright
 update-copyright:
-	$(PERL) scripts/maint/updateCopyright.pl $(OWNED_TOR_C_FILES)
+	$(PERL) $(top_srcdir)/scripts/maint/updateCopyright.pl $(OWNED_TOR_C_FILES)
 
 .PHONY: autostyle
 autostyle: update-versions rustfmt autostyle-ifdefs rectify-includes

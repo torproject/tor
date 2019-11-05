@@ -1,0 +1,5 @@
+# Relay tests
+# Options from relay/relay_config.c
+# Try a valid minimal bridge config
+ORPort 1
+BridgeRelay 1

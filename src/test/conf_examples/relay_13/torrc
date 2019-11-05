@@ -1,0 +1,4 @@
+# Relay tests
+# Options from relay/relay_config.c
+# Listening but not advertising: ORPort
+ORPort 1 NoAdvertise

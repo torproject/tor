@@ -97,6 +97,8 @@
 #include "core/or/circuitbuild.h"
 #include "feature/client/transports.h"
 #include "feature/relay/router.h"
+/* 31851: split the server transport code out of the client module */
+#include "feature/relay/transport_config.h"
 #include "app/config/statefile.h"
 #include "core/or/connection_or.h"
 #include "feature/relay/ext_orport.h"
@@ -1279,7 +1281,7 @@ get_transport_options_for_server_proxy(const managed_proxy_t *mp)
       string. */
   SMARTLIST_FOREACH_BEGIN(mp->transports_to_launch, const char *, transport) {
     smartlist_t *options_tmp_sl = NULL;
-    options_tmp_sl = get_options_for_server_transport(transport);
+    options_tmp_sl = pt_get_options_for_server_transport(transport);
     if (!options_tmp_sl)
       continue;
 

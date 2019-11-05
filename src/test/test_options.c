@@ -4,10 +4,13 @@
 /* See LICENSE for licensing information */
 
 #define CONFIG_PRIVATE
+#define RELAY_CONFIG_PRIVATE
 #define LOG_PRIVATE
 #include "core/or/or.h"
 #include "lib/confmgt/confmgt.h"
 #include "app/config/config.h"
+#include "feature/dirauth/dirauth_config.h"
+#include "feature/relay/relay_config.h"
 #include "test/test.h"
 #include "lib/geoip/geoip.h"
 
@@ -98,6 +101,50 @@ clear_log_messages(void)
     opt->command = CMD_RUN_TOR;              \
     options_init(opt);                       \
   } while (0)
+
+#ifdef COCCI
+
+#define ENABLE_AUTHORITY_MIN ""
+#define ENABLE_AUTHORITY_V3_MIN ""
+#define ENABLE_AUTHORITY_BRIDGE_MIN ""
+#define AUTHORITY_OPT_REQ_ ""
+#define ENABLE_AUTHORITY ""
+#define ENABLE_AUTHORITY_V3 ""
+#define ENABLE_AUTHORITY_BRIDGE ""
+
+#else /* !defined(COCCI) */
+
+#define ENABLE_AUTHORITY_MIN \
+  "AuthoritativeDirectory 1\n"
+
+#define ENABLE_AUTHORITY_V3_MIN \
+  ENABLE_AUTHORITY_MIN \
+  "V3AuthoritativeDir 1\n"
+
+#define ENABLE_AUTHORITY_BRIDGE_MIN \
+  ENABLE_AUTHORITY_MIN \
+  "BridgeAuthoritativeDir 1\n"
+
+#define AUTHORITY_OPT_REQ_ \
+  "Address 192.0.2.111\n" \
+  "ContactInfo a@example.org\n" \
+  "DirPort 1025\n" \
+  "ORPort 1026\n"
+
+/* Not actually valid: requires v3 / bridge */
+#define ENABLE_AUTHORITY \
+  ENABLE_AUTHORITY_MIN \
+  AUTHORITY_OPT_REQ_
+
+#define ENABLE_AUTHORITY_V3 \
+  ENABLE_AUTHORITY_V3_MIN \
+  AUTHORITY_OPT_REQ_
+
+#define ENABLE_AUTHORITY_BRIDGE \
+  ENABLE_AUTHORITY_BRIDGE_MIN \
+  AUTHORITY_OPT_REQ_
+
+#endif /* defined(COCCI) */
 
 #define VALID_DIR_AUTH "DirAuthority dizum orport=443 v3ident=E8A9C45"  \
   "EDE6D711294FADF8E7951F4DE6CA56B58 194.109.206.212:80 7EA6 EAD6 FD83" \
@@ -710,7 +757,7 @@ test_options_validate__authdir(void *ignored)
   char *msg;
   setup_capture_of_logs(LOG_INFO);
   options_test_data_t *tdata = get_options_test_data(
-                                 "AuthoritativeDirectory 1\n"
+                                 ENABLE_AUTHORITY_V3_MIN
                                  "Address this.should.not!exist!.example.org");
 
   sandbox_disable_getaddrinfo_cache();
@@ -726,7 +773,7 @@ test_options_validate__authdir(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3_MIN
                                 "Address 100.200.10.1");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
@@ -736,7 +783,7 @@ test_options_validate__authdir(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3_MIN
                                 "Address 100.200.10.1\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
@@ -746,7 +793,7 @@ test_options_validate__authdir(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_MIN
                                 "Address 100.200.10.1\n"
                                 "TestingTorNetwork 1\n");
   mock_clean_saved_logs();
@@ -757,9 +804,7 @@ test_options_validate__authdir(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
-                                "Address 100.200.10.1\n"
-                                "ContactInfo hello@hello.com\n");
+  tdata = get_options_test_data(ENABLE_AUTHORITY);
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -768,10 +813,8 @@ test_options_validate__authdir(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
-                                "Address 100.200.10.1\n"
-                                "RecommendedVersions 1.2, 3.14\n"
-                                "ContactInfo hello@hello.com\n");
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "RecommendedVersions 1.2, 3.14\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
   tt_str_op(tdata->opt->RecommendedClientVersions->value, OP_EQ, "1.2, 3.14");
@@ -779,12 +822,10 @@ test_options_validate__authdir(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
-                                "Address 100.200.10.1\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
                                 "RecommendedVersions 1.2, 3.14\n"
                                 "RecommendedClientVersions 25\n"
-                                "RecommendedServerVersions 4.18\n"
-                                "ContactInfo hello@hello.com\n");
+                                "RecommendedServerVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
   tt_str_op(tdata->opt->RecommendedClientVersions->value, OP_EQ, "25");
@@ -792,13 +833,11 @@ test_options_validate__authdir(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
-                                "Address 100.200.10.1\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY
                                 "VersioningAuthoritativeDirectory 1\n"
                                 "RecommendedVersions 1.2, 3.14\n"
                                 "RecommendedClientVersions 25\n"
-                                "RecommendedServerVersions 4.18\n"
-                                "ContactInfo hello@hello.com\n");
+                                "RecommendedServerVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
   tt_str_op(msg, OP_EQ, "AuthoritativeDir is set, but none of (Bridge/V3)"
@@ -806,11 +845,9 @@ test_options_validate__authdir(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
-                                "Address 100.200.10.1\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
                                 "VersioningAuthoritativeDirectory 1\n"
-                                "RecommendedServerVersions 4.18\n"
-                                "ContactInfo hello@hello.com\n");
+                                "RecommendedServerVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
   tt_str_op(msg, OP_EQ, "Versioning authoritative dir servers must set "
@@ -818,11 +855,9 @@ test_options_validate__authdir(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
-                                "Address 100.200.10.1\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
                                 "VersioningAuthoritativeDirectory 1\n"
-                                "RecommendedClientVersions 4.18\n"
-                                "ContactInfo hello@hello.com\n");
+                                "RecommendedClientVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
   tt_str_op(msg, OP_EQ, "Versioning authoritative dir servers must set "
@@ -830,10 +865,8 @@ test_options_validate__authdir(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
-                                "Address 100.200.10.1\n"
-                                "UseEntryGuards 1\n"
-                                "ContactInfo hello@hello.com\n");
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "UseEntryGuards 1\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
   expect_log_msg("Authoritative directory servers "
@@ -842,10 +875,8 @@ test_options_validate__authdir(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
-                                "Address 100.200.10.1\n"
-                                "V3AuthoritativeDir 1\n"
-                                "ContactInfo hello@hello.com\n");
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "DownloadExtraInfo 0\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
   expect_log_msg("Authoritative directories always try"
@@ -854,80 +885,27 @@ test_options_validate__authdir(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
-                                "Address 100.200.10.1\n"
-                                "DownloadExtraInfo 1\n"
-                                "V3AuthoritativeDir 1\n"
-                                "ContactInfo hello@hello.com\n");
-  mock_clean_saved_logs();
-  options_validate(NULL, tdata->opt, &msg);
-  expect_no_log_msg("Authoritative directories always try"
-            " to download extra-info documents. Setting DownloadExtraInfo.\n");
-  tt_int_op(tdata->opt->DownloadExtraInfo, OP_EQ, 1);
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
-                                "Address 100.200.10.1\n"
-                                "ContactInfo hello@hello.com\n");
-  mock_clean_saved_logs();
-  options_validate(NULL, tdata->opt, &msg);
-  tt_str_op(msg, OP_EQ, "AuthoritativeDir is set, but none of (Bridge/V3)"
-            "AuthoritativeDir is set.");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
-                                "Address 100.200.10.1\n"
-                                "BridgeAuthoritativeDir 1\n"
-                                "ContactInfo hello@hello.com\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
                                 "V3BandwidthsFile non-existent-file\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
-  tt_str_op(msg, OP_EQ,
-            "Running as authoritative directory, but no DirPort set.");
+  expect_log_msg("Can't open bandwidth file at configured location: "
+                 "non-existent-file\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
-                                "Address 100.200.10.1\n"
-                                "BridgeAuthoritativeDir 1\n"
-                                "ContactInfo hello@hello.com\n"
-                                "V3BandwidthsFile non-existent-file\n");
-  mock_clean_saved_logs();
-  options_validate(NULL, tdata->opt, &msg);
-  tt_str_op(msg, OP_EQ,
-            "Running as authoritative directory, but no DirPort set.");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
-                                "Address 100.200.10.1\n"
-                                "BridgeAuthoritativeDir 1\n"
-                                "ContactInfo hello@hello.com\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
                                 "GuardfractionFile non-existent-file\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
-  tt_str_op(msg, OP_EQ,
-            "Running as authoritative directory, but no DirPort set.");
+  expect_log_msg("Cannot open guardfraction file 'non-existent-file'. "
+                 "Failing.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3_MIN
                                 "Address 100.200.10.1\n"
-                                "BridgeAuthoritativeDir 1\n"
-                                "ContactInfo hello@hello.com\n"
-                                "GuardfractionFile non-existent-file\n");
-  mock_clean_saved_logs();
-  options_validate(NULL, tdata->opt, &msg);
-  tt_str_op(msg, OP_EQ,
-            "Running as authoritative directory, but no DirPort set.");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
-                                "Address 100.200.10.1\n"
-                                "BridgeAuthoritativeDir 1\n"
+                                "ORPort 2000\n"
                                 "ContactInfo hello@hello.com\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
@@ -937,10 +915,21 @@ test_options_validate__authdir(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("AuthoritativeDirectory 1\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_BRIDGE_MIN
+                                "Address 100.200.10.1\n"
+                                "ORPort 2000\n"
+                                "ContactInfo hello@hello.com\n");
+  mock_clean_saved_logs();
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_str_op(msg, OP_EQ,
+            "Running as authoritative directory, but no DirPort set.");
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3_MIN
                                 "Address 100.200.10.1\n"
                                 "DirPort 999\n"
-                                "BridgeAuthoritativeDir 1\n"
                                 "ContactInfo hello@hello.com\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
@@ -949,22 +938,57 @@ test_options_validate__authdir(void *ignored)
             "Running as authoritative directory, but no ORPort set.");
   tor_free(msg);
 
-  // TODO: This case can't be reached, since clientonly is used to
-  // check when parsing port lines as well.
-  /* free_options_test_data(tdata); */
-  /* tdata = get_options_test_data("AuthoritativeDirectory 1\n" */
-  /*                               "Address 100.200.10.1\n" */
-  /*                               "DirPort 999\n" */
-  /*                               "ORPort 888\n" */
-  /*                               "ClientOnly 1\n" */
-  /*                               "BridgeAuthoritativeDir 1\n" */
-  /*                               "ContactInfo hello@hello.com\n" ); */
-  /* mock_clean_saved_logs(); */
-  /* ret = options_validate(NULL, tdata->opt, */
-  /*                        tdata->def_opt, 0, &msg); */
-  /* tt_int_op(ret, OP_EQ, -1); */
-  /* tt_str_op(msg, OP_EQ, "Running as authoritative directory, " */
-  /*           "but ClientOnly also set."); */
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(ENABLE_AUTHORITY_BRIDGE_MIN
+                                "Address 100.200.10.1\n"
+                                "DirPort 999\n"
+                                "ContactInfo hello@hello.com\n");
+  mock_clean_saved_logs();
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_str_op(msg, OP_EQ,
+            "Running as authoritative directory, but no ORPort set.");
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "ClientOnly 1\n");
+  /* We have to call the dirauth-specific function, and fake port parsing,
+   * to hit this case */
+  tdata->opt->DirPort_set = 1;
+  tdata->opt->ORPort_set = 1;
+  mock_clean_saved_logs();
+  ret = options_validate_dirauth_mode(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_str_op(msg, OP_EQ, "Running as authoritative directory, "
+            "but ClientOnly also set.");
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(ENABLE_AUTHORITY_BRIDGE
+                                "ClientOnly 1\n");
+  /* We have to call the dirauth-specific function, and fake port parsing,
+   * to hit this case */
+  tdata->opt->DirPort_set = 1;
+  tdata->opt->ORPort_set = 1;
+  mock_clean_saved_logs();
+  ret = options_validate_dirauth_mode(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_str_op(msg, OP_EQ, "Running as authoritative directory, "
+            "but ClientOnly also set.");
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3);
+  /* We have to set this value manually, because it won't parse */
+  tdata->opt->MinUptimeHidServDirectoryV2 = -1;
+  mock_clean_saved_logs();
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  expect_log_msg("MinUptimeHidServDirectoryV2 "
+                 "option must be at least 0 seconds. Changing to 0.\n");
+  tt_int_op(tdata->opt->MinUptimeHidServDirectoryV2, OP_EQ, 0);
+  tor_free(msg);
 
  done:
   teardown_capture_of_logs();
@@ -978,6 +1002,7 @@ test_options_validate__relay_with_hidden_services(void *ignored)
 {
   (void)ignored;
   char *msg;
+  int ret;
   setup_capture_of_logs(LOG_DEBUG);
   options_test_data_t *tdata = get_options_test_data(
                                   "ORPort 127.0.0.1:5555\n"
@@ -986,7 +1011,8 @@ test_options_validate__relay_with_hidden_services(void *ignored)
                                   "HiddenServicePort 80 127.0.0.1:8080\n"
                                                      );
 
-  options_validate(NULL, tdata->opt, &msg);
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
   expect_log_msg(
             "Tor is currently configured as a relay and a hidden service. "
             "That's not very secure: you should probably run your hidden servi"
@@ -999,27 +1025,25 @@ test_options_validate__relay_with_hidden_services(void *ignored)
   tor_free(msg);
 }
 
-// TODO: it doesn't seem possible to hit the case of having no port lines at
-// all, since there will be a default created for SocksPort
-/* static void */
-/* test_options_validate__ports(void *ignored) */
-/* { */
-/*   (void)ignored; */
-/*   int ret; */
-/*   char *msg; */
-/*   setup_capture_of_logs(LOG_WARN); */
-/*   options_test_data_t *tdata = get_options_test_data(""); */
-/*   ret = options_validate(NULL, tdata->opt, */
-/*                          tdata->def_opt, 0, &msg); */
-/*   expect_log_msg("SocksPort, TransPort, NATDPort, DNSPort, and ORPort " */
-/*           "are all undefined, and there aren't any hidden services " */
-/*           "configured. " */
-/*           " Tor will still run, but probably won't do anything.\n"); */
-/*  done: */
-/*   teardown_capture_of_logs(); */
-/*   free_options_test_data(tdata); */
-/*   tor_free(msg); */
-/* } */
+static void
+test_options_validate__listen_ports(void *ignored)
+{
+  (void)ignored;
+  int ret;
+  char *msg;
+  setup_capture_of_logs(LOG_WARN);
+  options_test_data_t *tdata = get_options_test_data("SOCKSPort 0");
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  expect_log_msg("SocksPort, TransPort, NATDPort, DNSPort, and ORPort "
+                 "are all undefined, and there aren't any hidden services "
+                 "configured. "
+                 " Tor will still run, but probably won't do anything.\n");
+ done:
+  teardown_capture_of_logs();
+  free_options_test_data(tdata);
+  tor_free(msg);
+}
 
 static void
 test_options_validate__transproxy(void *ignored)
@@ -2004,15 +2028,7 @@ test_options_validate__hidserv(void *ignored)
   char *msg;
   setup_capture_of_logs(LOG_WARN);
 
-  options_test_data_t *tdata = get_options_test_data("");
-
-  tdata->opt->MinUptimeHidServDirectoryV2 = -1;
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg("MinUptimeHidServDirectoryV2 "
-            "option must be at least 0 seconds. Changing to 0.\n");
-  tt_int_op(tdata->opt->MinUptimeHidServDirectoryV2, OP_EQ, 0);
-  tor_free(msg);
+  options_test_data_t *tdata = NULL;
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("RendPostPeriod 1\n" );
@@ -2101,25 +2117,46 @@ test_options_validate__bandwidth(void *ignored)
   char *msg;
   options_test_data_t *tdata = NULL;
 
-#define ENSURE_BANDWIDTH_PARAM(p) \
-  STMT_BEGIN                                                \
+#define ENSURE_BANDWIDTH_PARAM(p, EXTRA_OPT_STR) \
+  STMT_BEGIN \
   free_options_test_data(tdata); \
-  tdata = get_options_test_data(#p " 3Gb\n"); \
-  ret = options_validate(NULL, tdata->opt, &msg);     \
+  tdata = get_options_test_data(EXTRA_OPT_STR \
+                                #p " 3Gb\n"); \
+  ret = options_validate(NULL, tdata->opt, &msg); \
   tt_int_op(ret, OP_EQ, -1); \
   tt_mem_op(msg, OP_EQ, #p " (3221225471) must be at most 2147483647", 40); \
   tor_free(msg); \
   STMT_END
 
-  ENSURE_BANDWIDTH_PARAM(BandwidthRate);
-  ENSURE_BANDWIDTH_PARAM(BandwidthBurst);
-  ENSURE_BANDWIDTH_PARAM(MaxAdvertisedBandwidth);
-  ENSURE_BANDWIDTH_PARAM(RelayBandwidthRate);
-  ENSURE_BANDWIDTH_PARAM(RelayBandwidthBurst);
-  ENSURE_BANDWIDTH_PARAM(PerConnBWRate);
-  ENSURE_BANDWIDTH_PARAM(PerConnBWBurst);
-  ENSURE_BANDWIDTH_PARAM(AuthDirFastGuarantee);
-  ENSURE_BANDWIDTH_PARAM(AuthDirGuardBWGuarantee);
+  ENSURE_BANDWIDTH_PARAM(BandwidthRate, "");
+  ENSURE_BANDWIDTH_PARAM(BandwidthBurst, "");
+
+  ENSURE_BANDWIDTH_PARAM(BandwidthRate, ENABLE_AUTHORITY_V3);
+  ENSURE_BANDWIDTH_PARAM(BandwidthBurst, ENABLE_AUTHORITY_V3);
+
+  ENSURE_BANDWIDTH_PARAM(BandwidthRate, ENABLE_AUTHORITY_BRIDGE);
+  ENSURE_BANDWIDTH_PARAM(BandwidthBurst, ENABLE_AUTHORITY_BRIDGE);
+
+  ENSURE_BANDWIDTH_PARAM(MaxAdvertisedBandwidth, "");
+  ENSURE_BANDWIDTH_PARAM(RelayBandwidthRate, "");
+  ENSURE_BANDWIDTH_PARAM(RelayBandwidthBurst, "");
+  ENSURE_BANDWIDTH_PARAM(PerConnBWRate, "");
+  ENSURE_BANDWIDTH_PARAM(PerConnBWBurst, "");
+
+  ENSURE_BANDWIDTH_PARAM(MaxAdvertisedBandwidth, ENABLE_AUTHORITY_V3);
+  ENSURE_BANDWIDTH_PARAM(RelayBandwidthRate, ENABLE_AUTHORITY_V3);
+  ENSURE_BANDWIDTH_PARAM(RelayBandwidthBurst, ENABLE_AUTHORITY_V3);
+  ENSURE_BANDWIDTH_PARAM(PerConnBWRate, ENABLE_AUTHORITY_V3);
+  ENSURE_BANDWIDTH_PARAM(PerConnBWBurst, ENABLE_AUTHORITY_V3);
+
+  ENSURE_BANDWIDTH_PARAM(MaxAdvertisedBandwidth, ENABLE_AUTHORITY_BRIDGE);
+  ENSURE_BANDWIDTH_PARAM(RelayBandwidthRate, ENABLE_AUTHORITY_BRIDGE);
+  ENSURE_BANDWIDTH_PARAM(RelayBandwidthBurst, ENABLE_AUTHORITY_BRIDGE);
+  ENSURE_BANDWIDTH_PARAM(PerConnBWRate, ENABLE_AUTHORITY_BRIDGE);
+  ENSURE_BANDWIDTH_PARAM(PerConnBWBurst, ENABLE_AUTHORITY_BRIDGE);
+
+  ENSURE_BANDWIDTH_PARAM(AuthDirFastGuarantee, ENABLE_AUTHORITY_V3);
+  ENSURE_BANDWIDTH_PARAM(AuthDirGuardBWGuarantee, ENABLE_AUTHORITY_V3);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("RelayBandwidthRate 1000\n");
@@ -2522,6 +2559,20 @@ test_options_validate__accounting(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(tdata->opt->AccountingRule, OP_EQ, ACCT_MAX);
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data("AccountingRule in\n");
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(tdata->opt->AccountingRule, OP_EQ, ACCT_IN);
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data("AccountingRule out\n");
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(tdata->opt->AccountingRule, OP_EQ, ACCT_OUT);
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -3459,7 +3510,8 @@ test_options_validate__v3_auth(void *ignored)
   setup_capture_of_logs(LOG_WARN);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("V3AuthVoteDelay 1000\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "V3AuthVoteDelay 1000\n"
                                 "V3AuthDistDelay 1000\n"
                                 "V3AuthVotingInterval 1000\n"
                                 );
@@ -3471,14 +3523,16 @@ test_options_validate__v3_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("V3AuthVoteDelay 1\n");
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "V3AuthVoteDelay 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "V3AuthVoteDelay is way too low.");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("V3AuthVoteDelay 1\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "V3AuthVoteDelay 1\n"
                                 "TestingTorNetwork 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -3490,14 +3544,16 @@ test_options_validate__v3_auth(void *ignored)
   // since they are the same
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("V3AuthDistDelay 1\n");
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "V3AuthDistDelay 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "V3AuthDistDelay is way too low.");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("V3AuthDistDelay 1\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "V3AuthDistDelay 1\n"
                                 "TestingTorNetwork 1\n"
                                 );
   ret = options_validate(NULL, tdata->opt, &msg);
@@ -3505,12 +3561,13 @@ test_options_validate__v3_auth(void *ignored)
   tt_str_op(msg, OP_EQ, "V3AuthDistDelay is way too low.");
   tor_free(msg);
 
-  // TODO: we can't reach the case of v3authdistdelay lower than
+  // We can't reach the case of v3authdistdelay lower than
   // MIN_DIST_SECONDS but not lower than MIN_DIST_SECONDS_TESTING,
   // since they are the same
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("V3AuthNIntervalsValid 1\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "V3AuthNIntervalsValid 1\n"
                                 );
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -3518,7 +3575,8 @@ test_options_validate__v3_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("V3AuthVoteDelay 49\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "V3AuthVoteDelay 49\n"
                                 "V3AuthDistDelay 49\n"
                                 "V3AuthVotingInterval 200\n"
                                 );
@@ -3528,7 +3586,49 @@ test_options_validate__v3_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("V3AuthVoteDelay 49\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                VALID_DIR_AUTH
+                                "TestingTorNetwork 1\n"
+                                "V3AuthVoteDelay 49\n"
+                                "V3AuthDistDelay 49\n"
+                                "V3AuthVotingInterval 200\n"
+                                );
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_ptr_op(msg, OP_EQ, NULL);
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                VALID_DIR_AUTH
+                                "TestingTorNetwork 1\n"
+                                "V3AuthVoteDelay 2\n"
+                                "V3AuthDistDelay 2\n"
+                                "V3AuthVotingInterval 9\n"
+                                );
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_str_op(msg, OP_EQ,
+            "V3AuthVoteDelay plus V3AuthDistDelay must be less than half "
+            "V3AuthVotingInterval");
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                VALID_DIR_AUTH
+                                "TestingTorNetwork 1\n"
+                                "V3AuthVoteDelay 2\n"
+                                "V3AuthDistDelay 2\n"
+                                "V3AuthVotingInterval 10\n"
+                                );
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_ptr_op(msg, OP_EQ, NULL);
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "V3AuthVoteDelay 49\n"
                                 "V3AuthDistDelay 49\n"
                                 "V3AuthVotingInterval 200000\n"
                                 );
@@ -3538,7 +3638,8 @@ test_options_validate__v3_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("V3AuthVoteDelay 49\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "V3AuthVoteDelay 49\n"
                                 "V3AuthDistDelay 49\n"
                                 "V3AuthVotingInterval 1441\n"
                                 );
@@ -3550,7 +3651,8 @@ test_options_validate__v3_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("V3AuthVoteDelay 49\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "V3AuthVoteDelay 49\n"
                                 "V3AuthDistDelay 49\n"
                                 "V3AuthVotingInterval 1440\n"
                                 );
@@ -3562,7 +3664,8 @@ test_options_validate__v3_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("V3AuthVoteDelay 49\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "V3AuthVoteDelay 49\n"
                                 "V3AuthDistDelay 49\n"
                                 "V3AuthVotingInterval 299\n"
                                 VALID_DIR_AUTH
@@ -3575,23 +3678,23 @@ test_options_validate__v3_auth(void *ignored)
             "This may lead to failure to synchronise for a consensus.\n");
   tor_free(msg);
 
-  // TODO: It is impossible to reach the case of testingtor network, with
-  // v3authvotinginterval too low
-  /* free_options_test_data(tdata); */
-  /* tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES */
-  /*                               "V3AuthVoteDelay 1\n" */
-  /*                               "V3AuthDistDelay 1\n" */
-  /*                               "V3AuthVotingInterval 9\n" */
-                                   /* VALID_DIR_AUTH */
-  /*                               "TestingTorNetwork 1\n" */
-  /*                               ); */
-  /* ret = options_validate(NULL, tdata->opt, */
-  /*                        tdata->def_opt, 0, &msg); */
-  /* tt_int_op(ret, OP_EQ, -1); */
-  /* tt_str_op(msg, OP_EQ, "V3AuthVotingInterval is insanely low."); */
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "V3AuthVoteDelay 1\n"
+                                "V3AuthDistDelay 1\n"
+                                "V3AuthVotingInterval 9\n"
+                                VALID_DIR_AUTH
+                                "TestingTorNetwork 1\n"
+                                );
+  /* We have to call the dirauth-specific function to reach this case */
+  ret = options_validate_dirauth_schedule(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_str_op(msg, OP_EQ, "V3AuthVoteDelay is way too low.");
+  tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("TestingV3AuthInitialVoteDelay 1\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "TestingV3AuthInitialVoteDelay 1\n"
                                 VALID_DIR_AUTH
                                 "TestingTorNetwork 1\n"
                                 );
@@ -3601,7 +3704,8 @@ test_options_validate__v3_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("TestingV3AuthInitialDistDelay 1\n"
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                "TestingV3AuthInitialDistDelay 1\n"
                                 VALID_DIR_AUTH
                                 "TestingTorNetwork 1\n"
                                 );
@@ -3611,7 +3715,8 @@ test_options_validate__v3_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(VALID_DIR_AUTH
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                VALID_DIR_AUTH
                                 "TestingTorNetwork 1\n"
                                 );
   tdata->opt->TestingV3AuthVotingStartOffset = 100000;
@@ -3622,7 +3727,8 @@ test_options_validate__v3_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(VALID_DIR_AUTH
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                VALID_DIR_AUTH
                                 "TestingTorNetwork 1\n"
                                 );
   tdata->opt->TestingV3AuthVotingStartOffset = -1;
@@ -3633,13 +3739,56 @@ test_options_validate__v3_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(VALID_DIR_AUTH
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                VALID_DIR_AUTH
                                 "TestingTorNetwork 1\n"
                                 "TestingV3AuthInitialVotingInterval 4\n"
                                 );
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "TestingV3AuthInitialVotingInterval is insanely low.");
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                VALID_DIR_AUTH
+                                "TestingTorNetwork 1\n"
+                                "TestingV3AuthInitialVoteDelay 2\n"
+                                "TestingV3AuthInitialDistDelay 2\n"
+                                "TestingV3AuthInitialVotingInterval 5\n"
+                                );
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_ptr_op(msg, OP_EQ, NULL);
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                VALID_DIR_AUTH
+                                "TestingTorNetwork 1\n"
+                                "TestingV3AuthInitialVotingInterval 7\n"
+                                );
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_str_op(msg, OP_EQ,
+            "TestingV3AuthInitialVotingInterval does not divide evenly into "
+            "30 minutes.");
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
+                                VALID_DIR_AUTH
+                                "TestingTorNetwork 1\n"
+                                "TestingV3AuthInitialVoteDelay 3\n"
+                                "TestingV3AuthInitialDistDelay 3\n"
+                                "TestingV3AuthInitialVotingInterval 5\n"
+                                );
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_str_op(msg, OP_EQ,
+            "TestingV3AuthInitialVoteDelay plus "
+            "TestingV3AuthInitialDistDelay must be less than "
+            "TestingV3AuthInitialVotingInterval");
   tor_free(msg);
 
  done:
@@ -3688,10 +3837,11 @@ test_options_validate__testing_options(void *ignored)
   options_test_data_t *tdata = NULL;
   setup_capture_of_logs(LOG_WARN);
 
-#define TEST_TESTING_OPTION(name, low_val, high_val, err_low)           \
+#define TEST_TESTING_OPTION(name, low_val, high_val, err_low, EXTRA_OPT_STR) \
   STMT_BEGIN                                                            \
     free_options_test_data(tdata);                                      \
-  tdata = get_options_test_data(VALID_DIR_AUTH                          \
+  tdata = get_options_test_data(EXTRA_OPT_STR                           \
+                                VALID_DIR_AUTH                          \
                                 "TestingTorNetwork 1\n"                 \
                                 );                                      \
   tdata->opt-> name = low_val;                                       \
@@ -3701,25 +3851,44 @@ test_options_validate__testing_options(void *ignored)
   tor_free(msg); \
                                                                         \
   free_options_test_data(tdata);                                        \
-  tdata = get_options_test_data(VALID_DIR_AUTH                          \
+  tdata = get_options_test_data(EXTRA_OPT_STR                           \
+                                VALID_DIR_AUTH                          \
                                 "TestingTorNetwork 1\n"                 \
                                 );                                      \
   tdata->opt->  name = high_val;                                      \
   mock_clean_saved_logs();                                              \
   ret = options_validate(NULL, tdata->opt,  &msg);            \
   tt_int_op(ret, OP_EQ, 0);                                             \
+  tt_ptr_op(msg, OP_EQ, NULL);                                          \
   expect_log_msg( #name " is insanely high.\n"); \
   tor_free(msg); \
   STMT_END
 
   TEST_TESTING_OPTION(TestingAuthDirTimeToLearnReachability, -1, 8000,
-                      "must be non-negative.");
+                      "must be non-negative.", ENABLE_AUTHORITY_V3);
+  TEST_TESTING_OPTION(TestingAuthDirTimeToLearnReachability, -1, 8000,
+                      "must be non-negative.", ENABLE_AUTHORITY_BRIDGE);
+
   TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, -1, 3601,
-                      "must be non-negative.");
+                      "must be non-negative.", "");
   TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, -1, 3601,
-                      "is way too low.");
+                      "is way too low.", "");
   TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
-                      "is way too low.");
+                      "is way too low.", "");
+
+  TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, -1, 3601,
+                      "must be non-negative.", ENABLE_AUTHORITY_V3);
+  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, -1, 3601,
+                      "is way too low.", ENABLE_AUTHORITY_V3);
+  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
+                      "is way too low.", ENABLE_AUTHORITY_V3);
+
+  TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, -1, 3601,
+                      "must be non-negative.", ENABLE_AUTHORITY_BRIDGE);
+  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, -1, 3601,
+                      "is way too low.", ENABLE_AUTHORITY_BRIDGE);
+  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
+                      "is way too low.", ENABLE_AUTHORITY_BRIDGE);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("TestingEnableConnBwEvent 1\n");
@@ -4144,6 +4313,7 @@ struct testcase_t options_tests[] = {
   LOCAL_VALIDATE_TEST(logs),
   LOCAL_VALIDATE_TEST(authdir),
   LOCAL_VALIDATE_TEST(relay_with_hidden_services),
+  LOCAL_VALIDATE_TEST(listen_ports),
   LOCAL_VALIDATE_TEST(transproxy),
   LOCAL_VALIDATE_TEST(exclude_nodes),
   LOCAL_VALIDATE_TEST(node_families),

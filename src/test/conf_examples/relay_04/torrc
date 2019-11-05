@@ -1,0 +1,4 @@
+# Relay tests
+# Options from relay/relay_config.c
+# Try a valid minimal config
+ORPort 1

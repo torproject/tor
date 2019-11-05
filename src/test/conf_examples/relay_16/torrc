@@ -1,0 +1,4 @@
+# Relay tests
+# Options from relay/relay_config.c
+# IPv6 ORPort only
+ORPort [::1]:2

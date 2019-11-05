@@ -85,6 +85,8 @@ fi
 
 TOR_BINARY="$(abspath "$TOR_BINARY")"
 
+echo "TOR BINARY IS ${TOR_BINARY}"
+
 TOR_MODULES_DISABLED="$("$TOR_BINARY" --list-modules | grep ": no" \
                         | cut -d ":" -f1 | sort | tr "\n" "_")"
 # Remove the last underscore, if there is one
@@ -116,7 +118,9 @@ else
     EXITCODE=1
 fi
 
-die() { echo "$1" >&2 ; exit "$EXITCODE"; }
+FINAL_EXIT=0
+
+die() { echo "$1" >&2 ; FINAL_EXIT=$EXITCODE; }
 
 if test "$WINDOWS" = 1; then
     FILTER="dos2unix"
@@ -161,10 +165,10 @@ for dir in "${EXAMPLEDIR}"/*; do
 
             # Check for broken configs
             if test -f "./error${suffix}"; then
-                echo "FAIL: Found both ${dir}/expected${suffix}"
-                echo "and ${dir}/error${suffix}."
-                echo "(Only one of these files should exist.)"
-                exit $EXITCODE
+                echo "FAIL: Found both ${dir}/expected${suffix}" >&2
+                echo "and ${dir}/error${suffix}." >&2
+                echo "(Only one of these files should exist.)" >&2
+                FINAL_EXIT=$EXITCODE
             fi
 
             EXPECTED="./expected${suffix}"
@@ -185,7 +189,7 @@ for dir in "${EXAMPLEDIR}"/*; do
                         --dump-config short \
                         ${CMDLINE} \
                         | "${FILTER}" > "${DATA_DIR}/output.${testname}" \
-                        || die "Failure: Tor exited."
+                        || die "FAIL: $EXPECTED: Tor reported an error."
 
         if cmp "$EXPECTED" "${DATA_DIR}/output.${testname}">/dev/null ; then
             # Check round-trip.
@@ -194,17 +198,18 @@ for dir in "${EXAMPLEDIR}"/*; do
                             --dump-config short \
                             | "${FILTER}" \
                             > "${DATA_DIR}/output_2.${testname}" \
-                        || die "Failure: Tor exited on round-trip."
+                        || die \
+                       "FAIL: $EXPECTED: Tor reported an error on round-trip."
 
             if ! cmp "${DATA_DIR}/output.${testname}" \
                  "${DATA_DIR}/output_2.${testname}"; then
-                echo "Failure: did not match on round-trip."
-                exit $EXITCODE
+                echo "FAIL: $EXPECTED did not match on round-trip." >&2
+                FINAL_EXIT=$EXITCODE
             fi
 
             echo "OK"
         else
-            echo "FAIL"
+            echo "FAIL" >&2
             if test "$(wc -c < "${DATA_DIR}/output.${testname}")" = 0; then
                 # There was no output -- probably we failed.
                 "${TOR_BINARY}" -f "./torrc" \
@@ -212,39 +217,49 @@ for dir in "${EXAMPLEDIR}"/*; do
                                 --verify-config \
                                 ${CMDLINE} || true
             fi
-            diff -u "$EXPECTED" "${DATA_DIR}/output.${testname}" || /bin/true
-            exit $EXITCODE
+            echo "FAIL: $EXPECTED did not match." >&2
+            diff -u "$EXPECTED" "${DATA_DIR}/output.${testname}" >&2 \
+                || true
+            FINAL_EXIT=$EXITCODE
         fi
 
    elif test -f "$ERROR"; then
         # This case should fail: run verify-config and see if it does.
+
+        if ! test -s "$ERROR"; then
+            echo "FAIL: error file '$ERROR' is empty." >&2
+            echo "Empty error files match any output." >&2
+            FINAL_EXIT=$EXITCODE
+        fi
 
         "${TOR_BINARY}" --verify-config \
                         -f ./torrc \
                         --defaults-torrc "${DEFAULTS}" \
                         ${CMDLINE} \
                         > "${DATA_DIR}/output.${testname}" \
-                        && die "Failure: Tor did not report an error."
+                        && die "FAIL: $ERROR: Tor did not report an error."
 
         expect_err="$(cat $ERROR)"
         if grep "${expect_err}" "${DATA_DIR}/output.${testname}" >/dev/null; then
             echo "OK"
         else
-            echo "FAIL"
-            echo "Expected error: ${expect_err}"
-            echo "Tor said:"
-            cat "${DATA_DIR}/output.${testname}"
-            exit $EXITCODE
+            echo "FAIL" >&2
+            echo "Expected $ERROR: ${expect_err}" >&2
+            echo "Tor said:" >&2
+            cat "${DATA_DIR}/output.${testname}" >&2
+            FINAL_EXIT=$EXITCODE
         fi
 
     else
         # This case is not actually configured with a success or a failure.
         # call that an error.
 
-        echo "FAIL: Did not find ${dir}/*expected or ${dir}/*error."
-        exit $EXITCODE
+        echo "FAIL: Did not find ${dir}/*expected or ${dir}/*error." >&2
+        FINAL_EXIT=$EXITCODE
     fi
 
     cd "${PREV_DIR}"
 
 done
+
+exit $FINAL_EXIT

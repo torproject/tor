@@ -31,7 +31,6 @@
 #define MAX_DEFAULT_MEMORY_QUEUE_SIZE (UINT64_C(2) << 30)
 #endif
 
-MOCK_DECL(const char*, get_dirportfrontpage, (void));
 MOCK_DECL(const or_options_t *, get_options, (void));
 MOCK_DECL(or_options_t *, get_options_mutable, (void));
 int set_options(or_options_t *new_val, char **msg);
@@ -163,6 +162,8 @@ int write_to_data_subdir(const char* subdir, const char* fname,
 int get_num_cpus(const or_options_t *options);
 
 MOCK_DECL(const smartlist_t *,get_configured_ports,(void));
+int port_binds_ipv4(const port_cfg_t *port);
+int port_binds_ipv6(const port_cfg_t *port);
 int get_first_advertised_port_by_type_af(int listener_type,
                                          int address_family);
 #define get_primary_or_port() \
@@ -181,16 +182,9 @@ char *get_first_listener_addrport_string(int listener_type);
 int options_need_geoip_info(const or_options_t *options,
                             const char **reason_out);
 
-smartlist_t *get_list_of_ports_to_forward(void);
-
 int getinfo_helper_config(control_connection_t *conn,
                           const char *question, char **answer,
                           const char **errmsg);
-
-uint32_t get_effective_bwrate(const or_options_t *options);
-uint32_t get_effective_bwburst(const or_options_t *options);
-
-char *get_transport_bindaddr_from_config(const char *transport);
 
 int init_cookie_authentication(const char *fname, const char *header,
                                int cookie_len, int group_readable,
@@ -246,14 +240,16 @@ void bridge_line_free_(bridge_line_t *bridge_line);
 #define bridge_line_free(line) \
   FREE_AND_NULL(bridge_line_t, bridge_line_free_, (line))
 bridge_line_t *parse_bridge_line(const char *line);
-smartlist_t *get_options_from_transport_options_line(const char *line,
-                                                     const char *transport);
-smartlist_t *get_options_for_server_transport(const char *transport);
 
 /* Port helper functions. */
 int options_any_client_port_set(const or_options_t *options);
-
-#ifdef CONFIG_PRIVATE
+int port_parse_config(smartlist_t *out,
+                      const struct config_line_t *ports,
+                      const char *portname,
+                      int listener_type,
+                      const char *defaultaddr,
+                      int defaultport,
+                      const unsigned flags);
 
 #define CL_PORT_NO_STREAM_OPTIONS (1u<<0)
 #define CL_PORT_WARN_NONLOCAL (1u<<1)
@@ -264,24 +260,32 @@ int options_any_client_port_set(const or_options_t *options);
 #define CL_PORT_IS_UNIXSOCKET (1u<<6)
 #define CL_PORT_DFLT_GROUP_WRITABLE (1u<<7)
 
+port_cfg_t *port_cfg_new(size_t namelen);
+#define port_cfg_free(port) \
+  FREE_AND_NULL(port_cfg_t, port_cfg_free_, (port))
+void port_cfg_free_(port_cfg_t *port);
+
+int port_count_real_listeners(const smartlist_t *ports,
+                         int listenertype,
+                         int count_sockets);
+int pt_parse_transport_line(const or_options_t *options,
+                         const char *line, int validate_only,
+                         int server);
+int config_ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg);
+
+#ifdef CONFIG_PRIVATE
+
 MOCK_DECL(STATIC int, options_act,(const or_options_t *old_options));
 MOCK_DECL(STATIC int, options_act_reversible,(const or_options_t *old_options,
                                              char **msg));
 struct config_mgr_t;
 STATIC const struct config_mgr_t *get_options_mgr(void);
 
-STATIC port_cfg_t *port_cfg_new(size_t namelen);
-#define port_cfg_free(port) \
-  FREE_AND_NULL(port_cfg_t, port_cfg_free_, (port))
-STATIC void port_cfg_free_(port_cfg_t *port);
 #define or_options_free(opt) \
   FREE_AND_NULL(or_options_t, or_options_free_, (opt))
 STATIC void or_options_free_(or_options_t *options);
 STATIC int options_validate_single_onion(or_options_t *options,
                                          char **msg);
-STATIC int parse_transport_line(const or_options_t *options,
-                                const char *line, int validate_only,
-                                int server);
 STATIC int consider_adding_dir_servers(const or_options_t *options,
                                        const or_options_t *old_options);
 STATIC void add_default_trusted_dir_authorities(dirinfo_type_t type);
@@ -290,17 +294,6 @@ STATIC int parse_dir_authority_line(const char *line,
                                     dirinfo_type_t required_type,
                                     int validate_only);
 STATIC int parse_dir_fallback_line(const char *line, int validate_only);
-STATIC int have_enough_mem_for_dircache(const or_options_t *options,
-                                        size_t total_mem, char **msg);
-STATIC int parse_port_config(smartlist_t *out,
-                  const struct config_line_t *ports,
-                  const char *portname,
-                  int listener_type,
-                  const char *defaultaddr,
-                  int defaultport,
-                  const unsigned flags);
-
-STATIC int check_bridge_distribution_setting(const char *bd);
 
 STATIC uint64_t compute_real_max_mem_in_queues(const uint64_t val,
                                                int log_guess);

@@ -1,0 +1,4 @@
+# Relay tests
+# Options from relay/relay_config.c
+# Bad DirPort
+DirPort illegal_hostname_chars$()^*%(%#%)#(%*
