@@ -880,6 +880,7 @@ static const config_format_t options_format = {
   .legacy_validate_fn = options_validate_cb,
   .check_transition_fn = options_check_transition_cb,
   .clear_fn = options_clear_cb,
+  .has_config_suite = true,
   .config_suite_offset = offsetof(or_options_t, subconfigs_),
 };
 

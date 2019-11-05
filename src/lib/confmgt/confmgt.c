@@ -169,9 +169,14 @@ config_mgr_register_fmt(config_mgr_t *mgr,
               "it had been frozen.");
 
   if (object_idx != IDX_TOPLEVEL) {
-    tor_assertf(fmt->config_suite_offset < 0,
+    tor_assertf(! fmt->has_config_suite,
           "Tried to register a toplevel format in a non-toplevel position");
   }
+  if (fmt->config_suite_offset) {
+    tor_assertf(fmt->has_config_suite,
+                "config_suite_offset was set, but has_config_suite was not.");
+  }
+
   tor_assertf(fmt != mgr->toplevel &&
               ! smartlist_contains(mgr->subconfigs, fmt),
               "Tried to register an already-registered format.");
@@ -223,7 +228,7 @@ config_mgr_add_format(config_mgr_t *mgr,
 static inline config_suite_t **
 config_mgr_get_suite_ptr(const config_mgr_t *mgr, void *toplevel)
 {
-  if (mgr->toplevel->config_suite_offset < 0)
+  if (! mgr->toplevel->has_config_suite)
     return NULL;
   return STRUCT_VAR_P(toplevel, mgr->toplevel->config_suite_offset);
 }
