@@ -244,7 +244,8 @@ dist-rpm: dist-gzip
 
 .PHONY: doxygen
 doxygen: Doxyfile
-	mkdir -p doc/doxygen && doxygen
+	mkdir -p doc/doxygen
+	(cd "$(top_srcdir)" && doxygen "$(abs_top_builddir)/Doxyfile")
 
 test: all
 	$(top_builddir)/src/test/test
