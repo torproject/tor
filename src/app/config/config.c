@@ -386,7 +386,7 @@ static const config_var_t option_vars_[] = {
   V(UnixSocksGroupWritable,    BOOL,     "0"),
   V(CookieAuthentication,        BOOL,     "0"),
   V(CookieAuthFileGroupReadable, BOOL,     "0"),
-  V(CookieAuthFile,              STRING,   NULL),
+  V(CookieAuthFile,              FILENAME, NULL),
   V(CountPrivateBandwidth,       BOOL,     "0"),
   VAR_IMMUTABLE("DataDirectory", FILENAME, DataDirectory_option, NULL),
   V(DataDirectoryGroupReadable,  BOOL,     "0"),
@@ -456,7 +456,7 @@ static const config_var_t option_vars_[] = {
   V(ExtendAllowPrivateAddresses, BOOL,     "0"),
   V(ExitRelay,                   AUTOBOOL, "auto"),
   VPORT(ExtORPort),
-  V(ExtORPortCookieAuthFile,     STRING,   NULL),
+  V(ExtORPortCookieAuthFile,     FILENAME,   NULL),
   V(ExtORPortCookieAuthFileGroupReadable, BOOL, "0"),
   V(ExtraInfoStatistics,         BOOL,     "1"),
   V(ExtendByEd25519ID,           AUTOBOOL, "auto"),
@@ -594,7 +594,7 @@ static const config_var_t option_vars_[] = {
   V(PathsNeededToBuildCircuits,  DOUBLE,   "-1"),
   V(PerConnBWBurst,              MEMUNIT,  "0"),
   V(PerConnBWRate,               MEMUNIT,  "0"),
-  V_IMMUTABLE(PidFile,           STRING,   NULL),
+  V_IMMUTABLE(PidFile,           FILENAME,   NULL),
   V_IMMUTABLE(TestingTorNetwork, BOOL,     "0"),
   V(TestingMinExitFlagThreshold, MEMUNIT,  "0"),
   V(TestingMinFastFlagThreshold, MEMUNIT,  "0"),
@@ -639,7 +639,7 @@ static const config_var_t option_vars_[] = {
   V(ServerDNSAllowNonRFC953Hostnames, BOOL,"0"),
   V(ServerDNSDetectHijacking,    BOOL,     "1"),
   V(ServerDNSRandomizeCase,      BOOL,     "1"),
-  V(ServerDNSResolvConfFile,     STRING,   NULL),
+  V(ServerDNSResolvConfFile,     FILENAME,   NULL),
   V(ServerDNSSearchDomains,      BOOL,     "0"),
   V(ServerDNSTestAddresses,      CSV,
       "www.google.com,www.mit.edu,www.yahoo.com,www.slashdot.org"),
@@ -3007,25 +3007,20 @@ warn_about_relative_paths(const or_options_t *options)
 {
   tor_assert(options);
   int n = 0;
+  const config_mgr_t *mgr = get_options_mgr();
 
-  n += warn_if_option_path_is_relative("CookieAuthFile",
-                                       options->CookieAuthFile);
-  n += warn_if_option_path_is_relative("ExtORPortCookieAuthFile",
-                                       options->ExtORPortCookieAuthFile);
-  n += warn_if_option_path_is_relative("DirPortFrontPage",
-                                       options->DirPortFrontPage);
-  n += warn_if_option_path_is_relative("V3BandwidthsFile",
-                                       options->V3BandwidthsFile);
-  n += warn_if_option_path_is_relative("ControlPortWriteToFile",
-                                       options->ControlPortWriteToFile);
-  n += warn_if_option_path_is_relative("GeoIPFile",options->GeoIPFile);
-  n += warn_if_option_path_is_relative("GeoIPv6File",options->GeoIPv6File);
-  n += warn_if_option_path_is_relative("Log",options->DebugLogFile);
-  n += warn_if_option_path_is_relative("AccelDir",options->AccelDir);
-  n += warn_if_option_path_is_relative("DataDirectory",options->DataDirectory);
-  n += warn_if_option_path_is_relative("PidFile",options->PidFile);
-  n += warn_if_option_path_is_relative("ClientOnionAuthDir",
-                                        options->ClientOnionAuthDir);
+  smartlist_t *vars = config_mgr_list_vars(mgr);
+  SMARTLIST_FOREACH_BEGIN(vars, const config_var_t *, cv) {
+    config_line_t *line;
+    if (cv->member.type != CONFIG_TYPE_FILENAME)
+      continue;
+    const char *name = cv->member.name;
+    line = config_get_assigned_option(mgr, options, name, 0);
+    if (line)
+      n += warn_if_option_path_is_relative(name, line->value);
+    config_free_lines(line);
+  } SMARTLIST_FOREACH_END(cv);
+  smartlist_free(vars);
 
   for (config_line_t *hs_line = options->RendConfigLines; hs_line;
        hs_line = hs_line->next) {
