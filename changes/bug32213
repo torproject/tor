@@ -1,0 +1,20 @@
+  o Minor bugfixes (dirauth module):
+    - When the dirauth module is disabled, reject attempts to set the
+      AuthoritativeDir option, rather than ignoring the value of the
+      option. Fixes bug 32213; bugfix on 0.3.4.1-alpha.
+    - Split the dirauth config code into a separate file in the dirauth
+      module. Disable this code when the dirauth module is disabled.
+      Closes ticket 32213.
+  o Minor features (relay module):
+    - When the relay module is disabled, reject attempts to set the
+      ORPort, DirPort, DirCache, BridgeRelay, ExtORPort, or
+      ServerTransport* options, rather than ignoring the values of these
+      options. Closes ticket 32213.
+    - Split the relay and server pluggable transport config code into
+      separate files in the relay module. Disable this code when the relay
+      module is disabled. Closes ticket 32213.
+  o Code simplification and refactoring:
+    - Simplify some relay and dirauth config code. Closes ticket 32213.
+  o Testing:
+    - Improve test coverage for relay and dirauth config code, focusing on
+      option validation and normalization. Closes ticket 32213.
