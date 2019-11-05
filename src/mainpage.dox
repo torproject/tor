@@ -1,9 +1,7 @@
 /**
 @mainpage Tor source reference
 
-@section intro Getting to know Tor
-
-Welcome!
+@section intro Welcome to Tor
 
 This documentation describes the general structure of the Tor codebase, how
 it fits together, what functionality is available for extending Tor, and
@@ -22,7 +20,9 @@ This document is not an overview of the Tor protocol.  For that, see the
 design paper and the specifications at https://spec.torproject.org/ .
 
 For more information about Tor's coding standards and some helpful
-development tools, see doc/HACKING in the Tor repository.
+development tools, see
+[doc/HACKING](https://gitweb.torproject.org/tor.git/tree/doc/HACKING) in the
+Tor repository.
 
 @section highlevel The very high level
 
