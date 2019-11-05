@@ -71,6 +71,10 @@ new_fake_orcirc(channel_t *nchan, channel_t *pchan)
 void
 free_fake_orcirc(or_circuit_t *orcirc)
 {
+  if (!orcirc) {
+    return;
+  }
+
   circuit_t *circ = TO_CIRCUIT(orcirc);
 
   relay_crypto_clear(&orcirc->crypto);
