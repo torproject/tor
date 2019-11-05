@@ -293,7 +293,6 @@ static const config_format_t crypto_options_fmt = {
              offsetof(crypto_options_t, magic) },
   .vars = crypto_options_t_vars,
   .validate_fn = crypto_options_validate,
-  .config_suite_offset = -1,
 };
 
 /**

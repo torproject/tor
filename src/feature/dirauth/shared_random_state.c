@@ -92,7 +92,6 @@ static const config_format_t state_format = {
   },
   .vars = state_vars,
   .extra = &state_extra_var,
-  .config_suite_offset = -1,
 };
 
 /** Global configuration manager for the shared-random state file */
