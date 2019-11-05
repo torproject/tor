@@ -43,10 +43,10 @@ problem function-size /src/app/config/config.c:options_init_from_torrc() 207
 problem function-size /src/app/config/config.c:options_init_from_string() 113
 problem function-size /src/app/config/config.c:options_init_logs() 145
 problem function-size /src/app/config/config.c:parse_bridge_line() 104
-problem function-size /src/app/config/config.c:parse_transport_line() 189
+problem function-size /src/app/config/config.c:pt_parse_transport_line() 189
 problem function-size /src/app/config/config.c:parse_dir_authority_line() 150
 problem function-size /src/app/config/config.c:parse_dir_fallback_line() 101
-problem function-size /src/app/config/config.c:parse_port_config() 446
+problem function-size /src/app/config/config.c:port_parse_config() 446
 problem function-size /src/app/config/config.c:parse_ports() 168
 problem file-size /src/app/config/or_options_st.h 1121
 problem include-count /src/app/main/main.c 68
