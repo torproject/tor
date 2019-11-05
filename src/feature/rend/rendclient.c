@@ -1058,6 +1058,7 @@ rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
   /* Get service ID so we can use it to query the failure cache. If we fail to
    * parse it, this cache entry is no good. */
   if (BUG(rend_get_service_id(entry->parsed->pk, service_id) < 0)) {
+    smartlist_free(usable_nodes);
     return NULL;
   }
 
