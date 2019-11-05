@@ -1,5 +1,5 @@
 /**
-@dir app
+@dir /app
 @brief app: top-level entry point for Tor
 
 The "app" directory has Tor's main entry point and configuration logic,
