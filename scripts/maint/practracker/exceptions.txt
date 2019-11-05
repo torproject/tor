@@ -33,25 +33,25 @@
 #
 # Remember: It is better to fix the problem than to add a new exception!
 
-problem file-size /src/app/config/config.c 8459
-problem include-count /src/app/config/config.c 89
+problem file-size /src/app/config/config.c 7223
+problem include-count /src/app/config/config.c 80
 problem function-size /src/app/config/config.c:options_act_reversible() 296
-problem function-size /src/app/config/config.c:options_act() 589
+problem function-size /src/app/config/config.c:options_act() 381
 problem function-size /src/app/config/config.c:resolve_my_address() 190
-problem function-size /src/app/config/config.c:options_validate_cb() 1209
-problem function-size /src/app/config/config.c:options_init_from_torrc() 207
-problem function-size /src/app/config/config.c:options_init_from_string() 113
-problem function-size /src/app/config/config.c:options_init_logs() 145
+problem function-size /src/app/config/config.c:options_validate_cb() 785
+problem function-size /src/app/config/config.c:options_init_from_torrc() 188
+problem function-size /src/app/config/config.c:options_init_from_string() 103
+problem function-size /src/app/config/config.c:options_init_logs() 125
 problem function-size /src/app/config/config.c:parse_bridge_line() 104
 problem function-size /src/app/config/config.c:pt_parse_transport_line() 189
 problem function-size /src/app/config/config.c:parse_dir_authority_line() 150
 problem function-size /src/app/config/config.c:parse_dir_fallback_line() 101
 problem function-size /src/app/config/config.c:port_parse_config() 446
-problem function-size /src/app/config/config.c:parse_ports() 168
-problem file-size /src/app/config/or_options_st.h 1121
+problem function-size /src/app/config/config.c:parse_ports() 132
+problem file-size /src/app/config/or_options_st.h 1117
 problem include-count /src/app/main/main.c 68
 problem function-size /src/app/main/main.c:dumpstats() 102
-problem function-size /src/app/main/main.c:tor_init() 137
+problem function-size /src/app/main/main.c:tor_init() 111
 problem function-size /src/app/main/main.c:sandbox_init_filter() 291
 problem function-size /src/app/main/main.c:run_tor_main_loop() 105
 problem function-size /src/app/main/ntmain.c:nt_service_install() 126
@@ -204,7 +204,7 @@ problem function-size /src/feature/control/control_cmd.c:add_onion_helper_keyarg
 problem function-size /src/feature/control/control_events.c:control_event_stream_status() 118
 problem include-count /src/feature/control/control_getinfo.c 54
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_misc() 108
-problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_dir() 302
+problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_dir() 297
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_events() 234
 problem function-size /src/feature/dirauth/bwauth.c:dirserv_read_measured_bandwidths() 121
 problem file-size /src/feature/dirauth/dirvote.c 4700
@@ -257,7 +257,7 @@ problem function-size /src/feature/hs/hs_descriptor.c:decrypt_desc_layer() 111
 problem function-size /src/feature/hs/hs_descriptor.c:decode_introduction_point() 122
 problem function-size /src/feature/hs/hs_descriptor.c:desc_decode_superencrypted_v3() 107
 problem function-size /src/feature/hs/hs_descriptor.c:desc_decode_encrypted_v3() 107
-problem file-size /src/feature/hs/hs_service.c 4182
+problem file-size /src/feature/hs/hs_service.c 4172
 problem function-size /src/feature/keymgt/loadkey.c:ed_key_init_from_file() 326
 problem function-size /src/feature/nodelist/authcert.c:trusted_dirs_load_certs_from_string() 123
 problem function-size /src/feature/nodelist/authcert.c:authority_certs_fetch_missing() 295
@@ -320,7 +320,7 @@ problem function-size /src/lib/net/address.c:tor_addr_compare_masked() 110
 problem function-size /src/lib/net/inaddr.c:tor_inet_pton() 107
 problem function-size /src/lib/net/socketpair.c:tor_ersatz_socketpair() 102
 problem function-size /src/lib/osinfo/uname.c:get_uname() 116
-problem function-size /src/lib/process/process_unix.c:process_unix_exec() 220
+problem function-size /src/lib/process/process_unix.c:process_unix_exec() 213
 problem function-size /src/lib/process/process_win32.c:process_win32_exec() 151
 problem function-size /src/lib/process/process_win32.c:process_win32_create_pipe() 109
 problem function-size /src/lib/process/restrict.c:set_max_file_descriptors() 102
