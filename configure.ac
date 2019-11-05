@@ -2129,6 +2129,7 @@ if test "x$SRCDIR" = "x"; then
   SRCDIR=$(cd "$srcdir"; pwd)
 fi
 AH_TEMPLATE([SRCDIR],[tor's sourcedir directory])
+AC_SUBST(SRCDIR)
 AC_DEFINE_UNQUOTED(SRCDIR,"$SRCDIR")
 
 if test "x$CONFDIR" = "x"; then
