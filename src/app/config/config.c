@@ -2951,7 +2951,7 @@ options_validate(const or_options_t *old_options, or_options_t *options,
   vs = config_validate(get_options_mgr(), old_options, options, msg);
   return vs < 0 ? -1 : 0;
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 #define REJECT(arg) \
   STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END

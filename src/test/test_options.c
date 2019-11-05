@@ -112,7 +112,7 @@ clear_log_messages(void)
 #define ENABLE_AUTHORITY_V3 ""
 #define ENABLE_AUTHORITY_BRIDGE ""
 
-#else
+#else /* !defined(COCCI) */
 
 #define ENABLE_AUTHORITY_MIN \
   "AuthoritativeDirectory 1\n"
@@ -144,7 +144,7 @@ clear_log_messages(void)
   ENABLE_AUTHORITY_BRIDGE_MIN \
   AUTHORITY_OPT_REQ_
 
-#endif
+#endif /* defined(COCCI) */
 
 #define VALID_DIR_AUTH "DirAuthority dizum orport=443 v3ident=E8A9C45"  \
   "EDE6D711294FADF8E7951F4DE6CA56B58 194.109.206.212:80 7EA6 EAD6 FD83" \

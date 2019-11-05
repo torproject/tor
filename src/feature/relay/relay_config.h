@@ -88,9 +88,9 @@ STATIC int check_bridge_distribution_setting(const char *bd);
 STATIC int have_enough_mem_for_dircache(const or_options_t *options,
                                         size_t total_mem, char **msg);
 
-#endif
+#endif /* defined(RELAY_CONFIG_PRIVATE) */
 
-#else
+#else /* !defined(HAVE_MODULE_RELAY) */
 
 #include "lib/cc/compat_compiler.h"
 
@@ -183,6 +183,6 @@ options_validate_relay_mode(const or_options_t *old_options,
 #define options_act_relay_dir(old_options) \
   (((void)(old_options)),0)
 
-#endif
+#endif /* defined(HAVE_MODULE_RELAY) */
 
 #endif /* !defined(TOR_FEATURE_RELAY_RELAY_CONFIG_H) */

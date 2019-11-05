@@ -39,7 +39,7 @@ int options_act_dirauth_mtbf(const or_options_t *old_options);
 int options_act_dirauth_stats(const or_options_t *old_options,
                               bool *print_notice_out);
 
-#else
+#else /* !defined(HAVE_MODULE_DIRAUTH) */
 
 /** When tor is compiled with the dirauth module disabled, it can't be
  * configured as a directory authority.

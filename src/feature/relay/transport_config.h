@@ -34,9 +34,9 @@ STATIC smartlist_t *get_options_from_transport_options_line(
                       const char *line,
                       const char *transport);
 
-#endif
+#endif /* defined(RELAY_TRANSPORT_CONFIG_PRIVATE) */
 
-#else
+#else /* !defined(HAVE_MODULE_RELAY) */
 
 /** When tor is compiled with the relay module disabled, it can't be
  * configured with server pluggable transports.
@@ -80,6 +80,6 @@ options_validate_server_transport(const or_options_t *old_options,
 #define options_act_server_transport(old_options) \
   (((void)(old_options)),0)
 
-#endif
+#endif /* defined(HAVE_MODULE_RELAY) */
 
 #endif /* !defined(TOR_FEATURE_RELAY_TRANSPORT_CONFIG_H) */
