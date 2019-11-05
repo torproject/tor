@@ -266,12 +266,22 @@ DUMMY_TYPECHECK_INSTANCE(or_options_t);
 #define VAR_NODUMP(varname,conftype,member,initvalue)             \
   CONFIG_VAR_ETYPE(or_options_t, varname, conftype, member,       \
                    CFLG_NODUMP, initvalue)
+#define VAR_NODUMP_IMMUTABLE(varname,conftype,member,initvalue)   \
+  CONFIG_VAR_ETYPE(or_options_t, varname, conftype, member,       \
+                   CFLG_NODUMP | CFLG_IMMUTABLE, initvalue)
 #define VAR_INVIS(varname,conftype,member,initvalue)              \
   CONFIG_VAR_ETYPE(or_options_t, varname, conftype, member,       \
                    CFLG_NODUMP | CFLG_NOSET | CFLG_NOLIST, initvalue)
 
 #define V(member,conftype,initvalue)            \
   VAR(#member, conftype, member, initvalue)
+
+#define VAR_IMMUTABLE(varname, conftype, member, initvalue)             \
+  CONFIG_VAR_ETYPE(or_options_t, varname, conftype, member,             \
+                   CFLG_IMMUTABLE, initvalue)
+
+#define V_IMMUTABLE(member,conftype,initvalue)                 \
+  VAR_IMMUTABLE(#member, conftype, member, initvalue)
 
 /** As V, but uses a type definition instead of a type enum */
 #define V_D(member,type,initvalue)              \
@@ -342,7 +352,7 @@ static const config_var_t option_vars_[] = {
   V(BridgeRecordUsageByCountry,  BOOL,     "1"),
   V(BridgeRelay,                 BOOL,     "0"),
   V(BridgeDistribution,          STRING,   NULL),
-  VAR("CacheDirectory",          FILENAME, CacheDirectory_option, NULL),
+  VAR_IMMUTABLE("CacheDirectory",FILENAME, CacheDirectory_option, NULL),
   V(CacheDirectoryGroupReadable, AUTOBOOL,     "auto"),
   V(CellStatistics,              BOOL,     "0"),
   V(PaddingStatistics,           BOOL,     "1"),
@@ -378,7 +388,7 @@ static const config_var_t option_vars_[] = {
   V(CookieAuthFileGroupReadable, BOOL,     "0"),
   V(CookieAuthFile,              STRING,   NULL),
   V(CountPrivateBandwidth,       BOOL,     "0"),
-  VAR("DataDirectory",           FILENAME, DataDirectory_option, NULL),
+  VAR_IMMUTABLE("DataDirectory", FILENAME, DataDirectory_option, NULL),
   V(DataDirectoryGroupReadable,  BOOL,     "0"),
   V(DisableOOSCheck,             BOOL,     "1"),
   V(DisableNetwork,              BOOL,     "0"),
@@ -399,8 +409,8 @@ static const config_var_t option_vars_[] = {
    * an order of magnitude, so there isn't too much load shifting to
    * authorities when fallbacks go down. */
   V(DirAuthorityFallbackRate,    DOUBLE,   "0.1"),
-  V(DisableAllSwap,              BOOL,     "0"),
-  V(DisableDebuggerAttachment,   BOOL,     "1"),
+  V_IMMUTABLE(DisableAllSwap,    BOOL,     "0"),
+  V_IMMUTABLE(DisableDebuggerAttachment,   BOOL,     "1"),
   OBSOLETE("DisableIOCP"),
   OBSOLETE("DisableV2DirectoryInfo_"),
   OBSOLETE("DynamicDHGroups"),
@@ -476,11 +486,11 @@ static const config_var_t option_vars_[] = {
 #endif /* defined(_WIN32) */
   OBSOLETE("Group"),
   V(GuardLifetime,               INTERVAL, "0 minutes"),
-  V(HardwareAccel,               BOOL,     "0"),
+  V_IMMUTABLE(HardwareAccel,     BOOL,     "0"),
   V(HeartbeatPeriod,             INTERVAL, "6 hours"),
   V(MainloopStats,               BOOL,     "0"),
-  V(AccelName,                   STRING,   NULL),
-  V(AccelDir,                    FILENAME, NULL),
+  V_IMMUTABLE(AccelName,         STRING,   NULL),
+  V_IMMUTABLE(AccelDir,          FILENAME, NULL),
   V(HashedControlPassword,       LINELIST, NULL),
   OBSOLETE("HidServDirectoryV2"),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
@@ -504,8 +514,8 @@ static const config_var_t option_vars_[] = {
   V(ClientOnionAuthDir,          FILENAME, NULL),
   OBSOLETE("CloseHSClientCircuitsImmediatelyOnTimeout"),
   OBSOLETE("CloseHSServiceRendCircuitsImmediatelyOnTimeout"),
-  V(HiddenServiceSingleHopMode,  BOOL,     "0"),
-  V(HiddenServiceNonAnonymousMode,BOOL,    "0"),
+  V_IMMUTABLE(HiddenServiceSingleHopMode,  BOOL,     "0"),
+  V_IMMUTABLE(HiddenServiceNonAnonymousMode,BOOL,    "0"),
   V(HTTPProxy,                   STRING,   NULL),
   V(HTTPProxyAuthenticator,      STRING,   NULL),
   V(HTTPSProxy,                  STRING,   NULL),
@@ -520,18 +530,18 @@ static const config_var_t option_vars_[] = {
   V(Socks5Proxy,                 STRING,   NULL),
   V(Socks5ProxyUsername,         STRING,   NULL),
   V(Socks5ProxyPassword,         STRING,   NULL),
-  VAR("KeyDirectory",            FILENAME, KeyDirectory_option, NULL),
+  VAR_IMMUTABLE("KeyDirectory",  FILENAME, KeyDirectory_option, NULL),
   V(KeyDirectoryGroupReadable,   BOOL,     "0"),
   VAR_D("HSLayer2Nodes",         ROUTERSET,  HSLayer2Nodes,  NULL),
   VAR_D("HSLayer3Nodes",         ROUTERSET,  HSLayer3Nodes,  NULL),
   V(KeepalivePeriod,             INTERVAL, "5 minutes"),
-  V(KeepBindCapabilities,            AUTOBOOL, "auto"),
+  V_IMMUTABLE(KeepBindCapabilities,        AUTOBOOL, "auto"),
   VAR("Log",                     LINELIST, Logs,             NULL),
   V(LogMessageDomains,           BOOL,     "0"),
   V(LogTimeGranularity,          MSEC_INTERVAL, "1 second"),
   V(TruncateLogFile,             BOOL,     "0"),
-  V(SyslogIdentityTag,           STRING,   NULL),
-  V(AndroidIdentityTag,          STRING,   NULL),
+  V_IMMUTABLE(SyslogIdentityTag, STRING,   NULL),
+  V_IMMUTABLE(AndroidIdentityTag,STRING,   NULL),
   V(LongLivedPorts,              CSV,
         "21,22,706,1863,5050,5190,5222,5223,6523,6667,6697,8300"),
   VAR("MapAddress",              LINELIST, AddressMap,           NULL),
@@ -553,7 +563,7 @@ static const config_var_t option_vars_[] = {
   OBSOLETE("PredictedPortsRelevanceTime"),
   OBSOLETE("WarnUnsafeSocks"),
   VAR("NodeFamily",              LINELIST, NodeFamilies,         NULL),
-  V(NoExec,                      BOOL,     "0"),
+  V_IMMUTABLE(NoExec,            BOOL,     "0"),
   V(NumCPUs,                     POSINT,     "0"),
   V(NumDirectoryGuards,          POSINT,     "0"),
   V(NumEntryGuards,              POSINT,     "0"),
@@ -584,8 +594,8 @@ static const config_var_t option_vars_[] = {
   V(PathsNeededToBuildCircuits,  DOUBLE,   "-1"),
   V(PerConnBWBurst,              MEMUNIT,  "0"),
   V(PerConnBWRate,               MEMUNIT,  "0"),
-  V(PidFile,                     STRING,   NULL),
-  V(TestingTorNetwork,           BOOL,     "0"),
+  V_IMMUTABLE(PidFile,           STRING,   NULL),
+  V_IMMUTABLE(TestingTorNetwork, BOOL,     "0"),
   V(TestingMinExitFlagThreshold, MEMUNIT,  "0"),
   V(TestingMinFastFlagThreshold, MEMUNIT,  "0"),
 
@@ -619,10 +629,10 @@ static const config_var_t option_vars_[] = {
   V(RelayBandwidthRate,          MEMUNIT,  "0"),
   V(RendPostPeriod,              INTERVAL, "1 hour"),
   V(RephistTrackTime,            INTERVAL, "24 hours"),
-  V(RunAsDaemon,                 BOOL,     "0"),
+  V_IMMUTABLE(RunAsDaemon,       BOOL,     "0"),
   V(ReducedExitPolicy,           BOOL,     "0"),
   OBSOLETE("RunTesting"), // currently unused
-  V(Sandbox,                     BOOL,     "0"),
+  V_IMMUTABLE(Sandbox,           BOOL,     "0"),
   V(SafeLogging,                 STRING,   "1"),
   V(SafeSocks,                   BOOL,     "0"),
   V(ServerDNSAllowBrokenConfig,  BOOL,     "1"),
@@ -650,7 +660,7 @@ static const config_var_t option_vars_[] = {
   V(StrictNodes,                 BOOL,     "0"),
   OBSOLETE("Support022HiddenServices"),
   V(TestSocks,                   BOOL,     "0"),
-  V(TokenBucketRefillInterval,   MSEC_INTERVAL, "100 msec"),
+  V_IMMUTABLE(TokenBucketRefillInterval,   MSEC_INTERVAL, "100 msec"),
   OBSOLETE("Tor2webMode"),
   OBSOLETE("Tor2webRendezvousPoints"),
   OBSOLETE("TLSECGroup"),
@@ -667,7 +677,7 @@ static const config_var_t option_vars_[] = {
   V(UseGuardFraction,            AUTOBOOL, "auto"),
   V(UseMicrodescriptors,         AUTOBOOL, "auto"),
   OBSOLETE("UseNTorHandshake"),
-  V(User,                        STRING,   NULL),
+  V_IMMUTABLE(User,              STRING,   NULL),
   OBSOLETE("UserspaceIOCPBuffers"),
   V(AuthDirSharedRandomness,     BOOL,     "1"),
   V(AuthDirTestEd25519LinkKeys,  BOOL,     "1"),
@@ -695,12 +705,14 @@ static const config_var_t option_vars_[] = {
   VAR_NODUMP("__ReloadTorrcOnSIGHUP",   BOOL,  ReloadTorrcOnSIGHUP,      "1"),
   VAR_NODUMP("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
   VAR_NODUMP("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
-  VAR_NODUMP("__DisableSignalHandlers", BOOL,  DisableSignalHandlers,    "0"),
+  VAR_NODUMP_IMMUTABLE("__DisableSignalHandlers", BOOL,
+                       DisableSignalHandlers,    "0"),
   VAR_NODUMP("__LeaveStreamsUnattached",BOOL,  LeaveStreamsUnattached,   "0"),
   VAR_NODUMP("__HashedControlSessionPassword", LINELIST,
              HashedControlSessionPassword,
       NULL),
-  VAR_NODUMP("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
+  VAR_NODUMP_IMMUTABLE("__OwningControllerProcess",STRING,
+                       OwningControllerProcess, NULL),
   VAR_NODUMP("__OwningControllerFD", UINT64, OwningControllerFD,
              UINT64_MAX_STRING),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "96 hours"),
@@ -4040,36 +4052,6 @@ options_check_transition_cb(const void *old_,
                       " is not allowed");                               \
     return -1;                                                          \
   } while (0)
-
-#define NO_CHANGE_BOOL(opt) \
-  if (! CFG_EQ_BOOL(old, new_val, opt)) BAD_CHANGE_TO(opt,"")
-#define NO_CHANGE_INT(opt) \
-  if (! CFG_EQ_INT(old, new_val, opt)) BAD_CHANGE_TO(opt,"")
-#define NO_CHANGE_STRING(opt) \
-  if (! CFG_EQ_STRING(old, new_val, opt)) BAD_CHANGE_TO(opt,"")
-
-  NO_CHANGE_STRING(PidFile);
-  NO_CHANGE_BOOL(RunAsDaemon);
-  NO_CHANGE_BOOL(Sandbox);
-  NO_CHANGE_STRING(DataDirectory);
-  NO_CHANGE_STRING(KeyDirectory);
-  NO_CHANGE_STRING(CacheDirectory);
-  NO_CHANGE_STRING(User);
-  NO_CHANGE_BOOL(KeepBindCapabilities);
-  NO_CHANGE_STRING(SyslogIdentityTag);
-  NO_CHANGE_STRING(AndroidIdentityTag);
-  NO_CHANGE_BOOL(HardwareAccel);
-  NO_CHANGE_STRING(AccelName);
-  NO_CHANGE_STRING(AccelDir);
-  NO_CHANGE_BOOL(TestingTorNetwork);
-  NO_CHANGE_BOOL(DisableAllSwap);
-  NO_CHANGE_INT(TokenBucketRefillInterval);
-  NO_CHANGE_BOOL(HiddenServiceSingleHopMode);
-  NO_CHANGE_BOOL(HiddenServiceNonAnonymousMode);
-  NO_CHANGE_BOOL(DisableDebuggerAttachment);
-  NO_CHANGE_BOOL(NoExec);
-  NO_CHANGE_INT(OwningControllerFD);
-  NO_CHANGE_BOOL(DisableSignalHandlers);
 
   if (sandbox_is_active()) {
 #define SB_NOCHANGE_STR(opt)                      \
