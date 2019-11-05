@@ -4008,7 +4008,7 @@ test_options_validate__accel(void *ignored)
   tdata = get_options_test_data("AccelName foo\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(get_crypto_options(tdata->opt)->HardwareAccel, OP_EQ, 1);
+  tt_int_op(get_crypto_options(tdata->opt)->HardwareAccel, OP_EQ, 0);
   tor_free(msg);
 
   free_options_test_data(tdata);
