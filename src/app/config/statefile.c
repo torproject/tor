@@ -169,6 +169,7 @@ static const config_format_t state_format = {
   .vars = state_vars_,
   .legacy_validate_fn = or_state_validate_cb,
   .extra = &state_extra_var,
+  .has_config_suite = true,
   .config_suite_offset = offsetof(or_state_t, substates_),
 };
 
