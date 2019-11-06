@@ -1,6 +1,6 @@
 /**
-@dir /core/or
-@brief core/or: *Onion routing happens here*.
+@dir core/or
+@brief core/or: **Onion routing happens here!**
 
 This is the central part of Tor that handles the core tasks of onion routing:
 building circuit, handling circuits, attaching circuit to streams, moving
@@ -60,3 +60,5 @@ encrypt, route, and interpret relay cells.
 
 `scheduler.c`
 : Decides which channel/circuit pair is ready to receive the next cell.
+
+**/
