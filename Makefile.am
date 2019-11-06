@@ -378,7 +378,7 @@ endif
 
 check-includes:
 if USEPYTHON
-	$(PYTHON) $(top_srcdir)/scripts/maint/practracker/includes.py
+	$(PYTHON) $(top_srcdir)/scripts/maint/practracker/includes.py $(top_srcdir)
 endif
 
 check-best-practices:
