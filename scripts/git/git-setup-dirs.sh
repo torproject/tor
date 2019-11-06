@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-SCRIPT_NAME=`basename $0`
+SCRIPT_NAME=$(basename "$0")
 
 function usage()
 {
@@ -295,8 +295,10 @@ function add_remote
   printf "  %s Adding remote %s at %s..." "$MARKER" "$1" "$2"
   local check_cmd="git remote get-url '$1'"
   msg=$( eval "$check_cmd" 2>&1 )
+  ret=$?
   # We don't want a remote, so we invert the exit status
-  if validate_ret_skip $[ ! $? ] "Remote already exists for $1 at $msg."; then
+  if validate_ret_skip $(( ! ret )) \
+                       "Remote already exists for $1 at $msg."; then
     return
   fi
   if [ $DRY_RUN -eq 0 ]; then

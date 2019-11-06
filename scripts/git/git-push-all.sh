@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-SCRIPT_NAME=`basename $0`
+SCRIPT_NAME=$(basename "$0")
 
 function usage()
 {
@@ -257,7 +257,7 @@ if [ "$PUSH_SAME" -eq 0 ]; then
       fi
     done
     if [ "$SKIP_UPSTREAM" ]; then
-      printf "Skipping unchanged: %s matching remote: %s\n" \
+      printf "Skipping unchanged: %s matching remote: %s\\n" \
         "$b" "$SKIP_UPSTREAM"
     else
       if [ "$NEW_PUSH_BRANCHES" ]; then
@@ -287,32 +287,38 @@ if [ "$PUSH_DELAY" -le 0 ]; then
   $GIT_PUSH "$@" "$UPSTREAM_REMOTE" $PUSH_BRANCHES
 else
   # Push the branches in optimal CI order, with a delay between each push
-  PUSH_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\n" | sort -V)
-  MASTER_BRANCH=$(echo "$PUSH_BRANCHES" | tr " " "\n" | grep master) \
+  PUSH_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | sort -V)
+  MASTER_BRANCH=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | grep master) \
       || true # Skipped master branch
   if [ -z "$TEST_BRANCH_PREFIX" ]; then
-    MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\n" | grep maint) \
+    MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | grep maint) \
         || true # Skipped all maint branches
-    RELEASE_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\n" | grep release | \
-      tr "\n" " ") || true # Skipped all release branches
+    RELEASE_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | grep release | \
+      tr "\\n" " ") || true # Skipped all release branches
+    printf \
+      "Pushing with %ss delays, so CI runs in this order:\\n%s\\n%s\\n%s\\n" \
+      "$PUSH_DELAY" "$MASTER_BRANCH" "$MAINT_BRANCHES" "$RELEASE_BRANCHES"
   else
     # Actually test branches based on maint branches
-    MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\n" | grep -v master) \
+    MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | grep -v master) \
         || true # Skipped all maint test branches
+    printf "Pushing with %ss delays, so CI runs in this order:\\n%s\\n%s\\n" \
+      "$PUSH_DELAY" "$MASTER_BRANCH" "$MAINT_BRANCHES"
     # No release branches
     RELEASE_BRANCHES=
   fi
   if [ "$MASTER_BRANCH" ] || [ "$MAINT_BRANCHES" ] \
       || [ "$RELEASE_BRANCHES" ]; then
-    printf "Pushing with %ss delays, so CI runs in this order:\n" "$PUSH_DELAY"
+    printf "Pushing with %ss delays, so CI runs in this order:\\n" \
+           "$PUSH_DELAY"
     if [ "$MASTER_BRANCH" ]; then
-      printf "%s\n" "$MASTER_BRANCH"
+      printf "%s\\n" "$MASTER_BRANCH"
     fi
     if [ "$MAINT_BRANCHES" ]; then
-      printf "%s\n" "$MAINT_BRANCHES"
+      printf "%s\\n" "$MAINT_BRANCHES"
     fi
     if [ "$RELEASE_BRANCHES" ]; then
-      printf "%s\n" "$RELEASE_BRANCHES"
+      printf "%s\\n" "$RELEASE_BRANCHES"
     fi
   fi
   # shellcheck disable=SC2086
