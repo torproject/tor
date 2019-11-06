@@ -2,4 +2,5 @@
     - Our "make doxygen" target now respects --enable-fatal-warnings by
       default, and does not warn about items that are missing documentation.
       To warn about missing documentation, run configure with the
-      "--enable-missing-doc-warnings" flag. Closes ticket 32385.
+      "--enable-missing-doc-warnings" flag: doing suspends fatal warnings
+      for doxygen. Closes ticket 32385.
