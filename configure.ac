@@ -77,7 +77,7 @@ AC_ARG_ENABLE(pic,
    AS_HELP_STRING(--enable-pic, [Build Tor's binaries as position-independent code, suitable to link as a library.]))
 
 AC_ARG_ENABLE(missing-doc-warnings,
-   AS_HELP_STRING(--enable-missing-doc-warnings, [Tell doxygen to warn about missing documentation.]))
+   AS_HELP_STRING(--enable-missing-doc-warnings, [Tell doxygen to warn about missing documentation. Makes doxygen warnings nonfatal.]))
 
 if test "$enable_missing_doc_warnings" = "yes"; then
    DOXYGEN_FATAL_WARNINGS=NO
