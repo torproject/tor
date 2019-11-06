@@ -6182,6 +6182,7 @@ test_util_map_anon_nofork(void *arg)
    * crash, or send zero. */
 
   char *ptr = NULL;
+  const char TEST_VALUE = 0xd0;
   size_t sz = 16384;
   int pipefd[2] = {-1, -1};
   unsigned inherit=0;
@@ -6189,7 +6190,7 @@ test_util_map_anon_nofork(void *arg)
   tor_munmap_anonymous(ptr, sz);
   ptr = tor_mmap_anonymous(sz, ANONMAP_NOINHERIT, &inherit);
   tt_ptr_op(ptr, OP_NE, 0);
-  memset(ptr, 0xd0, sz);
+  memset(ptr, (uint8_t)TEST_VALUE, sz);
 
   tt_int_op(0, OP_EQ, pipe(pipefd));
   pid_t child = fork();
@@ -6220,7 +6221,7 @@ test_util_map_anon_nofork(void *arg)
     // noinherit isn't implemented.
     tt_int_op(inherit, OP_EQ, INHERIT_RES_KEEP);
     tt_int_op((int)r, OP_EQ, 1); // child should send us a byte.
-    tt_int_op(buf[0], OP_EQ, 0xd0); // that byte should what we set it to.
+    tt_int_op(buf[0], OP_EQ, TEST_VALUE); // that byte should be TEST_VALUE.
   }
 
   int ws;
