@@ -1,0 +1,3 @@
+  o Minor features (build system):
+    - Make pkg-config use --prefix when cross-compiling, if PKG_CONFIG_PATH
+      is not set. Closes ticket 32191.
