@@ -37,6 +37,11 @@ else
     pkg_config_user_action="check the PKG_CONFIG_PATH environment variable"
 fi
 
+if test "x$PKG_CONFIG_PATH" = "x" && test "x$prefix" != "xNONE" && test "$host" != "$build"; then
+   export PKG_CONFIG_PATH=$prefix/lib/pkgconfig
+   AC_MSG_NOTICE([set PKG_CONFIG_PATH=$PKG_CONFIG_PATH to support cross-compiling])
+fi
+
 AC_ARG_ENABLE(openbsd-malloc,
    AS_HELP_STRING(--enable-openbsd-malloc, [use malloc code from OpenBSD.  Linux only. Deprecated: see --with-malloc]))
 AC_ARG_ENABLE(static-openssl,
