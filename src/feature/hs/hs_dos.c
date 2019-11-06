@@ -45,6 +45,9 @@
  * introduction DoS defense. Disabled by default. */
 #define HS_DOS_INTRODUCE_ENABLED_DEFAULT 0
 
+/* INTRODUCE2 rejected request counter. */
+static uint64_t intro2_rejected_count = 0;
+
 /* Consensus parameters. The ESTABLISH_INTRO DoS cell extension have higher
  * priority than these values. If no extension is sent, these are used only by
  * the introduction point. */
@@ -163,12 +166,12 @@ hs_dos_can_send_intro2(or_circuit_t *s_intro_circ)
    * This can be set by the consensus, the ESTABLISH_INTRO cell extension or
    * the hardcoded values in tor code. */
   if (!s_intro_circ->introduce2_dos_defense_enabled) {
-    return true;
+    goto allow;
   }
 
   /* Should not happen but if so, scream loudly. */
   if (BUG(TO_CIRCUIT(s_intro_circ)->purpose != CIRCUIT_PURPOSE_INTRO_POINT)) {
-    return false;
+    goto disallow;
   }
 
   /* This is called just after we got a valid and parsed INTRODUCE1 cell. The
@@ -189,7 +192,25 @@ hs_dos_can_send_intro2(or_circuit_t *s_intro_circ)
   }
 
   /* Finally, we can send a new INTRODUCE2 if there are still tokens. */
-  return token_bucket_ctr_get(&s_intro_circ->introduce2_bucket) > 0;
+  if (token_bucket_ctr_get(&s_intro_circ->introduce2_bucket) > 0) {
+    goto allow;
+  }
+
+  /* Fallthrough is to disallow since this means the bucket has reached 0. */
+ disallow:
+  /* Increment stats counter, we are rejecting the INTRO2 cell. */
+  intro2_rejected_count++;
+  return false;
+
+ allow:
+  return true;
+}
+
+/* Return rolling count of rejected INTRO2. */
+uint64_t
+hs_dos_get_intro2_rejected_count(void)
+{
+  return intro2_rejected_count;
 }
 
 /* Initialize the onion service Denial of Service subsystem. */

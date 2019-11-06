@@ -449,12 +449,13 @@ NS(logv)(int severity, log_domain_mask_t domain,
     case 5:
       tt_int_op(severity, OP_EQ, LOG_NOTICE);
       tt_u64_op(domain, OP_EQ, LD_HEARTBEAT);
-      tt_str_op(format, OP_EQ, "DoS mitigation since startup:%s%s%s%s");
+      tt_str_op(format, OP_EQ, "DoS mitigation since startup:%s%s%s%s%s");
       tt_str_op(va_arg(ap, char *), OP_EQ,
                 " 0 circuits killed with too many cells.");
       tt_str_op(va_arg(ap, char *), OP_EQ, " [cc not enabled]");
       tt_str_op(va_arg(ap, char *), OP_EQ, " [conn not enabled]");
       tt_str_op(va_arg(ap, char *), OP_EQ, "");
+      tt_str_op(va_arg(ap, char *), OP_EQ, " 0 INTRODUCE2 rejected.");
       break;
     default:
       tt_abort_msg("unexpected call to logv()");  // TODO: prettyprint args

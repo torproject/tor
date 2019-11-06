@@ -15,6 +15,7 @@
 #include "core/or/channel.h"
 #include "core/or/connection_or.h"
 #include "core/or/relay.h"
+#include "feature/hs/hs_dos.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/relay/routermode.h"
@@ -629,6 +630,7 @@ dos_log_heartbeat(void)
   char *cc_msg = NULL;
   char *single_hop_client_msg = NULL;
   char *circ_stats_msg = NULL;
+  char *hs_dos_intro2_msg = NULL;
 
   /* Stats number coming from relay.c append_cell_to_circuit_queue(). */
   tor_asprintf(&circ_stats_msg,
@@ -654,17 +656,24 @@ dos_log_heartbeat(void)
                  num_single_hop_client_refused);
   }
 
+  /* HS DoS stats. */
+  tor_asprintf(&hs_dos_intro2_msg,
+               " %" PRIu64 " INTRODUCE2 rejected.",
+               hs_dos_get_intro2_rejected_count());
+
   log_notice(LD_HEARTBEAT,
-             "DoS mitigation since startup:%s%s%s%s",
+             "DoS mitigation since startup:%s%s%s%s%s",
              circ_stats_msg,
              (cc_msg != NULL) ? cc_msg : " [cc not enabled]",
              (conn_msg != NULL) ? conn_msg : " [conn not enabled]",
-             (single_hop_client_msg != NULL) ? single_hop_client_msg : "");
+             (single_hop_client_msg != NULL) ? single_hop_client_msg : "",
+             (hs_dos_intro2_msg != NULL) ? hs_dos_intro2_msg : "");
 
   tor_free(conn_msg);
   tor_free(cc_msg);
   tor_free(single_hop_client_msg);
   tor_free(circ_stats_msg);
+  tor_free(hs_dos_intro2_msg);
   return;
 }
 
