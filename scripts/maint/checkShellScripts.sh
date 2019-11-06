@@ -35,12 +35,8 @@ if [ ! -d "$TOPLEVEL/src" ]; then
 fi
 
 # Check *.sh scripts, but ignore the ones that we can't fix
-find "$TOPLEVEL" \
+find "$TOPLEVEL/contrib" "$TOPLEVEL/doc" "$TOPLEVEL/scripts" "$TOPLEVEL/src" \
     -name "*.sh" \
-    -path "$TOPLEVEL/contrib/*" \
-    -path "$TOPLEVEL/doc/*" \
-    -path "$TOPLEVEL/scripts/*" \
-    -path "$TOPLEVEL/src/*" \
     -not -path "$TOPLEVEL/src/ext/*" \
     -not -path "$TOPLEVEL/src/rust/registry/*" \
     -exec shellcheck {} +
