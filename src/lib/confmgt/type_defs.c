@@ -90,9 +90,12 @@ static const var_type_fns_t string_fns = {
 // These types are implemented as int, possibly with a restricted range.
 /////
 
+/**
+ * Parameters for parsing an integer type.
+ **/
 typedef struct int_type_params_t {
-  int minval;
-  int maxval;
+  int minval; /**< Lowest allowed value */
+  int maxval; /**< Highest allowed value */
 } int_parse_params_t;
 
 static const int_parse_params_t INT_PARSE_UNRESTRICTED = {
