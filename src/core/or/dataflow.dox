@@ -1,5 +1,7 @@
+/**
+@tableofcontents
 
-## Data flow in the Tor process ##
+@page dataflow Data flow in the Tor process
 
 We read bytes from the network, we write bytes to the network.  For the
 most part, the bytes we write correspond roughly to bytes we have read,
@@ -7,9 +9,7 @@ with bits of cryptography added in.
 
 The rest is a matter of details.
 
-![Diagram of main data flows in Tor](./diagrams/02/02-dataflow.png "Diagram of main data flows in Tor")
-
-### Connections and buffers: reading, writing, and interpreting. ###
+### Connections and buffers: reading, writing, and interpreting.
 
 At a low level, Tor's networking code is based on "connections".  Each
 connection represents an object that can send or receive network-like
@@ -79,7 +79,7 @@ wide variety of reasons, including:
    * For some connection types, reading is disabled when the inbuf is
      too full.
    * Reading/writing is temporarily disabled on connections that have
-     recently read/written enough data up to their bandwidth 
+     recently read/written enough data up to their bandwidth
    * Reading is disabled on connections when reading more data from them
      would require that data to be buffered somewhere else that is
      already full.
@@ -208,7 +208,7 @@ next channel in sequence with `append cell_to_circuit_queue()`.  This
 places the cell on a per-circuit queue for cells headed out on that
 particular channel.
 
-### Sending cells on circuits: the complicated bit. ###
+### Sending cells on circuits: the complicated bit.
 
 Relay cells are queued onto circuits from one of two (main) sources:
 reading data from edge connections, and receiving a cell to be relayed
@@ -234,3 +234,5 @@ queue the next cell.
 
 (This logic applies to outgoing relay cells only; incoming relay cells
 are processed as they arrive.)
+
+**/
