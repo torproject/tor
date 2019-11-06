@@ -28,7 +28,7 @@ typedef struct circuit_guard_state_t circuit_guard_state_t;
    private. */
 typedef struct entry_guard_restriction_t entry_guard_restriction_t;
 
-/* Information about a guard's pathbias status.
+/** Information about a guard's pathbias status.
  * These fields are used in circpathbias.c to try to detect entry
  * nodes that are failing circuits at a suspicious frequency.
  */
