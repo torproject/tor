@@ -1,0 +1,5 @@
+  o Major bugfixes (torrc):
+    - Stop ignoring torrc options after an %include directive, when the
+      included directory ends with a file that does not contain any config
+      options. (But does contain comments or whitespace.)
+      Fixes bug 31408; bugfix on 0.3.1.1-alpha.
