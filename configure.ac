@@ -1080,10 +1080,10 @@ dnl Where we do we find lzma?
 AC_ARG_ENABLE(lzma,
       AS_HELP_STRING(--enable-lzma, [enable support for the LZMA compression scheme.]),
       [case "${enableval}" in
-        "yes") lzma=true ;;
-        "no")  lzma=false ;;
+        "yes") ;;
+        "no")  ;;
         * ) AC_MSG_ERROR(bad value for --enable-lzma) ;;
-      esac], [lzma=auto])
+      esac], [enable_lzma=auto])
 
 if test "x$enable_lzma" = "xno"; then
     have_lzma=no;
@@ -1112,10 +1112,10 @@ dnl Where we do we find zstd?
 AC_ARG_ENABLE(zstd,
       AS_HELP_STRING(--enable-zstd, [enable support for the Zstandard compression scheme.]),
       [case "${enableval}" in
-        "yes") zstd=true ;;
-        "no")  zstd=false ;;
+        "yes") ;;
+        "no")  ;;
         * ) AC_MSG_ERROR(bad value for --enable-zstd) ;;
-      esac], [zstd=auto])
+      esac], [enable_zstd=auto])
 
 if test "x$enable_zstd" = "xno"; then
     have_zstd=no;
