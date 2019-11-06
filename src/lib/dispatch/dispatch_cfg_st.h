@@ -14,8 +14,11 @@
 
 struct smartlist_t;
 
-/* Information needed to create a dispatcher, but in a less efficient, more
- * mutable format. */
+/** Information needed to create a dispatcher, but in a less efficient, more
+ * mutable format.
+ *
+ * Nearly everybody should use the \refdir{lib/pubsub} module to configure
+ * dispatchers, instead of using this. */
 struct dispatch_cfg_t {
   /** A list of msg_type_id_t (cast to void*), indexed by msg_t. */
   struct smartlist_t *type_by_msg;
