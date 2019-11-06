@@ -1,0 +1,4 @@
+  o Minor features (testing):
+    - test_parseconf.sh now supports result variants for any combination
+      of the optional libraries lzma, nss, and zstd.
+      Closes ticket 32397.

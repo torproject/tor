@@ -37,7 +37,25 @@
 #      fail. Exactly one of "expected" or "error" must be present, or the
 #      test will fail.
 #
-# {expected,error}_no_${TOR_MODULES_DISABLED} -- If this file is present,
+# {expected,error}_${TOR_LIBS_ENABLED}* -- If this file is present,
+#      then the outcome is different when some optional libraries are
+#      enabled. If there is no result file matching the exact list of enabled
+#      libraries, the script searches for result files with one or more of
+#      those libraries disabled. The search terminates at the standard result
+#      file.
+#
+#      For example:
+#      A test that succeeds, regardless of any enabled libraries:
+#       - expected
+#      A test that has a different result if the nss library is enabled
+#      (but the same result if any other library is enabled):
+#       - expected
+#       - expected_nss
+#      A test that fails if the lzma and zstd modules are *not* enabled:
+#       - error
+#       - expected_lzma_zstd
+#
+# {expected,error}*_no_${TOR_MODULES_DISABLED} -- If this file is present,
 #      then the outcome is different when some modules are disabled. If there
 #      is no result file matching the exact list of disabled modules, the
 #      standard result file is used.
@@ -87,11 +105,6 @@ TOR_BINARY="$(abspath "$TOR_BINARY")"
 
 echo "TOR BINARY IS ${TOR_BINARY}"
 
-TOR_MODULES_DISABLED="$("$TOR_BINARY" --list-modules | grep ": no" \
-                        | cut -d ":" -f1 | sort | tr "\\n" "_")"
-# Remove the last underscore, if there is one
-TOR_MODULES_DISABLED=${TOR_MODULES_DISABLED%_}
-
 # make a safe space for temporary files
 DATA_DIR=$(mktemp -d -t tor_parseconf_tests.XXXXXX)
 trap 'rm -rf "$DATA_DIR"' 0
@@ -128,7 +141,54 @@ else
     FILTER="cat"
 fi
 
-touch "${DATA_DIR}/EMPTY" || die "Couldn't create empty file."
+EMPTY="${DATA_DIR}/EMPTY"
+
+touch "$EMPTY" || die "Couldn't create empty file."
+
+STANDARD_LIBS="libevent\\|openssl\\|zlib"
+# Lib names are restricted to [a-z0-9]* at the moment
+# We don't actually want to support foreign accents here
+# shellcheck disable=SC2018,SC2019
+TOR_LIBS_ENABLED="$("$TOR_BINARY" --verify-config \
+                      -f "$EMPTY" --defaults-torrc "$EMPTY" \
+                    | sed -n 's/.* Tor .* running on .* with\(.*\)\./\1/p' \
+                    | tr 'A-Z' 'a-z' | tr ',' '\n' \
+                    | grep -v "$STANDARD_LIBS" | grep -v "n/a" \
+                    | sed 's/\( and\)* \(lib\)*\([a-z0-9]*\) .*/\3/' \
+                    | sort | tr '\n' '_')"
+# Remove the last underscore, if there is one
+TOR_LIBS_ENABLED=${TOR_LIBS_ENABLED%_}
+
+# If we ever have more than 3 optional libraries, we'll need more code here
+TOR_LIBS_ENABLED_COUNT="$(echo "$TOR_LIBS_ENABLED_SEARCH" \
+                          | tr ' ' '\n' | wc -l)"
+if [ "$TOR_LIBS_ENABLED_COUNT" -gt 3 ]; then
+    echo "$0 can not handle more than 3 optional libraries"
+    exit 1
+fi
+# Brute-force the combinations of libraries
+TOR_LIBS_ENABLED_SEARCH_3="$(echo "$TOR_LIBS_ENABLED" \
+    | sed -n \
+      's/^\([^_]*\)_\([^_]*\)_\([^_]*\)$/_\1_\2 _\1_\3 _\2_\3 _\1 _\2 _\3/p')"
+TOR_LIBS_ENABLED_SEARCH_2="$(echo "$TOR_LIBS_ENABLED" \
+    | sed -n 's/^\([^_]*\)_\([^_]*\)$/_\1 _\2/p')"
+TOR_LIBS_ENABLED_SEARCH="_$TOR_LIBS_ENABLED \
+                           $TOR_LIBS_ENABLED_SEARCH_3 \
+                           $TOR_LIBS_ENABLED_SEARCH_2"
+TOR_LIBS_ENABLED_SEARCH="$(echo "$TOR_LIBS_ENABLED_SEARCH" | tr ' ' '\n' \
+                           | grep -v '^_*$' | tr '\n' ' ')"
+
+TOR_MODULES_DISABLED="$("$TOR_BINARY" --list-modules | grep ': no' \
+                        | cut -d ':' -f1 | sort | tr '\n' '_')"
+# Remove the last underscore, if there is one
+TOR_MODULES_DISABLED=${TOR_MODULES_DISABLED%_}
+
+echo "Tor is configured with:"
+echo "Optional Libraries: ${TOR_LIBS_ENABLED:-(None)}"
+if [ -n "${TOR_LIBS_ENABLED}" ]; then
+    echo "Optional Library Search List: $TOR_LIBS_ENABLED_SEARCH"
+fi
+echo "Disabled Modules: ${TOR_MODULES_DISABLED:-(None)}"
 
 for dir in "${EXAMPLEDIR}"/*; do
     if ! test -d "${dir}"; then
@@ -157,25 +217,36 @@ for dir in "${EXAMPLEDIR}"/*; do
 
     EXPECTED=
     ERROR=
-    # If tor has some modules disabled, search for a custom result file for
-    # the disabled modules
-    for suffix in "_no_$TOR_MODULES_DISABLED" ""; do
+    # Search for a custom result file for any combination of enabled optional
+    # libraries
+    # The libs in the list are [A-Za-z0-9_]* and space-separated.
+    # shellcheck disable=SC2086
+    for lib_suffix in $TOR_LIBS_ENABLED_SEARCH ""; do
+        # Search for a custom result file for any disabled modules
+        for mod_suffix in "_no_${TOR_MODULES_DISABLED}" ""; do
+            suffix="${lib_suffix}${mod_suffix}"
 
-        if test -f "./expected${suffix}"; then
+            if test -f "./expected${suffix}"; then
 
-            # Check for broken configs
-            if test -f "./error${suffix}"; then
-                echo "FAIL: Found both ${dir}/expected${suffix}" >&2
-                echo "and ${dir}/error${suffix}." >&2
-                echo "(Only one of these files should exist.)" >&2
-                FINAL_EXIT=$EXITCODE
+                # Check for broken configs
+                if test -f "./error${suffix}"; then
+                    echo "FAIL: Found both ${dir}/expected${suffix}" >&2
+                    echo "and ${dir}/error${suffix}." >&2
+                    echo "(Only one of these files should exist.)" >&2
+                    FINAL_EXIT=$EXITCODE
+                fi
+
+                EXPECTED="./expected${suffix}"
+                break
+
+            elif test -f "./error${suffix}"; then
+                ERROR="./error${suffix}"
+                break
             fi
+        done
 
-            EXPECTED="./expected${suffix}"
-            break
-
-        elif test -f "./error${suffix}"; then
-            ERROR="./error${suffix}"
+        # Exit as soon as the inner loop finds a file
+        if test -f "$EXPECTED" || test -f "$ERROR"; then
             break
         fi
     done
