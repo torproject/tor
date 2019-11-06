@@ -17,7 +17,7 @@
 #define TOR_USEC_PER_SEC (1000000)
 /** How many nanoseconds per microsecond */
 #define TOR_NSEC_PER_USEC (1000)
-/* How many nanoseconds per millisecond */
+/** How many nanoseconds per millisecond */
 #define TOR_NSEC_PER_MSEC (1000*1000)
 
 #endif /* !defined(TOR_TIME_DEFS_H) */

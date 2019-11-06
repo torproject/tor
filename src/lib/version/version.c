@@ -24,6 +24,10 @@ static const char the_short_tor_version[] =
 #endif
   "";
 
+/**
+ * Longest possible version length. We make this a constant so that we
+ * can statically allocate the_tor_version.
+ **/
 #define MAX_VERSION_LEN 128
 
 /** The version of this Tor process, possibly including git version */

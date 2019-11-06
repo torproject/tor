@@ -85,6 +85,11 @@ struct dispatch_t *pubsub_builder_finalize(pubsub_builder_t *,
  **/
 void pubsub_items_clear_bindings(pubsub_items_t *items);
 
+/**
+ * @copydoc pubsub_items_free_
+ *
+ * Additionally, set the pointer <b>cfg</b> to NULL.
+ **/
 #define pubsub_items_free(cfg) \
   FREE_AND_NULL(pubsub_items_t, pubsub_items_free_, (cfg))
 void pubsub_items_free_(pubsub_items_t *cfg);

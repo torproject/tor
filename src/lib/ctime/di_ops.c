@@ -145,8 +145,11 @@ tor_memeq(const void *a, const void *b, size_t sz)
 
 /* Implement di_digest256_map_t as a linked list of entries. */
 struct di_digest256_map_t {
+  /** Pointer to the next entry in the list. */
   struct di_digest256_map_t *next;
+  /** Key for this entry. */
   uint8_t key[32];
+  /** Value for this entry. */
   void *val;
 };
 

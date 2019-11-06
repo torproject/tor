@@ -23,6 +23,12 @@ const char tor_git_revision[] =
 #endif
   "";
 
+/**
+ * String appended to Tor bug messages describing the Tor version.
+ *
+ * It has the form "(on Tor 0.4.3.1-alpha)" or
+ * "(on Tor 0.4.3.1-alpha git-b994397f1af193f8)"
+ **/
 const char tor_bug_suffix[] = " (on Tor " VERSION
 #ifndef COCCI
 #ifndef _MSC_VER

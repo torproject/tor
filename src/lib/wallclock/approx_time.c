@@ -44,6 +44,9 @@ update_approx_time(time_t now)
 }
 #endif /* !defined(TIME_IS_FAST) */
 
+/**
+ * Initialize the "wallclock" subsystem by setting the current cached time.
+ **/
 static int
 subsys_wallclock_initialize(void)
 {
@@ -51,6 +54,9 @@ subsys_wallclock_initialize(void)
   return 0;
 }
 
+/**
+ * Subsystem function table describing the "wallclock" subsystem.
+ **/
 const subsys_fns_t sys_wallclock = {
   .name = "wallclock",
   .supported = true,

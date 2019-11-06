@@ -16,6 +16,7 @@
 /** A signed integer representing a country code. */
 typedef int16_t country_t;
 
+/** Maximum value for country_t. */
 #define COUNTRY_MAX INT16_MAX
 
 #endif /* !defined(TOR_COUNTRY_H) */

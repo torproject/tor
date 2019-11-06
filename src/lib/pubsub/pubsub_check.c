@@ -9,7 +9,9 @@
  * @brief Enforce various requirements on a pubsub_builder.
  **/
 
+/** @{ */
 #define PUBSUB_PRIVATE
+/** @} */
 
 #include "lib/dispatch/dispatch_naming.h"
 #include "lib/dispatch/msgtypes.h"

@@ -31,6 +31,7 @@ int geoip_get_country_by_ipv6(const struct in6_addr *addr);
 
 /** A per-country GeoIP record. */
 typedef struct geoip_country_t {
+  /** A nul-terminated two-letter country-code. */
   char countrycode[3];
 } geoip_country_t;
 

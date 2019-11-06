@@ -58,6 +58,11 @@ void tor_mutex_init_nonrecursive(tor_mutex_t *m);
 void tor_mutex_acquire(tor_mutex_t *m);
 void tor_mutex_release(tor_mutex_t *m);
 void tor_mutex_free_(tor_mutex_t *m);
+/**
+ * @copydoc tor_mutex_free_
+ *
+ * Additionally, set the pointer <b>m</b> to NULL.
+ **/
 #define tor_mutex_free(m) FREE_AND_NULL(tor_mutex_t, tor_mutex_free_, (m))
 void tor_mutex_uninit(tor_mutex_t *m);
 
