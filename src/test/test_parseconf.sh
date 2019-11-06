@@ -88,7 +88,7 @@ TOR_BINARY="$(abspath "$TOR_BINARY")"
 echo "TOR BINARY IS ${TOR_BINARY}"
 
 TOR_MODULES_DISABLED="$("$TOR_BINARY" --list-modules | grep ": no" \
-                        | cut -d ":" -f1 | sort | tr "\n" "_")"
+                        | cut -d ":" -f1 | sort | tr "\\n" "_")"
 # Remove the last underscore, if there is one
 TOR_MODULES_DISABLED=${TOR_MODULES_DISABLED%_}
 
@@ -239,7 +239,7 @@ for dir in "${EXAMPLEDIR}"/*; do
                         > "${DATA_DIR}/output.${testname}" \
                         && die "FAIL: $ERROR: Tor did not report an error."
 
-        expect_err="$(cat $ERROR)"
+        expect_err="$(cat "$ERROR")"
         if grep "${expect_err}" "${DATA_DIR}/output.${testname}" >/dev/null; then
             echo "OK"
         else

@@ -309,15 +309,16 @@ else
   fi
   if [ "$MASTER_BRANCH" ] || [ "$MAINT_BRANCHES" ] \
       || [ "$RELEASE_BRANCHES" ]; then
-    printf "Pushing with %ss delays, so CI runs in this order:\n" "$PUSH_DELAY"
+    printf "Pushing with %ss delays, so CI runs in this order:\\n" \
+           "$PUSH_DELAY"
     if [ "$MASTER_BRANCH" ]; then
-      printf "%s\n" "$MASTER_BRANCH"
+      printf "%s\\n" "$MASTER_BRANCH"
     fi
     if [ "$MAINT_BRANCHES" ]; then
-      printf "%s\n" "$MAINT_BRANCHES"
+      printf "%s\\n" "$MAINT_BRANCHES"
     fi
     if [ "$RELEASE_BRANCHES" ]; then
-      printf "%s\n" "$RELEASE_BRANCHES"
+      printf "%s\\n" "$RELEASE_BRANCHES"
     fi
   fi
   # shellcheck disable=SC2086
