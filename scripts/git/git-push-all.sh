@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-SCRIPT_NAME=`basename $0`
+SCRIPT_NAME=$(basename "$0")
 
 function usage()
 {
@@ -237,7 +237,7 @@ if [ "$PUSH_SAME" -eq 0 ] && [ "$TEST_BRANCH_PREFIX" ]; then
       fi
     done
     if [ "$SKIP_UPSTREAM" ]; then
-      printf "Skipping unchanged: %s remote: %s\n" \
+      printf "Skipping unchanged: %s remote: %s\\n" \
         "$b" "$SKIP_UPSTREAM"
     else
       if [ "$NEW_PUSH_BRANCHES" ]; then
@@ -261,18 +261,19 @@ if [ "$PUSH_DELAY" -le 0 ]; then
   $GIT_PUSH "$@" "$UPSTREAM_REMOTE" $PUSH_BRANCHES
 else
   # Push the branches in optimal CI order, with a delay between each push
-  PUSH_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\n" | sort -V)
-  MASTER_BRANCH=$(echo "$PUSH_BRANCHES" | tr " " "\n" | grep master)
+  PUSH_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | sort -V)
+  MASTER_BRANCH=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | grep master)
   if [ -z "$TEST_BRANCH_PREFIX" ]; then
-    MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\n" | grep maint)
-    RELEASE_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\n" | grep release | \
-      tr "\n" " ")
-    printf "Pushing with %ss delays, so CI runs in this order:\n%s\n%s\n%s\n" \
+    MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | grep maint)
+    RELEASE_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | grep release | \
+      tr "\\n" " ")
+    printf \
+      "Pushing with %ss delays, so CI runs in this order:\\n%s\\n%s\\n%s\\n" \
       "$PUSH_DELAY" "$MASTER_BRANCH" "$MAINT_BRANCHES" "$RELEASE_BRANCHES"
   else
     # Actually test branches based on maint branches
-    MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\n" | grep -v master)
-    printf "Pushing with %ss delays, so CI runs in this order:\n%s\n%s\n" \
+    MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | grep -v master)
+    printf "Pushing with %ss delays, so CI runs in this order:\\n%s\\n%s\\n" \
       "$PUSH_DELAY" "$MASTER_BRANCH" "$MAINT_BRANCHES"
     # No release branches
     RELEASE_BRANCHES=
