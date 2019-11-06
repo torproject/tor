@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-SCRIPT_NAME=`basename $0`
+SCRIPT_NAME=$(basename "$0")
 
 function usage()
 {
