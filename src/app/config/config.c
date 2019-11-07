@@ -1431,7 +1431,7 @@ options_act_once_on_startup(char **msg_out)
     return 0;
 
   const or_options_t *options = get_options();
-  int running_tor = options->command == CMD_RUN_TOR;
+  const bool running_tor = options->command == CMD_RUN_TOR;
 
   if (!running_tor)
     return 0;
@@ -1481,15 +1481,109 @@ options_act_once_on_startup(char **msg_out)
   return 0;
 }
 
+/**
+ * Change our user ID if we're configured to do so.
+ **/
+static int
+options_switch_id(char **msg_out)
+{
+  const or_options_t *options = get_options();
+
+  /* Setuid/setgid as appropriate */
+  if (options->User) {
+    tor_assert(have_low_ports != -1);
+    unsigned switch_id_flags = 0;
+    if (options->KeepBindCapabilities == 1) {
+      switch_id_flags |= SWITCH_ID_KEEP_BINDLOW;
+      switch_id_flags |= SWITCH_ID_WARN_IF_NO_CAPS;
+    }
+    if (options->KeepBindCapabilities == -1 && have_low_ports) {
+      switch_id_flags |= SWITCH_ID_KEEP_BINDLOW;
+    }
+    if (switch_id(options->User, switch_id_flags) != 0) {
+      /* No need to roll back, since you can't change the value. */
+      *msg_out = tor_strdup("Problem with User value. See logs for details.");
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Create our DataDirectory, CacheDirectory, and KeyDirectory, and
+ * set their permissions correctly.
+ */
+static int
+options_create_directories(char **msg_out)
+{
+  const or_options_t *options = get_options();
+  const bool running_tor = options->command == CMD_RUN_TOR;
+
+  /* Ensure data directory is private; create if possible. */
+  /* It's okay to do this in "options_act_reversible()" even though it isn't
+   * actually reversible, since you can't change the DataDirectory while
+   * Tor is running. */
+  if (check_and_create_data_directory(running_tor /* create */,
+                                      options->DataDirectory,
+                                      options->DataDirectoryGroupReadable,
+                                      options->User,
+                                      msg_out) < 0) {
+    return -1;
+  }
+  if (check_and_create_data_directory(running_tor /* create */,
+                                      options->KeyDirectory,
+                                      options->KeyDirectoryGroupReadable,
+                                      options->User,
+                                      msg_out) < 0) {
+    return -1;
+  }
+
+  /* We need to handle the group-readable flag for the cache directory
+   * specially, since the directory defaults to being the same as the
+   * DataDirectory. */
+  int cache_dir_group_readable;
+  if (options->CacheDirectoryGroupReadable != -1) {
+    /* If the user specified a value, use their setting */
+    cache_dir_group_readable = options->CacheDirectoryGroupReadable;
+  } else if (!strcmp(options->CacheDirectory, options->DataDirectory)) {
+    /* If the user left the value as "auto", and the cache is the same as the
+     * datadirectory, use the datadirectory setting.
+     */
+    cache_dir_group_readable = options->DataDirectoryGroupReadable;
+  } else {
+    /* Otherwise, "auto" means "not group readable". */
+    cache_dir_group_readable = 0;
+  }
+  if (check_and_create_data_directory(running_tor /* create */,
+                                      options->CacheDirectory,
+                                      cache_dir_group_readable,
+                                      options->User,
+                                      msg_out) < 0) {
+    return -1;
+  }
+
+  return 0;
+}
+
 /** Fetch the active option list, and take actions based on it. All of the
  * things we do should survive being done repeatedly.  If present,
  * <b>old_options</b> contains the previous value of the options.
+ *
+ * This function is only truly "reversible" _after_ the first time it
+ * is run.  The first time that it runs, it performs some irreversible
+ * tasks in the correct sequence between the reversible option changes.
+ *
+ * Option changes should only be marked as "reversible" if they cannot
+ * be validated before switching them, but they can be switched back if
+ * some other validateion fails.
  *
  * Return 0 if all goes well, return -1 if things went badly.
  */
 MOCK_IMPL(STATIC int,
 options_act_reversible,(const or_options_t *old_options, char **msg))
 {
+  const bool first_time = ! have_set_startup_options;
   smartlist_t *new_listeners = smartlist_new();
   or_options_t *options = get_options_mutable();
   int running_tor = options->command == CMD_RUN_TOR;
@@ -1561,66 +1655,14 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
   }
 #endif /* defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H) */
 
-  /* Setuid/setgid as appropriate */
-  if (options->User) {
-    tor_assert(have_low_ports != -1);
-    unsigned switch_id_flags = 0;
-    if (options->KeepBindCapabilities == 1) {
-      switch_id_flags |= SWITCH_ID_KEEP_BINDLOW;
-      switch_id_flags |= SWITCH_ID_WARN_IF_NO_CAPS;
-    }
-    if (options->KeepBindCapabilities == -1 && have_low_ports) {
-      switch_id_flags |= SWITCH_ID_KEEP_BINDLOW;
-    }
-    if (switch_id(options->User, switch_id_flags) != 0) {
-      /* No need to roll back, since you can't change the value. */
-      *msg = tor_strdup("Problem with User value. See logs for details.");
+  if (first_time) {
+    if (options_switch_id(msg) < 0)
       goto done;
-    }
+
+    if (options_create_directories(msg) < 0)
+      goto done;
   }
 
-  /* Ensure data directory is private; create if possible. */
-  /* It's okay to do this in "options_act_reversible()" even though it isn't
-   * actually reversible, since you can't change the DataDirectory while
-   * Tor is running. */
-  if (check_and_create_data_directory(running_tor /* create */,
-                                      options->DataDirectory,
-                                      options->DataDirectoryGroupReadable,
-                                      options->User,
-                                      msg) < 0) {
-    goto done;
-  }
-  if (check_and_create_data_directory(running_tor /* create */,
-                                      options->KeyDirectory,
-                                      options->KeyDirectoryGroupReadable,
-                                      options->User,
-                                      msg) < 0) {
-    goto done;
-  }
-
-  /* We need to handle the group-readable flag for the cache directory
-   * specially, since the directory defaults to being the same as the
-   * DataDirectory. */
-  int cache_dir_group_readable;
-  if (options->CacheDirectoryGroupReadable != -1) {
-    /* If the user specified a value, use their setting */
-    cache_dir_group_readable = options->CacheDirectoryGroupReadable;
-  } else if (!strcmp(options->CacheDirectory, options->DataDirectory)) {
-    /* If the user left the value as "auto", and the cache is the same as the
-     * datadirectory, use the datadirectory setting.
-     */
-    cache_dir_group_readable = options->DataDirectoryGroupReadable;
-  } else {
-    /* Otherwise, "auto" means "not group readable". */
-    cache_dir_group_readable = 0;
-  }
-  if (check_and_create_data_directory(running_tor /* create */,
-                                      options->CacheDirectory,
-                                      cache_dir_group_readable,
-                                      options->User,
-                                      msg) < 0) {
-    goto done;
-  }
 
   /* Bail out at this point if we're not going to be a client or server:
    * we don't run Tor itself. */
