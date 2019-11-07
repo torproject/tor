@@ -301,7 +301,7 @@ STATIC int open_and_add_file_log(const log_severity_list_t *severity,
                                  const char *fname,
                                  int truncate_log);
 STATIC int options_init_logs(const or_options_t *old_options,
-                             or_options_t *options, int validate_only);
+                             const or_options_t *options, int validate_only);
 
 #ifdef TOR_UNIT_TESTS
 int options_validate(const or_options_t *old_options,
