@@ -1,0 +1,4 @@
+  o Minor bugfixes (crash):
+    - When running Tor with an option like --verify-config or --dump-config
+      that does not start the event loop, avoid crashing if we try to exit
+      early because of an error. Fixes bug 32407; bugfix on 0.3.3.1-alpha.

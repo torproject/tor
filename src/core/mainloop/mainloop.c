@@ -769,6 +769,10 @@ tor_shutdown_event_loop_and_exit(int exitcode)
   main_loop_should_exit = 1;
   main_loop_exit_value = exitcode;
 
+  if (! tor_libevent_is_initialized()) {
+    return; /* No event loop to shut down. */
+  }
+
   /* Die with an assertion failure in ten seconds, if for some reason we don't
    * exit normally. */
   /* XXXX We should consider this code if it's never used. */
