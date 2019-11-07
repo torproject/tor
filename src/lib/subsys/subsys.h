@@ -14,6 +14,7 @@
 #include <stdbool.h>
 
 struct pubsub_connector_t;
+struct config_format_t;
 
 /**
  * A subsystem is a part of Tor that is initialized, shut down, configured,
@@ -88,6 +89,47 @@ typedef struct subsys_fns_t {
    **/
   void (*shutdown)(void);
 
+  /**
+   * A config_format_t describing all of the torrc fields owned by this
+   * subsystem.
+   **/
+  const struct config_format_t *options_format;
+
+  /**
+   * A config_format_t describing all of the DataDir/state fields owned by
+   * this subsystem.
+   **/
+  const struct config_format_t *state_format;
+
+  /**
+   * Receive an options object as defined by options_format. Return 0
+   * on success, -1 on failure.
+   *
+   * It is safe to store the pointer to the object until set_options()
+   * is called again. */
+  int (*set_options)(void *);
+
+  /* XXXX Add an implementation for options_act_reversible() later in this
+   * branch. */
+
+  /**
+   * Receive a state object as defined by state_format. Return 0 on success,
+   * -1 on failure.
+   *
+   * It is safe to store the pointer to the object; set_state() is only
+   * called on startup.
+   **/
+  int (*set_state)(void *);
+
+  /**
+   * Update any information that needs to be stored in the provided state
+   * object (as defined by state_format).  Return 0 on success, -1 on failure.
+   *
+   * The object provided here will be the same one as provided earlier to
+   * set_state().  This method is called when we are about to save the state
+   * to disk.
+   **/
+  int (*flush_state)(void *);
 } subsys_fns_t;
 
 /**

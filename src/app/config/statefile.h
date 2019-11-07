@@ -31,6 +31,8 @@ STATIC struct config_line_t *get_transport_in_state_by_name(
 STATIC void or_state_free_(or_state_t *state);
 #define or_state_free(st) FREE_AND_NULL(or_state_t, or_state_free_, (st))
 STATIC or_state_t *or_state_new(void);
+struct config_mgr_t;
+STATIC const struct config_mgr_t *get_state_mgr(void);
 #endif /* defined(STATEFILE_PRIVATE) */
 
 #endif /* !defined(TOR_STATEFILE_H) */

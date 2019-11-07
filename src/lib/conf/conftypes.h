@@ -335,8 +335,14 @@ typedef struct config_format_t {
   /** If present, extra denotes a LINELIST variable for unrecognized
    * lines.  Otherwise, unrecognized lines are an error. */
   const struct_member_t *extra;
-  /** The position of a config_suite_t pointer within the toplevel object,
-   * or -1 if there is no such pointer. */
+  /**
+   * If true, this format describes a top-level configuration, with
+   * a suite containing multiple sub-configuration objects.
+   */
+  bool has_config_suite;
+  /** The position of a config_suite_t pointer within the toplevel object.
+   * Ignored unless have_config_suite is true.
+   */
   ptrdiff_t config_suite_offset;
 } config_format_t;
 

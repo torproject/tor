@@ -275,8 +275,14 @@ log_engine(const char *fn, ENGINE *e)
 }
 #endif /* !defined(DISABLE_ENGINES) */
 
-/** Initialize engines for openssl (if enabled). */
-static void
+/** Initialize engines for openssl (if enabled).  Load all the built-in
+ * engines, along with the one called <b>accelName</b> (which may be NULL).
+ * If <b>accelName is prefixed with "!", then it is required: return -1
+ * if it can't be loaded.  Otherwise return 0.
+ *
+ * If <b>accelDir</b> is not NULL, it is the path from which the engine should
+ * be loaded. */
+static int
 crypto_openssl_init_engines(const char *accelName,
                             const char *accelDir)
 {
@@ -284,6 +290,12 @@ crypto_openssl_init_engines(const char *accelName,
   (void)accelName;
   (void)accelDir;
   log_warn(LD_CRYPTO, "No OpenSSL hardware acceleration support enabled.");
+  if (accelName && accelName[0] == '!') {
+    log_warn(LD_CRYPTO, "Unable to load required dynamic OpenSSL engine "
+             "\"%s\".", accelName+1);
+    return -1;
+  }
+  return 0;
 #else
   ENGINE *e = NULL;
 
@@ -292,6 +304,9 @@ crypto_openssl_init_engines(const char *accelName,
   ENGINE_register_all_complete();
 
   if (accelName) {
+    const bool required = accelName[0] == '!';
+    if (required)
+      ++accelName;
     if (accelDir) {
       log_info(LD_CRYPTO, "Trying to load dynamic OpenSSL engine \"%s\""
                " via path \"%s\".", accelName, accelDir);
@@ -302,8 +317,11 @@ crypto_openssl_init_engines(const char *accelName,
       e = ENGINE_by_id(accelName);
     }
     if (!e) {
-      log_warn(LD_CRYPTO, "Unable to load dynamic OpenSSL engine \"%s\".",
+      log_warn(LD_CRYPTO, "Unable to load %sdynamic OpenSSL engine \"%s\".",
+               required?"required ":"",
                accelName);
+      if (required)
+        return -1;
     } else {
       log_info(LD_CRYPTO, "Loaded dynamic OpenSSL engine \"%s\".",
                accelName);
@@ -340,6 +358,7 @@ crypto_openssl_init_engines(const char *accelName,
 #ifdef NID_aes_256_gcm
   log_engine("AES-256-GCM", ENGINE_get_cipher_engine(NID_aes_256_gcm));
 #endif
+  return 0;
 
 #endif /* defined(DISABLE_ENGINES) */
 }
@@ -350,7 +369,8 @@ crypto_openssl_late_init(int useAccel, const char *accelName,
                          const char *accelDir)
 {
   if (useAccel > 0) {
-    crypto_openssl_init_engines(accelName, accelDir);
+    if (crypto_openssl_init_engines(accelName, accelDir) < 0)
+      return -1;
   } else {
     log_info(LD_CRYPTO, "NOT using OpenSSL engine support.");
   }

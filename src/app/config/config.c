@@ -498,11 +498,8 @@ static const config_var_t option_vars_[] = {
 #endif /* defined(_WIN32) */
   OBSOLETE("Group"),
   V(GuardLifetime,               INTERVAL, "0 minutes"),
-  V_IMMUTABLE(HardwareAccel,     BOOL,     "0"),
   V(HeartbeatPeriod,             INTERVAL, "6 hours"),
   V(MainloopStats,               BOOL,     "0"),
-  V_IMMUTABLE(AccelName,         STRING,   NULL),
-  V_IMMUTABLE(AccelDir,          FILENAME, NULL),
   V(HashedControlPassword,       LINELIST, NULL),
   OBSOLETE("HidServDirectoryV2"),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
@@ -883,6 +880,7 @@ static const config_format_t options_format = {
   .legacy_validate_fn = options_validate_cb,
   .check_transition_fn = options_check_transition_cb,
   .clear_fn = options_clear_cb,
+  .has_config_suite = true,
   .config_suite_offset = offsetof(or_options_t, subconfigs_),
 };
 
@@ -918,6 +916,8 @@ get_options_mgr(void)
 {
   if (PREDICT_UNLIKELY(options_mgr == NULL)) {
     options_mgr = config_mgr_new(&options_format);
+    int rv = subsystems_register_options_formats(options_mgr);
+    tor_assert(rv == 0);
     config_mgr_freeze(options_mgr);
   }
   return options_mgr;
@@ -985,7 +985,8 @@ set_options(or_options_t *new_val, char **msg)
     global_options = old_options;
     return -1;
   }
-  if (options_act(old_options) < 0) { /* acting on the options failed. die. */
+  if (subsystems_set_options(get_options_mgr(), new_val) < 0 ||
+      options_act(old_options) < 0) { /* acting on the options failed. die. */
     if (! tor_event_loop_shutdown_is_pending()) {
       log_err(LD_BUG,
               "Acting on config options left us in a broken state. Dying.");
@@ -3934,11 +3935,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
                         "therefore only advised if you are building a "
                         "testing Tor network!");
   }
-
-  if (options->AccelName && !options->HardwareAccel)
-    options->HardwareAccel = 1;
-  if (options->AccelDir && !options->AccelName)
-    REJECT("Can't use hardware crypto accelerator dir without engine name.");
 
   if (options_validate_scheduler(options, msg) < 0) {
     return -1;

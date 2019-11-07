@@ -45,6 +45,7 @@
 #include "feature/relay/routermode.h"
 #include "lib/sandbox/sandbox.h"
 #include "app/config/statefile.h"
+#include "app/main/subsysmgr.h"
 #include "lib/encoding/confline.h"
 #include "lib/net/resolve.h"
 #include "lib/version/torversion.h"
@@ -131,9 +132,6 @@ static const config_var_t state_vars_[] = {
   VAR("CircuitBuildTimeBin",          LINELIST_S, BuildtimeHistogram, NULL),
   VAR("BuildtimeHistogram",           LINELIST_V, BuildtimeHistogram, NULL),
 
-  V(MinutesSinceUserActivity,         POSINT,     NULL),
-  V(Dormant,                          AUTOBOOL, "auto"),
-
   END_OF_CONFIG_VARS
 };
 
@@ -168,6 +166,7 @@ static const config_format_t state_format = {
   .vars = state_vars_,
   .legacy_validate_fn = or_state_validate_cb,
   .extra = &state_extra_var,
+  .has_config_suite = true,
   .config_suite_offset = offsetof(or_state_t, substates_),
 };
 
@@ -175,11 +174,13 @@ static const config_format_t state_format = {
 static config_mgr_t *state_mgr = NULL;
 
 /** Return the configuration manager for state-file objects. */
-static const config_mgr_t *
+STATIC const config_mgr_t *
 get_state_mgr(void)
 {
   if (PREDICT_UNLIKELY(state_mgr == NULL)) {
     state_mgr = config_mgr_new(&state_format);
+    int rv = subsystems_register_state_formats(state_mgr);
+    tor_assert(rv == 0);
     config_mgr_freeze(state_mgr);
   }
   return state_mgr;
@@ -313,6 +314,9 @@ or_state_set(or_state_t *new_state)
   tor_assert(new_state);
   config_free(get_state_mgr(), global_state);
   global_state = new_state;
+  if (subsystems_set_state(get_state_mgr(), global_state) < 0) {
+    ret = -1;
+  }
   if (entry_guards_parse_state(global_state, 1, &err)<0) {
     log_warn(LD_GENERAL,"%s",err);
     tor_free(err);
@@ -327,7 +331,6 @@ or_state_set(or_state_t *new_state)
       get_circuit_build_times_mutable(),global_state) < 0) {
     ret = -1;
   }
-  netstatus_load_from_state(global_state, time(NULL));
 
   return ret;
 }
@@ -516,10 +519,10 @@ or_state_save(time_t now)
 
   /* Call everything else that might dirty the state even more, in order
    * to avoid redundant writes. */
+  (void) subsystems_flush_state(get_state_mgr(), global_state);
   entry_guards_update_state(global_state);
   rep_hist_update_state(global_state);
   circuit_build_times_update_state(get_circuit_build_times(), global_state);
-  netstatus_flush_to_state(global_state, now);
 
   if (accounting_is_enabled(get_options()))
     accounting_run_housekeeping(now);

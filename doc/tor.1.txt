@@ -843,6 +843,9 @@ GENERAL OPTIONS
     engine of this name. This must be used for any dynamic hardware engine.
     Names can be verified with the openssl engine command. Can not be changed
     while tor is running.
+ +
+    If the engine name is prefixed with a "!", then Tor will exit if the
+    engine cannot be loaded.
 
 [[AccelDir]] **AccelDir** __DIR__::
     Specify this option if using dynamic hardware acceleration and the engine

@@ -193,6 +193,7 @@ static const config_format_t pasture_fmt = {
     offsetof(pasture_cfg_t, magic)
   },
   .vars = pasture_vars,
+  .has_config_suite = true,
   .config_suite_offset = offsetof(pasture_cfg_t, subobjs),
   .legacy_validate_fn = legacy_validate_pasture,
 };
@@ -205,7 +206,6 @@ static const config_format_t llama_fmt = {
     offsetof(llama_cfg_t, magic)
   },
   .vars = llama_vars,
-  .config_suite_offset = -1,
   .deprecations = llama_deprecations,
   .abbrevs = llama_abbrevs,
   .clear_fn = clear_llama_cfg,
@@ -221,7 +221,6 @@ static const config_format_t alpaca_fmt = {
     offsetof(alpaca_cfg_t, magic)
   },
   .vars = alpaca_vars,
-  .config_suite_offset = -1,
   .deprecations = alpaca_deprecations,
   .pre_normalize_fn = pre_normalize_alpaca,
   .check_transition_fn = check_transition_alpaca,
