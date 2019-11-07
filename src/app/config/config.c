@@ -904,8 +904,8 @@ static smartlist_t *configured_ports = NULL;
 /** True iff we're currently validating options, and any calls to
  * get_options() are likely to be bugs. */
 static int in_option_validation = 0;
-/* True iff we've initialized libevent */
-static int libevent_initialized = 0;
+/** True iff we have run options_act_once_on_startup() */
+static bool have_set_startup_options = false;
 
 /* A global configuration manager to handle all configuration objects. */
 static config_mgr_t *options_mgr = NULL;
@@ -1085,7 +1085,7 @@ config_free_all(void)
 
   cleanup_protocol_warning_severity_level();
 
-  libevent_initialized = 0;
+  have_set_startup_options = false;
 
   config_mgr_free(options_mgr);
 }
@@ -1422,6 +1422,65 @@ create_keys_directory(const or_options_t *options)
 /* Helps determine flags to pass to switch_id. */
 static int have_low_ports = -1;
 
+/** Take case of initial startup tasks that must occur before any of the
+ * transactional option-related changes are allowed. */
+static int
+options_act_once_on_startup(char **msg_out)
+{
+  if (have_set_startup_options)
+    return 0;
+
+  const or_options_t *options = get_options();
+  int running_tor = options->command == CMD_RUN_TOR;
+
+  if (!running_tor)
+    return 0;
+
+  /* Daemonize _first_, since we only want to open most of this stuff in
+   * the subprocess.  Libevent bases can't be reliably inherited across
+   * processes. */
+  if (options->RunAsDaemon) {
+    if (! start_daemon_has_been_called())
+      subsystems_prefork();
+    /* No need to roll back, since you can't change the value. */
+    if (start_daemon())
+      subsystems_postfork();
+  }
+
+#ifdef HAVE_SYSTEMD
+  /* Our PID may have changed, inform supervisor */
+  sd_notifyf(0, "MAINPID=%ld\n", (long int)getpid());
+#endif
+
+  /* Set up libevent.  (We need to do this before we can register the
+   * listeners as listeners.) */
+  init_libevent(options);
+
+  /* This has to come up after libevent is initialized. */
+  control_initialize_event_queue();
+
+  /*
+   * Initialize the scheduler - this has to come after
+   * options_init_from_torrc() sets up libevent - why yes, that seems
+   * completely sensible to hide the libevent setup in the option parsing
+   * code!  It also needs to happen before init_keys(), so it needs to
+   * happen here too.  How yucky. */
+  scheduler_init();
+
+  /* Attempt to lock all current and future memory with mlockall() only once.
+   * This must happen before setuid. */
+  if (options->DisableAllSwap) {
+    if (tor_mlockall() == -1) {
+      *msg_out = tor_strdup("DisableAllSwap failure. Do you have proper "
+                        "permissions?");
+      return -1;
+    }
+  }
+
+  have_set_startup_options = true;
+  return 0;
+}
+
 /** Fetch the active option list, and take actions based on it. All of the
  * things we do should survive being done repeatedly.  If present,
  * <b>old_options</b> contains the previous value of the options.
@@ -1439,21 +1498,8 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
   int logs_marked = 0, logs_initialized = 0;
   int old_min_log_level = get_min_log_level();
 
-  /* Daemonize _first_, since we only want to open most of this stuff in
-   * the subprocess.  Libevent bases can't be reliably inherited across
-   * processes. */
-  if (running_tor && options->RunAsDaemon) {
-    if (! start_daemon_has_been_called())
-      subsystems_prefork();
-    /* No need to roll back, since you can't change the value. */
-    if (start_daemon())
-      subsystems_postfork();
-  }
-
-#ifdef HAVE_SYSTEMD
-  /* Our PID may have changed, inform supervisor */
-  sd_notifyf(0, "MAINPID=%ld\n", (long int)getpid());
-#endif
+  if (options_act_once_on_startup(msg) < 0)
+    goto rollback;
 
   if (running_tor) {
     int n_ports=0;
@@ -1469,24 +1515,6 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
     } else {
       tor_assert(old_options);
       options->ConnLimit_ = old_options->ConnLimit_;
-    }
-
-    /* Set up libevent.  (We need to do this before we can register the
-     * listeners as listeners.) */
-    if (running_tor && !libevent_initialized) {
-      init_libevent(options);
-      libevent_initialized = 1;
-
-      /* This has to come up after libevent is initialized. */
-      control_initialize_event_queue();
-
-      /*
-       * Initialize the scheduler - this has to come after
-       * options_init_from_torrc() sets up libevent - why yes, that seems
-       * completely sensible to hide the libevent setup in the option parsing
-       * code!  It also needs to happen before init_keys(), so it needs to
-       * happen here too.  How yucky. */
-      scheduler_init();
     }
 
     /* Adjust the port configuration so we can launch listeners. */
@@ -1532,15 +1560,6 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
     }
   }
 #endif /* defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H) */
-
-  /* Attempt to lock all current and future memory with mlockall() only once */
-  if (options->DisableAllSwap) {
-    if (tor_mlockall() == -1) {
-      *msg = tor_strdup("DisableAllSwap failure. Do you have proper "
-                        "permissions?");
-      goto done;
-    }
-  }
 
   /* Setuid/setgid as appropriate */
   if (options->User) {
