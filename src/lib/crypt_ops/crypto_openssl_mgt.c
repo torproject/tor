@@ -290,6 +290,11 @@ crypto_openssl_init_engines(const char *accelName,
   (void)accelName;
   (void)accelDir;
   log_warn(LD_CRYPTO, "No OpenSSL hardware acceleration support enabled.");
+  if (accelName && accelName[0] == '!') {
+    log_warn(LD_CRYPTO, "Unable to load required dynamic OpenSSL engine "
+             "\"%s\".", accelName+1);
+    return -1;
+  }
   return 0;
 #else
   ENGINE *e = NULL;
@@ -312,7 +317,8 @@ crypto_openssl_init_engines(const char *accelName,
       e = ENGINE_by_id(accelName);
     }
     if (!e) {
-      log_warn(LD_CRYPTO, "Unable to load dynamic OpenSSL engine \"%s\".",
+      log_warn(LD_CRYPTO, "Unable to load %sdynamic OpenSSL engine \"%s\".",
+               required?"required ":"",
                accelName);
       if (required)
         return -1;
