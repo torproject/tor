@@ -183,12 +183,18 @@ typedef struct struct_magic_decl_t {
  * running.
  **/
 #define CFLG_IMMUTABLE (1u<<6)
+/**
+ * Flag to indicate that we should warn that an option or type is obsolete
+ * whenever the user tries to use it.
+ **/
+#define CFLG_WARN_OBSOLETE (1u<<7)
 
 /**
  * A group of flags that should be set on all obsolete options and types.
  **/
 #define CFLG_GROUP_OBSOLETE \
-  (CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP|CFLG_NOSET|CFLG_NOLIST)
+  (CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP|CFLG_NOSET|CFLG_NOLIST|\
+   CFLG_WARN_OBSOLETE)
 
 /** A variable allowed in the configuration file or on the command line. */
 typedef struct config_var_t {

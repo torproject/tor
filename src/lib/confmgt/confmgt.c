@@ -657,6 +657,11 @@ config_assign_value(const config_mgr_t *mgr, void *options,
   tor_assert(!strcmp(c->key, var->cvar->member.name));
   void *object = config_mgr_get_obj_mutable(mgr, options, var->object_idx);
 
+  if (config_var_has_flag(var->cvar, CFLG_WARN_OBSOLETE)) {
+    log_warn(LD_GENERAL, "Skipping obsolete configuration option \"%s\".",
+             var->cvar->member.name);
+  }
+
   return struct_var_kvassign(object, c, msg, &var->cvar->member);
 }
 
