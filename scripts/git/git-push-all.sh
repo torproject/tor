@@ -295,15 +295,10 @@ else
         || true # Skipped all maint branches
     RELEASE_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | grep release | \
       tr "\\n" " ") || true # Skipped all release branches
-    printf \
-      "Pushing with %ss delays, so CI runs in this order:\\n%s\\n%s\\n%s\\n" \
-      "$PUSH_DELAY" "$MASTER_BRANCH" "$MAINT_BRANCHES" "$RELEASE_BRANCHES"
   else
     # Actually test branches based on maint branches
     MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | grep -v master) \
         || true # Skipped all maint test branches
-    printf "Pushing with %ss delays, so CI runs in this order:\\n%s\\n%s\\n" \
-      "$PUSH_DELAY" "$MASTER_BRANCH" "$MAINT_BRANCHES"
     # No release branches
     RELEASE_BRANCHES=
   fi
