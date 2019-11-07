@@ -29,6 +29,7 @@
 /** As described in the specification, service publishes their next descriptor
  * at a random time between those two values (in seconds). */
 #define HS_SERVICE_NEXT_UPLOAD_TIME_MIN (60 * 60)
+/** Maximum interval for uploading next descriptor (in seconds). */
 #define HS_SERVICE_NEXT_UPLOAD_TIME_MAX (120 * 60)
 
 /** Service side introduction point. */
@@ -316,6 +317,11 @@ void hs_service_free_all(void);
 /* Service new/free functions. */
 hs_service_t *hs_service_new(const or_options_t *options);
 void hs_service_free_(hs_service_t *service);
+/**
+ * @copydoc hs_service_free_
+ *
+ * Additionally, set the pointer <b>s</b> to NULL.
+ **/
 #define hs_service_free(s) FREE_AND_NULL(hs_service_t, hs_service_free_, (s))
 
 MOCK_DECL(unsigned int, hs_service_get_num_services,(void));

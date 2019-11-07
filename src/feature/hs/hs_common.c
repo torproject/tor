@@ -305,9 +305,9 @@ hs_get_next_time_period_num(time_t now)
   return hs_get_time_period_num(now) + 1;
 }
 
-/* Get the number of the _previous_ HS time period, given that the current time
- * is <b>now</b>. If <b>now</b> is not set, we try to get the time from a live
- * consensus. */
+/** Get the number of the _previous_ HS time period, given that the current
+ * time is <b>now</b>. If <b>now</b> is not set, we try to get the time from a
+ * live consensus. */
 uint64_t
 hs_get_previous_time_period_num(time_t now)
 {
@@ -725,7 +725,7 @@ build_blinded_key_param(const ed25519_public_key_t *pubkey,
   memwipe(nonce, 0, sizeof(nonce));
 }
 
-/* Using an ed25519 public key and version to build the checksum of an
+/** Using an ed25519 public key and version to build the checksum of an
  * address. Put in checksum_out. Format is:
  *    SHA3-256(".onion checksum" || PUBKEY || VERSION)
  *

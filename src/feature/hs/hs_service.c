@@ -509,7 +509,7 @@ service_intro_point_new(const node_t *node)
   return NULL;
 }
 
-/* Add the given intro point object to the given intro point map. The intro
+/** Add the given intro point object to the given intro point map. The intro
  * point MUST have its RSA encryption key set if this is a legacy type or the
  * authentication key set otherwise. */
 STATIC void
@@ -1076,7 +1076,7 @@ load_service_keys(hs_service_t *service)
   return ret;
 }
 
-/* Check if the client file name is valid or not. Return 1 if valid,
+/** Check if the client file name is valid or not. Return 1 if valid,
  * otherwise return 0. */
 STATIC int
 client_filename_is_valid(const char *filename)
@@ -1737,7 +1737,7 @@ build_service_desc_encrypted(const hs_service_t *service,
   return 0;
 }
 
-/* Populate the descriptor superencrypted section from the given service
+/** Populate the descriptor superencrypted section from the given service
  * object. This will generate a valid list of hs_desc_authorized_client_t
  * of clients that are authorized to use the service. Return 0 on success
  * else -1 on error. */
@@ -2637,7 +2637,7 @@ run_build_descriptor_event(time_t now)
   update_all_descriptors_intro_points(now);
 }
 
-/* For the given service, launch any intro point circuits that could be
+/** For the given service, launch any intro point circuits that could be
  * needed. This considers every descriptor of the service. */
 static void
 launch_intro_point_circuits(hs_service_t *service)

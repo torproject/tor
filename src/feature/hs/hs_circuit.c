@@ -40,7 +40,7 @@
 #include "feature/nodelist/node_st.h"
 #include "core/or/origin_circuit_st.h"
 
-/* A circuit is about to become an e2e rendezvous circuit. Check
+/** A circuit is about to become an e2e rendezvous circuit. Check
  * <b>circ_purpose</b> and ensure that it's properly set. Return true iff
  * circuit purpose is properly set, otherwise return false. */
 static int
@@ -67,7 +67,7 @@ circuit_purpose_is_correct_for_rend(unsigned int circ_purpose,
   return 1;
 }
 
-/* Create and return a crypt path for the final hop of a v3 prop224 rendezvous
+/** Create and return a crypt path for the final hop of a v3 prop224 rendezvous
  * circuit. Initialize the crypt path crypto using the output material from the
  * ntor key exchange at <b>ntor_key_seed</b>.
  *
@@ -101,7 +101,7 @@ create_rend_cpath(const uint8_t *ntor_key_seed, size_t seed_len,
   return cpath;
 }
 
-/* We are a v2 legacy HS client: Create and return a crypt path for the hidden
+/** We are a v2 legacy HS client: Create and return a crypt path for the hidden
  * service on the other side of the rendezvous circuit <b>circ</b>. Initialize
  * the crypt path crypto using the body of the RENDEZVOUS1 cell at
  * <b>rend_cell_body</b> (which must be at least DH1024_KEY_LEN+DIGEST_LEN
@@ -152,7 +152,7 @@ create_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
   return hop;
 }
 
-/* Append the final <b>hop</b> to the cpath of the rend <b>circ</b>, and mark
+/** Append the final <b>hop</b> to the cpath of the rend <b>circ</b>, and mark
  * <b>circ</b> ready for use to transfer HS relay cells. */
 static void
 finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
@@ -193,7 +193,7 @@ finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
   }
 }
 
-/* For a given circuit and a service introduction point object, register the
+/** For a given circuit and a service introduction point object, register the
  * intro circuit to the circuitmap. This supports legacy intro point. */
 static void
 register_intro_circ(const hs_service_intro_point_t *ip,
@@ -211,7 +211,7 @@ register_intro_circ(const hs_service_intro_point_t *ip,
   }
 }
 
-/* Return the number of opened introduction circuit for the given circuit that
+/** Return the number of opened introduction circuit for the given circuit that
  * is matching its identity key. */
 static unsigned int
 count_opened_desc_intro_point_circuits(const hs_service_t *service,
@@ -243,7 +243,7 @@ count_opened_desc_intro_point_circuits(const hs_service_t *service,
   return count;
 }
 
-/* From a given service, rendezvous cookie and handshake info, create a
+/** From a given service, rendezvous cookie and handshake info, create a
  * rendezvous point circuit identifier. This can't fail. */
 STATIC hs_ident_circuit_t *
 create_rp_circuit_identifier(const hs_service_t *service,
@@ -282,7 +282,7 @@ create_rp_circuit_identifier(const hs_service_t *service,
   return ident;
 }
 
-/* From a given service and service intro point, create an introduction point
+/** From a given service and service intro point, create an introduction point
  * circuit identifier. This can't fail. */
 static hs_ident_circuit_t *
 create_intro_circuit_identifier(const hs_service_t *service,
@@ -299,7 +299,7 @@ create_intro_circuit_identifier(const hs_service_t *service,
   return ident;
 }
 
-/* For a given introduction point and an introduction circuit, send the
+/** For a given introduction point and an introduction circuit, send the
  * ESTABLISH_INTRO cell. The service object is used for logging. This can fail
  * and if so, the circuit is closed and the intro point object is flagged
  * that the circuit is not established anymore which is important for the
@@ -349,7 +349,7 @@ send_establish_intro(const hs_service_t *service,
   memwipe(payload, 0, sizeof(payload));
 }
 
-/* Return a string constant describing the anonymity of service. */
+/** Return a string constant describing the anonymity of service. */
 static const char *
 get_service_anonymity_string(const hs_service_t *service)
 {
@@ -360,7 +360,7 @@ get_service_anonymity_string(const hs_service_t *service)
   }
 }
 
-/* For a given service, the ntor onion key and a rendezvous cookie, launch a
+/** For a given service, the ntor onion key and a rendezvous cookie, launch a
  * circuit to the rendezvous point specified by the link specifiers. On
  * success, a circuit identifier is attached to the circuit with the needed
  * data. This function will try to open a circuit for a maximum value of
@@ -469,7 +469,7 @@ launch_rendezvous_point_circuit(const hs_service_t *service,
   extend_info_free(info);
 }
 
-/* Return true iff the given service rendezvous circuit circ is allowed for a
+/** Return true iff the given service rendezvous circuit circ is allowed for a
  * relaunch to the rendezvous point. */
 static int
 can_relaunch_service_rendezvous_point(const origin_circuit_t *circ)
@@ -516,7 +516,7 @@ can_relaunch_service_rendezvous_point(const origin_circuit_t *circ)
   return 0;
 }
 
-/* Retry the rendezvous point of circ by launching a new circuit to it. */
+/** Retry the rendezvous point of circ by launching a new circuit to it. */
 static void
 retry_service_rendezvous_point(const origin_circuit_t *circ)
 {
@@ -565,7 +565,7 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
   return;
 }
 
-/* Using the given descriptor intro point ip, the node of the
+/** Using the given descriptor intro point ip, the node of the
  * rendezvous point rp_node and the service's subcredential, populate the
  * already allocated intro1_data object with the needed key material and link
  * specifiers.
@@ -622,7 +622,7 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
 /* Public API */
 /* ========== */
 
-/* Return an introduction point circuit matching the given intro point object.
+/** Return an introduction point circuit matching the given intro point object.
  * NULL is returned is no such circuit can be found. */
 origin_circuit_t *
 hs_circ_service_get_intro_circ(const hs_service_intro_point_t *ip)
@@ -637,7 +637,7 @@ hs_circ_service_get_intro_circ(const hs_service_intro_point_t *ip)
   }
 }
 
-/* Return an introduction point established circuit matching the given intro
+/** Return an introduction point established circuit matching the given intro
  * point object. The circuit purpose has to be CIRCUIT_PURPOSE_S_INTRO. NULL
  * is returned is no such circuit can be found. */
 origin_circuit_t *
@@ -658,7 +658,7 @@ hs_circ_service_get_established_intro_circ(const hs_service_intro_point_t *ip)
   return (TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO) ? circ : NULL;
 }
 
-/* Called when we fail building a rendezvous circuit at some point other than
+/** Called when we fail building a rendezvous circuit at some point other than
  * the last hop: launches a new circuit to the same rendezvous point. This
  * supports legacy service.
  *
@@ -698,7 +698,7 @@ hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ)
   return;
 }
 
-/* For a given service and a service intro point, launch a circuit to the
+/** For a given service and a service intro point, launch a circuit to the
  * extend info ei. If the service is a single onion, and direct_conn is true,
  * a one-hop circuit will be requested.
  *
@@ -759,7 +759,7 @@ hs_circ_launch_intro_point(hs_service_t *service,
   return ret;
 }
 
-/* Called when a service introduction point circuit is done building. Given
+/** Called when a service introduction point circuit is done building. Given
  * the service and intro point object, this function will send the
  * ESTABLISH_INTRO cell on the circuit. Return 0 on success. Return 1 if the
  * circuit has been repurposed to General because we already have too many
@@ -828,7 +828,7 @@ hs_circ_service_intro_has_opened(hs_service_t *service,
   return ret;
 }
 
-/* Called when a service rendezvous point circuit is done building. Given the
+/** Called when a service rendezvous point circuit is done building. Given the
  * service and the circuit, this function will send a RENDEZVOUS1 cell on the
  * circuit using the information in the circuit identifier. If the cell can't
  * be sent, the circuit is closed. */
@@ -894,7 +894,7 @@ hs_circ_service_rp_has_opened(const hs_service_t *service,
   memwipe(payload, 0, sizeof(payload));
 }
 
-/* Circ has been expecting an INTRO_ESTABLISHED cell that just arrived. Handle
+/** Circ has been expecting an INTRO_ESTABLISHED cell that just arrived. Handle
  * the INTRO_ESTABLISHED cell payload of length payload_len arriving on the
  * given introduction circuit circ. The service is only used for logging
  * purposes. Return 0 on success else a negative value. */
@@ -939,7 +939,7 @@ hs_circ_handle_intro_established(const hs_service_t *service,
   return ret;
 }
 
-/* We just received an INTRODUCE2 cell on the established introduction circuit
+/** We just received an INTRODUCE2 cell on the established introduction circuit
  * circ.  Handle the INTRODUCE2 payload of size payload_len for the given
  * circuit and service. This cell is associated with the intro point object ip
  * and the subcredential. Return 0 on success else a negative value. */
@@ -1006,7 +1006,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   return ret;
 }
 
-/* Circuit <b>circ</b> just finished the rend ntor key exchange. Use the key
+/** Circuit <b>circ</b> just finished the rend ntor key exchange. Use the key
  * exchange output material at <b>ntor_key_seed</b> and setup <b>circ</b> to
  * serve as a rendezvous end-to-end circuit between the client and the
  * service. If <b>is_service_side</b> is set, then we are the hidden service
@@ -1036,7 +1036,7 @@ hs_circuit_setup_e2e_rend_circ(origin_circuit_t *circ,
   return 0;
 }
 
-/* We are a v2 legacy HS client and we just received a RENDEZVOUS1 cell
+/** We are a v2 legacy HS client and we just received a RENDEZVOUS1 cell
  * <b>rend_cell_body</b> on <b>circ</b>. Finish up the DH key exchange and then
  * extend the crypt path of <b>circ</b> so that the hidden service is on the
  * other side. */
@@ -1061,7 +1061,7 @@ hs_circuit_setup_e2e_rend_circ_legacy_client(origin_circuit_t *circ,
   return 0;
 }
 
-/* Given the introduction circuit intro_circ, the rendezvous circuit
+/** Given the introduction circuit intro_circ, the rendezvous circuit
  * rend_circ, a descriptor intro point object ip and the service's
  * subcredential, send an INTRODUCE1 cell on intro_circ.
  *
@@ -1146,7 +1146,7 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
   return ret;
 }
 
-/* Send an ESTABLISH_RENDEZVOUS cell along the rendezvous circuit circ. On
+/** Send an ESTABLISH_RENDEZVOUS cell along the rendezvous circuit circ. On
  * success, 0 is returned else -1 and the circuit is marked for close. */
 int
 hs_circ_send_establish_rendezvous(origin_circuit_t *circ)
@@ -1197,7 +1197,7 @@ hs_circ_send_establish_rendezvous(origin_circuit_t *circ)
   return -1;
 }
 
-/* We are about to close or free this <b>circ</b>. Clean it up from any
+/** We are about to close or free this <b>circ</b>. Clean it up from any
  * related HS data structures. This function can be called multiple times
  * safely for the same circuit. */
 void

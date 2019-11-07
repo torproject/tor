@@ -34,7 +34,7 @@
 #include "lib/encoding/confline.h"
 #include "app/config/or_options_st.h"
 
-/* Using the given list of services, stage them into our global state. Every
+/** Using the given list of services, stage them into our global state. Every
  * service version are handled. This function can remove entries in the given
  * service_list.
  *
@@ -70,7 +70,7 @@ stage_services(smartlist_t *service_list)
   hs_service_stage_services(service_list);
 }
 
-/* Validate the given service against all service in the given list. If the
+/** Validate the given service against all service in the given list. If the
  * service is ephemeral, this function ignores it. Services with the same
  * directory path aren't allowed and will return an error. If a duplicate is
  * found, 1 is returned else 0 if none found. */
@@ -118,7 +118,7 @@ service_is_duplicate_in_list(const smartlist_t *service_list,
   return ret;
 }
 
-/* Helper function: Given an configuration option name, its value, a minimum
+/** Helper function: Given an configuration option name, its value, a minimum
  * min and a maxium max, parse the value as a uint64_t. On success, ok is set
  * to 1 and ret is the parsed value. On error, ok is set to 0 and ret must be
  * ignored. This function logs both on error and success. */
@@ -173,7 +173,7 @@ helper_parse_circuit_id_protocol(const char *key, const char *value, int *ok)
   return ret;
 }
 
-/* Return the service version by trying to learn it from the key on disk if
+/** Return the service version by trying to learn it from the key on disk if
  * any. If nothing is found, the current service configured version is
  * returned. */
 static int
@@ -191,7 +191,7 @@ config_learn_service_version(hs_service_t *service)
   return version;
 }
 
-/* Return true iff the given options starting at line_ for a hidden service
+/** Return true iff the given options starting at line_ for a hidden service
  * contains at least one invalid option. Each hidden service option don't
  * apply to all versions so this function can find out. The line_ MUST start
  * right after the HiddenServiceDir line of this service.
@@ -273,7 +273,7 @@ config_has_invalid_options(const config_line_t *line_,
   return ret;
 }
 
-/* Validate service configuration. This is used when loading the configuration
+/** Validate service configuration. This is used when loading the configuration
  * and once we've setup a service object, it's config object is passed to this
  * function for further validation. This does not validate service key
  * material. Return 0 if valid else -1 if invalid. */
@@ -304,7 +304,7 @@ config_validate_service(const hs_service_config_t *config)
   return -1;
 }
 
-/* Configuration funcion for a version 3 service. The line_ must be pointing
+/** Configuration funcion for a version 3 service. The line_ must be pointing
  * to the directive directly after a HiddenServiceDir. That way, when hitting
  * the next HiddenServiceDir line or reaching the end of the list of lines, we
  * know that we have to stop looking for more options. The given service
@@ -423,7 +423,7 @@ config_service_v3(const config_line_t *line_,
   return -1;
 }
 
-/* Configure a service using the given options in line_ and options. This is
+/** Configure a service using the given options in line_ and options. This is
  * called for any service regardless of its version which means that all
  * directives in this function are generic to any service version. This
  * function will also check the validity of the service directory path.
@@ -577,7 +577,7 @@ config_generic_service(const config_line_t *line_,
   return -1;
 }
 
-/* Configure a service using the given line and options. This function will
+/** Configure a service using the given line and options. This function will
  * call the corresponding configuration function for a specific service
  * version and validate the service against the other ones. On success, add
  * the service to the given list and return 0. On error, nothing is added to
@@ -663,7 +663,7 @@ config_service(const config_line_t *line, const or_options_t *options,
   return -1;
 }
 
-/* From a set of <b>options</b>, setup every hidden service found. Return 0 on
+/** From a set of <b>options</b>, setup every hidden service found. Return 0 on
  * success or -1 on failure. If <b>validate_only</b> is set, parse, warn and
  * return as normal, but don't actually change the configured services. */
 int
@@ -731,7 +731,7 @@ hs_config_service_all(const or_options_t *options, int validate_only)
   return ret;
 }
 
-/* From a set of <b>options</b>, setup every client authorization found.
+/** From a set of <b>options</b>, setup every client authorization found.
  * Return 0 on success or -1 on failure. If <b>validate_only</b> is set,
  * parse, warn and return as normal, but don't actually change the
  * configured state. */
