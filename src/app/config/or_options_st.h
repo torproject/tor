@@ -573,7 +573,9 @@ struct or_options_t {
 
   int DirCache; /**< Cache all directory documents and accept requests via
                  * tunnelled dir conns from clients. If 1, enabled (default);
-                 * If 0, disabled. */
+                 * If 0, disabled. Use dir_server_mode() rather than
+                 * referencing this option directly. (Except for routermode
+                 * and relay_config, which do direct checks.) */
 
   char *VirtualAddrNetworkIPv4; /**< Address and mask to hand out for virtual
                                  * MAPADDRESS requests for IPv4 addresses */
