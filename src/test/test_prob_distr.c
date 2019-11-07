@@ -946,7 +946,7 @@ psi_test(const size_t C[PSI_DF], const double logP[PSI_DF], size_t N)
 static bool
 test_stochastic_geometric_impl(double p)
 {
-  const struct geometric geometric = {
+  const struct geometric_t geometric = {
     .base = GEOMETRIC(geometric),
     .p = p,
   };
@@ -1012,7 +1012,8 @@ test_stochastic_geometric_impl(double p)
  * +inf, and x_i = i*(hi - lo)/(n - 2).
  */
 static void
-bin_cdfs(const struct dist *dist, double lo, double hi, double *logP, size_t n)
+bin_cdfs(const struct dist_t *dist, double lo, double hi, double *logP,
+         size_t n)
 {
 #define CDF(x)  dist_cdf(dist, x)
 #define SF(x)   dist_sf(dist, x)
@@ -1059,7 +1060,8 @@ bin_cdfs(const struct dist *dist, double lo, double hi, double *logP, size_t n)
  * +inf, and x_i = i*(hi - lo)/(n - 2).
  */
 static void
-bin_samples(const struct dist *dist, double lo, double hi, size_t *C, size_t n)
+bin_samples(const struct dist_t *dist, double lo, double hi, size_t *C,
+            size_t n)
 {
   const double w = (hi - lo)/(n - 2);
   size_t i;
@@ -1088,7 +1090,7 @@ bin_samples(const struct dist *dist, double lo, double hi, size_t *C, size_t n)
  * 0.01^2 = 0.0001.
  */
 static bool
-test_psi_dist_sample(const struct dist *dist)
+test_psi_dist_sample(const struct dist_t *dist)
 {
   double logP[PSI_DF] = {0};
   unsigned ntry = NTRIALS, npass = 0;
@@ -1134,32 +1136,32 @@ test_stochastic_uniform(void *arg)
 {
   (void) arg;
 
-  const struct uniform uniform01 = {
+  const struct uniform_t uniform01 = {
     .base = UNIFORM(uniform01),
     .a = 0,
     .b = 1,
   };
-  const struct uniform uniform_pos = {
+  const struct uniform_t uniform_pos = {
     .base = UNIFORM(uniform_pos),
     .a = 1.23,
     .b = 4.56,
   };
-  const struct uniform uniform_neg = {
+  const struct uniform_t uniform_neg = {
     .base = UNIFORM(uniform_neg),
     .a = -10,
     .b = -1,
   };
-  const struct uniform uniform_cross = {
+  const struct uniform_t uniform_cross = {
     .base = UNIFORM(uniform_cross),
     .a = -1.23,
     .b = 4.56,
   };
-  const struct uniform uniform_subnormal = {
+  const struct uniform_t uniform_subnormal = {
     .base = UNIFORM(uniform_subnormal),
     .a = 4e-324,
     .b = 4e-310,
   };
-  const struct uniform uniform_subnormal_cross = {
+  const struct uniform_t uniform_subnormal_cross = {
     .base = UNIFORM(uniform_subnormal_cross),
     .a = -4e-324,
     .b = 4e-310,
@@ -1189,7 +1191,7 @@ test_stochastic_uniform(void *arg)
 static bool
 test_stochastic_logistic_impl(double mu, double sigma)
 {
-  const struct logistic dist = {
+  const struct logistic_t dist = {
     .base = LOGISTIC(dist),
     .mu = mu,
     .sigma = sigma,
@@ -1202,7 +1204,7 @@ test_stochastic_logistic_impl(double mu, double sigma)
 static bool
 test_stochastic_log_logistic_impl(double alpha, double beta)
 {
-  const struct log_logistic dist = {
+  const struct log_logistic_t dist = {
     .base = LOG_LOGISTIC(dist),
     .alpha = alpha,
     .beta = beta,
@@ -1215,7 +1217,7 @@ test_stochastic_log_logistic_impl(double alpha, double beta)
 static bool
 test_stochastic_weibull_impl(double lambda, double k)
 {
-  const struct weibull dist = {
+  const struct weibull_t dist = {
     .base = WEIBULL(dist),
     .lambda = lambda,
     .k = k,
@@ -1235,7 +1237,7 @@ test_stochastic_weibull_impl(double lambda, double k)
 static bool
 test_stochastic_genpareto_impl(double mu, double sigma, double xi)
 {
-  const struct genpareto dist = {
+  const struct genpareto_t dist = {
     .base = GENPARETO(dist),
     .mu = mu,
     .sigma = sigma,

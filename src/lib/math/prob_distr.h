@@ -15,12 +15,12 @@
 /**
  * Container for distribution parameters for sampling, CDF, &c.
  */
-struct dist {
+struct dist_t {
   const struct dist_ops_t *ops;
 };
 
 /**
- * Untyped initializer element for struct dist using the specified
+ * Untyped initializer element for struct dist_t using the specified
  * struct dist_ops_t pointer.  Don't actually use this directly -- use
  * the type-specific macro built out of DIST_BASE_TYPED below -- but if
  * you did use this directly, it would be something like:
@@ -61,13 +61,13 @@ struct dist {
 #endif /* defined(__COVERITY__) */
 
 /**
-* Typed initializer element for struct dist using the specified struct
+* Typed initializer element for struct dist_t using the specified struct
 * dist_ops_t pointer.  Don't actually use this directly -- use a
 * type-specific macro built out of it -- but if you did use this
 * directly, it would be something like:
 *
 *     struct weibull mydist = {
-*       DIST_BASE_TYPED(&weibull_ops, mydist, struct weibull),
+*       DIST_BASE_TYPED(&weibull_ops, mydist, struct weibull_t),
 *       .lambda = ...,
 *       .k = ...,
 *     };
@@ -76,7 +76,7 @@ struct dist {
 * operations and define a type-specific initializer element like so:
 *
 *     struct foo {
-*       struct dist base;
+*       struct dist_t base;
 *       int omega;
 *       double tau;
 *       double phi;
@@ -113,12 +113,12 @@ struct dist {
  * corresponding dist_ops_t function.  In the parlance of C++, these call
  * virtual member functions.
  */
-const char *dist_name(const struct dist *);
-double dist_sample(const struct dist *);
-double dist_cdf(const struct dist *, double x);
-double dist_sf(const struct dist *, double x);
-double dist_icdf(const struct dist *, double p);
-double dist_isf(const struct dist *, double p);
+const char *dist_name(const struct dist_t *);
+double dist_sample(const struct dist_t *);
+double dist_cdf(const struct dist_t *, double x);
+double dist_sf(const struct dist_t *, double x);
+double dist_icdf(const struct dist_t *, double p);
+double dist_isf(const struct dist_t *, double p);
 
 /**
  * Set of operations on a potentially parametric family of
@@ -127,29 +127,29 @@ double dist_isf(const struct dist *, double p);
  */
 struct dist_ops_t {
   const char *name;
-  double (*sample)(const struct dist *);
-  double (*cdf)(const struct dist *, double x);
-  double (*sf)(const struct dist *, double x);
-  double (*icdf)(const struct dist *, double p);
-  double (*isf)(const struct dist *, double p);
+  double (*sample)(const struct dist_t *);
+  double (*cdf)(const struct dist_t *, double x);
+  double (*sf)(const struct dist_t *, double x);
+  double (*icdf)(const struct dist_t *, double p);
+  double (*isf)(const struct dist_t *, double p);
 };
 
 /* Geometric distribution on positive number of trials before first success */
 
-struct geometric {
-  struct dist base;
+struct geometric_t {
+  struct dist_t base;
   double p; /* success probability */
 };
 
 extern const struct dist_ops_t geometric_ops;
 
 #define GEOMETRIC(OBJ)                                      \
-  DIST_BASE_TYPED(&geometric_ops, OBJ, struct geometric)
+  DIST_BASE_TYPED(&geometric_ops, OBJ, struct geometric_t)
 
 /* Pareto distribution */
 
-struct genpareto {
-  struct dist base;
+struct genpareto_t {
+  struct dist_t base;
   double mu;
   double sigma;
   double xi;
@@ -158,12 +158,12 @@ struct genpareto {
 extern const struct dist_ops_t genpareto_ops;
 
 #define GENPARETO(OBJ)                                      \
-  DIST_BASE_TYPED(&genpareto_ops, OBJ, struct genpareto)
+  DIST_BASE_TYPED(&genpareto_ops, OBJ, struct genpareto_t)
 
 /* Weibull distribution */
 
-struct weibull {
-  struct dist base;
+struct weibull_t {
+  struct dist_t base;
   double lambda;
   double k;
 };
@@ -171,12 +171,12 @@ struct weibull {
 extern const struct dist_ops_t weibull_ops;
 
 #define WEIBULL(OBJ)                                    \
-  DIST_BASE_TYPED(&weibull_ops, OBJ, struct weibull)
+  DIST_BASE_TYPED(&weibull_ops, OBJ, struct weibull_t)
 
 /* Log-logistic distribution */
 
-struct log_logistic {
-  struct dist base;
+struct log_logistic_t {
+  struct dist_t base;
   double alpha;
   double beta;
 };
@@ -184,12 +184,12 @@ struct log_logistic {
 extern const struct dist_ops_t log_logistic_ops;
 
 #define LOG_LOGISTIC(OBJ)                                       \
-  DIST_BASE_TYPED(&log_logistic_ops, OBJ, struct log_logistic)
+  DIST_BASE_TYPED(&log_logistic_ops, OBJ, struct log_logistic_t)
 
 /* Logistic distribution */
 
-struct logistic {
-  struct dist base;
+struct logistic_t {
+  struct dist_t base;
   double mu;
   double sigma;
 };
@@ -197,12 +197,12 @@ struct logistic {
 extern const struct dist_ops_t logistic_ops;
 
 #define LOGISTIC(OBJ)                                   \
-  DIST_BASE_TYPED(&logistic_ops, OBJ, struct logistic)
+  DIST_BASE_TYPED(&logistic_ops, OBJ, struct logistic_t)
 
 /* Uniform distribution */
 
-struct uniform {
-  struct dist base;
+struct uniform_t {
+  struct dist_t base;
   double a;
   double b;
 };
@@ -210,7 +210,7 @@ struct uniform {
 extern const struct dist_ops_t uniform_ops;
 
 #define UNIFORM(OBJ)                                    \
-  DIST_BASE_TYPED(&uniform_ops, OBJ, struct uniform)
+  DIST_BASE_TYPED(&uniform_ops, OBJ, struct uniform_t)
 
 /** Only by unittests */
 
