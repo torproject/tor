@@ -12,11 +12,11 @@
 #include "core/or/or.h"
 #include "lib/testsupport/testsupport.h"
 
-typedef struct circuitmux_policy_s circuitmux_policy_t;
-typedef struct circuitmux_policy_data_s circuitmux_policy_data_t;
-typedef struct circuitmux_policy_circ_data_s circuitmux_policy_circ_data_t;
+typedef struct circuitmux_policy_t circuitmux_policy_t;
+typedef struct circuitmux_policy_data_t circuitmux_policy_data_t;
+typedef struct circuitmux_policy_circ_data_t circuitmux_policy_circ_data_t;
 
-struct circuitmux_policy_s {
+struct circuitmux_policy_t {
   /* Allocate cmux-wide policy-specific data */
   circuitmux_policy_data_t * (*alloc_cmux_data)(circuitmux_t *cmux);
   /* Free cmux-wide policy-specific data */
@@ -67,7 +67,7 @@ struct circuitmux_policy_s {
  * wide data; it just has the magic number in the base struct.
  */
 
-struct circuitmux_policy_data_s {
+struct circuitmux_policy_data_t {
   uint32_t magic;
 };
 
@@ -76,7 +76,7 @@ struct circuitmux_policy_data_s {
  * specific data; it just has the magic number in the base struct.
  */
 
-struct circuitmux_policy_circ_data_s {
+struct circuitmux_policy_circ_data_t {
   uint32_t magic;
 };
 
@@ -173,7 +173,7 @@ typedef HT_HEAD(chanid_circid_muxinfo_map, chanid_circid_muxinfo_t)
  * Structures for circuitmux.c
  */
 
-struct circuitmux_s {
+struct circuitmux_t {
   /* Keep count of attached, active circuits */
   unsigned int n_circuits, n_active_circuits;
 

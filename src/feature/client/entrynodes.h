@@ -15,7 +15,7 @@
 #include "lib/container/handles.h"
 
 /* Forward declare for guard_selection_t; entrynodes.c has the real struct */
-typedef struct guard_selection_s guard_selection_t;
+typedef struct guard_selection_t guard_selection_t;
 
 /* Forward declare for entry_guard_t; the real declaration is private. */
 typedef struct entry_guard_t entry_guard_t;
@@ -210,7 +210,7 @@ typedef enum guard_selection_type_t {
  * See the module documentation for entrynodes.c for more information
  * about guard selection algorithms.
  */
-struct guard_selection_s {
+struct guard_selection_t {
   /**
    * The name for this guard-selection object. (Must not contain spaces).
    */

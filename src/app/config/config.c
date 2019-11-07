@@ -6770,7 +6770,7 @@ get_num_cpus(const or_options_t *options)
 static void
 init_libevent(const or_options_t *options)
 {
-  tor_libevent_cfg cfg;
+  tor_libevent_cfg_t cfg;
 
   tor_assert(options);
 

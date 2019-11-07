@@ -24,7 +24,7 @@ struct curve25519_public_key_t;
 
 #ifdef TOR_CHANNEL_INTERNAL_
 
-struct channel_tls_s {
+struct channel_tls_t {
   /* Base channel_t struct */
   channel_t base_;
   /* or_connection_t pointer */

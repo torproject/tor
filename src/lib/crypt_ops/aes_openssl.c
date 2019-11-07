@@ -154,7 +154,7 @@ evaluate_ctr_for_aes(void)
 /* Interface to AES code, and counter implementation */
 
 /** Implements an AES counter-mode cipher. */
-struct aes_cnt_cipher {
+struct aes_cnt_cipher_t {
 /** This next element (however it's defined) is the AES key. */
   union {
     EVP_CIPHER_CTX evp;

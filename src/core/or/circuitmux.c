@@ -94,14 +94,14 @@ typedef struct chanid_circid_muxinfo_t chanid_circid_muxinfo_t;
  * a count of queued cells.
  */
 
-typedef struct circuit_muxinfo_s circuit_muxinfo_t;
+typedef struct circuit_muxinfo_t circuit_muxinfo_t;
 
 /*
  * This struct holds whatever we want to store per attached circuit on a
  * circuitmux_t; right now, just the count of queued cells and the direction.
  */
 
-struct circuit_muxinfo_s {
+struct circuit_muxinfo_t {
   /* Count of cells on this circuit at last update */
   unsigned int cell_count;
   /* Direction of flow */

@@ -334,7 +334,7 @@ typedef struct get_handler_args_t {
  * an arguments structure, and must return 0 on success or -1 if we should
  * close the connection.
  **/
-typedef struct url_table_ent_s {
+typedef struct url_table_ent_t {
   const char *string;
   int is_prefix;
   int (*handler)(dir_connection_t *conn, const get_handler_args_t *args);

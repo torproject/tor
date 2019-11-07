@@ -19,8 +19,8 @@ typedef struct {
  * Declare fp_pair_map_t functions and structs
  */
 
-typedef struct fp_pair_map_entry_s fp_pair_map_entry_t;
-typedef struct fp_pair_map_s fp_pair_map_t;
+typedef struct fp_pair_map_entry_t fp_pair_map_entry_t;
+typedef struct fp_pair_map_t fp_pair_map_t;
 typedef fp_pair_map_entry_t *fp_pair_map_iter_t;
 
 fp_pair_map_t * fp_pair_map_new(void);

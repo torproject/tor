@@ -12,7 +12,7 @@
 #ifndef RELAY_CRYPTO_ST_H
 #define RELAY_CRYPTO_ST_H
 
-#define crypto_cipher_t aes_cnt_cipher
+#define crypto_cipher_t aes_cnt_cipher_t
 struct crypto_cipher_t;
 struct crypto_digest_t;
 

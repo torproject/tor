@@ -16,12 +16,12 @@
  * Container for distribution parameters for sampling, CDF, &c.
  */
 struct dist {
-  const struct dist_ops *ops;
+  const struct dist_ops_t *ops;
 };
 
 /**
  * Untyped initializer element for struct dist using the specified
- * struct dist_ops pointer.  Don't actually use this directly -- use
+ * struct dist_ops_t pointer.  Don't actually use this directly -- use
  * the type-specific macro built out of DIST_BASE_TYPED below -- but if
  * you did use this directly, it would be something like:
  *
@@ -62,7 +62,7 @@ struct dist {
 
 /**
 * Typed initializer element for struct dist using the specified struct
-* dist_ops pointer.  Don't actually use this directly -- use a
+* dist_ops_t pointer.  Don't actually use this directly -- use a
 * type-specific macro built out of it -- but if you did use this
 * directly, it would be something like:
 *
@@ -82,7 +82,7 @@ struct dist {
 *       double phi;
 *     };
 *
-*     struct dist_ops foo_ops = ...;
+*     struct dist_ops_t foo_ops = ...;
 *
 *     #define FOO(OBJ) DIST_BASE_TYPED(&foo_ops, OBJ, struct foo)
 *
@@ -110,7 +110,7 @@ struct dist {
 
 /**
  * Generic operations on distributions.  These simply defer to the
- * corresponding dist_ops function.  In the parlance of C++, these call
+ * corresponding dist_ops_t function.  In the parlance of C++, these call
  * virtual member functions.
  */
 const char *dist_name(const struct dist *);
@@ -125,7 +125,7 @@ double dist_isf(const struct dist *, double p);
  * distributions.  In the parlance of C++, this would be called a
  * `vtable' and the members are virtual member functions.
  */
-struct dist_ops {
+struct dist_ops_t {
   const char *name;
   double (*sample)(const struct dist *);
   double (*cdf)(const struct dist *, double x);
@@ -141,7 +141,7 @@ struct geometric {
   double p; /* success probability */
 };
 
-extern const struct dist_ops geometric_ops;
+extern const struct dist_ops_t geometric_ops;
 
 #define GEOMETRIC(OBJ)                                      \
   DIST_BASE_TYPED(&geometric_ops, OBJ, struct geometric)
@@ -155,7 +155,7 @@ struct genpareto {
   double xi;
 };
 
-extern const struct dist_ops genpareto_ops;
+extern const struct dist_ops_t genpareto_ops;
 
 #define GENPARETO(OBJ)                                      \
   DIST_BASE_TYPED(&genpareto_ops, OBJ, struct genpareto)
@@ -168,7 +168,7 @@ struct weibull {
   double k;
 };
 
-extern const struct dist_ops weibull_ops;
+extern const struct dist_ops_t weibull_ops;
 
 #define WEIBULL(OBJ)                                    \
   DIST_BASE_TYPED(&weibull_ops, OBJ, struct weibull)
@@ -181,7 +181,7 @@ struct log_logistic {
   double beta;
 };
 
-extern const struct dist_ops log_logistic_ops;
+extern const struct dist_ops_t log_logistic_ops;
 
 #define LOG_LOGISTIC(OBJ)                                       \
   DIST_BASE_TYPED(&log_logistic_ops, OBJ, struct log_logistic)
@@ -194,7 +194,7 @@ struct logistic {
   double sigma;
 };
 
-extern const struct dist_ops logistic_ops;
+extern const struct dist_ops_t logistic_ops;
 
 #define LOGISTIC(OBJ)                                   \
   DIST_BASE_TYPED(&logistic_ops, OBJ, struct logistic)
@@ -207,7 +207,7 @@ struct uniform {
   double b;
 };
 
-extern const struct dist_ops uniform_ops;
+extern const struct dist_ops_t uniform_ops;
 
 #define UNIFORM(OBJ)                                    \
   DIST_BASE_TYPED(&uniform_ops, OBJ, struct uniform)

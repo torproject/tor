@@ -266,7 +266,7 @@ main(int c, const char **v)
 
   options = options_new();
 
-  struct tor_libevent_cfg cfg;
+  struct tor_libevent_cfg_t cfg;
   memset(&cfg, 0, sizeof(cfg));
   tor_libevent_initialize(&cfg);
 

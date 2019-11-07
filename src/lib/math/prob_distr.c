@@ -1418,7 +1418,7 @@ uniform_isf(const struct dist *dist, double p)
   return (p < 0.5 ? (U->b - w*p) : (U->a + w*(1 - p)));
 }
 
-const struct dist_ops uniform_ops = {
+const struct dist_ops_t uniform_ops = {
   .name = "uniform",
   .sample = uniform_sample,
   .cdf = uniform_cdf,
@@ -1472,7 +1472,7 @@ logistic_isf(const struct dist *dist, double p)
   return isf_logistic(p, L->mu, L->sigma);
 }
 
-const struct dist_ops logistic_ops = {
+const struct dist_ops_t logistic_ops = {
   .name = "logistic",
   .sample = logistic_sample,
   .cdf = logistic_cdf,
@@ -1521,7 +1521,7 @@ log_logistic_isf(const struct dist *dist, double p)
   return isf_log_logistic(p, LL->alpha, LL->beta);
 }
 
-const struct dist_ops log_logistic_ops = {
+const struct dist_ops_t log_logistic_ops = {
   .name = "log logistic",
   .sample = log_logistic_sample,
   .cdf = log_logistic_cdf,
@@ -1570,7 +1570,7 @@ weibull_isf(const struct dist *dist, double p)
   return isf_weibull(p, W->lambda, W->k);
 }
 
-const struct dist_ops weibull_ops = {
+const struct dist_ops_t weibull_ops = {
   .name = "Weibull",
   .sample = weibull_sample,
   .cdf = weibull_cdf,
@@ -1619,7 +1619,7 @@ genpareto_isf(const struct dist *dist, double p)
   return isf_genpareto(p, GP->mu, GP->sigma, GP->xi);
 }
 
-const struct dist_ops genpareto_ops = {
+const struct dist_ops_t genpareto_ops = {
   .name = "generalized Pareto",
   .sample = genpareto_sample,
   .cdf = genpareto_cdf,
@@ -1678,7 +1678,7 @@ geometric_isf(const struct dist *dist, double p)
   return log(p)/log1p(-G->p);
 }
 
-const struct dist_ops geometric_ops = {
+const struct dist_ops_t geometric_ops = {
   .name = "geometric (1-based)",
   .sample = geometric_sample,
   .cdf = geometric_cdf,

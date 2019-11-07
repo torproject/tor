@@ -155,7 +155,7 @@ test_threads_basic(void *arg)
     tor_mutex_free(thread_test_start2_);
 }
 
-typedef struct cv_testinfo_s {
+typedef struct cv_testinfo_t {
   tor_cond_t *cond;
   tor_mutex_t *mutex;
   int value;

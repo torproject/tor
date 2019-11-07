@@ -106,7 +106,7 @@ static smartlist_t *finished_listeners = NULL;
 
 /** Map from channel->global_identifier to channel.  Contains the same
  * elements as all_channels. */
-static HT_HEAD(channel_gid_map, channel_s) channel_gid_map = HT_INITIALIZER();
+static HT_HEAD(channel_gid_map, channel_t) channel_gid_map = HT_INITIALIZER();
 
 static unsigned
 channel_id_hash(const channel_t *chan)
@@ -118,13 +118,13 @@ channel_id_eq(const channel_t *a, const channel_t *b)
 {
   return a->global_identifier == b->global_identifier;
 }
-HT_PROTOTYPE(channel_gid_map, channel_s, gidmap_node,
+HT_PROTOTYPE(channel_gid_map, channel_t, gidmap_node,
              channel_id_hash, channel_id_eq)
-HT_GENERATE2(channel_gid_map, channel_s, gidmap_node,
+HT_GENERATE2(channel_gid_map, channel_t, gidmap_node,
              channel_id_hash, channel_id_eq,
              0.6, tor_reallocarray_, tor_free_)
 
-HANDLE_IMPL(channel, channel_s,)
+HANDLE_IMPL(channel, channel_t,)
 
 /* Counter for ID numbers */
 static uint64_t n_channels_allocated = 0;
@@ -137,13 +137,13 @@ static uint64_t n_channels_allocated = 0;
  * If more than one channel exists, follow the next_with_same_id pointer
  * as a linked list.
  */
-static HT_HEAD(channel_idmap, channel_idmap_entry_s) channel_identity_map =
+static HT_HEAD(channel_idmap, channel_idmap_entry_t) channel_identity_map =
   HT_INITIALIZER();
 
-typedef struct channel_idmap_entry_s {
-  HT_ENTRY(channel_idmap_entry_s) node;
+typedef struct channel_idmap_entry_t {
+  HT_ENTRY(channel_idmap_entry_t) node;
   uint8_t digest[DIGEST_LEN];
-  TOR_LIST_HEAD(channel_list_s, channel_s) channel_list;
+  TOR_LIST_HEAD(channel_list_s, channel_t) channel_list;
 } channel_idmap_entry_t;
 
 static inline unsigned
@@ -159,9 +159,9 @@ channel_idmap_eq(const channel_idmap_entry_t *a,
   return tor_memeq(a->digest, b->digest, DIGEST_LEN);
 }
 
-HT_PROTOTYPE(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
+HT_PROTOTYPE(channel_idmap, channel_idmap_entry_t, node, channel_idmap_hash,
              channel_idmap_eq)
-HT_GENERATE2(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
+HT_GENERATE2(channel_idmap, channel_idmap_entry_t, node, channel_idmap_hash,
              channel_idmap_eq, 0.5,  tor_reallocarray_, tor_free_)
 
 /* Functions to maintain the digest map */

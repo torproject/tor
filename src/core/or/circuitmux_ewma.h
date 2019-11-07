@@ -25,9 +25,9 @@ void circuitmux_ewma_free_all(void);
 
 /*** EWMA structures ***/
 
-typedef struct cell_ewma_s cell_ewma_t;
-typedef struct ewma_policy_data_s ewma_policy_data_t;
-typedef struct ewma_policy_circ_data_s ewma_policy_circ_data_t;
+typedef struct cell_ewma_t cell_ewma_t;
+typedef struct ewma_policy_data_t ewma_policy_data_t;
+typedef struct ewma_policy_circ_data_t ewma_policy_circ_data_t;
 
 /**
  * The cell_ewma_t structure keeps track of how many cells a circuit has
@@ -36,7 +36,7 @@ typedef struct ewma_policy_circ_data_s ewma_policy_circ_data_t;
  * connection in channel_flush_from_first_active_circuit().
  */
 
-struct cell_ewma_s {
+struct cell_ewma_t {
   /** The last 'tick' at which we recalibrated cell_count.
    *
    * A cell sent at exactly the start of this tick has weight 1.0. Cells sent
@@ -53,7 +53,7 @@ struct cell_ewma_s {
   int heap_index;
 };
 
-struct ewma_policy_data_s {
+struct ewma_policy_data_t {
   circuitmux_policy_data_t base_;
 
   /**
@@ -72,7 +72,7 @@ struct ewma_policy_data_s {
   unsigned int active_circuit_pqueue_last_recalibrated;
 };
 
-struct ewma_policy_circ_data_s {
+struct ewma_policy_circ_data_t {
   circuitmux_policy_circ_data_t base_;
 
   /**
