@@ -1,6 +1,8 @@
 # Relay PT tests
 # Options from relay/transport_config.c
 # Bad options are also ignored
+# (Unless the relay module is disabled, because they are relay-only
+# options. We'll ignore all relay-only options in #32395.)
 ExtORPort illegal_hostname_chars$()^*%(%#%)#(%*
 ServerTransportPlugin bad
 ServerTransportPlugin bad2 exec

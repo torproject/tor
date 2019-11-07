@@ -122,9 +122,6 @@ options_validate_relay_mode(const or_options_t *old_options,
     return -1;
   }
 
-  /* 31851 / 29211: Set this option the correct way */
-  options->ClientOnly = 1;
-
   return 0;
 }
 

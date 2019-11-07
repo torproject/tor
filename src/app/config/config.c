@@ -363,7 +363,13 @@ static const config_var_t option_vars_[] = {
   V(CircuitStreamTimeout,        INTERVAL, "0"),
   V(CircuitPriorityHalflife,     DOUBLE,  "-1.0"), /*negative:'Use default'*/
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
+#if defined(HAVE_MODULE_RELAY) || defined(TOR_UNIT_TESTS)
+  /* The unit tests expect the ClientOnly default to be 0. */
   V(ClientOnly,                  BOOL,     "0"),
+#else
+  /* We must be a Client if the relay module is disabled. */
+  V(ClientOnly,                  BOOL,     "1"),
+#endif /* defined(HAVE_MODULE_RELAY) || defined(TOR_UNIT_TESTS) */
   V(ClientPreferIPv6ORPort,      AUTOBOOL, "auto"),
   V(ClientPreferIPv6DirPort,     AUTOBOOL, "auto"),
   V(ClientAutoIPv6ORPort,        BOOL,     "0"),
@@ -400,7 +406,13 @@ static const config_var_t option_vars_[] = {
   V(DirPortFrontPage,            FILENAME, NULL),
   VAR("DirReqStatistics",        BOOL,     DirReqStatistics_option, "1"),
   VAR("DirAuthority",            LINELIST, DirAuthorities, NULL),
+#if defined(HAVE_MODULE_RELAY) || defined(TOR_UNIT_TESTS)
+  /* The unit tests expect the DirCache default to be 1. */
   V(DirCache,                    BOOL,     "1"),
+#else
+  /* We can't be a DirCache if the relay module is disabled. */
+  V(DirCache,                    BOOL,     "0"),
+#endif /* defined(HAVE_MODULE_RELAY) || defined(TOR_UNIT_TESTS) */
   /* A DirAuthorityFallbackRate of 0.1 means that 0.5% of clients try an
    * authority when all fallbacks are up, and 2% try an authority when 25% of
    * fallbacks are down. (We rebuild the list when 25% of fallbacks are down).
