@@ -212,7 +212,7 @@ struct circuitmux_s {
   circuitmux_policy_data_t *policy_data;
 };
 
-#endif /* CIRCUITMUX_PRIVATE */
+#endif /* defined(CIRCUITMUX_PRIVATE) */
 
 #endif /* !defined(TOR_CIRCUITMUX_H) */
 

@@ -129,7 +129,7 @@ TO_EWMA_POL_CIRC_DATA(circuitmux_policy_circ_data_t *pol)
 STATIC unsigned cell_ewma_get_current_tick_and_fraction(double *remainder_out);
 STATIC void cell_ewma_initialize_ticks(void);
 
-#endif /* CIRCUITMUX_EWMA_PRIVATE */
+#endif /* defined(CIRCUITMUX_EWMA_PRIVATE) */
 
 #endif /* !defined(TOR_CIRCUITMUX_EWMA_H) */
 

@@ -14,4 +14,4 @@
 or_circuit_t *new_fake_orcirc(channel_t *nchan, channel_t *pchan);
 void free_fake_orcirc(or_circuit_t *orcirc);
 
-#endif /* TOR_FAKECIRCS_H */
+#endif /* !defined(TOR_FAKECIRCS_H) */
