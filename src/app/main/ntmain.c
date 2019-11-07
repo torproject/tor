@@ -66,7 +66,7 @@ static int nt_service_cmd_stop(void);
 
 /** Struct to hold dynamically loaded NT-service related function pointers.
  */
-struct service_fns {
+struct {
   int loaded;
 
   /** @{ */
