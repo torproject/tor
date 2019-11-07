@@ -1455,20 +1455,6 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
   sd_notifyf(0, "MAINPID=%ld\n", (long int)getpid());
 #endif
 
-#ifndef HAVE_SYS_UN_H
-  if (options->ControlSocket || options->ControlSocketsGroupWritable) {
-    *msg = tor_strdup("Unix domain sockets (ControlSocket) not supported "
-                      "on this OS/with this build.");
-    goto rollback;
-  }
-#else /* defined(HAVE_SYS_UN_H) */
-  if (options->ControlSocketsGroupWritable && !options->ControlSocket) {
-    *msg = tor_strdup("Setting ControlSocketGroupWritable without setting"
-                      "a ControlSocket makes no sense.");
-    goto rollback;
-  }
-#endif /* !defined(HAVE_SYS_UN_H) */
-
   if (running_tor) {
     int n_ports=0;
     /* We need to set the connection limit before we can open the listeners. */
@@ -3179,6 +3165,20 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (parse_ports(options, 1, msg, &n_ports,
                   &world_writable_control_socket) < 0)
     return -1;
+
+#ifndef HAVE_SYS_UN_H
+  if (options->ControlSocket || options->ControlSocketsGroupWritable) {
+    *msg = tor_strdup("Unix domain sockets (ControlSocket) not supported "
+                      "on this OS/with this build.");
+    return -1;
+  }
+#else /* defined(HAVE_SYS_UN_H) */
+  if (options->ControlSocketsGroupWritable && !options->ControlSocket) {
+    *msg = tor_strdup("Setting ControlSocketGroupWritable without setting"
+                      "a ControlSocket makes no sense.");
+    return -1;
+  }
+#endif /* !defined(HAVE_SYS_UN_H) */
 
   /* Set UseEntryGuards from the configured value, before we check it below.
    * We change UseEntryGuards when it's incompatible with other options,
