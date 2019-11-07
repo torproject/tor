@@ -251,7 +251,8 @@ if [ "$PUSH_SAME" -eq 0 ]; then
     PUSH_COMMIT=$(git rev-parse "$b")
     SKIP_UPSTREAM=
     for u in $UPSTREAM_SKIP_SAME_AS; do
-      UPSTREAM_COMMIT=$(git rev-parse "$u")
+      # Skip the branch check on error
+      UPSTREAM_COMMIT=$(git rev-parse "$u" 2>/dev/null) || continue
       if [ "$PUSH_COMMIT" = "$UPSTREAM_COMMIT" ]; then
         SKIP_UPSTREAM="$u"
       fi
