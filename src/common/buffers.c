@@ -273,7 +273,7 @@ buf_t *
 buf_new_with_data(const char *cp, size_t sz)
 {
   /* Validate arguments */
-  if (!cp || sz <= 0) {
+  if (!cp || sz <= 0 || sz >= INT_MAX) {
     return NULL;
   }
 
@@ -818,7 +818,7 @@ buf_move_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen)
   char b[4096];
   size_t cp, len;
 
-  if (BUG(buf_out->datalen >= INT_MAX))
+  if (BUG(buf_out->datalen >= INT_MAX || *buf_flushlen >= INT_MAX))
     return -1;
   if (BUG(buf_out->datalen >= INT_MAX - *buf_flushlen))
     return -1;
@@ -849,6 +849,10 @@ buf_move_all(buf_t *buf_out, buf_t *buf_in)
 {
   tor_assert(buf_out);
   if (!buf_in)
+    return;
+  if (BUG(buf_out->datalen >= INT_MAX || buf_in->datalen >= INT_MAX))
+    return;
+  if (BUG(buf_out->datalen >= INT_MAX - buf_in->datalen))
     return;
 
   if (buf_out->head == NULL) {
@@ -917,6 +921,7 @@ buf_find_pos_of_char(char ch, buf_pos_t *out)
 static inline int
 buf_pos_inc(buf_pos_t *pos)
 {
+  tor_assert(pos->pos < INT_MAX - 1);
   ++pos->pos;
   if (pos->pos == (off_t)pos->chunk->datalen) {
     if (!pos->chunk->next)
@@ -997,6 +1002,7 @@ buf_find_offset_of_char(buf_t *buf, char ch)
 {
   chunk_t *chunk;
   off_t offset = 0;
+  tor_assert(buf->datalen < INT_MAX);
   for (chunk = buf->head; chunk; chunk = chunk->next) {
     char *cp = memchr(chunk->data, ch, chunk->datalen);
     if (cp)
@@ -1125,6 +1131,7 @@ buf_assert_ok(buf_t *buf)
     for (ch = buf->head; ch; ch = ch->next) {
       total += ch->datalen;
       tor_assert(ch->datalen <= ch->memlen);
+      tor_assert(ch->datalen < INT_MAX);
       tor_assert(ch->data >= &ch->mem[0]);
       tor_assert(ch->data <= &ch->mem[0]+ch->memlen);
       if (ch->data == &ch->mem[0]+ch->memlen) {
