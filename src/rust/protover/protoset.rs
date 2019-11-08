@@ -352,23 +352,25 @@ impl FromStr for ProtoSet {
     /// assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("3-"));
     /// assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1-,4"));
     ///
-    /// // Things which would get parsed into an _empty_ `ProtoSet` are,
-    /// // however, legal, and result in an empty `ProtoSet`:
+    /// // An empty string is, however, legal, and results in an
+    /// // empty `ProtoSet`:
     /// assert_eq!(Ok(ProtoSet::default()), ProtoSet::from_str(""));
-    /// assert_eq!(Ok(ProtoSet::default()), ProtoSet::from_str(",,,"));
     /// #
     /// # Ok(protoset)
     /// # }
     /// # fn main() { do_test(); }  // wrap the test so we can use the ? operator
     /// ```
     fn from_str(version_string: &str) -> Result<Self, Self::Err> {
+        // If we were passed in an empty string, then return an empty ProtoSet.
+        if version_string.is_empty() {
+            return Ok(Self::default());
+        }
+
         let mut pairs: Vec<(Version, Version)> = Vec::new();
         let pieces: ::std::str::Split<char> = version_string.split(',');
 
         for p in pieces {
-            if p.is_empty() {
-                continue;
-            } else if p.contains('-') {
+            if p.contains('-') {
                 let mut pair = p.splitn(2, '-');
 
                 let low  = pair.next().ok_or(ProtoverError::Unparseable)?;
@@ -377,24 +379,14 @@ impl FromStr for ProtoSet {
                 let lo: Version =  low.parse().or(Err(ProtoverError::Unparseable))?;
                 let hi: Version = high.parse().or(Err(ProtoverError::Unparseable))?;
 
-                if lo == u32::MAX || hi == u32::MAX {
-                    return Err(ProtoverError::ExceedsMax);
-                }
                 pairs.push((lo, hi));
             } else {
                 let v: u32 = p.parse().or(Err(ProtoverError::Unparseable))?;
 
-                if v == u32::MAX {
-                    return Err(ProtoverError::ExceedsMax);
-                }
                 pairs.push((v, v));
             }
         }
-        // If we were passed in an empty string, or
-        // simply a comma, or a pile of commas, then return an empty ProtoSet.
-        if pairs.len() == 0 {
-            return Ok(ProtoSet::default());
-        }
+
         ProtoSet::from_slice(&pairs[..])
     }
 }
@@ -556,6 +548,13 @@ mod test {
     #[test]
     fn test_versions_from_str_negative_1() {
         assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("-1"));
+    }
+
+    #[test]
+    fn test_versions_from_str_commas() {
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str(","));
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1,,2"));
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1,2,"));
     }
 
     #[test]
