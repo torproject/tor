@@ -3323,7 +3323,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
    * but leave UseEntryGuards_option with the original value.
    * Always use the value of UseEntryGuards, not UseEntryGuards_option. */
   options->UseEntryGuards = options->UseEntryGuards_option;
-
+  if (server_mode(options) && options->SocksPort_set) {
+    log_warn(LD_CONFIG, "You appear to be attempting to use Tor for both "
+             "relay and client functionality at the same time. "
+             "Unfortunately, a side channel issue (Bug #16585) means that "
+             "this fact will be visible in network traffic patterns. "
+             "If you do not actually want to run Tor as a client, "
+             "you can add SocksPort 0 to your configuration, to turn off "
+             "the default client behavior.");
+  }
   if (warn_about_relative_paths(options) && options->RunAsDaemon) {
     REJECT("You have specified at least one relative path (see above) "
            "with the RunAsDaemon option. RunAsDaemon is not compatible "

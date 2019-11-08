@@ -1,0 +1,5 @@
+  o Minor bugfix (Relay Client):
+    - Add warning message to users running in both Relay and Client mode.
+      Notify of side channel traffic analysis as per  (Bug 16585) . 
+      Suggests adding SocksPort 0 to prevent Client mode. Fixes bug 16824;
+      bugfix on 0.3.3.5-rc-dev  / maint-0.3.3
