@@ -55,7 +55,7 @@ In simplest terms, a **subsytem** is a logically separate part of Tor that
 can be initialized, shut down, managed, and configured somewhat independently
 of the rest of the program.
 
-To define a subsystem, we declare a `static const` instance of subsys_fns_t,
+To define a subsystem, we declare a `const` instance of subsys_fns_t,
 describing the subsystem and a set of functions that initialize it,
 deconstruct it, and so on.  See the documentation for subsys_fns_t for a full
 list of these functions.
@@ -70,6 +70,7 @@ We note that the initialization phase of Tor occurs before any configuration
 is read from disk -- and therefore before any other files are read from
 disk.  Therefore, any behavior that depends on Tor's configuration or state
 must occur _after_ the initialization process, during configuration.
+
 
 
 
