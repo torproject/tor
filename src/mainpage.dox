@@ -30,7 +30,10 @@ Tor repository.
 
 @subpage intro
 
+@subpage initialization
+
 @subpage dataflow
+
 **/
 
 /**
