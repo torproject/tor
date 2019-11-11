@@ -277,7 +277,7 @@ log_engine(const char *fn, ENGINE *e)
 
 /** Initialize engines for openssl (if enabled).  Load all the built-in
  * engines, along with the one called <b>accelName</b> (which may be NULL).
- * If <b>accelName is prefixed with "!", then it is required: return -1
+ * If <b>accelName</b> is prefixed with "!", then it is required: return -1
  * if it can't be loaded.  Otherwise return 0.
  *
  * If <b>accelDir</b> is not NULL, it is the path from which the engine should
