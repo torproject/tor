@@ -33,7 +33,8 @@
 
 /**
  * Try to parse a string in <b>value</b> that encodes an object of the type
- * defined by <b>def</b>.
+ * defined by <b>def</b>. If not NULL, <b>key</b> is the name of the option,
+ * which may be used for logging.
  *
  * On success, adjust the lvalue pointed to by <b>target</b> to hold that
  * value, and return 0.  On failure, set *<b>errmsg</b> to a newly allocated
@@ -41,7 +42,7 @@
  **/
 int
 typed_var_assign(void *target, const char *value, char **errmsg,
-                    const var_type_def_t *def)
+                 const var_type_def_t *def, const char *key)
 {
   if (BUG(!def))
     return -1; // LCOV_EXCL_LINE
@@ -49,7 +50,7 @@ typed_var_assign(void *target, const char *value, char **errmsg,
   typed_var_free(target, def);
 
   tor_assert(def->fns->parse);
-  return def->fns->parse(target, value, errmsg, def->params);
+  return def->fns->parse(target, value, errmsg, def->params, key);
 }
 
 /**
@@ -75,7 +76,7 @@ typed_var_kvassign(void *target, const config_line_t *line,
     return def->fns->kv_parse(target, line, errmsg, def->params);
   }
 
-  return typed_var_assign(target, line->value, errmsg, def);
+  return typed_var_assign(target, line->value, errmsg, def, line->key);
 }
 
 /**
@@ -158,7 +159,7 @@ typed_var_copy(void *dest, const void *src, const var_type_def_t *def)
     return 0;
   }
   char *err = NULL;
-  int rv = typed_var_assign(dest, enc, &err, def);
+  int rv = typed_var_assign(dest, enc, &err, def, NULL);
   if (BUG(rv < 0)) {
     // LCOV_EXCL_START
     log_warn(LD_BUG, "Encoded value %s was not parseable as a %s: %s",
