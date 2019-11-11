@@ -52,11 +52,10 @@
 
 static int
 string_parse(void *target, const char *value, char **errmsg,
-             const void *params, const char *key)
+             const void *params)
 {
   (void)params;
   (void)errmsg;
-  (void)key;
   char **p = (char**)target;
   *p = tor_strdup(value);
   return 0;
@@ -107,10 +106,8 @@ static const int_parse_params_t INT_PARSE_POSINT = {
 };
 
 static int
-int_parse(void *target, const char *value, char **errmsg, const void *params,
-          const char *key)
+int_parse(void *target, const char *value, char **errmsg, const void *params)
 {
-  (void)key;
   const int_parse_params_t *pp;
   if (params) {
     pp = params;
@@ -172,11 +169,10 @@ static const var_type_fns_t int_fns = {
 
 static int
 uint64_parse(void *target, const char *value, char **errmsg,
-             const void *params, const char *key)
+             const void *params)
 {
   (void)params;
   (void)errmsg;
-  (void)key;
   uint64_t *p = target;
   int ok=0;
   *p = tor_parse_uint64(value, 10, 0, UINT64_MAX, &ok, NULL);
@@ -223,9 +219,8 @@ static const var_type_fns_t uint64_fns = {
 
 static int
 units_parse_u64(void *target, const char *value, char **errmsg,
-                const void *params, const char *key)
+                const void *params)
 {
-  (void)key;
   const unit_table_t *table = params;
   tor_assert(table);
   uint64_t *v = (uint64_t*)target;
@@ -240,9 +235,8 @@ units_parse_u64(void *target, const char *value, char **errmsg,
 
 static int
 units_parse_int(void *target, const char *value, char **errmsg,
-                const void *params, const char *key)
+               const void *params)
 {
-  (void)key;
   const unit_table_t *table = params;
   tor_assert(table);
   int *v = (int*)target;
@@ -289,11 +283,10 @@ static const var_type_fns_t interval_fns = {
 
 static int
 double_parse(void *target, const char *value, char **errmsg,
-             const void *params, const char *key)
+             const void *params)
 {
   (void)params;
   (void)errmsg;
-  (void)key;
   double *v = (double*)target;
   char *endptr=NULL;
   errno = 0;
@@ -354,9 +347,8 @@ typedef struct enumeration_table_t {
 
 static int
 enum_parse(void *target, const char *value, char **errmsg,
-           const void *params, const char *key)
+           const void *params)
 {
-  (void)key;
   const enumeration_table_t *table = params;
   int *p = (int *)target;
   for (; table->name; ++table) {
@@ -430,10 +422,9 @@ static const var_type_fns_t enum_fns = {
 
 static int
 time_parse(void *target, const char *value, char **errmsg,
-           const void *params, const char *key)
+           const void *params)
 {
   (void) params;
-  (void) key;
   time_t *p = target;
   if (parse_iso_time(value, p) < 0) {
     tor_asprintf(errmsg, "Invalid time %s", escaped(value));
@@ -475,11 +466,10 @@ static const var_type_fns_t time_fns = {
 
 static int
 csv_parse(void *target, const char *value, char **errmsg,
-          const void *params, const char *key)
+          const void *params)
 {
   (void)params;
   (void)errmsg;
-  (void)key;
   smartlist_t **sl = (smartlist_t**)target;
   *sl = smartlist_new();
   smartlist_split_string(*sl, value, ",",
@@ -525,7 +515,7 @@ static const var_type_fns_t csv_fns = {
 
 static int
 legacy_csv_interval_parse(void *target, const char *value, char **errmsg,
-                          const void *params, const char *key)
+                          const void *params)
 {
   (void)params;
   /* We used to have entire smartlists here.  But now that all of our
@@ -539,7 +529,7 @@ legacy_csv_interval_parse(void *target, const char *value, char **errmsg,
     val = tmp;
   }
 
-  int rv = units_parse_int(target, val, errmsg, &time_units, key);
+  int rv = units_parse_int(target, val, errmsg, &time_units);
   tor_free(tmp);
   return rv;
 }
@@ -703,17 +693,14 @@ static const var_type_fns_t linelist_s_fns = {
 
 static int
 ignore_parse(void *target, const char *value, char **errmsg,
-             const void *params, const char *key)
+             const void *params)
 {
   (void)target;
   (void)value;
   (void)errmsg;
   (void)params;
   // XXXX move this to a higher level, once such a level exists.
-  log_warn(LD_GENERAL, "Skipping obsolete configuration option%s%s%s",
-           key && *key ? " \"" : "",
-           key && *key ? key : "",
-           key && *key ? "\"." : ".");
+  log_warn(LD_GENERAL, "Skipping obsolete configuration option.");
   return 0;
 }
 
