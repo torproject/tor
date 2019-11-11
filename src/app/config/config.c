@@ -3400,7 +3400,7 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   }
 #else /* defined(HAVE_SYS_UN_H) */
   if (options->ControlSocketsGroupWritable && !options->ControlSocket) {
-    *msg = tor_strdup("Setting ControlSocketGroupWritable without setting"
+    *msg = tor_strdup("Setting ControlSocketGroupWritable without setting "
                       "a ControlSocket makes no sense.");
     return -1;
   }
