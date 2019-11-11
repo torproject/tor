@@ -81,6 +81,24 @@ AC_ARG_ENABLE(nss,
 AC_ARG_ENABLE(pic,
    AS_HELP_STRING(--enable-pic, [Build Tor's binaries as position-independent code, suitable to link as a library.]))
 
+AC_ARG_ENABLE(missing-doc-warnings,
+   AS_HELP_STRING(--enable-missing-doc-warnings, [Tell doxygen to warn about missing documentation. Makes doxygen warnings nonfatal.]))
+
+if test "$enable_missing_doc_warnings" = "yes"; then
+   DOXYGEN_FATAL_WARNINGS=NO
+   DOXYGEN_WARN_ON_MISSING=YES
+elif test "$enable_fatal_warnings" = "yes"; then
+   # Fatal warnings from doxygen are nice, but not if we're warning about
+   # missing documentation.
+   DOXYGEN_FATAL_WARNINGS=YES
+   DOXYGEN_WARN_ON_MISSING=NO
+else
+   DOXYGEN_FATAL_WARNINGS=NO
+   DOXYGEN_WARN_ON_MISSING=NO
+fi
+AC_SUBST(DOXYGEN_FATAL_WARNINGS)
+AC_SUBST(DOXYGEN_WARN_ON_MISSING)
+
 if test "x$enable_coverage" != "xyes" -a "x$enable_asserts_in_tests" = "xno" ; then
     AC_MSG_ERROR([Can't disable assertions outside of coverage build])
 fi
