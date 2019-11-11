@@ -64,8 +64,18 @@ typedef enum config_type_t {
   CONFIG_TYPE_LINELIST_V,   /**< Catch-all "virtual" option to summarize
                              * context-sensitive config lines when fetching.
                              */
-  CONFIG_TYPE_OBSOLETE,     /**< Ignored (obsolete) option. Uses no storage. */
-  CONFIG_TYPE_IGNORE,       /**< Ignored option. Uses no storage. */
+  /** Ignored (obsolete) option. Uses no storage.
+   *
+   * Reported as "obsolete" when its type is queried.
+   */
+  CONFIG_TYPE_OBSOLETE,
+  /** Ignored option. Uses no storage.
+   *
+   * Reported as "ignored" when its type is queried. For use with options used
+   * by disabled modules.
+   **/
+  CONFIG_TYPE_IGNORE,
+
   /**
    * Extended type: definition appears in the <b>type_def</b> pointer
    * of the corresponding struct_member_t.
