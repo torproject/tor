@@ -28,6 +28,11 @@
 # cmdline -- Optional. If present, it contains command-line arguments that
 #      will be passed to Tor.
 #
+# (included torrc files or directories) -- Optional. If present, and
+#      configured in the torrc* or cmdline, these files or directories are
+#      included. Include paths should be specified relative to the test case
+#      directory.
+#
 # expected -- If this file is present, then it should be the expected result
 #      of "--dump-config short" for this test case.  Exactly one of
 #      "expected" or "error" must be present, or the test will fail.
