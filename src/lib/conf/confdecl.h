@@ -40,10 +40,10 @@
  * with appropriate members, and a table of config_var_t objects called
  * `module_options_t_vars[]`.
  *
- * For lower-level modules, you can say `#define CONF_TABLE LL_TABLE`, and get
- * a table definition suitable for use in modules that are at a lower level
- * than lib/confmgt.  Note that the types for these tables cannot include any
- * extended types.
+ * For lower-level modules, you can say <tt>\#define CONF_TABLE LL_TABLE</tt>,
+ * and get a table definition suitable for use in modules that are at a lower
+ * level than lib/confmgt.  Note that the types for these tables cannot
+ * include any extended types.
  **/
 
 #ifndef TOR_LIB_CONF_CONFDECL_H
