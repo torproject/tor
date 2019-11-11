@@ -64,7 +64,18 @@ typedef enum config_type_t {
   CONFIG_TYPE_LINELIST_V,   /**< Catch-all "virtual" option to summarize
                              * context-sensitive config lines when fetching.
                              */
-  CONFIG_TYPE_OBSOLETE,     /**< Obsolete (ignored) option. */
+  /** Ignored (obsolete) option. Uses no storage.
+   *
+   * Reported as "obsolete" when its type is queried.
+   */
+  CONFIG_TYPE_OBSOLETE,
+  /** Ignored option. Uses no storage.
+   *
+   * Reported as "ignored" when its type is queried. For use with options used
+   * by disabled modules.
+   **/
+  CONFIG_TYPE_IGNORE,
+
   /**
    * Extended type: definition appears in the <b>type_def</b> pointer
    * of the corresponding struct_member_t.
@@ -183,12 +194,18 @@ typedef struct struct_magic_decl_t {
  * running.
  **/
 #define CFLG_IMMUTABLE (1u<<6)
+/**
+ * Flag to indicate that we should warn that an option or type is obsolete
+ * whenever the user tries to use it.
+ **/
+#define CFLG_WARN_OBSOLETE (1u<<7)
 
 /**
  * A group of flags that should be set on all obsolete options and types.
  **/
 #define CFLG_GROUP_OBSOLETE \
-  (CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP|CFLG_NOSET|CFLG_NOLIST)
+  (CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP|CFLG_NOSET|CFLG_NOLIST|\
+   CFLG_WARN_OBSOLETE)
 
 /** A variable allowed in the configuration file or on the command line. */
 typedef struct config_var_t {

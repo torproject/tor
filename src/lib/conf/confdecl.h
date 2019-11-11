@@ -191,6 +191,7 @@ extern const struct var_type_def_t CSV_INTERVAL_type_defn;
 extern const struct var_type_def_t LINELIST_type_defn;
 extern const struct var_type_def_t LINELIST_V_type_defn;
 extern const struct var_type_def_t LINELIST_S_type_defn;
+extern const struct var_type_def_t IGNORE_type_defn;
 extern const struct var_type_def_t OBSOLETE_type_defn;
 /**@}*/
 

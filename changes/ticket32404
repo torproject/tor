@@ -1,0 +1,5 @@
+  o Minor features (configuration):
+    - We use a flag-driven logic to warn about obsolete configuration fields,
+      so that we can include their names.  In 0.4.2, we used
+      a special type, which prevented us from generating good warnings.
+      Implements ticket 32404.

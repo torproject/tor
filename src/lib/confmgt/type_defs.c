@@ -682,17 +682,13 @@ static const var_type_fns_t linelist_s_fns = {
 /////
 // CONFIG_TYPE_ROUTERSET
 //
-// XXXX This type is not implemented here, since routerset_t is not available
 // XXXX to this module.
 /////
 
 /////
-// CONFIG_TYPE_OBSOLETE
+// CONFIG_TYPE_IGNORE
 //
-// Used to indicate an obsolete option.
-//
-// XXXX This is not a type, and should be handled at a higher level of
-// XXXX abstraction.
+// Used to indicate an option that cannot be stored or encoded.
 /////
 
 static int
@@ -703,8 +699,6 @@ ignore_parse(void *target, const char *value, char **errmsg,
   (void)value;
   (void)errmsg;
   (void)params;
-  // XXXX move this to a higher level, once such a level exists.
-  log_warn(LD_GENERAL, "Skipping obsolete configuration option.");
   return 0;
 }
 
@@ -774,6 +768,10 @@ const var_type_def_t LINELIST_S_type_defn = {
 const var_type_def_t LINELIST_V_type_defn = {
   .name="Virtual", .fns=&linelist_v_fns,
   .flags=CFLG_NOREPLACE|CFLG_NOSET };
+const var_type_def_t IGNORE_type_defn = {
+  .name="Ignored", .fns=&ignore_fns,
+  .flags=CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP|CFLG_NOSET,
+};
 const var_type_def_t OBSOLETE_type_defn = {
   .name="Obsolete", .fns=&ignore_fns,
   .flags=CFLG_GROUP_OBSOLETE,
@@ -800,6 +798,7 @@ static const var_type_def_t *type_definitions_table[] = {
   [CONFIG_TYPE_LINELIST] = &LINELIST_type_defn,
   [CONFIG_TYPE_LINELIST_S] = &LINELIST_S_type_defn,
   [CONFIG_TYPE_LINELIST_V] = &LINELIST_V_type_defn,
+  [CONFIG_TYPE_IGNORE] = &IGNORE_type_defn,
   [CONFIG_TYPE_OBSOLETE] = &OBSOLETE_type_defn,
 };
 
