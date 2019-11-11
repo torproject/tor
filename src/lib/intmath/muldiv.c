@@ -69,8 +69,8 @@ gcd64(uint64_t a, uint64_t b)
   return a;
 }
 
-/** Return the unsigned integer product of <b>a</b> and <b>b</b>, if overflow
- * is detected return UINT64_MAX instead. */
+/** Return the unsigned integer product of <b>a</b> and <b>b</b>. If overflow
+ * is detected, return UINT64_MAX instead. */
 uint64_t
 tor_mul_u64_nowrap(uint64_t a, uint64_t b)
 {

@@ -148,7 +148,7 @@ config_parse_units(const char *val, const unit_table_t *u, int *ok)
         d = u->multiplier * d;
 
         if (d < 0) {
-          log_warn(LD_CONFIG, "Negative value arised when parsing %s %s",
+          log_warn(LD_CONFIG, "Got a negative value while parsing %s %s",
                    val, u->unit);
           *ok = 0;
           goto done;
@@ -157,7 +157,8 @@ config_parse_units(const char *val, const unit_table_t *u, int *ok)
         // Some compilers may warn about casting a double to an unsigned type
         // because they don't know if d is >= 0
         if (d >= 0 && (d > (double)INT64_MAX || (uint64_t)d > INT64_MAX)) {
-          log_warn(LD_CONFIG, "Overflow detected parsing %s %s", val, u->unit);
+          log_warn(LD_CONFIG, "Overflow detected while parsing %s %s",
+                   val, u->unit);
           *ok = 0;
           goto done;
         }
@@ -167,7 +168,8 @@ config_parse_units(const char *val, const unit_table_t *u, int *ok)
         v = tor_mul_u64_nowrap(v, u->multiplier);
 
         if (v > INT64_MAX) {
-          log_warn(LD_CONFIG, "Overflow detected parsing %s %s", val, u->unit);
+          log_warn(LD_CONFIG, "Overflow detected while parsing %s %s",
+                   val, u->unit);
           *ok = 0;
           goto done;
         }
