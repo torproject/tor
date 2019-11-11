@@ -69,6 +69,20 @@ gcd64(uint64_t a, uint64_t b)
   return a;
 }
 
+/** Return the unsigned integer product of <b>a</b> and <b>b</b>, if overflow
+ * is detected return UINT64_MAX instead. */
+uint64_t
+tor_mul_u64_nowrap(uint64_t a, uint64_t b)
+{
+  if (a == 0 || b == 0) {
+    return 0;
+  } else if (PREDICT_UNLIKELY(UINT64_MAX / a < b)) {
+    return UINT64_MAX;
+  } else {
+    return a*b;
+  }
+}
+
 /* Given a fraction *<b>numer</b> / *<b>denom</b>, simplify it.
  * Requires that the denominator is greater than 0. */
 void
