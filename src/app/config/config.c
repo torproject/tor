@@ -1888,7 +1888,7 @@ options_rollback_log_transaction(log_transaction_t *xn)
  *
  * Option changes should only be marked as "reversible" if they cannot
  * be validated before switching them, but they can be switched back if
- * some other validateion fails.
+ * some other validation fails.
  *
  * Return 0 if all goes well, return -1 if things went badly.
  */
