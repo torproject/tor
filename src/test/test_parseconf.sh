@@ -30,10 +30,10 @@
 # cmdline -- Optional. If present, it contains command-line arguments that
 #      will be passed to Tor.
 #
-# (included torrc files or directories) -- Optional. If present, and
-#      configured in the torrc* or cmdline, these files or directories are
-#      included. Include paths should be specified relative to the test case
-#      directory.
+# (included torrc files or directories) -- Optional. Additional files can be
+#      included in configuration, using the "%include" directive. Files or
+#      directories can be included in any of the config files listed above.
+#      Include paths should be specified relative to the test case directory.
 #
 # Result Files
 #
