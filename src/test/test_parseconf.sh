@@ -107,7 +107,7 @@ MYNAME="$0"
 # emulate realpath(), in case coreutils or equivalent is not installed.
 abspath() {
     f="$*"
-    if [ -d "$f" ]; then
+    if test -d "$f"; then
         dir="$f"
         base=""
     else
@@ -119,8 +119,8 @@ abspath() {
 }
 
 # find the tor binary
-if [ $# -ge 1 ]; then
-  TOR_BINARY="${1}"
+if test $# -ge 1; then
+  TOR_BINARY="$1"
   shift
 else
   TOR_BINARY="${TESTING_TOR_BINARY:-./src/app/tor}"
@@ -128,7 +128,7 @@ fi
 
 TOR_BINARY="$(abspath "$TOR_BINARY")"
 
-echo "TOR BINARY IS ${TOR_BINARY}"
+echo "TOR BINARY IS $TOR_BINARY"
 
 # make a safe space for temporary files
 DATA_DIR=$(mktemp -d -t tor_parseconf_tests.XXXXXX)
@@ -163,14 +163,14 @@ fail() { printf "FAIL: " >&2;
          # The first argument is a printf string, so this warning is spurious
          # shellcheck disable=SC2059
          printf "$@" >&2;
-         printf '\n' >&2;
+         printf "\\n" >&2;
          NEXT_TEST="yes"
          FINAL_EXIT=$EXITCODE; }
 die()  { printf "FAIL: CRITICAL error in '%s':" "$MYNAME" >&2;
          # The first argument is a printf string, so this warning is spurious
          # shellcheck disable=SC2059
          printf "$@" >&2;
-         printf '\n' >&2;
+         printf "\\n" >&2;
          exit $EXITCODE; }
 
 if test "$WINDOWS" = 1; then
@@ -223,7 +223,7 @@ TOR_MODULES_DISABLED=${TOR_MODULES_DISABLED%_}
 
 echo "Tor is configured with:"
 echo "Optional Libraries: ${TOR_LIBS_ENABLED:-(None)}"
-if [ -n "${TOR_LIBS_ENABLED}" ]; then
+if test "$TOR_LIBS_ENABLED"; then
     echo "Optional Library Search List: $TOR_LIBS_ENABLED_SEARCH"
 fi
 echo "Disabled Modules: ${TOR_MODULES_DISABLED:-(None)}"
@@ -238,10 +238,11 @@ for dir in "${EXAMPLEDIR}"/*; do
 
     testname="$(basename "${dir}")"
     # We use printf since "echo -n" is not standard
-    printf "%s: " "$testname"
+    printf "%s: " \
+           "$testname"
 
     PREV_DIR="$(pwd)"
-    cd "${dir}"
+    cd "$dir"
 
     if test -f "./torrc.defaults"; then
         DEFAULTS="./torrc.defaults"
@@ -419,8 +420,8 @@ for dir in "${EXAMPLEDIR}"/*; do
             && fail "'%s': Tor did not report an error." \
                     "$ERROR"
 
-        expect_err="$(cat "$ERROR")"
-        if grep "${expect_err}" "${DATA_DIR}/output.${testname}" >/dev/null; then
+        expect_err="$(cat "${ERROR}")"
+        if grep "$expect_err" "${DATA_DIR}/output.${testname}" > /dev/null; then
             echo "OK"
         else
             fail "Expected '%s':\\n%s\\nTor said:" \
@@ -435,7 +436,7 @@ for dir in "${EXAMPLEDIR}"/*; do
         fail "Did not find ${dir}/*expected or ${dir}/*error."
     fi
 
-    cd "${PREV_DIR}"
+    cd "$PREV_DIR"
 
 done
 
