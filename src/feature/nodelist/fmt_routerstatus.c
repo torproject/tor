@@ -124,6 +124,8 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
     if (format != NS_CONTROL_PORT) {
       /* Blow up more or less nicely if we didn't get anything or not the
        * thing we expected.
+       * This should be kept in sync with the function
+       * routerstatus_has_changed and the struct routerstatus_t
        */
       if (!desc) {
         char id[HEX_DIGEST_LEN+1];

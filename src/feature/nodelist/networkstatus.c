@@ -101,6 +101,7 @@
 #include "feature/nodelist/routerlist_st.h"
 #include "feature/dirauth/vote_microdesc_hash_st.h"
 #include "feature/nodelist/vote_routerstatus_st.h"
+#include "routerstatus_st.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -1603,8 +1604,14 @@ networkstatus_consensus_has_ipv6(const or_options_t* options)
   }
 }
 
-/** Given two router status entries for the same router identity, return 1 if
- * if the contents have changed between them. Otherwise, return 0. */
+/** Given two router status entries for the same router identity, return 1
+ * if the contents have changed between them. Otherwise, return 0.
+ * It only checks for fields that are output by control port.
+ * This should be kept in sync with the struct routerstatus_t
+ * and the printing function routerstatus_format_entry in
+ * NS_CONTROL_PORT mode.
+ **/
+
 static int
 routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
 {
@@ -1625,9 +1632,14 @@ routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
          a->is_valid != b->is_valid ||
          a->is_possible_guard != b->is_possible_guard ||
          a->is_bad_exit != b->is_bad_exit ||
-         a->is_hs_dir != b->is_hs_dir;
-  // XXXX this function needs a huge refactoring; it has gotten out
-  // XXXX of sync with routerstatus_t, and it will do so again.
+         a->is_hs_dir != b->is_hs_dir ||
+         a->is_staledesc != b->is_staledesc ||
+         a->has_bandwidth != b->has_bandwidth ||
+         a->published_on != b->published_on ||
+         a->ipv6_orport != b->ipv6_orport ||
+         a->is_v2_dir != b->is_v2_dir ||
+         a->bandwidth_kb != b->bandwidth_kb ||
+         tor_addr_compare(&a->ipv6_addr, &b->ipv6_addr, CMP_EXACT);
 }
 
 /** Notify controllers of any router status entries that changed between
