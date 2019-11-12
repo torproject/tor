@@ -1,3 +1,0 @@
-  o Minor bugfixes (shellcheck):
-    - Fix minor shellcheck errors in the git-*.sh scripts.
-      Fixes bug 32402; bugfix on 0.4.2.1-alpha.

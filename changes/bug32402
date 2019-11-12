@@ -1,3 +1,0 @@
-  o Minor bugfixes (shellcheck):
-    - Start checking most scripts for shellcheck errors again.
-      Fixes bug 32402; bugfix on 0.4.2.1-alpha.

@@ -1,5 +1,0 @@
-  o Minor features (continuous integration):
-    - Use Ubuntu Bionic images for our Travis CI builds, so we can get
-      a recent version of coccinelle. But leave chutney on Ubuntu Trusty,
-      until we can fix some Bionic permissions issues (see ticket 32240).
-      Related to ticket 31919.
