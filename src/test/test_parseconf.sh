@@ -311,20 +311,23 @@ for dir in "${EXAMPLEDIR}"/*; do
 
             if ! cmp "${DATA_DIR}/output.${testname}" \
                  "${DATA_DIR}/output_2.${testname}"; then
-                echo "FAIL: $EXPECTED did not match on round-trip." >&2
+                echo "FAIL: $EXPECTED did not match on round-trip:" >&2
+                diff -u "${DATA_DIR}/output.${testname}" \
+                     "${DATA_DIR}/output_2.${testname}" >&2 \
+                    || true
                 FINAL_EXIT=$EXITCODE
             fi
         else
             FAILED_CONFIG="yes"
-            echo "FAIL" >&2
             if test "$(wc -c < "${DATA_DIR}/output.${testname}")" = 0; then
+                echo "FAIL: $EXPECTED: Tor said:" >&2
                 # There was no output -- probably we failed.
                 "${TOR_BINARY}" -f "./torrc" \
                                 --defaults-torrc "${DEFAULTS}" \
                                 --verify-config \
                                 ${CMDLINE} || true
             fi
-            echo "FAIL: $EXPECTED did not match." >&2
+            echo "FAIL: $EXPECTED did not match:" >&2
             diff -u "$EXPECTED" "${DATA_DIR}/output.${testname}" >&2 \
                 || true
             FINAL_EXIT=$EXITCODE
@@ -346,8 +349,8 @@ for dir in "${EXAMPLEDIR}"/*; do
                 :
             else
                 FAILED_LOG="yes"
-                echo "FAIL" >&2
-                echo "Expected $EXPECTED_LOG: ${expect_log}" >&2
+                echo "FAIL: Expected $EXPECTED_LOG:" >&2
+                echo "${expect_log}" >&2
                 echo "Tor said:" >&2
                 cat "${DATA_DIR}/output_log.${testname}" >&2
                 FINAL_EXIT=$EXITCODE
@@ -378,8 +381,8 @@ for dir in "${EXAMPLEDIR}"/*; do
         if grep "${expect_err}" "${DATA_DIR}/output.${testname}" >/dev/null; then
             echo "OK"
         else
-            echo "FAIL" >&2
-            echo "Expected $ERROR: ${expect_err}" >&2
+            echo "FAIL: Expected $ERROR: " >&2
+            echo "${expect_err}" >&2
             echo "Tor said:" >&2
             cat "${DATA_DIR}/output.${testname}" >&2
             FINAL_EXIT=$EXITCODE
