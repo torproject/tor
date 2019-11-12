@@ -36,6 +36,8 @@ Tor repository.
 
 @subpage threading
 
+@subpage strings
+
 **/
 
 /**

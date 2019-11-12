@@ -1,5 +1,6 @@
+/**
 
-## String processing in Tor ##
+@page strings String processing in Tor
 
 Since you're reading about a C program, you probably expected this
 section: it's full of functions for manipulating the (notoriously
@@ -77,6 +78,11 @@ full of substrings in order.  Then you can concatenate them into a
 single string with smartlist_join_strings(), which also takes optional
 separator and terminator arguments.
 
+Alternatively, you might find it more convenient (and more
+allocation-efficient) to use the buffer API in buffers.c: Construct a buf_t
+object, add your data to it with buf_add_string(), buf_add_printf(), and so
+on, then call buf_extract() to get the resulting output.
+
 As a convenience, we provide smartlist_add_asprintf(), which combines
 the two methods above together.  Many of the cryptographic digest
 functions also accept a not-yet-concatenated smartlist of strings.
@@ -93,3 +99,5 @@ you can use hex_str(memory, length) for that.
 
 The escaped() and hex_str() functions both provide outputs that are
 only valid till they are next invoked; they are not threadsafe.
+
+*/
