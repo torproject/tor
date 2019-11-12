@@ -96,6 +96,13 @@ The following options in this section are only recognized on the
 [[opt-verify-config]] **`--verify-config`**::
     Verify whether the configuration file is valid.
 
+[[opt-dump-config]] **`--dump-config`** **`short`**|**`full`**|**`non-builtin`**::
+    Write a complete list of Tor's configured options to standard output.
+    When the `short` flag is selected, only write the options that
+    are different from their default values.  When `non-builtin` is selected,
+    write options that are not zero or the empty string.
+    When `full` is selected, write every option.
+
 [[opt-serviceinstall]] **`--service install`** [**`--options`** __command-line options__]::
     Install an instance of Tor as a Windows service, with the provided
     command-line options. Current instructions can be found at
