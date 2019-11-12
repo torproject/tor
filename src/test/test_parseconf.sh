@@ -17,6 +17,8 @@
 # This script looks for its test cases as individual directories in
 # src/test/conf_examples/.  Each test may have these files:
 #
+# Configuration Files
+#
 # torrc -- Usually needed. This file is passed to Tor on the command line
 #      with the "-f" flag. (If you omit it, you'll test Tor's behavior when
 #      it receives a nonexistent configuration file.)
@@ -32,6 +34,8 @@
 #      configured in the torrc* or cmdline, these files or directories are
 #      included. Include paths should be specified relative to the test case
 #      directory.
+#
+# Result Files
 #
 # expected -- If this file is present, then it should be the expected result
 #      of "--dump-config short" for this test case.  Exactly one of
