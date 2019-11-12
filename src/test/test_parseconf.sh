@@ -8,11 +8,16 @@
 # Valid configurations are tested with --dump-config, which parses and
 # validates the configuration before writing it out.  We then make sure that
 # the result is what we expect, before parsing and dumping it again to make
-# sure that there is no change.
+# sure that there is no change. Optionally, we can also test the log messages
+# with --verify-config.
 #
 # Invalid configurations are tested with --verify-config, which parses
 # and validates the configuration. We capture its output and make sure that
 # it contains the error message we expect.
+#
+# When tor is compiled with different libraries or modules, some
+# configurations may have different results. We can specify these result
+# variants using additional result files.
 
 # This script looks for its test cases as individual directories in
 # src/test/conf_examples/.  Each test may have these files:
@@ -41,33 +46,42 @@
 #      of "--dump-config short" for this test case.  Exactly one of
 #      "expected" or "error" must be present, or the test will fail.
 #
+# expected_log -- Optional. If this file is present, then it contains a regex
+#      that must be matched by some line in the output of "--verify-config",
+#      which must succeed. Only used if "expected" is also present.
+#
 # error -- If this file is present, then it contains a regex that must be
 #      matched by some line in the output of "--verify-config", which must
 #      fail. Exactly one of "expected" or "error" must be present, or the
 #      test will fail.
 #
-# {expected,error}_${TOR_LIBS_ENABLED}* -- If this file is present,
-#      then the outcome is different when some optional libraries are
+# {expected,expected_log,error}_${TOR_LIBS_ENABLED}* -- If this file is
+#      present, then the outcome is different when some optional libraries are
 #      enabled. If there is no result file matching the exact list of enabled
 #      libraries, the script searches for result files with one or more of
 #      those libraries disabled. The search terminates at the standard result
-#      file.
+#      file. If expected* is present, the script also searches for
+#      expected_log*.
 #
 #      For example:
 #      A test that succeeds, regardless of any enabled libraries:
 #       - expected
 #      A test that has a different result if the nss library is enabled
-#      (but the same result if any other library is enabled):
+#      (but the same result if any other library is enabled). We also check
+#      the log output in this test:
 #       - expected
+#       - expected_log
 #       - expected_nss
+#       - expected_log_nss
 #      A test that fails if the lzma and zstd modules are *not* enabled:
 #       - error
 #       - expected_lzma_zstd
 #
-# {expected,error}*_no_${TOR_MODULES_DISABLED} -- If this file is present,
-#      then the outcome is different when some modules are disabled. If there
-#      is no result file matching the exact list of disabled modules, the
-#      standard result file is used.
+# {expected,expected_log,error}*_no_${TOR_MODULES_DISABLED} -- If this file is
+#      present, then the outcome is different when some modules are disabled.
+#      If there is no result file matching the exact list of disabled modules,
+#      the standard result file is used. If expected* is present, the script
+#      also searches for expected_log*.
 #
 #      For example:
 #      A test that succeeds, regardless of any disabled modules:
@@ -225,6 +239,7 @@ for dir in "${EXAMPLEDIR}"/*; do
     fi
 
     EXPECTED=
+    EXPECTED_LOG=
     ERROR=
     # Search for a custom result file for any combination of enabled optional
     # libraries
@@ -246,6 +261,9 @@ for dir in "${EXAMPLEDIR}"/*; do
                 fi
 
                 EXPECTED="./expected${suffix}"
+                if test -f "./expected_log${suffix}"; then
+                    EXPECTED_LOG="./expected_log${suffix}"
+                fi
                 break
 
             elif test -f "./error${suffix}"; then
@@ -261,8 +279,17 @@ for dir in "${EXAMPLEDIR}"/*; do
     done
 
     if test -f "$EXPECTED"; then
-
         # This case should succeed: run dump-config and see if it does.
+        FAILED_LOG=
+        FAILED_CONFIG=
+
+        if test -f "$EXPECTED_LOG"; then
+            if ! test -s "$EXPECTED_LOG"; then
+                echo "FAIL: expected log file '$EXPECTED_LOG' is empty." >&2
+                echo "Empty expected log files match any output." >&2
+                FINAL_EXIT=$EXITCODE
+            fi
+        fi
 
         "${TOR_BINARY}" -f "./torrc" \
                         --defaults-torrc "${DEFAULTS}" \
@@ -270,6 +297,7 @@ for dir in "${EXAMPLEDIR}"/*; do
                         ${CMDLINE} \
                         | "${FILTER}" > "${DATA_DIR}/output.${testname}" \
                         || die "FAIL: $EXPECTED: Tor reported an error."
+
 
         if cmp "$EXPECTED" "${DATA_DIR}/output.${testname}">/dev/null ; then
             # Check round-trip.
@@ -286,9 +314,8 @@ for dir in "${EXAMPLEDIR}"/*; do
                 echo "FAIL: $EXPECTED did not match on round-trip." >&2
                 FINAL_EXIT=$EXITCODE
             fi
-
-            echo "OK"
         else
+            FAILED_CONFIG="yes"
             echo "FAIL" >&2
             if test "$(wc -c < "${DATA_DIR}/output.${testname}")" = 0; then
                 # There was no output -- probably we failed.
@@ -301,6 +328,34 @@ for dir in "${EXAMPLEDIR}"/*; do
             diff -u "$EXPECTED" "${DATA_DIR}/output.${testname}" >&2 \
                 || true
             FINAL_EXIT=$EXITCODE
+        fi
+
+        if test -f "$EXPECTED_LOG"; then
+            # This case should succeed: run verify-config and see if it does.
+
+            "${TOR_BINARY}" --verify-config \
+                            -f ./torrc \
+                            --defaults-torrc "${DEFAULTS}" \
+                            ${CMDLINE} \
+                            > "${DATA_DIR}/output_log.${testname}" \
+                        || die "FAIL: $EXPECTED_LOG: Tor reported an error."
+
+            expect_log="$(cat "$EXPECTED_LOG")"
+            if grep "${expect_log}" "${DATA_DIR}/output_log.${testname}" \
+                    >/dev/null; then
+                :
+            else
+                FAILED_LOG="yes"
+                echo "FAIL" >&2
+                echo "Expected $EXPECTED_LOG: ${expect_log}" >&2
+                echo "Tor said:" >&2
+                cat "${DATA_DIR}/output_log.${testname}" >&2
+                FINAL_EXIT=$EXITCODE
+            fi
+        fi
+
+        if test -z "${FAILED_LOG}${FAILED_CONFIG}"; then
+            echo "OK"
         fi
 
    elif test -f "$ERROR"; then
