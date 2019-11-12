@@ -1,3 +1,64 @@
+Changes in version 0.4.2.4-rc - 2019-11-??
+  Tor 0.4.2.4-rc is the first release candidate in its series; it fixes
+  several bugs from earlier versions.
+
+  o Minor features (build system):
+    - Make pkg-config use --prefix when cross-compiling, if
+      PKG_CONFIG_PATH is not set. Closes ticket 32191.
+
+  o Minor features (continuous integration):
+    - Use Ubuntu Bionic images for our Travis CI builds, so we can get a
+      recent version of coccinelle. But leave chutney on Ubuntu Trusty,
+      until we can fix some Bionic permissions issues (see ticket
+      32240). Related to ticket 31919.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the November 6 2019 Maxmind GeoLite2
+      Country database. Closes ticket 32440.
+
+  o Minor bugfixes (CI, appveyor):
+    - Install the mingw OpenSSL package in Appveyor. This makes sure
+      that the OpenSSL headers and libraries match in Tor's Appveyor
+      builds. (This bug was triggered by an Appveyor image update.)
+      Fixes bug 32449; bugfix on 0.3.5.6-rc.
+
+  o Minor bugfixes (clietn, hidden service v3):
+    - Fix a BUG() assertion that occurs within a very small race window
+      between a client intro circuit opens and its descriptor that gets
+      cleaned up from the cache. The circuit is now closed which will
+      trigger a re-fetch of the descriptor and continue the HS
+      connection. Fixes bug 28970; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (code quality):
+    - Fix "make check-includes" so it runs correctly on out-of-tree
+      builds. Fixes bug 31335; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (configuration):
+    - Log the option name when skipping an obsolete option. Fixes bug
+      32295; bugfix on 0.4.2.1-alpha.
+
+  o Minor bugfixes (crash):
+    - When running Tor with an option like --verify-config or
+      --dump-config that does not start the event loop, avoid crashing
+      if we try to exit early because of an error. Fixes bug 32407;
+      bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (directory):
+    - When checking if a directory connection is anonymous, test if the
+      circuit was marked for close before looking at its channel. This
+      avoids a BUG() stacktrace in case it was previously closed. Fixes
+      bug 31958; bugfix on 0.4.2.1-alpha.
+
+  o Minor bugfixes (shellcheck):
+    - Fix minor shellcheck errors in the git-*.sh scripts. Fixes bug
+      32402; bugfix on 0.4.2.1-alpha.
+    - Start checking most scripts for shellcheck errors again. Fixes bug
+      32402; bugfix on 0.4.2.1-alpha.
+
+  o Testing (continuous integration):
+    - In Travis, use Xcode 11.2 on macOS 10.14. Closes ticket 32241.
+
+
 Changes in version 0.4.2.3-alpha - 2019-10-24
   This release fixes several bugs from the previous alpha release, and
   from earlier versions of Tor.

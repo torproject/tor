@@ -1,3 +1,0 @@
-  o Minor bugfixes (configuration):
-    - Log the option name when skipping an obsolete option.
-      Fixes bug 32295; bugfix on 0.4.2.1-alpha.
