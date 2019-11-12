@@ -1,0 +1,2 @@
+- Code refactoring :
+  - Check all fields in the function routerstatus_has_changed

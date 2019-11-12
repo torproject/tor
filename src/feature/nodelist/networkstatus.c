@@ -101,6 +101,7 @@
 #include "feature/nodelist/routerlist_st.h"
 #include "feature/dirauth/vote_microdesc_hash_st.h"
 #include "feature/nodelist/vote_routerstatus_st.h"
+#include "routerstatus_st.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -1604,7 +1605,9 @@ networkstatus_consensus_has_ipv6(const or_options_t* options)
 }
 
 /** Given two router status entries for the same router identity, return 1 if
- * if the contents have changed between them. Otherwise, return 0. */
+ * if the contents have changed between them. Otherwise, return 0.
+ * It also checks for changes that are output by control port*/
+
 static int
 routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
 {
@@ -1625,7 +1628,12 @@ routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
          a->is_valid != b->is_valid ||
          a->is_possible_guard != b->is_possible_guard ||
          a->is_bad_exit != b->is_bad_exit ||
-         a->is_hs_dir != b->is_hs_dir;
+         a->is_hs_dir != b->is_hs_dir ||
+         a->published_on != b->published_on ||
+         a->ipv6_orport != b->ipv6_orport ||
+         a->is_v2_dir != b->is_v2_dir ||
+         a->bandwidth_kb != b->bandwidth_kb ||
+         tor_addr_compare(&a->ipv6_addr, &b->ipv6_addr, CMP_EXACT);
   // XXXX this function needs a huge refactoring; it has gotten out
   // XXXX of sync with routerstatus_t, and it will do so again.
 }
