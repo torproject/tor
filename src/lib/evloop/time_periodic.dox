@@ -1,5 +1,6 @@
+/**
 
-## Time in tor ##
+@page time_periodic Time and periodic events in Tor
 
 ### What time is it? ###
 
@@ -33,28 +34,28 @@ tor_gettimeofday_cached().
 
 Tor has functions to parse and format time in these formats:
 
-   * RFC1123 format. ("Fri, 29 Sep 2006 15:54:20 GMT").  For this,
-     use format_rfc1123_time() and parse_rfc1123_time.
+ - RFC1123 format. ("Fri, 29 Sep 2006 15:54:20 GMT").  For this,
+   use format_rfc1123_time() and parse_rfc1123_time.
 
-   * ISO8601 format. ("2006-10-29 10:57:20") For this, use
-     format_local_iso_time and format_iso_time.  We also support the
-     variant format "2006-10-29T10:57:20" with format_iso_time_nospace, and
-     "2006-10-29T10:57:20.123456" with format_iso_time_nospace_usec.
+ - ISO8601 format. ("2006-10-29 10:57:20") For this, use
+   format_local_iso_time() and format_iso_time().  We also support the
+   variant format "2006-10-29T10:57:20" with format_iso_time_nospace(), and
+   "2006-10-29T10:57:20.123456" with format_iso_time_nospace_usec().
 
-   * HTTP format collections (preferably "Mon, 25 Jul 2016 04:01:11
-     GMT" or possibly "Wed Jun 30 21:49:08 1993" or even "25-Jul-16
-     04:01:11 GMT"). For this, use parse_http_time.  Don't generate anything
-     but the first format.
+ - HTTP format collections (preferably "Mon, 25 Jul 2016 04:01:11
+   GMT" or possibly "Wed Jun 30 21:49:08 1993" or even "25-Jul-16
+   04:01:11 GMT"). For this, use parse_http_time().  Don't generate anything
+   but the first format.
 
 Some of these functions use struct tm. You can use the standard
-tor_localtime_r and tor_gmtime_r() to wrap these in a safe way. We
+tor_localtime_r() and tor_gmtime_r() to wrap these in a safe way. We
 also have a tor_timegm() function.
 
 ### Scheduling events ###
 
 The main way to schedule a not-too-frequent periodic event with
 respect to the Tor mainloop is via the mechanism in periodic.c.
-There's a big table of periodic_events in main.c, each of which gets
+There's a big table of periodic_events in mainloop.c, each of which gets
 invoked on its own schedule.  You should not expect more than about
 one second of accuracy with these timers.
 
@@ -73,3 +74,5 @@ accurate within a handful of milliseconds -- possibly better on some
 platforms.  (The timers.c module uses William Ahern's timeout.c
 implementation as its backend, which is based on a hierarchical timing
 wheel algorithm. It's cool stuff; check it out.)
+
+**/

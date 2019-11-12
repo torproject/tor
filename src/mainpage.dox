@@ -38,6 +38,8 @@ Tor repository.
 
 @subpage strings
 
+@subpage time_periodic
+
 **/
 
 /**
