@@ -102,6 +102,8 @@
 umask 077
 set -e
 
+MYNAME="$0"
+
 # emulate realpath(), in case coreutils or equivalent is not installed.
 abspath() {
     f="$*"
@@ -156,7 +158,20 @@ fi
 
 FINAL_EXIT=0
 
-die() { echo "$1" >&2 ; FINAL_EXIT=$EXITCODE; }
+NEXT_TEST=
+fail() { printf "FAIL: " >&2;
+         # The first argument is a printf string, so this warning is spurious
+         # shellcheck disable=SC2059
+         printf "$@" >&2;
+         printf '\n' >&2;
+         NEXT_TEST="yes"
+         FINAL_EXIT=$EXITCODE; }
+die()  { printf "FAIL: CRITICAL error in '%s':" "$MYNAME" >&2;
+         # The first argument is a printf string, so this warning is spurious
+         # shellcheck disable=SC2059
+         printf "$@" >&2;
+         printf '\n' >&2;
+         exit $EXITCODE; }
 
 if test "$WINDOWS" = 1; then
     FILTER="dos2unix"
@@ -166,7 +181,8 @@ fi
 
 EMPTY="${DATA_DIR}/EMPTY"
 
-touch "$EMPTY" || die "Couldn't create empty file."
+touch "$EMPTY" || die "Couldn't create empty file '%s'." \
+                      "$EMPTY"
 
 STANDARD_LIBS="libevent\\|openssl\\|zlib"
 # Lib names are restricted to [a-z0-9]* at the moment
@@ -185,9 +201,8 @@ TOR_LIBS_ENABLED=${TOR_LIBS_ENABLED%_}
 # If we ever have more than 3 optional libraries, we'll need more code here
 TOR_LIBS_ENABLED_COUNT="$(echo "$TOR_LIBS_ENABLED_SEARCH" \
                           | tr ' ' '\n' | wc -l)"
-if [ "$TOR_LIBS_ENABLED_COUNT" -gt 3 ]; then
-    echo "$0 can not handle more than 3 optional libraries"
-    exit 1
+if test "$TOR_LIBS_ENABLED_COUNT" -gt 3; then
+    die "Can not handle more than 3 optional libraries"
 fi
 # Brute-force the combinations of libraries
 TOR_LIBS_ENABLED_SEARCH_3="$(echo "$TOR_LIBS_ENABLED" \
@@ -214,7 +229,9 @@ fi
 echo "Disabled Modules: ${TOR_MODULES_DISABLED:-(None)}"
 
 for dir in "${EXAMPLEDIR}"/*; do
-    if ! test -d "${dir}"; then
+    NEXT_TEST=
+
+    if ! test -d "$dir"; then
        # Only count directories.
        continue
     fi
@@ -254,10 +271,11 @@ for dir in "${EXAMPLEDIR}"/*; do
 
                 # Check for broken configs
                 if test -f "./error${suffix}"; then
-                    echo "FAIL: Found both ${dir}/expected${suffix}" >&2
-                    echo "and ${dir}/error${suffix}." >&2
-                    echo "(Only one of these files should exist.)" >&2
-                    FINAL_EXIT=$EXITCODE
+                    fail "Found both '%s' and '%s'.%s" \
+                         "${dir}/expected${suffix}" \
+                         "${dir}/error${suffix}" \
+                         "(Only one of these files should exist.)"
+                    break
                 fi
 
                 EXPECTED="./expected${suffix}"
@@ -272,92 +290,114 @@ for dir in "${EXAMPLEDIR}"/*; do
             fi
         done
 
-        # Exit as soon as the inner loop finds a file
-        if test -f "$EXPECTED" || test -f "$ERROR"; then
+        # Exit as soon as the inner loop finds a file, or fails
+        if test -f "$EXPECTED" || test -f "$ERROR" || test "$NEXT_TEST"; then
             break
         fi
     done
 
-    if test -f "$EXPECTED"; then
+    if test "$NEXT_TEST"; then
+        # The test failed inside the file search loop: go to the next test
+        continue
+    elif test -f "$EXPECTED"; then
         # This case should succeed: run dump-config and see if it does.
-        FAILED_LOG=
-        FAILED_CONFIG=
 
         if test -f "$EXPECTED_LOG"; then
             if ! test -s "$EXPECTED_LOG"; then
-                echo "FAIL: expected log file '$EXPECTED_LOG' is empty." >&2
-                echo "Empty expected log files match any output." >&2
-                FINAL_EXIT=$EXITCODE
+                fail "Expected log file '%s' is empty.%s" \
+                     "$EXPECTED_LOG" \
+                     "(Empty expected log files match any output.)"
+                continue
             fi
         fi
 
-        "${TOR_BINARY}" -f "./torrc" \
-                        --defaults-torrc "${DEFAULTS}" \
-                        --dump-config short \
-                        ${CMDLINE} \
-                        | "${FILTER}" > "${DATA_DIR}/output.${testname}" \
-                        || die "FAIL: $EXPECTED: Tor reported an error."
+        "$TOR_BINARY" -f "./torrc" \
+                      --defaults-torrc "$DEFAULTS" \
+                      --dump-config short \
+                      $CMDLINE > "${DATA_DIR}/output_raw.${testname}" \
+            || fail "'%s': Tor --dump-config reported an error." \
+                    "$EXPECTED"
 
+        "$FILTER" "${DATA_DIR}/output_raw.${testname}" \
+                  > "${DATA_DIR}/output.${testname}" \
+            || fail "'%s': Filter '%s' reported an error." \
+                    "$EXPECTED" \
+                    "$FILTER"
 
-        if cmp "$EXPECTED" "${DATA_DIR}/output.${testname}">/dev/null ; then
+        if cmp "$EXPECTED" "${DATA_DIR}/output.${testname}" > /dev/null; then
             # Check round-trip.
-            "${TOR_BINARY}" -f "${DATA_DIR}/output.${testname}" \
-                            --defaults-torrc "${DATA_DIR}/empty" \
-                            --dump-config short \
-                            | "${FILTER}" \
-                            > "${DATA_DIR}/output_2.${testname}" \
-                        || die \
-                       "FAIL: $EXPECTED: Tor reported an error on round-trip."
+            "$TOR_BINARY" -f "${DATA_DIR}/output.${testname}" \
+                          --defaults-torrc "$EMPTY" \
+                          --dump-config short \
+                          > "${DATA_DIR}/output_2_raw.${testname}" \
+                || fail "'%s': Tor --dump-config reported an error%s." \
+                        "$EXPECTED" \
+                        " on round-trip"
+
+            "$FILTER" "${DATA_DIR}/output_2_raw.${testname}" \
+                      > "${DATA_DIR}/output_2.${testname}" \
+                || fail "'%s': Filter '%s' reported an error." \
+                        "$EXPECTED" \
+                        "$FILTER"
 
             if ! cmp "${DATA_DIR}/output.${testname}" \
                  "${DATA_DIR}/output_2.${testname}"; then
-                echo "FAIL: $EXPECTED did not match on round-trip:" >&2
+                fail "'%s': did not match on round-trip:" \
+                     "$EXPECTED"
                 diff -u "${DATA_DIR}/output.${testname}" \
                      "${DATA_DIR}/output_2.${testname}" >&2 \
                     || true
-                FINAL_EXIT=$EXITCODE
             fi
         else
-            FAILED_CONFIG="yes"
             if test "$(wc -c < "${DATA_DIR}/output.${testname}")" = 0; then
-                echo "FAIL: $EXPECTED: Tor said:" >&2
                 # There was no output -- probably we failed.
-                "${TOR_BINARY}" -f "./torrc" \
-                                --defaults-torrc "${DEFAULTS}" \
-                                --verify-config \
-                                ${CMDLINE} || true
+                fail "'%s': Tor said:" \
+                     "$EXPECTED"
+                "$TOR_BINARY" -f "./torrc" \
+                              --defaults-torrc "$DEFAULTS" \
+                              --verify-config \
+                              $CMDLINE >&2 \
+                    || true
             fi
-            echo "FAIL: $EXPECTED did not match:" >&2
+            fail "'%s' did not match:" \
+                 "$EXPECTED"
             diff -u "$EXPECTED" "${DATA_DIR}/output.${testname}" >&2 \
                 || true
-            FINAL_EXIT=$EXITCODE
         fi
 
-        if test -f "$EXPECTED_LOG"; then
+        if test -f "$EXPECTED_LOG" || test "$NEXT_TEST"; then
             # This case should succeed: run verify-config and see if it does.
+            #
+            # As a temporary hack, we also use this code when --dump-config
+            # has failed, to display the error logs.
+            if ! test -f "$EXPECTED_LOG"; then
+                NON_EMPTY="${DATA_DIR}/NON_EMPTY"
+                echo "This pattern should not match any log messages" \
+                     > "$NON_EMPTY"
+                EXPECTED_LOG=$NON_EMPTY
+            fi
 
-            "${TOR_BINARY}" --verify-config \
-                            -f ./torrc \
-                            --defaults-torrc "${DEFAULTS}" \
-                            ${CMDLINE} \
-                            > "${DATA_DIR}/output_log.${testname}" \
-                        || die "FAIL: $EXPECTED_LOG: Tor reported an error."
+            "$TOR_BINARY" --verify-config \
+                          -f ./torrc \
+                          --defaults-torrc "$DEFAULTS" \
+                          $CMDLINE \
+                          > "${DATA_DIR}/output_log.${testname}" \
+                || fail "'%s': Tor --verify-config reported an error." \
+                        "$EXPECTED_LOG"
 
-            expect_log="$(cat "$EXPECTED_LOG")"
-            if grep "${expect_log}" "${DATA_DIR}/output_log.${testname}" \
-                    >/dev/null; then
+            expect_log="$(cat "${EXPECTED_LOG}")"
+            if grep "$expect_log" "${DATA_DIR}/output_log.${testname}" \
+                    > /dev/null; then
                 :
             else
-                FAILED_LOG="yes"
-                echo "FAIL: Expected $EXPECTED_LOG:" >&2
-                echo "${expect_log}" >&2
-                echo "Tor said:" >&2
+                fail "Expected '%s':\\n%s\\nTor said:" \
+                     "$EXPECTED_LOG" \
+                     "$expect_log"
                 cat "${DATA_DIR}/output_log.${testname}" >&2
-                FINAL_EXIT=$EXITCODE
             fi
         fi
 
-        if test -z "${FAILED_LOG}${FAILED_CONFIG}"; then
+        if test -z "$NEXT_TEST"; then
             echo "OK"
         fi
 
@@ -365,35 +405,34 @@ for dir in "${EXAMPLEDIR}"/*; do
         # This case should fail: run verify-config and see if it does.
 
         if ! test -s "$ERROR"; then
-            echo "FAIL: error file '$ERROR' is empty." >&2
-            echo "Empty error files match any output." >&2
-            FINAL_EXIT=$EXITCODE
+            fail "Error file '%s' is empty.%s" \
+                 "$ERROR" \
+                 "(Empty error files match any output.)"
+            continue
         fi
 
-        "${TOR_BINARY}" --verify-config \
-                        -f ./torrc \
-                        --defaults-torrc "${DEFAULTS}" \
-                        ${CMDLINE} \
-                        > "${DATA_DIR}/output.${testname}" \
-                        && die "FAIL: $ERROR: Tor did not report an error."
+        "$TOR_BINARY" --verify-config \
+                      -f ./torrc \
+                      --defaults-torrc "$DEFAULTS" \
+                      $CMDLINE \
+                      > "${DATA_DIR}/output.${testname}" \
+            && fail "'%s': Tor did not report an error." \
+                    "$ERROR"
 
         expect_err="$(cat "$ERROR")"
         if grep "${expect_err}" "${DATA_DIR}/output.${testname}" >/dev/null; then
             echo "OK"
         else
-            echo "FAIL: Expected $ERROR: " >&2
-            echo "${expect_err}" >&2
-            echo "Tor said:" >&2
+            fail "Expected '%s':\\n%s\\nTor said:" \
+                 "$ERROR" \
+                 "$expect_err"
             cat "${DATA_DIR}/output.${testname}" >&2
-            FINAL_EXIT=$EXITCODE
         fi
 
     else
         # This case is not actually configured with a success or a failure.
         # call that an error.
-
-        echo "FAIL: Did not find ${dir}/*expected or ${dir}/*error." >&2
-        FINAL_EXIT=$EXITCODE
+        fail "Did not find ${dir}/*expected or ${dir}/*error."
     fi
 
     cd "${PREV_DIR}"
