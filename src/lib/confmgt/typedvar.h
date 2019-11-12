@@ -21,7 +21,7 @@ typedef struct var_type_fns_t var_type_fns_t;
 typedef struct var_type_def_t var_type_def_t;
 
 int typed_var_assign(void *target, const char *value, char **errmsg,
-                        const var_type_def_t *def);
+                     const var_type_def_t *def, const char *key);
 void typed_var_free(void *target, const var_type_def_t *def);
 char *typed_var_encode(const void *value, const var_type_def_t *def);
 int typed_var_copy(void *dest, const void *src, const var_type_def_t *def);
