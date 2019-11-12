@@ -663,8 +663,6 @@ test_cntev_format_stream(void *arg)
     "ISO_FIELDS=DESTPORT,SOCKS_USERNAME,SOCKS_PASSWORD,NYM_EPOCH,"));
 
  done:
-  tor_free(username);
-  tor_free(password);
   tor_free(conndesc);
   connection_free_minimal(ENTRY_TO_CONN(ec));
 }
