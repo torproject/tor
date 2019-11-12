@@ -31,6 +31,8 @@ Tor repository.
 @subpage intro
 
 @subpage dataflow
+
+@subpage certificates
 **/
 
 /**
