@@ -159,19 +159,21 @@ fi
 FINAL_EXIT=0
 
 NEXT_TEST=
-fail() { printf "FAIL: " >&2;
-         # The first argument is a printf string, so this warning is spurious
-         # shellcheck disable=SC2059
-         printf "$@" >&2;
-         printf "\\n" >&2;
-         NEXT_TEST="yes"
-         FINAL_EXIT=$EXITCODE; }
-die()  { printf "FAIL: CRITICAL error in '%s':" "$MYNAME" >&2;
-         # The first argument is a printf string, so this warning is spurious
-         # shellcheck disable=SC2059
-         printf "$@" >&2;
-         printf "\\n" >&2;
-         exit $EXITCODE; }
+fail_printf() { printf "FAIL: " >&2;
+                # The first argument is a printf string, so this warning is
+                # spurious
+                # shellcheck disable=SC2059
+                printf "$@" >&2;
+                printf "\\n" >&2;
+                NEXT_TEST="yes"
+                FINAL_EXIT=$EXITCODE; }
+die_printf()  { printf "FAIL: CRITICAL error in '%s':" "$MYNAME" >&2;
+                # The first argument is a printf string, so this warning is
+                # spurious
+                # shellcheck disable=SC2059
+                printf "$@" >&2;
+                printf "\\n" >&2;
+                exit $EXITCODE; }
 
 if test "$WINDOWS" = 1; then
     FILTER="dos2unix"
@@ -181,8 +183,8 @@ fi
 
 EMPTY="${DATA_DIR}/EMPTY"
 
-touch "$EMPTY" || die "Couldn't create empty file '%s'." \
-                      "$EMPTY"
+touch "$EMPTY" || die_printf "Couldn't create empty file '%s'." \
+                             "$EMPTY"
 
 STANDARD_LIBS="libevent\\|openssl\\|zlib"
 # Lib names are restricted to [a-z0-9]* at the moment
@@ -202,7 +204,7 @@ TOR_LIBS_ENABLED=${TOR_LIBS_ENABLED%_}
 TOR_LIBS_ENABLED_COUNT="$(echo "$TOR_LIBS_ENABLED_SEARCH" \
                           | tr ' ' '\n' | wc -l)"
 if test "$TOR_LIBS_ENABLED_COUNT" -gt 3; then
-    die "Can not handle more than 3 optional libraries"
+    die_printf "Can not handle more than 3 optional libraries"
 fi
 # Brute-force the combinations of libraries
 TOR_LIBS_ENABLED_SEARCH_3="$(echo "$TOR_LIBS_ENABLED" \
@@ -272,10 +274,10 @@ for dir in "${EXAMPLEDIR}"/*; do
 
                 # Check for broken configs
                 if test -f "./error${suffix}"; then
-                    fail "Found both '%s' and '%s'.%s" \
-                         "${dir}/expected${suffix}" \
-                         "${dir}/error${suffix}" \
-                         "(Only one of these files should exist.)"
+                    fail_printf "Found both '%s' and '%s'.%s" \
+                                "${dir}/expected${suffix}" \
+                                "${dir}/error${suffix}" \
+                                "(Only one of these files should exist.)"
                     break
                 fi
 
@@ -305,9 +307,9 @@ for dir in "${EXAMPLEDIR}"/*; do
 
         if test -f "$EXPECTED_LOG"; then
             if ! test -s "$EXPECTED_LOG"; then
-                fail "Expected log file '%s' is empty.%s" \
-                     "$EXPECTED_LOG" \
-                     "(Empty expected log files match any output.)"
+                fail_printf "Expected log file '%s' is empty.%s" \
+                            "$EXPECTED_LOG" \
+                            "(Empty expected log files match any output.)"
                 continue
             fi
         fi
@@ -316,14 +318,14 @@ for dir in "${EXAMPLEDIR}"/*; do
                       --defaults-torrc "$DEFAULTS" \
                       --dump-config short \
                       $CMDLINE > "${DATA_DIR}/output_raw.${testname}" \
-            || fail "'%s': Tor --dump-config reported an error." \
-                    "$EXPECTED"
+            || fail_printf "'%s': Tor --dump-config reported an error." \
+                           "$EXPECTED"
 
         "$FILTER" "${DATA_DIR}/output_raw.${testname}" \
                   > "${DATA_DIR}/output.${testname}" \
-            || fail "'%s': Filter '%s' reported an error." \
-                    "$EXPECTED" \
-                    "$FILTER"
+            || fail_printf "'%s': Filter '%s' reported an error." \
+                           "$EXPECTED" \
+                           "$FILTER"
 
         if cmp "$EXPECTED" "${DATA_DIR}/output.${testname}" > /dev/null; then
             # Check round-trip.
@@ -331,20 +333,20 @@ for dir in "${EXAMPLEDIR}"/*; do
                           --defaults-torrc "$EMPTY" \
                           --dump-config short \
                           > "${DATA_DIR}/output_2_raw.${testname}" \
-                || fail "'%s': Tor --dump-config reported an error%s." \
-                        "$EXPECTED" \
-                        " on round-trip"
+                || fail_printf "'%s': Tor --dump-config reported an %s." \
+                               "$EXPECTED" \
+                               "error on round-trip"
 
             "$FILTER" "${DATA_DIR}/output_2_raw.${testname}" \
                       > "${DATA_DIR}/output_2.${testname}" \
-                || fail "'%s': Filter '%s' reported an error." \
-                        "$EXPECTED" \
-                        "$FILTER"
+                || fail_printf "'%s': Filter '%s' reported an error." \
+                               "$EXPECTED" \
+                               "$FILTER"
 
             if ! cmp "${DATA_DIR}/output.${testname}" \
                  "${DATA_DIR}/output_2.${testname}"; then
-                fail "'%s': did not match on round-trip:" \
-                     "$EXPECTED"
+                fail_printf "'%s': did not match on round-trip:" \
+                            "$EXPECTED"
                 diff -u "${DATA_DIR}/output.${testname}" \
                      "${DATA_DIR}/output_2.${testname}" >&2 \
                     || true
@@ -352,16 +354,16 @@ for dir in "${EXAMPLEDIR}"/*; do
         else
             if test "$(wc -c < "${DATA_DIR}/output.${testname}")" = 0; then
                 # There was no output -- probably we failed.
-                fail "'%s': Tor said:" \
-                     "$EXPECTED"
+                fail_printf "'%s': Tor said:" \
+                            "$EXPECTED"
                 "$TOR_BINARY" -f "./torrc" \
                               --defaults-torrc "$DEFAULTS" \
                               --verify-config \
                               $CMDLINE >&2 \
                     || true
             fi
-            fail "'%s' did not match:" \
-                 "$EXPECTED"
+            fail_printf "'%s' did not match:" \
+                        "$EXPECTED"
             diff -u "$EXPECTED" "${DATA_DIR}/output.${testname}" >&2 \
                 || true
         fi
@@ -383,17 +385,17 @@ for dir in "${EXAMPLEDIR}"/*; do
                           --defaults-torrc "$DEFAULTS" \
                           $CMDLINE \
                           > "${DATA_DIR}/output_log.${testname}" \
-                || fail "'%s': Tor --verify-config reported an error." \
-                        "$EXPECTED_LOG"
+                || fail_printf "'%s': Tor --verify-config reported an error." \
+                               "$EXPECTED_LOG"
 
             expect_log="$(cat "${EXPECTED_LOG}")"
             if grep "$expect_log" "${DATA_DIR}/output_log.${testname}" \
                     > /dev/null; then
                 :
             else
-                fail "Expected '%s':\\n%s\\nTor said:" \
-                     "$EXPECTED_LOG" \
-                     "$expect_log"
+                fail_printf "Expected '%s':\\n%s\\nTor said:" \
+                            "$EXPECTED_LOG" \
+                            "$expect_log"
                 cat "${DATA_DIR}/output_log.${testname}" >&2
             fi
         fi
@@ -406,9 +408,9 @@ for dir in "${EXAMPLEDIR}"/*; do
         # This case should fail: run verify-config and see if it does.
 
         if ! test -s "$ERROR"; then
-            fail "Error file '%s' is empty.%s" \
-                 "$ERROR" \
-                 "(Empty error files match any output.)"
+            fail_printf "Error file '%s' is empty.%s" \
+                        "$ERROR" \
+                        "(Empty error files match any output.)"
             continue
         fi
 
@@ -417,23 +419,23 @@ for dir in "${EXAMPLEDIR}"/*; do
                       --defaults-torrc "$DEFAULTS" \
                       $CMDLINE \
                       > "${DATA_DIR}/output.${testname}" \
-            && fail "'%s': Tor did not report an error." \
-                    "$ERROR"
+            && fail_printf "'%s': Tor did not report an error." \
+                           "$ERROR"
 
         expect_err="$(cat "${ERROR}")"
         if grep "$expect_err" "${DATA_DIR}/output.${testname}" > /dev/null; then
             echo "OK"
         else
-            fail "Expected '%s':\\n%s\\nTor said:" \
-                 "$ERROR" \
-                 "$expect_err"
+            fail_printf "Expected '%s':\\n%s\\nTor said:" \
+                        "$ERROR" \
+                        "$expect_err"
             cat "${DATA_DIR}/output.${testname}" >&2
         fi
 
     else
         # This case is not actually configured with a success or a failure.
         # call that an error.
-        fail "Did not find ${dir}/*expected or ${dir}/*error."
+        fail_printf "Did not find ${dir}/*expected or ${dir}/*error."
     fi
 
     cd "$PREV_DIR"
