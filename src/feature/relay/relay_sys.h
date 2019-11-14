@@ -12,6 +12,10 @@
 #ifndef TOR_FEATURE_RELAY_RELAY_SYS_H
 #define TOR_FEATURE_RELAY_RELAY_SYS_H
 
+#ifdef HAVE_MODULE_RELAY
+
 extern const struct subsys_fns_t sys_relay;
+
+#endif
 
 #endif /* !defined(TOR_FEATURE_RELAY_RELAY_SYS_H) */
