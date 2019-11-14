@@ -1894,10 +1894,16 @@ hs_config_client_authorization(const or_options_t *options,
   return ret;
 }
 
-/** Called when a descriptor directory fetch is done. The ident is the
- * directory connection identifier, the decode_status is the descriptor
- * decoding status and the request_status_code is the status code of the
- * directory request. */
+/** Called when a descriptor directory fetch is done.
+ *
+ * Act accordingly on all entry connections depending on the HTTP status code
+ * we got. In case of an error, the SOCKS error is set (if ExtendedErrors is
+ * set).
+ *
+ * The reason is a human readable string returned by the directory server
+ * which can describe the status of the request. The body is the response
+ * content, on 200 code it is the descriptor itself. Finally, the status_code
+ * is the HTTP code returned by the directory server. */
 void
 hs_client_dir_fetch_done(dir_connection_t *dir_conn, const char *reason,
                          const char *body, const int status_code)
