@@ -252,6 +252,15 @@ FALSE=1
 # Send tor's standard output to stderr.
 log_verify_config()
 {
+    # show the command we're about to execute
+    # log_verify_config() is only called when we've failed
+    printf "Tor --verify-config said:\\n" >&2
+    printf "$ %s %s %s %s %s %s %s\\n" \
+    "$TOR_BINARY" --verify-config \
+                  -f "$1" \
+                  --defaults-torrc "$2" \
+                  "$3" \
+                  >&2
     # We need cmdline unquoted
     # shellcheck disable=SC2086
     "$TOR_BINARY" --verify-config \
@@ -266,6 +275,8 @@ log_verify_config()
 # may be $EMPTY. Pass tor the extra command line arguments $3, which will be
 # passed unquoted. Send tor's standard output to $4.
 #
+# Set $FULL_TOR_CMD to the tor command line that was executed.
+#
 # If tor fails, fail_printf() using the file name $5, and context $6,
 # which may be an empty string. Then run log_verify_config().
 dump_config()
@@ -276,6 +287,13 @@ dump_config()
         CONTEXT=""
     fi
 
+    # keep the command we're about to execute, and show if it we fail
+    FULL_TOR_CMD=$(printf "$ %s %s %s %s %s %s %s %s" \
+         "$TOR_BINARY" --dump-config short \
+                       -f "$1" \
+                       --defaults-torrc "$2" \
+                       "$3"
+             )
     # We need cmdline unquoted
     # shellcheck disable=SC2086
     if ! "$TOR_BINARY" --dump-config short \
@@ -283,9 +301,10 @@ dump_config()
                        --defaults-torrc "$2" \
                        $3 \
                        > "$4"; then
-        fail_printf "'%s': Tor --dump-config reported an error%s. Tor said:" \
+        fail_printf "'%s': Tor --dump-config reported an error%s:\\n%s" \
                     "$5" \
-                    "$CONTEXT"
+                    "$CONTEXT" \
+                    "$FULL_TOR_CMD"
         log_verify_config "$1" \
                           "$2" \
                           "$3"
@@ -314,19 +333,18 @@ filter()
 
 # Compare the expected file $1, and output file $2.
 #
-# If they are different, fail. If this is the first step that failed in this
-# test, run log_verify_config() with torrc $3, defaults torrc $4, and command
-# line $5, to log Tor's error messages. Finally, log the differences between
-# the files.
+# If they are different, fail. Log the differences between the files.
+# Run log_verify_config() with torrc $3, defaults torrc $4, and command
+# line $5, to log Tor's error messages.
 #
 # If the file contents are identical, returns true. Otherwise, return false.
 #
-# Log failure messages using fail_printf(), with the expected file name, and
-# context $6, which may be an empty string.
+# Log failure messages using fail_printf(), with the expected file name,
+# context $6, which may be an empty string, and the tor command line $7.
 check_diff()
 {
     if test "$6"; then
-        CONTEXT=" $=6"
+        CONTEXT=" $6"
     else
         CONTEXT=""
     fi
@@ -334,21 +352,15 @@ check_diff()
     if cmp "$1" "$2" > /dev/null; then
         return "$TRUE"
     else
-        # If this is the first step that failed in this test,
-        # show tor's logs
-        if test -z "$NEXT_TEST"; then
-           fail_printf "'%s': Tor said%s:" \
-                       "$1" \
-                       "$CONTEXT"
-           log_verify_config "$3" \
-                             "$4" \
-                             "$5"
-        fi
-        fail_printf "'%s' did not match%s:" \
+        fail_printf "'%s': Tor --dump-config said%s:\\n%s" \
                     "$1" \
-                    "$CONTEXT"
+                    "$CONTEXT" \
+                    "$7"
         diff -u "$1" "$2" >&2 \
             || true
+        log_verify_config "$3" \
+                          "$4" \
+                          "$5"
         return "$FALSE"
     fi
 }
@@ -372,6 +384,8 @@ check_dump_config()
 {
     OUTPUT="$4"
     OUTPUT_RAW="${OUTPUT}_raw"
+
+    FULL_TOR_CMD=
     dump_config "$1" \
                 "$2" \
                 "$3" \
@@ -389,8 +403,8 @@ check_dump_config()
                   "$1" \
                   "$2" \
                   "$3" \
-                  "$5" \
-                  "$6"; then
+                  "$6" \
+                  "$FULL_TOR_CMD"; then
         return "$TRUE"
     else
         return "$FALSE"
@@ -416,11 +430,21 @@ check_empty_pattern()
 # be $EMPTY. Pass tor the extra command line arguments $3, which will be
 # passed unquoted. Send tor's standard output to $4.
 #
+# Set $FULL_TOR_CMD to the tor command line that was executed.
+#
 # If tor's exit status does not match the boolean $5, fail_printf()
 # using the file name $6, and context $7, which is required.
 verify_config()
 {
     RESULT=$TRUE
+
+    # keep the command we're about to execute, and show if it we fail
+    FULL_TOR_CMD=$(printf "$ %s %s %s %s %s %s %s" \
+    "$TOR_BINARY" --verify-config \
+                  -f "$1" \
+                  --defaults-torrc "$2" \
+                  "$3"
+             )
     # We need cmdline unquoted
     # shellcheck disable=SC2086
     "$TOR_BINARY" --verify-config \
@@ -431,9 +455,11 @@ verify_config()
 
     # Convert the actual and expected results to boolean, and compare
     if test $((! (! RESULT))) -ne $((! (! $5))); then
-        fail_printf "'%s': Tor --verify-config did not %s." \
+        fail_printf "'%s': Tor --verify-config did not %s:\\n%s" \
                     "$6" \
-                    "$7"
+                    "$7" \
+                    "$FULL_TOR_CMD"
+        cat "$4" >&2
     fi
 }
 
@@ -445,15 +471,17 @@ verify_config()
 # Log the pattern, and the entire contents of the output file.
 #
 # Log failure messages using fail_printf(), with the match file name,
-# and context $3, which is required.
+# context $3, and tor command line $4, which are required.
 check_pattern()
 {
     expect_log="$(cat "$1")"
     if ! grep "$expect_log" "$2" > /dev/null; then
-        fail_printf "Expected %s '%s':\\n%s\\nTor said:" \
+        fail_printf "Expected %s '%s':\\n%s" \
                     "$3" \
                     "$1" \
                     "$expect_log"
+        printf "Tor --verify-config said:\\n%s\\n" \
+               "$4" >&2
         cat "$2" >&2
     fi
 }
@@ -479,6 +507,7 @@ check_verify_config()
         return
     fi
 
+    FULL_TOR_CMD=
     verify_config "$1" \
                   "$2" \
                   "$3" \
@@ -489,7 +518,8 @@ check_verify_config()
 
     check_pattern "$6" \
                   "$4" \
-                  "$7"
+                  "$7" \
+                  "$FULL_TOR_CMD"
 }
 
 for dir in "${EXAMPLEDIR}"/*; do
@@ -591,7 +621,7 @@ for dir in "${EXAMPLEDIR}"/*; do
                           "${DATA_DIR}/output_log.${testname}" \
                           "$TRUE" \
                           "$EXPECTED_LOG" \
-                          "log ok"
+                          "log success"
         fi
 
    elif test -f "$ERROR"; then
