@@ -1553,7 +1553,14 @@ consider_plaintext_ports(entry_connection_t *conn, uint16_t port)
   return 0;
 }
 
-/** If address is of the form "y.onion" with a well-formed handle y:
+/** Parse the given hostname in address. Returns true if the parsing was
+ * successful and type_out contains the type of the hostname. Else, false is
+ * returned which means it was not recognized and type_out is set to
+ * BAD_HOSTNAME.
+ *
+ * The possible recognized forms are (where true is returned):
+ *
+ *  If address is of the form "y.onion" with a well-formed handle y:
  *     Put a NUL after y, lower-case it, and return ONION_V2_HOSTNAME or
  *     ONION_V3_HOSTNAME depending on the HS version.
  *
