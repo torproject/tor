@@ -143,7 +143,6 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/relay/dns.c			\
 	src/feature/relay/ext_orport.c		\
 	src/feature/relay/onion_queue.c		\
-	src/feature/relay/relay_periodic.c	\
 	src/feature/relay/relay_sys.c		\
 	src/feature/relay/router.c		\
 	src/feature/relay/routerkeys.c		\
@@ -174,6 +173,7 @@ LIBTOR_APP_TESTING_A_SOURCES = $(LIBTOR_APP_A_SOURCES)
 MODULE_RELAY_SOURCES = 						\
 	src/feature/relay/routermode.c				\
 	src/feature/relay/relay_config.c			\
+	src/feature/relay/relay_periodic.c			\
 	src/feature/relay/transport_config.c
 
 # The Directory Authority module.
