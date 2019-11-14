@@ -40,6 +40,16 @@ function usage()
   echo "       (current: $GITHUB_PULL)"
   echo "   TOR_GITHUB_PUSH: the tor-github remote push URL"
   echo "       (current: $GITHUB_PUSH)"
+  echo "   TOR_EXTRA_CLONE_ARGS: extra arguments to git clone"
+  echo "       (current: $TOR_EXTRA_CLONE_ARGS)"
+  echo "   TOR_EXTRA_REMOTE_NAME: the name of an extra remote"
+  echo "       This remote is not pulled by this script or git-pull-all.sh."
+  echo "       This remote is not pushed by git-push-all.sh."
+  echo "       (current: $TOR_EXTRA_REMOTE_NAME)"
+  echo "   TOR_EXTRA_REMOTE_PULL: the extra remote pull URL."
+  echo "       (current: $TOR_EXTRA_REMOTE_PULL)"
+  echo "   TOR_EXTRA_REMOTE_PUSH: the extra remote push URL"
+  echo "       (current: $TOR_EXTRA_REMOTE_PUSH)"
   echo "   we recommend that you set these env vars in your ~/.profile"
 }
 
@@ -254,6 +264,25 @@ function make_directory
   fi
 }
 
+# Create a symlink from the first argument to the second argument
+# If the link already exists: fail if $USE_EXISTING is 0, otherwise skip.
+function make_symlink
+{
+  local cmd="ln -s '$1' '$2'"
+  printf "  %s Creating symlink from %s to %s..." "$MARKER" "$1" "$2"
+  local check_cmd="[ ! -e '$2' ]"
+  msg=$( eval "$check_cmd" 2>&1 )
+  if validate_ret_skip $? "File already exists."; then
+    return
+  fi
+  if [ $DRY_RUN -eq 0 ]; then
+    msg=$( eval "$cmd" 2>&1 )
+    validate_ret $? "$msg"
+  else
+    printf "\\n      %s\\n" "${IWTH}$cmd${CNRM}"
+  fi
+}
+
 # Go into the directory or repository, even if $DRY_RUN is non-zero.
 # If the directory does not exist, fail and log an error.
 # Otherwise, silently succeed.
@@ -269,7 +298,7 @@ function goto_dir
 # If the directory already exists: fail if $USE_EXISTING is 0, otherwise skip.
 function clone_repo
 {
-  local cmd="git clone '$1' '$2'"
+  local cmd="git clone $TOR_EXTRA_CLONE_ARGS '$1' '$2'"
   printf "  %s Cloning %s into %s..." "$MARKER" "$1" "$2"
   local check_cmd="[ ! -d '$2' ]"
   msg=$( eval "$check_cmd" 2>&1 )
@@ -491,6 +520,17 @@ set_tor_github_pr_fetch_config
 # Now fetch them all
 fetch_remote "tor-github"
 
+# Extra remote
+if [ "$TOR_EXTRA_REMOTE_NAME" ]; then
+  printf "%s Setting up remote %s\\n" "$MARKER" \
+    "${BYEL}$TOR_EXTRA_REMOTE_NAME${CNRM}"
+  # Add remote
+  add_remote "$TOR_EXTRA_REMOTE_NAME" "$TOR_EXTRA_REMOTE_PULL"
+  set_remote_push "$TOR_EXTRA_REMOTE_NAME" "$TOR_EXTRA_REMOTE_PUSH"
+  # But leave it to the user to decide if they want to fetch it
+  #fetch_remote "$TOR_EXTRA_REMOTE_NAME"
+fi
+
 # Go over all configured worktree.
 for ((i=0; i<COUNT; i++)); do
   branch=${!WORKTREE[$i]:0:1}
@@ -498,7 +538,12 @@ for ((i=0; i<COUNT; i++)); do
 
   printf "%s Handling branch %s\\n" "$MARKER" "${BYEL}$branch${CNRM}"
   # We cloned the repository, and master is the default branch
-  if [ "$branch" != "master" ]; then
+  if [ "$branch" = "master" ]; then
+    if [ "$TOR_MASTER_NAME" != "master" ]; then
+      # Set up a master link in the worktree directory
+      make_symlink "$repo_path" "$GIT_PATH/$TOR_WKT_NAME/master"
+    fi
+  else
     # git makes worktree directories if they don't exist
     add_worktree "origin/$branch" "$repo_path"
   fi
