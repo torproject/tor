@@ -778,7 +778,9 @@ hs_cache_lookup_encoded_as_client(const ed25519_public_key_t *key)
 }
 
 /** Public API: Given the HS ed25519 identity public key in <b>key</b>, return
- *  its HS descriptor if it's stored in our cache, or NULL if not. */
+ *  its HS descriptor if it's stored in our cache, or NULL if not or if the
+ *  descriptor was never decrypted. The later can happen if we are waiting for
+ *  client authorization to be added. */
 const hs_descriptor_t *
 hs_cache_lookup_as_client(const ed25519_public_key_t *key)
 {
