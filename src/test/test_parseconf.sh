@@ -614,12 +614,18 @@ for dir in "${EXAMPLEDIR}"/*; do
             # This case should succeed: run verify-config and see if it does.
 
             check_verify_config "./torrc" \
-                          "$DEFAULTS" \
-                          "$CMDLINE" \
-                          "${DATA_DIR}/output_log.${testname}" \
-                          "$TRUE" \
-                          "$EXPECTED_LOG" \
-                          "log success"
+                                "$DEFAULTS" \
+                                "$CMDLINE" \
+                                "${DATA_DIR}/output_log.${testname}" \
+                                "$TRUE" \
+                                "$EXPECTED_LOG" \
+                                "log success"
+        else
+            printf "\\nNOTICE: Missing '%s_log' file:\\n" \
+                   "$EXPECTED" >&2
+            log_verify_config "./torrc" \
+                              "$DEFAULTS" \
+                              "$CMDLINE"
         fi
 
    elif test -f "$ERROR"; then
