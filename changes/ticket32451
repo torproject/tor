@@ -1,0 +1,5 @@
+  o Minor features (testing):
+    - Allow test_parseconf.sh to test expected log outputs for successful
+      configs, as well as failed configs. Closes ticket 32451.
+    - Add common failure cases for test_parseconf.sh in
+      src/test/conf_failures. Closes ticket 32451.
