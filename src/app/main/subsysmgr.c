@@ -385,7 +385,7 @@ subsystems_get_state_idx(const subsys_fns_t *sys)
   tor_assert(i >= 0);
   return sys_status[i].state_idx;
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /**
  * Call all appropriate set_options() methods to tell the various subsystems

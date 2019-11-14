@@ -296,7 +296,7 @@ crypto_openssl_init_engines(const char *accelName,
     return -1;
   }
   return 0;
-#else
+#else /* !defined(DISABLE_ENGINES) */
   ENGINE *e = NULL;
 
   log_info(LD_CRYPTO, "Initializing OpenSSL engine support.");

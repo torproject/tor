@@ -17,7 +17,7 @@
 void relay_register_periodic_events(void);
 void reschedule_descriptor_update_check(void);
 
-#else
+#else /* !defined(HAVE_MODULE_RELAY) */
 
 #include "lib/cc/compat_compiler.h"
 
@@ -26,6 +26,6 @@ void reschedule_descriptor_update_check(void);
 #define reschedule_descriptor_update_check() \
   STMT_NIL
 
-#endif
+#endif /* defined(HAVE_MODULE_RELAY) */
 
 #endif /* !defined(TOR_FEATURE_RELAY_RELAY_PERIODIC_H) */
