@@ -418,7 +418,11 @@ cache_client_desc_new(const char *desc_str,
   if (ret == HS_DESC_DECODE_OK) {
     tor_assert(desc);
   } else {
-    tor_assert(!desc);
+    if (BUG(desc != NULL)) {
+      /* We are not suppose to have a descriptor if the decoding code is not
+       * indicating success. Just in case, bail early to recover. */
+      goto end;
+    }
   }
 
   /* All is good: make a cache object for this descriptor */
