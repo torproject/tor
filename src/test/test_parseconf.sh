@@ -167,7 +167,6 @@ fail_printf()
     # The first argument is a printf string, so this warning is spurious
     # shellcheck disable=SC2059
     printf "$@" >&2
-    printf "\\n" >&2
     NEXT_TEST="yes"
     FINAL_EXIT=$EXITCODE
 }
@@ -180,7 +179,6 @@ die_printf()
     # The first argument is a printf string, so this warning is spurious
     # shellcheck disable=SC2059
     printf "$@" >&2
-    printf "\\n" >&2
     exit $EXITCODE
 }
 
@@ -191,11 +189,11 @@ else
 fi
 
 EMPTY="${DATA_DIR}/EMPTY"
-touch "$EMPTY" || die_printf "Couldn't create empty file '%s'." \
+touch "$EMPTY" || die_printf "Couldn't create empty file '%s'.\\n" \
                              "$EMPTY"
 NON_EMPTY="${DATA_DIR}/NON_EMPTY"
 echo "This pattern should not match any log messages" \
-     > "$NON_EMPTY" || die_printf "Couldn't create non-empty file '%s'." \
+     > "$NON_EMPTY" || die_printf "Couldn't create non-empty file '%s'.\\n" \
                                   "$NON_EMPTY"
 
 STANDARD_LIBS="libevent\\|openssl\\|zlib"
@@ -216,7 +214,7 @@ TOR_LIBS_ENABLED=${TOR_LIBS_ENABLED%_}
 TOR_LIBS_ENABLED_COUNT="$(echo "$TOR_LIBS_ENABLED_SEARCH" \
                           | tr ' ' '\n' | wc -l)"
 if test "$TOR_LIBS_ENABLED_COUNT" -gt 3; then
-    die_printf "Can not handle more than 3 optional libraries"
+    die_printf "Can not handle more than 3 optional libraries.\\n"
 fi
 # Brute-force the combinations of libraries
 TOR_LIBS_ENABLED_SEARCH_3="$(echo "$TOR_LIBS_ENABLED" \
@@ -301,7 +299,7 @@ dump_config()
                        --defaults-torrc "$2" \
                        $3 \
                        > "$4"; then
-        fail_printf "'%s': Tor --dump-config reported an error%s:\\n%s" \
+        fail_printf "'%s': Tor --dump-config reported an error%s:\\n%s\\n" \
                     "$5" \
                     "$CONTEXT" \
                     "$FULL_TOR_CMD"
@@ -325,7 +323,7 @@ filter()
 
     "$FILTER" "$1" \
               > "$2" \
-        || fail_printf "'%s': Filter '%s' reported an error%s." \
+        || fail_printf "'%s': Filter '%s' reported an error%s.\\n" \
                        "$3" \
                        "$FILTER" \
                        "$CONTEXT"
@@ -352,7 +350,7 @@ check_diff()
     if cmp "$1" "$2" > /dev/null; then
         return "$TRUE"
     else
-        fail_printf "'%s': Tor --dump-config said%s:\\n%s" \
+        fail_printf "'%s': Tor --dump-config said%s:\\n%s\\n" \
                     "$1" \
                     "$CONTEXT" \
                     "$7"
@@ -417,7 +415,7 @@ check_dump_config()
 check_empty_pattern()
 {
     if ! test -s "$1"; then
-        fail_printf "%s file '%s' is empty, and will match any output." \
+        fail_printf "%s file '%s' is empty, and will match any output.\\n" \
                     "$2" \
                     "$1"
         return "$TRUE"
@@ -455,7 +453,7 @@ verify_config()
 
     # Convert the actual and expected results to boolean, and compare
     if test $((! (! RESULT))) -ne $((! (! $5))); then
-        fail_printf "'%s': Tor --verify-config did not %s:\\n%s" \
+        fail_printf "'%s': Tor --verify-config did not %s:\\n%s\\n" \
                     "$6" \
                     "$7" \
                     "$FULL_TOR_CMD"
@@ -476,7 +474,7 @@ check_pattern()
 {
     expect_log="$(cat "$1")"
     if ! grep "$expect_log" "$2" > /dev/null; then
-        fail_printf "Expected %s '%s':\\n%s" \
+        fail_printf "Expected %s '%s':\\n%s\\n" \
                     "$3" \
                     "$1" \
                     "$expect_log"
@@ -566,7 +564,7 @@ for dir in "${EXAMPLEDIR}"/*; do
 
                 # Check for broken configs
                 if test -f "./error${suffix}"; then
-                    fail_printf "Found both '%s' and '%s'.%s" \
+                    fail_printf "Found both '%s' and '%s'.%s\\n" \
                                 "${dir}/expected${suffix}" \
                                 "${dir}/error${suffix}" \
                                 "(Only one of these files should exist.)"
@@ -637,7 +635,7 @@ for dir in "${EXAMPLEDIR}"/*; do
     else
         # This case is not actually configured with a success or a failure.
         # call that an error.
-        fail_printf "Did not find ${dir}/*expected or ${dir}/*error."
+        fail_printf "Did not find ${dir}/*expected or ${dir}/*error.\\n"
     fi
 
     if test -z "$NEXT_TEST"; then
