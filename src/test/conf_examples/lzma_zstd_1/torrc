@@ -1,4 +1,1 @@
-# Deliberately bad options, to cause an error message
-# But this test actually checks for the optional library list in tor's logs,
-# not the error message
-bad bad bad
+# This test checks for the optional library list in tor's logs

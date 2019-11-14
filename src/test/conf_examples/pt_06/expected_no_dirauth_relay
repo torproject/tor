@@ -1,0 +1,6 @@
+ExtORPortCookieAuthFile /
+ExtORPortCookieAuthFileGroupReadable 1
+ExtORPort 1
+ServerTransportListenAddr bad3 127.0.0.1:2
+ServerTransportOptions bad3 a=b
+ServerTransportPlugin bad3 exec /
