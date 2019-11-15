@@ -22,6 +22,8 @@ env:
     - HARDENING_OPTIONS="--enable-expensive-hardening"
     ## We turn off asciidoc by default, because it's slow
     - ASCIIDOC_OPTIONS="--disable-asciidoc"
+    ## Turn off some newer features, turn on clang's -Wtypedef-redefinition
+    - C_DIALECT_OPTIONS="-std=gnu99"
   matrix:
     ## This matrix entry is required, but it doesn't actually create any jobs
     -
@@ -136,8 +138,8 @@ install:
 script:
   - ./autogen.sh
   - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $OPENSSL_OPTIONS --enable-fatal-warnings --disable-silent-rules"
-  - echo "Configure flags are $CONFIGURE_FLAGS"
-  - ./configure $CONFIGURE_FLAGS
+  - echo "Configure flags are $CONFIGURE_FLAGS CC=\"$CC $C_DIALECT_OPTIONS\""
+  - ./configure $CONFIGURE_FLAGS CC="$CC $C_DIALECT_OPTIONS"
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - if [[ "$SKIP_MAKE_CHECK" == "" ]]; then make check; fi
   - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
