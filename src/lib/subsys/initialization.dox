@@ -9,7 +9,7 @@
 Tor has a single entry point: tor_run_main() in main.c.  All the ways of
 starting a Tor process (ntmain.c, tor_main.c, and tor_api.c) work by invoking tor_run_main().
 
-The tor_run_main() function normally exits (\ref init_exceptwhen "1") by
+The tor_run_main() function normally exits (@ref init_exceptwhen "1") by
 returning: not by calling abort() or exit().  Before it returns, it calls
 tor_cleanup() in shutdown.c.
 
@@ -17,7 +17,7 @@ Conceptually, there are several stages in running Tor.
 
 1. First, we initialize those modules that do not depend on the
    configuration.  This happens in the first half of tor_run_main(), and the
-   first half of tor_init().  (\ref init_pending_refactor "2")
+   first half of tor_init().  (@ref init_pending_refactor "2")
 
 2. Second, we parse the command line and our configuration, and configure
    systems that depend on our configuration or state.  This configuration
@@ -33,16 +33,16 @@ Conceptually, there are several stages in running Tor.
    running.
 
 
-> \anchor init_exceptwhen 1. tor_run_main() _can_ terminate with a call to
+> @anchor init_exceptwhen 1. tor_run_main() _can_ terminate with a call to
 > abort() or exit(), but only when crashing due to a bug, or when forking to
 > run as a daemon.
 
-> \anchor init_pending_refactor 2. The pieces of code that I'm describing as
+> @anchor init_pending_refactor 2. The pieces of code that I'm describing as
 > "the first part of tor_init()" and so on deserve to be functions with their
 > own name.  I'd like to refactor them, but before I do so, there is some
 > slight reorganization that needs to happen.  Notably, the
 > nt_service_parse_options() call ought logically to be later in our
-> initialization sequence.  See \ticket{32447} for our refactoring progress.
+> initialization sequence.  See @ticket{32447} for our refactoring progress.
 
 
 @section subsys Subsystems and initialization
@@ -55,10 +55,10 @@ In simplest terms, a **subsytem** is a logically separate part of Tor that
 can be initialized, shut down, managed, and configured somewhat independently
 of the rest of the program.
 
-To define a subsystem, we declare a `const` instance of subsys_fns_t,
-describing the subsystem and a set of functions that initialize it,
-deconstruct it, and so on.  See the documentation for subsys_fns_t for a full
-list of these functions.
+The subsys_fns_t type describes a subsystem and a set of functions that
+initialize it, desconstruct it, and so on. To define a subsystem, we declare
+a `const` instance of subsys_fns_t.  See the documentation for subsys_fns_t
+for a full list of these functions.
 
 After defining a subsytem, it must be inserted in subsystem_list.c.  At that
 point, table-driven mechanisms in subsysmgr.c will invoke its functions when

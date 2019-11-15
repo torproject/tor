@@ -23,10 +23,11 @@ struct config_format_t;
  * All callbacks are optional -- if a callback is set to NULL, the subsystem
  * manager will treat it as a no-op.
  *
- * You should use c99 named-field initializers with this structure: we
- * will be adding more fields, often in the middle of the structure.
+ * You should use c99 named-field initializers with this structure, for
+ * readability and safety. (There are a lot of functions here, all of them
+ * optional, and many of them with similar signatures.)
  *
- * See \ref initialization for more information about initialization and
+ * See @ref initialization for more information about initialization and
  * shutdown in Tor.
  *
  * To make a new subsystem, you declare a const instance of this type, and
@@ -71,7 +72,7 @@ typedef struct subsys_fns_t {
   /**
    * Connect a subsystem to the message dispatch system.
    *
-   * This function should use the macros in \refdir{lib/pubsub} to register a
+   * This function should use the macros in @refdir{lib/pubsub} to register a
    * set of messages that this subsystem may publish, and may subscribe to.
    *
    * See pubsub_macros.h for more information, and for examples.
