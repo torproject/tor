@@ -1,4 +1,3 @@
-/**
 @dir /lib/malloc
 @brief lib/malloc: Wrappers and utilities for memory management.
 
@@ -75,4 +74,3 @@ using the FREE_AND_NULL macro, as follows:
 #define x_free(ptr) FREE_AND_NULL(x_t, x_free_, (ptr))
 ```
 
-**/

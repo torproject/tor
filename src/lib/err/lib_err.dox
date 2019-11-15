@@ -1,4 +1,3 @@
-/**
 @dir /lib/err
 @brief lib/err: Lowest-level error handling code.
 
@@ -12,4 +11,3 @@ There are three kinds of users for the functions in this module:
   * Code that needs signal-safe error reporting.
   * Higher-level error handling code.
 
-**/

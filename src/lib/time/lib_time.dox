@@ -1,4 +1,3 @@
-/**
 @dir /lib/time
 @brief lib/time: Higher-level time functions
 
@@ -8,4 +7,3 @@ wrappers for them to try to improve efficiency.
 For "what time is it" in UTC, see \refdir{lib/wallclock}.  For parsing and
 encoding times and dates, see \refdir{lib/encoding}.
 
-**/

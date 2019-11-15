@@ -1,4 +1,3 @@
-/**
 @dir /lib/smartlist_core
 @brief lib/smartlist_core: Minimal dynamic array implementation
 
@@ -9,4 +8,3 @@ There are higher-level pieces in \refdir{lib/container} but
 the ones in lib/smartlist_core are used by the logging code, and therefore
 cannot use the logging code.
 
-**/

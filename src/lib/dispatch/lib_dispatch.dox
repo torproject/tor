@@ -1,4 +1,3 @@
-/**
 @dir /lib/dispatch
 @brief lib/dispatch: In-process message delivery.
 
@@ -13,4 +12,3 @@ This is not a fancy multi-threaded many-to-many dispatcher as you may be used
 to from more sophisticated architectures: this dispatcher is intended only
 for use in improving Tor's architecture.
 
-**/

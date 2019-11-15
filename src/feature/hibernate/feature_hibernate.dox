@@ -1,4 +1,3 @@
-/**
 @dir /feature/hibernate
 @brief feature/hibernate: Bandwidth accounting and hibernation (!)
 
@@ -13,4 +12,3 @@ The two features are related only in the sense that "soft hibernation" (being
 almost out of ) is very close to the "shutting down" state.  But it would be
 better in the long run to make the two completely separate.
 
-**/

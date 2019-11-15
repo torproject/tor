@@ -1,4 +1,3 @@
-/**
 @dir /lib/sandbox
 @brief lib/sandbox: Linux seccomp2-based sandbox.
 
@@ -14,4 +13,3 @@ A better architecture would put the responsibility for invoking tricky system
 calls (like open()) in another, less restricted process, and give that
 process responsibility for enforcing our sandbox rules.
 
-**/

@@ -1,4 +1,3 @@
-/**
 @dir /lib
 @brief lib: low-level functionality.
 
@@ -130,4 +129,3 @@ If you are using platform-specific `ifdef`s to manage compatibility
 issues among platforms, you should probably consider whether you can
 put your code into lib.
 
-**/

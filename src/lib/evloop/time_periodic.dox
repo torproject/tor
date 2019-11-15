@@ -1,4 +1,3 @@
-/**
 
 @page time_periodic Time and periodic events in Tor
 
@@ -75,4 +74,3 @@ platforms.  (The timers.c module uses William Ahern's timeout.c
 implementation as its backend, which is based on a hierarchical timing
 wheel algorithm. It's cool stuff; check it out.)
 
-**/

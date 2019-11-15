@@ -1,4 +1,3 @@
-/**
 @mainpage Tor source reference
 
 @tableofcontents
@@ -42,9 +41,7 @@ Tor repository.
 
 @subpage time_periodic
 
-**/
 
-/**
 @page intro A high-level overview
 
 @tableofcontents
@@ -144,4 +141,3 @@ more connection types.
 A 'Node' (node_t) is a view of a Tor instance's current knowledge and opinions
 about a Tor relay or bridge.
 
-**/

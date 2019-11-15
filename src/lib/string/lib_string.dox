@@ -1,4 +1,3 @@
-/**
 @dir /lib/string
 @brief lib/string: Low-level string manipulation.
 
@@ -12,4 +11,3 @@ in the rest of the codebase.
 
 Any string function high-level enough to need logging belongs in a
 higher-level module.
-**/

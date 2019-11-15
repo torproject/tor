@@ -1,4 +1,3 @@
-/**
 @dir /lib/wallclock
 @brief lib/wallclock: Inspect and manipulate the current time.
 
@@ -10,4 +9,3 @@ For versions of the time that are more local, more monotonic, or more
 accurate, see \refdir{lib/time}.  For parsing and encoding times and dates,
 see \refdir{lib/encoding}.
 
-**/

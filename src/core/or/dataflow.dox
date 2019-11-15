@@ -1,4 +1,3 @@
-/**
 @tableofcontents
 
 @page dataflow Data flow in the Tor process
@@ -235,4 +234,3 @@ queue the next cell.
 (This logic applies to outgoing relay cells only; incoming relay cells
 are processed as they arrive.)
 
-**/

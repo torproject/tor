@@ -1,4 +1,3 @@
-/**
 @dir core/or
 @brief core/or: **Onion routing happens here!**
 
@@ -61,4 +60,3 @@ encrypt, route, and interpret relay cells.
 `scheduler.c`
 : Decides which channel/circuit pair is ready to receive the next cell.
 
-**/

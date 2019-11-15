@@ -1,4 +1,3 @@
-/**
 @dir /lib/buf
 @brief lib/buf: An efficient byte queue.
 
@@ -12,4 +11,3 @@ The buf_t type is also reasonable for use in constructing long strings.
 See \refdir{lib/net} for networking code that uses buf_t, and
 \refdir{lib/tls} for cryptographic code that uses buf_t.
 
-**/

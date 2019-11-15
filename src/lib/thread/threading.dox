@@ -1,4 +1,3 @@
-/**
 
 @page threading Threading in Tor
 
@@ -25,4 +24,3 @@ Try to minimize sharing between threads: it is usually best to simply
 make the worker "own" all the data it needs while the work is in
 progress, and to give up ownership when it's complete.
 
-**/

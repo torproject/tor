@@ -1,4 +1,3 @@
-/**
 @dir /feature/dirparse
 @brief feature/dirparse: Parsing Tor directory objects
 
@@ -7,4 +6,3 @@ We define a number of "directory objects" in
 all of them using a common line-oriented meta-format.  This module is used by
 other parts of Tor to parse them.
 
-**/

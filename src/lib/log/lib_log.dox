@@ -1,4 +1,3 @@
-/**
 @dir /lib/log
 @brief lib/log: Log messages to files, syslogs, etc.
 
@@ -9,4 +8,3 @@ specifically written to avoid having to log, because the logging module
 depends on it.
 
 
-**/

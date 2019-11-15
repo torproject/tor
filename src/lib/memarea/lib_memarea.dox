@@ -1,4 +1,3 @@
-/**
 @dir /lib/memarea
 @brief lib/memarea: A fast arena-style allocator.
 
@@ -27,4 +26,3 @@ The allocation functions `memarea_alloc()`, `memarea_alloc_zero()`,
 to the similarly-named malloc() functions.  There is intentionally no
 `memarea_free()` or `memarea_realloc()`.
 
-**/

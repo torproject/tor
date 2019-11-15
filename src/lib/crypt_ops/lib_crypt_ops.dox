@@ -1,4 +1,3 @@
-/**
 @dir /lib/crypt_ops
 @brief lib/crypt_ops: Cryptographic operations.
 
@@ -136,4 +135,3 @@ secret object to disk, encrypted with a passphrase.  The crypto_pwbox
 and crypto_unpwbox functions do so in a way that's likely to be
 readable by future versions of Tor.
 
-**/

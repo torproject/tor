@@ -1,4 +1,3 @@
-/**
 @dir /lib/fs
 @brief lib/fs: Files, filenames, directories, etc.
 
@@ -8,4 +7,3 @@ operating-system-specific filesystem access.
 It also contains a set of convenience functions for safely writing to files,
 creating directories, and so on.
 
-**/

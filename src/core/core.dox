@@ -1,4 +1,3 @@
-/**
 @dir /core
 @brief core: main loop and onion routing functionality
 
@@ -17,4 +16,3 @@ and one high-level piece:
 
    - \refdir{core/or} -- Implements onion routing itself.
 
-**/

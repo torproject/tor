@@ -1,4 +1,3 @@
-/**
 @dir /lib/subsys
 @brief lib/subsys: Types for declaring a "subsystem".
 
@@ -31,4 +30,3 @@ that are initialized from `tor_init()` or `run_tor_main_loop()` or
 these to subsystems over time; please don't add any new code that follows
 this pattern.
 
-**/

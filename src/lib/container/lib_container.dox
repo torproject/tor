@@ -1,4 +1,3 @@
-/**
 @dir /lib/container
 @brief lib/container: Hash tables, dynamic arrays, bit arrays, etc.
 
@@ -48,4 +47,3 @@ cryptographic siphash24g function to extract hashes.
 <!-- TODO: WRITE about bloom filters, namemaps, bit-arrays, order functions.
 -->
 
-**/

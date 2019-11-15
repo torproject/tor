@@ -1,4 +1,3 @@
-/**
 @dir /lib/ctime
 @brief lib/ctime: Constant-time code to avoid side-channels.
 
@@ -13,4 +12,3 @@ consider calls to memcmp() to be in error, we require that code that actually
 doesn't need to be constant-time to use the fast_memeq() / fast_memneq() /
 fast_memcmp() aliases instead.
 
-**/

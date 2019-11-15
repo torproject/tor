@@ -1,4 +1,3 @@
-/**
 @dir /lib/pubsub
 @brief lib/pubsub: Publish-subscribe message passing.
 
@@ -13,4 +12,3 @@ would be clumsy and tend to complicate the call graph.)
 
 See pubsub.c for more information.
 
-**/
