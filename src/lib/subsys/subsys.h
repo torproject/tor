@@ -23,8 +23,16 @@ struct config_format_t;
  * All callbacks are optional -- if a callback is set to NULL, the subsystem
  * manager will treat it as a no-op.
  *
- * You should use c99 named-field initializers with this structure: we
- * will be adding more fields, often in the middle of the structure.
+ * You should use c99 named-field initializers with this structure, for
+ * readability and safety. (There are a lot of functions here, all of them
+ * optional, and many of them with similar signatures.)
+ *
+ * See @ref initialization for more information about initialization and
+ * shutdown in Tor.
+ *
+ * To make a new subsystem, you declare a const instance of this type, and
+ * include it on the list in subsystem_list.c.  The code that manages these
+ * subsystems is in subsysmgr.c.
  **/
 typedef struct subsys_fns_t {
   /**
@@ -55,7 +63,7 @@ typedef struct subsys_fns_t {
    * it is only for global state or pre-configuration state.
    *
    * (If you need to do any setup that depends on configuration, you'll need
-   * to declare a configuration callback. (Not yet designed))
+   * to declare a configuration callback instead. (Not yet designed))
    *
    * This function MUST NOT have any parts that can fail.
    **/
@@ -63,22 +71,49 @@ typedef struct subsys_fns_t {
 
   /**
    * Connect a subsystem to the message dispatch system.
+   *
+   * This function should use the macros in @refdir{lib/pubsub} to register a
+   * set of messages that this subsystem may publish, and may subscribe to.
+   *
+   * See pubsub_macros.h for more information, and for examples.
    **/
   int (*add_pubsub)(struct pubsub_connector_t *);
 
   /**
    * Perform any necessary pre-fork cleanup.  This function may not fail.
+   *
+   * On Windows (and any other platforms without fork()), this function will
+   * never be invoked.  Otherwise it is used when we are about to start
+   * running as a background daemon, or when we are about to run a unit test
+   * in a subprocess.  Unlike the subsys_fns_t.postfork callback, it is run
+   * from the parent process.
+   *
+   * Note that we do not invoke this function when the child process's only
+   * purpose is to call exec() and run another program.
    */
   void (*prefork)(void);
 
   /**
    * Perform any necessary post-fork setup. This function may not fail.
+   *
+   * On Windows (and any other platforms without fork()), this function will
+   * never be invoked.  Otherwise it is used when we are about to start
+   * running as a background daemon, or when we are about to run a unit test
+   * in a subprocess.  Unlike the subsys_fns_t.prefork callback, it is run
+   * from the child process.
+   *
+   * Note that we do not invoke this function when the child process's only
+   * purpose is to call exec() and run another program.
    */
   void (*postfork)(void);
 
   /**
    * Free any thread-local resources held by this subsystem. Called before
    * the thread exits.
+   *
+   * This function is not allowed to fail.
+   *
+   * \bug Note that this callback is currently buggy: See \ticket{32103}.
    */
   void (*thread_cleanup)(void);
 
@@ -86,18 +121,28 @@ typedef struct subsys_fns_t {
    * Free all resources held by this subsystem.
    *
    * This function is not allowed to fail.
+   *
+   * Subsystems are shut down when Tor is about to exit or return control to
+   * an embedding program. This callback must return the process to a state
+   * such that subsys_fns_t.init will succeed if invoked again.
    **/
   void (*shutdown)(void);
 
   /**
    * A config_format_t describing all of the torrc fields owned by this
    * subsystem.
+   *
+   * This object, if present, is registered in a confmgr_t for Tor's options,
+   * and used to parse option fields from the command line and torrc file.
    **/
   const struct config_format_t *options_format;
 
   /**
    * A config_format_t describing all of the DataDir/state fields owned by
    * this subsystem.
+   *
+   * This object, if present, is registered in a confmgr_t for Tor's state,
+   * and used to parse state fields from the DataDir/state file.
    **/
   const struct config_format_t *state_format;
 
@@ -106,7 +151,11 @@ typedef struct subsys_fns_t {
    * on success, -1 on failure.
    *
    * It is safe to store the pointer to the object until set_options()
-   * is called again. */
+   * is called again.
+   *
+   * This function is only called after all the validation code defined
+   * by subsys_fns_t.options_format has passed.
+   **/
   int (*set_options)(void *);
 
   /* XXXX Add an implementation for options_act_reversible() later in this
@@ -118,6 +167,12 @@ typedef struct subsys_fns_t {
    *
    * It is safe to store the pointer to the object; set_state() is only
    * called on startup.
+   *
+   * This function is only called after all the validation code defined
+   * by subsys_fns_t.state_format has passed.
+   *
+   * This function will only be called once per invocation of Tor, since
+   * Tor does not reload its state while it is running.
    **/
   int (*set_state)(void *);
 
