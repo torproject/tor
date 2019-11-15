@@ -1,4 +1,4 @@
-Changes in version 0.4.2.4-rc - 2019-11-??
+Changes in version 0.4.2.4-rc - 2019-11-15
   Tor 0.4.2.4-rc is the first release candidate in its series. It fixes
   several bugs from earlier versions, including a few that would result in
   stack traces or incorrect behavior.
