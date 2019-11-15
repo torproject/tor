@@ -12,31 +12,31 @@
 #ifndef TOR_FEATURE_DIRAUTH_DIRAUTH_CONFIG_H
 #define TOR_FEATURE_DIRAUTH_DIRAUTH_CONFIG_H
 
-typedef struct or_options_t or_options_t;
+struct or_options_t;
 
 #ifdef HAVE_MODULE_DIRAUTH
 
 #include "lib/cc/torint.h"
 
-int options_validate_dirauth_mode(const or_options_t *old_options,
-                                  or_options_t *options,
+int options_validate_dirauth_mode(const struct or_options_t *old_options,
+                                  struct or_options_t *options,
                                   char **msg);
 
-int options_validate_dirauth_bandwidth(const or_options_t *old_options,
-                                       or_options_t *options,
+int options_validate_dirauth_bandwidth(const struct or_options_t *old_options,
+                                       struct or_options_t *options,
                                        char **msg);
 
-int options_validate_dirauth_schedule(const or_options_t *old_options,
-                                      or_options_t *options,
+int options_validate_dirauth_schedule(const struct or_options_t *old_options,
+                                      struct or_options_t *options,
                                       char **msg);
 
-int options_validate_dirauth_testing(const or_options_t *old_options,
-                                     or_options_t *options,
+int options_validate_dirauth_testing(const struct or_options_t *old_options,
+                                     struct or_options_t *options,
                                      char **msg);
 
-int options_act_dirauth(const or_options_t *old_options);
-int options_act_dirauth_mtbf(const or_options_t *old_options);
-int options_act_dirauth_stats(const or_options_t *old_options,
+int options_act_dirauth(const struct or_options_t *old_options);
+int options_act_dirauth_mtbf(const struct or_options_t *old_options);
+int options_act_dirauth_stats(const struct or_options_t *old_options,
                               bool *print_notice_out);
 
 #else /* !defined(HAVE_MODULE_DIRAUTH) */
@@ -47,8 +47,8 @@ int options_act_dirauth_stats(const or_options_t *old_options,
  * Returns -1 and sets msg to a newly allocated string, if AuthoritativeDir
  * is set in options. Otherwise returns 0. */
 static inline int
-options_validate_dirauth_mode(const or_options_t *old_options,
-                              or_options_t *options,
+options_validate_dirauth_mode(const struct or_options_t *old_options,
+                              struct or_options_t *options,
                               char **msg)
 {
   (void)old_options;
