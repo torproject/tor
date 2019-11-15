@@ -134,7 +134,7 @@
    .initvalue = initval                                         \
   },
 /**@}*/
-#endif
+#endif /* !defined(COCCI) */
 
 /** Type aliases for the "commonly used" configuration types.
  *

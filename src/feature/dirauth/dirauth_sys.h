@@ -12,6 +12,10 @@
 #ifndef DIRAUTH_SYS_H
 #define DIRAUTH_SYS_H
 
+#ifdef HAVE_MODULE_DIRAUTH
+
 extern const struct subsys_fns_t sys_dirauth;
+
+#endif
 
 #endif /* !defined(DIRAUTH_SYS_H) */
