@@ -1936,9 +1936,7 @@ routerlist_descriptors_added(smartlist_t *sl, int from_cache)
       learned_bridge_descriptor(ri, from_cache);
     if (ri->needs_retest_if_added) {
       ri->needs_retest_if_added = 0;
-#ifdef HAVE_MODULE_DIRAUTH
       dirserv_single_reachability_test(approx_time(), ri);
-#endif
     }
   } SMARTLIST_FOREACH_END(ri);
 }
