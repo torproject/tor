@@ -1050,7 +1050,7 @@ consdiff_gen_diff(const smartlist_t *cons1,
   if (smartlist_len(cons2) == smartlist_len(ed_cons2)) {
     SMARTLIST_FOREACH_BEGIN(cons2, const cdline_t *, line1) {
       const cdline_t *line2 = smartlist_get(ed_cons2, line1_sl_idx);
-      if (! lines_eq(line1, line2) ) {
+      if (!lines_eq(line1, line2)) {
         cons2_eq = 0;
         break;
       }
