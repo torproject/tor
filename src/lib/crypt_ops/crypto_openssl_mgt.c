@@ -399,7 +399,7 @@ crypto_openssl_thread_cleanup(void)
 void
 crypto_openssl_global_cleanup(void)
 {
-  #ifndef OPENSSL_1_1_API
+#ifndef OPENSSL_1_1_API
   EVP_cleanup();
 #endif
 #ifndef NEW_THREAD_API
