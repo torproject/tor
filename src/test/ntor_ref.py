@@ -99,7 +99,7 @@ else:
    def int2byte(i):
       return bytes([i])
 
-def  kdf_rfc5869(key, salt, info, n):
+def kdf_rfc5869(key, salt, info, n):
 
     prk = HMAC(key=salt, msg=key)
 
