@@ -2428,7 +2428,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
                      "Discarding this circuit.", conn->chosen_exit_name);
             return -1;
           }
-        } else  { /* ! (r && node_has_preferred_descriptor(...)) */
+        } else { /* ! (r && node_has_preferred_descriptor(...)) */
           log_debug(LD_DIR, "considering %d, %s",
                     want_onehop, conn->chosen_exit_name);
           if (want_onehop && conn->chosen_exit_name[0] == '$') {

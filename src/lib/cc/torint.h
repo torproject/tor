@@ -28,7 +28,7 @@
 #ifndef SIZE_MAX
 #if SIZEOF_SIZE_T == 8
 #define SIZE_MAX UINT64_MAX
-#elif  SIZEOF_SIZE_T == 4
+#elif SIZEOF_SIZE_T == 4
 #define SIZE_MAX UINT32_MAX
 #else
 #error "Can't define SIZE_MAX"

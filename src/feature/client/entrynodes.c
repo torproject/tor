@@ -2563,7 +2563,7 @@ circ_state_has_higher_priority(origin_circuit_t *a,
   } else if (! guard_b) {
     /* Known guard -- higher priority than any unknown guard. */
     return 1;
-  } else  if (! entry_guard_obeys_restriction(guard_a, rst)) {
+  } else if (! entry_guard_obeys_restriction(guard_a, rst)) {
     /* Restriction violated; guard_a cannot have higher priority. */
     return 0;
   } else {

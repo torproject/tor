@@ -253,7 +253,7 @@ typedef struct circpad_distribution_t {
 
 /** State number type. Represents current state of state machine. */
 typedef uint16_t circpad_statenum_t;
-#define  CIRCPAD_STATENUM_MAX   (UINT16_MAX)
+#define CIRCPAD_STATENUM_MAX   (UINT16_MAX)
 
 /** A histogram can be used to sample padding delays given a machine state.
  * This constant defines the maximum histogram width (i.e. the max number of
@@ -415,7 +415,7 @@ typedef struct circpad_state_t {
  * consequences, but may make naive serialization of the state machine
  * large, if we're not careful about how we represent empty fields.
  */
-#define  CIRCPAD_STATE_START       0
+#define CIRCPAD_STATE_START       0
 
 /**
  * The burst state for this machine.
@@ -435,7 +435,7 @@ typedef struct circpad_state_t {
  * between these two states arbitrarily, to encode other dynamics of
  * target traffic.
  */
-#define  CIRCPAD_STATE_BURST       1
+#define CIRCPAD_STATE_BURST       1
 
 /**
  * The gap state for this machine.
@@ -450,7 +450,7 @@ typedef struct circpad_state_t {
  * Again, in this implementation, these transitions must be specified
  * explicitly, and other transitions are also permitted.
  */
-#define  CIRCPAD_STATE_GAP         2
+#define CIRCPAD_STATE_GAP         2
 
 /**
  * End is a pseudo-state that causes the machine to go completely
@@ -459,7 +459,7 @@ typedef struct circpad_state_t {
  *
  * End MUST NOT occupy a slot in the machine state array.
  */
-#define  CIRCPAD_STATE_END         CIRCPAD_STATENUM_MAX
+#define CIRCPAD_STATE_END         CIRCPAD_STATENUM_MAX
 
 /**
  * "Ignore" is a pseudo-state that means "do not react to this
@@ -467,7 +467,7 @@ typedef struct circpad_state_t {
  *
  * "Ignore" MUST NOT occupy a slot in the machine state array.
  */
-#define  CIRCPAD_STATE_IGNORE         (CIRCPAD_STATENUM_MAX-1)
+#define CIRCPAD_STATE_IGNORE         (CIRCPAD_STATENUM_MAX-1)
 
 /**
  * "Cancel" is a pseudo-state that means "cancel pending timers,
@@ -475,7 +475,7 @@ typedef struct circpad_state_t {
  *
  * Cancel MUST NOT occupy a slot in the machine state array.
  */
-#define  CIRCPAD_STATE_CANCEL         (CIRCPAD_STATENUM_MAX-2)
+#define CIRCPAD_STATE_CANCEL         (CIRCPAD_STATENUM_MAX-2)
 
 /**
  * Since we have 3 pseudo-states, the max state array length is

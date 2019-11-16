@@ -23,7 +23,7 @@
  * How skewed do we allow our clock to be with respect to certificates that
  * seem to come from the future? (seconds)
  */
-#define  TOR_X509_FUTURE_SLOP (30*24*60*60)
+#define TOR_X509_FUTURE_SLOP (30*24*60*60)
 
 MOCK_DECL(tor_x509_cert_impl_t *, tor_tls_create_certificate,
                                                    (crypto_pk_t *rsa,

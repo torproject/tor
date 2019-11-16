@@ -49,13 +49,13 @@ typedef enum {
   DIGEST_SHA3_512 = 4,
 } digest_algorithm_t;
 /** Number of digest algorithms that we know */
-#define  N_DIGEST_ALGORITHMS (DIGEST_SHA3_512+1)
+#define N_DIGEST_ALGORITHMS (DIGEST_SHA3_512+1)
 /** Number of digest algorithms to compute when computing "all the
  * commonly used digests."
  *
  * (This is used in common_digests_t and related functions.)
  */
-#define  N_COMMON_DIGEST_ALGORITHMS (DIGEST_SHA256+1)
+#define N_COMMON_DIGEST_ALGORITHMS (DIGEST_SHA256+1)
 
 /**
  * Bytes of storage needed to record the state of an in-progress SHA-1 digest.

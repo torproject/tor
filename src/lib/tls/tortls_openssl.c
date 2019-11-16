@@ -376,7 +376,7 @@ always_accept_verify_cb(int preverify_ok,
 /** List of ciphers that servers should select from when the client might be
  * claiming extra unsupported ciphers in order to avoid fingerprinting.  */
 static const char SERVER_CIPHER_LIST[] =
-#ifdef  TLS1_3_TXT_AES_128_GCM_SHA256
+#ifdef TLS1_3_TXT_AES_128_GCM_SHA256
   /* This one can never actually get selected, since if the client lists it,
    * we will assume that the client is honest, and not use this list.
    * Nonetheless we list it if it's available, so that the server doesn't
@@ -511,7 +511,7 @@ tor_tls_context_impl_free_(struct ssl_ctx_st *ctx)
 }
 
 /** The group we should use for ecdhe when none was selected. */
-#define  NID_tor_default_ecdhe_group NID_X9_62_prime256v1
+#define NID_tor_default_ecdhe_group NID_X9_62_prime256v1
 
 /** Create a new TLS context for use with Tor TLS handshakes.
  * <b>identity</b> should be set to the identity key used to sign the
