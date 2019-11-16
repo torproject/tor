@@ -22,8 +22,6 @@ env:
     - HARDENING_OPTIONS="--enable-expensive-hardening"
     ## We turn off asciidoc by default, because it's slow
     - ASCIIDOC_OPTIONS="--disable-asciidoc"
-    ## Turn off some newer features, turn on clang's -Wtypedef-redefinition
-    - C_DIALECT_OPTIONS="-std=gnu99"
   matrix:
     ## This matrix entry is required, but it doesn't actually create any jobs
     -
@@ -34,12 +32,16 @@ matrix:
     ## We run basic tests on macOS
     - compiler: clang
       os: osx
+      ## Turn off some newer features, turn on clang's -Wtypedef-redefinition
+      env: C_DIALECT_OPTIONS="-std=gnu99"
     ## We run chutney on Linux, because it's faster than chutney on macOS
     - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
       ## (Linux only) Use an older Linux image (Ubuntu Trusty)
       ## The Xenial and Bionic images cause permissions issues for chutney,
       ## this is a workaround, until we fix #32240.
       dist: trusty
+      ## Turn off some newer features, maybe turn on some extra gcc warnings?
+      env: C_DIALECT_OPTIONS="-std=gnu99"
     ## We check asciidoc with distcheck, to make sure we remove doc products
     ## We use Linux clang, because there are no other Linux clang jobs
     - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
