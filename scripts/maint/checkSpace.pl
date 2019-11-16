@@ -144,8 +144,7 @@ for my $fn (@ARGV) {
             }
             s!"(?:[^\"]+|\\.)*"!"X"!g;
             next if /^\#/;
-            ## Warn about C++-style comments.
-            #   (Use C style comments only.)
+            ## Skip C++-style comments.
             if (m!//!) {
                 #    msg "       //:$fn:$.\n";
                 s!//.*!!;
