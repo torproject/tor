@@ -1196,7 +1196,7 @@ test_dir_formats_rsa_ed25519(void *arg)
   tor_free(buf2);
 }
 
-#include "failing_routerdescs.inc"
+#include "test/failing_routerdescs.inc"
 
 static void
 test_dir_routerinfo_parsing(void *arg)
@@ -1313,7 +1313,7 @@ test_dir_routerinfo_parsing(void *arg)
   routerinfo_free(ri);
 }
 
-#include "example_extrainfo.inc"
+#include "test/example_extrainfo.inc"
 
 static void
 routerinfo_free_wrapper_(void *arg)

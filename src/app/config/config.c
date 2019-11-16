@@ -785,7 +785,7 @@ static const config_var_t option_vars_[] = {
 /** List of default directory authorities */
 static const char *default_authorities[] = {
 #ifndef COCCI
-#include "auth_dirs.inc"
+#include "app/config/auth_dirs.inc"
 #endif
   NULL
 };
@@ -795,7 +795,7 @@ static const char *default_authorities[] = {
  */
 static const char *default_fallbacks[] = {
 #ifndef COCCI
-#include "fallback_dirs.inc"
+#include "app/config/fallback_dirs.inc"
 #endif
   NULL
 };
@@ -807,7 +807,7 @@ static const struct {
   const char *v;
 } testing_tor_network_defaults[] = {
 #ifndef COCCI
-#include "testnet.inc"
+#include "app/config/testnet.inc"
 #endif
   { NULL, NULL }
 };

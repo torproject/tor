@@ -46,7 +46,7 @@ DISABLE_GCC_WARNING(overlength-strings)
 /* We allow huge string constants in the unit tests, but not in the code
  * at large. */
 #endif
-#include "test_descriptors.inc"
+#include "test/test_descriptors.inc"
 #include "core/or/circuitlist.h"
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
 ENABLE_GCC_WARNING(overlength-strings)

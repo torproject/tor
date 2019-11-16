@@ -28,7 +28,7 @@ DISABLE_GCC_WARNING(overlength-strings)
 /* We allow huge string constants in the unit tests, but not in the code
  * at large. */
 #endif
-#include "test_hs_descriptor.inc"
+#include "test/test_hs_descriptor.inc"
 ENABLE_GCC_WARNING(overlength-strings)
 
 /* Test certificate encoding put in a descriptor. */

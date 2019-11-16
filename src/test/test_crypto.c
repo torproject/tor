@@ -17,7 +17,7 @@
 #include "lib/crypt_ops/crypto_hkdf.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_init.h"
-#include "ed25519_vectors.inc"
+#include "test/ed25519_vectors.inc"
 #include "test/log_test_helpers.h"
 
 #ifdef HAVE_SYS_STAT_H
