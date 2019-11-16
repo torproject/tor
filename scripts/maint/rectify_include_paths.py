@@ -42,6 +42,7 @@ def get_include_map():
     return includes
 
 INCLUDE_PAT = re.compile(r'( *# *include +")([^"]+)(".*)')
+USER_INC_START = '#include "'
 
 def get_base_header_name(hdr):
     return os.path.split(hdr)[1]
@@ -53,7 +54,7 @@ def fix_includes(inp, out, mapping):
             include,hdr,rest = m.groups()
             basehdr = get_base_header_name(hdr)
             if basehdr in mapping and mapping[basehdr] is not DUPLICATE:
-                out.write('{}{}{}\n'.format(include,mapping[basehdr],rest))
+                out.write('{}{}{}\n'.format(USER_INC_START,mapping[basehdr],rest))
                 continue
 
         out.write(line)
