@@ -41,6 +41,8 @@ Tor repository.
 
 @subpage time_periodic
 
+@subpage publish_subscribe
+
 
 @page intro A high-level overview
 
@@ -140,4 +142,3 @@ more connection types.
 
 A 'Node' (node_t) is a view of a Tor instance's current knowledge and opinions
 about a Tor relay or bridge.
-
