@@ -4,6 +4,7 @@
 #define CONTROL_CMD_PRIVATE
 #define CONTROL_GETINFO_PRIVATE
 #include "core/or/or.h"
+#include "app/config/config.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "feature/client/bridges.h"
 #include "feature/control/control.h"
@@ -11,6 +12,8 @@
 #include "feature/control/control_getinfo.h"
 #include "feature/control/control_proto.h"
 #include "feature/client/entrynodes.h"
+#include "feature/dircache/cached_dir_st.h"
+#include "feature/dircache/dirserv.h"
 #include "feature/hs/hs_common.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/rend/rendservice.h"
@@ -27,7 +30,6 @@
 #include "feature/dirclient/download_status_st.h"
 #include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/node_st.h"
-#include "feature/dircache/dirserv.c"
 
 typedef struct {
   const char *input;
