@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 #   This software has been dedicated to the public domain under the CC0
 #   public domain dedication.
@@ -37,32 +37,12 @@ import time
 
 METADATA_MARKER = b'\xab\xcd\xefMaxMind.com'
 
-# Here's some python2/python3 junk.  Better solutions wanted.
-try:
-    ord(b"1"[0])
-except TypeError:
-    def byte_to_int(b):
-        "convert a single element of a bytestring to an integer."
-        return b
-else:
-    byte_to_int = ord
-
-# Here's some more python2/python3 junk.  Better solutions wanted.
-try:
-    str(b"a", "utf8")
-except TypeError:
-    bytesToStr = str
-else:
-    def bytesToStr(b):
-        "convert a bytestring in utf8 to a string."
-        return str(b, 'utf8')
-
 def to_int(s):
     "Parse a big-endian integer from bytestring s."
     result = 0
     for c in s:
         result *= 256
-        result += byte_to_int(c)
+        result += c
     return result
 
 def to_int24(s):
@@ -170,7 +150,7 @@ class Datum(object):
                 v.build_maps()
                 if k.kind != TP_UTF8:
                     raise ValueError("Bad dictionary key type %d"% k.kind)
-                self.map[bytesToStr(k.data)] = v
+                self.map[k.data.decode("utf-8")] = v
 
     def int_val(self):
         """If this is an integer type, return its value"""
@@ -224,11 +204,11 @@ def get_type_and_len(s):
     """Data parsing helper: decode the type value and much-overloaded 'length'
        field for the value starting at s.  Return a 3-tuple of type, length,
        and number of bytes used to encode type-plus-length."""
-    c = byte_to_int(s[0])
+    c = s[0]
     tp = c >> 5
     skip = 1
     if tp == 0:
-        tp = byte_to_int(s[1])+7
+        tp = s[1]+7
         skip = 2
     ln = c & 31
 
@@ -350,11 +330,11 @@ def format_datum(datum):
        fill all A1 entries with what ARIN et. al think.
     """
     try:
-        return bytesToStr(datum.map['country'].map['iso_code'].data)
+        return datum.map['country'].map['iso_code'].data.decode("utf-8")
     except KeyError:
         pass
     try:
-        return bytesToStr(datum.map['registered_country'].map['iso_code'].data)
+        return datum.map['registered_country'].map['iso_code'].data.decode("utf-8")
     except KeyError:
         pass
     return None
@@ -433,7 +413,7 @@ GEOIP_FILE_HEADER = """\
 # Last updated based on %s Maxmind GeoLite2 Country
 # wget https://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.mmdb.gz
 # gunzip GeoLite2-Country.mmdb.gz
-# python mmdb-convert.py GeoLite2-Country.mmdb
+# ./mmdb-convert.py GeoLite2-Country.mmdb
 """
 
 def write_geoip_file(filename, metadata, the_tree, dump_item, fmt_item):
