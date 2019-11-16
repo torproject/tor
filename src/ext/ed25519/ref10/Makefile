@@ -5,19 +5,19 @@ ge_p2_dbl.h \
 pow225521.h pow22523.h
 
 d.h: d.py
-	python d.py > d.h
+	./d.py > d.h
 
 d2.h: d2.py
-	python d2.py > d2.h
+	./d2.py > d2.h
 
 sqrtm1.h: sqrtm1.py
-	python sqrtm1.py > sqrtm1.h
+	./sqrtm1.py > sqrtm1.h
 
 base.h: base.py
-	python base.py > base.h
+	./base.py > base.h
 
 base2.h: base2.py
-	python base2.py > base2.h
+	./base2.py > base2.h
 
 ge_add.h: ge_add.q q2h.sh
 	./q2h.sh < ge_add.q > ge_add.h

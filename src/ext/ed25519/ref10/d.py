@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
+
 q = 2**255 - 19
 
 def expmod(b,e,m):
   if e == 0: return 1
-  t = expmod(b,e/2,m)**2 % m
+  t = expmod(b,e//2,m)**2 % m
   if e & 1: t = (t*b) % m
   return t
 
@@ -15,7 +17,7 @@ def radix255(x):
   x = [x,0,0,0,0,0,0,0,0,0]
   bits = [26,25,26,25,26,25,26,25,26,25]
   for i in range(9):
-    carry = (x[i] + 2**(bits[i]-1)) / 2**bits[i]
+    carry = (x[i] + 2**(bits[i]-1)) // 2**bits[i]
     x[i] -= carry * 2**bits[i]
     x[i + 1] += carry
   result = ""
@@ -25,4 +27,4 @@ def radix255(x):
   return result
 
 d = -121665 * inv(121666)
-print radix255(d)
+print(radix255(d))
