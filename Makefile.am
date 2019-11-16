@@ -478,7 +478,7 @@ update-versions:
 
 .PHONY: callgraph
 callgraph:
-	$(top_builddir)/scripts/maint/run_calltool.sh
+	cd $(top_builddir); $(abs_top_srcdir)/scripts/maint/run_calltool.sh
 
 version:
 	@echo "Tor @VERSION@"
@@ -497,7 +497,7 @@ autostyle-operators:
 
 .PHONY: rectify-includes
 rectify-includes:
-	$(PYTHON) $(top_srcdir)/scripts/maint/rectify_include_paths.py
+	cd $(top_srcdir); $(PYTHON) $(abs_top_srcdir)/scripts/maint/rectify_include_paths.py
 
 .PHONY: update-copyright
 update-copyright:
