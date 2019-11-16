@@ -54,6 +54,13 @@ if [ -e scripts/maint/checkShellScripts.sh ]; then
     scripts/maint/checkShellScripts.sh
 fi
 
+# Always run the practracker unit tests
+PT_DIR=scripts/maint/practracker
+
+if [ -e "${PT_DIR}/test_practracker.sh" ]; then
+    "${PT_DIR}/test_practracker.sh"
+fi
+
 if [ ! "$CHECK_FILES" ]; then
     echo "No modified tor-owned source files, skipping further checks"
     exit 0
@@ -75,13 +82,9 @@ fi
 # Only call practracker if ${PT_DIR}/.enable_practracker_in_hooks exists
 # We do this check so that we can enable practracker in hooks in master, and
 # disable it on maint branches
-PT_DIR=scripts/maint/practracker
-
 if [ -e "${PT_DIR}/practracker.py" ]; then
     if [ -e "${PT_DIR}/.enable_practracker_in_hooks" ]; then
-        if ! python3 "${PT_DIR}/practracker.py" "$workdir"; then
-            exit 1
-        fi
+        python3 "${PT_DIR}/practracker.py" "$workdir"
     fi
 fi
 
