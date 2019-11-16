@@ -3,7 +3,9 @@
 #
 # Find all of tor's C headers (".h" files).
 # Generate a canonical path for each header.
+#
 # Find all user-editable C source files (".c" and ".h" files).
+# Replace each *_PRIVATE define with a canonical form.
 # Replace each user include of a tor header with its canonical form.
 
 import os
@@ -41,6 +43,9 @@ def get_include_map():
 
     return includes
 
+DEF_PRIVATE_PAT = re.compile(r'( *# *define +)([A-Z_]+)(_PRIVATE.*)')
+DEF_PRIVATE_START = '#define '
+
 INCLUDE_PAT = re.compile(r'( *# *include +")([^"]+)(".*)')
 USER_INC_START = '#include "'
 
@@ -49,6 +54,14 @@ def get_base_header_name(hdr):
 
 def fix_includes(inp, out, mapping):
     for line in inp:
+        # match #define ..._PRIVATE...
+        m = DEF_PRIVATE_PAT.match(line)
+        if m:
+            define,prefix,rest = m.groups()
+            out.write('{}{}{}\n'.format(DEF_PRIVATE_START,prefix,rest))
+            continue
+
+        # match #include "..."...
         m = INCLUDE_PAT.match(line)
         if m:
             include,hdr,rest = m.groups()
