@@ -5,8 +5,10 @@
 # Generate a canonical path for each header.
 #
 # Find all user-editable C source files (".c" and ".h" files).
-# Replace each *_PRIVATE and *_INTERNAL_ define with a canonical form.
-# Replace each user include of a tor header with its canonical form.
+# Replace the following lines with their canonical forms:
+#   - *_PRIVATE and *_INTERNAL_ defines
+#   - conditional macro directives
+#   - user includes of tor headers
 
 import os
 import os.path
@@ -81,6 +83,26 @@ def fix_line(line, pat, out, std_directive=None, mapping=None):
             return True
     return False
 
+IF_PAT = re.compile(r'( *)(#)( *)(if.*)')
+IFDEF_PAT = re.compile(r'( *)(#)( *)(ifdef.*)')
+ELIF_PAT = re.compile(r'( *)(#)( *)(elif.*)')
+ELSE_PAT = re.compile(r'( *)(#)( *)(else.*)')
+ENDIF_PAT = re.compile(r'( *)(#)( *)(endif.*)')
+
+def fix_macro_cond_line(line, pat, out):
+    '''If line matches pat, reformat it into a canonical string.
+       Parts 1 and 3 are whitespace, move them after part 2, which is '#'.
+       Then leave part 4 umodified.
+       Finally, if the line was modified, write it to out.
+       Returns True if line was written to out, otherwise returns False.
+       '''
+    m = pat.match(line)
+    if m:
+        s1, start, s2, rest = m.groups()
+        out.write('{}{}{}{}\n'.format(start,s1,s2,rest))
+        return True
+    return False
+
 def fix_includes(inp, out, mapping):
     '''Fix every line in inp using mapping, and write the result to out.'''
     for line in inp:
@@ -97,6 +119,36 @@ def fix_includes(inp, out, mapping):
                     DEFINE_INTERNAL_PAT,
                     out,
                     std_directive=DEFINE_START):
+            continue
+
+        # match #if *
+        if fix_macro_cond_line(line,
+                               IF_PAT,
+                               out):
+            continue
+
+        # match #ifdef *
+        if fix_macro_cond_line(line,
+                               IFDEF_PAT,
+                               out):
+            continue
+
+        # match #elif *
+        if fix_macro_cond_line(line,
+                               ELIF_PAT,
+                               out):
+            continue
+
+        # match #else*
+        if fix_macro_cond_line(line,
+                               ELSE_PAT,
+                               out):
+            continue
+
+        # match #endif*
+        if fix_macro_cond_line(line,
+                               ENDIF_PAT,
+                               out):
             continue
 
         # match #include "*.h"*
