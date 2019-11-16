@@ -3228,13 +3228,13 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
     if (!strcasecmp(options->TransProxyType, "default")) {
       options->TransProxyType_parsed = TPT_DEFAULT;
     } else if (!strcasecmp(options->TransProxyType, "pf-divert")) {
-#if !defined(OpenBSD) && !defined( DARWIN )
+#if !defined(OpenBSD) && !defined(DARWIN)
       /* Later versions of OS X have pf */
       REJECT("pf-divert is a OpenBSD-specific "
              "and OS X/Darwin-specific feature.");
 #else
       options->TransProxyType_parsed = TPT_PF_DIVERT;
-#endif /* !defined(OpenBSD) && !defined( DARWIN ) */
+#endif /* !defined(OpenBSD) && !defined(DARWIN) */
     } else if (!strcasecmp(options->TransProxyType, "tproxy")) {
 #if !defined(__linux__)
       REJECT("TPROXY is a Linux-specific feature.");
