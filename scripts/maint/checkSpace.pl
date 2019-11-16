@@ -61,14 +61,55 @@ for my $fn (@ARGV) {
             msg "Space\@EOL:$fn:$.\n";
         }
         ## Warn about control keywords without following space.
-        #    (We put a space after every 'if', 'while', 'for', 'switch', etc)
+        #    (We put one space after every 'if', 'while', 'for', 'switch', etc)
         if ($C && /\s(?:if|while|for|switch)\(/) {
             msg "      KW(:$fn:$.\n";
+        }
+        if ($C && /\s(?:else)\{/) {
+            msg "      KW{:$fn:$.\n";
+        }
+        ## Warn about control keywords more than one following space.
+        #    (We put one space after every 'if', 'while', 'for', 'switch', etc)
+        if ($C && /\s(?:if|while|for|switch)  +\(/) {
+            msg "      KW  +(:$fn:$.\n";
+        }
+        if ($C && /\s(?:else)  +\{/) {
+            msg "      KW  +{:$fn:$.\n";
+        }
+        if ($C && /\s(?:else)  +if/) {
+            msg "      KW  +if:$fn:$.\n";
         }
         ## Warn about #else #if instead of #elif.
         #    (We only allow #elif)
         if (($lastline =~ /^\# *else/) and ($_ =~ /^\# *if/)) {
             msg " #else#if:$fn:$.\n";
+        }
+        ## Warn about pre-processor directives without a following space
+        if ($C && /^ *\# *(?:ifdef|ifndef|elif|define|undef)[^ ]/) {
+            msg "      PP[^ ]:$fn:$.\n";
+        }
+        # Split a long pattern into two checks
+        if ($C && /^ *\# *(?:include|pragma|error|warning)[^ ]/) {
+            msg "      PP[^ ]:$fn:$.\n";
+        }
+        ## Handle if[n]?def specially
+        if ($C && /^ *\# *(?:if)[^ dn]/) {
+            msg "      PP[^ ]:$fn:$.\n";
+        }
+        if ($C && /^ *\# *(?:else|endif)\\/) {
+            msg "      PP\\:$fn:$.\n";
+        }
+        ## And warn about pre-processor directives with more than one
+        #    following space
+        if ($C && /^ *\# *(?:ifdef|ifndef|elif|define|undef|if)  +/) {
+            msg "      PP  +:$fn:$.\n";
+        }
+        # Split a long pattern into two (or three) checks
+        if ($C && /^ *\# *(?:include|pragma|error|warning)  +/) {
+            msg "      PP  +:$fn:$.\n";
+        }
+        if ($C && /^ *\# *(?:else|endif)  +/) {
+            msg "      PP  +:$fn:$.\n";
         }
         ## Warn about some K&R violations
         #    (We use K&R-style C, where open braces go on the same line as

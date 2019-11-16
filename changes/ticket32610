@@ -1,0 +1,5 @@
+  o Code simplification and refactoring:
+    - In "make check-spaces", check for exactly one space after C control
+      keywords, rather than allowing multiple spaces. Also check "else {".
+      And check for exactly one space after C preprocessor directives.
+      Closes ticket 32610.
