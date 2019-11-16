@@ -1,4 +1,10 @@
 #!/usr/bin/python
+# Make all tor header includes into a canonical form.
+#
+# Find all of tor's C headers (".h" files).
+# Generate a canonical path for each header.
+# Find all user-editable C source files (".c" and ".h" files).
+# Replace each user include of a tor header with its canonical form.
 
 import os
 import os.path
