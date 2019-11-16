@@ -57,41 +57,63 @@ def get_base_header_name(hdr):
     '''Return the file name part of the path hdr.'''
     return os.path.split(hdr)[1]
 
+def fix_line(line, pat, out, std_directive=None, mapping=None):
+    '''If line matches pat, reformat it into a canonical string.
+       Optionally, use std_directive instead of the first part of pat.
+       Optionally, use mapping to lookup the canonical form of the second
+       part of pat, and modify the line if the lookup succeeds.
+       Leave the third part of pat unmodified.
+       Finally, if the line was modified, write it to out.
+       Returns True if line was written to out, otherwise returns False.
+       '''
+    m = pat.match(line)
+    if m:
+        directive,prefix,rest = m.groups()
+        if std_directive:
+            directive = std_directive
+        if mapping:
+            basehdr = get_base_header_name(prefix)
+            if basehdr in mapping and mapping[basehdr] is not DUPLICATE:
+                out.write('{}{}{}\n'.format(directive,mapping[basehdr],rest))
+                return True
+        else:
+            out.write('{}{}{}\n'.format(directive,prefix,rest))
+            return True
+    return False
+
 def fix_includes(inp, out, mapping):
     '''Fix every line in inp using mapping, and write the result to out.'''
     for line in inp:
 
         # match #define *_PRIVATE*
-        m = DEFINE_PRIVATE_PAT.match(line)
-        if m:
-            define,prefix,rest = m.groups()
-            out.write('{}{}{}\n'.format(DEFINE_START,prefix,rest))
+        if fix_line(line,
+                    DEFINE_PRIVATE_PAT,
+                    out,
+                    std_directive=DEFINE_START):
             continue
 
         # match #define *_INTERNAL_*
-        m = DEFINE_INTERNAL_PAT.match(line)
-        if m:
-            define,prefix,rest = m.groups()
-            out.write('{}{}{}\n'.format(DEFINE_START,prefix,rest))
+        if fix_line(line,
+                    DEFINE_INTERNAL_PAT,
+                    out,
+                    std_directive=DEFINE_START):
             continue
 
         # match #include "*.h"*
-        m = INCLUDE_H_PAT.match(line)
-        if m:
-            include,hdr,rest = m.groups()
-            basehdr = get_base_header_name(hdr)
-            if basehdr in mapping and mapping[basehdr] is not DUPLICATE:
-                out.write('{}{}{}\n'.format(INCLUDE_START,mapping[basehdr],rest))
-                continue
+        if fix_line(line,
+                    INCLUDE_H_PAT,
+                    out,
+                    std_directive=INCLUDE_START,
+                    mapping=mapping):
+            continue
 
         # match #include "*.inc"*
-        m = INCLUDE_INC_PAT.match(line)
-        if m:
-            include,hdr,rest = m.groups()
-            basehdr = get_base_header_name(hdr)
-            if basehdr in mapping and mapping[basehdr] is not DUPLICATE:
-                out.write('{}{}{}\n'.format(INCLUDE_START,mapping[basehdr],rest))
-                continue
+        if fix_line(line,
+                    INCLUDE_INC_PAT,
+                    out,
+                    std_directive=INCLUDE_START,
+                    mapping=mapping):
+            continue
 
         out.write(line)
 
