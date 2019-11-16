@@ -16,33 +16,33 @@
  * To enable a type to have handles, add a HANDLE_ENTRY() field in its
  * definition, as in:
  *
- *     struct walrus {
- *         HANDLE_ENTRY(wlr, walrus);
+ *     struct walrus_t {
+ *         HANDLE_ENTRY(wlr, walrus_t);
  *         // ...
  *     };
  *
- * And invoke HANDLE_DECL(wlr, walrus, [static]) to declare the handle
+ * And invoke HANDLE_DECL(wlr, walrus_t, [static]) to declare the handle
  * manipulation functions (typically in a header):
  *
  *     // opaque handle to walrus.
  *     typedef struct wlr_handle_t wlr_handle_t;
  *
  *     // make a new handle
- *     struct wlr_handle_t *wlr_handle_new(struct walrus *);
+ *     struct wlr_handle_t *wlr_handle_new(struct walrus_t *);
  *
  *     // release a handle
  *     void wlr_handle_free(wlr_handle_t *);
  *
  *     // return the pointed-to walrus, or NULL.
- *     struct walrus *wlr_handle_get(wlr_handle_t *).
+ *     struct walrus_t *wlr_handle_get(wlr_handle_t *).
  *
  *     // call this function when you're about to free the walrus;
  *     // it invalidates all handles. (IF YOU DON'T, YOU WILL HAVE
  *     // DANGLING REFERENCES)
- *     void wlr_handles_clear(struct walrus *);
+ *     void wlr_handles_clear(struct walrus_t *);
  *
  * Finally, use HANDLE_IMPL() to define the above functions in some
- * appropriate C file: HANDLE_IMPL(wlr, walrus, [static])
+ * appropriate C file: HANDLE_IMPL(wlr, walrus_t, [static])
  *
  **/
 

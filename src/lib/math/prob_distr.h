@@ -75,7 +75,7 @@ struct dist_t {
 * If you want to define a distribution type, define a canonical set of
 * operations and define a type-specific initializer element like so:
 *
-*     struct foo {
+*     struct foo_t {
 *       struct dist_t base;
 *       int omega;
 *       double tau;
@@ -84,11 +84,11 @@ struct dist_t {
 *
 *     struct dist_ops_t foo_ops = ...;
 *
-*     #define FOO(OBJ) DIST_BASE_TYPED(&foo_ops, OBJ, struct foo)
+*     #define FOO(OBJ) DIST_BASE_TYPED(&foo_ops, OBJ, struct foo_t)
 *
 * Then users can do:
 *
-*     struct foo mydist = {
+*     struct foo_t mydist = {
 *       FOO(mydist),
 *       .omega = ...,
 *       .tau = ...,
@@ -97,7 +97,7 @@ struct dist_t {
 *
 * If you accidentally write
 *
-*     struct bar mydist = {
+*     struct bar_t mydist = {
 *       FOO(mydist),
 *       ...
 *     };
