@@ -57,12 +57,13 @@
 #define HANDLE_ENTRY(name, structname)         \
   struct name ## _handle_head_t *handle_head
 
-#define HANDLE_DECL(name, structname, linkage)                          \
+#define HANDLE_DECL(name, structname_t, linkage)                        \
   typedef struct name ## _handle_t name ## _handle_t;                   \
-  linkage  name ## _handle_t *name ## _handle_new(struct structname *object); \
+  linkage name ## _handle_t *name ## _handle_new(                       \
+                                          struct structname_t *object); \
   linkage void name ## _handle_free_(name ## _handle_t *);              \
-  linkage struct structname *name ## _handle_get(name ## _handle_t *);  \
-  linkage void name ## _handles_clear(struct structname *object);
+  linkage struct structname_t *name ## _handle_get(name ## _handle_t *); \
+  linkage void name ## _handles_clear(struct structname_t *object);
 
 /*
  * Implementation notes: there are lots of possible implementations here.  We
