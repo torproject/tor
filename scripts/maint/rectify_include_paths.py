@@ -14,11 +14,11 @@ import re
 import sys
 
 def warn(msg):
+    '''Log a warning to stderr with msg.'''
     sys.stderr.write("WARNING: %s\n"%msg)
 
-# Find all the include files, map them to their real names.
-
 def exclude(paths, dirnames):
+    '''Exclude any strings in dirnames that are equal to an item in paths.'''
     for p in paths:
         if p in dirnames:
             dirnames.remove(p)
@@ -26,6 +26,7 @@ def exclude(paths, dirnames):
 DUPLICATE = object()
 
 def get_include_map():
+    '''Find all the include files, map them to their real names.'''
     includes = { }
 
     for dirpath,dirnames,fnames in os.walk("src"):
@@ -43,6 +44,7 @@ def get_include_map():
 
     return includes
 
+# Patterns for preprocessor directives
 DEFINE_PRIVATE_PAT = re.compile(r'( *# *define +)([A-Z_]+)(_PRIVATE.*)')
 DEFINE_INTERNAL_PAT = re.compile(r'( *# *define +)([A-Z_]+)(_INTERNAL_.*)')
 DEFINE_START = '#define '
@@ -52,9 +54,11 @@ INCLUDE_INC_PAT = re.compile(r'( *# *include +")([^"]+\.inc)(".*)')
 INCLUDE_START = '#include "'
 
 def get_base_header_name(hdr):
+    '''Return the file name part of the path hdr.'''
     return os.path.split(hdr)[1]
 
 def fix_includes(inp, out, mapping):
+    '''Fix every line in inp using mapping, and write the result to out.'''
     for line in inp:
 
         # match #define *_PRIVATE*
@@ -91,6 +95,7 @@ def fix_includes(inp, out, mapping):
 
         out.write(line)
 
+# Main entry point
 incs = get_include_map()
 
 for dirpath,dirnames,fnames in os.walk("src"):
