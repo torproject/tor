@@ -156,11 +156,11 @@ tor_close_socket_simple(tor_socket_t s)
   * tor_close_socket to close sockets, and always using close() on
   * files.
   */
-  #if defined(_WIN32)
+#  if defined(_WIN32)
     r = closesocket(s);
-  #else
+#  else
     r = close(s);
-  #endif
+#  endif
 
   if (r != 0) {
     int err = tor_socket_errno(-1);
