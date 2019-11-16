@@ -143,7 +143,7 @@ static HT_HEAD(channel_idmap, channel_idmap_entry_t) channel_identity_map =
 typedef struct channel_idmap_entry_t {
   HT_ENTRY(channel_idmap_entry_t) node;
   uint8_t digest[DIGEST_LEN];
-  TOR_LIST_HEAD(channel_list_s, channel_t) channel_list;
+  TOR_LIST_HEAD(channel_list_t, channel_t) channel_list;
 } channel_idmap_entry_t;
 
 static inline unsigned
@@ -3406,7 +3406,7 @@ channel_sort_by_ed25519_identity(const void **a_, const void **b_)
  * all of which MUST have the same RSA ID.  (They MAY have different
  * Ed25519 IDs.) */
 static void
-channel_rsa_id_group_set_badness(struct channel_list_s *lst, int force)
+channel_rsa_id_group_set_badness(struct channel_list_t *lst, int force)
 {
   /*XXXX This function should really be about channels. 15056 */
   channel_t *chan = TOR_LIST_FIRST(lst);
