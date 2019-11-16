@@ -39,6 +39,8 @@ matrix:
     ## We run basic tests on macOS
     - compiler: clang
       os: osx
+      ## Turn off some newer features, turn on clang's -Wtypedef-redefinition
+      env: C_DIALECT_OPTIONS="-std=gnu99"
     ## We check NSS
     ## NSS is a fast job, clang is slower on Linux, so we do NSS clang
     - env: NSS_OPTIONS="--enable-nss"
@@ -49,6 +51,8 @@ matrix:
       ## The Xenial and Bionic images cause permissions issues for chutney,
       ## this is a workaround, until we fix #32240.
       dist: trusty
+      ## Turn off some newer features, maybe turn on some extra gcc warnings?
+      env: C_DIALECT_OPTIONS="-std=gnu99"
     ## We check asciidoc with distcheck, to make sure we remove doc products
     ## We use Linux clang, because there are no other Linux clang jobs
     - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
@@ -203,8 +207,8 @@ script:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export TOR_SKIP_TEST_REBIND=true; fi
   - ./autogen.sh
   - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $MODULES_OPTIONS $NSS_OPTIONS $OPENSSL_OPTIONS $RUST_OPTIONS --enable-fatal-warnings --disable-silent-rules"
-  - echo "Configure flags are $CONFIGURE_FLAGS"
-  - ./configure $CONFIGURE_FLAGS
+  - echo "Configure flags are $CONFIGURE_FLAGS CC=\"$CC $C_DIALECT_OPTIONS\""
+  - ./configure $CONFIGURE_FLAGS CC="$CC $C_DIALECT_OPTIONS"
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - if [[ "$SKIP_MAKE_CHECK" == "" ]]; then make check; fi
   - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
