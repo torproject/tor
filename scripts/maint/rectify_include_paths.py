@@ -5,7 +5,7 @@
 # Generate a canonical path for each header.
 #
 # Find all user-editable C source files (".c" and ".h" files).
-# Replace each *_PRIVATE define with a canonical form.
+# Replace each *_PRIVATE and *_INTERNAL_ define with a canonical form.
 # Replace each user include of a tor header with its canonical form.
 
 import os
@@ -43,31 +43,50 @@ def get_include_map():
 
     return includes
 
-DEF_PRIVATE_PAT = re.compile(r'( *# *define +)([A-Z_]+)(_PRIVATE.*)')
-DEF_PRIVATE_START = '#define '
+DEFINE_PRIVATE_PAT = re.compile(r'( *# *define +)([A-Z_]+)(_PRIVATE.*)')
+DEFINE_INTERNAL_PAT = re.compile(r'( *# *define +)([A-Z_]+)(_INTERNAL_.*)')
+DEFINE_START = '#define '
 
-INCLUDE_PAT = re.compile(r'( *# *include +")([^"]+)(".*)')
-USER_INC_START = '#include "'
+INCLUDE_H_PAT = re.compile(r'( *# *include +")([^"]+\.h)(".*)')
+INCLUDE_INC_PAT = re.compile(r'( *# *include +")([^"]+\.inc)(".*)')
+INCLUDE_START = '#include "'
 
 def get_base_header_name(hdr):
     return os.path.split(hdr)[1]
 
 def fix_includes(inp, out, mapping):
     for line in inp:
-        # match #define ..._PRIVATE...
-        m = DEF_PRIVATE_PAT.match(line)
+
+        # match #define *_PRIVATE*
+        m = DEFINE_PRIVATE_PAT.match(line)
         if m:
             define,prefix,rest = m.groups()
-            out.write('{}{}{}\n'.format(DEF_PRIVATE_START,prefix,rest))
+            out.write('{}{}{}\n'.format(DEFINE_START,prefix,rest))
             continue
 
-        # match #include "..."...
-        m = INCLUDE_PAT.match(line)
+        # match #define *_INTERNAL_*
+        m = DEFINE_INTERNAL_PAT.match(line)
+        if m:
+            define,prefix,rest = m.groups()
+            out.write('{}{}{}\n'.format(DEFINE_START,prefix,rest))
+            continue
+
+        # match #include "*.h"*
+        m = INCLUDE_H_PAT.match(line)
         if m:
             include,hdr,rest = m.groups()
             basehdr = get_base_header_name(hdr)
             if basehdr in mapping and mapping[basehdr] is not DUPLICATE:
-                out.write('{}{}{}\n'.format(USER_INC_START,mapping[basehdr],rest))
+                out.write('{}{}{}\n'.format(INCLUDE_START,mapping[basehdr],rest))
+                continue
+
+        # match #include "*.inc"*
+        m = INCLUDE_INC_PAT.match(line)
+        if m:
+            include,hdr,rest = m.groups()
+            basehdr = get_base_header_name(hdr)
+            if basehdr in mapping and mapping[basehdr] is not DUPLICATE:
+                out.write('{}{}{}\n'.format(INCLUDE_START,mapping[basehdr],rest))
                 continue
 
         out.write(line)
