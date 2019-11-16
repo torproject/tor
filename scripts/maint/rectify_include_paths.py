@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # Make all tor header includes into a canonical form.
 #
-# Find all of tor's C headers (".h" files).
+# Find all of tor's C headers (".h" and ".inc" files).
 # Generate a canonical path for each header.
 #
 # Find all user-editable C source files (".c" and ".h" files).
@@ -32,7 +32,7 @@ def get_include_map():
         exclude(["ext", "win32"], dirnames)
 
         for fname in fnames:
-            if fname.endswith(".h"):
+            if fname.endswith(".h") or fname.endswith(".inc"):
                 if fname in includes:
                     warn("Multiple headers named %s"%fname)
                     includes[fname] = DUPLICATE
