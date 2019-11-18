@@ -235,14 +235,14 @@ test_decode_descriptor(void *arg)
   /* Give some bad stuff to the decoding function. */
   ret = hs_desc_decode_descriptor("hladfjlkjadf", subcredential,
                                   NULL, &decoded);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
 
   ret = hs_desc_encode_descriptor(desc, &signing_kp, NULL, &encoded);
-  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
   tt_assert(encoded);
 
   ret = hs_desc_decode_descriptor(encoded, subcredential, NULL, &decoded);
-  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
   tt_assert(decoded);
 
   hs_helper_desc_equal(desc, decoded);
@@ -263,7 +263,7 @@ test_decode_descriptor(void *arg)
     tt_assert(encoded);
     hs_descriptor_free(decoded);
     ret = hs_desc_decode_descriptor(encoded, subcredential, NULL, &decoded);
-    tt_int_op(ret, OP_EQ, 0);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
     tt_assert(decoded);
   }
 
@@ -317,21 +317,21 @@ test_decode_descriptor(void *arg)
     hs_descriptor_free(decoded);
     ret = hs_desc_decode_descriptor(encoded, subcredential,
                                     NULL, &decoded);
-    tt_int_op(ret, OP_LT, 0);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_NEED_CLIENT_AUTH);
     tt_assert(!decoded);
 
     /* If we have an invalid client secret key, the decoding must fail. */
     hs_descriptor_free(decoded);
     ret = hs_desc_decode_descriptor(encoded, subcredential,
                                     &invalid_client_kp.seckey, &decoded);
-    tt_int_op(ret, OP_LT, 0);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_BAD_CLIENT_AUTH);
     tt_assert(!decoded);
 
     /* If we have the client secret key, the decoding must succeed and the
      * decoded descriptor must be correct. */
     ret = hs_desc_decode_descriptor(encoded, subcredential,
                                     &client_kp.seckey, &decoded);
-    tt_int_op(ret, OP_EQ, 0);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
     tt_assert(decoded);
 
     hs_helper_desc_equal(desc, decoded);
@@ -567,7 +567,7 @@ test_decode_bad_signature(void *arg)
 
   setup_full_capture_of_logs(LOG_WARN);
   ret = hs_desc_decode_plaintext(HS_DESC_BAD_SIG, &desc_plaintext);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   expect_log_msg_containing("Malformed signature line. Rejecting.");
   teardown_capture_of_logs();
 
@@ -607,14 +607,14 @@ test_decode_plaintext(void *arg)
     tor_asprintf(&plaintext, template, bad_value, "180", "42", "MESSAGE");
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
     tor_free(plaintext);
-    tt_int_op(ret, OP_EQ, -1);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   }
 
   /* Missing fields. */
   {
     const char *plaintext = "hs-descriptor 3\n";
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
-    tt_int_op(ret, OP_EQ, -1);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   }
 
   /* Max length. */
@@ -627,7 +627,7 @@ test_decode_plaintext(void *arg)
     plaintext[big - 1] = '\0';
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
     tor_free(plaintext);
-    tt_int_op(ret, OP_EQ, -1);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   }
 
   /* Bad lifetime value. */
@@ -636,7 +636,7 @@ test_decode_plaintext(void *arg)
     tor_asprintf(&plaintext, template, "3", bad_value, "42", "MESSAGE");
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
     tor_free(plaintext);
-    tt_int_op(ret, OP_EQ, -1);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   }
 
   /* Huge lifetime value. */
@@ -645,7 +645,7 @@ test_decode_plaintext(void *arg)
     tor_asprintf(&plaintext, template, "3", "7181615", "42", "MESSAGE");
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
     tor_free(plaintext);
-    tt_int_op(ret, OP_EQ, -1);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   }
 
   /* Invalid encrypted section. */
@@ -654,7 +654,7 @@ test_decode_plaintext(void *arg)
     tor_asprintf(&plaintext, template, "3", "180", "42", bad_value);
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
     tor_free(plaintext);
-    tt_int_op(ret, OP_EQ, -1);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   }
 
   /* Invalid revision counter. */
@@ -663,7 +663,7 @@ test_decode_plaintext(void *arg)
     tor_asprintf(&plaintext, template, "3", "180", bad_value, "MESSAGE");
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
     tor_free(plaintext);
-    tt_int_op(ret, OP_EQ, -1);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   }
 
  done:

@@ -2038,7 +2038,7 @@ desc_sig_is_valid(const char *b64_sig,
  * unknowns but requires that all v3 token be present and valid.
  *
  * Return 0 on success else a negative value. */
-static int
+static hs_desc_decode_status_t
 desc_decode_plaintext_v3(smartlist_t *tokens,
                          hs_desc_plaintext_data_t *desc,
                          const char *encoded_desc, size_t encoded_len)
@@ -2128,21 +2128,19 @@ desc_decode_plaintext_v3(smartlist_t *tokens,
     goto err;
   }
 
-  return 0;
-
+  return HS_DESC_DECODE_OK;
  err:
-  return -1;
+  return HS_DESC_DECODE_PLAINTEXT_ERROR;
 }
 
 /** Decode the version 3 superencrypted section of the given descriptor desc.
- * The desc_superencrypted_out will be populated with the decoded data.
- * Return 0 on success else -1. */
-static int
+ * The desc_superencrypted_out will be populated with the decoded data. */
+static hs_desc_decode_status_t
 desc_decode_superencrypted_v3(const hs_descriptor_t *desc,
                               hs_desc_superencrypted_data_t *
                               desc_superencrypted_out)
 {
-  int ret = -1;
+  int ret = HS_DESC_DECODE_SUPERENC_ERROR;
   char *message = NULL;
   size_t message_len;
   memarea_t *area = NULL;
@@ -2228,11 +2226,11 @@ desc_decode_superencrypted_v3(const hs_descriptor_t *desc,
                                               tok->object_size);
   superencrypted->encrypted_blob_size = tok->object_size;
 
-  ret = 0;
+  ret = HS_DESC_DECODE_OK;
   goto done;
 
  err:
-  tor_assert(ret < 0);
+  tor_assert(ret < HS_DESC_DECODE_OK);
   hs_desc_superencrypted_data_free_contents(desc_superencrypted_out);
 
  done:
@@ -2250,14 +2248,13 @@ desc_decode_superencrypted_v3(const hs_descriptor_t *desc,
 }
 
 /** Decode the version 3 encrypted section of the given descriptor desc. The
- * desc_encrypted_out will be populated with the decoded data. Return 0 on
- * success else -1. */
-static int
+ * desc_encrypted_out will be populated with the decoded data. */
+static hs_desc_decode_status_t
 desc_decode_encrypted_v3(const hs_descriptor_t *desc,
                          const curve25519_secret_key_t *client_auth_sk,
                          hs_desc_encrypted_data_t *desc_encrypted_out)
 {
-  int ret = -1;
+  int ret = HS_DESC_DECODE_ENCRYPTED_ERROR;
   char *message = NULL;
   size_t message_len;
   memarea_t *area = NULL;
@@ -2280,12 +2277,14 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
        * authorization is failing. */
       log_warn(LD_REND, "Client authorization for requested onion address "
                         "is invalid. Can't decrypt the descriptor.");
+      ret = HS_DESC_DECODE_BAD_CLIENT_AUTH;
     } else {
       /* Inform at notice level that the onion address requested can't be
        * reached without client authorization most likely. */
       log_notice(LD_REND, "Fail to decrypt descriptor for requested onion "
                         "address. It is likely requiring client "
                         "authorization.");
+      ret = HS_DESC_DECODE_NEED_CLIENT_AUTH;
     }
     goto err;
   }
@@ -2343,11 +2342,11 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
   /* NOTE: Unknown fields are allowed because this function could be used to
    * decode other descriptor version. */
 
-  ret = 0;
+  ret = HS_DESC_DECODE_OK;
   goto done;
 
  err:
-  tor_assert(ret < 0);
+  tor_assert(ret < HS_DESC_DECODE_OK);
   hs_desc_encrypted_data_free_contents(desc_encrypted_out);
 
  done:
@@ -2366,7 +2365,7 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
 
 /** Table of encrypted decode function version specific. The function are
  * indexed by the version number so v3 callback is at index 3 in the array. */
-static int
+static hs_desc_decode_status_t
   (*decode_encrypted_handlers[])(
       const hs_descriptor_t *desc,
       const curve25519_secret_key_t *client_auth_sk,
@@ -2379,12 +2378,12 @@ static int
 /** Decode the encrypted data section of the given descriptor and store the
  * data in the given encrypted data object. Return 0 on success else a
  * negative value on error. */
-int
+hs_desc_decode_status_t
 hs_desc_decode_encrypted(const hs_descriptor_t *desc,
                          const curve25519_secret_key_t *client_auth_sk,
                          hs_desc_encrypted_data_t *desc_encrypted)
 {
-  int ret;
+  int ret = HS_DESC_DECODE_ENCRYPTED_ERROR;
   uint32_t version;
 
   tor_assert(desc);
@@ -2398,7 +2397,6 @@ hs_desc_decode_encrypted(const hs_descriptor_t *desc,
   /* Let's make sure we have a supported version as well. By correctly parsing
    * the plaintext, this should not fail. */
   if (BUG(!hs_desc_is_supported_version(version))) {
-    ret = -1;
     goto err;
   }
   /* Extra precaution. Having no handler for the supported version should
@@ -2419,7 +2417,7 @@ hs_desc_decode_encrypted(const hs_descriptor_t *desc,
 
 /** Table of superencrypted decode function version specific. The function are
  * indexed by the version number so v3 callback is at index 3 in the array. */
-static int
+static hs_desc_decode_status_t
   (*decode_superencrypted_handlers[])(
       const hs_descriptor_t *desc,
       hs_desc_superencrypted_data_t *desc_superencrypted) =
@@ -2429,14 +2427,13 @@ static int
 };
 
 /** Decode the superencrypted data section of the given descriptor and store
- * the data in the given superencrypted data object. Return 0 on success else
- * a negative value on error. */
-int
+ * the data in the given superencrypted data object. */
+hs_desc_decode_status_t
 hs_desc_decode_superencrypted(const hs_descriptor_t *desc,
                               hs_desc_superencrypted_data_t *
                               desc_superencrypted)
 {
-  int ret;
+  int ret = HS_DESC_DECODE_SUPERENC_ERROR;
   uint32_t version;
 
   tor_assert(desc);
@@ -2450,7 +2447,6 @@ hs_desc_decode_superencrypted(const hs_descriptor_t *desc,
   /* Let's make sure we have a supported version as well. By correctly parsing
    * the plaintext, this should not fail. */
   if (BUG(!hs_desc_is_supported_version(version))) {
-    ret = -1;
     goto err;
   }
   /* Extra precaution. Having no handler for the supported version should
@@ -2470,7 +2466,7 @@ hs_desc_decode_superencrypted(const hs_descriptor_t *desc,
 
 /** Table of plaintext decode function version specific. The function are
  * indexed by the version number so v3 callback is at index 3 in the array. */
-static int
+static hs_desc_decode_status_t
   (*decode_plaintext_handlers[])(
       smartlist_t *tokens,
       hs_desc_plaintext_data_t *desc,
@@ -2482,12 +2478,12 @@ static int
 };
 
 /** Fully decode the given descriptor plaintext and store the data in the
- * plaintext data object. Returns 0 on success else a negative value. */
-int
+ * plaintext data object. */
+hs_desc_decode_status_t
 hs_desc_decode_plaintext(const char *encoded,
                          hs_desc_plaintext_data_t *plaintext)
 {
-  int ok = 0, ret = -1;
+  int ok = 0, ret = HS_DESC_DECODE_PLAINTEXT_ERROR;
   memarea_t *area = NULL;
   smartlist_t *tokens = NULL;
   size_t encoded_len;
@@ -2537,11 +2533,11 @@ hs_desc_decode_plaintext(const char *encoded,
   /* Run the version specific plaintext decoder. */
   ret = decode_plaintext_handlers[plaintext->version](tokens, plaintext,
                                                       encoded, encoded_len);
-  if (ret < 0) {
+  if (ret != HS_DESC_DECODE_OK) {
     goto err;
   }
   /* Success. Descriptor has been populated with the data. */
-  ret = 0;
+  ret = HS_DESC_DECODE_OK;
 
  err:
   if (tokens) {
@@ -2560,13 +2556,13 @@ hs_desc_decode_plaintext(const char *encoded,
  *
  * Return 0 on success. A negative value is returned on error and desc_out is
  * set to NULL. */
-int
+hs_desc_decode_status_t
 hs_desc_decode_descriptor(const char *encoded,
                           const uint8_t *subcredential,
                           const curve25519_secret_key_t *client_auth_sk,
                           hs_descriptor_t **desc_out)
 {
-  int ret = -1;
+  hs_desc_decode_status_t ret = HS_DESC_DECODE_GENERIC_ERROR;
   hs_descriptor_t *desc;
 
   tor_assert(encoded);
@@ -2583,17 +2579,17 @@ hs_desc_decode_descriptor(const char *encoded,
   memcpy(desc->subcredential, subcredential, sizeof(desc->subcredential));
 
   ret = hs_desc_decode_plaintext(encoded, &desc->plaintext_data);
-  if (ret < 0) {
+  if (ret != HS_DESC_DECODE_OK) {
     goto err;
   }
 
   ret = hs_desc_decode_superencrypted(desc, &desc->superencrypted_data);
-  if (ret < 0) {
+  if (ret != HS_DESC_DECODE_OK) {
     goto err;
   }
 
   ret = hs_desc_decode_encrypted(desc, client_auth_sk, &desc->encrypted_data);
-  if (ret < 0) {
+  if (ret != HS_DESC_DECODE_OK) {
     goto err;
   }
 
@@ -2672,7 +2668,8 @@ hs_desc_encode_descriptor,(const hs_descriptor_t *desc,
   if (!descriptor_cookie) {
     ret = hs_desc_decode_descriptor(*encoded_out, desc->subcredential,
                                     NULL, NULL);
-    if (BUG(ret < 0)) {
+    if (BUG(ret != HS_DESC_DECODE_OK)) {
+      ret = -1;
       goto err;
     }
   }
@@ -2815,7 +2812,9 @@ hs_desc_encrypted_obj_size(const hs_desc_encrypted_data_t *data)
   size_t
 hs_desc_obj_size(const hs_descriptor_t *data)
 {
-  tor_assert(data);
+  if (data == NULL) {
+    return 0;
+  }
   return (hs_desc_plaintext_obj_size(&data->plaintext_data) +
           hs_desc_encrypted_obj_size(&data->encrypted_data) +
           sizeof(data->subcredential));

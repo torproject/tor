@@ -83,8 +83,8 @@ const hs_descriptor_t *
 hs_cache_lookup_as_client(const struct ed25519_public_key_t *key);
 const char *
 hs_cache_lookup_encoded_as_client(const struct ed25519_public_key_t *key);
-int hs_cache_store_as_client(const char *desc_str,
-                             const struct ed25519_public_key_t *identity_pk);
+hs_desc_decode_status_t hs_cache_store_as_client(const char *desc_str,
+                           const struct ed25519_public_key_t *identity_pk);
 void hs_cache_clean_as_client(time_t now);
 void hs_cache_purge_as_client(void);
 
@@ -99,6 +99,8 @@ const hs_cache_intro_state_t *hs_cache_client_intro_state_find(
 void hs_cache_client_intro_state_clean(time_t now);
 void hs_cache_client_intro_state_purge(void);
 
+bool hs_cache_client_new_auth_parse(const ed25519_public_key_t *service_pk);
+
 #ifdef HS_CACHE_PRIVATE
 #include "lib/crypt_ops/crypto_ed25519.h"
 
@@ -112,8 +114,10 @@ typedef struct hs_cache_client_descriptor_t {
    * using the next blinded key of the service. */
   time_t expiration_ts;
 
-  /** The cached descriptor, this object is the owner. It can't be NULL. A
-   * cache object without a valid descriptor is not possible. */
+  /** The cached decoded descriptor, this object is the owner. This can be
+   * NULL if the descriptor couldn't be decoded due to missing or bad client
+   * authorization. It can be decoded later from the encoded_desc object if
+   * the proper client authorization is given tor. */
   hs_descriptor_t *desc;
 
   /** Encoded descriptor in string form. Can't be NULL. */

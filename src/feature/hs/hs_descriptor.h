@@ -69,6 +69,31 @@ typedef enum {
   HS_DESC_AUTH_ED25519 = 1
 } hs_desc_auth_type_t;
 
+/** Error code when decoding a descriptor. */
+typedef enum {
+  /* The configured client authorization for the requested .onion address
+   * failed to decode the descriptor. */
+  HS_DESC_DECODE_BAD_CLIENT_AUTH  = -6,
+
+  /* The requested .onion address requires a client authorization. */
+  HS_DESC_DECODE_NEED_CLIENT_AUTH = -5,
+
+  /* Error during decryption of the encrypted layer. */
+  HS_DESC_DECODE_ENCRYPTED_ERROR  = -4,
+
+  /* Error during decryption of the super encrypted layer. */
+  HS_DESC_DECODE_SUPERENC_ERROR   = -3,
+
+  /* Error while decoding the plaintext section. */
+  HS_DESC_DECODE_PLAINTEXT_ERROR  = -2,
+
+  /* Generic error. */
+  HS_DESC_DECODE_GENERIC_ERROR    = -1,
+
+  /* Decoding a descriptor was successful. */
+  HS_DESC_DECODE_OK               =  0,
+} hs_desc_decode_status_t;
+
 /** Introduction point information located in a descriptor. */
 typedef struct hs_desc_intro_point_t {
   /** Link specifier(s) which details how to extend to the relay. This list

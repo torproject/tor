@@ -2733,62 +2733,7 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
   log_info(LD_REND,"Received v3 hsdesc (body size %d, status %d (%s))",
            (int)body_len, status_code, escaped(reason));
 
-  switch (status_code) {
-  case 200:
-    /* We got something: Try storing it in the cache. */
-    if (hs_cache_store_as_client(body, &conn->hs_ident->identity_pk) < 0) {
-      log_info(LD_REND, "Failed to store hidden service descriptor");
-      /* Fire control port FAILED event. */
-      hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
-                                   "BAD_DESC");
-      hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
-                                    NULL);
-    } else {
-      log_info(LD_REND, "Stored hidden service descriptor successfully.");
-      TO_CONN(conn)->purpose = DIR_PURPOSE_HAS_FETCHED_HSDESC;
-      hs_client_desc_has_arrived(conn->hs_ident);
-      /* Fire control port RECEIVED event. */
-      hs_control_desc_event_received(conn->hs_ident, conn->identity_digest);
-      hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
-                                    body);
-    }
-    break;
-  case 404:
-    /* Not there. We'll retry when connection_about_to_close_connection()
-     * tries to clean this conn up. */
-    log_info(LD_REND, "Fetching hidden service v3 descriptor not found: "
-                      "Retrying at another directory.");
-    /* Fire control port FAILED event. */
-    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
-                                 "NOT_FOUND");
-    hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
-                                  NULL);
-    break;
-  case 400:
-    log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
-                      "http status 400 (%s). Dirserver didn't like our "
-                      "query? Retrying at another directory.",
-             escaped(reason));
-    /* Fire control port FAILED event. */
-    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
-                                 "QUERY_REJECTED");
-    hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
-                                  NULL);
-    break;
-  default:
-    log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
-             "http status %d (%s) response unexpected from HSDir server "
-             "'%s:%d'. Retrying at another directory.",
-             status_code, escaped(reason), TO_CONN(conn)->address,
-             TO_CONN(conn)->port);
-    /* Fire control port FAILED event. */
-    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
-                                 "UNEXPECTED");
-    hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
-                                  NULL);
-    break;
-  }
-
+  hs_client_dir_fetch_done(conn, reason, body, status_code);
   return 0;
 }
 

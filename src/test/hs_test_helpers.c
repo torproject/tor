@@ -1,12 +1,16 @@
 /* Copyright (c) 2017-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define HS_CLIENT_PRIVATE
+
 #include "core/or/or.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "test/test.h"
 #include "feature/nodelist/torcert.h"
 
+#include "feature/hs/hs_client.h"
 #include "feature/hs/hs_common.h"
+#include "feature/hs/hs_service.h"
 #include "test/hs_test_helpers.h"
 
 hs_desc_intro_point_t *
@@ -207,6 +211,35 @@ hs_helper_build_hs_desc_no_ip(const ed25519_keypair_t *signing_kp)
   return hs_helper_build_hs_desc_impl(1, signing_kp);
 }
 
+hs_descriptor_t *
+hs_helper_build_hs_desc_with_client_auth(
+                        const uint8_t *descriptor_cookie,
+                        const curve25519_public_key_t *client_pk,
+                        const ed25519_keypair_t *signing_kp)
+{
+  curve25519_keypair_t auth_ephemeral_kp;
+  hs_descriptor_t *desc = hs_helper_build_hs_desc_impl(0, signing_kp);
+  hs_desc_authorized_client_t *desc_client;
+
+  /* The number of client authorized auth has tobe a multiple of
+   * HS_DESC_AUTH_CLIENT_MULTIPLE so remove one that we'll replace. */
+  desc_client = smartlist_get(desc->superencrypted_data.clients, 0);
+  smartlist_remove(desc->superencrypted_data.clients, desc_client);
+  hs_desc_authorized_client_free(desc_client);
+
+  desc_client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
+
+  curve25519_keypair_generate(&auth_ephemeral_kp, 0);
+  memcpy(&desc->superencrypted_data.auth_ephemeral_pubkey,
+         &auth_ephemeral_kp.pubkey, sizeof(curve25519_public_key_t));
+
+  hs_desc_build_authorized_client(desc->subcredential, client_pk,
+                                  &auth_ephemeral_kp.seckey,
+                                  descriptor_cookie, desc_client);
+  smartlist_add(desc->superencrypted_data.clients, desc_client);
+  return desc;
+}
+
 void
 hs_helper_desc_equal(const hs_descriptor_t *desc1,
                      const hs_descriptor_t *desc2)
@@ -353,3 +386,19 @@ hs_helper_desc_equal(const hs_descriptor_t *desc1,
   ;
 }
 
+void
+hs_helper_add_client_auth(const ed25519_public_key_t *service_pk,
+                          const curve25519_secret_key_t *client_sk)
+{
+  digest256map_t *client_auths = get_hs_client_auths_map();
+  if (client_auths == NULL) {
+    client_auths = digest256map_new();
+    set_hs_client_auths_map(client_auths);
+  }
+
+  hs_client_service_authorization_t *auth =
+    tor_malloc_zero(sizeof(hs_client_service_authorization_t));
+  memcpy(&auth->enc_seckey, client_sk, sizeof(curve25519_secret_key_t));
+  hs_build_address(service_pk, HS_VERSION_THREE, auth->onion_address);
+  digest256map_set(client_auths, service_pk->pubkey, auth);
+}

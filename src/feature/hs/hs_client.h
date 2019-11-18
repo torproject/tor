@@ -48,7 +48,7 @@ void hs_client_launch_v3_desc_fetch(
                                const ed25519_public_key_t *onion_identity_pk,
                                const smartlist_t *hsdirs);
 
-int hs_client_decode_descriptor(
+hs_desc_decode_status_t hs_client_decode_descriptor(
                      const char *desc_str,
                      const ed25519_public_key_t *service_identity_pk,
                      hs_descriptor_t **desc);
@@ -72,7 +72,8 @@ int hs_client_receive_rendezvous2(origin_circuit_t *circ,
                                   const uint8_t *payload,
                                   size_t payload_len);
 
-void hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident);
+void hs_client_dir_fetch_done(dir_connection_t *dir_conn, const char *reason,
+                              const char *body, const int status_code);
 
 extend_info_t *hs_client_get_random_intro_from_edge(
                                           const edge_connection_t *edge_conn);
@@ -114,6 +115,7 @@ STATIC void retry_all_socks_conn_waiting_for_desc(void);
 #ifdef TOR_UNIT_TESTS
 
 STATIC digest256map_t *get_hs_client_auths_map(void);
+STATIC void set_hs_client_auths_map(digest256map_t *map);
 
 #endif /* defined(TOR_UNIT_TESTS) */
 
