@@ -23,10 +23,10 @@ consensus_cache_t *consensus_cache_open(const char *subdir, int max_entries);
 void consensus_cache_free_(consensus_cache_t *cache);
 #define consensus_cache_free(cache) \
   FREE_AND_NULL(consensus_cache_t, consensus_cache_free_, (cache))
-struct sandbox_cfg_elem;
+struct sandbox_cfg_elem_t;
 int consensus_cache_may_overallocate(consensus_cache_t *cache);
 int consensus_cache_register_with_sandbox(consensus_cache_t *cache,
-                                          struct sandbox_cfg_elem **cfg);
+                                          struct sandbox_cfg_elem_t **cfg);
 void consensus_cache_unmap_lazy(consensus_cache_t *cache, time_t cutoff);
 void consensus_cache_delete_pending(consensus_cache_t *cache,
                                     int force);

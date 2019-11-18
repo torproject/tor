@@ -107,7 +107,7 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
 STATIC int connected_cell_parse(const relay_header_t *rh, const cell_t *cell,
                          tor_addr_t *addr_out, int *ttl_out);
 /** An address-and-ttl tuple as yielded by resolved_cell_parse */
-typedef struct address_ttl_s {
+typedef struct address_ttl_t {
   tor_addr_t addr;
   char *hostname;
   int ttl;

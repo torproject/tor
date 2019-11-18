@@ -56,7 +56,7 @@ dirserv_get_last_n_measured_bws(void)
 }
 
 /** Measured bandwidth cache entry */
-typedef struct mbw_cache_entry_s {
+typedef struct mbw_cache_entry_t {
   long mbw_kb;
   time_t as_of;
 } mbw_cache_entry_t;

@@ -63,7 +63,7 @@ int tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex,
 void tor_cond_signal_one(tor_cond_t *cond);
 void tor_cond_signal_all(tor_cond_t *cond);
 
-typedef struct tor_threadlocal_s {
+typedef struct tor_threadlocal_t {
 #ifdef _WIN32
   DWORD index;
 #else

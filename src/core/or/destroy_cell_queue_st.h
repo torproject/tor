@@ -26,7 +26,7 @@ struct destroy_cell_t {
 /** A queue of destroy cells on a channel. */
 struct destroy_cell_queue_t {
   /** Linked list of packed_cell_t */
-  TOR_SIMPLEQ_HEAD(dcell_simpleq, destroy_cell_t) head;
+  TOR_SIMPLEQ_HEAD(dcell_simpleq_t, destroy_cell_t) head;
   int n; /**< The number of cells in the queue. */
 };
 

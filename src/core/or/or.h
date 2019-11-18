@@ -609,21 +609,21 @@ typedef uint32_t circid_t;
 /** Identifies a stream on a circuit */
 typedef uint16_t streamid_t;
 
-/* channel_t typedef; struct channel_s is in channel.h */
+/* channel_t typedef; struct channel_t is in channel.h */
 
-typedef struct channel_s channel_t;
+typedef struct channel_t channel_t;
 
-/* channel_listener_t typedef; struct channel_listener_s is in channel.h */
+/* channel_listener_t typedef; struct channel_listener_t is in channel.h */
 
-typedef struct channel_listener_s channel_listener_t;
+typedef struct channel_listener_t channel_listener_t;
 
 /* TLS channel stuff */
 
-typedef struct channel_tls_s channel_tls_t;
+typedef struct channel_tls_t channel_tls_t;
 
-/* circuitmux_t typedef; struct circuitmux_s is in circuitmux.h */
+/* circuitmux_t typedef; struct circuitmux_t is in circuitmux.h */
 
-typedef struct circuitmux_s circuitmux_t;
+typedef struct circuitmux_t circuitmux_t;
 
 typedef struct cell_t cell_t;
 typedef struct var_cell_t var_cell_t;
@@ -1013,7 +1013,7 @@ typedef struct or_state_t or_state_t;
 #define BW_MIN_WEIGHT_SCALE 1
 #define BW_MAX_WEIGHT_SCALE INT32_MAX
 
-typedef struct circuit_build_times_s circuit_build_times_t;
+typedef struct circuit_build_times_t circuit_build_times_t;
 
 /********************************* config.c ***************************/
 

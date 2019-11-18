@@ -178,15 +178,15 @@ typedef enum {
  * to a particular node, and once constructed support the abstract operations
  * defined below.
  */
-struct channel_s {
+struct channel_t {
   /** Magic number for type-checking cast macros */
   uint32_t magic;
 
   /** List entry for hashtable for global-identifier lookup. */
-  HT_ENTRY(channel_s) gidmap_node;
+  HT_ENTRY(channel_t) gidmap_node;
 
   /** Handle entry for handle-based lookup */
-  HANDLE_ENTRY(channel, channel_s);
+  HANDLE_ENTRY(channel, channel_t);
 
   /** Current channel state */
   channel_state_t state;
@@ -397,7 +397,7 @@ struct channel_s {
    * Linked list of channels with the same RSA identity digest, for use with
    * the digest->channel map
    */
-  TOR_LIST_ENTRY(channel_s) next_with_same_id;
+  TOR_LIST_ENTRY(channel_t) next_with_same_id;
 
   /** Circuit mux for circuits sending on this channel */
   circuitmux_t *cmux;
@@ -464,7 +464,7 @@ struct channel_s {
   uint64_t n_cells_xmitted, n_bytes_xmitted;
 };
 
-struct channel_listener_s {
+struct channel_listener_t {
   /** Current channel listener state */
   channel_listener_state_t state;
 
@@ -773,7 +773,7 @@ int packed_cell_is_destroy(channel_t *chan,
                            circid_t *circid_out);
 
 /* Declare the handle helpers */
-HANDLE_DECL(channel, channel_s,)
+HANDLE_DECL(channel, channel_t,)
 #define channel_handle_free(h)    \
   FREE_AND_NULL(channel_handle_t, channel_handle_free_, (h))
 #undef tor_timer_t

@@ -325,7 +325,7 @@ test_link_handshake_certs_ok(void *arg)
   crypto_pk_free(key2);
 }
 
-typedef struct certs_data_s {
+typedef struct certs_data_t {
   int is_ed;
   int is_link_cert;
   or_connection_t *c;
@@ -972,7 +972,7 @@ test_link_handshake_send_authchallenge(void *arg)
   crypto_pk_free(rsa1);
 }
 
-typedef struct authchallenge_data_s {
+typedef struct authchallenge_data_t {
   or_connection_t *c;
   channel_tls_t *chan;
   var_cell_t *cell;
@@ -1171,7 +1171,7 @@ mock_set_circid_type(channel_t *chan,
   (void) consider_identity;
 }
 
-typedef struct authenticate_data_s {
+typedef struct authenticate_data_t {
   int is_ed;
   or_connection_t *c1, *c2;
   channel_tls_t *chan2;

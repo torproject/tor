@@ -40,7 +40,7 @@ typedef enum {
  * doesn't create any state for itself, thus it has nothing to free when Tor
  * is shutting down), then set that function pointer to NULL.
  */
-typedef struct scheduler_s {
+typedef struct scheduler_t {
   /* Scheduler type. This is used for logging when the scheduler is switched
    * during runtime. */
   scheduler_types_t type;
@@ -173,8 +173,8 @@ void scheduler_touch_channel(channel_t *chan);
 
 /* Socket table entry which holds information of a channel's socket and kernel
  * TCP information. Only used by KIST. */
-typedef struct socket_table_ent_s {
-  HT_ENTRY(socket_table_ent_s) node;
+typedef struct socket_table_ent_t {
+  HT_ENTRY(socket_table_ent_t) node;
   const channel_t *chan;
   /* Amount written this scheduling run */
   uint64_t written;
@@ -187,7 +187,7 @@ typedef struct socket_table_ent_s {
   uint32_t notsent;
 } socket_table_ent_t;
 
-typedef HT_HEAD(outbuf_table_s, outbuf_table_ent_s) outbuf_table_t;
+typedef HT_HEAD(outbuf_table_s, outbuf_table_ent_t) outbuf_table_t;
 
 MOCK_DECL(int, channel_should_write_to_kernel,
           (outbuf_table_t *table, channel_t *chan));

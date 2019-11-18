@@ -25,7 +25,7 @@
 /** Length of our symmetric cipher's keys of 256-bit. */
 #define CIPHER256_KEY_LEN 32
 
-typedef struct aes_cnt_cipher crypto_cipher_t;
+typedef struct aes_cnt_cipher_t crypto_cipher_t;
 
 /* environment setup */
 crypto_cipher_t *crypto_cipher_new(const char *key);
