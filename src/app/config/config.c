@@ -540,7 +540,7 @@ static const config_var_t option_vars_[] = {
   V(Socks5ProxyUsername,         STRING,   NULL),
   V(Socks5ProxyPassword,         STRING,   NULL),
   VAR_IMMUTABLE("KeyDirectory",  FILENAME, KeyDirectory_option, NULL),
-  V(KeyDirectoryGroupReadable,   BOOL,     "0"),
+  V(KeyDirectoryGroupReadable,   AUTOBOOL, "auto"),
   VAR_D("HSLayer2Nodes",         ROUTERSET,  HSLayer2Nodes,  NULL),
   VAR_D("HSLayer3Nodes",         ROUTERSET,  HSLayer3Nodes,  NULL),
   V(KeepalivePeriod,             INTERVAL, "5 minutes"),
@@ -1516,10 +1516,38 @@ options_switch_id(char **msg_out)
 }
 
 /**
+ * Helper. Given a data directory (<b>datadir</b>) and another directory
+ * (<b>subdir</b>) with respective group-writable permissions
+ * <b>datadir_gr</b> and <b>subdir_gr</b>, compute whether the subdir should
+ * be group-writeable.
+ **/
+static int
+compute_group_readable_flag(const char *datadir,
+                            const char *subdir,
+                            int datadir_gr,
+                            int subdir_gr)
+{
+  if (subdir_gr != -1) {
+    /* The user specified a default for "subdir", so we always obey it. */
+    return subdir_gr;
+  }
+
+  /* The user left the subdir_gr option on "auto." */
+  if (0 == strcmp(subdir, datadir)) {
+    /* The directories are the same, so we use the group-readable flag from
+     * the datadirectory */
+    return datadir_gr;
+  } else {
+    /* The directores are different, so we default to "not group-readable" */
+    return 0;
+  }
+}
+
+/**
  * Create our DataDirectory, CacheDirectory, and KeyDirectory, and
  * set their permissions correctly.
  */
-static int
+STATIC int
 options_create_directories(char **msg_out)
 {
   const or_options_t *options = get_options();
@@ -1536,30 +1564,29 @@ options_create_directories(char **msg_out)
                                       msg_out) < 0) {
     return -1;
   }
+
+  /* We need to handle the group-readable flag for the cache directory and key
+   * directory specially, since they may be the same as the data directory */
+  const int key_dir_group_readable = compute_group_readable_flag(
+                                        options->DataDirectory,
+                                        options->KeyDirectory,
+                                        options->DataDirectoryGroupReadable,
+                                        options->KeyDirectoryGroupReadable);
+
   if (check_and_create_data_directory(running_tor /* create */,
                                       options->KeyDirectory,
-                                      options->KeyDirectoryGroupReadable,
+                                      key_dir_group_readable,
                                       options->User,
                                       msg_out) < 0) {
     return -1;
   }
 
-  /* We need to handle the group-readable flag for the cache directory
-   * specially, since the directory defaults to being the same as the
-   * DataDirectory. */
-  int cache_dir_group_readable;
-  if (options->CacheDirectoryGroupReadable != -1) {
-    /* If the user specified a value, use their setting */
-    cache_dir_group_readable = options->CacheDirectoryGroupReadable;
-  } else if (!strcmp(options->CacheDirectory, options->DataDirectory)) {
-    /* If the user left the value as "auto", and the cache is the same as the
-     * datadirectory, use the datadirectory setting.
-     */
-    cache_dir_group_readable = options->DataDirectoryGroupReadable;
-  } else {
-    /* Otherwise, "auto" means "not group readable". */
-    cache_dir_group_readable = 0;
-  }
+  const int cache_dir_group_readable = compute_group_readable_flag(
+                                        options->DataDirectory,
+                                        options->CacheDirectory,
+                                        options->DataDirectoryGroupReadable,
+                                        options->CacheDirectoryGroupReadable);
+
   if (check_and_create_data_directory(running_tor /* create */,
                                       options->CacheDirectory,
                                       cache_dir_group_readable,
