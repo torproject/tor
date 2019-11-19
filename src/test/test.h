@@ -252,6 +252,7 @@ extern struct testcase_t nodelist_tests[];
 extern struct testcase_t oom_tests[];
 extern struct testcase_t oos_tests[];
 extern struct testcase_t options_tests[];
+extern struct testcase_t options_act_tests[];
 extern struct testcase_t parsecommon_tests[];
 extern struct testcase_t pem_tests[];
 extern struct testcase_t periodic_event_tests[];
