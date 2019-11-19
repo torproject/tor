@@ -6,6 +6,7 @@
 #define CONFIG_PRIVATE
 #include "core/or/or.h"
 #include "app/config/config.h"
+#include "lib/encoding/confline.h"
 
 #include "test/test.h"
 #include "test/log_test_helpers.h"
@@ -167,11 +168,93 @@ test_options_act_create_dirs(void *arg)
   tor_free(msg);
 }
 
+static void
+test_options_act_log_transition(void *arg)
+{
+  (void)arg;
+  or_options_t *opts = mock_opts = options_new();
+  or_options_t *old_opts = NULL;
+  opts->LogTimeGranularity = 1000;
+  opts->SafeLogging_ = SAFELOG_SCRUB_ALL;
+  struct log_transaction_t *lt = NULL;
+  char *msg = NULL;
+  MOCK(get_options, mock_get_options);
+
+  tt_ptr_op(opts->Logs, OP_EQ, NULL);
+  config_line_append(&opts->Logs, "Log", "notice stdout");
+  lt = options_start_log_transaction(NULL, &msg);
+  tt_assert(lt);
+  tt_assert(!msg);
+
+  // commit, see that there is a change.
+  options_commit_log_transaction(lt);
+  lt=NULL;
+  tt_int_op(get_min_log_level(), OP_EQ, LOG_NOTICE);
+
+  // Now drop to debug.
+  old_opts = opts;
+  opts = mock_opts = options_new();
+  opts->LogTimeGranularity = 1000;
+  opts->SafeLogging_ = SAFELOG_SCRUB_ALL;
+  config_line_append(&opts->Logs, "Log", "debug stdout");
+  lt = options_start_log_transaction(old_opts, &msg);
+  tt_assert(lt);
+  tt_assert(!msg);
+
+  setup_full_capture_of_logs(LOG_NOTICE);
+  options_commit_log_transaction(lt);
+  lt=NULL;
+  expect_single_log_msg_containing("may contain sensitive information");
+  tt_int_op(get_min_log_level(), OP_EQ, LOG_DEBUG);
+
+  // Turn off SafeLogging
+  or_options_free(old_opts);
+  mock_clean_saved_logs();
+  old_opts = opts;
+  opts = mock_opts = options_new();
+  opts->SafeLogging_ = SAFELOG_SCRUB_NONE;
+  opts->LogTimeGranularity = 1000;
+  config_line_append(&opts->Logs, "Log", "debug stdout");
+  lt = options_start_log_transaction(old_opts, &msg);
+  tt_assert(lt);
+  tt_assert(!msg);
+  options_commit_log_transaction(lt);
+  lt=NULL;
+  expect_single_log_msg_containing("may contain sensitive information");
+  tt_int_op(get_min_log_level(), OP_EQ, LOG_DEBUG);
+
+  // Try rolling back.
+  teardown_capture_of_logs();
+  or_options_free(old_opts);
+  mock_clean_saved_logs();
+  old_opts = opts;
+  opts = mock_opts = options_new();
+  opts->SafeLogging_ = SAFELOG_SCRUB_NONE;
+  opts->LogTimeGranularity = 1000;
+  config_line_append(&opts->Logs, "Log", "notice stdout");
+  lt = options_start_log_transaction(old_opts, &msg);
+  tt_assert(lt);
+  tt_assert(!msg);
+  options_rollback_log_transaction(lt);
+  lt = NULL;
+  tt_int_op(get_min_log_level(), OP_EQ, LOG_DEBUG);
+
+ done:
+  UNMOCK(get_options);
+  or_options_free(opts);
+  or_options_free(old_opts);
+  tor_free(msg);
+  if (lt)
+    options_rollback_log_transaction(lt);
+  teardown_capture_of_logs();
+}
+
 #ifndef COCCI
 #define T(name) { #name, test_options_act_##name, TT_FORK, NULL, NULL }
 #endif
 
 struct testcase_t options_act_tests[] = {
   T(create_dirs),
+  T(log_transition),
   END_OF_TESTCASES
 };
