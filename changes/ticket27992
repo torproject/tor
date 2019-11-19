@@ -1,0 +1,5 @@
+  o Minor bugfixes (configuration):
+    - When creating a KeyDirectory with the same location as the
+      DataDirectory (not recommended), respect the DataDirectory's
+      group-readable setting if one has not been set for the KeyDirectory.
+      Fixes bug 27992; bugfix on 0.3.3.1-alpha.
