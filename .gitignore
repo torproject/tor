@@ -23,6 +23,7 @@
 .*.graph
 # Stuff made by our makefiles
 *.bak
+*.tmp
 # Python droppings
 *.pyc
 *.pyo
