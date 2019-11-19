@@ -226,6 +226,8 @@ MOCK_DECL(void, connection_write_to_buf_impl_,
 /* DOCDOC connection_write_to_buf */
 static void connection_buf_add(const char *string, size_t len,
                                     connection_t *conn);
+void connection_dir_buf_add(const char *string, size_t len,
+                            dir_connection_t *dir_conn, int done);
 static inline void
 connection_buf_add(const char *string, size_t len, connection_t *conn)
 {
