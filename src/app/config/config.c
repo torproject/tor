@@ -862,8 +862,6 @@ static void options_clear_cb(const config_mgr_t *mgr, void *opts);
 static setopt_err_t options_validate_and_set(const or_options_t *old_options,
                                              or_options_t *new_options,
                                              char **msg_out);
-struct log_transaction_t;
-static void options_rollback_log_transaction(struct log_transaction_t *xn);
 struct listener_transaction_t;
 static void options_rollback_listener_transaction(
                                            struct listener_transaction_t *xn);
@@ -1801,7 +1799,7 @@ typedef struct log_transaction_t {
  * On failure return NULL and write a message into a newly allocated string in
  * *<b>msg_out</b>.
  **/
-static log_transaction_t *
+STATIC log_transaction_t *
 options_start_log_transaction(const or_options_t *old_options,
                               char **msg_out)
 {
@@ -1837,7 +1835,7 @@ options_start_log_transaction(const or_options_t *old_options,
  * Finish configuring the logs that started to get configured with <b>xn</b>.
  * Frees <b>xn</b>.
  **/
-static void
+STATIC void
 options_commit_log_transaction(log_transaction_t *xn)
 {
   const or_options_t *options = get_options();
@@ -1891,7 +1889,7 @@ options_commit_log_transaction(log_transaction_t *xn)
  * Revert the log configuration changes that that started to get configured
  * with <b>xn</b>.  Frees <b>xn</b>.
  **/
-static void
+STATIC void
 options_rollback_log_transaction(log_transaction_t *xn)
 {
   if (!xn)
