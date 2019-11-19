@@ -109,11 +109,7 @@ test_options_act_create_dirs(void *arg)
   opts->KeyDirectory = tor_strdup(fn);
   opts->DataDirectoryGroupReadable = 1;
   opts->CacheDirectoryGroupReadable = -1; /* default. */
-#if 1
-  /* Bug 27992: this setting shouldn't be needed, but for now it is, in the
-   * unusual case that DataDirectory == KeyDirectory */
-  opts->KeyDirectoryGroupReadable = 1;
-#endif
+  opts->KeyDirectoryGroupReadable = -1; /* default */
   r = options_create_directories(&msg);
   tt_int_op(r, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
