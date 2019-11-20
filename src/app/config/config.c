@@ -1808,6 +1808,8 @@ options_start_log_transaction(const or_options_t *old_options,
 
   log_transaction_t *xn = tor_malloc_zero(sizeof(log_transaction_t));
   xn->old_min_log_level = get_min_log_level();
+  xn->safelogging_changed = !old_options ||
+    old_options->SafeLogging_ != options->SafeLogging_;
 
   if (! running_tor)
     goto done;
@@ -1821,9 +1823,6 @@ options_start_log_transaction(const or_options_t *old_options,
     xn = NULL;
     goto done;
   }
-
-  xn->safelogging_changed = !old_options ||
-    old_options->SafeLogging_ != options->SafeLogging_;
 
   xn->logs_initialized = true;
 
