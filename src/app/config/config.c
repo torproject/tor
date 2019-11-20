@@ -4590,6 +4590,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
 
   newoptions->IncludeUsed = cf_has_include;
   newoptions->FilesOpenedByIncludes = opened_files;
+  opened_files = NULL; // prevent double-free.
 
   /* If this is a testing network configuration, change defaults
    * for a list of dependent config options, and try this function again. */
@@ -4600,13 +4601,11 @@ options_init_from_string(const char *cf_defaults, const char *cf,
     goto err;
   }
 
-  newoptions->IncludeUsed = cf_has_include;
-  newoptions->FilesOpenedByIncludes = opened_files;
-  opened_files = NULL; // prevent double-free.
-
   err = options_validate_and_set(oldoptions, newoptions, msg);
-  if (err < 0)
+  if (err < 0) {
+    newoptions = NULL; // This was already freed in options_validate_and_set.
     goto err;
+  }
 
   or_options_free(global_default_options);
   global_default_options = newdefaultoptions;
@@ -4620,6 +4619,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
     smartlist_free(opened_files);
   }
   or_options_free(newdefaultoptions);
+  or_options_free(newoptions);
   if (*msg) {
     char *old_msg = *msg;
     tor_asprintf(msg, "Failed to parse/validate config: %s", old_msg);
