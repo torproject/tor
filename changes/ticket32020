@@ -1,0 +1,4 @@
+  o Major bugfixes (onion service):
+    - Report back HS circuit failure back into the HS subsytem so we take
+      appropriate action with regards to the client introduction point failure
+      cache. Fixes bug 32020; bugfix on 0.3.2.1-alpha;
