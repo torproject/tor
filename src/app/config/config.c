@@ -1902,8 +1902,10 @@ options_rollback_log_transaction(log_transaction_t *xn)
   tor_free(xn);
 }
 
-/** Fetch the active option list, and take actions based on it. All of the
- * things we do should survive being done repeatedly.  If present,
+/**
+ * Fetch the active option list, and take actions based on it. All of
+ * the things we do in this function should survive being done
+ * repeatedly, OR be done only once when starting Tor.  If present,
  * <b>old_options</b> contains the previous value of the options.
  *
  * This function is only truly "reversible" _after_ the first time it
@@ -1924,9 +1926,19 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
   listener_transaction_t *listener_transaction = NULL;
   int r = -1;
 
+  /* The ordering of actions in this function is not free, sadly.
+   *
+   * First of all, we _must_ daemonize before we take all kinds of
+   * initialization actions, since they need to happen in the
+   * subprocess.
+   */
   if (options_act_once_on_startup(msg) < 0)
     goto rollback;
 
+  /* Once we've handled most of once-off initialization, we need to
+   * open our listeners before we switch IDs.  (If we open listeners first,
+   * we might not be able to bind to low ports.)
+   */
   listener_transaction = options_start_listener_transaction(old_options, msg);
   if (listener_transaction == NULL)
     goto rollback;
@@ -1934,7 +1946,13 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
   if (first_time) {
     if (options_switch_id(msg) < 0)
       goto done;
+  }
 
+  /* On the other hand, we need to touch the file system _after_ we
+   * switch IDs: otherwise, we'll be making directories and opening files
+   * with the wrong permissions.
+   */
+  if (first_time) {
     if (options_create_directories(msg) < 0)
       goto done;
   }
