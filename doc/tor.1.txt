@@ -1450,6 +1450,11 @@ The following options are useful only for clients (that is, if
             authorization information it has. This means the client access
             were revoked.
 
+          X'F6' Onion Service Invalid Address
+
+            The given .onion address is invalid. Either the checksum doesn't
+            match or the length or encoding.
+
 // Anchor only for formatting, not visible in the man page.
 [[SocksPortFlagsMisc]]::
     Flags are processed left to right. If flags conflict, the last flag on the
