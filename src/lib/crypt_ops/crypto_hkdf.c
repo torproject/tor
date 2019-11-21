@@ -22,6 +22,8 @@
 #include <openssl/opensslv.h>
 
 #if defined(HAVE_ERR_LOAD_KDF_STRINGS)
+/* As of LibreSSL 2.9.2, there is apparently not an exposed KDF API.
+ */
 #include <openssl/kdf.h>
 #define HAVE_OPENSSL_HKDF 1
 #endif
