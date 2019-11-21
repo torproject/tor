@@ -529,13 +529,8 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
 #endif /* 0 */
 
   /* Tell OpenSSL to use TLS 1.0 or later but not SSL2 or SSL3. */
-#ifdef HAVE_TLS_METHOD
   if (!(result->ctx = SSL_CTX_new(TLS_method())))
     goto error;
-#else
-  if (!(result->ctx = SSL_CTX_new(SSLv23_method())))
-    goto error;
-#endif /* defined(HAVE_TLS_METHOD) */
 
 #ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
   /* Level 1 re-enables RSA1024 and DH1024 for compatibility with old tors */
@@ -786,11 +781,7 @@ static void
 prune_v2_cipher_list(const SSL *ssl)
 {
   uint16_t *inp, *outp;
-#ifdef HAVE_TLS_METHOD
   const SSL_METHOD *m = TLS_method();
-#else
-  const SSL_METHOD *m = SSLv23_method();
-#endif
 
   inp = outp = v2_cipher_list;
   while (*inp) {
