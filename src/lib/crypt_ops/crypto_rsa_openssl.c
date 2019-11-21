@@ -46,16 +46,12 @@ struct crypto_pk_t
 int
 crypto_pk_key_is_private(const crypto_pk_t *k)
 {
-#ifdef OPENSSL_1_1_API
   if (!k || !k->key)
     return 0;
 
   const BIGNUM *p, *q;
   RSA_get0_factors(k->key, &p, &q);
   return p != NULL; /* XXX/yawning: Should we check q? */
-#else /* !defined(OPENSSL_1_1_API) */
-  return k && k->key && k->key->p;
-#endif /* defined(OPENSSL_1_1_API) */
 }
 
 /** used by tortls.c: wrap an RSA* in a crypto_pk_t. Takes ownership of
@@ -210,13 +206,9 @@ crypto_pk_public_exponent_ok(const crypto_pk_t *env)
   tor_assert(env->key);
 
   const BIGNUM *e;
-
-#ifdef OPENSSL_1_1_API
   const BIGNUM *n, *d;
   RSA_get0_key(env->key, &n, &e, &d);
-#else
-  e = env->key->e;
-#endif /* defined(OPENSSL_1_1_API) */
+
   return BN_is_word(e, TOR_RSA_EXPONENT);
 }
 
@@ -240,17 +232,9 @@ crypto_pk_cmp_keys(const crypto_pk_t *a, const crypto_pk_t *b)
 
   const BIGNUM *a_n, *a_e;
   const BIGNUM *b_n, *b_e;
-
-#ifdef OPENSSL_1_1_API
   const BIGNUM *a_d, *b_d;
   RSA_get0_key(a->key, &a_n, &a_e, &a_d);
   RSA_get0_key(b->key, &b_n, &b_e, &b_d);
-#else
-  a_n = a->key->n;
-  a_e = a->key->e;
-  b_n = b->key->n;
-  b_e = b->key->e;
-#endif /* defined(OPENSSL_1_1_API) */
 
   tor_assert(a_n != NULL && a_e != NULL);
   tor_assert(b_n != NULL && b_e != NULL);
@@ -278,7 +262,6 @@ crypto_pk_num_bits(crypto_pk_t *env)
   tor_assert(env);
   tor_assert(env->key);
 
-#ifdef OPENSSL_1_1_API
   /* It's so stupid that there's no other way to check that n is valid
    * before calling RSA_bits().
    */
@@ -287,10 +270,6 @@ crypto_pk_num_bits(crypto_pk_t *env)
   tor_assert(n != NULL);
 
   return RSA_bits(env->key);
-#else /* !defined(OPENSSL_1_1_API) */
-  tor_assert(env->key->n);
-  return BN_num_bits(env->key->n);
-#endif /* defined(OPENSSL_1_1_API) */
 }
 
 /** Increase the reference count of <b>env</b>, and return it.

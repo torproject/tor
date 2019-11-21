@@ -185,12 +185,8 @@ test_crypto_dh(void *arg)
     dh4 = crypto_dh_new_openssl_tls();
     tt_assert(DH_generate_key(dh4));
     const BIGNUM *pk=NULL;
-#ifdef OPENSSL_1_1_API
     const BIGNUM *sk=NULL;
     DH_get0_key(dh4, &pk, &sk);
-#else
-    pk = dh4->pub_key;
-#endif /* defined(OPENSSL_1_1_API) */
     tt_assert(pk);
     tt_int_op(BN_num_bytes(pk), OP_LE, DH1024_KEY_LEN);
     tt_int_op(BN_num_bytes(pk), OP_GT, 0);

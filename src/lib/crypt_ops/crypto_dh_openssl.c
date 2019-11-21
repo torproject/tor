@@ -60,7 +60,6 @@ crypto_validate_dh_params(const BIGNUM *p, const BIGNUM *g)
   /* Copy into a temporary DH object, just so that DH_check() can be called. */
   if (!(dh = DH_new()))
       goto out;
-#ifdef OPENSSL_1_1_API
   BIGNUM *dh_p, *dh_g;
   if (!(dh_p = BN_dup(p)))
     goto out;
@@ -68,12 +67,6 @@ crypto_validate_dh_params(const BIGNUM *p, const BIGNUM *g)
     goto out;
   if (!DH_set0_pqg(dh, dh_p, NULL, dh_g))
     goto out;
-#else /* !defined(OPENSSL_1_1_API) */
-  if (!(dh->p = BN_dup(p)))
-    goto out;
-  if (!(dh->g = BN_dup(g)))
-    goto out;
-#endif /* defined(OPENSSL_1_1_API) */
 
   /* Perform the validation. */
   int codes = 0;
@@ -223,19 +216,12 @@ new_openssl_dh_from_params(BIGNUM *p, BIGNUM *g)
     goto err;
   }
 
-#ifdef OPENSSL_1_1_API
-
   if (!DH_set0_pqg(res_dh, dh_p, NULL, dh_g)) {
     goto err;
   }
 
   if (!DH_set_length(res_dh, DH_PRIVATE_KEY_BITS))
     goto err;
-#else /* !defined(OPENSSL_1_1_API) */
-  res_dh->p = dh_p;
-  res_dh->g = dh_g;
-  res_dh->length = DH_PRIVATE_KEY_BITS;
-#endif /* defined(OPENSSL_1_1_API) */
 
   return res_dh;
 
@@ -276,9 +262,6 @@ crypto_dh_get_bytes(crypto_dh_t *dh)
 int
 crypto_dh_generate_public(crypto_dh_t *dh)
 {
-#ifndef OPENSSL_1_1_API
- again:
-#endif
   if (!DH_generate_key(dh->dh)) {
     /* LCOV_EXCL_START
      * To test this we would need some way to tell openssl to break DH. */
@@ -286,7 +269,7 @@ crypto_dh_generate_public(crypto_dh_t *dh)
     return -1;
     /* LCOV_EXCL_STOP */
   }
-#ifdef OPENSSL_1_1_API
+
   /* OpenSSL 1.1.x doesn't appear to let you regenerate a DH key, without
    * recreating the DH object.  I have no idea what sort of aliasing madness
    * can occur here, so do the check, and just bail on failure.
@@ -298,20 +281,7 @@ crypto_dh_generate_public(crypto_dh_t *dh)
              "the-universe chances really do happen.  Treating as a failure.");
     return -1;
   }
-#else /* !defined(OPENSSL_1_1_API) */
-  if (tor_check_dh_key(LOG_WARN, dh->dh->pub_key)<0) {
-    /* LCOV_EXCL_START
-     * If this happens, then openssl's DH implementation is busted. */
-    log_warn(LD_CRYPTO, "Weird! Our own DH key was invalid.  I guess once-in-"
-             "the-universe chances really do happen.  Trying again.");
-    /* Free and clear the keys, so OpenSSL will actually try again. */
-    BN_clear_free(dh->dh->pub_key);
-    BN_clear_free(dh->dh->priv_key);
-    dh->dh->pub_key = dh->dh->priv_key = NULL;
-    goto again;
-    /* LCOV_EXCL_STOP */
-  }
-#endif /* defined(OPENSSL_1_1_API) */
+
   return 0;
 }
 
@@ -326,23 +296,14 @@ crypto_dh_get_public(crypto_dh_t *dh, char *pubkey, size_t pubkey_len)
   tor_assert(dh);
 
   const BIGNUM *dh_pub;
-
-#ifdef OPENSSL_1_1_API
   const BIGNUM *dh_priv;
   DH_get0_key(dh->dh, &dh_pub, &dh_priv);
-#else
-  dh_pub = dh->dh->pub_key;
-#endif /* defined(OPENSSL_1_1_API) */
 
   if (!dh_pub) {
     if (crypto_dh_generate_public(dh)<0)
       return -1;
     else {
-#ifdef OPENSSL_1_1_API
       DH_get0_key(dh->dh, &dh_pub, &dh_priv);
-#else
-      dh_pub = dh->dh->pub_key;
-#endif
     }
   }
 
