@@ -974,12 +974,22 @@ CPPFLAGS="$TOR_CPPFLAGS_openssl $CPPFLAGS"
 
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <openssl/opensslv.h>
-#if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER < 0x1000100fL
+#if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER < 0x1010100fL
 #error "too old"
 #endif
    ]], [[]])],
    [ : ],
-   [ AC_MSG_ERROR([OpenSSL is too old. We require 1.0.1 or later. You can specify a path to a newer one with --with-openssl-dir.]) ])
+   [ AC_MSG_ERROR([OpenSSL is too old. We require 1.1.1 or later. You can specify a path to a newer one with --with-openssl-dir.]) ])
+
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <openssl/opensslv.h>
+#if defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x2090000fL
+#error "too old"
+#endif
+   ]], [[]])],
+   [ : ],
+   [ AC_MSG_ERROR([LibreSSL is too old. We require 2.9.0 or later. You can specify a path to a newer one with --with-openssl-dir.]) ])
+
 
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <openssl/opensslv.h>

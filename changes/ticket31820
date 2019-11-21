@@ -1,0 +1,5 @@
+  o New system requirements:
+    - Tor no longer builds with OpenSSL versions older than 1.1.1,
+      or LibreSSL versions older than 2.9.0.  Such versions are
+      (or soon will be) unsupported by their maintainers.
+      Closes ticket 31820.
