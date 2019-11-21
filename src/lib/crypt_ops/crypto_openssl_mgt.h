@@ -55,22 +55,6 @@
 #define DISABLE_ENGINES
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,5) && \
-  !defined(LIBRESSL_VERSION_NUMBER)
-/* OpenSSL as of 1.1.0pre4 has an "new" thread API, which doesn't require
- * seting up various callbacks.
- *
- * OpenSSL 1.1.0pre4 has a messed up `ERR_remove_thread_state()` prototype,
- * while the previous one was restored in pre5, and the function made a no-op
- * (along with a deprecated annotation, which produces a compiler warning).
- *
- * While it is possible to support all three versions of the thread API,
- * a version that existed only for one snapshot pre-release is kind of
- * pointless, so let's not.
- */
-#define NEW_THREAD_API
-#endif /* OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,5) && ... */
-
 void crypto_openssl_log_errors(int severity, const char *doing);
 
 /* global openssl state */

@@ -40,19 +40,8 @@ ENABLE_GCC_WARNING(redundant-decls)
 
 #include <string.h>
 
-#ifndef NEW_THREAD_API
-/** A number of preallocated mutexes for use by OpenSSL. */
-static tor_mutex_t **openssl_mutexes_ = NULL;
-/** How many mutexes have we allocated for use by OpenSSL? */
-static int n_openssl_mutexes_ = 0;
-#endif /* !defined(NEW_THREAD_API) */
-
 /** Declare STATIC functions */
 STATIC char * parse_openssl_version_str(const char *raw_version);
-#ifndef NEW_THREAD_API
-STATIC void openssl_locking_cb_(int mode, int n, const char *file, int line);
-STATIC void tor_set_openssl_thread_id(CRYPTO_THREADID *threadid);
-#endif
 
 /** Log all pending crypto errors at level <b>severity</b>.  Use
  * <b>doing</b> to describe our current activities.
@@ -128,46 +117,11 @@ crypto_openssl_get_header_version_str(void)
 #endif
 #endif /* !defined(COCCI) */
 
-#ifndef NEW_THREAD_API
-/** Helper: OpenSSL uses this callback to manipulate mutexes. */
-STATIC void
-openssl_locking_cb_(int mode, int n, const char *file, int line)
-{
-  (void)file;
-  (void)line;
-  if (!openssl_mutexes_)
-    /* This is not a really good fix for the
-     * "release-freed-lock-from-separate-thread-on-shutdown" problem, but
-     * it can't hurt. */
-    return;
-  if (mode & CRYPTO_LOCK)
-    tor_mutex_acquire(openssl_mutexes_[n]);
-  else
-    tor_mutex_release(openssl_mutexes_[n]);
-}
-
-STATIC void
-tor_set_openssl_thread_id(CRYPTO_THREADID *threadid)
-{
-  CRYPTO_THREADID_set_numeric(threadid, tor_get_thread_id());
-}
-#endif /* !defined(NEW_THREAD_API) */
-
 /** Helper: Construct mutexes, and set callbacks to help OpenSSL handle being
  * multithreaded. Returns 0. */
 static int
 setup_openssl_threading(void)
 {
-#ifndef NEW_THREAD_API
-  int i;
-  int n = CRYPTO_num_locks();
-  n_openssl_mutexes_ = n;
-  openssl_mutexes_ = tor_calloc(n, sizeof(tor_mutex_t *));
-  for (i=0; i < n; ++i)
-    openssl_mutexes_[i] = tor_mutex_new();
-  CRYPTO_set_locking_callback(openssl_locking_cb_);
-  CRYPTO_THREADID_set_callback(tor_set_openssl_thread_id);
-#endif /* !defined(NEW_THREAD_API) */
   return 0;
 }
 
@@ -177,24 +131,6 @@ crypto_openssl_free_all(void)
 {
   tor_free(crypto_openssl_version_str);
   tor_free(crypto_openssl_header_version_str);
-
-  /* Destroying a locked mutex is undefined behaviour. This mutex may be
-   * locked, because multiple threads can access it. But we need to destroy
-   * it, otherwise re-initialisation will trigger undefined behaviour.
-   * See #31735 for details. */
-#ifndef NEW_THREAD_API
-  if (n_openssl_mutexes_) {
-    int n = n_openssl_mutexes_;
-    tor_mutex_t **ms = openssl_mutexes_;
-    int i;
-    openssl_mutexes_ = NULL;
-    n_openssl_mutexes_ = 0;
-    for (i=0;i<n;++i) {
-      tor_mutex_free(ms[i]);
-    }
-    tor_free(ms);
-  }
-#endif /* !defined(NEW_THREAD_API) */
 }
 
 /** Perform early (pre-configuration) initialization tasks for OpenSSL. */
@@ -390,9 +326,6 @@ crypto_openssl_late_init(int useAccel, const char *accelName,
 void
 crypto_openssl_thread_cleanup(void)
 {
-#ifndef NEW_THREAD_API
-  ERR_remove_thread_state(NULL);
-#endif
 }
 
 /** Clean up global resources held by openssl. */
@@ -401,9 +334,6 @@ crypto_openssl_global_cleanup(void)
 {
   #ifndef OPENSSL_1_1_API
   EVP_cleanup();
-#endif
-#ifndef NEW_THREAD_API
-  ERR_remove_thread_state(NULL);
 #endif
 #ifndef OPENSSL_1_1_API
   ERR_free_strings();
