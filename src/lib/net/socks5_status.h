@@ -36,6 +36,7 @@ typedef enum {
   SOCKS5_HS_REND_FAILED             = 0xF3,
   SOCKS5_HS_MISSING_CLIENT_AUTH     = 0xF4,
   SOCKS5_HS_BAD_CLIENT_AUTH         = 0xF5,
+  SOCKS5_HS_BAD_ADDRESS             = 0xF6,
 } socks5_reply_status_t;
 
 #endif /* !defined(TOR_SOCKS5_STATUS_H) */

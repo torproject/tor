@@ -1418,37 +1418,43 @@ The following options are useful only for clients (that is, if
           X'F0' Onion Service Descriptor Can Not be Found
 
             The requested onion service descriptor can't be found on the
-            hashring and thus not reachable by the client.
+            hashring and thus not reachable by the client. (v3 only)
 
           X'F1' Onion Service Descriptor Is Invalid
 
             The requested onion service descriptor can't be parsed or
-            signature validation failed.
+            signature validation failed. (v3 only)
 
           X'F2' Onion Service Introduction Failed
 
             Client failed to introduce to the service meaning the descriptor
             was found but the service is not connected anymore to the
             introduction point. The service has likely changed its descriptor
-            or is not running.
+            or is not running. (v3 only)
 
           X'F3' Onion Service Rendezvous Failed
 
             Client failed to rendezvous with the service which means that the
-            client is unable to finalize the connection.
+            client is unable to finalize the connection. (v3 only)
 
           X'F4' Onion Service Missing Client Authorization
 
             Client was able to download the requested onion service descriptor
             but is unable to decrypt its content because it is missing client
-            authorization information.
+            authorization information. (v3 only)
 
           X'F5' Onion Service Wrong Client Authorization
 
             Client was able to download the requested onion service descriptor
             but is unable to decrypt its content using the client
             authorization information it has. This means the client access
-            were revoked.
+            were revoked. (v3 only)
+
+          X'F6' Onion Service Invalid Address
+
+            The given .onion address is invalid. In one of these cases this
+            error is returned: address checksum doesn't match, ed25519 public
+            key is invalid or the encoding is invalid. (v3 only)
 
 // Anchor only for formatting, not visible in the man page.
 [[SocksPortFlagsMisc]]::

@@ -2123,7 +2123,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                 escaped(socks->address));
     if (addresstype == ONION_V3_HOSTNAME) {
-      conn->socks_request->socks_extended_error_code = SOCKS5_HS_IS_INVALID;
+      conn->socks_request->socks_extended_error_code = SOCKS5_HS_BAD_ADDRESS;
     }
     connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
     return -1;
