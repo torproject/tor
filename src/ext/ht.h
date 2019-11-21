@@ -370,7 +370,8 @@ ht_string_hash(const char *s)
   /* Return the next element in 'head' after 'elm', under the arbitrary \
    * order used by HT_START.  If there are no more elements, return     \
    * NULL.  If 'elm' is to be removed from the table, you must call     \
-   * this function for the next value before you remove it.             \
+   * this function for the next value before you remove it, or use      \
+   * HT_NEXT_RMV instead.                                               \
    */                                                                   \
   ATTR_UNUSED static inline struct type **                              \
   name##_HT_NEXT(struct name *head, struct type **elm)                  \
@@ -392,6 +393,8 @@ ht_string_hash(const char *s)
       return NULL;                                                      \
     }                                                                   \
   }                                                                     \
+  /* As HT_NEXT, but also remove the current element 'elm' from the     \
+   * table. */                                                          \
   ATTR_UNUSED static inline struct type **                              \
   name##_HT_NEXT_RMV(struct name *head, struct type **elm)              \
   {                                                                     \
@@ -617,4 +620,3 @@ ht_string_hash(const char *s)
 */
 
 #endif
-
