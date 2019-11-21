@@ -48,12 +48,12 @@ usage, see crypto_options.inc or mainloop_state.inc.
 After using those macros, you must tell the subsystem management
 code about your module's configuration/state.
 
-If you're writing configuration code, you'll need a function that
-receives the configuration object, and acts upon it.  This function
-needs to be safe to call multiple times, since Tor will reconfigure
-its subsystems whenever it, or whenever it restarts in process.
-This function goes in your subsystem's subsys_fns_t.set_options
-field.
+If you're writing configuration code, you'll need a function that receives
+the configuration object, and acts upon it.  This function needs to be safe
+to call multiple times, since Tor will reconfigure its subsystems whenever it
+re-reads the torrc, gets a configuration change from a controller, or
+restarts in process.  This function goes in your subsystem's
+subsys_fns_t.set_options field.
 
 If you're writing state code, you'll need a function that receives
 state (subsys_fns_t.set_state), and a function that flushes the
@@ -89,10 +89,10 @@ subsystem manager code (subsysmgr.c) to pass the corresponding
 configuration or state objects to each module that has one.
 
 Note that the top level code does not have easy access to the
-configuration objects used by the sub-modules.  This is by design.
-A module _may_ expose its configuration or state object, if it
-likes, but if it does not, that object should be considered
-module-local.
+configuration objects used by the sub-modules.  This is by design.  A
+module _may_ expose some or all of its configuration or state object via
+accessor functions, if it likes, but if it does not, that object should
+be considered module-local.
 
 ## Adding new types
 
@@ -113,8 +113,8 @@ used with the macros in confdecl.h.
 
 ## Legacy configuration and state
 
-As of this writing, most of the configuration and state is still
-handled directly in config.c and statefile.c, and stored in the
+As of this writing (November 2019), most of the configuration and state is
+still handled directly in config.c and statefile.c, and stored in the
 monolithic structures or_options_t and or_state_t respectively.
 
 These top-level structures are accessed with get_options() and
