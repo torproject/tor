@@ -137,15 +137,10 @@ crypto_openssl_free_all(void)
 void
 crypto_openssl_early_init(void)
 {
-#ifdef OPENSSL_1_1_API
     OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS |
                      OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
                      OPENSSL_INIT_ADD_ALL_CIPHERS |
                      OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
-#else /* !defined(OPENSSL_1_1_API) */
-    ERR_load_crypto_strings();
-    OpenSSL_add_all_algorithms();
-#endif /* defined(OPENSSL_1_1_API) */
 
     setup_openssl_threading();
 
@@ -272,12 +267,7 @@ crypto_openssl_init_engines(const char *accelName,
      used by Tor and the set of algorithms available in the engine */
   log_engine("RSA", ENGINE_get_default_RSA());
   log_engine("DH", ENGINE_get_default_DH());
-#ifdef OPENSSL_1_1_API
   log_engine("EC", ENGINE_get_default_EC());
-#else
-  log_engine("ECDH", ENGINE_get_default_ECDH());
-  log_engine("ECDSA", ENGINE_get_default_ECDSA());
-#endif /* defined(OPENSSL_1_1_API) */
   log_engine("RAND", ENGINE_get_default_RAND());
   log_engine("RAND (which we will not use)", ENGINE_get_default_RAND());
   log_engine("SHA1", ENGINE_get_digest_engine(NID_sha1));
@@ -329,23 +319,7 @@ crypto_openssl_thread_cleanup(void)
 void
 crypto_openssl_global_cleanup(void)
 {
-  #ifndef OPENSSL_1_1_API
-  EVP_cleanup();
-#endif
-#ifndef OPENSSL_1_1_API
-  ERR_free_strings();
-#endif
-
-#ifndef DISABLE_ENGINES
-#ifndef OPENSSL_1_1_API
-  ENGINE_cleanup();
-#endif
-#endif
-
   CONF_modules_unload(1);
-#ifndef OPENSSL_1_1_API
-  CRYPTO_cleanup_all_ex_data();
-#endif
 
   crypto_openssl_free_all();
 }
