@@ -21,8 +21,13 @@
  **/
 
 #if !defined(LIBRESSL_VERSION_NUMBER) && \
-  OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,1)
-#error "We require OpenSSL >= 1.0.1"
+  OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,1)
+#error "We require OpenSSL >= 1.1.1"
+#endif
+
+#if defined(LIBRESSL_VERSION_NUMBER) && \
+  LIBRESSL_VERSION_NUMBER < OPENSSL_V_SERIES(2,9,0)
+#error "We require LibreSSL >= 2.9.0"
 #endif
 
 #if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0) && \
@@ -54,4 +59,3 @@
 #endif /* defined(ENABLE_OPENSSL) */
 
 #endif /* !defined(TOR_COMPAT_OPENSSL_H) */
-
