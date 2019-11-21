@@ -540,7 +540,7 @@ static const config_var_t option_vars_[] = {
   V(Socks5ProxyUsername,         STRING,   NULL),
   V(Socks5ProxyPassword,         STRING,   NULL),
   VAR_IMMUTABLE("KeyDirectory",  FILENAME, KeyDirectory_option, NULL),
-  V(KeyDirectoryGroupReadable,   BOOL,     "0"),
+  V(KeyDirectoryGroupReadable,   AUTOBOOL, "auto"),
   VAR_D("HSLayer2Nodes",         ROUTERSET,  HSLayer2Nodes,  NULL),
   VAR_D("HSLayer3Nodes",         ROUTERSET,  HSLayer3Nodes,  NULL),
   V(KeepalivePeriod,             INTERVAL, "5 minutes"),
@@ -862,6 +862,9 @@ static void options_clear_cb(const config_mgr_t *mgr, void *opts);
 static setopt_err_t options_validate_and_set(const or_options_t *old_options,
                                              or_options_t *new_options,
                                              char **msg_out);
+struct listener_transaction_t;
+static void options_rollback_listener_transaction(
+                                           struct listener_transaction_t *xn);
 
 /** Magic value for or_options_t. */
 #define OR_OPTIONS_MAGIC 9090909
@@ -904,8 +907,8 @@ static smartlist_t *configured_ports = NULL;
 /** True iff we're currently validating options, and any calls to
  * get_options() are likely to be bugs. */
 static int in_option_validation = 0;
-/* True iff we've initialized libevent */
-static int libevent_initialized = 0;
+/** True iff we have run options_act_once_on_startup() */
+static bool have_set_startup_options = false;
 
 /* A global configuration manager to handle all configuration objects. */
 static config_mgr_t *options_mgr = NULL;
@@ -1085,7 +1088,7 @@ config_free_all(void)
 
   cleanup_protocol_warning_severity_level();
 
-  libevent_initialized = 0;
+  have_set_startup_options = false;
 
   config_mgr_free(options_mgr);
 }
@@ -1422,27 +1425,24 @@ create_keys_directory(const or_options_t *options)
 /* Helps determine flags to pass to switch_id. */
 static int have_low_ports = -1;
 
-/** Fetch the active option list, and take actions based on it. All of the
- * things we do should survive being done repeatedly.  If present,
- * <b>old_options</b> contains the previous value of the options.
- *
- * Return 0 if all goes well, return -1 if things went badly.
- */
-MOCK_IMPL(STATIC int,
-options_act_reversible,(const or_options_t *old_options, char **msg))
+/** Take case of initial startup tasks that must occur before any of the
+ * transactional option-related changes are allowed. */
+static int
+options_act_once_on_startup(char **msg_out)
 {
-  smartlist_t *new_listeners = smartlist_new();
-  or_options_t *options = get_options_mutable();
-  int running_tor = options->command == CMD_RUN_TOR;
-  int set_conn_limit = 0;
-  int r = -1;
-  int logs_marked = 0, logs_initialized = 0;
-  int old_min_log_level = get_min_log_level();
+  if (have_set_startup_options)
+    return 0;
+
+  const or_options_t *options = get_options();
+  const bool running_tor = options->command == CMD_RUN_TOR;
+
+  if (!running_tor)
+    return 0;
 
   /* Daemonize _first_, since we only want to open most of this stuff in
    * the subprocess.  Libevent bases can't be reliably inherited across
    * processes. */
-  if (running_tor && options->RunAsDaemon) {
+  if (options->RunAsDaemon) {
     if (! start_daemon_has_been_called())
       subsystems_prefork();
     /* No need to roll back, since you can't change the value. */
@@ -1455,106 +1455,42 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
   sd_notifyf(0, "MAINPID=%ld\n", (long int)getpid());
 #endif
 
-#ifndef HAVE_SYS_UN_H
-  if (options->ControlSocket || options->ControlSocketsGroupWritable) {
-    *msg = tor_strdup("Unix domain sockets (ControlSocket) not supported "
-                      "on this OS/with this build.");
-    goto rollback;
-  }
-#else /* defined(HAVE_SYS_UN_H) */
-  if (options->ControlSocketsGroupWritable && !options->ControlSocket) {
-    *msg = tor_strdup("Setting ControlSocketGroupWritable without setting"
-                      "a ControlSocket makes no sense.");
-    goto rollback;
-  }
-#endif /* !defined(HAVE_SYS_UN_H) */
+  /* Set up libevent.  (We need to do this before we can register the
+   * listeners as listeners.) */
+  init_libevent(options);
 
-  if (running_tor) {
-    int n_ports=0;
-    /* We need to set the connection limit before we can open the listeners. */
-    if (! sandbox_is_active()) {
-      if (set_max_file_descriptors((unsigned)options->ConnLimit,
-                                   &options->ConnLimit_) < 0) {
-        *msg = tor_strdup("Problem with ConnLimit value. "
-                          "See logs for details.");
-        goto rollback;
-      }
-      set_conn_limit = 1;
-    } else {
-      tor_assert(old_options);
-      options->ConnLimit_ = old_options->ConnLimit_;
-    }
+  /* This has to come up after libevent is initialized. */
+  control_initialize_event_queue();
 
-    /* Set up libevent.  (We need to do this before we can register the
-     * listeners as listeners.) */
-    if (running_tor && !libevent_initialized) {
-      init_libevent(options);
-      libevent_initialized = 1;
+  /*
+   * Initialize the scheduler - this has to come after
+   * options_init_from_torrc() sets up libevent - why yes, that seems
+   * completely sensible to hide the libevent setup in the option parsing
+   * code!  It also needs to happen before init_keys(), so it needs to
+   * happen here too.  How yucky. */
+  scheduler_init();
 
-      /* This has to come up after libevent is initialized. */
-      control_initialize_event_queue();
-
-      /*
-       * Initialize the scheduler - this has to come after
-       * options_init_from_torrc() sets up libevent - why yes, that seems
-       * completely sensible to hide the libevent setup in the option parsing
-       * code!  It also needs to happen before init_keys(), so it needs to
-       * happen here too.  How yucky. */
-      scheduler_init();
-    }
-
-    /* Adjust the port configuration so we can launch listeners. */
-    /* 31851: some ports are relay-only */
-    if (parse_ports(options, 0, msg, &n_ports, NULL)) {
-      if (!*msg)
-        *msg = tor_strdup("Unexpected problem parsing port config");
-      goto rollback;
-    }
-
-    /* Set the hibernation state appropriately.*/
-    consider_hibernation(time(NULL));
-
-    /* Launch the listeners.  (We do this before we setuid, so we can bind to
-     * ports under 1024.)  We don't want to rebind if we're hibernating or
-     * shutting down. If networking is disabled, this will close all but the
-     * control listeners, but disable those. */
-    /* 31851: some listeners are relay-only */
-    if (!we_are_hibernating()) {
-      if (retry_all_listeners(new_listeners, options->DisableNetwork) < 0) {
-        *msg = tor_strdup("Failed to bind one of the listener ports.");
-        goto rollback;
-      }
-    }
-    if (options->DisableNetwork) {
-      /* Aggressively close non-controller stuff, NOW */
-      log_notice(LD_NET, "DisableNetwork is set. Tor will not make or accept "
-                 "non-control network connections. Shutting down all existing "
-                 "connections.");
-      connection_mark_all_noncontrol_connections();
-      /* We can't complete circuits until the network is re-enabled. */
-      note_that_we_maybe_cant_complete_circuits();
-    }
-  }
-
-#if defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H)
-  /* Open /dev/pf before dropping privileges. */
-  if (options->TransPort_set &&
-      options->TransProxyType_parsed == TPT_DEFAULT) {
-    if (get_pf_socket() < 0) {
-      *msg = tor_strdup("Unable to open /dev/pf for transparent proxy.");
-      goto rollback;
-    }
-  }
-#endif /* defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H) */
-
-  /* Attempt to lock all current and future memory with mlockall() only once */
+  /* Attempt to lock all current and future memory with mlockall() only once.
+   * This must happen before setuid. */
   if (options->DisableAllSwap) {
     if (tor_mlockall() == -1) {
-      *msg = tor_strdup("DisableAllSwap failure. Do you have proper "
+      *msg_out = tor_strdup("DisableAllSwap failure. Do you have proper "
                         "permissions?");
-      goto done;
+      return -1;
     }
   }
+
+  have_set_startup_options = true;
+  return 0;
+}
+
+/**
+ * Change our user ID if we're configured to do so.
+ **/
+static int
+options_switch_id(char **msg_out)
+{
+  const or_options_t *options = get_options();
 
   /* Setuid/setgid as appropriate */
   if (options->User) {
@@ -1569,10 +1505,51 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
     }
     if (switch_id(options->User, switch_id_flags) != 0) {
       /* No need to roll back, since you can't change the value. */
-      *msg = tor_strdup("Problem with User value. See logs for details.");
-      goto done;
+      *msg_out = tor_strdup("Problem with User value. See logs for details.");
+      return -1;
     }
   }
+
+  return 0;
+}
+
+/**
+ * Helper. Given a data directory (<b>datadir</b>) and another directory
+ * (<b>subdir</b>) with respective group-writable permissions
+ * <b>datadir_gr</b> and <b>subdir_gr</b>, compute whether the subdir should
+ * be group-writeable.
+ **/
+static int
+compute_group_readable_flag(const char *datadir,
+                            const char *subdir,
+                            int datadir_gr,
+                            int subdir_gr)
+{
+  if (subdir_gr != -1) {
+    /* The user specified a default for "subdir", so we always obey it. */
+    return subdir_gr;
+  }
+
+  /* The user left the subdir_gr option on "auto." */
+  if (0 == strcmp(subdir, datadir)) {
+    /* The directories are the same, so we use the group-readable flag from
+     * the datadirectory */
+    return datadir_gr;
+  } else {
+    /* The directores are different, so we default to "not group-readable" */
+    return 0;
+  }
+}
+
+/**
+ * Create our DataDirectory, CacheDirectory, and KeyDirectory, and
+ * set their permissions correctly.
+ */
+STATIC int
+options_create_directories(char **msg_out)
+{
+  const or_options_t *options = get_options();
+  const bool running_tor = options->command == CMD_RUN_TOR;
 
   /* Ensure data directory is private; create if possible. */
   /* It's okay to do this in "options_act_reversible()" even though it isn't
@@ -1582,98 +1559,159 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
                                       options->DataDirectory,
                                       options->DataDirectoryGroupReadable,
                                       options->User,
-                                      msg) < 0) {
-    goto done;
-  }
-  if (check_and_create_data_directory(running_tor /* create */,
-                                      options->KeyDirectory,
-                                      options->KeyDirectoryGroupReadable,
-                                      options->User,
-                                      msg) < 0) {
-    goto done;
+                                      msg_out) < 0) {
+    return -1;
   }
 
-  /* We need to handle the group-readable flag for the cache directory
-   * specially, since the directory defaults to being the same as the
-   * DataDirectory. */
-  int cache_dir_group_readable;
-  if (options->CacheDirectoryGroupReadable != -1) {
-    /* If the user specified a value, use their setting */
-    cache_dir_group_readable = options->CacheDirectoryGroupReadable;
-  } else if (!strcmp(options->CacheDirectory, options->DataDirectory)) {
-    /* If the user left the value as "auto", and the cache is the same as the
-     * datadirectory, use the datadirectory setting.
-     */
-    cache_dir_group_readable = options->DataDirectoryGroupReadable;
-  } else {
-    /* Otherwise, "auto" means "not group readable". */
-    cache_dir_group_readable = 0;
+  /* We need to handle the group-readable flag for the cache directory and key
+   * directory specially, since they may be the same as the data directory */
+  const int key_dir_group_readable = compute_group_readable_flag(
+                                        options->DataDirectory,
+                                        options->KeyDirectory,
+                                        options->DataDirectoryGroupReadable,
+                                        options->KeyDirectoryGroupReadable);
+
+  if (check_and_create_data_directory(running_tor /* create */,
+                                      options->KeyDirectory,
+                                      key_dir_group_readable,
+                                      options->User,
+                                      msg_out) < 0) {
+    return -1;
   }
+
+  const int cache_dir_group_readable = compute_group_readable_flag(
+                                        options->DataDirectory,
+                                        options->CacheDirectory,
+                                        options->DataDirectoryGroupReadable,
+                                        options->CacheDirectoryGroupReadable);
+
   if (check_and_create_data_directory(running_tor /* create */,
                                       options->CacheDirectory,
                                       cache_dir_group_readable,
                                       options->User,
-                                      msg) < 0) {
-    goto done;
+                                      msg_out) < 0) {
+    return -1;
   }
 
-  /* Bail out at this point if we're not going to be a client or server:
-   * we don't run Tor itself. */
-  if (!running_tor)
-    goto commit;
+  return 0;
+}
 
-  mark_logs_temp(); /* Close current logs once new logs are open. */
-  logs_marked = 1;
-  /* Configure the tor_log(s) */
-  if (options_init_logs(old_options, options, 0)<0) {
-    *msg = tor_strdup("Failed to init Log options. See logs for details.");
+/** Structure to represent an incomplete configuration of a set of
+ * listeners.
+ *
+ * This structure is generated by options_start_listener_transaction(), and is
+ * either committed by options_commit_listener_transaction() or rolled back by
+ * options_rollback_listener_transaction(). */
+typedef struct listener_transaction_t {
+  bool set_conn_limit; /**< True if we've set the connection limit */
+  unsigned old_conn_limit; /**< If nonzero, previous connlimit value. */
+  smartlist_t *new_listeners; /**< List of new listeners that we opened. */
+} listener_transaction_t;
+
+/**
+ * Start configuring our listeners based on the current value of
+ * get_options().
+ *
+ * The value <b>old_options</b> holds either the previous options object,
+ * or NULL if we're starting for the first time.
+ *
+ * On success, return a listener_transaction_t that we can either roll back or
+ * commit.
+ *
+ * On failure return NULL and write a message into a newly allocated string in
+ * *<b>msg_out</b>.
+ **/
+static listener_transaction_t *
+options_start_listener_transaction(const or_options_t *old_options,
+                                   char **msg_out)
+{
+  listener_transaction_t *xn = tor_malloc_zero(sizeof(listener_transaction_t));
+  xn->new_listeners = smartlist_new();
+  or_options_t *options = get_options_mutable();
+  const bool running_tor = options->command == CMD_RUN_TOR;
+
+  if (! running_tor) {
+    return xn;
+  }
+
+  int n_ports=0;
+  /* We need to set the connection limit before we can open the listeners. */
+  if (! sandbox_is_active()) {
+    if (set_max_file_descriptors((unsigned)options->ConnLimit,
+                                 &options->ConnLimit_) < 0) {
+      *msg_out = tor_strdup("Problem with ConnLimit value. "
+                            "See logs for details.");
+      goto rollback;
+    }
+    xn->set_conn_limit = true;
+    if (old_options)
+      xn->old_conn_limit = (unsigned)old_options->ConnLimit;
+  } else {
+    tor_assert(old_options);
+    options->ConnLimit_ = old_options->ConnLimit_;
+  }
+
+  /* Adjust the port configuration so we can launch listeners. */
+  /* 31851: some ports are relay-only */
+  if (parse_ports(options, 0, msg_out, &n_ports, NULL)) {
+    if (!*msg_out)
+      *msg_out = tor_strdup("Unexpected problem parsing port config");
     goto rollback;
   }
-  logs_initialized = 1;
 
- commit:
-  r = 0;
-  if (logs_marked) {
-    log_severity_list_t *severity =
-      tor_malloc_zero(sizeof(log_severity_list_t));
-    close_temp_logs();
-    add_callback_log(severity, control_event_logmsg);
-    logs_set_pending_callback_callback(control_event_logmsg_pending);
-    control_adjust_event_log_severity();
-    tor_free(severity);
-    tor_log_update_sigsafe_err_fds();
-  }
-  if (logs_initialized) {
-    flush_log_messages_from_startup();
-  }
+  /* Set the hibernation state appropriately.*/
+  consider_hibernation(time(NULL));
 
-  {
-    const char *badness = NULL;
-    int bad_safelog = 0, bad_severity = 0, new_badness = 0;
-    if (options->SafeLogging_ != SAFELOG_SCRUB_ALL) {
-      bad_safelog = 1;
-      if (!old_options || old_options->SafeLogging_ != options->SafeLogging_)
-        new_badness = 1;
+  /* Launch the listeners.  (We do this before we setuid, so we can bind to
+   * ports under 1024.)  We don't want to rebind if we're hibernating or
+   * shutting down. If networking is disabled, this will close all but the
+   * control listeners, but disable those. */
+  /* 31851: some listeners are relay-only */
+  if (!we_are_hibernating()) {
+    if (retry_all_listeners(xn->new_listeners,
+                            options->DisableNetwork) < 0) {
+      *msg_out = tor_strdup("Failed to bind one of the listener ports.");
+      goto rollback;
     }
-    if (get_min_log_level() >= LOG_INFO) {
-      bad_severity = 1;
-      if (get_min_log_level() != old_min_log_level)
-        new_badness = 1;
-    }
-    if (bad_safelog && bad_severity)
-      badness = "you disabled SafeLogging, and "
-        "you're logging more than \"notice\"";
-    else if (bad_safelog)
-      badness = "you disabled SafeLogging";
-    else
-      badness = "you're logging more than \"notice\"";
-    if (new_badness)
-      log_warn(LD_GENERAL, "Your log may contain sensitive information - %s. "
-               "Don't log unless it serves an important reason. "
-               "Overwrite the log afterwards.", badness);
+  }
+  if (options->DisableNetwork) {
+    /* Aggressively close non-controller stuff, NOW */
+    log_notice(LD_NET, "DisableNetwork is set. Tor will not make or accept "
+               "non-control network connections. Shutting down all existing "
+               "connections.");
+    connection_mark_all_noncontrol_connections();
+    /* We can't complete circuits until the network is re-enabled. */
+    note_that_we_maybe_cant_complete_circuits();
   }
 
-  if (set_conn_limit) {
+#if defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H)
+  /* Open /dev/pf before (possibly) dropping privileges. */
+  if (options->TransPort_set &&
+      options->TransProxyType_parsed == TPT_DEFAULT) {
+    if (get_pf_socket() < 0) {
+      *msg_out = tor_strdup("Unable to open /dev/pf for transparent proxy.");
+      goto rollback;
+    }
+  }
+#endif /* defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H) */
+
+  return xn;
+
+ rollback:
+  options_rollback_listener_transaction(xn);
+  return NULL;
+}
+
+/**
+ * Finish configuring the listeners that started to get configured with
+ * <b>xn</b>.  Frees <b>xn</b>.
+ **/
+static void
+options_commit_listener_transaction(listener_transaction_t *xn)
+{
+  tor_assert(xn);
+  if (xn->set_conn_limit) {
+    or_options_t *options = get_options_mutable();
     /*
      * If we adjusted the conn limit, recompute the OOS threshold too
      *
@@ -1701,22 +1739,26 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
     connection_check_oos(get_n_open_sockets(), 0);
   }
 
-  goto done;
+  smartlist_free(xn->new_listeners);
+  tor_free(xn);
+}
 
- rollback:
-  r = -1;
-  tor_assert(*msg);
+/**
+ * Revert the listener configuration changes that that started to get
+ * configured with <b>xn</b>.  Frees <b>xn</b>.
+ **/
+static void
+options_rollback_listener_transaction(listener_transaction_t *xn)
+{
+  if (! xn)
+    return;
 
-  if (logs_marked) {
-    rollback_log_changes();
-    control_adjust_event_log_severity();
-  }
+  or_options_t *options = get_options_mutable();
 
-  if (set_conn_limit && old_options)
-    set_max_file_descriptors((unsigned)old_options->ConnLimit,
-                             &options->ConnLimit_);
+  if (xn->set_conn_limit && xn->old_conn_limit)
+    set_max_file_descriptors(xn->old_conn_limit, &options->ConnLimit_);
 
-  SMARTLIST_FOREACH(new_listeners, connection_t *, conn,
+  SMARTLIST_FOREACH(xn->new_listeners, connection_t *, conn,
   {
     log_notice(LD_NET, "Closing partially-constructed %s on %s:%d",
                conn_type_to_string(conn->type), conn->address, conn->port);
@@ -1724,8 +1766,220 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
     connection_mark_for_close(conn);
   });
 
+  smartlist_free(xn->new_listeners);
+  tor_free(xn);
+}
+
+/** Structure to represent an incomplete configuration of a set of logs.
+ *
+ * This structure is generated by options_start_log_transaction(), and is
+ * either committed by options_commit_log_transaction() or rolled back by
+ * options_rollback_log_transaction(). */
+typedef struct log_transaction_t {
+  /** Previous lowest severity of any configured log. */
+  int old_min_log_level;
+  /** True if we have marked the previous logs to be closed */
+  bool logs_marked;
+  /** True if we initialized the new set of logs */
+  bool logs_initialized;
+  /** True if our safelogging configuration is different from what it was
+   * previously (or if we are starting for the first time). */
+  bool safelogging_changed;
+} log_transaction_t;
+
+/**
+ * Start configuring our logs based on the current value of get_options().
+ *
+ * The value <b>old_options</b> holds either the previous options object,
+ * or NULL if we're starting for the first time.
+ *
+ * On success, return a log_transaction_t that we can either roll back or
+ * commit.
+ *
+ * On failure return NULL and write a message into a newly allocated string in
+ * *<b>msg_out</b>.
+ **/
+STATIC log_transaction_t *
+options_start_log_transaction(const or_options_t *old_options,
+                              char **msg_out)
+{
+  const or_options_t *options = get_options();
+  const bool running_tor = options->command == CMD_RUN_TOR;
+
+  log_transaction_t *xn = tor_malloc_zero(sizeof(log_transaction_t));
+  xn->old_min_log_level = get_min_log_level();
+  xn->safelogging_changed = !old_options ||
+    old_options->SafeLogging_ != options->SafeLogging_;
+
+  if (! running_tor)
+    goto done;
+
+  mark_logs_temp(); /* Close current logs once new logs are open. */
+  xn->logs_marked = true;
+  /* Configure the tor_log(s) */
+  if (options_init_logs(old_options, options, 0)<0) {
+    *msg_out = tor_strdup("Failed to init Log options. See logs for details.");
+    options_rollback_log_transaction(xn);
+    xn = NULL;
+    goto done;
+  }
+
+  xn->logs_initialized = true;
+
  done:
-  smartlist_free(new_listeners);
+  return xn;
+}
+
+/**
+ * Finish configuring the logs that started to get configured with <b>xn</b>.
+ * Frees <b>xn</b>.
+ **/
+STATIC void
+options_commit_log_transaction(log_transaction_t *xn)
+{
+  const or_options_t *options = get_options();
+  tor_assert(xn);
+
+  if (xn->logs_marked) {
+    log_severity_list_t *severity =
+      tor_malloc_zero(sizeof(log_severity_list_t));
+    close_temp_logs();
+    add_callback_log(severity, control_event_logmsg);
+    logs_set_pending_callback_callback(control_event_logmsg_pending);
+    control_adjust_event_log_severity();
+    tor_free(severity);
+    tor_log_update_sigsafe_err_fds();
+  }
+
+  if (xn->logs_initialized) {
+    flush_log_messages_from_startup();
+  }
+
+  {
+    const char *badness = NULL;
+    int bad_safelog = 0, bad_severity = 0, new_badness = 0;
+    if (options->SafeLogging_ != SAFELOG_SCRUB_ALL) {
+      bad_safelog = 1;
+      if (xn->safelogging_changed)
+        new_badness = 1;
+    }
+    if (get_min_log_level() >= LOG_INFO) {
+      bad_severity = 1;
+      if (get_min_log_level() != xn->old_min_log_level)
+        new_badness = 1;
+    }
+    if (bad_safelog && bad_severity)
+      badness = "you disabled SafeLogging, and "
+        "you're logging more than \"notice\"";
+    else if (bad_safelog)
+      badness = "you disabled SafeLogging";
+    else
+      badness = "you're logging more than \"notice\"";
+    if (new_badness)
+      log_warn(LD_GENERAL, "Your log may contain sensitive information - %s. "
+               "Don't log unless it serves an important reason. "
+               "Overwrite the log afterwards.", badness);
+  }
+
+  tor_free(xn);
+}
+
+/**
+ * Revert the log configuration changes that that started to get configured
+ * with <b>xn</b>.  Frees <b>xn</b>.
+ **/
+STATIC void
+options_rollback_log_transaction(log_transaction_t *xn)
+{
+  if (!xn)
+    return;
+
+  if (xn->logs_marked) {
+    rollback_log_changes();
+    control_adjust_event_log_severity();
+  }
+
+  tor_free(xn);
+}
+
+/**
+ * Fetch the active option list, and take actions based on it. All of
+ * the things we do in this function should survive being done
+ * repeatedly, OR be done only once when starting Tor.  If present,
+ * <b>old_options</b> contains the previous value of the options.
+ *
+ * This function is only truly "reversible" _after_ the first time it
+ * is run.  The first time that it runs, it performs some irreversible
+ * tasks in the correct sequence between the reversible option changes.
+ *
+ * Option changes should only be marked as "reversible" if they cannot
+ * be validated before switching them, but they can be switched back if
+ * some other validation fails.
+ *
+ * Return 0 if all goes well, return -1 if things went badly.
+ */
+MOCK_IMPL(STATIC int,
+options_act_reversible,(const or_options_t *old_options, char **msg))
+{
+  const bool first_time = ! have_set_startup_options;
+  log_transaction_t *log_transaction = NULL;
+  listener_transaction_t *listener_transaction = NULL;
+  int r = -1;
+
+  /* The ordering of actions in this function is not free, sadly.
+   *
+   * First of all, we _must_ daemonize before we take all kinds of
+   * initialization actions, since they need to happen in the
+   * subprocess.
+   */
+  if (options_act_once_on_startup(msg) < 0)
+    goto rollback;
+
+  /* Once we've handled most of once-off initialization, we need to
+   * open our listeners before we switch IDs.  (If we open listeners first,
+   * we might not be able to bind to low ports.)
+   */
+  listener_transaction = options_start_listener_transaction(old_options, msg);
+  if (listener_transaction == NULL)
+    goto rollback;
+
+  if (first_time) {
+    if (options_switch_id(msg) < 0)
+      goto done;
+  }
+
+  /* On the other hand, we need to touch the file system _after_ we
+   * switch IDs: otherwise, we'll be making directories and opening files
+   * with the wrong permissions.
+   */
+  if (first_time) {
+    if (options_create_directories(msg) < 0)
+      goto done;
+  }
+
+  /* Bail out at this point if we're not going to be a client or server:
+   * we don't run Tor itself. */
+  log_transaction = options_start_log_transaction(old_options, msg);
+  if (log_transaction == NULL)
+    goto rollback;
+
+  // Commit!
+  r = 0;
+
+  options_commit_log_transaction(log_transaction);
+
+  options_commit_listener_transaction(listener_transaction);
+
+  goto done;
+
+ rollback:
+  r = -1;
+  tor_assert(*msg);
+
+  options_rollback_log_transaction(log_transaction);
+  options_rollback_listener_transaction(listener_transaction);
+
+ done:
   return r;
 }
 
@@ -3179,6 +3433,20 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (parse_ports(options, 1, msg, &n_ports,
                   &world_writable_control_socket) < 0)
     return -1;
+
+#ifndef HAVE_SYS_UN_H
+  if (options->ControlSocket || options->ControlSocketsGroupWritable) {
+    *msg = tor_strdup("Unix domain sockets (ControlSocket) not supported "
+                      "on this OS/with this build.");
+    return -1;
+  }
+#else /* defined(HAVE_SYS_UN_H) */
+  if (options->ControlSocketsGroupWritable && !options->ControlSocket) {
+    *msg = tor_strdup("Setting ControlSocketGroupWritable without setting "
+                      "a ControlSocket makes no sense.");
+    return -1;
+  }
+#endif /* !defined(HAVE_SYS_UN_H) */
 
   /* Set UseEntryGuards from the configured value, before we check it below.
    * We change UseEntryGuards when it's incompatible with other options,
@@ -4796,7 +5064,7 @@ options_init_log_granularity(const or_options_t *options,
  * Initialize the logs based on the configuration file.
  */
 STATIC int
-options_init_logs(const or_options_t *old_options, or_options_t *options,
+options_init_logs(const or_options_t *old_options, const or_options_t *options,
                   int validate_only)
 {
   config_line_t *opt;

@@ -2595,10 +2595,12 @@ is non-zero):
     running.
     (Default: the "keys" subdirectory of DataDirectory.)
 
-[[KeyDirectoryGroupReadable]] **KeyDirectoryGroupReadable** **0**|**1**::
+[[KeyDirectoryGroupReadable]] **KeyDirectoryGroupReadable** **0**|**1**|**auto**::
     If this option is set to 0, don't allow the filesystem group to read the
-    KeywDirectory. If the option is set to 1, make the KeyDirectory readable
-    by the default GID. (Default: 0)
+    KeyDirectory. If the option is set to 1, make the KeyDirectory readable
+    by the default GID. If the option is "auto", then we use the
+    setting for DataDirectoryGroupReadable when the KeyDirectory is the
+    same as the DataDirectory, and 0 otherwise. (Default: auto)
 
 [[RephistTrackTime]] **RephistTrackTime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
     Tells an authority, or other node tracking node reliability and history,

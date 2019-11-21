@@ -301,7 +301,15 @@ STATIC int open_and_add_file_log(const log_severity_list_t *severity,
                                  const char *fname,
                                  int truncate_log);
 STATIC int options_init_logs(const or_options_t *old_options,
-                             or_options_t *options, int validate_only);
+                             const or_options_t *options, int validate_only);
+
+STATIC int options_create_directories(char **msg_out);
+struct log_transaction_t;
+STATIC struct log_transaction_t *options_start_log_transaction(
+                              const or_options_t *old_options,
+                              char **msg_out);
+STATIC void options_commit_log_transaction(struct log_transaction_t *xn);
+STATIC void options_rollback_log_transaction(struct log_transaction_t *xn);
 
 #ifdef TOR_UNIT_TESTS
 int options_validate(const or_options_t *old_options,

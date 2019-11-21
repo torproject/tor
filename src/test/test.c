@@ -732,6 +732,7 @@ struct testgroup_t testgroups[] = {
   { "oom/", oom_tests },
   { "oos/", oos_tests },
   { "options/", options_tests },
+  { "options/act/", options_act_tests },
   { "parsecommon/", parsecommon_tests },
   { "periodic-event/" , periodic_event_tests },
   { "policy/" , policy_tests },

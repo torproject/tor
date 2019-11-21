@@ -33,7 +33,7 @@
 #
 # Remember: It is better to fix the problem than to add a new exception!
 
-problem file-size /src/app/config/config.c 7212
+problem file-size /src/app/config/config.c 7400
 problem include-count /src/app/config/config.c 80
 problem function-size /src/app/config/config.c:options_act_reversible() 298
 problem function-size /src/app/config/config.c:options_act() 381
