@@ -34,9 +34,6 @@
 #define OPENSSL_VERSION SSLEAY_VERSION
 #endif
 
-/* TODO: remove. */
-#define OPENSSL_1_1_API
-
 #ifdef LIBRESSL_VERSION_NUMBER
 #define RAND_OpenSSL() RAND_SSLeay()
 #define STATE_IS_SW_SERVER_HELLO(st)       \

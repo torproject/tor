@@ -80,14 +80,6 @@ ENABLE_GCC_WARNING(redundant-decls)
 
 #define ADDR(tls) (((tls) && (tls)->address) ? tls->address : "peer")
 
-#if OPENSSL_VERSION_NUMBER <  OPENSSL_V(1,0,0,'f')
-/* This is a version of OpenSSL before 1.0.0f. It does not have
- * the CVE-2011-4576 fix, and as such it can't use RELEASE_BUFFERS and
- * SSL3 safely at the same time.
- */
-#define DISABLE_SSL3_HANDSHAKE
-#endif /* OPENSSL_VERSION_NUMBER <  OPENSSL_V(1,0,0,'f') */
-
 /* We redefine these so that we can run correctly even if the vendor gives us
  * a version of OpenSSL that does not match its header files.  (Apple: I am
  * looking at you.)
@@ -208,9 +200,6 @@ tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
     case SSL_R_HTTP_REQUEST:
     case SSL_R_HTTPS_PROXY_REQUEST:
     case SSL_R_RECORD_LENGTH_MISMATCH:
-#ifndef OPENSSL_1_1_API
-    case SSL_R_RECORD_TOO_LARGE:
-#endif
     case SSL_R_UNKNOWN_PROTOCOL:
     case SSL_R_UNSUPPORTED_PROTOCOL:
       severity = LOG_INFO;
@@ -313,15 +302,9 @@ tor_tls_init(void)
   check_no_tls_errors();
 
   if (!tls_library_is_initialized) {
-#ifdef OPENSSL_1_1_API
     OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL);
-#else
-    SSL_library_init();
-    SSL_load_error_strings();
-#endif /* defined(OPENSSL_1_1_API) */
 
-#if (SIZEOF_VOID_P >= 8 &&                              \
-     OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,1))
+#if (SIZEOF_VOID_P >= 8)
     long version = OpenSSL_version_num();
 
     /* LCOV_EXCL_START : we can't test these lines on the same machine */
@@ -344,15 +327,15 @@ tor_tls_init(void)
       EC_KEY_free(key);
 
       if (warn)
-        log_notice(LD_GENERAL, "We were built to run on a 64-bit CPU, with "
-                   "OpenSSL 1.0.1 or later, but with a version of OpenSSL "
+        log_notice(LD_GENERAL, "We were built to run on a 64-bit CPU, "
+                   "but with a version of OpenSSL "
                    "that apparently lacks accelerated support for the NIST "
                    "P-224 and P-256 groups. Building openssl with such "
                    "support (using the enable-ec_nistp_64_gcc_128 option "
                    "when configuring it) would make ECDH much faster.");
     }
     /* LCOV_EXCL_STOP */
-#endif /* (SIZEOF_VOID_P >= 8 &&                              ... */
+#endif /* (SIZEOF_VOID_P >= 8) */
 
     tor_tls_allocate_tor_tls_object_ex_data_index();
 
@@ -603,12 +586,6 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
 #ifdef SSL_OP_NO_COMPRESSION
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_COMPRESSION);
 #endif
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
-#ifndef OPENSSL_NO_COMP
-  if (result->ctx->comp_methods)
-    result->ctx->comp_methods = NULL;
-#endif
-#endif /* OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0) */
 
 #ifdef SSL_MODE_RELEASE_BUFFERS
   SSL_CTX_set_mode(result->ctx, SSL_MODE_RELEASE_BUFFERS);
@@ -781,7 +758,7 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
     return c != NULL;
   }
 #endif /* defined(HAVE_STRUCT_SSL_METHOD_ST_GET_CIPHER_BY_CHAR) */
-# ifndef OPENSSL_1_1_API
+
   if (m && m->get_cipher && m->num_ciphers) {
     /* It would seem that some of the "let's-clean-up-openssl" forks have
      * removed the get_cipher_by_char function.  Okay, so now you get a
@@ -796,10 +773,8 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
     }
     return 0;
   }
-#endif /* !defined(OPENSSL_1_1_API) */
-  (void) ssl;
-  (void) m;
-  (void) cipher;
+  (void)ssl;
+
   return 1; /* No way to search */
 #endif /* defined(HAVE_SSL_CIPHER_FIND) */
 }
@@ -1503,18 +1478,11 @@ tor_tls_get_n_raw_bytes(tor_tls_t *tls, size_t *n_read, size_t *n_written)
    * save the original BIO for  tls->ssl in the tor_tls_t structure, but
    * that would be tempting fate. */
   wbio = SSL_get_wbio(tls->ssl);
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,5)
-  /* BIO structure is opaque as of OpenSSL 1.1.0-pre5-dev.  Again, not
-   * supposed to use this form of the version macro, but the OpenSSL developers
-   * introduced major API changes in the pre-release stage.
-   */
+
   if (BIO_method_type(wbio) == BIO_TYPE_BUFFER &&
         (tmpbio = BIO_next(wbio)) != NULL)
     wbio = tmpbio;
-#else /* !(OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,5)) */
-  if (wbio->method == BIO_f_buffer() && (tmpbio = BIO_next(wbio)) != NULL)
-    wbio = tmpbio;
-#endif /* OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,5) */
+
   w = (unsigned long) BIO_number_written(wbio);
 
   /* We are ok with letting these unsigned ints go "negative" here:
@@ -1747,7 +1715,6 @@ tor_tls_get_buffer_sizes(tor_tls_t *tls,
                          size_t *rbuf_capacity, size_t *rbuf_bytes,
                          size_t *wbuf_capacity, size_t *wbuf_bytes)
 {
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
   (void)tls;
   (void)rbuf_capacity;
   (void)rbuf_bytes;
@@ -1755,19 +1722,6 @@ tor_tls_get_buffer_sizes(tor_tls_t *tls,
   (void)wbuf_bytes;
 
   return -1;
-#else /* !(OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)) */
-  if (tls->ssl->s3->rbuf.buf)
-    *rbuf_capacity = tls->ssl->s3->rbuf.len;
-  else
-    *rbuf_capacity = 0;
-  if (tls->ssl->s3->wbuf.buf)
-    *wbuf_capacity = tls->ssl->s3->wbuf.len;
-  else
-    *wbuf_capacity = 0;
-  *rbuf_bytes = tls->ssl->s3->rbuf.left;
-  *wbuf_bytes = tls->ssl->s3->wbuf.left;
-  return 0;
-#endif /* OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0) */
 }
 
 /** Check whether the ECC group requested is supported by the current OpenSSL

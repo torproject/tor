@@ -128,12 +128,7 @@ test_tortls_tor_tls_new(void *data)
 static void
 library_init(void)
 {
-#ifdef OPENSSL_1_1_API
   OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL);
-#else
-  SSL_library_init();
-  SSL_load_error_strings();
-#endif /* defined(OPENSSL_1_1_API) */
 }
 
 static void
@@ -300,13 +295,6 @@ test_tortls_log_one_error(void *ignored)
   tor_tls_log_one_error(tls, ERR_PACK(1, 2, SSL_R_RECORD_LENGTH_MISMATCH),
                         LOG_WARN, 0, NULL);
   expect_log_severity(LOG_INFO);
-
-#ifndef OPENSSL_1_1_API
-  mock_clean_saved_logs();
-  tor_tls_log_one_error(tls, ERR_PACK(1, 2, SSL_R_RECORD_TOO_LARGE),
-                        LOG_WARN, 0, NULL);
-  expect_log_severity(LOG_INFO);
-#endif /* !defined(OPENSSL_1_1_API) */
 
   mock_clean_saved_logs();
   tor_tls_log_one_error(tls, ERR_PACK(1, 2, SSL_R_UNKNOWN_PROTOCOL),
@@ -1185,11 +1173,6 @@ test_tortls_block_renegotiation(void *ignored)
   tls->ssl->s3->flags = SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
 
   tor_tls_block_renegotiation(tls);
-
-#ifndef OPENSSL_1_1_API
-  tt_assert(!(tls->ssl->s3->flags &
-              SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION));
-#endif
 
  done:
   tor_free(tls->ssl->s3);
