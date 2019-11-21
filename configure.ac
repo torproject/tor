@@ -1007,12 +1007,7 @@ AC_CHECK_FUNCS([ \
 		EVP_PBE_scrypt \
 		EVP_sha3_256 \
 		SSL_CIPHER_find \
-		SSL_CTX_set1_groups_list \
 		SSL_CTX_set_security_level \
-		SSL_SESSION_get_master_key \
-		SSL_get_client_ciphers \
-		SSL_get_client_random \
-		SSL_get_server_random \
 	       ])
 
 dnl Check if OpenSSL structures are opaque

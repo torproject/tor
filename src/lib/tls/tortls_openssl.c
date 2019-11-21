@@ -616,9 +616,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
     SSL_CTX_set_tmp_dh(result->ctx, dh);
     DH_free(dh);
   }
-/* We check for this function in two ways, since it might be either a symbol
- * or a macro. */
-#if defined(SSL_CTX_set1_groups_list) || defined(HAVE_SSL_CTX_SET1_GROUPS_LIST)
+
   {
     const char *list;
     if (flags & TOR_TLS_CTX_USE_ECDHE_P224)
@@ -631,23 +629,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
     if (r < 0)
       goto error;
   }
-#else /* !(defined(SSL_CTX_set1_groups_list) || defined(HAVE_SSL_CTX_SE...)) */
-  if (! is_client) {
-    int nid;
-    EC_KEY *ec_key;
-    if (flags & TOR_TLS_CTX_USE_ECDHE_P224)
-      nid = NID_secp224r1;
-    else if (flags & TOR_TLS_CTX_USE_ECDHE_P256)
-      nid = NID_X9_62_prime256v1;
-    else
-      nid = NID_tor_default_ecdhe_group;
-    /* Use P-256 for ECDHE. */
-    ec_key = EC_KEY_new_by_curve_name(nid);
-    if (ec_key != NULL) /*XXXX Handle errors? */
-      SSL_CTX_set_tmp_ecdh(result->ctx, ec_key);
-    EC_KEY_free(ec_key);
-  }
-#endif /* defined(SSL_CTX_set1_groups_list) || defined(HAVE_SSL_CTX_SET1...) */
+
   SSL_CTX_set_verify(result->ctx, SSL_VERIFY_PEER,
                      always_accept_verify_cb);
   /* let us realloc bufs that we're writing from */
@@ -886,16 +868,7 @@ int
 tor_tls_client_is_using_v2_ciphers(const SSL *ssl)
 {
   STACK_OF(SSL_CIPHER) *ciphers;
-#ifdef HAVE_SSL_GET_CLIENT_CIPHERS
   ciphers = SSL_get_client_ciphers(ssl);
-#else
-  SSL_SESSION *session;
-  if (!(session = SSL_get_session((SSL *)ssl))) {
-    log_info(LD_NET, "No session on TLS?");
-    return CIPHERS_ERR;
-  }
-  ciphers = session->ciphers;
-#endif /* defined(HAVE_SSL_GET_CLIENT_CIPHERS) */
 
   return tor_tls_classify_client_ciphers(ssl, ciphers) >= CIPHERS_V2;
 }
@@ -1532,46 +1505,6 @@ tor_tls_server_got_renegotiate(tor_tls_t *tls)
 {
   return tls->got_renegotiate;
 }
-
-#ifndef HAVE_SSL_GET_CLIENT_RANDOM
-static size_t
-SSL_get_client_random(SSL *s, uint8_t *out, size_t len)
-{
-  if (len == 0)
-    return SSL3_RANDOM_SIZE;
-  tor_assert(len == SSL3_RANDOM_SIZE);
-  tor_assert(s->s3);
-  memcpy(out, s->s3->client_random, len);
-  return len;
-}
-#endif /* !defined(HAVE_SSL_GET_CLIENT_RANDOM) */
-
-#ifndef HAVE_SSL_GET_SERVER_RANDOM
-static size_t
-SSL_get_server_random(SSL *s, uint8_t *out, size_t len)
-{
-  if (len == 0)
-    return SSL3_RANDOM_SIZE;
-  tor_assert(len == SSL3_RANDOM_SIZE);
-  tor_assert(s->s3);
-  memcpy(out, s->s3->server_random, len);
-  return len;
-}
-#endif /* !defined(HAVE_SSL_GET_SERVER_RANDOM) */
-
-#ifndef HAVE_SSL_SESSION_GET_MASTER_KEY
-size_t
-SSL_SESSION_get_master_key(SSL_SESSION *s, uint8_t *out, size_t len)
-{
-  tor_assert(s);
-  if (len == 0)
-    return s->master_key_length;
-  tor_assert(len == (size_t)s->master_key_length);
-  tor_assert(out);
-  memcpy(out, s->master_key, len);
-  return len;
-}
-#endif /* !defined(HAVE_SSL_SESSION_GET_MASTER_KEY) */
 
 /** Set the DIGEST256_LEN buffer at <b>secrets_out</b> to the value used in
  * the v3 handshake to prove that the client knows the TLS secrets for the

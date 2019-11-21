@@ -593,26 +593,6 @@ test_tortls_get_my_client_auth_key(void *ignored)
   tor_free(ctx);
 }
 
-#ifndef HAVE_SSL_GET_CLIENT_CIPHERS
-static SSL_CIPHER *
-get_cipher_by_name(const char *name)
-{
-  int i;
-  const SSL_METHOD *method = SSLv23_method();
-  int num = method->num_ciphers();
-
-  for (i = 0; i < num; ++i) {
-    const SSL_CIPHER *cipher = method->get_cipher(i);
-    const char *ciphername = SSL_CIPHER_get_name(cipher);
-    if (!strcmp(ciphername, name)) {
-      return (SSL_CIPHER *)cipher;
-    }
-  }
-
-  return NULL;
-}
-#endif /* !defined(HAVE_SSL_GET_CLIENT_CIPHERS) */
-
 #ifndef OPENSSL_OPAQUE
 static void
 test_tortls_get_ciphersuite_name(void *ignored)
@@ -755,42 +735,9 @@ test_tortls_client_is_using_v2_ciphers(void *ignored)
 {
   (void)ignored;
 
-#ifdef HAVE_SSL_GET_CLIENT_CIPHERS
   tt_skip();
  done:
   (void)1;
-#else
-  int ret;
-  SSL_CTX *ctx;
-  SSL *ssl;
-  SSL_SESSION *sess;
-  STACK_OF(SSL_CIPHER) *ciphers;
-
-  library_init();
-
-  ctx = SSL_CTX_new(TLSv1_method());
-  ssl = SSL_new(ctx);
-  sess = SSL_SESSION_new();
-
-  ret = tor_tls_client_is_using_v2_ciphers(ssl);
-  tt_int_op(ret, OP_EQ, -1);
-
-  ssl->session = sess;
-  ret = tor_tls_client_is_using_v2_ciphers(ssl);
-  tt_int_op(ret, OP_EQ, 0);
-
-  ciphers = sk_SSL_CIPHER_new_null();
-  SSL_CIPHER *one = get_cipher_by_name("ECDHE-RSA-AES256-GCM-SHA384");
-  tt_assert(one);
-  one->id = 0x00ff;
-  sk_SSL_CIPHER_push(ciphers, one);
-  sess->ciphers = ciphers;
-  ret = tor_tls_client_is_using_v2_ciphers(ssl);
-  tt_int_op(ret, OP_EQ, 1);
- done:
-  SSL_free(ssl);
-  SSL_CTX_free(ctx);
-#endif /* defined(HAVE_SSL_GET_CLIENT_CIPHERS) */
 }
 
 #ifndef OPENSSL_OPAQUE
@@ -842,18 +789,6 @@ test_tortls_SSL_SESSION_get_master_key(void *ignored)
   tls->ssl->session = tor_malloc_zero(sizeof(SSL_SESSION));
   tls->ssl->session->master_key_length = 1;
 
-#ifndef HAVE_SSL_SESSION_GET_MASTER_KEY
-  tls->ssl->session->master_key[0] = 43;
-  ret = SSL_SESSION_get_master_key(tls->ssl->session, out, 0);
-  tt_int_op(ret, OP_EQ, 1);
-  tt_int_op(out[0], OP_EQ, 0);
-
-  ret = SSL_SESSION_get_master_key(tls->ssl->session, out, 1);
-  tt_int_op(ret, OP_EQ, 1);
-  tt_int_op(out[0], OP_EQ, 43);
-
- done:
-#endif /* !defined(HAVE_SSL_SESSION_GET_MASTER_KEY) */
   tor_free(tls->ssl->session);
   tor_free(tls->ssl);
   tor_free(tls);

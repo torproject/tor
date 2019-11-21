@@ -49,12 +49,6 @@ void tor_tls_server_info_callback(const struct ssl_st *ssl,
                                          int type, int val);
 void tor_tls_allocate_tor_tls_object_ex_data_index(void);
 
-#if !defined(HAVE_SSL_SESSION_GET_MASTER_KEY)
-size_t SSL_SESSION_get_master_key(struct ssl_session_st *s,
-                                  uint8_t *out,
-                                  size_t len);
-#endif
-
 #ifdef TORTLS_OPENSSL_PRIVATE
 int always_accept_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx);
 int tor_tls_classify_client_ciphers(const struct ssl_st *ssl,
