@@ -258,14 +258,12 @@ test_crypto_openssl_version(void *arg)
 static void
 test_crypto_aes128(void *arg)
 {
+  (void)arg;
   char *data1 = NULL, *data2 = NULL, *data3 = NULL;
   crypto_cipher_t *env1 = NULL, *env2 = NULL;
   int i, j;
   char *mem_op_hex_tmp=NULL;
   char key[CIPHER_KEY_LEN];
-  int use_evp = !strcmp(arg,"evp");
-  evaluate_evp_for_aes(use_evp);
-  evaluate_ctr_for_aes();
 
   data1 = tor_malloc(1024);
   data2 = tor_malloc(1024);
@@ -1589,13 +1587,11 @@ test_crypto_formats(void *arg)
 static void
 test_crypto_aes_iv(void *arg)
 {
+  (void)arg;
   char *plain, *encrypted1, *encrypted2, *decrypted1, *decrypted2;
   char plain_1[1], plain_15[15], plain_16[16], plain_17[17];
   char key1[16], key2[16];
   ssize_t encrypted_size, decrypted_size;
-
-  int use_evp = !strcmp(arg,"evp");
-  evaluate_evp_for_aes(use_evp);
 
   plain = tor_malloc(4095);
   encrypted1 = tor_malloc(4095 + 1 + 16);
@@ -2987,8 +2983,7 @@ test_crypto_failure_modes(void *arg)
 struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(formats),
   { "openssl_version", test_crypto_openssl_version, TT_FORK, NULL, NULL },
-  { "aes_AES", test_crypto_aes128, TT_FORK, &passthrough_setup, (void*)"aes" },
-  { "aes_EVP", test_crypto_aes128, TT_FORK, &passthrough_setup, (void*)"evp" },
+  { "aes_EVP", test_crypto_aes128, TT_FORK, NULL, NULL },
   { "aes128_ctr_testvec", test_crypto_aes_ctr_testvec, 0,
     &passthrough_setup, (void*)"128" },
   { "aes192_ctr_testvec", test_crypto_aes_ctr_testvec, 0,
@@ -3008,10 +3003,7 @@ struct testcase_t crypto_tests[] = {
   { "sha3_xof", test_crypto_sha3_xof, TT_FORK, NULL, NULL},
   { "mac_sha3", test_crypto_mac_sha3, TT_FORK, NULL, NULL},
   CRYPTO_LEGACY(dh),
-  { "aes_iv_AES", test_crypto_aes_iv, TT_FORK, &passthrough_setup,
-    (void*)"aes" },
-  { "aes_iv_EVP", test_crypto_aes_iv, TT_FORK, &passthrough_setup,
-    (void*)"evp" },
+  { "aes_iv_EVP", test_crypto_aes_iv, TT_FORK, NULL, NULL },
   CRYPTO_LEGACY(base32_decode),
   { "kdf_TAP", test_crypto_kdf_TAP, 0, NULL, NULL },
   { "hkdf_sha256", test_crypto_hkdf_sha256, 0, NULL, NULL },

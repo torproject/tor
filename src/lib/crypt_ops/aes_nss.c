@@ -91,16 +91,3 @@ aes_crypt_inplace(aes_cnt_cipher_t *cipher, char *data_, size_t len_)
   tor_assert(s == SECSuccess);
   tor_assert(result_len == len);
 }
-
-int
-evaluate_evp_for_aes(int force_value)
-{
-  (void)force_value;
-  return 0;
-}
-
-int
-evaluate_ctr_for_aes(void)
-{
-  return 0;
-}

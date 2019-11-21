@@ -316,9 +316,6 @@ crypto_openssl_late_init(int useAccel, const char *accelName,
       return -1;
   }
 
-  evaluate_evp_for_aes(-1);
-  evaluate_ctr_for_aes();
-
   return 0;
 }
 
