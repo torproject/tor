@@ -35,6 +35,36 @@ NEEDS_SUBCATEGORIES = set([
     "Major features",
     ])
 
+def split_tor_version(version):
+    '''
+    Return the initial numeric components of the Tor version as a list of ints.
+    For versions earlier than 0.1.0, returns MAJOR, MINOR, and MICRO.
+    For versions 0.1.0 and later, returns MAJOR, MINOR, MICRO, and PATCHLEVEL if present.
+
+    If the version is malformed, returns None.
+    '''
+    version_match = re.match('([0-9]+)\.([0-9]+)\.([0-9]+)(\.([0-9]+))?', version)
+    if version_match is None:
+        return None
+
+    version_groups = version_match.groups()
+    if version_groups is None:
+        return None
+    if len(version_groups) < 3:
+        return None
+
+    if len(version_groups) != 5:
+        return None
+    version_components = version_groups[0:3]
+    version_components += version_groups[4:5]
+
+    try:
+        version_list = [int(v) for v in version_components if v is not None]
+    except ValueError:
+        return None
+
+    return version_list
+
 def lintfile(fname):
     have_warned = []
 
@@ -87,6 +117,32 @@ def lintfile(fname):
             warn("Bugfix does not say 'Fixes bug X; bugfix on Y'")
         elif re.search('tor-([0-9]+)', contents):
             warn("Do not prefix versions with 'tor-'. ('0.1.2', not 'tor-0.1.2'.)")
+        else:
+            bugfix_match = re.search('bugfix on ([0-9]+\.[0-9]+\.[0-9]+)', contents)
+            if bugfix_match is None:
+                warn("Versions must have at least 3 digits. ('0.1.2', '0.3.4.8', or '0.3.5.1-alpha'.)")
+            elif bugfix_match.group(0) is None:
+                warn("Versions must have at least 3 digits. ('0.1.2', '0.3.4.8', or '0.3.5.1-alpha'.)")
+            else:
+                bugfix_match = re.search('bugfix on ([0-9a-z][-.0-9a-z]+[0-9a-z])', contents)
+                bugfix_group = bugfix_match.groups() if bugfix_match is not None else None
+                bugfix_version = bugfix_group[0] if bugfix_group is not None else None
+                package_version = os.environ.get('PACKAGE_VERSION', None)
+                if bugfix_version is None:
+                    # This should be unreachable, unless the patterns are out of sync
+                    warn("Malformed bugfix version.")
+                elif package_version is not None:
+                    # If $PACKAGE_VERSION isn't set, skip this check
+                    bugfix_split = split_tor_version(bugfix_version)
+                    package_split = split_tor_version(package_version)
+                    if bugfix_split is None:
+                        # This should be unreachable, unless the patterns are out of sync
+                        warn("Malformed bugfix version: '{}'.".format(bugfix_version))
+                    elif package_split is None:
+                        # This should be unreachable, unless the patterns are out of sync, or the package versioning scheme has changed
+                        warn("Malformed $PACKAGE_VERSION: '{}'.".format(package_version))
+                    elif bugfix_split > package_split:
+                        warn("Bugfixes must be made on earlier versions (or this version). (Bugfix on version: '{}', current tor package version: '{}'.)".format(bugfix_version, package_version))
 
     return have_warned != []
 
