@@ -1,0 +1,3 @@
+  o Minor bugfixes (compilation, Android):
+    - Fix a missing header in freespace.c. Fixes bug 28286; bugfix on
+      0.3.5.1-alpha.
