@@ -1,0 +1,5 @@
+  o Minor bugfixes (chutney, makefiles, documentation):
+    - "make test-network-all" shows the warnings from each test-network.sh
+      run on the console, so developers see new warnings early. Improve the
+      documentation for this feature, and rename a Makefile variable so the
+      code is self-documenting. Fixes bug 30455; bugfix on 0.3.0.4-rc.
