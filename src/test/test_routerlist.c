@@ -301,7 +301,6 @@ test_router_pick_directory_server_impl(void *arg)
   tt_assert(!networkstatus_consensus_is_bootstrapping(con_md->valid_until
                                                       + 24*60*60));
   /* These times are outside the test validity period */
-  tt_assert(networkstatus_consensus_is_bootstrapping(now));
   tt_assert(networkstatus_consensus_is_bootstrapping(now + 2*24*60*60));
   tt_assert(networkstatus_consensus_is_bootstrapping(now - 2*24*60*60));
 
