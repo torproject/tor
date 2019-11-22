@@ -164,6 +164,8 @@ static int64_t last_tick_count = 0;
  * to be monotonic; increments them as appropriate so that they actually
  * _are_ monotonic.
  *
+ * The returned time may be the same as the previous returned time.
+ *
  * Caller must hold lock. */
 STATIC int64_t
 ratchet_performance_counter(int64_t count_raw)
@@ -201,6 +203,8 @@ static struct timeval timeofday_offset = { 0, 0 };
 /** Helper for gettimeofday(): Called with a sequence of times that are
  * supposed to be monotonic; increments them as appropriate so that they
  * actually _are_ monotonic.
+ *
+ * The returned time may be the same as the previous returned time.
  *
  * Caller must hold lock. */
 STATIC void
@@ -270,7 +274,9 @@ monotime_init_internal(void)
 }
 
 /**
- * Set "out" to the most recent monotonic time value
+ * Set "out" to the most recent monotonic time value.
+ *
+ * The returned time may be the same as the previous returned time.
  */
 void
 monotime_get(monotime_t *out)
@@ -302,6 +308,8 @@ monotime_coarse_get(monotime_coarse_t *out)
 
 /**
  * Return the number of nanoseconds between <b>start</b> and <b>end</b>.
+ *
+ * The returned value may be equal to zero.
  */
 int64_t
 monotime_diff_nsec(const monotime_t *start,
