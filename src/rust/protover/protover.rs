@@ -124,12 +124,6 @@ impl From<Protocol> for UnknownProtocol {
     }
 }
 
-#[cfg(feature = "test_linking_hack")]
-fn have_linkauth_v1() -> bool {
-    true
-}
-
-#[cfg(not(feature = "test_linking_hack"))]
 fn have_linkauth_v1() -> bool {
     use external::c_tor_is_using_nss;
     !c_tor_is_using_nss()

@@ -2,6 +2,7 @@
 authors = ["The Tor Project"]
 version = "0.0.1"
 name = "external"
+build = "../build.rs"
 
 [dependencies]
 libc = "=0.2.39"
@@ -11,10 +12,3 @@ tor_allocate = { path = "../tor_allocate" }
 [lib]
 name = "external"
 path = "lib.rs"
-
-[features]
-# We have to define a feature here because doctests don't get cfg(test),
-# and we need to disable some C dependencies when running the doctests
-# because of the various linker issues.  See
-# https://github.com/rust-lang/rust/issues/45599
-test_linking_hack = []

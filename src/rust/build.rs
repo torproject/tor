@@ -122,7 +122,7 @@ pub fn main() {
     let package = env::var("CARGO_PKG_NAME").unwrap();
 
     match package.as_ref() {
-        "crypto" => {
+        "crypto" | "protover" | "external" => {
             // Right now, I'm having a separate configuration for each Rust
             // package, since I'm hoping we can trim them down.  Once we have a
             // second Rust package that needs to use this build script, let's
