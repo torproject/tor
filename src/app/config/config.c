@@ -1005,8 +1005,7 @@ set_options(or_options_t *new_val, char **msg)
     config_line_t *changes =
       config_get_changes(get_options_mgr(), old_options, new_val);
     for (config_line_t *line = changes; line; line = line->next) {
-      smartlist_add(elements, line->key);
-      smartlist_add(elements, line->value);
+      smartlist_add(elements, line);
     }
     control_event_conf_changed(elements);
     smartlist_free(elements);

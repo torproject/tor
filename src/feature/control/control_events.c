@@ -38,6 +38,7 @@
 #include "core/or/origin_circuit_st.h"
 
 #include "lib/evloop/compat_libevent.h"
+#include "lib/encoding/confline.h"
 
 static void flush_queued_events_cb(mainloop_event_t *event, void *arg);
 static void control_get_bytes_rw_last_sec(uint64_t *r, uint64_t *w);
@@ -1770,7 +1771,6 @@ control_event_guard(const char *nickname, const char *digest,
 int
 control_event_conf_changed(const smartlist_t *elements)
 {
-  int i;
   char *result;
   smartlist_t *lines;
   if (!EVENT_IS_INTERESTING(EVENT_CONF_CHANGED) ||
@@ -1778,15 +1778,13 @@ control_event_conf_changed(const smartlist_t *elements)
     return 0;
   }
   lines = smartlist_new();
-  for (i = 0; i < smartlist_len(elements); i += 2) {
-    char *k = smartlist_get(elements, i);
-    char *v = smartlist_get(elements, i+1);
-    if (v == NULL) {
-      smartlist_add_asprintf(lines, "650-%s", k);
+  SMARTLIST_FOREACH_BEGIN(elements, config_line_t *, e) {
+    if (e->value == NULL) {
+      smartlist_add_asprintf(lines, "650-%s", e->key);
     } else {
-      smartlist_add_asprintf(lines, "650-%s=%s", k, v);
+      smartlist_add_asprintf(lines, "650-%s=%s", e->key, e->value);
     }
-  }
+  } SMARTLIST_FOREACH_END(e);
   result = smartlist_join_strings(lines, "\r\n", 0, NULL);
   send_control_event(EVENT_CONF_CHANGED,
     "650-CONF_CHANGED\r\n%s\r\n650 OK\r\n", result);
