@@ -1,2 +1,4 @@
-- Code refactoring :
-  - Check all fields in the function routerstatus_has_changed
+  o Minor bugfixes (routerstatus_has_changed function):
+    - Check all fields in the function routerstatus_has_changed.
+
+  Fixes bug 20218; bugfix on 0.4.3.x-final
