@@ -15,7 +15,7 @@
 #include "lib/testsupport/testsupport.h"
 #include "core/or/or.h"
 
-typedef struct dircollator_s dircollator_t;
+typedef struct dircollator_t dircollator_t;
 
 dircollator_t *dircollator_new(int n_votes, int n_authorities);
 void dircollator_free_(dircollator_t *obj);
@@ -30,11 +30,11 @@ vote_routerstatus_t **dircollator_get_votes_for_router(dircollator_t *dc,
                                                        int idx);
 
 #ifdef DIRCOLLATE_PRIVATE
-struct ddmap_entry_s;
-typedef HT_HEAD(double_digest_map, ddmap_entry_s) double_digest_map_t;
+struct ddmap_entry_t;
+typedef HT_HEAD(double_digest_map, ddmap_entry_t) double_digest_map_t;
 /** A dircollator keeps track of all the routerstatus entries in a
  * set of networkstatus votes, and matches them by an appropriate rule. */
-struct dircollator_s {
+struct dircollator_t {
   /** True iff we have run the collation algorithm. */
   int is_collated;
   /** The total number of votes that we received. */

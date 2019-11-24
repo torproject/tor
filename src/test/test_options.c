@@ -1071,14 +1071,14 @@ test_options_validate__transproxy(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
 
-#if !defined(OpenBSD) && !defined( DARWIN )
+#if !defined(OpenBSD) && !defined(DARWIN)
   tt_str_op(msg, OP_EQ,
           "pf-divert is a OpenBSD-specific and OS X/Darwin-specific feature.");
 #else
   tt_int_op(tdata->opt->TransProxyType_parsed, OP_EQ, TPT_PF_DIVERT);
   tt_str_op(msg, OP_EQ, "Cannot use TransProxyType without "
             "any valid TransPort.");
-#endif /* !defined(OpenBSD) && !defined( DARWIN ) */
+#endif /* !defined(OpenBSD) && !defined(DARWIN) */
   tor_free(msg);
 
   // Test tproxy trans proxy

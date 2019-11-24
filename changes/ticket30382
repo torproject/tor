@@ -1,0 +1,5 @@
+  o Major feature (onion service, SOCKS5):
+    - Introduce a new SocksPort flag named: ExtendedErrors. Detailed in
+      proposal 304, a number of onion service error codes are now sent back,
+      if this flag is set, with the SOCKS5 protocol using new custom error
+      values. Closes ticket 30382;

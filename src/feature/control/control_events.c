@@ -317,7 +317,7 @@ control_per_second_events(void)
 
 /** Represents an event that's queued to be sent to one or more
  * controllers. */
-typedef struct queued_event_s {
+typedef struct queued_event_t {
   uint16_t event;
   char *msg;
 } queued_event_t;
@@ -1211,7 +1211,7 @@ control_event_circuit_cell_stats(void)
 static int next_measurement_idx = 0;
 /* number of entries set in n_measurements */
 static int n_measurements = 0;
-static struct cached_bw_event_s {
+static struct cached_bw_event_t {
   uint32_t n_read;
   uint32_t n_written;
 } cached_bw_events[N_BW_EVENTS_TO_CACHE];
@@ -1250,7 +1250,7 @@ get_bw_samples(void)
 
   for (i = 0; i < n_measurements; ++i) {
     tor_assert(0 <= idx && idx < N_BW_EVENTS_TO_CACHE);
-    const struct cached_bw_event_s *bwe = &cached_bw_events[idx];
+    const struct cached_bw_event_t *bwe = &cached_bw_events[idx];
 
     smartlist_add_asprintf(elements, "%u,%u",
                            (unsigned)bwe->n_read,

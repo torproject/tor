@@ -844,7 +844,7 @@ consdiffmgr_configure(const consdiff_cfg_t *cfg)
  * operations that the consensus diff manager will need.
  */
 int
-consdiffmgr_register_with_sandbox(struct sandbox_cfg_elem **cfg)
+consdiffmgr_register_with_sandbox(struct sandbox_cfg_elem_t **cfg)
 {
   return consensus_cache_register_with_sandbox(cdm_cache_get(), cfg);
 }

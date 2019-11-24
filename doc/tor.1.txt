@@ -1411,6 +1411,50 @@ The following options are useful only for clients (that is, if
         one. You can disable this behavior, so that Tor will select "No
         authentication" when IsolateSOCKSAuth is disabled, or when this
         option is set.
+    **ExtendedErrors**;;
+        Return extended error code in the SOCKS reply. So far, the possible
+        errors are:
+
+          X'F0' Onion Service Descriptor Can Not be Found
+
+            The requested onion service descriptor can't be found on the
+            hashring and thus not reachable by the client. (v3 only)
+
+          X'F1' Onion Service Descriptor Is Invalid
+
+            The requested onion service descriptor can't be parsed or
+            signature validation failed. (v3 only)
+
+          X'F2' Onion Service Introduction Failed
+
+            Client failed to introduce to the service meaning the descriptor
+            was found but the service is not connected anymore to the
+            introduction point. The service has likely changed its descriptor
+            or is not running. (v3 only)
+
+          X'F3' Onion Service Rendezvous Failed
+
+            Client failed to rendezvous with the service which means that the
+            client is unable to finalize the connection. (v3 only)
+
+          X'F4' Onion Service Missing Client Authorization
+
+            Client was able to download the requested onion service descriptor
+            but is unable to decrypt its content because it is missing client
+            authorization information. (v3 only)
+
+          X'F5' Onion Service Wrong Client Authorization
+
+            Client was able to download the requested onion service descriptor
+            but is unable to decrypt its content using the client
+            authorization information it has. This means the client access
+            were revoked. (v3 only)
+
+          X'F6' Onion Service Invalid Address
+
+            The given .onion address is invalid. In one of these cases this
+            error is returned: address checksum doesn't match, ed25519 public
+            key is invalid or the encoding is invalid. (v3 only)
 
 // Anchor only for formatting, not visible in the man page.
 [[SocksPortFlagsMisc]]::
@@ -2551,10 +2595,12 @@ is non-zero):
     running.
     (Default: the "keys" subdirectory of DataDirectory.)
 
-[[KeyDirectoryGroupReadable]] **KeyDirectoryGroupReadable** **0**|**1**::
+[[KeyDirectoryGroupReadable]] **KeyDirectoryGroupReadable** **0**|**1**|**auto**::
     If this option is set to 0, don't allow the filesystem group to read the
-    KeywDirectory. If the option is set to 1, make the KeyDirectory readable
-    by the default GID. (Default: 0)
+    KeyDirectory. If the option is set to 1, make the KeyDirectory readable
+    by the default GID. If the option is "auto", then we use the
+    setting for DataDirectoryGroupReadable when the KeyDirectory is the
+    same as the DataDirectory, and 0 otherwise. (Default: auto)
 
 [[RephistTrackTime]] **RephistTrackTime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
     Tells an authority, or other node tracking node reliability and history,

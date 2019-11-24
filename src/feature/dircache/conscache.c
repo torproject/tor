@@ -138,7 +138,7 @@ consensus_cache_may_overallocate(consensus_cache_t *cache)
  */
 int
 consensus_cache_register_with_sandbox(consensus_cache_t *cache,
-                                      struct sandbox_cfg_elem **cfg)
+                                      struct sandbox_cfg_elem_t **cfg)
 {
 #ifdef MUST_UNMAP_TO_UNLINK
   /* Our Linux sandbox doesn't support huge file lists like the one that would

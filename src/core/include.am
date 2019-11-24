@@ -83,6 +83,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/control/control_auth.c	\
 	src/feature/control/control_bootstrap.c	\
 	src/feature/control/control_cmd.c	\
+	src/feature/control/control_hs.c	\
 	src/feature/control/control_events.c	\
 	src/feature/control/control_fmt.c	\
 	src/feature/control/control_getinfo.c	\
@@ -143,8 +144,6 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/relay/dns.c			\
 	src/feature/relay/ext_orport.c		\
 	src/feature/relay/onion_queue.c		\
-	src/feature/relay/relay_periodic.c	\
-	src/feature/relay/relay_sys.c		\
 	src/feature/relay/router.c		\
 	src/feature/relay/routerkeys.c		\
 	src/feature/relay/selftest.c		\
@@ -174,6 +173,8 @@ LIBTOR_APP_TESTING_A_SOURCES = $(LIBTOR_APP_A_SOURCES)
 MODULE_RELAY_SOURCES = 						\
 	src/feature/relay/routermode.c				\
 	src/feature/relay/relay_config.c			\
+	src/feature/relay/relay_periodic.c			\
+	src/feature/relay/relay_sys.c				\
 	src/feature/relay/transport_config.c
 
 # The Directory Authority module.
@@ -330,6 +331,7 @@ noinst_HEADERS +=					\
 	src/feature/control/control.h			\
 	src/feature/control/control_auth.h		\
 	src/feature/control/control_cmd.h		\
+	src/feature/control/control_hs.h		\
 	src/feature/control/control_cmd_args_st.h	\
 	src/feature/control/control_connection_st.h	\
 	src/feature/control/control_events.h		\

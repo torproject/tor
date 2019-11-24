@@ -102,16 +102,16 @@ struct crypto_fast_rng_t {
    * crypto_strongest_rand().
    */
   int16_t n_till_reseed;
-  /** How many bytes are remaining in cbuf.bytes? */
+  /** How many bytes are remaining in cbuf_t.bytes? */
   uint16_t bytes_left;
 #ifdef CHECK_PID
   /** Which process owns this fast_rng?  If this value is zero, we do not
    * need to test the owner. */
   pid_t owner;
 #endif
-  struct cbuf {
+  struct cbuf_t {
     /** The seed (key and IV) that we will use the next time that we refill
-     * cbuf. */
+     * cbuf_t. */
     uint8_t seed[SEED_LEN];
     /**
      * Bytes that we are yielding to the user.  The next byte to be
@@ -122,9 +122,9 @@ struct crypto_fast_rng_t {
   } buf;
 };
 
-/* alignof(uint8_t) should be 1, so there shouldn't be any padding in cbuf.
+/* alignof(uint8_t) should be 1, so there shouldn't be any padding in cbuf_t.
  */
-CTASSERT(sizeof(struct cbuf) == BUFLEN+SEED_LEN);
+CTASSERT(sizeof(struct cbuf_t) == BUFLEN+SEED_LEN);
 /* We're trying to fit all of the RNG state into a nice mmapable chunk.
  */
 CTASSERT(sizeof(crypto_fast_rng_t) <= MAPLEN);

@@ -48,7 +48,7 @@
 #include <winsock2.h>
 #endif
 
-struct timeout_cb {
+struct timeout_cb_t {
   timer_cb_fn_t cb;
   void *arg;
 };
@@ -70,7 +70,7 @@ struct timeout_cb {
 /* We always know the global_timeouts object, so we don't need each timeout
  * to keep a pointer to it. */
 #define TIMEOUT_DISABLE_RELATIVE_ACCESS
-/* We're providing our own struct timeout_cb. */
+/* We're providing our own struct timeout_cb_t. */
 #define TIMEOUT_CB_OVERRIDE
 /* We're going to support timers that are pretty far out in advance. Making
  * this big can be inefficient, but having a significant number of timers

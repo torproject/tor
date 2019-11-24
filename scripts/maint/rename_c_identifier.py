@@ -132,7 +132,7 @@ def make_commit_msg(pairs, no_verify):
     script = " \\\n".join(script)
 
     if len(pairs) == 1:
-        line1 = "Rename {} to {}".format(pairs[0])
+        line1 = "Rename {} to {}".format(*pairs[0])
     else:
         line1 = "Replace several C identifiers."
 

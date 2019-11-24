@@ -13,12 +13,12 @@
 
 /** A replyqueue is used to tell the main thread about the outcome of
  * work that we queued for the workers. */
-typedef struct replyqueue_s replyqueue_t;
+typedef struct replyqueue_t replyqueue_t;
 /** A thread-pool manages starting threads and passing work to them. */
-typedef struct threadpool_s threadpool_t;
+typedef struct threadpool_t threadpool_t;
 /** A workqueue entry represents a request that has been passed to a thread
  * pool. */
-typedef struct workqueue_entry_s workqueue_entry_t;
+typedef struct workqueue_entry_t workqueue_entry_t;
 
 /** Possible return value from a work function: */
 typedef enum workqueue_reply_t {

@@ -133,7 +133,7 @@ test_cmux_allocate(void *arg)
   tt_uint_op(cmux->n_active_circuits, OP_EQ, 0);
   tt_uint_op(cmux->n_cells, OP_EQ, 0);
   tt_uint_op(cmux->last_cell_was_destroy, OP_EQ, 0);
-  tt_int_op(cmux->destroy_ctr, OP_EQ, 0);
+  tt_i64_op(cmux->destroy_ctr, OP_EQ, 0);
   tt_ptr_op(cmux->policy, OP_EQ, NULL);
   tt_ptr_op(cmux->policy_data, OP_EQ, NULL);
 
@@ -418,14 +418,14 @@ test_cmux_xmit_cell(void *arg)
   /* Queue a DESTROY cell. */
   pchan->has_queued_writes = mock_has_queued_writes_true;
   circuitmux_append_destroy_cell(pchan, pchan->cmux, orcirc->p_circ_id, 0);
-  tt_int_op(pchan->cmux->destroy_ctr, OP_EQ, 1);
+  tt_i64_op(pchan->cmux->destroy_ctr, OP_EQ, 1);
   tt_int_op(pchan->cmux->destroy_cell_queue.n, OP_EQ, 1);
-  tt_int_op(circuitmux_count_queued_destroy_cells(pchan, pchan->cmux),
+  tt_i64_op(circuitmux_count_queued_destroy_cells(pchan, pchan->cmux),
             OP_EQ, 1);
 
   /* Emit the DESTROY cell. */
   circuitmux_notify_xmit_destroy(pchan->cmux);
-  tt_int_op(pchan->cmux->destroy_ctr, OP_EQ, 0);
+  tt_i64_op(pchan->cmux->destroy_ctr, OP_EQ, 0);
 
  done:
   free_fake_orcirc(orcirc);
@@ -478,4 +478,3 @@ struct testcase_t circuitmux_tests[] = {
 
   END_OF_TESTCASES
 };
-

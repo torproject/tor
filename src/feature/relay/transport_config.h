@@ -16,21 +16,21 @@
 
 #include "lib/testsupport/testsupport.h"
 
-typedef struct or_options_t or_options_t;
-typedef struct smartlist_t smartlist_t;
+struct or_options_t;
+struct smartlist_t;
 
-int options_validate_server_transport(const or_options_t *old_options,
-                                      or_options_t *options,
+int options_validate_server_transport(const struct or_options_t *old_options,
+                                      struct or_options_t *options,
                                       char **msg);
 
 char *pt_get_bindaddr_from_config(const char *transport);
-smartlist_t *pt_get_options_for_server_transport(const char *transport);
+struct smartlist_t *pt_get_options_for_server_transport(const char *transport);
 
-int options_act_server_transport(const or_options_t *old_options);
+int options_act_server_transport(const struct or_options_t *old_options);
 
 #ifdef RELAY_TRANSPORT_CONFIG_PRIVATE
 
-STATIC smartlist_t *get_options_from_transport_options_line(
+STATIC struct smartlist_t *get_options_from_transport_options_line(
                       const char *line,
                       const char *transport);
 
@@ -45,8 +45,8 @@ STATIC smartlist_t *get_options_from_transport_options_line(
  * ServerTransportPlugin, ServerTransportListenAddr, or
  * ServerTransportOptions are set in options. Otherwise returns 0. */
 static inline int
-options_validate_server_transport(const or_options_t *old_options,
-                                  or_options_t *options,
+options_validate_server_transport(const struct or_options_t *old_options,
+                                  struct or_options_t *options,
                                   char **msg)
 {
   (void)old_options;

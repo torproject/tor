@@ -194,8 +194,8 @@
 /** Macro: yield a pointer to the field at position <b>off</b> within the
  * structure <b>st</b>.  Example:
  * <pre>
- *   struct a { int foo; int bar; } x;
- *   ptrdiff_t bar_offset = offsetof(struct a, bar);
+ *   struct a_t { int foo; int bar; } x;
+ *   ptrdiff_t bar_offset = offsetof(struct a_t, bar);
  *   int *bar_p = STRUCT_VAR_P(&x, bar_offset);
  *   *bar_p = 3;
  * </pre>
@@ -205,10 +205,10 @@
 /** Macro: yield a pointer to an enclosing structure given a pointer to
  * a substructure at offset <b>off</b>. Example:
  * <pre>
- *   struct base { ... };
- *   struct subtype { int x; struct base b; } x;
- *   struct base *bp = &x.base;
- *   struct *sp = SUBTYPE_P(bp, struct subtype, b);
+ *   struct base_t { ... };
+ *   struct subtype_t { int x; struct base_t b; } x;
+ *   struct base_t *bp = &x.base;
+ *   struct *sp = SUBTYPE_P(bp, struct subtype_t, b);
  * </pre>
  */
 #define SUBTYPE_P(p, subtype, basemember) \

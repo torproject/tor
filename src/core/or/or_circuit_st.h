@@ -27,7 +27,7 @@ struct or_circuit_t {
   /** Pointer to a workqueue entry, if this circuit has given an onionskin to
    * a cpuworker and is waiting for a response. Used to decide whether it is
    * safe to free a circuit or if it is still in use by a cpuworker. */
-  struct workqueue_entry_s *workqueue_entry;
+  struct workqueue_entry_t *workqueue_entry;
 
   /** The circuit_id used in the previous (backward) hop of this circuit. */
   circid_t p_circ_id;

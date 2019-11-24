@@ -12,80 +12,80 @@
 #ifndef TOR_FEATURE_RELAY_RELAY_CONFIG_H
 #define TOR_FEATURE_RELAY_RELAY_CONFIG_H
 
-typedef struct or_options_t or_options_t;
+struct or_options_t;
 
 #ifdef HAVE_MODULE_RELAY
 
 #include "lib/cc/torint.h"
 #include "lib/testsupport/testsupport.h"
 
-typedef struct smartlist_t smartlist_t;
+struct smartlist_t;
 
-int options_validate_relay_mode(const or_options_t *old_options,
-                                or_options_t *options,
+int options_validate_relay_mode(const struct or_options_t *old_options,
+                                struct or_options_t *options,
                                 char **msg);
 
 MOCK_DECL(const char*, relay_get_dirportfrontpage, (void));
 void relay_config_free_all(void);
 
-uint32_t relay_get_effective_bwrate(const or_options_t *options);
-uint32_t relay_get_effective_bwburst(const or_options_t *options);
+uint32_t relay_get_effective_bwrate(const struct or_options_t *options);
+uint32_t relay_get_effective_bwburst(const struct or_options_t *options);
 
-void port_warn_nonlocal_ext_orports(const smartlist_t *ports,
+void port_warn_nonlocal_ext_orports(const struct smartlist_t *ports,
                                const char *portname);
 
-int port_parse_ports_relay(or_options_t *options,
+int port_parse_ports_relay(struct or_options_t *options,
                       char **msg,
-                      smartlist_t *ports_out,
+                      struct smartlist_t *ports_out,
                       int *have_low_ports_out);
-void port_update_port_set_relay(or_options_t *options,
-                           const smartlist_t *ports);
+void port_update_port_set_relay(struct or_options_t *options,
+                           const struct smartlist_t *ports);
 
-int options_validate_relay_os(const or_options_t *old_options,
-                              or_options_t *options,
+int options_validate_relay_os(const struct or_options_t *old_options,
+                              struct or_options_t *options,
                               char **msg);
 
-int options_validate_relay_info(const or_options_t *old_options,
-                                or_options_t *options,
+int options_validate_relay_info(const struct or_options_t *old_options,
+                                struct or_options_t *options,
                                 char **msg);
 
-int options_validate_publish_server(const or_options_t *old_options,
-                                    or_options_t *options,
+int options_validate_publish_server(const struct or_options_t *old_options,
+                                    struct or_options_t *options,
                                     char **msg);
 
-int options_validate_relay_padding(const or_options_t *old_options,
-                                   or_options_t *options,
+int options_validate_relay_padding(const struct or_options_t *old_options,
+                                   struct or_options_t *options,
                                    char **msg);
 
-int options_validate_relay_bandwidth(const or_options_t *old_options,
-                                     or_options_t *options,
+int options_validate_relay_bandwidth(const struct or_options_t *old_options,
+                                     struct or_options_t *options,
                                      char **msg);
 
-int options_validate_relay_accounting(const or_options_t *old_options,
-                                      or_options_t *options,
+int options_validate_relay_accounting(const struct or_options_t *old_options,
+                                      struct or_options_t *options,
                                       char **msg);
 
-int options_validate_relay_testing(const or_options_t *old_options,
-                                   or_options_t *options,
+int options_validate_relay_testing(const struct or_options_t *old_options,
+                                   struct or_options_t *options,
                                    char **msg);
 
-int options_act_relay(const or_options_t *old_options);
-int options_act_relay_accounting(const or_options_t *old_options);
-int options_act_relay_bandwidth(const or_options_t *old_options);
-int options_act_bridge_stats(const or_options_t *old_options);
+int options_act_relay(const struct or_options_t *old_options);
+int options_act_relay_accounting(const struct or_options_t *old_options);
+int options_act_relay_bandwidth(const struct or_options_t *old_options);
+int options_act_bridge_stats(const struct or_options_t *old_options);
 
-int options_act_relay_stats(const or_options_t *old_options,
+int options_act_relay_stats(const struct or_options_t *old_options,
                             bool *print_notice_out);
 void options_act_relay_stats_msg(void);
 
-int options_act_relay_desc(const or_options_t *old_options);
-int options_act_relay_dos(const or_options_t *old_options);
-int options_act_relay_dir(const or_options_t *old_options);
+int options_act_relay_desc(const struct or_options_t *old_options);
+int options_act_relay_dos(const struct or_options_t *old_options);
+int options_act_relay_dir(const struct or_options_t *old_options);
 
 #ifdef RELAY_CONFIG_PRIVATE
 
 STATIC int check_bridge_distribution_setting(const char *bd);
-STATIC int have_enough_mem_for_dircache(const or_options_t *options,
+STATIC int have_enough_mem_for_dircache(const struct or_options_t *options,
                                         size_t total_mem, char **msg);
 
 #endif /* defined(RELAY_CONFIG_PRIVATE) */
@@ -102,8 +102,8 @@ STATIC int have_enough_mem_for_dircache(const or_options_t *options,
  * Returns -1 and sets msg to a newly allocated string, if ORPort, DirPort,
  * DirCache, or BridgeRelay are set in options. Otherwise returns 0. */
 static inline int
-options_validate_relay_mode(const or_options_t *old_options,
-                            or_options_t *options,
+options_validate_relay_mode(const struct or_options_t *old_options,
+                            struct or_options_t *options,
                             char **msg)
 {
   (void)old_options;

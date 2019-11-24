@@ -130,7 +130,7 @@ rescan_mainloop_cb(evutil_socket_t fd, short events, void *arg)
 
 /** Initialize the Libevent library and set up the event base. */
 void
-tor_libevent_initialize(tor_libevent_cfg *torcfg)
+tor_libevent_initialize(tor_libevent_cfg_t *torcfg)
 {
   tor_assert(the_event_base == NULL);
   /* some paths below don't use torcfg, so avoid unused variable warnings */

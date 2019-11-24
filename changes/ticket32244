@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Disable relay_periodic when the relay module is disabled.
+      Closes ticket 32244.

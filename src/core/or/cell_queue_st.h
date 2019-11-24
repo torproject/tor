@@ -27,7 +27,7 @@ struct packed_cell_t {
  * or_connection_t's outbuf. */
 struct cell_queue_t {
   /** Linked list of packed_cell_t*/
-  TOR_SIMPLEQ_HEAD(cell_simpleq, packed_cell_t) head;
+  TOR_SIMPLEQ_HEAD(cell_simpleq_t, packed_cell_t) head;
   int n; /**< The number of cells in the queue. */
 };
 

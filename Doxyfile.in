@@ -258,6 +258,8 @@ ALIASES                =
 
 ALIASES += refdir{1}="\ref src/\1 \"\1\""
 
+ALIASES += ticket{1}="[ticket \1](https://bugs.torproject.org/\1)"
+
 # This tag can be used to specify a number of word-keyword mappings (TCL only).
 # A mapping has the form "name=value". For example adding "class=itcl::class"
 # will allow you to use the command class in the itcl::class meaning.
@@ -318,7 +320,7 @@ OPTIMIZE_OUTPUT_SLICE  = NO
 # Note that for custom extensions you also need to set FILE_PATTERNS otherwise
 # the files are not read by doxygen.
 
-EXTENSION_MAPPING      = dox=C h=C c=C inc=C
+EXTENSION_MAPPING      = dox=md h=C c=C inc=C md=md
 
 # If the MARKDOWN_SUPPORT tag is enabled then doxygen pre-processes all comments
 # according to the Markdown format, which allows for more readable
@@ -845,8 +847,8 @@ INPUT_ENCODING         = UTF-8
 
 FILE_PATTERNS          = *.c \
                          *.h \
-                         *.dox \
-                         *.inc
+                         *.inc \
+                         *.md
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
@@ -863,7 +865,8 @@ RECURSIVE              = YES
 
 EXCLUDE                = ./src/ext \
                          ./src/trunnel \
-                         ./src/test
+                         ./src/test \
+                         ./src/rust/registry
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded

@@ -31,7 +31,37 @@ typedef enum {
   HS_CLIENT_FETCH_PENDING      = 5,
 } hs_client_fetch_status_t;
 
-/** Client-side configuration of authorization for a service. */
+/* Status code of client auth credential registration */
+typedef enum {
+  /* We successfuly registered these credentials */
+  REGISTER_SUCCESS,
+  /* We successfully registered these credentials, but had to replace some
+   * existing ones. */
+  REGISTER_SUCCESS_ALREADY_EXISTS,
+  /* We successfuly registered these credentials, and also decrypted a cached
+   * descriptor. */
+  REGISTER_SUCCESS_AND_DECRYPTED,
+  /* We failed to register these credentials, because of a bad HS address. */
+  REGISTER_FAIL_BAD_ADDRESS,
+} hs_client_register_auth_status_t;
+
+/* Status code of client auth credential removal */
+typedef enum {
+  /* We successfuly removed these credentials */
+  REMOVAL_SUCCESS,
+  /* No need to remove those credentials, because they were not there. */
+  REMOVAL_SUCCESS_NOT_FOUND,
+  /* We failed to register these credentials, because of a bad HS address. */
+  REMOVAL_BAD_ADDRESS,
+} hs_client_removal_auth_status_t;
+
+/** Flag to set when a client auth is permanent (saved on disk). */
+#define CLIENT_AUTH_FLAG_IS_PERMANENT (1<<0)
+
+/** Max length of a client auth nickname */
+#define HS_CLIENT_AUTH_MAX_NICKNAME_LENGTH 255
+
+/** Client-side configuration of client authorization */
 typedef struct hs_client_service_authorization_t {
   /** An curve25519 secret key used to compute decryption keys that
    * allow the client to decrypt the hidden service descriptor. */
@@ -39,7 +69,28 @@ typedef struct hs_client_service_authorization_t {
 
   /** An onion address that is used to connect to the onion service. */
   char onion_address[HS_SERVICE_ADDR_LEN_BASE32+1];
+
+  /* An optional nickname for this client */
+  char *nickname;
+
+  /* Optional flags for this client. */
+  int flags;
 } hs_client_service_authorization_t;
+
+hs_client_register_auth_status_t
+hs_client_register_auth_credentials(hs_client_service_authorization_t *creds);
+
+hs_client_removal_auth_status_t
+hs_client_remove_auth_credentials(const char *hsaddress);
+
+digest256map_t *get_hs_client_auths_map(void);
+
+#define client_service_authorization_free(auth)                      \
+  FREE_AND_NULL(hs_client_service_authorization_t,                   \
+                client_service_authorization_free_, (auth))
+
+void
+client_service_authorization_free_(hs_client_service_authorization_t *auth);
 
 void hs_client_note_connection_attempt_succeeded(
                                        const edge_connection_t *conn);
@@ -48,7 +99,7 @@ void hs_client_launch_v3_desc_fetch(
                                const ed25519_public_key_t *onion_identity_pk,
                                const smartlist_t *hsdirs);
 
-int hs_client_decode_descriptor(
+hs_desc_decode_status_t hs_client_decode_descriptor(
                      const char *desc_str,
                      const ed25519_public_key_t *service_identity_pk,
                      hs_descriptor_t **desc);
@@ -72,7 +123,8 @@ int hs_client_receive_rendezvous2(origin_circuit_t *circ,
                                   const uint8_t *payload,
                                   size_t payload_len);
 
-void hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident);
+void hs_client_dir_fetch_done(dir_connection_t *dir_conn, const char *reason,
+                              const char *body, const int status_code);
 
 extend_info_t *hs_client_get_random_intro_from_edge(
                                           const edge_connection_t *edge_conn);
@@ -113,7 +165,7 @@ STATIC void retry_all_socks_conn_waiting_for_desc(void);
 
 #ifdef TOR_UNIT_TESTS
 
-STATIC digest256map_t *get_hs_client_auths_map(void);
+STATIC void set_hs_client_auths_map(digest256map_t *map);
 
 #endif /* defined(TOR_UNIT_TESTS) */
 

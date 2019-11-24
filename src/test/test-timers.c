@@ -59,7 +59,7 @@ main(int argc, char **argv)
 {
   (void)argc;
   (void)argv;
-  tor_libevent_cfg cfg;
+  tor_libevent_cfg_t cfg;
   memset(&cfg, 0, sizeof(cfg));
   tor_libevent_initialize(&cfg);
   timers_initialize();

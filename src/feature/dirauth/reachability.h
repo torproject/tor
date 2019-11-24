@@ -24,10 +24,10 @@
 #define REACHABILITY_TEST_CYCLE_PERIOD \
   (REACHABILITY_TEST_INTERVAL*REACHABILITY_MODULO_PER_TEST)
 
+#ifdef HAVE_MODULE_DIRAUTH
 void dirserv_single_reachability_test(time_t now, routerinfo_t *router);
 void dirserv_test_reachability(time_t now);
 
-#ifdef HAVE_MODULE_DIRAUTH
 int dirserv_should_launch_reachability_test(const routerinfo_t *ri,
                                             const routerinfo_t *ri_old);
 void dirserv_orconn_tls_done(const tor_addr_t *addr,
@@ -35,25 +35,16 @@ void dirserv_orconn_tls_done(const tor_addr_t *addr,
                              const char *digest_rcvd,
                              const struct ed25519_public_key_t *ed_id_rcvd);
 #else /* !defined(HAVE_MODULE_DIRAUTH) */
-static inline int
-dirserv_should_launch_reachability_test(const routerinfo_t *ri,
-                                            const routerinfo_t *ri_old)
-{
-  (void)ri;
-  (void)ri_old;
-  return 0;
-}
-static inline void
-dirserv_orconn_tls_done(const tor_addr_t *addr,
-                        uint16_t or_port,
-                        const char *digest_rcvd,
-                        const struct ed25519_public_key_t *ed_id_rcvd)
-{
-  (void)addr;
-  (void)or_port;
-  (void)digest_rcvd;
-  (void)ed_id_rcvd;
-}
+#define dirserv_single_reachability_test(now, router) \
+  (((void)(now)),((void)(router)))
+#define dirserv_test_reachability(now) \
+  (((void)(now)))
+
+#define dirserv_should_launch_reachability_test(ri, ri_old) \
+  (((void)(ri)),((void)(ri_old)),0)
+#define dirserv_orconn_tls_done(addr, or_port, digest_rcvd, ed_id_rcvd) \
+  (((void)(addr)),((void)(or_port)),((void)(digest_rcvd)), \
+   ((void)(ed_id_rcvd)))
 #endif /* defined(HAVE_MODULE_DIRAUTH) */
 
 #endif /* !defined(TOR_REACHABILITY_H) */
