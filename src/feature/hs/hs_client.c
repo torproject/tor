@@ -1568,6 +1568,50 @@ hs_client_register_auth_credentials(hs_client_service_authorization_t *creds)
   return retval;
 }
 
+/** Load a client authorization file with <b>filename</b> that is stored under
+ *  the global client auth directory, and return a newly-allocated credentials
+ *  object if it parsed well. Otherwise, return NULL.
+ */
+static hs_client_service_authorization_t *
+get_creds_from_client_auth_filename(const char *filename,
+                                    const or_options_t *options)
+{
+  hs_client_service_authorization_t *auth = NULL;
+  char *client_key_file_path = NULL;
+  char *client_key_str = NULL;
+
+  log_info(LD_REND, "Loading a client authorization key file %s...",
+           filename);
+
+  if (!auth_key_filename_is_valid(filename)) {
+    log_notice(LD_REND, "Client authorization unrecognized filename %s. "
+               "File must end in .auth_private. Ignoring.",
+               filename);
+    goto err;
+  }
+
+  /* Create a full path for a file. */
+  client_key_file_path = hs_path_from_filename(options->ClientOnionAuthDir,
+                                               filename);
+
+  client_key_str = read_file_to_str(client_key_file_path, 0, NULL);
+  if (!client_key_str) {
+    log_warn(LD_REND, "The file %s cannot be read.", filename);
+    goto err;
+  }
+
+  auth = parse_auth_file_content(client_key_str);
+  if (!auth) {
+    goto err;
+  }
+
+ err:
+  tor_free(client_key_str);
+  tor_free(client_key_file_path);
+
+  return auth;
+}
+
 /** Remove client auth credentials for the service <b>hs_address</b>. */
 hs_client_removal_auth_status_t
 hs_client_remove_auth_credentials(const char *hsaddress)
@@ -1957,8 +2001,6 @@ hs_config_client_authorization(const or_options_t *options,
   int ret = -1;
   digest256map_t *auths = digest256map_new();
   smartlist_t *file_list = NULL;
-  char *client_key_str = NULL;
-  char *client_key_file_path = NULL;
 
   tor_assert(options);
 
@@ -1981,37 +2023,11 @@ hs_config_client_authorization(const or_options_t *options,
     goto end;
   }
 
-  SMARTLIST_FOREACH_BEGIN(file_list, char *, filename) {
-
+  SMARTLIST_FOREACH_BEGIN(file_list, const char *, filename) {
     hs_client_service_authorization_t *auth = NULL;
     ed25519_public_key_t identity_pk;
-    log_info(LD_REND, "Loading a client authorization key file %s...",
-             filename);
 
-    if (!auth_key_filename_is_valid(filename)) {
-      log_notice(LD_REND, "Client authorization unrecognized filename %s. "
-                          "File must end in .auth_private. Ignoring.",
-                 filename);
-      continue;
-    }
-
-    /* Create a full path for a file. */
-    client_key_file_path = hs_path_from_filename(options->ClientOnionAuthDir,
-                                                 filename);
-    client_key_str = read_file_to_str(client_key_file_path, 0, NULL);
-    /* Free the file path immediately after using it. */
-    tor_free(client_key_file_path);
-
-    /* If we cannot read the file, continue with the next file. */
-    if (!client_key_str) {
-      log_warn(LD_REND, "The file %s cannot be read.", filename);
-      continue;
-    }
-
-    auth = parse_auth_file_content(client_key_str);
-    /* Free immediately after using it. */
-    tor_free(client_key_str);
-
+    auth = get_creds_from_client_auth_filename(filename, options);
     if (!auth) {
       continue;
     }
@@ -2043,8 +2059,6 @@ hs_config_client_authorization(const or_options_t *options,
   ret = 0;
 
  end:
-  tor_free(client_key_str);
-  tor_free(client_key_file_path);
   if (file_list) {
     SMARTLIST_FOREACH(file_list, char *, s, tor_free(s));
     smartlist_free(file_list);
