@@ -833,13 +833,19 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
   circ = circuit_get_by_edge_conn(ENTRY_TO_EDGE_CONN(conn));
   if (circ && CIRCUIT_IS_ORIGIN(circ))
     origin_circ = TO_ORIGIN_CIRCUIT(circ);
-  send_control_event(EVENT_STREAM_STATUS,
-                        "650 STREAM %"PRIu64" %s %lu %s%s%s%s\r\n",
+
+  {
+    char *conndesc = entry_connection_describe_status_for_controller(conn);
+    const char *sp = strlen(conndesc) ? " " : "";
+    send_control_event(EVENT_STREAM_STATUS,
+                        "650 STREAM %"PRIu64" %s %lu %s%s%s%s%s%s\r\n",
                      (ENTRY_TO_CONN(conn)->global_identifier),
                      status,
                         origin_circ?
                            (unsigned long)origin_circ->global_identifier : 0ul,
-                        buf, reason_buf, addrport_buf, purpose);
+                        buf, reason_buf, addrport_buf, purpose, sp, conndesc);
+    tor_free(conndesc);
+  }
 
   /* XXX need to specify its intended exit, etc? */
 
