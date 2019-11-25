@@ -1831,10 +1831,6 @@ client_service_authorization_free_(hs_client_service_authorization_t *auth)
     return;
   }
 
-  if (auth->nickname) {
-    tor_free(auth->nickname);
-  }
-
   memwipe(auth, 0, sizeof(*auth));
   tor_free(auth);
 }
