@@ -874,6 +874,16 @@ conn_read_callback(evutil_socket_t fd, short event, void *_conn)
 
   /* assert_connection_ok(conn, time(NULL)); */
 
+  /* Handle marked for close connections early */
+  if (conn->marked_for_close && connection_is_reading(conn)) {
+    /* Libevent says we can read, but we are marked for close so we will never
+     * try to read again. We will try to close the connection below inside of
+     * close_closeable_connections(), but let's make sure not to cause Libevent
+     * to spin on conn_read_callback() while we wait for the socket to let us
+     * flush to it.*/
+    connection_stop_reading(conn);
+  }
+
   if (connection_handle_read(conn) < 0) {
     if (!conn->marked_for_close) {
 #ifndef _WIN32
@@ -1378,7 +1388,7 @@ STATIC periodic_event_item_t mainloop_periodic_events[] = {
   /* This is a legacy catch-all callback that runs once per second if
    * we are online and active. */
   CALLBACK(second_elapsed, NET_PARTICIPANT,
-           FL(NEED_NET)|FL(RUN_ON_DISABLE)),
+           FL(RUN_ON_DISABLE)),
 
   /* XXXX Do we have a reason to do this on a callback? Does it do any good at
    * all?  For now, if we're dormant, we can let our listeners decay. */

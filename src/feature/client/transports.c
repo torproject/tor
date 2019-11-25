@@ -1826,15 +1826,13 @@ managed_proxy_stdout_callback(process_t *process,
 
   managed_proxy_t *mp = process_get_data(process);
 
-  if (BUG(mp == NULL))
+  if (mp == NULL)
     return;
 
   handle_proxy_line(line, mp);
 
-  if (proxy_configuration_finished(mp)) {
+  if (proxy_configuration_finished(mp))
     handle_finished_proxy(mp);
-    tor_assert(mp->conf_state == PT_PROTO_COMPLETED);
-  }
 }
 
 /** Callback function that is called when our PT process have data on its
