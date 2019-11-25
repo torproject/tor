@@ -145,6 +145,10 @@ handle_control_onion_client_auth_add(control_connection_t *conn,
     /* It's a bug because the service addr has already been validated above */
     control_printf_endreply(conn, 512, "Invalid v3 address \"%s\"", hsaddress);
     break;
+  case REGISTER_FAIL_PERMANENT_STORAGE:
+    control_printf_endreply(conn, 553, "Unable to store creds for \"%s\"",
+                            hsaddress);
+    break;
   case REGISTER_SUCCESS_ALREADY_EXISTS:
     control_printf_endreply(conn, 251,"Client for onion existed and replaced");
     break;
