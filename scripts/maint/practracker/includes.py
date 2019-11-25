@@ -235,7 +235,7 @@ def run_check_includes(topdir, list_unused=False, log_sorted_levels=False,
             trouble = True
 
     if trouble:
-        err(
+        warn(
     """To change which includes are allowed in a C file, edit the {}
     files in its enclosing directory.""".format(RULES_FNAME))
         sys.exit(1)
