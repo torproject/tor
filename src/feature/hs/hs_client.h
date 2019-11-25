@@ -60,9 +60,6 @@ typedef enum {
 /** Flag to set when a client auth is permanent (saved on disk). */
 #define CLIENT_AUTH_FLAG_IS_PERMANENT (1<<0)
 
-/** Max length of a client auth nickname */
-#define HS_CLIENT_AUTH_MAX_NICKNAME_LENGTH 255
-
 /** Client-side configuration of client authorization */
 typedef struct hs_client_service_authorization_t {
   /** An curve25519 secret key used to compute decryption keys that
@@ -71,9 +68,6 @@ typedef struct hs_client_service_authorization_t {
 
   /** An onion address that is used to connect to the onion service. */
   char onion_address[HS_SERVICE_ADDR_LEN_BASE32+1];
-
-  /* An optional nickname for this client */
-  char *nickname;
 
   /* Optional flags for this client. */
   int flags;

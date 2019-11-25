@@ -245,8 +245,7 @@ test_hs_control_good_onion_client_auth_add(void *arg)
 
   /* Register first service */
   args = tor_strdup("2fvhjskjet3n5syd6yfg5lhvwcs62bojmthr35ko5bllr3iqdb4ctdyd "
-                    "x25519:iJ1tjKCrMAbiFT2bVrCjhbfMDnE1fpaRbIS5ZHKUvEQ= "
-                    "ClientName=bob");
+                    "x25519:iJ1tjKCrMAbiFT2bVrCjhbfMDnE1fpaRbIS5ZHKUvEQ= ");
 
   retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
   tt_int_op(retval, OP_EQ, 0);
@@ -277,13 +276,11 @@ test_hs_control_good_onion_client_auth_add(void *arg)
   hs_client_service_authorization_t *client_2fv =
     digest256map_get(client_auths, service_identity_pk_2fv.pubkey);
   tt_assert(client_2fv);
-  tt_str_op(client_2fv->nickname, OP_EQ, "bob");
   tt_int_op(client_2fv->flags, OP_EQ, 0);
 
   hs_client_service_authorization_t *client_jt4 =
     digest256map_get(client_auths, service_identity_pk_jt4.pubkey);
   tt_assert(client_jt4);
-  tt_assert(!client_jt4->nickname);
   tt_int_op(client_jt4->flags, OP_EQ, 0);
 
   /* Now let's VIEW the auth credentials */
@@ -296,8 +293,7 @@ test_hs_control_good_onion_client_auth_add(void *arg)
 
 #define VIEW_CORRECT_REPLY_NO_ADDR "250-ONION_CLIENT_AUTH_VIEW\r\n"   \
   "250-CLIENT x25519:eIIdIGoSZwI2Q/lSzpf92akGki5I+PZIDz37MA5BhlA=\r\n"\
-  "250-CLIENT x25519:iJ1tjKCrMAbiFT2bVrCjhbfMDnE1fpaRbIS5ZHKUvEQ= "   \
-  "ClientName=bob\r\n"                                                \
+  "250-CLIENT x25519:iJ1tjKCrMAbiFT2bVrCjhbfMDnE1fpaRbIS5ZHKUvEQ=\r\n"   \
   "250 OK\r\n"
 
   retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
@@ -516,7 +512,7 @@ test_hs_control_store_permanent_creds(void *arg)
   /* Try registering first service with no ClientOnionAuthDir set */
   args = tor_strdup("2fvhjskjet3n5syd6yfg5lhvwcs62bojmthr35ko5bllr3iqdb4ctdyd "
                     "x25519:iJ1tjKCrMAbiFT2bVrCjhbfMDnE1fpaRbIS5ZHKUvEQ= "
-                    "ClientName=bob Flags=Permanent");
+                    "Flags=Permanent");
 
   retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
   tt_int_op(retval, OP_EQ, 0);
@@ -546,7 +542,7 @@ test_hs_control_store_permanent_creds(void *arg)
   /* Try the control port command again. This time it should work! */
   args = tor_strdup("2fvhjskjet3n5syd6yfg5lhvwcs62bojmthr35ko5bllr3iqdb4ctdyd "
                     "x25519:iJ1tjKCrMAbiFT2bVrCjhbfMDnE1fpaRbIS5ZHKUvEQ= "
-                    "ClientName=bob Flags=Permanent");
+                    "Flags=Permanent");
   retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
   tt_int_op(retval, OP_EQ, 0);
 
@@ -571,7 +567,7 @@ test_hs_control_store_permanent_creds(void *arg)
   /* Overwrite the credentials and check that they got overwrited. */
   args = tor_strdup("2fvhjskjet3n5syd6yfg5lhvwcs62bojmthr35ko5bllr3iqdb4ctdyd "
                     "x25519:UDRvZLvcJo0QRLvDfkpgbtsqbkhIUQZyeo2FNBrgS18= "
-                    "ClientName=fab Flags=Permanent");
+                    "Flags=Permanent");
   retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
   tt_int_op(retval, OP_EQ, 0);
 
@@ -600,7 +596,6 @@ test_hs_control_store_permanent_creds(void *arg)
   hs_client_service_authorization_t *client_2fv =
     digest256map_get(client_auths, service_identity_pk_2fv.pubkey);
   tt_assert(client_2fv);
-  tt_assert(!client_2fv->nickname);
   tt_int_op(client_2fv->flags, OP_EQ, CLIENT_AUTH_FLAG_IS_PERMANENT);
   tt_str_op(hex_str((char*)client_2fv->enc_seckey.secret_key, 32), OP_EQ,
            "50346F64BBDC268D1044BBC37E4A606EDB2A6E48485106727A8D85341AE04B5F");
