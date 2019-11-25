@@ -29,7 +29,7 @@
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 
-#include "ed25519/donna/ed25519_donna_tor.h"
+#include "ext/ed25519/donna/ed25519_donna_tor.h"
 
 #include <string.h>
 

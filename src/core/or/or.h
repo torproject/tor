@@ -65,7 +65,7 @@
 #include "lib/wallclock/approx_time.h"
 #include "lib/wallclock/timeval.h"
 
-#include "ht.h"
+#include "ext/ht.h"
 
 // These, more than other includes, are for keeping the other struct
 // definitions working. We should remove them when we minimize our includes.

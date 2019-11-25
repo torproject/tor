@@ -22,7 +22,7 @@
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 
-#include "tinytest.h"
+#include "ext/tinytest.h"
 
 /* A mock replacement for crypto_digest that always fails. */
 static int

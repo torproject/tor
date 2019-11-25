@@ -29,7 +29,7 @@
 
 #include "core/or/or.h"
 
-#include "ht.h"
+#include "ext/ht.h"
 #include "lib/buf/buffers.h"
 #include "app/config/config.h"
 #include "feature/control/control_events.h"

@@ -19,8 +19,8 @@
 #include "feature/relay/router.h"
 #include "feature/nodelist/routerlist.h"
 
-#include "ht.h"
-#include "siphash.h"
+#include "ext/ht.h"
+#include "ext/siphash.h"
 
 #include "lib/container/smartlist.h"
 #include "lib/ctime/di_ops.h"

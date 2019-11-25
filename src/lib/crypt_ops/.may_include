@@ -22,7 +22,6 @@ lib/crypt_ops/*.inc
 
 trunnel/pwbox.h
 
-keccak-tiny/*.h
-ed25519/*.h
-
+ext/ed25519/*.h
+ext/keccak-tiny/*.h
 ext/siphash.h

@@ -19,7 +19,7 @@
 #include "core/or/channel.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
-#include "ht.h"
+#include "ext/ht.h"
 #include "core/or/relay.h"
 #include "feature/rend/rendservice.h"
 

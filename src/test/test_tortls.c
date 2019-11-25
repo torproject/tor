@@ -30,7 +30,7 @@
 #include "test/log_test_helpers.h"
 #include "test/test_tortls.h"
 
-#include "tinytest.h"
+#include "ext/tinytest.h"
 
 const char* notCompletelyValidCertString =
   "-----BEGIN CERTIFICATE-----\n"

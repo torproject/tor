@@ -33,8 +33,8 @@
 #include "lib/encoding/binascii.h"
 #include "lib/string/util_string.h"
 
-#include "ed25519/ref10/ed25519_ref10.h"
-#include "ed25519/donna/ed25519_donna_tor.h"
+#include "ext/ed25519/ref10/ed25519_ref10.h"
+#include "ext/ed25519/donna/ed25519_donna_tor.h"
 
 #include <string.h>
 #include <errno.h>

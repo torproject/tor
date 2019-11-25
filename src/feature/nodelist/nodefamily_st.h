@@ -13,7 +13,7 @@
 #define TOR_NODEFAMILY_ST_H
 
 #include "orconfig.h"
-#include "ht.h"
+#include "ext/ht.h"
 
 struct nodefamily_t {
   /** Entry for this nodefamily_t within the hashtable. */

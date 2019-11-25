@@ -16,7 +16,7 @@
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 
-#include "keccak-tiny/keccak-tiny.h"
+#include "ext/keccak-tiny/keccak-tiny.h"
 
 #include <stdlib.h>
 #include <string.h>

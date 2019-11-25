@@ -70,7 +70,7 @@
 #include "core/or/edge_connection_st.h"
 #include "core/or/or_circuit_st.h"
 
-#include "ht.h"
+#include "ext/ht.h"
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>

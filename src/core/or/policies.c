@@ -28,7 +28,7 @@
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 #include "lib/geoip/geoip.h"
-#include "ht.h"
+#include "ext/ht.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/encoding/confline.h"
 #include "trunnel/ed25519_cert.h"

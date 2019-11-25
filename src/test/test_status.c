@@ -13,7 +13,7 @@
 
 #include "core/or/or.h"
 #include "lib/log/log.h"
-#include "tor_queue.h"
+#include "ext/tor_queue.h"
 #include "core/or/status.h"
 #include "core/or/circuitlist.h"
 #include "app/config/config.h"

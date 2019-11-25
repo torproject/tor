@@ -101,7 +101,7 @@
 
 #include "core/or/ocirc_event.h"
 
-#include "ht.h"
+#include "ext/ht.h"
 
 #include "core/or/cpath_build_state_st.h"
 #include "core/or/crypt_path_reference_st.h"

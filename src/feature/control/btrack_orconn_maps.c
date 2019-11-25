@@ -13,8 +13,8 @@
 
 #include "core/or/or.h"
 
-#include "ht.h"
-#include "siphash.h"
+#include "ext/ht.h"
+#include "ext/siphash.h"
 
 #define BTRACK_ORCONN_PRIVATE
 

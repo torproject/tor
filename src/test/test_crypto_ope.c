@@ -13,7 +13,7 @@
 #include "lib/encoding/binascii.h"
 #include "lib/malloc/malloc.h"
 #include "test/test.h"
-#include "tinytest.h"
+#include "ext/tinytest.h"
 
 #include <stddef.h>
 #include <string.h>

@@ -13,9 +13,9 @@
 
 #define DEBUG_SMARTLIST 1
 
-#include "tinytest.h"
+#include "ext/tinytest.h"
 #define TT_EXIT_TEST_FUNCTION STMT_BEGIN goto done; STMT_END
-#include "tinytest_macros.h"
+#include "ext/tinytest_macros.h"
 
 #ifdef __GNUC__
 #define PRETTY_FUNCTION __PRETTY_FUNCTION__

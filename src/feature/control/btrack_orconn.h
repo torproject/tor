@@ -13,7 +13,7 @@
 
 #ifdef BTRACK_ORCONN_PRIVATE
 
-#include "ht.h"
+#include "ext/ht.h"
 
 /**
  * Structure for tracking OR connection states

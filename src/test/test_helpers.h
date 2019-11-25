@@ -7,7 +7,7 @@
 #define BUFFERS_PRIVATE
 
 #include "core/or/or.h"
-#include "tinytest.h"
+#include "ext/tinytest.h"
 
 const char *get_yesterday_date_str(void);
 

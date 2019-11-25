@@ -27,10 +27,10 @@
 #include "lib/string/printf.h"
 #include "lib/wallclock/approx_time.h"
 
-#include "ht.h"
+#include "ext/ht.h"
 #include "feature/dirauth/keypin.h"
 
-#include "siphash.h"
+#include "ext/siphash.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
