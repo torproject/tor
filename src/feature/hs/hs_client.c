@@ -1613,6 +1613,84 @@ get_creds_from_client_auth_filename(const char *filename,
   return auth;
 }
 
+/*
+ * Remove the file in <b>filename</b> under the global client auth credential
+ * storage.
+ */
+static void
+remove_client_auth_creds_file(const char *filename)
+{
+  char *creds_file_path = NULL;
+  const or_options_t *options = get_options();
+
+  creds_file_path = hs_path_from_filename(options->ClientOnionAuthDir,
+                                          filename);
+  if (tor_unlink(creds_file_path) != 0) {
+    log_warn(LD_REND, "Failed to remove client auth file (%s).",
+             creds_file_path);
+    goto end;
+  }
+
+  log_warn(LD_REND, "Successfuly removed client auth file (%s).",
+           creds_file_path);
+
+ end:
+  tor_free(creds_file_path);
+}
+
+/**
+ * Find the filesystem file corresponding to the permanent client auth
+ * credentials in <b>cred</b> and remove it.
+ */
+static void
+find_and_remove_client_auth_creds_file(
+                                 const hs_client_service_authorization_t *cred)
+{
+  smartlist_t *file_list = NULL;
+  const or_options_t *options = get_options();
+
+  tor_assert(cred->flags & CLIENT_AUTH_FLAG_IS_PERMANENT);
+
+  if (!options->ClientOnionAuthDir) {
+    log_warn(LD_REND, "Found permanent credential but no ClientOnionAuthDir "
+             "configured. There is no file to be removed.");
+    goto end;
+  }
+
+  file_list = tor_listdir(options->ClientOnionAuthDir);
+  if (file_list == NULL) {
+    log_warn(LD_REND, "Client authorization key directory %s can't be listed.",
+             options->ClientOnionAuthDir);
+    goto end;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(file_list, const char *, filename) {
+    hs_client_service_authorization_t *tmp_cred = NULL;
+
+    tmp_cred = get_creds_from_client_auth_filename(filename, options);
+    if (!tmp_cred) {
+      continue;
+    }
+
+    /* Find the right file for this credential */
+    if (!strcmp(tmp_cred->onion_address, cred->onion_address)) {
+      /* Found it! Remove the file! */
+      remove_client_auth_creds_file(filename);
+      /* cleanup and get out of here */
+      client_service_authorization_free(tmp_cred);
+      break;
+    }
+
+    client_service_authorization_free(tmp_cred);
+  } SMARTLIST_FOREACH_END(filename);
+
+ end:
+  if (file_list) {
+    SMARTLIST_FOREACH(file_list, char *, s, tor_free(s));
+    smartlist_free(file_list);
+  }
+}
+
 /** Remove client auth credentials for the service <b>hs_address</b>. */
 hs_client_removal_auth_status_t
 hs_client_remove_auth_credentials(const char *hsaddress)
@@ -1629,8 +1707,14 @@ hs_client_remove_auth_credentials(const char *hsaddress)
 
   hs_client_service_authorization_t *cred = NULL;
   cred = digest256map_remove(client_auths, service_identity_pk.pubkey);
+
   /* digestmap_remove() returns the previously stored data if there were any */
   if (cred) {
+    if (cred->flags & CLIENT_AUTH_FLAG_IS_PERMANENT) {
+      /* These creds are stored on disk: remove the corresponding file. */
+      find_and_remove_client_auth_creds_file(cred);
+    }
+
     client_service_authorization_free(cred);
     return REMOVAL_SUCCESS;
   }

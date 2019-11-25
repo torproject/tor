@@ -585,7 +585,7 @@ test_hs_control_store_permanent_creds(void *arg)
          /* This is the base32 represenation of the base64 UDRv... key above */
          "x25519:ka2g6zf33qti2ecexpbx4stan3nsu3sijbiqm4t2rwctigxajnpq");
 
-  /* Now for our final act!!! Actually get the HS client subsystem to parse the
+  /* Now for our next act!!! Actually get the HS client subsystem to parse the
    * whole directory and make sure that it extracted the right credential! */
   hs_config_client_authorization(get_options(), 0);
 
@@ -599,6 +599,27 @@ test_hs_control_store_permanent_creds(void *arg)
   tt_int_op(client_2fv->flags, OP_EQ, CLIENT_AUTH_FLAG_IS_PERMANENT);
   tt_str_op(hex_str((char*)client_2fv->enc_seckey.secret_key, 32), OP_EQ,
            "50346F64BBDC268D1044BBC37E4A606EDB2A6E48485106727A8D85341AE04B5F");
+
+  /* And now for the final act! Use the REMOVE control port command to remove
+     the credential, and ensure that the file has also been removed! */
+  tor_free(conn.current_cmd);
+  tor_free(cp1);
+  tor_free(args);
+
+  /* Ensure that the creds file exists */
+  tt_int_op(file_status(creds_fname), OP_EQ, FN_FILE);
+
+  /* Do the REMOVE */
+  conn.current_cmd = tor_strdup("ONION_CLIENT_AUTH_REMOVE");
+  args =tor_strdup("2fvhjskjet3n5syd6yfg5lhvwcs62bojmthr35ko5bllr3iqdb4ctdyd");
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
+  tt_int_op(retval, OP_EQ, 0);
+  cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ, "250 OK\r\n");
+
+  /* Ensure that the file has been removed and the map is empty */
+  tt_int_op(file_status(creds_fname), OP_EQ, FN_NOENT);
+  tt_uint_op(digest256map_size(client_auths), OP_EQ, 0);
 
  done:
   tor_free(args);
