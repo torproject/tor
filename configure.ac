@@ -352,15 +352,20 @@ AM_CONDITIONAL(BUILD_HTML_DOCS, [test "x$enable_html_manual" != "xno"])
 AM_PROG_CC_C_O
 AC_PROG_CC_C99
 
-AC_ARG_VAR([PYTHON], [path to Python binary])
-AC_CHECK_PROGS(PYTHON, [ \
+AC_CACHE_CHECK([for Python 3], [tor_cv_PYTHON],
+   [AC_PATH_PROGS_FEATURE_CHECK([PYTHON], [ \
 	python3 \
 	python3.8 python3.7 python3.6 python3.5 python3.4 \
-	python \
-	python2 python2.7])
+	python ],
+   [["$ac_path_PYTHON" -c 'import sys; sys.exit(sys.version_info[0]<3)' && tor_cv_PYTHON="$ac_path_PYTHON" ac_path_PYTHON_found=:]] )])
+AC_SUBST([PYTHON], [$tor_cv_PYTHON])
+
+PYTHON="$tor_cv_PYTHON"
+
 if test "x$PYTHON" = "x"; then
-  AC_MSG_WARN([Python unavailable; some tests will not be run.])
+  AC_MSG_WARN([Python 3 unavailable; some tests will not be run.])
 fi
+
 AM_CONDITIONAL(USEPYTHON, [test "x$PYTHON" != "x"])
 
 dnl List all external rust crates we depend on here. Include the version

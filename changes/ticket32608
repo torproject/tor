@@ -1,0 +1,4 @@
+  o New system requirements:
+    - When building Tor, you now need to have Python 3 in order to
+      run the integration tests. (Python 2 is officially unsupported
+      upstream, as of 1 Jan 2020.) Closes ticket 32608.
