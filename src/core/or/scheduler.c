@@ -12,7 +12,6 @@
 #include "lib/buf/buffers.h"
 #define TOR_CHANNEL_INTERNAL_
 #include "core/or/channeltls.h"
-#include "lib/evloop/compat_libevent.h"
 
 #include "core/or/or_connection_st.h"
 

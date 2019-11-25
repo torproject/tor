@@ -24,7 +24,6 @@
 
 #include "lib/arch/bytes.h"
 #include "lib/cc/compat_compiler.h"
-#include "lib/cc/torint.h"
 #include "lib/container/map.h"
 #include "lib/buf/buffers.h"
 #include "lib/container/smartlist.h"

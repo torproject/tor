@@ -28,8 +28,6 @@
 #include "feature/nodelist/routerstatus_st.h"
 #include "lib/crypt_ops/crypto_format.h"
 
-#include "test/test_helpers.h"
-
 /* mock ID digest and longname for node that's in nodelist */
 #define HSDIR_EXIST_ID \
   "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA" \

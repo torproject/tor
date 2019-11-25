@@ -67,7 +67,6 @@
 #include "lib/osinfo/uname.h"
 #include "lib/sandbox/sandbox.h"
 #include "lib/fs/lockfile.h"
-#include "lib/net/resolve.h"
 #include "lib/tls/tortls.h"
 #include "lib/evloop/compat_libevent.h"
 #include "lib/encoding/confline.h"
