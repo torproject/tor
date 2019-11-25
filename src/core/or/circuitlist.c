@@ -99,7 +99,6 @@
 #include "lib/compress/compress_zstd.h"
 #include "lib/buf/buffers.h"
 
-#define OCIRC_EVENT_PRIVATE
 #include "core/or/ocirc_event.h"
 
 #include "ht.h"

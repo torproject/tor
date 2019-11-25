@@ -32,7 +32,6 @@
  * request.
  */
 
-#define CRYPTO_RAND_FAST_PRIVATE
 #define CRYPTO_PRIVATE
 
 #include "lib/crypt_ops/crypto_rand.h"

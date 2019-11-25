@@ -8,7 +8,6 @@
  *        tor. The full feature is built as part of the dirauth module.
  **/
 
-#define VOTING_SCHEDULE_PRIVATE
 #include "feature/dircommon/voting_schedule.h"
 
 #include "core/or/or.h"

@@ -8,7 +8,6 @@
  *        as part of the dirauth module.
  **/
 
-#define SHARED_RANDOM_CLIENT_PRIVATE
 #include "feature/hs_common/shared_random_client.h"
 
 #include "app/config/config.h"

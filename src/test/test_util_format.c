@@ -7,7 +7,6 @@
 #include "test/test.h"
 
 #include "lib/crypt_ops/crypto_rand.h"
-#define UTIL_FORMAT_PRIVATE
 #include "lib/encoding/binascii.h"
 
 #define NS_MODULE util_format

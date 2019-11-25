@@ -4,11 +4,8 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#define COMPAT_PRIVATE
 #define COMPAT_TIME_PRIVATE
-#define UTIL_PRIVATE
 #define UTIL_MALLOC_PRIVATE
-#define SOCKET_PRIVATE
 #define PROCESS_WIN32_PRIVATE
 #include "lib/testsupport/testsupport.h"
 #include "core/or/or.h"

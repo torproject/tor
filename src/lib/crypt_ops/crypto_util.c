@@ -10,8 +10,6 @@
  * \brief Common cryptographic utilities.
  **/
 
-#define CRYPTO_UTIL_PRIVATE
-
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/cc/compat_compiler.h"
 
