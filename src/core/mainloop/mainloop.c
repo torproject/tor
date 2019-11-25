@@ -1397,7 +1397,7 @@ STATIC periodic_event_item_t periodic_events[] = {
   /* This is a legacy catch-all callback that runs once per second if
    * we are online and active. */
   CALLBACK(second_elapsed, NET_PARTICIPANT,
-           FL(NEED_NET)|FL(RUN_ON_DISABLE)),
+           FL(RUN_ON_DISABLE)),
 
   /* XXXX Do we have a reason to do this on a callback? Does it do any good at
    * all?  For now, if we're dormant, we can let our listeners decay. */
