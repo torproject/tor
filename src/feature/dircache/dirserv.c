@@ -3,7 +3,6 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#define DIRSERV_PRIVATE
 #include "core/or/or.h"
 
 #include "app/config/config.h"

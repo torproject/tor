@@ -23,8 +23,6 @@
  * every option that is common to all version (config_generic_service).
  **/
 
-#define HS_CONFIG_PRIVATE
-
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_config.h"
 #include "feature/hs/hs_client.h"

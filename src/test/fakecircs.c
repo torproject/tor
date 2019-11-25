@@ -6,7 +6,6 @@
  * \brief Fake circuits API for unit test.
  **/
 
-#define CHANNEL_PRIVATE
 #define CIRCUITBUILD_PRIVATE
 #define CIRCUITLIST_PRIVATE
 #define CRYPT_PATH_PRIVATE

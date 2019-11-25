@@ -1,7 +1,6 @@
 /* Copyright (c) 2010-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#define PROCMON_PRIVATE
 #include "orconfig.h"
 #include "core/or/or.h"
 #include "test/test.h"

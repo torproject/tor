@@ -9,7 +9,6 @@
  *    sockets.
  **/
 
-#define SOCKET_PRIVATE
 #include "lib/net/socket.h"
 #include "lib/net/socketpair.h"
 #include "lib/net/address.h"

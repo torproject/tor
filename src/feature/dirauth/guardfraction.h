@@ -16,7 +16,7 @@
 STATIC int
 dirserv_read_guardfraction_file_from_str(const char *guardfraction_file_str,
                                       smartlist_t *vote_routerstatuses);
-#endif /* defined(DIRSERV_PRIVATE) */
+#endif
 
 int dirserv_read_guardfraction_file(const char *fname,
                                  smartlist_t *vote_routerstatuses);

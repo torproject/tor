@@ -12,8 +12,6 @@
  * their own bandwidth, before publishing.
  */
 
-#define SELFTEST_PRIVATE
-
 #include "core/or/or.h"
 
 #include "app/config/config.h"

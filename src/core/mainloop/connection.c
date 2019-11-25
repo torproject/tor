@@ -66,7 +66,6 @@
  * part of a subclass (channel_tls_t).
  */
 #define TOR_CHANNEL_INTERNAL_
-#define CONNECTION_PRIVATE
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"

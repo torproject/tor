@@ -550,8 +550,6 @@ test_bridges_get_transport_by_bridge_addrport_no_ptlist(void *arg)
   sweep_bridge_list();
 }
 
-#define PT_PRIVATE
-
 /**
  * Calling get_transport_by_bridge_addrport() with the address and port of a
  * configured bridge which uses a pluggable transport should return 0 and set
