@@ -42,6 +42,7 @@ If you have changed build system components:
    - For example, if you have changed Makefiles, autoconf files, or anything
      else that affects the build system.
 
+
 License issues
 ==============
 
@@ -56,7 +57,6 @@ Some compatible licenses include:
   - 3-clause BSD
   - 2-clause BSD
   - CC0 Public Domain Dedication
-
 
 
 How we use Git branches
@@ -350,7 +350,6 @@ for more information about trunnel.
 
 For information on adding new trunnel code to Tor, see src/trunnel/README
 
-
 Calling and naming conventions
 ------------------------------
 
@@ -457,7 +456,6 @@ to use it as a function callback), define it with a name like
     {
       abc_free_(obj);
     }
-
 
 Doxygen comment conventions
 ---------------------------
