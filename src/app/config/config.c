@@ -1945,7 +1945,7 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
 
   if (first_time) {
     if (options_switch_id(msg) < 0)
-      goto done;
+      goto rollback;
   }
 
   /* On the other hand, we need to touch the file system _after_ we
@@ -1954,7 +1954,7 @@ options_act_reversible,(const or_options_t *old_options, char **msg))
    */
   if (first_time) {
     if (options_create_directories(msg) < 0)
-      goto done;
+      goto rollback;
   }
 
   /* Bail out at this point if we're not going to be a client or server:
