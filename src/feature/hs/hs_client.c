@@ -1445,6 +1445,80 @@ client_dir_fetch_unexpected(dir_connection_t *dir_conn, const char *reason,
                                 NULL);
 }
 
+/** Get the full filename for storing the client auth credentials for the
+ *  service in <b>onion_address</b>. The base directory is <b>dir</b>.
+ *  This function never returns NULL. */
+static char *
+get_client_auth_creds_filename(const char *onion_address,
+                               const char *dir)
+{
+  char *full_fname = NULL;
+  char *fname;
+
+  tor_asprintf(&fname, "%s.auth_private", onion_address);
+  full_fname = hs_path_from_filename(dir, fname);
+  tor_free(fname);
+
+  return full_fname;
+}
+
+/** Permanently store the credentials in <b>creds</b> to disk.
+ *
+ *  Return -1 if there was an error while storing the credentials, otherwise
+ *  return 0.
+ */
+static int
+store_permanent_client_auth_credentials(
+                              const hs_client_service_authorization_t *creds)
+{
+  const or_options_t *options = get_options();
+  char *full_fname = NULL;
+  char *file_contents = NULL;
+  char priv_key_b32[BASE32_NOPAD_LEN(CURVE25519_PUBKEY_LEN)+1];
+  int retval = -1;
+
+  tor_assert(creds->flags & CLIENT_AUTH_FLAG_IS_PERMANENT);
+
+  /* We need ClientOnionAuthDir to be set, otherwise we can't proceed */
+  if (!options->ClientOnionAuthDir) {
+    log_warn(LD_GENERAL, "Can't register permanent client auth credentials "
+             "for %s without ClientOnionAuthDir option. Discarding.",
+             creds->onion_address);
+    goto err;
+  }
+
+  /* Make sure the directory exists and is private enough. */
+  if (check_private_dir(options->ClientOnionAuthDir, 0, options->User) < 0) {
+    goto err;
+  }
+
+  /* Get filename that we should store the credentials */
+  full_fname = get_client_auth_creds_filename(creds->onion_address,
+                                              options->ClientOnionAuthDir);
+
+  /* Encode client private key */
+  base32_encode(priv_key_b32, sizeof(priv_key_b32),
+                (char*)creds->enc_seckey.secret_key,
+                sizeof(creds->enc_seckey.secret_key));
+
+  /* Get the full file contents and write it to disk! */
+  tor_asprintf(&file_contents, "%s:descriptor:x25519:%s",
+               creds->onion_address, priv_key_b32);
+  if (write_str_to_file(full_fname, file_contents, 0) < 0) {
+    log_warn(LD_GENERAL, "Failed to write client auth creds file for %s!",
+             creds->onion_address);
+    goto err;
+  }
+
+  retval = 0;
+
+ err:
+  tor_free(file_contents);
+  tor_free(full_fname);
+
+  return retval;
+}
+
 /** Register the credential <b>creds</b> as part of the client auth subsystem.
  *
  * Takes ownership of <b>creds</b>.
@@ -1466,6 +1540,15 @@ hs_client_register_auth_credentials(hs_client_service_authorization_t *creds)
                        NULL, NULL) < 0) {
     client_service_authorization_free(creds);
     return REGISTER_FAIL_BAD_ADDRESS;
+  }
+
+  /* If we reach this point, the credentials will be stored one way or another:
+   * Make them permanent if the user asked us to. */
+  if (creds->flags & CLIENT_AUTH_FLAG_IS_PERMANENT) {
+    if (store_permanent_client_auth_credentials(creds) < 0) {
+      client_service_authorization_free(creds);
+      return REGISTER_FAIL_PERMANENT_STORAGE;
+    }
   }
 
   old_creds = digest256map_get(client_auths, service_identity_pk.pubkey);
@@ -1795,6 +1878,13 @@ auth_key_filename_is_valid(const char *filename)
   return ret;
 }
 
+/** Parse the client auth credentials off a string in <b>client_key_str</b>
+ *  based on the file format documented in the "Client side configuration"
+ *  section of rend-spec-v3.txt.
+ *
+ *  Return NULL if there was an error, otherwise return a newly allocated
+ *  hs_client_service_authorization_t structure.
+ */
 STATIC hs_client_service_authorization_t *
 parse_auth_file_content(const char *client_key_str)
 {
@@ -1825,7 +1915,7 @@ parse_auth_file_content(const char *client_key_str)
     goto err;
   }
 
-  if (strlen(seckey_b32) != BASE32_NOPAD_LEN(CURVE25519_PUBKEY_LEN)) {
+  if (strlen(seckey_b32) != BASE32_NOPAD_LEN(CURVE25519_SECKEY_LEN)) {
     log_warn(LD_REND, "Client authorization encoded base32 private key "
                       "length is invalid: %s", seckey_b32);
     goto err;
@@ -1841,6 +1931,9 @@ parse_auth_file_content(const char *client_key_str)
     goto err;
   }
   strncpy(auth->onion_address, onion_address, HS_SERVICE_ADDR_LEN_BASE32);
+
+  /* We are reading this from the disk, so set the permanent flag anyway. */
+  auth->flags |= CLIENT_AUTH_FLAG_IS_PERMANENT;
 
   /* Success. */
   goto done;

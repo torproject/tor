@@ -43,6 +43,8 @@ typedef enum {
   REGISTER_SUCCESS_AND_DECRYPTED,
   /* We failed to register these credentials, because of a bad HS address. */
   REGISTER_FAIL_BAD_ADDRESS,
+  /* We failed to register these credentials, because of a bad HS address. */
+  REGISTER_FAIL_PERMANENT_STORAGE,
 } hs_client_register_auth_status_t;
 
 /* Status code of client auth credential removal */
