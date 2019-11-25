@@ -1957,7 +1957,6 @@ hs_config_client_authorization(const or_options_t *options,
 {
   int ret = -1;
   digest256map_t *auths = digest256map_new();
-  char *key_dir = NULL;
   smartlist_t *file_list = NULL;
   char *client_key_str = NULL;
   char *client_key_file_path = NULL;
@@ -1971,17 +1970,15 @@ hs_config_client_authorization(const or_options_t *options,
     goto end;
   }
 
-  key_dir = tor_strdup(options->ClientOnionAuthDir);
-
   /* Make sure the directory exists and is private enough. */
-  if (check_private_dir(key_dir, 0, options->User) < 0) {
+  if (check_private_dir(options->ClientOnionAuthDir, 0, options->User) < 0) {
     goto end;
   }
 
-  file_list = tor_listdir(key_dir);
+  file_list = tor_listdir(options->ClientOnionAuthDir);
   if (file_list == NULL) {
     log_warn(LD_REND, "Client authorization key directory %s can't be listed.",
-             key_dir);
+             options->ClientOnionAuthDir);
     goto end;
   }
 
@@ -2000,7 +1997,8 @@ hs_config_client_authorization(const or_options_t *options,
     }
 
     /* Create a full path for a file. */
-    client_key_file_path = hs_path_from_filename(key_dir, filename);
+    client_key_file_path = hs_path_from_filename(options->ClientOnionAuthDir,
+                                                 filename);
     client_key_str = read_file_to_str(client_key_file_path, 0, NULL);
     /* Free the file path immediately after using it. */
     tor_free(client_key_file_path);
@@ -2015,36 +2013,37 @@ hs_config_client_authorization(const or_options_t *options,
     /* Free immediately after using it. */
     tor_free(client_key_str);
 
-    if (auth) {
-      /* Parse the onion address to get an identity public key and use it
-       * as a key of global map in the future. */
-      if (hs_parse_address(auth->onion_address, &identity_pk,
-                           NULL, NULL) < 0) {
-        log_warn(LD_REND, "The onion address \"%s\" is invalid in "
-                          "file %s", filename, auth->onion_address);
-        client_service_authorization_free(auth);
-        continue;
-      }
+    if (!auth) {
+      continue;
+    }
 
-      if (digest256map_get(auths, identity_pk.pubkey)) {
+    /* Parse the onion address to get an identity public key and use it
+     * as a key of global map in the future. */
+    if (hs_parse_address(auth->onion_address, &identity_pk,
+                         NULL, NULL) < 0) {
+      log_warn(LD_REND, "The onion address \"%s\" is invalid in "
+               "file %s", filename, auth->onion_address);
+      client_service_authorization_free(auth);
+      continue;
+    }
+
+    if (digest256map_get(auths, identity_pk.pubkey)) {
         log_warn(LD_REND, "Duplicate authorization for the same hidden "
-                          "service address %s.",
+                 "service address %s.",
                  safe_str_client_opts(options, auth->onion_address));
         client_service_authorization_free(auth);
         goto end;
-      }
-
-      digest256map_set(auths, identity_pk.pubkey, auth);
-      log_info(LD_REND, "Loaded a client authorization key file %s.",
-               filename);
     }
+
+    digest256map_set(auths, identity_pk.pubkey, auth);
+    log_info(LD_REND, "Loaded a client authorization key file %s.",
+             filename);
   } SMARTLIST_FOREACH_END(filename);
 
   /* Success. */
   ret = 0;
 
  end:
-  tor_free(key_dir);
   tor_free(client_key_str);
   tor_free(client_key_file_path);
   if (file_list) {
