@@ -102,7 +102,6 @@
 /* Define to 1 if you have the <sys/socket.h> header file. */
 #undef HAVE_SYS_SOCKET_H
 
-
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #define HAVE_SYS_STAT_H
 
@@ -219,8 +218,6 @@
 
 /* Version number of package */
 #define VERSION "0.4.3.0-alpha-dev"
-
-
 
 #define HAVE_STRUCT_SOCKADDR_IN6
 #define HAVE_STRUCT_IN6_ADDR
