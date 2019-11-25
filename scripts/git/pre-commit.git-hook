@@ -19,6 +19,10 @@ if [ $# -eq 0 ]; then
     # Use the appropriate owned tor source list to filter the changed files
     if [ -d src/lib ]; then
         # This is the layout in 0.3.5
+        # Keep these lists consistent:
+        #   - OWNED_TOR_C_FILES in Makefile.am
+        #   - CHECK_FILES in pre-commit.git-hook and pre-push.git-hook
+        #   - try_parse in check_cocci_parse.sh
         CHECK_FILES="$($CHECK_FILTER \
                            src/lib/*/*.[ch] \
                            src/core/*/*.[ch] \
@@ -27,6 +31,7 @@ if [ $# -eq 0 ]; then
                            src/test/*.[ch] \
                            src/test/*/*.[ch] \
                            src/tools/*.[ch] \
+                           src/win32/*.[ch] \
                       )"
     elif [ -d src/common ]; then
         # This was the layout before 0.3.5

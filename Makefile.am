@@ -361,6 +361,10 @@ coverage-html-full: all
 	genhtml --branch-coverage -o "$(HTML_COVER_DIR)" "$(HTML_COVER_DIR)/lcov.info"
 
 # For scripts: avoid src/ext and src/trunnel.
+# Keep these lists consistent:
+#   - OWNED_TOR_C_FILES in Makefile.am
+#   - CHECK_FILES in pre-commit.git-hook and pre-push.git-hook
+#   - try_parse in check_cocci_parse.sh
 OWNED_TOR_C_FILES=\
 		$(top_srcdir)/src/lib/*/*.[ch] \
 		$(top_srcdir)/src/core/*/*.[ch] \
@@ -368,7 +372,8 @@ OWNED_TOR_C_FILES=\
 		$(top_srcdir)/src/app/*/*.[ch] \
 		$(top_srcdir)/src/test/*.[ch] \
 		$(top_srcdir)/src/test/*/*.[ch] \
-		$(top_srcdir)/src/tools/*.[ch]
+		$(top_srcdir)/src/tools/*.[ch] \
+		$(top_srcdir)/src/win32/*.[ch]
 
 check-spaces:
 if USE_PERL
