@@ -1686,6 +1686,15 @@ build_desc_intro_points(const hs_service_t *service,
 
   DIGEST256MAP_FOREACH(desc->intro_points.map, key,
                        const hs_service_intro_point_t *, ip) {
+    if (!ip->circuit_established) {
+      /* Ignore un-established intro points. They can linger in that list
+       * because their circuit has not opened and they haven't been removed
+       * yet even though we have enough intro circuits.
+       *
+       * Due to #31561, it can stay in that list until rotation so this check
+       * prevents to publish an intro point without a circuit. */
+      continue;
+    }
     hs_desc_intro_point_t *desc_ip = hs_desc_intro_point_new();
     if (setup_desc_intro_point(&desc->signing_kp, ip, now, desc_ip) < 0) {
       hs_desc_intro_point_free(desc_ip);
