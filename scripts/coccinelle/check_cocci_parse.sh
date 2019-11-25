@@ -73,6 +73,10 @@ if test $# -ge 1 ; then
 else
   cd "$top" || exit 1
   # This is the layout in 0.3.5
+  # Keep these lists consistent:
+  #   - OWNED_TOR_C_FILES in Makefile.am
+  #   - CHECK_FILES in pre-commit.git-hook and pre-push.git-hook
+  #   - try_parse in check_cocci_parse.sh
   "$try_parse" \
     src/lib/*/*.[ch] \
     src/core/*/*.[ch] \

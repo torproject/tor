@@ -65,6 +65,10 @@ do
             # files
             if [ -d src/lib ]; then
                 # This is the layout in 0.3.5
+                # Keep these lists consistent:
+                #   - OWNED_TOR_C_FILES in Makefile.am
+                #   - CHECK_FILES in pre-commit.git-hook and pre-push.git-hook
+                #   - try_parse in check_cocci_parse.sh
                 CHECK_FILES="$($CHECK_FILTER \
                                    src/lib/*/*.[ch] \
                                    src/core/*/*.[ch] \
@@ -81,7 +85,7 @@ do
                                    src/or/*/*.[ch] \
                                    src/test/*.[ch] \
                                    src/test/*/*.[ch] \
-                                   src/tools/*.[ch]
+                                   src/tools/*.[ch] \
                               )"
             fi
 
