@@ -863,18 +863,35 @@ export_hs_client_circuit_id(edge_connection_t *edge_conn,
   if (protocol != HS_CIRCUIT_ID_PROTOCOL_HAPROXY)
     return;
 
+  origin_circuit_t *circ;
   char *buf = NULL;
   const char dst_ipv6[] = "::1";
   /* See RFC4193 regarding fc00::/7 */
-  const char src_ipv6_prefix[] = "fc00:dead:beef:4dad:";
+  const char src_ipv6_prefix[] = "fc00:";
   uint16_t dst_port = 0;
   uint16_t src_port = 1; /* default value */
   uint32_t gid = 0; /* default value */
+  uint32_t rp_addr = 0;
+  uint16_t rp_port = 0;
 
   /* Generate a GID and source port for this client */
   if (edge_conn->on_circuit != NULL) {
-    gid = TO_ORIGIN_CIRCUIT(edge_conn->on_circuit)->global_identifier;
+    circ = TO_ORIGIN_CIRCUIT(edge_conn->on_circuit);
+    gid = circ->global_identifier;
     src_port = gid & 0x0000ffff;
+    if (get_options()->HiddenServiceExportRendPoint) {
+      crypt_path_t *cpath = circ->cpath;
+      crypt_path_t *cpath_last = NULL;
+      if (cpath) {
+        for (; cpath_last != cpath; cpath = cpath_last) {
+          cpath_last = cpath->next;
+        }
+      }
+      if (cpath_last) {
+        rp_addr = tor_addr_to_ipv4h(&cpath_last->extend_info->addr);
+        rp_port = cpath_last->extend_info->port;
+      }
+    }
   }
 
   /* Grab the original dest port from the hs ident */
@@ -883,8 +900,10 @@ export_hs_client_circuit_id(edge_connection_t *edge_conn,
   }
 
   /* Build the string */
-  tor_asprintf(&buf, "PROXY TCP6 %s:%x:%x %s %d %d\r\n",
+  tor_asprintf(&buf, "PROXY TCP6 %s:%x:%x:%x:%x:%x:%x %s %d %d\r\n",
                src_ipv6_prefix,
+               rp_addr >> 16, rp_addr & 0x0000ffff, rp_port,
+               get_options()->HiddenServiceExportInstanceID,
                gid >> 16, gid & 0x0000ffff,
                dst_ipv6, src_port, dst_port);
 

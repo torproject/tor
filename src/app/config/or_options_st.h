@@ -1103,6 +1103,12 @@ struct or_options_t {
    **/
   int DormantCanceledByStartup;
 
+  /** Boolean: true if we should export rend point when exporting CircuitID. */
+  int HiddenServiceExportRendPoint;
+
+  /** Instance ID to export when exporting CircuitID. */
+  int HiddenServiceExportInstanceID;
+
   /**
    * Configuration objects for individual modules.
    *

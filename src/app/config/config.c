@@ -513,6 +513,8 @@ static const config_var_t option_vars_[] = {
   VAR("HiddenServiceMaxStreamsCloseCircuit",LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceNumIntroductionPoints", LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceExportCircuitID", LINELIST_S,  RendConfigLines, NULL),
+  V(HiddenServiceExportRendPoint, BOOL, "0"),
+  V(HiddenServiceExportInstanceID, POSINT, "0"),
   VAR("HiddenServiceEnableIntroDoSDefense", LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceEnableIntroDoSRatePerSec",
       LINELIST_S, RendConfigLines, NULL),
@@ -3938,6 +3940,10 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
 
   if (options_validate_scheduler(options, msg) < 0) {
     return -1;
+  }
+
+  if (options->HiddenServiceExportInstanceID > 65535) {
+    REJECT("HiddenServiceExportInstanceID must be in range of 0 to 65535");
   }
 
   return 0;
