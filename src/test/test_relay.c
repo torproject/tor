@@ -10,7 +10,6 @@
 #include "core/or/channeltls.h"
 #include "feature/stats/rephist.h"
 #include "core/or/relay.h"
-#include "feature/stats/rephist.h"
 #include "lib/container/order.h"
 /* For init/free stuff */
 #include "core/or/scheduler.h"

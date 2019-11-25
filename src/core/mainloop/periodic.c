@@ -29,7 +29,6 @@
 #include "app/config/config.h"
 #include "core/mainloop/mainloop.h"
 #include "core/mainloop/periodic.h"
-#include "lib/evloop/compat_libevent.h"
 
 /** We disable any interval greater than this number of seconds, on the
  * grounds that it is probably an absolute time mistakenly passed in as a

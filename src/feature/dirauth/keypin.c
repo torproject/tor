@@ -15,8 +15,6 @@
 #include "lib/cc/torint.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_format.h"
-#include "lib/crypt_ops/crypto_format.h"
-#include "lib/ctime/di_ops.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/encoding/binascii.h"
 #include "lib/encoding/time_fmt.h"

@@ -43,7 +43,6 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerlist.h"
 #include "feature/relay/ext_orport.h"
 #include "feature/relay/relay_config.h"
 #include "feature/rend/rendcache.h"

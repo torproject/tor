@@ -30,7 +30,6 @@
 #include "feature/rend/rendservice.h"
 #include "lib/crypt_ops/crypto_ope.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 
 #include "feature/hs/hs_circuit.h"

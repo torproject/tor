@@ -27,7 +27,6 @@
 #include "core/crypto/relay_crypto.h"
 #include "core/or/protover.h"
 #include "feature/nodelist/nodelist.h"
-#include "lib/evloop/compat_libevent.h"
 #include "app/config/config.h"
 
 #include "feature/nodelist/routerstatus_st.h"

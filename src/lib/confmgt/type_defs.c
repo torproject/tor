@@ -23,7 +23,6 @@
 #include "lib/confmgt/unitparse.h"
 
 #include "lib/cc/compat_compiler.h"
-#include "lib/conf/conftypes.h"
 #include "lib/container/smartlist.h"
 #include "lib/encoding/confline.h"
 #include "lib/encoding/time_fmt.h"

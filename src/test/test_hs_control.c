@@ -28,8 +28,6 @@
 #include "feature/nodelist/routerstatus_st.h"
 #include "lib/crypt_ops/crypto_format.h"
 
-#include "test/test_helpers.h"
-
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
