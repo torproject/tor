@@ -36,7 +36,11 @@ def warn(msg):
 def fname_is_c(fname):
     """ Return true iff 'fname' is the name of a file that we should
         search for possibly disallowed #include directives. """
-    return fname.endswith(".h") or fname.endswith(".c")
+    if fname.endswith(".h") or fname.endswith(".c"):
+        bname = os.path.basename(fname)
+        return not (bname.startswith(".") or bname.startswith("#"))
+    else:
+        return False
 
 INCLUDE_PATTERN = re.compile(r'\s*#\s*include\s+"([^"]*)"')
 RULES_FNAME = ".may_include"
