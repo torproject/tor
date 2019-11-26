@@ -1266,6 +1266,7 @@ rend_client_circuit_cleanup_on_free(const circuit_t *circ)
   reason = circ->marked_for_close_reason;
   orig_reason = circ->marked_for_close_orig_reason;
   ocirc = CONST_TO_ORIGIN_CIRCUIT(circ);
+  tor_assert(ocirc->rend_data);
 
   has_timed_out = (reason == END_CIRC_REASON_TIMEOUT);
   ip_is_redundant = (orig_reason == END_CIRC_REASON_IP_NOW_REDUNDANT);
