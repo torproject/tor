@@ -1,0 +1,11 @@
+   UnnecNL:./dubious.c:10
+  DoubleNL:./dubious.c:12
+      Wide:./dubious.c:17
+       TAB:./dubious.c:24
+ nosplabel:./dubious.c:26
+        CR:./dubious.c:30
+ Space@EOL:./dubious.c:32
+ non-K&R {:./dubious.c:39
+   }\nelse:./dubious.c:43
+  #else#if:./dubious.c:52
+ dup fname:./subdir/dubious.c (same as ./dubious.c).
