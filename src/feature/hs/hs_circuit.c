@@ -1215,6 +1215,34 @@ hs_circ_send_establish_rendezvous(origin_circuit_t *circ)
   return -1;
 }
 
+/** Circuit cleanup strategy:
+ *
+ *  What follows is a series of functions that notifies the HS subsystem of 3
+ *  different circuit cleanup phase: close, free and repurpose.
+ *
+ *  Tor can call any of those in any orders so they have to be safe between
+ *  each other. In other wrods, the free should never depend on close to be
+ *  called before.
+ *
+ *  The "on_close()" is called from circuit_mark_for_close() which is
+ *  considered the tor fast path and thus as little work as possible should
+ *  done in that function. Currently, we only remove the circuit from the HS
+ *  circuit map and move on.
+ *
+ *  The "on_free()" is called from circuit circuit_free_() and it is very
+ *  important that at the end of the function, no state or objects related to
+ *  this circuit remains alive.
+ *
+ *  The "on_repurpose()" is called from circuit_change_purpose() for which we
+ *  simply remove it from the HS circuit map. We do not have other cleanup
+ *  requirements after that.
+ *
+ *  NOTE: The onion service code, specifically the service code, cleans up
+ *  lingering objects or state if any of its circuit disappear which is why
+ *  our cleanup strategy doesn't involve any service specific actions. As long
+ *  as the circuit is removed from the HS circuit map, it won't be used.
+ */
+
 /** We are about to close this <b>circ</b>. Clean it up from any related HS
  * data structures. This function can be called multiple times safely for the
  * same circuit. */
@@ -1223,18 +1251,9 @@ hs_circ_cleanup_on_close(circuit_t *circ)
 {
   tor_assert(circ);
 
-  /* NOTE: Following code must remain light and fast. The circuit close
-   * function has to remain very fast since it is called as part of multiple
-   * main loop event. */
+  /* On close, we simply remove it from the circuit map. It can not be used
+   * anymore. We keep this code path fast and lean. */
 
-  /* Clear HS circuitmap token for this circ (if any). Very important to be
-   * done after the HS subsystem has been notified of the close else the
-   * circuit will not be found.
-   *
-   * We do this at the close if possible because from that point on, the
-   * circuit is good as dead. We can't rely on removing it in the circuit
-   * free() function because we open a race window between the close and free
-   * where we can't register a new circuit for the same intro point. */
   if (circ->hs_token) {
     hs_circuitmap_remove_circuit(circ);
   }
