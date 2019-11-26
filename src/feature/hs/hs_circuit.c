@@ -1253,10 +1253,7 @@ hs_circ_cleanup_on_close(circuit_t *circ)
 
   /* On close, we simply remove it from the circuit map. It can not be used
    * anymore. We keep this code path fast and lean. */
-
-  if (circ->hs_token) {
-    hs_circuitmap_remove_circuit(circ);
-  }
+  hs_circuitmap_remove_circuit(circ);
 }
 
 /** We are about to free this <b>circ</b>. Clean it up from any related HS
@@ -1275,9 +1272,7 @@ hs_circ_cleanup_on_free(circuit_t *circ)
 
   /* We have no assurance that the given HS circuit has been closed before and
    * thus removed from the HS map. This actually happens in unit tests. */
-  if (circ->hs_token) {
-    hs_circuitmap_remove_circuit(circ);
-  }
+  hs_circuitmap_remove_circuit(circ);
 }
 
 /** We are about to repurpose this <b>circ</b>. Clean it up from any related
@@ -1291,8 +1286,5 @@ hs_circ_cleanup_on_repurpose(circuit_t *circ)
   /* On repurpose, we simply remove it from the circuit map but we do not do
    * the on_free actions since we don't treat a repurpose as something we need
    * to report in the client cache failure. */
-
-  if (circ->hs_token) {
-    hs_circuitmap_remove_circuit(circ);
-  }
+  hs_circuitmap_remove_circuit(circ);
 }
