@@ -1535,7 +1535,7 @@ hs_client_circuit_cleanup_on_free(const circuit_t *circ)
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
 
   orig_circ = CONST_TO_ORIGIN_CIRCUIT(circ);
-  tor_assert(orig_circ->hs_ident)
+  tor_assert(orig_circ->hs_ident);
 
   has_timed_out =
     (circ->marked_for_close_orig_reason == END_CIRC_REASON_TIMEOUT);
