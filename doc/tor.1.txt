@@ -227,6 +227,43 @@ forward slash (/) in the configuration file and on the command line.
 
 GENERAL OPTIONS
 ---------------
+[[AccelDir]] **AccelDir** __DIR__::
+    Specify this option if using dynamic hardware acceleration and the engine
+    implementation library resides somewhere other than the OpenSSL default.
+    Can not be changed while tor is running.
+
+[[AccelName]] **AccelName** __NAME__::
+    When using OpenSSL hardware crypto acceleration attempt to load the dynamic
+    engine of this name. This must be used for any dynamic hardware engine.
+    Names can be verified with the openssl engine command. Can not be changed
+    while tor is running.
+ +
+    If the engine name is prefixed with a "!", then Tor will exit if the
+    engine cannot be loaded.
+
+[[AlternateBridgeAuthority]] **AlternateBridgeAuthority** [__nickname__] [**flags**] __ipv4address__:__port__ __ fingerprint__::
+[[AlternateDirAuthority]] **AlternateDirAuthority** [__nickname__] [**flags**] __ipv4address__:__port__ __fingerprint__::
+    These options behave as DirAuthority, but they replace fewer of the
+    default directory authorities. Using
+    AlternateDirAuthority replaces the default Tor directory authorities, but
+    leaves the default bridge authorities in
+    place.  Similarly,
+    AlternateBridgeAuthority replaces the default bridge authority,
+    but leaves the directory authorities alone.
+
+[[AndroidIdentityTag]] **AndroidIdentityTag** __tag__::
+    When logging to Android's logging subsystem, adds a tag to the log identity
+    such that log entries are marked with "Tor-__tag__". Can not be changed while
+    tor is running. (Default: none)
+
+[[AvoidDiskWrites]] **AvoidDiskWrites** **0**|**1**::
+    If non-zero, try to write to disk less frequently than we would otherwise.
+    This is useful when running on flash memory or other media that support
+    only a limited number of writes. (Default: 0)
+
+[[BandwidthBurst]] **BandwidthBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
+    Limit the maximum token bucket size (also known as the burst) to the given
+    number of bytes in each direction. (Default: 1 GByte)
 
 [[BandwidthRate]] **BandwidthRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     A token bucket limits the average incoming bandwidth usage on this node
@@ -254,41 +291,27 @@ GENERAL OPTIONS
     To avoid confusion, we recommend writing "bytes" or "bits" explicitly,
     since it's easy to forget that "B" means bytes, not bits.
 
-[[BandwidthBurst]] **BandwidthBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
-    Limit the maximum token bucket size (also known as the burst) to the given
-    number of bytes in each direction. (Default: 1 GByte)
+[[CacheDirectory]] **CacheDirectory** __DIR__::
+    Store cached directory data in DIR. Can not be changed while tor is
+    running.
+    (Default: uses the value of DataDirectory.)
 
-[[MaxAdvertisedBandwidth]] **MaxAdvertisedBandwidth** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
-    If set, we will not advertise more than this amount of bandwidth for our
-    BandwidthRate. Server operators who want to reduce the number of clients
-    who ask to build circuits through them (since this is proportional to
-    advertised bandwidth rate) can thus reduce the CPU demands on their server
-    without impacting network performance.
+[[CacheDirectoryGroupReadable]] **CacheDirectoryGroupReadable** **0**|**1**|**auto**::
+    If this option is set to 0, don't allow the filesystem group to read the
+    CacheDirectory. If the option is set to 1, make the CacheDirectory readable
+    by the default GID. If the option is "auto", then we use the
+    setting for DataDirectoryGroupReadable when the CacheDirectory is the
+    same as the DataDirectory, and 0 otherwise. (Default: auto)
 
-[[RelayBandwidthRate]] **RelayBandwidthRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
-    If not 0, a separate token bucket limits the average incoming bandwidth
-    usage for \_relayed traffic_ on this node to the specified number of bytes
-    per second, and the average outgoing bandwidth usage to that same value.
-    Relayed traffic currently is calculated to include answers to directory
-    requests, but that may change in future versions. They do not include directory
-    fetches by the relay (from authority or other relays), because that is considered
-    "client" activity.  (Default: 0)
-
-[[RelayBandwidthBurst]] **RelayBandwidthBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
-    If not 0, limit the maximum token bucket size (also known as the burst) for
-    \_relayed traffic_ to the given number of bytes in each direction.
-    They do not include directory fetches by the relay (from authority
-    or other relays), because that is considered "client" activity. (Default: 0)
-
-[[PerConnBWRate]] **PerConnBWRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
-    If this option is set manually, or via the "perconnbwrate" consensus
-    field, Tor will use it for separate rate limiting for each connection
-    from a non-relay. (Default: 0)
-
-[[PerConnBWBurst]] **PerConnBWBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
-    If this option is set manually, or via the "perconnbwburst" consensus
-    field, Tor will use it for separate rate limiting for each connection
-    from a non-relay. (Default: 0)
+[[CircuitPriorityHalflife]] **CircuitPriorityHalflife** __NUM__::
+    If this value is set, we override the default algorithm for choosing which
+    circuit's cell to deliver or relay next. It is delivered first to the
+    circuit that has the lowest weighted cell count, where cells are weighted
+    exponentially according to this value (in seconds). If the value is -1, it
+    is taken from the consensus if possible else it will fallback to the
+    default value of 30. Minimum: 1, Maximum: 2147483647. This can be defined
+    as a float value. This is an advanced option; you generally shouldn't have
+    to mess with it. (Default: -1)
 
 [[ClientTransportPlugin]] **ClientTransportPlugin** __transport__ socks4|socks5 __IP__:__PORT__::
 **ClientTransportPlugin** __transport__ exec __path-to-binary__ [options]::
@@ -303,39 +326,6 @@ GENERAL OPTIONS
     __path-to-binary__ using __options__ as its command-line options, and
     forwards its traffic to it. It's the duty of that proxy to properly forward
     the traffic to the bridge. (Default: none)
-
-[[ServerTransportPlugin]] **ServerTransportPlugin** __transport__ exec __path-to-binary__ [options]::
-    The Tor relay launches the pluggable transport proxy in __path-to-binary__
-    using __options__ as its command-line options, and expects to receive
-    proxied client traffic from it. (Default: none)
-
-[[ServerTransportListenAddr]] **ServerTransportListenAddr** __transport__ __IP__:__PORT__::
-    When this option is set, Tor will suggest __IP__:__PORT__ as the
-    listening address of any pluggable transport proxy that tries to
-    launch __transport__. (IPv4 addresses should written as-is; IPv6
-    addresses should be wrapped in square brackets.) (Default: none)
-
-[[ServerTransportOptions]] **ServerTransportOptions** __transport__ __k=v__ __k=v__ ...::
-    When this option is set, Tor will pass the __k=v__ parameters to
-    any pluggable transport proxy that tries to launch __transport__. +
-    (Example: ServerTransportOptions obfs45 shared-secret=bridgepasswd cache=/var/lib/tor/cache) (Default: none)
-
-[[ExtORPort]] **ExtORPort** \['address':]__port__|**auto**::
-    Open this port to listen for Extended ORPort connections from your
-    pluggable transports. +
-    (Default: **DataDirectory**/extended_orport_auth_cookie)
-
-[[ExtORPortCookieAuthFile]] **ExtORPortCookieAuthFile** __Path__::
-    If set, this option overrides the default location and file name
-    for the Extended ORPort's cookie file -- the cookie file is needed
-    for pluggable transports to communicate through the Extended ORPort.
-
-[[ExtORPortCookieAuthFileGroupReadable]] **ExtORPortCookieAuthFileGroupReadable** **0**|**1**::
-    If this option is set to 0, don't allow the filesystem group to read the
-    Extended OR Port cookie file. If the option is set to 1, make the cookie
-    file readable by the default GID. [Making the file readable by other
-    groups is not yet implemented; let us know if you need this for some
-    reason.] (Default: 0)
 
 [[ConnLimit]] **ConnLimit** __NUM__::
     The minimum number of file descriptors that must be available to the Tor
@@ -352,15 +342,6 @@ GENERAL OPTIONS
     Unless you have severely limited sockets, you probably don't need to
     adjust **ConnLimit** itself. It has no effect on Windows, since that
     platform lacks getrlimit(). (Default: 1000)
-
-[[DisableNetwork]] **DisableNetwork** **0**|**1**::
-    When this option is set, we don't listen for or accept any connections
-    other than controller connections, and we close (and don't reattempt)
-    any outbound
-    connections.  Controllers sometimes use this option to avoid using
-    the network until Tor is fully configured.  Tor will make still certain
-    network-related calls (like DNS lookups) as a part of its configuration
-    process, even if DisableNetwork is set. (Default: 0)
 
 [[ConstrainedSockets]] **ConstrainedSockets** **0**|**1**::
     If set, Tor will tell the kernel to attempt to shrink the buffers for all
@@ -414,6 +395,16 @@ GENERAL OPTIONS
         Unix domain sockets only: Do not insist that the directory
         that holds the socket be read-restricted.
 
+[[ControlPortFileGroupReadable]] **ControlPortFileGroupReadable** **0**|**1**::
+    If this option is set to 0, don't allow the filesystem group to read the
+    control port file. If the option is set to 1, make the control port
+    file readable by the default GID. (Default: 0)
+
+[[ControlPortWriteToFile]] **ControlPortWriteToFile** __Path__::
+    If set, Tor writes the address and port of any control port it opens to
+    this address.  Usable by controllers to learn the actual control port
+    when ControlPort is set to "auto".
+
 [[ControlSocket]] **ControlSocket** __Path__::
     Like ControlPort, but listens on a Unix domain socket, rather than a TCP
     socket. '0' disables ControlSocket. (Unix and Unix-like systems only.)
@@ -423,13 +414,6 @@ GENERAL OPTIONS
     If this option is set to 0, don't allow the filesystem group to read and
     write unix sockets (e.g. ControlSocket). If the option is set to 1, make
     the control socket readable and writable by the default GID. (Default: 0)
-
-[[HashedControlPassword]] **HashedControlPassword** __hashed_password__::
-    Allow connections on the control port if they present
-    the password whose one-way hash is __hashed_password__. You
-    can compute the hash of a password by running "tor --hash-password
-    __password__". You can provide several acceptable passwords by using more
-    than one HashedControlPassword line.
 
 [[CookieAuthentication]] **CookieAuthentication** **0**|**1**::
     If this option is set to 1, allow connections on the control port
@@ -448,15 +432,11 @@ GENERAL OPTIONS
     the default GID. [Making the file readable by other groups is not yet
     implemented; let us know if you need this for some reason.] (Default: 0)
 
-[[ControlPortWriteToFile]] **ControlPortWriteToFile** __Path__::
-    If set, Tor writes the address and port of any control port it opens to
-    this address.  Usable by controllers to learn the actual control port
-    when ControlPort is set to "auto".
-
-[[ControlPortFileGroupReadable]] **ControlPortFileGroupReadable** **0**|**1**::
-    If this option is set to 0, don't allow the filesystem group to read the
-    control port file. If the option is set to 1, make the control port
-    file readable by the default GID. (Default: 0)
+[[CountPrivateBandwidth]] **CountPrivateBandwidth** **0**|**1**::
+    If this option is set, then Tor's rate-limiting applies not only to
+    remote connections, but also to connections to private addresses like
+    127.0.0.1 or 10.0.0.1.  This is mostly useful for debugging
+    rate-limiting.  (Default: 0)
 
 [[DataDirectory]] **DataDirectory** __DIR__::
     Store working data in DIR. Can not be changed while tor is running.
@@ -468,39 +448,6 @@ GENERAL OPTIONS
     If this option is set to 0, don't allow the filesystem group to read the
     DataDirectory. If the option is set to 1, make the DataDirectory readable
     by the default GID. (Default: 0)
-
-[[CacheDirectory]] **CacheDirectory** __DIR__::
-    Store cached directory data in DIR. Can not be changed while tor is
-    running.
-    (Default: uses the value of DataDirectory.)
-
-[[CacheDirectoryGroupReadable]] **CacheDirectoryGroupReadable** **0**|**1**|**auto**::
-    If this option is set to 0, don't allow the filesystem group to read the
-    CacheDirectory. If the option is set to 1, make the CacheDirectory readable
-    by the default GID. If the option is "auto", then we use the
-    setting for DataDirectoryGroupReadable when the CacheDirectory is the
-    same as the DataDirectory, and 0 otherwise. (Default: auto)
-
-[[FallbackDir]] **FallbackDir** __ipv4address__:__dirport__ orport=__orport__ id=__fingerprint__ [weight=__num__] [ipv6=**[**__ipv6address__**]**:__orport__]::
-    When tor is unable to connect to any directory cache for directory info
-    (usually because it doesn't know about any yet) it tries a hard-coded
-    directory. Relays try one directory authority at a time. Clients try
-    multiple directory authorities and FallbackDirs, to avoid hangs on
-    startup if a hard-coded directory is down. Clients wait for a few seconds
-    between each attempt, and retry FallbackDirs more often than directory
-    authorities, to reduce the load on the directory authorities.  +
- +
-    FallbackDirs should be stable relays with stable IP addresses, ports,
-    and identity keys. They must have a DirPort. +
- +
-    By default, the directory authorities are also FallbackDirs. Specifying a
-    FallbackDir replaces Tor's default hard-coded FallbackDirs (if any).
-    (See the **DirAuthority** entry for an explanation of each flag.)
-
-[[UseDefaultFallbackDirs]] **UseDefaultFallbackDirs** **0**|**1**::
-    Use Tor's default hard-coded FallbackDirs (if any). (When a
-    FallbackDir line is present, it replaces the hard-coded FallbackDirs,
-    regardless of the value of UseDefaultFallbackDirs.) (Default: 1)
 
 [[DirAuthority]] **DirAuthority** [__nickname__] [**flags**] __ipv4address__:__dirport__ __fingerprint__::
     Use a nonstandard authoritative directory server at the provided address
@@ -540,17 +487,6 @@ GENERAL OPTIONS
     should be 1.0 or less. The default is less than 1, to reduce load on
     authorities. (Default: 0.1)
 
-[[AlternateDirAuthority]] **AlternateDirAuthority** [__nickname__] [**flags**] __ipv4address__:__port__ __fingerprint__ +
-
-[[AlternateBridgeAuthority]] **AlternateBridgeAuthority** [__nickname__] [**flags**] __ipv4address__:__port__ __ fingerprint__::
-    These options behave as DirAuthority, but they replace fewer of the
-    default directory authorities. Using
-    AlternateDirAuthority replaces the default Tor directory authorities, but
-    leaves the default bridge authorities in
-    place.  Similarly,
-    AlternateBridgeAuthority replaces the default bridge authority,
-    but leaves the directory authorities alone.
-
 [[DisableAllSwap]] **DisableAllSwap** **0**|**1**::
     If set to 1, Tor will attempt to lock all current and future memory pages,
     so that memory cannot be paged out. Windows, OS X and Solaris are currently
@@ -574,6 +510,55 @@ GENERAL OPTIONS
    to attach to Tor with a debugger such as gdb or strace you will want to set
    this to 0 for the duration of your debugging. Normal users should leave it
    on. Disabling this option while Tor is running is prohibited. (Default: 1)
+
+[[DisableNetwork]] **DisableNetwork** **0**|**1**::
+    When this option is set, we don't listen for or accept any connections
+    other than controller connections, and we close (and don't reattempt)
+    any outbound
+    connections.  Controllers sometimes use this option to avoid using
+    the network until Tor is fully configured.  Tor will make still certain
+    network-related calls (like DNS lookups) as a part of its configuration
+    process, even if DisableNetwork is set. (Default: 0)
+
+[[ExtendByEd25519ID]] **ExtendByEd25519ID** **0**|**1**|**auto**::
+    If this option is set to 1, we always try to include a relay's Ed25519 ID
+    when telling the proceeding relay in a circuit to extend to it.
+    If this option is set to 0, we never include Ed25519 IDs when extending
+    circuits.  If the option is set to "default", we obey a
+    parameter in the consensus document. (Default: auto)
+
+[[ExtORPort]] **ExtORPort** \['address':]__port__|**auto**::
+    Open this port to listen for Extended ORPort connections from your
+    pluggable transports. +
+    (Default: **DataDirectory**/extended_orport_auth_cookie)
+
+[[ExtORPortCookieAuthFile]] **ExtORPortCookieAuthFile** __Path__::
+    If set, this option overrides the default location and file name
+    for the Extended ORPort's cookie file -- the cookie file is needed
+    for pluggable transports to communicate through the Extended ORPort.
+
+[[ExtORPortCookieAuthFileGroupReadable]] **ExtORPortCookieAuthFileGroupReadable** **0**|**1**::
+    If this option is set to 0, don't allow the filesystem group to read the
+    Extended OR Port cookie file. If the option is set to 1, make the cookie
+    file readable by the default GID. [Making the file readable by other
+    groups is not yet implemented; let us know if you need this for some
+    reason.] (Default: 0)
+
+[[FallbackDir]] **FallbackDir** __ipv4address__:__dirport__ orport=__orport__ id=__fingerprint__ [weight=__num__] [ipv6=**[**__ipv6address__**]**:__orport__]::
+    When tor is unable to connect to any directory cache for directory info
+    (usually because it doesn't know about any yet) it tries a hard-coded
+    directory. Relays try one directory authority at a time. Clients try
+    multiple directory authorities and FallbackDirs, to avoid hangs on
+    startup if a hard-coded directory is down. Clients wait for a few seconds
+    between each attempt, and retry FallbackDirs more often than directory
+    authorities, to reduce the load on the directory authorities.  +
+ +
+    FallbackDirs should be stable relays with stable IP addresses, ports,
+    and identity keys. They must have a DirPort. +
+ +
+    By default, the directory authorities are also FallbackDirs. Specifying a
+    FallbackDir replaces Tor's default hard-coded FallbackDirs (if any).
+    (See the **DirAuthority** entry for an explanation of each flag.)
 
 [[FetchDirInfoEarly]] **FetchDirInfoEarly** **0**|**1**::
     If set to 1, Tor will always fetch directory information like other
@@ -614,6 +599,17 @@ GENERAL OPTIONS
     flavour of consensues and descriptors that is fetched and used for
     building circuits. (Default: 0)
 
+[[HardwareAccel]] **HardwareAccel** **0**|**1**::
+    If non-zero, try to use built-in (static) crypto hardware acceleration when
+    available. Can not be changed while tor is running. (Default: 0)
+
+[[HashedControlPassword]] **HashedControlPassword** __hashed_password__::
+    Allow connections on the control port if they present
+    the password whose one-way hash is __hashed_password__. You
+    can compute the hash of a password by running "tor --hash-password
+    __password__". You can provide several acceptable passwords by using more
+    than one HashedControlPassword line.
+
 [[HTTPProxy]] **HTTPProxy** __host__[:__port__]::
     Tor will make all its directory requests through this host:port (or host:80
     if port is not specified), rather than connecting directly to any directory
@@ -639,56 +635,22 @@ GENERAL OPTIONS
     proxy authentication that Tor supports; feel free to submit a patch if you
     want it to support others.
 
-[[Sandbox]] **Sandbox** **0**|**1**::
-    If set to 1, Tor will run securely through the use of a syscall sandbox.
-    Otherwise the sandbox will be disabled. The option is currently an
-    experimental feature. It only works on Linux-based operating systems,
-    and only when Tor has been built with the libseccomp library. This option
-    can not be changed while tor is running. +
- +
-    When the **Sandbox** is 1, the following options can not be changed when tor
-    is running:
-    **Address**,
-    **ConnLimit**,
-    **CookieAuthFile**,
-    **DirPortFrontPage**,
-    **ExtORPortCookieAuthFile**,
-    **Logs**,
-    **ServerDNSResolvConfFile**,
-    **ClientOnionAuthDir** (and any files in it won't reload on HUP signal).
- +
-    Launching new Onion Services through the control port is not supported
-    with current syscall sandboxing implementation.
- +
-    Tor must remain in client or server mode (some changes to **ClientOnly**
-    and **ORPort** are not allowed). Currently, if **Sandbox** is 1,
-    **ControlPort** command "GETINFO address" will not work.
- +
-    (Default: 0)
-
-[[Socks4Proxy]] **Socks4Proxy** __host__[:__port__]::
-    Tor will make all OR connections through the SOCKS 4 proxy at host:port
-    (or host:1080 if port is not specified).
-
-[[Socks5Proxy]] **Socks5Proxy** __host__[:__port__]::
-    Tor will make all OR connections through the SOCKS 5 proxy at host:port
-    (or host:1080 if port is not specified).
-
-[[Socks5ProxyUsername]] **Socks5ProxyUsername** __username__ +
-
-[[Socks5ProxyPassword]] **Socks5ProxyPassword** __password__::
-    If defined, authenticate to the SOCKS 5 server using username and password
-    in accordance to RFC 1929. Both username and password must be between 1 and
-    255 characters.
-
-[[UnixSocksGroupWritable]] **UnixSocksGroupWritable** **0**|**1**::
-    If this option is set to 0, don't allow the filesystem group to read and
-    write unix sockets (e.g. SocksPort unix:). If the option is set to 1, make
-    the Unix socket readable and writable by the default GID. (Default: 0)
-
 [[KeepalivePeriod]] **KeepalivePeriod** __NUM__::
     To keep firewalls from expiring connections, send a padding keepalive cell
     every NUM seconds on open connections that are in use. (Default: 5 minutes)
+
+[[KeepBindCapabilities]] **KeepBindCapabilities** **0**|**1**|**auto**::
+    On Linux, when we are started as root and we switch our identity using
+    the **User** option, the **KeepBindCapabilities** option tells us whether to
+    try to retain our ability to bind to low ports.  If this value is 1, we
+    try to keep the capability; if it is 0 we do not; and if it is **auto**,
+    we keep the capability only if we are configured to listen on a low port.
+    Can not be changed while tor is running.
+    (Default: auto.)
+[[LogMessageDomains]] **LogMessageDomains** **0**|**1**::
+    If 1, Tor includes message domains with each log message.  Every log
+    message currently has at least one domain; most currently have exactly
+    one.  This doesn't affect controller log messages. (Default: 0)
 
 [[Log]] **Log** __minSeverity__[-__maxSeverity__] **stderr**|**stdout**|**syslog**::
     Send all messages between __minSeverity__ and __maxSeverity__ to the standard
@@ -739,10 +701,20 @@ GENERAL OPTIONS
     messages from domains other than networking and memory management, and all
     messages of severity notice or higher.
 
-[[LogMessageDomains]] **LogMessageDomains** **0**|**1**::
-    If 1, Tor includes message domains with each log message.  Every log
-    message currently has at least one domain; most currently have exactly
-    one.  This doesn't affect controller log messages. (Default: 0)
+[[LogTimeGranularity]] **LogTimeGranularity** __NUM__::
+    Set the resolution of timestamps in Tor's logs to NUM milliseconds.
+    NUM must be positive and either a divisor or a multiple of 1 second.
+    Note that this option only controls the granularity written by Tor to
+    a file or console log.  Tor does not (for example) "batch up" log
+    messages to affect times logged by a controller, times attached to
+    syslog messages, or the mtime fields on log files.  (Default: 1 second)
+
+[[MaxAdvertisedBandwidth]] **MaxAdvertisedBandwidth** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
+    If set, we will not advertise more than this amount of bandwidth for our
+    BandwidthRate. Server operators who want to reduce the number of clients
+    who ask to build circuits through them (since this is proportional to
+    advertised bandwidth rate) can thus reduce the CPU demands on their server
+    without impacting network performance.
 
 [[MaxUnparseableDescSizeToLog]] **MaxUnparseableDescSizeToLog** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**::
     Unparseable descriptors (e.g. for votes, consensuses, routers) are logged
@@ -750,6 +722,12 @@ GENERAL OPTIONS
     only files logged during the lifetime of this Tor process count toward the
     total; this is intended to be used to debug problems without opening live
     servers to resource exhaustion attacks. (Default: 10 MBytes)
+
+[[NoExec]] **NoExec** **0**|**1**::
+    If this option is set to 1, then Tor will never launch another
+    executable, regardless of the settings of ClientTransportPlugin
+    or ServerTransportPlugin.  Once this option has been set to 1,
+    it cannot be set back to 0 without restarting Tor. (Default: 0)
 
 [[OutboundBindAddress]] **OutboundBindAddress** __IP__::
     Make all outbound connections originate from the IP address specified. This
@@ -760,6 +738,15 @@ GENERAL OPTIONS
     This setting will be ignored for connections to the loopback addresses
     (127.0.0.0/8 and ::1), and is not used for DNS requests as well.
 
+[[OutboundBindAddressExit]] **OutboundBindAddressExit** __IP__::
+    Make all outbound exit connections originate from the IP address
+    specified. This option overrides **OutboundBindAddress** for the
+    same IP version. This option may be used twice, once with an IPv4
+    address and once with an IPv6 address.
+    IPv6 addresses should be wrapped in square brackets.
+    This setting will be ignored
+    for connections to the loopback addresses (127.0.0.0/8 and ::1).
+
 [[OutboundBindAddressOR]] **OutboundBindAddressOR** __IP__::
     Make all outbound non-exit (relay and other) connections
     originate from the IP address specified. This option overrides
@@ -769,14 +756,15 @@ GENERAL OPTIONS
     This setting will be ignored for connections to the loopback
     addresses (127.0.0.0/8 and ::1).
 
-[[OutboundBindAddressExit]] **OutboundBindAddressExit** __IP__::
-    Make all outbound exit connections originate from the IP address
-    specified. This option overrides **OutboundBindAddress** for the
-    same IP version. This option may be used twice, once with an IPv4
-    address and once with an IPv6 address.
-    IPv6 addresses should be wrapped in square brackets.
-    This setting will be ignored
-    for connections to the loopback addresses (127.0.0.0/8 and ::1).
+[[PerConnBWBurst]] **PerConnBWBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
+    If this option is set manually, or via the "perconnbwburst" consensus
+    field, Tor will use it for separate rate limiting for each connection
+    from a non-relay. (Default: 0)
+
+[[PerConnBWRate]] **PerConnBWRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
+    If this option is set manually, or via the "perconnbwrate" consensus
+    field, Tor will use it for separate rate limiting for each connection
+    from a non-relay. (Default: 0)
 
 [[PidFile]] **PidFile** __FILE__::
     On startup, write our PID to FILE. On clean shutdown, remove
@@ -787,33 +775,26 @@ GENERAL OPTIONS
     following the Tor specification. Otherwise, they are logged with severity
     \'info'. (Default: 0)
 
+[[RelayBandwidthBurst]] **RelayBandwidthBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
+    If not 0, limit the maximum token bucket size (also known as the burst) for
+    \_relayed traffic_ to the given number of bytes in each direction.
+    They do not include directory fetches by the relay (from authority
+    or other relays), because that is considered "client" activity. (Default: 0)
+
+[[RelayBandwidthRate]] **RelayBandwidthRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
+    If not 0, a separate token bucket limits the average incoming bandwidth
+    usage for \_relayed traffic_ on this node to the specified number of bytes
+    per second, and the average outgoing bandwidth usage to that same value.
+    Relayed traffic currently is calculated to include answers to directory
+    requests, but that may change in future versions. They do not include directory
+    fetches by the relay (from authority or other relays), because that is considered
+    "client" activity.  (Default: 0)
+
 [[RunAsDaemon]] **RunAsDaemon** **0**|**1**::
     If 1, Tor forks and daemonizes to the background. This option has no effect
     on Windows; instead you should use the --service command-line option.
     Can not be changed while tor is running.
     (Default: 0)
-
-[[LogTimeGranularity]] **LogTimeGranularity** __NUM__::
-    Set the resolution of timestamps in Tor's logs to NUM milliseconds.
-    NUM must be positive and either a divisor or a multiple of 1 second.
-    Note that this option only controls the granularity written by Tor to
-    a file or console log.  Tor does not (for example) "batch up" log
-    messages to affect times logged by a controller, times attached to
-    syslog messages, or the mtime fields on log files.  (Default: 1 second)
-
-[[TruncateLogFile]] **TruncateLogFile** **0**|**1**::
-    If 1, Tor will overwrite logs at startup and in response to a HUP signal,
-    instead of appending to them. (Default: 0)
-
-[[SyslogIdentityTag]] **SyslogIdentityTag** __tag__::
-    When logging to syslog, adds a tag to the syslog identity such that
-    log entries are marked with "Tor-__tag__". Can not be changed while tor is
-    running. (Default: none)
-
-[[AndroidIdentityTag]] **AndroidIdentityTag** __tag__::
-    When logging to Android's logging subsystem, adds a tag to the log identity
-    such that log entries are marked with "Tor-__tag__". Can not be changed while
-    tor is running. (Default: none)
 
 [[SafeLogging]] **SafeLogging** **0**|**1**|**relay**::
     Tor can scrub potentially sensitive strings from log messages (e.g.
@@ -828,70 +809,32 @@ GENERAL OPTIONS
     Note: Tor may not heed this option when logging at log levels below Notice.
     (Default: 1)
 
-[[User]] **User** __Username__::
-    On startup, setuid to this user and setgid to their primary group.
-    Can not be changed while tor is running.
-
-[[KeepBindCapabilities]] **KeepBindCapabilities** **0**|**1**|**auto**::
-    On Linux, when we are started as root and we switch our identity using
-    the **User** option, the **KeepBindCapabilities** option tells us whether to
-    try to retain our ability to bind to low ports.  If this value is 1, we
-    try to keep the capability; if it is 0 we do not; and if it is **auto**,
-    we keep the capability only if we are configured to listen on a low port.
-    Can not be changed while tor is running.
-    (Default: auto.)
-
-[[HardwareAccel]] **HardwareAccel** **0**|**1**::
-    If non-zero, try to use built-in (static) crypto hardware acceleration when
-    available. Can not be changed while tor is running. (Default: 0)
-
-[[AccelName]] **AccelName** __NAME__::
-    When using OpenSSL hardware crypto acceleration attempt to load the dynamic
-    engine of this name. This must be used for any dynamic hardware engine.
-    Names can be verified with the openssl engine command. Can not be changed
-    while tor is running.
+[[Sandbox]] **Sandbox** **0**|**1**::
+    If set to 1, Tor will run securely through the use of a syscall sandbox.
+    Otherwise the sandbox will be disabled. The option is currently an
+    experimental feature. It only works on Linux-based operating systems,
+    and only when Tor has been built with the libseccomp library. This option
+    can not be changed while tor is running. +
  +
-    If the engine name is prefixed with a "!", then Tor will exit if the
-    engine cannot be loaded.
-
-[[AccelDir]] **AccelDir** __DIR__::
-    Specify this option if using dynamic hardware acceleration and the engine
-    implementation library resides somewhere other than the OpenSSL default.
-    Can not be changed while tor is running.
-
-[[AvoidDiskWrites]] **AvoidDiskWrites** **0**|**1**::
-    If non-zero, try to write to disk less frequently than we would otherwise.
-    This is useful when running on flash memory or other media that support
-    only a limited number of writes. (Default: 0)
-
-[[CircuitPriorityHalflife]] **CircuitPriorityHalflife** __NUM__::
-    If this value is set, we override the default algorithm for choosing which
-    circuit's cell to deliver or relay next. It is delivered first to the
-    circuit that has the lowest weighted cell count, where cells are weighted
-    exponentially according to this value (in seconds). If the value is -1, it
-    is taken from the consensus if possible else it will fallback to the
-    default value of 30. Minimum: 1, Maximum: 2147483647. This can be defined
-    as a float value. This is an advanced option; you generally shouldn't have
-    to mess with it. (Default: -1)
-
-[[CountPrivateBandwidth]] **CountPrivateBandwidth** **0**|**1**::
-    If this option is set, then Tor's rate-limiting applies not only to
-    remote connections, but also to connections to private addresses like
-    127.0.0.1 or 10.0.0.1.  This is mostly useful for debugging
-    rate-limiting.  (Default: 0)
-
-[[ExtendByEd25519ID]] **ExtendByEd25519ID** **0**|**1**|**auto**::
-    If this option is set to 1, we always try to include a relay's Ed25519 ID
-    when telling the proceeding relay in a circuit to extend to it.
-    If this option is set to 0, we never include Ed25519 IDs when extending
-    circuits.  If the option is set to "default", we obey a
-    parameter in the consensus document. (Default: auto)
-
-[[NoExec]] **NoExec** **0**|**1**::
-    If this option is set to 1, then Tor will never launch another
-    executable, regardless of the settings of ClientTransportPlugin
-    or ServerTransportPlugin.  Once this option has been set to 1,
-    it cannot be set back to 0 without restarting Tor. (Default: 0)
+    When the **Sandbox** is 1, the following options can not be changed when tor
+    is running:
+    **Address**,
+    **ConnLimit**,
+    **CookieAuthFile**,
+    **DirPortFrontPage**,
+    **ExtORPortCookieAuthFile**,
+    **Logs**,
+    **ServerDNSResolvConfFile**,
+    **ClientOnionAuthDir** (and any files in it won't reload on HUP signal).
+ +
+    Launching new Onion Services through the control port is not supported
+    with current syscall sandboxing implementation.
+ +
+    Tor must remain in client or server mode (some changes to **ClientOnly**
+    and **ORPort** are not allowed). Currently, if **Sandbox** is 1,
+    **ControlPort** command "GETINFO address" will not work.
+ +
+    (Default: 0)
 
 [[Schedulers]] **Schedulers** **KIST**|**KISTLite**|**Vanilla**::
     Specify the scheduler type that tor should use. The scheduler is
@@ -930,6 +873,61 @@ GENERAL OPTIONS
 [[KISTSockBufSizeFactor]] **KISTSockBufSizeFactor** __NUM__::
     If KIST is used in Schedulers, this is a multiplier of the per-socket
     limit calculation of the KIST algorithm. (Default: 1.0)
+
+
+[[ServerTransportListenAddr]] **ServerTransportListenAddr** __transport__ __IP__:__PORT__::
+    When this option is set, Tor will suggest __IP__:__PORT__ as the
+    listening address of any pluggable transport proxy that tries to
+    launch __transport__. (IPv4 addresses should written as-is; IPv6
+    addresses should be wrapped in square brackets.) (Default: none)
+
+[[ServerTransportOptions]] **ServerTransportOptions** __transport__ __k=v__ __k=v__ ...::
+    When this option is set, Tor will pass the __k=v__ parameters to
+    any pluggable transport proxy that tries to launch __transport__. +
+    (Example: ServerTransportOptions obfs45 shared-secret=bridgepasswd cache=/var/lib/tor/cache) (Default: none)
+
+[[ServerTransportPlugin]] **ServerTransportPlugin** __transport__ exec __path-to-binary__ [options]::
+    The Tor relay launches the pluggable transport proxy in __path-to-binary__
+    using __options__ as its command-line options, and expects to receive
+    proxied client traffic from it. (Default: none)
+
+[[Socks4Proxy]] **Socks4Proxy** __host__[:__port__]::
+    Tor will make all OR connections through the SOCKS 4 proxy at host:port
+    (or host:1080 if port is not specified).
+
+[[Socks5Proxy]] **Socks5Proxy** __host__[:__port__]::
+    Tor will make all OR connections through the SOCKS 5 proxy at host:port
+    (or host:1080 if port is not specified).
+
+[[Socks5ProxyUsername]] **Socks5ProxyUsername** __username__ +
+
+[[Socks5ProxyPassword]] **Socks5ProxyPassword** __password__::
+    If defined, authenticate to the SOCKS 5 server using username and password
+    in accordance to RFC 1929. Both username and password must be between 1 and
+    255 characters.
+
+[[SyslogIdentityTag]] **SyslogIdentityTag** __tag__::
+    When logging to syslog, adds a tag to the syslog identity such that
+    log entries are marked with "Tor-__tag__". Can not be changed while tor is
+    running. (Default: none)
+
+[[TruncateLogFile]] **TruncateLogFile** **0**|**1**::
+    If 1, Tor will overwrite logs at startup and in response to a HUP signal,
+    instead of appending to them. (Default: 0)
+
+[[UnixSocksGroupWritable]] **UnixSocksGroupWritable** **0**|**1**::
+    If this option is set to 0, don't allow the filesystem group to read and
+    write unix sockets (e.g. SocksPort unix:). If the option is set to 1, make
+    the Unix socket readable and writable by the default GID. (Default: 0)
+
+[[UseDefaultFallbackDirs]] **UseDefaultFallbackDirs** **0**|**1**::
+    Use Tor's default hard-coded FallbackDirs (if any). (When a
+    FallbackDir line is present, it replaces the hard-coded FallbackDirs,
+    regardless of the value of UseDefaultFallbackDirs.) (Default: 1)
+
+[[User]] **User** __Username__::
+    On startup, setuid to this user and setgid to their primary group.
+    Can not be changed while tor is running.
 
 CLIENT OPTIONS
 --------------
