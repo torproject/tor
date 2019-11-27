@@ -2404,12 +2404,10 @@ static void
 cleanup_intro_points(hs_service_t *service, time_t now)
 {
   /* List of intro points to close. We can't mark the intro circuits for close
-   * in the modify loop because doing so calls
-   * hs_service_intro_circ_has_closed() which does a digest256map_get() on the
-   * intro points map (that we are iterating over). This can't be done in a
-   * single iteration after a MAP_DEL_CURRENT, the object will still be
-   * returned leading to a use-after-free. So, we close the circuits and free
-   * the intro points after the loop if any. */
+   * in the modify loop because doing so calls back into the HS subsystem and
+   * we need to keep that code path outside of the service/desc loop so those
+   * maps don't get modified during the close making us in a possible
+   * use-after-free situation. */
   smartlist_t *ips_to_free = smartlist_new();
 
   tor_assert(service);
@@ -3682,44 +3680,6 @@ hs_service_get_num_services,(void))
     return 0;
   }
   return HT_SIZE(hs_service_map);
-}
-
-/** Called once an introduction circuit is closed. If the circuit doesn't have
- * a v3 identifier, it is ignored. */
-void
-hs_service_intro_circ_has_closed(origin_circuit_t *circ)
-{
-  hs_service_t *service = NULL;
-  hs_service_intro_point_t *ip = NULL;
-  hs_service_descriptor_t *desc = NULL;
-
-  tor_assert(circ);
-
-  if (circ->hs_ident == NULL) {
-    /* This is not a v3 circuit, ignore. */
-    goto end;
-  }
-
-  get_objects_from_ident(circ->hs_ident, &service, &ip, &desc);
-  if (service == NULL) {
-    /* This is possible if the circuits are closed and the service is
-     * immediately deleted. */
-    log_info(LD_REND, "Unable to find any hidden service associated "
-                      "identity key %s on intro circuit %u.",
-             ed25519_fmt(&circ->hs_ident->identity_pk),
-             TO_CIRCUIT(circ)->n_circ_id);
-    goto end;
-  }
-  if (ip == NULL) {
-    /* The introduction point object has already been removed probably by our
-     * cleanup process so ignore. */
-    goto end;
-  }
-  /* Can't have an intro point object without a descriptor. */
-  tor_assert(desc);
-
- end:
-  return;
 }
 
 /** Given conn, a rendezvous edge connection acting as an exit stream, look up

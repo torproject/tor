@@ -12,6 +12,7 @@
 #ifndef TOR_RENDCLIENT_H
 #define TOR_RENDCLIENT_H
 
+#include "feature/hs/hs_circuit.h"
 #include "feature/rend/rendcache.h"
 
 void rend_client_purge_state(void);
@@ -46,6 +47,8 @@ int rend_parse_service_authorization(const or_options_t *options,
 rend_service_authorization_t *rend_client_lookup_service_authorization(
                                                 const char *onion_address);
 void rend_service_authorization_free_all(void);
+
+void rend_client_circuit_cleanup_on_free(const circuit_t *circ);
 
 #endif /* !defined(TOR_RENDCLIENT_H) */
 

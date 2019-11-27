@@ -344,8 +344,6 @@ int hs_service_receive_introduce2(origin_circuit_t *circ,
                                   const uint8_t *payload,
                                   size_t payload_len);
 
-void hs_service_intro_circ_has_closed(origin_circuit_t *circ);
-
 char *hs_service_lookup_current_desc(const ed25519_public_key_t *pk);
 
 hs_service_add_ephemeral_status_t

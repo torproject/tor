@@ -1250,3 +1250,66 @@ rend_parse_service_authorization(const or_options_t *options,
   }
   return res;
 }
+
+/** The given circuit is being freed. Take appropriate action if it is of
+ * interest to the client subsystem. */
+void
+rend_client_circuit_cleanup_on_free(const circuit_t *circ)
+{
+  int reason, orig_reason;
+  bool has_timed_out, ip_is_redundant;
+  const origin_circuit_t *ocirc = NULL;
+
+  tor_assert(circ);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
+
+  reason = circ->marked_for_close_reason;
+  orig_reason = circ->marked_for_close_orig_reason;
+  ocirc = CONST_TO_ORIGIN_CIRCUIT(circ);
+  tor_assert(ocirc->rend_data);
+
+  has_timed_out = (reason == END_CIRC_REASON_TIMEOUT);
+  ip_is_redundant = (orig_reason == END_CIRC_REASON_IP_NOW_REDUNDANT);
+
+  switch (circ->purpose) {
+  case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
+  {
+    if (ip_is_redundant) {
+      break;
+    }
+    tor_assert(circ->state == CIRCUIT_STATE_OPEN);
+    tor_assert(ocirc->build_state->chosen_exit);
+    /* Treat this like getting a nack from it */
+    log_info(LD_REND, "Failed intro circ %s to %s (awaiting ack). %s",
+        safe_str_client(rend_data_get_address(ocirc->rend_data)),
+        safe_str_client(build_state_get_exit_nickname(ocirc->build_state)),
+        has_timed_out ? "Recording timeout." : "Removing from descriptor.");
+    rend_client_report_intro_point_failure(ocirc->build_state->chosen_exit,
+                                           ocirc->rend_data,
+                                           has_timed_out ?
+                                           INTRO_POINT_FAILURE_TIMEOUT :
+                                           INTRO_POINT_FAILURE_GENERIC);
+    break;
+  }
+  case CIRCUIT_PURPOSE_C_INTRODUCING:
+  {
+    /* Ignore if we were introducing and it timed out, we didn't pick an exit
+     * point yet (IP) or the reason indicate that it was a redundant IP. */
+    if (has_timed_out || !ocirc->build_state->chosen_exit || ip_is_redundant) {
+      break;
+    }
+    log_info(LD_REND, "Failed intro circ %s to %s "
+             "(building circuit to intro point). "
+             "Marking intro point as possibly unreachable.",
+             safe_str_client(rend_data_get_address(ocirc->rend_data)),
+             safe_str_client(build_state_get_exit_nickname(
+                                                  ocirc->build_state)));
+    rend_client_report_intro_point_failure(ocirc->build_state->chosen_exit,
+                                           ocirc->rend_data,
+                                           INTRO_POINT_FAILURE_UNREACHABLE);
+    break;
+  }
+  default:
+    break;
+  }
+}
