@@ -64,7 +64,7 @@ log_credential_status(void)
 
   /* log UIDs */
 #ifdef HAVE_GETRESUID
-  if (getresuid(&ruid, &euid, &suid) != 0 ) {
+  if (getresuid(&ruid, &euid, &suid) != 0) {
     log_warn(LD_GENERAL, "Error getting changed UIDs: %s", strerror(errno));
     return -1;
   } else {
@@ -85,7 +85,7 @@ log_credential_status(void)
 
   /* log GIDs */
 #ifdef HAVE_GETRESGID
-  if (getresgid(&rgid, &egid, &sgid) != 0 ) {
+  if (getresgid(&rgid, &egid, &sgid) != 0) {
     log_warn(LD_GENERAL, "Error getting changed GIDs: %s", strerror(errno));
     return -1;
   } else {
