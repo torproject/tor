@@ -13,6 +13,7 @@
 #define TOR_CONTROL_EVENTS_H
 
 #include "core/or/ocirc_event.h"
+#include "lib/encoding/confline.h"
 
 /** Used to indicate the type of a CIRC_MINOR event passed to the controller.
  * The various types are defined in control-spec.txt . */
@@ -157,7 +158,7 @@ int control_event_server_error(const char *format, ...)
 
 int control_event_guard(const char *nickname, const char *digest,
                         const char *status);
-int control_event_conf_changed(const smartlist_t *elements);
+int control_event_conf_changed(const config_line_t *elements);
 int control_event_buildtimeout_set(buildtimeout_set_event_t type,
                                    const char *args);
 int control_event_signal(uintptr_t signal);

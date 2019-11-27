@@ -1001,15 +1001,9 @@ set_options(or_options_t *new_val, char **msg)
   /* Issues a CONF_CHANGED event to notify controller of the change. If Tor is
    * just starting up then the old_options will be undefined. */
   if (old_options && old_options != global_options) {
-    smartlist_t *elements = smartlist_new();
     config_line_t *changes =
       config_get_changes(get_options_mgr(), old_options, new_val);
-    for (config_line_t *line = changes; line; line = line->next) {
-      smartlist_add(elements, line->key);
-      smartlist_add(elements, line->value);
-    }
-    control_event_conf_changed(elements);
-    smartlist_free(elements);
+    control_event_conf_changed(changes);
     config_free_lines(changes);
   }
 

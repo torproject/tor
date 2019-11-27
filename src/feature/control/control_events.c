@@ -38,6 +38,7 @@
 #include "core/or/origin_circuit_st.h"
 
 #include "lib/evloop/compat_libevent.h"
+#include "lib/encoding/confline.h"
 
 static void flush_queued_events_cb(mainloop_event_t *event, void *arg);
 static void control_get_bytes_rw_last_sec(uint64_t *r, uint64_t *w);
@@ -1774,23 +1775,19 @@ control_event_guard(const char *nickname, const char *digest,
  * a smartlist_t containing (key, value, ...) pairs in sequence.
  * <b>value</b> can be NULL. */
 int
-control_event_conf_changed(const smartlist_t *elements)
+control_event_conf_changed(const config_line_t *elements)
 {
-  int i;
   char *result;
   smartlist_t *lines;
-  if (!EVENT_IS_INTERESTING(EVENT_CONF_CHANGED) ||
-      smartlist_len(elements) == 0) {
+  if (!EVENT_IS_INTERESTING(EVENT_CONF_CHANGED) || !elements) {
     return 0;
   }
   lines = smartlist_new();
-  for (i = 0; i < smartlist_len(elements); i += 2) {
-    char *k = smartlist_get(elements, i);
-    char *v = smartlist_get(elements, i+1);
-    if (v == NULL) {
-      smartlist_add_asprintf(lines, "650-%s", k);
+  for (const config_line_t *line = elements; line; line = line->next) {
+    if (line->value == NULL) {
+      smartlist_add_asprintf(lines, "650-%s", line->key);
     } else {
-      smartlist_add_asprintf(lines, "650-%s=%s", k, v);
+      smartlist_add_asprintf(lines, "650-%s=%s", line->key, line->value);
     }
   }
   result = smartlist_join_strings(lines, "\r\n", 0, NULL);
