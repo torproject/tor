@@ -45,9 +45,8 @@ matrix:
     ## We include a single coverage build with the best options for coverage
     - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
     ## We run chutney on macOS, because macOS Travis has IPv6
-    # Disabled due to slow Travis macOS builds, see #32177
-    #- env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
-    #  os: osx
+    - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
+      os: osx
 
   ## Allow the build to report success (with non-required sub-builds
   ## continuing to run) if all required sub-builds have succeeded.
