@@ -1774,13 +1774,13 @@ control_event_guard(const char *nickname, const char *digest,
  * by SETCONF requests and RELOAD/SIGHUP signals. The <b>changes</b> are
  * a smartlist_t containing (key, value, ...) pairs in sequence.
  * <b>changes</b> can be NULL. */
-int
+void
 control_event_conf_changed(const config_line_t *changes)
 {
   char *result;
   smartlist_t *lines;
   if (!EVENT_IS_INTERESTING(EVENT_CONF_CHANGED) || !changes) {
-    return 0;
+    return;
   }
   lines = smartlist_new();
   for (const config_line_t *line = changes; line; line = line->next) {
@@ -1796,7 +1796,6 @@ control_event_conf_changed(const config_line_t *changes)
   tor_free(result);
   SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
   smartlist_free(lines);
-  return 0;
 }
 
 /** We just generated a new summary of which countries we've seen clients
