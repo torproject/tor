@@ -1771,19 +1771,19 @@ control_event_guard(const char *nickname, const char *digest,
 }
 
 /** Called when a configuration option changes. This is generally triggered
- * by SETCONF requests and RELOAD/SIGHUP signals. The <b>elements</b> is
+ * by SETCONF requests and RELOAD/SIGHUP signals. The <b>changes</b> are
  * a smartlist_t containing (key, value, ...) pairs in sequence.
- * <b>value</b> can be NULL. */
+ * <b>changes</b> can be NULL. */
 int
-control_event_conf_changed(const config_line_t *elements)
+control_event_conf_changed(const config_line_t *changes)
 {
   char *result;
   smartlist_t *lines;
-  if (!EVENT_IS_INTERESTING(EVENT_CONF_CHANGED) || !elements) {
+  if (!EVENT_IS_INTERESTING(EVENT_CONF_CHANGED) || !changes) {
     return 0;
   }
   lines = smartlist_new();
-  for (const config_line_t *line = elements; line; line = line->next) {
+  for (const config_line_t *line = changes; line; line = line->next) {
     if (line->value == NULL) {
       smartlist_add_asprintf(lines, "650-%s", line->key);
     } else {
