@@ -1772,8 +1772,9 @@ control_event_guard(const char *nickname, const char *digest,
 
 /** Called when a configuration option changes. This is generally triggered
  * by SETCONF requests and RELOAD/SIGHUP signals. The <b>changes</b> are
- * a smartlist_t containing (key, value, ...) pairs in sequence.
- * <b>changes</b> can be NULL. */
+ * a linked list of configuration key-values.
+ * <b>changes</b> can be NULL, meaning "no changes".
+ */
 void
 control_event_conf_changed(const config_line_t *changes)
 {
