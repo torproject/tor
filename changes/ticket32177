@@ -1,3 +1,0 @@
-  o Testing:
-    - Disable all but one Travis CI macOS build, to mitigate slow scheduling
-      of Travis macOS jobs. Closes ticket 32177.
