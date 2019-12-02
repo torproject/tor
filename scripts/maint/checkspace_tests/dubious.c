@@ -59,7 +59,7 @@ foo{
 }
 
 void
-unexcpected_space(void)
+unexpected_space(void)
 {
   // This space gives a warning.
   foobar (77);
