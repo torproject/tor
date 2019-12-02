@@ -62,6 +62,9 @@ Currently, three delivery policies are possible:
       dispatch system at all. Instead, some other part of the code must
       call dispatch_flush() to get the messages delivered.
 
+See mainloop_pubsub.c and mainloop_pubsub.h for more information and
+implementation details.
+
 ## Layers: Dispatch vs publish-subsubscribe vs mainloop.
 
 At the lowest level, messages are sent via the "dispatcher" module in
