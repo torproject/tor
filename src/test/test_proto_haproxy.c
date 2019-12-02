@@ -24,7 +24,7 @@ test_format_proxy_header_line(void *arg)
   /* IPv4 address. */
   tor_addr_parse(&addr, "192.168.1.2");
   addr_port = tor_addr_port_new(&addr, 8000);
-  output = format_proxy_header_line(addr_port);
+  output = haproxy_format_proxy_header_line(addr_port);
 
   tt_str_op(output, OP_EQ, "PROXY TCP4 0.0.0.0 192.168.1.2 0 8000\r\n");
 
@@ -34,7 +34,7 @@ test_format_proxy_header_line(void *arg)
   /* IPv6 address. */
   tor_addr_parse(&addr, "123:45:6789::5005:11");
   addr_port = tor_addr_port_new(&addr, 8000);
-  output = format_proxy_header_line(addr_port);
+  output = haproxy_format_proxy_header_line(addr_port);
 
   tt_str_op(output, OP_EQ, "PROXY TCP6 :: 123:45:6789::5005:11 0 8000\r\n");
 
@@ -45,10 +45,10 @@ test_format_proxy_header_line(void *arg)
   memset(&addr, 0, sizeof(addr));
   addr.family = AF_UNIX;
   addr_port = tor_addr_port_new(&addr, 8000);
-  output = format_proxy_header_line(addr_port);
+  output = haproxy_format_proxy_header_line(addr_port);
 
-  /* If it's not an IPv4 or IPv6 address, format_proxy_header_line must return
-   * NULL. */
+  /* If it's not an IPv4 or IPv6 address, haproxy_format_proxy_header_line
+   * must return NULL. */
   tt_ptr_op(output, OP_EQ, NULL);
 
   tor_free(addr_port);
