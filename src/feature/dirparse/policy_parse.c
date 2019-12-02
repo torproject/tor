@@ -9,7 +9,7 @@
  * \brief Code to parse address policies.
  **/
 
-#define  EXPOSE_ROUTERDESC_TOKEN_TABLE
+#define EXPOSE_ROUTERDESC_TOKEN_TABLE
 
 #include "core/or/or.h"
 
