@@ -1625,12 +1625,6 @@ remove_client_auth_creds_file(const char *filename)
 
   creds_file_path = hs_path_from_filename(options->ClientOnionAuthDir,
                                           filename);
-  if (file_status(creds_file_path) != FN_FILE) {
-    log_warn(LD_REND, "Failed to remove client auth file (Not a file) (%s).",
-             creds_file_path);
-    goto end;
-  }
-
   if (tor_unlink(creds_file_path) != 0) {
     log_warn(LD_REND, "Failed to remove client auth file (%s).",
              creds_file_path);
