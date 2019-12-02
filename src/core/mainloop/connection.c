@@ -2504,7 +2504,7 @@ connection_haproxy_proxy_connect(connection_t *conn)
 {
   int ret = 0;
   tor_addr_port_t *addr_port = tor_addr_port_new(&conn->addr, conn->port);
-  char *buf = format_proxy_header_line(addr_port);
+  char *buf = haproxy_format_proxy_header_line(addr_port);
 
   if (buf == NULL) {
     ret = -1;

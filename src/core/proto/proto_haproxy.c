@@ -11,7 +11,7 @@
  * if addr_port->addr is incompatible with the proxy protocol.
  */
 char *
-format_proxy_header_line(const tor_addr_port_t *addr_port)
+haproxy_format_proxy_header_line(const tor_addr_port_t *addr_port)
 {
   tor_assert(addr_port);
 
