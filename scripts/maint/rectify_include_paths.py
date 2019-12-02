@@ -6,11 +6,11 @@
 #
 # Find user-editable C source files (".c" and ".h" files).
 # Replace the following lines with their canonical forms:
-#   - *_PRIVATE and *_INTERNAL_ defines
+#   - *_PRIVATE, *_INTERNAL_, and EXPOSE_* defines
 #   - conditional macro directives
 #   - user includes of tor headers
 # Delete:
-#   - unused *_PRIVATE and *_INTERNAL_ defines
+#   - unused *_PRIVATE, *_INTERNAL_, and EXPOSE_* defines
 #   - duplicate user includes of tor headers
 #   - double newlines created by other deletions
 #
@@ -92,13 +92,18 @@ NEWLINE = "\n"
 
 ## Patterns for preprocessor directives
 
-IF_PRIVATE_PAT = re.compile(
-    r'( *# *)(if|ifdef|ifndef)( +)(.*defined[(])?([A-Z0-9_]+_)(PRIVATE|INTERNAL)(_?)(.*)')
+# We can spell 'PRIVATE' 3 different ways
+PRIVATE_PAT_LIST = [ r'[A-Z0-9_]+_PRIVATE_?',
+                     r'[A-Z0-9_]+_INTERNAL_?',
+                     r'EXPOSE_[A-Z0-9_]+' ]
 
-DEFINE_PRIVATE_PAT = re.compile(
-    r'( *# *define +)([A-Z0-9_]+_PRIVATE_?)($| */[/*].*)')
-DEFINE_INTERNAL_PAT = re.compile(
-    r'( *# *define +)([A-Z0-9_]+_INTERNAL_?)($| */[/*].*)')
+IF_PRIVATE_PAT_LIST = [ re.compile(
+    r'( *# *)(if|ifdef|ifndef)( +)(.*defined[(])?(' + private + r')(.*)')
+    for private in PRIVATE_PAT_LIST]
+
+DEFINE_PRIVATE_PAT_LIST = [ re.compile(
+    r'( *# *define +)(' + private + r')($| */[/*].*)')
+    for private in PRIVATE_PAT_LIST]
 DEFINE_START = '#define '
 
 INCLUDE_H_FNAME_PAT = re.compile(r'( *# *include +")([^"]+/)([^"]+\.h)(".*)')
@@ -245,18 +250,18 @@ def get_base_file_name(hdr):
     '''Return the file name part of the path hdr.'''
     return os.path.split(hdr)[1]
 
-def get_private_from_if_pat(line, pat=IF_PRIVATE_PAT):
-    '''If pat matches, return a string containing the PRIVATE
-       macro name. Otherwise, return None.
+def get_private_from_if_pat(line, pat_list=IF_PRIVATE_PAT_LIST):
+    '''If any pattern in pat_list matches, return a string containing the
+       PRIVATE macro name. Otherwise, return None.
        '''
-    m = pat.match(line)
-    if m:
-        _, _, _, _, prefix, private, suffix, _ = m.groups()
-        return '{}{}{}'.format(prefix, private, suffix)
+    for pat in pat_list:
+        m = pat.match(line)
+        if m:
+            _, _, _, _, private, _ = m.groups()
+            return private
     return None
 
-def get_private_from_define_pat(line, pat_list=[DEFINE_PRIVATE_PAT,
-                                                DEFINE_INTERNAL_PAT]):
+def get_private_from_define_pat(line, pat_list=DEFINE_PRIVATE_PAT_LIST):
     '''If any pattern in pat_list matches, return a string containing
        the PRIVATE macro name. Otherwise, return None.
        '''
@@ -379,24 +384,17 @@ def fix_macro_cond_line(line, pat):
         return '{}{}{}{}\n'.format(start, s1, s2, rest)
     return None
 
-def fix_private(line):
-    '''Fix PRIVATE and INTERNAL defines in line.
-       If the line was matched, returns a possibly modified line,
+def fix_private(line, pat_list=DEFINE_PRIVATE_PAT_LIST):
+    '''Fix PRIVATE defines in line, using the first matching pattern in
+       pat_list. If the line was matched, returns a possibly modified line,
        otherwise returns None.
        '''
-    # match #define *_PRIVATE[_]*
-    mod_line = fix_line(line,
-                        DEFINE_PRIVATE_PAT,
-                        std_directive=DEFINE_START)
-    if mod_line is not None:
-        return mod_line
-
-    # match #define *_INTERNAL[_]*
-    mod_line = fix_line(line,
-                        DEFINE_INTERNAL_PAT,
-                        std_directive=DEFINE_START)
-    if mod_line is not None:
-        return mod_line
+    for pat in pat_list:
+        mod_line = fix_line(line,
+                            pat,
+                            std_directive=DEFINE_START)
+        if mod_line is not None:
+            return mod_line
 
     return None
 
