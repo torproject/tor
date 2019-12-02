@@ -165,6 +165,8 @@ addons:
 osx_image: xcode11.2
 
 before_install:
+  ## Set pipefail: we use pipes
+  - set -o pipefail || echo "pipefail failed"
   ## Create empty rust directories for non-Rust builds, so caching succeeds
   - if [[ "$RUST_OPTIONS" == "" ]]; then mkdir -p $HOME/.cargo $TRAVIS_BUILD_DIR/src/rust/target; fi
 
