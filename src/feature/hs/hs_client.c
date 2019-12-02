@@ -1446,7 +1446,8 @@ client_dir_fetch_unexpected(dir_connection_t *dir_conn, const char *reason,
 }
 
 /** Get the full filename for storing the client auth credentials for the
- *  service in <b>onion_address</b>. The base directory is <b>dir</b>. */
+ *  service in <b>onion_address</b>. The base directory is <b>dir</b>.
+ *  This function never returns NULL. */
 static char *
 get_client_auth_creds_filename(const char *onion_address,
                                const char *dir)
