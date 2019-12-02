@@ -37,7 +37,7 @@
 #include <sys/sysctl.h>
 #endif
 
-DISABLE_GCC_WARNING(aggregate-return)
+DISABLE_GCC_WARNING("-Waggregate-return")
 /** Call the platform malloc info function, and dump the results to the log at
  * level <b>severity</b>.  If no such function exists, do nothing. */
 void
@@ -58,7 +58,7 @@ tor_log_mallinfo(int severity)
   (void)severity;
 #endif /* defined(HAVE_MALLINFO) */
 }
-ENABLE_GCC_WARNING(aggregate-return)
+ENABLE_GCC_WARNING("-Waggregate-return")
 
 #if defined(HW_PHYSMEM64)
 /* OpenBSD and NetBSD define this */

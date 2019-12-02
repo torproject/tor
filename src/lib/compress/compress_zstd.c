@@ -29,11 +29,11 @@
 
 #ifdef HAVE_ZSTD
 #ifdef HAVE_CFLAG_WUNUSED_CONST_VARIABLE
-DISABLE_GCC_WARNING(unused-const-variable)
+DISABLE_GCC_WARNING("-Wunused-const-variable")
 #endif
 #include <zstd.h>
 #ifdef HAVE_CFLAG_WUNUSED_CONST_VARIABLE
-ENABLE_GCC_WARNING(unused-const-variable)
+ENABLE_GCC_WARNING("-Wunused-const-variable")
 #endif
 #endif /* defined(HAVE_ZSTD) */
 

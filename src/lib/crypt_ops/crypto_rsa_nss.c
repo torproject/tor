@@ -645,7 +645,7 @@ crypto_pk_asn1_decode(const char *str, size_t len)
   return result;
 }
 
-DISABLE_GCC_WARNING(unused-parameter)
+DISABLE_GCC_WARNING("-Wunused-parameter")
 
 /** Given a crypto_pk_t <b>pk</b>, allocate a new buffer containing the Base64
  * encoding of the DER representation of the private key into the
