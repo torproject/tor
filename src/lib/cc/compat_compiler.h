@@ -59,8 +59,6 @@
 
 /* Temporarily enable and disable warnings. */
 #ifdef __GNUC__
-#  define PRAGMA_STRINGIFY_(s) #s
-#  define PRAGMA_JOIN_STRINGIFY_(a,b) PRAGMA_STRINGIFY_(a ## b)
 /* Support for macro-generated pragmas (c99) */
 #  define PRAGMA_(x) _Pragma (#x)
 #  ifdef __clang__
@@ -72,15 +70,15 @@
 /* we have push/pop support */
 #    define DISABLE_GCC_WARNING(warningopt) \
           PRAGMA_DIAGNOSTIC_(push) \
-          PRAGMA_DIAGNOSTIC_(ignored PRAGMA_JOIN_STRINGIFY_(-W,warningopt))
+          PRAGMA_DIAGNOSTIC_(ignored warningopt)
 #    define ENABLE_GCC_WARNING(warningopt) \
           PRAGMA_DIAGNOSTIC_(pop)
 #else /* !(defined(__clang__) || GCC_VERSION >= 406) */
 /* older version of gcc: no push/pop support. */
 #    define DISABLE_GCC_WARNING(warningopt) \
-         PRAGMA_DIAGNOSTIC_(ignored PRAGMA_JOIN_STRINGIFY_(-W,warningopt))
+         PRAGMA_DIAGNOSTIC_(ignored warningopt)
 #    define ENABLE_GCC_WARNING(warningopt) \
-         PRAGMA_DIAGNOSTIC_(warning PRAGMA_JOIN_STRINGIFY_(-W,warningopt))
+         PRAGMA_DIAGNOSTIC_(warning warningopt)
 #endif /* defined(__clang__) || GCC_VERSION >= 406 */
 #else /* !defined(__GNUC__) */
 /* not gcc at all */
