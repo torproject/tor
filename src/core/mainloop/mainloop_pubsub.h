@@ -14,9 +14,41 @@
 
 struct pubsub_builder_t;
 
+/**
+ * Describe when and how messages are delivered on message channel.
+ *
+ * Every message channel must be associated with one of these strategies.
+ **/
 typedef enum {
+   /**
+    * Never deliver messages automatically.
+    *
+    * If a message channel uses this strategy, then no matter now many
+    * messages are published on it, they are not delivered until something
+    * manually calls dispatch_flush() for that channel
+    **/
    DELIV_NEVER=0,
+   /**
+    * Deliver messages promptly, via the event loop.
+    *
+    * If a message channel uses this strategy, then publishing a messages
+    * that channel activates an event that causes messages to be handled
+    * later in the mainloop.  The messages will be processed at some point
+    * very soon, delaying only for pending IO events and the like.
+    *
+    * Generally this is the best choice for a delivery strategy, since
+    * it avoids stack explosion.
+    **/
    DELIV_PROMPT,
+   /**
+    * Deliver messages immediately, skipping the event loop.
+    *
+    * Every event on this channel is flushed immediately after it is queued,
+    * using the stack.
+    *
+    * This delivery type should be used with caution, since it can cause
+    * unexpected call chains, resource starvation, and the like.
+    **/
    DELIV_IMMEDIATE,
 } deliv_strategy_t;
 
