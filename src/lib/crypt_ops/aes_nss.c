@@ -15,10 +15,10 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/log/util_bug.h"
 
-DISABLE_GCC_WARNING(strict-prototypes)
+DISABLE_GCC_WARNING("-Wstrict-prototypes")
 #include <pk11pub.h>
 #include <secerr.h>
-ENABLE_GCC_WARNING(strict-prototypes)
+ENABLE_GCC_WARNING("-Wstrict-prototypes")
 
 aes_cnt_cipher_t *
 aes_new_cipher(const uint8_t *key, const uint8_t *iv,

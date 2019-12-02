@@ -26,10 +26,10 @@
 #include <stdlib.h>
 
 #ifdef ENABLE_OPENSSL
-DISABLE_GCC_WARNING(redundant-decls)
+DISABLE_GCC_WARNING("-Wredundant-decls")
 #include <openssl/err.h>
 #include <openssl/crypto.h>
-ENABLE_GCC_WARNING(redundant-decls)
+ENABLE_GCC_WARNING("-Wredundant-decls")
 #endif /* defined(ENABLE_OPENSSL) */
 
 #include "lib/log/log.h"

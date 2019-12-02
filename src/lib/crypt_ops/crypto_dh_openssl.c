@@ -17,11 +17,11 @@
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 
-DISABLE_GCC_WARNING(redundant-decls)
+DISABLE_GCC_WARNING("-Wredundant-decls")
 
 #include <openssl/dh.h>
 
-ENABLE_GCC_WARNING(redundant-decls)
+ENABLE_GCC_WARNING("-Wredundant-decls")
 
 #include <openssl/bn.h>
 #include <string.h>

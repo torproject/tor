@@ -55,13 +55,13 @@
 #endif /* defined(_WIN32) */
 
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
-DISABLE_GCC_WARNING(overlength-strings)
+DISABLE_GCC_WARNING("-Woverlength-strings")
 /* We allow huge string constants in the unit tests, but not in the code
  * at large. */
 #endif
 #include "vote_descriptors.inc"
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
-ENABLE_GCC_WARNING(overlength-strings)
+ENABLE_GCC_WARNING("-Woverlength-strings")
 #endif
 
 #define NS_MODULE dir_handle_get

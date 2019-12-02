@@ -16,7 +16,7 @@
 #include "lib/log/util_bug.h"
 #include "lib/fs/files.h"
 
-DISABLE_GCC_WARNING(redundant-decls)
+DISABLE_GCC_WARNING("-Wredundant-decls")
 
 #include <openssl/err.h>
 #include <openssl/rsa.h>
@@ -27,7 +27,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/bn.h>
 #include <openssl/conf.h>
 
-ENABLE_GCC_WARNING(redundant-decls)
+ENABLE_GCC_WARNING("-Wredundant-decls")
 
 #include "lib/log/log.h"
 #include "lib/encoding/binascii.h"
