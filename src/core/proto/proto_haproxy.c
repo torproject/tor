@@ -33,15 +33,13 @@ format_proxy_header_line(const tor_addr_port_t *addr_port)
       return NULL;
   }
 
-  char *buf = tor_malloc_zero(MAX_HAPROXY_HEADER_LEN);
+  char *buf;
   char addrbuf[TOR_ADDR_BUF_LEN];
 
   tor_addr_to_str(addrbuf, &addr_port->addr, sizeof(addrbuf), 0);
 
-  tor_snprintf(buf, MAX_HAPROXY_HEADER_LEN, "PROXY %s %s %s 0 %d\r\n",
-      family_string,
-      src_addr_string,
-      addrbuf, addr_port->port);
+  tor_asprintf(&buf, "PROXY %s %s %s 0 %d\r\n", family_string, src_addr_string,
+                                                addrbuf, addr_port->port);
 
   return buf;
 }
