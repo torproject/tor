@@ -1103,10 +1103,14 @@ struct or_options_t {
    **/
   int DormantCanceledByStartup;
 
-  /** Boolean: true if we should export rend point when exporting CircuitID. */
+  /** Boolean: true if we should export rend point when exporting CircuitID. 
+   *  Default: 0
+   **/
   int HiddenServiceExportRendPoint;
 
-  /** Instance ID to export when exporting CircuitID. */
+  /** Instance ID to export when exporting CircuitID. 
+   *  Default: 0 Min: 0 Max: 65535. 
+   **/
   int HiddenServiceExportInstanceID;
 
   /**
