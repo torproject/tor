@@ -880,17 +880,21 @@ export_hs_client_circuit_id(edge_connection_t *edge_conn,
     gid = circ->global_identifier;
     src_port = gid & 0x0000ffff;
     if (get_options()->HiddenServiceExportRendPoint) {
-      crypt_path_t *cpath = circ->cpath;
-      crypt_path_t *cpath_last = NULL;
-      if (cpath) {
-        for (; cpath_last != cpath; cpath = cpath_last) {
-          cpath_last = cpath->next;
+      extend_info_t *extend_info = circ->build_state->chosen_exit;
+      if(BUG(extend_info == NULL)) {
+        crypt_path_t *cpath = circ->cpath;
+        crypt_path_t *cpath_last = NULL;
+        if (cpath) {
+          for (; cpath_last != cpath; cpath = cpath_last) {
+            cpath_last = cpath->next;
+          }
+        }
+        if (cpath_last) {
+          extend_info = cpath_last->extend_info;
         }
       }
-      if (cpath_last) {
-        rp_addr = tor_addr_to_ipv4h(&cpath_last->extend_info->addr);
-        rp_port = cpath_last->extend_info->port;
-      }
+      rp_addr = tor_addr_to_ipv4h(&extend_info->addr);
+      rp_port = extend_info->port;
     }
   }
 
