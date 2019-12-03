@@ -863,7 +863,7 @@ export_hs_client_circuit_id(edge_connection_t *edge_conn,
   if (protocol != HS_CIRCUIT_ID_PROTOCOL_HAPROXY)
     return;
 
-  const origin_circuit_t *circ;
+  const origin_circuit_t *circ = NULL;
   char *buf = NULL;
   const char dst_ipv6[] = "::1";
   /* See RFC4193 regarding fc00::/7 */
