@@ -21,8 +21,41 @@ exitcode=0
 
 export TOR_COCCI_EXCEPTIONS_FILE="${TOR_COCCI_EXCEPTIONS_FILE:-$scripts_cocci/exceptions.txt}"
 
-if ! command -v spatch; then
-    echo "Install coccinelle's spatch to check cocci C parsing!"
+PURPOSE="cocci C parsing"
+
+if ! command -v spatch ; then
+    echo "Install coccinelle's spatch to check $PURPOSE."
+    exit "$exitcode"
+fi
+
+# Returns true if $1 is greater than or equal to $2
+version_ge()
+{
+    if test "$1" = "$2" ; then
+        # return true
+        return 0
+    fi
+    LOWER_VERSION="$(printf '%s\n' "$1" "$2" | $SORT_V | head -n 1)"
+    # implicit return
+    test "$LOWER_VERSION" != "$1"
+}
+
+# 'sort -V' is a gnu extension
+SORT_V="sort -V"
+# Use 'sort -n' if 'sort -V' doesn't work
+if ! version_ge "1" "0" ; then
+    echo "Your 'sort -V' command appears broken. Falling back to 'sort -n'."
+    echo "Some spatch version checks may give the wrong result."
+    SORT_V="sort -n"
+fi
+
+MIN_SPATCH_V="1.0.4"
+SPATCH_V=$(spatch --version | head -1 | \
+               sed 's/spatch version \([0-9][\.0-9]*\) .*/\1/')
+
+if ! version_ge "$SPATCH_V" "$MIN_SPATCH_V" ; then
+    echo "Tor requires coccinelle spatch >= $MIN_SPATCH_V to check $PURPOSE."
+    echo "But you have $SPATCH_V. Please install a newer version."
     exit "$exitcode"
 fi
 
@@ -44,7 +77,7 @@ else
 fi
 
 if test "$exitcode" != 0 ; then
-    echo "Please fix these cocci parsing errors in the above files"
+    echo "Please fix these $PURPOSE errors in the above files"
     echo "Set VERBOSE=1 for more details"
     echo "Try running test-operator-cleanup or 'make autostyle-operators'"
     echo "As a last resort, you can modify scripts/coccinelle/exceptions.txt"
