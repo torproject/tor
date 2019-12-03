@@ -1,0 +1,7 @@
+  o Minor bugfixes (onion services v3, client):
+    - Properly handle the client rendezvous circuit timeout. This results in
+      better reachability because tor doesn't timeout a rendezvous circuit
+      awaiting the introduction ACK and thus preventing tor to re-establish all
+      circuits because the rendezvous circuit timed out too early. Fixes bug
+      32021; bugfix on 0.3.2.1-alpha.
+

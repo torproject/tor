@@ -775,16 +775,11 @@ circuit_expire_building(void)
     if (!(TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out)) {
       switch (victim->purpose) {
       case CIRCUIT_PURPOSE_C_REND_READY:
-        /* We only want to spare a rend circ if it has been specified in
-         * an INTRODUCE1 cell sent to a hidden service.  A circ's
-         * pending_final_cpath field is non-NULL iff it is a rend circ
-         * and we have tried to send an INTRODUCE1 cell specifying it.
-         * Thus, if the pending_final_cpath field *is* NULL, then we
-         * want to not spare it. */
-        if (TO_ORIGIN_CIRCUIT(victim)->build_state &&
-            TO_ORIGIN_CIRCUIT(victim)->build_state->pending_final_cpath ==
-            NULL)
+        /* We only want to spare a rend circ iff it has been specified in an
+         * INTRODUCE1 cell sent to a hidden service. */
+        if (!hs_circ_is_rend_sent_in_intro1(CONST_TO_ORIGIN_CIRCUIT(victim))) {
           break;
+        }
         /* fallthrough! */
       case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
       case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:

@@ -1296,3 +1296,51 @@ hs_circ_cleanup_on_repurpose(circuit_t *circ)
     hs_circuitmap_remove_circuit(circ);
   }
 }
+
+/** Return true iff the given established client rendezvous circuit was sent
+ * into the INTRODUCE1 cell. This is called so we can take a decision on
+ * expiring or not the circuit.
+ *
+ * The caller MUST make sure the circuit is an established client rendezvous
+ * circuit (purpose: CIRCUIT_PURPOSE_C_REND_READY).
+ *
+ * This function supports all onion service versions. */
+bool
+hs_circ_is_rend_sent_in_intro1(const origin_circuit_t *circ)
+{
+  tor_assert(circ);
+  /* This can only be called for a rendezvous circuit that is an established
+   * confirmed rendezsvous circuit but without an introduction ACK. */
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_C_REND_READY);
+
+  /* The v2 and v3 circuit are handled differently:
+   *
+   * v2: A circ's pending_final_cpath field is non-NULL iff it is a rend circ
+   * and we have tried to send an INTRODUCE1 cell specifying it. Thus, if the
+   * pending_final_cpath field *is* NULL, then we want to not spare it.
+   *
+   * v3: When the INTRODUCE1 cell is sent, the introduction encryption public
+   * key is copied in the rendezvous circuit hs identifier. If it is a valid
+   * key, we know that this circuit is waiting the ACK on the introduction
+   * circuit. We want to _not_ spare the circuit if the key was never set. */
+
+  if (circ->rend_data) {
+    /* v2. */
+    if (circ->build_state && circ->build_state->pending_final_cpath != NULL) {
+      return true;
+    }
+  } else if (circ->hs_ident) {
+    /* v3. */
+    if (curve25519_public_key_is_ok(&circ->hs_ident->intro_enc_pk)) {
+      return true;
+    }
+  } else {
+    /* A circuit with an HS purpose without an hs_ident or rend_data in theory
+     * can not happen. In case, scream loudly and return false to the caller
+     * that the rendezvous was not sent in the INTRO1 cell. */
+    tor_assert_nonfatal_unreached();
+  }
+
+  /* The rendezvous has not been specified in the INTRODUCE1 cell. */
+  return false;
+}
