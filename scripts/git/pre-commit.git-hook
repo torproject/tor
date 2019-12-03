@@ -54,16 +54,16 @@ if [ -e scripts/maint/checkShellScripts.sh ]; then
     scripts/maint/checkShellScripts.sh
 fi
 
-if [ ! "$CHECK_FILES" ]; then
-    echo "No modified tor-owned source files, skipping further checks"
-    exit 0
-fi
-
 # Always run the practracker unit tests
 PT_DIR=scripts/maint/practracker
 
 if [ -e "${PT_DIR}/test_practracker.sh" ]; then
     "${PT_DIR}/test_practracker.sh"
+fi
+
+if [ ! "$CHECK_FILES" ]; then
+    echo "No modified tor-owned source files, skipping further checks"
+    exit 0
 fi
 
 ## Owned Source File Checks
