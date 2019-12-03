@@ -882,8 +882,7 @@ export_hs_client_circuit_id(edge_connection_t *edge_conn,
     if (get_options()->HiddenServiceExportRendPoint) {
       extend_info_t *extend_info = circ->build_state->chosen_exit;
       if (BUG(extend_info == NULL)) {
-        tor_free(buf);
-        return;
+        goto cleanup;
       }
       rp_addr = tor_addr_to_ipv4h(&extend_info->addr);
       rp_port = extend_info->port;
@@ -904,8 +903,11 @@ export_hs_client_circuit_id(edge_connection_t *edge_conn,
                dst_ipv6, src_port, dst_port);
 
   connection_buf_add(buf, strlen(buf), TO_CONN(edge_conn));
+  goto cleanup;
 
+ cleanup:
   tor_free(buf);
+  return;
 }
 
 /** Connected handler for exit connections: start writing pending
