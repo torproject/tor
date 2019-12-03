@@ -863,7 +863,7 @@ export_hs_client_circuit_id(edge_connection_t *edge_conn,
   if (protocol != HS_CIRCUIT_ID_PROTOCOL_HAPROXY)
     return;
 
-  origin_circuit_t *circ;
+  const origin_circuit_t *circ;
   char *buf = NULL;
   const char dst_ipv6[] = "::1";
   /* See RFC4193 regarding fc00::/7 */
@@ -876,7 +876,7 @@ export_hs_client_circuit_id(edge_connection_t *edge_conn,
 
   /* Generate a GID and source port for this client */
   if (edge_conn->on_circuit != NULL) {
-    circ = TO_ORIGIN_CIRCUIT(edge_conn->on_circuit);
+    circ = CONST_TO_ORIGIN_CIRCUIT(edge_conn->on_circuit);
     gid = circ->global_identifier;
     src_port = gid & 0x0000ffff;
     if (get_options()->HiddenServiceExportRendPoint) {
