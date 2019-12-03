@@ -258,7 +258,7 @@ test_dir_handle_get_rendezvous2_not_found_if_not_encrypted(void *data)
   conn = new_dir_conn();
 
   // connection is not encrypted
-  tt_assert(!connection_dir_is_encrypted(conn))
+  tt_assert(!connection_dir_is_encrypted(conn));
 
   tt_int_op(directory_handle_command_get(conn, RENDEZVOUS2_GET(), NULL, 0),
             OP_EQ, 0);
