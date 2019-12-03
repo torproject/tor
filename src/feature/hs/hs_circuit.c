@@ -673,7 +673,8 @@ hs_circ_service_get_established_intro_circ(const hs_service_intro_point_t *ip)
   }
 
   /* Only return circuit if it is established. */
-  return (TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO) ? circ : NULL;
+  return (circ && TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO) ?
+          circ : NULL;
 }
 
 /** Called when we fail building a rendezvous circuit at some point other than
