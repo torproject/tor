@@ -3045,8 +3045,8 @@ The next section describes the per service options that can only be set
    https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
 
 [[HiddenServiceExportRendPoint]] **HiddenServiceExportRendPoint** **0**|**1**::
-   When HiddenServiceExportCircuitID along with this feature is enabled, export IP
-   and port of the rendezvous point along with the circuit ID. +
+   When HiddenServiceExportCircuitID along with this feature is enabled,
+   export IP and port of the rendezvous point along with the circuit ID. +
  +
    When this feature is enabled, tor will export IP and port of the rendezvous
    point in the following way. +
@@ -3056,14 +3056,15 @@ The next section describes the per service options that can only be set
       ip = (0xAAAA << 16) + 0xBBBB; +
       port = 0xCCCC; +
  +
-   For example, if the IP is 0x7f000001 and the port is 0x1bb, you can translate
-   to 127.30.0.1:443. (Default: 0)
+   For example, if the IP is 0x7f000001 and the port is 0x1bb, you can
+   translate to 127.30.0.1:443. (Default: 0)
 
 [[HiddenServiceExportInstanceID]] **HiddenServiceExportInstanceID** __N__::
    When HiddenServiceExportCircuitID is enabled, export an instance ID along
    with the circuit ID. The maximum allowed value is 65535. +
  +
-   When this feature is enabled, tor will export an instance ID in the following way. +
+   When this feature is enabled, tor will export an instance ID
+   in the following way. +
  +
    "PROXY TCP6 fc00::0:0:0:AAAA:ffff:ffff ::1 65535 42\r\n" +
  +
