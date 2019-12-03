@@ -61,6 +61,10 @@ if [ -e "${PT_DIR}/test_practracker.sh" ]; then
     "${PT_DIR}/test_practracker.sh"
 fi
 
+if [ -e scripts/maint/checkSpaceTest.sh ]; then
+    scripts/maint/checkSpaceTest.sh
+fi
+
 if [ ! "$CHECK_FILES" ]; then
     echo "No modified tor-owned source files, skipping further checks"
     exit 0
