@@ -168,6 +168,13 @@ EXTRA_DIST+= \
 	ReleaseNotes							\
 	scripts/maint/checkIncludes.py					\
 	scripts/maint/checkSpace.pl					\
+	scripts/maint/checkSpaceTest.sh					\
+	scripts/maint/checkspace_tests/dubious.c			\
+	scripts/maint/checkspace_tests/dubious.h			\
+	scripts/maint/checkspace_tests/expected.txt			\
+	scripts/maint/checkspace_tests/good_guard.h			\
+	scripts/maint/checkspace_tests/same_guard.h			\
+	scripts/maint/checkspace_tests/subdir/dubious.c			\
 	scripts/maint/checkShellScripts.sh				\
 	scripts/maint/practracker/README				\
 	scripts/maint/practracker/exceptions.txt			\
