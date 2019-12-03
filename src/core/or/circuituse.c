@@ -775,16 +775,31 @@ circuit_expire_building(void)
     if (!(TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out)) {
       switch (victim->purpose) {
       case CIRCUIT_PURPOSE_C_REND_READY:
-        /* We only want to spare a rend circ if it has been specified in
-         * an INTRODUCE1 cell sent to a hidden service.  A circ's
-         * pending_final_cpath field is non-NULL iff it is a rend circ
-         * and we have tried to send an INTRODUCE1 cell specifying it.
-         * Thus, if the pending_final_cpath field *is* NULL, then we
-         * want to not spare it. */
+        /* We only want to spare a rend circ if it has been specified in an
+         * INTRODUCE1 cell sent to a hidden service. The v2 and v3 circuit are
+         * handled differently:
+         *
+         *  v2: A circ's pending_final_cpath field is non-NULL iff it is a
+         *  rend circ and we have tried to send an INTRODUCE1 cell specifying
+         *  it. Thus, if the pending_final_cpath field *is* NULL, then we want
+         *  to not spare it.
+         *
+         *  v3: When the INTRODUCE1 cell is sent, the introduction encryption
+         *  public key is copied in the rendezvous circuit hs identifier. If
+         *  it is a valid key, we know that this circuit is waiting the ACK on
+         *  the introduction circuit. We want to _not_ spare the circuit if
+         *  the key was never set. */
         if (TO_ORIGIN_CIRCUIT(victim)->build_state &&
             TO_ORIGIN_CIRCUIT(victim)->build_state->pending_final_cpath ==
-            NULL)
+            NULL) {
+          /* v2. */
           break;
+        } else if (TO_ORIGIN_CIRCUIT(victim)->hs_ident &&
+                   !curve25519_public_key_is_ok(
+                      &TO_ORIGIN_CIRCUIT(victim)->hs_ident->intro_enc_pk)) {
+          /* v3. */
+          break;
+        }
         /* fallthrough! */
       case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
       case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
