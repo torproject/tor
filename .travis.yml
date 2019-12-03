@@ -32,8 +32,12 @@ matrix:
     ## We run basic tests on macOS
     - compiler: clang
       os: osx
+      ## Turn off some newer features, turn on clang's -Wtypedef-redefinition
+      env: C_DIALECT_OPTIONS="-std=gnu99"
     ## We run chutney on Linux, because it's faster than chutney on macOS
-    - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
+    ## Use -std=gnu99 to turn off some newer features, and maybe turn on some
+    ## extra gcc warnings?
+    - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes" C_DIALECT_OPTIONS="-std=gnu99"
       ## (Linux only) Use an older Linux image (Ubuntu Trusty)
       ## The Xenial and Bionic images cause permissions issues for chutney,
       ## this is a workaround, until we fix #32240.
@@ -136,8 +140,8 @@ install:
 script:
   - ./autogen.sh
   - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $OPENSSL_OPTIONS --enable-fatal-warnings --disable-silent-rules"
-  - echo "Configure flags are $CONFIGURE_FLAGS"
-  - ./configure $CONFIGURE_FLAGS
+  - echo "Configure flags are $CONFIGURE_FLAGS CC=\"$CC $C_DIALECT_OPTIONS\""
+  - ./configure $CONFIGURE_FLAGS CC="$CC $C_DIALECT_OPTIONS"
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - if [[ "$SKIP_MAKE_CHECK" == "" ]]; then make check; fi
   - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
