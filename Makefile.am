@@ -21,7 +21,12 @@ AM_CPPFLAGS=\
 	-I$(top_srcdir)/src/ext/trunnel \
 	-I$(top_srcdir)/src/trunnel
 
-AM_CFLAGS=@TOR_SYSTEMD_CFLAGS@ @CFLAGS_BUGTRAP@ @TOR_LZMA_CFLAGS@ @TOR_ZSTD_CFLAGS@
+AM_CFLAGS=					\
+	@TOR_SYSTEMD_CFLAGS@			\
+	@CFLAGS_BUGTRAP@			\
+	@TOR_LZMA_CFLAGS@			\
+	@TOR_ZSTD_CFLAGS@
+
 SHELL=@SHELL@
 
 if COVERAGE_ENABLED
@@ -263,7 +268,14 @@ shellcheck:
 check-practracker-unit-test:
 	$(top_srcdir)/scripts/maint/practracker/test_practracker.sh
 
-check-local: check-spaces check-changes check-includes check-practracker-unit-test check-best-practices shellcheck check-cocci
+check-local:					\
+	check-spaces				\
+	check-changes				\
+	check-includes				\
+	check-practracker-unit-test		\
+	check-best-practices			\
+	shellcheck				\
+	check-cocci
 
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
@@ -333,9 +345,19 @@ test-stem: need-stem-path $(TESTING_TOR_BINARY)
 test-stem-full: need-stem-path $(TESTING_TOR_BINARY)
 	@$(PYTHON) "$$STEM_SOURCE_DIR"/run_tests.py --tor "$(TESTING_TOR_BINARY)" --all --log notice --target RUN_ALL,ONLINE -v;
 
-test-full: need-stem-path need-chutney-path check test-network test-stem
+test-full:					\
+	need-stem-path				\
+	need-chutney-path			\
+	check					\
+	test-network				\
+	test-stem
 
-test-full-online: need-stem-path need-chutney-path check test-network test-stem-full
+test-full-online:				\
+	need-stem-path				\
+	need-chutney-path			\
+	check					\
+	test-network				\
+	test-stem-full
 
 # We can't delete the gcno files, because they are created when tor is compiled
 reset-gcov:
