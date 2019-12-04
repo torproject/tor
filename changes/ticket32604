@@ -1,6 +1,6 @@
   o Minor features (onion services):
     - Version 3 onion services can now use HiddenServiceExportRendPoint
-      to get the IP and port of the rendezvous point they are connecting to.
+      to get first 12 chars of the rendezvous point's fingerprint.
     - Version 3 onion services can now use HiddenServiceExportInstanceID
       which enables them to differenciate traffic when multiple tor
       instances share the same backend.

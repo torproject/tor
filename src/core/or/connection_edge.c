@@ -871,8 +871,7 @@ export_hs_client_circuit_id(edge_connection_t *edge_conn,
   uint16_t dst_port = 0;
   uint16_t src_port = 1; /* default value */
   uint32_t gid = 0; /* default value */
-  uint32_t rp_addr = 0;
-  uint16_t rp_port = 0;
+  char *rp_identity_buf = NULL;
 
   /* Generate a GID and source port for this client */
   if (edge_conn->on_circuit != NULL) {
@@ -884,8 +883,12 @@ export_hs_client_circuit_id(edge_connection_t *edge_conn,
       if (BUG(extend_info == NULL)) {
         goto cleanup;
       }
-      rp_addr = tor_addr_to_ipv4h(&extend_info->addr);
-      rp_port = extend_info->port;
+      const char* rp_identity = hex_str(extend_info->identity_digest,
+                                        DIGEST_LEN);
+      tor_asprintf(&rp_identity_buf, "%.4s:%.4s:%.4s",
+                   rp_identity,
+                   rp_identity + 4,
+                   rp_identity + 8);
     }
   }
 
@@ -895,9 +898,9 @@ export_hs_client_circuit_id(edge_connection_t *edge_conn,
   }
 
   /* Build the string */
-  tor_asprintf(&buf, "PROXY TCP6 %s:%x:%x:%x:%x:%x:%x %s %d %d\r\n",
+  tor_asprintf(&buf, "PROXY TCP6 %s:%s:%04x:%04x:%04x %s %d %d\r\n",
                src_ipv6_prefix,
-               rp_addr >> 16, rp_addr & 0x0000ffff, rp_port,
+               rp_identity_buf ? rp_identity_buf : "0000:0000:0000",
                get_options()->HiddenServiceExportInstanceID,
                gid >> 16, gid & 0x0000ffff,
                dst_ipv6, src_port, dst_port);
@@ -907,6 +910,7 @@ export_hs_client_circuit_id(edge_connection_t *edge_conn,
 
  cleanup:
   tor_free(buf);
+  tor_free(rp_identity_buf);
   return;
 }
 

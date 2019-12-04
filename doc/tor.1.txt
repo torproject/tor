@@ -3027,12 +3027,12 @@ The next section describes the per service options that can only be set
    enabled, the Tor process will write a header line when a client is connecting
    to the onion service. The header will look like this: +
  +
-   "PROXY TCP6 fc00:dead:beef:4dad::ffff:ffff ::1 65535 42\r\n" +
+   "PROXY TCP6 fc00::0000:0000:0000:0000:ffff:ffff ::1 65535 42\r\n" +
  +
    We encode the "global circuit identifier" as the last 32-bits of the first
    IPv6 address. All other values in the header can safely be ignored. You can
    compute the global circuit identifier using the following formula given the
-   IPv6 address "fc00:dead:beef:4dad::AABB:CCDD": +
+   IPv6 address "fc00::0000:0000:0000:0000:AABB:CCDD": +
  +
       global_circuit_id = (0xAA << 24) + (0xBB << 16) + (0xCC << 8) + 0xDD; +
  +
@@ -3046,18 +3046,16 @@ The next section describes the per service options that can only be set
 
 [[HiddenServiceExportRendPoint]] **HiddenServiceExportRendPoint** **0**|**1**::
    When HiddenServiceExportCircuitID along with this feature is enabled,
-   export IP and port of the rendezvous point along with the circuit ID. +
+   export fingerprint of the rendezvous point along with the circuit ID. +
  +
-   When this feature is enabled, tor will export IP and port of the rendezvous
-   point in the following way. +
+   When this feature is enabled, tor will export the rendezvous point's
+   fingerprint in the following way. +
  +
-   "PROXY TCP6 fc00::AAAA:BBBB:CCCC:0:ffff:ffff ::1 65535 42\r\n" +
+   "PROXY TCP6 fc00::AAAA:BBBB:CCCC:0000:ffff:ffff ::1 65535 42\r\n" +
  +
-      ip = (0xAAAA << 16) + 0xBBBB; +
-      port = 0xCCCC; +
+      fingerprint[:12] = AAAABBBBCCCC
  +
-   For example, if the IP is 0x7f000001 and the port is 0x1bb, you can
-   translate to 127.30.0.1:443. (Default: 0)
+   This can be used to look up the rendezvous point. (Default: 0)
 
 [[HiddenServiceExportInstanceID]] **HiddenServiceExportInstanceID** __N__::
    When HiddenServiceExportCircuitID is enabled, export an instance ID along
@@ -3066,7 +3064,7 @@ The next section describes the per service options that can only be set
    When this feature is enabled, tor will export an instance ID
    in the following way. +
  +
-   "PROXY TCP6 fc00::0:0:0:AAAA:ffff:ffff ::1 65535 42\r\n" +
+   "PROXY TCP6 fc00::0000:0000:0000:AAAA:ffff:ffff ::1 65535 42\r\n" +
  +
    Where 0xAAAA will be your provided instance ID in hex. (Default: 0)
 
