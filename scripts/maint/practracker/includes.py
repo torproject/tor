@@ -13,6 +13,10 @@
    file in each directory.  This file contains empty lines, #-prefixed
    comments, filenames (like "lib/foo/bar.h") and file globs (like lib/*/*.h)
    for files that are permitted.
+
+   The script exits with an error if any non-permitted includes are found.
+   .may_include files that contain "!advisory" are considered advisory.
+   Advisory .may_include files only result in warnings, rather than errors.
 """
 
 
