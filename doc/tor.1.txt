@@ -3055,7 +3055,8 @@ The next section describes the per service options that can only be set
  +
       fingerprint[:12] = AAAABBBBCCCC
  +
-   This can be used to look up the rendezvous point. (Default: 0)
+   This can be used to look up the rendezvous point. Note that
+   adversaries can brute-force fingerprints and disguise as  (Default: 0)
 
 [[HiddenServiceExportInstanceID]] **HiddenServiceExportInstanceID** __N__::
    When HiddenServiceExportCircuitID is enabled, export an instance ID along

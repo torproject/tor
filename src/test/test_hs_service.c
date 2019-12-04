@@ -2283,7 +2283,6 @@ test_export_client_circuit_id(void *arg)
             "PROXY TCP6 fc00::ffff:ffff:ffff:ffff:ffff:ffff ::1 65535 42\r\n");
 
  done:
-  tor_free(or_circ->build_state);
   extend_info_free(chosen_exit);
   UNMOCK(connection_write_to_buf_impl_);
   circuit_free_(TO_CIRCUIT(or_circ));
