@@ -525,6 +525,7 @@ test_hs_control_store_permanent_creds(void *arg)
   { /* Setup ClientOnionAuthDir */
     int ret;
     char *perm_creds_dir = tor_strdup(get_fname("permanent_credentials"));
+    get_options_mutable()->ClientOnionAuthDir = perm_creds_dir;
 
     #ifdef _WIN32
       ret = mkdir(perm_creds_dir);
@@ -532,8 +533,6 @@ test_hs_control_store_permanent_creds(void *arg)
       ret = mkdir(perm_creds_dir, 0700);
     #endif
     tt_int_op(ret, OP_EQ, 0);
-
-    get_options_mutable()->ClientOnionAuthDir = perm_creds_dir;
   }
 
   tor_free(args);
