@@ -239,7 +239,8 @@ encode_client_auth_cred_for_control_port(
     goto err;
   }
 
-  smartlist_add_asprintf(control_line, "CLIENT x25519:%s", x25519_b64);
+  smartlist_add_asprintf(control_line, "CLIENT %s x25519:%s",
+                         cred->onion_address, x25519_b64);
 
   if (cred->flags) { /* flags are also optional */
     if (cred->flags & CLIENT_AUTH_FLAG_IS_PERMANENT) {

@@ -292,8 +292,10 @@ test_hs_control_good_onion_client_auth_add(void *arg)
   args = tor_strdup("");
 
 #define VIEW_CORRECT_REPLY_NO_ADDR "250-ONION_CLIENT_AUTH_VIEW\r\n"   \
-  "250-CLIENT x25519:eIIdIGoSZwI2Q/lSzpf92akGki5I+PZIDz37MA5BhlA=\r\n"\
-  "250-CLIENT x25519:iJ1tjKCrMAbiFT2bVrCjhbfMDnE1fpaRbIS5ZHKUvEQ=\r\n"   \
+  "250-CLIENT 2fvhjskjet3n5syd6yfg5lhvwcs62bojmthr35ko5bllr3iqdb4ctdyd "  \
+    "x25519:iJ1tjKCrMAbiFT2bVrCjhbfMDnE1fpaRbIS5ZHKUvEQ=\r\n"   \
+  "250-CLIENT jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd " \
+    "x25519:eIIdIGoSZwI2Q/lSzpf92akGki5I+PZIDz37MA5BhlA=\r\n"             \
   "250 OK\r\n"
 
   retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
@@ -308,8 +310,9 @@ test_hs_control_good_onion_client_auth_add(void *arg)
     tor_strdup("jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd");
 
 #define VIEW_CORRECT_REPLY_JT4 "250-ONION_CLIENT_AUTH_VIEW " \
-  "jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd\r\n"   \
-  "250-CLIENT x25519:eIIdIGoSZwI2Q/lSzpf92akGki5I+PZIDz37MA5BhlA=\r\n"\
+    "jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd\r\n"   \
+  "250-CLIENT jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd " \
+    "x25519:eIIdIGoSZwI2Q/lSzpf92akGki5I+PZIDz37MA5BhlA=\r\n" \
   "250 OK\r\n"
 
   retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
