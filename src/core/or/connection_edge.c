@@ -903,7 +903,7 @@ export_hs_client_circuit_id(edge_connection_t *edge_conn,
                src_ipv6_prefix,
                rp_identity_buf ? rp_identity_buf : "0000:0000:0000",
                get_options()->HiddenServiceExportInstanceID,
-               gid >> 16, gid & 0x0000ffff,
+               (uint16_t) (gid >> 16), (uint16_t) (gid & 0x0000ffff),
                dst_ipv6, src_port, dst_port);
 
   connection_buf_add(buf, strlen(buf), TO_CONN(edge_conn));
