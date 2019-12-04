@@ -883,8 +883,9 @@ export_hs_client_circuit_id(edge_connection_t *edge_conn,
       if (BUG(extend_info == NULL)) {
         goto cleanup;
       }
-      const char* rp_identity = hex_str(extend_info->identity_digest,
-                                        DIGEST_LEN);
+      char *rp_identity = (char *) hex_str(extend_info->identity_digest,
+                                           DIGEST_LEN);
+      tor_strlower(rp_identity);
       tor_asprintf(&rp_identity_buf, "%.4s:%.4s:%.4s",
                    rp_identity,
                    rp_identity + 4,

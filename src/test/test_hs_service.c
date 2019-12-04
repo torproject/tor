@@ -2163,8 +2163,123 @@ test_export_client_circuit_id(void *arg)
   cp1 = buf_get_contents(conn->outbuf, &sz);
   tt_str_op(cp1, OP_EQ,
             "PROXY TCP6 fc00::0000:0000:0000:0000:0001:0006 ::1 6 42\r\n");
+  tor_free(cp1);
+
+  /* Now to test HiddenServiceExportInstanceID.
+   * Set GID to UINT32_MAX for convenience.*/
+  or_circ->global_identifier = UINT32_MAX;
+
+  /* Check min value 0. */
+  get_options_mutable()->HiddenServiceExportInstanceID = 0;
+  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
+  cp1 = buf_get_contents(conn->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ,
+            "PROXY TCP6 fc00::0000:0000:0000:0000:ffff:ffff ::1 65535 42\r\n");
+  tor_free(cp1);
+
+  /* Check value 1. */
+  get_options_mutable()->HiddenServiceExportInstanceID = 1;
+  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
+  cp1 = buf_get_contents(conn->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ,
+            "PROXY TCP6 fc00::0000:0000:0000:0001:ffff:ffff ::1 65535 42\r\n");
+  tor_free(cp1);
+
+  /* Check value UINT8_MAX. */
+  get_options_mutable()->HiddenServiceExportInstanceID = UINT8_MAX;
+  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
+  cp1 = buf_get_contents(conn->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ,
+            "PROXY TCP6 fc00::0000:0000:0000:00ff:ffff:ffff ::1 65535 42\r\n");
+  tor_free(cp1);
+
+  /* Check max value UINT16_MAX. */
+  get_options_mutable()->HiddenServiceExportInstanceID = UINT16_MAX;
+  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
+  cp1 = buf_get_contents(conn->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ,
+            "PROXY TCP6 fc00::0000:0000:0000:ffff:ffff:ffff ::1 65535 42\r\n");
+  tor_free(cp1);
+
+  /* Finally test HiddenServiceExportRendPoint.
+   * Enable HiddenServiceExportRendPoint and set up mock data. */
+  get_options_mutable()->HiddenServiceExportRendPoint = 1;
+  char test_digest[DIGEST_LEN];
+  tor_addr_t addr;
+  tor_addr_parse(&addr, "127.0.0.1");
+  uint16_t port = 100;
+  or_circ->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
+
+  /* Test fingerprint of moria. */
+  base16_decode(test_digest, DIGEST_LEN,
+                "9695DFC35FFEB861329B9F1AB04C46397020CE31", DIGEST_LEN);
+  or_circ->build_state->chosen_exit = extend_info_new("nick" /* nickname */,
+                                              test_digest /* rsa_id_digest */,
+                                              NULL /* ed_id */,
+                                              NULL /* onion_key */,
+                                              NULL /* ntor_key */,
+                                              &addr /* addr */,
+                                              port /* port */);
+  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
+  cp1 = buf_get_contents(conn->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ,
+            "PROXY TCP6 fc00::9695:dfc3:5ffe:ffff:ffff:ffff ::1 65535 42\r\n");
+  tor_free(cp1);
+  tor_free(or_circ->build_state->chosen_exit);
+
+  /* Test fingerprint of dizum. */
+  base16_decode(test_digest, DIGEST_LEN,
+                "7EA6EAD6FD83083C538F44038BBFA077587DD755", DIGEST_LEN);
+  or_circ->build_state->chosen_exit = extend_info_new("nick" /* nickname */,
+                                              test_digest /* rsa_id_digest */,
+                                              NULL /* ed_id */,
+                                              NULL /* onion_key */,
+                                              NULL /* ntor_key */,
+                                              &addr /* addr */,
+                                              port /* port */);
+  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
+  cp1 = buf_get_contents(conn->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ,
+            "PROXY TCP6 fc00::7ea6:ead6:fd83:ffff:ffff:ffff ::1 65535 42\r\n");
+  tor_free(cp1);
+  tor_free(or_circ->build_state->chosen_exit);
+
+  /* Test fingerprint of all 0s. */
+  base16_decode(test_digest, DIGEST_LEN,
+                "0000000000000000000000000000000000000000", DIGEST_LEN);
+  or_circ->build_state->chosen_exit = extend_info_new("nick" /* nickname */,
+                                              test_digest /* rsa_id_digest */,
+                                              NULL /* ed_id */,
+                                              NULL /* onion_key */,
+                                              NULL /* ntor_key */,
+                                              &addr /* addr */,
+                                              port /* port */);
+  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
+  cp1 = buf_get_contents(conn->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ,
+            "PROXY TCP6 fc00::0000:0000:0000:ffff:ffff:ffff ::1 65535 42\r\n");
+  tor_free(cp1);
+  tor_free(or_circ->build_state->chosen_exit);
+
+  /* Test fingerprint of all 'f's. */
+  base16_decode(test_digest, DIGEST_LEN,
+                "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", DIGEST_LEN);
+  or_circ->build_state->chosen_exit = extend_info_new("nick" /* nickname */,
+                                              test_digest /* rsa_id_digest */,
+                                              NULL /* ed_id */,
+                                              NULL /* onion_key */,
+                                              NULL /* ntor_key */,
+                                              &addr /* addr */,
+                                              port /* port */);
+  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
+  cp1 = buf_get_contents(conn->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ,
+            "PROXY TCP6 fc00::ffff:ffff:ffff:ffff:ffff:ffff ::1 65535 42\r\n");
+  tor_free(cp1);
+  tor_free(or_circ->build_state->chosen_exit);
 
  done:
+  tor_free(or_circ->build_state);
   UNMOCK(connection_write_to_buf_impl_);
   circuit_free_(TO_CIRCUIT(or_circ));
   connection_free_minimal(conn);
