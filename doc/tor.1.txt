@@ -3055,8 +3055,10 @@ The next section describes the per service options that can only be set
  +
       fingerprint[:12] = AAAABBBBCCCC
  +
-   This can be used to look up the rendezvous point. Note that
-   adversaries can brute-force fingerprints and disguise as  (Default: 0)
+   This can be used to look up the rendezvous point. Note that first
+   12 hex digits are not sufficient to reliably identify relays because
+   there can be two relays in the conensus with the same fingerprint or
+   adversaries can brute-force the fingerprint to match the prefix. (Default: 0)
 
 [[HiddenServiceExportInstanceID]] **HiddenServiceExportInstanceID** __N__::
    When HiddenServiceExportCircuitID is enabled, export an instance ID along

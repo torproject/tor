@@ -1,7 +1,9 @@
   o Minor features (onion services):
-    - Version 3 onion services can now use HiddenServiceExportRendPoint
-      to get first 12 chars of the rendezvous point's fingerprint.
-    - Version 3 onion services can now use HiddenServiceExportInstanceID
-      which enables them to differenciate traffic when multiple tor
-      instances share the same backend.
-    - Closes ticket 32604. Patch by Moonsik Park.
+    - When HiddenServiceExportCircuitID is set, version 3 onion
+      services can also set HiddenServiceExportRendPoint to
+      export the first 12 hex digits of the rendezvous point's
+      fingerprint using the haproxy protocol.
+    - When HiddenServiceExportCircuitID is set, version 3 onion
+      services can also set HiddenServiceExportInstanceID to
+      differenciate traffic when multiple tor instances share
+      the same backend. Closes ticket 32604. Patch by Moonsik Park.
