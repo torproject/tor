@@ -328,8 +328,38 @@ test_callbacks_terminate(void *arg)
   process_free(process);
 }
 
+static void
+test_nonexistent_executable(void *arg)
+{
+  (void)arg;
+
+  /* Process callback data. */
+  process_data_t *process_data = process_data_new();
+
+  /* Setup our process. */
+  process_t *process = process_new("binary-does-not-exist");
+  process_set_data(process, process_data);
+  process_set_exit_callback(process, process_exit_callback);
+
+  /* Run our process. */
+  process_exec(process);
+
+  /* Start our main loop. */
+  run_main_loop(process_data);
+
+  /* Ensure that the exit callback was actually called even though the binary
+   * did not exist.
+   */
+  tt_assert(process_data->did_exit);
+
+ done:
+  process_data_free(process_data);
+  process_free(process);
+}
+
 struct testcase_t slow_process_tests[] = {
   { "callbacks", test_callbacks, 0, NULL, NULL },
   { "callbacks_terminate", test_callbacks_terminate, 0, NULL, NULL },
+  { "nonexistent_executable", test_nonexistent_executable, 0, NULL, NULL },
   END_OF_TESTCASES
 };
