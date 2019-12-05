@@ -3,7 +3,9 @@
       services can also set HiddenServiceExportRendPoint to
       export the first 12 hex digits of the rendezvous point's
       fingerprint using the haproxy protocol.
+      Closes ticket 32604. Patch by Moonsik Park.
     - When HiddenServiceExportCircuitID is set, version 3 onion
       services can also set HiddenServiceExportInstanceID to
-      differenciate traffic when multiple tor instances share
-      the same backend. Closes ticket 32604. Patch by Moonsik Park.
+      differentiate traffic when multiple tor instances share
+      the same backend, using the haproxy protocol.
+      Closes ticket 32604. Patch by Moonsik Park.
