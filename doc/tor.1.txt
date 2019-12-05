@@ -3045,11 +3045,12 @@ The next section describes the per service options that can only be set
    https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
 
 [[HiddenServiceExportRendPoint]] **HiddenServiceExportRendPoint** **0**|**1**::
-   When HiddenServiceExportCircuitID along with this feature is enabled,
-   export fingerprint of the rendezvous point along with the circuit ID. +
+   When **HiddenServiceExportCircuitID** and **HiddenServiceExportRendPoint**
+   are both enabled, export part of the fingerprint of the rendezvous point,
+   along with the circuit ID. +
  +
-   When this feature is enabled, tor will export the rendezvous point's
-   fingerprint in the following way. +
+   When **HiddenServiceExportCircuitID** is set to \'haproxy', tor will
+   export the rendezvous point's fingerprint in the following way. +
  +
    "PROXY TCP6 fc00::AAAA:BBBB:CCCC:0000:ffff:ffff ::1 65535 42\r\n" +
  +
@@ -3061,11 +3062,13 @@ The next section describes the per service options that can only be set
    current consensus (or in any consensus). (Default: 0)
 
 [[HiddenServiceExportInstanceID]] **HiddenServiceExportInstanceID** __N__::
-   When HiddenServiceExportCircuitID is enabled, export an instance ID along
-   with the circuit ID. The maximum allowed value is 65535. +
+   When **HiddenServiceExportCircuitID** is enabled, export
+   **HiddenServiceExportInstanceID** as the tor instance ID, along with the
+   circuit ID. The maximum allowed value of **HiddenServiceExportInstanceID**
+   is 65535. +
  +
-   When this feature is enabled, tor will export an instance ID
-   in the following way. +
+   When **HiddenServiceExportCircuitID** is set to \'haproxy', tor will export
+   an instance ID in the following way. +
  +
    "PROXY TCP6 fc00::0000:0000:0000:AAAA:ffff:ffff ::1 65535 42\r\n" +
  +
