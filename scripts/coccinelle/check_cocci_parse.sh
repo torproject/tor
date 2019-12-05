@@ -23,6 +23,8 @@ export TOR_COCCI_EXCEPTIONS_FILE="${TOR_COCCI_EXCEPTIONS_FILE:-$scripts_cocci/ex
 
 PURPOSE="cocci C parsing"
 
+echo "Checking spatch:"
+
 if ! command -v spatch ; then
     echo "Install coccinelle's spatch to check $PURPOSE."
     exit "$exitcode"
@@ -48,6 +50,9 @@ if ! version_ge "1" "0" ; then
     echo "Some spatch version checks may give the wrong result."
     SORT_V="sort -n"
 fi
+
+# Print the full spatch version, for diagnostics
+spatch --version
 
 MIN_SPATCH_V="1.0.4"
 SPATCH_V=$(spatch --version | head -1 | \
