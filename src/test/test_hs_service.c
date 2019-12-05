@@ -2284,6 +2284,7 @@ test_export_client_circuit_id(void *arg)
 
  done:
   extend_info_free(chosen_exit);
+  or_circ->build_state->chosen_exit = NULL;
   UNMOCK(connection_write_to_buf_impl_);
   circuit_free_(TO_CIRCUIT(or_circ));
   connection_free_minimal(conn);
