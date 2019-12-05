@@ -55,8 +55,11 @@ fi
 spatch --version
 
 MIN_SPATCH_V="1.0.4"
+# This pattern needs to handle version strings like:
+# spatch version 1.0.0-rc19
+# spatch version 1.0.6 compiled with OCaml version 4.05.0
 SPATCH_V=$(spatch --version | head -1 | \
-               sed 's/spatch version \([0-9][\.0-9]*\) .*/\1/')
+               sed 's/spatch version \([0-9][^ ]*\).*/\1/')
 
 if ! version_ge "$SPATCH_V" "$MIN_SPATCH_V" ; then
     echo "Tor requires coccinelle spatch >= $MIN_SPATCH_V to check $PURPOSE."
