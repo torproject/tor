@@ -1,3 +1,13 @@
+Changes in version 0.4.2.5 - 2019-12-??
+  Blurb blurb.
+
+  o Testing (backport from 0.4.2.5):
+    - Require C99 standards-conforming code in Travis CI, but allow GNU
+      gcc extensions. Also activates clang's -Wtypedef-redefinition
+      warnings. Build some jobs with -std=gnu99, and some jobs without.
+      Closes ticket 32500.
+
+
 Changes in version 0.4.2.4-rc - 2019-11-15
   Tor 0.4.2.4-rc is the first release candidate in its series. It fixes
   several bugs from earlier versions, including a few that would result in
