@@ -1,0 +1,4 @@
+  o Minor bugfixes (onion services):
+    - In cancel_descriptor_fetches(), use connection_list_by_type_purpose()
+      instead of connection_list_by_type_state(). Fixes bug 32639; bugfix on
+      0.3.2.1-alpha. Patch by Neel Chauhan.

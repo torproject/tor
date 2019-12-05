@@ -145,7 +145,7 @@ static void
 cancel_descriptor_fetches(void)
 {
   smartlist_t *conns =
-    connection_list_by_type_state(CONN_TYPE_DIR, DIR_PURPOSE_FETCH_HSDESC);
+    connection_list_by_type_purpose(CONN_TYPE_DIR, DIR_PURPOSE_FETCH_HSDESC);
   SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     const hs_ident_dir_conn_t *ident = TO_DIR_CONN(conn)->hs_ident;
     if (BUG(ident == NULL)) {
