@@ -1,4 +1,0 @@
-  o Minor bugfixes ():
-    - Avoid a GCC 9.1.1 warning (and possible crash depending on libc
-      implemenation) when failing to load a hidden service client authorization
-      file.  Fixes bug 30475; bugfix on 0.3.5.1-alpha.

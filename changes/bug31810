@@ -1,4 +1,0 @@
-  o Minor bugfixes (process management):
-    - Remove assertion in the Unix process backend. This assertion would trigger
-      when a new process is spawned where the executable is not found leading to
-      a stack trace from the child process. Fixes bug 31810; bugfix on 0.4.0.1-alpha.

@@ -1,6 +1,0 @@
-  o Minor bugfixes (portability):
-    - Avoid crashing in our tor_vasprintf() implementation on systems that
-      define neither vasprintf() nor _vscprintf(). (This bug has been here
-      long enough that we question whether people are running Tor on such
-      systems, but we're applying the fix out of caution.) Fixes bug 30561;
-      bugfix on 0.2.8.2-alpha. Found and fixed by Tobias Stoeckmann.
