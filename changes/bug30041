@@ -1,5 +1,0 @@
-  o Minor bugfixes (hardening):
-    - Verify in more places that we are not about to create a buffer
-      with more than INT_MAX bytes, to avoid possible OOB access in the event
-      of bugs.  Fixes bug 30041; bugfix on 0.2.0.16.  Found and fixed by
-      Tobias Stoeckmann.

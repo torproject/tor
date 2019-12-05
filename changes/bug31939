@@ -1,3 +1,0 @@
-  o Minor bugfixes (tls, logging):
-    - Log TLS read buffer length bugs once, rather than filling the logs
-      with similar warnings. Fixes bug 31939; bugfix on 0.3.0.4-rc.

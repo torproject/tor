@@ -1,3 +1,0 @@
-  o Minor features (continuous integration):
-    - On Travis Rust builds, cleanup Rust registry and refrain from caching
-      target/ directory to speed up builds. Resolves issue 29962.
