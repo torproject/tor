@@ -1,7 +1,7 @@
 Changes in version 0.4.2.5 - 2019-12-??
   Blurb blurb.
 
-  o Testing (backport from 0.4.2.5):
+  o Testing:
     - Require C99 standards-conforming code in Travis CI, but allow GNU
       gcc extensions. Also activates clang's -Wtypedef-redefinition
       warnings. Build some jobs with -std=gnu99, and some jobs without.
