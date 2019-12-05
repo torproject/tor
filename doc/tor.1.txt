@@ -3023,23 +3023,36 @@ The next section describes the per service options that can only be set
    protocol supported right now \'haproxy'. This option is only for v3
    services. (Default: none) +
  +
-   The haproxy option works in the following way: when the feature is
-   enabled, the Tor process will write a header line when a client is connecting
-   to the onion service. The header will look like this: +
+   When **HiddenServiceExportCircuitID** is set to \'haproxy', each time a
+   tor client connects to the onion service, tor will open a connection to the
+   service's **HiddenServicePort**. When the connection opens, tor will write
+   a HAProxy header line as the first data on the connection. +
  +
-   "PROXY TCP6 fc00::0000:0000:0000:0000:ffff:ffff ::1 65535 42\r\n" +
+   In the HAProxy header line, tor will export its internal 32-bit
+   "global circuit identifier" for the client circuit in the following way.
  +
-   We encode the "global circuit identifier" as the last 32-bits of the first
-   IPv6 address. All other values in the header can safely be ignored. You can
-   compute the global circuit identifier using the following formula given the
-   IPv6 address "fc00::0000:0000:0000:0000:AABB:CCDD": +
+   "PROXY TCP6 fc00::0000:0000:0000:0000:AAAA:BBBB ::1 bbbbb 0\r\n" +
  +
-      global_circuit_id = (0xAA << 24) + (0xBB << 16) + (0xCC << 8) + 0xDD; +
+   global_identifier = 0xAAAABBBB +
+   (global_identifier >> 16) = bbbbb +
  +
-   In the case above, where the last 32-bits are 0xffffffff, the global circuit
-   identifier would be 4294967295. You can use this value together with Tor's
-   control port to terminate particular circuits using their global
-   circuit identifiers. For more information about this see control-spec.txt. +
+   The byte order of the global identifier varies, based on the host's byte
+   order. The source port is a decimal number, containing a copy of the lowest
+   16 bits of the global circuit identifier. +
+ +
+   You can use the global circuit identifier, together with Tor's control
+   port, to terminate particular circuits. For more information about the
+   control port, see control-spec.txt. +
+ +
+   Tor will also export the virtual destination **HiddenServicePort** as the
+   HAProxy destination port.
+ +
+   "PROXY TCP6 fc00::0000:0000:0000:0000:0000:0000 ::1 0 vvvvv\r\n" +
+ +
+   virtual_port = vvvvv +
+ +
+   You can use the virtual port to guess the protocol that the client might be
+   expecting, or that the server might be providing. +
  +
    The HAProxy version 1 protocol is described in detail at
    https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
@@ -3047,32 +3060,38 @@ The next section describes the per service options that can only be set
 [[HiddenServiceExportRendPoint]] **HiddenServiceExportRendPoint** **0**|**1**::
    When **HiddenServiceExportCircuitID** and **HiddenServiceExportRendPoint**
    are both enabled, export part of the fingerprint of the rendezvous point,
-   along with the circuit ID. +
+   along with the circuit ID. (Default: 0) +
  +
    When **HiddenServiceExportCircuitID** is set to \'haproxy', tor will
    export the rendezvous point's fingerprint in the following way. +
  +
-   "PROXY TCP6 fc00::AAAA:BBBB:CCCC:0000:ffff:ffff ::1 65535 42\r\n" +
+   "PROXY TCP6 fc00::AAAA:BBBB:CCCC:0000:0000:0000 ::1 0 0\r\n" +
  +
-      fingerprint[:12] = AAAABBBBCCCC
+   fingerprint[:12] = 0xAAAABBBBCCCC +
  +
-   This can be used to look up the rendezvous point. Note that first
-   12 hex digits may not be enough to uniquely identify all relays in the
-   consensus. Also, some rendezvous points may not be published in the
-   current consensus (or in any consensus). (Default: 0)
+   This fingerprint prefix can be used to look up the rendezvous point.
+   Note that first 12 hex digits may not be enough to uniquely identify all
+   relays in the consensus. Also, some rendezvous points may not be published
+   in the current consensus (or in any consensus).
 
 [[HiddenServiceExportInstanceID]] **HiddenServiceExportInstanceID** __N__::
    When **HiddenServiceExportCircuitID** is enabled, export
    **HiddenServiceExportInstanceID** as the tor instance ID, along with the
    circuit ID. The maximum allowed value of **HiddenServiceExportInstanceID**
-   is 65535. +
+   is 65535. (Default: 0)
  +
    When **HiddenServiceExportCircuitID** is set to \'haproxy', tor will export
    an instance ID in the following way. +
  +
-   "PROXY TCP6 fc00::0000:0000:0000:AAAA:ffff:ffff ::1 65535 42\r\n" +
+   "PROXY TCP6 fc00::0000:0000:0000:AAAA:0000:0000 ::1 0 0\r\n" +
  +
-   Where 0xAAAA will be your provided instance ID in hex. (Default: 0)
+   HiddenServiceExportInstanceID = 0xAAAA +
+ +
+   The byte order of the instance id varies, based on the host's byte
+   order.  +
+ +
+   The instance id can be used to distinguish between multiple tor instances,
+   which all use the same backend server.
 
 [[HiddenServiceMaxStreams]] **HiddenServiceMaxStreams** __N__::
    The maximum number of simultaneous streams (connections) per rendezvous
