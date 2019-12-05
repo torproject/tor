@@ -2138,6 +2138,7 @@ test_export_client_circuit_id(void *arg)
   cp2 = buf_get_contents(conn->outbuf, &sz);
   tt_str_op(cp1, OP_NE, cp2);
   tor_free(cp1);
+  tor_free(cp2);
 
   /* Check that GID with UINT32_MAX works. */
   or_circ->global_identifier = UINT32_MAX;
@@ -2229,6 +2230,7 @@ test_export_client_circuit_id(void *arg)
             "PROXY TCP6 fc00::9695:dfc3:5ffe:ffff:ffff:ffff ::1 65535 42\r\n");
   tor_free(cp1);
   extend_info_free(chosen_exit);
+  or_circ->build_state->chosen_exit = NULL;
 
   /* Test fingerprint of dizum. */
   base16_decode(test_digest, DIGEST_LEN,
@@ -2247,6 +2249,7 @@ test_export_client_circuit_id(void *arg)
             "PROXY TCP6 fc00::7ea6:ead6:fd83:ffff:ffff:ffff ::1 65535 42\r\n");
   tor_free(cp1);
   extend_info_free(chosen_exit);
+  or_circ->build_state->chosen_exit = NULL;
 
   /* Test fingerprint of all 0s. */
   base16_decode(test_digest, DIGEST_LEN,
@@ -2265,6 +2268,7 @@ test_export_client_circuit_id(void *arg)
             "PROXY TCP6 fc00::0000:0000:0000:ffff:ffff:ffff ::1 65535 42\r\n");
   tor_free(cp1);
   extend_info_free(chosen_exit);
+  or_circ->build_state->chosen_exit = NULL;
 
   /* Test fingerprint of all 'f's. */
   base16_decode(test_digest, DIGEST_LEN,
@@ -2281,11 +2285,14 @@ test_export_client_circuit_id(void *arg)
   cp1 = buf_get_contents(conn->outbuf, &sz);
   tt_str_op(cp1, OP_EQ,
             "PROXY TCP6 fc00::ffff:ffff:ffff:ffff:ffff:ffff ::1 65535 42\r\n");
-
- done:
+  tor_free(cp1);
   extend_info_free(chosen_exit);
   or_circ->build_state->chosen_exit = NULL;
+
+ done:
   UNMOCK(connection_write_to_buf_impl_);
+  extend_info_free(chosen_exit);
+  or_circ->build_state->chosen_exit = NULL;
   circuit_free_(TO_CIRCUIT(or_circ));
   connection_free_minimal(conn);
   hs_service_free(service);
