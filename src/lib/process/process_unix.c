@@ -253,22 +253,15 @@ process_unix_exec(process_t *process)
     process_environment_t *env = process_get_environment(process);
 
     /* Call the requested program. */
-    retval = execve(argv[0], argv, env->unixoid_environment_block);
+    execve(argv[0], argv, env->unixoid_environment_block);
 
     /* If we made it here it is because execve failed :-( */
-    if (-1 == retval)
-      fprintf(stderr, "Call to execve() failed: %s", strerror(errno));
-
     tor_free(argv);
     process_environment_free(env);
 
-    tor_assert_unreached();
-
  error:
-    /* LCOV_EXCL_START */
     fprintf(stderr, "Error from child process: %s", strerror(errno));
     _exit(1);
-    /* LCOV_EXCL_STOP */
   }
 
   /* We are in the parent process. */

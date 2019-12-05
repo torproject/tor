@@ -234,6 +234,24 @@ process_win32_exec(process_t *process)
     CloseHandle(stdin_pipe_read);
     CloseHandle(stdin_pipe_write);
 
+    /* In the Unix backend, we do not get an error in the Tor process when a
+     * child process fails to spawn its target executable since we need to
+     * first do the fork() call in the Tor process and then the child process
+     * is responsible for doing the call to execve().
+     *
+     * This means that the user of the process_exec() API must check for
+     * whether it returns PROCESS_STATUS_ERROR, which will rarely happen on
+     * Unix, but will happen for error cases on Windows where it does not
+     * happen on Unix. For example: when the target executable does not exist
+     * on the file system.
+     *
+     * To have somewhat feature compatibility between the Unix and the Windows
+     * backend, we here notify the process_t owner that the process have exited
+     * (even though it never managed to run) to ensure that the exit callback
+     * is executed.
+     */
+    process_notify_event_exit(process, 0);
+
     return PROCESS_STATUS_ERROR;
   }
 
