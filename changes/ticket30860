@@ -1,3 +1,0 @@
-  o Testing:
-    - Run the chutney IPv6 networks as part of Travis CI.
-      Closes ticket 30860.

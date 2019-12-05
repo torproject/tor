@@ -1,7 +1,0 @@
-  o Major bugfixes (hidden service v3):
-    - Make onion service always use the exact amount of configured intro points
-      (or less due to node exlusion). Before, a service could sometimes pick
-      more intro points than configured with the
-      HiddenServiceNumIntroductionPoints option. Fixes bug 31548; bugfix on
-      0.3.2.1-alpha.
-

@@ -1,3 +1,0 @@
-  o Minor bugfixes (tests, SunOS):
-    - Avoid a map_anon_nofork test failure due to a signed/unsigned integer
-      comparison. Fixes bug 31897; bugfix on 0.4.1.1-alpha.

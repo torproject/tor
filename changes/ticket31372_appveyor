@@ -1,4 +1,0 @@
-  o Minor features (continuous integration):
-    - When building on Appveyor, pass the "-k" flag to make, so that
-      we are informed of all compilation failures, not just the first
-      one or two. Closes part of ticket 31372.
