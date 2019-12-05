@@ -197,6 +197,12 @@ Changes in version 0.4.1.6 - 2019-09-19
       arguments. Previously, it required two or more arguments, and ignored
       the first. Fixes bug 31772; bugfix on 0.4.1.1-alpha.
 
+  o Minor bugfixes (FreeBSD, PF-based proxy, IPv6, backport from 0.4.2.1-alpha):
+    - When extracting an IPv6 address from a PF-based proxy, verify that
+      we are actually configured to receive an IPv6 address, and log an
+      internal error if not. Fixes part of bug 31687; bugfix
+      on 0.2.3.4-alpha.
+
   o Minor bugfixes (guards, backport from 0.4.2.1-alpha):
     - When tor is missing descriptors for some primary entry guards,
       make the log message less alarming. It's normal for descriptors to
