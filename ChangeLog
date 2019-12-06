@@ -97,9 +97,9 @@ Changes in version 0.4.0.6 - 2019-12-??
       list of 148 fallbacks (70 new, 78 existing, 79 removed) generated
       in June 2019. Closes ticket 28795.
 
-  o Minor features (geoip, backport from 0.4.2.4-rc):
-    - Update geoip and geoip6 to the November 6 2019 Maxmind GeoLite2
-      Country database. Closes ticket 32440.
+  o Minor features (geoip, backport from 0.4.2.5):
+    - Update geoip and geoip6 to the December 3 2019 Maxmind GeoLite2
+      Country database. Closes ticket 32685.
 
   o Minor features (stem tests, backport from 0.4.2.1-alpha):
     - Change "make test-stem" so it only runs the stem tests that use
@@ -334,8 +334,6 @@ Changes in version 0.4.0.6 - 2019-12-??
       scheduling of Travis macOS jobs. Closes ticket 32177.
     - Run the chutney IPv6 networks as part of Travis CI. Closes
       ticket 30860.
-    - Simplify the Travis CI build matrix, and optimise for build time.
-      Closes ticket 31859.
     - Simplify the Travis CI build matrix, and optimise for build time.
       Closes ticket 31859.
     - Use Windows Server 2019 instead of Windows Server 2016 in our
