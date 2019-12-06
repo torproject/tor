@@ -847,6 +847,10 @@ test_tortls_get_buffer_sizes(void *ignored)
 
   ret = tor_tls_get_buffer_sizes(tls, &rbuf_c, &rbuf_b, &wbuf_c, &wbuf_b);
 #if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+  /*
+   * Sadly, we don't yet have a way to get this information from OpenSSL 1.1.
+   * We should re-enable this test if OpenSSL gives us one.
+   */
   tt_int_op(ret, OP_EQ, -1);
 #else
   tt_int_op(ret, OP_EQ, 0);
