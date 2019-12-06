@@ -305,35 +305,33 @@ tor_tls_init(void)
     OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL);
 
 #if (SIZEOF_VOID_P >= 8)
-    long version = OpenSSL_version_num();
-
     /* LCOV_EXCL_START : we can't test these lines on the same machine */
-    if (version >= OPENSSL_V_SERIES(1,0,1)) {
-      /* Warn if we could *almost* be running with much faster ECDH.
-         If we're built for a 64-bit target, using OpenSSL 1.0.1, but we
-         don't have one of the built-in __uint128-based speedups, we are
-         just one build operation away from an accelerated handshake.
 
-         (We could be looking at OPENSSL_NO_EC_NISTP_64_GCC_128 instead of
-          doing this test, but that gives compile-time options, not runtime
-          behavior.)
-      */
-      EC_KEY *key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-      const EC_GROUP *g = key ? EC_KEY_get0_group(key) : NULL;
-      const EC_METHOD *m = g ? EC_GROUP_method_of(g) : NULL;
-      const int warn = (m == EC_GFp_simple_method() ||
-                        m == EC_GFp_mont_method() ||
-                        m == EC_GFp_nist_method());
-      EC_KEY_free(key);
+    /* Warn if we could *almost* be running with much faster ECDH.
+       If we're built for a 64-bit target, using OpenSSL 1.0.1, but we
+       don't have one of the built-in __uint128-based speedups, we are
+       just one build operation away from an accelerated handshake.
 
-      if (warn)
-        log_notice(LD_GENERAL, "We were built to run on a 64-bit CPU, "
-                   "but with a version of OpenSSL "
-                   "that apparently lacks accelerated support for the NIST "
-                   "P-224 and P-256 groups. Building openssl with such "
-                   "support (using the enable-ec_nistp_64_gcc_128 option "
-                   "when configuring it) would make ECDH much faster.");
-    }
+       (We could be looking at OPENSSL_NO_EC_NISTP_64_GCC_128 instead of
+       doing this test, but that gives compile-time options, not runtime
+       behavior.)
+    */
+    EC_KEY *key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+    const EC_GROUP *g = key ? EC_KEY_get0_group(key) : NULL;
+    const EC_METHOD *m = g ? EC_GROUP_method_of(g) : NULL;
+    const int warn = (m == EC_GFp_simple_method() ||
+                      m == EC_GFp_mont_method() ||
+                      m == EC_GFp_nist_method());
+    EC_KEY_free(key);
+
+    if (warn)
+      log_notice(LD_GENERAL, "We were built to run on a 64-bit CPU, "
+                 "but with a version of OpenSSL "
+                 "that apparently lacks accelerated support for the NIST "
+                 "P-224 and P-256 groups. Building openssl with such "
+                 "support (using the enable-ec_nistp_64_gcc_128 option "
+                 "when configuring it) would make ECDH much faster.");
+
     /* LCOV_EXCL_STOP */
 #endif /* (SIZEOF_VOID_P >= 8) */
 
