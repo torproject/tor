@@ -56,7 +56,7 @@ int tor_tls_classify_client_ciphers(const struct ssl_st *ssl,
 STATIC int tor_tls_session_secret_cb(struct ssl_st *ssl, void *secret,
                             int *secret_len,
                             STACK_OF(SSL_CIPHER) *peer_ciphers,
-                            CONST_IF_OPENSSL_1_1_API SSL_CIPHER **cipher,
+                            CONST_IF_OPENSSL SSL_CIPHER **cipher,
                             void *arg);
 STATIC int find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m,
                              uint16_t cipher);

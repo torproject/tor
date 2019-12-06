@@ -946,7 +946,7 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
 int
 tor_tls_session_secret_cb(SSL *ssl, void *secret, int *secret_len,
                           STACK_OF(SSL_CIPHER) *peer_ciphers,
-                          CONST_IF_OPENSSL_1_1_API SSL_CIPHER **cipher,
+                          CONST_IF_OPENSSL SSL_CIPHER **cipher,
                           void *arg)
 {
   (void) secret;
