@@ -40,9 +40,9 @@ Changes in version 0.4.1.7 - 2019-12-??
       so that we are informed of all compilation failures, not just the
       first one or two. Closes ticket 31372.
 
-  o Minor features (geoip, backport from 0.4.2.4-rc):
-    - Update geoip and geoip6 to the November 6 2019 Maxmind GeoLite2
-      Country database. Closes ticket 32440.
+  o Minor features (geoip, backport from 0.4.2.5):
+    - Update geoip and geoip6 to the December 3 2019 Maxmind GeoLite2
+      Country database. Closes ticket 32685.
 
   o Minor bugfixes (Appveyor CI, backport from 0.4.2.2-alpha):
     - Avoid spurious errors when Appveyor CI fails before the install step.
