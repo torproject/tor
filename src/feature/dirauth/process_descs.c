@@ -342,7 +342,8 @@ dirserv_rejects_tor_version(const char *platform,
   }
 
   /* Series between Tor 0.3.6 and 0.4.0 inclusive are unsupported. Reject
-   * them. */
+   * them. 0.3.6.0-alpha-dev only existed for a short time, before it was
+   * renamed to 0.4.0.0-alpha-dev. */
   if (tor_version_as_new_as(platform,"0.3.6.0-alpha-dev") &&
       !tor_version_as_new_as(platform,"0.4.1.1-alpha")) {
     if (msg) {
