@@ -61,6 +61,7 @@ aes_new_cipher(const uint8_t *key, const uint8_t *iv, int key_bits)
   EVP_EncryptInit(cipher, c, key, iv);
   return (aes_cnt_cipher_t *) cipher;
 }
+
 /**
  * Release storage held by <b>cipher</b>
  */
@@ -73,7 +74,9 @@ aes_cipher_free_(aes_cnt_cipher_t *cipher_)
   EVP_CIPHER_CTX_reset(cipher);
   EVP_CIPHER_CTX_free(cipher);
 }
-/** Encrypt <b>len</b> bytes from <b>input</b>, storing the results in place.
+
+/**
+ * Encrypt <b>len</b> bytes from <b>input</b>, storing the results in place.
  * Uses the key in <b>cipher</b>, and advances the counter by <b>len</b> bytes
  * as it encrypts.
  */
