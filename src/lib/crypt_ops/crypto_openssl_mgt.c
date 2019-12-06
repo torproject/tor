@@ -117,14 +117,6 @@ crypto_openssl_get_header_version_str(void)
 #endif
 #endif /* !defined(COCCI) */
 
-/** Helper: Construct mutexes, and set callbacks to help OpenSSL handle being
- * multithreaded. Returns 0. */
-static int
-setup_openssl_threading(void)
-{
-  return 0;
-}
-
 /** free OpenSSL variables */
 static void
 crypto_openssl_free_all(void)
@@ -141,8 +133,6 @@ crypto_openssl_early_init(void)
                      OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
                      OPENSSL_INIT_ADD_ALL_CIPHERS |
                      OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
-
-    setup_openssl_threading();
 
     unsigned long version_num = OpenSSL_version_num();
     const char *version_str = OpenSSL_version(OPENSSL_VERSION);
