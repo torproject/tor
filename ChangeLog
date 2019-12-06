@@ -1,6 +1,10 @@
 Changes in version 0.4.2.5 - 2019-12-??
   Blurb blurb.
 
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the December 3 2019 Maxmind GeoLite2
+      Country database. Closes ticket 32685.
+
   o Testing:
     - Require C99 standards-conforming code in Travis CI, but allow GNU
       gcc extensions. Also activates clang's -Wtypedef-redefinition

@@ -123,10 +123,8 @@ Changes in version 0.4.2.5 - 2019-12-??
       line parsing. Closes ticket 31529.
 
   o Minor features (geoip):
-    - Update geoip and geoip6 to the November 6 2019 Maxmind GeoLite2
-      Country database. Closes ticket 32440.
-    - Update geoip and geoip6 to the October 1 2019 Maxmind GeoLite2
-      Country database. Closes ticket 31931.
+    - Update geoip and geoip6 to the December 3 2019 Maxmind GeoLite2
+      Country database. Closes ticket 32685.
 
   o Minor features (git hooks):
     - Our pre-commit git hook now checks for a special file before
