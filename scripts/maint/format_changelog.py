@@ -9,6 +9,7 @@
 # To run it, pipe a section of the changelog (starting with "Changes
 # in Tor 0.x.y.z-alpha" through the script.)
 
+from __future__ import print_function
 import os
 import re
 import sys
@@ -190,7 +191,7 @@ def body_parser(line):
     elif re.match(r'^\s+\S', line):
         return TP_HEADTEXT
     else:
-        print "Weird line %r"%line
+        print("Weird line %r"%line, file=sys.stderr)
 
 def clean_head(head):
     return head
@@ -198,7 +199,7 @@ def clean_head(head):
 def head_score(s):
     m = re.match(r'^ +o (.*)', s)
     if not m:
-        print >>sys.stderr, "Can't score %r"%s
+        print("Can't score %r"%s, file=sys.stderr)
         return 99999
     lw = m.group(1).lower()
     if lw.startswith("security") and "feature" not in lw:
@@ -291,7 +292,7 @@ class ChangeLog(object):
     def lint_head(self, line, head):
         m = re.match(r'^ *o ([^\(]+)((?:\([^\)]+\))?):', head)
         if not m:
-            print >>sys.stderr, "Weird header format on line %s"%line
+            print("Weird header format on line %s"%line, file=sys.stderr)
 
     def lint_item(self, line, grafs, head_type):
         pass
@@ -306,7 +307,7 @@ class ChangeLog(object):
     def dumpGraf(self,par,indent1,indent2=-1):
         if not self.wrapText:
             for line in par:
-                print line
+                print(line)
             return
 
         if indent2 == -1:
@@ -320,17 +321,17 @@ class ChangeLog(object):
 
     def dumpPreheader(self, graf):
         self.dumpGraf(graf, 0)
-        print
+        print()
 
     def dumpMainhead(self, head):
-        print head
+        print(head)
 
     def dumpHeadGraf(self, graf):
         self.dumpGraf(graf, 2)
-        print
+        print()
 
     def dumpSectionHeader(self, header):
-        print header
+        print(header)
 
     def dumpStartOfSections(self):
         pass
@@ -339,10 +340,10 @@ class ChangeLog(object):
         pass
 
     def dumpEndOfSection(self):
-        print
+        print()
 
     def dumpEndOfChangelog(self):
-        print
+        print()
 
     def dumpDrupalBreak(self):
         pass
@@ -350,7 +351,7 @@ class ChangeLog(object):
     def dumpItem(self, grafs):
         self.dumpGraf(grafs[0],4,6)
         for par in grafs[1:]:
-            print
+            print()
             self.dumpGraf(par,6,6)
 
     def collateAndSortSections(self):
@@ -389,7 +390,7 @@ class ChangeLog(object):
         self.dumpStartOfSections()
         for _,head,items in self.sections:
             if not head.endswith(':'):
-                print >>sys.stderr, "adding : to %r"%head
+                print("adding : to %r"%head, file=sys.stderr)
                 head = head + ":"
             self.dumpSectionHeader(head)
             for _,grafs in items:
@@ -445,16 +446,16 @@ class HTMLChangeLog(ChangeLog):
         pass
 
     def dumpStartOfSections(self):
-        print "<ul>\n"
+        print("<ul>\n")
 
     def dumpEndOfSections(self):
-        print "</ul>\n"
+        print("</ul>\n")
 
     def dumpDrupalBreak(self):
-        print "\n</ul>\n"
-        print "<p>&nbsp;</p>"
-        print "\n<!--break-->\n\n"
-        print "<ul>"
+        print("\n</ul>\n")
+        print("<p>&nbsp;</p>")
+        print("\n<!--break-->\n\n")
+        print("<ul>")
 
     def dumpItem(self, grafs):
         grafs[0][0] = grafs[0][0].replace(" - ", "", 1).lstrip()
@@ -464,7 +465,7 @@ class HTMLChangeLog(ChangeLog):
                 self.htmlPar(par)
         else:
             self.htmlText(grafs[0])
-        print
+        print()
 
 op = optparse.OptionParser(usage="usage: %prog [options] [filename]")
 op.add_option('-W', '--no-wrap', action='store_false',
@@ -560,7 +561,7 @@ if options.firstOnly:
     sys.exit(0)
 
 if nextline is not None:
-    print nextline
+    print(nextline)
 
 for line in sys.stdin:
     sys.stdout.write(line)
