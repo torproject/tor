@@ -1,4 +1,4 @@
-Changes in version 0.3.5.9 - 2019-12-??
+Changes in version 0.3.5.9 - 2019-12-09
   Tor 0.3.5.9 backports serveral fixes from later releases, including
   several that affect bridge users, relay stability, onion services,
   and much more.
