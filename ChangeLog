@@ -1,4 +1,4 @@
-Changes in version 0.4.1.7 - 2019-12-??
+Changes in version 0.4.1.7 - 2019-12-09
   This release backports several bugfixes to improve stability and
   correctness.  Anyone experiencing build problems or crashes with 0.4.1.6,
   including all relays relying on AccountingMax, should upgrade.
