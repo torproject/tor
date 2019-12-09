@@ -1,4 +1,4 @@
-Changes in version 0.4.0.6 - 2019-12-??
+Changes in version 0.4.0.6 - 2019-12-09
   This is the second stable release in the 0.4.0.x series. This release
   backports several bugfixes to improve stability and correctness.  Anyone
   experiencing build problems or crashes with 0.4.0.5, including all relays
