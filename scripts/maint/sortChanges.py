@@ -7,6 +7,7 @@
    changelog.
 """
 
+from __future__ import print_function
 import re
 import sys
 
@@ -43,7 +44,7 @@ REPLACEMENTS = {
 def score(s,fname=None):
     m = re.match(r'^ +o ([^\n]*)\n(.*)', s, re.M|re.S)
     if not m:
-        print >>sys.stderr, "Can't score %r from %s"%(s,fname)
+        print("Can't score %r from %s"%(s,fname), file=sys.stderr)
     heading = m.group(1)
     heading = REPLACEMENTS.get(heading, heading)
     lw = m.group(1).lower()
@@ -100,9 +101,9 @@ changes.sort()
 last_lw = "this is not a header"
 for _, lw, header, rest in changes:
     if lw == last_lw:
-        print rest,
+        print(rest, end="")
     else:
-        print
-        print "  o",header
-        print rest,
+        print()
+        print("  o",header)
+        print(rest, end="")
         last_lw = lw
