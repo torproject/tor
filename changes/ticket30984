@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Create a new abstraction for formatting control protocol reply
+      lines based on key-value pairs.  Refactor some existing control
+      protocol code to take advantage of this.  Closes ticket 30984.
