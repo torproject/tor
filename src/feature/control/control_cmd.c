@@ -299,13 +299,13 @@ handle_control_getconf(control_connection_t *conn,
       config_line_t *answer = option_get_assignment(options,q);
       if (!answer) {
         const char *name = option_get_canonical_name(q);
-        control_reply_add_1kv(answers, 250, KV_OMIT_VALS, name, "");
+        control_reply_add_one_kv(answers, 250, KV_OMIT_VALS, name, "");
       }
 
       while (answer) {
         config_line_t *next;
-        control_reply_add_1kv(answers, 250, KV_RAW, answer->key,
-                              answer->value);
+        control_reply_add_one_kv(answers, 250, KV_RAW, answer->key,
+                                 answer->value);
         next = answer->next;
         tor_free(answer->key);
         tor_free(answer->value);

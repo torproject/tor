@@ -1653,7 +1653,7 @@ handle_control_getinfo(control_connection_t *conn,
                                  "Unrecognized key \"%s\"", q);
       }
     } else {
-      control_reply_add_1kv(answers, 250, KV_RAW, q, ans);
+      control_reply_add_one_kv(answers, 250, KV_RAW, q, ans);
     }
   } SMARTLIST_FOREACH_END(q);
 

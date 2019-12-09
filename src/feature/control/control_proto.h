@@ -29,7 +29,7 @@
  * Generally, modules implementing control commands will work with
  * smartlists of these structures, using functions like
  * control_reply_add_str() for adding a reply line consisting of a
- * single string, or control_reply_add_1kv() and
+ * single string, or control_reply_add_one_kv() and
  * control_reply_append_kv() for composing a line containing one or
  * more key-value pairs.
  *
@@ -97,8 +97,8 @@ void control_write_reply_line(control_connection_t *conn,
                               const control_reply_line_t *line, bool lastone);
 void control_write_reply_lines(control_connection_t *conn, smartlist_t *lines);
 
-void control_reply_add_1kv(smartlist_t *reply, int code, int flags,
-                           const char *key, const char *val);
+void control_reply_add_one_kv(smartlist_t *reply, int code, int flags,
+                              const char *key, const char *val);
 void control_reply_append_kv(smartlist_t *reply, const char *key,
                              const char *val);
 void control_reply_add_str(smartlist_t *reply, int code, const char *s);

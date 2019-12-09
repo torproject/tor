@@ -1993,8 +1993,8 @@ test_control_reply(void *arg)
   UNMOCK(control_write_reply);
   MOCK(control_write_reply, mock_control_write_reply_list);
   reply_strs = smartlist_new();
-  control_reply_add_1kv(lines, 250, 0, "A", "B");
-  control_reply_add_1kv(lines, 250, 0, "C", "D");
+  control_reply_add_one_kv(lines, 250, 0, "A", "B");
+  control_reply_add_one_kv(lines, 250, 0, "C", "D");
   control_write_reply_lines(NULL, lines);
   tt_int_op(smartlist_len(reply_strs), OP_EQ, 2);
   tt_str_op((char *)smartlist_get(reply_strs, 0), OP_EQ, "250-A=B");
@@ -2004,7 +2004,7 @@ test_control_reply(void *arg)
   SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
   smartlist_clear(reply_strs);
   control_reply_add_printf(lines, 250, "PROTOCOLINFO %d", 1);
-  control_reply_add_1kv(lines, 250, KV_OMIT_VALS|KV_RAW, "AUTH", "");
+  control_reply_add_one_kv(lines, 250, KV_OMIT_VALS|KV_RAW, "AUTH", "");
   control_reply_append_kv(lines, "METHODS", "COOKIE");
   control_reply_append_kv(lines, "COOKIEFILE", escaped("/tmp/cookie"));
   control_reply_add_done(lines);

@@ -335,8 +335,8 @@ control_write_reply_lines(control_connection_t *conn, smartlist_t *lines)
  * @param val value
  */
 void
-control_reply_add_1kv(smartlist_t *reply, int code, int flags,
-                     const char *key, const char *val)
+control_reply_add_one_kv(smartlist_t *reply, int code, int flags,
+                         const char *key, const char *val)
 {
   control_reply_line_t *line = tor_malloc_zero(sizeof(*line));
 
@@ -374,7 +374,7 @@ control_reply_append_kv(smartlist_t *reply, const char *key, const char *val)
 void
 control_reply_add_str(smartlist_t *reply, int code, const char *s)
 {
-  control_reply_add_1kv(reply, code, KV_OMIT_KEYS|KV_RAW, "", s);
+  control_reply_add_one_kv(reply, code, KV_OMIT_KEYS|KV_RAW, "", s);
 }
 
 /** Format a new reply line
