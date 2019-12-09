@@ -1,5 +1,21 @@
-Changes in version 0.4.2.5 - 2019-12-??
-  Blurb blurb.
+Changes in version 0.4.2.5 - 2019-12-09
+  This is the first stable release in the 0.4.2.x series. This series
+  improves reliability and stability, and includes several stability and
+  correctness improvements for onion services. It also fixes many smaller
+  bugs present in previous series.
+
+  Per our support policy, we will support the 0.4.2.x series for nine
+  months, or until three months after the release of a stable 0.4.3.x:
+  whichever is longer. If you need longer-term support, please stick
+  with 0.3.5.x, which will we plan to support until Feb 2022.
+
+  Per our support policy, we will support the 0.4.2.x series for nine
+  months, or until three months after the release of a stable 0.4.3.x:
+  whichever is longer. If you need longer-term support, please stick
+  with 0.3.5.x, which will we plan to support until Feb 2022.
+
+  Below are the changes since 0.4.1.4-rc. For a complete list of changes
+  since 0.4.1.5, see the ReleaseNotes file.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the December 3 2019 Maxmind GeoLite2
