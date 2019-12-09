@@ -157,6 +157,7 @@ Changes in version 0.4.1.7 - 2019-12-09
       Build some jobs with -std=gnu99, and some jobs without.
       Closes ticket 32500.
 
+
 Changes in version 0.4.1.6 - 2019-09-19
   This release backports several bugfixes to improve stability and
   correctness.  Anyone experiencing build problems or crashes with 0.4.1.5,

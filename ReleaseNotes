@@ -2,6 +2,166 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.1.7 - 2019-12-09
+  This release backports several bugfixes to improve stability and
+  correctness.  Anyone experiencing build problems or crashes with 0.4.1.6,
+  including all relays relying on AccountingMax, should upgrade.
+
+  o Major features (directory authorities, backport from 0.4.2.2-alpha):
+    - Directory authorities now reject relays running all currently
+      deprecated release series. The currently supported release series
+      are: 0.2.9, 0.3.5, 0.4.0, 0.4.1, and 0.4.2. Closes ticket 31549.
+
+  o Major bugfixes (embedded Tor, backport from 0.4.2.2-alpha):
+    - Avoid a possible crash when restarting Tor in embedded mode and
+      enabling a different set of publish/subscribe messages. Fixes bug
+      31898; bugfix on 0.4.1.1-alpha.
+
+  o Major bugfixes (relay, backport from 0.4.2.3-alpha):
+    - Relays now respect their AccountingMax bandwidth again. When
+      relays entered "soft" hibernation (which typically starts when
+      we've hit 90% of our AccountingMax), we had stopped checking
+      whether we should enter hard hibernation. Soft hibernation refuses
+      new connections and new circuits, but the existing circuits can
+      continue, meaning that relays could have exceeded their configured
+      AccountingMax. Fixes bug 32108; bugfix on 0.4.0.1-alpha.
+
+  o Major bugfixes (torrc parsing, backport from 0.4.2.2-alpha):
+    - Stop ignoring torrc options after an %include directive, when the
+      included directory ends with a file that does not contain any
+      config options (but does contain comments or whitespace). Fixes
+      bug 31408; bugfix on 0.3.1.1-alpha.
+
+  o Major bugfixes (v3 onion services, backport from 0.4.2.3-alpha):
+    - Onion services now always use the exact number of intro points
+      configured with the HiddenServiceNumIntroductionPoints option (or
+      fewer if nodes are excluded). Before, a service could sometimes
+      pick more intro points than configured. Fixes bug 31548; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor features (continuous integration, backport from 0.4.2.2-alpha):
+    - When building on Appveyor and Travis, pass the "-k" flag to make,
+      so that we are informed of all compilation failures, not just the
+      first one or two. Closes ticket 31372.
+
+  o Minor features (geoip, backport from 0.4.2.5):
+    - Update geoip and geoip6 to the December 3 2019 Maxmind GeoLite2
+      Country database. Closes ticket 32685.
+
+  o Minor bugfixes (Appveyor CI, backport from 0.4.2.2-alpha):
+    - Avoid spurious errors when Appveyor CI fails before the install step.
+      Fixes bug 31884; bugfix on 0.3.4.2-alpha.
+
+  o Minor bugfixes (client, onion service v3, backport from 0.4.2.4-rc):
+    - Fix a BUG() assertion that occurs within a very small race window
+      between when a client intro circuit opens and when its descriptor
+      gets cleaned up from the cache. The circuit is now closed early,
+      which will trigger a re-fetch of the descriptor and continue the
+      connection. Fixes bug 28970; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (connections, backport from 0.4.2.3-rc):
+    - Avoid trying to read data from closed connections, which can cause
+      needless loops in Libevent and infinite loops in Shadow. Fixes bug
+      30344; bugfix on 0.1.1.1-alpha.
+
+  o Minor bugfixes (error handling, backport from 0.4.2.1-alpha):
+    - On abort, try harder to flush the output buffers of log messages.
+      On some platforms (macOS), log messages could be discarded when
+      the process terminates. Fixes bug 31571; bugfix on 0.3.5.1-alpha.
+    - Report the tor version whenever an assertion fails. Previously, we
+      only reported the Tor version on some crashes, and some non-fatal
+      assertions. Fixes bug 31571; bugfix on 0.3.5.1-alpha.
+    - When tor aborts due to an error, close log file descriptors before
+      aborting. Closing the logs makes some OSes flush log file buffers,
+      rather than deleting buffered log lines. Fixes bug 31594; bugfix
+      on 0.2.5.2-alpha.
+
+  o Minor bugfixes (logging, backport from 0.4.2.2-alpha):
+    - Add a missing check for HAVE_PTHREAD_H, because the backtrace code
+      uses mutexes. Fixes bug 31614; bugfix on 0.2.5.2-alpha.
+    - Disable backtrace signal handlers when shutting down tor. Fixes
+      bug 31614; bugfix on 0.2.5.2-alpha.
+    - Rate-limit our the logging message about the obsolete .exit
+      notation. Previously, there was no limit on this warning, which
+      could potentially be triggered many times by a hostile website.
+      Fixes bug 31466; bugfix on 0.2.2.1-alpha.
+
+  o Minor bugfixes (logging, protocol violations, backport from 0.4.2.2-alpha):
+    - Do not log a nonfatal assertion failure when receiving a VERSIONS
+      cell on a connection using the obsolete v1 link protocol. Log a
+      protocol_warn instead. Fixes bug 31107; bugfix on 0.2.4.4-alpha.
+
+  o Minor bugfixes (mainloop, periodic events, in-process API, backport from 0.4.2.3-alpha):
+    - Reset the periodic events' "enabled" flag when Tor is shut down
+      cleanly. Previously, this flag was left on, which caused periodic
+      events not to be re-enabled when Tor was relaunched in-process
+      with tor_api.h after a shutdown. Fixes bug 32058; bugfix
+      on 0.3.3.1-alpha.
+
+  o Minor bugfixes (multithreading, backport from 0.4.2.2-alpha):
+    - Avoid some undefined behaviour when freeing mutexes. Fixes bug
+      31736; bugfix on 0.0.7.
+
+  o Minor bugfixes (process management, backport from 0.4.2.3-alpha):
+    - Remove overly strict assertions that triggered when a pluggable
+      transport failed to launch. Fixes bug 31091; bugfix
+      on 0.4.0.1-alpha.
+    - Remove an assertion in the Unix process backend. This assertion
+      would trigger when we failed to find the executable for a child
+      process. Fixes bug 31810; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (relay, backport from 0.4.2.2-alpha):
+    - Avoid crashing when starting with a corrupt keys directory where
+      the old ntor key and the new ntor key are identical. Fixes bug
+      30916; bugfix on 0.2.4.8-alpha.
+
+  o Minor bugfixes (testing, backport from 0.4.2.3-alpha):
+    - When testing port rebinding, don't busy-wait for tor to log.
+      Instead, actually sleep for a short time before polling again.
+      Also improve the formatting of control commands and log messages.
+      Fixes bug 31837; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (tests, SunOS, backport from 0.4.2.2-alpha):
+    - Avoid a map_anon_nofork test failure due to a signed/unsigned
+      integer comparison. Fixes bug 31897; bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (tls, logging, backport from 0.4.2.3-alpha):
+    - Log bugs about the TLS read buffer's length only once, rather than
+      filling the logs with similar warnings. Fixes bug 31939; bugfix
+      on 0.3.0.4-rc.
+
+  o Documentation (backport from 0.4.2.2-alpha):
+    - Explain why we can't destroy the backtrace buffer mutex. Explain
+      why we don't need to destroy the log mutex. Closes ticket 31736.
+
+  o Testing (continuous integration, backport from 0.4.2.3-alpha):
+    - Disable all but one Travis CI macOS build, to mitigate slow
+      scheduling of Travis macOS jobs. Closes ticket 32177.
+    - Run the chutney IPv6 networks as part of Travis CI. Closes
+      ticket 30860.
+    - Simplify the Travis CI build matrix, and optimise for build time.
+      Closes ticket 31859.
+    - Use Windows Server 2019 instead of Windows Server 2016 in our
+      Appveyor builds. Closes ticket 32086.
+
+  o Testing (continuous integration, backport from 0.4.2.4-rc):
+    - In Travis, use Xcode 11.2 on macOS 10.14. Closes ticket 32241.
+    - Use Ubuntu Bionic images for our Travis CI builds, so we can get a
+      recent version of coccinelle. But leave chutney on Ubuntu Trusty,
+      until we can fix some Bionic permissions issues (see ticket
+      32240). Related to ticket 31919.
+    - Install the mingw OpenSSL package in Appveyor. This makes sure
+      that the OpenSSL headers and libraries match in Tor's Appveyor
+      builds. (This bug was triggered by an Appveyor image update.)
+      Fixes bug 32449; bugfix on 0.3.5.6-rc.
+
+  o Testing (continuous integration, backport from 0.4.2.5):
+    - Require C99 standards-conforming code in Travis CI, but allow GNU gcc
+      extensions. Also activates clang's -Wtypedef-redefinition warnings.
+      Build some jobs with -std=gnu99, and some jobs without.
+      Closes ticket 32500.
+
+
 Changes in version 0.4.1.6 - 2019-09-19
   This release backports several bugfixes to improve stability and
   correctness.  Anyone experiencing build problems or crashes with 0.4.1.5,
