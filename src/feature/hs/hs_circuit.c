@@ -1297,6 +1297,14 @@ hs_circ_cleanup_on_repurpose(circuit_t *circ)
   }
 }
 
+/** Return true iff the given established client rendezvous circuit was sent
+ * into the INTRODUCE1 cell. This is called so we can take a decision on
+ * expiring or not the circuit.
+ *
+ * The caller MUST make sure the circuit is an established client rendezvous
+ * circuit (purpose: CIRCUIT_PURPOSE_C_REND_READY).
+ *
+ * This function supports all onion service versions. */
 bool
 hs_circ_is_rend_sent_in_intro1(const origin_circuit_t *circ)
 {
