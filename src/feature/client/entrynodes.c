@@ -2743,7 +2743,7 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
           {NONPRIMARY_GUARD_CONNECT_TIMEOUT} seconds."
     */
     circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
-    if BUG((state == NULL))
+    if (BUG(state == NULL))
       continue;
     if (state->state != GUARD_CIRC_STATE_COMPLETE)
       continue;
