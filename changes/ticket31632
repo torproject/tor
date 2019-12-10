@@ -1,0 +1,3 @@
+  o Minor bugfixes (onion service v3):
+    - When a service descriptor upload fails, retry on the same directory. Fixes
+      bug 31632; bugfix on 0.3.2.1-alpha.

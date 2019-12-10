@@ -3503,6 +3503,61 @@ service_encode_descriptor(const hs_service_t *service,
 /* Public API */
 /* ========== */
 
+/** With a directory connection identifier and the HSDir identity digest,
+ * attempt a re-upload of the corresponding descriptor. This is called when an
+ * HS descriptor upload fails.
+ *
+ * An upload does NOT occure when:
+ *  - Service no longer exists.
+ *  - Descriptor for that service can not be found.
+ *  - The directory has fell off the consensus.
+ */
+void
+hs_service_reupload_desc_to_dir(const hs_ident_dir_conn_t *ident,
+                                const char *dir_identity_digest)
+{
+  hs_service_t *service = NULL;
+  hs_service_descriptor_t *desc = NULL;
+  const node_t *dir_node;
+
+  tor_assert(ident);
+  tor_assert(dir_identity_digest);
+
+  get_objects_from_dir_ident(ident, &service, &desc);
+
+  /* Possible the service was removed from the configuration from the time it
+   * tried to upload up to this point. */
+  if (service == NULL) {
+    log_info(LD_REND, "Attempting to re-upload descriptor for service %s "
+                      "but has been removed from global map.",
+                      ed25519_fmt(&ident->identity_pk));
+    return;
+  }
+
+  /* Possible the descriptor have rotated from the time it tried to upload up
+   * to this point. */
+  if (desc == NULL || desc->desc == NULL) {
+    log_info(LD_REND, "Attempting to re-upload descriptor for service %s "
+                      "but descriptor for blinded key %s can't be found.",
+             ed25519_fmt(&ident->identity_pk),
+             ed25519_fmt(&ident->blinded_pk));
+    return;
+  }
+
+  /* Find the routerstatus from the directory identity digest. */
+  dir_node = node_get_by_id(dir_identity_digest);
+  if (dir_node == NULL) {
+    log_info(LD_REND, "Attempting to re-upload descriptor for service %s "
+                      "but HSDir %s has gone away.",
+             ed25519_fmt(&ident->identity_pk),
+             hex_str(dir_identity_digest, DIGEST_LEN));
+    return;
+  }
+
+  /* Initiate reupload. */
+  upload_descriptor_to_hsdir(service, desc, dir_node);
+}
+
 /** This is called everytime the service map (v2 or v3) changes that is if an
  * element is added or removed. */
 void

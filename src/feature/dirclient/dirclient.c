@@ -32,6 +32,7 @@
 #include "feature/hs/hs_cache.h"
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_control.h"
+#include "feature/hs/hs_service.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/dirlist.h"
@@ -759,6 +760,10 @@ connection_dir_client_request_failed(dir_connection_t *conn)
     log_info(LD_DIR, "Giving up on downloading microdescriptors from "
              "directory server at '%s'; will retry", conn->base_.address);
     connection_dir_download_routerdesc_failed(conn);
+  } else if (TO_CONN(conn)->purpose == DIR_PURPOSE_UPLOAD_HSDESC &&
+             conn->hs_ident) {
+    log_info(LD_DIR, "Giving up on uploading HS descriptor. Retrying.");
+    hs_service_reupload_desc_to_dir(conn->hs_ident, conn->identity_digest);
   }
 }
 

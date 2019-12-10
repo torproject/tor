@@ -358,6 +358,8 @@ void hs_service_upload_desc_to_dir(const char *encoded_desc,
                                    const ed25519_public_key_t *identity_pk,
                                    const ed25519_public_key_t *blinded_pk,
                                    const routerstatus_t *hsdir_rs);
+void hs_service_reupload_desc_to_dir(const hs_ident_dir_conn_t *ident,
+                                     const char *dir_identity_digest);
 
 hs_circuit_id_protocol_t
 hs_service_exports_circuit_id(const ed25519_public_key_t *pk);
