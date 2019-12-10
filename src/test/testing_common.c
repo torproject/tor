@@ -47,6 +47,13 @@
 #include <dirent.h>
 #endif /* defined(_WIN32) */
 
+#if defined(__ANDROID__)
+/** Temporary directory to delete on exit.  Android only. **/
+static char temp_dir_delete_on_exit[256];
+#else
+#define temp_dir_delete_on_exit temp_dir
+#endif
+
 /** Temporary directory (set up by setup_directory) under which we store all
  * our files during testing. */
 static char temp_dir[256];
@@ -100,6 +107,7 @@ setup_directory(void)
     perror("");
     exit(1);
   }
+  strlcpy(temp_dir_delete_on_exit, temp_dir, sizeof(temp_dir_delete_on_exit));
   tor_snprintf(temp_dir, sizeof(temp_dir),
                "/data/local/tmp/tor_%d_%d_%s/test_%d_%d_%s",
                (int) getuid(), (int) getpid(), rnd32,
@@ -196,7 +204,7 @@ remove_directory(void)
     return;
   }
 
-  rm_rf(temp_dir);
+  rm_rf(temp_dir_delete_on_exit);
 }
 
 static void *
