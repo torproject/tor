@@ -596,6 +596,27 @@ service_desc_find_by_intro(const hs_service_t *service,
   return descp;
 }
 
+/** For the given service and blinded public key, return the descriptor
+ * matching the blinded key. NULL is returned if not found. */
+static hs_service_descriptor_t *
+service_desc_find_by_blinded_pk(const hs_service_t *service,
+                                const ed25519_public_key_t *blinded_pk)
+{
+  hs_service_descriptor_t *descp = NULL;
+
+  tor_assert(service);
+  tor_assert(blinded_pk);
+
+  FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
+    if (ed25519_pubkey_eq(blinded_pk, &desc->blinded_kp.pubkey)) {
+      descp = desc;
+      break;
+    }
+  } FOR_EACH_DESCRIPTOR_END;
+
+  return descp;
+}
+
 /** From a circuit identifier, get all the possible objects associated with the
  * ident. If not NULL, service, ip or desc are set if the object can be found.
  * They are untouched if they can't be found.
@@ -627,6 +648,30 @@ get_objects_from_circ_ident(const hs_ident_circuit_t *ident,
   /* Get the descriptor for this introduction point and service. */
   if (s && ip && *ip && desc) {
     *desc = service_desc_find_by_intro(s, *ip);
+  }
+}
+
+/** From a directory identifier, get all the possible objects associated with
+ * the ident. If not NULL, service or desc are set if the object can be found.
+ * They are untouched if they can't be found. */
+STATIC void
+get_objects_from_dir_ident(const hs_ident_dir_conn_t *ident,
+                           hs_service_t **service,
+                           hs_service_descriptor_t **desc)
+{
+  hs_service_t *s;
+
+  tor_assert(ident);
+
+  /* Get service object from the circuit identifier. */
+  s = find_service(hs_service_map, &ident->identity_pk);
+  if (s && service) {
+    *service = s;
+  }
+
+  /* Get the descriptor for this service. */
+  if (s && desc) {
+    *desc = service_desc_find_by_blinded_pk(s, &ident->blinded_pk);
   }
 }
 

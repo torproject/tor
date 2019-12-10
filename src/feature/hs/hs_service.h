@@ -406,6 +406,10 @@ STATIC void get_objects_from_circ_ident(const hs_ident_circuit_t *ident,
                                         hs_service_t **service,
                                         hs_service_intro_point_t **ip,
                                         hs_service_descriptor_t **desc);
+STATIC void get_objects_from_dir_ident(const hs_ident_dir_conn_t *ident,
+                                       hs_service_t **service,
+                                       hs_service_descriptor_t **desc);
+
 STATIC const node_t *
 get_node_from_intro_point(const hs_service_intro_point_t *ip);
 STATIC int can_service_launch_intro_circuit(hs_service_t *service,

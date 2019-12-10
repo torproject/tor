@@ -812,6 +812,38 @@ test_helper_functions(void *arg)
     tt_ptr_op(desc_lookup, OP_EQ, NULL);
   }
 
+  /* Testing get_objects_from_dir_ident(). */
+  {
+    hs_service_t *s_lookup = NULL;
+    hs_service_descriptor_t *desc_lookup = NULL;
+    hs_ident_dir_conn_t dir_ident;
+
+    /* Setup ident. */
+    ed25519_pubkey_copy(&dir_ident.identity_pk, &service->keys.identity_pk);
+    ed25519_pubkey_copy(&dir_ident.blinded_pk,
+                        &service->desc_current->blinded_kp.pubkey);
+
+    get_objects_from_dir_ident(&dir_ident, &s_lookup, &desc_lookup);
+    tt_mem_op(s_lookup, OP_EQ, service, sizeof(hs_service_t));
+    tt_mem_op(desc_lookup, OP_EQ, service->desc_current,
+              sizeof(hs_service_descriptor_t));
+    /* Reset */
+    s_lookup = NULL; desc_lookup = NULL;
+
+    /* NULL parameter should work. */
+    get_objects_from_dir_ident(&dir_ident, NULL, &desc_lookup);
+    tt_mem_op(desc_lookup, OP_EQ, service->desc_current,
+              sizeof(hs_service_descriptor_t));
+    /* Reset. */
+    s_lookup = NULL; desc_lookup = NULL;
+
+    /* Break the ident and we should find nothing. */
+    memset(&dir_ident, 0, sizeof(dir_ident));
+    get_objects_from_dir_ident(&dir_ident, &s_lookup, &desc_lookup);
+    tt_ptr_op(s_lookup, OP_EQ, NULL);
+    tt_ptr_op(desc_lookup, OP_EQ, NULL);
+  }
+
   /* Testing get_node_from_intro_point() */
   {
     const node_t *node = get_node_from_intro_point(ip);
