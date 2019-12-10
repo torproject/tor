@@ -5117,7 +5117,20 @@ options_init_logs(const or_options_t *old_options, const or_options_t *options,
       goto cleanup;
     }
     if (smartlist_len(elts) == 1) {
-      if (!strcasecmp(smartlist_get(elts,0), "syslog")) {
+      bool is_syslog = !strcasecmp(smartlist_get(elts,0), "syslog");
+#if defined(__ANDROID__)
+      /* We accept "android" as an obsolete synonym for syslog.  Before
+       * 0.4.3.x, "android" caused us to use the "logcat" interface, but the
+       * two methods reportedly produce the same output in practice.
+       */
+      if (!strcasecmp(smartlist_get(elts,0), "android")) {
+        is_syslog = true;
+        log_warn(LD_CONFIG, "The log type 'android' is an obsolete "
+                 "synonym for 'syslog', and will go away in a future "
+                 "version of Tor.");
+      }
+#endif
+      if (is_syslog) {
 #ifdef HAVE_SYSLOG_H
         if (!validate_only) {
           add_syslog_log(severity, options->SyslogIdentityTag);
@@ -5125,18 +5138,6 @@ options_init_logs(const or_options_t *old_options, const or_options_t *options,
 #else
         log_warn(LD_CONFIG, "Syslog is not supported on this system. Sorry.");
 #endif /* defined(HAVE_SYSLOG_H) */
-        goto cleanup;
-      }
-
-      if (!strcasecmp(smartlist_get(elts, 0), "android")) {
-#ifdef HAVE_ANDROID_LOG_H
-        if (!validate_only) {
-          add_android_log(severity, options->AndroidIdentityTag);
-        }
-#else
-        log_warn(LD_CONFIG, "Android logging is not supported"
-                            " on this system. Sorry.");
-#endif /* defined(HAVE_ANDROID_LOG_H) */
         goto cleanup;
       }
     }
