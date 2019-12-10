@@ -1,0 +1,5 @@
+  o Removed features:
+    - Tor no longer includes support for calling Android's "logcat"
+      interface directly, and now uses the syslog interface instead.
+      A future version of Tor will remove the (undocumented) "android"
+      log type.  Closes ticket 32181.
