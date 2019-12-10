@@ -44,7 +44,6 @@ struct or_options_t {
   int TruncateLogFile; /**< Boolean: Should we truncate the log file
                             before we start writing? */
   char *SyslogIdentityTag; /**< Identity tag to add for syslog logging. */
-  char *AndroidIdentityTag; /**< Identity tag to add for Android logging. */
 
   char *DebugLogFile; /**< Where to send verbose log messages. */
   char *DataDirectory_option; /**< Where to store long-term data, as
