@@ -1,0 +1,4 @@
+  o Minor features (tests, Android):
+    - When running the unit tests on Android, create temporary files
+      in a subdirectory of /data/local/tmp. Closes ticket
+      32172. Based on a patch from Hans-Christoph Steiner.
