@@ -102,6 +102,8 @@ setup_directory(void)
   tor_snprintf(temp_dir, sizeof(temp_dir),
                "/data/local/tmp/tor_%d_%d_%s",
                (int) getuid(), (int) getpid(), rnd32);
+  /* I don't know why we're making these directories setgid and setuid.
+   * We don't need to do that on the other platforms. */
   r = mkdir(temp_dir, 06770);
   if (r) {
     fprintf(stderr, "Can't create directory %s:", temp_dir);
