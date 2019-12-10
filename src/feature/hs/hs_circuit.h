@@ -66,6 +66,8 @@ int hs_circuit_setup_e2e_rend_circ(origin_circuit_t *circ,
 int hs_circuit_setup_e2e_rend_circ_legacy_client(origin_circuit_t *circ,
                                           const uint8_t *rend_cell_body);
 
+bool hs_circ_is_rend_sent_in_intro1(const origin_circuit_t *circ);
+
 #ifdef HS_CIRCUIT_PRIVATE
 
 STATIC hs_ident_circuit_t *
