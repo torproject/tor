@@ -267,10 +267,6 @@ AM_CONDITIONAL([USE_ANDROID], [test "x$enable_android" = "xyes"])
 if test "x$enable_android" = "xyes"; then
   AC_DEFINE([USE_ANDROID], [1], [Compile with Android specific features enabled])
 
-  dnl Check if the Android log library is available.
-  AC_CHECK_HEADERS([android/log.h])
-  AC_SEARCH_LIBS(__android_log_write, [log])
-
 fi
 
 dnl ---
