@@ -782,13 +782,13 @@ test_helper_functions(void *arg)
   ed25519_pubkey_copy(&ident.intro_auth_pk, &ip->auth_key_kp.pubkey);
   ed25519_pubkey_copy(&ident.identity_pk, &service->keys.identity_pk);
 
-  /* Testing get_objects_from_ident(). */
+  /* Testing get_objects_from_circ_ident(). */
   {
     hs_service_t *s_lookup = NULL;
     hs_service_intro_point_t *ip_lookup = NULL;
     hs_service_descriptor_t *desc_lookup = NULL;
 
-    get_objects_from_ident(&ident, &s_lookup, &ip_lookup, &desc_lookup);
+    get_objects_from_circ_ident(&ident, &s_lookup, &ip_lookup, &desc_lookup);
     tt_mem_op(s_lookup, OP_EQ, service, sizeof(hs_service_t));
     tt_mem_op(ip_lookup, OP_EQ, ip, sizeof(hs_service_intro_point_t));
     tt_mem_op(desc_lookup, OP_EQ, service->desc_current,
@@ -797,7 +797,7 @@ test_helper_functions(void *arg)
     s_lookup = NULL; ip_lookup = NULL; desc_lookup = NULL;
 
     /* NULL parameter should work. */
-    get_objects_from_ident(&ident, NULL, &ip_lookup, &desc_lookup);
+    get_objects_from_circ_ident(&ident, NULL, &ip_lookup, &desc_lookup);
     tt_mem_op(ip_lookup, OP_EQ, ip, sizeof(hs_service_intro_point_t));
     tt_mem_op(desc_lookup, OP_EQ, service->desc_current,
               sizeof(hs_service_descriptor_t));
@@ -806,7 +806,7 @@ test_helper_functions(void *arg)
 
     /* Break the ident and we should find nothing. */
     memset(&ident, 0, sizeof(ident));
-    get_objects_from_ident(&ident, &s_lookup, &ip_lookup, &desc_lookup);
+    get_objects_from_circ_ident(&ident, &s_lookup, &ip_lookup, &desc_lookup);
     tt_ptr_op(s_lookup, OP_EQ, NULL);
     tt_ptr_op(ip_lookup, OP_EQ, NULL);
     tt_ptr_op(desc_lookup, OP_EQ, NULL);

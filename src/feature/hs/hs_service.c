@@ -603,9 +603,10 @@ service_desc_find_by_intro(const hs_service_t *service,
  * This is an helper function because we do those lookups often so it's more
  * convenient to simply call this functions to get all the things at once. */
 STATIC void
-get_objects_from_ident(const hs_ident_circuit_t *ident,
-                       hs_service_t **service, hs_service_intro_point_t **ip,
-                       hs_service_descriptor_t **desc)
+get_objects_from_circ_ident(const hs_ident_circuit_t *ident,
+                            hs_service_t **service,
+                            hs_service_intro_point_t **ip,
+                            hs_service_descriptor_t **desc)
 {
   hs_service_t *s;
 
@@ -3203,7 +3204,7 @@ service_intro_circ_has_opened(origin_circuit_t *circ)
   }
 
   /* Get the corresponding service and intro point. */
-  get_objects_from_ident(circ->hs_ident, &service, &ip, &desc);
+  get_objects_from_circ_ident(circ->hs_ident, &service, &ip, &desc);
 
   if (service == NULL) {
     log_warn(LD_REND, "Unknown service identity key %s on the introduction "
@@ -3257,7 +3258,7 @@ service_rendezvous_circ_has_opened(origin_circuit_t *circ)
   pathbias_count_use_attempt(circ);
 
   /* Get the corresponding service and intro point. */
-  get_objects_from_ident(circ->hs_ident, &service, NULL, NULL);
+  get_objects_from_circ_ident(circ->hs_ident, &service, NULL, NULL);
   if (service == NULL) {
     log_warn(LD_REND, "Unknown service identity key %s on the rendezvous "
                       "circuit %u with cookie %s. Can't find onion service.",
@@ -3295,7 +3296,7 @@ service_handle_intro_established(origin_circuit_t *circ,
   tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
 
   /* We need the service and intro point for this cell. */
-  get_objects_from_ident(circ->hs_ident, &service, &ip, NULL);
+  get_objects_from_circ_ident(circ->hs_ident, &service, &ip, NULL);
 
   /* Get service object from the circuit identifier. */
   if (service == NULL) {
@@ -3347,7 +3348,7 @@ service_handle_introduce2(origin_circuit_t *circ, const uint8_t *payload,
   tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO);
 
   /* We'll need every object associated with this circuit. */
-  get_objects_from_ident(circ->hs_ident, &service, &ip, &desc);
+  get_objects_from_circ_ident(circ->hs_ident, &service, &ip, &desc);
 
   /* Get service object from the circuit identifier. */
   if (service == NULL) {
@@ -3700,7 +3701,7 @@ hs_service_set_conn_addr_port(const origin_circuit_t *circ,
   tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
   tor_assert(circ->hs_ident);
 
-  get_objects_from_ident(circ->hs_ident, &service, NULL, NULL);
+  get_objects_from_circ_ident(circ->hs_ident, &service, NULL, NULL);
 
   if (service == NULL) {
     log_warn(LD_REND, "Unable to find any hidden service associated "

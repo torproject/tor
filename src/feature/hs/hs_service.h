@@ -402,10 +402,10 @@ STATIC hs_service_descriptor_t *service_desc_find_by_intro(
 STATIC int client_filename_is_valid(const char *filename);
 STATIC hs_service_authorized_client_t *
 parse_authorized_client(const char *client_key_str);
-STATIC void get_objects_from_ident(const hs_ident_circuit_t *ident,
-                                   hs_service_t **service,
-                                   hs_service_intro_point_t **ip,
-                                   hs_service_descriptor_t **desc);
+STATIC void get_objects_from_circ_ident(const hs_ident_circuit_t *ident,
+                                        hs_service_t **service,
+                                        hs_service_intro_point_t **ip,
+                                        hs_service_descriptor_t **desc);
 STATIC const node_t *
 get_node_from_intro_point(const hs_service_intro_point_t *ip);
 STATIC int can_service_launch_intro_circuit(hs_service_t *service,
