@@ -102,7 +102,7 @@ setup_directory(void)
   tor_snprintf(temp_dir, sizeof(temp_dir),
                "/data/local/tmp/tor_%d_%d_%s",
                (int) getuid(), (int) getpid(), rnd32);
-  r = mkdir(temp_dir, 6770);
+  r = mkdir(temp_dir, 06770);
   if (r) {
     fprintf(stderr, "Can't create directory %s:", temp_dir);
     perror("");
@@ -113,12 +113,14 @@ setup_directory(void)
    * because of unspecified permissions issues in the directory we
    * create. Possibly it's because of ownership issues caused by the sticky
    * bit, like we fix in the unix case below with a chown()?
+   * Possibly it's because an earlier version of this code wasn't using
+   * octal for chmod()?
    */
   tor_snprintf(temp_dir, sizeof(temp_dir),
                "/data/local/tmp/tor_%d_%d_%s/test_%d_%d_%s",
                (int) getuid(), (int) getpid(), rnd32,
                (int) getuid(), (int) getpid(), rnd32);
-  r = mkdir(temp_dir, 6770);
+  r = mkdir(temp_dir, 06770);
 #else /* !defined(_WIN32) */
   tor_snprintf(temp_dir, sizeof(temp_dir), "/tmp/tor_test_%d_%s",
                (int) getpid(), rnd32);
