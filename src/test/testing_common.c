@@ -97,7 +97,8 @@ setup_directory(void)
     r = mkdir(temp_dir);
   }
 #elif defined(__ANDROID__)
-  /* tor might not like the default perms, so create a subdir */
+  /* Tor doesn't like the permissions of "tmp" per se, so we create a
+   * subdirectory. */
   tor_snprintf(temp_dir, sizeof(temp_dir),
                "/data/local/tmp/tor_%d_%d_%s",
                (int) getuid(), (int) getpid(), rnd32);
@@ -108,6 +109,11 @@ setup_directory(void)
     exit(1);
   }
   strlcpy(temp_dir_delete_on_exit, temp_dir, sizeof(temp_dir_delete_on_exit));
+  /* Now we creating this subdirectory of our subdirectory.  We do this
+   * because of unspecified permissions issues in the directory we
+   * create. Possibly it's because of ownership issues caused by the sticky
+   * bit, like we fix in the unix case below with a chown()?
+   */
   tor_snprintf(temp_dir, sizeof(temp_dir),
                "/data/local/tmp/tor_%d_%d_%s/test_%d_%d_%s",
                (int) getuid(), (int) getpid(), rnd32,
