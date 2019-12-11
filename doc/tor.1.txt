@@ -147,7 +147,7 @@ The following options in this section are only recognized on the
     can encrypt the master identity key with a passphrase.  When Tor
     asks you for a passphrase and you don't want to encrypt the master
     key, just don't enter any passphrase when asked. +
- +
+     +
     Use the **`--newpass`** option with **`--keygen`** only when you
     need to add, change, or remove a passphrase on an existing ed25519
     master identity key. You will be prompted for the old passphase
@@ -178,7 +178,7 @@ The following options in this section are only recognized on the
     The __purpose__ specifies which type of key certificate to determine
     the expiration of.  The only currently recognised __purpose__ is
     "sign". +
- +
+     +
     Running **`tor --key-expiration sign`** will attempt to find your
     signing key certificate and will output, both in the logs as well
     as to stdout, the signing key certificate's expiration time in
@@ -237,7 +237,7 @@ GENERAL OPTIONS
     engine of this name. This must be used for any dynamic hardware engine.
     Names can be verified with the openssl engine command. Can not be changed
     while tor is running. +
- +
+     +
     If the engine name is prefixed with a "!", then Tor will exit if the
     engine cannot be loaded.
 
@@ -273,13 +273,13 @@ GENERAL OPTIONS
     relay (that is, 600 kbits) or 50 KBytes for a bridge (400 kbits) -- but of
     course, more is better; we recommend at least 250 KBytes (2 mbits) if
     possible.  (Default: 1 GByte) +
- +
+     +
     Note that this option, and other bandwidth-limiting options, apply to TCP
     data only: They do not count TCP headers or DNS traffic. +
- +
+     +
     Tor uses powers of two, not powers of ten, so 1 GByte is
     1024*1024*1024 bytes as opposed to 1 billion bytes. +
- +
+     +
     With this option, and in other options that take arguments in bytes,
     KBytes, and so on, other formats are also supported. Notably, "KBytes" can
     also be written as "kilobytes" or "kb"; "MBytes" can be written as
@@ -320,7 +320,7 @@ GENERAL OPTIONS
     (IPv4 addresses should written as-is; IPv6 addresses should be wrapped in
     square brackets.) It's the
     duty of that proxy to properly forward the traffic to the bridge. +
- +
+     +
     In its second form, when set along with a corresponding Bridge line, the Tor
     client launches the pluggable transport proxy executable in
     __path-to-binary__ using __options__ as its command-line options, and
@@ -332,13 +332,13 @@ GENERAL OPTIONS
     process before it will start. Tor will ask the OS for as many file
     descriptors as the OS will allow (you can find this by "ulimit -H -n").
     If this number is less than ConnLimit, then Tor will refuse to start. +
- +
+     +
     Tor relays need thousands of sockets, to connect to every other relay.
     If you are running a private bridge, you can reduce the number of sockets
     that Tor uses. For example, to limit Tor to 500 sockets, run
     "ulimit -n 500" in a shell. Then start tor in the same shell, with
     **ConnLimit 500**. You may also need to set **DisableOOSCheck 0**. +
- +
+     +
     Unless you have severely limited sockets, you probably don't need to
     adjust **ConnLimit** itself. It has no effect on Windows, since that
     platform lacks getrlimit(). (Default: 1000)
@@ -350,15 +350,15 @@ GENERAL OPTIONS
     be limited. If you're on a virtual server, and you encounter the "Error
     creating network socket: No buffer space available" message, you are
     likely experiencing this problem. +
- +
+     +
     The preferred solution is to have the admin increase the buffer pool for
     the host itself via /proc/sys/net/ipv4/tcp_mem or equivalent facility;
     this configuration option is a second-resort. +
- +
+     +
     The DirPort option should also not be used if TCP buffers are scarce. The
     cached directory requests consume additional sockets which exacerbates
     the problem. +
- +
+     +
     You should **not** enable this feature unless you encounter the "no buffer
     space available" issue. Reducing the TCP buffers affects window size for
     the TCP stream and will reduce throughput in proportion to round trip
@@ -383,7 +383,7 @@ GENERAL OPTIONS
     C escape sequences. You can specify this directive multiple times, to
     bind to multiple address/port pairs.
     Set it to "auto" to have Tor pick a port for you. (Default: 0) +
- +
+     +
     Recognized flags are:
     **GroupWritable**;;
         Unix domain sockets only: makes the socket get created as
@@ -456,7 +456,7 @@ GENERAL OPTIONS
     separated by spaces, and determine what kind of an authority this directory
     is. By default, an authority is not authoritative for any directory style
     or version unless an appropriate flag is given. +
- +
+     +
     Tor will use this authority as a bridge authoritative directory if the
     "bridge" flag is set. If a flag "orport=**orport**" is given, Tor will
     use the given port when opening encrypted tunnels to the dirserver. If a
@@ -467,13 +467,13 @@ GENERAL OPTIONS
     if an "ipv6=**[**__ipv6address__**]**:__orport__" flag is present, then
     the directory authority is listening for IPv6 connections on the
     indicated IPv6 address and OR Port. +
- +
+     +
     Tor will contact the authority at __ipv4address__ to
     download directory documents. Clients always use the ORPort. Relays
     usually use the DirPort, but will use the ORPort in some circumstances.
     If an IPv6 ORPort is supplied, clients will also download directory
     documents at the IPv6 ORPort, if they are configured to use IPv6. +
- +
+     +
     If no **DirAuthority** line is given, Tor will use the default directory
     authorities. NOTE: this option is intended for setting up a private Tor
     network with its own directory authorities. If you use it, you will be
@@ -552,10 +552,10 @@ GENERAL OPTIONS
     startup if a hard-coded directory is down. Clients wait for a few seconds
     between each attempt, and retry FallbackDirs more often than directory
     authorities, to reduce the load on the directory authorities.  +
- +
+     +
     FallbackDirs should be stable relays with stable IP addresses, ports,
     and identity keys. They must have a DirPort. +
- +
+     +
     By default, the directory authorities are also FallbackDirs. Specifying a
     FallbackDir replaces Tor's default hard-coded FallbackDirs (if any).
     (See the **DirAuthority** entry for an explanation of each flag.)
@@ -660,7 +660,7 @@ GENERAL OPTIONS
     since anything more verbose may provide sensitive information to an
     attacker who obtains the logs. If only one severity level is given, all
     messages of that level or higher will be sent to the listed destination. +
- +
+     +
     Some low-level logs may be sent from signal handlers, so their destination
     logs must be signal-safe. These low-level logs include backtraces,
     logging function errors, and errors in code called by logging functions.
@@ -686,16 +686,16 @@ GENERAL OPTIONS
     list of logging domains.  You can prefix a domain with $$~$$ to indicate
     negation, and use * to indicate "all domains".  If you specify a severity
     range without a list of domains, it matches all domains. +
- +
+     +
     This is an advanced feature which is most useful for debugging one or two
     of Tor's subsystems at a time. +
- +
+     +
     The currently recognized domains are: general, crypto, net, config, fs,
     protocol, mm, http, app, control, circ, rend, bug, dir, dirserv, or, edge,
     acct, hist, handshake, heartbeat, channel, sched, guard, consdiff, dos,
     process, pt, btrack, and mesg.
     Domain names are case-insensitive. +
- +
+     +
     For example, "`Log [handshake]debug [~net,~mm]info notice stdout`" sends
     to stdout: all handshake messages of any severity, all info-and-higher
     messages from domains other than networking and memory management, and all
@@ -801,7 +801,7 @@ GENERAL OPTIONS
     addresses) by replacing them with the string [scrubbed]. This way logs can
     still be useful, but they don't leave behind personally identifying
     information about what sites a user might have visited. +
- +
+     +
     If this option is set to 0, Tor will not perform any scrubbing, if it is
     set to 1, all potentially sensitive strings are replaced. If it is set to
     relay, all log messages generated when acting as a relay are sanitized, but
@@ -815,7 +815,7 @@ GENERAL OPTIONS
     experimental feature. It only works on Linux-based operating systems,
     and only when Tor has been built with the libseccomp library. This option
     can not be changed while tor is running. +
- +
+     +
     When the **Sandbox** is 1, the following options can not be changed when tor
     is running:
     **Address**,
@@ -826,14 +826,14 @@ GENERAL OPTIONS
     **Logs**,
     **ServerDNSResolvConfFile**,
     **ClientOnionAuthDir** (and any files in it won't reload on HUP signal). +
- +
+     +
     Launching new Onion Services through the control port is not supported
     with current syscall sandboxing implementation. +
- +
+     +
     Tor must remain in client or server mode (some changes to **ClientOnly**
     and **ORPort** are not allowed). Currently, if **Sandbox** is 1,
     **ControlPort** command "GETINFO address" will not work. +
- +
+     +
     (Default: 0)
 
 [[Schedulers]] **Schedulers** **KIST**|**KISTLite**|**Vanilla**::
@@ -844,22 +844,22 @@ GENERAL OPTIONS
     these values at runtime. This option mostly effects relays, and most
     operators should leave it set to its default value.
     (Default: KIST,KISTLite,Vanilla) +
- +
+     +
     The possible scheduler types are:
- +
+     +
     **KIST**: Kernel-Informed Socket Transport. Tor will use TCP information
     from the kernel to make informed decisions regarding how much data to send
     and when to send it. KIST also handles traffic in batches (see
     KISTSchedRunInterval) in order to improve traffic prioritization decisions.
     As implemented, KIST will only work on Linux kernel version 2.6.39 or
     higher. +
- +
+     +
     **KISTLite**: Same as KIST but without kernel support. Tor will use all
     the same mechanics as with KIST, including the batching, but its decisions
     regarding how much data to send will not be as good. KISTLite will work on
     all kernels and operating systems, and the majority of the benefits of KIST
     are still realized with KISTLite. +
- +
+     +
     **Vanilla**: The scheduler that Tor used before KIST was implemented. It
     sends as much data as possible, as soon as possible. Vanilla will work on
     all kernels and operating systems.
@@ -943,14 +943,14 @@ The following options are useful only for clients (that is, if
     the relay running at that location has the right fingerprint. We also use
     fingerprint to look up the bridge descriptor at the bridge authority, if
     it's provided and if UpdateBridgesFromAuthority is set too.  +
- +
+     +
     If "transport" is provided, it must match a ClientTransportPlugin line. We
     then use that pluggable transport's proxy to transfer data to the bridge,
     rather than connecting to the bridge directly. Some transports use a
     transport-specific method to work out the remote address to connect to.
     These transports typically ignore the "IP:ORPort" specified in the bridge
     line.  +
- +
+     +
     Tor passes any "key=val" settings to the pluggable transport proxy as
     per-connection arguments when connecting to the bridge.  Consult
     the documentation of the pluggable transport for details of what
@@ -1029,19 +1029,19 @@ The following options are useful only for clients (that is, if
     be wrapped in braces; fingerprints may be preceded by a dollar sign.
     (Example:
     ExcludeNodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
- +
+     +
     By default, this option is treated as a preference that Tor is allowed
     to override in order to keep working.
     For example, if you try to connect to a hidden service,
     but you have excluded all of the hidden service's introduction points,
     Tor will connect to one of them anyway.  If you do not want this
     behavior, set the StrictNodes option (documented below).  +
- +
+     +
     Note also that if you are a relay, this (and the other node selection
     options below) only affects your own circuits that Tor builds for you.
     Clients can still build circuits through you to any node.  Controllers
     can tell Tor to build circuits through any node. +
- +
+     +
     Country codes are case-insensitive. The code "\{??}" refers to nodes whose
     country can't be identified. No country code, including \{??}, works if
     no GeoIPFile can be loaded. See also the GeoIPExcludeUnknown option below.
@@ -1069,22 +1069,22 @@ The following options are useful only for clients (that is, if
     patterns of nodes to use as exit node---that is, a
     node that delivers traffic for you *outside* the Tor network.  See
     the **ExcludeNodes** option for more information on how to specify nodes. +
- +
+     +
     Note that if you list too few nodes here, or if you exclude too many exit
     nodes with ExcludeExitNodes, you can degrade functionality.  For example,
     if none of the exits you list allows traffic on port 80 or 443, you won't
     be able to browse the web. +
- +
+     +
     Note also that not every circuit is used to deliver traffic *outside* of
     the Tor network.  It is normal to see non-exit circuits (such as those
     used to connect to hidden services, those that do directory fetches,
     those used for relay reachability self-tests, and so on) that end
     at a non-exit node.  To
     keep a node from being used entirely, see ExcludeNodes and StrictNodes. +
- +
+     +
     The ExcludeNodes option overrides this option: any node listed in both
     ExitNodes and ExcludeNodes is treated as excluded. +
- +
+     +
     The .exit address notation, if enabled via MapAddress, overrides
     this option.
 
@@ -1115,7 +1115,7 @@ The following options are useful only for clients (that is, if
     circuits except for direct connections to directory servers.  The Bridge
     option overrides this option; if you have configured bridges and
     UseBridges is 1, the Bridges are used as your entry nodes. +
- +
+     +
     The ExcludeNodes option overrides this option: any node listed in both
     EntryNodes and ExcludeNodes is treated as excluded. See
     the **ExcludeNodes** option for more information on how to specify nodes.
@@ -1168,7 +1168,7 @@ The following options are useful only for clients (that is, if
     these restrictions when connecting to Onion Routers, using TLS/SSL. If not
     set explicitly then the value of **ReachableAddresses** is used. If
     **HTTPSProxy** is set then these connections will go through that proxy. +
- +
+     +
     The separation between **ReachableORAddresses** and
     **ReachableDirAddresses** is only interesting when you are connecting
     through proxies (see **HTTPProxy** and **HTTPSProxy**). Most proxies limit
@@ -1190,9 +1190,9 @@ The following options are useful only for clients (that is, if
     Path to the directory containing v3 hidden service authorization files.
     Each file is for a single onion address, and the files MUST have the suffix
     ".auth_private" (i.e. "bob_onion.auth_private"). The content format MUST be:
- +
+     +
       <onion-address>:descriptor:x25519:<base32-encoded-privkey>
- +
+     +
     The <onion-address> MUST NOT have the ".onion" suffix. The
     <base32-encoded-privkey> is the base32 representation of the raw key bytes
     only (32 bytes for x25519). See Appendix G in the rend-spec-v3.txt file of
@@ -1223,7 +1223,7 @@ The following options are useful only for clients (that is, if
     *.example.com www.example.com". If the specified exit is not available,
     or the exit can not connect to the site, Tor will fail any connections
     to the mapped address.+
- +
+     +
     NOTES:
 
     1. When evaluating MapAddress expressions Tor stops when it hits the most
@@ -1300,14 +1300,14 @@ The following options are useful only for clients (that is, if
     to multiple addresses/ports. If a unix domain socket is used, you may
     quote the path using standard C escape sequences.
     (Default: 9050) +
- +
+     +
         NOTE: Although this option allows you to specify an IP address
         other than localhost, you should do so only with extreme caution.
         The SOCKS protocol is unencrypted and (as we use it)
         unauthenticated, so exposing it in this way could leak your
         information to anybody watching your network, and allow anybody
         to use your computer as an open proxy. +
- +
+     +
     If multiple entries of this option are present in your configuration
     file, Tor will perform stream isolation between listeners by default.
     The _isolation flags_ arguments give Tor rules for which streams
@@ -1572,7 +1572,7 @@ The following options are useful only for clients (that is, if
     command from the controller or the AutomapHostsOnResolve feature, Tor
     picks an unassigned address from this range. (Defaults:
     127.192.0.0/10 and [FE80::]/10 respectively.) +
- +
+     +
     When providing proxy server service to a network of computers using a tool
     like dns-proxy-tor, change the IPv4 network to "10.192.0.0/10" or
     "172.16.0.0/12" and change the IPv6 network to "[FC00::]/7".
@@ -1608,7 +1608,7 @@ The following options are useful only for clients (that is, if
     entries of this option are present in your configuration file, Tor will
     perform stream isolation between listeners by default.  See
     SOCKSPort for an explanation of isolation flags. +
- +
+     +
     TransPort requires OS support for transparent proxies, such as BSDs' pf or
     Linux's IPTables. If you're planning to use Tor as a transparent proxy for
     a network, you'll want to examine and change VirtualAddrNetwork from the
@@ -1617,25 +1617,25 @@ The following options are useful only for clients (that is, if
 [[TransProxyType]] **TransProxyType** **default**|**TPROXY**|**ipfw**|**pf-divert**::
     TransProxyType may only be enabled when there is transparent proxy listener
     enabled. +
- +
+     +
     Set this to "TPROXY" if you wish to be able to use the TPROXY Linux module
     to transparently proxy connections that are configured using the TransPort
     option. Detailed information on how to configure the TPROXY
     feature can be found in the Linux kernel source tree in the file
     Documentation/networking/tproxy.txt. +
- +
+     +
     Set this option to "ipfw" to use the FreeBSD ipfw interface. +
- +
+     +
     On *BSD operating systems when using pf, set this to "pf-divert" to take
     advantage of +divert-to+ rules, which do not modify the packets like
     +rdr-to+ rules do. Detailed information on how to configure pf to use
     +divert-to+ rules can be found in the pf.conf(5) manual page. On OpenBSD,
     +divert-to+ is available to use on versions greater than or equal to
     OpenBSD 4.4. +
- +
+     +
     Set this to "default", or leave it unconfigured, to use regular IPTables
     on Linux, or to use pf +rdr-to+ rules on *BSD systems. +
- +
+     +
     (Default: "default")
 
 [[NATDPort]] **NATDPort** \['address':]__port__|**auto** [_isolation flags_]::
@@ -1647,7 +1647,7 @@ The following options are useful only for clients (that is, if
     entries of this option are present in your configuration file, Tor will
     perform stream isolation between listeners by default. See
     SocksPort for an explanation of isolation flags. +
- +
+     +
     This option is only for people who cannot use TransPort. (Default: 0)
 
 [[AutomapHostsOnResolve]] **AutomapHostsOnResolve** **0**|**1**::
@@ -1716,39 +1716,39 @@ The following options are useful only for clients (that is, if
     and induces your client or service to create many circuits, in order
     to discover your primary guard node.
     (Default: Any node in the network may be used in the second hop.)
- +
+     +
     (Example:
     HSLayer2Nodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
- +
+     +
     When this is set, the resulting hidden service paths will
     look like:
- +
+     +
         C - G - L2 - M - Rend +
         C - G - L2 - M - HSDir +
         C - G - L2 - M - Intro +
         S - G - L2 - M - Rend +
         S - G - L2 - M - HSDir +
         S - G - L2 - M - Intro +
- +
+     +
     where C is this client, S is the service, G is the Guard node,
     L2 is a node from this option, and M is a random middle node.
     Rend, HSDir, and Intro point selection is not affected by this
     option.
- +
+     +
     This option may be combined with HSLayer3Nodes to create
     paths of the form:
- +
+     +
         C - G - L2 - L3 - Rend +
         C - G - L2 - L3 - M - HSDir +
         C - G - L2 - L3 - M - Intro +
         S - G - L2 - L3 - M - Rend +
         S - G - L2 - L3 - HSDir +
         S - G - L2 - L3 - Intro +
- +
+     +
     ExcludeNodes have higher priority than HSLayer2Nodes,
     which means that nodes specified in ExcludeNodes will not be
     picked.
- +
+     +
     When either this option or HSLayer3Nodes are set, the /16 subnet
     and node family restrictions are removed for hidden service
     circuits. Additionally, we allow the guard node to be present
@@ -1756,7 +1756,7 @@ The following options are useful only for clients (that is, if
     is done to prevent the adversary from inferring information
     about our guard, layer2, and layer3 node choices at later points
     in the path.
- +
+     +
     This option is meant to be managed by a Tor controller such as
     https://github.com/mikeperry-tor/vanguards that selects and
     updates this set of nodes for you. Hence it does not do load
@@ -1772,10 +1772,10 @@ The following options are useful only for clients (that is, if
     and induces your client or service to create many circuits, in order
     to discover your primary or Layer2 guard nodes.
     (Default: Any node in the network may be used in the third hop.)
- +
+     +
     (Example:
     HSLayer3Nodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
- +
+     +
     When this is set by itself, the resulting hidden service paths
     will look like: +
         C - G - M - L3 - Rend +
@@ -1788,21 +1788,21 @@ The following options are useful only for clients (that is, if
     L2 is a node from this option, and M is a random middle node.
     Rend, HSDir, and Intro point selection is not affected by this
     option.
- +
+     +
     While it is possible to use this option by itself, it should be
     combined with HSLayer2Nodes to create paths of the form:
- +
+     +
         C - G - L2 - L3 - Rend +
         C - G - L2 - L3 - M - HSDir +
         C - G - L2 - L3 - M - Intro +
         S - G - L2 - L3 - M - Rend +
         S - G - L2 - L3 - HSDir +
         S - G - L2 - L3 - Intro +
- +
+     +
     ExcludeNodes have higher priority than HSLayer3Nodes,
     which means that nodes specified in ExcludeNodes will not be
     picked.
- +
+     +
     When either this option or HSLayer2Nodes are set, the /16 subnet
     and node family restrictions are removed for hidden service
     circuits. Additionally, we allow the guard node to be present
@@ -1841,18 +1841,18 @@ The following options are useful only for clients (that is, if
     experimental**) path bias detection algorithm. To try to find broken or
     misbehaving guard nodes, Tor looks for nodes where more than a certain
     fraction of circuits through that guard fail to get built. +
- +
+     +
     The PathBiasCircThreshold option controls how many circuits we need to build
     through a guard before we make these checks.  The PathBiasNoticeRate,
     PathBiasWarnRate and PathBiasExtremeRate options control what fraction of
     circuits must succeed through a guard so we won't write log messages.
     If less than PathBiasExtremeRate circuits succeed *and* PathBiasDropGuards
     is set to 1, we disable use of that guard. +
- +
+     +
     When we have seen more than PathBiasScaleThreshold
     circuits through a guard, we scale our observations by 0.5 (governed by
     the consensus) so that new observations don't get swamped by old ones. +
- +
+     +
     By default, or if a negative value is provided for one of these options,
     Tor uses reasonable defaults from the networkstatus consensus document.
     If no defaults are available there, these options default to 150, .70,
@@ -1867,14 +1867,14 @@ The following options are useful only for clients (that is, if
 [[PathBiasScaleUseThreshold]] **PathBiasScaleUseThreshold** __NUM__::
     Similar to the above options, these options override the default behavior
     of Tor's (**currently experimental**) path use bias detection algorithm. +
- +
+     +
     Where as the path bias parameters govern thresholds for successfully
     building circuits, these four path use bias parameters govern thresholds
     only for circuit usage. Circuits which receive no stream usage
     are not counted by this detection algorithm. A used circuit is considered
     successful if it is capable of carrying streams or otherwise receiving
     well-formed responses to RELAY cells. +
- +
+     +
     By default, or if a negative value is provided for one of these options,
     Tor uses reasonable defaults from the networkstatus consensus document.
     If no defaults are available there, these options default to 20, .80,
@@ -1975,7 +1975,7 @@ The following options are useful only for clients (that is, if
     a request.  (This mode is recommended if installing a Tor client for a
     user who might not actually use it.)  If false, Tor bootstraps the first
     time it is started, whether it sees a user request or not.
- +
+     +
     After the first time Tor starts, it begins in dormant mode if it was
     dormant before, and not otherwise. (Default: 0)
 
@@ -1985,7 +1985,7 @@ The following options are useful only for clients (that is, if
     this option is true, Tor treats every startup event as user
     activity, and Tor will never start in Dormant mode, even if it has
     been unused for a long time on previous runs. (Default: 0)
- +
+     +
     Note: Packagers and application developers should change the value of
     this option only with great caution: it has the potential to
     create spurious traffic on the network.  This option should only
@@ -2021,7 +2021,7 @@ is non-zero):
     from bridge users to the Tor network. It mainly causes Tor to publish a
     server descriptor to the bridge database, rather than
     to the public directory authorities. +
- +
+     +
     Note: make sure that no MyFamily lines are present in your torrc when
     relay is configured in bridge mode.
 
@@ -2040,7 +2040,7 @@ is non-zero):
     spammers might also collect them. You may want to obscure the fact
     that it's an email address and/or generate a new address for this
     purpose. +
- +
+     +
     ContactInfo **must** be set to a working address if you run more than one
     relay or bridge.  (Really, everybody running a relay or bridge should set
     it.)
@@ -2051,10 +2051,10 @@ is non-zero):
     non-bridge server, and ExitRelay is set to 1, then Tor allows traffic to
     exit according to the ExitPolicy option, the ReducedExitPolicy option,
     or the default ExitPolicy (if no other exit policy option is specified). +
- +
+     +
     If ExitRelay is set to 0, no traffic is allowed to exit, and the
     ExitPolicy, ReducedExitPolicy, and IPv6Exit options are ignored. +
- +
+     +
     If ExitRelay is set to "auto", then Tor checks the ExitPolicy,
     ReducedExitPolicy, and IPv6Exit options. If at least one of these options
     is set, Tor behaves as if ExitRelay were set to 1. If none of these exit
@@ -2071,29 +2071,29 @@ is non-zero):
     __PORT__ can be a single port number, an interval of ports
     "__FROM_PORT__-__TO_PORT__", or "\*". If __PORT__ is omitted, that means
     "\*". +
- +
+     +
     For example, "accept 18.7.22.69:\*,reject 18.0.0.0/8:\*,accept \*:\*" would
     reject any IPv4 traffic destined for MIT except for web.mit.edu, and accept
     any other IPv4 or IPv6 traffic. +
- +
+     +
     Tor also allows IPv6 exit policy entries. For instance, "reject6 [FC00::]/7:\*"
     rejects all destinations that share 7 most significant bit prefix with
     address FC00::. Respectively, "accept6 [C000::]/3:\*" accepts all destinations
     that share 3 most significant bit prefix with address C000::. +
- +
+     +
     accept6 and reject6 only produce IPv6 exit policy entries. Using an IPv4
     address with accept6 or reject6 is ignored and generates a warning.
     accept/reject allows either IPv4 or IPv6 addresses. Use \*4 as an IPv4
     wildcard address, and \*6 as an IPv6 wildcard address. accept/reject *
     expands to matching IPv4 and IPv6 wildcard address rules. +
- +
+     +
     To specify all IPv4 and IPv6 internal and link-local networks (including
     0.0.0.0/8, 169.254.0.0/16, 127.0.0.0/8, 192.168.0.0/16, 10.0.0.0/8,
     172.16.0.0/12, [::]/8, [FC00::]/7, [FE80::]/10, [FEC0::]/10, [FF00::]/8,
     and [::]/127), you can use the "private" alias instead of an address.
     ("private" always produces rules for IPv4 and IPv6 addresses, even when
     used with accept6/reject6.) +
- +
+     +
     Private addresses are rejected by default (at the beginning of your exit
     policy), along with any configured primary public IPv4 and IPv6 addresses.
     These private addresses are rejected unless you set the
@@ -2105,10 +2105,10 @@ is non-zero):
     about internal and reserved IP address space. See
     ExitPolicyRejectLocalInterfaces if you want to block every address on the
     relay, even those that aren't advertised in the descriptor. +
- +
+     +
     This directive can be specified multiple times so you don't have to put it
     all on one line. +
- +
+     +
     Policies are considered first to last, and the first match wins. If you
     want to allow the same ports on IPv4 and IPv6, write your rules using
     accept/reject \*. If you want to allow different ports on IPv4 and IPv6,
@@ -2116,13 +2116,13 @@ is non-zero):
     accept/reject \*4. If you want to \_replace_ the default exit policy, end
     your exit policy with either a reject \*:* or an accept \*:*. Otherwise,
     you're \_augmenting_ (prepending to) the default exit policy. +
- +
+     +
     If you want to use a reduced exit policy rather than the default exit
     policy, set "ReducedExitPolicy 1". If you want to _replace_ the default
     exit policy with your custom exit policy, end your exit policy with either
     a reject *:* or an accept *:*. Otherwise, you're _augmenting_ (prepending
     to) the default or reduced exit policy. +
- +
+     +
     The default exit policy is:
 
        reject *:25
@@ -2162,13 +2162,13 @@ is non-zero):
 
 [[ReducedExitPolicy]] **ReducedExitPolicy** **0**|**1**::
     If set, use a reduced exit policy rather than the default one. +
- +
+     +
     The reduced exit policy is an alternative to the default exit policy. It
     allows as many Internet services as possible while still blocking the
     majority of TCP ports. Currently, the policy allows approximately 65 ports.
     This reduces the odds that your node will be used for peer-to-peer
     applications. +
- +
+     +
     The reduced exit policy is:
 
         accept *:20-21
@@ -2274,13 +2274,13 @@ is non-zero):
     relay only needs to list the other servers in its family; it doesn't need to
     list itself, but it won't hurt if it does.) Do not list any bridge relay as it would
     compromise its concealment. +
- +
+     +
     When listing a node, it's better to list it by fingerprint than by
     nickname: fingerprints are more reliable. +
- +
+     +
     If you run more than one relay, the MyFamily option on each relay
     **must** list all other relays, as described above. +
- +
+     +
     Note: do not use MyFamily when configuring your Tor instance as a
     brigde.
 
@@ -2300,7 +2300,7 @@ is non-zero):
     servers.  This option is required to be a Tor server.
     Set it to "auto" to have Tor pick a port for you. Set it to 0 to not
     run an ORPort at all. This option can occur more than once. (Default: 0) +
- +
+     +
     Tor recognizes these flags on each ORPort:
     **NoAdvertise**;;
         By default, we bind to a port and tell our users about it. If
@@ -2328,7 +2328,7 @@ is non-zero):
     This option specifies which descriptors Tor will publish when acting as
     a relay. You can
     choose multiple arguments, separated by commas. +
- +
+     +
     If this option is set to 0, Tor will not publish its
     descriptors to any directories. (This is useful if you're testing
     out your server, or if you're using a Tor controller that handles
@@ -2381,7 +2381,7 @@ is non-zero):
     it provides users with a collection of fast servers that are up some
     of the time, which is more useful than a set of slow servers that are
     always "available". +
- +
+     +
     Note that (as also described in the Bandwidth section) Tor uses
     powers of two, not powers of ten: 1 GByte is 1024*1024*1024, not
     one billion. Be careful: some internet service providers might count
@@ -2624,7 +2624,7 @@ details.)
     Set it to "auto" to have Tor pick a port for you.  This option can occur
     more than once, but only one advertised DirPort is supported: all
     but one DirPort must have the **NoAdvertise** flag set. (Default: 0) +
- +
+     +
     The same flags are supported here as are supported by ORPort.
 
 [[DirPolicy]] **DirPolicy** __policy__,__policy__,__...__::
@@ -2664,14 +2664,14 @@ and are as follows:
   1. If a single client address makes too many concurrent connections (this is
      configurable via DoSConnectionMaxConcurrentCount), hang up on further
      connections.
- +
+     +
   2. If a single client IP address (v4 or v6) makes circuits too quickly
      (default values are more than 3 per second, with an allowed burst of 90,
      see DoSCircuitCreationRate and DoSCircuitCreationBurst) while also having
      too many connections open (default is 3, see
      DoSCircuitCreationMinConnections), tor will refuse any new circuit (CREATE
      cells) for the next while (random value between 1 and 2 hours).
- +
+     +
   3. If a client asks to establish a rendezvous point to you directly (ex:
      Tor2Web client), ignore the request.
 
@@ -2729,11 +2729,11 @@ Denial of Service mitigation subsystem described above.
 
     This is the type of defense applied to a detected client address. The
     possible values are:
- +
+     +
       1: No defense.
- +
+     +
       2: Refuse circuit creation for the DoSCircuitCreationDefenseTimePeriod period of time.
- +
+     +
     "0" means use the consensus parameter. If not defined in the consensus, the value is 2.
     (Default: 0)
 
@@ -2765,11 +2765,11 @@ Denial of Service mitigation subsystem described above.
 
     This is the type of defense applied to a detected client address for the
     connection mitigation. The possible values are:
- +
+     +
       1: No defense.
- +
+     +
       2: Immediately close new connections.
- +
+     +
     "0" means use the consensus parameter. If not defined in the consensus, the value is 2.
     (Default: 0)
 
@@ -2855,7 +2855,7 @@ on the public Tor network.
     Authoritative directories only. A set of address patterns for servers that
     will be listed as bad exits in any network status document this authority
     publishes, if **AuthDirListBadExits** is set. +
- +
+     +
     (The address pattern syntax here and in the options below
     is the same as for exit policies, except that you don't need to say
     "accept" or "reject", and ports are not needed.)
@@ -3066,25 +3066,25 @@ The next section describes the per service options that can only be set
    identifier of each inbound client circuit. The only
    protocol supported right now \'haproxy'. This option is only for v3
    services. (Default: none) +
- +
+     +
    The haproxy option works in the following way: when the feature is
    enabled, the Tor process will write a header line when a client is connecting
    to the onion service. The header will look like this: +
- +
+     +
    "PROXY TCP6 fc00:dead:beef:4dad::ffff:ffff ::1 65535 42\r\n" +
- +
+     +
    We encode the "global circuit identifier" as the last 32-bits of the first
    IPv6 address. All other values in the header can safely be ignored. You can
    compute the global circuit identifier using the following formula given the
    IPv6 address "fc00:dead:beef:4dad::AABB:CCDD": +
- +
+     +
       global_circuit_id = (0xAA << 24) + (0xBB << 16) + (0xCC << 8) + 0xDD; +
- +
+     +
    In the case above, where the last 32-bits are 0xffffffff, the global circuit
    identifier would be 4294967295. You can use this value together with Tor's
    control port to terminate particular circuits using their global
    circuit identifiers. For more information about this see control-spec.txt. +
- +
+     +
    The HAProxy version 1 protocol is described in detail at
    https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
 
@@ -3158,7 +3158,7 @@ The next section describes the per service options that can only be set
     locatable, but clients remain location-anonymous. However, the fact that a
     client is accessing a Single Onion rather than a Hidden Service may be
     statistically distinguishable. +
- +
+     +
     **WARNING:** Once a hidden service directory has been used by a tor
     instance in HiddenServiceSingleHopMode, it can **NEVER** be used again for
     a hidden service. It is best practice to create a new hidden service
@@ -3166,7 +3166,7 @@ The next section describes the per service options that can only be set
     Service. It is not possible to run Single Onion Services and Hidden
     Services from the same tor instance: they should be run on different
     servers with different IP addresses. +
- +
+     +
     HiddenServiceSingleHopMode requires HiddenServiceNonAnonymousMode to be set
     to 1. Since a Single Onion service is non-anonymous, you can not configure
     a SOCKSPort on a tor instance that is running in
@@ -3344,7 +3344,7 @@ The following options are used for running a testing Tor network.
     address patterns of nodes to vote Exit for regardless of their
     uptime, bandwidth, or exit policy. See the **ExcludeNodes**
     option for more information on how to specify nodes. +
- +
+     +
     In order for this option to have any effect, **TestingTorNetwork**
     has to be set. See the **ExcludeNodes** option for more
     information on how to specify nodes.
@@ -3353,7 +3353,7 @@ The following options are used for running a testing Tor network.
     If True (1), a node will never receive the Exit flag unless it is specified
     in the **TestingDirAuthVoteExit** list, regardless of its uptime, bandwidth,
     or exit policy. +
- +
+     +
     In order for this option to have any effect, **TestingTorNetwork**
     has to be set.
 
@@ -3362,14 +3362,14 @@ The following options are used for running a testing Tor network.
     address patterns of nodes to vote Guard for regardless of their
     uptime and bandwidth. See the **ExcludeNodes** option for more
     information on how to specify nodes. +
- +
+     +
     In order for this option to have any effect, **TestingTorNetwork**
     has to be set.
 
 [[TestingDirAuthVoteGuardIsStrict]] **TestingDirAuthVoteGuardIsStrict** **0**|**1** ::
     If True (1), a node will never receive the Guard flag unless it is specified
     in the **TestingDirAuthVoteGuard** list, regardless of its uptime and bandwidth. +
- +
+     +
     In order for this option to have any effect, **TestingTorNetwork**
     has to be set.
 
@@ -3378,14 +3378,14 @@ The following options are used for running a testing Tor network.
     address patterns of nodes to vote HSDir for regardless of their
     uptime and DirPort. See the **ExcludeNodes** option for more
     information on how to specify nodes. +
- +
+     +
     In order for this option to have any effect, **TestingTorNetwork**
     must be set.
 
 [[TestingDirAuthVoteHSDirIsStrict]] **TestingDirAuthVoteHSDirIsStrict** **0**|**1** ::
     If True (1), a node will never receive the HSDir flag unless it is specified
     in the **TestingDirAuthVoteHSDir** list, regardless of its uptime and DirPort. +
- +
+     +
     In order for this option to have any effect, **TestingTorNetwork**
     has to be set.
 
