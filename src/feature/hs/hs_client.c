@@ -956,6 +956,20 @@ client_get_random_intro(const ed25519_public_key_t *service_pk)
   return ei;
 }
 
+/** Called when introduction has failed meaning there is no more usable
+ * introduction points to be used (either NACKed or failed) for the given
+ * entry connection.
+ *
+ * This function only reports back the SOCKS5_HS_INTRO_FAILED (0xF2) code. The
+ * caller has to make sure to close the entry connections. */
+static void
+socks_report_introduction_failed(entry_connection_t *conn)
+{
+  tor_assert(conn);
+  tor_assert(conn->socks_request);
+  conn->socks_request->socks_extended_error_code = SOCKS5_HS_INTRO_FAILED;
+}
+
 /** For this introduction circuit, we'll look at if we have any usable
  * introduction point left for this service. If so, we'll use the circuit to
  * re-extend to a new intro point. Else, we'll close the circuit and its
@@ -1288,6 +1302,10 @@ client_desc_has_arrived(const smartlist_t *entry_conns)
     if (!hs_client_any_intro_points_usable(identity_pk, desc)) {
       log_info(LD_REND, "Hidden service descriptor is unusable. "
                         "Closing streams.");
+      /* Report the extended socks error code that we were unable to introduce
+       * to the service. */
+      socks_report_introduction_failed(entry_conn);
+
       connection_mark_unattached_ap(entry_conn,
                                     END_STREAM_REASON_RESOLVEFAILED);
       /* We are unable to use the descriptor so remove the directory request
