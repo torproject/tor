@@ -1136,8 +1136,8 @@ However, there currently is no such optimization for reaction to patterns of
 complex patterns of sent traffic than can be expressed by our current
 histogram and length count events.
 
-In other words, if you wish your machine to react to a certain count of
-incoming cells in a row, you have to have a state for each cell, and use the
+For example: if you wish your machine to react to a certain count of incoming
+cells in a row, right now you have to have a state for each cell, and use the
 infinity bin to timeout of the sequence in each state. We could make this more
 compact if each state had an arrival cell counter and inter-cell timeout. Or
 we could make more complex mechanisms to recognize certain patterns of arrival
@@ -1147,7 +1147,7 @@ The best way to build recognition primitives like this into the framework is
 to add additional [Internal Machine Events](#63-internal-machine-events) for
 the pattern in question.
 
-As a simple example, a useful additional event might be to transition
+As another simple example, a useful additional event might be to transition
 whenever any of your histogram bins are empty, rather than all of them. To do
 this, you would add `CIRCPAD_EVENT_ANY_BIN_EMPTY` to the enum
 `circpad_event_t` in `circuitpadding.h`. You would then create a function
