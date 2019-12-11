@@ -4,20 +4,20 @@
 // Learn asciidoc on http://www.methods.co.nz/asciidoc/userguide.html
 :man source:   Tor
 :man manual:   Tor Manual
-TOR(1)
-======
+// compat-mode tells Asciidoctor tools to process this as legacy AsciiDoc
+:compat-mode:
+= TOR(1)
 
-NAME
-----
+== NAME
+
 tor - The second-generation onion router
 
 
-SYNOPSIS
---------
+== SYNOPSIS
+
 **tor** [__OPTION__ __value__]...
 
-DESCRIPTION
------------
+== DESCRIPTION
 
 Tor is a connection-oriented anonymizing communication service. Users
 choose a source-routed path through a set of nodes, and negotiate a
@@ -38,8 +38,7 @@ providing bandwidth as a relay, change the **ORPort** configuration
 option as mentioned below.  Please also consult the documentation on
 the Tor Project's website.
 
-COMMAND-LINE OPTIONS
---------------------
+== COMMAND-LINE OPTIONS
 
 Tor has a powerful command-line interface. This section lists optional
 arguments you can specify at the command line using the **`tor`**
@@ -186,8 +185,7 @@ The following options in this section are only recognized on the
     of the form: "signing-cert-expiry: 2017-07-25 08:30:15 UTC"
 
 [[conf-format]]
-THE CONFIGURATION FILE FORMAT
------------------------------
+== THE CONFIGURATION FILE FORMAT
 
 All configuration options in a configuration are written on a single line by
 default.  They take the form of an option name and a value, or an option name
@@ -225,8 +223,8 @@ command line that you want no SocksPorts at all.  To do that, prefix the
 option name with a forward slash (/).  You can use the plus sign (+) and the
 forward slash (/) in the configuration file and on the command line.
 
-GENERAL OPTIONS
----------------
+== GENERAL OPTIONS
+
 [[AccelDir]] **AccelDir** __DIR__::
     Specify this option if using dynamic hardware acceleration and the engine
     implementation library resides somewhere other than the OpenSSL default.
@@ -929,8 +927,7 @@ GENERAL OPTIONS
     On startup, setuid to this user and setgid to their primary group.
     Can not be changed while tor is running.
 
-CLIENT OPTIONS
---------------
+== CLIENT OPTIONS
 
 The following options are useful only for clients (that is, if
 **SocksPort**, **HTTPTunnelPort**, **TransPort**, **DNSPort**, or
@@ -1994,8 +1991,7 @@ The following options are useful only for clients (that is, if
     is launched for some other reason (for example, by a startup
     process, or by an application that launches itself on every login.)
 
-SERVER OPTIONS
---------------
+== SERVER OPTIONS
 
 The following options are useful only for servers (that is, if ORPort
 is non-zero):
@@ -2606,8 +2602,7 @@ is non-zero):
     changed for a given amount of time.  (Default: 24 hours)
 
 
-DIRECTORY SERVER OPTIONS
-------------------------
+== DIRECTORY SERVER OPTIONS
 
 The following options are useful only for directory servers. (Relays with
 enough bandwidth automatically become directory servers; see DirCache for
@@ -2652,8 +2647,7 @@ details.)
     (Default: 0)
 
 
-DENIAL OF SERVICE MITIGATION OPTIONS
-------------------------------------
+== DENIAL OF SERVICE MITIGATION OPTIONS
 
 Tor has three built-in mitigation options that can be individually
 enabled/disabled and fine-tuned, but by default Tor directory authorities will
@@ -2782,8 +2776,7 @@ Denial of Service mitigation subsystem described above.
     (Default: auto)
 
 
-DIRECTORY AUTHORITY SERVER OPTIONS
-----------------------------------
+== DIRECTORY AUTHORITY SERVER OPTIONS
 
 The following options enable operation as a directory authority, and
 control how Tor behaves as a directory authority.  You should not need
@@ -3002,8 +2995,7 @@ on the public Tor network.
     before it will treat advertised bandwidths as wholly
     unreliable. (Default: 500)
 
-HIDDEN SERVICE OPTIONS
-----------------------
+== HIDDEN SERVICE OPTIONS
 
 The following options are used to configure a hidden service. Some options
 apply per service and some apply for the whole tor instance.
@@ -3181,8 +3173,7 @@ The next section describes the per service options that can only be set
     including setting SOCKSPort to "0". Can not be changed while tor is
     running. (Default: 0)
 
-Client Authorization
---------------------
+== Client Authorization
 
 (Version 3 only)
 
@@ -3223,8 +3214,7 @@ Client side:
 
 For more information, please see https://2019.www.torproject.org/docs/tor-onion-service.html.en#ClientAuthorization .
 
-TESTING NETWORK OPTIONS
------------------------
+== TESTING NETWORK OPTIONS
 
 The following options are used for running a testing Tor network.
 
@@ -3423,8 +3413,7 @@ The following options are used for running a testing Tor network.
     we replace it and issue a new key?
     (Default: 3 hours for link and auth; 1 day for signing.)
 
-NON-PERSISTENT OPTIONS
-----------------------
+== NON-PERSISTENT OPTIONS
 
 These options are not saved to the torrc file by the "SAVECONF" controller
 command.  Other options of this type are documented in control-spec.txt,
@@ -3436,8 +3425,7 @@ section 5.4. End-users should mostly ignore them.
     torrc file by the controller's SAVECONF command.
 
 
-SIGNALS
--------
+== SIGNALS
 
 Tor catches the following signals:
 
@@ -3470,8 +3458,7 @@ Tor catches the following signals:
 [[SIGXFSZ]] **SIGXFSZ**::
     If this signal exists on your platform, Tor catches and ignores it.
 
-FILES
------
+== FILES
 
 **`@CONFDIR@/torrc`**::
     Default location of the configuration file.
@@ -3703,19 +3690,17 @@ __HiddenServiceDirectory__/**`onion_service_non_anonymous`**::
     This file is present if a hidden service key was created in
     **HiddenServiceNonAnonymousMode**.
 
-SEE ALSO
---------
+== SEE ALSO
 
 For more information, refer to the Tor Project website at
 https://www.torproject.org/ and the Tor specifications at
 https://spec.torproject.org. See also **torsocks**(1) and **torify**(1).
 
-BUGS
-----
+== BUGS
 
 Because Tor is still under development, there may be plenty of bugs. Please
 report them at https://trac.torproject.org/.
 
-AUTHORS
--------
+== AUTHORS
+
 Roger Dingledine [arma at mit.edu], Nick Mathewson [nickm at alum.mit.edu].
