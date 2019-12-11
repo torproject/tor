@@ -1427,15 +1427,13 @@ The following options are useful only for clients (that is, if
 
           X'F2' Onion Service Introduction Failed
 
-            Client failed to introduce to the service meaning the descriptor
-            was found but the service is not connected anymore to the
-            introduction point. The service has likely changed its descriptor
-            or is not running. (v3 only)
+            Every introduction attempts failed either due to a combination of
+            NACK by the intro point or time out. (v3 only)
 
           X'F3' Onion Service Rendezvous Failed
 
-            Client failed to rendezvous with the service which means that the
-            client is unable to finalize the connection. (v3 only)
+            Every rendezvous circuit has timed out and thus the client is
+            unable to rendezvous with the service. (v3 only)
 
           X'F4' Onion Service Missing Client Authorization
 
@@ -1455,6 +1453,11 @@ The following options are useful only for clients (that is, if
             The given .onion address is invalid. In one of these cases this
             error is returned: address checksum doesn't match, ed25519 public
             key is invalid or the encoding is invalid. (v3 only)
+
+          X'F7' Onion Service Introduction Timed Out
+
+            Similar has X'F2' code but in this case, all introduction attemps
+            have failed due to a time out. (v3 only)
 
 // Anchor only for formatting, not visible in the man page.
 [[SocksPortFlagsMisc]]::
