@@ -621,6 +621,20 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
 }
 
 /** Helper: cleanup function for client circuit. This is for every HS version.
+ * It is called from hs_circ_cleanup_on_close() entry point. */
+static void
+cleanup_on_close_client_circ(circuit_t *circ)
+{
+  tor_assert(circ);
+
+  if (circuit_is_hs_v3(circ)) {
+    hs_client_circuit_cleanup_on_close(circ);
+  }
+  /* It is possible the circuit has an HS purpose but no identifier (rend_data
+   * or hs_ident). Thus possible that this passess through. */
+}
+
+/** Helper: cleanup function for client circuit. This is for every HS version.
  * It is called from hs_circ_cleanup_on_free() entry point. */
 static void
 cleanup_on_free_client_circ(circuit_t *circ)
@@ -1251,6 +1265,10 @@ void
 hs_circ_cleanup_on_close(circuit_t *circ)
 {
   tor_assert(circ);
+
+  if (circuit_purpose_is_hs_client(circ->purpose)) {
+    cleanup_on_close_client_circ(circ);
+  }
 
   /* On close, we simply remove it from the circuit map. It can not be used
    * anymore. We keep this code path fast and lean. */
