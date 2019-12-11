@@ -956,6 +956,37 @@ client_get_random_intro(const ed25519_public_key_t *service_pk)
   return ei;
 }
 
+/** Return true iff all intro points for the given service have timed out. */
+static bool
+intro_points_all_timed_out(const ed25519_public_key_t *service_pk)
+{
+  bool ret = false;
+
+  tor_assert(service_pk);
+
+  const hs_descriptor_t *desc = hs_cache_lookup_as_client(service_pk);
+
+  SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
+                          const hs_desc_intro_point_t *, ip) {
+    const hs_cache_intro_state_t *state =
+      hs_cache_client_intro_state_find(service_pk,
+                                       &ip->auth_key_cert->signed_key);
+    if (!state || !state->timed_out) {
+      /* No state or if this intro point has not timed out, we are done since
+       * clearly not all of them have timed out. */
+      goto end;
+    }
+  } SMARTLIST_FOREACH_END(ip);
+
+  /* Exiting the loop here means that all intro points we've looked at have
+   * timed out. Note that we can _not_ have a descriptor without intro points
+   * in the client cache. */
+  ret = true;
+
+ end:
+  return ret;
+}
+
 /** Called when a rendezvous circuit has timed out. Every streams attached to
  * the circuit will get set with the SOCKS5_HS_REND_FAILED (0xF3) extended
  * error code so if the connection to the rendezvous point ends up not
@@ -981,14 +1012,23 @@ socks_report_rend_circuit_timed_out(const origin_circuit_t *rend_circ)
  * introduction points to be used (either NACKed or failed) for the given
  * entry connection.
  *
- * This function only reports back the SOCKS5_HS_INTRO_FAILED (0xF2) code. The
- * caller has to make sure to close the entry connections. */
+ * This function only reports back the SOCKS5_HS_INTRO_FAILED (0xF2) code or
+ * SOCKS5_HS_INTRO_TIMEDOUT (0xF7) if all intros have timed out. The caller
+ * has to make sure to close the entry connections. */
 static void
-socks_report_introduction_failed(entry_connection_t *conn)
+socks_report_introduction_failed(entry_connection_t *conn,
+                                 const ed25519_public_key_t *identity_pk)
 {
+  socks5_reply_status_t code = SOCKS5_HS_INTRO_FAILED;
+
   tor_assert(conn);
   tor_assert(conn->socks_request);
-  conn->socks_request->socks_extended_error_code = SOCKS5_HS_INTRO_FAILED;
+  tor_assert(identity_pk);
+
+  if (intro_points_all_timed_out(identity_pk)) {
+    code = SOCKS5_HS_INTRO_TIMEDOUT;
+  }
+  conn->socks_request->socks_extended_error_code = code;
 }
 
 /** For this introduction circuit, we'll look at if we have any usable
@@ -1325,7 +1365,7 @@ client_desc_has_arrived(const smartlist_t *entry_conns)
                         "Closing streams.");
       /* Report the extended socks error code that we were unable to introduce
        * to the service. */
-      socks_report_introduction_failed(entry_conn);
+      socks_report_introduction_failed(entry_conn, identity_pk);
 
       connection_mark_unattached_ap(entry_conn,
                                     END_STREAM_REASON_RESOLVEFAILED);
