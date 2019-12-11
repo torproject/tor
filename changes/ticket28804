@@ -1,0 +1,5 @@
+  o Major features (documentation):
+    - Provide a Circuit Padding Framework quickstart guide and developer
+      documentation for researchers to implement and study Circuit Padding
+      machines. Closes ticket 28804.
+
