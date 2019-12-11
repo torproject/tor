@@ -1604,9 +1604,13 @@ networkstatus_consensus_has_ipv6(const or_options_t* options)
   }
 }
 
-/** Given two router status entries for the same router identity, return 1 if
+/** Given two router status entries for the same router identity, return 1
  * if the contents have changed between them. Otherwise, return 0.
- * It also checks for changes that are output by control port*/
+ * It only checks for fields that are output by control port.
+ * This should be kept in sync with the struct routerstatus_t
+ * and the printing function routerstatus_format_entry in
+ * NS_CONTROL_PORT mode.
+ **/
 
 static int
 routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
@@ -1634,8 +1638,6 @@ routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
          a->is_v2_dir != b->is_v2_dir ||
          a->bandwidth_kb != b->bandwidth_kb ||
          tor_addr_compare(&a->ipv6_addr, &b->ipv6_addr, CMP_EXACT);
-  // XXXX this function needs a huge refactoring; it has gotten out
-  // XXXX of sync with routerstatus_t, and it will do so again.
 }
 
 /** Notify controllers of any router status entries that changed between
