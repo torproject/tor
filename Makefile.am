@@ -21,7 +21,12 @@ AM_CPPFLAGS=\
 	-I$(top_srcdir)/src/ext/trunnel \
 	-I$(top_srcdir)/src/trunnel
 
-AM_CFLAGS=@TOR_SYSTEMD_CFLAGS@ @CFLAGS_BUGTRAP@ @TOR_LZMA_CFLAGS@ @TOR_ZSTD_CFLAGS@
+AM_CFLAGS=					\
+	@TOR_SYSTEMD_CFLAGS@			\
+	@CFLAGS_BUGTRAP@			\
+	@TOR_LZMA_CFLAGS@			\
+	@TOR_ZSTD_CFLAGS@
+
 SHELL=@SHELL@
 
 if COVERAGE_ENABLED
@@ -168,6 +173,13 @@ EXTRA_DIST+= \
 	ReleaseNotes							\
 	scripts/maint/checkIncludes.py					\
 	scripts/maint/checkSpace.pl					\
+	scripts/maint/checkSpaceTest.sh					\
+	scripts/maint/checkspace_tests/dubious.c			\
+	scripts/maint/checkspace_tests/dubious.h			\
+	scripts/maint/checkspace_tests/expected.txt			\
+	scripts/maint/checkspace_tests/good_guard.h			\
+	scripts/maint/checkspace_tests/same_guard.h			\
+	scripts/maint/checkspace_tests/subdir/dubious.c			\
 	scripts/maint/checkShellScripts.sh				\
 	scripts/maint/practracker/README				\
 	scripts/maint/practracker/exceptions.txt			\
@@ -253,7 +265,17 @@ test: all
 shellcheck:
 	$(top_srcdir)/scripts/maint/checkShellScripts.sh
 
-check-local: check-spaces check-changes check-includes check-best-practices shellcheck check-cocci
+check-practracker-unit-test:
+	$(top_srcdir)/scripts/maint/practracker/test_practracker.sh
+
+check-local:					\
+	check-spaces				\
+	check-changes				\
+	check-includes				\
+	check-practracker-unit-test		\
+	check-best-practices			\
+	shellcheck				\
+	check-cocci
 
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
@@ -323,9 +345,19 @@ test-stem: need-stem-path $(TESTING_TOR_BINARY)
 test-stem-full: need-stem-path $(TESTING_TOR_BINARY)
 	@$(PYTHON) "$$STEM_SOURCE_DIR"/run_tests.py --tor "$(TESTING_TOR_BINARY)" --all --log notice --target RUN_ALL,ONLINE -v;
 
-test-full: need-stem-path need-chutney-path check test-network test-stem
+test-full:					\
+	need-stem-path				\
+	need-chutney-path			\
+	check					\
+	test-network				\
+	test-stem
 
-test-full-online: need-stem-path need-chutney-path check test-network test-stem-full
+test-full-online:				\
+	need-stem-path				\
+	need-chutney-path			\
+	check					\
+	test-network				\
+	test-stem-full
 
 # We can't delete the gcno files, because they are created when tor is compiled
 reset-gcov:
@@ -478,7 +510,7 @@ update-versions:
 
 .PHONY: callgraph
 callgraph:
-	$(top_builddir)/scripts/maint/run_calltool.sh
+	cd $(top_builddir); $(abs_top_srcdir)/scripts/maint/run_calltool.sh
 
 version:
 	@echo "Tor @VERSION@"
@@ -497,7 +529,7 @@ autostyle-operators:
 
 .PHONY: rectify-includes
 rectify-includes:
-	$(PYTHON) $(top_srcdir)/scripts/maint/rectify_include_paths.py
+	cd $(top_srcdir); $(PYTHON) $(abs_top_srcdir)/scripts/maint/rectify_include_paths.py
 
 .PHONY: update-copyright
 update-copyright:

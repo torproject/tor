@@ -20,11 +20,13 @@
 #include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_circuitmap.h"
+#include "feature/hs/hs_client.h"
 #include "feature/hs/hs_ident.h"
 #include "feature/hs/hs_service.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/rend/rendservice.h"
+#include "feature/rend/rendclient.h"
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
@@ -618,6 +620,22 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
   return ret;
 }
 
+/** Helper: cleanup function for client circuit. This is for every HS version.
+ * It is called from hs_circ_cleanup_on_free() entry point. */
+static void
+cleanup_on_free_client_circ(circuit_t *circ)
+{
+  tor_assert(circ);
+
+  if (circuit_is_hs_v2(circ)) {
+    rend_client_circuit_cleanup_on_free(circ);
+  } else if (circuit_is_hs_v3(circ)) {
+    hs_client_circuit_cleanup_on_free(circ);
+  }
+  /* It is possible the circuit has an HS purpose but no identifier (rend_data
+   * or hs_ident). Thus possible that this passess through. */
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
@@ -655,7 +673,8 @@ hs_circ_service_get_established_intro_circ(const hs_service_intro_point_t *ip)
   }
 
   /* Only return circuit if it is established. */
-  return (TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO) ? circ : NULL;
+  return (circ && TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO) ?
+          circ : NULL;
 }
 
 /** Called when we fail building a rendezvous circuit at some point other than
@@ -1197,30 +1216,132 @@ hs_circ_send_establish_rendezvous(origin_circuit_t *circ)
   return -1;
 }
 
-/** We are about to close or free this <b>circ</b>. Clean it up from any
- * related HS data structures. This function can be called multiple times
- * safely for the same circuit. */
+/** Circuit cleanup strategy:
+ *
+ *  What follows is a series of functions that notifies the HS subsystem of 3
+ *  different circuit cleanup phase: close, free and repurpose.
+ *
+ *  Tor can call any of those in any orders so they have to be safe between
+ *  each other. In other words, the free should never depend on close to be
+ *  called before.
+ *
+ *  The "on_close()" is called from circuit_mark_for_close() which is
+ *  considered the tor fast path and thus as little work as possible should
+ *  done in that function. Currently, we only remove the circuit from the HS
+ *  circuit map and move on.
+ *
+ *  The "on_free()" is called from circuit circuit_free_() and it is very
+ *  important that at the end of the function, no state or objects related to
+ *  this circuit remains alive.
+ *
+ *  The "on_repurpose()" is called from circuit_change_purpose() for which we
+ *  simply remove it from the HS circuit map. We do not have other cleanup
+ *  requirements after that.
+ *
+ *  NOTE: The onion service code, specifically the service code, cleans up
+ *  lingering objects or state if any of its circuit disappear which is why
+ *  our cleanup strategy doesn't involve any service specific actions. As long
+ *  as the circuit is removed from the HS circuit map, it won't be used.
+ */
+
+/** We are about to close this <b>circ</b>. Clean it up from any related HS
+ * data structures. This function can be called multiple times safely for the
+ * same circuit. */
 void
-hs_circ_cleanup(circuit_t *circ)
+hs_circ_cleanup_on_close(circuit_t *circ)
 {
   tor_assert(circ);
 
-  /* If it's a service-side intro circ, notify the HS subsystem for the intro
-   * point circuit closing so it can be dealt with cleanly. */
-  if (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
-      circ->purpose == CIRCUIT_PURPOSE_S_INTRO) {
-    hs_service_intro_circ_has_closed(TO_ORIGIN_CIRCUIT(circ));
-  }
+  /* On close, we simply remove it from the circuit map. It can not be used
+   * anymore. We keep this code path fast and lean. */
 
-  /* Clear HS circuitmap token for this circ (if any). Very important to be
-   * done after the HS subsystem has been notified of the close else the
-   * circuit will not be found.
-   *
-   * We do this at the close if possible because from that point on, the
-   * circuit is good as dead. We can't rely on removing it in the circuit
-   * free() function because we open a race window between the close and free
-   * where we can't register a new circuit for the same intro point. */
   if (circ->hs_token) {
     hs_circuitmap_remove_circuit(circ);
   }
+}
+
+/** We are about to free this <b>circ</b>. Clean it up from any related HS
+ * data structures. This function can be called multiple times safely for the
+ * same circuit. */
+void
+hs_circ_cleanup_on_free(circuit_t *circ)
+{
+  tor_assert(circ);
+
+  /* NOTE: Bulk of the work of cleaning up a circuit is done here. */
+
+  if (circuit_purpose_is_hs_client(circ->purpose)) {
+    cleanup_on_free_client_circ(circ);
+  }
+
+  /* We have no assurance that the given HS circuit has been closed before and
+   * thus removed from the HS map. This actually happens in unit tests. */
+  if (circ->hs_token) {
+    hs_circuitmap_remove_circuit(circ);
+  }
+}
+
+/** We are about to repurpose this <b>circ</b>. Clean it up from any related
+ * HS data structures. This function can be called multiple times safely for
+ * the same circuit. */
+void
+hs_circ_cleanup_on_repurpose(circuit_t *circ)
+{
+  tor_assert(circ);
+
+  /* On repurpose, we simply remove it from the circuit map but we do not do
+   * the on_free actions since we don't treat a repurpose as something we need
+   * to report in the client cache failure. */
+
+  if (circ->hs_token) {
+    hs_circuitmap_remove_circuit(circ);
+  }
+}
+
+/** Return true iff the given established client rendezvous circuit was sent
+ * into the INTRODUCE1 cell. This is called so we can take a decision on
+ * expiring or not the circuit.
+ *
+ * The caller MUST make sure the circuit is an established client rendezvous
+ * circuit (purpose: CIRCUIT_PURPOSE_C_REND_READY).
+ *
+ * This function supports all onion service versions. */
+bool
+hs_circ_is_rend_sent_in_intro1(const origin_circuit_t *circ)
+{
+  tor_assert(circ);
+  /* This can only be called for a rendezvous circuit that is an established
+   * confirmed rendezsvous circuit but without an introduction ACK. */
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_C_REND_READY);
+
+  /* The v2 and v3 circuit are handled differently:
+   *
+   * v2: A circ's pending_final_cpath field is non-NULL iff it is a rend circ
+   * and we have tried to send an INTRODUCE1 cell specifying it. Thus, if the
+   * pending_final_cpath field *is* NULL, then we want to not spare it.
+   *
+   * v3: When the INTRODUCE1 cell is sent, the introduction encryption public
+   * key is copied in the rendezvous circuit hs identifier. If it is a valid
+   * key, we know that this circuit is waiting the ACK on the introduction
+   * circuit. We want to _not_ spare the circuit if the key was never set. */
+
+  if (circ->rend_data) {
+    /* v2. */
+    if (circ->build_state && circ->build_state->pending_final_cpath != NULL) {
+      return true;
+    }
+  } else if (circ->hs_ident) {
+    /* v3. */
+    if (curve25519_public_key_is_ok(&circ->hs_ident->intro_enc_pk)) {
+      return true;
+    }
+  } else {
+    /* A circuit with an HS purpose without an hs_ident or rend_data in theory
+     * can not happen. In case, scream loudly and return false to the caller
+     * that the rendezvous was not sent in the INTRO1 cell. */
+    tor_assert_nonfatal_unreached();
+  }
+
+  /* The rendezvous has not been specified in the INTRODUCE1 cell. */
+  return false;
 }

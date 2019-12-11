@@ -775,16 +775,11 @@ circuit_expire_building(void)
     if (!(TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out)) {
       switch (victim->purpose) {
       case CIRCUIT_PURPOSE_C_REND_READY:
-        /* We only want to spare a rend circ if it has been specified in
-         * an INTRODUCE1 cell sent to a hidden service.  A circ's
-         * pending_final_cpath field is non-NULL iff it is a rend circ
-         * and we have tried to send an INTRODUCE1 cell specifying it.
-         * Thus, if the pending_final_cpath field *is* NULL, then we
-         * want to not spare it. */
-        if (TO_ORIGIN_CIRCUIT(victim)->build_state &&
-            TO_ORIGIN_CIRCUIT(victim)->build_state->pending_final_cpath ==
-            NULL)
+        /* We only want to spare a rend circ iff it has been specified in an
+         * INTRODUCE1 cell sent to a hidden service. */
+        if (!hs_circ_is_rend_sent_in_intro1(CONST_TO_ORIGIN_CIRCUIT(victim))) {
           break;
+        }
         /* fallthrough! */
       case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
       case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
@@ -1965,23 +1960,61 @@ have_enough_path_info(int need_exit)
 int
 circuit_purpose_is_hidden_service(uint8_t purpose)
 {
-   if (purpose == CIRCUIT_PURPOSE_HS_VANGUARDS) {
-     return 1;
-   }
+  /* HS Vanguard purpose. */
+  if (circuit_purpose_is_hs_vanguards(purpose)) {
+    return 1;
+  }
 
-   /* Client-side purpose */
-   if (purpose >= CIRCUIT_PURPOSE_C_HS_MIN_ &&
-       purpose <= CIRCUIT_PURPOSE_C_HS_MAX_) {
-     return 1;
-   }
+  /* Client-side purpose */
+  if (circuit_purpose_is_hs_client(purpose)) {
+    return 1;
+  }
 
-   /* Service-side purpose */
-   if (purpose >= CIRCUIT_PURPOSE_S_HS_MIN_ &&
-       purpose <= CIRCUIT_PURPOSE_S_HS_MAX_) {
-     return 1;
-   }
+  /* Service-side purpose */
+  if (circuit_purpose_is_hs_service(purpose)) {
+    return 1;
+  }
 
-   return 0;
+  return 0;
+}
+
+/** Retrun true iff the given circuit is an HS client circuit. */
+bool
+circuit_purpose_is_hs_client(const uint8_t purpose)
+{
+  return (purpose >= CIRCUIT_PURPOSE_C_HS_MIN_ &&
+          purpose <= CIRCUIT_PURPOSE_C_HS_MAX_);
+}
+
+/** Retrun true iff the given circuit is an HS service circuit. */
+bool
+circuit_purpose_is_hs_service(const uint8_t purpose)
+{
+  return (purpose >= CIRCUIT_PURPOSE_S_HS_MIN_ &&
+          purpose <= CIRCUIT_PURPOSE_S_HS_MAX_);
+}
+
+/** Retrun true iff the given circuit is an HS Vanguards circuit. */
+bool
+circuit_purpose_is_hs_vanguards(const uint8_t purpose)
+{
+  return (purpose == CIRCUIT_PURPOSE_HS_VANGUARDS);
+}
+
+/** Retrun true iff the given circuit is an HS v2 circuit. */
+bool
+circuit_is_hs_v2(const circuit_t *circ)
+{
+  return (CIRCUIT_IS_ORIGIN(circ) &&
+          (CONST_TO_ORIGIN_CIRCUIT(circ)->rend_data != NULL));
+}
+
+/** Retrun true iff the given circuit is an HS v3 circuit. */
+bool
+circuit_is_hs_v3(const circuit_t *circ)
+{
+  return (CIRCUIT_IS_ORIGIN(circ) &&
+          (CONST_TO_ORIGIN_CIRCUIT(circ)->hs_ident != NULL));
 }
 
 /**
@@ -3086,7 +3119,7 @@ circuit_change_purpose(circuit_t *circ, uint8_t new_purpose)
     /* Take specific actions if we are repurposing a hidden service circuit. */
     if (circuit_purpose_is_hidden_service(circ->purpose) &&
         !circuit_purpose_is_hidden_service(new_purpose)) {
-      hs_circ_cleanup(circ);
+      hs_circ_cleanup_on_repurpose(circ);
     }
   }
 

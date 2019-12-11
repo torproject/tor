@@ -380,7 +380,7 @@ secret_to_key_derivekey(uint8_t *key_out, size_t key_out_len,
 #ifndef HAVE_SCRYPT
   if (type == S2K_TYPE_SCRYPT)
     return S2K_NO_SCRYPT_SUPPORT;
- #endif
+#endif
 
   if (! legacy_format) {
     ++spec;

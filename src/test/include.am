@@ -48,6 +48,11 @@ TESTSCRIPTS += src/test/test_rebind.sh
 endif
 endif
 
+if USE_PERL
+TESTSCRIPTS += \
+        scripts/maint/checkSpaceTest.sh
+endif
+
 TESTS += src/test/test src/test/test-slow src/test/test-memwipe \
 	src/test/test_workqueue \
 	src/test/test_keygen.sh \

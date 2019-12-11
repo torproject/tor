@@ -43,6 +43,7 @@ Tor repository.
 
 @subpage configuration
 
+@subpage publish_subscribe
 
 @page intro A high-level overview
 

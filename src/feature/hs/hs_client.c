@@ -1445,6 +1445,80 @@ client_dir_fetch_unexpected(dir_connection_t *dir_conn, const char *reason,
                                 NULL);
 }
 
+/** Get the full filename for storing the client auth credentials for the
+ *  service in <b>onion_address</b>. The base directory is <b>dir</b>.
+ *  This function never returns NULL. */
+static char *
+get_client_auth_creds_filename(const char *onion_address,
+                               const char *dir)
+{
+  char *full_fname = NULL;
+  char *fname;
+
+  tor_asprintf(&fname, "%s.auth_private", onion_address);
+  full_fname = hs_path_from_filename(dir, fname);
+  tor_free(fname);
+
+  return full_fname;
+}
+
+/** Permanently store the credentials in <b>creds</b> to disk.
+ *
+ *  Return -1 if there was an error while storing the credentials, otherwise
+ *  return 0.
+ */
+static int
+store_permanent_client_auth_credentials(
+                              const hs_client_service_authorization_t *creds)
+{
+  const or_options_t *options = get_options();
+  char *full_fname = NULL;
+  char *file_contents = NULL;
+  char priv_key_b32[BASE32_NOPAD_LEN(CURVE25519_PUBKEY_LEN)+1];
+  int retval = -1;
+
+  tor_assert(creds->flags & CLIENT_AUTH_FLAG_IS_PERMANENT);
+
+  /* We need ClientOnionAuthDir to be set, otherwise we can't proceed */
+  if (!options->ClientOnionAuthDir) {
+    log_warn(LD_GENERAL, "Can't register permanent client auth credentials "
+             "for %s without ClientOnionAuthDir option. Discarding.",
+             creds->onion_address);
+    goto err;
+  }
+
+  /* Make sure the directory exists and is private enough. */
+  if (check_private_dir(options->ClientOnionAuthDir, 0, options->User) < 0) {
+    goto err;
+  }
+
+  /* Get filename that we should store the credentials */
+  full_fname = get_client_auth_creds_filename(creds->onion_address,
+                                              options->ClientOnionAuthDir);
+
+  /* Encode client private key */
+  base32_encode(priv_key_b32, sizeof(priv_key_b32),
+                (char*)creds->enc_seckey.secret_key,
+                sizeof(creds->enc_seckey.secret_key));
+
+  /* Get the full file contents and write it to disk! */
+  tor_asprintf(&file_contents, "%s:descriptor:x25519:%s",
+               creds->onion_address, priv_key_b32);
+  if (write_str_to_file(full_fname, file_contents, 0) < 0) {
+    log_warn(LD_GENERAL, "Failed to write client auth creds file for %s!",
+             creds->onion_address);
+    goto err;
+  }
+
+  retval = 0;
+
+ err:
+  tor_free(file_contents);
+  tor_free(full_fname);
+
+  return retval;
+}
+
 /** Register the credential <b>creds</b> as part of the client auth subsystem.
  *
  * Takes ownership of <b>creds</b>.
@@ -1468,6 +1542,15 @@ hs_client_register_auth_credentials(hs_client_service_authorization_t *creds)
     return REGISTER_FAIL_BAD_ADDRESS;
   }
 
+  /* If we reach this point, the credentials will be stored one way or another:
+   * Make them permanent if the user asked us to. */
+  if (creds->flags & CLIENT_AUTH_FLAG_IS_PERMANENT) {
+    if (store_permanent_client_auth_credentials(creds) < 0) {
+      client_service_authorization_free(creds);
+      return REGISTER_FAIL_PERMANENT_STORAGE;
+    }
+  }
+
   old_creds = digest256map_get(client_auths, service_identity_pk.pubkey);
   if (old_creds) {
     digest256map_remove(client_auths, service_identity_pk.pubkey);
@@ -1486,6 +1569,128 @@ hs_client_register_auth_credentials(hs_client_service_authorization_t *creds)
   return retval;
 }
 
+/** Load a client authorization file with <b>filename</b> that is stored under
+ *  the global client auth directory, and return a newly-allocated credentials
+ *  object if it parsed well. Otherwise, return NULL.
+ */
+static hs_client_service_authorization_t *
+get_creds_from_client_auth_filename(const char *filename,
+                                    const or_options_t *options)
+{
+  hs_client_service_authorization_t *auth = NULL;
+  char *client_key_file_path = NULL;
+  char *client_key_str = NULL;
+
+  log_info(LD_REND, "Loading a client authorization key file %s...",
+           filename);
+
+  if (!auth_key_filename_is_valid(filename)) {
+    log_notice(LD_REND, "Client authorization unrecognized filename %s. "
+               "File must end in .auth_private. Ignoring.",
+               filename);
+    goto err;
+  }
+
+  /* Create a full path for a file. */
+  client_key_file_path = hs_path_from_filename(options->ClientOnionAuthDir,
+                                               filename);
+
+  client_key_str = read_file_to_str(client_key_file_path, 0, NULL);
+  if (!client_key_str) {
+    log_warn(LD_REND, "The file %s cannot be read.", filename);
+    goto err;
+  }
+
+  auth = parse_auth_file_content(client_key_str);
+  if (!auth) {
+    goto err;
+  }
+
+ err:
+  tor_free(client_key_str);
+  tor_free(client_key_file_path);
+
+  return auth;
+}
+
+/*
+ * Remove the file in <b>filename</b> under the global client auth credential
+ * storage.
+ */
+static void
+remove_client_auth_creds_file(const char *filename)
+{
+  char *creds_file_path = NULL;
+  const or_options_t *options = get_options();
+
+  creds_file_path = hs_path_from_filename(options->ClientOnionAuthDir,
+                                          filename);
+  if (tor_unlink(creds_file_path) != 0) {
+    log_warn(LD_REND, "Failed to remove client auth file (%s).",
+             creds_file_path);
+    goto end;
+  }
+
+  log_warn(LD_REND, "Successfuly removed client auth file (%s).",
+           creds_file_path);
+
+ end:
+  tor_free(creds_file_path);
+}
+
+/**
+ * Find the filesystem file corresponding to the permanent client auth
+ * credentials in <b>cred</b> and remove it.
+ */
+static void
+find_and_remove_client_auth_creds_file(
+                                 const hs_client_service_authorization_t *cred)
+{
+  smartlist_t *file_list = NULL;
+  const or_options_t *options = get_options();
+
+  tor_assert(cred->flags & CLIENT_AUTH_FLAG_IS_PERMANENT);
+
+  if (!options->ClientOnionAuthDir) {
+    log_warn(LD_REND, "Found permanent credential but no ClientOnionAuthDir "
+             "configured. There is no file to be removed.");
+    goto end;
+  }
+
+  file_list = tor_listdir(options->ClientOnionAuthDir);
+  if (file_list == NULL) {
+    log_warn(LD_REND, "Client authorization key directory %s can't be listed.",
+             options->ClientOnionAuthDir);
+    goto end;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(file_list, const char *, filename) {
+    hs_client_service_authorization_t *tmp_cred = NULL;
+
+    tmp_cred = get_creds_from_client_auth_filename(filename, options);
+    if (!tmp_cred) {
+      continue;
+    }
+
+    /* Find the right file for this credential */
+    if (!strcmp(tmp_cred->onion_address, cred->onion_address)) {
+      /* Found it! Remove the file! */
+      remove_client_auth_creds_file(filename);
+      /* cleanup and get out of here */
+      client_service_authorization_free(tmp_cred);
+      break;
+    }
+
+    client_service_authorization_free(tmp_cred);
+  } SMARTLIST_FOREACH_END(filename);
+
+ end:
+  if (file_list) {
+    SMARTLIST_FOREACH(file_list, char *, s, tor_free(s));
+    smartlist_free(file_list);
+  }
+}
+
 /** Remove client auth credentials for the service <b>hs_address</b>. */
 hs_client_removal_auth_status_t
 hs_client_remove_auth_credentials(const char *hsaddress)
@@ -1502,8 +1707,14 @@ hs_client_remove_auth_credentials(const char *hsaddress)
 
   hs_client_service_authorization_t *cred = NULL;
   cred = digest256map_remove(client_auths, service_identity_pk.pubkey);
+
   /* digestmap_remove() returns the previously stored data if there were any */
   if (cred) {
+    if (cred->flags & CLIENT_AUTH_FLAG_IS_PERMANENT) {
+      /* These creds are stored on disk: remove the corresponding file. */
+      find_and_remove_client_auth_creds_file(cred);
+    }
+
     client_service_authorization_free(cred);
     return REMOVAL_SUCCESS;
   }
@@ -1521,6 +1732,56 @@ get_hs_client_auths_map(void)
 /* ========== */
 /* Public API */
 /* ========== */
+
+/** Called when a circuit was just cleaned up. This is done right before the
+ * circuit is freed. */
+void
+hs_client_circuit_cleanup_on_free(const circuit_t *circ)
+{
+  bool has_timed_out;
+  rend_intro_point_failure_t failure = INTRO_POINT_FAILURE_GENERIC;
+  const origin_circuit_t *orig_circ = NULL;
+
+  tor_assert(circ);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
+
+  orig_circ = CONST_TO_ORIGIN_CIRCUIT(circ);
+  tor_assert(orig_circ->hs_ident);
+
+  has_timed_out =
+    (circ->marked_for_close_orig_reason == END_CIRC_REASON_TIMEOUT);
+  if (has_timed_out) {
+    failure = INTRO_POINT_FAILURE_TIMEOUT;
+  }
+
+  switch (circ->purpose) {
+  case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
+    log_info(LD_REND, "Failed v3 intro circ for service %s to intro point %s "
+                      "(awaiting ACK). Failure code: %d",
+        safe_str_client(ed25519_fmt(&orig_circ->hs_ident->identity_pk)),
+        safe_str_client(build_state_get_exit_nickname(orig_circ->build_state)),
+        failure);
+    hs_cache_client_intro_state_note(&orig_circ->hs_ident->identity_pk,
+                                     &orig_circ->hs_ident->intro_auth_pk,
+                                     failure);
+    break;
+  case CIRCUIT_PURPOSE_C_INTRODUCING:
+    if (has_timed_out || !orig_circ->build_state) {
+      break;
+    }
+    failure = INTRO_POINT_FAILURE_UNREACHABLE;
+    log_info(LD_REND, "Failed v3 intro circ for service %s to intro point %s "
+                      "(while building circuit). Marking as unreachable.",
+       safe_str_client(ed25519_fmt(&orig_circ->hs_ident->identity_pk)),
+       safe_str_client(build_state_get_exit_nickname(orig_circ->build_state)));
+    hs_cache_client_intro_state_note(&orig_circ->hs_ident->identity_pk,
+                                     &orig_circ->hs_ident->intro_auth_pk,
+                                     failure);
+    break;
+  default:
+    break;
+  }
+}
 
 /** A circuit just finished connecting to a hidden service that the stream
  *  <b>conn</b> has been waiting for. Let the HS subsystem know about this. */
@@ -1749,10 +2010,6 @@ client_service_authorization_free_(hs_client_service_authorization_t *auth)
     return;
   }
 
-  if (auth->nickname) {
-    tor_free(auth->nickname);
-  }
-
   memwipe(auth, 0, sizeof(*auth));
   tor_free(auth);
 }
@@ -1795,6 +2052,13 @@ auth_key_filename_is_valid(const char *filename)
   return ret;
 }
 
+/** Parse the client auth credentials off a string in <b>client_key_str</b>
+ *  based on the file format documented in the "Client side configuration"
+ *  section of rend-spec-v3.txt.
+ *
+ *  Return NULL if there was an error, otherwise return a newly allocated
+ *  hs_client_service_authorization_t structure.
+ */
 STATIC hs_client_service_authorization_t *
 parse_auth_file_content(const char *client_key_str)
 {
@@ -1825,7 +2089,7 @@ parse_auth_file_content(const char *client_key_str)
     goto err;
   }
 
-  if (strlen(seckey_b32) != BASE32_NOPAD_LEN(CURVE25519_PUBKEY_LEN)) {
+  if (strlen(seckey_b32) != BASE32_NOPAD_LEN(CURVE25519_SECKEY_LEN)) {
     log_warn(LD_REND, "Client authorization encoded base32 private key "
                       "length is invalid: %s", seckey_b32);
     goto err;
@@ -1841,6 +2105,9 @@ parse_auth_file_content(const char *client_key_str)
     goto err;
   }
   strncpy(auth->onion_address, onion_address, HS_SERVICE_ADDR_LEN_BASE32);
+
+  /* We are reading this from the disk, so set the permanent flag anyway. */
+  auth->flags |= CLIENT_AUTH_FLAG_IS_PERMANENT;
 
   /* Success. */
   goto done;
@@ -1868,10 +2135,7 @@ hs_config_client_authorization(const or_options_t *options,
 {
   int ret = -1;
   digest256map_t *auths = digest256map_new();
-  char *key_dir = NULL;
   smartlist_t *file_list = NULL;
-  char *client_key_str = NULL;
-  char *client_key_file_path = NULL;
 
   tor_assert(options);
 
@@ -1882,82 +2146,54 @@ hs_config_client_authorization(const or_options_t *options,
     goto end;
   }
 
-  key_dir = tor_strdup(options->ClientOnionAuthDir);
-
   /* Make sure the directory exists and is private enough. */
-  if (check_private_dir(key_dir, 0, options->User) < 0) {
+  if (check_private_dir(options->ClientOnionAuthDir, 0, options->User) < 0) {
     goto end;
   }
 
-  file_list = tor_listdir(key_dir);
+  file_list = tor_listdir(options->ClientOnionAuthDir);
   if (file_list == NULL) {
     log_warn(LD_REND, "Client authorization key directory %s can't be listed.",
-             key_dir);
+             options->ClientOnionAuthDir);
     goto end;
   }
 
-  SMARTLIST_FOREACH_BEGIN(file_list, char *, filename) {
-
+  SMARTLIST_FOREACH_BEGIN(file_list, const char *, filename) {
     hs_client_service_authorization_t *auth = NULL;
     ed25519_public_key_t identity_pk;
-    log_info(LD_REND, "Loading a client authorization key file %s...",
-             filename);
 
-    if (!auth_key_filename_is_valid(filename)) {
-      log_notice(LD_REND, "Client authorization unrecognized filename %s. "
-                          "File must end in .auth_private. Ignoring.",
-                 filename);
+    auth = get_creds_from_client_auth_filename(filename, options);
+    if (!auth) {
       continue;
     }
 
-    /* Create a full path for a file. */
-    client_key_file_path = hs_path_from_filename(key_dir, filename);
-    client_key_str = read_file_to_str(client_key_file_path, 0, NULL);
-    /* Free the file path immediately after using it. */
-    tor_free(client_key_file_path);
-
-    /* If we cannot read the file, continue with the next file. */
-    if (!client_key_str) {
-      log_warn(LD_REND, "The file %s cannot be read.", filename);
+    /* Parse the onion address to get an identity public key and use it
+     * as a key of global map in the future. */
+    if (hs_parse_address(auth->onion_address, &identity_pk,
+                         NULL, NULL) < 0) {
+      log_warn(LD_REND, "The onion address \"%s\" is invalid in "
+               "file %s", filename, auth->onion_address);
+      client_service_authorization_free(auth);
       continue;
     }
 
-    auth = parse_auth_file_content(client_key_str);
-    /* Free immediately after using it. */
-    tor_free(client_key_str);
-
-    if (auth) {
-      /* Parse the onion address to get an identity public key and use it
-       * as a key of global map in the future. */
-      if (hs_parse_address(auth->onion_address, &identity_pk,
-                           NULL, NULL) < 0) {
-        log_warn(LD_REND, "The onion address \"%s\" is invalid in "
-                          "file %s", filename, auth->onion_address);
-        client_service_authorization_free(auth);
-        continue;
-      }
-
-      if (digest256map_get(auths, identity_pk.pubkey)) {
+    if (digest256map_get(auths, identity_pk.pubkey)) {
         log_warn(LD_REND, "Duplicate authorization for the same hidden "
-                          "service address %s.",
+                 "service address %s.",
                  safe_str_client_opts(options, auth->onion_address));
         client_service_authorization_free(auth);
         goto end;
-      }
-
-      digest256map_set(auths, identity_pk.pubkey, auth);
-      log_info(LD_REND, "Loaded a client authorization key file %s.",
-               filename);
     }
+
+    digest256map_set(auths, identity_pk.pubkey, auth);
+    log_info(LD_REND, "Loaded a client authorization key file %s.",
+             filename);
   } SMARTLIST_FOREACH_END(filename);
 
   /* Success. */
   ret = 0;
 
  end:
-  tor_free(key_dir);
-  tor_free(client_key_str);
-  tor_free(client_key_file_path);
   if (file_list) {
     SMARTLIST_FOREACH(file_list, char *, s, tor_free(s));
     smartlist_free(file_list);

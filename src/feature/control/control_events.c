@@ -38,6 +38,7 @@
 #include "core/or/origin_circuit_st.h"
 
 #include "lib/evloop/compat_libevent.h"
+#include "lib/encoding/confline.h"
 
 static void flush_queued_events_cb(mainloop_event_t *event, void *arg);
 static void control_get_bytes_rw_last_sec(uint64_t *r, uint64_t *w);
@@ -833,13 +834,19 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
   circ = circuit_get_by_edge_conn(ENTRY_TO_EDGE_CONN(conn));
   if (circ && CIRCUIT_IS_ORIGIN(circ))
     origin_circ = TO_ORIGIN_CIRCUIT(circ);
-  send_control_event(EVENT_STREAM_STATUS,
-                        "650 STREAM %"PRIu64" %s %lu %s%s%s%s\r\n",
+
+  {
+    char *conndesc = entry_connection_describe_status_for_controller(conn);
+    const char *sp = strlen(conndesc) ? " " : "";
+    send_control_event(EVENT_STREAM_STATUS,
+                        "650 STREAM %"PRIu64" %s %lu %s%s%s%s%s%s\r\n",
                      (ENTRY_TO_CONN(conn)->global_identifier),
                      status,
                         origin_circ?
                            (unsigned long)origin_circ->global_identifier : 0ul,
-                        buf, reason_buf, addrport_buf, purpose);
+                        buf, reason_buf, addrport_buf, purpose, sp, conndesc);
+    tor_free(conndesc);
+  }
 
   /* XXX need to specify its intended exit, etc? */
 
@@ -1764,27 +1771,24 @@ control_event_guard(const char *nickname, const char *digest,
 }
 
 /** Called when a configuration option changes. This is generally triggered
- * by SETCONF requests and RELOAD/SIGHUP signals. The <b>elements</b> is
- * a smartlist_t containing (key, value, ...) pairs in sequence.
- * <b>value</b> can be NULL. */
-int
-control_event_conf_changed(const smartlist_t *elements)
+ * by SETCONF requests and RELOAD/SIGHUP signals. The <b>changes</b> are
+ * a linked list of configuration key-values.
+ * <b>changes</b> can be NULL, meaning "no changes".
+ */
+void
+control_event_conf_changed(const config_line_t *changes)
 {
-  int i;
   char *result;
   smartlist_t *lines;
-  if (!EVENT_IS_INTERESTING(EVENT_CONF_CHANGED) ||
-      smartlist_len(elements) == 0) {
-    return 0;
+  if (!EVENT_IS_INTERESTING(EVENT_CONF_CHANGED) || !changes) {
+    return;
   }
   lines = smartlist_new();
-  for (i = 0; i < smartlist_len(elements); i += 2) {
-    char *k = smartlist_get(elements, i);
-    char *v = smartlist_get(elements, i+1);
-    if (v == NULL) {
-      smartlist_add_asprintf(lines, "650-%s", k);
+  for (const config_line_t *line = changes; line; line = line->next) {
+    if (line->value == NULL) {
+      smartlist_add_asprintf(lines, "650-%s", line->key);
     } else {
-      smartlist_add_asprintf(lines, "650-%s=%s", k, v);
+      smartlist_add_asprintf(lines, "650-%s=%s", line->key, line->value);
     }
   }
   result = smartlist_join_strings(lines, "\r\n", 0, NULL);
@@ -1793,7 +1797,6 @@ control_event_conf_changed(const smartlist_t *elements)
   tor_free(result);
   SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
   smartlist_free(lines);
-  return 0;
 }
 
 /** We just generated a new summary of which countries we've seen clients

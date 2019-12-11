@@ -13,6 +13,10 @@
    file in each directory.  This file contains empty lines, #-prefixed
    comments, filenames (like "lib/foo/bar.h") and file globs (like lib/*/*.h)
    for files that are permitted.
+
+   The script exits with an error if any non-permitted includes are found.
+   .may_include files that contain "!advisory" are considered advisory.
+   Advisory .may_include files only result in warnings, rather than errors.
 """
 
 
@@ -36,7 +40,11 @@ def warn(msg):
 def fname_is_c(fname):
     """ Return true iff 'fname' is the name of a file that we should
         search for possibly disallowed #include directives. """
-    return fname.endswith(".h") or fname.endswith(".c")
+    if fname.endswith(".h") or fname.endswith(".c"):
+        bname = os.path.basename(fname)
+        return not (bname.startswith(".") or bname.startswith("#"))
+    else:
+        return False
 
 INCLUDE_PATTERN = re.compile(r'\s*#\s*include\s+"([^"]*)"')
 RULES_FNAME = ".may_include"
@@ -235,7 +243,7 @@ def run_check_includes(topdir, list_unused=False, log_sorted_levels=False,
             trouble = True
 
     if trouble:
-        err(
+        warn(
     """To change which includes are allowed in a C file, edit the {}
     files in its enclosing directory.""".format(RULES_FNAME))
         sys.exit(1)

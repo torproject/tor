@@ -73,7 +73,6 @@ const control_cmd_syntax_t onion_client_auth_add_syntax = {
  *  register the new client-side client auth credentials:
  *  "ONION_CLIENT_AUTH_ADD" SP HSAddress
  *                          SP KeyType ":" PrivateKeyBlob
- *                          [SP "ClientName=" Nickname]
  *                          [SP "Type=" TYPE] CRLF
  */
 int
@@ -112,14 +111,7 @@ handle_control_onion_client_auth_add(control_connection_t *conn,
 
   /* Now let's parse the remaining arguments (variable size) */
   for (const config_line_t *line = args->kwargs; line; line = line->next) {
-    if (!strcasecmp(line->key, "ClientName")) {
-      if (strlen(line->value) > HS_CLIENT_AUTH_MAX_NICKNAME_LENGTH) {
-        control_write_endreply(conn, 512, "Too big 'ClientName' argument");
-        goto err;
-      }
-      creds->nickname = tor_strdup(line->value);
-
-    } else if (!strcasecmpstart(line->key, "Flags")) {
+    if (!strcasecmpstart(line->key, "Flags")) {
       smartlist_split_string(flags, line->value, ",", SPLIT_IGNORE_BLANK, 0);
       if (smartlist_len(flags) < 1) {
         control_write_endreply(conn, 512, "Invalid 'Flags' argument");
@@ -144,6 +136,10 @@ handle_control_onion_client_auth_add(control_connection_t *conn,
   case REGISTER_FAIL_BAD_ADDRESS:
     /* It's a bug because the service addr has already been validated above */
     control_printf_endreply(conn, 512, "Invalid v3 address \"%s\"", hsaddress);
+    break;
+  case REGISTER_FAIL_PERMANENT_STORAGE:
+    control_printf_endreply(conn, 553, "Unable to store creds for \"%s\"",
+                            hsaddress);
     break;
   case REGISTER_SUCCESS_ALREADY_EXISTS:
     control_printf_endreply(conn, 251,"Client for onion existed and replaced");
@@ -243,11 +239,8 @@ encode_client_auth_cred_for_control_port(
     goto err;
   }
 
-  smartlist_add_asprintf(control_line, "CLIENT x25519:%s", x25519_b64);
-
-  if (cred->nickname) { /* nickname is optional */
-    smartlist_add_asprintf(control_line, " ClientName=%s", cred->nickname);
-  }
+  smartlist_add_asprintf(control_line, "CLIENT %s x25519:%s",
+                         cred->onion_address, x25519_b64);
 
   if (cred->flags) { /* flags are also optional */
     if (cred->flags & CLIENT_AUTH_FLAG_IS_PERMANENT) {

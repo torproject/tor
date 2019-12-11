@@ -41,12 +41,16 @@ matrix:
     ## We run basic tests on macOS
     - compiler: clang
       os: osx
+      ## Turn off some newer features, turn on clang's -Wtypedef-redefinition
+      env: C_DIALECT_OPTIONS="-std=gnu99"
     ## We check NSS
-    ## NSS is a fast job, clang is slower on Linux, so we do NSS clang
-    - env: NSS_OPTIONS="--enable-nss"
-      compiler: clang
+    ## Use -std=gnu99 to turn off some newer features, and maybe turn on some
+    ## extra gcc warnings?
+    - env: NSS_OPTIONS="--enable-nss" C_DIALECT_OPTIONS="-std=gnu99"
     ## We run chutney on Linux, because it's faster than chutney on macOS
+    ## Chutney is a fast job, clang is slower on Linux, so we do Chutney clang
     - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
+      compiler: clang
       ## (Linux only) Use an older Linux image (Ubuntu Trusty)
       ## The Xenial and Bionic images cause permissions issues for chutney,
       ## this is a workaround, until we fix #32240.
@@ -165,6 +169,8 @@ addons:
 osx_image: xcode11.2
 
 before_install:
+  ## Set pipefail: we use pipes
+  - set -o pipefail || echo "pipefail failed"
   ## Create empty rust directories for non-Rust builds, so caching succeeds
   - if [[ "$RUST_OPTIONS" == "" ]]; then mkdir -p $HOME/.cargo $TRAVIS_BUILD_DIR/src/rust/target; fi
 
@@ -219,8 +225,8 @@ script:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export TOR_SKIP_TEST_REBIND=true; fi
   - ./autogen.sh
   - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $MODULES_OPTIONS $NSS_OPTIONS $OPENSSL_OPTIONS $RUST_OPTIONS --enable-fatal-warnings --disable-silent-rules"
-  - echo "Configure flags are $CONFIGURE_FLAGS"
-  - ./configure $CONFIGURE_FLAGS
+  - echo "Configure flags are $CONFIGURE_FLAGS CC=\"$CC $C_DIALECT_OPTIONS\""
+  - ./configure $CONFIGURE_FLAGS CC="$CC $C_DIALECT_OPTIONS"
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - if [[ "$SKIP_MAKE_CHECK" == "" ]]; then make check; fi
   - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi

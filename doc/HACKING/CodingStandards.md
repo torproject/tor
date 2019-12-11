@@ -42,6 +42,7 @@ If you have changed build system components:
    - For example, if you have changed Makefiles, autoconf files, or anything
      else that affects the build system.
 
+
 License issues
 ==============
 
@@ -56,7 +57,6 @@ Some compatible licenses include:
   - 3-clause BSD
   - 2-clause BSD
   - CC0 Public Domain Dedication
-
 
 
 How we use Git branches
@@ -99,17 +99,28 @@ When you do a commit that needs a ChangeLog entry, add a new file to
 the `changes` toplevel subdirectory.  It should have the format of a
 one-entry changelog section from the current ChangeLog file, as in
 
-- Major bugfixes:
+  o Major bugfixes (security):
     - Fix a potential buffer overflow. Fixes bug 99999; bugfix on
       0.3.1.4-beta.
+  o Minor features (performance):
+    - Make tor faster. Closes ticket 88888.
 
 To write a changes file, first categorize the change.  Some common categories
-are: Minor bugfixes, Major bugfixes, Minor features, Major features, Code
-simplifications and refactoring.  Then say what the change does.  If
-it's a bugfix, mention what bug it fixes and when the bug was
-introduced.  To find out which Git tag the change was introduced in,
-you can use `git describe --contains <sha1 of commit>`.
+are:
+  o Minor bugfixes (subheading):
+  o Major bugfixes (subheading):
+  o Minor features (subheading):
+  o Major features (subheading):
+  o Code simplifications and refactoring:
+  o Testing:
+  o Documentation:
 
+The subheading is a particular area within Tor.  See the ChangeLog for
+examples.
+
+Then say what the change does.  If it's a bugfix, mention what bug it fixes
+and when the bug was introduced. To find out which Git tag the change was
+introduced in, you can use `git describe --contains <sha1 of commit>`.
 If you don't know the commit, you can search the git diffs (-S) for the first
 instance of the feature (--reverse).
 
@@ -147,10 +158,6 @@ that our CI passes.  These checks are implemented in
 `scripts/maint/lintChanges.py`.
 
 Changes file style guide:
-  * Changes files begin with "  o Header (subheading):".  The header
-    should usually be "Minor/Major bugfixes/features". The subheading is a
-    particular area within Tor.  See the ChangeLog for examples.
-
   * Make everything terse.
 
   * Write from the user's point of view: describe the user-visible changes
@@ -383,7 +390,6 @@ for more information about trunnel.
 
 For information on adding new trunnel code to Tor, see src/trunnel/README
 
-
 Calling and naming conventions
 ------------------------------
 
@@ -493,7 +499,6 @@ to use it as a function callback), define it with a name like
 
 When deallocating, don't say e.g. `if (x) tor_free(x)`. The convention is to
 have deallocators do nothing when NULL pointer is passed.
-
 
 Doxygen comment conventions
 ---------------------------

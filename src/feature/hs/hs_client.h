@@ -10,6 +10,8 @@
 #define TOR_HS_CLIENT_H
 
 #include "lib/crypt_ops/crypto_ed25519.h"
+
+#include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_descriptor.h"
 #include "feature/hs/hs_ident.h"
 
@@ -43,6 +45,8 @@ typedef enum {
   REGISTER_SUCCESS_AND_DECRYPTED,
   /* We failed to register these credentials, because of a bad HS address. */
   REGISTER_FAIL_BAD_ADDRESS,
+  /* We failed to register these credentials, because of a bad HS address. */
+  REGISTER_FAIL_PERMANENT_STORAGE,
 } hs_client_register_auth_status_t;
 
 /* Status code of client auth credential removal */
@@ -58,9 +62,6 @@ typedef enum {
 /** Flag to set when a client auth is permanent (saved on disk). */
 #define CLIENT_AUTH_FLAG_IS_PERMANENT (1<<0)
 
-/** Max length of a client auth nickname */
-#define HS_CLIENT_AUTH_MAX_NICKNAME_LENGTH 255
-
 /** Client-side configuration of client authorization */
 typedef struct hs_client_service_authorization_t {
   /** An curve25519 secret key used to compute decryption keys that
@@ -69,9 +70,6 @@ typedef struct hs_client_service_authorization_t {
 
   /** An onion address that is used to connect to the onion service. */
   char onion_address[HS_SERVICE_ADDR_LEN_BASE32+1];
-
-  /* An optional nickname for this client */
-  char *nickname;
 
   /* Optional flags for this client. */
   int flags;
@@ -112,6 +110,7 @@ int hs_client_send_introduce1(origin_circuit_t *intro_circ,
                               origin_circuit_t *rend_circ);
 
 void hs_client_circuit_has_opened(origin_circuit_t *circ);
+void hs_client_circuit_cleanup_on_free(const circuit_t *circ);
 
 int hs_client_receive_rendezvous_acked(origin_circuit_t *circ,
                                        const uint8_t *payload,
