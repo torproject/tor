@@ -1128,7 +1128,11 @@ static void
 test_socks_hs_errors(void *arg)
 {
   int ret;
+  char digest[DIGEST_LEN];
   char *desc_encoded = NULL;
+  circuit_t *circ = NULL;
+  origin_circuit_t *ocirc = NULL;
+  tor_addr_t addr;
   ed25519_keypair_t service_kp;
   ed25519_keypair_t signing_kp;
   entry_connection_t *socks_conn = NULL;
@@ -1175,6 +1179,73 @@ test_socks_hs_errors(void *arg)
   desc = hs_helper_build_hs_desc_with_ip(&service_kp);
   tt_assert(desc);
 
+  /* Before testing the client authentication error code, encode the
+   * descriptor with no client auth. */
+  ret = hs_desc_encode_descriptor(desc, &service_kp, NULL, &desc_encoded);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_assert(desc_encoded);
+
+  /*
+   * Test the introduction failure codes (X'F2' and X'F7')
+   */
+
+  /* First, we have to put all the IPs in the failure cache. */
+  SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
+                          hs_desc_intro_point_t *, ip) {
+    hs_cache_client_intro_state_note(&service_kp.pubkey,
+                                     &ip->auth_key_cert->signed_key,
+                                     INTRO_POINT_FAILURE_GENERIC);
+  } SMARTLIST_FOREACH_END(ip);
+
+  hs_client_dir_fetch_done(dir_conn, "Reason", desc_encoded, 200);
+  tt_int_op(socks_conn->socks_request->socks_extended_error_code, OP_EQ,
+            SOCKS5_HS_INTRO_FAILED);
+
+  /* Purge client cache of the descriptor so we can go again. */
+  hs_cache_purge_as_client();
+
+  /* Second, set all failures to be time outs. */
+  SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
+                          hs_desc_intro_point_t *, ip) {
+    hs_cache_client_intro_state_note(&service_kp.pubkey,
+                                     &ip->auth_key_cert->signed_key,
+                                     INTRO_POINT_FAILURE_TIMEOUT);
+  } SMARTLIST_FOREACH_END(ip);
+
+  hs_client_dir_fetch_done(dir_conn, "Reason", desc_encoded, 200);
+  tt_int_op(socks_conn->socks_request->socks_extended_error_code, OP_EQ,
+            SOCKS5_HS_INTRO_TIMEDOUT);
+
+  /* Purge client cache of the descriptor so we can go again. */
+  hs_cache_purge_as_client();
+
+  /*
+   * Test the rendezvous failure codes (X'F3')
+   */
+
+  circ = dummy_origin_circuit_new(0);
+  tt_assert(circ);
+  circ->purpose = CIRCUIT_PURPOSE_C_REND_READY;
+  ocirc = TO_ORIGIN_CIRCUIT(circ);
+  ocirc->hs_ident = hs_ident_circuit_new(&service_kp.pubkey);
+  ocirc->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
+  /* Code path will log this exit so build it. */
+  ocirc->build_state->chosen_exit = extend_info_new("TestNickname", digest,
+                                                    NULL, NULL, NULL, &addr,
+                                                    4242);
+  /* Attach socks connection to this rendezvous circuit. */
+  ocirc->p_streams = ENTRY_TO_EDGE_CONN(socks_conn);
+  /* Trigger the rendezvous failure. Timeout the circuit and free. */
+  circuit_mark_for_close(circ, END_CIRC_REASON_TIMEOUT);
+
+  tt_int_op(socks_conn->socks_request->socks_extended_error_code, OP_EQ,
+            SOCKS5_HS_REND_FAILED);
+
+  /*
+   * Test client authorization codes.
+   */
+
+  tor_free(desc_encoded);
   crypto_rand((char *) descriptor_cookie, sizeof(descriptor_cookie));
   ret = hs_desc_encode_descriptor(desc, &service_kp, descriptor_cookie,
                                   &desc_encoded);
@@ -1216,6 +1287,7 @@ test_socks_hs_errors(void *arg)
   connection_free_minimal(TO_CONN(dir_conn));
   hs_descriptor_free(desc);
   tor_free(desc_encoded);
+  circuit_free(circ);
 
   hs_free_all();
 
