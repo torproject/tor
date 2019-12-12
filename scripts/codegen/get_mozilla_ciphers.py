@@ -10,6 +10,11 @@
 # It takes two arguments: the location of a firefox source directory, and the
 # location of an openssl source directory.
 
+# Future imports for Python 2.7, mandatory in 3.0
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import os
 import re
 import sys

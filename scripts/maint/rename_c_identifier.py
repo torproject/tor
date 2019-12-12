@@ -11,6 +11,11 @@ Helpful script to replace one or more C identifiers, and optionally
 generate a commit message explaining what happened.
 """
 
+# Future imports for Python 2.7, mandatory in 3.0
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import argparse
 import fileinput
 import os

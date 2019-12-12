@@ -57,6 +57,11 @@ Note that only #else and #endif lines are annotated.  Existing comments
 on those lines are removed.
 """
 
+# Future imports for Python 2.7, mandatory in 3.0
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import re
 
 # Any block with fewer than this many lines does not need annotations.
