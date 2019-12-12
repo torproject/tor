@@ -15,6 +15,11 @@ if test "${PRACTRACKER_DIR}" = "" ||
     PRACTRACKER_DIR=$(dirname "$0")
 fi
 
+# Change to the tor directory, and canonicalise PRACTRACKER_DIR,
+# so paths in practracker output are consistent, even in out-of-tree builds
+cd "${PRACTRACKER_DIR}"/../../..
+PRACTRACKER_DIR="scripts/maint/practracker"
+
 TMPDIR="$(mktemp -d -t pracktracker.test.XXXXXX)"
 if test -z "${TMPDIR}" || test ! -d "${TMPDIR}" ; then
     echo >&2 "mktemp failed."
@@ -52,18 +57,18 @@ echo "unit tests:"
 
 echo "ex0:"
 
-run_practracker --exceptions "${DATA}/ex0.txt" > "${TMPDIR}/ex0-received.txt"
+run_practracker --exceptions "${DATA}/ex0.txt" > "${TMPDIR}/ex0-received.txt" 2>&1
 
 compare "${TMPDIR}/ex0-received.txt" "${DATA}/ex0-expected.txt"
 
 echo "ex1:"
 
-run_practracker --exceptions "${DATA}/ex1.txt" > "${TMPDIR}/ex1-received.txt"
+run_practracker --exceptions "${DATA}/ex1.txt" > "${TMPDIR}/ex1-received.txt" 2>&1
 
 compare "${TMPDIR}/ex1-received.txt" "${DATA}/ex1-expected.txt"
 
 echo "ex1.overbroad:"
 
-run_practracker --exceptions "${DATA}/ex1.txt" --list-overbroad > "${TMPDIR}/ex1-overbroad-received.txt"
+run_practracker --exceptions "${DATA}/ex1.txt" --list-overbroad > "${TMPDIR}/ex1-overbroad-received.txt" 2>&1
 
 compare "${TMPDIR}/ex1-overbroad-received.txt" "${DATA}/ex1-overbroad-expected.txt"
