@@ -52,18 +52,18 @@ echo "unit tests:"
 
 echo "ex0:"
 
-run_practracker --exceptions "${DATA}/ex0.txt" > "${TMPDIR}/ex0-received.txt"
+run_practracker --exceptions "${DATA}/ex0.txt" > "${TMPDIR}/ex0-received.txt" 2>&1
 
 compare "${TMPDIR}/ex0-received.txt" "${DATA}/ex0-expected.txt"
 
 echo "ex1:"
 
-run_practracker --exceptions "${DATA}/ex1.txt" > "${TMPDIR}/ex1-received.txt"
+run_practracker --exceptions "${DATA}/ex1.txt" > "${TMPDIR}/ex1-received.txt" 2>&1
 
 compare "${TMPDIR}/ex1-received.txt" "${DATA}/ex1-expected.txt"
 
 echo "ex1.overbroad:"
 
-run_practracker --exceptions "${DATA}/ex1.txt" --list-overbroad > "${TMPDIR}/ex1-overbroad-received.txt"
+run_practracker --exceptions "${DATA}/ex1.txt" --list-overbroad > "${TMPDIR}/ex1-overbroad-received.txt" 2>&1
 
 compare "${TMPDIR}/ex1-overbroad-received.txt" "${DATA}/ex1-overbroad-expected.txt"
