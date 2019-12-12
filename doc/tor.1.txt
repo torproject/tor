@@ -6,6 +6,8 @@
 :man manual:   Tor Manual
 // compat-mode tells Asciidoctor tools to process this as legacy AsciiDoc
 :compat-mode:
+// attribute to make it easier to write names containing double underscores
+:dbl_: __
 = TOR(1)
 
 == NAME
@@ -367,7 +369,7 @@ forward slash (/) in the configuration file and on the command line.
     all sockets will be set to this limit. Must be a value between 2048 and
     262144, in 1024 byte increments. Default of 8192 is recommended.
 
-[[ControlPort]] **ControlPort** \['address':]__port__|**unix:**__path__|**auto** [__flags__]::
+[[ControlPort]] **ControlPort** ['address'**:**]{empty}__port__|**unix:**__path__|**auto** [__flags__]::
     If set, Tor will accept connections on this port and allow those
     connections to control the Tor process using the Tor Control Protocol
     (described in control-spec.txt in
@@ -525,7 +527,7 @@ forward slash (/) in the configuration file and on the command line.
     circuits.  If the option is set to "default", we obey a
     parameter in the consensus document. (Default: auto)
 
-[[ExtORPort]] **ExtORPort** \['address':]__port__|**auto**::
+[[ExtORPort]] **ExtORPort** ['address'**:**]{empty}__port__|**auto**::
     Open this port to listen for Extended ORPort connections from your
     pluggable transports. +
     (Default: **DataDirectory**/extended_orport_auth_cookie)
@@ -1289,7 +1291,7 @@ The following options are useful only for clients (that is, if
     the same circuit. Currently, two addresses are "too close" if they lie in
     the same /16 range. (Default: 1)
 
-[[SocksPort]] **SocksPort** \['address':]__port__|**unix:**__path__|**auto** [_flags_] [_isolation flags_]::
+[[SocksPort]] **SocksPort** ['address'**:**]{empty}__port__|**unix:**__path__|**auto** [_flags_] [_isolation flags_]::
     Open this port to listen for connections from SOCKS-speaking
     applications. Set this to 0 if you don't want to allow application
     connections via SOCKS. Set it to "auto" to have Tor pick a port for
@@ -1587,7 +1589,7 @@ The following options are useful only for clients (that is, if
     resolved. This helps trap accidental attempts to resolve URLs and so on.
     (Default: 0)
 
-[[HTTPTunnelPort]] **HTTPTunnelPort**  \['address':]__port__|**auto** [_isolation flags_]::
+[[HTTPTunnelPort]] **HTTPTunnelPort** ['address'**:**]{empty}__port__|**auto** [_isolation flags_]::
     Open this port to listen for proxy connections using the "HTTP CONNECT"
     protocol instead of SOCKS. Set this to
     0 if you don't want to allow "HTTP CONNECT" connections. Set the port
@@ -1597,7 +1599,7 @@ The following options are useful only for clients (that is, if
     perform stream isolation between listeners by default. See
     SOCKSPort for an explanation of isolation flags. (Default: 0)
 
-[[TransPort]] **TransPort**  \['address':]__port__|**auto** [_isolation flags_]::
+[[TransPort]] **TransPort** ['address'**:**]{empty}__port__|**auto** [_isolation flags_]::
     Open this port to listen for transparent proxy connections.  Set this to
     0 if you don't want to allow transparent proxy connections.  Set the port
     to "auto" to have Tor pick a port for you. This directive can be
@@ -1635,7 +1637,7 @@ The following options are useful only for clients (that is, if
      +
     (Default: "default")
 
-[[NATDPort]] **NATDPort** \['address':]__port__|**auto** [_isolation flags_]::
+[[NATDPort]] **NATDPort** ['address'**:**]{empty}__port__|**auto** [_isolation flags_]::
     Open this port to listen for connections from old versions of ipfw (as
     included in old versions of FreeBSD, etc) using the NATD protocol.
     Use 0 if you don't want to allow NATD connections.  Set the port
@@ -1658,7 +1660,7 @@ The following options are useful only for clients (that is, if
     A comma-separated list of suffixes to use with **AutomapHostsOnResolve**.
     The "." suffix is equivalent to "all addresses." (Default: .exit,.onion).
 
-[[DNSPort]] **DNSPort** \['address':]__port__|**auto** [_isolation flags_]::
+[[DNSPort]] **DNSPort** ['address'**:**]{empty}__port__|**auto** [_isolation flags_]::
     If non-zero, open this port to listen for UDP DNS requests, and resolve
     them anonymously.  This port only handles A, AAAA, and PTR requests---it
     doesn't handle arbitrary DNS request types. Set the port to "auto" to
@@ -2291,7 +2293,7 @@ is non-zero):
     parallelizable operations.  If this is set to 0, Tor will try to detect
     how many CPUs you have, defaulting to 1 if it can't tell.  (Default: 0)
 
-[[ORPort]] **ORPort** \['address':]__PORT__|**auto** [_flags_]::
+[[ORPort]] **ORPort** ['address'**:**]{empty}__PORT__|**auto** [_flags_]::
     Advertise this port to listen for connections from Tor clients and
     servers.  This option is required to be a Tor server.
     Set it to "auto" to have Tor pick a port for you. Set it to 0 to not
@@ -2614,7 +2616,7 @@ details.)
     to set up a separate webserver. There's a sample disclaimer in
     contrib/operator-tools/tor-exit-notice.html.
 
-[[DirPort]] **DirPort** \['address':]__PORT__|**auto** [_flags_]::
+[[DirPort]] **DirPort** ['address'**:**]{empty}__PORT__|**auto** [_flags_]::
     If this option is nonzero, advertise the directory service on this port.
     Set it to "auto" to have Tor pick a port for you.  This option can occur
     more than once, but only one advertised DirPort is supported: all
@@ -3419,7 +3421,7 @@ These options are not saved to the torrc file by the "SAVECONF" controller
 command.  Other options of this type are documented in control-spec.txt,
 section 5.4. End-users should mostly ignore them.
 
-[[UnderscorePorts]] **\_\_ControlPort**, **\_\_DirPort**, **\_\_DNSPort**, **\_\_ExtORPort**, **\_\_NATDPort**, **\_\_ORPort**, **\_\_SocksPort**, **\_\_TransPort**::
+[[UnderscorePorts]] **{dbl_}ControlPort**, **{dbl_}DirPort**, **{dbl_}DNSPort**, **{dbl_}ExtORPort**, **{dbl_}NATDPort**, **{dbl_}ORPort**, **{dbl_}SocksPort**, **{dbl_}TransPort**::
     These underscore-prefixed options are variants of the regular Port
     options.  They behave the same, except they are not saved to the
     torrc file by the controller's SAVECONF command.
