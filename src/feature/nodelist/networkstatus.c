@@ -1633,6 +1633,8 @@ routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
          a->is_possible_guard != b->is_possible_guard ||
          a->is_bad_exit != b->is_bad_exit ||
          a->is_hs_dir != b->is_hs_dir ||
+         a->is_staledesc != b->is_staledesc ||
+         a->has_bandwidth != b->has_bandwidth ||
          a->published_on != b->published_on ||
          a->ipv6_orport != b->ipv6_orport ||
          a->is_v2_dir != b->is_v2_dir ||
