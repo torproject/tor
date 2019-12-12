@@ -171,6 +171,12 @@ control_event_bootstrap_core(int loglevel, bootstrap_status_t status,
   control_event_client_status(LOG_NOTICE, "%s", buf);
 }
 
+int
+control_get_bootstrap_percent(void)
+{
+  return bootstrap_percent;
+}
+
 /** Called when Tor has made progress at bootstrapping its directory
  * information and initial circuits.
  *

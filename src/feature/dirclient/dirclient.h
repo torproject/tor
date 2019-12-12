@@ -14,6 +14,8 @@
 
 #include "feature/hs/hs_ident.h"
 
+void dirclient_dump_total_dls(void);
+
 int directories_have_accepted_server_descriptor(void);
 void directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                                   dirinfo_type_t type, const char *payload,
