@@ -265,14 +265,10 @@ test: all
 shellcheck:
 	$(top_srcdir)/scripts/maint/checkShellScripts.sh
 
-check-practracker-unit-test:
-	$(top_srcdir)/scripts/maint/practracker/test_practracker.sh
-
 check-local:					\
 	check-spaces				\
 	check-changes				\
 	check-includes				\
-	check-practracker-unit-test		\
 	check-best-practices			\
 	shellcheck				\
 	check-cocci
