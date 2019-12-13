@@ -29,6 +29,14 @@
 #     "mv fname.c.newdoc fname.c".  Otherwise, you'll need to merge
 #     the parts you like by hand.
 
+# Future imports for Python 2.7, mandatory in 3.0
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
+import re
+import sys
+
 # Which files should we ignore warning from?  Mostly, these are external
 # files that we've snarfed in from somebody else, whose C we do no intend
 # to document for them.
@@ -51,9 +59,6 @@ ADD_DOCDOCS_TO_TYPES += [ 'variable', ]
 
 # ====================
 # The rest of this should not need hacking.
-
-import re
-import sys
 
 KINDS = [ "type", "field", "typedef", "define", "function", "variable",
           "enumeration" ]

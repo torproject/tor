@@ -9,7 +9,11 @@
 # To run it, pipe a section of the changelog (starting with "Changes
 # in Tor 0.x.y.z-alpha" through the script.)
 
+# Future imports for Python 2.7, mandatory in 3.0
+from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
+
 import os
 import re
 import sys

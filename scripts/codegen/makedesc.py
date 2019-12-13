@@ -9,6 +9,11 @@
 # I've used this to make inputs for unit tests.  I wouldn't suggest
 # using it for anything else.
 
+# Future imports for Python 2.7, mandatory in 3.0
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import base64
 import binascii
 import ctypes

@@ -1,3 +1,8 @@
+# Future imports for Python 2.7, mandatory in 3.0
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 b = 256
 q = 2**255 - 19
 l = 2**252 + 27742317777372353535851937790883648493
