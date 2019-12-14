@@ -50,6 +50,7 @@
 #include "feature/hibernate/hibernate.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"
+#include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nickname.h"
 #include "feature/nodelist/node_select.h"
@@ -78,6 +79,7 @@
 #include "feature/nodelist/authority_cert_st.h"
 #include "feature/nodelist/document_signature_st.h"
 #include "feature/nodelist/extrainfo_st.h"
+#include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/networkstatus_st.h"
 #include "feature/nodelist/networkstatus_voter_info_st.h"
 #include "feature/dirauth/ns_detached_signatures_st.h"
@@ -7209,6 +7211,300 @@ test_dir_format_versions_list(void *arg)
   teardown_capture_of_logs();
 }
 
+static void
+test_dir_add_fingerprint(void *arg)
+{
+  (void)arg;
+  authdir_config_t *list;
+  int ret;
+  ed25519_secret_key_t seckey;
+  ed25519_public_key_t pubkey_good, pubkey_bad;
+
+  authdir_init_fingerprint_list();
+  list = authdir_return_fingerprint_list();
+
+  setup_capture_of_logs(LOG_WARN);
+
+  /* RSA test - successful */
+  ret = add_rsa_fingerprint_to_dir("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                                   list, 0);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* RSA test - failure */
+  ret = add_rsa_fingerprint_to_dir("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+                                   list, 0);
+  tt_int_op(ret, OP_EQ, -1);
+
+  /* ed25519 test - successful */
+  ed25519_secret_key_generate(&seckey, 0);
+  ed25519_public_key_generate(&pubkey_good, &seckey);
+
+  ret = add_ed25519_to_dir(&pubkey_good, list, 0);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* ed25519 test - failure */
+  digest256_from_base64((char *) pubkey_bad.pubkey, "gibberish");
+
+  ret = add_ed25519_to_dir(&pubkey_bad, list, 0);
+  tt_int_op(ret, OP_EQ, -1);
+
+ done:
+  teardown_capture_of_logs();
+  dirserv_free_fingerprint_list();
+}
+
+static void
+test_dir_dirserv_load_fingerprint_file(void *arg)
+{
+  (void)arg;
+  char *fname = tor_strdup(get_fname("approved-routers"));
+
+  // Neither RSA nor ed25519
+  const char *router_lines_invalid =
+    "!badexit notafingerprint";
+  const char *router_lines_too_long =
+    "!badexit thisisareallylongstringthatislongerthanafingerprint\n";
+  const char *router_lines_bad_fmt_str =
+    "!badexit ABCDEFGH|%1$p|%2$p|%3$p|%4$p|%5$p|%6$p\n";
+  const char *router_lines_valid_rsa =
+    "!badexit AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+  const char *router_lines_invalid_rsa =
+    "!badexit ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ\n";
+  const char *router_lines_valid_ed25519 =
+    "!badexit wqfLzgfCtRfYNg88LsL1QpzxS0itapJ1aj6TbnByx/Q\n";
+  const char *router_lines_invalid_ed25519 =
+    "!badexit --fLzgfCtRfYNg88LsL1QpzxS0itapJ1aj6TbnByx--\n";
+
+  // Test: Invalid Fingerprint (not RSA or ed25519)
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_invalid, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+  // Test: Very long string (longer than RSA or ed25519 key)
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_too_long, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+  // Test: Formt string exploit
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_bad_fmt_str, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+  // Test: Valid RSA
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_valid_rsa, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  teardown_capture_of_logs();
+
+  // Test: Invalid RSA
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_invalid_rsa, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+  // Test: Valid ed25519
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_valid_ed25519, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  teardown_capture_of_logs();
+
+  // Test: Invalid ed25519
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_invalid_ed25519, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+ done:
+  tor_free(fname);
+  dirserv_free_fingerprint_list();
+}
+
+#define RESET_FP_LIST(list) STMT_BEGIN \
+    dirserv_free_fingerprint_list(); \
+    authdir_init_fingerprint_list(); \
+    list = authdir_return_fingerprint_list(); \
+  STMT_END
+
+static void
+test_dir_dirserv_router_get_status(void *arg)
+{
+  authdir_config_t *list;
+  routerinfo_t *ri = NULL;
+  ed25519_keypair_t kp1, kp2;
+  char d[DIGEST_LEN];
+  char fp[HEX_DIGEST_LEN+1];
+  int ret;
+  const char *msg;
+  time_t now = time(NULL);
+
+  (void)arg;
+
+  crypto_pk_t *pk = pk_generate(0);
+
+  authdir_init_fingerprint_list();
+  list = authdir_return_fingerprint_list();
+
+  /* Set up the routerinfo */
+  ri = tor_malloc_zero(sizeof(routerinfo_t));
+  ri->addr = 0xc0a80001u;
+  ri->or_port = 9001;
+  ri->platform = tor_strdup("0.4.0.1-alpha");
+  ri->nickname = tor_strdup("Jessica");
+  ri->identity_pkey = crypto_pk_dup_key(pk);
+
+  curve25519_keypair_t ri_onion_keypair;
+  curve25519_keypair_generate(&ri_onion_keypair, 0);
+  ri->onion_curve25519_pkey = tor_memdup(&ri_onion_keypair.pubkey,
+                                         sizeof(curve25519_public_key_t));
+
+  ed25519_secret_key_from_seed(&kp1.seckey,
+                          (const uint8_t*)"YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
+  ed25519_public_key_generate(&kp1.pubkey, &kp1.seckey);
+  ed25519_secret_key_from_seed(&kp2.seckey,
+                          (const uint8_t*)"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+  ed25519_public_key_generate(&kp2.pubkey, &kp2.seckey);
+  ri->cache_info.signing_key_cert = tor_cert_create(&kp1,
+                                         CERT_TYPE_ID_SIGNING,
+                                         &kp2.pubkey,
+                                         now, 86400,
+                                         CERT_FLAG_INCLUDE_SIGNING_KEY);
+
+  crypto_pk_get_digest(ri->identity_pkey, d);
+  base16_encode(fp, HEX_DIGEST_LEN + 1, d, DIGEST_LEN);
+
+  /* Try on an empty fingerprint list */
+  ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
+  tt_int_op(ret, OP_EQ, 0);
+  RESET_FP_LIST(list);
+
+  ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
+  tt_int_op(ret, OP_EQ, 0);
+  RESET_FP_LIST(list);
+
+  /* Try an accepted router */
+  add_rsa_fingerprint_to_dir(fp, list, 0);
+  ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
+  tt_int_op(ret, OP_EQ, 0);
+  RESET_FP_LIST(list);
+
+  add_ed25519_to_dir(&kp1.pubkey, list, 0);
+  ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
+  tt_int_op(ret, OP_EQ, 0);
+  RESET_FP_LIST(list);
+
+  /* Try a rejected router */
+  add_rsa_fingerprint_to_dir(fp, list, RTR_REJECT);
+  ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
+  tt_int_op(ret, OP_EQ, RTR_REJECT);
+  RESET_FP_LIST(list);
+
+  add_ed25519_to_dir(&kp1.pubkey, list, RTR_REJECT);
+  ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
+  tt_int_op(ret, OP_EQ, RTR_REJECT);
+  RESET_FP_LIST(list);
+
+ done:
+  dirserv_free_fingerprint_list();
+  routerinfo_free(ri);
+  crypto_pk_free(pk);
+}
+
+static void
+test_dir_dirserv_would_reject_router(void *arg)
+{
+  authdir_config_t *list;
+  routerstatus_t rs;
+  vote_routerstatus_t vrs;
+  ed25519_keypair_t kp;
+  char fp[HEX_DIGEST_LEN+1];
+
+  (void)arg;
+
+  authdir_init_fingerprint_list();
+  list = authdir_return_fingerprint_list();
+
+  /* Set up the routerstatus */
+  memset(&rs, 0, sizeof(rs));
+  rs.addr = 0xc0a80001u;
+  rs.or_port = 9001;
+  strlcpy(rs.nickname, "Nicole", sizeof(rs.nickname));
+  memcpy(rs.identity_digest, "Cloud nine is great ", DIGEST_LEN);
+
+  ed25519_secret_key_from_seed(&kp.seckey,
+                          (const uint8_t*)"YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
+  ed25519_public_key_generate(&kp.pubkey, &kp.seckey);
+
+  base16_encode(fp, HEX_DIGEST_LEN + 1, rs.identity_digest, DIGEST_LEN);
+
+  /* Setup the vote_routerstatus_t. */
+  memcpy(vrs.ed25519_id, &kp.pubkey, ED25519_PUBKEY_LEN);
+
+  /* Try an empty fingerprint list */
+  tt_assert(!dirserv_would_reject_router(&rs, &vrs));
+  RESET_FP_LIST(list);
+
+  tt_assert(!dirserv_would_reject_router(&rs, &vrs));
+  RESET_FP_LIST(list);
+
+  /* Try an accepted router */
+  add_rsa_fingerprint_to_dir(fp, list, 0);
+  tt_assert(!dirserv_would_reject_router(&rs, &vrs));
+  RESET_FP_LIST(list);
+
+  add_ed25519_to_dir(&kp.pubkey, list, 0);
+  tt_assert(!dirserv_would_reject_router(&rs, &vrs));
+  RESET_FP_LIST(list);
+
+  /* Try a rejected router */
+  add_rsa_fingerprint_to_dir(fp, list, RTR_REJECT);
+  tt_assert(dirserv_would_reject_router(&rs, &vrs));
+  RESET_FP_LIST(list);
+
+  add_ed25519_to_dir(&kp.pubkey, list, RTR_REJECT);
+  tt_assert(dirserv_would_reject_router(&rs, &vrs));
+  RESET_FP_LIST(list);
+
+ done:
+  dirserv_free_fingerprint_list();
+}
+
+static void
+test_dir_dirserv_add_own_fingerprint(void *arg)
+{
+  authdir_config_t *list;
+  char digest[DIGEST_LEN];
+  crypto_pk_t *pk = pk_generate(0);
+
+  (void)arg;
+
+  init_mock_ed_keys(pk);
+  authdir_init_fingerprint_list();
+  list = authdir_return_fingerprint_list();
+  dirserv_add_own_fingerprint(pk, get_master_identity_key());
+
+  /* Check if we have a RSA key. */
+  crypto_pk_get_digest(pk, digest);
+  tt_assert(digestmap_get(list->status_by_digest, digest));
+
+  /* Check if we have a ed25519 key. */
+  tt_assert(digest256map_get(list->status_by_digest256,
+                             get_master_identity_key()->pubkey));
+
+  RESET_FP_LIST(list);
+
+ done:
+  dirserv_free_fingerprint_list();
+  crypto_pk_free(pk);
+}
+
 #ifndef COCCI
 #define DIR_LEGACY(name)                             \
   { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
@@ -7298,5 +7594,10 @@ struct testcase_t dir_tests[] = {
   DIR(platform_str, 0),
   DIR(networkstatus_consensus_has_ipv6, TT_FORK),
   DIR(format_versions_list, TT_FORK),
+  DIR(add_fingerprint, TT_FORK),
+  DIR(dirserv_load_fingerprint_file, TT_FORK),
+  DIR(dirserv_router_get_status, TT_FORK),
+  DIR(dirserv_would_reject_router, TT_FORK),
+  DIR(dirserv_add_own_fingerprint, TT_FORK),
   END_OF_TESTCASES
 };
