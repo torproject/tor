@@ -1,0 +1,5 @@
+  o Major features (directory authority, ed25519):
+      Add support for banning a relay's ed25519 keys in the approved-routers
+      file. This will allow us to migrate away from RSA keys in the future.
+      Previously, only RSA keys could be banned in approved-routers. Resolves
+      ticket 22029. Patch by Neel Chauhan.
