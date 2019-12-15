@@ -131,6 +131,9 @@ typedef struct struct_member_t {
  *
  * These 'magic numbers' are 32-bit values used to tag objects to make sure
  * that they have the correct type.
+ *
+ * If all fields in this structure are zero or 0, the magic-number check is
+ * not performed.
  */
 typedef struct struct_magic_decl_t {
   /** The name of the structure */
