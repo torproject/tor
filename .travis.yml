@@ -22,6 +22,9 @@ env:
     - HARDENING_OPTIONS="--enable-expensive-hardening"
     ## We turn off asciidoc by default, because it's slow
     - ASCIIDOC_OPTIONS="--disable-asciidoc"
+    ## Turn off tor's sandbox in chutney, until we fix sandbox errors that are
+    ## triggered by Ubuntu Xenial and Bionic. See #32722.
+    - CHUTNEY_TOR_SANDBOX="0"
   matrix:
     ## This matrix entry is required, but it doesn't actually create any jobs
     -
