@@ -5,13 +5,15 @@
 /* See LICENSE for licensing information */
 
 /**
- * @file dirauth_sys.h
- * @brief Header for dirauth_sys.c
+ * @file relay_stub.c
+ * @brief Stub declarations for use when relay module is disabled.
  **/
 
-#ifndef DIRAUTH_SYS_H
-#define DIRAUTH_SYS_H
+#include "orconfig.h"
+#include "feature/relay/relay_sys.h"
 
-extern const struct subsys_fns_t sys_dirauth;
-
-#endif /* !defined(DIRAUTH_SYS_H) */
+const struct subsys_fns_t sys_relay = {
+  .name = "relay",
+  .supported = false,
+  .level = 50,
+};
