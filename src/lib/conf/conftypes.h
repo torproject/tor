@@ -199,6 +199,11 @@ typedef struct struct_magic_decl_t {
  * whenever the user tries to use it.
  **/
 #define CFLG_WARN_OBSOLETE (1u<<7)
+/**
+ * Flag to indicate that we should warn that an option applies only to
+ * a disabled module, whenever the user tries to use it.
+ **/
+#define CFLG_WARN_DISABLED (1u<<8)
 
 /**
  * A group of flags that should be set on all obsolete options and types.
@@ -206,6 +211,13 @@ typedef struct struct_magic_decl_t {
 #define CFLG_GROUP_OBSOLETE \
   (CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP|CFLG_NOSET|CFLG_NOLIST|\
    CFLG_WARN_OBSOLETE)
+
+/**
+ * A group of fflags that should be set on all disabled options.
+ **/
+#define CFLG_GROUP_DISABLED \
+  (CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP|CFLG_NOSET|CFLG_NOLIST|\
+   CFLG_WARN_DISABLED)
 
 /** A variable allowed in the configuration file or on the command line. */
 typedef struct config_var_t {
