@@ -41,10 +41,12 @@
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dirauth/shared_random_state.h"
+#include "feature/dirauth/dirauth_sys.h"
 
 #include "feature/nodelist/authority_cert_st.h"
 #include "feature/dircache/cached_dir_st.h"
 #include "feature/dirclient/dir_server_st.h"
+#include "feature/dirauth/dirauth_options_st.h"
 #include "feature/nodelist/document_signature_st.h"
 #include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/networkstatus_st.h"
@@ -4228,7 +4230,7 @@ compare_routerinfo_by_ip_and_bw_(const void **a, const void **b)
 static digestmap_t *
 get_possible_sybil_list(const smartlist_t *routers)
 {
-  const or_options_t *options = get_options();
+  const dirauth_options_t *options = dirauth_get_options();
   digestmap_t *omit_as_sybil;
   smartlist_t *routers_by_ip = smartlist_new();
   uint32_t last_addr;

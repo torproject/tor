@@ -467,8 +467,6 @@ struct or_options_t {
 
   int AuthDirListBadExits; /**< True iff we should list bad exits,
                             * and vote for all other exits as good. */
-  int AuthDirMaxServersPerAddr; /**< Do not permit more than this
-                                 * number of servers per IP address. */
   int AuthDirHasIPv6Connectivity; /**< Boolean: are we on IPv6?  */
   int AuthDirPinKeys; /**< Boolean: Do we enforce key-pinning? */
 

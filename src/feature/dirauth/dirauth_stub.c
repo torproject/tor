@@ -11,9 +11,23 @@
 
 #include "orconfig.h"
 #include "feature/dirauth/dirauth_sys.h"
+#include "lib/conf/conftypes.h"
+#include "lib/conf/confdecl.h"
+#include "lib/subsys/subsys.h"
+
+/* Declare the options field table for dirauth_options */
+#define CONF_CONTEXT STUB_TABLE
+#include "feature/dirauth/dirauth_options.inc"
+#undef CONF_CONTEXT
+
+static const config_format_t dirauth_options_stub_fmt = {
+  .vars = dirauth_options_t_vars,
+};
 
 const struct subsys_fns_t sys_dirauth = {
   .name = "dirauth",
   .supported = false,
   .level = 70,
+
+  .options_format = &dirauth_options_stub_fmt
 };
