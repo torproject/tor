@@ -4,3 +4,6 @@
       cache. This improves reachability of onion services, since now clients
       notice failing introduction circuits properly. Fixes bug 32020; bugfix on
       0.3.2.1-alpha;
+    - If an rendevous point fails multiple times, we mark the intro point as
+      bad when cleaning up the circuit. This helps avoid buggy or malicious
+      intro points. Fixes bug 32614. Patch by Neel Chauhan. 
