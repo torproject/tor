@@ -157,6 +157,11 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/stats/rephist.c		\
 	src/feature/stats/predict_ports.c
 
+#
+# Sources that we only add for the real libtor_a, and not for testing.
+#
+LIBTOR_APP_A_STUB_SOURCES =
+
 if BUILD_NT_SERVICES
 LIBTOR_APP_A_SOURCES += src/app/main/ntmain.c
 endif
@@ -199,13 +204,19 @@ MODULE_DIRAUTH_SOURCES =					\
 
 if BUILD_MODULE_RELAY
 LIBTOR_APP_A_SOURCES += $(MODULE_RELAY_SOURCES)
+else
+LIBTOR_APP_A_STUB_SOURCES += src/feature/relay/relay_stub.c
 endif
 
 if BUILD_MODULE_DIRAUTH
 LIBTOR_APP_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)
+else
+LIBTOR_APP_A_STUB_SOURCES += src/feature/dirauth/dirauth_stub.c
 endif
 
-src_core_libtor_app_a_SOURCES = $(LIBTOR_APP_A_SOURCES)
+src_core_libtor_app_a_SOURCES = \
+	$(LIBTOR_APP_A_SOURCES) \
+	$(LIBTOR_APP_A_STUB_SOURCES)
 if UNITTESTS_ENABLED
 
 # Add the sources of the modules that are needed for tests to work here.
