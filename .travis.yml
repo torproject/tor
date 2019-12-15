@@ -115,8 +115,7 @@ addons:
       - libnss3-dev
       - libscrypt-dev
       - libseccomp-dev
-      ## zstd doesn't exist in Ubuntu Trusty
-      #- libzstd
+      - libzstd-dev
       - shellcheck
       ## Conditional build dependencies
       ## Always installed, so we don't need sudo
