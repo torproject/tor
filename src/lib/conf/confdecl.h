@@ -51,6 +51,7 @@
 
 #undef CONF_CONTEXT
 #include "lib/cc/tokpaste.h"
+#include "lib/cc/torint.h"
 
 /**
  * Begin the definition of a configuration object called `name`.
