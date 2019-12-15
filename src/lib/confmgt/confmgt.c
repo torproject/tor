@@ -660,6 +660,9 @@ config_assign_value(const config_mgr_t *mgr, void *options,
   if (config_var_has_flag(var->cvar, CFLG_WARN_OBSOLETE)) {
     log_warn(LD_GENERAL, "Skipping obsolete configuration option \"%s\".",
              var->cvar->member.name);
+  } else if (config_var_has_flag(var->cvar, CFLG_WARN_DISABLED)) {
+    log_warn(LD_GENERAL, "This copy of Tor was built without support for "
+             "the option \"%s\". Skipping.", var->cvar->member.name);
   }
 
   return struct_var_kvassign(object, c, msg, &var->cvar->member);

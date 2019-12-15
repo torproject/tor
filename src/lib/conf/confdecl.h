@@ -135,6 +135,28 @@
    .initvalue = initval                                         \
   },
 /**@}*/
+
+/* @defgroup STUB_TABLE_MACROS Internal macros: stub table declarations,
+ * for use when a module is disabled.
+ * Implementation helpers: the regular confdecl macros expand to these
+ * when CONF_CONTEXT is defined to LL_TABLE.  Don't use them directly.
+ * @{*/
+#define BEGIN_CONF_STRUCT__STUB_TABLE(structname)                       \
+  static const config_var_t structname##_vars[] = {
+#define END_CONF_STRUCT__STUB_TABLE(structname)   \
+  { .member = { .name = NULL } }                \
+    };
+#define CONF_VAR__STUB_TABLE(varname, vartype, varflags, initval)       \
+  {                                                             \
+   .member =                                                    \
+   { .name = #varname,                                          \
+     .type = CONFIG_TYPE_IGNORE,                                \
+     .offset = -1,                                              \
+   },                                                           \
+   .flags = CFLG_GROUP_DISABLED,                                \
+  },
+/**@}*/
+
 #endif /* !defined(COCCI) */
 
 /** Type aliases for the "commonly used" configuration types.
