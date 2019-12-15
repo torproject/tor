@@ -1,0 +1,4 @@
+  o Testing:
+    - Re-enable the Travis CI macOS Chutney build, but allow the job to finish
+      before it finishes, because the Travis macOS jobs are slow.
+      Closes ticket 32629.
