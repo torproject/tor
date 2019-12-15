@@ -6050,6 +6050,36 @@ test_config_kvline_parse(void *arg)
   tt_str_op(lines->next->next->value, OP_EQ, "I");
   enc = kvline_encode(lines, KV_OMIT_VALS|KV_QUOTED);
   tt_str_op(enc, OP_EQ, "AB=\"CD E\" DE FGH=I");
+  tor_free(enc);
+  config_free_lines(lines);
+
+  lines = kvline_parse("AB=CD \"EF=GH\"", KV_OMIT_KEYS|KV_QUOTED);
+  tt_assert(lines);
+  tt_str_op(lines->key, OP_EQ, "AB");
+  tt_str_op(lines->value, OP_EQ, "CD");
+  tt_str_op(lines->next->key, OP_EQ, "");
+  tt_str_op(lines->next->value, OP_EQ, "EF=GH");
+  enc = kvline_encode(lines, KV_OMIT_KEYS);
+  tt_assert(!enc);
+  enc = kvline_encode(lines, KV_OMIT_KEYS|KV_QUOTED);
+  tt_assert(enc);
+  tt_str_op(enc, OP_EQ, "AB=CD \"EF=GH\"");
+  tor_free(enc);
+  config_free_lines(lines);
+
+  lines = tor_malloc_zero(sizeof(*lines));
+  lines->key = tor_strdup("A=B");
+  lines->value = tor_strdup("CD");
+  enc = kvline_encode(lines, 0);
+  tt_assert(!enc);
+  config_free_lines(lines);
+
+  config_line_append(&lines, "A", "B C");
+  enc = kvline_encode(lines, 0);
+  tt_assert(!enc);
+  enc = kvline_encode(lines, KV_RAW);
+  tt_assert(enc);
+  tt_str_op(enc, OP_EQ, "A=B C");
 
  done:
   config_free_lines(lines);

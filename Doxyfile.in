@@ -2117,7 +2117,8 @@ PREDEFINED             = "MOCK_IMPL(a,b,c)=a b c" \
                          __attribute__(x)= \
                          "BEGIN_CONF_STRUCT(x)=struct x {" \
                          "END_CONF_STRUCT(x)=};" \
-                         "CONF_VAR(a,b,c,d)=b a;"
+                         "CONF_VAR(a,b,c,d)=b a;" \
+                         "CHECK_PRINTF(a, b)="
 
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
