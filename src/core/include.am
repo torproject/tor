@@ -355,6 +355,8 @@ noinst_HEADERS +=					\
 	src/feature/dirauth/bridgeauth.h		\
 	src/feature/dirauth/bwauth.h			\
 	src/feature/dirauth/dirauth_config.h		\
+	src/feature/dirauth/dirauth_options.inc		\
+	src/feature/dirauth/dirauth_options_st.h	\
 	src/feature/dirauth/dirauth_periodic.h		\
 	src/feature/dirauth/dirauth_sys.h		\
 	src/feature/dirauth/dircollate.h		\

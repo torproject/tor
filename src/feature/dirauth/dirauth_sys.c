@@ -17,8 +17,13 @@
 #include "feature/dirauth/dirauth_periodic.h"
 #include "feature/dirauth/keypin.h"
 #include "feature/dirauth/process_descs.h"
+#include "feature/dirauth/dirauth_config.h"
+
+#include "feature/dirauth/dirauth_options_st.h"
 
 #include "lib/subsys/subsys.h"
+
+static const dirauth_options_t *global_dirauth_options;
 
 static int
 subsys_dirauth_initialize(void)
@@ -34,6 +39,22 @@ subsys_dirauth_shutdown(void)
   dirvote_free_all();
   dirserv_clear_measured_bw_cache();
   keypin_close_journal();
+  global_dirauth_options = NULL;
+}
+
+const dirauth_options_t *
+dirauth_get_options(void)
+{
+  tor_assert(global_dirauth_options);
+  return global_dirauth_options;
+}
+
+static int
+dirauth_set_options(void *arg)
+{
+  dirauth_options_t *opts = arg;
+  global_dirauth_options = opts;
+  return 0;
 }
 
 const struct subsys_fns_t sys_dirauth = {
@@ -42,4 +63,7 @@ const struct subsys_fns_t sys_dirauth = {
   .level = 70,
   .initialize = subsys_dirauth_initialize,
   .shutdown = subsys_dirauth_shutdown,
+
+  .options_format = &dirauth_options_fmt,
+  .set_options = dirauth_set_options,
 };
