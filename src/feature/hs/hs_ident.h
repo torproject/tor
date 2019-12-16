@@ -79,6 +79,10 @@ typedef struct hs_ident_circuit_t {
    * rendezvous circuit. We track this because there is a check on a maximum
    * value. */
   uint64_t num_rdv_streams;
+
+  /** (Only rendezvous circuit) Number of times we have tried this rendevous
+   * circuit. This is needed to avoid retrying bad intro points. */
+  uint8_t num_tries;
 } hs_ident_circuit_t;
 
 /** Client and service side directory connection identifier used for a
