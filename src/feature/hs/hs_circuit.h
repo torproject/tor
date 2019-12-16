@@ -70,13 +70,14 @@ bool hs_circ_is_rend_sent_in_intro1(const origin_circuit_t *circ);
 
 #ifdef HS_CIRCUIT_PRIVATE
 
+struct hs_ntor_rend_cell_keys_t;
+
 STATIC hs_ident_circuit_t *
 create_rp_circuit_identifier(const hs_service_t *service,
                              const uint8_t *rendezvous_cookie,
                              const curve25519_public_key_t *server_pk,
-                             const hs_ntor_rend_cell_keys_t *keys);
+                             const struct hs_ntor_rend_cell_keys_t *keys);
 
 #endif /* defined(HS_CIRCUIT_PRIVATE) */
 
 #endif /* !defined(TOR_HS_CIRCUIT_H) */
-
