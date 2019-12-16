@@ -12,6 +12,8 @@
 #ifndef TOR_LIB_CONF_CONFTESTING_H
 #define TOR_LIB_CONF_CONFTESTING_H
 
+#include "lib/cc/torint.h"
+
 #ifndef COCCI
 #ifdef TOR_UNIT_TESTS
 #define USE_CONF_TESTING
