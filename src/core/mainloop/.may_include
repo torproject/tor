@@ -16,7 +16,9 @@ lib/net/*.h
 lib/evloop/*.h
 lib/geoip/*.h
 lib/sandbox/*.h
+lib/smartlist_core/*.h
 lib/compress/*.h
+lib/log/*.h
 
 core/mainloop/*.h
 core/mainloop/*.inc
