@@ -41,6 +41,7 @@ void routerparse_init(void);
 void routerparse_free_all(void);
 
 #ifdef EXPOSE_ROUTERDESC_TOKEN_TABLE
+#include "feature/dirparse/parsecommon.h"
 extern const struct token_rule_t routerdesc_token_table[];
 #endif
 
