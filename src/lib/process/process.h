@@ -15,6 +15,8 @@
 #include "lib/malloc/malloc.h"
 #include "lib/string/printf.h"
 
+#include <stdbool.h>
+
 /** Maximum number of bytes to write to a process' stdin. */
 #define PROCESS_MAX_WRITE (1024)
 
