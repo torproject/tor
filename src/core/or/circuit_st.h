@@ -17,6 +17,7 @@
 #include "lib/container/handles.h"
 
 #include "core/or/cell_queue_st.h"
+#include "ext/ht.h"
 
 struct hs_token_t;
 struct circpad_machine_spec_t;

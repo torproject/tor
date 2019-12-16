@@ -21,6 +21,8 @@
 /* Trunnel */
 #include "trunnel/hs/cell_establish_intro.h"
 
+#include "ext/ht.h"
+
 /** When loading and configuring a service, this is the default version it will
  * be configured for as it is possible that no HiddenServiceVersion is
  * present. */
