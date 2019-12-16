@@ -227,6 +227,9 @@ forward slash (/) in the configuration file and on the command line.
 
 == GENERAL OPTIONS
 
+// These options are in alphabetical order, with exceptions as noted.
+// Please keep them that way!
+
 [[AccelDir]] **AccelDir** __DIR__::
     Specify this option if using dynamic hardware acceleration and the engine
     implementation library resides somewhere other than the OpenSSL default.
@@ -647,10 +650,6 @@ forward slash (/) in the configuration file and on the command line.
     we keep the capability only if we are configured to listen on a low port.
     Can not be changed while tor is running.
     (Default: auto.)
-[[LogMessageDomains]] **LogMessageDomains** **0**|**1**::
-    If 1, Tor includes message domains with each log message.  Every log
-    message currently has at least one domain; most currently have exactly
-    one.  This doesn't affect controller log messages. (Default: 0)
 
 [[Log]] **Log** __minSeverity__[-__maxSeverity__] **stderr**|**stdout**|**syslog**::
     Send all messages between __minSeverity__ and __maxSeverity__ to the standard
@@ -700,6 +699,11 @@ forward slash (/) in the configuration file and on the command line.
     to stdout: all handshake messages of any severity, all info-and-higher
     messages from domains other than networking and memory management, and all
     messages of severity notice or higher.
+
+[[LogMessageDomains]] **LogMessageDomains** **0**|**1**::
+    If 1, Tor includes message domains with each log message.  Every log
+    message currently has at least one domain; most currently have exactly
+    one.  This doesn't affect controller log messages. (Default: 0)
 
 [[LogTimeGranularity]] **LogTimeGranularity** __NUM__::
     Set the resolution of timestamps in Tor's logs to NUM milliseconds.
@@ -864,12 +868,14 @@ forward slash (/) in the configuration file and on the command line.
     sends as much data as possible, as soon as possible. Vanilla will work on
     all kernels and operating systems.
 
+// Out of order because it logically belongs near the Schedulers option
 [[KISTSchedRunInterval]] **KISTSchedRunInterval** __NUM__ **msec**::
     If KIST or KISTLite is used in the Schedulers option, this controls at which
     interval the scheduler tick is. If the value is 0 msec, the value is taken
     from the consensus if possible else it will fallback to the default 10
     msec. Maximum possible value is 100 msec. (Default: 0 msec)
 
+// Out of order because it logically belongs near the Schedulers option
 [[KISTSockBufSizeFactor]] **KISTSockBufSizeFactor** __NUM__::
     If KIST is used in Schedulers, this is a multiplier of the per-socket
     limit calculation of the KIST algorithm. (Default: 1.0)
@@ -899,6 +905,7 @@ forward slash (/) in the configuration file and on the command line.
     Tor will make all OR connections through the SOCKS 5 proxy at host:port
     (or host:1080 if port is not specified).
 
+// Out of order because Username logically precedes Password
 [[Socks5ProxyUsername]] **Socks5ProxyUsername** __username__ +
 
 [[Socks5ProxyPassword]] **Socks5ProxyPassword** __password__::
