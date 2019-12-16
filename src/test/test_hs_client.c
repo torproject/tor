@@ -306,7 +306,7 @@ test_e2e_rend_circuit_setup(void *arg)
        mock_connection_ap_handshake_send_begin);
 
   /* Setup */
-  retval = helper_get_circ_and_stream_for_test( &or_circ, &conn, 0);
+  retval = helper_get_circ_and_stream_for_test(&or_circ, &conn, 0);
   tt_int_op(retval, OP_EQ, 0);
   tt_assert(or_circ);
   tt_assert(conn);
