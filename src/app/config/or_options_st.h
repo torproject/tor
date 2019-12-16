@@ -13,6 +13,7 @@
 #ifndef TOR_OR_OPTIONS_ST_H
 #define TOR_OR_OPTIONS_ST_H
 
+#include "core/or/or.h"
 #include "lib/cc/torint.h"
 #include "lib/net/address.h"
 #include "app/config/tor_cmdline_mode.h"
@@ -20,6 +21,7 @@
 struct smartlist_t;
 struct config_line_t;
 struct config_suite_t;
+struct routerset_t;
 
 /** Enumeration of outbound address configuration types:
  * Exit-only, OR-only, or both */
@@ -66,28 +68,29 @@ struct or_options_t {
   char *Address; /**< OR only: configured address for this onion router. */
   char *PidFile; /**< Where to store PID of Tor process. */
 
-  routerset_t *ExitNodes; /**< Structure containing nicknames, digests,
+  struct routerset_t *ExitNodes; /**< Structure containing nicknames, digests,
                            * country codes and IP address patterns of ORs to
                            * consider as exits. */
-  routerset_t *MiddleNodes; /**< Structure containing nicknames, digests,
-                             * country codes and IP address patterns of ORs to
-                             * consider as middles. */
-  routerset_t *EntryNodes;/**< Structure containing nicknames, digests,
+  struct routerset_t *MiddleNodes; /**< Structure containing nicknames,
+                             * digests, country codes and IP address patterns
+                             * of ORs to consider as middles. */
+  struct routerset_t *EntryNodes;/**< Structure containing nicknames, digests,
                            * country codes and IP address patterns of ORs to
                            * consider as entry points. */
   int StrictNodes; /**< Boolean: When none of our EntryNodes or ExitNodes
                     * are up, or we need to access a node in ExcludeNodes,
                     * do we just fail instead? */
-  routerset_t *ExcludeNodes;/**< Structure containing nicknames, digests,
-                             * country codes and IP address patterns of ORs
-                             * not to use in circuits. But see StrictNodes
-                             * above. */
-  routerset_t *ExcludeExitNodes;/**< Structure containing nicknames, digests,
-                                 * country codes and IP address patterns of
-                                 * ORs not to consider as exits. */
+  struct routerset_t *ExcludeNodes;/**< Structure containing nicknames,
+                             * digests, country codes and IP address patterns
+                             * of ORs not to use in circuits. But see
+                             * StrictNodes above. */
+  struct routerset_t *ExcludeExitNodes;/**< Structure containing nicknames,
+                                 * digests, country codes and IP address
+                                 * patterns of ORs not to consider as
+                                 * exits. */
 
   /** Union of ExcludeNodes and ExcludeExitNodes */
-  routerset_t *ExcludeExitNodesUnion_;
+  struct routerset_t *ExcludeExitNodesUnion_;
 
   int DisableAllSwap; /**< Boolean: Attempt to call mlockall() on our
                        * process for all current and future memory. */
@@ -274,11 +277,11 @@ struct or_options_t {
 
   /** A routerset that should be used when picking middle nodes for HS
    *  circuits. */
-  routerset_t *HSLayer2Nodes;
+  struct routerset_t *HSLayer2Nodes;
 
   /** A routerset that should be used when picking third-hop nodes for HS
    *  circuits. */
-  routerset_t *HSLayer3Nodes;
+  struct routerset_t *HSLayer3Nodes;
 
   /** Onion Services in HiddenServiceSingleHopMode make one-hop (direct)
    * circuits between the onion service server, and the introduction and
@@ -811,17 +814,17 @@ struct or_options_t {
 
   /** Relays in a testing network which should be voted Exit
    * regardless of exit policy. */
-  routerset_t *TestingDirAuthVoteExit;
+  struct routerset_t *TestingDirAuthVoteExit;
   int TestingDirAuthVoteExitIsStrict;
 
   /** Relays in a testing network which should be voted Guard
    * regardless of uptime and bandwidth. */
-  routerset_t *TestingDirAuthVoteGuard;
+  struct routerset_t *TestingDirAuthVoteGuard;
   int TestingDirAuthVoteGuardIsStrict;
 
   /** Relays in a testing network which should be voted HSDir
    * regardless of uptime and DirPort. */
-  routerset_t *TestingDirAuthVoteHSDir;
+  struct routerset_t *TestingDirAuthVoteHSDir;
   int TestingDirAuthVoteHSDirIsStrict;
 
   /** Enable CONN_BW events.  Only altered on testing networks. */
