@@ -183,9 +183,8 @@ test_e2e_rend_circuit_setup(void *arg)
   /* Setup the circuit: do the ntor key exchange */
   {
     uint8_t ntor_key_seed[DIGEST256_LEN] = {2};
-    retval = hs_circuit_setup_e2e_rend_circ(or_circ,
-                                       ntor_key_seed, sizeof(ntor_key_seed),
-                                       1);
+    retval = hs_circuit_setup_e2e_rend_circ(or_circ, ntor_key_seed,
+                                            sizeof(ntor_key_seed), 1);
     tt_int_op(retval, OP_EQ, 0);
   }
 
@@ -194,11 +193,9 @@ test_e2e_rend_circuit_setup(void *arg)
   tt_int_op(retval, OP_EQ, 1);
 
   /* Check the digest algo */
-  tt_int_op(
-         crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.f_digest),
+  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.f_digest),
             OP_EQ, DIGEST_SHA3_256);
-  tt_int_op(
-         crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.b_digest),
+  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.b_digest),
             OP_EQ, DIGEST_SHA3_256);
   tt_assert(or_circ->cpath->pvt_crypto.f_crypto);
   tt_assert(or_circ->cpath->pvt_crypto.b_crypto);
