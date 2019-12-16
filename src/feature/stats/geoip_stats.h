@@ -13,6 +13,7 @@
 #define TOR_GEOIP_STATS_H
 
 #include "core/or/dos.h"
+#include "ext/ht.h"
 
 /** Indicates an action that we might be noting geoip statistics on.
  * Note that if we're noticing CONNECT, we're a bridge, and if we're noticing
