@@ -1866,6 +1866,16 @@ mock_relay_send_rendezvous1(streamid_t stream_id, circuit_t *circ,
   return 0;
 }
 
+origin_circuit_t origin_circuit;
+
+static origin_circuit_t *
+mock_hs_circuitmap_get_intro_circ_v3_service_side(const
+                                               ed25519_public_key_t *auth_key)
+{
+  (void) auth_key;
+  return &origin_circuit;
+}
+
 /** Send a RENDEZVOUS1 as a service, and parse it as a client. */
 static void
 test_rendezvous1_parsing(void *arg)
@@ -1885,6 +1895,8 @@ test_rendezvous1_parsing(void *arg)
   (void) arg;
 
   MOCK(relay_send_command_from_edge_, mock_relay_send_rendezvous1);
+  MOCK(hs_circuitmap_get_intro_circ_v3_service_side,
+       mock_hs_circuitmap_get_intro_circ_v3_service_side);
 
   {
     /* Let's start by setting up the service that will start the rend */
@@ -1960,6 +1972,7 @@ test_rendezvous1_parsing(void *arg)
   hs_service_free(service);
   hs_free_all();
   UNMOCK(relay_send_command_from_edge_);
+  UNMOCK(hs_circuitmap_get_intro_circ_v3_service_side);
 }
 
 static void
