@@ -1228,3 +1228,7 @@ open-world case, to be more akin to an optimization problem, where a
 WTF-PAD-like defense must be tuned through an optimizer to produce results
 comparable to provably optimal but practically unrealizable defenses, through
 rigorous adversarial evaluation.
+
+## A. Acknowledgments
+
+This research was supported in part by NSF grants CNS-1619454 and CNS-1526306.
