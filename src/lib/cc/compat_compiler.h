@@ -76,9 +76,9 @@
 #else /* !(defined(__clang__) || GCC_VERSION >= 406) */
 /* older version of gcc: no push/pop support. */
 #    define DISABLE_GCC_WARNING(warningopt) \
-         PRAGMA_DIAGNOSTIC_(ignored PRAGMA_JOIN_STRINGIFY_ warningopt)
+         PRAGMA_DIAGNOSTIC_(ignored warningopt)
 #    define ENABLE_GCC_WARNING(warningopt) \
-         PRAGMA_DIAGNOSTIC_(warning PRAGMA_JOIN_STRINGIFY_ warningopt)
+         PRAGMA_DIAGNOSTIC_(warning warningopt)
 #endif /* defined(__clang__) || GCC_VERSION >= 406 */
 #else /* !defined(__GNUC__) */
 /* not gcc at all */
