@@ -14,4 +14,12 @@
 
 extern const struct subsys_fns_t sys_relay;
 
+/**
+ * Subsystem level for the relay system.
+ *
+ * Defined here so that it can be shared between the real and stub
+ * definitions.
+ **/
+#define RELAY_SUBSYS_LEVEL 50
+
 #endif /* !defined(TOR_FEATURE_RELAY_RELAY_SYS_H) */

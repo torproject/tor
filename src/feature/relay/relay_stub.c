@@ -16,5 +16,5 @@
 const struct subsys_fns_t sys_relay = {
   .name = "relay",
   .supported = false,
-  .level = 50,
+  .level = RELAY_SUBSYS_LEVEL,
 };
