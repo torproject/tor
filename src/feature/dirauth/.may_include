@@ -1,2 +1,2 @@
 *.h
-*.inc
+feature/dirauth/*.inc
