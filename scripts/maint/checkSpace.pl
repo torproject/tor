@@ -58,9 +58,9 @@ for my $fn (@ARGV) {
         }
         ## Warn about labels that don't have a space in front of them
         #    (We indent every label at least one space)
-        if (/^[a-zA-Z_][a-zA-Z_0-9]*:/) {
-            msg "nosplabel:$fn:$.\n";
-        }
+        #if (/^[a-zA-Z_][a-zA-Z_0-9]*:/) {
+        #    msg "nosplabel:$fn:$.\n";
+        #}
         ## Warn about trailing whitespace.
         #    (We don't allow whitespace at the end of the line; make your
         #    editor highlight it for you so you can stop adding it in.)
