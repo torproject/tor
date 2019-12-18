@@ -57,25 +57,25 @@ struct or_state_t {
    * interval. The "Maxima" list holds decimal strings describing the highest
    * rate achieved during the interval.
    */
-  time_t      BWHistoryReadEnds;
-  int         BWHistoryReadInterval;
+  time_t BWHistoryReadEnds;
+  int BWHistoryReadInterval;
   struct smartlist_t *BWHistoryReadValues;
   struct smartlist_t *BWHistoryReadMaxima;
-  time_t      BWHistoryWriteEnds;
-  int         BWHistoryWriteInterval;
+  time_t BWHistoryWriteEnds;
+  int BWHistoryWriteInterval;
   struct smartlist_t *BWHistoryWriteValues;
   struct smartlist_t *BWHistoryWriteMaxima;
-  time_t      BWHistoryDirReadEnds;
-  int         BWHistoryDirReadInterval;
+  time_t BWHistoryDirReadEnds;
+  int BWHistoryDirReadInterval;
   struct smartlist_t *BWHistoryDirReadValues;
   struct smartlist_t *BWHistoryDirReadMaxima;
-  time_t      BWHistoryDirWriteEnds;
-  int         BWHistoryDirWriteInterval;
+  time_t BWHistoryDirWriteEnds;
+  int BWHistoryDirWriteInterval;
   struct smartlist_t *BWHistoryDirWriteValues;
   struct smartlist_t *BWHistoryDirWriteMaxima;
 
   /** Build time histogram */
-  struct config_line_t * BuildtimeHistogram;
+  struct config_line_t *BuildtimeHistogram;
   int TotalBuildTimes;
   int CircuitBuildAbandonedCount;
 

@@ -27,8 +27,8 @@
 static char *
 ex_int_fmt(msg_aux_data_t aux)
 {
-  int val = (int) aux.u64;
-  char *r=NULL;
+  int val = (int)aux.u64;
+  char *r = NULL;
   tor_asprintf(&r, "%d", val);
   return r;
 }
@@ -45,14 +45,10 @@ ex_str_free(msg_aux_data_t aux)
   tor_free_(aux.ptr);
 }
 
-static dispatch_typefns_t intfns = {
-  .fmt_fn = ex_int_fmt
-};
+static dispatch_typefns_t intfns = {.fmt_fn = ex_int_fmt};
 
-static dispatch_typefns_t stringfns = {
-  .free_fn = ex_str_free,
-  .fmt_fn = ex_str_fmt
-};
+static dispatch_typefns_t stringfns = {.free_fn = ex_str_free,
+                                       .fmt_fn = ex_str_fmt};
 
 DECLARE_MESSAGE_INT(bunch_of_coconuts, int, int);
 DECLARE_PUBLISH(bunch_of_coconuts);
@@ -79,8 +75,8 @@ absent_item_cb(const msg_t *m, const char *fruitname)
 #define FLAG_SKIP 99999
 
 static void
-seed_dispatch_builder(pubsub_builder_t *b,
-                      unsigned fl1, unsigned fl2, unsigned fl3, unsigned fl4)
+seed_dispatch_builder(pubsub_builder_t *b, unsigned fl1, unsigned fl2,
+                      unsigned fl3, unsigned fl4)
 {
   pubsub_connector_t *c = NULL;
 
@@ -132,12 +128,13 @@ test_pubsub_build_types_ok(void *arg)
   tt_int_op(smartlist_len(items->items), OP_EQ, 4);
 
   // Make sure that the bindings got build correctly.
-  SMARTLIST_FOREACH_BEGIN(items->items, pubsub_cfg_t *, item) {
+  SMARTLIST_FOREACH_BEGIN (items->items, pubsub_cfg_t *, item) {
     if (item->is_publish) {
       tt_assert(item->pub_binding);
       tt_ptr_op(item->pub_binding->dispatch_ptr, OP_EQ, dispatcher);
     }
-  } SMARTLIST_FOREACH_END(item);
+  }
+  SMARTLIST_FOREACH_END(item);
 
   tt_int_op(dispatcher->n_types, OP_GE, 2);
   tt_assert(dispatcher->typefns);
@@ -149,14 +146,15 @@ test_pubsub_build_types_ok(void *arg)
   // Now clear the bindings, like we would do before freeing the
   // the dispatcher.
   pubsub_items_clear_bindings(items);
-  SMARTLIST_FOREACH_BEGIN(items->items, pubsub_cfg_t *, item) {
+  SMARTLIST_FOREACH_BEGIN (items->items, pubsub_cfg_t *, item) {
     if (item->is_publish) {
       tt_assert(item->pub_binding);
       tt_ptr_op(item->pub_binding->dispatch_ptr, OP_EQ, NULL);
     }
-  } SMARTLIST_FOREACH_END(item);
+  }
+  SMARTLIST_FOREACH_END(item);
 
- done:
+done:
   pubsub_connector_free(c);
   pubsub_builder_free(b);
   dispatch_free(dispatcher);
@@ -188,7 +186,7 @@ test_pubsub_build_types_decls_conflict(void *arg)
   tt_assert(dispatcher == NULL);
   // expect_log_msg_containing("(int) declared twice"); // XXXX
 
- done:
+done:
   pubsub_connector_free(c);
   pubsub_builder_free(b);
   dispatch_free(dispatcher);
@@ -215,10 +213,9 @@ test_pubsub_build_unused_message(void *arg)
   dispatcher = pubsub_builder_finalize(b, NULL);
   b = NULL;
   tt_assert(dispatcher);
-  expect_log_msg_containing(
-     "Nobody is publishing or subscribing to message");
+  expect_log_msg_containing("Nobody is publishing or subscribing to message");
 
- done:
+done:
   pubsub_builder_free(b);
   dispatch_free(dispatcher);
   teardown_capture_of_logs();
@@ -242,11 +239,11 @@ test_pubsub_build_missing_pubsub(void *arg)
   tt_assert(dispatcher == NULL);
 
   expect_log_msg_containing(
-       "Message \"bunch_of_coconuts\" has publishers, but no subscribers.");
+      "Message \"bunch_of_coconuts\" has publishers, but no subscribers.");
   expect_log_msg_containing(
-       "Message \"yes_we_have_no\" has subscribers, but no publishers.");
+      "Message \"yes_we_have_no\" has subscribers, but no publishers.");
 
- done:
+done:
   pubsub_builder_free(b);
   dispatch_free(dispatcher);
   teardown_capture_of_logs();
@@ -276,7 +273,7 @@ test_pubsub_build_stub_pubsub(void *arg)
   tt_ptr_op(NULL, OP_EQ,
             dispatcher->table[get_message_id("bunch_of_coconuts")]);
 
- done:
+done:
   pubsub_builder_free(b);
   dispatch_free(dispatcher);
 }
@@ -300,9 +297,7 @@ test_pubsub_build_channels_conflict(void *arg)
      * the wrong channel */
     pubsub_add_pub_(c, &btmp, get_channel_id("hithere"),
                     get_message_id("bunch_of_coconuts"),
-                    get_msg_type_id("int"),
-                    0 /* flags */,
-                    "somewhere.c", 22);
+                    get_msg_type_id("int"), 0 /* flags */, "somewhere.c", 22);
     pubsub_connector_free(c);
   };
 
@@ -314,7 +309,7 @@ test_pubsub_build_channels_conflict(void *arg)
   expect_log_msg_containing("Message \"bunch_of_coconuts\" is associated "
                             "with multiple inconsistent channels.");
 
- done:
+done:
   pubsub_builder_free(b);
   dispatch_free(dispatcher);
   teardown_capture_of_logs();
@@ -339,9 +334,8 @@ test_pubsub_build_types_conflict(void *arg)
      * the wrong channel */
     pubsub_add_pub_(c, &btmp, get_channel_id("hithere"),
                     get_message_id("bunch_of_coconuts"),
-                    get_msg_type_id("string"),
-                    0 /* flags */,
-                    "somewhere.c", 22);
+                    get_msg_type_id("string"), 0 /* flags */, "somewhere.c",
+                    22);
     pubsub_connector_free(c);
   };
 
@@ -353,7 +347,7 @@ test_pubsub_build_types_conflict(void *arg)
   expect_log_msg_containing("Message \"bunch_of_coconuts\" is associated "
                             "with multiple inconsistent message types.");
 
- done:
+done:
   pubsub_builder_free(b);
   dispatch_free(dispatcher);
   teardown_capture_of_logs();
@@ -386,7 +380,7 @@ test_pubsub_build_pubsub_same(void *arg)
   expect_log_msg_containing("Message \"bunch_of_coconuts\" is published "
                             "and subscribed by the same subsystem \"sys1\".");
 
- done:
+done:
   pubsub_builder_free(b);
   dispatch_free(dispatcher);
   teardown_capture_of_logs();
@@ -408,11 +402,9 @@ test_pubsub_build_pubsub_multi(void *arg)
   {
     c = pubsub_connector_for_subsystem(b, get_subsys_id("sys3"));
     DISPATCH_ADD_SUB(c, main, bunch_of_coconuts);
-    pubsub_add_pub_(c, &btmp, get_channel_id("main"),
-                    get_message_id("yes_we_have_no"),
-                    get_msg_type_id("string"),
-                    0 /* flags */,
-                    "somewhere.c", 22);
+    pubsub_add_pub_(
+        c, &btmp, get_channel_id("main"), get_message_id("yes_we_have_no"),
+        get_msg_type_id("string"), 0 /* flags */, "somewhere.c", 22);
     pubsub_connector_free(c);
   };
 
@@ -424,14 +416,13 @@ test_pubsub_build_pubsub_multi(void *arg)
   tt_int_op(1, OP_EQ,
             dispatcher->table[get_message_id("yes_we_have_no")]->n_enabled);
   // 2 subscribers.
-  dtbl_entry_t *ent =
-    dispatcher->table[get_message_id("bunch_of_coconuts")];
+  dtbl_entry_t *ent = dispatcher->table[get_message_id("bunch_of_coconuts")];
   tt_int_op(2, OP_EQ, ent->n_enabled);
   tt_int_op(2, OP_EQ, ent->n_fns);
   tt_ptr_op(ent->rcv[0].fn, OP_EQ, recv_fn__bunch_of_coconuts);
   tt_ptr_op(ent->rcv[1].fn, OP_EQ, recv_fn__bunch_of_coconuts);
 
- done:
+done:
   pubsub_builder_free(b);
   dispatch_free(dispatcher);
 }
@@ -457,17 +448,15 @@ test_pubsub_build_sub_many(void *arg)
 
   int i;
   for (i = 1; i < 100; ++i) {
-    tor_asprintf(&sysname, "system%d",i);
+    tor_asprintf(&sysname, "system%d", i);
     c = pubsub_connector_for_subsystem(b, get_subsys_id(sysname));
     if (i % 7) {
       DISPATCH_ADD_SUB(c, main, bunch_of_coconuts);
     } else {
-      pubsub_add_sub_(c, some_other_coconut_hook,
-                      get_channel_id("main"),
+      pubsub_add_sub_(c, some_other_coconut_hook, get_channel_id("main"),
                       get_message_id("bunch_of_coconuts"),
-                      get_msg_type_id("int"),
-                      0 /* flags */,
-                      "somewhere.c", 22);
+                      get_msg_type_id("int"), 0 /* flags */, "somewhere.c",
+                      22);
     }
     pubsub_connector_free(c);
     tor_free(sysname);
@@ -477,8 +466,7 @@ test_pubsub_build_sub_many(void *arg)
   b = NULL;
   tt_assert(dispatcher);
 
-  dtbl_entry_t *ent =
-    dispatcher->table[get_message_id("bunch_of_coconuts")];
+  dtbl_entry_t *ent = dispatcher->table[get_message_id("bunch_of_coconuts")];
   tt_int_op(100, OP_EQ, ent->n_enabled);
   tt_int_op(100, OP_EQ, ent->n_fns);
   tt_ptr_op(ent->rcv[0].fn, OP_EQ, recv_fn__bunch_of_coconuts);
@@ -487,7 +475,7 @@ test_pubsub_build_sub_many(void *arg)
   tt_ptr_op(ent->rcv[77].fn, OP_EQ, some_other_coconut_hook);
   tt_ptr_op(ent->rcv[78].fn, OP_EQ, recv_fn__bunch_of_coconuts);
 
- done:
+done:
   pubsub_builder_free(b);
   dispatch_free(dispatcher);
   tor_free(sysname);
@@ -503,8 +491,7 @@ test_pubsub_build_excl_ok(void *arg)
 
   b = pubsub_builder_new();
   // Try one excl/excl pair and one excl/non pair.
-  seed_dispatch_builder(b, DISP_FLAG_EXCL, 0,
-                        DISP_FLAG_EXCL, DISP_FLAG_EXCL);
+  seed_dispatch_builder(b, DISP_FLAG_EXCL, 0, DISP_FLAG_EXCL, DISP_FLAG_EXCL);
 
   dispatcher = pubsub_builder_finalize(b, NULL);
   b = NULL;
@@ -517,7 +504,7 @@ test_pubsub_build_excl_ok(void *arg)
   tt_int_op(1, OP_EQ,
             dispatcher->table[get_message_id("bunch_of_coconuts")]->n_enabled);
 
- done:
+done:
   pubsub_builder_free(b);
   dispatch_free(dispatcher);
 }
@@ -532,8 +519,7 @@ test_pubsub_build_excl_bad(void *arg)
   pubsub_connector_t *c = NULL;
 
   b = pubsub_builder_new();
-  seed_dispatch_builder(b, DISP_FLAG_EXCL, DISP_FLAG_EXCL,
-                        0, 0);
+  seed_dispatch_builder(b, DISP_FLAG_EXCL, DISP_FLAG_EXCL, 0, 0);
 
   {
     c = pubsub_connector_for_subsystem(b, get_subsys_id("sys3"));
@@ -552,27 +538,27 @@ test_pubsub_build_excl_bad(void *arg)
   expect_log_msg_containing("has multiple subscribers, but at least one is "
                             "marked as exclusive.");
 
- done:
+done:
   pubsub_builder_free(b);
   dispatch_free(dispatcher);
   teardown_capture_of_logs();
 }
 
-#define T(name, flags)                                          \
-  { #name, test_pubsub_build_ ## name , (flags), NULL, NULL }
+#define T(name, flags)                                   \
+  {                                                      \
+#    name, test_pubsub_build_##name, (flags), NULL, NULL \
+  }
 
-struct testcase_t pubsub_build_tests[] = {
-  T(types_ok, TT_FORK),
-  T(types_decls_conflict, TT_FORK),
-  T(unused_message, TT_FORK),
-  T(missing_pubsub, TT_FORK),
-  T(stub_pubsub, TT_FORK),
-  T(channels_conflict, TT_FORK),
-  T(types_conflict, TT_FORK),
-  T(pubsub_same, TT_FORK),
-  T(pubsub_multi, TT_FORK),
-  T(sub_many, TT_FORK),
-  T(excl_ok, TT_FORK),
-  T(excl_bad, TT_FORK),
-  END_OF_TESTCASES
-};
+struct testcase_t pubsub_build_tests[] = {T(types_ok, TT_FORK),
+                                          T(types_decls_conflict, TT_FORK),
+                                          T(unused_message, TT_FORK),
+                                          T(missing_pubsub, TT_FORK),
+                                          T(stub_pubsub, TT_FORK),
+                                          T(channels_conflict, TT_FORK),
+                                          T(types_conflict, TT_FORK),
+                                          T(pubsub_same, TT_FORK),
+                                          T(pubsub_multi, TT_FORK),
+                                          T(sub_many, TT_FORK),
+                                          T(excl_ok, TT_FORK),
+                                          T(excl_bad, TT_FORK),
+                                          END_OF_TESTCASES};

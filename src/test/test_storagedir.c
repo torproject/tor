@@ -8,7 +8,7 @@
 #include "test/test.h"
 
 #ifdef HAVE_UTIME_H
-#include <utime.h>
+#  include <utime.h>
 #endif
 
 static void
@@ -37,7 +37,7 @@ test_storagedir_empty(void *arg)
   tt_int_op(0, OP_EQ, smartlist_len(storage_dir_list(d)));
   tt_u64_op(0, OP_EQ, storage_dir_get_usage(d));
 
- done:
+done:
   storage_dir_free(d);
   tor_free(dirname);
 }
@@ -55,7 +55,7 @@ test_storagedir_basic(void *arg)
   (void)arg;
 
   junk = tor_malloc(junklen);
-  crypto_rand((void*)junk, junklen);
+  crypto_rand((void *)junk, junklen);
 
   d = storage_dir_new(dirname, 10);
   tt_assert(d);
@@ -97,7 +97,7 @@ test_storagedir_basic(void *arg)
   tt_u64_op(mapping->size, OP_EQ, strlen(hello_str));
   tt_mem_op(mapping->data, OP_EQ, hello_str, strlen(hello_str));
 
- done:
+done:
   tor_free(dirname);
   tor_free(junk);
   tor_free(bytes);
@@ -139,7 +139,7 @@ test_storagedir_deletion(void *arg)
   tt_int_op(FN_FILE, OP_EQ, file_status(fn1));
   tt_int_op(FN_NOENT, OP_EQ, file_status(fn2));
 
-  bytes = (char*) storage_dir_read(d, "1007", 1, NULL);
+  bytes = (char *)storage_dir_read(d, "1007", 1, NULL);
   tt_str_op(bytes, OP_EQ, str1);
 
   // Should have no effect; file already gone.
@@ -153,7 +153,7 @@ test_storagedir_deletion(void *arg)
   tt_int_op(0, OP_EQ, smartlist_len(storage_dir_list(d)));
   tt_u64_op(0, OP_EQ, storage_dir_get_usage(d));
 
- done:
+done:
   tor_free(dirname);
   tor_free(fn1);
   tor_free(fn2);
@@ -189,7 +189,7 @@ test_storagedir_full(void *arg)
 
   tt_u64_op(strlen(str) * 3, OP_EQ, storage_dir_get_usage(d));
 
- done:
+done:
   tor_free(dirname);
   storage_dir_free(d);
 }
@@ -201,11 +201,10 @@ test_storagedir_cleaning(void *arg)
 
   char *dirname = tor_strdup(get_fname_rnd("store_dir"));
   storage_dir_t *d = NULL;
-  const char str[] =
-    "On a mountain halfway between Reno and Rome / "
-    "We have a machine in a plexiglass dome / "
-    "Which listens and looks into everyone's home."
-    " -- Dr. Seuss";
+  const char str[] = "On a mountain halfway between Reno and Rome / "
+                     "We have a machine in a plexiglass dome / "
+                     "Which listens and looks into everyone's home."
+                     " -- Dr. Seuss";
   char *fns[8];
   int r, i;
 
@@ -214,7 +213,7 @@ test_storagedir_cleaning(void *arg)
   tt_assert(d);
 
   for (i = 0; i < 8; ++i) {
-    r = storage_dir_save_string_to_file(d, str+i*2, 1, &fns[i]);
+    r = storage_dir_save_string_to_file(d, str + i * 2, 1, &fns[i]);
     tt_int_op(r, OP_EQ, 0);
   }
 
@@ -234,7 +233,7 @@ test_storagedir_cleaning(void *arg)
 
   const uint64_t usage_orig = storage_dir_get_usage(d);
   /* No changes needed if we are already under target. */
-  storage_dir_shrink(d, 1024*1024, 0);
+  storage_dir_shrink(d, 1024 * 1024, 0);
   tt_u64_op(usage_orig, OP_EQ, storage_dir_get_usage(d));
 
   /* Get rid of at least one byte.  This will delete fns[0]. */
@@ -243,14 +242,14 @@ test_storagedir_cleaning(void *arg)
   tt_u64_op(usage_orig - strlen(str), OP_EQ, storage_dir_get_usage(d));
 
   /* Get rid of at least two files.  This will delete fns[1] and fns[2]. */
-  storage_dir_shrink(d, 1024*1024, 2);
-  tt_u64_op(usage_orig - strlen(str)*3 + 6, OP_EQ, storage_dir_get_usage(d));
+  storage_dir_shrink(d, 1024 * 1024, 2);
+  tt_u64_op(usage_orig - strlen(str) * 3 + 6, OP_EQ, storage_dir_get_usage(d));
 
   /* Get rid of everything. */
   storage_dir_remove_all(d);
   tt_u64_op(0, OP_EQ, storage_dir_get_usage(d));
 
- done:
+done:
   tor_free(dirname);
   storage_dir_free(d);
   for (i = 0; i < 8; ++i) {
@@ -276,9 +275,8 @@ test_storagedir_save_labeled(void *arg)
 
   config_line_append(&labels, "Foo", "bar baz");
   config_line_append(&labels, "quux", "quuzXxz");
-  const char expected[] =
-    "Foo bar baz\n"
-    "quux quuzXxz\n";
+  const char expected[] = "Foo bar baz\n"
+                          "quux quuzXxz\n";
 
   int r = storage_dir_save_labeled_to_file(d, labels, inp, 8192, &fname);
   tt_int_op(r, OP_EQ, 0);
@@ -286,10 +284,10 @@ test_storagedir_save_labeled(void *arg)
   size_t n = 0;
   saved = storage_dir_read(d, fname, 1, &n);
   tt_assert(memchr(saved, '\0', n));
-  tt_str_op((char*)saved, OP_EQ, expected); /* NUL guarantees strcmp works */
-  tt_mem_op(saved+strlen(expected)+1, OP_EQ, inp, 8192);
+  tt_str_op((char *)saved, OP_EQ, expected); /* NUL guarantees strcmp works */
+  tt_mem_op(saved + strlen(expected) + 1, OP_EQ, inp, 8192);
 
- done:
+done:
   storage_dir_free(d);
   tor_free(dirname);
   tor_free(inp);
@@ -313,12 +311,12 @@ test_storagedir_read_labeled(void *arg)
   d = storage_dir_new(dirname, 10);
   tt_assert(d);
 
-  tor_snprintf((char*)inp, 8192,
+  tor_snprintf((char *)inp, 8192,
                "Hello world\n"
                "This is a test\n"
                "Yadda yadda.\n");
-  size_t bodylen = 8192 - strlen((char*)inp) - 1;
-  crypto_rand((char *)inp+strlen((char*)inp)+1, bodylen);
+  size_t bodylen = 8192 - strlen((char *)inp) - 1;
+  crypto_rand((char *)inp + strlen((char *)inp) + 1, bodylen);
 
   int r = storage_dir_save_bytes_to_file(d, inp, 8192, 1, &fname);
   tt_int_op(r, OP_EQ, 0);
@@ -330,7 +328,7 @@ test_storagedir_read_labeled(void *arg)
   tt_assert(map);
   tt_assert(datap);
   tt_u64_op(sz, OP_EQ, bodylen);
-  tt_mem_op(datap, OP_EQ, inp+strlen((char*)inp)+1, bodylen);
+  tt_mem_op(datap, OP_EQ, inp + strlen((char *)inp) + 1, bodylen);
   tt_assert(labels);
   tt_str_op(labels->key, OP_EQ, "Hello");
   tt_str_op(labels->value, OP_EQ, "world");
@@ -347,10 +345,10 @@ test_storagedir_read_labeled(void *arg)
   as_read = storage_dir_read_labeled(d, fname, &labels2, &sz);
   tt_assert(as_read);
   tt_u64_op(sz, OP_EQ, bodylen);
-  tt_mem_op(as_read, OP_EQ, inp+strlen((char*)inp)+1, bodylen);
+  tt_mem_op(as_read, OP_EQ, inp + strlen((char *)inp) + 1, bodylen);
   tt_assert(config_lines_eq(labels, labels2));
 
- done:
+done:
   storage_dir_free(d);
   tor_free(dirname);
   tor_free(inp);
@@ -361,16 +359,11 @@ test_storagedir_read_labeled(void *arg)
   tor_free(as_read);
 }
 
-#define ENT(name)                                               \
-  { #name, test_storagedir_ ## name, TT_FORK, NULL, NULL }
+#define ENT(name)                                      \
+  {                                                    \
+#    name, test_storagedir_##name, TT_FORK, NULL, NULL \
+  }
 
 struct testcase_t storagedir_tests[] = {
-  ENT(empty),
-  ENT(basic),
-  ENT(deletion),
-  ENT(full),
-  ENT(cleaning),
-  ENT(save_labeled),
-  ENT(read_labeled),
-  END_OF_TESTCASES
-};
+    ENT(empty),    ENT(basic),        ENT(deletion),     ENT(full),
+    ENT(cleaning), ENT(save_labeled), ENT(read_labeled), END_OF_TESTCASES};

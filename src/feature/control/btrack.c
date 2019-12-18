@@ -55,10 +55,10 @@ btrack_add_pubsub(pubsub_connector_t *connector)
 }
 
 const subsys_fns_t sys_btrack = {
-  .name = "btrack",
-  .supported = true,
-  .level = -30,
-  .initialize = btrack_init,
-  .shutdown = btrack_fini,
-  .add_pubsub = btrack_add_pubsub,
+    .name = "btrack",
+    .supported = true,
+    .level = -30,
+    .initialize = btrack_init,
+    .shutdown = btrack_fini,
+    .add_pubsub = btrack_add_pubsub,
 };

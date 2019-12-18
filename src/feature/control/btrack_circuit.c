@@ -24,13 +24,13 @@ typedef struct btc_best_t {
 } btc_best_t;
 
 /** GID and state of the best origin circuit we've seen so far */
-static btc_best_t best_any_state = { 0, -1 };
+static btc_best_t best_any_state = {0, -1};
 /** GID and state of the best application circuit we've seen so far */
-static btc_best_t best_ap_state = { 0, -1 };
+static btc_best_t best_ap_state = {0, -1};
 /** GID and status of the best origin circuit we've seen so far */
-static btc_best_t best_any_evtype = { 0, -1 };
+static btc_best_t best_any_evtype = {0, -1};
 /** GID and status of the best application circuit we've seen so far */
-static btc_best_t best_ap_evtype = { 0, -1 };
+static btc_best_t best_ap_evtype = {0, -1};
 
 /** Reset cached "best" values */
 static void
@@ -57,11 +57,9 @@ btc_state_better(int state, const btc_best_t *best)
  * being nonnegative and dense.
  **/
 static int circ_event_order[] = {
-  [CIRC_EVENT_FAILED] = -1,
-  [CIRC_EVENT_CLOSED] = -1,
-  [CIRC_EVENT_LAUNCHED] = 1,
-  [CIRC_EVENT_EXTENDED] = 2,
-  [CIRC_EVENT_BUILT] = 3,
+    [CIRC_EVENT_FAILED] = -1,  [CIRC_EVENT_CLOSED] = -1,
+    [CIRC_EVENT_LAUNCHED] = 1, [CIRC_EVENT_EXTENDED] = 2,
+    [CIRC_EVENT_BUILT] = 3,
 };
 #define N_CIRC_EVENT_ORDER \
   (sizeof(circ_event_order) / sizeof(circ_event_order[0]))
@@ -86,7 +84,7 @@ btc_update_state(const ocirc_state_msg_t *msg, btc_best_t *best,
                  const char *type)
 {
   if (btc_state_better(msg->state, best)) {
-    log_info(LD_BTRACK, "CIRC BEST_%s state %d->%d gid=%"PRIu32, type,
+    log_info(LD_BTRACK, "CIRC BEST_%s state %d->%d gid=%" PRIu32, type,
              best->val, msg->state, msg->gid);
     best->gid = msg->gid;
     best->val = msg->state;
@@ -100,7 +98,7 @@ btc_update_evtype(const ocirc_cevent_msg_t *msg, btc_best_t *best,
                   const char *type)
 {
   if (btc_evtype_better(msg->evtype, best)) {
-    log_info(LD_BTRACK, "CIRC BEST_%s evtype %d->%d gid=%"PRIu32, type,
+    log_info(LD_BTRACK, "CIRC BEST_%s evtype %d->%d gid=%" PRIu32, type,
              best->val, msg->evtype, msg->gid);
     best->gid = msg->gid;
     best->val = msg->evtype;
@@ -117,8 +115,8 @@ static void
 btc_state_rcvr(const msg_t *msg, const ocirc_state_msg_t *arg)
 {
   (void)msg;
-  log_debug(LD_BTRACK, "CIRC gid=%"PRIu32" state=%d onehop=%d",
-            arg->gid, arg->state, arg->onehop);
+  log_debug(LD_BTRACK, "CIRC gid=%" PRIu32 " state=%d onehop=%d", arg->gid,
+            arg->state, arg->onehop);
 
   btc_update_state(arg, &best_any_state, "ANY");
   if (arg->onehop)
@@ -130,7 +128,7 @@ static void
 btc_cevent_rcvr(const msg_t *msg, const ocirc_cevent_msg_t *arg)
 {
   (void)msg;
-  log_debug(LD_BTRACK, "CIRC gid=%"PRIu32" evtype=%d reason=%d onehop=%d",
+  log_debug(LD_BTRACK, "CIRC gid=%" PRIu32 " evtype=%d reason=%d onehop=%d",
             arg->gid, arg->evtype, arg->reason, arg->onehop);
 
   btc_update_evtype(arg, &best_any_evtype, "ANY");
@@ -143,7 +141,7 @@ static void
 btc_chan_rcvr(const msg_t *msg, const ocirc_chan_msg_t *arg)
 {
   (void)msg;
-  log_debug(LD_BTRACK, "CIRC gid=%"PRIu32" chan=%"PRIu64" onehop=%d",
+  log_debug(LD_BTRACK, "CIRC gid=%" PRIu32 " chan=%" PRIu64 " onehop=%d",
             arg->gid, arg->chan, arg->onehop);
 }
 

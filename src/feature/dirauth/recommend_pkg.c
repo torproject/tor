@@ -39,13 +39,13 @@ validate_recommended_package_line(const char *line)
 {
   const char *cp = line;
 
-#define WORD()                                  \
-  do {                                          \
-    if (*cp == ' ')                             \
-      return 0;                                 \
-    cp = strchr(cp, ' ');                       \
-    if (!cp)                                    \
-      return 0;                                 \
+#define WORD()            \
+  do {                    \
+    if (*cp == ' ')       \
+      return 0;           \
+    cp = strchr(cp, ' '); \
+    if (! cp)             \
+      return 0;           \
   } while (0)
 
   WORD(); /* skip packagename */
@@ -68,13 +68,13 @@ validate_recommended_package_line(const char *line)
 
     const char *eq = memchr(start_of_word, '=', end_of_word - start_of_word);
 
-    if (!eq)
+    if (! eq)
       return 0;
     if (eq == start_of_word)
       return 0;
     if (eq == end_of_word - 1)
       return 0;
-    if (memchr(eq+1, '=', end_of_word - (eq+1)))
+    if (memchr(eq + 1, '=', end_of_word - (eq + 1)))
       return 0;
 
     ++n_entries;

@@ -19,22 +19,22 @@
 #include "lib/malloc/malloc.h"
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #include <stdlib.h>
 #include <string.h>
 #ifdef HAVE_CRT_EXTERNS_H
 /* For _NSGetEnviron on macOS */
-#include <crt_externs.h>
+#  include <crt_externs.h>
 #endif
 
 #ifndef HAVE__NSGETENVIRON
-#ifndef HAVE_EXTERN_ENVIRON_DECLARED
+#  ifndef HAVE_EXTERN_ENVIRON_DECLARED
 /* Some platforms declare environ under some circumstances, others don't. */
-#ifndef RUNNING_DOXYGEN
+#    ifndef RUNNING_DOXYGEN
 extern char **environ;
-#endif
-#endif /* !defined(HAVE_EXTERN_ENVIRON_DECLARED) */
+#    endif
+#  endif /* !defined(HAVE_EXTERN_ENVIRON_DECLARED) */
 #endif /* !defined(HAVE__NSGETENVIRON) */
 
 /** Return the current environment. This is a portable replacement for
@@ -73,8 +73,7 @@ environment_variable_names_equal(const char *s1, const char *s2)
   size_t s1_name_len = str_num_before(s1, '=');
   size_t s2_name_len = str_num_before(s2, '=');
 
-  return (s1_name_len == s2_name_len &&
-          tor_memeq(s1, s2, s1_name_len));
+  return (s1_name_len == s2_name_len && tor_memeq(s1, s2, s1_name_len));
 }
 
 /** Free <b>env</b> (assuming it was produced by
@@ -82,7 +81,8 @@ environment_variable_names_equal(const char *s1, const char *s2)
 void
 process_environment_free_(process_environment_t *env)
 {
-  if (env == NULL) return;
+  if (env == NULL)
+    return;
 
   /* As both an optimization hack to reduce consing on Unixoid systems
    * and a nice way to ensure that some otherwise-Windows-specific
@@ -165,9 +165,9 @@ process_environment_make(struct smartlist_t *env_vars)
       prev_env_var = s;
 
       /* Actually copy the string into the environment. */
-      memcpy(cp, s, slen+1);
+      memcpy(cp, s, slen + 1);
       env->unixoid_environment_block[i] = cp;
-      cp += slen+1;
+      cp += slen + 1;
     }
 
     tor_assert(cp == env->windows_environment_block + total_env_length - 1);
@@ -206,17 +206,17 @@ get_current_process_environment_variables(void)
 void
 set_environment_variable_in_smartlist(struct smartlist_t *env_vars,
                                       const char *new_var,
-                                      void (*free_old)(void*),
-                                      int free_p)
+                                      void (*free_old)(void *), int free_p)
 {
-  SMARTLIST_FOREACH_BEGIN(env_vars, const char *, s) {
+  SMARTLIST_FOREACH_BEGIN (env_vars, const char *, s) {
     if (environment_variable_names_equal(s, new_var)) {
       SMARTLIST_DEL_CURRENT(env_vars, s);
       if (free_p) {
         free_old((void *)s);
       }
     }
-  } SMARTLIST_FOREACH_END(s);
+  }
+  SMARTLIST_FOREACH_END(s);
 
   if (strchr(new_var, '=') != NULL) {
     smartlist_add(env_vars, (void *)new_var);

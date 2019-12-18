@@ -28,11 +28,11 @@
 
 #include <string.h>
 #ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
+#  include <sys/stat.h>
 #endif
 
 #ifdef ENABLE_OPENSSL
-#include <openssl/rsa.h>
+#  include <openssl/rsa.h>
 #endif
 
 /** Return the number of bytes added by padding method <b>padding</b>.
@@ -40,11 +40,13 @@
 int
 crypto_get_rsa_padding_overhead(int padding)
 {
-  switch (padding)
-    {
-    case PK_PKCS1_OAEP_PADDING: return PKCS1_OAEP_PADDING_OVERHEAD;
-    default: tor_assert(0); return -1; // LCOV_EXCL_LINE
-    }
+  switch (padding) {
+    case PK_PKCS1_OAEP_PADDING:
+      return PKCS1_OAEP_PADDING_OVERHEAD;
+    default:
+      tor_assert(0);
+      return -1; // LCOV_EXCL_LINE
+  }
 }
 
 #ifdef ENABLE_OPENSSL
@@ -53,11 +55,13 @@ crypto_get_rsa_padding_overhead(int padding)
 int
 crypto_get_rsa_padding(int padding)
 {
-  switch (padding)
-    {
-    case PK_PKCS1_OAEP_PADDING: return RSA_PKCS1_OAEP_PADDING;
-    default: tor_assert(0); return -1; // LCOV_EXCL_LINE
-    }
+  switch (padding) {
+    case PK_PKCS1_OAEP_PADDING:
+      return RSA_PKCS1_OAEP_PADDING;
+    default:
+      tor_assert(0);
+      return -1; // LCOV_EXCL_LINE
+  }
 }
 #endif /* defined(ENABLE_OPENSSL) */
 
@@ -91,11 +95,10 @@ crypto_pk_eq_keys(const crypto_pk_t *a, const crypto_pk_t *b)
  * part of the data, and SHOULD NOT BE USED for new protocols.
  */
 int
-crypto_pk_obsolete_public_hybrid_encrypt(crypto_pk_t *env,
-                                char *to, size_t tolen,
-                                const char *from,
-                                size_t fromlen,
-                                int padding, int force)
+crypto_pk_obsolete_public_hybrid_encrypt(crypto_pk_t *env, char *to,
+                                         size_t tolen, const char *from,
+                                         size_t fromlen, int padding,
+                                         int force)
 {
   int overhead, outlen, r;
   size_t pkeylen, symlen;
@@ -110,11 +113,9 @@ crypto_pk_obsolete_public_hybrid_encrypt(crypto_pk_t *env,
   overhead = crypto_get_rsa_padding_overhead(padding);
   pkeylen = crypto_pk_keysize(env);
 
-  if (!force && fromlen+overhead <= pkeylen) {
+  if (! force && fromlen + overhead <= pkeylen) {
     /* It all fits in a single encrypt. */
-    return crypto_pk_public_encrypt(env,to,
-                                    tolen,
-                                    from,fromlen,padding);
+    return crypto_pk_public_encrypt(env, to, tolen, from, fromlen, padding);
   }
   tor_assert(tolen >= fromlen + overhead + CIPHER_KEY_LEN);
   tor_assert(tolen >= pkeylen);
@@ -123,28 +124,30 @@ crypto_pk_obsolete_public_hybrid_encrypt(crypto_pk_t *env,
   crypto_rand(key, sizeof(key)); /* generate a new key. */
   cipher = crypto_cipher_new(key);
 
-  buf = tor_malloc(pkeylen+1);
+  buf = tor_malloc(pkeylen + 1);
   memcpy(buf, key, CIPHER_KEY_LEN);
-  memcpy(buf+CIPHER_KEY_LEN, from, pkeylen-overhead-CIPHER_KEY_LEN);
+  memcpy(buf + CIPHER_KEY_LEN, from, pkeylen - overhead - CIPHER_KEY_LEN);
 
   /* Length of symmetrically encrypted data. */
-  symlen = fromlen-(pkeylen-overhead-CIPHER_KEY_LEN);
+  symlen = fromlen - (pkeylen - overhead - CIPHER_KEY_LEN);
 
-  outlen = crypto_pk_public_encrypt(env,to,tolen,buf,pkeylen-overhead,padding);
-  if (outlen!=(int)pkeylen) {
+  outlen = crypto_pk_public_encrypt(env, to, tolen, buf, pkeylen - overhead,
+                                    padding);
+  if (outlen != (int)pkeylen) {
     goto err;
   }
-  r = crypto_cipher_encrypt(cipher, to+outlen,
-                            from+pkeylen-overhead-CIPHER_KEY_LEN, symlen);
+  r = crypto_cipher_encrypt(
+      cipher, to + outlen, from + pkeylen - overhead - CIPHER_KEY_LEN, symlen);
 
-  if (r<0) goto err;
+  if (r < 0)
+    goto err;
   memwipe(buf, 0, pkeylen);
   memwipe(key, 0, sizeof(key));
   tor_free(buf);
   crypto_cipher_free(cipher);
-  tor_assert(outlen+symlen < INT_MAX);
+  tor_assert(outlen + symlen < INT_MAX);
   return (int)(outlen + symlen);
- err:
+err:
 
   memwipe(buf, 0, pkeylen);
   memwipe(key, 0, sizeof(key));
@@ -160,12 +163,10 @@ crypto_pk_obsolete_public_hybrid_encrypt(crypto_pk_t *env,
  * part of the data, and SHOULD NOT BE USED for new protocols.
  */
 int
-crypto_pk_obsolete_private_hybrid_decrypt(crypto_pk_t *env,
-                                 char *to,
-                                 size_t tolen,
-                                 const char *from,
-                                 size_t fromlen,
-                                 int padding, int warnOnFailure)
+crypto_pk_obsolete_private_hybrid_decrypt(crypto_pk_t *env, char *to,
+                                          size_t tolen, const char *from,
+                                          size_t fromlen, int padding,
+                                          int warnOnFailure)
 {
   int outlen, r;
   size_t pkeylen;
@@ -176,40 +177,41 @@ crypto_pk_obsolete_private_hybrid_decrypt(crypto_pk_t *env,
   pkeylen = crypto_pk_keysize(env);
 
   if (fromlen <= pkeylen) {
-    return crypto_pk_private_decrypt(env,to,tolen,from,fromlen,padding,
+    return crypto_pk_private_decrypt(env, to, tolen, from, fromlen, padding,
                                      warnOnFailure);
   }
 
   buf = tor_malloc(pkeylen);
-  outlen = crypto_pk_private_decrypt(env,buf,pkeylen,from,pkeylen,padding,
+  outlen = crypto_pk_private_decrypt(env, buf, pkeylen, from, pkeylen, padding,
                                      warnOnFailure);
-  if (outlen<0) {
-    log_fn(warnOnFailure?LOG_WARN:LOG_DEBUG, LD_CRYPTO,
+  if (outlen < 0) {
+    log_fn(warnOnFailure ? LOG_WARN : LOG_DEBUG, LD_CRYPTO,
            "Error decrypting public-key data");
     goto err;
   }
   if (outlen < CIPHER_KEY_LEN) {
-    log_fn(warnOnFailure?LOG_WARN:LOG_INFO, LD_CRYPTO,
+    log_fn(warnOnFailure ? LOG_WARN : LOG_INFO, LD_CRYPTO,
            "No room for a symmetric key");
     goto err;
   }
   cipher = crypto_cipher_new(buf);
-  if (!cipher) {
+  if (! cipher) {
     goto err;
   }
-  memcpy(to,buf+CIPHER_KEY_LEN,outlen-CIPHER_KEY_LEN);
+  memcpy(to, buf + CIPHER_KEY_LEN, outlen - CIPHER_KEY_LEN);
   outlen -= CIPHER_KEY_LEN;
   tor_assert(tolen - outlen >= fromlen - pkeylen);
-  r = crypto_cipher_decrypt(cipher, to+outlen, from+pkeylen, fromlen-pkeylen);
-  if (r<0)
+  r = crypto_cipher_decrypt(cipher, to + outlen, from + pkeylen,
+                            fromlen - pkeylen);
+  if (r < 0)
     goto err;
-  memwipe(buf,0,pkeylen);
+  memwipe(buf, 0, pkeylen);
   tor_free(buf);
   crypto_cipher_free(cipher);
   tor_assert(outlen + fromlen < INT_MAX);
-  return (int)(outlen + (fromlen-pkeylen));
- err:
-  memwipe(buf,0,pkeylen);
+  return (int)(outlen + (fromlen - pkeylen));
+err:
+  memwipe(buf, 0, pkeylen);
   tor_free(buf);
   crypto_cipher_free(cipher);
   return -1;
@@ -229,15 +231,15 @@ int
 crypto_pk_get_fingerprint(crypto_pk_t *pk, char *fp_out, int add_space)
 {
   char digest[DIGEST_LEN];
-  char hexdigest[HEX_DIGEST_LEN+1];
+  char hexdigest[HEX_DIGEST_LEN + 1];
   if (crypto_pk_get_digest(pk, digest)) {
     return -1;
   }
-  base16_encode(hexdigest,sizeof(hexdigest),digest,DIGEST_LEN);
+  base16_encode(hexdigest, sizeof(hexdigest), digest, DIGEST_LEN);
   if (add_space) {
-    crypto_add_spaces_to_fp(fp_out, FINGERPRINT_LEN+1, hexdigest);
+    crypto_add_spaces_to_fp(fp_out, FINGERPRINT_LEN + 1, hexdigest);
   } else {
-    strncpy(fp_out, hexdigest, HEX_DIGEST_LEN+1);
+    strncpy(fp_out, hexdigest, HEX_DIGEST_LEN + 1);
   }
   return 0;
 }
@@ -270,17 +272,17 @@ void
 crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in)
 {
   int n = 0;
-  char *end = out+outlen;
+  char *end = out + outlen;
   tor_assert(outlen < SIZE_T_CEILING);
 
-  while (*in && out<end) {
+  while (*in && out < end) {
     *out++ = *in++;
-    if (++n == 4 && *in && out<end) {
+    if (++n == 4 && *in && out < end) {
       n = 0;
       *out++ = ' ';
     }
   }
-  tor_assert(out<end);
+  tor_assert(out < end);
   *out = '\0';
 }
 
@@ -289,10 +291,9 @@ crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in)
  * in <b>env</b>. Return 0 if <b>sig</b> is a correct signature for
  * SHA1(data).  Else return -1.
  */
-MOCK_IMPL(int,
-crypto_pk_public_checksig_digest,(crypto_pk_t *env, const char *data,
-                                  size_t datalen, const char *sig,
-                                  size_t siglen))
+MOCK_IMPL(int, crypto_pk_public_checksig_digest,
+          (crypto_pk_t * env, const char *data, size_t datalen,
+           const char *sig, size_t siglen))
 {
   char digest[DIGEST_LEN];
   char *buf;
@@ -305,13 +306,13 @@ crypto_pk_public_checksig_digest,(crypto_pk_t *env, const char *data,
   tor_assert(datalen < SIZE_T_CEILING);
   tor_assert(siglen < SIZE_T_CEILING);
 
-  if (crypto_digest(digest,data,datalen)<0) {
+  if (crypto_digest(digest, data, datalen) < 0) {
     log_warn(LD_BUG, "couldn't compute digest");
     return -1;
   }
   buflen = crypto_pk_keysize(env);
   buf = tor_malloc(buflen);
-  r = crypto_pk_public_checksig(env,buf,buflen,sig,siglen);
+  r = crypto_pk_public_checksig(env, buf, buflen, sig, siglen);
   if (r != DIGEST_LEN) {
     log_warn(LD_CRYPTO, "Invalid signature");
     tor_free(buf);
@@ -341,9 +342,9 @@ crypto_pk_private_sign_digest(crypto_pk_t *env, char *to, size_t tolen,
 {
   int r;
   char digest[DIGEST_LEN];
-  if (crypto_digest(digest,from,fromlen)<0)
+  if (crypto_digest(digest, from, fromlen) < 0)
     return -1;
-  r = crypto_pk_private_sign(env,to,tolen,digest,DIGEST_LEN);
+  r = crypto_pk_private_sign(env, to, tolen, digest, DIGEST_LEN);
   memwipe(digest, 0, sizeof(digest));
   return r;
 }
@@ -360,7 +361,7 @@ crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out)
   int len;
   int rv = -1;
 
-  buflen = crypto_pk_keysize(pk)*2;
+  buflen = crypto_pk_keysize(pk) * 2;
   buf = tor_malloc(buflen);
   len = crypto_pk_asn1_encode(pk, buf, buflen);
   if (len < 0)
@@ -370,7 +371,7 @@ crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out)
     goto done;
 
   rv = 0;
-  done:
+done:
   tor_free(buf);
   return rv;
 }
@@ -385,17 +386,17 @@ crypto_pk_get_common_digests(crypto_pk_t *pk, common_digests_t *digests_out)
   int len;
   int rv = -1;
 
-  buflen = crypto_pk_keysize(pk)*2;
+  buflen = crypto_pk_keysize(pk) * 2;
   buf = tor_malloc(buflen);
   len = crypto_pk_asn1_encode(pk, buf, buflen);
   if (len < 0)
     goto done;
 
-  if (crypto_common_digests(digests_out, (char*)buf, len) < 0)
+  if (crypto_common_digests(digests_out, (char *)buf, len) < 0)
     goto done;
 
   rv = 0;
- done:
+done:
   tor_free(buf);
   return rv;
 }
@@ -415,31 +416,26 @@ static const char RSA_PRIVATE_TAG[] = "RSA PRIVATE KEY";
  * return -1.
  */
 static int
-crypto_pk_write_to_string_generic(crypto_pk_t *env,
-                                  char **dest, size_t *len,
+crypto_pk_write_to_string_generic(crypto_pk_t *env, char **dest, size_t *len,
                                   bool private_key)
 {
-  const int factor =
-    private_key ? PRIVATE_ASN_MAX_OVERHEAD_FACTOR
-                : PUBLIC_ASN_MAX_OVERHEAD_FACTOR;
+  const int factor = private_key ? PRIVATE_ASN_MAX_OVERHEAD_FACTOR
+                                 : PUBLIC_ASN_MAX_OVERHEAD_FACTOR;
   size_t buflen = crypto_pk_keysize(env) * factor;
-  const char *tag =
-    private_key ? RSA_PRIVATE_TAG : RSA_PUBLIC_TAG;
+  const char *tag = private_key ? RSA_PRIVATE_TAG : RSA_PUBLIC_TAG;
   char *buf = tor_malloc(buflen);
   char *result = NULL;
   size_t resultlen = 0;
   int rv = -1;
 
-  int n = private_key
-    ? crypto_pk_asn1_encode_private(env, buf, buflen)
-    : crypto_pk_asn1_encode(env, buf, buflen);
+  int n = private_key ? crypto_pk_asn1_encode_private(env, buf, buflen)
+                      : crypto_pk_asn1_encode(env, buf, buflen);
   if (n < 0)
     goto done;
 
   resultlen = pem_encoded_size(n, tag);
   result = tor_malloc(resultlen);
-  if (pem_encode(result, resultlen,
-                 (const unsigned char *)buf, n, tag) < 0) {
+  if (pem_encode(result, resultlen, (const unsigned char *)buf, n, tag) < 0) {
     goto done;
   }
 
@@ -447,7 +443,7 @@ crypto_pk_write_to_string_generic(crypto_pk_t *env,
   *len = resultlen;
   rv = 0;
 
- done:
+done:
   if (rv < 0 && result) {
     memwipe(result, 0, resultlen);
     tor_free(result);
@@ -463,8 +459,8 @@ crypto_pk_write_to_string_generic(crypto_pk_t *env,
  * failure, return -1.
  */
 int
-crypto_pk_write_public_key_to_string(crypto_pk_t *env,
-                                     char **dest, size_t *len)
+crypto_pk_write_public_key_to_string(crypto_pk_t *env, char **dest,
+                                     size_t *len)
 {
   return crypto_pk_write_to_string_generic(env, dest, len, false);
 }
@@ -475,8 +471,8 @@ crypto_pk_write_public_key_to_string(crypto_pk_t *env,
  * failure, return -1.
  */
 int
-crypto_pk_write_private_key_to_string(crypto_pk_t *env,
-                                          char **dest, size_t *len)
+crypto_pk_write_private_key_to_string(crypto_pk_t *env, char **dest,
+                                      size_t *len)
 {
   return crypto_pk_write_to_string_generic(env, dest, len, true);
 }
@@ -489,32 +485,30 @@ crypto_pk_write_private_key_to_string(crypto_pk_t *env,
  */
 static int
 crypto_pk_read_from_string_generic(crypto_pk_t *env, const char *src,
-                                   size_t len, int severity,
-                                   bool private_key)
+                                   size_t len, int severity, bool private_key)
 {
   if (len == (size_t)-1) // "-1" indicates "use the length of the string."
     len = strlen(src);
 
   const char *ktype = private_key ? "private key" : "public key";
-  const char *tag =
-    private_key ? RSA_PRIVATE_TAG : RSA_PUBLIC_TAG;
+  const char *tag = private_key ? RSA_PRIVATE_TAG : RSA_PUBLIC_TAG;
   size_t buflen = len;
   uint8_t *buf = tor_malloc(buflen);
   int rv = -1;
 
   int n = pem_decode(buf, buflen, src, len, tag);
   if (n < 0) {
-    log_fn(severity, LD_CRYPTO,
-           "Error decoding PEM wrapper while reading %s", ktype);
+    log_fn(severity, LD_CRYPTO, "Error decoding PEM wrapper while reading %s",
+           ktype);
     goto done;
   }
 
   crypto_pk_t *pk = private_key
-    ? crypto_pk_asn1_decode_private((const char*)buf, n)
-    : crypto_pk_asn1_decode((const char*)buf, n);
+                        ? crypto_pk_asn1_decode_private((const char *)buf, n)
+                        : crypto_pk_asn1_decode((const char *)buf, n);
   if (! pk) {
-    log_fn(severity, LD_CRYPTO,
-           "Error decoding ASN.1 while reading %s", ktype);
+    log_fn(severity, LD_CRYPTO, "Error decoding ASN.1 while reading %s",
+           ktype);
     goto done;
   }
 
@@ -525,7 +519,7 @@ crypto_pk_read_from_string_generic(crypto_pk_t *env, const char *src,
   crypto_pk_free(pk);
   rv = 0;
 
- done:
+done:
   memwipe(buf, 0, buflen);
   tor_free(buf);
   return rv;
@@ -536,8 +530,8 @@ crypto_pk_read_from_string_generic(crypto_pk_t *env, const char *src,
  * failure.  If len is -1, the string is nul-terminated.
  */
 int
-crypto_pk_read_public_key_from_string(crypto_pk_t *env,
-                                      const char *src, size_t len)
+crypto_pk_read_public_key_from_string(crypto_pk_t *env, const char *src,
+                                      size_t len)
 {
   return crypto_pk_read_from_string_generic(env, src, len, LOG_INFO, false);
 }
@@ -547,25 +541,24 @@ crypto_pk_read_public_key_from_string(crypto_pk_t *env,
  * the string is nul-terminated.
  */
 int
-crypto_pk_read_private_key_from_string(crypto_pk_t *env,
-                                       const char *src, ssize_t len)
+crypto_pk_read_private_key_from_string(crypto_pk_t *env, const char *src,
+                                       ssize_t len)
 {
   return crypto_pk_read_from_string_generic(env, src, len, LOG_INFO, true);
 }
 
 /** If a file is longer than this, we won't try to decode its private key */
-#define MAX_PRIVKEY_FILE_LEN (16*1024*1024)
+#define MAX_PRIVKEY_FILE_LEN (16 * 1024 * 1024)
 
 /** Read a PEM-encoded private key from the file named by
  * <b>keyfile</b> into <b>env</b>.  Return 0 on success, -1 on failure.
  */
 int
-crypto_pk_read_private_key_from_filename(crypto_pk_t *env,
-                                         const char *keyfile)
+crypto_pk_read_private_key_from_filename(crypto_pk_t *env, const char *keyfile)
 {
   struct stat st;
   char *buf = read_file_to_str(keyfile, 0, &st);
-  if (!buf) {
+  if (! buf) {
     log_warn(LD_CRYPTO, "Unable to read file for private key in %s",
              escaped(keyfile));
     return -1;
@@ -592,8 +585,7 @@ crypto_pk_read_private_key_from_filename(crypto_pk_t *env,
  * PEM-encoded.  Return 0 on success, -1 on failure.
  */
 int
-crypto_pk_write_private_key_to_filename(crypto_pk_t *env,
-                                        const char *fname)
+crypto_pk_write_private_key_to_filename(crypto_pk_t *env, const char *fname)
 {
   char *s = NULL;
   size_t n = 0;
@@ -617,7 +609,7 @@ crypto_pk_write_private_key_to_filename(crypto_pk_t *env,
 int
 crypto_pk_base64_encode_private(const crypto_pk_t *pk, char **priv_out)
 {
-  size_t buflen = crypto_pk_keysize(pk)*16;
+  size_t buflen = crypto_pk_keysize(pk) * 16;
   char *buf = tor_malloc(buflen);
   char *result = NULL;
   size_t reslen = 0;
@@ -628,14 +620,14 @@ crypto_pk_base64_encode_private(const crypto_pk_t *pk, char **priv_out)
   if (n < 0)
     goto done;
 
-  reslen = base64_encode_size(n, 0)+1;
+  reslen = base64_encode_size(n, 0) + 1;
   result = tor_malloc(reslen);
   if (base64_encode(result, reslen, buf, n, 0) < 0)
     goto done;
 
   ok = true;
 
- done:
+done:
   memwipe(buf, 0, buflen);
   tor_free(buf);
   if (result && ! ok) {
@@ -664,8 +656,8 @@ crypto_pk_base64_decode_private(const char *str, size_t len)
 
   pk = crypto_pk_asn1_decode_private(der, der_len);
 
- out:
-  memwipe(der, 0, len+1);
+out:
+  memwipe(der, 0, len + 1);
   tor_free(der);
 
   return pk;

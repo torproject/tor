@@ -59,8 +59,7 @@ router_reset_reachability(void)
 static int
 router_reachability_checks_disabled(const or_options_t *options)
 {
-  return options->AssumeReachable ||
-         net_is_disabled();
+  return options->AssumeReachable || net_is_disabled();
 }
 
 /** Return 0 if we need to do an ORPort reachability check, because:
@@ -75,8 +74,7 @@ int
 check_whether_orport_reachable(const or_options_t *options)
 {
   int reach_checks_disabled = router_reachability_checks_disabled(options);
-  return reach_checks_disabled ||
-         can_reach_or_port;
+  return reach_checks_disabled || can_reach_or_port;
 }
 
 /** Return 0 if we need to do a DirPort reachability check, because:
@@ -91,10 +89,9 @@ check_whether_orport_reachable(const or_options_t *options)
 int
 check_whether_dirport_reachable(const or_options_t *options)
 {
-  int reach_checks_disabled = router_reachability_checks_disabled(options) ||
-                              !options->DirPort_set;
-  return reach_checks_disabled ||
-         can_reach_dir_port;
+  int reach_checks_disabled =
+      router_reachability_checks_disabled(options) || ! options->DirPort_set;
+  return reach_checks_disabled || can_reach_dir_port;
 }
 
 /** See if we currently believe our ORPort or DirPort to be
@@ -106,7 +103,7 @@ router_should_check_reachability(int test_or, int test_dir)
   const routerinfo_t *me = router_get_my_routerinfo();
   const or_options_t *options = get_options();
 
-  if (!me)
+  if (! me)
     return 0;
 
   if (routerset_contains_router(options->ExcludeNodes, me, -1) &&
@@ -115,12 +112,13 @@ router_should_check_reachability(int test_or, int test_dir)
      * ourself. */
     if (test_or || test_dir) {
 #define SELF_EXCLUDED_WARN_INTERVAL 3600
-      static ratelim_t warning_limit=RATELIM_INIT(SELF_EXCLUDED_WARN_INTERVAL);
+      static ratelim_t warning_limit =
+          RATELIM_INIT(SELF_EXCLUDED_WARN_INTERVAL);
       log_fn_ratelim(&warning_limit, LOG_WARN, LD_CIRC,
-                 "Can't peform self-tests for this relay: we have "
-                 "listed ourself in ExcludeNodes, and StrictNodes is set. "
-                 "We cannot learn whether we are usable, and will not "
-                 "be able to advertise ourself.");
+                     "Can't peform self-tests for this relay: we have "
+                     "listed ourself in ExcludeNodes, and StrictNodes is set. "
+                     "We cannot learn whether we are usable, and will not "
+                     "be able to advertise ourself.");
     }
     return 0;
   }
@@ -149,10 +147,9 @@ extend_info_from_router(const routerinfo_t *r)
 
   router_get_prim_orport(r, &ap);
   rsa_pubkey = router_get_rsa_onion_pkey(r->onion_pkey, r->onion_pkey_len);
-  info = extend_info_new(r->nickname, r->cache_info.identity_digest,
-                         ed_id_key,
-                         rsa_pubkey, r->onion_curve25519_pkey,
-                         &ap.addr, ap.port);
+  info =
+      extend_info_new(r->nickname, r->cache_info.identity_digest, ed_id_key,
+                      rsa_pubkey, r->onion_curve25519_pkey, &ap.addr, ap.port);
   crypto_pk_free(rsa_pubkey);
   return info;
 }
@@ -177,23 +174,24 @@ router_do_reachability_checks(int test_or, int test_dir)
   tor_addr_t addr;
 
   if (router_should_check_reachability(test_or, test_dir)) {
-    if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
+    if (test_or && (! orport_reachable || ! circuit_enough_testing_circs())) {
       extend_info_t *ei = extend_info_from_router(me);
       /* XXX IPv6 self testing */
       log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
-               !orport_reachable ? "reachability" : "bandwidth",
+               ! orport_reachable ? "reachability" : "bandwidth",
                fmt_addr32(me->addr), me->or_port);
       circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
-                              CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
+                                    CIRCLAUNCH_NEED_CAPACITY |
+                                        CIRCLAUNCH_IS_INTERNAL);
       extend_info_free(ei);
     }
 
     /* XXX IPv6 self testing */
     tor_addr_from_ipv4h(&addr, me->addr);
-    if (test_dir && !check_whether_dirport_reachable(options) &&
-        !connection_get_by_type_addr_port_purpose(
-                  CONN_TYPE_DIR, &addr, me->dir_port,
-                  DIR_PURPOSE_FETCH_SERVERDESC)) {
+    if (test_dir && ! check_whether_dirport_reachable(options) &&
+        ! connection_get_by_type_addr_port_purpose(
+            CONN_TYPE_DIR, &addr, me->dir_port,
+            DIR_PURPOSE_FETCH_SERVERDESC)) {
       tor_addr_port_t my_orport, my_dirport;
       memcpy(&my_orport.addr, &addr, sizeof(addr));
       memcpy(&my_dirport.addr, &addr, sizeof(addr));
@@ -201,11 +199,11 @@ router_do_reachability_checks(int test_or, int test_dir)
       my_dirport.port = me->dir_port;
       /* ask myself, via tor, for my server descriptor. */
       directory_request_t *req =
-        directory_request_new(DIR_PURPOSE_FETCH_SERVERDESC);
+          directory_request_new(DIR_PURPOSE_FETCH_SERVERDESC);
       directory_request_set_or_addr_port(req, &my_orport);
       directory_request_set_dir_addr_port(req, &my_dirport);
-      directory_request_set_directory_id_digest(req,
-                                              me->cache_info.identity_digest);
+      directory_request_set_directory_id_digest(
+          req, me->cache_info.identity_digest);
       // ask via an anon circuit, connecting to our dirport.
       directory_request_set_indirection(req, DIRIND_ANON_DIRPORT);
       directory_request_set_resource(req, "authority.z");
@@ -221,13 +219,15 @@ router_orport_found_reachable(void)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
   const or_options_t *options = get_options();
-  if (!can_reach_or_port && me) {
+  if (! can_reach_or_port && me) {
     char *address = tor_dup_ip(me->addr);
-    log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
+    log_notice(LD_OR,
+               "Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
-               options->PublishServerDescriptor_ != NO_DIRINFO
-               && check_whether_dirport_reachable(options) ?
-                 " Publishing server descriptor." : "");
+               options->PublishServerDescriptor_ != NO_DIRINFO &&
+                       check_whether_dirport_reachable(options)
+                   ? " Publishing server descriptor."
+                   : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty("ORPort found reachable");
     /* This is a significant enough change to upload immediately,
@@ -248,13 +248,15 @@ router_dirport_found_reachable(void)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
   const or_options_t *options = get_options();
-  if (!can_reach_dir_port && me) {
+  if (! can_reach_dir_port && me) {
     char *address = tor_dup_ip(me->addr);
-    log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
+    log_notice(LD_DIRSERV,
+               "Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.%s",
-               options->PublishServerDescriptor_ != NO_DIRINFO
-               && check_whether_orport_reachable(options) ?
-               " Publishing server descriptor." : "");
+               options->PublishServerDescriptor_ != NO_DIRINFO &&
+                       check_whether_orport_reachable(options)
+                   ? " Publishing server descriptor."
+                   : "");
     can_reach_dir_port = 1;
     if (router_should_advertise_dirport(options, me->dir_port)) {
       mark_my_descriptor_dirty("DirPort found reachable");
@@ -276,25 +278,23 @@ router_dirport_found_reachable(void)
 void
 router_perform_bandwidth_test(int num_circs, time_t now)
 {
-  int num_cells = (int)(get_options()->BandwidthRate * 10 /
-                        CELL_MAX_NETWORK_SIZE);
-  int max_cells = num_cells < CIRCWINDOW_START ?
-                    num_cells : CIRCWINDOW_START;
+  int num_cells =
+      (int)(get_options()->BandwidthRate * 10 / CELL_MAX_NETWORK_SIZE);
+  int max_cells = num_cells < CIRCWINDOW_START ? num_cells : CIRCWINDOW_START;
   int cells_per_circuit = max_cells / num_circs;
   origin_circuit_t *circ = NULL;
 
-  log_notice(LD_OR,"Performing bandwidth self-test...done.");
-  while ((circ = circuit_get_next_by_pk_and_purpose(circ, NULL,
-                                              CIRCUIT_PURPOSE_TESTING))) {
+  log_notice(LD_OR, "Performing bandwidth self-test...done.");
+  while ((circ = circuit_get_next_by_pk_and_purpose(
+              circ, NULL, CIRCUIT_PURPOSE_TESTING))) {
     /* dump cells_per_circuit drop cells onto this circ */
     int i = cells_per_circuit;
     if (circ->base_.state != CIRCUIT_STATE_OPEN)
       continue;
     circ->base_.timestamp_dirty = now;
     while (i-- > 0) {
-      if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
-                                       RELAY_COMMAND_DROP,
-                                       NULL, 0, circ->cpath->prev)<0) {
+      if (relay_send_command_from_edge(0, TO_CIRCUIT(circ), RELAY_COMMAND_DROP,
+                                       NULL, 0, circ->cpath->prev) < 0) {
         return; /* stop if error */
       }
     }

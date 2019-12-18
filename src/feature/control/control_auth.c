@@ -64,17 +64,16 @@ init_control_cookie_authentication(int enabled)
   char *fname = NULL;
   int retval;
 
-  if (!enabled) {
+  if (! enabled) {
     authentication_cookie_is_set = 0;
     return 0;
   }
 
   fname = get_controller_cookie_file_name();
-  retval = init_cookie_authentication(fname, "", /* no header */
-                                      AUTHENTICATION_COOKIE_LEN,
-                                   get_options()->CookieAuthFileGroupReadable,
-                                      &authentication_cookie,
-                                      &authentication_cookie_is_set);
+  retval = init_cookie_authentication(
+      fname, "", /* no header */
+      AUTHENTICATION_COOKIE_LEN, get_options()->CookieAuthFileGroupReadable,
+      &authentication_cookie, &authentication_cookie_is_set);
   tor_free(fname);
   return retval;
 }
@@ -96,37 +95,37 @@ decode_hashed_passwords(config_line_t *passwords)
   for (cl = passwords; cl; cl = cl->next) {
     const char *hashed = cl->value;
 
-    if (!strcmpstart(hashed, "16:")) {
-      if (base16_decode(decoded, sizeof(decoded), hashed+3, strlen(hashed+3))
-                        != S2K_RFC2440_SPECIFIER_LEN + DIGEST_LEN
-          || strlen(hashed+3) != (S2K_RFC2440_SPECIFIER_LEN+DIGEST_LEN)*2) {
+    if (! strcmpstart(hashed, "16:")) {
+      if (base16_decode(decoded, sizeof(decoded), hashed + 3,
+                        strlen(hashed + 3)) !=
+              S2K_RFC2440_SPECIFIER_LEN + DIGEST_LEN ||
+          strlen(hashed + 3) != (S2K_RFC2440_SPECIFIER_LEN + DIGEST_LEN) * 2) {
         goto err;
       }
     } else {
-        if (base64_decode(decoded, sizeof(decoded), hashed, strlen(hashed))
-            != S2K_RFC2440_SPECIFIER_LEN+DIGEST_LEN) {
-          goto err;
-        }
+      if (base64_decode(decoded, sizeof(decoded), hashed, strlen(hashed)) !=
+          S2K_RFC2440_SPECIFIER_LEN + DIGEST_LEN) {
+        goto err;
+      }
     }
     smartlist_add(sl,
-                  tor_memdup(decoded, S2K_RFC2440_SPECIFIER_LEN+DIGEST_LEN));
+                  tor_memdup(decoded, S2K_RFC2440_SPECIFIER_LEN + DIGEST_LEN));
   }
 
   return sl;
 
- err:
-  SMARTLIST_FOREACH(sl, char*, cp, tor_free(cp));
+err:
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_free(sl);
   return NULL;
 }
 
 const control_cmd_syntax_t authchallenge_syntax = {
-   .min_args = 1,
-   .max_args = 1,
-   .accept_keywords=true,
-   .kvline_flags=KV_OMIT_KEYS|KV_QUOTED_QSTRING,
-   .store_raw_body=true
-};
+    .min_args = 1,
+    .max_args = 1,
+    .accept_keywords = true,
+    .kvline_flags = KV_OMIT_KEYS | KV_QUOTED_QSTRING,
+    .store_raw_body = true};
 
 /** Called when we get an AUTHCHALLENGE command. */
 int
@@ -136,9 +135,9 @@ handle_control_authchallenge(control_connection_t *conn,
   char *client_nonce;
   size_t client_nonce_len;
   char server_hash[DIGEST256_LEN];
-  char server_hash_encoded[HEX_DIGEST256_LEN+1];
+  char server_hash_encoded[HEX_DIGEST256_LEN + 1];
   char server_nonce[SAFECOOKIE_SERVER_NONCE_LEN];
-  char server_nonce_encoded[(2*SAFECOOKIE_SERVER_NONCE_LEN) + 1];
+  char server_nonce_encoded[(2 * SAFECOOKIE_SERVER_NONCE_LEN) + 1];
 
   if (strcasecmp(smartlist_get(args->args, 0), "SAFECOOKIE")) {
     control_write_endreply(conn, 513,
@@ -146,7 +145,7 @@ handle_control_authchallenge(control_connection_t *conn,
                            "authentication");
     goto fail;
   }
-  if (!authentication_cookie_is_set) {
+  if (! authentication_cookie_is_set) {
     control_write_endreply(conn, 515, "Cookie authentication is disabled");
     goto fail;
   }
@@ -187,26 +186,21 @@ handle_control_authchallenge(control_connection_t *conn,
   tor_assert(authentication_cookie != NULL);
 
   {
-    size_t tmp_len = (AUTHENTICATION_COOKIE_LEN +
-                      client_nonce_len +
+    size_t tmp_len = (AUTHENTICATION_COOKIE_LEN + client_nonce_len +
                       SAFECOOKIE_SERVER_NONCE_LEN);
     char *tmp = tor_malloc_zero(tmp_len);
     char *client_hash = tor_malloc_zero(DIGEST256_LEN);
     memcpy(tmp, authentication_cookie, AUTHENTICATION_COOKIE_LEN);
     memcpy(tmp + AUTHENTICATION_COOKIE_LEN, client_nonce, client_nonce_len);
-    memcpy(tmp + AUTHENTICATION_COOKIE_LEN + client_nonce_len,
-           server_nonce, SAFECOOKIE_SERVER_NONCE_LEN);
+    memcpy(tmp + AUTHENTICATION_COOKIE_LEN + client_nonce_len, server_nonce,
+           SAFECOOKIE_SERVER_NONCE_LEN);
 
-    crypto_hmac_sha256(server_hash,
-                       SAFECOOKIE_SERVER_TO_CONTROLLER_CONSTANT,
-                       strlen(SAFECOOKIE_SERVER_TO_CONTROLLER_CONSTANT),
-                       tmp,
+    crypto_hmac_sha256(server_hash, SAFECOOKIE_SERVER_TO_CONTROLLER_CONSTANT,
+                       strlen(SAFECOOKIE_SERVER_TO_CONTROLLER_CONSTANT), tmp,
                        tmp_len);
 
-    crypto_hmac_sha256(client_hash,
-                       SAFECOOKIE_CONTROLLER_TO_SERVER_CONSTANT,
-                       strlen(SAFECOOKIE_CONTROLLER_TO_SERVER_CONSTANT),
-                       tmp,
+    crypto_hmac_sha256(client_hash, SAFECOOKIE_CONTROLLER_TO_SERVER_CONSTANT,
+                       strlen(SAFECOOKIE_CONTROLLER_TO_SERVER_CONSTANT), tmp,
                        tmp_len);
 
     conn->safecookie_client_hash = client_hash;
@@ -214,29 +208,27 @@ handle_control_authchallenge(control_connection_t *conn,
     tor_free(tmp);
   }
 
-  base16_encode(server_hash_encoded, sizeof(server_hash_encoded),
-                server_hash, sizeof(server_hash));
+  base16_encode(server_hash_encoded, sizeof(server_hash_encoded), server_hash,
+                sizeof(server_hash));
   base16_encode(server_nonce_encoded, sizeof(server_nonce_encoded),
                 server_nonce, sizeof(server_nonce));
 
   control_printf_endreply(conn, 250,
                           "AUTHCHALLENGE SERVERHASH=%s SERVERNONCE=%s",
-                          server_hash_encoded,
-                          server_nonce_encoded);
+                          server_hash_encoded, server_nonce_encoded);
 
   tor_free(client_nonce);
   return 0;
- fail:
+fail:
   connection_mark_for_close(TO_CONN(conn));
   return -1;
 }
 
 const control_cmd_syntax_t authenticate_syntax = {
-   .max_args = 0,
-   .accept_keywords=true,
-   .kvline_flags=KV_OMIT_KEYS|KV_QUOTED_QSTRING,
-   .store_raw_body=true
-};
+    .max_args = 0,
+    .accept_keywords = true,
+    .kvline_flags = KV_OMIT_KEYS | KV_QUOTED_QSTRING,
+    .store_raw_body = true};
 
 /** Called when we get an AUTHENTICATE message.  Check whether the
  * authentication is valid, and if so, update the connection's state to
@@ -251,7 +243,7 @@ handle_control_authenticate(control_connection_t *conn,
   const char *errstr = "Unknown error";
   char *password;
   size_t password_len;
-  int bad_cookie=0, bad_password=0;
+  int bad_cookie = 0, bad_password = 0;
   smartlist_t *sl = NULL;
 
   if (args->kwargs == NULL) {
@@ -273,13 +265,14 @@ handle_control_authenticate(control_connection_t *conn,
   } else {
     const char *hex_passwd = args->kwargs->value;
     password_len = strlen(hex_passwd) / 2;
-    password = tor_malloc(password_len+1);
-    if (base16_decode(password, password_len+1, hex_passwd, strlen(hex_passwd))
-                      != (int) password_len) {
-      control_write_endreply(conn, 551,
-            "Invalid hexadecimal encoding.  Maybe you tried a plain text "
-            "password?  If so, the standard requires that you put it in "
-            "double quotes.");
+    password = tor_malloc(password_len + 1);
+    if (base16_decode(password, password_len + 1, hex_passwd,
+                      strlen(hex_passwd)) != (int)password_len) {
+      control_write_endreply(
+          conn, 551,
+          "Invalid hexadecimal encoding.  Maybe you tried a plain text "
+          "password?  If so, the standard requires that you put it in "
+          "double quotes.");
       connection_mark_for_close(TO_CONN(conn));
       tor_free(password);
       return 0;
@@ -296,7 +289,8 @@ handle_control_authenticate(control_connection_t *conn,
     if (password_len != DIGEST256_LEN) {
       log_warn(LD_CONTROL,
                "Got safe cookie authentication response with wrong length "
-               "(%d)", (int)password_len);
+               "(%d)",
+               (int)password_len);
       errstr = "Wrong length for safe cookie response.";
       goto err;
     }
@@ -312,8 +306,8 @@ handle_control_authenticate(control_connection_t *conn,
     goto ok;
   }
 
-  if (!options->CookieAuthentication && !options->HashedControlPassword &&
-      !options->HashedControlSessionPassword) {
+  if (! options->CookieAuthentication && ! options->HashedControlPassword &&
+      ! options->HashedControlSessionPassword) {
     /* if Tor doesn't demand any stronger authentication, then
      * the controller can get in with anything. */
     goto ok;
@@ -321,17 +315,19 @@ handle_control_authenticate(control_connection_t *conn,
 
   if (options->CookieAuthentication) {
     int also_password = options->HashedControlPassword != NULL ||
-      options->HashedControlSessionPassword != NULL;
+                        options->HashedControlSessionPassword != NULL;
     if (password_len != AUTHENTICATION_COOKIE_LEN) {
-      if (!also_password) {
-        log_warn(LD_CONTROL, "Got authentication cookie with wrong length "
-                 "(%d)", (int)password_len);
+      if (! also_password) {
+        log_warn(LD_CONTROL,
+                 "Got authentication cookie with wrong length "
+                 "(%d)",
+                 (int)password_len);
         errstr = "Wrong length on authentication cookie.";
         goto err;
       }
       bad_cookie = 1;
     } else if (tor_memneq(authentication_cookie, password, password_len)) {
-      if (!also_password) {
+      if (! also_password) {
         log_warn(LD_CONTROL, "Got mismatched authentication cookie");
         errstr = "Authentication cookie did not match expected value.";
         goto err;
@@ -351,7 +347,7 @@ handle_control_authenticate(control_connection_t *conn,
     sl = smartlist_new();
     if (options->HashedControlPassword) {
       sl_tmp = decode_hashed_passwords(options->HashedControlPassword);
-      if (!sl_tmp)
+      if (! sl_tmp)
         bad = 1;
       else {
         smartlist_add_all(sl, sl_tmp);
@@ -360,7 +356,7 @@ handle_control_authenticate(control_connection_t *conn,
     }
     if (options->HashedControlSessionPassword) {
       sl_tmp = decode_hashed_passwords(options->HashedControlSessionPassword);
-      if (!sl_tmp)
+      if (! sl_tmp)
         bad = 1;
       else {
         smartlist_add_all(sl, sl_tmp);
@@ -368,10 +364,11 @@ handle_control_authenticate(control_connection_t *conn,
       }
     }
     if (bad) {
-      if (!also_cookie) {
+      if (! also_cookie) {
         log_warn(LD_BUG,
                  "Couldn't decode HashedControlPassword: invalid base16");
-        errstr="Couldn't decode HashedControlPassword value in configuration.";
+        errstr =
+            "Couldn't decode HashedControlPassword value in configuration.";
         goto err;
       }
       bad_password = 1;
@@ -379,12 +376,11 @@ handle_control_authenticate(control_connection_t *conn,
       smartlist_free(sl);
       sl = NULL;
     } else {
-      SMARTLIST_FOREACH(sl, char *, expected,
-      {
-        secret_to_key_rfc2440(received,DIGEST_LEN,
-                              password,password_len,expected);
-        if (tor_memeq(expected + S2K_RFC2440_SPECIFIER_LEN,
-                      received, DIGEST_LEN))
+      SMARTLIST_FOREACH(sl, char *, expected, {
+        secret_to_key_rfc2440(received, DIGEST_LEN, password, password_len,
+                              expected);
+        if (tor_memeq(expected + S2K_RFC2440_SPECIFIER_LEN, received,
+                      DIGEST_LEN))
           goto ok;
       });
       SMARTLIST_FOREACH(sl, char *, str, tor_free(str));
@@ -393,13 +389,14 @@ handle_control_authenticate(control_connection_t *conn,
 
       if (used_quoted_string)
         errstr = "Password did not match HashedControlPassword value from "
-          "configuration";
+                 "configuration";
       else
-        errstr = "Password did not match HashedControlPassword value from "
-          "configuration. Maybe you tried a plain text password? "
-          "If so, the standard requires that you put it in double quotes.";
+        errstr =
+            "Password did not match HashedControlPassword value from "
+            "configuration. Maybe you tried a plain text password? "
+            "If so, the standard requires that you put it in double quotes.";
       bad_password = 1;
-      if (!also_cookie)
+      if (! also_cookie)
         goto err;
     }
   }
@@ -408,9 +405,9 @@ handle_control_authenticate(control_connection_t *conn,
   tor_assert(bad_password && bad_cookie);
   log_warn(LD_CONTROL, "Bad password or authentication cookie on controller.");
   errstr = "Password did not match HashedControlPassword *or* authentication "
-    "cookie.";
+           "cookie.";
 
- err:
+err:
   tor_free(password);
   control_printf_endreply(conn, 515, "Authentication failed: %s", errstr);
   connection_mark_for_close(TO_CONN(conn));
@@ -419,9 +416,10 @@ handle_control_authenticate(control_connection_t *conn,
     smartlist_free(sl);
   }
   return 0;
- ok:
-  log_info(LD_CONTROL, "Authenticated control connection ("TOR_SOCKET_T_FORMAT
-           ")", conn->base_.s);
+ok:
+  log_info(LD_CONTROL,
+           "Authenticated control connection (" TOR_SOCKET_T_FORMAT ")",
+           conn->base_.s);
   send_control_done(conn);
   conn->base_.state = CONTROL_CONN_STATE_OPEN;
   tor_free(password);

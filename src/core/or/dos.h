@@ -79,13 +79,13 @@ void dos_note_refuse_single_hop_client(void);
 /* Type of defense that we can use for the circuit creation DoS mitigation. */
 typedef enum dos_cc_defense_type_t {
   /* No defense used. */
-  DOS_CC_DEFENSE_NONE             = 1,
+  DOS_CC_DEFENSE_NONE = 1,
   /* Refuse any cells which means a DESTROY cell will be sent back. */
-  DOS_CC_DEFENSE_REFUSE_CELL      = 2,
+  DOS_CC_DEFENSE_REFUSE_CELL = 2,
 
   /* Maximum value that can be used. Useful for the boundaries of the
    * consensus parameter. */
-  DOS_CC_DEFENSE_MAX              = 2,
+  DOS_CC_DEFENSE_MAX = 2,
 } dos_cc_defense_type_t;
 
 void dos_cc_new_create_cell(channel_t *channel);
@@ -106,24 +106,23 @@ dos_cc_defense_type_t dos_cc_get_defense_type(channel_t *chan);
  * mitigation. */
 typedef enum dos_conn_defense_type_t {
   /* No defense used. */
-  DOS_CONN_DEFENSE_NONE             = 1,
+  DOS_CONN_DEFENSE_NONE = 1,
   /* Close immediately the connection meaning refuse it. */
-  DOS_CONN_DEFENSE_CLOSE            = 2,
+  DOS_CONN_DEFENSE_CLOSE = 2,
 
   /* Maximum value that can be used. Useful for the boundaries of the
    * consensus parameter. */
-  DOS_CONN_DEFENSE_MAX              = 2,
+  DOS_CONN_DEFENSE_MAX = 2,
 } dos_conn_defense_type_t;
 
 dos_conn_defense_type_t dos_conn_addr_get_defense_type(const tor_addr_t *addr);
 
 #ifdef DOS_PRIVATE
 
-STATIC uint32_t get_param_conn_max_concurrent_count(
-                                              const networkstatus_t *ns);
+STATIC uint32_t get_param_conn_max_concurrent_count(const networkstatus_t *ns);
 STATIC uint32_t get_param_cc_circuit_burst(const networkstatus_t *ns);
-STATIC uint32_t get_param_cc_min_concurrent_connection(
-                                            const networkstatus_t *ns);
+STATIC uint32_t
+get_param_cc_min_concurrent_connection(const networkstatus_t *ns);
 
 STATIC uint64_t get_circuit_rate_per_second(void);
 STATIC void cc_stats_refill_bucket(cc_client_stats_t *stats,
@@ -137,4 +136,3 @@ MOCK_DECL(STATIC unsigned int, get_param_conn_enabled,
 #endif /* defined(DOS_PRIVATE) */
 
 #endif /* !defined(TOR_DOS_H) */
-

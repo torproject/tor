@@ -40,7 +40,7 @@ struct routerinfo_t {
   /** Length of onion_pkey, in bytes. */
   size_t onion_pkey_len;
 
-  crypto_pk_t *identity_pkey;  /**< Public RSA key for signing. */
+  crypto_pk_t *identity_pkey; /**< Public RSA key for signing. */
   /** Public curve25519 key for onions */
   struct curve25519_public_key_t *onion_curve25519_pkey;
   /** What's the earliest expiration time on all the certs in this
@@ -67,29 +67,29 @@ struct routerinfo_t {
   smartlist_t *declared_family; /**< Nicknames of router which this router
                                  * claims are its family. */
   char *contact_info; /**< Declared contact info for this router. */
-  unsigned int is_hibernating:1; /**< Whether the router claims to be
-                                  * hibernating */
-  unsigned int caches_extra_info:1; /**< Whether the router says it caches and
-                                     * serves extrainfo documents. */
-  unsigned int allow_single_hop_exits:1;  /**< Whether the router says
-                                           * it allows single hop exits. */
+  unsigned int is_hibernating : 1; /**< Whether the router claims to be
+                                    * hibernating */
+  unsigned int caches_extra_info : 1; /**< Whether the router says it caches
+                                       * and serves extrainfo documents. */
+  unsigned int allow_single_hop_exits : 1; /**< Whether the router says
+                                            * it allows single hop exits. */
 
-  unsigned int wants_to_be_hs_dir:1; /**< True iff this router claims to be
-                                      * a hidden service directory. */
-  unsigned int policy_is_reject_star:1; /**< True iff the exit policy for this
-                                         * router rejects everything. */
+  unsigned int wants_to_be_hs_dir : 1; /**< True iff this router claims to be
+                                        * a hidden service directory. */
+  unsigned int policy_is_reject_star : 1; /**< True iff the exit policy for
+                                           * this router rejects everything. */
   /** True if, after we have added this router, we should re-launch
    * tests for it. */
-  unsigned int needs_retest_if_added:1;
+  unsigned int needs_retest_if_added : 1;
 
   /** True iff this router included "tunnelled-dir-server" in its descriptor,
    * implying it accepts tunnelled directory requests, or it advertised
    * dir_port > 0. */
-  unsigned int supports_tunnelled_dir_requests:1;
+  unsigned int supports_tunnelled_dir_requests : 1;
 
   /** Used during voting to indicate that we should not include an entry for
    * this routerinfo. Used only during voting. */
-  unsigned int omit_from_vote:1;
+  unsigned int omit_from_vote : 1;
 
   /** Flags to summarize the protocol versions for this routerinfo_t. */
   protover_summary_flags_t pv;

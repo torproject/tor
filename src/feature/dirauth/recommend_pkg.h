@@ -20,7 +20,7 @@ int validate_recommended_package_line(const char *line);
 static inline int
 validate_recommended_package_line(const char *line)
 {
-  (void) line;
+  (void)line;
   return 0;
 }
 

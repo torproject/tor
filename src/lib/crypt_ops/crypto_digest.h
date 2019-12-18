@@ -49,13 +49,13 @@ typedef enum {
   DIGEST_SHA3_512 = 4,
 } digest_algorithm_t;
 /** Number of digest algorithms that we know */
-#define  N_DIGEST_ALGORITHMS (DIGEST_SHA3_512+1)
+#define N_DIGEST_ALGORITHMS (DIGEST_SHA3_512 + 1)
 /** Number of digest algorithms to compute when computing "all the
  * commonly used digests."
  *
  * (This is used in common_digests_t and related functions.)
  */
-#define  N_COMMON_DIGEST_ALGORITHMS (DIGEST_SHA256+1)
+#define N_COMMON_DIGEST_ALGORITHMS (DIGEST_SHA256 + 1)
 
 /**
  * Bytes of storage needed to record the state of an in-progress SHA-1 digest.
@@ -103,7 +103,7 @@ typedef struct crypto_xof_t crypto_xof_t;
 struct smartlist_t;
 
 /* SHA-1 and other digests */
-MOCK_DECL(int, crypto_digest,(char *digest, const char *m, size_t len));
+MOCK_DECL(int, crypto_digest, (char *digest, const char *m, size_t len));
 int crypto_digest256(char *digest, const char *m, size_t len,
                      digest_algorithm_t algorithm);
 int crypto_digest512(char *digest, const char *m, size_t len,
@@ -131,21 +131,18 @@ void crypto_digest_free_(crypto_digest_t *digest);
   FREE_AND_NULL(crypto_digest_t, crypto_digest_free_, (d))
 void crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
                              size_t len);
-void crypto_digest_get_digest(crypto_digest_t *digest,
-                              char *out, size_t out_len);
+void crypto_digest_get_digest(crypto_digest_t *digest, char *out,
+                              size_t out_len);
 crypto_digest_t *crypto_digest_dup(const crypto_digest_t *digest);
 void crypto_digest_checkpoint(crypto_digest_checkpoint_t *checkpoint,
                               const crypto_digest_t *digest);
 void crypto_digest_restore(crypto_digest_t *digest,
                            const crypto_digest_checkpoint_t *checkpoint);
-void crypto_digest_assign(crypto_digest_t *into,
-                          const crypto_digest_t *from);
-void crypto_hmac_sha256(char *hmac_out,
-                        const char *key, size_t key_len,
+void crypto_digest_assign(crypto_digest_t *into, const crypto_digest_t *from);
+void crypto_hmac_sha256(char *hmac_out, const char *key, size_t key_len,
                         const char *msg, size_t msg_len);
-void crypto_mac_sha3_256(uint8_t *mac_out, size_t len_out,
-                         const uint8_t *key, size_t key_len,
-                         const uint8_t *msg, size_t msg_len);
+void crypto_mac_sha3_256(uint8_t *mac_out, size_t len_out, const uint8_t *key,
+                         size_t key_len, const uint8_t *msg, size_t msg_len);
 
 /* xof functions*/
 crypto_xof_t *crypto_xof_new(void);
@@ -157,8 +154,8 @@ void crypto_xof_free_(crypto_xof_t *xof);
  **/
 #define crypto_xof_free(xof) \
   FREE_AND_NULL(crypto_xof_t, crypto_xof_free_, (xof))
-void crypto_xof(uint8_t *output, size_t output_len,
-                const uint8_t *input, size_t input_len);
+void crypto_xof(uint8_t *output, size_t output_len, const uint8_t *input,
+                size_t input_len);
 
 #ifdef TOR_UNIT_TESTS
 digest_algorithm_t crypto_digest_get_algorithm(crypto_digest_t *digest);

@@ -32,7 +32,7 @@ esc_for_log(const char *s)
   const char *cp;
   char *result, *outp;
   size_t len = 3;
-  if (!s) {
+  if (! s) {
     return tor_strdup("(null)");
   }
 
@@ -47,7 +47,7 @@ esc_for_log(const char *s)
         len += 2;
         break;
       default:
-        if (TOR_ISPRINT(*cp) && ((uint8_t)*cp)<127)
+        if (TOR_ISPRINT(*cp) && ((uint8_t)*cp) < 127)
           ++len;
         else
           len += 4;
@@ -62,7 +62,7 @@ esc_for_log(const char *s)
   for (cp = s; *cp; ++cp) {
     /* This assertion should always succeed, since we will write at least
      * one char here, and two chars for closing quote and nul later */
-    tor_assert((outp-result) < (ssize_t)len-2);
+    tor_assert((outp - result) < (ssize_t)len - 2);
     switch (*cp) {
       case '\\':
       case '\"':
@@ -83,18 +83,18 @@ esc_for_log(const char *s)
         *outp++ = 'r';
         break;
       default:
-        if (TOR_ISPRINT(*cp) && ((uint8_t)*cp)<127) {
+        if (TOR_ISPRINT(*cp) && ((uint8_t)*cp) < 127) {
           *outp++ = *cp;
         } else {
-          tor_assert((outp-result) < (ssize_t)len-4);
-          tor_snprintf(outp, 5, "\\%03o", (int)(uint8_t) *cp);
+          tor_assert((outp - result) < (ssize_t)len - 4);
+          tor_snprintf(outp, 5, "\\%03o", (int)(uint8_t)*cp);
           outp += 4;
         }
         break;
     }
   }
 
-  tor_assert((outp-result) <= (ssize_t)len-2);
+  tor_assert((outp - result) <= (ssize_t)len - 2);
   *outp++ = '\"';
   *outp++ = 0;
 

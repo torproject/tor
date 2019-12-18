@@ -46,7 +46,7 @@ typedef enum was_router_added_t {
 } was_router_added_t;
 
 /** How long do we avoid using a directory server after it's given us a 503? */
-#define DIR_503_TIMEOUT (60*60)
+#define DIR_503_TIMEOUT (60 * 60)
 
 int router_reload_router_list(void);
 
@@ -67,9 +67,9 @@ int hexdigest_to_digest(const char *hexdigest, char *digest);
 const routerinfo_t *router_get_by_id_digest(const char *digest);
 routerinfo_t *router_get_mutable_by_digest(const char *digest);
 signed_descriptor_t *router_get_by_descriptor_digest(const char *digest);
-MOCK_DECL(signed_descriptor_t *,router_get_by_extrainfo_digest,
+MOCK_DECL(signed_descriptor_t *, router_get_by_extrainfo_digest,
           (const char *digest));
-MOCK_DECL(signed_descriptor_t *,extrainfo_get_by_descriptor_digest,
+MOCK_DECL(signed_descriptor_t *, extrainfo_get_by_descriptor_digest,
           (const char *digest));
 const char *signed_descriptor_get_body(const signed_descriptor_t *desc);
 const char *signed_descriptor_get_annotations(const signed_descriptor_t *desc);
@@ -88,8 +88,7 @@ void routerlist_free_all(void);
 void routerlist_reset_warnings(void);
 
 /* XXXX move this */
-void list_pending_downloads(digestmap_t *result,
-                            digest256map_t *result256,
+void list_pending_downloads(digestmap_t *result, digest256map_t *result256,
                             int purpose, const char *prefix);
 
 static int WRA_WAS_ADDED(was_router_added_t s);
@@ -101,7 +100,8 @@ static int WRA_NEVER_DOWNLOADABLE(was_router_added_t s);
  * generator should be notified.
  */
 static inline int
-WRA_WAS_ADDED(was_router_added_t s) {
+WRA_WAS_ADDED(was_router_added_t s)
+{
   return s == ROUTER_ADDED_SUCCESSFULLY;
 }
 /** Return true iff the outcome code in <b>s</b> indicates that the descriptor
@@ -111,45 +111,45 @@ WRA_WAS_ADDED(was_router_added_t s) {
  * - it was outdated.
  * - its certificates were expired.
  */
-static inline int WRA_WAS_OUTDATED(was_router_added_t s)
+static inline int
+WRA_WAS_OUTDATED(was_router_added_t s)
 {
-  return (s == ROUTER_WAS_TOO_OLD ||
-          s == ROUTER_IS_ALREADY_KNOWN ||
+  return (s == ROUTER_WAS_TOO_OLD || s == ROUTER_IS_ALREADY_KNOWN ||
           s == ROUTER_NOT_IN_CONSENSUS ||
           s == ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS ||
           s == ROUTER_CERTS_EXPIRED);
 }
 /** Return true iff the outcome code in <b>s</b> indicates that the descriptor
  * was flat-out rejected. */
-static inline int WRA_WAS_REJECTED(was_router_added_t s)
+static inline int
+WRA_WAS_REJECTED(was_router_added_t s)
 {
   return (s == ROUTER_AUTHDIR_REJECTS);
 }
 /** Return true iff the outcome code in <b>s</b> indicates that the descriptor
  * was flat-out rejected. */
-static inline int WRA_NEVER_DOWNLOADABLE(was_router_added_t s)
+static inline int
+WRA_NEVER_DOWNLOADABLE(was_router_added_t s)
 {
-  return (s == ROUTER_AUTHDIR_REJECTS ||
-          s == ROUTER_BAD_EI ||
-          s == ROUTER_WAS_TOO_OLD ||
-          s == ROUTER_CERTS_EXPIRED);
+  return (s == ROUTER_AUTHDIR_REJECTS || s == ROUTER_BAD_EI ||
+          s == ROUTER_WAS_TOO_OLD || s == ROUTER_CERTS_EXPIRED);
 }
 was_router_added_t router_add_to_routerlist(routerinfo_t *router,
-                                            const char **msg,
-                                            int from_cache,
+                                            const char **msg, int from_cache,
                                             int from_fetch);
-was_router_added_t router_add_extrainfo_to_routerlist(
-                                        extrainfo_t *ei, const char **msg,
-                                        int from_cache, int from_fetch);
+was_router_added_t router_add_extrainfo_to_routerlist(extrainfo_t *ei,
+                                                      const char **msg,
+                                                      int from_cache,
+                                                      int from_fetch);
 void routerlist_descriptors_added(smartlist_t *sl, int from_cache);
 void routerlist_remove_old_routers(void);
 int router_load_single_router(const char *s, uint8_t purpose, int cache,
                               const char **msg);
 int router_load_routers_from_string(const char *s, const char *eos,
-                                     saved_location_t saved_location,
-                                     smartlist_t *requested_fingerprints,
-                                     int descriptor_digests,
-                                     const char *prepend_annotations);
+                                    saved_location_t saved_location,
+                                    smartlist_t *requested_fingerprints,
+                                    int descriptor_digests,
+                                    const char *prepend_annotations);
 void router_load_extrainfo_from_string(const char *s, const char *eos,
                                        saved_location_t saved_location,
                                        smartlist_t *requested_fingerprints,
@@ -182,13 +182,10 @@ void routers_sort_by_identity(smartlist_t *routers);
 void refresh_all_country_info(void);
 
 void list_pending_microdesc_downloads(digest256map_t *result);
-void launch_descriptor_downloads(int purpose,
-                                 smartlist_t *downloadable,
-                                 const routerstatus_t *source,
-                                 time_t now);
+void launch_descriptor_downloads(int purpose, smartlist_t *downloadable,
+                                 const routerstatus_t *source, time_t now);
 
-int hex_digest_nickname_decode(const char *hexdigest,
-                               char *digest_out,
+int hex_digest_nickname_decode(const char *hexdigest, char *digest_out,
                                char *nickname_qualifier_out,
                                char *nickname_out);
 int hex_digest_nickname_matches(const char *hexdigest,
@@ -196,10 +193,10 @@ int hex_digest_nickname_matches(const char *hexdigest,
                                 const char *nickname);
 
 #ifdef ROUTERLIST_PRIVATE
-MOCK_DECL(int, router_descriptor_is_older_than, (const routerinfo_t *router,
-                                                 int seconds));
+MOCK_DECL(int, router_descriptor_is_older_than,
+          (const routerinfo_t *router, int seconds));
 MOCK_DECL(STATIC was_router_added_t, extrainfo_insert,
-          (routerlist_t *rl, extrainfo_t *ei, int warn_if_incompatible));
+          (routerlist_t * rl, extrainfo_t *ei, int warn_if_incompatible));
 
 MOCK_DECL(STATIC void, initiate_descriptor_downloads,
           (const routerstatus_t *source, int purpose, smartlist_t *digests,

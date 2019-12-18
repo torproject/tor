@@ -5,24 +5,28 @@
 #include "core/or/or.h"
 
 #ifdef _WIN32
-#include <direct.h>
+#  include <direct.h>
 #else
-#include <dirent.h>
+#  include <dirent.h>
 #endif
 
 #include "app/config/config.h"
 #include "test/test.h"
 
 #ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
+#  include <sys/stat.h>
 #endif
 
 #ifdef _WIN32
-#define mkdir(a,b) mkdir(a)
-#define tt_int_op_nowin(a,op,b) do { (void)(a); (void)(b); } while (0)
-#define umask(mask) ((void)0)
+#  define mkdir(a, b) mkdir(a)
+#  define tt_int_op_nowin(a, op, b) \
+    do {                            \
+      (void)(a);                    \
+      (void)(b);                    \
+    } while (0)
+#  define umask(mask) ((void)0)
 #else
-#define tt_int_op_nowin(a,op,b) tt_int_op((a),op,(b))
+#  define tt_int_op_nowin(a, op, b) tt_int_op((a), op, (b))
 #endif /* defined(_WIN32) */
 
 /** Run unit tests for private dir permission enforcement logic. */
@@ -33,9 +37,9 @@ test_checkdir_perms(void *testdata)
   or_options_t *options = get_options_mutable();
   const char *subdir = "test_checkdir";
   char *testdir = NULL;
-  cpd_check_t  cpd_chkopts;
-  cpd_check_t  unix_create_opts;
-  cpd_check_t  unix_verify_optsmask;
+  cpd_check_t cpd_chkopts;
+  cpd_check_t unix_create_opts;
+  cpd_check_t unix_verify_optsmask;
   struct stat st;
 
   umask(022);
@@ -56,7 +60,7 @@ test_checkdir_perms(void *testdata)
 
   /* test: create new dir, CPD_GROUP_OK option set. */
   testdir = get_datadir_fname("checkdir_new_groupok");
-  cpd_chkopts = CPD_CREATE|CPD_GROUP_OK;
+  cpd_chkopts = CPD_CREATE | CPD_GROUP_OK;
   unix_verify_optsmask = 0077;
   tt_int_op(0, OP_EQ, check_private_dir(testdir, cpd_chkopts, NULL));
   tt_int_op(0, OP_EQ, stat(testdir, &st));
@@ -67,13 +71,13 @@ test_checkdir_perms(void *testdata)
            wrong perms */
   testdir = get_datadir_fname("checkdir_new_groupok_err");
   tt_int_op(0, OP_EQ, mkdir(testdir, 027));
-  cpd_chkopts = CPD_CHECK_MODE_ONLY|CPD_CREATE|CPD_GROUP_OK;
+  cpd_chkopts = CPD_CHECK_MODE_ONLY | CPD_CREATE | CPD_GROUP_OK;
   tt_int_op_nowin(-1, OP_EQ, check_private_dir(testdir, cpd_chkopts, NULL));
   tor_free(testdir);
 
   /* test: create new dir, CPD_GROUP_READ option set. */
   testdir = get_datadir_fname("checkdir_new_groupread");
-  cpd_chkopts = CPD_CREATE|CPD_GROUP_READ;
+  cpd_chkopts = CPD_CREATE | CPD_GROUP_READ;
   unix_verify_optsmask = 0027;
   tt_int_op(0, OP_EQ, check_private_dir(testdir, cpd_chkopts, NULL));
   tt_int_op(0, OP_EQ, stat(testdir, &st));
@@ -120,7 +124,7 @@ test_checkdir_perms(void *testdata)
   /* test: check existing dir created with CPD_GROUP_READ,
             and verify with CPD_GROUP_OK option set. */
   testdir = get_datadir_fname("checkdir_existsread_groupok");
-  cpd_chkopts = CPD_CREATE|CPD_GROUP_READ;
+  cpd_chkopts = CPD_CREATE | CPD_GROUP_READ;
   unix_verify_optsmask = 0027;
   tt_int_op(0, OP_EQ, check_private_dir(testdir, cpd_chkopts, NULL));
   cpd_chkopts = CPD_GROUP_OK;
@@ -132,20 +136,20 @@ test_checkdir_perms(void *testdata)
   /* test: check existing dir created with CPD_GROUP_READ,
             and verify with CPD_GROUP_READ option set. */
   testdir = get_datadir_fname("checkdir_existsread_groupread");
-  cpd_chkopts = CPD_CREATE|CPD_GROUP_READ;
+  cpd_chkopts = CPD_CREATE | CPD_GROUP_READ;
   unix_verify_optsmask = 0027;
   tt_int_op(0, OP_EQ, check_private_dir(testdir, cpd_chkopts, NULL));
   tt_int_op(0, OP_EQ, stat(testdir, &st));
   tt_int_op_nowin(0, OP_EQ, (st.st_mode & unix_verify_optsmask));
 
- done:
+done:
   tor_free(testdir);
 }
 
-#define CHECKDIR(name,flags)                              \
-  { #name, test_checkdir_##name, (flags), NULL, NULL }
+#define CHECKDIR(name, flags)                        \
+  {                                                  \
+#    name, test_checkdir_##name, (flags), NULL, NULL \
+  }
 
-struct testcase_t checkdir_tests[] = {
-  CHECKDIR(perms, TT_FORK),
-  END_OF_TESTCASES
-};
+struct testcase_t checkdir_tests[] = {CHECKDIR(perms, TT_FORK),
+                                      END_OF_TESTCASES};

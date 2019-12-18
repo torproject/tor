@@ -21,11 +21,11 @@ void addressmap_clean(time_t now);
 void addressmap_clear_configured(void);
 void addressmap_clear_transient(void);
 void addressmap_free_all(void);
-#define AMR_FLAG_USE_IPV4_DNS   (1u<<0)
-#define AMR_FLAG_USE_IPV6_DNS   (1u<<1)
-#define AMR_FLAG_USE_MAPADDRESS (1u<<2)
-#define AMR_FLAG_USE_AUTOMAP    (1u<<3)
-#define AMR_FLAG_USE_TRACKEXIT  (1u<<4)
+#define AMR_FLAG_USE_IPV4_DNS (1u << 0)
+#define AMR_FLAG_USE_IPV6_DNS (1u << 1)
+#define AMR_FLAG_USE_MAPADDRESS (1u << 2)
+#define AMR_FLAG_USE_AUTOMAP (1u << 3)
+#define AMR_FLAG_USE_TRACKEXIT (1u << 4)
 int addressmap_rewrite(char *address, size_t maxlen, unsigned flags,
                        time_t *expires_out,
                        addressmap_entry_source_t *exit_source_out);
@@ -37,9 +37,8 @@ void addressmap_register(const char *address, char *new_address,
                          time_t expires, addressmap_entry_source_t source,
                          const int address_wildcard,
                          const int new_address_wildcard);
-int parse_virtual_addr_network(const char *val,
-                               sa_family_t family, int validate_only,
-                               char **msg);
+int parse_virtual_addr_network(const char *val, sa_family_t family,
+                               int validate_only, char **msg);
 int client_dns_incr_failures(const char *address);
 void client_dns_clear_failures(const char *address);
 void client_dns_set_addressmap(entry_connection_t *for_conn,

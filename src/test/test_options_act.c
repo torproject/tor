@@ -13,7 +13,7 @@
 #include "test/test_helpers.h"
 
 #ifndef _WIN32
-#include <sys/stat.h>
+#  include <sys/stat.h>
 
 /**
  * Check whether fname is readable. On success set
@@ -27,22 +27,23 @@ get_file_mode(const char *fname, unsigned *permissions_out)
   int r = stat(fname, &st);
   if (r < 0)
     return -1;
-  *permissions_out = (unsigned) st.st_mode;
+  *permissions_out = (unsigned)st.st_mode;
   return 0;
 }
-#define assert_mode(fn,mask,expected) STMT_BEGIN                 \
-  unsigned mode_;                                                \
-  int tmp_ = get_file_mode((fn), &mode_);                        \
-  if (tmp_ < 0) {                                                \
-    TT_DIE(("Couldn't stat %s: %s", (fn), strerror(errno)));     \
-  }                                                              \
-  if ((mode_ & (mask)) != (expected)) {                          \
-    TT_DIE(("Bad mode %o on %s", mode_, (fn)));                  \
-  }                                                              \
-  STMT_END
+#  define assert_mode(fn, mask, expected)                        \
+    STMT_BEGIN                                                   \
+      unsigned mode_;                                            \
+      int tmp_ = get_file_mode((fn), &mode_);                    \
+      if (tmp_ < 0) {                                            \
+        TT_DIE(("Couldn't stat %s: %s", (fn), strerror(errno))); \
+      }                                                          \
+      if ((mode_ & (mask)) != (expected)) {                      \
+        TT_DIE(("Bad mode %o on %s", mode_, (fn)));              \
+      }                                                          \
+    STMT_END
 #else
 /* "group-readable" isn't meaningful on windows */
-#define assert_mode(fn,mask,expected) STMT_NIL
+#  define assert_mode(fn, mask, expected) STMT_NIL
 #endif
 
 static or_options_t *mock_opts;
@@ -131,7 +132,7 @@ test_options_act_create_dirs(void *arg)
   write_str_to_file(opts->DataDirectory, "foo", 0);
   r = options_create_directories(&msg);
   tt_int_op(r, OP_LT, 0);
-  tt_assert(!strcmpstart(msg, "Couldn't create private data directory"));
+  tt_assert(! strcmpstart(msg, "Couldn't create private data directory"));
   or_options_free(opts);
   tor_free(msg);
 
@@ -143,7 +144,7 @@ test_options_act_create_dirs(void *arg)
   write_str_to_file(opts->KeyDirectory, "foo", 0);
   r = options_create_directories(&msg);
   tt_int_op(r, OP_LT, 0);
-  tt_assert(!strcmpstart(msg, "Couldn't create private data directory"));
+  tt_assert(! strcmpstart(msg, "Couldn't create private data directory"));
   or_options_free(opts);
   tor_free(msg);
 
@@ -155,12 +156,12 @@ test_options_act_create_dirs(void *arg)
   write_str_to_file(opts->CacheDirectory, "foo", 0);
   r = options_create_directories(&msg);
   tt_int_op(r, OP_LT, 0);
-  tt_assert(!strcmpstart(msg, "Couldn't create private data directory"));
+  tt_assert(! strcmpstart(msg, "Couldn't create private data directory"));
   tor_free(fn);
   or_options_free(opts);
   tor_free(msg);
 
- done:
+done:
   UNMOCK(get_options);
   or_options_free(opts);
   mock_opts = NULL;
@@ -184,11 +185,11 @@ test_options_act_log_transition(void *arg)
   config_line_append(&opts->Logs, "Log", "notice stdout");
   lt = options_start_log_transaction(NULL, &msg);
   tt_assert(lt);
-  tt_assert(!msg);
+  tt_assert(! msg);
 
   // commit, see that there is a change.
   options_commit_log_transaction(lt);
-  lt=NULL;
+  lt = NULL;
   tt_int_op(get_min_log_level(), OP_EQ, LOG_NOTICE);
 
   // Now drop to debug.
@@ -199,11 +200,11 @@ test_options_act_log_transition(void *arg)
   config_line_append(&opts->Logs, "Log", "debug stdout");
   lt = options_start_log_transaction(old_opts, &msg);
   tt_assert(lt);
-  tt_assert(!msg);
+  tt_assert(! msg);
 
   setup_full_capture_of_logs(LOG_NOTICE);
   options_commit_log_transaction(lt);
-  lt=NULL;
+  lt = NULL;
   expect_single_log_msg_containing("may contain sensitive information");
   tt_int_op(get_min_log_level(), OP_EQ, LOG_DEBUG);
 
@@ -217,9 +218,9 @@ test_options_act_log_transition(void *arg)
   config_line_append(&opts->Logs, "Log", "debug stdout");
   lt = options_start_log_transaction(old_opts, &msg);
   tt_assert(lt);
-  tt_assert(!msg);
+  tt_assert(! msg);
   options_commit_log_transaction(lt);
-  lt=NULL;
+  lt = NULL;
   expect_single_log_msg_containing("may contain sensitive information");
   tt_int_op(get_min_log_level(), OP_EQ, LOG_DEBUG);
 
@@ -233,7 +234,7 @@ test_options_act_log_transition(void *arg)
   config_line_append(&opts->Logs, "Log", "notice stdout");
   lt = options_start_log_transaction(old_opts, &msg);
   tt_assert(lt);
-  tt_assert(!msg);
+  tt_assert(! msg);
   options_rollback_log_transaction(lt);
   expect_no_log_entry();
   lt = NULL;
@@ -246,12 +247,12 @@ test_options_act_log_transition(void *arg)
   opts->LogTimeGranularity = 1000;
   config_line_append(&opts->Logs, "Log", "warn blaznert");
   lt = options_start_log_transaction(old_opts, &msg);
-  tt_assert(!lt);
+  tt_assert(! lt);
   tt_str_op(msg, OP_EQ, "Failed to init Log options. See logs for details.");
   expect_single_log_msg_containing("Couldn't parse");
   tt_int_op(get_min_log_level(), OP_EQ, LOG_DEBUG);
 
- done:
+done:
   UNMOCK(get_options);
   or_options_free(opts);
   or_options_free(old_opts);
@@ -262,11 +263,11 @@ test_options_act_log_transition(void *arg)
 }
 
 #ifndef COCCI
-#define T(name) { #name, test_options_act_##name, TT_FORK, NULL, NULL }
+#  define T(name)                                         \
+    {                                                     \
+#      name, test_options_act_##name, TT_FORK, NULL, NULL \
+    }
 #endif
 
-struct testcase_t options_act_tests[] = {
-  T(create_dirs),
-  T(log_transition),
-  END_OF_TESTCASES
-};
+struct testcase_t options_act_tests[] = {T(create_dirs), T(log_transition),
+                                         END_OF_TESTCASES};

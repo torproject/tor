@@ -15,14 +15,12 @@
 int directory_handle_command(dir_connection_t *conn);
 
 #ifdef DIRCACHE_PRIVATE
-MOCK_DECL(STATIC int, directory_handle_command_get,(dir_connection_t *conn,
-                                                    const char *headers,
-                                                    const char *req_body,
-                                                    size_t req_body_len));
-MOCK_DECL(STATIC int, directory_handle_command_post,(dir_connection_t *conn,
-                                                     const char *headers,
-                                                     const char *body,
-                                                     size_t body_len));
+MOCK_DECL(STATIC int, directory_handle_command_get,
+          (dir_connection_t * conn, const char *headers, const char *req_body,
+           size_t req_body_len));
+MOCK_DECL(STATIC int, directory_handle_command_post,
+          (dir_connection_t * conn, const char *headers, const char *body,
+           size_t body_len));
 
 STATIC int handle_post_hs_descriptor(const char *url, const char *body);
 enum compression_level_t;

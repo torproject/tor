@@ -42,31 +42,27 @@ typedef struct ed25519_keypair_t {
 } ed25519_keypair_t;
 
 int ed25519_secret_key_generate(ed25519_secret_key_t *seckey_out,
-                            int extra_strong);
+                                int extra_strong);
 int ed25519_secret_key_from_seed(ed25519_secret_key_t *seckey_out,
                                  const uint8_t *seed);
 
 int ed25519_public_key_generate(ed25519_public_key_t *pubkey_out,
-                            const ed25519_secret_key_t *seckey);
+                                const ed25519_secret_key_t *seckey);
 int ed25519_keypair_generate(ed25519_keypair_t *keypair_out, int extra_strong);
-int ed25519_sign(ed25519_signature_t *signature_out,
-                 const uint8_t *msg, size_t len,
-                 const ed25519_keypair_t *key);
-MOCK_DECL(int,ed25519_checksig,(const ed25519_signature_t *signature,
-                                const uint8_t *msg, size_t len,
-                                const ed25519_public_key_t *pubkey));
+int ed25519_sign(ed25519_signature_t *signature_out, const uint8_t *msg,
+                 size_t len, const ed25519_keypair_t *key);
+MOCK_DECL(int, ed25519_checksig,
+          (const ed25519_signature_t *signature, const uint8_t *msg,
+           size_t len, const ed25519_public_key_t *pubkey));
 
-MOCK_DECL(int,
-ed25519_sign_prefixed,(ed25519_signature_t *signature_out,
-                       const uint8_t *msg, size_t len,
-                       const char *prefix_str,
-                       const ed25519_keypair_t *keypair));
+MOCK_DECL(int, ed25519_sign_prefixed,
+          (ed25519_signature_t * signature_out, const uint8_t *msg, size_t len,
+           const char *prefix_str, const ed25519_keypair_t *keypair));
 
-int
-ed25519_checksig_prefixed(const ed25519_signature_t *signature,
-                          const uint8_t *msg, size_t len,
-                          const char *prefix_str,
-                          const ed25519_public_key_t *pubkey);
+int ed25519_checksig_prefixed(const ed25519_signature_t *signature,
+                              const uint8_t *msg, size_t len,
+                              const char *prefix_str,
+                              const ed25519_public_key_t *pubkey);
 
 int ed25519_public_key_is_zero(const ed25519_public_key_t *pubkey);
 
@@ -85,19 +81,18 @@ typedef struct {
   size_t len;
 } ed25519_checkable_t;
 
-MOCK_DECL(int, ed25519_checksig_batch,(int *okay_out,
-                                       const ed25519_checkable_t *checkable,
-                                       int n_checkable));
+MOCK_DECL(int, ed25519_checksig_batch,
+          (int *okay_out, const ed25519_checkable_t *checkable,
+           int n_checkable));
 
 int ed25519_keypair_from_curve25519_keypair(ed25519_keypair_t *out,
                                             int *signbit_out,
                                             const curve25519_keypair_t *inp);
 
-int ed25519_public_key_from_curve25519_public_key(ed25519_public_key_t *pubkey,
-                                     const curve25519_public_key_t *pubkey_in,
-                                     int signbit);
-int ed25519_keypair_blind(ed25519_keypair_t *out,
-                          const ed25519_keypair_t *inp,
+int ed25519_public_key_from_curve25519_public_key(
+    ed25519_public_key_t *pubkey, const curve25519_public_key_t *pubkey_in,
+    int signbit);
+int ed25519_keypair_blind(ed25519_keypair_t *out, const ed25519_keypair_t *inp,
                           const uint8_t *param);
 int ed25519_public_blind(ed25519_public_key_t *out,
                          const ed25519_public_key_t *inp,
@@ -106,17 +101,13 @@ int ed25519_public_blind(ed25519_public_key_t *out,
 /* XXXX read encrypted, write encrypted. */
 
 int ed25519_seckey_write_to_file(const ed25519_secret_key_t *seckey,
-                                 const char *filename,
-                                 const char *tag);
+                                 const char *filename, const char *tag);
 int ed25519_seckey_read_from_file(ed25519_secret_key_t *seckey_out,
-                                  char **tag_out,
-                                  const char *filename);
+                                  char **tag_out, const char *filename);
 int ed25519_pubkey_write_to_file(const ed25519_public_key_t *pubkey,
-                                 const char *filename,
-                                 const char *tag);
+                                 const char *filename, const char *tag);
 int ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
-                                  char **tag_out,
-                                  const char *filename);
+                                  char **tag_out, const char *filename);
 
 void ed25519_keypair_free_(ed25519_keypair_t *kp);
 #define ed25519_keypair_free(kp) \

@@ -15,33 +15,33 @@
 #include "lib/string/parse_int.h"
 
 #ifdef HAVE_SIGNAL_H
-#include <signal.h>
+#  include <signal.h>
 #endif
 #ifdef HAVE_ERRNO_H
-#include <errno.h>
+#  include <errno.h>
 #endif
 #ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
+#  include <sys/time.h>
 #endif
 
 #ifdef _WIN32
-#include <winsock2.h>
-#include <windows.h>
+#  include <winsock2.h>
+#  include <windows.h>
 #endif
 
 #if (0 == SIZEOF_PID_T) && defined(_WIN32)
 /* Windows does not define pid_t sometimes, but _getpid() returns an int.
  * Everybody else needs to have a pid_t. */
 typedef int pid_t;
-#define PID_T_FORMAT "%d"
+#  define PID_T_FORMAT "%d"
 #elif (SIZEOF_PID_T == SIZEOF_INT) || (SIZEOF_PID_T == SIZEOF_SHORT)
-#define PID_T_FORMAT "%d"
+#  define PID_T_FORMAT "%d"
 #elif (SIZEOF_PID_T == SIZEOF_LONG)
-#define PID_T_FORMAT "%ld"
+#  define PID_T_FORMAT "%ld"
 #elif (SIZEOF_PID_T == 8)
-#define PID_T_FORMAT "%"PRId64
+#  define PID_T_FORMAT "%" PRId64
 #else
-#error Unknown: SIZEOF_PID_T
+#  error Unknown: SIZEOF_PID_T
 #endif /* (0 == SIZEOF_PID_T) && defined(_WIN32) || ... */
 
 /* Define to 1 if process-termination monitors on this OS and Libevent
@@ -50,8 +50,7 @@ typedef int pid_t;
 /* Currently we need to poll in some way on all systems. */
 
 #ifdef PROCMON_POLLS
-static void tor_process_monitor_poll_cb(periodic_timer_t *ev,
-                                        void *procmon_);
+static void tor_process_monitor_poll_cb(periodic_timer_t *ev, void *procmon_);
 #endif
 
 /* This struct may contain pointers into the original process
@@ -88,13 +87,13 @@ parse_process_specifier(const char *process_spec,
   }
 
   ppspec->pid = (pid_t)(pid_l);
-  if (!pid_ok || (pid_l != (long)(ppspec->pid))) {
+  if (! pid_ok || (pid_l != (long)(ppspec->pid))) {
     *msg = "invalid PID";
     goto err;
   }
 
   return 0;
- err:
+err:
   return -1;
 }
 
@@ -154,8 +153,7 @@ struct tor_process_monitor_t {
  * error message into *<b>msg</b> on failure.  The caller must not
  * free the returned error message. */
 int
-tor_validate_process_specifier(const char *process_spec,
-                               const char **msg)
+tor_validate_process_specifier(const char *process_spec, const char **msg)
 {
   struct parsed_process_specifier_t ppspec;
 
@@ -178,14 +176,13 @@ static const struct timeval poll_interval_tv = {15, 0};
  * <b>cb</b>(<b>cb_arg</b>).
  */
 tor_process_monitor_t *
-tor_process_monitor_new(struct event_base *base,
-                        const char *process_spec,
+tor_process_monitor_new(struct event_base *base, const char *process_spec,
                         log_domain_mask_t log_domain,
                         tor_procmon_callback_t cb, void *cb_arg,
                         const char **msg)
 {
-  tor_process_monitor_t *procmon = tor_malloc_zero(
-                                       sizeof(tor_process_monitor_t));
+  tor_process_monitor_t *procmon =
+      tor_malloc_zero(sizeof(tor_process_monitor_t));
   struct parsed_process_specifier_t ppspec;
 
   tor_assert(msg != NULL);
@@ -204,21 +201,20 @@ tor_process_monitor_new(struct event_base *base,
   procmon->pid = ppspec.pid;
 
 #ifdef _WIN32
-  procmon->hproc = OpenProcess(PROCESS_QUERY_INFORMATION | SYNCHRONIZE,
-                               FALSE,
+  procmon->hproc = OpenProcess(PROCESS_QUERY_INFORMATION | SYNCHRONIZE, FALSE,
                                procmon->pid);
 
   if (procmon->hproc != NULL) {
     procmon->poll_hproc = 1;
-    log_info(procmon->log_domain, "Successfully opened handle to process "
-             PID_T_FORMAT"; "
+    log_info(procmon->log_domain,
+             "Successfully opened handle to process " PID_T_FORMAT "; "
              "monitoring it.",
              procmon->pid);
   } else {
     /* If we couldn't get a handle to the process, we'll try again the
      * first time we poll. */
-    log_info(procmon->log_domain, "Failed to open handle to process "
-             PID_T_FORMAT"; will "
+    log_info(procmon->log_domain,
+             "Failed to open handle to process " PID_T_FORMAT "; will "
              "try again later.",
              procmon->pid);
   }
@@ -228,15 +224,14 @@ tor_process_monitor_new(struct event_base *base,
   procmon->cb_arg = cb_arg;
 
 #ifdef PROCMON_POLLS
-  procmon->e = periodic_timer_new(base,
-                                  &poll_interval_tv,
+  procmon->e = periodic_timer_new(base, &poll_interval_tv,
                                   tor_process_monitor_poll_cb, procmon);
 #else /* !(defined(PROCMON_POLLS)) */
-#error OOPS?
+#  error OOPS?
 #endif /* defined(PROCMON_POLLS) */
 
   return procmon;
- err:
+err:
   tor_process_monitor_free(procmon);
   return NULL;
 }
@@ -253,13 +248,14 @@ tor_process_monitor_poll_cb(periodic_timer_t *event, void *procmon_)
 
   tor_assert(procmon != NULL);
 
-#ifdef _WIN32
+#  ifdef _WIN32
   if (procmon->poll_hproc) {
     DWORD exit_code;
-    if (!GetExitCodeProcess(procmon->hproc, &exit_code)) {
+    if (! GetExitCodeProcess(procmon->hproc, &exit_code)) {
       char *errmsg = format_win32_error(GetLastError());
-      log_warn(procmon->log_domain, "Error \"%s\" occurred while polling "
-               "handle for monitored process "PID_T_FORMAT"; assuming "
+      log_warn(procmon->log_domain,
+               "Error \"%s\" occurred while polling "
+               "handle for monitored process " PID_T_FORMAT "; assuming "
                "it's dead.",
                errmsg, procmon->pid);
       tor_free(errmsg);
@@ -271,12 +267,12 @@ tor_process_monitor_poll_cb(periodic_timer_t *event, void *procmon_)
     /* All we can do is try to open the process, and look at the error
      * code if it fails again. */
     procmon->hproc = OpenProcess(PROCESS_QUERY_INFORMATION | SYNCHRONIZE,
-                                 FALSE,
-                                 procmon->pid);
+                                 FALSE, procmon->pid);
 
     if (procmon->hproc != NULL) {
-      log_info(procmon->log_domain, "Successfully opened handle to monitored "
-               "process "PID_T_FORMAT".",
+      log_info(procmon->log_domain,
+               "Successfully opened handle to monitored "
+               "process " PID_T_FORMAT ".",
                procmon->pid);
       its_dead_jim = 0;
       procmon->poll_hproc = 1;
@@ -293,26 +289,25 @@ tor_process_monitor_poll_cb(periodic_timer_t *event, void *procmon_)
        * mean that the process we are monitoring is still alive. */
       its_dead_jim = (err_code == ERROR_INVALID_PARAMETER);
 
-      if (!its_dead_jim)
-        log_info(procmon->log_domain, "Failed to open handle to monitored "
-                 "process "PID_T_FORMAT", and error code %lu (%s) is not "
+      if (! its_dead_jim)
+        log_info(procmon->log_domain,
+                 "Failed to open handle to monitored "
+                 "process " PID_T_FORMAT ", and error code %lu (%s) is not "
                  "'invalid parameter' -- assuming the process is still alive.",
-                 procmon->pid,
-                 err_code, errmsg);
+                 procmon->pid, err_code, errmsg);
 
       tor_free(errmsg);
     }
   }
-#else /* !defined(_WIN32) */
+#  else /* !defined(_WIN32) */
   /* Unix makes this part easy, if a bit racy. */
   its_dead_jim = kill(procmon->pid, 0);
   its_dead_jim = its_dead_jim && (errno == ESRCH);
-#endif /* defined(_WIN32) */
+#  endif /* defined(_WIN32) */
 
-  tor_log(its_dead_jim ? LOG_NOTICE : LOG_INFO,
-      procmon->log_domain, "Monitored process "PID_T_FORMAT" is %s.",
-      procmon->pid,
-      its_dead_jim ? "dead" : "still alive");
+  tor_log(its_dead_jim ? LOG_NOTICE : LOG_INFO, procmon->log_domain,
+          "Monitored process " PID_T_FORMAT " is %s.", procmon->pid,
+          its_dead_jim ? "dead" : "still alive");
 
   if (its_dead_jim) {
     procmon->cb(procmon->cb_arg);

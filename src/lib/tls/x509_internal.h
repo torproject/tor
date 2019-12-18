@@ -18,26 +18,22 @@
  * How skewed do we allow our clock to be with respect to certificates that
  * seem to be expired? (seconds)
  */
-#define TOR_X509_PAST_SLOP (2*24*60*60)
+#define TOR_X509_PAST_SLOP (2 * 24 * 60 * 60)
 /**
  * How skewed do we allow our clock to be with respect to certificates that
  * seem to come from the future? (seconds)
  */
-#define  TOR_X509_FUTURE_SLOP (30*24*60*60)
+#define TOR_X509_FUTURE_SLOP (30 * 24 * 60 * 60)
 
 MOCK_DECL(tor_x509_cert_impl_t *, tor_tls_create_certificate,
-                                                   (crypto_pk_t *rsa,
-                                                    crypto_pk_t *rsa_sign,
-                                                    const char *cname,
-                                                    const char *cname_sign,
-                                                  unsigned int cert_lifetime));
+          (crypto_pk_t * rsa, crypto_pk_t *rsa_sign, const char *cname,
+           const char *cname_sign, unsigned int cert_lifetime));
 MOCK_DECL(tor_x509_cert_t *, tor_x509_cert_new,
-          (tor_x509_cert_impl_t *x509_cert));
+          (tor_x509_cert_impl_t * x509_cert));
 
 int tor_x509_check_cert_lifetime_internal(int severity,
                                           const tor_x509_cert_impl_t *cert,
-                                          time_t now,
-                                          int past_tolerance,
+                                          time_t now, int past_tolerance,
                                           int future_tolerance);
 
 void tor_x509_cert_impl_free_(tor_x509_cert_impl_t *cert);
@@ -47,7 +43,7 @@ tor_x509_cert_impl_t *tor_x509_cert_impl_dup_(tor_x509_cert_impl_t *cert);
 #ifdef ENABLE_OPENSSL
 int tor_x509_cert_set_cached_der_encoding(tor_x509_cert_t *cert);
 #else
-#define tor_x509_cert_set_cached_der_encoding(cert) (0)
+#  define tor_x509_cert_set_cached_der_encoding(cert) (0)
 #endif
 
 #endif /* !defined(TOR_X509_INTERNAL_H) */

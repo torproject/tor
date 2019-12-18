@@ -27,7 +27,7 @@ tor_cond_t *
 tor_cond_new(void)
 {
   tor_cond_t *cond = tor_malloc(sizeof(tor_cond_t));
-  if (BUG(tor_cond_init(cond)<0))
+  if (BUG(tor_cond_init(cond) < 0))
     tor_free(cond); // LCOV_EXCL_LINE
   return cond;
 }
@@ -36,7 +36,7 @@ tor_cond_new(void)
 void
 tor_cond_free_(tor_cond_t *c)
 {
-  if (!c)
+  if (! c)
     return;
   tor_cond_uninit(c);
   tor_free(c);
@@ -128,10 +128,10 @@ subsys_threads_initialize(void)
 }
 
 const subsys_fns_t sys_threads = {
-  .name = "threads",
-  .supported = true,
-  /* Threads is used by logging, which is a diagnostic feature, we want it to
-   * init right after low-level error handling and approx time. */
-  .level = -95,
-  .initialize = subsys_threads_initialize,
+    .name = "threads",
+    .supported = true,
+    /* Threads is used by logging, which is a diagnostic feature, we want it to
+     * init right after low-level error handling and approx time. */
+    .level = -95,
+    .initialize = subsys_threads_initialize,
 };

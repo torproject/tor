@@ -54,7 +54,7 @@ typedef enum {
   /* This state has used up its cell count */
   CIRCPAD_EVENT_LENGTH_COUNT = 6
 } circpad_event_t;
-#define CIRCPAD_NUM_EVENTS ((int)CIRCPAD_EVENT_LENGTH_COUNT+1)
+#define CIRCPAD_NUM_EVENTS ((int)CIRCPAD_EVENT_LENGTH_COUNT + 1)
 
 /** Boolean type that says if we decided to transition states or not */
 typedef enum {
@@ -73,7 +73,7 @@ typedef uint64_t circpad_time_t;
 
 /** The type for timer delays, in microseconds */
 typedef uint32_t circpad_delay_t;
-#define CIRCPAD_DELAY_UNITS_PER_SECOND  (1000*1000)
+#define CIRCPAD_DELAY_UNITS_PER_SECOND (1000 * 1000)
 
 /**
  * An infinite padding cell delay means don't schedule any padding --
@@ -84,21 +84,21 @@ typedef uint32_t circpad_delay_t;
  * XXX: Is this enough if we want to simulate light, intermittent
  * activity on an onion service?
  */
-#define CIRCPAD_DELAY_INFINITE  (UINT32_MAX)
+#define CIRCPAD_DELAY_INFINITE (UINT32_MAX)
 
 /**
  * This is the maximum delay that the circuit padding system can have, in
  * seconds.
  */
-#define CIRCPAD_DELAY_MAX_SECS   \
-    ((CIRCPAD_DELAY_INFINITE/CIRCPAD_DELAY_UNITS_PER_SECOND)+1)
+#define CIRCPAD_DELAY_MAX_SECS \
+  ((CIRCPAD_DELAY_INFINITE / CIRCPAD_DELAY_UNITS_PER_SECOND) + 1)
 
 /**
  * Macro to clarify when we're checking the infinity bin.
  *
  * Works with either circpad_state_t or circpad_machine_runtime_t
  */
-#define CIRCPAD_INFINITY_BIN(mi)  ((mi)->histogram_len-1)
+#define CIRCPAD_INFINITY_BIN(mi) ((mi)->histogram_len - 1)
 
 /**
  * These constants form a bitfield that specifies when a state machine
@@ -114,25 +114,25 @@ typedef uint32_t circpad_delay_t;
  */
 typedef enum {
   /* Only apply machine if the circuit is still building */
-  CIRCPAD_CIRC_BUILDING = 1<<0,
+  CIRCPAD_CIRC_BUILDING = 1 << 0,
   /* Only apply machine if the circuit is open */
-  CIRCPAD_CIRC_OPENED = 1<<1,
+  CIRCPAD_CIRC_OPENED = 1 << 1,
   /* Only apply machine if the circuit has no attached streams */
-  CIRCPAD_CIRC_NO_STREAMS = 1<<2,
+  CIRCPAD_CIRC_NO_STREAMS = 1 << 2,
   /* Only apply machine if the circuit has attached streams */
-  CIRCPAD_CIRC_STREAMS = 1<<3,
+  CIRCPAD_CIRC_STREAMS = 1 << 3,
   /* Only apply machine if the circuit still allows RELAY_EARLY cells */
-  CIRCPAD_CIRC_HAS_RELAY_EARLY = 1<<4,
+  CIRCPAD_CIRC_HAS_RELAY_EARLY = 1 << 4,
   /* Only apply machine if the circuit has depleted its RELAY_EARLY cells
    * allowance. */
-  CIRCPAD_CIRC_HAS_NO_RELAY_EARLY = 1<<5
+  CIRCPAD_CIRC_HAS_NO_RELAY_EARLY = 1 << 5
 } circpad_circuit_state_t;
 
 /** Bitmask that says "apply this machine to all states" */
-#define CIRCPAD_STATE_ALL   \
-    (CIRCPAD_CIRC_BUILDING|CIRCPAD_CIRC_OPENED| \
-     CIRCPAD_CIRC_STREAMS|CIRCPAD_CIRC_NO_STREAMS| \
-     CIRCPAD_CIRC_HAS_RELAY_EARLY|CIRCPAD_CIRC_HAS_NO_RELAY_EARLY)
+#define CIRCPAD_STATE_ALL                                               \
+  (CIRCPAD_CIRC_BUILDING | CIRCPAD_CIRC_OPENED | CIRCPAD_CIRC_STREAMS | \
+   CIRCPAD_CIRC_NO_STREAMS | CIRCPAD_CIRC_HAS_RELAY_EARLY |             \
+   CIRCPAD_CIRC_HAS_NO_RELAY_EARLY)
 
 /**
  * A compact circuit purpose bitfield mask that allows us to compactly
@@ -253,7 +253,7 @@ typedef struct circpad_distribution_t {
 
 /** State number type. Represents current state of state machine. */
 typedef uint16_t circpad_statenum_t;
-#define  CIRCPAD_STATENUM_MAX   (UINT16_MAX)
+#define CIRCPAD_STATENUM_MAX (UINT16_MAX)
 
 /** A histogram can be used to sample padding delays given a machine state.
  * This constant defines the maximum histogram width (i.e. the max number of
@@ -330,7 +330,7 @@ typedef struct circpad_state_t {
    * array.
    *
    * This array must have histogram_len elements. */
-  circpad_delay_t histogram_edges[CIRCPAD_MAX_HISTOGRAM_LEN+1];
+  circpad_delay_t histogram_edges[CIRCPAD_MAX_HISTOGRAM_LEN + 1];
   /** Total number of tokens in this histogram. This is a constant and is *not*
    *  decremented every time we spend a token. It's used for initializing and
    *  refilling the histogram. */
@@ -415,7 +415,7 @@ typedef struct circpad_state_t {
  * consequences, but may make naive serialization of the state machine
  * large, if we're not careful about how we represent empty fields.
  */
-#define  CIRCPAD_STATE_START       0
+#define CIRCPAD_STATE_START 0
 
 /**
  * The burst state for this machine.
@@ -435,7 +435,7 @@ typedef struct circpad_state_t {
  * between these two states arbitrarily, to encode other dynamics of
  * target traffic.
  */
-#define  CIRCPAD_STATE_BURST       1
+#define CIRCPAD_STATE_BURST 1
 
 /**
  * The gap state for this machine.
@@ -450,7 +450,7 @@ typedef struct circpad_state_t {
  * Again, in this implementation, these transitions must be specified
  * explicitly, and other transitions are also permitted.
  */
-#define  CIRCPAD_STATE_GAP         2
+#define CIRCPAD_STATE_GAP 2
 
 /**
  * End is a pseudo-state that causes the machine to go completely
@@ -459,7 +459,7 @@ typedef struct circpad_state_t {
  *
  * End MUST NOT occupy a slot in the machine state array.
  */
-#define  CIRCPAD_STATE_END         CIRCPAD_STATENUM_MAX
+#define CIRCPAD_STATE_END CIRCPAD_STATENUM_MAX
 
 /**
  * "Ignore" is a pseudo-state that means "do not react to this
@@ -467,7 +467,7 @@ typedef struct circpad_state_t {
  *
  * "Ignore" MUST NOT occupy a slot in the machine state array.
  */
-#define  CIRCPAD_STATE_IGNORE         (CIRCPAD_STATENUM_MAX-1)
+#define CIRCPAD_STATE_IGNORE (CIRCPAD_STATENUM_MAX - 1)
 
 /**
  * "Cancel" is a pseudo-state that means "cancel pending timers,
@@ -475,13 +475,13 @@ typedef struct circpad_state_t {
  *
  * Cancel MUST NOT occupy a slot in the machine state array.
  */
-#define  CIRCPAD_STATE_CANCEL         (CIRCPAD_STATENUM_MAX-2)
+#define CIRCPAD_STATE_CANCEL (CIRCPAD_STATENUM_MAX - 2)
 
 /**
  * Since we have 3 pseudo-states, the max state array length is
  * up to one less than cancel's statenum.
  */
-#define CIRCPAD_MAX_MACHINE_STATES  (CIRCPAD_STATE_CANCEL-1)
+#define CIRCPAD_MAX_MACHINE_STATES (CIRCPAD_STATE_CANCEL - 1)
 
 /**
  * Mutable padding machine info.
@@ -582,7 +582,7 @@ typedef struct circpad_machine_runtime_t {
 
 /** Max number of padding machines on each circuit. If changed,
  * also ensure the machine_index bitwith supports the new size. */
-#define CIRCPAD_MAX_MACHINES    (2)
+#define CIRCPAD_MAX_MACHINES (2)
   /** Which padding machine index was this for.
    * (make sure changes to the bitwidth can support the
    * CIRCPAD_MAX_MACHINES define). */
@@ -592,7 +592,7 @@ typedef struct circpad_machine_runtime_t {
 
 /** Helper macro to get an actual state machine from a machineinfo */
 #define CIRCPAD_GET_MACHINE(machineinfo) \
-    ((machineinfo)->on_circ->padding_machine[(machineinfo)->machine_index])
+  ((machineinfo)->on_circ->padding_machine[(machineinfo)->machine_index])
 
 /**
  * This specifies a particular padding machine to use after negotiation.
@@ -687,8 +687,8 @@ circpad_decision_t
 circpad_internal_event_infinity(circpad_machine_runtime_t *mi);
 circpad_decision_t
 circpad_internal_event_bins_empty(circpad_machine_runtime_t *);
-circpad_decision_t circpad_internal_event_state_length_up(
-                                  circpad_machine_runtime_t *);
+circpad_decision_t
+circpad_internal_event_state_length_up(circpad_machine_runtime_t *);
 
 /** Machine creation events are events that cause us to set up or
  *  tear down padding state machines. */
@@ -711,7 +711,7 @@ void circpad_machine_states_init(circpad_machine_spec_t *machine,
 void circpad_circuit_free_all_machineinfos(struct circuit_t *circ);
 
 bool circpad_padding_is_from_expected_hop(struct circuit_t *circ,
-                                         crypt_path_t *from_hop);
+                                          crypt_path_t *from_hop);
 
 /** Serializaton functions for writing to/from torrc and consensus */
 char *circpad_machine_spec_to_string(const circpad_machine_spec_t *machine);
@@ -719,18 +719,17 @@ const circpad_machine_spec_t *circpad_string_to_machine(const char *str);
 
 /* Padding negotiation between client and middle */
 signed_error_t circpad_handle_padding_negotiate(struct circuit_t *circ,
-                                      struct cell_t *cell);
+                                                struct cell_t *cell);
 signed_error_t circpad_handle_padding_negotiated(struct circuit_t *circ,
-                                      struct cell_t *cell,
-                                      crypt_path_t *layer_hint);
+                                                 struct cell_t *cell,
+                                                 crypt_path_t *layer_hint);
 signed_error_t circpad_negotiate_padding(struct origin_circuit_t *circ,
-                          circpad_machine_num_t machine,
-                          uint8_t target_hopnum,
-                          uint8_t command);
+                                         circpad_machine_num_t machine,
+                                         uint8_t target_hopnum,
+                                         uint8_t command);
 bool circpad_padding_negotiated(struct circuit_t *circ,
-                           circpad_machine_num_t machine,
-                           uint8_t command,
-                           uint8_t response);
+                                circpad_machine_num_t machine, uint8_t command,
+                                uint8_t response);
 
 circpad_purpose_mask_t circpad_circ_purpose_to_mask(uint8_t circ_purpose);
 
@@ -738,22 +737,21 @@ int circpad_check_received_cell(cell_t *cell, circuit_t *circ,
                                 crypt_path_t *layer_hint,
                                 const relay_header_t *rh);
 
-MOCK_DECL(circpad_decision_t,
-circpad_machine_schedule_padding,(circpad_machine_runtime_t *));
+MOCK_DECL(circpad_decision_t, circpad_machine_schedule_padding,
+          (circpad_machine_runtime_t *));
 
-MOCK_DECL(circpad_decision_t,
-circpad_machine_spec_transition, (circpad_machine_runtime_t *mi,
-                             circpad_event_t event));
+MOCK_DECL(circpad_decision_t, circpad_machine_spec_transition,
+          (circpad_machine_runtime_t * mi, circpad_event_t event));
 
-circpad_decision_t circpad_send_padding_cell_for_callback(
-                                 circpad_machine_runtime_t *mi);
+circpad_decision_t
+circpad_send_padding_cell_for_callback(circpad_machine_runtime_t *mi);
 
 void circpad_free_all(void);
 
 #ifdef CIRCUITPADDING_PRIVATE
-STATIC void  machine_spec_free_(circpad_machine_spec_t *m);
-#define machine_spec_free(chan) \
-  FREE_AND_NULL(circpad_machine_spec_t,machine_spec_free_, (m))
+STATIC void machine_spec_free_(circpad_machine_spec_t *m);
+#  define machine_spec_free(chan) \
+    FREE_AND_NULL(circpad_machine_spec_t, machine_spec_free_, (m))
 
 STATIC circpad_delay_t
 circpad_machine_sample_delay(circpad_machine_runtime_t *mi);
@@ -761,9 +759,8 @@ circpad_machine_sample_delay(circpad_machine_runtime_t *mi);
 STATIC bool
 circpad_machine_reached_padding_limit(circpad_machine_runtime_t *mi);
 
-STATIC circpad_delay_t
-circpad_histogram_bin_to_usec(const circpad_machine_runtime_t *mi,
-                              circpad_hist_index_t bin);
+STATIC circpad_delay_t circpad_histogram_bin_to_usec(
+    const circpad_machine_runtime_t *mi, circpad_hist_index_t bin);
 
 STATIC const circpad_state_t *
 circpad_machine_current_state(const circpad_machine_runtime_t *mi);
@@ -771,42 +768,38 @@ circpad_machine_current_state(const circpad_machine_runtime_t *mi);
 STATIC void circpad_machine_remove_token(circpad_machine_runtime_t *mi);
 
 STATIC circpad_hist_index_t circpad_histogram_usec_to_bin(
-                                       const circpad_machine_runtime_t *mi,
-                                       circpad_delay_t us);
+    const circpad_machine_runtime_t *mi, circpad_delay_t us);
 
-STATIC circpad_machine_runtime_t *circpad_circuit_machineinfo_new(
-                                               struct circuit_t *on_circ,
-                                               int machine_index);
+STATIC circpad_machine_runtime_t *
+circpad_circuit_machineinfo_new(struct circuit_t *on_circ, int machine_index);
 STATIC void circpad_machine_remove_higher_token(circpad_machine_runtime_t *mi,
-                                         circpad_delay_t target_bin_us);
+                                                circpad_delay_t target_bin_us);
 STATIC void circpad_machine_remove_lower_token(circpad_machine_runtime_t *mi,
-                                         circpad_delay_t target_bin_us);
+                                               circpad_delay_t target_bin_us);
 STATIC void circpad_machine_remove_closest_token(circpad_machine_runtime_t *mi,
-                                         circpad_delay_t target_bin_us,
-                                         bool use_usec);
+                                                 circpad_delay_t target_bin_us,
+                                                 bool use_usec);
 STATIC void circpad_machine_setup_tokens(circpad_machine_runtime_t *mi);
 
-MOCK_DECL(STATIC signed_error_t,
-circpad_send_command_to_hop,(struct origin_circuit_t *circ, uint8_t hopnum,
-                             uint8_t relay_command, const uint8_t *payload,
-                             ssize_t payload_len));
+MOCK_DECL(STATIC signed_error_t, circpad_send_command_to_hop,
+          (struct origin_circuit_t * circ, uint8_t hopnum,
+           uint8_t relay_command, const uint8_t *payload,
+           ssize_t payload_len));
 
-MOCK_DECL(STATIC const node_t *,
-circuit_get_nth_node,(origin_circuit_t *circ, int hop));
+MOCK_DECL(STATIC const node_t *, circuit_get_nth_node,
+          (origin_circuit_t * circ, int hop));
 
-STATIC circpad_delay_t
-histogram_get_bin_upper_bound(const circpad_machine_runtime_t *mi,
-                              circpad_hist_index_t bin);
+STATIC circpad_delay_t histogram_get_bin_upper_bound(
+    const circpad_machine_runtime_t *mi, circpad_hist_index_t bin);
 
-STATIC void
-circpad_add_matching_machines(origin_circuit_t *on_circ,
-                              smartlist_t *machines_sl);
+STATIC void circpad_add_matching_machines(origin_circuit_t *on_circ,
+                                          smartlist_t *machines_sl);
 
-#ifdef TOR_UNIT_TESTS
+#  ifdef TOR_UNIT_TESTS
 extern smartlist_t *origin_padding_machines;
 extern smartlist_t *relay_padding_machines;
 
-#endif
+#  endif
 
 #endif /* defined(CIRCUITPADDING_PRIVATE) */
 

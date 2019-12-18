@@ -28,23 +28,23 @@
 
 #include "orconfig.h"
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #ifdef HAVE_SYS_WAIT_H
-#include <sys/wait.h>
+#  include <sys/wait.h>
 #endif
 #ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
+#  include <sys/socket.h>
 #endif
 #include <stdlib.h>
 #include <string.h>
 
 #ifndef __GNUC__
-#define __attribute__(x)
+#  define __attribute__(x)
 #endif
 
 static void child(const tor_main_configuration_t *cfg)
-  __attribute__((noreturn));
+    __attribute__((noreturn));
 
 const char *
 tor_api_get_provider_version(void)
@@ -93,7 +93,7 @@ child(const tor_main_configuration_t *cfg)
 {
   /* XXXX Close unused file descriptors. */
 
-  char **args = real_calloc(cfg->argc + cfg->argc_owned+1, sizeof(char *));
+  char **args = real_calloc(cfg->argc + cfg->argc_owned + 1, sizeof(char *));
   memcpy(args, cfg->argv, cfg->argc * sizeof(char *));
   if (cfg->argc_owned)
     memcpy(args + cfg->argc, cfg->argv_owned,

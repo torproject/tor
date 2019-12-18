@@ -14,57 +14,62 @@
 #define DEBUG_SMARTLIST 1
 
 #include "tinytest.h"
-#define TT_EXIT_TEST_FUNCTION STMT_BEGIN goto done; STMT_END
+#define TT_EXIT_TEST_FUNCTION \
+  STMT_BEGIN                  \
+    goto done;                \
+  STMT_END
 #include "tinytest_macros.h"
 
 #ifdef __GNUC__
-#define PRETTY_FUNCTION __PRETTY_FUNCTION__
+#  define PRETTY_FUNCTION __PRETTY_FUNCTION__
 #else
-#define PRETTY_FUNCTION ""
+#  define PRETTY_FUNCTION ""
 #endif
 
 /* As test_mem_op, but decodes 'hex' before comparing.  There must be a
  * local char* variable called mem_op_hex_tmp for this to work. */
-#define test_mem_op_hex(expr1, op, hex)                                 \
-  STMT_BEGIN                                                            \
-  size_t length = strlen(hex);                                          \
-  tor_free(mem_op_hex_tmp);                                             \
-  mem_op_hex_tmp = tor_malloc(length/2);                                \
-  tor_assert((length&1)==0);                                            \
-  base16_decode(mem_op_hex_tmp, length/2, hex, length);                 \
-  tt_mem_op(expr1, op, mem_op_hex_tmp, length/2);                       \
+#define test_mem_op_hex(expr1, op, hex)                     \
+  STMT_BEGIN                                                \
+    size_t length = strlen(hex);                            \
+    tor_free(mem_op_hex_tmp);                               \
+    mem_op_hex_tmp = tor_malloc(length / 2);                \
+    tor_assert((length & 1) == 0);                          \
+    base16_decode(mem_op_hex_tmp, length / 2, hex, length); \
+    tt_mem_op(expr1, op, mem_op_hex_tmp, length / 2);       \
   STMT_END
 
 #define test_memeq_hex(expr1, hex) test_mem_op_hex(expr1, OP_EQ, hex)
 
 #ifndef COCCI
-#define tt_double_op(a,op,b)                                            \
-  tt_assert_test_type(a,b,#a" "#op" "#b,double,(val1_ op val2_),"%g",   \
-                      TT_EXIT_TEST_FUNCTION)
+#  define tt_double_op(a, op, b)                                           \
+    tt_assert_test_type(a, b, #a " " #op " " #b, double, (val1_ op val2_), \
+                        "%g", TT_EXIT_TEST_FUNCTION)
 
 /* Declare "double equal" in a sneaky way, so compiler won't complain about
  * comparing floats with == or !=.  Of course, only do this if you know what
  * you're doing. */
-#define tt_double_eq(a,b)     \
-  STMT_BEGIN                  \
-  tt_double_op((a), OP_GE, (b)); \
-  tt_double_op((a), OP_LE, (b)); \
-  STMT_END
+#  define tt_double_eq(a, b)         \
+    STMT_BEGIN                       \
+      tt_double_op((a), OP_GE, (b)); \
+      tt_double_op((a), OP_LE, (b)); \
+    STMT_END
 
-#define tt_size_op(a,op,b)                                              \
-  tt_assert_test_fmt_type(a,b,#a" "#op" "#b,size_t,(val1_ op val2_),    \
-    size_t, "%"TOR_PRIuSZ,                                              \
-    {print_ = (size_t) value_;}, {}, TT_EXIT_TEST_FUNCTION)
+#  define tt_size_op(a, op, b)                                     \
+    tt_assert_test_fmt_type(                                       \
+        a, b, #a " " #op " " #b, size_t, (val1_ op val2_), size_t, \
+        "%" TOR_PRIuSZ, { print_ = (size_t)value_; }, {},          \
+        TT_EXIT_TEST_FUNCTION)
 
-#define tt_u64_op(a,op,b)                                              \
-  tt_assert_test_fmt_type(a,b,#a" "#op" "#b,uint64_t,(val1_ op val2_), \
-    uint64_t, "%"PRIu64,                                               \
-    {print_ = (uint64_t) value_;}, {}, TT_EXIT_TEST_FUNCTION)
+#  define tt_u64_op(a, op, b)                                          \
+    tt_assert_test_fmt_type(                                           \
+        a, b, #a " " #op " " #b, uint64_t, (val1_ op val2_), uint64_t, \
+        "%" PRIu64, { print_ = (uint64_t)value_; }, {},                \
+        TT_EXIT_TEST_FUNCTION)
 
-#define tt_i64_op(a,op,b)                                              \
-  tt_assert_test_fmt_type(a,b,#a" "#op" "#b,int64_t,(val1_ op val2_),  \
-    int64_t, "%"PRId64,                                                \
-    {print_ = (int64_t) value_;}, {}, TT_EXIT_TEST_FUNCTION)
+#  define tt_i64_op(a, op, b)                                        \
+    tt_assert_test_fmt_type(                                         \
+        a, b, #a " " #op " " #b, int64_t, (val1_ op val2_), int64_t, \
+        "%" PRId64, { print_ = (int64_t)value_; }, {}, TT_EXIT_TEST_FUNCTION)
 #endif /* !defined(COCCI) */
 
 /**
@@ -81,9 +86,9 @@ struct crypto_pk_t *pk_generate(int idx);
 void init_pregenerated_keys(void);
 void free_pregenerated_keys(void);
 
-#define US2_CONCAT_2__(a, b) a ## __ ## b
-#define US_CONCAT_2__(a, b) a ## _ ## b
-#define US_CONCAT_3__(a, b, c) a ## _ ## b ## _ ## c
+#define US2_CONCAT_2__(a, b) a##__##b
+#define US_CONCAT_2__(a, b) a##_##b
+#define US_CONCAT_3__(a, b, c) a##_##b##_##c
 #define US_CONCAT_2_(a, b) US_CONCAT_2__(a, b)
 #define US_CONCAT_3_(a, b, c) US_CONCAT_3__(a, b, c)
 
@@ -148,22 +153,17 @@ void free_pregenerated_keys(void);
 #define NAME_TEST(name) NAME_TEST_(name)
 #define ASPECT(test_module, test_name) US2_CONCAT_2__(test_module, test_name)
 #ifndef COCCI
-#define TEST_CASE(function)  \
-  {  \
-      NAME_TEST(function),  \
-      NS_FULL(NS_MODULE, function, test_main),  \
-      TT_FORK,  \
-      NULL,  \
-      NULL,  \
-  }
-#define TEST_CASE_ASPECT(function, aspect)  \
-  {  \
-      NAME_TEST(ASPECT(function, aspect)),  \
-      NS_FULL(NS_MODULE, ASPECT(function, aspect), test_main),  \
-      TT_FORK,  \
-      NULL,  \
-      NULL,  \
-  }
+#  define TEST_CASE(function)                                                \
+    {                                                                        \
+      NAME_TEST(function), NS_FULL(NS_MODULE, function, test_main), TT_FORK, \
+          NULL, NULL,                                                        \
+    }
+#  define TEST_CASE_ASPECT(function, aspect)                                \
+    {                                                                       \
+      NAME_TEST(ASPECT(function, aspect)),                                  \
+          NS_FULL(NS_MODULE, ASPECT(function, aspect), test_main), TT_FORK, \
+          NULL, NULL,                                                       \
+    }
 #endif /* !defined(COCCI) */
 
 #define NS(name) US_CONCAT_3_(NS_MODULE, NS_SUBMODULE, name)
@@ -171,10 +171,11 @@ void free_pregenerated_keys(void);
 
 #define CALLED(mock_name) US_CONCAT_2_(NS(mock_name), called)
 #ifndef COCCI
-#define NS_DECL(retval, mock_fn, args) \
-    extern int CALLED(mock_fn);        \
-    static retval NS(mock_fn) args; int CALLED(mock_fn) = 0
-#define NS_MOCK(name) MOCK(name, NS(name))
+#  define NS_DECL(retval, mock_fn, args) \
+    extern int CALLED(mock_fn);          \
+    static retval NS(mock_fn) args;      \
+    int CALLED(mock_fn) = 0
+#  define NS_MOCK(name) MOCK(name, NS(name))
 #endif /* !defined(COCCI) */
 #define NS_UNMOCK(name) UNMOCK(name)
 

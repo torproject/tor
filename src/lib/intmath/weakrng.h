@@ -20,7 +20,10 @@ typedef struct tor_weak_rng_t {
 } tor_weak_rng_t;
 
 #ifndef COCCI
-#define TOR_WEAK_RNG_INIT {383745623}
+#  define TOR_WEAK_RNG_INIT \
+    {                       \
+      383745623             \
+    }
 #endif
 #define TOR_WEAK_RANDOM_MAX (INT_MAX)
 
@@ -29,6 +32,7 @@ int32_t tor_weak_random(tor_weak_rng_t *weak_rng);
 int32_t tor_weak_random_range(tor_weak_rng_t *rng, int32_t top);
 /** Randomly return true according to <b>rng</b> with probability 1 in
  * <b>n</b> */
-#define tor_weak_random_one_in_n(rng, n) (0==tor_weak_random_range((rng),(n)))
+#define tor_weak_random_one_in_n(rng, n) \
+  (0 == tor_weak_random_range((rng), (n)))
 
 #endif /* !defined(TOR_WEAKRNG_H) */

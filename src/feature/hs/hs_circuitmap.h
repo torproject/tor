@@ -20,9 +20,8 @@ struct ed25519_public_key_t;
 
 /** Public relay-side API: */
 
-struct or_circuit_t *
-hs_circuitmap_get_intro_circ_v3_relay_side(const
-                                   struct ed25519_public_key_t *auth_key);
+struct or_circuit_t *hs_circuitmap_get_intro_circ_v3_relay_side(
+    const struct ed25519_public_key_t *auth_key);
 struct or_circuit_t *
 hs_circuitmap_get_intro_circ_v2_relay_side(const uint8_t *digest);
 struct or_circuit_t *
@@ -32,16 +31,15 @@ void hs_circuitmap_register_rend_circ_relay_side(struct or_circuit_t *circ,
                                                  const uint8_t *cookie);
 void hs_circuitmap_register_intro_circ_v2_relay_side(struct or_circuit_t *circ,
                                                      const uint8_t *digest);
-void hs_circuitmap_register_intro_circ_v3_relay_side(struct or_circuit_t *circ,
-                                 const struct ed25519_public_key_t *auth_key);
+void hs_circuitmap_register_intro_circ_v3_relay_side(
+    struct or_circuit_t *circ, const struct ed25519_public_key_t *auth_key);
 
 smartlist_t *hs_circuitmap_get_all_intro_circ_relay_side(void);
 
 /** Public service-side API: */
 
-struct origin_circuit_t *
-hs_circuitmap_get_intro_circ_v3_service_side(const
-                                     struct ed25519_public_key_t *auth_key);
+struct origin_circuit_t *hs_circuitmap_get_intro_circ_v3_service_side(
+    const struct ed25519_public_key_t *auth_key);
 struct origin_circuit_t *
 hs_circuitmap_get_intro_circ_v2_service_side(const uint8_t *digest);
 struct origin_circuit_t *
@@ -52,17 +50,16 @@ struct origin_circuit_t *
 hs_circuitmap_get_established_rend_circ_client_side(const uint8_t *cookie);
 
 void hs_circuitmap_register_intro_circ_v2_service_side(
-                                        struct origin_circuit_t *circ,
-                                        const uint8_t *digest);
+    struct origin_circuit_t *circ, const uint8_t *digest);
 void hs_circuitmap_register_intro_circ_v3_service_side(
-                                 struct origin_circuit_t *circ,
-                                 const struct ed25519_public_key_t *auth_key);
-void hs_circuitmap_register_rend_circ_service_side(
-                                        struct origin_circuit_t *circ,
-                                        const uint8_t *cookie);
-void hs_circuitmap_register_rend_circ_client_side(
-                                      struct origin_circuit_t *circ,
-                                      const uint8_t *cookie);
+    struct origin_circuit_t *circ,
+    const struct ed25519_public_key_t *auth_key);
+void
+hs_circuitmap_register_rend_circ_service_side(struct origin_circuit_t *circ,
+                                              const uint8_t *cookie);
+void
+hs_circuitmap_register_rend_circ_client_side(struct origin_circuit_t *circ,
+                                             const uint8_t *cookie);
 
 void hs_circuitmap_remove_circuit(struct circuit_t *circ);
 

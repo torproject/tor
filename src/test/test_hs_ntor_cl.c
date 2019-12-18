@@ -22,25 +22,34 @@
 #include "core/crypto/hs_ntor.h"
 #include "core/crypto/onion_ntor.h"
 
-#define N_ARGS(n) STMT_BEGIN {                                  \
-    if (argc < (n)) {                                           \
-      fprintf(stderr, "%s needs %d arguments.\n",argv[1],n);    \
-      return 1;                                                 \
-    }                                                           \
-  } STMT_END
-#define BASE16(idx, var, n) STMT_BEGIN {                                \
-    const char *s = argv[(idx)];                                        \
-    if (base16_decode((char*)var, n, s, strlen(s)) < (int)n ) {              \
-      fprintf(stderr, "couldn't decode argument %d (%s)\n",idx,s);      \
-      return 1;                                                         \
-    }                                                                   \
-  } STMT_END
-#define INT(idx, var) STMT_BEGIN {                                      \
-    var = atoi(argv[(idx)]);                                            \
-    if (var <= 0) {                                                     \
-      fprintf(stderr, "bad integer argument %d (%s)\n",idx,argv[(idx)]); \
-    }                                                                   \
-  } STMT_END
+#define N_ARGS(n)                                                \
+  STMT_BEGIN                                                     \
+    {                                                            \
+      if (argc < (n)) {                                          \
+        fprintf(stderr, "%s needs %d arguments.\n", argv[1], n); \
+        return 1;                                                \
+      }                                                          \
+    }                                                            \
+  STMT_END
+#define BASE16(idx, var, n)                                            \
+  STMT_BEGIN                                                           \
+    {                                                                  \
+      const char *s = argv[(idx)];                                     \
+      if (base16_decode((char *)var, n, s, strlen(s)) < (int)n) {      \
+        fprintf(stderr, "couldn't decode argument %d (%s)\n", idx, s); \
+        return 1;                                                      \
+      }                                                                \
+    }                                                                  \
+  STMT_END
+#define INT(idx, var)                                                        \
+  STMT_BEGIN                                                                 \
+    {                                                                        \
+      var = atoi(argv[(idx)]);                                               \
+      if (var <= 0) {                                                        \
+        fprintf(stderr, "bad integer argument %d (%s)\n", idx, argv[(idx)]); \
+      }                                                                      \
+    }                                                                        \
+  STMT_END
 
 /** The first part of the HS ntor protocol. The client-side computes all
     necessary key material and sends the appropriate message to the service. */
@@ -71,27 +80,25 @@ client1(int argc, char **argv)
   curve25519_public_key_generate(&client_ephemeral_enc_keypair.pubkey,
                                  &client_ephemeral_enc_keypair.seckey);
 
-  retval = hs_ntor_client_get_introduce1_keys(&intro_auth_pubkey,
-                                              &intro_enc_pubkey,
-                                              &client_ephemeral_enc_keypair,
-                                              subcredential,
-                                              &hs_ntor_intro_cell_keys);
+  retval = hs_ntor_client_get_introduce1_keys(
+      &intro_auth_pubkey, &intro_enc_pubkey, &client_ephemeral_enc_keypair,
+      subcredential, &hs_ntor_intro_cell_keys);
   if (retval < 0) {
     goto done;
   }
 
   /* Send ENC_KEY */
   base16_encode(buf, sizeof(buf),
-                (const char*)hs_ntor_intro_cell_keys.enc_key,
+                (const char *)hs_ntor_intro_cell_keys.enc_key,
                 sizeof(hs_ntor_intro_cell_keys.enc_key));
   printf("%s\n", buf);
   /* Send MAC_KEY */
   base16_encode(buf, sizeof(buf),
-                (const char*)hs_ntor_intro_cell_keys.mac_key,
+                (const char *)hs_ntor_intro_cell_keys.mac_key,
                 sizeof(hs_ntor_intro_cell_keys.mac_key));
   printf("%s\n", buf);
 
- done:
+done:
   return retval;
 }
 
@@ -127,52 +134,48 @@ server1(int argc, char **argv)
   curve25519_keypair_generate(&service_ephemeral_rend_keypair, 0);
 
   /* Get INTRODUCE1 keys */
-  retval = hs_ntor_service_get_introduce1_keys(&intro_auth_pubkey,
-                                               &intro_enc_keypair,
-                                               &client_ephemeral_enc_pubkey,
-                                               subcredential,
-                                               &hs_ntor_intro_cell_keys);
+  retval = hs_ntor_service_get_introduce1_keys(
+      &intro_auth_pubkey, &intro_enc_keypair, &client_ephemeral_enc_pubkey,
+      subcredential, &hs_ntor_intro_cell_keys);
   if (retval < 0) {
     goto done;
   }
 
   /* Get RENDEZVOUS1 keys */
-  retval = hs_ntor_service_get_rendezvous1_keys(&intro_auth_pubkey,
-                                               &intro_enc_keypair,
-                                               &service_ephemeral_rend_keypair,
-                                               &client_ephemeral_enc_pubkey,
-                                               &hs_ntor_rend_cell_keys);
+  retval = hs_ntor_service_get_rendezvous1_keys(
+      &intro_auth_pubkey, &intro_enc_keypair, &service_ephemeral_rend_keypair,
+      &client_ephemeral_enc_pubkey, &hs_ntor_rend_cell_keys);
   if (retval < 0) {
     goto done;
   }
 
   /* Send ENC_KEY */
   base16_encode(buf, sizeof(buf),
-                (const char*)hs_ntor_intro_cell_keys.enc_key,
+                (const char *)hs_ntor_intro_cell_keys.enc_key,
                 sizeof(hs_ntor_intro_cell_keys.enc_key));
   printf("%s\n", buf);
   /* Send MAC_KEY */
   base16_encode(buf, sizeof(buf),
-                (const char*)hs_ntor_intro_cell_keys.mac_key,
+                (const char *)hs_ntor_intro_cell_keys.mac_key,
                 sizeof(hs_ntor_intro_cell_keys.mac_key));
   printf("%s\n", buf);
   /* Send AUTH_MAC */
   base16_encode(buf, sizeof(buf),
-                (const char*)hs_ntor_rend_cell_keys.rend_cell_auth_mac,
+                (const char *)hs_ntor_rend_cell_keys.rend_cell_auth_mac,
                 sizeof(hs_ntor_rend_cell_keys.rend_cell_auth_mac));
   printf("%s\n", buf);
   /* Send NTOR_KEY_SEED */
   base16_encode(buf, sizeof(buf),
-                (const char*)hs_ntor_rend_cell_keys.ntor_key_seed,
+                (const char *)hs_ntor_rend_cell_keys.ntor_key_seed,
                 sizeof(hs_ntor_rend_cell_keys.ntor_key_seed));
   printf("%s\n", buf);
   /* Send service ephemeral pubkey (Y) */
   base16_encode(buf, sizeof(buf),
-                (const char*)service_ephemeral_rend_keypair.pubkey.public_key,
+                (const char *)service_ephemeral_rend_keypair.pubkey.public_key,
                 sizeof(service_ephemeral_rend_keypair.pubkey.public_key));
   printf("%s\n", buf);
 
- done:
+done:
   return retval;
 }
 
@@ -208,27 +211,25 @@ client2(int argc, char **argv)
                                  &client_ephemeral_enc_keypair.seckey);
 
   /* Get RENDEZVOUS1 keys */
-  retval = hs_ntor_client_get_rendezvous1_keys(&intro_auth_pubkey,
-                                               &client_ephemeral_enc_keypair,
-                                               &intro_enc_pubkey,
-                                               &service_ephemeral_rend_pubkey,
-                                               &hs_ntor_rend_cell_keys);
+  retval = hs_ntor_client_get_rendezvous1_keys(
+      &intro_auth_pubkey, &client_ephemeral_enc_keypair, &intro_enc_pubkey,
+      &service_ephemeral_rend_pubkey, &hs_ntor_rend_cell_keys);
   if (retval < 0) {
     goto done;
   }
 
   /* Send AUTH_MAC */
   base16_encode(buf, sizeof(buf),
-                (const char*)hs_ntor_rend_cell_keys.rend_cell_auth_mac,
+                (const char *)hs_ntor_rend_cell_keys.rend_cell_auth_mac,
                 sizeof(hs_ntor_rend_cell_keys.rend_cell_auth_mac));
   printf("%s\n", buf);
   /* Send NTOR_KEY_SEED */
   base16_encode(buf, sizeof(buf),
-                (const char*)hs_ntor_rend_cell_keys.ntor_key_seed,
+                (const char *)hs_ntor_rend_cell_keys.ntor_key_seed,
                 sizeof(hs_ntor_rend_cell_keys.ntor_key_seed));
   printf("%s\n", buf);
 
- done:
+done:
   return 1;
 }
 
@@ -246,11 +247,11 @@ main(int argc, char **argv)
   if (crypto_global_init(0, NULL, NULL) < 0)
     return 1;
 
-  if (!strcmp(argv[1], "client1")) {
+  if (! strcmp(argv[1], "client1")) {
     return client1(argc, argv);
-  } else if (!strcmp(argv[1], "server1")) {
+  } else if (! strcmp(argv[1], "server1")) {
     return server1(argc, argv);
-  } else if (!strcmp(argv[1], "client2")) {
+  } else if (! strcmp(argv[1], "client2")) {
     return client2(argc, argv);
   } else {
     fprintf(stderr, "What's a %s?\n", argv[1]);

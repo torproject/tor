@@ -14,8 +14,7 @@
 
 #include "lib/malloc/malloc.h"
 
-int handle_control_command(control_connection_t *conn,
-                           uint32_t cmd_data_len,
+int handle_control_command(control_connection_t *conn, uint32_t cmd_data_len,
                            char *args);
 void control_cmd_free_all(void);
 
@@ -75,7 +74,7 @@ typedef struct control_cmd_syntax_t {
 } control_cmd_syntax_t;
 
 #ifdef CONTROL_CMD_PRIVATE
-#include "lib/crypt_ops/crypto_ed25519.h"
+#  include "lib/crypt_ops/crypto_ed25519.h"
 
 /* ADD_ONION secret key to create an ephemeral service. The command supports
  * multiple versions so this union stores the key and passes it to the HS
@@ -94,20 +93,18 @@ STATIC int add_onion_helper_keyarg(const char *arg, int discard_pk,
                                    int *hs_version,
                                    control_connection_t *conn);
 
-STATIC rend_authorized_client_t *add_onion_helper_clientauth(const char *arg,
-                                   int *created, control_connection_t *conn);
+STATIC rend_authorized_client_t *
+add_onion_helper_clientauth(const char *arg, int *created,
+                            control_connection_t *conn);
 
-STATIC control_cmd_args_t *control_cmd_parse_args(
-                                   const char *command,
-                                   const control_cmd_syntax_t *syntax,
-                                   size_t body_len,
-                                   const char *body,
-                                   char **error_out);
+STATIC control_cmd_args_t *
+control_cmd_parse_args(const char *command, const control_cmd_syntax_t *syntax,
+                       size_t body_len, const char *body, char **error_out);
 
 #endif /* defined(CONTROL_CMD_PRIVATE) */
 
 #ifdef CONTROL_MODULE_PRIVATE
-smartlist_t * get_detached_onion_services(void);
+smartlist_t *get_detached_onion_services(void);
 #endif /* defined(CONTROL_MODULE_PRIVATE) */
 
 #endif /* !defined(TOR_CONTROL_CMD_H) */

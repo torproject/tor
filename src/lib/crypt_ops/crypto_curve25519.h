@@ -53,17 +53,14 @@ void curve25519_public_key_generate(curve25519_public_key_t *key_out,
 int curve25519_keypair_generate(curve25519_keypair_t *keypair_out,
                                 int extra_strong);
 
-void curve25519_handshake(uint8_t *output,
-                          const curve25519_secret_key_t *,
+void curve25519_handshake(uint8_t *output, const curve25519_secret_key_t *,
                           const curve25519_public_key_t *);
 
 int curve25519_keypair_write_to_file(const curve25519_keypair_t *keypair,
-                                     const char *fname,
-                                     const char *tag);
+                                     const char *fname, const char *tag);
 
 int curve25519_keypair_read_from_file(curve25519_keypair_t *keypair_out,
-                                      char **tag_out,
-                                      const char *fname);
+                                      char **tag_out, const char *fname);
 
 int curve25519_rand_seckey_bytes(uint8_t *out, int extra_strong);
 

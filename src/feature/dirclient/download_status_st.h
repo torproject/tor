@@ -50,14 +50,16 @@ struct download_status_t {
                                               * downloaded? This determines the
                                               * schedule used for the download.
                                               */
-  download_want_authority_bitfield_t want_authority : 1; /**< Is the download
-                                              * happening from an authority
-                                              * or a mirror? This determines
-                                              * the schedule used for the
-                                              * download. */
-  download_schedule_increment_bitfield_t increment_on : 1; /**< does this
-                                        * schedule increment on each attempt,
-                                        * or after each failure? */
+  download_want_authority_bitfield_t
+      want_authority : 1; /**< Is the download
+                           * happening from an authority
+                           * or a mirror? This determines
+                           * the schedule used for the
+                           * download. */
+  download_schedule_increment_bitfield_t
+      increment_on : 1; /**< does this
+                         * schedule increment on each attempt,
+                         * or after each failure? */
   uint8_t last_backoff_position; /**< number of attempts/failures, depending
                                   * on increment_on, when we last recalculated
                                   * the delay.  Only updated if backoff

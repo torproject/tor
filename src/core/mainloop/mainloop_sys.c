@@ -44,12 +44,10 @@ subsys_mainloop_shutdown(void)
  * Format object for mainloop state.
  **/
 static config_format_t mainloop_state_fmt = {
-  .size = sizeof(mainloop_state_t),
-  .magic = { "mainloop_state",
-             MAINLOOP_STATE_MAGIC,
-             offsetof(mainloop_state_t, magic)
-            },
-  .vars = mainloop_state_t_vars,
+    .size = sizeof(mainloop_state_t),
+    .magic = {"mainloop_state", MAINLOOP_STATE_MAGIC,
+              offsetof(mainloop_state_t, magic)},
+    .vars = mainloop_state_t_vars,
 };
 
 /**
@@ -77,13 +75,13 @@ mainloop_flush_state(void *arg)
 }
 
 const struct subsys_fns_t sys_mainloop = {
-  .name = "mainloop",
-  .supported = true,
-  .level = 5,
-  .initialize = subsys_mainloop_initialize,
-  .shutdown = subsys_mainloop_shutdown,
+    .name = "mainloop",
+    .supported = true,
+    .level = 5,
+    .initialize = subsys_mainloop_initialize,
+    .shutdown = subsys_mainloop_shutdown,
 
-  .state_format = &mainloop_state_fmt,
-  .set_state = mainloop_set_state,
-  .flush_state = mainloop_flush_state,
+    .state_format = &mainloop_state_fmt,
+    .set_state = mainloop_set_state,
+    .flush_state = mainloop_flush_state,
 };

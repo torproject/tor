@@ -117,6 +117,6 @@ hs_ident_intro_circ_is_valid(const hs_ident_circuit_t *ident)
 
   /* Valid. */
   return 1;
- invalid:
+invalid:
   return 0;
 }

@@ -25,23 +25,23 @@
 #include <string.h>
 #include <stdio.h>
 #ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
+#  include <sys/time.h>
 #endif
 #ifdef HAVE_TIME_H
-#include <time.h>
+#  include <time.h>
 #endif
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
+#  include <sys/types.h>
 #endif
 
 #include "lib/err/torerr.h"
 #include "lib/err/backtrace.h"
 
 /** Array of fds to log crash-style warnings to. */
-static int sigsafe_log_fds[TOR_SIGSAFE_LOG_MAX_FDS] = { STDERR_FILENO };
+static int sigsafe_log_fds[TOR_SIGSAFE_LOG_MAX_FDS] = {STDERR_FILENO};
 /** The number of elements used in sigsafe_log_fds */
 static int n_sigsafe_log_fds = 1;
 /** Log granularity in milliseconds. */
@@ -56,7 +56,7 @@ tor_log_err_sigsafe_write(const char *s)
   ssize_t r;
   size_t len = strlen(s);
   int err = 0;
-  for (i=0; i < n_sigsafe_log_fds; ++i) {
+  for (i = 0; i < n_sigsafe_log_fds; ++i) {
     r = write(sigsafe_log_fds[i], s, len);
     err += (r != (ssize_t)len);
   }
@@ -74,23 +74,24 @@ tor_log_err_sigsafe(const char *m, ...)
   char timebuf[33];
   time_t now = time(NULL);
 
-  if (!m)
+  if (! m)
     return;
   if (log_granularity >= 2000) {
     int g = log_granularity / 1000;
     now -= now % g;
   }
   timebuf[0] = now < 0 ? '-' : ' ';
-  if (now < 0) now = -now;
+  if (now < 0)
+    now = -now;
   timebuf[1] = '\0';
-  format_dec_number_sigsafe(now, timebuf+1, sizeof(timebuf)-1);
+  format_dec_number_sigsafe(now, timebuf + 1, sizeof(timebuf) - 1);
   tor_log_err_sigsafe_write("\n=========================================="
-                             "================== T=");
+                            "================== T=");
   tor_log_err_sigsafe_write(timebuf);
   tor_log_err_sigsafe_write("\n");
   tor_log_err_sigsafe_write(m);
   va_start(ap, m);
-  while ((x = va_arg(ap, const char*))) {
+  while ((x = va_arg(ap, const char *))) {
     tor_log_err_sigsafe_write(x);
   }
   va_end(ap);
@@ -146,7 +147,7 @@ tor_log_set_sigsafe_err_fds(const int *fds, int n)
 void
 tor_log_reset_sigsafe_err_fds(void)
 {
-  int fds[] = { STDERR_FILENO };
+  int fds[] = {STDERR_FILENO};
   tor_log_set_sigsafe_err_fds(fds, 1);
 }
 
@@ -199,8 +200,8 @@ tor_raw_assertion_failed_msg_(const char *file, int line, const char *expr,
   char linebuf[16];
   format_dec_number_sigsafe(line, linebuf, sizeof(linebuf));
   tor_log_err_sigsafe("INTERNAL ERROR: Raw assertion failed in ",
-                      get_tor_backtrace_version(), " at ",
-                      file, ":", linebuf, ": ", expr, "\n", NULL);
+                      get_tor_backtrace_version(), " at ", file, ":", linebuf,
+                      ": ", expr, "\n", NULL);
   if (msg) {
     tor_log_err_sigsafe_write(msg);
     tor_log_err_sigsafe_write("\n");
@@ -252,13 +253,13 @@ format_number_sigsafe(unsigned long x, char *buf, int buf_len,
   }
 
   /* Not long enough */
-  if (!buf || len >= buf_len)
+  if (! buf || len >= buf_len)
     return 0;
 
   cp = buf + len;
   *cp = '\0';
   do {
-    unsigned digit = (unsigned) (x % radix);
+    unsigned digit = (unsigned)(x % radix);
     if (cp <= buf) {
       /* Not tor_assert(); see above. */
       tor_raw_abort_();

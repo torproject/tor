@@ -42,12 +42,12 @@ static bool
 using_proxy(const bt_orconn_t *bto)
 {
   switch (bto->proxy_type) {
-  case PROXY_CONNECT:
-  case PROXY_SOCKS4:
-  case PROXY_SOCKS5:
-    return true;
-  default:
-    return false;
+    case PROXY_CONNECT:
+    case PROXY_SOCKS4:
+    case PROXY_SOCKS5:
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -62,43 +62,43 @@ void
 bto_cevent_anyconn(const bt_orconn_t *bto)
 {
   switch (bto->state) {
-  case OR_CONN_STATE_CONNECTING:
-    /* Exactly what kind of thing we're connecting to isn't
-     * information we directly get from the states in connection_or.c,
-     * so decode it here. */
-    if (using_pt(bto))
-      control_event_bootstrap(BOOTSTRAP_STATUS_CONN_PT, 0);
-    else if (using_proxy(bto))
-      control_event_bootstrap(BOOTSTRAP_STATUS_CONN_PROXY, 0);
-    else
-      control_event_bootstrap(BOOTSTRAP_STATUS_CONN, 0);
-    break;
-  case OR_CONN_STATE_PROXY_HANDSHAKING:
-    /* Similarly, starting a proxy handshake means the TCP connect()
-     * succeeded to the proxy.  Let's be specific about what kind of
-     * proxy. */
-    if (using_pt(bto))
-      control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DONE_PT, 0);
-    else if (using_proxy(bto))
-      control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DONE_PROXY, 0);
-    break;
-  case OR_CONN_STATE_TLS_HANDSHAKING:
-    control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DONE, 0);
-    break;
-  case OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING:
-  case OR_CONN_STATE_OR_HANDSHAKING_V2:
-  case OR_CONN_STATE_OR_HANDSHAKING_V3:
-    control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE, 0);
-    break;
-  case OR_CONN_STATE_OPEN:
-    control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE_DONE, 0);
-    /* Unblock directory progress display */
-    control_event_boot_first_orconn();
-    /* Unblock apconn progress display */
-    bto_first_orconn = true;
-    break;
-  default:
-    break;
+    case OR_CONN_STATE_CONNECTING:
+      /* Exactly what kind of thing we're connecting to isn't
+       * information we directly get from the states in connection_or.c,
+       * so decode it here. */
+      if (using_pt(bto))
+        control_event_bootstrap(BOOTSTRAP_STATUS_CONN_PT, 0);
+      else if (using_proxy(bto))
+        control_event_bootstrap(BOOTSTRAP_STATUS_CONN_PROXY, 0);
+      else
+        control_event_bootstrap(BOOTSTRAP_STATUS_CONN, 0);
+      break;
+    case OR_CONN_STATE_PROXY_HANDSHAKING:
+      /* Similarly, starting a proxy handshake means the TCP connect()
+       * succeeded to the proxy.  Let's be specific about what kind of
+       * proxy. */
+      if (using_pt(bto))
+        control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DONE_PT, 0);
+      else if (using_proxy(bto))
+        control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DONE_PROXY, 0);
+      break;
+    case OR_CONN_STATE_TLS_HANDSHAKING:
+      control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DONE, 0);
+      break;
+    case OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING:
+    case OR_CONN_STATE_OR_HANDSHAKING_V2:
+    case OR_CONN_STATE_OR_HANDSHAKING_V3:
+      control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE, 0);
+      break;
+    case OR_CONN_STATE_OPEN:
+      control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE_DONE, 0);
+      /* Unblock directory progress display */
+      control_event_boot_first_orconn();
+      /* Unblock apconn progress display */
+      bto_first_orconn = true;
+      break;
+    default:
+      break;
   }
 }
 
@@ -112,42 +112,42 @@ bto_cevent_anyconn(const bt_orconn_t *bto)
 void
 bto_cevent_apconn(const bt_orconn_t *bto)
 {
-  if (!bto_first_orconn)
+  if (! bto_first_orconn)
     return;
 
   switch (bto->state) {
-  case OR_CONN_STATE_CONNECTING:
-    /* Exactly what kind of thing we're connecting to isn't
-     * information we directly get from the states in connection_or.c,
-     * so decode it here. */
-    if (using_pt(bto))
-      control_event_bootstrap(BOOTSTRAP_STATUS_AP_CONN_PT, 0);
-    else if (using_proxy(bto))
-      control_event_bootstrap(BOOTSTRAP_STATUS_AP_CONN_PROXY, 0);
-    else
-      control_event_bootstrap(BOOTSTRAP_STATUS_AP_CONN, 0);
-    break;
-  case OR_CONN_STATE_PROXY_HANDSHAKING:
-    /* Similarly, starting a proxy handshake means the TCP connect()
-     * succeeded to the proxy.  Let's be specific about what kind of
-     * proxy. */
-    if (using_pt(bto))
-      control_event_bootstrap(BOOTSTRAP_STATUS_AP_CONN_DONE_PT, 0);
-    else if (using_proxy(bto))
-      control_event_bootstrap(BOOTSTRAP_STATUS_AP_CONN_DONE_PROXY, 0);
-    break;
-  case OR_CONN_STATE_TLS_HANDSHAKING:
-    control_event_bootstrap(BOOTSTRAP_STATUS_AP_CONN_DONE, 0);
-    break;
-  case OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING:
-  case OR_CONN_STATE_OR_HANDSHAKING_V2:
-  case OR_CONN_STATE_OR_HANDSHAKING_V3:
-    control_event_bootstrap(BOOTSTRAP_STATUS_AP_HANDSHAKE, 0);
-    break;
-  case OR_CONN_STATE_OPEN:
-    control_event_bootstrap(BOOTSTRAP_STATUS_AP_HANDSHAKE_DONE, 0);
-  default:
-    break;
+    case OR_CONN_STATE_CONNECTING:
+      /* Exactly what kind of thing we're connecting to isn't
+       * information we directly get from the states in connection_or.c,
+       * so decode it here. */
+      if (using_pt(bto))
+        control_event_bootstrap(BOOTSTRAP_STATUS_AP_CONN_PT, 0);
+      else if (using_proxy(bto))
+        control_event_bootstrap(BOOTSTRAP_STATUS_AP_CONN_PROXY, 0);
+      else
+        control_event_bootstrap(BOOTSTRAP_STATUS_AP_CONN, 0);
+      break;
+    case OR_CONN_STATE_PROXY_HANDSHAKING:
+      /* Similarly, starting a proxy handshake means the TCP connect()
+       * succeeded to the proxy.  Let's be specific about what kind of
+       * proxy. */
+      if (using_pt(bto))
+        control_event_bootstrap(BOOTSTRAP_STATUS_AP_CONN_DONE_PT, 0);
+      else if (using_proxy(bto))
+        control_event_bootstrap(BOOTSTRAP_STATUS_AP_CONN_DONE_PROXY, 0);
+      break;
+    case OR_CONN_STATE_TLS_HANDSHAKING:
+      control_event_bootstrap(BOOTSTRAP_STATUS_AP_CONN_DONE, 0);
+      break;
+    case OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING:
+    case OR_CONN_STATE_OR_HANDSHAKING_V2:
+    case OR_CONN_STATE_OR_HANDSHAKING_V3:
+      control_event_bootstrap(BOOTSTRAP_STATUS_AP_HANDSHAKE, 0);
+      break;
+    case OR_CONN_STATE_OPEN:
+      control_event_bootstrap(BOOTSTRAP_STATUS_AP_HANDSHAKE_DONE, 0);
+    default:
+      break;
   }
 }
 

@@ -13,8 +13,8 @@
 #define TOR_WINLIB_H
 
 #ifdef _WIN32
-#include <windows.h>
-#include <tchar.h>
+#  include <windows.h>
+#  include <tchar.h>
 
 HANDLE load_windows_system_library(const TCHAR *library_name);
 #endif /* defined(_WIN32) */

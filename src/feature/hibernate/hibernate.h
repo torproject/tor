@@ -25,11 +25,10 @@ void accounting_add_bytes(size_t n_read, size_t n_written, int seconds);
 int accounting_record_bandwidth_usage(time_t now, or_state_t *state);
 void hibernate_begin_shutdown(void);
 MOCK_DECL(int, we_are_hibernating, (void));
-MOCK_DECL(int, we_are_fully_hibernating,(void));
+MOCK_DECL(int, we_are_fully_hibernating, (void));
 void consider_hibernation(time_t now);
-int getinfo_helper_accounting(control_connection_t *conn,
-                              const char *question, char **answer,
-                              const char **errmsg);
+int getinfo_helper_accounting(control_connection_t *conn, const char *question,
+                              char **answer, const char **errmsg);
 uint64_t get_accounting_max_total(void);
 void accounting_free_all(void);
 bool accounting_tor_is_dormant(void);
@@ -38,25 +37,24 @@ bool accounting_tor_is_dormant(void);
 /** Possible values of hibernate_state */
 typedef enum {
   /** We are running normally. */
-  HIBERNATE_STATE_LIVE=1,
+  HIBERNATE_STATE_LIVE = 1,
   /** We're trying to shut down cleanly, and we'll kill all active connections
    * at shutdown_time. */
-  HIBERNATE_STATE_EXITING=2,
+  HIBERNATE_STATE_EXITING = 2,
   /** We're running low on allocated bandwidth for this period, so we won't
    * accept any new connections. */
-  HIBERNATE_STATE_LOWBANDWIDTH=3,
+  HIBERNATE_STATE_LOWBANDWIDTH = 3,
   /** We are hibernating, and we won't wake up till there's more bandwidth to
    * use. */
-  HIBERNATE_STATE_DORMANT=4,
+  HIBERNATE_STATE_DORMANT = 4,
   /** We start out in state default, which means we havent decided which state
    * we're in. */
-  HIBERNATE_STATE_INITIAL=5
+  HIBERNATE_STATE_INITIAL = 5
 } hibernate_state_t;
 
-#ifdef TOR_UNIT_TESTS
+#  ifdef TOR_UNIT_TESTS
 void hibernate_set_state_for_testing_(hibernate_state_t newstate);
-#endif
+#  endif
 #endif /* defined(HIBERNATE_PRIVATE) */
 
 #endif /* !defined(TOR_HIBERNATE_H) */
-

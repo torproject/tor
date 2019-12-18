@@ -21,8 +21,7 @@ struct ed25519_signature_t;
 
 int crypto_write_tagged_contents_to_file(const char *fname,
                                          const char *typestring,
-                                         const char *tag,
-                                         const uint8_t *data,
+                                         const char *tag, const uint8_t *data,
                                          size_t datalen);
 
 ssize_t crypto_read_tagged_contents_from_file(const char *fname,

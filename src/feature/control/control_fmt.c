@@ -33,16 +33,19 @@ write_stream_target_to_buf(entry_connection_t *conn, char *buf, size_t len)
 {
   char buf2[256];
   if (conn->chosen_exit_name)
-    if (tor_snprintf(buf2, sizeof(buf2), ".%s.exit", conn->chosen_exit_name)<0)
+    if (tor_snprintf(buf2, sizeof(buf2), ".%s.exit", conn->chosen_exit_name) <
+        0)
       return -1;
-  if (!conn->socks_request)
+  if (! conn->socks_request)
     return -1;
-  if (tor_snprintf(buf, len, "%s%s%s:%d",
-               conn->socks_request->address,
-               conn->chosen_exit_name ? buf2 : "",
-               !conn->chosen_exit_name && connection_edge_is_rendezvous_stream(
-                                     ENTRY_TO_EDGE_CONN(conn)) ? ".onion" : "",
-               conn->socks_request->port)<0)
+  if (tor_snprintf(buf, len, "%s%s%s:%d", conn->socks_request->address,
+                   conn->chosen_exit_name ? buf2 : "",
+                   ! conn->chosen_exit_name &&
+                           connection_edge_is_rendezvous_stream(
+                               ENTRY_TO_EDGE_CONN(conn))
+                       ? ".onion"
+                       : "",
+                   conn->socks_request->port) < 0)
     return -1;
   return 0;
 }
@@ -59,11 +62,9 @@ orconn_target_get_name(char *name, size_t len, or_connection_t *conn)
     node_get_verbose_nickname(node, name);
   } else if (! tor_digest_is_zero(conn->identity_digest)) {
     name[0] = '$';
-    base16_encode(name+1, len-1, conn->identity_digest,
-                  DIGEST_LEN);
+    base16_encode(name + 1, len - 1, conn->identity_digest, DIGEST_LEN);
   } else {
-    tor_snprintf(name, len, "%s:%d",
-                 conn->base_.address, conn->base_.port);
+    tor_snprintf(name, len, "%s:%d", conn->base_.address, conn->base_.port);
   }
 }
 
@@ -110,12 +111,13 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
     smartlist_free(flaglist);
   }
 
-  smartlist_add_asprintf(descparts, "PURPOSE=%s",
-                    circuit_purpose_to_controller_string(circ->base_.purpose));
+  smartlist_add_asprintf(
+      descparts, "PURPOSE=%s",
+      circuit_purpose_to_controller_string(circ->base_.purpose));
 
   {
     const char *hs_state =
-      circuit_purpose_to_controller_hs_state_string(circ->base_.purpose);
+        circuit_purpose_to_controller_hs_state_string(circ->base_.purpose);
 
     if (hs_state != NULL) {
       smartlist_add_asprintf(descparts, "HS_STATE=%s", hs_state);
@@ -135,7 +137,7 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
   }
 
   {
-    char tbuf[ISO_TIME_USEC_LEN+1];
+    char tbuf[ISO_TIME_USEC_LEN + 1];
     format_iso_time_nospace_usec(tbuf, &circ->base_.timestamp_created);
 
     smartlist_add_asprintf(descparts, "TIME_CREATED=%s", tbuf);
@@ -143,15 +145,15 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
 
   // Show username and/or password if available.
   if (circ->socks_username_len > 0) {
-    char* socks_username_escaped = esc_for_log_len(circ->socks_username,
-                                     (size_t) circ->socks_username_len);
+    char *socks_username_escaped = esc_for_log_len(
+        circ->socks_username, (size_t)circ->socks_username_len);
     smartlist_add_asprintf(descparts, "SOCKS_USERNAME=%s",
                            socks_username_escaped);
     tor_free(socks_username_escaped);
   }
   if (circ->socks_password_len > 0) {
-    char* socks_password_escaped = esc_for_log_len(circ->socks_password,
-                                     (size_t) circ->socks_password_len);
+    char *socks_password_escaped = esc_for_log_len(
+        circ->socks_password, (size_t)circ->socks_password_len);
     smartlist_add_asprintf(descparts, "SOCKS_PASSWORD=%s",
                            socks_password_escaped);
     tor_free(socks_password_escaped);
@@ -175,46 +177,55 @@ entry_connection_describe_status_for_controller(const entry_connection_t *conn)
   if (conn->socks_request != NULL) {
     // Show username and/or password if available; used by IsolateSOCKSAuth.
     if (conn->socks_request->usernamelen > 0) {
-      char* username_escaped = esc_for_log_len(conn->socks_request->username,
-                                 (size_t) conn->socks_request->usernamelen);
-      smartlist_add_asprintf(descparts, "SOCKS_USERNAME=%s",
-                             username_escaped);
+      char *username_escaped =
+          esc_for_log_len(conn->socks_request->username,
+                          (size_t)conn->socks_request->usernamelen);
+      smartlist_add_asprintf(descparts, "SOCKS_USERNAME=%s", username_escaped);
       tor_free(username_escaped);
     }
     if (conn->socks_request->passwordlen > 0) {
-      char* password_escaped = esc_for_log_len(conn->socks_request->password,
-                                 (size_t) conn->socks_request->passwordlen);
-      smartlist_add_asprintf(descparts, "SOCKS_PASSWORD=%s",
-                             password_escaped);
+      char *password_escaped =
+          esc_for_log_len(conn->socks_request->password,
+                          (size_t)conn->socks_request->passwordlen);
+      smartlist_add_asprintf(descparts, "SOCKS_PASSWORD=%s", password_escaped);
       tor_free(password_escaped);
     }
 
     const char *client_protocol;
     // Show the client protocol; used by IsolateClientProtocol.
-    switch (conn->socks_request->listener_type)
-      {
+    switch (conn->socks_request->listener_type) {
       case CONN_TYPE_AP_LISTENER:
-        switch (conn->socks_request->socks_version)
-          {
-          case 4: client_protocol = "SOCKS4"; break;
-          case 5: client_protocol = "SOCKS5"; break;
-          default: client_protocol = "UNKNOWN";
-          }
+        switch (conn->socks_request->socks_version) {
+          case 4:
+            client_protocol = "SOCKS4";
+            break;
+          case 5:
+            client_protocol = "SOCKS5";
+            break;
+          default:
+            client_protocol = "UNKNOWN";
+        }
         break;
-      case CONN_TYPE_AP_TRANS_LISTENER: client_protocol = "TRANS"; break;
-      case CONN_TYPE_AP_NATD_LISTENER: client_protocol = "NATD"; break;
-      case CONN_TYPE_AP_DNS_LISTENER: client_protocol = "DNS"; break;
+      case CONN_TYPE_AP_TRANS_LISTENER:
+        client_protocol = "TRANS";
+        break;
+      case CONN_TYPE_AP_NATD_LISTENER:
+        client_protocol = "NATD";
+        break;
+      case CONN_TYPE_AP_DNS_LISTENER:
+        client_protocol = "DNS";
+        break;
       case CONN_TYPE_AP_HTTP_CONNECT_LISTENER:
-        client_protocol = "HTTPCONNECT"; break;
-      default: client_protocol = "UNKNOWN";
-      }
-    smartlist_add_asprintf(descparts, "CLIENT_PROTOCOL=%s",
-                           client_protocol);
+        client_protocol = "HTTPCONNECT";
+        break;
+      default:
+        client_protocol = "UNKNOWN";
+    }
+    smartlist_add_asprintf(descparts, "CLIENT_PROTOCOL=%s", client_protocol);
   }
 
   // Show newnym epoch; used for stream isolation when NEWNYM is used.
-  smartlist_add_asprintf(descparts, "NYM_EPOCH=%u",
-                         conn->nym_epoch);
+  smartlist_add_asprintf(descparts, "NYM_EPOCH=%u", conn->nym_epoch);
 
   // Show session group; used for stream isolation of multiple listener ports.
   smartlist_add_asprintf(descparts, "SESSION_GROUP=%d",
@@ -265,10 +276,9 @@ entry_connection_describe_status_for_controller(const entry_connection_t *conn)
  * This function is not thread-safe.  Each call to this function invalidates
  * previous values returned by this function.
  */
-MOCK_IMPL(const char *,
-node_describe_longname_by_id,(const char *id_digest))
+MOCK_IMPL(const char *, node_describe_longname_by_id, (const char *id_digest))
 {
-  static char longname[MAX_VERBOSE_NICKNAME_LEN+1];
+  static char longname[MAX_VERBOSE_NICKNAME_LEN + 1];
   node_get_verbose_nickname_by_id(id_digest, longname);
   return longname;
 }

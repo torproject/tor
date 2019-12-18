@@ -1,5 +1,5 @@
- /* Copyright (c) 2012-2019, The Tor Project, Inc. */
- /* See LICENSE for licensing information */
+/* Copyright (c) 2012-2019, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
 
 /**
  * \file replaycache.c
@@ -29,12 +29,13 @@
 void
 replaycache_free_(replaycache_t *r)
 {
-  if (!r) {
+  if (! r) {
     log_info(LD_BUG, "replaycache_free() called on NULL");
     return;
   }
 
-  if (r->digests_seen) digest256map_free(r->digests_seen, tor_free_);
+  if (r->digests_seen)
+    digest256map_free(r->digests_seen, tor_free_);
 
   tor_free(r);
 }
@@ -50,13 +51,13 @@ replaycache_new(time_t horizon, time_t interval)
 
   if (horizon < 0) {
     log_info(LD_BUG, "replaycache_new() called with negative"
-        " horizon parameter");
+                     " horizon parameter");
     goto err;
   }
 
   if (interval < 0) {
     log_info(LD_BUG, "replaycache_new() called with negative interval"
-        " parameter");
+                     " parameter");
     interval = 0;
   }
 
@@ -66,25 +67,25 @@ replaycache_new(time_t horizon, time_t interval)
   r->horizon = horizon;
   r->digests_seen = digest256map_new();
 
- err:
+err:
   return r;
 }
 
 /** See documentation for replaycache_add_and_test().
  */
 STATIC int
-replaycache_add_and_test_internal(
-    time_t present, replaycache_t *r, const void *data, size_t len,
-    time_t *elapsed)
+replaycache_add_and_test_internal(time_t present, replaycache_t *r,
+                                  const void *data, size_t len,
+                                  time_t *elapsed)
 {
   int rv = 0;
   uint8_t digest[DIGEST256_LEN];
   time_t *access_time;
 
   /* sanity check */
-  if (present <= 0 || !r || !data || len == 0) {
+  if (present <= 0 || ! r || ! data || len == 0) {
     log_info(LD_BUG, "replaycache_add_and_test_internal() called with stupid"
-        " parameters; please fix this.");
+                     " parameters; please fix this.");
     goto done;
   }
 
@@ -129,7 +130,7 @@ replaycache_add_and_test_internal(
   /* now scrub the cache if it's time */
   replaycache_scrub_if_needed_internal(present, r);
 
- done:
+done:
   return rv;
 }
 
@@ -144,21 +145,23 @@ replaycache_scrub_if_needed_internal(time_t present, replaycache_t *r)
   time_t *access_time;
 
   /* sanity check */
-  if (!r || !(r->digests_seen)) {
+  if (! r || ! (r->digests_seen)) {
     log_info(LD_BUG, "replaycache_scrub_if_needed_internal() called with"
-        " stupid parameters; please fix this.");
+                     " stupid parameters; please fix this.");
     return;
   }
 
   /* scrub time yet? (scrubbed == 0 indicates never scrubbed before) */
-  if (present - r->scrubbed < r->scrub_interval && r->scrubbed > 0) return;
+  if (present - r->scrubbed < r->scrub_interval && r->scrubbed > 0)
+    return;
 
   /* if we're never expiring, don't bother scrubbing */
-  if (r->horizon == 0) return;
+  if (r->horizon == 0)
+    return;
 
   /* okay, scrub time */
   itr = digest256map_iter_init(r->digests_seen);
-  while (!digest256map_iter_done(itr)) {
+  while (! digest256map_iter_done(itr)) {
     digest256map_iter_get(itr, &digest, &valp);
     access_time = (time_t *)valp;
     /* aged out yet? */
@@ -174,7 +177,8 @@ replaycache_scrub_if_needed_internal(time_t present, replaycache_t *r)
   }
 
   /* update scrubbed timestamp */
-  if (present > r->scrubbed) r->scrubbed = present;
+  if (present > r->scrubbed)
+    r->scrubbed = present;
 }
 
 /** Test the buffer of length len point to by data against the replay cache r;
@@ -192,8 +196,8 @@ replaycache_add_and_test(replaycache_t *r, const void *data, size_t len)
  * elapsed since this digest was last seen.
  */
 int
-replaycache_add_test_and_elapsed(
-    replaycache_t *r, const void *data, size_t len, time_t *elapsed)
+replaycache_add_test_and_elapsed(replaycache_t *r, const void *data,
+                                 size_t len, time_t *elapsed)
 {
   return replaycache_add_and_test_internal(time(NULL), r, data, len, elapsed);
 }
@@ -206,4 +210,3 @@ replaycache_scrub_if_needed(replaycache_t *r)
 {
   replaycache_scrub_if_needed_internal(time(NULL), r);
 }
-

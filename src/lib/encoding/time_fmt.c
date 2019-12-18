@@ -27,12 +27,12 @@
 #include <time.h>
 
 #ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
+#  include <sys/time.h>
 #endif
 
 #ifdef _WIN32
 /* For struct timeval */
-#include <winsock2.h>
+#  include <winsock2.h>
 #endif
 
 /** As localtime_r, but defined for platforms that don't have it:
@@ -74,20 +74,20 @@ tor_gmtime_r(const time_t *timep, struct tm *result)
 }
 
 /** Yield true iff <b>y</b> is a leap-year. */
-#define IS_LEAPYEAR(y) (!(y % 4) && ((y % 100) || !(y % 400)))
+#define IS_LEAPYEAR(y) (! (y % 4) && ((y % 100) || ! (y % 400)))
 /** Helper: Return the number of leap-days between Jan 1, y1 and Jan 1, y2. */
 static int
 n_leapdays(int year1, int year2)
 {
   --year1;
   --year2;
-  return (year2/4 - year1/4) - (year2/100 - year1/100)
-    + (year2/400 - year1/400);
+  return (year2 / 4 - year1 / 4) - (year2 / 100 - year1 / 100) +
+         (year2 / 400 - year1 / 400);
 }
 /** Number of days per month in non-leap year; used by tor_timegm and
  * parse_rfc1123_time. */
-static const int days_per_month[] =
-  { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+static const int days_per_month[] = {31, 28, 31, 30, 31, 30,
+                                     31, 31, 30, 31, 30, 31};
 
 /** Compute a time_t given a struct tm.  The result is given in UTC, and
  * does not account for leap seconds.  Return 0 on success, -1 on failure.
@@ -111,17 +111,17 @@ tor_timegm(const struct tm *tm, time_t *time_out)
   *time_out = 0;
 
   /* avoid int overflow on addition */
-  if (tm->tm_year < INT32_MAX-1900) {
+  if (tm->tm_year < INT32_MAX - 1900) {
     year = tm->tm_year + 1900;
   } else {
     /* clamp year */
     year = INT32_MAX;
   }
-  invalid_year = (year < 1970 || tm->tm_year >= INT32_MAX-1900);
+  invalid_year = (year < 1970 || tm->tm_year >= INT32_MAX - 1900);
 
   if (tm->tm_mon >= 0 && tm->tm_mon <= 11) {
     dpm = days_per_month[tm->tm_mon];
-    if (tm->tm_mon == 1 && !invalid_year && IS_LEAPYEAR(tm->tm_year)) {
+    if (tm->tm_mon == 1 && ! invalid_year && IS_LEAPYEAR(tm->tm_year)) {
       dpm = 29;
     }
   } else {
@@ -129,25 +129,22 @@ tor_timegm(const struct tm *tm, time_t *time_out)
     dpm = 0;
   }
 
-  if (invalid_year ||
-      tm->tm_mon < 0 || tm->tm_mon > 11 ||
-      tm->tm_mday < 1 || tm->tm_mday > dpm ||
-      tm->tm_hour < 0 || tm->tm_hour > 23 ||
-      tm->tm_min < 0 || tm->tm_min > 59 ||
-      tm->tm_sec < 0 || tm->tm_sec > 60) {
+  if (invalid_year || tm->tm_mon < 0 || tm->tm_mon > 11 || tm->tm_mday < 1 ||
+      tm->tm_mday > dpm || tm->tm_hour < 0 || tm->tm_hour > 23 ||
+      tm->tm_min < 0 || tm->tm_min > 59 || tm->tm_sec < 0 || tm->tm_sec > 60) {
     log_warn(LD_BUG, "Out-of-range argument to tor_timegm");
     return -1;
   }
-  days = 365 * (year-1970) + n_leapdays(1970,(int)year);
+  days = 365 * (year - 1970) + n_leapdays(1970, (int)year);
   for (i = 0; i < tm->tm_mon; ++i)
     days += days_per_month[i];
   if (tm->tm_mon > 1 && IS_LEAPYEAR(year))
     ++days;
   days += tm->tm_mday - 1;
-  hours = days*24 + tm->tm_hour;
+  hours = days * 24 + tm->tm_hour;
 
-  minutes = hours*60 + tm->tm_min;
-  seconds = minutes*60 + tm->tm_sec;
+  minutes = hours * 60 + tm->tm_min;
+  seconds = minutes * 60 + tm->tm_sec;
   /* Check that "seconds" will fit in a time_t. On platforms where time_t is
    * 32-bit, this check will fail for dates in and after 2038.
    *
@@ -165,12 +162,11 @@ tor_timegm(const struct tm *tm, time_t *time_out)
 /* strftime is locale-specific, so we need to replace those parts */
 
 /** A c-locale array of 3-letter names of weekdays, starting with Sun. */
-static const char *WEEKDAY_NAMES[] =
-  { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+static const char *WEEKDAY_NAMES[] = {"Sun", "Mon", "Tue", "Wed",
+                                      "Thu", "Fri", "Sat"};
 /** A c-locale array of 3-letter names of months, starting with Jan. */
-static const char *MONTH_NAMES[] =
-  { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+static const char *MONTH_NAMES[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
 /** Set <b>buf</b> to the RFC1123 encoding of the UTC value of <b>t</b>.
  * The buffer must be at least RFC1123_TIME_LEN+1 bytes long.
@@ -185,13 +181,13 @@ format_rfc1123_time(char *buf, time_t t)
 
   tor_gmtime_r(&t, &tm);
 
-  strftime(buf, RFC1123_TIME_LEN+1, "___, %d ___ %Y %H:%M:%S GMT", &tm);
+  strftime(buf, RFC1123_TIME_LEN + 1, "___, %d ___ %Y %H:%M:%S GMT", &tm);
   tor_assert(tm.tm_wday >= 0);
   tor_assert(tm.tm_wday <= 6);
   memcpy(buf, WEEKDAY_NAMES[tm.tm_wday], 3);
   tor_assert(tm.tm_mon >= 0);
   tor_assert(tm.tm_mon <= 11);
-  memcpy(buf+8, MONTH_NAMES[tm.tm_mon], 3);
+  memcpy(buf + 8, MONTH_NAMES[tm.tm_mon], 3);
 }
 
 /** Parse the (a subset of) the RFC1123 encoding of some time (in UTC) from
@@ -201,7 +197,7 @@ format_rfc1123_time(char *buf, time_t t)
  * not the full range of formats suggested by RFC 1123.
  *
  * Return 0 on success, -1 on failure.
-*/
+ */
 int
 parse_rfc1123_time(const char *buf, time_t *t)
 {
@@ -215,9 +211,8 @@ parse_rfc1123_time(const char *buf, time_t *t)
   if (strlen(buf) != RFC1123_TIME_LEN)
     return -1;
   memset(&tm, 0, sizeof(tm));
-  if (tor_sscanf(buf, "%3s, %2u %3s %u %2u:%2u:%2u GMT", weekday,
-             &tm_mday, month, &tm_year, &tm_hour,
-             &tm_min, &tm_sec) < 7) {
+  if (tor_sscanf(buf, "%3s, %2u %3s %u %2u:%2u:%2u GMT", weekday, &tm_mday,
+                 month, &tm_year, &tm_hour, &tm_min, &tm_sec) < 7) {
     char *esc = esc_for_log(buf);
     log_warn(LD_GENERAL, "Got invalid RFC1123 time %s", esc);
     tor_free(esc);
@@ -226,12 +221,12 @@ parse_rfc1123_time(const char *buf, time_t *t)
 
   m = -1;
   for (i = 0; i < 12; ++i) {
-    if (!strcmp(month, MONTH_NAMES[i])) {
+    if (! strcmp(month, MONTH_NAMES[i])) {
       m = i;
       break;
     }
   }
-  if (m<0) {
+  if (m < 0) {
     char *esc = esc_for_log(buf);
     log_warn(LD_GENERAL, "Got invalid RFC1123 time %s: No such month", esc);
     tor_free(esc);
@@ -242,12 +237,12 @@ parse_rfc1123_time(const char *buf, time_t *t)
   invalid_year = (tm_year >= INT32_MAX || tm_year < 1970);
   tor_assert(m >= 0 && m <= 11);
   dpm = days_per_month[m];
-  if (m == 1 && !invalid_year && IS_LEAPYEAR(tm_year)) {
+  if (m == 1 && ! invalid_year && IS_LEAPYEAR(tm_year)) {
     dpm = 29;
   }
 
-  if (invalid_year || tm_mday < 1 || tm_mday > dpm ||
-      tm_hour > 23 || tm_min > 59 || tm_sec > 60) {
+  if (invalid_year || tm_mday < 1 || tm_mday > dpm || tm_hour > 23 ||
+      tm_min > 59 || tm_sec > 60) {
     char *esc = esc_for_log(buf);
     log_warn(LD_GENERAL, "Got invalid RFC1123 time %s", esc);
     tor_free(esc);
@@ -265,8 +260,7 @@ parse_rfc1123_time(const char *buf, time_t *t)
      *      invalid_year above. */
     tor_assert_nonfatal_unreached();
     char *esc = esc_for_log(buf);
-    log_warn(LD_GENERAL,
-             "Got invalid RFC1123 time %s. (Before 1970)", esc);
+    log_warn(LD_GENERAL, "Got invalid RFC1123 time %s. (Before 1970)", esc);
     tor_free(esc);
     return -1;
     /* LCOV_EXCL_STOP */
@@ -285,7 +279,8 @@ void
 format_local_iso_time(char *buf, time_t t)
 {
   struct tm tm;
-  strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", tor_localtime_r(&t, &tm));
+  strftime(buf, ISO_TIME_LEN + 1, "%Y-%m-%d %H:%M:%S",
+           tor_localtime_r(&t, &tm));
 }
 
 /** Set <b>buf</b> to the ISO8601 encoding of the GMT value of <b>t</b>.
@@ -295,7 +290,7 @@ void
 format_iso_time(char *buf, time_t t)
 {
   struct tm tm;
-  strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", tor_gmtime_r(&t, &tm));
+  strftime(buf, ISO_TIME_LEN + 1, "%Y-%m-%d %H:%M:%S", tor_gmtime_r(&t, &tm));
 }
 
 /** As format_local_iso_time, but use the yyyy-mm-ddThh:mm:ss format to avoid
@@ -324,7 +319,7 @@ format_iso_time_nospace_usec(char *buf, const struct timeval *tv)
 {
   tor_assert(tv);
   format_iso_time_nospace(buf, (time_t)tv->tv_sec);
-  tor_snprintf(buf+ISO_TIME_LEN, 8, ".%06d", (int)tv->tv_usec);
+  tor_snprintf(buf + ISO_TIME_LEN, 8, ".%06d", (int)tv->tv_usec);
 }
 
 /** Given an ISO-formatted UTC time value (after the epoch) in <b>cp</b>,
@@ -336,13 +331,11 @@ int
 parse_iso_time_(const char *cp, time_t *t, int strict, int nospace)
 {
   struct tm st_tm;
-  unsigned int year=0, month=0, day=0, hour=0, minute=0, second=0;
+  unsigned int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
   int n_fields;
   char extra_char, separator_char;
-  n_fields = tor_sscanf(cp, "%u-%2u-%2u%c%2u:%2u:%2u%c",
-                        &year, &month, &day,
-                        &separator_char,
-                        &hour, &minute, &second, &extra_char);
+  n_fields = tor_sscanf(cp, "%u-%2u-%2u%c%2u:%2u:%2u%c", &year, &month, &day,
+                        &separator_char, &hour, &minute, &second, &extra_char);
   if (strict ? (n_fields != 7) : (n_fields < 7)) {
     char *esc = esc_for_log(cp);
     log_warn(LD_GENERAL, "ISO time %s was unparseable", esc);
@@ -356,14 +349,14 @@ parse_iso_time_(const char *cp, time_t *t, int strict, int nospace)
     return -1;
   }
   if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
-          hour > 23 || minute > 59 || second > 60 || year >= INT32_MAX) {
+      hour > 23 || minute > 59 || second > 60 || year >= INT32_MAX) {
     char *esc = esc_for_log(cp);
     log_warn(LD_GENERAL, "ISO time %s was nonsensical", esc);
     tor_free(esc);
     return -1;
   }
-  st_tm.tm_year = (int)year-1900;
-  st_tm.tm_mon = month-1;
+  st_tm.tm_year = (int)year - 1900;
+  st_tm.tm_mon = month - 1;
   st_tm.tm_mday = day;
   st_tm.tm_hour = hour;
   st_tm.tm_min = minute;
@@ -423,23 +416,20 @@ parse_http_time(const char *date, struct tm *tm)
     if (*cp != ' ')
       return -1;
     ++cp;
-    if (tor_sscanf(cp, "%2u %3s %4u %2u:%2u:%2u GMT",
-               &tm_mday, month, &tm_year,
-               &tm_hour, &tm_min, &tm_sec) == 6) {
+    if (tor_sscanf(cp, "%2u %3s %4u %2u:%2u:%2u GMT", &tm_mday, month,
+                   &tm_year, &tm_hour, &tm_min, &tm_sec) == 6) {
       /* rfc1123-date */
       tm_year -= 1900;
-    } else if (tor_sscanf(cp, "%2u-%3s-%2u %2u:%2u:%2u GMT",
-                      &tm_mday, month, &tm_year,
-                      &tm_hour, &tm_min, &tm_sec) == 6) {
+    } else if (tor_sscanf(cp, "%2u-%3s-%2u %2u:%2u:%2u GMT", &tm_mday, month,
+                          &tm_year, &tm_hour, &tm_min, &tm_sec) == 6) {
       /* rfc850-date */
     } else {
       return -1;
     }
   } else {
     /* No comma; possibly asctime() format. */
-    if (tor_sscanf(date, "%3s %3s %2u %2u:%2u:%2u %4u",
-               wkday, month, &tm_mday,
-               &tm_hour, &tm_min, &tm_sec, &tm_year) == 7) {
+    if (tor_sscanf(date, "%3s %3s %2u %2u:%2u:%2u %4u", wkday, month, &tm_mday,
+                   &tm_hour, &tm_min, &tm_sec, &tm_year) == 7) {
       tm_year -= 1900;
     } else {
       return -1;
@@ -457,17 +447,15 @@ parse_http_time(const char *date, struct tm *tm)
   /* set tm->tm_mon to dummy value so the check below fails. */
   tm->tm_mon = -1;
   for (i = 0; i < 12; ++i) {
-    if (!strcasecmp(MONTH_NAMES[i], month)) {
+    if (! strcasecmp(MONTH_NAMES[i], month)) {
       tm->tm_mon = i;
     }
   }
 
-  if (tm->tm_year < 0 ||
-      tm->tm_mon < 0  || tm->tm_mon > 11 ||
-      tm->tm_mday < 1 || tm->tm_mday > 31 ||
-      tm->tm_hour < 0 || tm->tm_hour > 23 ||
-      tm->tm_min < 0  || tm->tm_min > 59 ||
-      tm->tm_sec < 0  || tm->tm_sec > 60)
+  if (tm->tm_year < 0 || tm->tm_mon < 0 || tm->tm_mon > 11 ||
+      tm->tm_mday < 1 || tm->tm_mday > 31 || tm->tm_hour < 0 ||
+      tm->tm_hour > 23 || tm->tm_min < 0 || tm->tm_min > 59 ||
+      tm->tm_sec < 0 || tm->tm_sec > 60)
     return -1; /* Out of range, or bad month. */
 
   return 0;
@@ -504,8 +492,8 @@ format_time_interval(char *out, size_t out_len, long interval)
   sec = interval;
 
   if (day) {
-    return tor_snprintf(out, out_len, "%ld days, %ld hours, %ld minutes",
-                        day, hour, min);
+    return tor_snprintf(out, out_len, "%ld days, %ld hours, %ld minutes", day,
+                        hour, min);
   } else if (hour) {
     return tor_snprintf(out, out_len, "%ld hours, %ld minutes", hour, min);
   } else if (min) {

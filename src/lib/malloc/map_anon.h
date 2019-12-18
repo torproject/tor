@@ -20,7 +20,7 @@
  *
  * In some operating systems, this flag is not implemented.
  */
-#define ANONMAP_PRIVATE   (1u<<0)
+#define ANONMAP_PRIVATE (1u << 0)
 /**
  * When this flag is specified, try to prevent the mapping from being
  * inherited after a fork().  In some operating systems, trying to access it
@@ -29,12 +29,12 @@
  *
  * In some operating systems, this flag is not implemented at all.
  */
-#define ANONMAP_NOINHERIT (1u<<1)
+#define ANONMAP_NOINHERIT (1u << 1)
 
 typedef enum {
   /** Possible value for inherit_result_out: the memory will be kept
    * by any child process. */
-  INHERIT_RES_KEEP=0,
+  INHERIT_RES_KEEP = 0,
   /** Possible value for inherit_result_out: the memory will be dropped in the
    * child process. Attempting to access it will likely cause a segfault. */
   INHERIT_RES_DROP,
@@ -59,9 +59,9 @@ typedef enum {
  * (Linux added DONTFORK in 2.6.16 and WIPEONFORK in 4.14. If we someday
  * require 2.6.16 or later, we can assume that DONTFORK will work.)
  */
-#define NOINHERIT_CAN_FAIL
+#  define NOINHERIT_CAN_FAIL
 #else
-#define NOINHERIT_CAN_FAIL
+#  define NOINHERIT_CAN_FAIL
 #endif /* defined(_WIN32) || ... */
 
 void *tor_mmap_anonymous(size_t sz, unsigned flags,

@@ -27,14 +27,14 @@ struct vote_routerstatus_t {
                   * running. */
   char *protocols; /**< The protocols that this authority says this router
                     * provides. */
-  unsigned int has_measured_bw:1; /**< The vote had a measured bw */
+  unsigned int has_measured_bw : 1; /**< The vote had a measured bw */
   /** True iff the vote included an entry for ed25519 ID, or included
    * "id ed25519 none" to indicate that there was no ed25519 ID. */
-  unsigned int has_ed25519_listing:1;
+  unsigned int has_ed25519_listing : 1;
   /** True if the Ed25519 listing here is the consensus-opinion for the
    * Ed25519 listing; false if there was no consensus on Ed25519 key status,
    * or if this VRS doesn't reflect it. */
-  unsigned int ed25519_reflects_consensus:1;
+  unsigned int ed25519_reflects_consensus : 1;
   uint32_t measured_bw_kb; /**< Measured bandwidth (capacity) of the router */
   /** The hash or hashes that the authority claims this microdesc has. */
   vote_microdesc_hash_t *microdesc;

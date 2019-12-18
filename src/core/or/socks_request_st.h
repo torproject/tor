@@ -20,16 +20,16 @@
 #define SOCKS_USER_PASS 0x02
 
 /** Please open a TCP connection to this addr:port. */
-#define SOCKS_COMMAND_CONNECT       0x01
+#define SOCKS_COMMAND_CONNECT 0x01
 /** Please turn this FQDN into an IP address, privately. */
-#define SOCKS_COMMAND_RESOLVE       0xF0
+#define SOCKS_COMMAND_RESOLVE 0xF0
 /** Please turn this IP address into an FQDN, privately. */
-#define SOCKS_COMMAND_RESOLVE_PTR   0xF1
+#define SOCKS_COMMAND_RESOLVE_PTR 0xF1
 
 /* || 0 is for -Wparentheses-equality (-Wall?) appeasement under clang */
-#define SOCKS_COMMAND_IS_CONNECT(c) (((c)==SOCKS_COMMAND_CONNECT) || 0)
-#define SOCKS_COMMAND_IS_RESOLVE(c) ((c)==SOCKS_COMMAND_RESOLVE || \
-                                     (c)==SOCKS_COMMAND_RESOLVE_PTR)
+#define SOCKS_COMMAND_IS_CONNECT(c) (((c) == SOCKS_COMMAND_CONNECT) || 0)
+#define SOCKS_COMMAND_IS_RESOLVE(c) \
+  ((c) == SOCKS_COMMAND_RESOLVE || (c) == SOCKS_COMMAND_RESOLVE_PTR)
 
 /** State of a SOCKS request from a user to an OP.  Also used to encode other
  * information for non-socks user request (such as those on TransPort and
@@ -48,18 +48,19 @@ struct socks_request_t {
   /** Which kind of listener created this stream? */
   uint8_t listener_type;
   size_t replylen; /**< Length of <b>reply</b>. */
-  uint8_t reply[MAX_SOCKS_REPLY_LEN]; /**< Write an entry into this string if
-                                    * we want to specify our own socks reply,
-                                    * rather than using the default socks4 or
-                                    * socks5 socks reply. We use this for the
-                                    * two-stage socks5 handshake.
-                                    */
+  uint8_t
+      reply[MAX_SOCKS_REPLY_LEN]; /**< Write an entry into this string if
+                                   * we want to specify our own socks reply,
+                                   * rather than using the default socks4 or
+                                   * socks5 socks reply. We use this for the
+                                   * two-stage socks5 handshake.
+                                   */
   char address[MAX_SOCKS_ADDR_LEN]; /**< What address did the client ask to
                                        connect to/resolve? */
   uint16_t port; /**< What port did the client ask to connect to? */
   unsigned int has_finished : 1; /**< Has the SOCKS handshake finished? Used to
-                              * make sure we send back a socks reply for
-                              * every connection. */
+                                  * make sure we send back a socks reply for
+                                  * every connection. */
   unsigned int got_auth : 1; /**< Have we received any authentication data? */
   /** If this is set, we will choose "no authentication" instead of
    * "username/password" authentication if both are offered. Used as input to

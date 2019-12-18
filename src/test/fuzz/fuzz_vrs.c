@@ -35,12 +35,10 @@ fuzz_init(void)
   area = memarea_new();
   dummy_vote = tor_malloc_zero(sizeof(*dummy_vote));
   dummy_vote->known_flags = smartlist_new();
-  smartlist_split_string(dummy_vote->known_flags,
-                         DIRVOTE_UNIVERSAL_FLAGS,
-                         " ", 0, 0);
-  smartlist_split_string(dummy_vote->known_flags,
-                         DIRVOTE_OPTIONAL_FLAGS,
-                         " ", 0, 0);
+  smartlist_split_string(dummy_vote->known_flags, DIRVOTE_UNIVERSAL_FLAGS, " ",
+                         0, 0);
+  smartlist_split_string(dummy_vote->known_flags, DIRVOTE_OPTIONAL_FLAGS, " ",
+                         0, 0);
   smartlist_sort_strings(dummy_vote->known_flags);
   return 0;
 }
@@ -64,22 +62,21 @@ fuzz_main(const uint8_t *data, size_t sz)
   const char *eos = (const char *)data + sz;
 
   s = (const char *)data;
-  rs_ns = routerstatus_parse_entry_from_string(area, &s, eos, tokens,
-                                               NULL, NULL, 26, FLAV_NS);
+  rs_ns = routerstatus_parse_entry_from_string(area, &s, eos, tokens, NULL,
+                                               NULL, 26, FLAV_NS);
   tor_assert(smartlist_len(tokens) == 0);
 
   s = (const char *)data;
-  rs_md = routerstatus_parse_entry_from_string(area, &s, eos, tokens,
-                                               NULL, NULL, 26, FLAV_MICRODESC);
+  rs_md = routerstatus_parse_entry_from_string(area, &s, eos, tokens, NULL,
+                                               NULL, 26, FLAV_MICRODESC);
   tor_assert(smartlist_len(tokens) == 0);
 
   s = (const char *)data;
   rs_vote = routerstatus_parse_entry_from_string(area, &s, eos, tokens,
-                                              dummy_vote, vrs, 26, FLAV_NS);
+                                                 dummy_vote, vrs, 26, FLAV_NS);
   tor_assert(smartlist_len(tokens) == 0);
 
-  log_debug(LD_GENERAL,
-            "ns=%p, md=%p, vote=%p", rs_ns, rs_md, rs_vote);
+  log_debug(LD_GENERAL, "ns=%p, md=%p, vote=%p", rs_ns, rs_md, rs_vote);
 
   routerstatus_free(rs_md);
   routerstatus_free(rs_ns);

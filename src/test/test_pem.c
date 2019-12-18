@@ -33,19 +33,18 @@ test_crypto_pem_encode(void *arg)
 
   char buf[4096];
 
-  int n = (int) pem_encoded_size(strlen(example_pre), "WOMBAT QUOTE");
+  int n = (int)pem_encoded_size(strlen(example_pre), "WOMBAT QUOTE");
 
-  int n2 = pem_encode(buf, sizeof(buf),
-                      (const unsigned char *)example_pre, strlen(example_pre),
-                      "WOMBAT QUOTE");
-  tt_int_op(strlen(buf)+1, OP_EQ, n);
+  int n2 = pem_encode(buf, sizeof(buf), (const unsigned char *)example_pre,
+                      strlen(example_pre), "WOMBAT QUOTE");
+  tt_int_op(strlen(buf) + 1, OP_EQ, n);
   tt_int_op(n2, OP_EQ, 0);
   tt_str_op(buf, OP_EQ, expected);
 
   /* Now make sure it succeeds if the buffer is exactly the length we want. */
   memset(buf, 0, sizeof(buf));
   n2 = pem_encode(buf, n, (const unsigned char *)example_pre,
-                      strlen(example_pre), "WOMBAT QUOTE");
+                  strlen(example_pre), "WOMBAT QUOTE");
   tt_int_op(n2, OP_EQ, 0);
   tt_str_op(buf, OP_EQ, expected);
 
@@ -55,8 +54,7 @@ test_crypto_pem_encode(void *arg)
                   strlen(example_pre), "WOMBAT QUOTE");
   tt_int_op(n2, OP_EQ, -1);
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -67,16 +65,14 @@ test_crypto_pem_decode(void *arg)
   unsigned char buf[4096];
 
   /* Try a straightforward decoding. */
-  int n = pem_decode(buf, sizeof(buf),
-                     expected, strlen(expected),
-                     "WOMBAT QUOTE");
+  int n =
+      pem_decode(buf, sizeof(buf), expected, strlen(expected), "WOMBAT QUOTE");
   tt_int_op(n, OP_EQ, strlen(example_pre));
   tt_mem_op(buf, OP_EQ, example_pre, n);
 
   /* Succeed if the buffer is exactly the right size. */
   memset(buf, 0xff, sizeof(buf));
-  n = pem_decode(buf, strlen(example_pre),
-                 expected, strlen(expected),
+  n = pem_decode(buf, strlen(example_pre), expected, strlen(expected),
                  "WOMBAT QUOTE");
   tt_int_op(n, OP_EQ, strlen(example_pre));
   tt_mem_op(buf, OP_EQ, example_pre, n);
@@ -84,25 +80,20 @@ test_crypto_pem_decode(void *arg)
 
   /* Verify that it fails if the buffer is too small. */
   memset(buf, 0xff, sizeof(buf));
-  n = pem_decode(buf, strlen(example_pre) - 1,
-                 expected, strlen(expected),
+  n = pem_decode(buf, strlen(example_pre) - 1, expected, strlen(expected),
                  "WOMBAT QUOTE");
   tt_int_op(n, OP_EQ, -1);
 
   /* Verify that it fails with an incorrect tag. */
   memset(buf, 0xff, sizeof(buf));
-  n = pem_decode(buf, sizeof(buf),
-                 expected, strlen(expected),
-                 "QUOKKA VOTE");
+  n = pem_decode(buf, sizeof(buf), expected, strlen(expected), "QUOKKA VOTE");
   tt_int_op(n, OP_EQ, -1);
 
   /* Try truncated buffers of different sizes. */
   size_t i;
   for (i = 0; i <= strlen(expected); ++i) {
     char *truncated = tor_memdup(expected, i);
-    n = pem_decode(buf, sizeof(buf),
-                   truncated, i,
-                   "WOMBAT QUOTE");
+    n = pem_decode(buf, sizeof(buf), truncated, i, "WOMBAT QUOTE");
     tor_free(truncated);
     if (i < strlen(expected) - 1) {
       tt_int_op(n, OP_EQ, -1);
@@ -111,12 +102,10 @@ test_crypto_pem_decode(void *arg)
     }
   }
 
- done:
-  ;
+done:;
 }
 
 struct testcase_t pem_tests[] = {
-  { "encode", test_crypto_pem_encode, 0, NULL, NULL },
-  { "decode", test_crypto_pem_decode, 0, NULL, NULL },
-  END_OF_TESTCASES
-};
+    {"encode", test_crypto_pem_encode, 0, NULL, NULL},
+    {"decode", test_crypto_pem_decode, 0, NULL, NULL},
+    END_OF_TESTCASES};

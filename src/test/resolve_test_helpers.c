@@ -31,15 +31,15 @@ replacement_host_lookup(const char *name, uint16_t family, tor_addr_t *addr)
     const char *ipv4;
     const char *ipv6;
   } entries[] = {
-    { "localhost", "127.0.0.1", "::1" },
-    { "torproject.org", "198.51.100.6", "2001:DB8::700" },
-    { NULL, NULL, NULL },
+      {"localhost", "127.0.0.1", "::1"},
+      {"torproject.org", "198.51.100.6", "2001:DB8::700"},
+      {NULL, NULL, NULL},
   };
 
   int r = -1;
 
   for (unsigned i = 0; entries[i].name != NULL; ++i) {
-    if (!strcasecmp(name, entries[i].name)) {
+    if (! strcasecmp(name, entries[i].name)) {
       if (family == AF_INET6) {
         int s = tor_addr_parse(addr, entries[i].ipv6);
         tt_int_op(s, OP_EQ, AF_INET6);
@@ -52,11 +52,11 @@ replacement_host_lookup(const char *name, uint16_t family, tor_addr_t *addr)
     }
   }
 
-  log_debug(LD_GENERAL, "resolve(%s,%d) => %s",
-            name, family, r == 0 ? fmt_addr(addr) : "-1");
+  log_debug(LD_GENERAL, "resolve(%s,%d) => %s", name, family,
+            r == 0 ? fmt_addr(addr) : "-1");
 
   return r;
- done:
+done:
   return -1;
 }
 

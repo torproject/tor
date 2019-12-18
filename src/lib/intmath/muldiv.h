@@ -25,6 +25,6 @@ void simplify_fraction64(uint64_t *numer, uint64_t *denom);
 /* Compute the CEIL of <b>a</b> divided by <b>b</b>, for nonnegative <b>a</b>
  * and positive <b>b</b>.  Works on integer types only. Not defined if a+(b-1)
  * can overflow. */
-#define CEIL_DIV(a,b) (((a)+((b)-1))/(b))
+#define CEIL_DIV(a, b) (((a) + ((b)-1)) / (b))
 
 #endif /* !defined(TOR_INTMATH_MULDIV_H) */

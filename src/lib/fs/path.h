@@ -15,9 +15,9 @@
 #include "lib/cc/compat_compiler.h"
 
 #ifdef _WIN32
-#define PATH_SEPARATOR "\\"
+#  define PATH_SEPARATOR "\\"
 #else
-#define PATH_SEPARATOR "/"
+#  define PATH_SEPARATOR "/"
 #endif
 
 char *get_unquoted_path(const char *path);

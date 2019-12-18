@@ -39,7 +39,10 @@ struct dist_t {
  *     ...
  *   };
  */
-#define DIST_BASE(OPS)  { .ops = (OPS) }
+#define DIST_BASE(OPS) \
+  {                    \
+    .ops = (OPS)       \
+  }
 
 /** A compile-time type-checking macro for use with DIST_BASE_TYPED.
  *
@@ -54,59 +57,59 @@ struct dist_t {
  *  Coverity, which gets confused by the sizeof business.
  */
 #ifdef __COVERITY__
-#define TYPE_CHECK_OBJ(OPS, OBJ, TYPE) 0
+#  define TYPE_CHECK_OBJ(OPS, OBJ, TYPE) 0
 #else
-#define TYPE_CHECK_OBJ(OPS, OBJ, TYPE) \
-  (0*sizeof(&(OBJ) - (const TYPE *)&(OBJ)))
+#  define TYPE_CHECK_OBJ(OPS, OBJ, TYPE) \
+    (0 * sizeof(&(OBJ) - (const TYPE *)&(OBJ)))
 #endif /* defined(__COVERITY__) */
 
 /**
-* Typed initializer element for struct dist_t using the specified struct
-* dist_ops_t pointer.  Don't actually use this directly -- use a
-* type-specific macro built out of it -- but if you did use this
-* directly, it would be something like:
-*
-*     struct weibull mydist = {
-*       DIST_BASE_TYPED(&weibull_ops, mydist, struct weibull_t),
-*       .lambda = ...,
-*       .k = ...,
-*     };
-*
-* If you want to define a distribution type, define a canonical set of
-* operations and define a type-specific initializer element like so:
-*
-*     struct foo_t {
-*       struct dist_t base;
-*       int omega;
-*       double tau;
-*       double phi;
-*     };
-*
-*     struct dist_ops_t foo_ops = ...;
-*
-*     #define FOO(OBJ) DIST_BASE_TYPED(&foo_ops, OBJ, struct foo_t)
-*
-* Then users can do:
-*
-*     struct foo_t mydist = {
-*       FOO(mydist),
-*       .omega = ...,
-*       .tau = ...,
-*       .phi = ...,
-*     };
-*
-* If you accidentally write
-*
-*     struct bar_t mydist = {
-*       FOO(mydist),
-*       ...
-*     };
-*
-* then the compiler will report a type mismatch in the sizeof
-* expression, which otherwise evaporates at runtime.
-*/
-#define DIST_BASE_TYPED(OPS, OBJ, TYPE)                         \
-  DIST_BASE((OPS) + TYPE_CHECK_OBJ(OPS,OBJ,TYPE))
+ * Typed initializer element for struct dist_t using the specified struct
+ * dist_ops_t pointer.  Don't actually use this directly -- use a
+ * type-specific macro built out of it -- but if you did use this
+ * directly, it would be something like:
+ *
+ *     struct weibull mydist = {
+ *       DIST_BASE_TYPED(&weibull_ops, mydist, struct weibull_t),
+ *       .lambda = ...,
+ *       .k = ...,
+ *     };
+ *
+ * If you want to define a distribution type, define a canonical set of
+ * operations and define a type-specific initializer element like so:
+ *
+ *     struct foo_t {
+ *       struct dist_t base;
+ *       int omega;
+ *       double tau;
+ *       double phi;
+ *     };
+ *
+ *     struct dist_ops_t foo_ops = ...;
+ *
+ *     #define FOO(OBJ) DIST_BASE_TYPED(&foo_ops, OBJ, struct foo_t)
+ *
+ * Then users can do:
+ *
+ *     struct foo_t mydist = {
+ *       FOO(mydist),
+ *       .omega = ...,
+ *       .tau = ...,
+ *       .phi = ...,
+ *     };
+ *
+ * If you accidentally write
+ *
+ *     struct bar_t mydist = {
+ *       FOO(mydist),
+ *       ...
+ *     };
+ *
+ * then the compiler will report a type mismatch in the sizeof
+ * expression, which otherwise evaporates at runtime.
+ */
+#define DIST_BASE_TYPED(OPS, OBJ, TYPE) \
+  DIST_BASE((OPS) + TYPE_CHECK_OBJ(OPS, OBJ, TYPE))
 
 /**
  * Generic operations on distributions.  These simply defer to the
@@ -143,8 +146,7 @@ struct geometric_t {
 
 extern const struct dist_ops_t geometric_ops;
 
-#define GEOMETRIC(OBJ)                                      \
-  DIST_BASE_TYPED(&geometric_ops, OBJ, struct geometric_t)
+#define GEOMETRIC(OBJ) DIST_BASE_TYPED(&geometric_ops, OBJ, struct geometric_t)
 
 /* Pareto distribution */
 
@@ -157,8 +159,7 @@ struct genpareto_t {
 
 extern const struct dist_ops_t genpareto_ops;
 
-#define GENPARETO(OBJ)                                      \
-  DIST_BASE_TYPED(&genpareto_ops, OBJ, struct genpareto_t)
+#define GENPARETO(OBJ) DIST_BASE_TYPED(&genpareto_ops, OBJ, struct genpareto_t)
 
 /* Weibull distribution */
 
@@ -170,8 +171,7 @@ struct weibull_t {
 
 extern const struct dist_ops_t weibull_ops;
 
-#define WEIBULL(OBJ)                                    \
-  DIST_BASE_TYPED(&weibull_ops, OBJ, struct weibull_t)
+#define WEIBULL(OBJ) DIST_BASE_TYPED(&weibull_ops, OBJ, struct weibull_t)
 
 /* Log-logistic distribution */
 
@@ -183,7 +183,7 @@ struct log_logistic_t {
 
 extern const struct dist_ops_t log_logistic_ops;
 
-#define LOG_LOGISTIC(OBJ)                                       \
+#define LOG_LOGISTIC(OBJ) \
   DIST_BASE_TYPED(&log_logistic_ops, OBJ, struct log_logistic_t)
 
 /* Logistic distribution */
@@ -196,8 +196,7 @@ struct logistic_t {
 
 extern const struct dist_ops_t logistic_ops;
 
-#define LOGISTIC(OBJ)                                   \
-  DIST_BASE_TYPED(&logistic_ops, OBJ, struct logistic_t)
+#define LOGISTIC(OBJ) DIST_BASE_TYPED(&logistic_ops, OBJ, struct logistic_t)
 
 /* Uniform distribution */
 
@@ -209,8 +208,7 @@ struct uniform_t {
 
 extern const struct dist_ops_t uniform_ops;
 
-#define UNIFORM(OBJ)                                    \
-  DIST_BASE_TYPED(&uniform_ops, OBJ, struct uniform_t)
+#define UNIFORM(OBJ) DIST_BASE_TYPED(&uniform_ops, OBJ, struct uniform_t)
 
 /** Only by unittests */
 

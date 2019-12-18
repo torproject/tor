@@ -18,11 +18,13 @@ struct ed25519_public_key_t;
 
 /** Ways to convert a spoolable_resource_t to a bunch of bytes. */
 typedef enum dir_spool_source_t {
-    DIR_SPOOL_SERVER_BY_DIGEST=1, DIR_SPOOL_SERVER_BY_FP,
-    DIR_SPOOL_EXTRA_BY_DIGEST, DIR_SPOOL_EXTRA_BY_FP,
-    DIR_SPOOL_MICRODESC,
-    DIR_SPOOL_NETWORKSTATUS,
-    DIR_SPOOL_CONSENSUS_CACHE_ENTRY,
+  DIR_SPOOL_SERVER_BY_DIGEST = 1,
+  DIR_SPOOL_SERVER_BY_FP,
+  DIR_SPOOL_EXTRA_BY_DIGEST,
+  DIR_SPOOL_EXTRA_BY_FP,
+  DIR_SPOOL_MICRODESC,
+  DIR_SPOOL_NETWORKSTATUS,
+  DIR_SPOOL_CONSENSUS_CACHE_ENTRY,
 } dir_spool_source_t;
 #define dir_spool_source_bitfield_t ENUM_BF(dir_spool_source_t)
 
@@ -83,17 +85,14 @@ int directory_too_idle_to_fetch_descriptors(const or_options_t *options,
                                             time_t now);
 
 MOCK_DECL(cached_dir_t *, dirserv_get_consensus, (const char *flavor_name));
-void dirserv_set_cached_consensus_networkstatus(const char *consensus,
-                                              size_t consensus_len,
-                                              const char *flavor_name,
-                                              const common_digests_t *digests,
-                                              const uint8_t *sha3_as_signed,
-                                              time_t published);
+void dirserv_set_cached_consensus_networkstatus(
+    const char *consensus, size_t consensus_len, const char *flavor_name,
+    const common_digests_t *digests, const uint8_t *sha3_as_signed,
+    time_t published);
 void dirserv_clear_old_networkstatuses(time_t cutoff);
 int dirserv_get_routerdesc_spool(smartlist_t *spools_out, const char *key,
                                  dir_spool_source_t source,
-                                 int conn_is_encrypted,
-                                 const char **msg_out);
+                                 int conn_is_encrypted, const char **msg_out);
 int dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
                             const char **msg);
 
@@ -104,8 +103,8 @@ cached_dir_t *new_cached_dir(char *s, time_t published);
 spooled_resource_t *spooled_resource_new(dir_spool_source_t source,
                                          const uint8_t *digest,
                                          size_t digestlen);
-spooled_resource_t *spooled_resource_new_from_cache_entry(
-                                      struct consensus_cache_entry_t *entry);
+spooled_resource_t *
+spooled_resource_new_from_cache_entry(struct consensus_cache_entry_t *entry);
 void spooled_resource_free_(spooled_resource_t *spooled);
 #define spooled_resource_free(sp) \
   FREE_AND_NULL(spooled_resource_t, spooled_resource_free_, (sp))

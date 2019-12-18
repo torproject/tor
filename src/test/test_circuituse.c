@@ -27,8 +27,8 @@ test_circuit_is_available_for_use_ret_false_when_marked_for_close(void *arg)
 
   tt_int_op(0, OP_EQ, circuit_is_available_for_use(circ));
 
-  done:
-    tor_free(circ);
+done:
+  tor_free(circ);
 }
 
 static void
@@ -41,8 +41,8 @@ test_circuit_is_available_for_use_ret_false_when_timestamp_dirty(void *arg)
 
   tt_int_op(0, OP_EQ, circuit_is_available_for_use(circ));
 
-  done:
-    tor_free(circ);
+done:
+  tor_free(circ);
 }
 
 static void
@@ -55,8 +55,8 @@ test_circuit_is_available_for_use_ret_false_for_non_general_purpose(void *arg)
 
   tt_int_op(0, OP_EQ, circuit_is_available_for_use(circ));
 
-  done:
-    tor_free(circ);
+done:
+  tor_free(circ);
 }
 
 static void
@@ -69,8 +69,8 @@ test_circuit_is_available_for_use_ret_false_for_non_general_origin(void *arg)
 
   tt_int_op(0, OP_EQ, circuit_is_available_for_use(circ));
 
-  done:
-    tor_free(circ);
+done:
+  tor_free(circ);
 }
 
 static void
@@ -83,8 +83,8 @@ test_circuit_is_available_for_use_ret_false_for_non_origin_purpose(void *arg)
 
   tt_int_op(0, OP_EQ, circuit_is_available_for_use(circ));
 
-  done:
-    tor_free(circ);
+done:
+  tor_free(circ);
 }
 
 static void
@@ -97,8 +97,8 @@ test_circuit_is_available_for_use_ret_false_unusable_for_new_conns(void *arg)
 
   tt_int_op(0, OP_EQ, circuit_is_available_for_use(circ));
 
-  done:
-    circuit_free(circ);
+done:
+  circuit_free(circ);
 }
 
 static void
@@ -113,8 +113,8 @@ test_circuit_is_available_for_use_returns_false_for_onehop_tunnel(void *arg)
 
   tt_int_op(0, OP_EQ, circuit_is_available_for_use(circ));
 
-  done:
-    circuit_free(circ);
+done:
+  circuit_free(circ);
 }
 
 static void
@@ -129,13 +129,12 @@ test_circuit_is_available_for_use_returns_true_for_clean_circuit(void *arg)
 
   tt_int_op(1, OP_EQ, circuit_is_available_for_use(circ));
 
-  done:
-    circuit_free(circ);
+done:
+  circuit_free(circ);
 }
 
 static int
-mock_circuit_all_predicted_ports_handled(time_t now,
-                                         int *need_uptime,
+mock_circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
                                          int *need_capacity)
 {
   (void)now;
@@ -171,8 +170,8 @@ test_needs_exit_circuits_ret_false_for_predicted_ports_and_path(void *arg)
   tt_int_op(0, OP_EQ,
             needs_exit_circuits(now, &needs_uptime, &needs_capacity));
 
-  done:
-    UNMOCK(circuit_all_predicted_ports_handled);
+done:
+  UNMOCK(circuit_all_predicted_ports_handled);
 }
 
 static void
@@ -190,9 +189,9 @@ test_needs_exit_circuits_ret_false_for_non_exit_consensus_path(void *arg)
   tt_int_op(0, OP_EQ,
             needs_exit_circuits(now, &needs_uptime, &needs_capacity));
 
-  done:
-    UNMOCK(circuit_all_predicted_ports_handled);
-    UNMOCK(router_have_consensus_path);
+done:
+  UNMOCK(circuit_all_predicted_ports_handled);
+  UNMOCK(router_have_consensus_path);
 }
 
 static void
@@ -210,9 +209,9 @@ test_needs_exit_circuits_ret_true_for_predicted_ports_and_path(void *arg)
   tt_int_op(1, OP_EQ,
             needs_exit_circuits(now, &needs_uptime, &needs_capacity));
 
-  done:
-    UNMOCK(circuit_all_predicted_ports_handled);
-    UNMOCK(router_have_consensus_path);
+done:
+  UNMOCK(circuit_all_predicted_ports_handled);
+  UNMOCK(router_have_consensus_path);
 }
 
 static void
@@ -221,7 +220,7 @@ test_needs_circuits_for_build_ret_false_consensus_path_unknown(void *arg)
   (void)arg;
   MOCK(router_have_consensus_path, mock_router_have_unknown_consensus_path);
   tt_int_op(0, OP_EQ, needs_circuits_for_build(0));
-  done: ;
+done:;
 }
 
 static void
@@ -230,8 +229,8 @@ test_needs_circuits_for_build_ret_false_if_num_less_than_max(void *arg)
   (void)arg;
   MOCK(router_have_consensus_path, mock_router_have_exit_consensus_path);
   tt_int_op(0, OP_EQ, needs_circuits_for_build(13));
-  done:
-    UNMOCK(router_have_consensus_path);
+done:
+  UNMOCK(router_have_consensus_path);
 }
 
 static void
@@ -240,71 +239,51 @@ test_needs_circuits_for_build_returns_true_when_more_are_needed(void *arg)
   (void)arg;
   MOCK(router_have_consensus_path, mock_router_have_exit_consensus_path);
   tt_int_op(1, OP_EQ, needs_circuits_for_build(0));
-  done:
-    UNMOCK(router_have_consensus_path);
+done:
+  UNMOCK(router_have_consensus_path);
 }
 
 struct testcase_t circuituse_tests[] = {
- { "marked",
-   test_circuit_is_available_for_use_ret_false_when_marked_for_close,
-   TT_FORK, NULL, NULL
- },
- { "timestamp",
-   test_circuit_is_available_for_use_ret_false_when_timestamp_dirty,
-   TT_FORK, NULL, NULL
- },
- { "non_general",
-   test_circuit_is_available_for_use_ret_false_for_non_general_purpose,
-   TT_FORK, NULL, NULL
- },
- { "non_general",
-  test_circuit_is_available_for_use_ret_false_for_non_general_origin,
-   TT_FORK, NULL, NULL
- },
- { "origin",
-   test_circuit_is_available_for_use_ret_false_for_non_origin_purpose,
-   TT_FORK, NULL, NULL
- },
- { "clean",
-   test_circuit_is_available_for_use_ret_false_unusable_for_new_conns,
-   TT_FORK, NULL, NULL
- },
- { "onehop",
-   test_circuit_is_available_for_use_returns_false_for_onehop_tunnel,
-   TT_FORK, NULL, NULL
- },
- { "clean_circ",
-   test_circuit_is_available_for_use_returns_true_for_clean_circuit,
-   TT_FORK, NULL, NULL
- },
- { "exit_f",
-   test_needs_exit_circuits_ret_false_for_predicted_ports_and_path,
-   TT_FORK, NULL, NULL
- },
- { "exit_t",
-   test_needs_exit_circuits_ret_true_for_predicted_ports_and_path,
-   TT_FORK, NULL, NULL
- },
- { "non_exit",
-   test_needs_exit_circuits_ret_false_for_non_exit_consensus_path,
-   TT_FORK, NULL, NULL
- },
- { "true",
-   test_needs_exit_circuits_ret_true_for_predicted_ports_and_path,
-   TT_FORK, NULL, NULL
- },
- { "consensus_path_unknown",
-   test_needs_circuits_for_build_ret_false_consensus_path_unknown,
-   TT_FORK, NULL, NULL
- },
- { "less_than_max",
-   test_needs_circuits_for_build_ret_false_if_num_less_than_max,
-   TT_FORK, NULL, NULL
- },
- { "more_needed",
-   test_needs_circuits_for_build_returns_true_when_more_are_needed,
-   TT_FORK, NULL, NULL
- },
-  END_OF_TESTCASES
-};
-
+    {"marked",
+     test_circuit_is_available_for_use_ret_false_when_marked_for_close,
+     TT_FORK, NULL, NULL},
+    {"timestamp",
+     test_circuit_is_available_for_use_ret_false_when_timestamp_dirty, TT_FORK,
+     NULL, NULL},
+    {"non_general",
+     test_circuit_is_available_for_use_ret_false_for_non_general_purpose,
+     TT_FORK, NULL, NULL},
+    {"non_general",
+     test_circuit_is_available_for_use_ret_false_for_non_general_origin,
+     TT_FORK, NULL, NULL},
+    {"origin",
+     test_circuit_is_available_for_use_ret_false_for_non_origin_purpose,
+     TT_FORK, NULL, NULL},
+    {"clean",
+     test_circuit_is_available_for_use_ret_false_unusable_for_new_conns,
+     TT_FORK, NULL, NULL},
+    {"onehop",
+     test_circuit_is_available_for_use_returns_false_for_onehop_tunnel,
+     TT_FORK, NULL, NULL},
+    {"clean_circ",
+     test_circuit_is_available_for_use_returns_true_for_clean_circuit, TT_FORK,
+     NULL, NULL},
+    {"exit_f", test_needs_exit_circuits_ret_false_for_predicted_ports_and_path,
+     TT_FORK, NULL, NULL},
+    {"exit_t", test_needs_exit_circuits_ret_true_for_predicted_ports_and_path,
+     TT_FORK, NULL, NULL},
+    {"non_exit",
+     test_needs_exit_circuits_ret_false_for_non_exit_consensus_path, TT_FORK,
+     NULL, NULL},
+    {"true", test_needs_exit_circuits_ret_true_for_predicted_ports_and_path,
+     TT_FORK, NULL, NULL},
+    {"consensus_path_unknown",
+     test_needs_circuits_for_build_ret_false_consensus_path_unknown, TT_FORK,
+     NULL, NULL},
+    {"less_than_max",
+     test_needs_circuits_for_build_ret_false_if_num_less_than_max, TT_FORK,
+     NULL, NULL},
+    {"more_needed",
+     test_needs_circuits_for_build_returns_true_when_more_are_needed, TT_FORK,
+     NULL, NULL},
+    END_OF_TESTCASES};

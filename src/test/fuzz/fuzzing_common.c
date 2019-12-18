@@ -22,8 +22,8 @@ mock_get_options(void)
 
 static int
 mock_crypto_pk_public_checksig__nocheck(const crypto_pk_t *env, char *to,
-                                        size_t tolen,
-                                        const char *from, size_t fromlen)
+                                        size_t tolen, const char *from,
+                                        size_t fromlen)
 {
   tor_assert(env && to && from);
   (void)fromlen;
@@ -37,8 +37,7 @@ mock_crypto_pk_public_checksig__nocheck(const crypto_pk_t *env, char *to,
 static int
 mock_crypto_pk_public_checksig_digest__nocheck(crypto_pk_t *env,
                                                const char *data,
-                                               size_t datalen,
-                                               const char *sig,
+                                               size_t datalen, const char *sig,
                                                size_t siglen)
 {
   tor_assert(env && data && sig);
@@ -50,8 +49,8 @@ mock_crypto_pk_public_checksig_digest__nocheck(crypto_pk_t *env,
 
 static int
 mock_ed25519_checksig__nocheck(const ed25519_signature_t *signature,
-                      const uint8_t *msg, size_t len,
-                      const ed25519_public_key_t *pubkey)
+                               const uint8_t *msg, size_t len,
+                               const ed25519_public_key_t *pubkey)
 {
   tor_assert(signature && msg && pubkey);
   /* We could look at msg[0..len-1] ... */
@@ -85,8 +84,7 @@ mock_ed25519_impl_spot_check__nocheck(void)
 void
 disable_signature_checking(void)
 {
-  MOCK(crypto_pk_public_checksig,
-       mock_crypto_pk_public_checksig__nocheck);
+  MOCK(crypto_pk_public_checksig, mock_crypto_pk_public_checksig__nocheck);
   MOCK(crypto_pk_public_checksig_digest,
        mock_crypto_pk_public_checksig_digest__nocheck);
   MOCK(ed25519_checksig, mock_ed25519_checksig__nocheck);
@@ -106,7 +104,7 @@ global_init(void)
     abort();
 
   {
-    struct sipkey sipkey = { 1337, 7331 };
+    struct sipkey sipkey = {1337, 7331};
     siphash_unset_global_key();
     siphash_set_global_key(&sipkey);
   }
@@ -128,7 +126,7 @@ int
 LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 {
   static int initialized = 0;
-  if (!initialized) {
+  if (! initialized) {
     global_init();
     if (fuzz_init() < 0)
       abort();
@@ -151,13 +149,13 @@ main(int argc, char **argv)
   int loglevel = LOG_ERR;
 
   for (int i = 1; i < argc; ++i) {
-    if (!strcmp(argv[i], "--warn")) {
+    if (! strcmp(argv[i], "--warn")) {
       loglevel = LOG_WARN;
-    } else if (!strcmp(argv[i], "--notice")) {
+    } else if (! strcmp(argv[i], "--notice")) {
       loglevel = LOG_NOTICE;
-    } else if (!strcmp(argv[i], "--info")) {
+    } else if (! strcmp(argv[i], "--info")) {
       loglevel = LOG_INFO;
-    } else if (!strcmp(argv[i], "--debug")) {
+    } else if (! strcmp(argv[i], "--debug")) {
       loglevel = LOG_DEBUG;
     }
   }
@@ -174,17 +172,17 @@ main(int argc, char **argv)
   if (fuzz_init() < 0)
     abort();
 
-#ifdef __AFL_HAVE_MANUAL_CONTROL
+#  ifdef __AFL_HAVE_MANUAL_CONTROL
   /* Tell AFL to pause and fork here - ignored if not using AFL */
   __AFL_INIT();
-#endif
+#  endif
 
-#define MAX_FUZZ_SIZE (128*1024)
+#  define MAX_FUZZ_SIZE (128 * 1024)
   char *input = read_file_to_str_until_eof(0, MAX_FUZZ_SIZE, &size);
   tor_assert(input);
   char *raw = tor_memdup(input, size); /* Because input is nul-terminated */
   tor_free(input);
-  fuzz_main((const uint8_t*)raw, size);
+  fuzz_main((const uint8_t *)raw, size);
   tor_free(raw);
 
   if (fuzz_cleanup() < 0)

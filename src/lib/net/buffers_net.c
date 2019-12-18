@@ -17,21 +17,24 @@
 #include "lib/net/nettypes.h"
 
 #ifdef _WIN32
-#include <winsock2.h>
+#  include <winsock2.h>
 #endif
 
 #include <stdlib.h>
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
 #ifdef PARANOIA
 /** Helper: If PARANOIA is defined, assert that the buffer in local variable
  * <b>buf</b> is well-formed. */
-#define check() STMT_BEGIN buf_assert_ok(buf); STMT_END
+#  define check()         \
+    STMT_BEGIN            \
+      buf_assert_ok(buf); \
+    STMT_END
 #else
-#define check() STMT_NIL
+#  define check() STMT_NIL
 #endif /* defined(PARANOIA) */
 
 /** Read up to <b>at_most</b> bytes from the file descriptor <b>fd</b> into
@@ -56,7 +59,7 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, tor_socket_t fd, size_t at_most,
   if (read_result < 0) {
     int e = is_socket ? tor_socket_errno(fd) : errno;
 
-    if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
+    if (! ERRNO_IS_EAGAIN(e)) { /* it's a real error */
 #ifdef _WIN32
       if (e == WSAENOBUFS)
         log_warn(LD_NET, "%s() failed: WSAENOBUFS. Not enough ram?",
@@ -68,13 +71,13 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, tor_socket_t fd, size_t at_most,
     }
     return 0; /* would block. */
   } else if (read_result == 0) {
-    log_debug(LD_NET,"Encountered eof on fd %d", (int)fd);
+    log_debug(LD_NET, "Encountered eof on fd %d", (int)fd);
     *reached_eof = 1;
     return 0;
   } else { /* actually got bytes. */
     buf->datalen += read_result;
     chunk->datalen += read_result;
-    log_debug(LD_NET,"Read %ld bytes. %d on inbuf.", (long)read_result,
+    log_debug(LD_NET, "Read %ld bytes. %d on inbuf.", (long)read_result,
               (int)buf->datalen);
     tor_assert(read_result < INT_MAX);
     return (int)read_result;
@@ -88,10 +91,8 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, tor_socket_t fd, size_t at_most,
  */
 /* XXXX indicate "read blocked" somehow? */
 static int
-buf_read_from_fd(buf_t *buf, int fd, size_t at_most,
-                 int *reached_eof,
-                 int *socket_error,
-                 bool is_socket)
+buf_read_from_fd(buf_t *buf, int fd, size_t at_most, int *reached_eof,
+                 int *socket_error, bool is_socket)
 {
   /* XXXX It's stupid to overload the return values for these functions:
    * "error status" and "number of bytes read" are not mutually exclusive.
@@ -111,7 +112,7 @@ buf_read_from_fd(buf_t *buf, int fd, size_t at_most,
   while (at_most > total_read) {
     size_t readlen = at_most - total_read;
     chunk_t *chunk;
-    if (!buf->tail || CHUNK_REMAINING_CAPACITY(buf->tail) < MIN_READ_LEN) {
+    if (! buf->tail || CHUNK_REMAINING_CAPACITY(buf->tail) < MIN_READ_LEN) {
       chunk = buf_add_chunk_with_capacity(buf, at_most, 1);
       if (readlen > chunk->memlen)
         readlen = chunk->memlen;
@@ -122,12 +123,12 @@ buf_read_from_fd(buf_t *buf, int fd, size_t at_most,
         readlen = cap;
     }
 
-    r = read_to_chunk(buf, chunk, fd, readlen,
-                      reached_eof, socket_error, is_socket);
+    r = read_to_chunk(buf, chunk, fd, readlen, reached_eof, socket_error,
+                      is_socket);
     check();
     if (r < 0)
       return r; /* Error */
-    tor_assert(total_read+r < INT_MAX);
+    tor_assert(total_read + r < INT_MAX);
     total_read += r;
     if ((size_t)r < readlen) { /* eof, block, or no more to read. */
       break;
@@ -158,14 +159,14 @@ flush_chunk(tor_socket_t fd, buf_t *buf, chunk_t *chunk, size_t sz,
   if (write_result < 0) {
     int e = is_socket ? tor_socket_errno(fd) : errno;
 
-    if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
+    if (! ERRNO_IS_EAGAIN(e)) { /* it's a real error */
 #ifdef _WIN32
       if (e == WSAENOBUFS)
-        log_warn(LD_NET,"write() failed: WSAENOBUFS. Not enough ram?");
+        log_warn(LD_NET, "write() failed: WSAENOBUFS. Not enough ram?");
 #endif
       return -1;
     }
-    log_debug(LD_NET,"write() would block, returning.");
+    log_debug(LD_NET, "write() would block, returning.");
     return 0;
   } else {
     *buf_flushlen -= write_result;
@@ -182,8 +183,8 @@ flush_chunk(tor_socket_t fd, buf_t *buf, chunk_t *chunk, size_t sz,
  * -1 on failure.  Return 0 if write() would block.
  */
 static int
-buf_flush_to_fd(buf_t *buf, int fd, size_t sz,
-                size_t *buf_flushlen, bool is_socket)
+buf_flush_to_fd(buf_t *buf, int fd, size_t sz, size_t *buf_flushlen,
+                bool is_socket)
 {
   /* XXXX It's stupid to overload the return values for these functions:
    * "error status" and "number of bytes flushed" are not mutually exclusive.
@@ -241,8 +242,7 @@ buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
  */
 int
 buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
-                     int *reached_eof,
-                     int *socket_error)
+                     int *reached_eof, int *socket_error)
 {
   return buf_read_from_fd(buf, s, at_most, reached_eof, socket_error, true);
 }
@@ -254,8 +254,7 @@ buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
  * -1 on failure.  Return 0 if write() would block.
  */
 int
-buf_flush_to_pipe(buf_t *buf, int fd, size_t sz,
-                  size_t *buf_flushlen)
+buf_flush_to_pipe(buf_t *buf, int fd, size_t sz, size_t *buf_flushlen)
 {
   return buf_flush_to_fd(buf, fd, sz, buf_flushlen, false);
 }
@@ -266,8 +265,7 @@ buf_flush_to_pipe(buf_t *buf, int fd, size_t sz,
  * error; else return the number of bytes read.
  */
 int
-buf_read_from_pipe(buf_t *buf, int fd, size_t at_most,
-                   int *reached_eof,
+buf_read_from_pipe(buf_t *buf, int fd, size_t at_most, int *reached_eof,
                    int *socket_error)
 {
   return buf_read_from_fd(buf, fd, at_most, reached_eof, socket_error, false);

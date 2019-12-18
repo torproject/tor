@@ -79,8 +79,8 @@ typedef struct rend_service_t {
                          * if no client authorization is performed. */
   /* Other fields */
   crypto_pk_t *private_key; /**< Permanent hidden-service key. */
-  char service_id[REND_SERVICE_ID_LEN_BASE32+1]; /**< Onion address without
-                                                  * '.onion' */
+  char service_id[REND_SERVICE_ID_LEN_BASE32 + 1]; /**< Onion address without
+                                                    * '.onion' */
   char pk_digest[DIGEST_LEN]; /**< Hash of permanent hidden-service key. */
   smartlist_t *intro_nodes; /**< List of rend_intro_point_t's we have,
                              * or are trying to establish. */
@@ -119,22 +119,22 @@ typedef struct rend_service_t {
 } rend_service_t;
 
 STATIC void rend_service_free_(rend_service_t *service);
-#define rend_service_free(s) \
-  FREE_AND_NULL(rend_service_t, rend_service_free_, (s))
+#  define rend_service_free(s) \
+    FREE_AND_NULL(rend_service_t, rend_service_free_, (s))
 STATIC char *rend_service_sos_poison_path(const rend_service_t *service);
-STATIC int rend_service_verify_single_onion_poison(
-                                                  const rend_service_t *s,
-                                                  const or_options_t *options);
-STATIC int rend_service_poison_new_single_onion_dir(
-                                                  const rend_service_t *s,
-                                                  const or_options_t* options);
-#ifdef TOR_UNIT_TESTS
+STATIC int
+rend_service_verify_single_onion_poison(const rend_service_t *s,
+                                        const or_options_t *options);
+STATIC int
+rend_service_poison_new_single_onion_dir(const rend_service_t *s,
+                                         const or_options_t *options);
+#  ifdef TOR_UNIT_TESTS
 
 STATIC void set_rend_service_list(smartlist_t *new_list);
 STATIC void set_rend_rend_service_staging_list(smartlist_t *new_list);
 STATIC void rend_service_prune_list_impl_(void);
 
-#endif /* defined(TOR_UNIT_TESTS) */
+#  endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(RENDSERVICE_PRIVATE) */
 
@@ -155,24 +155,23 @@ void rend_consider_descriptor_republication(void);
 
 void rend_service_intro_has_opened(origin_circuit_t *circuit);
 int rend_service_intro_established(origin_circuit_t *circuit,
-                                   const uint8_t *request,
-                                   size_t request_len);
+                                   const uint8_t *request, size_t request_len);
 void rend_service_rendezvous_has_opened(origin_circuit_t *circuit);
 int rend_service_receive_introduction(origin_circuit_t *circuit,
                                       const uint8_t *request,
                                       size_t request_len);
-int rend_service_decrypt_intro(rend_intro_cell_t *request,
-                               crypto_pk_t *key,
+int rend_service_decrypt_intro(rend_intro_cell_t *request, crypto_pk_t *key,
                                char **err_msg_out);
 void rend_service_free_intro_(rend_intro_cell_t *request);
-#define rend_service_free_intro(req) do {       \
-    rend_service_free_intro_(req);              \
-    (req) = NULL;                               \
+#define rend_service_free_intro(req) \
+  do {                               \
+    rend_service_free_intro_(req);   \
+    (req) = NULL;                    \
   } while (0)
-rend_intro_cell_t * rend_service_begin_parse_intro(const uint8_t *request,
-                                                   size_t request_len,
-                                                   uint8_t type,
-                                                   char **err_msg_out);
+rend_intro_cell_t *rend_service_begin_parse_intro(const uint8_t *request,
+                                                  size_t request_len,
+                                                  uint8_t type,
+                                                  char **err_msg_out);
 int rend_service_parse_intro_plaintext(rend_intro_cell_t *intro,
                                        char **err_msg_out);
 ssize_t rend_service_encode_establish_intro_cell(char *cell_body_out,
@@ -192,22 +191,19 @@ rend_service_port_config_t *rend_service_parse_port_config(const char *string,
                                                            const char *sep,
                                                            char **err_msg_out);
 void rend_service_port_config_free_(rend_service_port_config_t *p);
-#define rend_service_port_config_free(p) \
+#define rend_service_port_config_free(p)                                    \
   FREE_AND_NULL(rend_service_port_config_t, rend_service_port_config_free_, \
                 (p))
 
 void rend_authorized_client_free_(rend_authorized_client_t *client);
-#define rend_authorized_client_free(client) \
+#define rend_authorized_client_free(client)                             \
   FREE_AND_NULL(rend_authorized_client_t, rend_authorized_client_free_, \
                 (client))
 
-hs_service_add_ephemeral_status_t rend_service_add_ephemeral(crypto_pk_t *pk,
-                               smartlist_t *ports,
-                               int max_streams_per_circuit,
-                               int max_streams_close_circuit,
-                               rend_auth_type_t auth_type,
-                               smartlist_t *auth_clients,
-                               char **service_id_out);
+hs_service_add_ephemeral_status_t rend_service_add_ephemeral(
+    crypto_pk_t *pk, smartlist_t *ports, int max_streams_per_circuit,
+    int max_streams_close_circuit, rend_auth_type_t auth_type,
+    smartlist_t *auth_clients, char **service_id_out);
 int rend_service_del_ephemeral(const char *service_id);
 
 void directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,

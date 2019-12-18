@@ -15,7 +15,7 @@
 #include "core/or/or.h"
 
 /** Protocol version */
-#define SR_PROTO_VERSION  1
+#define SR_PROTO_VERSION 1
 /** Default digest algorithm. */
 #define SR_DIGEST_ALG DIGEST_SHA3_256
 /** Invariant token in the SRV calculation. */
@@ -53,9 +53,9 @@
 /** Protocol phase. */
 typedef enum {
   /** Commitment phase */
-  SR_PHASE_COMMIT  = 1,
+  SR_PHASE_COMMIT = 1,
   /** Reveal phase */
-  SR_PHASE_REVEAL  = 2,
+  SR_PHASE_REVEAL = 2,
 } sr_phase_t;
 
 /** A shared random value (SRV). */
@@ -71,7 +71,7 @@ typedef struct sr_commit_t {
   /** Hashing algorithm used. */
   digest_algorithm_t alg;
   /** Indicate if this commit has been verified thus valid. */
-  unsigned int valid:1;
+  unsigned int valid : 1;
 
   /* Commit owner info */
 
@@ -117,7 +117,7 @@ void sr_act_post_consensus(const networkstatus_t *consensus);
 static inline int
 sr_init(int save_to_disk)
 {
-  (void) save_to_disk;
+  (void)save_to_disk;
   /* Always return success. */
   return 0;
 }
@@ -130,15 +130,14 @@ sr_save_and_cleanup(void)
 static inline void
 sr_act_post_consensus(const networkstatus_t *consensus)
 {
-  (void) consensus;
+  (void)consensus;
 }
 
 #endif /* defined(HAVE_MODULE_DIRAUTH) */
 
 /* Public methods used only by dirauth code. */
 
-void sr_handle_received_commits(smartlist_t *commits,
-                                crypto_pk_t *voter_key);
+void sr_handle_received_commits(smartlist_t *commits, crypto_pk_t *voter_key);
 sr_commit_t *sr_parse_commit(const smartlist_t *args);
 char *sr_get_string_for_vote(void);
 char *sr_get_string_for_consensus(const smartlist_t *votes,
@@ -147,8 +146,8 @@ void sr_commit_free_(sr_commit_t *commit);
 #define sr_commit_free(sr) FREE_AND_NULL(sr_commit_t, sr_commit_free_, (sr))
 
 /* Private methods (only used by shared_random_state.c): */
-static inline
-const char *sr_commit_get_rsa_fpr(const sr_commit_t *commit)
+static inline const char *
+sr_commit_get_rsa_fpr(const sr_commit_t *commit)
 {
   return commit->rsa_identity_hex;
 }
@@ -179,8 +178,7 @@ STATIC int commitments_are_the_same(const sr_commit_t *commit_one,
                                     const sr_commit_t *commit_two);
 STATIC int commit_is_authoritative(const sr_commit_t *commit,
                                    const char *voter_key);
-STATIC int should_keep_commit(const sr_commit_t *commit,
-                              const char *voter_key,
+STATIC int should_keep_commit(const sr_commit_t *commit, const char *voter_key,
                               sr_phase_t phase);
 STATIC void save_commit_during_reveal_phase(const sr_commit_t *commit);
 

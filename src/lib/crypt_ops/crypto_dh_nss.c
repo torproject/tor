@@ -34,13 +34,12 @@ crypto_dh_init_nss(void)
     return;
 
   int r;
-  r = base16_decode((char*)tls_dh_prime_data,
-                    sizeof(tls_dh_prime_data),
+  r = base16_decode((char *)tls_dh_prime_data, sizeof(tls_dh_prime_data),
                     TLS_DH_PRIME, strlen(TLS_DH_PRIME));
   tor_assert(r == DH1024_KEY_LEN);
-  r = base16_decode((char*)circuit_dh_prime_data,
-                    sizeof(circuit_dh_prime_data),
-                    OAKLEY_PRIME_2, strlen(OAKLEY_PRIME_2));
+  r = base16_decode((char *)circuit_dh_prime_data,
+                    sizeof(circuit_dh_prime_data), OAKLEY_PRIME_2,
+                    strlen(OAKLEY_PRIME_2));
   tor_assert(r == DH1024_KEY_LEN);
   dh_generator_data[0] = DH_GENERATOR;
 
@@ -107,18 +106,17 @@ crypto_dh_generate_public(crypto_dh_t *dh)
     p = &circuit_dh_param;
 
   dh->seckey = SECKEY_CreateDHPrivateKey(p, &dh->pubkey, NULL);
-  if (!dh->seckey || !dh->pubkey)
+  if (! dh->seckey || ! dh->pubkey)
     return -1;
   else
     return 0;
 }
 int
-crypto_dh_get_public(crypto_dh_t *dh, char *pubkey_out,
-                     size_t pubkey_out_len)
+crypto_dh_get_public(crypto_dh_t *dh, char *pubkey_out, size_t pubkey_out_len)
 {
   tor_assert(dh);
   tor_assert(pubkey_out);
-  if (!dh->pubkey) {
+  if (! dh->pubkey) {
     if (crypto_dh_generate_public(dh) < 0)
       return -1;
   }
@@ -130,9 +128,7 @@ crypto_dh_get_public(crypto_dh_t *dh, char *pubkey_out,
 
   /* Left-pad the result with 0s. */
   memset(pubkey_out, 0, pubkey_out_len);
-  memcpy(pubkey_out + pubkey_out_len - item->len,
-         item->data,
-         item->len);
+  memcpy(pubkey_out + pubkey_out_len - item->len, item->data, item->len);
 
   return 0;
 }
@@ -140,7 +136,7 @@ crypto_dh_get_public(crypto_dh_t *dh, char *pubkey_out,
 void
 crypto_dh_free_(crypto_dh_t *dh)
 {
-  if (!dh)
+  if (! dh)
     return;
   if (dh->seckey)
     SECKEY_DestroyPrivateKey(dh->seckey);
@@ -150,15 +146,14 @@ crypto_dh_free_(crypto_dh_t *dh)
 }
 
 ssize_t
-crypto_dh_handshake(int severity, crypto_dh_t *dh,
-                    const char *pubkey, size_t pubkey_len,
-                    unsigned char *secret_out,
+crypto_dh_handshake(int severity, crypto_dh_t *dh, const char *pubkey,
+                    size_t pubkey_len, unsigned char *secret_out,
                     size_t secret_bytes_out)
 {
   tor_assert(dh);
   if (pubkey_len > DH1024_KEY_LEN)
     return -1;
-  if (!dh->pubkey || !dh->seckey)
+  if (! dh->pubkey || ! dh->seckey)
     return -1;
   if (secret_bytes_out < DH1024_KEY_LEN)
     return -1;
@@ -176,12 +171,11 @@ crypto_dh_handshake(int severity, crypto_dh_t *dh,
   peer_key.u.dh.base.data = dh_generator_data;
   peer_key.u.dh.base.len = 1;
   peer_key.u.dh.publicValue.data = (unsigned char *)pubkey;
-  peer_key.u.dh.publicValue.len = (int) pubkey_len;
+  peer_key.u.dh.publicValue.len = (int)pubkey_len;
 
-  PK11SymKey *sym = PK11_PubDerive(dh->seckey, &peer_key,
-                       PR_FALSE, NULL, NULL, CKM_DH_PKCS_DERIVE,
-                       CKM_GENERIC_SECRET_KEY_GEN /* ??? */,
-                       CKA_DERIVE, 0, NULL);
+  PK11SymKey *sym = PK11_PubDerive(
+      dh->seckey, &peer_key, PR_FALSE, NULL, NULL, CKM_DH_PKCS_DERIVE,
+      CKM_GENERIC_SECRET_KEY_GEN /* ??? */, CKA_DERIVE, 0, NULL);
   if (! sym) {
     crypto_nss_log_errors(severity, "deriving a DH shared secret");
     return -1;

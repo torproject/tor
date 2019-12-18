@@ -19,25 +19,23 @@
  * NOTE: The implementation kind of sucks: It's O(n log n), whereas finding
  * the kth element of an n-element list can be done in O(n).  Then again, this
  * implementation is not in critical path, and it is obviously correct. */
-#define IMPLEMENT_ORDER_FUNC(funcname, elt_t)                   \
-  static int                                                    \
-  _cmp_ ## elt_t(const void *_a, const void *_b)                \
-  {                                                             \
-    const elt_t *a = _a, *b = _b;                               \
-    if (*a<*b)                                                  \
-      return -1;                                                \
-    else if (*a>*b)                                             \
-      return 1;                                                 \
-    else                                                        \
-      return 0;                                                 \
-  }                                                             \
-  elt_t                                                         \
-  funcname(elt_t *array, int n_elements, int nth)               \
-  {                                                             \
-    tor_assert(nth >= 0);                                       \
-    tor_assert(nth < n_elements);                               \
-    qsort(array, n_elements, sizeof(elt_t), _cmp_ ##elt_t);     \
-    return array[nth];                                          \
+#define IMPLEMENT_ORDER_FUNC(funcname, elt_t)              \
+  static int _cmp_##elt_t(const void *_a, const void *_b)  \
+  {                                                        \
+    const elt_t *a = _a, *b = _b;                          \
+    if (*a < *b)                                           \
+      return -1;                                           \
+    else if (*a > *b)                                      \
+      return 1;                                            \
+    else                                                   \
+      return 0;                                            \
+  }                                                        \
+  elt_t funcname(elt_t *array, int n_elements, int nth)    \
+  {                                                        \
+    tor_assert(nth >= 0);                                  \
+    tor_assert(nth < n_elements);                          \
+    qsort(array, n_elements, sizeof(elt_t), _cmp_##elt_t); \
+    return array[nth];                                     \
   }
 
 IMPLEMENT_ORDER_FUNC(find_nth_int, int)

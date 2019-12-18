@@ -41,19 +41,16 @@
  * key.
  */
 static tor_cert_t *
-tor_cert_sign_impl(const ed25519_keypair_t *signing_key,
-                      uint8_t cert_type,
-                      uint8_t signed_key_type,
-                      const uint8_t signed_key_info[32],
-                      time_t now, time_t lifetime,
-                      uint32_t flags)
+tor_cert_sign_impl(const ed25519_keypair_t *signing_key, uint8_t cert_type,
+                   uint8_t signed_key_type, const uint8_t signed_key_info[32],
+                   time_t now, time_t lifetime, uint32_t flags)
 {
   tor_cert_t *torcert = NULL;
 
   ed25519_cert_t *cert = ed25519_cert_new();
   tor_assert(cert); // Unlike Tor's, Trunnel's "new" functions can return NULL.
   cert->cert_type = cert_type;
-  cert->exp_field = (uint32_t) CEIL_DIV(now + lifetime, 3600);
+  cert->exp_field = (uint32_t)CEIL_DIV(now + lifetime, 3600);
   cert->cert_key_type = signed_key_type;
   memcpy(cert->certified_key, signed_key_info, 32);
 
@@ -74,11 +71,11 @@ tor_cert_sign_impl(const ed25519_keypair_t *signing_key,
   tor_assert(real_len == alloc_len);
   tor_assert(real_len > ED25519_SIG_LEN);
   uint8_t *sig = encoded + (real_len - ED25519_SIG_LEN);
-  tor_assert(fast_mem_is_zero((char*)sig, ED25519_SIG_LEN));
+  tor_assert(fast_mem_is_zero((char *)sig, ED25519_SIG_LEN));
 
   ed25519_signature_t signature;
-  if (ed25519_sign(&signature, encoded,
-                   real_len-ED25519_SIG_LEN, signing_key)<0) {
+  if (ed25519_sign(&signature, encoded, real_len - ED25519_SIG_LEN,
+                   signing_key) < 0) {
     /* LCOV_EXCL_START */
     log_warn(LD_BUG, "Can't sign certificate");
     goto err;
@@ -96,8 +93,10 @@ tor_cert_sign_impl(const ed25519_keypair_t *signing_key,
 
   if (tor_cert_checksig(torcert, &signing_key->pubkey, now) < 0) {
     /* LCOV_EXCL_START */
-    log_warn(LD_BUG, "Generated a certificate whose signature we can't "
-             "check: %s", tor_cert_describe_signature_status(torcert));
+    log_warn(LD_BUG,
+             "Generated a certificate whose signature we can't "
+             "check: %s",
+             tor_cert_describe_signature_status(torcert));
     goto err;
     /* LCOV_EXCL_STOP */
   }
@@ -106,13 +105,13 @@ tor_cert_sign_impl(const ed25519_keypair_t *signing_key,
 
   goto done;
 
- /* LCOV_EXCL_START */
- err:
+/* LCOV_EXCL_START */
+err:
   tor_cert_free(torcert);
   torcert = NULL;
- /* LCOV_EXCL_STOP */
+  /* LCOV_EXCL_STOP */
 
- done:
+done:
   ed25519_cert_free(cert);
   tor_free(encoded);
   return torcert;
@@ -128,15 +127,12 @@ tor_cert_sign_impl(const ed25519_keypair_t *signing_key,
  * the public part of <b>signing_key</b> in the certificate.
  */
 tor_cert_t *
-tor_cert_create(const ed25519_keypair_t *signing_key,
-                uint8_t cert_type,
-                const ed25519_public_key_t *signed_key,
-                time_t now, time_t lifetime,
-                uint32_t flags)
+tor_cert_create(const ed25519_keypair_t *signing_key, uint8_t cert_type,
+                const ed25519_public_key_t *signed_key, time_t now,
+                time_t lifetime, uint32_t flags)
 {
-  return tor_cert_sign_impl(signing_key, cert_type,
-                            SIGNED_KEY_TYPE_ED25519, signed_key->pubkey,
-                            now, lifetime, flags);
+  return tor_cert_sign_impl(signing_key, cert_type, SIGNED_KEY_TYPE_ED25519,
+                            signed_key->pubkey, now, lifetime, flags);
 }
 
 /** Release all storage held for <b>cert</b>. */
@@ -161,7 +157,7 @@ tor_cert_parse(const uint8_t *encoded, const size_t len)
   tor_cert_t *cert = NULL;
   ed25519_cert_t *parsed = NULL;
   ssize_t got_len = ed25519_cert_parse(&parsed, encoded, len);
-  if (got_len < 0 || (size_t) got_len != len)
+  if (got_len < 0 || (size_t)got_len != len)
     goto err;
 
   cert = tor_malloc_zero(sizeof(tor_cert_t));
@@ -174,7 +170,7 @@ tor_cert_parse(const uint8_t *encoded, const size_t len)
   if (valid_until_64 > TIME_MAX)
     valid_until_64 = TIME_MAX - 1;
 #endif
-  cert->valid_until = (time_t) valid_until_64;
+  cert->valid_until = (time_t)valid_until_64;
   cert->cert_type = parsed->cert_type;
 
   for (unsigned i = 0; i < ed25519_cert_getlen_ext(parsed); ++i) {
@@ -192,10 +188,10 @@ tor_cert_parse(const uint8_t *encoded, const size_t len)
   }
 
   goto done;
- err:
+err:
   tor_cert_free(cert);
   cert = NULL;
- done:
+done:
   ed25519_cert_free(parsed);
   return cert;
 }
@@ -225,8 +221,8 @@ tor_cert_get_checkable_sig(ed25519_checkable_t *checkable_out,
   tor_assert(cert->encoded_len > ED25519_SIG_LEN);
   const size_t signed_len = cert->encoded_len - ED25519_SIG_LEN;
   checkable_out->len = signed_len;
-  memcpy(checkable_out->signature.sig,
-         cert->encoded + signed_len, ED25519_SIG_LEN);
+  memcpy(checkable_out->signature.sig, cert->encoded + signed_len,
+         ED25519_SIG_LEN);
 
   if (expiration_out) {
     *expiration_out = MIN(*expiration_out, cert->valid_until);
@@ -241,8 +237,8 @@ tor_cert_get_checkable_sig(ed25519_checkable_t *checkable_out,
  * appropriate.
  */
 int
-tor_cert_checksig(tor_cert_t *cert,
-                  const ed25519_public_key_t *pubkey, time_t now)
+tor_cert_checksig(tor_cert_t *cert, const ed25519_public_key_t *pubkey,
+                  time_t now)
 {
   ed25519_checkable_t checkable;
   int okay;
@@ -290,8 +286,7 @@ tor_cert_describe_signature_status(const tor_cert_t *cert)
 }
 
 /** Return a new copy of <b>cert</b> */
-MOCK_IMPL(tor_cert_t *,
-tor_cert_dup,(const tor_cert_t *cert))
+MOCK_IMPL(tor_cert_t *, tor_cert_dup, (const tor_cert_t *cert))
 {
   tor_cert_t *newcert = tor_memdup(cert, sizeof(tor_cert_t));
   if (cert->encoded)
@@ -306,7 +301,7 @@ tor_cert_eq(const tor_cert_t *cert1, const tor_cert_t *cert2)
   tor_assert(cert1);
   tor_assert(cert2);
   return cert1->encoded_len == cert2->encoded_len &&
-    tor_memeq(cert1->encoded, cert2->encoded, cert1->encoded_len);
+         tor_memeq(cert1->encoded, cert2->encoded, cert1->encoded_len);
 }
 
 /** Return true iff cert1 and cert2 are the same cert, or if they are both
@@ -316,7 +311,7 @@ tor_cert_opt_eq(const tor_cert_t *cert1, const tor_cert_t *cert2)
 {
   if (cert1 == NULL && cert2 == NULL)
     return 1;
-  if (!cert1 || !cert2)
+  if (! cert1 || ! cert2)
     return 0;
   return tor_cert_eq(cert1, cert2);
 }
@@ -329,8 +324,7 @@ tor_cert_opt_eq(const tor_cert_t *cert1, const tor_cert_t *cert2)
  * the number of bytes stored. Returns negative on error.*/
 ssize_t
 tor_make_rsa_ed25519_crosscert(const ed25519_public_key_t *ed_key,
-                               const crypto_pk_t *rsa_key,
-                               time_t expires,
+                               const crypto_pk_t *rsa_key, time_t expires,
                                uint8_t **cert)
 {
   // It is later than 1985, since otherwise there would be no C89
@@ -341,7 +335,7 @@ tor_make_rsa_ed25519_crosscert(const ed25519_public_key_t *ed_key,
 
   rsa_ed_crosscert_t *cc = rsa_ed_crosscert_new();
   memcpy(cc->ed_key, ed_key->pubkey, ED25519_PUBKEY_LEN);
-  cc->expiration = (uint32_t) CEIL_DIV(expires, 3600);
+  cc->expiration = (uint32_t)CEIL_DIV(expires, 3600);
   cc->sig_len = crypto_pk_keysize(rsa_key);
   rsa_ed_crosscert_setlen_sig(cc, crypto_pk_keysize(rsa_key));
 
@@ -356,16 +350,15 @@ tor_make_rsa_ed25519_crosscert(const ed25519_public_key_t *ed_key,
                           strlen(RSA_ED_CROSSCERT_PREFIX));
 
   const int signed_part_len = 32 + 4;
-  crypto_digest_add_bytes(d, (char*)res, signed_part_len);
+  crypto_digest_add_bytes(d, (char *)res, signed_part_len);
 
   uint8_t digest[DIGEST256_LEN];
-  crypto_digest_get_digest(d, (char*)digest, sizeof(digest));
+  crypto_digest_get_digest(d, (char *)digest, sizeof(digest));
   crypto_digest_free(d);
 
-  int siglen = crypto_pk_private_sign(rsa_key,
-                                      (char*)rsa_ed_crosscert_getarray_sig(cc),
-                                      rsa_ed_crosscert_getlen_sig(cc),
-                                      (char*)digest, sizeof(digest));
+  int siglen = crypto_pk_private_sign(
+      rsa_key, (char *)rsa_ed_crosscert_getarray_sig(cc),
+      rsa_ed_crosscert_getlen_sig(cc), (char *)digest, sizeof(digest));
   tor_assert(siglen > 0 && siglen <= (int)crypto_pk_keysize(rsa_key));
   tor_assert(siglen <= UINT8_MAX);
   cc->sig_len = siglen;
@@ -387,29 +380,27 @@ tor_make_rsa_ed25519_crosscert(const ed25519_public_key_t *ed_key,
  *
  * Return 0 on success, negative on failure.
  */
-MOCK_IMPL(int,
-rsa_ed25519_crosscert_check, (const uint8_t *crosscert,
-                              const size_t crosscert_len,
-                              const crypto_pk_t *rsa_id_key,
-                              const ed25519_public_key_t *master_key,
-                              const time_t reject_if_expired_before))
+MOCK_IMPL(int, rsa_ed25519_crosscert_check,
+          (const uint8_t *crosscert, const size_t crosscert_len,
+           const crypto_pk_t *rsa_id_key,
+           const ed25519_public_key_t *master_key,
+           const time_t reject_if_expired_before))
 {
   rsa_ed_crosscert_t *cc = NULL;
   int rv;
 
-#define ERR(code, s)                                            \
-  do {                                                          \
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,                      \
-           "Received a bad RSA->Ed25519 crosscert: %s",         \
-           (s));                                                \
-    rv = (code);                                                \
-    goto err;                                                   \
+#define ERR(code, s)                                          \
+  do {                                                        \
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,                    \
+           "Received a bad RSA->Ed25519 crosscert: %s", (s)); \
+    rv = (code);                                              \
+    goto err;                                                 \
   } while (0)
 
   if (BUG(crypto_pk_keysize(rsa_id_key) > PK_BYTES))
     return -1;
 
-  if (BUG(!crosscert))
+  if (BUG(! crosscert))
     return -1;
 
   ssize_t parsed_len = rsa_ed_crosscert_parse(&cc, crosscert, crosscert_len);
@@ -417,8 +408,7 @@ rsa_ed25519_crosscert_check, (const uint8_t *crosscert,
     ERR(-2, "Unparseable or overlong crosscert");
   }
 
-  if (tor_memneq(rsa_ed_crosscert_getarray_ed_key(cc),
-                 master_key->pubkey,
+  if (tor_memneq(rsa_ed_crosscert_getarray_ed_key(cc), master_key->pubkey,
                  ED25519_PUBKEY_LEN)) {
     ERR(-3, "Crosscert did not match Ed25519 key");
   }
@@ -443,15 +433,14 @@ rsa_ed25519_crosscert_check, (const uint8_t *crosscert,
   crypto_digest_t *d = crypto_digest256_new(DIGEST_SHA256);
   crypto_digest_add_bytes(d, RSA_ED_CROSSCERT_PREFIX,
                           strlen(RSA_ED_CROSSCERT_PREFIX));
-  crypto_digest_add_bytes(d, (char*)crosscert, eos-crosscert);
-  crypto_digest_get_digest(d, (char*)digest, sizeof(digest));
+  crypto_digest_add_bytes(d, (char *)crosscert, eos - crosscert);
+  crypto_digest_get_digest(d, (char *)digest, sizeof(digest));
   crypto_digest_free(d);
 
   /* Now check the signature */
   uint8_t signed_[PK_BYTES];
-  int signed_len = crypto_pk_public_checksig(rsa_id_key,
-                                          (char*)signed_, sizeof(signed_),
-                                          (char*)sig, siglen);
+  int signed_len = crypto_pk_public_checksig(
+      rsa_id_key, (char *)signed_, sizeof(signed_), (char *)sig, siglen);
   if (signed_len < DIGEST256_LEN) {
     ERR(-5, "Bad signature, or length of signed data not as expected");
   }
@@ -461,7 +450,7 @@ rsa_ed25519_crosscert_check, (const uint8_t *crosscert,
   }
 
   rv = 0;
- err:
+err:
   rsa_ed_crosscert_free(cc);
   return rv;
 }
@@ -477,7 +466,7 @@ or_handshake_certs_new(void)
 void
 or_handshake_certs_free_(or_handshake_certs_t *certs)
 {
-  if (!certs)
+  if (! certs)
     return;
 
   tor_x509_cert_free(certs->auth_cert);
@@ -494,19 +483,15 @@ or_handshake_certs_free_(or_handshake_certs_t *certs)
 }
 
 #undef ERR
-#define ERR(s)                                                  \
-  do {                                                          \
-    log_fn(severity, LD_PROTOCOL,                               \
-           "Received a bad CERTS cell: %s",                     \
-           (s));                                                \
-    return 0;                                                   \
+#define ERR(s)                                                           \
+  do {                                                                   \
+    log_fn(severity, LD_PROTOCOL, "Received a bad CERTS cell: %s", (s)); \
+    return 0;                                                            \
   } while (0)
 
 int
-or_handshake_certs_rsa_ok(int severity,
-                          or_handshake_certs_t *certs,
-                          tor_tls_t *tls,
-                          time_t now)
+or_handshake_certs_rsa_ok(int severity, or_handshake_certs_t *certs,
+                          tor_tls_t *tls, time_t now)
 {
   tor_x509_cert_t *link_cert = certs->link_cert;
   tor_x509_cert_t *auth_cert = certs->auth_cert;
@@ -538,24 +523,22 @@ or_handshake_certs_rsa_ok(int severity,
  * return 0; on failure, return a negative value and warn at level
  * <b>severity</b> */
 int
-or_handshake_certs_ed25519_ok(int severity,
-                              or_handshake_certs_t *certs,
-                              tor_tls_t *tls,
-                              time_t now)
+or_handshake_certs_ed25519_ok(int severity, or_handshake_certs_t *certs,
+                              tor_tls_t *tls, time_t now)
 {
   ed25519_checkable_t check[10];
   unsigned n_checkable = 0;
   time_t expiration = TIME_MAX;
 
-#define ADDCERT(cert, pk)                                               \
-  do {                                                                  \
-    tor_assert(n_checkable < ARRAY_LENGTH(check));                      \
-    if (tor_cert_get_checkable_sig(&check[n_checkable++], cert, pk,     \
-                                   &expiration) < 0)                    \
-      ERR("Could not get checkable cert.");                             \
+#define ADDCERT(cert, pk)                                           \
+  do {                                                              \
+    tor_assert(n_checkable < ARRAY_LENGTH(check));                  \
+    if (tor_cert_get_checkable_sig(&check[n_checkable++], cert, pk, \
+                                   &expiration) < 0)                \
+      ERR("Could not get checkable cert.");                         \
   } while (0)
 
-  if (! certs->ed_id_sign || !certs->ed_id_sign->signing_key_included) {
+  if (! certs->ed_id_sign || ! certs->ed_id_sign->signing_key_included) {
     ERR("No Ed25519 signing key");
   }
   ADDCERT(certs->ed_id_sign, NULL);
@@ -566,19 +549,19 @@ or_handshake_certs_ed25519_ok(int severity,
     {
       /* check for a match with the TLS cert. */
       tor_x509_cert_t *peer_cert = tor_tls_get_peer_cert(tls);
-      if (BUG(!peer_cert)) {
+      if (BUG(! peer_cert)) {
         /* This is a bug, because if we got to this point, we are a connection
          * that was initiated here, and we completed a TLS handshake. The
          * other side *must* have given us a certificate! */
         ERR("No x509 peer cert"); // LCOV_EXCL_LINE
       }
       const common_digests_t *peer_cert_digests =
-        tor_x509_cert_get_cert_digests(peer_cert);
-      int okay = tor_memeq(peer_cert_digests->d[DIGEST_SHA256],
-                           certs->ed_sign_link->signed_key.pubkey,
-                           DIGEST256_LEN);
+          tor_x509_cert_get_cert_digests(peer_cert);
+      int okay =
+          tor_memeq(peer_cert_digests->d[DIGEST_SHA256],
+                    certs->ed_sign_link->signed_key.pubkey, DIGEST256_LEN);
       tor_x509_cert_free(peer_cert);
-      if (!okay)
+      if (! okay)
         ERR("Link certificate does not match TLS certificate");
     }
 
@@ -602,7 +585,7 @@ or_handshake_certs_ed25519_ok(int severity,
    */
 
   tor_x509_cert_t *rsa_id_cert = certs->id_cert;
-  if (!rsa_id_cert) {
+  if (! rsa_id_cert) {
     ERR("Missing legacy RSA ID certificate");
   }
   if (! tor_tls_cert_is_valid(severity, rsa_id_cert, rsa_id_cert, now, 1)) {
@@ -612,15 +595,13 @@ or_handshake_certs_ed25519_ok(int severity,
     ERR("Missing RSA->Ed25519 crosscert");
   }
   crypto_pk_t *rsa_id_key = tor_tls_cert_get_key(rsa_id_cert);
-  if (!rsa_id_key) {
+  if (! rsa_id_key) {
     ERR("RSA ID cert had no RSA key");
   }
 
   if (rsa_ed25519_crosscert_check(certs->ed_rsa_crosscert,
-                                  certs->ed_rsa_crosscert_len,
-                                  rsa_id_key,
-                                  &certs->ed_id_sign->signing_key,
-                                  now) < 0) {
+                                  certs->ed_rsa_crosscert_len, rsa_id_key,
+                                  &certs->ed_id_sign->signing_key, now) < 0) {
     crypto_pk_free(rsa_id_key);
     ERR("Invalid RSA->Ed25519 crosscert");
   }
@@ -641,20 +622,16 @@ or_handshake_certs_ed25519_ok(int severity,
 
 /** Check whether an RSA-TAP cross-certification is correct. Return 0 if it
  * is, -1 if it isn't. */
-MOCK_IMPL(int,
-check_tap_onion_key_crosscert,(const uint8_t *crosscert,
-                               int crosscert_len,
-                               const crypto_pk_t *onion_pkey,
-                               const ed25519_public_key_t *master_id_pkey,
-                               const uint8_t *rsa_id_digest))
+MOCK_IMPL(int, check_tap_onion_key_crosscert,
+          (const uint8_t *crosscert, int crosscert_len,
+           const crypto_pk_t *onion_pkey,
+           const ed25519_public_key_t *master_id_pkey,
+           const uint8_t *rsa_id_digest))
 {
   uint8_t *cc = tor_malloc(crypto_pk_keysize(onion_pkey));
-  int cc_len =
-    crypto_pk_public_checksig(onion_pkey,
-                              (char*)cc,
-                              crypto_pk_keysize(onion_pkey),
-                              (const char*)crosscert,
-                              crosscert_len);
+  int cc_len = crypto_pk_public_checksig(
+      onion_pkey, (char *)cc, crypto_pk_keysize(onion_pkey),
+      (const char *)crosscert, crosscert_len);
   if (cc_len < 0) {
     goto err;
   }
@@ -671,7 +648,7 @@ check_tap_onion_key_crosscert,(const uint8_t *crosscert,
 
   tor_free(cc);
   return 0;
- err:
+err:
   tor_free(cc);
   return -1;
 }
@@ -682,10 +659,8 @@ check_tap_onion_key_crosscert,(const uint8_t *crosscert,
  * identity, set *rs_id_out. Otherwise, set them both to NULL.
  */
 void
-or_handshake_certs_check_both(int severity,
-                              or_handshake_certs_t *certs,
-                              tor_tls_t *tls,
-                              time_t now,
+or_handshake_certs_check_both(int severity, or_handshake_certs_t *certs,
+                              tor_tls_t *tls, time_t now,
                               const ed25519_public_key_t **ed_id_out,
                               const common_digests_t **rsa_id_out)
 {
@@ -735,14 +710,13 @@ tor_cert_encode_ed22519(const tor_cert_t *cert, char **cert_str_out)
   tor_assert(cert_str_out);
 
   /* Get the encoded size and add the NUL byte. */
-  ed_cert_b64_len = base64_encode_size(cert->encoded_len,
-                                       BASE64_ENCODE_MULTILINE) + 1;
+  ed_cert_b64_len =
+      base64_encode_size(cert->encoded_len, BASE64_ENCODE_MULTILINE) + 1;
   ed_cert_b64 = tor_malloc_zero(ed_cert_b64_len);
 
   /* Base64 encode the encoded certificate. */
-  if (base64_encode(ed_cert_b64, ed_cert_b64_len,
-                    (const char *) cert->encoded, cert->encoded_len,
-                    BASE64_ENCODE_MULTILINE) < 0) {
+  if (base64_encode(ed_cert_b64, ed_cert_b64_len, (const char *)cert->encoded,
+                    cert->encoded_len, BASE64_ENCODE_MULTILINE) < 0) {
     /* LCOV_EXCL_START */
     log_err(LD_BUG, "Couldn't base64-encode ed22519 cert!");
     goto err;
@@ -758,7 +732,7 @@ tor_cert_encode_ed22519(const tor_cert_t *cert, char **cert_str_out)
   /* Success! */
   ret = 0;
 
- err:
+err:
   tor_free(ed_cert_b64);
   return ret;
 }

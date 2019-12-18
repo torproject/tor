@@ -37,9 +37,9 @@ subsys_dirauth_shutdown(void)
 }
 
 const struct subsys_fns_t sys_dirauth = {
-  .name = "dirauth",
-  .supported = true,
-  .level = 70,
-  .initialize = subsys_dirauth_initialize,
-  .shutdown = subsys_dirauth_shutdown,
+    .name = "dirauth",
+    .supported = true,
+    .level = 70,
+    .initialize = subsys_dirauth_initialize,
+    .shutdown = subsys_dirauth_shutdown,
 };

@@ -21,17 +21,17 @@
 #include "lib/process/env.h"
 
 #ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
+#  include <sys/time.h>
 #endif
 
 #ifdef HAVE_STRING_H
-#include <string.h>
+#  include <string.h>
 #endif
 
 #ifdef _WIN32
 
 /** The size of our intermediate buffers. */
-#define BUFFER_SIZE (1024)
+#  define BUFFER_SIZE (1024)
 
 /** Timer that ticks once a second and calls the process_win32_timer_callback()
  * function. */
@@ -162,24 +162,21 @@ process_win32_exec(process_t *process)
   security_attributes.lpSecurityDescriptor = NULL;
 
   /* Create our standard out pipe. */
-  if (! process_win32_create_pipe(&stdout_pipe_read,
-                                  &stdout_pipe_write,
+  if (! process_win32_create_pipe(&stdout_pipe_read, &stdout_pipe_write,
                                   &security_attributes,
                                   PROCESS_WIN32_PIPE_TYPE_READER)) {
     return PROCESS_STATUS_ERROR;
   }
 
   /* Create our standard error pipe. */
-  if (! process_win32_create_pipe(&stderr_pipe_read,
-                                  &stderr_pipe_write,
+  if (! process_win32_create_pipe(&stderr_pipe_read, &stderr_pipe_write,
                                   &security_attributes,
                                   PROCESS_WIN32_PIPE_TYPE_READER)) {
     return PROCESS_STATUS_ERROR;
   }
 
   /* Create out standard in pipe. */
-  if (! process_win32_create_pipe(&stdin_pipe_read,
-                                  &stdin_pipe_write,
+  if (! process_win32_create_pipe(&stdin_pipe_read, &stdin_pipe_write,
                                   &security_attributes,
                                   PROCESS_WIN32_PIPE_TYPE_WRITER)) {
     return PROCESS_STATUS_ERROR;
@@ -206,17 +203,12 @@ process_win32_exec(process_t *process)
   char *joined_argv = tor_join_win_cmdline((const char **)argv);
 
   /* Create the child process */
-  ret = CreateProcessA(NULL,
-                       joined_argv,
-                       NULL,
-                       NULL,
-                       TRUE,
-                       CREATE_NO_WINDOW,
-                       env->windows_environment_block[0] == '\0' ?
-                         NULL : env->windows_environment_block,
-                       NULL,
-                       &startup_info,
-                       &win32_process->process_information);
+  ret =
+      CreateProcessA(NULL, joined_argv, NULL, NULL, TRUE, CREATE_NO_WINDOW,
+                     env->windows_environment_block[0] == '\0'
+                         ? NULL
+                         : env->windows_environment_block,
+                     NULL, &startup_info, &win32_process->process_information);
 
   tor_free(argv);
   tor_free(joined_argv);
@@ -224,7 +216,7 @@ process_win32_exec(process_t *process)
 
   if (! ret) {
     log_warn(LD_PROCESS, "CreateProcessA() failed: %s",
-      format_win32_error(GetLastError()));
+             format_win32_error(GetLastError()));
 
     /* Cleanup our handles. */
     CloseHandle(stdout_pipe_read);
@@ -358,8 +350,8 @@ process_win32_write(struct process_t *process, buf_t *buffer)
     return 0;
 
   /* Figure out how much data we should read. */
-  const size_t write_size = MIN(buffer_size,
-                                sizeof(win32_process->stdin_handle.buffer));
+  const size_t write_size =
+      MIN(buffer_size, sizeof(win32_process->stdin_handle.buffer));
 
   /* Read data from the process_t buffer into our intermediate buffer. */
   buf_get_bytes(buffer, win32_process->stdin_handle.buffer, write_size);
@@ -372,8 +364,7 @@ process_win32_write(struct process_t *process, buf_t *buffer)
 
   /* Schedule our write. */
   ret = WriteFileEx(win32_process->stdin_handle.pipe,
-                    win32_process->stdin_handle.buffer,
-                    write_size,
+                    win32_process->stdin_handle.buffer, write_size,
                     &win32_process->stdin_handle.overlapped,
                     process_win32_stdin_write_done);
 
@@ -430,8 +421,7 @@ process_win32_read_stdout(struct process_t *process, buf_t *buffer)
 
   process_win32_t *win32_process = process_get_win32_process(process);
 
-  return process_win32_read_from_handle(&win32_process->stdout_handle,
-                                        buffer,
+  return process_win32_read_from_handle(&win32_process->stdout_handle, buffer,
                                         process_win32_stdout_read_done);
 }
 
@@ -449,8 +439,7 @@ process_win32_read_stderr(struct process_t *process, buf_t *buffer)
 
   process_win32_t *win32_process = process_get_win32_process(process);
 
-  return process_win32_read_from_handle(&win32_process->stderr_handle,
-                                        buffer,
+  return process_win32_read_from_handle(&win32_process->stderr_handle, buffer,
                                         process_win32_stderr_read_done);
 }
 
@@ -493,10 +482,8 @@ process_win32_timer_start(void)
   static const struct timeval interval = {1, 0};
 
   log_info(LD_PROCESS, "Starting Windows Process I/O timer");
-  periodic_timer = periodic_timer_new(tor_libevent_get_base(),
-                                      &interval,
-                                      process_win32_timer_callback,
-                                      NULL);
+  periodic_timer = periodic_timer_new(tor_libevent_get_base(), &interval,
+                                      process_win32_timer_callback, NULL);
 }
 
 /** Stops the periodic timer. */
@@ -543,7 +530,7 @@ process_win32_timer_callback(periodic_timer_t *timer, void *data)
     const smartlist_t *processes = process_get_all_processes();
     done = true;
 
-    SMARTLIST_FOREACH_BEGIN(processes, process_t *, process) {
+    SMARTLIST_FOREACH_BEGIN (processes, process_t *, process) {
       /* If process_win32_timer_test_process() returns true, it means that
        * smartlist_remove() might have been called on the list returned by
        * process_get_all_processes(). We start the loop over again until we
@@ -553,7 +540,8 @@ process_win32_timer_callback(periodic_timer_t *timer, void *data)
         done = false;
         break;
       }
-    } SMARTLIST_FOREACH_END(process);
+    }
+    SMARTLIST_FOREACH_END(process);
   } while (! done);
 }
 
@@ -621,8 +609,7 @@ process_win32_timer_test_process(process_t *process)
  * named, pipe in <b>*read_pipe</b> and <b>*write_pipe</b> if the function is
  * succesful. Returns true on sucess, false on failure. */
 STATIC bool
-process_win32_create_pipe(HANDLE *read_pipe,
-                          HANDLE *write_pipe,
+process_win32_create_pipe(HANDLE *read_pipe, HANDLE *write_pipe,
                           SECURITY_ATTRIBUTES *attributes,
                           process_win32_pipe_type_t pipe_type)
 {
@@ -649,21 +636,20 @@ process_win32_create_pipe(HANDLE *read_pipe,
     process_id = GetCurrentProcessId();
 
   tor_snprintf(pipe_name, sizeof(pipe_name),
-               "\\\\.\\Pipe\\Tor-Process-Pipe-%lu-%lu",
-               process_id, counter++);
+               "\\\\.\\Pipe\\Tor-Process-Pipe-%lu-%lu", process_id, counter++);
 
   /* Only one of our handles can be overlapped. */
   switch (pipe_type) {
-  case PROCESS_WIN32_PIPE_TYPE_READER:
-    read_mode = FILE_FLAG_OVERLAPPED;
-    break;
-  case PROCESS_WIN32_PIPE_TYPE_WRITER:
-    write_mode = FILE_FLAG_OVERLAPPED;
-    break;
-  default:
-    /* LCOV_EXCL_START */
-    tor_assert_nonfatal_unreached_once();
-    /* LCOV_EXCL_STOP */
+    case PROCESS_WIN32_PIPE_TYPE_READER:
+      read_mode = FILE_FLAG_OVERLAPPED;
+      break;
+    case PROCESS_WIN32_PIPE_TYPE_WRITER:
+      write_mode = FILE_FLAG_OVERLAPPED;
+      break;
+    default:
+      /* LCOV_EXCL_START */
+      tor_assert_nonfatal_unreached_once();
+      /* LCOV_EXCL_STOP */
   }
 
   /* Setup our read and write handles. */
@@ -671,14 +657,9 @@ process_win32_create_pipe(HANDLE *read_pipe,
   HANDLE write_handle;
 
   /* Create our named pipe. */
-  read_handle = CreateNamedPipeA(pipe_name,
-                                 (PIPE_ACCESS_INBOUND|read_mode),
-                                 (PIPE_TYPE_BYTE|PIPE_WAIT),
-                                 1,
-                                 size,
-                                 size,
-                                 1000,
-                                 attributes);
+  read_handle = CreateNamedPipeA(pipe_name, (PIPE_ACCESS_INBOUND | read_mode),
+                                 (PIPE_TYPE_BYTE | PIPE_WAIT), 1, size, size,
+                                 1000, attributes);
 
   if (read_handle == INVALID_HANDLE_VALUE) {
     log_warn(LD_PROCESS, "CreateNamedPipeA() failed: %s",
@@ -687,13 +668,9 @@ process_win32_create_pipe(HANDLE *read_pipe,
   }
 
   /* Create our file in the pipe namespace. */
-  write_handle = CreateFileA(pipe_name,
-                             GENERIC_WRITE,
-                             0,
-                             attributes,
-                             OPEN_EXISTING,
-                             (FILE_ATTRIBUTE_NORMAL|write_mode),
-                             NULL);
+  write_handle =
+      CreateFileA(pipe_name, GENERIC_WRITE, 0, attributes, OPEN_EXISTING,
+                  (FILE_ATTRIBUTE_NORMAL | write_mode), NULL);
 
   if (write_handle == INVALID_HANDLE_VALUE) {
     log_warn(LD_PROCESS, "CreateFileA() failed: %s",
@@ -706,16 +683,16 @@ process_win32_create_pipe(HANDLE *read_pipe,
 
   /* Set the inherit flag for our pipe. */
   switch (pipe_type) {
-  case PROCESS_WIN32_PIPE_TYPE_READER:
-    ret = SetHandleInformation(read_handle, HANDLE_FLAG_INHERIT, 0);
-    break;
-  case PROCESS_WIN32_PIPE_TYPE_WRITER:
-    ret = SetHandleInformation(write_handle, HANDLE_FLAG_INHERIT, 0);
-    break;
-  default:
-    /* LCOV_EXCL_START */
-    tor_assert_nonfatal_unreached_once();
-    /* LCOV_EXCL_STOP */
+    case PROCESS_WIN32_PIPE_TYPE_READER:
+      ret = SetHandleInformation(read_handle, HANDLE_FLAG_INHERIT, 0);
+      break;
+    case PROCESS_WIN32_PIPE_TYPE_WRITER:
+      ret = SetHandleInformation(write_handle, HANDLE_FLAG_INHERIT, 0);
+      break;
+    default:
+      /* LCOV_EXCL_START */
+      tor_assert_nonfatal_unreached_once();
+      /* LCOV_EXCL_STOP */
   }
 
   if (! ret) {
@@ -741,7 +718,7 @@ process_win32_cleanup_handle(process_win32_handle_t *handle)
 {
   tor_assert(handle);
 
-#if 0
+#  if 0
   BOOL ret;
   DWORD error_code;
 
@@ -759,7 +736,7 @@ process_win32_cleanup_handle(process_win32_handle_t *handle)
                format_win32_error(error_code));
     }
   }
-#endif /* 0 */
+#  endif /* 0 */
 
   /* Close our handle. */
   if (handle->pipe != INVALID_HANDLE_VALUE) {
@@ -773,8 +750,7 @@ process_win32_cleanup_handle(process_win32_handle_t *handle)
  * from the child process's standard output. We notify the Process subsystem if
  * there is data available for it to read from us. */
 STATIC VOID WINAPI
-process_win32_stdout_read_done(DWORD error_code,
-                               DWORD byte_count,
+process_win32_stdout_read_done(DWORD error_code, DWORD byte_count,
                                LPOVERLAPPED overlapped)
 {
   tor_assert(overlapped);
@@ -785,8 +761,7 @@ process_win32_stdout_read_done(DWORD error_code,
   process_win32_t *win32_process = process_get_win32_process(process);
 
   if (process_win32_handle_read_completion(&win32_process->stdout_handle,
-                                           error_code,
-                                           byte_count)) {
+                                           error_code, byte_count)) {
     /* Schedule our next read. */
     process_notify_event_stdout(process);
   }
@@ -796,8 +771,7 @@ process_win32_stdout_read_done(DWORD error_code,
  * from the child process's standard error. We notify the Process subsystem if
  * there is data available for it to read from us. */
 STATIC VOID WINAPI
-process_win32_stderr_read_done(DWORD error_code,
-                               DWORD byte_count,
+process_win32_stderr_read_done(DWORD error_code, DWORD byte_count,
                                LPOVERLAPPED overlapped)
 {
   tor_assert(overlapped);
@@ -808,8 +782,7 @@ process_win32_stderr_read_done(DWORD error_code,
   process_win32_t *win32_process = process_get_win32_process(process);
 
   if (process_win32_handle_read_completion(&win32_process->stderr_handle,
-                                           error_code,
-                                           byte_count)) {
+                                           error_code, byte_count)) {
     /* Schedule our next read. */
     process_notify_event_stderr(process);
   }
@@ -819,8 +792,7 @@ process_win32_stderr_read_done(DWORD error_code,
  * to the child process's standard input. We notify the Process subsystem that
  * it can write data to us again. */
 STATIC VOID WINAPI
-process_win32_stdin_write_done(DWORD error_code,
-                               DWORD byte_count,
+process_win32_stdin_write_done(DWORD error_code, DWORD byte_count,
                                LPOVERLAPPED overlapped)
 {
   tor_assert(overlapped);
@@ -870,8 +842,7 @@ process_win32_stdin_write_done(DWORD error_code,
  * ReadFileEx() background operation with the given <b>callback</b> as
  * completion callback. Returns the number of bytes written to the buffer. */
 STATIC int
-process_win32_read_from_handle(process_win32_handle_t *handle,
-                               buf_t *buffer,
+process_win32_read_from_handle(process_win32_handle_t *handle, buf_t *buffer,
                                LPOVERLAPPED_COMPLETION_ROUTINE callback)
 {
   tor_assert(handle);
@@ -912,11 +883,8 @@ process_win32_read_from_handle(process_win32_handle_t *handle,
 
   /* Ask the Windows kernel to read data from our pipe into our buffer and call
    * the callback function when it is done. */
-  ret = ReadFileEx(handle->pipe,
-                   handle->buffer,
-                   sizeof(handle->buffer),
-                   &handle->overlapped,
-                   callback);
+  ret = ReadFileEx(handle->pipe, handle->buffer, sizeof(handle->buffer),
+                   &handle->overlapped, callback);
 
   if (! ret) {
     error_code = GetLastError();
@@ -963,8 +931,7 @@ process_win32_read_from_handle(process_win32_handle_t *handle,
  * iff our caller should request more data from ReadFileEx(). */
 STATIC bool
 process_win32_handle_read_completion(process_win32_handle_t *handle,
-                                     DWORD error_code,
-                                     DWORD byte_count)
+                                     DWORD error_code, DWORD byte_count)
 {
   tor_assert(handle);
 
@@ -1023,45 +990,42 @@ format_win_cmdline_argument(const char *arg)
   need_quotes = (strchr(arg, ' ') || strchr(arg, '\t') || '\0' == arg[0]);
 
   /* Build up smartlist of *chars */
-  for (c=arg; *c != '\0'; c++) {
+  for (c = arg; *c != '\0'; c++) {
     if ('"' == *c) {
       /* Double up backslashes preceding a quote */
-      for (i=0; i<(bs_counter*2); i++)
-        smartlist_add(arg_chars, (void*)&backslash);
+      for (i = 0; i < (bs_counter * 2); i++)
+        smartlist_add(arg_chars, (void *)&backslash);
       bs_counter = 0;
       /* Escape the quote */
-      smartlist_add(arg_chars, (void*)&backslash);
-      smartlist_add(arg_chars, (void*)c);
+      smartlist_add(arg_chars, (void *)&backslash);
+      smartlist_add(arg_chars, (void *)c);
     } else if ('\\' == *c) {
       /* Count backslashes until we know whether to double up */
       bs_counter++;
     } else {
       /* Don't double up slashes preceding a non-quote */
-      for (i=0; i<bs_counter; i++)
-        smartlist_add(arg_chars, (void*)&backslash);
+      for (i = 0; i < bs_counter; i++)
+        smartlist_add(arg_chars, (void *)&backslash);
       bs_counter = 0;
-      smartlist_add(arg_chars, (void*)c);
+      smartlist_add(arg_chars, (void *)c);
     }
   }
   /* Don't double up trailing backslashes */
-  for (i=0; i<bs_counter; i++)
-    smartlist_add(arg_chars, (void*)&backslash);
+  for (i = 0; i < bs_counter; i++)
+    smartlist_add(arg_chars, (void *)&backslash);
 
   /* Allocate space for argument, quotes (if needed), and terminator */
-  const size_t formatted_arg_len = smartlist_len(arg_chars) +
-    (need_quotes ? 2 : 0) + 1;
+  const size_t formatted_arg_len =
+      smartlist_len(arg_chars) + (need_quotes ? 2 : 0) + 1;
   formatted_arg = tor_malloc_zero(formatted_arg_len);
 
   /* Add leading quote */
-  i=0;
+  i = 0;
   if (need_quotes)
     formatted_arg[i++] = '"';
 
   /* Add characters */
-  SMARTLIST_FOREACH(arg_chars, char*, ch,
-  {
-    formatted_arg[i++] = *ch;
-  });
+  SMARTLIST_FOREACH(arg_chars, char *, ch, { formatted_arg[i++] = *ch; });
 
   /* Add trailing quote */
   if (need_quotes)
@@ -1085,7 +1049,7 @@ tor_join_win_cmdline(const char *argv[])
 
   /* Format each argument and put the result in a smartlist */
   argv_list = smartlist_new();
-  for (i=0; argv[i] != NULL; i++) {
+  for (i = 0; argv[i] != NULL; i++) {
     smartlist_add(argv_list, (void *)format_win_cmdline_argument(argv[i]));
   }
 
@@ -1093,10 +1057,7 @@ tor_join_win_cmdline(const char *argv[])
   joined_argv = smartlist_join_strings(argv_list, " ", 0, NULL);
 
   /* Free the newly allocated arguments, and the smartlist */
-  SMARTLIST_FOREACH(argv_list, char *, arg,
-  {
-    tor_free(arg);
-  });
+  SMARTLIST_FOREACH(argv_list, char *, arg, { tor_free(arg); });
   smartlist_free(argv_list);
 
   return joined_argv;

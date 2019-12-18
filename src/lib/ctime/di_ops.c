@@ -71,12 +71,13 @@ tor_memcmp(const void *a, const void *b, size_t len)
      * (The result of an arithmetic shift on a negative value is
      * actually implementation-defined in standard C.  So how do we
      * get away with assuming it?  Easy.  We check.) */
-#if ((-60 >> 8) != -1)
-#error "According to cpp, right-shift doesn't perform sign-extension."
-#endif
-#ifndef RSHIFT_DOES_SIGN_EXTEND
-#error "According to configure, right-shift doesn't perform sign-extension."
-#endif
+#  if ((-60 >> 8) != -1)
+#    error "According to cpp, right-shift doesn't perform sign-extension."
+#  endif
+#  ifndef RSHIFT_DOES_SIGN_EXTEND
+#    error \
+        "According to configure, right-shift doesn't perform sign-extension."
+#  endif
 
     /* If v1 == v2, equal_p is ~0, so this will leave retval
      * unchanged; otherwise, equal_p is 0, so this will zero it. */
@@ -173,8 +174,7 @@ dimap_free_(di_digest256_map_t *map, dimap_free_fn free_fn)
  * The caller MUST NOT add a key that already appears in the map.
  */
 void
-dimap_add_entry(di_digest256_map_t **map,
-                const uint8_t *key, void *val)
+dimap_add_entry(di_digest256_map_t **map, const uint8_t *key, void *val)
 {
   di_digest256_map_t *new_ent;
   {
@@ -197,13 +197,12 @@ dimap_add_entry(di_digest256_map_t **map,
  * <b>map</b>, not on the position or presence of <b>key</b> within <b>map</b>.
  */
 void *
-dimap_search(const di_digest256_map_t *map, const uint8_t *key,
-             void *dflt_val)
+dimap_search(const di_digest256_map_t *map, const uint8_t *key, void *dflt_val)
 {
   uintptr_t result = (uintptr_t)dflt_val;
 
   while (map) {
-    uintptr_t r = (uintptr_t) tor_memeq(map->key, key, 32);
+    uintptr_t r = (uintptr_t)tor_memeq(map->key, key, 32);
     r -= 1; /* Now r is (uintptr_t)-1 if memeq returned false, and
              * 0 if memeq returned true. */
 
@@ -237,12 +236,12 @@ safe_mem_is_zero(const void *mem, size_t sz)
 /** Time-invariant 64-bit greater-than; works on two integers in the range
  * (0,INT64_MAX). */
 #if SIZEOF_VOID_P == 8
-#define gt_i64_timei(a,b) ((a) > (b))
+#  define gt_i64_timei(a, b) ((a) > (b))
 #else
 static inline int
 gt_i64_timei(uint64_t a, uint64_t b)
 {
-  int64_t diff = (int64_t) (b - a);
+  int64_t diff = (int64_t)(b - a);
   int res = diff >> 63;
   return res & 1;
 }
@@ -259,7 +258,7 @@ int
 select_array_member_cumulative_timei(const uint64_t *entries, int n_entries,
                                      uint64_t total, uint64_t rand_val)
 {
-  int i, i_chosen=-1, n_chosen=0;
+  int i, i_chosen = -1, n_chosen = 0;
   uint64_t total_so_far = 0;
 
   for (i = 0; i < n_entries; ++i) {

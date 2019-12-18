@@ -18,10 +18,8 @@
 
 /** Choose the start and end times for a certificate */
 void
-tor_tls_pick_certificate_lifetime(time_t now,
-                                  unsigned int cert_lifetime,
-                                  time_t *start_time_out,
-                                  time_t *end_time_out)
+tor_tls_pick_certificate_lifetime(time_t now, unsigned int cert_lifetime,
+                                  time_t *start_time_out, time_t *end_time_out)
 {
   time_t start_time, end_time;
   /* Make sure we're part-way through the certificate lifetime, rather
@@ -32,15 +30,15 @@ tor_tls_pick_certificate_lifetime(time_t now,
    * start cert_lifetime in the past, we'll have 0 real lifetime.  instead we
    * start up to (cert_lifetime - min_real_lifetime - start_granularity) in
    * the past. */
-  const time_t min_real_lifetime = 24*3600;
-  const time_t start_granularity = 24*3600;
+  const time_t min_real_lifetime = 24 * 3600;
+  const time_t start_granularity = 24 * 3600;
   time_t earliest_start_time;
   /* Don't actually start in the future! */
   if (cert_lifetime <= min_real_lifetime + start_granularity) {
     earliest_start_time = now - 1;
   } else {
-    earliest_start_time = now + min_real_lifetime + start_granularity
-      - cert_lifetime;
+    earliest_start_time =
+        now + min_real_lifetime + start_granularity - cert_lifetime;
   }
   start_time = crypto_rand_time_range(earliest_start_time, now);
   /* Round the start time back to the start of a day. */
@@ -91,12 +89,12 @@ tor_x509_cert_free_(tor_x509_cert_t *cert)
  *
  * Steals a reference to x509_cert.
  */
-MOCK_IMPL(tor_x509_cert_t *,
-tor_x509_cert_new,(tor_x509_cert_impl_t *x509_cert))
+MOCK_IMPL(tor_x509_cert_t *, tor_x509_cert_new,
+          (tor_x509_cert_impl_t * x509_cert))
 {
   tor_x509_cert_t *cert;
 
-  if (!x509_cert)
+  if (! x509_cert)
     return NULL;
 
   cert = tor_malloc_zero(sizeof(tor_x509_cert_t));
@@ -106,8 +104,8 @@ tor_x509_cert_new,(tor_x509_cert_impl_t *x509_cert))
     goto err;
 
   {
-    const uint8_t *encoded=NULL;
-    size_t encoded_len=0;
+    const uint8_t *encoded = NULL;
+    size_t encoded_len = 0;
     tor_x509_cert_get_der(cert, &encoded, &encoded_len);
     tor_assert(encoded);
     crypto_common_digests(&cert->cert_digests, (char *)encoded, encoded_len);
@@ -127,7 +125,7 @@ tor_x509_cert_new,(tor_x509_cert_impl_t *x509_cert))
   }
 
   return cert;
- err:
+err:
   log_err(LD_CRYPTO, "Couldn't wrap encoded X509 certificate.");
   tor_x509_cert_free(cert);
   return NULL;

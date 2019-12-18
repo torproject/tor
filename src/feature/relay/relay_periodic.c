@@ -32,11 +32,9 @@
 #include "feature/control/control_events.h"
 
 #ifndef COCCI
-#define DECLARE_EVENT(name, roles, flags)         \
-  static periodic_event_item_t name ## _event =   \
-    PERIODIC_EVENT(name,                          \
-                   PERIODIC_EVENT_ROLE_##roles,   \
-                   flags)
+#  define DECLARE_EVENT(name, roles, flags)     \
+    static periodic_event_item_t name##_event = \
+        PERIODIC_EVENT(name, PERIODIC_EVENT_ROLE_##roles, flags)
 #endif /* !defined(COCCI) */
 
 #define FL(name) (PERIODIC_EVENT_FLAG_##name)
@@ -48,7 +46,7 @@ static int
 retry_dns_callback(time_t now, const or_options_t *options)
 {
   (void)now;
-#define RETRY_DNS_INTERVAL (10*60)
+#define RETRY_DNS_INTERVAL (10 * 60)
   if (server_mode(options) && has_dns_init_failed())
     dns_init();
   return RETRY_DNS_INTERVAL;
@@ -68,8 +66,7 @@ check_dns_honesty_callback(time_t now, const or_options_t *options)
   (void)now;
   /* 9. and if we're an exit node, check whether our DNS is telling stories
    * to us. */
-  if (net_is_disabled() ||
-      ! public_server_mode(options) ||
+  if (net_is_disabled() || ! public_server_mode(options) ||
       router_my_exit_policy_is_reject_star())
     return PERIODIC_EVENT_NO_UPDATE;
 
@@ -80,7 +77,7 @@ check_dns_honesty_callback(time_t now, const or_options_t *options)
   }
 
   dns_launch_correctness_checks();
-  return 12*3600 + crypto_rand_int(12*3600);
+  return 12 * 3600 + crypto_rand_int(12 * 3600);
 }
 
 DECLARE_EVENT(check_dns_honesty, RELAY, FL(NEED_NET));
@@ -94,18 +91,18 @@ rotate_onion_key_callback(time_t now, const or_options_t *options)
 {
   if (server_mode(options)) {
     int onion_key_lifetime = get_onion_key_lifetime();
-    time_t rotation_time = get_onion_key_set_at()+onion_key_lifetime;
+    time_t rotation_time = get_onion_key_set_at() + onion_key_lifetime;
     if (rotation_time > now) {
       return ONION_KEY_CONSENSUS_CHECK_INTERVAL;
     }
 
-    log_info(LD_GENERAL,"Rotating onion key.");
+    log_info(LD_GENERAL, "Rotating onion key.");
     rotate_onion_key();
     cpuworkers_rotate_keyinfo();
-    if (router_rebuild_descriptor(1)<0) {
+    if (router_rebuild_descriptor(1) < 0) {
       log_info(LD_CONFIG, "Couldn't rebuild router descriptor");
     }
-    if (advertised_server_mode() && !net_is_disabled())
+    if (advertised_server_mode() && ! net_is_disabled())
       router_upload_dir_desc_to_dirservers(0);
     return ONION_KEY_CONSENSUS_CHECK_INTERVAL;
   }
@@ -128,7 +125,7 @@ check_descriptor_callback(time_t now, const or_options_t *options)
 
   /* 2b. Once per minute, regenerate and upload the descriptor if the old
    * one is inaccurate. */
-  if (!net_is_disabled()) {
+  if (! net_is_disabled()) {
     check_descriptor_bandwidth_changed(now);
     check_descriptor_ipaddress_changed(now);
     mark_my_descriptor_dirty_if_too_old(now);
@@ -156,10 +153,10 @@ check_for_reachability_bw_callback(time_t now, const or_options_t *options)
   /* also, check religiously for reachability, if it's within the first
    * 20 minutes of our uptime. */
   if (server_mode(options) &&
-      (have_completed_a_circuit() || !any_predicted_circuits(now)) &&
-      !net_is_disabled()) {
+      (have_completed_a_circuit() || ! any_predicted_circuits(now)) &&
+      ! net_is_disabled()) {
     if (get_uptime() < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
-      router_do_reachability_checks(1, dirport_reachability_count==0);
+      router_do_reachability_checks(1, dirport_reachability_count == 0);
       if (++dirport_reachability_count > 5)
         dirport_reachability_count = 0;
       return 1;
@@ -169,13 +166,12 @@ check_for_reachability_bw_callback(time_t now, const or_options_t *options)
        * bridges, since they might go long periods without much use. */
       const routerinfo_t *me = router_get_my_routerinfo();
       static int first_time = 1;
-      if (!first_time && me &&
-          me->bandwidthcapacity < me->bandwidthrate &&
+      if (! first_time && me && me->bandwidthcapacity < me->bandwidthrate &&
           me->bandwidthcapacity < 51200) {
         reset_bandwidth_test();
       }
       first_time = 0;
-#define BANDWIDTH_RECHECK_INTERVAL (12*60*60)
+#define BANDWIDTH_RECHECK_INTERVAL (12 * 60 * 60)
       return BANDWIDTH_RECHECK_INTERVAL;
     }
   }
@@ -190,20 +186,20 @@ DECLARE_EVENT(check_for_reachability_bw, ROUTER, FL(NEED_NET));
 static int
 reachability_warnings_callback(time_t now, const or_options_t *options)
 {
-  (void) now;
+  (void)now;
 
   if (get_uptime() < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
     return (int)(TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT - get_uptime());
   }
 
-  if (server_mode(options) &&
-      !net_is_disabled() &&
+  if (server_mode(options) && ! net_is_disabled() &&
       have_completed_a_circuit()) {
     /* every 20 minutes, check and complain if necessary */
     const routerinfo_t *me = router_get_my_routerinfo();
-    if (me && !check_whether_orport_reachable(options)) {
+    if (me && ! check_whether_orport_reachable(options)) {
       char *address = tor_dup_ip(me->addr);
-      log_warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that "
+      log_warn(LD_CONFIG,
+               "Your server (%s:%d) has not managed to confirm that "
                "its ORPort is reachable. Relays do not publish descriptors "
                "until their ORPort and DirPort are reachable. Please check "
                "your firewalls, ports, address, /etc/hosts file, etc.",
@@ -214,7 +210,7 @@ reachability_warnings_callback(time_t now, const or_options_t *options)
       tor_free(address);
     }
 
-    if (me && !check_whether_dirport_reachable(options)) {
+    if (me && ! check_whether_dirport_reachable(options)) {
       char *address = tor_dup_ip(me->addr);
       log_warn(LD_CONFIG,
                "Your server (%s:%d) has not managed to confirm that its "
@@ -266,7 +262,7 @@ check_onion_keys_expiry_time_callback(time_t now, const or_options_t *options)
 {
   if (server_mode(options)) {
     int onion_key_grace_period = get_onion_key_grace_period();
-    time_t expiry_time = get_onion_key_set_at()+onion_key_grace_period;
+    time_t expiry_time = get_onion_key_set_at() + onion_key_grace_period;
     if (expiry_time > now) {
       return ONION_KEY_CONSENSUS_CHECK_INTERVAL;
     }

@@ -66,10 +66,10 @@ routerset_get_countryname(const char *c)
 {
   char *country;
 
-  if (strlen(c) < 4 || c[0] !='{' || c[3] !='}')
+  if (strlen(c) < 4 || c[0] != '{' || c[3] != '}')
     return NULL;
 
-  country = tor_strndup(c+1, 2);
+  country = tor_strndup(c + 1, 2);
   tor_strlower(country);
   return country;
 }
@@ -83,23 +83,23 @@ routerset_refresh_countries(routerset_t *target)
   int cc;
   bitarray_free(target->countries);
 
-  if (!geoip_is_loaded(AF_INET)) {
+  if (! geoip_is_loaded(AF_INET)) {
     target->countries = NULL;
     target->n_countries = 0;
     return;
   }
   target->n_countries = geoip_get_n_countries();
   target->countries = bitarray_init_zero(target->n_countries);
-  SMARTLIST_FOREACH_BEGIN(target->country_names, const char *, country) {
+  SMARTLIST_FOREACH_BEGIN (target->country_names, const char *, country) {
     cc = geoip_get_country(country);
     if (cc >= 0) {
       tor_assert(cc < target->n_countries);
       bitarray_set(target->countries, cc);
     } else {
-      log_warn(LD_CONFIG, "Country code '%s' is not recognized.",
-          country);
+      log_warn(LD_CONFIG, "Country code '%s' is not recognized.", country);
     }
-  } SMARTLIST_FOREACH_END(country);
+  }
+  SMARTLIST_FOREACH_END(country);
 }
 
 /** Parse the string <b>s</b> to create a set of routerset entries, and add
@@ -118,48 +118,51 @@ routerset_parse(routerset_t *target, const char *s, const char *description)
   char *countryname;
   smartlist_t *list = smartlist_new();
   int malformed_list;
-  smartlist_split_string(list, s, ",",
-                         SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH_BEGIN(list, char *, nick) {
-      addr_policy_t *p;
-      /* if it doesn't pass our validation, assume it's malformed */
-      malformed_list = 1;
-      if (is_legal_hexdigest(nick)) {
-        char d[DIGEST_LEN];
-        if (*nick == '$')
-          ++nick;
-        log_debug(LD_CONFIG, "Adding identity %s to %s", nick, description);
-        base16_decode(d, sizeof(d), nick, HEX_DIGEST_LEN);
-        digestmap_set(target->digests, d, (void*)1);
-      } else if (is_legal_nickname(nick)) {
-        log_debug(LD_CONFIG, "Adding nickname %s to %s", nick, description);
-        strmap_set_lc(target->names, nick, (void*)1);
-      } else if ((countryname = routerset_get_countryname(nick)) != NULL) {
-        log_debug(LD_CONFIG, "Adding country %s to %s", nick,
-                  description);
-        smartlist_add(target->country_names, countryname);
-        added_countries = 1;
-      } else if ((strchr(nick,'.') || strchr(nick, ':') ||  strchr(nick, '*'))
-                 && (p = router_parse_addr_policy_item_from_string(
-                                     nick, ADDR_POLICY_REJECT,
-                                     &malformed_list))) {
-        /* IPv4 addresses contain '.', IPv6 addresses contain ':',
-         * and wildcard addresses contain '*'. */
-        log_debug(LD_CONFIG, "Adding address %s to %s", nick, description);
-        smartlist_add(target->policies, p);
-      } else if (malformed_list) {
-        log_warn(LD_CONFIG, "Entry '%s' in %s is malformed. Discarding entire"
-                 " list.", nick, description);
-        r = -1;
-        tor_free(nick);
-        SMARTLIST_DEL_CURRENT(list, nick);
-      } else {
-        log_notice(LD_CONFIG, "Entry '%s' in %s is ignored. Using the"
-                   " remainder of the list.", nick, description);
-        tor_free(nick);
-        SMARTLIST_DEL_CURRENT(list, nick);
-      }
-  } SMARTLIST_FOREACH_END(nick);
+  smartlist_split_string(list, s, ",", SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK,
+                         0);
+  SMARTLIST_FOREACH_BEGIN (list, char *, nick) {
+    addr_policy_t *p;
+    /* if it doesn't pass our validation, assume it's malformed */
+    malformed_list = 1;
+    if (is_legal_hexdigest(nick)) {
+      char d[DIGEST_LEN];
+      if (*nick == '$')
+        ++nick;
+      log_debug(LD_CONFIG, "Adding identity %s to %s", nick, description);
+      base16_decode(d, sizeof(d), nick, HEX_DIGEST_LEN);
+      digestmap_set(target->digests, d, (void *)1);
+    } else if (is_legal_nickname(nick)) {
+      log_debug(LD_CONFIG, "Adding nickname %s to %s", nick, description);
+      strmap_set_lc(target->names, nick, (void *)1);
+    } else if ((countryname = routerset_get_countryname(nick)) != NULL) {
+      log_debug(LD_CONFIG, "Adding country %s to %s", nick, description);
+      smartlist_add(target->country_names, countryname);
+      added_countries = 1;
+    } else if ((strchr(nick, '.') || strchr(nick, ':') || strchr(nick, '*')) &&
+               (p = router_parse_addr_policy_item_from_string(
+                    nick, ADDR_POLICY_REJECT, &malformed_list))) {
+      /* IPv4 addresses contain '.', IPv6 addresses contain ':',
+       * and wildcard addresses contain '*'. */
+      log_debug(LD_CONFIG, "Adding address %s to %s", nick, description);
+      smartlist_add(target->policies, p);
+    } else if (malformed_list) {
+      log_warn(LD_CONFIG,
+               "Entry '%s' in %s is malformed. Discarding entire"
+               " list.",
+               nick, description);
+      r = -1;
+      tor_free(nick);
+      SMARTLIST_DEL_CURRENT(list, nick);
+    } else {
+      log_notice(LD_CONFIG,
+                 "Entry '%s' in %s is ignored. Using the"
+                 " remainder of the list.",
+                 nick, description);
+      tor_free(nick);
+      SMARTLIST_DEL_CURRENT(list, nick);
+    }
+  }
+  SMARTLIST_FOREACH_END(nick);
   policy_expand_unspec(&target->policies);
   smartlist_add_all(target->list, list);
   smartlist_free(list);
@@ -174,7 +177,7 @@ routerset_union(routerset_t *target, const routerset_t *source)
 {
   char *s;
   tor_assert(target);
-  if (!source || !source->list)
+  if (! source || ! source->list)
     return;
   s = routerset_to_string(source);
   routerset_parse(target, s, "other routerset");
@@ -187,7 +190,7 @@ int
 routerset_is_list(const routerset_t *set)
 {
   return smartlist_len(set->country_names) == 0 &&
-    smartlist_len(set->policies) == 0;
+         smartlist_len(set->policies) == 0;
 }
 
 /** Return true iff we need a GeoIP IP-to-country database to make sense of
@@ -202,7 +205,7 @@ routerset_needs_geoip(const routerset_t *set)
 int
 routerset_is_empty(const routerset_t *set)
 {
-  return !set || smartlist_len(set->list) == 0;
+  return ! set || smartlist_len(set->list) == 0;
 }
 
 /** Return the number of entries in <b>set</b>. This does NOT return a
@@ -210,7 +213,7 @@ routerset_is_empty(const routerset_t *set)
 int
 routerset_len(const routerset_t *set)
 {
-  if (!set) {
+  if (! set) {
     return 0;
   }
   return smartlist_len(set->list);
@@ -225,18 +228,17 @@ routerset_len(const routerset_t *set)
  * from addr.) */
 STATIC int
 routerset_contains(const routerset_t *set, const tor_addr_t *addr,
-                   uint16_t orport,
-                   const char *nickname, const char *id_digest,
-                   country_t country)
+                   uint16_t orport, const char *nickname,
+                   const char *id_digest, country_t country)
 {
-  if (!set || !set->list)
+  if (! set || ! set->list)
     return 0;
   if (nickname && strmap_get_lc(set->names, nickname))
     return 4;
   if (id_digest && digestmap_get(set->digests, id_digest))
     return 4;
-  if (addr && compare_tor_addr_to_addr_policy(addr, orport, set->policies)
-      == ADDR_POLICY_REJECTED)
+  if (addr && compare_tor_addr_to_addr_policy(addr, orport, set->policies) ==
+                  ADDR_POLICY_REJECTED)
     return 3;
   if (set->countries) {
     if (country < 0 && addr)
@@ -259,18 +261,18 @@ routerset_add_unknown_ccs(routerset_t **setp, int only_if_some_cc_set)
   routerset_t *set;
   int add_unknown, add_a1;
   if (only_if_some_cc_set) {
-    if (!*setp || smartlist_len((*setp)->country_names) == 0)
+    if (! *setp || smartlist_len((*setp)->country_names) == 0)
       return 0;
   }
-  if (!*setp)
+  if (! *setp)
     *setp = routerset_new();
 
   set = *setp;
 
   add_unknown = ! smartlist_contains_string_case(set->country_names, "??") &&
-    geoip_get_country("??") >= 0;
+                geoip_get_country("??") >= 0;
   add_a1 = ! smartlist_contains_string_case(set->country_names, "a1") &&
-    geoip_get_country("A1") >= 0;
+           geoip_get_country("A1") >= 0;
 
   if (add_unknown) {
     smartlist_add_strdup(set->country_names, "??");
@@ -292,12 +294,8 @@ routerset_add_unknown_ccs(routerset_t **setp, int only_if_some_cc_set)
 int
 routerset_contains_extendinfo(const routerset_t *set, const extend_info_t *ei)
 {
-  return routerset_contains(set,
-                            &ei->addr,
-                            ei->port,
-                            ei->nickname,
-                            ei->identity_digest,
-                            -1 /*country*/);
+  return routerset_contains(set, &ei->addr, ei->port, ei->nickname,
+                            ei->identity_digest, -1 /*country*/);
 }
 
 /** Return true iff <b>ri</b> is in <b>set</b>.  If country is <b>-1</b>, we
@@ -308,29 +306,20 @@ routerset_contains_router(const routerset_t *set, const routerinfo_t *ri,
 {
   tor_addr_t addr;
   tor_addr_from_ipv4h(&addr, ri->addr);
-  return routerset_contains(set,
-                            &addr,
-                            ri->or_port,
-                            ri->nickname,
-                            ri->cache_info.identity_digest,
-                            country);
+  return routerset_contains(set, &addr, ri->or_port, ri->nickname,
+                            ri->cache_info.identity_digest, country);
 }
 
 /** Return true iff <b>rs</b> is in <b>set</b>.  If country is <b>-1</b>, we
  * look up the country. */
 int
 routerset_contains_routerstatus(const routerset_t *set,
-                                const routerstatus_t *rs,
-                                country_t country)
+                                const routerstatus_t *rs, country_t country)
 {
   tor_addr_t addr;
   tor_addr_from_ipv4h(&addr, rs->addr);
-  return routerset_contains(set,
-                            &addr,
-                            rs->or_port,
-                            rs->nickname,
-                            rs->identity_digest,
-                            country);
+  return routerset_contains(set, &addr, rs->or_port, rs->nickname,
+                            rs->identity_digest, country);
 }
 
 /** Return true iff <b>node</b> is in <b>set</b>. */
@@ -349,12 +338,12 @@ routerset_contains_node(const routerset_t *set, const node_t *node)
 int
 routerset_contains_bridge(const routerset_t *set, const bridge_info_t *bridge)
 {
-  const char *id = (const char*)bridge_get_rsa_id_digest(bridge);
+  const char *id = (const char *)bridge_get_rsa_id_digest(bridge);
   const tor_addr_port_t *addrport = bridge_get_addr_port(bridge);
 
   tor_assert(addrport);
-  return routerset_contains(set, &addrport->addr, addrport->port,
-                            NULL, id, -1);
+  return routerset_contains(set, &addrport->addr, addrport->port, NULL, id,
+                            -1);
 }
 
 /** Add every known node_t that is a member of <b>routerset</b> to
@@ -365,30 +354,30 @@ routerset_get_all_nodes(smartlist_t *out, const routerset_t *routerset,
                         const routerset_t *excludeset, int running_only)
 {
   tor_assert(out);
-  if (!routerset || !routerset->list)
+  if (! routerset || ! routerset->list)
     return;
 
   if (routerset_is_list(routerset)) {
     /* No routers are specified by type; all are given by name or digest.
      * we can do a lookup in O(len(routerset)). */
     SMARTLIST_FOREACH(routerset->list, const char *, name, {
-        const node_t *node = node_get_by_nickname(name, 0);
-        if (node) {
-          if (!running_only || node->is_running)
-            if (!routerset_contains_node(excludeset, node))
-              smartlist_add(out, (void*)node);
-        }
+      const node_t *node = node_get_by_nickname(name, 0);
+      if (node) {
+        if (! running_only || node->is_running)
+          if (! routerset_contains_node(excludeset, node))
+            smartlist_add(out, (void *)node);
+      }
     });
   } else {
     /* We need to iterate over the routerlist to get all the ones of the
      * right kind. */
     const smartlist_t *nodes = nodelist_get_list();
     SMARTLIST_FOREACH(nodes, const node_t *, node, {
-        if (running_only && !node->is_running)
-          continue;
-        if (routerset_contains_node(routerset, node) &&
-            !routerset_contains_node(excludeset, node))
-          smartlist_add(out, (void*)node);
+      if (running_only && ! node->is_running)
+        continue;
+      if (routerset_contains_node(routerset, node) &&
+          ! routerset_contains_node(excludeset, node))
+        smartlist_add(out, (void *)node);
     });
   }
 }
@@ -398,14 +387,14 @@ void
 routerset_subtract_nodes(smartlist_t *lst, const routerset_t *routerset)
 {
   tor_assert(lst);
-  if (!routerset)
+  if (! routerset)
     return;
   SMARTLIST_FOREACH(lst, const node_t *, node, {
-      if (routerset_contains_node(routerset, node)) {
-        //log_debug(LD_DIR, "Subtracting %s",r->nickname);
-        SMARTLIST_DEL_CURRENT(lst, node);
-      }
-    });
+    if (routerset_contains_node(routerset, node)) {
+      // log_debug(LD_DIR, "Subtracting %s",r->nickname);
+      SMARTLIST_DEL_CURRENT(lst, node);
+    }
+  });
 }
 
 /** Return a new string that when parsed by routerset_parse_string() will
@@ -413,7 +402,7 @@ routerset_subtract_nodes(smartlist_t *lst, const routerset_t *routerset)
 char *
 routerset_to_string(const routerset_t *set)
 {
-  if (!set || !set->list)
+  if (! set || ! set->list)
     return tor_strdup("");
   return smartlist_join_strings(set->list, ",", 0, NULL);
 }
@@ -449,7 +438,7 @@ routerset_equal(const routerset_t *old, const routerset_t *new)
 void
 routerset_free_(routerset_t *routerset)
 {
-  if (!routerset)
+  if (! routerset)
     return;
 
   SMARTLIST_FOREACH(routerset->list, char *, cp, tor_free(cp));
@@ -482,10 +471,10 @@ routerset_free_(routerset_t *routerset)
  */
 static int
 routerset_kv_parse(void *target, const config_line_t *line, char **errmsg,
-                  const void *params)
+                   const void *params)
 {
   (void)params;
-  routerset_t **p = (routerset_t**)target;
+  routerset_t **p = (routerset_t **)target;
   routerset_free(*p); // clear the old value, if any.
   routerset_t *rs = routerset_new();
   if (routerset_parse(rs, line->value, line->key) < 0) {
@@ -512,7 +501,7 @@ static char *
 routerset_encode(const void *value, const void *params)
 {
   (void)params;
-  const routerset_t **p = (const routerset_t**)value;
+  const routerset_t **p = (const routerset_t **)value;
   return routerset_to_string(*p);
 }
 
@@ -525,7 +514,7 @@ static void
 routerset_clear(void *value, const void *params)
 {
   (void)params;
-  routerset_t **p = (routerset_t**)value;
+  routerset_t **p = (routerset_t **)value;
   routerset_free(*p); // sets *p to NULL.
 }
 
@@ -540,8 +529,8 @@ static int
 routerset_copy(void *dest, const void *src, const void *params)
 {
   (void)params;
-  routerset_t **output = (routerset_t**)dest;
-  const routerset_t *input = *(routerset_t**)src;
+  routerset_t **output = (routerset_t **)dest;
+  const routerset_t *input = *(routerset_t **)src;
   routerset_free(*output); // sets *output to NULL
   if (! routerset_is_empty(input)) {
     *output = routerset_new();
@@ -553,12 +542,11 @@ routerset_copy(void *dest, const void *src, const void *params)
 /**
  * Function table to implement a routerset_t-based configuration type.
  **/
-static const var_type_fns_t routerset_type_fns = {
-  .kv_parse = routerset_kv_parse,
-  .encode = routerset_encode,
-  .clear = routerset_clear,
-  .copy = routerset_copy
-};
+static const var_type_fns_t routerset_type_fns = {.kv_parse =
+                                                      routerset_kv_parse,
+                                                  .encode = routerset_encode,
+                                                  .clear = routerset_clear,
+                                                  .copy = routerset_copy};
 
 /**
  * Definition of a routerset_t-based configuration type.
@@ -569,7 +557,5 @@ static const var_type_fns_t routerset_type_fns = {
  *
  * Empty sets are represented as NULL.
  **/
-const var_type_def_t ROUTERSET_type_defn = {
-  .name = "RouterList",
-  .fns = &routerset_type_fns
-};
+const var_type_def_t ROUTERSET_type_defn = {.name = "RouterList",
+                                            .fns = &routerset_type_fns};

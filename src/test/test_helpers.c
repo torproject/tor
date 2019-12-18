@@ -58,9 +58,9 @@ ENABLE_GCC_WARNING("-Woverlength-strings")
 const char *
 get_yesterday_date_str(void)
 {
-  static char buf[ISO_TIME_LEN+1];
+  static char buf[ISO_TIME_LEN + 1];
 
-  time_t yesterday = time(NULL) - 24*60*60;
+  time_t yesterday = time(NULL) - 24 * 60 * 60;
   format_iso_time(buf, yesterday);
   return buf;
 }
@@ -70,8 +70,8 @@ static int
 router_descriptor_is_older_than_replacement(const routerinfo_t *router,
                                             int seconds)
 {
-  (void) router;
-  (void) seconds;
+  (void)router;
+  (void)seconds;
   return 0;
 }
 
@@ -93,28 +93,28 @@ helper_setup_fake_routerlist(void)
        router_descriptor_is_older_than_replacement);
 
   /* Load all the test descriptors to the routerlist. */
-  retval = router_load_routers_from_string(TEST_DESCRIPTORS,
-                                           NULL, SAVED_IN_JOURNAL,
-                                           NULL, 0, NULL);
+  retval = router_load_routers_from_string(TEST_DESCRIPTORS, NULL,
+                                           SAVED_IN_JOURNAL, NULL, 0, NULL);
   tt_int_op(retval, OP_EQ, HELPER_NUMBER_OF_DESCRIPTORS);
 
   /* Sanity checking of routerlist and nodelist. */
   our_routerlist = router_get_routerlist();
   tt_int_op(smartlist_len(our_routerlist->routers), OP_EQ,
-              HELPER_NUMBER_OF_DESCRIPTORS);
+            HELPER_NUMBER_OF_DESCRIPTORS);
   routerlist_assert_ok(our_routerlist);
 
   our_nodelist = nodelist_get_list();
   tt_int_op(smartlist_len(our_nodelist), OP_EQ, HELPER_NUMBER_OF_DESCRIPTORS);
 
   /* Mark all routers as non-guards but up and running! */
-  SMARTLIST_FOREACH_BEGIN(our_nodelist, node_t *, node) {
+  SMARTLIST_FOREACH_BEGIN (our_nodelist, node_t *, node) {
     node->is_running = 1;
     node->is_valid = 1;
     node->is_possible_guard = 0;
-  } SMARTLIST_FOREACH_END(node);
+  }
+  SMARTLIST_FOREACH_END(node);
 
- done:
+done:
   UNMOCK(router_descriptor_is_older_than);
 }
 
@@ -122,7 +122,7 @@ void
 connection_write_to_buf_mock(const char *string, size_t len,
                              connection_t *conn, int compressed)
 {
-  (void) compressed;
+  (void)compressed;
 
   tor_assert(string);
   tor_assert(conn);
@@ -158,11 +158,10 @@ dummy_origin_circuit_new(int n_cells)
   int i;
   cell_t cell;
 
-  for (i=0; i < n_cells; ++i) {
-    crypto_rand((void*)&cell, sizeof(cell));
-    cell_queue_append_packed_copy(TO_CIRCUIT(circ),
-                                  &TO_CIRCUIT(circ)->n_chan_cells,
-                                  1, &cell, 1, 0);
+  for (i = 0; i < n_cells; ++i) {
+    crypto_rand((void *)&cell, sizeof(cell));
+    cell_queue_append_packed_copy(
+        TO_CIRCUIT(circ), &TO_CIRCUIT(circ)->n_chan_cells, 1, &cell, 1, 0);
   }
 
   TO_CIRCUIT(circ)->purpose = CIRCUIT_PURPOSE_C_GENERAL;
@@ -175,8 +174,8 @@ dummy_origin_circuit_new(int n_cells)
  * for things like 1.2.3.4.5 or "invalidstuff!!"
  */
 int
-mock_tor_addr_lookup__fail_on_bad_addrs(const char *name,
-                                        uint16_t family, tor_addr_t *out)
+mock_tor_addr_lookup__fail_on_bad_addrs(const char *name, uint16_t family,
+                                        tor_addr_t *out)
 {
   if (name && strchr(name, '!')) {
     return -1;
@@ -199,12 +198,10 @@ static int fake_socket_number = TEST_CONN_FD_INIT;
 
 /* Helper for test_conn_get_connection() */
 static int
-mock_connection_connect_sockaddr(connection_t *conn,
-                                 const struct sockaddr *sa,
+mock_connection_connect_sockaddr(connection_t *conn, const struct sockaddr *sa,
                                  socklen_t sa_len,
                                  const struct sockaddr *bindaddr,
-                                 socklen_t bindaddr_len,
-                                 int *socket_error)
+                                 socklen_t bindaddr_len, int *socket_error)
 {
   (void)sa_len;
   (void)bindaddr;
@@ -223,7 +220,7 @@ mock_connection_connect_sockaddr(connection_t *conn,
    * (and therefore event->ev_base) is NULL.  */
   tt_int_op(connection_add_connecting(conn), OP_EQ, 0);
 
- done:
+done:
   /* Fake "connected" status */
   return 1;
 }
@@ -237,8 +234,7 @@ test_conn_get_connection(uint8_t state, uint8_t type, uint8_t purpose)
   int socket_err = 0;
   int in_progress = 0;
 
-  MOCK(connection_connect_sockaddr,
-       mock_connection_connect_sockaddr);
+  MOCK(connection_connect_sockaddr, mock_connection_connect_sockaddr);
   MOCK(tor_close_socket, fake_close_socket);
 
   tor_init_connection_lists();
@@ -247,7 +243,7 @@ test_conn_get_connection(uint8_t state, uint8_t type, uint8_t purpose)
   tt_assert(conn);
 
   test_conn_lookup_addr_helper(TEST_CONN_ADDRESS, TEST_CONN_FAMILY, &addr);
-  tt_assert(!tor_addr_is_null(&addr));
+  tt_assert(! tor_addr_is_null(&addr));
 
   tor_addr_copy_tight(&conn->addr, &addr);
   conn->port = TEST_CONN_PORT;
@@ -255,7 +251,7 @@ test_conn_get_connection(uint8_t state, uint8_t type, uint8_t purpose)
   in_progress = connection_connect(conn, TEST_CONN_ADDRESS_PORT, &addr,
                                    TEST_CONN_PORT, &socket_err);
   tt_int_op(mock_connection_connect_sockaddr_called, OP_EQ, 1);
-  tt_assert(!socket_err);
+  tt_assert(! socket_err);
   tt_assert(in_progress == 0 || in_progress == 1);
 
   /* fake some of the attributes so the connection looks OK */
@@ -268,7 +264,7 @@ test_conn_get_connection(uint8_t state, uint8_t type, uint8_t purpose)
   return conn;
 
   /* On failure */
- done:
+done:
   UNMOCK(connection_connect_sockaddr);
   UNMOCK(tor_close_socket);
   return NULL;
@@ -300,7 +296,7 @@ helper_parse_options(const char *conf)
     goto done;
   }
 
- done:
+done:
   config_free_lines(line);
   if (ret != 0) {
     or_options_free(opt);
@@ -316,7 +312,7 @@ helper_parse_options(const char *conf)
 static void
 alertfn_immediate(dispatch_t *d, channel_id_t chan, void *arg)
 {
-  (void) arg;
+  (void)arg;
   dispatch_flush(d, chan, INT_MAX);
 }
 
@@ -356,6 +352,5 @@ helper_cleanup_pubsub(const struct testcase_t *testcase, void *dispatcher_)
   return 1;
 }
 
-const struct testcase_setup_t helper_pubsub_setup = {
-  helper_setup_pubsub, helper_cleanup_pubsub
-};
+const struct testcase_setup_t helper_pubsub_setup = {helper_setup_pubsub,
+                                                     helper_cleanup_pubsub};

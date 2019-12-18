@@ -30,17 +30,17 @@
  */
 static int
 guardfraction_line_apply(const char *guard_id,
-                      uint32_t guardfraction_percentage,
-                      smartlist_t *vote_routerstatuses)
+                         uint32_t guardfraction_percentage,
+                         smartlist_t *vote_routerstatuses)
 {
   vote_routerstatus_t *vrs = NULL;
 
   tor_assert(vote_routerstatuses);
 
   vrs = smartlist_bsearch(vote_routerstatuses, guard_id,
-                         compare_digest_to_vote_routerstatus_entry);
+                          compare_digest_to_vote_routerstatus_entry);
 
-  if (!vrs) {
+  if (! vrs) {
     return 0;
   }
 
@@ -78,7 +78,7 @@ guardfraction_file_parse_guard_line(const char *guard_line,
   /* guard_line should contain something like this:
      <hex digest> <guardfraction> <appearances> */
   smartlist_split_string(sl, guard_line, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 3);
+                         SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, 3);
   if (smartlist_len(sl) < 3) {
     tor_asprintf(err_msg, "bad line '%s'", guard_line);
     goto done;
@@ -86,8 +86,8 @@ guardfraction_file_parse_guard_line(const char *guard_line,
 
   inputs_tmp = smartlist_get(sl, 0);
   if (strlen(inputs_tmp) != HEX_DIGEST_LEN ||
-      base16_decode(guard_id, DIGEST_LEN,
-                    inputs_tmp, HEX_DIGEST_LEN) != DIGEST_LEN) {
+      base16_decode(guard_id, DIGEST_LEN, inputs_tmp, HEX_DIGEST_LEN) !=
+          DIGEST_LEN) {
     tor_asprintf(err_msg, "bad digest '%s'", inputs_tmp);
     goto done;
   }
@@ -95,21 +95,21 @@ guardfraction_file_parse_guard_line(const char *guard_line,
   inputs_tmp = smartlist_get(sl, 1);
   /* Guardfraction is an integer in [0, 100]. */
   guardfraction =
-    (uint32_t) tor_parse_long(inputs_tmp, 10, 0, 100, &num_ok, NULL);
-  if (!num_ok) {
+      (uint32_t)tor_parse_long(inputs_tmp, 10, 0, 100, &num_ok, NULL);
+  if (! num_ok) {
     tor_asprintf(err_msg, "wrong percentage '%s'", inputs_tmp);
     goto done;
   }
 
   /* If routerstatuses were provided, apply this info to actual routers. */
   if (vote_routerstatuses) {
-    retval = guardfraction_line_apply(guard_id, guardfraction,
-                                      vote_routerstatuses);
+    retval =
+        guardfraction_line_apply(guard_id, guardfraction, vote_routerstatuses);
   } else {
     retval = 0; /* If we got this far, line was correctly formatted. */
   }
 
- done:
+done:
 
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_free(sl);
@@ -127,8 +127,7 @@ guardfraction_file_parse_guard_line(const char *guard_line,
  */
 static int
 guardfraction_file_parse_inputs_line(const char *inputs_line,
-                                     int *total_consensuses,
-                                     int *total_days,
+                                     int *total_consensuses, int *total_days,
                                      char **err_msg)
 {
   int retval = -1;
@@ -141,7 +140,7 @@ guardfraction_file_parse_inputs_line(const char *inputs_line,
   /* Second line is inputs information:
    *   n-inputs <total_consensuses> <total_days>. */
   smartlist_split_string(sl, inputs_line, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 3);
+                         SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, 3);
   if (smartlist_len(sl) < 2) {
     tor_asprintf(err_msg, "incomplete line '%s'", inputs_line);
     goto done;
@@ -149,23 +148,22 @@ guardfraction_file_parse_inputs_line(const char *inputs_line,
 
   inputs_tmp = smartlist_get(sl, 0);
   *total_consensuses =
-    (int) tor_parse_long(inputs_tmp, 10, 0, INT_MAX, &num_ok, NULL);
-  if (!num_ok) {
+      (int)tor_parse_long(inputs_tmp, 10, 0, INT_MAX, &num_ok, NULL);
+  if (! num_ok) {
     tor_asprintf(err_msg, "unparseable consensus '%s'", inputs_tmp);
     goto done;
   }
 
   inputs_tmp = smartlist_get(sl, 1);
-  *total_days =
-    (int) tor_parse_long(inputs_tmp, 10, 0, INT_MAX, &num_ok, NULL);
-  if (!num_ok) {
+  *total_days = (int)tor_parse_long(inputs_tmp, 10, 0, INT_MAX, &num_ok, NULL);
+  if (! num_ok) {
     tor_asprintf(err_msg, "unparseable days '%s'", inputs_tmp);
     goto done;
   }
 
   retval = 0;
 
- done:
+done:
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_free(sl);
 
@@ -173,7 +171,7 @@ guardfraction_file_parse_inputs_line(const char *inputs_line,
 }
 
 /* Maximum age of a guardfraction file that we are willing to accept. */
-#define MAX_GUARDFRACTION_FILE_AGE (7*24*60*60) /* approx a week */
+#define MAX_GUARDFRACTION_FILE_AGE (7 * 24 * 60 * 60) /* approx a week */
 
 /** Static strings of guardfraction files. */
 #define GUARDFRACTION_DATE_STR "written-at"
@@ -202,9 +200,9 @@ guardfraction_file_parse_inputs_line(const char *inputs_line,
  */
 STATIC int
 dirserv_read_guardfraction_file_from_str(const char *guardfraction_file_str,
-                                      smartlist_t *vote_routerstatuses)
+                                         smartlist_t *vote_routerstatuses)
 {
-  config_line_t *front=NULL, *line;
+  config_line_t *front = NULL, *line;
   int ret_tmp;
   int retval = -1;
   int current_line_n = 0; /* line counter for better log messages */
@@ -228,22 +226,21 @@ dirserv_read_guardfraction_file_from_str(const char *guardfraction_file_str,
   if (vote_routerstatuses)
     smartlist_sort(vote_routerstatuses, compare_vote_routerstatus_entries);
 
-  for (line = front; line; line=line->next) {
+  for (line = front; line; line = line->next) {
     current_line_n++;
 
-    if (!strcmp(line->key, GUARDFRACTION_VERSION)) {
+    if (! strcmp(line->key, GUARDFRACTION_VERSION)) {
       int num_ok = 1;
       unsigned int version;
 
-      version =
-        (unsigned int) tor_parse_long(line->value,
-                                      10, 0, INT_MAX, &num_ok, NULL);
+      version = (unsigned int)tor_parse_long(line->value, 10, 0, INT_MAX,
+                                             &num_ok, NULL);
 
-      if (!num_ok || version != 1) {
+      if (! num_ok || version != 1) {
         log_warn(LD_GENERAL, "Got unknown guardfraction version %d.", version);
         goto done;
       }
-    } else if (!strcmp(line->key, GUARDFRACTION_DATE_STR)) {
+    } else if (! strcmp(line->key, GUARDFRACTION_DATE_STR)) {
       time_t file_written_at;
       time_t now = time(NULL);
 
@@ -258,28 +255,23 @@ dirserv_read_guardfraction_file_from_str(const char *guardfraction_file_str,
                  current_line_n, line->value);
         goto done; /* don't tolerate failure here. */
       }
-    } else if (!strcmp(line->key, GUARDFRACTION_INPUTS)) {
+    } else if (! strcmp(line->key, GUARDFRACTION_INPUTS)) {
       char *err_msg = NULL;
 
-      if (guardfraction_file_parse_inputs_line(line->value,
-                                               &total_consensuses,
-                                               &total_days,
-                                               &err_msg) < 0) {
-        log_warn(LD_CONFIG, "Guardfraction:%d: %s",
-                 current_line_n, err_msg);
+      if (guardfraction_file_parse_inputs_line(line->value, &total_consensuses,
+                                               &total_days, &err_msg) < 0) {
+        log_warn(LD_CONFIG, "Guardfraction:%d: %s", current_line_n, err_msg);
         tor_free(err_msg);
         continue;
       }
 
-    } else if (!strcmp(line->key, GUARDFRACTION_GUARD)) {
+    } else if (! strcmp(line->key, GUARDFRACTION_GUARD)) {
       char *err_msg = NULL;
 
-      ret_tmp = guardfraction_file_parse_guard_line(line->value,
-                                                    vote_routerstatuses,
-                                                    &err_msg);
+      ret_tmp = guardfraction_file_parse_guard_line(
+          line->value, vote_routerstatuses, &err_msg);
       if (ret_tmp < 0) { /* failed while parsing the guard line */
-        log_warn(LD_CONFIG, "Guardfraction:%d: %s",
-                 current_line_n, err_msg);
+        log_warn(LD_CONFIG, "Guardfraction:%d: %s", current_line_n, err_msg);
         tor_free(err_msg);
         continue;
       }
@@ -301,9 +293,9 @@ dirserv_read_guardfraction_file_from_str(const char *guardfraction_file_str,
            "Successfully parsed guardfraction file with %d consensuses over "
            "%d days. Parsed %d nodes and applied %d of them%s.",
            total_consensuses, total_days, guards_read_n, guards_applied_n,
-           vote_routerstatuses ? "" : " (no routerstatus provided)" );
+           vote_routerstatuses ? "" : " (no routerstatus provided)");
 
- done:
+done:
   config_free_lines(front);
 
   if (retval < 0) {
@@ -317,17 +309,17 @@ dirserv_read_guardfraction_file_from_str(const char *guardfraction_file_str,
  *  information to <b>vote_routerstatuses</b>. */
 int
 dirserv_read_guardfraction_file(const char *fname,
-                             smartlist_t *vote_routerstatuses)
+                                smartlist_t *vote_routerstatuses)
 {
   char *guardfraction_file_str;
 
   /* Read file to a string */
   guardfraction_file_str = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
-  if (!guardfraction_file_str) {
-      log_warn(LD_FS, "Cannot open guardfraction file '%s'. Failing.", fname);
-      return -1;
+  if (! guardfraction_file_str) {
+    log_warn(LD_FS, "Cannot open guardfraction file '%s'. Failing.", fname);
+    return -1;
   }
 
   return dirserv_read_guardfraction_file_from_str(guardfraction_file_str,
-                                               vote_routerstatuses);
+                                                  vote_routerstatuses);
 }

@@ -12,17 +12,15 @@
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
-#include <fcntl.h>
+#  include <fcntl.h>
 #endif
 
 #include "core/or/or.h"
 #include "test/test.h"
 
 struct testgroup_t testgroups[] = {
-  { "slow/crypto/", slow_crypto_tests },
-  { "slow/process/", slow_process_tests },
-  { "slow/prob_distr/", slow_stochastic_prob_distr_tests },
-  { "slow/ptr/", slow_ptr_tests },
-  END_OF_GROUPS
-};
-
+    {"slow/crypto/", slow_crypto_tests},
+    {"slow/process/", slow_process_tests},
+    {"slow/prob_distr/", slow_stochastic_prob_distr_tests},
+    {"slow/ptr/", slow_ptr_tests},
+    END_OF_GROUPS};

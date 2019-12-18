@@ -23,7 +23,6 @@ struct listener_connection_t {
   struct evdns_server_port *dns_server_port;
 
   entry_port_cfg_t entry_cfg;
-
 };
 
 #endif /* !defined(LISTENER_CONNECTION_ST_H) */

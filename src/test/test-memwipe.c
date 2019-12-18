@@ -13,7 +13,7 @@
 #include <stdlib.h>
 
 #ifdef HAVE_SYS_PARAM_H
-#include <sys/param.h>
+#  include <sys/param.h>
 #endif
 
 static unsigned fill_a_buffer_memset(void) __attribute__((noinline));
@@ -35,7 +35,7 @@ const char *s = NULL;
                                                                         \
   /* Fill up a 1k buffer with a recognizable pattern. */                \
   for (i = 0; i < BUF_LEN; i += strlen(s)) {                            \
-    memcpy(buf+i, s, MIN(strlen(s), BUF_LEN-i));                        \
+    memcpy(buf + i, s, MIN(strlen(s), BUF_LEN - i));                    \
   }                                                                     \
                                                                         \
   /* Use the buffer as input to a computation so the above can't get */ \
@@ -103,7 +103,7 @@ check_a_buffer(void)
      the memset/memwipe calls or not, please let me know.
    */
   for (i = 0; i < BUF_LEN - strlen(s); ++i) {
-    if (vmemeq(buf+i, s, strlen(s)))
+    if (vmemeq(buf + i, s, strlen(s)))
       ++sum;
   }
 
@@ -156,7 +156,7 @@ check_heap_buffer(void)
      the memset/memwipe calls or not, please let me know.
    */
   for (i = 0; i < BUF_LEN - strlen(s); ++i) {
-    if (vmemeq(buf+i, s, strlen(s)))
+    if (vmemeq(buf + i, s, strlen(s)))
       ++sum;
   }
 
@@ -166,19 +166,15 @@ check_heap_buffer(void)
 static struct testcase {
   const char *name;
   /* this spacing satisfies make check-spaces */
-  unsigned
-    (*fill_fn)(void);
-  unsigned
-    (*check_fn)(void);
-} testcases[] = {
-  { "nil", fill_a_buffer_nothing, check_a_buffer },
-  { "nil-heap", fill_heap_buffer_nothing, check_heap_buffer },
-  { "memset", fill_a_buffer_memset, check_a_buffer },
-  { "memset-heap", fill_heap_buffer_memset, check_heap_buffer },
-  { "memwipe", fill_a_buffer_memwipe, check_a_buffer },
-  { "memwipe-heap", fill_heap_buffer_memwipe, check_heap_buffer },
-  { NULL, NULL, NULL }
-};
+  unsigned (*fill_fn)(void);
+  unsigned (*check_fn)(void);
+} testcases[] = {{"nil", fill_a_buffer_nothing, check_a_buffer},
+                 {"nil-heap", fill_heap_buffer_nothing, check_heap_buffer},
+                 {"memset", fill_a_buffer_memset, check_a_buffer},
+                 {"memset-heap", fill_heap_buffer_memset, check_heap_buffer},
+                 {"memwipe", fill_a_buffer_memwipe, check_a_buffer},
+                 {"memwipe-heap", fill_heap_buffer_memwipe, check_heap_buffer},
+                 {NULL, NULL, NULL}};
 
 int
 main(int argc, char **argv)
@@ -187,7 +183,8 @@ main(int argc, char **argv)
   int i;
   int working = 1;
   unsigned found[6];
-  (void) argc; (void) argv;
+  (void)argc;
+  (void)argv;
 
   s = "squamous haberdasher gallimaufry";
 
@@ -204,12 +201,12 @@ main(int argc, char **argv)
     }
   }
 
-  if (!working || !found[0] || !found[1]) {
+  if (! working || ! found[0] || ! found[1]) {
     printf("It appears that this test case may not give you reliable "
            "information. Sorry.\n");
   }
 
-  if (!found[2] && !found[3]) {
+  if (! found[2] && ! found[3]) {
     printf("It appears that memset is good enough on this platform. Good.\n");
   }
 

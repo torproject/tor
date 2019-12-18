@@ -55,4 +55,3 @@ hs_stats_get_n_rendezvous_launches(void)
 {
   return n_rendezvous_launches;
 }
-

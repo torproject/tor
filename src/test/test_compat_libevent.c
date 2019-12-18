@@ -63,21 +63,20 @@ test_compat_libevent_logging_callback(void *ignored)
                             "012345678901234567890123456789"
                             "012345678901234567890123456789"
                             "012345678901234567890123456789"
-                            "012345678901234567890123456789"
-                            );
+                            "012345678901234567890123456789");
   expect_log_msg("Message from libevent: "
-                            "012345678901234567890123456789"
-                            "012345678901234567890123456789"
-                            "012345678901234567890123456789"
-                            "012345678901234567890123456789"
-                            "012345678901234567890123456789"
-                            "012345678901234567890123456789"
-                            "012345678901234567890123456789"
-                            "012345678901234567890123456789"
-                            "012345678901234567890123456789"
-                            "012345678901234567890123456789"
-                            "012345678901234567890123456789"
-            "012345678901234567890123456789\n");
+                 "012345678901234567890123456789"
+                 "012345678901234567890123456789"
+                 "012345678901234567890123456789"
+                 "012345678901234567890123456789"
+                 "012345678901234567890123456789"
+                 "012345678901234567890123456789"
+                 "012345678901234567890123456789"
+                 "012345678901234567890123456789"
+                 "012345678901234567890123456789"
+                 "012345678901234567890123456789"
+                 "012345678901234567890123456789"
+                 "012345678901234567890123456789\n");
   expect_log_severity(LOG_DEBUG);
   tt_int_op(smartlist_len(mock_saved_logs()), OP_EQ, 1);
 
@@ -103,7 +102,7 @@ test_compat_libevent_logging_callback(void *ignored)
   // No way of verifying the result of this, it seems =/
   configure_libevent_logging();
 
- done:
+done:
   suppress_libevent_log_msg(NULL);
   teardown_capture_of_logs();
 }
@@ -117,7 +116,7 @@ test_compat_libevent_header_version(void *ignored)
   res = tor_libevent_get_header_version_str();
   tt_str_op(res, OP_EQ, LIBEVENT_VERSION);
 
- done:
+done:
   (void)0;
 }
 
@@ -157,7 +156,7 @@ test_compat_libevent_postloop_events(void *arg)
   a = mainloop_event_postloop_new(activate_event_cb, &b);
 
   int counter = 0;
-  struct timeval fifty_ms = { 0, 10 * 1000 };
+  struct timeval fifty_ms = {0, 10 * 1000};
   timed = periodic_timer_new(tor_libevent_get_base(), &fifty_ms,
                              increment_int_counter_cb, &counter);
 
@@ -171,17 +170,16 @@ test_compat_libevent_postloop_events(void *arg)
 
   tt_int_op(activated_counter, OP_GE, 2);
 
- done:
+done:
   mainloop_event_free(a);
   mainloop_event_free(b);
   periodic_timer_free(timed);
 }
 
 struct testcase_t compat_libevent_tests[] = {
-  { "logging_callback", test_compat_libevent_logging_callback,
-    TT_FORK, NULL, NULL },
-  { "header_version", test_compat_libevent_header_version, 0, NULL, NULL },
-  { "postloop_events", test_compat_libevent_postloop_events,
-    TT_FORK, NULL, NULL },
-  END_OF_TESTCASES
-};
+    {"logging_callback", test_compat_libevent_logging_callback, TT_FORK, NULL,
+     NULL},
+    {"header_version", test_compat_libevent_header_version, 0, NULL, NULL},
+    {"postloop_events", test_compat_libevent_postloop_events, TT_FORK, NULL,
+     NULL},
+    END_OF_TESTCASES};

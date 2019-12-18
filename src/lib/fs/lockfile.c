@@ -18,17 +18,17 @@
 #include "lib/malloc/malloc.h"
 
 #ifdef HAVE_SYS_FILE_H
-#include <sys/file.h>
+#  include <sys/file.h>
 #endif
 #ifdef HAVE_FCNTL_H
-#include <fcntl.h>
+#  include <fcntl.h>
 #endif
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #ifdef _WIN32
-#include <windows.h>
-#include <sys/locking.h>
+#  include <windows.h>
+#  include <sys/locking.h>
 #endif
 
 #include <errno.h>
@@ -67,9 +67,9 @@ tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
   *locked_out = 0;
 
   log_info(LD_FS, "Locking \"%s\"", filename);
-  fd = tor_open_cloexec(filename, O_RDWR|O_CREAT|O_TRUNC, 0600);
+  fd = tor_open_cloexec(filename, O_RDWR | O_CREAT | O_TRUNC, 0600);
   if (fd < 0) {
-    log_warn(LD_FS,"Couldn't open \"%s\" for locking: %s", filename,
+    log_warn(LD_FS, "Couldn't open \"%s\" for locking: %s", filename,
              strerror(errno));
     return NULL;
   }
@@ -78,16 +78,16 @@ tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
   _lseek(fd, 0, SEEK_SET);
   if (_locking(fd, blocking ? _LK_LOCK : _LK_NBLCK, 1) < 0) {
     if (errno != EACCES && errno != EDEADLOCK)
-      log_warn(LD_FS,"Couldn't lock \"%s\": %s", filename, strerror(errno));
+      log_warn(LD_FS, "Couldn't lock \"%s\": %s", filename, strerror(errno));
     else
       *locked_out = 1;
     close(fd);
     return NULL;
   }
 #elif defined(HAVE_FLOCK)
-  if (flock(fd, LOCK_EX|(blocking ? 0 : LOCK_NB)) < 0) {
+  if (flock(fd, LOCK_EX | (blocking ? 0 : LOCK_NB)) < 0) {
     if (errno != EWOULDBLOCK)
-      log_warn(LD_FS,"Couldn't lock \"%s\": %s", filename, strerror(errno));
+      log_warn(LD_FS, "Couldn't lock \"%s\": %s", filename, strerror(errno));
     else
       *locked_out = 1;
     close(fd);
@@ -126,7 +126,7 @@ tor_lockfile_unlock(tor_lockfile_t *lockfile)
 #ifdef _WIN32
   _lseek(lockfile->fd, 0, SEEK_SET);
   if (_locking(lockfile->fd, _LK_UNLCK, 1) < 0) {
-    log_warn(LD_FS,"Error unlocking \"%s\": %s", lockfile->filename,
+    log_warn(LD_FS, "Error unlocking \"%s\": %s", lockfile->filename,
              strerror(errno));
   }
 #elif defined(HAVE_FLOCK)

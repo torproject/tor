@@ -28,7 +28,7 @@ static void test_relay_append_cell_to_circuit_queue(void *arg);
 static void
 assert_circuit_ok_mock(const circuit_t *c)
 {
-  (void) c;
+  (void)c;
   return;
 }
 
@@ -63,8 +63,7 @@ test_relay_close_circuit(void *arg)
 
   MOCK(scheduler_channel_has_waiting_cells,
        scheduler_channel_has_waiting_cells_mock);
-  MOCK(assert_circuit_ok,
-       assert_circuit_ok_mock);
+  MOCK(assert_circuit_ok, assert_circuit_ok_mock);
 
   /* Append it */
   old_count = get_mock_scheduler_has_waiting_cells_count();
@@ -91,8 +90,8 @@ test_relay_close_circuit(void *arg)
   commit_max(write_array);
   /* Check for two cells plus overhead */
   tt_u64_op(find_largest_max(write_array), OP_EQ,
-                             2*(get_cell_network_size(nchan->wide_circ_ids)
-                                +TLS_PER_CELL_OVERHEAD));
+            2 * (get_cell_network_size(nchan->wide_circ_ids) +
+                 TLS_PER_CELL_OVERHEAD));
 
   UNMOCK(scheduler_channel_has_waiting_cells);
 
@@ -105,7 +104,7 @@ test_relay_close_circuit(void *arg)
   /* Shut down channels */
   channel_free_all();
 
- done:
+done:
   tor_free(cell);
   if (orcirc) {
     circuitmux_detach_circuit(nchan->cmux, TO_CIRCUIT(orcirc));
@@ -178,7 +177,7 @@ test_relay_append_cell_to_circuit_queue(void *arg)
   /* Shut down channels */
   channel_free_all();
 
- done:
+done:
   tor_free(cell);
   if (orcirc) {
     circuitmux_detach_circuit(nchan->cmux, TO_CIRCUIT(orcirc));
@@ -194,9 +193,7 @@ test_relay_append_cell_to_circuit_queue(void *arg)
 }
 
 struct testcase_t relay_tests[] = {
-  { "append_cell_to_circuit_queue", test_relay_append_cell_to_circuit_queue,
-    TT_FORK, NULL, NULL },
-  { "close_circ_rephist", test_relay_close_circuit,
-    TT_FORK, NULL, NULL },
-  END_OF_TESTCASES
-};
+    {"append_cell_to_circuit_queue", test_relay_append_cell_to_circuit_queue,
+     TT_FORK, NULL, NULL},
+    {"close_circ_rephist", test_relay_close_circuit, TT_FORK, NULL, NULL},
+    END_OF_TESTCASES};

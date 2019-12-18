@@ -17,11 +17,11 @@
 #include "lib/lock/compat_mutex.h"
 
 #if defined(HAVE_STDATOMIC_H) && defined(STDATOMIC_WORKS)
-#define HAVE_WORKING_STDATOMIC
+#  define HAVE_WORKING_STDATOMIC
 #endif
 
 #ifdef HAVE_WORKING_STDATOMIC
-#include <stdatomic.h>
+#  include <stdatomic.h>
 #endif
 
 struct timeval;
@@ -49,7 +49,7 @@ typedef struct tor_cond_t {
   int n_to_wake;
   int generation;
 #else
-#error no known condition implementation.
+#  error no known condition implementation.
 #endif /* defined(USE_PTHREADS) || ... */
 } tor_cond_t;
 
@@ -106,15 +106,15 @@ void tor_threadlocal_set(tor_threadlocal_t *threadlocal, void *value);
 typedef struct atomic_counter_t {
   atomic_size_t val;
 } atomic_counter_t;
-#ifndef COCCI
-#define ATOMIC_LINKAGE static
-#endif
+#  ifndef COCCI
+#    define ATOMIC_LINKAGE static
+#  endif
 #else /* !defined(HAVE_WORKING_STDATOMIC) */
 typedef struct atomic_counter_t {
   tor_mutex_t mutex;
   size_t val;
 } atomic_counter_t;
-#define ATOMIC_LINKAGE
+#  define ATOMIC_LINKAGE
 #endif /* defined(HAVE_WORKING_STDATOMIC) */
 
 ATOMIC_LINKAGE void atomic_counter_init(atomic_counter_t *counter);
@@ -153,13 +153,13 @@ atomic_counter_destroy(atomic_counter_t *counter)
 static inline void
 atomic_counter_add(atomic_counter_t *counter, size_t add)
 {
-  (void) atomic_fetch_add(&counter->val, add);
+  (void)atomic_fetch_add(&counter->val, add);
 }
 /** Subtract a value from an atomic counter. */
 static inline void
 atomic_counter_sub(atomic_counter_t *counter, size_t sub)
 {
-  (void) atomic_fetch_sub(&counter->val, sub);
+  (void)atomic_fetch_sub(&counter->val, sub);
 }
 /** Return the current value of an atomic counter */
 static inline size_t

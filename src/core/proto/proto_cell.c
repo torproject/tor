@@ -30,19 +30,20 @@ cell_command_is_var_length(uint8_t command, int linkproto)
    * them.
    */
   switch (linkproto) {
-  case 1:
-    /* Link protocol version 1 has no variable-length cells. */
-    return 0;
-  case 2:
-    /* In link protocol version 2, VERSIONS is the only variable-length cell */
-    return command == CELL_VERSIONS;
-  case 0:
-  case 3:
-  default:
-    /* In link protocol version 3 and later, and in version "unknown",
-     * commands 128 and higher indicate variable-length. VERSIONS is
-     * grandfathered in. */
-    return command == CELL_VERSIONS || command >= 128;
+    case 1:
+      /* Link protocol version 1 has no variable-length cells. */
+      return 0;
+    case 2:
+      /* In link protocol version 2, VERSIONS is the only variable-length cell
+       */
+      return command == CELL_VERSIONS;
+    case 0:
+    case 3:
+    default:
+      /* In link protocol version 3 and later, and in version "unknown",
+       * commands 128 and higher indicate variable-length. VERSIONS is
+       * grandfathered in. */
+      return command == CELL_VERSIONS || command >= 128;
   }
 }
 
@@ -69,11 +70,11 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
   buf_peek(buf, hdr, header_len);
 
   command = get_uint8(hdr + circ_id_len);
-  if (!(cell_command_is_var_length(command, linkproto)))
+  if (! (cell_command_is_var_length(command, linkproto)))
     return 0;
 
   length = ntohs(get_uint16(hdr + circ_id_len + 1));
-  if (buf_datalen(buf) < (size_t)(header_len+length))
+  if (buf_datalen(buf) < (size_t)(header_len + length))
     return 1;
 
   result = var_cell_new(length);
@@ -84,7 +85,7 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
     result->circ_id = ntohs(get_uint16(hdr));
 
   buf_drain(buf, header_len);
-  buf_peek(buf, (char*) result->payload, length);
+  buf_peek(buf, (char *)result->payload, length);
   buf_drain(buf, length);
 
   *out = result;

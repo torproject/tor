@@ -15,7 +15,7 @@
 struct buf_t;
 
 /* Values for connection_t.magic: used to make sure that downcasts (casts from
-* connection_t to foo_connection_t) are safe. */
+ * connection_t to foo_connection_t) are safe. */
 #define BASE_CONNECTION_MAGIC 0x7C3C304Eu
 #define OR_CONNECTION_MAGIC 0x7D31FF03u
 #define EDGE_CONNECTION_MAGIC 0xF0374013u
@@ -47,46 +47,48 @@ struct connection_t {
                    * *_CONNECTION_MAGIC. */
 
   uint8_t state; /**< Current state of this connection. */
-  unsigned int type:5; /**< What kind of connection is this? */
-  unsigned int purpose:5; /**< Only used for DIR and EXIT types currently. */
+  unsigned int type : 5; /**< What kind of connection is this? */
+  unsigned int purpose : 5; /**< Only used for DIR and EXIT types currently. */
 
   /* The next fields are all one-bit booleans. Some are only applicable to
    * connection subtypes, but we hold them here anyway, to save space.
    */
-  unsigned int read_blocked_on_bw:1; /**< Boolean: should we start reading
-                            * again once the bandwidth throttler allows it? */
-  unsigned int write_blocked_on_bw:1; /**< Boolean: should we start writing
-                             * again once the bandwidth throttler allows
-                             * writes? */
-  unsigned int hold_open_until_flushed:1; /**< Despite this connection's being
-                                      * marked for close, do we flush it
-                                      * before closing it? */
-  unsigned int inbuf_reached_eof:1; /**< Boolean: did read() return 0 on this
-                                     * conn? */
+  unsigned int read_blocked_on_bw : 1; /**< Boolean: should we start reading
+                                        * again once the bandwidth throttler
+                                        * allows it? */
+  unsigned int write_blocked_on_bw : 1; /**< Boolean: should we start writing
+                                         * again once the bandwidth throttler
+                                         * allows writes? */
+  unsigned int hold_open_until_flushed : 1; /**< Despite this connection's
+                                             * being marked for close, do we
+                                             * flush it before closing it? */
+  unsigned int inbuf_reached_eof : 1; /**< Boolean: did read() return 0 on this
+                                       * conn? */
   /** Set to 1 when we're inside connection_flushed_some to keep us from
    * calling connection_handle_write() recursively. */
-  unsigned int in_flushed_some:1;
+  unsigned int in_flushed_some : 1;
   /** True if connection_handle_write is currently running on this connection.
    */
-  unsigned int in_connection_handle_write:1;
+  unsigned int in_connection_handle_write : 1;
 
   /* For linked connections:
    */
-  unsigned int linked:1; /**< True if there is, or has been, a linked_conn. */
+  unsigned int
+      linked : 1; /**< True if there is, or has been, a linked_conn. */
   /** True iff we'd like to be notified about read events from the
    * linked conn. */
-  unsigned int reading_from_linked_conn:1;
+  unsigned int reading_from_linked_conn : 1;
   /** True iff we're willing to write to the linked conn. */
-  unsigned int writing_to_linked_conn:1;
+  unsigned int writing_to_linked_conn : 1;
   /** True iff we're currently able to read on the linked conn, and our
    * read_event should be made active with libevent. */
-  unsigned int active_on_link:1;
+  unsigned int active_on_link : 1;
   /** True iff we've called connection_close_immediate() on this linked
    * connection. */
-  unsigned int linked_conn_is_closed:1;
+  unsigned int linked_conn_is_closed : 1;
 
   /** CONNECT/SOCKS proxy client handshake state (for outgoing connections). */
-  unsigned int proxy_state:4;
+  unsigned int proxy_state : 4;
 
   /** Our socket; set to TOR_INVALID_SOCKET if this connection is closed,
    * or has no socket. */

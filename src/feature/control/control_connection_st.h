@@ -24,10 +24,10 @@ struct control_connection_t {
                         * EVENT_MAX_ is >31, so we need a 64 bit mask */
 
   /** True if we have sent a protocolinfo reply on this connection. */
-  unsigned int have_sent_protocolinfo:1;
+  unsigned int have_sent_protocolinfo : 1;
   /** True if we have received a takeownership command on this
    * connection. */
-  unsigned int is_owning_control_connection:1;
+  unsigned int is_owning_control_connection : 1;
 
   /** List of ephemeral onion services belonging to this connection. */
   smartlist_t *ephemeral_onion_services;

@@ -58,9 +58,9 @@ typedef struct bto_best_t {
 } bto_best_t;
 
 /** GID and state of the best ORCONN we've seen so far */
-static bto_best_t best_any = { 0, -1 };
+static bto_best_t best_any = {0, -1};
 /** GID and state of the best application circuit ORCONN we've seen so far */
-static bto_best_t best_ap = { 0, -1 };
+static bto_best_t best_ap = {0, -1};
 
 /**
  * Update a cached state of a best ORCONN progress we've seen so far.
@@ -77,7 +77,7 @@ bto_update_best(const bt_orconn_t *bto, bto_best_t *best, const char *type)
    * that state. */
   best->gid = bto->gid;
   if (bto->state > best->state) {
-    log_info(LD_BTRACK, "ORCONN BEST_%s state %d->%d gid=%"PRIu64, type,
+    log_info(LD_BTRACK, "ORCONN BEST_%s state %d->%d gid=%" PRIu64, type,
              best->state, bto->state, bto->gid);
     best->state = bto->state;
     return true;
@@ -98,7 +98,7 @@ bto_update_bests(const bt_orconn_t *bto)
 
   if (bto_update_best(bto, &best_any, "ANY"))
     bto_cevent_anyconn(bto);
-  if (!bto->is_onehop && bto_update_best(bto, &best_ap, "AP"))
+  if (! bto->is_onehop && bto_update_best(bto, &best_ap, "AP"))
     bto_cevent_apconn(bto);
 }
 
@@ -121,8 +121,8 @@ bto_state_rcvr(const msg_t *msg, const orconn_state_msg_t *arg)
 
   (void)msg;
   bto = bto_find_or_new(arg->gid, arg->chan);
-  log_debug(LD_BTRACK, "ORCONN gid=%"PRIu64" chan=%"PRIu64
-            " proxy_type=%d state=%d",
+  log_debug(LD_BTRACK,
+            "ORCONN gid=%" PRIu64 " chan=%" PRIu64 " proxy_type=%d state=%d",
             arg->gid, arg->chan, arg->proxy_type, arg->state);
   bto->proxy_type = arg->proxy_type;
   bto->state = arg->state;
@@ -140,13 +140,13 @@ bto_status_rcvr(const msg_t *msg, const orconn_status_msg_t *arg)
 {
   (void)msg;
   switch (arg->status) {
-  case OR_CONN_EVENT_FAILED:
-  case OR_CONN_EVENT_CLOSED:
-    log_info(LD_BTRACK, "ORCONN DELETE gid=%"PRIu64" status=%d reason=%d",
-             arg->gid, arg->status, arg->reason);
-    return bto_delete(arg->gid);
-  default:
-    break;
+    case OR_CONN_EVENT_FAILED:
+    case OR_CONN_EVENT_CLOSED:
+      log_info(LD_BTRACK, "ORCONN DELETE gid=%" PRIu64 " status=%d reason=%d",
+               arg->gid, arg->status, arg->reason);
+      return bto_delete(arg->gid);
+    default:
+      break;
   }
 }
 
@@ -162,12 +162,12 @@ bto_chan_rcvr(const msg_t *msg, const ocirc_chan_msg_t *arg)
 
   (void)msg;
   bto = bto_find_or_new(0, arg->chan);
-  if (!bto->is_orig || (bto->is_onehop && !arg->onehop)) {
-    log_debug(LD_BTRACK, "ORCONN LAUNCH chan=%"PRIu64" onehop=%d",
-              arg->chan, arg->onehop);
+  if (! bto->is_orig || (bto->is_onehop && ! arg->onehop)) {
+    log_debug(LD_BTRACK, "ORCONN LAUNCH chan=%" PRIu64 " onehop=%d", arg->chan,
+              arg->onehop);
   }
   bto->is_orig = true;
-  if (!arg->onehop)
+  if (! arg->onehop)
     bto->is_onehop = false;
   bto_update_bests(bto);
 }

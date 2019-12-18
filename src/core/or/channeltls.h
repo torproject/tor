@@ -33,25 +33,24 @@ struct channel_tls_t {
 
 #endif /* defined(TOR_CHANNEL_INTERNAL_) */
 
-channel_t * channel_tls_connect(const tor_addr_t *addr, uint16_t port,
-                                const char *id_digest,
-                                const struct ed25519_public_key_t *ed_id);
-channel_listener_t * channel_tls_get_listener(void);
-channel_listener_t * channel_tls_start_listener(void);
-channel_t * channel_tls_handle_incoming(or_connection_t *orconn);
+channel_t *channel_tls_connect(const tor_addr_t *addr, uint16_t port,
+                               const char *id_digest,
+                               const struct ed25519_public_key_t *ed_id);
+channel_listener_t *channel_tls_get_listener(void);
+channel_listener_t *channel_tls_start_listener(void);
+channel_t *channel_tls_handle_incoming(or_connection_t *orconn);
 
 /* Casts */
 
-channel_t * channel_tls_to_base(channel_tls_t *tlschan);
-channel_tls_t * channel_tls_from_base(channel_t *chan);
+channel_t *channel_tls_to_base(channel_tls_t *tlschan);
+channel_tls_t *channel_tls_from_base(channel_t *chan);
 
 /* Things for connection_or.c to call back into */
 void channel_tls_handle_cell(cell_t *cell, or_connection_t *conn);
 void channel_tls_handle_state_change_on_orconn(channel_tls_t *chan,
                                                or_connection_t *conn,
                                                uint8_t state);
-void channel_tls_handle_var_cell(var_cell_t *var_cell,
-                                 or_connection_t *conn);
+void channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn);
 void channel_tls_update_marks(or_connection_t *conn);
 
 /* Cleanup at shutdown */

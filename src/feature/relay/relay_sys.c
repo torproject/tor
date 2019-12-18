@@ -40,9 +40,9 @@ subsys_relay_shutdown(void)
 }
 
 const struct subsys_fns_t sys_relay = {
-  .name = "relay",
-  .supported = true,
-  .level = 50,
-  .initialize = subsys_relay_initialize,
-  .shutdown = subsys_relay_shutdown,
+    .name = "relay",
+    .supported = true,
+    .level = 50,
+    .initialize = subsys_relay_initialize,
+    .shutdown = subsys_relay_shutdown,
 };

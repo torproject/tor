@@ -13,11 +13,11 @@
 
 #ifdef _WIN32
 
-#include "orconfig.h"
-#include "lib/malloc/malloc.h"
-#include "lib/evloop/compat_libevent.h"
+#  include "orconfig.h"
+#  include "lib/malloc/malloc.h"
+#  include "lib/evloop/compat_libevent.h"
 
-#include <windows.h>
+#  include <windows.h>
 
 struct process_t;
 
@@ -26,8 +26,8 @@ typedef struct process_win32_t process_win32_t;
 
 process_win32_t *process_win32_new(void);
 void process_win32_free_(process_win32_t *win32_process);
-#define process_win32_free(s) \
-  FREE_AND_NULL(process_win32_t, process_win32_free_, (s))
+#  define process_win32_free(s) \
+    FREE_AND_NULL(process_win32_t, process_win32_free_, (s))
 
 void process_win32_init(void);
 void process_win32_deinit(void);
@@ -48,7 +48,7 @@ void process_win32_timer_start(void);
 void process_win32_timer_stop(void);
 bool process_win32_timer_running(void);
 
-#ifdef PROCESS_WIN32_PRIVATE
+#  ifdef PROCESS_WIN32_PRIVATE
 STATIC void process_win32_timer_callback(periodic_timer_t *, void *);
 STATIC bool process_win32_timer_test_process(process_t *);
 
@@ -64,33 +64,24 @@ typedef enum process_win32_pipe_type_t {
   PROCESS_WIN32_PIPE_TYPE_WRITER
 } process_win32_pipe_type_t;
 
-STATIC bool process_win32_create_pipe(HANDLE *,
-                                      HANDLE *,
+STATIC bool process_win32_create_pipe(HANDLE *, HANDLE *,
                                       SECURITY_ATTRIBUTES *,
                                       process_win32_pipe_type_t);
 
 STATIC void process_win32_cleanup_handle(process_win32_handle_t *handle);
 
-STATIC VOID WINAPI process_win32_stdout_read_done(DWORD,
-                                                  DWORD,
-                                                  LPOVERLAPPED);
-STATIC VOID WINAPI process_win32_stderr_read_done(DWORD,
-                                                  DWORD,
-                                                  LPOVERLAPPED);
-STATIC VOID WINAPI process_win32_stdin_write_done(DWORD,
-                                                  DWORD,
-                                                  LPOVERLAPPED);
+STATIC VOID WINAPI process_win32_stdout_read_done(DWORD, DWORD, LPOVERLAPPED);
+STATIC VOID WINAPI process_win32_stderr_read_done(DWORD, DWORD, LPOVERLAPPED);
+STATIC VOID WINAPI process_win32_stdin_write_done(DWORD, DWORD, LPOVERLAPPED);
 
-STATIC int process_win32_read_from_handle(process_win32_handle_t *,
-                                          buf_t *,
+STATIC int process_win32_read_from_handle(process_win32_handle_t *, buf_t *,
                                           LPOVERLAPPED_COMPLETION_ROUTINE);
 STATIC bool process_win32_handle_read_completion(process_win32_handle_t *,
-                                                 DWORD,
-                                                 DWORD);
+                                                 DWORD, DWORD);
 
 STATIC char *format_win_cmdline_argument(const char *arg);
 STATIC char *tor_join_win_cmdline(const char *argv[]);
-#endif /* defined(PROCESS_WIN32_PRIVATE) */
+#  endif /* defined(PROCESS_WIN32_PRIVATE) */
 
 #endif /* defined(_WIN32) */
 

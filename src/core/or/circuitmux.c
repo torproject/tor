@@ -109,7 +109,7 @@ struct circuit_muxinfo_t {
   /* Policy-specific data */
   circuitmux_policy_circ_data_t *policy_data;
   /* Mark bit for consistency checker */
-  unsigned int mark:1;
+  unsigned int mark : 1;
 };
 
 /*
@@ -128,17 +128,16 @@ struct chanid_circid_muxinfo_t {
  * Static function declarations
  */
 
-static inline int
-chanid_circid_entries_eq(chanid_circid_muxinfo_t *a,
-                         chanid_circid_muxinfo_t *b);
+static inline int chanid_circid_entries_eq(chanid_circid_muxinfo_t *a,
+                                           chanid_circid_muxinfo_t *b);
 static inline unsigned int
 chanid_circid_entry_hash(chanid_circid_muxinfo_t *a);
-static chanid_circid_muxinfo_t *
-circuitmux_find_map_entry(circuitmux_t *cmux, circuit_t *circ);
-static void
-circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ);
-static void
-circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ);
+static chanid_circid_muxinfo_t *circuitmux_find_map_entry(circuitmux_t *cmux,
+                                                          circuit_t *circ);
+static void circuitmux_make_circuit_active(circuitmux_t *cmux,
+                                           circuit_t *circ);
+static void circuitmux_make_circuit_inactive(circuitmux_t *cmux,
+                                             circuit_t *circ);
 
 /* Static global variables */
 
@@ -157,7 +156,7 @@ static inline int
 chanid_circid_entries_eq(chanid_circid_muxinfo_t *a,
                          chanid_circid_muxinfo_t *b)
 {
-    return a->chan_id == b->chan_id && a->circ_id == b->circ_id;
+  return a->chan_id == b->chan_id && a->circ_id == b->circ_id;
 }
 
 /**
@@ -167,9 +166,9 @@ chanid_circid_entries_eq(chanid_circid_muxinfo_t *a,
 static inline unsigned int
 chanid_circid_entry_hash(chanid_circid_muxinfo_t *a)
 {
-    return (((unsigned int)(a->circ_id) << 8) ^
-            ((unsigned int)((a->chan_id >> 32) & 0xffffffff)) ^
-            ((unsigned int)(a->chan_id & 0xffffffff)));
+  return (((unsigned int)(a->circ_id) << 8) ^
+          ((unsigned int)((a->chan_id >> 32) & 0xffffffff)) ^
+          ((unsigned int)(a->chan_id & 0xffffffff)));
 }
 
 /* Emit a bunch of hash table stuff */
@@ -193,7 +192,7 @@ circuitmux_alloc(void)
   circuitmux_t *rv = NULL;
 
   rv = tor_malloc_zero(sizeof(*rv));
-  rv->chanid_circid_map = tor_malloc_zero(sizeof(*( rv->chanid_circid_map)));
+  rv->chanid_circid_map = tor_malloc_zero(sizeof(*(rv->chanid_circid_map)));
   HT_INIT(chanid_circid_muxinfo_map, rv->chanid_circid_map);
   destroy_cell_queue_init(&rv->destroy_cell_queue);
 
@@ -227,9 +226,8 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux, smartlist_t *detached_out)
       /* Find a channel and circuit */
       chan = channel_find_by_global_id(to_remove->chan_id);
       if (chan) {
-        circ =
-          circuit_get_by_circid_channel_even_if_marked(to_remove->circ_id,
-                                                       chan);
+        circ = circuit_get_by_circid_channel_even_if_marked(to_remove->circ_id,
+                                                            chan);
         if (circ) {
           /* Clear the circuit's mux for this direction */
           if (to_remove->muxinfo.direction == CELL_DIRECTION_OUT) {
@@ -259,10 +257,9 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux, smartlist_t *detached_out)
           } else {
             /* Complain and move on */
             log_warn(LD_CIRC,
-                     "Circuit %u/channel %"PRIu64 " had direction == "
+                     "Circuit %u/channel %" PRIu64 " had direction == "
                      "CELL_DIRECTION_IN, but isn't an or_circuit_t",
-                     (unsigned)to_remove->circ_id,
-                     (to_remove->chan_id));
+                     (unsigned)to_remove->circ_id, (to_remove->chan_id));
           }
 
           /* Free policy-specific data if we have it */
@@ -274,25 +271,21 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux, smartlist_t *detached_out)
             tor_assert(cmux->policy);
             tor_assert(cmux->policy->free_circ_data);
             /* Call free_circ_data() */
-            cmux->policy->free_circ_data(cmux,
-                                         cmux->policy_data,
-                                         circ,
+            cmux->policy->free_circ_data(cmux, cmux->policy_data, circ,
                                          to_remove->muxinfo.policy_data);
             to_remove->muxinfo.policy_data = NULL;
           }
         } else {
           /* Complain and move on */
           log_warn(LD_CIRC,
-                   "Couldn't find circuit %u (for channel %"PRIu64 ")",
-                   (unsigned)to_remove->circ_id,
-                   (to_remove->chan_id));
+                   "Couldn't find circuit %u (for channel %" PRIu64 ")",
+                   (unsigned)to_remove->circ_id, (to_remove->chan_id));
         }
       } else {
         /* Complain and move on */
         log_warn(LD_CIRC,
-                 "Couldn't find channel %"PRIu64 " (for circuit id %u)",
-                 (to_remove->chan_id),
-                 (unsigned)to_remove->circ_id);
+                 "Couldn't find channel %" PRIu64 " (for circuit id %u)",
+                 (to_remove->chan_id), (unsigned)to_remove->circ_id);
       }
 
       /* Assert that we don't have un-freed policy data for this circuit */
@@ -321,7 +314,7 @@ void
 circuitmux_mark_destroyed_circids_usable(circuitmux_t *cmux, channel_t *chan)
 {
   destroy_cell_t *cell;
-  TOR_SIMPLEQ_FOREACH(cell, &cmux->destroy_cell_queue.head, next) {
+  TOR_SIMPLEQ_FOREACH (cell, &cmux->destroy_cell_queue.head, next) {
     channel_mark_circid_usable(chan, cell->circid);
   }
 }
@@ -334,7 +327,8 @@ circuitmux_mark_destroyed_circids_usable(circuitmux_t *cmux, channel_t *chan)
 void
 circuitmux_free_(circuitmux_t *cmux)
 {
-  if (!cmux) return;
+  if (! cmux)
+    return;
 
   tor_assert(cmux->n_circuits == 0);
   tor_assert(cmux->n_active_circuits == 0);
@@ -351,7 +345,8 @@ circuitmux_free_(circuitmux_t *cmux)
       cmux->policy->free_cmux_data(cmux, cmux->policy_data);
       cmux->policy_data = NULL;
     }
-  } else tor_assert(cmux->policy_data == NULL);
+  } else
+    tor_assert(cmux->policy_data == NULL);
 
   if (cmux->chanid_circid_map) {
     HT_CLEAR(chanid_circid_muxinfo_map, cmux->chanid_circid_map);
@@ -367,17 +362,14 @@ circuitmux_free_(circuitmux_t *cmux)
     global_destroy_ctr -= cmux->destroy_cell_queue.n;
     log_debug(LD_CIRC,
               "Freeing cmux at %p with %u queued destroys; the last cmux "
-              "destroy balance was %"PRId64", global is %"PRId64,
-              cmux, cmux->destroy_cell_queue.n,
-              (cmux->destroy_ctr),
+              "destroy balance was %" PRId64 ", global is %" PRId64,
+              cmux, cmux->destroy_cell_queue.n, (cmux->destroy_ctr),
               (global_destroy_ctr));
   } else {
     log_debug(LD_CIRC,
               "Freeing cmux at %p with no queued destroys, the cmux destroy "
-              "balance was %"PRId64", global is %"PRId64,
-              cmux,
-              (cmux->destroy_ctr),
-              (global_destroy_ctr));
+              "balance was %" PRId64 ", global is %" PRId64,
+              cmux, (cmux->destroy_ctr), (global_destroy_ctr));
   }
 
   destroy_cell_queue_clear(&cmux->destroy_cell_queue);
@@ -408,8 +400,8 @@ circuitmux_clear_policy(circuitmux_t *cmux)
  * Return the policy currently installed on a circuitmux_t
  */
 
-MOCK_IMPL(const circuitmux_policy_t *,
-circuitmux_get_policy, (circuitmux_t *cmux))
+MOCK_IMPL(const circuitmux_policy_t *, circuitmux_get_policy,
+          (circuitmux_t * cmux))
 {
   tor_assert(cmux);
 
@@ -422,8 +414,7 @@ circuitmux_get_policy, (circuitmux_t *cmux))
  */
 
 void
-circuitmux_set_policy(circuitmux_t *cmux,
-                      const circuitmux_policy_t *pol)
+circuitmux_set_policy(circuitmux_t *cmux, const circuitmux_policy_t *pol)
 {
   const circuitmux_policy_t *old_pol = NULL, *new_pol = NULL;
   circuitmux_policy_data_t *old_pol_data = NULL, *new_pol_data = NULL;
@@ -440,7 +431,8 @@ circuitmux_set_policy(circuitmux_t *cmux,
   new_pol = pol;
 
   /* Check if this is the trivial case */
-  if (old_pol == new_pol) return;
+  if (old_pol == new_pol)
+    return;
 
   /* Allocate data for new policy, if any */
   if (new_pol && new_pol->alloc_cmux_data) {
@@ -468,7 +460,7 @@ circuitmux_set_policy(circuitmux_t *cmux,
      * Get the channel; since normal case is all circuits on the mux share a
      * channel, we cache last_chan_id_searched
      */
-    if (!chan || last_chan_id_searched != (*i)->chan_id) {
+    if (! chan || last_chan_id_searched != (*i)->chan_id) {
       chan = channel_find_by_global_id((*i)->chan_id);
       last_chan_id_searched = (*i)->chan_id;
     }
@@ -492,7 +484,7 @@ circuitmux_set_policy(circuitmux_t *cmux,
       tor_assert(old_pol->free_circ_data);
       /* Free it */
       old_pol->free_circ_data(cmux, old_pol_data, circ,
-                             (*i)->muxinfo.policy_data);
+                              (*i)->muxinfo.policy_data);
       (*i)->muxinfo.policy_data = NULL;
     }
 
@@ -504,10 +496,9 @@ circuitmux_set_policy(circuitmux_t *cmux,
        * free it when the time comes, and allocate it.
        */
       tor_assert(new_pol->free_circ_data);
-      (*i)->muxinfo.policy_data =
-        new_pol->alloc_circ_data(cmux, new_pol_data, circ,
-                                 (*i)->muxinfo.direction,
-                                 (*i)->muxinfo.cell_count);
+      (*i)->muxinfo.policy_data = new_pol->alloc_circ_data(
+          cmux, new_pol_data, circ, (*i)->muxinfo.direction,
+          (*i)->muxinfo.cell_count);
     }
 
     /* Need to make active on new policy? */
@@ -582,8 +573,8 @@ circuitmux_find_map_entry(circuitmux_t *cmux, circuit_t *circ)
     search.circ_id = circ->n_circ_id;
 
     /* Query */
-    hashent = HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
-                      &search);
+    hashent =
+        HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map, &search);
   }
 
   /* Found something? */
@@ -683,8 +674,7 @@ circuitmux_num_cells_for_circuit(circuitmux_t *cmux, circuit_t *circ)
  * Query total number of available cells on a circuitmux
  */
 
-MOCK_IMPL(unsigned int,
-circuitmux_num_cells, (circuitmux_t *cmux))
+MOCK_IMPL(unsigned int, circuitmux_num_cells, (circuitmux_t * cmux))
 {
   tor_assert(cmux);
 
@@ -723,9 +713,8 @@ circuitmux_num_circuits(circuitmux_t *cmux)
  * Attach a circuit to a circuitmux, for the specified direction.
  */
 
-MOCK_IMPL(void,
-circuitmux_attach_circuit,(circuitmux_t *cmux, circuit_t *circ,
-                           cell_direction_t direction))
+MOCK_IMPL(void, circuitmux_attach_circuit,
+          (circuitmux_t * cmux, circuit_t *circ, cell_direction_t direction))
 {
   channel_t *chan = NULL;
   uint64_t channel_id;
@@ -765,8 +754,8 @@ circuitmux_attach_circuit,(circuitmux_t *cmux, circuit_t *circ,
   /* See if we already have this one */
   search.chan_id = channel_id;
   search.circ_id = circ_id;
-  hashent = HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
-                    &search);
+  hashent =
+      HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map, &search);
 
   if (hashent) {
     /*
@@ -774,10 +763,9 @@ circuitmux_attach_circuit,(circuitmux_t *cmux, circuit_t *circ,
      * directions match and update the cell count and active circuit count.
      */
     log_info(LD_CIRC,
-             "Circuit %u on channel %"PRIu64 " was already attached to "
+             "Circuit %u on channel %" PRIu64 " was already attached to "
              "(trying to attach to %p)",
-             (unsigned)circ_id, (channel_id),
-             cmux);
+             (unsigned)circ_id, (channel_id), cmux);
 
     /*
      * The mux pointer on this circuit and the direction in result should
@@ -804,7 +792,7 @@ circuitmux_attach_circuit,(circuitmux_t *cmux, circuit_t *circ,
      * counts.
      */
     log_debug(LD_CIRC,
-             "Attaching circuit %u on channel %"PRIu64 " to cmux %p",
+              "Attaching circuit %u on channel %" PRIu64 " to cmux %p",
               (unsigned)circ_id, (channel_id), cmux);
 
     /* Insert it in the map */
@@ -818,17 +806,12 @@ circuitmux_attach_circuit,(circuitmux_t *cmux, circuit_t *circ,
       /* Assert that we have the means to free policy-specific data */
       tor_assert(cmux->policy->free_circ_data);
       /* Allocate it */
-      hashent->muxinfo.policy_data =
-        cmux->policy->alloc_circ_data(cmux,
-                                      cmux->policy_data,
-                                      circ,
-                                      direction,
-                                      cell_count);
+      hashent->muxinfo.policy_data = cmux->policy->alloc_circ_data(
+          cmux, cmux->policy_data, circ, direction, cell_count);
       /* If we wanted policy data, it's an error  not to get any */
       tor_assert(hashent->muxinfo.policy_data);
     }
-    HT_INSERT(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
-              hashent);
+    HT_INSERT(chanid_circid_muxinfo_map, cmux->chanid_circid_map, hashent);
 
     /* Update counters */
     ++(cmux->n_circuits);
@@ -845,8 +828,8 @@ circuitmux_attach_circuit,(circuitmux_t *cmux, circuit_t *circ,
  * no-op if not attached.
  */
 
-MOCK_IMPL(void,
-circuitmux_detach_circuit,(circuitmux_t *cmux, circuit_t *circ))
+MOCK_IMPL(void, circuitmux_detach_circuit,
+          (circuitmux_t * cmux, circuit_t *circ))
 {
   chanid_circid_muxinfo_t search, *hashent = NULL;
   /*
@@ -866,27 +849,26 @@ circuitmux_detach_circuit,(circuitmux_t *cmux, circuit_t *circ))
   if (circ->n_chan) {
     search.chan_id = circ->n_chan->global_identifier;
     search.circ_id = circ->n_circ_id;
-    hashent = HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
-                        &search);
+    hashent =
+        HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map, &search);
     last_searched_direction = CELL_DIRECTION_OUT;
   }
 
   /* Got one? If not, see if it's an or_circuit_t and try p_chan/p_circ_id */
-  if (!hashent) {
+  if (! hashent) {
     if (circ->magic == OR_CIRCUIT_MAGIC) {
       search.circ_id = TO_OR_CIRCUIT(circ)->p_circ_id;
       if (TO_OR_CIRCUIT(circ)->p_chan) {
         search.chan_id = TO_OR_CIRCUIT(circ)->p_chan->global_identifier;
-        hashent = HT_FIND(chanid_circid_muxinfo_map,
-                            cmux->chanid_circid_map,
-                            &search);
+        hashent = HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
+                          &search);
         last_searched_direction = CELL_DIRECTION_IN;
       }
     }
   }
 
-  tor_assert(last_searched_direction == CELL_DIRECTION_OUT
-             || last_searched_direction == CELL_DIRECTION_IN);
+  tor_assert(last_searched_direction == CELL_DIRECTION_OUT ||
+             last_searched_direction == CELL_DIRECTION_IN);
 
   /*
    * If hashent isn't NULL, we have a circuit to detach; don't remove it from
@@ -908,9 +890,7 @@ circuitmux_detach_circuit,(circuitmux_t *cmux, circuit_t *circ))
       tor_assert(cmux->policy);
       tor_assert(cmux->policy->free_circ_data);
       /* Call free_circ_data() */
-      cmux->policy->free_circ_data(cmux,
-                                   cmux->policy_data,
-                                   circ,
+      cmux->policy->free_circ_data(cmux, cmux->policy_data, circ,
                                    hashent->muxinfo.policy_data);
       hashent->muxinfo.policy_data = NULL;
     }
@@ -945,8 +925,8 @@ circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ)
     /* We should have found something */
     tor_assert(hashent);
     /* Notify */
-    cmux->policy->notify_circ_active(cmux, cmux->policy_data,
-                                     circ, hashent->muxinfo.policy_data);
+    cmux->policy->notify_circ_active(cmux, cmux->policy_data, circ,
+                                     hashent->muxinfo.policy_data);
   }
 }
 
@@ -969,8 +949,8 @@ circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ)
     /* We should have found something */
     tor_assert(hashent);
     /* Notify */
-    cmux->policy->notify_circ_inactive(cmux, cmux->policy_data,
-                                       circ, hashent->muxinfo.policy_data);
+    cmux->policy->notify_circ_inactive(cmux, cmux->policy_data, circ,
+                                       hashent->muxinfo.policy_data);
   }
 }
 
@@ -1010,11 +990,8 @@ circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
   /* Do we need to notify a cmux policy? */
   if (cmux->policy->notify_set_n_cells) {
     /* Call notify_set_n_cells */
-    cmux->policy->notify_set_n_cells(cmux,
-                                     cmux->policy_data,
-                                     circ,
-                                     hashent->muxinfo.policy_data,
-                                     n_cells);
+    cmux->policy->notify_set_n_cells(cmux, cmux->policy_data, circ,
+                                     hashent->muxinfo.policy_data, n_cells);
   }
 
   /*
@@ -1025,7 +1002,7 @@ circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
     --(cmux->n_active_circuits);
     hashent->muxinfo.cell_count = n_cells;
     circuitmux_make_circuit_inactive(cmux, circ);
-  /* Is the old cell count == 0 and the new cell count > 0 ? */
+    /* Is the old cell count == 0 and the new cell count > 0 ? */
   } else if (hashent->muxinfo.cell_count == 0 && n_cells > 0) {
     ++(cmux->n_active_circuits);
     hashent->muxinfo.cell_count = n_cells;
@@ -1066,7 +1043,7 @@ circuitmux_get_first_active_circuit(circuitmux_t *cmux,
   *destroy_queue_out = NULL;
 
   if (cmux->destroy_cell_queue.n &&
-        (!cmux->last_cell_was_destroy || cmux->n_active_circuits == 0)) {
+      (! cmux->last_cell_was_destroy || cmux->n_active_circuits == 0)) {
     /* We have destroy cells to send, and either we just sent a relay cell,
      * or we have no relay cells to send. */
 
@@ -1104,7 +1081,8 @@ circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
   tor_assert(cmux);
   tor_assert(circ);
 
-  if (n_cells == 0) return;
+  if (n_cells == 0)
+    return;
 
   /*
    * To handle this, we have to:
@@ -1125,7 +1103,8 @@ circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
   tor_assert(n_cells <= hashent->muxinfo.cell_count);
   hashent->muxinfo.cell_count -= n_cells;
   /* Do we need to make the circuit inactive? */
-  if (hashent->muxinfo.cell_count == 0) becomes_inactive = 1;
+  if (hashent->muxinfo.cell_count == 0)
+    becomes_inactive = 1;
   /* Adjust the mux cell counter */
   cmux->n_cells -= n_cells;
 
@@ -1135,8 +1114,7 @@ circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
    */
   if (cmux->policy->notify_xmit_cells) {
     cmux->policy->notify_xmit_cells(cmux, cmux->policy_data, circ,
-                                    hashent->muxinfo.policy_data,
-                                    n_cells);
+                                    hashent->muxinfo.policy_data, n_cells);
   }
 
   /*
@@ -1162,19 +1140,15 @@ circuitmux_notify_xmit_destroy(circuitmux_t *cmux)
   --(cmux->destroy_ctr);
   --(global_destroy_ctr);
   log_debug(LD_CIRC,
-            "Cmux at %p sent a destroy, cmux counter is now %"PRId64", "
-            "global counter is now %"PRId64,
-            cmux,
-            (cmux->destroy_ctr),
-            (global_destroy_ctr));
+            "Cmux at %p sent a destroy, cmux counter is now %" PRId64 ", "
+            "global counter is now %" PRId64,
+            cmux, (cmux->destroy_ctr), (global_destroy_ctr));
 }
 
 /*DOCDOC */
 void
-circuitmux_append_destroy_cell(channel_t *chan,
-                               circuitmux_t *cmux,
-                               circid_t circ_id,
-                               uint8_t reason)
+circuitmux_append_destroy_cell(channel_t *chan, circuitmux_t *cmux,
+                               circid_t circ_id, uint8_t reason)
 {
   destroy_cell_queue_append(&cmux->destroy_cell_queue, circ_id, reason);
 
@@ -1183,13 +1157,11 @@ circuitmux_append_destroy_cell(channel_t *chan,
   ++global_destroy_ctr;
   log_debug(LD_CIRC,
             "Cmux at %p queued a destroy for circ %u, cmux counter is now "
-            "%"PRId64", global counter is now %"PRId64,
-            cmux, circ_id,
-            (cmux->destroy_ctr),
-            (global_destroy_ctr));
+            "%" PRId64 ", global counter is now %" PRId64,
+            cmux, circ_id, (cmux->destroy_ctr), (global_destroy_ctr));
 
   /* XXXX Duplicate code from append_cell_to_circuit_queue */
-  if (!channel_has_queued_writes(chan)) {
+  if (! channel_has_queued_writes(chan)) {
     /* There is no data at all waiting to be sent on the outbuf.  Add a
      * cell, so that we can notice when it gets flushed, flushed_some can
      * get called, and we can start putting more data onto the buffer then.
@@ -1211,24 +1183,23 @@ circuitmux_count_queued_destroy_cells(const channel_t *chan,
   int64_t manual_total_in_map = 0;
   destroy_cell_t *cell;
 
-  TOR_SIMPLEQ_FOREACH(cell, &cmux->destroy_cell_queue.head, next) {
+  TOR_SIMPLEQ_FOREACH (cell, &cmux->destroy_cell_queue.head, next) {
     circid_t id;
     ++manual_total;
 
     id = cell->circid;
-    if (circuit_id_in_use_on_channel(id, (channel_t*)chan))
+    if (circuit_id_in_use_on_channel(id, (channel_t *)chan))
       ++manual_total_in_map;
   }
 
   if (n_destroy_cells != destroy_queue_size ||
       n_destroy_cells != manual_total ||
       n_destroy_cells != manual_total_in_map) {
-    log_warn(LD_BUG, "  Discrepancy in counts for queued destroy cells on "
-             "circuitmux. n=%"PRId64". queue_size=%"PRId64". "
-             "manual_total=%"PRId64". manual_total_in_map=%"PRId64".",
-             (n_destroy_cells),
-             (destroy_queue_size),
-             (manual_total),
+    log_warn(LD_BUG,
+             "  Discrepancy in counts for queued destroy cells on "
+             "circuitmux. n=%" PRId64 ". queue_size=%" PRId64 ". "
+             "manual_total=%" PRId64 ". manual_total_in_map=%" PRId64 ".",
+             (n_destroy_cells), (destroy_queue_size), (manual_total),
              (manual_total_in_map));
   }
 
@@ -1245,8 +1216,8 @@ circuitmux_count_queued_destroy_cells(const channel_t *chan,
  * support the cmp_cmux method, return 0.
  */
 
-MOCK_IMPL(int,
-circuitmux_compare_muxes, (circuitmux_t *cmux_1, circuitmux_t *cmux_2))
+MOCK_IMPL(int, circuitmux_compare_muxes,
+          (circuitmux_t * cmux_1, circuitmux_t *cmux_2))
 {
   const circuitmux_policy_t *policy;
 
@@ -1264,8 +1235,8 @@ circuitmux_compare_muxes, (circuitmux_t *cmux_1, circuitmux_t *cmux_2))
 
       if (policy->cmp_cmux) {
         /* Okay, we can compare! */
-        return policy->cmp_cmux(cmux_1, cmux_1->policy_data,
-                                cmux_2, cmux_2->policy_data);
+        return policy->cmp_cmux(cmux_1, cmux_1->policy_data, cmux_2,
+                                cmux_2->policy_data);
       } else {
         /*
          * Equivalent because the policy doesn't know how to compare between
@@ -1282,4 +1253,3 @@ circuitmux_compare_muxes, (circuitmux_t *cmux_1, circuitmux_t *cmux_2))
     return 0;
   }
 }
-

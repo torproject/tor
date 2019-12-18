@@ -31,9 +31,9 @@ fuzz_cleanup(void)
 int
 fuzz_main(const uint8_t *stdin_buf, size_t data_size)
 {
-  buf_t *buffer = buf_new_with_data((char*)stdin_buf, data_size);
-  if (!buffer) {
-    tor_assert(data_size==0);
+  buf_t *buffer = buf_new_with_data((char *)stdin_buf, data_size);
+  if (! buffer) {
+    tor_assert(data_size == 0);
     buffer = buf_new();
   }
 

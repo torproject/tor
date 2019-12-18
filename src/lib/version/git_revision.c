@@ -17,11 +17,11 @@
  */
 const char tor_git_revision[] =
 #ifndef COCCI
-#ifndef _MSC_VER
-#include "micro-revision.i"
+#  ifndef _MSC_VER
+#    include "micro-revision.i"
+#  endif
 #endif
-#endif
-  "";
+    "";
 
 /**
  * String appended to Tor bug messages describing the Tor version.
@@ -31,9 +31,9 @@ const char tor_git_revision[] =
  **/
 const char tor_bug_suffix[] = " (on Tor " VERSION
 #ifndef COCCI
-#ifndef _MSC_VER
-  " "
-#include "micro-revision.i"
-#endif
+#  ifndef _MSC_VER
+                              " "
+#    include "micro-revision.i"
+#  endif
 #endif /* !defined(COCCI) */
-  ")";
+                              ")";

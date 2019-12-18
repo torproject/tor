@@ -37,7 +37,7 @@ tor_weak_random(tor_weak_rng_t *rng)
    * since some platforms have bad weak RNGs that only return values in the
    * range 0..INT16_MAX, which just isn't enough. */
   rng->state = (rng->state * 1103515245 + 12345) & 0x7fffffff;
-  return (int32_t) rng->state;
+  return (int32_t)rng->state;
 }
 
 /** Return a random number in the range [0 , <b>top</b>). {That is, the range

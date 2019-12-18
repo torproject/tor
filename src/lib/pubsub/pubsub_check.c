@@ -27,8 +27,7 @@
 
 #include <string.h>
 
-static void pubsub_adjmap_add(pubsub_adjmap_t *map,
-                                const pubsub_cfg_t *item);
+static void pubsub_adjmap_add(pubsub_adjmap_t *map, const pubsub_cfg_t *item);
 
 /**
  * Helper: contruct and return a new pubsub_adjacency_map from <b>cfg</b>.
@@ -44,14 +43,15 @@ pubsub_build_adjacency_map(const pubsub_items_t *cfg)
   map->n_subsystems = n_subsystems;
   map->n_msgs = n_msgs;
 
-  map->pub_by_subsys = tor_calloc(n_subsystems, sizeof(smartlist_t*));
-  map->sub_by_subsys = tor_calloc(n_subsystems, sizeof(smartlist_t*));
-  map->pub_by_msg = tor_calloc(n_msgs, sizeof(smartlist_t*));
-  map->sub_by_msg = tor_calloc(n_msgs, sizeof(smartlist_t*));
+  map->pub_by_subsys = tor_calloc(n_subsystems, sizeof(smartlist_t *));
+  map->sub_by_subsys = tor_calloc(n_subsystems, sizeof(smartlist_t *));
+  map->pub_by_msg = tor_calloc(n_msgs, sizeof(smartlist_t *));
+  map->sub_by_msg = tor_calloc(n_msgs, sizeof(smartlist_t *));
 
-  SMARTLIST_FOREACH_BEGIN(cfg->items, const pubsub_cfg_t *, item) {
+  SMARTLIST_FOREACH_BEGIN (cfg->items, const pubsub_cfg_t *, item) {
     pubsub_adjmap_add(map, item);
-  } SMARTLIST_FOREACH_END(item);
+  }
+  SMARTLIST_FOREACH_END(item);
 
   return map;
 }
@@ -60,8 +60,7 @@ pubsub_build_adjacency_map(const pubsub_items_t *cfg)
  * Helper: add a single pubsub_cfg_t to an adjacency map.
  **/
 static void
-pubsub_adjmap_add(pubsub_adjmap_t *map,
-                  const pubsub_cfg_t *item)
+pubsub_adjmap_add(pubsub_adjmap_t *map, const pubsub_cfg_t *item)
 {
   smartlist_t **by_subsys;
   smartlist_t **by_msg;
@@ -81,8 +80,8 @@ pubsub_adjmap_add(pubsub_adjmap_t *map,
     *by_subsys = smartlist_new();
   if (! *by_msg)
     *by_msg = smartlist_new();
-  smartlist_add(*by_subsys, (void*) item);
-  smartlist_add(*by_msg, (void *) item);
+  smartlist_add(*by_subsys, (void *)item);
+  smartlist_add(*by_msg, (void *)item);
 }
 
 /**
@@ -98,7 +97,7 @@ pubsub_adjmap_add(pubsub_adjmap_t *map,
 static void
 pubsub_adjmap_free_helper(smartlist_t **lsts, size_t n)
 {
-  if (!lsts)
+  if (! lsts)
     return;
 
   for (unsigned i = 0; i < n; ++i) {
@@ -113,7 +112,7 @@ pubsub_adjmap_free_helper(smartlist_t **lsts, size_t n)
 static void
 pubsub_adjmap_free_(pubsub_adjmap_t *map)
 {
-  if (!map)
+  if (! map)
     return;
   pubsub_adjmap_free_helper(map->pub_by_subsys, map->n_subsystems);
   pubsub_adjmap_free_helper(map->sub_by_subsys, map->n_subsystems);
@@ -147,7 +146,7 @@ format_flags(unsigned flags)
   if (flags & DISP_FLAG_STUB) {
     strlcat(buf, " STUB", sizeof(buf));
   }
-  return buf[0] ? buf+1 : buf;
+  return buf[0] ? buf + 1 : buf;
 }
 
 /**
@@ -160,14 +159,10 @@ pubsub_cfg_dump(const pubsub_cfg_t *cfg, int severity, const char *prefix)
   tor_assert(prefix);
 
   tor_log(severity, LD_MESG,
-          "%s%s %s: %s{%s} on %s (%s) <%u %u %u %u %x> [%s:%d]",
-          prefix,
-          get_subsys_id_name(cfg->subsys),
-          cfg->is_publish ? "PUB" : "SUB",
-          get_message_id_name(cfg->msg),
-          get_msg_type_id_name(cfg->type),
-          get_channel_id_name(cfg->channel),
-          format_flags(cfg->flags),
+          "%s%s %s: %s{%s} on %s (%s) <%u %u %u %u %x> [%s:%d]", prefix,
+          get_subsys_id_name(cfg->subsys), cfg->is_publish ? "PUB" : "SUB",
+          get_message_id_name(cfg->msg), get_msg_type_id_name(cfg->type),
+          get_channel_id_name(cfg->channel), format_flags(cfg->flags),
           cfg->subsys, cfg->msg, cfg->type, cfg->channel, cfg->flags,
           cfg->added_by_file, cfg->added_by_line);
 }
@@ -177,17 +172,17 @@ pubsub_cfg_dump(const pubsub_cfg_t *cfg, int severity, const char *prefix)
  * subsystems listed in <b>items</b>.
  **/
 static void
-get_message_bitarray(const pubsub_adjmap_t *map,
-                     const smartlist_t *items,
+get_message_bitarray(const pubsub_adjmap_t *map, const smartlist_t *items,
                      bitarray_t **out)
 {
   *out = bitarray_init_zero((unsigned)map->n_subsystems);
   if (! items)
     return;
 
-  SMARTLIST_FOREACH_BEGIN(items, const pubsub_cfg_t *, cfg) {
+  SMARTLIST_FOREACH_BEGIN (items, const pubsub_cfg_t *, cfg) {
     bitarray_set(*out, cfg->subsys);
-  } SMARTLIST_FOREACH_END(cfg);
+  }
+  SMARTLIST_FOREACH_END(cfg);
 }
 
 /**
@@ -201,10 +196,8 @@ get_message_bitarray(const pubsub_adjmap_t *map,
  * Return 0 on success, -1 on failure.
  **/
 static int
-lint_message_graph(const pubsub_adjmap_t *map,
-                   message_id_t msg,
-                   const smartlist_t *pub,
-                   const smartlist_t *sub)
+lint_message_graph(const pubsub_adjmap_t *map, message_id_t msg,
+                   const smartlist_t *pub, const smartlist_t *sub)
 {
   bitarray_t *published_by = NULL;
   bitarray_t *subscribed_by = NULL;
@@ -219,11 +212,10 @@ lint_message_graph(const pubsub_adjmap_t *map,
   for (unsigned i = 0; i < map->n_subsystems; ++i) {
     if (bitarray_is_set(published_by, i) &&
         bitarray_is_set(subscribed_by, i)) {
-      log_warn(LD_MESG|LD_BUG,
+      log_warn(LD_MESG | LD_BUG,
                "Message \"%s\" is published and subscribed by the same "
                "subsystem \"%s\".",
-               get_message_id_name(msg),
-               get_subsys_id_name(i));
+               get_message_id_name(msg), get_subsys_id_name(i));
       ok = false;
     }
   }
@@ -239,11 +231,10 @@ lint_message_graph(const pubsub_adjmap_t *map,
  * respective smartlists have compatible flags, channels, and types.
  **/
 static int
-lint_message_consistency(message_id_t msg,
-                         const smartlist_t *pub,
+lint_message_consistency(message_id_t msg, const smartlist_t *pub,
                          const smartlist_t *sub)
 {
-  if (!smartlist_len_opt(pub) && !smartlist_len_opt(sub))
+  if (! smartlist_len_opt(pub) && ! smartlist_len_opt(sub))
     return 0; // LCOV_EXCL_LINE -- this was already checked.
 
   /* The 'all' list has the publishers and the subscribers. */
@@ -260,26 +251,27 @@ lint_message_consistency(message_id_t msg,
 
   /* Simple message consistency properties across messages.
    */
-  SMARTLIST_FOREACH_BEGIN(all, const pubsub_cfg_t *, cfg) {
+  SMARTLIST_FOREACH_BEGIN (all, const pubsub_cfg_t *, cfg) {
     chan_same &= (cfg->channel == item0->channel);
     type_same &= (cfg->type == item0->type);
     if (cfg->is_publish)
       pub_excl |= (cfg->flags & DISP_FLAG_EXCL) != 0;
     else
       sub_excl |= (cfg->flags & DISP_FLAG_EXCL) != 0;
-  } SMARTLIST_FOREACH_END(cfg);
+  }
+  SMARTLIST_FOREACH_END(cfg);
 
   bool ok = true;
 
   if (! chan_same) {
-    log_warn(LD_MESG|LD_BUG,
+    log_warn(LD_MESG | LD_BUG,
              "Message \"%s\" is associated with multiple inconsistent "
              "channels.",
              get_message_id_name(msg));
     ok = false;
   }
   if (! type_same) {
-    log_warn(LD_MESG|LD_BUG,
+    log_warn(LD_MESG | LD_BUG,
              "Message \"%s\" is associated with multiple inconsistent "
              "message types.",
              get_message_id_name(msg));
@@ -290,14 +282,14 @@ lint_message_consistency(message_id_t msg,
    * it.
    */
   if (pub_excl && smartlist_len_opt(pub) > 1) {
-    log_warn(LD_MESG|LD_BUG,
+    log_warn(LD_MESG | LD_BUG,
              "Message \"%s\" has multiple publishers, but at least one is "
              "marked as exclusive.",
              get_message_id_name(msg));
     ok = false;
   }
   if (sub_excl && smartlist_len_opt(sub) > 1) {
-    log_warn(LD_MESG|LD_BUG,
+    log_warn(LD_MESG | LD_BUG,
              "Message \"%s\" has multiple subscribers, but at least one is "
              "marked as exclusive.",
              get_message_id_name(msg));
@@ -330,7 +322,8 @@ lint_message(const pubsub_adjmap_t *map, message_id_t msg)
   const size_t n_sub = smartlist_len_opt(sub);
 
   if (n_pub == 0 && n_sub == 0) {
-    log_info(LD_MESG, "Nobody is publishing or subscribing to message "
+    log_info(LD_MESG,
+             "Nobody is publishing or subscribing to message "
              "\"%s\".",
              get_message_id_name(msg));
     return 0; // No publishers or subscribers: nothing to do.
@@ -340,12 +333,12 @@ lint_message(const pubsub_adjmap_t *map, message_id_t msg)
 
   /* First make sure that if there are publishers, there are subscribers. */
   if (n_pub == 0) {
-    log_warn(LD_MESG|LD_BUG,
+    log_warn(LD_MESG | LD_BUG,
              "Message \"%s\" has subscribers, but no publishers.",
              get_message_id_name(msg));
     ok = false;
   } else if (n_sub == 0) {
-    log_warn(LD_MESG|LD_BUG,
+    log_warn(LD_MESG | LD_BUG,
              "Message \"%s\" has publishers, but no subscribers.",
              get_message_id_name(msg));
     ok = false;
@@ -359,7 +352,7 @@ lint_message(const pubsub_adjmap_t *map, message_id_t msg)
   if (lint_message_consistency(msg, pub, sub) < 0)
     ok = false;
 
-  if (!ok) {
+  if (! ok) {
     /* There was a problem -- let's log all the publishers and subscribers on
      * this message */
     if (pub) {
@@ -401,14 +394,14 @@ pubsub_builder_check(pubsub_builder_t *builder)
   pubsub_adjmap_t *map = pubsub_build_adjacency_map(builder->items);
   int rv = -1;
 
-  if (!map)
+  if (! map)
     goto err; // should be impossible
 
   if (pubsub_adjmap_check(map) < 0)
     goto err;
 
   rv = 0;
- err:
+err:
   pubsub_adjmap_free(map);
   return rv;
 }

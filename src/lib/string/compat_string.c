@@ -14,10 +14,10 @@
 
 /* Inline the strl functions if the platform doesn't have them. */
 #ifndef HAVE_STRLCPY
-#include "ext/strlcpy.c"
+#  include "ext/strlcpy.c"
 #endif
 #ifndef HAVE_STRLCAT
-#include "ext/strlcat.c"
+#  include "ext/strlcat.c"
 #endif
 
 #include <stdlib.h>
@@ -48,23 +48,23 @@ tor_strtok_r_impl(char *str, const char *sep, char **lasts)
   raw_assert(*sep);
   if (str) {
     str = strtok_helper(str, sep);
-    if (!*str)
+    if (! *str)
       return NULL;
     start = cp = *lasts = str;
-  } else if (!*lasts || !**lasts) {
+  } else if (! *lasts || ! **lasts) {
     return NULL;
   } else {
     start = cp = *lasts;
   }
 
   if (sep[1]) {
-    while (*cp && !strchr(sep, *cp))
+    while (*cp && ! strchr(sep, *cp))
       ++cp;
   } else {
     cp = strchr(cp, *sep);
   }
 
-  if (!cp || !*cp) {
+  if (! cp || ! *cp) {
     *lasts = NULL;
   } else {
     *cp++ = '\0';

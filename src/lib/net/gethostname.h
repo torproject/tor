@@ -14,6 +14,6 @@
 #include "lib/testsupport/testsupport.h"
 #include <stddef.h>
 
-MOCK_DECL(int,tor_gethostname,(char *name, size_t namelen));
+MOCK_DECL(int, tor_gethostname, (char *name, size_t namelen));
 
 #endif /* !defined(TOR_GETHOSTNAME_H) */

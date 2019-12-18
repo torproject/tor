@@ -59,16 +59,12 @@ dispatch_t *dispatch_new(const struct dispatch_cfg_t *cfg);
 /**
  * Free a dispatcher.  Tor does this at exit.
  */
-#define dispatch_free(d) \
-  FREE_AND_NULL(dispatch_t, dispatch_free_, (d))
+#define dispatch_free(d) FREE_AND_NULL(dispatch_t, dispatch_free_, (d))
 
 void dispatch_free_(dispatch_t *);
 
-int dispatch_send(dispatch_t *d,
-                  subsys_id_t sender,
-                  channel_id_t channel,
-                  message_id_t msg,
-                  msg_type_id_t type,
+int dispatch_send(dispatch_t *d, subsys_id_t sender, channel_id_t channel,
+                  message_id_t msg, msg_type_id_t type,
                   msg_aux_data_t auxdata);
 
 int dispatch_send_msg(dispatch_t *d, msg_t *m);
@@ -95,18 +91,19 @@ int dispatch_flush(dispatch_t *, channel_id_t chan, int max_msgs);
  * Ex 3: To cause messages to be processed periodically, this function should
  * do nothing, and a periodic event should invoke dispatch_flush().
  **/
-typedef void (*dispatch_alertfn_t)(struct dispatch_t *,
-                                   channel_id_t, void *);
+typedef void (*dispatch_alertfn_t)(struct dispatch_t *, channel_id_t, void *);
 
 int dispatch_set_alert_fn(dispatch_t *d, channel_id_t chan,
                           dispatch_alertfn_t fn, void *userdata);
 
-#define dispatch_free_msg(d,msg)                                \
-  STMT_BEGIN {                                                  \
-    msg_t **msg_tmp_ptr__ = &(msg);                             \
-    dispatch_free_msg_((d), *msg_tmp_ptr__);                    \
-    *msg_tmp_ptr__= NULL;                                       \
-  } STMT_END
+#define dispatch_free_msg(d, msg)              \
+  STMT_BEGIN                                   \
+    {                                          \
+      msg_t **msg_tmp_ptr__ = &(msg);          \
+      dispatch_free_msg_((d), *msg_tmp_ptr__); \
+      *msg_tmp_ptr__ = NULL;                   \
+    }                                          \
+  STMT_END
 void dispatch_free_msg_(const dispatch_t *d, msg_t *msg);
 
 char *dispatch_fmt_msg_data(const dispatch_t *d, const msg_t *msg);

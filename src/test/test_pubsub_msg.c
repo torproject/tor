@@ -33,52 +33,54 @@ ex_str_free(msg_aux_data_t aux)
 {
   tor_free_(aux.ptr);
 }
-static dispatch_typefns_t stringfns = {
-  .free_fn = ex_str_free,
-  .fmt_fn = ex_str_fmt
-};
+static dispatch_typefns_t stringfns = {.free_fn = ex_str_free,
+                                       .fmt_fn = ex_str_fmt};
 
 // We're using the lowest-level publish/subscribe logic here, to avoid the
 // pubsub_macros.h macros and just test the dispatch core.  We'll use a string
 // type for everything.
 
-#define DECLARE_MESSAGE(suffix)                         \
-  static pub_binding_t pub_binding_##suffix;            \
-  static int msg_received_##suffix = 0;                 \
-  static void recv_msg_##suffix(const msg_t *m) {       \
-    (void)m;                                            \
-    ++msg_received_##suffix;                            \
-  }                                                     \
+#define DECLARE_MESSAGE(suffix)                 \
+  static pub_binding_t pub_binding_##suffix;    \
+  static int msg_received_##suffix = 0;         \
+  static void recv_msg_##suffix(const msg_t *m) \
+  {                                             \
+    (void)m;                                    \
+    ++msg_received_##suffix;                    \
+  }                                             \
   EAT_SEMICOLON
 
-#define ADD_PUBLISH(binding_suffix, subsys, channel, msg, flags)        \
-  STMT_BEGIN {                                                          \
-    con = pubsub_connector_for_subsystem(builder,                       \
-                                           get_subsys_id(#subsys));     \
-    pubsub_add_pub_(con, &pub_binding_##binding_suffix,                 \
-                      get_channel_id(#channel),                         \
-                      get_message_id(#msg), get_msg_type_id("string"),  \
-                      (flags), __FILE__, __LINE__);                     \
-    pubsub_connector_free(con);                                         \
-  } STMT_END
+#define ADD_PUBLISH(binding_suffix, subsys, channel, msg, flags)             \
+  STMT_BEGIN                                                                 \
+    {                                                                        \
+      con = pubsub_connector_for_subsystem(builder, get_subsys_id(#subsys)); \
+      pubsub_add_pub_(con, &pub_binding_##binding_suffix,                    \
+                      get_channel_id(#channel), get_message_id(#msg),        \
+                      get_msg_type_id("string"), (flags), __FILE__,          \
+                      __LINE__);                                             \
+      pubsub_connector_free(con);                                            \
+    }                                                                        \
+  STMT_END
 
-#define ADD_SUBSCRIBE(hook_suffix, subsys, channel, msg, flags)         \
-  STMT_BEGIN {                                                          \
-    con = pubsub_connector_for_subsystem(builder,                       \
-                                           get_subsys_id(#subsys));     \
-    pubsub_add_sub_(con, recv_msg_##hook_suffix,                        \
-                      get_channel_id(#channel),                         \
-                      get_message_id(#msg), get_msg_type_id("string"),  \
-                      (flags), __FILE__, __LINE__);                     \
-    pubsub_connector_free(con);                                         \
-  } STMT_END
+#define ADD_SUBSCRIBE(hook_suffix, subsys, channel, msg, flags)              \
+  STMT_BEGIN                                                                 \
+    {                                                                        \
+      con = pubsub_connector_for_subsystem(builder, get_subsys_id(#subsys)); \
+      pubsub_add_sub_(con, recv_msg_##hook_suffix, get_channel_id(#channel), \
+                      get_message_id(#msg), get_msg_type_id("string"),       \
+                      (flags), __FILE__, __LINE__);                          \
+      pubsub_connector_free(con);                                            \
+    }                                                                        \
+  STMT_END
 
-#define SEND(binding_suffix, val)                          \
-  STMT_BEGIN {                                             \
-    msg_aux_data_t data_;                                  \
-    data_.ptr = tor_strdup(val);                           \
-    pubsub_pub_(&pub_binding_##binding_suffix, data_);     \
-  } STMT_END
+#define SEND(binding_suffix, val)                        \
+  STMT_BEGIN                                             \
+    {                                                    \
+      msg_aux_data_t data_;                              \
+      data_.ptr = tor_strdup(val);                       \
+      pubsub_pub_(&pub_binding_##binding_suffix, data_); \
+    }                                                    \
+  STMT_END
 
 DECLARE_MESSAGE(msg1);
 DECLARE_MESSAGE(msg2);
@@ -103,9 +105,7 @@ setup_dispatcher(const struct testcase_t *testcase)
 
   {
     con = pubsub_connector_for_subsystem(builder, get_subsys_id("types"));
-    pubsub_connector_register_type_(con,
-                                    get_msg_type_id("string"),
-                                    &stringfns,
+    pubsub_connector_register_type_(con, get_msg_type_id("string"), &stringfns,
                                     "nowhere.c", 99);
     pubsub_connector_free(con);
   }
@@ -136,14 +136,13 @@ setup_dispatcher(const struct testcase_t *testcase)
   ADD_SUBSCRIBE(msg5, sys6, main, message5, 0);
   ADD_SUBSCRIBE(msg5, sys7, main, message5, 0);
   ADD_SUBSCRIBE(msg5, sys8, main, message5, 0);
-  for (int i = 0; i < 1000-5; ++i) {
+  for (int i = 0; i < 1000 - 5; ++i) {
     char *sys;
     tor_asprintf(&sys, "xsys-%d", i);
     con = pubsub_connector_for_subsystem(builder, get_subsys_id(sys));
-    pubsub_add_sub_(con, recv_msg_copy_string,
-                    get_channel_id("main"),
-                    get_message_id("message5"),
-                    get_msg_type_id("string"), 0, "here", 100);
+    pubsub_add_sub_(con, recv_msg_copy_string, get_channel_id("main"),
+                    get_message_id("message5"), get_msg_type_id("string"), 0,
+                    "here", 100);
     pubsub_connector_free(con);
     tor_free(sys);
   }
@@ -160,9 +159,8 @@ cleanup_dispatcher(const struct testcase_t *testcase, void *dispatcher_)
   return 1;
 }
 
-static const struct testcase_setup_t dispatcher_setup = {
-  setup_dispatcher, cleanup_dispatcher
-};
+static const struct testcase_setup_t dispatcher_setup = {setup_dispatcher,
+                                                         cleanup_dispatcher};
 
 static void
 test_pubsub_msg_minimal(void *arg)
@@ -176,8 +174,7 @@ test_pubsub_msg_minimal(void *arg)
   tt_int_op(0, OP_EQ, dispatch_flush(d, get_channel_id("main"), 1000));
   tt_int_op(1, OP_EQ, msg_received_msg1); // we got the message!
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -192,8 +189,7 @@ test_pubsub_msg_send_to_stub(void *arg)
   tt_int_op(0, OP_EQ, dispatch_flush(d, get_channel_id("main"), 1000));
   tt_int_op(0, OP_EQ, msg_received_msg2); // doesn't arrive -- stub hook.
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -212,8 +208,7 @@ test_pubsub_msg_cancel_msgs(void *arg)
 
   // At this point, the dispatcher will be freed with queued, undelivered
   // messages.
- done:
-  ;
+done:;
 }
 
 struct alertfn_target {
@@ -228,23 +223,22 @@ alertfn_generic(dispatch_t *d, channel_id_t ch, void *arg)
   tt_ptr_op(d, OP_EQ, t->d);
   tt_int_op(ch, OP_EQ, t->ch);
   ++t->count;
- done:
-  ;
+done:;
 }
 
 static void
 test_pubsub_msg_alertfns(void *arg)
 {
   dispatch_t *d = arg;
-  struct alertfn_target ch1_a = { d, get_channel_id("main"), 0 };
-  struct alertfn_target ch2_a = { d, get_channel_id("other"), 0 };
+  struct alertfn_target ch1_a = {d, get_channel_id("main"), 0};
+  struct alertfn_target ch2_a = {d, get_channel_id("other"), 0};
 
   tt_int_op(0, OP_EQ,
-            dispatch_set_alert_fn(d, get_channel_id("main"),
-                                  alertfn_generic, &ch1_a));
+            dispatch_set_alert_fn(d, get_channel_id("main"), alertfn_generic,
+                                  &ch1_a));
   tt_int_op(0, OP_EQ,
-            dispatch_set_alert_fn(d, get_channel_id("other"),
-                                  alertfn_generic, &ch2_a));
+            dispatch_set_alert_fn(d, get_channel_id("other"), alertfn_generic,
+                                  &ch2_a));
 
   SEND(msg3, "hello");
   tt_int_op(ch1_a.count, OP_EQ, 1);
@@ -266,8 +260,7 @@ test_pubsub_msg_alertfns(void *arg)
   tt_int_op(ch1_a.count, OP_EQ, 2);
   tt_int_op(ch2_a.count, OP_EQ, 1);
 
- done:
-  ;
+done:;
 }
 
 /* try more than N_FAST_FNS hooks on msg5 */
@@ -286,20 +279,16 @@ test_pubsub_msg_many_hooks(void *arg)
   tt_int_op(5, OP_EQ, msg_received_msg5);
   tt_int_op(995, OP_EQ, smartlist_len(strings_received));
 
- done:
+done:
   SMARTLIST_FOREACH(strings_received, char *, s, tor_free(s));
   smartlist_free(strings_received);
 }
 
-#define T(name)                                                 \
-  { #name, test_pubsub_msg_ ## name , TT_FORK,                \
-      &dispatcher_setup, NULL }
+#define T(name)                                                     \
+  {                                                                 \
+#    name, test_pubsub_msg_##name, TT_FORK, &dispatcher_setup, NULL \
+  }
 
-struct testcase_t pubsub_msg_tests[] = {
-  T(minimal),
-  T(send_to_stub),
-  T(cancel_msgs),
-  T(alertfns),
-  T(many_hooks),
-  END_OF_TESTCASES
-};
+struct testcase_t pubsub_msg_tests[] = {T(minimal),     T(send_to_stub),
+                                        T(cancel_msgs), T(alertfns),
+                                        T(many_hooks),  END_OF_TESTCASES};

@@ -49,7 +49,7 @@ mock_get_estimated_address_per_node(void)
 static unsigned int
 mock_enable_dos_protection(const networkstatus_t *ns)
 {
-  (void) ns;
+  (void)ns;
   return 1;
 }
 
@@ -58,7 +58,7 @@ mock_enable_dos_protection(const networkstatus_t *ns)
 static void
 test_dos_conn_creation(void *arg)
 {
-  (void) arg;
+  (void)arg;
 
   MOCK(get_param_cc_enabled, mock_enable_dos_protection);
   MOCK(get_param_conn_enabled, mock_enable_dos_protection);
@@ -66,8 +66,7 @@ test_dos_conn_creation(void *arg)
   /* Initialize test data */
   or_connection_t or_conn;
   time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
-  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&or_conn.real_addr,
-                                          "18.0.0.1"));
+  tt_int_op(AF_INET, OP_EQ, tor_addr_parse(&or_conn.real_addr, "18.0.0.1"));
   tor_addr_t *addr = &or_conn.real_addr;
 
   /* Get DoS subsystem limits */
@@ -102,7 +101,7 @@ test_dos_conn_creation(void *arg)
   tt_int_op(DOS_CONN_DEFENSE_CLOSE, OP_EQ,
             dos_conn_addr_get_defense_type(addr));
 
- done:
+done:
   dos_free_all();
 }
 
@@ -111,10 +110,10 @@ static int
 mock_channel_get_addr_if_possible(channel_t *chan, tor_addr_t *addr_out)
 {
   (void)chan;
-  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(addr_out, "18.0.0.1"));
+  tt_int_op(AF_INET, OP_EQ, tor_addr_parse(addr_out, "18.0.0.1"));
   return 1;
 
- done:
+done:
   return 0;
 }
 
@@ -123,13 +122,12 @@ mock_channel_get_addr_if_possible(channel_t *chan, tor_addr_t *addr_out)
 static void
 test_dos_circuit_creation(void *arg)
 {
-  (void) arg;
+  (void)arg;
   unsigned int i;
 
   MOCK(get_param_cc_enabled, mock_enable_dos_protection);
   MOCK(get_param_conn_enabled, mock_enable_dos_protection);
-  MOCK(channel_get_addr_if_possible,
-       mock_channel_get_addr_if_possible);
+  MOCK(channel_get_addr_if_possible, mock_channel_get_addr_if_possible);
 
   /* Initialize channels/conns/circs that will be used */
   channel_t *chan = tor_malloc_zero(sizeof(channel_t));
@@ -139,26 +137,25 @@ test_dos_circuit_creation(void *arg)
   /* Initialize test data */
   or_connection_t or_conn;
   time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
-  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&or_conn.real_addr,
-                                          "18.0.0.1"));
+  tt_int_op(AF_INET, OP_EQ, tor_addr_parse(&or_conn.real_addr, "18.0.0.1"));
   tor_addr_t *addr = &or_conn.real_addr;
 
   /* Get DoS subsystem limits */
   dos_init();
   uint32_t max_circuit_count = get_param_cc_circuit_burst(NULL);
   uint32_t min_conc_conns_for_cc =
-    get_param_cc_min_concurrent_connection(NULL);
+      get_param_cc_min_concurrent_connection(NULL);
 
   /* Introduce new client and establish enough connections to activate the
    * circuit counting subsystem */
   geoip_note_client_seen(GEOIP_CLIENT_CONNECT, addr, NULL, now);
-  for (i = 0; i < min_conc_conns_for_cc ; i++) {
+  for (i = 0; i < min_conc_conns_for_cc; i++) {
     dos_new_client_conn(&or_conn);
   }
 
   /* Register new circuits for this client and conn, but not enough to get
    * detected as dos */
-  for (i=0; i < max_circuit_count-1; i++) {
+  for (i = 0; i < max_circuit_count - 1; i++) {
     dos_cc_new_create_cell(chan);
   }
   /* see that we didn't get detected for dosing */
@@ -174,7 +171,7 @@ test_dos_circuit_creation(void *arg)
   /* TODO: Actually send a Tor cell (instead of calling the DoS function) and
    * check that it will get refused */
 
- done:
+done:
   tor_free(chan);
   dos_free_all();
 }
@@ -183,7 +180,7 @@ test_dos_circuit_creation(void *arg)
 static void
 test_dos_bucket_refill(void *arg)
 {
-  (void) arg;
+  (void)arg;
   int i;
   /* For this test, this variable is set to the current circ count of the token
    * bucket. */
@@ -191,8 +188,7 @@ test_dos_bucket_refill(void *arg)
 
   MOCK(get_param_cc_enabled, mock_enable_dos_protection);
   MOCK(get_param_conn_enabled, mock_enable_dos_protection);
-  MOCK(channel_get_addr_if_possible,
-       mock_channel_get_addr_if_possible);
+  MOCK(channel_get_addr_if_possible, mock_channel_get_addr_if_possible);
 
   time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
   update_approx_time(now);
@@ -202,8 +198,7 @@ test_dos_bucket_refill(void *arg)
   channel_init(chan);
   chan->is_client = 1;
   or_connection_t or_conn;
-  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&or_conn.real_addr,
-                                          "18.0.0.1"));
+  tt_int_op(AF_INET, OP_EQ, tor_addr_parse(&or_conn.real_addr, "18.0.0.1"));
   tor_addr_t *addr = &or_conn.real_addr;
 
   /* Initialize DoS subsystem and get relevant limits */
@@ -220,10 +215,10 @@ test_dos_bucket_refill(void *arg)
   dos_new_client_conn(&or_conn);
 
   /* Fetch this client from the geoip cache and get its DoS structs */
-  clientmap_entry_t *entry = geoip_lookup_client(addr, NULL,
-                                                 GEOIP_CLIENT_CONNECT);
+  clientmap_entry_t *entry =
+      geoip_lookup_client(addr, NULL, GEOIP_CLIENT_CONNECT);
   tt_assert(entry);
-  dos_client_stats_t* dos_stats = &entry->dos_stats;
+  dos_client_stats_t *dos_stats = &entry->dos_stats;
   /* Check that the circuit bucket is still uninitialized */
   tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, 0);
 
@@ -235,9 +230,9 @@ test_dos_bucket_refill(void *arg)
 
   /* Now send 29 more CREATEs and ensure that the bucket is missing 30
    * tokens */
-  for (i=0; i < 29; i++) {
-   dos_cc_new_create_cell(chan);
-   current_circ_count--;
+  for (i = 0; i < 29; i++) {
+    dos_cc_new_create_cell(chan);
+    current_circ_count--;
   }
   tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
 
@@ -253,7 +248,7 @@ test_dos_bucket_refill(void *arg)
   /* Now send as many CREATE cells as needed to deplete our token bucket
    * completely */
   for (; current_circ_count != 0; current_circ_count--) {
-   dos_cc_new_create_cell(chan);
+    dos_cc_new_create_cell(chan);
   }
   tt_uint_op(current_circ_count, OP_EQ, 0);
   tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
@@ -413,7 +408,7 @@ test_dos_bucket_refill(void *arg)
   tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
 #endif /* SIZEOF_TIME_T == 8 */
 
- done:
+done:
   tor_free(chan);
   dos_free_all();
 }
@@ -423,16 +418,17 @@ static void
 test_known_relay(void *arg)
 {
   clientmap_entry_t *entry = NULL;
-  routerstatus_t *rs = NULL; microdesc_t *md = NULL; routerinfo_t *ri = NULL;
+  routerstatus_t *rs = NULL;
+  microdesc_t *md = NULL;
+  routerinfo_t *ri = NULL;
 
-  (void) arg;
+  (void)arg;
 
   MOCK(networkstatus_get_latest_consensus,
        mock_networkstatus_get_latest_consensus);
   MOCK(networkstatus_get_latest_consensus_by_flavor,
        mock_networkstatus_get_latest_consensus_by_flavor);
-  MOCK(get_estimated_address_per_node,
-       mock_get_estimated_address_per_node);
+  MOCK(get_estimated_address_per_node, mock_get_estimated_address_per_node);
   MOCK(get_param_cc_enabled, mock_enable_dos_protection);
 
   dos_init();
@@ -481,8 +477,10 @@ test_known_relay(void *arg)
   /* We should have a count of 2. */
   tt_uint_op(entry->dos_stats.concurrent_count, OP_EQ, 2);
 
- done:
-  routerstatus_free(rs); routerinfo_free(ri); microdesc_free(md);
+done:
+  routerstatus_free(rs);
+  routerinfo_free(ri);
+  microdesc_free(md);
   smartlist_clear(dummy_ns->routerstatus_list);
   networkstatus_vote_free(dummy_ns);
   dos_free_all();
@@ -493,10 +491,8 @@ test_known_relay(void *arg)
 }
 
 struct testcase_t dos_tests[] = {
-  { "conn_creation", test_dos_conn_creation, TT_FORK, NULL, NULL },
-  { "circuit_creation", test_dos_circuit_creation, TT_FORK, NULL, NULL },
-  { "bucket_refill", test_dos_bucket_refill, TT_FORK, NULL, NULL },
-  { "known_relay" , test_known_relay, TT_FORK,
-    NULL, NULL },
-  END_OF_TESTCASES
-};
+    {"conn_creation", test_dos_conn_creation, TT_FORK, NULL, NULL},
+    {"circuit_creation", test_dos_circuit_creation, TT_FORK, NULL, NULL},
+    {"bucket_refill", test_dos_bucket_refill, TT_FORK, NULL, NULL},
+    {"known_relay", test_known_relay, TT_FORK, NULL, NULL},
+    END_OF_TESTCASES};

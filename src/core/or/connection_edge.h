@@ -68,7 +68,7 @@ entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *);
 #define AP_CONN_STATE_IS_UNATTACHED(s) \
   ((s) <= AP_CONN_STATE_CIRCUIT_WAIT || (s) == AP_CONN_STATE_NATD_WAIT)
 
-#define connection_mark_unattached_ap(conn, endreason)                  \
+#define connection_mark_unattached_ap(conn, endreason) \
   connection_mark_unattached_ap_((conn), (endreason), __LINE__, SHORT_FILE__)
 
 /** Possible return values for parse_extended_hostname. */
@@ -80,9 +80,9 @@ typedef enum hostname_type_t {
   ONION_V3_HOSTNAME,
 } hostname_type_t;
 
-MOCK_DECL(void,connection_mark_unattached_ap_,
-          (entry_connection_t *conn, int endreason,
-           int line, const char *file));
+MOCK_DECL(void, connection_mark_unattached_ap_,
+          (entry_connection_t * conn, int endreason, int line,
+           const char *file));
 int connection_edge_reached_eof(edge_connection_t *conn);
 int connection_edge_process_inbuf(edge_connection_t *conn,
                                   int package_partial);
@@ -97,30 +97,21 @@ int connection_edge_finished_connecting(edge_connection_t *conn);
 void connection_ap_about_to_close(entry_connection_t *edge_conn);
 void connection_exit_about_to_close(edge_connection_t *edge_conn);
 
-MOCK_DECL(int,
-          connection_ap_handshake_send_begin,(entry_connection_t *ap_conn));
+MOCK_DECL(int, connection_ap_handshake_send_begin,
+          (entry_connection_t * ap_conn));
 int connection_ap_handshake_send_resolve(entry_connection_t *ap_conn);
 
-entry_connection_t  *connection_ap_make_link(connection_t *partner,
-                                            char *address, uint16_t port,
-                                            const char *digest,
-                                            int session_group,
-                                            int isolation_flags,
-                                            int use_begindir, int want_onehop);
+entry_connection_t *connection_ap_make_link(
+    connection_t *partner, char *address, uint16_t port, const char *digest,
+    int session_group, int isolation_flags, int use_begindir, int want_onehop);
 void connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
-                                         size_t replylen,
-                                         int endreason);
-MOCK_DECL(void,connection_ap_handshake_socks_resolved,
-          (entry_connection_t *conn,
-           int answer_type,
-           size_t answer_len,
-           const uint8_t *answer,
-           int ttl,
-           time_t expires));
+                                         size_t replylen, int endreason);
+MOCK_DECL(void, connection_ap_handshake_socks_resolved,
+          (entry_connection_t * conn, int answer_type, size_t answer_len,
+           const uint8_t *answer, int ttl, time_t expires));
 void connection_ap_handshake_socks_resolved_addr(entry_connection_t *conn,
                                                  const tor_addr_t *answer,
-                                                 int ttl,
-                                                 time_t expires);
+                                                 int ttl, time_t expires);
 
 int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 int connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ);
@@ -132,34 +123,33 @@ void connection_ap_expire_beginning(void);
 void connection_ap_rescan_and_attach_pending(void);
 void connection_ap_attach_pending(int retry);
 void connection_ap_mark_as_pending_circuit_(entry_connection_t *entry_conn,
-                                           const char *file, int line);
+                                            const char *file, int line);
 #define connection_ap_mark_as_pending_circuit(c) \
   connection_ap_mark_as_pending_circuit_((c), __FILE__, __LINE__)
 void connection_ap_mark_as_non_pending_circuit(entry_connection_t *entry_conn);
-void connection_ap_mark_as_waiting_for_renddesc(
-                                       entry_connection_t *entry_conn);
+void
+connection_ap_mark_as_waiting_for_renddesc(entry_connection_t *entry_conn);
 
-#define CONNECTION_AP_EXPECT_NONPENDING(c) do {                         \
-    if (ENTRY_TO_CONN(c)->state == AP_CONN_STATE_CIRCUIT_WAIT) {        \
+#define CONNECTION_AP_EXPECT_NONPENDING(c)                               \
+  do {                                                                   \
+    if (ENTRY_TO_CONN(c)->state == AP_CONN_STATE_CIRCUIT_WAIT) {         \
       log_warn(LD_BUG, "At %s:%d: %p was unexpectedly in circuit_wait.", \
-               __FILE__, __LINE__, (c));                                \
-      connection_ap_mark_as_non_pending_circuit(c);                     \
-    }                                                                   \
+               __FILE__, __LINE__, (c));                                 \
+      connection_ap_mark_as_non_pending_circuit(c);                      \
+    }                                                                    \
   } while (0)
 void connection_ap_fail_onehop(const char *failed_digest,
                                cpath_build_state_t *build_state);
 void circuit_discard_optional_exit_enclaves(extend_info_t *info);
 int connection_ap_detach_retriable(entry_connection_t *conn,
-                                   origin_circuit_t *circ,
-                                   int reason);
+                                   origin_circuit_t *circ, int reason);
 int connection_ap_process_transparent(entry_connection_t *conn);
 
 int address_is_invalid_destination(const char *address, int client);
 
 MOCK_DECL(int, connection_ap_rewrite_and_attach_if_allowed,
-                                                (entry_connection_t *conn,
-                                                 origin_circuit_t *circ,
-                                                 crypt_path_t *cpath));
+          (entry_connection_t * conn, origin_circuit_t *circ,
+           crypt_path_t *cpath));
 int connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
                                                origin_circuit_t *circ,
                                                crypt_path_t *cpath);
@@ -178,9 +168,9 @@ streamid_t get_unique_stream_id_by_circ(origin_circuit_t *circ);
 
 void connection_edge_free_all(void);
 
-void connection_ap_warn_and_unmark_if_pending_circ(
-                                             entry_connection_t *entry_conn,
-                                             const char *where);
+void
+connection_ap_warn_and_unmark_if_pending_circ(entry_connection_t *entry_conn,
+                                              const char *where);
 
 int connection_half_edge_is_valid_data(const smartlist_t *half_conns,
                                        streamid_t stream_id);
@@ -196,8 +186,7 @@ int connection_half_edge_is_valid_resolved(smartlist_t *half_conns,
 size_t half_streams_get_total_allocation(void);
 struct half_edge_t;
 void half_edge_free_(struct half_edge_t *he);
-#define half_edge_free(he) \
-  FREE_AND_NULL(half_edge_t, half_edge_free_, (he))
+#define half_edge_free(he) FREE_AND_NULL(half_edge_t, half_edge_free_, (he))
 
 /** @name Begin-cell flags
  *
@@ -208,15 +197,15 @@ void half_edge_free_(struct half_edge_t *he);
  **/
 /** When this flag is set, the client is willing to get connected to IPv6
  * addresses */
-#define BEGIN_FLAG_IPV6_OK        (1u<<0)
+#define BEGIN_FLAG_IPV6_OK (1u << 0)
 /** When this flag is set, the client DOES NOT support connecting to IPv4
  * addresses.  (The sense of this flag is inverted from IPV6_OK, so that the
  * old default behavior of Tor is equivalent to having all flags set to 0.)
  **/
-#define BEGIN_FLAG_IPV4_NOT_OK    (1u<<1)
+#define BEGIN_FLAG_IPV4_NOT_OK (1u << 1)
 /** When this flag is set, if we find both an IPv4 and an IPv6 address,
  * we use the IPv6 address.  Otherwise we use the IPv4 address. */
-#define BEGIN_FLAG_IPV6_PREFERRED (1u<<2)
+#define BEGIN_FLAG_IPV6_PREFERRED (1u << 2)
 /**@}*/
 
 #ifdef CONNECTION_EDGE_PRIVATE
@@ -240,10 +229,9 @@ typedef struct begin_cell_t {
 } begin_cell_t;
 
 STATIC int begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
-                     uint8_t *end_reason_out);
+                            uint8_t *end_reason_out);
 STATIC int connected_cell_format_payload(uint8_t *payload_out,
-                                  const tor_addr_t *addr,
-                                  uint32_t ttl);
+                                         const tor_addr_t *addr, uint32_t ttl);
 
 typedef struct {
   /** Original address, after we lowercased it but before we started
@@ -271,14 +259,14 @@ STATIC void connection_ap_handshake_rewrite(entry_connection_t *conn,
 
 STATIC int connection_ap_process_http_connect(entry_connection_t *conn);
 STATIC void export_hs_client_circuit_id(edge_connection_t *edge_conn,
-                            hs_circuit_id_protocol_t protocol);
+                                        hs_circuit_id_protocol_t protocol);
 
 struct half_edge_t;
 STATIC void connection_half_edge_add(const edge_connection_t *conn,
                                      origin_circuit_t *circ);
-STATIC struct half_edge_t *connection_half_edge_find_stream_id(
-                                     const smartlist_t *half_conns,
-                                     streamid_t stream_id);
+STATIC struct half_edge_t *
+connection_half_edge_find_stream_id(const smartlist_t *half_conns,
+                                    streamid_t stream_id);
 #endif /* defined(CONNECTION_EDGE_PRIVATE) */
 
 #endif /* !defined(TOR_CONNECTION_EDGE_H) */

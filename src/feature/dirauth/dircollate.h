@@ -67,4 +67,3 @@ struct dircollator_t {
 #endif /* defined(DIRCOLLATE_PRIVATE) */
 
 #endif /* !defined(TOR_DIRCOLLATE_H) */
-

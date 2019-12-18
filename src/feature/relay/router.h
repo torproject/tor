@@ -17,23 +17,23 @@
 struct curve25519_keypair_t;
 struct ed25519_keypair_t;
 
-#define TOR_ROUTERINFO_ERROR_NO_EXT_ADDR     (-1)
-#define TOR_ROUTERINFO_ERROR_CANNOT_PARSE    (-2)
-#define TOR_ROUTERINFO_ERROR_NOT_A_SERVER    (-3)
-#define TOR_ROUTERINFO_ERROR_DIGEST_FAILED   (-4)
+#define TOR_ROUTERINFO_ERROR_NO_EXT_ADDR (-1)
+#define TOR_ROUTERINFO_ERROR_CANNOT_PARSE (-2)
+#define TOR_ROUTERINFO_ERROR_NOT_A_SERVER (-3)
+#define TOR_ROUTERINFO_ERROR_DIGEST_FAILED (-4)
 #define TOR_ROUTERINFO_ERROR_CANNOT_GENERATE (-5)
 #define TOR_ROUTERINFO_ERROR_DESC_REBUILDING (-6)
-#define TOR_ROUTERINFO_ERROR_INTERNAL_BUG    (-7)
+#define TOR_ROUTERINFO_ERROR_INTERNAL_BUG (-7)
 
-MOCK_DECL(crypto_pk_t *,get_onion_key,(void));
+MOCK_DECL(crypto_pk_t *, get_onion_key, (void));
 time_t get_onion_key_set_at(void);
 void set_server_identity_key(crypto_pk_t *k);
 /* Some compilers are clever enough to know that when relay mode is disabled,
  * this function never returns. */
 #ifdef HAVE_MODULE_RELAY
-MOCK_DECL(crypto_pk_t *,get_server_identity_key,(void));
+MOCK_DECL(crypto_pk_t *, get_server_identity_key, (void));
 #else
-#define get_server_identity_key() (tor_abort_(),NULL)
+#  define get_server_identity_key() (tor_abort_(), NULL)
 #endif
 int server_identity_key_is_set(void);
 void set_client_identity_key(crypto_pk_t *k);
@@ -86,9 +86,9 @@ int router_has_bandwidth_to_be_dirserver(const or_options_t *options);
 void router_new_address_suggestion(const char *suggestion,
                                    const dir_connection_t *d_conn);
 int router_compare_to_my_exit_policy(const tor_addr_t *addr, uint16_t port);
-MOCK_DECL(int, router_my_exit_policy_is_reject_star,(void));
+MOCK_DECL(int, router_my_exit_policy_is_reject_star, (void));
 MOCK_DECL(const routerinfo_t *, router_get_my_routerinfo, (void));
-MOCK_DECL(const routerinfo_t *, router_get_my_routerinfo_with_err,(int *err));
+MOCK_DECL(const routerinfo_t *, router_get_my_routerinfo_with_err, (int *err));
 extrainfo_t *router_get_my_extrainfo(void);
 const char *router_get_my_descriptor(void);
 const char *router_get_descriptor_gen_reason(void);
@@ -96,19 +96,18 @@ int router_digest_is_me(const char *digest);
 const uint8_t *router_get_my_id_digest(void);
 int router_extrainfo_digest_is_me(const char *digest);
 int router_is_me(const routerinfo_t *router);
-MOCK_DECL(int,router_pick_published_address,(const or_options_t *options,
-                                             uint32_t *addr,
-                                             int cache_only));
+MOCK_DECL(int, router_pick_published_address,
+          (const or_options_t *options, uint32_t *addr, int cache_only));
 int router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e);
 int router_rebuild_descriptor(int force);
-char *router_dump_router_to_string(routerinfo_t *router,
+char *
+router_dump_router_to_string(routerinfo_t *router,
                              const crypto_pk_t *ident_key,
                              const crypto_pk_t *tap_key,
                              const struct curve25519_keypair_t *ntor_keypair,
                              const struct ed25519_keypair_t *signing_keypair);
 char *router_dump_exit_policy_to_string(const routerinfo_t *router,
-                                         int include_ipv4,
-                                         int include_ipv6);
+                                        int include_ipv4, int include_ipv6);
 int extrainfo_dump_to_string(char **s, extrainfo_t *extrainfo,
                              crypto_pk_t *ident_key,
                              const struct ed25519_keypair_t *signing_keypair);
@@ -126,21 +125,21 @@ STATIC void get_platform_str(char *platform, size_t len);
 STATIC int router_write_fingerprint(int hashed);
 STATIC smartlist_t *get_my_declared_family(const or_options_t *options);
 
-#ifdef TOR_UNIT_TESTS
+#  ifdef TOR_UNIT_TESTS
 extern time_t desc_clean_since;
 extern const char *desc_dirty_reason;
 void set_server_identity_key_digest_testing(const uint8_t *digest);
 MOCK_DECL(STATIC const struct curve25519_keypair_t *,
-                                       get_current_curve25519_keypair,(void));
+          get_current_curve25519_keypair, (void));
 
-MOCK_DECL(STATIC int,
-              router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out));
-STATIC extrainfo_t *router_build_fresh_signed_extrainfo(
-                                                      const routerinfo_t *ri);
+MOCK_DECL(STATIC int, router_build_fresh_unsigned_routerinfo,
+          (routerinfo_t * *ri_out));
+STATIC extrainfo_t *
+router_build_fresh_signed_extrainfo(const routerinfo_t *ri);
 STATIC void router_update_routerinfo_from_extrainfo(routerinfo_t *ri,
                                                     const extrainfo_t *ei);
 STATIC int router_dump_and_sign_routerinfo_descriptor_body(routerinfo_t *ri);
-#endif /* defined(TOR_UNIT_TESTS) */
+#  endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(ROUTER_PRIVATE) */
 

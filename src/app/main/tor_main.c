@@ -5,7 +5,7 @@
 
 #include "orconfig.h"
 #ifdef ENABLE_RESTART_DEBUGGING
-#include <stdlib.h>
+#  include <stdlib.h>
 #endif
 
 /**
@@ -27,7 +27,7 @@ main(int argc, char *argv[])
   int r;
 #ifdef ENABLE_RESTART_DEBUGGING
   int restart_count = getenv("TOR_DEBUG_RESTART") ? 1 : 0;
- again:
+again:
 #endif
   r = tor_main(argc, argv);
   if (r < 0 || r > 255)
@@ -39,4 +39,3 @@ main(int argc, char *argv[])
   else
     return r;
 }
-

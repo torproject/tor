@@ -109,7 +109,7 @@ tor_cleanup(void)
 void
 tor_free_all(int postfork)
 {
-  if (!postfork) {
+  if (! postfork) {
     evdns_shutdown(1);
   }
   geoip_free_all();
@@ -142,12 +142,12 @@ tor_free_all(int postfork)
   accounting_free_all();
   circpad_free_all();
 
-  if (!postfork) {
+  if (! postfork) {
     config_free_all();
     relay_config_free_all();
     or_state_free_all();
   }
-  if (!postfork) {
+  if (! postfork) {
 #ifndef _WIN32
     tor_getpwnam(NULL);
 #endif
@@ -156,14 +156,14 @@ tor_free_all(int postfork)
 
   tor_mainloop_disconnect_pubsub();
 
-  if (!postfork) {
+  if (! postfork) {
     release_lockfile();
   }
 
   subsystems_shutdown();
 
   /* Stuff in util.c and address.c*/
-  if (!postfork) {
+  if (! postfork) {
     esc_router_info(NULL);
   }
 }

@@ -89,24 +89,23 @@
 #include "feature/nodelist/vote_routerstatus_st.h"
 
 #ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
+#  include <sys/stat.h>
 #endif
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
 #define NS_MODULE dir
 
 static networkstatus_t *
-networkstatus_parse_vote_from_string_(const char *s,
-                                      const char **eos_out,
+networkstatus_parse_vote_from_string_(const char *s, const char **eos_out,
                                       enum networkstatus_type_t ns_type)
 {
   size_t len = strlen(s);
   // memdup so that it won't be nul-terminated.
   char *tmp = tor_memdup(s, len);
   networkstatus_t *result =
-    networkstatus_parse_vote_from_string(tmp, len, eos_out, ns_type);
+      networkstatus_parse_vote_from_string(tmp, len, eos_out, ns_type);
   if (eos_out && *eos_out) {
     *eos_out = s + (*eos_out - tmp);
   }
@@ -118,48 +117,47 @@ static void
 test_dir_nicknames(void *arg)
 {
   (void)arg;
-  tt_assert( is_legal_nickname("a"));
-  tt_assert(!is_legal_nickname(""));
-  tt_assert(!is_legal_nickname("abcdefghijklmnopqrst")); /* 20 chars */
-  tt_assert(!is_legal_nickname("hyphen-")); /* bad char */
-  tt_assert( is_legal_nickname("abcdefghijklmnopqrs")); /* 19 chars */
-  tt_assert(!is_legal_nickname("$AAAAAAAA01234AAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+  tt_assert(is_legal_nickname("a"));
+  tt_assert(! is_legal_nickname(""));
+  tt_assert(! is_legal_nickname("abcdefghijklmnopqrst")); /* 20 chars */
+  tt_assert(! is_legal_nickname("hyphen-")); /* bad char */
+  tt_assert(is_legal_nickname("abcdefghijklmnopqrs")); /* 19 chars */
+  tt_assert(! is_legal_nickname("$AAAAAAAA01234AAAAAAAAAAAAAAAAAAAAAAAAAAA"));
   /* valid */
-  tt_assert( is_legal_nickname_or_hexdigest(
-                                 "$AAAAAAAA01234AAAAAAAAAAAAAAAAAAAAAAAAAAA"));
-  tt_assert( is_legal_nickname_or_hexdigest(
-                         "$AAAAAAAA01234AAAAAAAAAAAAAAAAAAAAAAAAAAA=fred"));
-  tt_assert( is_legal_nickname_or_hexdigest(
-                         "$AAAAAAAA01234AAAAAAAAAAAAAAAAAAAAAAAAAAA~fred"));
+  tt_assert(is_legal_nickname_or_hexdigest(
+      "$AAAAAAAA01234AAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+  tt_assert(is_legal_nickname_or_hexdigest(
+      "$AAAAAAAA01234AAAAAAAAAAAAAAAAAAAAAAAAAAA=fred"));
+  tt_assert(is_legal_nickname_or_hexdigest(
+      "$AAAAAAAA01234AAAAAAAAAAAAAAAAAAAAAAAAAAA~fred"));
   /* too short */
-  tt_assert(!is_legal_nickname_or_hexdigest(
-                                 "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+  tt_assert(! is_legal_nickname_or_hexdigest(
+      "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
   /* illegal char */
-  tt_assert(!is_legal_nickname_or_hexdigest(
-                                 "$AAAAAAzAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+  tt_assert(! is_legal_nickname_or_hexdigest(
+      "$AAAAAAzAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
   /* hex part too long */
-  tt_assert(!is_legal_nickname_or_hexdigest(
-                         "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
-  tt_assert(!is_legal_nickname_or_hexdigest(
-                         "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=fred"));
+  tt_assert(! is_legal_nickname_or_hexdigest(
+      "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+  tt_assert(! is_legal_nickname_or_hexdigest(
+      "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=fred"));
   /* Bad nickname */
-  tt_assert(!is_legal_nickname_or_hexdigest(
-                         "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="));
-  tt_assert(!is_legal_nickname_or_hexdigest(
-                         "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~"));
-  tt_assert(!is_legal_nickname_or_hexdigest(
-                       "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~hyphen-"));
-  tt_assert(!is_legal_nickname_or_hexdigest(
-                       "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~"
-                       "abcdefghijklmnoppqrst"));
+  tt_assert(! is_legal_nickname_or_hexdigest(
+      "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="));
+  tt_assert(! is_legal_nickname_or_hexdigest(
+      "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~"));
+  tt_assert(! is_legal_nickname_or_hexdigest(
+      "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~hyphen-"));
+  tt_assert(! is_legal_nickname_or_hexdigest(
+      "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~"
+      "abcdefghijklmnoppqrst"));
   /* Bad extra char. */
-  tt_assert(!is_legal_nickname_or_hexdigest(
-                         "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA!"));
+  tt_assert(! is_legal_nickname_or_hexdigest(
+      "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA!"));
   tt_assert(is_legal_nickname_or_hexdigest("xyzzy"));
   tt_assert(is_legal_nickname_or_hexdigest("abcdefghijklmnopqrs"));
-  tt_assert(!is_legal_nickname_or_hexdigest("abcdefghijklmnopqrst"));
- done:
-  ;
+  tt_assert(! is_legal_nickname_or_hexdigest("abcdefghijklmnopqrst"));
+done:;
 }
 
 /* Allocate and return a new routerinfo, with the fields set from the
@@ -177,8 +175,7 @@ static routerinfo_t *
 basic_routerinfo_new(const char *nickname, uint32_t ipv4_addr,
                      uint16_t or_port, uint16_t dir_port,
                      uint32_t bandwidthrate, uint32_t bandwidthburst,
-                     uint32_t bandwidthcapacity,
-                     time_t published_on,
+                     uint32_t bandwidthcapacity, time_t published_on,
                      crypto_pk_t **rsa_onion_keypair_out)
 {
   char platform[256];
@@ -231,10 +228,8 @@ get_new_router_line(const routerinfo_t *r1)
 
   tor_assert(r1);
 
-  tor_asprintf(&line,
-               "router %s %s %d 0 %d\n",
-               r1->nickname, fmt_addr32(r1->addr),
-               r1->or_port, r1->dir_port);
+  tor_asprintf(&line, "router %s %s %d 0 %d\n", r1->nickname,
+               fmt_addr32(r1->addr), r1->or_port, r1->dir_port);
   tor_assert(line);
 
   return line;
@@ -247,9 +242,7 @@ get_new_platform_line(void)
 {
   char *line = NULL;
 
-  tor_asprintf(&line,
-               "platform Tor %s on %s\n",
-               VERSION, get_uname());
+  tor_asprintf(&line, "platform Tor %s on %s\n", VERSION, get_uname());
   tor_assert(line);
 
   return line;
@@ -267,8 +260,7 @@ get_new_published_line(const routerinfo_t *r1)
   tor_assert(r1->cache_info.published_on >= 0);
   tor_assert(r1->cache_info.published_on <= 59);
 
-  tor_asprintf(&line,
-               "published 1970-01-01 00:00:%02u\n",
+  tor_asprintf(&line, "published 1970-01-01 00:00:%02u\n",
                (unsigned)r1->cache_info.published_on);
   tor_assert(line);
 
@@ -280,16 +272,14 @@ static char *
 get_new_fingerprint_line(const routerinfo_t *r1)
 {
   char *line = NULL;
-  char fingerprint[FINGERPRINT_LEN+1];
+  char fingerprint[FINGERPRINT_LEN + 1];
 
   tor_assert(r1);
 
-  tor_assert(!crypto_pk_get_fingerprint(r1->identity_pkey, fingerprint, 1));
+  tor_assert(! crypto_pk_get_fingerprint(r1->identity_pkey, fingerprint, 1));
   tor_assert(strlen(fingerprint) > 0);
 
-  tor_asprintf(&line,
-               "fingerprint %s\n",
-               fingerprint);
+  tor_asprintf(&line, "fingerprint %s\n", fingerprint);
   tor_assert(line);
 
   return line;
@@ -306,9 +296,7 @@ get_new_uptime_line(time_t t)
 {
   char *line = NULL;
 
-  tor_asprintf(&line,
-               "uptime %u\n",
-               (unsigned)t);
+  tor_asprintf(&line, "uptime %u\n", (unsigned)t);
   tor_assert(line);
 
   return line;
@@ -323,11 +311,8 @@ get_new_bandwidth_line(const routerinfo_t *r1)
 
   tor_assert(r1);
 
-  tor_asprintf(&line,
-               "bandwidth %u %u %u\n",
-               r1->bandwidthrate,
-               r1->bandwidthburst,
-               r1->bandwidthcapacity);
+  tor_asprintf(&line, "bandwidth %u %u %u\n", r1->bandwidthrate,
+               r1->bandwidthburst, r1->bandwidthcapacity);
   tor_assert(line);
 
   return line;
@@ -346,15 +331,12 @@ get_new_rsa_key_block(const char *key_name, crypto_pk_t *pk1)
   tor_assert(key_name);
   tor_assert(pk1);
 
-  tor_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str,
-                                                   &pk1_str_len));
+  tor_assert(
+      ! crypto_pk_write_public_key_to_string(pk1, &pk1_str, &pk1_str_len));
   tor_assert(pk1_str);
   tor_assert(pk1_str_len);
 
-  tor_asprintf(&block,
-               "%s\n%s",
-               key_name,
-               pk1_str);
+  tor_asprintf(&block, "%s\n%s", key_name, pk1_str);
   tor_free(pk1_str);
 
   tor_assert(block);
@@ -369,8 +351,8 @@ get_new_onion_key_block(const routerinfo_t *r1)
 {
   char *block = NULL;
   tor_assert(r1);
-  crypto_pk_t *pk_tmp = router_get_rsa_onion_pkey(r1->onion_pkey,
-                                                  r1->onion_pkey_len);
+  crypto_pk_t *pk_tmp =
+      router_get_rsa_onion_pkey(r1->onion_pkey, r1->onion_pkey_len);
   block = get_new_rsa_key_block("onion-key", pk_tmp);
   crypto_pk_free(pk_tmp);
   return block;
@@ -399,14 +381,12 @@ get_new_ntor_onion_key_line(const curve25519_public_key_t *ntor_onion_pubkey)
   tor_assert(ntor_onion_pubkey);
 
   rv = base64_encode(cert_buf, sizeof(cert_buf),
-                     (const char*)ntor_onion_pubkey->public_key, 32,
+                     (const char *)ntor_onion_pubkey->public_key, 32,
                      BASE64_ENCODE_MULTILINE);
   tor_assert(rv > 0);
   tor_assert(strlen(cert_buf) > 0);
 
-  tor_asprintf(&line,
-               "ntor-onion-key %s",
-               cert_buf);
+  tor_asprintf(&line, "ntor-onion-key %s", cert_buf);
   tor_assert(line);
 
   return line;
@@ -585,8 +565,8 @@ setup_mocks_for_fresh_descriptor(const routerinfo_t *r1,
   if (rsa_onion_keypair) {
     mocked_onionkey = crypto_pk_dup_key(rsa_onion_keypair);
   } else {
-    mocked_onionkey = router_get_rsa_onion_pkey(r1->onion_pkey,
-                                                r1->onion_pkey_len);
+    mocked_onionkey =
+        router_get_rsa_onion_pkey(r1->onion_pkey, r1->onion_pkey_len);
   }
   MOCK(get_onion_key, mock_get_onion_key);
 }
@@ -631,39 +611,39 @@ setup_dir_formats_options(const char *arg, or_options_t *options)
 /* Check that routerinfos r1 and rp1 are consistent.
  * Only performs some basic checks.
  */
-#define CHECK_ROUTERINFO_CONSISTENCY(r1, rp1) \
-STMT_BEGIN \
-  tt_assert(r1); \
-  tt_assert(rp1); \
-  tt_int_op(rp1->addr,OP_EQ, r1->addr); \
-  tt_int_op(rp1->or_port,OP_EQ, r1->or_port); \
-  tt_int_op(rp1->dir_port,OP_EQ, r1->dir_port); \
-  tt_int_op(rp1->bandwidthrate,OP_EQ, r1->bandwidthrate); \
-  tt_int_op(rp1->bandwidthburst,OP_EQ, r1->bandwidthburst); \
-  tt_int_op(rp1->bandwidthcapacity,OP_EQ, r1->bandwidthcapacity); \
-  crypto_pk_t *rp1_onion_pkey = router_get_rsa_onion_pkey(rp1->onion_pkey, \
-                                                      rp1->onion_pkey_len); \
-  crypto_pk_t *r1_onion_pkey = router_get_rsa_onion_pkey(r1->onion_pkey, \
-                                                      r1->onion_pkey_len); \
-  tt_int_op(crypto_pk_cmp_keys(rp1_onion_pkey, r1_onion_pkey), OP_EQ, 0); \
-  crypto_pk_free(rp1_onion_pkey); \
-  crypto_pk_free(r1_onion_pkey); \
-  tt_int_op(crypto_pk_cmp_keys(rp1->identity_pkey, r1->identity_pkey), \
-            OP_EQ, 0); \
-  tt_int_op(rp1->supports_tunnelled_dir_requests, OP_EQ, \
-            r1->supports_tunnelled_dir_requests); \
-STMT_END
+#define CHECK_ROUTERINFO_CONSISTENCY(r1, rp1)                               \
+  STMT_BEGIN                                                                \
+    tt_assert(r1);                                                          \
+    tt_assert(rp1);                                                         \
+    tt_int_op(rp1->addr, OP_EQ, r1->addr);                                  \
+    tt_int_op(rp1->or_port, OP_EQ, r1->or_port);                            \
+    tt_int_op(rp1->dir_port, OP_EQ, r1->dir_port);                          \
+    tt_int_op(rp1->bandwidthrate, OP_EQ, r1->bandwidthrate);                \
+    tt_int_op(rp1->bandwidthburst, OP_EQ, r1->bandwidthburst);              \
+    tt_int_op(rp1->bandwidthcapacity, OP_EQ, r1->bandwidthcapacity);        \
+    crypto_pk_t *rp1_onion_pkey =                                           \
+        router_get_rsa_onion_pkey(rp1->onion_pkey, rp1->onion_pkey_len);    \
+    crypto_pk_t *r1_onion_pkey =                                            \
+        router_get_rsa_onion_pkey(r1->onion_pkey, r1->onion_pkey_len);      \
+    tt_int_op(crypto_pk_cmp_keys(rp1_onion_pkey, r1_onion_pkey), OP_EQ, 0); \
+    crypto_pk_free(rp1_onion_pkey);                                         \
+    crypto_pk_free(r1_onion_pkey);                                          \
+    tt_int_op(crypto_pk_cmp_keys(rp1->identity_pkey, r1->identity_pkey),    \
+              OP_EQ, 0);                                                    \
+    tt_int_op(rp1->supports_tunnelled_dir_requests, OP_EQ,                  \
+              r1->supports_tunnelled_dir_requests);                         \
+  STMT_END
 
 /* Check that routerinfo r1 and extrainfo e1 are consistent.
  * Only performs some basic checks.
  */
-#define CHECK_EXTRAINFO_CONSISTENCY(r1, e1) \
-STMT_BEGIN \
-  tt_assert(r1); \
-  tt_assert(e1); \
-\
-  tt_str_op(e1->nickname, OP_EQ, r1->nickname); \
-STMT_END
+#define CHECK_EXTRAINFO_CONSISTENCY(r1, e1)       \
+  STMT_BEGIN                                      \
+    tt_assert(r1);                                \
+    tt_assert(e1);                                \
+                                                  \
+    tt_str_op(e1->nickname, OP_EQ, r1->nickname); \
+  STMT_END
 
 /** Run unit tests for router descriptor generation logic for a RSA-only
  * router. Tor versions without ed25519 (0.2.6 and earlier) are no longer
@@ -693,17 +673,14 @@ test_dir_formats_rsa(void *arg)
   hibernate_set_state_for_testing_(HIBERNATE_STATE_LIVE);
 
   /* r1 is a minimal, RSA-only descriptor, with DirPort and IPv6 */
-  r1 = basic_routerinfo_new("Magri", 0xc0a80001u /* 192.168.0.1 */,
-                            9000, 9003,
-                            1000, 5000, 10000,
-                            0,
-                            NULL);
+  r1 = basic_routerinfo_new("Magri", 0xc0a80001u /* 192.168.0.1 */, 9000, 9003,
+                            1000, 5000, 10000, 0, NULL);
 
- /* Fake just enough of an ntor key to get by */
+  /* Fake just enough of an ntor key to get by */
   curve25519_keypair_t r1_onion_keypair;
   curve25519_keypair_generate(&r1_onion_keypair, 0);
-  r1->onion_curve25519_pkey = tor_memdup(&r1_onion_keypair.pubkey,
-                                         sizeof(curve25519_public_key_t));
+  r1->onion_curve25519_pkey =
+      tor_memdup(&r1_onion_keypair.pubkey, sizeof(curve25519_public_key_t));
 
   /* Now add IPv6 */
   tor_addr_parse(&r1->ipv6_addr, "1:2:3:4::");
@@ -761,7 +738,7 @@ test_dir_formats_rsa(void *arg)
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
                              * twice */
 
-  tt_str_op(buf,OP_EQ, buf2);
+  tt_str_op(buf, OP_EQ, buf2);
   tor_free(buf);
 
   setup_mock_configured_ports(r1->or_port, r1->dir_port);
@@ -773,7 +750,8 @@ test_dir_formats_rsa(void *arg)
 
   /* Now, try to parse buf */
   cp = buf;
-  rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
+  rp1 =
+      router_parse_entry_from_string((const char *)cp, NULL, 1, 0, NULL, NULL);
 
   CHECK_ROUTERINFO_CONSISTENCY(r1, rp1);
 
@@ -825,7 +803,8 @@ test_dir_formats_rsa(void *arg)
   /* Test that the signed ri is parseable */
   tt_assert(r1->cache_info.signed_descriptor_body);
   cp = r1->cache_info.signed_descriptor_body;
-  rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
+  rp1 =
+      router_parse_entry_from_string((const char *)cp, NULL, 1, 0, NULL, NULL);
 
   CHECK_ROUTERINFO_CONSISTENCY(r1, rp1);
 
@@ -836,7 +815,8 @@ test_dir_formats_rsa(void *arg)
   /* Test that the signed ei is parseable */
   tt_assert(e1->cache_info.signed_descriptor_body);
   cp = e1->cache_info.signed_descriptor_body;
-  ep1 = extrainfo_parse_entry_from_string((const char*)cp,NULL,1,NULL,NULL);
+  ep1 =
+      extrainfo_parse_entry_from_string((const char *)cp, NULL, 1, NULL, NULL);
 
   CHECK_EXTRAINFO_CONSISTENCY(r1, ep1);
 
@@ -844,7 +824,7 @@ test_dir_formats_rsa(void *arg)
 
   extrainfo_free(ep1);
 
- done:
+done:
   dirserv_free_fingerprint_list();
 
   tor_free(options->ContactInfo);
@@ -871,24 +851,24 @@ test_dir_formats_rsa(void *arg)
 }
 
 /* Check that the exit policy in rp2 is as expected. */
-#define CHECK_PARSED_EXIT_POLICY(rp2) \
-STMT_BEGIN \
-  tt_int_op(smartlist_len(rp2->exit_policy),OP_EQ, 2); \
- \
-  p = smartlist_get(rp2->exit_policy, 0); \
-  tt_int_op(p->policy_type,OP_EQ, ADDR_POLICY_ACCEPT); \
-  tt_assert(tor_addr_is_null(&p->addr)); \
-  tt_int_op(p->maskbits,OP_EQ, 0); \
-  tt_int_op(p->prt_min,OP_EQ, 80); \
-  tt_int_op(p->prt_max,OP_EQ, 80); \
- \
-  p = smartlist_get(rp2->exit_policy, 1); \
-  tt_int_op(p->policy_type,OP_EQ, ADDR_POLICY_REJECT); \
-  tt_assert(tor_addr_eq(&p->addr, &ex2->addr)); \
-  tt_int_op(p->maskbits,OP_EQ, 8); \
-  tt_int_op(p->prt_min,OP_EQ, 24); \
-  tt_int_op(p->prt_max,OP_EQ, 24); \
-STMT_END
+#define CHECK_PARSED_EXIT_POLICY(rp2)                     \
+  STMT_BEGIN                                              \
+    tt_int_op(smartlist_len(rp2->exit_policy), OP_EQ, 2); \
+                                                          \
+    p = smartlist_get(rp2->exit_policy, 0);               \
+    tt_int_op(p->policy_type, OP_EQ, ADDR_POLICY_ACCEPT); \
+    tt_assert(tor_addr_is_null(&p->addr));                \
+    tt_int_op(p->maskbits, OP_EQ, 0);                     \
+    tt_int_op(p->prt_min, OP_EQ, 80);                     \
+    tt_int_op(p->prt_max, OP_EQ, 80);                     \
+                                                          \
+    p = smartlist_get(rp2->exit_policy, 1);               \
+    tt_int_op(p->policy_type, OP_EQ, ADDR_POLICY_REJECT); \
+    tt_assert(tor_addr_eq(&p->addr, &ex2->addr));         \
+    tt_int_op(p->maskbits, OP_EQ, 8);                     \
+    tt_int_op(p->prt_min, OP_EQ, 24);                     \
+    tt_int_op(p->prt_max, OP_EQ, 24);                     \
+  STMT_END
 
 /** Run unit tests for router descriptor generation logic for a RSA + ed25519
  * router.
@@ -923,32 +903,27 @@ test_dir_formats_rsa_ed25519(void *arg)
 
   /* r2 is a RSA + ed25519 descriptor, with an exit policy, but no DirPort or
    * IPv6 */
-  r2 = basic_routerinfo_new("Fred", 0x0a030201u /* 10.3.2.1 */,
-                            9005, 0,
-                            3000, 3000, 3000,
-                            5,
-                            &r2_onion_pkey);
+  r2 = basic_routerinfo_new("Fred", 0x0a030201u /* 10.3.2.1 */, 9005, 0, 3000,
+                            3000, 3000, 5, &r2_onion_pkey);
 
   /* Fake just enough of an ntor key to get by */
   curve25519_keypair_t r2_onion_keypair;
   curve25519_keypair_generate(&r2_onion_keypair, 0);
-  r2->onion_curve25519_pkey = tor_memdup(&r2_onion_keypair.pubkey,
-                                         sizeof(curve25519_public_key_t));
+  r2->onion_curve25519_pkey =
+      tor_memdup(&r2_onion_keypair.pubkey, sizeof(curve25519_public_key_t));
 
   /* Now add relay ed25519 keys
    * We can't use init_mock_ed_keys() here, because the keys are seeded */
   ed25519_keypair_t kp1, kp2;
-  ed25519_secret_key_from_seed(&kp1.seckey,
-                          (const uint8_t*)"YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
+  ed25519_secret_key_from_seed(
+      &kp1.seckey, (const uint8_t *)"YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
   ed25519_public_key_generate(&kp1.pubkey, &kp1.seckey);
-  ed25519_secret_key_from_seed(&kp2.seckey,
-                          (const uint8_t*)"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+  ed25519_secret_key_from_seed(
+      &kp2.seckey, (const uint8_t *)"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
   ed25519_public_key_generate(&kp2.pubkey, &kp2.seckey);
-  r2->cache_info.signing_key_cert = tor_cert_create(&kp1,
-                                         CERT_TYPE_ID_SIGNING,
-                                         &kp2.pubkey,
-                                         now, 86400,
-                                         CERT_FLAG_INCLUDE_SIGNING_KEY);
+  r2->cache_info.signing_key_cert =
+      tor_cert_create(&kp1, CERT_TYPE_ID_SIGNING, &kp2.pubkey, now, 86400,
+                      CERT_FLAG_INCLUDE_SIGNING_KEY);
 
   /* Now add an exit policy */
   ex1 = tor_malloc_zero(sizeof(addr_policy_t));
@@ -958,7 +933,7 @@ test_dir_formats_rsa_ed25519(void *arg)
   ex1->maskbits = 0;
   ex1->prt_min = ex1->prt_max = 80;
   ex2->policy_type = ADDR_POLICY_REJECT;
-  tor_addr_from_ipv4h(&ex2->addr, 18<<24);
+  tor_addr_from_ipv4h(&ex2->addr, 18 << 24);
   ex2->maskbits = 8;
   ex2->prt_min = ex2->prt_max = 24;
 
@@ -969,8 +944,7 @@ test_dir_formats_rsa_ed25519(void *arg)
   /* Fake just enough of an ORPort to get by */
   setup_mock_configured_ports(r2->or_port, 0);
 
-  buf = router_dump_router_to_string(r2,
-                                     r2->identity_pkey, r2_onion_pkey,
+  buf = router_dump_router_to_string(r2, r2->identity_pkey, r2_onion_pkey,
                                      &r2_onion_keypair, &kp2);
   tt_assert(buf);
 
@@ -981,11 +955,10 @@ test_dir_formats_rsa_ed25519(void *arg)
   /* Synthesise a router descriptor, without the signatures */
   smartlist_add(chunks, get_new_router_line(r2));
 
-  smartlist_add_strdup(chunks,
-                       "identity-ed25519\n"
-                       "-----BEGIN ED25519 CERT-----\n");
+  smartlist_add_strdup(chunks, "identity-ed25519\n"
+                               "-----BEGIN ED25519 CERT-----\n");
   base64_encode(cert_buf, sizeof(cert_buf),
-                (const char*)r2->cache_info.signing_key_cert->encoded,
+                (const char *)r2->cache_info.signing_key_cert->encoded,
                 r2->cache_info.signing_key_cert->encoded_len,
                 BASE64_ENCODE_MULTILINE);
   smartlist_add_strdup(chunks, cert_buf);
@@ -993,7 +966,7 @@ test_dir_formats_rsa_ed25519(void *arg)
 
   smartlist_add_strdup(chunks, "master-key-ed25519 ");
   {
-    char k[ED25519_BASE64_LEN+1];
+    char k[ED25519_BASE64_LEN + 1];
     ed25519_public_to_base64(k, &r2->cache_info.signing_key_cert->signing_key);
     smartlist_add_strdup(chunks, k);
     smartlist_add_strdup(chunks, "\n");
@@ -1010,36 +983,32 @@ test_dir_formats_rsa_ed25519(void *arg)
   smartlist_add(chunks, get_new_signing_key_block(r2));
 
   int rsa_cc_len;
-  rsa_cc = make_tap_onion_key_crosscert(r2_onion_pkey,
-                                        &kp1.pubkey,
-                                        r2->identity_pkey,
-                                        &rsa_cc_len);
+  rsa_cc = make_tap_onion_key_crosscert(r2_onion_pkey, &kp1.pubkey,
+                                        r2->identity_pkey, &rsa_cc_len);
   tt_assert(rsa_cc);
-  base64_encode(cert_buf, sizeof(cert_buf), (char*)rsa_cc, rsa_cc_len,
+  base64_encode(cert_buf, sizeof(cert_buf), (char *)rsa_cc, rsa_cc_len,
                 BASE64_ENCODE_MULTILINE);
   smartlist_add_strdup(chunks, "onion-key-crosscert\n"
-                       "-----BEGIN CROSSCERT-----\n");
+                               "-----BEGIN CROSSCERT-----\n");
   smartlist_add_strdup(chunks, cert_buf);
   smartlist_add_strdup(chunks, "-----END CROSSCERT-----\n");
   int ntor_cc_sign;
   {
     tor_cert_t *ntor_cc = NULL;
-    ntor_cc = make_ntor_onion_key_crosscert(&r2_onion_keypair,
-                                          &kp1.pubkey,
-                                          r2->cache_info.published_on,
-                                          get_onion_key_lifetime(),
-                                          &ntor_cc_sign);
+    ntor_cc = make_ntor_onion_key_crosscert(
+        &r2_onion_keypair, &kp1.pubkey, r2->cache_info.published_on,
+        get_onion_key_lifetime(), &ntor_cc_sign);
     tt_assert(ntor_cc);
-    base64_encode(cert_buf, sizeof(cert_buf),
-                (char*)ntor_cc->encoded, ntor_cc->encoded_len,
-                BASE64_ENCODE_MULTILINE);
+    base64_encode(cert_buf, sizeof(cert_buf), (char *)ntor_cc->encoded,
+                  ntor_cc->encoded_len, BASE64_ENCODE_MULTILINE);
     tor_cert_free(ntor_cc);
   }
   smartlist_add_asprintf(chunks,
-               "ntor-onion-key-crosscert %d\n"
-               "-----BEGIN ED25519 CERT-----\n"
-               "%s"
-               "-----END ED25519 CERT-----\n", ntor_cc_sign, cert_buf);
+                         "ntor-onion-key-crosscert %d\n"
+                         "-----BEGIN ED25519 CERT-----\n"
+                         "%s"
+                         "-----END ED25519 CERT-----\n",
+                         ntor_cc_sign, cert_buf);
 
   smartlist_add_strdup(chunks, "hidden-service-dir\n");
 
@@ -1072,13 +1041,13 @@ test_dir_formats_rsa_ed25519(void *arg)
 
   /* Now, try to parse buf */
   cp = buf;
-  rp2 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
+  rp2 =
+      router_parse_entry_from_string((const char *)cp, NULL, 1, 0, NULL, NULL);
 
   CHECK_ROUTERINFO_CONSISTENCY(r2, rp2);
 
-  tt_mem_op(rp2->onion_curve25519_pkey->public_key,OP_EQ,
-             r2->onion_curve25519_pkey->public_key,
-             CURVE25519_PUBKEY_LEN);
+  tt_mem_op(rp2->onion_curve25519_pkey->public_key, OP_EQ,
+            r2->onion_curve25519_pkey->public_key, CURVE25519_PUBKEY_LEN);
 
   CHECK_PARSED_EXIT_POLICY(rp2);
 
@@ -1146,13 +1115,13 @@ test_dir_formats_rsa_ed25519(void *arg)
   /* Test that the signed ri is parseable */
   tt_assert(r2->cache_info.signed_descriptor_body);
   cp = r2->cache_info.signed_descriptor_body;
-  rp2 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
+  rp2 =
+      router_parse_entry_from_string((const char *)cp, NULL, 1, 0, NULL, NULL);
 
   CHECK_ROUTERINFO_CONSISTENCY(r2, rp2);
 
-  tt_mem_op(rp2->onion_curve25519_pkey->public_key,OP_EQ,
-            r2->onion_curve25519_pkey->public_key,
-            CURVE25519_PUBKEY_LEN);
+  tt_mem_op(rp2->onion_curve25519_pkey->public_key, OP_EQ,
+            r2->onion_curve25519_pkey->public_key, CURVE25519_PUBKEY_LEN);
 
   CHECK_PARSED_EXIT_POLICY(rp2);
 
@@ -1161,7 +1130,8 @@ test_dir_formats_rsa_ed25519(void *arg)
   /* Test that the signed ei is parseable */
   tt_assert(e2->cache_info.signed_descriptor_body);
   cp = e2->cache_info.signed_descriptor_body;
-  ep2 = extrainfo_parse_entry_from_string((const char*)cp,NULL,1,NULL,NULL);
+  ep2 =
+      extrainfo_parse_entry_from_string((const char *)cp, NULL, 1, NULL, NULL);
 
   CHECK_EXTRAINFO_CONSISTENCY(r2, ep2);
 
@@ -1169,7 +1139,7 @@ test_dir_formats_rsa_ed25519(void *arg)
 
   extrainfo_free(ep2);
 
- done:
+done:
   dirserv_free_fingerprint_list();
 
   tor_free(options->Nickname);
@@ -1201,16 +1171,16 @@ test_dir_formats_rsa_ed25519(void *arg)
 static void
 test_dir_routerinfo_parsing(void *arg)
 {
-  (void) arg;
+  (void)arg;
 
   int again;
   routerinfo_t *ri = NULL;
 
-#define CHECK_OK(s)                                                     \
-  do {                                                                  \
-    routerinfo_free(ri);                                                \
-    ri = router_parse_entry_from_string((s), NULL, 0, 0, NULL, NULL);   \
-    tt_assert(ri);                                                      \
+#define CHECK_OK(s)                                                   \
+  do {                                                                \
+    routerinfo_free(ri);                                              \
+    ri = router_parse_entry_from_string((s), NULL, 0, 0, NULL, NULL); \
+    tt_assert(ri);                                                    \
   } while (0)
 #define CHECK_FAIL(s, againval)                                         \
   do {                                                                  \
@@ -1218,7 +1188,7 @@ test_dir_routerinfo_parsing(void *arg)
     again = 999;                                                        \
     ri = router_parse_entry_from_string((s), NULL, 0, 0, NULL, &again); \
     tt_assert(ri == NULL);                                              \
-    tt_int_op(again, OP_EQ, (againval));                                   \
+    tt_int_op(again, OP_EQ, (againval));                                \
   } while (0)
 
   CHECK_OK(EX_RI_MINIMAL);
@@ -1235,13 +1205,13 @@ test_dir_routerinfo_parsing(void *arg)
   routerinfo_free(ri);
 
   /* bad annotations prepended. */
-  ri = router_parse_entry_from_string(EX_RI_MINIMAL,
-                                      NULL, 0, 0, "@purpose\n", NULL);
+  ri = router_parse_entry_from_string(EX_RI_MINIMAL, NULL, 0, 0, "@purpose\n",
+                                      NULL);
   tt_ptr_op(ri, OP_EQ, NULL);
 
   /* bad annotations on router. */
-  ri = router_parse_entry_from_string("@purpose\nrouter x\n", NULL, 0, 1,
-                                      NULL, NULL);
+  ri = router_parse_entry_from_string("@purpose\nrouter x\n", NULL, 0, 1, NULL,
+                                      NULL);
   tt_ptr_op(ri, OP_EQ, NULL);
 
   /* unwanted annotations on router. */
@@ -1250,8 +1220,7 @@ test_dir_routerinfo_parsing(void *arg)
   tt_ptr_op(ri, OP_EQ, NULL);
 
   /* No signature. */
-  ri = router_parse_entry_from_string("router x\n", NULL, 0, 0,
-                                      NULL, NULL);
+  ri = router_parse_entry_from_string("router x\n", NULL, 0, 0, NULL, NULL);
   tt_ptr_op(ri, OP_EQ, NULL);
 
   /* Not a router */
@@ -1309,7 +1278,7 @@ test_dir_routerinfo_parsing(void *arg)
 
 #undef CHECK_FAIL
 #undef CHECK_OK
- done:
+done:
   routerinfo_free(ri);
 }
 
@@ -1324,31 +1293,31 @@ routerinfo_free_wrapper_(void *arg)
 static void
 test_dir_extrainfo_parsing(void *arg)
 {
-  (void) arg;
+  (void)arg;
 
-#define CHECK_OK(s)                                                     \
-  do {                                                                  \
-    extrainfo_free(ei);                                                 \
-    ei = extrainfo_parse_entry_from_string((s), NULL, 0, map, NULL);    \
-    tt_assert(ei);                                                      \
+#define CHECK_OK(s)                                                  \
+  do {                                                               \
+    extrainfo_free(ei);                                              \
+    ei = extrainfo_parse_entry_from_string((s), NULL, 0, map, NULL); \
+    tt_assert(ei);                                                   \
   } while (0)
-#define CHECK_FAIL(s, againval)                                         \
-  do {                                                                  \
-    extrainfo_free(ei);                                                 \
-    again = 999;                                                        \
-    ei = extrainfo_parse_entry_from_string((s), NULL, 0, map, &again);  \
-    tt_assert(ei == NULL);                                              \
-    tt_int_op(again, OP_EQ, (againval));                                   \
+#define CHECK_FAIL(s, againval)                                        \
+  do {                                                                 \
+    extrainfo_free(ei);                                                \
+    again = 999;                                                       \
+    ei = extrainfo_parse_entry_from_string((s), NULL, 0, map, &again); \
+    tt_assert(ei == NULL);                                             \
+    tt_int_op(again, OP_EQ, (againval));                               \
   } while (0)
-#define ADD(name)                                                       \
-  do {                                                                  \
-    ri = tor_malloc_zero(sizeof(routerinfo_t));                         \
-    crypto_pk_t *pk = ri->identity_pkey = crypto_pk_new();              \
-    tt_assert(! crypto_pk_read_public_key_from_string(pk,               \
-                                      name##_KEY, strlen(name##_KEY))); \
-    tt_int_op(20,OP_EQ,base16_decode(d, 20, name##_FP, strlen(name##_FP))); \
-    digestmap_set((digestmap_t*)map, d, ri);                            \
-    ri = NULL;                                                          \
+#define ADD(name)                                                             \
+  do {                                                                        \
+    ri = tor_malloc_zero(sizeof(routerinfo_t));                               \
+    crypto_pk_t *pk = ri->identity_pkey = crypto_pk_new();                    \
+    tt_assert(! crypto_pk_read_public_key_from_string(pk, name##_KEY,         \
+                                                      strlen(name##_KEY)));   \
+    tt_int_op(20, OP_EQ, base16_decode(d, 20, name##_FP, strlen(name##_FP))); \
+    digestmap_set((digestmap_t *)map, d, ri);                                 \
+    ri = NULL;                                                                \
   } while (0)
 
   routerinfo_t *ri = NULL;
@@ -1390,38 +1359,38 @@ test_dir_extrainfo_parsing(void *arg)
   CHECK_OK(EX_EI_GOOD_ED_EI);
   tt_ptr_op(ei->pending_sig, OP_EQ, NULL);
 
-  CHECK_FAIL(EX_EI_BAD_SIG1,1);
-  CHECK_FAIL(EX_EI_BAD_SIG2,1);
-  CHECK_FAIL(EX_EI_BAD_SIG3,1);
-  CHECK_FAIL(EX_EI_BAD_FP,0);
-  CHECK_FAIL(EX_EI_BAD_NICKNAME,0);
-  CHECK_FAIL(EX_EI_BAD_TOKENS,0);
-  CHECK_FAIL(EX_EI_BAD_START,0);
-  CHECK_FAIL(EX_EI_BAD_PUBLISHED,0);
+  CHECK_FAIL(EX_EI_BAD_SIG1, 1);
+  CHECK_FAIL(EX_EI_BAD_SIG2, 1);
+  CHECK_FAIL(EX_EI_BAD_SIG3, 1);
+  CHECK_FAIL(EX_EI_BAD_FP, 0);
+  CHECK_FAIL(EX_EI_BAD_NICKNAME, 0);
+  CHECK_FAIL(EX_EI_BAD_TOKENS, 0);
+  CHECK_FAIL(EX_EI_BAD_START, 0);
+  CHECK_FAIL(EX_EI_BAD_PUBLISHED, 0);
 
-  CHECK_FAIL(EX_EI_ED_MISSING_SIG,0);
-  CHECK_FAIL(EX_EI_ED_MISSING_CERT,0);
-  CHECK_FAIL(EX_EI_ED_BAD_CERT1,0);
-  CHECK_FAIL(EX_EI_ED_BAD_CERT2,0);
-  CHECK_FAIL(EX_EI_ED_BAD_SIG1,0);
-  CHECK_FAIL(EX_EI_ED_BAD_SIG2,0);
-  CHECK_FAIL(EX_EI_ED_MISPLACED_CERT,0);
-  CHECK_FAIL(EX_EI_ED_MISPLACED_SIG,0);
+  CHECK_FAIL(EX_EI_ED_MISSING_SIG, 0);
+  CHECK_FAIL(EX_EI_ED_MISSING_CERT, 0);
+  CHECK_FAIL(EX_EI_ED_BAD_CERT1, 0);
+  CHECK_FAIL(EX_EI_ED_BAD_CERT2, 0);
+  CHECK_FAIL(EX_EI_ED_BAD_SIG1, 0);
+  CHECK_FAIL(EX_EI_ED_BAD_SIG2, 0);
+  CHECK_FAIL(EX_EI_ED_MISPLACED_CERT, 0);
+  CHECK_FAIL(EX_EI_ED_MISPLACED_SIG, 0);
 
 #undef CHECK_OK
 #undef CHECK_FAIL
 
- done:
+done:
   escaped(NULL);
   extrainfo_free(ei);
   routerinfo_free(ri);
-  digestmap_free_((digestmap_t*)map, routerinfo_free_wrapper_);
+  digestmap_free_((digestmap_t *)map, routerinfo_free_wrapper_);
 }
 
 static void
 test_dir_parse_router_list(void *arg)
 {
-  (void) arg;
+  (void)arg;
   smartlist_t *invalid = smartlist_new();
   smartlist_t *dest = smartlist_new();
   smartlist_t *chunks = smartlist_new();
@@ -1433,33 +1402,33 @@ test_dir_parse_router_list(void *arg)
   routerinfo_t *ri = NULL;
   char d[DIGEST_LEN];
 
-  smartlist_add_strdup(chunks, EX_RI_MINIMAL);     // ri 0
-  smartlist_add_strdup(chunks, EX_RI_BAD_PORTS);   // bad ri 0
-  smartlist_add_strdup(chunks, EX_EI_MAXIMAL);     // ei 0
-  smartlist_add_strdup(chunks, EX_EI_BAD_SIG2);    // bad ei --
-  smartlist_add_strdup(chunks, EX_EI_BAD_NICKNAME);// bad ei 0
-  smartlist_add_strdup(chunks, EX_RI_BAD_SIG1);    // bad ri --
-  smartlist_add_strdup(chunks, EX_EI_BAD_PUBLISHED);  // bad ei 1
-  smartlist_add_strdup(chunks, EX_RI_MAXIMAL);     // ri 1
-  smartlist_add_strdup(chunks, EX_RI_BAD_FAMILY);  // bad ri 1
-  smartlist_add_strdup(chunks, EX_EI_MINIMAL);     // ei 1
+  smartlist_add_strdup(chunks, EX_RI_MINIMAL); // ri 0
+  smartlist_add_strdup(chunks, EX_RI_BAD_PORTS); // bad ri 0
+  smartlist_add_strdup(chunks, EX_EI_MAXIMAL); // ei 0
+  smartlist_add_strdup(chunks, EX_EI_BAD_SIG2); // bad ei --
+  smartlist_add_strdup(chunks, EX_EI_BAD_NICKNAME); // bad ei 0
+  smartlist_add_strdup(chunks, EX_RI_BAD_SIG1); // bad ri --
+  smartlist_add_strdup(chunks, EX_EI_BAD_PUBLISHED); // bad ei 1
+  smartlist_add_strdup(chunks, EX_RI_MAXIMAL); // ri 1
+  smartlist_add_strdup(chunks, EX_RI_BAD_FAMILY); // bad ri 1
+  smartlist_add_strdup(chunks, EX_EI_MINIMAL); // ei 1
 
   list = smartlist_join_strings(chunks, "", 0, NULL);
 
   /* First, parse the routers. */
   cp = list;
-  tt_int_op(0,OP_EQ,
-            router_parse_list_from_string(&cp, NULL, dest, SAVED_NOWHERE,
-                                          0, 0, NULL, invalid));
+  tt_int_op(0, OP_EQ,
+            router_parse_list_from_string(&cp, NULL, dest, SAVED_NOWHERE, 0, 0,
+                                          NULL, invalid));
   tt_int_op(2, OP_EQ, smartlist_len(dest));
   tt_ptr_op(cp, OP_EQ, list + strlen(list));
 
   routerinfo_t *r = smartlist_get(dest, 0);
-  tt_mem_op(r->cache_info.signed_descriptor_body, OP_EQ,
-            EX_RI_MINIMAL, strlen(EX_RI_MINIMAL));
+  tt_mem_op(r->cache_info.signed_descriptor_body, OP_EQ, EX_RI_MINIMAL,
+            strlen(EX_RI_MINIMAL));
   r = smartlist_get(dest, 1);
-  tt_mem_op(r->cache_info.signed_descriptor_body, OP_EQ,
-            EX_RI_MAXIMAL, strlen(EX_RI_MAXIMAL));
+  tt_mem_op(r->cache_info.signed_descriptor_body, OP_EQ, EX_RI_MAXIMAL,
+            strlen(EX_RI_MAXIMAL));
 
   tt_int_op(2, OP_EQ, smartlist_len(invalid));
   test_memeq_hex(smartlist_get(invalid, 0),
@@ -1475,22 +1444,22 @@ test_dir_parse_router_list(void *arg)
 
   /* And check extrainfos. */
   dest_has_ri = 0;
-  map = (digestmap_t*)router_get_routerlist()->identity_map;
+  map = (digestmap_t *)router_get_routerlist()->identity_map;
   ADD(EX_EI_MINIMAL);
   ADD(EX_EI_MAXIMAL);
   ADD(EX_EI_BAD_NICKNAME);
   ADD(EX_EI_BAD_PUBLISHED);
   cp = list;
-  tt_int_op(0,OP_EQ,
-            router_parse_list_from_string(&cp, NULL, dest, SAVED_NOWHERE,
-                                          1, 0, NULL, invalid));
+  tt_int_op(0, OP_EQ,
+            router_parse_list_from_string(&cp, NULL, dest, SAVED_NOWHERE, 1, 0,
+                                          NULL, invalid));
   tt_int_op(2, OP_EQ, smartlist_len(dest));
   extrainfo_t *e = smartlist_get(dest, 0);
-  tt_mem_op(e->cache_info.signed_descriptor_body, OP_EQ,
-            EX_EI_MAXIMAL, strlen(EX_EI_MAXIMAL));
+  tt_mem_op(e->cache_info.signed_descriptor_body, OP_EQ, EX_EI_MAXIMAL,
+            strlen(EX_EI_MAXIMAL));
   e = smartlist_get(dest, 1);
-  tt_mem_op(e->cache_info.signed_descriptor_body, OP_EQ,
-            EX_EI_MINIMAL, strlen(EX_EI_MINIMAL));
+  tt_mem_op(e->cache_info.signed_descriptor_body, OP_EQ, EX_EI_MINIMAL,
+            strlen(EX_EI_MINIMAL));
 
   tt_int_op(2, OP_EQ, smartlist_len(invalid));
   test_memeq_hex(smartlist_get(invalid, 0),
@@ -1498,7 +1467,7 @@ test_dir_parse_router_list(void *arg)
   test_memeq_hex(smartlist_get(invalid, 1),
                  "f61efd2a7f4531f3687a9043e0de90a862ec64ba");
 
- done:
+done:
   tor_free(list);
   if (dest_has_ri)
     SMARTLIST_FOREACH(dest, routerinfo_t *, rt, routerinfo_free(rt));
@@ -1511,9 +1480,9 @@ test_dir_parse_router_list(void *arg)
   smartlist_free(chunks);
   routerinfo_free(ri);
   if (map) {
-    digestmap_free_((digestmap_t*)map, routerinfo_free_wrapper_);
+    digestmap_free_((digestmap_t *)map, routerinfo_free_wrapper_);
     router_get_routerlist()->identity_map =
-      (struct digest_ri_map_t*)digestmap_new();
+        (struct digest_ri_map_t *)digestmap_new();
   }
   tor_free(mem_op_hex_tmp);
 
@@ -1534,19 +1503,19 @@ static download_status_t *
 mock_router_get_dl_status(const char *d)
 {
   ++mock_router_get_dl_status_calls;
-  char hex[HEX_DIGEST_LEN+1];
+  char hex[HEX_DIGEST_LEN + 1];
   base16_encode(hex, sizeof(hex), d, DIGEST_LEN);
-  if (!strcmp(hex, "3E31D19A69EB719C00B02EC60D13356E3F7A3452")) {
+  if (! strcmp(hex, "3E31D19A69EB719C00B02EC60D13356E3F7A3452")) {
     return &dls_minimal;
-  } else if (!strcmp(hex, "581D8A368A0FA854ECDBFAB841D88B3F1B004038")) {
+  } else if (! strcmp(hex, "581D8A368A0FA854ECDBFAB841D88B3F1B004038")) {
     return &dls_maximal;
-  } else if (!strcmp(hex, "2578AE227C6116CDE29B3F0E95709B9872DEE5F1")) {
+  } else if (! strcmp(hex, "2578AE227C6116CDE29B3F0E95709B9872DEE5F1")) {
     return &dls_bad_fingerprint;
-  } else if (!strcmp(hex, "16D387D3A58F7DB3CF46638F8D0B90C45C7D769C")) {
+  } else if (! strcmp(hex, "16D387D3A58F7DB3CF46638F8D0B90C45C7D769C")) {
     return &dls_bad_sig2;
-  } else if (!strcmp(hex, "AB9EEAA95E7D45740185B4E519C76EAD756277A9")) {
+  } else if (! strcmp(hex, "AB9EEAA95E7D45740185B4E519C76EAD756277A9")) {
     return &dls_bad_ports;
-  } else if (!strcmp(hex, "A0CC2CEFAD59DBF19F468BFEE60E0868C804B422")) {
+  } else if (! strcmp(hex, "A0CC2CEFAD59DBF19F468BFEE60E0868C804B422")) {
     return &dls_bad_tokens;
   } else {
     ++mock_router_get_dl_status_unrecognized;
@@ -1557,7 +1526,7 @@ mock_router_get_dl_status(const char *d)
 static void
 test_dir_load_routers(void *arg)
 {
-  (void) arg;
+  (void)arg;
   smartlist_t *chunks = smartlist_new();
   smartlist_t *wanted = smartlist_new();
   char buf[DIGEST_LEN];
@@ -1566,8 +1535,8 @@ test_dir_load_routers(void *arg)
 
 #define ADD(str)                                                        \
   do {                                                                  \
-    tt_int_op(0,OP_EQ,router_get_router_hash(str, strlen(str), buf));      \
-    smartlist_add_strdup(wanted, hex_str(buf, DIGEST_LEN));        \
+    tt_int_op(0, OP_EQ, router_get_router_hash(str, strlen(str), buf)); \
+    smartlist_add_strdup(wanted, hex_str(buf, DIGEST_LEN));             \
   } while (0)
 
   MOCK(router_get_dl_status_by_descriptor_digest, mock_router_get_dl_status);
@@ -1595,7 +1564,7 @@ test_dir_load_routers(void *arg)
 
   /* The "maximal" router was added. */
   /* "minimal" was not. */
-  tt_int_op(smartlist_len(router_get_routerlist()->routers),OP_EQ,1);
+  tt_int_op(smartlist_len(router_get_routerlist()->routers), OP_EQ, 1);
   routerinfo_t *r = smartlist_get(router_get_routerlist()->routers, 0);
   test_memeq_hex(r->cache_info.signed_descriptor_digest,
                  "581D8A368A0FA854ECDBFAB841D88B3F1B004038");
@@ -1621,7 +1590,7 @@ test_dir_load_routers(void *arg)
 
 #undef ADD
 
- done:
+done:
   tor_free(mem_op_hex_tmp);
   UNMOCK(router_get_dl_status_by_descriptor_digest);
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
@@ -1643,20 +1612,19 @@ static signed_descriptor_t sd_ei_bad_sig2;
 static signed_descriptor_t *
 mock_get_by_ei_desc_digest(const char *d)
 {
-
   ++mock_get_by_ei_dd_calls;
-  char hex[HEX_DIGEST_LEN+1];
+  char hex[HEX_DIGEST_LEN + 1];
   base16_encode(hex, sizeof(hex), d, DIGEST_LEN);
 
-  if (!strcmp(hex, "11E0EDF526950739F7769810FCACAB8C882FAEEE")) {
+  if (! strcmp(hex, "11E0EDF526950739F7769810FCACAB8C882FAEEE")) {
     return &sd_ei_minimal;
-  } else if (!strcmp(hex, "47803B02A0E70E9E8BDA226CB1D74DE354D67DFF")) {
+  } else if (! strcmp(hex, "47803B02A0E70E9E8BDA226CB1D74DE354D67DFF")) {
     return &sd_ei_maximal;
-  } else if (!strcmp(hex, "D5DF4AA62EE9FFC9543D41150C9864908E0390AF")) {
+  } else if (! strcmp(hex, "D5DF4AA62EE9FFC9543D41150C9864908E0390AF")) {
     return &sd_ei_bad_nickname;
-  } else if (!strcmp(hex, "16D387D3A58F7DB3CF46638F8D0B90C45C7D769C")) {
+  } else if (! strcmp(hex, "16D387D3A58F7DB3CF46638F8D0B90C45C7D769C")) {
     return &sd_ei_bad_sig2;
-  } else if (!strcmp(hex, "9D90F8C42955BBC57D54FB05E54A3F083AF42E8B")) {
+  } else if (! strcmp(hex, "9D90F8C42955BBC57D54FB05E54A3F083AF42E8B")) {
     return &sd_ei_bad_tokens;
   } else {
     ++mock_get_by_ei_dd_unrecognized;
@@ -1667,11 +1635,11 @@ mock_get_by_ei_desc_digest(const char *d)
 static signed_descriptor_t *
 mock_ei_get_by_ei_digest(const char *d)
 {
-  char hex[HEX_DIGEST_LEN+1];
+  char hex[HEX_DIGEST_LEN + 1];
   base16_encode(hex, sizeof(hex), d, DIGEST_LEN);
   signed_descriptor_t *sd = &sd_ei_minimal;
 
-  if (!strcmp(hex, "11E0EDF526950739F7769810FCACAB8C882FAEEE")) {
+  if (! strcmp(hex, "11E0EDF526950739F7769810FCACAB8C882FAEEE")) {
     sd->signed_descriptor_body = (char *)EX_EI_MINIMAL;
     sd->signed_descriptor_len = sizeof(EX_EI_MINIMAL);
     sd->annotations_len = 0;
@@ -1685,8 +1653,8 @@ static smartlist_t *mock_ei_insert_list = NULL;
 static was_router_added_t
 mock_ei_insert(routerlist_t *rl, extrainfo_t *ei, int warn_if_incompatible)
 {
-  (void) rl;
-  (void) warn_if_incompatible;
+  (void)rl;
+  (void)warn_if_incompatible;
   smartlist_add(mock_ei_insert_list, ei);
   return ROUTER_ADDED_SUCCESSFULLY;
 }
@@ -1694,17 +1662,17 @@ mock_ei_insert(routerlist_t *rl, extrainfo_t *ei, int warn_if_incompatible)
 static void
 test_dir_load_extrainfo(void *arg)
 {
-  (void) arg;
+  (void)arg;
   smartlist_t *chunks = smartlist_new();
   smartlist_t *wanted = smartlist_new();
   char buf[DIGEST_LEN];
   char *mem_op_hex_tmp = NULL;
   char *list = NULL;
 
-#define ADD(str)                                                        \
-  do {                                                                  \
-    tt_int_op(0,OP_EQ,router_get_extrainfo_hash(str, strlen(str), buf));   \
-    smartlist_add_strdup(wanted, hex_str(buf, DIGEST_LEN));        \
+#define ADD(str)                                                           \
+  do {                                                                     \
+    tt_int_op(0, OP_EQ, router_get_extrainfo_hash(str, strlen(str), buf)); \
+    smartlist_add_strdup(wanted, hex_str(buf, DIGEST_LEN));                \
   } while (0)
 
   mock_ei_insert_list = smartlist_new();
@@ -1730,7 +1698,7 @@ test_dir_load_extrainfo(void *arg)
   /* The "maximal" router was added. */
   /* "minimal" was also added, even though we didn't ask for it, since
    * that's what we do with extrainfos. */
-  tt_int_op(smartlist_len(mock_ei_insert_list),OP_EQ,2);
+  tt_int_op(smartlist_len(mock_ei_insert_list), OP_EQ, 2);
 
   extrainfo_t *e = smartlist_get(mock_ei_insert_list, 0);
   test_memeq_hex(e->cache_info.signed_descriptor_digest,
@@ -1759,7 +1727,7 @@ test_dir_load_extrainfo(void *arg)
 
 #undef ADD
 
- done:
+done:
   tor_free(mem_op_hex_tmp);
   UNMOCK(router_get_by_extrainfo_digest);
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
@@ -1778,25 +1746,27 @@ test_dir_getinfo_extra(void *arg)
 
   (void)arg;
   MOCK(extrainfo_get_by_descriptor_digest, mock_ei_get_by_ei_digest);
-  r = getinfo_helper_dir(NULL, "extra-info/digest/"
-                         "11E0EDF526950739F7769810FCACAB8C882FAEEE", &answer,
-                         &errmsg);
+  r = getinfo_helper_dir(NULL,
+                         "extra-info/digest/"
+                         "11E0EDF526950739F7769810FCACAB8C882FAEEE",
+                         &answer, &errmsg);
   tt_int_op(0, OP_EQ, r);
   tt_ptr_op(NULL, OP_EQ, errmsg);
   tt_str_op(answer, OP_EQ, EX_EI_MINIMAL);
   tor_free(answer);
 
   answer = NULL;
-  r = getinfo_helper_dir(NULL, "extra-info/digest/"
-                         "NOTAVALIDHEXSTRINGNOTAVALIDHEXSTRINGNOTA", &answer,
-                         &errmsg);
+  r = getinfo_helper_dir(NULL,
+                         "extra-info/digest/"
+                         "NOTAVALIDHEXSTRINGNOTAVALIDHEXSTRINGNOTA",
+                         &answer, &errmsg);
   tt_int_op(0, OP_EQ, r);
   /* getinfo_helper_dir() should maybe return an error here but doesn't */
   tt_ptr_op(NULL, OP_EQ, errmsg);
   /* In any case, there should be no answer for an invalid hex string. */
   tt_ptr_op(NULL, OP_EQ, answer);
 
- done:
+done:
   UNMOCK(extrainfo_get_by_descriptor_digest);
 }
 
@@ -1807,44 +1777,44 @@ test_dir_versions(void *arg)
 
   /* Try out version parsing functionality */
   (void)arg;
-  tt_int_op(0,OP_EQ, tor_version_parse("0.3.4pre2-cvs", &ver1));
-  tt_int_op(0,OP_EQ, ver1.major);
-  tt_int_op(3,OP_EQ, ver1.minor);
-  tt_int_op(4,OP_EQ, ver1.micro);
-  tt_int_op(VER_PRE,OP_EQ, ver1.status);
-  tt_int_op(2,OP_EQ, ver1.patchlevel);
-  tt_int_op(0,OP_EQ, tor_version_parse("0.3.4rc1", &ver1));
-  tt_int_op(0,OP_EQ, ver1.major);
-  tt_int_op(3,OP_EQ, ver1.minor);
-  tt_int_op(4,OP_EQ, ver1.micro);
-  tt_int_op(VER_RC,OP_EQ, ver1.status);
-  tt_int_op(1,OP_EQ, ver1.patchlevel);
-  tt_int_op(0,OP_EQ, tor_version_parse("1.3.4", &ver1));
-  tt_int_op(1,OP_EQ, ver1.major);
-  tt_int_op(3,OP_EQ, ver1.minor);
-  tt_int_op(4,OP_EQ, ver1.micro);
-  tt_int_op(VER_RELEASE,OP_EQ, ver1.status);
-  tt_int_op(0,OP_EQ, ver1.patchlevel);
-  tt_int_op(0,OP_EQ, tor_version_parse("1.3.4.999", &ver1));
-  tt_int_op(1,OP_EQ, ver1.major);
-  tt_int_op(3,OP_EQ, ver1.minor);
-  tt_int_op(4,OP_EQ, ver1.micro);
-  tt_int_op(VER_RELEASE,OP_EQ, ver1.status);
-  tt_int_op(999,OP_EQ, ver1.patchlevel);
-  tt_int_op(0,OP_EQ, tor_version_parse("0.1.2.4-alpha", &ver1));
-  tt_int_op(0,OP_EQ, ver1.major);
-  tt_int_op(1,OP_EQ, ver1.minor);
-  tt_int_op(2,OP_EQ, ver1.micro);
-  tt_int_op(4,OP_EQ, ver1.patchlevel);
-  tt_int_op(VER_RELEASE,OP_EQ, ver1.status);
-  tt_str_op("alpha",OP_EQ, ver1.status_tag);
-  tt_int_op(0,OP_EQ, tor_version_parse("0.1.2.4", &ver1));
-  tt_int_op(0,OP_EQ, ver1.major);
-  tt_int_op(1,OP_EQ, ver1.minor);
-  tt_int_op(2,OP_EQ, ver1.micro);
-  tt_int_op(4,OP_EQ, ver1.patchlevel);
-  tt_int_op(VER_RELEASE,OP_EQ, ver1.status);
-  tt_str_op("",OP_EQ, ver1.status_tag);
+  tt_int_op(0, OP_EQ, tor_version_parse("0.3.4pre2-cvs", &ver1));
+  tt_int_op(0, OP_EQ, ver1.major);
+  tt_int_op(3, OP_EQ, ver1.minor);
+  tt_int_op(4, OP_EQ, ver1.micro);
+  tt_int_op(VER_PRE, OP_EQ, ver1.status);
+  tt_int_op(2, OP_EQ, ver1.patchlevel);
+  tt_int_op(0, OP_EQ, tor_version_parse("0.3.4rc1", &ver1));
+  tt_int_op(0, OP_EQ, ver1.major);
+  tt_int_op(3, OP_EQ, ver1.minor);
+  tt_int_op(4, OP_EQ, ver1.micro);
+  tt_int_op(VER_RC, OP_EQ, ver1.status);
+  tt_int_op(1, OP_EQ, ver1.patchlevel);
+  tt_int_op(0, OP_EQ, tor_version_parse("1.3.4", &ver1));
+  tt_int_op(1, OP_EQ, ver1.major);
+  tt_int_op(3, OP_EQ, ver1.minor);
+  tt_int_op(4, OP_EQ, ver1.micro);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_int_op(0, OP_EQ, ver1.patchlevel);
+  tt_int_op(0, OP_EQ, tor_version_parse("1.3.4.999", &ver1));
+  tt_int_op(1, OP_EQ, ver1.major);
+  tt_int_op(3, OP_EQ, ver1.minor);
+  tt_int_op(4, OP_EQ, ver1.micro);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_int_op(999, OP_EQ, ver1.patchlevel);
+  tt_int_op(0, OP_EQ, tor_version_parse("0.1.2.4-alpha", &ver1));
+  tt_int_op(0, OP_EQ, ver1.major);
+  tt_int_op(1, OP_EQ, ver1.minor);
+  tt_int_op(2, OP_EQ, ver1.micro);
+  tt_int_op(4, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("alpha", OP_EQ, ver1.status_tag);
+  tt_int_op(0, OP_EQ, tor_version_parse("0.1.2.4", &ver1));
+  tt_int_op(0, OP_EQ, ver1.major);
+  tt_int_op(1, OP_EQ, ver1.minor);
+  tt_int_op(2, OP_EQ, ver1.micro);
+  tt_int_op(4, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("", OP_EQ, ver1.status_tag);
 
   tt_int_op(0, OP_EQ, tor_version_parse("10.1", &ver1));
   tt_int_op(10, OP_EQ, ver1.major);
@@ -1937,17 +1907,17 @@ test_dir_versions(void *arg)
   tt_int_op(-1, OP_EQ, tor_version_parse("0.\r0.0", &ver1));
   tt_int_op(-1, OP_EQ, tor_version_parse("0. 0.0", &ver1));
 
-#define tt_versionstatus_op(vs1, op, vs2)                               \
-  tt_assert_test_type(vs1,vs2,#vs1" "#op" "#vs2,version_status_t,       \
-                      (val1_ op val2_),"%d",TT_EXIT_TEST_FUNCTION)
-#define test_v_i_o(val, ver, lst)                                       \
+#define tt_versionstatus_op(vs1, op, vs2)                                \
+  tt_assert_test_type(vs1, vs2, #vs1 " " #op " " #vs2, version_status_t, \
+                      (val1_ op val2_), "%d", TT_EXIT_TEST_FUNCTION)
+#define test_v_i_o(val, ver, lst) \
   tt_versionstatus_op(val, OP_EQ, tor_version_is_obsolete(ver, lst))
 
   /* make sure tor_version_is_obsolete() works */
   test_v_i_o(VS_OLD, "0.0.1", "Tor 0.0.2");
   test_v_i_o(VS_OLD, "0.0.1", "0.0.2, Tor 0.0.3");
   test_v_i_o(VS_OLD, "0.0.1", "0.0.2,Tor 0.0.3");
-  test_v_i_o(VS_OLD, "0.0.1","0.0.3,BetterTor 0.0.1");
+  test_v_i_o(VS_OLD, "0.0.1", "0.0.3,BetterTor 0.0.1");
   test_v_i_o(VS_RECOMMENDED, "0.0.2", "Tor 0.0.2,Tor 0.0.3");
   test_v_i_o(VS_NEW_IN_SERIES, "0.0.2", "Tor 0.0.2pre1,Tor 0.0.3");
   test_v_i_o(VS_OLD, "0.0.2", "Tor 0.0.2.1,Tor 0.0.3");
@@ -1967,123 +1937,128 @@ test_dir_versions(void *arg)
   test_v_i_o(VS_UNRECOMMENDED, "0.1.0.1",
              "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0");
   /* On list, not newer than any on same series. */
-  test_v_i_o(VS_UNRECOMMENDED,
-             "0.1.0.1", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0");
-  tt_int_op(0,OP_EQ, tor_version_as_new_as("Tor 0.0.5", "0.0.9pre1-cvs"));
-  tt_int_op(1,OP_EQ, tor_version_as_new_as(
-          "Tor 0.0.8 on Darwin 64-121-192-100.c3-0."
-          "sfpo-ubr1.sfrn-sfpo.ca.cable.rcn.com Power Macintosh",
-          "0.0.8rc2"));
-  tt_int_op(0,OP_EQ, tor_version_as_new_as(
-          "Tor 0.0.8 on Darwin 64-121-192-100.c3-0."
-          "sfpo-ubr1.sfrn-sfpo.ca.cable.rcn.com Power Macintosh", "0.0.8.2"));
+  test_v_i_o(VS_UNRECOMMENDED, "0.1.0.1",
+             "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0");
+  tt_int_op(0, OP_EQ, tor_version_as_new_as("Tor 0.0.5", "0.0.9pre1-cvs"));
+  tt_int_op(1, OP_EQ,
+            tor_version_as_new_as(
+                "Tor 0.0.8 on Darwin 64-121-192-100.c3-0."
+                "sfpo-ubr1.sfrn-sfpo.ca.cable.rcn.com Power Macintosh",
+                "0.0.8rc2"));
+  tt_int_op(0, OP_EQ,
+            tor_version_as_new_as(
+                "Tor 0.0.8 on Darwin 64-121-192-100.c3-0."
+                "sfpo-ubr1.sfrn-sfpo.ca.cable.rcn.com Power Macintosh",
+                "0.0.8.2"));
 
   /* Now try svn revisions. */
-  tt_int_op(1,OP_EQ, tor_version_as_new_as("Tor 0.2.1.0-dev (r100)",
-                                   "Tor 0.2.1.0-dev (r99)"));
-  tt_int_op(1,OP_EQ, tor_version_as_new_as(
-                                   "Tor 0.2.1.0-dev (r100) on Banana Jr",
-                                   "Tor 0.2.1.0-dev (r99) on Hal 9000"));
-  tt_int_op(1,OP_EQ, tor_version_as_new_as("Tor 0.2.1.0-dev (r100)",
-                                   "Tor 0.2.1.0-dev on Colossus"));
-  tt_int_op(0,OP_EQ, tor_version_as_new_as("Tor 0.2.1.0-dev (r99)",
-                                   "Tor 0.2.1.0-dev (r100)"));
-  tt_int_op(0,OP_EQ, tor_version_as_new_as("Tor 0.2.1.0-dev (r99) on MCP",
-                                   "Tor 0.2.1.0-dev (r100) on AM"));
-  tt_int_op(0,OP_EQ, tor_version_as_new_as("Tor 0.2.1.0-dev",
-                                   "Tor 0.2.1.0-dev (r99)"));
-  tt_int_op(1,OP_EQ, tor_version_as_new_as("Tor 0.2.1.1",
-                                   "Tor 0.2.1.0-dev (r99)"));
+  tt_int_op(1, OP_EQ,
+            tor_version_as_new_as("Tor 0.2.1.0-dev (r100)",
+                                  "Tor 0.2.1.0-dev (r99)"));
+  tt_int_op(1, OP_EQ,
+            tor_version_as_new_as("Tor 0.2.1.0-dev (r100) on Banana Jr",
+                                  "Tor 0.2.1.0-dev (r99) on Hal 9000"));
+  tt_int_op(1, OP_EQ,
+            tor_version_as_new_as("Tor 0.2.1.0-dev (r100)",
+                                  "Tor 0.2.1.0-dev on Colossus"));
+  tt_int_op(0, OP_EQ,
+            tor_version_as_new_as("Tor 0.2.1.0-dev (r99)",
+                                  "Tor 0.2.1.0-dev (r100)"));
+  tt_int_op(0, OP_EQ,
+            tor_version_as_new_as("Tor 0.2.1.0-dev (r99) on MCP",
+                                  "Tor 0.2.1.0-dev (r100) on AM"));
+  tt_int_op(0, OP_EQ,
+            tor_version_as_new_as("Tor 0.2.1.0-dev", "Tor 0.2.1.0-dev (r99)"));
+  tt_int_op(1, OP_EQ,
+            tor_version_as_new_as("Tor 0.2.1.1", "Tor 0.2.1.0-dev (r99)"));
   /* And git revisions */
-  tt_int_op(1,OP_EQ, tor_version_as_new_as(
-                                        "Tor 0.2.9.9 (git-56788a2489127072)",
-                                        "Tor 0.2.9.9 (git-56788a2489127072)"));
+  tt_int_op(1, OP_EQ,
+            tor_version_as_new_as("Tor 0.2.9.9 (git-56788a2489127072)",
+                                  "Tor 0.2.9.9 (git-56788a2489127072)"));
   /* a git revision is newer than no git revision */
-  tt_int_op(1,OP_EQ, tor_version_as_new_as(
-                                        "Tor 0.2.9.9 (git-56788a2489127072)",
-                                        "Tor 0.2.9.9"));
+  tt_int_op(1, OP_EQ,
+            tor_version_as_new_as("Tor 0.2.9.9 (git-56788a2489127072)",
+                                  "Tor 0.2.9.9"));
   /* a longer git revision is newer than a shorter git revision
    * this should be true if they prefix-match, but if they don't, they are
    * incomparable, because hashes aren't ordered (but we compare their bytes
    * anyway) */
-  tt_int_op(1,OP_EQ, tor_version_as_new_as(
-                  "Tor 0.2.9.9 (git-56788a2489127072d513cf4baf35a8ff475f3c7b)",
-                  "Tor 0.2.9.9 (git-56788a2489127072)"));
-  tt_int_op(1,OP_EQ, tor_version_as_new_as(
-                                        "Tor 0.2.9.9 (git-0102)",
-                                        "Tor 0.2.9.9 (git-03)"));
-  tt_int_op(1,OP_EQ, tor_version_as_new_as(
-                                        "Tor 0.2.9.9 (git-0102)",
-                                        "Tor 0.2.9.9 (git-00)"));
-  tt_int_op(1,OP_EQ, tor_version_as_new_as(
-                                           "Tor 0.2.9.9 (git-01)",
-                                           "Tor 0.2.9.9 (git-00)"));
-  tt_int_op(0,OP_EQ, tor_version_as_new_as(
-                                           "Tor 0.2.9.9 (git-00)",
-                                           "Tor 0.2.9.9 (git-01)"));
+  tt_int_op(1, OP_EQ,
+            tor_version_as_new_as(
+                "Tor 0.2.9.9 (git-56788a2489127072d513cf4baf35a8ff475f3c7b)",
+                "Tor 0.2.9.9 (git-56788a2489127072)"));
+  tt_int_op(
+      1, OP_EQ,
+      tor_version_as_new_as("Tor 0.2.9.9 (git-0102)", "Tor 0.2.9.9 (git-03)"));
+  tt_int_op(
+      1, OP_EQ,
+      tor_version_as_new_as("Tor 0.2.9.9 (git-0102)", "Tor 0.2.9.9 (git-00)"));
+  tt_int_op(
+      1, OP_EQ,
+      tor_version_as_new_as("Tor 0.2.9.9 (git-01)", "Tor 0.2.9.9 (git-00)"));
+  tt_int_op(
+      0, OP_EQ,
+      tor_version_as_new_as("Tor 0.2.9.9 (git-00)", "Tor 0.2.9.9 (git-01)"));
   /* In #21278, we compare without integer overflows.
    * But since #21450 limits version components to [0, INT32_MAX], it is no
    * longer possible to cause an integer overflow in tor_version_compare() */
-  tt_int_op(0,OP_EQ, tor_version_as_new_as(
-                                           "Tor 0.0.0.0",
-                                           "Tor 2147483647.0.0.0"));
-  tt_int_op(1,OP_EQ, tor_version_as_new_as(
-                                           "Tor 2147483647.0.0.0",
-                                           "Tor 0.0.0.0"));
+  tt_int_op(0, OP_EQ,
+            tor_version_as_new_as("Tor 0.0.0.0", "Tor 2147483647.0.0.0"));
+  tt_int_op(1, OP_EQ,
+            tor_version_as_new_as("Tor 2147483647.0.0.0", "Tor 0.0.0.0"));
   /* These versions used to cause an overflow, now they don't parse
    * (and authorities reject their descriptors), and log a BUG message */
   setup_full_capture_of_logs(LOG_WARN);
-  tt_int_op(0,OP_EQ, tor_version_as_new_as(
-                                           "Tor 0.0.0.0",
-                                           "Tor 0.-2147483648.0.0"));
+  tt_int_op(0, OP_EQ,
+            tor_version_as_new_as("Tor 0.0.0.0", "Tor 0.-2147483648.0.0"));
   expect_single_log_msg_containing("unparseable");
   mock_clean_saved_logs();
-  tt_int_op(0,OP_EQ, tor_version_as_new_as(
-                                           "Tor 0.2147483647.0.0",
-                                           "Tor 0.-1.0.0"));
+  tt_int_op(0, OP_EQ,
+            tor_version_as_new_as("Tor 0.2147483647.0.0", "Tor 0.-1.0.0"));
   expect_single_log_msg_containing("unparseable");
   mock_clean_saved_logs();
-  tt_int_op(0,OP_EQ, tor_version_as_new_as(
-                                           "Tor 0.2147483647.0.0",
-                                           "Tor 0.-2147483648.0.0"));
+  tt_int_op(
+      0, OP_EQ,
+      tor_version_as_new_as("Tor 0.2147483647.0.0", "Tor 0.-2147483648.0.0"));
   expect_single_log_msg_containing("unparseable");
   mock_clean_saved_logs();
-  tt_int_op(1,OP_EQ, tor_version_as_new_as(
-                                           "Tor 4294967295.0.0.0",
-                                           "Tor 0.0.0.0"));
+  tt_int_op(1, OP_EQ,
+            tor_version_as_new_as("Tor 4294967295.0.0.0", "Tor 0.0.0.0"));
   expect_no_log_entry();
-  tt_int_op(0,OP_EQ, tor_version_as_new_as(
-                                           "Tor 0.4294967295.0.0",
-                                           "Tor 0.-4294967295.0.0"));
+  tt_int_op(
+      0, OP_EQ,
+      tor_version_as_new_as("Tor 0.4294967295.0.0", "Tor 0.-4294967295.0.0"));
   expect_single_log_msg_containing("unparseable");
   mock_clean_saved_logs();
   teardown_capture_of_logs();
 
   /* Now try git revisions */
-  tt_int_op(0,OP_EQ, tor_version_parse("0.5.6.7 (git-ff00ff)", &ver1));
-  tt_int_op(0,OP_EQ, ver1.major);
-  tt_int_op(5,OP_EQ, ver1.minor);
-  tt_int_op(6,OP_EQ, ver1.micro);
-  tt_int_op(7,OP_EQ, ver1.patchlevel);
-  tt_int_op(3,OP_EQ, ver1.git_tag_len);
-  tt_mem_op(ver1.git_tag,OP_EQ, "\xff\x00\xff", 3);
+  tt_int_op(0, OP_EQ, tor_version_parse("0.5.6.7 (git-ff00ff)", &ver1));
+  tt_int_op(0, OP_EQ, ver1.major);
+  tt_int_op(5, OP_EQ, ver1.minor);
+  tt_int_op(6, OP_EQ, ver1.micro);
+  tt_int_op(7, OP_EQ, ver1.patchlevel);
+  tt_int_op(3, OP_EQ, ver1.git_tag_len);
+  tt_mem_op(ver1.git_tag, OP_EQ, "\xff\x00\xff", 3);
   /* reject bad hex digits */
-  tt_int_op(-1,OP_EQ, tor_version_parse("0.5.6.7 (git-ff00xx)", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.5.6.7 (git-ff00xx)", &ver1));
   /* reject odd hex digit count */
-  tt_int_op(-1,OP_EQ, tor_version_parse("0.5.6.7 (git-ff00fff)", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.5.6.7 (git-ff00fff)", &ver1));
   /* ignore "git " */
-  tt_int_op(0,OP_EQ, tor_version_parse("0.5.6.7 (git ff00fff)", &ver1));
+  tt_int_op(0, OP_EQ, tor_version_parse("0.5.6.7 (git ff00fff)", &ver1));
   /* standard length is 16 hex digits */
-  tt_int_op(0,OP_EQ, tor_version_parse("0.5.6.7 (git-0010203040506070)",
-                                       &ver1));
+  tt_int_op(0, OP_EQ,
+            tor_version_parse("0.5.6.7 (git-0010203040506070)", &ver1));
   /* length limit is 40 hex digits */
-  tt_int_op(0,OP_EQ, tor_version_parse(
-                     "0.5.6.7 (git-000102030405060708090a0b0c0d0e0f10111213)",
-                     &ver1));
-  tt_int_op(-1,OP_EQ, tor_version_parse(
-                    "0.5.6.7 (git-000102030405060708090a0b0c0d0e0f1011121314)",
-                    &ver1));
- done:
+  tt_int_op(
+      0, OP_EQ,
+      tor_version_parse(
+          "0.5.6.7 (git-000102030405060708090a0b0c0d0e0f10111213)", &ver1));
+  tt_int_op(
+      -1, OP_EQ,
+      tor_version_parse(
+          "0.5.6.7 (git-000102030405060708090a0b0c0d0e0f1011121314)", &ver1));
+done:
   teardown_capture_of_logs();
 }
 
@@ -2096,24 +2071,25 @@ test_dir_fp_pairs(void *arg)
 
   (void)arg;
   dir_split_resource_into_fingerprint_pairs(
-       /* Two pairs, out of order, with one duplicate. */
-       "73656372657420646174612E0000000000FFFFFF-"
-       "557365204145532d32353620696e73746561642e+"
-       "73656372657420646174612E0000000000FFFFFF-"
-       "557365204145532d32353620696e73746561642e+"
-       "48657861646563696d616c2069736e277420736f-"
-       "676f6f6420666f7220686964696e6720796f7572.z", sl);
+      /* Two pairs, out of order, with one duplicate. */
+      "73656372657420646174612E0000000000FFFFFF-"
+      "557365204145532d32353620696e73746561642e+"
+      "73656372657420646174612E0000000000FFFFFF-"
+      "557365204145532d32353620696e73746561642e+"
+      "48657861646563696d616c2069736e277420736f-"
+      "676f6f6420666f7220686964696e6720796f7572.z",
+      sl);
 
-  tt_int_op(smartlist_len(sl),OP_EQ, 2);
+  tt_int_op(smartlist_len(sl), OP_EQ, 2);
   pair = smartlist_get(sl, 0);
-  tt_mem_op(pair->first,OP_EQ,  "Hexadecimal isn't so", DIGEST_LEN);
-  tt_mem_op(pair->second,OP_EQ, "good for hiding your", DIGEST_LEN);
+  tt_mem_op(pair->first, OP_EQ, "Hexadecimal isn't so", DIGEST_LEN);
+  tt_mem_op(pair->second, OP_EQ, "good for hiding your", DIGEST_LEN);
   pair = smartlist_get(sl, 1);
-  tt_mem_op(pair->first,OP_EQ,  "secret data.\0\0\0\0\0\xff\xff\xff",
+  tt_mem_op(pair->first, OP_EQ, "secret data.\0\0\0\0\0\xff\xff\xff",
             DIGEST_LEN);
-  tt_mem_op(pair->second,OP_EQ, "Use AES-256 instead.", DIGEST_LEN);
+  tt_mem_op(pair->second, OP_EQ, "Use AES-256 instead.", DIGEST_LEN);
 
- done:
+done:
   SMARTLIST_FOREACH(sl, fp_pair_t *, pair_to_free, tor_free(pair_to_free));
   smartlist_free(sl);
 }
@@ -2130,11 +2106,11 @@ test_dir_split_fps(void *testdata)
 #define HEX2 "Deadbeef99999991111119999911111111f00ba4"
 #define HEX3 "b33ff00db33ff00db33ff00db33ff00db33ff00d"
 #define HEX256_1 \
-    "f3f3f3f3fbbbbf3f3f3f3fbbbf3f3f3f3fbbbbf3f3f3f3fbbbf3f3f3f3fbbbbf"
+  "f3f3f3f3fbbbbf3f3f3f3fbbbf3f3f3f3fbbbbf3f3f3f3fbbbf3f3f3f3fbbbbf"
 #define HEX256_2 \
-    "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccCCc"
+  "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccCCc"
 #define HEX256_3 \
-    "0123456789ABCdef0123456789ABCdef0123456789ABCdef0123456789ABCdef"
+  "0123456789ABCdef0123456789ABCdef0123456789ABCdef0123456789ABCdef"
 #define B64_1 "/g2v+JEnOJvGdVhpEjEjRVEZPu4"
 #define B64_2 "3q2+75mZmZERERmZmRERERHwC6Q"
 #define B64_256_1 "8/Pz8/u7vz8/Pz+7vz8/Pz+7u/Pz8/P7u/Pz8/P7u78"
@@ -2159,7 +2135,7 @@ test_dir_split_fps(void *testdata)
   smartlist_clear(sl);
 
   /* Decode hex. */
-  dir_split_resource_into_fingerprints(HEX1"+"HEX2, sl, NULL, DSR_HEX);
+  dir_split_resource_into_fingerprints(HEX1 "+" HEX2, sl, NULL, DSR_HEX);
   tt_int_op(smartlist_len(sl), OP_EQ, 2);
   test_mem_op_hex(smartlist_get(sl, 0), OP_EQ, HEX1);
   test_mem_op_hex(smartlist_get(sl, 1), OP_EQ, HEX2);
@@ -2167,8 +2143,8 @@ test_dir_split_fps(void *testdata)
   smartlist_clear(sl);
 
   /* decode hex and drop weirdness. */
-  dir_split_resource_into_fingerprints(HEX1"+bogus+"HEX2"+"HEX256_1,
-                                       sl, NULL, DSR_HEX);
+  dir_split_resource_into_fingerprints(HEX1 "+bogus+" HEX2 "+" HEX256_1, sl,
+                                       NULL, DSR_HEX);
   tt_int_op(smartlist_len(sl), OP_EQ, 2);
   test_mem_op_hex(smartlist_get(sl, 0), OP_EQ, HEX1);
   test_mem_op_hex(smartlist_get(sl, 1), OP_EQ, HEX2);
@@ -2176,8 +2152,9 @@ test_dir_split_fps(void *testdata)
   smartlist_clear(sl);
 
   /* Decode long hex */
-  dir_split_resource_into_fingerprints(HEX256_1"+"HEX256_2"+"HEX2"+"HEX256_3,
-                                       sl, NULL, DSR_HEX|DSR_DIGEST256);
+  dir_split_resource_into_fingerprints(HEX256_1 "+" HEX256_2 "+" HEX2
+                                                "+" HEX256_3,
+                                       sl, NULL, DSR_HEX | DSR_DIGEST256);
   tt_int_op(smartlist_len(sl), OP_EQ, 3);
   test_mem_op_hex(smartlist_get(sl, 0), OP_EQ, HEX256_1);
   test_mem_op_hex(smartlist_get(sl, 1), OP_EQ, HEX256_2);
@@ -2186,8 +2163,8 @@ test_dir_split_fps(void *testdata)
   smartlist_clear(sl);
 
   /* Decode hex and sort. */
-  dir_split_resource_into_fingerprints(HEX1"+"HEX2"+"HEX3"+"HEX2,
-                                       sl, NULL, DSR_HEX|DSR_SORT_UNIQ);
+  dir_split_resource_into_fingerprints(HEX1 "+" HEX2 "+" HEX3 "+" HEX2, sl,
+                                       NULL, DSR_HEX | DSR_SORT_UNIQ);
   tt_int_op(smartlist_len(sl), OP_EQ, 3);
   test_mem_op_hex(smartlist_get(sl, 0), OP_EQ, HEX3);
   test_mem_op_hex(smartlist_get(sl, 1), OP_EQ, HEX2);
@@ -2196,10 +2173,9 @@ test_dir_split_fps(void *testdata)
   smartlist_clear(sl);
 
   /* Decode long hex and sort */
-  dir_split_resource_into_fingerprints(HEX256_1"+"HEX256_2"+"HEX256_3
-                                       "+"HEX256_1,
-                                       sl, NULL,
-                                       DSR_HEX|DSR_DIGEST256|DSR_SORT_UNIQ);
+  dir_split_resource_into_fingerprints(
+      HEX256_1 "+" HEX256_2 "+" HEX256_3 "+" HEX256_1, sl, NULL,
+      DSR_HEX | DSR_DIGEST256 | DSR_SORT_UNIQ);
   tt_int_op(smartlist_len(sl), OP_EQ, 3);
   test_mem_op_hex(smartlist_get(sl, 0), OP_EQ, HEX256_3);
   test_mem_op_hex(smartlist_get(sl, 1), OP_EQ, HEX256_2);
@@ -2208,7 +2184,7 @@ test_dir_split_fps(void *testdata)
   smartlist_clear(sl);
 
   /* Decode base64 */
-  dir_split_resource_into_fingerprints(B64_1"-"B64_2, sl, NULL, DSR_BASE64);
+  dir_split_resource_into_fingerprints(B64_1 "-" B64_2, sl, NULL, DSR_BASE64);
   tt_int_op(smartlist_len(sl), OP_EQ, 2);
   test_mem_op_hex(smartlist_get(sl, 0), OP_EQ, HEX1);
   test_mem_op_hex(smartlist_get(sl, 1), OP_EQ, HEX2);
@@ -2216,22 +2192,22 @@ test_dir_split_fps(void *testdata)
   smartlist_clear(sl);
 
   /* Decode long base64 */
-  dir_split_resource_into_fingerprints(B64_256_1"-"B64_256_2,
-                                       sl, NULL, DSR_BASE64|DSR_DIGEST256);
+  dir_split_resource_into_fingerprints(B64_256_1 "-" B64_256_2, sl, NULL,
+                                       DSR_BASE64 | DSR_DIGEST256);
   tt_int_op(smartlist_len(sl), OP_EQ, 2);
   test_mem_op_hex(smartlist_get(sl, 0), OP_EQ, HEX256_1);
   test_mem_op_hex(smartlist_get(sl, 1), OP_EQ, HEX256_2);
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
 
-  dir_split_resource_into_fingerprints(B64_256_1,
-                                       sl, NULL, DSR_BASE64|DSR_DIGEST256);
+  dir_split_resource_into_fingerprints(B64_256_1, sl, NULL,
+                                       DSR_BASE64 | DSR_DIGEST256);
   tt_int_op(smartlist_len(sl), OP_EQ, 1);
   test_mem_op_hex(smartlist_get(sl, 0), OP_EQ, HEX256_1);
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
 
- done:
+done:
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_free(sl);
   tor_free(mem_op_hex_tmp);
@@ -2243,78 +2219,71 @@ test_dir_measured_bw_kb(void *arg)
   measured_bw_line_t mbwl;
   int i;
   const char *lines_pass[] = {
-    "node_id=$557365204145532d32353620696e73746561642e bw=1024\n",
-    "node_id=$557365204145532d32353620696e73746561642e\t  bw=1024 \n",
-    " node_id=$557365204145532d32353620696e73746561642e  bw=1024\n",
-    "\tnoise\tnode_id=$557365204145532d32353620696e73746561642e  "
-                "bw=1024 junk=007\n",
-    "misc=junk node_id=$557365204145532d32353620696e73746561642e  "
-                "bw=1024 junk=007\n",
-    /* check whether node_id can be at the end */
-    "bw=1024 node_id=$557365204145532d32353620696e73746561642e\n",
-    /* check whether node_id can be at the end and bw has something in front*/
-    "foo=bar bw=1024 node_id=$557365204145532d32353620696e73746561642e\n",
-    /* check whether node_id can be at the end and something in the
-     * in the middle of bw and node_id */
-    "bw=1024 foo=bar node_id=$557365204145532d32353620696e73746561642e\n",
+      "node_id=$557365204145532d32353620696e73746561642e bw=1024\n",
+      "node_id=$557365204145532d32353620696e73746561642e\t  bw=1024 \n",
+      " node_id=$557365204145532d32353620696e73746561642e  bw=1024\n",
+      "\tnoise\tnode_id=$557365204145532d32353620696e73746561642e  "
+      "bw=1024 junk=007\n",
+      "misc=junk node_id=$557365204145532d32353620696e73746561642e  "
+      "bw=1024 junk=007\n",
+      /* check whether node_id can be at the end */
+      "bw=1024 node_id=$557365204145532d32353620696e73746561642e\n",
+      /* check whether node_id can be at the end and bw has something in
+         front*/
+      "foo=bar bw=1024 node_id=$557365204145532d32353620696e73746561642e\n",
+      /* check whether node_id can be at the end and something in the
+       * in the middle of bw and node_id */
+      "bw=1024 foo=bar node_id=$557365204145532d32353620696e73746561642e\n",
 
-    /* Test that a line with vote=1 will pass. */
-    "node_id=$557365204145532d32353620696e73746561642e bw=1024 vote=1\n",
-    /* Test that a line with unmeasured=1 will pass. */
-    "node_id=$557365204145532d32353620696e73746561642e bw=1024 unmeasured=1\n",
-    /* Test that a line with vote=1 and unmeasured=1 will pass. */
-    "node_id=$557365204145532d32353620696e73746561642e bw=1024 vote=1"
-    "unmeasured=1\n",
-    /* Test that a line with unmeasured=0 will pass. */
-    "node_id=$557365204145532d32353620696e73746561642e bw=1024 unmeasured=0\n",
-    /* Test that a line with vote=1 and unmeasured=0 will pass. */
-    "node_id=$557365204145532d32353620696e73746561642e bw=1024 vote=1"
-    "unmeasured=0\n",
-    "end"
-  };
+      /* Test that a line with vote=1 will pass. */
+      "node_id=$557365204145532d32353620696e73746561642e bw=1024 vote=1\n",
+      /* Test that a line with unmeasured=1 will pass. */
+      "node_id=$557365204145532d32353620696e73746561642e bw=1024 "
+      "unmeasured=1\n",
+      /* Test that a line with vote=1 and unmeasured=1 will pass. */
+      "node_id=$557365204145532d32353620696e73746561642e bw=1024 vote=1"
+      "unmeasured=1\n",
+      /* Test that a line with unmeasured=0 will pass. */
+      "node_id=$557365204145532d32353620696e73746561642e bw=1024 "
+      "unmeasured=0\n",
+      /* Test that a line with vote=1 and unmeasured=0 will pass. */
+      "node_id=$557365204145532d32353620696e73746561642e bw=1024 vote=1"
+      "unmeasured=0\n",
+      "end"};
   const char *lines_fail[] = {
-    /* Test possible python stupidity on input */
-    "node_id=None bw=1024\n",
-    "node_id=$None bw=1024\n",
-    "node_id=$557365204145532d32353620696e73746561642e bw=None\n",
-    "node_id=$557365204145532d32353620696e73746561642e bw=1024.0\n",
-    "node_id=$557365204145532d32353620696e73746561642e bw=.1024\n",
-    "node_id=$557365204145532d32353620696e73746561642e bw=1.024\n",
-    "node_id=$557365204145532d32353620696e73746561642e bw=1024 bw=0\n",
-    "node_id=$557365204145532d32353620696e73746561642e bw=1024 bw=None\n",
-    "node_id=$557365204145532d32353620696e73746561642e bw=-1024\n",
-    /* Test incomplete writes due to race conditions, partial copies, etc */
-    "node_i",
-    "node_i\n",
-    "node_id=",
-    "node_id=\n",
-    "node_id=$557365204145532d32353620696e73746561642e bw=",
-    "node_id=$557365204145532d32353620696e73746561642e bw=1024",
-    "node_id=$557365204145532d32353620696e73746561642e bw=\n",
-    "node_id=$557365204145532d32353620696e7374",
-    "node_id=$557365204145532d32353620696e7374\n",
-    "",
-    "\n",
-    " \n ",
-    " \n\n",
-    /* Test assorted noise */
-    " node_id= ",
-    "node_id==$557365204145532d32353620696e73746561642e bw==1024\n",
-    "node_id=$55736520414552d32353620696e73746561642e bw=1024\n",
-    "node_id=557365204145532d32353620696e73746561642e bw=1024\n",
-    "node_id= $557365204145532d32353620696e73746561642e bw=0.23\n",
+      /* Test possible python stupidity on input */
+      "node_id=None bw=1024\n", "node_id=$None bw=1024\n",
+      "node_id=$557365204145532d32353620696e73746561642e bw=None\n",
+      "node_id=$557365204145532d32353620696e73746561642e bw=1024.0\n",
+      "node_id=$557365204145532d32353620696e73746561642e bw=.1024\n",
+      "node_id=$557365204145532d32353620696e73746561642e bw=1.024\n",
+      "node_id=$557365204145532d32353620696e73746561642e bw=1024 bw=0\n",
+      "node_id=$557365204145532d32353620696e73746561642e bw=1024 bw=None\n",
+      "node_id=$557365204145532d32353620696e73746561642e bw=-1024\n",
+      /* Test incomplete writes due to race conditions, partial copies, etc */
+      "node_i", "node_i\n", "node_id=", "node_id=\n",
+      "node_id=$557365204145532d32353620696e73746561642e bw=",
+      "node_id=$557365204145532d32353620696e73746561642e bw=1024",
+      "node_id=$557365204145532d32353620696e73746561642e bw=\n",
+      "node_id=$557365204145532d32353620696e7374",
+      "node_id=$557365204145532d32353620696e7374\n", "", "\n", " \n ", " \n\n",
+      /* Test assorted noise */
+      " node_id= ",
+      "node_id==$557365204145532d32353620696e73746561642e bw==1024\n",
+      "node_id=$55736520414552d32353620696e73746561642e bw=1024\n",
+      "node_id=557365204145532d32353620696e73746561642e bw=1024\n",
+      "node_id= $557365204145532d32353620696e73746561642e bw=0.23\n",
 
-    /* Test that a line with vote=0 will fail too, so that it is ignored. */
-    "node_id=$557365204145532d32353620696e73746561642e bw=1024 vote=0\n",
-    /* Test that a line with vote=0 will fail even if unmeasured=0. */
-    "node_id=$557365204145532d32353620696e73746561642e bw=1024 vote=0 "
-    "unmeasured=0\n",
-    "end"
-  };
+      /* Test that a line with vote=0 will fail too, so that it is ignored. */
+      "node_id=$557365204145532d32353620696e73746561642e bw=1024 vote=0\n",
+      /* Test that a line with vote=0 will fail even if unmeasured=0. */
+      "node_id=$557365204145532d32353620696e73746561642e bw=1024 vote=0 "
+      "unmeasured=0\n",
+      "end"};
 
   (void)arg;
   for (i = 0; strcmp(lines_fail[i], "end"); i++) {
-    //fprintf(stderr, "Testing: %s\n", lines_fail[i]);
+    // fprintf(stderr, "Testing: %s\n", lines_fail[i]);
     /* Testing only with line_is_after_headers = 1. Tests with
      * line_is_after_headers = 0 in
      * test_dir_measured_bw_kb_line_is_after_headers */
@@ -2322,17 +2291,17 @@ test_dir_measured_bw_kb(void *arg)
   }
 
   for (i = 0; strcmp(lines_pass[i], "end"); i++) {
-    //fprintf(stderr, "Testing: %s %d\n", lines_pass[i], TOR_ISSPACE('\n'));
+    // fprintf(stderr, "Testing: %s %d\n", lines_pass[i], TOR_ISSPACE('\n'));
     /* Testing only with line_is_after_headers = 1. Tests with
      * line_is_after_headers = 0 in
      * test_dir_measured_bw_kb_line_is_after_headers */
     tt_assert(measured_bw_line_parse(&mbwl, lines_pass[i], 1) == 0);
     tt_assert(mbwl.bw_kb == 1024);
     tt_assert(strcmp(mbwl.node_hex,
-                "557365204145532d32353620696e73746561642e") == 0);
+                     "557365204145532d32353620696e73746561642e") == 0);
   }
 
- done:
+done:
   return;
 }
 
@@ -2345,15 +2314,12 @@ test_dir_measured_bw_kb_line_is_after_headers(void *arg)
 {
   (void)arg;
   measured_bw_line_t mbwl;
-  const char *line_pass = \
-    "node_id=$557365204145532d32353620696e73746561642e bw=1024\n";
+  const char *line_pass =
+      "node_id=$557365204145532d32353620696e73746561642e bw=1024\n";
   int i;
   const char *lines_fail[] = {
-    "node_id=$557365204145532d32353620696e73746561642e \n",
-    "bw=1024\n",
-    "rtt=300\n",
-    "end"
-  };
+      "node_id=$557365204145532d32353620696e73746561642e \n", "bw=1024\n",
+      "rtt=300\n", "end"};
 
   setup_capture_of_logs(LOG_DEBUG);
 
@@ -2375,7 +2341,7 @@ test_dir_measured_bw_kb_line_is_after_headers(void *arg)
 
   tt_assert(measured_bw_line_parse(&mbwl, line_pass, 0) == 0);
 
- done:
+done:
   teardown_capture_of_logs();
 }
 
@@ -2402,68 +2368,66 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   char header_lines_long[MAX_BW_FILE_HEADER_COUNT_IN_VOTE * 8 + 1] = "";
   int i;
   const char *header_lines_v110_no_terminator_no_timestamp =
-    "version=1.1.0\n"
-    "software=sbws\n"
-    "software_version=0.1.0\n"
-    "earliest_bandwidth=2018-05-08T16:13:26\n"
-    "file_created=2018-04-16T21:49:18\n"
-    "generator_started=2018-05-08T16:13:25\n"
-    "latest_bandwidth=2018-04-16T20:49:18\n";
+      "version=1.1.0\n"
+      "software=sbws\n"
+      "software_version=0.1.0\n"
+      "earliest_bandwidth=2018-05-08T16:13:26\n"
+      "file_created=2018-04-16T21:49:18\n"
+      "generator_started=2018-05-08T16:13:25\n"
+      "latest_bandwidth=2018-04-16T20:49:18\n";
   const char *bw_file_headers_str_v110_no_timestamp =
-    "version=1.1.0 software=sbws "
-    "software_version=0.1.0 "
-    "earliest_bandwidth=2018-05-08T16:13:26 "
-    "file_created=2018-04-16T21:49:18 "
-    "generator_started=2018-05-08T16:13:25 "
-    "latest_bandwidth=2018-04-16T20:49:18";
+      "version=1.1.0 software=sbws "
+      "software_version=0.1.0 "
+      "earliest_bandwidth=2018-05-08T16:13:26 "
+      "file_created=2018-04-16T21:49:18 "
+      "generator_started=2018-05-08T16:13:25 "
+      "latest_bandwidth=2018-04-16T20:49:18";
   const char *relay_lines_v100 =
-    "node_id=$557365204145532d32353620696e73746561642e bw=1024 "
-    "nick=Test measured_at=1523911725 updated_at=1523911725 "
-    "pid_error=4.11374090719 pid_error_sum=4.11374090719 "
-    "pid_bw=57136645 pid_delta=2.12168374577 circ_fail=0.2 "
-    "scanner=/filepath\n";
+      "node_id=$557365204145532d32353620696e73746561642e bw=1024 "
+      "nick=Test measured_at=1523911725 updated_at=1523911725 "
+      "pid_error=4.11374090719 pid_error_sum=4.11374090719 "
+      "pid_bw=57136645 pid_delta=2.12168374577 circ_fail=0.2 "
+      "scanner=/filepath\n";
   const char *relay_lines_v110 =
-    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 "
-    "master_key_ed25519=YaqV4vbvPYKucElk297eVdNArDz9HtIwUoIeo0+cVIpQ "
-    "bw=760 nick=Test rtt=380 time=2018-05-08T16:13:26\n";
+      "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 "
+      "master_key_ed25519=YaqV4vbvPYKucElk297eVdNArDz9HtIwUoIeo0+cVIpQ "
+      "bw=760 nick=Test rtt=380 time=2018-05-08T16:13:26\n";
   const char *relay_lines_bad =
-    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A\n";
+      "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A\n";
 
   tor_asprintf(&header_lines_v100, "%ld\n", (long)timestamp);
   tor_asprintf(&header_lines_v110_no_terminator, "%ld\n%s", (long)timestamp,
                header_lines_v110_no_terminator_no_timestamp);
-  tor_asprintf(&header_lines_v110, "%s%s",
-               header_lines_v110_no_terminator, BW_FILE_HEADERS_TERMINATOR);
+  tor_asprintf(&header_lines_v110, "%s%s", header_lines_v110_no_terminator,
+               BW_FILE_HEADERS_TERMINATOR);
 
-  tor_asprintf(&bw_file_headers_str_v100, "timestamp=%ld",(long)timestamp);
-  tor_asprintf(&bw_file_headers_str_v110, "timestamp=%ld %s",
-               (long)timestamp, bw_file_headers_str_v110_no_timestamp);
-  tor_asprintf(&bw_file_headers_str_bad, "%s "
+  tor_asprintf(&bw_file_headers_str_v100, "timestamp=%ld", (long)timestamp);
+  tor_asprintf(&bw_file_headers_str_v110, "timestamp=%ld %s", (long)timestamp,
+               bw_file_headers_str_v110_no_timestamp);
+  tor_asprintf(&bw_file_headers_str_bad,
+               "%s "
                "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A",
                bw_file_headers_str_v110);
 
-  for (i=0; i<MAX_BW_FILE_HEADER_COUNT_IN_VOTE; i++) {
-    strlcat(header_lines_long, "foo=bar\n",
-            sizeof(header_lines_long));
+  for (i = 0; i < MAX_BW_FILE_HEADER_COUNT_IN_VOTE; i++) {
+    strlcat(header_lines_long, "foo=bar\n", sizeof(header_lines_long));
   }
   /* 8 is the number of v110 lines in header_lines_v110 */
-  for (i=0; i<MAX_BW_FILE_HEADER_COUNT_IN_VOTE - 8 - 1; i++) {
+  for (i = 0; i < MAX_BW_FILE_HEADER_COUNT_IN_VOTE - 8 - 1; i++) {
     strlcat(bw_file_headers_str_long, "foo=bar ",
             sizeof(bw_file_headers_str_long));
   }
   strlcat(bw_file_headers_str_long, "foo=bar",
           sizeof(bw_file_headers_str_long));
-  tor_asprintf(&bw_file_headers_str_extra,
-               "%s %s",
-               bw_file_headers_str_v110,
+  tor_asprintf(&bw_file_headers_str_extra, "%s %s", bw_file_headers_str_v110,
                bw_file_headers_str_long);
 
   /* Test an empty bandwidth file. bw_file_headers will be empty string */
   write_str_to_file(fname, "", 0);
   setup_capture_of_logs(LOG_WARN);
-  tt_int_op(-1, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                        bw_file_headers,
-                                                        NULL));
+  tt_int_op(
+      -1, OP_EQ,
+      dirserv_read_measured_bandwidths(fname, NULL, bw_file_headers, NULL));
   expect_log_msg("Empty bandwidth file\n");
   teardown_capture_of_logs();
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
@@ -2478,9 +2442,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   tor_asprintf(&content, "%ld", (long)timestamp);
   write_str_to_file(fname, content, 0);
   tor_free(content);
-  tt_int_op(-1, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                        bw_file_headers,
-                                                        NULL));
+  tt_int_op(
+      -1, OP_EQ,
+      dirserv_read_measured_bandwidths(fname, NULL, bw_file_headers, NULL));
 
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op("", OP_EQ, bw_file_headers_str);
@@ -2491,9 +2455,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   /* Test v1.0.0 bandwidth file headers */
   write_str_to_file(fname, header_lines_v100, 0);
   bw_file_headers = smartlist_new();
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers,
-                                                       NULL));
+  tt_int_op(
+      0, OP_EQ,
+      dirserv_read_measured_bandwidths(fname, NULL, bw_file_headers, NULL));
 
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v100, OP_EQ, bw_file_headers_str);
@@ -2506,9 +2470,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   tor_asprintf(&content, "%s%s", header_lines_v100, relay_lines_v100);
   write_str_to_file(fname, content, 0);
   tor_free(content);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers,
-                                                       NULL));
+  tt_int_op(
+      0, OP_EQ,
+      dirserv_read_measured_bandwidths(fname, NULL, bw_file_headers, NULL));
 
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v100, OP_EQ, bw_file_headers_str);
@@ -2520,8 +2484,8 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   tor_asprintf(&content, "%s%s", header_lines_v100, relay_lines_v100);
   write_str_to_file(fname, content, 0);
   tor_free(content);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL, NULL,
-                                                       NULL));
+  tt_int_op(0, OP_EQ,
+            dirserv_read_measured_bandwidths(fname, NULL, NULL, NULL));
 
   /* Test bandwidth file including v1.1.0 bandwidth headers and
    * v1.0.0 relay lines. bw_file_headers will contain the v1.1.0 headers. */
@@ -2530,9 +2494,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
                relay_lines_v100);
   write_str_to_file(fname, content, 0);
   tor_free(content);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers,
-                                                       NULL));
+  tt_int_op(
+      0, OP_EQ,
+      dirserv_read_measured_bandwidths(fname, NULL, bw_file_headers, NULL));
 
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v110, OP_EQ, bw_file_headers_str);
@@ -2548,9 +2512,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
                header_lines_v110);
   write_str_to_file(fname, content, 0);
   tor_free(content);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers,
-                                                       NULL));
+  tt_int_op(
+      0, OP_EQ,
+      dirserv_read_measured_bandwidths(fname, NULL, bw_file_headers, NULL));
 
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v100, OP_EQ, bw_file_headers_str);
@@ -2567,9 +2531,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
                header_lines_v110, relay_lines_v100);
   write_str_to_file(fname, content, 0);
   tor_free(content);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers,
-                                                       NULL));
+  tt_int_op(
+      0, OP_EQ,
+      dirserv_read_measured_bandwidths(fname, NULL, bw_file_headers, NULL));
 
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v100, OP_EQ, bw_file_headers_str);
@@ -2580,9 +2544,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   /* Test v1.1.0 bandwidth headers without terminator */
   bw_file_headers = smartlist_new();
   write_str_to_file(fname, header_lines_v110_no_terminator, 0);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers,
-                                                       NULL));
+  tt_int_op(
+      0, OP_EQ,
+      dirserv_read_measured_bandwidths(fname, NULL, bw_file_headers, NULL));
 
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v110, OP_EQ, bw_file_headers_str);
@@ -2593,9 +2557,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   /* Test v1.1.0 bandwidth headers with terminator */
   bw_file_headers = smartlist_new();
   write_str_to_file(fname, header_lines_v110, 0);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers,
-                                                       NULL));
+  tt_int_op(
+      0, OP_EQ,
+      dirserv_read_measured_bandwidths(fname, NULL, bw_file_headers, NULL));
 
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v110, OP_EQ, bw_file_headers_str);
@@ -2606,13 +2570,13 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   /* Test v1.1.0 bandwidth file without terminator, then relay lines.
    * bw_file_headers will contain the v1.1.0 headers. */
   bw_file_headers = smartlist_new();
-  tor_asprintf(&content, "%s%s",
-               header_lines_v110_no_terminator, relay_lines_v110);
+  tor_asprintf(&content, "%s%s", header_lines_v110_no_terminator,
+               relay_lines_v110);
   write_str_to_file(fname, content, 0);
   tor_free(content);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers,
-                                                       NULL));
+  tt_int_op(
+      0, OP_EQ,
+      dirserv_read_measured_bandwidths(fname, NULL, bw_file_headers, NULL));
 
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v110, OP_EQ, bw_file_headers_str);
@@ -2623,13 +2587,12 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   /* Test v1.1.0 bandwidth headers with terminator, then relay lines
    * bw_file_headers will contain the v1.1.0 headers. */
   bw_file_headers = smartlist_new();
-  tor_asprintf(&content, "%s%s",
-               header_lines_v110, relay_lines_v110);
+  tor_asprintf(&content, "%s%s", header_lines_v110, relay_lines_v110);
   write_str_to_file(fname, content, 0);
   tor_free(content);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers,
-                                                       NULL));
+  tt_int_op(
+      0, OP_EQ,
+      dirserv_read_measured_bandwidths(fname, NULL, bw_file_headers, NULL));
 
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v110, OP_EQ, bw_file_headers_str);
@@ -2645,9 +2608,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
                BW_FILE_HEADERS_TERMINATOR, relay_lines_bad);
   write_str_to_file(fname, content, 0);
   tor_free(content);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers,
-                                                       NULL));
+  tt_int_op(
+      0, OP_EQ,
+      dirserv_read_measured_bandwidths(fname, NULL, bw_file_headers, NULL));
 
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v110, OP_EQ, bw_file_headers_str);
@@ -2659,14 +2622,13 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
    * then relay lines. bw_file_headers will contain the v1.1.0 headers and
    * the bad relay lines. */
   bw_file_headers = smartlist_new();
-  tor_asprintf(&content, "%s%s%s",
-               header_lines_v110_no_terminator, relay_lines_bad,
-               relay_lines_v110);
+  tor_asprintf(&content, "%s%s%s", header_lines_v110_no_terminator,
+               relay_lines_bad, relay_lines_v110);
   write_str_to_file(fname, content, 0);
   tor_free(content);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers,
-                                                       NULL));
+  tt_int_op(
+      0, OP_EQ,
+      dirserv_read_measured_bandwidths(fname, NULL, bw_file_headers, NULL));
 
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_bad, OP_EQ, bw_file_headers_str);
@@ -2679,14 +2641,13 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
    * bw_file_headers will contain the v1.1.0 headers and the bad relay lines
    * to a maximum of MAX_BW_FILE_HEADER_COUNT_IN_VOTE header lines. */
   bw_file_headers = smartlist_new();
-  tor_asprintf(&content, "%s%s%s",
-               header_lines_v110_no_terminator, header_lines_long,
-               relay_lines_v110);
+  tor_asprintf(&content, "%s%s%s", header_lines_v110_no_terminator,
+               header_lines_long, relay_lines_v110);
   write_str_to_file(fname, content, 0);
   tor_free(content);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers,
-                                                       NULL));
+  tt_int_op(
+      0, OP_EQ,
+      dirserv_read_measured_bandwidths(fname, NULL, bw_file_headers, NULL));
 
   tt_int_op(MAX_BW_FILE_HEADER_COUNT_IN_VOTE, OP_EQ,
             smartlist_len(bw_file_headers));
@@ -2702,14 +2663,13 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
    * Force bw_file_headers to have more than MAX_BW_FILE_HEADER_COUNT_IN_VOTE
    * This test is needed while there is not dirvote test. */
   bw_file_headers = smartlist_new();
-  tor_asprintf(&content, "%s%s%s",
-               header_lines_v110_no_terminator, header_lines_long,
-               relay_lines_v110);
+  tor_asprintf(&content, "%s%s%s", header_lines_v110_no_terminator,
+               header_lines_long, relay_lines_v110);
   write_str_to_file(fname, content, 0);
   tor_free(content);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers,
-                                                       NULL));
+  tt_int_op(
+      0, OP_EQ,
+      dirserv_read_measured_bandwidths(fname, NULL, bw_file_headers, NULL));
 
   tt_int_op(MAX_BW_FILE_HEADER_COUNT_IN_VOTE, OP_EQ,
             smartlist_len(bw_file_headers));
@@ -2726,11 +2686,11 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   /* Test v1.x.x bandwidth line with vote=0.
    * It will be ignored it and logged it at debug level. */
   const char *relay_lines_ignore =
-    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 bw=1024 vote=0\n"
-    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 bw=1024 vote=0"
-    "unmeasured=1\n"
-    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 bw=1024 vote=0"
-    "unmeasured=0\n";
+      "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 bw=1024 vote=0\n"
+      "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 bw=1024 vote=0"
+      "unmeasured=1\n"
+      "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 bw=1024 vote=0"
+      "unmeasured=0\n";
 
   /* Create the bandwidth file */
   tor_asprintf(&content, "%ld\n%s", (long)timestamp, relay_lines_ignore);
@@ -2739,8 +2699,8 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
 
   /* Read the bandwidth file */
   setup_full_capture_of_logs(LOG_DEBUG);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL, NULL,
-                                                       NULL));
+  tt_int_op(0, OP_EQ,
+            dirserv_read_measured_bandwidths(fname, NULL, NULL, NULL));
   expect_log_msg_containing("Ignoring bandwidth file line");
   teardown_capture_of_logs();
 
@@ -2749,21 +2709,23 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
    * They will not be ignored. */
   /* Create the bandwidth file */
   const char *relay_lines_vote =
-    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 bw=1024 vote=1\n"
-    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 bw=1024 unmeasured=0\n"
-    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 bw=1024 unmeasured=1\n";
+      "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 bw=1024 vote=1\n"
+      "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 bw=1024 "
+      "unmeasured=0\n"
+      "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 bw=1024 "
+      "unmeasured=1\n";
   tor_asprintf(&content, "%ld\n%s", (long)timestamp, relay_lines_vote);
   write_str_to_file(fname, content, 0);
   tor_free(content);
 
   /* Read the bandwidth file */
   setup_full_capture_of_logs(LOG_DEBUG);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL, NULL,
-                                                       NULL));
+  tt_int_op(0, OP_EQ,
+            dirserv_read_measured_bandwidths(fname, NULL, NULL, NULL));
   expect_log_msg_not_containing("Ignoring bandwidth file line");
   teardown_capture_of_logs();
 
- done:
+done:
   unlink(fname);
   tor_free(fname);
   tor_free(header_lines_v100);
@@ -2792,7 +2754,7 @@ test_dir_measured_bw_kb_cache(void *arg)
   /* First, clear the cache and assert that it's empty */
   (void)arg;
   dirserv_clear_measured_bw_cache();
-  tt_int_op(dirserv_get_measured_bw_cache_size(),OP_EQ, 0);
+  tt_int_op(dirserv_get_measured_bw_cache_size(), OP_EQ, 0);
   /*
    * Set up test mbwls; none of the dirserv_cache_*() functions care about
    * the node_hex field.
@@ -2805,51 +2767,51 @@ test_dir_measured_bw_kb_cache(void *arg)
   mbwl[2].bw_kb = 80;
   /* Try caching something */
   dirserv_cache_measured_bw(&(mbwl[0]), curr);
-  tt_int_op(dirserv_get_measured_bw_cache_size(),OP_EQ, 1);
+  tt_int_op(dirserv_get_measured_bw_cache_size(), OP_EQ, 1);
   /* Okay, let's see if we can retrieve it */
-  tt_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,&bw, &as_of));
-  tt_int_op(bw,OP_EQ, 20);
-  tt_int_op(as_of,OP_EQ, MBWC_INIT_TIME);
+  tt_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id, &bw, &as_of));
+  tt_int_op(bw, OP_EQ, 20);
+  tt_int_op(as_of, OP_EQ, MBWC_INIT_TIME);
   /* Try retrieving it without some outputs */
-  tt_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,NULL, NULL));
-  tt_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,&bw, NULL));
-  tt_int_op(bw,OP_EQ, 20);
-  tt_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,NULL,&as_of));
-  tt_int_op(as_of,OP_EQ, MBWC_INIT_TIME);
+  tt_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id, NULL, NULL));
+  tt_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id, &bw, NULL));
+  tt_int_op(bw, OP_EQ, 20);
+  tt_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id, NULL, &as_of));
+  tt_int_op(as_of, OP_EQ, MBWC_INIT_TIME);
   /* Now expire it */
   curr += MAX_MEASUREMENT_AGE + 1;
   dirserv_expire_measured_bw_cache(curr);
   /* Check that the cache is empty */
-  tt_int_op(dirserv_get_measured_bw_cache_size(),OP_EQ, 0);
+  tt_int_op(dirserv_get_measured_bw_cache_size(), OP_EQ, 0);
   /* Check that we can't retrieve it */
-  tt_assert(!dirserv_query_measured_bw_cache_kb(mbwl[0].node_id, NULL,NULL));
+  tt_assert(! dirserv_query_measured_bw_cache_kb(mbwl[0].node_id, NULL, NULL));
   /* Try caching a few things now */
   dirserv_cache_measured_bw(&(mbwl[0]), curr);
-  tt_int_op(dirserv_get_measured_bw_cache_size(),OP_EQ, 1);
+  tt_int_op(dirserv_get_measured_bw_cache_size(), OP_EQ, 1);
   curr += MAX_MEASUREMENT_AGE / 4;
   dirserv_cache_measured_bw(&(mbwl[1]), curr);
-  tt_int_op(dirserv_get_measured_bw_cache_size(),OP_EQ, 2);
+  tt_int_op(dirserv_get_measured_bw_cache_size(), OP_EQ, 2);
   curr += MAX_MEASUREMENT_AGE / 4;
   dirserv_cache_measured_bw(&(mbwl[2]), curr);
-  tt_int_op(dirserv_get_measured_bw_cache_size(),OP_EQ, 3);
+  tt_int_op(dirserv_get_measured_bw_cache_size(), OP_EQ, 3);
   curr += MAX_MEASUREMENT_AGE / 4 + 1;
   /* Do an expire that's too soon to get any of them */
   dirserv_expire_measured_bw_cache(curr);
-  tt_int_op(dirserv_get_measured_bw_cache_size(),OP_EQ, 3);
+  tt_int_op(dirserv_get_measured_bw_cache_size(), OP_EQ, 3);
   /* Push the oldest one off the cliff */
   curr += MAX_MEASUREMENT_AGE / 4;
   dirserv_expire_measured_bw_cache(curr);
-  tt_int_op(dirserv_get_measured_bw_cache_size(),OP_EQ, 2);
+  tt_int_op(dirserv_get_measured_bw_cache_size(), OP_EQ, 2);
   /* And another... */
   curr += MAX_MEASUREMENT_AGE / 4;
   dirserv_expire_measured_bw_cache(curr);
-  tt_int_op(dirserv_get_measured_bw_cache_size(),OP_EQ, 1);
+  tt_int_op(dirserv_get_measured_bw_cache_size(), OP_EQ, 1);
   /* This should empty it out again */
   curr += MAX_MEASUREMENT_AGE / 4;
   dirserv_expire_measured_bw_cache(curr);
-  tt_int_op(dirserv_get_measured_bw_cache_size(),OP_EQ, 0);
+  tt_int_op(dirserv_get_measured_bw_cache_size(), OP_EQ, 0);
 
- done:
+done:
   return;
 }
 
@@ -2886,28 +2848,32 @@ test_dir_param_voting(void *arg)
   vote2.net_params = smartlist_new();
   vote3.net_params = smartlist_new();
   vote4.net_params = smartlist_new();
-  smartlist_split_string(vote1.net_params,
-                         "ab=90 abcd=20 cw=50 x-yz=-99", NULL, 0, 0);
-  smartlist_split_string(vote2.net_params,
-                         "ab=27 cw=5 x-yz=88", NULL, 0, 0);
+  smartlist_split_string(vote1.net_params, "ab=90 abcd=20 cw=50 x-yz=-99",
+                         NULL, 0, 0);
+  smartlist_split_string(vote2.net_params, "ab=27 cw=5 x-yz=88", NULL, 0, 0);
   smartlist_split_string(vote3.net_params,
                          "abcd=20 c=60 cw=500 x-yz=-9 zzzzz=101", NULL, 0, 0);
   smartlist_split_string(vote4.net_params,
                          "ab=900 abcd=200 c=1 cw=51 x-yz=100", NULL, 0, 0);
-  tt_int_op(100,OP_EQ, networkstatus_get_param(&vote4, "x-yz", 50, 0, 300));
-  tt_int_op(222,OP_EQ, networkstatus_get_param(&vote4, "foobar", 222, 0, 300));
-  tt_int_op(80,OP_EQ, networkstatus_get_param(&vote4, "ab", 12, 0, 80));
-  tt_int_op(-8,OP_EQ, networkstatus_get_param(&vote4, "ab", -12, -100, -8));
-  tt_int_op(0,OP_EQ, networkstatus_get_param(&vote4, "foobar", 0, -100, 8));
+  tt_int_op(100, OP_EQ, networkstatus_get_param(&vote4, "x-yz", 50, 0, 300));
+  tt_int_op(222, OP_EQ,
+            networkstatus_get_param(&vote4, "foobar", 222, 0, 300));
+  tt_int_op(80, OP_EQ, networkstatus_get_param(&vote4, "ab", 12, 0, 80));
+  tt_int_op(-8, OP_EQ, networkstatus_get_param(&vote4, "ab", -12, -100, -8));
+  tt_int_op(0, OP_EQ, networkstatus_get_param(&vote4, "foobar", 0, -100, 8));
 
-  tt_int_op(100,OP_EQ, networkstatus_get_overridable_param(
-                                        &vote4, -1, "x-yz", 50, 0, 300));
-  tt_int_op(30,OP_EQ, networkstatus_get_overridable_param(
-                                        &vote4, 30, "x-yz", 50, 0, 300));
-  tt_int_op(0,OP_EQ, networkstatus_get_overridable_param(
-                                        &vote4, -101, "foobar", 0, -100, 8));
-  tt_int_op(-99,OP_EQ, networkstatus_get_overridable_param(
-                                        &vote4, -99, "foobar", 0, -100, 8));
+  tt_int_op(
+      100, OP_EQ,
+      networkstatus_get_overridable_param(&vote4, -1, "x-yz", 50, 0, 300));
+  tt_int_op(
+      30, OP_EQ,
+      networkstatus_get_overridable_param(&vote4, 30, "x-yz", 50, 0, 300));
+  tt_int_op(
+      0, OP_EQ,
+      networkstatus_get_overridable_param(&vote4, -101, "foobar", 0, -100, 8));
+  tt_int_op(
+      -99, OP_EQ,
+      networkstatus_get_overridable_param(&vote4, -99, "foobar", 0, -100, 8));
 
   smartlist_add(votes, &vote1);
 
@@ -2915,62 +2881,62 @@ test_dir_param_voting(void *arg)
    * networks without many dirauths. */
 
   res = dirvote_compute_params(votes, 12, 2);
-  tt_str_op(res,OP_EQ, "");
+  tt_str_op(res, OP_EQ, "");
   tor_free(res);
 
   res = dirvote_compute_params(votes, 12, 1);
-  tt_str_op(res,OP_EQ, "ab=90 abcd=20 cw=50 x-yz=-99");
+  tt_str_op(res, OP_EQ, "ab=90 abcd=20 cw=50 x-yz=-99");
   tor_free(res);
 
   smartlist_add(votes, &vote2);
 
   res = dirvote_compute_params(votes, 12, 2);
-  tt_str_op(res,OP_EQ, "ab=27 cw=5 x-yz=-99");
+  tt_str_op(res, OP_EQ, "ab=27 cw=5 x-yz=-99");
   tor_free(res);
 
   res = dirvote_compute_params(votes, 12, 3);
-  tt_str_op(res,OP_EQ, "ab=27 cw=5 x-yz=-99");
+  tt_str_op(res, OP_EQ, "ab=27 cw=5 x-yz=-99");
   tor_free(res);
 
   res = dirvote_compute_params(votes, 12, 6);
-  tt_str_op(res,OP_EQ, "");
+  tt_str_op(res, OP_EQ, "");
   tor_free(res);
 
   smartlist_add(votes, &vote3);
 
   res = dirvote_compute_params(votes, 12, 3);
-  tt_str_op(res,OP_EQ, "ab=27 abcd=20 cw=50 x-yz=-9");
+  tt_str_op(res, OP_EQ, "ab=27 abcd=20 cw=50 x-yz=-9");
   tor_free(res);
 
   res = dirvote_compute_params(votes, 12, 5);
-  tt_str_op(res,OP_EQ, "cw=50 x-yz=-9");
+  tt_str_op(res, OP_EQ, "cw=50 x-yz=-9");
   tor_free(res);
 
   res = dirvote_compute_params(votes, 12, 9);
-  tt_str_op(res,OP_EQ, "cw=50 x-yz=-9");
+  tt_str_op(res, OP_EQ, "cw=50 x-yz=-9");
   tor_free(res);
 
   smartlist_add(votes, &vote4);
 
   res = dirvote_compute_params(votes, 12, 4);
-  tt_str_op(res,OP_EQ, "ab=90 abcd=20 cw=50 x-yz=-9");
+  tt_str_op(res, OP_EQ, "ab=90 abcd=20 cw=50 x-yz=-9");
   tor_free(res);
 
   res = dirvote_compute_params(votes, 12, 5);
-  tt_str_op(res,OP_EQ, "ab=90 abcd=20 cw=50 x-yz=-9");
+  tt_str_op(res, OP_EQ, "ab=90 abcd=20 cw=50 x-yz=-9");
   tor_free(res);
 
   /* Test that the special-cased "at least three dirauths voted for
    * this param" logic works as expected. */
   res = dirvote_compute_params(votes, 12, 6);
-  tt_str_op(res,OP_EQ, "ab=90 abcd=20 cw=50 x-yz=-9");
+  tt_str_op(res, OP_EQ, "ab=90 abcd=20 cw=50 x-yz=-9");
   tor_free(res);
 
   res = dirvote_compute_params(votes, 12, 10);
-  tt_str_op(res,OP_EQ, "ab=90 abcd=20 cw=50 x-yz=-9");
+  tt_str_op(res, OP_EQ, "ab=90 abcd=20 cw=50 x-yz=-9");
   tor_free(res);
 
- done:
+done:
   tor_free(res);
   SMARTLIST_FOREACH(vote1.net_params, char *, cp, tor_free(cp));
   SMARTLIST_FOREACH(vote2.net_params, char *, cp, tor_free(cp));
@@ -2996,8 +2962,8 @@ test_dir_param_voting_lookup(void *arg)
                          "jack= electricity=sdk opa=6z abc=9 abcd=99",
                          NULL, 0, 0);
 
-  tt_int_op(1000,
-            OP_EQ, dirvote_get_intermediate_param_value(lst, "ab", 1000));
+  tt_int_op(1000, OP_EQ,
+            dirvote_get_intermediate_param_value(lst, "ab", 1000));
   tt_int_op(9, OP_EQ, dirvote_get_intermediate_param_value(lst, "abc", 1000));
   tt_int_op(99, OP_EQ,
             dirvote_get_intermediate_param_value(lst, "abcd", 1000));
@@ -3018,27 +2984,24 @@ test_dir_param_voting_lookup(void *arg)
   tt_int_op(-100, OP_EQ,
             dirvote_get_intermediate_param_value(lst, "jack", -100));
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
-  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
-            "!(! ok)");
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ, "!(! ok)");
   tor_end_capture_bugs_();
   /* electricity and opa aren't integers. */
   tor_capture_bugs_(1);
   tt_int_op(-100, OP_EQ,
             dirvote_get_intermediate_param_value(lst, "electricity", -100));
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
-  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
-            "!(! ok)");
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ, "!(! ok)");
   tor_end_capture_bugs_();
 
   tor_capture_bugs_(1);
   tt_int_op(-100, OP_EQ,
             dirvote_get_intermediate_param_value(lst, "opa", -100));
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
-  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
-            "!(! ok)");
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ, "!(! ok)");
   tor_end_capture_bugs_();
 
- done:
+done:
   SMARTLIST_FOREACH(lst, char *, cp, tor_free(cp));
   smartlist_free(lst);
   tor_end_capture_bugs_();
@@ -3050,19 +3013,17 @@ test_dir_param_voting_lookup(void *arg)
  * same voting authority, and that they do in fact have all the same
  * information. */
 static void
-test_same_voter(networkstatus_voter_info_t *v1,
-                networkstatus_voter_info_t *v2)
+test_same_voter(networkstatus_voter_info_t *v1, networkstatus_voter_info_t *v2)
 {
-  tt_str_op(v1->nickname,OP_EQ, v2->nickname);
-  tt_mem_op(v1->identity_digest,OP_EQ, v2->identity_digest, DIGEST_LEN);
-  tt_str_op(v1->address,OP_EQ, v2->address);
-  tt_int_op(v1->addr,OP_EQ, v2->addr);
-  tt_int_op(v1->dir_port,OP_EQ, v2->dir_port);
-  tt_int_op(v1->or_port,OP_EQ, v2->or_port);
-  tt_str_op(v1->contact,OP_EQ, v2->contact);
-  tt_mem_op(v1->vote_digest,OP_EQ, v2->vote_digest, DIGEST_LEN);
- done:
-  ;
+  tt_str_op(v1->nickname, OP_EQ, v2->nickname);
+  tt_mem_op(v1->identity_digest, OP_EQ, v2->identity_digest, DIGEST_LEN);
+  tt_str_op(v1->address, OP_EQ, v2->address);
+  tt_int_op(v1->addr, OP_EQ, v2->addr);
+  tt_int_op(v1->dir_port, OP_EQ, v2->dir_port);
+  tt_int_op(v1->or_port, OP_EQ, v2->or_port);
+  tt_str_op(v1->contact, OP_EQ, v2->contact);
+  tt_mem_op(v1->vote_digest, OP_EQ, v2->vote_digest, DIGEST_LEN);
+done:;
 }
 
 /** Helper: get a detached signatures document for one or two
@@ -3074,9 +3035,9 @@ get_detached_sigs(networkstatus_t *ns, networkstatus_t *ns2)
   smartlist_t *sl;
   tor_assert(ns && ns->flavor == FLAV_NS);
   sl = smartlist_new();
-  smartlist_add(sl,ns);
+  smartlist_add(sl, ns);
   if (ns2)
-    smartlist_add(sl,ns2);
+    smartlist_add(sl, ns2);
   r = networkstatus_get_detached_signatures(sl);
   smartlist_free(sl);
   return r;
@@ -3111,12 +3072,12 @@ vote_tweaks_for_v3ns(networkstatus_t *v, int voter, time_t now)
       vote_routerstatus_free(vrs);
       vrs = smartlist_get(v->routerstatus_list, 0);
       memset(vrs->status.descriptor_digest, (int)'Z', DIGEST_LEN);
-      tt_assert(router_add_to_routerlist(
-                  dir_common_generate_ri_from_rs(vrs), &msg,0,0) >= 0);
+      tt_assert(router_add_to_routerlist(dir_common_generate_ri_from_rs(vrs),
+                                         &msg, 0, 0) >= 0);
     }
   }
 
- done:
+done:
   return 0;
 }
 
@@ -3138,44 +3099,46 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
                 "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
                 "\x3\x3\x3\x3",
                 DIGEST_LEN) &&
-                (voter == 1)) {
+      (voter == 1)) {
     /* Check the first routerstatus. */
-    tt_str_op(vrs->version,OP_EQ, "0.1.2.14");
-    tt_int_op(rs->published_on,OP_EQ, now-1500);
-    tt_str_op(rs->nickname,OP_EQ, "router2");
-    tt_mem_op(rs->identity_digest,OP_EQ,
-               "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
-               "\x3\x3\x3\x3",
-               DIGEST_LEN);
-    tt_mem_op(rs->descriptor_digest,OP_EQ, "NNNNNNNNNNNNNNNNNNNN", DIGEST_LEN);
-    tt_int_op(rs->addr,OP_EQ, 0x99008801);
-    tt_int_op(rs->or_port,OP_EQ, 443);
-    tt_int_op(rs->dir_port,OP_EQ, 8000);
+    tt_str_op(vrs->version, OP_EQ, "0.1.2.14");
+    tt_int_op(rs->published_on, OP_EQ, now - 1500);
+    tt_str_op(rs->nickname, OP_EQ, "router2");
+    tt_mem_op(rs->identity_digest, OP_EQ,
+              "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
+              "\x3\x3\x3\x3",
+              DIGEST_LEN);
+    tt_mem_op(rs->descriptor_digest, OP_EQ, "NNNNNNNNNNNNNNNNNNNN",
+              DIGEST_LEN);
+    tt_int_op(rs->addr, OP_EQ, 0x99008801);
+    tt_int_op(rs->or_port, OP_EQ, 443);
+    tt_int_op(rs->dir_port, OP_EQ, 8000);
     /* no flags except "running" (16) and "v2dir" (64) and "valid" (128) */
     tt_u64_op(vrs->flags, OP_EQ, UINT64_C(0xd0));
   } else if (tor_memeq(rs->identity_digest,
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
                        "\x5\x5\x5\x5",
                        DIGEST_LEN) &&
-                       (voter == 1 || voter == 2)) {
-    tt_mem_op(rs->identity_digest,OP_EQ,
-               "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
-               "\x5\x5\x5\x5",
-               DIGEST_LEN);
+             (voter == 1 || voter == 2)) {
+    tt_mem_op(rs->identity_digest, OP_EQ,
+              "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
+              "\x5\x5\x5\x5",
+              DIGEST_LEN);
 
     if (voter == 1) {
       /* Check the second routerstatus. */
-      tt_str_op(vrs->version,OP_EQ, "0.2.0.5");
-      tt_int_op(rs->published_on,OP_EQ, now-1000);
-      tt_str_op(rs->nickname,OP_EQ, "router1");
+      tt_str_op(vrs->version, OP_EQ, "0.2.0.5");
+      tt_int_op(rs->published_on, OP_EQ, now - 1000);
+      tt_str_op(rs->nickname, OP_EQ, "router1");
     }
-    tt_mem_op(rs->descriptor_digest,OP_EQ, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
-    tt_int_op(rs->addr,OP_EQ, 0x99009901);
-    tt_int_op(rs->or_port,OP_EQ, 443);
-    tt_int_op(rs->dir_port,OP_EQ, 0);
+    tt_mem_op(rs->descriptor_digest, OP_EQ, "MMMMMMMMMMMMMMMMMMMM",
+              DIGEST_LEN);
+    tt_int_op(rs->addr, OP_EQ, 0x99009901);
+    tt_int_op(rs->or_port, OP_EQ, 443);
+    tt_int_op(rs->dir_port, OP_EQ, 0);
     tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
     tt_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
-    tt_int_op(rs->ipv6_orport,OP_EQ, 4711);
+    tt_int_op(rs->ipv6_orport, OP_EQ, 4711);
     if (voter == 1) {
       /* all except "authority" (1) */
       tt_u64_op(vrs->flags, OP_EQ, UINT64_C(254));
@@ -3187,10 +3150,9 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
                        "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33"
                        "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33",
                        DIGEST_LEN) &&
-                       (voter == 1 || voter == 2)) {
+             (voter == 1 || voter == 2)) {
     /* Check the measured bandwidth bits */
-    tt_assert(vrs->has_measured_bw &&
-                vrs->measured_bw_kb == 1024);
+    tt_assert(vrs->has_measured_bw && vrs->measured_bw_kb == 1024);
   } else {
     /*
      * Didn't expect this, but the old unit test only checked some of them,
@@ -3199,7 +3161,7 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
     /* tt_assert(0); */
   }
 
- done:
+done:
   return;
 }
 
@@ -3213,11 +3175,11 @@ test_consensus_for_v3ns(networkstatus_t *con, time_t now)
 
   tt_assert(con);
   tt_ptr_op(con->cert, OP_EQ, NULL);
-  tt_int_op(2,OP_EQ, smartlist_len(con->routerstatus_list));
+  tt_int_op(2, OP_EQ, smartlist_len(con->routerstatus_list));
   /* There should be two listed routers: one with identity 3, one with
    * identity 5. */
 
- done:
+done:
   return;
 }
 
@@ -3238,19 +3200,20 @@ test_routerstatus_for_v3ns(routerstatus_t *rs, time_t now)
                 "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
                 "\x3\x3",
                 DIGEST_LEN)) {
-    tt_mem_op(rs->identity_digest,OP_EQ,
-               "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
-               DIGEST_LEN);
-    tt_mem_op(rs->descriptor_digest,OP_EQ, "NNNNNNNNNNNNNNNNNNNN", DIGEST_LEN);
-    tt_assert(!rs->is_authority);
-    tt_assert(!rs->is_exit);
-    tt_assert(!rs->is_fast);
-    tt_assert(!rs->is_possible_guard);
-    tt_assert(!rs->is_stable);
+    tt_mem_op(rs->identity_digest, OP_EQ,
+              "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
+              DIGEST_LEN);
+    tt_mem_op(rs->descriptor_digest, OP_EQ, "NNNNNNNNNNNNNNNNNNNN",
+              DIGEST_LEN);
+    tt_assert(! rs->is_authority);
+    tt_assert(! rs->is_exit);
+    tt_assert(! rs->is_fast);
+    tt_assert(! rs->is_possible_guard);
+    tt_assert(! rs->is_stable);
     /* (If it wasn't running it wouldn't be here) */
     tt_assert(rs->is_flagged_running);
     tt_assert(rs->is_valid);
-    tt_assert(!rs->is_named);
+    tt_assert(! rs->is_named);
     tt_assert(rs->is_v2_dir);
     /* XXXX check version */
   } else if (tor_memeq(rs->identity_digest,
@@ -3258,19 +3221,20 @@ test_routerstatus_for_v3ns(routerstatus_t *rs, time_t now)
                        "\x5\x5\x5\x5",
                        DIGEST_LEN)) {
     /* This one showed up in 3 digests. Twice with ID 'M', once with 'Z'.  */
-    tt_mem_op(rs->identity_digest,OP_EQ,
-               "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
-               DIGEST_LEN);
-    tt_str_op(rs->nickname,OP_EQ, "router1");
-    tt_mem_op(rs->descriptor_digest,OP_EQ, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
-    tt_int_op(rs->published_on,OP_EQ, now-1000);
-    tt_int_op(rs->addr,OP_EQ, 0x99009901);
-    tt_int_op(rs->or_port,OP_EQ, 443);
-    tt_int_op(rs->dir_port,OP_EQ, 0);
+    tt_mem_op(rs->identity_digest, OP_EQ,
+              "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
+              DIGEST_LEN);
+    tt_str_op(rs->nickname, OP_EQ, "router1");
+    tt_mem_op(rs->descriptor_digest, OP_EQ, "MMMMMMMMMMMMMMMMMMMM",
+              DIGEST_LEN);
+    tt_int_op(rs->published_on, OP_EQ, now - 1000);
+    tt_int_op(rs->addr, OP_EQ, 0x99009901);
+    tt_int_op(rs->or_port, OP_EQ, 443);
+    tt_int_op(rs->dir_port, OP_EQ, 0);
     tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
     tt_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
-    tt_int_op(rs->ipv6_orport,OP_EQ, 4711);
-    tt_assert(!rs->is_authority);
+    tt_int_op(rs->ipv6_orport, OP_EQ, 4711);
+    tt_assert(! rs->is_authority);
     tt_assert(rs->is_exit);
     tt_assert(rs->is_fast);
     tt_assert(rs->is_possible_guard);
@@ -3278,21 +3242,21 @@ test_routerstatus_for_v3ns(routerstatus_t *rs, time_t now)
     tt_assert(rs->is_flagged_running);
     tt_assert(rs->is_valid);
     tt_assert(rs->is_v2_dir);
-    tt_assert(!rs->is_named);
+    tt_assert(! rs->is_named);
     /* XXXX check version */
   } else {
     /* Weren't expecting this... */
     tt_abort();
   }
 
- done:
+done:
   return;
 }
 
 static void
 test_dir_networkstatus_compute_bw_weights_v10(void *arg)
 {
-  (void) arg;
+  (void)arg;
   smartlist_t *chunks = smartlist_new();
   int64_t G, M, E, D, T, weight_scale;
   int ret;
@@ -3316,10 +3280,12 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
                                              weight_scale);
   tt_int_op(ret, OP_EQ, 1);
   tt_int_op(smartlist_len(chunks), OP_EQ, 1);
-  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=3333 "
-    "Wbe=3000 Wbg=3000 Wbm=10000 Wdb=10000 Web=10000 Wed=3333 Wee=7000 "
-    "Weg=3333 Wem=7000 Wgb=10000 Wgd=3333 Wgg=7000 Wgm=7000 Wmb=10000 "
-    "Wmd=3333 Wme=3000 Wmg=3000 Wmm=10000\n");
+  tt_str_op(
+      smartlist_get(chunks, 0), OP_EQ,
+      "bandwidth-weights Wbd=3333 "
+      "Wbe=3000 Wbg=3000 Wbm=10000 Wdb=10000 Web=10000 Wed=3333 Wee=7000 "
+      "Weg=3333 Wem=7000 Wgb=10000 Wgd=3333 Wgg=7000 Wgm=7000 Wmb=10000 "
+      "Wmd=3333 Wme=3000 Wmg=3000 Wmm=10000\n");
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
@@ -3331,10 +3297,12 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_int_op(ret, OP_EQ, 1);
-  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=0 Wbe=0 "
-    "Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=10000 Wee=10000 Weg=10000 "
-    "Wem=10000 Wgb=10000 Wgd=0 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 Wme=0 "
-    "Wmg=0 Wmm=10000\n");
+  tt_str_op(
+      smartlist_get(chunks, 0), OP_EQ,
+      "bandwidth-weights Wbd=0 Wbe=0 "
+      "Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=10000 Wee=10000 Weg=10000 "
+      "Wem=10000 Wgb=10000 Wgd=0 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 Wme=0 "
+      "Wmg=0 Wmm=10000\n");
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
@@ -3346,10 +3314,12 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_int_op(ret, OP_EQ, 1);
-  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=0 Wbe=0 "
-    "Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=0 Wee=10000 Weg=0 Wem=10000 "
-    "Wgb=10000 Wgd=10000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 Wme=0 Wmg=0 "
-    "Wmm=10000\n");
+  tt_str_op(
+      smartlist_get(chunks, 0), OP_EQ,
+      "bandwidth-weights Wbd=0 Wbe=0 "
+      "Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=0 Wee=10000 Weg=0 Wem=10000 "
+      "Wgb=10000 Wgd=10000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 Wme=0 Wmg=0 "
+      "Wmm=10000\n");
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
@@ -3362,10 +3332,12 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_int_op(ret, OP_EQ, 1);
-  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=4000 "
-    "Wbe=0 Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=2000 Wee=10000 Weg=2000 "
-    "Wem=10000 Wgb=10000 Wgd=4000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=4000 "
-    "Wme=0 Wmg=0 Wmm=10000\n");
+  tt_str_op(
+      smartlist_get(chunks, 0), OP_EQ,
+      "bandwidth-weights Wbd=4000 "
+      "Wbe=0 Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=2000 Wee=10000 Weg=2000 "
+      "Wem=10000 Wgb=10000 Wgd=4000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=4000 "
+      "Wme=0 Wmg=0 Wmm=10000\n");
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
@@ -3378,10 +3350,12 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_int_op(ret, OP_EQ, 1);
-  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=666 Wbe=0 "
-    "Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=3666 Wee=10000 Weg=3666 "
-    "Wem=10000 Wgb=10000 Wgd=5668 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=666 "
-    "Wme=0 Wmg=0 Wmm=10000\n");
+  tt_str_op(
+      smartlist_get(chunks, 0), OP_EQ,
+      "bandwidth-weights Wbd=666 Wbe=0 "
+      "Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=3666 Wee=10000 Weg=3666 "
+      "Wem=10000 Wgb=10000 Wgd=5668 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=666 "
+      "Wme=0 Wmg=0 Wmm=10000\n");
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
@@ -3410,10 +3384,12 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_int_op(ret, OP_EQ, 1);
-  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=0 "
-    "Wbe=3333 Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=0 Wee=6667 Weg=0 "
-    "Wem=6667 Wgb=10000 Wgd=10000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 "
-    "Wme=3333 Wmg=0 Wmm=10000\n");
+  tt_str_op(
+      smartlist_get(chunks, 0), OP_EQ,
+      "bandwidth-weights Wbd=0 "
+      "Wbe=3333 Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=0 Wee=6667 Weg=0 "
+      "Wem=6667 Wgb=10000 Wgd=10000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 "
+      "Wme=3333 Wmg=0 Wmm=10000\n");
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
@@ -3426,10 +3402,12 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_int_op(ret, OP_EQ, 1);
-  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=0 Wbe=0 "
-    "Wbg=3333 Wbm=10000 Wdb=10000 Web=10000 Wed=10000 Wee=10000 Weg=10000 "
-    "Wem=10000 Wgb=10000 Wgd=0 Wgg=6667 Wgm=6667 Wmb=10000 Wmd=0 Wme=0 "
-    "Wmg=3333 Wmm=10000\n");
+  tt_str_op(
+      smartlist_get(chunks, 0), OP_EQ,
+      "bandwidth-weights Wbd=0 Wbe=0 "
+      "Wbg=3333 Wbm=10000 Wdb=10000 Web=10000 Wed=10000 Wee=10000 Weg=10000 "
+      "Wem=10000 Wgb=10000 Wgd=0 Wgg=6667 Wgm=6667 Wmb=10000 Wmd=0 Wme=0 "
+      "Wmg=3333 Wmm=10000\n");
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
@@ -3442,10 +3420,12 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_int_op(ret, OP_EQ, 1);
-  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=0 "
-    "Wbe=3334 Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=0 Wee=6666 Weg=0 "
-    "Wem=6666 Wgb=10000 Wgd=10000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 "
-    "Wme=3334 Wmg=0 Wmm=10000\n");
+  tt_str_op(
+      smartlist_get(chunks, 0), OP_EQ,
+      "bandwidth-weights Wbd=0 "
+      "Wbe=3334 Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=0 Wee=6666 Weg=0 "
+      "Wem=6666 Wgb=10000 Wgd=10000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 "
+      "Wme=3334 Wmg=0 Wmm=10000\n");
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
@@ -3458,10 +3438,12 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_int_op(ret, OP_EQ, 1);
-  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=0 Wbe=0 "
-    "Wbg=3334 Wbm=10000 Wdb=10000 Web=10000 Wed=10000 Wee=10000 Weg=10000 "
-    "Wem=10000 Wgb=10000 Wgd=0 Wgg=6666 Wgm=6666 Wmb=10000 Wmd=0 Wme=0 "
-    "Wmg=3334 Wmm=10000\n");
+  tt_str_op(
+      smartlist_get(chunks, 0), OP_EQ,
+      "bandwidth-weights Wbd=0 Wbe=0 "
+      "Wbg=3334 Wbm=10000 Wdb=10000 Web=10000 Wed=10000 Wee=10000 Weg=10000 "
+      "Wem=10000 Wgb=10000 Wgd=0 Wgg=6666 Wgm=6666 Wmb=10000 Wmd=0 Wme=0 "
+      "Wmg=3334 Wmm=10000\n");
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
@@ -3471,67 +3453,75 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
   E = 980834;
   D = 3385803;
   T = 11305425;
-  tt_i64_op(G+M+E+D, OP_EQ, T);
+  tt_i64_op(G + M + E + D, OP_EQ, T);
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_assert(ret);
-  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=883 Wbe=0 "
-    "Wbg=3673 Wbm=10000 Wdb=10000 Web=10000 Wed=8233 Wee=10000 Weg=8233 "
-    "Wem=10000 Wgb=10000 Wgd=883 Wgg=6327 Wgm=6327 Wmb=10000 Wmd=883 Wme=0 "
-    "Wmg=3673 Wmm=10000\n");
+  tt_str_op(
+      smartlist_get(chunks, 0), OP_EQ,
+      "bandwidth-weights Wbd=883 Wbe=0 "
+      "Wbg=3673 Wbm=10000 Wdb=10000 Web=10000 Wed=8233 Wee=10000 Weg=8233 "
+      "Wem=10000 Wgb=10000 Wgd=883 Wgg=6327 Wgm=6327 Wmb=10000 Wmd=883 Wme=0 "
+      "Wmg=3673 Wmm=10000\n");
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* case from 04 Oct 2016 (3a E scarce) */
-  G=29322240;
-  M=4721546;
-  E=1522058;
-  D=9273571;
-  T=44839415;
-  tt_i64_op(G+M+E+D, OP_EQ, T);
+  G = 29322240;
+  M = 4721546;
+  E = 1522058;
+  D = 9273571;
+  T = 44839415;
+  tt_i64_op(G + M + E + D, OP_EQ, T);
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_assert(ret);
-  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=0 Wbe=0 "
-    "Wbg=4194 Wbm=10000 Wdb=10000 Web=10000 Wed=10000 Wee=10000 Weg=10000 "
-    "Wem=10000 Wgb=10000 Wgd=0 Wgg=5806 Wgm=5806 Wmb=10000 Wmd=0 Wme=0 "
-    "Wmg=4194 Wmm=10000\n");
+  tt_str_op(
+      smartlist_get(chunks, 0), OP_EQ,
+      "bandwidth-weights Wbd=0 Wbe=0 "
+      "Wbg=4194 Wbm=10000 Wdb=10000 Web=10000 Wed=10000 Wee=10000 Weg=10000 "
+      "Wem=10000 Wgb=10000 Wgd=0 Wgg=5806 Wgm=5806 Wmb=10000 Wmd=0 Wme=0 "
+      "Wmg=4194 Wmm=10000\n");
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* case from 04 Sep 2013 (2b1) */
-  G=3091352;
-  M=1838837;
-  E=2109300;
-  D=2469369;
-  T=9508858;
-  tt_i64_op(G+M+E+D, OP_EQ, T);
+  G = 3091352;
+  M = 1838837;
+  E = 2109300;
+  D = 2469369;
+  T = 9508858;
+  tt_i64_op(G + M + E + D, OP_EQ, T);
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_assert(ret);
-  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=317 "
-    "Wbe=5938 Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=9366 Wee=4061 "
-    "Weg=9366 Wem=4061 Wgb=10000 Wgd=317 Wgg=10000 Wgm=10000 Wmb=10000 "
-    "Wmd=317 Wme=5938 Wmg=0 Wmm=10000\n");
+  tt_str_op(
+      smartlist_get(chunks, 0), OP_EQ,
+      "bandwidth-weights Wbd=317 "
+      "Wbe=5938 Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=9366 Wee=4061 "
+      "Weg=9366 Wem=4061 Wgb=10000 Wgd=317 Wgg=10000 Wgm=10000 Wmb=10000 "
+      "Wmd=317 Wme=5938 Wmg=0 Wmm=10000\n");
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* explicitly test initializing weights to 1*/
-  G=1;
-  M=1;
-  E=1;
-  D=1;
-  T=4;
-  tt_i64_op(G+M+E+D, OP_EQ, T);
+  G = 1;
+  M = 1;
+  E = 1;
+  D = 1;
+  T = 4;
+  tt_i64_op(G + M + E + D, OP_EQ, T);
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
-  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=3333 "
-    "Wbe=0 Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=3333 Wee=10000 Weg=3333 "
-    "Wem=10000 Wgb=10000 Wgd=3333 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=3333 "
-    "Wme=0 Wmg=0 Wmm=10000\n");
+  tt_str_op(
+      smartlist_get(chunks, 0), OP_EQ,
+      "bandwidth-weights Wbd=3333 "
+      "Wbe=0 Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=3333 Wee=10000 Weg=3333 "
+      "Wem=10000 Wgb=10000 Wgd=3333 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=3333 "
+      "Wme=0 Wmg=0 Wmm=10000\n");
   tt_assert(ret);
 
- done:
+done:
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_free(chunks);
 }
@@ -3548,16 +3538,17 @@ get_my_v3_authority_cert_m(void)
 /** Run a unit tests for generating and parsing networkstatuses, with
  * the supply test fns. */
 static void
-test_a_networkstatus(
-    vote_routerstatus_t * (*vrs_gen)(int idx, time_t now),
-    int (*vote_tweaks)(networkstatus_t *v, int voter, time_t now),
-    void (*vrs_test)(vote_routerstatus_t *vrs, int voter, time_t now),
-    void (*consensus_test)(networkstatus_t *con, time_t now),
-    void (*rs_test)(routerstatus_t *rs, time_t now))
+test_a_networkstatus(vote_routerstatus_t *(*vrs_gen)(int idx, time_t now),
+                     int (*vote_tweaks)(networkstatus_t *v, int voter,
+                                        time_t now),
+                     void (*vrs_test)(vote_routerstatus_t *vrs, int voter,
+                                      time_t now),
+                     void (*consensus_test)(networkstatus_t *con, time_t now),
+                     void (*rs_test)(routerstatus_t *rs, time_t now))
 {
-  authority_cert_t *cert1=NULL, *cert2=NULL, *cert3=NULL;
-  crypto_pk_t *sign_skey_1=NULL, *sign_skey_2=NULL, *sign_skey_3=NULL;
-  crypto_pk_t *sign_skey_leg1=NULL;
+  authority_cert_t *cert1 = NULL, *cert2 = NULL, *cert3 = NULL;
+  crypto_pk_t *sign_skey_1 = NULL, *sign_skey_2 = NULL, *sign_skey_3 = NULL;
+  crypto_pk_t *sign_skey_leg1 = NULL;
   /*
    * Sum the non-zero returns from vote_tweaks() we've seen; if vote_tweaks()
    * returns non-zero, it changed net_params and we should skip the tests for
@@ -3568,21 +3559,21 @@ test_a_networkstatus(
   time_t now = time(NULL);
   networkstatus_voter_info_t *voter;
   document_signature_t *sig;
-  networkstatus_t *vote=NULL, *v1=NULL, *v2=NULL, *v3=NULL, *con=NULL,
-    *con_md=NULL;
+  networkstatus_t *vote = NULL, *v1 = NULL, *v2 = NULL, *v3 = NULL,
+                  *con = NULL, *con_md = NULL;
   vote_routerstatus_t *vrs;
   routerstatus_t *rs;
   int idx, n_rs, n_vrs;
-  char *consensus_text=NULL, *cp=NULL;
+  char *consensus_text = NULL, *cp = NULL;
   smartlist_t *votes = smartlist_new();
 
   /* For generating the two other consensuses. */
-  char *detached_text1=NULL, *detached_text2=NULL;
-  char *consensus_text2=NULL, *consensus_text3=NULL;
-  char *consensus_text_md2=NULL, *consensus_text_md3=NULL;
-  char *consensus_text_md=NULL;
-  networkstatus_t *con2=NULL, *con_md2=NULL, *con3=NULL, *con_md3=NULL;
-  ns_detached_signatures_t *dsig1=NULL, *dsig2=NULL;
+  char *detached_text1 = NULL, *detached_text2 = NULL;
+  char *consensus_text2 = NULL, *consensus_text3 = NULL;
+  char *consensus_text_md2 = NULL, *consensus_text_md3 = NULL;
+  char *consensus_text_md = NULL;
+  networkstatus_t *con2 = NULL, *con_md2 = NULL, *con3 = NULL, *con_md3 = NULL;
+  ns_detached_signatures_t *dsig1 = NULL, *dsig2 = NULL;
 
   tt_assert(vrs_gen);
   tt_assert(rs_test);
@@ -3591,17 +3582,14 @@ test_a_networkstatus(
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
 
   /* Parse certificates and keys. */
-  cert1 = mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
-                                                 strlen(AUTHORITY_CERT_1),
-                                                 NULL);
+  cert1 = mock_cert = authority_cert_parse_from_string(
+      AUTHORITY_CERT_1, strlen(AUTHORITY_CERT_1), NULL);
   tt_assert(cert1);
   cert2 = authority_cert_parse_from_string(AUTHORITY_CERT_2,
-                                           strlen(AUTHORITY_CERT_2),
-                                           NULL);
+                                           strlen(AUTHORITY_CERT_2), NULL);
   tt_assert(cert2);
   cert3 = authority_cert_parse_from_string(AUTHORITY_CERT_3,
-                                           strlen(AUTHORITY_CERT_3),
-                                           NULL);
+                                           strlen(AUTHORITY_CERT_3), NULL);
   tt_assert(cert3);
   sign_skey_1 = crypto_pk_new();
   sign_skey_2 = crypto_pk_new();
@@ -3610,48 +3598,49 @@ test_a_networkstatus(
   voting_schedule_recalculate_timing(get_options(), now);
   sr_state_init(0, 0);
 
-  tt_assert(!crypto_pk_read_private_key_from_string(sign_skey_1,
-                                                   AUTHORITY_SIGNKEY_1, -1));
-  tt_assert(!crypto_pk_read_private_key_from_string(sign_skey_2,
-                                                   AUTHORITY_SIGNKEY_2, -1));
-  tt_assert(!crypto_pk_read_private_key_from_string(sign_skey_3,
-                                                   AUTHORITY_SIGNKEY_3, -1));
+  tt_assert(! crypto_pk_read_private_key_from_string(sign_skey_1,
+                                                     AUTHORITY_SIGNKEY_1, -1));
+  tt_assert(! crypto_pk_read_private_key_from_string(sign_skey_2,
+                                                     AUTHORITY_SIGNKEY_2, -1));
+  tt_assert(! crypto_pk_read_private_key_from_string(sign_skey_3,
+                                                     AUTHORITY_SIGNKEY_3, -1));
 
-  tt_assert(!crypto_pk_cmp_keys(sign_skey_1, cert1->signing_key));
-  tt_assert(!crypto_pk_cmp_keys(sign_skey_2, cert2->signing_key));
+  tt_assert(! crypto_pk_cmp_keys(sign_skey_1, cert1->signing_key));
+  tt_assert(! crypto_pk_cmp_keys(sign_skey_2, cert2->signing_key));
 
-  tt_assert(!dir_common_construct_vote_1(&vote, cert1, sign_skey_1, vrs_gen,
-                                         &v1, &n_vrs, now, 1));
+  tt_assert(! dir_common_construct_vote_1(&vote, cert1, sign_skey_1, vrs_gen,
+                                          &v1, &n_vrs, now, 1));
   tt_assert(v1);
 
   /* Make sure the parsed thing was right. */
-  tt_int_op(v1->type,OP_EQ, NS_TYPE_VOTE);
-  tt_int_op(v1->published,OP_EQ, vote->published);
-  tt_int_op(v1->valid_after,OP_EQ, vote->valid_after);
-  tt_int_op(v1->fresh_until,OP_EQ, vote->fresh_until);
-  tt_int_op(v1->valid_until,OP_EQ, vote->valid_until);
-  tt_int_op(v1->vote_seconds,OP_EQ, vote->vote_seconds);
-  tt_int_op(v1->dist_seconds,OP_EQ, vote->dist_seconds);
-  tt_str_op(v1->client_versions,OP_EQ, vote->client_versions);
-  tt_str_op(v1->server_versions,OP_EQ, vote->server_versions);
+  tt_int_op(v1->type, OP_EQ, NS_TYPE_VOTE);
+  tt_int_op(v1->published, OP_EQ, vote->published);
+  tt_int_op(v1->valid_after, OP_EQ, vote->valid_after);
+  tt_int_op(v1->fresh_until, OP_EQ, vote->fresh_until);
+  tt_int_op(v1->valid_until, OP_EQ, vote->valid_until);
+  tt_int_op(v1->vote_seconds, OP_EQ, vote->vote_seconds);
+  tt_int_op(v1->dist_seconds, OP_EQ, vote->dist_seconds);
+  tt_str_op(v1->client_versions, OP_EQ, vote->client_versions);
+  tt_str_op(v1->server_versions, OP_EQ, vote->server_versions);
   tt_assert(v1->voters && smartlist_len(v1->voters));
   voter = smartlist_get(v1->voters, 0);
-  tt_str_op(voter->nickname,OP_EQ, "Voter1");
-  tt_str_op(voter->address,OP_EQ, "1.2.3.4");
-  tt_int_op(voter->addr,OP_EQ, 0x01020304);
-  tt_int_op(voter->dir_port,OP_EQ, 80);
-  tt_int_op(voter->or_port,OP_EQ, 9000);
-  tt_str_op(voter->contact,OP_EQ, "voter@example.com");
+  tt_str_op(voter->nickname, OP_EQ, "Voter1");
+  tt_str_op(voter->address, OP_EQ, "1.2.3.4");
+  tt_int_op(voter->addr, OP_EQ, 0x01020304);
+  tt_int_op(voter->dir_port, OP_EQ, 80);
+  tt_int_op(voter->or_port, OP_EQ, 9000);
+  tt_str_op(voter->contact, OP_EQ, "voter@example.com");
   tt_assert(v1->cert);
-  tt_assert(!crypto_pk_cmp_keys(sign_skey_1, v1->cert->signing_key));
+  tt_assert(! crypto_pk_cmp_keys(sign_skey_1, v1->cert->signing_key));
   cp = smartlist_join_strings(v1->known_flags, ":", 0, NULL);
-  tt_str_op(cp,OP_EQ, "Authority:Exit:Fast:Guard:Running:Stable:V2Dir:Valid");
+  tt_str_op(cp, OP_EQ, "Authority:Exit:Fast:Guard:Running:Stable:V2Dir:Valid");
   tor_free(cp);
-  tt_int_op(smartlist_len(v1->routerstatus_list),OP_EQ, n_vrs);
+  tt_int_op(smartlist_len(v1->routerstatus_list), OP_EQ, n_vrs);
   networkstatus_vote_free(vote);
   vote = NULL;
 
-  if (vote_tweaks) params_tweaked += vote_tweaks(v1, 1, now);
+  if (vote_tweaks)
+    params_tweaked += vote_tweaks(v1, 1, now);
 
   /* Check the routerstatuses. */
   for (idx = 0; idx < n_vrs; ++idx) {
@@ -3663,16 +3652,18 @@ test_a_networkstatus(
   /* Generate second vote. It disagrees on some of the times,
    * and doesn't list versions, and knows some crazy flags.
    * Generate and parse v2. */
-  tt_assert(!dir_common_construct_vote_2(&vote, cert2, sign_skey_2, vrs_gen,
-                                         &v2, &n_vrs, now, 1));
+  tt_assert(! dir_common_construct_vote_2(&vote, cert2, sign_skey_2, vrs_gen,
+                                          &v2, &n_vrs, now, 1));
   tt_assert(v2);
 
-  if (vote_tweaks) params_tweaked += vote_tweaks(v2, 2, now);
+  if (vote_tweaks)
+    params_tweaked += vote_tweaks(v2, 2, now);
 
   /* Check that flags come out right.*/
   cp = smartlist_join_strings(v2->known_flags, ":", 0, NULL);
-  tt_str_op(cp,OP_EQ, "Authority:Exit:Fast:Guard:MadeOfCheese:MadeOfTin:"
-             "Running:Stable:V2Dir:Valid");
+  tt_str_op(cp, OP_EQ,
+            "Authority:Exit:Fast:Guard:MadeOfCheese:MadeOfTin:"
+            "Running:Stable:V2Dir:Valid");
   tor_free(cp);
 
   /* Check the routerstatuses. */
@@ -3686,73 +3677,66 @@ test_a_networkstatus(
   vote = NULL;
 
   /* Generate the third vote with a legacy id. */
-  tt_assert(!dir_common_construct_vote_3(&vote, cert3, sign_skey_3, vrs_gen,
-                                         &v3, &n_vrs, now, 1));
+  tt_assert(! dir_common_construct_vote_3(&vote, cert3, sign_skey_3, vrs_gen,
+                                          &v3, &n_vrs, now, 1));
   tt_assert(v3);
 
-  if (vote_tweaks) params_tweaked += vote_tweaks(v3, 3, now);
+  if (vote_tweaks)
+    params_tweaked += vote_tweaks(v3, 3, now);
 
   /* Compute a consensus as voter 3. */
   smartlist_add(votes, v3);
   smartlist_add(votes, v1);
   smartlist_add(votes, v2);
-  consensus_text = networkstatus_compute_consensus(votes, 3,
-                                                   cert3->identity_key,
-                                                   sign_skey_3,
-                                                   "AAAAAAAAAAAAAAAAAAAA",
-                                                   sign_skey_leg1,
-                                                   FLAV_NS);
+  consensus_text = networkstatus_compute_consensus(
+      votes, 3, cert3->identity_key, sign_skey_3, "AAAAAAAAAAAAAAAAAAAA",
+      sign_skey_leg1, FLAV_NS);
   tt_assert(consensus_text);
   con = networkstatus_parse_vote_from_string_(consensus_text, NULL,
-                                             NS_TYPE_CONSENSUS);
+                                              NS_TYPE_CONSENSUS);
   tt_assert(con);
-  //log_notice(LD_GENERAL, "<<%s>>\n<<%s>>\n<<%s>>\n",
+  // log_notice(LD_GENERAL, "<<%s>>\n<<%s>>\n<<%s>>\n",
   //           v1_text, v2_text, v3_text);
-  consensus_text_md = networkstatus_compute_consensus(votes, 3,
-                                                   cert3->identity_key,
-                                                   sign_skey_3,
-                                                   "AAAAAAAAAAAAAAAAAAAA",
-                                                   sign_skey_leg1,
-                                                   FLAV_MICRODESC);
+  consensus_text_md = networkstatus_compute_consensus(
+      votes, 3, cert3->identity_key, sign_skey_3, "AAAAAAAAAAAAAAAAAAAA",
+      sign_skey_leg1, FLAV_MICRODESC);
   tt_assert(consensus_text_md);
   con_md = networkstatus_parse_vote_from_string_(consensus_text_md, NULL,
-                                                NS_TYPE_CONSENSUS);
+                                                 NS_TYPE_CONSENSUS);
   tt_assert(con_md);
-  tt_int_op(con_md->flavor,OP_EQ, FLAV_MICRODESC);
+  tt_int_op(con_md->flavor, OP_EQ, FLAV_MICRODESC);
 
   /* Check consensus contents. */
   tt_assert(con->type == NS_TYPE_CONSENSUS);
-  tt_int_op(con->published,OP_EQ, 0); /* this field only appears in votes. */
-  tt_int_op(con->valid_after,OP_EQ, now+1000);
-  tt_int_op(con->fresh_until,OP_EQ, now+2003); /* median */
-  tt_int_op(con->valid_until,OP_EQ, now+3000);
-  tt_int_op(con->vote_seconds,OP_EQ, 100);
-  tt_int_op(con->dist_seconds,OP_EQ, 250); /* median */
-  tt_str_op(con->client_versions,OP_EQ, "0.1.2.14");
-  tt_str_op(con->server_versions,OP_EQ, "0.1.2.15,0.1.2.16");
+  tt_int_op(con->published, OP_EQ, 0); /* this field only appears in votes. */
+  tt_int_op(con->valid_after, OP_EQ, now + 1000);
+  tt_int_op(con->fresh_until, OP_EQ, now + 2003); /* median */
+  tt_int_op(con->valid_until, OP_EQ, now + 3000);
+  tt_int_op(con->vote_seconds, OP_EQ, 100);
+  tt_int_op(con->dist_seconds, OP_EQ, 250); /* median */
+  tt_str_op(con->client_versions, OP_EQ, "0.1.2.14");
+  tt_str_op(con->server_versions, OP_EQ, "0.1.2.15,0.1.2.16");
   cp = smartlist_join_strings(v2->known_flags, ":", 0, NULL);
-  tt_str_op(cp,OP_EQ, "Authority:Exit:Fast:Guard:MadeOfCheese:MadeOfTin:"
-             "Running:Stable:V2Dir:Valid");
+  tt_str_op(cp, OP_EQ,
+            "Authority:Exit:Fast:Guard:MadeOfCheese:MadeOfTin:"
+            "Running:Stable:V2Dir:Valid");
   tor_free(cp);
-  if (!params_tweaked) {
+  if (! params_tweaked) {
     /* Skip this one if vote_tweaks() messed with the param lists */
     cp = smartlist_join_strings(con->net_params, ":", 0, NULL);
-    tt_str_op(cp,OP_EQ, "circuitwindow=80:foo=660");
+    tt_str_op(cp, OP_EQ, "circuitwindow=80:foo=660");
     tor_free(cp);
   }
 
-  tt_int_op(4,OP_EQ, smartlist_len(con->voters)); /*3 voters, 1 legacy key.*/
+  tt_int_op(4, OP_EQ, smartlist_len(con->voters)); /*3 voters, 1 legacy key.*/
   /* The voter id digests should be in this order. */
   tt_assert(fast_memcmp(cert2->cache_info.identity_digest,
-                     cert1->cache_info.identity_digest,DIGEST_LEN)<0);
+                        cert1->cache_info.identity_digest, DIGEST_LEN) < 0);
   tt_assert(fast_memcmp(cert1->cache_info.identity_digest,
-                     cert3->cache_info.identity_digest,DIGEST_LEN)<0);
-  test_same_voter(smartlist_get(con->voters, 1),
-                  smartlist_get(v2->voters, 0));
-  test_same_voter(smartlist_get(con->voters, 2),
-                  smartlist_get(v1->voters, 0));
-  test_same_voter(smartlist_get(con->voters, 3),
-                  smartlist_get(v3->voters, 0));
+                        cert3->cache_info.identity_digest, DIGEST_LEN) < 0);
+  test_same_voter(smartlist_get(con->voters, 1), smartlist_get(v2->voters, 0));
+  test_same_voter(smartlist_get(con->voters, 2), smartlist_get(v1->voters, 0));
+  test_same_voter(smartlist_get(con->voters, 3), smartlist_get(v3->voters, 0));
 
   consensus_test(con, now);
 
@@ -3775,65 +3759,59 @@ test_a_networkstatus(
   /* Check signatures.  the first voter is a pseudo-entry with a legacy key.
    * The second one hasn't signed.  The fourth one has signed: validate it. */
   voter = smartlist_get(con->voters, 1);
-  tt_int_op(smartlist_len(voter->sigs),OP_EQ, 0);
+  tt_int_op(smartlist_len(voter->sigs), OP_EQ, 0);
 
   voter = smartlist_get(con->voters, 3);
-  tt_int_op(smartlist_len(voter->sigs),OP_EQ, 1);
+  tt_int_op(smartlist_len(voter->sigs), OP_EQ, 1);
   sig = smartlist_get(voter->sigs, 0);
   tt_assert(sig->signature);
-  tt_assert(!sig->good_signature);
-  tt_assert(!sig->bad_signature);
+  tt_assert(! sig->good_signature);
+  tt_assert(! sig->bad_signature);
 
-  tt_assert(!networkstatus_check_document_signature(con, sig, cert3));
+  tt_assert(! networkstatus_check_document_signature(con, sig, cert3));
   tt_assert(sig->signature);
   tt_assert(sig->good_signature);
-  tt_assert(!sig->bad_signature);
+  tt_assert(! sig->bad_signature);
 
   {
-    const char *msg=NULL;
+    const char *msg = NULL;
     /* Compute the other two signed consensuses. */
     smartlist_shuffle(votes);
-    consensus_text2 = networkstatus_compute_consensus(votes, 3,
-                                                      cert2->identity_key,
-                                                      sign_skey_2, NULL,NULL,
-                                                      FLAV_NS);
-    consensus_text_md2 = networkstatus_compute_consensus(votes, 3,
-                                                      cert2->identity_key,
-                                                      sign_skey_2, NULL,NULL,
-                                                      FLAV_MICRODESC);
+    consensus_text2 = networkstatus_compute_consensus(
+        votes, 3, cert2->identity_key, sign_skey_2, NULL, NULL, FLAV_NS);
+    consensus_text_md2 = networkstatus_compute_consensus(
+        votes, 3, cert2->identity_key, sign_skey_2, NULL, NULL,
+        FLAV_MICRODESC);
     smartlist_shuffle(votes);
-    consensus_text3 = networkstatus_compute_consensus(votes, 3,
-                                                      cert1->identity_key,
-                                                      sign_skey_1, NULL,NULL,
-                                                      FLAV_NS);
-    consensus_text_md3 = networkstatus_compute_consensus(votes, 3,
-                                                      cert1->identity_key,
-                                                      sign_skey_1, NULL,NULL,
-                                                      FLAV_MICRODESC);
+    consensus_text3 = networkstatus_compute_consensus(
+        votes, 3, cert1->identity_key, sign_skey_1, NULL, NULL, FLAV_NS);
+    consensus_text_md3 = networkstatus_compute_consensus(
+        votes, 3, cert1->identity_key, sign_skey_1, NULL, NULL,
+        FLAV_MICRODESC);
     tt_assert(consensus_text2);
     tt_assert(consensus_text3);
     tt_assert(consensus_text_md2);
     tt_assert(consensus_text_md3);
     con2 = networkstatus_parse_vote_from_string_(consensus_text2, NULL,
-                                                NS_TYPE_CONSENSUS);
+                                                 NS_TYPE_CONSENSUS);
     con3 = networkstatus_parse_vote_from_string_(consensus_text3, NULL,
-                                                NS_TYPE_CONSENSUS);
+                                                 NS_TYPE_CONSENSUS);
     con_md2 = networkstatus_parse_vote_from_string_(consensus_text_md2, NULL,
-                                                NS_TYPE_CONSENSUS);
+                                                    NS_TYPE_CONSENSUS);
     con_md3 = networkstatus_parse_vote_from_string_(consensus_text_md3, NULL,
-                                                NS_TYPE_CONSENSUS);
+                                                    NS_TYPE_CONSENSUS);
     tt_assert(con2);
     tt_assert(con3);
     tt_assert(con_md2);
     tt_assert(con_md3);
 
     /* All three should have the same digest. */
-    tt_mem_op(&con->digests,OP_EQ, &con2->digests, sizeof(common_digests_t));
-    tt_mem_op(&con->digests,OP_EQ, &con3->digests, sizeof(common_digests_t));
+    tt_mem_op(&con->digests, OP_EQ, &con2->digests, sizeof(common_digests_t));
+    tt_mem_op(&con->digests, OP_EQ, &con3->digests, sizeof(common_digests_t));
 
-    tt_mem_op(&con_md->digests,OP_EQ, &con_md2->digests,
+    tt_mem_op(&con_md->digests, OP_EQ, &con_md2->digests,
               sizeof(common_digests_t));
-    tt_mem_op(&con_md->digests,OP_EQ, &con_md3->digests,
+    tt_mem_op(&con_md->digests, OP_EQ, &con_md3->digests,
               sizeof(common_digests_t));
 
     /* Extract a detached signature from con3. */
@@ -3844,9 +3822,9 @@ test_a_networkstatus(
     tt_assert(dsig1);
 
     /* Are parsed values as expected? */
-    tt_int_op(dsig1->valid_after,OP_EQ, con3->valid_after);
-    tt_int_op(dsig1->fresh_until,OP_EQ, con3->fresh_until);
-    tt_int_op(dsig1->valid_until,OP_EQ, con3->valid_until);
+    tt_int_op(dsig1->valid_after, OP_EQ, con3->valid_after);
+    tt_int_op(dsig1->fresh_until, OP_EQ, con3->fresh_until);
+    tt_int_op(dsig1->valid_until, OP_EQ, con3->valid_until);
     {
       common_digests_t *dsig_digests = strmap_get(dsig1->digests, "ns");
       tt_assert(dsig_digests);
@@ -3854,39 +3832,39 @@ test_a_networkstatus(
                 con3->digests.d[DIGEST_SHA1], DIGEST_LEN);
       dsig_digests = strmap_get(dsig1->digests, "microdesc");
       tt_assert(dsig_digests);
-      tt_mem_op(dsig_digests->d[DIGEST_SHA256],OP_EQ,
-                 con_md3->digests.d[DIGEST_SHA256],
-                 DIGEST256_LEN);
+      tt_mem_op(dsig_digests->d[DIGEST_SHA256], OP_EQ,
+                con_md3->digests.d[DIGEST_SHA256], DIGEST256_LEN);
     }
     {
       smartlist_t *dsig_signatures = strmap_get(dsig1->signatures, "ns");
       tt_assert(dsig_signatures);
-      tt_int_op(1,OP_EQ, smartlist_len(dsig_signatures));
+      tt_int_op(1, OP_EQ, smartlist_len(dsig_signatures));
       sig = smartlist_get(dsig_signatures, 0);
-      tt_mem_op(sig->identity_digest,OP_EQ, cert1->cache_info.identity_digest,
-                 DIGEST_LEN);
-      tt_int_op(sig->alg,OP_EQ, DIGEST_SHA1);
+      tt_mem_op(sig->identity_digest, OP_EQ, cert1->cache_info.identity_digest,
+                DIGEST_LEN);
+      tt_int_op(sig->alg, OP_EQ, DIGEST_SHA1);
 
       dsig_signatures = strmap_get(dsig1->signatures, "microdesc");
       tt_assert(dsig_signatures);
-      tt_int_op(1,OP_EQ, smartlist_len(dsig_signatures));
+      tt_int_op(1, OP_EQ, smartlist_len(dsig_signatures));
       sig = smartlist_get(dsig_signatures, 0);
-      tt_mem_op(sig->identity_digest,OP_EQ, cert1->cache_info.identity_digest,
-                 DIGEST_LEN);
-      tt_int_op(sig->alg,OP_EQ, DIGEST_SHA256);
+      tt_mem_op(sig->identity_digest, OP_EQ, cert1->cache_info.identity_digest,
+                DIGEST_LEN);
+      tt_int_op(sig->alg, OP_EQ, DIGEST_SHA256);
     }
 
     /* Try adding it to con2. */
-    detached_text2 = get_detached_sigs(con2,con_md2);
-    tt_int_op(1,OP_EQ, networkstatus_add_detached_signatures(con2, dsig1,
-                                                   "test", LOG_INFO, &msg));
+    detached_text2 = get_detached_sigs(con2, con_md2);
+    tt_int_op(1, OP_EQ,
+              networkstatus_add_detached_signatures(con2, dsig1, "test",
+                                                    LOG_INFO, &msg));
     tor_free(detached_text2);
-    tt_int_op(1,OP_EQ,
+    tt_int_op(1, OP_EQ,
               networkstatus_add_detached_signatures(con_md2, dsig1, "test",
-                                                     LOG_INFO, &msg));
+                                                    LOG_INFO, &msg));
     tor_free(detached_text2);
-    detached_text2 = get_detached_sigs(con2,con_md2);
-    //printf("\n<%s>\n", detached_text2);
+    detached_text2 = get_detached_sigs(con2, con_md2);
+    // printf("\n<%s>\n", detached_text2);
     dsig2 = networkstatus_parse_detached_signatures(detached_text2, NULL);
     tt_assert(dsig2);
     /*
@@ -3897,31 +3875,34 @@ test_a_networkstatus(
         printf("%s\n", hd);
       });
     */
-    tt_int_op(2,OP_EQ,
-            smartlist_len((smartlist_t*)strmap_get(dsig2->signatures, "ns")));
-    tt_int_op(2,OP_EQ,
-            smartlist_len((smartlist_t*)strmap_get(dsig2->signatures,
-                                                   "microdesc")));
+    tt_int_op(
+        2, OP_EQ,
+        smartlist_len((smartlist_t *)strmap_get(dsig2->signatures, "ns")));
+    tt_int_op(2, OP_EQ,
+              smartlist_len(
+                  (smartlist_t *)strmap_get(dsig2->signatures, "microdesc")));
 
     /* Try adding to con2 twice; verify that nothing changes. */
-    tt_int_op(0,OP_EQ, networkstatus_add_detached_signatures(con2, dsig1,
-                                               "test", LOG_INFO, &msg));
+    tt_int_op(0, OP_EQ,
+              networkstatus_add_detached_signatures(con2, dsig1, "test",
+                                                    LOG_INFO, &msg));
 
     /* Add to con. */
-    tt_int_op(2,OP_EQ, networkstatus_add_detached_signatures(con, dsig2,
-                                               "test", LOG_INFO, &msg));
+    tt_int_op(2, OP_EQ,
+              networkstatus_add_detached_signatures(con, dsig2, "test",
+                                                    LOG_INFO, &msg));
     /* Check signatures */
     voter = smartlist_get(con->voters, 1);
     sig = smartlist_get(voter->sigs, 0);
     tt_assert(sig);
-    tt_assert(!networkstatus_check_document_signature(con, sig, cert2));
+    tt_assert(! networkstatus_check_document_signature(con, sig, cert2));
     voter = smartlist_get(con->voters, 2);
     sig = smartlist_get(voter->sigs, 0);
     tt_assert(sig);
-    tt_assert(!networkstatus_check_document_signature(con, sig, cert1));
+    tt_assert(! networkstatus_check_document_signature(con, sig, cert1));
   }
 
- done:
+done:
   tor_free(cp);
   smartlist_free(votes);
   tor_free(consensus_text);
@@ -3963,44 +3944,35 @@ test_dir_v3_networkstatus(void *arg)
 {
   (void)arg;
   test_a_networkstatus(dir_common_gen_routerstatus_for_v3ns,
-                       vote_tweaks_for_v3ns,
-                       test_vrs_for_v3ns,
-                       test_consensus_for_v3ns,
-                       test_routerstatus_for_v3ns);
+                       vote_tweaks_for_v3ns, test_vrs_for_v3ns,
+                       test_consensus_for_v3ns, test_routerstatus_for_v3ns);
 }
 
 static void
 test_dir_scale_bw(void *testdata)
 {
-  double v[8] = { 2.0/3,
-                  7.0,
-                  1.0,
-                  3.0,
-                  1.0/5,
-                  1.0/7,
-                  12.0,
-                  24.0 };
+  double v[8] = {2.0 / 3, 7.0, 1.0, 3.0, 1.0 / 5, 1.0 / 7, 12.0, 24.0};
   double vals_dbl[8];
   uint64_t vals_u64[8];
   uint64_t total;
   int i;
 
-  (void) testdata;
+  (void)testdata;
 
-  for (i=0; i<8; ++i)
+  for (i = 0; i < 8; ++i)
     vals_dbl[i] = v[i];
 
   scale_array_elements_to_u64(vals_u64, vals_dbl, 8, &total);
 
   tt_int_op((int)total, OP_EQ, 48);
   total = 0;
-  for (i=0; i<8; ++i) {
+  for (i = 0; i < 8; ++i) {
     total += vals_u64[i];
   }
-  tt_assert(total >= (UINT64_C(1)<<60));
-  tt_assert(total <= (UINT64_C(1)<<62));
+  tt_assert(total >= (UINT64_C(1) << 60));
+  tt_assert(total <= (UINT64_C(1) << 62));
 
-  for (i=0; i<8; ++i) {
+  for (i = 0; i < 8; ++i) {
     /* vals[2].u64 is the scaled value of 1.0 */
     double ratio = ((double)vals_u64[i]) / vals_u64[2];
     tt_double_op(fabs(ratio - v[i]), OP_LT, .00001);
@@ -4032,30 +4004,29 @@ test_dir_scale_bw(void *testdata)
   tt_assert(vals_u64[0] == 0);
   tt_assert(vals_u64[1] == 0);
 
- done:
-  ;
+done:;
 }
 
 static void
 test_dir_random_weighted(void *testdata)
 {
   int histogram[10];
-  uint64_t vals[10] = {3,1,2,4,6,0,7,5,8,9}, total=0;
+  uint64_t vals[10] = {3, 1, 2, 4, 6, 0, 7, 5, 8, 9}, total = 0;
   uint64_t inp_u64[10];
   int i, choice;
   const int n = 50000;
   double max_sq_error;
-  (void) testdata;
+  (void)testdata;
 
   /* Try a ten-element array with values from 0 through 10. The values are
    * in a scrambled order to make sure we don't depend on order. */
-  memset(histogram,0,sizeof(histogram));
-  for (i=0; i<10; ++i) {
+  memset(histogram, 0, sizeof(histogram));
+  for (i = 0; i < 10; ++i) {
     inp_u64[i] = vals[i];
     total += vals[i];
   }
   tt_u64_op(total, OP_EQ, 45);
-  for (i=0; i<n; ++i) {
+  for (i = 0; i < n; ++i) {
     choice = choose_array_element_by_weight(inp_u64, 10);
     tt_int_op(choice, OP_GE, 0);
     tt_int_op(choice, OP_LT, 10);
@@ -4064,8 +4035,8 @@ test_dir_random_weighted(void *testdata)
 
   /* Now see if we chose things about frequently enough. */
   max_sq_error = 0;
-  for (i=0; i<10; ++i) {
-    int expected = (int)(n*vals[i]/total);
+  for (i = 0; i < 10; ++i) {
+    int expected = (int)(n * vals[i] / total);
     double frac_diff = 0, sq;
     TT_BLATHER(("  %d : %5d vs %5d\n", (int)vals[i], histogram[i], expected));
     if (expected)
@@ -4088,7 +4059,7 @@ test_dir_random_weighted(void *testdata)
   }
 
   /* Now try an array of zeros.  We should choose randomly. */
-  memset(histogram,0,sizeof(histogram));
+  memset(histogram, 0, sizeof(histogram));
   for (i = 0; i < 5; ++i)
     inp_u64[i] = 0;
   for (i = 0; i < n; ++i) {
@@ -4099,8 +4070,8 @@ test_dir_random_weighted(void *testdata)
   }
   /* Now see if we chose things about frequently enough. */
   max_sq_error = 0;
-  for (i=0; i<5; ++i) {
-    int expected = n/5;
+  for (i = 0; i < 5; ++i) {
+    int expected = n / 5;
     double frac_diff = 0, sq;
     TT_BLATHER(("  %d : %5d vs %5d\n", (int)vals[i], histogram[i], expected));
     frac_diff = (histogram[i] - expected) / ((double)expected);
@@ -4111,8 +4082,7 @@ test_dir_random_weighted(void *testdata)
   /* It should almost always be much much less than this.  If you want to
    * figure out the odds, please feel free. */
   tt_double_op(max_sq_error, OP_LT, .05);
- done:
-  ;
+done:;
 }
 
 /* Function pointers for test_dir_clip_unmeasured_bw_kb() */
@@ -4129,8 +4099,9 @@ gen_routerstatus_for_umbw(int idx, time_t now)
   vote_routerstatus_t *vrs = NULL;
   routerstatus_t *rs;
   tor_addr_t addr_ipv6;
-  uint32_t max_unmeasured_bw_kb = (alternate_clip_bw > 0) ?
-    alternate_clip_bw : DEFAULT_MAX_UNMEASURED_BW_KB;
+  uint32_t max_unmeasured_bw_kb = (alternate_clip_bw > 0)
+                                      ? alternate_clip_bw
+                                      : DEFAULT_MAX_UNMEASURED_BW_KB;
 
   switch (idx) {
     case 0:
@@ -4138,7 +4109,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
       vrs->version = tor_strdup("0.1.2.14");
-      rs->published_on = now-1500;
+      rs->published_on = now - 1500;
       strlcpy(rs->nickname, "router2", sizeof(rs->nickname));
       memset(rs->identity_digest, 3, DIGEST_LEN);
       memset(rs->descriptor_digest, 78, DIGEST_LEN);
@@ -4162,7 +4133,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
       vrs->version = tor_strdup("0.2.0.5");
-      rs->published_on = now-1000;
+      rs->published_on = now - 1000;
       strlcpy(rs->nickname, "router1", sizeof(rs->nickname));
       memset(rs->identity_digest, 5, DIGEST_LEN);
       memset(rs->descriptor_digest, 77, DIGEST_LEN);
@@ -4173,7 +4144,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       tor_addr_copy(&rs->ipv6_addr, &addr_ipv6);
       rs->ipv6_orport = 4711;
       rs->is_exit = rs->is_stable = rs->is_fast = rs->is_flagged_running =
-        rs->is_valid = rs->is_possible_guard = 1;
+          rs->is_valid = rs->is_possible_guard = 1;
       /*
        * This one has measured bandwidth above the clip cutoff, and
        * so shouldn't be clipped; we'll have to test that it isn't
@@ -4188,7 +4159,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
       vrs->version = tor_strdup("0.1.0.3");
-      rs->published_on = now-1000;
+      rs->published_on = now - 1000;
       strlcpy(rs->nickname, "router3", sizeof(rs->nickname));
       memset(rs->identity_digest, 0x33, DIGEST_LEN);
       memset(rs->descriptor_digest, 79, DIGEST_LEN);
@@ -4196,8 +4167,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       rs->or_port = 400;
       rs->dir_port = 9999;
       rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
-        rs->is_flagged_running = rs->is_valid =
-        rs->is_possible_guard = 1;
+          rs->is_flagged_running = rs->is_valid = rs->is_possible_guard = 1;
       /*
        * This one has unmeasured bandwidth above the clip cutoff, and
        * so should be clipped; we'll have to test that it isn't
@@ -4213,7 +4183,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
       vrs->version = tor_strdup("0.1.6.3");
-      rs->published_on = now-1000;
+      rs->published_on = now - 1000;
       strlcpy(rs->nickname, "router4", sizeof(rs->nickname));
       memset(rs->identity_digest, 0x34, DIGEST_LEN);
       memset(rs->descriptor_digest, 47, DIGEST_LEN);
@@ -4249,7 +4219,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
                  idx);
   }
 
- done:
+done:
   return vrs;
 }
 
@@ -4269,9 +4239,7 @@ vote_tweaks_for_umbw(networkstatus_t *v, int voter, time_t now)
   SMARTLIST_FOREACH(v->supported_methods, char *, c, tor_free(c));
   smartlist_clear(v->supported_methods);
   /* Method 17 is MIN_METHOD_TO_CLIP_UNMEASURED_BW_KB */
-  smartlist_split_string(v->supported_methods,
-                         "25 26 27 28",
-                         NULL, 0, -1);
+  smartlist_split_string(v->supported_methods, "25 26 27 28", NULL, 0, -1);
   /* If we're using a non-default clip bandwidth, add it to net_params */
   if (alternate_clip_bw > 0) {
     tor_asprintf(&maxbw_param, "maxunmeasuredbw=%u", alternate_clip_bw);
@@ -4282,7 +4250,7 @@ vote_tweaks_for_umbw(networkstatus_t *v, int voter, time_t now)
     }
   }
 
- done:
+done:
   return rv;
 }
 
@@ -4294,8 +4262,9 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
 {
   routerstatus_t *rs;
   tor_addr_t addr_ipv6;
-  uint32_t max_unmeasured_bw_kb = (alternate_clip_bw > 0) ?
-    alternate_clip_bw : DEFAULT_MAX_UNMEASURED_BW_KB;
+  uint32_t max_unmeasured_bw_kb = (alternate_clip_bw > 0)
+                                      ? alternate_clip_bw
+                                      : DEFAULT_MAX_UNMEASURED_BW_KB;
 
   (void)voter;
   tt_assert(vrs);
@@ -4311,48 +4280,49 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
      * Check the first routerstatus - measured bandwidth below the clip
      * cutoff.
      */
-    tt_str_op(vrs->version,OP_EQ, "0.1.2.14");
-    tt_int_op(rs->published_on,OP_EQ, now-1500);
-    tt_str_op(rs->nickname,OP_EQ, "router2");
-    tt_mem_op(rs->identity_digest,OP_EQ,
-               "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
-               "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
-               DIGEST_LEN);
-    tt_mem_op(rs->descriptor_digest,OP_EQ, "NNNNNNNNNNNNNNNNNNNN", DIGEST_LEN);
-    tt_int_op(rs->addr,OP_EQ, 0x99008801);
-    tt_int_op(rs->or_port,OP_EQ, 443);
-    tt_int_op(rs->dir_port,OP_EQ, 8000);
+    tt_str_op(vrs->version, OP_EQ, "0.1.2.14");
+    tt_int_op(rs->published_on, OP_EQ, now - 1500);
+    tt_str_op(rs->nickname, OP_EQ, "router2");
+    tt_mem_op(rs->identity_digest, OP_EQ,
+              "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
+              "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
+              DIGEST_LEN);
+    tt_mem_op(rs->descriptor_digest, OP_EQ, "NNNNNNNNNNNNNNNNNNNN",
+              DIGEST_LEN);
+    tt_int_op(rs->addr, OP_EQ, 0x99008801);
+    tt_int_op(rs->or_port, OP_EQ, 443);
+    tt_int_op(rs->dir_port, OP_EQ, 8000);
     tt_assert(rs->has_bandwidth);
     tt_assert(vrs->has_measured_bw);
-    tt_int_op(rs->bandwidth_kb,OP_EQ, max_unmeasured_bw_kb / 2);
-    tt_int_op(vrs->measured_bw_kb,OP_EQ, max_unmeasured_bw_kb / 2);
+    tt_int_op(rs->bandwidth_kb, OP_EQ, max_unmeasured_bw_kb / 2);
+    tt_int_op(vrs->measured_bw_kb, OP_EQ, max_unmeasured_bw_kb / 2);
   } else if (tor_memeq(rs->identity_digest,
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
                        DIGEST_LEN)) {
-
     /*
      * Check the second routerstatus - measured bandwidth above the clip
      * cutoff.
      */
-    tt_str_op(vrs->version,OP_EQ, "0.2.0.5");
-    tt_int_op(rs->published_on,OP_EQ, now-1000);
-    tt_str_op(rs->nickname,OP_EQ, "router1");
-    tt_mem_op(rs->identity_digest,OP_EQ,
-               "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
-               "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
-               DIGEST_LEN);
-    tt_mem_op(rs->descriptor_digest,OP_EQ, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
-    tt_int_op(rs->addr,OP_EQ, 0x99009901);
-    tt_int_op(rs->or_port,OP_EQ, 443);
-    tt_int_op(rs->dir_port,OP_EQ, 0);
+    tt_str_op(vrs->version, OP_EQ, "0.2.0.5");
+    tt_int_op(rs->published_on, OP_EQ, now - 1000);
+    tt_str_op(rs->nickname, OP_EQ, "router1");
+    tt_mem_op(rs->identity_digest, OP_EQ,
+              "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
+              "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
+              DIGEST_LEN);
+    tt_mem_op(rs->descriptor_digest, OP_EQ, "MMMMMMMMMMMMMMMMMMMM",
+              DIGEST_LEN);
+    tt_int_op(rs->addr, OP_EQ, 0x99009901);
+    tt_int_op(rs->or_port, OP_EQ, 443);
+    tt_int_op(rs->dir_port, OP_EQ, 0);
     tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
     tt_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
-    tt_int_op(rs->ipv6_orport,OP_EQ, 4711);
+    tt_int_op(rs->ipv6_orport, OP_EQ, 4711);
     tt_assert(rs->has_bandwidth);
     tt_assert(vrs->has_measured_bw);
-    tt_int_op(rs->bandwidth_kb,OP_EQ, max_unmeasured_bw_kb * 2);
-    tt_int_op(vrs->measured_bw_kb,OP_EQ, max_unmeasured_bw_kb * 2);
+    tt_int_op(rs->bandwidth_kb, OP_EQ, max_unmeasured_bw_kb * 2);
+    tt_int_op(vrs->measured_bw_kb, OP_EQ, max_unmeasured_bw_kb * 2);
   } else if (tor_memeq(rs->identity_digest,
                        "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33"
                        "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33",
@@ -4363,9 +4333,9 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
      * appears unclipped in the vote.
      */
     tt_assert(rs->has_bandwidth);
-    tt_assert(!(vrs->has_measured_bw));
-    tt_int_op(rs->bandwidth_kb,OP_EQ, max_unmeasured_bw_kb * 2);
-    tt_int_op(vrs->measured_bw_kb,OP_EQ, 0);
+    tt_assert(! (vrs->has_measured_bw));
+    tt_int_op(rs->bandwidth_kb, OP_EQ, max_unmeasured_bw_kb * 2);
+    tt_int_op(vrs->measured_bw_kb, OP_EQ, 0);
   } else if (tor_memeq(rs->identity_digest,
                        "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34"
                        "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34",
@@ -4375,14 +4345,14 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
      * cutoff; this one should not be clipped.
      */
     tt_assert(rs->has_bandwidth);
-    tt_assert(!(vrs->has_measured_bw));
-    tt_int_op(rs->bandwidth_kb,OP_EQ, max_unmeasured_bw_kb / 2);
-    tt_int_op(vrs->measured_bw_kb,OP_EQ, 0);
+    tt_assert(! (vrs->has_measured_bw));
+    tt_int_op(rs->bandwidth_kb, OP_EQ, max_unmeasured_bw_kb / 2);
+    tt_int_op(vrs->measured_bw_kb, OP_EQ, 0);
   } else {
     tt_abort();
   }
 
- done:
+done:
   return;
 }
 
@@ -4398,10 +4368,10 @@ test_consensus_for_umbw(networkstatus_t *con, time_t now)
   tt_ptr_op(con->cert, OP_EQ, NULL);
   // tt_assert(con->consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW_KB);
   tt_int_op(con->consensus_method, OP_GE, 16);
-  tt_int_op(4,OP_EQ, smartlist_len(con->routerstatus_list));
+  tt_int_op(4, OP_EQ, smartlist_len(con->routerstatus_list));
   /* There should be four listed routers; all voters saw the same in this */
 
- done:
+done:
   return;
 }
 
@@ -4412,8 +4382,9 @@ static void
 test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
 {
   tor_addr_t addr_ipv6;
-  uint32_t max_unmeasured_bw_kb = (alternate_clip_bw > 0) ?
-    alternate_clip_bw : DEFAULT_MAX_UNMEASURED_BW_KB;
+  uint32_t max_unmeasured_bw_kb = (alternate_clip_bw > 0)
+                                      ? alternate_clip_bw
+                                      : DEFAULT_MAX_UNMEASURED_BW_KB;
 
   tt_assert(rs);
 
@@ -4422,82 +4393,84 @@ test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
                 "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
                 "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
                 DIGEST_LEN)) {
-    tt_mem_op(rs->identity_digest,OP_EQ,
-               "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
-               "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
-               DIGEST_LEN);
-    tt_mem_op(rs->descriptor_digest,OP_EQ, "NNNNNNNNNNNNNNNNNNNN", DIGEST_LEN);
-    tt_assert(!rs->is_authority);
-    tt_assert(!rs->is_exit);
-    tt_assert(!rs->is_fast);
-    tt_assert(!rs->is_possible_guard);
-    tt_assert(!rs->is_stable);
+    tt_mem_op(rs->identity_digest, OP_EQ,
+              "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
+              "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
+              DIGEST_LEN);
+    tt_mem_op(rs->descriptor_digest, OP_EQ, "NNNNNNNNNNNNNNNNNNNN",
+              DIGEST_LEN);
+    tt_assert(! rs->is_authority);
+    tt_assert(! rs->is_exit);
+    tt_assert(! rs->is_fast);
+    tt_assert(! rs->is_possible_guard);
+    tt_assert(! rs->is_stable);
     /* (If it wasn't running and valid it wouldn't be here) */
     tt_assert(rs->is_flagged_running);
     tt_assert(rs->is_valid);
-    tt_assert(!rs->is_named);
+    tt_assert(! rs->is_named);
     /* This one should have measured bandwidth below the clip cutoff */
     tt_assert(rs->has_bandwidth);
-    tt_int_op(rs->bandwidth_kb,OP_EQ, max_unmeasured_bw_kb / 2);
-    tt_assert(!(rs->bw_is_unmeasured));
+    tt_int_op(rs->bandwidth_kb, OP_EQ, max_unmeasured_bw_kb / 2);
+    tt_assert(! (rs->bw_is_unmeasured));
   } else if (tor_memeq(rs->identity_digest,
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
                        DIGEST_LEN)) {
     /* This one showed up in 3 digests. Twice with ID 'M', once with 'Z'.  */
-    tt_mem_op(rs->identity_digest,OP_EQ,
-               "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
-               "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
-               DIGEST_LEN);
-    tt_str_op(rs->nickname,OP_EQ, "router1");
-    tt_mem_op(rs->descriptor_digest,OP_EQ, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
-    tt_int_op(rs->published_on,OP_EQ, now-1000);
-    tt_int_op(rs->addr,OP_EQ, 0x99009901);
-    tt_int_op(rs->or_port,OP_EQ, 443);
-    tt_int_op(rs->dir_port,OP_EQ, 0);
+    tt_mem_op(rs->identity_digest, OP_EQ,
+              "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
+              "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
+              DIGEST_LEN);
+    tt_str_op(rs->nickname, OP_EQ, "router1");
+    tt_mem_op(rs->descriptor_digest, OP_EQ, "MMMMMMMMMMMMMMMMMMMM",
+              DIGEST_LEN);
+    tt_int_op(rs->published_on, OP_EQ, now - 1000);
+    tt_int_op(rs->addr, OP_EQ, 0x99009901);
+    tt_int_op(rs->or_port, OP_EQ, 443);
+    tt_int_op(rs->dir_port, OP_EQ, 0);
     tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
     tt_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
-    tt_int_op(rs->ipv6_orport,OP_EQ, 4711);
-    tt_assert(!rs->is_authority);
+    tt_int_op(rs->ipv6_orport, OP_EQ, 4711);
+    tt_assert(! rs->is_authority);
     tt_assert(rs->is_exit);
     tt_assert(rs->is_fast);
     tt_assert(rs->is_possible_guard);
     tt_assert(rs->is_stable);
     tt_assert(rs->is_flagged_running);
     tt_assert(rs->is_valid);
-    tt_assert(!rs->is_named);
+    tt_assert(! rs->is_named);
     /* This one should have measured bandwidth above the clip cutoff */
     tt_assert(rs->has_bandwidth);
-    tt_int_op(rs->bandwidth_kb,OP_EQ, max_unmeasured_bw_kb * 2);
-    tt_assert(!(rs->bw_is_unmeasured));
+    tt_int_op(rs->bandwidth_kb, OP_EQ, max_unmeasured_bw_kb * 2);
+    tt_assert(! (rs->bw_is_unmeasured));
   } else if (tor_memeq(rs->identity_digest,
-                "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33"
-                "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33",
-                DIGEST_LEN)) {
+                       "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33"
+                       "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33",
+                       DIGEST_LEN)) {
     /*
      * This one should have unmeasured bandwidth above the clip cutoff,
      * and so should be clipped
      */
     tt_assert(rs->has_bandwidth);
-    tt_int_op(rs->bandwidth_kb,OP_EQ, max_unmeasured_bw_kb);
+    tt_int_op(rs->bandwidth_kb, OP_EQ, max_unmeasured_bw_kb);
     tt_assert(rs->bw_is_unmeasured);
   } else if (tor_memeq(rs->identity_digest,
-                "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34"
-                "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34",
-                DIGEST_LEN)) {
+                       "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34"
+                       "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34",
+                       DIGEST_LEN)) {
     /*
      * This one should have unmeasured bandwidth below the clip cutoff,
      * and so should not be clipped
      */
     tt_assert(rs->has_bandwidth);
-    tt_int_op(rs->bandwidth_kb,OP_EQ, max_unmeasured_bw_kb / 2);
+    tt_int_op(rs->bandwidth_kb, OP_EQ, max_unmeasured_bw_kb / 2);
     tt_assert(rs->bw_is_unmeasured);
   } else {
     /* Weren't expecting this... */
     tt_abort();
   }
 
- done:
+done:
   return;
 }
 
@@ -4513,10 +4486,8 @@ test_dir_clip_unmeasured_bw_kb(void *arg)
   /* Run the test with the default clip bandwidth */
   (void)arg;
   alternate_clip_bw = 0;
-  test_a_networkstatus(gen_routerstatus_for_umbw,
-                       vote_tweaks_for_umbw,
-                       test_vrs_for_umbw,
-                       test_consensus_for_umbw,
+  test_a_networkstatus(gen_routerstatus_for_umbw, vote_tweaks_for_umbw,
+                       test_vrs_for_umbw, test_consensus_for_umbw,
                        test_routerstatus_for_umbw);
 }
 
@@ -4536,10 +4507,8 @@ test_dir_clip_unmeasured_bw_kb_alt(void *arg)
    */
   (void)arg;
   alternate_clip_bw = 3 * DEFAULT_MAX_UNMEASURED_BW_KB;
-  test_a_networkstatus(gen_routerstatus_for_umbw,
-                       vote_tweaks_for_umbw,
-                       test_vrs_for_umbw,
-                       test_consensus_for_umbw,
+  test_a_networkstatus(gen_routerstatus_for_umbw, vote_tweaks_for_umbw,
+                       test_vrs_for_umbw, test_consensus_for_umbw,
                        test_routerstatus_for_umbw);
 }
 
@@ -4569,12 +4538,12 @@ test_dir_fmt_control_ns(void *arg)
   tt_assert(s);
   tt_str_op(s, OP_EQ,
             "r TetsuoMilk U3RhdGVseSwgcGx1bXAgQnVjayA "
-               "TXVsbGlnYW4gY2FtZSB1cCBmcm8 2013-04-02 17:53:18 "
-               "32.48.64.80 9001 9002\n"
+            "TXVsbGlnYW4gY2FtZSB1cCBmcm8 2013-04-02 17:53:18 "
+            "32.48.64.80 9001 9002\n"
             "s Exit Fast Running V2Dir\n"
             "w Bandwidth=1000\n");
 
- done:
+done:
   tor_free(s);
 }
 
@@ -4609,10 +4578,10 @@ test_dir_bwauth_bw_file_digest256(void *arg)
 {
   (void)arg;
   const char *content =
-    "1541171221\n"
-    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 "
-    "master_key_ed25519=YaqV4vbvPYKucElk297eVdNArDz9HtIwUoIeo0+cVIpQ "
-    "bw=760 nick=Test time=2018-05-08T16:13:26\n";
+      "1541171221\n"
+      "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 "
+      "master_key_ed25519=YaqV4vbvPYKucElk297eVdNArDz9HtIwUoIeo0+cVIpQ "
+      "bw=760 nick=Test time=2018-05-08T16:13:26\n";
 
   char *fname = tor_strdup(get_fname("V3BandwidthsFile"));
   /* Initialize to a wrong digest. */
@@ -4628,15 +4597,13 @@ test_dir_bwauth_bw_file_digest256(void *arg)
 
   /* When the bandwidth file can not be found. */
   tt_int_op(-1, OP_EQ,
-            dirserv_read_measured_bandwidths(fname,
-                                             NULL, NULL, digest));
+            dirserv_read_measured_bandwidths(fname, NULL, NULL, digest));
   tt_mem_op(digest, OP_EQ, digest_empty_str, DIGEST256_LEN);
 
   /* When there is a timestamp but it is too old. */
   write_str_to_file(fname, content, 0);
   tt_int_op(-1, OP_EQ,
-            dirserv_read_measured_bandwidths(fname,
-                                             NULL, NULL, digest));
+            dirserv_read_measured_bandwidths(fname, NULL, NULL, digest));
   /* The digest will be correct. */
   tt_mem_op(digest, OP_EQ, digest_expected, DIGEST256_LEN);
 
@@ -4644,19 +4611,17 @@ test_dir_bwauth_bw_file_digest256(void *arg)
 
   /* When there is a bandwidth file and it can be read. */
   tt_int_op(0, OP_EQ,
-            dirserv_read_measured_bandwidths(fname,
-                                             NULL, NULL, digest));
+            dirserv_read_measured_bandwidths(fname, NULL, NULL, digest));
   tt_mem_op(digest, OP_EQ, digest_expected, DIGEST256_LEN);
 
- done:
+done:
   unlink(fname);
   tor_free(fname);
   update_approx_time(time(NULL));
 }
 
 static void
-reset_routerstatus(routerstatus_t *rs,
-                   const char *hex_identity_digest,
+reset_routerstatus(routerstatus_t *rs, const char *hex_identity_digest,
                    uint32_t ipv4_addr)
 {
   memset(rs, 0, sizeof(routerstatus_t));
@@ -4667,13 +4632,13 @@ reset_routerstatus(routerstatus_t *rs,
   rs->addr = ipv4_addr;
 }
 
-#define ROUTER_A_ID_STR    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-#define ROUTER_A_IPV4      0xAA008801
-#define ROUTER_B_ID_STR    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
-#define ROUTER_B_IPV4      0xBB008801
+#define ROUTER_A_ID_STR "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+#define ROUTER_A_IPV4 0xAA008801
+#define ROUTER_B_ID_STR "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+#define ROUTER_B_IPV4 0xBB008801
 
-#define ROUTERSET_ALL_STR  "*"
-#define ROUTERSET_A_STR    ROUTER_A_ID_STR
+#define ROUTERSET_ALL_STR "*"
+#define ROUTERSET_A_STR ROUTER_A_ID_STR
 #define ROUTERSET_NONE_STR ""
 
 /*
@@ -4696,11 +4661,11 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   MOCK(get_options, mock_get_options);
 
   /* Init routersets */
-  routerset_t *routerset_all  = routerset_new();
-  routerset_parse(routerset_all,  ROUTERSET_ALL_STR,  "All routers");
+  routerset_t *routerset_all = routerset_new();
+  routerset_parse(routerset_all, ROUTERSET_ALL_STR, "All routers");
 
-  routerset_t *routerset_a    = routerset_new();
-  routerset_parse(routerset_a,    ROUTERSET_A_STR,    "Router A only");
+  routerset_t *routerset_a = routerset_new();
+  routerset_parse(routerset_a, ROUTERSET_A_STR, "Router A only");
 
   routerset_t *routerset_none = routerset_new();
   /* Routersets are empty when provided by routerset_new(),
@@ -4897,7 +4862,7 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   tt_uint_op(rs_b->is_possible_guard, OP_EQ, 1);
   tt_uint_op(rs_b->is_hs_dir, OP_EQ, 1);
 
- done:
+done:
   tor_free(mock_options);
   mock_options = NULL;
 
@@ -4923,17 +4888,18 @@ test_dir_http_handling(void *args)
                            "Host: example.com\r\n"
                            "User-Agent: Mozilla/5.0 (Windows;"
                            " U; Windows NT 6.1; en-US; rv:1.9.1.5)\r\n",
-                           &url),OP_EQ, 0);
-  tt_str_op(url,OP_EQ, "/tor/a/b/c.txt");
-  tor_free(url);
-
-  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.0\r\n", &url),OP_EQ, 0);
-  tt_str_op(url,OP_EQ, "/tor/a/b/c.txt");
-  tor_free(url);
-
-  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.600\r\n", &url),
+                           &url),
             OP_EQ, 0);
-  tt_str_op(url,OP_EQ, "/tor/a/b/c.txt");
+  tt_str_op(url, OP_EQ, "/tor/a/b/c.txt");
+  tor_free(url);
+
+  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.0\r\n", &url), OP_EQ, 0);
+  tt_str_op(url, OP_EQ, "/tor/a/b/c.txt");
+  tor_free(url);
+
+  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.600\r\n", &url), OP_EQ,
+            0);
+  tt_str_op(url, OP_EQ, "/tor/a/b/c.txt");
   tor_free(url);
 
   /* Should prepend '/tor/' to url if required */
@@ -4941,8 +4907,9 @@ test_dir_http_handling(void *args)
                            "Host: example.com\r\n"
                            "User-Agent: Mozilla/5.0 (Windows;"
                            " U; Windows NT 6.1; en-US; rv:1.9.1.5)\r\n",
-                           &url),OP_EQ, 0);
-  tt_str_op(url,OP_EQ, "/tor/a/b/c.txt");
+                           &url),
+            OP_EQ, 0);
+  tt_str_op(url, OP_EQ, "/tor/a/b/c.txt");
   tor_free(url);
 
   /* Bad headers -- no HTTP/1.x*/
@@ -4950,7 +4917,8 @@ test_dir_http_handling(void *args)
                            "Host: example.com\r\n"
                            "User-Agent: Mozilla/5.0 (Windows;"
                            " U; Windows NT 6.1; en-US; rv:1.9.1.5)\r\n",
-                           &url),OP_EQ, -1);
+                           &url),
+            OP_EQ, -1);
   tt_ptr_op(url, OP_EQ, NULL);
 
   /* Bad headers */
@@ -4958,26 +4926,27 @@ test_dir_http_handling(void *args)
                            "Host: example.com\r\n"
                            "User-Agent: Mozilla/5.0 (Windows;"
                            " U; Windows NT 6.1; en-US; rv:1.9.1.5)\r\n",
-                           &url),OP_EQ, -1);
-  tt_ptr_op(url, OP_EQ, NULL);
-
-  tt_int_op(parse_http_url("GET /tor/a/b/c.txt", &url),OP_EQ, -1);
-  tt_ptr_op(url, OP_EQ, NULL);
-
-  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.1", &url),OP_EQ, -1);
-  tt_ptr_op(url, OP_EQ, NULL);
-
-  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.1x\r\n", &url),
+                           &url),
             OP_EQ, -1);
   tt_ptr_op(url, OP_EQ, NULL);
 
-  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.", &url),OP_EQ, -1);
+  tt_int_op(parse_http_url("GET /tor/a/b/c.txt", &url), OP_EQ, -1);
   tt_ptr_op(url, OP_EQ, NULL);
 
-  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.\r", &url),OP_EQ, -1);
+  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.1", &url), OP_EQ, -1);
   tt_ptr_op(url, OP_EQ, NULL);
 
- done:
+  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.1x\r\n", &url), OP_EQ,
+            -1);
+  tt_ptr_op(url, OP_EQ, NULL);
+
+  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.", &url), OP_EQ, -1);
+  tt_ptr_op(url, OP_EQ, NULL);
+
+  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.\r", &url), OP_EQ, -1);
+  tt_ptr_op(url, OP_EQ, NULL);
+
+done:
   tor_free(url);
 }
 
@@ -4993,7 +4962,7 @@ test_dir_purpose_needs_anonymity_returns_true_by_default(void *arg)
   expect_single_log_msg_containing("Called with dir_purpose=0");
 
   tor_end_capture_bugs_();
- done:
+done:
   tor_end_capture_bugs_();
   teardown_capture_of_logs();
 }
@@ -5004,22 +4973,22 @@ test_dir_purpose_needs_anonymity_returns_true_for_bridges(void *arg)
   (void)arg;
 
   tt_int_op(1, OP_EQ, purpose_needs_anonymity(0, ROUTER_PURPOSE_BRIDGE, NULL));
-  tt_int_op(1, OP_EQ, purpose_needs_anonymity(0, ROUTER_PURPOSE_BRIDGE,
-                                           "foobar"));
+  tt_int_op(1, OP_EQ,
+            purpose_needs_anonymity(0, ROUTER_PURPOSE_BRIDGE, "foobar"));
   tt_int_op(1, OP_EQ,
             purpose_needs_anonymity(DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2,
                                     ROUTER_PURPOSE_BRIDGE, NULL));
- done: ;
+done:;
 }
 
 static void
 test_dir_purpose_needs_anonymity_returns_false_for_own_bridge_desc(void *arg)
 {
   (void)arg;
-  tt_int_op(0, OP_EQ, purpose_needs_anonymity(DIR_PURPOSE_FETCH_SERVERDESC,
-                                           ROUTER_PURPOSE_BRIDGE,
-                                           "authority.z"));
- done: ;
+  tt_int_op(0, OP_EQ,
+            purpose_needs_anonymity(DIR_PURPOSE_FETCH_SERVERDESC,
+                                    ROUTER_PURPOSE_BRIDGE, "authority.z"));
+done:;
 }
 
 static void
@@ -5027,14 +4996,14 @@ test_dir_purpose_needs_anonymity_returns_true_for_sensitive_purpose(void *arg)
 {
   (void)arg;
 
-  tt_int_op(1, OP_EQ, purpose_needs_anonymity(
-                    DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2,
-                    ROUTER_PURPOSE_GENERAL, NULL));
-  tt_int_op(1, OP_EQ, purpose_needs_anonymity(
-                    DIR_PURPOSE_UPLOAD_RENDDESC_V2, 0,  NULL));
-  tt_int_op(1, OP_EQ, purpose_needs_anonymity(
-                    DIR_PURPOSE_FETCH_RENDDESC_V2, 0, NULL));
- done: ;
+  tt_int_op(1, OP_EQ,
+            purpose_needs_anonymity(DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2,
+                                    ROUTER_PURPOSE_GENERAL, NULL));
+  tt_int_op(1, OP_EQ,
+            purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_RENDDESC_V2, 0, NULL));
+  tt_int_op(1, OP_EQ,
+            purpose_needs_anonymity(DIR_PURPOSE_FETCH_RENDDESC_V2, 0, NULL));
+done:;
 }
 
 static void
@@ -5042,16 +5011,18 @@ test_dir_purpose_needs_anonymity_ret_false_for_non_sensitive_conn(void *arg)
 {
   (void)arg;
 
-  tt_int_op(0, OP_EQ, purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_DIR,
-                                           ROUTER_PURPOSE_GENERAL, NULL));
+  tt_int_op(0, OP_EQ,
+            purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_DIR,
+                                    ROUTER_PURPOSE_GENERAL, NULL));
   tt_int_op(0, OP_EQ,
             purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_VOTE, 0, NULL));
   tt_int_op(0, OP_EQ,
             purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_SIGNATURES, 0, NULL));
   tt_int_op(0, OP_EQ,
             purpose_needs_anonymity(DIR_PURPOSE_FETCH_STATUS_VOTE, 0, NULL));
-  tt_int_op(0, OP_EQ, purpose_needs_anonymity(
-                    DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0, NULL));
+  tt_int_op(
+      0, OP_EQ,
+      purpose_needs_anonymity(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0, NULL));
   tt_int_op(0, OP_EQ,
             purpose_needs_anonymity(DIR_PURPOSE_FETCH_CONSENSUS, 0, NULL));
   tt_int_op(0, OP_EQ,
@@ -5062,7 +5033,7 @@ test_dir_purpose_needs_anonymity_ret_false_for_non_sensitive_conn(void *arg)
             purpose_needs_anonymity(DIR_PURPOSE_FETCH_EXTRAINFO, 0, NULL));
   tt_int_op(0, OP_EQ,
             purpose_needs_anonymity(DIR_PURPOSE_FETCH_MICRODESC, 0, NULL));
-  done: ;
+done:;
 }
 
 static void
@@ -5070,38 +5041,49 @@ test_dir_fetch_type(void *arg)
 {
   (void)arg;
 
-  tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_EXTRAINFO, ROUTER_PURPOSE_BRIDGE,
-                           NULL), OP_EQ, EXTRAINFO_DIRINFO | BRIDGE_DIRINFO);
+  tt_int_op(
+      dir_fetch_type(DIR_PURPOSE_FETCH_EXTRAINFO, ROUTER_PURPOSE_BRIDGE, NULL),
+      OP_EQ, EXTRAINFO_DIRINFO | BRIDGE_DIRINFO);
   tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_EXTRAINFO, ROUTER_PURPOSE_GENERAL,
-                           NULL), OP_EQ, EXTRAINFO_DIRINFO | V3_DIRINFO);
+                           NULL),
+            OP_EQ, EXTRAINFO_DIRINFO | V3_DIRINFO);
 
   tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_SERVERDESC, ROUTER_PURPOSE_BRIDGE,
-                           NULL), OP_EQ, BRIDGE_DIRINFO);
+                           NULL),
+            OP_EQ, BRIDGE_DIRINFO);
   tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_SERVERDESC,
-                           ROUTER_PURPOSE_GENERAL, NULL), OP_EQ, V3_DIRINFO);
+                           ROUTER_PURPOSE_GENERAL, NULL),
+            OP_EQ, V3_DIRINFO);
 
   tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_STATUS_VOTE,
-                           ROUTER_PURPOSE_GENERAL, NULL), OP_EQ, V3_DIRINFO);
+                           ROUTER_PURPOSE_GENERAL, NULL),
+            OP_EQ, V3_DIRINFO);
   tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES,
-                           ROUTER_PURPOSE_GENERAL, NULL), OP_EQ, V3_DIRINFO);
+                           ROUTER_PURPOSE_GENERAL, NULL),
+            OP_EQ, V3_DIRINFO);
   tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_CERTIFICATE,
-                           ROUTER_PURPOSE_GENERAL, NULL), OP_EQ, V3_DIRINFO);
+                           ROUTER_PURPOSE_GENERAL, NULL),
+            OP_EQ, V3_DIRINFO);
 
   tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_CONSENSUS, ROUTER_PURPOSE_GENERAL,
-                           "microdesc"), OP_EQ, V3_DIRINFO|MICRODESC_DIRINFO);
+                           "microdesc"),
+            OP_EQ, V3_DIRINFO | MICRODESC_DIRINFO);
   tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_CONSENSUS, ROUTER_PURPOSE_GENERAL,
-                           NULL), OP_EQ, V3_DIRINFO);
+                           NULL),
+            OP_EQ, V3_DIRINFO);
 
   tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_MICRODESC, ROUTER_PURPOSE_GENERAL,
-                           NULL), OP_EQ, MICRODESC_DIRINFO);
+                           NULL),
+            OP_EQ, MICRODESC_DIRINFO);
 
   /* This will give a warning, because this function isn't supposed to be
    * used for HS descriptors. */
   setup_full_capture_of_logs(LOG_WARN);
   tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_RENDDESC_V2,
-                           ROUTER_PURPOSE_GENERAL, NULL), OP_EQ, NO_DIRINFO);
+                           ROUTER_PURPOSE_GENERAL, NULL),
+            OP_EQ, NO_DIRINFO);
   expect_single_log_msg_containing("Unexpected purpose");
- done:
+done:
   teardown_capture_of_logs();
 }
 
@@ -5112,10 +5094,8 @@ test_dir_packages(void *arg)
   char *res = NULL;
   (void)arg;
 
-#define BAD(s) \
-  tt_int_op(0, OP_EQ, validate_recommended_package_line(s));
-#define GOOD(s) \
-  tt_int_op(1, OP_EQ, validate_recommended_package_line(s));
+#define BAD(s) tt_int_op(0, OP_EQ, validate_recommended_package_line(s));
+#define GOOD(s) tt_int_op(1, OP_EQ, validate_recommended_package_line(s));
   GOOD("tor 0.2.6.3-alpha "
        "http://torproject.example.com/dist/tor-0.2.6.3-alpha.tar.gz "
        "sha256=sssdlkfjdsklfjdskfljasdklfj");
@@ -5123,15 +5103,15 @@ test_dir_packages(void *arg)
        "http://torproject.example.com/dist/tor-0.2.6.3-alpha.tar.gz "
        "sha256=sssdlkfjdsklfjdskfljasdklfj blake2b=fred");
   BAD("tor 0.2.6.3-alpha "
-       "http://torproject.example.com/dist/tor-0.2.6.3-alpha.tar.gz "
-       "sha256=sssdlkfjdsklfjdskfljasdklfj=");
+      "http://torproject.example.com/dist/tor-0.2.6.3-alpha.tar.gz "
+      "sha256=sssdlkfjdsklfjdskfljasdklfj=");
   BAD("tor 0.2.6.3-alpha "
-       "http://torproject.example.com/dist/tor-0.2.6.3-alpha.tar.gz "
-       "sha256=sssdlkfjdsklfjdskfljasdklfj blake2b");
+      "http://torproject.example.com/dist/tor-0.2.6.3-alpha.tar.gz "
+      "sha256=sssdlkfjdsklfjdskfljasdklfj blake2b");
   BAD("tor 0.2.6.3-alpha "
-       "http://torproject.example.com/dist/tor-0.2.6.3-alpha.tar.gz ");
+      "http://torproject.example.com/dist/tor-0.2.6.3-alpha.tar.gz ");
   BAD("tor 0.2.6.3-alpha "
-       "http://torproject.example.com/dist/tor-0.2.6.3-alpha.tar.gz");
+      "http://torproject.example.com/dist/tor-0.2.6.3-alpha.tar.gz");
   BAD("tor 0.2.6.3-alpha ");
   BAD("tor 0.2.6.3-alpha");
   BAD("tor ");
@@ -5154,9 +5134,10 @@ test_dir_packages(void *arg)
   SMARTLIST_FOREACH(votes, networkstatus_t *, ns,
                     ns->package_lines = smartlist_new());
 
-#define ADD(i, s)                                                       \
-  smartlist_add(((networkstatus_t*)smartlist_get(votes, (i)))->package_lines, \
-                (void*)(s));
+#define ADD(i, s)                                                    \
+  smartlist_add(                                                     \
+      ((networkstatus_t *)smartlist_get(votes, (i)))->package_lines, \
+      (void *)(s));
 
   /* Only one vote for this one. */
   ADD(4, "cisco 99z http://foobar.example.com/ sha256=blahblah");
@@ -5232,20 +5213,23 @@ test_dir_packages(void *arg)
 
   res = compute_consensus_package_lines(votes);
   tt_assert(res);
-  tt_str_op(res, OP_EQ,
-    "package cbc 99.1.11.1.1 http://example.com/cbc/ cubehash=ahooy sha512=m\n"
-    "package clownshoes 22alpha3 http://quumble.example.com/ blake2=fooz\n"
-    "package clownshoes 22alpha4 http://quumble.example.cam/ blake2=fooa\n"
-    "package element 0.66.1 http://quux.example.com/ sha256=abcdef\n"
-    "package mystic 99y http://foobar.example.com/ sha256=blahblah\n"
-            );
+  tt_str_op(
+      res, OP_EQ,
+      "package cbc 99.1.11.1.1 http://example.com/cbc/ cubehash=ahooy "
+      "sha512=m\n"
+      "package clownshoes 22alpha3 http://quumble.example.com/ blake2=fooz\n"
+      "package clownshoes 22alpha4 http://quumble.example.cam/ blake2=fooa\n"
+      "package element 0.66.1 http://quux.example.com/ sha256=abcdef\n"
+      "package mystic 99y http://foobar.example.com/ sha256=blahblah\n");
 
 #undef ADD
 #undef BAD
 #undef GOOD
- done:
-  SMARTLIST_FOREACH(votes, networkstatus_t *, ns,
-                    { smartlist_free(ns->package_lines); tor_free(ns); });
+done:
+  SMARTLIST_FOREACH(votes, networkstatus_t *, ns, {
+    smartlist_free(ns->package_lines);
+    tor_free(ns);
+  });
   smartlist_free(votes);
   tor_free(res);
 }
@@ -5253,9 +5237,9 @@ test_dir_packages(void *arg)
 static void
 download_status_random_backoff_helper(int min_delay)
 {
-  download_status_t dls_random =
-    { 0, 0, 0, DL_SCHED_GENERIC, DL_WANT_AUTHORITY,
-               DL_SCHED_INCREMENT_FAILURE, 0, 0 };
+  download_status_t dls_random = {
+      0, 0, 0, DL_SCHED_GENERIC, DL_WANT_AUTHORITY, DL_SCHED_INCREMENT_FAILURE,
+      0, 0};
   int increment = -1;
   int old_increment = -1;
   time_t current_time = time(NULL);
@@ -5263,12 +5247,11 @@ download_status_random_backoff_helper(int min_delay)
   /* Check the random backoff cases */
   int n_attempts = 0;
   do {
-    increment = download_status_schedule_get_delay(&dls_random,
-                                                   min_delay,
+    increment = download_status_schedule_get_delay(&dls_random, min_delay,
                                                    current_time);
 
-    log_debug(LD_DIR, "Min: %d, Inc: %d, Old Inc: %d",
-              min_delay, increment, old_increment);
+    log_debug(LD_DIR, "Min: %d, Inc: %d, Old Inc: %d", min_delay, increment,
+              old_increment);
 
     /* Regression test for 20534 and friends
      * increment must always increase after the first */
@@ -5290,7 +5273,7 @@ download_status_random_backoff_helper(int min_delay)
     old_increment = increment;
   } while (++n_attempts < 1000);
 
- done:
+done:
   return;
 }
 
@@ -5306,7 +5289,7 @@ test_dir_download_status_random_backoff(void *arg)
   download_status_random_backoff_helper(20);
 
   /* Pathological cases */
-  download_status_random_backoff_helper(INT_MAX/2);
+  download_status_random_backoff_helper(INT_MAX / 2);
 }
 
 static void
@@ -5320,7 +5303,7 @@ test_dir_download_status_random_backoff_ranges(void *arg)
 
   next_random_exponential_delay_range(&lo, &hi, 6, 10);
   tt_int_op(lo, OP_EQ, 10);
-  tt_int_op(hi, OP_EQ, 6*3);
+  tt_int_op(hi, OP_EQ, 6 * 3);
 
   next_random_exponential_delay_range(&lo, &hi, 13, 10);
   tt_int_op(lo, OP_EQ, 10);
@@ -5334,21 +5317,24 @@ test_dir_download_status_random_backoff_ranges(void *arg)
   tt_int_op(lo, OP_EQ, 10);
   tt_int_op(hi, OP_EQ, 369);
 
-  next_random_exponential_delay_range(&lo, &hi, INT_MAX-5, 10);
+  next_random_exponential_delay_range(&lo, &hi, INT_MAX - 5, 10);
   tt_int_op(lo, OP_EQ, 10);
   tt_int_op(hi, OP_EQ, INT_MAX);
- done:
-  ;
+done:;
 }
 
 static void
 test_dir_download_status_increment(void *arg)
 {
   (void)arg;
-  download_status_t dls_exp = { 0, 0, 0, DL_SCHED_GENERIC,
-    DL_WANT_ANY_DIRSERVER,
-    DL_SCHED_INCREMENT_ATTEMPT,
-    0, 0 };
+  download_status_t dls_exp = {0,
+                               0,
+                               0,
+                               DL_SCHED_GENERIC,
+                               DL_WANT_ANY_DIRSERVER,
+                               DL_SCHED_INCREMENT_ATTEMPT,
+                               0,
+                               0};
   or_options_t test_options;
   time_t current_time = time(NULL);
 
@@ -5379,10 +5365,9 @@ test_dir_download_status_increment(void *arg)
   mock_get_options_calls = 0;
   /* we really want to test that it's equal to time(NULL) + delay0, but that's
    * an unrealiable test, because time(NULL) might change. */
-  tt_assert(download_status_get_next_attempt_at(&dls_exp)
-            >= current_time + no_delay);
-  tt_assert(download_status_get_next_attempt_at(&dls_exp)
-            != TIME_MAX);
+  tt_assert(download_status_get_next_attempt_at(&dls_exp) >=
+            current_time + no_delay);
+  tt_assert(download_status_get_next_attempt_at(&dls_exp) != TIME_MAX);
   tt_int_op(download_status_get_n_failures(&dls_exp), OP_EQ, 0);
   tt_int_op(download_status_get_n_attempts(&dls_exp), OP_EQ, 0);
   tt_int_op(mock_get_options_calls, OP_GE, 1);
@@ -5392,15 +5377,14 @@ test_dir_download_status_increment(void *arg)
   mock_get_options_calls = 0;
   /* we really want to test that it's equal to time(NULL) + delay0, but that's
    * an unrealiable test, because time(NULL) might change. */
-  tt_assert(download_status_get_next_attempt_at(&dls_exp)
-            >= current_time + delay0);
-  tt_assert(download_status_get_next_attempt_at(&dls_exp)
-            != TIME_MAX);
+  tt_assert(download_status_get_next_attempt_at(&dls_exp) >=
+            current_time + delay0);
+  tt_assert(download_status_get_next_attempt_at(&dls_exp) != TIME_MAX);
   tt_int_op(download_status_get_n_failures(&dls_exp), OP_EQ, 0);
   tt_int_op(download_status_get_n_attempts(&dls_exp), OP_EQ, 0);
   tt_int_op(mock_get_options_calls, OP_GE, 1);
 
- done:
+done:
   UNMOCK(get_options);
   mock_options = NULL;
   mock_get_options_calls = 0;
@@ -5431,10 +5415,10 @@ test_dir_authdir_type_to_string(void *data)
   tt_str_op(res = authdir_type_to_string(BRIDGE_DIRINFO), OP_EQ, "Bridge");
   tor_free(res);
 
-  tt_str_op(res = authdir_type_to_string(
-            V3_DIRINFO | BRIDGE_DIRINFO | EXTRAINFO_DIRINFO), OP_EQ,
-            "V3, Bridge");
-  done:
+  tt_str_op(res = authdir_type_to_string(V3_DIRINFO | BRIDGE_DIRINFO |
+                                         EXTRAINFO_DIRINFO),
+            OP_EQ, "V3, Bridge");
+done:
   tor_free(res);
 }
 
@@ -5469,15 +5453,13 @@ test_dir_conn_purpose_to_string(void *data)
   EXPECT_CONN_PURPOSE(1024, "(unknown)");
   expect_single_log_msg_containing("Called with unknown purpose 1024");
 
- done:
+done:
   teardown_capture_of_logs();
 }
 
-NS_DECL(int,
-public_server_mode, (const or_options_t *options));
+NS_DECL(int, public_server_mode, (const or_options_t *options));
 
-static int
-NS(public_server_mode)(const or_options_t *options)
+static int NS(public_server_mode)(const or_options_t *options)
 {
   (void)options;
 
@@ -5536,14 +5518,13 @@ test_dir_should_use_directory_guards(void *data)
   tt_int_op(CALLED(public_server_mode), OP_EQ, 7);
   options->FetchUselessDescriptors = 0;
 
-  done:
-    NS_UNMOCK(public_server_mode);
-    or_options_free(options);
-    tor_free(errmsg);
+done:
+  NS_UNMOCK(public_server_mode);
+  or_options_free(options);
+  tor_free(errmsg);
 }
 
-NS_DECL(void,
-directory_initiate_request, (directory_request_t *req));
+NS_DECL(void, directory_initiate_request, (directory_request_t * req));
 
 static void
 test_dir_should_not_init_request_to_ourselves(void *data)
@@ -5551,7 +5532,7 @@ test_dir_should_not_init_request_to_ourselves(void *data)
   char digest[DIGEST_LEN];
   dir_server_t *ourself = NULL;
   crypto_pk_t *key = pk_generate(2);
-  (void) data;
+  (void)data;
 
   NS_MOCK(directory_initiate_request);
 
@@ -5559,10 +5540,9 @@ test_dir_should_not_init_request_to_ourselves(void *data)
   routerlist_free_all();
 
   set_server_identity_key(key);
-  crypto_pk_get_digest(key, (char*) &digest);
-  ourself = trusted_dir_server_new("ourself", "127.0.0.1", 9059, 9060,
-                                   NULL, digest,
-                                   NULL, V3_DIRINFO, 1.0);
+  crypto_pk_get_digest(key, (char *)&digest);
+  ourself = trusted_dir_server_new("ourself", "127.0.0.1", 9059, 9060, NULL,
+                                   digest, NULL, V3_DIRINFO, 1.0);
 
   tt_assert(ourself);
   dir_server_add(ourself);
@@ -5575,20 +5555,20 @@ test_dir_should_not_init_request_to_ourselves(void *data)
 
   tt_int_op(CALLED(directory_initiate_request), OP_EQ, 0);
 
-  done:
-    NS_UNMOCK(directory_initiate_request);
-    clear_dir_servers();
-    routerlist_free_all();
-    crypto_pk_free(key);
+done:
+  NS_UNMOCK(directory_initiate_request);
+  clear_dir_servers();
+  routerlist_free_all();
+  crypto_pk_free(key);
 }
 
 static void
 test_dir_should_not_init_request_to_dir_auths_without_v3_info(void *data)
 {
   dir_server_t *ds = NULL;
-  dirinfo_type_t dirinfo_type = BRIDGE_DIRINFO | EXTRAINFO_DIRINFO \
-                                | MICRODESC_DIRINFO;
-  (void) data;
+  dirinfo_type_t dirinfo_type =
+      BRIDGE_DIRINFO | EXTRAINFO_DIRINFO | MICRODESC_DIRINFO;
+  (void)data;
 
   NS_MOCK(directory_initiate_request);
 
@@ -5607,17 +5587,17 @@ test_dir_should_not_init_request_to_dir_auths_without_v3_info(void *data)
                                      NULL);
   tt_int_op(CALLED(directory_initiate_request), OP_EQ, 0);
 
-  done:
-    NS_UNMOCK(directory_initiate_request);
-    clear_dir_servers();
-    routerlist_free_all();
+done:
+  NS_UNMOCK(directory_initiate_request);
+  clear_dir_servers();
+  routerlist_free_all();
 }
 
 static void
 test_dir_should_init_request_to_dir_auths(void *data)
 {
   dir_server_t *ds = NULL;
-  (void) data;
+  (void)data;
 
   NS_MOCK(directory_initiate_request);
 
@@ -5636,21 +5616,20 @@ test_dir_should_init_request_to_dir_auths(void *data)
                                      NULL);
   tt_int_op(CALLED(directory_initiate_request), OP_EQ, 2);
 
-  done:
-    NS_UNMOCK(directory_initiate_request);
-    clear_dir_servers();
-    routerlist_free_all();
+done:
+  NS_UNMOCK(directory_initiate_request);
+  clear_dir_servers();
+  routerlist_free_all();
 }
 
-void
-NS(directory_initiate_request)(directory_request_t *req)
+void NS(directory_initiate_request)(directory_request_t *req)
 {
   (void)req;
   CALLED(directory_initiate_request)++;
 }
 
 static void
-test_dir_choose_compression_level(void* data)
+test_dir_choose_compression_level(void *data)
 {
   (void)data;
 
@@ -5658,8 +5637,8 @@ test_dir_choose_compression_level(void* data)
   tt_int_op(have_been_under_memory_pressure(), OP_EQ, 1);
 
   tt_assert(HIGH_COMPRESSION == choose_compression_level(-1));
-  tt_assert(LOW_COMPRESSION == choose_compression_level(1024-1));
-  tt_assert(MEDIUM_COMPRESSION == choose_compression_level(2048-1));
+  tt_assert(LOW_COMPRESSION == choose_compression_level(1024 - 1));
+  tt_assert(MEDIUM_COMPRESSION == choose_compression_level(2048 - 1));
   tt_assert(HIGH_COMPRESSION == choose_compression_level(2048));
 
   /* Reset under_memory_pressure timer */
@@ -5667,11 +5646,11 @@ test_dir_choose_compression_level(void* data)
   tt_int_op(have_been_under_memory_pressure(), OP_EQ, 0);
 
   tt_assert(HIGH_COMPRESSION == choose_compression_level(-1));
-  tt_assert(HIGH_COMPRESSION == choose_compression_level(1024-1));
-  tt_assert(HIGH_COMPRESSION == choose_compression_level(2048-1));
+  tt_assert(HIGH_COMPRESSION == choose_compression_level(1024 - 1));
+  tt_assert(HIGH_COMPRESSION == choose_compression_level(2048 - 1));
   tt_assert(HIGH_COMPRESSION == choose_compression_level(2048));
 
-  done: ;
+done:;
 }
 
 /*
@@ -5699,12 +5678,10 @@ mock_check_private_dir(const char *dirname, cpd_check_t check,
  */
 
 static char *
-mock_get_datadir_fname(const or_options_t *options,
-                       directory_root_t roottype,
-                       const char *sub1, const char *sub2,
-                       const char *suffix)
+mock_get_datadir_fname(const or_options_t *options, directory_root_t roottype,
+                       const char *sub1, const char *sub2, const char *suffix)
 {
-  (void) roottype;
+  (void)roottype;
   char *rv = NULL;
 
   /*
@@ -5727,7 +5704,7 @@ mock_get_datadir_fname(const or_options_t *options,
     rv = tor_strdup(sub1);
   }
 
- done:
+done:
   return rv;
 }
 
@@ -5750,7 +5727,7 @@ mock_unlink(const char *path)
   last_unlinked_path = tor_strdup(path);
   ++unlinked_count;
 
- done:
+done:
   return 0;
 }
 
@@ -5784,7 +5761,7 @@ mock_write_str_to_file(const char *path, const char *str, int bin)
   memcpy(last_write_str_hash, hash, sizeof(last_write_str_hash));
   ++write_str_count;
 
- done:
+done:
   return 0;
 }
 
@@ -5798,58 +5775,58 @@ test_dir_dump_unparseable_descriptors(void *data)
   const char *test_desc_type = "squamous";
   /* strlen(test_desc_1) = 583 bytes */
   const char *test_desc_1 =
-    "The most merciful thing in the world, I think, is the inability of the "
-    "human mind to correlate all its contents. We live on a placid island of"
-    " ignorance in the midst of black seas of infinity, and it was not meant"
-    " that we should voyage far. The sciences, each straining in its own dir"
-    "ection, have hitherto harmed us little; but some day the piecing togeth"
-    "er of dissociated knowledge will open up such terrifying vistas of real"
-    "ity, and of our frightful position therein, that we shall either go mad"
-    "from the revelation or flee from the light into the peace and safety of"
-    "a new dark age.";
+      "The most merciful thing in the world, I think, is the inability of the "
+      "human mind to correlate all its contents. We live on a placid island of"
+      " ignorance in the midst of black seas of infinity, and it was not meant"
+      " that we should voyage far. The sciences, each straining in its own dir"
+      "ection, have hitherto harmed us little; but some day the piecing togeth"
+      "er of dissociated knowledge will open up such terrifying vistas of real"
+      "ity, and of our frightful position therein, that we shall either go mad"
+      "from the revelation or flee from the light into the peace and safety of"
+      "a new dark age.";
   uint8_t test_desc_1_hash[DIGEST256_LEN];
-  char test_desc_1_hash_str[HEX_DIGEST256_LEN+1];
+  char test_desc_1_hash_str[HEX_DIGEST256_LEN + 1];
   /* strlen(test_desc_2) = 650 bytes */
   const char *test_desc_2 =
-    "I think their predominant colour was a greyish-green, though they had w"
-    "hite bellies. They were mostly shiny and slippery, but the ridges of th"
-    "eir backs were scaly. Their forms vaguely suggested the anthropoid, whi"
-    "le their heads were the heads of fish, with prodigious bulging eyes tha"
-    "t never closed. At the sides of their necks were palpitating gills, and"
-    "their long paws were webbed. They hopped irregularly, sometimes on two "
-    "legs and sometimes on four. I was somehow glad that they had no more th"
-    "an four limbs. Their croaking, baying voices, clearly wed tar articulat"
-    "e speech, held all the dark shades of expression which their staring fa"
-    "ces lacked.";
+      "I think their predominant colour was a greyish-green, though they had w"
+      "hite bellies. They were mostly shiny and slippery, but the ridges of th"
+      "eir backs were scaly. Their forms vaguely suggested the anthropoid, whi"
+      "le their heads were the heads of fish, with prodigious bulging eyes tha"
+      "t never closed. At the sides of their necks were palpitating gills, and"
+      "their long paws were webbed. They hopped irregularly, sometimes on two "
+      "legs and sometimes on four. I was somehow glad that they had no more th"
+      "an four limbs. Their croaking, baying voices, clearly wed tar articulat"
+      "e speech, held all the dark shades of expression which their staring fa"
+      "ces lacked.";
   uint8_t test_desc_2_hash[DIGEST256_LEN];
-  char test_desc_2_hash_str[HEX_DIGEST256_LEN+1];
+  char test_desc_2_hash_str[HEX_DIGEST256_LEN + 1];
   /* strlen(test_desc_3) = 700 bytes */
   const char *test_desc_3 =
-    "Without knowing what futurism is like, Johansen achieved something very"
-    "close to it when he spoke of the city; for instead of describing any de"
-    "finite structure or building, he dwells only on broad impressions of va"
-    "st angles and stone surfaces - surfaces too great to belong to anything"
-    "right or proper for this earth, and impious with horrible images and hi"
-    "eroglyphs. I mention his talk about angles because it suggests somethin"
-    "g Wilcox had told me of his awful dreams. He said that the geometry of "
-    "the dream-place he saw was abnormal, non-Euclidean, and loathsomely red"
-    "olent of spheres and dimensions apart from ours. Now an unlettered seam"
-    "an felt the same thing whilst gazing at the terrible reality.";
+      "Without knowing what futurism is like, Johansen achieved something very"
+      "close to it when he spoke of the city; for instead of describing any de"
+      "finite structure or building, he dwells only on broad impressions of va"
+      "st angles and stone surfaces - surfaces too great to belong to anything"
+      "right or proper for this earth, and impious with horrible images and hi"
+      "eroglyphs. I mention his talk about angles because it suggests somethin"
+      "g Wilcox had told me of his awful dreams. He said that the geometry of "
+      "the dream-place he saw was abnormal, non-Euclidean, and loathsomely red"
+      "olent of spheres and dimensions apart from ours. Now an unlettered seam"
+      "an felt the same thing whilst gazing at the terrible reality.";
   uint8_t test_desc_3_hash[DIGEST256_LEN];
-  char test_desc_3_hash_str[HEX_DIGEST256_LEN+1];
+  char test_desc_3_hash_str[HEX_DIGEST256_LEN + 1];
   /* strlen(test_desc_3) = 604 bytes */
   const char *test_desc_4 =
-    "So we glanced back simultaneously, it would appear; though no doubt the"
-    "incipient motion of one prompted the imitation of the other. As we did "
-    "so we flashed both torches full strength at the momentarily thinned mis"
-    "t; either from sheer primitive anxiety to see all we could, or in a les"
-    "s primitive but equally unconscious effort to dazzle the entity before "
-    "we dimmed our light and dodged among the penguins of the labyrinth cent"
-    "er ahead. Unhappy act! Not Orpheus himself, or Lot's wife, paid much mo"
-    "re dearly for a backward glance. And again came that shocking, wide-ran"
-    "ged piping - \"Tekeli-li! Tekeli-li!\"";
+      "So we glanced back simultaneously, it would appear; though no doubt the"
+      "incipient motion of one prompted the imitation of the other. As we did "
+      "so we flashed both torches full strength at the momentarily thinned mis"
+      "t; either from sheer primitive anxiety to see all we could, or in a les"
+      "s primitive but equally unconscious effort to dazzle the entity before "
+      "we dimmed our light and dodged among the penguins of the labyrinth cent"
+      "er ahead. Unhappy act! Not Orpheus himself, or Lot's wife, paid much mo"
+      "re dearly for a backward glance. And again came that shocking, wide-ran"
+      "ged piping - \"Tekeli-li! Tekeli-li!\"";
   uint8_t test_desc_4_hash[DIGEST256_LEN];
-  char test_desc_4_hash_str[HEX_DIGEST256_LEN+1];
+  char test_desc_4_hash_str[HEX_DIGEST256_LEN + 1];
   (void)data;
 
   /*
@@ -5861,8 +5838,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   mock_options->MaxUnparseableDescSizeToLog = 1536;
   MOCK(get_options, mock_get_options);
   MOCK(check_private_dir, mock_check_private_dir);
-  MOCK(options_get_dir_fname2_suffix,
-       mock_get_datadir_fname);
+  MOCK(options_get_dir_fname2_suffix, mock_get_datadir_fname);
 
   /*
    * Set up unlink and write mocks
@@ -5875,26 +5851,22 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Compute hashes we'll need to recognize which descriptor is which
    */
-  crypto_digest256((char *)test_desc_1_hash, test_desc_1,
-                   strlen(test_desc_1), DIGEST_SHA256);
+  crypto_digest256((char *)test_desc_1_hash, test_desc_1, strlen(test_desc_1),
+                   DIGEST_SHA256);
   base16_encode(test_desc_1_hash_str, sizeof(test_desc_1_hash_str),
-                (const char *)test_desc_1_hash,
-                sizeof(test_desc_1_hash));
-  crypto_digest256((char *)test_desc_2_hash, test_desc_2,
-                   strlen(test_desc_2), DIGEST_SHA256);
+                (const char *)test_desc_1_hash, sizeof(test_desc_1_hash));
+  crypto_digest256((char *)test_desc_2_hash, test_desc_2, strlen(test_desc_2),
+                   DIGEST_SHA256);
   base16_encode(test_desc_2_hash_str, sizeof(test_desc_2_hash_str),
-                (const char *)test_desc_2_hash,
-                sizeof(test_desc_2_hash));
-  crypto_digest256((char *)test_desc_3_hash, test_desc_3,
-                   strlen(test_desc_3), DIGEST_SHA256);
+                (const char *)test_desc_2_hash, sizeof(test_desc_2_hash));
+  crypto_digest256((char *)test_desc_3_hash, test_desc_3, strlen(test_desc_3),
+                   DIGEST_SHA256);
   base16_encode(test_desc_3_hash_str, sizeof(test_desc_3_hash_str),
-                (const char *)test_desc_3_hash,
-                sizeof(test_desc_3_hash));
-  crypto_digest256((char *)test_desc_4_hash, test_desc_4,
-                   strlen(test_desc_4), DIGEST_SHA256);
+                (const char *)test_desc_3_hash, sizeof(test_desc_3_hash));
+  crypto_digest256((char *)test_desc_4_hash, test_desc_4, strlen(test_desc_4),
+                   DIGEST_SHA256);
   base16_encode(test_desc_4_hash_str, sizeof(test_desc_4_hash_str),
-                (const char *)test_desc_4_hash,
-                sizeof(test_desc_4_hash));
+                (const char *)test_desc_4_hash, sizeof(test_desc_4_hash));
 
   /*
    * Reset the FIFO and check its state
@@ -6369,7 +6341,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   tt_int_op(unlinked_count, OP_EQ, 0);
   tt_int_op(write_str_count, OP_EQ, 0);
 
- done:
+done:
 
   /* Clean up the fifo */
   dump_desc_fifo_cleanup();
@@ -6409,8 +6381,8 @@ reset_read_file_to_str_mock(void)
 }
 
 static char *
-read_file_to_str_mock(const char *filename, int flags,
-                      struct stat *stat_out) {
+read_file_to_str_mock(const char *filename, int flags, struct stat *stat_out)
+{
   char *result = NULL;
 
   /* Insist we got a filename */
@@ -6427,8 +6399,7 @@ read_file_to_str_mock(const char *filename, int flags,
     tt_str_op(filename, OP_EQ, expected_filename);
   }
 
-  if (expected_filename != NULL &&
-      file_content != NULL &&
+  if (expected_filename != NULL && file_content != NULL &&
       strcmp(filename, expected_filename) == 0) {
     /* You asked for it, you got it */
 
@@ -6454,7 +6425,7 @@ read_file_to_str_mock(const char *filename, int flags,
   }
   /* else no match, return NULL */
 
- done:
+done:
   return result;
 }
 
@@ -6498,9 +6469,8 @@ test_dir_populate_dump_desc_fifo(void *data)
   tt_int_op(read_count, OP_EQ, 0);
   tt_int_op(read_call_count, OP_EQ, 0);
 
-  ent = dump_desc_populate_one_file(
-      dirname,
-      "unparseable-desc.08AE85E90461F59E");
+  ent = dump_desc_populate_one_file(dirname,
+                                    "unparseable-desc.08AE85E90461F59E");
   tt_ptr_op(ent, OP_EQ, NULL);
   tt_int_op(unlinked_count, OP_EQ, 4);
   tt_int_op(read_count, OP_EQ, 0);
@@ -6538,9 +6508,8 @@ test_dir_populate_dump_desc_fifo(void *data)
   tt_int_op(read_call_count, OP_EQ, 1);
 
   /* This read will succeed but the digest won't match the file content */
-  fname =
-    "unparseable-desc."
-    "DF0981323F3A70D02B55AB54B44B04F287D72F7B72F242E85C8CB0EDA8854A99";
+  fname = "unparseable-desc."
+          "DF0981323F3A70D02B55AB54B44B04F287D72F7B72F242E85C8CB0EDA8854A99";
   enforce_expected_filename = 1;
   tor_asprintf(&expected_filename, "%s%s%s", dirname, PATH_SEPARATOR, fname);
   file_content = tor_strdup("hanc culpam maiorem an illam dicam?");
@@ -6556,9 +6525,8 @@ test_dir_populate_dump_desc_fifo(void *data)
   tor_free(file_content);
 
   /* This one will match */
-  fname =
-    "unparseable-desc."
-    "0786C7173447B7FB033FFCA2FC47C3CF71C30DD47CA8236D3FC7FF35853271C6";
+  fname = "unparseable-desc."
+          "0786C7173447B7FB033FFCA2FC47C3CF71C30DD47CA8236D3FC7FF35853271C6";
   tor_asprintf(&expected_filename, "%s%s%s", dirname, PATH_SEPARATOR, fname);
   file_content = tor_strdup("hanc culpam maiorem an illam dicam?");
   file_content_len = strlen(file_content);
@@ -6583,7 +6551,7 @@ test_dir_populate_dump_desc_fifo(void *data)
   reset_read_file_to_str_mock();
   tt_int_op(read_count, OP_EQ, 0);
 
- done:
+done:
 
   UNMOCK(tor_unlink);
   mock_unlink_reset();
@@ -6677,7 +6645,7 @@ test_dir_populate_dump_desc_fifo_2(void *data)
   tt_int_op(ent->len, OP_EQ, 123);
   tt_int_op(ent->when, OP_EQ, 1024);
 
- done:
+done:
   dump_desc_fifo_cleanup();
 
   UNMOCK(dump_desc_populate_one_file);
@@ -6697,7 +6665,7 @@ mock_networkstatus_consensus_is_bootstrapping(time_t now)
 static int mock_networkstatus_consensus_can_use_extra_fallbacks_value = 0;
 static int
 mock_networkstatus_consensus_can_use_extra_fallbacks(
-                                                  const or_options_t *options)
+    const or_options_t *options)
 {
   (void)options;
   return mock_networkstatus_consensus_can_use_extra_fallbacks_value;
@@ -6718,7 +6686,7 @@ mock_num_bridges_usable(int use_maybe_reachable)
  * fallbacks.
  */
 static void
-test_dir_find_dl_min_delay(void* data)
+test_dir_find_dl_min_delay(void *data)
 {
   const char *str = (const char *)data;
 
@@ -6747,14 +6715,13 @@ test_dir_find_dl_min_delay(void* data)
        mock_networkstatus_consensus_is_bootstrapping);
   MOCK(networkstatus_consensus_can_use_extra_fallbacks,
        mock_networkstatus_consensus_can_use_extra_fallbacks);
-  MOCK(num_bridges_usable,
-       mock_num_bridges_usable);
+  MOCK(num_bridges_usable, mock_num_bridges_usable);
 
   download_status_t dls;
 
-  const int server=10, client=20, server_cons=30, client_cons=40;
-  const int client_boot_auth_only_cons=50, client_boot_auth_cons=60;
-  const int client_boot_fallback_cons=70, bridge=80, bridge_bootstrap=90;
+  const int server = 10, client = 20, server_cons = 30, client_cons = 40;
+  const int client_boot_auth_only_cons = 50, client_boot_auth_cons = 60;
+  const int client_boot_fallback_cons = 70, bridge = 80, bridge_bootstrap = 90;
 
   mock_options = tor_malloc(sizeof(or_options_t));
   reset_options(mock_options, &mock_get_options_calls);
@@ -6765,11 +6732,11 @@ test_dir_find_dl_min_delay(void* data)
   mock_options->TestingServerConsensusDownloadInitialDelay = server_cons;
   mock_options->TestingClientConsensusDownloadInitialDelay = client_cons;
   mock_options->ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay =
-    client_boot_auth_only_cons;
+      client_boot_auth_only_cons;
   mock_options->ClientBootstrapConsensusAuthorityDownloadInitialDelay =
-    client_boot_auth_cons;
+      client_boot_auth_cons;
   mock_options->ClientBootstrapConsensusFallbackDownloadInitialDelay =
-    client_boot_fallback_cons;
+      client_boot_fallback_cons;
   mock_options->TestingBridgeDownloadInitialDelay = bridge;
   mock_options->TestingBridgeBootstrapDownloadInitialDelay = bridge_bootstrap;
 
@@ -6844,15 +6811,13 @@ test_dir_find_dl_min_delay(void* data)
   } else {
     /* client */
     mock_options->ClientOnly = 1;
-    tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
-              client_cons);
+    tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, client_cons);
     mock_options->ClientOnly = 0;
 
     /* bridge relay */
     mock_options->ORPort_set = 1;
     mock_options->BridgeRelay = 1;
-    tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
-              client_cons);
+    tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, client_cons);
     mock_options->ORPort_set = 0;
     mock_options->BridgeRelay = 0;
   }
@@ -6867,7 +6832,7 @@ test_dir_find_dl_min_delay(void* data)
     tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, bridge_bootstrap);
   }
 
- done:
+done:
   UNMOCK(networkstatus_consensus_is_bootstrapping);
   UNMOCK(networkstatus_consensus_can_use_extra_fallbacks);
   UNMOCK(num_bridges_usable);
@@ -6879,7 +6844,7 @@ test_dir_find_dl_min_delay(void* data)
 static void
 test_dir_matching_flags(void *arg)
 {
-  (void) arg;
+  (void)arg;
   routerstatus_t *rs_noflags = NULL;
   routerstatus_t *rs = NULL;
   char *s = NULL;
@@ -6890,37 +6855,38 @@ test_dir_matching_flags(void *arg)
   int expected_val_when_unused = 0;
 
   const char *ex_noflags =
-    "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 "
-       "192.168.0.1 9001 0\n"
-    "m thisoneislongerbecauseitisa256bitmddigest33\n"
-    "s\n";
+      "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 "
+      "192.168.0.1 9001 0\n"
+      "m thisoneislongerbecauseitisa256bitmddigest33\n"
+      "s\n";
   const char *cp = ex_noflags;
   rs_noflags = routerstatus_parse_entry_from_string(
-         area, &cp,
-         cp + strlen(cp),
-         tokens, NULL, NULL,
-         MAX_SUPPORTED_CONSENSUS_METHOD, FLAV_MICRODESC);
+      area, &cp, cp + strlen(cp), tokens, NULL, NULL,
+      MAX_SUPPORTED_CONSENSUS_METHOD, FLAV_MICRODESC);
   tt_assert(rs_noflags);
 
-#define FLAG(string, field) STMT_BEGIN {        \
-    tor_asprintf(&s,\
-                 "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 " \
-                 "192.168.0.1 9001 0\n"                                 \
-                 "m thisoneislongerbecauseitisa256bitmddigest33\n"      \
-                 "s %s\n", string);                                     \
-    cp = s;                                                             \
-    rs =  routerstatus_parse_entry_from_string(                         \
-      area, &cp,                                                        \
-      cp + strlen(cp),                                                  \
-      tokens, NULL, NULL,                                               \
-      MAX_SUPPORTED_CONSENSUS_METHOD, FLAV_MICRODESC);                  \
-    /* the field should usually be 0 when no flags are listed */        \
-    tt_int_op(rs_noflags->field, OP_EQ, expected_val_when_unused);      \
-    /* the field should be 1 when this flags islisted */                \
-    tt_int_op(rs->field, OP_EQ, 1);                                     \
-    tor_free(s);                                                        \
-    routerstatus_free(rs);                                              \
-} STMT_END
+#define FLAG(string, field)                                            \
+  STMT_BEGIN                                                           \
+    {                                                                  \
+      tor_asprintf(                                                    \
+          &s,                                                          \
+          "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 " \
+          "192.168.0.1 9001 0\n"                                       \
+          "m thisoneislongerbecauseitisa256bitmddigest33\n"            \
+          "s %s\n",                                                    \
+          string);                                                     \
+      cp = s;                                                          \
+      rs = routerstatus_parse_entry_from_string(                       \
+          area, &cp, cp + strlen(cp), tokens, NULL, NULL,              \
+          MAX_SUPPORTED_CONSENSUS_METHOD, FLAV_MICRODESC);             \
+      /* the field should usually be 0 when no flags are listed */     \
+      tt_int_op(rs_noflags->field, OP_EQ, expected_val_when_unused);   \
+      /* the field should be 1 when this flags islisted */             \
+      tt_int_op(rs->field, OP_EQ, 1);                                  \
+      tor_free(s);                                                     \
+      routerstatus_free(rs);                                           \
+    }                                                                  \
+  STMT_END
 
   FLAG("Authority", is_authority);
   FLAG("BadExit", is_bad_exit);
@@ -6942,7 +6908,7 @@ test_dir_matching_flags(void *arg)
   FLAG("Named", is_named);
   FLAG("Unnamed", is_unnamed);
 
- done:
+done:
   tor_free(s);
   routerstatus_free(rs);
   routerstatus_free(rs_noflags);
@@ -6961,10 +6927,10 @@ test_dir_assumed_flags(void *arg)
   /* We can assume that consensus method is higher than 24, so Running and
    * Valid are always implicitly set */
   const char *str1 =
-    "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 "
-       "192.168.0.1 9001 0\n"
-    "m thisoneislongerbecauseitisa256bitmddigest33\n"
-    "s Fast Guard Stable\n";
+      "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 "
+      "192.168.0.1 9001 0\n"
+      "m thisoneislongerbecauseitisa256bitmddigest33\n"
+      "s Fast Guard Stable\n";
   const char *eos = str1 + strlen(str1);
 
   const char *cp = str1;
@@ -6976,7 +6942,7 @@ test_dir_assumed_flags(void *arg)
   tt_assert(! rs->is_exit);
   tt_assert(rs->is_fast);
 
- done:
+done:
   smartlist_free(tokens);
   memarea_drop_all(area);
   routerstatus_free(rs);
@@ -6985,7 +6951,7 @@ test_dir_assumed_flags(void *arg)
 static void
 test_dir_post_parsing(void *arg)
 {
-  (void) arg;
+  (void)arg;
 
   /* Test the version parsing from an HS descriptor publish request. */
   {
@@ -7003,7 +6969,8 @@ test_dir_post_parsing(void *arg)
     version = parse_hs_version_from_post("/tor/hs/42/publish", prefix, &end);
     tt_int_op(version, OP_EQ, 42);
     tt_str_op(end, OP_EQ, "/publish");
-    version = parse_hs_version_from_post("/tor/hs/18163/publish",prefix, &end);
+    version =
+        parse_hs_version_from_post("/tor/hs/18163/publish", prefix, &end);
     tt_int_op(version, OP_EQ, 18163);
     tt_str_op(end, OP_EQ, "/publish");
     version = parse_hs_version_from_post("JUNKJUNKJUNK", prefix, &end);
@@ -7028,19 +6995,18 @@ test_dir_post_parsing(void *arg)
     tt_int_op(version, OP_EQ, -1);
     tt_ptr_op(end, OP_EQ, NULL);
     /* INT_MAX */
-    version = parse_hs_version_from_post("/tor/hs/2147483647/publish",
-                                         prefix, &end);
+    version =
+        parse_hs_version_from_post("/tor/hs/2147483647/publish", prefix, &end);
     tt_int_op(version, OP_EQ, INT_MAX);
     tt_str_op(end, OP_EQ, "/publish");
     /* INT_MAX + 1*/
-    version = parse_hs_version_from_post("/tor/hs/2147483648/publish",
-                                         prefix, &end);
+    version =
+        parse_hs_version_from_post("/tor/hs/2147483648/publish", prefix, &end);
     tt_int_op(version, OP_EQ, -1);
     tt_ptr_op(end, OP_EQ, NULL);
   }
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -7051,7 +7017,7 @@ test_dir_platform_str(void *arg)
   platform[0] = 0;
   get_platform_str(platform, sizeof(platform));
   tt_int_op((int)strlen(platform), OP_GT, 0);
-  tt_assert(!strcmpstart(platform, "Tor "));
+  tt_assert(! strcmpstart(platform, "Tor "));
 
   tor_version_t ver;
   // make sure this is a tor version, a real actual tor version.
@@ -7061,9 +7027,9 @@ test_dir_platform_str(void *arg)
 
   // Handle an example version.
   tt_int_op(tor_version_parse_platform(
-        "Tor 0.3.3.3 (foo) (git-xyzzy) on a potato", &ver, 1), OP_EQ, 1);
- done:
-  ;
+                "Tor 0.3.3.3 (foo) (git-xyzzy) on a potato", &ver, 1),
+            OP_EQ, 1);
+done:;
 }
 
 static networkstatus_t *mock_networkstatus;
@@ -7130,7 +7096,7 @@ test_dir_networkstatus_consensus_has_ipv6(void *arg)
   mock_networkstatus->consensus_method =
       MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS - 1;
   has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(!has_ipv6);
+  tt_assert(! has_ipv6);
 
   /* Test the edge cases */
   mock_options->UseMicrodescriptors = 1;
@@ -7143,17 +7109,17 @@ test_dir_networkstatus_consensus_has_ipv6(void *arg)
   tt_assert(has_ipv6);
 
   /* Not reasonably live */
-  mock_networkstatus->valid_after = approx_time() - 24*60*60 - 3600;
-  mock_networkstatus->valid_until = approx_time() - 24*60*60 - 60;
+  mock_networkstatus->valid_after = approx_time() - 24 * 60 * 60 - 3600;
+  mock_networkstatus->valid_until = approx_time() - 24 * 60 * 60 - 60;
   has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(!has_ipv6);
+  tt_assert(! has_ipv6);
 
   /* NULL consensus */
   mock_networkstatus = NULL;
   has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(!has_ipv6);
+  tt_assert(! has_ipv6);
 
- done:
+done:
   UNMOCK(get_options);
   UNMOCK(networkstatus_get_latest_consensus_by_flavor);
 }
@@ -7172,12 +7138,12 @@ test_dir_format_versions_list(void *arg)
   tor_free(s);
   config_line_append(&lines, "ignored", "0.3.4.1, 0.2.9.111-alpha, 4.4.4-rc");
   s = format_recommended_version_list(lines, 1);
-  tt_str_op(s, OP_EQ,  "0.2.9.111-alpha,0.3.4.1,4.4.4-rc");
+  tt_str_op(s, OP_EQ, "0.2.9.111-alpha,0.3.4.1,4.4.4-rc");
 
   tor_free(s);
   config_line_append(&lines, "ignored", "0.1.2.3,0.2.9.10   ");
   s = format_recommended_version_list(lines, 1);
-  tt_str_op(s, OP_EQ,  "0.1.2.3,0.2.9.10,0.2.9.111-alpha,0.3.4.1,4.4.4-rc");
+  tt_str_op(s, OP_EQ, "0.1.2.3,0.2.9.10,0.2.9.111-alpha,0.3.4.1,4.4.4-rc");
 
   /* There should be no warnings so far. */
   expect_no_log_entry();
@@ -7186,11 +7152,12 @@ test_dir_format_versions_list(void *arg)
   tor_free(s);
   config_line_append(&lines, "ignored", "1.3.3.8 1.3.3.7");
   s = format_recommended_version_list(lines, 1);
-  tt_str_op(s, OP_EQ,  "0.1.2.3,0.2.9.10,0.2.9.111-alpha,0.3.4.1,"
+  tt_str_op(s, OP_EQ,
+            "0.1.2.3,0.2.9.10,0.2.9.111-alpha,0.3.4.1,"
             "1.3.3.7,1.3.3.8,4.4.4-rc");
 
   expect_single_log_msg_containing(
-          "Unexpected space in versions list member \"1.3.3.8 1.3.3.7\"." );
+      "Unexpected space in versions list member \"1.3.3.8 1.3.3.7\".");
 
   /* Start over, with a line containing a bogus version */
   config_free_lines(lines);
@@ -7198,105 +7165,90 @@ test_dir_format_versions_list(void *arg)
   tor_free(s);
   mock_clean_saved_logs();
   config_line_append(&lines, "ignored", "0.1.2.3, alpha-complex, 0.1.1.8-rc");
-  s = format_recommended_version_list(lines,1);
+  s = format_recommended_version_list(lines, 1);
   tt_str_op(s, OP_EQ, "0.1.1.8-rc,0.1.2.3,alpha-complex");
   expect_single_log_msg_containing(
-        "Recommended version \"alpha-complex\" does not look valid.");
+      "Recommended version \"alpha-complex\" does not look valid.");
 
- done:
+done:
   tor_free(s);
   config_free_lines(lines);
   teardown_capture_of_logs();
 }
 
 #ifndef COCCI
-#define DIR_LEGACY(name)                             \
-  { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
+#  define DIR_LEGACY(name)                        \
+    {                                             \
+#      name, test_dir_##name, TT_FORK, NULL, NULL \
+    }
 
-#define DIR(name,flags)                              \
-  { #name, test_dir_##name, (flags), NULL, NULL }
+#  define DIR(name, flags)                        \
+    {                                             \
+#      name, test_dir_##name, (flags), NULL, NULL \
+    }
 
 /* where arg is a string constant */
-#define DIR_ARG(name,flags,arg)                      \
-  { #name "_" arg, test_dir_##name, (flags), &passthrough_setup, (void*) arg }
+#  define DIR_ARG(name, flags, arg)                                \
+    {                                                              \
+#      name "_" arg, test_dir_##name, (flags), &passthrough_setup, \
+          (void *)arg                                              \
+    }
 #endif /* !defined(COCCI) */
 
 struct testcase_t dir_tests[] = {
-  DIR_LEGACY(nicknames),
-  /* extrainfo without any stats */
-  DIR_ARG(formats_rsa, TT_FORK, ""),
-  DIR_ARG(formats_rsa_ed25519, TT_FORK, ""),
-  /* on a bridge */
-  DIR_ARG(formats_rsa, TT_FORK, "b"),
-  DIR_ARG(formats_rsa_ed25519, TT_FORK, "b"),
-  /* extrainfo with basic stats */
-  DIR_ARG(formats_rsa, TT_FORK, "e"),
-  DIR_ARG(formats_rsa_ed25519, TT_FORK, "e"),
-  DIR_ARG(formats_rsa, TT_FORK, "be"),
-  DIR_ARG(formats_rsa_ed25519, TT_FORK, "be"),
-  /* extrainfo with all stats */
-  DIR_ARG(formats_rsa, TT_FORK, "es"),
-  DIR_ARG(formats_rsa_ed25519, TT_FORK, "es"),
-  DIR_ARG(formats_rsa, TT_FORK, "bes"),
-  DIR_ARG(formats_rsa_ed25519, TT_FORK, "bes"),
-  DIR(routerinfo_parsing, 0),
-  DIR(extrainfo_parsing, 0),
-  DIR(parse_router_list, TT_FORK),
-  DIR(load_routers, TT_FORK),
-  DIR(load_extrainfo, TT_FORK),
-  DIR(getinfo_extra, 0),
-  DIR_LEGACY(versions),
-  DIR_LEGACY(fp_pairs),
-  DIR(split_fps, 0),
-  DIR_LEGACY(measured_bw_kb),
-  DIR_LEGACY(measured_bw_kb_line_is_after_headers),
-  DIR_LEGACY(measured_bw_kb_cache),
-  DIR_LEGACY(dirserv_read_measured_bandwidths),
-  DIR(bwauth_bw_file_digest256, 0),
-  DIR_LEGACY(param_voting),
-  DIR(param_voting_lookup, 0),
-  DIR_LEGACY(v3_networkstatus),
-  DIR(random_weighted, 0),
-  DIR(scale_bw, 0),
-  DIR_LEGACY(clip_unmeasured_bw_kb),
-  DIR_LEGACY(clip_unmeasured_bw_kb_alt),
-  DIR(fmt_control_ns, 0),
-  DIR(dirserv_set_routerstatus_testing, 0),
-  DIR(http_handling, 0),
-  DIR(purpose_needs_anonymity_returns_true_for_bridges, 0),
-  DIR(purpose_needs_anonymity_returns_false_for_own_bridge_desc, 0),
-  DIR(purpose_needs_anonymity_returns_true_by_default, 0),
-  DIR(purpose_needs_anonymity_returns_true_for_sensitive_purpose, 0),
-  DIR(purpose_needs_anonymity_ret_false_for_non_sensitive_conn, 0),
-  DIR(post_parsing, 0),
-  DIR(fetch_type, 0),
-  DIR(packages, 0),
-  DIR(download_status_random_backoff, 0),
-  DIR(download_status_random_backoff_ranges, 0),
-  DIR(download_status_increment, TT_FORK),
-  DIR(authdir_type_to_string, 0),
-  DIR(conn_purpose_to_string, 0),
-  DIR(should_use_directory_guards, 0),
-  DIR(should_not_init_request_to_ourselves, TT_FORK),
-  DIR(should_not_init_request_to_dir_auths_without_v3_info, 0),
-  DIR(should_init_request_to_dir_auths, 0),
-  DIR(choose_compression_level, 0),
-  DIR(dump_unparseable_descriptors, 0),
-  DIR(populate_dump_desc_fifo, 0),
-  DIR(populate_dump_desc_fifo_2, 0),
-  DIR_ARG(find_dl_min_delay, TT_FORK, "bfd"),
-  DIR_ARG(find_dl_min_delay, TT_FORK, "bad"),
-  DIR_ARG(find_dl_min_delay, TT_FORK, "cfd"),
-  DIR_ARG(find_dl_min_delay, TT_FORK, "cad"),
-  DIR_ARG(find_dl_min_delay, TT_FORK, "bfr"),
-  DIR_ARG(find_dl_min_delay, TT_FORK, "bar"),
-  DIR_ARG(find_dl_min_delay, TT_FORK, "cfr"),
-  DIR_ARG(find_dl_min_delay, TT_FORK, "car"),
-  DIR(assumed_flags, 0),
-  DIR(matching_flags, 0),
-  DIR(networkstatus_compute_bw_weights_v10, 0),
-  DIR(platform_str, 0),
-  DIR(networkstatus_consensus_has_ipv6, TT_FORK),
-  DIR(format_versions_list, TT_FORK),
-  END_OF_TESTCASES
-};
+    DIR_LEGACY(nicknames),
+    /* extrainfo without any stats */
+    DIR_ARG(formats_rsa, TT_FORK, ""),
+    DIR_ARG(formats_rsa_ed25519, TT_FORK, ""),
+    /* on a bridge */
+    DIR_ARG(formats_rsa, TT_FORK, "b"),
+    DIR_ARG(formats_rsa_ed25519, TT_FORK, "b"),
+    /* extrainfo with basic stats */
+    DIR_ARG(formats_rsa, TT_FORK, "e"),
+    DIR_ARG(formats_rsa_ed25519, TT_FORK, "e"),
+    DIR_ARG(formats_rsa, TT_FORK, "be"),
+    DIR_ARG(formats_rsa_ed25519, TT_FORK, "be"),
+    /* extrainfo with all stats */
+    DIR_ARG(formats_rsa, TT_FORK, "es"),
+    DIR_ARG(formats_rsa_ed25519, TT_FORK, "es"),
+    DIR_ARG(formats_rsa, TT_FORK, "bes"),
+    DIR_ARG(formats_rsa_ed25519, TT_FORK, "bes"), DIR(routerinfo_parsing, 0),
+    DIR(extrainfo_parsing, 0), DIR(parse_router_list, TT_FORK),
+    DIR(load_routers, TT_FORK), DIR(load_extrainfo, TT_FORK),
+    DIR(getinfo_extra, 0), DIR_LEGACY(versions), DIR_LEGACY(fp_pairs),
+    DIR(split_fps, 0), DIR_LEGACY(measured_bw_kb),
+    DIR_LEGACY(measured_bw_kb_line_is_after_headers),
+    DIR_LEGACY(measured_bw_kb_cache),
+    DIR_LEGACY(dirserv_read_measured_bandwidths),
+    DIR(bwauth_bw_file_digest256, 0), DIR_LEGACY(param_voting),
+    DIR(param_voting_lookup, 0), DIR_LEGACY(v3_networkstatus),
+    DIR(random_weighted, 0), DIR(scale_bw, 0),
+    DIR_LEGACY(clip_unmeasured_bw_kb), DIR_LEGACY(clip_unmeasured_bw_kb_alt),
+    DIR(fmt_control_ns, 0), DIR(dirserv_set_routerstatus_testing, 0),
+    DIR(http_handling, 0),
+    DIR(purpose_needs_anonymity_returns_true_for_bridges, 0),
+    DIR(purpose_needs_anonymity_returns_false_for_own_bridge_desc, 0),
+    DIR(purpose_needs_anonymity_returns_true_by_default, 0),
+    DIR(purpose_needs_anonymity_returns_true_for_sensitive_purpose, 0),
+    DIR(purpose_needs_anonymity_ret_false_for_non_sensitive_conn, 0),
+    DIR(post_parsing, 0), DIR(fetch_type, 0), DIR(packages, 0),
+    DIR(download_status_random_backoff, 0),
+    DIR(download_status_random_backoff_ranges, 0),
+    DIR(download_status_increment, TT_FORK), DIR(authdir_type_to_string, 0),
+    DIR(conn_purpose_to_string, 0), DIR(should_use_directory_guards, 0),
+    DIR(should_not_init_request_to_ourselves, TT_FORK),
+    DIR(should_not_init_request_to_dir_auths_without_v3_info, 0),
+    DIR(should_init_request_to_dir_auths, 0), DIR(choose_compression_level, 0),
+    DIR(dump_unparseable_descriptors, 0), DIR(populate_dump_desc_fifo, 0),
+    DIR(populate_dump_desc_fifo_2, 0),
+    DIR_ARG(find_dl_min_delay, TT_FORK, "bfd"),
+    DIR_ARG(find_dl_min_delay, TT_FORK, "bad"),
+    DIR_ARG(find_dl_min_delay, TT_FORK, "cfd"),
+    DIR_ARG(find_dl_min_delay, TT_FORK, "cad"),
+    DIR_ARG(find_dl_min_delay, TT_FORK, "bfr"),
+    DIR_ARG(find_dl_min_delay, TT_FORK, "bar"),
+    DIR_ARG(find_dl_min_delay, TT_FORK, "cfr"),
+    DIR_ARG(find_dl_min_delay, TT_FORK, "car"), DIR(assumed_flags, 0),
+    DIR(matching_flags, 0), DIR(networkstatus_compute_bw_weights_v10, 0),
+    DIR(platform_str, 0), DIR(networkstatus_consensus_has_ipv6, TT_FORK),
+    DIR(format_versions_list, TT_FORK), END_OF_TESTCASES};

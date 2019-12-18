@@ -15,8 +15,8 @@
 
 /* Cached time */
 #ifdef TIME_IS_FAST
-#define approx_time() time(NULL)
-#define update_approx_time(t) STMT_NIL
+#  define approx_time() time(NULL)
+#  define update_approx_time(t) STMT_NIL
 #else
 time_t approx_time(void);
 void update_approx_time(time_t now);

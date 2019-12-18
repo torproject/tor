@@ -31,4 +31,3 @@ protover_contains_long_protocol_names(const char *s)
 }
 
 #endif /* defined(HAVE_RUST) */
-

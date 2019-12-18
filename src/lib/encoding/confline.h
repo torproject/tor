@@ -32,17 +32,16 @@ typedef struct config_line_t {
   struct config_line_t *next;
 
   /** What special treatment (if any) does this line require? */
-  unsigned int command:2;
+  unsigned int command : 2;
   /** If true, subsequent assignments to this linelist should replace
    * it, not extend it.  Set only on the first item in a linelist in an
    * or_options_t. */
-  unsigned int fragile:1;
+  unsigned int fragile : 1;
 } config_line_t;
 
-void config_line_append(config_line_t **lst,
-                        const char *key, const char *val);
-void config_line_prepend(config_line_t **lst,
-                         const char *key, const char *val);
+void config_line_append(config_line_t **lst, const char *key, const char *val);
+void config_line_prepend(config_line_t **lst, const char *key,
+                         const char *val);
 config_line_t *config_lines_dup(const config_line_t *inp);
 config_line_t *config_lines_dup_and_filter(const config_line_t *inp,
                                            const char *key);
@@ -59,8 +58,9 @@ void config_free_lines_(config_line_t *front);
     (front) = NULL;              \
   } while (0)
 const char *parse_config_line_from_str_verbose(const char *line,
-                                       char **key_out, char **value_out,
-                                       const char **err_out);
+                                               char **key_out,
+                                               char **value_out,
+                                               const char **err_out);
 
 int config_get_lines(const char *string, struct config_line_t **result,
                      int extended);
@@ -71,8 +71,7 @@ typedef int (*include_handler_fn)(const char *, int, int,
                                   struct smartlist_t *);
 
 int config_get_lines_aux(const char *string, struct config_line_t **result,
-                         int extended,
-                         int allow_include, int *has_include,
+                         int extended, int allow_include, int *has_include,
                          struct smartlist_t *opened_lst, int recursion_level,
                          config_line_t **last,
                          include_handler_fn handle_include);

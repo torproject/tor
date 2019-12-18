@@ -17,7 +17,7 @@
  * are controlled by command-line options.
  **/
 typedef enum {
-  CMD_RUN_TOR=0, /**< The default: run Tor as a daemon. */
+  CMD_RUN_TOR = 0, /**< The default: run Tor as a daemon. */
   CMD_LIST_FINGERPRINT, /**< Running --list-fingerprint. */
   CMD_HASH_PASSWORD, /**< Running --hash-password. */
   CMD_VERIFY_CONFIG, /**< Running --verify-config. */

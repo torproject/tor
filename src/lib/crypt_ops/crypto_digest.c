@@ -67,15 +67,15 @@ crypto_digest_algorithm_get_name(digest_algorithm_t alg)
 int
 crypto_digest_algorithm_parse_name(const char *name)
 {
-  if (!strcmp(name, "sha1"))
+  if (! strcmp(name, "sha1"))
     return DIGEST_SHA1;
-  else if (!strcmp(name, "sha256"))
+  else if (! strcmp(name, "sha256"))
     return DIGEST_SHA256;
-  else if (!strcmp(name, "sha512"))
+  else if (! strcmp(name, "sha512"))
     return DIGEST_SHA512;
-  else if (!strcmp(name, "sha3-256"))
+  else if (! strcmp(name, "sha3-256"))
     return DIGEST_SHA3_256;
-  else if (!strcmp(name, "sha3-512"))
+  else if (! strcmp(name, "sha3-512"))
     return DIGEST_SHA3_512;
   else
     return -1;
@@ -97,7 +97,7 @@ crypto_digest_algorithm_get_length(digest_algorithm_t alg)
     case DIGEST_SHA3_512:
       return DIGEST512_LEN;
     default:
-      tor_assert(0);              // LCOV_EXCL_LINE
+      tor_assert(0); // LCOV_EXCL_LINE
       return 0; /* Unreachable */ // LCOV_EXCL_LINE
   }
 }
@@ -107,9 +107,8 @@ crypto_digest_algorithm_get_length(digest_algorithm_t alg)
  * <b>salt_len</b>. Store the result of <b>len_out</b> bytes in in
  * <b>mac_out</b>. This function can't fail. */
 void
-crypto_mac_sha3_256(uint8_t *mac_out, size_t len_out,
-                    const uint8_t *key, size_t key_len,
-                    const uint8_t *msg, size_t msg_len)
+crypto_mac_sha3_256(uint8_t *mac_out, size_t len_out, const uint8_t *key,
+                    size_t key_len, const uint8_t *msg, size_t msg_len)
 {
   crypto_digest_t *digest;
 
@@ -123,11 +122,11 @@ crypto_mac_sha3_256(uint8_t *mac_out, size_t len_out,
 
   /* Order matters here that is any subsystem using this function should
    * expect this very precise ordering in the MAC construction. */
-  crypto_digest_add_bytes(digest, (const char *) &key_len_netorder,
+  crypto_digest_add_bytes(digest, (const char *)&key_len_netorder,
                           sizeof(key_len_netorder));
-  crypto_digest_add_bytes(digest, (const char *) key, key_len);
-  crypto_digest_add_bytes(digest, (const char *) msg, msg_len);
-  crypto_digest_get_digest(digest, (char *) mac_out, len_out);
+  crypto_digest_add_bytes(digest, (const char *)key, key_len);
+  crypto_digest_add_bytes(digest, (const char *)msg, msg_len);
+  crypto_digest_get_digest(digest, (char *)mac_out, len_out);
   crypto_digest_free(digest);
 }
 
@@ -213,7 +212,7 @@ crypto_xof_squeeze_bytes(crypto_xof_t *xof, uint8_t *out, size_t len)
 void
 crypto_xof_free_(crypto_xof_t *xof)
 {
-  if (!xof)
+  if (! xof)
     return;
 #ifdef OPENSSL_HAS_SHAKE256
   if (xof->ctx)
@@ -226,8 +225,8 @@ crypto_xof_free_(crypto_xof_t *xof)
 /** Compute the XOF (SHAKE256) of a <b>input_len</b> bytes at <b>input</b>,
  * putting <b>output_len</b> bytes at <b>output</b>. */
 void
-crypto_xof(uint8_t *output, size_t output_len,
-           const uint8_t *input, size_t input_len)
+crypto_xof(uint8_t *output, size_t output_len, const uint8_t *input,
+           size_t input_len)
 {
 #ifdef OPENSSL_HAS_SHA3
   EVP_MD_CTX *ctx = EVP_MD_CTX_new();

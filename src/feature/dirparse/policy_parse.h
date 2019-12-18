@@ -17,7 +17,7 @@
 struct directory_token_t;
 
 MOCK_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string,
-         (const char *s, int assume_action, int *malformed_list));
+          (const char *s, int assume_action, int *malformed_list));
 
 addr_policy_t *router_parse_addr_policy(struct directory_token_t *tok,
                                         unsigned fmt_flags);

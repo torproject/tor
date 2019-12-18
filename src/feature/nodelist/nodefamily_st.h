@@ -29,7 +29,7 @@ struct nodefamily_t {
   uint8_t family_members[FLEXIBLE_ARRAY_MEMBER];
 };
 
-#define NODEFAMILY_MEMBER_LEN (1+DIGEST_LEN)
+#define NODEFAMILY_MEMBER_LEN (1 + DIGEST_LEN)
 
 /** Tag byte, indicates that the following bytes are a RSA1024 SHA1 ID.
  */
@@ -41,13 +41,12 @@ struct nodefamily_t {
 /**
  * Number of bytes to allocate in the array for a nodefamily_t with N members.
  **/
-#define NODEFAMILY_ARRAY_SIZE(n) \
-  ((n) * NODEFAMILY_MEMBER_LEN)
+#define NODEFAMILY_ARRAY_SIZE(n) ((n)*NODEFAMILY_MEMBER_LEN)
 
 /**
  * Pointer to the i'th member of <b>nf</b>, as encoded.
  */
 #define NODEFAMILY_MEMBER_PTR(nf, i) \
-  (&((nf)->family_members[(i) * NODEFAMILY_MEMBER_LEN]))
+  (&((nf)->family_members[(i)*NODEFAMILY_MEMBER_LEN]))
 
 #endif /* !defined(TOR_NODEFAMILY_ST_H) */

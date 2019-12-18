@@ -13,7 +13,7 @@
 
 #ifdef BTRACK_ORCONN_PRIVATE
 
-#include "ht.h"
+#  include "ht.h"
 
 /**
  * Structure for tracking OR connection states
@@ -22,14 +22,14 @@
  * another with channel IDs.
  **/
 typedef struct bt_orconn_t {
-  HT_ENTRY(bt_orconn_t) node;   /**< Hash map entry indexed by gid */
+  HT_ENTRY(bt_orconn_t) node; /**< Hash map entry indexed by gid */
   HT_ENTRY(bt_orconn_t) chan_node; /**< Hash map entry indexed by channel ID */
-  uint64_t gid;                    /**< Global ID of this ORCONN */
-  uint64_t chan;                   /**< Channel ID, if known */
-  int proxy_type;                  /**< Proxy type */
-  uint8_t state;                   /**< State of this ORCONN */
-  bool is_orig;             /**< Does this carry an origin circuit? */
-  bool is_onehop;           /**< Is this for a one-hop circuit? */
+  uint64_t gid; /**< Global ID of this ORCONN */
+  uint64_t chan; /**< Channel ID, if known */
+  int proxy_type; /**< Proxy type */
+  uint8_t state; /**< State of this ORCONN */
+  bool is_orig; /**< Does this carry an origin circuit? */
+  bool is_onehop; /**< Is this for a one-hop circuit? */
 } bt_orconn_t;
 
 #endif /* defined(BTRACK_ORCONN_PRIVATE) */

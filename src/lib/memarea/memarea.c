@@ -26,64 +26,65 @@
 
 /** If true, we try to detect any attempts to write beyond the length of a
  * memarea. */
-#define USE_SENTINELS
+#  define USE_SENTINELS
 
 /** All returned pointers should be aligned to the nearest multiple of this
  * value. */
-#define MEMAREA_ALIGN SIZEOF_VOID_P
+#  define MEMAREA_ALIGN SIZEOF_VOID_P
 
 /** A value which, when masked out of a pointer, produces a maximally aligned
  * pointer. */
-#if MEMAREA_ALIGN == 4
-#define MEMAREA_ALIGN_MASK ((uintptr_t)3)
-#elif MEMAREA_ALIGN == 8
-#define MEMAREA_ALIGN_MASK ((uintptr_t)7)
-#else
-#error "void* is neither 4 nor 8 bytes long. I don't know how to align stuff."
-#endif /* MEMAREA_ALIGN == 4 || ... */
+#  if MEMAREA_ALIGN == 4
+#    define MEMAREA_ALIGN_MASK ((uintptr_t)3)
+#  elif MEMAREA_ALIGN == 8
+#    define MEMAREA_ALIGN_MASK ((uintptr_t)7)
+#  else
+#    error \
+        "void* is neither 4 nor 8 bytes long. I don't know how to align stuff."
+#  endif /* MEMAREA_ALIGN == 4 || ... */
 
-#if defined(__GNUC__) && defined(FLEXIBLE_ARRAY_MEMBER)
-#define USE_ALIGNED_ATTRIBUTE
+#  if defined(__GNUC__) && defined(FLEXIBLE_ARRAY_MEMBER)
+#    define USE_ALIGNED_ATTRIBUTE
 /** Name for the 'memory' member of a memory chunk. */
-#define U_MEM mem
-#else
-#define U_MEM u.mem
-#endif /* defined(__GNUC__) && defined(FLEXIBLE_ARRAY_MEMBER) */
+#    define U_MEM mem
+#  else
+#    define U_MEM u.mem
+#  endif /* defined(__GNUC__) && defined(FLEXIBLE_ARRAY_MEMBER) */
 
-#ifdef USE_SENTINELS
+#  ifdef USE_SENTINELS
 /** Magic value that we stick at the end of a memarea so we can make sure
  * there are no run-off-the-end bugs. */
-#define SENTINEL_VAL 0x90806622u
+#    define SENTINEL_VAL 0x90806622u
 /** How many bytes per area do we devote to the sentinel? */
-#define SENTINEL_LEN sizeof(uint32_t)
+#    define SENTINEL_LEN sizeof(uint32_t)
 /** Given a mem_area_chunk_t with SENTINEL_LEN extra bytes allocated at the
  * end, set those bytes. */
-#define SET_SENTINEL(chunk)                                     \
-  STMT_BEGIN                                                    \
-  set_uint32( &(chunk)->U_MEM[chunk->mem_size], SENTINEL_VAL ); \
-  STMT_END
+#    define SET_SENTINEL(chunk)                                     \
+      STMT_BEGIN                                                    \
+        set_uint32(&(chunk)->U_MEM[chunk->mem_size], SENTINEL_VAL); \
+      STMT_END
 /** Assert that the sentinel on a memarea is set correctly. */
-#define CHECK_SENTINEL(chunk)                                           \
-  STMT_BEGIN                                                            \
-  uint32_t sent_val = get_uint32(&(chunk)->U_MEM[chunk->mem_size]);     \
-  tor_assert(sent_val == SENTINEL_VAL);                                 \
-  STMT_END
-#else /* !defined(USE_SENTINELS) */
-#define SENTINEL_LEN 0
-#define SET_SENTINEL(chunk) STMT_NIL
-#define CHECK_SENTINEL(chunk) STMT_NIL
-#endif /* defined(USE_SENTINELS) */
+#    define CHECK_SENTINEL(chunk)                                         \
+      STMT_BEGIN                                                          \
+        uint32_t sent_val = get_uint32(&(chunk)->U_MEM[chunk->mem_size]); \
+        tor_assert(sent_val == SENTINEL_VAL);                             \
+      STMT_END
+#  else /* !defined(USE_SENTINELS) */
+#    define SENTINEL_LEN 0
+#    define SET_SENTINEL(chunk) STMT_NIL
+#    define CHECK_SENTINEL(chunk) STMT_NIL
+#  endif /* defined(USE_SENTINELS) */
 
 /** Increment <b>ptr</b> until it is aligned to MEMAREA_ALIGN. */
 static inline void *
 realign_pointer(void *ptr)
 {
   uintptr_t x = (uintptr_t)ptr;
-  x = (x+MEMAREA_ALIGN_MASK) & ~MEMAREA_ALIGN_MASK;
+  x = (x + MEMAREA_ALIGN_MASK) & ~MEMAREA_ALIGN_MASK;
   /* Reinstate this if bug 930 ever reappears
   tor_assert(((void*)x) >= ptr);
   */
-  return (void*)x;
+  return (void *)x;
 }
 
 /** Implements part of a memarea.  New memory is carved off from chunk->mem in
@@ -95,24 +96,24 @@ typedef struct memarea_chunk_t {
   size_t mem_size; /**< How much RAM is available in mem, total? */
   char *next_mem; /**< Next position in mem to allocate data at.  If it's
                    * equal to mem+mem_size, this chunk is full. */
-#ifdef USE_ALIGNED_ATTRIBUTE
+#  ifdef USE_ALIGNED_ATTRIBUTE
   /** Actual content of the memory chunk. */
   char mem[FLEXIBLE_ARRAY_MEMBER] __attribute__((aligned(MEMAREA_ALIGN)));
-#else
+#  else
   union {
     char mem[1]; /**< Memory space in this chunk.  */
     void *void_for_alignment_; /**< Dummy; used to make sure mem is aligned. */
   } u; /**< Union used to enforce alignment when we don't have support for
         * doing it right. */
-#endif /* defined(USE_ALIGNED_ATTRIBUTE) */
+#  endif /* defined(USE_ALIGNED_ATTRIBUTE) */
 } memarea_chunk_t;
 
 /** How many bytes are needed for overhead before we get to the memory part
  * of a chunk? */
-#define CHUNK_HEADER_SIZE offsetof(memarea_chunk_t, U_MEM)
+#  define CHUNK_HEADER_SIZE offsetof(memarea_chunk_t, U_MEM)
 
 /** What's the smallest that we'll allocate a chunk? */
-#define CHUNK_SIZE 4096
+#  define CHUNK_SIZE 4096
 
 /** A memarea_t is an allocation region for a set of small memory requests
  * that will all be freed at once. */
@@ -133,8 +134,8 @@ alloc_chunk(size_t sz)
   res->next_chunk = NULL;
   res->mem_size = chunk_size - CHUNK_HEADER_SIZE - SENTINEL_LEN;
   res->next_mem = res->U_MEM;
-  tor_assert(res->next_mem+res->mem_size+SENTINEL_LEN ==
-             ((char*)res)+chunk_size);
+  tor_assert(res->next_mem + res->mem_size + SENTINEL_LEN ==
+             ((char *)res) + chunk_size);
   tor_assert(realign_pointer(res->next_mem) == res->next_mem);
   SET_SENTINEL(res);
   return res;
@@ -217,12 +218,12 @@ memarea_alloc(memarea_t *area, size_t sz)
     sz = 1;
   tor_assert(chunk->next_mem <= chunk->U_MEM + chunk->mem_size);
   const size_t space_remaining =
-    (chunk->U_MEM + chunk->mem_size) - chunk->next_mem;
+      (chunk->U_MEM + chunk->mem_size) - chunk->next_mem;
   if (sz > space_remaining) {
-    if (sz+CHUNK_HEADER_SIZE >= CHUNK_SIZE) {
+    if (sz + CHUNK_HEADER_SIZE >= CHUNK_SIZE) {
       /* This allocation is too big.  Stick it in a special chunk, and put
        * that chunk second in the list. */
-      memarea_chunk_t *new_chunk = alloc_chunk(sz+CHUNK_HEADER_SIZE);
+      memarea_chunk_t *new_chunk = alloc_chunk(sz + CHUNK_HEADER_SIZE);
       new_chunk->next_chunk = chunk->next_chunk;
       chunk->next_chunk = new_chunk;
       chunk = new_chunk;
@@ -265,7 +266,7 @@ memarea_memdup(memarea_t *area, const void *s, size_t n)
 char *
 memarea_strdup(memarea_t *area, const char *s)
 {
-  return memarea_memdup(area, s, strlen(s)+1);
+  return memarea_memdup(area, s, strlen(s) + 1);
 }
 
 /** As strndup, but returns the memory from <b>area</b>. */
@@ -277,9 +278,9 @@ memarea_strndup(memarea_t *area, const char *s, size_t n)
   tor_assert(n < SIZE_T_CEILING);
   for (ln = 0; ln < n && s[ln]; ++ln)
     ;
-  result = memarea_alloc(area, ln+1);
+  result = memarea_alloc(area, ln + 1);
   memcpy(result, s, ln);
-  result[ln]='\0';
+  result[ln] = '\0';
   return result;
 }
 
@@ -311,7 +312,7 @@ memarea_assert_ok(memarea_t *area)
     CHECK_SENTINEL(chunk);
     tor_assert(chunk->next_mem >= chunk->U_MEM);
     tor_assert(chunk->next_mem <=
-          (char*) realign_pointer(chunk->U_MEM+chunk->mem_size));
+               (char *)realign_pointer(chunk->U_MEM + chunk->mem_size));
   }
 }
 
@@ -374,7 +375,7 @@ char *
 memarea_strdup(memarea_t *area, const char *s)
 {
   size_t n = strlen(s);
-  char *r = memarea_alloc(area, n+1);
+  char *r = memarea_alloc(area, n + 1);
   memcpy(r, s, n);
   r[n] = 0;
   return r;
@@ -383,14 +384,13 @@ char *
 memarea_strndup(memarea_t *area, const char *s, size_t n)
 {
   size_t ln = strnlen(s, n);
-  char *r = memarea_alloc(area, ln+1);
+  char *r = memarea_alloc(area, ln + 1);
   memcpy(r, s, ln);
   r[ln] = 0;
   return r;
 }
 void
-memarea_get_stats(memarea_t *area,
-                  size_t *allocated_out, size_t *used_out)
+memarea_get_stats(memarea_t *area, size_t *allocated_out, size_t *used_out)
 {
   (void)area;
   *allocated_out = *used_out = 128;

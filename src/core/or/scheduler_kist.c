@@ -23,13 +23,13 @@
 #include "core/or/or_connection_st.h"
 
 #ifdef HAVE_SYS_IOCTL_H
-#include <sys/ioctl.h>
+#  include <sys/ioctl.h>
 #endif
 
 #ifdef HAVE_KIST_SUPPORT
 /* Kernel interface needed for KIST. */
-#include <netinet/tcp.h>
-#include <linux/sockios.h>
+#  include <netinet/tcp.h>
+#  include <linux/sockios.h>
 #endif /* HAVE_KIST_SUPPORT */
 
 /*****************************************************************************
@@ -135,7 +135,7 @@ channel_outbuf_length(channel_t *chan)
 static int
 each_channel_write_to_kernel(outbuf_table_ent_t *ent, void *data)
 {
-  (void) data; /* Make compiler happy. */
+  (void)data; /* Make compiler happy. */
   channel_write_to_kernel(ent->chan);
   return 0; /* Returning non-zero removes the element from the table. */
 }
@@ -144,7 +144,7 @@ each_channel_write_to_kernel(outbuf_table_ent_t *ent, void *data)
 static int
 free_outbuf_info_by_ent(outbuf_table_ent_t *ent, void *data)
 {
-  (void) data; /* Make compiler happy. */
+  (void)data; /* Make compiler happy. */
   log_debug(LD_SCHED, "Freeing outbuf table entry from chan=%" PRIu64,
             ent->chan->global_identifier);
   tor_free(ent);
@@ -155,7 +155,7 @@ free_outbuf_info_by_ent(outbuf_table_ent_t *ent, void *data)
 static int
 free_socket_info_by_ent(socket_table_ent_t *ent, void *data)
 {
-  (void) data; /* Make compiler happy. */
+  (void)data; /* Make compiler happy. */
   log_debug(LD_SCHED, "Freeing socket table entry from chan=%" PRIu64,
             ent->chan->global_identifier);
   tor_free(ent);
@@ -185,7 +185,7 @@ free_socket_info_by_chan(socket_table_t *table, const channel_t *chan)
 {
   socket_table_ent_t *ent = NULL;
   ent = socket_table_search(table, chan);
-  if (!ent)
+  if (! ent)
     return;
   log_debug(LD_SCHED, "scheduler free socket info for chan=%" PRIu64,
             chan->global_identifier);
@@ -195,15 +195,14 @@ free_socket_info_by_chan(socket_table_t *table, const channel_t *chan)
 
 /* Perform system calls for the given socket in order to calculate kist's
  * per-socket limit as documented in the function body. */
-MOCK_IMPL(void,
-update_socket_info_impl, (socket_table_ent_t *ent))
+MOCK_IMPL(void, update_socket_info_impl, (socket_table_ent_t * ent))
 {
 #ifdef HAVE_KIST_SUPPORT
   int64_t tcp_space, extra_space;
   tor_assert(ent);
   tor_assert(ent->chan);
   const tor_socket_t sock =
-    TO_CONN(BASE_CHAN_TO_TLS((channel_t *) ent->chan)->conn)->s;
+      TO_CONN(BASE_CHAN_TO_TLS((channel_t *)ent->chan)->conn)->s;
   struct tcp_info tcp;
   socklen_t tcp_info_len = sizeof(tcp);
 
@@ -288,10 +287,10 @@ update_socket_info_impl, (socket_table_ent_t *ent))
    * In fact, if sock_buf_size_factor is still forced to be >= 0 in config.c,
    * then it will be positive for sure. Then we subtract a uint32_t. Getting a
    * negative value is OK, see after how it is being handled. */
-  extra_space =
-    clamp_double_to_int64(
-                 (ent->cwnd * (int64_t)ent->mss) * sock_buf_size_factor) -
-    ent->notsent - (int64_t)channel_outbuf_length((channel_t *) ent->chan);
+  extra_space = clamp_double_to_int64((ent->cwnd * (int64_t)ent->mss) *
+                                      sock_buf_size_factor) -
+                ent->notsent -
+                (int64_t)channel_outbuf_length((channel_t *)ent->chan);
   if ((tcp_space + extra_space) < 0) {
     /* This means that the "notsent" queue is just too big so we shouldn't put
      * more in the kernel for now. */
@@ -307,7 +306,7 @@ update_socket_info_impl, (socket_table_ent_t *ent))
   goto fallback;
 #endif /* defined(HAVE_KIST_SUPPORT) */
 
- fallback:
+fallback:
   /* If all of a sudden we don't have kist support, we just zero out all the
    * variables for this socket since we don't know what they should be. We
    * also allow the socket to write as much as it can from the estimated
@@ -318,7 +317,7 @@ update_socket_info_impl, (socket_table_ent_t *ent))
    * and ask how many cells it can write on the outbuf which we then multiply
    * by the size of the cells for this channel. The cast is because this
    * function requires a non-const channel object, meh. */
-  ent->limit = channel_num_cells_writeable((channel_t *) ent->chan) *
+  ent->limit = channel_num_cells_writeable((channel_t *)ent->chan) *
                (get_cell_network_size(ent->chan->wide_circ_ids) +
                 TLS_PER_CELL_OVERHEAD);
 }
@@ -332,7 +331,7 @@ init_socket_info(socket_table_t *table, const channel_t *chan)
 {
   socket_table_ent_t *ent = NULL;
   ent = socket_table_search(table, chan);
-  if (!ent) {
+  if (! ent) {
     log_debug(LD_SCHED, "scheduler init socket info for chan=%" PRIu64,
               chan->global_identifier);
     ent = tor_malloc_zero(sizeof(*ent));
@@ -350,7 +349,7 @@ outbuf_table_add(outbuf_table_t *table, channel_t *chan)
   outbuf_table_ent_t search, *ent;
   search.chan = chan;
   ent = HT_FIND(outbuf_table_s, table, &search);
-  if (!ent) {
+  if (! ent) {
     log_debug(LD_SCHED, "scheduler init outbuf info for chan=%" PRIu64,
               chan->global_identifier);
     ent = tor_malloc_zero(sizeof(*ent));
@@ -378,8 +377,9 @@ set_scheduler_run_interval(void)
   int old_sched_run_interval = sched_run_interval;
   sched_run_interval = kist_scheduler_run_interval();
   if (old_sched_run_interval != sched_run_interval) {
-    log_info(LD_SCHED, "Scheduler KIST changing its running interval "
-                       "from %" PRId32 " to %" PRId32,
+    log_info(LD_SCHED,
+             "Scheduler KIST changing its running interval "
+             "from %" PRId32 " to %" PRId32,
              old_sched_run_interval, sched_run_interval);
   }
 }
@@ -390,7 +390,7 @@ socket_can_write(socket_table_t *table, const channel_t *chan)
 {
   socket_table_ent_t *ent = NULL;
   ent = socket_table_search(table, chan);
-  if (SCHED_BUG(!ent, chan)) {
+  if (SCHED_BUG(! ent, chan)) {
     return 1; // Just return true, saying that kist wouldn't limit the socket
   }
 
@@ -398,9 +398,8 @@ socket_can_write(socket_table_t *table, const channel_t *chan)
    * calculation, first determine how much room is left in bytes. Then divide
    * that by the amount of space a cell takes. If there's room for at least 1
    * cell, then KIST will allow the socket to write. */
-  int64_t kist_limit_space =
-    (int64_t) (ent->limit - ent->written) /
-    (CELL_MAX_NETWORK_SIZE + TLS_PER_CELL_OVERHEAD);
+  int64_t kist_limit_space = (int64_t)(ent->limit - ent->written) /
+                             (CELL_MAX_NETWORK_SIZE + TLS_PER_CELL_OVERHEAD);
   return kist_limit_space > 0;
 }
 
@@ -410,13 +409,14 @@ update_socket_info(socket_table_t *table, const channel_t *chan)
 {
   socket_table_ent_t *ent = NULL;
   ent = socket_table_search(table, chan);
-  if (SCHED_BUG(!ent, chan)) {
+  if (SCHED_BUG(! ent, chan)) {
     return; // Whelp. Entry didn't exist for some reason so nothing to do.
   }
   update_socket_info_impl(ent);
-  log_debug(LD_SCHED, "chan=%" PRIu64 " updated socket info, limit: %" PRIu64
-                      ", cwnd: %" PRIu32 ", unacked: %" PRIu32
-                      ", notsent: %" PRIu32 ", mss: %" PRIu32,
+  log_debug(LD_SCHED,
+            "chan=%" PRIu64 " updated socket info, limit: %" PRIu64
+            ", cwnd: %" PRIu32 ", unacked: %" PRIu32 ", notsent: %" PRIu32
+            ", mss: %" PRIu32,
             ent->chan->global_identifier, ent->limit, ent->cwnd, ent->unacked,
             ent->notsent, ent->mss);
 }
@@ -427,12 +427,12 @@ update_socket_written(socket_table_t *table, channel_t *chan, size_t bytes)
 {
   socket_table_ent_t *ent = NULL;
   ent = socket_table_search(table, chan);
-  if (SCHED_BUG(!ent, chan)) {
+  if (SCHED_BUG(! ent, chan)) {
     return; // Whelp. Entry didn't exist so nothing to do.
   }
 
   log_debug(LD_SCHED, "chan=%" PRIu64 " wrote %lu bytes, old was %" PRIi64,
-            chan->global_identifier, (unsigned long) bytes, ent->written);
+            chan->global_identifier, (unsigned long)bytes, ent->written);
 
   ent->written += bytes;
 }
@@ -447,7 +447,7 @@ update_socket_written(socket_table_t *table, channel_t *chan, size_t bytes)
  * in it.
  */
 MOCK_IMPL(int, channel_should_write_to_kernel,
-          (outbuf_table_t *table, channel_t *chan))
+          (outbuf_table_t * table, channel_t *chan))
 {
   outbuf_table_add(table, chan);
   /* CELL_MAX_NETWORK_SIZE * 8 because we only want to write the outbuf to the
@@ -457,7 +457,7 @@ MOCK_IMPL(int, channel_should_write_to_kernel,
 
 /* Little helper function to write a channel's outbuf all the way to the
  * kernel */
-MOCK_IMPL(void, channel_write_to_kernel, (channel_t *chan))
+MOCK_IMPL(void, channel_write_to_kernel, (channel_t * chan))
 {
   tor_assert(chan);
   log_debug(LD_SCHED, "Writing %lu bytes to kernel for chan %" PRIu64,
@@ -471,7 +471,8 @@ static int
 have_work(void)
 {
   smartlist_t *cp = get_channels_pending();
-  IF_BUG_ONCE(!cp) {
+  IF_BUG_ONCE(! cp)
+  {
     return 0; // channels_pending doesn't exist so... no work?
   }
   return smartlist_len(cp) > 0;
@@ -523,8 +524,10 @@ kist_scheduler_init(void)
   monotime_get(&scheduler_last_run);
 
   kist_scheduler_on_new_options();
-  IF_BUG_ONCE(sched_run_interval == 0) {
-    log_warn(LD_SCHED, "We are initing the KIST scheduler and noticed the "
+  IF_BUG_ONCE(sched_run_interval == 0)
+  {
+    log_warn(LD_SCHED,
+             "We are initing the KIST scheduler and noticed the "
              "KISTSchedRunInterval is telling us to not use KIST. That's "
              "weird! We'll continue using KIST, but at %" PRId32 "ms.",
              KIST_SCHED_RUN_INTERVAL_DEFAULT);
@@ -540,7 +543,7 @@ kist_scheduler_schedule(void)
   struct timeval next_run;
   int64_t diff;
 
-  if (!have_work()) {
+  if (! have_work()) {
     return;
   }
   monotime_get(&now);
@@ -551,8 +554,10 @@ kist_scheduler_schedule(void)
    * info level but don't make it more noisy. */
   diff = monotime_diff_msec(&scheduler_last_run, &now);
   if (diff < 0) {
-    log_info(LD_SCHED, "Monotonic time between now and last run of scheduler "
-                       "is negative: %" PRId64 ". Setting diff to 0.", diff);
+    log_info(LD_SCHED,
+             "Monotonic time between now and last run of scheduler "
+             "is negative: %" PRId64 ". Setting diff to 0.",
+             diff);
     diff = 0;
   }
   if (diff < sched_run_interval) {
@@ -561,7 +566,7 @@ kist_scheduler_schedule(void)
      * negative and can NOT be bigger than sched_run_interval so values can
      * only go from 1000 usec (diff set to interval - 1) to 100000 usec (diff
      * set to 0) for the maximum allowed run interval (100ms). */
-    next_run.tv_usec = (int) ((sched_run_interval - diff) * 1000);
+    next_run.tv_usec = (int)((sched_run_interval - diff) * 1000);
     /* Re-adding an event reschedules it. It does not duplicate it. */
     scheduler_ev_add(&next_run);
   } else {
@@ -585,10 +590,11 @@ kist_scheduler_run(void)
   outbuf_table_t outbuf_table = HT_INITIALIZER();
 
   /* For each pending channel, collect new kernel information */
-  SMARTLIST_FOREACH_BEGIN(cp, const channel_t *, pchan) {
-      init_socket_info(&socket_table, pchan);
-      update_socket_info(&socket_table, pchan);
-  } SMARTLIST_FOREACH_END(pchan);
+  SMARTLIST_FOREACH_BEGIN (cp, const channel_t *, pchan) {
+    init_socket_info(&socket_table, pchan);
+    update_socket_info(&socket_table, pchan);
+  }
+  SMARTLIST_FOREACH_END(pchan);
 
   log_debug(LD_SCHED, "Running the scheduler. %d channels pending",
             smartlist_len(cp));
@@ -598,7 +604,7 @@ kist_scheduler_run(void)
     /* get best channel */
     chan = smartlist_pqueue_pop(cp, scheduler_compare_channels,
                                 offsetof(channel_t, sched_heap_idx));
-    if (SCHED_BUG(!chan, NULL)) {
+    if (SCHED_BUG(! chan, NULL)) {
       /* Some-freaking-how a NULL got into the channels_pending. That should
        * never happen, but it should be harmless to ignore it and keep looping.
        */
@@ -608,7 +614,7 @@ kist_scheduler_run(void)
 
     /* if we have switched to a new channel, consider writing the previous
      * channel's outbuf to the kernel. */
-    if (!prev_chan) {
+    if (! prev_chan) {
       prev_chan = chan;
     }
     if (prev_chan != chan) {
@@ -629,7 +635,7 @@ kist_scheduler_run(void)
        * design issue, the error is not propagated back so we don't get an
        * error at this point. So before we continue, make sure the channel is
        * open and if not just ignore it. See #23751. */
-      if (!CHANNEL_IS_OPEN(chan)) {
+      if (! CHANNEL_IS_OPEN(chan)) {
         /* Channel isn't open so we put it back in IDLE mode. It is either
          * renegotiating its TLS session or about to be released. */
         scheduler_set_channel_state(chan, SCHED_CHAN_IDLE);
@@ -637,8 +643,9 @@ kist_scheduler_run(void)
       }
       /* flush_result has the # cells flushed */
       if (flush_result > 0) {
-        update_socket_written(&socket_table, chan, flush_result *
-                              (CELL_MAX_NETWORK_SIZE + TLS_PER_CELL_OVERHEAD));
+        update_socket_written(
+            &socket_table, chan,
+            flush_result * (CELL_MAX_NETWORK_SIZE + TLS_PER_CELL_OVERHEAD));
       } else {
         /* XXX: This can happen because tor sometimes does flush in an
          * opportunistic way cells from the circuit to the outbuf so the
@@ -646,13 +653,13 @@ kist_scheduler_run(void)
          * to write to the kernel. Hopefully we'll fix that soon but for now
          * we have to handle this case which happens kind of often. */
         log_debug(LD_SCHED,
-                 "We didn't flush anything on a chan that we think "
-                 "can write and wants to write. The channel's state is '%s' "
-                 "and in scheduler state '%s'. We're going to mark it as "
-                 "waiting_for_cells (as that's most likely the issue) and "
-                 "stop scheduling it this round.",
-                 channel_state_to_string(chan->state),
-                 get_scheduler_state_string(chan->scheduler_state));
+                  "We didn't flush anything on a chan that we think "
+                  "can write and wants to write. The channel's state is '%s' "
+                  "and in scheduler state '%s'. We're going to mark it as "
+                  "waiting_for_cells (as that's most likely the issue) and "
+                  "stop scheduling it this round.",
+                  channel_state_to_string(chan->state),
+                  get_scheduler_state_string(chan->scheduler_state));
         scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
         continue;
       }
@@ -660,9 +667,8 @@ kist_scheduler_run(void)
 
     /* Decide what to do with the channel now */
 
-    if (!channel_more_to_flush(chan) &&
-        !socket_can_write(&socket_table, chan)) {
-
+    if (! channel_more_to_flush(chan) &&
+        ! socket_can_write(&socket_table, chan)) {
       /* Case 1: no more cells to send, and cannot write */
 
       /*
@@ -681,13 +687,11 @@ kist_scheduler_run(void)
        * starts having serious throughput issues. Best done in shadow/chutney.
        */
       scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
-    } else if (!channel_more_to_flush(chan)) {
-
+    } else if (! channel_more_to_flush(chan)) {
       /* Case 2: no more cells to send, but still open for writes */
 
       scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
-    } else if (!socket_can_write(&socket_table, chan)) {
-
+    } else if (! socket_can_write(&socket_table, chan)) {
       /* Case 3: cells to send, but cannot write */
 
       /*
@@ -697,16 +701,15 @@ kist_scheduler_run(void)
        * after the scheduling loop is over. They can hopefully be taken care of
        * in the next scheduling round.
        */
-      if (!to_readd) {
+      if (! to_readd) {
         to_readd = smartlist_new();
       }
       smartlist_add(to_readd, chan);
     } else {
-
       /* Case 4: cells to send, and still open for writes */
 
       scheduler_set_channel_state(chan, SCHED_CHAN_PENDING);
-      if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
+      if (! SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
         smartlist_pqueue_add(cp, scheduler_compare_channels,
                              offsetof(channel_t, sched_heap_idx), chan);
       }
@@ -720,24 +723,25 @@ kist_scheduler_run(void)
   HT_FOREACH_FN(outbuf_table_s, &outbuf_table, free_outbuf_info_by_ent, NULL);
   HT_CLEAR(outbuf_table_s, &outbuf_table);
 
-  log_debug(LD_SCHED, "len pending=%d, len to_readd=%d",
-            smartlist_len(cp),
+  log_debug(LD_SCHED, "len pending=%d, len to_readd=%d", smartlist_len(cp),
             (to_readd ? smartlist_len(to_readd) : -1));
 
   /* Re-add any channels we need to */
   if (to_readd) {
-    SMARTLIST_FOREACH_BEGIN(to_readd, channel_t *, readd_chan) {
+    SMARTLIST_FOREACH_BEGIN (to_readd, channel_t *, readd_chan) {
       scheduler_set_channel_state(readd_chan, SCHED_CHAN_PENDING);
-      if (!smartlist_contains(cp, readd_chan)) {
-        if (!SCHED_BUG(readd_chan->sched_heap_idx != -1, readd_chan)) {
+      if (! smartlist_contains(cp, readd_chan)) {
+        if (! SCHED_BUG(readd_chan->sched_heap_idx != -1, readd_chan)) {
           /* XXXX Note that the check above is in theory redundant with
            * the smartlist_contains check.  But let's make sure we're
            * not messing anything up, and leave them both for now. */
           smartlist_pqueue_add(cp, scheduler_compare_channels,
-                             offsetof(channel_t, sched_heap_idx), readd_chan);
+                               offsetof(channel_t, sched_heap_idx),
+                               readd_chan);
         }
       }
-    } SMARTLIST_FOREACH_END(readd_chan);
+    }
+    SMARTLIST_FOREACH_END(readd_chan);
     smartlist_free(to_readd);
   }
 
@@ -750,14 +754,14 @@ kist_scheduler_run(void)
 
 /* Stores the kist scheduler function pointers. */
 static scheduler_t kist_scheduler = {
-  .type = SCHEDULER_KIST,
-  .free_all = kist_free_all,
-  .on_channel_free = kist_on_channel_free_fn,
-  .init = kist_scheduler_init,
-  .on_new_consensus = kist_scheduler_on_new_consensus,
-  .schedule = kist_scheduler_schedule,
-  .run = kist_scheduler_run,
-  .on_new_options = kist_scheduler_on_new_options,
+    .type = SCHEDULER_KIST,
+    .free_all = kist_free_all,
+    .on_channel_free = kist_on_channel_free_fn,
+    .init = kist_scheduler_init,
+    .on_new_consensus = kist_scheduler_on_new_consensus,
+    .schedule = kist_scheduler_schedule,
+    .run = kist_scheduler_run,
+    .on_new_options = kist_scheduler_on_new_options,
 };
 
 /* Return the KIST scheduler object. If it didn't exists, return a newly
@@ -783,8 +787,10 @@ kist_scheduler_run_interval(void)
   int run_interval = get_options()->KISTSchedRunInterval;
 
   if (run_interval != 0) {
-    log_debug(LD_SCHED, "Found KISTSchedRunInterval=%" PRId32 " in torrc. "
-                        "Using that.", run_interval);
+    log_debug(LD_SCHED,
+              "Found KISTSchedRunInterval=%" PRId32 " in torrc. "
+              "Using that.",
+              run_interval);
     return run_interval;
   }
 
@@ -792,10 +798,9 @@ kist_scheduler_run_interval(void)
 
   /* Will either be the consensus value or the default. Note that 0 can be
    * returned which means the consensus wants us to NOT use KIST. */
-  return networkstatus_get_param(NULL, "KISTSchedRunInterval",
-                                 KIST_SCHED_RUN_INTERVAL_DEFAULT,
-                                 KIST_SCHED_RUN_INTERVAL_MIN,
-                                 KIST_SCHED_RUN_INTERVAL_MAX);
+  return networkstatus_get_param(
+      NULL, "KISTSchedRunInterval", KIST_SCHED_RUN_INTERVAL_DEFAULT,
+      KIST_SCHED_RUN_INTERVAL_MIN, KIST_SCHED_RUN_INTERVAL_MAX);
 }
 
 /* Set KISTLite mode that is KIST without kernel support. */
@@ -814,8 +819,7 @@ scheduler_kist_set_full_mode(void)
 {
   kist_lite_mode = 0;
   kist_scheduler.type = SCHEDULER_KIST;
-  log_info(LD_SCHED,
-           "Setting KIST scheduler with kernel support (KIST mode)");
+  log_info(LD_SCHED, "Setting KIST scheduler with kernel support (KIST mode)");
 }
 
 #ifdef HAVE_KIST_SUPPORT
@@ -832,9 +836,10 @@ scheduler_can_use_kist(void)
   /* We do have the support, time to check if we can get the interval that the
    * consensus can be disabling. */
   int run_interval = kist_scheduler_run_interval();
-  log_debug(LD_SCHED, "Determined KIST sched_run_interval should be "
-                      "%" PRId32 ". Can%s use KIST.",
-           run_interval, (run_interval > 0 ? "" : " not"));
+  log_debug(LD_SCHED,
+            "Determined KIST sched_run_interval should be "
+            "%" PRId32 ". Can%s use KIST.",
+            run_interval, (run_interval > 0 ? "" : " not"));
   return run_interval > 0;
 }
 

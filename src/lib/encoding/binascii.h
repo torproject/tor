@@ -27,14 +27,14 @@ const char *hex_str(const char *from, size_t fromlen);
  * NUL. */
 #define BASE64_LEN(n) (CEIL_DIV((n), 3) * 4)
 #define BASE32_LEN(n) (CEIL_DIV((n), 5) * 8)
-#define BASE16_LEN(n) ((n) * 2)
+#define BASE16_LEN(n) ((n)*2)
 
 #define BASE64_BUFSIZE(n) (BASE64_LEN(n) + 1)
 #define BASE32_BUFSIZE(n) (BASE32_LEN(n) + 1)
 #define BASE16_BUFSIZE(n) (BASE16_LEN(n) + 1)
 
-#define BASE64_NOPAD_LEN(n) (CEIL_DIV((n) * 4, 3))
-#define BASE32_NOPAD_LEN(n) (CEIL_DIV((n) * 8, 5))
+#define BASE64_NOPAD_LEN(n) (CEIL_DIV((n)*4, 3))
+#define BASE32_NOPAD_LEN(n) (CEIL_DIV((n)*8, 5))
 
 #define BASE64_NOPAD_BUFSIZE(n) (BASE64_NOPAD_LEN(n) + 1)
 #define BASE32_NOPAD_BUFSIZE(n) (BASE32_NOPAD_LEN(n) + 1)
@@ -46,8 +46,8 @@ size_t base64_decode_maxsize(size_t srclen);
 int base64_encode(char *dest, size_t destlen, const char *src, size_t srclen,
                   int flags);
 int base64_decode(char *dest, size_t destlen, const char *src, size_t srclen);
-int base64_encode_nopad(char *dest, size_t destlen,
-                        const uint8_t *src, size_t srclen);
+int base64_encode_nopad(char *dest, size_t destlen, const uint8_t *src,
+                        size_t srclen);
 
 /** Characters that can appear (case-insensitively) in a base32 encoding. */
 #define BASE32_CHARS "abcdefghijklmnopqrstuvwxyz234567"

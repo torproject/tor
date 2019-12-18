@@ -41,7 +41,7 @@ tor_mutex_new_nonrecursive(void)
 void
 tor_mutex_free_(tor_mutex_t *m)
 {
-  if (!m)
+  if (! m)
     return;
   tor_mutex_uninit(m);
   tor_free(m);

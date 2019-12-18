@@ -36,7 +36,7 @@ string_is_key_value(int severity, const char *string)
   }
 
   equal_sign_pos = strchr(string, '=');
-  if (!equal_sign_pos) {
+  if (! equal_sign_pos) {
     tor_log(severity, LD_GENERAL, "'%s' is not a k=v value.", escaped(string));
     return 0;
   }

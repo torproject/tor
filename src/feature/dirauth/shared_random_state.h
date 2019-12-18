@@ -13,11 +13,11 @@
 
 /** Action that can be performed on the state for any objects. */
 typedef enum {
-  SR_STATE_ACTION_GET     = 1,
-  SR_STATE_ACTION_PUT     = 2,
-  SR_STATE_ACTION_DEL     = 3,
+  SR_STATE_ACTION_GET = 1,
+  SR_STATE_ACTION_PUT = 2,
+  SR_STATE_ACTION_DEL = 3,
   SR_STATE_ACTION_DEL_ALL = 4,
-  SR_STATE_ACTION_SAVE    = 5,
+  SR_STATE_ACTION_SAVE = 5,
 } sr_state_action_t;
 
 /** Object in the state that can be queried through the state API. */
@@ -76,7 +76,7 @@ typedef struct sr_state_t {
    * SRV is fresh or not ultimately making it _NOT_ use the super majority
    * when deciding to put or not the SRV in the consensus. This is for now
    * an acceptable very rare edge case. */
-  unsigned int is_srv_fresh:1;
+  unsigned int is_srv_fresh : 1;
 } sr_state_t;
 
 /** Persistent state of the protocol, as saved to disk. */

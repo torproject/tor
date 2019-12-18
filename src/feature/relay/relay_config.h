@@ -16,58 +16,50 @@ struct or_options_t;
 
 #ifdef HAVE_MODULE_RELAY
 
-#include "lib/cc/torint.h"
-#include "lib/testsupport/testsupport.h"
+#  include "lib/cc/torint.h"
+#  include "lib/testsupport/testsupport.h"
 
 struct smartlist_t;
 
 int options_validate_relay_mode(const struct or_options_t *old_options,
-                                struct or_options_t *options,
-                                char **msg);
+                                struct or_options_t *options, char **msg);
 
-MOCK_DECL(const char*, relay_get_dirportfrontpage, (void));
+MOCK_DECL(const char *, relay_get_dirportfrontpage, (void));
 void relay_config_free_all(void);
 
 uint32_t relay_get_effective_bwrate(const struct or_options_t *options);
 uint32_t relay_get_effective_bwburst(const struct or_options_t *options);
 
 void port_warn_nonlocal_ext_orports(const struct smartlist_t *ports,
-                               const char *portname);
+                                    const char *portname);
 
-int port_parse_ports_relay(struct or_options_t *options,
-                      char **msg,
-                      struct smartlist_t *ports_out,
-                      int *have_low_ports_out);
+int port_parse_ports_relay(struct or_options_t *options, char **msg,
+                           struct smartlist_t *ports_out,
+                           int *have_low_ports_out);
 void port_update_port_set_relay(struct or_options_t *options,
-                           const struct smartlist_t *ports);
+                                const struct smartlist_t *ports);
 
 int options_validate_relay_os(const struct or_options_t *old_options,
-                              struct or_options_t *options,
-                              char **msg);
+                              struct or_options_t *options, char **msg);
 
 int options_validate_relay_info(const struct or_options_t *old_options,
-                                struct or_options_t *options,
-                                char **msg);
+                                struct or_options_t *options, char **msg);
 
 int options_validate_publish_server(const struct or_options_t *old_options,
-                                    struct or_options_t *options,
-                                    char **msg);
+                                    struct or_options_t *options, char **msg);
 
 int options_validate_relay_padding(const struct or_options_t *old_options,
-                                   struct or_options_t *options,
-                                   char **msg);
+                                   struct or_options_t *options, char **msg);
 
 int options_validate_relay_bandwidth(const struct or_options_t *old_options,
-                                     struct or_options_t *options,
-                                     char **msg);
+                                     struct or_options_t *options, char **msg);
 
 int options_validate_relay_accounting(const struct or_options_t *old_options,
                                       struct or_options_t *options,
                                       char **msg);
 
 int options_validate_relay_testing(const struct or_options_t *old_options,
-                                   struct or_options_t *options,
-                                   char **msg);
+                                   struct or_options_t *options, char **msg);
 
 int options_act_relay(const struct or_options_t *old_options);
 int options_act_relay_accounting(const struct or_options_t *old_options);
@@ -82,17 +74,17 @@ int options_act_relay_desc(const struct or_options_t *old_options);
 int options_act_relay_dos(const struct or_options_t *old_options);
 int options_act_relay_dir(const struct or_options_t *old_options);
 
-#ifdef RELAY_CONFIG_PRIVATE
+#  ifdef RELAY_CONFIG_PRIVATE
 
 STATIC int check_bridge_distribution_setting(const char *bd);
 STATIC int have_enough_mem_for_dircache(const struct or_options_t *options,
                                         size_t total_mem, char **msg);
 
-#endif /* defined(RELAY_CONFIG_PRIVATE) */
+#  endif /* defined(RELAY_CONFIG_PRIVATE) */
 
 #else /* !defined(HAVE_MODULE_RELAY) */
 
-#include "lib/cc/compat_compiler.h"
+#  include "lib/cc/compat_compiler.h"
 
 /** When tor is compiled with the relay module disabled, it can't be
  * configured as a relay or bridge.
@@ -103,17 +95,14 @@ STATIC int have_enough_mem_for_dircache(const struct or_options_t *options,
  * DirCache, or BridgeRelay are set in options. Otherwise returns 0. */
 static inline int
 options_validate_relay_mode(const struct or_options_t *old_options,
-                            struct or_options_t *options,
-                            char **msg)
+                            struct or_options_t *options, char **msg)
 {
   (void)old_options;
 
   /* Only check the primary options for now, #29211 will disable more
    * options. These ORPort and DirPort checks are too strict, and will
    * reject valid configs that disable ports, like "ORPort 0". */
-  if (options->DirCache ||
-      options->BridgeRelay ||
-      options->ORPort_lines ||
+  if (options->DirCache || options->BridgeRelay || options->ORPort_lines ||
       options->DirPort_lines) {
     /* REJECT() this configuration */
     *msg = tor_strdup("This tor was built with relay mode disabled. "
@@ -125,60 +114,52 @@ options_validate_relay_mode(const struct or_options_t *old_options,
   return 0;
 }
 
-#define relay_get_dirportfrontpage() \
-  (NULL)
-#define relay_config_free_all() \
-  STMT_BEGIN STMT_END
+#  define relay_get_dirportfrontpage() (NULL)
+#  define relay_config_free_all() \
+    STMT_BEGIN                    \
+    STMT_END
 
-#define relay_get_effective_bwrate(options) \
-  (((void)(options)),0)
-#define relay_get_effective_bwburst(options) \
-  (((void)(options)),0)
+#  define relay_get_effective_bwrate(options) (((void)(options)), 0)
+#  define relay_get_effective_bwburst(options) (((void)(options)), 0)
 
-#define port_warn_nonlocal_ext_orports(ports, portname) \
-  (((void)(ports)),((void)(portname)))
+#  define port_warn_nonlocal_ext_orports(ports, portname) \
+    (((void)(ports)), ((void)(portname)))
 
-#define port_parse_ports_relay(options, msg, ports_out, have_low_ports_out) \
-  (((void)(options)),((void)(msg)),((void)(ports_out)), \
-   ((void)(have_low_ports_out)),0)
-#define port_update_port_set_relay(options, ports) \
-  (((void)(options)),((void)(ports)))
+#  define port_parse_ports_relay(options, msg, ports_out, have_low_ports_out) \
+    (((void)(options)), ((void)(msg)), ((void)(ports_out)),                   \
+     ((void)(have_low_ports_out)), 0)
+#  define port_update_port_set_relay(options, ports) \
+    (((void)(options)), ((void)(ports)))
 
-#define options_validate_relay_os(old_options, options, msg) \
-  (((void)(old_options)),((void)(options)),((void)(msg)),0)
-#define options_validate_relay_info(old_options, options, msg) \
-  (((void)(old_options)),((void)(options)),((void)(msg)),0)
-#define options_validate_publish_server(old_options, options, msg) \
-  (((void)(old_options)),((void)(options)),((void)(msg)),0)
-#define options_validate_relay_padding(old_options, options, msg) \
-  (((void)(old_options)),((void)(options)),((void)(msg)),0)
-#define options_validate_relay_bandwidth(old_options, options, msg) \
-  (((void)(old_options)),((void)(options)),((void)(msg)),0)
-#define options_validate_relay_accounting(old_options, options, msg) \
-  (((void)(old_options)),((void)(options)),((void)(msg)),0)
-#define options_validate_relay_testing(old_options, options, msg) \
-  (((void)(old_options)),((void)(options)),((void)(msg)),0)
+#  define options_validate_relay_os(old_options, options, msg) \
+    (((void)(old_options)), ((void)(options)), ((void)(msg)), 0)
+#  define options_validate_relay_info(old_options, options, msg) \
+    (((void)(old_options)), ((void)(options)), ((void)(msg)), 0)
+#  define options_validate_publish_server(old_options, options, msg) \
+    (((void)(old_options)), ((void)(options)), ((void)(msg)), 0)
+#  define options_validate_relay_padding(old_options, options, msg) \
+    (((void)(old_options)), ((void)(options)), ((void)(msg)), 0)
+#  define options_validate_relay_bandwidth(old_options, options, msg) \
+    (((void)(old_options)), ((void)(options)), ((void)(msg)), 0)
+#  define options_validate_relay_accounting(old_options, options, msg) \
+    (((void)(old_options)), ((void)(options)), ((void)(msg)), 0)
+#  define options_validate_relay_testing(old_options, options, msg) \
+    (((void)(old_options)), ((void)(options)), ((void)(msg)), 0)
 
-#define options_act_relay(old_options) \
-  (((void)(old_options)),0)
-#define options_act_relay_accounting(old_options) \
-  (((void)(old_options)),0)
-#define options_act_relay_bandwidth(old_options) \
-  (((void)(old_options)),0)
-#define options_act_bridge_stats(old_options) \
-  (((void)(old_options)),0)
+#  define options_act_relay(old_options) (((void)(old_options)), 0)
+#  define options_act_relay_accounting(old_options) (((void)(old_options)), 0)
+#  define options_act_relay_bandwidth(old_options) (((void)(old_options)), 0)
+#  define options_act_bridge_stats(old_options) (((void)(old_options)), 0)
 
-#define options_act_relay_stats(old_options, print_notice_out) \
-  (((void)(old_options)),((void)(print_notice_out)),0)
-#define options_act_relay_stats_msg() \
-  STMT_BEGIN STMT_END
+#  define options_act_relay_stats(old_options, print_notice_out) \
+    (((void)(old_options)), ((void)(print_notice_out)), 0)
+#  define options_act_relay_stats_msg() \
+    STMT_BEGIN                          \
+    STMT_END
 
-#define options_act_relay_desc(old_options) \
-  (((void)(old_options)),0)
-#define options_act_relay_dos(old_options) \
-  (((void)(old_options)),0)
-#define options_act_relay_dir(old_options) \
-  (((void)(old_options)),0)
+#  define options_act_relay_desc(old_options) (((void)(old_options)), 0)
+#  define options_act_relay_dos(old_options) (((void)(old_options)), 0)
+#  define options_act_relay_dir(old_options) (((void)(old_options)), 0)
 
 #endif /* defined(HAVE_MODULE_RELAY) */
 

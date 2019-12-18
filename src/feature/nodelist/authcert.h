@@ -53,7 +53,7 @@ MOCK_DECL(download_status_t *, id_only_download_status_for_authority_id,
 MOCK_DECL(smartlist_t *, list_sk_digests_for_authority_id,
           (const char *digest));
 MOCK_DECL(download_status_t *, download_status_for_authority_id_and_sk,
-    (const char *id_digest, const char *sk_digest));
+          (const char *id_digest, const char *sk_digest));
 
 void authcert_free_all(void);
 

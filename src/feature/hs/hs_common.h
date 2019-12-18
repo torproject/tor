@@ -38,7 +38,7 @@ struct ed25519_keypair_t;
 #define NUM_INTRO_POINTS_EXTRA 2
 
 /** If we can't build our intro circuits, don't retry for this long. */
-#define INTRO_CIRC_RETRY_PERIOD (60*5)
+#define INTRO_CIRC_RETRY_PERIOD (60 * 5)
 /** Don't try to build more than this many circuits before giving up for a
  * while.*/
 #define MAX_INTRO_CIRCS_PER_PERIOD 10
@@ -57,7 +57,8 @@ struct ed25519_keypair_t;
 /** The minimum time period length as seen in prop224 section [TIME-PERIODS] */
 #define HS_TIME_PERIOD_LENGTH_MIN 30 /* minutes */
 /** The minimum time period length as seen in prop224 section [TIME-PERIODS] */
-#define HS_TIME_PERIOD_LENGTH_MAX (60 * 24 * 10) /* 10 days or 14400 minutes */
+#define HS_TIME_PERIOD_LENGTH_MAX (60 * 24 * 10) /* 10 days or 14400 minutes \
+                                                  */
 
 /** Prefix of the onion address checksum. */
 #define HS_SERVICE_ADDR_CHECKSUM_PREFIX ".onion checksum"
@@ -80,15 +81,15 @@ struct ed25519_keypair_t;
   (ED25519_PUBKEY_LEN + HS_SERVICE_ADDR_CHECKSUM_LEN_USED + sizeof(uint8_t))
 /** Length of 'y' portion of 'y.onion' URL. This is base32 encoded and the
  * length ends up to 56 bytes (not counting the terminated NUL byte.) */
-#define HS_SERVICE_ADDR_LEN_BASE32 \
-  (CEIL_DIV(HS_SERVICE_ADDR_LEN * 8, 5))
+#define HS_SERVICE_ADDR_LEN_BASE32 (CEIL_DIV(HS_SERVICE_ADDR_LEN * 8, 5))
 
 /** The default HS time period length */
 #define HS_TIME_PERIOD_LENGTH_DEFAULT 1440 /* 1440 minutes == one day */
 /** The minimum time period length as seen in prop224 section [TIME-PERIODS] */
 #define HS_TIME_PERIOD_LENGTH_MIN 30 /* minutes */
 /** The minimum time period length as seen in prop224 section [TIME-PERIODS] */
-#define HS_TIME_PERIOD_LENGTH_MAX (60 * 24 * 10) /* 10 days or 14400 minutes */
+#define HS_TIME_PERIOD_LENGTH_MAX (60 * 24 * 10) /* 10 days or 14400 minutes \
+                                                  */
 /** The time period rotation offset as seen in prop224 section
  * [TIME-PERIODS] */
 #define HS_TIME_PERIOD_ROTATION_OFFSET (12 * 60) /* minutes */
@@ -133,19 +134,19 @@ struct ed25519_keypair_t;
 
 /** Type of authentication key used by an introduction point. */
 typedef enum {
-  HS_AUTH_KEY_TYPE_LEGACY  = 1,
+  HS_AUTH_KEY_TYPE_LEGACY = 1,
   HS_AUTH_KEY_TYPE_ED25519 = 2,
 } hs_auth_key_type_t;
 
 /** Return value when adding an ephemeral service through the ADD_ONION
  * control port command. Both v2 and v3 share these. */
 typedef enum {
-  RSAE_BADAUTH     = -5, /**< Invalid auth_type/auth_clients */
+  RSAE_BADAUTH = -5, /**< Invalid auth_type/auth_clients */
   RSAE_BADVIRTPORT = -4, /**< Invalid VIRTPORT/TARGET(s) */
-  RSAE_ADDREXISTS  = -3, /**< Onion address collision */
-  RSAE_BADPRIVKEY  = -2, /**< Invalid public key */
-  RSAE_INTERNAL    = -1, /**< Internal error */
-  RSAE_OKAY        = 0   /**< Service added as expected */
+  RSAE_ADDREXISTS = -3, /**< Onion address collision */
+  RSAE_BADPRIVKEY = -2, /**< Invalid public key */
+  RSAE_INTERNAL = -1, /**< Internal error */
+  RSAE_OKAY = 0 /**< Service added as expected */
 } hs_service_add_ephemeral_status_t;
 
 /** Represents the mapping from a virtual port of a rendezvous service to a
@@ -154,7 +155,7 @@ typedef struct rend_service_port_config_t {
   /** The incoming HS virtual port we're mapping */
   uint16_t virtual_port;
   /** Is this an AF_UNIX port? */
-  unsigned int is_unix_addr:1;
+  unsigned int is_unix_addr : 1;
   /** The outgoing TCP port to use, if !is_unix_addr */
   uint16_t real_port;
   /** The outgoing IPv4 or IPv6 address to use, if !is_unix_addr */
@@ -195,8 +196,7 @@ void rend_data_free_(rend_data_t *data);
   FREE_AND_NULL(rend_data_t, rend_data_free_, (data))
 rend_data_t *rend_data_dup(const rend_data_t *data);
 rend_data_t *rend_data_client_create(const char *onion_address,
-                                     const char *desc_id,
-                                     const char *cookie,
+                                     const char *desc_id, const char *cookie,
                                      rend_auth_type_t auth_type);
 rend_data_t *rend_data_service_create(const char *onion_address,
                                       const char *pk_digest,
@@ -239,17 +239,17 @@ int32_t hs_get_hsdir_spread_fetch(void);
 int32_t hs_get_hsdir_spread_store(void);
 
 void hs_get_responsible_hsdirs(const struct ed25519_public_key_t *blinded_pk,
-                              uint64_t time_period_num,
-                              int use_second_hsdir_index,
-                              int for_fetching, smartlist_t *responsible_dirs);
+                               uint64_t time_period_num,
+                               int use_second_hsdir_index, int for_fetching,
+                               smartlist_t *responsible_dirs);
 routerstatus_t *hs_pick_hsdir(smartlist_t *responsible_dirs,
                               const char *req_key_str,
                               bool *is_rate_limited_out);
 
 time_t hs_hsdir_requery_period(const or_options_t *options);
 time_t hs_lookup_last_hid_serv_request(routerstatus_t *hs_dir,
-                                       const char *desc_id_base32,
-                                       time_t now, int set);
+                                       const char *desc_id_base32, time_t now,
+                                       int set);
 void hs_clean_last_hid_serv_requests(time_t now);
 void hs_purge_hid_serv_from_last_hid_serv_requests(const char *desc_id);
 void hs_purge_last_hid_serv_requests(void);
@@ -259,9 +259,10 @@ int hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn);
 void hs_inc_rdv_stream_counter(origin_circuit_t *circ);
 void hs_dec_rdv_stream_counter(origin_circuit_t *circ);
 
-extend_info_t *hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
-                          const struct curve25519_public_key_t *onion_key,
-                          int direct_conn);
+extend_info_t *
+hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
+                               const struct curve25519_public_key_t *onion_key,
+                               int direct_conn);
 
 link_specifier_t *link_specifier_dup(const link_specifier_t *src);
 
@@ -271,12 +272,12 @@ STATIC void get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out);
 
 /** The period for which a hidden service directory cannot be queried for
  * the same descriptor ID again. */
-#define REND_HID_SERV_DIR_REQUERY_PERIOD (15 * 60)
+#  define REND_HID_SERV_DIR_REQUERY_PERIOD (15 * 60)
 /** Test networks generate a new consensus every 5 or 10 seconds.
  * So allow them to requery HSDirs much faster. */
-#define REND_HID_SERV_DIR_REQUERY_PERIOD_TESTING (5)
+#  define REND_HID_SERV_DIR_REQUERY_PERIOD_TESTING (5)
 
-#ifdef TOR_UNIT_TESTS
+#  ifdef TOR_UNIT_TESTS
 
 STATIC strmap_t *get_last_hid_serv_requests(void);
 STATIC uint64_t get_time_period_length(void);
@@ -284,7 +285,7 @@ STATIC uint64_t get_time_period_length(void);
 STATIC uint8_t *get_first_cached_disaster_srv(void);
 STATIC uint8_t *get_second_cached_disaster_srv(void);
 
-#endif /* defined(TOR_UNIT_TESTS) */
+#  endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(HS_COMMON_PRIVATE) */
 

@@ -39,7 +39,7 @@ orconn_state_fmt(msg_aux_data_t u)
   orconn_state_msg_t *msg = (orconn_state_msg_t *)u.ptr;
   char *s = NULL;
 
-  tor_asprintf(&s, "<gid=%"PRIu64" chan=%"PRIu64" proxy_type=%d state=%d>",
+  tor_asprintf(&s, "<gid=%" PRIu64 " chan=%" PRIu64 " proxy_type=%d state=%d>",
                msg->gid, msg->chan, msg->proxy_type, msg->state);
   return s;
 }
@@ -50,19 +50,19 @@ orconn_status_fmt(msg_aux_data_t u)
   orconn_status_msg_t *msg = (orconn_status_msg_t *)u.ptr;
   char *s = NULL;
 
-  tor_asprintf(&s, "<gid=%"PRIu64" status=%d reason=%d>",
-               msg->gid, msg->status, msg->reason);
+  tor_asprintf(&s, "<gid=%" PRIu64 " status=%d reason=%d>", msg->gid,
+               msg->status, msg->reason);
   return s;
 }
 
 static dispatch_typefns_t orconn_state_fns = {
-  .free_fn = orconn_event_free,
-  .fmt_fn = orconn_state_fmt,
+    .free_fn = orconn_event_free,
+    .fmt_fn = orconn_state_fmt,
 };
 
 static dispatch_typefns_t orconn_status_fns = {
-  .free_fn = orconn_event_free,
-  .fmt_fn = orconn_status_fmt,
+    .free_fn = orconn_event_free,
+    .fmt_fn = orconn_status_fmt,
 };
 
 static int
@@ -92,8 +92,8 @@ orconn_status_publish(orconn_status_msg_t *msg)
 }
 
 const subsys_fns_t sys_orconn_event = {
-  .name = "orconn_event",
-  .supported = true,
-  .level = -33,
-  .add_pubsub = orconn_add_pubsub,
+    .name = "orconn_event",
+    .supported = true,
+    .level = -33,
+    .add_pubsub = orconn_add_pubsub,
 };

@@ -45,8 +45,8 @@ needs_escape(const char *s, bool as_keyless_val)
     return true;
 
   for (; *s; ++s) {
-    if (*s >= 127 || TOR_ISSPACE(*s) || ! TOR_ISPRINT(*s) ||
-        *s == '\'' || *s == '\"') {
+    if (*s >= 127 || TOR_ISSPACE(*s) || ! TOR_ISPRINT(*s) || *s == '\'' ||
+        *s == '\"') {
       return true;
     }
   }
@@ -78,19 +78,20 @@ line_has_no_val(const config_line_t *line)
 static bool
 kvline_can_encode_lines(const config_line_t *line, unsigned flags)
 {
-  for ( ; line; line = line->next) {
+  for (; line; line = line->next) {
     const bool keyless = line_has_no_key(line);
     if (keyless && ! (flags & KV_OMIT_KEYS)) {
       /* If KV_OMIT_KEYS is not set, we can't encode a line with no key. */
       return false;
     }
 
-    if (needs_escape(line->value, keyless) && ! (flags & (KV_QUOTED|KV_RAW))) {
+    if (needs_escape(line->value, keyless) &&
+        ! (flags & (KV_QUOTED | KV_RAW))) {
       /* If both KV_QUOTED and KV_RAW are false, we can't encode a
          value that needs quotes. */
       return false;
     }
-    if (!keyless && needs_escape(line->key, true)) {
+    if (! keyless && needs_escape(line->key, true)) {
       /* We can't handle keys that need quoting. */
       return false;
     }
@@ -123,22 +124,20 @@ kvline_can_encode_lines(const config_line_t *line, unsigned flags)
  * KV_QUOTED_QSTRING is not supported.
  */
 char *
-kvline_encode(const config_line_t *line,
-              unsigned flags)
+kvline_encode(const config_line_t *line, unsigned flags)
 {
   tor_assert(! (flags & KV_QUOTED_QSTRING));
 
-  tor_assert((flags & (KV_OMIT_KEYS|KV_OMIT_VALS)) !=
-             (KV_OMIT_KEYS|KV_OMIT_VALS));
-  tor_assert((flags & (KV_QUOTED|KV_RAW)) != (KV_QUOTED|KV_RAW));
+  tor_assert((flags & (KV_OMIT_KEYS | KV_OMIT_VALS)) !=
+             (KV_OMIT_KEYS | KV_OMIT_VALS));
+  tor_assert((flags & (KV_QUOTED | KV_RAW)) != (KV_QUOTED | KV_RAW));
 
-  if (!kvline_can_encode_lines(line, flags))
+  if (! kvline_can_encode_lines(line, flags))
     return NULL;
 
   smartlist_t *elements = smartlist_new();
 
   for (; line; line = line->next) {
-
     const char *k = "";
     const char *eq = "=";
     const char *v = "";
@@ -155,7 +154,7 @@ kvline_encode(const config_line_t *line,
     if ((flags & KV_OMIT_VALS) && line_has_no_val(line)) {
       eq = "";
       v = "";
-    } else if (!(flags & KV_RAW) && esc) {
+    } else if (! (flags & KV_RAW) && esc) {
       tmp = esc_for_log(line->value);
       v = tmp;
     } else {
@@ -198,14 +197,14 @@ kvline_encode(const config_line_t *line,
 config_line_t *
 kvline_parse(const char *line, unsigned flags)
 {
-  tor_assert((flags & (KV_OMIT_KEYS|KV_OMIT_VALS)) !=
-             (KV_OMIT_KEYS|KV_OMIT_VALS));
-  tor_assert(!(flags & KV_RAW));
+  tor_assert((flags & (KV_OMIT_KEYS | KV_OMIT_VALS)) !=
+             (KV_OMIT_KEYS | KV_OMIT_VALS));
+  tor_assert(! (flags & KV_RAW));
 
   const char *cp = line, *cplast = NULL;
   const bool omit_keys = (flags & KV_OMIT_KEYS) != 0;
   const bool omit_vals = (flags & KV_OMIT_VALS) != 0;
-  const bool quoted = (flags & (KV_QUOTED|KV_QUOTED_QSTRING)) != 0;
+  const bool quoted = (flags & (KV_QUOTED | KV_QUOTED_QSTRING)) != 0;
   const bool c_quoted = (flags & (KV_QUOTED)) != 0;
 
   config_line_t *result = NULL;
@@ -244,16 +243,16 @@ kvline_parse(const char *line, unsigned flags)
         cp += idx;
         goto commit;
       } else {
-        if (!omit_keys)
+        if (! omit_keys)
           goto err;
       }
     }
 
     if (*cp == '\"') {
       /* The type is "V". */
-      if (!quoted)
+      if (! quoted)
         goto err;
-      size_t len=0;
+      size_t len = 0;
       if (c_quoted) {
         cp = unescape_string(cp, &val, &len);
       } else {
@@ -283,13 +282,13 @@ kvline_parse(const char *line, unsigned flags)
   }
 
   if (! (flags & KV_QUOTED_QSTRING)) {
-    if (!kvline_can_encode_lines(result, flags)) {
+    if (! kvline_can_encode_lines(result, flags)) {
       goto err;
     }
   }
   return result;
 
- err:
+err:
   tor_free(key);
   tor_free(val);
   config_free_lines(result);

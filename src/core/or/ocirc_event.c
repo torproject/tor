@@ -42,8 +42,8 @@ ocirc_state_fmt(msg_aux_data_t u)
   ocirc_state_msg_t *msg = (ocirc_state_msg_t *)u.ptr;
   char *s = NULL;
 
-  tor_asprintf(&s, "<gid=%"PRIu32" state=%d onehop=%d>",
-               msg->gid, msg->state, msg->onehop);
+  tor_asprintf(&s, "<gid=%" PRIu32 " state=%d onehop=%d>", msg->gid,
+               msg->state, msg->onehop);
   return s;
 }
 
@@ -53,8 +53,8 @@ ocirc_chan_fmt(msg_aux_data_t u)
   ocirc_chan_msg_t *msg = (ocirc_chan_msg_t *)u.ptr;
   char *s = NULL;
 
-  tor_asprintf(&s, "<gid=%"PRIu32" chan=%"PRIu64" onehop=%d>",
-               msg->gid, msg->chan, msg->onehop);
+  tor_asprintf(&s, "<gid=%" PRIu32 " chan=%" PRIu64 " onehop=%d>", msg->gid,
+               msg->chan, msg->onehop);
   return s;
 }
 
@@ -64,24 +64,24 @@ ocirc_cevent_fmt(msg_aux_data_t u)
   ocirc_cevent_msg_t *msg = (ocirc_cevent_msg_t *)u.ptr;
   char *s = NULL;
 
-  tor_asprintf(&s, "<gid=%"PRIu32" evtype=%d reason=%d onehop=%d>",
-               msg->gid, msg->evtype, msg->reason, msg->onehop);
+  tor_asprintf(&s, "<gid=%" PRIu32 " evtype=%d reason=%d onehop=%d>", msg->gid,
+               msg->evtype, msg->reason, msg->onehop);
   return s;
 }
 
 static dispatch_typefns_t ocirc_state_fns = {
-  .free_fn = ocirc_event_free,
-  .fmt_fn = ocirc_state_fmt,
+    .free_fn = ocirc_event_free,
+    .fmt_fn = ocirc_state_fmt,
 };
 
 static dispatch_typefns_t ocirc_chan_fns = {
-  .free_fn = ocirc_event_free,
-  .fmt_fn = ocirc_chan_fmt,
+    .free_fn = ocirc_event_free,
+    .fmt_fn = ocirc_chan_fmt,
 };
 
 static dispatch_typefns_t ocirc_cevent_fns = {
-  .free_fn = ocirc_event_free,
-  .fmt_fn = ocirc_cevent_fmt,
+    .free_fn = ocirc_event_free,
+    .fmt_fn = ocirc_cevent_fmt,
 };
 
 static int
@@ -121,8 +121,8 @@ ocirc_cevent_publish(ocirc_cevent_msg_t *msg)
 }
 
 const subsys_fns_t sys_ocirc_event = {
-  .name = "ocirc_event",
-  .supported = true,
-  .level = -32,
-  .add_pubsub = ocirc_add_pubsub,
+    .name = "ocirc_event",
+    .supported = true,
+    .level = -32,
+    .add_pubsub = ocirc_add_pubsub,
 };

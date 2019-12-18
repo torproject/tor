@@ -35,9 +35,9 @@ subsys_or_shutdown(void)
 }
 
 const struct subsys_fns_t sys_or = {
-  .name = "or",
-  .supported = true,
-  .level = 20,
-  .initialize = subsys_or_initialize,
-  .shutdown = subsys_or_shutdown,
+    .name = "or",
+    .supported = true,
+    .level = 20,
+    .initialize = subsys_or_initialize,
+    .shutdown = subsys_or_shutdown,
 };

@@ -47,7 +47,7 @@ test_validate_address(void *arg)
 {
   int ret;
 
-  (void) arg;
+  (void)arg;
 
   /* Address too short and too long. */
   setup_full_capture_of_logs(LOG_WARN);
@@ -58,7 +58,7 @@ test_validate_address(void *arg)
 
   setup_full_capture_of_logs(LOG_WARN);
   ret = hs_address_is_valid(
-           "p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnadb");
+      "p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnadb");
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg_containing("has an invalid length");
   teardown_capture_of_logs();
@@ -66,14 +66,14 @@ test_validate_address(void *arg)
   /* Invalid checksum (taken from prop224) */
   setup_full_capture_of_logs(LOG_WARN);
   ret = hs_address_is_valid(
-           "l5satjgud6gucryazcyvyvhuxhr74u6ygigiuyixe3a6ysis67ororad");
+      "l5satjgud6gucryazcyvyvhuxhr74u6ygigiuyixe3a6ysis67ororad");
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg_containing("invalid checksum");
   teardown_capture_of_logs();
 
   setup_full_capture_of_logs(LOG_WARN);
   ret = hs_address_is_valid(
-           "btojiu7nu5y5iwut64eufevogqdw4wmqzugnoluw232r4t3ecsfv37ad");
+      "btojiu7nu5y5iwut64eufevogqdw4wmqzugnoluw232r4t3ecsfv37ad");
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg_containing("invalid checksum");
   teardown_capture_of_logs();
@@ -81,29 +81,29 @@ test_validate_address(void *arg)
   /* Non base32 decodable string. */
   setup_full_capture_of_logs(LOG_WARN);
   ret = hs_address_is_valid(
-           "????????????????????????????????????????????????????????");
+      "????????????????????????????????????????????????????????");
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg_containing("can't be decoded");
   teardown_capture_of_logs();
 
   /* Valid address. */
   ret = hs_address_is_valid(
-           "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid");
+      "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid");
   tt_int_op(ret, OP_EQ, 1);
 
- done:
-  ;
+done:;
 }
 
 static int
 mock_write_str_to_file(const char *path, const char *str, int bin)
 {
   (void)bin;
-  tt_str_op(path, OP_EQ, "/double/five"PATH_SEPARATOR"squared");
-  tt_str_op(str, OP_EQ,
-           "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid.onion\n");
+  tt_str_op(path, OP_EQ, "/double/five" PATH_SEPARATOR "squared");
+  tt_str_op(
+      str, OP_EQ,
+      "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid.onion\n");
 
- done:
+done:
   return 0;
 }
 
@@ -117,21 +117,21 @@ test_build_address(void *arg)
   ed25519_public_key_t pubkey;
   /* hex-encoded ed25519 pubkey used in hs_build_address.py */
   char pubkey_hex[] =
-    "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+      "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
   hs_service_t *service = NULL;
 
-  (void) arg;
+  (void)arg;
 
   MOCK(write_str_to_file, mock_write_str_to_file);
 
   /* The following has been created with hs_build_address.py script that
    * follows proposal 224 specification to build an onion address. */
   static const char *test_addr =
-    "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid";
+      "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid";
 
   /* Let's try to build the same onion address as the script */
-  base16_decode((char*)pubkey.pubkey, sizeof(pubkey.pubkey),
-                pubkey_hex, strlen(pubkey_hex));
+  base16_decode((char *)pubkey.pubkey, sizeof(pubkey.pubkey), pubkey_hex,
+                strlen(pubkey_hex));
   hs_build_address(&pubkey, HS_VERSION_THREE, onion_addr);
   tt_str_op(test_addr, OP_EQ, onion_addr);
   /* Validate that address. */
@@ -144,7 +144,7 @@ test_build_address(void *arg)
   ret = write_address_to_file(service, "squared");
   tt_int_op(ret, OP_EQ, 0);
 
- done:
+done:
   hs_service_free(service);
 }
 
@@ -152,14 +152,13 @@ test_build_address(void *arg)
 static void
 test_time_period(void *arg)
 {
-  (void) arg;
+  (void)arg;
   uint64_t tn;
   int retval;
   time_t fake_time, correct_time, start_time;
 
   /* Let's do the example in prop224 section [TIME-PERIODS] */
-  retval = parse_rfc1123_time("Wed, 13 Apr 2016 11:00:00 UTC",
-                              &fake_time);
+  retval = parse_rfc1123_time("Wed, 13 Apr 2016 11:00:00 UTC", &fake_time);
   tt_int_op(retval, OP_EQ, 0);
 
   /* Check that the time period number is right */
@@ -173,8 +172,8 @@ test_time_period(void *arg)
   tt_u64_op(tn, OP_EQ, 16903);
 
   { /* Check start time of next time period */
-    retval = parse_rfc1123_time("Wed, 13 Apr 2016 12:00:00 UTC",
-                                &correct_time);
+    retval =
+        parse_rfc1123_time("Wed, 13 Apr 2016 12:00:00 UTC", &correct_time);
     tt_int_op(retval, OP_EQ, 0);
 
     start_time = hs_get_start_time_of_next_time_period(fake_time);
@@ -191,8 +190,8 @@ test_time_period(void *arg)
   tt_u64_op(tn, OP_EQ, 16905);
 
   { /* Check start time of next time period again */
-    retval = parse_rfc1123_time("Wed, 14 Apr 2016 12:00:00 UTC",
-                                &correct_time);
+    retval =
+        parse_rfc1123_time("Wed, 14 Apr 2016 12:00:00 UTC", &correct_time);
     tt_int_op(retval, OP_EQ, 0);
 
     start_time = hs_get_start_time_of_next_time_period(fake_time);
@@ -208,23 +207,21 @@ test_time_period(void *arg)
               hs_get_next_time_period_num(fake_time));
   }
 
- done:
-  ;
+done:;
 }
 
 /** Test that we can correctly find the start time of the next time period */
 static void
 test_start_time_of_next_time_period(void *arg)
 {
-  (void) arg;
+  (void)arg;
   int retval;
   time_t fake_time;
   char tbuf[ISO_TIME_LEN + 1];
   time_t next_tp_start_time;
 
   /* Do some basic tests */
-  retval = parse_rfc1123_time("Wed, 13 Apr 2016 11:00:00 UTC",
-                              &fake_time);
+  retval = parse_rfc1123_time("Wed, 13 Apr 2016 11:00:00 UTC", &fake_time);
   tt_int_op(retval, OP_EQ, 0);
   next_tp_start_time = hs_get_start_time_of_next_time_period(fake_time);
   /* Compare it with the correct result */
@@ -232,8 +229,7 @@ test_start_time_of_next_time_period(void *arg)
   tt_str_op("2016-04-13 12:00:00", OP_EQ, tbuf);
 
   /* Another test with an edge-case time (start of TP) */
-  retval = parse_rfc1123_time("Wed, 13 Apr 2016 12:00:00 UTC",
-                              &fake_time);
+  retval = parse_rfc1123_time("Wed, 13 Apr 2016 12:00:00 UTC", &fake_time);
   tt_int_op(retval, OP_EQ, 0);
   next_tp_start_time = hs_get_start_time_of_next_time_period(fake_time);
   format_iso_time(tbuf, next_tp_start_time);
@@ -250,16 +246,14 @@ test_start_time_of_next_time_period(void *arg)
     options->V3AuthVotingInterval = 10;
     options->TestingV3AuthInitialVotingInterval = 10;
 
-    retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:00:00 UTC",
-                                &fake_time);
+    retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:00:00 UTC", &fake_time);
     tt_int_op(retval, OP_EQ, 0);
     next_tp_start_time = hs_get_start_time_of_next_time_period(fake_time);
     /* Compare it with the correct result */
     format_iso_time(tbuf, next_tp_start_time);
     tt_str_op("2016-04-13 00:02:00", OP_EQ, tbuf);
 
-    retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:02:00 UTC",
-                                &fake_time);
+    retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:02:00 UTC", &fake_time);
     tt_int_op(retval, OP_EQ, 0);
     next_tp_start_time = hs_get_start_time_of_next_time_period(fake_time);
     /* Compare it with the correct result */
@@ -267,8 +261,7 @@ test_start_time_of_next_time_period(void *arg)
     tt_str_op("2016-04-13 00:06:00", OP_EQ, tbuf);
   }
 
- done:
-  ;
+done:;
 }
 
 /* Cleanup the global nodelist. It also frees the "md" in the node_t because
@@ -277,18 +270,17 @@ static void
 cleanup_nodelist(void)
 {
   const smartlist_t *nodelist = nodelist_get_list();
-  SMARTLIST_FOREACH_BEGIN(nodelist, node_t *, node) {
+  SMARTLIST_FOREACH_BEGIN (nodelist, node_t *, node) {
     tor_free(node->md);
     node->md = NULL;
-  } SMARTLIST_FOREACH_END(node);
+  }
+  SMARTLIST_FOREACH_END(node);
   nodelist_free_all();
 }
 
 static void
-helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
-                                  int identity_idx,
-                                  const char *nickname,
-                                  int is_hsdir)
+helper_add_hsdir_to_networkstatus(networkstatus_t *ns, int identity_idx,
+                                  const char *nickname, int is_hsdir)
 {
   routerstatus_t *rs = tor_malloc_zero(sizeof(routerstatus_t));
   routerinfo_t *ri = tor_malloc_zero(sizeof(routerinfo_t));
@@ -310,8 +302,8 @@ helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
   memcpy(ri->cache_info.identity_digest, identity, DIGEST_LEN);
   ri->cache_info.signing_key_cert = tor_malloc_zero(sizeof(tor_cert_t));
   /* Needed for the HSDir index computation. */
-  memset(&ri->cache_info.signing_key_cert->signing_key,
-         identity_idx, ED25519_PUBKEY_LEN);
+  memset(&ri->cache_info.signing_key_cert->signing_key, identity_idx,
+         ED25519_PUBKEY_LEN);
   tt_assert(nodelist_set_routerinfo(ri, NULL));
 
   node = node_get_mutable_by_id(ri->cache_info.identity_digest);
@@ -326,7 +318,7 @@ helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
   node->ri = NULL;
   smartlist_add(ns->routerstatus_list, rs);
 
- done:
+done:
   if (node == NULL)
     routerstatus_free(rs);
 
@@ -349,9 +341,9 @@ mock_networkstatus_get_latest_consensus(void)
   mock_ns = tor_malloc_zero(sizeof(networkstatus_t));
 
   /* This consensus is live */
-  mock_ns->valid_after = now-1;
-  mock_ns->fresh_until = now+1;
-  mock_ns->valid_until = now+2;
+  mock_ns->valid_after = now - 1;
+  mock_ns->fresh_until = now + 1;
+  mock_ns->valid_until = now + 2;
   /* Create routerstatus list */
   mock_ns->routerstatus_list = smartlist_new();
   mock_ns->type = NS_TYPE_CONSENSUS;
@@ -362,11 +354,11 @@ mock_networkstatus_get_latest_consensus(void)
 static networkstatus_t *
 mock_networkstatus_get_live_consensus(time_t now)
 {
-  (void) now;
+  (void)now;
 
   tt_assert(mock_ns);
 
- done:
+done:
   return mock_ns;
 }
 
@@ -376,7 +368,7 @@ test_responsible_hsdirs(void *arg)
 {
   smartlist_t *responsible_dirs = smartlist_new();
   networkstatus_t *ns = NULL;
-  (void) arg;
+  (void)arg;
 
   hs_init();
 
@@ -402,8 +394,7 @@ test_responsible_hsdirs(void *arg)
   uint64_t time_period_num = 17653; // 2 May, 2018, 14:00.
   memset(&pubkey, 42, sizeof(pubkey));
 
-  hs_get_responsible_hsdirs(&pubkey, time_period_num,
-                            0, 0, responsible_dirs);
+  hs_get_responsible_hsdirs(&pubkey, time_period_num, 0, 0, responsible_dirs);
 
   /* Make sure that we only found 2 responsible HSDirs.
    * The third relay was not an hsdir! */
@@ -411,9 +402,9 @@ test_responsible_hsdirs(void *arg)
 
   /** TODO: Build a bigger network and do more tests here */
 
- done:
-  SMARTLIST_FOREACH(ns->routerstatus_list,
-                    routerstatus_t *, rs, routerstatus_free(rs));
+done:
+  SMARTLIST_FOREACH(ns->routerstatus_list, routerstatus_t *, rs,
+                    routerstatus_free(rs));
   smartlist_free(responsible_dirs);
   smartlist_clear(ns->routerstatus_list);
   networkstatus_vote_free(mock_ns);
@@ -463,20 +454,16 @@ test_desc_reupload_logic(void *arg)
 {
   networkstatus_t *ns = NULL;
 
-  (void) arg;
+  (void)arg;
 
   hs_init();
 
-  MOCK(router_have_minimum_dir_info,
-       mock_router_have_minimum_dir_info);
-  MOCK(get_or_state,
-       get_or_state_replacement);
+  MOCK(router_have_minimum_dir_info, mock_router_have_minimum_dir_info);
+  MOCK(get_or_state, get_or_state_replacement);
   MOCK(networkstatus_get_latest_consensus,
        mock_networkstatus_get_latest_consensus);
-  MOCK(directory_initiate_request,
-       mock_directory_initiate_request);
-  MOCK(hs_desc_encode_descriptor,
-       mock_hs_desc_encode_descriptor);
+  MOCK(directory_initiate_request, mock_directory_initiate_request);
+  MOCK(hs_desc_encode_descriptor, mock_hs_desc_encode_descriptor);
 
   ns = networkstatus_get_latest_consensus();
 
@@ -496,11 +483,11 @@ test_desc_reupload_logic(void *arg)
   hs_service_t *service = NULL;
   /* hex-encoded ed25519 pubkey used in hs_build_address.py */
   char pubkey_hex[] =
-    "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+      "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
   char onion_addr[HS_SERVICE_ADDR_LEN_BASE32 + 1];
   ed25519_public_key_t pubkey;
-  base16_decode((char*)pubkey.pubkey, sizeof(pubkey.pubkey),
-                pubkey_hex, strlen(pubkey_hex));
+  base16_decode((char *)pubkey.pubkey, sizeof(pubkey.pubkey), pubkey_hex,
+                strlen(pubkey_hex));
   hs_build_address(&pubkey, HS_VERSION_THREE, onion_addr);
   service = tor_malloc_zero(sizeof(hs_service_t));
   tt_assert(service);
@@ -541,8 +528,8 @@ test_desc_reupload_logic(void *arg)
   /* Now change the HSDir hash ring by swapping nora for aaron.
    * Start by clearing the hash ring */
   {
-    SMARTLIST_FOREACH(ns->routerstatus_list,
-                      routerstatus_t *, rs, routerstatus_free(rs));
+    SMARTLIST_FOREACH(ns->routerstatus_list, routerstatus_t *, rs,
+                      routerstatus_free(rs));
     smartlist_clear(ns->routerstatus_list);
     cleanup_nodelist();
     routerlist_free_all();
@@ -573,8 +560,8 @@ test_desc_reupload_logic(void *arg)
      aaron for nora */
   /* First clear up the hash ring */
   {
-    SMARTLIST_FOREACH(ns->routerstatus_list,
-                      routerstatus_t *, rs, routerstatus_free(rs));
+    SMARTLIST_FOREACH(ns->routerstatus_list, routerstatus_t *, rs,
+                      routerstatus_free(rs));
     smartlist_clear(ns->routerstatus_list);
     cleanup_nodelist();
     routerlist_free_all();
@@ -601,9 +588,9 @@ test_desc_reupload_logic(void *arg)
   upload_descriptor_to_all(service, desc);
   tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
 
- done:
-  SMARTLIST_FOREACH(ns->routerstatus_list,
-                    routerstatus_t *, rs, routerstatus_free(rs));
+done:
+  SMARTLIST_FOREACH(ns->routerstatus_list, routerstatus_t *, rs,
+                    routerstatus_free(rs));
   smartlist_clear(ns->routerstatus_list);
   if (service) {
     remove_service(get_hs_service_map(), service);
@@ -626,7 +613,7 @@ test_disaster_srv(void *arg)
   uint8_t srv_four[DIGEST256_LEN] = {0};
   uint8_t srv_five[DIGEST256_LEN] = {0};
 
-  (void) arg;
+  (void)arg;
 
   /* Get the cached SRVs: we gonna use them later for verification */
   cached_disaster_srv_one = get_first_cached_disaster_srv();
@@ -661,8 +648,7 @@ test_disaster_srv(void *arg)
   tt_mem_op(cached_disaster_srv_one, OP_EQ, srv_five, DIGEST256_LEN);
   tt_mem_op(cached_disaster_srv_two, OP_EQ, srv_four, DIGEST256_LEN);
 
- done:
-  ;
+done:;
 }
 
 /** Test our HS descriptor request tracker by making various requests and
@@ -670,81 +656,80 @@ test_disaster_srv(void *arg)
 static void
 test_hid_serv_request_tracker(void *arg)
 {
-  (void) arg;
+  (void)arg;
   time_t retval;
   routerstatus_t *hsdir = NULL, *hsdir2 = NULL, *hsdir3 = NULL;
   time_t now = approx_time();
 
-  const char *req_key_str_first =
- "vd4zb6zesaubtrjvdqcr2w7x7lhw2up4Xnw4526ThUNbL5o1go+EdUuEqlKxHkNbnK41pRzizzs";
-  const char *req_key_str_second =
- "g53o7iavcd62oihswhr24u6czmqws5kpXnw4526ThUNbL5o1go+EdUuEqlKxHkNbnK41pRzizzs";
+  const char *req_key_str_first = "vd4zb6zesaubtrjvdqcr2w7x7lhw2up4Xnw4526ThUN"
+                                  "bL5o1go+EdUuEqlKxHkNbnK41pRzizzs";
+  const char *req_key_str_second = "g53o7iavcd62oihswhr24u6czmqws5kpXnw4526ThU"
+                                   "NbL5o1go+EdUuEqlKxHkNbnK41pRzizzs";
   const char *req_key_str_small = "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ";
 
   /*************************** basic test *******************************/
 
   /* Get request tracker and make sure it's empty */
   strmap_t *request_tracker = get_last_hid_serv_requests();
-  tt_int_op(strmap_size(request_tracker),OP_EQ, 0);
+  tt_int_op(strmap_size(request_tracker), OP_EQ, 0);
 
   /* Let's register a hid serv request */
   hsdir = tor_malloc_zero(sizeof(routerstatus_t));
   memset(hsdir->identity_digest, 'Z', DIGEST_LEN);
-  retval = hs_lookup_last_hid_serv_request(hsdir, req_key_str_first,
-                                           now, 1);
+  retval = hs_lookup_last_hid_serv_request(hsdir, req_key_str_first, now, 1);
   tt_int_op(retval, OP_EQ, now);
-  tt_int_op(strmap_size(request_tracker),OP_EQ, 1);
+  tt_int_op(strmap_size(request_tracker), OP_EQ, 1);
 
   /* Let's lookup a non-existent hidserv request */
-  retval = hs_lookup_last_hid_serv_request(hsdir, req_key_str_second,
-                                           now+1, 0);
+  retval =
+      hs_lookup_last_hid_serv_request(hsdir, req_key_str_second, now + 1, 0);
   tt_int_op(retval, OP_EQ, 0);
-  tt_int_op(strmap_size(request_tracker),OP_EQ, 1);
+  tt_int_op(strmap_size(request_tracker), OP_EQ, 1);
 
   /* Let's lookup a real hidserv request */
-  retval = hs_lookup_last_hid_serv_request(hsdir, req_key_str_first,
-                                           now+2, 0);
+  retval =
+      hs_lookup_last_hid_serv_request(hsdir, req_key_str_first, now + 2, 0);
   tt_int_op(retval, OP_EQ, now); /* we got it */
-  tt_int_op(strmap_size(request_tracker),OP_EQ, 1);
+  tt_int_op(strmap_size(request_tracker), OP_EQ, 1);
 
   /**********************************************************************/
 
   /* Let's add another request for the same HS but on a different HSDir. */
   hsdir2 = tor_malloc_zero(sizeof(routerstatus_t));
   memset(hsdir2->identity_digest, 2, DIGEST_LEN);
-  retval = hs_lookup_last_hid_serv_request(hsdir2, req_key_str_first,
-                                           now+3, 1);
-  tt_int_op(retval, OP_EQ, now+3);
-  tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
+  retval =
+      hs_lookup_last_hid_serv_request(hsdir2, req_key_str_first, now + 3, 1);
+  tt_int_op(retval, OP_EQ, now + 3);
+  tt_int_op(strmap_size(request_tracker), OP_EQ, 2);
 
   /* Check that we can clean the first request based on time */
-  hs_clean_last_hid_serv_requests(now+3+REND_HID_SERV_DIR_REQUERY_PERIOD);
-  tt_int_op(strmap_size(request_tracker),OP_EQ, 1);
+  hs_clean_last_hid_serv_requests(now + 3 + REND_HID_SERV_DIR_REQUERY_PERIOD);
+  tt_int_op(strmap_size(request_tracker), OP_EQ, 1);
   /* Check that it doesn't exist anymore */
-  retval = hs_lookup_last_hid_serv_request(hsdir, req_key_str_first,
-                                           now+2, 0);
+  retval =
+      hs_lookup_last_hid_serv_request(hsdir, req_key_str_first, now + 2, 0);
   tt_int_op(retval, OP_EQ, 0);
 
   /* Now let's add a smaller req key str */
   hsdir3 = tor_malloc_zero(sizeof(routerstatus_t));
   memset(hsdir3->identity_digest, 3, DIGEST_LEN);
-  retval = hs_lookup_last_hid_serv_request(hsdir3, req_key_str_small,
-                                           now+4, 1);
-  tt_int_op(retval, OP_EQ, now+4);
-  tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
+  retval =
+      hs_lookup_last_hid_serv_request(hsdir3, req_key_str_small, now + 4, 1);
+  tt_int_op(retval, OP_EQ, now + 4);
+  tt_int_op(strmap_size(request_tracker), OP_EQ, 2);
 
   /*************************** deleting entries **************************/
 
   /* Add another request with very short key */
-  retval = hs_lookup_last_hid_serv_request(hsdir, "l",  now, 1);
+  retval = hs_lookup_last_hid_serv_request(hsdir, "l", now, 1);
   tt_int_op(retval, OP_EQ, now);
-  tt_int_op(strmap_size(request_tracker),OP_EQ, 3);
+  tt_int_op(strmap_size(request_tracker), OP_EQ, 3);
 
   /* Try deleting entries with a dummy key. Check that our previous requests
    * are still there */
   tor_capture_bugs_(1);
   hs_purge_hid_serv_from_last_hid_serv_requests("a");
-  tt_int_op(strmap_size(request_tracker),OP_EQ, 3);
+  tt_int_op(strmap_size(request_tracker), OP_EQ, 3);
   tor_end_capture_bugs_();
 
   /* Try another dummy key. Check that requests are still there */
@@ -753,23 +738,23 @@ test_hid_serv_request_tracker(void *arg)
     memset(dummy, 'Z', 2000);
     dummy[1999] = '\x00';
     hs_purge_hid_serv_from_last_hid_serv_requests(dummy);
-    tt_int_op(strmap_size(request_tracker),OP_EQ, 3);
+    tt_int_op(strmap_size(request_tracker), OP_EQ, 3);
   }
 
   /* Another dummy key! */
   hs_purge_hid_serv_from_last_hid_serv_requests(req_key_str_second);
-  tt_int_op(strmap_size(request_tracker),OP_EQ, 3);
+  tt_int_op(strmap_size(request_tracker), OP_EQ, 3);
 
   /* Now actually delete a request! */
   hs_purge_hid_serv_from_last_hid_serv_requests(req_key_str_first);
-  tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
+  tt_int_op(strmap_size(request_tracker), OP_EQ, 2);
 
   /* Purge it all! */
   hs_purge_last_hid_serv_requests();
   request_tracker = get_last_hid_serv_requests();
-  tt_int_op(strmap_size(request_tracker),OP_EQ, 0);
+  tt_int_op(strmap_size(request_tracker), OP_EQ, 0);
 
- done:
+done:
   tor_free(hsdir);
   tor_free(hsdir2);
   tor_free(hsdir3);
@@ -778,7 +763,7 @@ test_hid_serv_request_tracker(void *arg)
 static void
 test_parse_extended_hostname(void *arg)
 {
-  (void) arg;
+  (void)arg;
   hostname_type_t type;
 
   char address1[] = "fooaddress.onion";
@@ -789,11 +774,11 @@ test_parse_extended_hostname(void *arg)
   char address6[] = "foo.bar.abcdefghijklmnop.onion";
   char address7[] = ".abcdefghijklmnop.onion";
   char address8[] =
-    "www.25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid.onion";
+      "www.25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid.onion";
   char address9[] =
-    "www.15njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid.onion";
+      "www.15njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid.onion";
 
-  tt_assert(!parse_extended_hostname(address1, &type));
+  tt_assert(! parse_extended_hostname(address1, &type));
   tt_int_op(type, OP_EQ, BAD_HOSTNAME);
 
   tt_assert(parse_extended_hostname(address2, &type));
@@ -814,7 +799,7 @@ test_parse_extended_hostname(void *arg)
   tt_int_op(type, OP_EQ, ONION_V2_HOSTNAME);
   tt_str_op(address6, OP_EQ, "abcdefghijklmnop");
 
-  tt_assert(!parse_extended_hostname(address7, &type));
+  tt_assert(! parse_extended_hostname(address7, &type));
   tt_int_op(type, OP_EQ, BAD_HOSTNAME);
 
   tt_assert(parse_extended_hostname(address8, &type));
@@ -823,10 +808,10 @@ test_parse_extended_hostname(void *arg)
             "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid");
 
   /* Invalid v3 address. */
-  tt_assert(!parse_extended_hostname(address9, &type));
+  tt_assert(! parse_extended_hostname(address9, &type));
   tt_int_op(type, OP_EQ, ONION_V3_HOSTNAME);
 
- done: ;
+done:;
 }
 
 static void
@@ -834,7 +819,7 @@ test_time_between_tp_and_srv(void *arg)
 {
   int ret;
   networkstatus_t ns;
-  (void) arg;
+  (void)arg;
 
   /* This function should be returning true where "^" are:
    *
@@ -889,8 +874,7 @@ test_time_between_tp_and_srv(void *arg)
   ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 0);
 
- done:
-  ;
+done:;
 }
 
 /************ Reachability Test (it is huge) ****************/
@@ -907,7 +891,7 @@ static smartlist_t *client_responsible_hsdirs = NULL;
 static networkstatus_t *
 mock_networkstatus_get_live_consensus_service(time_t now)
 {
-  (void) now;
+  (void)now;
 
   if (mock_service_ns) {
     return mock_service_ns;
@@ -929,7 +913,7 @@ mock_networkstatus_get_latest_consensus_service(void)
 static networkstatus_t *
 mock_networkstatus_get_live_consensus_client(time_t now)
 {
-  (void) now;
+  (void)now;
 
   if (mock_client_ns) {
     return mock_client_ns;
@@ -954,10 +938,10 @@ static void
 mock_circuit_mark_for_close(circuit_t *circ, int reason, int line,
                             const char *file)
 {
-  (void) circ;
-  (void) reason;
-  (void) line;
-  (void) file;
+  (void)circ;
+  (void)reason;
+  (void)line;
+  (void)file;
   return;
 }
 
@@ -968,13 +952,13 @@ helper_initialize_big_hash_ring(networkstatus_t *ns)
   int ret;
 
   /* Generate 250 hsdirs! :) */
-  for (int counter = 1 ; counter < 251 ; counter++) {
+  for (int counter = 1; counter < 251; counter++) {
     /* Let's generate random nickname for each hsdir... */
     char nickname_binary[8];
     char nickname_str[13] = {0};
     crypto_rand(nickname_binary, sizeof(nickname_binary));
-    ret = base64_encode(nickname_str, sizeof(nickname_str),
-                        nickname_binary, sizeof(nickname_binary), 0);
+    ret = base64_encode(nickname_str, sizeof(nickname_str), nickname_binary,
+                        sizeof(nickname_binary), 0);
     tt_int_op(ret, OP_EQ, 12);
     helper_add_hsdir_to_networkstatus(ns, counter, nickname_str, 1);
   }
@@ -982,8 +966,7 @@ helper_initialize_big_hash_ring(networkstatus_t *ns)
   /* Make sure we have 200 hsdirs in our list */
   tt_int_op(smartlist_len(ns->routerstatus_list), OP_EQ, 250);
 
- done:
-  ;
+done:;
 }
 
 /** Initialize service and publish its descriptor as needed. Return the newly
@@ -1007,7 +990,7 @@ helper_init_service(time_t now)
   tt_assert(service->desc_current);
   tt_assert(service->desc_next);
 
- done:
+done:
   return service;
 }
 
@@ -1021,7 +1004,7 @@ set_consensus_times(const char *timestr, time_t *t)
   int ret = parse_rfc1123_time(timestr, t);
   tt_int_op(ret, OP_EQ, 0);
 
- done:
+done:
   return;
 }
 
@@ -1030,8 +1013,8 @@ static void
 cleanup_mock_ns(void)
 {
   if (mock_service_ns) {
-    SMARTLIST_FOREACH(mock_service_ns->routerstatus_list,
-                      routerstatus_t *, rs, routerstatus_free(rs));
+    SMARTLIST_FOREACH(mock_service_ns->routerstatus_list, routerstatus_t *, rs,
+                      routerstatus_free(rs));
     smartlist_clear(mock_service_ns->routerstatus_list);
     mock_service_ns->sr_info.current_srv = NULL;
     mock_service_ns->sr_info.previous_srv = NULL;
@@ -1040,8 +1023,8 @@ cleanup_mock_ns(void)
   }
 
   if (mock_client_ns) {
-    SMARTLIST_FOREACH(mock_client_ns->routerstatus_list,
-                      routerstatus_t *, rs, routerstatus_free(rs));
+    SMARTLIST_FOREACH(mock_client_ns->routerstatus_list, routerstatus_t *, rs,
+                      routerstatus_free(rs));
     smartlist_clear(mock_client_ns->routerstatus_list);
     mock_client_ns->sr_info.current_srv = NULL;
     mock_client_ns->sr_info.previous_srv = NULL;
@@ -1097,19 +1080,21 @@ are_responsible_hsdirs_equal(void)
   tt_int_op(smartlist_len(client_responsible_hsdirs), OP_EQ, 6);
   tt_int_op(smartlist_len(service_responsible_hsdirs), OP_EQ, 8);
 
-  SMARTLIST_FOREACH_BEGIN(client_responsible_hsdirs,
-                          const routerstatus_t *, c_rs) {
-    SMARTLIST_FOREACH_BEGIN(service_responsible_hsdirs,
-                            const routerstatus_t *, s_rs) {
+  SMARTLIST_FOREACH_BEGIN (client_responsible_hsdirs, const routerstatus_t *,
+                           c_rs) {
+    SMARTLIST_FOREACH_BEGIN (service_responsible_hsdirs,
+                             const routerstatus_t *, s_rs) {
       if (tor_memeq(c_rs->identity_digest, s_rs->identity_digest,
                     DIGEST_LEN)) {
         count++;
         break;
       }
-    } SMARTLIST_FOREACH_END(s_rs);
-  } SMARTLIST_FOREACH_END(c_rs);
+    }
+    SMARTLIST_FOREACH_END(s_rs);
+  }
+  SMARTLIST_FOREACH_END(c_rs);
 
- done:
+done:
   return (count == 6);
 }
 
@@ -1163,192 +1148,191 @@ typedef struct reachability_cfg_t {
 #define NEED_NEXT_DESC 1
 
 static reachability_cfg_t reachability_scenarios[] = {
-  /* Scenario 1
-   *
-   *  +------------------------------------------------------------------+
-   *  |                                                                  |
-   *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
-   *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
-   *  |                                                                  |
-   *  |  $==========|-----------$===========|-----------$===========|    |
-   *  |              ^ ^                                                 |
-   *  |              S C                                                 |
-   *  +------------------------------------------------------------------+
-   *
-   *  S: Service, C: Client
-   *
-   *  Service consensus valid_after time is set to 13:00 and client to 15:00,
-   *  both are after TP#1 thus have access to SRV#1. Service and client should
-   *  be using TP#1.
-   */
+    /* Scenario 1
+     *
+     *  +------------------------------------------------------------------+
+     *  |                                                                  |
+     *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
+     *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+     *  |                                                                  |
+     *  |  $==========|-----------$===========|-----------$===========|    |
+     *  |              ^ ^                                                 |
+     *  |              S C                                                 |
+     *  +------------------------------------------------------------------+
+     *
+     *  S: Service, C: Client
+     *
+     *  Service consensus valid_after time is set to 13:00 and client to 15:00,
+     *  both are after TP#1 thus have access to SRV#1. Service and client
+     * should be using TP#1.
+     */
 
-  { "Sat, 26 Oct 1985 13:00:00 UTC", /* Service valid_after */
-    "Sat, 26 Oct 1985 14:00:00 UTC", /* Service valid_until */
-    "Sat, 26 Oct 1985 15:00:00 UTC", /* Client valid_after */
-    "Sat, 26 Oct 1985 16:00:00 UTC", /* Client valid_until. */
-    &current_srv, NULL, /* Service current and previous SRV */
-    &current_srv, NULL, /* Client current and previous SRV */
-    hs_get_time_period_num, /* Service time period function. */
-    IN_NEW_TP, /* Is service in new TP? */
-    IN_NEW_TP, /* Is client in new TP? */
-    NEED_NEXT_DESC },
+    {"Sat, 26 Oct 1985 13:00:00 UTC", /* Service valid_after */
+     "Sat, 26 Oct 1985 14:00:00 UTC", /* Service valid_until */
+     "Sat, 26 Oct 1985 15:00:00 UTC", /* Client valid_after */
+     "Sat, 26 Oct 1985 16:00:00 UTC", /* Client valid_until. */
+     &current_srv, NULL, /* Service current and previous SRV */
+     &current_srv, NULL, /* Client current and previous SRV */
+     hs_get_time_period_num, /* Service time period function. */
+     IN_NEW_TP, /* Is service in new TP? */
+     IN_NEW_TP, /* Is client in new TP? */
+     NEED_NEXT_DESC},
 
-  /* Scenario 2
-   *
-   *  +------------------------------------------------------------------+
-   *  |                                                                  |
-   *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
-   *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
-   *  |                                                                  |
-   *  |  $==========|-----------$===========|-----------$===========|    |
-   *  |                        ^ ^                                       |
-   *  |                        S C                                       |
-   *  +------------------------------------------------------------------+
-   *
-   *  S: Service, C: Client
-   *
-   *  Service consensus valid_after time is set to 23:00 and client to 01:00,
-   *  which makes the client after the SRV#2 and the service just before. The
-   *  service should only be using TP#1. The client should be using TP#1.
-   */
+    /* Scenario 2
+     *
+     *  +------------------------------------------------------------------+
+     *  |                                                                  |
+     *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
+     *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+     *  |                                                                  |
+     *  |  $==========|-----------$===========|-----------$===========|    |
+     *  |                        ^ ^                                       |
+     *  |                        S C                                       |
+     *  +------------------------------------------------------------------+
+     *
+     *  S: Service, C: Client
+     *
+     *  Service consensus valid_after time is set to 23:00 and client to 01:00,
+     *  which makes the client after the SRV#2 and the service just before. The
+     *  service should only be using TP#1. The client should be using TP#1.
+     */
 
-  { "Sat, 26 Oct 1985 23:00:00 UTC", /* Service valid_after */
-    "Sat, 27 Oct 1985 00:00:00 UTC", /* Service valid_until */
-    "Sat, 27 Oct 1985 01:00:00 UTC", /* Client valid_after */
-    "Sat, 27 Oct 1985 02:00:00 UTC", /* Client valid_until. */
-    &previous_srv, NULL, /* Service current and previous SRV */
-    &current_srv, &previous_srv, /* Client current and previous SRV */
-    hs_get_time_period_num, /* Service time period function. */
-    IN_NEW_TP, /* Is service in new TP? */
-    NOT_IN_NEW_TP, /* Is client in new TP? */
-    NEED_NEXT_DESC },
+    {"Sat, 26 Oct 1985 23:00:00 UTC", /* Service valid_after */
+     "Sat, 27 Oct 1985 00:00:00 UTC", /* Service valid_until */
+     "Sat, 27 Oct 1985 01:00:00 UTC", /* Client valid_after */
+     "Sat, 27 Oct 1985 02:00:00 UTC", /* Client valid_until. */
+     &previous_srv, NULL, /* Service current and previous SRV */
+     &current_srv, &previous_srv, /* Client current and previous SRV */
+     hs_get_time_period_num, /* Service time period function. */
+     IN_NEW_TP, /* Is service in new TP? */
+     NOT_IN_NEW_TP, /* Is client in new TP? */
+     NEED_NEXT_DESC},
 
-  /* Scenario 3
-   *
-   *  +------------------------------------------------------------------+
-   *  |                                                                  |
-   *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
-   *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
-   *  |                                                                  |
-   *  |  $==========|-----------$===========|----------$===========|     |
-   *  |                            ^ ^                                   |
-   *  |                            S C                                   |
-   *  +------------------------------------------------------------------+
-   *
-   *  S: Service, C: Client
-   *
-   *  Service consensus valid_after time is set to 03:00 and client to 05:00,
-   *  which makes both after SRV#2. The service should be using TP#1 as its
-   *  current time period. The client should be using TP#1.
-   */
+    /* Scenario 3
+     *
+     *  +------------------------------------------------------------------+
+     *  |                                                                  |
+     *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
+     *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+     *  |                                                                  |
+     *  |  $==========|-----------$===========|----------$===========|     |
+     *  |                            ^ ^                                   |
+     *  |                            S C                                   |
+     *  +------------------------------------------------------------------+
+     *
+     *  S: Service, C: Client
+     *
+     *  Service consensus valid_after time is set to 03:00 and client to 05:00,
+     *  which makes both after SRV#2. The service should be using TP#1 as its
+     *  current time period. The client should be using TP#1.
+     */
 
-  { "Sat, 27 Oct 1985 03:00:00 UTC", /* Service valid_after */
-    "Sat, 27 Oct 1985 04:00:00 UTC", /* Service valid_until */
-    "Sat, 27 Oct 1985 05:00:00 UTC", /* Client valid_after */
-    "Sat, 27 Oct 1985 06:00:00 UTC", /* Client valid_until. */
-    &current_srv, &previous_srv, /* Service current and previous SRV */
-    &current_srv, &previous_srv, /* Client current and previous SRV */
-    hs_get_time_period_num, /* Service time period function. */
-    NOT_IN_NEW_TP, /* Is service in new TP? */
-    NOT_IN_NEW_TP, /* Is client in new TP? */
-    DONT_NEED_NEXT_DESC },
+    {"Sat, 27 Oct 1985 03:00:00 UTC", /* Service valid_after */
+     "Sat, 27 Oct 1985 04:00:00 UTC", /* Service valid_until */
+     "Sat, 27 Oct 1985 05:00:00 UTC", /* Client valid_after */
+     "Sat, 27 Oct 1985 06:00:00 UTC", /* Client valid_until. */
+     &current_srv, &previous_srv, /* Service current and previous SRV */
+     &current_srv, &previous_srv, /* Client current and previous SRV */
+     hs_get_time_period_num, /* Service time period function. */
+     NOT_IN_NEW_TP, /* Is service in new TP? */
+     NOT_IN_NEW_TP, /* Is client in new TP? */
+     DONT_NEED_NEXT_DESC},
 
-  /* Scenario 4
-   *
-   *  +------------------------------------------------------------------+
-   *  |                                                                  |
-   *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
-   *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
-   *  |                                                                  |
-   *  |  $==========|-----------$===========|-----------$===========|    |
-   *  |                                    ^ ^                           |
-   *  |                                    S C                           |
-   *  +------------------------------------------------------------------+
-   *
-   *  S: Service, C: Client
-   *
-   *  Service consensus valid_after time is set to 11:00 and client to 13:00,
-   *  which makes the service before TP#2 and the client just after. The
-   *  service should be using TP#1 as its current time period and TP#2 as the
-   *  next. The client should be using TP#2 time period.
-   */
+    /* Scenario 4
+     *
+     *  +------------------------------------------------------------------+
+     *  |                                                                  |
+     *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
+     *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+     *  |                                                                  |
+     *  |  $==========|-----------$===========|-----------$===========|    |
+     *  |                                    ^ ^                           |
+     *  |                                    S C                           |
+     *  +------------------------------------------------------------------+
+     *
+     *  S: Service, C: Client
+     *
+     *  Service consensus valid_after time is set to 11:00 and client to 13:00,
+     *  which makes the service before TP#2 and the client just after. The
+     *  service should be using TP#1 as its current time period and TP#2 as the
+     *  next. The client should be using TP#2 time period.
+     */
 
-  { "Sat, 27 Oct 1985 11:00:00 UTC", /* Service valid_after */
-    "Sat, 27 Oct 1985 12:00:00 UTC", /* Service valid_until */
-    "Sat, 27 Oct 1985 13:00:00 UTC", /* Client valid_after */
-    "Sat, 27 Oct 1985 14:00:00 UTC", /* Client valid_until. */
-    &current_srv, &previous_srv, /* Service current and previous SRV */
-    &current_srv, &previous_srv, /* Client current and previous SRV */
-    hs_get_next_time_period_num, /* Service time period function. */
-    NOT_IN_NEW_TP, /* Is service in new TP? */
-    IN_NEW_TP, /* Is client in new TP? */
-    NEED_NEXT_DESC },
+    {"Sat, 27 Oct 1985 11:00:00 UTC", /* Service valid_after */
+     "Sat, 27 Oct 1985 12:00:00 UTC", /* Service valid_until */
+     "Sat, 27 Oct 1985 13:00:00 UTC", /* Client valid_after */
+     "Sat, 27 Oct 1985 14:00:00 UTC", /* Client valid_until. */
+     &current_srv, &previous_srv, /* Service current and previous SRV */
+     &current_srv, &previous_srv, /* Client current and previous SRV */
+     hs_get_next_time_period_num, /* Service time period function. */
+     NOT_IN_NEW_TP, /* Is service in new TP? */
+     IN_NEW_TP, /* Is client in new TP? */
+     NEED_NEXT_DESC},
 
-  /* Scenario 5
-   *
-   *  +------------------------------------------------------------------+
-   *  |                                                                  |
-   *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
-   *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
-   *  |                                                                  |
-   *  |  $==========|-----------$===========|-----------$===========|    |
-   *  |                        ^ ^                                       |
-   *  |                        C S                                       |
-   *  +------------------------------------------------------------------+
-   *
-   *  S: Service, C: Client
-   *
-   *  Service consensus valid_after time is set to 01:00 and client to 23:00,
-   *  which makes the service after SRV#2 and the client just before. The
-   *  service should be using TP#1 as its current time period and TP#2 as the
-   *  next. The client should be using TP#1 time period.
-   */
+    /* Scenario 5
+     *
+     *  +------------------------------------------------------------------+
+     *  |                                                                  |
+     *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
+     *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+     *  |                                                                  |
+     *  |  $==========|-----------$===========|-----------$===========|    |
+     *  |                        ^ ^                                       |
+     *  |                        C S                                       |
+     *  +------------------------------------------------------------------+
+     *
+     *  S: Service, C: Client
+     *
+     *  Service consensus valid_after time is set to 01:00 and client to 23:00,
+     *  which makes the service after SRV#2 and the client just before. The
+     *  service should be using TP#1 as its current time period and TP#2 as the
+     *  next. The client should be using TP#1 time period.
+     */
 
-  { "Sat, 27 Oct 1985 01:00:00 UTC", /* Service valid_after */
-    "Sat, 27 Oct 1985 02:00:00 UTC", /* Service valid_until */
-    "Sat, 26 Oct 1985 23:00:00 UTC", /* Client valid_after */
-    "Sat, 27 Oct 1985 00:00:00 UTC", /* Client valid_until. */
-    &current_srv, &previous_srv, /* Service current and previous SRV */
-    &previous_srv, NULL, /* Client current and previous SRV */
-    hs_get_time_period_num, /* Service time period function. */
-    NOT_IN_NEW_TP, /* Is service in new TP? */
-    IN_NEW_TP, /* Is client in new TP? */
-    DONT_NEED_NEXT_DESC },
+    {"Sat, 27 Oct 1985 01:00:00 UTC", /* Service valid_after */
+     "Sat, 27 Oct 1985 02:00:00 UTC", /* Service valid_until */
+     "Sat, 26 Oct 1985 23:00:00 UTC", /* Client valid_after */
+     "Sat, 27 Oct 1985 00:00:00 UTC", /* Client valid_until. */
+     &current_srv, &previous_srv, /* Service current and previous SRV */
+     &previous_srv, NULL, /* Client current and previous SRV */
+     hs_get_time_period_num, /* Service time period function. */
+     NOT_IN_NEW_TP, /* Is service in new TP? */
+     IN_NEW_TP, /* Is client in new TP? */
+     DONT_NEED_NEXT_DESC},
 
-  /* Scenario 6
-   *
-   *  +------------------------------------------------------------------+
-   *  |                                                                  |
-   *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
-   *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
-   *  |                                                                  |
-   *  |  $==========|-----------$===========|-----------$===========|    |
-   *  |                                    ^ ^                           |
-   *  |                                    C S                           |
-   *  +------------------------------------------------------------------+
-   *
-   *  S: Service, C: Client
-   *
-   *  Service consensus valid_after time is set to 13:00 and client to 11:00,
-   *  which makes the service outside after TP#2 and the client just before.
-   *  The service should be using TP#1 as its current time period and TP#2 as
-   *  its next. The client should be using TP#1 time period.
-   */
+    /* Scenario 6
+     *
+     *  +------------------------------------------------------------------+
+     *  |                                                                  |
+     *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
+     *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+     *  |                                                                  |
+     *  |  $==========|-----------$===========|-----------$===========|    |
+     *  |                                    ^ ^                           |
+     *  |                                    C S                           |
+     *  +------------------------------------------------------------------+
+     *
+     *  S: Service, C: Client
+     *
+     *  Service consensus valid_after time is set to 13:00 and client to 11:00,
+     *  which makes the service outside after TP#2 and the client just before.
+     *  The service should be using TP#1 as its current time period and TP#2 as
+     *  its next. The client should be using TP#1 time period.
+     */
 
-  { "Sat, 27 Oct 1985 13:00:00 UTC", /* Service valid_after */
-    "Sat, 27 Oct 1985 14:00:00 UTC", /* Service valid_until */
-    "Sat, 27 Oct 1985 11:00:00 UTC", /* Client valid_after */
-    "Sat, 27 Oct 1985 12:00:00 UTC", /* Client valid_until. */
-    &current_srv, &previous_srv, /* Service current and previous SRV */
-    &current_srv, &previous_srv, /* Client current and previous SRV */
-    get_previous_time_period, /* Service time period function. */
-    IN_NEW_TP, /* Is service in new TP? */
-    NOT_IN_NEW_TP, /* Is client in new TP? */
-    DONT_NEED_NEXT_DESC },
+    {"Sat, 27 Oct 1985 13:00:00 UTC", /* Service valid_after */
+     "Sat, 27 Oct 1985 14:00:00 UTC", /* Service valid_until */
+     "Sat, 27 Oct 1985 11:00:00 UTC", /* Client valid_after */
+     "Sat, 27 Oct 1985 12:00:00 UTC", /* Client valid_until. */
+     &current_srv, &previous_srv, /* Service current and previous SRV */
+     &current_srv, &previous_srv, /* Client current and previous SRV */
+     get_previous_time_period, /* Service time period function. */
+     IN_NEW_TP, /* Is service in new TP? */
+     NOT_IN_NEW_TP, /* Is client in new TP? */
+     DONT_NEED_NEXT_DESC},
 
-  /* End marker. */
-  { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0}
-};
+    /* End marker. */
+    {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0}};
 
 /* Run a single reachability scenario. num_scenario is the corresponding
  * scenario number from the documentation. It is used to log it in case of
@@ -1366,12 +1350,9 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
   tt_assert(cfg);
 
   /* Set service consensus time. */
-  set_consensus_times(cfg->service_valid_after,
-                      &mock_service_ns->valid_after);
-  set_consensus_times(cfg->service_valid_until,
-                      &mock_service_ns->valid_until);
-  set_consensus_times(cfg->service_valid_until,
-                      &mock_service_ns->fresh_until);
+  set_consensus_times(cfg->service_valid_after, &mock_service_ns->valid_after);
+  set_consensus_times(cfg->service_valid_until, &mock_service_ns->valid_until);
+  set_consensus_times(cfg->service_valid_until, &mock_service_ns->fresh_until);
   voting_schedule_recalculate_timing(get_options(),
                                      mock_service_ns->valid_after);
   /* Check that service is in the right time period point */
@@ -1379,12 +1360,9 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
             cfg->service_in_new_tp);
 
   /* Set client consensus time. */
-  set_consensus_times(cfg->client_valid_after,
-                      &mock_client_ns->valid_after);
-  set_consensus_times(cfg->client_valid_until,
-                      &mock_client_ns->valid_until);
-  set_consensus_times(cfg->client_valid_until,
-                      &mock_client_ns->fresh_until);
+  set_consensus_times(cfg->client_valid_after, &mock_client_ns->valid_after);
+  set_consensus_times(cfg->client_valid_until, &mock_client_ns->valid_until);
+  set_consensus_times(cfg->client_valid_until, &mock_client_ns->fresh_until);
   voting_schedule_recalculate_timing(get_options(),
                                      mock_client_ns->valid_after);
   /* Check that client is in the right time period point */
@@ -1399,7 +1377,7 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
 
   /* Initialize a service to get keys. */
   update_approx_time(mock_service_ns->valid_after);
-  service = helper_init_service(mock_service_ns->valid_after+1);
+  service = helper_init_service(mock_service_ns->valid_after + 1);
 
   /*
    * === Client setup ===
@@ -1420,8 +1398,8 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
    * service using only its current time period. */
   client_tp = hs_get_time_period_num(0);
 
-  hs_build_blinded_pubkey(&service->keys.identity_pk, NULL, 0,
-                          client_tp, &client_blinded_pk);
+  hs_build_blinded_pubkey(&service->keys.identity_pk, NULL, 0, client_tp,
+                          &client_blinded_pk);
   hs_get_responsible_hsdirs(&client_blinded_pk, client_tp, 0, 1,
                             client_responsible_hsdirs);
   /* Cleanup the nodelist so we can let the service computes its own set of
@@ -1448,8 +1426,8 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
 
   service_tp = cfg->service_time_period_fn(0);
 
-  hs_build_blinded_pubkey(&service->keys.identity_pk, NULL, 0,
-                          service_tp, &service_blinded_pk);
+  hs_build_blinded_pubkey(&service->keys.identity_pk, NULL, 0, service_tp,
+                          &service_blinded_pk);
 
   /* A service builds two lists of responsible HSDir, for the current and the
    * next descriptor. Depending on the scenario, the client timing indicate if
@@ -1474,7 +1452,7 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
   /* Everything went well. */
   ret = 0;
 
- done:
+done:
   cleanup_reachability_test();
   if (ret == -1) {
     /* Do this so we can know which scenario failed. */
@@ -1488,7 +1466,7 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
 static void
 test_reachability(void *arg)
 {
-  (void) arg;
+  (void)arg;
 
   /* NOTE: An important axiom to understand here is that SRV#N must only be
    * used with TP#N value. For example, SRV#2 with TP#1 should NEVER be used
@@ -1506,7 +1484,7 @@ test_reachability(void *arg)
  *  its identity digest in <b>hsdir_digest_out</b>. */
 static void
 helper_client_pick_hsdir(const ed25519_public_key_t *onion_identity_pk,
-                        char *hsdir_digest_out)
+                         char *hsdir_digest_out)
 {
   tt_assert(onion_identity_pk);
 
@@ -1514,8 +1492,7 @@ helper_client_pick_hsdir(const ed25519_public_key_t *onion_identity_pk,
   tt_assert(client_hsdir);
   digest_to_base64(hsdir_digest_out, client_hsdir->identity_digest);
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -1525,13 +1502,13 @@ test_hs_indexes(void *arg)
   uint64_t period_num = 42;
   ed25519_public_key_t pubkey;
 
-  (void) arg;
+  (void)arg;
 
   /* Build the hs_index */
   {
     uint8_t hs_index[DIGEST256_LEN];
     const char *b32_test_vector =
-      "37e5cbbd56a22823714f18f1623ece5983a0d64c78495a8cfab854245e5f9a8a";
+        "37e5cbbd56a22823714f18f1623ece5983a0d64c78495a8cfab854245e5f9a8a";
     char test_vector[DIGEST256_LEN];
     ret = base16_decode(test_vector, sizeof(test_vector), b32_test_vector,
                         strlen(b32_test_vector));
@@ -1547,7 +1524,7 @@ test_hs_indexes(void *arg)
     uint8_t srv[DIGEST256_LEN];
     uint8_t hsdir_index[DIGEST256_LEN];
     const char *b32_test_vector =
-      "db475361014a09965e7e5e4d4a25b8f8d4b8f16cb1d8a7e95eed50249cc1a2d5";
+        "db475361014a09965e7e5e4d4a25b8f8d4b8f16cb1d8a7e95eed50249cc1a2d5";
     char test_vector[DIGEST256_LEN];
     ret = base16_decode(test_vector, sizeof(test_vector), b32_test_vector,
                         strlen(b32_test_vector));
@@ -1559,8 +1536,7 @@ test_hs_indexes(void *arg)
     tt_mem_op(hsdir_index, OP_EQ, test_vector, sizeof(hsdir_index));
   }
 
- done:
-  ;
+done:;
 }
 
 #define EARLY_IN_SRV_TO_TP 0
@@ -1614,16 +1590,15 @@ helper_set_consensus_and_system_time(networkstatus_t *ns, int position)
   real_time = ns->valid_until - 120;
   update_approx_time(real_time);
 
- done:
+done:
   return real_time;
 }
 
 /** Helper function that carries out the actual test for
  *  test_client_service_sync() */
 static void
-helper_test_hsdir_sync(networkstatus_t *ns,
-                       int service_position, int client_position,
-                       int client_fetches_next_desc)
+helper_test_hsdir_sync(networkstatus_t *ns, int service_position,
+                       int client_position, int client_fetches_next_desc)
 {
   hs_service_descriptor_t *desc;
   int retval;
@@ -1657,15 +1632,15 @@ helper_test_hsdir_sync(networkstatus_t *ns,
   helper_set_consensus_and_system_time(ns, client_position);
 
   cleanup_nodelist();
-  SMARTLIST_FOREACH(ns->routerstatus_list,
-                    routerstatus_t *, rs, routerstatus_free(rs));
+  SMARTLIST_FOREACH(ns->routerstatus_list, routerstatus_t *, rs,
+                    routerstatus_free(rs));
   smartlist_clear(ns->routerstatus_list);
   helper_initialize_big_hash_ring(ns);
 
   /* 4) Pick 6 HSDirs as a client and check that they were also chosen by the
         service. */
-  for (int y = 0 ; y < 6 ; y++) {
-    char client_hsdir_b64_digest[BASE64_DIGEST_LEN+1] = {0};
+  for (int y = 0; y < 6; y++) {
+    char client_hsdir_b64_digest[BASE64_DIGEST_LEN + 1] = {0};
     helper_client_pick_hsdir(&service->keys.identity_pk,
                              client_hsdir_b64_digest);
 
@@ -1678,16 +1653,16 @@ helper_test_hsdir_sync(networkstatus_t *ns,
 
   /* Finally, try to pick a 7th hsdir and see that NULL is returned since we
    * exhausted all of them: */
-  tt_assert(!pick_hsdir_v3(&service->keys.identity_pk));
+  tt_assert(! pick_hsdir_v3(&service->keys.identity_pk));
 
- done:
+done:
   /* At the end: free all services and initialize the subsystem again, we will
    * need it for next scenario. */
   cleanup_nodelist();
   hs_service_free_all();
   hs_service_init();
-  SMARTLIST_FOREACH(ns->routerstatus_list,
-                    routerstatus_t *, rs, routerstatus_free(rs));
+  SMARTLIST_FOREACH(ns->routerstatus_list, routerstatus_t *, rs,
+                    routerstatus_free(rs));
   smartlist_clear(ns->routerstatus_list);
 }
 
@@ -1711,18 +1686,15 @@ test_client_service_hsdir_set_sync(void *arg)
 {
   networkstatus_t *ns = NULL;
 
-  (void) arg;
+  (void)arg;
 
   MOCK(networkstatus_get_latest_consensus,
        mock_networkstatus_get_latest_consensus);
   MOCK(networkstatus_get_live_consensus,
        mock_networkstatus_get_live_consensus);
-  MOCK(get_or_state,
-       get_or_state_replacement);
-  MOCK(hs_desc_encode_descriptor,
-       mock_hs_desc_encode_descriptor);
-  MOCK(directory_initiate_request,
-       mock_directory_initiate_request);
+  MOCK(get_or_state, get_or_state_replacement);
+  MOCK(hs_desc_encode_descriptor, mock_hs_desc_encode_descriptor);
+  MOCK(directory_initiate_request, mock_directory_initiate_request);
 
   hs_init();
 
@@ -1829,39 +1801,30 @@ test_client_service_hsdir_set_sync(void *arg)
    */
   helper_test_hsdir_sync(ns, LATE_IN_TP_TO_SRV, EARLY_IN_SRV_TO_TP, 1);
 
- done:
+done:
   networkstatus_vote_free(ns);
   nodelist_free_all();
   hs_free_all();
 }
 
 struct testcase_t hs_common_tests[] = {
-  { "build_address", test_build_address, TT_FORK,
-    NULL, NULL },
-  { "validate_address", test_validate_address, TT_FORK,
-    NULL, NULL },
-  { "time_period", test_time_period, TT_FORK,
-    NULL, NULL },
-  { "start_time_of_next_time_period", test_start_time_of_next_time_period,
-    TT_FORK, NULL, NULL },
-  { "responsible_hsdirs", test_responsible_hsdirs, TT_FORK,
-    NULL, NULL },
-  { "desc_reupload_logic", test_desc_reupload_logic, TT_FORK,
-    NULL, NULL },
-  { "disaster_srv", test_disaster_srv, TT_FORK,
-    NULL, NULL },
-  { "hid_serv_request_tracker", test_hid_serv_request_tracker, TT_FORK,
-    NULL, NULL },
-  { "parse_extended_hostname", test_parse_extended_hostname, TT_FORK,
-    NULL, NULL },
-  { "time_between_tp_and_srv", test_time_between_tp_and_srv, TT_FORK,
-    NULL, NULL },
-  { "reachability", test_reachability, TT_FORK,
-    NULL, NULL },
-  { "client_service_hsdir_set_sync", test_client_service_hsdir_set_sync,
-    TT_FORK, NULL, NULL },
-  { "hs_indexes", test_hs_indexes, TT_FORK,
-    NULL, NULL },
+    {"build_address", test_build_address, TT_FORK, NULL, NULL},
+    {"validate_address", test_validate_address, TT_FORK, NULL, NULL},
+    {"time_period", test_time_period, TT_FORK, NULL, NULL},
+    {"start_time_of_next_time_period", test_start_time_of_next_time_period,
+     TT_FORK, NULL, NULL},
+    {"responsible_hsdirs", test_responsible_hsdirs, TT_FORK, NULL, NULL},
+    {"desc_reupload_logic", test_desc_reupload_logic, TT_FORK, NULL, NULL},
+    {"disaster_srv", test_disaster_srv, TT_FORK, NULL, NULL},
+    {"hid_serv_request_tracker", test_hid_serv_request_tracker, TT_FORK, NULL,
+     NULL},
+    {"parse_extended_hostname", test_parse_extended_hostname, TT_FORK, NULL,
+     NULL},
+    {"time_between_tp_and_srv", test_time_between_tp_and_srv, TT_FORK, NULL,
+     NULL},
+    {"reachability", test_reachability, TT_FORK, NULL, NULL},
+    {"client_service_hsdir_set_sync", test_client_service_hsdir_set_sync,
+     TT_FORK, NULL, NULL},
+    {"hs_indexes", test_hs_indexes, TT_FORK, NULL, NULL},
 
-  END_OF_TESTCASES
-};
+    END_OF_TESTCASES};

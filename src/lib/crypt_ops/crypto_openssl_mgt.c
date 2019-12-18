@@ -48,7 +48,7 @@ static int n_openssl_mutexes_ = 0;
 #endif /* !defined(NEW_THREAD_API) */
 
 /** Declare STATIC functions */
-STATIC char * parse_openssl_version_str(const char *raw_version);
+STATIC char *parse_openssl_version_str(const char *raw_version);
 #ifndef NEW_THREAD_API
 STATIC void openssl_locking_cb_(int mode, int n, const char *file, int line);
 STATIC void tor_set_openssl_thread_id(CRYPTO_THREADID *threadid);
@@ -63,35 +63,38 @@ crypto_openssl_log_errors(int severity, const char *doing)
   unsigned long err;
   const char *msg, *lib, *func;
   while ((err = ERR_get_error()) != 0) {
-    msg = (const char*)ERR_reason_error_string(err);
-    lib = (const char*)ERR_lib_error_string(err);
-    func = (const char*)ERR_func_error_string(err);
-    if (!msg) msg = "(null)";
-    if (!lib) lib = "(null)";
-    if (!func) func = "(null)";
-    if (BUG(!doing)) doing = "(null)";
-    tor_log(severity, LD_CRYPTO, "crypto error while %s: %s (in %s:%s)",
-              doing, msg, lib, func);
+    msg = (const char *)ERR_reason_error_string(err);
+    lib = (const char *)ERR_lib_error_string(err);
+    func = (const char *)ERR_func_error_string(err);
+    if (! msg)
+      msg = "(null)";
+    if (! lib)
+      lib = "(null)";
+    if (! func)
+      func = "(null)";
+    if (BUG(! doing))
+      doing = "(null)";
+    tor_log(severity, LD_CRYPTO, "crypto error while %s: %s (in %s:%s)", doing,
+            msg, lib, func);
   }
 }
 
 /* Returns a trimmed and human-readable version of an openssl version string
-* <b>raw_version</b>. They are usually in the form of 'OpenSSL 1.0.0b 10
-* May 2012' and this will parse them into a form similar to '1.0.0b' */
+ * <b>raw_version</b>. They are usually in the form of 'OpenSSL 1.0.0b 10
+ * May 2012' and this will parse them into a form similar to '1.0.0b' */
 STATIC char *
 parse_openssl_version_str(const char *raw_version)
 {
   const char *end_of_version = NULL;
   /* The output should be something like "OpenSSL 1.0.0b 10 May 2012. Let's
      trim that down. */
-  if (!strcmpstart(raw_version, "OpenSSL ")) {
+  if (! strcmpstart(raw_version, "OpenSSL ")) {
     raw_version += strlen("OpenSSL ");
     end_of_version = strchr(raw_version, ' ');
   }
 
   if (end_of_version)
-    return tor_strndup(raw_version,
-                      end_of_version-raw_version);
+    return tor_strndup(raw_version, end_of_version - raw_version);
   else
     return tor_strdup(raw_version);
 }
@@ -110,22 +113,22 @@ crypto_openssl_get_version_str(void)
 
 static char *crypto_openssl_header_version_str = NULL;
 /* Return a human-readable version of the compile-time openssl version
-* number. */
+ * number. */
 const char *
 crypto_openssl_get_header_version_str(void)
 {
   if (crypto_openssl_header_version_str == NULL) {
     crypto_openssl_header_version_str =
-                        parse_openssl_version_str(OPENSSL_VERSION_TEXT);
+        parse_openssl_version_str(OPENSSL_VERSION_TEXT);
   }
   return crypto_openssl_header_version_str;
 }
 
 #ifndef COCCI
-#ifndef OPENSSL_THREADS
-#error "OpenSSL has been built without thread support. Tor requires an \
+#  ifndef OPENSSL_THREADS
+#    error "OpenSSL has been built without thread support. Tor requires an \
  OpenSSL library with thread support enabled."
-#endif
+#  endif
 #endif /* !defined(COCCI) */
 
 #ifndef NEW_THREAD_API
@@ -135,7 +138,7 @@ openssl_locking_cb_(int mode, int n, const char *file, int line)
 {
   (void)file;
   (void)line;
-  if (!openssl_mutexes_)
+  if (! openssl_mutexes_)
     /* This is not a really good fix for the
      * "release-freed-lock-from-separate-thread-on-shutdown" problem, but
      * it can't hurt. */
@@ -163,7 +166,7 @@ setup_openssl_threading(void)
   int n = CRYPTO_num_locks();
   n_openssl_mutexes_ = n;
   openssl_mutexes_ = tor_calloc(n, sizeof(tor_mutex_t *));
-  for (i=0; i < n; ++i)
+  for (i = 0; i < n; ++i)
     openssl_mutexes_[i] = tor_mutex_new();
   CRYPTO_set_locking_callback(openssl_locking_cb_);
   CRYPTO_THREADID_set_callback(tor_set_openssl_thread_id);
@@ -189,7 +192,7 @@ crypto_openssl_free_all(void)
     int i;
     openssl_mutexes_ = NULL;
     n_openssl_mutexes_ = 0;
-    for (i=0;i<n;++i) {
+    for (i = 0; i < n; ++i) {
       tor_mutex_free(ms[i]);
     }
     tor_free(ms);
@@ -202,40 +205,43 @@ void
 crypto_openssl_early_init(void)
 {
 #ifdef OPENSSL_1_1_API
-    OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS |
-                     OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
-                     OPENSSL_INIT_ADD_ALL_CIPHERS |
-                     OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
+  OPENSSL_init_ssl(
+      OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
+          OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS,
+      NULL);
 #else /* !defined(OPENSSL_1_1_API) */
-    ERR_load_crypto_strings();
-    OpenSSL_add_all_algorithms();
+  ERR_load_crypto_strings();
+  OpenSSL_add_all_algorithms();
 #endif /* defined(OPENSSL_1_1_API) */
 
-    setup_openssl_threading();
+  setup_openssl_threading();
 
-    unsigned long version_num = OpenSSL_version_num();
-    const char *version_str = OpenSSL_version(OPENSSL_VERSION);
-    if (version_num == OPENSSL_VERSION_NUMBER &&
-        !strcmp(version_str, OPENSSL_VERSION_TEXT)) {
-      log_info(LD_CRYPTO, "OpenSSL version matches version from headers "
-                 "(%lx: %s).", version_num, version_str);
-    } else if ((version_num & 0xffff0000) ==
-               (OPENSSL_VERSION_NUMBER & 0xffff0000)) {
-      log_notice(LD_CRYPTO,
+  unsigned long version_num = OpenSSL_version_num();
+  const char *version_str = OpenSSL_version(OPENSSL_VERSION);
+  if (version_num == OPENSSL_VERSION_NUMBER &&
+      ! strcmp(version_str, OPENSSL_VERSION_TEXT)) {
+    log_info(LD_CRYPTO,
+             "OpenSSL version matches version from headers "
+             "(%lx: %s).",
+             version_num, version_str);
+  } else if ((version_num & 0xffff0000) ==
+             (OPENSSL_VERSION_NUMBER & 0xffff0000)) {
+    log_notice(LD_CRYPTO,
                "We compiled with OpenSSL %lx: %s and we "
                "are running with OpenSSL %lx: %s. "
                "These two versions should be binary compatible.",
                (unsigned long)OPENSSL_VERSION_NUMBER, OPENSSL_VERSION_TEXT,
                version_num, version_str);
-    } else {
-      log_warn(LD_CRYPTO, "OpenSSL version from headers does not match the "
-               "version we're running with. If you get weird crashes, that "
-               "might be why. (Compiled with %lx: %s; running with %lx: %s).",
-               (unsigned long)OPENSSL_VERSION_NUMBER, OPENSSL_VERSION_TEXT,
-               version_num, version_str);
-    }
+  } else {
+    log_warn(LD_CRYPTO,
+             "OpenSSL version from headers does not match the "
+             "version we're running with. If you get weird crashes, that "
+             "might be why. (Compiled with %lx: %s; running with %lx: %s).",
+             (unsigned long)OPENSSL_VERSION_NUMBER, OPENSSL_VERSION_TEXT,
+             version_num, version_str);
+  }
 
-    crypto_force_rand_ssleay();
+  crypto_force_rand_ssleay();
 }
 
 #ifndef DISABLE_ENGINES
@@ -246,10 +252,10 @@ try_load_engine(const char *path, const char *engine)
 {
   ENGINE *e = ENGINE_by_id("dynamic");
   if (e) {
-    if (!ENGINE_ctrl_cmd_string(e, "ID", engine, 0) ||
-        !ENGINE_ctrl_cmd_string(e, "DIR_LOAD", "2", 0) ||
-        !ENGINE_ctrl_cmd_string(e, "DIR_ADD", path, 0) ||
-        !ENGINE_ctrl_cmd_string(e, "LOAD", NULL, 0)) {
+    if (! ENGINE_ctrl_cmd_string(e, "ID", engine, 0) ||
+        ! ENGINE_ctrl_cmd_string(e, "DIR_LOAD", "2", 0) ||
+        ! ENGINE_ctrl_cmd_string(e, "DIR_ADD", path, 0) ||
+        ! ENGINE_ctrl_cmd_string(e, "LOAD", NULL, 0)) {
       ENGINE_free(e);
       e = NULL;
     }
@@ -267,8 +273,8 @@ log_engine(const char *fn, ENGINE *e)
     const char *name, *id;
     name = ENGINE_get_name(e);
     id = ENGINE_get_id(e);
-    log_notice(LD_CRYPTO, "Default OpenSSL engine for %s is %s [%s]",
-               fn, name?name:"?", id?id:"?");
+    log_notice(LD_CRYPTO, "Default OpenSSL engine for %s is %s [%s]", fn,
+               name ? name : "?", id ? id : "?");
   } else {
     log_info(LD_CRYPTO, "Using default implementation for %s", fn);
   }
@@ -283,16 +289,17 @@ log_engine(const char *fn, ENGINE *e)
  * If <b>accelDir</b> is not NULL, it is the path from which the engine should
  * be loaded. */
 static int
-crypto_openssl_init_engines(const char *accelName,
-                            const char *accelDir)
+crypto_openssl_init_engines(const char *accelName, const char *accelDir)
 {
 #ifdef DISABLE_ENGINES
   (void)accelName;
   (void)accelDir;
   log_warn(LD_CRYPTO, "No OpenSSL hardware acceleration support enabled.");
   if (accelName && accelName[0] == '!') {
-    log_warn(LD_CRYPTO, "Unable to load required dynamic OpenSSL engine "
-             "\"%s\".", accelName+1);
+    log_warn(LD_CRYPTO,
+             "Unable to load required dynamic OpenSSL engine "
+             "\"%s\".",
+             accelName + 1);
     return -1;
   }
   return 0;
@@ -308,56 +315,58 @@ crypto_openssl_init_engines(const char *accelName,
     if (required)
       ++accelName;
     if (accelDir) {
-      log_info(LD_CRYPTO, "Trying to load dynamic OpenSSL engine \"%s\""
-               " via path \"%s\".", accelName, accelDir);
+      log_info(LD_CRYPTO,
+               "Trying to load dynamic OpenSSL engine \"%s\""
+               " via path \"%s\".",
+               accelName, accelDir);
       e = try_load_engine(accelName, accelDir);
     } else {
-      log_info(LD_CRYPTO, "Initializing dynamic OpenSSL engine \"%s\""
-               " acceleration support.", accelName);
+      log_info(LD_CRYPTO,
+               "Initializing dynamic OpenSSL engine \"%s\""
+               " acceleration support.",
+               accelName);
       e = ENGINE_by_id(accelName);
     }
-    if (!e) {
+    if (! e) {
       log_warn(LD_CRYPTO, "Unable to load %sdynamic OpenSSL engine \"%s\".",
-               required?"required ":"",
-               accelName);
+               required ? "required " : "", accelName);
       if (required)
         return -1;
     } else {
-      log_info(LD_CRYPTO, "Loaded dynamic OpenSSL engine \"%s\".",
-               accelName);
+      log_info(LD_CRYPTO, "Loaded dynamic OpenSSL engine \"%s\".", accelName);
     }
   }
   if (e) {
     log_info(LD_CRYPTO, "Loaded OpenSSL hardware acceleration engine,"
-             " setting default ciphers.");
+                        " setting default ciphers.");
     ENGINE_set_default(e, ENGINE_METHOD_ALL);
   }
   /* Log, if available, the intersection of the set of algorithms
      used by Tor and the set of algorithms available in the engine */
   log_engine("RSA", ENGINE_get_default_RSA());
   log_engine("DH", ENGINE_get_default_DH());
-#ifdef OPENSSL_1_1_API
+#  ifdef OPENSSL_1_1_API
   log_engine("EC", ENGINE_get_default_EC());
-#else
+#  else
   log_engine("ECDH", ENGINE_get_default_ECDH());
   log_engine("ECDSA", ENGINE_get_default_ECDSA());
-#endif /* defined(OPENSSL_1_1_API) */
+#  endif /* defined(OPENSSL_1_1_API) */
   log_engine("RAND", ENGINE_get_default_RAND());
   log_engine("RAND (which we will not use)", ENGINE_get_default_RAND());
   log_engine("SHA1", ENGINE_get_digest_engine(NID_sha1));
   log_engine("3DES-CBC", ENGINE_get_cipher_engine(NID_des_ede3_cbc));
   log_engine("AES-128-ECB", ENGINE_get_cipher_engine(NID_aes_128_ecb));
   log_engine("AES-128-CBC", ENGINE_get_cipher_engine(NID_aes_128_cbc));
-#ifdef NID_aes_128_ctr
+#  ifdef NID_aes_128_ctr
   log_engine("AES-128-CTR", ENGINE_get_cipher_engine(NID_aes_128_ctr));
-#endif
-#ifdef NID_aes_128_gcm
+#  endif
+#  ifdef NID_aes_128_gcm
   log_engine("AES-128-GCM", ENGINE_get_cipher_engine(NID_aes_128_gcm));
-#endif
+#  endif
   log_engine("AES-256-CBC", ENGINE_get_cipher_engine(NID_aes_256_cbc));
-#ifdef NID_aes_256_gcm
+#  ifdef NID_aes_256_gcm
   log_engine("AES-256-GCM", ENGINE_get_cipher_engine(NID_aes_256_gcm));
-#endif
+#  endif
   return 0;
 
 #endif /* defined(DISABLE_ENGINES) */
@@ -410,9 +419,9 @@ crypto_openssl_global_cleanup(void)
 #endif
 
 #ifndef DISABLE_ENGINES
-#ifndef OPENSSL_1_1_API
+#  ifndef OPENSSL_1_1_API
   ENGINE_cleanup();
-#endif
+#  endif
 #endif
 
   CONF_modules_unload(1);

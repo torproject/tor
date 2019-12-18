@@ -17,7 +17,7 @@
 #include <stddef.h>
 
 #ifdef _WIN32
-#include <windef.h>
+#  include <windef.h>
 #endif
 
 /** Represents an mmaped file. Allocated via tor_mmap_file; freed with
@@ -37,6 +37,6 @@ typedef struct tor_mmap_t {
 } tor_mmap_t;
 
 MOCK_DECL(tor_mmap_t *, tor_mmap_file, (const char *filename));
-MOCK_DECL(int, tor_munmap_file, (tor_mmap_t *handle));
+MOCK_DECL(int, tor_munmap_file, (tor_mmap_t * handle));
 
 #endif /* !defined(TOR_MMAP_H) */

@@ -164,12 +164,12 @@ static void pathbias_check_close_success_count(entry_guard_t *guard);
 static int node_is_possible_guard(const node_t *node);
 static int node_passes_guard_filter(const or_options_t *options,
                                     const node_t *node);
-static entry_guard_t *entry_guard_add_to_sample_impl(guard_selection_t *gs,
-                               const uint8_t *rsa_id_digest,
-                               const char *nickname,
-                               const tor_addr_port_t *bridge_addrport);
-static entry_guard_t *get_sampled_guard_by_bridge_addr(guard_selection_t *gs,
-                                              const tor_addr_port_t *addrport);
+static entry_guard_t *entry_guard_add_to_sample_impl(
+    guard_selection_t *gs, const uint8_t *rsa_id_digest, const char *nickname,
+    const tor_addr_port_t *bridge_addrport);
+static entry_guard_t *
+get_sampled_guard_by_bridge_addr(guard_selection_t *gs,
+                                 const tor_addr_port_t *addrport);
 static int entry_guard_obeys_restriction(const entry_guard_t *guard,
                                          const entry_guard_restriction_t *rst);
 
@@ -200,7 +200,7 @@ static int
 guard_has_descriptor(const entry_guard_t *guard)
 {
   const node_t *node = node_get_by_id(guard->identity);
-  if (!node)
+  if (! node)
     return 0;
   return node_has_preferred_descriptor(node, 1);
 }
@@ -210,13 +210,12 @@ guard_has_descriptor(const entry_guard_t *guard)
  * if <b>type</b> is GS_TYPE_INFER.
  */
 STATIC guard_selection_type_t
-guard_selection_infer_type(guard_selection_type_t type,
-                           const char *name)
+guard_selection_infer_type(guard_selection_type_t type, const char *name)
 {
   if (type == GS_TYPE_INFER) {
-    if (!strcmp(name, "bridges"))
+    if (! strcmp(name, "bridges"))
       type = GS_TYPE_BRIDGE;
-    else if (!strcmp(name, "restricted"))
+    else if (! strcmp(name, "restricted"))
       type = GS_TYPE_RESTRICTED;
     else
       type = GS_TYPE_NORMAL;
@@ -228,8 +227,7 @@ guard_selection_infer_type(guard_selection_type_t type,
  * Allocate and return a new guard_selection_t, with the name <b>name</b>.
  */
 STATIC guard_selection_t *
-guard_selection_new(const char *name,
-                    guard_selection_type_t type)
+guard_selection_new(const char *name, guard_selection_type_t type)
 {
   guard_selection_t *gs;
 
@@ -251,17 +249,17 @@ guard_selection_new(const char *name,
  * is none, and <b>create_if_absent</b> is false, then return NULL.
  */
 STATIC guard_selection_t *
-get_guard_selection_by_name(const char *name,
-                            guard_selection_type_t type,
+get_guard_selection_by_name(const char *name, guard_selection_type_t type,
                             int create_if_absent)
 {
-  if (!guard_contexts) {
+  if (! guard_contexts) {
     guard_contexts = smartlist_new();
   }
-  SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
-    if (!strcmp(gs->name, name))
+  SMARTLIST_FOREACH_BEGIN (guard_contexts, guard_selection_t *, gs) {
+    if (! strcmp(gs->name, name))
       return gs;
-  } SMARTLIST_FOREACH_END(gs);
+  }
+  SMARTLIST_FOREACH_END(gs);
 
   if (! create_if_absent)
     return NULL;
@@ -281,17 +279,15 @@ static void
 create_initial_guard_context(void)
 {
   tor_assert(! curr_guard_context);
-  if (!guard_contexts) {
+  if (! guard_contexts) {
     guard_contexts = smartlist_new();
   }
   guard_selection_type_t type = GS_TYPE_INFER;
-  const char *name = choose_guard_selection(
-                             get_options(),
+  const char *name =
+      choose_guard_selection(get_options(),
                              networkstatus_get_reasonably_live_consensus(
-                                                    approx_time(),
-                                                    usable_consensus_flavor()),
-                             NULL,
-                             &type);
+                                 approx_time(), usable_consensus_flavor()),
+                             NULL, &type);
   tor_assert(name); // "name" can only be NULL if we had an old name.
   tor_assert(type != GS_TYPE_INFER);
   log_notice(LD_GUARD, "Starting with guard context \"%s\"", name);
@@ -302,7 +298,7 @@ create_initial_guard_context(void)
 guard_selection_t *
 get_guard_selection_info(void)
 {
-  if (!curr_guard_context) {
+  if (! curr_guard_context) {
     create_initial_guard_context();
   }
 
@@ -315,8 +311,7 @@ const char *
 entry_guard_describe(const entry_guard_t *guard)
 {
   static char buf[256];
-  tor_snprintf(buf, sizeof(buf),
-               "%s ($%s)",
+  tor_snprintf(buf, sizeof(buf), "%s ($%s)",
                strlen(guard->nickname) ? guard->nickname : "[bridge]",
                hex_str(guard->identity, DIGEST_LEN));
   return buf;
@@ -342,8 +337,7 @@ HANDLE_IMPL(entry_guard, entry_guard_t, ATTR_UNUSED STATIC)
  * chosen uniformly at random.  We use this before recording persistent
  * dates, so that we aren't leaking exactly when we recorded it.
  */
-MOCK_IMPL(STATIC time_t,
-randomize_time,(time_t now, time_t max_backdate))
+MOCK_IMPL(STATIC time_t, randomize_time, (time_t now, time_t max_backdate))
 {
   tor_assert(max_backdate > 0);
 
@@ -372,9 +366,8 @@ STATIC double
 get_max_sample_threshold(void)
 {
   int32_t pct =
-    networkstatus_get_param(NULL, "guard-max-sample-threshold-percent",
-                            DFLT_MAX_SAMPLE_THRESHOLD_PERCENT,
-                            1, 100);
+      networkstatus_get_param(NULL, "guard-max-sample-threshold-percent",
+                              DFLT_MAX_SAMPLE_THRESHOLD_PERCENT, 1, 100);
   return pct / 100.0;
 }
 /**
@@ -383,9 +376,8 @@ get_max_sample_threshold(void)
 STATIC int
 get_max_sample_size_absolute(void)
 {
-  return (int) networkstatus_get_param(NULL, "guard-max-sample-size",
-                                       DFLT_MAX_SAMPLE_SIZE,
-                                       1, INT32_MAX);
+  return (int)networkstatus_get_param(NULL, "guard-max-sample-size",
+                                      DFLT_MAX_SAMPLE_SIZE, 1, INT32_MAX);
 }
 /**
  * We always try to make our sample contain at least this many guards.
@@ -394,8 +386,7 @@ STATIC int
 get_min_filtered_sample_size(void)
 {
   return networkstatus_get_param(NULL, "guard-min-filtered-sample-size",
-                                 DFLT_MIN_FILTERED_SAMPLE_SIZE,
-                                 1, INT32_MAX);
+                                 DFLT_MIN_FILTERED_SAMPLE_SIZE, 1, INT32_MAX);
 }
 /**
  * If a guard is unlisted for this many days in a row, we remove it.
@@ -403,10 +394,9 @@ get_min_filtered_sample_size(void)
 STATIC int
 get_remove_unlisted_guards_after_days(void)
 {
-  return networkstatus_get_param(NULL,
-                                 "guard-remove-unlisted-guards-after-days",
-                                 DFLT_REMOVE_UNLISTED_GUARDS_AFTER_DAYS,
-                                 1, 365*10);
+  return networkstatus_get_param(
+      NULL, "guard-remove-unlisted-guards-after-days",
+      DFLT_REMOVE_UNLISTED_GUARDS_AFTER_DAYS, 1, 365 * 10);
 }
 
 /**
@@ -429,9 +419,8 @@ get_guard_lifetime(void)
   if (get_options()->GuardLifetime >= 86400)
     return get_options()->GuardLifetime;
   int32_t days;
-  days = networkstatus_get_param(NULL,
-                                 "guard-lifetime-days",
-                                 DFLT_GUARD_LIFETIME_DAYS, 1, 365*10);
+  days = networkstatus_get_param(NULL, "guard-lifetime-days",
+                                 DFLT_GUARD_LIFETIME_DAYS, 1, 365 * 10);
   return days * 86400;
 }
 /**
@@ -445,8 +434,8 @@ get_guard_confirmed_min_lifetime(void)
     return get_options()->GuardLifetime;
   int32_t days;
   days = networkstatus_get_param(NULL, "guard-confirmed-min-lifetime-days",
-                                 DFLT_GUARD_CONFIRMED_MIN_LIFETIME_DAYS,
-                                 1, 365*10);
+                                 DFLT_GUARD_CONFIRMED_MIN_LIFETIME_DAYS, 1,
+                                 365 * 10);
   return days * 86400;
 }
 /**
@@ -464,8 +453,7 @@ get_n_primary_guards(void)
 
   /* otherwise check for consensus parameter and if that's not set either, just
    * use the default value. */
-  return networkstatus_get_param(NULL,
-                                 "guard-n-primary-guards",
+  return networkstatus_get_param(NULL, "guard-n-primary-guards",
                                  DFLT_N_PRIMARY_GUARDS, 1, INT32_MAX);
 }
 /**
@@ -493,8 +481,8 @@ get_n_primary_guards_to_use(guard_usage_t usage)
   if (configured >= 1) {
     return configured;
   }
-  return networkstatus_get_param(NULL,
-                                 param_name, param_default, 1, INT32_MAX);
+  return networkstatus_get_param(NULL, param_name, param_default, 1,
+                                 INT32_MAX);
 }
 /**
  * If we haven't successfully built or used a circuit in this long, then
@@ -504,8 +492,8 @@ STATIC int
 get_internet_likely_down_interval(void)
 {
   return networkstatus_get_param(NULL, "guard-internet-likely-down-interval",
-                                 DFLT_INTERNET_LIKELY_DOWN_INTERVAL,
-                                 1, INT32_MAX);
+                                 DFLT_INTERNET_LIKELY_DOWN_INTERVAL, 1,
+                                 INT32_MAX);
 }
 /**
  * If we're trying to connect to a nonprimary guard for at least this
@@ -515,10 +503,9 @@ get_internet_likely_down_interval(void)
 STATIC int
 get_nonprimary_guard_connect_timeout(void)
 {
-  return networkstatus_get_param(NULL,
-                                 "guard-nonprimary-guard-connect-timeout",
-                                 DFLT_NONPRIMARY_GUARD_CONNECT_TIMEOUT,
-                                 1, INT32_MAX);
+  return networkstatus_get_param(
+      NULL, "guard-nonprimary-guard-connect-timeout",
+      DFLT_NONPRIMARY_GUARD_CONNECT_TIMEOUT, 1, INT32_MAX);
 }
 /**
  * If a circuit has been sitting around in 'waiting for better guard' state
@@ -527,10 +514,9 @@ get_nonprimary_guard_connect_timeout(void)
 STATIC int
 get_nonprimary_guard_idle_timeout(void)
 {
-  return networkstatus_get_param(NULL,
-                                 "guard-nonprimary-guard-idle-timeout",
-                                 DFLT_NONPRIMARY_GUARD_IDLE_TIMEOUT,
-                                 1, INT32_MAX);
+  return networkstatus_get_param(NULL, "guard-nonprimary-guard-idle-timeout",
+                                 DFLT_NONPRIMARY_GUARD_IDLE_TIMEOUT, 1,
+                                 INT32_MAX);
 }
 /**
  * If our configuration retains fewer than this fraction of guards from the
@@ -539,10 +525,9 @@ get_nonprimary_guard_idle_timeout(void)
 STATIC double
 get_meaningful_restriction_threshold(void)
 {
-  int32_t pct = networkstatus_get_param(NULL,
-                                        "guard-meaningful-restriction-percent",
-                                        DFLT_MEANINGFUL_RESTRICTION_PERCENT,
-                                        1, INT32_MAX);
+  int32_t pct = networkstatus_get_param(
+      NULL, "guard-meaningful-restriction-percent",
+      DFLT_MEANINGFUL_RESTRICTION_PERCENT, 1, INT32_MAX);
   return pct / 100.0;
 }
 /**
@@ -552,10 +537,9 @@ get_meaningful_restriction_threshold(void)
 STATIC double
 get_extreme_restriction_threshold(void)
 {
-  int32_t pct = networkstatus_get_param(NULL,
-                                        "guard-extreme-restriction-percent",
-                                        DFLT_EXTREME_RESTRICTION_PERCENT,
-                                        1, INT32_MAX);
+  int32_t pct =
+      networkstatus_get_param(NULL, "guard-extreme-restriction-percent",
+                              DFLT_EXTREME_RESTRICTION_PERCENT, 1, INT32_MAX);
   return pct / 100.0;
 }
 
@@ -584,12 +568,13 @@ mark_primary_guards_maybe_reachable(guard_selection_t *gs)
 {
   tor_assert(gs);
 
-  if (!gs->primary_guards_up_to_date)
+  if (! gs->primary_guards_up_to_date)
     entry_guards_update_primary(gs);
 
-  SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->primary_entry_guards, entry_guard_t *, guard) {
     mark_guard_maybe_reachable(guard);
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
 }
 
 /* Called when we exhaust all guards in our sampled set: Marks all guards as
@@ -599,9 +584,10 @@ mark_all_guards_maybe_reachable(guard_selection_t *gs)
 {
   tor_assert(gs);
 
-  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->sampled_entry_guards, entry_guard_t *, guard) {
     mark_guard_maybe_reachable(guard);
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
 }
 
 /**@}*/
@@ -633,25 +619,26 @@ choose_guard_selection(const or_options_t *options,
 
   const smartlist_t *nodes = nodelist_get_list();
   int n_guards = 0, n_passing_filter = 0;
-  SMARTLIST_FOREACH_BEGIN(nodes, const node_t *, node) {
+  SMARTLIST_FOREACH_BEGIN (nodes, const node_t *, node) {
     if (node_is_possible_guard(node)) {
       ++n_guards;
       if (node_passes_guard_filter(options, node)) {
         ++n_passing_filter;
       }
     }
-  } SMARTLIST_FOREACH_END(node);
+  }
+  SMARTLIST_FOREACH_END(node);
 
   /* We use separate 'high' and 'low' thresholds here to prevent flapping
    * back and forth */
   const int meaningful_threshold_high =
-    (int)(n_guards * get_meaningful_restriction_threshold() * 1.05);
+      (int)(n_guards * get_meaningful_restriction_threshold() * 1.05);
   const int meaningful_threshold_mid =
-    (int)(n_guards * get_meaningful_restriction_threshold());
+      (int)(n_guards * get_meaningful_restriction_threshold());
   const int meaningful_threshold_low =
-    (int)(n_guards * get_meaningful_restriction_threshold() * .95);
+      (int)(n_guards * get_meaningful_restriction_threshold() * .95);
   const int extreme_threshold =
-    (int)(n_guards * get_extreme_restriction_threshold());
+      (int)(n_guards * get_extreme_restriction_threshold());
 
   /*
     If we have no previous selection, then we're "restricted" iff we are
@@ -668,15 +655,16 @@ choose_guard_selection(const or_options_t *options,
   */
 
   static int have_warned_extreme_threshold = 0;
-  if (n_guards &&
-      n_passing_filter < extreme_threshold &&
+  if (n_guards && n_passing_filter < extreme_threshold &&
       ! have_warned_extreme_threshold) {
     have_warned_extreme_threshold = 1;
     const double exclude_frac =
-      (n_guards - n_passing_filter) / (double)n_guards;
-    log_warn(LD_GUARD, "Your configuration excludes %d%% of all possible "
+        (n_guards - n_passing_filter) / (double)n_guards;
+    log_warn(LD_GUARD,
+             "Your configuration excludes %d%% of all possible "
              "guards. That's likely to make you stand out from the "
-             "rest of the world.", (int)(exclude_frac * 100));
+             "rest of the world.",
+             (int)(exclude_frac * 100));
   }
 
   /* Easy case: no previous selection. Just check if we are in restricted or
@@ -720,26 +708,24 @@ choose_guard_selection(const or_options_t *options,
 int
 update_guard_selection_choice(const or_options_t *options)
 {
-  if (!curr_guard_context) {
+  if (! curr_guard_context) {
     create_initial_guard_context();
     return 1;
   }
 
   guard_selection_type_t type = GS_TYPE_INFER;
-  const char *new_name = choose_guard_selection(
-                             options,
+  const char *new_name =
+      choose_guard_selection(options,
                              networkstatus_get_reasonably_live_consensus(
-                                                    approx_time(),
-                                                    usable_consensus_flavor()),
-                             curr_guard_context,
-                             &type);
+                                 approx_time(), usable_consensus_flavor()),
+                             curr_guard_context, &type);
   tor_assert(new_name);
   tor_assert(type != GS_TYPE_INFER);
 
   const char *cur_name = curr_guard_context->name;
   if (! strcmp(cur_name, new_name)) {
-    log_debug(LD_GUARD,
-              "Staying with guard context \"%s\" (no change)", new_name);
+    log_debug(LD_GUARD, "Staying with guard context \"%s\" (no change)",
+              new_name);
     return 0; // No change
   }
 
@@ -765,27 +751,24 @@ node_is_possible_guard(const node_t *node)
    * holds. */
 
   tor_assert(node);
-  return (node->is_possible_guard &&
-          node->is_stable &&
-          node->is_fast &&
-          node->is_valid &&
-          node_is_dir(node) &&
-          !router_digest_is_me(node->identity));
+  return (node->is_possible_guard && node->is_stable && node->is_fast &&
+          node->is_valid && node_is_dir(node) &&
+          ! router_digest_is_me(node->identity));
 }
 
 /**
  * Return the sampled guard with the RSA identity digest <b>rsa_id</b>, or
  * NULL if we don't have one. */
 STATIC entry_guard_t *
-get_sampled_guard_with_id(guard_selection_t *gs,
-                          const uint8_t *rsa_id)
+get_sampled_guard_with_id(guard_selection_t *gs, const uint8_t *rsa_id)
 {
   tor_assert(gs);
   tor_assert(rsa_id);
-  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->sampled_entry_guards, entry_guard_t *, guard) {
     if (tor_memeq(guard->identity, rsa_id, DIGEST_LEN))
       return guard;
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
   return NULL;
 }
 
@@ -798,7 +781,7 @@ get_sampled_guard_for_bridge(guard_selection_t *gs,
   const uint8_t *id = bridge_get_rsa_id_digest(bridge);
   const tor_addr_port_t *addrport = bridge_get_addr_port(bridge);
   entry_guard_t *guard;
-  if (BUG(!addrport))
+  if (BUG(! addrport))
     return NULL; // LCOV_EXCL_LINE
   guard = get_sampled_guard_by_bridge_addr(gs, addrport);
   if (! guard || (id && tor_memneq(id, guard->identity, DIGEST_LEN)))
@@ -820,9 +803,8 @@ get_bridge_info_for_guard(const entry_guard_t *guard)
     return NULL;
 
   return get_configured_bridge_by_exact_addr_port_digest(
-                                                 &guard->bridge_addr->addr,
-                                                 guard->bridge_addr->port,
-                                                 (const char*)identity);
+      &guard->bridge_addr->addr, guard->bridge_addr->port,
+      (const char *)identity);
 }
 
 /**
@@ -840,20 +822,17 @@ have_sampled_guard_with_id(guard_selection_t *gs, const uint8_t *rsa_id)
  * not currently be a sampled guard in <b>gs</b>.
  */
 STATIC entry_guard_t *
-entry_guard_add_to_sample(guard_selection_t *gs,
-                          const node_t *node)
+entry_guard_add_to_sample(guard_selection_t *gs, const node_t *node)
 {
   log_info(LD_GUARD, "Adding %s to the entry guard sample set.",
            node_describe(node));
 
   /* make sure that the guard is not already sampled. */
-  if (BUG(have_sampled_guard_with_id(gs, (const uint8_t*)node->identity)))
+  if (BUG(have_sampled_guard_with_id(gs, (const uint8_t *)node->identity)))
     return NULL; // LCOV_EXCL_LINE
 
-  return entry_guard_add_to_sample_impl(gs,
-                                        (const uint8_t*)node->identity,
-                                        node_get_nickname(node),
-                                        NULL);
+  return entry_guard_add_to_sample_impl(gs, (const uint8_t *)node->identity,
+                                        node_get_nickname(node), NULL);
 }
 
 /**
@@ -874,7 +853,7 @@ entry_guard_add_to_sample_impl(guard_selection_t *gs,
   // XXXX #20827 take ed25519 identity here too.
 
   /* Make sure we can actually identify the guard. */
-  if (BUG(!rsa_id_digest && !bridge_addrport))
+  if (BUG(! rsa_id_digest && ! bridge_addrport))
     return NULL; // LCOV_EXCL_LINE
 
   entry_guard_t *guard = tor_malloc_zero(sizeof(entry_guard_t));
@@ -886,7 +865,7 @@ entry_guard_add_to_sample_impl(guard_selection_t *gs,
     memcpy(guard->identity, rsa_id_digest, DIGEST_LEN);
   if (nickname)
     strlcpy(guard->nickname, nickname, sizeof(guard->nickname));
-  guard->sampled_on_date = randomize_time(approx_time(), GUARD_LIFETIME/10);
+  guard->sampled_on_date = randomize_time(approx_time(), GUARD_LIFETIME / 10);
   tor_free(guard->sampled_by_version);
   guard->sampled_by_version = tor_strdup(VERSION);
   guard->currently_listed = 1;
@@ -927,19 +906,20 @@ entry_guard_add_bridge_to_sample(guard_selection_t *gs,
 /**
  * Return the entry_guard_t in <b>gs</b> whose address is <b>addrport</b>,
  * or NULL if none exists.
-*/
+ */
 static entry_guard_t *
 get_sampled_guard_by_bridge_addr(guard_selection_t *gs,
                                  const tor_addr_port_t *addrport)
 {
   if (! gs)
     return NULL;
-  if (BUG(!addrport))
+  if (BUG(! addrport))
     return NULL;
-  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, g) {
+  SMARTLIST_FOREACH_BEGIN (gs->sampled_entry_guards, entry_guard_t *, g) {
     if (g->bridge_addr && tor_addr_port_eq(addrport, g->bridge_addr))
       return g;
-  } SMARTLIST_FOREACH_END(g);
+  }
+  SMARTLIST_FOREACH_END(g);
   return NULL;
 }
 
@@ -950,14 +930,13 @@ void
 entry_guard_learned_bridge_identity(const tor_addr_port_t *addrport,
                                     const uint8_t *rsa_id_digest)
 {
-  guard_selection_t *gs = get_guard_selection_by_name("bridges",
-                                                      GS_TYPE_BRIDGE,
-                                                      0);
-  if (!gs)
+  guard_selection_t *gs =
+      get_guard_selection_by_name("bridges", GS_TYPE_BRIDGE, 0);
+  if (! gs)
     return;
 
   entry_guard_t *g = get_sampled_guard_by_bridge_addr(gs, addrport);
-  if (!g)
+  if (! g)
     return;
 
   int make_persistent = 0;
@@ -970,14 +949,14 @@ entry_guard_learned_bridge_identity(const tor_addr_port_t *addrport,
     if (BUG(! g->is_persistent))
       make_persistent = 1;
   } else {
-    char old_id[HEX_DIGEST_LEN+1];
+    char old_id[HEX_DIGEST_LEN + 1];
     base16_encode(old_id, sizeof(old_id), g->identity, sizeof(g->identity));
-    log_warn(LD_BUG, "We 'learned' an identity %s for a bridge at %s:%d, but "
+    log_warn(LD_BUG,
+             "We 'learned' an identity %s for a bridge at %s:%d, but "
              "we already knew a different one (%s). Ignoring the new info as "
              "possibly bogus.",
              hex_str((const char *)rsa_id_digest, DIGEST_LEN),
-             fmt_and_decorate_addr(&addrport->addr), addrport->port,
-             old_id);
+             fmt_and_decorate_addr(&addrport->addr), addrport->port, old_id);
     return; // redundant, but let's be clear: we're not making this persistent.
   }
 
@@ -1000,21 +979,21 @@ num_reachable_filtered_guards(const guard_selection_t *gs,
                               const entry_guard_restriction_t *rst)
 {
   int n_reachable_filtered_guards = 0;
-  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->sampled_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);
     if (! entry_guard_obeys_restriction(guard, rst))
       continue;
     if (guard->is_usable_filtered_guard)
       ++n_reachable_filtered_guards;
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
   return n_reachable_filtered_guards;
 }
 
 /** Return the actual maximum size for the sample in <b>gs</b>,
  * given that we know about <b>n_guards</b> total. */
 static int
-get_max_sample_size(guard_selection_t *gs,
-                    int n_guards)
+get_max_sample_size(guard_selection_t *gs, int n_guards)
 {
   const int using_bridges = (gs->type == GS_TYPE_BRIDGE);
   const int min_sample = get_min_filtered_sample_size();
@@ -1043,8 +1022,7 @@ get_max_sample_size(guard_selection_t *gs,
  * that were already sampled.
  */
 static smartlist_t *
-get_eligible_guards(const or_options_t *options,
-                    guard_selection_t *gs,
+get_eligible_guards(const or_options_t *options, guard_selection_t *gs,
                     int *n_guards_out)
 {
   /* Construct eligible_guards as GUARDS - SAMPLED_GUARDS */
@@ -1053,25 +1031,27 @@ get_eligible_guards(const or_options_t *options,
 
   if (gs->type == GS_TYPE_BRIDGE) {
     const smartlist_t *bridges = bridge_list_get();
-    SMARTLIST_FOREACH_BEGIN(bridges, bridge_info_t *, bridge) {
+    SMARTLIST_FOREACH_BEGIN (bridges, bridge_info_t *, bridge) {
       ++n_guards;
       if (NULL != get_sampled_guard_for_bridge(gs, bridge)) {
         continue;
       }
       smartlist_add(eligible_guards, bridge);
-    } SMARTLIST_FOREACH_END(bridge);
+    }
+    SMARTLIST_FOREACH_END(bridge);
   } else {
     const smartlist_t *nodes = nodelist_get_list();
     const int n_sampled = smartlist_len(gs->sampled_entry_guards);
 
     /* Build a bloom filter of our current guards: let's keep this O(N). */
     digestset_t *sampled_guard_ids = digestset_new(n_sampled);
-    SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, const entry_guard_t *,
-                            guard) {
+    SMARTLIST_FOREACH_BEGIN (gs->sampled_entry_guards, const entry_guard_t *,
+                             guard) {
       digestset_add(sampled_guard_ids, guard->identity);
-    } SMARTLIST_FOREACH_END(guard);
+    }
+    SMARTLIST_FOREACH_END(guard);
 
-    SMARTLIST_FOREACH_BEGIN(nodes, const node_t *, node) {
+    SMARTLIST_FOREACH_BEGIN (nodes, const node_t *, node) {
       if (! node_is_possible_guard(node))
         continue;
       if (gs->type == GS_TYPE_RESTRICTED) {
@@ -1085,8 +1065,9 @@ get_eligible_guards(const or_options_t *options,
       ++n_guards;
       if (digestset_probably_contains(sampled_guard_ids, node->identity))
         continue;
-      smartlist_add(eligible_guards, (node_t*)node);
-    } SMARTLIST_FOREACH_END(node);
+      smartlist_add(eligible_guards, (node_t *)node);
+    }
+    SMARTLIST_FOREACH_END(node);
 
     /* Now we can free that bloom filter. */
     digestset_free(sampled_guard_ids);
@@ -1107,14 +1088,14 @@ select_and_add_guard_item_for_sample(guard_selection_t *gs,
   entry_guard_t *added_guard;
   if (gs->type == GS_TYPE_BRIDGE) {
     const bridge_info_t *bridge = smartlist_choose(eligible_guards);
-    if (BUG(!bridge))
+    if (BUG(! bridge))
       return NULL; // LCOV_EXCL_LINE
     smartlist_remove(eligible_guards, bridge);
     added_guard = entry_guard_add_bridge_to_sample(gs, bridge);
   } else {
     const node_t *node =
-      node_sl_choose_by_bandwidth(eligible_guards, WEIGHT_FOR_GUARD);
-    if (BUG(!node))
+        node_sl_choose_by_bandwidth(eligible_guards, WEIGHT_FOR_GUARD);
+    if (BUG(! node))
       return NULL; // LCOV_EXCL_LINE
     smartlist_remove(eligible_guards, node);
     added_guard = entry_guard_add_to_sample(gs, node);
@@ -1137,8 +1118,7 @@ reasonably_live_consensus_is_missing(const guard_selection_t *gs)
     return 0;
   }
   return networkstatus_get_reasonably_live_consensus(
-                                            approx_time(),
-                                            usable_consensus_flavor()) == NULL;
+             approx_time(), usable_consensus_flavor()) == NULL;
 }
 
 /**
@@ -1155,7 +1135,7 @@ entry_guards_expand_sample(guard_selection_t *gs)
 
   if (reasonably_live_consensus_is_missing(gs)) {
     log_info(LD_GUARD, "Not expanding the sample guard set; we have "
-             "no reasonably live consensus.");
+                       "no reasonably live consensus.");
     return NULL;
   }
 
@@ -1168,14 +1148,16 @@ entry_guards_expand_sample(guard_selection_t *gs)
   const int max_sample = get_max_sample_size(gs, n_guards);
   const int min_filtered_sample = get_min_filtered_sample_size();
 
-  log_info(LD_GUARD, "Expanding the sample guard set. We have %d guards "
+  log_info(LD_GUARD,
+           "Expanding the sample guard set. We have %d guards "
            "in the sample, and %d eligible guards to extend it with.",
            n_sampled, smartlist_len(eligible_guards));
 
   while (n_usable_filtered_guards < min_filtered_sample) {
     /* Has our sample grown too large to expand? */
     if (n_sampled >= max_sample) {
-      log_info(LD_GUARD, "Not expanding the guard sample any further; "
+      log_info(LD_GUARD,
+               "Not expanding the guard sample any further; "
                "just hit the maximum sample threshold of %d",
                max_sample);
       goto done;
@@ -1188,14 +1170,14 @@ entry_guards_expand_sample(guard_selection_t *gs)
          allow all guards to be sampled, this can't be reached.
        */
       log_info(LD_GUARD, "Not expanding the guard sample any further; "
-               "just ran out of eligible guards");
+                         "just ran out of eligible guards");
       goto done;
       /* LCOV_EXCL_STOP */
     }
 
     /* Otherwise we can add at least one new guard. */
     added_guard = select_and_add_guard_item_for_sample(gs, eligible_guards);
-    if (!added_guard)
+    if (! added_guard)
       goto done; // LCOV_EXCL_LINE -- only fails on BUG.
 
     ++n_sampled;
@@ -1204,7 +1186,7 @@ entry_guards_expand_sample(guard_selection_t *gs)
       ++n_usable_filtered_guards;
   }
 
- done:
+done:
   smartlist_free(eligible_guards);
   return added_guard;
 }
@@ -1241,8 +1223,8 @@ remove_guard_from_confirmed_and_primary_lists(guard_selection_t *gs,
 /** Return true iff <b>guard</b> is currently "listed" -- that is, it
  * appears in the consensus, or as a configured bridge (as
  * appropriate) */
-MOCK_IMPL(STATIC int,
-entry_guard_is_listed,(guard_selection_t *gs, const entry_guard_t *guard))
+MOCK_IMPL(STATIC int, entry_guard_is_listed,
+          (guard_selection_t * gs, const entry_guard_t *guard))
 {
   if (gs->type == GS_TYPE_BRIDGE) {
     return NULL != get_bridge_info_for_guard(guard);
@@ -1274,9 +1256,9 @@ sampled_guards_update_consensus_presence(guard_selection_t *gs)
   tor_assert(gs);
 
   const time_t unlisted_since_slop =
-    get_remove_unlisted_guards_after_seconds() /  5;
+      get_remove_unlisted_guards_after_seconds() / 5;
 
-  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->sampled_entry_guards, entry_guard_t *, guard) {
     /* XXXX #20827 check ed ID too */
     const int is_listed = entry_guard_is_listed(gs, guard);
 
@@ -1286,16 +1268,16 @@ sampled_guards_update_consensus_presence(guard_selection_t *gs)
       guard->unlisted_since_date = 0;
       log_info(LD_GUARD, "Sampled guard %s is now listed again.",
                entry_guard_describe(guard));
-    } else if (!is_listed && guard->currently_listed) {
+    } else if (! is_listed && guard->currently_listed) {
       ++n_changes;
       guard->currently_listed = 0;
-      guard->unlisted_since_date = randomize_time(approx_time(),
-                                                  unlisted_since_slop);
+      guard->unlisted_since_date =
+          randomize_time(approx_time(), unlisted_since_slop);
       log_info(LD_GUARD, "Sampled guard %s is now unlisted.",
                entry_guard_describe(guard));
     } else if (is_listed && guard->currently_listed) {
       log_debug(LD_GUARD, "Sampled guard %s is still listed.",
-               entry_guard_describe(guard));
+                entry_guard_describe(guard));
     } else {
       tor_assert(! is_listed && ! guard->currently_listed);
       log_debug(LD_GUARD, "Sampled guard %s is still unlisted.",
@@ -1306,18 +1288,21 @@ sampled_guards_update_consensus_presence(guard_selection_t *gs)
     if (guard->currently_listed && guard->unlisted_since_date) {
       ++n_changes;
       guard->unlisted_since_date = 0;
-      log_warn(LD_BUG, "Sampled guard %s was listed, but with "
+      log_warn(LD_BUG,
+               "Sampled guard %s was listed, but with "
                "unlisted_since_date set. Fixing.",
                entry_guard_describe(guard));
-    } else if (!guard->currently_listed && ! guard->unlisted_since_date) {
+    } else if (! guard->currently_listed && ! guard->unlisted_since_date) {
       ++n_changes;
-      guard->unlisted_since_date = randomize_time(approx_time(),
-                                                  unlisted_since_slop);
-      log_warn(LD_BUG, "Sampled guard %s was unlisted, but with "
+      guard->unlisted_since_date =
+          randomize_time(approx_time(), unlisted_since_slop);
+      log_warn(LD_BUG,
+               "Sampled guard %s was unlisted, but with "
                "unlisted_since_date unset. Fixing.",
                entry_guard_describe(guard));
     }
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
 
   return n_changes;
 }
@@ -1337,16 +1322,16 @@ sampled_guards_update_consensus_presence(guard_selection_t *gs)
  * Return number of entries deleted.
  */
 static size_t
-sampled_guards_prune_obsolete_entries(guard_selection_t *gs,
-                                  const time_t remove_if_unlisted_since,
-                                  const time_t maybe_remove_if_sampled_before,
-                                  const time_t remove_if_confirmed_before)
+sampled_guards_prune_obsolete_entries(
+    guard_selection_t *gs, const time_t remove_if_unlisted_since,
+    const time_t maybe_remove_if_sampled_before,
+    const time_t remove_if_confirmed_before)
 {
   size_t n_changes = 0;
 
   tor_assert(gs);
 
-  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->sampled_entry_guards, entry_guard_t *, guard) {
     int rmv = 0;
 
     if (guard->currently_listed == 0 &&
@@ -1356,8 +1341,10 @@ sampled_guards_prune_obsolete_entries(guard_selection_t *gs,
          {FIRST_UNLISTED_AT} is over get_remove_unlisted_guards_after_days()
          days in the past."
       */
-      log_info(LD_GUARD, "Removing sampled guard %s: it has been unlisted "
-               "for over %d days", entry_guard_describe(guard),
+      log_info(LD_GUARD,
+               "Removing sampled guard %s: it has been unlisted "
+               "for over %d days",
+               entry_guard_describe(guard),
                get_remove_unlisted_guards_after_days());
       rmv = 1;
     } else if (guard->sampled_on_date < maybe_remove_if_sampled_before) {
@@ -1367,16 +1354,16 @@ sampled_guards_prune_obsolete_entries(guard_selection_t *gs,
       */
       if (guard->confirmed_on_date == 0) {
         rmv = 1;
-        log_info(LD_GUARD, "Removing sampled guard %s: it was sampled "
+        log_info(LD_GUARD,
+                 "Removing sampled guard %s: it was sampled "
                  "over %d days ago, but never confirmed.",
-                 entry_guard_describe(guard),
-                 get_guard_lifetime() / 86400);
+                 entry_guard_describe(guard), get_guard_lifetime() / 86400);
       } else if (guard->confirmed_on_date < remove_if_confirmed_before) {
         rmv = 1;
-        log_info(LD_GUARD, "Removing sampled guard %s: it was sampled "
+        log_info(LD_GUARD,
+                 "Removing sampled guard %s: it was sampled "
                  "over %d days ago, and confirmed over %d days ago.",
-                 entry_guard_describe(guard),
-                 get_guard_lifetime() / 86400,
+                 entry_guard_describe(guard), get_guard_lifetime() / 86400,
                  get_guard_confirmed_min_lifetime() / 86400);
       }
     }
@@ -1387,7 +1374,8 @@ sampled_guards_prune_obsolete_entries(guard_selection_t *gs,
       remove_guard_from_confirmed_and_primary_lists(gs, guard);
       entry_guard_free(guard);
     }
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
 
   return n_changes;
 }
@@ -1406,28 +1394,26 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
   // But we don't want to make changes based on anything that's really old.
   if (reasonably_live_consensus_is_missing(gs)) {
     log_info(LD_GUARD, "Not updating the sample guard set; we have "
-             "no reasonably live consensus.");
+                       "no reasonably live consensus.");
     return;
   }
   log_info(LD_GUARD, "Updating sampled guard status based on received "
-           "consensus.");
+                     "consensus.");
 
   /* First: Update listed/unlisted. */
   size_t n_changes = sampled_guards_update_consensus_presence(gs);
 
   const time_t remove_if_unlisted_since =
-    approx_time() - get_remove_unlisted_guards_after_seconds();
+      approx_time() - get_remove_unlisted_guards_after_seconds();
   const time_t maybe_remove_if_sampled_before =
-    approx_time() - get_guard_lifetime();
+      approx_time() - get_guard_lifetime();
   const time_t remove_if_confirmed_before =
-    approx_time() - get_guard_confirmed_min_lifetime();
+      approx_time() - get_guard_confirmed_min_lifetime();
 
   /* Then: remove the ones that have been junk for too long */
-  n_changes +=
-    sampled_guards_prune_obsolete_entries(gs,
-                                          remove_if_unlisted_since,
-                                          maybe_remove_if_sampled_before,
-                                          remove_if_confirmed_before);
+  n_changes += sampled_guards_prune_obsolete_entries(
+      gs, remove_if_unlisted_since, maybe_remove_if_sampled_before,
+      remove_if_confirmed_before);
 
   if (n_changes) {
     gs->primary_guards_up_to_date = 0;
@@ -1444,8 +1430,7 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
  * Return true iff <b>node</b> is a Tor relay that we are configured to
  * be able to connect to. */
 static int
-node_passes_guard_filter(const or_options_t *options,
-                         const node_t *node)
+node_passes_guard_filter(const or_options_t *options, const node_t *node)
 {
   /* NOTE: Make sure that this function stays in sync with
    * options_transition_affects_entry_guards */
@@ -1453,10 +1438,10 @@ node_passes_guard_filter(const or_options_t *options,
     return 0;
 
   if (options->EntryNodes &&
-      !routerset_contains_node(options->EntryNodes, node))
+      ! routerset_contains_node(options->EntryNodes, node))
     return 0;
 
-  if (!fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION, 0))
+  if (! fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION, 0))
     return 0;
 
   if (node_is_a_configured_bridge(node))
@@ -1473,7 +1458,7 @@ bridge_passes_guard_filter(const or_options_t *options,
                            const bridge_info_t *bridge)
 {
   tor_assert(bridge);
-  if (!bridge)
+  if (! bridge)
     return 0;
 
   if (routerset_contains_bridge(options->ExcludeNodes, bridge))
@@ -1482,10 +1467,8 @@ bridge_passes_guard_filter(const or_options_t *options,
   /* Ignore entrynodes */
   const tor_addr_port_t *addrport = bridge_get_addr_port(bridge);
 
-  if (!fascist_firewall_allows_address_addr(&addrport->addr,
-                                            addrport->port,
-                                            FIREWALL_OR_CONNECTION,
-                                            0, 0))
+  if (! fascist_firewall_allows_address_addr(&addrport->addr, addrport->port,
+                                             FIREWALL_OR_CONNECTION, 0, 0))
     return 0;
 
   return 1;
@@ -1580,8 +1563,10 @@ should_set_md_dirserver_restriction(void)
 
   /* Don't set restriction if too few reachable filtered guards. */
   if (num_usable_guards < MIN_GUARDS_FOR_MD_RESTRICTION) {
-    log_info(LD_GUARD, "Not setting md restriction: only %d"
-             " usable guards.", num_usable_guards);
+    log_info(LD_GUARD,
+             "Not setting md restriction: only %d"
+             " usable guards.",
+             num_usable_guards);
     return 0;
   }
 
@@ -1596,9 +1581,9 @@ guard_create_dirserver_md_restriction(void)
 {
   entry_guard_restriction_t *rst = NULL;
 
-  if (!should_set_md_dirserver_restriction()) {
+  if (! should_set_md_dirserver_restriction()) {
     log_debug(LD_GUARD, "Not setting md restriction: too few "
-              "filtered guards.");
+                        "filtered guards.");
     return NULL;
   }
 
@@ -1616,7 +1601,7 @@ guard_obeys_exit_restriction(const entry_guard_t *guard,
   tor_assert(rst->type == RST_EXIT_NODE);
 
   // Exclude the exit ID and all of its family.
-  const node_t *node = node_get_by_id((const char*)rst->exclude_id);
+  const node_t *node = node_get_by_id((const char *)rst->exclude_id);
   if (node && guard_in_node_family(guard, node))
     return 0;
 
@@ -1668,8 +1653,7 @@ entry_guard_obeys_restriction(const entry_guard_t *guard,
  * flags on <b>guard</b>. */
 void
 entry_guard_set_filtered_flags(const or_options_t *options,
-                               guard_selection_t *gs,
-                               entry_guard_t *guard)
+                               guard_selection_t *gs, entry_guard_t *guard)
 {
   unsigned was_filtered = guard->is_filtered_guard;
   guard->is_filtered_guard = 0;
@@ -1683,11 +1667,13 @@ entry_guard_set_filtered_flags(const or_options_t *options,
 
     entry_guard_consider_retry(guard);
   }
-  log_debug(LD_GUARD, "Updated sampled guard %s: filtered=%d; "
-            "reachable_filtered=%d.", entry_guard_describe(guard),
-            guard->is_filtered_guard, guard->is_usable_filtered_guard);
+  log_debug(LD_GUARD,
+            "Updated sampled guard %s: filtered=%d; "
+            "reachable_filtered=%d.",
+            entry_guard_describe(guard), guard->is_filtered_guard,
+            guard->is_usable_filtered_guard);
 
-  if (!bool_eq(was_filtered, guard->is_filtered_guard)) {
+  if (! bool_eq(was_filtered, guard->is_filtered_guard)) {
     /* This guard might now be primary or nonprimary. */
     gs->primary_guards_up_to_date = 0;
   }
@@ -1701,9 +1687,10 @@ entry_guards_update_filtered_sets(guard_selection_t *gs)
 {
   const or_options_t *options = get_options();
 
-  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->sampled_entry_guards, entry_guard_t *, guard) {
     entry_guard_set_filtered_flags(options, gs, guard);
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
 }
 
 /**
@@ -1730,14 +1717,17 @@ sample_reachable_filtered_entry_guards(guard_selection_t *gs,
   const unsigned no_update_primary = flags & SAMPLE_NO_UPDATE_PRIMARY;
   const unsigned need_descriptor = flags & SAMPLE_EXCLUDE_NO_DESCRIPTOR;
 
-  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->sampled_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
 
   const int n_reachable_filtered = num_reachable_filtered_guards(gs, rst);
 
-  log_info(LD_GUARD, "Trying to sample a reachable guard: We know of %d "
-           "in the USABLE_FILTERED set.", n_reachable_filtered);
+  log_info(LD_GUARD,
+           "Trying to sample a reachable guard: We know of %d "
+           "in the USABLE_FILTERED set.",
+           n_reachable_filtered);
 
   const int min_filtered_sample = get_min_filtered_sample_size();
   if (n_reachable_filtered < min_filtered_sample) {
@@ -1745,13 +1735,14 @@ sample_reachable_filtered_entry_guards(guard_selection_t *gs,
     entry_guards_expand_sample(gs);
   }
 
-  if (exclude_primary && !gs->primary_guards_up_to_date && !no_update_primary)
+  if (exclude_primary && ! gs->primary_guards_up_to_date &&
+      ! no_update_primary)
     entry_guards_update_primary(gs);
 
   /* Build the set of reachable filtered guards. */
   smartlist_t *reachable_filtered_sample = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
-    entry_guard_consider_retry(guard);// redundant, but cheap.
+  SMARTLIST_FOREACH_BEGIN (gs->sampled_entry_guards, entry_guard_t *, guard) {
+    entry_guard_consider_retry(guard); // redundant, but cheap.
     if (! entry_guard_obeys_restriction(guard, rst))
       continue;
     if (! guard->is_usable_filtered_guard)
@@ -1762,10 +1753,11 @@ sample_reachable_filtered_entry_guards(guard_selection_t *gs,
       continue;
     if (exclude_pending && guard->is_pending)
       continue;
-    if (need_descriptor && !guard_has_descriptor(guard))
+    if (need_descriptor && ! guard_has_descriptor(guard))
       continue;
     smartlist_add(reachable_filtered_sample, guard);
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
 
   log_info(LD_GUARD, "  (After filters [%x], we have %d guards to consider.)",
            flags, smartlist_len(reachable_filtered_sample));
@@ -1805,20 +1797,23 @@ STATIC void
 entry_guards_update_confirmed(guard_selection_t *gs)
 {
   smartlist_clear(gs->confirmed_entry_guards);
-  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->sampled_entry_guards, entry_guard_t *, guard) {
     if (guard->confirmed_idx >= 0)
       smartlist_add(gs->confirmed_entry_guards, guard);
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
 
   smartlist_sort(gs->confirmed_entry_guards, compare_guards_by_confirmed_idx);
 
   int any_changed = 0;
-  SMARTLIST_FOREACH_BEGIN(gs->confirmed_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->confirmed_entry_guards, entry_guard_t *,
+                           guard) {
     if (guard->confirmed_idx != guard_sl_idx) {
       any_changed = 1;
       guard->confirmed_idx = guard_sl_idx;
     }
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
 
   gs->next_confirmed_idx = smartlist_len(gs->confirmed_entry_guards);
 
@@ -1841,11 +1836,11 @@ make_guard_confirmed(guard_selection_t *gs, entry_guard_t *guard)
     return; // LCOV_EXCL_LINE
 
   const int GUARD_LIFETIME = get_guard_lifetime();
-  guard->confirmed_on_date = randomize_time(approx_time(), GUARD_LIFETIME/10);
+  guard->confirmed_on_date =
+      randomize_time(approx_time(), GUARD_LIFETIME / 10);
 
   log_info(LD_GUARD, "Marking %s as a confirmed guard (index %d)",
-           entry_guard_describe(guard),
-           gs->next_confirmed_idx);
+           entry_guard_describe(guard), gs->next_confirmed_idx);
 
   guard->confirmed_idx = gs->next_confirmed_idx++;
   smartlist_add(gs->confirmed_entry_guards, guard);
@@ -1868,7 +1863,7 @@ entry_guards_update_primary(guard_selection_t *gs)
 
   // prevent recursion. Recursion is potentially very bad here.
   static int running = 0;
-  tor_assert(!running);
+  tor_assert(! running);
   running = 1;
 
   const int N_PRIMARY_GUARDS = get_n_primary_guards();
@@ -1881,16 +1876,18 @@ entry_guards_update_primary(guard_selection_t *gs)
   gs->primary_guards_up_to_date = 1;
 
   /* First, can we fill it up with confirmed guards? */
-  SMARTLIST_FOREACH_BEGIN(gs->confirmed_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->confirmed_entry_guards, entry_guard_t *,
+                           guard) {
     if (smartlist_len(new_primary_guards) >= N_PRIMARY_GUARDS)
       break;
     if (! guard->is_filtered_guard)
       continue;
     guard->is_primary = 1;
     smartlist_add(new_primary_guards, guard);
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
 
-  SMARTLIST_FOREACH_BEGIN(old_primary_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (old_primary_guards, entry_guard_t *, guard) {
     /* Can we keep any older primary guards? First remove all the ones
      * that we already kept. */
     if (smartlist_contains(new_primary_guards, guard)) {
@@ -1908,15 +1905,16 @@ entry_guards_update_primary(guard_selection_t *gs)
       /* Mark the remaining previous primary guards as non-primary */
       guard->is_primary = 0;
     }
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
 
   /* Finally, fill out the list with sampled guards. */
   while (smartlist_len(new_primary_guards) < N_PRIMARY_GUARDS) {
-    entry_guard_t *guard = sample_reachable_filtered_entry_guards(gs, NULL,
-                                            SAMPLE_EXCLUDE_CONFIRMED|
-                                            SAMPLE_EXCLUDE_PRIMARY|
-                                            SAMPLE_NO_UPDATE_PRIMARY);
-    if (!guard)
+    entry_guard_t *guard = sample_reachable_filtered_entry_guards(
+        gs, NULL,
+        SAMPLE_EXCLUDE_CONFIRMED | SAMPLE_EXCLUDE_PRIMARY |
+            SAMPLE_NO_UPDATE_PRIMARY);
+    if (! guard)
       break;
     guard->is_primary = 1;
     smartlist_add(new_primary_guards, guard);
@@ -1925,24 +1923,24 @@ entry_guards_update_primary(guard_selection_t *gs)
 #if 1
   /* Debugging. */
   SMARTLIST_FOREACH(gs->sampled_entry_guards, entry_guard_t *, guard, {
-    tor_assert_nonfatal(
-                   bool_eq(guard->is_primary,
-                           smartlist_contains(new_primary_guards, guard)));
+    tor_assert_nonfatal(bool_eq(
+        guard->is_primary, smartlist_contains(new_primary_guards, guard)));
   });
 #endif /* 1 */
 
-  const int any_change = !smartlist_ptrs_eq(gs->primary_entry_guards,
-                                            new_primary_guards);
+  const int any_change =
+      ! smartlist_ptrs_eq(gs->primary_entry_guards, new_primary_guards);
   if (any_change) {
     log_info(LD_GUARD, "Primary entry guards have changed. "
-             "New primary guard list is: ");
+                       "New primary guard list is: ");
     int n = smartlist_len(new_primary_guards);
-    SMARTLIST_FOREACH_BEGIN(new_primary_guards, entry_guard_t *, g) {
-      log_info(LD_GUARD, "  %d/%d: %s%s%s",
-               g_sl_idx+1, n, entry_guard_describe(g),
+    SMARTLIST_FOREACH_BEGIN (new_primary_guards, entry_guard_t *, g) {
+      log_info(LD_GUARD, "  %d/%d: %s%s%s", g_sl_idx + 1, n,
+               entry_guard_describe(g),
                g->confirmed_idx >= 0 ? " (confirmed)" : "",
                g->is_filtered_guard ? "" : " (excluded by filter)");
-    } SMARTLIST_FOREACH_END(g);
+    }
+    SMARTLIST_FOREACH_END(g);
   }
 
   smartlist_free(old_primary_guards);
@@ -1957,8 +1955,7 @@ entry_guards_update_primary(guard_selection_t *gs)
  * retry a guard that has been failing since <b>failing_since</b>.
  */
 static int
-get_retry_schedule(time_t failing_since, time_t now,
-                   int is_primary)
+get_retry_schedule(time_t failing_since, time_t now, int is_primary)
 {
   const unsigned SIX_HOURS = 6 * 3600;
   const unsigned FOUR_DAYS = 4 * 86400;
@@ -1972,13 +1969,13 @@ get_retry_schedule(time_t failing_since, time_t now,
   }
 
   const struct {
-    time_t maximum; int primary_delay; int nonprimary_delay;
-  } delays[] = {
-    { SIX_HOURS,    10*60,  1*60*60 },
-    { FOUR_DAYS,    90*60,  4*60*60 },
-    { SEVEN_DAYS, 4*60*60, 18*60*60 },
-    { TIME_MAX,   9*60*60, 36*60*60 }
-  };
+    time_t maximum;
+    int primary_delay;
+    int nonprimary_delay;
+  } delays[] = {{SIX_HOURS, 10 * 60, 1 * 60 * 60},
+                {FOUR_DAYS, 90 * 60, 4 * 60 * 60},
+                {SEVEN_DAYS, 4 * 60 * 60, 18 * 60 * 60},
+                {TIME_MAX, 9 * 60 * 60, 36 * 60 * 60}};
 
   unsigned i;
   for (i = 0; i < ARRAY_LENGTH(delays); ++i) {
@@ -1988,7 +1985,7 @@ get_retry_schedule(time_t failing_since, time_t now,
   }
   /* LCOV_EXCL_START -- can't reach, since delays ends with TIME_MAX. */
   tor_assert_nonfatal_unreached();
-  return 36*60*60;
+  return 36 * 60 * 60;
   /* LCOV_EXCL_STOP */
 }
 
@@ -2004,20 +2001,19 @@ entry_guard_consider_retry(entry_guard_t *guard)
 
   const time_t now = approx_time();
   const int delay =
-    get_retry_schedule(guard->failing_since, now, guard->is_primary);
+      get_retry_schedule(guard->failing_since, now, guard->is_primary);
   const time_t last_attempt = guard->last_tried_to_connect;
 
-  if (BUG(last_attempt == 0) ||
-      now >= last_attempt + delay) {
+  if (BUG(last_attempt == 0) || now >= last_attempt + delay) {
     /* We should mark this retriable. */
-    char tbuf[ISO_TIME_LEN+1];
+    char tbuf[ISO_TIME_LEN + 1];
     format_local_iso_time(tbuf, last_attempt);
-    log_info(LD_GUARD, "Marked %s%sguard %s for possible retry, since we "
+    log_info(LD_GUARD,
+             "Marked %s%sguard %s for possible retry, since we "
              "haven't tried to use it since %s.",
-             guard->is_primary?"primary ":"",
-             guard->confirmed_idx>=0?"confirmed ":"",
-             entry_guard_describe(guard),
-             tbuf);
+             guard->is_primary ? "primary " : "",
+             guard->confirmed_idx >= 0 ? "confirmed " : "",
+             entry_guard_describe(guard), tbuf);
 
     guard->is_reachable = GUARD_REACHABLE_MAYBE;
     if (guard->is_filtered_guard)
@@ -2040,8 +2036,7 @@ entry_guards_note_internet_connectivity(guard_selection_t *gs)
  * of the circuit.
  */
 static entry_guard_t *
-select_primary_guard_for_circuit(guard_selection_t *gs,
-                                 guard_usage_t usage,
+select_primary_guard_for_circuit(guard_selection_t *gs, guard_usage_t usage,
                                  const entry_guard_restriction_t *rst,
                                  unsigned *state_out)
 {
@@ -2051,12 +2046,12 @@ select_primary_guard_for_circuit(guard_selection_t *gs,
   int num_entry_guards = get_n_primary_guards_to_use(usage);
   smartlist_t *usable_primary_guards = smartlist_new();
 
-  SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->primary_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);
     if (! entry_guard_obeys_restriction(guard, rst))
       continue;
     if (guard->is_reachable != GUARD_REACHABLE_NO) {
-      if (need_descriptor && !guard_has_descriptor(guard)) {
+      if (need_descriptor && ! guard_has_descriptor(guard)) {
         continue;
       }
       *state_out = GUARD_CIRC_STATE_USABLE_ON_COMPLETION;
@@ -2065,7 +2060,8 @@ select_primary_guard_for_circuit(guard_selection_t *gs,
       if (smartlist_len(usable_primary_guards) >= num_entry_guards)
         break;
     }
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
 
   if (smartlist_len(usable_primary_guards)) {
     chosen_guard = smartlist_choose(usable_primary_guards);
@@ -2085,32 +2081,34 @@ select_primary_guard_for_circuit(guard_selection_t *gs,
  * to the new guard-state of the circuit.
  */
 static entry_guard_t *
-select_confirmed_guard_for_circuit(guard_selection_t *gs,
-                                  guard_usage_t usage,
-                                  const entry_guard_restriction_t *rst,
-                                  unsigned *state_out)
+select_confirmed_guard_for_circuit(guard_selection_t *gs, guard_usage_t usage,
+                                   const entry_guard_restriction_t *rst,
+                                   unsigned *state_out)
 {
   const int need_descriptor = (usage == GUARD_USAGE_TRAFFIC);
 
-  SMARTLIST_FOREACH_BEGIN(gs->confirmed_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->confirmed_entry_guards, entry_guard_t *,
+                           guard) {
     if (guard->is_primary)
       continue; /* we already considered this one. */
     if (! entry_guard_obeys_restriction(guard, rst))
       continue;
     entry_guard_consider_retry(guard);
     if (guard->is_usable_filtered_guard && ! guard->is_pending) {
-      if (need_descriptor && !guard_has_descriptor(guard))
+      if (need_descriptor && ! guard_has_descriptor(guard))
         continue; /* not a bug */
       guard->is_pending = 1;
       guard->last_tried_to_connect = approx_time();
       *state_out = GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD;
-      log_info(LD_GUARD, "No primary guards available. Selected confirmed "
+      log_info(LD_GUARD,
+               "No primary guards available. Selected confirmed "
                "guard %s for circuit. Will try other guards before using "
                "this circuit.",
                entry_guard_describe(guard));
       return guard;
     }
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
 
   return NULL;
 }
@@ -2122,8 +2120,7 @@ select_confirmed_guard_for_circuit(guard_selection_t *gs,
  * to the new guard-state of the circuit.
  */
 static entry_guard_t *
-select_filtered_guard_for_circuit(guard_selection_t *gs,
-                                  guard_usage_t usage,
+select_filtered_guard_for_circuit(guard_selection_t *gs, guard_usage_t usage,
                                   const entry_guard_restriction_t *rst,
                                   unsigned *state_out)
 {
@@ -2132,20 +2129,19 @@ select_filtered_guard_for_circuit(guard_selection_t *gs,
   unsigned flags = 0;
   if (need_descriptor)
     flags |= SAMPLE_EXCLUDE_NO_DESCRIPTOR;
-  chosen_guard = sample_reachable_filtered_entry_guards(gs,
-                                                 rst,
-                                                 SAMPLE_EXCLUDE_CONFIRMED |
-                                                 SAMPLE_EXCLUDE_PRIMARY |
-                                                 SAMPLE_EXCLUDE_PENDING |
-                                                 flags);
-  if (!chosen_guard) {
+  chosen_guard = sample_reachable_filtered_entry_guards(
+      gs, rst,
+      SAMPLE_EXCLUDE_CONFIRMED | SAMPLE_EXCLUDE_PRIMARY |
+          SAMPLE_EXCLUDE_PENDING | flags);
+  if (! chosen_guard) {
     return NULL;
   }
 
   chosen_guard->is_pending = 1;
   chosen_guard->last_tried_to_connect = approx_time();
   *state_out = GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD;
-  log_info(LD_GUARD, "No primary or confirmed guards available. Selected "
+  log_info(LD_GUARD,
+           "No primary or confirmed guards available. Selected "
            "random guard %s for circuit. Will try other guards before "
            "using this circuit.",
            entry_guard_describe(chosen_guard));
@@ -2161,8 +2157,7 @@ select_filtered_guard_for_circuit(guard_selection_t *gs,
  * of the circuit.
  */
 STATIC entry_guard_t *
-select_entry_guard_for_circuit(guard_selection_t *gs,
-                               guard_usage_t usage,
+select_entry_guard_for_circuit(guard_selection_t *gs, guard_usage_t usage,
                                const entry_guard_restriction_t *rst,
                                unsigned *state_out)
 {
@@ -2170,7 +2165,7 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
   tor_assert(gs);
   tor_assert(state_out);
 
-  if (!gs->primary_guards_up_to_date)
+  if (! gs->primary_guards_up_to_date)
     entry_guards_update_primary(gs);
 
   /* "If any entry in PRIMARY_GUARDS has {is_reachable} status of
@@ -2192,7 +2187,8 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
   chosen_guard = select_filtered_guard_for_circuit(gs, usage, rst, state_out);
 
   if (chosen_guard == NULL) {
-    log_info(LD_GUARD, "Absolutely no sampled guards were available. "
+    log_info(LD_GUARD,
+             "Absolutely no sampled guards were available. "
              "Marking all guards for retry and starting from top again.");
     mark_all_guards_maybe_reachable(gs);
     return NULL;
@@ -2206,8 +2202,7 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
  * Use with a guard returned by select_entry_guard_for_circuit().
  */
 STATIC void
-entry_guards_note_guard_failure(guard_selection_t *gs,
-                                entry_guard_t *guard)
+entry_guards_note_guard_failure(guard_selection_t *gs, entry_guard_t *guard)
 {
   tor_assert(gs);
 
@@ -2219,8 +2214,8 @@ entry_guards_note_guard_failure(guard_selection_t *gs,
     guard->failing_since = approx_time();
 
   log_info(LD_GUARD, "Recorded failure for %s%sguard %s",
-           guard->is_primary?"primary ":"",
-           guard->confirmed_idx>=0?"confirmed ":"",
+           guard->is_primary ? "primary " : "",
+           guard->confirmed_idx >= 0 ? "confirmed " : "",
            entry_guard_describe(guard));
 }
 
@@ -2233,8 +2228,7 @@ entry_guards_note_guard_failure(guard_selection_t *gs,
  * GUARD_CIRC_STATE_COMPLETE.
  **/
 STATIC unsigned
-entry_guards_note_guard_success(guard_selection_t *gs,
-                                entry_guard_t *guard,
+entry_guards_note_guard_success(guard_selection_t *gs, entry_guard_t *guard,
                                 unsigned old_state)
 {
   tor_assert(gs);
@@ -2251,7 +2245,7 @@ entry_guards_note_guard_success(guard_selection_t *gs,
 
   if (guard->confirmed_idx < 0) {
     make_guard_confirmed(gs, guard);
-    if (!gs->primary_guards_up_to_date)
+    if (! gs->primary_guards_up_to_date)
       entry_guards_update_primary(gs);
   }
 
@@ -2281,15 +2275,15 @@ entry_guards_note_guard_success(guard_selection_t *gs,
   }
 
   if (! guard->is_primary) {
-    if (last_time_on_internet + get_internet_likely_down_interval()
-        < approx_time()) {
+    if (last_time_on_internet + get_internet_likely_down_interval() <
+        approx_time()) {
       mark_primary_guards_maybe_reachable(gs);
     }
   }
 
   log_info(LD_GUARD, "Recorded success for %s%sguard %s",
-           guard->is_primary?"primary ":"",
-           guard->confirmed_idx>=0?"confirmed ":"",
+           guard->is_primary ? "primary " : "",
+           guard->confirmed_idx >= 0 ? "confirmed " : "",
            entry_guard_describe(guard));
 
   return new_state;
@@ -2348,7 +2342,7 @@ entry_guard_restriction_free_(entry_guard_restriction_t *rst)
 void
 circuit_guard_state_free_(circuit_guard_state_t *state)
 {
-  if (!state)
+  if (! state)
     return;
   entry_guard_restriction_free(state->restrictions);
   entry_guard_handle_free(state->guard);
@@ -2357,9 +2351,9 @@ circuit_guard_state_free_(circuit_guard_state_t *state)
 
 /** Allocate and return a new circuit_guard_state_t to track the result
  * of using <b>guard</b> for a given operation. */
-MOCK_IMPL(STATIC circuit_guard_state_t *,
-circuit_guard_state_new,(entry_guard_t *guard, unsigned state,
-                         entry_guard_restriction_t *rst))
+MOCK_IMPL(STATIC circuit_guard_state_t *, circuit_guard_state_new,
+          (entry_guard_t * guard, unsigned state,
+           entry_guard_restriction_t *rst))
 {
   circuit_guard_state_t *result;
 
@@ -2383,8 +2377,7 @@ circuit_guard_state_new,(entry_guard_t *guard, unsigned state,
  * later use. (Takes ownership of the <b>rst</b> object.)
  */
 int
-entry_guard_pick_for_circuit(guard_selection_t *gs,
-                             guard_usage_t usage,
+entry_guard_pick_for_circuit(guard_selection_t *gs, guard_usage_t usage,
                              entry_guard_restriction_t *rst,
                              const node_t **chosen_node_out,
                              circuit_guard_state_t **guard_state_out)
@@ -2397,7 +2390,7 @@ entry_guard_pick_for_circuit(guard_selection_t *gs,
 
   unsigned state = 0;
   entry_guard_t *guard =
-    select_entry_guard_for_circuit(gs, usage, rst, &state);
+      select_entry_guard_for_circuit(gs, usage, rst, &state);
   if (! guard)
     goto fail;
   if (BUG(state == 0))
@@ -2407,14 +2400,14 @@ entry_guard_pick_for_circuit(guard_selection_t *gs,
   if (! node)
     goto fail;
   if (BUG(usage != GUARD_USAGE_DIRGUARD &&
-          !node_has_preferred_descriptor(node, 1)))
+          ! node_has_preferred_descriptor(node, 1)))
     goto fail;
 
   *chosen_node_out = node;
   *guard_state_out = circuit_guard_state_new(guard, state, rst);
 
   return 0;
- fail:
+fail:
   entry_guard_restriction_free(rst);
   return -1;
 }
@@ -2438,9 +2431,8 @@ entry_guard_succeeded(circuit_guard_state_t **guard_state_p)
   if (! guard || BUG(guard->in_selection == NULL))
     return GUARD_USABLE_NEVER;
 
-  unsigned newstate =
-    entry_guards_note_guard_success(guard->in_selection, guard,
-                                    (*guard_state_p)->state);
+  unsigned newstate = entry_guards_note_guard_success(
+      guard->in_selection, guard, (*guard_state_p)->state);
 
   (*guard_state_p)->state = newstate;
   (*guard_state_p)->state_set_at = approx_time();
@@ -2499,13 +2491,13 @@ entry_guard_failed(circuit_guard_state_t **guard_state_p)
 void
 entry_guard_chan_failed(channel_t *chan)
 {
-  if (!chan)
+  if (! chan)
     return;
 
   smartlist_t *pending = smartlist_new();
   circuit_get_all_pending_on_channel(pending, chan);
-  SMARTLIST_FOREACH_BEGIN(pending, circuit_t *, circ) {
-    if (!CIRCUIT_IS_ORIGIN(circ))
+  SMARTLIST_FOREACH_BEGIN (pending, circuit_t *, circ) {
+    if (! CIRCUIT_IS_ORIGIN(circ))
       continue;
 
     origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
@@ -2514,7 +2506,8 @@ entry_guard_chan_failed(channel_t *chan)
        * circuit (eg it's for a fallback directory). */
       entry_guard_failed(&origin_circ->guard_state);
     }
-  } SMARTLIST_FOREACH_END(circ);
+  }
+  SMARTLIST_FOREACH_END(circ);
   smartlist_free(pending);
 }
 
@@ -2526,13 +2519,14 @@ STATIC int
 entry_guards_all_primary_guards_are_down(guard_selection_t *gs)
 {
   tor_assert(gs);
-  if (!gs->primary_guards_up_to_date)
+  if (! gs->primary_guards_up_to_date)
     entry_guards_update_primary(gs);
-  SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->primary_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);
     if (guard->is_reachable != GUARD_REACHABLE_NO)
       return 0;
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
   return 1;
 }
 
@@ -2563,7 +2557,7 @@ circ_state_has_higher_priority(origin_circuit_t *a,
   } else if (! guard_b) {
     /* Known guard -- higher priority than any unknown guard. */
     return 1;
-  } else  if (! entry_guard_obeys_restriction(guard_a, rst)) {
+  } else if (! entry_guard_obeys_restriction(guard_a, rst)) {
     /* Restriction violated; guard_a cannot have higher priority. */
     return 0;
   } else {
@@ -2593,7 +2587,7 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
     /* We only upgrade a waiting circuit if the primary guards are all
      * down. */
     log_debug(LD_GUARD, "Considered upgrading guard-stalled circuits, "
-              "but not all primary guards were definitely down.");
+                        "but not all primary guards were definitely down.");
     return 0;
   }
 
@@ -2602,14 +2596,14 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
   int n_complete_blocking = 0;
   origin_circuit_t *best_waiting_circuit = NULL;
   smartlist_t *all_circuits = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(all_circuits_in, origin_circuit_t *, circ) {
+  SMARTLIST_FOREACH_BEGIN (all_circuits_in, origin_circuit_t *, circ) {
     // We filter out circuits that aren't ours, or which we can't
     // reason about.
     circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
     if (state == NULL)
       continue;
     entry_guard_t *guard = entry_guard_handle_get(state->guard);
-    if (!guard || guard->in_selection != gs)
+    if (! guard || guard->in_selection != gs)
       continue;
     if (TO_CIRCUIT(circ)->marked_for_close) {
       /* Don't consider any marked for close circuits. */
@@ -2617,9 +2611,10 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
     }
 
     smartlist_add(all_circuits, circ);
-  } SMARTLIST_FOREACH_END(circ);
+  }
+  SMARTLIST_FOREACH_END(circ);
 
-  SMARTLIST_FOREACH_BEGIN(all_circuits, origin_circuit_t *, circ) {
+  SMARTLIST_FOREACH_BEGIN (all_circuits, origin_circuit_t *, circ) {
     circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
     if (BUG(state == NULL))
       continue;
@@ -2631,11 +2626,12 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
         best_waiting_circuit = circ;
       }
     }
-  } SMARTLIST_FOREACH_END(circ);
+  }
+  SMARTLIST_FOREACH_END(circ);
 
   if (! best_waiting_circuit) {
     log_debug(LD_GUARD, "Considered upgrading guard-stalled circuits, "
-              "but didn't find any.");
+                        "but didn't find any.");
     goto no_change;
   }
 
@@ -2643,10 +2639,10 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
    * circuit, so that we don't allow any circuit without those restrictions to
    * block it. */
   const entry_guard_restriction_t *rst_on_best_waiting =
-    origin_circuit_get_guard_state(best_waiting_circuit)->restrictions;
+      origin_circuit_get_guard_state(best_waiting_circuit)->restrictions;
 
   /* First look at the complete circuits: Do any block this circuit? */
-  SMARTLIST_FOREACH_BEGIN(all_circuits, origin_circuit_t *, circ) {
+  SMARTLIST_FOREACH_BEGIN (all_circuits, origin_circuit_t *, circ) {
     /* "C2 "blocks" C1 if:
         * C2 obeys all the restrictions that C1 had to obey, AND
         * C2 has higher priority than C1, AND
@@ -2655,18 +2651,21 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
           {NONPRIMARY_GUARD_CONNECT_TIMEOUT} seconds."
     */
     circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
-    if BUG((state == NULL))
-      continue;
+    if
+      BUG((state == NULL))
+    continue;
     if (state->state != GUARD_CIRC_STATE_COMPLETE)
       continue;
     ++n_complete;
     if (circ_state_has_higher_priority(circ, rst_on_best_waiting,
                                        best_waiting_circuit))
       ++n_complete_blocking;
-  } SMARTLIST_FOREACH_END(circ);
+  }
+  SMARTLIST_FOREACH_END(circ);
 
   if (n_complete_blocking) {
-    log_debug(LD_GUARD, "Considered upgrading guard-stalled circuits: found "
+    log_debug(LD_GUARD,
+              "Considered upgrading guard-stalled circuits: found "
               "%d complete and %d guard-stalled. At least one complete "
               "circuit had higher priority, so not upgrading.",
               n_complete, n_waiting);
@@ -2680,8 +2679,8 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
   */
   int n_blockers_found = 0;
   const time_t state_set_at_cutoff =
-    approx_time() - get_nonprimary_guard_connect_timeout();
-  SMARTLIST_FOREACH_BEGIN(all_circuits, origin_circuit_t *, circ) {
+      approx_time() - get_nonprimary_guard_connect_timeout();
+  SMARTLIST_FOREACH_BEGIN (all_circuits, origin_circuit_t *, circ) {
     circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
     if (BUG(state == NULL))
       continue;
@@ -2692,10 +2691,12 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
     if (circ_state_has_higher_priority(circ, rst_on_best_waiting,
                                        best_waiting_circuit))
       ++n_blockers_found;
-  } SMARTLIST_FOREACH_END(circ);
+  }
+  SMARTLIST_FOREACH_END(circ);
 
   if (n_blockers_found) {
-    log_debug(LD_GUARD, "Considered upgrading guard-stalled circuits: found "
+    log_debug(LD_GUARD,
+              "Considered upgrading guard-stalled circuits: found "
               "%d guard-stalled, but %d pending circuit(s) had higher "
               "guard priority, so not upgrading.",
               n_waiting, n_blockers_found);
@@ -2706,7 +2707,7 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
      anything better.  Add all circuits with that priority to the
      list, and call them COMPLETE. */
   int n_succeeded = 0;
-  SMARTLIST_FOREACH_BEGIN(all_circuits, origin_circuit_t *, circ) {
+  SMARTLIST_FOREACH_BEGIN (all_circuits, origin_circuit_t *, circ) {
     circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
     if (BUG(state == NULL))
       continue;
@@ -2724,9 +2725,11 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
     state->state_set_at = approx_time();
     smartlist_add(newly_complete_out, circ);
     ++n_succeeded;
-  } SMARTLIST_FOREACH_END(circ);
+  }
+  SMARTLIST_FOREACH_END(circ);
 
-  log_info(LD_GUARD, "Considered upgrading guard-stalled circuits: found "
+  log_info(LD_GUARD,
+           "Considered upgrading guard-stalled circuits: found "
            "%d guard-stalled, %d complete. %d of the guard-stalled "
            "circuit(s) had high enough priority to upgrade.",
            n_waiting, n_complete, n_succeeded);
@@ -2735,7 +2738,7 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
   smartlist_free(all_circuits);
   return 1;
 
- no_change:
+no_change:
   smartlist_free(all_circuits);
   return 0;
 }
@@ -2750,9 +2753,9 @@ entry_guard_state_should_expire(circuit_guard_state_t *guard_state)
   if (guard_state == NULL)
     return 0;
   const time_t expire_if_waiting_since =
-    approx_time() - get_nonprimary_guard_idle_timeout();
-  return (guard_state->state == GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD
-          && guard_state->state_set_at < expire_if_waiting_since);
+      approx_time() - get_nonprimary_guard_idle_timeout();
+  return (guard_state->state == GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD &&
+          guard_state->state_set_at < expire_if_waiting_since);
 }
 
 /**
@@ -2785,7 +2788,7 @@ entry_guard_encode_for_state(entry_guard_t *guard)
    */
 
   smartlist_t *result = smartlist_new();
-  char tbuf[ISO_TIME_LEN+1];
+  char tbuf[ISO_TIME_LEN + 1];
 
   tor_assert(guard);
 
@@ -2805,8 +2808,7 @@ entry_guard_encode_for_state(entry_guard_t *guard)
   smartlist_add_asprintf(result, "sampled_on=%s", tbuf);
 
   if (guard->sampled_by_version) {
-    smartlist_add_asprintf(result, "sampled_by=%s",
-                           guard->sampled_by_version);
+    smartlist_add_asprintf(result, "sampled_by=%s", guard->sampled_by_version);
   }
 
   if (guard->unlisted_since_date > 0) {
@@ -2814,8 +2816,7 @@ entry_guard_encode_for_state(entry_guard_t *guard)
     smartlist_add_asprintf(result, "unlisted_since=%s", tbuf);
   }
 
-  smartlist_add_asprintf(result, "listed=%d",
-                         (int)guard->currently_listed);
+  smartlist_add_asprintf(result, "listed=%d", (int)guard->currently_listed);
 
   if (guard->confirmed_idx >= 0) {
     format_iso_time_nospace(tbuf, guard->confirmed_on_date);
@@ -2832,11 +2833,12 @@ entry_guard_encode_for_state(entry_guard_t *guard)
   pb->use_successes = pathbias_get_use_success_count(guard);
   pb->successful_circuits_closed = pathbias_get_close_success_count(guard);
 
-  #define PB_FIELD(field) do {                                          \
-      if (pb->field >= EPSILON) {                                       \
-        smartlist_add_asprintf(result, "pb_" #field "=%f", pb->field);  \
-      }                                                                 \
-    } while (0)
+#define PB_FIELD(field)                                              \
+  do {                                                               \
+    if (pb->field >= EPSILON) {                                      \
+      smartlist_add_asprintf(result, "pb_" #field "=%f", pb->field); \
+    }                                                                \
+  } while (0)
   PB_FIELD(use_attempts);
   PB_FIELD(use_successes);
   PB_FIELD(circ_attempts);
@@ -2876,7 +2878,7 @@ entry_guard_parse_from_state(const char *s)
   char *sampled_on = NULL;
   char *sampled_by = NULL;
   char *unlisted_since = NULL;
-  char *listed  = NULL;
+  char *listed = NULL;
   char *confirmed_on = NULL;
   char *confirmed_idx = NULL;
   char *bridge_addr = NULL;
@@ -2897,8 +2899,7 @@ entry_guard_parse_from_state(const char *s)
     smartlist_t *entries = smartlist_new();
 
     strmap_t *vals = strmap_new(); // Maps keyword to location
-#define FIELD(f) \
-    strmap_set(vals, #f, &f);
+#define FIELD(f) strmap_set(vals, #f, &f);
     FIELD(in);
     FIELD(rsa_id);
     FIELD(nickname);
@@ -2920,15 +2921,15 @@ entry_guard_parse_from_state(const char *s)
 #undef FIELD
 
     smartlist_split_string(entries, s, " ",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+                           SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, 0);
 
-    SMARTLIST_FOREACH_BEGIN(entries, char *, entry) {
+    SMARTLIST_FOREACH_BEGIN (entries, char *, entry) {
       const char *eq = strchr(entry, '=');
-      if (!eq) {
+      if (! eq) {
         smartlist_add(extra, entry);
         continue;
       }
-      char *key = tor_strndup(entry, eq-entry);
+      char *key = tor_strndup(entry, eq - entry);
       char **target = strmap_get(vals, key);
       if (target == NULL || *target != NULL) {
         /* unrecognized or already set */
@@ -2937,10 +2938,11 @@ entry_guard_parse_from_state(const char *s)
         continue;
       }
 
-      *target = tor_strdup(eq+1);
+      *target = tor_strdup(eq + 1);
       tor_free(key);
       tor_free(entry);
-    } SMARTLIST_FOREACH_END(entry);
+    }
+    SMARTLIST_FOREACH_END(entry);
 
     smartlist_free(entries);
     strmap_free(vals, NULL);
@@ -2963,8 +2965,8 @@ entry_guard_parse_from_state(const char *s)
   }
 
   /* Process the identity and nickname. */
-  if (base16_decode(guard->identity, sizeof(guard->identity),
-                    rsa_id, strlen(rsa_id)) != DIGEST_LEN) {
+  if (base16_decode(guard->identity, sizeof(guard->identity), rsa_id,
+                    strlen(rsa_id)) != DIGEST_LEN) {
     log_warn(LD_CIRC, "Unable to decode guard identity %s", escaped(rsa_id));
     goto err;
   }
@@ -2972,16 +2974,16 @@ entry_guard_parse_from_state(const char *s)
   if (nickname) {
     strlcpy(guard->nickname, nickname, sizeof(guard->nickname));
   } else {
-    guard->nickname[0]='$';
-    base16_encode(guard->nickname+1, sizeof(guard->nickname)-1,
+    guard->nickname[0] = '$';
+    base16_encode(guard->nickname + 1, sizeof(guard->nickname) - 1,
                   guard->identity, DIGEST_LEN);
   }
 
   if (bridge_addr) {
     tor_addr_port_t res;
     memset(&res, 0, sizeof(res));
-    int r = tor_addr_port_parse(LOG_WARN, bridge_addr,
-                                &res.addr, &res.port, -1);
+    int r =
+        tor_addr_port_parse(LOG_WARN, bridge_addr, &res.addr, &res.port, -1);
     if (r == 0)
       guard->bridge_addr = tor_memdup(&res, sizeof(res));
     /* On error, we already warned. */
@@ -2989,15 +2991,16 @@ entry_guard_parse_from_state(const char *s)
 
   /* Process the various time fields. */
 
-#define HANDLE_TIME(field) do {                                 \
-    if (field) {                                                \
-      int r = parse_iso_time_nospace(field, &field ## _time);   \
-      if (r < 0) {                                              \
-        log_warn(LD_CIRC, "Unable to parse %s %s from guard",   \
-                 #field, escaped(field));                       \
-        field##_time = -1;                                      \
-      }                                                         \
-    }                                                           \
+#define HANDLE_TIME(field)                                            \
+  do {                                                                \
+    if (field) {                                                      \
+      int r = parse_iso_time_nospace(field, &field##_time);           \
+      if (r < 0) {                                                    \
+        log_warn(LD_CIRC, "Unable to parse %s %s from guard", #field, \
+                 escaped(field));                                     \
+        field##_time = -1;                                            \
+      }                                                               \
+    }                                                                 \
   } while (0)
 
   time_t sampled_on_time = 0;
@@ -3015,7 +3018,7 @@ entry_guard_parse_from_state(const char *s)
   if (confirmed_on_time < 0)
     confirmed_on_time = 0;
 
-  #undef HANDLE_TIME
+#undef HANDLE_TIME
 
   guard->sampled_on_date = sampled_on_time;
   guard->unlisted_since_date = unlisted_since_time;
@@ -3032,7 +3035,7 @@ entry_guard_parse_from_state(const char *s)
   /* The index is a nonnegative integer. */
   guard->confirmed_idx = -1;
   if (confirmed_idx) {
-    int ok=1;
+    int ok = 1;
     long idx = tor_parse_long(confirmed_idx, 10, 0, INT_MAX, &ok, NULL);
     if (! ok) {
       log_warn(LD_GUARD, "Guard has invalid confirmed_idx %s",
@@ -3050,18 +3053,17 @@ entry_guard_parse_from_state(const char *s)
   /* initialize non-persistent fields */
   guard->is_reachable = GUARD_REACHABLE_MAYBE;
 
-#define PB_FIELD(field)                                                 \
-  do {                                                                  \
-    if (pb_ ## field) {                                                 \
-      int ok = 1;                                                       \
-      double r = tor_parse_double(pb_ ## field, 0.0, 1e9, &ok, NULL);   \
-      if (! ok) {                                                       \
-        log_warn(LD_CIRC, "Guard has invalid pb_%s %s",                 \
-                 #field, pb_ ## field);                                 \
-      } else {                                                          \
-        guard->pb.field = r;                                            \
-      }                                                                 \
-    }                                                                   \
+#define PB_FIELD(field)                                                      \
+  do {                                                                       \
+    if (pb_##field) {                                                        \
+      int ok = 1;                                                            \
+      double r = tor_parse_double(pb_##field, 0.0, 1e9, &ok, NULL);          \
+      if (! ok) {                                                            \
+        log_warn(LD_CIRC, "Guard has invalid pb_%s %s", #field, pb_##field); \
+      } else {                                                               \
+        guard->pb.field = r;                                                 \
+      }                                                                      \
+    }                                                                        \
   } while (0)
   PB_FIELD(use_attempts);
   PB_FIELD(use_successes);
@@ -3081,12 +3083,12 @@ entry_guard_parse_from_state(const char *s)
 
   goto done;
 
- err:
+err:
   // only consider it an error if the guard state was totally unparseable.
   entry_guard_free(guard);
   guard = NULL;
 
- done:
+done:
   tor_free(in);
   tor_free(rsa_id);
   tor_free(nickname);
@@ -3119,21 +3121,24 @@ entry_guard_parse_from_state(const char *s)
 static void
 entry_guards_update_guards_in_state(or_state_t *state)
 {
-  if (!guard_contexts)
+  if (! guard_contexts)
     return;
   config_line_t *lines = NULL;
   config_line_t **nextline = &lines;
 
-  SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
-    SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (guard_contexts, guard_selection_t *, gs) {
+    SMARTLIST_FOREACH_BEGIN (gs->sampled_entry_guards, entry_guard_t *,
+                             guard) {
       if (guard->is_persistent == 0)
         continue;
       *nextline = tor_malloc_zero(sizeof(config_line_t));
       (*nextline)->key = tor_strdup("Guard");
       (*nextline)->value = entry_guard_encode_for_state(guard);
       nextline = &(*nextline)->next;
-    } SMARTLIST_FOREACH_END(guard);
-  } SMARTLIST_FOREACH_END(gs);
+    }
+    SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(gs);
 
   config_free_lines(state->Guard);
   state->Guard = lines;
@@ -3150,28 +3155,29 @@ entry_guards_load_guards_from_state(or_state_t *state, int set)
   const config_line_t *line = state->Guard;
   int n_errors = 0;
 
-  if (!guard_contexts)
+  if (! guard_contexts)
     guard_contexts = smartlist_new();
 
   /* Wipe all our existing guard info. (we shouldn't have any, but
    * let's be safe.) */
   if (set) {
-    SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
+    SMARTLIST_FOREACH_BEGIN (guard_contexts, guard_selection_t *, gs) {
       guard_selection_free(gs);
       if (curr_guard_context == gs)
         curr_guard_context = NULL;
       SMARTLIST_DEL_CURRENT(guard_contexts, gs);
-    } SMARTLIST_FOREACH_END(gs);
+    }
+    SMARTLIST_FOREACH_END(gs);
   }
 
-  for ( ; line != NULL; line = line->next) {
+  for (; line != NULL; line = line->next) {
     entry_guard_t *guard = entry_guard_parse_from_state(line->value);
     if (guard == NULL) {
       ++n_errors;
       continue;
     }
     tor_assert(guard->selection_name);
-    if (!strcmp(guard->selection_name, "legacy")) {
+    if (! strcmp(guard->selection_name, "legacy")) {
       ++n_errors;
       entry_guard_free(guard);
       continue;
@@ -3179,8 +3185,8 @@ entry_guards_load_guards_from_state(or_state_t *state, int set)
 
     if (set) {
       guard_selection_t *gs;
-      gs = get_guard_selection_by_name(guard->selection_name,
-                                       GS_TYPE_INFER, 1);
+      gs =
+          get_guard_selection_by_name(guard->selection_name, GS_TYPE_INFER, 1);
       tor_assert(gs);
       smartlist_add(gs->sampled_entry_guards, guard);
       guard->in_selection = gs;
@@ -3190,9 +3196,10 @@ entry_guards_load_guards_from_state(or_state_t *state, int set)
   }
 
   if (set) {
-    SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
+    SMARTLIST_FOREACH_BEGIN (guard_contexts, guard_selection_t *, gs) {
       entry_guards_update_all(gs);
-    } SMARTLIST_FOREACH_END(gs);
+    }
+    SMARTLIST_FOREACH_END(gs);
   }
   return n_errors ? -1 : 0;
 }
@@ -3204,7 +3211,7 @@ entry_guard_t *
 entry_guard_get_by_id_digest_for_guard_selection(guard_selection_t *gs,
                                                  const char *digest)
 {
-  return get_sampled_guard_with_id(gs, (const uint8_t*)digest);
+  return get_sampled_guard_with_id(gs, (const uint8_t *)digest);
 }
 
 /** Return the node_t associated with a single entry_guard_t. May
@@ -3235,8 +3242,8 @@ get_guard_state_for_bridge_desc_fetch(const char *digest)
   entry_guard_t *guard = NULL;
 
   guard = entry_guard_get_by_id_digest_for_guard_selection(
-                                    get_guard_selection_info(), digest);
-  if (!guard) {
+      get_guard_selection_info(), digest);
+  if (! guard) {
     return NULL;
   }
 
@@ -3245,9 +3252,8 @@ get_guard_state_for_bridge_desc_fetch(const char *digest)
   guard->last_tried_to_connect = approx_time();
 
   /* Create the guard state */
-  guard_state = circuit_guard_state_new(guard,
-                                        GUARD_CIRC_STATE_USABLE_ON_COMPLETION,
-                                        NULL);
+  guard_state = circuit_guard_state_new(
+      guard, GUARD_CIRC_STATE_USABLE_ON_COMPLETION, NULL);
 
   return guard_state;
 }
@@ -3256,7 +3262,7 @@ get_guard_state_for_bridge_desc_fetch(const char *digest)
 STATIC void
 entry_guard_free_(entry_guard_t *e)
 {
-  if (!e)
+  if (! e)
     return;
   entry_guard_handles_clear(e);
   tor_free(e->sampled_by_version);
@@ -3290,20 +3296,19 @@ entry_list_is_constrained(const or_options_t *options)
  * We use this function to decide if we're ready to start building
  * circuits through our bridges, or if we need to wait until the
  * directory "server/authority" requests finish. */
-MOCK_IMPL(int,
-num_bridges_usable,(int use_maybe_reachable))
+MOCK_IMPL(int, num_bridges_usable, (int use_maybe_reachable))
 {
   int n_options = 0;
 
-  if (BUG(!get_options()->UseBridges)) {
+  if (BUG(! get_options()->UseBridges)) {
     return 0;
   }
-  guard_selection_t *gs  = get_guard_selection_info();
+  guard_selection_t *gs = get_guard_selection_info();
   if (BUG(gs->type != GS_TYPE_BRIDGE)) {
     return 0;
   }
 
-  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->sampled_entry_guards, entry_guard_t *, guard) {
     /* Not a bridge, or not one we are configured to be able to use. */
     if (! guard->is_filtered_guard)
       continue;
@@ -3311,14 +3316,15 @@ num_bridges_usable,(int use_maybe_reachable))
     if (guard->is_reachable == GUARD_REACHABLE_NO)
       continue;
     /* If we want to be really sure the bridges will work, skip maybes */
-    if (!use_maybe_reachable && guard->is_reachable == GUARD_REACHABLE_MAYBE)
+    if (! use_maybe_reachable && guard->is_reachable == GUARD_REACHABLE_MAYBE)
       continue;
     if (tor_digest_is_zero(guard->identity))
       continue;
     const node_t *node = node_get_by_id(guard->identity);
     if (node && node->ri)
       ++n_options;
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
 
   return n_options;
 }
@@ -3335,14 +3341,13 @@ pathbias_check_use_success_count(entry_guard_t *node)
    * rate and disable the feature entirely. If refactoring, don't
    * change to <= */
   if (node->pb.use_attempts > EPSILON &&
-      pathbias_get_use_success_count(node)/node->pb.use_attempts
-      < pathbias_get_extreme_use_rate(options) &&
+      pathbias_get_use_success_count(node) / node->pb.use_attempts <
+          pathbias_get_extreme_use_rate(options) &&
       pathbias_get_dropguards(options)) {
     node->pb.path_bias_disabled = 1;
     log_info(LD_GENERAL,
              "Path use bias is too high (%f/%f); disabling node %s",
-             node->pb.circ_successes, node->pb.circ_attempts,
-             node->nickname);
+             node->pb.circ_successes, node->pb.circ_attempts, node->nickname);
   }
 }
 
@@ -3358,14 +3363,12 @@ pathbias_check_close_success_count(entry_guard_t *node)
    * rate and disable the feature entirely. If refactoring, don't
    * change to <= */
   if (node->pb.circ_attempts > EPSILON &&
-      pathbias_get_close_success_count(node)/node->pb.circ_attempts
-      < pathbias_get_extreme_rate(options) &&
+      pathbias_get_close_success_count(node) / node->pb.circ_attempts <
+          pathbias_get_extreme_rate(options) &&
       pathbias_get_dropguards(options)) {
     node->pb.path_bias_disabled = 1;
-    log_info(LD_GENERAL,
-             "Path bias is too high (%f/%f); disabling node %s",
-             node->pb.circ_successes, node->pb.circ_attempts,
-             node->nickname);
+    log_info(LD_GENERAL, "Path bias is too high (%f/%f); disabling node %s",
+             node->pb.circ_successes, node->pb.circ_attempts, node->nickname);
   }
 }
 
@@ -3447,7 +3450,7 @@ entry_guards_update_state(or_state_t *state)
 
   entry_guards_dirty = 0;
 
-  if (!get_options()->AvoidDiskWrites)
+  if (! get_options()->AvoidDiskWrites)
     or_state_mark_dirty(get_or_state(), 0);
   entry_guards_dirty = 0;
 }
@@ -3456,12 +3459,12 @@ entry_guards_update_state(or_state_t *state)
 int
 entry_guard_could_succeed(const circuit_guard_state_t *guard_state)
 {
-  if (!guard_state) {
+  if (! guard_state) {
     return 0;
   }
 
   entry_guard_t *guard = entry_guard_handle_get(guard_state->guard);
-  if (!guard || BUG(guard->in_selection == NULL)) {
+  if (! guard || BUG(guard->in_selection == NULL)) {
     return 0;
   }
 
@@ -3478,8 +3481,8 @@ getinfo_helper_format_single_entry_guard(const entry_guard_t *e)
   const char *status = NULL;
   time_t when = 0;
   const node_t *node;
-  char tbuf[ISO_TIME_LEN+1];
-  char nbuf[MAX_VERBOSE_NICKNAME_LEN+1];
+  char tbuf[ISO_TIME_LEN + 1];
+  char nbuf[MAX_VERBOSE_NICKNAME_LEN + 1];
 
   /* This is going to be a bit tricky, since the status
    * codes weren't really intended for prop271 guards.
@@ -3505,7 +3508,7 @@ getinfo_helper_format_single_entry_guard(const entry_guard_t *e)
     node_get_verbose_nickname(node, nbuf);
   } else {
     nbuf[0] = '$';
-    base16_encode(nbuf+1, sizeof(nbuf)-1, e->identity, DIGEST_LEN);
+    base16_encode(nbuf + 1, sizeof(nbuf) - 1, e->identity, DIGEST_LEN);
     /* e->nickname field is not very reliable if we don't know about
      * this router any longer; don't include it. */
   }
@@ -3530,28 +3533,28 @@ getinfo_helper_format_single_entry_guard(const entry_guard_t *e)
  * going to take some control spec work.
  * */
 int
-getinfo_helper_entry_guards(control_connection_t *conn,
-                            const char *question, char **answer,
-                            const char **errmsg)
+getinfo_helper_entry_guards(control_connection_t *conn, const char *question,
+                            char **answer, const char **errmsg)
 {
   guard_selection_t *gs = get_guard_selection_info();
 
   tor_assert(gs != NULL);
 
-  (void) conn;
-  (void) errmsg;
+  (void)conn;
+  (void)errmsg;
 
-  if (!strcmp(question,"entry-guards") ||
-      !strcmp(question,"helper-nodes")) {
+  if (! strcmp(question, "entry-guards") ||
+      ! strcmp(question, "helper-nodes")) {
     const smartlist_t *guards;
     guards = gs->sampled_entry_guards;
 
     smartlist_t *sl = smartlist_new();
 
-    SMARTLIST_FOREACH_BEGIN(guards, const entry_guard_t *, e) {
+    SMARTLIST_FOREACH_BEGIN (guards, const entry_guard_t *, e) {
       char *cp = getinfo_helper_format_single_entry_guard(e);
       smartlist_add(sl, cp);
-    } SMARTLIST_FOREACH_END(e);
+    }
+    SMARTLIST_FOREACH_END(e);
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
@@ -3589,9 +3592,9 @@ guard_get_guardfraction_bandwidth(guardfraction_bandwidth_t *guardfraction_bw,
   long guard_bw = tor_lround(guardfraction_fraction * orig_bandwidth);
   tor_assert(guard_bw <= INT_MAX);
 
-  guardfraction_bw->guard_bw = (int) guard_bw;
+  guardfraction_bw->guard_bw = (int)guard_bw;
 
-  guardfraction_bw->non_guard_bw = orig_bandwidth - (int) guard_bw;
+  guardfraction_bw->non_guard_bw = orig_bandwidth - (int)guard_bw;
 }
 
 /** Helper: Update the status of all entry guards, in whatever algorithm
@@ -3617,8 +3620,7 @@ guards_update_all(void)
 /** Helper: pick a guard for a circuit, with whatever algorithm is
     used. */
 const node_t *
-guards_choose_guard(cpath_build_state_t *state,
-                    uint8_t purpose,
+guards_choose_guard(cpath_build_state_t *state, uint8_t purpose,
                     circuit_guard_state_t **guard_state_out)
 {
   const node_t *r = NULL;
@@ -3628,7 +3630,7 @@ guards_choose_guard(cpath_build_state_t *state,
   /* Only apply restrictions if we have a specific exit node in mind, and only
    * if we are not doing vanguard circuits: we don't want to apply guard
    * restrictions to vanguard circuits. */
-  if (state && !circuit_should_use_vanguards(purpose) &&
+  if (state && ! circuit_should_use_vanguards(purpose) &&
       (exit_id = build_state_get_exit_rsa_id(state))) {
     /* We're building to a targeted exit node, so that node can't be
      * chosen as our guard for this circuit.  Remember that fact in a
@@ -3637,9 +3639,7 @@ guards_choose_guard(cpath_build_state_t *state,
     tor_assert(rst);
   }
   if (entry_guard_pick_for_circuit(get_guard_selection_info(),
-                                   GUARD_USAGE_TRAFFIC,
-                                   rst,
-                                   &r,
+                                   GUARD_USAGE_TRAFFIC, rst, &r,
                                    guard_state_out) < 0) {
     tor_assert(r == NULL);
   }
@@ -3698,9 +3698,7 @@ guards_choose_dirguard(uint8_t dir_purpose,
   }
 
   if (entry_guard_pick_for_circuit(get_guard_selection_info(),
-                                   GUARD_USAGE_DIRGUARD,
-                                   rst,
-                                   &r,
+                                   GUARD_USAGE_DIRGUARD, rst, &r,
                                    guard_state_out) < 0) {
     tor_assert(r == NULL);
   }
@@ -3730,10 +3728,10 @@ guards_retry_optimistic(const or_options_t *options)
  * <b>num_usable</b> to improve the error message. */
 char *
 guard_selection_get_err_str_if_dir_info_missing(guard_selection_t *gs,
-                                        int using_mds,
-                                        int num_present, int num_usable)
+                                                int using_mds, int num_present,
+                                                int num_usable)
 {
-  if (!gs->primary_guards_up_to_date)
+  if (! gs->primary_guards_up_to_date)
     entry_guards_update_primary(gs);
 
   char *ret_str = NULL;
@@ -3747,28 +3745,30 @@ guard_selection_get_err_str_if_dir_info_missing(guard_selection_t *gs,
   num_primary_to_check = get_n_primary_guards_to_use(GUARD_USAGE_TRAFFIC);
   num_primary_to_check++;
 
-  SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
+  SMARTLIST_FOREACH_BEGIN (gs->primary_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);
     if (guard->is_reachable == GUARD_REACHABLE_NO)
       continue;
     n_considered++;
-    if (!guard_has_descriptor(guard))
+    if (! guard_has_descriptor(guard))
       n_missing_descriptors++;
     if (n_considered >= num_primary_to_check)
       break;
-  } SMARTLIST_FOREACH_END(guard);
+  }
+  SMARTLIST_FOREACH_END(guard);
 
   /* If we are not missing any descriptors, return NULL. */
-  if (!n_missing_descriptors) {
+  if (! n_missing_descriptors) {
     return NULL;
   }
 
   /* otherwise return a helpful error string */
-  tor_asprintf(&ret_str, "We're missing descriptors for %d/%d of our "
+  tor_asprintf(&ret_str,
+               "We're missing descriptors for %d/%d of our "
                "primary entry guards (total %sdescriptors: %d/%d). "
                "That's ok. We will try to fetch missing descriptors soon.",
                n_missing_descriptors, num_primary_to_check,
-               using_mds?"micro":"", num_present, num_usable);
+               using_mds ? "micro" : "", num_present, num_usable);
 
   return ret_str;
 }
@@ -3776,20 +3776,19 @@ guard_selection_get_err_str_if_dir_info_missing(guard_selection_t *gs,
 /** As guard_selection_have_enough_dir_info_to_build_circuits, but uses
  * the default guard selection. */
 char *
-entry_guards_get_err_str_if_dir_info_missing(int using_mds,
-                                     int num_present, int num_usable)
+entry_guards_get_err_str_if_dir_info_missing(int using_mds, int num_present,
+                                             int num_usable)
 {
   return guard_selection_get_err_str_if_dir_info_missing(
-                                                 get_guard_selection_info(),
-                                                 using_mds,
-                                                 num_present, num_usable);
+      get_guard_selection_info(), using_mds, num_present, num_usable);
 }
 
 /** Free one guard selection context */
 STATIC void
 guard_selection_free_(guard_selection_t *gs)
 {
-  if (!gs) return;
+  if (! gs)
+    return;
 
   tor_free(gs->name);
 
@@ -3815,9 +3814,10 @@ entry_guards_free_all(void)
   curr_guard_context = NULL;
   /* Free all the guard contexts */
   if (guard_contexts != NULL) {
-    SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
+    SMARTLIST_FOREACH_BEGIN (guard_contexts, guard_selection_t *, gs) {
       guard_selection_free(gs);
-    } SMARTLIST_FOREACH_END(gs);
+    }
+    SMARTLIST_FOREACH_END(gs);
     smartlist_free(guard_contexts);
     guard_contexts = NULL;
   }

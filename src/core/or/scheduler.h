@@ -17,9 +17,9 @@
  * parsed strings in Schedulers. The reason to do such a thing is so we can
  * quickly and without parsing strings select the scheduler at anytime. */
 typedef enum {
-  SCHEDULER_NONE =     -1,
-  SCHEDULER_VANILLA =   1,
-  SCHEDULER_KIST =      2,
+  SCHEDULER_NONE = -1,
+  SCHEDULER_VANILLA = 1,
+  SCHEDULER_KIST = 2,
   SCHEDULER_KIST_LITE = 3,
 } scheduler_types_t;
 
@@ -119,7 +119,7 @@ void scheduler_init(void);
 void scheduler_free_all(void);
 void scheduler_conf_changed(void);
 void scheduler_notify_networkstatus_changed(void);
-MOCK_DECL(void, scheduler_release_channel, (channel_t *chan));
+MOCK_DECL(void, scheduler_release_channel, (channel_t * chan));
 
 /*
  * Ways for a channel to interact with the scheduling system. A channel only
@@ -127,8 +127,8 @@ MOCK_DECL(void, scheduler_release_channel, (channel_t *chan));
  * (ii) whether or not it would like to write.
  */
 void scheduler_channel_wants_writes(channel_t *chan);
-MOCK_DECL(void, scheduler_channel_doesnt_want_writes, (channel_t *chan));
-MOCK_DECL(void, scheduler_channel_has_waiting_cells, (channel_t *chan));
+MOCK_DECL(void, scheduler_channel_doesnt_want_writes, (channel_t * chan));
+MOCK_DECL(void, scheduler_channel_has_waiting_cells, (channel_t * chan));
 
 /*****************************************************************************
  * Private scheduler functions
@@ -138,7 +138,7 @@ MOCK_DECL(void, scheduler_channel_has_waiting_cells, (channel_t *chan));
  *****************************************************************************/
 #ifdef SCHEDULER_PRIVATE_
 
-#include "ext/ht.h"
+#  include "ext/ht.h"
 
 /*********************************
  * Defined in scheduler.c
@@ -148,9 +148,10 @@ void scheduler_set_channel_state(channel_t *chan, int new_state);
 const char *get_scheduler_state_string(int scheduler_state);
 
 /* Triggers a BUG() and extra information with chan if available. */
-#define SCHED_BUG(cond, chan) \
-  (PREDICT_UNLIKELY(cond) ? \
-   ((BUG(cond)) ? (scheduler_bug_occurred(chan), 1) : 0) : 0)
+#  define SCHED_BUG(cond, chan)                                  \
+    (PREDICT_UNLIKELY(cond)                                      \
+         ? ((BUG(cond)) ? (scheduler_bug_occurred(chan), 1) : 0) \
+         : 0)
 
 void scheduler_bug_occurred(const channel_t *chan);
 
@@ -160,18 +161,18 @@ MOCK_DECL(int, scheduler_compare_channels,
 void scheduler_ev_active(void);
 void scheduler_ev_add(const struct timeval *next_run);
 
-#ifdef TOR_UNIT_TESTS
+#  ifdef TOR_UNIT_TESTS
 extern smartlist_t *channels_pending;
 extern struct mainloop_event_t *run_sched_ev;
 extern const scheduler_t *the_scheduler;
 void scheduler_touch_channel(channel_t *chan);
-#endif /* defined(TOR_UNIT_TESTS) */
+#  endif /* defined(TOR_UNIT_TESTS) */
 
 /*********************************
  * Defined in scheduler_kist.c
  *********************************/
 
-#ifdef SCHEDULER_KIST_PRIVATE
+#  ifdef SCHEDULER_KIST_PRIVATE
 
 /* Socket table entry which holds information of a channel's socket and kernel
  * TCP information. Only used by KIST. */
@@ -192,9 +193,9 @@ typedef struct socket_table_ent_t {
 typedef HT_HEAD(outbuf_table_s, outbuf_table_ent_t) outbuf_table_t;
 
 MOCK_DECL(int, channel_should_write_to_kernel,
-          (outbuf_table_t *table, channel_t *chan));
-MOCK_DECL(void, channel_write_to_kernel, (channel_t *chan));
-MOCK_DECL(void, update_socket_info_impl, (socket_table_ent_t *ent));
+          (outbuf_table_t * table, channel_t *chan));
+MOCK_DECL(void, channel_write_to_kernel, (channel_t * chan));
+MOCK_DECL(void, update_socket_info_impl, (socket_table_ent_t * ent));
 
 int scheduler_can_use_kist(void);
 void scheduler_kist_set_full_mode(void);
@@ -202,11 +203,11 @@ void scheduler_kist_set_lite_mode(void);
 scheduler_t *get_kist_scheduler(void);
 int kist_scheduler_run_interval(void);
 
-#ifdef TOR_UNIT_TESTS
+#    ifdef TOR_UNIT_TESTS
 extern int32_t sched_run_interval;
-#endif /* TOR_UNIT_TESTS */
+#    endif /* TOR_UNIT_TESTS */
 
-#endif /* defined(SCHEDULER_KIST_PRIVATE) */
+#  endif /* defined(SCHEDULER_KIST_PRIVATE) */
 
 /*********************************
  * Defined in scheduler_vanilla.c

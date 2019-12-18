@@ -97,17 +97,16 @@ geoip_get_countries(void)
 /** Return the index of the <b>country</b>'s entry in the GeoIP
  * country list if it is a valid 2-letter country code, otherwise
  * return -1. */
-MOCK_IMPL(country_t,
-geoip_get_country,(const char *country))
+MOCK_IMPL(country_t, geoip_get_country, (const char *country))
 {
   void *idxplus1_;
   intptr_t idx;
 
   idxplus1_ = strmap_get_lc(country_idxplus1_by_lc_code, country);
-  if (!idxplus1_)
+  if (! idxplus1_)
     return -1;
 
-  idx = ((uintptr_t)idxplus1_)-1;
+  idx = ((uintptr_t)idxplus1_) - 1;
   return (country_t)idx;
 }
 
@@ -121,25 +120,25 @@ geoip_add_entry(const tor_addr_t *low, const tor_addr_t *high,
   void *idxplus1_;
 
   IF_BUG_ONCE(tor_addr_family(low) != tor_addr_family(high))
-    return;
+  return;
   IF_BUG_ONCE(tor_addr_compare(high, low, CMP_EXACT) < 0)
-    return;
+  return;
 
   idxplus1_ = strmap_get_lc(country_idxplus1_by_lc_code, country);
 
-  if (!idxplus1_) {
+  if (! idxplus1_) {
     geoip_country_t *c = tor_malloc_zero(sizeof(geoip_country_t));
     strlcpy(c->countrycode, country, sizeof(c->countrycode));
     tor_strlower(c->countrycode);
     smartlist_add(geoip_countries, c);
     idx = smartlist_len(geoip_countries) - 1;
-    strmap_set_lc(country_idxplus1_by_lc_code, country, (void*)(idx+1));
+    strmap_set_lc(country_idxplus1_by_lc_code, country, (void *)(idx + 1));
   } else {
-    idx = ((uintptr_t)idxplus1_)-1;
+    idx = ((uintptr_t)idxplus1_) - 1;
   }
   {
     geoip_country_t *c = smartlist_get(geoip_countries, (int)idx);
-    tor_assert(!strcasecmp(c->countrycode, country));
+    tor_assert(! strcasecmp(c->countrycode, country));
   }
 
   if (tor_addr_family(low) == AF_INET) {
@@ -166,13 +165,13 @@ geoip_parse_entry(const char *line, sa_family_t family)
   char c[3];
   char *country = NULL;
 
-  if (!geoip_countries)
+  if (! geoip_countries)
     init_geoip_countries();
   if (family == AF_INET) {
-    if (!geoip_ipv4_entries)
+    if (! geoip_ipv4_entries)
       geoip_ipv4_entries = smartlist_new();
   } else if (family == AF_INET6) {
-    if (!geoip_ipv6_entries)
+    if (! geoip_ipv6_entries)
       geoip_ipv6_entries = smartlist_new();
   } else {
     log_warn(LD_GENERAL, "Unsupported family: %d", family);
@@ -187,26 +186,26 @@ geoip_parse_entry(const char *line, sa_family_t family)
   char buf[512];
   if (family == AF_INET) {
     unsigned int low, high;
-    if (tor_sscanf(line,"%u,%u,%2s", &low, &high, c) == 3 ||
-        tor_sscanf(line,"\"%u\",\"%u\",\"%2s\",", &low, &high, c) == 3) {
+    if (tor_sscanf(line, "%u,%u,%2s", &low, &high, c) == 3 ||
+        tor_sscanf(line, "\"%u\",\"%u\",\"%2s\",", &low, &high, c) == 3) {
       tor_addr_from_ipv4h(&low_addr, low);
       tor_addr_from_ipv4h(&high_addr, high);
     } else
       goto fail;
     country = c;
-  } else {                      /* AF_INET6 */
+  } else { /* AF_INET6 */
     char *low_str, *high_str;
     struct in6_addr low, high;
     char *strtok_state;
     strlcpy(buf, line, sizeof(buf));
     low_str = tor_strtok_r(buf, ",", &strtok_state);
-    if (!low_str)
+    if (! low_str)
       goto fail;
     high_str = tor_strtok_r(NULL, ",", &strtok_state);
-    if (!high_str)
+    if (! high_str)
       goto fail;
     country = tor_strtok_r(NULL, "\n", &strtok_state);
-    if (!country)
+    if (! country)
       goto fail;
     if (strlen(country) != 2)
       goto fail;
@@ -220,7 +219,7 @@ geoip_parse_entry(const char *line, sa_family_t family)
   geoip_add_entry(&low_addr, &high_addr, country);
   return 0;
 
-  fail:
+fail:
   log_warn(LD_GENERAL, "Unable to parse line from GEOIP %s file: %s",
            family == AF_INET ? "IPv4" : "IPv6", escaped(line));
   return -1;
@@ -275,10 +274,10 @@ geoip_ipv6_compare_key_to_entry_(const void *_key, const void **_member)
   const geoip_ipv6_entry_t *entry = *_member;
 
   if (fast_memcmp(addr->s6_addr, entry->ip_low.s6_addr,
-             sizeof(struct in6_addr)) < 0)
+                  sizeof(struct in6_addr)) < 0)
     return -1;
   else if (fast_memcmp(addr->s6_addr, entry->ip_high.s6_addr,
-                  sizeof(struct in6_addr)) > 0)
+                       sizeof(struct in6_addr)) > 0)
     return 1;
   else
     return 0;
@@ -299,7 +298,7 @@ init_geoip_countries(void)
           sizeof(geoip_unresolved->countrycode));
   smartlist_add(geoip_countries, geoip_unresolved);
   country_idxplus1_by_lc_code = strmap_new();
-  strmap_set_lc(country_idxplus1_by_lc_code, "??", (void*)(1));
+  strmap_set_lc(country_idxplus1_by_lc_code, "??", (void *)(1));
 }
 
 /** Clear appropriate GeoIP database, based on <b>family</b>, and
@@ -328,12 +327,11 @@ geoip_load_file(sa_family_t family, const char *filename, int severity)
 
   tor_assert(family == AF_INET || family == AF_INET6);
 
-  if (!(f = tor_fopen_cloexec(filename, "r"))) {
-    log_fn(severity, LD_GENERAL, "Failed to open GEOIP file %s.",
-           filename);
+  if (! (f = tor_fopen_cloexec(filename, "r"))) {
+    log_fn(severity, LD_GENERAL, "Failed to open GEOIP file %s.", filename);
     return -1;
   }
-  if (!geoip_countries)
+  if (! geoip_countries)
     init_geoip_countries();
 
   if (family == AF_INET) {
@@ -355,7 +353,7 @@ geoip_load_file(sa_family_t family, const char *filename, int severity)
 
   log_notice(LD_GENERAL, "Parsing GEOIP %s file %s.",
              (family == AF_INET) ? "IPv4" : "IPv6", filename);
-  while (!feof(f)) {
+  while (! feof(f)) {
     char buf[512];
     if (fgets(buf, (int)sizeof(buf), f) == NULL)
       break;
@@ -391,7 +389,7 @@ int
 geoip_get_country_by_ipv4(uint32_t ipaddr)
 {
   geoip_ipv4_entry_t *ent;
-  if (!geoip_ipv4_entries)
+  if (! geoip_ipv4_entries)
     return -1;
   ent = smartlist_bsearch(geoip_ipv4_entries, &ipaddr,
                           geoip_ipv4_compare_key_to_entry_);
@@ -408,7 +406,7 @@ geoip_get_country_by_ipv6(const struct in6_addr *addr)
 {
   geoip_ipv6_entry_t *ent;
 
-  if (!geoip_ipv6_entries)
+  if (! geoip_ipv6_entries)
     return -1;
   ent = smartlist_bsearch(geoip_ipv6_entries, addr,
                           geoip_ipv6_compare_key_to_entry_);
@@ -420,8 +418,7 @@ geoip_get_country_by_ipv6(const struct in6_addr *addr)
  * the 'unknown country'.  The return value will always be less than
  * geoip_get_n_countries().  To decode it, call geoip_get_country_name().
  */
-MOCK_IMPL(int,
-geoip_get_country_by_addr,(const tor_addr_t *addr))
+MOCK_IMPL(int, geoip_get_country_by_addr, (const tor_addr_t *addr))
 {
   if (tor_addr_family(addr) == AF_INET) {
     return geoip_get_country_by_ipv4(tor_addr_to_ipv4h(addr));
@@ -433,12 +430,11 @@ geoip_get_country_by_addr,(const tor_addr_t *addr))
 }
 
 /** Return the number of countries recognized by the GeoIP country list. */
-MOCK_IMPL(int,
-geoip_get_n_countries,(void))
+MOCK_IMPL(int, geoip_get_n_countries, (void))
 {
-  if (!geoip_countries)
+  if (! geoip_countries)
     init_geoip_countries();
-  return (int) smartlist_len(geoip_countries);
+  return (int)smartlist_len(geoip_countries);
 }
 
 /** Return the two-letter country code associated with the number <b>num</b>,
@@ -454,15 +450,14 @@ geoip_get_country_name(country_t num)
 }
 
 /** Return true iff we have loaded a GeoIP database.*/
-MOCK_IMPL(int,
-geoip_is_loaded,(sa_family_t family))
+MOCK_IMPL(int, geoip_is_loaded, (sa_family_t family))
 {
   tor_assert(family == AF_INET || family == AF_INET6);
   if (geoip_countries == NULL)
     return 0;
   if (family == AF_INET)
     return geoip_ipv4_entries != NULL;
-  else                          /* AF_INET6 */
+  else /* AF_INET6 */
     return geoip_ipv6_entries != NULL;
 }
 
@@ -475,7 +470,7 @@ geoip_db_digest(sa_family_t family)
   tor_assert(family == AF_INET || family == AF_INET6);
   if (family == AF_INET)
     return hex_str(geoip_digest, DIGEST_LEN);
-  else                          /* AF_INET6 */
+  else /* AF_INET6 */
     return hex_str(geoip6_digest, DIGEST_LEN);
 }
 

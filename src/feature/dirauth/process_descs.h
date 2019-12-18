@@ -19,23 +19,20 @@ void dirserv_free_fingerprint_list(void);
 
 #ifdef HAVE_MODULE_DIRAUTH
 int dirserv_load_fingerprint_file(void);
-enum was_router_added_t dirserv_add_multiple_descriptors(
-                                     const char *desc, size_t desclen,
-                                     uint8_t purpose,
-                                     const char *source,
-                                     const char **msg);
-enum was_router_added_t dirserv_add_descriptor(routerinfo_t *ri,
-                                               const char **msg,
-                                               const char *source);
+enum was_router_added_t dirserv_add_multiple_descriptors(const char *desc,
+                                                         size_t desclen,
+                                                         uint8_t purpose,
+                                                         const char *source,
+                                                         const char **msg);
+enum was_router_added_t
+dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source);
 
 int dirserv_would_reject_router(const routerstatus_t *rs);
 int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
-                                   int complain,
-                                   int *valid_out);
+                                   int complain, int *valid_out);
 int dirserv_add_own_fingerprint(crypto_pk_t *pk);
 uint32_t dirserv_router_get_status(const routerinfo_t *router,
-                                   const char **msg,
-                                   int severity);
+                                   const char **msg, int severity);
 void dirserv_set_node_flags_from_authoritative_status(node_t *node,
                                                       uint32_t authstatus);
 #else /* !defined(HAVE_MODULE_DIRAUTH) */
@@ -46,8 +43,7 @@ dirserv_load_fingerprint_file(void)
 }
 static inline enum was_router_added_t
 dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
-                                 uint8_t purpose,
-                                 const char *source,
+                                 uint8_t purpose, const char *source,
                                  const char **msg)
 {
   (void)desc;
@@ -58,9 +54,7 @@ dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
   return (enum was_router_added_t)0;
 }
 static inline enum was_router_added_t
-dirserv_add_descriptor(routerinfo_t *ri,
-                       const char **msg,
-                       const char *source)
+dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
 {
   (void)ri;
   (void)msg;
@@ -75,8 +69,7 @@ dirserv_would_reject_router(const routerstatus_t *rs)
 }
 static inline int
 authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
-                               int complain,
-                               int *valid_out)
+                               int complain, int *valid_out)
 {
   (void)ri;
   (void)msg;
@@ -91,8 +84,7 @@ dirserv_add_own_fingerprint(crypto_pk_t *pk)
   return 0;
 }
 static inline uint32_t
-dirserv_router_get_status(const routerinfo_t *router,
-                          const char **msg,
+dirserv_router_get_status(const routerinfo_t *router, const char **msg,
                           int severity)
 {
   (void)router;

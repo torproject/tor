@@ -49,8 +49,8 @@ struct entry_connection_t {
    * retry this connection. */
   struct buf_t *pending_optimistic_data;
   /* For AP connections only: buffer for data that we previously sent
-  * optimistically which we are currently re-sending as we retry this
-  * connection. */
+   * optimistically which we are currently re-sending as we retry this
+   * connection. */
   struct buf_t *sending_optimistic_data;
 
   /** If this is a DNSPort connection, this field holds the pending DNS
@@ -66,30 +66,30 @@ struct entry_connection_t {
 
 #define NUM_CIRCUITS_LAUNCHED_THRESHOLD 10
   /** Number of times we've launched a circuit to handle this stream. If
-    * it gets too high, that could indicate an inconsistency between our
-    * "launch a circuit to handle this stream" logic and our "attach our
-    * stream to one of the available circuits" logic. */
-  unsigned int num_circuits_launched:4;
+   * it gets too high, that could indicate an inconsistency between our
+   * "launch a circuit to handle this stream" logic and our "attach our
+   * stream to one of the available circuits" logic. */
+  unsigned int num_circuits_launched : 4;
 
   /** True iff this stream must attach to a one-hop circuit (e.g. for
    * begin_dir). */
-  unsigned int want_onehop:1;
+  unsigned int want_onehop : 1;
   /** True iff this stream should use a BEGIN_DIR relay command to establish
    * itself rather than BEGIN (either via onehop or via a whole circuit). */
-  unsigned int use_begindir:1;
+  unsigned int use_begindir : 1;
 
   /** For AP connections only. If 1, and we fail to reach the chosen exit,
    * stop requiring it. */
-  unsigned int chosen_exit_optional:1;
+  unsigned int chosen_exit_optional : 1;
   /** For AP connections only. If non-zero, this exit node was picked as
    * a result of the TrackHostExit, and the value decrements every time
    * we fail to complete a circuit to our chosen exit -- if it reaches
    * zero, abandon the associated mapaddress. */
-  unsigned int chosen_exit_retries:3;
+  unsigned int chosen_exit_retries : 3;
 
   /** True iff this is an AP connection that came from a transparent or
    * NATd connection */
-  unsigned int is_transparent_ap:1;
+  unsigned int is_transparent_ap : 1;
 
   /** For AP connections only: Set if this connection's target exit node
    * allows optimistic data (that is, data sent on this stream before

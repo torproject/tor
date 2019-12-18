@@ -34,13 +34,14 @@ struct dir_server_t {
   char v3_identity_digest[DIGEST_LEN]; /**< Digest of v3 (authority only,
                                         * high-security) identity key. */
 
-  unsigned int is_running:1; /**< True iff we think this server is running. */
-  unsigned int is_authority:1; /**< True iff this is a directory authority
-                                * of some kind. */
+  unsigned int
+      is_running : 1; /**< True iff we think this server is running. */
+  unsigned int is_authority : 1; /**< True iff this is a directory authority
+                                  * of some kind. */
 
   /** True iff this server has accepted the most recent server descriptor
    * we tried to upload to it. */
-  unsigned int has_accepted_serverdesc:1;
+  unsigned int has_accepted_serverdesc : 1;
 
   /** What kind of authority is this? (Bitfield.) */
   dirinfo_type_t type;

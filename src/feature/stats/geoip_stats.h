@@ -65,11 +65,11 @@ typedef enum {
   /** END cell sent to circuit that initiated a tunneled request. */
   DIRREQ_END_CELL_SENT = 2,
   /** Flushed last cell from queue of the circuit that initiated a
-    * tunneled request to the outbuf of the OR connection. */
+   * tunneled request to the outbuf of the OR connection. */
   DIRREQ_CIRC_QUEUE_FLUSHED = 3,
   /** Flushed last byte from buffer of the channel belonging to the
-    * circuit that initiated a tunneled request; completes a tunneled
-    * request. */
+   * circuit that initiated a tunneled request; completes a tunneled
+   * request. */
   DIRREQ_CHANNEL_BUFFER_FLUSHED = 4
 } dirreq_state_t;
 
@@ -87,8 +87,8 @@ typedef struct clientmap_entry_t {
    *
    * (This will run out of space around 4011 CE.  If Tor is still in use around
    * 4000 CE, please remember to add more bits to last_seen_in_minutes.) */
-  unsigned int last_seen_in_minutes:30;
-  unsigned int action:2;
+  unsigned int last_seen_in_minutes : 30;
+  unsigned int action : 2;
 
   /* This object is used to keep some statistics per client address for the
    * DoS mitigation subsystem. */
@@ -109,8 +109,8 @@ size_t geoip_client_cache_handle_oom(time_t now, size_t min_remove_bytes);
 
 void geoip_note_ns_response(geoip_ns_response_t response);
 char *geoip_get_transport_history(void);
-int geoip_get_client_history(geoip_client_action_t action,
-                             char **country_str, char **ipver_str);
+int geoip_get_client_history(geoip_client_action_t action, char **country_str,
+                             char **ipver_str);
 char *geoip_get_request_history(void);
 void geoip_stats_free_all(void);
 

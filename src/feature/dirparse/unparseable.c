@@ -17,7 +17,7 @@
 #include "lib/sandbox/sandbox.h"
 
 #ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
+#  include <sys/stat.h>
 #endif
 
 /* Dump mechanism for unparseable descriptors */
@@ -85,7 +85,7 @@ dump_desc_init(void)
       problem_with_dump_desc_dir = 1;
   }
 
-  if (have_dump_desc_dir && !problem_with_dump_desc_dir) {
+  if (have_dump_desc_dir && ! problem_with_dump_desc_dir) {
     dump_desc_populate_fifo_from_directory(dump_desc_dir);
   }
 
@@ -99,16 +99,16 @@ dump_desc_create_dir(void)
   char *dump_desc_dir;
 
   /* If the problem flag is set, skip it */
-  if (problem_with_dump_desc_dir) return;
+  if (problem_with_dump_desc_dir)
+    return;
 
   /* Do we need it? */
-  if (!have_dump_desc_dir) {
+  if (! have_dump_desc_dir) {
     dump_desc_dir = get_datadir_fname(DESC_DUMP_DATADIR_SUBDIR);
 
-    if (check_private_dir(dump_desc_dir, CPD_CREATE,
-                          get_options()->User) < 0) {
-      log_notice(LD_DIR,
-                 "Failed to create descriptor dump directory %s",
+    if (check_private_dir(dump_desc_dir, CPD_CREATE, get_options()->User) <
+        0) {
+      log_notice(LD_DIR, "Failed to create descriptor dump directory %s",
                  dump_desc_dir);
       problem_with_dump_desc_dir = 1;
     }
@@ -153,8 +153,7 @@ dump_desc_fifo_add_and_clean(char *filename, const uint8_t *digest_sha256,
   /* Do we need to do some cleanup? */
   max_len = get_options()->MaxUnparseableDescSizeToLog;
   /* Iterate over the list until we've freed enough space */
-  while (len > max_len - len_descs_dumped &&
-         smartlist_len(descs_dumped) > 0) {
+  while (len > max_len - len_descs_dumped && smartlist_len(descs_dumped) > 0) {
     /* Get the oldest thing on the list */
     tmp = (dumped_desc_t *)(smartlist_get(descs_dumped, 0));
 
@@ -206,9 +205,8 @@ dump_desc_fifo_bump_hash(const uint8_t *digest_sha256)
 
   if (descs_dumped) {
     /* Find a match if one exists */
-    SMARTLIST_FOREACH_BEGIN(descs_dumped, dumped_desc_t *, ent) {
-      if (ent &&
-          tor_memeq(ent->digest_sha256, digest_sha256, DIGEST256_LEN)) {
+    SMARTLIST_FOREACH_BEGIN (descs_dumped, dumped_desc_t *, ent) {
+      if (ent && tor_memeq(ent->digest_sha256, digest_sha256, DIGEST256_LEN)) {
         /*
          * Save a pointer to the match and remove it from its current
          * position.
@@ -217,7 +215,8 @@ dump_desc_fifo_bump_hash(const uint8_t *digest_sha256)
         SMARTLIST_DEL_CURRENT_KEEPORDER(descs_dumped, ent);
         break;
       }
-    } SMARTLIST_FOREACH_END(ent);
+    }
+    SMARTLIST_FOREACH_END(ent);
 
     if (match) {
       /* Update the timestamp */
@@ -240,11 +239,12 @@ dump_desc_fifo_cleanup(void)
 {
   if (descs_dumped) {
     /* Free each descriptor */
-    SMARTLIST_FOREACH_BEGIN(descs_dumped, dumped_desc_t *, ent) {
+    SMARTLIST_FOREACH_BEGIN (descs_dumped, dumped_desc_t *, ent) {
       tor_assert(ent);
       tor_free(ent->filename);
       tor_free(ent);
-    } SMARTLIST_FOREACH_END(ent);
+    }
+    SMARTLIST_FOREACH_END(ent);
     /* Free the list */
     smartlist_free(descs_dumped);
     descs_dumped = NULL;
@@ -256,8 +256,8 @@ dump_desc_fifo_cleanup(void)
  * the filename is sensibly formed and matches the file content, and either
  * return a dumped_desc_t for it or remove the file and return NULL.
  */
-MOCK_IMPL(STATIC dumped_desc_t *,
-dump_desc_populate_one_file, (const char *dirname, const char *f))
+MOCK_IMPL(STATIC dumped_desc_t *, dump_desc_populate_one_file,
+          (const char *dirname, const char *f))
 {
   dumped_desc_t *ent = NULL;
   char *path = NULL, *desc = NULL;
@@ -280,11 +280,11 @@ dump_desc_populate_one_file, (const char *dirname, const char *f))
 
   /* Check that f has the form DESC_DUMP_BASE_FILENAME.<digest256> */
 
-  if (!strcmpstart(f, f_pfx)) {
+  if (! strcmpstart(f, f_pfx)) {
     /* It matches the form, but is the digest parseable as such? */
     digest_str = f + strlen(f_pfx);
-    if (base16_decode(digest, DIGEST256_LEN,
-                      digest_str, strlen(digest_str)) != DIGEST256_LEN) {
+    if (base16_decode(digest, DIGEST256_LEN, digest_str, strlen(digest_str)) !=
+        DIGEST256_LEN) {
       /* We failed to decode it */
       digest_str = NULL;
     }
@@ -293,11 +293,12 @@ dump_desc_populate_one_file, (const char *dirname, const char *f))
     digest_str = NULL;
   }
 
-  if (!digest_str) {
+  if (! digest_str) {
     /* We couldn't get a sensible digest */
     log_notice(LD_DIR,
                "Removing unrecognized filename %s from unparseable "
-               "descriptors directory", f);
+               "descriptors directory",
+               f);
     tor_unlink(path);
     /* We're done */
     goto done;
@@ -310,12 +311,13 @@ dump_desc_populate_one_file, (const char *dirname, const char *f))
    * file contains a '\0', read_file_to_str() will allocate space for and
    * read the entire file and return the correct size in st.
    */
-  desc = read_file_to_str(path, RFTS_IGNORE_MISSING|RFTS_BIN, &st);
-  if (!desc) {
+  desc = read_file_to_str(path, RFTS_IGNORE_MISSING | RFTS_BIN, &st);
+  if (! desc) {
     /* We couldn't read it */
     log_notice(LD_DIR,
                "Failed to read %s from unparseable descriptors directory; "
-               "attempting to remove it.", f);
+               "attempting to remove it.",
+               f);
     tor_unlink(path);
     /* We're done */
     goto done;
@@ -342,12 +344,13 @@ dump_desc_populate_one_file, (const char *dirname, const char *f))
    * We got one; now compute its digest and check that it matches the
    * filename.
    */
-  if (crypto_digest256((char *)content_digest, desc, (size_t) st.st_size,
+  if (crypto_digest256((char *)content_digest, desc, (size_t)st.st_size,
                        DIGEST_SHA256) < 0) {
     /* Weird, but okay */
     log_info(LD_DIR,
              "Unable to hash content of %s from unparseable descriptors "
-             "directory", f);
+             "directory",
+             f);
     tor_unlink(path);
     /* We're done */
     goto done;
@@ -358,7 +361,8 @@ dump_desc_populate_one_file, (const char *dirname, const char *f))
     /* No match */
     log_info(LD_DIR,
              "Hash of %s from unparseable descriptors directory didn't "
-             "match its filename; removing it", f);
+             "match its filename; removing it",
+             f);
     tor_unlink(path);
     /* We're done */
     goto done;
@@ -368,12 +372,12 @@ dump_desc_populate_one_file, (const char *dirname, const char *f))
   ent = tor_malloc_zero(sizeof(dumped_desc_t));
   ent->filename = path;
   memcpy(ent->digest_sha256, digest, DIGEST256_LEN);
-  ent->len = (size_t) st.st_size;
+  ent->len = (size_t)st.st_size;
   ent->when = st.st_mtime;
   /* Null out path so we don't free it out from under ent */
   path = NULL;
 
- done:
+done:
   /* Free allocations if we had them */
   tor_free(desc);
   tor_free(path);
@@ -432,7 +436,7 @@ dump_desc_populate_fifo_from_directory(const char *dirname)
 
   /* Get a list of files */
   files = tor_listdir(dirname);
-  if (!files) {
+  if (! files) {
     log_notice(LD_DIR,
                "Unable to get contents of unparseable descriptor dump "
                "directory %s",
@@ -445,7 +449,7 @@ dump_desc_populate_fifo_from_directory(const char *dirname)
    * FIFO and which should be purged.
    */
 
-  SMARTLIST_FOREACH_BEGIN(files, char *, f) {
+  SMARTLIST_FOREACH_BEGIN (files, char *, f) {
     /* Try to get a FIFO entry */
     ent = dump_desc_populate_one_file(dirname, f);
     if (ent) {
@@ -455,7 +459,7 @@ dump_desc_populate_fifo_from_directory(const char *dirname)
        */
 
       /* Make sure we have a list to add it to */
-      if (!descs_dumped) {
+      if (! descs_dumped) {
         descs_dumped = smartlist_new();
         len_descs_dumped = 0;
       }
@@ -469,7 +473,8 @@ dump_desc_populate_fifo_from_directory(const char *dirname)
      * possible, and emitted a log message about it, so just go on to
      * the next.
      */
-  } SMARTLIST_FOREACH_END(f);
+  }
+  SMARTLIST_FOREACH_END(f);
 
   /* Did we get anything? */
   if (descs_dumped != NULL) {
@@ -479,7 +484,7 @@ dump_desc_populate_fifo_from_directory(const char *dirname)
     /* Log some stats */
     log_info(LD_DIR,
              "Reloaded unparseable descriptor dump FIFO with %d dump(s) "
-             "totaling %"PRIu64 " bytes",
+             "totaling %" PRIu64 " bytes",
              smartlist_len(descs_dumped), (len_descs_dumped));
   }
 
@@ -492,25 +497,24 @@ dump_desc_populate_fifo_from_directory(const char *dirname)
  * type *<b>type</b> to file $DATADIR/unparseable-desc. Do not write more
  * than one descriptor to disk per minute. If there is already such a
  * file in the data directory, overwrite it. */
-MOCK_IMPL(void,
-dump_desc,(const char *desc, const char *type))
+MOCK_IMPL(void, dump_desc, (const char *desc, const char *type))
 {
   tor_assert(desc);
   tor_assert(type);
   size_t len;
   /* The SHA256 of the string */
   uint8_t digest_sha256[DIGEST256_LEN];
-  char digest_sha256_hex[HEX_DIGEST256_LEN+1];
+  char digest_sha256_hex[HEX_DIGEST256_LEN + 1];
   /* Filename to log it to */
   char *debugfile, *debugfile_base;
 
   /* Get the hash for logging purposes anyway */
   len = strlen(desc);
-  if (crypto_digest256((char *)digest_sha256, desc, len,
-                       DIGEST_SHA256) < 0) {
+  if (crypto_digest256((char *)digest_sha256, desc, len, DIGEST_SHA256) < 0) {
     log_info(LD_DIR,
              "Unable to parse descriptor of type %s, and unable to even hash"
-             " it!", type);
+             " it!",
+             type);
     goto err;
   }
 
@@ -521,21 +525,21 @@ dump_desc,(const char *desc, const char *type))
    * We mention type and hash in the main log; don't clutter up the files
    * with anything but the exact dump.
    */
-  tor_asprintf(&debugfile_base,
-               DESC_DUMP_BASE_FILENAME ".%s", digest_sha256_hex);
+  tor_asprintf(&debugfile_base, DESC_DUMP_BASE_FILENAME ".%s",
+               digest_sha256_hex);
   debugfile = get_datadir_fname2(DESC_DUMP_DATADIR_SUBDIR, debugfile_base);
 
   /*
    * Check if the sandbox is active or will become active; see comment
    * below at the log message for why.
    */
-  if (!(sandbox_is_active() || get_options()->Sandbox)) {
+  if (! (sandbox_is_active() || get_options()->Sandbox)) {
     if (len <= get_options()->MaxUnparseableDescSizeToLog) {
-      if (!dump_desc_fifo_bump_hash(digest_sha256)) {
+      if (! dump_desc_fifo_bump_hash(digest_sha256)) {
         /* Create the directory if needed */
         dump_desc_create_dir();
         /* Make sure we've got it */
-        if (have_dump_desc_dir && !problem_with_dump_desc_dir) {
+        if (have_dump_desc_dir && ! problem_with_dump_desc_dir) {
           /* Write it, and tell the main log about it */
           write_str_to_file(debugfile, desc, 1);
           log_info(LD_DIR,
@@ -591,6 +595,6 @@ dump_desc,(const char *desc, const char *type))
   tor_free(debugfile_base);
   tor_free(debugfile);
 
- err:
+err:
   return;
 }

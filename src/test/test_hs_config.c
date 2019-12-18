@@ -29,7 +29,7 @@ helper_config_service(const char *conf, int validate_only)
   options = helper_parse_options(conf);
   tt_assert(options);
   ret = hs_config_service_all(options, validate_only);
- done:
+done:
   or_options_free(options);
   return ret;
 }
@@ -39,13 +39,13 @@ test_invalid_service(void *arg)
 {
   int ret;
 
-  (void) arg;
+  (void)arg;
 
   /* Try with a missing port configuration. */
   {
     const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 1\n"; /* Wrong not supported version. */
+        "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+        "HiddenServiceVersion 1\n"; /* Wrong not supported version. */
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, -1);
@@ -56,9 +56,9 @@ test_invalid_service(void *arg)
   /* Bad value of HiddenServiceAllowUnknownPorts. */
   {
     const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServiceAllowUnknownPorts 2\n"; /* Should be 0 or 1. */
+        "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+        "HiddenServiceVersion 2\n"
+        "HiddenServiceAllowUnknownPorts 2\n"; /* Should be 0 or 1. */
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, -1);
@@ -70,9 +70,9 @@ test_invalid_service(void *arg)
   /* Bad value of HiddenServiceDirGroupReadable */
   {
     const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServiceDirGroupReadable 2\n"; /* Should be 0 or 1. */
+        "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+        "HiddenServiceVersion 2\n"
+        "HiddenServiceDirGroupReadable 2\n"; /* Should be 0 or 1. */
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, -1);
@@ -84,9 +84,9 @@ test_invalid_service(void *arg)
   /* Bad value of HiddenServiceMaxStreamsCloseCircuit */
   {
     const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServiceMaxStreamsCloseCircuit 2\n"; /* Should be 0 or 1. */
+        "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+        "HiddenServiceVersion 2\n"
+        "HiddenServiceMaxStreamsCloseCircuit 2\n"; /* Should be 0 or 1. */
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, -1);
@@ -97,11 +97,10 @@ test_invalid_service(void *arg)
 
   /* Too much max streams. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServicePort 80\n"
-      "HiddenServiceMaxStreams 65536\n"; /* One too many. */
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+                       "HiddenServiceVersion 2\n"
+                       "HiddenServicePort 80\n"
+                       "HiddenServiceMaxStreams 65536\n"; /* One too many. */
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, -1);
@@ -112,13 +111,12 @@ test_invalid_service(void *arg)
 
   /* Duplicate directory directive. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServicePort 80\n"
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServicePort 81\n";
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+                       "HiddenServiceVersion 2\n"
+                       "HiddenServicePort 80\n"
+                       "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+                       "HiddenServiceVersion 2\n"
+                       "HiddenServicePort 81\n";
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, -1);
@@ -129,10 +127,9 @@ test_invalid_service(void *arg)
 
   /* Bad port. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServicePort 65536\n";
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+                       "HiddenServiceVersion 2\n"
+                       "HiddenServicePort 65536\n";
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, -1);
@@ -142,10 +139,9 @@ test_invalid_service(void *arg)
 
   /* Bad target addr:port separation. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServicePort 80 127.0.0.1 8000\n";
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+                       "HiddenServiceVersion 2\n"
+                       "HiddenServicePort 80 127.0.0.1 8000\n";
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, -1);
@@ -156,10 +152,9 @@ test_invalid_service(void *arg)
 
   /* Out of order directives. */
   {
-    const char *conf =
-      "HiddenServiceVersion 2\n"
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServicePort 80\n";
+    const char *conf = "HiddenServiceVersion 2\n"
+                       "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+                       "HiddenServicePort 80\n";
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, -1);
@@ -168,8 +163,7 @@ test_invalid_service(void *arg)
     teardown_capture_of_logs();
   }
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -177,26 +171,24 @@ test_valid_service(void *arg)
 {
   int ret;
 
-  (void) arg;
+  (void)arg;
 
   /* Mix of v2 and v3. Still valid. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServicePort 80\n"
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs2\n"
-      "HiddenServiceVersion 3\n"
-      "HiddenServicePort 81\n"
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs3\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServicePort 82\n";
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+                       "HiddenServiceVersion 2\n"
+                       "HiddenServicePort 80\n"
+                       "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs2\n"
+                       "HiddenServiceVersion 3\n"
+                       "HiddenServicePort 81\n"
+                       "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs3\n"
+                       "HiddenServiceVersion 2\n"
+                       "HiddenServicePort 82\n";
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, 0);
   }
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -204,13 +196,12 @@ test_invalid_service_v2(void *arg)
 {
   int validate_only = 1, ret;
 
-  (void) arg;
+  (void)arg;
 
   /* Try with a missing port configuration. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 2\n";
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+                       "HiddenServiceVersion 2\n";
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, validate_only);
     tt_int_op(ret, OP_EQ, -1);
@@ -221,10 +212,10 @@ test_invalid_service_v2(void *arg)
   /* Too many introduction points. */
   {
     const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServicePort 80\n"
-      "HiddenServiceNumIntroductionPoints 11\n"; /* One too many. */
+        "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+        "HiddenServiceVersion 2\n"
+        "HiddenServicePort 80\n"
+        "HiddenServiceNumIntroductionPoints 11\n"; /* One too many. */
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, validate_only);
     tt_int_op(ret, OP_EQ, -1);
@@ -235,11 +226,10 @@ test_invalid_service_v2(void *arg)
 
   /* Too little introduction points. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServicePort 80\n"
-      "HiddenServiceNumIntroductionPoints -1\n";
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+                       "HiddenServiceVersion 2\n"
+                       "HiddenServicePort 80\n"
+                       "HiddenServiceNumIntroductionPoints -1\n";
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, validate_only);
     tt_int_op(ret, OP_EQ, -1);
@@ -251,10 +241,10 @@ test_invalid_service_v2(void *arg)
   /* Bad authorized client type. */
   {
     const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServicePort 80\n"
-      "HiddenServiceAuthorizeClient blah alice,bob\n"; /* blah is no good. */
+        "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+        "HiddenServiceVersion 2\n"
+        "HiddenServicePort 80\n"
+        "HiddenServiceAuthorizeClient blah alice,bob\n"; /* blah is no good. */
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, validate_only);
     tt_int_op(ret, OP_EQ, -1);
@@ -263,8 +253,7 @@ test_invalid_service_v2(void *arg)
     teardown_capture_of_logs();
   }
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -272,50 +261,48 @@ test_valid_service_v2(void *arg)
 {
   int ret;
 
-  (void) arg;
+  (void)arg;
   mock_hostname_resolver();
 
   /* Valid complex configuration. Basic client authorization. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServicePort 80\n"
-      "HiddenServicePort 22 localhost:22\n"
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+                       "HiddenServiceVersion 2\n"
+                       "HiddenServicePort 80\n"
+                       "HiddenServicePort 22 localhost:22\n"
 #ifdef HAVE_SYS_UN_H
-      "HiddenServicePort 42 unix:/path/to/socket\n"
+                       "HiddenServicePort 42 unix:/path/to/socket\n"
 #endif
-      "HiddenServiceAuthorizeClient basic alice,bob,eve\n"
-      "HiddenServiceAllowUnknownPorts 1\n"
-      "HiddenServiceMaxStreams 42\n"
-      "HiddenServiceMaxStreamsCloseCircuit 0\n"
-      "HiddenServiceDirGroupReadable 1\n"
-      "HiddenServiceNumIntroductionPoints 7\n";
+                       "HiddenServiceAuthorizeClient basic alice,bob,eve\n"
+                       "HiddenServiceAllowUnknownPorts 1\n"
+                       "HiddenServiceMaxStreams 42\n"
+                       "HiddenServiceMaxStreamsCloseCircuit 0\n"
+                       "HiddenServiceDirGroupReadable 1\n"
+                       "HiddenServiceNumIntroductionPoints 7\n";
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, 0);
   }
 
   /* Valid complex configuration. Stealth client authorization. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs2\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServicePort 65535\n"
-      "HiddenServicePort 22 1.1.1.1:22\n"
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs2\n"
+                       "HiddenServiceVersion 2\n"
+                       "HiddenServicePort 65535\n"
+                       "HiddenServicePort 22 1.1.1.1:22\n"
 #ifdef HAVE_SYS_UN_H
-      "HiddenServicePort 9000 unix:/path/to/socket\n"
+                       "HiddenServicePort 9000 unix:/path/to/socket\n"
 #endif
-      "HiddenServiceAuthorizeClient stealth charlie,romeo\n"
-      "HiddenServiceAllowUnknownPorts 0\n"
-      "HiddenServiceMaxStreams 42\n"
-      "HiddenServiceMaxStreamsCloseCircuit 0\n"
-      "HiddenServiceDirGroupReadable 1\n"
-      "HiddenServiceNumIntroductionPoints 8\n";
+                       "HiddenServiceAuthorizeClient stealth charlie,romeo\n"
+                       "HiddenServiceAllowUnknownPorts 0\n"
+                       "HiddenServiceMaxStreams 42\n"
+                       "HiddenServiceMaxStreamsCloseCircuit 0\n"
+                       "HiddenServiceDirGroupReadable 1\n"
+                       "HiddenServiceNumIntroductionPoints 8\n";
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, 0);
   }
 
- done:
+done:
   unmock_hostname_resolver();
 }
 
@@ -324,13 +311,12 @@ test_invalid_service_v3(void *arg)
 {
   int validate_only = 1, ret;
 
-  (void) arg;
+  (void)arg;
 
   /* Try with a missing port configuration. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 3\n";
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+                       "HiddenServiceVersion 3\n";
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, validate_only);
     tt_int_op(ret, OP_EQ, -1);
@@ -341,10 +327,10 @@ test_invalid_service_v3(void *arg)
   /* Too many introduction points. */
   {
     const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 3\n"
-      "HiddenServicePort 80\n"
-      "HiddenServiceNumIntroductionPoints 21\n"; /* One too many. */
+        "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+        "HiddenServiceVersion 3\n"
+        "HiddenServicePort 80\n"
+        "HiddenServiceNumIntroductionPoints 21\n"; /* One too many. */
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, validate_only);
     tt_int_op(ret, OP_EQ, -1);
@@ -355,11 +341,10 @@ test_invalid_service_v3(void *arg)
 
   /* Too little introduction points. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 3\n"
-      "HiddenServicePort 80\n"
-      "HiddenServiceNumIntroductionPoints 1\n";
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+                       "HiddenServiceVersion 3\n"
+                       "HiddenServicePort 80\n"
+                       "HiddenServiceNumIntroductionPoints 1\n";
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, validate_only);
     tt_int_op(ret, OP_EQ, -1);
@@ -370,10 +355,9 @@ test_invalid_service_v3(void *arg)
 
   /* v2-specific HiddenServiceAuthorizeClient set. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 3\n"
-      "HiddenServiceAuthorizeClient stealth client1\n";
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+                       "HiddenServiceVersion 3\n"
+                       "HiddenServiceAuthorizeClient stealth client1\n";
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, validate_only);
     tt_int_op(ret, OP_EQ, -1);
@@ -384,8 +368,7 @@ test_invalid_service_v3(void *arg)
     teardown_capture_of_logs();
   }
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -393,64 +376,61 @@ test_valid_service_v3(void *arg)
 {
   int ret;
 
-  (void) arg;
+  (void)arg;
   mock_hostname_resolver();
 
   /* Valid complex configuration. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 3\n"
-      "HiddenServicePort 80\n"
-      "HiddenServicePort 22 localhost:22\n"
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+                       "HiddenServiceVersion 3\n"
+                       "HiddenServicePort 80\n"
+                       "HiddenServicePort 22 localhost:22\n"
 #ifdef HAVE_SYS_UN_H
-      "HiddenServicePort 42 unix:/path/to/socket\n"
+                       "HiddenServicePort 42 unix:/path/to/socket\n"
 #endif
-      "HiddenServiceAllowUnknownPorts 1\n"
-      "HiddenServiceMaxStreams 42\n"
-      "HiddenServiceMaxStreamsCloseCircuit 0\n"
-      "HiddenServiceDirGroupReadable 1\n"
-      "HiddenServiceNumIntroductionPoints 7\n";
+                       "HiddenServiceAllowUnknownPorts 1\n"
+                       "HiddenServiceMaxStreams 42\n"
+                       "HiddenServiceMaxStreamsCloseCircuit 0\n"
+                       "HiddenServiceDirGroupReadable 1\n"
+                       "HiddenServiceNumIntroductionPoints 7\n";
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, 0);
   }
 
   /* Valid complex configuration. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs2\n"
-      "HiddenServiceVersion 3\n"
-      "HiddenServicePort 65535\n"
-      "HiddenServicePort 22 1.1.1.1:22\n"
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs2\n"
+                       "HiddenServiceVersion 3\n"
+                       "HiddenServicePort 65535\n"
+                       "HiddenServicePort 22 1.1.1.1:22\n"
 #ifdef HAVE_SYS_UN_H
-      "HiddenServicePort 9000 unix:/path/to/socket\n"
+                       "HiddenServicePort 9000 unix:/path/to/socket\n"
 #endif
-      "HiddenServiceAllowUnknownPorts 0\n"
-      "HiddenServiceMaxStreams 42\n"
-      "HiddenServiceMaxStreamsCloseCircuit 0\n"
-      "HiddenServiceDirGroupReadable 1\n"
-      "HiddenServiceNumIntroductionPoints 20\n";
+                       "HiddenServiceAllowUnknownPorts 0\n"
+                       "HiddenServiceMaxStreams 42\n"
+                       "HiddenServiceMaxStreamsCloseCircuit 0\n"
+                       "HiddenServiceDirGroupReadable 1\n"
+                       "HiddenServiceNumIntroductionPoints 20\n";
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, 0);
   }
 
   /* Mix of v2 and v3. Still valid. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServicePort 80\n"
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs2\n"
-      "HiddenServiceVersion 3\n"
-      "HiddenServicePort 81\n"
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs3\n"
-      "HiddenServiceVersion 2\n"
-      "HiddenServicePort 82\n";
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+                       "HiddenServiceVersion 2\n"
+                       "HiddenServicePort 80\n"
+                       "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs2\n"
+                       "HiddenServiceVersion 3\n"
+                       "HiddenServicePort 81\n"
+                       "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs3\n"
+                       "HiddenServiceVersion 2\n"
+                       "HiddenServicePort 82\n";
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, 0);
   }
 
- done:
+done:
   unmock_hostname_resolver();
 }
 
@@ -459,7 +439,7 @@ test_staging_service_v3(void *arg)
 {
   int ret;
 
-  (void) arg;
+  (void)arg;
 
   /* We don't validate a service object, this is the service test that are in
    * charge of doing so. We just check for the stable state after
@@ -468,19 +448,18 @@ test_staging_service_v3(void *arg)
   hs_init();
 
   /* Time for a valid v3 service that should get staged. */
-  const char *conf =
-    "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs2\n"
-    "HiddenServiceVersion 3\n"
-    "HiddenServicePort 65535\n"
-    "HiddenServicePort 22 1.1.1.1:22\n"
+  const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs2\n"
+                     "HiddenServiceVersion 3\n"
+                     "HiddenServicePort 65535\n"
+                     "HiddenServicePort 22 1.1.1.1:22\n"
 #ifdef HAVE_SYS_UN_H
-    "HiddenServicePort 9000 unix:/path/to/socket\n"
+                     "HiddenServicePort 9000 unix:/path/to/socket\n"
 #endif
-    "HiddenServiceAllowUnknownPorts 0\n"
-    "HiddenServiceMaxStreams 42\n"
-    "HiddenServiceMaxStreamsCloseCircuit 0\n"
-    "HiddenServiceDirGroupReadable 1\n"
-    "HiddenServiceNumIntroductionPoints 20\n";
+                     "HiddenServiceAllowUnknownPorts 0\n"
+                     "HiddenServiceMaxStreams 42\n"
+                     "HiddenServiceMaxStreamsCloseCircuit 0\n"
+                     "HiddenServiceDirGroupReadable 1\n"
+                     "HiddenServiceNumIntroductionPoints 20\n";
   ret = helper_config_service(conf, 0);
   tt_int_op(ret, OP_EQ, 0);
   /* Ok, we have a service in our map! Registration went well. */
@@ -488,7 +467,7 @@ test_staging_service_v3(void *arg)
   /* Make sure we don't have a magic v2 service out of this. */
   tt_int_op(rend_num_services(), OP_EQ, 0);
 
- done:
+done:
   hs_free_all();
 }
 
@@ -497,19 +476,18 @@ test_dos_parameters(void *arg)
 {
   int ret;
 
-  (void) arg;
+  (void)arg;
 
   hs_init();
 
   /* Valid configuration. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs3\n"
-      "HiddenServiceVersion 3\n"
-      "HiddenServicePort 22 1.1.1.1:22\n"
-      "HiddenServiceEnableIntroDoSDefense 1\n"
-      "HiddenServiceEnableIntroDoSRatePerSec 42\n"
-      "HiddenServiceEnableIntroDoSBurstPerSec 87\n";
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs3\n"
+                       "HiddenServiceVersion 3\n"
+                       "HiddenServicePort 22 1.1.1.1:22\n"
+                       "HiddenServiceEnableIntroDoSDefense 1\n"
+                       "HiddenServiceEnableIntroDoSRatePerSec 42\n"
+                       "HiddenServiceEnableIntroDoSBurstPerSec 87\n";
 
     setup_full_capture_of_logs(LOG_INFO);
     ret = helper_config_service(conf, 0);
@@ -521,13 +499,12 @@ test_dos_parameters(void *arg)
 
   /* Invalid rate. Value of 2^37. Max allowed is 2^31. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs3\n"
-      "HiddenServiceVersion 3\n"
-      "HiddenServicePort 22 1.1.1.1:22\n"
-      "HiddenServiceEnableIntroDoSDefense 1\n"
-      "HiddenServiceEnableIntroDoSRatePerSec 137438953472\n"
-      "HiddenServiceEnableIntroDoSBurstPerSec 87\n";
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs3\n"
+                       "HiddenServiceVersion 3\n"
+                       "HiddenServicePort 22 1.1.1.1:22\n"
+                       "HiddenServiceEnableIntroDoSDefense 1\n"
+                       "HiddenServiceEnableIntroDoSRatePerSec 137438953472\n"
+                       "HiddenServiceEnableIntroDoSBurstPerSec 87\n";
 
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, 0);
@@ -540,13 +517,12 @@ test_dos_parameters(void *arg)
 
   /* Invalid burst. Value of 2^38. Max allowed is 2^31. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs3\n"
-      "HiddenServiceVersion 3\n"
-      "HiddenServicePort 22 1.1.1.1:22\n"
-      "HiddenServiceEnableIntroDoSDefense 1\n"
-      "HiddenServiceEnableIntroDoSRatePerSec 42\n"
-      "HiddenServiceEnableIntroDoSBurstPerSec 274877906944\n";
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs3\n"
+                       "HiddenServiceVersion 3\n"
+                       "HiddenServicePort 22 1.1.1.1:22\n"
+                       "HiddenServiceEnableIntroDoSDefense 1\n"
+                       "HiddenServiceEnableIntroDoSRatePerSec 42\n"
+                       "HiddenServiceEnableIntroDoSBurstPerSec 274877906944\n";
 
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, 0);
@@ -559,13 +535,12 @@ test_dos_parameters(void *arg)
 
   /* Burst is smaller than rate. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs3\n"
-      "HiddenServiceVersion 3\n"
-      "HiddenServicePort 22 1.1.1.1:22\n"
-      "HiddenServiceEnableIntroDoSDefense 1\n"
-      "HiddenServiceEnableIntroDoSRatePerSec 42\n"
-      "HiddenServiceEnableIntroDoSBurstPerSec 27\n";
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs3\n"
+                       "HiddenServiceVersion 3\n"
+                       "HiddenServicePort 22 1.1.1.1:22\n"
+                       "HiddenServiceEnableIntroDoSDefense 1\n"
+                       "HiddenServiceEnableIntroDoSRatePerSec 42\n"
+                       "HiddenServiceEnableIntroDoSBurstPerSec 27\n";
 
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, 0);
@@ -577,13 +552,12 @@ test_dos_parameters(void *arg)
 
   /* Negative value. */
   {
-    const char *conf =
-      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs3\n"
-      "HiddenServiceVersion 3\n"
-      "HiddenServicePort 22 1.1.1.1:22\n"
-      "HiddenServiceEnableIntroDoSDefense 1\n"
-      "HiddenServiceEnableIntroDoSRatePerSec -1\n"
-      "HiddenServiceEnableIntroDoSBurstPerSec 42\n";
+    const char *conf = "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs3\n"
+                       "HiddenServiceVersion 3\n"
+                       "HiddenServicePort 22 1.1.1.1:22\n"
+                       "HiddenServiceEnableIntroDoSDefense 1\n"
+                       "HiddenServiceEnableIntroDoSRatePerSec -1\n"
+                       "HiddenServiceEnableIntroDoSBurstPerSec 42\n";
 
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, 0);
@@ -593,36 +567,27 @@ test_dos_parameters(void *arg)
     teardown_capture_of_logs();
   }
 
- done:
+done:
   hs_free_all();
 }
 
 struct testcase_t hs_config_tests[] = {
-  /* Invalid service not specific to any version. */
-  { "invalid_service", test_invalid_service, TT_FORK,
-    NULL, NULL },
-  { "valid_service", test_valid_service, TT_FORK,
-    NULL, NULL },
+    /* Invalid service not specific to any version. */
+    {"invalid_service", test_invalid_service, TT_FORK, NULL, NULL},
+    {"valid_service", test_valid_service, TT_FORK, NULL, NULL},
 
-  /* Test case only for version 2. */
-  { "invalid_service_v2", test_invalid_service_v2, TT_FORK,
-    NULL, NULL },
-  { "valid_service_v2", test_valid_service_v2, TT_FORK,
-    NULL, NULL },
+    /* Test case only for version 2. */
+    {"invalid_service_v2", test_invalid_service_v2, TT_FORK, NULL, NULL},
+    {"valid_service_v2", test_valid_service_v2, TT_FORK, NULL, NULL},
 
-  /* Test case only for version 3. */
-  { "invalid_service_v3", test_invalid_service_v3, TT_FORK,
-    NULL, NULL },
-  { "valid_service_v3", test_valid_service_v3, TT_FORK,
-    NULL, NULL },
+    /* Test case only for version 3. */
+    {"invalid_service_v3", test_invalid_service_v3, TT_FORK, NULL, NULL},
+    {"valid_service_v3", test_valid_service_v3, TT_FORK, NULL, NULL},
 
-  /* Test service staging. */
-  { "staging_service_v3", test_staging_service_v3, TT_FORK,
-    NULL, NULL },
+    /* Test service staging. */
+    {"staging_service_v3", test_staging_service_v3, TT_FORK, NULL, NULL},
 
-  /* Test HS DoS parameters. */
-  { "dos_parameters", test_dos_parameters, TT_FORK,
-    NULL, NULL },
+    /* Test HS DoS parameters. */
+    {"dos_parameters", test_dos_parameters, TT_FORK, NULL, NULL},
 
-  END_OF_TESTCASES
-};
+    END_OF_TESTCASES};

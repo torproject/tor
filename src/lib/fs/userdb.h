@@ -15,7 +15,7 @@
 #include "orconfig.h"
 
 #ifndef _WIN32
-#include <sys/types.h>
+#  include <sys/types.h>
 
 struct passwd;
 const struct passwd *tor_getpwnam(const char *username);

@@ -20,7 +20,7 @@ char *consensus_diff_apply(const char *consensus, size_t consensus_len,
 int looks_like_a_consensus_diff(const char *document, size_t len);
 
 #ifdef CONSDIFF_PRIVATE
-#include "lib/container/bitarray.h"
+#  include "lib/container/bitarray.h"
 
 struct memarea_t;
 
@@ -44,8 +44,7 @@ STATIC smartlist_t *consdiff_gen_diff(const smartlist_t *cons1,
 STATIC char *consdiff_apply_diff(const smartlist_t *cons1,
                                  const smartlist_t *diff,
                                  const consensus_digest_t *digests1);
-STATIC int consdiff_get_digests(const smartlist_t *diff,
-                                char *digest1_out,
+STATIC int consdiff_get_digests(const smartlist_t *diff, char *digest1_out,
                                 char *digest2_out);
 
 /** Data structure to define a slice of a smarltist. */
@@ -64,16 +63,14 @@ STATIC smartlist_t *gen_ed_diff(const smartlist_t *cons1,
                                 const smartlist_t *cons2,
                                 struct memarea_t *area);
 STATIC smartlist_t *apply_ed_diff(const smartlist_t *cons1,
-                                  const smartlist_t *diff,
-                                  int start_line);
+                                  const smartlist_t *diff, int start_line);
 STATIC void calc_changes(smartlist_slice_t *slice1, smartlist_slice_t *slice2,
                          bitarray_t *changed1, bitarray_t *changed2);
-STATIC smartlist_slice_t *smartlist_slice(const smartlist_t *list,
-                                          int start, int end);
+STATIC smartlist_slice_t *smartlist_slice(const smartlist_t *list, int start,
+                                          int end);
 STATIC int next_router(const smartlist_t *cons, int cur);
 STATIC int *lcs_lengths(const smartlist_slice_t *slice1,
-                        const smartlist_slice_t *slice2,
-                        int direction);
+                        const smartlist_slice_t *slice2, int direction);
 STATIC void trim_slices(smartlist_slice_t *slice1, smartlist_slice_t *slice2);
 STATIC int base64cmp(const cdline_t *hash1, const cdline_t *hash2);
 STATIC int get_id_hash(const cdline_t *line, cdline_t *hash_out);
@@ -83,23 +80,19 @@ STATIC int smartlist_slice_string_pos(const smartlist_slice_t *slice,
 STATIC void set_changed(bitarray_t *changed1, bitarray_t *changed2,
                         const smartlist_slice_t *slice1,
                         const smartlist_slice_t *slice2);
-STATIC int consensus_split_lines(smartlist_t *out,
-                                 const char *s, size_t len,
+STATIC int consensus_split_lines(smartlist_t *out, const char *s, size_t len,
                                  struct memarea_t *area);
 STATIC void smartlist_add_linecpy(smartlist_t *lst, struct memarea_t *area,
                                   const char *s);
 STATIC int lines_eq(const cdline_t *a, const cdline_t *b);
 STATIC int line_str_eq(const cdline_t *a, const char *b);
 
-MOCK_DECL(STATIC int,
-          consensus_compute_digest,(const char *cons, size_t len,
-                                    consensus_digest_t *digest_out));
-MOCK_DECL(STATIC int,
-          consensus_compute_digest_as_signed,(const char *cons, size_t len,
-                                              consensus_digest_t *digest_out));
-MOCK_DECL(STATIC int,
-          consensus_digest_eq,(const uint8_t *d1,
-                               const uint8_t *d2));
+MOCK_DECL(STATIC int, consensus_compute_digest,
+          (const char *cons, size_t len, consensus_digest_t *digest_out));
+MOCK_DECL(STATIC int, consensus_compute_digest_as_signed,
+          (const char *cons, size_t len, consensus_digest_t *digest_out));
+MOCK_DECL(STATIC int, consensus_digest_eq,
+          (const uint8_t *d1, const uint8_t *d2));
 #endif /* defined(CONSDIFF_PRIVATE) */
 
 #endif /* !defined(TOR_CONSDIFF_H) */

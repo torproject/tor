@@ -19,28 +19,28 @@
 
 #ifdef _WIN32
 
-#include "core/or/or.h"
+#  include "core/or/or.h"
 
-#include "app/config/config.h"
-#include "app/main/main.h"
-#include "app/main/ntmain.h"
-#include "app/main/shutdown.h"
-#include "core/mainloop/mainloop.h"
-#include "lib/evloop/compat_libevent.h"
-#include "lib/fs/winlib.h"
-#include "lib/log/win32err.h"
+#  include "app/config/config.h"
+#  include "app/main/main.h"
+#  include "app/main/ntmain.h"
+#  include "app/main/shutdown.h"
+#  include "core/mainloop/mainloop.h"
+#  include "lib/evloop/compat_libevent.h"
+#  include "lib/fs/winlib.h"
+#  include "lib/log/win32err.h"
 
-#include <windows.h>
-#define GENSRV_SERVICENAME  "tor"
-#define GENSRV_DISPLAYNAME  "Tor Win32 Service"
-#define GENSRV_DESCRIPTION  \
-  "Provides an anonymous Internet communication system"
-#define GENSRV_USERACCT "NT AUTHORITY\\LocalService"
+#  include <windows.h>
+#  define GENSRV_SERVICENAME "tor"
+#  define GENSRV_DISPLAYNAME "Tor Win32 Service"
+#  define GENSRV_DESCRIPTION \
+    "Provides an anonymous Internet communication system"
+#  define GENSRV_USERACCT "NT AUTHORITY\\LocalService"
 
 // Cheating: using the pre-defined error codes, tricks Windows into displaying
 //           a semi-related human-readable error message if startup fails as
 //           opposed to simply scaring people with Error: 0xffffffff
-#define NT_SERVICE_ERROR_TORINIT_FAILED ERROR_EXCEPTION_IN_SERVICE
+#  define NT_SERVICE_ERROR_TORINIT_FAILED ERROR_EXCEPTION_IN_SERVICE
 
 static SERVICE_STATUS service_status;
 static SERVICE_STATUS_HANDLE hStatus;
@@ -74,79 +74,50 @@ struct {
    * management.  These are NULL, or they point to the .  They're set by
    * calling the LOAD macro below.  */
 
-  BOOL (WINAPI *ChangeServiceConfig2A_fn)(
-                             SC_HANDLE hService,
-                             DWORD dwInfoLevel,
-                             LPVOID lpInfo);
+  BOOL(WINAPI *ChangeServiceConfig2A_fn)
+  (SC_HANDLE hService, DWORD dwInfoLevel, LPVOID lpInfo);
 
-  BOOL (WINAPI *CloseServiceHandle_fn)(
-                             SC_HANDLE hSCObject);
+  BOOL(WINAPI *CloseServiceHandle_fn)(SC_HANDLE hSCObject);
 
-  BOOL (WINAPI *ControlService_fn)(
-                             SC_HANDLE hService,
-                             DWORD dwControl,
-                             LPSERVICE_STATUS lpServiceStatus);
+  BOOL(WINAPI *ControlService_fn)
+  (SC_HANDLE hService, DWORD dwControl, LPSERVICE_STATUS lpServiceStatus);
 
-  SC_HANDLE (WINAPI *CreateServiceA_fn)(
-                             SC_HANDLE hSCManager,
-                             LPCSTR lpServiceName,
-                             LPCSTR lpDisplayName,
-                             DWORD dwDesiredAccess,
-                             DWORD dwServiceType,
-                             DWORD dwStartType,
-                             DWORD dwErrorControl,
-                             LPCSTR lpBinaryPathName,
-                             LPCSTR lpLoadOrderGroup,
-                             LPDWORD lpdwTagId,
-                             LPCSTR lpDependencies,
-                             LPCSTR lpServiceStartName,
-                             LPCSTR lpPassword);
+  SC_HANDLE(WINAPI *CreateServiceA_fn)
+  (SC_HANDLE hSCManager, LPCSTR lpServiceName, LPCSTR lpDisplayName,
+   DWORD dwDesiredAccess, DWORD dwServiceType, DWORD dwStartType,
+   DWORD dwErrorControl, LPCSTR lpBinaryPathName, LPCSTR lpLoadOrderGroup,
+   LPDWORD lpdwTagId, LPCSTR lpDependencies, LPCSTR lpServiceStartName,
+   LPCSTR lpPassword);
 
-  BOOL (WINAPI *DeleteService_fn)(
-                             SC_HANDLE hService);
+  BOOL(WINAPI *DeleteService_fn)(SC_HANDLE hService);
 
-  SC_HANDLE (WINAPI *OpenSCManagerA_fn)(
-                             LPCSTR lpMachineName,
-                             LPCSTR lpDatabaseName,
-                             DWORD dwDesiredAccess);
+  SC_HANDLE(WINAPI *OpenSCManagerA_fn)
+  (LPCSTR lpMachineName, LPCSTR lpDatabaseName, DWORD dwDesiredAccess);
 
-  SC_HANDLE (WINAPI *OpenServiceA_fn)(
-                             SC_HANDLE hSCManager,
-                             LPCSTR lpServiceName,
-                             DWORD dwDesiredAccess);
+  SC_HANDLE(WINAPI *OpenServiceA_fn)
+  (SC_HANDLE hSCManager, LPCSTR lpServiceName, DWORD dwDesiredAccess);
 
-  BOOL (WINAPI *QueryServiceStatus_fn)(
-                             SC_HANDLE hService,
-                             LPSERVICE_STATUS lpServiceStatus);
+  BOOL(WINAPI *QueryServiceStatus_fn)
+  (SC_HANDLE hService, LPSERVICE_STATUS lpServiceStatus);
 
-  SERVICE_STATUS_HANDLE (WINAPI *RegisterServiceCtrlHandlerA_fn)(
-                             LPCSTR lpServiceName,
-                             LPHANDLER_FUNCTION lpHandlerProc);
+  SERVICE_STATUS_HANDLE(WINAPI *RegisterServiceCtrlHandlerA_fn)
+  (LPCSTR lpServiceName, LPHANDLER_FUNCTION lpHandlerProc);
 
-  BOOL (WINAPI *SetServiceStatus_fn)(SERVICE_STATUS_HANDLE,
-                             LPSERVICE_STATUS);
+  BOOL(WINAPI *SetServiceStatus_fn)(SERVICE_STATUS_HANDLE, LPSERVICE_STATUS);
 
-  BOOL (WINAPI *StartServiceCtrlDispatcherA_fn)(
-                             const SERVICE_TABLE_ENTRYA* lpServiceTable);
+  BOOL(WINAPI *StartServiceCtrlDispatcherA_fn)
+  (const SERVICE_TABLE_ENTRYA *lpServiceTable);
 
-  BOOL (WINAPI *StartServiceA_fn)(
-                             SC_HANDLE hService,
-                             DWORD dwNumServiceArgs,
-                             LPCSTR* lpServiceArgVectors);
+  BOOL(WINAPI *StartServiceA_fn)
+  (SC_HANDLE hService, DWORD dwNumServiceArgs, LPCSTR *lpServiceArgVectors);
 
-  BOOL (WINAPI *LookupAccountNameA_fn)(
-                             LPCSTR lpSystemName,
-                             LPCSTR lpAccountName,
-                             PSID Sid,
-                             LPDWORD cbSid,
-                             LPTSTR ReferencedDomainName,
-                             LPDWORD cchReferencedDomainName,
-                             PSID_NAME_USE peUse);
+  BOOL(WINAPI *LookupAccountNameA_fn)
+  (LPCSTR lpSystemName, LPCSTR lpAccountName, PSID Sid, LPDWORD cbSid,
+   LPTSTR ReferencedDomainName, LPDWORD cchReferencedDomainName,
+   PSID_NAME_USE peUse);
   /** @} */
-} service_fns = { 0,
-                  NULL, NULL, NULL, NULL, NULL, NULL,
-                  NULL, NULL, NULL, NULL, NULL, NULL,
-                  NULL};
+} service_fns = {0,    NULL, NULL, NULL, NULL, NULL, NULL,
+                 NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 /** Loads functions used by NT services. Returns on success, or prints a
  * complaint to stdout and exits on error. */
@@ -159,9 +130,9 @@ nt_service_loadlibrary(void)
   if (service_fns.loaded)
     return;
 
-  if (!(library = load_windows_system_library(TEXT("advapi32.dll")))) {
+  if (! (library = load_windows_system_library(TEXT("advapi32.dll")))) {
     log_err(LD_GENERAL, "Couldn't open advapi32.dll.  Are you trying to use "
-            "NT services on Windows 98? That doesn't work.");
+                        "NT services on Windows 98? That doesn't work.");
     goto err;
   }
 
@@ -169,16 +140,18 @@ nt_service_loadlibrary(void)
  * service_functions.<b>f</b>_fn.  On failure, log an error message, and goto
  * err.
  */
-#define LOAD(f) STMT_BEGIN                                              \
-    if (!(fn = GetProcAddress(library, #f))) {                          \
-      log_err(LD_BUG,                                                   \
-              "Couldn't find %s in advapi32.dll! We probably got the "  \
-              "name wrong.", #f);                                       \
-      goto err;                                                         \
-    } else {                                                            \
-      service_fns.f ## _fn = fn;                                        \
-    }                                                                   \
-  STMT_END
+#  define LOAD(f)                                                        \
+    STMT_BEGIN                                                           \
+      if (! (fn = GetProcAddress(library, #f))) {                        \
+        log_err(LD_BUG,                                                  \
+                "Couldn't find %s in advapi32.dll! We probably got the " \
+                "name wrong.",                                           \
+                #f);                                                     \
+        goto err;                                                        \
+      } else {                                                           \
+        service_fns.f##_fn = fn;                                         \
+      }                                                                  \
+    STMT_END
 
   LOAD(ChangeServiceConfig2A);
   LOAD(CloseServiceHandle);
@@ -197,7 +170,7 @@ nt_service_loadlibrary(void)
   service_fns.loaded = 1;
 
   return;
- err:
+err:
   printf("Unable to load library support for NT services: exiting.\n");
   exit(1); // exit ok: ntmain can't read libraries
 }
@@ -211,7 +184,7 @@ nt_service_is_stopping(void)
 {
   /* If we haven't loaded the function pointers, we can't possibly be an NT
    * service trying to shut down. */
-  if (!service_fns.loaded)
+  if (! service_fns.loaded)
     return 0;
 
   if (service_status.dwCurrentState == SERVICE_STOP_PENDING) {
@@ -238,20 +211,19 @@ static void
 nt_service_control(DWORD request)
 {
   static struct timeval exit_now;
-  exit_now.tv_sec  = 0;
+  exit_now.tv_sec = 0;
   exit_now.tv_usec = 0;
 
   nt_service_loadlibrary();
 
   switch (request) {
     case SERVICE_CONTROL_STOP:
-        case SERVICE_CONTROL_SHUTDOWN:
-          log_notice(LD_GENERAL,
-                     "Got stop/shutdown request; shutting down cleanly.");
-          service_status.dwCurrentState = SERVICE_STOP_PENDING;
-          tor_libevent_exit_loop_after_delay(tor_libevent_get_base(),
-                                             &exit_now);
-          return;
+    case SERVICE_CONTROL_SHUTDOWN:
+      log_notice(LD_GENERAL,
+                 "Got stop/shutdown request; shutting down cleanly.");
+      service_status.dwCurrentState = SERVICE_STOP_PENDING;
+      tor_libevent_exit_loop_after_delay(tor_libevent_get_base(), &exit_now);
+      return;
   }
   service_fns.SetServiceStatus_fn(hStatus, &service_status);
 }
@@ -264,19 +236,19 @@ static void
 nt_service_body(int argc, char **argv)
 {
   int r;
-  (void) argc; /* unused */
-  (void) argv; /* unused */
+  (void)argc; /* unused */
+  (void)argv; /* unused */
   nt_service_loadlibrary();
   service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
   service_status.dwCurrentState = SERVICE_START_PENDING;
   service_status.dwControlsAccepted =
-        SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
+      SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
   service_status.dwWin32ExitCode = 0;
   service_status.dwServiceSpecificExitCode = 0;
   service_status.dwCheckPoint = 0;
   service_status.dwWaitHint = 1000;
-  hStatus = service_fns.RegisterServiceCtrlHandlerA_fn(GENSRV_SERVICENAME,
-                                   (LPHANDLER_FUNCTION) nt_service_control);
+  hStatus = service_fns.RegisterServiceCtrlHandlerA_fn(
+      GENSRV_SERVICENAME, (LPHANDLER_FUNCTION)nt_service_control);
 
   if (hStatus == 0) {
     /* Failed to register the service control handler function */
@@ -312,38 +284,39 @@ nt_service_main(void)
   DWORD result = 0;
   char *errmsg;
   nt_service_loadlibrary();
-  table[0].lpServiceName = (char*)GENSRV_SERVICENAME;
+  table[0].lpServiceName = (char *)GENSRV_SERVICENAME;
   table[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTIONA)nt_service_body;
   table[1].lpServiceName = NULL;
   table[1].lpServiceProc = NULL;
 
-  if (!service_fns.StartServiceCtrlDispatcherA_fn(table)) {
+  if (! service_fns.StartServiceCtrlDispatcherA_fn(table)) {
     result = GetLastError();
     errmsg = format_win32_error(result);
-    printf("Service error %d : %s\n", (int) result, errmsg);
+    printf("Service error %d : %s\n", (int)result, errmsg);
     tor_free(errmsg);
     if (result == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
       if (tor_init(backup_argc, backup_argv))
         return;
       switch (get_options()->command) {
-      case CMD_RUN_TOR:
-        run_tor_main_loop();
-        break;
-      case CMD_LIST_FINGERPRINT:
-      case CMD_HASH_PASSWORD:
-      case CMD_VERIFY_CONFIG:
-      case CMD_DUMP_CONFIG:
-      case CMD_KEYGEN:
-      case CMD_KEY_EXPIRATION:
-        log_err(LD_CONFIG, "Unsupported command (--list-fingerprint, "
-               "--hash-password, --keygen, --dump-config, --verify-config, "
-               "or --key-expiration) in NT service.");
-        break;
-      case CMD_RUN_UNITTESTS:
-      case CMD_IMMEDIATE:
-      default:
-        log_err(LD_CONFIG, "Illegal command number %d: internal error.",
-                get_options()->command);
+        case CMD_RUN_TOR:
+          run_tor_main_loop();
+          break;
+        case CMD_LIST_FINGERPRINT:
+        case CMD_HASH_PASSWORD:
+        case CMD_VERIFY_CONFIG:
+        case CMD_DUMP_CONFIG:
+        case CMD_KEYGEN:
+        case CMD_KEY_EXPIRATION:
+          log_err(LD_CONFIG,
+                  "Unsupported command (--list-fingerprint, "
+                  "--hash-password, --keygen, --dump-config, --verify-config, "
+                  "or --key-expiration) in NT service.");
+          break;
+        case CMD_RUN_UNITTESTS:
+        case CMD_IMMEDIATE:
+        default:
+          log_err(LD_CONFIG, "Illegal command number %d: internal error.",
+                  get_options()->command);
       }
       tor_cleanup();
     }
@@ -360,7 +333,7 @@ nt_service_open_scm(void)
 
   nt_service_loadlibrary();
   if ((hSCManager = service_fns.OpenSCManagerA_fn(
-                            NULL, NULL, SC_MANAGER_CREATE_SERVICE)) == NULL) {
+           NULL, NULL, SC_MANAGER_CREATE_SERVICE)) == NULL) {
     errmsg = format_win32_error(GetLastError());
     printf("OpenSCManager() failed : %s\n", errmsg);
     tor_free(errmsg);
@@ -377,7 +350,7 @@ nt_service_open(SC_HANDLE hSCManager)
   char *errmsg = NULL;
   nt_service_loadlibrary();
   if ((hService = service_fns.OpenServiceA_fn(hSCManager, GENSRV_SERVICENAME,
-                              SERVICE_ALL_ACCESS)) == NULL) {
+                                              SERVICE_ALL_ACCESS)) == NULL) {
     errmsg = format_win32_error(GetLastError());
     printf("OpenService() failed : %s\n", errmsg);
     tor_free(errmsg);
@@ -430,7 +403,7 @@ static int
 nt_service_stop(SC_HANDLE hService)
 {
 /** Wait at most 10 seconds for the service to stop. */
-#define MAX_SERVICE_WAIT_TIME 10
+#  define MAX_SERVICE_WAIT_TIME 10
   int wait_time;
   char *errmsg = NULL;
   nt_service_loadlibrary();
@@ -457,7 +430,7 @@ nt_service_stop(SC_HANDLE hService)
       printf("Service did not stop within %d seconds.\n", wait_time);
     } else {
       errmsg = format_win32_error(GetLastError());
-      printf("QueryServiceStatus() failed : %s\n",errmsg);
+      printf("QueryServiceStatus() failed : %s\n", errmsg);
       tor_free(errmsg);
     }
   } else {
@@ -476,9 +449,9 @@ nt_service_stop(SC_HANDLE hService)
 static char *
 nt_service_command_line(int *using_default_torrc)
 {
-  TCHAR tor_exe[MAX_PATH+1];
-  char tor_exe_ascii[MAX_PATH*2+1];
-  char *command=NULL, *options=NULL;
+  TCHAR tor_exe[MAX_PATH + 1];
+  char tor_exe_ascii[MAX_PATH * 2 + 1];
+  char *command = NULL, *options = NULL;
   smartlist_t *sl;
   int i;
   *using_default_torrc = 1;
@@ -490,31 +463,31 @@ nt_service_command_line(int *using_default_torrc)
   /* Get the service arguments */
   sl = smartlist_new();
   for (i = 1; i < backup_argc; ++i) {
-    if (!strcmp(backup_argv[i], "--options") ||
-        !strcmp(backup_argv[i], "-options")) {
+    if (! strcmp(backup_argv[i], "--options") ||
+        ! strcmp(backup_argv[i], "-options")) {
       while (++i < backup_argc) {
-        if (!strcmp(backup_argv[i], "-f"))
+        if (! strcmp(backup_argv[i], "-f"))
           *using_default_torrc = 0;
         smartlist_add(sl, backup_argv[i]);
       }
     }
   }
   if (smartlist_len(sl))
-    options = smartlist_join_strings(sl,"\" \"",0,NULL);
+    options = smartlist_join_strings(sl, "\" \"", 0, NULL);
   smartlist_free(sl);
 
-#ifdef UNICODE
+#  ifdef UNICODE
   wcstombs(tor_exe_ascii, tor_exe, sizeof(tor_exe_ascii));
-  tor_exe_ascii[sizeof(tor_exe_ascii)-1] = '\0';
-#else
+  tor_exe_ascii[sizeof(tor_exe_ascii) - 1] = '\0';
+#  else
   strlcpy(tor_exe_ascii, tor_exe, sizeof(tor_exe_ascii));
-#endif /* defined(UNICODE) */
+#  endif /* defined(UNICODE) */
 
   /* Allocate a string for the NT service command line and */
   /* Format the service command */
   if (options) {
-    tor_asprintf(&command, "\"%s\" --nt-service \"%s\"",
-                 tor_exe_ascii, options);
+    tor_asprintf(&command, "\"%s\" --nt-service \"%s\"", tor_exe_ascii,
+                 options);
   } else { /* ! options */
     tor_asprintf(&command, "\"%s\" --nt-service", tor_exe_ascii);
   }
@@ -563,13 +536,13 @@ nt_service_install(int argc, char **argv)
     return -1;
   }
 
-  for (i=1; i < argc; ++i) {
-    if (!strcmp(argv[i], "--user") && i+1<argc) {
-      user_acct = argv[i+1];
+  for (i = 1; i < argc; ++i) {
+    if (! strcmp(argv[i], "--user") && i + 1 < argc) {
+      user_acct = argv[i + 1];
       ++i;
     }
-    if (!strcmp(argv[i], "--password") && i+1<argc) {
-      password = argv[i+1];
+    if (! strcmp(argv[i], "--password") && i + 1 < argc) {
+      password = argv[i + 1];
       ++i;
     }
   }
@@ -586,7 +559,7 @@ nt_service_install(int argc, char **argv)
       is_win2k_or_worse = 1;
   }
 
-  if (!user_acct) {
+  if (! user_acct) {
     if (is_win2k_or_worse) {
       /* On Win2k, there is no LocalService account, so we actually need to
        * fall back on NULL (the system account). */
@@ -602,11 +575,11 @@ nt_service_install(int argc, char **argv)
              "LocalService account exists.\n");
       user_acct = GENSRV_USERACCT;
     }
-  } else if (0 && service_fns.LookupAccountNameA_fn(NULL, // On this system
-                            user_acct,
-                            NULL, &sidLen, // Don't care about the SID
-                            NULL, &domainLen, // Don't care about the domain
-                            &sidUse) == 0) {
+  } else if (0 && service_fns.LookupAccountNameA_fn(
+                      NULL, // On this system
+                      user_acct, NULL, &sidLen, // Don't care about the SID
+                      NULL, &domainLen, // Don't care about the domain
+                      &sidUse) == 0) {
     /* XXXX For some reason, the above test segfaults. Fix that. */
     printf("User \"%s\" doesn't seem to exist.\n", user_acct);
     tor_free(command);
@@ -617,19 +590,20 @@ nt_service_install(int argc, char **argv)
   /* XXXX This warning could be better about explaining how to resolve the
    * situation. */
   if (using_default_torrc)
-    printf("IMPORTANT NOTE:\n"
+    printf(
+        "IMPORTANT NOTE:\n"
         "    The Tor service will run under the account \"%s\".  This means\n"
         "    that Tor will look for its configuration file under that\n"
         "    account's Application Data directory, which is probably not\n"
-        "    the same as yours.\n", user_acct?user_acct:"<local system>");
+        "    the same as yours.\n",
+        user_acct ? user_acct : "<local system>");
 
   /* Create the Tor service, set to auto-start on boot */
-  if ((hService = service_fns.CreateServiceA_fn(hSCManager, GENSRV_SERVICENAME,
-                                GENSRV_DISPLAYNAME,
-                                SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS,
-                                SERVICE_AUTO_START, SERVICE_ERROR_IGNORE,
-                                command, NULL, NULL, NULL,
-                                user_acct, password)) == NULL) {
+  if ((hService = service_fns.CreateServiceA_fn(
+           hSCManager, GENSRV_SERVICENAME, GENSRV_DISPLAYNAME,
+           SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START,
+           SERVICE_ERROR_IGNORE, command, NULL, NULL, NULL, user_acct,
+           password)) == NULL) {
     errmsg = format_win32_error(GetLastError());
     printf("CreateService() failed : %s\n", errmsg);
     service_fns.CloseServiceHandle_fn(hSCManager);
@@ -640,7 +614,7 @@ nt_service_install(int argc, char **argv)
   printf("Done with CreateService.\n");
 
   /* Set the service's description */
-  sdBuff.lpDescription = (char*)GENSRV_DESCRIPTION;
+  sdBuff.lpDescription = (char *)GENSRV_DESCRIPTION;
   service_fns.ChangeServiceConfig2A_fn(hService, SERVICE_CONFIG_DESCRIPTION,
                                        &sdBuff);
   printf("Service installed successfully\n");
@@ -741,22 +715,23 @@ nt_service_parse_options(int argc, char **argv, int *should_exit)
   *should_exit = 0;
 
   if ((argc >= 3) &&
-      (!strcmp(argv[1], "-service") || !strcmp(argv[1], "--service"))) {
+      (! strcmp(argv[1], "-service") || ! strcmp(argv[1], "--service"))) {
     nt_service_loadlibrary();
     *should_exit = 1;
-    if (!strcmp(argv[2], "install"))
+    if (! strcmp(argv[2], "install"))
       return nt_service_install(argc, argv);
-    if (!strcmp(argv[2], "remove"))
+    if (! strcmp(argv[2], "remove"))
       return nt_service_remove();
-    if (!strcmp(argv[2], "start"))
+    if (! strcmp(argv[2], "start"))
       return nt_service_cmd_start();
-    if (!strcmp(argv[2], "stop"))
+    if (! strcmp(argv[2], "stop"))
       return nt_service_cmd_stop();
     printf("Unrecognized service command '%s'\n", argv[2]);
     return 1;
   }
   if (argc >= 2) {
-    if (!strcmp(argv[1], "-nt-service") || !strcmp(argv[1], "--nt-service")) {
+    if (! strcmp(argv[1], "-nt-service") ||
+        ! strcmp(argv[1], "--nt-service")) {
       nt_service_loadlibrary();
       nt_service_main();
       *should_exit = 1;
@@ -764,19 +739,20 @@ nt_service_parse_options(int argc, char **argv, int *should_exit)
     }
     // These values have been deprecated since 0.1.1.2-alpha; we've warned
     // about them since 0.1.2.7-alpha.
-    if (!strcmp(argv[1], "-install") || !strcmp(argv[1], "--install")) {
+    if (! strcmp(argv[1], "-install") || ! strcmp(argv[1], "--install")) {
       nt_service_loadlibrary();
-      fprintf(stderr,
-            "The %s option is deprecated; use \"--service install\" instead.",
-            argv[1]);
+      fprintf(
+          stderr,
+          "The %s option is deprecated; use \"--service install\" instead.",
+          argv[1]);
       *should_exit = 1;
       return nt_service_install(argc, argv);
     }
-    if (!strcmp(argv[1], "-remove") || !strcmp(argv[1], "--remove")) {
+    if (! strcmp(argv[1], "-remove") || ! strcmp(argv[1], "--remove")) {
       nt_service_loadlibrary();
       fprintf(stderr,
-            "The %s option is deprecated; use \"--service remove\" instead.",
-            argv[1]);
+              "The %s option is deprecated; use \"--service remove\" instead.",
+              argv[1]);
       *should_exit = 1;
       return nt_service_remove();
     }

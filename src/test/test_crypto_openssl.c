@@ -42,16 +42,15 @@ test_crypto_rng_engine(void *arg)
   tt_assert(RAND_get_rand_method() == RAND_OpenSSL());
 
   /* Make sure we aren't calling dummy_method */
-  crypto_rand((void *) &dummy_method, sizeof(dummy_method));
-  crypto_rand((void *) &dummy_method, sizeof(dummy_method));
+  crypto_rand((void *)&dummy_method, sizeof(dummy_method));
+  crypto_rand((void *)&dummy_method, sizeof(dummy_method));
 
- done:
-  ;
+done:;
 }
 
 #ifndef OPENSSL_1_1_API
-#define EVP_ENCODE_CTX_new() tor_malloc_zero(sizeof(EVP_ENCODE_CTX))
-#define EVP_ENCODE_CTX_free(ctx) tor_free(ctx)
+#  define EVP_ENCODE_CTX_new() tor_malloc_zero(sizeof(EVP_ENCODE_CTX))
+#  define EVP_ENCODE_CTX_free(ctx) tor_free(ctx)
 #endif
 
 /** Encode src into dest with OpenSSL's EVP Encode interface, returning the
@@ -60,7 +59,7 @@ test_crypto_rng_engine(void *arg)
 static int
 base64_encode_evp(char *dest, char *src, size_t srclen)
 {
-  const unsigned char *s = (unsigned char*)src;
+  const unsigned char *s = (unsigned char *)src;
   EVP_ENCODE_CTX *ctx = EVP_ENCODE_CTX_new();
   int len, ret;
 
@@ -68,7 +67,7 @@ base64_encode_evp(char *dest, char *src, size_t srclen)
   EVP_EncodeUpdate(ctx, (unsigned char *)dest, &len, s, (int)srclen);
   EVP_EncodeFinal(ctx, (unsigned char *)(dest + len), &ret);
   EVP_ENCODE_CTX_free(ctx);
-  return ret+ len;
+  return ret + len;
 }
 
 static void
@@ -94,13 +93,11 @@ test_crypto_base64_encode_matches(void *arg)
     tt_int_op(j, OP_EQ, strlen(data2));
   }
 
- done:
-  ;
+done:;
 }
 
 struct testcase_t crypto_openssl_tests[] = {
-  { "rng_engine", test_crypto_rng_engine, TT_FORK, NULL, NULL },
-  { "base64_encode_match", test_crypto_base64_encode_matches,
-    TT_FORK, NULL, NULL },
-  END_OF_TESTCASES
-};
+    {"rng_engine", test_crypto_rng_engine, TT_FORK, NULL, NULL},
+    {"base64_encode_match", test_crypto_base64_encode_matches, TT_FORK, NULL,
+     NULL},
+    END_OF_TESTCASES};

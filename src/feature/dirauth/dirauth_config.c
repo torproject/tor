@@ -30,18 +30,26 @@
 #include "feature/dirauth/guardfraction.h"
 
 /* Copied from config.c, we will refactor later in 29211. */
-#define REJECT(arg) \
-  STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
+#define REJECT(arg)         \
+  STMT_BEGIN                \
+    *msg = tor_strdup(arg); \
+    return -1;              \
+  STMT_END
 #if defined(__GNUC__) && __GNUC__ <= 3
-#define COMPLAIN(args...) \
-  STMT_BEGIN log_warn(LD_CONFIG, args); STMT_END
+#  define COMPLAIN(args...)      \
+    STMT_BEGIN                   \
+      log_warn(LD_CONFIG, args); \
+    STMT_END
 #else
-#define COMPLAIN(args, ...)                                     \
-  STMT_BEGIN log_warn(LD_CONFIG, args, ##__VA_ARGS__); STMT_END
+#  define COMPLAIN(args, ...)                   \
+    STMT_BEGIN                                  \
+      log_warn(LD_CONFIG, args, ##__VA_ARGS__); \
+    STMT_END
 #endif /* defined(__GNUC__) && __GNUC__ <= 3 */
 
-#define YES_IF_CHANGED_INT(opt) \
-  if (!CFG_EQ_INT(old_options, new_options, opt)) return 1;
+#define YES_IF_CHANGED_INT(opt)                    \
+  if (! CFG_EQ_INT(old_options, new_options, opt)) \
+    return 1;
 
 /**
  * Legacy validation/normalization function for the dirauth mode options in
@@ -52,16 +60,15 @@
  */
 int
 options_validate_dirauth_mode(const or_options_t *old_options,
-                              or_options_t *options,
-                              char **msg)
+                              or_options_t *options, char **msg)
 {
-  if (BUG(!options))
+  if (BUG(! options))
     return -1;
 
-  if (BUG(!msg))
+  if (BUG(! msg))
     return -1;
 
-  if (!authdir_mode(options))
+  if (! authdir_mode(options))
     return 0;
 
   /* confirm that our address isn't broken, so we can complain now */
@@ -69,17 +76,17 @@ options_validate_dirauth_mode(const or_options_t *old_options,
   if (resolve_my_address(LOG_WARN, options, &tmp, NULL, NULL) < 0)
     REJECT("Failed to resolve/guess local address. See logs for details.");
 
-  if (!options->ContactInfo && !options->TestingTorNetwork)
+  if (! options->ContactInfo && ! options->TestingTorNetwork)
     REJECT("Authoritative directory servers must set ContactInfo");
-  if (!options->RecommendedClientVersions)
+  if (! options->RecommendedClientVersions)
     options->RecommendedClientVersions =
-      config_lines_dup(options->RecommendedVersions);
-  if (!options->RecommendedServerVersions)
+        config_lines_dup(options->RecommendedVersions);
+  if (! options->RecommendedServerVersions)
     options->RecommendedServerVersions =
-      config_lines_dup(options->RecommendedVersions);
+        config_lines_dup(options->RecommendedVersions);
   if (options->VersioningAuthoritativeDir &&
-      (!options->RecommendedClientVersions ||
-       !options->RecommendedServerVersions))
+      (! options->RecommendedClientVersions ||
+       ! options->RecommendedServerVersions))
     REJECT("Versioning authoritative dir servers must set "
            "Recommended*Versions.");
 
@@ -92,33 +99,32 @@ options_validate_dirauth_mode(const or_options_t *old_options,
 
   if (options->UseEntryGuards) {
     log_info(LD_CONFIG, "Authoritative directory servers can't set "
-             "UseEntryGuards. Disabling.");
+                        "UseEntryGuards. Disabling.");
     options->UseEntryGuards = 0;
   }
-  if (!options->DownloadExtraInfo && authdir_mode_v3(options)) {
+  if (! options->DownloadExtraInfo && authdir_mode_v3(options)) {
     log_info(LD_CONFIG, "Authoritative directories always try to download "
-             "extra-info documents. Setting DownloadExtraInfo.");
+                        "extra-info documents. Setting DownloadExtraInfo.");
     options->DownloadExtraInfo = 1;
   }
-  if (!(options->BridgeAuthoritativeDir ||
-        options->V3AuthoritativeDir))
+  if (! (options->BridgeAuthoritativeDir || options->V3AuthoritativeDir))
     REJECT("AuthoritativeDir is set, but none of "
            "(Bridge/V3)AuthoritativeDir is set.");
 
   /* If we have a v3bandwidthsfile and it's broken, complain on startup */
-  if (options->V3BandwidthsFile && !old_options) {
+  if (options->V3BandwidthsFile && ! old_options) {
     dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL, NULL,
                                      NULL);
   }
   /* same for guardfraction file */
-  if (options->GuardfractionFile && !old_options) {
+  if (options->GuardfractionFile && ! old_options) {
     dirserv_read_guardfraction_file(options->GuardfractionFile, NULL);
   }
 
-  if (!options->DirPort_set)
+  if (! options->DirPort_set)
     REJECT("Running as authoritative directory, but no DirPort set.");
 
-  if (!options->ORPort_set)
+  if (! options->ORPort_set)
     REJECT("Running as authoritative directory, but no ORPort set.");
 
   if (options->ClientOnly)
@@ -126,7 +132,7 @@ options_validate_dirauth_mode(const or_options_t *old_options,
 
   if (options->MinUptimeHidServDirectoryV2 < 0) {
     log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
-             "least 0 seconds. Changing to 0.");
+                        "least 0 seconds. Changing to 0.");
     options->MinUptimeHidServDirectoryV2 = 0;
   }
 
@@ -142,25 +148,24 @@ options_validate_dirauth_mode(const or_options_t *old_options,
  */
 int
 options_validate_dirauth_bandwidth(const or_options_t *old_options,
-                                   or_options_t *options,
-                                   char **msg)
+                                   or_options_t *options, char **msg)
 {
   (void)old_options;
 
-  if (BUG(!options))
+  if (BUG(! options))
     return -1;
 
-  if (BUG(!msg))
+  if (BUG(! msg))
     return -1;
 
-  if (!authdir_mode(options))
+  if (! authdir_mode(options))
     return 0;
 
   if (config_ensure_bandwidth_cap(&options->AuthDirFastGuarantee,
-                           "AuthDirFastGuarantee", msg) < 0)
+                                  "AuthDirFastGuarantee", msg) < 0)
     return -1;
   if (config_ensure_bandwidth_cap(&options->AuthDirGuardBWGuarantee,
-                           "AuthDirGuardBWGuarantee", msg) < 0)
+                                  "AuthDirGuardBWGuarantee", msg) < 0)
     return -1;
 
   return 0;
@@ -175,22 +180,21 @@ options_validate_dirauth_bandwidth(const or_options_t *old_options,
  */
 int
 options_validate_dirauth_schedule(const or_options_t *old_options,
-                                  or_options_t *options,
-                                  char **msg)
+                                  or_options_t *options, char **msg)
 {
   (void)old_options;
 
-  if (BUG(!options))
+  if (BUG(! options))
     return -1;
 
-  if (BUG(!msg))
+  if (BUG(! msg))
     return -1;
 
-  if (!authdir_mode_v3(options))
+  if (! authdir_mode_v3(options))
     return 0;
 
   if (options->V3AuthVoteDelay + options->V3AuthDistDelay >=
-      options->V3AuthVotingInterval/2) {
+      options->V3AuthVotingInterval / 2) {
     REJECT("V3AuthVoteDelay plus V3AuthDistDelay must be less than half "
            "V3AuthVotingInterval");
   }
@@ -236,9 +240,9 @@ options_validate_dirauth_schedule(const or_options_t *old_options,
     } else {
       REJECT("V3AuthVotingInterval is insanely low.");
     }
-  } else if (options->V3AuthVotingInterval > 24*60*60) {
+  } else if (options->V3AuthVotingInterval > 24 * 60 * 60) {
     REJECT("V3AuthVotingInterval is insanely high.");
-  } else if (((24*60*60) % options->V3AuthVotingInterval) != 0) {
+  } else if (((24 * 60 * 60) % options->V3AuthVotingInterval) != 0) {
     COMPLAIN("V3AuthVotingInterval does not divide evenly into 24 hours.");
   }
 
@@ -254,33 +258,32 @@ options_validate_dirauth_schedule(const or_options_t *old_options,
  */
 int
 options_validate_dirauth_testing(const or_options_t *old_options,
-                                 or_options_t *options,
-                                 char **msg)
+                                 or_options_t *options, char **msg)
 {
   (void)old_options;
 
-  if (BUG(!options))
+  if (BUG(! options))
     return -1;
 
-  if (BUG(!msg))
+  if (BUG(! msg))
     return -1;
 
-  if (!authdir_mode(options))
+  if (! authdir_mode(options))
     return 0;
 
   if (options->TestingAuthDirTimeToLearnReachability < 0) {
     REJECT("TestingAuthDirTimeToLearnReachability must be non-negative.");
-  } else if (options->TestingAuthDirTimeToLearnReachability > 2*60*60) {
+  } else if (options->TestingAuthDirTimeToLearnReachability > 2 * 60 * 60) {
     COMPLAIN("TestingAuthDirTimeToLearnReachability is insanely high.");
   }
 
-  if (!authdir_mode_v3(options))
+  if (! authdir_mode_v3(options))
     return 0;
 
-  if (options->TestingV3AuthInitialVotingInterval
-      < MIN_VOTE_INTERVAL_TESTING_INITIAL) {
+  if (options->TestingV3AuthInitialVotingInterval <
+      MIN_VOTE_INTERVAL_TESTING_INITIAL) {
     REJECT("TestingV3AuthInitialVotingInterval is insanely low.");
-  } else if (((30*60) % options->TestingV3AuthInitialVotingInterval) != 0) {
+  } else if (((30 * 60) % options->TestingV3AuthInitialVotingInterval) != 0) {
     REJECT("TestingV3AuthInitialVotingInterval does not divide evenly into "
            "30 minutes.");
   }
@@ -294,7 +297,7 @@ options_validate_dirauth_testing(const or_options_t *old_options,
   }
 
   if (options->TestingV3AuthInitialVoteDelay +
-      options->TestingV3AuthInitialDistDelay >=
+          options->TestingV3AuthInitialDistDelay >=
       options->TestingV3AuthInitialVotingInterval) {
     REJECT("TestingV3AuthInitialVoteDelay plus TestingV3AuthInitialDistDelay "
            "must be less than TestingV3AuthInitialVotingInterval");
@@ -385,7 +388,7 @@ options_act_dirauth_mtbf(const or_options_t *old_options)
   const or_options_t *options = get_options();
   int running_tor = options->command == CMD_RUN_TOR;
 
-  if (!authdir_mode(options))
+  if (! authdir_mode(options))
     return 0;
 
   /* Load dirauth state */
@@ -413,7 +416,7 @@ int
 options_act_dirauth_stats(const or_options_t *old_options,
                           bool *print_notice_out)
 {
-  if (BUG(!print_notice_out))
+  if (BUG(! print_notice_out))
     return -1;
 
   const or_options_t *options = get_options();
@@ -422,7 +425,7 @@ options_act_dirauth_stats(const or_options_t *old_options,
     time_t now = time(NULL);
     int print_notice = 0;
 
-    if (!old_options || !authdir_mode_bridge(old_options)) {
+    if (! old_options || ! authdir_mode_bridge(old_options)) {
       rep_hist_desc_stats_init(now);
       print_notice = 1;
     }
@@ -433,7 +436,7 @@ options_act_dirauth_stats(const or_options_t *old_options,
   /* If we used to have statistics enabled but we just disabled them,
      stop gathering them.  */
   if (old_options && authdir_mode_bridge(old_options) &&
-      !authdir_mode_bridge(options))
+      ! authdir_mode_bridge(options))
     rep_hist_desc_stats_term();
 
   return 0;

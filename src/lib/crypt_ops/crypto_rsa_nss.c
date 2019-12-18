@@ -28,13 +28,12 @@
 #include <secder.h>
 
 #ifdef ENABLE_OPENSSL
-#include <openssl/rsa.h>
-#include <openssl/evp.h>
+#  include <openssl/rsa.h>
+#  include <openssl/evp.h>
 #endif
 
 /** Declaration for crypto_pk_t structure. */
-struct crypto_pk_t
-{
+struct crypto_pk_t {
   SECKEYPrivateKey *seckey;
   SECKEYPublicKey *pubkey;
 };
@@ -90,7 +89,7 @@ crypto_new_pk_from_openssl_rsa_(RSA *rsa)
 
   pk = crypto_pk_asn1_decode((const char *)buf, len);
 
- end:
+end:
   if (buf)
     OPENSSL_free(buf);
   return pk;
@@ -101,17 +100,17 @@ crypto_new_pk_from_openssl_rsa_(RSA *rsa)
 struct rsa_st *
 crypto_pk_get_openssl_rsa_(crypto_pk_t *pk)
 {
-  size_t buflen = crypto_pk_keysize(pk)*16;
+  size_t buflen = crypto_pk_keysize(pk) * 16;
   unsigned char *buf = tor_malloc_zero(buflen);
   const unsigned char *cp = buf;
   RSA *rsa = NULL;
 
-  int used = crypto_pk_asn1_encode_private(pk, (char*)buf, buflen);
+  int used = crypto_pk_asn1_encode_private(pk, (char *)buf, buflen);
   if (used < 0)
     goto end;
   rsa = d2i_RSAPrivateKey(NULL, &cp, used);
 
- end:
+end:
   memwipe(buf, 0, buflen);
   tor_free(buf);
   return rsa;
@@ -120,38 +119,38 @@ crypto_pk_get_openssl_rsa_(crypto_pk_t *pk)
 /** used by tortls.c: get an equivalent EVP_PKEY* for a crypto_pk_t.  Iff
  * private is set, include the private-key portion of the key. Return a valid
  * pointer on success, and NULL on failure. */
-MOCK_IMPL(struct evp_pkey_st *,
-crypto_pk_get_openssl_evp_pkey_,(crypto_pk_t *pk, int private))
+MOCK_IMPL(struct evp_pkey_st *, crypto_pk_get_openssl_evp_pkey_,
+          (crypto_pk_t * pk, int private))
 {
-  size_t buflen = crypto_pk_keysize(pk)*16;
+  size_t buflen = crypto_pk_keysize(pk) * 16;
   unsigned char *buf = tor_malloc_zero(buflen);
   const unsigned char *cp = buf;
   RSA *rsa = NULL;
   EVP_PKEY *result = NULL;
 
   if (private) {
-    int len = crypto_pk_asn1_encode_private(pk, (char*)buf, buflen);
+    int len = crypto_pk_asn1_encode_private(pk, (char *)buf, buflen);
     if (len < 0)
       goto end;
     rsa = d2i_RSAPrivateKey(NULL, &cp, len);
   } else {
-    int len = crypto_pk_asn1_encode(pk, (char*)buf, buflen);
+    int len = crypto_pk_asn1_encode(pk, (char *)buf, buflen);
     if (len < 0)
       goto end;
     rsa = d2i_RSAPublicKey(NULL, &cp, len);
   }
-  if (!rsa)
+  if (! rsa)
     goto end;
 
-  if (!(result = EVP_PKEY_new()))
+  if (! (result = EVP_PKEY_new()))
     goto end;
-  if (!(EVP_PKEY_assign_RSA(result, rsa))) {
+  if (! (EVP_PKEY_assign_RSA(result, rsa))) {
     EVP_PKEY_free(result);
     RSA_free(rsa);
     result = NULL;
   }
 
- end:
+end:
   memwipe(buf, 0, buflen);
   tor_free(buf);
   return result;
@@ -161,8 +160,7 @@ crypto_pk_get_openssl_evp_pkey_,(crypto_pk_t *pk, int private))
 /** Allocate and return storage for a public key.  The key itself will not yet
  * be set.
  */
-MOCK_IMPL(crypto_pk_t *,
-crypto_pk_new,(void))
+MOCK_IMPL(crypto_pk_t *, crypto_pk_new, (void))
 {
   crypto_pk_t *result = tor_malloc_zero(sizeof(crypto_pk_t));
   return result;
@@ -185,7 +183,7 @@ crypto_pk_clear(crypto_pk_t *key)
 void
 crypto_pk_free_(crypto_pk_t *key)
 {
-  if (!key)
+  if (! key)
     return;
 
   crypto_pk_clear(key);
@@ -196,31 +194,25 @@ crypto_pk_free_(crypto_pk_t *key)
 /** Generate a <b>bits</b>-bit new public/private keypair in <b>env</b>.
  * Return 0 on success, -1 on failure.
  */
-MOCK_IMPL(int,
-crypto_pk_generate_key_with_bits,(crypto_pk_t *key, int bits))
+MOCK_IMPL(int, crypto_pk_generate_key_with_bits, (crypto_pk_t * key, int bits))
 {
   tor_assert(key);
 
-  PK11RSAGenParams params = {
-    .keySizeInBits = bits,
-    .pe = TOR_RSA_EXPONENT
-  };
+  PK11RSAGenParams params = {.keySizeInBits = bits, .pe = TOR_RSA_EXPONENT};
 
   int result = -1;
   PK11SlotInfo *slot = PK11_GetBestSlot(CKM_RSA_PKCS_KEY_PAIR_GEN, NULL);
   SECKEYPrivateKey *seckey = NULL;
   SECKEYPublicKey *pubkey = NULL;
 
-  if (!slot) {
+  if (! slot) {
     crypto_nss_log_errors(LOG_WARN, "getting slot for RSA keygen");
     goto done;
   }
 
   seckey = PK11_GenerateKeyPair(slot, CKM_RSA_PKCS_KEY_PAIR_GEN, &params,
-                                &pubkey,
-                                PR_FALSE /*isPerm */,
-                                PR_FALSE /*isSensitive*/,
-                                NULL);
+                                &pubkey, PR_FALSE /*isPerm */,
+                                PR_FALSE /*isSensitive*/, NULL);
   if (seckey == NULL || pubkey == NULL) {
     crypto_nss_log_errors(LOG_WARN, "generating an RSA key");
     goto done;
@@ -233,7 +225,7 @@ crypto_pk_generate_key_with_bits,(crypto_pk_t *key, int bits))
   pubkey = NULL;
 
   result = 0;
- done:
+done:
   if (slot)
     PK11_FreeSlot(slot);
   if (pubkey)
@@ -260,10 +252,9 @@ crypto_pk_is_valid_private_key(const crypto_pk_t *key)
 int
 crypto_pk_public_exponent_ok(const crypto_pk_t *key)
 {
-  return key &&
-    key->pubkey &&
-    key->pubkey->keyType == rsaKey &&
-    DER_GetUInteger(&key->pubkey->u.rsa.publicExponent) == TOR_RSA_EXPONENT;
+  return key && key->pubkey && key->pubkey->keyType == rsaKey &&
+         DER_GetUInteger(&key->pubkey->u.rsa.publicExponent) ==
+             TOR_RSA_EXPONENT;
 }
 
 /** Compare two big-endian integers stored in a and b; return a tristate.
@@ -304,7 +295,7 @@ crypto_pk_cmp_keys(const crypto_pk_t *a, const crypto_pk_t *b)
   int result;
   char a_is_non_null = (a != NULL) && (a->pubkey != NULL);
   char b_is_non_null = (b != NULL) && (b->pubkey != NULL);
-  char an_argument_is_null = !a_is_non_null | !b_is_non_null;
+  char an_argument_is_null = ! a_is_non_null | ! b_is_non_null;
 
   result = tor_memcmp(&a_is_non_null, &b_is_non_null, sizeof(a_is_non_null));
   if (an_argument_is_null)
@@ -390,18 +381,15 @@ crypto_pk_copy_full(crypto_pk_t *key)
   return crypto_pk_dup_key(key);
 }
 
-static const CK_RSA_PKCS_OAEP_PARAMS oaep_params = {
-            .hashAlg = CKM_SHA_1,
-            .mgf = CKG_MGF1_SHA1,
-            .source = CKZ_DATA_SPECIFIED,
-            .pSourceData = NULL,
-            .ulSourceDataLen = 0
-};
-static const SECItem oaep_item = {
-            .type = siBuffer,
-            .data = (unsigned char *) &oaep_params,
-            .len = sizeof(oaep_params)
-};
+static const CK_RSA_PKCS_OAEP_PARAMS oaep_params = {.hashAlg = CKM_SHA_1,
+                                                    .mgf = CKG_MGF1_SHA1,
+                                                    .source =
+                                                        CKZ_DATA_SPECIFIED,
+                                                    .pSourceData = NULL,
+                                                    .ulSourceDataLen = 0};
+static const SECItem oaep_item = {.type = siBuffer,
+                                  .data = (unsigned char *)&oaep_params,
+                                  .len = sizeof(oaep_params)};
 
 /** Return the mechanism code and parameters for a given padding method when
  * used with RSA */
@@ -444,12 +432,10 @@ crypto_pk_public_encrypt(crypto_pk_t *env, char *to, size_t tolen,
   SECItem *item = NULL;
   CK_MECHANISM_TYPE m = padding_to_mechanism(padding, &item);
 
-  SECStatus s = PK11_PubEncrypt(env->pubkey, m, item,
-                                (unsigned char *)to, &result_len,
-                                (unsigned int)tolen,
-                                (const unsigned char *)from,
-                                (unsigned int)fromlen,
-                                NULL);
+  SECStatus s =
+      PK11_PubEncrypt(env->pubkey, m, item, (unsigned char *)to, &result_len,
+                      (unsigned int)tolen, (const unsigned char *)from,
+                      (unsigned int)fromlen, NULL);
   if (s != SECSuccess) {
     crypto_nss_log_errors(LOG_WARN, "encrypting to an RSA key");
     return -1;
@@ -467,10 +453,9 @@ crypto_pk_public_encrypt(crypto_pk_t *env, char *to, size_t tolen,
  * at least the length of the modulus of <b>key</b>.
  */
 int
-crypto_pk_private_decrypt(crypto_pk_t *key, char *to,
-                          size_t tolen,
-                          const char *from, size_t fromlen,
-                          int padding, int warnOnFailure)
+crypto_pk_private_decrypt(crypto_pk_t *key, char *to, size_t tolen,
+                          const char *from, size_t fromlen, int padding,
+                          int warnOnFailure)
 {
   tor_assert(key);
   tor_assert(to);
@@ -478,17 +463,15 @@ crypto_pk_private_decrypt(crypto_pk_t *key, char *to,
   tor_assert(tolen < INT_MAX);
   tor_assert(fromlen < INT_MAX);
 
-  if (!crypto_pk_key_is_private(key))
+  if (! crypto_pk_key_is_private(key))
     return -1; /* Not a private key. */
 
   unsigned int result_len = 0;
   SECItem *item = NULL;
   CK_MECHANISM_TYPE m = padding_to_mechanism(padding, &item);
-  SECStatus s = PK11_PrivDecrypt(key->seckey, m, item,
-                                 (unsigned char *)to, &result_len,
-                                 (unsigned int)tolen,
-                                 (const unsigned char *)from,
-                                 (unsigned int)fromlen);
+  SECStatus s = PK11_PrivDecrypt(
+      key->seckey, m, item, (unsigned char *)to, &result_len,
+      (unsigned int)tolen, (const unsigned char *)from, (unsigned int)fromlen);
 
   if (s != SECSuccess) {
     const int severity = warnOnFailure ? LOG_WARN : LOG_INFO;
@@ -507,10 +490,9 @@ crypto_pk_private_decrypt(crypto_pk_t *key, char *to,
  * <b>tolen</b> is the number of writable bytes in <b>to</b>, and must be
  * at least the length of the modulus of <b>key</b>.
  */
-MOCK_IMPL(int,
-crypto_pk_public_checksig,(const crypto_pk_t *key, char *to,
-                           size_t tolen,
-                           const char *from, size_t fromlen))
+MOCK_IMPL(int, crypto_pk_public_checksig,
+          (const crypto_pk_t *key, char *to, size_t tolen, const char *from,
+           size_t fromlen))
 {
   tor_assert(key);
   tor_assert(to);
@@ -520,15 +502,13 @@ crypto_pk_public_checksig,(const crypto_pk_t *key, char *to,
   tor_assert(key->pubkey);
 
   SECItem sig = {
-                 .type = siBuffer,
-                 .data = (unsigned char *) from,
-                 .len = (unsigned int) fromlen,
+      .type = siBuffer,
+      .data = (unsigned char *)from,
+      .len = (unsigned int)fromlen,
   };
-  SECItem dsig = {
-                  .type = siBuffer,
-                  .data = (unsigned char *) to,
-                  .len = (unsigned int) tolen
-  };
+  SECItem dsig = {.type = siBuffer,
+                  .data = (unsigned char *)to,
+                  .len = (unsigned int)tolen};
   SECStatus s;
   s = PK11_VerifyRecover(key->pubkey, &sig, &dsig, NULL);
   if (s != SECSuccess)
@@ -555,22 +535,17 @@ crypto_pk_private_sign(const crypto_pk_t *key, char *to, size_t tolen,
   tor_assert(tolen < INT_MAX);
   tor_assert(fromlen < INT_MAX);
 
-  if (BUG(!crypto_pk_key_is_private(key)))
+  if (BUG(! crypto_pk_key_is_private(key)))
     return -1;
 
-  SECItem sig = {
-                 .type = siBuffer,
+  SECItem sig = {.type = siBuffer,
                  .data = (unsigned char *)to,
-                 .len = (unsigned int) tolen
-  };
-  SECItem hash = {
-                 .type = siBuffer,
-                 .data = (unsigned char *)from,
-                 .len = (unsigned int) fromlen
-  };
+                 .len = (unsigned int)tolen};
+  SECItem hash = {.type = siBuffer,
+                  .data = (unsigned char *)from,
+                  .len = (unsigned int)fromlen};
   CK_MECHANISM_TYPE m = CKM_RSA_PKCS;
-  SECStatus s = PK11_SignWithMechanism(key->seckey, m, NULL,
-                                       &sig, &hash);
+  SECStatus s = PK11_SignWithMechanism(key->seckey, m, NULL, &sig, &hash);
 
   if (s != SECSuccess) {
     crypto_nss_log_errors(LOG_WARN, "signing with an RSA key");
@@ -583,10 +558,9 @@ crypto_pk_private_sign(const crypto_pk_t *key, char *to, size_t tolen,
 /* "This has lead to people trading hard-to-find object identifiers and ASN.1
  * definitions like baseball cards" - Peter Gutmann, "X.509 Style Guide". */
 static const unsigned char RSA_OID[] = {
-  /* RSADSI */ 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d,
-  /* PKCS1 */ 0x01, 0x01,
-  /* RSA */ 0x01
-};
+    /* RSADSI */ 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d,
+    /* PKCS1 */ 0x01,  0x01,
+    /* RSA */ 0x01};
 
 /** ASN.1-encode the public portion of <b>pk</b> into <b>dest</b>.
  * Return -1 on error, or the number of characters used on success.
@@ -609,7 +583,7 @@ crypto_pk_asn1_encode(const crypto_pk_t *pk, char *dest, size_t dest_len)
   memcpy(dest, item->data, n_used);
 
   SECKEY_DestroySubjectPublicKeyInfo(info);
-  return (int) n_used;
+  return (int)n_used;
 }
 
 /** Decode an ASN.1-encoded public key from <b>str</b>; return the result on
@@ -622,19 +596,14 @@ crypto_pk_asn1_decode(const char *str, size_t len)
   if (len >= INT_MAX)
     return NULL;
   CERTSubjectPublicKeyInfo info = {
-             .algorithm = {
-                           .algorithm = {
-                                         .type = siDEROID,
-                                         .data = (unsigned char *)RSA_OID,
-                                         .len = sizeof(RSA_OID)
-                                           }
-                           },
-             .subjectPublicKey = {
-                   .type = siBuffer,
-                   .data = (unsigned char *)str,
-                   .len = (unsigned int)(len << 3) /* bytes to bits */
-                                  }
-  };
+      .algorithm = {.algorithm = {.type = siDEROID,
+                                  .data = (unsigned char *)RSA_OID,
+                                  .len = sizeof(RSA_OID)}},
+      .subjectPublicKey = {
+          .type = siBuffer,
+          .data = (unsigned char *)str,
+          .len = (unsigned int)(len << 3) /* bytes to bits */
+      }};
 
   SECKEYPublicKey *pub = SECKEY_ExtractPublicKey(&info);
   if (pub == NULL)
@@ -653,15 +622,15 @@ DISABLE_GCC_WARNING("-Wunused-parameter")
  * Return the number of bytes written on success, -1 on failure.
  */
 int
-crypto_pk_asn1_encode_private(const crypto_pk_t *pk,
-                              char *dest, size_t destlen)
+crypto_pk_asn1_encode_private(const crypto_pk_t *pk, char *dest,
+                              size_t destlen)
 {
   tor_assert(destlen <= INT_MAX);
-  if (!crypto_pk_key_is_private(pk))
+  if (! crypto_pk_key_is_private(pk))
     return -1;
 
   SECKEYPrivateKeyInfo *info = PK11_ExportPrivKeyInfo(pk->seckey, NULL);
-  if (!info)
+  if (! info)
     return -1;
   SECItem *item = &info->privateKey;
 
@@ -686,34 +655,26 @@ crypto_pk_asn1_decode_private(const char *str, size_t len)
   tor_assert(str);
   tor_assert(len < INT_MAX);
   PK11SlotInfo *slot = PK11_GetBestSlot(CKM_RSA_PKCS, NULL);
-  if (!slot)
+  if (! slot)
     return NULL;
 
   SECKEYPrivateKeyInfo info = {
-             .algorithm = {
-                           .algorithm = {
-                                         .type = siBuffer,
-                                         .data = (unsigned char *)RSA_OID,
-                                         .len = sizeof(RSA_OID)
-                                           }
-                           },
-             .privateKey = {
-                            .type = siBuffer,
-                            .data = (unsigned char *)str,
-                            .len = (int)len,
-                            }
-  };
+      .algorithm = {.algorithm = {.type = siBuffer,
+                                  .data = (unsigned char *)RSA_OID,
+                                  .len = sizeof(RSA_OID)}},
+      .privateKey = {
+          .type = siBuffer,
+          .data = (unsigned char *)str,
+          .len = (int)len,
+      }};
 
   SECStatus s;
   SECKEYPrivateKey *seckey = NULL;
 
-  s = PK11_ImportPrivateKeyInfoAndReturnKey(slot, &info,
-                                            NULL /* nickname */,
-                                            NULL /* publicValue */,
-                                            PR_FALSE /* isPerm */,
-                                            PR_FALSE /* isPrivate */,
-                                            KU_ALL /* keyUsage */,
-                                            &seckey, NULL);
+  s = PK11_ImportPrivateKeyInfoAndReturnKey(
+      slot, &info, NULL /* nickname */, NULL /* publicValue */,
+      PR_FALSE /* isPerm */, PR_FALSE /* isPrivate */, KU_ALL /* keyUsage */,
+      &seckey, NULL);
 
   crypto_pk_t *output = NULL;
 

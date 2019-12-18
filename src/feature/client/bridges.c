@@ -83,7 +83,7 @@ static smartlist_t *bridge_list = NULL;
 void
 mark_bridge_list(void)
 {
-  if (!bridge_list)
+  if (! bridge_list)
     bridge_list = smartlist_new();
   SMARTLIST_FOREACH(bridge_list, bridge_info_t *, b,
                     b->marked_for_removal = 1);
@@ -94,21 +94,22 @@ mark_bridge_list(void)
 void
 sweep_bridge_list(void)
 {
-  if (!bridge_list)
+  if (! bridge_list)
     bridge_list = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, b) {
+  SMARTLIST_FOREACH_BEGIN (bridge_list, bridge_info_t *, b) {
     if (b->marked_for_removal) {
       SMARTLIST_DEL_CURRENT(bridge_list, b);
       bridge_free(b);
     }
-  } SMARTLIST_FOREACH_END(b);
+  }
+  SMARTLIST_FOREACH_END(b);
 }
 
 /** Initialize the bridge list to empty, creating it if needed. */
 STATIC void
 clear_bridge_list(void)
 {
-  if (!bridge_list)
+  if (! bridge_list)
     bridge_list = smartlist_new();
   SMARTLIST_FOREACH(bridge_list, bridge_info_t *, b, bridge_free(b));
   smartlist_clear(bridge_list);
@@ -118,12 +119,12 @@ clear_bridge_list(void)
 static void
 bridge_free_(bridge_info_t *bridge)
 {
-  if (!bridge)
+  if (! bridge)
     return;
 
   tor_free(bridge->transport_name);
   if (bridge->socks_args) {
-    SMARTLIST_FOREACH(bridge->socks_args, char*, s, tor_free(s));
+    SMARTLIST_FOREACH(bridge->socks_args, char *, s, tor_free(s));
     smartlist_free(bridge->socks_args);
   }
 
@@ -134,7 +135,7 @@ bridge_free_(bridge_info_t *bridge)
 const smartlist_t *
 bridge_list_get(void)
 {
-  if (!bridge_list)
+  if (! bridge_list)
     bridge_list = smartlist_new();
   return bridge_list;
 }
@@ -150,7 +151,7 @@ bridge_get_rsa_id_digest(const bridge_info_t *bridge)
   if (tor_digest_is_zero(bridge->identity))
     return NULL;
   else
-    return (const uint8_t *) bridge->identity;
+    return (const uint8_t *)bridge->identity;
 }
 
 /**
@@ -172,22 +173,20 @@ STATIC bridge_info_t *
 get_configured_bridge_by_orports_digest(const char *digest,
                                         const smartlist_t *orports)
 {
-  if (!bridge_list)
+  if (! bridge_list)
     return NULL;
-  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)
-    {
-      if (tor_digest_is_zero(bridge->identity)) {
-        SMARTLIST_FOREACH_BEGIN(orports, tor_addr_port_t *, ap)
-          {
-            if (tor_addr_compare(&bridge->addr, &ap->addr, CMP_EXACT) == 0 &&
-                bridge->port == ap->port)
-              return bridge;
-          }
-        SMARTLIST_FOREACH_END(ap);
+  SMARTLIST_FOREACH_BEGIN (bridge_list, bridge_info_t *, bridge) {
+    if (tor_digest_is_zero(bridge->identity)) {
+      SMARTLIST_FOREACH_BEGIN (orports, tor_addr_port_t *, ap) {
+        if (tor_addr_compare(&bridge->addr, &ap->addr, CMP_EXACT) == 0 &&
+            bridge->port == ap->port)
+          return bridge;
       }
-      if (digest && tor_memeq(bridge->identity, digest, DIGEST_LEN))
-        return bridge;
+      SMARTLIST_FOREACH_END(ap);
     }
+    if (digest && tor_memeq(bridge->identity, digest, DIGEST_LEN))
+      return bridge;
+  }
   SMARTLIST_FOREACH_END(bridge);
   return NULL;
 }
@@ -198,20 +197,18 @@ get_configured_bridge_by_orports_digest(const char *digest,
  * address/port matches only. */
 bridge_info_t *
 get_configured_bridge_by_addr_port_digest(const tor_addr_t *addr,
-                                          uint16_t port,
-                                          const char *digest)
+                                          uint16_t port, const char *digest)
 {
-  if (!bridge_list)
+  if (! bridge_list)
     return NULL;
-  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)
-    {
-      if ((tor_digest_is_zero(bridge->identity) || digest == NULL) &&
-          !tor_addr_compare(&bridge->addr, addr, CMP_EXACT) &&
-          bridge->port == port)
-        return bridge;
-      if (digest && tor_memeq(bridge->identity, digest, DIGEST_LEN))
-        return bridge;
-    }
+  SMARTLIST_FOREACH_BEGIN (bridge_list, bridge_info_t *, bridge) {
+    if ((tor_digest_is_zero(bridge->identity) || digest == NULL) &&
+        ! tor_addr_compare(&bridge->addr, addr, CMP_EXACT) &&
+        bridge->port == port)
+      return bridge;
+    if (digest && tor_memeq(bridge->identity, digest, DIGEST_LEN))
+      return bridge;
+  }
   SMARTLIST_FOREACH_END(bridge);
   return NULL;
 }
@@ -227,19 +224,18 @@ get_configured_bridge_by_exact_addr_port_digest(const tor_addr_t *addr,
                                                 uint16_t port,
                                                 const char *digest)
 {
-  if (!bridge_list)
+  if (! bridge_list)
     return NULL;
-  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge) {
-    if (!tor_addr_compare(&bridge->addr, addr, CMP_EXACT) &&
+  SMARTLIST_FOREACH_BEGIN (bridge_list, bridge_info_t *, bridge) {
+    if (! tor_addr_compare(&bridge->addr, addr, CMP_EXACT) &&
         bridge->port == port) {
-
       if (digest && tor_memeq(bridge->identity, digest, DIGEST_LEN))
         return bridge;
-      else if (!digest || tor_digest_is_zero(bridge->identity))
+      else if (! digest || tor_digest_is_zero(bridge->identity))
         return bridge;
     }
-
-  } SMARTLIST_FOREACH_END(bridge);
+  }
+  SMARTLIST_FOREACH_END(bridge);
   return NULL;
 }
 
@@ -248,9 +244,8 @@ get_configured_bridge_by_exact_addr_port_digest(const tor_addr_t *addr,
  * return 1.  Else return 0. If <b>digest</b> is NULL, check for
  * address/port matches only. */
 int
-addr_is_a_configured_bridge(const tor_addr_t *addr,
-                                uint16_t port,
-                                const char *digest)
+addr_is_a_configured_bridge(const tor_addr_t *addr, uint16_t port,
+                            const char *digest)
 {
   tor_assert(addr);
   return get_configured_bridge_by_addr_port_digest(addr, port, digest) ? 1 : 0;
@@ -297,20 +292,17 @@ routerinfo_is_a_configured_bridge(const routerinfo_t *ri)
  */
 static int
 bridge_exists_with_ipv4h_addr_and_port(const uint32_t ipv4_addr,
-                                       const uint16_t port,
-                                       const char *digest)
+                                       const uint16_t port, const char *digest)
 {
   tor_addr_t node_ipv4;
 
   if (tor_addr_port_is_valid_ipv4h(ipv4_addr, port, 0)) {
     tor_addr_from_ipv4h(&node_ipv4, ipv4_addr);
 
-   bridge_info_t *bridge =
-    get_configured_bridge_by_addr_port_digest(&node_ipv4,
-                                              port,
-                                              digest);
+    bridge_info_t *bridge =
+        get_configured_bridge_by_addr_port_digest(&node_ipv4, port, digest);
 
-   return (bridge != NULL);
+    return (bridge != NULL);
   }
 
   return 0;
@@ -324,16 +316,13 @@ bridge_exists_with_ipv4h_addr_and_port(const uint32_t ipv4_addr,
  */
 static int
 bridge_exists_with_ipv6_addr_and_port(const tor_addr_t *ipv6_addr,
-                                      const uint16_t port,
-                                      const char *digest)
+                                      const uint16_t port, const char *digest)
 {
-  if (!tor_addr_port_is_valid(ipv6_addr, port, 0))
+  if (! tor_addr_port_is_valid(ipv6_addr, port, 0))
     return 0;
 
   bridge_info_t *bridge =
-   get_configured_bridge_by_addr_port_digest(ipv6_addr,
-                                             port,
-                                             digest);
+      get_configured_bridge_by_addr_port_digest(ipv6_addr, port, digest);
 
   return (bridge != NULL);
 }
@@ -360,29 +349,24 @@ node_is_a_configured_bridge(const node_t *node)
    * check for absence of identity digest in a bridge.
    */
   if (node->ri) {
-    if (bridge_exists_with_ipv4h_addr_and_port(node->ri->addr,
-                                               node->ri->or_port,
-                                               node->identity))
+    if (bridge_exists_with_ipv4h_addr_and_port(
+            node->ri->addr, node->ri->or_port, node->identity))
       return 1;
 
-    if (bridge_exists_with_ipv6_addr_and_port(&node->ri->ipv6_addr,
-                                              node->ri->ipv6_orport,
-                                              node->identity))
+    if (bridge_exists_with_ipv6_addr_and_port(
+            &node->ri->ipv6_addr, node->ri->ipv6_orport, node->identity))
       return 1;
   } else if (node->rs) {
-    if (bridge_exists_with_ipv4h_addr_and_port(node->rs->addr,
-                                               node->rs->or_port,
-                                               node->identity))
+    if (bridge_exists_with_ipv4h_addr_and_port(
+            node->rs->addr, node->rs->or_port, node->identity))
       return 1;
 
-    if (bridge_exists_with_ipv6_addr_and_port(&node->rs->ipv6_addr,
-                                              node->rs->ipv6_orport,
-                                              node->identity))
+    if (bridge_exists_with_ipv6_addr_and_port(
+            &node->rs->ipv6_addr, node->rs->ipv6_orport, node->identity))
       return 1;
-  }  else if (node->md) {
-    if (bridge_exists_with_ipv6_addr_and_port(&node->md->ipv6_addr,
-                                              node->md->ipv6_orport,
-                                              node->identity))
+  } else if (node->md) {
+    if (bridge_exists_with_ipv6_addr_and_port(
+            &node->md->ipv6_addr, node->md->ipv6_orport, node->identity))
       return 1;
   }
 
@@ -395,14 +379,13 @@ node_is_a_configured_bridge(const node_t *node)
  */
 void
 learned_router_identity(const tor_addr_t *addr, uint16_t port,
-                        const char *digest,
-                        const ed25519_public_key_t *ed_id)
+                        const char *digest, const ed25519_public_key_t *ed_id)
 {
   // XXXX prop220 use ed_id here, once there is some way to specify
   (void)ed_id;
   int learned = 0;
   bridge_info_t *bridge =
-    get_configured_bridge_by_exact_addr_port_digest(addr, port, digest);
+      get_configured_bridge_by_exact_addr_port_digest(addr, port, digest);
   if (bridge && tor_digest_is_zero(bridge->identity)) {
     memcpy(bridge->identity, digest, DIGEST_LEN);
     learned = 1;
@@ -419,7 +402,7 @@ learned_router_identity(const tor_addr_t *addr, uint16_t port,
   if (learned) {
     char *transport_info = NULL;
     const char *transport_name =
-      find_transport_name_by_bridge_addrport(addr, port);
+        find_transport_name_by_bridge_addrport(addr, port);
     if (transport_name)
       tor_asprintf(&transport_info, " (with transport '%s')", transport_name);
 
@@ -462,15 +445,14 @@ bridge_resolve_conflicts(const tor_addr_t *addr, uint16_t port,
      digest or transport than <b>digest</b>/<b>transport_name</b>,
      it's probably a misconfiguration and we should warn the user.
   */
-  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge) {
+  SMARTLIST_FOREACH_BEGIN (bridge_list, bridge_info_t *, bridge) {
     if (bridge->marked_for_removal)
       continue;
 
     if (tor_addr_eq(&bridge->addr, addr) && (bridge->port == port)) {
-
       bridge->marked_for_removal = 1;
 
-      if (!bridge_has_digest(bridge, digest) ||
+      if (! bridge_has_digest(bridge, digest) ||
           strcmp_opt(bridge->transport_name, transport_name)) {
         /* warn the user */
         char *bridge_description_new, *bridge_description_old;
@@ -480,11 +462,13 @@ bridge_resolve_conflicts(const tor_addr_t *addr, uint16_t port,
                      transport_name ? transport_name : "");
         tor_asprintf(&bridge_description_old, "%s:%s:%s",
                      fmt_addrport(&bridge->addr, bridge->port),
-                     tor_digest_is_zero(bridge->identity) ?
-                     "" : hex_str(bridge->identity,DIGEST_LEN),
+                     tor_digest_is_zero(bridge->identity)
+                         ? ""
+                         : hex_str(bridge->identity, DIGEST_LEN),
                      bridge->transport_name ? bridge->transport_name : "");
 
-        log_warn(LD_GENERAL,"Tried to add bridge '%s', but we found a conflict"
+        log_warn(LD_GENERAL,
+                 "Tried to add bridge '%s', but we found a conflict"
                  " with the already registered bridge '%s'. We will discard"
                  " the old bridge and keep '%s'. If this is not what you"
                  " wanted, please change your configuration file accordingly.",
@@ -495,22 +479,23 @@ bridge_resolve_conflicts(const tor_addr_t *addr, uint16_t port,
         tor_free(bridge_description_old);
       }
     }
-  } SMARTLIST_FOREACH_END(bridge);
+  }
+  SMARTLIST_FOREACH_END(bridge);
 }
 
 /** Return True if we have a bridge that uses a transport with name
  *  <b>transport_name</b>. */
-MOCK_IMPL(int,
-transport_is_needed, (const char *transport_name))
+MOCK_IMPL(int, transport_is_needed, (const char *transport_name))
 {
-  if (!bridge_list)
+  if (! bridge_list)
     return 0;
 
-  SMARTLIST_FOREACH_BEGIN(bridge_list, const bridge_info_t *, bridge) {
+  SMARTLIST_FOREACH_BEGIN (bridge_list, const bridge_info_t *, bridge) {
     if (bridge->transport_name &&
-        !strcmp(bridge->transport_name, transport_name))
+        ! strcmp(bridge->transport_name, transport_name))
       return 1;
-  } SMARTLIST_FOREACH_END(bridge);
+  }
+  SMARTLIST_FOREACH_END(bridge);
 
   return 0;
 }
@@ -527,10 +512,11 @@ bridge_add_from_config(bridge_line_t *bridge_line)
   { /* Log the bridge we are about to register: */
     log_debug(LD_GENERAL, "Registering bridge at %s (transport: %s) (%s)",
               fmt_addrport(&bridge_line->addr, bridge_line->port),
-              bridge_line->transport_name ?
-              bridge_line->transport_name : "no transport",
-              tor_digest_is_zero(bridge_line->digest) ?
-              "no key listed" : hex_str(bridge_line->digest, DIGEST_LEN));
+              bridge_line->transport_name ? bridge_line->transport_name
+                                          : "no transport",
+              tor_digest_is_zero(bridge_line->digest)
+                  ? "no key listed"
+                  : hex_str(bridge_line->digest, DIGEST_LEN));
 
     if (bridge_line->socks_args) { /* print socks arguments */
       int i = 0;
@@ -544,10 +530,8 @@ bridge_add_from_config(bridge_line_t *bridge_line)
     }
   }
 
-  bridge_resolve_conflicts(&bridge_line->addr,
-                           bridge_line->port,
-                           bridge_line->digest,
-                           bridge_line->transport_name);
+  bridge_resolve_conflicts(&bridge_line->addr, bridge_line->port,
+                           bridge_line->digest, bridge_line->transport_name);
 
   b = tor_malloc_zero(sizeof(bridge_info_t));
   tor_addr_copy(&b->addrport_configured.addr, &bridge_line->addr);
@@ -562,7 +546,7 @@ bridge_add_from_config(bridge_line_t *bridge_line)
   /* We can't reset the bridge's download status here, because UseBridges
    * might be 0 now, and it might be changed to 1 much later. */
   b->socks_args = bridge_line->socks_args;
-  if (!bridge_list)
+  if (! bridge_list)
     bridge_list = smartlist_new();
 
   tor_free(bridge_line); /* Deallocate bridge_line now. */
@@ -576,11 +560,10 @@ find_bridge_by_digest(const char *digest)
 {
   if (! bridge_list)
     return NULL;
-  SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
-    {
-      if (tor_memeq(bridge->identity, digest, DIGEST_LEN))
-        return bridge;
-    });
+  SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge, {
+    if (tor_memeq(bridge->identity, digest, DIGEST_LEN))
+      return bridge;
+  });
   return NULL;
 }
 
@@ -590,14 +573,14 @@ find_bridge_by_digest(const char *digest)
 const char *
 find_transport_name_by_bridge_addrport(const tor_addr_t *addr, uint16_t port)
 {
-  if (!bridge_list)
+  if (! bridge_list)
     return NULL;
 
-  SMARTLIST_FOREACH_BEGIN(bridge_list, const bridge_info_t *, bridge) {
-    if (tor_addr_eq(&bridge->addr, addr) &&
-        (bridge->port == port))
+  SMARTLIST_FOREACH_BEGIN (bridge_list, const bridge_info_t *, bridge) {
+    if (tor_addr_eq(&bridge->addr, addr) && (bridge->port == port))
       return bridge->transport_name;
-  } SMARTLIST_FOREACH_END(bridge);
+  }
+  SMARTLIST_FOREACH_END(bridge);
 
   return NULL;
 }
@@ -612,13 +595,13 @@ find_transport_name_by_bridge_addrport(const tor_addr_t *addr, uint16_t port)
  */
 int
 get_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
-                                  const transport_t **transport)
+                                 const transport_t **transport)
 {
   *transport = NULL;
-  if (!bridge_list)
+  if (! bridge_list)
     return 0;
 
-  SMARTLIST_FOREACH_BEGIN(bridge_list, const bridge_info_t *, bridge) {
+  SMARTLIST_FOREACH_BEGIN (bridge_list, const bridge_info_t *, bridge) {
     if (tor_addr_eq(&bridge->addr, addr) &&
         (bridge->port == port)) { /* bridge matched */
       if (bridge->transport_name) { /* it also uses pluggable transports */
@@ -632,7 +615,8 @@ get_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
         break;
       }
     }
-  } SMARTLIST_FOREACH_END(bridge);
+  }
+  SMARTLIST_FOREACH_END(bridge);
 
   *transport = NULL;
   return 0;
@@ -643,9 +627,8 @@ get_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
 const smartlist_t *
 get_socks_args_by_bridge_addrport(const tor_addr_t *addr, uint16_t port)
 {
-  bridge_info_t *bridge = get_configured_bridge_by_addr_port_digest(addr,
-                                                                    port,
-                                                                    NULL);
+  bridge_info_t *bridge =
+      get_configured_bridge_by_addr_port_digest(addr, port, NULL);
   return bridge ? bridge->socks_args : NULL;
 }
 
@@ -656,9 +639,9 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
   const or_options_t *options = get_options();
   circuit_guard_state_t *guard_state = NULL;
 
-  if (connection_get_by_type_addr_port_purpose(
-      CONN_TYPE_DIR, &bridge->addr, bridge->port,
-      DIR_PURPOSE_FETCH_SERVERDESC))
+  if (connection_get_by_type_addr_port_purpose(CONN_TYPE_DIR, &bridge->addr,
+                                               bridge->port,
+                                               DIR_PURPOSE_FETCH_SERVERDESC))
     return; /* it's already on the way */
 
   if (routerset_contains_bridge(options->ExcludeNodes, bridge)) {
@@ -670,9 +653,10 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
 
   /* Until we get a descriptor for the bridge, we only know one address for
    * it. */
-  if (!fascist_firewall_allows_address_addr(&bridge->addr, bridge->port,
-                                            FIREWALL_OR_CONNECTION, 0, 0)) {
-    log_notice(LD_CONFIG, "Tried to fetch a descriptor directly from a "
+  if (! fascist_firewall_allows_address_addr(&bridge->addr, bridge->port,
+                                             FIREWALL_OR_CONNECTION, 0, 0)) {
+    log_notice(LD_CONFIG,
+               "Tried to fetch a descriptor directly from a "
                "bridge, but that bridge is not reachable through our "
                "firewall.");
     return;
@@ -691,7 +675,7 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
   guard_state = get_guard_state_for_bridge_desc_fetch(bridge->identity);
 
   directory_request_t *req =
-    directory_request_new(DIR_PURPOSE_FETCH_SERVERDESC);
+      directory_request_new(DIR_PURPOSE_FETCH_SERVERDESC);
   directory_request_set_or_addr_port(req, &bridge_addrport);
   directory_request_set_directory_id_digest(req, bridge->identity);
   directory_request_set_router_purpose(req, ROUTER_PURPOSE_BRIDGE);
@@ -709,7 +693,7 @@ void
 retry_bridge_descriptor_fetch_directly(const char *digest)
 {
   bridge_info_t *bridge = find_bridge_by_digest(digest);
-  if (!bridge)
+  if (! bridge)
     return; /* not found? oh well. */
 
   launch_direct_bridge_descriptor_fetch(bridge);
@@ -725,7 +709,7 @@ fetch_bridge_descriptors(const or_options_t *options, time_t now)
   int ask_bridge_directly;
   int can_use_bridge_authority;
 
-  if (!bridge_list)
+  if (! bridge_list)
     return;
 
   /* If we still have unconfigured managed proxies, don't go and
@@ -733,67 +717,66 @@ fetch_bridge_descriptors(const or_options_t *options, time_t now)
   if (pt_proxies_configuration_pending())
     return;
 
-  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)
-    {
-      /* This resets the download status on first use */
-      if (!download_status_is_ready(&bridge->fetch_status, now))
-        continue; /* don't bother, no need to retry yet */
-      if (routerset_contains_bridge(options->ExcludeNodes, bridge)) {
-        download_status_mark_impossible(&bridge->fetch_status);
-        log_warn(LD_APP, "Not using bridge at %s: it is in ExcludeNodes.",
-                 safe_str_client(fmt_and_decorate_addr(&bridge->addr)));
-        continue;
-      }
-
-      /* schedule the next attempt
-       * we can't increment after a failure, because sometimes we use the
-       * bridge authority, and sometimes we use the bridge direct */
-      download_status_increment_attempt(
-                        &bridge->fetch_status,
-                        safe_str_client(fmt_and_decorate_addr(&bridge->addr)),
-                        now);
-
-      can_use_bridge_authority = !tor_digest_is_zero(bridge->identity) &&
-                                 num_bridge_auths;
-      ask_bridge_directly = !can_use_bridge_authority ||
-                            !options->UpdateBridgesFromAuthority;
-      log_debug(LD_DIR, "ask_bridge_directly=%d (%d, %d, %d)",
-                ask_bridge_directly, tor_digest_is_zero(bridge->identity),
-                !options->UpdateBridgesFromAuthority, !num_bridge_auths);
-
-      if (ask_bridge_directly &&
-          !fascist_firewall_allows_address_addr(&bridge->addr, bridge->port,
-                                                FIREWALL_OR_CONNECTION, 0,
-                                                0)) {
-        log_notice(LD_DIR, "Bridge at '%s' isn't reachable by our "
-                   "firewall policy. %s.",
-                   fmt_addrport(&bridge->addr, bridge->port),
-                   can_use_bridge_authority ?
-                     "Asking bridge authority instead" : "Skipping");
-        if (can_use_bridge_authority)
-          ask_bridge_directly = 0;
-        else
-          continue;
-      }
-
-      if (ask_bridge_directly) {
-        /* we need to ask the bridge itself for its descriptor. */
-        launch_direct_bridge_descriptor_fetch(bridge);
-      } else {
-        /* We have a digest and we want to ask an authority. We could
-         * combine all the requests into one, but that may give more
-         * hints to the bridge authority than we want to give. */
-        char resource[10 + HEX_DIGEST_LEN];
-        memcpy(resource, "fp/", 3);
-        base16_encode(resource+3, HEX_DIGEST_LEN+1,
-                      bridge->identity, DIGEST_LEN);
-        memcpy(resource+3+HEX_DIGEST_LEN, ".z", 3);
-        log_info(LD_DIR, "Fetching bridge info '%s' from bridge authority.",
-                 resource);
-        directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
-                ROUTER_PURPOSE_BRIDGE, resource, 0, DL_WANT_AUTHORITY);
-      }
+  SMARTLIST_FOREACH_BEGIN (bridge_list, bridge_info_t *, bridge) {
+    /* This resets the download status on first use */
+    if (! download_status_is_ready(&bridge->fetch_status, now))
+      continue; /* don't bother, no need to retry yet */
+    if (routerset_contains_bridge(options->ExcludeNodes, bridge)) {
+      download_status_mark_impossible(&bridge->fetch_status);
+      log_warn(LD_APP, "Not using bridge at %s: it is in ExcludeNodes.",
+               safe_str_client(fmt_and_decorate_addr(&bridge->addr)));
+      continue;
     }
+
+    /* schedule the next attempt
+     * we can't increment after a failure, because sometimes we use the
+     * bridge authority, and sometimes we use the bridge direct */
+    download_status_increment_attempt(
+        &bridge->fetch_status,
+        safe_str_client(fmt_and_decorate_addr(&bridge->addr)), now);
+
+    can_use_bridge_authority =
+        ! tor_digest_is_zero(bridge->identity) && num_bridge_auths;
+    ask_bridge_directly =
+        ! can_use_bridge_authority || ! options->UpdateBridgesFromAuthority;
+    log_debug(LD_DIR, "ask_bridge_directly=%d (%d, %d, %d)",
+              ask_bridge_directly, tor_digest_is_zero(bridge->identity),
+              ! options->UpdateBridgesFromAuthority, ! num_bridge_auths);
+
+    if (ask_bridge_directly &&
+        ! fascist_firewall_allows_address_addr(&bridge->addr, bridge->port,
+                                               FIREWALL_OR_CONNECTION, 0, 0)) {
+      log_notice(LD_DIR,
+                 "Bridge at '%s' isn't reachable by our "
+                 "firewall policy. %s.",
+                 fmt_addrport(&bridge->addr, bridge->port),
+                 can_use_bridge_authority ? "Asking bridge authority instead"
+                                          : "Skipping");
+      if (can_use_bridge_authority)
+        ask_bridge_directly = 0;
+      else
+        continue;
+    }
+
+    if (ask_bridge_directly) {
+      /* we need to ask the bridge itself for its descriptor. */
+      launch_direct_bridge_descriptor_fetch(bridge);
+    } else {
+      /* We have a digest and we want to ask an authority. We could
+       * combine all the requests into one, but that may give more
+       * hints to the bridge authority than we want to give. */
+      char resource[10 + HEX_DIGEST_LEN];
+      memcpy(resource, "fp/", 3);
+      base16_encode(resource + 3, HEX_DIGEST_LEN + 1, bridge->identity,
+                    DIGEST_LEN);
+      memcpy(resource + 3 + HEX_DIGEST_LEN, ".z", 3);
+      log_info(LD_DIR, "Fetching bridge info '%s' from bridge authority.",
+               resource);
+      directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
+                                   ROUTER_PURPOSE_BRIDGE, resource, 0,
+                                   DL_WANT_AUTHORITY);
+    }
+  }
   SMARTLIST_FOREACH_END(bridge);
 }
 
@@ -817,9 +800,9 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
   if (node->ri) {
     routerinfo_t *ri = node->ri;
     tor_addr_from_ipv4h(&addr, ri->addr);
-    if ((!tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
+    if ((! tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
          bridge->port == ri->or_port) ||
-        (!tor_addr_compare(&bridge->addr, &ri->ipv6_addr, CMP_EXACT) &&
+        (! tor_addr_compare(&bridge->addr, &ri->ipv6_addr, CMP_EXACT) &&
          bridge->port == ri->ipv6_orport)) {
       /* they match, so no need to do anything */
     } else {
@@ -848,37 +831,36 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
         options->ClientAutoIPv6ORPort == 0) {
       /* Mark which address to use based on which bridge_t we got. */
       node->ipv6_preferred = (tor_addr_family(&bridge->addr) == AF_INET6 &&
-                              !tor_addr_is_null(&node->ri->ipv6_addr));
+                              ! tor_addr_is_null(&node->ri->ipv6_addr));
     } else {
       /* Mark which address to use based on user preference */
       node->ipv6_preferred = (fascist_firewall_prefer_ipv6_orport(options) &&
-                              !tor_addr_is_null(&node->ri->ipv6_addr));
+                              ! tor_addr_is_null(&node->ri->ipv6_addr));
     }
 
     /* XXXipv6 we lack support for falling back to another address for
        the same relay, warn the user */
-    if (!tor_addr_is_null(&ri->ipv6_addr)) {
+    if (! tor_addr_is_null(&ri->ipv6_addr)) {
       tor_addr_port_t ap;
       node_get_pref_orport(node, &ap);
       log_notice(LD_CONFIG,
                  "Bridge '%s' has both an IPv4 and an IPv6 address.  "
                  "Will prefer using its %s address (%s) based on %s.",
-                 ri->nickname,
-                 node->ipv6_preferred ? "IPv6" : "IPv4",
+                 ri->nickname, node->ipv6_preferred ? "IPv6" : "IPv4",
                  fmt_addrport(&ap.addr, ap.port),
-                 options->ClientPreferIPv6ORPort == -1 ?
-                 "the configured Bridge address" :
-                 "ClientPreferIPv6ORPort");
+                 options->ClientPreferIPv6ORPort == -1
+                     ? "the configured Bridge address"
+                     : "ClientPreferIPv6ORPort");
     }
   }
   if (node->rs) {
     routerstatus_t *rs = node->rs;
     tor_addr_from_ipv4h(&addr, rs->addr);
 
-    if ((!tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
-        bridge->port == rs->or_port) ||
-       (!tor_addr_compare(&bridge->addr, &rs->ipv6_addr, CMP_EXACT) &&
-        bridge->port == rs->ipv6_orport)) {
+    if ((! tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
+         bridge->port == rs->or_port) ||
+        (! tor_addr_compare(&bridge->addr, &rs->ipv6_addr, CMP_EXACT) &&
+         bridge->port == rs->ipv6_orport)) {
       /* they match, so no need to do anything */
     } else {
       if (tor_addr_family(&bridge->addr) == AF_INET) {
@@ -888,7 +870,7 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
                  "Adjusted bridge routerstatus for '%s' to match "
                  "configured address %s.",
                  rs->nickname, fmt_addrport(&bridge->addr, rs->or_port));
-      /* set IPv6 preferences even if there is no ri */
+        /* set IPv6 preferences even if there is no ri */
       } else if (tor_addr_family(&bridge->addr) == AF_INET6) {
         tor_addr_copy(&rs->ipv6_addr, &bridge->addr);
         rs->ipv6_orport = bridge->port;
@@ -906,27 +888,26 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
     if (options->ClientPreferIPv6ORPort == -1) {
       /* Mark which address to use based on which bridge_t we got. */
       node->ipv6_preferred = (tor_addr_family(&bridge->addr) == AF_INET6 &&
-                              !tor_addr_is_null(&node->rs->ipv6_addr));
+                              ! tor_addr_is_null(&node->rs->ipv6_addr));
     } else {
       /* Mark which address to use based on user preference */
       node->ipv6_preferred = (fascist_firewall_prefer_ipv6_orport(options) &&
-                              !tor_addr_is_null(&node->rs->ipv6_addr));
+                              ! tor_addr_is_null(&node->rs->ipv6_addr));
     }
 
     /* XXXipv6 we lack support for falling back to another address for
     the same relay, warn the user */
-    if (!tor_addr_is_null(&rs->ipv6_addr)) {
+    if (! tor_addr_is_null(&rs->ipv6_addr)) {
       tor_addr_port_t ap;
       node_get_pref_orport(node, &ap);
       log_notice(LD_CONFIG,
                  "Bridge '%s' has both an IPv4 and an IPv6 address.  "
                  "Will prefer using its %s address (%s) based on %s.",
-                 rs->nickname,
-                 node->ipv6_preferred ? "IPv6" : "IPv4",
+                 rs->nickname, node->ipv6_preferred ? "IPv6" : "IPv4",
                  fmt_addrport(&ap.addr, ap.port),
-                 options->ClientPreferIPv6ORPort == -1 ?
-                 "the configured Bridge address" :
-                 "ClientPreferIPv6ORPort");
+                 options->ClientPreferIPv6ORPort == -1
+                     ? "the configured Bridge address"
+                     : "ClientPreferIPv6ORPort");
     }
   }
 }
@@ -951,7 +932,7 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
     if (bridge) { /* if we actually want to use this one */
       node_t *node;
       /* it's here; schedule its re-fetch for a long time from now. */
-      if (!from_cache) {
+      if (! from_cache) {
         /* This schedules the re-fetch at a constant interval, which produces
          * a pattern of bridge traffic. But it's better than trying all
          * configured briges several times in the first few minutes. */
@@ -962,14 +943,14 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
       tor_assert(node);
       rewrite_node_address_for_bridge(bridge, node);
       if (tor_digest_is_zero(bridge->identity)) {
-        memcpy(bridge->identity,ri->cache_info.identity_digest, DIGEST_LEN);
+        memcpy(bridge->identity, ri->cache_info.identity_digest, DIGEST_LEN);
         log_notice(LD_DIR, "Learned identity %s for bridge at %s:%d",
                    hex_str(bridge->identity, DIGEST_LEN),
-                   fmt_and_decorate_addr(&bridge->addr),
-                   (int) bridge->port);
+                   fmt_and_decorate_addr(&bridge->addr), (int)bridge->port);
       }
-      entry_guard_learned_bridge_identity(&bridge->addrport_configured,
-                              (const uint8_t*)ri->cache_info.identity_digest);
+      entry_guard_learned_bridge_identity(
+          &bridge->addrport_configured,
+          (const uint8_t *)ri->cache_info.identity_digest);
 
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s): %s", ri->nickname,
                  from_cache ? "cached" : "fresh", router_describe(ri));
@@ -983,8 +964,7 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
 }
 
 /** Return a smartlist containing all bridge identity digests */
-MOCK_IMPL(smartlist_t *,
-list_bridge_identities, (void))
+MOCK_IMPL(smartlist_t *, list_bridge_identities, (void))
 {
   smartlist_t *result = NULL;
   char *digest_tmp;
@@ -992,29 +972,31 @@ list_bridge_identities, (void))
   if (get_options()->UseBridges && bridge_list) {
     result = smartlist_new();
 
-    SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, b) {
+    SMARTLIST_FOREACH_BEGIN (bridge_list, bridge_info_t *, b) {
       digest_tmp = tor_malloc(DIGEST_LEN);
       memcpy(digest_tmp, b->identity, DIGEST_LEN);
       smartlist_add(result, digest_tmp);
-    } SMARTLIST_FOREACH_END(b);
+    }
+    SMARTLIST_FOREACH_END(b);
   }
 
   return result;
 }
 
 /** Get the download status for a bridge descriptor given its identity */
-MOCK_IMPL(download_status_t *,
-get_bridge_dl_status_by_id, (const char *digest))
+MOCK_IMPL(download_status_t *, get_bridge_dl_status_by_id,
+          (const char *digest))
 {
   download_status_t *dl = NULL;
 
   if (digest && get_options()->UseBridges && bridge_list) {
-    SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, b) {
+    SMARTLIST_FOREACH_BEGIN (bridge_list, bridge_info_t *, b) {
       if (tor_memeq(digest, b->identity, DIGEST_LEN)) {
         dl = &(b->fetch_status);
         break;
       }
-    } SMARTLIST_FOREACH_END(b);
+    }
+    SMARTLIST_FOREACH_END(b);
   }
 
   return dl;

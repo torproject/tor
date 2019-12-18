@@ -24,8 +24,8 @@
 
 #include "feature/nodelist/networkstatus_st.h"
 
-static int cached_client_descriptor_has_expired(time_t now,
-           const hs_cache_client_descriptor_t *cached_desc);
+static int cached_client_descriptor_has_expired(
+    time_t now, const hs_cache_client_descriptor_t *cached_desc);
 
 /********************** Directory HS cache ******************/
 
@@ -90,8 +90,7 @@ cache_dir_desc_new(const char *desc)
   tor_assert(desc);
 
   dir_desc = tor_malloc_zero(sizeof(hs_cache_dir_descriptor_t));
-  dir_desc->plaintext_data =
-    tor_malloc_zero(sizeof(hs_desc_plaintext_data_t));
+  dir_desc->plaintext_data = tor_malloc_zero(sizeof(hs_desc_plaintext_data_t));
   dir_desc->encoded_desc = tor_strdup(desc);
 
   if (hs_desc_decode_plaintext(desc, dir_desc->plaintext_data) < 0) {
@@ -104,7 +103,7 @@ cache_dir_desc_new(const char *desc)
   dir_desc->created_ts = time(NULL);
   return dir_desc;
 
- err:
+err:
   cache_dir_desc_free(dir_desc);
   return NULL;
 }
@@ -113,8 +112,8 @@ cache_dir_desc_new(const char *desc)
 static size_t
 cache_get_dir_entry_size(const hs_cache_dir_descriptor_t *entry)
 {
-  return (sizeof(*entry) + hs_desc_plaintext_obj_size(entry->plaintext_data)
-          + strlen(entry->encoded_desc));
+  return (sizeof(*entry) + hs_desc_plaintext_obj_size(entry->plaintext_data) +
+          strlen(entry->encoded_desc));
 }
 
 /** Try to store a valid version 3 descriptor in the directory cache. Return 0
@@ -136,7 +135,8 @@ cache_store_v3_as_dir(hs_cache_dir_descriptor_t *desc)
      * in our cache */
     if (cache_entry->plaintext_data->revision_counter >=
         desc->plaintext_data->revision_counter) {
-      log_info(LD_REND, "Descriptor revision counter in our cache is "
+      log_info(LD_REND,
+               "Descriptor revision counter in our cache is "
                "greater or equal than the one we received (%d/%d). "
                "Rejecting!",
                (int)cache_entry->plaintext_data->revision_counter,
@@ -163,7 +163,7 @@ cache_store_v3_as_dir(hs_cache_dir_descriptor_t *desc)
 
   return 0;
 
- err:
+err:
   return -1;
 }
 
@@ -198,7 +198,7 @@ cache_lookup_v3_as_dir(const char *query, const char **desc_out)
 
   return found;
 
- err:
+err:
   return -1;
 }
 
@@ -214,15 +214,16 @@ cache_clean_v3_as_dir(time_t now, time_t global_cutoff)
   /* Code flow error if this ever happens. */
   tor_assert(global_cutoff >= 0);
 
-  if (!hs_cache_v3_dir) { /* No cache to clean. Just return. */
+  if (! hs_cache_v3_dir) { /* No cache to clean. Just return. */
     return 0;
   }
 
   DIGEST256MAP_FOREACH_MODIFY(hs_cache_v3_dir, key,
-                              hs_cache_dir_descriptor_t *, entry) {
+                              hs_cache_dir_descriptor_t *, entry)
+  {
     size_t entry_size;
     time_t cutoff = global_cutoff;
-    if (!cutoff) {
+    if (! cutoff) {
       /* Cutoff is the lifetime of the entry found in the descriptor. */
       cutoff = now - entry->plaintext_data->lifetime_sec;
     }
@@ -243,11 +244,12 @@ cache_clean_v3_as_dir(time_t now, time_t global_cutoff)
     /* Logging. */
     {
       char key_b64[BASE64_DIGEST256_LEN + 1];
-      digest256_to_base64(key_b64, (const char *) key);
+      digest256_to_base64(key_b64, (const char *)key);
       log_info(LD_REND, "Removing v3 descriptor '%s' from HSDir cache",
                safe_str_client(key_b64));
     }
-  } DIGEST256MAP_FOREACH_END;
+  }
+  DIGEST256MAP_FOREACH_END;
 
   return bytes_removed;
 }
@@ -273,16 +275,16 @@ hs_cache_store_as_dir(const char *desc)
    * we are sure that the descriptor's version is supported else the
    * decoding would have failed. */
   switch (dir_desc->plaintext_data->version) {
-  case HS_VERSION_THREE:
-  default:
-    if (cache_store_v3_as_dir(dir_desc) < 0) {
-      goto err;
-    }
-    break;
+    case HS_VERSION_THREE:
+    default:
+      if (cache_store_v3_as_dir(dir_desc) < 0) {
+        goto err;
+      }
+      break;
   }
   return 0;
 
- err:
+err:
   cache_dir_desc_free(dir_desc);
   return -1;
 }
@@ -303,10 +305,10 @@ hs_cache_lookup_as_dir(uint32_t version, const char *query,
   tor_assert(hs_desc_is_supported_version(version));
 
   switch (version) {
-  case HS_VERSION_THREE:
-  default:
-    found = cache_lookup_v3_as_dir(query, desc_out);
-    break;
+    case HS_VERSION_THREE:
+    default:
+      found = cache_lookup_v3_as_dir(query, desc_out);
+      break;
   }
 
   return found;
@@ -341,8 +343,8 @@ static digest256map_t *hs_cache_client_intro_state;
 static size_t
 cache_get_client_entry_size(const hs_cache_client_descriptor_t *entry)
 {
-  return sizeof(*entry) +
-         strlen(entry->encoded_desc) + hs_desc_obj_size(entry->desc);
+  return sizeof(*entry) + strlen(entry->encoded_desc) +
+         hs_desc_obj_size(entry->desc);
 }
 
 /** Remove a given descriptor from our cache. */
@@ -376,7 +378,7 @@ lookup_v3_desc_as_client(const uint8_t *key)
 
   /* Do the lookup */
   cached_desc = digest256map_get(hs_cache_v3_client, key);
-  if (!cached_desc) {
+  if (! cached_desc) {
     return NULL;
   }
 
@@ -407,8 +409,7 @@ cache_client_desc_new(const char *desc_str,
 
   /* Decode the descriptor we just fetched. */
   ret = hs_client_decode_descriptor(desc_str, service_identity_pk, &desc);
-  if (ret != HS_DESC_DECODE_OK &&
-      ret != HS_DESC_DECODE_NEED_CLIENT_AUTH &&
+  if (ret != HS_DESC_DECODE_OK && ret != HS_DESC_DECODE_NEED_CLIENT_AUTH &&
       ret != HS_DESC_DECODE_BAD_CLIENT_AUTH) {
     /* In the case of a missing or bad client authorization, we'll keep the
      * descriptor in the cache because those credentials can arrive later. */
@@ -435,7 +436,7 @@ cache_client_desc_new(const char *desc_str,
   client_desc->desc = desc;
   client_desc->encoded_desc = tor_strdup(desc_str);
 
- end:
+end:
   if (decode_status_out) {
     *decode_status_out = ret;
   }
@@ -503,8 +504,8 @@ cache_client_intro_state_new(void)
   return cache;
 }
 
-#define cache_client_intro_state_free(val)              \
-  FREE_AND_NULL(hs_cache_client_intro_state_t,          \
+#define cache_client_intro_state_free(val)     \
+  FREE_AND_NULL(hs_cache_client_intro_state_t, \
                 cache_client_intro_state_free_, (val))
 
 /** Free a cache_client_intro_state object. */
@@ -556,7 +557,7 @@ cache_client_intro_state_lookup(const ed25519_public_key_t *service_pk,
     *entry = state;
   }
   return 1;
- not_found:
+not_found:
   return 0;
 }
 
@@ -567,18 +568,18 @@ cache_client_intro_state_note(hs_cache_intro_state_t *state,
 {
   tor_assert(state);
   switch (failure) {
-  case INTRO_POINT_FAILURE_GENERIC:
-    state->error = 1;
-    break;
-  case INTRO_POINT_FAILURE_TIMEOUT:
-    state->timed_out = 1;
-    break;
-  case INTRO_POINT_FAILURE_UNREACHABLE:
-    state->unreachable_count++;
-    break;
-  default:
-    tor_assert_nonfatal_unreached();
-    return;
+    case INTRO_POINT_FAILURE_GENERIC:
+      state->error = 1;
+      break;
+    case INTRO_POINT_FAILURE_TIMEOUT:
+      state->timed_out = 1;
+      break;
+    case INTRO_POINT_FAILURE_UNREACHABLE:
+      state->unreachable_count++;
+      break;
+    default:
+      tor_assert_nonfatal_unreached();
+      return;
   }
 }
 
@@ -625,12 +626,14 @@ cache_client_intro_state_clean(time_t cutoff,
   tor_assert(cache);
 
   DIGEST256MAP_FOREACH_MODIFY(cache->intro_points, key,
-                              hs_cache_intro_state_t *, entry) {
+                              hs_cache_intro_state_t *, entry)
+  {
     if (entry->created_ts <= cutoff) {
       cache_intro_state_free(entry);
       MAP_DEL_CURRENT(key);
     }
-  } DIGEST256MAP_FOREACH_END;
+  }
+  DIGEST256MAP_FOREACH_END;
 }
 
 /** Return true iff no intro points are in this cache. */
@@ -686,19 +689,19 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
     cache_client_desc_free(cache_entry);
   }
 
- store:
+store:
   /* Store descriptor in cache */
   store_v3_desc_as_client(client_desc);
 
- done:
+done:
   return 0;
 }
 
 /** Return true iff the cached client descriptor at <b>cached_desc</b> has
  * expired. */
 static int
-cached_client_descriptor_has_expired(time_t now,
-                               const hs_cache_client_descriptor_t *cached_desc)
+cached_client_descriptor_has_expired(
+    time_t now, const hs_cache_client_descriptor_t *cached_desc)
 {
   /* We use the current consensus time to see if we should expire this
    * descriptor since we use consensus time for all other parts of the protocol
@@ -706,7 +709,7 @@ cached_client_descriptor_has_expired(time_t now,
   const networkstatus_t *ns = networkstatus_get_live_consensus(now);
   /* If we don't have a recent consensus, consider this entry expired since we
    * will want to fetch a new HS desc when we get a live consensus. */
-  if (!ns) {
+  if (! ns) {
     return 1;
   }
 
@@ -724,16 +727,17 @@ cache_clean_v3_as_client(time_t now)
 {
   size_t bytes_removed = 0;
 
-  if (!hs_cache_v3_client) { /* No cache to clean. Just return. */
+  if (! hs_cache_v3_client) { /* No cache to clean. Just return. */
     return 0;
   }
 
   DIGEST256MAP_FOREACH_MODIFY(hs_cache_v3_client, key,
-                              hs_cache_client_descriptor_t *, entry) {
+                              hs_cache_client_descriptor_t *, entry)
+  {
     size_t entry_size;
 
     /* If the entry has not expired, continue to the next cached entry */
-    if (!cached_client_descriptor_has_expired(now, entry)) {
+    if (! cached_client_descriptor_has_expired(now, entry)) {
       continue;
     }
     /* Here, our entry has expired, remove and free. */
@@ -753,12 +757,14 @@ cache_clean_v3_as_client(time_t now)
     /* Logging. */
     {
       char key_b64[BASE64_DIGEST256_LEN + 1];
-      digest256_to_base64(key_b64, (const char *) key);
-      log_info(LD_REND, "Removing hidden service v3 descriptor '%s' "
-                        "from client cache",
+      digest256_to_base64(key_b64, (const char *)key);
+      log_info(LD_REND,
+               "Removing hidden service v3 descriptor '%s' "
+               "from client cache",
                safe_str_client(key_b64));
     }
-  } DIGEST256MAP_FOREACH_END;
+  }
+  DIGEST256MAP_FOREACH_END;
 
   return bytes_removed;
 }
@@ -828,7 +834,7 @@ hs_cache_store_as_client(const char *desc_str,
 
   /* Create client cache descriptor object */
   client_desc = cache_client_desc_new(desc_str, identity_pk, &ret);
-  if (!client_desc) {
+  if (! client_desc) {
     log_warn(LD_GENERAL, "HSDesc parsing failed!");
     log_debug(LD_GENERAL, "Failed to parse HSDesc: %s.", escaped(desc_str));
     goto err;
@@ -842,7 +848,7 @@ hs_cache_store_as_client(const char *desc_str,
 
   return ret;
 
- err:
+err:
   cache_client_desc_free(client_desc);
   return ret;
 }
@@ -863,14 +869,16 @@ void
 hs_cache_purge_as_client(void)
 {
   DIGEST256MAP_FOREACH_MODIFY(hs_cache_v3_client, key,
-                              hs_cache_client_descriptor_t *, entry) {
+                              hs_cache_client_descriptor_t *, entry)
+  {
     size_t entry_size = cache_get_client_entry_size(entry);
     MAP_DEL_CURRENT(key);
     cache_client_desc_free(entry);
     /* Update our OOM. We didn't use the remove() function because we are in
      * a loop so we have to explicitly decrement. */
     rend_cache_decrement_allocation(entry_size);
-  } DIGEST256MAP_FOREACH_END;
+  }
+  DIGEST256MAP_FOREACH_END;
 
   log_info(LD_REND, "Hidden service client descriptor cache purged.");
 }
@@ -889,7 +897,7 @@ hs_cache_client_intro_state_note(const ed25519_public_key_t *service_pk,
   tor_assert(auth_key);
 
   found = cache_client_intro_state_lookup(service_pk, auth_key, &entry);
-  if (!found) {
+  if (! found) {
     /* Create a new entry and add it to the cache. */
     cache_client_intro_state_add(service_pk, auth_key, &entry);
   }
@@ -915,7 +923,8 @@ hs_cache_client_intro_state_clean(time_t now)
   time_t cutoff = now - HS_CACHE_CLIENT_INTRO_STATE_MAX_AGE;
 
   DIGEST256MAP_FOREACH_MODIFY(hs_cache_client_intro_state, key,
-                              hs_cache_client_intro_state_t *, cache) {
+                              hs_cache_client_intro_state_t *, cache)
+  {
     /* Cleanup intro points failure. */
     cache_client_intro_state_clean(cutoff, cache);
 
@@ -925,7 +934,8 @@ hs_cache_client_intro_state_clean(time_t now)
       cache_client_intro_state_free(cache);
       MAP_DEL_CURRENT(key);
     }
-  } DIGEST256MAP_FOREACH_END;
+  }
+  DIGEST256MAP_FOREACH_END;
 }
 
 /** Purge the client introduction state cache. */
@@ -933,10 +943,12 @@ void
 hs_cache_client_intro_state_purge(void)
 {
   DIGEST256MAP_FOREACH_MODIFY(hs_cache_client_intro_state, key,
-                              hs_cache_client_intro_state_t *, cache) {
+                              hs_cache_client_intro_state_t *, cache)
+  {
     MAP_DEL_CURRENT(key);
     cache_client_intro_state_free(cache);
-  } DIGEST256MAP_FOREACH_END;
+  }
+  DIGEST256MAP_FOREACH_END;
 
   log_info(LD_REND, "Hidden service client introduction point state "
                     "cache purged.");
@@ -954,7 +966,7 @@ hs_cache_client_new_auth_parse(const ed25519_public_key_t *service_pk)
 
   tor_assert(service_pk);
 
-  if (!hs_cache_v3_client) {
+  if (! hs_cache_v3_client) {
     return false;
   }
 
@@ -970,7 +982,7 @@ hs_cache_client_new_auth_parse(const ed25519_public_key_t *service_pk)
     ret = true;
   }
 
- end:
+end:
   return ret;
 }
 
@@ -1034,9 +1046,8 @@ hs_cache_handle_oom(time_t now, size_t min_remove_bytes)
 unsigned int
 hs_cache_get_max_descriptor_size(void)
 {
-  return (unsigned) networkstatus_get_param(NULL,
-                                            "HSV3MaxDescriptorSize",
-                                            HS_DESC_MAX_LEN, 1, INT32_MAX);
+  return (unsigned)networkstatus_get_param(NULL, "HSV3MaxDescriptorSize",
+                                           HS_DESC_MAX_LEN, 1, INT32_MAX);
 }
 
 /** Initialize the hidden service cache subsystem. */
@@ -1044,13 +1055,13 @@ void
 hs_cache_init(void)
 {
   /* Calling this twice is very wrong code flow. */
-  tor_assert(!hs_cache_v3_dir);
+  tor_assert(! hs_cache_v3_dir);
   hs_cache_v3_dir = digest256map_new();
 
-  tor_assert(!hs_cache_v3_client);
+  tor_assert(! hs_cache_v3_client);
   hs_cache_v3_client = digest256map_new();
 
-  tor_assert(!hs_cache_client_intro_state);
+  tor_assert(! hs_cache_client_intro_state);
   hs_cache_client_intro_state = digest256map_new();
 }
 

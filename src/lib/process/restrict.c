@@ -16,7 +16,7 @@
 #include "lib/net/socket.h"
 
 #ifdef HAVE_SYS_MMAN_H
-#include <sys/mman.h>
+#  include <sys/mman.h>
 #endif
 #include <errno.h>
 #include <stdlib.h>
@@ -43,15 +43,14 @@ int
 tor_disable_debugger_attach(void)
 {
   int r = -1;
-  log_debug(LD_CONFIG,
-            "Attemping to disable debugger attachment to Tor for "
-            "unprivileged users.");
-#if defined(__linux__) && defined(HAVE_SYS_PRCTL_H) \
-  && defined(HAVE_PRCTL) && defined(PR_SET_DUMPABLE)
-#define TRIED_TO_DISABLE
+  log_debug(LD_CONFIG, "Attemping to disable debugger attachment to Tor for "
+                       "unprivileged users.");
+#if defined(__linux__) && defined(HAVE_SYS_PRCTL_H) && defined(HAVE_PRCTL) && \
+    defined(PR_SET_DUMPABLE)
+#  define TRIED_TO_DISABLE
   r = prctl(PR_SET_DUMPABLE, 0);
 #elif defined(__APPLE__) && defined(PT_DENY_ATTACH)
-#define TRIED_TO_ATTACH
+#  define TRIED_TO_ATTACH
   r = ptrace(PT_DENY_ATTACH, 0, 0, 0);
 #endif /* defined(__linux__) && defined(HAVE_SYS_PRCTL_H) ... || ... */
 
@@ -59,8 +58,8 @@ tor_disable_debugger_attach(void)
   // XXX: TODO - Windows probably has something similar
 #ifdef TRIED_TO_DISABLE
   if (r == 0) {
-    log_debug(LD_CONFIG,"Debugger attachment disabled for "
-              "unprivileged users.");
+    log_debug(LD_CONFIG, "Debugger attachment disabled for "
+                         "unprivileged users.");
     return 1;
   } else {
     log_warn(LD_CONFIG, "Unable to disable debugger attaching: %s",
@@ -72,7 +71,7 @@ tor_disable_debugger_attach(void)
 }
 
 #if defined(HAVE_MLOCKALL) && HAVE_DECL_MLOCKALL && defined(RLIMIT_MEMLOCK)
-#define HAVE_UNIX_MLOCKALL
+#  define HAVE_UNIX_MLOCKALL
 #endif
 
 #ifdef HAVE_UNIX_MLOCKALL
@@ -136,7 +135,7 @@ tor_mlockall(void)
     log_debug(LD_GENERAL, "RLIMIT_MEMLOCK is now set to RLIM_INFINITY.");
   }
 
-  if (mlockall(MCL_CURRENT|MCL_FUTURE) == 0) {
+  if (mlockall(MCL_CURRENT | MCL_FUTURE) == 0) {
     log_info(LD_GENERAL, "Insecure OS paging is effectively disabled.");
     return 0;
   } else {
@@ -148,8 +147,10 @@ tor_mlockall(void)
       log_notice(LD_GENERAL, "It appears that you lack the permissions to "
                              "lock memory. Are you root?");
     }
-    log_notice(LD_GENERAL, "Unable to lock all current and future memory "
-                           "pages: %s", strerror(errno));
+    log_notice(LD_GENERAL,
+               "Unable to lock all current and future memory "
+               "pages: %s",
+               strerror(errno));
     return -1;
   }
 #else /* !defined(HAVE_UNIX_MLOCKALL) */
@@ -183,8 +184,8 @@ int
 set_max_file_descriptors(rlim_t limit, int *max_out)
 {
   if (limit < ULIMIT_BUFFER) {
-    log_warn(LD_CONFIG,
-             "ConnLimit must be at least %d. Failing.", ULIMIT_BUFFER);
+    log_warn(LD_CONFIG, "ConnLimit must be at least %d. Failing.",
+             ULIMIT_BUFFER);
     return -1;
   }
 
@@ -194,16 +195,16 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
    * For an iPhone, 9999 should work. For Windows and all other unknown
    * systems we use 15000 as the default. */
 #ifndef HAVE_GETRLIMIT
-#if defined(CYGWIN) || defined(__CYGWIN__)
+#  if defined(CYGWIN) || defined(__CYGWIN__)
   const char *platform = "Cygwin";
   const unsigned long MAX_CONNECTIONS = 3200;
-#elif defined(_WIN32)
+#  elif defined(_WIN32)
   const char *platform = "Windows";
   const unsigned long MAX_CONNECTIONS = 15000;
-#else
+#  else
   const char *platform = "unknown platforms with no getrlimit()";
   const unsigned long MAX_CONNECTIONS = 15000;
-#endif /* defined(CYGWIN) || defined(__CYGWIN__) || ... */
+#  endif /* defined(CYGWIN) || defined(__CYGWIN__) || ... */
   log_fn(LOG_INFO, LD_NET,
          "This platform is missing getrlimit(). Proceeding.");
   if (limit > MAX_CONNECTIONS) {
@@ -223,14 +224,15 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
     return -1;
   }
   if (rlim.rlim_max < limit) {
-    log_warn(LD_CONFIG,"We need %lu file descriptors available, and we're "
+    log_warn(LD_CONFIG,
+             "We need %lu file descriptors available, and we're "
              "limited to %lu. Please change your ulimit -n.",
              (unsigned long)limit, (unsigned long)rlim.rlim_max);
     return -1;
   }
 
   if (rlim.rlim_max > rlim.rlim_cur) {
-    log_info(LD_NET,"Raising max file descriptors from %lu to %lu.",
+    log_info(LD_NET, "Raising max file descriptors from %lu to %lu.",
              (unsigned long)rlim.rlim_cur, (unsigned long)rlim.rlim_max);
   }
   /* Set the current limit value so if the attempt to set the limit to the
@@ -242,21 +244,23 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
     int couldnt_set = 1;
     const int setrlimit_errno = errno;
-#ifdef OPEN_MAX
+#  ifdef OPEN_MAX
     uint64_t try_limit = OPEN_MAX - ULIMIT_BUFFER;
-    if (errno == EINVAL && try_limit < (uint64_t) rlim.rlim_cur) {
+    if (errno == EINVAL && try_limit < (uint64_t)rlim.rlim_cur) {
       /* On some platforms, OPEN_MAX is the real limit, and getrlimit() is
        * full of nasty lies.  I'm looking at you, OSX 10.5.... */
-      rlim.rlim_cur = MIN((rlim_t) try_limit, rlim.rlim_cur);
+      rlim.rlim_cur = MIN((rlim_t)try_limit, rlim.rlim_cur);
       if (setrlimit(RLIMIT_NOFILE, &rlim) == 0) {
         if (rlim.rlim_cur < (rlim_t)limit) {
-          log_warn(LD_CONFIG, "We are limited to %lu file descriptors by "
+          log_warn(LD_CONFIG,
+                   "We are limited to %lu file descriptors by "
                    "OPEN_MAX (%lu), and ConnLimit is %lu.  Changing "
                    "ConnLimit; sorry.",
                    (unsigned long)try_limit, (unsigned long)OPEN_MAX,
                    (unsigned long)limit);
         } else {
-          log_info(LD_CONFIG, "Dropped connection limit to %lu based on "
+          log_info(LD_CONFIG,
+                   "Dropped connection limit to %lu based on "
                    "OPEN_MAX (%lu); Apparently, %lu was too high and rlimit "
                    "lied to us.",
                    (unsigned long)try_limit, (unsigned long)OPEN_MAX,
@@ -265,9 +269,10 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
         couldnt_set = 0;
       }
     }
-#endif /* defined(OPEN_MAX) */
+#  endif /* defined(OPEN_MAX) */
     if (couldnt_set) {
-      log_warn(LD_CONFIG,"Couldn't set maximum number of file descriptors: %s",
+      log_warn(LD_CONFIG,
+               "Couldn't set maximum number of file descriptors: %s",
                strerror(setrlimit_errno));
     }
   }

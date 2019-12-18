@@ -60,17 +60,19 @@ struct edge_connection_t {
   uint32_t n_written;
 
   /** True iff this connection is for a DNS request only. */
-  unsigned int is_dns_request:1;
+  unsigned int is_dns_request : 1;
   /** True iff this connection is for a PTR DNS request. (exit only) */
-  unsigned int is_reverse_dns_lookup:1;
+  unsigned int is_reverse_dns_lookup : 1;
 
-  unsigned int edge_has_sent_end:1; /**< For debugging; only used on edge
-                         * connections.  Set once we've set the stream end,
-                         * and check in connection_about_to_close_connection().
-                         */
+  unsigned int
+      edge_has_sent_end : 1; /**< For debugging; only used on edge
+                              * connections.  Set once we've set the stream
+                              * end, and check in
+                              * connection_about_to_close_connection().
+                              */
   /** True iff we've blocked reading until the circuit has fewer queued
    * cells. */
-  unsigned int edge_blocked_on_circ:1;
+  unsigned int edge_blocked_on_circ : 1;
 
   /** Unique ID for directory requests; this used to be in connection_t, but
    * that's going away and being used on channels instead.  We still tag

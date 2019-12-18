@@ -33,23 +33,19 @@ int onion_skin_ntor_create(const uint8_t *router_id,
                            ntor_handshake_state_t **handshake_state_out,
                            uint8_t *onion_skin_out);
 
-int onion_skin_ntor_server_handshake(const uint8_t *onion_skin,
-                           const struct di_digest256_map_t *private_keys,
-                           const struct curve25519_keypair_t *junk_keypair,
-                           const uint8_t *my_node_id,
-                           uint8_t *handshake_reply_out,
-                           uint8_t *key_out,
-                           size_t key_out_len);
+int onion_skin_ntor_server_handshake(
+    const uint8_t *onion_skin, const struct di_digest256_map_t *private_keys,
+    const struct curve25519_keypair_t *junk_keypair, const uint8_t *my_node_id,
+    uint8_t *handshake_reply_out, uint8_t *key_out, size_t key_out_len);
 
-int onion_skin_ntor_client_handshake(
-                             const ntor_handshake_state_t *handshake_state,
-                             const uint8_t *handshake_reply,
-                             uint8_t *key_out,
-                             size_t key_out_len,
-                             const char **msg_out);
+int
+onion_skin_ntor_client_handshake(const ntor_handshake_state_t *handshake_state,
+                                 const uint8_t *handshake_reply,
+                                 uint8_t *key_out, size_t key_out_len,
+                                 const char **msg_out);
 
 #ifdef ONION_NTOR_PRIVATE
-#include "lib/crypt_ops/crypto_curve25519.h"
+#  include "lib/crypt_ops/crypto_curve25519.h"
 
 /** Storage held by a client while waiting for an ntor reply from a server. */
 struct ntor_handshake_state_t {

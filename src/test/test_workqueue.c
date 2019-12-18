@@ -16,7 +16,7 @@
 
 #include <stdio.h>
 
-#define MAX_INFLIGHT (1<<16)
+#define MAX_INFLIGHT (1 << 16)
 
 static int opt_verbose = 0;
 static int opt_n_threads = 8;
@@ -79,8 +79,8 @@ workqueue_do_rsa(void *state, void *work)
 
   tor_assert(st->magic == 13371337);
 
-  len = crypto_pk_private_sign(rsa, (char*)sig, 256,
-                               (char*)rw->msg, rw->msglen);
+  len = crypto_pk_private_sign(rsa, (char *)sig, 256, (char *)rw->msg,
+                               rw->msglen);
   if (len < 0) {
     rw->msglen = 0;
     return WQ_RPL_ERROR;
@@ -101,7 +101,7 @@ workqueue_do_shutdown(void *state, void *work)
 {
   (void)state;
   (void)work;
-  crypto_pk_free(((state_t*)state)->rsa);
+  crypto_pk_free(((state_t *)state)->rsa);
   tor_free(state);
   return WQ_RPL_SHUTDOWN;
 }
@@ -175,7 +175,7 @@ handle_reply(void *arg)
 #ifdef TRACK_RESPONSES
   rsa_work_t *rw = arg; /* Naughty cast, but only looking at serial. */
   tor_assert(! bitarray_is_set(received, rw->serial));
-  bitarray_set(received,rw->serial);
+  bitarray_set(received, rw->serial);
 #endif
 
   tor_free(arg);
@@ -193,24 +193,22 @@ handle_reply_shutdown(void *arg)
 static workqueue_entry_t *
 add_work(threadpool_t *tp)
 {
-  int add_rsa =
-    opt_ratio_rsa == 0 ||
-    tor_weak_random_range(&weak_rng, opt_ratio_rsa) == 0;
+  int add_rsa = opt_ratio_rsa == 0 ||
+                tor_weak_random_range(&weak_rng, opt_ratio_rsa) == 0;
 
   if (add_rsa) {
     rsa_work_t *w = tor_malloc_zero(sizeof(*w));
     w->serial = n_sent++;
-    crypto_rand((char*)w->msg, 20);
+    crypto_rand((char *)w->msg, 20);
     w->msglen = 20;
     ++rsa_sent;
-    return threadpool_queue_work_priority(tp,
-                                          WQ_PRI_MED,
-                                          workqueue_do_rsa, handle_reply, w);
+    return threadpool_queue_work_priority(tp, WQ_PRI_MED, workqueue_do_rsa,
+                                          handle_reply, w);
   } else {
     ecdh_work_t *w = tor_malloc_zero(sizeof(*w));
     w->serial = n_sent++;
     /* Not strictly right, but this is just for benchmarks. */
-    crypto_rand((char*)w->u.pk.public_key, 32);
+    crypto_rand((char *)w->u.pk.public_key, 32);
     ++ecdh_sent;
     return threadpool_queue_work(tp, workqueue_do_ecdh, handle_reply, w);
   }
@@ -228,7 +226,7 @@ add_n_work_items(threadpool_t *tp, int n)
   workqueue_entry_t *ent;
 
   // We'll choose randomly which entries to cancel.
-  to_cancel = tor_calloc(opt_n_cancel, sizeof(workqueue_entry_t*));
+  to_cancel = tor_calloc(opt_n_cancel, sizeof(workqueue_entry_t *));
 
   while (n_queued++ < n) {
     ent = add_work(tp);
@@ -275,8 +273,8 @@ replysock_readable_cb(threadpool_t *tp)
   if (opt_verbose) {
     printf("%d / %d", n_received, n_sent);
     if (opt_n_cancel)
-      printf(" (%d cancelled, %d uncancellable)",
-             n_successful_cancel, n_failed_cancel);
+      printf(" (%d cancelled, %d uncancellable)", n_successful_cancel,
+             n_failed_cancel);
     puts("");
   }
 #ifdef TRACK_RESPONSES
@@ -293,24 +291,22 @@ replysock_readable_cb(threadpool_t *tp)
   tor_mutex_release(&bitmap_mutex);
 #endif /* defined(TRACK_RESPONSES) */
 
-  if (n_sent - (n_received+n_successful_cancel) < opt_n_lowwater) {
+  if (n_sent - (n_received + n_successful_cancel) < opt_n_lowwater) {
     int n_to_send = n_received + opt_n_inflight - n_sent;
     if (n_to_send > opt_n_items - n_sent)
       n_to_send = opt_n_items - n_sent;
     add_n_work_items(tp, n_to_send);
   }
 
-  if (shutting_down == 0 &&
-      n_received+n_successful_cancel == n_sent &&
+  if (shutting_down == 0 && n_received + n_successful_cancel == n_sent &&
       n_sent >= opt_n_items) {
     shutting_down = 1;
-    threadpool_queue_update(tp, NULL,
-                             workqueue_do_shutdown, NULL, NULL);
+    threadpool_queue_update(tp, NULL, workqueue_do_shutdown, NULL, NULL);
     // Anything we add after starting the shutdown must not be executed.
-    threadpool_queue_work(tp, workqueue_shutdown_error,
-                          handle_reply_shutdown, NULL);
+    threadpool_queue_work(tp, workqueue_shutdown_error, handle_reply_shutdown,
+                          NULL);
     {
-      struct timeval limit = { 2, 0 };
+      struct timeval limit = {2, 0};
       tor_libevent_exit_loop_after_delay(tor_libevent_get_base(), &limit);
     }
   }
@@ -319,18 +315,17 @@ replysock_readable_cb(threadpool_t *tp)
 static void
 help(void)
 {
-  puts(
-     "Options:\n"
-     "  -h            Display this information\n"
-     "  -v            Be verbose\n"
-     "  -N <items>    Run this many items of work\n"
-     "  -T <threads>  Use this many threads\n"
-     "  -I <inflight> Have no more than this many requests queued at once\n"
-     "  -L <lowwater> Add items whenever fewer than this many are pending\n"
-     "  -C <cancel>   Try to cancel N items of every batch that we add\n"
-     "  -R <ratio>    Make one out of this many items be a slow (RSA) one\n"
-     "  --no-{eventfd2,eventfd,pipe2,pipe,socketpair}\n"
-     "                Disable one of the alert_socket backends.");
+  puts("Options:\n"
+       "  -h            Display this information\n"
+       "  -v            Be verbose\n"
+       "  -N <items>    Run this many items of work\n"
+       "  -T <threads>  Use this many threads\n"
+       "  -I <inflight> Have no more than this many requests queued at once\n"
+       "  -L <lowwater> Add items whenever fewer than this many are pending\n"
+       "  -C <cancel>   Try to cancel N items of every batch that we add\n"
+       "  -R <ratio>    Make one out of this many items be a slow (RSA) one\n"
+       "  --no-{eventfd2,eventfd,pipe2,pipe,socketpair}\n"
+       "                Disable one of the alert_socket backends.");
 }
 
 int
@@ -343,31 +338,31 @@ main(int argc, char **argv)
   uint32_t as_flags = 0;
 
   for (i = 1; i < argc; ++i) {
-    if (!strcmp(argv[i], "-v")) {
+    if (! strcmp(argv[i], "-v")) {
       opt_verbose = 1;
-    } else if (!strcmp(argv[i], "-T") && i+1<argc) {
+    } else if (! strcmp(argv[i], "-T") && i + 1 < argc) {
       opt_n_threads = atoi(argv[++i]);
-    } else if (!strcmp(argv[i], "-N") && i+1<argc) {
+    } else if (! strcmp(argv[i], "-N") && i + 1 < argc) {
       opt_n_items = atoi(argv[++i]);
-    } else if (!strcmp(argv[i], "-I") && i+1<argc) {
+    } else if (! strcmp(argv[i], "-I") && i + 1 < argc) {
       opt_n_inflight = atoi(argv[++i]);
-    } else if (!strcmp(argv[i], "-L") && i+1<argc) {
+    } else if (! strcmp(argv[i], "-L") && i + 1 < argc) {
       opt_n_lowwater = atoi(argv[++i]);
-    } else if (!strcmp(argv[i], "-R") && i+1<argc) {
+    } else if (! strcmp(argv[i], "-R") && i + 1 < argc) {
       opt_ratio_rsa = atoi(argv[++i]);
-    } else if (!strcmp(argv[i], "-C") && i+1<argc) {
+    } else if (! strcmp(argv[i], "-C") && i + 1 < argc) {
       opt_n_cancel = atoi(argv[++i]);
-    } else if (!strcmp(argv[i], "--no-eventfd2")) {
+    } else if (! strcmp(argv[i], "--no-eventfd2")) {
       as_flags |= ASOCKS_NOEVENTFD2;
-    } else if (!strcmp(argv[i], "--no-eventfd")) {
+    } else if (! strcmp(argv[i], "--no-eventfd")) {
       as_flags |= ASOCKS_NOEVENTFD;
-    } else if (!strcmp(argv[i], "--no-pipe2")) {
+    } else if (! strcmp(argv[i], "--no-pipe2")) {
       as_flags |= ASOCKS_NOPIPE2;
-    } else if (!strcmp(argv[i], "--no-pipe")) {
+    } else if (! strcmp(argv[i], "--no-pipe")) {
       as_flags |= ASOCKS_NOPIPE;
-    } else if (!strcmp(argv[i], "--no-socketpair")) {
+    } else if (! strcmp(argv[i], "--no-socketpair")) {
       as_flags |= ASOCKS_NOSOCKETPAIR;
-    } else if (!strcmp(argv[i], "-h")) {
+    } else if (! strcmp(argv[i], "-h")) {
       help();
       return 0;
     } else {
@@ -376,16 +371,15 @@ main(int argc, char **argv)
     }
   }
 
-  if (opt_n_threads < 1 ||
-      opt_n_items < 1 || opt_n_inflight < 1 || opt_n_lowwater < 0 ||
-      opt_n_cancel > opt_n_inflight || opt_n_inflight > MAX_INFLIGHT ||
-      opt_ratio_rsa < 0) {
+  if (opt_n_threads < 1 || opt_n_items < 1 || opt_n_inflight < 1 ||
+      opt_n_lowwater < 0 || opt_n_cancel > opt_n_inflight ||
+      opt_n_inflight > MAX_INFLIGHT || opt_ratio_rsa < 0) {
     help();
     return 1;
   }
 
   if (opt_n_inflight > opt_n_items) {
-      opt_n_inflight = opt_n_items;
+    opt_n_inflight = opt_n_items;
   }
 
   init_logging(1);
@@ -404,8 +398,7 @@ main(int argc, char **argv)
     return 77; // 77 means "skipped".
 
   tor_assert(rq);
-  tp = threadpool_new(opt_n_threads,
-                      rq, new_state, free_state, NULL);
+  tp = threadpool_new(opt_n_threads, rq, new_state, free_state, NULL);
   tor_assert(tp);
 
   crypto_seed_weak_rng(&weak_rng);
@@ -414,8 +407,7 @@ main(int argc, char **argv)
   tor_libevent_initialize(&evcfg);
 
   {
-    int r = threadpool_register_reply_event(tp,
-                                            replysock_readable_cb);
+    int r = threadpool_register_reply_event(tp, replysock_readable_cb);
     tor_assert(r == 0);
   }
 
@@ -434,13 +426,13 @@ main(int argc, char **argv)
   }
 
   {
-    struct timeval limit = { 180, 0 };
+    struct timeval limit = {180, 0};
     tor_libevent_exit_loop_after_delay(tor_libevent_get_base(), &limit);
   }
 
   tor_libevent_run_event_loop(tor_libevent_get_base(), 0);
 
-  if (n_sent != opt_n_items || n_received+n_successful_cancel != n_sent) {
+  if (n_sent != opt_n_items || n_received + n_successful_cancel != n_sent) {
     printf("%d vs %d\n", n_sent, opt_n_items);
     printf("%d+%d vs %d\n", n_received, n_successful_cancel, n_sent);
     puts("FAIL");

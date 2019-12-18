@@ -23,19 +23,19 @@ MOCK_DECL(int, advertised_server_mode, (void));
 void set_server_advertised(int s);
 
 /** Is the relay module enabled? */
-#define have_module_relay() (1)
+#  define have_module_relay() (1)
 
 #else /* !defined(HAVE_MODULE_RELAY) */
 
-#define dir_server_mode(options) (((void)(options)),0)
-#define server_mode(options) (((void)(options)),0)
-#define public_server_mode(options) (((void)(options)),0)
-#define advertised_server_mode() (0)
+#  define dir_server_mode(options) (((void)(options)), 0)
+#  define server_mode(options) (((void)(options)), 0)
+#  define public_server_mode(options) (((void)(options)), 0)
+#  define advertised_server_mode() (0)
 
 /* We shouldn't be publishing descriptors when relay mode is disabled. */
-#define set_server_advertised(s) tor_assert_nonfatal(!(s))
+#  define set_server_advertised(s) tor_assert_nonfatal(! (s))
 
-#define have_module_relay() (0)
+#  define have_module_relay() (0)
 
 #endif /* defined(HAVE_MODULE_RELAY) */
 

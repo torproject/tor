@@ -22,9 +22,11 @@
 
 /* Example on how to map a tracepoint to log_debug(). */
 #undef tor_trace
-#define tor_trace(subsystem, name, args...) \
-  log_debug(LD_GENERAL, "Trace event \"" XSTR(name) "\" from " \
-                        "\"" XSTR(subsystem) "\" hit. " \
-                        "(line "XSTR(__LINE__) ")")
+#define tor_trace(subsystem, name, args...)           \
+  log_debug(LD_GENERAL,                               \
+            "Trace event \"" XSTR(                    \
+                name) "\" from "                      \
+                      "\"" XSTR(subsystem) "\" hit. " \
+                                           "(line " XSTR(__LINE__) ")")
 
 #endif /* !defined(TOR_TRACE_LOG_DEBUG_H) */

@@ -24,7 +24,7 @@ DISABLE_GCC_WARNING("-Wredundant-decls")
 #include <openssl/opensslv.h>
 
 #ifdef OPENSSL_NO_EC
-#error "We require OpenSSL with ECC support"
+#  error "We require OpenSSL with ECC support"
 #endif
 
 #include <openssl/err.h>
@@ -47,23 +47,19 @@ ENABLE_GCC_WARNING("-Wredundant-decls")
 #include <string.h>
 
 #ifdef OPENSSL_1_1_API
-#define X509_get_notBefore_const(cert) \
-    X509_get0_notBefore(cert)
-#define X509_get_notAfter_const(cert) \
-    X509_get0_notAfter(cert)
-#ifndef X509_get_notBefore
-#define X509_get_notBefore(cert) \
-    X509_getm_notBefore(cert)
-#endif
-#ifndef X509_get_notAfter
-#define X509_get_notAfter(cert) \
-    X509_getm_notAfter(cert)
-#endif
+#  define X509_get_notBefore_const(cert) X509_get0_notBefore(cert)
+#  define X509_get_notAfter_const(cert) X509_get0_notAfter(cert)
+#  ifndef X509_get_notBefore
+#    define X509_get_notBefore(cert) X509_getm_notBefore(cert)
+#  endif
+#  ifndef X509_get_notAfter
+#    define X509_get_notAfter(cert) X509_getm_notAfter(cert)
+#  endif
 #else /* !defined(OPENSSL_1_1_API) */
-#define X509_get_notBefore_const(cert) \
-  ((const ASN1_TIME*) X509_get_notBefore((X509 *)cert))
-#define X509_get_notAfter_const(cert) \
-  ((const ASN1_TIME*) X509_get_notAfter((X509 *)cert))
+#  define X509_get_notBefore_const(cert) \
+    ((const ASN1_TIME *)X509_get_notBefore((X509 *)cert))
+#  define X509_get_notAfter_const(cert) \
+    ((const ASN1_TIME *)X509_get_notAfter((X509 *)cert))
 #endif /* defined(OPENSSL_1_1_API) */
 
 /** Return a newly allocated X509 name with commonName <b>cname</b>. */
@@ -73,17 +69,18 @@ tor_x509_name_new(const char *cname)
   int nid;
   X509_NAME *name;
   /* LCOV_EXCL_BR_START : these branches will only fail on OOM errors */
-  if (!(name = X509_NAME_new()))
+  if (! (name = X509_NAME_new()))
     return NULL;
-  if ((nid = OBJ_txt2nid("commonName")) == NID_undef) goto error;
-  if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
-                                   (unsigned char*)cname, -1, -1, 0)))
+  if ((nid = OBJ_txt2nid("commonName")) == NID_undef)
+    goto error;
+  if (! (X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
+                                    (unsigned char *)cname, -1, -1, 0)))
     goto error;
   /* LCOV_EXCL_BR_STOP */
   return name;
 
   /* LCOV_EXCL_START : these lines will only execute on out of memory errors*/
- error:
+error:
   X509_NAME_free(name);
   return NULL;
   /* LCOV_EXCL_STOP */
@@ -97,12 +94,9 @@ tor_x509_name_new(const char *cname)
  *
  * Return a certificate on success, NULL on failure.
  */
-MOCK_IMPL(X509 *,
-tor_tls_create_certificate,(crypto_pk_t *rsa,
-                            crypto_pk_t *rsa_sign,
-                            const char *cname,
-                            const char *cname_sign,
-                            unsigned int cert_lifetime))
+MOCK_IMPL(X509 *, tor_tls_create_certificate,
+          (crypto_pk_t * rsa, crypto_pk_t *rsa_sign, const char *cname,
+           const char *cname_sign, unsigned int cert_lifetime))
 {
   /* OpenSSL generates self-signed certificates with random 64-bit serial
    * numbers, so let's do that too. */
@@ -111,64 +105,64 @@ tor_tls_create_certificate,(crypto_pk_t *rsa,
   time_t start_time, end_time;
   BIGNUM *serial_number = NULL;
   unsigned char serial_tmp[SERIAL_NUMBER_SIZE];
-  EVP_PKEY *sign_pkey = NULL, *pkey=NULL;
+  EVP_PKEY *sign_pkey = NULL, *pkey = NULL;
   X509 *x509 = NULL;
-  X509_NAME *name = NULL, *name_issuer=NULL;
+  X509_NAME *name = NULL, *name_issuer = NULL;
 
   tor_tls_init();
 
   time_t now = time(NULL);
 
-  tor_tls_pick_certificate_lifetime(now, cert_lifetime,
-                                    &start_time, &end_time);
+  tor_tls_pick_certificate_lifetime(now, cert_lifetime, &start_time,
+                                    &end_time);
 
   tor_assert(rsa);
   tor_assert(cname);
   tor_assert(rsa_sign);
   tor_assert(cname_sign);
-  if (!(sign_pkey = crypto_pk_get_openssl_evp_pkey_(rsa_sign,1)))
+  if (! (sign_pkey = crypto_pk_get_openssl_evp_pkey_(rsa_sign, 1)))
     goto error;
-  if (!(pkey = crypto_pk_get_openssl_evp_pkey_(rsa,0)))
+  if (! (pkey = crypto_pk_get_openssl_evp_pkey_(rsa, 0)))
     goto error;
-  if (!(x509 = X509_new()))
+  if (! (x509 = X509_new()))
     goto error;
-  if (!(X509_set_version(x509, 2)))
+  if (! (X509_set_version(x509, 2)))
     goto error;
 
   { /* our serial number is 8 random bytes. */
     crypto_rand((char *)serial_tmp, sizeof(serial_tmp));
-    if (!(serial_number = BN_bin2bn(serial_tmp, sizeof(serial_tmp), NULL)))
+    if (! (serial_number = BN_bin2bn(serial_tmp, sizeof(serial_tmp), NULL)))
       goto error;
-    if (!(BN_to_ASN1_INTEGER(serial_number, X509_get_serialNumber(x509))))
+    if (! (BN_to_ASN1_INTEGER(serial_number, X509_get_serialNumber(x509))))
       goto error;
   }
 
-  if (!(name = tor_x509_name_new(cname)))
+  if (! (name = tor_x509_name_new(cname)))
     goto error;
-  if (!(X509_set_subject_name(x509, name)))
+  if (! (X509_set_subject_name(x509, name)))
     goto error;
-  if (!(name_issuer = tor_x509_name_new(cname_sign)))
+  if (! (name_issuer = tor_x509_name_new(cname_sign)))
     goto error;
-  if (!(X509_set_issuer_name(x509, name_issuer)))
-    goto error;
-
-  if (!X509_time_adj(X509_get_notBefore(x509),0,&start_time))
-    goto error;
-  if (!X509_time_adj(X509_get_notAfter(x509),0,&end_time))
-    goto error;
-  if (!X509_set_pubkey(x509, pkey))
+  if (! (X509_set_issuer_name(x509, name_issuer)))
     goto error;
 
-  if (!X509_sign(x509, sign_pkey, EVP_sha256()))
+  if (! X509_time_adj(X509_get_notBefore(x509), 0, &start_time))
+    goto error;
+  if (! X509_time_adj(X509_get_notAfter(x509), 0, &end_time))
+    goto error;
+  if (! X509_set_pubkey(x509, pkey))
+    goto error;
+
+  if (! X509_sign(x509, sign_pkey, EVP_sha256()))
     goto error;
 
   goto done;
- error:
+error:
   if (x509) {
     X509_free(x509);
     x509 = NULL;
   }
- done:
+done:
   tls_log_errors(NULL, LOG_WARN, LD_NET, "generating certificate");
   if (sign_pkey)
     EVP_PKEY_free(sign_pkey);
@@ -195,7 +189,7 @@ tor_x509_cert_set_cached_der_encoding(tor_x509_cert_t *cert)
   if (length <= 0 || buf == NULL) {
     return -1;
   }
-  cert->encoded_len = (size_t) length;
+  cert->encoded_len = (size_t)length;
   cert->encoded = tor_malloc(length);
   memcpy(cert->encoded, buf, length);
   OPENSSL_free(buf);
@@ -221,8 +215,8 @@ tor_x509_cert_impl_dup_(tor_x509_cert_impl_t *cert)
 /** Set *<b>encoded_out</b> and *<b>size_out</b> to <b>cert</b>'s encoded DER
  * representation and length, respectively. */
 void
-tor_x509_cert_get_der(const tor_x509_cert_t *cert,
-                 const uint8_t **encoded_out, size_t *size_out)
+tor_x509_cert_get_der(const tor_x509_cert_t *cert, const uint8_t **encoded_out,
+                      size_t *size_out)
 {
   tor_assert(cert);
   tor_assert(encoded_out);
@@ -248,14 +242,14 @@ tor_x509_cert_decode(const uint8_t *certificate, size_t certificate_len)
 
   x509 = d2i_X509(NULL, &cp, (int)certificate_len);
 
-  if (!x509)
+  if (! x509)
     goto err; /* Couldn't decode */
   if (cp - certificate != (int)certificate_len) {
     X509_free(x509);
     goto err; /* Didn't use all the bytes */
   }
   newcert = tor_x509_cert_new(x509);
-  if (!newcert) {
+  if (! newcert) {
     goto err;
   }
   if (newcert->encoded_len != certificate_len ||
@@ -265,7 +259,7 @@ tor_x509_cert_decode(const uint8_t *certificate, size_t certificate_len)
     goto err;
   }
   return newcert;
- err:
+err:
   tls_log_errors(NULL, LOG_INFO, LD_CRYPTO, "decoding a certificate");
   return NULL;
 }
@@ -280,10 +274,10 @@ tor_tls_cert_get_key(tor_x509_cert_t *cert)
   crypto_pk_t *result = NULL;
   EVP_PKEY *pkey = X509_get_pubkey(cert->cert);
   RSA *rsa;
-  if (!pkey)
+  if (! pkey)
     return NULL;
   rsa = EVP_PKEY_get1_RSA(pkey);
-  if (!rsa) {
+  if (! rsa) {
     EVP_PKEY_free(pkey);
     return NULL;
   }
@@ -298,21 +292,19 @@ tor_tls_cert_get_key(tor_x509_cert_t *cert)
  * the key is long enough. Return 1 if the cert is good, and 0 if it's bad or
  * we couldn't check it. */
 int
-tor_tls_cert_is_valid(int severity,
-                      const tor_x509_cert_t *cert,
-                      const tor_x509_cert_t *signing_cert,
-                      time_t now,
+tor_tls_cert_is_valid(int severity, const tor_x509_cert_t *cert,
+                      const tor_x509_cert_t *signing_cert, time_t now,
                       int check_rsa_1024)
 {
   check_no_tls_errors();
   EVP_PKEY *cert_key;
   int r, key_ok = 0;
 
-  if (!signing_cert || !cert)
+  if (! signing_cert || ! cert)
     goto bad;
 
   EVP_PKEY *signing_key = X509_get_pubkey(signing_cert->cert);
-  if (!signing_key)
+  if (! signing_key)
     goto bad;
   r = X509_verify(cert->cert, signing_key);
   EVP_PKEY_free(signing_key);
@@ -351,13 +343,13 @@ tor_tls_cert_is_valid(int severity,
       key_ok = 1;
   }
   EVP_PKEY_free(cert_key);
-  if (!key_ok)
+  if (! key_ok)
     goto bad;
 
   /* XXXX compare DNs or anything? */
 
   return 1;
- bad:
+bad:
   tls_log_errors(NULL, LOG_INFO, LD_CRYPTO, "checking a certificate");
   return 0;
 }
@@ -369,21 +361,22 @@ log_cert_lifetime(int severity, const X509 *cert, const char *problem,
 {
   BIO *bio = NULL;
   BUF_MEM *buf;
-  char *s1=NULL, *s2=NULL;
+  char *s1 = NULL, *s2 = NULL;
   char mytime[33];
   struct tm tm;
   size_t n;
 
   if (problem)
     tor_log(severity, LD_GENERAL,
-        "Certificate %s. Either their clock is set wrong, or your clock "
-        "is wrong.",
-           problem);
+            "Certificate %s. Either their clock is set wrong, or your clock "
+            "is wrong.",
+            problem);
 
-  if (!(bio = BIO_new(BIO_s_mem()))) {
-    log_warn(LD_GENERAL, "Couldn't allocate BIO!"); goto end;
+  if (! (bio = BIO_new(BIO_s_mem()))) {
+    log_warn(LD_GENERAL, "Couldn't allocate BIO!");
+    goto end;
   }
-  if (!(ASN1_TIME_print(bio, X509_get_notBefore_const(cert)))) {
+  if (! (ASN1_TIME_print(bio, X509_get_notBefore_const(cert)))) {
     tls_log_errors(NULL, LOG_WARN, LD_NET, "printing certificate lifetime");
     goto end;
   }
@@ -391,7 +384,7 @@ log_cert_lifetime(int severity, const X509 *cert, const char *problem,
   s1 = tor_strndup(buf->data, buf->length);
 
   (void)BIO_reset(bio);
-  if (!(ASN1_TIME_print(bio, X509_get_notAfter_const(cert)))) {
+  if (! (ASN1_TIME_print(bio, X509_get_notAfter_const(cert)))) {
     tls_log_errors(NULL, LOG_WARN, LD_NET, "printing certificate lifetime");
     goto end;
   }
@@ -401,16 +394,16 @@ log_cert_lifetime(int severity, const X509 *cert, const char *problem,
   n = strftime(mytime, 32, "%b %d %H:%M:%S %Y UTC", tor_gmtime_r(&now, &tm));
   if (n > 0) {
     tor_log(severity, LD_GENERAL,
-        "(certificate lifetime runs from %s through %s. Your time is %s.)",
-        s1,s2,mytime);
+            "(certificate lifetime runs from %s through %s. Your time is %s.)",
+            s1, s2, mytime);
   } else {
     tor_log(severity, LD_GENERAL,
-        "(certificate lifetime runs from %s through %s. "
-        "Couldn't get your time.)",
-        s1, s2);
+            "(certificate lifetime runs from %s through %s. "
+            "Couldn't get your time.)",
+            s1, s2);
   }
 
- end:
+end:
   /* Not expected to get invoked */
   tls_log_errors(NULL, LOG_WARN, LD_NET, "getting certificate lifetime");
   if (bio)
@@ -426,8 +419,8 @@ log_cert_lifetime(int severity, const X509 *cert, const char *problem,
  * and return -1. */
 int
 tor_x509_check_cert_lifetime_internal(int severity, const X509 *cert,
-                                      time_t now,
-                                      int past_tolerance, int future_tolerance)
+                                      time_t now, int past_tolerance,
+                                      int future_tolerance)
 {
   time_t t;
 

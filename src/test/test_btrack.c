@@ -86,8 +86,7 @@ test_btrack_launch(void *arg)
   expect_log_msg_containing("ORCONN BEST_AP state -1->1 gid=2");
   teardown_capture_of_logs();
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -118,12 +117,10 @@ test_btrack_delete(void *arg)
   expect_log_msg_containing("ORCONN DELETE gid=1 status=3 reason=0");
   teardown_capture_of_logs();
 
- done:
-  ;
+done:;
 }
 
 struct testcase_t btrack_tests[] = {
-  { "launch", test_btrack_launch, TT_FORK, &helper_pubsub_setup, NULL },
-  { "delete", test_btrack_delete, TT_FORK, &helper_pubsub_setup, NULL },
-  END_OF_TESTCASES
-};
+    {"launch", test_btrack_launch, TT_FORK, &helper_pubsub_setup, NULL},
+    {"delete", test_btrack_delete, TT_FORK, &helper_pubsub_setup, NULL},
+    END_OF_TESTCASES};

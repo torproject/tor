@@ -22,8 +22,7 @@
 
 static or_state_t *or_state;
 NS_DECL(or_state_t *, get_or_state, (void));
-static or_state_t *
-NS(get_or_state)(void)
+static or_state_t *NS(get_or_state)(void)
 {
   return or_state;
 }
@@ -33,7 +32,7 @@ test_accounting_limits(void *arg)
 {
   or_options_t *options = get_options_mutable();
   time_t fake_time = time(NULL);
-  (void) arg;
+  (void)arg;
 
   NS_MOCK(get_or_state);
   or_state = or_state_new();
@@ -93,7 +92,7 @@ test_accounting_limits(void *arg)
   tor_assert(we_are_hibernating() == 1);
 
   goto done;
- done:
+done:
   NS_UNMOCK(get_or_state);
   or_state_free(or_state);
 }
@@ -101,6 +100,5 @@ test_accounting_limits(void *arg)
 #undef NS_SUBMODULE
 
 struct testcase_t accounting_tests[] = {
-  { "bwlimits", test_accounting_limits, TT_FORK, NULL, NULL },
-  END_OF_TESTCASES
-};
+    {"bwlimits", test_accounting_limits, TT_FORK, NULL, NULL},
+    END_OF_TESTCASES};

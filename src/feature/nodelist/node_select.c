@@ -44,12 +44,13 @@ static int compute_weighted_bandwidths(const smartlist_t *sl,
                                        bandwidth_weight_rule_t rule,
                                        double **bandwidths_out,
                                        double *total_bandwidth_out);
-static const routerstatus_t *router_pick_trusteddirserver_impl(
-                const smartlist_t *sourcelist, dirinfo_type_t auth,
-                int flags, int *n_busy_out);
-static const routerstatus_t *router_pick_dirserver_generic(
-                              smartlist_t *sourcelist,
-                              dirinfo_type_t type, int flags);
+static const routerstatus_t *
+router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
+                                  dirinfo_type_t auth, int flags,
+                                  int *n_busy_out);
+static const routerstatus_t *
+router_pick_dirserver_generic(smartlist_t *sourcelist, dirinfo_type_t type,
+                              int flags);
 
 /** Try to find a running dirserver that supports operations of <b>type</b>.
  *
@@ -74,21 +75,20 @@ router_pick_directory_server(dirinfo_type_t type, int flags)
   const routerstatus_t *choice;
 
   choice = router_pick_directory_server_impl(type, flags, &busy);
-  if (choice || !(flags & PDS_RETRY_IF_NO_SERVERS))
+  if (choice || ! (flags & PDS_RETRY_IF_NO_SERVERS))
     return choice;
 
   if (busy) {
     /* If the reason that we got no server is that servers are "busy",
      * we must be excluding good servers because we already have serverdesc
      * fetches with them.  Do not mark down servers up because of this. */
-    tor_assert((flags & (PDS_NO_EXISTING_SERVERDESC_FETCH|
+    tor_assert((flags & (PDS_NO_EXISTING_SERVERDESC_FETCH |
                          PDS_NO_EXISTING_MICRODESC_FETCH)));
     return NULL;
   }
 
-  log_info(LD_DIR,
-           "No reachable router entries for dirservers. "
-           "Trying them all again.");
+  log_info(LD_DIR, "No reachable router entries for dirservers. "
+                   "Trying them all again.");
   /* mark all fallback directory mirrors as up again */
   router_reset_status_download_failures();
   /* try again */
@@ -100,8 +100,8 @@ router_pick_directory_server(dirinfo_type_t type, int flags)
  * router_pick_directory_server.
  */
 const routerstatus_t *
-router_pick_dirserver_generic(smartlist_t *sourcelist,
-                              dirinfo_type_t type, int flags)
+router_pick_dirserver_generic(smartlist_t *sourcelist, dirinfo_type_t type,
+                              int flags)
 {
   const routerstatus_t *choice;
   int busy = 0;
@@ -113,19 +113,18 @@ router_pick_dirserver_generic(smartlist_t *sourcelist,
   }
 
   choice = router_pick_trusteddirserver_impl(sourcelist, type, flags, &busy);
-  if (choice || !(flags & PDS_RETRY_IF_NO_SERVERS))
+  if (choice || ! (flags & PDS_RETRY_IF_NO_SERVERS))
     return choice;
   if (busy) {
     /* If the reason that we got no server is that servers are "busy",
      * we must be excluding good servers because we already have serverdesc
      * fetches with them.  Do not mark down servers up because of this. */
-    tor_assert((flags & (PDS_NO_EXISTING_SERVERDESC_FETCH|
+    tor_assert((flags & (PDS_NO_EXISTING_SERVERDESC_FETCH |
                          PDS_NO_EXISTING_MICRODESC_FETCH)));
     return NULL;
   }
 
-  log_info(LD_DIR,
-           "No dirservers are reachable. Trying them all again.");
+  log_info(LD_DIR, "No dirservers are reachable. Trying them all again.");
   mark_all_dirservers_up(sourcelist);
   return router_pick_trusteddirserver_impl(sourcelist, type, flags, NULL);
 }
@@ -137,16 +136,16 @@ router_pick_dirserver_generic(smartlist_t *sourcelist,
  * If we got no result, and we are applying IP preferences, and we are a
  * client that could use an alternate IP version, try again with the
  * opposite preferences. */
-#define RETRY_ALTERNATE_IP_VERSION(retry_label)                               \
-  STMT_BEGIN                                                                  \
-    if (result == NULL && try_ip_pref && options->ClientUseIPv4               \
-        && fascist_firewall_use_ipv6(options) && !server_mode(options)        \
-        && !n_busy) {                                                         \
-      n_excluded = 0;                                                         \
-      n_busy = 0;                                                             \
-      try_ip_pref = 0;                                                        \
-      goto retry_label;                                                       \
-    }                                                                         \
+#define RETRY_ALTERNATE_IP_VERSION(retry_label)                         \
+  STMT_BEGIN                                                            \
+    if (result == NULL && try_ip_pref && options->ClientUseIPv4 &&      \
+        fascist_firewall_use_ipv6(options) && ! server_mode(options) && \
+        ! n_busy) {                                                     \
+      n_excluded = 0;                                                   \
+      n_busy = 0;                                                       \
+      try_ip_pref = 0;                                                  \
+      goto retry_label;                                                 \
+    }                                                                   \
   STMT_END
 
 /* Common retry code for router_pick_directory_server_impl and
@@ -155,16 +154,16 @@ router_pick_dirserver_generic(smartlist_t *sourcelist,
  *
  * If we got no result, and we are excluding nodes, and StrictNodes is
  * not set, try again without excluding nodes. */
-#define RETRY_WITHOUT_EXCLUDE(retry_label)                                    \
-  STMT_BEGIN                                                                  \
-    if (result == NULL && try_excluding && !options->StrictNodes              \
-        && n_excluded && !n_busy) {                                           \
-      try_excluding = 0;                                                      \
-      n_excluded = 0;                                                         \
-      n_busy = 0;                                                             \
-      try_ip_pref = 1;                                                        \
-      goto retry_label;                                                       \
-    }                                                                         \
+#define RETRY_WITHOUT_EXCLUDE(retry_label)                           \
+  STMT_BEGIN                                                         \
+    if (result == NULL && try_excluding && ! options->StrictNodes && \
+        n_excluded && ! n_busy) {                                    \
+      try_excluding = 0;                                             \
+      n_excluded = 0;                                                \
+      n_busy = 0;                                                    \
+      try_ip_pref = 1;                                               \
+      goto retry_label;                                              \
+    }                                                                \
   STMT_END
 
 /* Common code used in the loop within router_pick_directory_server_impl and
@@ -173,17 +172,17 @@ router_pick_dirserver_generic(smartlist_t *sourcelist,
  * Check if the given <b>identity</b> supports extrainfo. If not, skip further
  * checks.
  */
-#define SKIP_MISSING_TRUSTED_EXTRAINFO(type, identity)                        \
-  STMT_BEGIN                                                                  \
-    int is_trusted_extrainfo = router_digest_is_trusted_dir_type(             \
-                               (identity), EXTRAINFO_DIRINFO);                \
-    if (((type) & EXTRAINFO_DIRINFO) &&                                       \
-        !router_supports_extrainfo((identity), is_trusted_extrainfo))         \
-      continue;                                                               \
+#define SKIP_MISSING_TRUSTED_EXTRAINFO(type, identity)                    \
+  STMT_BEGIN                                                              \
+    int is_trusted_extrainfo =                                            \
+        router_digest_is_trusted_dir_type((identity), EXTRAINFO_DIRINFO); \
+    if (((type)&EXTRAINFO_DIRINFO) &&                                     \
+        ! router_supports_extrainfo((identity), is_trusted_extrainfo))    \
+      continue;                                                           \
   STMT_END
 
 #ifndef LOG_FALSE_POSITIVES_DURING_BOOTSTRAP
-#define LOG_FALSE_POSITIVES_DURING_BOOTSTRAP 0
+#  define LOG_FALSE_POSITIVES_DURING_BOOTSTRAP 0
 #endif
 
 /* Log a message if rs is not found or not a preferred address */
@@ -191,38 +190,38 @@ static void
 router_picked_poor_directory_log(const routerstatus_t *rs)
 {
   const networkstatus_t *usable_consensus;
-  usable_consensus = networkstatus_get_reasonably_live_consensus(time(NULL),
-                                                 usable_consensus_flavor());
+  usable_consensus = networkstatus_get_reasonably_live_consensus(
+      time(NULL), usable_consensus_flavor());
 
-#if !LOG_FALSE_POSITIVES_DURING_BOOTSTRAP
+#if ! LOG_FALSE_POSITIVES_DURING_BOOTSTRAP
   /* Don't log early in the bootstrap process, it's normal to pick from a
    * small pool of nodes. Of course, this won't help if we're trying to
    * diagnose bootstrap issues. */
-  if (!smartlist_len(nodelist_get_list()) || !usable_consensus
-      || !router_have_minimum_dir_info()) {
+  if (! smartlist_len(nodelist_get_list()) || ! usable_consensus ||
+      ! router_have_minimum_dir_info()) {
     return;
   }
 #endif /* !LOG_FALSE_POSITIVES_DURING_BOOTSTRAP */
 
   /* We couldn't find a node, or the one we have doesn't fit our preferences.
    * Sometimes this is normal, sometimes it can be a reachability issue. */
-  if (!rs) {
+  if (! rs) {
     /* This happens a lot, so it's at debug level */
-    log_debug(LD_DIR, "Wanted to make an outgoing directory connection, but "
+    log_debug(LD_DIR,
+              "Wanted to make an outgoing directory connection, but "
               "we couldn't find a directory that fit our criteria. "
               "Perhaps we will succeed next time with less strict criteria.");
-  } else if (!fascist_firewall_allows_rs(rs, FIREWALL_OR_CONNECTION, 1)
-             && !fascist_firewall_allows_rs(rs, FIREWALL_DIR_CONNECTION, 1)
-             ) {
+  } else if (! fascist_firewall_allows_rs(rs, FIREWALL_OR_CONNECTION, 1) &&
+             ! fascist_firewall_allows_rs(rs, FIREWALL_DIR_CONNECTION, 1)) {
     /* This is rare, and might be interesting to users trying to diagnose
      * connection issues on dual-stack machines. */
-    log_info(LD_DIR, "Selected a directory %s with non-preferred OR and Dir "
+    log_info(LD_DIR,
+             "Selected a directory %s with non-preferred OR and Dir "
              "addresses for launching an outgoing connection: "
              "IPv4 %s OR %d Dir %d IPv6 %s OR %d Dir %d",
-             routerstatus_describe(rs),
-             fmt_addr32(rs->addr), rs->or_port,
-             rs->dir_port, fmt_addr(&rs->ipv6_addr),
-             rs->ipv6_orport, rs->dir_port);
+             routerstatus_describe(rs), fmt_addr32(rs->addr), rs->or_port,
+             rs->dir_port, fmt_addr(&rs->ipv6_addr), rs->ipv6_orport,
+             rs->dir_port);
   }
 }
 
@@ -237,23 +236,23 @@ STATIC int
 router_is_already_dir_fetching(const tor_addr_port_t *ap, int serverdesc,
                                int microdesc)
 {
-  if (!ap || tor_addr_is_null(&ap->addr) || !ap->port) {
+  if (! ap || tor_addr_is_null(&ap->addr) || ! ap->port) {
     return 0;
   }
 
   /* XX/teor - we're not checking tunnel connections here, see #17848
    */
-  if (serverdesc && (
-     connection_get_by_type_addr_port_purpose(
-       CONN_TYPE_DIR, &ap->addr, ap->port, DIR_PURPOSE_FETCH_SERVERDESC)
-  || connection_get_by_type_addr_port_purpose(
-       CONN_TYPE_DIR, &ap->addr, ap->port, DIR_PURPOSE_FETCH_EXTRAINFO))) {
+  if (serverdesc &&
+      (connection_get_by_type_addr_port_purpose(
+           CONN_TYPE_DIR, &ap->addr, ap->port, DIR_PURPOSE_FETCH_SERVERDESC) ||
+       connection_get_by_type_addr_port_purpose(
+           CONN_TYPE_DIR, &ap->addr, ap->port, DIR_PURPOSE_FETCH_EXTRAINFO))) {
     return 1;
   }
 
-  if (microdesc && (
-     connection_get_by_type_addr_port_purpose(
-       CONN_TYPE_DIR, &ap->addr, ap->port, DIR_PURPOSE_FETCH_MICRODESC))) {
+  if (microdesc &&
+      (connection_get_by_type_addr_port_purpose(
+          CONN_TYPE_DIR, &ap->addr, ap->port, DIR_PURPOSE_FETCH_MICRODESC))) {
     return 1;
   }
 
@@ -266,10 +265,8 @@ router_is_already_dir_fetching(const tor_addr_port_t *ap, int serverdesc,
  */
 static int
 router_is_already_dir_fetching_(uint32_t ipv4_addr,
-                                const tor_addr_t *ipv6_addr,
-                                uint16_t dir_port,
-                                int serverdesc,
-                                int microdesc)
+                                const tor_addr_t *ipv6_addr, uint16_t dir_port,
+                                int serverdesc, int microdesc)
 {
   tor_addr_port_t ipv4_dir_ap, ipv6_dir_ap;
 
@@ -279,8 +276,9 @@ router_is_already_dir_fetching_(uint32_t ipv4_addr,
   tor_addr_copy(&ipv6_dir_ap.addr, ipv6_addr);
   ipv6_dir_ap.port = dir_port;
 
-  return (router_is_already_dir_fetching(&ipv4_dir_ap, serverdesc, microdesc)
-       || router_is_already_dir_fetching(&ipv6_dir_ap, serverdesc, microdesc));
+  return (
+      router_is_already_dir_fetching(&ipv4_dir_ap, serverdesc, microdesc) ||
+      router_is_already_dir_fetching(&ipv6_dir_ap, serverdesc, microdesc));
 }
 
 /** Pick a random running valid directory server/mirror from our
@@ -303,15 +301,16 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
   const networkstatus_t *consensus = networkstatus_get_latest_consensus();
   const int requireother = ! (flags & PDS_ALLOW_SELF);
   const int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
-  const int no_serverdesc_fetching =(flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
+  const int no_serverdesc_fetching =
+      (flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
   const int no_microdesc_fetching = (flags & PDS_NO_EXISTING_MICRODESC_FETCH);
   int try_excluding = 1, n_excluded = 0, n_busy = 0;
   int try_ip_pref = 1;
 
-  if (!consensus)
+  if (! consensus)
     return NULL;
 
- retry_search:
+retry_search:
 
   direct = smartlist_new();
   tunnel = smartlist_new();
@@ -325,33 +324,30 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
   const int must_have_or = directory_must_use_begindir(options);
 
   /* Find all the running dirservers we know about. */
-  SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
+  SMARTLIST_FOREACH_BEGIN (nodelist_get_list(), const node_t *, node) {
     int is_trusted;
     int is_overloaded;
     const routerstatus_t *status = node->rs;
     const country_t country = node->country;
-    if (!status)
+    if (! status)
       continue;
 
-    if (!node->is_running || !node_is_dir(node) || !node->is_valid)
+    if (! node->is_running || ! node_is_dir(node) || ! node->is_valid)
       continue;
     if (requireother && router_digest_is_me(node->identity))
       continue;
 
     SKIP_MISSING_TRUSTED_EXTRAINFO(type, node->identity);
 
-    if (try_excluding &&
-        routerset_contains_routerstatus(options->ExcludeNodes, status,
-                                        country)) {
+    if (try_excluding && routerset_contains_routerstatus(options->ExcludeNodes,
+                                                         status, country)) {
       ++n_excluded;
       continue;
     }
 
-    if (router_is_already_dir_fetching_(status->addr,
-                                        &status->ipv6_addr,
-                                        status->dir_port,
-                                        no_serverdesc_fetching,
-                                        no_microdesc_fetching)) {
+    if (router_is_already_dir_fetching_(
+            status->addr, &status->ipv6_addr, status->dir_port,
+            no_serverdesc_fetching, no_microdesc_fetching)) {
       ++n_busy;
       continue;
     }
@@ -366,23 +362,25 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
      * address for each router (if any). (To ensure correct load-balancing
      * we try routers that only have one address both times.)
      */
-    if (!fascistfirewall || skip_or_fw ||
+    if (! fascistfirewall || skip_or_fw ||
         fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION,
                                      try_ip_pref))
-      smartlist_add(is_trusted ? trusted_tunnel :
-                    is_overloaded ? overloaded_tunnel : tunnel, (void*)node);
-    else if (!must_have_or && (skip_dir_fw ||
-             fascist_firewall_allows_node(node, FIREWALL_DIR_CONNECTION,
-                                          try_ip_pref)))
-      smartlist_add(is_trusted ? trusted_direct :
-                    is_overloaded ? overloaded_direct : direct, (void*)node);
-  } SMARTLIST_FOREACH_END(node);
+      smartlist_add(is_trusted ? trusted_tunnel
+                               : is_overloaded ? overloaded_tunnel : tunnel,
+                    (void *)node);
+    else if (! must_have_or &&
+             (skip_dir_fw || fascist_firewall_allows_node(
+                                 node, FIREWALL_DIR_CONNECTION, try_ip_pref)))
+      smartlist_add(is_trusted ? trusted_direct
+                               : is_overloaded ? overloaded_direct : direct,
+                    (void *)node);
+  }
+  SMARTLIST_FOREACH_END(node);
 
   if (smartlist_len(tunnel)) {
     result = node_sl_choose_by_bandwidth(tunnel, WEIGHT_FOR_DIR);
   } else if (smartlist_len(overloaded_tunnel)) {
-    result = node_sl_choose_by_bandwidth(overloaded_tunnel,
-                                                 WEIGHT_FOR_DIR);
+    result = node_sl_choose_by_bandwidth(overloaded_tunnel, WEIGHT_FOR_DIR);
   } else if (smartlist_len(trusted_tunnel)) {
     /* FFFF We don't distinguish between trusteds and overloaded trusteds
      * yet. Maybe one day we should. */
@@ -392,8 +390,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
   } else if (smartlist_len(direct)) {
     result = node_sl_choose_by_bandwidth(direct, WEIGHT_FOR_DIR);
   } else if (smartlist_len(overloaded_direct)) {
-    result = node_sl_choose_by_bandwidth(overloaded_direct,
-                                         WEIGHT_FOR_DIR);
+    result = node_sl_choose_by_bandwidth(overloaded_direct, WEIGHT_FOR_DIR);
   } else {
     result = smartlist_choose(trusted_direct);
   }
@@ -422,8 +419,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
  * the sum of all elements in the array _before_ scaling. */
 STATIC void
 scale_array_elements_to_u64(uint64_t *entries_out, const double *entries_in,
-                            int n_entries,
-                            uint64_t *total_out)
+                            int n_entries, uint64_t *total_out)
 {
   double total = 0.0;
   double scale_factor = 0.0;
@@ -441,7 +437,7 @@ scale_array_elements_to_u64(uint64_t *entries_out, const double *entries_in,
     entries_out[i] = tor_llround(entries_in[i] * scale_factor);
 
   if (total_out)
-    *total_out = (uint64_t) total;
+    *total_out = (uint64_t)total;
 }
 
 /** Pick a random element of <b>n_entries</b>-element array <b>entries</b>,
@@ -469,8 +465,8 @@ choose_array_element_by_weight(const uint64_t *entries, int n_entries)
 
   rand_val = crypto_rand_uint64(total);
 
-  return select_array_member_cumulative_timei(
-                           entries, n_entries, total, rand_val);
+  return select_array_member_cumulative_timei(entries, n_entries, total,
+                                              rand_val);
 }
 
 /** Return bw*1000, unless bw*1000 would overflow, in which case return
@@ -478,7 +474,7 @@ choose_array_element_by_weight(const uint64_t *entries, int n_entries)
 static inline int32_t
 kb_to_bytes(uint32_t bw)
 {
-  return (bw > (INT32_MAX/1000)) ? INT32_MAX : bw*1000;
+  return (bw > (INT32_MAX / 1000)) ? INT32_MAX : bw * 1000;
 }
 
 /** Helper function:
@@ -499,8 +495,8 @@ static const node_t *
 smartlist_choose_node_by_bandwidth_weights(const smartlist_t *sl,
                                            bandwidth_weight_rule_t rule)
 {
-  double *bandwidths_dbl=NULL;
-  uint64_t *bandwidths_u64=NULL;
+  double *bandwidths_dbl = NULL;
+  uint64_t *bandwidths_u64 = NULL;
 
   if (compute_weighted_bandwidths(sl, rule, &bandwidths_dbl, NULL) < 0)
     return NULL;
@@ -510,8 +506,8 @@ smartlist_choose_node_by_bandwidth_weights(const smartlist_t *sl,
                               smartlist_len(sl), NULL);
 
   {
-    int idx = choose_array_element_by_weight(bandwidths_u64,
-                                             smartlist_len(sl));
+    int idx =
+        choose_array_element_by_weight(bandwidths_u64, smartlist_len(sl));
     tor_free(bandwidths_dbl);
     tor_free(bandwidths_u64);
     return idx < 0 ? NULL : smartlist_get(sl, idx);
@@ -521,7 +517,7 @@ smartlist_choose_node_by_bandwidth_weights(const smartlist_t *sl,
 /** When weighting bridges, enforce these values as lower and upper
  * bound for believable bandwidth, because there is no way for us
  * to verify a bridge's bandwidth currently. */
-#define BRIDGE_MIN_BELIEVABLE_BANDWIDTH 20000  /* 20 kB/sec */
+#define BRIDGE_MIN_BELIEVABLE_BANDWIDTH 20000 /* 20 kB/sec */
 #define BRIDGE_MAX_BELIEVABLE_BANDWIDTH 100000 /* 100 kB/sec */
 
 /** Return the smaller of the router's configured BandwidthRate
@@ -565,10 +561,8 @@ compute_weighted_bandwidths(const smartlist_t *sl,
   tor_assert(bandwidths_out);
 
   /* Can't choose exit and guard at same time */
-  tor_assert(rule == NO_WEIGHTING ||
-             rule == WEIGHT_FOR_EXIT ||
-             rule == WEIGHT_FOR_GUARD ||
-             rule == WEIGHT_FOR_MID ||
+  tor_assert(rule == NO_WEIGHTING || rule == WEIGHT_FOR_EXIT ||
+             rule == WEIGHT_FOR_GUARD || rule == WEIGHT_FOR_MID ||
              rule == WEIGHT_FOR_DIR);
 
   *bandwidths_out = NULL;
@@ -632,8 +626,8 @@ compute_weighted_bandwidths(const smartlist_t *sl,
     Wgb = Wmb = Web = Wdb = weight_scale;
   }
 
-  if (Wg < 0 || Wm < 0 || We < 0 || Wd < 0 || Wgb < 0 || Wmb < 0 || Wdb < 0
-      || Web < 0) {
+  if (Wg < 0 || Wm < 0 || We < 0 || Wd < 0 || Wgb < 0 || Wmb < 0 || Wdb < 0 ||
+      Web < 0) {
     log_debug(LD_CIRC,
               "Got negative bandwidth weights. Defaulting to naive selection"
               " algorithm.");
@@ -655,7 +649,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
 
   // Cycle through smartlist and total the bandwidth.
   static int warned_missing_bw = 0;
-  SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
+  SMARTLIST_FOREACH_BEGIN (sl, const node_t *, node) {
     int is_exit = 0, is_guard = 0, is_dir = 0, this_bw = 0;
     double weight = 1;
     double weight_without_guard_flag = 0; /* Used for guardfraction */
@@ -664,13 +658,13 @@ compute_weighted_bandwidths(const smartlist_t *sl,
     is_guard = node->is_possible_guard;
     is_dir = node_is_dir(node);
     if (node->rs) {
-      if (!node->rs->has_bandwidth) {
+      if (! node->rs->has_bandwidth) {
         /* This should never happen, unless all the authorities downgrade
          * to 0.2.0 or rogue routerstatuses get inserted into our consensus. */
         if (! warned_missing_bw) {
           log_warn(LD_BUG,
-                 "Consensus is missing some bandwidths. Using a naive "
-                 "router selection algorithm");
+                   "Consensus is missing some bandwidths. Using a naive "
+                   "router selection algorithm");
           warned_missing_bw = 1;
         }
         this_bw = 30000; /* Chosen arbitrarily */
@@ -686,15 +680,15 @@ compute_weighted_bandwidths(const smartlist_t *sl,
     }
 
     if (is_guard && is_exit) {
-      weight = (is_dir ? Wdb*Wd : Wd);
-      weight_without_guard_flag = (is_dir ? Web*We : We);
+      weight = (is_dir ? Wdb * Wd : Wd);
+      weight_without_guard_flag = (is_dir ? Web * We : We);
     } else if (is_guard) {
-      weight = (is_dir ? Wgb*Wg : Wg);
-      weight_without_guard_flag = (is_dir ? Wmb*Wm : Wm);
+      weight = (is_dir ? Wgb * Wg : Wg);
+      weight_without_guard_flag = (is_dir ? Wmb * Wm : Wm);
     } else if (is_exit) {
-      weight = (is_dir ? Web*We : We);
+      weight = (is_dir ? Web * We : We);
     } else { // middle
-      weight = (is_dir ? Wmb*Wm : Wm);
+      weight = (is_dir ? Wmb * Wm : Wm);
     }
     /* These should be impossible; but overflows here would be bad, so let's
      * make sure. */
@@ -722,31 +716,31 @@ compute_weighted_bandwidths(const smartlist_t *sl,
        * equivalent: */
       tor_assert(node->rs->is_possible_guard);
 
-      guard_get_guardfraction_bandwidth(&guardfraction_bw,
-                                        this_bw,
+      guard_get_guardfraction_bandwidth(&guardfraction_bw, this_bw,
                                         node->rs->guardfraction_percentage);
 
       /* Calculate final_weight = F*Wpf*B + (1-F)*Wpn*B */
-      final_weight =
-        guardfraction_bw.guard_bw * weight +
-        guardfraction_bw.non_guard_bw * weight_without_guard_flag;
+      final_weight = guardfraction_bw.guard_bw * weight +
+                     guardfraction_bw.non_guard_bw * weight_without_guard_flag;
 
       log_debug(LD_GENERAL, "%s: Guardfraction weight %f instead of %f (%s)",
-                node->rs->nickname, final_weight, weight*this_bw,
+                node->rs->nickname, final_weight, weight * this_bw,
                 bandwidth_weight_rule_to_string(rule));
     } else { /* no guardfraction information. calculate the weight normally. */
-      final_weight = weight*this_bw;
+      final_weight = weight * this_bw;
     }
 
     bandwidths[node_sl_idx] = final_weight;
     total_bandwidth += final_weight;
-  } SMARTLIST_FOREACH_END(node);
+  }
+  SMARTLIST_FOREACH_END(node);
 
-  log_debug(LD_CIRC, "Generated weighted bandwidths for rule %s based "
+  log_debug(LD_CIRC,
+            "Generated weighted bandwidths for rule %s based "
             "on weights "
             "Wg=%f Wm=%f We=%f Wd=%f with total bw %f",
-            bandwidth_weight_rule_to_string(rule),
-            Wg, Wm, We, Wd, total_bandwidth);
+            bandwidth_weight_rule_to_string(rule), Wg, Wm, We, Wd,
+            total_bandwidth);
 
   *bandwidths_out = bandwidths;
 
@@ -766,8 +760,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
  * to it indirectly, or use it as if we were connecting to it indirectly. */
 double
 frac_nodes_with_descriptors(const smartlist_t *sl,
-                            bandwidth_weight_rule_t rule,
-                            int for_direct_conn)
+                            bandwidth_weight_rule_t rule, int for_direct_conn)
 {
   double *bandwidths = NULL;
   double total, present;
@@ -787,10 +780,11 @@ frac_nodes_with_descriptors(const smartlist_t *sl,
   }
 
   present = 0.0;
-  SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
+  SMARTLIST_FOREACH_BEGIN (sl, const node_t *, node) {
     if (node_has_preferred_descriptor(node, for_direct_conn))
       present += bandwidths[node_sl_idx];
-  } SMARTLIST_FOREACH_END(node);
+  }
+  SMARTLIST_FOREACH_END(node);
 
   tor_free(bandwidths);
 
@@ -847,18 +841,19 @@ nodelist_subtract(smartlist_t *sl, const smartlist_t *excluded)
 
   /* Set the excluded_idx bit corresponding to every excluded node...
    */
-  SMARTLIST_FOREACH_BEGIN(excluded, const node_t *, node) {
+  SMARTLIST_FOREACH_BEGIN (excluded, const node_t *, node) {
     const int idx = node->nodelist_idx;
     if (BUG(idx < 0) || BUG(idx >= nodelist_len) ||
         BUG(node != smartlist_get(nodelist, idx))) {
       goto internal_error;
     }
     bitarray_set(excluded_idx, idx);
-  } SMARTLIST_FOREACH_END(node);
+  }
+  SMARTLIST_FOREACH_END(node);
 
   /* Then remove them from sl.
    */
-  SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
+  SMARTLIST_FOREACH_BEGIN (sl, const node_t *, node) {
     const int idx = node->nodelist_idx;
     if (BUG(idx < 0) || BUG(idx >= nodelist_len) ||
         BUG(node != smartlist_get(nodelist, idx))) {
@@ -867,13 +862,15 @@ nodelist_subtract(smartlist_t *sl, const smartlist_t *excluded)
     if (bitarray_is_set(excluded_idx, idx)) {
       SMARTLIST_DEL_CURRENT(sl, node);
     }
-  } SMARTLIST_FOREACH_END(node);
+  }
+  SMARTLIST_FOREACH_END(node);
 
   bitarray_free(excluded_idx);
   return;
 
- internal_error:
-  log_warn(LD_BUG, "Internal error prevented us from using the fast method "
+internal_error:
+  log_warn(LD_BUG,
+           "Internal error prevented us from using the fast method "
            "for subtracting nodelists. Falling back to the quadratic way.");
   smartlist_subtract(sl, excluded);
   bitarray_free(excluded_idx);
@@ -901,8 +898,7 @@ nodelist_subtract(smartlist_t *sl, const smartlist_t *excluded)
  */
 const node_t *
 router_choose_random_node(smartlist_t *excludedsmartlist,
-                          routerset_t *excludedset,
-                          router_crn_flags_t flags)
+                          routerset_t *excludedset, router_crn_flags_t flags)
 { /* XXXX MOVE */
   const int need_uptime = (flags & CRN_NEED_UPTIME) != 0;
   const int need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
@@ -914,29 +910,28 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   const int rendezvous_v3 = (flags & CRN_RENDEZVOUS_V3) != 0;
 
   const smartlist_t *node_list = nodelist_get_list();
-  smartlist_t *sl=smartlist_new(),
-    *excludednodes=smartlist_new();
+  smartlist_t *sl = smartlist_new(), *excludednodes = smartlist_new();
   const node_t *choice = NULL;
   const routerinfo_t *r;
   bandwidth_weight_rule_t rule;
 
-  tor_assert(!(weight_for_exit && need_guard));
-  rule = weight_for_exit ? WEIGHT_FOR_EXIT :
-    (need_guard ? WEIGHT_FOR_GUARD : WEIGHT_FOR_MID);
+  tor_assert(! (weight_for_exit && need_guard));
+  rule = weight_for_exit ? WEIGHT_FOR_EXIT
+                         : (need_guard ? WEIGHT_FOR_GUARD : WEIGHT_FOR_MID);
 
-  SMARTLIST_FOREACH_BEGIN(node_list, const node_t *, node) {
+  SMARTLIST_FOREACH_BEGIN (node_list, const node_t *, node) {
     if (node_allows_single_hop_exits(node)) {
       /* Exclude relays that allow single hop exit circuits. This is an
        * obsolete option since 0.2.9.2-alpha and done by default in
        * 0.3.1.0-alpha. */
-      smartlist_add(excludednodes, (node_t*)node);
-    } else if (rendezvous_v3 &&
-               !node_supports_v3_rendezvous_point(node)) {
+      smartlist_add(excludednodes, (node_t *)node);
+    } else if (rendezvous_v3 && ! node_supports_v3_rendezvous_point(node)) {
       /* Exclude relays that do not support to rendezvous for a hidden service
        * version 3. */
-      smartlist_add(excludednodes, (node_t*)node);
+      smartlist_add(excludednodes, (node_t *)node);
     }
-  } SMARTLIST_FOREACH_END(node);
+  }
+  SMARTLIST_FOREACH_END(node);
 
   /* If the node_t is not found we won't be to exclude ourself but we
    * won't be able to pick ourself in router_choose_random_node() so
@@ -947,9 +942,7 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   router_add_running_nodes_to_smartlist(sl, need_uptime, need_capacity,
                                         need_guard, need_desc, pref_addr,
                                         direct_conn);
-  log_debug(LD_CIRC,
-           "We found %d running nodes.",
-            smartlist_len(sl));
+  log_debug(LD_CIRC, "We found %d running nodes.", smartlist_len(sl));
 
   if (excludedsmartlist) {
     smartlist_add_all(excludednodes, excludedsmartlist);
@@ -957,9 +950,8 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   nodelist_subtract(sl, excludednodes);
 
   if (excludedset) {
-    routerset_subtract_nodes(sl,excludedset);
-    log_debug(LD_CIRC,
-              "We removed excludedset, leaving %d nodes.",
+    routerset_subtract_nodes(sl, excludedset);
+    log_debug(LD_CIRC, "We removed excludedset, leaving %d nodes.",
               smartlist_len(sl));
   }
 
@@ -967,21 +959,19 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   choice = node_sl_choose_by_bandwidth(sl, rule);
 
   smartlist_free(sl);
-  if (!choice && (need_uptime || need_capacity || need_guard || pref_addr)) {
+  if (! choice && (need_uptime || need_capacity || need_guard || pref_addr)) {
     /* try once more -- recurse but with fewer restrictions. */
     log_info(LD_CIRC,
              "We couldn't find any live%s%s%s routers; falling back "
              "to list of all routers.",
-             need_capacity?", fast":"",
-             need_uptime?", stable":"",
-             need_guard?", guard":"");
-    flags &= ~ (CRN_NEED_UPTIME|CRN_NEED_CAPACITY|CRN_NEED_GUARD|
-                CRN_PREF_ADDR);
-    choice = router_choose_random_node(
-                     excludedsmartlist, excludedset, flags);
+             need_capacity ? ", fast" : "", need_uptime ? ", stable" : "",
+             need_guard ? ", guard" : "");
+    flags &= ~(CRN_NEED_UPTIME | CRN_NEED_CAPACITY | CRN_NEED_GUARD |
+               CRN_PREF_ADDR);
+    choice = router_choose_random_node(excludedsmartlist, excludedset, flags);
   }
   smartlist_free(excludednodes);
-  if (!choice) {
+  if (! choice) {
     log_warn(LD_CIRC,
              "No available nodes when trying to choose node. Failing.");
   }
@@ -995,8 +985,7 @@ const routerstatus_t *
 router_pick_trusteddirserver(dirinfo_type_t type, int flags)
 {
   return router_pick_dirserver_generic(
-                                  router_get_trusted_dir_servers_mutable(),
-                                  type, flags);
+      router_get_trusted_dir_servers_mutable(), type, flags);
 }
 
 /** Try to find a running fallback directory. Flags are as for
@@ -1006,8 +995,7 @@ const routerstatus_t *
 router_pick_fallback_dirserver(dirinfo_type_t type, int flags)
 {
   return router_pick_dirserver_generic(
-                                  router_get_fallback_dir_servers_mutable(),
-                                  type, flags);
+      router_get_fallback_dir_servers_mutable(), type, flags);
 }
 
 /** Pick a random element from a list of dir_server_t, weighting by their
@@ -1053,20 +1041,21 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
   time_t now = time(NULL);
   const int requireother = ! (flags & PDS_ALLOW_SELF);
   const int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
-  const int no_serverdesc_fetching =(flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
-  const int no_microdesc_fetching =(flags & PDS_NO_EXISTING_MICRODESC_FETCH);
-  const double auth_weight =
-    (sourcelist == router_get_fallback_dir_servers()) ?
-    options->DirAuthorityFallbackRate : 1.0;
+  const int no_serverdesc_fetching =
+      (flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
+  const int no_microdesc_fetching = (flags & PDS_NO_EXISTING_MICRODESC_FETCH);
+  const double auth_weight = (sourcelist == router_get_fallback_dir_servers())
+                                 ? options->DirAuthorityFallbackRate
+                                 : 1.0;
   smartlist_t *pick_from;
   int n_busy = 0;
   int try_excluding = 1, n_excluded = 0;
   int try_ip_pref = 1;
 
-  if (!sourcelist)
+  if (! sourcelist)
     return NULL;
 
- retry_search:
+retry_search:
 
   direct = smartlist_new();
   tunnel = smartlist_new();
@@ -1077,50 +1066,46 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
   const int skip_dir_fw = router_skip_dir_reachability(options, try_ip_pref);
   const int must_have_or = directory_must_use_begindir(options);
 
-  SMARTLIST_FOREACH_BEGIN(sourcelist, const dir_server_t *, d)
-    {
-      int is_overloaded =
-          d->fake_status.last_dir_503_at + DIR_503_TIMEOUT > now;
-      if (!d->is_running) continue;
-      if ((type & d->type) == 0)
-        continue;
+  SMARTLIST_FOREACH_BEGIN (sourcelist, const dir_server_t *, d) {
+    int is_overloaded = d->fake_status.last_dir_503_at + DIR_503_TIMEOUT > now;
+    if (! d->is_running)
+      continue;
+    if ((type & d->type) == 0)
+      continue;
 
-      SKIP_MISSING_TRUSTED_EXTRAINFO(type, d->digest);
+    SKIP_MISSING_TRUSTED_EXTRAINFO(type, d->digest);
 
-      if (requireother && me && router_digest_is_me(d->digest))
-        continue;
-      if (try_excluding &&
-          routerset_contains_routerstatus(options->ExcludeNodes,
-                                          &d->fake_status, -1)) {
-        ++n_excluded;
-        continue;
-      }
-
-      if (router_is_already_dir_fetching_(d->addr,
-                                          &d->ipv6_addr,
-                                          d->dir_port,
-                                          no_serverdesc_fetching,
-                                          no_microdesc_fetching)) {
-        ++n_busy;
-        continue;
-      }
-
-      /* Clients use IPv6 addresses if the server has one and the client
-       * prefers IPv6.
-       * Add the router if its preferred address and port are reachable.
-       * If we don't get any routers, we'll try again with the non-preferred
-       * address for each router (if any). (To ensure correct load-balancing
-       * we try routers that only have one address both times.)
-       */
-      if (!fascistfirewall || skip_or_fw ||
-          fascist_firewall_allows_dir_server(d, FIREWALL_OR_CONNECTION,
-                                             try_ip_pref))
-        smartlist_add(is_overloaded ? overloaded_tunnel : tunnel, (void*)d);
-      else if (!must_have_or && (skip_dir_fw ||
-               fascist_firewall_allows_dir_server(d, FIREWALL_DIR_CONNECTION,
-                                                  try_ip_pref)))
-        smartlist_add(is_overloaded ? overloaded_direct : direct, (void*)d);
+    if (requireother && me && router_digest_is_me(d->digest))
+      continue;
+    if (try_excluding && routerset_contains_routerstatus(
+                             options->ExcludeNodes, &d->fake_status, -1)) {
+      ++n_excluded;
+      continue;
     }
+
+    if (router_is_already_dir_fetching_(d->addr, &d->ipv6_addr, d->dir_port,
+                                        no_serverdesc_fetching,
+                                        no_microdesc_fetching)) {
+      ++n_busy;
+      continue;
+    }
+
+    /* Clients use IPv6 addresses if the server has one and the client
+     * prefers IPv6.
+     * Add the router if its preferred address and port are reachable.
+     * If we don't get any routers, we'll try again with the non-preferred
+     * address for each router (if any). (To ensure correct load-balancing
+     * we try routers that only have one address both times.)
+     */
+    if (! fascistfirewall || skip_or_fw ||
+        fascist_firewall_allows_dir_server(d, FIREWALL_OR_CONNECTION,
+                                           try_ip_pref))
+      smartlist_add(is_overloaded ? overloaded_tunnel : tunnel, (void *)d);
+    else if (! must_have_or &&
+             (skip_dir_fw || fascist_firewall_allows_dir_server(
+                                 d, FIREWALL_DIR_CONNECTION, try_ip_pref)))
+      smartlist_add(is_overloaded ? overloaded_direct : direct, (void *)d);
+  }
   SMARTLIST_FOREACH_END(d);
 
   if (smartlist_len(tunnel)) {
@@ -1135,7 +1120,7 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
 
   {
     const dir_server_t *selection =
-      dirserver_choose_by_weight(pick_from, auth_weight);
+        dirserver_choose_by_weight(pick_from, auth_weight);
 
     if (selection)
       result = &selection->fake_status;

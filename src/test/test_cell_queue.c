@@ -16,10 +16,11 @@
 static void
 test_cq_manip(void *arg)
 {
-  packed_cell_t *pc1=NULL, *pc2=NULL, *pc3=NULL, *pc4=NULL, *pc_tmp=NULL;
+  packed_cell_t *pc1 = NULL, *pc2 = NULL, *pc3 = NULL, *pc4 = NULL,
+                *pc_tmp = NULL;
   cell_queue_t cq;
   cell_t cell;
-  (void) arg;
+  (void)arg;
 
   cell_queue_init(&cq);
   tt_int_op(cq.n, OP_EQ, 0);
@@ -56,7 +57,8 @@ test_cq_manip(void *arg)
   memset(&cell, 0, sizeof(cell));
   cell.circ_id = 0x12345678;
   cell.command = 10;
-  strlcpy((char*)cell.payload, "Lorax ipsum gruvvulus thneed amet, snergelly "
+  strlcpy((char *)cell.payload,
+          "Lorax ipsum gruvvulus thneed amet, snergelly "
           "once-ler lerkim, sed do barbaloot tempor gluppitus ut labore et "
           "truffula magna aliqua.",
           sizeof(cell.payload));
@@ -71,14 +73,14 @@ test_cq_manip(void *arg)
   tt_int_op(cq.n, OP_EQ, 1);
   tt_ptr_op(pc_tmp, OP_NE, NULL);
   tt_mem_op(pc_tmp->body, OP_EQ, "\x12\x34\x56\x78\x0a", 5);
-  tt_mem_op(pc_tmp->body+5, OP_EQ, cell.payload, sizeof(cell.payload));
+  tt_mem_op(pc_tmp->body + 5, OP_EQ, cell.payload, sizeof(cell.payload));
   packed_cell_free(pc_tmp);
 
   pc_tmp = cell_queue_pop(&cq);
   tt_int_op(cq.n, OP_EQ, 0);
   tt_ptr_op(pc_tmp, OP_NE, NULL);
   tt_mem_op(pc_tmp->body, OP_EQ, "\x20\x13\x0a", 3);
-  tt_mem_op(pc_tmp->body+3, OP_EQ, cell.payload, sizeof(cell.payload));
+  tt_mem_op(pc_tmp->body + 3, OP_EQ, cell.payload, sizeof(cell.payload));
   packed_cell_free(pc_tmp);
   pc_tmp = NULL;
 
@@ -92,7 +94,7 @@ test_cq_manip(void *arg)
   pc2 = pc1 = NULL; /* prevent double-free */
   tt_int_op(cq.n, OP_EQ, 0);
 
- done:
+done:
   packed_cell_free(pc1);
   packed_cell_free(pc2);
   packed_cell_free(pc3);
@@ -105,9 +107,10 @@ test_cq_manip(void *arg)
 static void
 test_circuit_n_cells(void *arg)
 {
-  packed_cell_t *pc1=NULL, *pc2=NULL, *pc3=NULL, *pc4=NULL, *pc5=NULL;
-  origin_circuit_t *origin_c=NULL;
-  or_circuit_t *or_c=NULL;
+  packed_cell_t *pc1 = NULL, *pc2 = NULL, *pc3 = NULL, *pc4 = NULL,
+                *pc5 = NULL;
+  origin_circuit_t *origin_c = NULL;
+  or_circuit_t *or_c = NULL;
 
   (void)arg;
 
@@ -134,14 +137,18 @@ test_circuit_n_cells(void *arg)
   cell_queue_append(&origin_c->base_.n_chan_cells, pc5);
   tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(origin_c)), OP_EQ, 2);
 
- done:
+done:
   circuit_free_(TO_CIRCUIT(or_c));
   circuit_free_(TO_CIRCUIT(origin_c));
 }
 
 struct testcase_t cell_queue_tests[] = {
-  { "basic", test_cq_manip, TT_FORK, NULL, NULL, },
-  { "circ_n_cells", test_circuit_n_cells, TT_FORK, NULL, NULL },
-  END_OF_TESTCASES
-};
-
+    {
+        "basic",
+        test_cq_manip,
+        TT_FORK,
+        NULL,
+        NULL,
+    },
+    {"circ_n_cells", test_circuit_n_cells, TT_FORK, NULL, NULL},
+    END_OF_TESTCASES};

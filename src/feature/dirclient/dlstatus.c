@@ -44,27 +44,27 @@ find_dl_min_delay(const download_status_t *dls, const or_options_t *options)
         return options->TestingClientDownloadInitialDelay;
       }
     case DL_SCHED_CONSENSUS:
-      if (!networkstatus_consensus_can_use_multiple_directories(options)) {
+      if (! networkstatus_consensus_can_use_multiple_directories(options)) {
         /* A public relay */
         return options->TestingServerConsensusDownloadInitialDelay;
       } else {
         /* A client or bridge */
         if (networkstatus_consensus_is_bootstrapping(time(NULL))) {
           /* During bootstrapping */
-          if (!networkstatus_consensus_can_use_extra_fallbacks(options)) {
+          if (! networkstatus_consensus_can_use_extra_fallbacks(options)) {
             /* A bootstrapping client without extra fallback directories */
-            return options->
-              ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay;
+            return options
+                ->ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay;
           } else if (dls->want_authority) {
             /* A bootstrapping client with extra fallback directories, but
              * connecting to an authority */
-            return
-             options->ClientBootstrapConsensusAuthorityDownloadInitialDelay;
+            return options
+                ->ClientBootstrapConsensusAuthorityDownloadInitialDelay;
           } else {
             /* A bootstrapping client connecting to extra fallback directories
              */
-            return
-              options->ClientBootstrapConsensusFallbackDownloadInitialDelay;
+            return options
+                ->ClientBootstrapConsensusFallbackDownloadInitialDelay;
           }
         } else {
           /* A client with a reasonably live consensus, with or without
@@ -97,22 +97,20 @@ find_dl_min_delay(const download_status_t *dls, const or_options_t *options)
  * *<b>high_bound_out</b>.  Guarantees that the low bound is strictly less
  * than the high bound. */
 STATIC void
-next_random_exponential_delay_range(int *low_bound_out,
-                                    int *high_bound_out,
-                                    int delay,
-                                    int base_delay)
+next_random_exponential_delay_range(int *low_bound_out, int *high_bound_out,
+                                    int delay, int base_delay)
 {
   // This is the "decorrelated jitter" approach, from
   //    https://www.awsarchitectureblog.com/2015/03/backoff.html
   // The formula is
   //    sleep = min(cap, random_between(base, sleep * 3))
 
-  const int delay_times_3 = delay < INT_MAX/3 ? delay * 3 : INT_MAX;
+  const int delay_times_3 = delay < INT_MAX / 3 ? delay * 3 : INT_MAX;
   *low_bound_out = base_delay;
   if (delay_times_3 > base_delay) {
     *high_bound_out = delay_times_3;
   } else {
-    *high_bound_out = base_delay+1;
+    *high_bound_out = base_delay + 1;
   }
 }
 
@@ -127,8 +125,7 @@ next_random_exponential_delay_range(int *low_bound_out,
  * delay.
  */
 STATIC int
-next_random_exponential_delay(int delay,
-                              int base_delay)
+next_random_exponential_delay(int delay, int base_delay)
 {
   /* Check preconditions */
   if (BUG(delay < 0))
@@ -137,10 +134,10 @@ next_random_exponential_delay(int delay,
   if (base_delay < 1)
     base_delay = 1;
 
-  int low_bound=0, high_bound=INT_MAX;
+  int low_bound = 0, high_bound = INT_MAX;
 
-  next_random_exponential_delay_range(&low_bound, &high_bound,
-                                      delay, base_delay);
+  next_random_exponential_delay_range(&low_bound, &high_bound, delay,
+                                      base_delay);
 
   return crypto_rand_int_range(low_bound, high_bound);
 }
@@ -151,8 +148,7 @@ next_random_exponential_delay(int delay,
  * Helper for download_status_increment_failure and
  * download_status_increment_attempt. */
 STATIC int
-download_status_schedule_get_delay(download_status_t *dls,
-                                   int min_delay,
+download_status_schedule_get_delay(download_status_t *dls, int min_delay,
                                    time_t now)
 {
   tor_assert(dls);
@@ -160,13 +156,14 @@ download_status_schedule_get_delay(download_status_t *dls,
   tor_assert(min_delay >= 0);
 
   int delay = INT_MAX;
-  uint8_t dls_schedule_position = (dls->increment_on
-                                   == DL_SCHED_INCREMENT_ATTEMPT
-                                   ? dls->n_download_attempts
-                                   : dls->n_download_failures);
+  uint8_t dls_schedule_position =
+      (dls->increment_on == DL_SCHED_INCREMENT_ATTEMPT
+           ? dls->n_download_attempts
+           : dls->n_download_failures);
 
   /* Check if we missed a reset somehow */
-  IF_BUG_ONCE(dls->last_backoff_position > dls_schedule_position) {
+  IF_BUG_ONCE(dls->last_backoff_position > dls_schedule_position)
+  {
     dls->last_backoff_position = 0;
     dls->last_delay_used = 0;
   }
@@ -186,7 +183,8 @@ download_status_schedule_get_delay(download_status_t *dls,
   }
 
   /* Clamp it within min/max if we have them */
-  if (min_delay >= 0 && delay < min_delay) delay = min_delay;
+  if (min_delay >= 0 && delay < min_delay)
+    delay = min_delay;
 
   /* Store it for next time */
   dls->last_backoff_position = dls_schedule_position;
@@ -199,7 +197,7 @@ download_status_schedule_get_delay(download_status_t *dls,
   /* Avoid now+delay overflowing TIME_MAX, by comparing with a subtraction
    * that won't overflow (since delay is non-negative). */
   if (delay < INT_MAX && now <= TIME_MAX - delay) {
-    dls->next_attempt_at = now+delay;
+    dls->next_attempt_at = now + delay;
   } else {
     dls->next_attempt_at = TIME_MAX;
   }
@@ -221,20 +219,20 @@ download_status_log_helper(const char *item, int was_schedule_incremented,
                            time_t dls_next_attempt_at, time_t now)
 {
   if (item) {
-    if (!was_schedule_incremented)
-      log_debug(LD_DIR, "%s %s %d time(s); I'll try again %s.",
-                item, increment_action, (int)dls_n_download_increments,
+    if (! was_schedule_incremented)
+      log_debug(LD_DIR, "%s %s %d time(s); I'll try again %s.", item,
+                increment_action, (int)dls_n_download_increments,
                 not_incremented_response);
     else if (increment == 0)
-      log_debug(LD_DIR, "%s %s %d time(s); I'll try again immediately.",
-                item, increment_action, (int)dls_n_download_increments);
+      log_debug(LD_DIR, "%s %s %d time(s); I'll try again immediately.", item,
+                increment_action, (int)dls_n_download_increments);
     else if (dls_next_attempt_at < TIME_MAX)
       log_debug(LD_DIR, "%s %s %d time(s); I'll try again in %d seconds.",
                 item, increment_action, (int)dls_n_download_increments,
-                (int)(dls_next_attempt_at-now));
+                (int)(dls_next_attempt_at - now));
     else
-      log_debug(LD_DIR, "%s %s %d time(s); Giving up for a while.",
-                item, increment_action, (int)dls_n_download_increments);
+      log_debug(LD_DIR, "%s %s %d time(s); Giving up for a while.", item,
+                increment_action, (int)dls_n_download_increments);
   }
 }
 
@@ -250,8 +248,8 @@ time_t
 download_status_increment_failure(download_status_t *dls, int status_code,
                                   const char *item, int server, time_t now)
 {
-  (void) status_code; // XXXX no longer used.
-  (void) server; // XXXX no longer used.
+  (void)status_code; // XXXX no longer used.
+  (void)server; // XXXX no longer used.
   int increment = -1;
   int min_delay = 0;
 
@@ -263,7 +261,7 @@ download_status_increment_failure(download_status_t *dls, int status_code,
   }
 
   /* count the failure */
-  if (dls->n_download_failures < IMPOSSIBLE_TO_DOWNLOAD-1) {
+  if (dls->n_download_failures < IMPOSSIBLE_TO_DOWNLOAD - 1) {
     ++dls->n_download_failures;
   }
 
@@ -273,7 +271,7 @@ download_status_increment_failure(download_status_t *dls, int status_code,
      * We'll never find out about successful connections, but this doesn't
      * matter, because schedules are reset after a successful download.
      */
-    if (dls->n_download_attempts < IMPOSSIBLE_TO_DOWNLOAD-1)
+    if (dls->n_download_attempts < IMPOSSIBLE_TO_DOWNLOAD - 1)
       ++dls->n_download_attempts;
 
     /* only return a failure retry time if this schedule increments on failures
@@ -282,11 +280,10 @@ download_status_increment_failure(download_status_t *dls, int status_code,
     increment = download_status_schedule_get_delay(dls, min_delay, now);
   }
 
-  download_status_log_helper(item, !dls->increment_on, "failed",
+  download_status_log_helper(item, ! dls->increment_on, "failed",
                              "concurrently", dls->n_download_failures,
                              increment,
-                             download_status_get_next_attempt_at(dls),
-                             now);
+                             download_status_get_next_attempt_at(dls), now);
 
   if (dls->increment_on == DL_SCHED_INCREMENT_ATTEMPT) {
     /* stop this schedule retrying on failure, it will launch concurrent
@@ -323,20 +320,19 @@ download_status_increment_attempt(download_status_t *dls, const char *item,
     /* this schedule should retry on failure, and not launch any concurrent
      attempts */
     log_warn(LD_BUG, "Tried to launch an attempt-based connection on a "
-             "failure-based schedule.");
+                     "failure-based schedule.");
     return TIME_MAX;
   }
 
-  if (dls->n_download_attempts < IMPOSSIBLE_TO_DOWNLOAD-1)
+  if (dls->n_download_attempts < IMPOSSIBLE_TO_DOWNLOAD - 1)
     ++dls->n_download_attempts;
 
   min_delay = find_dl_min_delay(dls, get_options());
   delay = download_status_schedule_get_delay(dls, min_delay, now);
 
   download_status_log_helper(item, dls->increment_on, "attempted",
-                             "on failure", dls->n_download_attempts,
-                             delay, download_status_get_next_attempt_at(dls),
-                             now);
+                             "on failure", dls->n_download_attempts, delay,
+                             download_status_get_next_attempt_at(dls), now);
 
   return download_status_get_next_attempt_at(dls);
 }
@@ -363,8 +359,8 @@ download_status_get_initial_delay_from_now(const download_status_t *dls)
 void
 download_status_reset(download_status_t *dls)
 {
-  if (dls->n_download_failures == IMPOSSIBLE_TO_DOWNLOAD
-      || dls->n_download_attempts == IMPOSSIBLE_TO_DOWNLOAD)
+  if (dls->n_download_failures == IMPOSSIBLE_TO_DOWNLOAD ||
+      dls->n_download_attempts == IMPOSSIBLE_TO_DOWNLOAD)
     return; /* Don't reset this. */
 
   dls->n_download_failures = 0;

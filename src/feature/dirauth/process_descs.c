@@ -40,21 +40,20 @@
 #include "lib/encoding/confline.h"
 
 /** How far in the future do we allow a router to get? (seconds) */
-#define ROUTER_ALLOW_SKEW (60*60*12)
+#define ROUTER_ALLOW_SKEW (60 * 60 * 12)
 
 static void directory_remove_invalid(void);
 struct authdir_config_t;
 static was_router_added_t dirserv_add_extrainfo(extrainfo_t *ei,
                                                 const char **msg);
-static uint32_t
-dirserv_get_status_impl(const char *fp, const char *nickname,
-                        uint32_t addr, uint16_t or_port,
-                        const char *platform, const char **msg,
-                        int severity);
+static uint32_t dirserv_get_status_impl(const char *fp, const char *nickname,
+                                        uint32_t addr, uint16_t or_port,
+                                        const char *platform, const char **msg,
+                                        int severity);
 
 /*                 1  Historically used to indicate Named */
-#define RTR_INVALID 2  /**< Believed invalid. */
-#define RTR_REJECT  4  /**< We will not publish this router. */
+#define RTR_INVALID 2 /**< Believed invalid. */
+#define RTR_REJECT 4 /**< We will not publish this router. */
 /*                 8  Historically used to avoid using this as a dir. */
 #define RTR_BADEXIT 16 /**< We'll tell clients not to use this as an exit. */
 /*                 32 Historically used to indicade Unnamed */
@@ -102,16 +101,15 @@ add_fingerprint_to_dir(const char *fp, authdir_config_t *list,
 
   fingerprint = tor_strdup(fp);
   tor_strstrip(fingerprint, " ");
-  if (base16_decode(d, DIGEST_LEN,
-                    fingerprint, strlen(fingerprint)) != DIGEST_LEN) {
-    log_warn(LD_DIRSERV, "Couldn't decode fingerprint \"%s\"",
-             escaped(fp));
+  if (base16_decode(d, DIGEST_LEN, fingerprint, strlen(fingerprint)) !=
+      DIGEST_LEN) {
+    log_warn(LD_DIRSERV, "Couldn't decode fingerprint \"%s\"", escaped(fp));
     tor_free(fingerprint);
     return;
   }
 
   status = digestmap_get(list->status_by_digest, d);
-  if (!status) {
+  if (! status) {
     status = tor_malloc_zero(sizeof(rtr_flags_t));
     digestmap_set(list->status_by_digest, d, status);
   }
@@ -126,12 +124,12 @@ add_fingerprint_to_dir(const char *fp, authdir_config_t *list,
 int
 dirserv_add_own_fingerprint(crypto_pk_t *pk)
 {
-  char fp[FINGERPRINT_LEN+1];
-  if (crypto_pk_get_fingerprint(pk, fp, 0)<0) {
+  char fp[FINGERPRINT_LEN + 1];
+  if (crypto_pk_get_fingerprint(pk, fp, 0) < 0) {
     log_err(LD_BUG, "Error computing fingerprint");
     return -1;
   }
-  if (!fingerprint_list)
+  if (! fingerprint_list)
     fingerprint_list = authdir_config_new();
   add_fingerprint_to_dir(fp, fingerprint_list, 0);
   return 0;
@@ -150,14 +148,14 @@ dirserv_load_fingerprint_file(void)
   char *nickname, *fingerprint;
   authdir_config_t *fingerprint_list_new;
   int result;
-  config_line_t *front=NULL, *list;
+  config_line_t *front = NULL, *list;
 
   fname = get_datadir_fname("approved-routers");
-  log_info(LD_GENERAL,
-           "Reloading approved fingerprints from \"%s\"...", fname);
+  log_info(LD_GENERAL, "Reloading approved fingerprints from \"%s\"...",
+           fname);
 
   cf = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
-  if (!cf) {
+  if (! cf) {
     log_warn(LD_FS, "Cannot open fingerprint file '%s'. That's ok.", fname);
     tor_free(fname);
     return 0;
@@ -173,26 +171,27 @@ dirserv_load_fingerprint_file(void)
 
   fingerprint_list_new = authdir_config_new();
 
-  for (list=front; list; list=list->next) {
+  for (list = front; list; list = list->next) {
     char digest_tmp[DIGEST_LEN];
     rtr_flags_t add_status = 0;
-    nickname = list->key; fingerprint = list->value;
+    nickname = list->key;
+    fingerprint = list->value;
     tor_strstrip(fingerprint, " "); /* remove spaces */
     if (strlen(fingerprint) != HEX_DIGEST_LEN ||
-        base16_decode(digest_tmp, sizeof(digest_tmp),
-                      fingerprint, HEX_DIGEST_LEN) != sizeof(digest_tmp)) {
+        base16_decode(digest_tmp, sizeof(digest_tmp), fingerprint,
+                      HEX_DIGEST_LEN) != sizeof(digest_tmp)) {
       log_notice(LD_CONFIG,
                  "Invalid fingerprint (nickname '%s', "
                  "fingerprint %s). Skipping.",
                  nickname, fingerprint);
       continue;
     }
-    if (!strcasecmp(nickname, "!reject")) {
-        add_status = RTR_REJECT;
-    } else if (!strcasecmp(nickname, "!badexit")) {
-        add_status = RTR_BADEXIT;
-    } else if (!strcasecmp(nickname, "!invalid")) {
-        add_status = RTR_INVALID;
+    if (! strcasecmp(nickname, "!reject")) {
+      add_status = RTR_REJECT;
+    } else if (! strcasecmp(nickname, "!badexit")) {
+      add_status = RTR_BADEXIT;
+    } else if (! strcasecmp(nickname, "!invalid")) {
+      add_status = RTR_INVALID;
     }
     add_fingerprint_to_dir(fingerprint, fingerprint_list_new, add_status);
   }
@@ -235,16 +234,16 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
   const int key_pinning = get_options()->AuthDirPinKeys;
 
   if (crypto_pk_get_digest(router->identity_pkey, d)) {
-    log_warn(LD_BUG,"Error computing fingerprint");
+    log_warn(LD_BUG, "Error computing fingerprint");
     if (msg)
       *msg = "Bug: Error computing fingerprint";
     return RTR_REJECT;
   }
 
   /* Check for the more common reasons to reject a router first. */
-  const uint32_t r = dirserv_get_status_impl(d, router->nickname,
-                                             router->addr, router->or_port,
-                                             router->platform, msg, severity);
+  const uint32_t r = dirserv_get_status_impl(d, router->nickname, router->addr,
+                                             router->or_port, router->platform,
+                                             msg, severity);
   if (r)
     return r;
 
@@ -253,10 +252,11 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
    * But just in case a relay doesn't provide or lies about its version, or
    * doesn't include an ntor key in its descriptor, check that it exists,
    * and is non-zero (clients check that it's non-zero before using it). */
-  if (!routerinfo_has_curve25519_onion_key(router)) {
+  if (! routerinfo_has_curve25519_onion_key(router)) {
     log_fn(severity, LD_DIR,
            "Descriptor from router %s is missing an ntor curve25519 onion "
-           "key.", router_describe(router));
+           "key.",
+           router_describe(router));
     if (msg)
       *msg = "Missing ntor curve25519 onion key. Please upgrade!";
     return RTR_REJECT;
@@ -265,12 +265,13 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
   if (router->cache_info.signing_key_cert) {
     /* This has an ed25519 identity key. */
     if (KEYPIN_MISMATCH ==
-        keypin_check((const uint8_t*)router->cache_info.identity_digest,
-                   router->cache_info.signing_key_cert->signing_key.pubkey)) {
+        keypin_check(
+            (const uint8_t *)router->cache_info.identity_digest,
+            router->cache_info.signing_key_cert->signing_key.pubkey)) {
       log_fn(severity, LD_DIR,
              "Descriptor from router %s has an Ed25519 key, "
-               "but the <rsa,ed25519> keys don't match what they were before.",
-               router_describe(router));
+             "but the <rsa,ed25519> keys don't match what they were before.",
+             router_describe(router));
       if (key_pinning) {
         if (msg) {
           *msg = "Ed25519 identity key or RSA identity key has changed.";
@@ -280,13 +281,14 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
     }
   } else {
     /* No ed25519 key */
-    if (KEYPIN_MISMATCH == keypin_check_lone_rsa(
-                        (const uint8_t*)router->cache_info.identity_digest)) {
+    if (KEYPIN_MISMATCH ==
+        keypin_check_lone_rsa(
+            (const uint8_t *)router->cache_info.identity_digest)) {
       log_fn(severity, LD_DIR,
-               "Descriptor from router %s has no Ed25519 key, "
-               "when we previously knew an Ed25519 for it. Ignoring for now, "
-               "since Ed25519 keys are fairly new.",
-               router_describe(router));
+             "Descriptor from router %s has no Ed25519 key, "
+             "when we previously knew an Ed25519 for it. Ignoring for now, "
+             "since Ed25519 keys are fairly new.",
+             router_describe(router));
 #ifdef DISABLE_DISABLING_ED25519
       if (key_pinning) {
         if (msg) {
@@ -308,9 +310,8 @@ dirserv_would_reject_router(const routerstatus_t *rs)
 {
   uint32_t res;
 
-  res = dirserv_get_status_impl(rs->identity_digest, rs->nickname,
-                                rs->addr, rs->or_port,
-                                NULL, NULL, LOG_DEBUG);
+  res = dirserv_get_status_impl(rs->identity_digest, rs->nickname, rs->addr,
+                                rs->or_port, NULL, NULL, LOG_DEBUG);
 
   return (res & RTR_REJECT) != 0;
 }
@@ -322,19 +323,18 @@ dirserv_would_reject_router(const routerstatus_t *rs)
  * return false.
  */
 STATIC bool
-dirserv_rejects_tor_version(const char *platform,
-                            const char **msg)
+dirserv_rejects_tor_version(const char *platform, const char **msg)
 {
-  if (!platform)
+  if (! platform)
     return false;
 
   static const char please_upgrade_string[] =
-    "Tor version is insecure or unsupported. Please upgrade!";
+      "Tor version is insecure or unsupported. Please upgrade!";
 
   /* Versions before Tor 0.2.9 are unsupported. Versions between 0.2.9.0 and
    * 0.2.9.4 suffer from bug #20499, where relays don't keep their consensus
    * up to date */
-  if (!tor_version_as_new_as(platform,"0.2.9.5-alpha")) {
+  if (! tor_version_as_new_as(platform, "0.2.9.5-alpha")) {
     if (msg)
       *msg = please_upgrade_string;
     return true;
@@ -345,8 +345,8 @@ dirserv_rejects_tor_version(const char *platform,
    *
    * Also reject unstable versions of 0.3.5, since (as of this writing)
    * they are almost none of the network. */
-  if (tor_version_as_new_as(platform,"0.3.0.0-alpha-dev") &&
-      !tor_version_as_new_as(platform,"0.3.5.7")) {
+  if (tor_version_as_new_as(platform, "0.3.0.0-alpha-dev") &&
+      ! tor_version_as_new_as(platform, "0.3.5.7")) {
     if (msg) {
       *msg = please_upgrade_string;
     }
@@ -365,13 +365,13 @@ dirserv_rejects_tor_version(const char *platform,
  */
 static uint32_t
 dirserv_get_status_impl(const char *id_digest, const char *nickname,
-                        uint32_t addr, uint16_t or_port,
-                        const char *platform, const char **msg, int severity)
+                        uint32_t addr, uint16_t or_port, const char *platform,
+                        const char **msg, int severity)
 {
   uint32_t result = 0;
   rtr_flags_t *status_by_digest;
 
-  if (!fingerprint_list)
+  if (! fingerprint_list)
     fingerprint_list = authdir_config_new();
 
   log_debug(LD_DIRSERV, "%d fingerprints, %d digests known.",
@@ -393,8 +393,8 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
     return RTR_REJECT;
   }
 
-  status_by_digest = digestmap_get(fingerprint_list->status_by_digest,
-                                   id_digest);
+  status_by_digest =
+      digestmap_get(fingerprint_list->status_by_digest, id_digest);
   if (status_by_digest)
     result |= *status_by_digest;
 
@@ -412,14 +412,14 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
 
   if (authdir_policy_badexit_address(addr, or_port)) {
     log_fn(severity, LD_DIRSERV,
-           "Marking '%s' as bad exit because of address '%s'",
-               nickname, fmt_addr32(addr));
+           "Marking '%s' as bad exit because of address '%s'", nickname,
+           fmt_addr32(addr));
     result |= RTR_BADEXIT;
   }
 
-  if (!authdir_policy_permits_address(addr, or_port)) {
+  if (! authdir_policy_permits_address(addr, or_port)) {
     log_fn(severity, LD_DIRSERV, "Rejecting '%s' because of address '%s'",
-               nickname, fmt_addr32(addr));
+           nickname, fmt_addr32(addr));
     if (msg)
       *msg = "Suspicious relay address range -- if you think this is a "
              "mistake please set a valid email address in ContactInfo and "
@@ -427,10 +427,10 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
              "your address(es) and fingerprint(s)?";
     return RTR_REJECT;
   }
-  if (!authdir_policy_valid_address(addr, or_port)) {
+  if (! authdir_policy_valid_address(addr, or_port)) {
     log_fn(severity, LD_DIRSERV,
-           "Not marking '%s' valid because of address '%s'",
-               nickname, fmt_addr32(addr));
+           "Not marking '%s' valid because of address '%s'", nickname,
+           fmt_addr32(addr));
     result |= RTR_INVALID;
   }
 
@@ -441,7 +441,7 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
 void
 dirserv_free_fingerprint_list(void)
 {
-  if (!fingerprint_list)
+  if (! fingerprint_list)
     return;
 
   strmap_free(fingerprint_list->fp_by_name, tor_free_);
@@ -473,7 +473,7 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
 
   /* We only check internal v6 on non-null addresses because we do not require
    * IPv6 and null IPv6 is normal. */
-  if (!tor_addr_is_null(&ri->ipv6_addr) &&
+  if (! tor_addr_is_null(&ri->ipv6_addr) &&
       tor_addr_is_internal(&ri->ipv6_addr, 0)) {
     log_info(LD_DIRSERV,
              "Router %s published internal IPv6 address. Refusing.",
@@ -506,33 +506,33 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
 
   /* Is there too much clock skew? */
   now = time(NULL);
-  if (ri->cache_info.published_on > now+ROUTER_ALLOW_SKEW) {
-    log_fn(severity, LD_DIRSERV, "Publication time for %s is too "
+  if (ri->cache_info.published_on > now + ROUTER_ALLOW_SKEW) {
+    log_fn(severity, LD_DIRSERV,
+           "Publication time for %s is too "
            "far (%d minutes) in the future; possible clock skew. Not adding "
            "(%s)",
            router_describe(ri),
-           (int)((ri->cache_info.published_on-now)/60),
+           (int)((ri->cache_info.published_on - now) / 60),
            esc_router_info(ri));
     *msg = "Rejected: Your clock is set too far in the future, or your "
-      "timezone is not correct.";
+           "timezone is not correct.";
     return -1;
   }
-  if (ri->cache_info.published_on < now-ROUTER_MAX_AGE_TO_PUBLISH) {
+  if (ri->cache_info.published_on < now - ROUTER_MAX_AGE_TO_PUBLISH) {
     log_fn(severity, LD_DIRSERV,
            "Publication time for %s is too far "
            "(%d minutes) in the past. Not adding (%s)",
            router_describe(ri),
-           (int)((now-ri->cache_info.published_on)/60),
+           (int)((now - ri->cache_info.published_on) / 60),
            esc_router_info(ri));
     *msg = "Rejected: Server is expired, or your clock is too far in the past,"
-      " or your timezone is not correct.";
+           " or your timezone is not correct.";
     return -1;
   }
   if (dirserv_router_has_valid_address(ri) < 0) {
     log_fn(severity, LD_DIRSERV,
            "Router %s has invalid address. Not adding (%s).",
-           router_describe(ri),
-           esc_router_info(ri));
+           router_describe(ri), esc_router_info(ri));
     *msg = "Rejected: Address is a private address.";
     return -1;
   }
@@ -564,8 +564,7 @@ WRA_MORE_SEVERE(was_router_added_t a, was_router_added_t b)
  * returns the most severe error that occurred for any one of them. */
 was_router_added_t
 dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
-                                 uint8_t purpose,
-                                 const char *source,
+                                 uint8_t purpose, const char *source,
                                  const char **msg)
 {
   was_router_added_t r, r_tmp;
@@ -575,13 +574,13 @@ dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
   int n_parsed = 0;
   time_t now = time(NULL);
   char annotation_buf[ROUTER_ANNOTATION_BUF_LEN];
-  char time_buf[ISO_TIME_LEN+1];
+  char time_buf[ISO_TIME_LEN + 1];
   int general = purpose == ROUTER_PURPOSE_GENERAL;
   tor_assert(msg);
 
-  r=ROUTER_ADDED_SUCCESSFULLY; /* Least severe return value. */
+  r = ROUTER_ADDED_SUCCESSFULLY; /* Least severe return value. */
 
-  if (!string_is_utf8_no_bom(desc, desclen)) {
+  if (! string_is_utf8_no_bom(desc, desclen)) {
     *msg = "descriptor(s) or extrainfo(s) not valid UTF-8 or had BOM.";
     return ROUTER_AUTHDIR_REJECTS;
   }
@@ -590,49 +589,49 @@ dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
   if (tor_snprintf(annotation_buf, sizeof(annotation_buf),
                    "@uploaded-at %s\n"
                    "@source %s\n"
-                   "%s%s%s", time_buf, escaped(source),
-                   !general ? "@purpose " : "",
-                   !general ? router_purpose_to_string(purpose) : "",
-                   !general ? "\n" : "")<0) {
+                   "%s%s%s",
+                   time_buf, escaped(source), ! general ? "@purpose " : "",
+                   ! general ? router_purpose_to_string(purpose) : "",
+                   ! general ? "\n" : "") < 0) {
     *msg = "Couldn't format annotations";
     return ROUTER_AUTHDIR_BUG_ANNOTATIONS;
   }
 
   s = desc;
   list = smartlist_new();
-  if (!router_parse_list_from_string(&s, s+desclen, list, SAVED_NOWHERE, 0, 0,
-                                     annotation_buf, NULL)) {
+  if (! router_parse_list_from_string(&s, s + desclen, list, SAVED_NOWHERE, 0,
+                                      0, annotation_buf, NULL)) {
     SMARTLIST_FOREACH(list, routerinfo_t *, ri, {
-        msg_out = NULL;
-        tor_assert(ri->purpose == purpose);
-        r_tmp = dirserv_add_descriptor(ri, &msg_out, source);
-        if (WRA_MORE_SEVERE(r_tmp, r)) {
-          r = r_tmp;
-          *msg = msg_out;
-        }
-      });
+      msg_out = NULL;
+      tor_assert(ri->purpose == purpose);
+      r_tmp = dirserv_add_descriptor(ri, &msg_out, source);
+      if (WRA_MORE_SEVERE(r_tmp, r)) {
+        r = r_tmp;
+        *msg = msg_out;
+      }
+    });
   }
   n_parsed += smartlist_len(list);
   smartlist_clear(list);
 
   s = desc;
-  if (!router_parse_list_from_string(&s, s+desclen, list, SAVED_NOWHERE, 1, 0,
-                                     NULL, NULL)) {
+  if (! router_parse_list_from_string(&s, s + desclen, list, SAVED_NOWHERE, 1,
+                                      0, NULL, NULL)) {
     SMARTLIST_FOREACH(list, extrainfo_t *, ei, {
-        msg_out = NULL;
+      msg_out = NULL;
 
-        r_tmp = dirserv_add_extrainfo(ei, &msg_out);
-        if (WRA_MORE_SEVERE(r_tmp, r)) {
-          r = r_tmp;
-          *msg = msg_out;
-        }
-      });
+      r_tmp = dirserv_add_extrainfo(ei, &msg_out);
+      if (WRA_MORE_SEVERE(r_tmp, r)) {
+        r = r_tmp;
+        *msg = msg_out;
+      }
+    });
   }
   n_parsed += smartlist_len(list);
   smartlist_free(list);
 
   if (! *msg) {
-    if (!n_parsed) {
+    if (! n_parsed) {
       *msg = "No descriptors found in your POST.";
       if (WRA_WAS_ADDED(r))
         r = ROUTER_IS_ALREADY_KNOWN;
@@ -664,15 +663,16 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
   was_router_added_t r;
   routerinfo_t *ri_old;
   char *desc, *nickname;
-  const size_t desclen = ri->cache_info.signed_descriptor_len +
-      ri->cache_info.annotations_len;
+  const size_t desclen =
+      ri->cache_info.signed_descriptor_len + ri->cache_info.annotations_len;
   const int key_pinning = get_options()->AuthDirPinKeys;
   *msg = NULL;
 
   /* If it's too big, refuse it now. Otherwise we'll cache it all over the
    * network and it'll clog everything up. */
   if (ri->cache_info.signed_descriptor_len > MAX_DESCRIPTOR_UPLOAD_SIZE) {
-    log_notice(LD_DIR, "Somebody attempted to publish a router descriptor '%s'"
+    log_notice(LD_DIR,
+               "Somebody attempted to publish a router descriptor '%s'"
                " (source: %s) with size %d. Either this is an attack, or the "
                "MAX_DESCRIPTOR_UPLOAD_SIZE (%d) constant is too low.",
                ri->nickname, source, (int)ri->cache_info.signed_descriptor_len,
@@ -687,15 +687,15 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
    * because we want to be able to accept the newest router descriptor that
    * another authority has, so we all converge on the same one.) */
   ri_old = router_get_mutable_by_digest(ri->cache_info.identity_digest);
-  if (ri_old && ri_old->cache_info.published_on < ri->cache_info.published_on
-      && router_differences_are_cosmetic(ri_old, ri)
-      && !router_is_me(ri)) {
+  if (ri_old &&
+      ri_old->cache_info.published_on < ri->cache_info.published_on &&
+      router_differences_are_cosmetic(ri_old, ri) && ! router_is_me(ri)) {
     log_info(LD_DIRSERV,
              "Not replacing descriptor from %s (source: %s); "
              "differences are cosmetic.",
              router_describe(ri), source);
     *msg = "Not replacing router descriptor; no information has changed since "
-      "the last one with this identity.";
+           "the last one with this identity.";
     r = ROUTER_IS_ALREADY_KNOWN;
     goto fail;
   }
@@ -713,27 +713,29 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
     }
 
     /* Now pin it! */
-    keypin_status = keypin_check_and_add(
-      (const uint8_t*)ri->cache_info.identity_digest,
-      pkey->pubkey, ! key_pinning);
+    keypin_status =
+        keypin_check_and_add((const uint8_t *)ri->cache_info.identity_digest,
+                             pkey->pubkey, ! key_pinning);
   } else {
-    keypin_status = keypin_check_lone_rsa(
-      (const uint8_t*)ri->cache_info.identity_digest);
+    keypin_status =
+        keypin_check_lone_rsa((const uint8_t *)ri->cache_info.identity_digest);
 #ifndef DISABLE_DISABLING_ED25519
     if (keypin_status == KEYPIN_MISMATCH)
       keypin_status = KEYPIN_NOT_FOUND;
 #endif
   }
   if (keypin_status == KEYPIN_MISMATCH && key_pinning) {
-    log_info(LD_DIRSERV, "Dropping descriptor from %s (source: %s) because "
+    log_info(LD_DIRSERV,
+             "Dropping descriptor from %s (source: %s) because "
              "its key did not match an older RSA/Ed25519 keypair",
              router_describe(ri), source);
-    *msg = "Looks like your keypair has changed? This authority previously "
-      "recorded a different RSA identity for this Ed25519 identity (or vice "
-      "versa.) Did you replace or copy some of your key files, but not "
-      "the others? You should either restore the expected keypair, or "
-      "delete your keys and restart Tor to start your relay with a new "
-      "identity.";
+    *msg =
+        "Looks like your keypair has changed? This authority previously "
+        "recorded a different RSA identity for this Ed25519 identity (or vice "
+        "versa.) Did you replace or copy some of your key files, but not "
+        "the others? You should either restore the expected keypair, or "
+        "delete your keys and restart Tor to start your relay with a new "
+        "identity.";
     r = ROUTER_AUTHDIR_REJECTS;
     goto fail;
   }
@@ -745,13 +747,12 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
 
   /* Tell if we're about to need to launch a test if we add this. */
   ri->needs_retest_if_added =
-    dirserv_should_launch_reachability_test(ri, ri_old);
+      dirserv_should_launch_reachability_test(ri, ri_old);
 
   r = router_add_to_routerlist(ri, msg, 0, 0);
-  if (!WRA_WAS_ADDED(r)) {
+  if (! WRA_WAS_ADDED(r)) {
     /* unless the routerinfo was fine, just out-of-date */
-    log_info(LD_DIRSERV,
-             "Did not add descriptor from '%s' (source: %s): %s.",
+    log_info(LD_DIRSERV, "Did not add descriptor from '%s' (source: %s): %s.",
              nickname, source, *msg ? *msg : "(no message)");
   } else {
     smartlist_t *changed;
@@ -760,29 +761,28 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
     smartlist_add(changed, ri);
     routerlist_descriptors_added(changed, 0);
     smartlist_free(changed);
-    if (!*msg) {
-      *msg =  "Descriptor accepted";
+    if (! *msg) {
+      *msg = "Descriptor accepted";
     }
-    log_info(LD_DIRSERV,
-             "Added descriptor from '%s' (source: %s): %s.",
+    log_info(LD_DIRSERV, "Added descriptor from '%s' (source: %s): %s.",
              nickname, source, *msg);
   }
   tor_free(desc);
   tor_free(nickname);
   return r;
- fail:
-  {
-    const char *desc_digest = ri->cache_info.signed_descriptor_digest;
-    download_status_t *dls =
+fail : {
+  const char *desc_digest = ri->cache_info.signed_descriptor_digest;
+  download_status_t *dls =
       router_get_dl_status_by_descriptor_digest(desc_digest);
-    if (dls) {
-      log_info(LD_GENERAL, "Marking router with descriptor %s as rejected, "
-               "and therefore undownloadable",
-               hex_str(desc_digest, DIGEST_LEN));
-      download_status_mark_impossible(dls);
-    }
-    routerinfo_free(ri);
+  if (dls) {
+    log_info(LD_GENERAL,
+             "Marking router with descriptor %s as rejected, "
+             "and therefore undownloadable",
+             hex_str(desc_digest, DIGEST_LEN));
+    download_status_mark_impossible(dls);
   }
+  routerinfo_free(ri);
+}
   return r;
 }
 
@@ -799,7 +799,7 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
   /* Needs to be mutable so routerinfo_incompatible_with_extrainfo
    * can mess with some of the flags in ri->cache_info. */
   ri = router_get_mutable_by_digest(ei->cache_info.identity_digest);
-  if (!ri) {
+  if (! ri) {
     *msg = "No corresponding router descriptor for extra-info descriptor";
     rv = ROUTER_BAD_EI;
     goto fail;
@@ -808,7 +808,8 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
   /* If it's too big, refuse it now. Otherwise we'll cache it all over the
    * network and it'll clog everything up. */
   if (ei->cache_info.signed_descriptor_len > MAX_EXTRAINFO_UPLOAD_SIZE) {
-    log_notice(LD_DIR, "Somebody attempted to publish an extrainfo "
+    log_notice(LD_DIR,
+               "Somebody attempted to publish an extrainfo "
                "with size %d. Either this is an attack, or the "
                "MAX_EXTRAINFO_UPLOAD_SIZE (%d) constant is too low.",
                (int)ei->cache_info.signed_descriptor_len,
@@ -820,7 +821,7 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
 
   if ((r = routerinfo_incompatible_with_extrainfo(ri->identity_pkey, ei,
                                                   &ri->cache_info, msg))) {
-    if (r<0) {
+    if (r < 0) {
       extrainfo_free(ei);
       return ROUTER_IS_ALREADY_KNOWN;
     }
@@ -829,18 +830,18 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
   }
   router_add_extrainfo_to_routerlist(ei, msg, 0, 0);
   return ROUTER_ADDED_SUCCESSFULLY;
- fail:
-  {
-    const char *d = ei->cache_info.signed_descriptor_digest;
-    signed_descriptor_t *sd = router_get_by_extrainfo_digest((char*)d);
-    if (sd) {
-      log_info(LD_GENERAL, "Marking extrainfo with descriptor %s as "
-               "rejected, and therefore undownloadable",
-               hex_str((char*)d,DIGEST_LEN));
-      download_status_mark_impossible(&sd->ei_dl_status);
-    }
-    extrainfo_free(ei);
+fail : {
+  const char *d = ei->cache_info.signed_descriptor_digest;
+  signed_descriptor_t *sd = router_get_by_extrainfo_digest((char *)d);
+  if (sd) {
+    log_info(LD_GENERAL,
+             "Marking extrainfo with descriptor %s as "
+             "rejected, and therefore undownloadable",
+             hex_str((char *)d, DIGEST_LEN));
+    download_status_mark_impossible(&sd->ei_dl_status);
   }
+  extrainfo_free(ei);
+}
   return rv;
 }
 
@@ -855,32 +856,33 @@ directory_remove_invalid(void)
   smartlist_t *nodes = smartlist_new();
   smartlist_add_all(nodes, nodelist_get_list());
 
-  SMARTLIST_FOREACH_BEGIN(nodes, node_t *, node) {
+  SMARTLIST_FOREACH_BEGIN (nodes, node_t *, node) {
     const char *msg = NULL;
     const char *description;
     routerinfo_t *ent = node->ri;
     uint32_t r;
-    if (!ent)
+    if (! ent)
       continue;
     r = dirserv_router_get_status(ent, &msg, LOG_INFO);
     description = router_describe(ent);
     if (r & RTR_REJECT) {
-      log_info(LD_DIRSERV, "Router %s is now rejected: %s",
-               description, msg?msg:"");
+      log_info(LD_DIRSERV, "Router %s is now rejected: %s", description,
+               msg ? msg : "");
       routerlist_remove(rl, ent, 0, time(NULL));
       continue;
     }
-    if (bool_neq((r & RTR_INVALID), !node->is_valid)) {
+    if (bool_neq((r & RTR_INVALID), ! node->is_valid)) {
       log_info(LD_DIRSERV, "Router '%s' is now %svalid.", description,
-               (r&RTR_INVALID) ? "in" : "");
-      node->is_valid = (r&RTR_INVALID)?0:1;
+               (r & RTR_INVALID) ? "in" : "");
+      node->is_valid = (r & RTR_INVALID) ? 0 : 1;
     }
     if (bool_neq((r & RTR_BADEXIT), node->is_bad_exit)) {
       log_info(LD_DIRSERV, "Router '%s' is now a %s exit", description,
                (r & RTR_BADEXIT) ? "bad" : "good");
-      node->is_bad_exit = (r&RTR_BADEXIT) ? 1: 0;
+      node->is_bad_exit = (r & RTR_BADEXIT) ? 1 : 0;
     }
-  } SMARTLIST_FOREACH_END(node);
+  }
+  SMARTLIST_FOREACH_END(node);
 
   routerlist_assert_ok(rl);
   smartlist_free(nodes);

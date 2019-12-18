@@ -29,12 +29,12 @@ static void
 circuit_mark_for_close_dummy_(circuit_t *circ, int reason, int line,
                               const char *file)
 {
-  (void) reason;
+  (void)reason;
   if (circ->marked_for_close) {
     TT_FAIL(("Circuit already marked for close at %s:%d, but we are marking "
              "it again at %s:%d",
-             circ->marked_for_close_file, (int)circ->marked_for_close,
-             file, line));
+             circ->marked_for_close_file, (int)circ->marked_for_close, file,
+             line));
   }
 
   circ->marked_for_close = line;
@@ -48,17 +48,16 @@ dummy_or_circuit_new(int n_p_cells, int n_n_cells)
   int i;
   cell_t cell;
 
-  for (i=0; i < n_p_cells; ++i) {
-    crypto_rand((void*)&cell, sizeof(cell));
-    cell_queue_append_packed_copy(TO_CIRCUIT(circ), &circ->p_chan_cells,
-                                  0, &cell, 1, 0);
+  for (i = 0; i < n_p_cells; ++i) {
+    crypto_rand((void *)&cell, sizeof(cell));
+    cell_queue_append_packed_copy(TO_CIRCUIT(circ), &circ->p_chan_cells, 0,
+                                  &cell, 1, 0);
   }
 
-  for (i=0; i < n_n_cells; ++i) {
-    crypto_rand((void*)&cell, sizeof(cell));
-    cell_queue_append_packed_copy(TO_CIRCUIT(circ),
-                                  &TO_CIRCUIT(circ)->n_chan_cells,
-                                  1, &cell, 1, 0);
+  for (i = 0; i < n_n_cells; ++i) {
+    crypto_rand((void *)&cell, sizeof(cell));
+    cell_queue_append_packed_copy(
+        TO_CIRCUIT(circ), &TO_CIRCUIT(circ)->n_chan_cells, 1, &cell, 1, 0);
   }
 
   TO_CIRCUIT(circ)->purpose = CIRCUIT_PURPOSE_OR;
@@ -79,8 +78,8 @@ add_bytes_to_buf(buf_t *buf, size_t n_bytes)
 }
 
 static edge_connection_t *
-dummy_edge_conn_new(circuit_t *circ,
-                    int type, size_t in_bytes, size_t out_bytes)
+dummy_edge_conn_new(circuit_t *circ, int type, size_t in_bytes,
+                    size_t out_bytes)
 {
   edge_connection_t *conn;
   buf_t *inbuf, *outbuf;
@@ -100,7 +99,7 @@ dummy_edge_conn_new(circuit_t *circ,
 
   conn->on_circuit = circ;
   if (type == CONN_TYPE_EXIT) {
-    or_circuit_t *oc  = TO_OR_CIRCUIT(circ);
+    or_circuit_t *oc = TO_OR_CIRCUIT(circ);
     conn->next_stream = oc->n_streams;
     oc->n_streams = conn;
   } else {
@@ -121,13 +120,13 @@ test_oom_circbuf(void *arg)
   uint64_t now_ns = 1389631048 * (uint64_t)1000000000;
   const uint64_t start_ns = now_ns;
 
-  (void) arg;
+  (void)arg;
 
   monotime_enable_test_mocking();
   MOCK(circuit_mark_for_close_, circuit_mark_for_close_dummy_);
 
   /* Far too low for real life. */
-  options->MaxMemInQueues = 256*packed_cell_mem_cost();
+  options->MaxMemInQueues = 256 * packed_cell_mem_cost();
   options->CellStatistics = 0;
 
   tt_int_op(cell_queues_check_size(), OP_EQ, 0); /* We don't start out OOM. */
@@ -143,8 +142,7 @@ test_oom_circbuf(void *arg)
   monotime_coarse_set_mock_time_nsec(now_ns);
   c2 = dummy_or_circuit_new(20, 20);
 
-  tt_int_op(packed_cell_mem_cost(), OP_EQ,
-            sizeof(packed_cell_t));
+  tt_int_op(packed_cell_mem_cost(), OP_EQ, sizeof(packed_cell_t));
   tt_int_op(cell_queues_get_total_allocation(), OP_EQ,
             packed_cell_mem_cost() * 70);
   tt_int_op(cell_queues_check_size(), OP_EQ, 0); /* We are still not OOM */
@@ -192,7 +190,7 @@ test_oom_circbuf(void *arg)
   tt_int_op(cell_queues_get_total_allocation(), OP_EQ,
             packed_cell_mem_cost() * (257 - 30));
 
- done:
+done:
   circuit_free(c1);
   circuit_free(c2);
   circuit_free(c3);
@@ -214,13 +212,13 @@ test_oom_streambuf(void *arg)
   const uint64_t start_ns = 1389641159 * (uint64_t)1000000000;
   uint64_t now_ns = start_ns;
 
-  (void) arg;
+  (void)arg;
   monotime_enable_test_mocking();
 
   MOCK(circuit_mark_for_close_, circuit_mark_for_close_dummy_);
 
   /* Far too low for real life. */
-  options->MaxMemInQueues = 81*packed_cell_mem_cost() + 4096 * 34;
+  options->MaxMemInQueues = 81 * packed_cell_mem_cost() + 4096 * 34;
   options->CellStatistics = 0;
 
   tt_int_op(cell_queues_check_size(), OP_EQ, 0); /* We don't start out OOM. */
@@ -233,14 +231,14 @@ test_oom_streambuf(void *arg)
 
   /* go halfway into the second. */
   monotime_coarse_set_mock_time_nsec(start_ns + 500 * 1000000);
-  c1 = dummy_or_circuit_new(10,10);
+  c1 = dummy_or_circuit_new(10, 10);
 
   monotime_coarse_set_mock_time_nsec(start_ns + 510 * 1000000);
   c2 = dummy_origin_circuit_new(20);
   monotime_coarse_set_mock_time_nsec(start_ns + 520 * 1000000);
-  c3 = dummy_or_circuit_new(20,20);
+  c3 = dummy_or_circuit_new(20, 20);
   monotime_coarse_set_mock_time_nsec(start_ns + 530 * 1000000);
-  c4 = dummy_or_circuit_new(0,0);
+  c4 = dummy_or_circuit_new(0, 0);
   tt_int_op(cell_queues_get_total_allocation(), OP_EQ,
             packed_cell_mem_cost() * 80);
 
@@ -278,10 +276,11 @@ test_oom_streambuf(void *arg)
   monotime_coarse_set_mock_time_nsec(now_ns);
   tvts = monotime_coarse_get_stamp();
 
-#define ts_is_approx(ts, val) do {                                   \
-    uint32_t x_ = (uint32_t) monotime_coarse_stamp_units_to_approx_msec(ts); \
-    tt_int_op(x_, OP_GE, val - 5);                                      \
-    tt_int_op(x_, OP_LE, val + 5);                                      \
+#define ts_is_approx(ts, val)                                               \
+  do {                                                                      \
+    uint32_t x_ = (uint32_t)monotime_coarse_stamp_units_to_approx_msec(ts); \
+    tt_int_op(x_, OP_GE, val - 5);                                          \
+    tt_int_op(x_, OP_LE, val + 5);                                          \
   } while (0)
 
   ts_is_approx(circuit_max_queued_cell_age(c1, tvts), 500);
@@ -301,7 +300,7 @@ test_oom_streambuf(void *arg)
 
   tt_int_op(cell_queues_get_total_allocation(), OP_EQ,
             packed_cell_mem_cost() * 80);
-  tt_int_op(buf_get_total_allocation(), OP_EQ, 4096*16*2);
+  tt_int_op(buf_get_total_allocation(), OP_EQ, 4096 * 16 * 2);
 
   /* Now give c4 a very old buffer of modest size */
   {
@@ -312,19 +311,19 @@ test_oom_streambuf(void *arg)
     tt_assert(ec);
     smartlist_add(edgeconns, ec);
   }
-  tt_int_op(buf_get_total_allocation(), OP_EQ, 4096*17*2);
+  tt_int_op(buf_get_total_allocation(), OP_EQ, 4096 * 17 * 2);
   ts_is_approx(circuit_max_queued_item_age(c4, tvts), 1000);
 
   tt_int_op(cell_queues_check_size(), OP_EQ, 0);
 
   /* And run over the limit. */
-  now_ns += 800*1000000;
+  now_ns += 800 * 1000000;
   monotime_coarse_set_mock_time_nsec(now_ns);
-  c5 = dummy_or_circuit_new(0,5);
+  c5 = dummy_or_circuit_new(0, 5);
 
   tt_int_op(cell_queues_get_total_allocation(), OP_EQ,
             packed_cell_mem_cost() * 85);
-  tt_int_op(buf_get_total_allocation(), OP_EQ, 4096*17*2);
+  tt_int_op(buf_get_total_allocation(), OP_EQ, 4096 * 17 * 2);
 
   tt_int_op(cell_queues_check_size(), OP_EQ, 1); /* We are now OOM */
 
@@ -337,9 +336,9 @@ test_oom_streambuf(void *arg)
 
   tt_int_op(cell_queues_get_total_allocation(), OP_EQ,
             packed_cell_mem_cost() * 85);
-  tt_int_op(buf_get_total_allocation(), OP_EQ, 4096*8*2);
+  tt_int_op(buf_get_total_allocation(), OP_EQ, 4096 * 8 * 2);
 
- done:
+done:
   circuit_free(c1);
   circuit_free(c2);
   circuit_free(c3);
@@ -355,8 +354,6 @@ test_oom_streambuf(void *arg)
 }
 
 struct testcase_t oom_tests[] = {
-  { "circbuf", test_oom_circbuf, TT_FORK, NULL, NULL },
-  { "streambuf", test_oom_streambuf, TT_FORK, NULL, NULL },
-  END_OF_TESTCASES
-};
-
+    {"circbuf", test_oom_circbuf, TT_FORK, NULL, NULL},
+    {"streambuf", test_oom_streambuf, TT_FORK, NULL, NULL},
+    END_OF_TESTCASES};

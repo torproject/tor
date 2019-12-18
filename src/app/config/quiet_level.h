@@ -14,12 +14,12 @@
 
 /** Enumeration to define how quietly Tor should log at startup. */
 typedef enum {
-   /** Default quiet level: we log everything of level NOTICE or higher. */
-   QUIET_NONE = 0,
-   /** "--hush" quiet level: we log everything of level WARNING or higher. */
-   QUIET_HUSH = 1 ,
-   /** "--quiet" quiet level: we log nothing at all. */
-   QUIET_SILENT = 2
+  /** Default quiet level: we log everything of level NOTICE or higher. */
+  QUIET_NONE = 0,
+  /** "--hush" quiet level: we log everything of level WARNING or higher. */
+  QUIET_HUSH = 1,
+  /** "--quiet" quiet level: we log nothing at all. */
+  QUIET_SILENT = 2
 } quiet_level_t;
 
 /** How quietly should Tor log at startup? */

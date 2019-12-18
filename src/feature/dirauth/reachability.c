@@ -35,8 +35,7 @@
  * Inform the reachability checker that we could get to this relay.
  */
 void
-dirserv_orconn_tls_done(const tor_addr_t *addr,
-                        uint16_t or_port,
+dirserv_orconn_tls_done(const tor_addr_t *addr, uint16_t or_port,
                         const char *digest_rcvd,
                         const ed25519_public_key_t *ed_id_rcvd)
 {
@@ -60,10 +59,11 @@ dirserv_orconn_tls_done(const tor_addr_t *addr,
      * the routerinfo, but if we *HAVE* been told one in the routerinfo, it
      * needs to match. */
     const ed25519_public_key_t *expected_id =
-      &ri->cache_info.signing_key_cert->signing_key;
-    tor_assert(!ed25519_public_key_is_zero(expected_id));
+        &ri->cache_info.signing_key_cert->signing_key;
+    tor_assert(! ed25519_public_key_is_zero(expected_id));
     if (! ed_id_rcvd || ! ed25519_pubkey_eq(ed_id_rcvd, expected_id)) {
-      log_info(LD_DIRSERV, "Router at %s:%d with RSA ID %s "
+      log_info(LD_DIRSERV,
+               "Router at %s:%d with RSA ID %s "
                "did not present expected Ed25519 ID.",
                fmt_addr(addr), or_port, hex_str(digest_rcvd, DIGEST_LEN));
       return; /* Don't mark it as reachable. */
@@ -74,7 +74,7 @@ dirserv_orconn_tls_done(const tor_addr_t *addr,
   orport.port = or_port;
   if (router_has_orport(ri, &orport)) {
     /* Found the right router.  */
-    if (!authdir_mode_bridge(get_options()) ||
+    if (! authdir_mode_bridge(get_options()) ||
         ri->purpose == ROUTER_PURPOSE_BRIDGE) {
       char addrstr[TOR_ADDR_BUF_LEN];
       /* This is a bridge or we're not a bridge authority --
@@ -101,14 +101,14 @@ int
 dirserv_should_launch_reachability_test(const routerinfo_t *ri,
                                         const routerinfo_t *ri_old)
 {
-  if (!authdir_mode_handles_descs(get_options(), ri->purpose))
+  if (! authdir_mode_handles_descs(get_options(), ri->purpose))
     return 0;
-  if (!ri_old) {
+  if (! ri_old) {
     /* New router: Launch an immediate reachability test, so we will have an
      * opinion soon in case we're generating a consensus soon */
     return 1;
   }
-  if (ri_old->is_hibernating && !ri->is_hibernating) {
+  if (ri_old->is_hibernating && ! ri->is_hibernating) {
     /* It just came out of hibernation; launch a reachability test */
     return 1;
   }
@@ -130,7 +130,7 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
   const node_t *node = NULL;
   tor_addr_t router_addr;
   const ed25519_public_key_t *ed_id_key;
-  (void) now;
+  (void)now;
 
   tor_assert(router);
   node = node_get_by_id(router->cache_info.identity_digest);
@@ -145,26 +145,25 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
   }
 
   /* IPv4. */
-  log_debug(LD_OR,"Testing reachability of %s at %s:%u.",
-            router->nickname, fmt_addr32(router->addr), router->or_port);
+  log_debug(LD_OR, "Testing reachability of %s at %s:%u.", router->nickname,
+            fmt_addr32(router->addr), router->or_port);
   tor_addr_from_ipv4h(&router_addr, router->addr);
   chan = channel_tls_connect(&router_addr, router->or_port,
-                             router->cache_info.identity_digest,
-                             ed_id_key);
-  if (chan) command_setup_channel(chan);
+                             router->cache_info.identity_digest, ed_id_key);
+  if (chan)
+    command_setup_channel(chan);
 
   /* Possible IPv6. */
   if (get_options()->AuthDirHasIPv6Connectivity == 1 &&
-      !tor_addr_is_null(&router->ipv6_addr)) {
+      ! tor_addr_is_null(&router->ipv6_addr)) {
     char addrstr[TOR_ADDR_BUF_LEN];
-    log_debug(LD_OR, "Testing reachability of %s at %s:%u.",
-              router->nickname,
+    log_debug(LD_OR, "Testing reachability of %s at %s:%u.", router->nickname,
               tor_addr_to_str(addrstr, &router->ipv6_addr, sizeof(addrstr), 1),
               router->ipv6_orport);
     chan = channel_tls_connect(&router->ipv6_addr, router->ipv6_orport,
-                               router->cache_info.identity_digest,
-                               ed_id_key);
-    if (chan) command_setup_channel(chan);
+                               router->cache_info.identity_digest, ed_id_key);
+    if (chan)
+      command_setup_channel(chan);
   }
 }
 
@@ -186,22 +185,23 @@ dirserv_test_reachability(time_t now)
    * effects in other parts of the code. It doesn't hurt much to do
    * the testing, and directory authorities are easy to upgrade. Let's
    * wait til 0.2.0. -RD */
-//  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
+  //  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   routerlist_t *rl = router_get_routerlist();
   static char ctr = 0;
   int bridge_auth = authdir_mode_bridge(get_options());
 
-  SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, router) {
+  SMARTLIST_FOREACH_BEGIN (rl->routers, routerinfo_t *, router) {
     const char *id_digest = router->cache_info.identity_digest;
     if (router_is_me(router))
       continue;
     if (bridge_auth && router->purpose != ROUTER_PURPOSE_BRIDGE)
       continue; /* bridge authorities only test reachability on bridges */
-//    if (router->cache_info.published_on > cutoff)
-//      continue;
+    //    if (router->cache_info.published_on > cutoff)
+    //      continue;
     if ((((uint8_t)id_digest[0]) % REACHABILITY_MODULO_PER_TEST) == ctr) {
       dirserv_single_reachability_test(now, router);
     }
-  } SMARTLIST_FOREACH_END(router);
+  }
+  SMARTLIST_FOREACH_END(router);
   ctr = (ctr + 1) % REACHABILITY_MODULO_PER_TEST; /* increment ctr */
 }

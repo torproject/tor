@@ -136,12 +136,11 @@
 
 /** True iff the circuit purpose <b>p</b> is for a circuit that
  * originated at this node. */
-#define CIRCUIT_PURPOSE_IS_ORIGIN(p) ((p)>CIRCUIT_PURPOSE_OR_MAX_)
+#define CIRCUIT_PURPOSE_IS_ORIGIN(p) ((p) > CIRCUIT_PURPOSE_OR_MAX_)
 /** True iff the circuit purpose <b>p</b> is for a circuit that originated
  * here to serve as a client.  (Hidden services don't count here.) */
-#define CIRCUIT_PURPOSE_IS_CLIENT(p)  \
-  ((p)> CIRCUIT_PURPOSE_OR_MAX_ &&    \
-   (p)<=CIRCUIT_PURPOSE_C_MAX_)
+#define CIRCUIT_PURPOSE_IS_CLIENT(p) \
+  ((p) > CIRCUIT_PURPOSE_OR_MAX_ && (p) <= CIRCUIT_PURPOSE_C_MAX_)
 /** True iff the circuit_t <b>c</b> is actually an origin_circuit_t. */
 #define CIRCUIT_IS_ORIGIN(c) (CIRCUIT_PURPOSE_IS_ORIGIN((c)->purpose))
 /** True iff the circuit purpose <b>p</b> is for an established rendezvous
@@ -157,8 +156,7 @@
  * general purpose circuits, as well as the first step of client onion
  * service connections (HSDir gets). */
 #define CIRCUIT_PURPOSE_COUNTS_TOWARDS_MAXPENDING(p) \
-    ((p) == CIRCUIT_PURPOSE_C_GENERAL || \
-     (p) == CIRCUIT_PURPOSE_C_HSDIR_GET)
+  ((p) == CIRCUIT_PURPOSE_C_GENERAL || (p) == CIRCUIT_PURPOSE_C_HSDIR_GET)
 
 /** Convert a circuit_t* to a pointer to the enclosing or_circuit_t.  Assert
  * if the cast is impossible. */
@@ -182,8 +180,7 @@ const char *circuit_purpose_to_string(uint8_t purpose);
 void circuit_dump_by_conn(connection_t *conn, int severity);
 void circuit_set_p_circid_chan(or_circuit_t *circ, circid_t id,
                                channel_t *chan);
-void circuit_set_n_circid_chan(circuit_t *circ, circid_t id,
-                               channel_t *chan);
+void circuit_set_n_circid_chan(circuit_t *circ, circid_t id, channel_t *chan);
 void channel_mark_circid_unusable(channel_t *chan, circid_t id);
 void channel_mark_circid_usable(channel_t *chan, circid_t id);
 time_t circuit_id_when_marked_unusable_on_channel(circid_t circ_id,
@@ -195,19 +192,18 @@ void circuit_close_all_marked(void);
 int32_t circuit_initial_package_window(void);
 origin_circuit_t *origin_circuit_new(void);
 or_circuit_t *or_circuit_new(circid_t p_circ_id, channel_t *p_chan);
-circuit_t *circuit_get_by_circid_channel(circid_t circ_id,
-                                         channel_t *chan);
-circuit_t *
-circuit_get_by_circid_channel_even_if_marked(circid_t circ_id,
-                                             channel_t *chan);
+circuit_t *circuit_get_by_circid_channel(circid_t circ_id, channel_t *chan);
+circuit_t *circuit_get_by_circid_channel_even_if_marked(circid_t circ_id,
+                                                        channel_t *chan);
 int circuit_id_in_use_on_channel(circid_t circ_id, channel_t *chan);
 circuit_t *circuit_get_by_edge_conn(edge_connection_t *conn);
 void circuit_unlink_all_from_channel(channel_t *chan, int reason);
 origin_circuit_t *circuit_get_by_global_id(uint32_t id);
-origin_circuit_t *circuit_get_ready_rend_circ_by_rend_data(
-  const rend_data_t *rend_data);
+origin_circuit_t *
+circuit_get_ready_rend_circ_by_rend_data(const rend_data_t *rend_data);
 origin_circuit_t *circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
-                                     const uint8_t *digest, uint8_t purpose);
+                                                     const uint8_t *digest,
+                                                     uint8_t purpose);
 origin_circuit_t *circuit_get_next_intro_circ(const origin_circuit_t *start,
                                               bool want_client_circ);
 origin_circuit_t *circuit_get_next_service_rp_circ(origin_circuit_t *start);
@@ -218,20 +214,19 @@ void circuit_mark_all_unused_circs(void);
 void circuit_mark_all_dirty_circs_as_unusable(void);
 void circuit_synchronize_written_or_bandwidth(const circuit_t *c,
                                               circuit_channel_direction_t dir);
-MOCK_DECL(void, circuit_mark_for_close_, (circuit_t *circ, int reason,
-                                          int line, const char *cfile));
+MOCK_DECL(void, circuit_mark_for_close_,
+          (circuit_t * circ, int reason, int line, const char *cfile));
 int circuit_get_cpath_len(origin_circuit_t *circ);
 int circuit_get_cpath_opened_len(const origin_circuit_t *);
 void circuit_clear_cpath(origin_circuit_t *circ);
 crypt_path_t *circuit_get_cpath_hop(origin_circuit_t *circ, int hopnum);
-void circuit_get_all_pending_on_channel(smartlist_t *out,
-                                        channel_t *chan);
+void circuit_get_all_pending_on_channel(smartlist_t *out, channel_t *chan);
 int circuit_count_pending_on_channel(channel_t *chan);
 
-#define circuit_mark_for_close(c, reason)                               \
+#define circuit_mark_for_close(c, reason) \
   circuit_mark_for_close_((c), (reason), __LINE__, SHORT_FILE__)
 
-MOCK_DECL(void, assert_circuit_ok,(const circuit_t *c));
+MOCK_DECL(void, assert_circuit_ok, (const circuit_t *c));
 void circuit_free_all(void);
 void circuits_handle_oom(size_t current_allocation);
 
@@ -239,18 +234,18 @@ void circuit_clear_testing_cell_stats(circuit_t *circ);
 
 void channel_note_destroy_pending(channel_t *chan, circid_t id);
 MOCK_DECL(void, channel_note_destroy_not_pending,
-          (channel_t *chan, circid_t id));
+          (channel_t * chan, circid_t id));
 
 smartlist_t *circuit_find_circuits_to_upgrade_from_guard_wait(void);
 
 /* Declare the handle helpers */
 HANDLE_DECL(circuit, circuit_t, )
-#define circuit_handle_free(h)    \
-    FREE_AND_NULL(circuit_handle_t, circuit_handle_free_, (h))
+#define circuit_handle_free(h) \
+  FREE_AND_NULL(circuit_handle_t, circuit_handle_free_, (h))
 
 #ifdef CIRCUITLIST_PRIVATE
 STATIC void circuit_free_(circuit_t *circ);
-#define circuit_free(circ) FREE_AND_NULL(circuit_t, circuit_free_, (circ))
+#  define circuit_free(circ) FREE_AND_NULL(circuit_t, circuit_free_, (circ))
 STATIC size_t n_cells_in_circ_queues(const circuit_t *c);
 STATIC uint32_t circuit_max_queued_data_age(const circuit_t *c, uint32_t now);
 STATIC uint32_t circuit_max_queued_cell_age(const circuit_t *c, uint32_t now);

@@ -37,8 +37,8 @@ int
 fuzz_main(const uint8_t *data, size_t sz)
 {
   rend_service_descriptor_t *desc =
-    tor_malloc_zero(sizeof(rend_service_descriptor_t));
-  const char *str = (const char*) data;
+      tor_malloc_zero(sizeof(rend_service_descriptor_t));
+  const char *str = (const char *)data;
   int r = rend_parse_introduction_points(desc, str, sz);
   if (r >= 0) {
     log_debug(LD_GENERAL, "Parsing okay: %d", r);

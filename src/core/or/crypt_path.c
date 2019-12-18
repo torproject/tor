@@ -105,18 +105,17 @@ cpath_assert_ok(const crypt_path_t *cp)
 void
 cpath_assert_layer_ok(const crypt_path_t *cp)
 {
-//  tor_assert(cp->addr); /* these are zero for rendezvous extra-hops */
-//  tor_assert(cp->port);
+  //  tor_assert(cp->addr); /* these are zero for rendezvous extra-hops */
+  //  tor_assert(cp->port);
   tor_assert(cp);
   tor_assert(cp->magic == CRYPT_PATH_MAGIC);
-  switch (cp->state)
-    {
+  switch (cp->state) {
     case CPATH_STATE_OPEN:
       relay_crypto_assert_ok(&cp->pvt_crypto);
       /* fall through */
     case CPATH_STATE_CLOSED:
       /*XXXX Assert that there's no handshake_state either. */
-      tor_assert(!cp->rend_dh_handshake_state);
+      tor_assert(! cp->rend_dh_handshake_state);
       break;
     case CPATH_STATE_AWAITING_KEYS:
       /* tor_assert(cp->dh_handshake_state); */
@@ -124,7 +123,7 @@ cpath_assert_layer_ok(const crypt_path_t *cp)
     default:
       log_fn(LOG_ERR, LD_BUG, "Unexpected state %d", cp->state);
       tor_assert(0);
-    }
+  }
   tor_assert(cp->package_window >= 0);
   tor_assert(cp->deliver_window >= 0);
 }
@@ -147,21 +146,19 @@ cpath_assert_layer_ok(const crypt_path_t *cp)
  * Return 0 if init was successful, else -1 if it failed.
  */
 int
-cpath_init_circuit_crypto(crypt_path_t *cpath,
-                          const char *key_data, size_t key_data_len,
-                          int reverse, int is_hs_v3)
+cpath_init_circuit_crypto(crypt_path_t *cpath, const char *key_data,
+                          size_t key_data_len, int reverse, int is_hs_v3)
 {
-
   tor_assert(cpath);
-  return relay_crypto_init(&cpath->pvt_crypto, key_data, key_data_len,
-                           reverse, is_hs_v3);
+  return relay_crypto_init(&cpath->pvt_crypto, key_data, key_data_len, reverse,
+                           is_hs_v3);
 }
 
 /** Deallocate space associated with the cpath node <b>victim</b>. */
 void
 cpath_free(crypt_path_t *victim)
 {
-  if (!victim)
+  if (! victim)
     return;
 
   relay_crypto_clear(&victim->pvt_crypto);
@@ -245,7 +242,7 @@ cpath_get_n_hops(crypt_path_t **head_ptr)
   unsigned int n_hops = 0;
   crypt_path_t *tmp;
 
-  if (!*head_ptr) {
+  if (! *head_ptr) {
     return 0;
   }
 
@@ -259,4 +256,3 @@ cpath_get_n_hops(crypt_path_t **head_ptr)
 }
 
 #endif /* defined(TOR_UNIT_TESTS) */
-

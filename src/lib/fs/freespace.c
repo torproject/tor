@@ -13,10 +13,10 @@
 #include "lib/cc/torint.h"
 
 #ifdef HAVE_SYS_STATVFS_H
-#include <sys/statvfs.h>
+#  include <sys/statvfs.h>
 #endif
 #ifdef _WIN32
-#include <windows.h>
+#  include <windows.h>
 #endif
 
 #include <errno.h>
@@ -51,7 +51,7 @@ tor_get_avail_disk_space(const char *path)
   BOOL ok;
 
   ok = GetDiskFreeSpaceEx(path, &freeBytesAvail, NULL, NULL);
-  if (!ok) {
+  if (! ok) {
     return -1;
   }
   return (int64_t)freeBytesAvail.QuadPart;

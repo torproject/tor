@@ -55,10 +55,10 @@
 #include "feature/control/control_connection_st.h"
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
+#  include <sys/stat.h>
 #endif
 
 /** Convert a connection_t* to an control_connection_t*; assert if the cast is
@@ -80,8 +80,8 @@ control_connection_add_local_fd(tor_socket_t sock, unsigned flags)
 {
   if (BUG(! SOCKET_OK(sock)))
     return -1;
-  const int is_owner = !!(flags & CC_LOCAL_FD_IS_OWNER);
-  const int is_authenticated = !!(flags & CC_LOCAL_FD_IS_AUTHENTICATED);
+  const int is_owner = ! ! (flags & CC_LOCAL_FD_IS_OWNER);
+  const int is_authenticated = ! ! (flags & CC_LOCAL_FD_IS_AUTHENTICATED);
   control_connection_t *control_conn = control_connection_new(AF_UNSPEC);
   connection_t *conn = TO_CONN(control_conn);
   conn->s = sock;
@@ -93,8 +93,7 @@ control_connection_add_local_fd(tor_socket_t sock, unsigned flags)
    * we don't freak out. */
   tor_take_socket_ownership(sock);
 
-  if (set_socket_nonblocking(sock) < 0 ||
-      connection_add(conn) < 0) {
+  if (set_socket_nonblocking(sock) < 0 || connection_add(conn) < 0) {
     connection_free(conn);
     return -1;
   }
@@ -121,12 +120,13 @@ control_ports_write_to_file(void)
   char *joined = NULL;
   const or_options_t *options = get_options();
 
-  if (!options->ControlPortWriteToFile)
+  if (! options->ControlPortWriteToFile)
     return;
 
   lines = smartlist_new();
 
-  SMARTLIST_FOREACH_BEGIN(get_connection_array(), const connection_t *, conn) {
+  SMARTLIST_FOREACH_BEGIN (get_connection_array(), const connection_t *,
+                           conn) {
     if (conn->type != CONN_TYPE_CONTROL_LISTENER || conn->marked_for_close)
       continue;
 #ifdef AF_UNIX
@@ -136,7 +136,8 @@ control_ports_write_to_file(void)
     }
 #endif /* defined(AF_UNIX) */
     smartlist_add_asprintf(lines, "PORT=%s:%d\n", conn->address, conn->port);
-  } SMARTLIST_FOREACH_END(conn);
+  }
+  SMARTLIST_FOREACH_END(conn);
 
   joined = smartlist_join_strings(lines, "", 0, NULL);
 
@@ -147,7 +148,7 @@ control_ports_write_to_file(void)
 #ifndef _WIN32
   if (options->ControlPortFileGroupReadable) {
     if (chmod(options->ControlPortWriteToFile, 0640)) {
-      log_warn(LD_FS,"Unable to make %s group-readable.",
+      log_warn(LD_FS, "Unable to make %s group-readable.",
                options->ControlPortWriteToFile);
     }
   }
@@ -158,22 +159,14 @@ control_ports_write_to_file(void)
 }
 
 const struct signal_name_t signal_table[] = {
-  { SIGHUP, "RELOAD" },
-  { SIGHUP, "HUP" },
-  { SIGINT, "SHUTDOWN" },
-  { SIGUSR1, "DUMP" },
-  { SIGUSR1, "USR1" },
-  { SIGUSR2, "DEBUG" },
-  { SIGUSR2, "USR2" },
-  { SIGTERM, "HALT" },
-  { SIGTERM, "TERM" },
-  { SIGTERM, "INT" },
-  { SIGNEWNYM, "NEWNYM" },
-  { SIGCLEARDNSCACHE, "CLEARDNSCACHE"},
-  { SIGHEARTBEAT, "HEARTBEAT"},
-  { SIGACTIVE, "ACTIVE" },
-  { SIGDORMANT, "DORMANT" },
-  { 0, NULL },
+    {SIGHUP, "RELOAD"},          {SIGHUP, "HUP"},
+    {SIGINT, "SHUTDOWN"},        {SIGUSR1, "DUMP"},
+    {SIGUSR1, "USR1"},           {SIGUSR2, "DEBUG"},
+    {SIGUSR2, "USR2"},           {SIGTERM, "HALT"},
+    {SIGTERM, "TERM"},           {SIGTERM, "INT"},
+    {SIGNEWNYM, "NEWNYM"},       {SIGCLEARDNSCACHE, "CLEARDNSCACHE"},
+    {SIGHEARTBEAT, "HEARTBEAT"}, {SIGACTIVE, "ACTIVE"},
+    {SIGDORMANT, "DORMANT"},     {0, NULL},
 };
 
 /** Called when <b>conn</b> has no more bytes left on its outbuf. */
@@ -190,7 +183,7 @@ connection_control_reached_eof(control_connection_t *conn)
 {
   tor_assert(conn);
 
-  log_info(LD_CONTROL,"Control connection reached EOF. Closing.");
+  log_info(LD_CONTROL, "Control connection reached EOF. Closing.");
   connection_mark_for_close(TO_CONN(conn));
   return 0;
 }
@@ -219,7 +212,7 @@ connection_control_closed(control_connection_t *conn)
    * The list and it's contents are scrubbed/freed in connection_free_.
    */
   if (conn->ephemeral_onion_services) {
-    SMARTLIST_FOREACH_BEGIN(conn->ephemeral_onion_services, char *, cp) {
+    SMARTLIST_FOREACH_BEGIN (conn->ephemeral_onion_services, char *, cp) {
       if (rend_valid_v2_service_id(cp)) {
         rend_service_del_ephemeral(cp);
       } else if (hs_address_is_valid(cp)) {
@@ -228,7 +221,8 @@ connection_control_closed(control_connection_t *conn)
         /* An invalid .onion in our list should NEVER happen */
         tor_fragile_assert();
       }
-    } SMARTLIST_FOREACH_END(cp);
+    }
+    SMARTLIST_FOREACH_END(cp);
   }
 
   if (conn->is_owning_control_connection) {
@@ -243,13 +237,12 @@ is_valid_initial_command(control_connection_t *conn, const char *cmd)
 {
   if (conn->base_.state == CONTROL_CONN_STATE_OPEN)
     return 1;
-  if (!strcasecmp(cmd, "PROTOCOLINFO"))
-    return (!conn->have_sent_protocolinfo &&
+  if (! strcasecmp(cmd, "PROTOCOLINFO"))
+    return (! conn->have_sent_protocolinfo &&
             conn->safecookie_client_hash == NULL);
-  if (!strcasecmp(cmd, "AUTHCHALLENGE"))
+  if (! strcasecmp(cmd, "AUTHCHALLENGE"))
     return (conn->safecookie_client_hash == NULL);
-  if (!strcasecmp(cmd, "AUTHENTICATE") ||
-      !strcasecmp(cmd, "QUIT"))
+  if (! strcasecmp(cmd, "AUTHENTICATE") || ! strcasecmp(cmd, "QUIT"))
     return 1;
   return 0;
 }
@@ -257,7 +250,7 @@ is_valid_initial_command(control_connection_t *conn, const char *cmd)
 /** Do not accept any control command of more than 1MB in length.  Anything
  * that needs to be anywhere near this long probably means that one of our
  * interfaces is broken. */
-#define MAX_COMMAND_LINE_LENGTH (1024*1024)
+#define MAX_COMMAND_LINE_LENGTH (1024 * 1024)
 
 /** Wrapper around peek_buf_has_control0 command: presents the same
  * interface as that underlying functions, but takes a connection_t intead of
@@ -282,19 +275,17 @@ peek_connection_has_http_command(connection_t *conn)
  * to the arguments.
  **/
 STATIC char *
-control_split_incoming_command(char *incoming_cmd,
-                               size_t *data_len,
+control_split_incoming_command(char *incoming_cmd, size_t *data_len,
                                char **current_cmd_out)
 {
   const bool is_multiline = *data_len && incoming_cmd[0] == '+';
   size_t cmd_len = 0;
-  while (cmd_len < *data_len
-         && !TOR_ISSPACE(incoming_cmd[cmd_len]))
+  while (cmd_len < *data_len && ! TOR_ISSPACE(incoming_cmd[cmd_len]))
     ++cmd_len;
 
   *current_cmd_out = tor_memdup_nulterm(incoming_cmd, cmd_len);
-  char *args = incoming_cmd+cmd_len;
-  tor_assert(*data_len>=cmd_len);
+  char *args = incoming_cmd + cmd_len;
+  tor_assert(*data_len >= cmd_len);
   *data_len -= cmd_len;
   if (is_multiline) {
     // Only match horizontal space: any line after the first is data,
@@ -314,30 +305,32 @@ control_split_incoming_command(char *incoming_cmd,
 }
 
 static const char CONTROLPORT_IS_NOT_AN_HTTP_PROXY_MSG[] =
-  "HTTP/1.0 501 Tor ControlPort is not an HTTP proxy"
-  "\r\nContent-Type: text/html; charset=iso-8859-1\r\n\r\n"
-  "<html>\n"
-  "<head>\n"
-  "<title>Tor's ControlPort is not an HTTP proxy</title>\n"
-  "</head>\n"
-  "<body>\n"
-  "<h1>Tor's ControlPort is not an HTTP proxy</h1>\n"
-  "<p>\n"
-  "It appears you have configured your web browser to use Tor's control port"
-  " as an HTTP proxy.\n"
-  "This is not correct: Tor's default SOCKS proxy port is 9050.\n"
-  "Please configure your client accordingly.\n"
-  "</p>\n"
-  "<p>\n"
-  "See <a href=\"https://www.torproject.org/documentation.html\">"
-  "https://www.torproject.org/documentation.html</a> for more "
-  "information.\n"
-  "<!-- Plus this comment, to make the body response more than 512 bytes, so "
-  "     IE will be willing to display it. Comment comment comment comment "
-  "     comment comment comment comment comment comment comment comment.-->\n"
-  "</p>\n"
-  "</body>\n"
-  "</html>\n";
+    "HTTP/1.0 501 Tor ControlPort is not an HTTP proxy"
+    "\r\nContent-Type: text/html; charset=iso-8859-1\r\n\r\n"
+    "<html>\n"
+    "<head>\n"
+    "<title>Tor's ControlPort is not an HTTP proxy</title>\n"
+    "</head>\n"
+    "<body>\n"
+    "<h1>Tor's ControlPort is not an HTTP proxy</h1>\n"
+    "<p>\n"
+    "It appears you have configured your web browser to use Tor's control port"
+    " as an HTTP proxy.\n"
+    "This is not correct: Tor's default SOCKS proxy port is 9050.\n"
+    "Please configure your client accordingly.\n"
+    "</p>\n"
+    "<p>\n"
+    "See <a href=\"https://www.torproject.org/documentation.html\">"
+    "https://www.torproject.org/documentation.html</a> for more "
+    "information.\n"
+    "<!-- Plus this comment, to make the body response more than 512 bytes, "
+    "so "
+    "     IE will be willing to display it. Comment comment comment comment "
+    "     comment comment comment comment comment comment comment "
+    "comment.-->\n"
+    "</p>\n"
+    "</body>\n"
+    "</html>\n";
 
 /** Return an error on a control connection that tried to use the v0 protocol.
  */
@@ -346,14 +339,15 @@ control_send_v0_reject(control_connection_t *conn)
 {
   size_t body_len;
   char buf[128];
-  set_uint16(buf+2, htons(0x0000)); /* type == error */
-  set_uint16(buf+4, htons(0x0001)); /* code == internal error */
-  strlcpy(buf+6, "The v0 control protocol is not supported by Tor 0.1.2.17 "
+  set_uint16(buf + 2, htons(0x0000)); /* type == error */
+  set_uint16(buf + 4, htons(0x0001)); /* code == internal error */
+  strlcpy(buf + 6,
+          "The v0 control protocol is not supported by Tor 0.1.2.17 "
           "and later; upgrade your controller.",
-          sizeof(buf)-6);
-  body_len = 2+strlen(buf+6)+2; /* code, msg, nul. */
-  set_uint16(buf+0, htons(body_len));
-  connection_buf_add(buf, 4+body_len, TO_CONN(conn));
+          sizeof(buf) - 6);
+  body_len = 2 + strlen(buf + 6) + 2; /* code, msg, nul. */
+  set_uint16(buf + 0, htons(body_len));
+  connection_buf_add(buf, 4 + body_len, TO_CONN(conn));
 
   connection_mark_and_flush(TO_CONN(conn));
 }
@@ -407,26 +401,26 @@ connection_control_process_inbuf(control_connection_t *conn)
   tor_assert(conn->base_.state == CONTROL_CONN_STATE_OPEN ||
              conn->base_.state == CONTROL_CONN_STATE_NEEDAUTH);
 
-  if (!conn->incoming_cmd) {
+  if (! conn->incoming_cmd) {
     conn->incoming_cmd = tor_malloc(1024);
     conn->incoming_cmd_len = 1024;
     conn->incoming_cmd_cur_len = 0;
   }
 
-  if (!control_protocol_is_valid(conn)) {
+  if (! control_protocol_is_valid(conn)) {
     return 0;
   }
 
- again:
+again:
   while (1) {
     size_t last_idx;
     int r;
     /* First, fetch a line. */
     do {
       data_len = conn->incoming_cmd_len - conn->incoming_cmd_cur_len;
-      r = connection_buf_get_line(TO_CONN(conn),
-                              conn->incoming_cmd+conn->incoming_cmd_cur_len,
-                              &data_len);
+      r = connection_buf_get_line(
+          TO_CONN(conn), conn->incoming_cmd + conn->incoming_cmd_cur_len,
+          &data_len);
       if (r == 0)
         /* Line not all here yet. Wait. */
         return 0;
@@ -436,10 +430,10 @@ connection_control_process_inbuf(control_connection_t *conn)
           connection_stop_reading(TO_CONN(conn));
           connection_mark_and_flush(TO_CONN(conn));
         }
-        while (conn->incoming_cmd_len < data_len+conn->incoming_cmd_cur_len)
+        while (conn->incoming_cmd_len < data_len + conn->incoming_cmd_cur_len)
           conn->incoming_cmd_len *= 2;
-        conn->incoming_cmd = tor_realloc(conn->incoming_cmd,
-                                         conn->incoming_cmd_len);
+        conn->incoming_cmd =
+            tor_realloc(conn->incoming_cmd, conn->incoming_cmd_len);
       }
     } while (r != 1);
 
@@ -453,13 +447,13 @@ connection_control_process_inbuf(control_connection_t *conn)
       /* One line command, didn't start with '+'. */
       break;
     /* XXXX this code duplication is kind of dumb. */
-    if (last_idx+3 == conn->incoming_cmd_cur_len &&
+    if (last_idx + 3 == conn->incoming_cmd_cur_len &&
         tor_memeq(conn->incoming_cmd + last_idx, ".\r\n", 3)) {
       /* Just appended ".\r\n"; we're done. Remove it. */
       conn->incoming_cmd[last_idx] = '\0';
       conn->incoming_cmd_cur_len -= 3;
       break;
-    } else if (last_idx+2 == conn->incoming_cmd_cur_len &&
+    } else if (last_idx + 2 == conn->incoming_cmd_cur_len &&
                tor_memeq(conn->incoming_cmd + last_idx, ".\n", 2)) {
       /* Just appended ".\n"; we're done. Remove it. */
       conn->incoming_cmd[last_idx] = '\0';
@@ -476,7 +470,7 @@ connection_control_process_inbuf(control_connection_t *conn)
   tor_free(conn->current_cmd);
   args = control_split_incoming_command(conn->incoming_cmd, &data_len,
                                         &conn->current_cmd);
-  if (BUG(!conn->current_cmd))
+  if (BUG(! conn->current_cmd))
     return -1;
 
   /* If the connection is already closing, ignore further commands */
@@ -485,14 +479,14 @@ connection_control_process_inbuf(control_connection_t *conn)
   }
 
   /* Otherwise, Quit is always valid. */
-  if (!strcasecmp(conn->current_cmd, "QUIT")) {
+  if (! strcasecmp(conn->current_cmd, "QUIT")) {
     control_write_endreply(conn, 250, "closing connection");
     connection_mark_and_flush(TO_CONN(conn));
     return 0;
   }
 
   if (conn->base_.state == CONTROL_CONN_STATE_NEEDAUTH &&
-      !is_valid_initial_command(conn, conn->current_cmd)) {
+      ! is_valid_initial_command(conn, conn->current_cmd)) {
     control_write_endreply(conn, 514, "Authentication required.");
     connection_mark_for_close(TO_CONN(conn));
     return 0;
@@ -558,8 +552,8 @@ monitor_owning_controller_process(const char *process_spec)
              (owning_controller_process_monitor == NULL));
 
   if (owning_controller_process_spec != NULL) {
-    if ((process_spec != NULL) && !strcmp(process_spec,
-                                          owning_controller_process_spec)) {
+    if ((process_spec != NULL) &&
+        ! strcmp(process_spec, owning_controller_process_spec)) {
       /* Same process -- return now, instead of disposing of and
        * recreating the process-termination monitor. */
       return;
@@ -581,15 +575,13 @@ monitor_owning_controller_process(const char *process_spec)
     return;
 
   owning_controller_process_spec = tor_strdup(process_spec);
-  owning_controller_process_monitor =
-    tor_process_monitor_new(tor_libevent_get_base(),
-                            owning_controller_process_spec,
-                            LD_CONTROL,
-                            owning_controller_procmon_cb, NULL,
-                            &msg);
+  owning_controller_process_monitor = tor_process_monitor_new(
+      tor_libevent_get_base(), owning_controller_process_spec, LD_CONTROL,
+      owning_controller_procmon_cb, NULL, &msg);
 
   if (owning_controller_process_monitor == NULL) {
-    log_err(LD_BUG, "Couldn't create process-termination monitor for "
+    log_err(LD_BUG,
+            "Couldn't create process-termination monitor for "
             "owning controller: %s.  Exiting.",
             msg);
     owning_controller_process_spec = NULL;

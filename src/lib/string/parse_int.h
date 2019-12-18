@@ -13,13 +13,13 @@
 
 #include "lib/cc/torint.h"
 
-long tor_parse_long(const char *s, int base, long min,
-                    long max, int *ok, char **next);
+long tor_parse_long(const char *s, int base, long min, long max, int *ok,
+                    char **next);
 unsigned long tor_parse_ulong(const char *s, int base, unsigned long min,
                               unsigned long max, int *ok, char **next);
 double tor_parse_double(const char *s, double min, double max, int *ok,
                         char **next);
-uint64_t tor_parse_uint64(const char *s, int base, uint64_t min,
-                         uint64_t max, int *ok, char **next);
+uint64_t tor_parse_uint64(const char *s, int base, uint64_t min, uint64_t max,
+                          int *ok, char **next);
 
 #endif /* !defined(TOR_PARSE_INT_H) */

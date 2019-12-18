@@ -125,7 +125,7 @@ sr_srv_dup(const sr_srv_t *orig)
 {
   sr_srv_t *duplicate = NULL;
 
-  if (!orig) {
+  if (! orig) {
     return NULL;
   }
 
@@ -180,9 +180,10 @@ verify_commit_and_reveal(const sr_commit_t *commit)
 
   /* Check that the timestamps match. */
   if (commit->commit_ts != commit->reveal_ts) {
-    log_warn(LD_BUG, "SR: Commit timestamp %" PRIu64 " doesn't match reveal "
-                     "timestamp %" PRIu64, commit->commit_ts,
-             commit->reveal_ts);
+    log_warn(LD_BUG,
+             "SR: Commit timestamp %" PRIu64 " doesn't match reveal "
+             "timestamp %" PRIu64,
+             commit->commit_ts, commit->reveal_ts);
     goto invalid;
   }
 
@@ -208,15 +209,16 @@ verify_commit_and_reveal(const sr_commit_t *commit)
     /* Now compare that with the hashed_reveal we received in COMMIT. */
     if (fast_memneq(received_hashed_reveal, commit->hashed_reveal,
                     sizeof(received_hashed_reveal))) {
-      log_warn(LD_BUG, "SR: Received reveal value from authority %s "
-                       "doesn't match the commit value.",
+      log_warn(LD_BUG,
+               "SR: Received reveal value from authority %s "
+               "doesn't match the commit value.",
                sr_commit_get_rsa_fpr(commit));
       goto invalid;
     }
   }
 
   return 0;
- invalid:
+invalid:
   return -1;
 }
 
@@ -224,8 +226,8 @@ verify_commit_and_reveal(const sr_commit_t *commit)
 STATIC int
 commit_has_reveal_value(const sr_commit_t *commit)
 {
-  return !fast_mem_is_zero(commit->encoded_reveal,
-                          sizeof(commit->encoded_reveal));
+  return ! fast_mem_is_zero(commit->encoded_reveal,
+                            sizeof(commit->encoded_reveal));
 }
 
 /** Parse the encoded commit. The format is:
@@ -252,8 +254,8 @@ commit_decode(const char *encoded, sr_commit_t *commit)
   /* Decode our encoded commit. Let's be careful here since _encoded_ is
    * coming from the network in a dirauth vote so we expect nothing more
    * than the base64 encoded length of a commit. */
-  decoded_len = base64_decode(b64_decoded, sizeof(b64_decoded),
-                              encoded, strlen(encoded));
+  decoded_len = base64_decode(b64_decoded, sizeof(b64_decoded), encoded,
+                              strlen(encoded));
   if (decoded_len < 0) {
     log_warn(LD_BUG, "SR: Commit from authority %s can't be decoded.",
              sr_commit_get_rsa_fpr(commit));
@@ -261,8 +263,9 @@ commit_decode(const char *encoded, sr_commit_t *commit)
   }
 
   if (decoded_len != SR_COMMIT_LEN) {
-    log_warn(LD_BUG, "SR: Commit from authority %s decoded length doesn't "
-                     "match the expected length (%d vs %u).",
+    log_warn(LD_BUG,
+             "SR: Commit from authority %s decoded length doesn't "
+             "match the expected length (%d vs %u).",
              sr_commit_get_rsa_fpr(commit), decoded_len,
              (unsigned)SR_COMMIT_LEN);
     goto error;
@@ -279,7 +282,7 @@ commit_decode(const char *encoded, sr_commit_t *commit)
 
   return 0;
 
- error:
+error:
   return -1;
 }
 
@@ -304,8 +307,8 @@ reveal_decode(const char *encoded, sr_commit_t *commit)
   /* Decode our encoded reveal. Let's be careful here since _encoded_ is
    * coming from the network in a dirauth vote so we expect nothing more
    * than the base64 encoded length of our reveal. */
-  decoded_len = base64_decode(b64_decoded, sizeof(b64_decoded),
-                              encoded, strlen(encoded));
+  decoded_len = base64_decode(b64_decoded, sizeof(b64_decoded), encoded,
+                              strlen(encoded));
   if (decoded_len < 0) {
     log_warn(LD_BUG, "SR: Reveal from authority %s can't be decoded.",
              sr_commit_get_rsa_fpr(commit));
@@ -313,8 +316,9 @@ reveal_decode(const char *encoded, sr_commit_t *commit)
   }
 
   if (decoded_len != SR_REVEAL_LEN) {
-    log_warn(LD_BUG, "SR: Reveal from authority %s decoded length is "
-                     "doesn't match the expected length (%d vs %u)",
+    log_warn(LD_BUG,
+             "SR: Reveal from authority %s decoded length is "
+             "doesn't match the expected length (%d vs %u)",
              sr_commit_get_rsa_fpr(commit), decoded_len,
              (unsigned)SR_REVEAL_LEN);
     goto error;
@@ -329,7 +333,7 @@ reveal_decode(const char *encoded, sr_commit_t *commit)
 
   return 0;
 
- error:
+error:
   return -1;
 }
 
@@ -351,8 +355,7 @@ reveal_encode(const sr_commit_t *commit, char *dst, size_t len)
 
   set_uint64(buf, tor_htonll(commit->reveal_ts));
   offset += sizeof(uint64_t);
-  memcpy(buf + offset, commit->random_number,
-         sizeof(commit->random_number));
+  memcpy(buf + offset, commit->random_number, sizeof(commit->random_number));
 
   /* Let's clean the buffer and then b64 encode it. */
   memset(dst, 0, len);
@@ -380,8 +383,7 @@ commit_encode(const sr_commit_t *commit, char *dst, size_t len)
   set_uint64(buf, tor_htonll(commit->commit_ts));
   offset += sizeof(uint64_t);
   /* and then the hashed reveal. */
-  memcpy(buf + offset, commit->hashed_reveal,
-         sizeof(commit->hashed_reveal));
+  memcpy(buf + offset, commit->hashed_reveal, sizeof(commit->hashed_reveal));
 
   /* Clean the buffer and then b64 encode it. */
   memset(dst, 0, len);
@@ -405,7 +407,7 @@ get_srv_element_from_commit(const sr_commit_t *commit)
   char *element;
   tor_assert(commit);
 
-  if (!commit_has_reveal_value(commit)) {
+  if (! commit_has_reveal_value(commit)) {
     return NULL;
   }
 
@@ -444,7 +446,7 @@ generate_srv(const char *hashed_reveals, uint64_t reveal_num,
   /* Ok we have our message and key for the HMAC computation, allocate our
    * srv object and do the last step. */
   srv = tor_malloc_zero(sizeof(*srv));
-  crypto_digest256((char *) srv->value, msg, sizeof(msg), SR_DIGEST_ALG);
+  crypto_digest256((char *)srv->value, msg, sizeof(msg), SR_DIGEST_ALG);
   srv->num_reveals = reveal_num;
 
   {
@@ -474,32 +476,27 @@ get_vote_line_from_commit(const sr_commit_t *commit, sr_phase_t phase)
   char *vote_line = NULL;
 
   switch (phase) {
-  case SR_PHASE_COMMIT:
-    tor_asprintf(&vote_line, "%s %u %s %s %s\n",
-                 commit_ns_str,
-                 SR_PROTO_VERSION,
-                 crypto_digest_algorithm_get_name(commit->alg),
-                 sr_commit_get_rsa_fpr(commit),
-                 commit->encoded_commit);
-    break;
-  case SR_PHASE_REVEAL:
-  {
-    /* Send a reveal value for this commit if we have one. */
-    const char *reveal_str = commit->encoded_reveal;
-    if (fast_mem_is_zero(commit->encoded_reveal,
-                        sizeof(commit->encoded_reveal))) {
-      reveal_str = "";
+    case SR_PHASE_COMMIT:
+      tor_asprintf(&vote_line, "%s %u %s %s %s\n", commit_ns_str,
+                   SR_PROTO_VERSION,
+                   crypto_digest_algorithm_get_name(commit->alg),
+                   sr_commit_get_rsa_fpr(commit), commit->encoded_commit);
+      break;
+    case SR_PHASE_REVEAL: {
+      /* Send a reveal value for this commit if we have one. */
+      const char *reveal_str = commit->encoded_reveal;
+      if (fast_mem_is_zero(commit->encoded_reveal,
+                           sizeof(commit->encoded_reveal))) {
+        reveal_str = "";
+      }
+      tor_asprintf(
+          &vote_line, "%s %u %s %s %s %s\n", commit_ns_str, SR_PROTO_VERSION,
+          crypto_digest_algorithm_get_name(commit->alg),
+          sr_commit_get_rsa_fpr(commit), commit->encoded_commit, reveal_str);
+      break;
     }
-    tor_asprintf(&vote_line, "%s %u %s %s %s %s\n",
-                 commit_ns_str,
-                 SR_PROTO_VERSION,
-                 crypto_digest_algorithm_get_name(commit->alg),
-                 sr_commit_get_rsa_fpr(commit),
-                 commit->encoded_commit, reveal_str);
-    break;
-  }
-  default:
-    tor_assert(0);
+    default:
+      tor_assert(0);
   }
 
   log_debug(LD_DIR, "SR: Commit vote line: %s", vote_line);
@@ -518,8 +515,8 @@ srv_to_ns_string(const sr_srv_t *srv, const char *key)
   tor_assert(key);
 
   sr_srv_encode(srv_hash_encoded, sizeof(srv_hash_encoded), srv);
-  tor_asprintf(&srv_str, "%s %" PRIu64 " %s\n", key,
-               srv->num_reveals, srv_hash_encoded);
+  tor_asprintf(&srv_str, "%s %" PRIu64 " %s\n", key, srv->num_reveals,
+               srv_hash_encoded);
   log_debug(LD_DIR, "SR: Consensus SRV line: %s", srv_str);
   return srv_str;
 }
@@ -533,7 +530,7 @@ get_ns_str_from_sr_values(const sr_srv_t *prev_srv, const sr_srv_t *cur_srv)
   smartlist_t *chunks = NULL;
   char *srv_str;
 
-  if (!prev_srv && !cur_srv) {
+  if (! prev_srv && ! cur_srv) {
     return NULL;
   }
 
@@ -576,8 +573,7 @@ commitments_are_the_same(const sr_commit_t *commit_one,
  * <b>identity_digest</b>. Return 1 if this commit is authorititative that
  * is, it belongs to the authority that voted it. Else return 0 if not. */
 STATIC int
-commit_is_authoritative(const sr_commit_t *commit,
-                        const char *voter_key)
+commit_is_authoritative(const sr_commit_t *commit, const char *voter_key)
 {
   tor_assert(commit);
   tor_assert(voter_key);
@@ -602,12 +598,11 @@ should_keep_commit(const sr_commit_t *commit, const char *voter_key,
   tor_assert(voter_key);
 
   log_debug(LD_DIR, "SR: Inspecting commit from %s (voter: %s)?",
-            sr_commit_get_rsa_fpr(commit),
-            hex_str(voter_key, DIGEST_LEN));
+            sr_commit_get_rsa_fpr(commit), hex_str(voter_key, DIGEST_LEN));
 
   /* For a commit to be considered, it needs to be authoritative (it should
    * be the voter's own commit). */
-  if (!commit_is_authoritative(commit, voter_key)) {
+  if (! commit_is_authoritative(commit, voter_key)) {
     log_debug(LD_DIR, "SR: Ignoring non-authoritative commit.");
     goto ignore;
   }
@@ -616,8 +611,9 @@ should_keep_commit(const sr_commit_t *commit, const char *voter_key,
    * us. Even though this comes from a vote, doesn't hurt to be
    * extracareful. */
   if (trusteddirserver_get_by_v3_auth_digest(commit->rsa_identity) == NULL) {
-    log_warn(LD_DIR, "SR: Fingerprint %s is not from a recognized "
-                     "authority. Discarding commit.",
+    log_warn(LD_DIR,
+             "SR: Fingerprint %s is not from a recognized "
+             "authority. Discarding commit.",
              escaped(commit->rsa_identity));
     goto ignore;
   }
@@ -627,81 +623,84 @@ should_keep_commit(const sr_commit_t *commit, const char *voter_key,
   saved_commit = sr_state_get_commit(commit->rsa_identity);
 
   switch (phase) {
-  case SR_PHASE_COMMIT:
-    /* Already having a commit for an authority so ignore this one. */
-    if (saved_commit) {
-      /*  Receiving known commits should happen naturally since commit phase
-          lasts multiple rounds. However if the commitment value changes
-          during commit phase, it might be a bug so log more loudly. */
-      if (!commitments_are_the_same(commit, saved_commit)) {
-        log_info(LD_DIR,
-                 "SR: Received altered commit from %s in commit phase.",
-                 sr_commit_get_rsa_fpr(commit));
-      } else {
-        log_debug(LD_DIR, "SR: Ignoring known commit during commit phase.");
+    case SR_PHASE_COMMIT:
+      /* Already having a commit for an authority so ignore this one. */
+      if (saved_commit) {
+        /*  Receiving known commits should happen naturally since commit phase
+            lasts multiple rounds. However if the commitment value changes
+            during commit phase, it might be a bug so log more loudly. */
+        if (! commitments_are_the_same(commit, saved_commit)) {
+          log_info(LD_DIR,
+                   "SR: Received altered commit from %s in commit phase.",
+                   sr_commit_get_rsa_fpr(commit));
+        } else {
+          log_debug(LD_DIR, "SR: Ignoring known commit during commit phase.");
+        }
+        goto ignore;
       }
-      goto ignore;
-    }
 
-    /* A commit with a reveal value during commitment phase is very wrong. */
-    if (commit_has_reveal_value(commit)) {
-      log_warn(LD_DIR, "SR: Commit from authority %s has a reveal value "
-                       "during COMMIT phase. (voter: %s)",
-               sr_commit_get_rsa_fpr(commit),
-               hex_str(voter_key, DIGEST_LEN));
-      goto ignore;
-    }
-    break;
-  case SR_PHASE_REVEAL:
-    /* We are now in reveal phase. We keep a commit if and only if:
-     *
-     * - We have already seen a commit by this auth, AND
-     * - the saved commit has the same commitment value as this one, AND
-     * - the saved commit has no reveal information, AND
-     * - this commit does have reveal information, AND
-     * - the reveal & commit information are matching.
-     *
-     * If all the above are true, then we are interested in this new commit
-     * for its reveal information. */
+      /* A commit with a reveal value during commitment phase is very wrong. */
+      if (commit_has_reveal_value(commit)) {
+        log_warn(LD_DIR,
+                 "SR: Commit from authority %s has a reveal value "
+                 "during COMMIT phase. (voter: %s)",
+                 sr_commit_get_rsa_fpr(commit),
+                 hex_str(voter_key, DIGEST_LEN));
+        goto ignore;
+      }
+      break;
+    case SR_PHASE_REVEAL:
+      /* We are now in reveal phase. We keep a commit if and only if:
+       *
+       * - We have already seen a commit by this auth, AND
+       * - the saved commit has the same commitment value as this one, AND
+       * - the saved commit has no reveal information, AND
+       * - this commit does have reveal information, AND
+       * - the reveal & commit information are matching.
+       *
+       * If all the above are true, then we are interested in this new commit
+       * for its reveal information. */
 
-    if (!saved_commit) {
-      log_debug(LD_DIR, "SR: Ignoring commit first seen in reveal phase.");
-      goto ignore;
-    }
+      if (! saved_commit) {
+        log_debug(LD_DIR, "SR: Ignoring commit first seen in reveal phase.");
+        goto ignore;
+      }
 
-    if (!commitments_are_the_same(commit, saved_commit)) {
-      log_warn(LD_DIR, "SR: Commit from authority %s is different from "
-                       "previous commit in our state (voter: %s)",
-               sr_commit_get_rsa_fpr(commit),
-               hex_str(voter_key, DIGEST_LEN));
-      goto ignore;
-    }
+      if (! commitments_are_the_same(commit, saved_commit)) {
+        log_warn(LD_DIR,
+                 "SR: Commit from authority %s is different from "
+                 "previous commit in our state (voter: %s)",
+                 sr_commit_get_rsa_fpr(commit),
+                 hex_str(voter_key, DIGEST_LEN));
+        goto ignore;
+      }
 
-    if (commit_has_reveal_value(saved_commit)) {
-      log_debug(LD_DIR, "SR: Ignoring commit with known reveal info.");
-      goto ignore;
-    }
+      if (commit_has_reveal_value(saved_commit)) {
+        log_debug(LD_DIR, "SR: Ignoring commit with known reveal info.");
+        goto ignore;
+      }
 
-    if (!commit_has_reveal_value(commit)) {
-      log_debug(LD_DIR, "SR: Ignoring commit without reveal value.");
-      goto ignore;
-    }
+      if (! commit_has_reveal_value(commit)) {
+        log_debug(LD_DIR, "SR: Ignoring commit without reveal value.");
+        goto ignore;
+      }
 
-    if (verify_commit_and_reveal(commit) < 0) {
-      log_warn(LD_BUG, "SR: Commit from authority %s has an invalid "
-                       "reveal value. (voter: %s)",
-               sr_commit_get_rsa_fpr(commit),
-               hex_str(voter_key, DIGEST_LEN));
-      goto ignore;
-    }
-    break;
-  default:
-    tor_assert(0);
+      if (verify_commit_and_reveal(commit) < 0) {
+        log_warn(LD_BUG,
+                 "SR: Commit from authority %s has an invalid "
+                 "reveal value. (voter: %s)",
+                 sr_commit_get_rsa_fpr(commit),
+                 hex_str(voter_key, DIGEST_LEN));
+        goto ignore;
+      }
+      break;
+    default:
+      tor_assert(0);
   }
 
   return 1;
 
- ignore:
+ignore:
   return 0;
 }
 
@@ -738,16 +737,16 @@ save_commit_to_state(sr_commit_t *commit)
   ASSERT_COMMIT_VALID(commit);
 
   switch (phase) {
-  case SR_PHASE_COMMIT:
-    /* During commit phase, just save any new authoritative commit */
-    sr_state_add_commit(commit);
-    break;
-  case SR_PHASE_REVEAL:
-    save_commit_during_reveal_phase(commit);
-    sr_commit_free(commit);
-    break;
-  default:
-    tor_assert(0);
+    case SR_PHASE_COMMIT:
+      /* During commit phase, just save any new authoritative commit */
+      sr_state_add_commit(commit);
+      break;
+    case SR_PHASE_REVEAL:
+      save_commit_during_reveal_phase(commit);
+      sr_commit_free(commit);
+      break;
+    default:
+      tor_assert(0);
   }
 }
 
@@ -762,8 +761,8 @@ should_keep_srv(int n_agreements)
 
   /* We need at the very least majority to keep a value. */
   if (n_agreements < votes_required_for_majority) {
-    log_notice(LD_DIR, "SR: SRV didn't reach majority [%d/%d]!",
-               n_agreements, votes_required_for_majority);
+    log_notice(LD_DIR, "SR: SRV didn't reach majority [%d/%d]!", n_agreements,
+               votes_required_for_majority);
     return 0;
   }
 
@@ -802,8 +801,7 @@ static int
 compare_srv_(const void **_a, const void **_b)
 {
   const sr_srv_t *a = *_a, *b = *_b;
-  return fast_memcmp(a->value, b->value,
-                     sizeof(a->value));
+  return fast_memcmp(a->value, b->value, sizeof(a->value));
 }
 
 /** Using a list of <b>votes</b>, return the SRV object from them that has
@@ -824,30 +822,31 @@ get_majority_srv_from_votes(const smartlist_t *votes, int current)
   srv_list = smartlist_new();
 
   /* Walk over votes and register any SRVs found. */
-  SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
+  SMARTLIST_FOREACH_BEGIN (votes, networkstatus_t *, v) {
     sr_srv_t *srv_tmp = NULL;
 
-    if (!v->sr_info.participate) {
+    if (! v->sr_info.participate) {
       /* Ignore vote that do not participate. */
       continue;
     }
     /* Do we want previous or current SRV? */
     srv_tmp = current ? v->sr_info.current_srv : v->sr_info.previous_srv;
-    if (!srv_tmp) {
+    if (! srv_tmp) {
       continue;
     }
 
     smartlist_add(srv_list, srv_tmp);
-  } SMARTLIST_FOREACH_END(v);
+  }
+  SMARTLIST_FOREACH_END(v);
 
   smartlist_sort(srv_list, compare_srv_);
   most_frequent_srv = smartlist_get_most_frequent_srv(srv_list, &count);
-  if (!most_frequent_srv) {
+  if (! most_frequent_srv) {
     goto end;
   }
 
   /* Was this SRV voted by enough auths for us to keep it? */
-  if (!should_keep_srv(count)) {
+  if (! should_keep_srv(count)) {
     goto end;
   }
 
@@ -862,7 +861,7 @@ get_majority_srv_from_votes(const smartlist_t *votes, int current)
               count);
   }
 
- end:
+end:
   /* We do not free any sr_srv_t values, we don't have the ownership. */
   smartlist_free(srv_list);
   return the_srv;
@@ -899,8 +898,7 @@ sr_generate_our_commit(time_t timestamp, const authority_cert_t *my_rsa_cert)
   commit = commit_new(digest);
 
   /* Generate the reveal random value */
-  crypto_strongest_rand(commit->random_number,
-                        sizeof(commit->random_number));
+  crypto_strongest_rand(commit->random_number, sizeof(commit->random_number));
   commit->commit_ts = commit->reveal_ts = timestamp;
 
   /* Now get the base64 blob that corresponds to our reveal */
@@ -932,7 +930,7 @@ sr_generate_our_commit(time_t timestamp, const authority_cert_t *my_rsa_cert)
   commit->valid = 1;
   return commit;
 
- error:
+error:
   sr_commit_free(commit);
   return NULL;
 }
@@ -959,33 +957,36 @@ sr_compute_srv(void)
 
   /* We must make a list of commit ordered by authority fingerprint in
    * ascending order as specified by proposal 250. */
-  DIGESTMAP_FOREACH(state_commits, key, sr_commit_t *, c) {
+  DIGESTMAP_FOREACH (state_commits, key, sr_commit_t *, c) {
     /* Extra safety net, make sure we have valid commit before using it. */
     ASSERT_COMMIT_VALID(c);
     /* Let's not use a commit from an authority that we don't know. It's
      * possible that an authority could be removed during a protocol run so
      * that commit value should never be used in the SRV computation. */
     if (trusteddirserver_get_by_v3_auth_digest(c->rsa_identity) == NULL) {
-      log_warn(LD_DIR, "SR: Fingerprint %s is not from a recognized "
+      log_warn(LD_DIR,
+               "SR: Fingerprint %s is not from a recognized "
                "authority. Discarding commit for the SRV computation.",
                sr_commit_get_rsa_fpr(c));
       continue;
     }
     /* We consider this commit valid. */
     smartlist_add(commits, c);
-  } DIGESTMAP_FOREACH_END;
+  }
+  DIGESTMAP_FOREACH_END;
   smartlist_sort(commits, compare_reveal_);
 
   /* Now for each commit for that sorted list in ascending order, we'll
    * build the element for each authority that needs to go into the srv
    * computation. */
-  SMARTLIST_FOREACH_BEGIN(commits, const sr_commit_t *, c) {
+  SMARTLIST_FOREACH_BEGIN (commits, const sr_commit_t *, c) {
     char *element = get_srv_element_from_commit(c);
     if (element) {
       smartlist_add(chunks, element);
       reveal_num++;
     }
-  } SMARTLIST_FOREACH_END(c);
+  }
+  SMARTLIST_FOREACH_END(c);
   smartlist_free(commits);
 
   {
@@ -1000,14 +1001,14 @@ sr_compute_srv(void)
                          SR_DIGEST_ALG) < 0) {
       goto end;
     }
-    current_srv = generate_srv(hashed_reveals, reveal_num,
-                               sr_state_get_previous_srv());
+    current_srv =
+        generate_srv(hashed_reveals, reveal_num, sr_state_get_previous_srv());
     sr_state_set_current_srv(current_srv);
     /* We have a fresh SRV, flag our state. */
     sr_state_set_fresh_srv();
   }
 
- end:
+end:
   tor_free(reveals);
 }
 
@@ -1033,7 +1034,7 @@ sr_parse_commit(const smartlist_t *args)
   /* First is the version number of the SR protocol which indicates at which
    * version that commit was created. */
   value = smartlist_get(args, 0);
-  version = (uint32_t) tor_parse_ulong(value, 10, 1, UINT32_MAX, NULL, NULL);
+  version = (uint32_t)tor_parse_ulong(value, 10, 1, UINT32_MAX, NULL, NULL);
   if (version > SR_PROTO_VERSION) {
     log_info(LD_DIR, "SR: Commit version %" PRIu32 " (%s) is not supported.",
              version, escaped(value));
@@ -1052,8 +1053,8 @@ sr_parse_commit(const smartlist_t *args)
   /* Third argument is the RSA fingerprint of the auth and turn it into a
    * digest value. */
   rsa_identity_fpr = smartlist_get(args, 2);
-  if (base16_decode(digest, DIGEST_LEN, rsa_identity_fpr,
-                    HEX_DIGEST_LEN) < 0) {
+  if (base16_decode(digest, DIGEST_LEN, rsa_identity_fpr, HEX_DIGEST_LEN) <
+      0) {
     log_warn(LD_DIR, "SR: RSA fingerprint %s not decodable",
              escaped(rsa_identity_fpr));
     goto error;
@@ -1078,7 +1079,7 @@ sr_parse_commit(const smartlist_t *args)
 
   return commit;
 
- error:
+error:
   sr_commit_free(commit);
   return NULL;
 }
@@ -1104,12 +1105,11 @@ sr_handle_received_commits(smartlist_t *commits, crypto_pk_t *voter_key)
     return;
   }
 
-  SMARTLIST_FOREACH_BEGIN(commits, sr_commit_t *, commit) {
+  SMARTLIST_FOREACH_BEGIN (commits, sr_commit_t *, commit) {
     /* We won't need the commit in this list anymore, kept or not. */
     SMARTLIST_DEL_CURRENT(commits, commit);
     /* Check if this commit is valid and should be stored in our state. */
-    if (!should_keep_commit(commit, rsa_identity,
-                            sr_state_get_phase())) {
+    if (! should_keep_commit(commit, rsa_identity, sr_state_get_phase())) {
       sr_commit_free(commit);
       continue;
     }
@@ -1118,7 +1118,8 @@ sr_handle_received_commits(smartlist_t *commits, crypto_pk_t *voter_key)
     commit->valid = 1;
     /* Everything lines up: save this commit to state then! */
     save_commit_to_state(commit);
-  } SMARTLIST_FOREACH_END(commit);
+  }
+  SMARTLIST_FOREACH_END(commit);
 }
 
 /** Return a heap-allocated string containing commits that should be put in
@@ -1133,7 +1134,7 @@ sr_get_string_for_vote(void)
   const or_options_t *options = get_options();
 
   /* Are we participating in the protocol? */
-  if (!options->AuthDirSharedRandomness) {
+  if (! options->AuthDirSharedRandomness) {
     goto end;
   }
 
@@ -1149,10 +1150,11 @@ sr_get_string_for_vote(void)
   /* In our vote we include every commitment in our permanent state. */
   state_commits = sr_state_get_commits();
   smartlist_t *state_commit_vote_lines = smartlist_new();
-  DIGESTMAP_FOREACH(state_commits, key, const sr_commit_t *, commit) {
+  DIGESTMAP_FOREACH (state_commits, key, const sr_commit_t *, commit) {
     char *line = get_vote_line_from_commit(commit, sr_state_get_phase());
     smartlist_add(state_commit_vote_lines, line);
-  } DIGESTMAP_FOREACH_END;
+  }
+  DIGESTMAP_FOREACH_END;
 
   /* Sort the commit strings by version (string, not numeric), algorithm,
    * and fingerprint. This makes sure the commit lines in votes are in a
@@ -1172,7 +1174,7 @@ sr_get_string_for_vote(void)
     }
   }
 
- end:
+end:
   vote_str = smartlist_join_strings(chunks, "", 0, NULL);
   SMARTLIST_FOREACH(chunks, char *, s, tor_free(s));
   smartlist_free(chunks);
@@ -1200,7 +1202,7 @@ sr_get_string_for_consensus(const smartlist_t *votes,
   tor_assert(votes);
 
   /* Not participating, avoid returning anything. */
-  if (!options->AuthDirSharedRandomness) {
+  if (! options->AuthDirSharedRandomness) {
     log_info(LD_DIR, "SR: Support disabled (AuthDirSharedRandomness %d)",
              options->AuthDirSharedRandomness);
     goto end;
@@ -1214,12 +1216,12 @@ sr_get_string_for_consensus(const smartlist_t *votes,
   sr_srv_t *prev_srv = get_majority_srv_from_votes(votes, 0);
   sr_srv_t *cur_srv = get_majority_srv_from_votes(votes, 1);
   srv_str = get_ns_str_from_sr_values(prev_srv, cur_srv);
-  if (!srv_str) {
+  if (! srv_str) {
     goto end;
   }
 
   return srv_str;
- end:
+end:
   return NULL;
 }
 
@@ -1236,7 +1238,7 @@ sr_act_post_consensus(const networkstatus_t *consensus)
    * initialization of the SR subsystem. We also should not be doing
    * anything if we are _not_ a directory authority and if we are a bridge
    * authority. */
-  if (!sr_state_is_initialized() || !authdir_mode_v3(options) ||
+  if (! sr_state_is_initialized() || ! authdir_mode_v3(options) ||
       authdir_mode_bridge(options)) {
     return;
   }

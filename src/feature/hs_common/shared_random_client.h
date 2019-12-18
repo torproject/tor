@@ -45,4 +45,3 @@ time_t get_start_time_of_current_round(void);
 #endif /* TOR_UNIT_TESTS */
 
 #endif /* !defined(TOR_SHARED_RANDOM_CLIENT_H) */
-

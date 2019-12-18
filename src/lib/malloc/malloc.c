@@ -21,7 +21,7 @@
 #include "lib/err/torerr.h"
 
 #ifdef __clang_analyzer__
-#undef MALLOC_ZERO_WORKS
+#  undef MALLOC_ZERO_WORKS
 #endif
 
 /** Allocate a chunk of <b>size</b> bytes of memory, and return a pointer to
@@ -37,8 +37,8 @@ tor_malloc_(size_t size)
 
 #ifndef MALLOC_ZERO_WORKS
   /* Some libc mallocs don't work when size==0. Override them. */
-  if (size==0) {
-    size=1;
+  if (size == 0) {
+    size = 1;
   }
 #endif /* !defined(MALLOC_ZERO_WORKS) */
 
@@ -78,7 +78,7 @@ tor_malloc_zero_(size_t size)
  * 32 bits, then SIZE_MAX is 0xffffffff and this value is 0x10000.  If a and
  * b are less than this, then their product is at most (65535*65535) ==
  * 0xfffe0001. */
-#define SQRT_SIZE_MAX_P1 (((size_t)1) << (sizeof(size_t)*4))
+#define SQRT_SIZE_MAX_P1 (((size_t)1) << (sizeof(size_t) * 4))
 
 /** Return non-zero if and only if the product of the arguments is exact,
  * and cannot overflow. */
@@ -91,9 +91,7 @@ size_mul_check(const size_t x, const size_t y)
      Rationale: if either one of x or y is >= SQRT_SIZE_MAX_P1, then it
      will have some bit set in its most significant half.
    */
-  return ((x|y) < SQRT_SIZE_MAX_P1 ||
-          y == 0 ||
-          x <= SIZE_MAX / y);
+  return ((x | y) < SQRT_SIZE_MAX_P1 || y == 0 || x <= SIZE_MAX / y);
 }
 
 /** Allocate a chunk of <b>nmemb</b>*<b>size</b> bytes of memory, fill
@@ -123,8 +121,8 @@ tor_realloc_(void *ptr, size_t size)
 
 #ifndef MALLOC_ZERO_WORKS
   /* Some libc mallocs don't work when size==0. Override them. */
-  if (size==0) {
-    size=1;
+  if (size == 0) {
+    size = 1;
   }
 #endif /* !defined(MALLOC_ZERO_WORKS) */
 
@@ -184,13 +182,13 @@ tor_strndup_(const char *s, size_t n)
   char *duplicate;
   raw_assert(s);
   raw_assert(n < SIZE_T_CEILING);
-  duplicate = tor_malloc_((n+1));
+  duplicate = tor_malloc_((n + 1));
   /* Performance note: Ordinarily we prefer strlcpy to strncpy.  But
    * this function gets called a whole lot, and platform strncpy is
    * much faster than strlcpy when strlen(s) is much longer than n.
    */
   strncpy(duplicate, s, n);
-  duplicate[n]='\0';
+  duplicate[n] = '\0';
   return duplicate;
 }
 
@@ -213,9 +211,9 @@ void *
 tor_memdup_nulterm_(const void *mem, size_t len)
 {
   char *duplicate;
-  raw_assert(len < SIZE_T_CEILING+1);
+  raw_assert(len < SIZE_T_CEILING + 1);
   raw_assert(mem);
-  duplicate = tor_malloc_(len+1);
+  duplicate = tor_malloc_(len + 1);
   memcpy(duplicate, mem, len);
   duplicate[len] = '\0';
   return duplicate;

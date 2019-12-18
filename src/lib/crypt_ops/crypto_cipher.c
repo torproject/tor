@@ -26,14 +26,13 @@
  * The key is <b>bits</b> bits long; the IV is CIPHER_IV_LEN bytes.  Both
  * must be provided. Key length must be 128, 192, or 256 */
 crypto_cipher_t *
-crypto_cipher_new_with_iv_and_bits(const uint8_t *key,
-                                   const uint8_t *iv,
+crypto_cipher_new_with_iv_and_bits(const uint8_t *key, const uint8_t *iv,
                                    int bits)
 {
   tor_assert(key);
   tor_assert(iv);
 
-  return aes_new_cipher((const uint8_t*)key, (const uint8_t*)iv, bits);
+  return aes_new_cipher((const uint8_t *)key, (const uint8_t *)iv, bits);
 }
 
 /** Allocate and return a new symmetric cipher using the provided key and iv.
@@ -43,7 +42,7 @@ crypto_cipher_new_with_iv_and_bits(const uint8_t *key,
 crypto_cipher_t *
 crypto_cipher_new_with_iv(const char *key, const char *iv)
 {
-  return crypto_cipher_new_with_iv_and_bits((uint8_t*)key, (uint8_t*)iv,
+  return crypto_cipher_new_with_iv_and_bits((uint8_t *)key, (uint8_t *)iv,
                                             128);
 }
 
@@ -55,7 +54,7 @@ crypto_cipher_new_with_bits(const char *key, int bits)
 {
   char zeroiv[CIPHER_IV_LEN];
   memset(zeroiv, 0, sizeof(zeroiv));
-  return crypto_cipher_new_with_iv_and_bits((uint8_t*)key, (uint8_t*)zeroiv,
+  return crypto_cipher_new_with_iv_and_bits((uint8_t *)key, (uint8_t *)zeroiv,
                                             bits);
 }
 
@@ -72,7 +71,7 @@ crypto_cipher_new(const char *key)
 void
 crypto_cipher_free_(crypto_cipher_t *env)
 {
-  if (!env)
+  if (! env)
     return;
 
   aes_cipher_free(env);
@@ -85,8 +84,8 @@ crypto_cipher_free_(crypto_cipher_t *env)
  * Does not check for failure.
  */
 int
-crypto_cipher_encrypt(crypto_cipher_t *env, char *to,
-                      const char *from, size_t fromlen)
+crypto_cipher_encrypt(crypto_cipher_t *env, char *to, const char *from,
+                      size_t fromlen)
 {
   tor_assert(env);
   tor_assert(env);
@@ -105,8 +104,8 @@ crypto_cipher_encrypt(crypto_cipher_t *env, char *to,
  * Does not check for failure.
  */
 int
-crypto_cipher_decrypt(crypto_cipher_t *env, char *to,
-                      const char *from, size_t fromlen)
+crypto_cipher_decrypt(crypto_cipher_t *env, char *to, const char *from,
+                      size_t fromlen)
 {
   tor_assert(env);
   tor_assert(from);
@@ -135,8 +134,7 @@ crypto_cipher_crypt_inplace(crypto_cipher_t *env, char *buf, size_t len)
  * number of bytes written, on failure, return -1.
  */
 int
-crypto_cipher_encrypt_with_iv(const char *key,
-                              char *to, size_t tolen,
+crypto_cipher_encrypt_with_iv(const char *key, char *to, size_t tolen,
                               const char *from, size_t fromlen)
 {
   crypto_cipher_t *cipher;
@@ -154,7 +152,7 @@ crypto_cipher_encrypt_with_iv(const char *key,
   cipher = crypto_cipher_new_with_iv(key, iv);
 
   memcpy(to, iv, CIPHER_IV_LEN);
-  crypto_cipher_encrypt(cipher, to+CIPHER_IV_LEN, from, fromlen);
+  crypto_cipher_encrypt(cipher, to + CIPHER_IV_LEN, from, fromlen);
   crypto_cipher_free(cipher);
   memwipe(iv, 0, sizeof(iv));
   return (int)(fromlen + CIPHER_IV_LEN);
@@ -167,8 +165,7 @@ crypto_cipher_encrypt_with_iv(const char *key,
  * number of bytes written, on failure, return -1.
  */
 int
-crypto_cipher_decrypt_with_iv(const char *key,
-                              char *to, size_t tolen,
+crypto_cipher_decrypt_with_iv(const char *key, char *to, size_t tolen,
                               const char *from, size_t fromlen)
 {
   crypto_cipher_t *cipher;
@@ -184,7 +181,8 @@ crypto_cipher_decrypt_with_iv(const char *key,
 
   cipher = crypto_cipher_new_with_iv(key, from);
 
-  crypto_cipher_encrypt(cipher, to, from+CIPHER_IV_LEN, fromlen-CIPHER_IV_LEN);
+  crypto_cipher_encrypt(cipher, to, from + CIPHER_IV_LEN,
+                        fromlen - CIPHER_IV_LEN);
   crypto_cipher_free(cipher);
   return (int)(fromlen - CIPHER_IV_LEN);
 }

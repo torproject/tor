@@ -23,6 +23,6 @@ tor_add_u32_nowrap(uint32_t a, uint32_t b)
   if (PREDICT_UNLIKELY(a > UINT32_MAX - b)) {
     return UINT32_MAX;
   } else {
-    return a+b;
+    return a + b;
   }
 }

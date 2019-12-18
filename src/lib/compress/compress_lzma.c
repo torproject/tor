@@ -21,7 +21,7 @@
 #include "lib/thread/threads.h"
 
 #ifdef HAVE_LZMA
-#include <lzma.h>
+#  include <lzma.h>
 #endif
 
 /** The maximum amount of memory we allow the LZMA decoder to use, in bytes. */
@@ -38,9 +38,12 @@ memory_level(compression_level_t level)
   switch (level) {
     default:
     case BEST_COMPRESSION:
-    case HIGH_COMPRESSION: return 6;
-    case MEDIUM_COMPRESSION: return 4;
-    case LOW_COMPRESSION: return 2;
+    case HIGH_COMPRESSION:
+      return 6;
+    case MEDIUM_COMPRESSION:
+      return 4;
+    case LOW_COMPRESSION:
+      return 2;
   }
 }
 
@@ -148,7 +151,7 @@ tor_lzma_state_size_precalc(int compress, compression_level_t level)
   if (memory_usage == UINT64_MAX) {
     // LCOV_EXCL_START
     log_warn(LD_GENERAL, "Unsupported compression level passed to LZMA %s",
-                         compress ? "encoder" : "decoder");
+             compress ? "encoder" : "decoder");
     goto err;
     // LCOV_EXCL_STOP
   }
@@ -160,10 +163,10 @@ tor_lzma_state_size_precalc(int compress, compression_level_t level)
 
   return (size_t)memory_usage;
 
- // LCOV_EXCL_START
- err:
+// LCOV_EXCL_START
+err:
   return 0;
- // LCOV_EXCL_STOP
+  // LCOV_EXCL_STOP
 }
 #endif /* defined(HAVE_LZMA) */
 
@@ -171,8 +174,7 @@ tor_lzma_state_size_precalc(int compress, compression_level_t level)
  * <b>method</b>. If <b>compress</b>, it's for compression; otherwise it's for
  * decompression. */
 tor_lzma_compress_state_t *
-tor_lzma_compress_new(int compress,
-                      compress_method_t method,
+tor_lzma_compress_new(int compress, compress_method_t method,
                       compression_level_t level)
 {
   tor_assert(method == LZMA_METHOD);
@@ -216,11 +218,11 @@ tor_lzma_compress_new(int compress,
   atomic_counter_add(&total_lzma_allocation, result->allocation);
   return result;
 
- /* LCOV_EXCL_START */
- err:
+/* LCOV_EXCL_START */
+err:
   tor_free(result);
   return NULL;
- /* LCOV_EXCL_STOP */
+  /* LCOV_EXCL_STOP */
 #else /* !defined(HAVE_LZMA) */
   (void)compress;
   (void)method;
@@ -242,9 +244,8 @@ tor_lzma_compress_new(int compress,
  * Return TOR_COMPRESS_ERROR if the stream is corrupt.
  */
 tor_compress_output_t
-tor_lzma_compress_process(tor_lzma_compress_state_t *state,
-                          char **out, size_t *out_len,
-                          const char **in, size_t *in_len,
+tor_lzma_compress_process(tor_lzma_compress_state_t *state, char **out,
+                          size_t *out_len, const char **in, size_t *in_len,
                           int finish)
 {
 #ifdef HAVE_LZMA
@@ -272,9 +273,8 @@ tor_lzma_compress_process(tor_lzma_compress_state_t *state,
   *in = (const char *)state->stream.next_in;
   *in_len = state->stream.avail_in;
 
-  if (! state->compress &&
-      tor_compress_is_compression_bomb(state->input_so_far,
-                                       state->output_so_far)) {
+  if (! state->compress && tor_compress_is_compression_bomb(
+                               state->input_so_far, state->output_so_far)) {
     log_warn(LD_DIR, "Possible compression bomb; abandoning stream.");
     return TOR_COMPRESS_ERROR;
   }
@@ -287,7 +287,7 @@ tor_lzma_compress_process(tor_lzma_compress_state_t *state,
       return TOR_COMPRESS_OK;
 
     case LZMA_BUF_ERROR:
-      if (state->stream.avail_in == 0 && !finish)
+      if (state->stream.avail_in == 0 && ! finish)
         return TOR_COMPRESS_OK;
 
       return TOR_COMPRESS_BUFFER_FULL;

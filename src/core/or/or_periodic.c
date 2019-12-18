@@ -21,16 +21,14 @@
 #include "feature/relay/routermode.h"
 
 #ifndef COCCI
-#define DECLARE_EVENT(name, roles, flags)         \
-  static periodic_event_item_t name ## _event =   \
-    PERIODIC_EVENT(name,                          \
-                   PERIODIC_EVENT_ROLE_##roles,   \
-                   flags)
+#  define DECLARE_EVENT(name, roles, flags)     \
+    static periodic_event_item_t name##_event = \
+        PERIODIC_EVENT(name, PERIODIC_EVENT_ROLE_##roles, flags)
 #endif /* !defined(COCCI) */
 
-#define FL(name) (PERIODIC_EVENT_FLAG_ ## name)
+#define FL(name) (PERIODIC_EVENT_FLAG_##name)
 
-#define CHANNEL_CHECK_INTERVAL (60*60)
+#define CHANNEL_CHECK_INTERVAL (60 * 60)
 static int
 check_canonical_channels_callback(time_t now, const or_options_t *options)
 {

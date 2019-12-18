@@ -67,11 +67,11 @@
 #include "feature/nodelist/routerlist_st.h"
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
 #ifndef _WIN32
-#include <pwd.h>
+#  include <pwd.h>
 #endif
 
 static char *list_getinfo_options(void);
@@ -83,29 +83,29 @@ static int
 getinfo_helper_misc(control_connection_t *conn, const char *question,
                     char **answer, const char **errmsg)
 {
-  (void) conn;
-  if (!strcmp(question, "version")) {
+  (void)conn;
+  if (! strcmp(question, "version")) {
     *answer = tor_strdup(get_version());
-  } else if (!strcmp(question, "bw-event-cache")) {
+  } else if (! strcmp(question, "bw-event-cache")) {
     *answer = get_bw_samples();
-  } else if (!strcmp(question, "config-file")) {
+  } else if (! strcmp(question, "config-file")) {
     const char *a = get_torrc_fname(0);
     if (a)
       *answer = tor_strdup(a);
-  } else if (!strcmp(question, "config-defaults-file")) {
+  } else if (! strcmp(question, "config-defaults-file")) {
     const char *a = get_torrc_fname(1);
     if (a)
       *answer = tor_strdup(a);
-  } else if (!strcmp(question, "config-text")) {
+  } else if (! strcmp(question, "config-text")) {
     *answer = options_dump(get_options(), OPTIONS_DUMP_MINIMAL);
-  } else if (!strcmp(question, "config-can-saveconf")) {
+  } else if (! strcmp(question, "config-can-saveconf")) {
     *answer = tor_strdup(get_options()->IncludeUsed ? "0" : "1");
-  } else if (!strcmp(question, "info/names")) {
+  } else if (! strcmp(question, "info/names")) {
     *answer = list_getinfo_options();
-  } else if (!strcmp(question, "dormant")) {
+  } else if (! strcmp(question, "dormant")) {
     int dormant = rep_hist_circbuilding_dormant(time(NULL));
     *answer = tor_strdup(dormant ? "1" : "0");
-  } else if (!strcmp(question, "events/names")) {
+  } else if (! strcmp(question, "events/names")) {
     int i;
     smartlist_t *event_names = smartlist_new();
 
@@ -116,76 +116,75 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     *answer = smartlist_join_strings(event_names, " ", 0, NULL);
 
     smartlist_free(event_names);
-  } else if (!strcmp(question, "signal/names")) {
+  } else if (! strcmp(question, "signal/names")) {
     smartlist_t *signal_names = smartlist_new();
     int j;
     for (j = 0; signal_table[j].signal_name != NULL; ++j) {
-      smartlist_add(signal_names, (char*)signal_table[j].signal_name);
+      smartlist_add(signal_names, (char *)signal_table[j].signal_name);
     }
 
     *answer = smartlist_join_strings(signal_names, " ", 0, NULL);
 
     smartlist_free(signal_names);
-  } else if (!strcmp(question, "features/names")) {
+  } else if (! strcmp(question, "features/names")) {
     *answer = tor_strdup("VERBOSE_NAMES EXTENDED_EVENTS");
-  } else if (!strcmp(question, "address")) {
+  } else if (! strcmp(question, "address")) {
     uint32_t addr;
     if (router_pick_published_address(get_options(), &addr, 0) < 0) {
       *errmsg = "Address unknown";
       return -1;
     }
     *answer = tor_dup_ip(addr);
-  } else if (!strcmp(question, "traffic/read")) {
-    tor_asprintf(answer, "%"PRIu64, (get_bytes_read()));
-  } else if (!strcmp(question, "traffic/written")) {
-    tor_asprintf(answer, "%"PRIu64, (get_bytes_written()));
-  } else if (!strcmp(question, "uptime")) {
+  } else if (! strcmp(question, "traffic/read")) {
+    tor_asprintf(answer, "%" PRIu64, (get_bytes_read()));
+  } else if (! strcmp(question, "traffic/written")) {
+    tor_asprintf(answer, "%" PRIu64, (get_bytes_written()));
+  } else if (! strcmp(question, "uptime")) {
     long uptime_secs = get_uptime();
     tor_asprintf(answer, "%ld", uptime_secs);
-  } else if (!strcmp(question, "process/pid")) {
+  } else if (! strcmp(question, "process/pid")) {
     int myPid = -1;
 
 #ifdef _WIN32
-      myPid = _getpid();
+    myPid = _getpid();
 #else
-      myPid = getpid();
+    myPid = getpid();
 #endif
 
     tor_asprintf(answer, "%d", myPid);
-  } else if (!strcmp(question, "process/uid")) {
+  } else if (! strcmp(question, "process/uid")) {
 #ifdef _WIN32
-      *answer = tor_strdup("-1");
+    *answer = tor_strdup("-1");
 #else
-      int myUid = geteuid();
-      tor_asprintf(answer, "%d", myUid);
+    int myUid = geteuid();
+    tor_asprintf(answer, "%d", myUid);
 #endif /* defined(_WIN32) */
-  } else if (!strcmp(question, "process/user")) {
+  } else if (! strcmp(question, "process/user")) {
 #ifdef _WIN32
-      *answer = tor_strdup("");
+    *answer = tor_strdup("");
 #else
-      int myUid = geteuid();
-      const struct passwd *myPwEntry = tor_getpwuid(myUid);
+    int myUid = geteuid();
+    const struct passwd *myPwEntry = tor_getpwuid(myUid);
 
-      if (myPwEntry) {
-        *answer = tor_strdup(myPwEntry->pw_name);
-      } else {
-        *answer = tor_strdup("");
-      }
+    if (myPwEntry) {
+      *answer = tor_strdup(myPwEntry->pw_name);
+    } else {
+      *answer = tor_strdup("");
+    }
 #endif /* defined(_WIN32) */
-  } else if (!strcmp(question, "process/descriptor-limit")) {
+  } else if (! strcmp(question, "process/descriptor-limit")) {
     int max_fds = get_max_sockets();
     tor_asprintf(answer, "%d", max_fds);
-  } else if (!strcmp(question, "limits/max-mem-in-queues")) {
-    tor_asprintf(answer, "%"PRIu64,
-                 (get_options()->MaxMemInQueues));
-  } else if (!strcmp(question, "fingerprint")) {
+  } else if (! strcmp(question, "limits/max-mem-in-queues")) {
+    tor_asprintf(answer, "%" PRIu64, (get_options()->MaxMemInQueues));
+  } else if (! strcmp(question, "fingerprint")) {
     crypto_pk_t *server_key;
-    if (!server_mode(get_options())) {
+    if (! server_mode(get_options())) {
       *errmsg = "Not running in server mode";
       return -1;
     }
     server_key = get_server_identity_key();
-    *answer = tor_malloc(HEX_DIGEST_LEN+1);
+    *answer = tor_malloc(HEX_DIGEST_LEN + 1);
     crypto_pk_get_fingerprint(server_key, *answer, 0);
   }
   return 0;
@@ -211,33 +210,33 @@ munge_extrainfo_into_routerinfo(const char *ri_body,
   const char *ei_body = signed_descriptor_get_body(ei);
   size_t ri_len = ri->signed_descriptor_len;
   size_t ei_len = ei->signed_descriptor_len;
-  if (!ei_body)
+  if (! ei_body)
     goto bail;
 
-  outp = out = tor_malloc(ri_len+ei_len+1);
-  if (!(router_sig = tor_memstr(ri_body, ri_len, "\nrouter-signature")))
+  outp = out = tor_malloc(ri_len + ei_len + 1);
+  if (! (router_sig = tor_memstr(ri_body, ri_len, "\nrouter-signature")))
     goto bail;
   ++router_sig;
-  memcpy(out, ri_body, router_sig-ri_body);
-  outp += router_sig-ri_body;
+  memcpy(out, ri_body, router_sig - ri_body);
+  outp += router_sig - ri_body;
 
-  for (i=0; i < 2; ++i) {
+  for (i = 0; i < 2; ++i) {
     const char *kwd = i ? "\nwrite-history " : "\nread-history ";
     const char *cp, *eol;
-    if (!(cp = tor_memstr(ei_body, ei_len, kwd)))
+    if (! (cp = tor_memstr(ei_body, ei_len, kwd)))
       continue;
     ++cp;
-    if (!(eol = memchr(cp, '\n', ei_len - (cp-ei_body))))
+    if (! (eol = memchr(cp, '\n', ei_len - (cp - ei_body))))
       continue;
-    memcpy(outp, cp, eol-cp+1);
-    outp += eol-cp+1;
+    memcpy(outp, cp, eol - cp + 1);
+    outp += eol - cp + 1;
   }
-  memcpy(outp, router_sig, ri_len - (router_sig-ri_body));
+  memcpy(outp, router_sig, ri_len - (router_sig - ri_body));
   *outp++ = '\0';
-  tor_assert(outp-out < (int)(ri_len+ei_len+1));
+  tor_assert(outp - out < (int)(ri_len + ei_len + 1));
 
   return out;
- bail:
+bail:
   tor_free(out);
   return tor_strndup(ri_body, ri->signed_descriptor_len);
 }
@@ -246,8 +245,8 @@ munge_extrainfo_into_routerinfo(const char *ri_body,
  * which ports are bound. */
 static int
 getinfo_helper_listeners(control_connection_t *control_conn,
-                         const char *question,
-                         char **answer, const char **errmsg)
+                         const char *question, char **answer,
+                         const char **errmsg)
 {
   int type;
   smartlist_t *res;
@@ -255,33 +254,33 @@ getinfo_helper_listeners(control_connection_t *control_conn,
   (void)control_conn;
   (void)errmsg;
 
-  if (!strcmp(question, "net/listeners/or"))
+  if (! strcmp(question, "net/listeners/or"))
     type = CONN_TYPE_OR_LISTENER;
-  else if (!strcmp(question, "net/listeners/extor"))
+  else if (! strcmp(question, "net/listeners/extor"))
     type = CONN_TYPE_EXT_OR_LISTENER;
-  else if (!strcmp(question, "net/listeners/dir"))
+  else if (! strcmp(question, "net/listeners/dir"))
     type = CONN_TYPE_DIR_LISTENER;
-  else if (!strcmp(question, "net/listeners/socks"))
+  else if (! strcmp(question, "net/listeners/socks"))
     type = CONN_TYPE_AP_LISTENER;
-  else if (!strcmp(question, "net/listeners/trans"))
+  else if (! strcmp(question, "net/listeners/trans"))
     type = CONN_TYPE_AP_TRANS_LISTENER;
-  else if (!strcmp(question, "net/listeners/natd"))
+  else if (! strcmp(question, "net/listeners/natd"))
     type = CONN_TYPE_AP_NATD_LISTENER;
-  else if (!strcmp(question, "net/listeners/httptunnel"))
+  else if (! strcmp(question, "net/listeners/httptunnel"))
     type = CONN_TYPE_AP_HTTP_CONNECT_LISTENER;
-  else if (!strcmp(question, "net/listeners/dns"))
+  else if (! strcmp(question, "net/listeners/dns"))
     type = CONN_TYPE_AP_DNS_LISTENER;
-  else if (!strcmp(question, "net/listeners/control"))
+  else if (! strcmp(question, "net/listeners/control"))
     type = CONN_TYPE_CONTROL_LISTENER;
   else
     return 0; /* unknown key */
 
   res = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
+  SMARTLIST_FOREACH_BEGIN (get_connection_array(), connection_t *, conn) {
     struct sockaddr_storage ss;
     socklen_t ss_len = sizeof(ss);
 
-    if (conn->type != type || conn->marked_for_close || !SOCKET_OK(conn->s))
+    if (conn->type != type || conn->marked_for_close || ! SOCKET_OK(conn->s))
       continue;
 
     if (getsockname(conn->s, (struct sockaddr *)&ss, &ss_len) < 0) {
@@ -291,8 +290,8 @@ getinfo_helper_listeners(control_connection_t *control_conn,
       smartlist_add(res, esc_for_log(tmp));
       tor_free(tmp);
     }
-
-  } SMARTLIST_FOREACH_END(conn);
+  }
+  SMARTLIST_FOREACH_END(conn);
 
   *answer = smartlist_join_strings(res, " ", 0, NULL);
 
@@ -305,19 +304,19 @@ getinfo_helper_listeners(control_connection_t *control_conn,
  * the current time in both local and UTC forms. */
 STATIC int
 getinfo_helper_current_time(control_connection_t *control_conn,
-                         const char *question,
-                         char **answer, const char **errmsg)
+                            const char *question, char **answer,
+                            const char **errmsg)
 {
   (void)control_conn;
   (void)errmsg;
 
   struct timeval now;
   tor_gettimeofday(&now);
-  char timebuf[ISO_TIME_LEN+1];
+  char timebuf[ISO_TIME_LEN + 1];
 
-  if (!strcmp(question, "current-time/local"))
+  if (! strcmp(question, "current-time/local"))
     format_local_iso_time_nospace(timebuf, (time_t)now.tv_sec);
-  else if (!strcmp(question, "current-time/utc"))
+  else if (! strcmp(question, "current-time/utc"))
     format_iso_time_nospace(timebuf, (time_t)now.tv_sec);
   else
     return 0;
@@ -329,12 +328,11 @@ getinfo_helper_current_time(control_connection_t *control_conn,
 /** GETINFO helper for dumping different consensus flavors
  * returns: 0 on success -1 on error. */
 STATIC int
-getinfo_helper_current_consensus(consensus_flavor_t flavor,
-                                 char** answer,
-                                 const char** errmsg)
+getinfo_helper_current_consensus(consensus_flavor_t flavor, char **answer,
+                                 const char **errmsg)
 {
   const char *flavor_name = networkstatus_get_flavor_name(flavor);
-  if (BUG(!strcmp(flavor_name, "??"))) {
+  if (BUG(! strcmp(flavor_name, "??"))) {
     *errmsg = "Internal error: unrecognized flavor name.";
     return -1;
   }
@@ -345,16 +343,16 @@ getinfo_helper_current_consensus(consensus_flavor_t flavor,
       *answer = tor_strdup(consensus->dir);
     }
   }
-  if (!*answer) { /* try loading it from disk */
+  if (! *answer) { /* try loading it from disk */
 
     tor_mmap_t *mapped = networkstatus_map_cached_consensus(flavor_name);
     if (mapped) {
       *answer = tor_memdup_nulterm(mapped->data, mapped->size);
       tor_munmap_file(mapped);
     }
-    if (!*answer) { /* generate an error */
+    if (! *answer) { /* generate an error */
       *errmsg = "Could not open cached consensus. "
-        "Make sure FetchUselessDescriptors is set to 1.";
+                "Make sure FetchUselessDescriptors is set to 1.";
       return -1;
     }
   }
@@ -364,14 +362,13 @@ getinfo_helper_current_consensus(consensus_flavor_t flavor,
 /** Implementation helper for GETINFO: knows the answers for questions about
  * directory information. */
 STATIC int
-getinfo_helper_dir(control_connection_t *control_conn,
-                   const char *question, char **answer,
-                   const char **errmsg)
+getinfo_helper_dir(control_connection_t *control_conn, const char *question,
+                   char **answer, const char **errmsg)
 {
-  (void) control_conn;
-  if (!strcmpstart(question, "desc/id/")) {
+  (void)control_conn;
+  if (! strcmpstart(question, "desc/id/")) {
     const routerinfo_t *ri = NULL;
-    const node_t *node = node_get_by_hex_id(question+strlen("desc/id/"), 0);
+    const node_t *node = node_get_by_hex_id(question + strlen("desc/id/"), 0);
     if (node)
       ri = node->ri;
     if (ri) {
@@ -385,12 +382,12 @@ getinfo_helper_dir(control_connection_t *control_conn,
                 "instead of desc/id/*.";
       return 0;
     }
-  } else if (!strcmpstart(question, "desc/name/")) {
+  } else if (! strcmpstart(question, "desc/name/")) {
     const routerinfo_t *ri = NULL;
     /* XXX Setting 'warn_if_unnamed' here is a bit silly -- the
      * warning goes to the user, not to the controller. */
     const node_t *node =
-      node_get_by_nickname(question+strlen("desc/name/"), 0);
+        node_get_by_nickname(question + strlen("desc/name/"), 0);
     if (node)
       ri = node->ri;
     if (ri) {
@@ -404,46 +401,46 @@ getinfo_helper_dir(control_connection_t *control_conn,
                 "instead of desc/name/*.";
       return 0;
     }
-  } else if (!strcmp(question, "desc/download-enabled")) {
+  } else if (! strcmp(question, "desc/download-enabled")) {
     int r = we_fetch_router_descriptors(get_options());
-    tor_asprintf(answer, "%d", !!r);
-  } else if (!strcmp(question, "desc/all-recent")) {
+    tor_asprintf(answer, "%d", ! ! r);
+  } else if (! strcmp(question, "desc/all-recent")) {
     routerlist_t *routerlist = router_get_routerlist();
     smartlist_t *sl = smartlist_new();
     if (routerlist && routerlist->routers) {
-      SMARTLIST_FOREACH(routerlist->routers, const routerinfo_t *, ri,
-      {
+      SMARTLIST_FOREACH(routerlist->routers, const routerinfo_t *, ri, {
         const char *body = signed_descriptor_get_body(&ri->cache_info);
         if (body)
-          smartlist_add(sl,
-                  tor_strndup(body, ri->cache_info.signed_descriptor_len));
+          smartlist_add(
+              sl, tor_strndup(body, ri->cache_info.signed_descriptor_len));
       });
     }
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
-  } else if (!strcmp(question, "desc/all-recent-extrainfo-hack")) {
+  } else if (! strcmp(question, "desc/all-recent-extrainfo-hack")) {
     /* XXXX Remove this once Torstat asks for extrainfos. */
     routerlist_t *routerlist = router_get_routerlist();
     smartlist_t *sl = smartlist_new();
     if (routerlist && routerlist->routers) {
-      SMARTLIST_FOREACH_BEGIN(routerlist->routers, const routerinfo_t *, ri) {
+      SMARTLIST_FOREACH_BEGIN (routerlist->routers, const routerinfo_t *, ri) {
         const char *body = signed_descriptor_get_body(&ri->cache_info);
         signed_descriptor_t *ei = extrainfo_get_by_descriptor_digest(
-                                     ri->cache_info.extra_info_digest);
+            ri->cache_info.extra_info_digest);
         if (ei && body) {
-          smartlist_add(sl, munge_extrainfo_into_routerinfo(body,
-                                                        &ri->cache_info, ei));
+          smartlist_add(
+              sl, munge_extrainfo_into_routerinfo(body, &ri->cache_info, ei));
         } else if (body) {
-          smartlist_add(sl,
-                  tor_strndup(body, ri->cache_info.signed_descriptor_len));
+          smartlist_add(
+              sl, tor_strndup(body, ri->cache_info.signed_descriptor_len));
         }
-      } SMARTLIST_FOREACH_END(ri);
+      }
+      SMARTLIST_FOREACH_END(ri);
     }
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
-  } else if (!strcmpstart(question, "hs/client/desc/id/")) {
+  } else if (! strcmpstart(question, "hs/client/desc/id/")) {
     hostname_type_t addr_type;
 
     question += strlen("hs/client/desc/id/");
@@ -458,7 +455,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
 
     if (addr_type == ONION_V2_HOSTNAME) {
       rend_cache_entry_t *e = NULL;
-      if (!rend_cache_lookup_entry(question, -1, &e)) {
+      if (! rend_cache_lookup_entry(question, -1, &e)) {
         /* Descriptor found in cache */
         *answer = tor_strdup(e->desc);
       } else {
@@ -485,7 +482,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
         return -1;
       }
     }
-  } else if (!strcmpstart(question, "hs/service/desc/id/")) {
+  } else if (! strcmpstart(question, "hs/service/desc/id/")) {
     hostname_type_t addr_type;
 
     question += strlen("hs/service/desc/id/");
@@ -500,7 +497,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     rend_cache_entry_t *e = NULL;
 
     if (addr_type == ONION_V2_HOSTNAME) {
-      if (!rend_cache_lookup_v2_desc_as_service(question, &e)) {
+      if (! rend_cache_lookup_v2_desc_as_service(question, &e)) {
         /* Descriptor found in cache */
         *answer = tor_strdup(e->desc);
       } else {
@@ -528,7 +525,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
         return -1;
       }
     }
-  } else if (!strcmp(question, "md/all")) {
+  } else if (! strcmp(question, "md/all")) {
     const smartlist_t *nodes = nodelist_get_list();
     tor_assert(nodes);
 
@@ -539,57 +536,60 @@ getinfo_helper_dir(control_connection_t *control_conn,
 
     smartlist_t *microdescs = smartlist_new();
 
-    SMARTLIST_FOREACH_BEGIN(nodes, node_t *, n) {
+    SMARTLIST_FOREACH_BEGIN (nodes, node_t *, n) {
       if (n->md && n->md->body) {
         char *copy = tor_strndup(n->md->body, n->md->bodylen);
         smartlist_add(microdescs, copy);
       }
-    } SMARTLIST_FOREACH_END(n);
+    }
+    SMARTLIST_FOREACH_END(n);
 
     *answer = smartlist_join_strings(microdescs, "", 0, NULL);
     SMARTLIST_FOREACH(microdescs, char *, md, tor_free(md));
     smartlist_free(microdescs);
-  } else if (!strcmpstart(question, "md/id/")) {
-    const node_t *node = node_get_by_hex_id(question+strlen("md/id/"), 0);
+  } else if (! strcmpstart(question, "md/id/")) {
+    const node_t *node = node_get_by_hex_id(question + strlen("md/id/"), 0);
     const microdesc_t *md = NULL;
-    if (node) md = node->md;
+    if (node)
+      md = node->md;
     if (md && md->body) {
       *answer = tor_strndup(md->body, md->bodylen);
     }
-  } else if (!strcmpstart(question, "md/name/")) {
+  } else if (! strcmpstart(question, "md/name/")) {
     /* XXX Setting 'warn_if_unnamed' here is a bit silly -- the
      * warning goes to the user, not to the controller. */
-    const node_t *node = node_get_by_nickname(question+strlen("md/name/"), 0);
+    const node_t *node =
+        node_get_by_nickname(question + strlen("md/name/"), 0);
     /* XXXX duplicated code */
     const microdesc_t *md = NULL;
-    if (node) md = node->md;
+    if (node)
+      md = node->md;
     if (md && md->body) {
       *answer = tor_strndup(md->body, md->bodylen);
     }
-  } else if (!strcmp(question, "md/download-enabled")) {
+  } else if (! strcmp(question, "md/download-enabled")) {
     int r = we_fetch_microdescriptors(get_options());
-    tor_asprintf(answer, "%d", !!r);
-  } else if (!strcmpstart(question, "desc-annotations/id/")) {
+    tor_asprintf(answer, "%d", ! ! r);
+  } else if (! strcmpstart(question, "desc-annotations/id/")) {
     const routerinfo_t *ri = NULL;
     const node_t *node =
-      node_get_by_hex_id(question+strlen("desc-annotations/id/"), 0);
+        node_get_by_hex_id(question + strlen("desc-annotations/id/"), 0);
     if (node)
       ri = node->ri;
     if (ri) {
       const char *annotations =
-        signed_descriptor_get_annotations(&ri->cache_info);
+          signed_descriptor_get_annotations(&ri->cache_info);
       if (annotations)
-        *answer = tor_strndup(annotations,
-                              ri->cache_info.annotations_len);
+        *answer = tor_strndup(annotations, ri->cache_info.annotations_len);
     }
-  } else if (!strcmpstart(question, "dir/server/")) {
+  } else if (! strcmpstart(question, "dir/server/")) {
     size_t answer_len = 0;
     char *url = NULL;
     smartlist_t *descs = smartlist_new();
     const char *msg;
     int res;
     char *cp;
-    tor_asprintf(&url, "/tor/%s", question+4);
+    tor_asprintf(&url, "/tor/%s", question + 4);
     res = dirserv_get_routerdescs(descs, url, &msg);
     if (res) {
       log_warn(LD_CONTROL, "getinfo '%s': %s", question, msg);
@@ -600,50 +600,48 @@ getinfo_helper_dir(control_connection_t *control_conn,
     }
     SMARTLIST_FOREACH(descs, signed_descriptor_t *, sd,
                       answer_len += sd->signed_descriptor_len);
-    cp = *answer = tor_malloc(answer_len+1);
-    SMARTLIST_FOREACH(descs, signed_descriptor_t *, sd,
-                      {
-                        memcpy(cp, signed_descriptor_get_body(sd),
-                               sd->signed_descriptor_len);
-                        cp += sd->signed_descriptor_len;
-                      });
+    cp = *answer = tor_malloc(answer_len + 1);
+    SMARTLIST_FOREACH(descs, signed_descriptor_t *, sd, {
+      memcpy(cp, signed_descriptor_get_body(sd), sd->signed_descriptor_len);
+      cp += sd->signed_descriptor_len;
+    });
     *cp = '\0';
     tor_free(url);
     smartlist_free(descs);
-  } else if (!strcmpstart(question, "dir/status/")) {
+  } else if (! strcmpstart(question, "dir/status/")) {
     *answer = tor_strdup("");
-  } else if (!strcmp(question, "dir/status-vote/current/consensus")) {
-    int consensus_result = getinfo_helper_current_consensus(FLAV_NS,
-                                                            answer, errmsg);
+  } else if (! strcmp(question, "dir/status-vote/current/consensus")) {
+    int consensus_result =
+        getinfo_helper_current_consensus(FLAV_NS, answer, errmsg);
     if (consensus_result < 0) {
       return -1;
     }
-  } else if (!strcmp(question,
-                     "dir/status-vote/current/consensus-microdesc")) {
-    int consensus_result = getinfo_helper_current_consensus(FLAV_MICRODESC,
-                                                            answer, errmsg);
+  } else if (! strcmp(question,
+                      "dir/status-vote/current/consensus-microdesc")) {
+    int consensus_result =
+        getinfo_helper_current_consensus(FLAV_MICRODESC, answer, errmsg);
     if (consensus_result < 0) {
       return -1;
     }
-  } else if (!strcmp(question, "network-status")) { /* v1 */
+  } else if (! strcmp(question, "network-status")) { /* v1 */
     static int network_status_warned = 0;
-    if (!network_status_warned) {
+    if (! network_status_warned) {
       log_warn(LD_CONTROL, "GETINFO network-status is deprecated; it will "
-               "go away in a future version of Tor.");
+                           "go away in a future version of Tor.");
       network_status_warned = 1;
     }
     routerlist_t *routerlist = router_get_routerlist();
-    if (!routerlist || !routerlist->routers ||
+    if (! routerlist || ! routerlist->routers ||
         list_server_status_v1(routerlist->routers, answer, 1) < 0) {
       return -1;
     }
-  } else if (!strcmpstart(question, "extra-info/digest/")) {
+  } else if (! strcmpstart(question, "extra-info/digest/")) {
     question += strlen("extra-info/digest/");
     if (strlen(question) == HEX_DIGEST_LEN) {
       char d[DIGEST_LEN];
       signed_descriptor_t *sd = NULL;
-      if (base16_decode(d, sizeof(d), question, strlen(question))
-                        == sizeof(d)) {
+      if (base16_decode(d, sizeof(d), question, strlen(question)) ==
+          sizeof(d)) {
         /* XXXX this test should move into extrainfo_get_by_descriptor_digest,
          * but I don't want to risk affecting other parts of the code,
          * especially since the rules for using our own extrainfo (including
@@ -679,11 +677,12 @@ digest_list_to_string(const smartlist_t *sl)
   result = tor_malloc_zero(len);
 
   s = result;
-  SMARTLIST_FOREACH_BEGIN(sl, const char *, digest) {
+  SMARTLIST_FOREACH_BEGIN (sl, const char *, digest) {
     base16_encode(s, HEX_DIGEST_LEN + 1, digest, DIGEST_LEN);
     s[HEX_DIGEST_LEN] = '\n';
     s += HEX_DIGEST_LEN + 1;
-  } SMARTLIST_FOREACH_END(digest);
+  }
+  SMARTLIST_FOREACH_END(digest);
   *s = '\0';
 
   return result;
@@ -696,7 +695,7 @@ static char *
 download_status_to_string(const download_status_t *dl)
 {
   char *rv = NULL;
-  char tbuf[ISO_TIME_LEN+1];
+  char tbuf[ISO_TIME_LEN + 1];
   const char *schedule_str, *want_authority_str;
   const char *increment_on_str, *backoff_str;
 
@@ -756,15 +755,9 @@ download_status_to_string(const download_status_t *dl)
                  "backoff %s\n"
                  "last-backoff-position %u\n"
                  "last-delay-used %d\n",
-                 tbuf,
-                 dl->n_download_failures,
-                 dl->n_download_attempts,
-                 schedule_str,
-                 want_authority_str,
-                 increment_on_str,
-                 backoff_str,
-                 dl->last_backoff_position,
-                 dl->last_delay_used);
+                 tbuf, dl->n_download_failures, dl->n_download_attempts,
+                 schedule_str, want_authority_str, increment_on_str,
+                 backoff_str, dl->last_backoff_position, dl->last_delay_used);
   }
 
   return rv;
@@ -784,16 +777,16 @@ getinfo_helper_downloads_networkstatus(const char *flavor,
     *dl_to_emit = networkstatus_get_dl_status_by_flavor(FLAV_NS);
   } else if (strcmp(flavor, "ns/bootstrap") == 0) {
     *dl_to_emit = networkstatus_get_dl_status_by_flavor_bootstrap(FLAV_NS);
-  } else if (strcmp(flavor, "ns/running") == 0 ) {
+  } else if (strcmp(flavor, "ns/running") == 0) {
     *dl_to_emit = networkstatus_get_dl_status_by_flavor_running(FLAV_NS);
   } else if (strcmp(flavor, "microdesc") == 0) {
     *dl_to_emit = networkstatus_get_dl_status_by_flavor(FLAV_MICRODESC);
   } else if (strcmp(flavor, "microdesc/bootstrap") == 0) {
     *dl_to_emit =
-      networkstatus_get_dl_status_by_flavor_bootstrap(FLAV_MICRODESC);
+        networkstatus_get_dl_status_by_flavor_bootstrap(FLAV_MICRODESC);
   } else if (strcmp(flavor, "microdesc/running") == 0) {
     *dl_to_emit =
-      networkstatus_get_dl_status_by_flavor_running(FLAV_MICRODESC);
+        networkstatus_get_dl_status_by_flavor_running(FLAV_MICRODESC);
   } else {
     *errmsg = "Unknown flavor";
   }
@@ -803,8 +796,7 @@ getinfo_helper_downloads_networkstatus(const char *flavor,
 STATIC void
 getinfo_helper_downloads_cert(const char *fp_sk_req,
                               download_status_t **dl_to_emit,
-                              smartlist_t **digest_list,
-                              const char **errmsg)
+                              smartlist_t **digest_list, const char **errmsg)
 {
   const char *sk_req;
   char id_digest[DIGEST_LEN];
@@ -840,33 +832,33 @@ getinfo_helper_downloads_cert(const char *fp_sk_req,
 
   if (strcmp(fp_sk_req, "fps") == 0) {
     *digest_list = list_authority_ids_with_downloads();
-    if (!(*digest_list)) {
+    if (! (*digest_list)) {
       *errmsg = "Failed to get list of authority identity digests (!)";
     }
-  } else if (!strcmpstart(fp_sk_req, "fp/")) {
+  } else if (! strcmpstart(fp_sk_req, "fp/")) {
     fp_sk_req += strlen("fp/");
     /* Okay, look for another / to tell the fp from fp-sk cases */
     sk_req = strchr(fp_sk_req, '/');
     if (sk_req) {
       /* okay, split it here and try to parse <fp> */
-      if (base16_decode(id_digest, DIGEST_LEN,
-                        fp_sk_req, sk_req - fp_sk_req) == DIGEST_LEN) {
+      if (base16_decode(id_digest, DIGEST_LEN, fp_sk_req,
+                        sk_req - fp_sk_req) == DIGEST_LEN) {
         /* Skip past the '/' */
         ++sk_req;
         if (strcmp(sk_req, "sks") == 0) {
           /* We're asking for the list of signing key fingerprints */
           *digest_list = list_sk_digests_for_authority_id(id_digest);
-          if (!(*digest_list)) {
+          if (! (*digest_list)) {
             *errmsg = "Failed to get list of signing key digests for this "
                       "authority identity digest";
           }
         } else {
           /* We've got a signing key digest */
-          if (base16_decode(sk_digest, DIGEST_LEN,
-                            sk_req, strlen(sk_req)) == DIGEST_LEN) {
+          if (base16_decode(sk_digest, DIGEST_LEN, sk_req, strlen(sk_req)) ==
+              DIGEST_LEN) {
             *dl_to_emit =
-              download_status_for_authority_id_and_sk(id_digest, sk_digest);
-            if (!(*dl_to_emit)) {
+                download_status_for_authority_id_and_sk(id_digest, sk_digest);
+            if (! (*dl_to_emit)) {
               *errmsg = "Failed to get download status for this identity/"
                         "signing key digest pair";
             }
@@ -880,10 +872,10 @@ getinfo_helper_downloads_cert(const char *fp_sk_req,
     } else {
       /* We're either in downloads/certs/fp/<fp>, or we can't parse <fp> */
       if (strlen(fp_sk_req) == HEX_DIGEST_LEN) {
-        if (base16_decode(id_digest, DIGEST_LEN,
-                          fp_sk_req, strlen(fp_sk_req)) == DIGEST_LEN) {
+        if (base16_decode(id_digest, DIGEST_LEN, fp_sk_req,
+                          strlen(fp_sk_req)) == DIGEST_LEN) {
           *dl_to_emit = id_only_download_status_for_authority_id(id_digest);
-          if (!(*dl_to_emit)) {
+          if (! (*dl_to_emit)) {
             *errmsg = "Failed to get download status for this authority "
                       "identity digest";
           }
@@ -903,8 +895,7 @@ getinfo_helper_downloads_cert(const char *fp_sk_req,
 STATIC void
 getinfo_helper_downloads_desc(const char *desc_req,
                               download_status_t **dl_to_emit,
-                              smartlist_t **digest_list,
-                              const char **errmsg)
+                              smartlist_t **digest_list, const char **errmsg)
 {
   char desc_digest[DIGEST_LEN];
   /*
@@ -922,7 +913,7 @@ getinfo_helper_downloads_desc(const char *desc_req,
 
   if (strcmp(desc_req, "descs") == 0) {
     *digest_list = router_get_descriptor_digests();
-    if (!(*digest_list)) {
+    if (! (*digest_list)) {
       *errmsg = "We don't seem to have a networkstatus-flavored consensus";
     }
     /*
@@ -930,11 +921,11 @@ getinfo_helper_downloads_desc(const char *desc_req,
      * answer queries about their downloads here; see microdesc.c.
      */
   } else if (strlen(desc_req) == HEX_DIGEST_LEN) {
-    if (base16_decode(desc_digest, DIGEST_LEN,
-                      desc_req, strlen(desc_req)) == DIGEST_LEN) {
+    if (base16_decode(desc_digest, DIGEST_LEN, desc_req, strlen(desc_req)) ==
+        DIGEST_LEN) {
       /* Okay we got a digest-shaped thing; try asking for it */
       *dl_to_emit = router_get_dl_status_by_descriptor_digest(desc_digest);
-      if (!(*dl_to_emit)) {
+      if (! (*dl_to_emit)) {
         *errmsg = "No such descriptor digest found";
       }
     } else {
@@ -949,8 +940,7 @@ getinfo_helper_downloads_desc(const char *desc_req,
 STATIC void
 getinfo_helper_downloads_bridge(const char *bridge_req,
                                 download_status_t **dl_to_emit,
-                                smartlist_t **digest_list,
-                                const char **errmsg)
+                                smartlist_t **digest_list, const char **errmsg)
 {
   char bridge_digest[DIGEST_LEN];
   /*
@@ -968,15 +958,15 @@ getinfo_helper_downloads_bridge(const char *bridge_req,
 
   if (strcmp(bridge_req, "bridges") == 0) {
     *digest_list = list_bridge_identities();
-    if (!(*digest_list)) {
+    if (! (*digest_list)) {
       *errmsg = "We don't seem to be using bridges";
     }
   } else if (strlen(bridge_req) == HEX_DIGEST_LEN) {
-    if (base16_decode(bridge_digest, DIGEST_LEN,
-                      bridge_req, strlen(bridge_req)) == DIGEST_LEN) {
+    if (base16_decode(bridge_digest, DIGEST_LEN, bridge_req,
+                      strlen(bridge_req)) == DIGEST_LEN) {
       /* Okay we got a digest-shaped thing; try asking for it */
       *dl_to_emit = get_bridge_dl_status_by_id(bridge_digest);
-      if (!(*dl_to_emit)) {
+      if (! (*dl_to_emit)) {
         *errmsg = "No such bridge identity digest found";
       }
     } else {
@@ -991,8 +981,8 @@ getinfo_helper_downloads_bridge(const char *bridge_req,
  * download status information. */
 STATIC int
 getinfo_helper_downloads(control_connection_t *control_conn,
-                   const char *question, char **answer,
-                   const char **errmsg)
+                         const char *question, char **answer,
+                         const char **errmsg)
 {
   download_status_t *dl_to_emit = NULL;
   smartlist_t *digest_list = NULL;
@@ -1007,25 +997,21 @@ getinfo_helper_downloads(control_connection_t *control_conn,
   *errmsg = NULL;
 
   /* Are we after networkstatus downloads? */
-  if (!strcmpstart(question, "downloads/networkstatus/")) {
+  if (! strcmpstart(question, "downloads/networkstatus/")) {
     getinfo_helper_downloads_networkstatus(
-        question + strlen("downloads/networkstatus/"),
-        &dl_to_emit, errmsg);
-  /* Certificates? */
-  } else if (!strcmpstart(question, "downloads/cert/")) {
-    getinfo_helper_downloads_cert(
-        question + strlen("downloads/cert/"),
-        &dl_to_emit, &digest_list, errmsg);
-  /* Router descriptors? */
-  } else if (!strcmpstart(question, "downloads/desc/")) {
-    getinfo_helper_downloads_desc(
-        question + strlen("downloads/desc/"),
-        &dl_to_emit, &digest_list, errmsg);
-  /* Bridge descriptors? */
-  } else if (!strcmpstart(question, "downloads/bridge/")) {
-    getinfo_helper_downloads_bridge(
-        question + strlen("downloads/bridge/"),
-        &dl_to_emit, &digest_list, errmsg);
+        question + strlen("downloads/networkstatus/"), &dl_to_emit, errmsg);
+    /* Certificates? */
+  } else if (! strcmpstart(question, "downloads/cert/")) {
+    getinfo_helper_downloads_cert(question + strlen("downloads/cert/"),
+                                  &dl_to_emit, &digest_list, errmsg);
+    /* Router descriptors? */
+  } else if (! strcmpstart(question, "downloads/desc/")) {
+    getinfo_helper_downloads_desc(question + strlen("downloads/desc/"),
+                                  &dl_to_emit, &digest_list, errmsg);
+    /* Bridge descriptors? */
+  } else if (! strcmpstart(question, "downloads/bridge/")) {
+    getinfo_helper_downloads_bridge(question + strlen("downloads/bridge/"),
+                                    &dl_to_emit, &digest_list, errmsg);
   } else {
     *errmsg = "Unknown download status query";
   }
@@ -1041,7 +1027,7 @@ getinfo_helper_downloads(control_connection_t *control_conn,
 
     return 0;
   } else {
-    if (!(*errmsg)) {
+    if (! (*errmsg)) {
       *errmsg = "Unknown error";
     }
 
@@ -1052,15 +1038,14 @@ getinfo_helper_downloads(control_connection_t *control_conn,
 /** Implementation helper for GETINFO: knows how to generate summaries of the
  * current states of things we send events about. */
 static int
-getinfo_helper_events(control_connection_t *control_conn,
-                      const char *question, char **answer,
-                      const char **errmsg)
+getinfo_helper_events(control_connection_t *control_conn, const char *question,
+                      char **answer, const char **errmsg)
 {
   const or_options_t *options = get_options();
-  (void) control_conn;
-  if (!strcmp(question, "circuit-status")) {
+  (void)control_conn;
+  if (! strcmp(question, "circuit-status")) {
     smartlist_t *status = smartlist_new();
-    SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ_) {
+    SMARTLIST_FOREACH_BEGIN (circuit_get_global_list(), circuit_t *, circ_) {
       origin_circuit_t *circ;
       char *circdesc;
       const char *state;
@@ -1080,31 +1065,29 @@ getinfo_helper_events(control_connection_t *control_conn,
       circdesc = circuit_describe_status_for_controller(circ);
 
       smartlist_add_asprintf(status, "%lu %s%s%s",
-                   (unsigned long)circ->global_identifier,
-                   state, *circdesc ? " " : "", circdesc);
+                             (unsigned long)circ->global_identifier, state,
+                             *circdesc ? " " : "", circdesc);
       tor_free(circdesc);
     }
     SMARTLIST_FOREACH_END(circ_);
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
     smartlist_free(status);
-  } else if (!strcmp(question, "stream-status")) {
+  } else if (! strcmp(question, "stream-status")) {
     smartlist_t *conns = get_connection_array();
     smartlist_t *status = smartlist_new();
     char buf[256];
-    SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
+    SMARTLIST_FOREACH_BEGIN (conns, connection_t *, base_conn) {
       const char *state;
       entry_connection_t *conn;
       circuit_t *circ;
       origin_circuit_t *origin_circ = NULL;
-      if (base_conn->type != CONN_TYPE_AP ||
-          base_conn->marked_for_close ||
+      if (base_conn->type != CONN_TYPE_AP || base_conn->marked_for_close ||
           base_conn->state == AP_CONN_STATE_SOCKS_WAIT ||
           base_conn->state == AP_CONN_STATE_NATD_WAIT)
         continue;
       conn = TO_ENTRY_CONN(base_conn);
-      switch (base_conn->state)
-        {
+      switch (base_conn->state) {
         case AP_CONN_STATE_CONTROLLER_WAIT:
         case AP_CONN_STATE_CIRCUIT_WAIT:
           if (conn->socks_request &&
@@ -1115,33 +1098,37 @@ getinfo_helper_events(control_connection_t *control_conn,
           break;
         case AP_CONN_STATE_RENDDESC_WAIT:
         case AP_CONN_STATE_CONNECT_WAIT:
-          state = "SENTCONNECT"; break;
+          state = "SENTCONNECT";
+          break;
         case AP_CONN_STATE_RESOLVE_WAIT:
-          state = "SENTRESOLVE"; break;
+          state = "SENTRESOLVE";
+          break;
         case AP_CONN_STATE_OPEN:
-          state = "SUCCEEDED"; break;
+          state = "SUCCEEDED";
+          break;
         default:
           log_warn(LD_BUG, "Asked for stream in unknown state %d",
                    base_conn->state);
           continue;
-        }
+      }
       circ = circuit_get_by_edge_conn(ENTRY_TO_EDGE_CONN(conn));
       if (circ && CIRCUIT_IS_ORIGIN(circ))
         origin_circ = TO_ORIGIN_CIRCUIT(circ);
       write_stream_target_to_buf(conn, buf, sizeof(buf));
-      smartlist_add_asprintf(status, "%lu %s %lu %s",
-                   (unsigned long) base_conn->global_identifier,state,
-                   origin_circ?
-                         (unsigned long)origin_circ->global_identifier : 0ul,
-                   buf);
-    } SMARTLIST_FOREACH_END(base_conn);
+      smartlist_add_asprintf(
+          status, "%lu %s %lu %s", (unsigned long)base_conn->global_identifier,
+          state,
+          origin_circ ? (unsigned long)origin_circ->global_identifier : 0ul,
+          buf);
+    }
+    SMARTLIST_FOREACH_END(base_conn);
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
     smartlist_free(status);
-  } else if (!strcmp(question, "orconn-status")) {
+  } else if (! strcmp(question, "orconn-status")) {
     smartlist_t *conns = get_connection_array();
     smartlist_t *status = smartlist_new();
-    SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
+    SMARTLIST_FOREACH_BEGIN (conns, connection_t *, base_conn) {
       const char *state;
       char name[128];
       or_connection_t *conn;
@@ -1156,22 +1143,27 @@ getinfo_helper_events(control_connection_t *control_conn,
         state = "NEW";
       orconn_target_get_name(name, sizeof(name), conn);
       smartlist_add_asprintf(status, "%s %s", name, state);
-    } SMARTLIST_FOREACH_END(base_conn);
+    }
+    SMARTLIST_FOREACH_END(base_conn);
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
     smartlist_free(status);
-  } else if (!strcmpstart(question, "address-mappings/")) {
+  } else if (! strcmpstart(question, "address-mappings/")) {
     time_t min_e, max_e;
     smartlist_t *mappings;
     question += strlen("address-mappings/");
-    if (!strcmp(question, "all")) {
-      min_e = 0; max_e = TIME_MAX;
-    } else if (!strcmp(question, "cache")) {
-      min_e = 2; max_e = TIME_MAX;
-    } else if (!strcmp(question, "config")) {
-      min_e = 0; max_e = 0;
-    } else if (!strcmp(question, "control")) {
-      min_e = 1; max_e = 1;
+    if (! strcmp(question, "all")) {
+      min_e = 0;
+      max_e = TIME_MAX;
+    } else if (! strcmp(question, "cache")) {
+      min_e = 2;
+      max_e = TIME_MAX;
+    } else if (! strcmp(question, "config")) {
+      min_e = 0;
+      max_e = 0;
+    } else if (! strcmp(question, "control")) {
+      min_e = 1;
+      max_e = 1;
     } else {
       return 0;
     }
@@ -1180,33 +1172,33 @@ getinfo_helper_events(control_connection_t *control_conn,
     *answer = smartlist_join_strings(mappings, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
     smartlist_free(mappings);
-  } else if (!strcmpstart(question, "status/")) {
+  } else if (! strcmpstart(question, "status/")) {
     /* Note that status/ is not a catch-all for events; there's only supposed
      * to be a status GETINFO if there's a corresponding STATUS event. */
-    if (!strcmp(question, "status/circuit-established")) {
+    if (! strcmp(question, "status/circuit-established")) {
       *answer = tor_strdup(have_completed_a_circuit() ? "1" : "0");
-    } else if (!strcmp(question, "status/enough-dir-info")) {
+    } else if (! strcmp(question, "status/enough-dir-info")) {
       *answer = tor_strdup(router_have_minimum_dir_info() ? "1" : "0");
-    } else if (!strcmp(question, "status/good-server-descriptor") ||
-               !strcmp(question, "status/accepted-server-descriptor")) {
+    } else if (! strcmp(question, "status/good-server-descriptor") ||
+               ! strcmp(question, "status/accepted-server-descriptor")) {
       /* They're equivalent for now, until we can figure out how to make
        * good-server-descriptor be what we want. See comment in
        * control-spec.txt. */
-      *answer = tor_strdup(directories_have_accepted_server_descriptor()
-                           ? "1" : "0");
-    } else if (!strcmp(question, "status/reachability-succeeded/or")) {
-      *answer = tor_strdup(check_whether_orport_reachable(options) ?
-                            "1" : "0");
-    } else if (!strcmp(question, "status/reachability-succeeded/dir")) {
-      *answer = tor_strdup(check_whether_dirport_reachable(options) ?
-                            "1" : "0");
-    } else if (!strcmp(question, "status/reachability-succeeded")) {
+      *answer = tor_strdup(
+          directories_have_accepted_server_descriptor() ? "1" : "0");
+    } else if (! strcmp(question, "status/reachability-succeeded/or")) {
+      *answer =
+          tor_strdup(check_whether_orport_reachable(options) ? "1" : "0");
+    } else if (! strcmp(question, "status/reachability-succeeded/dir")) {
+      *answer =
+          tor_strdup(check_whether_dirport_reachable(options) ? "1" : "0");
+    } else if (! strcmp(question, "status/reachability-succeeded")) {
       tor_asprintf(answer, "OR=%d DIR=%d",
                    check_whether_orport_reachable(options) ? 1 : 0,
                    check_whether_dirport_reachable(options) ? 1 : 0);
-    } else if (!strcmp(question, "status/bootstrap-phase")) {
+    } else if (! strcmp(question, "status/bootstrap-phase")) {
       *answer = control_event_boot_last_msg();
-    } else if (!strcmpstart(question, "status/version/")) {
+    } else if (! strcmpstart(question, "status/version/")) {
       int is_server = server_mode(options);
       networkstatus_t *c = networkstatus_get_latest_consensus();
       version_status_t status;
@@ -1219,32 +1211,46 @@ getinfo_helper_events(control_connection_t *control_conn,
         status = VS_UNKNOWN;
       }
 
-      if (!strcmp(question, "status/version/recommended")) {
+      if (! strcmp(question, "status/version/recommended")) {
         *answer = tor_strdup(recommended);
         return 0;
       }
-      if (!strcmp(question, "status/version/current")) {
-        switch (status)
-          {
-          case VS_RECOMMENDED: *answer = tor_strdup("recommended"); break;
-          case VS_OLD: *answer = tor_strdup("obsolete"); break;
-          case VS_NEW: *answer = tor_strdup("new"); break;
-          case VS_NEW_IN_SERIES: *answer = tor_strdup("new in series"); break;
-          case VS_UNRECOMMENDED: *answer = tor_strdup("unrecommended"); break;
-          case VS_EMPTY: *answer = tor_strdup("none recommended"); break;
-          case VS_UNKNOWN: *answer = tor_strdup("unknown"); break;
-          default: tor_fragile_assert();
-          }
+      if (! strcmp(question, "status/version/current")) {
+        switch (status) {
+          case VS_RECOMMENDED:
+            *answer = tor_strdup("recommended");
+            break;
+          case VS_OLD:
+            *answer = tor_strdup("obsolete");
+            break;
+          case VS_NEW:
+            *answer = tor_strdup("new");
+            break;
+          case VS_NEW_IN_SERIES:
+            *answer = tor_strdup("new in series");
+            break;
+          case VS_UNRECOMMENDED:
+            *answer = tor_strdup("unrecommended");
+            break;
+          case VS_EMPTY:
+            *answer = tor_strdup("none recommended");
+            break;
+          case VS_UNKNOWN:
+            *answer = tor_strdup("unknown");
+            break;
+          default:
+            tor_fragile_assert();
+        }
       }
-    } else if (!strcmp(question, "status/clients-seen")) {
+    } else if (! strcmp(question, "status/clients-seen")) {
       char *bridge_stats = geoip_get_bridge_stats_controller(time(NULL));
-      if (!bridge_stats) {
+      if (! bridge_stats) {
         *errmsg = "No bridge-client stats available";
         return -1;
       }
       *answer = bridge_stats;
-    } else if (!strcmp(question, "status/fresh-relay-descs")) {
-      if (!server_mode(options)) {
+    } else if (! strcmp(question, "status/fresh-relay-descs")) {
+      if (! server_mode(options)) {
         *errmsg = "Only relays have descriptors";
         return -1;
       }
@@ -1293,21 +1299,20 @@ getinfo_helper_events(control_connection_t *control_conn,
 /** Implementation helper for GETINFO: knows how to enumerate hidden services
  * created via the control port. */
 STATIC int
-getinfo_helper_onions(control_connection_t *control_conn,
-                      const char *question, char **answer,
-                      const char **errmsg)
+getinfo_helper_onions(control_connection_t *control_conn, const char *question,
+                      char **answer, const char **errmsg)
 {
   smartlist_t *onion_list = NULL;
-  (void) errmsg;  /* no errors from this method */
+  (void)errmsg; /* no errors from this method */
 
-  if (control_conn && !strcmp(question, "onions/current")) {
+  if (control_conn && ! strcmp(question, "onions/current")) {
     onion_list = control_conn->ephemeral_onion_services;
-  } else if (!strcmp(question, "onions/detached")) {
+  } else if (! strcmp(question, "onions/detached")) {
     onion_list = get_detached_onion_services();
   } else {
     return 0;
   }
-  if (!onion_list || smartlist_len(onion_list) == 0) {
+  if (! onion_list || smartlist_len(onion_list) == 0) {
     if (answer) {
       *answer = tor_strdup("");
     }
@@ -1324,8 +1329,8 @@ getinfo_helper_onions(control_connection_t *control_conn,
  * liveness. */
 static int
 getinfo_helper_liveness(control_connection_t *control_conn,
-                      const char *question, char **answer,
-                      const char **errmsg)
+                        const char *question, char **answer,
+                        const char **errmsg)
 {
   (void)control_conn;
   (void)errmsg;
@@ -1343,16 +1348,15 @@ getinfo_helper_liveness(control_connection_t *control_conn,
 /** Implementation helper for GETINFO: answers queries about shared random
  * value. */
 static int
-getinfo_helper_sr(control_connection_t *control_conn,
-                  const char *question, char **answer,
-                  const char **errmsg)
+getinfo_helper_sr(control_connection_t *control_conn, const char *question,
+                  char **answer, const char **errmsg)
 {
-  (void) control_conn;
-  (void) errmsg;
+  (void)control_conn;
+  (void)errmsg;
 
-  if (!strcmp(question, "sr/current")) {
+  if (! strcmp(question, "sr/current")) {
     *answer = sr_get_current_for_control();
-  } else if (!strcmp(question, "sr/previous")) {
+  } else if (! strcmp(question, "sr/previous")) {
     *answer = sr_get_previous_for_control();
   }
   /* Else statement here is unrecognized key so do nothing. */
@@ -1368,9 +1372,8 @@ getinfo_helper_sr(control_connection_t *control_conn,
  * set <b>a</b> if the key is not recognized but you may set <b>error_out</b>
  * to improve the error message.
  */
-typedef int (*getinfo_helper_t)(control_connection_t *,
-                                const char *q, char **a,
-                                const char **error_out);
+typedef int (*getinfo_helper_t)(control_connection_t *, const char *q,
+                                char **a, const char **error_out);
 
 /** A single item for the GETINFO question-to-answer-function table. */
 typedef struct getinfo_item_t {
@@ -1381,191 +1384,207 @@ typedef struct getinfo_item_t {
   int is_prefix; /** Must varname match exactly, or must it be a prefix? */
 } getinfo_item_t;
 
-#define ITEM(name, fn, desc) { name, getinfo_helper_##fn, desc, 0 }
-#define PREFIX(name, fn, desc) { name, getinfo_helper_##fn, desc, 1 }
-#define DOC(name, desc) { name, NULL, desc, 0 }
+#define ITEM(name, fn, desc)           \
+  {                                    \
+    name, getinfo_helper_##fn, desc, 0 \
+  }
+#define PREFIX(name, fn, desc)         \
+  {                                    \
+    name, getinfo_helper_##fn, desc, 1 \
+  }
+#define DOC(name, desc) \
+  {                     \
+    name, NULL, desc, 0 \
+  }
 
 /** Table mapping questions accepted by GETINFO to the functions that know how
  * to answer them. */
 static const getinfo_item_t getinfo_items[] = {
-  ITEM("version", misc, "The current version of Tor."),
-  ITEM("bw-event-cache", misc, "Cached BW events for a short interval."),
-  ITEM("config-file", misc, "Current location of the \"torrc\" file."),
-  ITEM("config-defaults-file", misc, "Current location of the defaults file."),
-  ITEM("config-text", misc,
-       "Return the string that would be written by a saveconf command."),
-  ITEM("config-can-saveconf", misc,
-       "Is it possible to save the configuration to the \"torrc\" file?"),
-  ITEM("accounting/bytes", accounting,
-       "Number of bytes read/written so far in the accounting interval."),
-  ITEM("accounting/bytes-left", accounting,
-      "Number of bytes left to write/read so far in the accounting interval."),
-  ITEM("accounting/enabled", accounting, "Is accounting currently enabled?"),
-  ITEM("accounting/hibernating", accounting, "Are we hibernating or awake?"),
-  ITEM("accounting/interval-start", accounting,
-       "Time when the accounting period starts."),
-  ITEM("accounting/interval-end", accounting,
-       "Time when the accounting period ends."),
-  ITEM("accounting/interval-wake", accounting,
-       "Time to wake up in this accounting period."),
-  ITEM("helper-nodes", entry_guards, NULL), /* deprecated */
-  ITEM("entry-guards", entry_guards,
-       "Which nodes are we using as entry guards?"),
-  ITEM("fingerprint", misc, NULL),
-  PREFIX("config/", config, "Current configuration values."),
-  DOC("config/names",
-      "List of configuration options, types, and documentation."),
-  DOC("config/defaults",
-      "List of default values for configuration options. "
-      "See also config/names"),
-  PREFIX("current-time/", current_time, "Current time."),
-  DOC("current-time/local", "Current time on the local system."),
-  DOC("current-time/utc", "Current UTC time."),
-  PREFIX("downloads/networkstatus/", downloads,
-         "Download statuses for networkstatus objects"),
-  DOC("downloads/networkstatus/ns",
-      "Download status for current-mode networkstatus download"),
-  DOC("downloads/networkstatus/ns/bootstrap",
-      "Download status for bootstrap-time networkstatus download"),
-  DOC("downloads/networkstatus/ns/running",
-      "Download status for run-time networkstatus download"),
-  DOC("downloads/networkstatus/microdesc",
-      "Download status for current-mode microdesc download"),
-  DOC("downloads/networkstatus/microdesc/bootstrap",
-      "Download status for bootstrap-time microdesc download"),
-  DOC("downloads/networkstatus/microdesc/running",
-      "Download status for run-time microdesc download"),
-  PREFIX("downloads/cert/", downloads,
-         "Download statuses for certificates, by id fingerprint and "
-         "signing key"),
-  DOC("downloads/cert/fps",
-      "List of authority fingerprints for which any download statuses "
-      "exist"),
-  DOC("downloads/cert/fp/<fp>",
-      "Download status for <fp> with the default signing key; corresponds "
-      "to /fp/ URLs on directory server."),
-  DOC("downloads/cert/fp/<fp>/sks",
-      "List of signing keys for which specific download statuses are "
-      "available for this id fingerprint"),
-  DOC("downloads/cert/fp/<fp>/<sk>",
-      "Download status for <fp> with signing key <sk>; corresponds "
-      "to /fp-sk/ URLs on directory server."),
-  PREFIX("downloads/desc/", downloads,
-         "Download statuses for router descriptors, by descriptor digest"),
-  DOC("downloads/desc/descs",
-      "Return a list of known router descriptor digests"),
-  DOC("downloads/desc/<desc>",
-      "Return a download status for a given descriptor digest"),
-  PREFIX("downloads/bridge/", downloads,
-         "Download statuses for bridge descriptors, by bridge identity "
-         "digest"),
-  DOC("downloads/bridge/bridges",
-      "Return a list of configured bridge identity digests with download "
-      "statuses"),
-  DOC("downloads/bridge/<desc>",
-      "Return a download status for a given bridge identity digest"),
-  ITEM("info/names", misc,
-       "List of GETINFO options, types, and documentation."),
-  ITEM("events/names", misc,
-       "Events that the controller can ask for with SETEVENTS."),
-  ITEM("signal/names", misc, "Signal names recognized by the SIGNAL command"),
-  ITEM("features/names", misc, "What arguments can USEFEATURE take?"),
-  PREFIX("desc/id/", dir, "Router descriptors by ID."),
-  PREFIX("desc/name/", dir, "Router descriptors by nickname."),
-  ITEM("desc/all-recent", dir,
-       "All non-expired, non-superseded router descriptors."),
-  ITEM("desc/download-enabled", dir,
-       "Do we try to download router descriptors?"),
-  ITEM("desc/all-recent-extrainfo-hack", dir, NULL), /* Hack. */
-  ITEM("md/all", dir, "All known microdescriptors."),
-  PREFIX("md/id/", dir, "Microdescriptors by ID"),
-  PREFIX("md/name/", dir, "Microdescriptors by name"),
-  ITEM("md/download-enabled", dir,
-       "Do we try to download microdescriptors?"),
-  PREFIX("extra-info/digest/", dir, "Extra-info documents by digest."),
-  PREFIX("hs/client/desc/id", dir,
-         "Hidden Service descriptor in client's cache by onion."),
-  PREFIX("hs/service/desc/id/", dir,
-         "Hidden Service descriptor in services's cache by onion."),
-  PREFIX("net/listeners/", listeners, "Bound addresses by type"),
-  ITEM("ns/all", networkstatus,
-       "Brief summary of router status (v2 directory format)"),
-  PREFIX("ns/id/", networkstatus,
-         "Brief summary of router status by ID (v2 directory format)."),
-  PREFIX("ns/name/", networkstatus,
-         "Brief summary of router status by nickname (v2 directory format)."),
-  PREFIX("ns/purpose/", networkstatus,
-         "Brief summary of router status by purpose (v2 directory format)."),
-  PREFIX("consensus/", networkstatus,
-         "Information about and from the ns consensus."),
-  ITEM("network-status", dir,
-       "Brief summary of router status (v1 directory format)"),
-  ITEM("network-liveness", liveness,
-       "Current opinion on whether the network is live"),
-  ITEM("circuit-status", events, "List of current circuits originating here."),
-  ITEM("stream-status", events,"List of current streams."),
-  ITEM("orconn-status", events, "A list of current OR connections."),
-  ITEM("dormant", misc,
-       "Is Tor dormant (not building circuits because it's idle)?"),
-  PREFIX("address-mappings/", events, NULL),
-  DOC("address-mappings/all", "Current address mappings."),
-  DOC("address-mappings/cache", "Current cached DNS replies."),
-  DOC("address-mappings/config",
-      "Current address mappings from configuration."),
-  DOC("address-mappings/control", "Current address mappings from controller."),
-  PREFIX("status/", events, NULL),
-  DOC("status/circuit-established",
-      "Whether we think client functionality is working."),
-  DOC("status/enough-dir-info",
-      "Whether we have enough up-to-date directory information to build "
-      "circuits."),
-  DOC("status/bootstrap-phase",
-      "The last bootstrap phase status event that Tor sent."),
-  DOC("status/clients-seen",
-      "Breakdown of client countries seen by a bridge."),
-  DOC("status/fresh-relay-descs",
-      "A fresh relay/ei descriptor pair for Tor's current state. Not stored."),
-  DOC("status/version/recommended", "List of currently recommended versions."),
-  DOC("status/version/current", "Status of the current version."),
-  ITEM("address", misc, "IP address of this Tor host, if we can guess it."),
-  ITEM("traffic/read", misc,"Bytes read since the process was started."),
-  ITEM("traffic/written", misc,
-       "Bytes written since the process was started."),
-  ITEM("uptime", misc, "Uptime of the Tor daemon in seconds."),
-  ITEM("process/pid", misc, "Process id belonging to the main tor process."),
-  ITEM("process/uid", misc, "User id running the tor process."),
-  ITEM("process/user", misc,
-       "Username under which the tor process is running."),
-  ITEM("process/descriptor-limit", misc, "File descriptor limit."),
-  ITEM("limits/max-mem-in-queues", misc, "Actual limit on memory in queues"),
-  PREFIX("desc-annotations/id/", dir, "Router annotations by hexdigest."),
-  PREFIX("dir/server/", dir,"Router descriptors as retrieved from a DirPort."),
-  PREFIX("dir/status/", dir,
-         "v2 networkstatus docs as retrieved from a DirPort."),
-  ITEM("dir/status-vote/current/consensus", dir,
-       "v3 Networkstatus consensus as retrieved from a DirPort."),
-  ITEM("dir/status-vote/current/consensus-microdesc", dir,
-       "v3 Microdescriptor consensus as retrieved from a DirPort."),
-  ITEM("exit-policy/default", policies,
-       "The default value appended to the configured exit policy."),
-  ITEM("exit-policy/reject-private/default", policies,
-       "The default rules appended to the configured exit policy by"
-       " ExitPolicyRejectPrivate."),
-  ITEM("exit-policy/reject-private/relay", policies,
-       "The relay-specific rules appended to the configured exit policy by"
-       " ExitPolicyRejectPrivate and/or ExitPolicyRejectLocalInterfaces."),
-  ITEM("exit-policy/full", policies, "The entire exit policy of onion router"),
-  ITEM("exit-policy/ipv4", policies, "IPv4 parts of exit policy"),
-  ITEM("exit-policy/ipv6", policies, "IPv6 parts of exit policy"),
-  PREFIX("ip-to-country/", geoip, "Perform a GEOIP lookup"),
-  ITEM("onions/current", onions,
-       "Onion services owned by the current control connection."),
-  ITEM("onions/detached", onions,
-       "Onion services detached from the control connection."),
-  ITEM("sr/current", sr, "Get current shared random value."),
-  ITEM("sr/previous", sr, "Get previous shared random value."),
-  { NULL, NULL, NULL, 0 }
-};
+    ITEM("version", misc, "The current version of Tor."),
+    ITEM("bw-event-cache", misc, "Cached BW events for a short interval."),
+    ITEM("config-file", misc, "Current location of the \"torrc\" file."),
+    ITEM("config-defaults-file", misc,
+         "Current location of the defaults file."),
+    ITEM("config-text", misc,
+         "Return the string that would be written by a saveconf command."),
+    ITEM("config-can-saveconf", misc,
+         "Is it possible to save the configuration to the \"torrc\" file?"),
+    ITEM("accounting/bytes", accounting,
+         "Number of bytes read/written so far in the accounting interval."),
+    ITEM("accounting/bytes-left", accounting,
+         "Number of bytes left to write/read so far in the accounting "
+         "interval."),
+    ITEM("accounting/enabled", accounting, "Is accounting currently enabled?"),
+    ITEM("accounting/hibernating", accounting, "Are we hibernating or awake?"),
+    ITEM("accounting/interval-start", accounting,
+         "Time when the accounting period starts."),
+    ITEM("accounting/interval-end", accounting,
+         "Time when the accounting period ends."),
+    ITEM("accounting/interval-wake", accounting,
+         "Time to wake up in this accounting period."),
+    ITEM("helper-nodes", entry_guards, NULL), /* deprecated */
+    ITEM("entry-guards", entry_guards,
+         "Which nodes are we using as entry guards?"),
+    ITEM("fingerprint", misc, NULL),
+    PREFIX("config/", config, "Current configuration values."),
+    DOC("config/names",
+        "List of configuration options, types, and documentation."),
+    DOC("config/defaults", "List of default values for configuration options. "
+                           "See also config/names"),
+    PREFIX("current-time/", current_time, "Current time."),
+    DOC("current-time/local", "Current time on the local system."),
+    DOC("current-time/utc", "Current UTC time."),
+    PREFIX("downloads/networkstatus/", downloads,
+           "Download statuses for networkstatus objects"),
+    DOC("downloads/networkstatus/ns",
+        "Download status for current-mode networkstatus download"),
+    DOC("downloads/networkstatus/ns/bootstrap",
+        "Download status for bootstrap-time networkstatus download"),
+    DOC("downloads/networkstatus/ns/running",
+        "Download status for run-time networkstatus download"),
+    DOC("downloads/networkstatus/microdesc",
+        "Download status for current-mode microdesc download"),
+    DOC("downloads/networkstatus/microdesc/bootstrap",
+        "Download status for bootstrap-time microdesc download"),
+    DOC("downloads/networkstatus/microdesc/running",
+        "Download status for run-time microdesc download"),
+    PREFIX("downloads/cert/", downloads,
+           "Download statuses for certificates, by id fingerprint and "
+           "signing key"),
+    DOC("downloads/cert/fps",
+        "List of authority fingerprints for which any download statuses "
+        "exist"),
+    DOC("downloads/cert/fp/<fp>",
+        "Download status for <fp> with the default signing key; corresponds "
+        "to /fp/ URLs on directory server."),
+    DOC("downloads/cert/fp/<fp>/sks",
+        "List of signing keys for which specific download statuses are "
+        "available for this id fingerprint"),
+    DOC("downloads/cert/fp/<fp>/<sk>",
+        "Download status for <fp> with signing key <sk>; corresponds "
+        "to /fp-sk/ URLs on directory server."),
+    PREFIX("downloads/desc/", downloads,
+           "Download statuses for router descriptors, by descriptor digest"),
+    DOC("downloads/desc/descs",
+        "Return a list of known router descriptor digests"),
+    DOC("downloads/desc/<desc>",
+        "Return a download status for a given descriptor digest"),
+    PREFIX("downloads/bridge/", downloads,
+           "Download statuses for bridge descriptors, by bridge identity "
+           "digest"),
+    DOC("downloads/bridge/bridges",
+        "Return a list of configured bridge identity digests with download "
+        "statuses"),
+    DOC("downloads/bridge/<desc>",
+        "Return a download status for a given bridge identity digest"),
+    ITEM("info/names", misc,
+         "List of GETINFO options, types, and documentation."),
+    ITEM("events/names", misc,
+         "Events that the controller can ask for with SETEVENTS."),
+    ITEM("signal/names", misc,
+         "Signal names recognized by the SIGNAL command"),
+    ITEM("features/names", misc, "What arguments can USEFEATURE take?"),
+    PREFIX("desc/id/", dir, "Router descriptors by ID."),
+    PREFIX("desc/name/", dir, "Router descriptors by nickname."),
+    ITEM("desc/all-recent", dir,
+         "All non-expired, non-superseded router descriptors."),
+    ITEM("desc/download-enabled", dir,
+         "Do we try to download router descriptors?"),
+    ITEM("desc/all-recent-extrainfo-hack", dir, NULL), /* Hack. */
+    ITEM("md/all", dir, "All known microdescriptors."),
+    PREFIX("md/id/", dir, "Microdescriptors by ID"),
+    PREFIX("md/name/", dir, "Microdescriptors by name"),
+    ITEM("md/download-enabled", dir,
+         "Do we try to download microdescriptors?"),
+    PREFIX("extra-info/digest/", dir, "Extra-info documents by digest."),
+    PREFIX("hs/client/desc/id", dir,
+           "Hidden Service descriptor in client's cache by onion."),
+    PREFIX("hs/service/desc/id/", dir,
+           "Hidden Service descriptor in services's cache by onion."),
+    PREFIX("net/listeners/", listeners, "Bound addresses by type"),
+    ITEM("ns/all", networkstatus,
+         "Brief summary of router status (v2 directory format)"),
+    PREFIX("ns/id/", networkstatus,
+           "Brief summary of router status by ID (v2 directory format)."),
+    PREFIX(
+        "ns/name/", networkstatus,
+        "Brief summary of router status by nickname (v2 directory format)."),
+    PREFIX("ns/purpose/", networkstatus,
+           "Brief summary of router status by purpose (v2 directory format)."),
+    PREFIX("consensus/", networkstatus,
+           "Information about and from the ns consensus."),
+    ITEM("network-status", dir,
+         "Brief summary of router status (v1 directory format)"),
+    ITEM("network-liveness", liveness,
+         "Current opinion on whether the network is live"),
+    ITEM("circuit-status", events,
+         "List of current circuits originating here."),
+    ITEM("stream-status", events, "List of current streams."),
+    ITEM("orconn-status", events, "A list of current OR connections."),
+    ITEM("dormant", misc,
+         "Is Tor dormant (not building circuits because it's idle)?"),
+    PREFIX("address-mappings/", events, NULL),
+    DOC("address-mappings/all", "Current address mappings."),
+    DOC("address-mappings/cache", "Current cached DNS replies."),
+    DOC("address-mappings/config",
+        "Current address mappings from configuration."),
+    DOC("address-mappings/control",
+        "Current address mappings from controller."),
+    PREFIX("status/", events, NULL),
+    DOC("status/circuit-established",
+        "Whether we think client functionality is working."),
+    DOC("status/enough-dir-info",
+        "Whether we have enough up-to-date directory information to build "
+        "circuits."),
+    DOC("status/bootstrap-phase",
+        "The last bootstrap phase status event that Tor sent."),
+    DOC("status/clients-seen",
+        "Breakdown of client countries seen by a bridge."),
+    DOC("status/fresh-relay-descs", "A fresh relay/ei descriptor pair for "
+                                    "Tor's current state. Not stored."),
+    DOC("status/version/recommended",
+        "List of currently recommended versions."),
+    DOC("status/version/current", "Status of the current version."),
+    ITEM("address", misc, "IP address of this Tor host, if we can guess it."),
+    ITEM("traffic/read", misc, "Bytes read since the process was started."),
+    ITEM("traffic/written", misc,
+         "Bytes written since the process was started."),
+    ITEM("uptime", misc, "Uptime of the Tor daemon in seconds."),
+    ITEM("process/pid", misc, "Process id belonging to the main tor process."),
+    ITEM("process/uid", misc, "User id running the tor process."),
+    ITEM("process/user", misc,
+         "Username under which the tor process is running."),
+    ITEM("process/descriptor-limit", misc, "File descriptor limit."),
+    ITEM("limits/max-mem-in-queues", misc, "Actual limit on memory in queues"),
+    PREFIX("desc-annotations/id/", dir, "Router annotations by hexdigest."),
+    PREFIX("dir/server/", dir,
+           "Router descriptors as retrieved from a DirPort."),
+    PREFIX("dir/status/", dir,
+           "v2 networkstatus docs as retrieved from a DirPort."),
+    ITEM("dir/status-vote/current/consensus", dir,
+         "v3 Networkstatus consensus as retrieved from a DirPort."),
+    ITEM("dir/status-vote/current/consensus-microdesc", dir,
+         "v3 Microdescriptor consensus as retrieved from a DirPort."),
+    ITEM("exit-policy/default", policies,
+         "The default value appended to the configured exit policy."),
+    ITEM("exit-policy/reject-private/default", policies,
+         "The default rules appended to the configured exit policy by"
+         " ExitPolicyRejectPrivate."),
+    ITEM("exit-policy/reject-private/relay", policies,
+         "The relay-specific rules appended to the configured exit policy by"
+         " ExitPolicyRejectPrivate and/or ExitPolicyRejectLocalInterfaces."),
+    ITEM("exit-policy/full", policies,
+         "The entire exit policy of onion router"),
+    ITEM("exit-policy/ipv4", policies, "IPv4 parts of exit policy"),
+    ITEM("exit-policy/ipv6", policies, "IPv6 parts of exit policy"),
+    PREFIX("ip-to-country/", geoip, "Perform a GEOIP lookup"),
+    ITEM("onions/current", onions,
+         "Onion services owned by the current control connection."),
+    ITEM("onions/detached", onions,
+         "Onion services detached from the control connection."),
+    ITEM("sr/current", sr, "Get current shared random value."),
+    ITEM("sr/previous", sr, "Get previous shared random value."),
+    {NULL, NULL, NULL, 0}};
 
 /** Allocate and return a list of recognized GETINFO options. */
 static char *
@@ -1575,13 +1594,12 @@ list_getinfo_options(void)
   smartlist_t *lines = smartlist_new();
   char *ans;
   for (i = 0; getinfo_items[i].varname; ++i) {
-    if (!getinfo_items[i].desc)
+    if (! getinfo_items[i].desc)
       continue;
 
-    smartlist_add_asprintf(lines, "%s%s -- %s\n",
-                 getinfo_items[i].varname,
-                 getinfo_items[i].is_prefix ? "*" : "",
-                 getinfo_items[i].desc);
+    smartlist_add_asprintf(lines, "%s%s -- %s\n", getinfo_items[i].varname,
+                           getinfo_items[i].is_prefix ? "*" : "",
+                           getinfo_items[i].desc);
   }
   smartlist_sort_strings(lines);
 
@@ -1597,9 +1615,8 @@ list_getinfo_options(void)
  * Return 0 if success or unrecognized, or -1 if recognized but
  * internal error. */
 static int
-handle_getinfo_helper(control_connection_t *control_conn,
-                      const char *question, char **answer,
-                      const char **err_out)
+handle_getinfo_helper(control_connection_t *control_conn, const char *question,
+                      char **answer, const char **err_out)
 {
   int i;
   *answer = NULL; /* unrecognized key by default */
@@ -1607,9 +1624,9 @@ handle_getinfo_helper(control_connection_t *control_conn,
   for (i = 0; getinfo_items[i].varname; ++i) {
     int match;
     if (getinfo_items[i].is_prefix)
-      match = !strcmpstart(question, getinfo_items[i].varname);
+      match = ! strcmpstart(question, getinfo_items[i].varname);
     else
-      match = !strcmp(question, getinfo_items[i].varname);
+      match = ! strcmp(question, getinfo_items[i].varname);
     if (match) {
       tor_assert(getinfo_items[i].fn);
       return getinfo_items[i].fn(control_conn, question, answer, err_out);
@@ -1620,7 +1637,7 @@ handle_getinfo_helper(control_connection_t *control_conn,
 }
 
 const control_cmd_syntax_t getinfo_syntax = {
-  .max_args = UINT_MAX,
+    .max_args = UINT_MAX,
 };
 
 /** Called when we receive a GETINFO command.  Try to fetch all requested
@@ -1634,28 +1651,29 @@ handle_control_getinfo(control_connection_t *conn,
   smartlist_t *unrecognized = smartlist_new();
   char *ans = NULL;
 
-  SMARTLIST_FOREACH_BEGIN(questions, const char *, q) {
+  SMARTLIST_FOREACH_BEGIN (questions, const char *, q) {
     const char *errmsg = NULL;
 
     if (handle_getinfo_helper(conn, q, &ans, &errmsg) < 0) {
-      if (!errmsg)
+      if (! errmsg)
         errmsg = "Internal error";
       control_write_endreply(conn, 551, errmsg);
       goto done;
     }
-    if (!ans) {
+    if (! ans) {
       if (errmsg) {
         /* use provided error message */
         control_reply_add_str(unrecognized, 552, errmsg);
       } else {
         /* use default error message */
-        control_reply_add_printf(unrecognized, 552,
-                                 "Unrecognized key \"%s\"", q);
+        control_reply_add_printf(unrecognized, 552, "Unrecognized key \"%s\"",
+                                 q);
       }
     } else {
       control_reply_add_one_kv(answers, 250, KV_RAW, q, ans);
     }
-  } SMARTLIST_FOREACH_END(q);
+  }
+  SMARTLIST_FOREACH_END(q);
 
   control_reply_add_done(answers);
 
@@ -1667,7 +1685,7 @@ handle_control_getinfo(control_connection_t *conn,
 
   control_write_reply_lines(conn, answers);
 
- done:
+done:
   control_reply_free(answers);
   control_reply_free(unrecognized);
 

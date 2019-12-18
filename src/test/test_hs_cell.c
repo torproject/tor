@@ -28,7 +28,7 @@
 static void
 test_gen_establish_intro_cell(void *arg)
 {
-  (void) arg;
+  (void)arg;
   ssize_t ret;
   char circ_nonce[DIGEST_LEN] = {0};
   uint8_t buf[RELAY_PAYLOAD_SIZE];
@@ -55,11 +55,11 @@ test_gen_establish_intro_cell(void *arg)
     /* First byte is the auth key type: make sure its correct */
     tt_int_op(buf[0], OP_EQ, TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519);
     /* Next two bytes is auth key len */
-    tt_int_op(ntohs(get_uint16(buf+1)), OP_EQ, ED25519_PUBKEY_LEN);
+    tt_int_op(ntohs(get_uint16(buf + 1)), OP_EQ, ED25519_PUBKEY_LEN);
     /* Skip to the number of extensions: no extensions */
     tt_int_op(buf[35], OP_EQ, 0);
     /* Skip to the sig len. Make sure it's the size of an ed25519 sig */
-    tt_int_op(ntohs(get_uint16(buf+35+1+32)), OP_EQ, ED25519_SIG_LEN);
+    tt_int_op(ntohs(get_uint16(buf + 35 + 1 + 32)), OP_EQ, ED25519_SIG_LEN);
   }
 
   /* Parse it as the receiver */
@@ -67,13 +67,12 @@ test_gen_establish_intro_cell(void *arg)
     ret = trn_cell_establish_intro_parse(&cell_in, buf, sizeof(buf));
     tt_u64_op(ret, OP_GT, 0);
 
-    ret = verify_establish_intro_cell(cell_in,
-                                      (const uint8_t *) circ_nonce,
+    ret = verify_establish_intro_cell(cell_in, (const uint8_t *)circ_nonce,
                                       sizeof(circ_nonce));
     tt_u64_op(ret, OP_EQ, 0);
   }
 
- done:
+done:
   trn_cell_establish_intro_free(cell_in);
 }
 
@@ -82,12 +81,13 @@ static int
 mock_ed25519_sign_prefixed(ed25519_signature_t *signature_out,
                            const uint8_t *msg, size_t msg_len,
                            const char *prefix_str,
-                           const ed25519_keypair_t *keypair) {
-  (void) signature_out;
-  (void) msg;
-  (void) msg_len;
-  (void) prefix_str;
-  (void) keypair;
+                           const ed25519_keypair_t *keypair)
+{
+  (void)signature_out;
+  (void)msg;
+  (void)msg_len;
+  (void)prefix_str;
+  (void)keypair;
   return -1;
 }
 
@@ -95,7 +95,7 @@ mock_ed25519_sign_prefixed(ed25519_signature_t *signature_out,
 static void
 test_gen_establish_intro_cell_bad(void *arg)
 {
-  (void) arg;
+  (void)arg;
   ssize_t cell_len = 0;
   trn_cell_establish_intro_t *cell = NULL;
   char circ_nonce[DIGEST_LEN] = {0};
@@ -121,7 +121,7 @@ test_gen_establish_intro_cell_bad(void *arg)
   teardown_capture_of_logs();
   tt_i64_op(cell_len, OP_EQ, -1);
 
- done:
+done:
   trn_cell_establish_intro_free(cell);
   UNMOCK(ed25519_sign_prefixed);
 }
@@ -135,7 +135,7 @@ test_gen_establish_intro_dos_ext(void *arg)
   trn_cell_extension_t *extensions = NULL;
   trn_cell_extension_dos_t *dos = NULL;
 
-  (void) arg;
+  (void)arg;
 
   memset(&config, 0, sizeof(config));
   ip = service_intro_point_new(NULL);
@@ -156,16 +156,16 @@ test_gen_establish_intro_dos_ext(void *arg)
   tt_int_op(trn_cell_extension_get_num(extensions), OP_EQ, 1);
   /* Validate the extension. */
   const trn_cell_extension_field_t *field =
-    trn_cell_extension_getconst_fields(extensions, 0);
+      trn_cell_extension_getconst_fields(extensions, 0);
   tt_int_op(trn_cell_extension_field_get_field_type(field), OP_EQ,
             TRUNNEL_CELL_EXTENSION_TYPE_DOS);
-  ret = trn_cell_extension_dos_parse(&dos,
-                 trn_cell_extension_field_getconstarray_field(field),
-                 trn_cell_extension_field_getlen_field(field));
+  ret = trn_cell_extension_dos_parse(
+      &dos, trn_cell_extension_field_getconstarray_field(field),
+      trn_cell_extension_field_getlen_field(field));
   tt_int_op(ret, OP_EQ, 19);
   /* Rate per sec param. */
   const trn_cell_extension_dos_param_t *param =
-    trn_cell_extension_dos_getconst_params(dos, 0);
+      trn_cell_extension_dos_getconst_params(dos, 0);
   tt_int_op(trn_cell_extension_dos_param_get_type(param), OP_EQ,
             TRUNNEL_DOS_PARAM_TYPE_INTRO2_RATE_PER_SEC);
   tt_u64_op(trn_cell_extension_dos_param_get_value(param), OP_EQ, 0);
@@ -174,8 +174,10 @@ test_gen_establish_intro_dos_ext(void *arg)
   tt_int_op(trn_cell_extension_dos_param_get_type(param), OP_EQ,
             TRUNNEL_DOS_PARAM_TYPE_INTRO2_BURST_PER_SEC);
   tt_u64_op(trn_cell_extension_dos_param_get_value(param), OP_EQ, 0);
-  trn_cell_extension_dos_free(dos); dos = NULL;
-  trn_cell_extension_free(extensions); extensions = NULL;
+  trn_cell_extension_dos_free(dos);
+  dos = NULL;
+  trn_cell_extension_free(extensions);
+  extensions = NULL;
 
   /* Case 3: Enable the DoS extension. Parameter set to some normal values. */
   config.has_dos_defense_enabled = 1;
@@ -187,9 +189,9 @@ test_gen_establish_intro_dos_ext(void *arg)
   field = trn_cell_extension_getconst_fields(extensions, 0);
   tt_int_op(trn_cell_extension_field_get_field_type(field), OP_EQ,
             TRUNNEL_CELL_EXTENSION_TYPE_DOS);
-  ret = trn_cell_extension_dos_parse(&dos,
-                 trn_cell_extension_field_getconstarray_field(field),
-                 trn_cell_extension_field_getlen_field(field));
+  ret = trn_cell_extension_dos_parse(
+      &dos, trn_cell_extension_field_getconstarray_field(field),
+      trn_cell_extension_field_getlen_field(field));
   tt_int_op(ret, OP_EQ, 19);
   /* Rate per sec param. */
   param = trn_cell_extension_dos_getconst_params(dos, 0);
@@ -201,23 +203,23 @@ test_gen_establish_intro_dos_ext(void *arg)
   tt_int_op(trn_cell_extension_dos_param_get_type(param), OP_EQ,
             TRUNNEL_DOS_PARAM_TYPE_INTRO2_BURST_PER_SEC);
   tt_u64_op(trn_cell_extension_dos_param_get_value(param), OP_EQ, 250);
-  trn_cell_extension_dos_free(dos); dos = NULL;
-  trn_cell_extension_free(extensions); extensions = NULL;
+  trn_cell_extension_dos_free(dos);
+  dos = NULL;
+  trn_cell_extension_free(extensions);
+  extensions = NULL;
 
- done:
+done:
   service_intro_point_free(ip);
   trn_cell_extension_dos_free(dos);
   trn_cell_extension_free(extensions);
 }
 
 struct testcase_t hs_cell_tests[] = {
-  { "gen_establish_intro_cell", test_gen_establish_intro_cell, TT_FORK,
-    NULL, NULL },
-  { "gen_establish_intro_cell_bad", test_gen_establish_intro_cell_bad, TT_FORK,
-    NULL, NULL },
-  { "gen_establish_intro_dos_ext", test_gen_establish_intro_dos_ext, TT_FORK,
-    NULL, NULL },
+    {"gen_establish_intro_cell", test_gen_establish_intro_cell, TT_FORK, NULL,
+     NULL},
+    {"gen_establish_intro_cell_bad", test_gen_establish_intro_cell_bad,
+     TT_FORK, NULL, NULL},
+    {"gen_establish_intro_dos_ext", test_gen_establish_intro_dos_ext, TT_FORK,
+     NULL, NULL},
 
-  END_OF_TESTCASES
-};
-
+    END_OF_TESTCASES};
