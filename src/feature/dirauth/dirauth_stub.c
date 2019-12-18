@@ -27,7 +27,7 @@ static const config_format_t dirauth_options_stub_fmt = {
 const struct subsys_fns_t sys_dirauth = {
   .name = "dirauth",
   .supported = false,
-  .level = 70,
+  .level = DIRAUTH_SUBSYS_LEVEL,
 
   .options_format = &dirauth_options_stub_fmt
 };
