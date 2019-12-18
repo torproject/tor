@@ -11,6 +11,8 @@
 #ifndef TORTLS_INTERNAL_H
 #define TORTLS_INTERNAL_H
 
+#include "lib/tls/x509.h"
+
 int tor_errno_to_tls_error(int e);
 #ifdef ENABLE_OPENSSL
 int tor_tls_get_error(tor_tls_t *tls, int r, int extra,

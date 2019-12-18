@@ -14,6 +14,7 @@
 #include "lib/container/handles.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
+#include "ext/ht.h"
 #include "tor_queue.h"
 
 #define tor_timer_t timeout

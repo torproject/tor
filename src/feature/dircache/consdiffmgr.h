@@ -66,17 +66,19 @@ void consdiffmgr_free_all(void);
 int consdiffmgr_validate(void);
 
 #ifdef CONSDIFFMGR_PRIVATE
+struct consensus_cache_t;
+struct consensus_cache_entry_t;
 STATIC unsigned n_diff_compression_methods(void);
 STATIC unsigned n_consensus_compression_methods(void);
-STATIC consensus_cache_t *cdm_cache_get(void);
-STATIC consensus_cache_entry_t *cdm_cache_lookup_consensus(
+STATIC struct consensus_cache_t *cdm_cache_get(void);
+STATIC struct consensus_cache_entry_t *cdm_cache_lookup_consensus(
                           consensus_flavor_t flavor, time_t valid_after);
 STATIC int cdm_entry_get_sha3_value(uint8_t *digest_out,
-                                    consensus_cache_entry_t *ent,
+                                    struct consensus_cache_entry_t *ent,
                                     const char *label);
 STATIC int uncompress_or_set_ptr(const char **out, size_t *outlen,
                                  char **owned_out,
-                                 consensus_cache_entry_t *ent);
+                                 struct consensus_cache_entry_t *ent);
 #endif /* defined(CONSDIFFMGR_PRIVATE) */
 
 #ifdef TOR_UNIT_TESTS

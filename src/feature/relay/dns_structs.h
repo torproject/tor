@@ -13,6 +13,8 @@
 #ifndef TOR_DNS_STRUCTS_H
 #define TOR_DNS_STRUCTS_H
 
+#include "ext/ht.h"
+
 /** Longest hostname we're willing to resolve. */
 #define MAX_ADDRESSLEN 256
 
@@ -99,4 +101,3 @@ typedef struct cached_resolve_t {
 } cached_resolve_t;
 
 #endif /* !defined(TOR_DNS_STRUCTS_H) */
-

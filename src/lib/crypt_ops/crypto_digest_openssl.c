@@ -25,12 +25,12 @@
 
 #include "lib/crypt_ops/crypto_openssl_mgt.h"
 
-DISABLE_GCC_WARNING(redundant-decls)
+DISABLE_GCC_WARNING("-Wredundant-decls")
 
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 
-ENABLE_GCC_WARNING(redundant-decls)
+ENABLE_GCC_WARNING("-Wredundant-decls")
 
 /* Crypto digest functions */
 

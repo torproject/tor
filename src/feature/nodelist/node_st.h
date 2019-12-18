@@ -14,6 +14,7 @@
 
 #include "feature/hs/hsdir_index_st.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
+#include "ext/ht.h"
 
 /** A node_t represents a Tor router.
  *

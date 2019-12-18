@@ -23,9 +23,9 @@
 
 #include "lib/arch/bytes.h"
 
-DISABLE_GCC_WARNING(strict-prototypes)
+DISABLE_GCC_WARNING("-Wstrict-prototypes")
 #include <pk11pub.h>
-ENABLE_GCC_WARNING(strict-prototypes)
+ENABLE_GCC_WARNING("-Wstrict-prototypes")
 
 /**
  * Convert a digest_algorithm_t (used by tor) to a HashType (used by NSS).

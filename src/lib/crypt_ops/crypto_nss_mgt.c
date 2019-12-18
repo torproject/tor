@@ -16,7 +16,7 @@
 #include "lib/log/util_bug.h"
 #include "lib/string/printf.h"
 
-DISABLE_GCC_WARNING(strict-prototypes)
+DISABLE_GCC_WARNING("-Wstrict-prototypes")
 #include <nss.h>
 #include <pk11func.h>
 #include <ssl.h>
@@ -24,7 +24,7 @@ DISABLE_GCC_WARNING(strict-prototypes)
 #include <prerror.h>
 #include <prtypes.h>
 #include <prinit.h>
-ENABLE_GCC_WARNING(strict-prototypes)
+ENABLE_GCC_WARNING("-Wstrict-prototypes")
 
 const char *
 crypto_nss_get_version_str(void)

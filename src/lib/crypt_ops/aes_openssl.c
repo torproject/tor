@@ -28,7 +28,7 @@
 #error "We require OpenSSL >= 1.0.0"
 #endif
 
-DISABLE_GCC_WARNING(redundant-decls)
+DISABLE_GCC_WARNING("-Wredundant-decls")
 
 #include <stdlib.h>
 #include <string.h>
@@ -37,7 +37,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/engine.h>
 #include <openssl/modes.h>
 
-ENABLE_GCC_WARNING(redundant-decls)
+ENABLE_GCC_WARNING("-Wredundant-decls")
 
 #include "lib/crypt_ops/aes.h"
 #include "lib/log/log.h"

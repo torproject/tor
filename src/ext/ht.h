@@ -226,7 +226,8 @@ ht_string_hash(const char *s)
        (x) = HT_NEXT(name, head, x))
 
 #ifndef HT_NDEBUG
-#define HT_ASSERT_(x) tor_assert(x)
+#include "lib/err/torerr.h"
+#define HT_ASSERT_(x) raw_assert(x)
 #else
 #define HT_ASSERT_(x) (void)0
 #endif
