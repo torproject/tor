@@ -1,3 +1,4 @@
+address_h.c
 addressmap_h.c
 authcert_h.c
 authcert_parse_h.c
@@ -110,6 +111,7 @@ nodelist_h.c
 nodelist_hu.c
 ns_detached_signatures_st_h.c
 ns_parse_h.c
+ntmain_h.c
 onion_crypto_h.c
 onion_fast_h.c
 onion_h.c
@@ -125,6 +127,7 @@ process_descs_h.c
 process_descs_hu.c
 process_h.c
 process_unix_h.c
+process_win32_h.c
 proto_socks_h.c
 proxymode_h.c
 pubsub_builder_st_h.c
@@ -162,6 +165,8 @@ socks_request_st_h.c
 statefile_h.c
 test_connection_h.c
 test_tortls_h.c
+timers_h.c
+tor_api_h.c
 tor_version_st_h.c
 torcert_h.c
 tortls_internal_h.c
