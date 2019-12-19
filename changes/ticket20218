@@ -1,3 +1,3 @@
   o Minor bugfixes (controller):
     - In routerstatus_has_changed(), check all the fields that are output over the control port.
-  Fixes bug 20218; bugfix on 0.1.1.11-alpha~209
+      Fixes bug 20218; bugfix on 0.1.1.11-alpha
