@@ -48,6 +48,10 @@ CONF_VAR(AuthDirTestEd25519LinkKeys, BOOL, 0, "1")
  * consensus vote on the 'params' line. */
 CONF_VAR(ConsensusParams, STRING, 0, NULL)
 
+/** Authority only: minimum number of measured bandwidths we must see
+ * before we only believe measured bandwidths to assign flags. */
+CONF_VAR(MinMeasuredBWsForAuthToIgnoreAdvertised, INT, 0, "500")
+
 /** As directory authority, accept hidden service directories after what
  * time? */
 CONF_VAR(MinUptimeHidServDirectoryV2, INTERVAL, 0, "96 hours")

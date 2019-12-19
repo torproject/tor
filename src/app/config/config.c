@@ -555,7 +555,6 @@ static const config_var_t option_vars_[] = {
   OBSOLETE("MaxOnionsPending"),
   V(MaxOnionQueueDelay,          MSEC_INTERVAL, "1750 msec"),
   V(MaxUnparseableDescSizeToLog, MEMUNIT, "10 MB"),
-  V(MinMeasuredBWsForAuthToIgnoreAdvertised, INT, "500"),
   VAR("MyFamily",                LINELIST, MyFamily_lines,       NULL),
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
   OBSOLETE("NamingAuthoritativeDirectory"),

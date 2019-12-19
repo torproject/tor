@@ -244,11 +244,12 @@ dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil)
   const smartlist_t *nodelist;
   time_t now = time(NULL);
   const or_options_t *options = get_options();
+  const dirauth_options_t *dirauth_options = dirauth_get_options();
 
   /* Require mbw? */
   int require_mbw =
     (dirserv_get_last_n_measured_bws() >
-     options->MinMeasuredBWsForAuthToIgnoreAdvertised) ? 1 : 0;
+     dirauth_options->MinMeasuredBWsForAuthToIgnoreAdvertised) ? 1 : 0;
 
   /* initialize these all here, in case there are no routers */
   stable_uptime = 0;
@@ -432,7 +433,7 @@ dirserv_get_flag_thresholds_line(void)
 {
   char *result=NULL;
   const int measured_threshold =
-    get_options()->MinMeasuredBWsForAuthToIgnoreAdvertised;
+    dirauth_get_options()->MinMeasuredBWsForAuthToIgnoreAdvertised;
   const int enough_measured_bw =
     dirserv_get_last_n_measured_bws() > measured_threshold;
 

@@ -670,10 +670,6 @@ struct or_options_t {
   /** Location of guardfraction file */
   char *GuardfractionFile;
 
-  /** Authority only: minimum number of measured bandwidths we must see
-   * before we only believe measured bandwidths to assign flags. */
-  int MinMeasuredBWsForAuthToIgnoreAdvertised;
-
   /** The length of time that we think an initial consensus should be fresh.
    * Only altered on testing networks. */
   int TestingV3AuthInitialVotingInterval;
