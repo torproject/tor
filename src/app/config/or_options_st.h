@@ -686,11 +686,6 @@ struct or_options_t {
       voting. Only altered on testing networks. */
   int TestingV3AuthVotingStartOffset;
 
-  /** If an authority has been around for less than this amount of time, it
-   * does not believe its reachability information is accurate.  Only
-   * altered on testing networks. */
-  int TestingAuthDirTimeToLearnReachability;
-
   /** Clients don't download any descriptor this recent, since it will
    * probably not have propagated to enough caches.  Only altered on testing
    * networks. */

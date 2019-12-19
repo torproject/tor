@@ -213,12 +213,6 @@ options_validate_dirauth_testing(const or_options_t *old_options,
   if (!authdir_mode(options))
     return 0;
 
-  if (options->TestingAuthDirTimeToLearnReachability < 0) {
-    REJECT("TestingAuthDirTimeToLearnReachability must be non-negative.");
-  } else if (options->TestingAuthDirTimeToLearnReachability > 2*60*60) {
-    COMPLAIN("TestingAuthDirTimeToLearnReachability is insanely high.");
-  }
-
   if (!authdir_mode_v3(options))
     return 0;
 
@@ -442,6 +436,12 @@ dirauth_options_validate(const void *arg, char **msg)
   tor_free(t);
   t = format_recommended_version_list(options->RecommendedServerVersions, 1);
   tor_free(t);
+
+  if (options->TestingAuthDirTimeToLearnReachability < 0) {
+    REJECT("TestingAuthDirTimeToLearnReachability must be non-negative.");
+  } else if (options->TestingAuthDirTimeToLearnReachability > 2*60*60) {
+    COMPLAIN("TestingAuthDirTimeToLearnReachability is insanely high.");
+  }
 
   return 0;
 }

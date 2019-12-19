@@ -3851,14 +3851,15 @@ test_options_validate__testing_options(void *ignored)
   options_test_data_t *tdata = NULL;
   setup_capture_of_logs(LOG_WARN);
 
-#define TEST_TESTING_OPTION(name, low_val, high_val, err_low, EXTRA_OPT_STR) \
+#define TEST_TESTING_OPTION(name, accessor, \
+                            low_val, high_val, err_low, EXTRA_OPT_STR)  \
   STMT_BEGIN                                                            \
     free_options_test_data(tdata);                                      \
   tdata = get_options_test_data(EXTRA_OPT_STR                           \
                                 VALID_DIR_AUTH                          \
                                 "TestingTorNetwork 1\n"                 \
                                 );                                      \
-  tdata->opt-> name = low_val;                                       \
+  accessor(tdata->opt)->name = low_val;                                 \
   ret = options_validate(NULL, tdata->opt,  &msg);            \
   tt_int_op(ret, OP_EQ, -1);                                            \
   tt_str_op(msg, OP_EQ, #name " " err_low);                \
@@ -3869,7 +3870,7 @@ test_options_validate__testing_options(void *ignored)
                                 VALID_DIR_AUTH                          \
                                 "TestingTorNetwork 1\n"                 \
                                 );                                      \
-  tdata->opt->  name = high_val;                                      \
+  accessor(tdata->opt)->name = high_val;                                \
   mock_clean_saved_logs();                                              \
   ret = options_validate(NULL, tdata->opt,  &msg);            \
   tt_int_op(ret, OP_EQ, 0);                                             \
@@ -3878,30 +3879,32 @@ test_options_validate__testing_options(void *ignored)
   tor_free(msg); \
   STMT_END
 
-  TEST_TESTING_OPTION(TestingAuthDirTimeToLearnReachability, -1, 8000,
+  TEST_TESTING_OPTION(TestingAuthDirTimeToLearnReachability,
+                      get_dirauth_options, -1, 8000,
                       "must be non-negative.", ENABLE_AUTHORITY_V3);
-  TEST_TESTING_OPTION(TestingAuthDirTimeToLearnReachability, -1, 8000,
+  TEST_TESTING_OPTION(TestingAuthDirTimeToLearnReachability,
+                      get_dirauth_options, -1, 8000,
                       "must be non-negative.", ENABLE_AUTHORITY_BRIDGE);
 
-  TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, -1, 3601,
+  TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, , -1, 3601,
                       "must be non-negative.", "");
-  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, -1, 3601,
+  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, , -1, 3601,
                       "is way too low.", "");
-  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
+  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, , 1, 3601,
                       "is way too low.", "");
 
-  TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, -1, 3601,
+  TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, , -1, 3601,
                       "must be non-negative.", ENABLE_AUTHORITY_V3);
-  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, -1, 3601,
+  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, , -1, 3601,
                       "is way too low.", ENABLE_AUTHORITY_V3);
-  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
+  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, , 1, 3601,
                       "is way too low.", ENABLE_AUTHORITY_V3);
 
-  TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, -1, 3601,
+  TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, , -1, 3601,
                       "must be non-negative.", ENABLE_AUTHORITY_BRIDGE);
-  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, -1, 3601,
+  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, , -1, 3601,
                       "is way too low.", ENABLE_AUTHORITY_BRIDGE);
-  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
+  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, , 1, 3601,
                       "is way too low.", ENABLE_AUTHORITY_BRIDGE);
 
   free_options_test_data(tdata);

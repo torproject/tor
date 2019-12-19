@@ -460,8 +460,9 @@ dirserv_get_flag_thresholds_line(void)
 int
 running_long_enough_to_decide_unreachable(void)
 {
-  return time_of_process_start
-    + get_options()->TestingAuthDirTimeToLearnReachability < approx_time();
+  const dirauth_options_t *opts = dirauth_get_options();
+  return time_of_process_start +
+    opts->TestingAuthDirTimeToLearnReachability < approx_time();
 }
 
 /** Each server needs to have passed a reachability test no more

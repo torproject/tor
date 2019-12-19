@@ -65,6 +65,11 @@ CONF_VAR(RecommendedClientVersions, LINELIST, 0, NULL)
 /** Which versions of tor should we tell users to run on relays? */
 CONF_VAR(RecommendedServerVersions, LINELIST, 0, NULL)
 
+/** If an authority has been around for less than this amount of time, it
+ * does not believe its reachability information is accurate.  Only
+ * altered on testing networks. */
+CONF_VAR(TestingAuthDirTimeToLearnReachability, INTERVAL, 0, "30 minutes")
+
 /** Boolean: is this an authoritative directory that's willing to recommend
  * versions? */
 CONF_VAR(VersioningAuthoritativeDirectory, BOOL, 0, "0")

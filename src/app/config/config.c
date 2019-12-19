@@ -392,7 +392,6 @@ static const config_var_t option_vars_[] = {
   V(DisableOOSCheck,             BOOL,     "1"),
   V(DisableNetwork,              BOOL,     "0"),
   V(DirAllowPrivateAddresses,    BOOL,     "0"),
-  V(TestingAuthDirTimeToLearnReachability, INTERVAL, "30 minutes"),
   OBSOLETE("DirListenAddress"),
   V(DirPolicy,                   LINELIST, NULL),
   VPORT(DirPort),
