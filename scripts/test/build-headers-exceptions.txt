@@ -3,7 +3,6 @@ authcert_h.c
 authcert_parse_h.c
 authmode_h.c
 authority_cert_st_h.c
-backtrace_h.c
 bridges_h.c
 btrack_orconn_cevent_h.c
 btrack_orconn_maps_h.c
