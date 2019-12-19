@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright 2019  The Tor Project, Inc.
+# See LICENSE for licensing information.
 
 set -e
 set -o pipefail
