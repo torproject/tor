@@ -103,7 +103,9 @@
 
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/authmode.h"
+#include "feature/dirauth/dirauth_sys.h"
 
+#include "feature/dirauth/dirauth_options_st.h"
 #include "feature/nodelist/authority_cert_st.h"
 #include "feature/nodelist/networkstatus_st.h"
 
@@ -1130,7 +1132,7 @@ sr_get_string_for_vote(void)
   char *vote_str = NULL;
   digestmap_t *state_commits;
   smartlist_t *chunks = smartlist_new();
-  const or_options_t *options = get_options();
+  const dirauth_options_t *options = dirauth_get_options();
 
   /* Are we participating in the protocol? */
   if (!options->AuthDirSharedRandomness) {
@@ -1195,7 +1197,7 @@ sr_get_string_for_consensus(const smartlist_t *votes,
                             int32_t num_srv_agreements)
 {
   char *srv_str;
-  const or_options_t *options = get_options();
+  const dirauth_options_t *options = dirauth_get_options();
 
   tor_assert(votes);
 

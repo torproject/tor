@@ -33,6 +33,12 @@ CONF_VAR(AuthDirMaxServersPerAddr, POSINT, 0, "2")
 /** Boolean: Do we enforce key-pinning? */
 CONF_VAR(AuthDirPinKeys, BOOL, 0, "1")
 
+/** Bool (default: 1): Switch for the shared random protocol. Only
+ * relevant to a directory authority. If off, the authority won't
+ * participate in the protocol. If on (default), a flag is added to the
+ * vote indicating participation. */
+CONF_VAR(AuthDirSharedRandomness, BOOL, 0, "1")
+
 /** Which versions of tor should we tell users to run? */
 CONF_VAR(RecommendedVersions, LINELIST, 0, NULL)
 
