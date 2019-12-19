@@ -15,6 +15,7 @@
 
 #include "lib/encoding/confline.h"
 #include "lib/confmgt/confmgt.h"
+#include "lib/conf/confdecl.h"
 
 /* Required for dirinfo_type_t in or_options_t */
 #include "core/or/or.h"
@@ -28,6 +29,7 @@
 #include "feature/dirauth/dirauth_periodic.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/guardfraction.h"
+#include "feature/dirauth/dirauth_options_st.h"
 
 /* Copied from config.c, we will refactor later in 29211. */
 #define REJECT(arg) \
@@ -438,3 +440,23 @@ options_act_dirauth_stats(const or_options_t *old_options,
 
   return 0;
 }
+
+/* Declare the options field table for dirauth_options */
+#define CONF_CONTEXT TABLE
+#include "feature/dirauth/dirauth_options.inc"
+#undef CONF_CONTEXT
+
+/** Magic number for dirauth_options_t. */
+#define DIRAUTH_OPTIONS_MAGIC 0x41757448
+
+/**
+ * Declare the configuration options for the dirauth module.
+ **/
+const config_format_t dirauth_options_fmt = {
+  .size = sizeof(dirauth_options_t),
+  .magic = { "dirauth_options_t",
+             DIRAUTH_OPTIONS_MAGIC,
+             offsetof(dirauth_options_t, magic) },
+  .vars = dirauth_options_t_vars,
+};
+

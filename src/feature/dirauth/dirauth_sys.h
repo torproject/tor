@@ -12,10 +12,17 @@
 #ifndef DIRAUTH_SYS_H
 #define DIRAUTH_SYS_H
 
-#ifdef HAVE_MODULE_DIRAUTH
+struct dirauth_options_t;
+const struct dirauth_options_t *dirauth_get_options(void);
 
 extern const struct subsys_fns_t sys_dirauth;
 
-#endif
+/**
+ * Subsystem level for the directory-authority system.
+ *
+ * Defined here so that it can be shared between the real and stub
+ * definitions.
+ **/
+#define DIRAUTH_SUBSYS_LEVEL 70
 
 #endif /* !defined(DIRAUTH_SYS_H) */

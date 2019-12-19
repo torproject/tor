@@ -39,6 +39,8 @@ int options_act_dirauth_mtbf(const struct or_options_t *old_options);
 int options_act_dirauth_stats(const struct or_options_t *old_options,
                               bool *print_notice_out);
 
+extern const struct config_format_t dirauth_options_fmt;
+
 #else /* !defined(HAVE_MODULE_DIRAUTH) */
 
 /** When tor is compiled with the dirauth module disabled, it can't be

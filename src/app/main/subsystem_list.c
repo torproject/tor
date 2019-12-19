@@ -66,13 +66,9 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_mainloop,
   &sys_or,
 
-#ifdef HAVE_MODULE_RELAY
   &sys_relay,
-#endif
 
-#ifdef HAVE_MODULE_DIRAUTH
   &sys_dirauth,
-#endif
 };
 
 const unsigned n_tor_subsystems = ARRAY_LENGTH(tor_subsystems);
