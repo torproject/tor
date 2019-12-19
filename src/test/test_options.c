@@ -2001,7 +2001,6 @@ test_options_validate__testing(void *ignored)
   ENSURE_DEFAULT(TestingV3AuthInitialDistDelay, 3000);
   ENSURE_DEFAULT(TestingV3AuthVotingStartOffset, 3000);
   ENSURE_DEFAULT(TestingAuthDirTimeToLearnReachability, 3000);
-  ENSURE_DEFAULT(TestingEstimatedDescriptorPropagationTime, 3000);
   ENSURE_DEFAULT(TestingServerDownloadInitialDelay, 3000);
   ENSURE_DEFAULT(TestingClientDownloadInitialDelay, 3000);
   ENSURE_DEFAULT(TestingServerConsensusDownloadInitialDelay, 3000);
@@ -3872,22 +3871,16 @@ test_options_validate__testing_options(void *ignored)
   TEST_TESTING_OPTION(TestingAuthDirTimeToLearnReachability, -1, 8000,
                       "must be non-negative.", ENABLE_AUTHORITY_BRIDGE);
 
-  TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, -1, 3601,
-                      "must be non-negative.", "");
   TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, -1, 3601,
                       "is way too low.", "");
   TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
                       "is way too low.", "");
 
-  TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, -1, 3601,
-                      "must be non-negative.", ENABLE_AUTHORITY_V3);
   TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, -1, 3601,
                       "is way too low.", ENABLE_AUTHORITY_V3);
   TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
                       "is way too low.", ENABLE_AUTHORITY_V3);
 
-  TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, -1, 3601,
-                      "must be non-negative.", ENABLE_AUTHORITY_BRIDGE);
   TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, -1, 3601,
                       "is way too low.", ENABLE_AUTHORITY_BRIDGE);
   TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,

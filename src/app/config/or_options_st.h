@@ -723,11 +723,6 @@ struct or_options_t {
    * altered on testing networks. */
   int TestingAuthDirTimeToLearnReachability;
 
-  /** Clients don't download any descriptor this recent, since it will
-   * probably not have propagated to enough caches.  Only altered on testing
-   * networks. */
-  int TestingEstimatedDescriptorPropagationTime;
-
   /** Schedule for when servers should download things in general.  Only
    * altered on testing networks. */
   int TestingServerDownloadInitialDelay;
