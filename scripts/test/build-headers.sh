@@ -84,13 +84,15 @@ update-exceptions:
 
 .c.o:
 	echo "\$<" >> header_all.txt
-	if gcc -c -Wall -Werror @"${BUILD_DIR}"/warning_flags -Wno-unused-function \
-		-I "${SOURCE_DIR}" -I "${SOURCE_DIR}"/src -I "${SOURCE_DIR}"/src/ext \
-		-I "${SOURCE_DIR}"/src/ext/trunnel -I "${BUILD_DIR}" \
-		-o "\$@" "\$<"; then \
-		echo "\$<" >> header_success.txt; \
+	if gcc -c \
+	    -Wall -Werror @"${BUILD_DIR}"/warning_flags -Wno-unused-function \
+	    -I "${SOURCE_DIR}" -I "${SOURCE_DIR}"/src \
+	    -I "${SOURCE_DIR}"/src/ext -I "${SOURCE_DIR}"/src/ext/trunnel \
+	    -I "${BUILD_DIR}" \
+	    -o "\$@" "\$<"; then \
+	    echo "\$<" >> header_success.txt; \
 	else \
-		echo "\$<" >> header_fail.txt; \
+	    echo "\$<" >> header_fail.txt; \
 	fi
 EOF
 
@@ -105,16 +107,20 @@ EOF
 }
 
 # We deliberately skip win32: it only contains a Windows orconfig.h
-for hdr in $(cd "${SOURCE_DIR}"/src && find lib core feature app test tools -name '*.h'); do
+for hdr in $(cd "${SOURCE_DIR}"/src \
+                 && find lib core feature app test tools -name '*.h'); do
     hdr_path="${SOURCE_DIR}"/src/"${hdr}"
     name=$(basename "$hdr" .h)
     tc_name="${name}"_h
     tc_path="${TEST_DIR}"/"$tc_name".c
 
-    grep '^ *# *if\(def *\| .*defined(\)[A-Z_]*\(PRIVATE\|INTERNAL\|EXPOSE\)[A-Z_]*' "$hdr_path" | \
-        sed -e 's/.*[ (]\([A-Z_]*\(PRIVATE\|INTERNAL\|EXPOSE\)[A-Z_]*\).*/#define \1/' | \
-        sort -u > \
-             "$tc_path" || true # No PRIVATE defines
+    grep \
+        '^ *# *if\(def *\| .*defined(\)[A-Z_]*\(PRIVATE\|INTERNAL\|EXPOSE\)[A-Z_]*' \
+        "$hdr_path" \
+        | sed -e \
+        's/.*[ (]\([A-Z_]*\(PRIVATE\|INTERNAL\|EXPOSE\)[A-Z_]*\).*/#define \1/' \
+        | sort -u > \
+               "$tc_path" || true # ignore grep's exit status
 
     cat >> "$tc_path" <<EOF
 
@@ -125,7 +131,8 @@ EOF
 
     add_obj "$tc_name" "$hdr_path"
 
-    if grep -q '^ *# *if\(def *\| .*defined(\)TOR_UNIT_TESTS' "$hdr_path"; then
+    if grep -q \
+            '^ *# *if\(def *\| .*defined(\)TOR_UNIT_TESTS' "$hdr_path"; then
         tuc_name="${name}"_hu
         tuc_path="${TEST_DIR}"/"$tuc_name".c
         echo "#define TOR_UNIT_TESTS" > "$tuc_path"
