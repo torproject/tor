@@ -1638,12 +1638,12 @@ pt_get_extra_info_descriptor_string(void)
     SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
       char *transport_args = NULL;
 
-      /* If the transport proxy returned "0.0.0.0" as its address, and
-       * we know our external IP address, use it. Otherwise, use the
+      /* If the transport proxy returned an internal address, and we know our
+       * external IP address, use the external address. Otherwise, use the
        * returned address. */
       const char *addrport = NULL;
       uint32_t external_ip_address = 0;
-      if (tor_addr_is_null(&t->addr) &&
+      if (tor_addr_is_internal(&t->addr, 0) &&
           router_pick_published_address(get_options(),
                                         &external_ip_address, 0) >= 0) {
         tor_addr_t addr;

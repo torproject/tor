@@ -1,0 +1,6 @@
+  o Minor bugfix (pluggable transports):
+    - When Tor is about to advertize "0.0.0.0" in its extrainfo descriptor, it
+      replaces the bogus address 0.0.0.0 with its external address.  This patch
+      uses tor_addr_is_internal() instead of tor_addr_is_null(), so internal
+      addresses like 10.0.0.0/8 are also replaced. Fixes bug 31009; bugfix on
+      0.4.3.0-alpha.
