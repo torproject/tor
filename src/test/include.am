@@ -107,6 +107,7 @@ src_test_test_SOURCES += \
 	src/test/fakecircs.c \
 	src/test/log_test_helpers.c \
 	src/test/hs_test_helpers.c \
+	src/test/opts_test_helpers.c \
 	src/test/rend_test_helpers.c \
 	src/test/resolve_test_helpers.c \
 	src/test/rng_test_helpers.c \
@@ -351,6 +352,7 @@ noinst_HEADERS+= \
 	src/test/fakecircs.h \
 	src/test/hs_test_helpers.h \
 	src/test/log_test_helpers.h \
+	src/test/opts_test_helpers.h \
 	src/test/rend_test_helpers.h \
 	src/test/resolve_test_helpers.h \
 	src/test/rng_test_helpers.h \

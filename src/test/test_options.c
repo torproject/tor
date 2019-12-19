@@ -31,6 +31,7 @@
 #include "lib/encoding/confline.h"
 #include "core/or/policies.h"
 #include "test/test_helpers.h"
+#include "test/opts_test_helpers.h"
 #include "lib/net/resolve.h"
 
 #ifdef HAVE_SYS_PARAM_H
@@ -753,14 +754,6 @@ test_options_validate__logs(void *ignored)
 /*   config_line->value = tor_strdup(val); */
 /*   return config_line; */
 /* } */
-
-static dirauth_options_t *
-get_dirauth_options(or_options_t *opt)
-{
-  int idx = subsystems_get_options_idx(&sys_dirauth);
-  tor_assert(idx >= 0);
-  return config_mgr_get_obj_mutable(get_options_mgr(), opt, idx);
-}
 
 static void
 test_options_validate__authdir(void *ignored)
@@ -4003,14 +3996,6 @@ test_options_validate__testing_options(void *ignored)
   teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
-}
-
-static crypto_options_t *
-get_crypto_options(or_options_t *opt)
-{
-  int idx = subsystems_get_options_idx(&sys_crypto);
-  tor_assert(idx >= 0);
-  return config_mgr_get_obj_mutable(get_options_mgr(), opt, idx);
 }
 
 static void
