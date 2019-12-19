@@ -457,8 +457,6 @@ struct or_options_t {
   struct smartlist_t *AuthDirRejectCCs;
   /**@}*/
 
-  int AuthDirPinKeys; /**< Boolean: Do we enforce key-pinning? */
-
   char *AccountingStart; /**< How long is the accounting interval, and when
                           * does it start? */
   uint64_t AccountingMax; /**< How many bytes do we allow per accounting

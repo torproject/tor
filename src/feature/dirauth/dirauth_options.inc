@@ -30,6 +30,9 @@ CONF_VAR(AuthDirListBadExits, BOOL, 0, "0")
 /** Do not permit more than this number of servers per IP address. */
 CONF_VAR(AuthDirMaxServersPerAddr, POSINT, 0, "2")
 
+/** Boolean: Do we enforce key-pinning? */
+CONF_VAR(AuthDirPinKeys, BOOL, 0, "1")
+
 /** Which versions of tor should we tell users to run? */
 CONF_VAR(RecommendedVersions, LINELIST, 0, NULL)
 

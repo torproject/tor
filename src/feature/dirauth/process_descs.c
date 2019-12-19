@@ -18,6 +18,7 @@
 #include "app/config/config.h"
 #include "core/or/policies.h"
 #include "core/or/versions.h"
+#include "feature/dirauth/dirauth_sys.h"
 #include "feature/dirauth/keypin.h"
 #include "feature/dirauth/reachability.h"
 #include "feature/dirclient/dlstatus.h"
@@ -32,6 +33,7 @@
 #include "feature/relay/router.h"
 
 #include "core/or/tor_version_st.h"
+#include "feature/dirauth/dirauth_options_st.h"
 #include "feature/nodelist/extrainfo_st.h"
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
@@ -232,7 +234,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
                           int severity)
 {
   char d[DIGEST_LEN];
-  const int key_pinning = get_options()->AuthDirPinKeys;
+  const int key_pinning = dirauth_get_options()->AuthDirPinKeys;
 
   if (crypto_pk_get_digest(router->identity_pkey, d)) {
     log_warn(LD_BUG,"Error computing fingerprint");
@@ -666,7 +668,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
   char *desc, *nickname;
   const size_t desclen = ri->cache_info.signed_descriptor_len +
       ri->cache_info.annotations_len;
-  const int key_pinning = get_options()->AuthDirPinKeys;
+  const int key_pinning = dirauth_get_options()->AuthDirPinKeys;
   *msg = NULL;
 
   /* If it's too big, refuse it now. Otherwise we'll cache it all over the
