@@ -1,4 +1,7 @@
-#!/bin/sh
+#!/bin/bash
+
+set -e
+set -o pipefail
 
 mkdir -p test_headers
 rm -f test_headers/Makefile
