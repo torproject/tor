@@ -116,7 +116,7 @@ unlock_cb_buf(void **cb_buf)
  * ucontext_t structure.
  */
 void
-clean_backtrace(void **stack, size_t depth, const struct ucontext_t *ctx)
+clean_backtrace(void **stack, size_t depth, const ucontext_t *ctx)
 {
 #ifdef PC_FROM_UCONTEXT
 #if defined(__linux__)
@@ -179,7 +179,7 @@ crash_handler(int sig, siginfo_t *si, void *ctx_)
 {
   char buf[40];
   size_t depth;
-  struct ucontext_t *ctx = (struct ucontext_t *) ctx_;
+  ucontext_t *ctx = (ucontext_t *) ctx_;
   int n_fds, i;
   const int *fds = NULL;
 

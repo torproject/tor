@@ -15,7 +15,8 @@
 #include "lib/cc/torint.h"
 #include "lib/defs/logging_types.h"
 
-struct ucontext_t;
+/* Some system headers define the struct, others don't. */
+typedef struct ucontext_t ucontext_t;
 
 typedef void (*tor_log_fn)(int, log_domain_mask_t, const char *fmt, ...)
   CHECK_PRINTF(3,4);
@@ -34,7 +35,7 @@ const char *get_tor_backtrace_version(void);
 #ifdef EXPOSE_CLEAN_BACKTRACE
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
-void clean_backtrace(void **stack, size_t depth, const struct ucontext_t *ctx);
+void clean_backtrace(void **stack, size_t depth, const ucontext_t *ctx);
 #endif
 #endif /* defined(EXPOSE_CLEAN_BACKTRACE) */
 
