@@ -70,6 +70,12 @@ CONF_VAR(RecommendedServerVersions, LINELIST, 0, NULL)
  * altered on testing networks. */
 CONF_VAR(TestingAuthDirTimeToLearnReachability, INTERVAL, 0, "30 minutes")
 
+/** Minimum value for the Exit flag threshold on testing networks. */
+CONF_VAR(TestingMinExitFlagThreshold, MEMUNIT, 0, "0")
+
+/** Minimum value for the Fast flag threshold on testing networks. */
+CONF_VAR(TestingMinFastFlagThreshold, MEMUNIT, 0, "0")
+
 /** Boolean: is this an authoritative directory that's willing to recommend
  * versions? */
 CONF_VAR(VersioningAuthoritativeDirectory, BOOL, 0, "0")

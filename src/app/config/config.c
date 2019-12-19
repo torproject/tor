@@ -596,8 +596,6 @@ static const config_var_t option_vars_[] = {
   V(PerConnBWRate,               MEMUNIT,  "0"),
   V_IMMUTABLE(PidFile,           FILENAME,   NULL),
   V_IMMUTABLE(TestingTorNetwork, BOOL,     "0"),
-  V(TestingMinExitFlagThreshold, MEMUNIT,  "0"),
-  V(TestingMinFastFlagThreshold, MEMUNIT,  "0"),
 
   V(TestingLinkCertLifetime,          INTERVAL, "2 days"),
   V(TestingAuthKeyLifetime,          INTERVAL, "2 days"),

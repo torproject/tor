@@ -147,7 +147,7 @@ router_is_active(const routerinfo_t *ri, const node_t *node, time_t now)
    * if TestingTorNetwork, and TestingMinExitFlagThreshold is non-zero */
   if (!ri->bandwidthcapacity) {
     if (get_options()->TestingTorNetwork) {
-      if (get_options()->TestingMinExitFlagThreshold > 0) {
+      if (dirauth_get_options()->TestingMinExitFlagThreshold > 0) {
         /* If we're in a TestingTorNetwork, and TestingMinExitFlagThreshold is,
          * then require bandwidthcapacity */
         return 0;
@@ -216,9 +216,10 @@ router_counts_toward_thresholds(const node_t *node, time_t now,
     dirserv_has_measured_bw(node->identity);
   uint64_t min_bw_kb = ABSOLUTE_MIN_BW_VALUE_TO_CONSIDER_KB;
   const or_options_t *options = get_options();
+  const dirauth_options_t *dirauth_options = dirauth_get_options();
 
   if (options->TestingTorNetwork) {
-    min_bw_kb = (int64_t)options->TestingMinExitFlagThreshold / 1000;
+    min_bw_kb = (int64_t)dirauth_options->TestingMinExitFlagThreshold / 1000;
   }
 
   return node->ri && router_is_active(node->ri, node, now) &&
@@ -341,7 +342,7 @@ dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil)
       ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG,
       INT32_MAX);
     if (options->TestingTorNetwork) {
-      min_fast = (int32_t)options->TestingMinFastFlagThreshold;
+      min_fast = (int32_t)dirauth_options->TestingMinFastFlagThreshold;
     }
     max_fast = networkstatus_get_param(NULL, "FastFlagMaxThreshold",
                                        INT32_MAX, min_fast, INT32_MAX);

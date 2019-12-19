@@ -764,12 +764,6 @@ struct or_options_t {
    * of certain configuration options. */
   int TestingTorNetwork;
 
-  /** Minimum value for the Exit flag threshold on testing networks. */
-  uint64_t TestingMinExitFlagThreshold;
-
-  /** Minimum value for the Fast flag threshold on testing networks. */
-  uint64_t TestingMinFastFlagThreshold;
-
   /** Relays in a testing network which should be voted Exit
    * regardless of exit policy. */
   routerset_t *TestingDirAuthVoteExit;
