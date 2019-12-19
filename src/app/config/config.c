@@ -371,7 +371,6 @@ static const config_var_t option_vars_[] = {
   V(ClientTransportPlugin,       LINELIST, NULL),
   V(ClientUseIPv6,               BOOL,     "0"),
   V(ClientUseIPv4,               BOOL,     "1"),
-  V(ConsensusParams,             STRING,   NULL),
   V(ConnLimit,                   POSINT,     "1000"),
   V(ConnDirectionStatistics,     BOOL,     "0"),
   V(ConstrainedSockets,          BOOL,     "0"),

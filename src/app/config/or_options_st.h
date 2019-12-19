@@ -670,10 +670,6 @@ struct or_options_t {
   /** Location of guardfraction file */
   char *GuardfractionFile;
 
-  /** Authority only: key=value pairs that we add to our networkstatus
-   * consensus vote on the 'params' line. */
-  char *ConsensusParams;
-
   /** Authority only: minimum number of measured bandwidths we must see
    * before we only believe measured bandwidths to assign flags. */
   int MinMeasuredBWsForAuthToIgnoreAdvertised;
