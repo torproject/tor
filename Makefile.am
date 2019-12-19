@@ -265,13 +265,23 @@ test: all
 shellcheck:
 	$(top_srcdir)/scripts/maint/checkShellScripts.sh
 
+check-build-headers: $(top_builddir)/warning_flags
+	+$(top_srcdir)/scripts/test/build-headers.sh \
+		"$(abs_top_srcdir)" "$(abs_top_builddir)" "$(MAKE)"
+
+update-build-headers-exceptions: $(top_builddir)/warning_flags
+	+$(top_srcdir)/scripts/test/build-headers.sh \
+		"$(abs_top_srcdir)" "$(abs_top_builddir)" "$(MAKE)" || true
+	$(MAKE) -C "$(abs_top_builddir)"/test_headers update-exceptions
+
 check-local:					\
 	check-spaces				\
 	check-changes				\
 	check-includes				\
 	check-best-practices			\
 	shellcheck				\
-	check-cocci
+	check-cocci                             \
+	check-build-headers
 
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
