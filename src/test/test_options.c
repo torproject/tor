@@ -10,6 +10,8 @@
 #include "lib/confmgt/confmgt.h"
 #include "app/config/config.h"
 #include "feature/dirauth/dirauth_config.h"
+#include "feature/dirauth/dirauth_options_st.h"
+#include "feature/dirauth/dirauth_sys.h"
 #include "feature/relay/relay_config.h"
 #include "test/test.h"
 #include "lib/geoip/geoip.h"
@@ -752,6 +754,14 @@ test_options_validate__logs(void *ignored)
 /*   return config_line; */
 /* } */
 
+static dirauth_options_t *
+get_dirauth_options(or_options_t *opt)
+{
+  int idx = subsystems_get_options_idx(&sys_dirauth);
+  tor_assert(idx >= 0);
+  return config_mgr_get_obj_mutable(get_options_mgr(), opt, idx);
+}
+
 static void
 test_options_validate__authdir(void *ignored)
 {
@@ -762,6 +772,7 @@ test_options_validate__authdir(void *ignored)
   options_test_data_t *tdata = get_options_test_data(
                                  ENABLE_AUTHORITY_V3_MIN
                                  "Address this.should.not!exist!.example.org");
+  const dirauth_options_t *da_opt;
 
   sandbox_disable_getaddrinfo_cache();
 
@@ -820,8 +831,9 @@ test_options_validate__authdir(void *ignored)
                                 "RecommendedVersions 1.2, 3.14\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
-  tt_str_op(tdata->opt->RecommendedClientVersions->value, OP_EQ, "1.2, 3.14");
-  tt_str_op(tdata->opt->RecommendedServerVersions->value, OP_EQ, "1.2, 3.14");
+  da_opt = get_dirauth_options(tdata->opt);
+  tt_str_op(da_opt->RecommendedClientVersions->value, OP_EQ, "1.2, 3.14");
+  tt_str_op(da_opt->RecommendedServerVersions->value, OP_EQ, "1.2, 3.14");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -831,8 +843,9 @@ test_options_validate__authdir(void *ignored)
                                 "RecommendedServerVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
-  tt_str_op(tdata->opt->RecommendedClientVersions->value, OP_EQ, "25");
-  tt_str_op(tdata->opt->RecommendedServerVersions->value, OP_EQ, "4.18");
+  da_opt = get_dirauth_options(tdata->opt);
+  tt_str_op(da_opt->RecommendedClientVersions->value, OP_EQ, "25");
+  tt_str_op(da_opt->RecommendedServerVersions->value, OP_EQ, "4.18");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -843,6 +856,7 @@ test_options_validate__authdir(void *ignored)
                                 "RecommendedServerVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
+  da_opt = get_dirauth_options(tdata->opt);
   tt_str_op(msg, OP_EQ, "AuthoritativeDir is set, but none of (Bridge/V3)"
             "AuthoritativeDir is set.");
   tor_free(msg);
@@ -853,6 +867,7 @@ test_options_validate__authdir(void *ignored)
                                 "RecommendedServerVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
+  da_opt = get_dirauth_options(tdata->opt);
   tt_str_op(msg, OP_EQ, "Versioning authoritative dir servers must set "
             "Recommended*Versions.");
   tor_free(msg);
@@ -863,9 +878,11 @@ test_options_validate__authdir(void *ignored)
                                 "RecommendedClientVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
+  da_opt = get_dirauth_options(tdata->opt);
   tt_str_op(msg, OP_EQ, "Versioning authoritative dir servers must set "
             "Recommended*Versions.");
   tor_free(msg);
+  da_opt = NULL;
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(ENABLE_AUTHORITY_V3

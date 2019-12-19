@@ -15,4 +15,17 @@ BEGIN_CONF_STRUCT(dirauth_options_t)
 /** Do not permit more than this number of servers per IP address. */
 CONF_VAR(AuthDirMaxServersPerAddr, POSINT, 0, "2")
 
+/** Which versions of tor should we tell users to run? */
+CONF_VAR(RecommendedVersions, LINELIST, 0, NULL)
+
+/** Which versions of tor should we tell users to run on clients? */
+CONF_VAR(RecommendedClientVersions, LINELIST, 0, NULL)
+
+/** Which versions of tor should we tell users to run on relays? */
+CONF_VAR(RecommendedServerVersions, LINELIST, 0, NULL)
+
+/** Boolean: is this an authoritative directory that's willing to recommend
+ * versions? */
+CONF_VAR(VersioningAuthoritativeDirectory, BOOL, 0, "0")
+
 END_CONF_STRUCT(dirauth_options_t)

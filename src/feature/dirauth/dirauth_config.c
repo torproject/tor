@@ -73,24 +73,6 @@ options_validate_dirauth_mode(const or_options_t *old_options,
 
   if (!options->ContactInfo && !options->TestingTorNetwork)
     REJECT("Authoritative directory servers must set ContactInfo");
-  if (!options->RecommendedClientVersions)
-    options->RecommendedClientVersions =
-      config_lines_dup(options->RecommendedVersions);
-  if (!options->RecommendedServerVersions)
-    options->RecommendedServerVersions =
-      config_lines_dup(options->RecommendedVersions);
-  if (options->VersioningAuthoritativeDir &&
-      (!options->RecommendedClientVersions ||
-       !options->RecommendedServerVersions))
-    REJECT("Versioning authoritative dir servers must set "
-           "Recommended*Versions.");
-
-  char *t;
-  /* Call these functions to produce warnings only. */
-  t = format_recommended_version_list(options->RecommendedClientVersions, 1);
-  tor_free(t);
-  t = format_recommended_version_list(options->RecommendedServerVersions, 1);
-  tor_free(t);
 
   if (options->UseEntryGuards) {
     log_info(LD_CONFIG, "Authoritative directory servers can't set "
@@ -441,6 +423,55 @@ options_act_dirauth_stats(const or_options_t *old_options,
   return 0;
 }
 
+/**
+ * Make any necessary modifications to a dirauth_options_t that occur
+ * before validation.  On success return 0; on failure return -1 and
+ * set *<b>msg_out</b> to a newly allocated error string.
+ **/
+static int
+dirauth_options_pre_normalize(void *arg, char **msg_out)
+{
+  dirauth_options_t *options = arg;
+  (void)msg_out;
+
+  if (!options->RecommendedClientVersions)
+    options->RecommendedClientVersions =
+      config_lines_dup(options->RecommendedVersions);
+  if (!options->RecommendedServerVersions)
+    options->RecommendedServerVersions =
+      config_lines_dup(options->RecommendedVersions);
+
+  return 0;
+}
+
+/**
+ * Check whether a dirauth_options_t is correct.
+ *
+ * On success return 0; on failure return -1 and set *<b>msg_out</b> to a
+ * newly allocated error string.
+ **/
+static int
+dirauth_options_validate(const void *arg, char **msg)
+{
+  const dirauth_options_t *options = arg;
+
+  if (options->VersioningAuthoritativeDirectory &&
+      (!options->RecommendedClientVersions ||
+       !options->RecommendedServerVersions)) {
+      REJECT("Versioning authoritative dir servers must set "
+           "Recommended*Versions.");
+  }
+
+  char *t;
+  /* Call these functions to produce warnings only. */
+  t = format_recommended_version_list(options->RecommendedClientVersions, 1);
+  tor_free(t);
+  t = format_recommended_version_list(options->RecommendedServerVersions, 1);
+  tor_free(t);
+
+  return 0;
+}
+
 /* Declare the options field table for dirauth_options */
 #define CONF_CONTEXT TABLE
 #include "feature/dirauth/dirauth_options.inc"
@@ -458,5 +489,7 @@ const config_format_t dirauth_options_fmt = {
              DIRAUTH_OPTIONS_MAGIC,
              offsetof(dirauth_options_t, magic) },
   .vars = dirauth_options_t_vars,
-};
 
+  .pre_normalize_fn = dirauth_options_pre_normalize,
+  .validate_fn = dirauth_options_validate
+};

@@ -113,11 +113,6 @@ struct or_options_t {
    * [][0] is IPv4, [][1] is IPv6
    */
   tor_addr_t OutboundBindAddresses[OUTBOUND_ADDR_MAX][2];
-  /** Directory server only: which versions of
-   * Tor should we tell users to run? */
-  struct config_line_t *RecommendedVersions;
-  struct config_line_t *RecommendedClientVersions;
-  struct config_line_t *RecommendedServerVersions;
   /** Whether dirservers allow router descriptors with private IPs. */
   int DirAllowPrivateAddresses;
   /** Whether routers accept EXTEND cells to routers with private IPs. */
@@ -192,9 +187,6 @@ struct or_options_t {
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int V3AuthoritativeDir; /**< Boolean: is this an authoritative directory
                            * for version 3 directories? */
-  int VersioningAuthoritativeDir; /**< Boolean: is this an authoritative
-                                   * directory that's willing to recommend
-                                   * versions? */
   int BridgeAuthoritativeDir; /**< Boolean: is this an authoritative directory
                                * that aggregates bridge descriptors? */
 

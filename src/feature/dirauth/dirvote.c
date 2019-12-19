@@ -4419,6 +4419,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                                         authority_cert_t *cert)
 {
   const or_options_t *options = get_options();
+  const dirauth_options_t *d_options = dirauth_get_options();
   networkstatus_t *v3_out = NULL;
   uint32_t addr;
   char *hostname = NULL, *client_versions = NULL, *server_versions = NULL;
@@ -4458,11 +4459,11 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     hostname = tor_dup_ip(addr);
   }
 
-  if (options->VersioningAuthoritativeDir) {
+  if (d_options->VersioningAuthoritativeDirectory) {
     client_versions =
-      format_recommended_version_list(options->RecommendedClientVersions, 0);
+      format_recommended_version_list(d_options->RecommendedClientVersions, 0);
     server_versions =
-      format_recommended_version_list(options->RecommendedServerVersions, 0);
+      format_recommended_version_list(d_options->RecommendedServerVersions, 0);
   }
 
   contact = get_options()->ContactInfo;
