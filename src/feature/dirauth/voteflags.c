@@ -485,6 +485,7 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
    */
   int answer;
   const or_options_t *options = get_options();
+  const dirauth_options_t *dirauth_options = dirauth_get_options();
   node_t *node = node_get_mutable_by_id(router->cache_info.identity_digest);
   tor_assert(node);
 
@@ -511,7 +512,7 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
        IPv6 OR port since that'd kill all dual stack relays until a
        majority of the dir auths have IPv6 connectivity. */
     answer = (now < node->last_reachable + REACHABLE_TIMEOUT &&
-              (options->AuthDirHasIPv6Connectivity != 1 ||
+              (dirauth_options->AuthDirHasIPv6Connectivity != 1 ||
                tor_addr_is_null(&router->ipv6_addr) ||
                now < node->last_reachable6 + REACHABLE_TIMEOUT));
   }
@@ -542,7 +543,7 @@ static int
 should_publish_node_ipv6(const node_t *node, const routerinfo_t *ri,
                          time_t now)
 {
-  const or_options_t *options = get_options();
+  const dirauth_options_t *options = dirauth_get_options();
 
   return options->AuthDirHasIPv6Connectivity == 1 &&
     !tor_addr_is_null(&ri->ipv6_addr) &&

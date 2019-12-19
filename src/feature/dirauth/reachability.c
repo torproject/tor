@@ -17,6 +17,7 @@
 #include "core/or/channeltls.h"
 #include "core/or/command.h"
 #include "feature/dirauth/authmode.h"
+#include "feature/dirauth/dirauth_sys.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerinfo.h"
@@ -24,6 +25,7 @@
 #include "feature/nodelist/torcert.h"
 #include "feature/stats/rephist.h"
 
+#include "feature/dirauth/dirauth_options_st.h"
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerlist_st.h"
@@ -154,7 +156,7 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
   if (chan) command_setup_channel(chan);
 
   /* Possible IPv6. */
-  if (get_options()->AuthDirHasIPv6Connectivity == 1 &&
+  if (dirauth_get_options()->AuthDirHasIPv6Connectivity == 1 &&
       !tor_addr_is_null(&router->ipv6_addr)) {
     char addrstr[TOR_ADDR_BUF_LEN];
     log_debug(LD_OR, "Testing reachability of %s at %s:%u.",
