@@ -986,11 +986,6 @@ struct or_options_t {
    * If -1, we should do whatever the consensus parameter says. */
   int ExtendByEd25519ID;
 
-  /** Bool (default: 1): When testing routerinfos as a directory authority,
-   * do we enforce Ed25519 identity match? */
-  /* NOTE: remove this option someday. */
-  int AuthDirTestEd25519LinkKeys;
-
   /** Bool (default: 0): Tells if a %include was used on torrc */
   int IncludeUsed;
 

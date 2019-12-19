@@ -39,6 +39,11 @@ CONF_VAR(AuthDirPinKeys, BOOL, 0, "1")
  * vote indicating participation. */
 CONF_VAR(AuthDirSharedRandomness, BOOL, 0, "1")
 
+/** Bool (default: 1): When testing routerinfos as a directory authority,
+ * do we enforce Ed25519 identity match? */
+/* NOTE: remove this option someday. */
+CONF_VAR(AuthDirTestEd25519LinkKeys, BOOL, 0, "1")
+
 /** Which versions of tor should we tell users to run? */
 CONF_VAR(RecommendedVersions, LINELIST, 0, NULL)
 
