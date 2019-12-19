@@ -139,18 +139,41 @@ done
 all_count=$(grep -c '^.*$' "${TEST_DIR}"/header_all.txt) || true
 success_count=$(grep -c '^.*$' "${TEST_DIR}"/header_success.txt) || true
 fail_count=$(grep -c '^.*$' "${TEST_DIR}"/header_fail.txt) || true
-xfail_count=$(grep -c '^.*$' "$EXCEPTIONS_FILE") || true
+exception_count=$(grep -c '^.*$' "$EXCEPTIONS_FILE") || true
 
 sort "${TEST_DIR}"/header_fail.txt > "${TEST_DIR}"/header_fail_sorted.txt
 
+# Report success and failure counts
 echo "Compiled each tor-owned header by itself:"
 echo "${success_count}/${all_count} succeeded"
-if test "$fail_count" -gt 0; then
-    echo "${fail_count}/${all_count} failed"
-    echo "${xfail_count}/${all_count} expected to fail"
-    if ! diff -u "$EXCEPTIONS_FILE" "${TEST_DIR}"/header_fail_sorted.txt; then
-        EXIT_STATUS=1
-    fi
+echo "${fail_count}/${all_count} failed"
+echo "${exception_count}/${all_count} expected to fail"
+
+# Report differences
+diff -u "$EXCEPTIONS_FILE" "${TEST_DIR}"/header_fail_sorted.txt \
+     > "${TEST_DIR}"/header_fail_diff.txt || true
+if test -s "${TEST_DIR}"/header_fail_diff.txt; then
+    echo "Differences between expected failures and actual failures:"
+    cat "${TEST_DIR}"/header_fail_diff.txt
+fi
+
+# Check for errors
+if test "$fail_count" -gt "$exception_count"; then
+    echo "Too many header compilation failures!"
+    echo "Expected ${exception_count}, got ${fail_count}."
+    EXIT_STATUS=1
+fi
+
+# Ignore headers that we expected to fail, but actually didn't fail
+# (Some configurations disable some failing code.)
+grep '^+[^ ]*c$' "${TEST_DIR}"/header_fail_diff.txt \
+     > "${TEST_DIR}"/header_fail_unexp.txt || true
+unexpected_fail_count=$(grep -c '^.*$' "${TEST_DIR}"/header_fail_unexp.txt) \
+    || true
+if test "$unexpected_fail_count" -gt 0; then
+    echo "${unexpected_fail_count} unexpected header compilation failures:"
+    cat "${TEST_DIR}"/header_fail_unexp.txt
+    EXIT_STATUS=1
 fi
 
 rmdir "$RELATIVE_PATH_FAIL_DIR"
