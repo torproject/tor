@@ -462,14 +462,6 @@ struct or_options_t {
   int AuthDirHasIPv6Connectivity; /**< Boolean: are we on IPv6?  */
   int AuthDirPinKeys; /**< Boolean: Do we enforce key-pinning? */
 
-  /** If non-zero, always vote the Fast flag for any relay advertising
-   * this amount of capacity or more. */
-  uint64_t AuthDirFastGuarantee;
-
-  /** If non-zero, this advertised capacity or more is always sufficient
-   * to satisfy the bandwidth requirement for the Guard flag. */
-  uint64_t AuthDirGuardBWGuarantee;
-
   char *AccountingStart; /**< How long is the accounting interval, and when
                           * does it start? */
   uint64_t AccountingMax; /**< How many bytes do we allow per accounting

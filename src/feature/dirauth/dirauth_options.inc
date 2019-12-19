@@ -12,6 +12,14 @@
 /** Holds configuration about our directory authority options. */
 BEGIN_CONF_STRUCT(dirauth_options_t)
 
+/** If non-zero, always vote the Fast flag for any relay advertising
+ * this amount of capacity or more. */
+CONF_VAR(AuthDirFastGuarantee, MEMUNIT, 0, "100 KB")
+
+/** If non-zero, this advertised capacity or more is always sufficient
+ * to satisfy the bandwidth requirement for the Guard flag. */
+CONF_VAR(AuthDirGuardBWGuarantee, MEMUNIT, 0, "2 MB")
+
 /** Do not permit more than this number of servers per IP address. */
 CONF_VAR(AuthDirMaxServersPerAddr, POSINT, 0, "2")
 

@@ -329,8 +329,6 @@ static const config_var_t option_vars_[] = {
   V(AuthDirBadExitCCs,           CSV,      ""),
   V(AuthDirInvalid,              LINELIST, NULL),
   V(AuthDirInvalidCCs,           CSV,      ""),
-  V(AuthDirFastGuarantee,        MEMUNIT,  "100 KB"),
-  V(AuthDirGuardBWGuarantee,     MEMUNIT,  "2 MB"),
   V(AuthDirPinKeys,              BOOL,     "1"),
   V(AuthDirReject,               LINELIST, NULL),
   V(AuthDirRejectCCs,            CSV,      ""),
@@ -3875,8 +3873,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
     return -1;
 
   if (options_validate_relay_bandwidth(old_options, options, msg) < 0)
-    return -1;
-  if (options_validate_dirauth_bandwidth(old_options, options, msg) < 0)
     return -1;
 
   if (options->BandwidthRate > options->BandwidthBurst)

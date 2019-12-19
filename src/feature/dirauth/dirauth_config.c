@@ -118,39 +118,6 @@ options_validate_dirauth_mode(const or_options_t *old_options,
 }
 
 /**
- * Legacy validation/normalization function for the dirauth bandwidth options
- * in options. Uses old_options as the previous options.
- *
- * Returns 0 on success, returns -1 and sets *msg to a newly allocated string
- * on error.
- */
-int
-options_validate_dirauth_bandwidth(const or_options_t *old_options,
-                                   or_options_t *options,
-                                   char **msg)
-{
-  (void)old_options;
-
-  if (BUG(!options))
-    return -1;
-
-  if (BUG(!msg))
-    return -1;
-
-  if (!authdir_mode(options))
-    return 0;
-
-  if (config_ensure_bandwidth_cap(&options->AuthDirFastGuarantee,
-                           "AuthDirFastGuarantee", msg) < 0)
-    return -1;
-  if (config_ensure_bandwidth_cap(&options->AuthDirGuardBWGuarantee,
-                           "AuthDirGuardBWGuarantee", msg) < 0)
-    return -1;
-
-  return 0;
-}
-
-/**
  * Legacy validation/normalization function for the dirauth schedule options
  * in options. Uses old_options as the previous options.
  *
@@ -440,6 +407,13 @@ dirauth_options_pre_normalize(void *arg, char **msg_out)
   if (!options->RecommendedServerVersions)
     options->RecommendedServerVersions =
       config_lines_dup(options->RecommendedVersions);
+
+  if (config_ensure_bandwidth_cap(&options->AuthDirFastGuarantee,
+                           "AuthDirFastGuarantee", msg_out) < 0)
+    return -1;
+  if (config_ensure_bandwidth_cap(&options->AuthDirGuardBWGuarantee,
+                                  "AuthDirGuardBWGuarantee", msg_out) < 0)
+    return -1;
 
   return 0;
 }

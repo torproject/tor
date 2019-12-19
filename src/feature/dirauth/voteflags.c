@@ -18,6 +18,7 @@
 #include "core/or/policies.h"
 #include "feature/dirauth/bwauth.h"
 #include "feature/dirauth/reachability.h"
+#include "feature/dirauth/dirauth_sys.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/networkstatus.h"
@@ -27,6 +28,7 @@
 #include "feature/relay/router.h"
 #include "feature/stats/rephist.h"
 
+#include "feature/dirauth/dirauth_options_st.h"
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerlist_st.h"
@@ -352,9 +354,11 @@ dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil)
   }
   /* Protect sufficiently fast nodes from being pushed out of the set
    * of Fast nodes. */
-  if (options->AuthDirFastGuarantee &&
-      fast_bandwidth_kb > options->AuthDirFastGuarantee/1000)
-    fast_bandwidth_kb = (uint32_t)options->AuthDirFastGuarantee/1000;
+  {
+    const uint64_t fast_opt = dirauth_get_options()->AuthDirFastGuarantee;
+    if (fast_opt && fast_bandwidth_kb > fast_opt / 1000)
+      fast_bandwidth_kb = (uint32_t)(fast_opt / 1000);
+  }
 
   /* Now that we have a time-known that 7/8 routers are known longer than,
    * fill wfus with the wfu of every such "familiar" router. */
@@ -571,10 +575,10 @@ dirauth_set_routerstatus_from_routerinfo(routerstatus_t *rs,
   set_routerstatus_from_routerinfo(rs, node, ri);
 
   /* Override rs->is_possible_guard. */
+  const uint64_t bw_opt = dirauth_get_options()->AuthDirGuardBWGuarantee;
   if (node->is_fast && node->is_stable &&
       ri->supports_tunnelled_dir_requests &&
-      ((options->AuthDirGuardBWGuarantee &&
-        routerbw_kb >= options->AuthDirGuardBWGuarantee/1000) ||
+      ((bw_opt && routerbw_kb >= bw_opt / 1000) ||
        routerbw_kb >= MIN(guard_bandwidth_including_exits_kb,
                           guard_bandwidth_excluding_exits_kb))) {
     long tk = rep_hist_get_weighted_time_known(
