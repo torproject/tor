@@ -3,7 +3,32 @@
 set -e
 set -o pipefail
 
-# This script depends on the warning_flags file built by configure.
+# Script to set us up for building all of our headers by themselves
+#
+# This script makes a directory called "test_headers", then populates
+# it with one C file for each header.  The C file defines all of the
+# PRIVATE, INTERNAL, and EXPOSE macros listed in the header. If the
+# header depends on TOR_UNIT_TESTS, this script creates another C file,
+# which defines TOR_UNIT_TESTS, in addition to the other defines.
+#
+# This script also creates a prefix header, which contains common
+# header dependencies. Over time, we will reduce the number of headers
+# included in the prefix header.
+#
+# Finally, each C file also includes the target header.
+#
+# The script also makes a Makefile in this directory, that tries to
+# build every C file it generates. This script uses the Makefile to
+# build all the generated C files. The build depends on the
+# warning_flags file created by configure.
+#
+# At the moment, some headers fail to compile by themselves. This
+# script uses an exceptions file that allows some headers to fail.
+# Over time, we will reduce the number of headers in the exceptions
+# file.
+#
+# After building all the C files, this script reports the number of
+# successful and failed headers, and any unexpected failures.
 
 EXIT_STATUS=0
 
@@ -20,6 +45,8 @@ TEST_DIR="${BUILD_DIR}"/test_headers
 EXCEPTIONS_FILE="$SOURCE_DIR"/scripts/test/build-headers-exceptions.txt
 
 # Paths in this script must be absolute
+# If relative paths are used in this script, they will cause permissions
+# errors
 RELATIVE_PATH_FAIL_DIR=$(mktemp -d -t build_headers_path_fail_XXXXXX)
 cd "$RELATIVE_PATH_FAIL_DIR"
 chmod a-rwx "$RELATIVE_PATH_FAIL_DIR"
