@@ -68,7 +68,7 @@ DECLARE_PROB_DISTR_DOWNCAST_FN(logistic)
 DECLARE_PROB_DISTR_DOWNCAST_FN(log_logistic)
 DECLARE_PROB_DISTR_DOWNCAST_FN(genpareto)
 DECLARE_PROB_DISTR_DOWNCAST_FN(weibull)
-#endif
+#endif /* !defined(COCCI) */
 
 /**
  * Count number of one bits in 32-bit word.

@@ -108,7 +108,7 @@ setup_directory(void)
     /* undo sticky bit so tests don't get confused. */
     r = chown(temp_dir, getuid(), getgid());
   }
-#endif /* defined(_WIN32) */
+#endif /* defined(_WIN32) || ... */
   if (r) {
     fprintf(stderr, "Can't create directory %s:", temp_dir);
     perror("");

@@ -22,7 +22,7 @@
 #include "core/or/relay.h"
 #include "core/or/relay_crypto_st.h"
 
-#include "fakecircs.h"
+#include "test/fakecircs.h"
 
 /** Return newly allocated OR circuit using the given nchan and pchan. It must
  * be freed with the free_fake_orcirc(). */

@@ -29,5 +29,5 @@ int
 handle_control_onion_client_auth_view(control_connection_t *conn,
                                       const control_cmd_args_t *args);
 
-#endif
+#endif /* !defined(TOR_CONTROL_HS_H) */
 
