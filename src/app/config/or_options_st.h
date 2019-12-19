@@ -457,8 +457,6 @@ struct or_options_t {
   struct smartlist_t *AuthDirRejectCCs;
   /**@}*/
 
-  int AuthDirListBadExits; /**< True iff we should list bad exits,
-                            * and vote for all other exits as good. */
   int AuthDirPinKeys; /**< Boolean: Do we enforce key-pinning? */
 
   char *AccountingStart; /**< How long is the accounting interval, and when

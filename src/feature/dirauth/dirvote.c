@@ -4427,7 +4427,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   smartlist_t *routers, *routerstatuses;
   char identity_digest[DIGEST_LEN];
   char signing_key_digest[DIGEST_LEN];
-  int listbadexits = options->AuthDirListBadExits;
+  const int listbadexits = d_options->AuthDirListBadExits;
   routerlist_t *rl = router_get_routerlist();
   time_t now = time(NULL);
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;

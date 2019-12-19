@@ -334,7 +334,6 @@ static const config_var_t option_vars_[] = {
   V(AuthDirRejectCCs,            CSV,      ""),
   OBSOLETE("AuthDirRejectUnlisted"),
   OBSOLETE("AuthDirListBadDirs"),
-  V(AuthDirListBadExits,         BOOL,     "0"),
   OBSOLETE("AuthDirMaxServersPerAuthAddr"),
   VAR("AuthoritativeDirectory",  BOOL, AuthoritativeDir,    "0"),
   V(AutomapHostsOnResolve,       BOOL,     "0"),
