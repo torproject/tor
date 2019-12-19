@@ -764,21 +764,6 @@ struct or_options_t {
    * of certain configuration options. */
   int TestingTorNetwork;
 
-  /** Relays in a testing network which should be voted Exit
-   * regardless of exit policy. */
-  routerset_t *TestingDirAuthVoteExit;
-  int TestingDirAuthVoteExitIsStrict;
-
-  /** Relays in a testing network which should be voted Guard
-   * regardless of uptime and bandwidth. */
-  routerset_t *TestingDirAuthVoteGuard;
-  int TestingDirAuthVoteGuardIsStrict;
-
-  /** Relays in a testing network which should be voted HSDir
-   * regardless of uptime and DirPort. */
-  routerset_t *TestingDirAuthVoteHSDir;
-  int TestingDirAuthVoteHSDirIsStrict;
-
   /** Enable CONN_BW events.  Only altered on testing networks. */
   int TestingEnableConnBwEvent;
 

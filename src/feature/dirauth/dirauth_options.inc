@@ -70,6 +70,21 @@ CONF_VAR(RecommendedServerVersions, LINELIST, 0, NULL)
  * altered on testing networks. */
 CONF_VAR(TestingAuthDirTimeToLearnReachability, INTERVAL, 0, "30 minutes")
 
+  /** Relays in a testing network which should be voted Exit
+   * regardless of exit policy. */
+CONF_VAR(TestingDirAuthVoteExit, ROUTERSET, 0, NULL)
+CONF_VAR(TestingDirAuthVoteExitIsStrict, BOOL, 0, "0")
+
+/** Relays in a testing network which should be voted Guard
+ * regardless of uptime and bandwidth. */
+CONF_VAR(TestingDirAuthVoteGuard, ROUTERSET, 0, NULL)
+CONF_VAR(TestingDirAuthVoteGuardIsStrict, BOOL, 0, "0")
+
+/** Relays in a testing network which should be voted HSDir
+ * regardless of uptime and DirPort. */
+CONF_VAR(TestingDirAuthVoteHSDir, ROUTERSET, 0, NULL)
+CONF_VAR(TestingDirAuthVoteHSDirIsStrict, BOOL, 0, "0")
+
 /** Minimum value for the Exit flag threshold on testing networks. */
 CONF_VAR(TestingMinExitFlagThreshold, MEMUNIT, 0, "0")
 

@@ -752,12 +752,6 @@ static const config_var_t option_vars_[] = {
   OBSOLETE("TestingDescriptorMaxDownloadTries"),
   OBSOLETE("TestingMicrodescMaxDownloadTries"),
   OBSOLETE("TestingCertMaxDownloadTries"),
-  V_D(TestingDirAuthVoteExit, ROUTERSET, NULL),
-  V(TestingDirAuthVoteExitIsStrict,  BOOL,     "0"),
-  V_D(TestingDirAuthVoteGuard, ROUTERSET, NULL),
-  V(TestingDirAuthVoteGuardIsStrict,  BOOL,     "0"),
-  V_D(TestingDirAuthVoteHSDir, ROUTERSET, NULL),
-  V(TestingDirAuthVoteHSDirIsStrict,  BOOL,     "0"),
   VAR_INVIS("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_,
             "0"),
 

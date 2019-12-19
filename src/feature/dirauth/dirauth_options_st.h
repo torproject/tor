@@ -13,6 +13,8 @@
 #define TOR_FEATURE_DIRAUTH_DIRAUTH_OPTIONS_ST_H
 
 #include "lib/conf/confdecl.h"
+#include "feature/nodelist/routerset.h"
+
 #define CONF_CONTEXT STRUCT
 #include "feature/dirauth/dirauth_options.inc"
 #undef CONF_CONTEXT

@@ -620,9 +620,9 @@ dirauth_set_routerstatus_from_routerinfo(routerstatus_t *rs,
 STATIC void
 dirserv_set_routerstatus_testing(routerstatus_t *rs)
 {
-  const or_options_t *options = get_options();
+  const dirauth_options_t *options = dirauth_get_options();
 
-  tor_assert(options->TestingTorNetwork);
+  tor_assert(get_options()->TestingTorNetwork);
 
   if (routerset_contains_routerstatus(options->TestingDirAuthVoteExit,
                                       rs, 0)) {

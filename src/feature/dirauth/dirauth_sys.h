@@ -25,4 +25,8 @@ extern const struct subsys_fns_t sys_dirauth;
  **/
 #define DIRAUTH_SUBSYS_LEVEL 70
 
+#ifdef DIRAUTH_SYS_PRIVATE
+STATIC int dirauth_set_options(void *arg);
+#endif
+
 #endif /* !defined(DIRAUTH_SYS_H) */

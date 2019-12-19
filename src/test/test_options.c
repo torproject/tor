@@ -6,6 +6,7 @@
 #define CONFIG_PRIVATE
 #define RELAY_CONFIG_PRIVATE
 #define LOG_PRIVATE
+#define ROUTERSET_PRIVATE
 #include "core/or/or.h"
 #include "lib/confmgt/confmgt.h"
 #include "app/config/config.h"
@@ -16,7 +17,6 @@
 #include "test/test.h"
 #include "lib/geoip/geoip.h"
 
-#define ROUTERSET_PRIVATE
 #include "feature/nodelist/routerset.h"
 #include "core/mainloop/mainloop.h"
 #include "app/main/subsysmgr.h"
