@@ -177,14 +177,14 @@ dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
   long uptime;
 
   /* If we haven't been running for at least
-   * get_options()->MinUptimeHidServDirectoryV2 seconds, we can't
+   * MinUptimeHidServDirectoryV2 seconds, we can't
    * have accurate data telling us a relay has been up for at least
    * that long. We also want to allow a bit of slack: Reachability
    * tests aren't instant. If we haven't been running long enough,
    * trust the relay. */
 
   if (get_uptime() >
-      get_options()->MinUptimeHidServDirectoryV2 * 1.1)
+      dirauth_get_options()->MinUptimeHidServDirectoryV2 * 1.1)
     uptime = MIN(rep_hist_get_uptime(router->cache_info.identity_digest, now),
                  real_uptime(router, now));
   else
@@ -193,7 +193,7 @@ dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
   return (router->wants_to_be_hs_dir &&
           router->supports_tunnelled_dir_requests &&
           node->is_stable && node->is_fast &&
-          uptime >= get_options()->MinUptimeHidServDirectoryV2 &&
+          uptime >= dirauth_get_options()->MinUptimeHidServDirectoryV2 &&
           router_is_active(router, node, now));
 }
 

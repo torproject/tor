@@ -712,7 +712,6 @@ static const config_var_t option_vars_[] = {
                        OwningControllerProcess, NULL),
   VAR_NODUMP_IMMUTABLE("__OwningControllerFD", UINT64, OwningControllerFD,
              UINT64_MAX_STRING),
-  V(MinUptimeHidServDirectoryV2, INTERVAL, "96 hours"),
   V(TestingServerDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(TestingClientDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(TestingServerConsensusDownloadInitialDelay, CSV_INTERVAL, "0"),

@@ -44,6 +44,10 @@ CONF_VAR(AuthDirSharedRandomness, BOOL, 0, "1")
 /* NOTE: remove this option someday. */
 CONF_VAR(AuthDirTestEd25519LinkKeys, BOOL, 0, "1")
 
+/** As directory authority, accept hidden service directories after what
+ * time? */
+CONF_VAR(MinUptimeHidServDirectoryV2, INTERVAL, 0, "96 hours")
+
 /** Which versions of tor should we tell users to run? */
 CONF_VAR(RecommendedVersions, LINELIST, 0, NULL)
 

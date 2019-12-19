@@ -257,9 +257,6 @@ struct or_options_t {
   int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
   int FetchHidServDescriptors; /**< and hidden service descriptors? */
 
-  int MinUptimeHidServDirectoryV2; /**< As directory authority, accept hidden
-                                    * service directories after what time? */
-
   int FetchUselessDescriptors; /**< Do we fetch non-running descriptors too? */
   int AllDirActionsPrivate; /**< Should every directory action be sent
                              * through a Tor circuit? */

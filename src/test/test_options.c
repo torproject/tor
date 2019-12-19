@@ -994,13 +994,14 @@ test_options_validate__authdir(void *ignored)
   free_options_test_data(tdata);
   tdata = get_options_test_data(ENABLE_AUTHORITY_V3);
   /* We have to set this value manually, because it won't parse */
-  tdata->opt->MinUptimeHidServDirectoryV2 = -1;
+  get_dirauth_options(tdata->opt)->MinUptimeHidServDirectoryV2 = -1;
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg("MinUptimeHidServDirectoryV2 "
                  "option must be at least 0 seconds. Changing to 0.\n");
-  tt_int_op(tdata->opt->MinUptimeHidServDirectoryV2, OP_EQ, 0);
+  tt_int_op(get_dirauth_options(tdata->opt)->MinUptimeHidServDirectoryV2,
+            OP_EQ, 0);
   tor_free(msg);
 
  done:

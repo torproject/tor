@@ -108,12 +108,6 @@ options_validate_dirauth_mode(const or_options_t *old_options,
   if (options->ClientOnly)
     REJECT("Running as authoritative directory, but ClientOnly also set.");
 
-  if (options->MinUptimeHidServDirectoryV2 < 0) {
-    log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
-             "least 0 seconds. Changing to 0.");
-    options->MinUptimeHidServDirectoryV2 = 0;
-  }
-
   return 0;
 }
 
@@ -414,6 +408,12 @@ dirauth_options_pre_normalize(void *arg, char **msg_out)
   if (config_ensure_bandwidth_cap(&options->AuthDirGuardBWGuarantee,
                                   "AuthDirGuardBWGuarantee", msg_out) < 0)
     return -1;
+
+  if (options->MinUptimeHidServDirectoryV2 < 0) {
+    log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
+             "least 0 seconds. Changing to 0.");
+    options->MinUptimeHidServDirectoryV2 = 0;
+  }
 
   return 0;
 }
