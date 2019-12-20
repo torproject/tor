@@ -66,6 +66,8 @@ int init_keys_client(void);
 uint16_t router_get_active_listener_port_by_type_af(int listener_type,
                                                     sa_family_t family);
 uint16_t router_get_advertised_or_port(const or_options_t *options);
+void router_get_advertised_ipv6_or_ap(const or_options_t *options,
+                                      tor_addr_port_t *ipv6_ap_out);
 uint16_t router_get_advertised_or_port_by_af(const or_options_t *options,
                                              sa_family_t family);
 uint16_t router_get_advertised_dir_port(const or_options_t *options,
