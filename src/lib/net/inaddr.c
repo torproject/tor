@@ -35,7 +35,7 @@
  * (Like inet_aton(str,addr), but works on Windows and Solaris.)
  */
 int
-tor_inet_aton(const char *str, struct in_addr* addr)
+tor_inet_aton(const char *str, struct in_addr *addr)
 {
   unsigned a,b,c,d;
   char more;
