@@ -187,15 +187,6 @@ exception_count=${exception_count:-0}
 LC_ALL=C sort "${TEST_DIR}"/header_fail.txt \
       > "${TEST_DIR}"/header_fail_sorted.txt
 
-# Report success and failure counts
-echo "Compiled each tor-owned header by itself:"
-echo "${success_count}/${all_count} succeeded"
-echo "${fail_count}/${all_count} failed"
-# Don't show xfail if we only built some headers
-if test $# -eq 0; then
-    echo "${exception_count}/${all_count} expected to fail"
-fi
-
 # Work around sort that ignores LC_ALL, or uses a different sort order
 # to the exceptions file.
 LC_ALL=C sort "$EXCEPTIONS_FILE" \
@@ -212,6 +203,15 @@ if test $# -eq 0; then
         echo "Differences between expected failures and actual failures:"
         cat "${TEST_DIR}"/header_fail_diff.txt
     fi
+fi
+
+# Report success and failure counts
+echo "Compiled each tor-owned header by itself:"
+echo "${success_count}/${all_count} succeeded"
+echo "${fail_count}/${all_count} failed"
+# Don't show xfail if we only built some headers
+if test $# -eq 0; then
+    echo "${exception_count}/${all_count} expected to fail"
 fi
 
 # Check for errors
