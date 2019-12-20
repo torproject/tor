@@ -31,6 +31,9 @@ env:
     - ASCIIDOC_OPTIONS="--disable-asciidoc"
     ## Our default rust version is the minimum supported version
     - RUST_VERSION="1.31.0"
+    ## Turn off tor's sandbox in chutney, until we fix sandbox errors that are
+    ## triggered by Ubuntu Xenial and Bionic. See #32722.
+    - CHUTNEY_TOR_SANDBOX="0"
   matrix:
     ## This matrix entry is required, but it doesn't actually create any jobs
     -
@@ -51,10 +54,6 @@ matrix:
     ## Chutney is a fast job, clang is slower on Linux, so we do Chutney clang
     - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
       compiler: clang
-      ## (Linux only) Use an older Linux image (Ubuntu Trusty)
-      ## The Xenial and Bionic images cause permissions issues for chutney,
-      ## this is a workaround, until we fix #32240.
-      dist: trusty
     ## We check asciidoc with distcheck, to make sure we remove doc products
     ## We use Linux clang, because there are no other Linux clang jobs
     - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
@@ -120,8 +119,7 @@ addons:
       - libnss3-dev
       - libscrypt-dev
       - libseccomp-dev
-      ## zstd doesn't exist in Ubuntu Trusty
-      #- libzstd
+      - libzstd-dev
       ## Optional build dependencies
       - coccinelle
       - shellcheck
