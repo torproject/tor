@@ -72,6 +72,11 @@
 #include <ctype.h>
 #include <float.h>
 
+/* These platforms don't have meaningful pwdb or homedirs. */
+#if !defined(_WIN32) && !defined(__ANDROID__)
+#define DISABLE_PWDB_TESTS
+#endif
+
 #define INFINITY_DBL ((double)INFINITY)
 #define NAN_DBL ((double)NAN)
 
@@ -1845,7 +1850,7 @@ test_util_config_line_crlf(void *arg)
   tor_free(k); tor_free(v);
 }
 
-#ifndef _WIN32
+#ifndef DISABLE_PWDB_TESTS
 static void
 test_util_expand_filename(void *arg)
 {
@@ -5653,7 +5658,7 @@ test_util_touch_file(void *arg)
   ;
 }
 
-#if !(defined(_WIN32) || defined (__ANDROID__))
+#ifndef DISABLE_PWDB_TESTS
 static void
 test_util_pwdb(void *arg)
 {
@@ -6293,15 +6298,16 @@ test_util_map_anon_nofork(void *arg)
 #endif /* !defined(COCCI) */
 
 #ifdef _WIN32
-#define UTIL_TEST_NO_WIN(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
 #define UTIL_TEST_WIN_ONLY(n, f) UTIL_TEST(n, (f))
-#elif defined(__ANDROID__)
-#define UTIL_TEST_NO_WIN(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
-#define UTIL_TEST_WIN_ONLY(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
 #else
-#define UTIL_TEST_NO_WIN(n, f) UTIL_TEST(n, (f))
 #define UTIL_TEST_WIN_ONLY(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
-#endif /* defined(_WIN32) */
+#endif
+
+#ifdef DISABLE_PWDB_TESTS
+#define UTIL_TEST_PWDB(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
+#else
+#define UTIL_TEST_PWDB(n, f) UTIL_TEST(n, (f))
+#endif
 
 struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),
@@ -6311,7 +6317,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(config_line_comment_character),
   UTIL_LEGACY(config_line_escaped_content),
   UTIL_LEGACY(config_line_crlf),
-  UTIL_TEST_NO_WIN(expand_filename, 0),
+  UTIL_TEST_PWDB(expand_filename, 0),
   UTIL_LEGACY(escape_string_socks),
   UTIL_LEGACY(string_is_key_value),
   UTIL_LEGACY(strmisc),
@@ -6396,7 +6402,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(writepid, 0),
   UTIL_TEST(get_avail_disk_space, 0),
   UTIL_TEST(touch_file, 0),
-  UTIL_TEST_NO_WIN(pwdb, TT_FORK),
+  UTIL_TEST_PWDB(pwdb, TT_FORK),
   UTIL_TEST(calloc_check, 0),
   UTIL_TEST(monotonic_time, 0),
   UTIL_TEST(monotonic_time_ratchet, TT_FORK),
