@@ -82,7 +82,7 @@ all:
 
 update-exceptions:
 	\$(MAKE) all
-	sort header_fail.txt > "$EXCEPTIONS_FILE"
+	LC_ALL=C sort header_fail.txt > "$EXCEPTIONS_FILE"
 
 .c.o:
 	echo "\$<" >> header_all.txt
@@ -121,7 +121,7 @@ for hdr in $(cd "${SOURCE_DIR}"/src \
         "$hdr_path" \
         | sed -e \
         's/.*[ (]\([A-Z_]*\(PRIVATE\|INTERNAL\|EXPOSE\)[A-Z_]*\).*/#define \1/' \
-        | sort -u > \
+        | LC_ALL=C sort -u > \
                "$tc_path" || true # ignore grep's exit status
 
     cat >> "$tc_path" <<EOF
@@ -150,7 +150,8 @@ success_count=$(grep -c '^.*$' "${TEST_DIR}"/header_success.txt) || true
 fail_count=$(grep -c '^.*$' "${TEST_DIR}"/header_fail.txt) || true
 exception_count=$(grep -c '^.*$' "$EXCEPTIONS_FILE") || true
 
-sort "${TEST_DIR}"/header_fail.txt > "${TEST_DIR}"/header_fail_sorted.txt
+LC_ALL=C sort "${TEST_DIR}"/header_fail.txt \
+      > "${TEST_DIR}"/header_fail_sorted.txt
 
 # Report success and failure counts
 echo "Compiled each tor-owned header by itself:"
@@ -158,8 +159,15 @@ echo "${success_count}/${all_count} succeeded"
 echo "${fail_count}/${all_count} failed"
 echo "${exception_count}/${all_count} expected to fail"
 
+# Work around sort that ignores LC_ALL, or uses a different sort order
+# to the exceptions file.
+LC_ALL=C sort "$EXCEPTIONS_FILE" \
+      > "${TEST_DIR}"/header_exceptions_sorted.txt
+
 # Report differences
-diff -u "$EXCEPTIONS_FILE" "${TEST_DIR}"/header_fail_sorted.txt \
+diff -u \
+     "${TEST_DIR}"/header_exceptions_sorted.txt \
+     "${TEST_DIR}"/header_fail_sorted.txt \
      > "${TEST_DIR}"/header_fail_diff.txt || true
 if test -s "${TEST_DIR}"/header_fail_diff.txt; then
     echo "Differences between expected failures and actual failures:"
