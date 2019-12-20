@@ -8,9 +8,9 @@
 
 #include "core/or/or.h"
 #include "app/config/config.h"
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 #include "core/or/channel.h"
-#define SCHEDULER_PRIVATE_
+#define SCHEDULER_PRIVATE
 #include "core/or/scheduler.h"
 
 /*****************************************************************************

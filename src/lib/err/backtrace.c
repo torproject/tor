@@ -54,7 +54,7 @@
 
 #include "lib/cc/ctassert.h"
 
-#define EXPOSE_CLEAN_BACKTRACE
+#define BACKTRACE_PRIVATE
 #include "lib/err/backtrace.h"
 
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \

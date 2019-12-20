@@ -13,10 +13,10 @@
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "feature/nodelist/networkstatus.h"
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 #include "core/or/channel.h"
 #include "core/or/channeltls.h"
-#define SCHEDULER_PRIVATE_
+#define SCHEDULER_PRIVATE
 #include "core/or/scheduler.h"
 #include "lib/math/fp.h"
 

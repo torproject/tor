@@ -1,8 +1,8 @@
 /* Copyright (c) 2013-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#define TOR_CHANNEL_INTERNAL_
-#define CHANNEL_PRIVATE_
+#define CHANNEL_OBJECT_PRIVATE
+#define CHANNEL_FILE_PRIVATE
 #include "core/or/or.h"
 #include "core/or/channel.h"
 /* For channel_note_destroy_not_pending */

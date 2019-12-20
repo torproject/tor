@@ -65,7 +65,7 @@
  * Define this so we get channel internal functions, since we're implementing
  * part of a subclass (channel_tls_t).
  */
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"

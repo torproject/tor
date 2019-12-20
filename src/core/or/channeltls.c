@@ -34,7 +34,7 @@
  * Define this so channel.h gives us things only channel_t subclasses
  * should touch.
  */
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 
 #define CHANNELTLS_PRIVATE
 

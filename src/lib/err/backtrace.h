@@ -29,11 +29,11 @@ const char *get_tor_backtrace_version(void);
 #define log_backtrace(sev, dom, msg) \
   log_backtrace_impl((sev), (dom), (msg), tor_log)
 
-#ifdef EXPOSE_CLEAN_BACKTRACE
+#ifdef BACKTRACE_PRIVATE
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
 void clean_backtrace(void **stack, size_t depth, const ucontext_t *ctx);
 #endif
-#endif /* defined(EXPOSE_CLEAN_BACKTRACE) */
+#endif /* defined(BACKTRACE_PRIVATE) */
 
 #endif /* !defined(TOR_BACKTRACE_H) */

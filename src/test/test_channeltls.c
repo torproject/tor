@@ -5,7 +5,7 @@
 
 #include <math.h>
 
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 #include "core/or/or.h"
 #include "lib/net/address.h"
 #include "lib/buf/buffers.h"
