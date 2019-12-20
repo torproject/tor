@@ -82,7 +82,7 @@
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
 #define USE_BACKTRACE
-#define EXPOSE_CLEAN_BACKTRACE
+#define BACKTRACE_PRIVATE
 #include "lib/err/backtrace.h"
 #endif /* defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && ... */
 

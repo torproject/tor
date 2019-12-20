@@ -10,7 +10,7 @@
 #define DIRCACHE_PRIVATE
 #define DIRCLIENT_PRIVATE
 #define HS_CACHE_PRIVATE
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 
 #include "trunnel/ed25519_cert.h"
 #include "feature/hs/hs_cache.h"

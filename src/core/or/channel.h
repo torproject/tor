@@ -563,13 +563,13 @@ void channel_free_all(void);
 void channel_dumpstats(int severity);
 void channel_listener_dumpstats(int severity);
 
-#ifdef TOR_CHANNEL_INTERNAL_
+#ifdef CHANNEL_OBJECT_PRIVATE
 
-#ifdef CHANNEL_PRIVATE_
+#ifdef CHANNEL_FILE_PRIVATE
 
 STATIC void channel_add_to_digest_map(channel_t *chan);
 
-#endif /* defined(CHANNEL_PRIVATE_) */
+#endif /* defined(CHANNEL_FILE_PRIVATE) */
 
 /* Channel operations for subclasses and internal use only */
 
@@ -648,7 +648,7 @@ void channel_notify_flushed(channel_t *chan);
 /* Handle stuff we need to do on open like notifying circuits */
 void channel_do_open_actions(channel_t *chan);
 
-#endif /* defined(TOR_CHANNEL_INTERNAL_) */
+#endif /* defined(CHANNEL_OBJECT_PRIVATE) */
 
 /* Helper functions to perform operations on channels */
 

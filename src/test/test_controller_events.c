@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 #define CONNECTION_PRIVATE
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 #define CONTROL_PRIVATE
 #define CONTROL_EVENTS_PRIVATE
 #define OCIRC_EVENT_PRIVATE

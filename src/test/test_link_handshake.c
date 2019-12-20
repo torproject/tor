@@ -5,7 +5,7 @@
 
 #define CHANNELTLS_PRIVATE
 #define CONNECTION_PRIVATE
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 #define TORTLS_PRIVATE
 
 #include "core/or/or.h"

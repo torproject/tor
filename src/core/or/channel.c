@@ -52,10 +52,10 @@
  * Define this so channel.h gives us things only channel_t subclasses
  * should touch.
  */
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 
 /* This one's for stuff only channel.c and the test suite should see */
-#define CHANNEL_PRIVATE_
+#define CHANNEL_FILE_PRIVATE
 
 #include "core/or/or.h"
 #include "app/config/config.h"

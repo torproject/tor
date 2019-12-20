@@ -9,9 +9,9 @@
  * @brief Link-level padding code.
  **/
 
-/* TOR_CHANNEL_INTERNAL_ define needed for an O(1) implementation of
+/* CHANNEL_OBJECT_PRIVATE define needed for an O(1) implementation of
  * channelpadding_channel_to_channelinfo() */
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 
 #include "core/or/or.h"
 #include "core/or/channel.h"

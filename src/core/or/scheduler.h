@@ -136,7 +136,7 @@ MOCK_DECL(void, scheduler_channel_has_waiting_cells, (channel_t *chan));
  * These functions are only visible to the scheduling system, the current
  * scheduler implementation, and tests.
  *****************************************************************************/
-#ifdef SCHEDULER_PRIVATE_
+#ifdef SCHEDULER_PRIVATE
 
 /*********************************
  * Defined in scheduler.c
@@ -212,7 +212,7 @@ extern int32_t sched_run_interval;
 
 scheduler_t *get_vanilla_scheduler(void);
 
-#endif /* defined(SCHEDULER_PRIVATE_) */
+#endif /* defined(SCHEDULER_PRIVATE) */
 
 #endif /* !defined(TOR_SCHEDULER_H) */
 

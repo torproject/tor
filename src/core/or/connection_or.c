@@ -27,7 +27,7 @@
  * Define this so we get channel internal functions, since we're implementing
  * part of a subclass (channel_tls_t).
  */
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 #define CONNECTION_OR_PRIVATE
 #define ORCONN_EVENT_PRIVATE
 #include "core/or/channel.h"

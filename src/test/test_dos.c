@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 #define DOS_PRIVATE
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 #define CIRCUITLIST_PRIVATE
 
 #include "core/or/or.h"

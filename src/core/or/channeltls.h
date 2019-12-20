@@ -22,7 +22,7 @@ struct curve25519_public_key_t;
 
 #define TLS_CHAN_MAGIC 0x8a192427U
 
-#ifdef TOR_CHANNEL_INTERNAL_
+#ifdef CHANNEL_OBJECT_PRIVATE
 
 struct channel_tls_t {
   /* Base channel_t struct */
@@ -31,7 +31,7 @@ struct channel_tls_t {
   or_connection_t *conn;
 };
 
-#endif /* defined(TOR_CHANNEL_INTERNAL_) */
+#endif /* defined(CHANNEL_OBJECT_PRIVATE) */
 
 channel_t * channel_tls_connect(const tor_addr_t *addr, uint16_t port,
                                 const char *id_digest,

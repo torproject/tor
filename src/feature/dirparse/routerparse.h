@@ -40,7 +40,7 @@ int find_single_ipv6_orport(const smartlist_t *list,
 void routerparse_init(void);
 void routerparse_free_all(void);
 
-#ifdef EXPOSE_ROUTERDESC_TOKEN_TABLE
+#ifdef ROUTERDESC_TOKEN_TABLE_PRIVATE
 extern const struct token_rule_t routerdesc_token_table[];
 #endif
 

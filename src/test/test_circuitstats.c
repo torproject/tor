@@ -4,7 +4,7 @@
 #define CIRCUITBUILD_PRIVATE
 #define CIRCUITSTATS_PRIVATE
 #define CIRCUITLIST_PRIVATE
-#define CHANNEL_PRIVATE_
+#define CHANNEL_FILE_PRIVATE
 
 #include "core/or/or.h"
 #include "test/test.h"

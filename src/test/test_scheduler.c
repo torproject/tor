@@ -6,8 +6,8 @@
 #include <math.h>
 
 #define SCHEDULER_KIST_PRIVATE
-#define TOR_CHANNEL_INTERNAL_
-#define CHANNEL_PRIVATE_
+#define CHANNEL_OBJECT_PRIVATE
+#define CHANNEL_FILE_PRIVATE
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "lib/evloop/compat_libevent.h"
@@ -15,7 +15,7 @@
 #include "core/or/channeltls.h"
 #include "core/mainloop/connection.h"
 #include "feature/nodelist/networkstatus.h"
-#define SCHEDULER_PRIVATE_
+#define SCHEDULER_PRIVATE
 #include "core/or/scheduler.h"
 
 /* Test suite stuff */
