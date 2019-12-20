@@ -39,6 +39,9 @@ import socket
 import binascii
 import sys
 import time
+import os
+import hashlib
+import zipfile
 
 METADATA_MARKER = b'\xab\xcd\xefMaxMind.com'
 
@@ -464,8 +467,206 @@ def write_geoip_file(filename, metadata, the_tree, dump_item, fmt_item):
         fobj.write(fmt_item(unwritten))
     fobj.close()
 
+def _open_to_write(self, zinfo, force_zip64=False):
+    """Custom version of zipfile function to fix FAT/JAR ZIP header writing
+    Copied from /usr/lib/python3.7/zipfile.py
+    """
+    if force_zip64 and not self._allowZip64:
+        raise ValueError(
+            "force_zip64 is True, but allowZip64 was False when opening "
+            "the ZIP file."
+        )
+    if self._writing:
+        raise ValueError("Can't write to the ZIP file while there is "
+                         "another write handle open on it. "
+                         "Close the first handle before opening another.")
+
+    # Sizes and CRC are overwritten with correct data after processing the file
+    if not hasattr(zinfo, 'file_size'):
+        zinfo.file_size = 0
+    zinfo.compress_size = 0
+    zinfo.CRC = 0
+
+    zinfo.flag_bits = 2056
+    if not self._seekable:
+        zinfo.flag_bits |= 0x08
+
+    if not zinfo.external_attr and zinfo.create_system != 0:
+        zinfo.external_attr = 0o600 << 16  # permissions: ?rw-------
+
+    # Compressed size can be larger than uncompressed size
+    zip64 = self._allowZip64 and \
+            (force_zip64 or zinfo.file_size * 1.05 > zipfile.ZIP64_LIMIT)
+
+    if self._seekable:
+        self.fp.seek(self.start_dir)
+    zinfo.header_offset = self.fp.tell()
+
+    self._writecheck(zinfo)
+    self._didModify = True
+
+    self.fp.write(zinfo.FileHeader(zip64))
+
+    self._writing = True
+    return zipfile._ZipWriteFile(self, zinfo, zip64)
+
+def get_zinfo(filename, date_time):
+    info = zipfile.ZipInfo(filename)
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.create_system = 0  # "Windows" aka "FAT", what Java JAR uses
+    info.date_time = date_time
+    return info
+
+def write_jar(jarfile, filelist, assets=True):
+    zipfile.ZipFile._open_to_write = _open_to_write
+    with zipfile.ZipFile(jarfile, 'w') as jar:
+        zinfo = get_zinfo('META-INF/', date_time)
+        zinfo.extra = b'\xfe\xca\x00\x00'
+        jar.writestr(zinfo, '')
+        for f in filelist:
+            with open(f, 'rb') as fp:
+                zinfo = get_zinfo(f, date_time)
+                if assets and not zinfo.filename.startswith('META-INF/'):
+                    zinfo.filename = 'assets/' + zinfo.filename
+                jar.writestr(zinfo, fp.read())
+
+BUILDINFO = """buildinfo.version=0.1
+
+name=geoip
+group-id=org.torproject
+artifact-id=geoip
+version={version}
+
+source.scm.uri=scm:git:https://git.torproject.org/tor.git
+source.scm.tag=HEAD
+
+build-tool={build_tool}
+{build_tool}.rebuild-args={args}
+
+os.name={os_name}
+
+outputs.0.filename={jarname}
+outputs.0.length={jarname_size}
+outputs.0.checksums.sha512={jarname_sha512}
+outputs.1.filename={sourcesname}
+outputs.1.length={sourcesname_size}
+outputs.1.checksums.sha512={sourcesname_sha512}
+"""
+
+POM_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.torproject</groupId>
+  <artifactId>geoip</artifactId>
+  <version>%s</version>
+  <name>geoip</name>
+  <description>A Java library for controlling a Tor instance via its control port.</description>
+  <url>https://gitweb.torproject.org/tor</url>
+  <inceptionYear>2019</inceptionYear>
+  <licenses>
+    <license>
+      <name>BSD-3-clause</name>
+      <url>https://github.com/torproject/tor/blob/master/LICENSE</url>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>torproject</id>
+      <name>Tor Project</name>
+      <email>torbrowser@torproject.org</email>
+    </developer>
+    <developer>
+      <id>guardianproject</id>
+      <name>Guardian Project</name>
+      <email>support@guardianproject.info</email>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:https://git.torproject.org/tor.git</connection>
+    <url>https://gitweb.torproject.org/tor</url>
+  </scm>
+  <issueManagement>
+    <url>https://trac.torproject.org</url>
+  </issueManagement>
+
+  <repositories>
+    <repository>
+      <id>debian</id>
+      <url>file:///usr/share/maven-repo</url>
+    </repository>
+    <repository>
+      <id>gitlab-maven</id>
+      <url>https://gitlab.com/api/v4/projects/${env.CI_PROJECT_ID}/packages/maven</url>
+    </repository>
+  </repositories>
+
+  <distributionManagement>
+    <repository>
+      <id>gitlab-maven</id>
+      <url>https://gitlab.com/api/v4/projects/${env.CI_PROJECT_ID}/packages/maven</url>
+    </repository>
+    <snapshotRepository>
+      <id>gitlab-maven</id>
+      <url>https://gitlab.com/api/v4/projects/${env.CI_PROJECT_ID}/packages/maven</url>
+    </snapshotRepository>
+  </distributionManagement>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>debian</id>
+      <url>file:///usr/share/maven-repo</url>
+    </pluginRepository>
+  </pluginRepositories>
+</project>"""
+
+def write_maven_files(version):
+    basename = 'geoip-' + version
+    jarname = basename + '.jar'
+    sourcesname = basename + '-sources.jar'
+    with open(jarname, 'rb') as fp:
+        jarname_sha512 = hashlib.sha512(fp.read()).hexdigest()
+    with open(sourcesname, 'rb') as fp:
+        sourcesname_sha512 = hashlib.sha512(fp.read()).hexdigest()
+    with open(basename + '.buildinfo', 'w') as fp:
+        fp.write(BUILDINFO.format(
+            version=version,
+            os_name=sys.platform,
+            build_tool=os.path.basename(sys.executable),
+            args=' '.join(sys.argv),
+            jarname=jarname,
+            jarname_size=os.path.getsize(jarname),
+            jarname_sha512=jarname_sha512,
+            sourcesname=sourcesname,
+            sourcesname_size=os.path.getsize(sourcesname),
+            sourcesname_sha512=sourcesname_sha512,
+        ))
+    with open('pom.xml', 'w') as fp:
+        fp.write(POM_XML % version)
+
+
 content = open(sys.argv[1], 'rb').read()
 metadata, the_tree, _ = parse_mm_file(content)
 
 write_geoip_file('geoip', metadata, the_tree, dump_item_ipv4, fmt_item_ipv4)
 write_geoip_file('geoip6', metadata, the_tree, dump_item_ipv6, fmt_item_ipv6)
+
+if sys.argv[2] == '--make-maven-artifacts':
+    manifest = 'META-INF/MANIFEST.MF'
+    os.makedirs('META-INF', exist_ok=True)
+    with open(manifest, 'wb') as fp:
+        fp.write(b"""Manifest-Version: 1.0\r\nCreated-By: Tor Project\r\n\r\n""")
+    os.environ['TZ'] = 'UTC'
+    timestamp = metadata[0].map['build_epoch'].int_val()
+    version = time.strftime('%Y%m%d', time.gmtime(timestamp))
+    date_time = time.gmtime(timestamp)[:6]
+    os.utime(manifest, (timestamp, timestamp))
+    os.utime('geoip', (timestamp, timestamp))
+    os.utime('geoip6', (timestamp, timestamp))
+    os.utime(sys.argv[1], (timestamp, timestamp))
+    write_jar('geoip-' + version + '.jar', [manifest, 'geoip', 'geoip6'], True)
+    write_jar('geoip-' + version + '-sources.jar',
+              [manifest, 'GeoLite2-Country.mmdb', 'mmdb-convert.py'])
+    write_maven_files(version)
+    os.remove(manifest)
+    os.rmdir('META-INF')
