@@ -1,0 +1,6 @@
+  o Minor bugfixes (ipv4, address parsing):
+    - In tor_inet_aton(), parse the IPv4 address for leading zeros in the
+      octets, and reject the address if one exists and succeding characters
+      exist. Leading zeros usually occurs in addresses like 010.010.010.010
+      which is an obsolete notation for octal IPv4 addresses. Fixes bug
+      32363; bugfix on 0.4.1.6. Patch by Neel Chauhan.
