@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Copyright 2019  The Tor Project, Inc.
 # See LICENSE for licensing information.
 
