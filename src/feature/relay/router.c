@@ -1130,10 +1130,12 @@ init_keys(void)
 
   ds = router_get_trusteddirserver_by_digest(digest);
   if (!ds) {
+    tor_addr_port_t ipv6_orport;
+    router_get_advertised_ipv6_or_ap(options, &ipv6_orport);
     ds = trusted_dir_server_new(options->Nickname, NULL,
                                 router_get_advertised_dir_port(options, 0),
                                 router_get_advertised_or_port(options),
-                                NULL,
+                                &ipv6_orport,
                                 digest,
                                 v3_digest,
                                 type, 0.0);
