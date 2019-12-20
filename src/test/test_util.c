@@ -6295,15 +6295,12 @@ test_util_map_anon_nofork(void *arg)
 #ifdef _WIN32
 #define UTIL_TEST_NO_WIN(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
 #define UTIL_TEST_WIN_ONLY(n, f) UTIL_TEST(n, (f))
-#define UTIL_LEGACY_NO_WIN(n) UTIL_TEST_NO_WIN(n, 0)
 #elif defined(__ANDROID__)
 #define UTIL_TEST_NO_WIN(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
 #define UTIL_TEST_WIN_ONLY(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
-#define UTIL_LEGACY_NO_WIN(n) UTIL_TEST_NO_WIN(n, 0)
 #else
 #define UTIL_TEST_NO_WIN(n, f) UTIL_TEST(n, (f))
 #define UTIL_TEST_WIN_ONLY(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
-#define UTIL_LEGACY_NO_WIN(n) UTIL_LEGACY(n)
 #endif /* defined(_WIN32) */
 
 struct testcase_t util_tests[] = {
@@ -6314,7 +6311,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(config_line_comment_character),
   UTIL_LEGACY(config_line_escaped_content),
   UTIL_LEGACY(config_line_crlf),
-  UTIL_LEGACY_NO_WIN(expand_filename),
+  UTIL_TEST_NO_WIN(expand_filename, 0),
   UTIL_LEGACY(escape_string_socks),
   UTIL_LEGACY(string_is_key_value),
   UTIL_LEGACY(strmisc),
