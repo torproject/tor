@@ -35,10 +35,10 @@ set -o pipefail
 EXIT_STATUS=0
 
 # The first argument is $abs_top_srcdir, defaulting to the current directory.
-SOURCE_DIR="${1:-.}"
+SOURCE_DIR="${1:-$PWD}"
 # The second argument is $abs_top_builddir, defaulting to the current
 # directory.
-BUILD_DIR="${2:-.}"
+BUILD_DIR="${2:-$PWD}"
 # The third argument is $MAKE, defaulting to "make"
 MAKE_CMD="${3:-make}"
 # The remaining arguments are an optional list of file names, used to filter
