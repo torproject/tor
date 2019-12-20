@@ -73,7 +73,7 @@
 #include <float.h>
 
 /* These platforms don't have meaningful pwdb or homedirs. */
-#if !defined(_WIN32) && !defined(__ANDROID__)
+#if defined(_WIN32) || defined(__ANDROID__)
 #define DISABLE_PWDB_TESTS
 #endif
 
