@@ -32,8 +32,16 @@ const char *get_tor_backtrace_version(void);
 #ifdef EXPOSE_CLEAN_BACKTRACE
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
+
 /* It's hard to find a definition that satisfies all our OSes. */
-typedef ucontext_t;
+#ifdef HAVE_CYGWIN_SIGNAL_H
+#include <cygwin/signal.h>
+#elif defined(HAVE_SYS_UCONTEXT_H)
+#include <sys/ucontext.h>
+#elif defined(HAVE_UCONTEXT_H)
+#include <ucontext.h>
+#endif /* defined(HAVE_CYGWIN_SIGNAL_H) || ... */
+
 void clean_backtrace(void **stack, size_t depth, const ucontext_t *ctx);
 #endif
 #endif /* defined(EXPOSE_CLEAN_BACKTRACE) */

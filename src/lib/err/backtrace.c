@@ -40,14 +40,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#ifdef HAVE_CYGWIN_SIGNAL_H
-#include <cygwin/signal.h>
-#elif defined(HAVE_SYS_UCONTEXT_H)
-#include <sys/ucontext.h>
-#elif defined(HAVE_UCONTEXT_H)
-#include <ucontext.h>
-#endif /* defined(HAVE_CYGWIN_SIGNAL_H) || ... */
-
 #ifdef HAVE_PTHREAD_H
 #include <pthread.h>
 #endif
