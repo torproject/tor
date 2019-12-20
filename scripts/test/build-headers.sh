@@ -41,6 +41,16 @@ SOURCE_DIR="${1:-.}"
 BUILD_DIR="${2:-.}"
 # The third argument is $MAKE, defaulting to "make"
 MAKE_CMD="${3:-make}"
+# The remaining arguments are an optional list of file names, used to filter
+# the test files. We'll access them using "$*"
+shift
+shift
+shift
+
+if test $# -gt 0; then
+    echo "Skipping headers that are not in '$*'."
+fi
+
 # Paths in the Makefile are relative to $TEST_DIR
 TEST_DIR="${BUILD_DIR}"/test_headers
 # Headers that are allowed to fail
@@ -116,6 +126,19 @@ for hdr in $(cd "${SOURCE_DIR}"/src \
     tc_name="${name}"_h
     tc_path="${TEST_DIR}"/"$tc_name".c
 
+    if test $# -gt 0; then
+        name_h=$(basename "$hdr")
+        build_header=no
+        for use_h in "$@"; do
+            if test "$name_h" == "$use_h"; then
+                build_header=yes
+            fi
+        done
+        if test "$build_header" == no; then
+            continue;
+        fi
+    fi
+
     grep \
         '^ *# *if\(def *\| .*defined(\)[A-Z_]*\(PRIVATE\|INTERNAL\|EXPOSE\)[A-Z_]*' \
         "$hdr_path" \
@@ -157,7 +180,10 @@ LC_ALL=C sort "${TEST_DIR}"/header_fail.txt \
 echo "Compiled each tor-owned header by itself:"
 echo "${success_count}/${all_count} succeeded"
 echo "${fail_count}/${all_count} failed"
-echo "${exception_count}/${all_count} expected to fail"
+# Don't show xfail if we only built some headers
+if test $# -eq 0; then
+    echo "${exception_count}/${all_count} expected to fail"
+fi
 
 # Work around sort that ignores LC_ALL, or uses a different sort order
 # to the exceptions file.
@@ -169,9 +195,12 @@ diff -u \
      "${TEST_DIR}"/header_exceptions_sorted.txt \
      "${TEST_DIR}"/header_fail_sorted.txt \
      > "${TEST_DIR}"/header_fail_diff.txt || true
-if test -s "${TEST_DIR}"/header_fail_diff.txt; then
-    echo "Differences between expected failures and actual failures:"
-    cat "${TEST_DIR}"/header_fail_diff.txt
+# Don't show differences if we only built some headers
+if test $# -eq 0; then
+    if test -s "${TEST_DIR}"/header_fail_diff.txt; then
+        echo "Differences between expected failures and actual failures:"
+        cat "${TEST_DIR}"/header_fail_diff.txt
+    fi
 fi
 
 # Check for errors
