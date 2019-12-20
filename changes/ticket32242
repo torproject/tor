@@ -1,0 +1,2 @@
+  o Testing (continuous integration):
+    - Use zstd in our Travis Linux builds. Closes ticket 32242.
