@@ -168,10 +168,21 @@ EOF
 done
 
 "$MAKE_CMD" -C "$TEST_DIR"
+# Handle missing files
+touch "${TEST_DIR}"/header_all.txt
+touch "${TEST_DIR}"/header_success.txt
+touch "${TEST_DIR}"/header_fail.txt
+
 all_count=$(grep -c '^.*$' "${TEST_DIR}"/header_all.txt) || true
 success_count=$(grep -c '^.*$' "${TEST_DIR}"/header_success.txt) || true
 fail_count=$(grep -c '^.*$' "${TEST_DIR}"/header_fail.txt) || true
 exception_count=$(grep -c '^.*$' "$EXCEPTIONS_FILE") || true
+
+# Handle empty or missing files
+all_count=${all_count:-0}
+success_count=${success_count:-0}
+fail_count=${fail_count:-0}
+exception_count=${exception_count:-0}
 
 LC_ALL=C sort "${TEST_DIR}"/header_fail.txt \
       > "${TEST_DIR}"/header_fail_sorted.txt
@@ -216,6 +227,8 @@ grep '^+[^ ]*c$' "${TEST_DIR}"/header_fail_diff.txt \
      > "${TEST_DIR}"/header_fail_unexp.txt || true
 unexpected_fail_count=$(grep -c '^.*$' "${TEST_DIR}"/header_fail_unexp.txt) \
     || true
+# Handle empty or missing files
+unexpected_fail_count=${unexpected_fail_count:-0}
 if test "$unexpected_fail_count" -gt 0; then
     echo "${unexpected_fail_count} unexpected header compilation failures:"
     cat "${TEST_DIR}"/header_fail_unexp.txt
