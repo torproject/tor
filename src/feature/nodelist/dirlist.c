@@ -262,7 +262,7 @@ dir_server_new(int is_authority,
   ent->is_authority = is_authority;
   ent->type = type;
   ent->weight = weight;
-  if (addrport_ipv6) {
+  if (addrport_ipv6 && tor_addr_port_is_valid_ap(addrport_ipv6, 0)) {
     if (tor_addr_family(&addrport_ipv6->addr) != AF_INET6) {
       log_warn(LD_BUG, "Hey, I got a non-ipv6 addr as addrport_ipv6.");
       tor_addr_make_unspec(&ent->ipv6_addr);
