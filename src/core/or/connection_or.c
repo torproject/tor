@@ -771,13 +771,7 @@ connection_or_finished_connecting(or_connection_t *or_conn)
     }
 
     connection_or_change_state(or_conn, OR_CONN_STATE_PROXY_HANDSHAKING);
-
-    /* If the proxy type is haproxy, we don't have to wait for the response.
-     * We can start the TLS handshake immediately (but after all the outbound
-     * buffer is flushed). */
-    if (proxy_type != PROXY_HAPROXY) {
-      connection_start_reading(conn);
-    }
+    connection_start_reading(conn);
 
     return 0;
   }
