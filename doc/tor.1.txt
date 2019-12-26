@@ -954,9 +954,29 @@ forward slash (/) in the configuration file and on the command line.
 
 == CLIENT OPTIONS
 
+// These options are in alphabetical order, with exceptions as noted.
+// Please keep them that way!
+
 The following options are useful only for clients (that is, if
 **SocksPort**, **HTTPTunnelPort**, **TransPort**, **DNSPort**, or
 **NATDPort** is non-zero):
+
+[[AllowNonRFC953Hostnames]] **AllowNonRFC953Hostnames** **0**|**1**::
+    When this option is disabled, Tor blocks hostnames containing illegal
+    characters (like @ and :) rather than sending them to an exit node to be
+    resolved. This helps trap accidental attempts to resolve URLs and so on.
+    (Default: 0)
+
+[[AutomapHostsOnResolve]] **AutomapHostsOnResolve** **0**|**1**::
+    When this option is enabled, and we get a request to resolve an address
+    that ends with one of the suffixes in **AutomapHostsSuffixes**, we map an
+    unused virtual address to that address, and return the new virtual address.
+    This is handy for making ".onion" addresses work with applications that
+    resolve an address and then connect to it. (Default: 0)
+
+[[AutomapHostsSuffixes]] **AutomapHostsSuffixes** __SUFFIX__,__SUFFIX__,__...__::
+    A comma-separated list of suffixes to use with **AutomapHostsOnResolve**.
+    The "." suffix is equivalent to "all addresses." (Default: .exit,.onion).
 
 [[Bridge]] **Bridge** [__transport__] __IP__:__ORPort__ [__fingerprint__]::
     When set along with UseBridges, instructs Tor to use the relay at
@@ -978,6 +998,7 @@ The following options are useful only for clients (that is, if
     the documentation of the pluggable transport for details of what
     arguments it supports.
 
+// Out of order because it logically belongs before the CircuitBuildTimeout option
 [[LearnCircuitBuildTimeout]] **LearnCircuitBuildTimeout** **0**|**1**::
     If 0, CircuitBuildTimeout adaptive learning is disabled. (Default: 1)
 
@@ -988,6 +1009,14 @@ The following options are useful only for clients (that is, if
     value serves as the initial value to use before a timeout is learned. If
     LearnCircuitBuildTimeout is 0, this value is the only value used.
     (Default: 60 seconds)
+
+[[CircuitPadding]] **CircuitPadding** **0**|**1**::
+    If set to 0, Tor will not pad client circuits with additional cover
+    traffic. Only clients may set this option. This option should be offered
+    via the UI to mobile users for use where bandwidth may be expensive. If
+    set to 1, padding will be negotiated as per the consensus and relay
+    support (unlike ConnectionPadding, CircuitPadding cannot be force-enabled).
+    (Default: 1)
 
 [[CircuitsAvailableTimeout]] **CircuitsAvailableTimeout** __NUM__::
     Tor will attempt to keep at least one open, unused circuit available for
@@ -1005,6 +1034,58 @@ The following options are useful only for clients (that is, if
     If your network is particularly slow, you might want to set this to a
     number like 60. (Default: 0)
 
+[[ClientAutoIPv6ORPort]] **ClientAutoIPv6ORPort** **0**|**1**::
+    If this option is set to 1, Tor clients randomly prefer a node's IPv4 or
+    IPv6 ORPort. The random preference is set every time a node is loaded
+    from a new consensus or bridge config. When this option is set to 1,
+    **ClientPreferIPv6ORPort** is ignored. (Default: 0)
+
+[[ClientBootstrapConsensusAuthorityDownloadInitialDelay]] **ClientBootstrapConsensusAuthorityDownloadInitialDelay** __N__::
+    Initial delay in seconds for when clients should download consensuses from authorities
+    if they are bootstrapping (that is, they don't have a usable, reasonably
+    live consensus). Only used by clients fetching from a list of fallback
+    directory mirrors. This schedule is advanced by (potentially concurrent)
+    connection attempts, unlike other schedules, which are advanced by
+    connection failures. (Default: 6)
+
+[[ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay]] **ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay** __N__::
+    Initial delay in seconds for when clients should download consensuses from authorities
+    if they are bootstrapping (that is, they don't have a usable, reasonably
+    live consensus). Only used by clients which don't have or won't fetch
+    from a list of fallback directory mirrors. This schedule is advanced by
+    (potentially concurrent) connection attempts, unlike other schedules,
+    which are advanced by connection failures. (Default: 0)
+
+[[ClientBootstrapConsensusFallbackDownloadInitialDelay]] **ClientBootstrapConsensusFallbackDownloadInitialDelay** __N__::
+    Initial delay in seconds for when clients should download consensuses from fallback
+    directory mirrors if they are bootstrapping (that is, they don't have a
+    usable, reasonably live consensus). Only used by clients fetching from a
+    list of fallback directory mirrors. This schedule is advanced by
+    (potentially concurrent) connection attempts, unlike other schedules,
+    which are advanced by connection failures. (Default: 0)
+
+[[ClientBootstrapConsensusMaxInProgressTries]] **ClientBootstrapConsensusMaxInProgressTries** __NUM__::
+    Try this many simultaneous connections to download a consensus before
+    waiting for one to complete, timeout, or error out. (Default: 3)
+
+[[ClientDNSRejectInternalAddresses]] **ClientDNSRejectInternalAddresses** **0**|**1**::
+    If true, Tor does not believe any anonymously retrieved DNS answer that
+    tells it that an address resolves to an internal address (like 127.0.0.1 or
+    192.168.0.1). This option prevents certain browser-based attacks; it
+    is not allowed to be set on the default network. (Default: 1)
+
+[[ClientOnionAuthDir]] **ClientOnionAuthDir** __path__::
+    Path to the directory containing v3 hidden service authorization files.
+    Each file is for a single onion address, and the files MUST have the suffix
+    ".auth_private" (i.e. "bob_onion.auth_private"). The content format MUST be:
+     +
+      <onion-address>:descriptor:x25519:<base32-encoded-privkey>
+     +
+    The <onion-address> MUST NOT have the ".onion" suffix. The
+    <base32-encoded-privkey> is the base32 representation of the raw key bytes
+    only (32 bytes for x25519). See Appendix G in the rend-spec-v3.txt file of
+    https://spec.torproject.org/[torspec] for more information.
+
 [[ClientOnly]] **ClientOnly** **0**|**1**::
     If set to 1, Tor will not run as a relay or serve
     directory requests, even if the ORPort, ExtORPort, or DirPort options are
@@ -1013,6 +1094,43 @@ The following options are useful only for clients (that is, if
     Tor clients auto-promote themselves to being relays if they were stable
     and fast enough. The current behavior is simply that Tor is a client
     unless ORPort, ExtORPort, or DirPort are configured.) (Default: 0)
+
+[[ClientPreferIPv6DirPort]] **ClientPreferIPv6DirPort** **0**|**1**|**auto**::
+    If this option is set to 1, Tor prefers a directory port with an IPv6
+    address over one with IPv4, for direct connections, if a given directory
+    server has both. (Tor also prefers an IPv6 DirPort if IPv4Client is set to
+    0.) If this option is set to auto, clients prefer IPv4. Other things may
+    influence the choice. This option breaks a tie to the favor of IPv6.
+    (Default: auto)  (DEPRECATED: This option has had no effect for some
+    time.)
+
+[[ClientPreferIPv6ORPort]] **ClientPreferIPv6ORPort** **0**|**1**|**auto**::
+    If this option is set to 1, Tor prefers an OR port with an IPv6
+    address over one with IPv4 if a given entry node has both. (Tor also
+    prefers an IPv6 ORPort if IPv4Client is set to 0.) If this option is set
+    to auto, Tor bridge clients prefer the configured bridge address, and
+    other clients prefer IPv4. Other things may influence the choice. This
+    option breaks a tie to the favor of IPv6. (Default: auto)
+
+[[ClientRejectInternalAddresses]] **ClientRejectInternalAddresses** **0**|**1**::
+    If true, Tor does not try to fulfill requests to connect to an internal
+    address (like 127.0.0.1 or 192.168.0.1) __unless an exit node is
+    specifically requested__ (for example, via a .exit hostname, or a
+    controller request).  If true, multicast DNS hostnames for machines on the
+    local network (of the form *.local) are also rejected.  (Default: 1)
+
+[[ClientUseIPv4]] **ClientUseIPv4** **0**|**1**::
+    If this option is set to 0, Tor will avoid connecting to directory servers
+    and entry nodes over IPv4. Note that clients with an IPv4
+    address in a **Bridge**, proxy, or pluggable transport line will try
+    connecting over IPv4 even if **ClientUseIPv4** is set to 0. (Default: 1)
+
+[[ClientUseIPv6]] **ClientUseIPv6** **0**|**1**::
+    If this option is set to 1, Tor might connect to directory servers or
+    entry nodes over IPv6. For IPv6 only hosts, you need to also set
+    **ClientUseIPv4** to 0 to disable IPv4. Note that clients configured with
+    an IPv6 address in a **Bridge**, proxy, or pluggable transportline will
+    try connecting over IPv6 even if **ClientUseIPv6** is set to 0. (Default: 0)
 
 [[ConnectionPadding]] **ConnectionPadding** **0**|**1**|**auto**::
     This option governs Tor's use of padding to defend against some forms of
@@ -1024,25 +1142,74 @@ The following options are useful only for clients (that is, if
     for use where bandwidth may be expensive.
     (Default: auto)
 
-[[ReducedConnectionPadding]] **ReducedConnectionPadding** **0**|**1**::
-    If set to 1, Tor will not not hold OR connections open for very long,
-    and will send less padding on these connections. Only clients may set
-    this option. This option should be offered via the UI to mobile users
-    for use where bandwidth may be expensive. (Default: 0)
+[[DNSPort]] **DNSPort** ['address'**:**]{empty}__port__|**auto** [_isolation flags_]::
+    If non-zero, open this port to listen for UDP DNS requests, and resolve
+    them anonymously.  This port only handles A, AAAA, and PTR requests---it
+    doesn't handle arbitrary DNS request types. Set the port to "auto" to
+    have Tor pick a port for
+    you. This directive can be specified multiple times to bind to multiple
+    addresses/ports. See SocksPort for an explanation of isolation
+    flags. (Default: 0)
 
-[[CircuitPadding]] **CircuitPadding** **0**|**1**::
-    If set to 0, Tor will not pad client circuits with additional cover
-    traffic. Only clients may set this option. This option should be offered
-    via the UI to mobile users for use where bandwidth may be expensive. If
-    set to 1, padding will be negotiated as per the consensus and relay
-    support (unlike ConnectionPadding, CircuitPadding cannot be force-enabled).
-    (Default: 1)
+[[DormantCanceledByStartup]] **DormantCanceledByStartup** **0**|**1**::
+    By default, Tor starts in active mode if it was active the last time
+    it was shut down, and in dormant mode if it was dormant.  But if
+    this option is true, Tor treats every startup event as user
+    activity, and Tor will never start in Dormant mode, even if it has
+    been unused for a long time on previous runs. (Default: 0)
+     +
+    Note: Packagers and application developers should change the value of
+    this option only with great caution: it has the potential to
+    create spurious traffic on the network.  This option should only
+    be used if Tor is started by an affirmative user activity (like
+    clicking on an applcation or running a command), and not if Tor
+    is launched for some other reason (for example, by a startup
+    process, or by an application that launches itself on every login.)
 
-[[ReducedCircuitPadding]] **ReducedCircuitPadding** **0**|**1**::
-    If set to 1, Tor will only use circuit padding algorithms that have low
-    overhead. Only clients may set this option. This option should be offered
-    via the UI to mobile users for use where bandwidth may be expensive.
-    (Default: 0)
+[[DormantClientTimeout]] **DormantClientTimeout**  __N__ **minutes**|**hours**|**days**|**weeks**::
+    If Tor spends this much time without any client activity,
+    enter a dormant state where automatic circuits are not built, and
+    directory information is not fetched.
+    Does not affect servers or onion services. Must be at least 10 minutes.
+    (Default: 24 hours)
+
+[[DormantOnFirstStartup]] **DormantOnFirstStartup** **0**|**1**::
+    If true, then the first time Tor starts up with a fresh DataDirectory,
+    it starts in dormant mode, and takes no actions until the user has made
+    a request.  (This mode is recommended if installing a Tor client for a
+    user who might not actually use it.)  If false, Tor bootstraps the first
+    time it is started, whether it sees a user request or not.
+     +
+    After the first time Tor starts, it begins in dormant mode if it was
+    dormant before, and not otherwise. (Default: 0)
+
+[[DormantTimeoutDisabledByIdleStreams]] **DormantTimeoutDisabledByIdleStreams**  **0**|**1**::
+    If true, then any open client stream (even one not reading or writing)
+    counts as client activity for the purpose of DormantClientTimeout.
+    If false, then only network activity counts. (Default: 1)
+
+[[DownloadExtraInfo]] **DownloadExtraInfo** **0**|**1**::
+    If true, Tor downloads and caches "extra-info" documents. These documents
+    contain information about servers other than the information in their
+    regular server descriptors. Tor does not use this information for anything
+    itself; to save bandwidth, leave this option turned off. (Default: 0)
+
+[[EnforceDistinctSubnets]] **EnforceDistinctSubnets** **0**|**1**::
+    If 1, Tor will not put two servers whose IP addresses are "too close" on
+    the same circuit. Currently, two addresses are "too close" if they lie in
+    the same /16 range. (Default: 1)
+
+[[EntryNodes]] **EntryNodes** __node__,__node__,__...__::
+    A list of identity fingerprints and country codes of nodes
+    to use for the first hop in your normal circuits.
+    Normal circuits include all
+    circuits except for direct connections to directory servers.  The Bridge
+    option overrides this option; if you have configured bridges and
+    UseBridges is 1, the Bridges are used as your entry nodes. +
+     +
+    The ExcludeNodes option overrides this option: any node listed in both
+    EntryNodes and ExcludeNodes is treated as excluded. See
+    the **ExcludeNodes** option for more information on how to specify nodes.
 
 [[ExcludeNodes]] **ExcludeNodes** __node__,__node__,__...__::
     A list of identity fingerprints, country codes, and address
@@ -1068,7 +1235,7 @@ The following options are useful only for clients (that is, if
     country can't be identified. No country code, including \{??}, works if
     no GeoIPFile can be loaded. See also the GeoIPExcludeUnknown option below.
 
-
+// Out of order because it logically belongs after the ExcludeNodes option
 [[ExcludeExitNodes]] **ExcludeExitNodes** __node__,__node__,__...__::
     A list of identity fingerprints, country codes, and address
     patterns of nodes to never use when picking an exit node---that is, a
@@ -1077,14 +1244,6 @@ The following options are useful only for clients (that is, if
     list too.  See
     the **ExcludeNodes** option for more information on how to specify
     nodes. See also the caveats on the "ExitNodes" option below.
-
-[[GeoIPExcludeUnknown]] **GeoIPExcludeUnknown** **0**|**1**|**auto**::
-    If this option is set to 'auto', then whenever any country code is set in
-    ExcludeNodes or ExcludeExitNodes, all nodes with unknown country (\{??} and
-    possibly \{A1}) are treated as excluded as well. If this option is set to
-    '1', then all unknown countries are treated as excluded in ExcludeNodes
-    and ExcludeExitNodes.  This option has no effect when a GeoIP file isn't
-    configured or can't be found.  (Default: auto)
 
 [[ExitNodes]] **ExitNodes** __node__,__node__,__...__::
     A list of identity fingerprints, country codes, and address
@@ -1110,51 +1269,6 @@ The following options are useful only for clients (that is, if
     The .exit address notation, if enabled via MapAddress, overrides
     this option.
 
-[[MiddleNodes]] **MiddleNodes** __node__,__node__,__...__::
-    A list of identity fingerprints and country codes of nodes
-    to use for "middle" hops in your normal circuits.
-    Normal circuits include all circuits except for direct connections
-    to directory servers. Middle hops are all hops other than exit and entry. +
-+
-    This is an **experimental** feature that is meant to be used by researchers
-    and developers to test new features in the Tor network safely. Using it
-    without care will strongly influence your anonymity. This feature might get
-    removed in the future.
-+
-    The HSLayer2Node and HSLayer3Node options override this option for onion
-    service circuits, if they are set. The vanguards addon will read this
-    option, and if set, it will set HSLayer2Nodes and HSLayer3Nodes to nodes
-    from this set.
-+
-    The ExcludeNodes option overrides this option: any node listed in both
-    MiddleNodes and ExcludeNodes is treated as excluded. See
-    the **ExcludeNodes** option for more information on how to specify nodes.
-
-[[EntryNodes]] **EntryNodes** __node__,__node__,__...__::
-    A list of identity fingerprints and country codes of nodes
-    to use for the first hop in your normal circuits.
-    Normal circuits include all
-    circuits except for direct connections to directory servers.  The Bridge
-    option overrides this option; if you have configured bridges and
-    UseBridges is 1, the Bridges are used as your entry nodes. +
-     +
-    The ExcludeNodes option overrides this option: any node listed in both
-    EntryNodes and ExcludeNodes is treated as excluded. See
-    the **ExcludeNodes** option for more information on how to specify nodes.
-
-[[StrictNodes]] **StrictNodes** **0**|**1**::
-    If StrictNodes is set to 1, Tor will treat solely the ExcludeNodes option
-    as a requirement to follow for all the circuits you generate, even if
-    doing so will break functionality for you (StrictNodes does not apply to
-    ExcludeExitNodes, ExitNodes, MiddleNodes, or MapAddress).  If StrictNodes
-    is set to 0, Tor will still try to avoid nodes in the ExcludeNodes list,
-    but it will err on the side of avoiding unexpected errors.
-    Specifically, StrictNodes 0 tells Tor that it is okay to use an excluded
-    node when it is *necessary* to perform relay reachability self-tests,
-    connect to a hidden service, provide a hidden service to a client,
-    fulfill a .exit request, upload directory information, or download
-    directory information.  (Default: 0)
-
 [[FascistFirewall]] **FascistFirewall** **0**|**1**::
     If 1, Tor will only create outgoing connections to ORs running on ports
     that your firewall allows (defaults to 80 and 443; see **FirewallPorts**).
@@ -1168,35 +1282,13 @@ The following options are useful only for clients (that is, if
     **FascistFirewall** is set. This option is deprecated; use ReachableAddresses
     instead. (Default: 80, 443)
 
-[[ReachableAddresses]] **ReachableAddresses** __IP__[/__MASK__][:__PORT__]...::
-    A comma-separated list of IP addresses and ports that your firewall allows
-    you to connect to. The format is as for the addresses in ExitPolicy, except
-    that "accept" is understood unless "reject" is explicitly provided. For
-    example, \'ReachableAddresses 99.0.0.0/8, reject 18.0.0.0/8:80, accept
-    \*:80' means that your firewall allows connections to everything inside net
-    99, rejects port 80 connections to net 18, and accepts connections to port
-    80 otherwise. (Default: \'accept \*:*'.)
-
-[[ReachableDirAddresses]] **ReachableDirAddresses** __IP__[/__MASK__][:__PORT__]...::
-    Like **ReachableAddresses**, a list of addresses and ports. Tor will obey
-    these restrictions when fetching directory information, using standard HTTP
-    GET requests. If not set explicitly then the value of
-    **ReachableAddresses** is used. If **HTTPProxy** is set then these
-    connections will go through that proxy.   (DEPRECATED: This option has
-    had no effect for some time.)
-
-[[ReachableORAddresses]] **ReachableORAddresses** __IP__[/__MASK__][:__PORT__]...::
-    Like **ReachableAddresses**, a list of addresses and ports. Tor will obey
-    these restrictions when connecting to Onion Routers, using TLS/SSL. If not
-    set explicitly then the value of **ReachableAddresses** is used. If
-    **HTTPSProxy** is set then these connections will go through that proxy. +
-     +
-    The separation between **ReachableORAddresses** and
-    **ReachableDirAddresses** is only interesting when you are connecting
-    through proxies (see **HTTPProxy** and **HTTPSProxy**). Most proxies limit
-    TLS connections (which Tor uses to connect to Onion Routers) to port 443,
-    and some limit HTTP GET requests (which Tor uses for fetching directory
-    information) to port 80.
+[[GeoIPExcludeUnknown]] **GeoIPExcludeUnknown** **0**|**1**|**auto**::
+    If this option is set to 'auto', then whenever any country code is set in
+    ExcludeNodes or ExcludeExitNodes, all nodes with unknown country (\{??} and
+    possibly \{A1}) are treated as excluded as well. If this option is set to
+    '1', then all unknown countries are treated as excluded in ExcludeNodes
+    and ExcludeExitNodes.  This option has no effect when a GeoIP file isn't
+    configured or can't be found.  (Default: auto)
 
 [[HidServAuth]] **HidServAuth** __onion-address__ __auth-cookie__ [__service-name__]::
     Client authorization for a v2 hidden service. Valid onion addresses contain 16
@@ -1208,17 +1300,125 @@ The following options are useful only for clients (that is, if
     services can be configured to require authorization using the
     **HiddenServiceAuthorizeClient** option.
 
-[[ClientOnionAuthDir]] **ClientOnionAuthDir** __path__::
-    Path to the directory containing v3 hidden service authorization files.
-    Each file is for a single onion address, and the files MUST have the suffix
-    ".auth_private" (i.e. "bob_onion.auth_private"). The content format MUST be:
+[[HSLayer2Nodes]] **HSLayer2Nodes** __node__,__node__,__...__::
+    A list of identity fingerprints, nicknames, country codes, and
+    address patterns of nodes that are allowed to be used as the
+    second hop in all client or service-side Onion Service circuits.
+    This option mitigates attacks where the adversary runs middle nodes
+    and induces your client or service to create many circuits, in order
+    to discover your primary guard node.
+    (Default: Any node in the network may be used in the second hop.)
      +
-      <onion-address>:descriptor:x25519:<base32-encoded-privkey>
+    (Example:
+    HSLayer2Nodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
      +
-    The <onion-address> MUST NOT have the ".onion" suffix. The
-    <base32-encoded-privkey> is the base32 representation of the raw key bytes
-    only (32 bytes for x25519). See Appendix G in the rend-spec-v3.txt file of
-    https://spec.torproject.org/[torspec] for more information.
+    When this is set, the resulting hidden service paths will
+    look like:
+     +
+        C - G - L2 - M - Rend +
+        C - G - L2 - M - HSDir +
+        C - G - L2 - M - Intro +
+        S - G - L2 - M - Rend +
+        S - G - L2 - M - HSDir +
+        S - G - L2 - M - Intro +
+     +
+    where C is this client, S is the service, G is the Guard node,
+    L2 is a node from this option, and M is a random middle node.
+    Rend, HSDir, and Intro point selection is not affected by this
+    option.
+     +
+    This option may be combined with HSLayer3Nodes to create
+    paths of the form:
+     +
+        C - G - L2 - L3 - Rend +
+        C - G - L2 - L3 - M - HSDir +
+        C - G - L2 - L3 - M - Intro +
+        S - G - L2 - L3 - M - Rend +
+        S - G - L2 - L3 - HSDir +
+        S - G - L2 - L3 - Intro +
+     +
+    ExcludeNodes have higher priority than HSLayer2Nodes,
+    which means that nodes specified in ExcludeNodes will not be
+    picked.
+     +
+    When either this option or HSLayer3Nodes are set, the /16 subnet
+    and node family restrictions are removed for hidden service
+    circuits. Additionally, we allow the guard node to be present
+    as the Rend, HSDir, and IP node, and as the hop before it. This
+    is done to prevent the adversary from inferring information
+    about our guard, layer2, and layer3 node choices at later points
+    in the path.
+     +
+    This option is meant to be managed by a Tor controller such as
+    https://github.com/mikeperry-tor/vanguards that selects and
+    updates this set of nodes for you. Hence it does not do load
+    balancing if fewer than 20 nodes are selected, and if no nodes in
+    HSLayer2Nodes are currently available for use, Tor will not work.
+    Please use extreme care if you are setting this option manually.
+
+[[HSLayer3Nodes]] **HSLayer3Nodes** __node__,__node__,__...__::
+    A list of identity fingerprints, nicknames, country codes, and
+    address patterns of nodes that are allowed to be used as the
+    third hop in all client and service-side Onion Service circuits.
+    This option mitigates attacks where the adversary runs middle nodes
+    and induces your client or service to create many circuits, in order
+    to discover your primary or Layer2 guard nodes.
+    (Default: Any node in the network may be used in the third hop.)
+     +
+    (Example:
+    HSLayer3Nodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
+     +
+    When this is set by itself, the resulting hidden service paths
+    will look like: +
+        C - G - M - L3 - Rend +
+        C - G - M - L3 - M - HSDir +
+        C - G - M - L3 - M - Intro +
+        S - G - M - L3 - M - Rend +
+        S - G - M - L3 - HSDir +
+        S - G - M - L3 - Intro +
+    where C is this client, S is the service, G is the Guard node,
+    L2 is a node from this option, and M is a random middle node.
+    Rend, HSDir, and Intro point selection is not affected by this
+    option.
+     +
+    While it is possible to use this option by itself, it should be
+    combined with HSLayer2Nodes to create paths of the form:
+     +
+        C - G - L2 - L3 - Rend +
+        C - G - L2 - L3 - M - HSDir +
+        C - G - L2 - L3 - M - Intro +
+        S - G - L2 - L3 - M - Rend +
+        S - G - L2 - L3 - HSDir +
+        S - G - L2 - L3 - Intro +
+     +
+    ExcludeNodes have higher priority than HSLayer3Nodes,
+    which means that nodes specified in ExcludeNodes will not be
+    picked.
+     +
+    When either this option or HSLayer2Nodes are set, the /16 subnet
+    and node family restrictions are removed for hidden service
+    circuits. Additionally, we allow the guard node to be present
+    as the Rend, HSDir, and IP node, and as the hop before it. This
+    is done to prevent the adversary from inferring information
+    about our guard, layer2, and layer3 node choices at later points
+    in the path.
+  +
+    This option is meant to be managed by a Tor controller such as
+    https://github.com/mikeperry-tor/vanguards that selects and
+    updates this set of nodes for you. Hence it does not do load
+    balancing if fewer than 20 nodes are selected, and if no nodes in
+    HSLayer3Nodes are currently available for use, Tor will not work.
+    Please use extreme care if you are setting this option manually.
+
+[[HTTPTunnelPort]] **HTTPTunnelPort** ['address'**:**]{empty}__port__|**auto** [_isolation flags_]::
+    Open this port to listen for proxy connections using the "HTTP CONNECT"
+    protocol instead of SOCKS. Set this to
+    0 if you don't want to allow "HTTP CONNECT" connections. Set the port
+    to "auto" to have Tor pick a port for you. This directive can be
+    specified multiple times to bind to multiple addresses/ports. If multiple
+    entries of this option are present in your configuration file, Tor will
+    perform stream isolation between listeners by default. See
+    SOCKSPort for an explanation of isolation flags. (Default: 0)
 
 [[LongLivedPorts]] **LongLivedPorts** __PORTS__::
     A list of ports for services that tend to have long-running connections
@@ -1281,10 +1481,6 @@ The following options are useful only for clients (that is, if
        for the original address. You can use a wildcard mapping to handle
        redirects within the same site.
 
-[[NewCircuitPeriod]] **NewCircuitPeriod** __NUM__::
-    Every NUM seconds consider whether to build a new circuit. (Default: 30
-    seconds)
-
 [[MaxCircuitDirtiness]] **MaxCircuitDirtiness** __NUM__::
     Feel free to reuse a circuit that was first used at most NUM seconds ago,
     but never attach a new stream to a circuit that is too old.  For hidden
@@ -1299,6 +1495,42 @@ The following options are useful only for clients (that is, if
     client streams. A circuit is pending if we have begun constructing it,
     but it has not yet been completely constructed.  (Default: 32)
 
+[[MiddleNodes]] **MiddleNodes** __node__,__node__,__...__::
+    A list of identity fingerprints and country codes of nodes
+    to use for "middle" hops in your normal circuits.
+    Normal circuits include all circuits except for direct connections
+    to directory servers. Middle hops are all hops other than exit and entry. +
++
+    This is an **experimental** feature that is meant to be used by researchers
+    and developers to test new features in the Tor network safely. Using it
+    without care will strongly influence your anonymity. This feature might get
+    removed in the future.
++
+    The HSLayer2Node and HSLayer3Node options override this option for onion
+    service circuits, if they are set. The vanguards addon will read this
+    option, and if set, it will set HSLayer2Nodes and HSLayer3Nodes to nodes
+    from this set.
++
+    The ExcludeNodes option overrides this option: any node listed in both
+    MiddleNodes and ExcludeNodes is treated as excluded. See
+    the **ExcludeNodes** option for more information on how to specify nodes.
+
+[[NATDPort]] **NATDPort** ['address'**:**]{empty}__port__|**auto** [_isolation flags_]::
+    Open this port to listen for connections from old versions of ipfw (as
+    included in old versions of FreeBSD, etc) using the NATD protocol.
+    Use 0 if you don't want to allow NATD connections.  Set the port
+    to "auto" to have Tor pick a port for you. This directive can be
+    specified multiple times to bind to multiple addresses/ports.  If multiple
+    entries of this option are present in your configuration file, Tor will
+    perform stream isolation between listeners by default. See
+    SocksPort for an explanation of isolation flags. +
+     +
+    This option is only for people who cannot use TransPort. (Default: 0)
+
+[[NewCircuitPeriod]] **NewCircuitPeriod** __NUM__::
+    Every NUM seconds consider whether to build a new circuit. (Default: 30
+    seconds)
+
 [[NodeFamily]] **NodeFamily** __node__,__node__,__...__::
     The Tor servers, defined by their identity fingerprints,
     constitute a "family" of similar or co-administered servers, so never use
@@ -1309,10 +1541,142 @@ The following options are useful only for clients (that is, if
     codes in {curly braces}. See the **ExcludeNodes** option for more
     information on how to specify nodes.
 
-[[EnforceDistinctSubnets]] **EnforceDistinctSubnets** **0**|**1**::
-    If 1, Tor will not put two servers whose IP addresses are "too close" on
-    the same circuit. Currently, two addresses are "too close" if they lie in
-    the same /16 range. (Default: 1)
+[[OptimisticData]] **OptimisticData** **0**|**1**|**auto**::
+    When this option is set, and Tor is using an exit node that supports
+    the feature, it will try optimistically to send data to the exit node
+    without waiting for the exit node to report whether the connection
+    succeeded.  This can save a round-trip time for protocols like HTTP
+    where the client talks first.  If OptimisticData is set to **auto**,
+    Tor will look at the UseOptimisticData parameter in the networkstatus.
+    (Default: auto)
+
+// These are out of order because they logically belong together
+[[PathBiasCircThreshold]] **PathBiasCircThreshold** __NUM__ +
+
+[[PathBiasDropGuards]] **PathBiasDropGuards** __NUM__ +
+
+[[PathBiasExtremeRate]] **PathBiasExtremeRate** __NUM__ +
+
+[[PathBiasNoticeRate]] **PathBiasNoticeRate** __NUM__ +
+
+[[PathBiasWarnRate]] **PathBiasWarnRate** __NUM__ +
+
+[[PathBiasScaleThreshold]] **PathBiasScaleThreshold** __NUM__::
+    These options override the default behavior of Tor's (**currently
+    experimental**) path bias detection algorithm. To try to find broken or
+    misbehaving guard nodes, Tor looks for nodes where more than a certain
+    fraction of circuits through that guard fail to get built. +
+     +
+    The PathBiasCircThreshold option controls how many circuits we need to build
+    through a guard before we make these checks.  The PathBiasNoticeRate,
+    PathBiasWarnRate and PathBiasExtremeRate options control what fraction of
+    circuits must succeed through a guard so we won't write log messages.
+    If less than PathBiasExtremeRate circuits succeed *and* PathBiasDropGuards
+    is set to 1, we disable use of that guard. +
+     +
+    When we have seen more than PathBiasScaleThreshold
+    circuits through a guard, we scale our observations by 0.5 (governed by
+    the consensus) so that new observations don't get swamped by old ones. +
+     +
+    By default, or if a negative value is provided for one of these options,
+    Tor uses reasonable defaults from the networkstatus consensus document.
+    If no defaults are available there, these options default to 150, .70,
+    .50, .30, 0, and 300 respectively.
+
+// These are out of order because they logically belong together
+[[PathBiasUseThreshold]] **PathBiasUseThreshold** __NUM__ +
+
+[[PathBiasNoticeUseRate]] **PathBiasNoticeUseRate** __NUM__ +
+
+[[PathBiasExtremeUseRate]] **PathBiasExtremeUseRate** __NUM__ +
+
+[[PathBiasScaleUseThreshold]] **PathBiasScaleUseThreshold** __NUM__::
+    Similar to the above options, these options override the default behavior
+    of Tor's (**currently experimental**) path use bias detection algorithm. +
+     +
+    Where as the path bias parameters govern thresholds for successfully
+    building circuits, these four path use bias parameters govern thresholds
+    only for circuit usage. Circuits which receive no stream usage
+    are not counted by this detection algorithm. A used circuit is considered
+    successful if it is capable of carrying streams or otherwise receiving
+    well-formed responses to RELAY cells. +
+     +
+    By default, or if a negative value is provided for one of these options,
+    Tor uses reasonable defaults from the networkstatus consensus document.
+    If no defaults are available there, these options default to 20, .80,
+    .60, and 100, respectively.
+
+[[PathsNeededToBuildCircuits]] **PathsNeededToBuildCircuits** __NUM__::
+    Tor clients don't build circuits for user traffic until they know
+    about enough of the network so that they could potentially construct
+    enough of the possible paths through the network. If this option
+    is set to a fraction between 0.25 and 0.95, Tor won't build circuits
+    until it has enough descriptors or microdescriptors to construct
+    that fraction of possible paths. Note that setting this option too low
+    can make your Tor client less anonymous, and setting it too high can
+    prevent your Tor client from bootstrapping.  If this option is negative,
+    Tor will use a default value chosen by the directory authorities. If the
+    directory authorities do not choose a value, Tor will default to 0.6.
+    (Default: -1)
+
+[[ReachableAddresses]] **ReachableAddresses** __IP__[/__MASK__][:__PORT__]...::
+    A comma-separated list of IP addresses and ports that your firewall allows
+    you to connect to. The format is as for the addresses in ExitPolicy, except
+    that "accept" is understood unless "reject" is explicitly provided. For
+    example, \'ReachableAddresses 99.0.0.0/8, reject 18.0.0.0/8:80, accept
+    \*:80' means that your firewall allows connections to everything inside net
+    99, rejects port 80 connections to net 18, and accepts connections to port
+    80 otherwise. (Default: \'accept \*:*'.)
+
+[[ReachableDirAddresses]] **ReachableDirAddresses** __IP__[/__MASK__][:__PORT__]...::
+    Like **ReachableAddresses**, a list of addresses and ports. Tor will obey
+    these restrictions when fetching directory information, using standard HTTP
+    GET requests. If not set explicitly then the value of
+    **ReachableAddresses** is used. If **HTTPProxy** is set then these
+    connections will go through that proxy.   (DEPRECATED: This option has
+    had no effect for some time.)
+
+[[ReachableORAddresses]] **ReachableORAddresses** __IP__[/__MASK__][:__PORT__]...::
+    Like **ReachableAddresses**, a list of addresses and ports. Tor will obey
+    these restrictions when connecting to Onion Routers, using TLS/SSL. If not
+    set explicitly then the value of **ReachableAddresses** is used. If
+    **HTTPSProxy** is set then these connections will go through that proxy. +
+     +
+    The separation between **ReachableORAddresses** and
+    **ReachableDirAddresses** is only interesting when you are connecting
+    through proxies (see **HTTPProxy** and **HTTPSProxy**). Most proxies limit
+    TLS connections (which Tor uses to connect to Onion Routers) to port 443,
+    and some limit HTTP GET requests (which Tor uses for fetching directory
+    information) to port 80.
+
+[[ReducedCircuitPadding]] **ReducedCircuitPadding** **0**|**1**::
+    If set to 1, Tor will only use circuit padding algorithms that have low
+    overhead. Only clients may set this option. This option should be offered
+    via the UI to mobile users for use where bandwidth may be expensive.
+    (Default: 0)
+
+[[ReducedConnectionPadding]] **ReducedConnectionPadding** **0**|**1**::
+    If set to 1, Tor will not not hold OR connections open for very long,
+    and will send less padding on these connections. Only clients may set
+    this option. This option should be offered via the UI to mobile users
+    for use where bandwidth may be expensive. (Default: 0)
+
+[[RejectPlaintextPorts]] **RejectPlaintextPorts** __port__,__port__,__...__::
+    Like WarnPlaintextPorts, but instead of warning about risky port uses, Tor
+    will instead refuse to make the connection. (Default: None)
+
+[[SafeSocks]] **SafeSocks** **0**|**1**::
+    When this option is enabled, Tor will reject application connections that
+    use unsafe variants of the socks protocol -- ones that only provide an IP
+    address, meaning the application is doing a DNS resolve first.
+    Specifically, these are socks4 and socks5 when not doing remote DNS.
+    (Default: 0)
+
+[[SocksPolicy]] **SocksPolicy** __policy__,__policy__,__...__::
+    Set an entrance policy for this server, to limit who can connect to the
+    SocksPort and DNSPort ports. The policies have the same form as exit
+    policies below, except that port specifiers are ignored. Any address
+    not matched by some entry in the policy is accepted.
 
 [[SocksPort]] **SocksPort** ['address'**:**]{empty}__port__|**unix:**__path__|**auto** [_flags_] [_isolation flags_]::
     Open this port to listen for connections from SOCKS-speaking
@@ -1482,16 +1846,30 @@ The following options are useful only for clients (that is, if
     line is used, and all earlier flags are ignored. No error is issued for
     conflicting flags.
 
-[[SocksPolicy]] **SocksPolicy** __policy__,__policy__,__...__::
-    Set an entrance policy for this server, to limit who can connect to the
-    SocksPort and DNSPort ports. The policies have the same form as exit
-    policies below, except that port specifiers are ignored. Any address
-    not matched by some entry in the policy is accepted.
-
 [[SocksTimeout]] **SocksTimeout** __NUM__::
     Let a socks connection wait NUM seconds handshaking, and NUM seconds
     unattached waiting for an appropriate circuit, before we fail it. (Default:
     2 minutes)
+
+[[StrictNodes]] **StrictNodes** **0**|**1**::
+    If StrictNodes is set to 1, Tor will treat solely the ExcludeNodes option
+    as a requirement to follow for all the circuits you generate, even if
+    doing so will break functionality for you (StrictNodes does not apply to
+    ExcludeExitNodes, ExitNodes, MiddleNodes, or MapAddress).  If StrictNodes
+    is set to 0, Tor will still try to avoid nodes in the ExcludeNodes list,
+    but it will err on the side of avoiding unexpected errors.
+    Specifically, StrictNodes 0 tells Tor that it is okay to use an excluded
+    node when it is *necessary* to perform relay reachability self-tests,
+    connect to a hidden service, provide a hidden service to a client,
+    fulfill a .exit request, upload directory information, or download
+    directory information.  (Default: 0)
+
+[[TestSocks]] **TestSocks** **0**|**1**::
+    When this option is enabled, Tor will make a notice-level log entry for
+    each connection to the Socks port indicating whether the request used a
+    safe socks protocol or an unsafe one (see above entry on SafeSocks). This
+    helps to determine whether an application using Tor is possibly leaking
+    DNS requests. (Default: 0)
 
 [[TokenBucketRefillInterval]] **TokenBucketRefillInterval** __NUM__ [**msec**|**second**]::
     Set the refill delay interval of Tor's token bucket to NUM milliseconds.
@@ -1519,108 +1897,6 @@ The following options are useful only for clients (that is, if
     Since exit servers go up and down, it is desirable to expire the
     association between host and exit server after NUM seconds. The default is
     1800 seconds (30 minutes).
-
-[[UpdateBridgesFromAuthority]] **UpdateBridgesFromAuthority** **0**|**1**::
-    When set (along with UseBridges), Tor will try to fetch bridge descriptors
-    from the configured bridge authorities when feasible. It will fall back to
-    a direct request if the authority responds with a 404. (Default: 0)
-
-[[UseBridges]] **UseBridges** **0**|**1**::
-    When set, Tor will fetch descriptors for each bridge listed in the "Bridge"
-    config lines, and use these relays as both entry guards and directory
-    guards. (Default: 0)
-
-[[UseEntryGuards]] **UseEntryGuards** **0**|**1**::
-    If this option is set to 1, we pick a few long-term entry servers, and try
-    to stick with them. This is desirable because constantly changing servers
-    increases the odds that an adversary who owns some servers will observe a
-    fraction of your paths. Entry Guards can not be used by Directory
-    Authorities or Single Onion Services. In these cases,
-    this option is ignored. (Default: 1)
-
-[[GuardfractionFile]] **GuardfractionFile** __FILENAME__::
-    V3 authoritative directories only. Configures the location of the
-    guardfraction file which contains information about how long relays
-    have been guards. (Default: unset)
-
-[[UseGuardFraction]] **UseGuardFraction** **0**|**1**|**auto**::
-    This option specifies whether clients should use the
-    guardfraction information found in the consensus during path
-    selection. If it's set to 'auto', clients will do what the
-    UseGuardFraction consensus parameter tells them to do. (Default: auto)
-
-[[NumEntryGuards]] **NumEntryGuards** __NUM__::
-    If UseEntryGuards is set to 1, we will try to pick a total of NUM routers
-    as long-term entries for our circuits. If NUM is 0, we try to learn the
-    number from the guard-n-primary-guards-to-use consensus parameter, and
-    default to 1 if the consensus parameter isn't set. (Default: 0)
-
-[[NumPrimaryGuards]] **NumPrimaryGuards** __NUM__::
-    If UseEntryGuards is set to 1, we will try to pick NUM routers for our
-    primary guard list, which is the set of routers we strongly prefer when
-    connecting to the Tor network. If NUM is 0, we try to learn the number from
-    the guard-n-primary-guards consensus parameter, and default to 3 if the
-    consensus parameter isn't set. (Default: 0)
-
-[[NumDirectoryGuards]] **NumDirectoryGuards** __NUM__::
-    If UseEntryGuards is set to 1, we try to make sure we have at least NUM
-    routers to use as directory guards. If this option is set to 0, use the
-    value from the guard-n-primary-dir-guards-to-use consensus parameter, and
-    default to 3 if the consensus parameter isn't set.  (Default: 0)
-
-[[GuardLifetime]] **GuardLifetime**  __N__ **days**|**weeks**|**months**::
-    If UseEntryGuards is set, minimum time to keep a guard on our guard list
-    before  picking a new one.  If less than one day, we use defaults from the
-    consensus directory.  (Default: 0)
-
-[[SafeSocks]] **SafeSocks** **0**|**1**::
-    When this option is enabled, Tor will reject application connections that
-    use unsafe variants of the socks protocol -- ones that only provide an IP
-    address, meaning the application is doing a DNS resolve first.
-    Specifically, these are socks4 and socks5 when not doing remote DNS.
-    (Default: 0)
-
-[[TestSocks]] **TestSocks** **0**|**1**::
-    When this option is enabled, Tor will make a notice-level log entry for
-    each connection to the Socks port indicating whether the request used a
-    safe socks protocol or an unsafe one (see above entry on SafeSocks). This
-    helps to determine whether an application using Tor is possibly leaking
-    DNS requests. (Default: 0)
-
-[[VirtualAddrNetworkIPv4]] **VirtualAddrNetworkIPv4** __IPv4Address__/__bits__ +
-
-[[VirtualAddrNetworkIPv6]] **VirtualAddrNetworkIPv6** [__IPv6Address__]/__bits__::
-    When Tor needs to assign a virtual (unused) address because of a MAPADDRESS
-    command from the controller or the AutomapHostsOnResolve feature, Tor
-    picks an unassigned address from this range. (Defaults:
-    127.192.0.0/10 and [FE80::]/10 respectively.) +
-     +
-    When providing proxy server service to a network of computers using a tool
-    like dns-proxy-tor, change the IPv4 network to "10.192.0.0/10" or
-    "172.16.0.0/12" and change the IPv6 network to "[FC00::]/7".
-    The default **VirtualAddrNetwork** address ranges on a
-    properly configured machine will route to the loopback or link-local
-    interface. The maximum number of bits for the network prefix is set to 104
-    for IPv6 and 16 for IPv4. However, a wider network - smaller prefix length
-    - is preferable since it reduces the chances for an attacker to guess the
-    used IP. For local use, no change to the default VirtualAddrNetwork setting
-    is needed.
-
-[[AllowNonRFC953Hostnames]] **AllowNonRFC953Hostnames** **0**|**1**::
-    When this option is disabled, Tor blocks hostnames containing illegal
-    characters (like @ and :) rather than sending them to an exit node to be
-    resolved. This helps trap accidental attempts to resolve URLs and so on.
-    (Default: 0)
-
-[[HTTPTunnelPort]] **HTTPTunnelPort** ['address'**:**]{empty}__port__|**auto** [_isolation flags_]::
-    Open this port to listen for proxy connections using the "HTTP CONNECT"
-    protocol instead of SOCKS. Set this to
-    0 if you don't want to allow "HTTP CONNECT" connections. Set the port
-    to "auto" to have Tor pick a port for you. This directive can be
-    specified multiple times to bind to multiple addresses/ports. If multiple
-    entries of this option are present in your configuration file, Tor will
-    perform stream isolation between listeners by default. See
-    SOCKSPort for an explanation of isolation flags. (Default: 0)
 
 [[TransPort]] **TransPort** ['address'**:**]{empty}__port__|**auto** [_isolation flags_]::
     Open this port to listen for transparent proxy connections.  Set this to
@@ -1660,185 +1936,63 @@ The following options are useful only for clients (that is, if
      +
     (Default: "default")
 
-[[NATDPort]] **NATDPort** ['address'**:**]{empty}__port__|**auto** [_isolation flags_]::
-    Open this port to listen for connections from old versions of ipfw (as
-    included in old versions of FreeBSD, etc) using the NATD protocol.
-    Use 0 if you don't want to allow NATD connections.  Set the port
-    to "auto" to have Tor pick a port for you. This directive can be
-    specified multiple times to bind to multiple addresses/ports.  If multiple
-    entries of this option are present in your configuration file, Tor will
-    perform stream isolation between listeners by default. See
-    SocksPort for an explanation of isolation flags. +
-     +
-    This option is only for people who cannot use TransPort. (Default: 0)
+[[UpdateBridgesFromAuthority]] **UpdateBridgesFromAuthority** **0**|**1**::
+    When set (along with UseBridges), Tor will try to fetch bridge descriptors
+    from the configured bridge authorities when feasible. It will fall back to
+    a direct request if the authority responds with a 404. (Default: 0)
 
-[[AutomapHostsOnResolve]] **AutomapHostsOnResolve** **0**|**1**::
-    When this option is enabled, and we get a request to resolve an address
-    that ends with one of the suffixes in **AutomapHostsSuffixes**, we map an
-    unused virtual address to that address, and return the new virtual address.
-    This is handy for making ".onion" addresses work with applications that
-    resolve an address and then connect to it. (Default: 0)
+[[UseBridges]] **UseBridges** **0**|**1**::
+    When set, Tor will fetch descriptors for each bridge listed in the "Bridge"
+    config lines, and use these relays as both entry guards and directory
+    guards. (Default: 0)
 
-[[AutomapHostsSuffixes]] **AutomapHostsSuffixes** __SUFFIX__,__SUFFIX__,__...__::
-    A comma-separated list of suffixes to use with **AutomapHostsOnResolve**.
-    The "." suffix is equivalent to "all addresses." (Default: .exit,.onion).
+[[UseEntryGuards]] **UseEntryGuards** **0**|**1**::
+    If this option is set to 1, we pick a few long-term entry servers, and try
+    to stick with them. This is desirable because constantly changing servers
+    increases the odds that an adversary who owns some servers will observe a
+    fraction of your paths. Entry Guards can not be used by Directory
+    Authorities or Single Onion Services. In these cases,
+    this option is ignored. (Default: 1)
 
-[[DNSPort]] **DNSPort** ['address'**:**]{empty}__port__|**auto** [_isolation flags_]::
-    If non-zero, open this port to listen for UDP DNS requests, and resolve
-    them anonymously.  This port only handles A, AAAA, and PTR requests---it
-    doesn't handle arbitrary DNS request types. Set the port to "auto" to
-    have Tor pick a port for
-    you. This directive can be specified multiple times to bind to multiple
-    addresses/ports. See SocksPort for an explanation of isolation
-    flags. (Default: 0)
+//Out of order because it logically belongs with the UseGuardFraction option
+[[GuardfractionFile]] **GuardfractionFile** __FILENAME__::
+    V3 authoritative directories only. Configures the location of the
+    guardfraction file which contains information about how long relays
+    have been guards. (Default: unset)
 
-[[ClientDNSRejectInternalAddresses]] **ClientDNSRejectInternalAddresses** **0**|**1**::
-    If true, Tor does not believe any anonymously retrieved DNS answer that
-    tells it that an address resolves to an internal address (like 127.0.0.1 or
-    192.168.0.1). This option prevents certain browser-based attacks; it
-    is not allowed to be set on the default network. (Default: 1)
+[[UseGuardFraction]] **UseGuardFraction** **0**|**1**|**auto**::
+    This option specifies whether clients should use the
+    guardfraction information found in the consensus during path
+    selection. If it's set to 'auto', clients will do what the
+    UseGuardFraction consensus parameter tells them to do. (Default: auto)
 
-[[ClientRejectInternalAddresses]] **ClientRejectInternalAddresses** **0**|**1**::
-    If true, Tor does not try to fulfill requests to connect to an internal
-    address (like 127.0.0.1 or 192.168.0.1) __unless an exit node is
-    specifically requested__ (for example, via a .exit hostname, or a
-    controller request).  If true, multicast DNS hostnames for machines on the
-    local network (of the form *.local) are also rejected.  (Default: 1)
+//Out of order because it logically belongs after the UseEntryGuards option
+[[GuardLifetime]] **GuardLifetime**  __N__ **days**|**weeks**|**months**::
+    If UseEntryGuards is set, minimum time to keep a guard on our guard list
+    before  picking a new one.  If less than one day, we use defaults from the
+    consensus directory.  (Default: 0)
 
-[[DownloadExtraInfo]] **DownloadExtraInfo** **0**|**1**::
-    If true, Tor downloads and caches "extra-info" documents. These documents
-    contain information about servers other than the information in their
-    regular server descriptors. Tor does not use this information for anything
-    itself; to save bandwidth, leave this option turned off. (Default: 0)
+//Out of order because it logically belongs after the UseEntryGuards option
+[[NumDirectoryGuards]] **NumDirectoryGuards** __NUM__::
+    If UseEntryGuards is set to 1, we try to make sure we have at least NUM
+    routers to use as directory guards. If this option is set to 0, use the
+    value from the guard-n-primary-dir-guards-to-use consensus parameter, and
+    default to 3 if the consensus parameter isn't set.  (Default: 0)
 
-[[WarnPlaintextPorts]] **WarnPlaintextPorts** __port__,__port__,__...__::
-    Tells Tor to issue a warnings whenever the user tries to make an anonymous
-    connection to one of these ports. This option is designed to alert users
-    to services that risk sending passwords in the clear. (Default:
-    23,109,110,143)
+//Out of order because it logically belongs after the UseEntryGuards option
+[[NumEntryGuards]] **NumEntryGuards** __NUM__::
+    If UseEntryGuards is set to 1, we will try to pick a total of NUM routers
+    as long-term entries for our circuits. If NUM is 0, we try to learn the
+    number from the guard-n-primary-guards-to-use consensus parameter, and
+    default to 1 if the consensus parameter isn't set. (Default: 0)
 
-[[RejectPlaintextPorts]] **RejectPlaintextPorts** __port__,__port__,__...__::
-    Like WarnPlaintextPorts, but instead of warning about risky port uses, Tor
-    will instead refuse to make the connection. (Default: None)
-
-[[OptimisticData]] **OptimisticData** **0**|**1**|**auto**::
-    When this option is set, and Tor is using an exit node that supports
-    the feature, it will try optimistically to send data to the exit node
-    without waiting for the exit node to report whether the connection
-    succeeded.  This can save a round-trip time for protocols like HTTP
-    where the client talks first.  If OptimisticData is set to **auto**,
-    Tor will look at the UseOptimisticData parameter in the networkstatus.
-    (Default: auto)
-
-[[HSLayer2Nodes]] **HSLayer2Nodes** __node__,__node__,__...__::
-    A list of identity fingerprints, nicknames, country codes, and
-    address patterns of nodes that are allowed to be used as the
-    second hop in all client or service-side Onion Service circuits.
-    This option mitigates attacks where the adversary runs middle nodes
-    and induces your client or service to create many circuits, in order
-    to discover your primary guard node.
-    (Default: Any node in the network may be used in the second hop.)
-     +
-    (Example:
-    HSLayer2Nodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
-     +
-    When this is set, the resulting hidden service paths will
-    look like:
-     +
-        C - G - L2 - M - Rend +
-        C - G - L2 - M - HSDir +
-        C - G - L2 - M - Intro +
-        S - G - L2 - M - Rend +
-        S - G - L2 - M - HSDir +
-        S - G - L2 - M - Intro +
-     +
-    where C is this client, S is the service, G is the Guard node,
-    L2 is a node from this option, and M is a random middle node.
-    Rend, HSDir, and Intro point selection is not affected by this
-    option.
-     +
-    This option may be combined with HSLayer3Nodes to create
-    paths of the form:
-     +
-        C - G - L2 - L3 - Rend +
-        C - G - L2 - L3 - M - HSDir +
-        C - G - L2 - L3 - M - Intro +
-        S - G - L2 - L3 - M - Rend +
-        S - G - L2 - L3 - HSDir +
-        S - G - L2 - L3 - Intro +
-     +
-    ExcludeNodes have higher priority than HSLayer2Nodes,
-    which means that nodes specified in ExcludeNodes will not be
-    picked.
-     +
-    When either this option or HSLayer3Nodes are set, the /16 subnet
-    and node family restrictions are removed for hidden service
-    circuits. Additionally, we allow the guard node to be present
-    as the Rend, HSDir, and IP node, and as the hop before it. This
-    is done to prevent the adversary from inferring information
-    about our guard, layer2, and layer3 node choices at later points
-    in the path.
-     +
-    This option is meant to be managed by a Tor controller such as
-    https://github.com/mikeperry-tor/vanguards that selects and
-    updates this set of nodes for you. Hence it does not do load
-    balancing if fewer than 20 nodes are selected, and if no nodes in
-    HSLayer2Nodes are currently available for use, Tor will not work.
-    Please use extreme care if you are setting this option manually.
-
-[[HSLayer3Nodes]] **HSLayer3Nodes** __node__,__node__,__...__::
-    A list of identity fingerprints, nicknames, country codes, and
-    address patterns of nodes that are allowed to be used as the
-    third hop in all client and service-side Onion Service circuits.
-    This option mitigates attacks where the adversary runs middle nodes
-    and induces your client or service to create many circuits, in order
-    to discover your primary or Layer2 guard nodes.
-    (Default: Any node in the network may be used in the third hop.)
-     +
-    (Example:
-    HSLayer3Nodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
-     +
-    When this is set by itself, the resulting hidden service paths
-    will look like: +
-        C - G - M - L3 - Rend +
-        C - G - M - L3 - M - HSDir +
-        C - G - M - L3 - M - Intro +
-        S - G - M - L3 - M - Rend +
-        S - G - M - L3 - HSDir +
-        S - G - M - L3 - Intro +
-    where C is this client, S is the service, G is the Guard node,
-    L2 is a node from this option, and M is a random middle node.
-    Rend, HSDir, and Intro point selection is not affected by this
-    option.
-     +
-    While it is possible to use this option by itself, it should be
-    combined with HSLayer2Nodes to create paths of the form:
-     +
-        C - G - L2 - L3 - Rend +
-        C - G - L2 - L3 - M - HSDir +
-        C - G - L2 - L3 - M - Intro +
-        S - G - L2 - L3 - M - Rend +
-        S - G - L2 - L3 - HSDir +
-        S - G - L2 - L3 - Intro +
-     +
-    ExcludeNodes have higher priority than HSLayer3Nodes,
-    which means that nodes specified in ExcludeNodes will not be
-    picked.
-     +
-    When either this option or HSLayer2Nodes are set, the /16 subnet
-    and node family restrictions are removed for hidden service
-    circuits. Additionally, we allow the guard node to be present
-    as the Rend, HSDir, and IP node, and as the hop before it. This
-    is done to prevent the adversary from inferring information
-    about our guard, layer2, and layer3 node choices at later points
-    in the path.
-  +
-    This option is meant to be managed by a Tor controller such as
-    https://github.com/mikeperry-tor/vanguards that selects and
-    updates this set of nodes for you. Hence it does not do load
-    balancing if fewer than 20 nodes are selected, and if no nodes in
-    HSLayer3Nodes are currently available for use, Tor will not work.
-    Please use extreme care if you are setting this option manually.
+//Out of order because it logically belongs after the UseEntryGuards option
+[[NumPrimaryGuards]] **NumPrimaryGuards** __NUM__::
+    If UseEntryGuards is set to 1, we will try to pick NUM routers for our
+    primary guard list, which is the set of routers we strongly prefer when
+    connecting to the Tor network. If NUM is 0, we try to learn the number from
+    the guard-n-primary-guards consensus parameter, and default to 3 if the
+    consensus parameter isn't set. (Default: 0)
 
 [[UseMicrodescriptors]] **UseMicrodescriptors** **0**|**1**|**auto**::
     Microdescriptors are a smaller version of the information that Tor needs
@@ -1848,173 +2002,31 @@ The following options are useful only for clients (that is, if
     option doesn't save any bandwidth for them.  For legacy reasons, auto is
     accepted, but it has the same effect as 1. (Default: auto)
 
-[[PathBiasCircThreshold]] **PathBiasCircThreshold** __NUM__ +
+[[VirtualAddrNetworkIPv4]] **VirtualAddrNetworkIPv4** __IPv4Address__/__bits__ +
 
-[[PathBiasNoticeRate]] **PathBiasNoticeRate** __NUM__ +
-
-[[PathBiasWarnRate]] **PathBiasWarnRate** __NUM__ +
-
-[[PathBiasExtremeRate]] **PathBiasExtremeRate** __NUM__ +
-
-[[PathBiasDropGuards]] **PathBiasDropGuards** __NUM__ +
-
-[[PathBiasScaleThreshold]] **PathBiasScaleThreshold** __NUM__::
-    These options override the default behavior of Tor's (**currently
-    experimental**) path bias detection algorithm. To try to find broken or
-    misbehaving guard nodes, Tor looks for nodes where more than a certain
-    fraction of circuits through that guard fail to get built. +
+[[VirtualAddrNetworkIPv6]] **VirtualAddrNetworkIPv6** [__IPv6Address__]/__bits__::
+    When Tor needs to assign a virtual (unused) address because of a MAPADDRESS
+    command from the controller or the AutomapHostsOnResolve feature, Tor
+    picks an unassigned address from this range. (Defaults:
+    127.192.0.0/10 and [FE80::]/10 respectively.) +
      +
-    The PathBiasCircThreshold option controls how many circuits we need to build
-    through a guard before we make these checks.  The PathBiasNoticeRate,
-    PathBiasWarnRate and PathBiasExtremeRate options control what fraction of
-    circuits must succeed through a guard so we won't write log messages.
-    If less than PathBiasExtremeRate circuits succeed *and* PathBiasDropGuards
-    is set to 1, we disable use of that guard. +
-     +
-    When we have seen more than PathBiasScaleThreshold
-    circuits through a guard, we scale our observations by 0.5 (governed by
-    the consensus) so that new observations don't get swamped by old ones. +
-     +
-    By default, or if a negative value is provided for one of these options,
-    Tor uses reasonable defaults from the networkstatus consensus document.
-    If no defaults are available there, these options default to 150, .70,
-    .50, .30, 0, and 300 respectively.
+    When providing proxy server service to a network of computers using a tool
+    like dns-proxy-tor, change the IPv4 network to "10.192.0.0/10" or
+    "172.16.0.0/12" and change the IPv6 network to "[FC00::]/7".
+    The default **VirtualAddrNetwork** address ranges on a
+    properly configured machine will route to the loopback or link-local
+    interface. The maximum number of bits for the network prefix is set to 104
+    for IPv6 and 16 for IPv4. However, a wider network - smaller prefix length
+    - is preferable since it reduces the chances for an attacker to guess the
+    used IP. For local use, no change to the default VirtualAddrNetwork setting
+    is needed.
 
-[[PathBiasUseThreshold]] **PathBiasUseThreshold** __NUM__ +
+[[WarnPlaintextPorts]] **WarnPlaintextPorts** __port__,__port__,__...__::
+    Tells Tor to issue a warnings whenever the user tries to make an anonymous
+    connection to one of these ports. This option is designed to alert users
+    to services that risk sending passwords in the clear. (Default:
+    23,109,110,143)
 
-[[PathBiasNoticeUseRate]] **PathBiasNoticeUseRate** __NUM__ +
-
-[[PathBiasExtremeUseRate]] **PathBiasExtremeUseRate** __NUM__ +
-
-[[PathBiasScaleUseThreshold]] **PathBiasScaleUseThreshold** __NUM__::
-    Similar to the above options, these options override the default behavior
-    of Tor's (**currently experimental**) path use bias detection algorithm. +
-     +
-    Where as the path bias parameters govern thresholds for successfully
-    building circuits, these four path use bias parameters govern thresholds
-    only for circuit usage. Circuits which receive no stream usage
-    are not counted by this detection algorithm. A used circuit is considered
-    successful if it is capable of carrying streams or otherwise receiving
-    well-formed responses to RELAY cells. +
-     +
-    By default, or if a negative value is provided for one of these options,
-    Tor uses reasonable defaults from the networkstatus consensus document.
-    If no defaults are available there, these options default to 20, .80,
-    .60, and 100, respectively.
-
-[[ClientUseIPv4]] **ClientUseIPv4** **0**|**1**::
-    If this option is set to 0, Tor will avoid connecting to directory servers
-    and entry nodes over IPv4. Note that clients with an IPv4
-    address in a **Bridge**, proxy, or pluggable transport line will try
-    connecting over IPv4 even if **ClientUseIPv4** is set to 0. (Default: 1)
-
-[[ClientUseIPv6]] **ClientUseIPv6** **0**|**1**::
-    If this option is set to 1, Tor might connect to directory servers or
-    entry nodes over IPv6. For IPv6 only hosts, you need to also set
-    **ClientUseIPv4** to 0 to disable IPv4. Note that clients configured with
-    an IPv6 address in a **Bridge**, proxy, or pluggable transportline will
-    try connecting over IPv6 even if **ClientUseIPv6** is set to 0. (Default: 0)
-
-[[ClientPreferIPv6DirPort]] **ClientPreferIPv6DirPort** **0**|**1**|**auto**::
-    If this option is set to 1, Tor prefers a directory port with an IPv6
-    address over one with IPv4, for direct connections, if a given directory
-    server has both. (Tor also prefers an IPv6 DirPort if IPv4Client is set to
-    0.) If this option is set to auto, clients prefer IPv4. Other things may
-    influence the choice. This option breaks a tie to the favor of IPv6.
-    (Default: auto)  (DEPRECATED: This option has had no effect for some
-    time.)
-
-[[ClientPreferIPv6ORPort]] **ClientPreferIPv6ORPort** **0**|**1**|**auto**::
-    If this option is set to 1, Tor prefers an OR port with an IPv6
-    address over one with IPv4 if a given entry node has both. (Tor also
-    prefers an IPv6 ORPort if IPv4Client is set to 0.) If this option is set
-    to auto, Tor bridge clients prefer the configured bridge address, and
-    other clients prefer IPv4. Other things may influence the choice. This
-    option breaks a tie to the favor of IPv6. (Default: auto)
-
-[[ClientAutoIPv6ORPort]] **ClientAutoIPv6ORPort** **0**|**1**::
-    If this option is set to 1, Tor clients randomly prefer a node's IPv4 or
-    IPv6 ORPort. The random preference is set every time a node is loaded
-    from a new consensus or bridge config. When this option is set to 1,
-    **ClientPreferIPv6ORPort** is ignored. (Default: 0)
-
-[[PathsNeededToBuildCircuits]] **PathsNeededToBuildCircuits** __NUM__::
-    Tor clients don't build circuits for user traffic until they know
-    about enough of the network so that they could potentially construct
-    enough of the possible paths through the network. If this option
-    is set to a fraction between 0.25 and 0.95, Tor won't build circuits
-    until it has enough descriptors or microdescriptors to construct
-    that fraction of possible paths. Note that setting this option too low
-    can make your Tor client less anonymous, and setting it too high can
-    prevent your Tor client from bootstrapping.  If this option is negative,
-    Tor will use a default value chosen by the directory authorities. If the
-    directory authorities do not choose a value, Tor will default to 0.6.
-    (Default: -1)
-
-[[ClientBootstrapConsensusAuthorityDownloadInitialDelay]] **ClientBootstrapConsensusAuthorityDownloadInitialDelay** __N__::
-    Initial delay in seconds for when clients should download consensuses from authorities
-    if they are bootstrapping (that is, they don't have a usable, reasonably
-    live consensus). Only used by clients fetching from a list of fallback
-    directory mirrors. This schedule is advanced by (potentially concurrent)
-    connection attempts, unlike other schedules, which are advanced by
-    connection failures. (Default: 6)
-
-[[ClientBootstrapConsensusFallbackDownloadInitialDelay]] **ClientBootstrapConsensusFallbackDownloadInitialDelay** __N__::
-    Initial delay in seconds for when clients should download consensuses from fallback
-    directory mirrors if they are bootstrapping (that is, they don't have a
-    usable, reasonably live consensus). Only used by clients fetching from a
-    list of fallback directory mirrors. This schedule is advanced by
-    (potentially concurrent) connection attempts, unlike other schedules,
-    which are advanced by connection failures. (Default: 0)
-
-[[ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay]] **ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay** __N__::
-    Initial delay in seconds for when clients should download consensuses from authorities
-    if they are bootstrapping (that is, they don't have a usable, reasonably
-    live consensus). Only used by clients which don't have or won't fetch
-    from a list of fallback directory mirrors. This schedule is advanced by
-    (potentially concurrent) connection attempts, unlike other schedules,
-    which are advanced by connection failures. (Default: 0)
-
-[[ClientBootstrapConsensusMaxInProgressTries]] **ClientBootstrapConsensusMaxInProgressTries** __NUM__::
-    Try this many simultaneous connections to download a consensus before
-    waiting for one to complete, timeout, or error out. (Default: 3)
-
-[[DormantClientTimeout]] **DormantClientTimeout**  __N__ **minutes**|**hours**|**days**|**weeks**::
-    If Tor spends this much time without any client activity,
-    enter a dormant state where automatic circuits are not built, and
-    directory information is not fetched.
-    Does not affect servers or onion services. Must be at least 10 minutes.
-    (Default: 24 hours)
-
-[[DormantTimeoutDisabledByIdleStreams]] **DormantTimeoutDisabledByIdleStreams**  **0**|**1**::
-    If true, then any open client stream (even one not reading or writing)
-    counts as client activity for the purpose of DormantClientTimeout.
-    If false, then only network activity counts. (Default: 1)
-
-[[DormantOnFirstStartup]] **DormantOnFirstStartup** **0**|**1**::
-    If true, then the first time Tor starts up with a fresh DataDirectory,
-    it starts in dormant mode, and takes no actions until the user has made
-    a request.  (This mode is recommended if installing a Tor client for a
-    user who might not actually use it.)  If false, Tor bootstraps the first
-    time it is started, whether it sees a user request or not.
-     +
-    After the first time Tor starts, it begins in dormant mode if it was
-    dormant before, and not otherwise. (Default: 0)
-
-[[DormantCanceledByStartup]] **DormantCanceledByStartup** **0**|**1**::
-    By default, Tor starts in active mode if it was active the last time
-    it was shut down, and in dormant mode if it was dormant.  But if
-    this option is true, Tor treats every startup event as user
-    activity, and Tor will never start in Dormant mode, even if it has
-    been unused for a long time on previous runs. (Default: 0)
-     +
-    Note: Packagers and application developers should change the value of
-    this option only with great caution: it has the potential to
-    create spurious traffic on the network.  This option should only
-    be used if Tor is started by an affirmative user activity (like
-    clicking on an applcation or running a command), and not if Tor
-    is launched for some other reason (for example, by a startup
-    process, or by an application that launches itself on every login.)
 
 == SERVER OPTIONS
 
