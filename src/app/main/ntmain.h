@@ -22,7 +22,8 @@ int nt_service_is_stopping(void);
 void nt_service_set_state(DWORD state);
 #else
 #define nt_service_is_stopping() 0
+#define nt_service_parse_options(a, b, c) (0)
+#define nt_service_set_state(s) STMT_NIL
 #endif /* defined(NT_SERVICE) */
 
 #endif /* !defined(TOR_NTMAIN_H) */
-
