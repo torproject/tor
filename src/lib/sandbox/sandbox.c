@@ -143,6 +143,7 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(clock_gettime),
     SCMP_SYS(close),
     SCMP_SYS(clone),
+    SCMP_SYS(dup),
     SCMP_SYS(epoll_create),
     SCMP_SYS(epoll_wait),
 #ifdef __NR_epoll_pwait
