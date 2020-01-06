@@ -1,0 +1,4 @@
+  o Removed features:
+    - The option "TestingEstimatedDescriptorPropagationTime" is now marked as
+      obsolete.  It has had no effect since 0.3.0.7, when clients stopped
+      rejecting consensuses "from the future".  Closes ticket 32807.

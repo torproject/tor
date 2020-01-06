@@ -3256,7 +3256,6 @@ The following options are used for running a testing Tor network.
        TestingV3AuthInitialVoteDelay 20 seconds
        TestingV3AuthInitialDistDelay 20 seconds
        TestingAuthDirTimeToLearnReachability 0 minutes
-       TestingEstimatedDescriptorPropagationTime 0 minutes
        TestingServerDownloadInitialDelay 0
        TestingClientDownloadInitialDelay 0
        TestingServerConsensusDownloadInitialDelay 0
@@ -3291,11 +3290,6 @@ The following options are used for running a testing Tor network.
     After starting as an authority, do not make claims about whether routers
     are Running until this much time has passed. Changing this requires
     that **TestingTorNetwork** is set.  (Default: 30 minutes)
-
-[[TestingEstimatedDescriptorPropagationTime]] **TestingEstimatedDescriptorPropagationTime** __N__ **minutes**|**hours**::
-    Clients try downloading server descriptors from directory caches after this
-    time. Changing this requires that **TestingTorNetwork** is set. (Default:
-    10 minutes)
 
 [[TestingMinFastFlagThreshold]] **TestingMinFastFlagThreshold** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     Minimum value for the Fast flag.  Overrides the ordinary minimum taken

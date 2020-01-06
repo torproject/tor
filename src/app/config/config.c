@@ -451,7 +451,7 @@ static const config_var_t option_vars_[] = {
   V(EnforceDistinctSubnets,      BOOL,     "1"),
   V_D(EntryNodes,                ROUTERSET,   NULL),
   V(EntryStatistics,             BOOL,     "0"),
-  V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "10 minutes"),
+  OBSOLETE("TestingEstimatedDescriptorPropagationTime"),
   V_D(ExcludeNodes,              ROUTERSET, NULL),
   V_D(ExcludeExitNodes,          ROUTERSET, NULL),
   OBSOLETE("ExcludeSingleHopRelays"),
@@ -4123,7 +4123,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
     CHECK_DEFAULT(TestingV3AuthInitialDistDelay);
     CHECK_DEFAULT(TestingV3AuthVotingStartOffset);
     CHECK_DEFAULT(TestingAuthDirTimeToLearnReachability);
-    CHECK_DEFAULT(TestingEstimatedDescriptorPropagationTime);
     CHECK_DEFAULT(TestingServerDownloadInitialDelay);
     CHECK_DEFAULT(TestingClientDownloadInitialDelay);
     CHECK_DEFAULT(TestingServerConsensusDownloadInitialDelay);
@@ -4150,12 +4149,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
     return -1;
   if (options_validate_dirauth_testing(old_options, options, msg) < 0)
     return -1;
-
-  if (options->TestingEstimatedDescriptorPropagationTime < 0) {
-    REJECT("TestingEstimatedDescriptorPropagationTime must be non-negative.");
-  } else if (options->TestingEstimatedDescriptorPropagationTime > 60*60) {
-    COMPLAIN("TestingEstimatedDescriptorPropagationTime is insanely high.");
-  }
 
   if (options->TestingClientMaxIntervalWithoutRequest < 1) {
     REJECT("TestingClientMaxIntervalWithoutRequest is way too low.");
