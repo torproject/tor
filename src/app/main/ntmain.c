@@ -283,7 +283,9 @@ nt_service_body(int argc, char **argv)
     return;
   }
 
+  pubsub_install();
   r = tor_init(backup_argc, backup_argv);
+
   if (r) {
     /* Failed to start the Tor service */
     r = NT_SERVICE_ERROR_TORINIT_FAILED;
@@ -293,6 +295,8 @@ nt_service_body(int argc, char **argv)
     service_fns.SetServiceStatus_fn(hStatus, &service_status);
     return;
   }
+
+  pubsub_connect();
 
   /* Set the service's status to SERVICE_RUNNING and start the main
    * event loop */
@@ -322,9 +326,12 @@ nt_service_main(void)
     errmsg = format_win32_error(result);
     printf("Service error %d : %s\n", (int) result, errmsg);
     tor_free(errmsg);
+
+    pubsub_install();
     if (result == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
       if (tor_init(backup_argc, backup_argv))
         return;
+      pubsub_connect();
       switch (get_options()->command) {
       case CMD_RUN_TOR:
         run_tor_main_loop();

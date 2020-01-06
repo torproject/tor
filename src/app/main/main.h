@@ -25,4 +25,7 @@ int tor_init(int argc, char **argv);
 
 int run_tor_main_loop(void);
 
+void pubsub_install(void);
+void pubsub_connect(void);
+
 #endif /* !defined(TOR_MAIN_H) */
