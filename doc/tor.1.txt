@@ -918,6 +918,22 @@ forward slash (/) in the configuration file and on the command line.
     log entries are marked with "Tor-__tag__". Can not be changed while tor is
     running. (Default: none)
 
+[[TCPProxy]] **TCPProxy** __protocol__ __host__:__port__::
+	Tor will use the given protocol to make all its OR (SSL) connections through
+	a TCP proxy on host:port, rather than connecting directly to servers. You may
+	want to set **FascistFirewall** to restrict the set of ports you might try to
+	connect to, if your proxy only allows connecting to certain ports. There is no
+	equivalent option for directory connections, because all Tor client versions
+	that support this option download directory documents via OR connections. +
++
+	The only protocol supported right now 'haproxy'. This option is only for
+	clients. (Default: none) +
++
+	The HAProxy version 1 proxy protocol is described in detail at
+	https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt +
++
+	Both source IP address and source port will be set to zero.
+
 [[TruncateLogFile]] **TruncateLogFile** **0**|**1**::
     If 1, Tor will overwrite logs at startup and in response to a HUP signal,
     instead of appending to them. (Default: 0)

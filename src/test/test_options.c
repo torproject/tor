@@ -2807,7 +2807,7 @@ test_options_validate__proxy(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "You have configured more than one proxy type. "
-            "(Socks4Proxy|Socks5Proxy|HTTPSProxy)");
+            "(Socks4Proxy|Socks5Proxy|HTTPSProxy|TCPProxy)");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -2815,9 +2815,10 @@ test_options_validate__proxy(void *ignored)
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg("HTTPProxy configured, but no SOCKS "
-            "proxy or HTTPS proxy configured. Watch out: this configuration "
-            "will proxy unencrypted directory connections only.\n");
+  expect_log_msg("HTTPProxy configured, but no SOCKS proxy, "
+            "HTTPS proxy, or any other TCP proxy configured. Watch out: "
+            "this configuration will proxy unencrypted directory "
+            "connections only.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);

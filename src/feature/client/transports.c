@@ -735,6 +735,9 @@ get_pt_proxy_uri(void)
   const or_options_t *options = get_options();
   char *uri = NULL;
 
+  /* XXX: Currently TCPProxy is not supported in TOR_PT_PROXY because
+   * there isn't a standard URI scheme for some proxy protocols, such as
+   * haproxy. */
   if (options->Socks4Proxy || options->Socks5Proxy || options->HTTPSProxy) {
     char addr[TOR_ADDR_BUF_LEN+1];
 

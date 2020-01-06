@@ -9,6 +9,7 @@
 #define ROUTERLIST_PRIVATE
 #define CONFIG_PRIVATE
 #define CONNECTION_PRIVATE
+#define CONNECTION_OR_PRIVATE
 #define MAINLOOP_PRIVATE
 
 #include "orconfig.h"
@@ -19,6 +20,7 @@
 #include "lib/confmgt/confmgt.h"
 #include "app/main/subsysmgr.h"
 #include "core/mainloop/connection.h"
+#include "core/or/connection_or.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "core/mainloop/mainloop.h"
 #include "feature/nodelist/nodelist.h"
@@ -33,6 +35,7 @@
 
 #include "core/or/cell_st.h"
 #include "core/or/connection_st.h"
+#include "core/or/or_connection_st.h"
 #include "feature/nodelist/node_st.h"
 #include "core/or/origin_circuit_st.h"
 #include "feature/nodelist/routerlist_st.h"
@@ -194,6 +197,14 @@ fake_close_socket(tor_socket_t sock)
   return 0;
 }
 
+/* Helper for test_conn_get_proxy_or_connection() */
+void
+mock_connection_or_change_state(or_connection_t *conn, uint8_t state)
+{
+  tor_assert(conn);
+  conn->base_.state = state;
+}
+
 static int mock_connection_connect_sockaddr_called = 0;
 static int fake_socket_number = TEST_CONN_FD_INIT;
 
@@ -226,6 +237,76 @@ mock_connection_connect_sockaddr(connection_t *conn,
  done:
   /* Fake "connected" status */
   return 1;
+}
+
+or_connection_t *
+test_conn_get_proxy_or_connection(unsigned int proxy_type)
+{
+  or_connection_t *conn = NULL;
+  tor_addr_t dst_addr;
+  tor_addr_t proxy_addr;
+  int socket_err = 0;
+  int in_progress = 0;
+
+  MOCK(connection_connect_sockaddr,
+       mock_connection_connect_sockaddr);
+  MOCK(connection_write_to_buf_impl_,
+       connection_write_to_buf_mock);
+  MOCK(connection_or_change_state,
+       mock_connection_or_change_state);
+  MOCK(tor_close_socket, fake_close_socket);
+
+  tor_init_connection_lists();
+
+  conn = or_connection_new(CONN_TYPE_OR, TEST_CONN_FAMILY);
+  tt_assert(conn);
+
+  /* Set up a destination address. */
+  test_conn_lookup_addr_helper(TEST_CONN_ADDRESS, TEST_CONN_FAMILY,
+                               &dst_addr);
+  tt_assert(!tor_addr_is_null(&dst_addr));
+
+  conn->proxy_type = proxy_type;
+  conn->base_.proxy_state = PROXY_INFANT;
+
+  tor_addr_copy_tight(&conn->base_.addr, &dst_addr);
+  conn->base_.address = tor_addr_to_str_dup(&dst_addr);
+  conn->base_.port = TEST_CONN_PORT;
+
+  /* Set up a proxy address. */
+  test_conn_lookup_addr_helper(TEST_CONN_ADDRESS_2, TEST_CONN_FAMILY,
+                               &proxy_addr);
+  tt_assert(!tor_addr_is_null(&proxy_addr));
+
+  conn->base_.state = OR_CONN_STATE_CONNECTING;
+
+  mock_connection_connect_sockaddr_called = 0;
+  in_progress = connection_connect(TO_CONN(conn), TEST_CONN_ADDRESS_PORT,
+                                   &proxy_addr, TEST_CONN_PORT, &socket_err);
+  tt_int_op(mock_connection_connect_sockaddr_called, OP_EQ, 1);
+  tt_assert(!socket_err);
+  tt_assert(in_progress == 0 || in_progress == 1);
+
+  assert_connection_ok(TO_CONN(conn), time(NULL));
+
+  in_progress = connection_or_finished_connecting(conn);
+  tt_int_op(in_progress, OP_EQ, 0);
+
+  assert_connection_ok(TO_CONN(conn), time(NULL));
+
+  UNMOCK(connection_connect_sockaddr);
+  UNMOCK(connection_write_to_buf_impl_);
+  UNMOCK(connection_or_change_state);
+  UNMOCK(tor_close_socket);
+  return conn;
+
+  /* On failure */
+ done:
+  UNMOCK(connection_connect_sockaddr);
+  UNMOCK(connection_write_to_buf_impl_);
+  UNMOCK(connection_or_change_state);
+  UNMOCK(tor_close_socket);
+  return NULL;
 }
 
 /** Create and return a new connection/stream */

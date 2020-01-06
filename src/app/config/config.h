@@ -286,6 +286,8 @@ STATIC const struct config_mgr_t *get_options_mgr(void);
 STATIC void or_options_free_(or_options_t *options);
 STATIC int options_validate_single_onion(or_options_t *options,
                                          char **msg);
+STATIC int parse_tcp_proxy_line(const char *line, or_options_t *options,
+                                char **msg);
 STATIC int consider_adding_dir_servers(const or_options_t *options,
                                        const or_options_t *old_options);
 STATIC void add_default_trusted_dir_authorities(dirinfo_type_t type);

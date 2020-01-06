@@ -4,6 +4,10 @@ orconfig.h
 
 lib/crypt_ops/*.h
 lib/buf/*.h
+lib/malloc/*.h
+lib/string/*.h
+
+lib/net/address.h
 
 trunnel/*.h
 

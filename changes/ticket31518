@@ -1,0 +1,6 @@
+  o Major features (proxy):
+    - In addition to HTTP CONNECT, SOCKS4, and SOCKS5, Tor can make all OR
+      connections through the HAProxy server. A new torrc option was added to
+      specify the address/port of the server: TCPProxy <protocol>
+      <host>:<port>. Currently the only supported protocol in the option is
+      haproxy. Close ticket 31518. Patch done by Suphanat Chunhapanya (haxxpop).

@@ -167,12 +167,13 @@ struct curve25519_public_key_t;
 #define PROXY_CONNECT 1
 #define PROXY_SOCKS4 2
 #define PROXY_SOCKS5 3
-/* !!!! If there is ever a PROXY_* type over 3, we must grow the proxy_type
+#define PROXY_HAPROXY 4
+/* !!!! If there is ever a PROXY_* type over 7, we must grow the proxy_type
  * field in or_connection_t */
 
 /* Pluggable transport proxy type. Don't use this in or_connection_t,
  * instead use the actual underlying proxy type (see above).  */
-#define PROXY_PLUGGABLE 4
+#define PROXY_PLUGGABLE 5
 
 /** How many circuits do we want simultaneously in-progress to handle
  * a given stream? */

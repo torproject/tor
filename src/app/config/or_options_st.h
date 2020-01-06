@@ -27,6 +27,12 @@ typedef enum {OUTBOUND_ADDR_EXIT, OUTBOUND_ADDR_OR,
               OUTBOUND_ADDR_EXIT_AND_OR,
               OUTBOUND_ADDR_MAX} outbound_addr_t;
 
+/** Which protocol to use for TCPProxy. */
+typedef enum {
+  /** Use the HAProxy proxy protocol. */
+  TCP_PROXY_PROTOCOL_HAPROXY
+} tcp_proxy_protocol_t;
+
 /** Configuration options for a Tor process. */
 struct or_options_t {
   uint32_t magic_;
@@ -418,6 +424,11 @@ struct or_options_t {
   uint16_t Socks5ProxyPort; /**< Derived from Socks5Proxy. */
   char *Socks5ProxyUsername; /**< Username for SOCKS5 authentication, if any */
   char *Socks5ProxyPassword; /**< Password for SOCKS5 authentication, if any */
+
+  char *TCPProxy; /**< protocol and hostname:port to use as a proxy, if any. */
+  tcp_proxy_protocol_t TCPProxyProtocol; /**< Derived from TCPProxy. */
+  tor_addr_t TCPProxyAddr; /**< Derived from TCPProxy. */
+  uint16_t TCPProxyPort; /**< Derived from TCPProxy. */
 
   /** List of configuration lines for replacement directory authorities.
    * If you just want to replace one class of authority at a time,

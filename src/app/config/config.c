@@ -538,6 +538,7 @@ static const config_var_t option_vars_[] = {
   V(Socks5Proxy,                 STRING,   NULL),
   V(Socks5ProxyUsername,         STRING,   NULL),
   V(Socks5ProxyPassword,         STRING,   NULL),
+  V(TCPProxy,                    STRING,   NULL),
   VAR_IMMUTABLE("KeyDirectory",  FILENAME, KeyDirectory_option, NULL),
   V(KeyDirectoryGroupReadable,   AUTOBOOL, "auto"),
   VAR_D("HSLayer2Nodes",         ROUTERSET,  HSLayer2Nodes,  NULL),
@@ -3940,19 +3941,28 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
     }
   }
 
+  if (options->TCPProxy) {
+    int res = parse_tcp_proxy_line(options->TCPProxy, options, msg);
+    if (res < 0) {
+      return res;
+    }
+  }
+
   /* Check if more than one exclusive proxy type has been enabled. */
   if (!!options->Socks4Proxy + !!options->Socks5Proxy +
-      !!options->HTTPSProxy > 1)
+      !!options->HTTPSProxy + !!options->TCPProxy > 1)
     REJECT("You have configured more than one proxy type. "
-           "(Socks4Proxy|Socks5Proxy|HTTPSProxy)");
+           "(Socks4Proxy|Socks5Proxy|HTTPSProxy|TCPProxy)");
 
   /* Check if the proxies will give surprising behavior. */
   if (options->HTTPProxy && !(options->Socks4Proxy ||
                               options->Socks5Proxy ||
-                              options->HTTPSProxy)) {
-    log_warn(LD_CONFIG, "HTTPProxy configured, but no SOCKS proxy or "
-             "HTTPS proxy configured. Watch out: this configuration will "
-             "proxy unencrypted directory connections only.");
+                              options->HTTPSProxy ||
+                              options->TCPProxy)) {
+    log_warn(LD_CONFIG, "HTTPProxy configured, but no SOCKS proxy, "
+             "HTTPS proxy, or any other TCP proxy configured. Watch out: "
+             "this configuration will proxy unencrypted directory "
+             "connections only.");
   }
 
   if (options->Socks5ProxyUsername) {
@@ -5348,6 +5358,68 @@ parse_bridge_line(const char *line)
   return bridge_line;
 }
 
+/** Parse the contents of a TCPProxy line from <b>line</b> and put it
+ * in <b>options</b>. Return 0 if the line is well-formed, and -1 if it
+ * isn't.
+ *
+ * This will mutate only options->TCPProxyProtocol, options->TCPProxyAddr,
+ * and options->TCPProxyPort.
+ *
+ * On error, tor_strdup an error explanation into *<b>msg</b>.
+ */
+STATIC int
+parse_tcp_proxy_line(const char *line, or_options_t *options, char **msg)
+{
+  int ret = 0;
+  tor_assert(line);
+  tor_assert(options);
+  tor_assert(msg);
+
+  smartlist_t *sl = smartlist_new();
+  /* Split between the protocol and the address/port. */
+  smartlist_split_string(sl, line, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
+
+  /* The address/port is not specified. */
+  if (smartlist_len(sl) < 2) {
+    *msg = tor_strdup("TCPProxy has no address/port. Please fix.");
+    goto err;
+  }
+
+  char *protocol_string = smartlist_get(sl, 0);
+  char *addrport_string = smartlist_get(sl, 1);
+
+  /* The only currently supported protocol is 'haproxy'. */
+  if (strcasecmp(protocol_string, "haproxy")) {
+    *msg = tor_strdup("TCPProxy protocol is not supported. Currently "
+                      "the only supported protocol is 'haproxy'. "
+                      "Please fix.");
+    goto err;
+  } else {
+    /* Otherwise, set the correct protocol. */
+    options->TCPProxyProtocol = TCP_PROXY_PROTOCOL_HAPROXY;
+  }
+
+  /* Parse the address/port. */
+  if (tor_addr_port_lookup(addrport_string, &options->TCPProxyAddr,
+                           &options->TCPProxyPort) < 0) {
+    *msg = tor_strdup("TCPProxy address/port failed to parse or resolve. "
+                      "Please fix.");
+    goto err;
+  }
+
+  /* Success. */
+  ret = 0;
+  goto end;
+
+ err:
+  ret = -1;
+ end:
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_free(sl);
+  return ret;
+}
+
 /** Read the contents of a ClientTransportPlugin or ServerTransportPlugin
  * line from <b>line</b>, depending on the value of <b>server</b>. Return 0
  * if the line is well-formed, and -1 if it isn't.
@@ -5495,9 +5567,10 @@ pt_parse_transport_line(const or_options_t *options,
 
     /* ClientTransportPlugins connecting through a proxy is managed only. */
     if (!server && (options->Socks4Proxy || options->Socks5Proxy ||
-                    options->HTTPSProxy)) {
+                    options->HTTPSProxy || options->TCPProxy)) {
       log_warn(LD_CONFIG, "You have configured an external proxy with another "
-                          "proxy type. (Socks4Proxy|Socks5Proxy|HTTPSProxy)");
+                          "proxy type. (Socks4Proxy|Socks5Proxy|HTTPSProxy|"
+                          "TCPProxy)");
       goto err;
     }
 
