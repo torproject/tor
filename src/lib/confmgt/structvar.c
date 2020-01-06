@@ -53,8 +53,8 @@ struct_check_magic(const void *object, const struct_magic_decl_t *decl)
   const uint32_t *ptr = STRUCT_VAR_P(object, decl->magic_offset);
   tor_assertf(*ptr == decl->magic_val,
               "Bad magic number on purported %s object. "
-              "Expected %"PRIu32"x but got "PRIu32"x.",
-              decl->magic_val, *ptr);
+              "Expected %"PRIu32"x but got %"PRIu32"x.",
+              decl->typename, decl->magic_val, *ptr);
 }
 
 /**
