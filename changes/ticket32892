@@ -1,0 +1,3 @@
+  o Code simplification and refactoring (channel):
+    - Channel layer had a variable length cell handler that was not used and
+      thus removed. Closes ticket 32892.

@@ -542,13 +542,8 @@ void channel_listener_set_listener_fn(channel_listener_t *chan,
 /* Incoming cell callbacks */
 channel_cell_handler_fn_ptr channel_get_cell_handler(channel_t *chan);
 
-channel_var_cell_handler_fn_ptr
-channel_get_var_cell_handler(channel_t *chan);
-
 void channel_set_cell_handlers(channel_t *chan,
-                               channel_cell_handler_fn_ptr cell_handler,
-                               channel_var_cell_handler_fn_ptr
-                                 var_cell_handler);
+                               channel_cell_handler_fn_ptr cell_handler);
 
 /* Clean up closed channels and channel listeners periodically; these are
  * called from run_scheduled_events() in main.c.

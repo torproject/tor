@@ -1067,23 +1067,6 @@ channel_get_cell_handler(channel_t *chan)
 }
 
 /**
- * Return the variable-length cell handler for a channel.
- *
- * This function gets the handler for incoming variable-length cells
- * installed on a channel.
- */
-channel_var_cell_handler_fn_ptr
-channel_get_var_cell_handler(channel_t *chan)
-{
-  tor_assert(chan);
-
-  if (CHANNEL_CAN_HANDLE_CELLS(chan))
-    return chan->var_cell_handler;
-
-  return NULL;
-}
-
-/**
  * Set both cell handlers for a channel.
  *
  * This function sets both the fixed-length and variable length cell handlers
@@ -1091,9 +1074,7 @@ channel_get_var_cell_handler(channel_t *chan)
  */
 void
 channel_set_cell_handlers(channel_t *chan,
-                          channel_cell_handler_fn_ptr cell_handler,
-                          channel_var_cell_handler_fn_ptr
-                            var_cell_handler)
+                          channel_cell_handler_fn_ptr cell_handler)
 {
   tor_assert(chan);
   tor_assert(CHANNEL_CAN_HANDLE_CELLS(chan));
@@ -1101,13 +1082,9 @@ channel_set_cell_handlers(channel_t *chan,
   log_debug(LD_CHANNEL,
            "Setting cell_handler callback for channel %p to %p",
            chan, cell_handler);
-  log_debug(LD_CHANNEL,
-           "Setting var_cell_handler callback for channel %p to %p",
-           chan, var_cell_handler);
 
   /* Change them */
   chan->cell_handler = cell_handler;
-  chan->var_cell_handler = var_cell_handler;
 }
 
 /*
