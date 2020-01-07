@@ -107,6 +107,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/geoip/geoip.h"
 
+#include "lib/cc/ctassert.h"
 #include "lib/sandbox/sandbox.h"
 #include "lib/net/buffers_net.h"
 #include "lib/tls/tortls.h"
@@ -2284,8 +2285,11 @@ connection_proxy_state_to_string(int state)
     "PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929",
     "PROXY_SOCKS5_WANT_AUTH_RFC1929_OK",
     "PROXY_SOCKS5_WANT_CONNECT_OK",
+    "PROXY_HAPROXY_WAIT_FOR_FLUSH",
     "PROXY_CONNECTED",
   };
+
+  CTASSERT(ARRAY_LENGTH(states) == PROXY_CONNECTED+1);
 
   if (state < PROXY_NONE || state > PROXY_CONNECTED)
     return unknown;
