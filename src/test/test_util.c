@@ -4104,9 +4104,42 @@ test_util_string_is_utf8(void *ptr)
   tt_int_op(0, OP_EQ, string_is_utf8("\xed\xbf\xbf", 3));
   tt_int_op(1, OP_EQ, string_is_utf8("\xee\x80\x80", 3));
 
-  // The maximum legal codepoint, 10FFFF.
+  // The minimum legal codepoint, 0x00.
+  tt_int_op(1, OP_EQ, string_is_utf8("\0", 1));
+
+  // The maximum legal codepoint, 0x10FFFF.
   tt_int_op(1, OP_EQ, string_is_utf8("\xf4\x8f\xbf\xbf", 4));
   tt_int_op(0, OP_EQ, string_is_utf8("\xf4\x90\x80\x80", 4));
+
+  /* Test cases that vary between programming languages /
+   * UTF-8 implementations.
+   * Source: POC||GTFO 19, page 43
+​  * https://www.alchemistowl.org/pocorgtfo/
+   */
+
+  // Invalid (in most implementations)
+  // surrogate
+  tt_int_op(0, OP_EQ, string_is_utf8("\xed\xa0\x81", 3));
+  // nullsurrog
+  tt_int_op(0, OP_EQ, string_is_utf8("\x30\x00\xed\xa0\x81", 5));
+  // threehigh
+  tt_int_op(0, OP_EQ, string_is_utf8("\xed\xbf\xbf", 3));
+  // fourhigh
+  tt_int_op(0, OP_EQ, string_is_utf8("\xf4\x90\xbf\xbf", 4));
+  // fivebyte
+  tt_int_op(0, OP_EQ, string_is_utf8("\xfb\x80\x80\x80\x80", 5));
+  // sixbyte
+  tt_int_op(0, OP_EQ, string_is_utf8("\xfd\x80\x80\x80\x80", 5));
+  // sixhigh
+  tt_int_op(0, OP_EQ, string_is_utf8("\xfd\xbf\xbf\xbf\xbf", 5));
+
+  // Valid (in most implementations)
+  // fourbyte
+  tt_int_op(1, OP_EQ, string_is_utf8("\xf0\x90\x8d\x88", 4));
+  // fourbyte2
+  tt_int_op(1, OP_EQ, string_is_utf8("\xf0\xbf\xbf\xbf", 4));
+  // nullbyte
+  tt_int_op(1, OP_EQ, string_is_utf8("\x30\x31\x32\x00\x33", 5));
 
  done:
   ;
