@@ -4114,7 +4114,7 @@ test_util_string_is_utf8(void *ptr)
   /* Test cases that vary between programming languages /
    * UTF-8 implementations.
    * Source: POC||GTFO 19, page 43
-​  * https://www.alchemistowl.org/pocorgtfo/
+   * https://www.alchemistowl.org/pocorgtfo/
    */
 
   // Invalid (in most implementations)
