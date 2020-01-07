@@ -659,12 +659,7 @@ test_addr_ip6_helpers(void *arg)
   tt_int_op(tor_addr_family(&t1),OP_EQ,AF_INET);
   tt_int_op(tor_addr_to_ipv4h(&t1),OP_EQ,0x01010202);
   r=tor_addr_parse_mask_ports("3.4.16.032:1-2",0,&t1, &mask, &port1, &port2);
-  tt_int_op(r, OP_EQ, AF_INET);
-  tt_int_op(mask,OP_EQ,32);
-  tt_int_op(tor_addr_family(&t1),OP_EQ,AF_INET);
-  tt_int_op(tor_addr_to_ipv4h(&t1),OP_EQ,0x03041020);
-  tt_uint_op(port1, OP_EQ, 1);
-  tt_uint_op(port2, OP_EQ, 2);
+  tt_int_op(r, OP_EQ, -1);
   r=tor_addr_parse_mask_ports("1.1.2.3/255.255.128.0",0,&t1, &mask,NULL,NULL);
   tt_int_op(r, OP_EQ, AF_INET);
   tt_int_op(mask,OP_EQ,17);
@@ -1653,6 +1648,29 @@ test_addr_rfc6598(void *arg)
   ;
 }
 
+#define TEST_ADDR_ATON(a, rv) STMT_BEGIN \
+    struct in_addr addr; \
+    tt_int_op(tor_inet_aton(a, &addr), OP_EQ, rv); \
+  STMT_END;
+
+static void
+test_addr_octal(void *arg)
+{
+  (void)arg;
+
+  /* Test non-octal IP addresses. */
+  TEST_ADDR_ATON("0.1.2.3", 1);
+  TEST_ADDR_ATON("1.0.2.3", 1);
+  TEST_ADDR_ATON("1.2.3.0", 1);
+
+  /* Test octal IP addresses. */
+  TEST_ADDR_ATON("01.1.2.3", 0);
+  TEST_ADDR_ATON("1.02.3.4", 0);
+  TEST_ADDR_ATON("1.2.3.04", 0);
+ done:
+  ;
+}
+
 #ifndef COCCI
 #define ADDR_LEGACY(name)                                               \
   { #name, test_addr_ ## name , 0, NULL, NULL }
@@ -1671,5 +1689,6 @@ struct testcase_t addr_tests[] = {
   { "is_loopback", test_addr_is_loopback, 0, NULL, NULL },
   { "make_null", test_addr_make_null, 0, NULL, NULL },
   { "rfc6598", test_addr_rfc6598, 0, NULL, NULL },
+  { "octal", test_addr_octal, 0, NULL, NULL },
   END_OF_TESTCASES
 };
