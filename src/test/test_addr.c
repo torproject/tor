@@ -659,8 +659,7 @@ test_addr_ip6_helpers(void *arg)
   tt_int_op(tor_addr_family(&t1),OP_EQ,AF_INET);
   tt_int_op(tor_addr_to_ipv4h(&t1),OP_EQ,0x01010202);
   r=tor_addr_parse_mask_ports("3.4.16.032:1-2",0,&t1, &mask, &port1, &port2);
-  tt_int_op(r, OP_EQ, AF_INET);
-  tt_int_op(mask,OP_EQ,32);
+  tt_int_op(r, OP_EQ, -1);
   tt_int_op(tor_addr_family(&t1),OP_EQ,AF_INET);
   tt_int_op(tor_addr_to_ipv4h(&t1),OP_EQ,0x03041020);
   tt_uint_op(port1, OP_EQ, 1);
