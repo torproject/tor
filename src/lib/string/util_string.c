@@ -506,6 +506,23 @@ validate_char(const uint8_t *c, uint8_t len)
 int
 string_is_utf8(const char *str, size_t len)
 {
+  // If str is NULL, don't try to read it
+  if (!str) {
+    // We could test for this case, but the low-level logs would produce
+    // confusing test output.
+    // LCOV_EXCL_START
+    if (len) {
+      // Use the low-level logging function, so that the log module can
+      // validate UTF-8 (if needed in future code)
+      tor_log_err_sigsafe(
+        "BUG: string_is_utf8() called with NULL str but non-zero len.");
+      // Since it's a bug, we should probably reject this string
+      return false;
+    }
+    // LCOV_EXCL_STOP
+    return true;
+  }
+
   for (size_t i = 0; i < len;) {
     uint8_t num_bytes = bytes_in_char(str[i]);
     if (num_bytes == 0) // Invalid leading byte found.
