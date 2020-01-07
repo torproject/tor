@@ -547,8 +547,8 @@ string_is_utf8(const char *str, size_t len)
 int
 string_is_utf8_no_bom(const char *str, size_t len)
 {
-  if (len >= 3 && (!strcmpstart(str, "\uFEFF") ||
-                   !strcmpstart(str, "\uFFFE"))) {
+  if (str && len >= 3 && (!strcmpstart(str, "\uFEFF") ||
+                          !strcmpstart(str, "\uFFFE"))) {
     return false;
   }
   return string_is_utf8(str, len);
