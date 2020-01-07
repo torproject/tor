@@ -306,6 +306,7 @@ test_conn_get_proxy_or_connection(unsigned int proxy_type)
   UNMOCK(connection_write_to_buf_impl_);
   UNMOCK(connection_or_change_state);
   UNMOCK(tor_close_socket);
+  connection_free_(TO_CONN(conn));
   return NULL;
 }
 
