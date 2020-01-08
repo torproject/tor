@@ -804,7 +804,10 @@ logs_free_all(void)
   }
 
   /* We _could_ destroy the log mutex here, but that would screw up any logs
-   * that happened between here and the end of execution. */
+   * that happened between here and the end of execution.
+   * If tor is re-initialized, log_mutex_initialized will still be 1. So we
+   * won't trigger any undefined behaviour by trying to re-initialize the
+   * log mutex. */
 }
 
 /** Remove and free the log entry <b>victim</b> from the linked-list

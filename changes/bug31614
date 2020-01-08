@@ -1,0 +1,9 @@
+  o Minor bugfixes (logging):
+    - Disable backtrace signal handlers when shutting down tor.
+      Fixes bug 31614; bugfix on 0.2.5.2-alpha.
+    - Add a missing check for HAVE_PTHREAD_H, because the backtrace code uses
+      mutexes. Fixes bug 31614; bugfix on 0.2.5.2-alpha.
+  o Documentation:
+    - Explain why we can't destroy the backtrace buffer mutex. Explain why
+      we don't need to destroy the log mutex.
+      Closes ticket 31736.
