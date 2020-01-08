@@ -141,7 +141,7 @@ STATIC void note_or_connect_failed(const or_connection_t *or_conn);
  */
 MOCK_DECL(STATIC void,connection_or_change_state,
           (or_connection_t *conn, uint8_t state));
-#endif
+#endif /* defined(CONNECTION_OR_PRIVATE) */
 
 #ifdef TOR_UNIT_TESTS
 extern int certs_cell_ed25519_disabled_for_testing;
