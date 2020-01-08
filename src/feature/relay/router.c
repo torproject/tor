@@ -1396,7 +1396,7 @@ consider_publishable_server(int force)
 }
 
 /** Return the port of the first active listener of type
- *  <b>listener_type</b>. */
+ *  <b>listener_type</b>. Returns 0 if no port is found. */
 /** XXX not a very good interface. it's not reliable when there are
     multiple listeners. */
 uint16_t
@@ -1418,8 +1418,7 @@ router_get_active_listener_port_by_type_af(int listener_type,
 
 /** Return the port that we should advertise as our ORPort; this is either
  * the one configured in the ORPort option, or the one we actually bound to
- * if ORPort is "auto".
- */
+ * if ORPort is "auto". Returns 0 if no port is found. */
 uint16_t
 router_get_advertised_or_port(const or_options_t *options)
 {
