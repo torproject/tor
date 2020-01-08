@@ -1461,17 +1461,18 @@ router_get_advertised_ipv6_or_ap(const or_options_t *options,
   /* Like IPv4, if the relay is configured using the default
    * authorities, disallow internal IPs. Otherwise, allow them. */
   const int default_auth = using_default_dir_authorities(options);
-  if (! tor_addr_is_internal(addr, 0) || ! default_auth) {
-    tor_addr_copy(&ipv6_ap_out->addr, addr);
-    ipv6_ap_out->port = port;
-  } else {
+  if (tor_addr_is_internal(addr, 0) && default_auth) {
     char addrbuf[TOR_ADDR_BUF_LEN];
     log_warn(LD_CONFIG,
              "Unable to use configured IPv6 address \"%s\" in a "
              "descriptor. Skipping it. "
              "Try specifying a globally reachable address explicitly.",
              tor_addr_to_str(addrbuf, addr, sizeof(addrbuf), 1));
+    return;
   }
+
+  tor_addr_copy(&ipv6_ap_out->addr, addr);
+  ipv6_ap_out->port = port;
 }
 
 /** Return the port that we should advertise as our DirPort;
