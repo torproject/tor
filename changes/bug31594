@@ -1,0 +1,5 @@
+  o Minor bugfixes (error handling):
+    - When tor aborts due to an error, close log file descriptors before
+      aborting. Closing the logs makes some OSes flush log file buffers,
+      rather than deleting buffered log lines. Fixes bug 31594;
+      bugfix on 0.2.5.2-alpha.
