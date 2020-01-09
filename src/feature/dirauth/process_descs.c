@@ -138,9 +138,7 @@ add_ed25519_to_dir(const ed25519_public_key_t *edkey, authdir_config_t *list,
   tor_assert(list);
 
   if (ed25519_validate_pubkey(edkey) < 0) {
-    char ed25519_base64_key[ED25519_BASE64_LEN+1];
-    ed25519_public_to_base64(ed25519_base64_key, edkey);
-    log_warn(LD_DIRSERV, "Invalid ed25519 key \"%s\"", ed25519_base64_key);
+    log_warn(LD_DIRSERV, "Invalid ed25519 key \"%s\"", ed25519_fmt(edkey));
     return -1;
   }
 
