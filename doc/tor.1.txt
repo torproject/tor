@@ -1663,16 +1663,32 @@ The following options are useful only for clients (that is, if
     and some limit HTTP GET requests (which Tor uses for fetching directory
     information) to port 80.
 
-[[RejectPlaintextPorts]] **RejectPlaintextPorts** __port__,__port__,__...__::
-    Like WarnPlaintextPorts, but instead of warning about risky port uses, Tor
-    will instead refuse to make the connection. (Default: None)
-
 [[SafeSocks]] **SafeSocks** **0**|**1**::
     When this option is enabled, Tor will reject application connections that
     use unsafe variants of the socks protocol -- ones that only provide an IP
     address, meaning the application is doing a DNS resolve first.
     Specifically, these are socks4 and socks5 when not doing remote DNS.
     (Default: 0)
+
+// Out of order because it logically belongs after SafeSocks
+[[TestSocks]] **TestSocks** **0**|**1**::
+    When this option is enabled, Tor will make a notice-level log entry for
+    each connection to the Socks port indicating whether the request used a
+    safe socks protocol or an unsafe one (see above entry on SafeSocks). This
+    helps to determine whether an application using Tor is possibly leaking
+    DNS requests. (Default: 0)
+
+// Out of order because it logically belongs with SafeSocks
+[[WarnPlaintextPorts]] **WarnPlaintextPorts** __port__,__port__,__...__::
+    Tells Tor to issue a warnings whenever the user tries to make an anonymous
+    connection to one of these ports. This option is designed to alert users
+    to services that risk sending passwords in the clear. (Default:
+    23,109,110,143)
+
+// Out of order because it logically belongs with SafeSocks
+[[RejectPlaintextPorts]] **RejectPlaintextPorts** __port__,__port__,__...__::
+    Like WarnPlaintextPorts, but instead of warning about risky port uses, Tor
+    will instead refuse to make the connection. (Default: None)
 
 [[SocksPolicy]] **SocksPolicy** __policy__,__policy__,__...__::
     Set an entrance policy for this server, to limit who can connect to the
@@ -1866,13 +1882,6 @@ The following options are useful only for clients (that is, if
     fulfill a .exit request, upload directory information, or download
     directory information.  (Default: 0)
 
-[[TestSocks]] **TestSocks** **0**|**1**::
-    When this option is enabled, Tor will make a notice-level log entry for
-    each connection to the Socks port indicating whether the request used a
-    safe socks protocol or an unsafe one (see above entry on SafeSocks). This
-    helps to determine whether an application using Tor is possibly leaking
-    DNS requests. (Default: 0)
-
 [[TokenBucketRefillInterval]] **TokenBucketRefillInterval** __NUM__ [**msec**|**second**]::
     Set the refill delay interval of Tor's token bucket to NUM milliseconds.
     NUM must be between 1 and 1000, inclusive.  When Tor is out of bandwidth,
@@ -2016,12 +2025,6 @@ The following options are useful only for clients (that is, if
     - is preferable since it reduces the chances for an attacker to guess the
     used IP. For local use, no change to the default VirtualAddrNetwork setting
     is needed.
-
-[[WarnPlaintextPorts]] **WarnPlaintextPorts** __port__,__port__,__...__::
-    Tells Tor to issue a warnings whenever the user tries to make an anonymous
-    connection to one of these ports. This option is designed to alert users
-    to services that risk sending passwords in the clear. (Default:
-    23,109,110,143)
 
 
 == SERVER OPTIONS
