@@ -156,9 +156,8 @@ for my $fn (@ARGV) {
                 #    msg "//:$fn:$.\n";
                 s!//.*!!;
             }
-            ## Warn about unquoted braces preceded by non-space.
-            #   (No character except a space should come before a {)
-            if (/([^\s'])\{/) {
+            ## Warn about unquoted braces preceded by unexpected character.
+            if (/([^\s'\)\(\{])\{/) {
                 msg "$1\{:$fn:$.\n";
             }
             ## Warn about double semi-colons at the end of a line.
