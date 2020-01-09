@@ -13,6 +13,7 @@
 #include "feature/hs_common/replaycache.h"
 
 #include "feature/hs/hs_cell.h"
+#include "feature/hs/hs_ob.h"
 #include "core/crypto/hs_ntor.h"
 
 #include "core/or/origin_circuit_st.h"
@@ -802,6 +803,47 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
   return intro_keys;
 }
 
+/** Return the newly allocated intro keys using the given service
+ * configuration and INTRODUCE2 data for the cell encrypted section.
+ *
+ * Every onion balance configured master key will be tried. If NULL is
+ * returned, no hit was found for the onion balance keys. */
+static hs_ntor_intro_cell_keys_t *
+get_intro2_keys_as_ob(const hs_service_config_t *config,
+                      const hs_cell_introduce2_data_t *data,
+                      const uint8_t *encrypted_section,
+                      size_t encrypted_section_len)
+{
+  uint8_t *ob_subcreds = NULL;
+  size_t ob_num_subcreds;
+  hs_ntor_intro_cell_keys_t *intro_keys = NULL;
+
+  ob_num_subcreds = hs_ob_get_subcredentials(config, &ob_subcreds);
+  if (!ob_num_subcreds) {
+    /* We are _not_ an OB instance since no configured master onion key(s)
+     * were found and thus no subcredentials were built. */
+    goto end;
+  }
+
+  for (size_t idx = 0; idx < ob_num_subcreds; idx++) {
+    /* Copy current data into a new INTRO2 cell data. We will then change the
+     * subcredential in order to validate. */
+    hs_cell_introduce2_data_t new_data = *data;
+    new_data.subcredential = &(ob_subcreds[idx * DIGEST256_LEN]);
+    intro_keys = get_introduce2_keys_and_verify_mac(&new_data,
+                                                    encrypted_section,
+                                                    encrypted_section_len);
+    if (intro_keys) {
+      /* It validates. We have a hit as an onion balance instance. */
+      goto end;
+    }
+  }
+
+ end:
+  tor_free(ob_subcreds);
+  return intro_keys;
+}
+
 /** Parse the INTRODUCE2 cell using data which contains everything we need to
  * do so and contains the destination buffers of information we extract and
  * compute from the cell. Return 0 on success else a negative value. The
@@ -856,14 +898,36 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
     goto done;
   }
 
-  /* Get the right INTRODUCE2 ntor keys and verify the cell MAC */
-  intro_keys = get_introduce2_keys_and_verify_mac(data, encrypted_section,
-                                                  encrypted_section_len);
+  /* First bytes of the ENCRYPTED section are the client public key (they are
+   * guaranteed to exist because of the length check above). We are gonna use
+   * the client public key to compute the ntor keys and decrypt the payload:
+   */
+  memcpy(&data->client_pk.public_key, encrypted_section,
+         CURVE25519_PUBKEY_LEN);
+
+  /* If we are configured as an Onion Balance instance, we need to try
+   * validation with the configured master public keys given in the config
+   * file. This is because the master identity key and the blinded key is put
+   * in the INTRODUCE2 cell by the client thus it will never validate with
+   * this instance default public key. */
+  if (service->config.ob_master_pubkeys) {
+    intro_keys = get_intro2_keys_as_ob(&service->config, data,
+                                       encrypted_section,
+                                       encrypted_section_len);
+  }
   if (!intro_keys) {
-    log_info(LD_REND, "Could not get valid INTRO2 keys on circuit %u "
-             "for service %s", TO_CIRCUIT(circ)->n_circ_id,
-             safe_str_client(service->onion_address));
-    goto done;
+    /* We are not an onion balance instance or no keys matched, fallback to
+     * our default values. */
+
+    /* Get the right INTRODUCE2 ntor keys and verify the cell MAC */
+    intro_keys = get_introduce2_keys_and_verify_mac(data, encrypted_section,
+                                                    encrypted_section_len);
+    if (!intro_keys) {
+      log_info(LD_REND, "Could not get valid INTRO2 keys on circuit %u "
+                        "for service %s", TO_CIRCUIT(circ)->n_circ_id,
+               safe_str_client(service->onion_address));
+      goto done;
+    }
   }
 
   {

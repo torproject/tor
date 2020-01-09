@@ -158,6 +158,8 @@ ob_option_parse(hs_service_config_t *config, const ob_options_t *opts)
       goto end;
     }
     smartlist_add(config->ob_master_pubkeys, pubkey);
+    log_info(LD_REND, "OnionBalance: MasterOnionAddress %s registered",
+             line->value);
   }
   /* Success. */
   ret = 1;
@@ -170,6 +172,26 @@ ob_option_parse(hs_service_config_t *config, const ob_options_t *opts)
   }
   return ret;
 }
+
+/** For the given master public key and time period, compute the subcredential
+ * and put them into subcredential. The subcredential parameter needs to be at
+ * least DIGEST256_LEN in size. */
+static void
+build_subcredential(const ed25519_public_key_t *pkey, uint64_t tp,
+                    uint8_t *subcredential)
+{
+  ed25519_public_key_t blinded_pubkey;
+
+  tor_assert(pkey);
+  tor_assert(subcredential);
+
+  hs_build_blinded_pubkey(pkey, NULL, 0, tp, &blinded_pubkey);
+  hs_get_subcredential(pkey, &blinded_pubkey, subcredential);
+}
+
+/*
+ * Public API.
+ */
 
 /** Read and parse the config file at fname on disk. The service config object
  * is populated with the options if any.
@@ -219,4 +241,79 @@ hs_ob_parse_config_file(hs_service_config_t *config)
   tor_free(content);
   tor_free(config_file_path);
   return ret;
+}
+
+/** Compute all possible subcredentials for every onion master key in the
+ * given service config object. The subcredentials is allocated and set as an
+ * continous array containing all possible values.
+ *
+ * On success, return the number of subcredential put in the array which will
+ * correspond to an arry of size: n * DIGEST256_LEN where DIGEST256_LEN is the
+ * length of a single subcredential.
+ *
+ * If the given configuration object has no OB master keys configured, 0 is
+ * returned and subcredentials is set to NULL.
+ *
+ * Otherwise, this can't fail. */
+size_t
+hs_ob_get_subcredentials(const hs_service_config_t *config,
+                         uint8_t **subcredentials)
+{
+  unsigned int num_pkeys, idx = 0;
+  uint8_t *subcreds = NULL;
+  const int steps[3] = {0, -1, 1};
+  const unsigned int num_steps = ARRAY_LENGTH(steps);
+  const size_t subcred_len = DIGEST256_LEN;
+  const uint64_t tp = hs_get_time_period_num(0);
+
+  tor_assert(config);
+  tor_assert(subcredentials);
+
+  num_pkeys = smartlist_len(config->ob_master_pubkeys);
+  if (!num_pkeys) {
+    goto end;
+  }
+
+  /* Time to build all the subcredentials for each time period: the previous
+   * one (-1), the current one (0) and the next one (1) for each configured
+   * key in order to accomodate client and service consensus skew.
+   *
+   * If the client consensus after_time is at 23:00 but the service one is at
+   * 01:00, the client will be using the previous time period where the
+   * service will think it is the client next time period. Thus why we have
+   * to try them all.
+   *
+   * The normal use case works because the service gets the descriptor object
+   * that corresponds to the intro point's request, and because each
+   * descriptor corresponds to a specific subcredential, we get the right
+   * subcredential out of it, and use that to do the decryption.
+   *
+   * As a slight optimization, statistically, the current time period (0) will
+   * be the one to work first so we'll put them first in the array to maximize
+   * our chance of success. */
+
+  /* We use a flat array, not a smartlist_t, in order to minimize memory
+   * allocation. This function is called for _each_ INTRODUCE2 cell arriving
+   * on this instance and thus the less we allocate small chunks often,
+   * usually the healthier our overall memory will be.
+   *
+   * Size of array is: length of a single subcredential multiplied by the
+   * number of time period we need to compute and finally multiplied by the
+   * total number of keys we are about to process. In other words, for each
+   * key, we allocate 3 subcredential slots. */
+  subcreds = tor_malloc_zero(subcred_len * num_steps * num_pkeys);
+
+  /* For each time period step. */
+  for (unsigned int i = 0; i < num_steps; i++) {
+    SMARTLIST_FOREACH_BEGIN(config->ob_master_pubkeys,
+                            const ed25519_public_key_t *, pkey) {
+      build_subcredential(pkey, tp + steps[i],
+                          &(subcreds[idx * subcred_len]));
+      idx++;
+    } SMARTLIST_FOREACH_END(pkey);
+  }
+
+ end:
+  *subcredentials = subcreds;
+  return idx;
 }

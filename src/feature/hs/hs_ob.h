@@ -13,6 +13,9 @@
 
 int hs_ob_parse_config_file(hs_service_config_t *config);
 
+size_t hs_ob_get_subcredentials(const hs_service_config_t *config,
+                                uint8_t **subcredentials);
+
 #ifdef HS_OB_PRIVATE
 
 typedef struct ob_options_t {
