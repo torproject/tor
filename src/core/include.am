@@ -91,10 +91,6 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/control/control_proto.c	\
 	src/feature/control/fmt_serverstatus.c  \
 	src/feature/control/getinfo_geoip.c	\
-	src/feature/dircache/conscache.c	\
-	src/feature/dircache/consdiffmgr.c	\
-	src/feature/dircache/dircache.c		\
-	src/feature/dircache/dirserv.c		\
 	src/feature/dirclient/dirclient.c	\
 	src/feature/dirclient/dlstatus.c	\
 	src/feature/dircommon/consdiff.c	\
@@ -183,6 +179,13 @@ MODULE_RELAY_SOURCES = 						\
 	src/feature/relay/relay_sys.c				\
 	src/feature/relay/transport_config.c
 
+# The Directory Cache module.
+MODULE_DIRCACHE_SOURCES = \
+	src/feature/dircache/conscache.c	\
+	src/feature/dircache/consdiffmgr.c	\
+	src/feature/dircache/dircache.c		\
+	src/feature/dircache/dirserv.c
+
 # The Directory Authority module.
 MODULE_DIRAUTH_SOURCES =					\
 	src/feature/dirauth/authmode.c				\
@@ -209,6 +212,12 @@ else
 LIBTOR_APP_A_STUB_SOURCES += src/feature/relay/relay_stub.c
 endif
 
+if BUILD_MODULE_DIRCACHE
+LIBTOR_APP_A_SOURCES += $(MODULE_DIRCACHE_SOURCES)
+else
+LIBTOR_APP_A_STUB_SOURCES += src/feature/dircache/dircache_stub.c
+endif
+
 if BUILD_MODULE_DIRAUTH
 LIBTOR_APP_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)
 else
@@ -222,6 +231,7 @@ if UNITTESTS_ENABLED
 
 # Add the sources of the modules that are needed for tests to work here.
 LIBTOR_APP_TESTING_A_SOURCES += $(MODULE_RELAY_SOURCES)
+LIBTOR_APP_TESTING_A_SOURCES += $(MODULE_DIRCACHE_SOURCES)
 LIBTOR_APP_TESTING_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)
 
 src_core_libtor_app_testing_a_SOURCES = $(LIBTOR_APP_TESTING_A_SOURCES)
