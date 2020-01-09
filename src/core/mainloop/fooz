@@ -1,0 +1,10 @@
+
+    dirserv_connection_clear(dir_conn);
+
+    tor_compress_free(dir_conn->compress_state);
+
+    if (dir_conn->spool) {
+      SMARTLIST_FOREACH(dir_conn->spool, spooled_resource_t *, spooled,
+                        spooled_resource_free(spooled));
+      smartlist_free(dir_conn->spool);
+    }
