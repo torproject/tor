@@ -1018,6 +1018,13 @@ The following options are useful only for clients (that is, if
     support (unlike ConnectionPadding, CircuitPadding cannot be force-enabled).
     (Default: 1)
 
+// Out of order because it logically belongs after CircuitPadding
+[[ReducedCircuitPadding]] **ReducedCircuitPadding** **0**|**1**::
+    If set to 1, Tor will only use circuit padding algorithms that have low
+    overhead. Only clients may set this option. This option should be offered
+    via the UI to mobile users for use where bandwidth may be expensive.
+    (Default: 0)
+
 [[CircuitsAvailableTimeout]] **CircuitsAvailableTimeout** __NUM__::
     Tor will attempt to keep at least one open, unused circuit available for
     this amount of time. This option governs how long idle circuits are kept
@@ -1141,6 +1148,13 @@ The following options are useful only for clients (that is, if
     this option. This option should be offered via the UI to mobile users
     for use where bandwidth may be expensive.
     (Default: auto)
+
+// Out of order because it logically belongs after ConnectionPadding
+[[ReducedConnectionPadding]] **ReducedConnectionPadding** **0**|**1**::
+    If set to 1, Tor will not not hold OR connections open for very long,
+    and will send less padding on these connections. Only clients may set
+    this option. This option should be offered via the UI to mobile users
+    for use where bandwidth may be expensive. (Default: 0)
 
 [[DNSPort]] **DNSPort** ['address'**:**]{empty}__port__|**auto** [_isolation flags_]::
     If non-zero, open this port to listen for UDP DNS requests, and resolve
@@ -1648,18 +1662,6 @@ The following options are useful only for clients (that is, if
     TLS connections (which Tor uses to connect to Onion Routers) to port 443,
     and some limit HTTP GET requests (which Tor uses for fetching directory
     information) to port 80.
-
-[[ReducedCircuitPadding]] **ReducedCircuitPadding** **0**|**1**::
-    If set to 1, Tor will only use circuit padding algorithms that have low
-    overhead. Only clients may set this option. This option should be offered
-    via the UI to mobile users for use where bandwidth may be expensive.
-    (Default: 0)
-
-[[ReducedConnectionPadding]] **ReducedConnectionPadding** **0**|**1**::
-    If set to 1, Tor will not not hold OR connections open for very long,
-    and will send less padding on these connections. Only clients may set
-    this option. This option should be offered via the UI to mobile users
-    for use where bandwidth may be expensive. (Default: 0)
 
 [[RejectPlaintextPorts]] **RejectPlaintextPorts** __port__,__port__,__...__::
     Like WarnPlaintextPorts, but instead of warning about risky port uses, Tor
