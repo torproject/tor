@@ -50,6 +50,8 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
                           int consensus_method,
                           const vote_routerstatus_t *vrs)
 {
+  (void) consensus_method;
+
   char *summary;
   char *result = NULL;
 
@@ -77,12 +79,6 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
    * this here, instead of in the caller. Then we could use the
    * networkstatus_type_t values, with an additional control port value
    * added -MP */
-
-  /* V3 microdesc consensuses only have "a" lines in later consensus methods
-   */
-  if (format == NS_V3_CONSENSUS_MICRODESC &&
-      consensus_method < MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS)
-    goto done;
 
   /* Possible "a" line. At most one for now. */
   if (!tor_addr_is_null(&rs->ipv6_addr)) {

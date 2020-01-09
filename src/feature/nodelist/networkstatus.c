@@ -1585,6 +1585,7 @@ networkstatus_consensus_is_already_downloading(const char *resource)
 int
 networkstatus_consensus_has_ipv6(const or_options_t* options)
 {
+  (void) options;
   const networkstatus_t *cons = networkstatus_get_reasonably_live_consensus(
                                                     approx_time(),
                                                     usable_consensus_flavor());
@@ -1594,13 +1595,8 @@ networkstatus_consensus_has_ipv6(const or_options_t* options)
     return 0;
   }
 
-  /* Different flavours of consensus gained IPv6 at different times */
-  if (we_use_microdescriptors_for_circuits(options)) {
-    return
-       cons->consensus_method >= MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS;
-  } else {
-    return 1;
-  }
+  /* All supported consensus methods have IPv6 addresses. */
+  return 1;
 }
 
 /** Given two router status entries for the same router identity, return 1 if
