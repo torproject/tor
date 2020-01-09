@@ -2558,8 +2558,15 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
   map = digestmap_new();
   list_pending_descriptor_downloads(map, 0);
   SMARTLIST_FOREACH_BEGIN(consensus->routerstatus_list, void *, rsp) {
-      routerstatus_t *rs =
-        is_vote ? &(((vote_routerstatus_t *)rsp)->status) : rsp;
+      routerstatus_t *rs;
+      vote_routerstatus_t *vrs;
+      if (is_vote) {
+        rs = &(((vote_routerstatus_t *)rsp)->status);
+        vrs = rsp;
+      } else {
+        rs = rsp;
+        vrs = NULL;
+      }
       signed_descriptor_t *sd;
       if ((sd = router_get_by_descriptor_digest(rs->descriptor_digest))) {
         const routerinfo_t *ri;
@@ -2584,7 +2591,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
         ++n_delayed; /* Not ready for retry. */
         continue;
       }
-      if (authdir && dirserv_would_reject_router(rs)) {
+      if (authdir && is_vote && dirserv_would_reject_router(rs, vrs)) {
         ++n_would_reject;
         continue; /* We would throw it out immediately. */
       }

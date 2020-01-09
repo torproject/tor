@@ -1074,8 +1074,10 @@ init_keys(void)
   if (authdir_mode_v3(options)) {
     const char *m = NULL;
     routerinfo_t *ri;
-    /* We need to add our own fingerprint so it gets recognized. */
-    if (dirserv_add_own_fingerprint(get_server_identity_key())) {
+    /* We need to add our own fingerprint and ed25519 key so it gets
+     * recognized. */
+    if (dirserv_add_own_fingerprint(get_server_identity_key(),
+                                    get_master_identity_key())) {
       log_err(LD_GENERAL,"Error adding own fingerprint to set of relays");
       return -1;
     }
