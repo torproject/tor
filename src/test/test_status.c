@@ -317,8 +317,7 @@ NS_DECL(int, we_are_hibernating, (void));
 NS_DECL(int, public_server_mode, (const or_options_t *options));
 NS_DECL(const routerinfo_t *, router_get_my_routerinfo, (void));
 NS_DECL(const node_t *, node_get_by_id, (const char *identity_digest));
-NS_DECL(void, logv, (int severity, log_domain_mask_t domain,
-    const char *funcname, const char *suffix, const char *format, va_list ap));
+NS_DECL(void, logv, (int severity, log_domain_mask_t domain, const char *funcname, const char *suffix, const char *format, va_list ap));
 NS_DECL(int, server_mode, (const or_options_t *options));
 
 static routerinfo_t *mock_routerinfo;
@@ -488,8 +487,7 @@ NS_DECL(int, public_server_mode, (const or_options_t *options));
 NS_DECL(long, get_uptime, (void));
 NS_DECL(uint64_t, get_bytes_read, (void));
 NS_DECL(uint64_t, get_bytes_written, (void));
-NS_DECL(void, logv, (int severity, log_domain_mask_t domain,
-    const char *funcname, const char *suffix, const char *format, va_list ap));
+NS_DECL(void, logv, (int severity, log_domain_mask_t domain, const char *funcname, const char *suffix, const char *format, va_list ap));
 NS_DECL(int, server_mode, (const or_options_t *options));
 
 static int NS(n_msgs) = 0;
@@ -613,8 +611,7 @@ NS_DECL(int, public_server_mode, (const or_options_t *options));
 NS_DECL(long, get_uptime, (void));
 NS_DECL(uint64_t, get_bytes_read, (void));
 NS_DECL(uint64_t, get_bytes_written, (void));
-NS_DECL(void, logv, (int severity, log_domain_mask_t domain,
-    const char *funcname, const char *suffix, const char *format, va_list ap));
+NS_DECL(void, logv, (int severity, log_domain_mask_t domain, const char *funcname, const char *suffix, const char *format, va_list ap));
 NS_DECL(int, server_mode, (const or_options_t *options));
 NS_DECL(or_state_t *, get_or_state, (void));
 NS_DECL(int, accounting_is_enabled, (const or_options_t *options));
@@ -800,8 +797,7 @@ NS_DECL(int, public_server_mode, (const or_options_t *options));
 NS_DECL(long, get_uptime, (void));
 NS_DECL(uint64_t, get_bytes_read, (void));
 NS_DECL(uint64_t, get_bytes_written, (void));
-NS_DECL(void, logv, (int severity, log_domain_mask_t domain,
-    const char *funcname, const char *suffix, const char *format, va_list ap));
+NS_DECL(void, logv, (int severity, log_domain_mask_t domain, const char *funcname, const char *suffix, const char *format, va_list ap));
 NS_DECL(int, server_mode, (const or_options_t *options));
 NS_DECL(int, accounting_is_enabled, (const or_options_t *options));
 
@@ -952,8 +948,7 @@ NS_DECL(int, public_server_mode, (const or_options_t *options));
 NS_DECL(long, get_uptime, (void));
 NS_DECL(uint64_t, get_bytes_read, (void));
 NS_DECL(uint64_t, get_bytes_written, (void));
-NS_DECL(void, logv, (int severity, log_domain_mask_t domain,
-    const char *funcname, const char *suffix, const char *format, va_list ap));
+NS_DECL(void, logv, (int severity, log_domain_mask_t domain, const char *funcname, const char *suffix, const char *format, va_list ap));
 NS_DECL(int, server_mode, (const or_options_t *options));
 NS_DECL(int, accounting_is_enabled, (const or_options_t *options));
 

@@ -107,10 +107,7 @@ static cached_resolve_t *cache_entry_mock = NULL;
 
 static int n_fake_impl = 0;
 
-NS_DECL(int, dns_resolve_impl, (edge_connection_t *exitconn, int is_resolve,
-                                or_circuit_t *oncirc, char **hostname_out,
-                                int *made_connection_pending_out,
-                                cached_resolve_t **resolve_out));
+NS_DECL(int, dns_resolve_impl, (edge_connection_t *exitconn, int is_resolve, or_circuit_t *oncirc, char **hostname_out, int *made_connection_pending_out, cached_resolve_t **resolve_out));
 
 /** This will be our configurable substitute for <b>dns_resolve_impl</b> in
  * dns.c. It will return <b>resolve_retval</b>,

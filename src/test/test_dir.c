@@ -5473,8 +5473,7 @@ test_dir_conn_purpose_to_string(void *data)
   teardown_capture_of_logs();
 }
 
-NS_DECL(int,
-public_server_mode, (const or_options_t *options));
+NS_DECL(int, public_server_mode, (const or_options_t *options));
 
 static int
 NS(public_server_mode)(const or_options_t *options)
@@ -5542,8 +5541,7 @@ test_dir_should_use_directory_guards(void *data)
     tor_free(errmsg);
 }
 
-NS_DECL(void,
-directory_initiate_request, (directory_request_t *req));
+NS_DECL(void, directory_initiate_request, (directory_request_t *req));
 
 static void
 test_dir_should_not_init_request_to_ourselves(void *data)

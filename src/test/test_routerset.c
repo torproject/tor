@@ -439,8 +439,7 @@ NS(test_main)(void *arg)
  * Structural test for routerset_parse, when given a valid wildcard policy.
  */
 
-NS_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string,
-    (const char *s, int assume_action, int *malformed_list));
+NS_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string, (const char *s, int assume_action, int *malformed_list));
 
 static addr_policy_t *NS(mock_addr_policy);
 
@@ -487,8 +486,7 @@ NS(router_parse_addr_policy_item_from_string)(const char *s,
  * literal policy.
  */
 
-NS_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string,
-        (const char *s, int assume_action, int *bogus));
+NS_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string, (const char *s, int assume_action, int *bogus));
 
 static addr_policy_t *NS(mock_addr_policy);
 
@@ -534,8 +532,7 @@ NS(router_parse_addr_policy_item_from_string)(const char *s, int assume_action,
  * literal policy.
  */
 
-NS_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string,
-        (const char *s, int assume_action, int *bad));
+NS_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string, (const char *s, int assume_action, int *bad));
 
 static addr_policy_t *NS(mock_addr_policy);
 
@@ -953,8 +950,7 @@ NS(test_main)(void *arg)
  * and the address is rejected by policy.
  */
 
-NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy,
-    (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
+NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy, (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
 
 static tor_addr_t MOCK_TOR_ADDR;
 #define MOCK_TOR_ADDR_PTR (&MOCK_TOR_ADDR)
@@ -1001,8 +997,7 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
  * and the address is not rejected by policy.
  */
 
-NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy,
-    (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
+NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy, (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
 
 static void
 NS(test_main)(void *arg)
@@ -1047,8 +1042,7 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
  * and the address is NULL.
  */
 
-NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy,
-    (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
+NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy, (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
 
 static void
 NS(test_main)(void *arg)
@@ -1091,8 +1085,7 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
  * for the address.
  */
 
-NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy,
-    (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
+NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy, (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
 NS_DECL(int, geoip_get_country_by_addr, (const tor_addr_t *addr));
 
 static void
@@ -1149,8 +1142,7 @@ NS(geoip_get_country_by_addr)(const tor_addr_t *addr)
  * for the address.
  */
 
-NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy,
-    (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
+NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy, (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
 NS_DECL(int, geoip_get_country_by_addr, (const tor_addr_t *addr));
 
 static void
@@ -1614,8 +1606,7 @@ NS(test_main)(void *arg)
  * is empty.
  */
 
-NS_DECL(const node_t *, node_get_by_nickname,
-    (const char *nickname, unsigned flags));
+NS_DECL(const node_t *, node_get_by_nickname, (const char *nickname, unsigned flags));
 static const char *NS(mock_nickname);
 
 static void
@@ -1663,8 +1654,7 @@ NS(node_get_by_nickname)(const char *nickname, unsigned flags)
  * is set but the nodes are not running.
  */
 
-NS_DECL(const node_t *, node_get_by_nickname,
-    (const char *nickname, unsigned flags));
+NS_DECL(const node_t *, node_get_by_nickname, (const char *nickname, unsigned flags));
 static const char *NS(mock_nickname);
 static node_t NS(mock_node);
 
@@ -1713,8 +1703,7 @@ NS(node_get_by_nickname)(const char *nickname, unsigned flags)
  * Structural test for routerset_get_all_nodes.
  */
 
-NS_DECL(const node_t *, node_get_by_nickname,
-    (const char *nickname, unsigned flags));
+NS_DECL(const node_t *, node_get_by_nickname, (const char *nickname, unsigned flags));
 static char *NS(mock_nickname);
 static node_t NS(mock_node);
 
