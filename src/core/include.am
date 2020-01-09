@@ -168,7 +168,7 @@ LIBTOR_APP_A_SOURCES += src/app/main/ntmain.c
 endif
 
 #
-# Modules are conditionnally compiled in tor starting here. We add the C files
+# Modules are conditionally compiled in tor starting here. We add the C files
 # only if the modules has been enabled at configure time. We always add the
 # source files of every module to libtor-testing.a so we can build the unit
 # tests for everything. See the UNITTESTS_ENABLED branch below.
