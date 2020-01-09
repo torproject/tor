@@ -31,6 +31,9 @@
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 
+#define NS_MODULE rtr
+#define NS_SUBMODULE tests
+
 NS_DECL(const routerinfo_t *, router_get_my_routerinfo, (void));
 
 static routerinfo_t* mock_routerinfo;

@@ -95,6 +95,7 @@
 #endif
 
 #define NS_MODULE dir
+#define NS_SUBMODULE tests
 
 static networkstatus_t *
 networkstatus_parse_vote_from_string_(const char *s,

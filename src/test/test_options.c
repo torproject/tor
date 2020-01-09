@@ -35,7 +35,8 @@
 #include <sys/param.h>
 #endif
 
-#define NS_MODULE test_options
+#define NS_MODULE opt
+#define NS_SUBMODULE tests
 
 typedef struct {
   int severity;

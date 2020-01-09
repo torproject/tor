@@ -65,6 +65,7 @@ ENABLE_GCC_WARNING("-Woverlength-strings")
 #endif
 
 #define NS_MODULE dir_handle_get
+#define NS_SUBMODULE tests
 
 #define NOT_FOUND "HTTP/1.0 404 Not found\r\n\r\n"
 #define BAD_REQUEST "HTTP/1.0 400 Bad request\r\n\r\n"
