@@ -11,12 +11,18 @@ selectively enable or disable, at `configure` time.
 Currently, tor has these modules:
 
   - Relay subsystem (relay)
+  - Directory cache system (dircache).
   - Directory Authority subsystem (dirauth)
 
-dirauth is located in its own directory in `src/feature/dirauth/`.
+The dirauth code is located in its own directory in `src/feature/dirauth/`.
 
-Relay is located in directories named `src/*/*relay` and `src/*/*dircache`,
-which are being progressively refactored and disabled.
+The relay code is located in a directory named `src/*/*relay`, which is
+being progressively refactored and disabled.
+
+The dircache code is located in `src/*/*dircache`.  Right now, it is
+disabled if and only if the relay module is disabled.  (We are treating
+them as separate modules because they are logically independent, not
+because you would actually want to run one without the other.)
 
 To disable a module, pass `--disable-module-{dirauth,relay}` at configure
 time. All modules are currently enabled by default.
