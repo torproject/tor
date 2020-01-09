@@ -28,6 +28,7 @@
 #include "lib/thread/thread_sys.h"
 #include "lib/time/time_sys.h"
 #include "lib/tls/tortls_sys.h"
+#include "lib/trace/trace_sys.h"
 #include "lib/wallclock/wallclock_sys.h"
 #include "lib/evloop/evloop_sys.h"
 
@@ -42,6 +43,11 @@
  * We'll implement a level dump command in #31614.
  **/
 const subsys_fns_t *tor_subsystems[] = {
+
+#ifdef HAVE_TRACING
+  &sys_tracing,
+#endif
+
   &sys_winprocess,
   &sys_torerr,
 
