@@ -226,15 +226,13 @@ dirserv_load_fingerprint_file(void)
     }
 
     /* Check if fingerprint is RSA or ed25519 by verifying it. */
-    int ed25519_not_ok, rsa_not_ok;
+    int ed25519_not_ok = -1, rsa_not_ok = -1;
 
     /* Attempt to add the RSA key. */
     if (strlen(fingerprint) == HEX_DIGEST_LEN) {
       rsa_not_ok = add_rsa_fingerprint_to_dir(fingerprint,
                                               fingerprint_list_new,
                                               add_status);
-    } else {
-      rsa_not_ok = -1;
     }
 
     /* Check ed25519 key. We check the size to prevent buffer overflows.
@@ -248,8 +246,6 @@ dirserv_load_fingerprint_file(void)
       } else {
         ed25519_not_ok = -1;
       }
-    } else {
-      ed25519_not_ok = -1;
     }
 
     /* If this is not a valid key, log and skip */
