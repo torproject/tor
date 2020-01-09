@@ -266,6 +266,37 @@ dirserv_get_consensus,(const char *flavor_name))
   return strmap_get(cached_consensuses, flavor_name);
 }
 
+/** As dir_split_resource_into_fingerprints, but instead fills
+ * <b>spool_out</b> with a list of spoolable_resource_t for the resource
+ * identified through <b>source</b>. */
+int
+dir_split_resource_into_spoolable(const char *resource,
+                                  dir_spool_source_t source,
+                                  smartlist_t *spool_out,
+                                  int *compressed_out,
+                                  int flags)
+{
+  smartlist_t *fingerprints = smartlist_new();
+
+  tor_assert(flags & (DSR_HEX|DSR_BASE64));
+  const size_t digest_len =
+    (flags & DSR_DIGEST256) ? DIGEST256_LEN : DIGEST_LEN;
+
+  int r = dir_split_resource_into_fingerprints(resource, fingerprints,
+                                               compressed_out, flags);
+  /* This is not a very efficient implementation XXXX */
+  SMARTLIST_FOREACH_BEGIN(fingerprints, uint8_t *, digest) {
+    spooled_resource_t *spooled =
+      spooled_resource_new(source, digest, digest_len);
+    if (spooled)
+      smartlist_add(spool_out, spooled);
+    tor_free(digest);
+  } SMARTLIST_FOREACH_END(digest);
+
+  smartlist_free(fingerprints);
+  return r;
+}
+
 /** As dirserv_get_routerdescs(), but instead of getting signed_descriptor_t
  * pointers, adds copies of digests to fps_out, and doesn't use the
  * /tor/server/ prefix.  For a /d/ request, adds descriptor digests; for other
