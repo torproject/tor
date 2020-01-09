@@ -249,15 +249,22 @@ AC_ARG_ENABLE(seccomp,
 AC_ARG_ENABLE(libscrypt,
      AS_HELP_STRING(--disable-libscrypt, [do not attempt to use libscrypt]))
 
-dnl Enable event tracing which are transformed to debug log statement.
-AC_ARG_ENABLE(event-tracing-debug,
-     AS_HELP_STRING(--enable-event-tracing-debug, [build with event tracing to debug log]))
-AM_CONDITIONAL([USE_EVENT_TRACING_DEBUG], [test "x$enable_event_tracing_debug" = "xyes"])
+dnl --- Tracing Options. ---
 
-if test x$enable_event_tracing_debug = xyes; then
-  AC_DEFINE([USE_EVENT_TRACING_DEBUG], [1], [Tracing framework to log debug])
-  AC_DEFINE([TOR_EVENT_TRACING_ENABLED], [1], [Compile the event tracing instrumentation])
-fi
+dnl Tracepoints event to debug logs.
+AC_ARG_ENABLE(tracing-instrumentation-log-debug,
+     AS_HELP_STRING([--enable-tracing-instrumentation-log-debug],
+                    [build with tracing event to debug log]),
+     AC_DEFINE([USE_TRACING_INSTRUMENTATION_LOG_DEBUG], [1],
+               [Tracepoints to log debug]), [])
+AM_CONDITIONAL([USE_TRACING_INSTRUMENTATION_LOG_DEBUG],
+               [test "x$enable_tracing_instrumentation_log_debug" = "xyes"])
+
+dnl Define that tracing is supported.
+AM_COND_IF([USE_TRACING_INSTRUMENTATION_LOG_DEBUG],
+           AC_DEFINE([HAVE_TRACING], [1], [Compiled with tracing support]))
+
+dnl -- End Tracing Options. --
 
 dnl Enable Android only features.
 AC_ARG_ENABLE(android,
@@ -2681,6 +2688,12 @@ PPRINT_PROP_BOOL([libFuzzer support (--enable-libfuzzer)], $value)
 
 test "x$enable_oss_fuzz" = "xyes" && value=1 || value=0
 PPRINT_PROP_BOOL([OSS-Fuzz support (--enable-oss-fuzz)], $value)
+
+AS_ECHO
+PPRINT_SUBTITLE([Tracing])
+
+test "x$enable_tracing_instrumentation_log_debug" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Tracepoints to log_debug() (--enable-tracing-instrumentation-log-debug)], $value)
 
 AS_ECHO
 PPRINT_SUBTITLE([Install Directories])
