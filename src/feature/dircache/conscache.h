@@ -14,6 +14,8 @@
 typedef struct consensus_cache_entry_t consensus_cache_entry_t;
 typedef struct consensus_cache_t consensus_cache_t;
 
+struct config_line_t;
+
 HANDLE_DECL(consensus_cache_entry, consensus_cache_entry_t, )
 #define consensus_cache_entry_handle_free(h)    \
   FREE_AND_NULL(consensus_cache_entry_handle_t, \

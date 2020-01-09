@@ -43,10 +43,10 @@
 #endif
 
 #ifdef ENABLE_OPENSSL
-DISABLE_GCC_WARNING(redundant-decls)
+DISABLE_GCC_WARNING("-Wredundant-decls")
 #include <openssl/rand.h>
 #include <openssl/sha.h>
-ENABLE_GCC_WARNING(redundant-decls)
+ENABLE_GCC_WARNING("-Wredundant-decls")
 #endif /* defined(ENABLE_OPENSSL) */
 
 #ifdef ENABLE_NSS

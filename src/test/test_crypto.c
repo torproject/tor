@@ -29,9 +29,9 @@
 
 #if defined(ENABLE_OPENSSL)
 #include "lib/crypt_ops/compat_openssl.h"
-DISABLE_GCC_WARNING(redundant-decls)
+DISABLE_GCC_WARNING("-Wredundant-decls")
 #include <openssl/dh.h>
-ENABLE_GCC_WARNING(redundant-decls)
+ENABLE_GCC_WARNING("-Wredundant-decls")
 #endif /* defined(ENABLE_OPENSSL) */
 
 /** Run unit tests for Diffie-Hellman functionality. */

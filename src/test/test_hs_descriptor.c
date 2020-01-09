@@ -24,12 +24,12 @@
 #include "test/rng_test_helpers.h"
 
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
-DISABLE_GCC_WARNING(overlength-strings)
+DISABLE_GCC_WARNING("-Woverlength-strings")
 /* We allow huge string constants in the unit tests, but not in the code
  * at large. */
 #endif
 #include "test_hs_descriptor.inc"
-ENABLE_GCC_WARNING(overlength-strings)
+ENABLE_GCC_WARNING("-Woverlength-strings")
 
 /* Test certificate encoding put in a descriptor. */
 static void

@@ -55,13 +55,13 @@
 #endif /* defined(_WIN32) */
 
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
-DISABLE_GCC_WARNING(overlength-strings)
+DISABLE_GCC_WARNING("-Woverlength-strings")
 /* We allow huge string constants in the unit tests, but not in the code
  * at large. */
 #endif
 #include "vote_descriptors.inc"
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
-ENABLE_GCC_WARNING(overlength-strings)
+ENABLE_GCC_WARNING("-Woverlength-strings")
 #endif
 
 #define NS_MODULE dir_handle_get
@@ -258,7 +258,7 @@ test_dir_handle_get_rendezvous2_not_found_if_not_encrypted(void *data)
   conn = new_dir_conn();
 
   // connection is not encrypted
-  tt_assert(!connection_dir_is_encrypted(conn))
+  tt_assert(!connection_dir_is_encrypted(conn));
 
   tt_int_op(directory_handle_command_get(conn, RENDEZVOUS2_GET(), NULL, 0),
             OP_EQ, 0);

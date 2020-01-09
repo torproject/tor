@@ -138,6 +138,8 @@ MOCK_DECL(void, scheduler_channel_has_waiting_cells, (channel_t *chan));
  *****************************************************************************/
 #ifdef SCHEDULER_PRIVATE
 
+#include "ext/ht.h"
+
 /*********************************
  * Defined in scheduler.c
  *********************************/
@@ -215,4 +217,3 @@ scheduler_t *get_vanilla_scheduler(void);
 #endif /* defined(SCHEDULER_PRIVATE) */
 
 #endif /* !defined(TOR_SCHEDULER_H) */
-

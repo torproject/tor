@@ -21,7 +21,7 @@
 #include "lib/testsupport/testsupport.h"
 #include "lib/thread/threads.h"
 
-DISABLE_GCC_WARNING(redundant-decls)
+DISABLE_GCC_WARNING("-Wredundant-decls")
 
 #include <openssl/err.h>
 #include <openssl/rsa.h>
@@ -36,7 +36,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>
 
-ENABLE_GCC_WARNING(redundant-decls)
+ENABLE_GCC_WARNING("-Wredundant-decls")
 
 #include <string.h>
 

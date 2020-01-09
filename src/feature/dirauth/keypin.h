@@ -45,6 +45,8 @@ int keypin_check_lone_rsa(const uint8_t *rsa_id_digest);
 
 #ifdef KEYPIN_PRIVATE
 
+#include "ext/ht.h"
+
 /**
  * In-memory representation of a key-pinning table entry.
  */

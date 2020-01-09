@@ -4726,7 +4726,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
   tt_int_op(port_cfg->port, OP_EQ, CFG_AUTO_PORT);
   tor_addr_parse(&addr, "127.0.0.46");
-  tt_assert(tor_addr_eq(&port_cfg->addr, &addr))
+  tt_assert(tor_addr_eq(&port_cfg->addr, &addr));
 
   // Test success with a port of auto in mixed case
   config_free_lines(config_port_valid); config_port_valid = NULL;
@@ -4740,7 +4740,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
   tt_int_op(port_cfg->port, OP_EQ, CFG_AUTO_PORT);
   tor_addr_parse(&addr, "127.0.0.46");
-  tt_assert(tor_addr_eq(&port_cfg->addr, &addr))
+  tt_assert(tor_addr_eq(&port_cfg->addr, &addr));
 
   // Test success with parsing both an address and an auto port
   config_free_lines(config_port_valid); config_port_valid = NULL;
@@ -4754,7 +4754,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
   tt_int_op(port_cfg->port, OP_EQ, CFG_AUTO_PORT);
   tor_addr_parse(&addr, "127.0.0.122");
-  tt_assert(tor_addr_eq(&port_cfg->addr, &addr))
+  tt_assert(tor_addr_eq(&port_cfg->addr, &addr));
 
   // Test failure when asked to parse an invalid address followed by auto
   config_free_lines(config_port_invalid); config_port_invalid = NULL;
@@ -4777,7 +4777,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
   tt_int_op(port_cfg->port, OP_EQ, 656);
   tor_addr_parse(&addr, "127.0.0.123");
-  tt_assert(tor_addr_eq(&port_cfg->addr, &addr))
+  tt_assert(tor_addr_eq(&port_cfg->addr, &addr));
 
   // Test failure if we can't parse anything at all
   config_free_lines(config_port_invalid); config_port_invalid = NULL;

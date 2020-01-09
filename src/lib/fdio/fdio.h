@@ -13,6 +13,9 @@
 #define TOR_FDIO_H
 
 #include <stddef.h>
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
 
 off_t tor_fd_getpos(int fd);
 int tor_fd_setpos(int fd, off_t pos);
