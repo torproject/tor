@@ -18,9 +18,9 @@
 
 #include "test/test.h"
 
-#define NS_MODULE routerset
+#define NS_MODULE rset
 
-#define NS_SUBMODULE routerset_new
+#define NS_SUBMODULE new
 
 /*
  * Functional (blackbox) test to determine that each member of the routerset
@@ -47,7 +47,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE routerset_get_countryname
+#define NS_SUBMODULE get_countryname
 
 /*
  * Functional test to strip the braces from a "{xx}" country code string.
@@ -92,7 +92,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_refresh_counties, geoip_not_loaded)
+#define NS_SUBMODULE ASPECT(refresh, geoip_not_loaded)
 
 /*
  * Structural (whitebox) test for routerset_refresh_counties, when the GeoIP DB
@@ -142,7 +142,7 @@ NS(geoip_get_n_countries)(void)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_refresh_counties, no_countries)
+#define NS_SUBMODULE ASPECT(refresh, no_countries)
 
 /*
  * Structural test for routerset_refresh_counties, when there are no countries.
@@ -205,7 +205,7 @@ NS(geoip_get_country)(const char *countrycode)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_refresh_counties, one_valid_country)
+#define NS_SUBMODULE ASPECT(refresh, one_valid_country)
 
 /*
  * Structural test for routerset_refresh_counties, with one valid country.
@@ -269,7 +269,7 @@ NS(geoip_get_country)(const char *countrycode)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_refresh_counties, one_invalid_country)
+#define NS_SUBMODULE ASPECT(refresh, one_invalid_country)
 
 /*
  * Structural test for routerset_refresh_counties, with one invalid
@@ -334,7 +334,7 @@ NS(geoip_get_country)(const char *countrycode)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_parse, malformed)
+#define NS_SUBMODULE ASPECT(parse, malformed)
 
 /*
  * Functional test, with a malformed string to parse.
@@ -357,7 +357,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_parse, valid_hexdigest)
+#define NS_SUBMODULE ASPECT(parse, valid_hexdigest)
 
 /*
  * Functional test for routerset_parse, that routerset_parse returns 0
@@ -383,7 +383,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_parse, valid_nickname)
+#define NS_SUBMODULE ASPECT(parse, valid_nickname)
 
 /*
  * Functional test for routerset_parse, when given a valid nickname as input.
@@ -408,7 +408,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_parse, get_countryname)
+#define NS_SUBMODULE ASPECT(parse, get_countryname)
 
 /*
  * Functional test for routerset_parse, when given a valid countryname.
@@ -433,7 +433,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_parse, policy_wildcard)
+#define NS_SUBMODULE ASPECT(parse, policy_wildcard)
 
 /*
  * Structural test for routerset_parse, when given a valid wildcard policy.
@@ -479,7 +479,7 @@ NS(router_parse_addr_policy_item_from_string)(const char *s,
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_parse, policy_ipv4)
+#define NS_SUBMODULE ASPECT(parse, policy_ipv4)
 
 /*
  * Structural test for routerset_parse, when given a valid IPv4 address
@@ -525,7 +525,7 @@ NS(router_parse_addr_policy_item_from_string)(const char *s, int assume_action,
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_parse, policy_ipv6)
+#define NS_SUBMODULE ASPECT(parse, policy_ipv6)
 
 /*
  * Structural test for routerset_parse, when given a valid IPv6 address
@@ -571,7 +571,7 @@ NS(router_parse_addr_policy_item_from_string)(const char *s,
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_union, source_bad)
+#define NS_SUBMODULE ASPECT(union, source_bad)
 
 /*
  * Structural test for routerset_union, when given a bad source argument.
@@ -616,7 +616,7 @@ NS(smartlist_new)(void)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_union, one)
+#define NS_SUBMODULE ASPECT(union, one)
 
 /*
  * Functional test for routerset_union.
@@ -641,7 +641,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE routerset_is_list
+#define NS_SUBMODULE is_list
 
 /*
  * Functional tests for routerset_is_list.
@@ -694,7 +694,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE routerset_needs_geoip
+#define NS_SUBMODULE needs_geoip
 
 /*
  * Functional tests for routerset_needs_geoip.
@@ -729,7 +729,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE routerset_is_empty
+#define NS_SUBMODULE is_empty
 
 /*
  * Functional tests for routerset_is_empty.
@@ -763,7 +763,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_contains, null_set_or_null_set_list)
+#define NS_SUBMODULE ASPECT(contains, null_set_or_list)
 
 /*
  * Functional test for routerset_contains, when given a NULL set or the
@@ -792,7 +792,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_contains, set_and_null_nickname)
+#define NS_SUBMODULE ASPECT(contains, null_nickname)
 
 /*
  * Functional test for routerset_contains, when given a valid routerset but a
@@ -817,7 +817,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_contains, set_and_nickname)
+#define NS_SUBMODULE ASPECT(contains, nickname)
 
 /*
  * Functional test for routerset_contains, when given a valid routerset
@@ -843,7 +843,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_contains, set_and_no_nickname)
+#define NS_SUBMODULE ASPECT(contains, no_nickname)
 
 /*
  * Functional test for routerset_contains, when given a valid routerset
@@ -867,7 +867,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_contains, set_and_digest)
+#define NS_SUBMODULE ASPECT(contains, digest)
 
 /*
  * Functional test for routerset_contains, when given a valid routerset
@@ -892,7 +892,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_contains, set_and_no_digest)
+#define NS_SUBMODULE ASPECT(contains, no_digest)
 
 /*
  * Functional test for routerset_contains, when given a valid routerset
@@ -918,7 +918,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_contains, set_and_null_digest)
+#define NS_SUBMODULE ASPECT(contains, null_digest)
 
 /*
  * Functional test for routerset_contains, when given a valid routerset
@@ -943,7 +943,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_contains, set_and_addr)
+#define NS_SUBMODULE ASPECT(contains, addr)
 
 /*
  * Structural test for routerset_contains, when given a valid routerset
@@ -990,7 +990,7 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_contains, set_and_no_addr)
+#define NS_SUBMODULE ASPECT(contains, no_addr)
 
 /*
  * Structural test for routerset_contains, when given a valid routerset
@@ -1035,7 +1035,7 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_contains, set_and_null_addr)
+#define NS_SUBMODULE ASPECT(contains, null_addr)
 
 /*
  * Structural test for routerset_contains, when given a valid routerset
@@ -1078,7 +1078,7 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_contains, countries_no_geoip)
+#define NS_SUBMODULE ASPECT(contains, countries_no_geoip)
 
 /*
  * Structural test for routerset_contains, when there is no matching country
@@ -1135,7 +1135,7 @@ NS(geoip_get_country_by_addr)(const tor_addr_t *addr)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_contains, countries_geoip)
+#define NS_SUBMODULE ASPECT(contains, countries_geoip)
 
 /*
  * Structural test for routerset_contains, when there a matching country
@@ -1193,7 +1193,7 @@ NS(geoip_get_country_by_addr)(const tor_addr_t *addr)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_add_unknown_ccs, only_flag_and_no_ccs)
+#define NS_SUBMODULE ASPECT(add_unknown_ccs, only_flag)
 
 /*
  * Functional test for routerset_add_unknown_ccs, where only_if_some_cc_set
@@ -1217,7 +1217,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_add_unknown_ccs, creates_set)
+#define NS_SUBMODULE ASPECT(add_unknown_ccs, creates_set)
 
 /*
  * Functional test for routerset_add_unknown_ccs, where the set argument
@@ -1257,7 +1257,7 @@ NS(geoip_get_country)(const char *country)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_add_unknown_ccs, add_unknown)
+#define NS_SUBMODULE ASPECT(add_unknown_ccs, add_unknown)
 
 /*
  * Structural test for routerset_add_unknown_ccs, that the "{??}"
@@ -1320,7 +1320,7 @@ NS(geoip_is_loaded)(sa_family_t family)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_add_unknown_ccs, add_a1)
+#define NS_SUBMODULE ASPECT(add_unknown_ccs, add_a1)
 
 /*
  * Structural test for routerset_add_unknown_ccs, that the "{a1}"
@@ -1383,7 +1383,7 @@ NS(geoip_is_loaded)(sa_family_t family)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE routerset_contains_extendinfo
+#define NS_SUBMODULE contains_extendinfo
 
 /*
  * Functional test for routerset_contains_extendinfo.
@@ -1411,7 +1411,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE routerset_contains_router
+#define NS_SUBMODULE contains_router
 
 /*
  * Functional test for routerset_contains_router.
@@ -1439,7 +1439,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE routerset_contains_routerstatus
+#define NS_SUBMODULE contains_routerstatus
 
 /*
  * Functional test for routerset_contains_routerstatus.
@@ -1472,7 +1472,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_contains_node, none)
+#define NS_SUBMODULE ASPECT(contains, none)
 
 /*
  * Functional test for routerset_contains_node, when the node has no
@@ -1500,7 +1500,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_contains_node, routerstatus)
+#define NS_SUBMODULE ASPECT(contains, rs)
 
 /*
  * Functional test for routerset_contains_node, when the node has a
@@ -1534,7 +1534,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_contains_node, routerinfo)
+#define NS_SUBMODULE ASPECT(contains, routerinfo)
 
 /*
  * Functional test for routerset_contains_node, when the node has no
@@ -1566,7 +1566,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_get_all_nodes, no_routerset)
+#define NS_SUBMODULE ASPECT(get_all, no_routerset)
 
 /*
  * Functional test for routerset_get_all_nodes, when routerset is NULL or
@@ -1599,7 +1599,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_get_all_nodes, list_with_no_nodes)
+#define NS_SUBMODULE ASPECT(get_all, l_no_nodes)
 
 /*
  * Structural test for routerset_get_all_nodes, when the routerset list
@@ -1647,7 +1647,7 @@ NS(node_get_by_nickname)(const char *nickname, unsigned flags)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_get_all_nodes, list_flag_not_running)
+#define NS_SUBMODULE ASPECT(get_all, l_not_running)
 
 /*
  * Structural test for routerset_get_all_nodes, with the running_only flag
@@ -1697,7 +1697,7 @@ NS(node_get_by_nickname)(const char *nickname, unsigned flags)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_get_all_nodes, list)
+#define NS_SUBMODULE ASPECT(get_all, list)
 
 /*
  * Structural test for routerset_get_all_nodes.
@@ -1748,7 +1748,7 @@ NS(node_get_by_nickname)(const char *nickname, unsigned flags)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_get_all_nodes, nodelist_with_no_nodes)
+#define NS_SUBMODULE ASPECT(get_all, n_no_nodes)
 
 /*
  * Structural test for routerset_get_all_nodes, when the nodelist has no nodes.
@@ -1757,7 +1757,6 @@ NS(node_get_by_nickname)(const char *nickname, unsigned flags)
 NS_DECL(const smartlist_t *, nodelist_get_list, (void));
 
 static smartlist_t *NS(mock_smartlist);
-
 static void
 NS(test_main)(void *arg)
 {
@@ -1793,7 +1792,7 @@ NS(nodelist_get_list)(void)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_get_all_nodes, nodelist_flag_not_running)
+#define NS_SUBMODULE ASPECT(get_all, n_not_running)
 
 /*
  * Structural test for routerset_get_all_nodes, with a non-list routerset
@@ -1842,7 +1841,7 @@ NS(nodelist_get_list)(void)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE routerset_subtract_nodes
+#define NS_SUBMODULE subtract_nodes
 
 /*
  * Functional test for routerset_subtract_nodes.
@@ -1875,7 +1874,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_subtract_nodes, null_routerset)
+#define NS_SUBMODULE ASPECT(subtract_nodes, null_routerset)
 
 /*
  * Functional test for routerset_subtract_nodes, with a NULL routerset.
@@ -1905,7 +1904,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE routerset_to_string
+#define NS_SUBMODULE to_string
 
 /*
  * Functional test for routerset_to_string.
@@ -1950,7 +1949,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_equal, empty_empty)
+#define NS_SUBMODULE ASPECT(equal, empty_empty)
 
 /*
  * Functional test for routerset_equal, with both routersets empty.
@@ -1974,7 +1973,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_equal, empty_not_empty)
+#define NS_SUBMODULE ASPECT(equal, empty_not_empty)
 
 /*
  * Functional test for routerset_equal, with one routersets empty.
@@ -1998,7 +1997,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_equal, differing_lengths)
+#define NS_SUBMODULE ASPECT(equal, differing_lengths)
 
 /*
  * Functional test for routerset_equal, with the routersets having
@@ -2025,7 +2024,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_equal, unequal)
+#define NS_SUBMODULE ASPECT(equal, unequal)
 
 /*
  * Functional test for routerset_equal, with the routersets being
@@ -2051,7 +2050,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_equal, equal)
+#define NS_SUBMODULE ASPECT(equal, equal)
 
 /*
  * Functional test for routerset_equal, with the routersets being
@@ -2077,7 +2076,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(routerset_free, null_routerset)
+#define NS_SUBMODULE ASPECT(free, null_routerset)
 
 /*
  * Structural test for routerset_free, where the routerset is NULL.
@@ -2108,7 +2107,7 @@ NS(smartlist_free_)(smartlist_t *s)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE routerset_free
+#define NS_SUBMODULE free
 
 /*
  * Structural test for routerset_free.
@@ -2162,61 +2161,61 @@ NS(digestmap_free_)(digestmap_t *map, void (*free_val)(void*))
 #undef NS_SUBMODULE
 
 struct testcase_t routerset_tests[] = {
-  TEST_CASE(routerset_new),
-  TEST_CASE(routerset_get_countryname),
-  TEST_CASE(routerset_is_list),
-  TEST_CASE(routerset_needs_geoip),
-  TEST_CASE(routerset_is_empty),
-  TEST_CASE_ASPECT(routerset_contains, null_set_or_null_set_list),
-  TEST_CASE_ASPECT(routerset_contains, set_and_nickname),
-  TEST_CASE_ASPECT(routerset_contains, set_and_null_nickname),
-  TEST_CASE_ASPECT(routerset_contains, set_and_no_nickname),
-  TEST_CASE_ASPECT(routerset_contains, set_and_digest),
-  TEST_CASE_ASPECT(routerset_contains, set_and_no_digest),
-  TEST_CASE_ASPECT(routerset_contains, set_and_null_digest),
-  TEST_CASE_ASPECT(routerset_contains, set_and_addr),
-  TEST_CASE_ASPECT(routerset_contains, set_and_no_addr),
-  TEST_CASE_ASPECT(routerset_contains, set_and_null_addr),
-  TEST_CASE_ASPECT(routerset_contains, countries_no_geoip),
-  TEST_CASE_ASPECT(routerset_contains, countries_geoip),
-  TEST_CASE_ASPECT(routerset_add_unknown_ccs, only_flag_and_no_ccs),
-  TEST_CASE_ASPECT(routerset_add_unknown_ccs, creates_set),
-  TEST_CASE_ASPECT(routerset_add_unknown_ccs, add_unknown),
-  TEST_CASE_ASPECT(routerset_add_unknown_ccs, add_a1),
-  TEST_CASE(routerset_contains_extendinfo),
-  TEST_CASE(routerset_contains_router),
-  TEST_CASE(routerset_contains_routerstatus),
-  TEST_CASE_ASPECT(routerset_contains_node, none),
-  TEST_CASE_ASPECT(routerset_contains_node, routerinfo),
-  TEST_CASE_ASPECT(routerset_contains_node, routerstatus),
-  TEST_CASE_ASPECT(routerset_get_all_nodes, no_routerset),
-  TEST_CASE_ASPECT(routerset_get_all_nodes, list_with_no_nodes),
-  TEST_CASE_ASPECT(routerset_get_all_nodes, list_flag_not_running),
-  TEST_CASE_ASPECT(routerset_get_all_nodes, list),
-  TEST_CASE_ASPECT(routerset_get_all_nodes, nodelist_with_no_nodes),
-  TEST_CASE_ASPECT(routerset_get_all_nodes, nodelist_flag_not_running),
-  TEST_CASE_ASPECT(routerset_refresh_counties, geoip_not_loaded),
-  TEST_CASE_ASPECT(routerset_refresh_counties, no_countries),
-  TEST_CASE_ASPECT(routerset_refresh_counties, one_valid_country),
-  TEST_CASE_ASPECT(routerset_refresh_counties, one_invalid_country),
-  TEST_CASE_ASPECT(routerset_union, source_bad),
-  TEST_CASE_ASPECT(routerset_union, one),
-  TEST_CASE_ASPECT(routerset_parse, malformed),
-  TEST_CASE_ASPECT(routerset_parse, valid_hexdigest),
-  TEST_CASE_ASPECT(routerset_parse, valid_nickname),
-  TEST_CASE_ASPECT(routerset_parse, get_countryname),
-  TEST_CASE_ASPECT(routerset_parse, policy_wildcard),
-  TEST_CASE_ASPECT(routerset_parse, policy_ipv4),
-  TEST_CASE_ASPECT(routerset_parse, policy_ipv6),
-  TEST_CASE(routerset_subtract_nodes),
-  TEST_CASE_ASPECT(routerset_subtract_nodes, null_routerset),
-  TEST_CASE(routerset_to_string),
-  TEST_CASE_ASPECT(routerset_equal, empty_empty),
-  TEST_CASE_ASPECT(routerset_equal, empty_not_empty),
-  TEST_CASE_ASPECT(routerset_equal, differing_lengths),
-  TEST_CASE_ASPECT(routerset_equal, unequal),
-  TEST_CASE_ASPECT(routerset_equal, equal),
-  TEST_CASE_ASPECT(routerset_free, null_routerset),
-  TEST_CASE(routerset_free),
+  TEST_CASE(new),
+  TEST_CASE(get_countryname),
+  TEST_CASE(is_list),
+  TEST_CASE(needs_geoip),
+  TEST_CASE(is_empty),
+  TEST_CASE_ASPECT(contains, null_set_or_list),
+  TEST_CASE_ASPECT(contains, nickname),
+  TEST_CASE_ASPECT(contains, null_nickname),
+  TEST_CASE_ASPECT(contains, no_nickname),
+  TEST_CASE_ASPECT(contains, digest),
+  TEST_CASE_ASPECT(contains, no_digest),
+  TEST_CASE_ASPECT(contains, null_digest),
+  TEST_CASE_ASPECT(contains, addr),
+  TEST_CASE_ASPECT(contains, no_addr),
+  TEST_CASE_ASPECT(contains, null_addr),
+  TEST_CASE_ASPECT(contains, countries_no_geoip),
+  TEST_CASE_ASPECT(contains, countries_geoip),
+  TEST_CASE_ASPECT(add_unknown_ccs, only_flag),
+  TEST_CASE_ASPECT(add_unknown_ccs, creates_set),
+  TEST_CASE_ASPECT(add_unknown_ccs, add_unknown),
+  TEST_CASE_ASPECT(add_unknown_ccs, add_a1),
+  TEST_CASE(contains_extendinfo),
+  TEST_CASE(contains_router),
+  TEST_CASE(contains_routerstatus),
+  TEST_CASE_ASPECT(contains, none),
+  TEST_CASE_ASPECT(contains, routerinfo),
+  TEST_CASE_ASPECT(contains, rs),
+  TEST_CASE_ASPECT(get_all, no_routerset),
+  TEST_CASE_ASPECT(get_all, l_no_nodes),
+  TEST_CASE_ASPECT(get_all, l_not_running),
+  TEST_CASE_ASPECT(get_all, list),
+  TEST_CASE_ASPECT(get_all, n_no_nodes),
+  TEST_CASE_ASPECT(get_all, n_not_running),
+  TEST_CASE_ASPECT(refresh, geoip_not_loaded),
+  TEST_CASE_ASPECT(refresh, no_countries),
+  TEST_CASE_ASPECT(refresh, one_valid_country),
+  TEST_CASE_ASPECT(refresh, one_invalid_country),
+  TEST_CASE_ASPECT(union, source_bad),
+  TEST_CASE_ASPECT(union, one),
+  TEST_CASE_ASPECT(parse, malformed),
+  TEST_CASE_ASPECT(parse, valid_hexdigest),
+  TEST_CASE_ASPECT(parse, valid_nickname),
+  TEST_CASE_ASPECT(parse, get_countryname),
+  TEST_CASE_ASPECT(parse, policy_wildcard),
+  TEST_CASE_ASPECT(parse, policy_ipv4),
+  TEST_CASE_ASPECT(parse, policy_ipv6),
+  TEST_CASE(subtract_nodes),
+  TEST_CASE_ASPECT(subtract_nodes, null_routerset),
+  TEST_CASE(to_string),
+  TEST_CASE_ASPECT(equal, empty_empty),
+  TEST_CASE_ASPECT(equal, empty_not_empty),
+  TEST_CASE_ASPECT(equal, differing_lengths),
+  TEST_CASE_ASPECT(equal, unequal),
+  TEST_CASE_ASPECT(equal, equal),
+  TEST_CASE_ASPECT(free, null_routerset),
+  TEST_CASE(free),
   END_OF_TESTCASES
 };

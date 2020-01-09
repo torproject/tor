@@ -243,7 +243,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(log_heartbeat, fails)
+#define NS_SUBMODULE ASPECT(hb, fails)
 
 /*
  * Tests that log_heartbeat() fails when in the public server mode,
@@ -305,7 +305,7 @@ NS(router_get_my_routerinfo)(void)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(log_heartbeat, not_in_consensus)
+#define NS_SUBMODULE ASPECT(hb, not_in_consensus)
 
 /*
  * Tests that log_heartbeat() logs appropriately if we are not in the cached
@@ -474,7 +474,7 @@ NS(server_mode)(const or_options_t *options)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(log_heartbeat, simple)
+#define NS_SUBMODULE ASPECT(hb, simple)
 
 /*
  * Tests that log_heartbeat() correctly logs heartbeat information
@@ -598,7 +598,7 @@ NS(server_mode)(const or_options_t *options)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(log_heartbeat, calls_log_accounting)
+#define NS_SUBMODULE ASPECT(hb, calls_log_accounting)
 
 /*
  * Tests that log_heartbeat() correctly logs heartbeat information
@@ -784,7 +784,7 @@ NS(get_or_state)(void)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(log_heartbeat, packaged_cell_fullness)
+#define NS_SUBMODULE ASPECT(hb, packaged_cell_fullness)
 
 /*
  * Tests that log_heartbeat() correctly logs packaged cell
@@ -935,7 +935,7 @@ NS(accounting_is_enabled)(const or_options_t *options)
 }
 
 #undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(log_heartbeat, tls_write_overhead)
+#define NS_SUBMODULE ASPECT(hb, tls_write_overhead)
 
 /*
  * Tests that log_heartbeat() correctly logs the TLS write overhead information
@@ -1088,11 +1088,11 @@ struct testcase_t status_tests[] = {
   TEST_CASE(count_circuits),
   TEST_CASE(secs_to_uptime),
   TEST_CASE(bytes_to_usage),
-  TEST_CASE_ASPECT(log_heartbeat, fails),
-  TEST_CASE_ASPECT(log_heartbeat, simple),
-  TEST_CASE_ASPECT(log_heartbeat, not_in_consensus),
-  TEST_CASE_ASPECT(log_heartbeat, calls_log_accounting),
-  TEST_CASE_ASPECT(log_heartbeat, packaged_cell_fullness),
-  TEST_CASE_ASPECT(log_heartbeat, tls_write_overhead),
+  TEST_CASE_ASPECT(hb, fails),
+  TEST_CASE_ASPECT(hb, simple),
+  TEST_CASE_ASPECT(hb, not_in_consensus),
+  TEST_CASE_ASPECT(hb, calls_log_accounting),
+  TEST_CASE_ASPECT(hb, packaged_cell_fullness),
+  TEST_CASE_ASPECT(hb, tls_write_overhead),
   END_OF_TESTCASES
 };

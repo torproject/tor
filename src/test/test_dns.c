@@ -23,7 +23,7 @@
 #define NS_MODULE dns
 
 #ifdef HAVE_EVDNS_BASE_GET_NAMESERVER_ADDR
-#define NS_SUBMODULE configure_nameservers_fallback
+#define NS_SUBMODULE configure_ns_fallback
 
 static or_options_t options = {
   .ORPort_set = 1,
@@ -386,7 +386,7 @@ create_valid_exitconn(void)
   return exitconn;
 }
 
-#define NS_SUBMODULE ASPECT(resolve_impl, addr_is_ip_no_need_to_resolve)
+#define NS_SUBMODULE ASPECT(impl, addr_is_ip)
 
 /*
  * Given that <b>exitconn->base_.address</b> is IP address string, we
@@ -431,7 +431,7 @@ NS(test_main)(void *arg)
 
 #undef NS_SUBMODULE
 
-#define NS_SUBMODULE ASPECT(resolve_impl, non_exit)
+#define NS_SUBMODULE ASPECT(impl, non_exit)
 
 /** Given that Tor instance is not configured as an exit node, we want
  * dns_resolve_impl() to fail with return value -1.
@@ -472,7 +472,7 @@ NS(test_main)(void *arg)
 
 #undef NS_SUBMODULE
 
-#define NS_SUBMODULE ASPECT(resolve_impl, addr_is_invalid_dest)
+#define NS_SUBMODULE ASPECT(impl, addr_is_invalid_dest)
 
 /** Given that address is not a valid destination (as judged by
  * address_is_invalid_destination() function), we want dns_resolve_impl()
@@ -515,7 +515,7 @@ NS(test_main)(void *arg)
 
 #undef NS_SUBMODULE
 
-#define NS_SUBMODULE ASPECT(resolve_impl, malformed_ptr)
+#define NS_SUBMODULE ASPECT(impl, malformed_ptr)
 
 /** Given that address is a malformed PTR name, we want dns_resolve_impl to
  * fail.
@@ -567,7 +567,7 @@ NS(test_main)(void *arg)
 
 #undef NS_SUBMODULE
 
-#define NS_SUBMODULE ASPECT(resolve_impl, cache_hit_pending)
+#define NS_SUBMODULE ASPECT(impl, cache_hit_pending)
 
 /* Given that there is already a pending resolve for the given address,
  * we want dns_resolve_impl to append our exit connection to list
@@ -633,7 +633,7 @@ NS(test_main)(void *arg)
 
 #undef NS_SUBMODULE
 
-#define NS_SUBMODULE ASPECT(resolve_impl, cache_hit_cached)
+#define NS_SUBMODULE ASPECT(impl, cache_hit_cached)
 
 /* Given that a finished DNS resolve is available in our cache, we want
  * dns_resolve_impl() return it to called via resolve_out and pass the
@@ -714,7 +714,7 @@ NS(test_main)(void *arg)
 
 #undef NS_SUBMODULE
 
-#define NS_SUBMODULE ASPECT(resolve_impl, cache_miss)
+#define NS_SUBMODULE ASPECT(impl, cache_miss)
 
 /* Given that there are neither pending nor pre-cached resolve for a given
  * address, we want dns_resolve_impl() to create a new cached_resolve_t
@@ -797,17 +797,17 @@ NS(test_main)(void *arg)
 
 struct testcase_t dns_tests[] = {
 #ifdef HAVE_EVDNS_BASE_GET_NAMESERVER_ADDR
-   TEST_CASE(configure_nameservers_fallback),
+   TEST_CASE(configure_ns_fallback),
 #endif
    TEST_CASE(clip_ttl),
    TEST_CASE(resolve),
-   TEST_CASE_ASPECT(resolve_impl, addr_is_ip_no_need_to_resolve),
-   TEST_CASE_ASPECT(resolve_impl, non_exit),
-   TEST_CASE_ASPECT(resolve_impl, addr_is_invalid_dest),
-   TEST_CASE_ASPECT(resolve_impl, malformed_ptr),
-   TEST_CASE_ASPECT(resolve_impl, cache_hit_pending),
-   TEST_CASE_ASPECT(resolve_impl, cache_hit_cached),
-   TEST_CASE_ASPECT(resolve_impl, cache_miss),
+   TEST_CASE_ASPECT(impl, addr_is_ip),
+   TEST_CASE_ASPECT(impl, non_exit),
+   TEST_CASE_ASPECT(impl, addr_is_invalid_dest),
+   TEST_CASE_ASPECT(impl, malformed_ptr),
+   TEST_CASE_ASPECT(impl, cache_hit_pending),
+   TEST_CASE_ASPECT(impl, cache_hit_cached),
+   TEST_CASE_ASPECT(impl, cache_miss),
    END_OF_TESTCASES
 };
 

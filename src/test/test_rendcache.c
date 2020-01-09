@@ -21,7 +21,7 @@
 #include "test/rend_test_helpers.h"
 #include "test/log_test_helpers.h"
 
-#define NS_MODULE rend_cache
+#define NS_MODULE rcache
 
 static const int RECENT_TIME = -10;
 static const int TIME_IN_THE_PAST = -(REND_CACHE_MAX_AGE + \
@@ -1250,4 +1250,3 @@ struct testcase_t rend_cache_tests[] = {
     test_rend_cache_validate_intro_point_failure, 0, NULL, NULL },
   END_OF_TESTCASES
 };
-

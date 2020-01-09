@@ -11,7 +11,7 @@
 
 #include "app/config/or_state_st.h"
 
-#define NS_MODULE accounting
+#define NS_MODULE acct
 
 #define NS_SUBMODULE limits
 
