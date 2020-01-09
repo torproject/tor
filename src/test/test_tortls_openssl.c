@@ -46,8 +46,6 @@ ENABLE_GCC_WARNING("-Wredundant-decls")
 #include "test/log_test_helpers.h"
 #include "test/test_tortls.h"
 
-#define NS_MODULE tortls
-
 #ifndef HAVE_SSL_STATE
 #define OPENSSL_OPAQUE
 #endif
@@ -122,8 +120,6 @@ test_tortls_tor_tls_new(void *data)
   tor_free(method);
   tor_tls_free_all();
 }
-
-#define NS_MODULE tortls
 
 static void
 library_init(void)

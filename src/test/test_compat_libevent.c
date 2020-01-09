@@ -13,8 +13,6 @@
 
 #include "test/log_test_helpers.h"
 
-#define NS_MODULE le
-
 static void
 test_compat_libevent_logging_callback(void *ignored)
 {

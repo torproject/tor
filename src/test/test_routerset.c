@@ -18,17 +18,13 @@
 
 #include "test/test.h"
 
-#define NS_MODULE rset
-
-#define NS_SUBMODULE new
-
 /*
  * Functional (blackbox) test to determine that each member of the routerset
  * is non-NULL
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_new(void *arg)
 {
   routerset_t *rs;
   (void)arg;
@@ -46,15 +42,12 @@ NS(test_main)(void *arg)
     routerset_free(rs);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE get_countryname
-
 /*
  * Functional test to strip the braces from a "{xx}" country code string.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_get_countryname(void *arg)
 {
   const char *input;
   char *name;
@@ -91,257 +84,264 @@ NS(test_main)(void *arg)
     tor_free(name);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(refresh, geoip_not_loaded)
-
 /*
  * Structural (whitebox) test for routerset_refresh_counties, when the GeoIP DB
  * is not loaded.
  */
 
-NS_DECL(int, geoip_is_loaded, (sa_family_t family));
-NS_DECL(int, geoip_get_n_countries, (void));
+static int rset_refresh_geoip_not_loaded_geoip_is_loaded(sa_family_t family);
+ATTR_UNUSED static int rset_refresh_geoip_not_loaded_geoip_is_loaded_called = 0;
+static int rset_refresh_geoip_not_loaded_geoip_get_n_countries(void);
+ATTR_UNUSED static int rset_refresh_geoip_not_loaded_geoip_get_n_countries_called = 0;
 
 static void
-NS(test_main)(void *arg)
+test_rset_refresh_geoip_not_loaded(void *arg)
 {
   routerset_t *set = routerset_new();
   (void)arg;
 
-  NS_MOCK(geoip_is_loaded);
-  NS_MOCK(geoip_get_n_countries);
+  MOCK(geoip_is_loaded,
+       rset_refresh_geoip_not_loaded_geoip_is_loaded);
+  MOCK(geoip_get_n_countries,
+       rset_refresh_geoip_not_loaded_geoip_get_n_countries);
 
   routerset_refresh_countries(set);
 
   tt_ptr_op(set->countries, OP_EQ, NULL);
   tt_int_op(set->n_countries, OP_EQ, 0);
-  tt_int_op(CALLED(geoip_is_loaded), OP_EQ, 1);
-  tt_int_op(CALLED(geoip_get_n_countries), OP_EQ, 0);
+  tt_int_op(rset_refresh_geoip_not_loaded_geoip_is_loaded_called, OP_EQ, 1);
+  tt_int_op(rset_refresh_geoip_not_loaded_geoip_get_n_countries_called, OP_EQ, 0);
 
   done:
-    NS_UNMOCK(geoip_is_loaded);
-    NS_UNMOCK(geoip_get_n_countries);
+    UNMOCK(geoip_is_loaded);
+    UNMOCK(geoip_get_n_countries);
     routerset_free(set);
 }
 
 static int
-NS(geoip_is_loaded)(sa_family_t family)
+rset_refresh_geoip_not_loaded_geoip_is_loaded(sa_family_t family)
 {
   (void)family;
-  CALLED(geoip_is_loaded)++;
+  rset_refresh_geoip_not_loaded_geoip_is_loaded_called++;
 
   return 0;
 }
 
 static int
-NS(geoip_get_n_countries)(void)
+rset_refresh_geoip_not_loaded_geoip_get_n_countries(void)
 {
-  CALLED(geoip_get_n_countries)++;
+  rset_refresh_geoip_not_loaded_geoip_get_n_countries_called++;
 
   return 0;
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(refresh, no_countries)
 
 /*
  * Structural test for routerset_refresh_counties, when there are no countries.
  */
 
-NS_DECL(int, geoip_is_loaded, (sa_family_t family));
-NS_DECL(int, geoip_get_n_countries, (void));
-NS_DECL(country_t, geoip_get_country, (const char *country));
+static int rset_refresh_no_countries_geoip_is_loaded(sa_family_t family);
+ATTR_UNUSED static int rset_refresh_no_countries_geoip_is_loaded_called = 0;
+static int rset_refresh_no_countries_geoip_get_n_countries(void);
+ATTR_UNUSED static int rset_refresh_no_countries_geoip_get_n_countries_called = 0;
+static country_t rset_refresh_no_countries_geoip_get_country(const char *country);
+ATTR_UNUSED static int rset_refresh_no_countries_geoip_get_country_called = 0;
 
 static void
-NS(test_main)(void *arg)
+test_rset_refresh_no_countries(void *arg)
 {
   routerset_t *set = routerset_new();
   (void)arg;
 
-  NS_MOCK(geoip_is_loaded);
-  NS_MOCK(geoip_get_n_countries);
-  NS_MOCK(geoip_get_country);
+  MOCK(geoip_is_loaded,
+       rset_refresh_no_countries_geoip_is_loaded);
+  MOCK(geoip_get_n_countries,
+       rset_refresh_no_countries_geoip_get_n_countries);
+  MOCK(geoip_get_country,
+       rset_refresh_no_countries_geoip_get_country);
 
   routerset_refresh_countries(set);
 
   tt_ptr_op(set->countries, OP_NE, NULL);
   tt_int_op(set->n_countries, OP_EQ, 1);
   tt_int_op((unsigned int)(*set->countries), OP_EQ, 0);
-  tt_int_op(CALLED(geoip_is_loaded), OP_EQ, 1);
-  tt_int_op(CALLED(geoip_get_n_countries), OP_EQ, 1);
-  tt_int_op(CALLED(geoip_get_country), OP_EQ, 0);
+  tt_int_op(rset_refresh_no_countries_geoip_is_loaded_called, OP_EQ, 1);
+  tt_int_op(rset_refresh_no_countries_geoip_get_n_countries_called, OP_EQ, 1);
+  tt_int_op(rset_refresh_no_countries_geoip_get_country_called, OP_EQ, 0);
 
   done:
-    NS_UNMOCK(geoip_is_loaded);
-    NS_UNMOCK(geoip_get_n_countries);
-    NS_UNMOCK(geoip_get_country);
+    UNMOCK(geoip_is_loaded);
+    UNMOCK(geoip_get_n_countries);
+    UNMOCK(geoip_get_country);
     routerset_free(set);
 }
 
 static int
-NS(geoip_is_loaded)(sa_family_t family)
+rset_refresh_no_countries_geoip_is_loaded(sa_family_t family)
 {
   (void)family;
-  CALLED(geoip_is_loaded)++;
+  rset_refresh_no_countries_geoip_is_loaded_called++;
 
   return 1;
 }
 
 static int
-NS(geoip_get_n_countries)(void)
+rset_refresh_no_countries_geoip_get_n_countries(void)
 {
-  CALLED(geoip_get_n_countries)++;
+  rset_refresh_no_countries_geoip_get_n_countries_called++;
 
   return 1;
 }
 
 static country_t
-NS(geoip_get_country)(const char *countrycode)
+rset_refresh_no_countries_geoip_get_country(const char *countrycode)
 {
   (void)countrycode;
-  CALLED(geoip_get_country)++;
+  rset_refresh_no_countries_geoip_get_country_called++;
 
   return 1;
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(refresh, one_valid_country)
 
 /*
  * Structural test for routerset_refresh_counties, with one valid country.
  */
 
-NS_DECL(int, geoip_is_loaded, (sa_family_t family));
-NS_DECL(int, geoip_get_n_countries, (void));
-NS_DECL(country_t, geoip_get_country, (const char *country));
+static int rset_refresh_one_valid_country_geoip_is_loaded(sa_family_t family);
+ATTR_UNUSED static int rset_refresh_one_valid_country_geoip_is_loaded_called = 0;
+static int rset_refresh_one_valid_country_geoip_get_n_countries(void);
+ATTR_UNUSED static int rset_refresh_one_valid_country_geoip_get_n_countries_called = 0;
+static country_t rset_refresh_one_valid_country_geoip_get_country(const char *country);
+ATTR_UNUSED static int rset_refresh_one_valid_country_geoip_get_country_called = 0;
 
 static void
-NS(test_main)(void *arg)
+test_rset_refresh_one_valid_country(void *arg)
 {
   routerset_t *set = routerset_new();
   (void)arg;
 
-  NS_MOCK(geoip_is_loaded);
-  NS_MOCK(geoip_get_n_countries);
-  NS_MOCK(geoip_get_country);
+  MOCK(geoip_is_loaded,
+       rset_refresh_one_valid_country_geoip_is_loaded);
+  MOCK(geoip_get_n_countries,
+       rset_refresh_one_valid_country_geoip_get_n_countries);
+  MOCK(geoip_get_country,
+       rset_refresh_one_valid_country_geoip_get_country);
   smartlist_add(set->country_names, tor_strndup("foo", 3));
 
   routerset_refresh_countries(set);
 
   tt_ptr_op(set->countries, OP_NE, NULL);
   tt_int_op(set->n_countries, OP_EQ, 2);
-  tt_int_op(CALLED(geoip_is_loaded), OP_EQ, 1);
-  tt_int_op(CALLED(geoip_get_n_countries), OP_EQ, 1);
-  tt_int_op(CALLED(geoip_get_country), OP_EQ, 1);
+  tt_int_op(rset_refresh_one_valid_country_geoip_is_loaded_called, OP_EQ, 1);
+  tt_int_op(rset_refresh_one_valid_country_geoip_get_n_countries_called, OP_EQ, 1);
+  tt_int_op(rset_refresh_one_valid_country_geoip_get_country_called, OP_EQ, 1);
   tt_int_op((unsigned int)(*set->countries), OP_NE, 0);
 
   done:
-    NS_UNMOCK(geoip_is_loaded);
-    NS_UNMOCK(geoip_get_n_countries);
-    NS_UNMOCK(geoip_get_country);
+    UNMOCK(geoip_is_loaded);
+    UNMOCK(geoip_get_n_countries);
+    UNMOCK(geoip_get_country);
     routerset_free(set);
 }
 
 static int
-NS(geoip_is_loaded)(sa_family_t family)
+rset_refresh_one_valid_country_geoip_is_loaded(sa_family_t family)
 {
   (void)family;
-  CALLED(geoip_is_loaded)++;
+  rset_refresh_one_valid_country_geoip_is_loaded_called++;
 
   return 1;
 }
 
 static int
-NS(geoip_get_n_countries)(void)
+rset_refresh_one_valid_country_geoip_get_n_countries(void)
 {
-  CALLED(geoip_get_n_countries)++;
+  rset_refresh_one_valid_country_geoip_get_n_countries_called++;
 
   return 2;
 }
 
 static country_t
-NS(geoip_get_country)(const char *countrycode)
+rset_refresh_one_valid_country_geoip_get_country(const char *countrycode)
 {
   (void)countrycode;
-  CALLED(geoip_get_country)++;
+  rset_refresh_one_valid_country_geoip_get_country_called++;
 
   return 1;
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(refresh, one_invalid_country)
 
 /*
  * Structural test for routerset_refresh_counties, with one invalid
  * country code..
  */
 
-NS_DECL(int, geoip_is_loaded, (sa_family_t family));
-NS_DECL(int, geoip_get_n_countries, (void));
-NS_DECL(country_t, geoip_get_country, (const char *country));
+static int rset_refresh_one_invalid_country_geoip_is_loaded(sa_family_t family);
+ATTR_UNUSED static int rset_refresh_one_invalid_country_geoip_is_loaded_called = 0;
+static int rset_refresh_one_invalid_country_geoip_get_n_countries(void);
+ATTR_UNUSED static int rset_refresh_one_invalid_country_geoip_get_n_countries_called = 0;
+static country_t rset_refresh_one_invalid_country_geoip_get_country(const char *country);
+ATTR_UNUSED static int rset_refresh_one_invalid_country_geoip_get_country_called = 0;
 
 static void
-NS(test_main)(void *arg)
+test_rset_refresh_one_invalid_country(void *arg)
 {
   routerset_t *set = routerset_new();
   (void)arg;
 
-  NS_MOCK(geoip_is_loaded);
-  NS_MOCK(geoip_get_n_countries);
-  NS_MOCK(geoip_get_country);
+  MOCK(geoip_is_loaded,
+       rset_refresh_one_invalid_country_geoip_is_loaded);
+  MOCK(geoip_get_n_countries,
+       rset_refresh_one_invalid_country_geoip_get_n_countries);
+  MOCK(geoip_get_country,
+       rset_refresh_one_invalid_country_geoip_get_country);
   smartlist_add(set->country_names, tor_strndup("foo", 3));
 
   routerset_refresh_countries(set);
 
   tt_ptr_op(set->countries, OP_NE, NULL);
   tt_int_op(set->n_countries, OP_EQ, 2);
-  tt_int_op(CALLED(geoip_is_loaded), OP_EQ, 1);
-  tt_int_op(CALLED(geoip_get_n_countries), OP_EQ, 1);
-  tt_int_op(CALLED(geoip_get_country), OP_EQ, 1);
+  tt_int_op(rset_refresh_one_invalid_country_geoip_is_loaded_called, OP_EQ, 1);
+  tt_int_op(rset_refresh_one_invalid_country_geoip_get_n_countries_called, OP_EQ, 1);
+  tt_int_op(rset_refresh_one_invalid_country_geoip_get_country_called, OP_EQ, 1);
   tt_int_op((unsigned int)(*set->countries), OP_EQ, 0);
 
   done:
-    NS_UNMOCK(geoip_is_loaded);
-    NS_UNMOCK(geoip_get_n_countries);
-    NS_UNMOCK(geoip_get_country);
+    UNMOCK(geoip_is_loaded);
+    UNMOCK(geoip_get_n_countries);
+    UNMOCK(geoip_get_country);
     routerset_free(set);
 }
 
 static int
-NS(geoip_is_loaded)(sa_family_t family)
+rset_refresh_one_invalid_country_geoip_is_loaded(sa_family_t family)
 {
   (void)family;
-  CALLED(geoip_is_loaded)++;
+  rset_refresh_one_invalid_country_geoip_is_loaded_called++;
 
   return 1;
 }
 
 static int
-NS(geoip_get_n_countries)(void)
+rset_refresh_one_invalid_country_geoip_get_n_countries(void)
 {
-  CALLED(geoip_get_n_countries)++;
+  rset_refresh_one_invalid_country_geoip_get_n_countries_called++;
 
   return 2;
 }
 
 static country_t
-NS(geoip_get_country)(const char *countrycode)
+rset_refresh_one_invalid_country_geoip_get_country(const char *countrycode)
 {
   (void)countrycode;
-  CALLED(geoip_get_country)++;
+  rset_refresh_one_invalid_country_geoip_get_country_called++;
 
   return -1;
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(parse, malformed)
 
 /*
  * Functional test, with a malformed string to parse.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_parse_malformed(void *arg)
 {
   routerset_t *set = routerset_new();
   const char *s = "_";
@@ -356,16 +356,13 @@ NS(test_main)(void *arg)
     routerset_free(set);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(parse, valid_hexdigest)
-
 /*
  * Functional test for routerset_parse, that routerset_parse returns 0
  * on a valid hexdigest entry.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_parse_valid_hexdigest(void *arg)
 {
   routerset_t *set;
   const char *s;
@@ -382,15 +379,12 @@ NS(test_main)(void *arg)
     routerset_free(set);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(parse, valid_nickname)
-
 /*
  * Functional test for routerset_parse, when given a valid nickname as input.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_parse_valid_nickname(void *arg)
 {
   routerset_t *set;
   const char *s;
@@ -407,15 +401,12 @@ NS(test_main)(void *arg)
     routerset_free(set);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(parse, get_countryname)
-
 /*
  * Functional test for routerset_parse, when given a valid countryname.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_parse_get_countryname(void *arg)
 {
   routerset_t *set;
   const char *s;
@@ -432,155 +423,150 @@ NS(test_main)(void *arg)
     routerset_free(set);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(parse, policy_wildcard)
-
 /*
  * Structural test for routerset_parse, when given a valid wildcard policy.
  */
 
-NS_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string, (const char *s, int assume_action, int *malformed_list));
+static addr_policy_t * rset_parse_policy_wildcard_router_parse_addr_policy_item_from_string(const char *s, int assume_action, int *malformed_list);
+ATTR_UNUSED static int rset_parse_policy_wildcard_router_parse_addr_policy_item_from_string_called = 0;
 
-static addr_policy_t *NS(mock_addr_policy);
+static addr_policy_t *rset_parse_policy_wildcard_mock_addr_policy;
 
 static void
-NS(test_main)(void *arg)
+test_rset_parse_policy_wildcard(void *arg)
 {
   routerset_t *set;
   const char *s;
   int r;
   (void)arg;
 
-  NS_MOCK(router_parse_addr_policy_item_from_string);
-  NS(mock_addr_policy) = tor_malloc_zero(sizeof(addr_policy_t));
+  MOCK(router_parse_addr_policy_item_from_string,
+       rset_parse_policy_wildcard_router_parse_addr_policy_item_from_string);
+  rset_parse_policy_wildcard_mock_addr_policy = tor_malloc_zero(sizeof(addr_policy_t));
 
   set = routerset_new();
   s = "*";
   r = routerset_parse(set, s, "");
   tt_int_op(r, OP_EQ, 0);
   tt_int_op(smartlist_len(set->policies), OP_NE, 0);
-  tt_int_op(CALLED(router_parse_addr_policy_item_from_string), OP_EQ, 1);
+  tt_int_op(rset_parse_policy_wildcard_router_parse_addr_policy_item_from_string_called, OP_EQ, 1);
 
   done:
     routerset_free(set);
 }
 
 addr_policy_t *
-NS(router_parse_addr_policy_item_from_string)(const char *s,
+rset_parse_policy_wildcard_router_parse_addr_policy_item_from_string(const char *s,
                                               int assume_action,
                                               int *malformed_list)
 {
   (void)s;
   (void)assume_action;
   (void)malformed_list;
-  CALLED(router_parse_addr_policy_item_from_string)++;
+  rset_parse_policy_wildcard_router_parse_addr_policy_item_from_string_called++;
 
-  return NS(mock_addr_policy);
+  return rset_parse_policy_wildcard_mock_addr_policy;
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(parse, policy_ipv4)
 
 /*
  * Structural test for routerset_parse, when given a valid IPv4 address
  * literal policy.
  */
 
-NS_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string, (const char *s, int assume_action, int *bogus));
+static addr_policy_t * rset_parse_policy_ipv4_router_parse_addr_policy_item_from_string(const char *s, int assume_action, int *bogus);
+ATTR_UNUSED static int rset_parse_policy_ipv4_router_parse_addr_policy_item_from_string_called = 0;
 
-static addr_policy_t *NS(mock_addr_policy);
+static addr_policy_t *rset_parse_policy_ipv4_mock_addr_policy;
 
 static void
-NS(test_main)(void *arg)
+test_rset_parse_policy_ipv4(void *arg)
 {
   routerset_t *set;
   const char *s;
   int r;
   (void)arg;
 
-  NS_MOCK(router_parse_addr_policy_item_from_string);
-  NS(mock_addr_policy) = tor_malloc_zero(sizeof(addr_policy_t));
+  MOCK(router_parse_addr_policy_item_from_string,
+       rset_parse_policy_ipv4_router_parse_addr_policy_item_from_string);
+  rset_parse_policy_ipv4_mock_addr_policy = tor_malloc_zero(sizeof(addr_policy_t));
 
   set = routerset_new();
   s = "127.0.0.1";
   r = routerset_parse(set, s, "");
   tt_int_op(r, OP_EQ, 0);
   tt_int_op(smartlist_len(set->policies), OP_NE, 0);
-  tt_int_op(CALLED(router_parse_addr_policy_item_from_string), OP_EQ, 1);
+  tt_int_op(rset_parse_policy_ipv4_router_parse_addr_policy_item_from_string_called, OP_EQ, 1);
 
  done:
   routerset_free(set);
 }
 
 addr_policy_t *
-NS(router_parse_addr_policy_item_from_string)(const char *s, int assume_action,
+rset_parse_policy_ipv4_router_parse_addr_policy_item_from_string(const char *s, int assume_action,
                                               int *bogus)
 {
   (void)s;
   (void)assume_action;
-  CALLED(router_parse_addr_policy_item_from_string)++;
+  rset_parse_policy_ipv4_router_parse_addr_policy_item_from_string_called++;
   *bogus = 0;
 
-  return NS(mock_addr_policy);
+  return rset_parse_policy_ipv4_mock_addr_policy;
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(parse, policy_ipv6)
 
 /*
  * Structural test for routerset_parse, when given a valid IPv6 address
  * literal policy.
  */
 
-NS_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string, (const char *s, int assume_action, int *bad));
+static addr_policy_t * rset_parse_policy_ipv6_router_parse_addr_policy_item_from_string(const char *s, int assume_action, int *bad);
+ATTR_UNUSED static int rset_parse_policy_ipv6_router_parse_addr_policy_item_from_string_called = 0;
 
-static addr_policy_t *NS(mock_addr_policy);
+static addr_policy_t *rset_parse_policy_ipv6_mock_addr_policy;
 
 static void
-NS(test_main)(void *arg)
+test_rset_parse_policy_ipv6(void *arg)
 {
   routerset_t *set;
   const char *s;
   int r;
   (void)arg;
 
-  NS_MOCK(router_parse_addr_policy_item_from_string);
-  NS(mock_addr_policy) = tor_malloc_zero(sizeof(addr_policy_t));
+  MOCK(router_parse_addr_policy_item_from_string,
+       rset_parse_policy_ipv6_router_parse_addr_policy_item_from_string);
+  rset_parse_policy_ipv6_mock_addr_policy = tor_malloc_zero(sizeof(addr_policy_t));
 
   set = routerset_new();
   s = "::1";
   r = routerset_parse(set, s, "");
   tt_int_op(r, OP_EQ, 0);
   tt_int_op(smartlist_len(set->policies), OP_NE, 0);
-  tt_int_op(CALLED(router_parse_addr_policy_item_from_string), OP_EQ, 1);
+  tt_int_op(rset_parse_policy_ipv6_router_parse_addr_policy_item_from_string_called, OP_EQ, 1);
 
  done:
   routerset_free(set);
 }
 
 addr_policy_t *
-NS(router_parse_addr_policy_item_from_string)(const char *s,
+rset_parse_policy_ipv6_router_parse_addr_policy_item_from_string(const char *s,
                                               int assume_action, int *bad)
 {
   (void)s;
   (void)assume_action;
-  CALLED(router_parse_addr_policy_item_from_string)++;
+  rset_parse_policy_ipv6_router_parse_addr_policy_item_from_string_called++;
   *bad = 0;
 
-  return NS(mock_addr_policy);
+  return rset_parse_policy_ipv6_mock_addr_policy;
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(union, source_bad)
 
 /*
  * Structural test for routerset_union, when given a bad source argument.
  */
 
-NS_DECL(smartlist_t *, smartlist_new, (void));
+static smartlist_t * rset_union_source_bad_smartlist_new(void);
+ATTR_UNUSED static int rset_union_source_bad_smartlist_new_called = 0;
 
 static void
-NS(test_main)(void *arg)
+test_rset_union_source_bad(void *arg)
 {
   routerset_t *set, *bad_set;
   (void)arg;
@@ -590,16 +576,17 @@ NS(test_main)(void *arg)
   smartlist_free(bad_set->list);
   bad_set->list = NULL;
 
-  NS_MOCK(smartlist_new);
+  MOCK(smartlist_new,
+       rset_union_source_bad_smartlist_new);
 
   routerset_union(set, NULL);
-  tt_int_op(CALLED(smartlist_new), OP_EQ, 0);
+  tt_int_op(rset_union_source_bad_smartlist_new_called, OP_EQ, 0);
 
   routerset_union(set, bad_set);
-  tt_int_op(CALLED(smartlist_new), OP_EQ, 0);
+  tt_int_op(rset_union_source_bad_smartlist_new_called, OP_EQ, 0);
 
   done:
-    NS_UNMOCK(smartlist_new);
+    UNMOCK(smartlist_new);
     routerset_free(set);
 
     /* Just recreate list, so we can simply use routerset_free. */
@@ -608,22 +595,19 @@ NS(test_main)(void *arg)
 }
 
 static smartlist_t *
-NS(smartlist_new)(void)
+rset_union_source_bad_smartlist_new(void)
 {
-  CALLED(smartlist_new)++;
+  rset_union_source_bad_smartlist_new_called++;
 
   return NULL;
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(union, one)
 
 /*
  * Functional test for routerset_union.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_union_one(void *arg)
 {
   routerset_t *src = routerset_new();
   routerset_t *tgt;
@@ -640,15 +624,12 @@ NS(test_main)(void *arg)
     routerset_free(tgt);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE is_list
-
 /*
  * Functional tests for routerset_is_list.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_is_list(void *arg)
 {
   routerset_t *set;
   addr_policy_t *policy;
@@ -693,15 +674,12 @@ NS(test_main)(void *arg)
     ;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE needs_geoip
-
 /*
  * Functional tests for routerset_needs_geoip.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_needs_geoip(void *arg)
 {
   routerset_t *set;
   int needs_geoip;
@@ -728,15 +706,12 @@ NS(test_main)(void *arg)
     ;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE is_empty
-
 /*
  * Functional tests for routerset_is_empty.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_is_empty(void *arg)
 {
   routerset_t *set = NULL;
   int is_empty;
@@ -762,16 +737,13 @@ NS(test_main)(void *arg)
     ;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(contains, null_set_or_list)
-
 /*
  * Functional test for routerset_contains, when given a NULL set or the
  * set has a NULL list.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_null_set_or_list(void *arg)
 {
   routerset_t *set = NULL;
   int contains;
@@ -791,16 +763,13 @@ NS(test_main)(void *arg)
     ;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(contains, null_nickname)
-
 /*
  * Functional test for routerset_contains, when given a valid routerset but a
  * NULL nickname.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_null_nickname(void *arg)
 {
   routerset_t *set = routerset_new();
   char *nickname = NULL;
@@ -816,16 +785,13 @@ NS(test_main)(void *arg)
     ;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(contains, nickname)
-
 /*
  * Functional test for routerset_contains, when given a valid routerset
  * and the nickname is in the routerset.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_nickname(void *arg)
 {
   routerset_t *set = routerset_new();
   const char *nickname;
@@ -842,16 +808,13 @@ NS(test_main)(void *arg)
     ;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(contains, no_nickname)
-
 /*
  * Functional test for routerset_contains, when given a valid routerset
  * and the nickname is not in the routerset.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_no_nickname(void *arg)
 {
   routerset_t *set = routerset_new();
   int contains;
@@ -866,16 +829,13 @@ NS(test_main)(void *arg)
     ;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(contains, digest)
-
 /*
  * Functional test for routerset_contains, when given a valid routerset
  * and the digest is contained in the routerset.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_digest(void *arg)
 {
   routerset_t *set = routerset_new();
   int contains;
@@ -891,16 +851,13 @@ NS(test_main)(void *arg)
     ;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(contains, no_digest)
-
 /*
  * Functional test for routerset_contains, when given a valid routerset
  * and the digest is not contained in the routerset.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_no_digest(void *arg)
 {
   routerset_t *set = routerset_new();
   int contains;
@@ -917,16 +874,13 @@ NS(test_main)(void *arg)
     ;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(contains, null_digest)
-
 /*
  * Functional test for routerset_contains, when given a valid routerset
  * and the digest is NULL.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_null_digest(void *arg)
 {
   routerset_t *set = routerset_new();
   int contains;
@@ -942,33 +896,32 @@ NS(test_main)(void *arg)
     ;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(contains, addr)
-
 /*
  * Structural test for routerset_contains, when given a valid routerset
  * and the address is rejected by policy.
  */
 
-NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy, (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
+static addr_policy_result_t rset_contains_addr_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port, const smartlist_t *policy);
+ATTR_UNUSED static int rset_contains_addr_compare_tor_addr_to_addr_policy_called = 0;
 
 static tor_addr_t MOCK_TOR_ADDR;
 #define MOCK_TOR_ADDR_PTR (&MOCK_TOR_ADDR)
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_addr(void *arg)
 {
   routerset_t *set = routerset_new();
   tor_addr_t *addr = MOCK_TOR_ADDR_PTR;
   int contains;
   (void)arg;
 
-  NS_MOCK(compare_tor_addr_to_addr_policy);
+  MOCK(compare_tor_addr_to_addr_policy,
+       rset_contains_addr_compare_tor_addr_to_addr_policy);
 
   contains = routerset_contains(set, addr, 0, NULL, NULL, 0);
   routerset_free(set);
 
-  tt_int_op(CALLED(compare_tor_addr_to_addr_policy), OP_EQ, 1);
+  tt_int_op(rset_contains_addr_compare_tor_addr_to_addr_policy_called, OP_EQ, 1);
   tt_int_op(contains, OP_EQ, 3);
 
   done:
@@ -976,12 +929,12 @@ NS(test_main)(void *arg)
 }
 
 addr_policy_result_t
-NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
+rset_contains_addr_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
     const smartlist_t *policy)
 {
   (void)port;
   (void)policy;
-  CALLED(compare_tor_addr_to_addr_policy)++;
+  rset_contains_addr_compare_tor_addr_to_addr_policy_called++;
   tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
   return ADDR_POLICY_REJECTED;
 
@@ -989,30 +942,29 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
     return 0;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(contains, no_addr)
-
 /*
  * Structural test for routerset_contains, when given a valid routerset
  * and the address is not rejected by policy.
  */
 
-NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy, (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
+static addr_policy_result_t rset_contains_no_addr_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port, const smartlist_t *policy);
+ATTR_UNUSED static int rset_contains_no_addr_compare_tor_addr_to_addr_policy_called = 0;
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_no_addr(void *arg)
 {
   routerset_t *set = routerset_new();
   tor_addr_t *addr = MOCK_TOR_ADDR_PTR;
   int contains;
   (void)arg;
 
-  NS_MOCK(compare_tor_addr_to_addr_policy);
+  MOCK(compare_tor_addr_to_addr_policy,
+       rset_contains_no_addr_compare_tor_addr_to_addr_policy);
 
   contains = routerset_contains(set, addr, 0, NULL, NULL, 0);
   routerset_free(set);
 
-  tt_int_op(CALLED(compare_tor_addr_to_addr_policy), OP_EQ, 1);
+  tt_int_op(rset_contains_no_addr_compare_tor_addr_to_addr_policy_called, OP_EQ, 1);
   tt_int_op(contains, OP_EQ, 0);
 
   done:
@@ -1020,12 +972,12 @@ NS(test_main)(void *arg)
 }
 
 addr_policy_result_t
-NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
+rset_contains_no_addr_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
     const smartlist_t *policy)
 {
   (void)port;
   (void)policy;
-  CALLED(compare_tor_addr_to_addr_policy)++;
+  rset_contains_no_addr_compare_tor_addr_to_addr_policy_called++;
   tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   return ADDR_POLICY_ACCEPTED;
@@ -1034,24 +986,23 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
       return 0;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(contains, null_addr)
-
 /*
  * Structural test for routerset_contains, when given a valid routerset
  * and the address is NULL.
  */
 
-NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy, (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
+static addr_policy_result_t rset_contains_null_addr_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port, const smartlist_t *policy);
+ATTR_UNUSED static int rset_contains_null_addr_compare_tor_addr_to_addr_policy_called = 0;
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_null_addr(void *arg)
 {
   routerset_t *set = routerset_new();
   int contains;
   (void)arg;
 
-  NS_MOCK(compare_tor_addr_to_addr_policy);
+  MOCK(compare_tor_addr_to_addr_policy,
+       rset_contains_null_addr_compare_tor_addr_to_addr_policy);
 
   contains = routerset_contains(set, NULL, 0, NULL, NULL, 0);
   routerset_free(set);
@@ -1063,12 +1014,12 @@ NS(test_main)(void *arg)
 }
 
 addr_policy_result_t
-NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
+rset_contains_null_addr_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
     const smartlist_t *policy)
 {
   (void)port;
   (void)policy;
-  CALLED(compare_tor_addr_to_addr_policy)++;
+  rset_contains_null_addr_compare_tor_addr_to_addr_policy_called++;
   tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   return ADDR_POLICY_ACCEPTED;
@@ -1077,26 +1028,27 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
     return 0;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(contains, countries_no_geoip)
-
 /*
  * Structural test for routerset_contains, when there is no matching country
  * for the address.
  */
 
-NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy, (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
-NS_DECL(int, geoip_get_country_by_addr, (const tor_addr_t *addr));
+static addr_policy_result_t rset_contains_countries_no_geoip_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port, const smartlist_t *policy);
+ATTR_UNUSED static int rset_contains_countries_no_geoip_compare_tor_addr_to_addr_policy_called = 0;
+static int rset_contains_countries_no_geoip_geoip_get_country_by_addr(const tor_addr_t *addr);
+ATTR_UNUSED static int rset_contains_countries_no_geoip_geoip_get_country_by_addr_called = 0;
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_countries_no_geoip(void *arg)
 {
   routerset_t *set = routerset_new();
   int contains = 1;
   (void)arg;
 
-  NS_MOCK(compare_tor_addr_to_addr_policy);
-  NS_MOCK(geoip_get_country_by_addr);
+  MOCK(compare_tor_addr_to_addr_policy,
+       rset_contains_countries_no_geoip_compare_tor_addr_to_addr_policy);
+  MOCK(geoip_get_country_by_addr,
+       rset_contains_countries_no_geoip_geoip_get_country_by_addr);
 
   set->countries = bitarray_init_zero(1);
   bitarray_set(set->countries, 1);
@@ -1104,20 +1056,20 @@ NS(test_main)(void *arg)
   routerset_free(set);
 
   tt_int_op(contains, OP_EQ, 0);
-  tt_int_op(CALLED(compare_tor_addr_to_addr_policy), OP_EQ, 1);
-  tt_int_op(CALLED(geoip_get_country_by_addr), OP_EQ, 1);
+  tt_int_op(rset_contains_countries_no_geoip_compare_tor_addr_to_addr_policy_called, OP_EQ, 1);
+  tt_int_op(rset_contains_countries_no_geoip_geoip_get_country_by_addr_called, OP_EQ, 1);
 
   done:
     ;
 }
 
 addr_policy_result_t
-NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
+rset_contains_countries_no_geoip_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
     const smartlist_t *policy)
 {
   (void)port;
   (void)policy;
-  CALLED(compare_tor_addr_to_addr_policy)++;
+  rset_contains_countries_no_geoip_compare_tor_addr_to_addr_policy_called++;
   tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   done:
@@ -1125,35 +1077,36 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
 }
 
 int
-NS(geoip_get_country_by_addr)(const tor_addr_t *addr)
+rset_contains_countries_no_geoip_geoip_get_country_by_addr(const tor_addr_t *addr)
 {
-  CALLED(geoip_get_country_by_addr)++;
+  rset_contains_countries_no_geoip_geoip_get_country_by_addr_called++;
   tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   done:
     return -1;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(contains, countries_geoip)
-
 /*
  * Structural test for routerset_contains, when there a matching country
  * for the address.
  */
 
-NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy, (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
-NS_DECL(int, geoip_get_country_by_addr, (const tor_addr_t *addr));
+static addr_policy_result_t rset_contains_countries_geoip_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port, const smartlist_t *policy);
+ATTR_UNUSED static int rset_contains_countries_geoip_compare_tor_addr_to_addr_policy_called = 0;
+static int rset_contains_countries_geoip_geoip_get_country_by_addr(const tor_addr_t *addr);
+ATTR_UNUSED static int rset_contains_countries_geoip_geoip_get_country_by_addr_called = 0;
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_countries_geoip(void *arg)
 {
   routerset_t *set = routerset_new();
   int contains = 1;
   (void)arg;
 
-  NS_MOCK(compare_tor_addr_to_addr_policy);
-  NS_MOCK(geoip_get_country_by_addr);
+  MOCK(compare_tor_addr_to_addr_policy,
+       rset_contains_countries_geoip_compare_tor_addr_to_addr_policy);
+  MOCK(geoip_get_country_by_addr,
+       rset_contains_countries_geoip_geoip_get_country_by_addr);
 
   set->n_countries = 2;
   set->countries = bitarray_init_zero(1);
@@ -1162,20 +1115,20 @@ NS(test_main)(void *arg)
   routerset_free(set);
 
   tt_int_op(contains, OP_EQ, 2);
-  tt_int_op(CALLED(compare_tor_addr_to_addr_policy), OP_EQ, 1);
-  tt_int_op(CALLED(geoip_get_country_by_addr), OP_EQ, 1);
+  tt_int_op(rset_contains_countries_geoip_compare_tor_addr_to_addr_policy_called, OP_EQ, 1);
+  tt_int_op(rset_contains_countries_geoip_geoip_get_country_by_addr_called, OP_EQ, 1);
 
   done:
     ;
 }
 
 addr_policy_result_t
-NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
+rset_contains_countries_geoip_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
     const smartlist_t *policy)
 {
   (void)port;
   (void)policy;
-  CALLED(compare_tor_addr_to_addr_policy)++;
+  rset_contains_countries_geoip_compare_tor_addr_to_addr_policy_called++;
   tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   done:
@@ -1183,17 +1136,14 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
 }
 
 int
-NS(geoip_get_country_by_addr)(const tor_addr_t *addr)
+rset_contains_countries_geoip_geoip_get_country_by_addr(const tor_addr_t *addr)
 {
-  CALLED(geoip_get_country_by_addr)++;
+  rset_contains_countries_geoip_geoip_get_country_by_addr_called++;
   tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   done:
     return 1;
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(add_unknown_ccs, only_flag)
 
 /*
  * Functional test for routerset_add_unknown_ccs, where only_if_some_cc_set
@@ -1201,7 +1151,7 @@ NS(geoip_get_country_by_addr)(const tor_addr_t *addr)
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_add_unknown_ccs_only_flag(void *arg)
 {
   routerset_t *set = routerset_new();
   routerset_t **setp = &set;
@@ -1216,26 +1166,25 @@ NS(test_main)(void *arg)
     routerset_free(set);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(add_unknown_ccs, creates_set)
-
 /*
  * Functional test for routerset_add_unknown_ccs, where the set argument
  * is created if passed in as NULL.
  */
 
 /* The mock is only used to stop the test from asserting erroneously. */
-NS_DECL(country_t, geoip_get_country, (const char *country));
+static country_t rset_add_unknown_ccs_creates_set_geoip_get_country(const char *country);
+ATTR_UNUSED static int rset_add_unknown_ccs_creates_set_geoip_get_country_called = 0;
 
 static void
-NS(test_main)(void *arg)
+test_rset_add_unknown_ccs_creates_set(void *arg)
 {
   routerset_t *set = NULL;
   routerset_t **setp = &set;
   int r;
   (void)arg;
 
-  NS_MOCK(geoip_get_country);
+  MOCK(geoip_get_country,
+       rset_add_unknown_ccs_creates_set_geoip_get_country);
 
   r = routerset_add_unknown_ccs(setp, 0);
 
@@ -1248,35 +1197,36 @@ NS(test_main)(void *arg)
 }
 
 country_t
-NS(geoip_get_country)(const char *country)
+rset_add_unknown_ccs_creates_set_geoip_get_country(const char *country)
 {
   (void)country;
-  CALLED(geoip_get_country)++;
+  rset_add_unknown_ccs_creates_set_geoip_get_country_called++;
 
   return -1;
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(add_unknown_ccs, add_unknown)
 
 /*
  * Structural test for routerset_add_unknown_ccs, that the "{??}"
  * country code is added to the list.
  */
 
-NS_DECL(country_t, geoip_get_country, (const char *country));
-NS_DECL(int, geoip_is_loaded, (sa_family_t family));
+static country_t rset_add_unknown_ccs_add_unknown_geoip_get_country(const char *country);
+ATTR_UNUSED static int rset_add_unknown_ccs_add_unknown_geoip_get_country_called = 0;
+static int rset_add_unknown_ccs_add_unknown_geoip_is_loaded(sa_family_t family);
+ATTR_UNUSED static int rset_add_unknown_ccs_add_unknown_geoip_is_loaded_called = 0;
 
 static void
-NS(test_main)(void *arg)
+test_rset_add_unknown_ccs_add_unknown(void *arg)
 {
   routerset_t *set = routerset_new();
   routerset_t **setp = &set;
   int r;
   (void)arg;
 
-  NS_MOCK(geoip_get_country);
-  NS_MOCK(geoip_is_loaded);
+  MOCK(geoip_get_country,
+       rset_add_unknown_ccs_add_unknown_geoip_get_country);
+  MOCK(geoip_is_loaded,
+       rset_add_unknown_ccs_add_unknown_geoip_is_loaded);
 
   r = routerset_add_unknown_ccs(setp, 0);
 
@@ -1290,11 +1240,11 @@ NS(test_main)(void *arg)
 }
 
 country_t
-NS(geoip_get_country)(const char *country)
+rset_add_unknown_ccs_add_unknown_geoip_get_country(const char *country)
 {
   int arg_is_qq, arg_is_a1;
 
-  CALLED(geoip_get_country)++;
+  rset_add_unknown_ccs_add_unknown_geoip_get_country_called++;
 
   arg_is_qq = !strcmp(country, "??");
   arg_is_a1 = !strcmp(country, "A1");
@@ -1309,9 +1259,9 @@ NS(geoip_get_country)(const char *country)
 }
 
 int
-NS(geoip_is_loaded)(sa_family_t family)
+rset_add_unknown_ccs_add_unknown_geoip_is_loaded(sa_family_t family)
 {
-  CALLED(geoip_is_loaded)++;
+  rset_add_unknown_ccs_add_unknown_geoip_is_loaded_called++;
 
   tt_int_op(family, OP_EQ, AF_INET);
 
@@ -1319,27 +1269,28 @@ NS(geoip_is_loaded)(sa_family_t family)
     return 0;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(add_unknown_ccs, add_a1)
-
 /*
  * Structural test for routerset_add_unknown_ccs, that the "{a1}"
  * country code is added to the list.
  */
 
-NS_DECL(country_t, geoip_get_country, (const char *country));
-NS_DECL(int, geoip_is_loaded, (sa_family_t family));
+static country_t rset_add_unknown_ccs_add_a1_geoip_get_country(const char *country);
+ATTR_UNUSED static int rset_add_unknown_ccs_add_a1_geoip_get_country_called = 0;
+static int rset_add_unknown_ccs_add_a1_geoip_is_loaded(sa_family_t family);
+ATTR_UNUSED static int rset_add_unknown_ccs_add_a1_geoip_is_loaded_called = 0;
 
 static void
-NS(test_main)(void *arg)
+test_rset_add_unknown_ccs_add_a1(void *arg)
 {
   routerset_t *set = routerset_new();
   routerset_t **setp = &set;
   int r;
   (void)arg;
 
-  NS_MOCK(geoip_get_country);
-  NS_MOCK(geoip_is_loaded);
+  MOCK(geoip_get_country,
+       rset_add_unknown_ccs_add_a1_geoip_get_country);
+  MOCK(geoip_is_loaded,
+       rset_add_unknown_ccs_add_a1_geoip_is_loaded);
 
   r = routerset_add_unknown_ccs(setp, 0);
 
@@ -1353,11 +1304,11 @@ NS(test_main)(void *arg)
 }
 
 country_t
-NS(geoip_get_country)(const char *country)
+rset_add_unknown_ccs_add_a1_geoip_get_country(const char *country)
 {
   int arg_is_qq, arg_is_a1;
 
-  CALLED(geoip_get_country)++;
+  rset_add_unknown_ccs_add_a1_geoip_get_country_called++;
 
   arg_is_qq = !strcmp(country, "??");
   arg_is_a1 = !strcmp(country, "A1");
@@ -1372,9 +1323,9 @@ NS(geoip_get_country)(const char *country)
 }
 
 int
-NS(geoip_is_loaded)(sa_family_t family)
+rset_add_unknown_ccs_add_a1_geoip_is_loaded(sa_family_t family)
 {
-  CALLED(geoip_is_loaded)++;
+  rset_add_unknown_ccs_add_a1_geoip_is_loaded_called++;
 
   tt_int_op(family, OP_EQ, AF_INET);
 
@@ -1382,15 +1333,12 @@ NS(geoip_is_loaded)(sa_family_t family)
     return 0;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE contains_extendinfo
-
 /*
  * Functional test for routerset_contains_extendinfo.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_extendinfo(void *arg)
 {
   routerset_t *set = routerset_new();
   extend_info_t ei;
@@ -1410,15 +1358,12 @@ NS(test_main)(void *arg)
     routerset_free(set);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE contains_router
-
 /*
  * Functional test for routerset_contains_router.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_router(void *arg)
 {
   routerset_t *set = routerset_new();
   routerinfo_t ri;
@@ -1438,9 +1383,6 @@ NS(test_main)(void *arg)
     routerset_free(set);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE contains_routerstatus
-
 /*
  * Functional test for routerset_contains_routerstatus.
  */
@@ -1450,7 +1392,7 @@ NS(test_main)(void *arg)
 // a bit more or test a bit more.
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_routerstatus(void *arg)
 {
   routerset_t *set = routerset_new();
   routerstatus_t rs;
@@ -1471,46 +1413,40 @@ NS(test_main)(void *arg)
     routerset_free(set);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(contains, none)
-
 /*
  * Functional test for routerset_contains_node, when the node has no
  * routerset or routerinfo.
  */
 
-static node_t NS(mock_node);
+static node_t rset_contains_none_mock_node;
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_none(void *arg)
 {
   routerset_t *set = routerset_new();
   int r;
   (void)arg;
 
-  memset(&NS(mock_node), 0, sizeof(NS(mock_node)));
-  NS(mock_node).ri = NULL;
-  NS(mock_node).rs = NULL;
+  memset(&rset_contains_none_mock_node, 0, sizeof(rset_contains_none_mock_node));
+  rset_contains_none_mock_node.ri = NULL;
+  rset_contains_none_mock_node.rs = NULL;
 
-  r = routerset_contains_node(set, &NS(mock_node));
+  r = routerset_contains_node(set, &rset_contains_none_mock_node);
   tt_int_op(r, OP_EQ, 0);
 
   done:
     routerset_free(set);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(contains, rs)
-
 /*
  * Functional test for routerset_contains_node, when the node has a
  * routerset and no routerinfo.
  */
 
-static node_t NS(mock_node);
+static node_t rset_contains_rs_mock_node;
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_rs(void *arg)
 {
   routerset_t *set = routerset_new();
   int r;
@@ -1522,19 +1458,16 @@ NS(test_main)(void *arg)
 
   strncpy(rs.nickname, nickname, sizeof(rs.nickname) - 1);
   rs.nickname[sizeof(rs.nickname) - 1] = '\0';
-  memset(&NS(mock_node), 0, sizeof(NS(mock_node)));
-  NS(mock_node).ri = NULL;
-  NS(mock_node).rs = &rs;
+  memset(&rset_contains_rs_mock_node, 0, sizeof(rset_contains_rs_mock_node));
+  rset_contains_rs_mock_node.ri = NULL;
+  rset_contains_rs_mock_node.rs = &rs;
 
-  r = routerset_contains_node(set, &NS(mock_node));
+  r = routerset_contains_node(set, &rset_contains_rs_mock_node);
 
   tt_int_op(r, OP_EQ, 4);
   done:
     routerset_free(set);
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(contains, routerinfo)
 
 /*
  * Functional test for routerset_contains_node, when the node has no
@@ -1542,7 +1475,7 @@ NS(test_main)(void *arg)
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_contains_routerinfo(void *arg)
 {
   routerset_t *set = routerset_new();
   int r;
@@ -1565,16 +1498,13 @@ NS(test_main)(void *arg)
     routerset_free(set);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(get_all, no_routerset)
-
 /*
  * Functional test for routerset_get_all_nodes, when routerset is NULL or
  * the routerset list is NULL.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_get_all_no_routerset(void *arg)
 {
   smartlist_t *out = smartlist_new();
   routerset_t *set = NULL;
@@ -1598,29 +1528,28 @@ NS(test_main)(void *arg)
   smartlist_free(out);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(get_all, l_no_nodes)
-
 /*
  * Structural test for routerset_get_all_nodes, when the routerset list
  * is empty.
  */
 
-NS_DECL(const node_t *, node_get_by_nickname, (const char *nickname, unsigned flags));
-static const char *NS(mock_nickname);
+static const node_t * rset_get_all_l_no_nodes_node_get_by_nickname(const char *nickname, unsigned flags);
+ATTR_UNUSED static int rset_get_all_l_no_nodes_node_get_by_nickname_called = 0;
+static const char *rset_get_all_l_no_nodes_mock_nickname;
 
 static void
-NS(test_main)(void *arg)
+test_rset_get_all_l_no_nodes(void *arg)
 {
   smartlist_t *out = smartlist_new();
   routerset_t *set = routerset_new();
   int out_len;
   (void)arg;
 
-  NS_MOCK(node_get_by_nickname);
+  MOCK(node_get_by_nickname,
+       rset_get_all_l_no_nodes_node_get_by_nickname);
 
-  NS(mock_nickname) = "foo";
-  smartlist_add_strdup(set->list, NS(mock_nickname));
+  rset_get_all_l_no_nodes_mock_nickname = "foo";
+  smartlist_add_strdup(set->list, rset_get_all_l_no_nodes_mock_nickname);
 
   routerset_get_all_nodes(out, set, NULL, 0);
   out_len = smartlist_len(out);
@@ -1629,48 +1558,47 @@ NS(test_main)(void *arg)
   routerset_free(set);
 
   tt_int_op(out_len, OP_EQ, 0);
-  tt_int_op(CALLED(node_get_by_nickname), OP_EQ, 1);
+  tt_int_op(rset_get_all_l_no_nodes_node_get_by_nickname_called, OP_EQ, 1);
 
   done:
     ;
 }
 
 const node_t *
-NS(node_get_by_nickname)(const char *nickname, unsigned flags)
+rset_get_all_l_no_nodes_node_get_by_nickname(const char *nickname, unsigned flags)
 {
-  CALLED(node_get_by_nickname)++;
-  tt_str_op(nickname, OP_EQ, NS(mock_nickname));
+  rset_get_all_l_no_nodes_node_get_by_nickname_called++;
+  tt_str_op(nickname, OP_EQ, rset_get_all_l_no_nodes_mock_nickname);
   tt_uint_op(flags, OP_EQ, 0);
 
   done:
     return NULL;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(get_all, l_not_running)
-
 /*
  * Structural test for routerset_get_all_nodes, with the running_only flag
  * is set but the nodes are not running.
  */
 
-NS_DECL(const node_t *, node_get_by_nickname, (const char *nickname, unsigned flags));
-static const char *NS(mock_nickname);
-static node_t NS(mock_node);
+static const node_t * rset_get_all_l_not_running_node_get_by_nickname(const char *nickname, unsigned flags);
+ATTR_UNUSED static int rset_get_all_l_not_running_node_get_by_nickname_called = 0;
+static const char *rset_get_all_l_not_running_mock_nickname;
+static node_t rset_get_all_l_not_running_mock_node;
 
 static void
-NS(test_main)(void *arg)
+test_rset_get_all_l_not_running(void *arg)
 {
   smartlist_t *out = smartlist_new();
   routerset_t *set = routerset_new();
   int out_len;
   (void)arg;
 
-  NS_MOCK(node_get_by_nickname);
+  MOCK(node_get_by_nickname,
+       rset_get_all_l_not_running_node_get_by_nickname);
 
-  NS(mock_node).is_running = 0;
-  NS(mock_nickname) = "foo";
-  smartlist_add_strdup(set->list, NS(mock_nickname));
+  rset_get_all_l_not_running_mock_node.is_running = 0;
+  rset_get_all_l_not_running_mock_nickname = "foo";
+  smartlist_add_strdup(set->list, rset_get_all_l_not_running_mock_nickname);
 
   routerset_get_all_nodes(out, set, NULL, 1);
   out_len = smartlist_len(out);
@@ -1679,36 +1607,34 @@ NS(test_main)(void *arg)
   routerset_free(set);
 
   tt_int_op(out_len, OP_EQ, 0);
-  tt_int_op(CALLED(node_get_by_nickname), OP_EQ, 1);
+  tt_int_op(rset_get_all_l_not_running_node_get_by_nickname_called, OP_EQ, 1);
 
   done:
     ;
 }
 
 const node_t *
-NS(node_get_by_nickname)(const char *nickname, unsigned flags)
+rset_get_all_l_not_running_node_get_by_nickname(const char *nickname, unsigned flags)
 {
-  CALLED(node_get_by_nickname)++;
-  tt_str_op(nickname, OP_EQ, NS(mock_nickname));
+  rset_get_all_l_not_running_node_get_by_nickname_called++;
+  tt_str_op(nickname, OP_EQ, rset_get_all_l_not_running_mock_nickname);
   tt_int_op(flags, OP_EQ, 0);
 
   done:
-    return &NS(mock_node);
+    return &rset_get_all_l_not_running_mock_node;
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(get_all, list)
 
 /*
  * Structural test for routerset_get_all_nodes.
  */
 
-NS_DECL(const node_t *, node_get_by_nickname, (const char *nickname, unsigned flags));
-static char *NS(mock_nickname);
-static node_t NS(mock_node);
+static const node_t * rset_get_all_list_node_get_by_nickname(const char *nickname, unsigned flags);
+ATTR_UNUSED static int rset_get_all_list_node_get_by_nickname_called = 0;
+static char *rset_get_all_list_mock_nickname;
+static node_t rset_get_all_list_mock_node;
 
 static void
-NS(test_main)(void *arg)
+test_rset_get_all_list(void *arg)
 {
   smartlist_t *out = smartlist_new();
   routerset_t *set = routerset_new();
@@ -1716,10 +1642,11 @@ NS(test_main)(void *arg)
   node_t *ent;
   (void)arg;
 
-  NS_MOCK(node_get_by_nickname);
+  MOCK(node_get_by_nickname,
+       rset_get_all_list_node_get_by_nickname);
 
-  NS(mock_nickname) = tor_strdup("foo");
-  smartlist_add(set->list, NS(mock_nickname));
+  rset_get_all_list_mock_nickname = tor_strdup("foo");
+  smartlist_add(set->list, rset_get_all_list_mock_nickname);
 
   routerset_get_all_nodes(out, set, NULL, 0);
   out_len = smartlist_len(out);
@@ -1729,126 +1656,121 @@ NS(test_main)(void *arg)
   routerset_free(set);
 
   tt_int_op(out_len, OP_EQ, 1);
-  tt_ptr_op(ent, OP_EQ, &NS(mock_node));
-  tt_int_op(CALLED(node_get_by_nickname), OP_EQ, 1);
+  tt_ptr_op(ent, OP_EQ, &rset_get_all_list_mock_node);
+  tt_int_op(rset_get_all_list_node_get_by_nickname_called, OP_EQ, 1);
 
   done:
     ;
 }
 
 const node_t *
-NS(node_get_by_nickname)(const char *nickname, unsigned flags)
+rset_get_all_list_node_get_by_nickname(const char *nickname, unsigned flags)
 {
-  CALLED(node_get_by_nickname)++;
-  tt_str_op(nickname, OP_EQ, NS(mock_nickname));
+  rset_get_all_list_node_get_by_nickname_called++;
+  tt_str_op(nickname, OP_EQ, rset_get_all_list_mock_nickname);
   tt_int_op(flags, OP_EQ, 0);
 
   done:
-    return &NS(mock_node);
+    return &rset_get_all_list_mock_node;
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(get_all, n_no_nodes)
 
 /*
  * Structural test for routerset_get_all_nodes, when the nodelist has no nodes.
  */
 
-NS_DECL(const smartlist_t *, nodelist_get_list, (void));
+static const smartlist_t * rset_get_all_n_no_nodes_nodelist_get_list(void);
+ATTR_UNUSED static int rset_get_all_n_no_nodes_nodelist_get_list_called = 0;
 
-static smartlist_t *NS(mock_smartlist);
+static smartlist_t *rset_get_all_n_no_nodes_mock_smartlist;
 static void
-NS(test_main)(void *arg)
+test_rset_get_all_n_no_nodes(void *arg)
 {
   routerset_t *set = routerset_new();
   smartlist_t *out = smartlist_new();
   int r;
   (void)arg;
 
-  NS_MOCK(nodelist_get_list);
+  MOCK(nodelist_get_list,
+       rset_get_all_n_no_nodes_nodelist_get_list);
 
   smartlist_add_strdup(set->country_names, "{xx}");
-  NS(mock_smartlist) = smartlist_new();
+  rset_get_all_n_no_nodes_mock_smartlist = smartlist_new();
 
   routerset_get_all_nodes(out, set, NULL, 1);
   r = smartlist_len(out);
   routerset_free(set);
   smartlist_free(out);
-  smartlist_free(NS(mock_smartlist));
+  smartlist_free(rset_get_all_n_no_nodes_mock_smartlist);
 
   tt_int_op(r, OP_EQ, 0);
-  tt_int_op(CALLED(nodelist_get_list), OP_EQ, 1);
+  tt_int_op(rset_get_all_n_no_nodes_nodelist_get_list_called, OP_EQ, 1);
 
   done:
     ;
 }
 
 const smartlist_t *
-NS(nodelist_get_list)(void)
+rset_get_all_n_no_nodes_nodelist_get_list(void)
 {
-  CALLED(nodelist_get_list)++;
+  rset_get_all_n_no_nodes_nodelist_get_list_called++;
 
-  return NS(mock_smartlist);
+  return rset_get_all_n_no_nodes_mock_smartlist;
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(get_all, n_not_running)
 
 /*
  * Structural test for routerset_get_all_nodes, with a non-list routerset
  * the running_only flag is set, but the nodes are not running.
  */
 
-NS_DECL(const smartlist_t *, nodelist_get_list, (void));
+static const smartlist_t * rset_get_all_n_not_running_nodelist_get_list(void);
+ATTR_UNUSED static int rset_get_all_n_not_running_nodelist_get_list_called = 0;
 
-static smartlist_t *NS(mock_smartlist);
-static node_t NS(mock_node);
+static smartlist_t *rset_get_all_n_not_running_mock_smartlist;
+static node_t rset_get_all_n_not_running_mock_node;
 
 static void
-NS(test_main)(void *arg)
+test_rset_get_all_n_not_running(void *arg)
 {
   routerset_t *set = routerset_new();
   smartlist_t *out = smartlist_new();
   int r;
   (void)arg;
 
-  NS_MOCK(nodelist_get_list);
+  MOCK(nodelist_get_list,
+       rset_get_all_n_not_running_nodelist_get_list);
 
   smartlist_add_strdup(set->country_names, "{xx}");
-  NS(mock_smartlist) = smartlist_new();
-  NS(mock_node).is_running = 0;
-  smartlist_add(NS(mock_smartlist), (void *)&NS(mock_node));
+  rset_get_all_n_not_running_mock_smartlist = smartlist_new();
+  rset_get_all_n_not_running_mock_node.is_running = 0;
+  smartlist_add(rset_get_all_n_not_running_mock_smartlist, (void *)&rset_get_all_n_not_running_mock_node);
 
   routerset_get_all_nodes(out, set, NULL, 1);
   r = smartlist_len(out);
   routerset_free(set);
   smartlist_free(out);
-  smartlist_free(NS(mock_smartlist));
+  smartlist_free(rset_get_all_n_not_running_mock_smartlist);
 
   tt_int_op(r, OP_EQ, 0);
-  tt_int_op(CALLED(nodelist_get_list), OP_EQ, 1);
+  tt_int_op(rset_get_all_n_not_running_nodelist_get_list_called, OP_EQ, 1);
 
   done:
     ;
 }
 
 const smartlist_t *
-NS(nodelist_get_list)(void)
+rset_get_all_n_not_running_nodelist_get_list(void)
 {
-  CALLED(nodelist_get_list)++;
+  rset_get_all_n_not_running_nodelist_get_list_called++;
 
-  return NS(mock_smartlist);
+  return rset_get_all_n_not_running_mock_smartlist;
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE subtract_nodes
 
 /*
  * Functional test for routerset_subtract_nodes.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_subtract_nodes(void *arg)
 {
   routerset_t *set = routerset_new();
   smartlist_t *list = smartlist_new();
@@ -1873,15 +1795,12 @@ NS(test_main)(void *arg)
     smartlist_free(list);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(subtract_nodes, null_routerset)
-
 /*
  * Functional test for routerset_subtract_nodes, with a NULL routerset.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_subtract_nodes_null_routerset(void *arg)
 {
   routerset_t *set = NULL;
   smartlist_t *list = smartlist_new();
@@ -1903,15 +1822,12 @@ NS(test_main)(void *arg)
     smartlist_free(list);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE to_string
-
 /*
  * Functional test for routerset_to_string.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_to_string(void *arg)
 {
   routerset_t *set = NULL;
   char *s = NULL;
@@ -1948,15 +1864,12 @@ NS(test_main)(void *arg)
   routerset_free(set);
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(equal, empty_empty)
-
 /*
  * Functional test for routerset_equal, with both routersets empty.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_equal_empty_empty(void *arg)
 {
   routerset_t *a = routerset_new(), *b = routerset_new();
   int r;
@@ -1972,15 +1885,12 @@ NS(test_main)(void *arg)
     ;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(equal, empty_not_empty)
-
 /*
  * Functional test for routerset_equal, with one routersets empty.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_equal_empty_not_empty(void *arg)
 {
   routerset_t *a = routerset_new(), *b = routerset_new();
   int r;
@@ -1996,16 +1906,13 @@ NS(test_main)(void *arg)
     ;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(equal, differing_lengths)
-
 /*
  * Functional test for routerset_equal, with the routersets having
  * differing lengths.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_equal_differing_lengths(void *arg)
 {
   routerset_t *a = routerset_new(), *b = routerset_new();
   int r;
@@ -2023,16 +1930,13 @@ NS(test_main)(void *arg)
     ;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(equal, unequal)
-
 /*
  * Functional test for routerset_equal, with the routersets being
  * different.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_equal_unequal(void *arg)
 {
   routerset_t *a = routerset_new(), *b = routerset_new();
   int r;
@@ -2049,16 +1953,13 @@ NS(test_main)(void *arg)
     ;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(equal, equal)
-
 /*
  * Functional test for routerset_equal, with the routersets being
  * equal.
  */
 
 static void
-NS(test_main)(void *arg)
+test_rset_equal_equal(void *arg)
 {
   routerset_t *a = routerset_new(), *b = routerset_new();
   int r;
@@ -2075,147 +1976,147 @@ NS(test_main)(void *arg)
     ;
 }
 
-#undef NS_SUBMODULE
-#define NS_SUBMODULE ASPECT(free, null_routerset)
-
 /*
  * Structural test for routerset_free, where the routerset is NULL.
  */
 
-NS_DECL(void, smartlist_free_, (smartlist_t *sl));
+static void rset_free_null_routerset_smartlist_free_(smartlist_t *sl);
+ATTR_UNUSED static int rset_free_null_routerset_smartlist_free__called = 0;
 
 static void
-NS(test_main)(void *arg)
+test_rset_free_null_routerset(void *arg)
 {
   (void)arg;
 
-  NS_MOCK(smartlist_free_);
+  MOCK(smartlist_free_,
+       rset_free_null_routerset_smartlist_free_);
 
   routerset_free_(NULL);
 
-  tt_int_op(CALLED(smartlist_free_), OP_EQ, 0);
+  tt_int_op(rset_free_null_routerset_smartlist_free__called, OP_EQ, 0);
 
   done:
     ;
 }
 
 void
-NS(smartlist_free_)(smartlist_t *s)
+rset_free_null_routerset_smartlist_free_(smartlist_t *s)
 {
   (void)s;
-  CALLED(smartlist_free_)++;
+  rset_free_null_routerset_smartlist_free__called++;
 }
-
-#undef NS_SUBMODULE
-#define NS_SUBMODULE free
 
 /*
  * Structural test for routerset_free.
  */
 
-NS_DECL(void, smartlist_free_, (smartlist_t *sl));
-NS_DECL(void, strmap_free_,(strmap_t *map, void (*free_val)(void*)));
-NS_DECL(void, digestmap_free_, (digestmap_t *map, void (*free_val)(void*)));
+static void rset_free_smartlist_free_(smartlist_t *sl);
+ATTR_UNUSED static int rset_free_smartlist_free__called = 0;
+static void rset_free_strmap_free_(strmap_t *map, void (*free_val)(void*));
+ATTR_UNUSED static int rset_free_strmap_free__called = 0;
+static void rset_free_digestmap_free_(digestmap_t *map, void (*free_val)(void*));
+ATTR_UNUSED static int rset_free_digestmap_free__called = 0;
 
 static void
-NS(test_main)(void *arg)
+test_rset_free(void *arg)
 {
   routerset_t *routerset = routerset_new();
   (void)arg;
 
-  NS_MOCK(smartlist_free_);
-  NS_MOCK(strmap_free_);
-  NS_MOCK(digestmap_free_);
+  MOCK(smartlist_free_,
+       rset_free_smartlist_free_);
+  MOCK(strmap_free_,
+       rset_free_strmap_free_);
+  MOCK(digestmap_free_,
+       rset_free_digestmap_free_);
 
   routerset_free(routerset);
 
-  tt_int_op(CALLED(smartlist_free_), OP_NE, 0);
-  tt_int_op(CALLED(strmap_free_), OP_NE, 0);
-  tt_int_op(CALLED(digestmap_free_), OP_NE, 0);
+  tt_int_op(rset_free_smartlist_free__called, OP_NE, 0);
+  tt_int_op(rset_free_strmap_free__called, OP_NE, 0);
+  tt_int_op(rset_free_digestmap_free__called, OP_NE, 0);
 
   done:
     ;
 }
 
 void
-NS(smartlist_free_)(smartlist_t *s)
+rset_free_smartlist_free_(smartlist_t *s)
 {
-  CALLED(smartlist_free_)++;
+  rset_free_smartlist_free__called++;
   smartlist_free___real(s);
 }
 
 void
-NS(strmap_free_)(strmap_t *map, void (*free_val)(void*))
+rset_free_strmap_free_(strmap_t *map, void (*free_val)(void*))
 {
-  CALLED(strmap_free_)++;
+  rset_free_strmap_free__called++;
   strmap_free___real(map, free_val);
 }
 
 void
-NS(digestmap_free_)(digestmap_t *map, void (*free_val)(void*))
+rset_free_digestmap_free_(digestmap_t *map, void (*free_val)(void*))
 {
-  CALLED(digestmap_free_)++;
+  rset_free_digestmap_free__called++;
   digestmap_free___real(map, free_val);
 }
 
-#undef NS_SUBMODULE
-
 struct testcase_t routerset_tests[] = {
-  TEST_CASE(new),
-  TEST_CASE(get_countryname),
-  TEST_CASE(is_list),
-  TEST_CASE(needs_geoip),
-  TEST_CASE(is_empty),
-  TEST_CASE_ASPECT(contains, null_set_or_list),
-  TEST_CASE_ASPECT(contains, nickname),
-  TEST_CASE_ASPECT(contains, null_nickname),
-  TEST_CASE_ASPECT(contains, no_nickname),
-  TEST_CASE_ASPECT(contains, digest),
-  TEST_CASE_ASPECT(contains, no_digest),
-  TEST_CASE_ASPECT(contains, null_digest),
-  TEST_CASE_ASPECT(contains, addr),
-  TEST_CASE_ASPECT(contains, no_addr),
-  TEST_CASE_ASPECT(contains, null_addr),
-  TEST_CASE_ASPECT(contains, countries_no_geoip),
-  TEST_CASE_ASPECT(contains, countries_geoip),
-  TEST_CASE_ASPECT(add_unknown_ccs, only_flag),
-  TEST_CASE_ASPECT(add_unknown_ccs, creates_set),
-  TEST_CASE_ASPECT(add_unknown_ccs, add_unknown),
-  TEST_CASE_ASPECT(add_unknown_ccs, add_a1),
-  TEST_CASE(contains_extendinfo),
-  TEST_CASE(contains_router),
-  TEST_CASE(contains_routerstatus),
-  TEST_CASE_ASPECT(contains, none),
-  TEST_CASE_ASPECT(contains, routerinfo),
-  TEST_CASE_ASPECT(contains, rs),
-  TEST_CASE_ASPECT(get_all, no_routerset),
-  TEST_CASE_ASPECT(get_all, l_no_nodes),
-  TEST_CASE_ASPECT(get_all, l_not_running),
-  TEST_CASE_ASPECT(get_all, list),
-  TEST_CASE_ASPECT(get_all, n_no_nodes),
-  TEST_CASE_ASPECT(get_all, n_not_running),
-  TEST_CASE_ASPECT(refresh, geoip_not_loaded),
-  TEST_CASE_ASPECT(refresh, no_countries),
-  TEST_CASE_ASPECT(refresh, one_valid_country),
-  TEST_CASE_ASPECT(refresh, one_invalid_country),
-  TEST_CASE_ASPECT(union, source_bad),
-  TEST_CASE_ASPECT(union, one),
-  TEST_CASE_ASPECT(parse, malformed),
-  TEST_CASE_ASPECT(parse, valid_hexdigest),
-  TEST_CASE_ASPECT(parse, valid_nickname),
-  TEST_CASE_ASPECT(parse, get_countryname),
-  TEST_CASE_ASPECT(parse, policy_wildcard),
-  TEST_CASE_ASPECT(parse, policy_ipv4),
-  TEST_CASE_ASPECT(parse, policy_ipv6),
-  TEST_CASE(subtract_nodes),
-  TEST_CASE_ASPECT(subtract_nodes, null_routerset),
-  TEST_CASE(to_string),
-  TEST_CASE_ASPECT(equal, empty_empty),
-  TEST_CASE_ASPECT(equal, empty_not_empty),
-  TEST_CASE_ASPECT(equal, differing_lengths),
-  TEST_CASE_ASPECT(equal, unequal),
-  TEST_CASE_ASPECT(equal, equal),
-  TEST_CASE_ASPECT(free, null_routerset),
-  TEST_CASE(free),
+  { "new", test_rset_new, TT_FORK, NULL, NULL },
+  { "get_countryname", test_rset_get_countryname, TT_FORK, NULL, NULL },
+  { "is_list", test_rset_is_list, TT_FORK, NULL, NULL },
+  { "needs_geoip", test_rset_needs_geoip, TT_FORK, NULL, NULL },
+  { "is_empty", test_rset_is_empty, TT_FORK, NULL, NULL },
+  { "contains_null_set_or_list", test_rset_contains_null_set_or_list, TT_FORK, NULL, NULL },
+  { "contains_nickname", test_rset_contains_nickname, TT_FORK, NULL, NULL },
+  { "contains_null_nickname", test_rset_contains_null_nickname, TT_FORK, NULL, NULL },
+  { "contains_no_nickname", test_rset_contains_no_nickname, TT_FORK, NULL, NULL },
+  { "contains_digest", test_rset_contains_digest, TT_FORK, NULL, NULL },
+  { "contains_no_digest", test_rset_contains_no_digest, TT_FORK, NULL, NULL },
+  { "contains_null_digest", test_rset_contains_null_digest, TT_FORK, NULL, NULL },
+  { "contains_addr", test_rset_contains_addr, TT_FORK, NULL, NULL },
+  { "contains_no_addr", test_rset_contains_no_addr, TT_FORK, NULL, NULL },
+  { "contains_null_addr", test_rset_contains_null_addr, TT_FORK, NULL, NULL },
+  { "contains_countries_no_geoip", test_rset_contains_countries_no_geoip, TT_FORK, NULL, NULL },
+  { "contains_countries_geoip", test_rset_contains_countries_geoip, TT_FORK, NULL, NULL },
+  { "add_unknown_ccs_only_flag", test_rset_add_unknown_ccs_only_flag, TT_FORK, NULL, NULL },
+  { "add_unknown_ccs_creates_set", test_rset_add_unknown_ccs_creates_set, TT_FORK, NULL, NULL },
+  { "add_unknown_ccs_add_unknown", test_rset_add_unknown_ccs_add_unknown, TT_FORK, NULL, NULL },
+  { "add_unknown_ccs_add_a1", test_rset_add_unknown_ccs_add_a1, TT_FORK, NULL, NULL },
+  { "contains_extendinfo", test_rset_contains_extendinfo, TT_FORK, NULL, NULL },
+  { "contains_router", test_rset_contains_router, TT_FORK, NULL, NULL },
+  { "contains_routerstatus", test_rset_contains_routerstatus, TT_FORK, NULL, NULL },
+  { "contains_none", test_rset_contains_none, TT_FORK, NULL, NULL },
+  { "contains_routerinfo", test_rset_contains_routerinfo, TT_FORK, NULL, NULL },
+  { "contains_rs", test_rset_contains_rs, TT_FORK, NULL, NULL },
+  { "get_all_no_routerset", test_rset_get_all_no_routerset, TT_FORK, NULL, NULL },
+  { "get_all_l_no_nodes", test_rset_get_all_l_no_nodes, TT_FORK, NULL, NULL },
+  { "get_all_l_not_running", test_rset_get_all_l_not_running, TT_FORK, NULL, NULL },
+  { "get_all_list", test_rset_get_all_list, TT_FORK, NULL, NULL },
+  { "get_all_n_no_nodes", test_rset_get_all_n_no_nodes, TT_FORK, NULL, NULL },
+  { "get_all_n_not_running", test_rset_get_all_n_not_running, TT_FORK, NULL, NULL },
+  { "refresh_geoip_not_loaded", test_rset_refresh_geoip_not_loaded, TT_FORK, NULL, NULL },
+  { "refresh_no_countries", test_rset_refresh_no_countries, TT_FORK, NULL, NULL },
+  { "refresh_one_valid_country", test_rset_refresh_one_valid_country, TT_FORK, NULL, NULL },
+  { "refresh_one_invalid_country", test_rset_refresh_one_invalid_country, TT_FORK, NULL, NULL },
+  { "union_source_bad", test_rset_union_source_bad, TT_FORK, NULL, NULL },
+  { "union_one", test_rset_union_one, TT_FORK, NULL, NULL },
+  { "parse_malformed", test_rset_parse_malformed, TT_FORK, NULL, NULL },
+  { "parse_valid_hexdigest", test_rset_parse_valid_hexdigest, TT_FORK, NULL, NULL },
+  { "parse_valid_nickname", test_rset_parse_valid_nickname, TT_FORK, NULL, NULL },
+  { "parse_get_countryname", test_rset_parse_get_countryname, TT_FORK, NULL, NULL },
+  { "parse_policy_wildcard", test_rset_parse_policy_wildcard, TT_FORK, NULL, NULL },
+  { "parse_policy_ipv4", test_rset_parse_policy_ipv4, TT_FORK, NULL, NULL },
+  { "parse_policy_ipv6", test_rset_parse_policy_ipv6, TT_FORK, NULL, NULL },
+  { "subtract_nodes", test_rset_subtract_nodes, TT_FORK, NULL, NULL },
+  { "subtract_nodes_null_routerset", test_rset_subtract_nodes_null_routerset, TT_FORK, NULL, NULL },
+  { "to_string", test_rset_to_string, TT_FORK, NULL, NULL },
+  { "equal_empty_empty", test_rset_equal_empty_empty, TT_FORK, NULL, NULL },
+  { "equal_empty_not_empty", test_rset_equal_empty_not_empty, TT_FORK, NULL, NULL },
+  { "equal_differing_lengths", test_rset_equal_differing_lengths, TT_FORK, NULL, NULL },
+  { "equal_unequal", test_rset_equal_unequal, TT_FORK, NULL, NULL },
+  { "equal_equal", test_rset_equal_equal, TT_FORK, NULL, NULL },
+  { "free_null_routerset", test_rset_free_null_routerset, TT_FORK, NULL, NULL },
+  { "free", test_rset_free, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
