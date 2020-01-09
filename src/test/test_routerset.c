@@ -90,9 +90,9 @@ test_rset_get_countryname(void *arg)
  */
 
 static int rset_refresh_geoip_not_loaded_geoip_is_loaded(sa_family_t family);
-ATTR_UNUSED static int rset_refresh_geoip_not_loaded_geoip_is_loaded_called = 0;
+static int rset_refresh_geoip_not_loaded_geoip_is_loaded_called = 0;
 static int rset_refresh_geoip_not_loaded_geoip_get_n_countries(void);
-ATTR_UNUSED static int rset_refresh_geoip_not_loaded_geoip_get_n_countries_called = 0;
+static int rset_refresh_geoip_not_loaded_geoip_get_n_countries_called = 0;
 
 static void
 test_rset_refresh_geoip_not_loaded(void *arg)
@@ -110,7 +110,8 @@ test_rset_refresh_geoip_not_loaded(void *arg)
   tt_ptr_op(set->countries, OP_EQ, NULL);
   tt_int_op(set->n_countries, OP_EQ, 0);
   tt_int_op(rset_refresh_geoip_not_loaded_geoip_is_loaded_called, OP_EQ, 1);
-  tt_int_op(rset_refresh_geoip_not_loaded_geoip_get_n_countries_called, OP_EQ, 0);
+  tt_int_op(rset_refresh_geoip_not_loaded_geoip_get_n_countries_called,
+            OP_EQ, 0);
 
   done:
     UNMOCK(geoip_is_loaded);
@@ -140,11 +141,12 @@ rset_refresh_geoip_not_loaded_geoip_get_n_countries(void)
  */
 
 static int rset_refresh_no_countries_geoip_is_loaded(sa_family_t family);
-ATTR_UNUSED static int rset_refresh_no_countries_geoip_is_loaded_called = 0;
+static int rset_refresh_no_countries_geoip_is_loaded_called = 0;
 static int rset_refresh_no_countries_geoip_get_n_countries(void);
-ATTR_UNUSED static int rset_refresh_no_countries_geoip_get_n_countries_called = 0;
-static country_t rset_refresh_no_countries_geoip_get_country(const char *country);
-ATTR_UNUSED static int rset_refresh_no_countries_geoip_get_country_called = 0;
+static int rset_refresh_no_countries_geoip_get_n_countries_called = 0;
+static country_t rset_refresh_no_countries_geoip_get_country(
+                                                    const char *country);
+static int rset_refresh_no_countries_geoip_get_country_called = 0;
 
 static void
 test_rset_refresh_no_countries(void *arg)
@@ -206,11 +208,12 @@ rset_refresh_no_countries_geoip_get_country(const char *countrycode)
  */
 
 static int rset_refresh_one_valid_country_geoip_is_loaded(sa_family_t family);
-ATTR_UNUSED static int rset_refresh_one_valid_country_geoip_is_loaded_called = 0;
+static int rset_refresh_one_valid_country_geoip_is_loaded_called = 0;
 static int rset_refresh_one_valid_country_geoip_get_n_countries(void);
-ATTR_UNUSED static int rset_refresh_one_valid_country_geoip_get_n_countries_called = 0;
-static country_t rset_refresh_one_valid_country_geoip_get_country(const char *country);
-ATTR_UNUSED static int rset_refresh_one_valid_country_geoip_get_country_called = 0;
+static int rset_refresh_one_valid_country_geoip_get_n_countries_called = 0;
+static country_t rset_refresh_one_valid_country_geoip_get_country(
+                                                    const char *country);
+static int rset_refresh_one_valid_country_geoip_get_country_called = 0;
 
 static void
 test_rset_refresh_one_valid_country(void *arg)
@@ -231,7 +234,8 @@ test_rset_refresh_one_valid_country(void *arg)
   tt_ptr_op(set->countries, OP_NE, NULL);
   tt_int_op(set->n_countries, OP_EQ, 2);
   tt_int_op(rset_refresh_one_valid_country_geoip_is_loaded_called, OP_EQ, 1);
-  tt_int_op(rset_refresh_one_valid_country_geoip_get_n_countries_called, OP_EQ, 1);
+  tt_int_op(rset_refresh_one_valid_country_geoip_get_n_countries_called,
+            OP_EQ, 1);
   tt_int_op(rset_refresh_one_valid_country_geoip_get_country_called, OP_EQ, 1);
   tt_int_op((unsigned int)(*set->countries), OP_NE, 0);
 
@@ -273,12 +277,14 @@ rset_refresh_one_valid_country_geoip_get_country(const char *countrycode)
  * country code..
  */
 
-static int rset_refresh_one_invalid_country_geoip_is_loaded(sa_family_t family);
-ATTR_UNUSED static int rset_refresh_one_invalid_country_geoip_is_loaded_called = 0;
+static int rset_refresh_one_invalid_country_geoip_is_loaded(
+                                               sa_family_t family);
+static int rset_refresh_one_invalid_country_geoip_is_loaded_called = 0;
 static int rset_refresh_one_invalid_country_geoip_get_n_countries(void);
-ATTR_UNUSED static int rset_refresh_one_invalid_country_geoip_get_n_countries_called = 0;
-static country_t rset_refresh_one_invalid_country_geoip_get_country(const char *country);
-ATTR_UNUSED static int rset_refresh_one_invalid_country_geoip_get_country_called = 0;
+static int rset_refresh_one_invalid_country_geoip_get_n_countries_called = 0;
+static country_t rset_refresh_one_invalid_country_geoip_get_country(
+                                               const char *country);
+static int rset_refresh_one_invalid_country_geoip_get_country_called = 0;
 
 static void
 test_rset_refresh_one_invalid_country(void *arg)
@@ -299,8 +305,10 @@ test_rset_refresh_one_invalid_country(void *arg)
   tt_ptr_op(set->countries, OP_NE, NULL);
   tt_int_op(set->n_countries, OP_EQ, 2);
   tt_int_op(rset_refresh_one_invalid_country_geoip_is_loaded_called, OP_EQ, 1);
-  tt_int_op(rset_refresh_one_invalid_country_geoip_get_n_countries_called, OP_EQ, 1);
-  tt_int_op(rset_refresh_one_invalid_country_geoip_get_country_called, OP_EQ, 1);
+  tt_int_op(rset_refresh_one_invalid_country_geoip_get_n_countries_called,
+            OP_EQ, 1);
+  tt_int_op(rset_refresh_one_invalid_country_geoip_get_country_called,
+            OP_EQ, 1);
   tt_int_op((unsigned int)(*set->countries), OP_EQ, 0);
 
   done:
@@ -427,8 +435,9 @@ test_rset_parse_get_countryname(void *arg)
  * Structural test for routerset_parse, when given a valid wildcard policy.
  */
 
-static addr_policy_t * rset_parse_policy_wildcard_router_parse_addr_policy_item_from_string(const char *s, int assume_action, int *malformed_list);
-ATTR_UNUSED static int rset_parse_policy_wildcard_router_parse_addr_policy_item_from_string_called = 0;
+static addr_policy_t * rset_parse_policy_wildcard_parse_item_from_string(
+               const char *s, int assume_action, int *malformed_list);
+static int rset_parse_policy_wildcard_parse_item_from_string_called = 0;
 
 static addr_policy_t *rset_parse_policy_wildcard_mock_addr_policy;
 
@@ -441,29 +450,31 @@ test_rset_parse_policy_wildcard(void *arg)
   (void)arg;
 
   MOCK(router_parse_addr_policy_item_from_string,
-       rset_parse_policy_wildcard_router_parse_addr_policy_item_from_string);
-  rset_parse_policy_wildcard_mock_addr_policy = tor_malloc_zero(sizeof(addr_policy_t));
+       rset_parse_policy_wildcard_parse_item_from_string);
+  rset_parse_policy_wildcard_mock_addr_policy =
+    tor_malloc_zero(sizeof(addr_policy_t));
 
   set = routerset_new();
   s = "*";
   r = routerset_parse(set, s, "");
   tt_int_op(r, OP_EQ, 0);
   tt_int_op(smartlist_len(set->policies), OP_NE, 0);
-  tt_int_op(rset_parse_policy_wildcard_router_parse_addr_policy_item_from_string_called, OP_EQ, 1);
+  tt_int_op(rset_parse_policy_wildcard_parse_item_from_string_called,
+            OP_EQ, 1);
 
   done:
     routerset_free(set);
 }
 
 addr_policy_t *
-rset_parse_policy_wildcard_router_parse_addr_policy_item_from_string(const char *s,
+rset_parse_policy_wildcard_parse_item_from_string(const char *s,
                                               int assume_action,
                                               int *malformed_list)
 {
   (void)s;
   (void)assume_action;
   (void)malformed_list;
-  rset_parse_policy_wildcard_router_parse_addr_policy_item_from_string_called++;
+  rset_parse_policy_wildcard_parse_item_from_string_called++;
 
   return rset_parse_policy_wildcard_mock_addr_policy;
 }
@@ -473,8 +484,9 @@ rset_parse_policy_wildcard_router_parse_addr_policy_item_from_string(const char 
  * literal policy.
  */
 
-static addr_policy_t * rset_parse_policy_ipv4_router_parse_addr_policy_item_from_string(const char *s, int assume_action, int *bogus);
-ATTR_UNUSED static int rset_parse_policy_ipv4_router_parse_addr_policy_item_from_string_called = 0;
+static addr_policy_t * rset_parse_policy_ipv4_parse_item_from_string(
+              const char *s, int assume_action, int *bogus);
+static int rset_parse_policy_ipv4_parse_item_from_string_called = 0;
 
 static addr_policy_t *rset_parse_policy_ipv4_mock_addr_policy;
 
@@ -487,27 +499,29 @@ test_rset_parse_policy_ipv4(void *arg)
   (void)arg;
 
   MOCK(router_parse_addr_policy_item_from_string,
-       rset_parse_policy_ipv4_router_parse_addr_policy_item_from_string);
-  rset_parse_policy_ipv4_mock_addr_policy = tor_malloc_zero(sizeof(addr_policy_t));
+       rset_parse_policy_ipv4_parse_item_from_string);
+  rset_parse_policy_ipv4_mock_addr_policy =
+    tor_malloc_zero(sizeof(addr_policy_t));
 
   set = routerset_new();
   s = "127.0.0.1";
   r = routerset_parse(set, s, "");
   tt_int_op(r, OP_EQ, 0);
   tt_int_op(smartlist_len(set->policies), OP_NE, 0);
-  tt_int_op(rset_parse_policy_ipv4_router_parse_addr_policy_item_from_string_called, OP_EQ, 1);
+  tt_int_op(rset_parse_policy_ipv4_parse_item_from_string_called, OP_EQ, 1);
 
  done:
   routerset_free(set);
 }
 
 addr_policy_t *
-rset_parse_policy_ipv4_router_parse_addr_policy_item_from_string(const char *s, int assume_action,
-                                              int *bogus)
+rset_parse_policy_ipv4_parse_item_from_string(
+                                      const char *s, int assume_action,
+                                      int *bogus)
 {
   (void)s;
   (void)assume_action;
-  rset_parse_policy_ipv4_router_parse_addr_policy_item_from_string_called++;
+  rset_parse_policy_ipv4_parse_item_from_string_called++;
   *bogus = 0;
 
   return rset_parse_policy_ipv4_mock_addr_policy;
@@ -518,8 +532,9 @@ rset_parse_policy_ipv4_router_parse_addr_policy_item_from_string(const char *s, 
  * literal policy.
  */
 
-static addr_policy_t * rset_parse_policy_ipv6_router_parse_addr_policy_item_from_string(const char *s, int assume_action, int *bad);
-ATTR_UNUSED static int rset_parse_policy_ipv6_router_parse_addr_policy_item_from_string_called = 0;
+static addr_policy_t * rset_parse_policy_ipv6_parse_item_from_string(
+               const char *s, int assume_action, int *bad);
+static int rset_parse_policy_ipv6_parse_item_from_string_called = 0;
 
 static addr_policy_t *rset_parse_policy_ipv6_mock_addr_policy;
 
@@ -532,27 +547,28 @@ test_rset_parse_policy_ipv6(void *arg)
   (void)arg;
 
   MOCK(router_parse_addr_policy_item_from_string,
-       rset_parse_policy_ipv6_router_parse_addr_policy_item_from_string);
-  rset_parse_policy_ipv6_mock_addr_policy = tor_malloc_zero(sizeof(addr_policy_t));
+       rset_parse_policy_ipv6_parse_item_from_string);
+  rset_parse_policy_ipv6_mock_addr_policy =
+    tor_malloc_zero(sizeof(addr_policy_t));
 
   set = routerset_new();
   s = "::1";
   r = routerset_parse(set, s, "");
   tt_int_op(r, OP_EQ, 0);
   tt_int_op(smartlist_len(set->policies), OP_NE, 0);
-  tt_int_op(rset_parse_policy_ipv6_router_parse_addr_policy_item_from_string_called, OP_EQ, 1);
+  tt_int_op(rset_parse_policy_ipv6_parse_item_from_string_called, OP_EQ, 1);
 
  done:
   routerset_free(set);
 }
 
 addr_policy_t *
-rset_parse_policy_ipv6_router_parse_addr_policy_item_from_string(const char *s,
+rset_parse_policy_ipv6_parse_item_from_string(const char *s,
                                               int assume_action, int *bad)
 {
   (void)s;
   (void)assume_action;
-  rset_parse_policy_ipv6_router_parse_addr_policy_item_from_string_called++;
+  rset_parse_policy_ipv6_parse_item_from_string_called++;
   *bad = 0;
 
   return rset_parse_policy_ipv6_mock_addr_policy;
@@ -563,7 +579,7 @@ rset_parse_policy_ipv6_router_parse_addr_policy_item_from_string(const char *s,
  */
 
 static smartlist_t * rset_union_source_bad_smartlist_new(void);
-ATTR_UNUSED static int rset_union_source_bad_smartlist_new_called = 0;
+static int rset_union_source_bad_smartlist_new_called = 0;
 
 static void
 test_rset_union_source_bad(void *arg)
@@ -901,8 +917,10 @@ test_rset_contains_null_digest(void *arg)
  * and the address is rejected by policy.
  */
 
-static addr_policy_result_t rset_contains_addr_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port, const smartlist_t *policy);
-ATTR_UNUSED static int rset_contains_addr_compare_tor_addr_to_addr_policy_called = 0;
+static addr_policy_result_t rset_contains_addr_cmp_addr_to_policy(
+              const tor_addr_t *addr, uint16_t port,
+              const smartlist_t *policy);
+static int rset_contains_addr_cmp_addr_to_policy_called = 0;
 
 static tor_addr_t MOCK_TOR_ADDR;
 #define MOCK_TOR_ADDR_PTR (&MOCK_TOR_ADDR)
@@ -916,12 +934,12 @@ test_rset_contains_addr(void *arg)
   (void)arg;
 
   MOCK(compare_tor_addr_to_addr_policy,
-       rset_contains_addr_compare_tor_addr_to_addr_policy);
+       rset_contains_addr_cmp_addr_to_policy);
 
   contains = routerset_contains(set, addr, 0, NULL, NULL, 0);
   routerset_free(set);
 
-  tt_int_op(rset_contains_addr_compare_tor_addr_to_addr_policy_called, OP_EQ, 1);
+  tt_int_op(rset_contains_addr_cmp_addr_to_policy_called, OP_EQ, 1);
   tt_int_op(contains, OP_EQ, 3);
 
   done:
@@ -929,12 +947,12 @@ test_rset_contains_addr(void *arg)
 }
 
 addr_policy_result_t
-rset_contains_addr_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
+rset_contains_addr_cmp_addr_to_policy(const tor_addr_t *addr, uint16_t port,
     const smartlist_t *policy)
 {
   (void)port;
   (void)policy;
-  rset_contains_addr_compare_tor_addr_to_addr_policy_called++;
+  rset_contains_addr_cmp_addr_to_policy_called++;
   tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
   return ADDR_POLICY_REJECTED;
 
@@ -947,8 +965,10 @@ rset_contains_addr_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint1
  * and the address is not rejected by policy.
  */
 
-static addr_policy_result_t rset_contains_no_addr_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port, const smartlist_t *policy);
-ATTR_UNUSED static int rset_contains_no_addr_compare_tor_addr_to_addr_policy_called = 0;
+static addr_policy_result_t rset_contains_no_addr_cmp_addr_to_policy(
+              const tor_addr_t *addr, uint16_t port,
+              const smartlist_t *policy);
+static int rset_contains_no_addr_cmp_addr_to_policy_called = 0;
 
 static void
 test_rset_contains_no_addr(void *arg)
@@ -959,12 +979,12 @@ test_rset_contains_no_addr(void *arg)
   (void)arg;
 
   MOCK(compare_tor_addr_to_addr_policy,
-       rset_contains_no_addr_compare_tor_addr_to_addr_policy);
+       rset_contains_no_addr_cmp_addr_to_policy);
 
   contains = routerset_contains(set, addr, 0, NULL, NULL, 0);
   routerset_free(set);
 
-  tt_int_op(rset_contains_no_addr_compare_tor_addr_to_addr_policy_called, OP_EQ, 1);
+  tt_int_op(rset_contains_no_addr_cmp_addr_to_policy_called, OP_EQ, 1);
   tt_int_op(contains, OP_EQ, 0);
 
   done:
@@ -972,12 +992,12 @@ test_rset_contains_no_addr(void *arg)
 }
 
 addr_policy_result_t
-rset_contains_no_addr_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
+rset_contains_no_addr_cmp_addr_to_policy(const tor_addr_t *addr, uint16_t port,
     const smartlist_t *policy)
 {
   (void)port;
   (void)policy;
-  rset_contains_no_addr_compare_tor_addr_to_addr_policy_called++;
+  rset_contains_no_addr_cmp_addr_to_policy_called++;
   tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   return ADDR_POLICY_ACCEPTED;
@@ -991,8 +1011,10 @@ rset_contains_no_addr_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, ui
  * and the address is NULL.
  */
 
-static addr_policy_result_t rset_contains_null_addr_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port, const smartlist_t *policy);
-ATTR_UNUSED static int rset_contains_null_addr_compare_tor_addr_to_addr_policy_called = 0;
+static addr_policy_result_t rset_contains_null_addr_cmp_addr_to_policy(
+                 const tor_addr_t *addr, uint16_t port,
+                 const smartlist_t *policy);
+static int rset_contains_null_addr_cmp_addr_to_policy_called = 0;
 
 static void
 test_rset_contains_null_addr(void *arg)
@@ -1002,7 +1024,7 @@ test_rset_contains_null_addr(void *arg)
   (void)arg;
 
   MOCK(compare_tor_addr_to_addr_policy,
-       rset_contains_null_addr_compare_tor_addr_to_addr_policy);
+       rset_contains_null_addr_cmp_addr_to_policy);
 
   contains = routerset_contains(set, NULL, 0, NULL, NULL, 0);
   routerset_free(set);
@@ -1014,12 +1036,13 @@ test_rset_contains_null_addr(void *arg)
 }
 
 addr_policy_result_t
-rset_contains_null_addr_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
+rset_contains_null_addr_cmp_addr_to_policy(
+    const tor_addr_t *addr, uint16_t port,
     const smartlist_t *policy)
 {
   (void)port;
   (void)policy;
-  rset_contains_null_addr_compare_tor_addr_to_addr_policy_called++;
+  rset_contains_null_addr_cmp_addr_to_policy_called++;
   tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   return ADDR_POLICY_ACCEPTED;
@@ -1033,22 +1056,25 @@ rset_contains_null_addr_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, 
  * for the address.
  */
 
-static addr_policy_result_t rset_contains_countries_no_geoip_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port, const smartlist_t *policy);
-ATTR_UNUSED static int rset_contains_countries_no_geoip_compare_tor_addr_to_addr_policy_called = 0;
-static int rset_contains_countries_no_geoip_geoip_get_country_by_addr(const tor_addr_t *addr);
-ATTR_UNUSED static int rset_contains_countries_no_geoip_geoip_get_country_by_addr_called = 0;
+static addr_policy_result_t rset_countries_no_geoip_cmp_addr_to_policy(
+                  const tor_addr_t *addr, uint16_t port,
+                  const smartlist_t *policy);
+static int rset_countries_no_geoip_cmp_addr_to_policy_called = 0;
+static int rset_countries_no_geoip_geoip_get_country_by_addr(
+                  const tor_addr_t *addr);
+static int rset_countries_no_geoip_geoip_get_country_by_addr_called = 0;
 
 static void
-test_rset_contains_countries_no_geoip(void *arg)
+test_rset_countries_no_geoip(void *arg)
 {
   routerset_t *set = routerset_new();
   int contains = 1;
   (void)arg;
 
   MOCK(compare_tor_addr_to_addr_policy,
-       rset_contains_countries_no_geoip_compare_tor_addr_to_addr_policy);
+       rset_countries_no_geoip_cmp_addr_to_policy);
   MOCK(geoip_get_country_by_addr,
-       rset_contains_countries_no_geoip_geoip_get_country_by_addr);
+       rset_countries_no_geoip_geoip_get_country_by_addr);
 
   set->countries = bitarray_init_zero(1);
   bitarray_set(set->countries, 1);
@@ -1056,20 +1082,23 @@ test_rset_contains_countries_no_geoip(void *arg)
   routerset_free(set);
 
   tt_int_op(contains, OP_EQ, 0);
-  tt_int_op(rset_contains_countries_no_geoip_compare_tor_addr_to_addr_policy_called, OP_EQ, 1);
-  tt_int_op(rset_contains_countries_no_geoip_geoip_get_country_by_addr_called, OP_EQ, 1);
+  tt_int_op(rset_countries_no_geoip_cmp_addr_to_policy_called,
+            OP_EQ, 1);
+  tt_int_op(rset_countries_no_geoip_geoip_get_country_by_addr_called,
+            OP_EQ, 1);
 
   done:
     ;
 }
 
 addr_policy_result_t
-rset_contains_countries_no_geoip_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
+rset_countries_no_geoip_cmp_addr_to_policy(
+    const tor_addr_t *addr, uint16_t port,
     const smartlist_t *policy)
 {
   (void)port;
   (void)policy;
-  rset_contains_countries_no_geoip_compare_tor_addr_to_addr_policy_called++;
+  rset_countries_no_geoip_cmp_addr_to_policy_called++;
   tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   done:
@@ -1077,9 +1106,9 @@ rset_contains_countries_no_geoip_compare_tor_addr_to_addr_policy(const tor_addr_
 }
 
 int
-rset_contains_countries_no_geoip_geoip_get_country_by_addr(const tor_addr_t *addr)
+rset_countries_no_geoip_geoip_get_country_by_addr(const tor_addr_t *addr)
 {
-  rset_contains_countries_no_geoip_geoip_get_country_by_addr_called++;
+  rset_countries_no_geoip_geoip_get_country_by_addr_called++;
   tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   done:
@@ -1091,22 +1120,25 @@ rset_contains_countries_no_geoip_geoip_get_country_by_addr(const tor_addr_t *add
  * for the address.
  */
 
-static addr_policy_result_t rset_contains_countries_geoip_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port, const smartlist_t *policy);
-ATTR_UNUSED static int rset_contains_countries_geoip_compare_tor_addr_to_addr_policy_called = 0;
-static int rset_contains_countries_geoip_geoip_get_country_by_addr(const tor_addr_t *addr);
-ATTR_UNUSED static int rset_contains_countries_geoip_geoip_get_country_by_addr_called = 0;
+static addr_policy_result_t rset_countries_geoip_cmp_addr_to_policy(
+              const tor_addr_t *addr, uint16_t port,
+              const smartlist_t *policy);
+static int rset_countries_geoip_cmp_addr_to_policy_called = 0;
+static int rset_countries_geoip_geoip_get_country_by_addr(
+                                          const tor_addr_t *addr);
+static int rset_countries_geoip_geoip_get_country_by_addr_called = 0;
 
 static void
-test_rset_contains_countries_geoip(void *arg)
+test_rset_countries_geoip(void *arg)
 {
   routerset_t *set = routerset_new();
   int contains = 1;
   (void)arg;
 
   MOCK(compare_tor_addr_to_addr_policy,
-       rset_contains_countries_geoip_compare_tor_addr_to_addr_policy);
+       rset_countries_geoip_cmp_addr_to_policy);
   MOCK(geoip_get_country_by_addr,
-       rset_contains_countries_geoip_geoip_get_country_by_addr);
+       rset_countries_geoip_geoip_get_country_by_addr);
 
   set->n_countries = 2;
   set->countries = bitarray_init_zero(1);
@@ -1115,20 +1147,24 @@ test_rset_contains_countries_geoip(void *arg)
   routerset_free(set);
 
   tt_int_op(contains, OP_EQ, 2);
-  tt_int_op(rset_contains_countries_geoip_compare_tor_addr_to_addr_policy_called, OP_EQ, 1);
-  tt_int_op(rset_contains_countries_geoip_geoip_get_country_by_addr_called, OP_EQ, 1);
+  tt_int_op(
+     rset_countries_geoip_cmp_addr_to_policy_called,
+     OP_EQ, 1);
+  tt_int_op(rset_countries_geoip_geoip_get_country_by_addr_called,
+            OP_EQ, 1);
 
   done:
     ;
 }
 
 addr_policy_result_t
-rset_contains_countries_geoip_compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
+rset_countries_geoip_cmp_addr_to_policy(
+    const tor_addr_t *addr, uint16_t port,
     const smartlist_t *policy)
 {
   (void)port;
   (void)policy;
-  rset_contains_countries_geoip_compare_tor_addr_to_addr_policy_called++;
+  rset_countries_geoip_cmp_addr_to_policy_called++;
   tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   done:
@@ -1136,9 +1172,9 @@ rset_contains_countries_geoip_compare_tor_addr_to_addr_policy(const tor_addr_t *
 }
 
 int
-rset_contains_countries_geoip_geoip_get_country_by_addr(const tor_addr_t *addr)
+rset_countries_geoip_geoip_get_country_by_addr(const tor_addr_t *addr)
 {
-  rset_contains_countries_geoip_geoip_get_country_by_addr_called++;
+  rset_countries_geoip_geoip_get_country_by_addr_called++;
   tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   done:
@@ -1172,8 +1208,9 @@ test_rset_add_unknown_ccs_only_flag(void *arg)
  */
 
 /* The mock is only used to stop the test from asserting erroneously. */
-static country_t rset_add_unknown_ccs_creates_set_geoip_get_country(const char *country);
-ATTR_UNUSED static int rset_add_unknown_ccs_creates_set_geoip_get_country_called = 0;
+static country_t rset_add_unknown_ccs_creates_set_geoip_get_country(
+                                                     const char *country);
+static int rset_add_unknown_ccs_creates_set_geoip_get_country_called = 0;
 
 static void
 test_rset_add_unknown_ccs_creates_set(void *arg)
@@ -1210,10 +1247,12 @@ rset_add_unknown_ccs_creates_set_geoip_get_country(const char *country)
  * country code is added to the list.
  */
 
-static country_t rset_add_unknown_ccs_add_unknown_geoip_get_country(const char *country);
-ATTR_UNUSED static int rset_add_unknown_ccs_add_unknown_geoip_get_country_called = 0;
-static int rset_add_unknown_ccs_add_unknown_geoip_is_loaded(sa_family_t family);
-ATTR_UNUSED static int rset_add_unknown_ccs_add_unknown_geoip_is_loaded_called = 0;
+static country_t rset_add_unknown_ccs_add_unknown_geoip_get_country(
+                                                 const char *country);
+static int rset_add_unknown_ccs_add_unknown_geoip_get_country_called = 0;
+static int rset_add_unknown_ccs_add_unknown_geoip_is_loaded(
+                                                 sa_family_t family);
+static int rset_add_unknown_ccs_add_unknown_geoip_is_loaded_called = 0;
 
 static void
 test_rset_add_unknown_ccs_add_unknown(void *arg)
@@ -1274,10 +1313,11 @@ rset_add_unknown_ccs_add_unknown_geoip_is_loaded(sa_family_t family)
  * country code is added to the list.
  */
 
-static country_t rset_add_unknown_ccs_add_a1_geoip_get_country(const char *country);
-ATTR_UNUSED static int rset_add_unknown_ccs_add_a1_geoip_get_country_called = 0;
+static country_t rset_add_unknown_ccs_add_a1_geoip_get_country(
+                                           const char *country);
+static int rset_add_unknown_ccs_add_a1_geoip_get_country_called = 0;
 static int rset_add_unknown_ccs_add_a1_geoip_is_loaded(sa_family_t family);
-ATTR_UNUSED static int rset_add_unknown_ccs_add_a1_geoip_is_loaded_called = 0;
+static int rset_add_unknown_ccs_add_a1_geoip_is_loaded_called = 0;
 
 static void
 test_rset_add_unknown_ccs_add_a1(void *arg)
@@ -1427,7 +1467,8 @@ test_rset_contains_none(void *arg)
   int r;
   (void)arg;
 
-  memset(&rset_contains_none_mock_node, 0, sizeof(rset_contains_none_mock_node));
+  memset(&rset_contains_none_mock_node, 0,
+         sizeof(rset_contains_none_mock_node));
   rset_contains_none_mock_node.ri = NULL;
   rset_contains_none_mock_node.rs = NULL;
 
@@ -1533,8 +1574,9 @@ test_rset_get_all_no_routerset(void *arg)
  * is empty.
  */
 
-static const node_t * rset_get_all_l_no_nodes_node_get_by_nickname(const char *nickname, unsigned flags);
-ATTR_UNUSED static int rset_get_all_l_no_nodes_node_get_by_nickname_called = 0;
+static const node_t * rset_get_all_l_no_nodes_node_get_by_nickname(
+                                       const char *nickname, unsigned flags);
+static int rset_get_all_l_no_nodes_node_get_by_nickname_called = 0;
 static const char *rset_get_all_l_no_nodes_mock_nickname;
 
 static void
@@ -1565,7 +1607,8 @@ test_rset_get_all_l_no_nodes(void *arg)
 }
 
 const node_t *
-rset_get_all_l_no_nodes_node_get_by_nickname(const char *nickname, unsigned flags)
+rset_get_all_l_no_nodes_node_get_by_nickname(const char *nickname,
+                                             unsigned flags)
 {
   rset_get_all_l_no_nodes_node_get_by_nickname_called++;
   tt_str_op(nickname, OP_EQ, rset_get_all_l_no_nodes_mock_nickname);
@@ -1580,8 +1623,9 @@ rset_get_all_l_no_nodes_node_get_by_nickname(const char *nickname, unsigned flag
  * is set but the nodes are not running.
  */
 
-static const node_t * rset_get_all_l_not_running_node_get_by_nickname(const char *nickname, unsigned flags);
-ATTR_UNUSED static int rset_get_all_l_not_running_node_get_by_nickname_called = 0;
+static const node_t * rset_get_all_l_not_running_node_get_by_nickname(
+                                       const char *nickname, unsigned flags);
+static int rset_get_all_l_not_running_node_get_by_nickname_called = 0;
 static const char *rset_get_all_l_not_running_mock_nickname;
 static node_t rset_get_all_l_not_running_mock_node;
 
@@ -1614,7 +1658,8 @@ test_rset_get_all_l_not_running(void *arg)
 }
 
 const node_t *
-rset_get_all_l_not_running_node_get_by_nickname(const char *nickname, unsigned flags)
+rset_get_all_l_not_running_node_get_by_nickname(const char *nickname,
+                                                unsigned flags)
 {
   rset_get_all_l_not_running_node_get_by_nickname_called++;
   tt_str_op(nickname, OP_EQ, rset_get_all_l_not_running_mock_nickname);
@@ -1628,8 +1673,9 @@ rset_get_all_l_not_running_node_get_by_nickname(const char *nickname, unsigned f
  * Structural test for routerset_get_all_nodes.
  */
 
-static const node_t * rset_get_all_list_node_get_by_nickname(const char *nickname, unsigned flags);
-ATTR_UNUSED static int rset_get_all_list_node_get_by_nickname_called = 0;
+static const node_t * rset_get_all_list_node_get_by_nickname(
+                             const char *nickname, unsigned flags);
+static int rset_get_all_list_node_get_by_nickname_called = 0;
 static char *rset_get_all_list_mock_nickname;
 static node_t rset_get_all_list_mock_node;
 
@@ -1679,7 +1725,7 @@ rset_get_all_list_node_get_by_nickname(const char *nickname, unsigned flags)
  */
 
 static const smartlist_t * rset_get_all_n_no_nodes_nodelist_get_list(void);
-ATTR_UNUSED static int rset_get_all_n_no_nodes_nodelist_get_list_called = 0;
+static int rset_get_all_n_no_nodes_nodelist_get_list_called = 0;
 
 static smartlist_t *rset_get_all_n_no_nodes_mock_smartlist;
 static void
@@ -1723,7 +1769,7 @@ rset_get_all_n_no_nodes_nodelist_get_list(void)
  */
 
 static const smartlist_t * rset_get_all_n_not_running_nodelist_get_list(void);
-ATTR_UNUSED static int rset_get_all_n_not_running_nodelist_get_list_called = 0;
+static int rset_get_all_n_not_running_nodelist_get_list_called = 0;
 
 static smartlist_t *rset_get_all_n_not_running_mock_smartlist;
 static node_t rset_get_all_n_not_running_mock_node;
@@ -1742,7 +1788,8 @@ test_rset_get_all_n_not_running(void *arg)
   smartlist_add_strdup(set->country_names, "{xx}");
   rset_get_all_n_not_running_mock_smartlist = smartlist_new();
   rset_get_all_n_not_running_mock_node.is_running = 0;
-  smartlist_add(rset_get_all_n_not_running_mock_smartlist, (void *)&rset_get_all_n_not_running_mock_node);
+  smartlist_add(rset_get_all_n_not_running_mock_smartlist,
+                (void *)&rset_get_all_n_not_running_mock_node);
 
   routerset_get_all_nodes(out, set, NULL, 1);
   r = smartlist_len(out);
@@ -1981,7 +2028,7 @@ test_rset_equal_equal(void *arg)
  */
 
 static void rset_free_null_routerset_smartlist_free_(smartlist_t *sl);
-ATTR_UNUSED static int rset_free_null_routerset_smartlist_free__called = 0;
+static int rset_free_null_routerset_smartlist_free__called = 0;
 
 static void
 test_rset_free_null_routerset(void *arg)
@@ -2011,11 +2058,12 @@ rset_free_null_routerset_smartlist_free_(smartlist_t *s)
  */
 
 static void rset_free_smartlist_free_(smartlist_t *sl);
-ATTR_UNUSED static int rset_free_smartlist_free__called = 0;
+static int rset_free_smartlist_free__called = 0;
 static void rset_free_strmap_free_(strmap_t *map, void (*free_val)(void*));
-ATTR_UNUSED static int rset_free_strmap_free__called = 0;
-static void rset_free_digestmap_free_(digestmap_t *map, void (*free_val)(void*));
-ATTR_UNUSED static int rset_free_digestmap_free__called = 0;
+static int rset_free_strmap_free__called = 0;
+static void rset_free_digestmap_free_(digestmap_t *map,
+                                      void (*free_val)(void*));
+static int rset_free_digestmap_free__called = 0;
 
 static void
 test_rset_free(void *arg)
@@ -2067,56 +2115,84 @@ struct testcase_t routerset_tests[] = {
   { "is_list", test_rset_is_list, TT_FORK, NULL, NULL },
   { "needs_geoip", test_rset_needs_geoip, TT_FORK, NULL, NULL },
   { "is_empty", test_rset_is_empty, TT_FORK, NULL, NULL },
-  { "contains_null_set_or_list", test_rset_contains_null_set_or_list, TT_FORK, NULL, NULL },
+  { "contains_null_set_or_list", test_rset_contains_null_set_or_list,
+    TT_FORK, NULL, NULL },
   { "contains_nickname", test_rset_contains_nickname, TT_FORK, NULL, NULL },
-  { "contains_null_nickname", test_rset_contains_null_nickname, TT_FORK, NULL, NULL },
-  { "contains_no_nickname", test_rset_contains_no_nickname, TT_FORK, NULL, NULL },
+  { "contains_null_nickname", test_rset_contains_null_nickname,
+    TT_FORK, NULL, NULL },
+  { "contains_no_nickname", test_rset_contains_no_nickname,
+    TT_FORK, NULL, NULL },
   { "contains_digest", test_rset_contains_digest, TT_FORK, NULL, NULL },
   { "contains_no_digest", test_rset_contains_no_digest, TT_FORK, NULL, NULL },
-  { "contains_null_digest", test_rset_contains_null_digest, TT_FORK, NULL, NULL },
+  { "contains_null_digest", test_rset_contains_null_digest,
+    TT_FORK, NULL, NULL },
   { "contains_addr", test_rset_contains_addr, TT_FORK, NULL, NULL },
   { "contains_no_addr", test_rset_contains_no_addr, TT_FORK, NULL, NULL },
   { "contains_null_addr", test_rset_contains_null_addr, TT_FORK, NULL, NULL },
-  { "contains_countries_no_geoip", test_rset_contains_countries_no_geoip, TT_FORK, NULL, NULL },
-  { "contains_countries_geoip", test_rset_contains_countries_geoip, TT_FORK, NULL, NULL },
-  { "add_unknown_ccs_only_flag", test_rset_add_unknown_ccs_only_flag, TT_FORK, NULL, NULL },
-  { "add_unknown_ccs_creates_set", test_rset_add_unknown_ccs_creates_set, TT_FORK, NULL, NULL },
-  { "add_unknown_ccs_add_unknown", test_rset_add_unknown_ccs_add_unknown, TT_FORK, NULL, NULL },
-  { "add_unknown_ccs_add_a1", test_rset_add_unknown_ccs_add_a1, TT_FORK, NULL, NULL },
-  { "contains_extendinfo", test_rset_contains_extendinfo, TT_FORK, NULL, NULL },
+  { "contains_countries_no_geoip", test_rset_countries_no_geoip,
+    TT_FORK, NULL, NULL },
+  { "contains_countries_geoip", test_rset_countries_geoip,
+    TT_FORK, NULL, NULL },
+  { "add_unknown_ccs_only_flag", test_rset_add_unknown_ccs_only_flag,
+    TT_FORK, NULL, NULL },
+  { "add_unknown_ccs_creates_set", test_rset_add_unknown_ccs_creates_set,
+    TT_FORK, NULL, NULL },
+  { "add_unknown_ccs_add_unknown", test_rset_add_unknown_ccs_add_unknown,
+    TT_FORK, NULL, NULL },
+  { "add_unknown_ccs_add_a1", test_rset_add_unknown_ccs_add_a1,
+    TT_FORK, NULL, NULL },
+  { "contains_extendinfo", test_rset_contains_extendinfo,
+    TT_FORK, NULL, NULL },
   { "contains_router", test_rset_contains_router, TT_FORK, NULL, NULL },
-  { "contains_routerstatus", test_rset_contains_routerstatus, TT_FORK, NULL, NULL },
+  { "contains_routerstatus", test_rset_contains_routerstatus,
+    TT_FORK, NULL, NULL },
   { "contains_none", test_rset_contains_none, TT_FORK, NULL, NULL },
-  { "contains_routerinfo", test_rset_contains_routerinfo, TT_FORK, NULL, NULL },
+  { "contains_routerinfo", test_rset_contains_routerinfo,
+    TT_FORK, NULL, NULL },
   { "contains_rs", test_rset_contains_rs, TT_FORK, NULL, NULL },
-  { "get_all_no_routerset", test_rset_get_all_no_routerset, TT_FORK, NULL, NULL },
+  { "get_all_no_routerset", test_rset_get_all_no_routerset,
+    TT_FORK, NULL, NULL },
   { "get_all_l_no_nodes", test_rset_get_all_l_no_nodes, TT_FORK, NULL, NULL },
-  { "get_all_l_not_running", test_rset_get_all_l_not_running, TT_FORK, NULL, NULL },
+  { "get_all_l_not_running", test_rset_get_all_l_not_running,
+    TT_FORK, NULL, NULL },
   { "get_all_list", test_rset_get_all_list, TT_FORK, NULL, NULL },
   { "get_all_n_no_nodes", test_rset_get_all_n_no_nodes, TT_FORK, NULL, NULL },
-  { "get_all_n_not_running", test_rset_get_all_n_not_running, TT_FORK, NULL, NULL },
-  { "refresh_geoip_not_loaded", test_rset_refresh_geoip_not_loaded, TT_FORK, NULL, NULL },
-  { "refresh_no_countries", test_rset_refresh_no_countries, TT_FORK, NULL, NULL },
-  { "refresh_one_valid_country", test_rset_refresh_one_valid_country, TT_FORK, NULL, NULL },
-  { "refresh_one_invalid_country", test_rset_refresh_one_invalid_country, TT_FORK, NULL, NULL },
+  { "get_all_n_not_running", test_rset_get_all_n_not_running,
+    TT_FORK, NULL, NULL },
+  { "refresh_geoip_not_loaded", test_rset_refresh_geoip_not_loaded,
+    TT_FORK, NULL, NULL },
+  { "refresh_no_countries", test_rset_refresh_no_countries,
+    TT_FORK, NULL, NULL },
+  { "refresh_one_valid_country", test_rset_refresh_one_valid_country,
+    TT_FORK, NULL, NULL },
+  { "refresh_one_invalid_country", test_rset_refresh_one_invalid_country,
+    TT_FORK, NULL, NULL },
   { "union_source_bad", test_rset_union_source_bad, TT_FORK, NULL, NULL },
   { "union_one", test_rset_union_one, TT_FORK, NULL, NULL },
   { "parse_malformed", test_rset_parse_malformed, TT_FORK, NULL, NULL },
-  { "parse_valid_hexdigest", test_rset_parse_valid_hexdigest, TT_FORK, NULL, NULL },
-  { "parse_valid_nickname", test_rset_parse_valid_nickname, TT_FORK, NULL, NULL },
-  { "parse_get_countryname", test_rset_parse_get_countryname, TT_FORK, NULL, NULL },
-  { "parse_policy_wildcard", test_rset_parse_policy_wildcard, TT_FORK, NULL, NULL },
+  { "parse_valid_hexdigest", test_rset_parse_valid_hexdigest,
+    TT_FORK, NULL, NULL },
+  { "parse_valid_nickname", test_rset_parse_valid_nickname,
+    TT_FORK, NULL, NULL },
+  { "parse_get_countryname", test_rset_parse_get_countryname,
+    TT_FORK, NULL, NULL },
+  { "parse_policy_wildcard", test_rset_parse_policy_wildcard,
+    TT_FORK, NULL, NULL },
   { "parse_policy_ipv4", test_rset_parse_policy_ipv4, TT_FORK, NULL, NULL },
   { "parse_policy_ipv6", test_rset_parse_policy_ipv6, TT_FORK, NULL, NULL },
   { "subtract_nodes", test_rset_subtract_nodes, TT_FORK, NULL, NULL },
-  { "subtract_nodes_null_routerset", test_rset_subtract_nodes_null_routerset, TT_FORK, NULL, NULL },
+  { "subtract_nodes_null_routerset", test_rset_subtract_nodes_null_routerset,
+    TT_FORK, NULL, NULL },
   { "to_string", test_rset_to_string, TT_FORK, NULL, NULL },
   { "equal_empty_empty", test_rset_equal_empty_empty, TT_FORK, NULL, NULL },
-  { "equal_empty_not_empty", test_rset_equal_empty_not_empty, TT_FORK, NULL, NULL },
-  { "equal_differing_lengths", test_rset_equal_differing_lengths, TT_FORK, NULL, NULL },
+  { "equal_empty_not_empty", test_rset_equal_empty_not_empty,
+    TT_FORK, NULL, NULL },
+  { "equal_differing_lengths", test_rset_equal_differing_lengths,
+    TT_FORK, NULL, NULL },
   { "equal_unequal", test_rset_equal_unequal, TT_FORK, NULL, NULL },
   { "equal_equal", test_rset_equal_equal, TT_FORK, NULL, NULL },
-  { "free_null_routerset", test_rset_free_null_routerset, TT_FORK, NULL, NULL },
+  { "free_null_routerset", test_rset_free_null_routerset,
+    TT_FORK, NULL, NULL },
   { "free", test_rset_free, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };

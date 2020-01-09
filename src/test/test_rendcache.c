@@ -367,13 +367,12 @@ test_rend_cache_store_v2_desc_as_client_with_different_time(void *data)
   rend_data_free(mock_rend_query);
 }
 
-static const routerinfo_t * rcache_lookup_v2_desc_as_dir_router_get_my_routerinfo(void);
-ATTR_UNUSED static int rcache_lookup_v2_desc_as_dir_router_get_my_routerinfo_called = 0;
+static const routerinfo_t *rcache_lookup_v2_as_dir_get_my_routerinfo(void);
 
 static routerinfo_t *mock_routerinfo;
 
 static const routerinfo_t *
-rcache_lookup_v2_desc_as_dir_router_get_my_routerinfo(void)
+rcache_lookup_v2_as_dir_get_my_routerinfo(void)
 {
   if (!mock_routerinfo) {
     mock_routerinfo = tor_malloc(sizeof(routerinfo_t));
@@ -394,7 +393,7 @@ test_rend_cache_lookup_v2_desc_as_dir(void *data)
   (void)data;
 
   MOCK(router_get_my_routerinfo,
-       rcache_lookup_v2_desc_as_dir_router_get_my_routerinfo);
+       rcache_lookup_v2_as_dir_get_my_routerinfo);
 
   rend_cache_init();
 
@@ -424,11 +423,10 @@ test_rend_cache_lookup_v2_desc_as_dir(void *data)
   tor_free(service_id);
 }
 
-static const routerinfo_t * rcache_store_v2_desc_as_dir_router_get_my_routerinfo(void);
-ATTR_UNUSED static int rcache_store_v2_desc_as_dir_router_get_my_routerinfo_called = 0;
+static const routerinfo_t *rcache_store_v2_as_dir_get_my_routerinfo(void);
 
 static const routerinfo_t *
-rcache_store_v2_desc_as_dir_router_get_my_routerinfo(void)
+rcache_store_v2_as_dir_get_my_routerinfo(void)
 {
   return mock_routerinfo;
 }
@@ -442,7 +440,7 @@ test_rend_cache_store_v2_desc_as_dir(void *data)
   char *service_id = NULL;
 
   MOCK(router_get_my_routerinfo,
-       rcache_store_v2_desc_as_dir_router_get_my_routerinfo);
+       rcache_store_v2_as_dir_get_my_routerinfo);
 
   rend_cache_init();
 
@@ -504,7 +502,7 @@ test_rend_cache_store_v2_desc_as_dir_with_different_time(void *data)
   rend_encoded_v2_service_descriptor_t *desc_holder_older;
 
   MOCK(router_get_my_routerinfo,
-       rcache_store_v2_desc_as_dir_router_get_my_routerinfo);
+       rcache_store_v2_as_dir_get_my_routerinfo);
 
   rend_cache_init();
 
@@ -568,7 +566,7 @@ test_rend_cache_store_v2_desc_as_dir_with_different_content(void *data)
   rend_encoded_v2_service_descriptor_t *desc_holder_two = NULL;
 
   MOCK(router_get_my_routerinfo,
-       rcache_store_v2_desc_as_dir_router_get_my_routerinfo);
+       rcache_store_v2_as_dir_get_my_routerinfo);
 
   rend_cache_init();
 

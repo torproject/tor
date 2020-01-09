@@ -41,7 +41,6 @@
 static smartlist_t * mock_global_circuitlist = NULL;
 
 static smartlist_t * status_count_circuits_circuit_get_global_list(void);
-ATTR_UNUSED static int status_count_circuits_circuit_get_global_list_called = 0;
 
 static void
 test_status_count_circuits(void *arg)
@@ -240,13 +239,9 @@ test_status_bytes_to_usage(void *arg)
  */
 
 static double status_hb_fails_tls_get_write_overhead_ratio(void);
-ATTR_UNUSED static int status_hb_fails_tls_get_write_overhead_ratio_called = 0;
 static int status_hb_fails_we_are_hibernating(void);
-ATTR_UNUSED static int status_hb_fails_we_are_hibernating_called = 0;
 static int status_hb_fails_public_server_mode(const or_options_t *options);
-ATTR_UNUSED static int status_hb_fails_public_server_mode_called = 0;
 static const routerinfo_t * status_hb_fails_router_get_my_routerinfo(void);
-ATTR_UNUSED static int status_hb_fails_router_get_my_routerinfo_called = 0;
 
 static void
 test_status_hb_fails(void *arg)
@@ -307,19 +302,17 @@ status_hb_fails_router_get_my_routerinfo(void)
  */
 
 static double status_hb_not_in_consensus_tls_get_write_overhead_ratio(void);
-ATTR_UNUSED static int status_hb_not_in_consensus_tls_get_write_overhead_ratio_called = 0;
 static int status_hb_not_in_consensus_we_are_hibernating(void);
-ATTR_UNUSED static int status_hb_not_in_consensus_we_are_hibernating_called = 0;
-static int status_hb_not_in_consensus_public_server_mode(const or_options_t *options);
-ATTR_UNUSED static int status_hb_not_in_consensus_public_server_mode_called = 0;
-static const routerinfo_t * status_hb_not_in_consensus_router_get_my_routerinfo(void);
-ATTR_UNUSED static int status_hb_not_in_consensus_router_get_my_routerinfo_called = 0;
-static const node_t * status_hb_not_in_consensus_node_get_by_id(const char *identity_digest);
-ATTR_UNUSED static int status_hb_not_in_consensus_node_get_by_id_called = 0;
-static void status_hb_not_in_consensus_logv(int severity, log_domain_mask_t domain, const char *funcname, const char *suffix, const char *format, va_list ap);
-ATTR_UNUSED static int status_hb_not_in_consensus_logv_called = 0;
+static int status_hb_not_in_consensus_public_server_mode(
+             const or_options_t *options);
+static const routerinfo_t *status_hb_not_in_consensus_get_my_routerinfo(void);
+static const node_t * status_hb_not_in_consensus_node_get_by_id(
+             const char *identity_digest);
+static void status_hb_not_in_consensus_logv(
+             int severity, log_domain_mask_t domain, const char *funcname,
+             const char *suffix, const char *format, va_list ap);
+static int status_hb_not_in_consensus_logv_called = 0;
 static int status_hb_not_in_consensus_server_mode(const or_options_t *options);
-ATTR_UNUSED static int status_hb_not_in_consensus_server_mode_called = 0;
 
 static routerinfo_t *mock_routerinfo;
 
@@ -336,7 +329,7 @@ test_status_hb_not_in_consensus(void *arg)
   MOCK(public_server_mode,
        status_hb_not_in_consensus_public_server_mode);
   MOCK(router_get_my_routerinfo,
-       status_hb_not_in_consensus_router_get_my_routerinfo);
+       status_hb_not_in_consensus_get_my_routerinfo);
   MOCK(node_get_by_id,
        status_hb_not_in_consensus_node_get_by_id);
   MOCK(logv,
@@ -388,7 +381,7 @@ status_hb_not_in_consensus_public_server_mode(const or_options_t *options)
 }
 
 static const routerinfo_t *
-status_hb_not_in_consensus_router_get_my_routerinfo(void)
+status_hb_not_in_consensus_get_my_routerinfo(void)
 {
   mock_routerinfo = tor_malloc(sizeof(routerinfo_t));
 
@@ -487,21 +480,16 @@ status_hb_not_in_consensus_server_mode(const or_options_t *options)
  */
 
 static double status_hb_simple_tls_get_write_overhead_ratio(void);
-ATTR_UNUSED static int status_hb_simple_tls_get_write_overhead_ratio_called = 0;
 static int status_hb_simple_we_are_hibernating(void);
-ATTR_UNUSED static int status_hb_simple_we_are_hibernating_called = 0;
 static int status_hb_simple_public_server_mode(const or_options_t *options);
-ATTR_UNUSED static int status_hb_simple_public_server_mode_called = 0;
 static long status_hb_simple_get_uptime(void);
-ATTR_UNUSED static int status_hb_simple_get_uptime_called = 0;
 static uint64_t status_hb_simple_get_bytes_read(void);
-ATTR_UNUSED static int status_hb_simple_get_bytes_read_called = 0;
 static uint64_t status_hb_simple_get_bytes_written(void);
-ATTR_UNUSED static int status_hb_simple_get_bytes_written_called = 0;
-static void status_hb_simple_logv(int severity, log_domain_mask_t domain, const char *funcname, const char *suffix, const char *format, va_list ap);
+static void status_hb_simple_logv(int severity, log_domain_mask_t domain,
+                                  const char *funcname, const char *suffix,
+                                  const char *format, va_list ap);
 ATTR_UNUSED static int status_hb_simple_logv_called = 0;
 static int status_hb_simple_server_mode(const or_options_t *options);
-ATTR_UNUSED static int status_hb_simple_server_mode_called = 0;
 
 static int status_hb_simple_n_msgs = 0;
 
@@ -586,7 +574,8 @@ status_hb_simple_get_bytes_written(void)
 }
 
 static void
-status_hb_simple_logv(int severity, log_domain_mask_t domain, const char *funcname,
+status_hb_simple_logv(int severity, log_domain_mask_t domain,
+  const char *funcname,
   const char *suffix, const char *format, va_list ap)
 {
   if (severity == LOG_INFO)
@@ -623,28 +612,25 @@ status_hb_simple_server_mode(const or_options_t *options)
  * and accounting information when configured.
  */
 
-static double status_hb_calls_log_accounting_tls_get_write_overhead_ratio(void);
-ATTR_UNUSED static int status_hb_calls_log_accounting_tls_get_write_overhead_ratio_called = 0;
+static double status_hb_calls_log_accounting_tls_get_write_overhead_ratio(
+                       void);
 static int status_hb_calls_log_accounting_we_are_hibernating(void);
-ATTR_UNUSED static int status_hb_calls_log_accounting_we_are_hibernating_called = 0;
-static int status_hb_calls_log_accounting_public_server_mode(const or_options_t *options);
-ATTR_UNUSED static int status_hb_calls_log_accounting_public_server_mode_called = 0;
+static int status_hb_calls_log_accounting_public_server_mode(
+                      const or_options_t *options);
 static long status_hb_calls_log_accounting_get_uptime(void);
-ATTR_UNUSED static int status_hb_calls_log_accounting_get_uptime_called = 0;
 static uint64_t status_hb_calls_log_accounting_get_bytes_read(void);
-ATTR_UNUSED static int status_hb_calls_log_accounting_get_bytes_read_called = 0;
 static uint64_t status_hb_calls_log_accounting_get_bytes_written(void);
-ATTR_UNUSED static int status_hb_calls_log_accounting_get_bytes_written_called = 0;
-static void status_hb_calls_log_accounting_logv(int severity, log_domain_mask_t domain, const char *funcname, const char *suffix, const char *format, va_list ap);
-ATTR_UNUSED static int status_hb_calls_log_accounting_logv_called = 0;
-static int status_hb_calls_log_accounting_server_mode(const or_options_t *options);
-ATTR_UNUSED static int status_hb_calls_log_accounting_server_mode_called = 0;
+static void status_hb_calls_log_accounting_logv(
+                      int severity, log_domain_mask_t domain,
+                      const char *funcname, const char *suffix,
+                      const char *format, va_list ap);
+static int status_hb_calls_log_accounting_logv_called = 0;
+static int status_hb_calls_log_accounting_server_mode(
+                      const or_options_t *options);
 static or_state_t * status_hb_calls_log_accounting_get_or_state(void);
-ATTR_UNUSED static int status_hb_calls_log_accounting_get_or_state_called = 0;
-static int status_hb_calls_log_accounting_accounting_is_enabled(const or_options_t *options);
-ATTR_UNUSED static int status_hb_calls_log_accounting_accounting_is_enabled_called = 0;
+static int status_hb_calls_log_accounting_accounting_is_enabled(
+                      const or_options_t *options);
 static time_t status_hb_calls_log_accounting_accounting_get_end_time(void);
-ATTR_UNUSED static int status_hb_calls_log_accounting_accounting_get_end_time_called = 0;
 
 static or_state_t * status_hb_calls_log_accounting_mock_state = NULL;
 static or_options_t * status_hb_calls_log_accounting_mock_options = NULL;
@@ -800,7 +786,8 @@ status_hb_calls_log_accounting_server_mode(const or_options_t *options)
 }
 
 static int
-status_hb_calls_log_accounting_accounting_is_enabled(const or_options_t *options)
+status_hb_calls_log_accounting_accounting_is_enabled(
+                                        const or_options_t *options)
 {
   (void)options;
 
@@ -816,9 +803,12 @@ status_hb_calls_log_accounting_accounting_get_end_time(void)
 static or_state_t *
 status_hb_calls_log_accounting_get_or_state(void)
 {
-  status_hb_calls_log_accounting_mock_state = tor_malloc_zero(sizeof(or_state_t));
-  status_hb_calls_log_accounting_mock_state->AccountingBytesReadInInterval = 0;
-  status_hb_calls_log_accounting_mock_state->AccountingBytesWrittenInInterval = 0;
+  status_hb_calls_log_accounting_mock_state =
+    tor_malloc_zero(sizeof(or_state_t));
+  status_hb_calls_log_accounting_mock_state
+    ->AccountingBytesReadInInterval = 0;
+  status_hb_calls_log_accounting_mock_state
+    ->AccountingBytesWrittenInInterval = 0;
 
   return status_hb_calls_log_accounting_mock_state;
 }
@@ -828,24 +818,23 @@ status_hb_calls_log_accounting_get_or_state(void)
  * fullness information.
  */
 
-static double status_hb_packaged_cell_fullness_tls_get_write_overhead_ratio(void);
-ATTR_UNUSED static int status_hb_packaged_cell_fullness_tls_get_write_overhead_ratio_called = 0;
+static double status_hb_packaged_cell_fullness_tls_get_write_overhead_ratio(
+                          void);
 static int status_hb_packaged_cell_fullness_we_are_hibernating(void);
-ATTR_UNUSED static int status_hb_packaged_cell_fullness_we_are_hibernating_called = 0;
-static int status_hb_packaged_cell_fullness_public_server_mode(const or_options_t *options);
-ATTR_UNUSED static int status_hb_packaged_cell_fullness_public_server_mode_called = 0;
+static int status_hb_packaged_cell_fullness_public_server_mode(
+                          const or_options_t *options);
 static long status_hb_packaged_cell_fullness_get_uptime(void);
-ATTR_UNUSED static int status_hb_packaged_cell_fullness_get_uptime_called = 0;
 static uint64_t status_hb_packaged_cell_fullness_get_bytes_read(void);
-ATTR_UNUSED static int status_hb_packaged_cell_fullness_get_bytes_read_called = 0;
 static uint64_t status_hb_packaged_cell_fullness_get_bytes_written(void);
-ATTR_UNUSED static int status_hb_packaged_cell_fullness_get_bytes_written_called = 0;
-static void status_hb_packaged_cell_fullness_logv(int severity, log_domain_mask_t domain, const char *funcname, const char *suffix, const char *format, va_list ap);
-ATTR_UNUSED static int status_hb_packaged_cell_fullness_logv_called = 0;
-static int status_hb_packaged_cell_fullness_server_mode(const or_options_t *options);
-ATTR_UNUSED static int status_hb_packaged_cell_fullness_server_mode_called = 0;
-static int status_hb_packaged_cell_fullness_accounting_is_enabled(const or_options_t *options);
-ATTR_UNUSED static int status_hb_packaged_cell_fullness_accounting_is_enabled_called = 0;
+static void status_hb_packaged_cell_fullness_logv(
+                          int severity, log_domain_mask_t domain,
+                          const char *funcname, const char *suffix,
+                          const char *format, va_list ap);
+static int status_hb_packaged_cell_fullness_logv_called = 0;
+static int status_hb_packaged_cell_fullness_server_mode(
+                          const or_options_t *options);
+static int status_hb_packaged_cell_fullness_accounting_is_enabled(
+                          const or_options_t *options);
 
 static void
 test_status_hb_packaged_cell_fullness(void *arg)
@@ -908,7 +897,8 @@ status_hb_packaged_cell_fullness_we_are_hibernating(void)
 }
 
 static int
-status_hb_packaged_cell_fullness_public_server_mode(const or_options_t *options)
+status_hb_packaged_cell_fullness_public_server_mode(
+                                     const or_options_t *options)
 {
   (void)options;
 
@@ -934,7 +924,8 @@ status_hb_packaged_cell_fullness_get_bytes_written(void)
 }
 
 static void
-status_hb_packaged_cell_fullness_logv(int severity, log_domain_mask_t domain, const char *funcname,
+status_hb_packaged_cell_fullness_logv(int severity,
+    log_domain_mask_t domain, const char *funcname,
     const char *suffix, const char *format, va_list ap)
 {
   switch (status_hb_packaged_cell_fullness_logv_called)
@@ -982,7 +973,8 @@ status_hb_packaged_cell_fullness_server_mode(const or_options_t *options)
 }
 
 static int
-status_hb_packaged_cell_fullness_accounting_is_enabled(const or_options_t *options)
+status_hb_packaged_cell_fullness_accounting_is_enabled(
+                                             const or_options_t *options)
 {
   (void)options;
 
@@ -995,23 +987,21 @@ status_hb_packaged_cell_fullness_accounting_is_enabled(const or_options_t *optio
  */
 
 static double status_hb_tls_write_overhead_tls_get_write_overhead_ratio(void);
-ATTR_UNUSED static int status_hb_tls_write_overhead_tls_get_write_overhead_ratio_called = 0;
 static int status_hb_tls_write_overhead_we_are_hibernating(void);
-ATTR_UNUSED static int status_hb_tls_write_overhead_we_are_hibernating_called = 0;
-static int status_hb_tls_write_overhead_public_server_mode(const or_options_t *options);
-ATTR_UNUSED static int status_hb_tls_write_overhead_public_server_mode_called = 0;
+static int status_hb_tls_write_overhead_public_server_mode(
+               const or_options_t *options);
 static long status_hb_tls_write_overhead_get_uptime(void);
-ATTR_UNUSED static int status_hb_tls_write_overhead_get_uptime_called = 0;
 static uint64_t status_hb_tls_write_overhead_get_bytes_read(void);
-ATTR_UNUSED static int status_hb_tls_write_overhead_get_bytes_read_called = 0;
 static uint64_t status_hb_tls_write_overhead_get_bytes_written(void);
-ATTR_UNUSED static int status_hb_tls_write_overhead_get_bytes_written_called = 0;
-static void status_hb_tls_write_overhead_logv(int severity, log_domain_mask_t domain, const char *funcname, const char *suffix, const char *format, va_list ap);
-ATTR_UNUSED static int status_hb_tls_write_overhead_logv_called = 0;
-static int status_hb_tls_write_overhead_server_mode(const or_options_t *options);
-ATTR_UNUSED static int status_hb_tls_write_overhead_server_mode_called = 0;
-static int status_hb_tls_write_overhead_accounting_is_enabled(const or_options_t *options);
-ATTR_UNUSED static int status_hb_tls_write_overhead_accounting_is_enabled_called = 0;
+static void status_hb_tls_write_overhead_logv(
+               int severity, log_domain_mask_t domain,
+               const char *funcname, const char *suffix,
+               const char *format, va_list ap);
+static int status_hb_tls_write_overhead_logv_called = 0;
+static int status_hb_tls_write_overhead_server_mode(
+               const or_options_t *options);
+static int status_hb_tls_write_overhead_accounting_is_enabled(
+               const or_options_t *options);
 
 static void
 test_status_hb_tls_write_overhead(void *arg)
@@ -1158,9 +1148,13 @@ struct testcase_t status_tests[] = {
   { "bytes_to_usage", test_status_bytes_to_usage, TT_FORK, NULL, NULL },
   { "hb_fails", test_status_hb_fails, TT_FORK, NULL, NULL },
   { "hb_simple", test_status_hb_simple, TT_FORK, NULL, NULL },
-  { "hb_not_in_consensus", test_status_hb_not_in_consensus, TT_FORK, NULL, NULL },
-  { "hb_calls_log_accounting", test_status_hb_calls_log_accounting, TT_FORK, NULL, NULL },
-  { "hb_packaged_cell_fullness", test_status_hb_packaged_cell_fullness, TT_FORK, NULL, NULL },
-  { "hb_tls_write_overhead", test_status_hb_tls_write_overhead, TT_FORK, NULL, NULL },
+  { "hb_not_in_consensus", test_status_hb_not_in_consensus,
+    TT_FORK, NULL, NULL },
+  { "hb_calls_log_accounting", test_status_hb_calls_log_accounting,
+    TT_FORK, NULL, NULL },
+  { "hb_packaged_cell_fullness", test_status_hb_packaged_cell_fullness,
+    TT_FORK, NULL, NULL },
+  { "hb_tls_write_overhead", test_status_hb_tls_write_overhead,
+    TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };

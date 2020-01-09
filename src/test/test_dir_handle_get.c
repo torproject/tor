@@ -2253,8 +2253,8 @@ test_dir_handle_get_status_vote_next_bandwidth_not_found(void* data)
     tor_free(header);
 }
 
-static const char* dhg_tests_dirvote_get_pending_consensus(consensus_flavor_t flav);
-ATTR_UNUSED static int dhg_tests_dirvote_get_pending_consensus_called = 0;
+static const char* dhg_tests_dirvote_get_pending_consensus(
+                                           consensus_flavor_t flav);
 
 const char*
 dhg_tests_dirvote_get_pending_consensus(consensus_flavor_t flav)
@@ -2355,7 +2355,6 @@ test_dir_handle_get_status_vote_next_consensus_signatures_not_found(void* data)
 }
 
 static const char* dhg_tests_dirvote_get_pending_detached_signatures(void);
-ATTR_UNUSED static int dhg_tests_dirvote_get_pending_detached_signatures_called = 0;
 
 const char*
 dhg_tests_dirvote_get_pending_detached_signatures(void)

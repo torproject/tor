@@ -97,7 +97,10 @@ static cached_resolve_t *cache_entry_mock = NULL;
 
 static int n_fake_impl = 0;
 
-static int dns_resolve_dns_resolve_impl(edge_connection_t *exitconn, int is_resolve, or_circuit_t *oncirc, char **hostname_out, int *made_connection_pending_out, cached_resolve_t **resolve_out);
+static int dns_resolve_dns_resolve_impl(edge_connection_t *exitconn,
+                     int is_resolve, or_circuit_t *oncirc,
+                     char **hostname_out, int *made_connection_pending_out,
+                     cached_resolve_t **resolve_out);
 ATTR_UNUSED static int dns_resolve_dns_resolve_impl_called = 0;
 
 /** This will be our configurable substitute for <b>dns_resolve_impl</b> in
@@ -625,7 +628,8 @@ static edge_connection_t *last_exitconn = NULL;
 static cached_resolve_t *last_resolve = NULL;
 
 static int
-dns_impl_cache_hit_cached_set_exitconn_info_from_resolve(edge_connection_t *exitconn,
+dns_impl_cache_hit_cached_set_exitconn_info_from_resolve(
+                                   edge_connection_t *exitconn,
                                    const cached_resolve_t *resolve,
                                    char **hostname_out)
 {
@@ -771,17 +775,20 @@ test_dns_impl_cache_miss(void *arg)
 
 struct testcase_t dns_tests[] = {
 #ifdef HAVE_EVDNS_BASE_GET_NAMESERVER_ADDR
-   { "configure_ns_fallback", test_dns_configure_ns_fallback, TT_FORK, NULL, NULL },
+   { "configure_ns_fallback", test_dns_configure_ns_fallback,
+     TT_FORK, NULL, NULL },
 #endif
    { "clip_ttl", test_dns_clip_ttl, TT_FORK, NULL, NULL },
    { "resolve", test_dns_resolve, TT_FORK, NULL, NULL },
    { "impl_addr_is_ip", test_dns_impl_addr_is_ip, TT_FORK, NULL, NULL },
    { "impl_non_exit", test_dns_impl_non_exit, TT_FORK, NULL, NULL },
-   { "impl_addr_is_invalid_dest", test_dns_impl_addr_is_invalid_dest, TT_FORK, NULL, NULL },
+   { "impl_addr_is_invalid_dest", test_dns_impl_addr_is_invalid_dest,
+     TT_FORK, NULL, NULL },
    { "impl_malformed_ptr", test_dns_impl_malformed_ptr, TT_FORK, NULL, NULL },
-   { "impl_cache_hit_pending", test_dns_impl_cache_hit_pending, TT_FORK, NULL, NULL },
-   { "impl_cache_hit_cached", test_dns_impl_cache_hit_cached, TT_FORK, NULL, NULL },
+   { "impl_cache_hit_pending", test_dns_impl_cache_hit_pending,
+     TT_FORK, NULL, NULL },
+   { "impl_cache_hit_cached", test_dns_impl_cache_hit_cached,
+     TT_FORK, NULL, NULL },
    { "impl_cache_miss", test_dns_impl_cache_miss, TT_FORK, NULL, NULL },
    END_OF_TESTCASES
 };
-
