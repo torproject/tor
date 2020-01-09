@@ -248,7 +248,7 @@ dirserv_load_fingerprint_file(void)
       }
     }
 
-    /* If this is not a valid key, log and skip */
+    /* If both keys are invalid (or missing), log and skip. */
     if (ed25519_not_ok && rsa_not_ok) {
       log_warn(LD_CONFIG, "Invalid fingerprint (nickname '%s', "
                "fingerprint %s). Skipping.", nickname, fingerprint);
