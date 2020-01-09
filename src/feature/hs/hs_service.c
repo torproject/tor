@@ -267,6 +267,11 @@ service_clear_config(hs_service_config_t *config)
                       service_authorized_client_free(p));
     smartlist_free(config->clients);
   }
+  if (config->ob_master_pubkeys) {
+    SMARTLIST_FOREACH(config->ob_master_pubkeys, ed25519_public_key_t *, k,
+                      tor_free(k));
+    smartlist_free(config->ob_master_pubkeys);
+  }
   memset(config, 0, sizeof(*config));
 }
 

@@ -510,6 +510,8 @@ static const config_var_t option_vars_[] = {
       LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceEnableIntroDoSBurstPerSec",
       LINELIST_S, RendConfigLines, NULL),
+  VAR("HiddenServiceOnionBalanceInstance",
+      LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceStatistics", BOOL, HiddenServiceStatistics_option, "1"),
   V(HidServAuth,                 LINELIST, NULL),
   V(ClientOnionAuthDir,          FILENAME, NULL),

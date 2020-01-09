@@ -26,6 +26,7 @@
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_config.h"
 #include "feature/hs/hs_client.h"
+#include "feature/hs/hs_ob.h"
 #include "feature/hs/hs_service.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendservice.h"
@@ -219,6 +220,7 @@ config_has_invalid_options(const config_line_t *line_,
     "HiddenServiceEnableIntroDoSDefense",
     "HiddenServiceEnableIntroDoSRatePerSec",
     "HiddenServiceEnableIntroDoSBurstPerSec",
+    "HiddenServiceOnionBalanceInstance",
     NULL /* End marker. */
   };
 
@@ -317,7 +319,7 @@ config_service_v3(const config_line_t *line_,
   int have_num_ip = 0;
   bool export_circuit_id = false; /* just to detect duplicate options */
   bool dos_enabled = false, dos_rate_per_sec = false;
-  bool dos_burst_per_sec = false;
+  bool dos_burst_per_sec = false, ob_instance = false;
   const char *dup_opt_seen = NULL;
   const config_line_t *line;
 
@@ -400,6 +402,27 @@ config_service_v3(const config_line_t *line_,
       dos_burst_per_sec = true;
       log_info(LD_REND, "Service INTRO2 DoS defenses burst set to: %" PRIu32,
                config->intro_dos_burst_per_sec);
+      continue;
+    }
+    if (!strcasecmp(line->key, "HiddenServiceOnionBalanceInstance")) {
+      bool enabled = !!helper_parse_uint64(line->key, line->value,
+                                           0, 1, &ok);
+      if (!ok || ob_instance) {
+        if (ob_instance) {
+          dup_opt_seen = line->key;
+        }
+        goto err;
+      }
+      ob_instance = true;
+      if (!enabled) {
+        /* Skip if this is disabled. */
+        continue;
+      }
+      /* Option is enabled, parse config file. */
+      ok = hs_ob_parse_config_file(config);
+      if (!ok) {
+        goto err;
+      }
       continue;
     }
   }
