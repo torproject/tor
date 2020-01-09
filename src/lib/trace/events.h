@@ -6,40 +6,28 @@
  * \brief Header file for Tor event tracing.
  **/
 
-#ifndef TOR_TRACE_EVENTS_H
-#define TOR_TRACE_EVENTS_H
+#ifndef TOR_LIB_TRACE_EVENTS_H
+#define TOR_LIB_TRACE_EVENTS_H
 
-/*
- * The following defines a generic event tracing function name that has to be
- * used to trace events in the code base.
- *
- * That generic function is then defined by a event tracing framework. For
- * instance, the "log debug" framework sends all trace events to log_debug()
- * which is defined in src/trace/debug.h which can only be enabled at compile
- * time (--enable-event-tracing-debug).
- *
- * By default, every trace events in the code base are replaced by a NOP. See
- * doc/HACKING/Tracing.md for more information on how to use event tracing or
- * add events.
- */
+/* XXX: DOCDOC once framework is stable. */
 
-#ifdef TOR_EVENT_TRACING_ENABLED
-/* Map every trace event to a per subsystem macro. */
-#define tor_trace(subsystem, name, ...) \
-  tor_trace_##subsystem(name, __VA_ARGS__)
+#ifdef HAVE_TRACING
 
-/* Enable event tracing for the debug framework where all trace events are
- * mapped to a log_debug(). */
-#ifdef USE_EVENT_TRACING_DEBUG
+#define tor_trace(subsystem, event_name, ...)           \
+  do {                                                  \
+    TOR_TRACE_LOG_DEBUG(tor_ ## subsystem, event_name); \
+  } while (0)
+
+/* This corresponds to the --enable-tracing-instrumentation-log-debug
+ * configure option which maps all tracepoints to a log_debug() statement. */
 #include "lib/trace/debug.h"
-#endif
 
-#else /* !defined(TOR_EVENT_TRACING_ENABLED) */
+#else /* !defined(HAVE_TRACING) */
 
-/* Reaching this point, we NOP every event declaration because event tracing
- * is not been enabled at compile time. */
-#define tor_trace(subsystem, name, args...)
+/* Reaching this point, tracing is disabled thus we NOP every tracepoints
+ * declaration so we have no execution cost at runtime. */
+#define tor_trace(subsystem, name, ...)
 
-#endif /* defined(TOR_EVENT_TRACING_ENABLED) */
+#endif /* defined(HAVE_TRACING) */
 
-#endif /* !defined(TOR_TRACE_EVENTS_H) */
+#endif /* !defined(TOR_LIB_TRACE_EVENTS_H) */
