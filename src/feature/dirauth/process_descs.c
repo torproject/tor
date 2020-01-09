@@ -243,8 +243,6 @@ dirserv_load_fingerprint_file(void)
                                  fingerprint)) {
         ed25519_not_ok = add_ed25519_to_dir(&ed25519_pubkey_tmp,
                                             fingerprint_list_new, add_status);
-      } else {
-        ed25519_not_ok = -1;
       }
     }
 
