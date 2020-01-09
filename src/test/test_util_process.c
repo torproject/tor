@@ -11,7 +11,6 @@
 #include "test/log_test_helpers.h"
 
 #ifndef _WIN32
-#define NS_MODULE util_process
 
 static void
 temp_callback(int r, void *s)

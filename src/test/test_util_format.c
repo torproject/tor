@@ -9,8 +9,6 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/encoding/binascii.h"
 
-#define NS_MODULE util_format
-
 static void
 test_util_format_unaligned_accessors(void *ignored)
 {

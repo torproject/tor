@@ -9,8 +9,6 @@
 
 #include "test/log_test_helpers.h"
 
-#define NS_MODULE procmon
-
 struct event_base;
 
 static void

@@ -35,8 +35,6 @@
 #include <sys/param.h>
 #endif
 
-#define NS_MODULE test_options
-
 typedef struct {
   int severity;
   log_domain_mask_t domain;
@@ -1166,13 +1164,14 @@ test_options_validate__transproxy(void *ignored)
   tor_free(msg);
 }
 
-NS_DECL(country_t, geoip_get_country, (const char *country));
+static country_t opt_tests_geoip_get_country(const char *country);
+ATTR_UNUSED static int opt_tests_geoip_get_country_called = 0;
 
 static country_t
-NS(geoip_get_country)(const char *countrycode)
+opt_tests_geoip_get_country(const char *countrycode)
 {
   (void)countrycode;
-  CALLED(geoip_get_country)++;
+  opt_tests_geoip_get_country_called++;
 
   return 1;
 }
@@ -1182,7 +1181,8 @@ test_options_validate__exclude_nodes(void *ignored)
 {
   (void)ignored;
 
-  NS_MOCK(geoip_get_country);
+  MOCK(geoip_get_country,
+       opt_tests_geoip_get_country);
 
   int ret;
   char *msg;
@@ -1246,7 +1246,7 @@ test_options_validate__exclude_nodes(void *ignored)
   tor_free(msg);
 
  done:
-  NS_UNMOCK(geoip_get_country);
+  UNMOCK(geoip_get_country);
   teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
@@ -1751,7 +1751,8 @@ test_options_validate__use_bridges(void *ignored)
             " the Internet, so they must not set UseBridges.");
   tor_free(msg);
 
-  NS_MOCK(geoip_get_country);
+  MOCK(geoip_get_country,
+       opt_tests_geoip_get_country);
   free_options_test_data(tdata);
   tdata = get_options_test_data("UseBridges 1\n"
                                 "EntryNodes {cn}\n");
@@ -1794,7 +1795,7 @@ test_options_validate__use_bridges(void *ignored)
   tor_free(msg);
 
  done:
-  NS_UNMOCK(geoip_get_country);
+  UNMOCK(geoip_get_country);
   policies_free_all();
   free_options_test_data(tdata);
   tor_free(msg);
@@ -1806,7 +1807,8 @@ test_options_validate__entry_nodes(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
-  NS_MOCK(geoip_get_country);
+  MOCK(geoip_get_country,
+       opt_tests_geoip_get_country);
   options_test_data_t *tdata = get_options_test_data(
                                          "EntryNodes {cn}\n"
                                          "UseEntryGuards 0\n");
@@ -1826,7 +1828,7 @@ test_options_validate__entry_nodes(void *ignored)
   tor_free(msg);
 
  done:
-  NS_UNMOCK(geoip_get_country);
+  UNMOCK(geoip_get_country);
   free_options_test_data(tdata);
   tor_free(msg);
 }

@@ -96,8 +96,6 @@
 #include <unistd.h>
 #endif
 
-#define NS_MODULE dir
-
 static networkstatus_t *
 networkstatus_parse_vote_from_string_(const char *s,
                                       const char **eos_out,
@@ -5474,15 +5472,15 @@ test_dir_conn_purpose_to_string(void *data)
   teardown_capture_of_logs();
 }
 
-NS_DECL(int,
-public_server_mode, (const or_options_t *options));
+static int dir_tests_public_server_mode(const or_options_t *options);
+ATTR_UNUSED static int dir_tests_public_server_mode_called = 0;
 
 static int
-NS(public_server_mode)(const or_options_t *options)
+dir_tests_public_server_mode(const or_options_t *options)
 {
   (void)options;
 
-  if (CALLED(public_server_mode)++ == 0) {
+  if (dir_tests_public_server_mode_called++ == 0) {
     return 1;
   }
 
@@ -5496,13 +5494,14 @@ test_dir_should_use_directory_guards(void *data)
   char *errmsg = NULL;
   (void)data;
 
-  NS_MOCK(public_server_mode);
+  MOCK(public_server_mode,
+       dir_tests_public_server_mode);
 
   options = options_new();
   options_init(options);
 
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 1);
+  tt_int_op(dir_tests_public_server_mode_called, OP_EQ, 1);
 
   options->UseEntryGuards = 1;
   options->DownloadExtraInfo = 0;
@@ -5510,41 +5509,41 @@ test_dir_should_use_directory_guards(void *data)
   options->FetchDirInfoExtraEarly = 0;
   options->FetchUselessDescriptors = 0;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 1);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 2);
+  tt_int_op(dir_tests_public_server_mode_called, OP_EQ, 2);
 
   options->UseEntryGuards = 0;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 3);
+  tt_int_op(dir_tests_public_server_mode_called, OP_EQ, 3);
   options->UseEntryGuards = 1;
 
   options->DownloadExtraInfo = 1;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 4);
+  tt_int_op(dir_tests_public_server_mode_called, OP_EQ, 4);
   options->DownloadExtraInfo = 0;
 
   options->FetchDirInfoEarly = 1;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 5);
+  tt_int_op(dir_tests_public_server_mode_called, OP_EQ, 5);
   options->FetchDirInfoEarly = 0;
 
   options->FetchDirInfoExtraEarly = 1;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 6);
+  tt_int_op(dir_tests_public_server_mode_called, OP_EQ, 6);
   options->FetchDirInfoExtraEarly = 0;
 
   options->FetchUselessDescriptors = 1;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 7);
+  tt_int_op(dir_tests_public_server_mode_called, OP_EQ, 7);
   options->FetchUselessDescriptors = 0;
 
   done:
-    NS_UNMOCK(public_server_mode);
+    UNMOCK(public_server_mode);
     or_options_free(options);
     tor_free(errmsg);
 }
 
-NS_DECL(void,
-directory_initiate_request, (directory_request_t *req));
+static void dir_tests_directory_initiate_request(directory_request_t *req);
+ATTR_UNUSED static int dir_tests_directory_initiate_request_called = 0;
 
 static void
 test_dir_should_not_init_request_to_ourselves(void *data)
@@ -5554,7 +5553,8 @@ test_dir_should_not_init_request_to_ourselves(void *data)
   crypto_pk_t *key = pk_generate(2);
   (void) data;
 
-  NS_MOCK(directory_initiate_request);
+  MOCK(directory_initiate_request,
+       dir_tests_directory_initiate_request);
 
   clear_dir_servers();
   routerlist_free_all();
@@ -5569,15 +5569,15 @@ test_dir_should_not_init_request_to_ourselves(void *data)
   dir_server_add(ourself);
 
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_STATUS_VOTE, 0, NULL);
-  tt_int_op(CALLED(directory_initiate_request), OP_EQ, 0);
+  tt_int_op(dir_tests_directory_initiate_request_called, OP_EQ, 0);
 
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0,
                                      NULL);
 
-  tt_int_op(CALLED(directory_initiate_request), OP_EQ, 0);
+  tt_int_op(dir_tests_directory_initiate_request_called, OP_EQ, 0);
 
   done:
-    NS_UNMOCK(directory_initiate_request);
+    UNMOCK(directory_initiate_request);
     clear_dir_servers();
     routerlist_free_all();
     crypto_pk_free(key);
@@ -5591,7 +5591,8 @@ test_dir_should_not_init_request_to_dir_auths_without_v3_info(void *data)
                                 | MICRODESC_DIRINFO;
   (void) data;
 
-  NS_MOCK(directory_initiate_request);
+  MOCK(directory_initiate_request,
+       dir_tests_directory_initiate_request);
 
   clear_dir_servers();
   routerlist_free_all();
@@ -5602,14 +5603,14 @@ test_dir_should_not_init_request_to_dir_auths_without_v3_info(void *data)
   dir_server_add(ds);
 
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_STATUS_VOTE, 0, NULL);
-  tt_int_op(CALLED(directory_initiate_request), OP_EQ, 0);
+  tt_int_op(dir_tests_directory_initiate_request_called, OP_EQ, 0);
 
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0,
                                      NULL);
-  tt_int_op(CALLED(directory_initiate_request), OP_EQ, 0);
+  tt_int_op(dir_tests_directory_initiate_request_called, OP_EQ, 0);
 
   done:
-    NS_UNMOCK(directory_initiate_request);
+    UNMOCK(directory_initiate_request);
     clear_dir_servers();
     routerlist_free_all();
 }
@@ -5620,7 +5621,8 @@ test_dir_should_init_request_to_dir_auths(void *data)
   dir_server_t *ds = NULL;
   (void) data;
 
-  NS_MOCK(directory_initiate_request);
+  MOCK(directory_initiate_request,
+       dir_tests_directory_initiate_request);
 
   clear_dir_servers();
   routerlist_free_all();
@@ -5631,23 +5633,23 @@ test_dir_should_init_request_to_dir_auths(void *data)
   dir_server_add(ds);
 
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_STATUS_VOTE, 0, NULL);
-  tt_int_op(CALLED(directory_initiate_request), OP_EQ, 1);
+  tt_int_op(dir_tests_directory_initiate_request_called, OP_EQ, 1);
 
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0,
                                      NULL);
-  tt_int_op(CALLED(directory_initiate_request), OP_EQ, 2);
+  tt_int_op(dir_tests_directory_initiate_request_called, OP_EQ, 2);
 
   done:
-    NS_UNMOCK(directory_initiate_request);
+    UNMOCK(directory_initiate_request);
     clear_dir_servers();
     routerlist_free_all();
 }
 
 void
-NS(directory_initiate_request)(directory_request_t *req)
+dir_tests_directory_initiate_request(directory_request_t *req)
 {
   (void)req;
-  CALLED(directory_initiate_request)++;
+  dir_tests_directory_initiate_request_called++;
 }
 
 static void

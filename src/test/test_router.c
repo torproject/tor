@@ -31,12 +31,13 @@
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 
-NS_DECL(const routerinfo_t *, router_get_my_routerinfo, (void));
+static const routerinfo_t * rtr_tests_router_get_my_routerinfo(void);
+ATTR_UNUSED static int rtr_tests_router_get_my_routerinfo_called = 0;
 
 static routerinfo_t* mock_routerinfo;
 
 static const routerinfo_t*
-NS(router_get_my_routerinfo)(void)
+rtr_tests_router_get_my_routerinfo(void)
 {
   crypto_pk_t* ident_key;
   crypto_pk_t* tap_key;
@@ -86,7 +87,8 @@ test_router_dump_router_to_string_no_bridge_distribution_method(void *arg)
   char* found = NULL;
   (void)arg;
 
-  NS_MOCK(router_get_my_routerinfo);
+  MOCK(router_get_my_routerinfo,
+       rtr_tests_router_get_my_routerinfo);
 
   options->ORPort_set = 1;
   options->BridgeRelay = 1;
@@ -120,7 +122,7 @@ test_router_dump_router_to_string_no_bridge_distribution_method(void *arg)
   tt_ptr_op(found, OP_NE, NULL);
 
  done:
-  NS_UNMOCK(router_get_my_routerinfo);
+  UNMOCK(router_get_my_routerinfo);
 
   tor_free(desc);
 }

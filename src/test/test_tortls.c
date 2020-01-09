@@ -214,7 +214,7 @@ test_tortls_tor_tls_get_error(void *data)
 
  done:
   UNMOCK(tor_tls_cert_matches_key);
-  NS_UNMOCK(logv);
+  UNMOCK(logv);
   crypto_pk_free(key1);
   crypto_pk_free(key2);
   tor_tls_free(tls);
