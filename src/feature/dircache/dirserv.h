@@ -101,8 +101,6 @@ int dirserv_get_routerdesc_spool(smartlist_t *spools_out, const char *key,
                                  dir_spool_source_t source,
                                  int conn_is_encrypted,
                                  const char **msg_out);
-int dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
-                            const char **msg);
 
 void dirserv_free_all(void);
 void cached_dir_decref(cached_dir_t *d);
