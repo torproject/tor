@@ -73,6 +73,13 @@ typedef struct spooled_resource_t {
 
 int connection_dirserv_flushed_some(dir_connection_t *conn);
 
+enum dir_spool_source_t;
+int dir_split_resource_into_spoolable(const char *resource,
+                                      enum dir_spool_source_t source,
+                                      smartlist_t *spool_out,
+                                      int *compressed_out,
+                                      int flags);
+
 int directory_fetches_from_authorities(const or_options_t *options);
 int directory_fetches_dir_info_early(const or_options_t *options);
 int directory_fetches_dir_info_later(const or_options_t *options);
