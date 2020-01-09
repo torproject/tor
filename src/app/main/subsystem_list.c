@@ -26,6 +26,7 @@
 #include "lib/thread/thread_sys.h"
 #include "lib/time/time_sys.h"
 #include "lib/tls/tortls_sys.h"
+#include "lib/trace/trace_sys.h"
 #include "lib/wallclock/wallclock_sys.h"
 #include "lib/evloop/evloop_sys.h"
 
@@ -46,6 +47,8 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_wallclock,
   &sys_logging,
   &sys_threads,
+
+  &sys_tracing,
 
   &sys_time,
 
