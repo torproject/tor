@@ -54,30 +54,10 @@
 #define ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD 0
 
 /** The lowest consensus method that we currently support. */
-#define MIN_SUPPORTED_CONSENSUS_METHOD 25
+#define MIN_SUPPORTED_CONSENSUS_METHOD 28
 
 /** The highest consensus method that we currently support. */
 #define MAX_SUPPORTED_CONSENSUS_METHOD 29
-
-/** Lowest consensus method where authorities vote on required/recommended
- * protocols. */
-#define MIN_METHOD_FOR_RECOMMENDED_PROTOCOLS 25
-
-/** Lowest consensus method where authorities add protocols to routerstatus
- * entries. */
-#define MIN_METHOD_FOR_RS_PROTOCOLS 25
-
-/** Lowest consensus method where authorities initialize bandwidth weights to 1
- * instead of 0. See #14881 */
-#define MIN_METHOD_FOR_INIT_BW_WEIGHTS_ONE 26
-
-/** Lowest consensus method where the microdesc consensus contains relay IPv6
- * addresses. See #23826 and #20916. */
-#define MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS 27
-
-/** Lowest consensus method where microdescriptors do not contain relay IPv6
- * addresses. See #23828 and #20916. */
-#define MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC 28
 
 /**
  * Lowest consensus method where microdescriptor lines are put in canonical

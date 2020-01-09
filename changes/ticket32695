@@ -1,0 +1,6 @@
+  o Removed features:
+    - We no longer support consensus methods before method 28; these
+      methods were only used by authorities running versions of Tor that
+      are now at end-of-life. In effect, this means that clients and
+      relays, and authorities now assume that authorities will be
+      running version 0.3.5.x or later. Closes ticket 32695.
