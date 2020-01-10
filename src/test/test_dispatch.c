@@ -18,14 +18,14 @@
 #include <stdio.h>
 #include <string.h>
 
-static dispatch_t *dispatcher_in_use=NULL;
+static dispatch_t *dispatcher_in_use = NULL;
 
 static void
 test_dispatch_max_in_u16_sl(void *arg)
 {
   (void)arg;
   smartlist_t *sl = smartlist_new();
-  uint16_t nums[] = { 10, 20, 30 };
+  uint16_t nums[] = {10, 20, 30};
   tt_int_op(-1, OP_EQ, max_in_u16_sl(sl, -1));
 
   smartlist_add(sl, NULL);
@@ -43,7 +43,7 @@ test_dispatch_max_in_u16_sl(void *arg)
   smartlist_add(sl, &nums[2]);
   tt_int_op(30, OP_EQ, max_in_u16_sl(sl, -1));
 
- done:
+done:
   smartlist_free(sl);
 }
 
@@ -53,14 +53,14 @@ test_dispatch_empty(void *arg)
 {
   (void)arg;
 
-  dispatch_t *d=NULL;
-  dispatch_cfg_t *cfg=NULL;
+  dispatch_t *d = NULL;
+  dispatch_cfg_t *cfg = NULL;
 
   cfg = dcfg_new();
   d = dispatch_new(cfg);
   tt_assert(d);
 
- done:
+done:
   dispatch_free(d);
   dcfg_free(cfg);
 }
@@ -82,7 +82,7 @@ simple_recv2(const msg_t *m)
   tor_free(recv2_received);
   recv2_received = dispatch_fmt_msg_data(dispatcher_in_use, m);
 
-  total_recv2_simple += m->aux_data__.u64*10;
+  total_recv2_simple += m->aux_data__.u64 * 10;
 }
 
 /* Construct a dispatch_t with two messages, make sure that they both get
@@ -92,18 +92,18 @@ test_dispatch_simple(void *arg)
 {
   (void)arg;
 
-  dispatch_t *d=NULL;
-  dispatch_cfg_t *cfg=NULL;
+  dispatch_t *d = NULL;
+  dispatch_cfg_t *cfg = NULL;
   int r;
 
   cfg = dcfg_new();
-  r = dcfg_msg_set_type(cfg,0,0);
-  r += dcfg_msg_set_chan(cfg,0,0);
-  r += dcfg_add_recv(cfg,0,1,simple_recv1);
-  r += dcfg_msg_set_type(cfg,1,0);
-  r += dcfg_msg_set_chan(cfg,1,0);
-  r += dcfg_add_recv(cfg,1,1,simple_recv2);
-  r += dcfg_add_recv(cfg,1,1,simple_recv2); /* second copy */
+  r = dcfg_msg_set_type(cfg, 0, 0);
+  r += dcfg_msg_set_chan(cfg, 0, 0);
+  r += dcfg_add_recv(cfg, 0, 1, simple_recv1);
+  r += dcfg_msg_set_type(cfg, 1, 0);
+  r += dcfg_msg_set_chan(cfg, 1, 0);
+  r += dcfg_add_recv(cfg, 1, 1, simple_recv2);
+  r += dcfg_add_recv(cfg, 1, 1, simple_recv2); /* second copy */
   tt_int_op(r, OP_EQ, 0);
 
   d = dispatch_new(cfg);
@@ -129,7 +129,7 @@ test_dispatch_simple(void *arg)
 
   tt_str_op(recv2_received, OP_EQ, "<>"); // no format function was set.
 
- done:
+done:
   dispatch_free(d);
   dcfg_free(cfg);
   tor_free(recv2_received);
@@ -142,32 +142,35 @@ test_dispatch_no_recipient(void *arg)
 {
   (void)arg;
 
-  dispatch_t *d=NULL;
-  dispatch_cfg_t *cfg=NULL;
+  dispatch_t *d = NULL;
+  dispatch_cfg_t *cfg = NULL;
   int r;
 
   cfg = dcfg_new();
-  r = dcfg_msg_set_type(cfg,0,0);
-  r += dcfg_msg_set_chan(cfg,0,0);
+  r = dcfg_msg_set_type(cfg, 0, 0);
+  r += dcfg_msg_set_chan(cfg, 0, 0);
   tt_int_op(r, OP_EQ, 0);
 
   d = dispatch_new(cfg);
   tt_assert(d);
   dispatcher_in_use = d;
 
-  msg_aux_data_t data = { .u64 = 7};
+  msg_aux_data_t data = {.u64 = 7};
   r = dispatch_send(d, 99, 0, 0, 0, data);
   tt_int_op(r, OP_EQ, 0);
 
   r = dispatch_flush(d, 0, INT_MAX);
   tt_int_op(r, OP_EQ, 0);
 
- done:
+done:
   dispatch_free(d);
   dcfg_free(cfg);
 }
 
-struct coord_t { int x; int y; };
+struct coord_t {
+  int x;
+  int y;
+};
 static void
 free_coord(msg_aux_data_t d)
 {
@@ -182,8 +185,8 @@ fmt_coord(msg_aux_data_t d)
   return v;
 }
 static dispatch_typefns_t coord_fns = {
-  .fmt_fn = fmt_coord,
-  .free_fn = free_coord,
+    .fmt_fn = fmt_coord,
+    .free_fn = free_coord,
 };
 static void
 alert_run_immediate(dispatch_t *d, channel_id_t ch, void *arg)
@@ -192,7 +195,7 @@ alert_run_immediate(dispatch_t *d, channel_id_t ch, void *arg)
   dispatch_flush(d, ch, INT_MAX);
 }
 
-static char *received_data=NULL;
+static char *received_data = NULL;
 
 static void
 recv_typed_data(const msg_t *m)
@@ -206,15 +209,15 @@ test_dispatch_with_types(void *arg)
 {
   (void)arg;
 
-  dispatch_t *d=NULL;
-  dispatch_cfg_t *cfg=NULL;
+  dispatch_t *d = NULL;
+  dispatch_cfg_t *cfg = NULL;
   int r;
 
   cfg = dcfg_new();
-  r = dcfg_msg_set_type(cfg,5,3);
-  r += dcfg_msg_set_chan(cfg,5,2);
-  r += dcfg_add_recv(cfg,5,0,recv_typed_data);
-  r += dcfg_type_set_fns(cfg,3,&coord_fns);
+  r = dcfg_msg_set_type(cfg, 5, 3);
+  r += dcfg_msg_set_chan(cfg, 5, 2);
+  r += dcfg_add_recv(cfg, 5, 0, recv_typed_data);
+  r += dcfg_type_set_fns(cfg, 3, &coord_fns);
   tt_int_op(r, OP_EQ, 0);
 
   d = dispatch_new(cfg);
@@ -229,11 +232,12 @@ test_dispatch_with_types(void *arg)
   xy->x = 13;
   xy->y = 37;
   msg_aux_data_t data = {.ptr = xy};
-  r = dispatch_send(d, 99/*sender*/, 2/*channel*/, 5/*msg*/, 3/*type*/, data);
+  r = dispatch_send(d, 99 /*sender*/, 2 /*channel*/, 5 /*msg*/, 3 /*type*/,
+                    data);
   tt_int_op(r, OP_EQ, 0);
   tt_str_op(received_data, OP_EQ, "[13, 37]");
 
- done:
+done:
   dispatch_free(d);
   dcfg_free(cfg);
   tor_free(received_data);
@@ -260,19 +264,15 @@ test_dispatch_bad_type_setup(void *arg)
   fns = coord_fns;
   tt_int_op(0, OP_EQ, dcfg_type_set_fns(cfg, 7, &fns));
 
- done:
+done:
   dcfg_free(cfg);
 }
 
-#define T(name)                                                 \
-  { #name, test_dispatch_ ## name, TT_FORK, NULL, NULL }
+#define T(name)                                      \
+  {                                                  \
+#    name, test_dispatch_##name, TT_FORK, NULL, NULL \
+  }
 
 struct testcase_t dispatch_tests[] = {
-  T(max_in_u16_sl),
-  T(empty),
-  T(simple),
-  T(no_recipient),
-  T(with_types),
-  T(bad_type_setup),
-  END_OF_TESTCASES
-};
+    T(max_in_u16_sl), T(empty),          T(simple),       T(no_recipient),
+    T(with_types),    T(bad_type_setup), END_OF_TESTCASES};

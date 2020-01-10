@@ -21,14 +21,14 @@ struct tor_compress_state_t;
 struct dir_connection_t {
   connection_t base_;
 
- /** Which 'resource' did we ask the directory for? This is typically the part
-  * of the URL string that defines, relative to the directory conn purpose,
-  * what thing we want.  For example, in router descriptor downloads by
-  * descriptor digest, it contains "d/", then one or more +-separated
-  * fingerprints.
-  **/
+  /** Which 'resource' did we ask the directory for? This is typically the part
+   * of the URL string that defines, relative to the directory conn purpose,
+   * what thing we want.  For example, in router descriptor downloads by
+   * descriptor digest, it contains "d/", then one or more +-separated
+   * fingerprints.
+   **/
   char *requested_resource;
-  unsigned int dirconn_direct:1; /**< Is this dirconn direct, or via Tor? */
+  unsigned int dirconn_direct : 1; /**< Is this dirconn direct, or via Tor? */
 
   /** If we're fetching descriptors, what router purpose shall we assign
    * to them? */

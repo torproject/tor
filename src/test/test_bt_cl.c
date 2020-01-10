@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef HAVE_SYS_RESOURCE_H
-#include <sys/resource.h>
+#  include <sys/resource.h>
 #endif
 
 /* To prevent 'assert' from going away. */
@@ -15,7 +15,7 @@
 #include "lib/log/log.h"
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
 /* -1: no crash.
@@ -24,7 +24,7 @@
 static int crashtype = 0;
 
 #ifdef __GNUC__
-#define NOINLINE __attribute__((noinline))
+#  define NOINLINE __attribute__((noinline))
 #endif
 
 int crash(int x) NOINLINE;
@@ -65,7 +65,7 @@ oh_what(int x)
    * tail-call optimization.  Only the first call will actually happen, but
    * telling the compiler to maybe do the second call will prevent it from
    * replacing the first call with a jump. */
-  return crash(x) + crash(x*2);
+  return crash(x) + crash(x * 2);
 }
 
 int
@@ -77,7 +77,7 @@ a_tangled_web(int x)
 int
 we_weave(int x)
 {
-  return a_tangled_web(x) + a_tangled_web(x+1);
+  return a_tangled_web(x) + a_tangled_web(x + 1);
 }
 
 int
@@ -92,23 +92,23 @@ main(int argc, char **argv)
   }
 
 #ifdef HAVE_SYS_RESOURCE_H
-  struct rlimit rlim = { .rlim_cur = 0, .rlim_max = 0 };
+  struct rlimit rlim = {.rlim_cur = 0, .rlim_max = 0};
   setrlimit(RLIMIT_CORE, &rlim);
 #endif
 
-#if !(defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
-   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION))
-    puts("Backtrace reporting is not supported on this platform");
-    return 77;
+#if ! (defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
+       defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION))
+  puts("Backtrace reporting is not supported on this platform");
+  return 77;
 #endif
 
-  if (!strcmp(argv[1], "assert")) {
+  if (! strcmp(argv[1], "assert")) {
     crashtype = 1;
-  } else if (!strcmp(argv[1], "crash")) {
+  } else if (! strcmp(argv[1], "crash")) {
     crashtype = 0;
-  } else if (!strcmp(argv[1], "none")) {
+  } else if (! strcmp(argv[1], "none")) {
     crashtype = -1;
-  } else if (!strcmp(argv[1], "backtraces")) {
+  } else if (! strcmp(argv[1], "backtraces")) {
     return 0;
   } else {
     puts("Argument should be \"assert\" or \"crash\" or \"none\"");

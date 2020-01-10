@@ -46,7 +46,7 @@ static void
 flush_channel_event(mainloop_event_t *ev, void *arg)
 {
   (void)ev;
-  if (!the_dispatcher)
+  if (! the_dispatcher)
     return;
 
   channel_id_t chan = (channel_id_t)(uintptr_t)(arg);
@@ -68,9 +68,9 @@ tor_mainloop_connect_pubsub(struct pubsub_builder_t *builder)
 
   rv = 0;
   goto done;
- err:
+err:
   tor_mainloop_disconnect_pubsub();
- done:
+done:
   return rv;
 }
 
@@ -91,7 +91,7 @@ tor_mainloop_connect_pubsub_events(void)
   for (size_t i = 0; i < num_channels; ++i) {
     smartlist_add(alert_events,
                   mainloop_event_postloop_new(flush_channel_event,
-                                              (void*)(uintptr_t)(i)));
+                                              (void *)(uintptr_t)(i)));
   }
 }
 
@@ -126,7 +126,7 @@ alertfn_prompt(dispatch_t *d, channel_id_t chan, void *arg)
 static void
 alertfn_immediate(dispatch_t *d, channel_id_t chan, void *arg)
 {
-  (void) arg;
+  (void)arg;
   dispatch_flush(d, chan, INT_MAX);
 }
 
@@ -141,8 +141,7 @@ tor_mainloop_set_delivery_strategy(const char *msg_channel_name,
                                    deliv_strategy_t strategy)
 {
   channel_id_t chan = get_channel_id(msg_channel_name);
-  if (BUG(chan == ERROR_ID) ||
-      BUG(chan >= smartlist_len(alert_events)))
+  if (BUG(chan == ERROR_ID) || BUG(chan >= smartlist_len(alert_events)))
     return -1;
 
   switch (strategy) {

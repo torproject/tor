@@ -58,9 +58,9 @@
 typedef struct {
   char *new_address;
   time_t expires;
-  addressmap_entry_source_bitfield_t source:3;
-  unsigned src_wildcard:1;
-  unsigned dst_wildcard:1;
+  addressmap_entry_source_bitfield_t source : 3;
+  unsigned src_wildcard : 1;
+  unsigned dst_wildcard : 1;
   short num_resolve_failures;
 } addressmap_entry_t;
 
@@ -72,7 +72,7 @@ typedef struct {
 } virtaddress_entry_t;
 
 /** A hash table to store client-side address rewrite instructions. */
-static strmap_t *addressmap=NULL;
+static strmap_t *addressmap = NULL;
 
 /**
  * Table mapping addresses to which virtual address, if any, we
@@ -84,7 +84,7 @@ static strmap_t *addressmap=NULL;
  * if it fails, then we could end up mapping two virtual addresses to
  * the same address, which is no disaster.
  **/
-static strmap_t *virtaddress_reversemap=NULL;
+static strmap_t *virtaddress_reversemap = NULL;
 
 /** Initialize addressmap. */
 void
@@ -94,14 +94,14 @@ addressmap_init(void)
   virtaddress_reversemap = strmap_new();
 }
 
-#define addressmap_ent_free(ent)                                        \
+#define addressmap_ent_free(ent) \
   FREE_AND_NULL(addressmap_entry_t, addressmap_ent_free_, (ent))
 
 /** Free the memory associated with the addressmap entry <b>_ent</b>. */
 static void
 addressmap_ent_free_(addressmap_entry_t *ent)
 {
-  if (!ent)
+  if (! ent)
     return;
 
   tor_free(ent->new_address);
@@ -114,14 +114,14 @@ addressmap_ent_free_void(void *ent)
   addressmap_ent_free_(ent);
 }
 
-#define addressmap_virtaddress_ent_free(ent)                            \
+#define addressmap_virtaddress_ent_free(ent) \
   FREE_AND_NULL(virtaddress_entry_t, addressmap_virtaddress_ent_free_, (ent))
 
 /** Free storage held by a virtaddress_entry_t* entry in <b>_ent</b>. */
 static void
 addressmap_virtaddress_ent_free_(virtaddress_entry_t *ent)
 {
-  if (!ent)
+  if (! ent)
     return;
   tor_free(ent->ipv4_address);
   tor_free(ent->ipv6_address);
@@ -143,16 +143,16 @@ addressmap_virtaddress_remove(const char *address, addressmap_entry_t *ent)
   if (ent && ent->new_address &&
       address_is_in_virtual_range(ent->new_address)) {
     virtaddress_entry_t *ve =
-      strmap_get(virtaddress_reversemap, ent->new_address);
+        strmap_get(virtaddress_reversemap, ent->new_address);
     /*log_fn(LOG_NOTICE,"remove reverse mapping for %s",ent->new_address);*/
     if (ve) {
-      if (!strcmp(address, ve->ipv4_address))
+      if (! strcmp(address, ve->ipv4_address))
         tor_free(ve->ipv4_address);
-      if (!strcmp(address, ve->ipv6_address))
+      if (! strcmp(address, ve->ipv6_address))
         tor_free(ve->ipv6_address);
-      if (!strcmp(address, ve->hostname_address))
+      if (! strcmp(address, ve->hostname_address))
         tor_free(ve->hostname_address);
-      if (!ve->ipv4_address && !ve->ipv6_address && !ve->hostname_address) {
+      if (! ve->ipv4_address && ! ve->ipv6_address && ! ve->hostname_address) {
         tor_free(ve);
         strmap_remove(virtaddress_reversemap, ent->new_address);
       }
@@ -175,18 +175,20 @@ void
 clear_trackexithost_mappings(const char *exitname)
 {
   char *suffix = NULL;
-  if (!addressmap || !exitname)
+  if (! addressmap || ! exitname)
     return;
   tor_asprintf(&suffix, ".%s.exit", exitname);
   tor_strlower(suffix);
 
-  STRMAP_FOREACH_MODIFY(addressmap, address, addressmap_entry_t *, ent) {
+  STRMAP_FOREACH_MODIFY(addressmap, address, addressmap_entry_t *, ent)
+  {
     if (ent->source == ADDRMAPSRC_TRACKEXIT &&
-        !strcmpend(ent->new_address, suffix)) {
+        ! strcmpend(ent->new_address, suffix)) {
       addressmap_ent_remove(address, ent);
       MAP_DEL_CURRENT(address);
     }
-  } STRMAP_FOREACH_END;
+  }
+  STRMAP_FOREACH_END;
 
   tor_free(suffix);
 }
@@ -200,20 +202,21 @@ addressmap_clear_excluded_trackexithosts(const or_options_t *options)
   const routerset_t *allow_nodes = options->ExitNodes;
   const routerset_t *exclude_nodes = options->ExcludeExitNodesUnion_;
 
-  if (!addressmap)
+  if (! addressmap)
     return;
   if (routerset_is_empty(allow_nodes))
     allow_nodes = NULL;
   if (allow_nodes == NULL && routerset_is_empty(exclude_nodes))
     return;
 
-  STRMAP_FOREACH_MODIFY(addressmap, address, addressmap_entry_t *, ent) {
+  STRMAP_FOREACH_MODIFY(addressmap, address, addressmap_entry_t *, ent)
+  {
     size_t len;
     const char *target = ent->new_address, *dot;
     char *nodename;
     const node_t *node;
 
-    if (!target) {
+    if (! target) {
       /* DNS resolving in progress */
       continue;
     } else if (strcmpend(target, ".exit")) {
@@ -229,19 +232,21 @@ addressmap_clear_excluded_trackexithosts(const or_options_t *options)
     dot = target + len - 6; /* dot now points to just before .exit */
     while (dot > target && *dot != '.')
       dot--;
-    if (*dot == '.') dot++;
-    nodename = tor_strndup(dot, len-5-(dot-target));
+    if (*dot == '.')
+      dot++;
+    nodename = tor_strndup(dot, len - 5 - (dot - target));
     node = node_get_by_nickname(nodename, NNF_NO_WARN_UNNAMED);
     tor_free(nodename);
-    if (!node ||
-        (allow_nodes && !routerset_contains_node(allow_nodes, node)) ||
+    if (! node ||
+        (allow_nodes && ! routerset_contains_node(allow_nodes, node)) ||
         routerset_contains_node(exclude_nodes, node) ||
-        !hostname_in_track_host_exits(options, address)) {
+        ! hostname_in_track_host_exits(options, address)) {
       /* We don't know this one, or we want to be rid of it. */
       addressmap_ent_remove(address, ent);
       MAP_DEL_CURRENT(address);
     }
-  } STRMAP_FOREACH_END;
+  }
+  STRMAP_FOREACH_END;
 }
 
 /** Return true iff <b>address</b> is one that we are configured to
@@ -252,15 +257,15 @@ addressmap_address_should_automap(const char *address,
 {
   const smartlist_t *suffix_list = options->AutomapHostsSuffixes;
 
-  if (!suffix_list)
+  if (! suffix_list)
     return 0;
 
-  SMARTLIST_FOREACH_BEGIN(suffix_list, const char *, suffix) {
-    if (!strcmp(suffix, "."))
+  SMARTLIST_FOREACH_BEGIN (suffix_list, const char *, suffix) {
+    if (! strcmp(suffix, "."))
       return 1;
-    if (!strcasecmpend(address, suffix))
+    if (! strcasecmpend(address, suffix))
       return 1;
-  } SMARTLIST_FOREACH_END(suffix);
+  } SMARTLIST_FOREACH_END (suffix);
   return 0;
 }
 
@@ -271,32 +276,34 @@ addressmap_address_should_automap(const char *address,
 void
 addressmap_clear_invalid_automaps(const or_options_t *options)
 {
-  int clear_all = !options->AutomapHostsOnResolve;
+  int clear_all = ! options->AutomapHostsOnResolve;
   const smartlist_t *suffixes = options->AutomapHostsSuffixes;
 
-  if (!addressmap)
+  if (! addressmap)
     return;
 
-  if (!suffixes)
+  if (! suffixes)
     clear_all = 1; /* This should be impossible, but let's be sure. */
 
-  STRMAP_FOREACH_MODIFY(addressmap, src_address, addressmap_entry_t *, ent) {
+  STRMAP_FOREACH_MODIFY(addressmap, src_address, addressmap_entry_t *, ent)
+  {
     int remove_this = clear_all;
     if (ent->source != ADDRMAPSRC_AUTOMAP)
       continue; /* not an automap mapping. */
 
-    if (!remove_this) {
+    if (! remove_this) {
       remove_this = ! addressmap_address_should_automap(src_address, options);
     }
 
-    if (!remove_this && ! address_is_in_virtual_range(ent->new_address))
+    if (! remove_this && ! address_is_in_virtual_range(ent->new_address))
       remove_this = 1;
 
     if (remove_this) {
       addressmap_ent_remove(src_address, ent);
       MAP_DEL_CURRENT(src_address);
     }
-  } STRMAP_FOREACH_END;
+  }
+  STRMAP_FOREACH_END;
 }
 
 /** Remove all entries from the addressmap that were set via the
@@ -355,7 +362,7 @@ addressmap_match_superdomains(char *address)
   cp = address;
   while ((cp = strchr(cp, '.'))) {
     /* cp now points to a suffix of address that begins with a . */
-    val = strmap_get_lc(addressmap, cp+1);
+    val = strmap_get_lc(addressmap, cp + 1);
     if (val && val->src_wildcard) {
       if (val->dst_wildcard)
         *cp = '\0';
@@ -381,8 +388,7 @@ addressmap_match_superdomains(char *address)
  * was a .exit.
  */
 int
-addressmap_rewrite(char *address, size_t maxlen,
-                   unsigned flags,
+addressmap_rewrite(char *address, size_t maxlen, unsigned flags,
                    time_t *expires_out,
                    addressmap_entry_source_t *exit_source_out)
 {
@@ -402,14 +408,14 @@ addressmap_rewrite(char *address, size_t maxlen,
     /* First check to see if there's an exact match for this address */
     ent = strmap_get(addressmap, address);
 
-    if (!ent || !ent->new_address) {
+    if (! ent || ! ent->new_address) {
       /* And if we don't have an exact match, try to check whether
        * we have a pattern-based match.
        */
       ent = addressmap_match_superdomains(address);
     } else {
-      if (ent->src_wildcard && !ent->dst_wildcard &&
-          !strcasecmp(address, ent->new_address)) {
+      if (ent->src_wildcard && ! ent->dst_wildcard &&
+          ! strcasecmp(address, ent->new_address)) {
         /* This is a rule like "rewrite *.example.com to example.com", and we
          * just got "example.com". Instead of calling it an infinite loop,
          * call it complete. */
@@ -418,7 +424,7 @@ addressmap_rewrite(char *address, size_t maxlen,
       exact_match = 1;
     }
 
-    if (!ent || !ent->new_address) {
+    if (! ent || ! ent->new_address) {
       /* We still have no match at all.  We're done! */
       goto done;
     }
@@ -426,40 +432,38 @@ addressmap_rewrite(char *address, size_t maxlen,
     /* Check wither the flags we were passed tell us not to use this
      * mapping. */
     switch (ent->source) {
-      case ADDRMAPSRC_DNS:
-        {
-          sa_family_t f;
-          tor_addr_t tmp;
-          f = tor_addr_parse(&tmp, ent->new_address);
-          if (f == AF_INET && !(flags & AMR_FLAG_USE_IPV4_DNS))
-            goto done;
-          else if (f == AF_INET6 && !(flags & AMR_FLAG_USE_IPV6_DNS))
-            goto done;
-        }
-        break;
+      case ADDRMAPSRC_DNS: {
+        sa_family_t f;
+        tor_addr_t tmp;
+        f = tor_addr_parse(&tmp, ent->new_address);
+        if (f == AF_INET && ! (flags & AMR_FLAG_USE_IPV4_DNS))
+          goto done;
+        else if (f == AF_INET6 && ! (flags & AMR_FLAG_USE_IPV6_DNS))
+          goto done;
+      } break;
       case ADDRMAPSRC_CONTROLLER:
       case ADDRMAPSRC_TORRC:
-        if (!(flags & AMR_FLAG_USE_MAPADDRESS))
+        if (! (flags & AMR_FLAG_USE_MAPADDRESS))
           goto done;
         break;
       case ADDRMAPSRC_AUTOMAP:
-        if (!(flags & AMR_FLAG_USE_AUTOMAP))
+        if (! (flags & AMR_FLAG_USE_AUTOMAP))
           goto done;
         break;
       case ADDRMAPSRC_TRACKEXIT:
-        if (!(flags & AMR_FLAG_USE_TRACKEXIT))
+        if (! (flags & AMR_FLAG_USE_TRACKEXIT))
           goto done;
         break;
       case ADDRMAPSRC_NONE:
       default:
         log_warn(LD_BUG, "Unknown addrmap source value %d. Ignoring it.",
-                 (int) ent->source);
+                 (int)ent->source);
         goto done;
     }
 
     /* Now fill in the address with the new address. That might be via
      * appending some new stuff to the end, or via just replacing it. */
-    if (ent->dst_wildcard && !exact_match) {
+    if (ent->dst_wildcard && ! exact_match) {
       strlcat(address, ".", maxlen);
       strlcat(address, ent->new_address, maxlen);
     } else {
@@ -467,14 +471,13 @@ addressmap_rewrite(char *address, size_t maxlen,
     }
 
     /* Is this now a .exit address?  If so, remember where we got it.*/
-    if (!strcmpend(address, ".exit") &&
-        strcmpend(addr_orig, ".exit") &&
+    if (! strcmpend(address, ".exit") && strcmpend(addr_orig, ".exit") &&
         exit_source == ADDRMAPSRC_NONE) {
       exit_source = ent->source;
     }
 
-    log_info(LD_APP, "Addressmap: rewriting %s to %s",
-             log_addr_orig, escaped_safe_str_client(address));
+    log_info(LD_APP, "Addressmap: rewriting %s to %s", log_addr_orig,
+             escaped_safe_str_client(address));
     if (ent->expires > 1 && ent->expires < expires)
       expires = ent->expires;
 
@@ -485,7 +488,7 @@ addressmap_rewrite(char *address, size_t maxlen,
            escaped_safe_str_client(address));
   /* it's fine to rewrite a rewrite, but don't loop forever */
 
- done:
+done:
   tor_free(addr_orig);
   tor_free(log_addr_orig);
   if (exit_source_out)
@@ -511,9 +514,9 @@ addressmap_rewrite_reverse(char *address, size_t maxlen, unsigned flags,
     sa_family_t f;
     tor_addr_t tmp;
     f = tor_addr_parse(&tmp, address);
-    if (f == AF_INET && !(flags & AMR_FLAG_USE_IPV4_DNS))
+    if (f == AF_INET && ! (flags & AMR_FLAG_USE_IPV4_DNS))
       return 0;
-    else if (f == AF_INET6 && !(flags & AMR_FLAG_USE_IPV6_DNS))
+    else if (f == AF_INET6 && ! (flags & AMR_FLAG_USE_IPV6_DNS))
       return 0;
     /* FFFF we should reverse-map virtual addresses even if we haven't
      * enabled DNS cacheing. */
@@ -545,10 +548,10 @@ int
 addressmap_have_mapping(const char *address, int update_expiry)
 {
   addressmap_entry_t *ent;
-  if (!(ent=strmap_get_lc(addressmap, address)))
+  if (! (ent = strmap_get_lc(addressmap, address)))
     return 0;
-  if (update_expiry && ent->source==ADDRMAPSRC_TRACKEXIT)
-    ent->expires=time(NULL) + update_expiry;
+  if (update_expiry && ent->source == ADDRMAPSRC_TRACKEXIT)
+    ent->expires = time(NULL) + update_expiry;
   return 1;
 }
 
@@ -575,8 +578,7 @@ addressmap_have_mapping(const char *address, int update_expiry)
  * not set. */
 void
 addressmap_register(const char *address, char *new_address, time_t expires,
-                    addressmap_entry_source_t source,
-                    const int wildcard_addr,
+                    addressmap_entry_source_t source, const int wildcard_addr,
                     const int wildcard_new_addr)
 {
   addressmap_entry_t *ent;
@@ -585,31 +587,30 @@ addressmap_register(const char *address, char *new_address, time_t expires,
     tor_assert(wildcard_addr);
 
   ent = strmap_get(addressmap, address);
-  if (!new_address || (!strcasecmp(address,new_address) &&
-                       wildcard_addr == wildcard_new_addr)) {
+  if (! new_address || (! strcasecmp(address, new_address) &&
+                        wildcard_addr == wildcard_new_addr)) {
     /* Remove the mapping, if any. */
     tor_free(new_address);
     if (ent) {
-      addressmap_ent_remove(address,ent);
+      addressmap_ent_remove(address, ent);
       strmap_remove(addressmap, address);
     }
     return;
   }
-  if (!ent) { /* make a new one and register it */
+  if (! ent) { /* make a new one and register it */
     ent = tor_malloc_zero(sizeof(addressmap_entry_t));
     strmap_set(addressmap, address, ent);
   } else if (ent->new_address) { /* we need to clean up the old mapping. */
     if (expires > 1) {
-      log_info(LD_APP,"Temporary addressmap ('%s' to '%s') not performed, "
+      log_info(LD_APP,
+               "Temporary addressmap ('%s' to '%s') not performed, "
                "since it's already mapped to '%s'",
-               safe_str_client(address),
-               safe_str_client(new_address),
+               safe_str_client(address), safe_str_client(new_address),
                safe_str_client(ent->new_address));
       tor_free(new_address);
       return;
     }
-    if (address_is_in_virtual_range(ent->new_address) &&
-        expires != 2) {
+    if (address_is_in_virtual_range(ent->new_address) && expires != 2) {
       /* XXX This isn't the perfect test; we want to avoid removing
        * mappings set from the control interface _as virtual mapping */
       addressmap_virtaddress_remove(address, ent);
@@ -618,15 +619,14 @@ addressmap_register(const char *address, char *new_address, time_t expires,
   } /* else { we have an in-progress resolve with no mapping. } */
 
   ent->new_address = new_address;
-  ent->expires = expires==2 ? 1 : expires;
+  ent->expires = expires == 2 ? 1 : expires;
   ent->num_resolve_failures = 0;
   ent->source = source;
   ent->src_wildcard = wildcard_addr ? 1 : 0;
   ent->dst_wildcard = wildcard_new_addr ? 1 : 0;
 
   log_info(LD_CONFIG, "Addressmap: (re)mapped '%s' to '%s'",
-           safe_str_client(address),
-           safe_str_client(ent->new_address));
+           safe_str_client(address), safe_str_client(ent->new_address));
   control_event_address_mapped(address, ent->new_address, expires, NULL, 1);
 }
 
@@ -638,16 +638,15 @@ int
 client_dns_incr_failures(const char *address)
 {
   addressmap_entry_t *ent = strmap_get(addressmap, address);
-  if (!ent) {
+  if (! ent) {
     ent = tor_malloc_zero(sizeof(addressmap_entry_t));
     ent->expires = time(NULL) + MAX_DNS_ENTRY_AGE;
-    strmap_set(addressmap,address,ent);
+    strmap_set(addressmap, address, ent);
   }
   if (ent->num_resolve_failures < SHRT_MAX)
     ++ent->num_resolve_failures; /* don't overflow */
   log_info(LD_APP, "Address %s now has %d resolve failures.",
-           safe_str_client(address),
-           ent->num_resolve_failures);
+           safe_str_client(address), ent->num_resolve_failures);
   return ent->num_resolve_failures;
 }
 
@@ -677,16 +676,15 @@ client_dns_clear_failures(const char *address)
 static void
 client_dns_set_addressmap_impl(entry_connection_t *for_conn,
                                const char *address, const char *name,
-                               const char *exitname,
-                               int ttl)
+                               const char *exitname, int ttl)
 {
-  char *extendedaddress=NULL, *extendedval=NULL;
+  char *extendedaddress = NULL, *extendedval = NULL;
   (void)for_conn;
 
   tor_assert(address);
   tor_assert(name);
 
-  if (ttl<0)
+  if (ttl < 0)
     ttl = DEFAULT_DNS_TTL;
   else
     ttl = dns_clip_ttl(ttl);
@@ -695,18 +693,14 @@ client_dns_set_addressmap_impl(entry_connection_t *for_conn,
     /* XXXX fails to ever get attempts to get an exit address of
      * google.com.digest[=~]nickname.exit; we need a syntax for this that
      * won't make strict RFC952-compliant applications (like us) barf. */
-    tor_asprintf(&extendedaddress,
-                 "%s.%s.exit", address, exitname);
-    tor_asprintf(&extendedval,
-                 "%s.%s.exit", name, exitname);
+    tor_asprintf(&extendedaddress, "%s.%s.exit", address, exitname);
+    tor_asprintf(&extendedval, "%s.%s.exit", name, exitname);
   } else {
-    tor_asprintf(&extendedaddress,
-                 "%s", address);
-    tor_asprintf(&extendedval,
-                 "%s", name);
+    tor_asprintf(&extendedaddress, "%s", address);
+    tor_asprintf(&extendedval, "%s", name);
   }
-  addressmap_register(extendedaddress, extendedval,
-                      time(NULL) + ttl, ADDRMAPSRC_DNS, 0, 0);
+  addressmap_register(extendedaddress, extendedval, time(NULL) + ttl,
+                      ADDRMAPSRC_DNS, 0, 0);
   tor_free(extendedaddress);
 }
 
@@ -721,11 +715,8 @@ client_dns_set_addressmap_impl(entry_connection_t *for_conn,
  * <b>ttl</b>seconds; otherwise, we use the default.
  */
 void
-client_dns_set_addressmap(entry_connection_t *for_conn,
-                          const char *address,
-                          const tor_addr_t *val,
-                          const char *exitname,
-                          int ttl)
+client_dns_set_addressmap(entry_connection_t *for_conn, const char *address,
+                          const tor_addr_t *val, const char *exitname, int ttl)
 {
   tor_addr_t addr_tmp;
   char valbuf[TOR_ADDR_BUF_LEN];
@@ -762,8 +753,7 @@ client_dns_set_addressmap(entry_connection_t *for_conn,
 void
 client_dns_set_reverse_addressmap(entry_connection_t *for_conn,
                                   const char *address, const char *v,
-                                  const char *exitname,
-                                  int ttl)
+                                  const char *exitname, int ttl)
 {
   char *s = NULL;
   {
@@ -796,8 +786,7 @@ static virtual_addr_conf_t virtaddr_conf_ipv6;
  * actual virtual address range to the parsed value. */
 int
 parse_virtual_addr_network(const char *val, sa_family_t family,
-                           int validate_only,
-                           char **msg)
+                           int validate_only, char **msg)
 {
   const int ipv6 = (family == AF_INET6);
   tor_addr_t addr;
@@ -805,22 +794,22 @@ parse_virtual_addr_network(const char *val, sa_family_t family,
   const int max_prefix_bits = ipv6 ? 104 : 16;
   virtual_addr_conf_t *conf = ipv6 ? &virtaddr_conf_ipv6 : &virtaddr_conf_ipv4;
 
-  if (!val || val[0] == '\0') {
+  if (! val || val[0] == '\0') {
     if (msg)
       tor_asprintf(msg, "Value not present (%s) after VirtualAddressNetwork%s",
-                   val?"Empty":"NULL", ipv6?"IPv6":"");
+                   val ? "Empty" : "NULL", ipv6 ? "IPv6" : "");
     return -1;
   }
   if (tor_addr_parse_mask_ports(val, 0, &addr, &bits, NULL, NULL) < 0) {
     if (msg)
       tor_asprintf(msg, "Error parsing VirtualAddressNetwork%s %s",
-                   ipv6?"IPv6":"", val);
+                   ipv6 ? "IPv6" : "", val);
     return -1;
   }
   if (tor_addr_family(&addr) != family) {
     if (msg)
       tor_asprintf(msg, "Incorrect address type for VirtualAddressNetwork%s",
-                   ipv6?"IPv6":"");
+                   ipv6 ? "IPv6" : "");
     return -1;
   }
 #if 0
@@ -834,8 +823,10 @@ parse_virtual_addr_network(const char *val, sa_family_t family,
 
   if (bits > max_prefix_bits) {
     if (msg)
-      tor_asprintf(msg, "VirtualAddressNetwork%s expects a /%d "
-                   "network or larger",ipv6?"IPv6":"", max_prefix_bits);
+      tor_asprintf(msg,
+                   "VirtualAddressNetwork%s expects a /%d "
+                   "network or larger",
+                   ipv6 ? "IPv6" : "", max_prefix_bits);
     return -1;
   }
 
@@ -857,12 +848,14 @@ address_is_in_virtual_range(const char *address)
 {
   tor_addr_t addr;
   tor_assert(address);
-  if (!strcasecmpend(address, ".virtual")) {
+  if (! strcasecmpend(address, ".virtual")) {
     return 1;
   } else if (tor_addr_parse(&addr, address) >= 0) {
-    const virtual_addr_conf_t *conf = (tor_addr_family(&addr) == AF_INET6) ?
-      &virtaddr_conf_ipv6 : &virtaddr_conf_ipv4;
-    if (tor_addr_compare_masked(&addr, &conf->addr, conf->bits, CMP_EXACT)==0)
+    const virtual_addr_conf_t *conf = (tor_addr_family(&addr) == AF_INET6)
+                                          ? &virtaddr_conf_ipv6
+                                          : &virtaddr_conf_ipv4;
+    if (tor_addr_compare_masked(&addr, &conf->addr, conf->bits, CMP_EXACT) ==
+        0)
       return 1;
   }
   return 0;
@@ -891,24 +884,24 @@ get_random_virtual_addr(const virtual_addr_conf_t *conf, tor_addr_t *addr_out)
   }
 
   /* Get an appropriate number of random bytes. */
-  crypto_rand((char*)bytes, total_bytes);
+  crypto_rand((char *)bytes, total_bytes);
 
   /* Now replace the first "conf->bits" bits of 'bytes' with addr_bytes*/
   if (conf->bits >= 8)
     memcpy(bytes, addr_bytes, conf->bits / 8);
   if (conf->bits & 7) {
     uint8_t mask = 0xff >> (conf->bits & 7);
-    bytes[conf->bits/8] &= mask;
-    bytes[conf->bits/8] |= addr_bytes[conf->bits/8] & ~mask;
+    bytes[conf->bits / 8] &= mask;
+    bytes[conf->bits / 8] |= addr_bytes[conf->bits / 8] & ~mask;
   }
 
   if (ipv6)
-    tor_addr_from_ipv6_bytes(addr_out, (char*) bytes);
+    tor_addr_from_ipv6_bytes(addr_out, (char *)bytes);
   else
     tor_addr_from_ipv4n(addr_out, get_uint32(bytes));
 
-  tor_assert(tor_addr_compare_masked(addr_out, &conf->addr,
-                                     conf->bits, CMP_EXACT)==0);
+  tor_assert(tor_addr_compare_masked(addr_out, &conf->addr, conf->bits,
+                                     CMP_EXACT) == 0);
 }
 
 /** Return a newly allocated string holding an address of <b>type</b>
@@ -927,14 +920,14 @@ addressmap_get_virtual_address(int type)
     char rand_bytes[10];
     do {
       crypto_rand(rand_bytes, sizeof(rand_bytes));
-      base32_encode(buf,sizeof(buf),rand_bytes,sizeof(rand_bytes));
+      base32_encode(buf, sizeof(buf), rand_bytes, sizeof(rand_bytes));
       strlcat(buf, ".virtual", sizeof(buf));
     } while (strmap_get(addressmap, buf));
     return tor_strdup(buf);
   } else if (type == RESOLVED_TYPE_IPV4 || type == RESOLVED_TYPE_IPV6) {
     const int ipv6 = (type == RESOLVED_TYPE_IPV6);
-    const virtual_addr_conf_t *conf = ipv6 ?
-      &virtaddr_conf_ipv6 : &virtaddr_conf_ipv4;
+    const virtual_addr_conf_t *conf =
+        ipv6 ? &virtaddr_conf_ipv6 : &virtaddr_conf_ipv4;
 
     /* Don't try more than 1000 times.  This gives us P < 1e-9 for
      * failing to get a good address so long as the address space is
@@ -949,7 +942,7 @@ addressmap_get_virtual_address(int type)
     while (attempts--) {
       get_random_virtual_addr(conf, &addr);
 
-      if (!ipv6) {
+      if (! ipv6) {
         /* Don't hand out any .0 or .255 address. */
         const uint32_t a = tor_addr_to_ipv4h(&addr);
         if ((a & 0xff) == 0 || (a & 0xff) == 0xff)
@@ -957,15 +950,15 @@ addressmap_get_virtual_address(int type)
       }
 
       tor_addr_to_str(buf, &addr, sizeof(buf), 1);
-      if (!strmap_get(addressmap, buf)) {
+      if (! strmap_get(addressmap, buf)) {
         /* XXXX This code is to make sure I didn't add an undecorated version
          * by mistake. I hope it's needless. */
         char tmp[TOR_ADDR_BUF_LEN];
         tor_addr_to_str(tmp, &addr, sizeof(tmp), 0);
         if (strmap_get(addressmap, tmp)) {
           // LCOV_EXCL_START
-          log_warn(LD_BUG, "%s wasn't in the addressmap, but %s was.",
-                   buf, tmp);
+          log_warn(LD_BUG, "%s wasn't in the addressmap, but %s was.", buf,
+                   tmp);
           continue;
           // LCOV_EXCL_STOP
         }
@@ -1004,7 +997,7 @@ addressmap_register_virtual_address(int type, char *new_address)
   tor_assert(virtaddress_reversemap);
 
   vent = strmap_get(virtaddress_reversemap, new_address);
-  if (!vent) {
+  if (! vent) {
     vent = tor_malloc_zero(sizeof(virtaddress_entry_t));
     vent_needs_to_be_added = 1;
   }
@@ -1019,24 +1012,23 @@ addressmap_register_virtual_address(int type, char *new_address)
   if (*addrp) {
     addressmap_entry_t *ent = strmap_get(addressmap, *addrp);
     if (ent && ent->new_address &&
-        !strcasecmp(new_address, ent->new_address)) {
+        ! strcasecmp(new_address, ent->new_address)) {
       tor_free(new_address);
-      tor_assert(!vent_needs_to_be_added);
+      tor_assert(! vent_needs_to_be_added);
       return *addrp;
     } else {
       log_warn(LD_BUG,
                "Internal confusion: I thought that '%s' was mapped to by "
                "'%s', but '%s' really maps to '%s'. This is a harmless bug.",
-               safe_str_client(new_address),
+               safe_str_client(new_address), safe_str_client(*addrp),
                safe_str_client(*addrp),
-               safe_str_client(*addrp),
-               ent?safe_str_client(ent->new_address):"(nothing)");
+               ent ? safe_str_client(ent->new_address) : "(nothing)");
     }
   }
 
   tor_free(*addrp);
   *addrp = addressmap_get_virtual_address(type);
-  if (!*addrp) {
+  if (! *addrp) {
     tor_free(vent);
     tor_free(new_address);
     return NULL;
@@ -1093,9 +1085,7 @@ address_is_invalid_destination(const char *address, int client)
   }
 
   while (*address) {
-    if (TOR_ISALNUM(*address) ||
-        *address == '-' ||
-        *address == '.' ||
+    if (TOR_ISALNUM(*address) || *address == '-' || *address == '.' ||
         *address == '_') /* Underscore is not allowed, but Windows does it
                           * sometimes, just to thumb its nose at the IETF. */
       ++address;
@@ -1115,42 +1105,41 @@ void
 addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
                         time_t max_expires, int want_expiry)
 {
-   strmap_iter_t *iter;
-   const char *key;
-   void *val_;
-   addressmap_entry_t *val;
+  strmap_iter_t *iter;
+  const char *key;
+  void *val_;
+  addressmap_entry_t *val;
 
-   if (!addressmap)
-     addressmap_init();
+  if (! addressmap)
+    addressmap_init();
 
-   for (iter = strmap_iter_init(addressmap); !strmap_iter_done(iter); ) {
-     strmap_iter_get(iter, &key, &val_);
-     val = val_;
-     if (val->expires >= min_expires && val->expires <= max_expires) {
-       if (!sl) {
-         iter = strmap_iter_next_rmv(addressmap,iter);
-         addressmap_ent_remove(key, val);
-         continue;
-       } else if (val->new_address) {
-         const char *src_wc = val->src_wildcard ? "*." : "";
-         const char *dst_wc = val->dst_wildcard ? "*." : "";
-         if (want_expiry) {
-           if (val->expires < 3 || val->expires == TIME_MAX)
-             smartlist_add_asprintf(sl, "%s%s %s%s NEVER",
-                                    src_wc, key, dst_wc, val->new_address);
-           else {
-             char isotime[ISO_TIME_LEN+1];
-             format_iso_time(isotime, val->expires);
-             smartlist_add_asprintf(sl, "%s%s %s%s \"%s\"",
-                                    src_wc, key, dst_wc, val->new_address,
-                                    isotime);
-           }
-         } else {
-           smartlist_add_asprintf(sl, "%s%s %s%s",
-                                  src_wc, key, dst_wc, val->new_address);
-         }
-       }
-     }
-     iter = strmap_iter_next(addressmap,iter);
-   }
+  for (iter = strmap_iter_init(addressmap); ! strmap_iter_done(iter);) {
+    strmap_iter_get(iter, &key, &val_);
+    val = val_;
+    if (val->expires >= min_expires && val->expires <= max_expires) {
+      if (! sl) {
+        iter = strmap_iter_next_rmv(addressmap, iter);
+        addressmap_ent_remove(key, val);
+        continue;
+      } else if (val->new_address) {
+        const char *src_wc = val->src_wildcard ? "*." : "";
+        const char *dst_wc = val->dst_wildcard ? "*." : "";
+        if (want_expiry) {
+          if (val->expires < 3 || val->expires == TIME_MAX)
+            smartlist_add_asprintf(sl, "%s%s %s%s NEVER", src_wc, key, dst_wc,
+                                   val->new_address);
+          else {
+            char isotime[ISO_TIME_LEN + 1];
+            format_iso_time(isotime, val->expires);
+            smartlist_add_asprintf(sl, "%s%s %s%s \"%s\"", src_wc, key, dst_wc,
+                                   val->new_address, isotime);
+          }
+        } else {
+          smartlist_add_asprintf(sl, "%s%s %s%s", src_wc, key, dst_wc,
+                                 val->new_address);
+        }
+      }
+    }
+    iter = strmap_iter_next(addressmap, iter);
+  }
 }

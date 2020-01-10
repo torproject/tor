@@ -22,9 +22,9 @@
  * preprocessor expand _that_ macro, you need to have another level of
  * indirection, as this macro provides.
  **/
-#define PASTE(a,b) PASTE__(a,b)
+#define PASTE(a, b) PASTE__(a, b)
 
 /** Helper for PASTE(). */
-#define PASTE__(a,b) a ## b
+#define PASTE__(a, b) a##b
 
 #endif /* !defined(TOR_LIB_CC_TOKPASTE_H) */

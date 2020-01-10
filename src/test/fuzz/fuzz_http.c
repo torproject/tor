@@ -27,10 +27,8 @@ mock_connection_write_to_buf_impl_(const char *string, size_t len,
 }
 
 static int
-mock_directory_handle_command_get(dir_connection_t *conn,
-                                      const char *headers,
-                                      const char *body,
-                                      size_t body_len)
+mock_directory_handle_command_get(dir_connection_t *conn, const char *headers,
+                                  const char *body, size_t body_len)
 {
   (void)conn;
 
@@ -51,10 +49,8 @@ mock_directory_handle_command_get(dir_connection_t *conn,
 }
 
 static int
-mock_directory_handle_command_post(dir_connection_t *conn,
-                                       const char *headers,
-                                       const char *body,
-                                       size_t body_len)
+mock_directory_handle_command_post(dir_connection_t *conn, const char *headers,
+                                   const char *body, size_t body_len)
 {
   (void)conn;
 
@@ -106,8 +102,8 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
   /* Apparently tor sets this before directory_handle_command() is called. */
   dir_conn.base_.address = tor_strdup("replace-this-address.example.com");
 
-  dir_conn.base_.inbuf = buf_new_with_data((char*)stdin_buf, data_size);
-  if (!dir_conn.base_.inbuf) {
+  dir_conn.base_.inbuf = buf_new_with_data((char *)stdin_buf, data_size);
+  if (! dir_conn.base_.inbuf) {
     log_debug(LD_GENERAL, "Zero-Length-Input\n");
     goto done;
   }
@@ -124,7 +120,7 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
 
   log_debug(LD_GENERAL, "Result:\n%d\n", rv);
 
- done:
+done:
   /* Reset. */
   tor_free(dir_conn.base_.address);
   buf_free(dir_conn.base_.inbuf);

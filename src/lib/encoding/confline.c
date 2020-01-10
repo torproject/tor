@@ -29,9 +29,7 @@
 /** Helper: allocate a new configuration option mapping 'key' to 'val',
  * append it to *<b>lst</b>. */
 void
-config_line_append(config_line_t **lst,
-                   const char *key,
-                   const char *val)
+config_line_append(config_line_t **lst, const char *key, const char *val)
 {
   tor_assert(lst);
 
@@ -50,9 +48,7 @@ config_line_append(config_line_t **lst,
 /** Helper: allocate a new configuration option mapping 'key' to 'val',
  * and prepend it to *<b>lst</b> */
 void
-config_line_prepend(config_line_t **lst,
-                    const char *key,
-                    const char *val)
+config_line_prepend(config_line_t **lst, const char *key, const char *val)
 {
   tor_assert(lst);
 
@@ -71,12 +67,11 @@ config_line_prepend(config_line_t **lst,
  * (In options parsing, this is for handling commandline-only options only;
  * other options should be looked up in the appropriate data structure.) */
 const config_line_t *
-config_line_find(const config_line_t *lines,
-                 const char *key)
+config_line_find(const config_line_t *lines, const char *key)
 {
   const config_line_t *cl;
   for (cl = lines; cl; cl = cl->next) {
-    if (!strcmp(cl->key, key))
+    if (! strcmp(cl->key, key))
       return cl;
   }
   return NULL;
@@ -84,12 +79,11 @@ config_line_find(const config_line_t *lines,
 
 /** As config_line_find(), but perform a case-insensitive comparison. */
 const config_line_t *
-config_line_find_case(const config_line_t *lines,
-                      const char *key)
+config_line_find_case(const config_line_t *lines, const char *key)
 {
   const config_line_t *cl;
   for (cl = lines; cl; cl = cl->next) {
-    if (!strcasecmp(cl->key, key))
+    if (! strcasecmp(cl->key, key))
       return cl;
   }
   return NULL;
@@ -104,8 +98,7 @@ int
 config_get_lines_aux(const char *string, config_line_t **result, int extended,
                      int allow_include, int *has_include,
                      struct smartlist_t *opened_lst, int recursion_level,
-                     config_line_t **last,
-                     include_handler_fn handle_include)
+                     config_line_t **last, include_handler_fn handle_include)
 {
   config_line_t *list = NULL, **next, *list_last = NULL;
   char *k, *v;
@@ -113,8 +106,10 @@ config_get_lines_aux(const char *string, config_line_t **result, int extended,
   int include_used = 0;
 
   if (recursion_level > MAX_INCLUDE_RECURSION_LEVEL) {
-    log_warn(LD_CONFIG, "Error while parsing configuration: more than %d "
-             "nested %%includes.", MAX_INCLUDE_RECURSION_LEVEL);
+    log_warn(LD_CONFIG,
+             "Error while parsing configuration: more than %d "
+             "nested %%includes.",
+             MAX_INCLUDE_RECURSION_LEVEL);
     return -1;
   }
 
@@ -122,9 +117,9 @@ config_get_lines_aux(const char *string, config_line_t **result, int extended,
   do {
     k = v = NULL;
     string = parse_config_line_from_str_verbose(string, &k, &v, &parse_err);
-    if (!string) {
+    if (! string) {
       log_warn(LD_CONFIG, "Error while parsing configuration: %s",
-               parse_err?parse_err:"<unknown>");
+               parse_err ? parse_err : "<unknown>");
       config_free_lines(list);
       tor_free(k);
       tor_free(v);
@@ -134,12 +129,12 @@ config_get_lines_aux(const char *string, config_line_t **result, int extended,
       unsigned command = CONFIG_LINE_NORMAL;
       if (extended) {
         if (k[0] == '+') {
-          char *k_new = tor_strdup(k+1);
+          char *k_new = tor_strdup(k + 1);
           tor_free(k);
           k = k_new;
           command = CONFIG_LINE_APPEND;
         } else if (k[0] == '/') {
-          char *k_new = tor_strdup(k+1);
+          char *k_new = tor_strdup(k + 1);
           tor_free(k);
           k = k_new;
           tor_free(v);
@@ -148,20 +143,23 @@ config_get_lines_aux(const char *string, config_line_t **result, int extended,
         }
       }
 
-      if (allow_include && !strcmp(k, "%include") && handle_include) {
+      if (allow_include && ! strcmp(k, "%include") && handle_include) {
         tor_free(k);
         include_used = 1;
 
         config_line_t *include_list;
         if (handle_include(v, recursion_level, extended, &include_list,
                            &list_last, opened_lst) < 0) {
-          log_warn(LD_CONFIG, "Error reading included configuration "
-                   "file or directory: \"%s\".", v);
+          log_warn(LD_CONFIG,
+                   "Error reading included configuration "
+                   "file or directory: \"%s\".",
+                   v);
           config_free_lines(list);
           tor_free(v);
           return -1;
         }
-        log_notice(LD_CONFIG, "Included configuration file or "
+        log_notice(LD_CONFIG,
+                   "Included configuration file or "
                    "directory at recursion level %d: \"%s\".",
                    recursion_level, v);
         *next = include_list;
@@ -200,8 +198,8 @@ config_get_lines_aux(const char *string, config_line_t **result, int extended,
 int
 config_get_lines(const char *string, config_line_t **result, int extended)
 {
-  return config_get_lines_aux(string, result, extended, 0, NULL, NULL, 1,
-                              NULL, NULL);
+  return config_get_lines_aux(string, result, extended, 0, NULL, NULL, 1, NULL,
+                              NULL);
 }
 
 /**
@@ -233,8 +231,7 @@ config_lines_dup(const config_line_t *inp)
  * but only the ones whose keys begin with <b>key</b> (case-insensitive).
  * If <b>key</b> is NULL, do not filter. */
 config_line_t *
-config_lines_dup_and_filter(const config_line_t *inp,
-                            const char *key)
+config_lines_dup_and_filter(const config_line_t *inp, const char *key)
 {
   config_line_t *result = NULL;
   config_line_t **next_out = &result;
@@ -275,7 +272,7 @@ config_count_key(const config_line_t *a, const char *key)
 {
   int n = 0;
   while (a) {
-    if (!strcasecmp(a->key, key)) {
+    if (! strcasecmp(a->key, key)) {
       ++n;
     }
     a = a->next;
@@ -294,8 +291,7 @@ config_count_key(const config_line_t *a, const char *key)
  */
 const char *
 parse_config_line_from_str_verbose(const char *line, char **key_out,
-                                   char **value_out,
-                                   const char **err_out)
+                                   char **value_out, const char **err_out)
 {
   /*
     See torrc_format.txt for a description of the (silly) format this parses.
@@ -320,17 +316,17 @@ parse_config_line_from_str_verbose(const char *line, char **key_out,
     }
   }
 
-  if (!*line) { /* End of string? */
+  if (! *line) { /* End of string? */
     *key_out = *value_out = NULL;
     return line;
   }
 
   /* Skip until the next space or \ followed by newline. */
   key = line;
-  while (*line && !TOR_ISSPACE(*line) && *line != '#' &&
+  while (*line && ! TOR_ISSPACE(*line) && *line != '#' &&
          ! (line[0] == '\\' && line[1] == '\n'))
     ++line;
-  *key_out = tor_strndup(key, line-key);
+  *key_out = tor_strndup(key, line - key);
 
   /* Skip until the value. */
   while (*line == ' ' || *line == '\t')
@@ -340,7 +336,7 @@ parse_config_line_from_str_verbose(const char *line, char **key_out,
 
   /* Find the end of the line. */
   if (*line == '\"') { // XXX No continuation handling is done here
-    if (!(line = unescape_string(line, value_out, NULL))) {
+    if (! (line = unescape_string(line, value_out, NULL))) {
       if (err_out)
         *err_out = "Invalid escape sequence in quoted string";
       return NULL;
@@ -377,13 +373,13 @@ parse_config_line_from_str_verbose(const char *line, char **key_out,
       cp = line;
     }
     /* Now back cp up to be the last nonspace character */
-    while (cp>val && TOR_ISSPACE(*(cp-1)))
+    while (cp > val && TOR_ISSPACE(*(cp - 1)))
       --cp;
 
     tor_assert(cp >= val);
 
     /* Now copy out and decode the value. */
-    *value_out = tor_strndup(val, cp-val);
+    *value_out = tor_strndup(val, cp - val);
     if (continuation) {
       char *v_out, *v_in;
       v_out = v_in = *value_out;
@@ -409,7 +405,8 @@ parse_config_line_from_str_verbose(const char *line, char **key_out,
       ++line;
     } while (*line && *line != '\n');
   }
-  while (TOR_ISSPACE(*line)) ++line;
+  while (TOR_ISSPACE(*line))
+    ++line;
 
   return line;
 }

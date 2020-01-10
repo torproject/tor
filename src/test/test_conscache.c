@@ -8,20 +8,19 @@
 #include "test/test.h"
 
 #ifdef HAVE_UTIME_H
-#include <utime.h>
+#  include <utime.h>
 #endif
 
 static void
 test_conscache_open_failure(void *arg)
 {
-  (void) arg;
+  (void)arg;
   /* Try opening a directory that doesn't exist and which we shouldn't be
    * able to create. */
   consensus_cache_t *cache = consensus_cache_open("a/b/c/d/e/f/g", 128);
   tt_ptr_op(cache, OP_EQ, NULL);
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -43,8 +42,7 @@ test_conscache_simple_usage(void *arg)
   config_line_t *labels = NULL;
   config_line_append(&labels, "Hello", "world");
   config_line_append(&labels, "Adios", "planetas");
-  ent = consensus_cache_add(cache,
-                            labels, (const uint8_t *)"A\0B\0C", 5);
+  ent = consensus_cache_add(cache, labels, (const uint8_t *)"A\0B\0C", 5);
   config_free_lines(labels);
   labels = NULL;
   tt_assert(ent);
@@ -52,8 +50,7 @@ test_conscache_simple_usage(void *arg)
   /* Make a second object */
   config_line_append(&labels, "Hello", "mundo");
   config_line_append(&labels, "Adios", "planets");
-  ent2 = consensus_cache_add(cache,
-                             labels, (const uint8_t *)"xyzzy", 5);
+  ent2 = consensus_cache_add(cache, labels, (const uint8_t *)"xyzzy", 5);
   config_free_lines(labels);
   labels = NULL;
   tt_assert(ent2);
@@ -109,7 +106,7 @@ test_conscache_simple_usage(void *arg)
   smartlist_free(entries);
   tt_int_op(n, OP_EQ, 2);
 
- done:
+done:
   consensus_cache_entry_decref(ent);
   tor_free(ddir_fname);
   consensus_cache_free(cache);
@@ -121,7 +118,7 @@ test_conscache_cleanup(void *arg)
   (void)arg;
   const int N = 20;
   consensus_cache_entry_t **ents =
-    tor_calloc(N, sizeof(consensus_cache_entry_t*));
+      tor_calloc(N, sizeof(consensus_cache_entry_t *));
 
   /* Make a temporary datadir for these tests */
   char *ddir_fname = tor_strdup(get_fname_rnd("datadir_cache"));
@@ -250,7 +247,7 @@ test_conscache_cleanup(void *arg)
     tt_int_op(n, OP_EQ, 18);
   }
 
- done:
+done:
   for (i = 0; i < N; ++i) {
     consensus_cache_entry_decref(ents[i]);
   }
@@ -292,7 +289,7 @@ test_conscache_filter(void *arg)
     uint8_t *body = tor_malloc(bodylen);
     memset(body, i, bodylen);
     consensus_cache_entry_t *ent =
-      consensus_cache_add(cache, labels, body, bodylen);
+        consensus_cache_add(cache, labels, body, bodylen);
     tor_free(body);
     config_free_lines(labels);
     tt_assert(ent);
@@ -319,22 +316,20 @@ test_conscache_filter(void *arg)
   consensus_cache_entry_t *ent2 = smartlist_get(lst, 1);
   const char *idx1 = consensus_cache_entry_get_value(ent1, "index");
   const char *idx2 = consensus_cache_entry_get_value(ent2, "index");
-  tt_assert( (!strcmp(idx1, "28") && !strcmp(idx2, "13")) ||
-             (!strcmp(idx1, "13") && !strcmp(idx2, "28")) );
+  tt_assert((! strcmp(idx1, "28") && ! strcmp(idx2, "13")) ||
+            (! strcmp(idx1, "13") && ! strcmp(idx2, "28")));
 
- done:
+done:
   tor_free(ddir_fname);
   consensus_cache_free(cache);
   smartlist_free(lst);
 }
 
-#define ENT(name)                                               \
-  { #name, test_conscache_ ## name, TT_FORK, NULL, NULL }
+#define ENT(name)                                     \
+  {                                                   \
+#    name, test_conscache_##name, TT_FORK, NULL, NULL \
+  }
 
-struct testcase_t conscache_tests[] = {
-  ENT(open_failure),
-  ENT(simple_usage),
-  ENT(cleanup),
-  ENT(filter),
-  END_OF_TESTCASES
-};
+struct testcase_t conscache_tests[] = {ENT(open_failure), ENT(simple_usage),
+                                       ENT(cleanup), ENT(filter),
+                                       END_OF_TESTCASES};

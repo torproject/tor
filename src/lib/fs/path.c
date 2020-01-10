@@ -19,7 +19,7 @@
 #include "lib/fs/userdb.h"
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
 #include <errno.h>
@@ -38,7 +38,7 @@ get_unquoted_path(const char *path)
   }
 
   int has_start_quote = (path[0] == '\"');
-  int has_end_quote = (len > 0 && path[len-1] == '\"');
+  int has_end_quote = (len > 0 && path[len - 1] == '\"');
   if (has_start_quote != has_end_quote || (len == 1 && has_start_quote)) {
     return NULL;
   }
@@ -47,11 +47,11 @@ get_unquoted_path(const char *path)
   char *s = unquoted_path;
   size_t i;
   for (i = has_start_quote; i < len - has_end_quote; i++) {
-    if (path[i] == '\"' && (i > 0 && path[i-1] == '\\')) {
-      *(s-1) = path[i];
+    if (path[i] == '\"' && (i > 0 && path[i - 1] == '\\')) {
+      *(s - 1) = path[i];
     } else if (path[i] != '\"') {
       *s++ = path[i];
-    } else {  /* unescaped quote */
+    } else { /* unescaped quote */
       tor_free(unquoted_path);
       return NULL;
     }
@@ -74,45 +74,47 @@ expand_filename(const char *filename)
   return tor_strdup(filename);
 #else /* !defined(_WIN32) */
   if (*filename == '~') {
-    char *home, *result=NULL;
+    char *home, *result = NULL;
     const char *rest;
 
     if (filename[1] == '/' || filename[1] == '\0') {
       home = getenv("HOME");
-      if (!home) {
-        log_warn(LD_CONFIG, "Couldn't find $HOME environment variable while "
-                 "expanding \"%s\"; defaulting to \"\".", filename);
+      if (! home) {
+        log_warn(LD_CONFIG,
+                 "Couldn't find $HOME environment variable while "
+                 "expanding \"%s\"; defaulting to \"\".",
+                 filename);
         home = tor_strdup("");
       } else {
         home = tor_strdup(home);
       }
-      rest = strlen(filename)>=2?(filename+2):"";
+      rest = strlen(filename) >= 2 ? (filename + 2) : "";
     } else {
-#ifdef HAVE_PWD_H
+#  ifdef HAVE_PWD_H
       char *username, *slash;
       slash = strchr(filename, '/');
       if (slash)
-        username = tor_strndup(filename+1,slash-filename-1);
+        username = tor_strndup(filename + 1, slash - filename - 1);
       else
-        username = tor_strdup(filename+1);
-      if (!(home = get_user_homedir(username))) {
-        log_warn(LD_CONFIG,"Couldn't get homedir for \"%s\"",username);
+        username = tor_strdup(filename + 1);
+      if (! (home = get_user_homedir(username))) {
+        log_warn(LD_CONFIG, "Couldn't get homedir for \"%s\"", username);
         tor_free(username);
         return NULL;
       }
       tor_free(username);
-      rest = slash ? (slash+1) : "";
-#else /* !defined(HAVE_PWD_H) */
+      rest = slash ? (slash + 1) : "";
+#  else /* !defined(HAVE_PWD_H) */
       log_warn(LD_CONFIG, "Couldn't expand homedir on system without pwd.h");
       return tor_strdup(filename);
-#endif /* defined(HAVE_PWD_H) */
+#  endif /* defined(HAVE_PWD_H) */
     }
     tor_assert(home);
     /* Remove trailing slash. */
-    if (strlen(home)>1 && !strcmpend(home,PATH_SEPARATOR)) {
-      home[strlen(home)-1] = '\0';
+    if (strlen(home) > 1 && ! strcmpend(home, PATH_SEPARATOR)) {
+      home[strlen(home) - 1] = '\0';
     }
-    tor_asprintf(&result,"%s"PATH_SEPARATOR"%s",home,rest);
+    tor_asprintf(&result, "%s" PATH_SEPARATOR "%s", home, rest);
     tor_free(home);
     return result;
   } else {
@@ -130,7 +132,7 @@ path_is_relative(const char *filename)
 #ifdef _WIN32
   else if (filename && filename[0] == '\\')
     return 0;
-  else if (filename && strlen(filename)>3 && TOR_ISALPHA(filename[0]) &&
+  else if (filename && strlen(filename) > 3 && TOR_ISALPHA(filename[0]) &&
            filename[1] == ':' && filename[2] == '\\')
     return 0;
 #endif /* defined(_WIN32) */
@@ -146,12 +148,12 @@ clean_fname_for_stat(char *name)
 {
 #ifdef _WIN32
   size_t len = strlen(name);
-  if (!len)
+  if (! len)
     return;
-  if (name[len-1]=='\\' || name[len-1]=='/') {
-    if (len == 1 || (len==3 && name[1]==':'))
+  if (name[len - 1] == '\\' || name[len - 1] == '/') {
+    if (len == 1 || (len == 3 && name[1] == ':'))
       return;
-    name[len-1]='\0';
+    name[len - 1] = '\0';
   }
 #else /* !defined(_WIN32) */
   (void)name;
@@ -198,7 +200,7 @@ get_parent_directory(char *fname)
 #ifdef _WIN32
                   || *cp == '\\'
 #endif
-                  );
+    );
     if (is_sep) {
       if (cp == fname) {
         /* This is the first separator in the file name; don't remove it! */
@@ -223,7 +225,7 @@ get_parent_directory(char *fname)
 static char *
 alloc_getcwd(void)
 {
-#ifdef HAVE_GET_CURRENT_DIR_NAME
+#  ifdef HAVE_GET_CURRENT_DIR_NAME
   /* Glibc makes this nice and simple for us. */
   char *cwd = get_current_dir_name();
   char *result = NULL;
@@ -233,7 +235,7 @@ alloc_getcwd(void)
     raw_free(cwd); // alias for free to avoid tripping check-spaces.
   }
   return result;
-#else /* !defined(HAVE_GET_CURRENT_DIR_NAME) */
+#  else /* !defined(HAVE_GET_CURRENT_DIR_NAME) */
   size_t size = 1024;
   char *buf = NULL;
   char *ptr = NULL;
@@ -250,7 +252,7 @@ alloc_getcwd(void)
     size *= 2;
   }
   return buf;
-#endif /* defined(HAVE_GET_CURRENT_DIR_NAME) */
+#  endif /* defined(HAVE_GET_CURRENT_DIR_NAME) */
 }
 #endif /* !defined(_WIN32) */
 
@@ -266,7 +268,8 @@ make_path_absolute(const char *fname)
   /* We don't want to assume that tor_free can free a string allocated
    * with malloc.  On failure, return fname (it's better than nothing). */
   char *absfname = tor_strdup(absfname_malloced ? absfname_malloced : fname);
-  if (absfname_malloced) raw_free(absfname_malloced);
+  if (absfname_malloced)
+    raw_free(absfname_malloced);
 
   return absfname;
 #else /* !defined(_WIN32) */

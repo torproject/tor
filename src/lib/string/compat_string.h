@@ -20,18 +20,22 @@
 #ifdef _WIN32
 /* Windows doesn't have str(n)casecmp, but mingw defines it: only define it
  * ourselves if it's missing. */
-#ifndef HAVE_STRNCASECMP
+#  ifndef HAVE_STRNCASECMP
 static inline int strncasecmp(const char *a, const char *b, size_t n);
-static inline int strncasecmp(const char *a, const char *b, size_t n) {
-  return _strnicmp(a,b,n);
+static inline int
+strncasecmp(const char *a, const char *b, size_t n)
+{
+  return _strnicmp(a, b, n);
 }
-#endif /* !defined(HAVE_STRNCASECMP) */
-#ifndef HAVE_STRCASECMP
+#  endif /* !defined(HAVE_STRNCASECMP) */
+#  ifndef HAVE_STRCASECMP
 static inline int strcasecmp(const char *a, const char *b);
-static inline int strcasecmp(const char *a, const char *b) {
-  return _stricmp(a,b);
+static inline int
+strcasecmp(const char *a, const char *b)
+{
+  return _stricmp(a, b);
 }
-#endif /* !defined(HAVE_STRCASECMP) */
+#  endif /* !defined(HAVE_STRCASECMP) */
 #endif /* defined(_WIN32) */
 
 #if defined __APPLE__
@@ -44,8 +48,8 @@ static inline int strcasecmp(const char *a, const char *b) {
  *
  * See https://trac.torproject.org/projects/tor/ticket/15205
  */
-#undef strlcat
-#undef strlcpy
+#  undef strlcat
+#  undef strlcpy
 #endif /* defined __APPLE__ */
 
 #ifndef HAVE_STRLCAT
@@ -57,9 +61,9 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 
 char *tor_strtok_r_impl(char *str, const char *sep, char **lasts);
 #ifdef HAVE_STRTOK_R
-#define tor_strtok_r(str, sep, lasts) strtok_r(str, sep, lasts)
+#  define tor_strtok_r(str, sep, lasts) strtok_r(str, sep, lasts)
 #else
-#define tor_strtok_r(str, sep, lasts) tor_strtok_r_impl(str, sep, lasts)
+#  define tor_strtok_r(str, sep, lasts) tor_strtok_r_impl(str, sep, lasts)
 #endif
 
 #endif /* !defined(TOR_COMPAT_STRING_H) */

@@ -75,7 +75,7 @@ struct rend_intro_point_t {
 
   /** (Service side only) Set if this intro point has an established circuit
    * and unset if it doesn't. */
-  unsigned int circuit_established:1;
+  unsigned int circuit_established : 1;
 };
 
 #endif /* !defined(REND_INTRO_POINT_ST_H) */

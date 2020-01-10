@@ -15,7 +15,7 @@
 
 /* Platform-specific helpers. */
 #ifdef _WIN32
-#include <windef.h>
+#  include <windef.h>
 char *format_win32_error(DWORD err);
 #endif
 

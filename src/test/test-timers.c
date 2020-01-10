@@ -19,10 +19,10 @@
 #define MAX_DURATION 30
 #define N_DISABLE 5
 
-static struct timeval fire_at[N_TIMERS] = { {0,0} };
+static struct timeval fire_at[N_TIMERS] = {{0, 0}};
 static int is_disabled[N_TIMERS] = {0};
 static int fired[N_TIMERS] = {0};
-static struct timeval difference[N_TIMERS] = { {0,0} };
+static struct timeval difference[N_TIMERS] = {{0, 0}};
 static tor_timer_t *timers[N_TIMERS] = {NULL};
 
 static int n_active_timers = 0;
@@ -40,12 +40,11 @@ timer_cb(tor_timer_t *t, void *arg, const monotime_t *now_mono)
   tor_gettimeofday(&now);
   tor_timer_t **t_ptr = arg;
   tor_assert(*t_ptr == t);
-  int idx = (int) (t_ptr - timers);
+  int idx = (int)(t_ptr - timers);
   ++fired[idx];
   timersub(&now, &fire_at[idx], &difference[idx]);
   diffs_mono_usec[idx] =
-    monotime_diff_usec(&started_at, now_mono) -
-    delay_usec[idx];
+      monotime_diff_usec(&started_at, now_mono) - delay_usec[idx];
   ++n_fired;
 
   // printf("%d / %d\n",n_fired, N_TIMERS);
@@ -75,8 +74,8 @@ main(int argc, char **argv)
   monotime_get(&started_at);
   for (i = 0; i < N_TIMERS; ++i) {
     struct timeval delay;
-    delay.tv_sec = crypto_rand_int_range(0,MAX_DURATION);
-    delay.tv_usec = crypto_rand_int_range(0,1000000);
+    delay.tv_sec = crypto_rand_int_range(0, MAX_DURATION);
+    delay.tv_usec = crypto_rand_int_range(0, 1000000);
     delay_usec[i] = delay.tv_sec * 1000000 + delay.tv_usec;
     timeradd(&now, &delay, &fire_at[i]);
     timers[i] = timer_new(timer_cb, &timers[i]);
@@ -105,22 +104,21 @@ main(int argc, char **argv)
       continue;
     }
     tor_assert(fired[i] == 1);
-    //int64_t diff = difference[i].tv_usec + difference[i].tv_sec * 1000000;
+    // int64_t diff = difference[i].tv_usec + difference[i].tv_sec * 1000000;
     int64_t diff = diffs_mono_usec[i];
     total_difference += diff;
-    total_square_difference += diff*diff;
+    total_square_difference += diff * diff;
   }
   const int64_t mean_diff = total_difference / n_active_timers;
-  printf("mean difference: %"PRId64" usec\n",
-         (mean_diff));
+  printf("mean difference: %" PRId64 " usec\n", (mean_diff));
 
-  const double mean_sq = ((double)total_square_difference)/ n_active_timers;
+  const double mean_sq = ((double)total_square_difference) / n_active_timers;
   const double sq_mean = mean_diff * mean_diff;
   const double stddev = sqrt(mean_sq - sq_mean);
   printf("standard deviation: %lf usec\n", stddev);
 
-#define MAX_DIFF_USEC (500*1000)
-#define MAX_STDDEV_USEC (500*1000)
+#define MAX_DIFF_USEC (500 * 1000)
+#define MAX_STDDEV_USEC (500 * 1000)
 #define ODD_DIFF_USEC (2000)
 #define ODD_STDDEV_USEC (2000)
 

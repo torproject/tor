@@ -16,9 +16,8 @@
 
 #include <stdarg.h>
 
-int tor_vsscanf(const char *buf, const char *pattern, va_list ap) \
-  CHECK_SCANF(2, 0);
-int tor_sscanf(const char *buf, const char *pattern, ...)
-  CHECK_SCANF(2, 3);
+int tor_vsscanf(const char *buf, const char *pattern, va_list ap)
+    CHECK_SCANF(2, 0);
+int tor_sscanf(const char *buf, const char *pattern, ...) CHECK_SCANF(2, 3);
 
 #endif /* !defined(TOR_UTIL_SCANF_H) */

@@ -31,7 +31,7 @@
 
 /** Type of circuit an hs_ident_t object is associated with. */
 typedef enum {
-  HS_IDENT_CIRCUIT_INTRO      = 1,
+  HS_IDENT_CIRCUIT_INTRO = 1,
   HS_IDENT_CIRCUIT_RENDEZVOUS = 2,
 } hs_ident_circuit_type_t;
 
@@ -113,8 +113,8 @@ typedef struct hs_ident_edge_conn_t {
 } hs_ident_edge_conn_t;
 
 /* Circuit identifier API. */
-hs_ident_circuit_t *hs_ident_circuit_new(
-                             const ed25519_public_key_t *identity_pk);
+hs_ident_circuit_t *
+hs_ident_circuit_new(const ed25519_public_key_t *identity_pk);
 void hs_ident_circuit_free_(hs_ident_circuit_t *ident);
 #define hs_ident_circuit_free(id) \
   FREE_AND_NULL(hs_ident_circuit_t, hs_ident_circuit_free_, (id))
@@ -130,8 +130,8 @@ void hs_ident_dir_conn_init(const ed25519_public_key_t *identity_pk,
                             hs_ident_dir_conn_t *ident);
 
 /* Edge connection identifier API. */
-hs_ident_edge_conn_t *hs_ident_edge_conn_new(
-                                    const ed25519_public_key_t *identity_pk);
+hs_ident_edge_conn_t *
+hs_ident_edge_conn_new(const ed25519_public_key_t *identity_pk);
 void hs_ident_edge_conn_free_(hs_ident_edge_conn_t *ident);
 #define hs_ident_edge_conn_free(id) \
   FREE_AND_NULL(hs_ident_edge_conn_t, hs_ident_edge_conn_free_, (id))

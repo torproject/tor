@@ -19,11 +19,10 @@ typedef struct nodefamily_t nodefamily_t;
 struct node_t;
 struct smartlist_t;
 
-#define NF_WARN_MALFORMED    (1u<<0)
-#define NF_REJECT_MALFORMED  (1u<<1)
+#define NF_WARN_MALFORMED (1u << 0)
+#define NF_REJECT_MALFORMED (1u << 1)
 
-nodefamily_t *nodefamily_parse(const char *s,
-                               const uint8_t *rsa_id_self,
+nodefamily_t *nodefamily_parse(const char *s, const uint8_t *rsa_id_self,
                                unsigned flags);
 nodefamily_t *nodefamily_from_members(const struct smartlist_t *members,
                                       const uint8_t *rsa_id_self,

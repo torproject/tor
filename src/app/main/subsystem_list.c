@@ -42,33 +42,23 @@
  * We'll implement a level dump command in #31614.
  **/
 const subsys_fns_t *tor_subsystems[] = {
-  &sys_winprocess,
-  &sys_torerr,
+    &sys_winprocess,   &sys_torerr,
 
-  &sys_wallclock,
-  &sys_threads,
-  &sys_logging,
+    &sys_wallclock,    &sys_threads,     &sys_logging,
 
-  &sys_time,
-  &sys_network,
+    &sys_time,         &sys_network,
 
-  &sys_compress,
-  &sys_crypto,
-  &sys_tortls,
-  &sys_process,
+    &sys_compress,     &sys_crypto,      &sys_tortls,  &sys_process,
 
-  &sys_orconn_event,
-  &sys_ocirc_event,
-  &sys_btrack,
+    &sys_orconn_event, &sys_ocirc_event, &sys_btrack,
 
-  &sys_evloop,
+    &sys_evloop,
 
-  &sys_mainloop,
-  &sys_or,
+    &sys_mainloop,     &sys_or,
 
-  &sys_relay,
+    &sys_relay,
 
-  &sys_dirauth,
+    &sys_dirauth,
 };
 
 const unsigned n_tor_subsystems = ARRAY_LENGTH(tor_subsystems);

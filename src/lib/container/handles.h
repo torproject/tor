@@ -54,16 +54,14 @@
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"
 
-#define HANDLE_ENTRY(name, structname)         \
-  struct name ## _handle_head_t *handle_head
+#define HANDLE_ENTRY(name, structname) struct name##_handle_head_t *handle_head
 
-#define HANDLE_DECL(name, structname_t, linkage)                        \
-  typedef struct name ## _handle_t name ## _handle_t;                   \
-  linkage name ## _handle_t *name ## _handle_new(                       \
-                                          struct structname_t *object); \
-  linkage void name ## _handle_free_(name ## _handle_t *);              \
-  linkage struct structname_t *name ## _handle_get(name ## _handle_t *); \
-  linkage void name ## _handles_clear(struct structname_t *object);
+#define HANDLE_DECL(name, structname_t, linkage)                           \
+  typedef struct name##_handle_t name##_handle_t;                          \
+  linkage name##_handle_t *name##_handle_new(struct structname_t *object); \
+  linkage void name##_handle_free_(name##_handle_t *);                     \
+  linkage struct structname_t *name##_handle_get(name##_handle_t *);       \
+  linkage void name##_handles_clear(struct structname_t *object);
 
 /*
  * Implementation notes: there are lots of possible implementations here.  We
@@ -87,68 +85,66 @@
  * this decision if handles are too slow.
  */
 
-#define HANDLE_IMPL(name, structname, linkage)                          \
-  /* The 'head' object for a handle-accessible type. This object */     \
-  /* persists for as long as the object, or any handles, exist. */      \
-  typedef struct name ## _handle_head_t {                               \
-    struct structname *object; /* pointed-to object, or NULL */         \
-    unsigned int references; /* number of existing handles */           \
-  } name ## _handle_head_t;                                             \
-                                                                        \
-  struct name ## _handle_t {                                            \
-    struct name ## _handle_head_t *head; /* reference to the 'head'. */ \
-  };                                                                    \
-                                                                        \
-  linkage struct name ## _handle_t *                                    \
-  name ## _handle_new(struct structname *object)                        \
-  {                                                                     \
-    tor_assert(object);                                                 \
-    name ## _handle_head_t *head = object->handle_head;                 \
-    if (PREDICT_UNLIKELY(head == NULL)) {                               \
-      head = object->handle_head = tor_malloc_zero(sizeof(*head));      \
-      head->object = object;                                            \
-    }                                                                   \
-    name ## _handle_t *new_ref = tor_malloc_zero(sizeof(*new_ref));     \
-    new_ref->head = head;                                               \
-    ++head->references;                                                 \
-    return new_ref;                                                     \
-  }                                                                     \
-                                                                        \
-  linkage void                                                          \
-  name ## _handle_free_(struct name ## _handle_t *ref)                   \
-  {                                                                     \
-    if (! ref) return;                                                  \
-    name ## _handle_head_t *head = ref->head;                           \
-    tor_assert(head);                                                   \
-    --head->references;                                                 \
-    tor_free(ref);                                                      \
-    if (head->object == NULL && head->references == 0) {                \
-      tor_free(head);                                                   \
-      return;                                                           \
-    }                                                                   \
-  }                                                                     \
-                                                                        \
-  linkage struct structname *                                           \
-  name ## _handle_get(struct name ## _handle_t *ref)                    \
-  {                                                                     \
-    tor_assert(ref);                                                    \
-    name ## _handle_head_t *head = ref->head;                           \
-    tor_assert(head);                                                   \
-    return head->object;                                                \
-  }                                                                     \
-                                                                        \
-  linkage void                                                          \
-  name ## _handles_clear(struct structname *object)                     \
-  {                                                                     \
-    tor_assert(object);                                                 \
-    name ## _handle_head_t *head = object->handle_head;                 \
-    if (! head)                                                         \
-      return;                                                           \
-    object->handle_head = NULL;                                         \
-    head->object = NULL;                                                \
-    if (head->references == 0) {                                        \
-      tor_free(head);                                                   \
-    }                                                                   \
+#define HANDLE_IMPL(name, structname, linkage)                              \
+  /* The 'head' object for a handle-accessible type. This object */         \
+  /* persists for as long as the object, or any handles, exist. */          \
+  typedef struct name##_handle_head_t {                                     \
+    struct structname *object; /* pointed-to object, or NULL */             \
+    unsigned int references; /* number of existing handles */               \
+  } name##_handle_head_t;                                                   \
+                                                                            \
+  struct name##_handle_t {                                                  \
+    struct name##_handle_head_t *head; /* reference to the 'head'. */       \
+  };                                                                        \
+                                                                            \
+  linkage struct name##_handle_t *name##_handle_new(                        \
+      struct structname *object)                                            \
+  {                                                                         \
+    tor_assert(object);                                                     \
+    name##_handle_head_t *head = object->handle_head;                       \
+    if (PREDICT_UNLIKELY(head == NULL)) {                                   \
+      head = object->handle_head = tor_malloc_zero(sizeof(*head));          \
+      head->object = object;                                                \
+    }                                                                       \
+    name##_handle_t *new_ref = tor_malloc_zero(sizeof(*new_ref));           \
+    new_ref->head = head;                                                   \
+    ++head->references;                                                     \
+    return new_ref;                                                         \
+  }                                                                         \
+                                                                            \
+  linkage void name##_handle_free_(struct name##_handle_t *ref)             \
+  {                                                                         \
+    if (! ref)                                                              \
+      return;                                                               \
+    name##_handle_head_t *head = ref->head;                                 \
+    tor_assert(head);                                                       \
+    --head->references;                                                     \
+    tor_free(ref);                                                          \
+    if (head->object == NULL && head->references == 0) {                    \
+      tor_free(head);                                                       \
+      return;                                                               \
+    }                                                                       \
+  }                                                                         \
+                                                                            \
+  linkage struct structname *name##_handle_get(struct name##_handle_t *ref) \
+  {                                                                         \
+    tor_assert(ref);                                                        \
+    name##_handle_head_t *head = ref->head;                                 \
+    tor_assert(head);                                                       \
+    return head->object;                                                    \
+  }                                                                         \
+                                                                            \
+  linkage void name##_handles_clear(struct structname *object)              \
+  {                                                                         \
+    tor_assert(object);                                                     \
+    name##_handle_head_t *head = object->handle_head;                       \
+    if (! head)                                                             \
+      return;                                                               \
+    object->handle_head = NULL;                                             \
+    head->object = NULL;                                                    \
+    if (head->references == 0) {                                            \
+      tor_free(head);                                                       \
+    }                                                                       \
   }
 
 #endif /* !defined(TOR_HANDLE_H) */

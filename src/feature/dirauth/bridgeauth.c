@@ -27,16 +27,16 @@ bridgeauth_dump_bridge_status_to_file(time_t now)
   char *fname = NULL;
   char *thresholds = NULL;
   char *published_thresholds_and_status = NULL;
-  char published[ISO_TIME_LEN+1];
+  char published[ISO_TIME_LEN + 1];
   const routerinfo_t *me = router_get_my_routerinfo();
-  char fingerprint[FINGERPRINT_LEN+1];
+  char fingerprint[FINGERPRINT_LEN + 1];
   char *fingerprint_line = NULL;
 
   dirserv_set_bridges_running(now);
   status = networkstatus_getinfo_by_purpose("bridge", now);
 
-  if (me && crypto_pk_get_fingerprint(me->identity_pkey,
-                                      fingerprint, 0) >= 0) {
+  if (me &&
+      crypto_pk_get_fingerprint(me->identity_pkey, fingerprint, 0) >= 0) {
     tor_asprintf(&fingerprint_line, "fingerprint %s\n", fingerprint);
   } else {
     log_warn(LD_BUG, "Error computing fingerprint for bridge status.");
@@ -45,11 +45,10 @@ bridgeauth_dump_bridge_status_to_file(time_t now)
   dirserv_compute_bridge_flag_thresholds();
   thresholds = dirserv_get_flag_thresholds_line();
   tor_asprintf(&published_thresholds_and_status,
-               "published %s\nflag-thresholds %s\n%s%s",
-               published, thresholds, fingerprint_line ? fingerprint_line : "",
-               status);
+               "published %s\nflag-thresholds %s\n%s%s", published, thresholds,
+               fingerprint_line ? fingerprint_line : "", status);
   fname = get_datadir_fname("networkstatus-bridges");
-  if (write_str_to_file(fname,published_thresholds_and_status,0)<0) {
+  if (write_str_to_file(fname, published_thresholds_and_status, 0) < 0) {
     log_warn(LD_DIRSERV, "Unable to write networkstatus-bridges file.");
   }
   tor_free(thresholds);

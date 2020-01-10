@@ -27,7 +27,7 @@ struct document_signature_t {
   unsigned int bad_signature : 1; /**< Set to true if we've tried to verify
                                    * the sig, and we know it's bad. */
   unsigned int good_signature : 1; /**< Set to true if we've verified the sig
-                                     * as good. */
+                                    * as good. */
 };
 
 #endif /* !defined(DOCUMENT_SIGNATURE_ST_H) */

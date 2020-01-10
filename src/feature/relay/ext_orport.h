@@ -35,7 +35,7 @@ int connection_ext_or_start_auth(or_connection_t *or_conn);
 
 ext_or_cmd_t *ext_or_cmd_new(uint16_t len);
 
-#define ext_or_cmd_free(cmd)                            \
+#define ext_or_cmd_free(cmd) \
   FREE_AND_NULL(ext_or_cmd_t, ext_or_cmd_free_, (cmd))
 
 void ext_or_cmd_free_(ext_or_cmd_t *cmd);
@@ -53,17 +53,16 @@ void ext_orport_free_all(void);
 
 #ifdef EXT_ORPORT_PRIVATE
 STATIC int connection_write_ext_or_command(connection_t *conn,
-                                           uint16_t command,
-                                           const char *body,
+                                           uint16_t command, const char *body,
                                            size_t bodylen);
 STATIC int handle_client_auth_nonce(const char *client_nonce,
-                         size_t client_nonce_len,
-                         char **client_hash_out,
-                         char **reply_out, size_t *reply_len_out);
-#ifdef TOR_UNIT_TESTS
+                                    size_t client_nonce_len,
+                                    char **client_hash_out, char **reply_out,
+                                    size_t *reply_len_out);
+#  ifdef TOR_UNIT_TESTS
 extern uint8_t *ext_or_auth_cookie;
 extern int ext_or_auth_cookie_is_set;
-#endif
+#  endif
 #endif /* defined(EXT_ORPORT_PRIVATE) */
 
 #endif /* !defined(EXT_ORPORT_H) */

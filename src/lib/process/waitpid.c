@@ -12,17 +12,17 @@
 
 #ifndef _WIN32
 
-#include "lib/process/waitpid.h"
-#include "lib/log/log.h"
-#include "lib/log/util_bug.h"
-#include "lib/malloc/malloc.h"
-#include "ext/ht.h"
+#  include "lib/process/waitpid.h"
+#  include "lib/log/log.h"
+#  include "lib/log/util_bug.h"
+#  include "lib/malloc/malloc.h"
+#  include "ext/ht.h"
 
-#ifdef HAVE_SYS_WAIT_H
-#include <sys/wait.h>
-#endif
+#  ifdef HAVE_SYS_WAIT_H
+#    include <sys/wait.h>
+#  endif
 
-#include <string.h>
+#  include <string.h>
 
 /* ================================================== */
 /* Convenience structures for handlers for waitpid().
@@ -45,7 +45,7 @@ struct waitpid_callback_t {
 static inline unsigned int
 process_map_entry_hash_(const waitpid_callback_t *ent)
 {
-  return (unsigned) ent->pid;
+  return (unsigned)ent->pid;
 }
 
 static inline unsigned int
@@ -82,8 +82,10 @@ set_waitpid_callback(pid_t pid, void (*fn)(int, void *), void *arg)
 
   old_ent = HT_REPLACE(process_map, &process_map, ent);
   if (old_ent) {
-    log_warn(LD_BUG, "Replaced a waitpid monitor on pid %u. That should be "
-             "impossible.", (unsigned) pid);
+    log_warn(LD_BUG,
+             "Replaced a waitpid monitor on pid %u. That should be "
+             "impossible.",
+             (unsigned)pid);
     old_ent->running = 0;
   }
 
@@ -105,7 +107,7 @@ clear_waitpid_callback(waitpid_callback_t *ent)
     old_ent = HT_REMOVE(process_map, &process_map, ent);
     if (old_ent != ent) {
       log_warn(LD_BUG, "Couldn't remove waitpid monitor for pid %u.",
-               (unsigned) ent->pid);
+               (unsigned)ent->pid);
       return;
     }
   }
@@ -122,9 +124,11 @@ notify_waitpid_callback_by_pid(pid_t pid, int status)
 
   search.pid = pid;
   ent = HT_REMOVE(process_map, &process_map, &search);
-  if (!ent || !ent->running) {
-    log_info(LD_GENERAL, "Child process %u has exited; no callback was "
-             "registered", (unsigned)pid);
+  if (! ent || ! ent->running) {
+    log_info(LD_GENERAL,
+             "Child process %u has exited; no callback was "
+             "registered",
+             (unsigned)pid);
     return;
   }
 

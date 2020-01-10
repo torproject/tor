@@ -22,7 +22,7 @@ peek_buf_has_control0_command(buf_t *buf)
     char header[4];
     uint16_t cmd;
     buf_peek(buf, header, sizeof(header));
-    cmd = ntohs(get_uint16(header+2));
+    cmd = ntohs(get_uint16(header + 2));
     if (cmd <= 0x14)
       return 1; /* This is definitely not a v1 control command. */
   }

@@ -17,7 +17,7 @@
  */
 
 static or_state_t *or_state;
-static or_state_t * acct_limits_get_or_state(void);
+static or_state_t *acct_limits_get_or_state(void);
 ATTR_UNUSED static int acct_limits_get_or_state_called = 0;
 static or_state_t *
 acct_limits_get_or_state(void)
@@ -30,10 +30,9 @@ test_accounting_limits(void *arg)
 {
   or_options_t *options = get_options_mutable();
   time_t fake_time = time(NULL);
-  (void) arg;
+  (void)arg;
 
-  MOCK(get_or_state,
-       acct_limits_get_or_state);
+  MOCK(get_or_state, acct_limits_get_or_state);
   or_state = or_state_new();
 
   options->AccountingMax = 100;
@@ -91,12 +90,11 @@ test_accounting_limits(void *arg)
   tor_assert(we_are_hibernating() == 1);
 
   goto done;
- done:
+done:
   UNMOCK(get_or_state);
   or_state_free(or_state);
 }
 
 struct testcase_t accounting_tests[] = {
-  { "bwlimits", test_accounting_limits, TT_FORK, NULL, NULL },
-  END_OF_TESTCASES
-};
+    {"bwlimits", test_accounting_limits, TT_FORK, NULL, NULL},
+    END_OF_TESTCASES};

@@ -19,7 +19,7 @@ test_format_proxy_header_line(void *arg)
   tor_addr_port_t *addr_port = NULL;
   char *output = NULL;
 
-  (void) arg;
+  (void)arg;
 
   /* IPv4 address. */
   tor_addr_parse(&addr, "192.168.1.2");
@@ -54,13 +54,12 @@ test_format_proxy_header_line(void *arg)
   tor_free(addr_port);
   tor_free(output);
 
- done:
+done:
   tor_free(addr_port);
   tor_free(output);
 }
 
 struct testcase_t proto_haproxy_tests[] = {
-  { "format_proxy_header_line", test_format_proxy_header_line, 0, NULL, NULL },
+    {"format_proxy_header_line", test_format_proxy_header_line, 0, NULL, NULL},
 
-  END_OF_TESTCASES
-};
+    END_OF_TESTCASES};

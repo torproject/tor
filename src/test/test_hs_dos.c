@@ -31,7 +31,7 @@ setup_mock_consensus(void)
   current_ns_consensus = tor_malloc_zero(sizeof(networkstatus_t));
   current_ns_consensus->net_params = smartlist_new();
   smartlist_add(current_ns_consensus->net_params,
-                (void *) "HiddenServiceEnableIntroDoSDefense=1");
+                (void *)"HiddenServiceEnableIntroDoSDefense=1");
   hs_dos_consensus_has_changed(current_ns_consensus);
 }
 
@@ -45,10 +45,10 @@ free_mock_consensus(void)
 static void
 test_can_send_intro2(void *arg)
 {
-  uint32_t now = (uint32_t) approx_time();
+  uint32_t now = (uint32_t)approx_time();
   or_circuit_t *or_circ = NULL;
 
-  (void) arg;
+  (void)arg;
 
   hs_init();
   hs_dos_init();
@@ -56,7 +56,7 @@ test_can_send_intro2(void *arg)
   get_options_mutable()->ORPort_set = 1;
   setup_mock_consensus();
 
-  or_circ =  or_circuit_new(1, NULL);
+  or_circ = or_circuit_new(1, NULL);
 
   /* Make that circuit a service intro point. */
   circuit_change_purpose(TO_CIRCUIT(or_circ), CIRCUIT_PURPOSE_INTRO_POINT);
@@ -120,7 +120,7 @@ test_can_send_intro2(void *arg)
   tt_uint_op(token_bucket_ctr_get(&or_circ->introduce2_bucket), OP_EQ,
              get_intro2_rate_consensus_param(NULL) - 1);
 
- done:
+done:
   circuit_free_(TO_CIRCUIT(or_circ));
 
   hs_free_all();
@@ -132,12 +132,12 @@ test_validate_dos_extension_params(void *arg)
 {
   bool ret;
 
-  (void) arg;
+  (void)arg;
 
   /* Validate the default values. */
   ret = cell_dos_extension_parameters_are_valid(
-                                      get_intro2_rate_consensus_param(NULL),
-                                      get_intro2_burst_consensus_param(NULL));
+      get_intro2_rate_consensus_param(NULL),
+      get_intro2_burst_consensus_param(NULL));
   tt_assert(ret);
 
   /* Valid custom rate/burst. */
@@ -148,11 +148,11 @@ test_validate_dos_extension_params(void *arg)
 
   /* Invalid rate. */
   ret = cell_dos_extension_parameters_are_valid(UINT64_MAX, 42);
-  tt_assert(!ret);
+  tt_assert(! ret);
 
   /* Invalid burst. */
   ret = cell_dos_extension_parameters_are_valid(42, UINT64_MAX);
-  tt_assert(!ret);
+  tt_assert(! ret);
 
   /* Value of 0 is valid (but should disable defenses) */
   ret = cell_dos_extension_parameters_are_valid(0, 0);
@@ -160,17 +160,15 @@ test_validate_dos_extension_params(void *arg)
 
   /* Can't have burst smaller than rate. */
   ret = cell_dos_extension_parameters_are_valid(42, 40);
-  tt_assert(!ret);
+  tt_assert(! ret);
 
- done:
+done:
   return;
 }
 
 struct testcase_t hs_dos_tests[] = {
-  { "can_send_intro2", test_can_send_intro2, TT_FORK,
-    NULL, NULL },
-  { "validate_dos_extension_params", test_validate_dos_extension_params,
-    TT_FORK, NULL, NULL },
+    {"can_send_intro2", test_can_send_intro2, TT_FORK, NULL, NULL},
+    {"validate_dos_extension_params", test_validate_dos_extension_params,
+     TT_FORK, NULL, NULL},
 
-  END_OF_TESTCASES
-};
+    END_OF_TESTCASES};

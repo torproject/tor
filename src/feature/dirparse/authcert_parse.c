@@ -37,7 +37,7 @@ authority_cert_parse_from_string(const char *s, size_t maxlen,
 {
   /** Reject any certificate at least this big; it is probably an overflow, an
    * attack, a bug, or some other nonsense. */
-#define MAX_CERT_SIZE (128*1024)
+#define MAX_CERT_SIZE (128 * 1024)
 
   authority_cert_t *cert = NULL, *old_cert;
   smartlist_t *tokens = NULL;
@@ -62,20 +62,23 @@ authority_cert_parse_from_string(const char *s, size_t maxlen,
     log_warn(LD_DIR, "No end-of-signature found on key certificate");
     return NULL;
   }
-  eos = memchr(eos+2, '\n', end_of_s - (eos+2));
+  eos = memchr(eos + 2, '\n', end_of_s - (eos + 2));
   tor_assert(eos);
   ++eos;
   len = eos - s;
 
   if (len > MAX_CERT_SIZE) {
-    log_warn(LD_DIR, "Certificate is far too big (at %lu bytes long); "
-             "rejecting", (unsigned long)len);
+    log_warn(LD_DIR,
+             "Certificate is far too big (at %lu bytes long); "
+             "rejecting",
+             (unsigned long)len);
     return NULL;
   }
 
   tokens = smartlist_new();
   area = memarea_new();
-  if (tokenize_string(area,s, eos, tokens, dir_key_certificate_table, 0) < 0) {
+  if (tokenize_string(area, s, eos, tokens, dir_key_certificate_table, 0) <
+      0) {
     log_warn(LD_DIR, "Error tokenizing key certificate");
     goto err;
   }
@@ -119,7 +122,7 @@ authority_cert_parse_from_string(const char *s, size_t maxlen,
 
   if (tor_memneq(cert->cache_info.identity_digest, fp_declared, DIGEST_LEN)) {
     log_warn(LD_DIR, "Digest of certificate key didn't match declared "
-             "fingerprint");
+                     "fingerprint");
     goto err;
   }
 
@@ -142,23 +145,22 @@ authority_cert_parse_from_string(const char *s, size_t maxlen,
 
   tok = find_by_keyword(tokens, K_DIR_KEY_PUBLISHED);
   if (parse_iso_time(tok->args[0], &cert->cache_info.published_on) < 0) {
-     goto err;
+    goto err;
   }
   tok = find_by_keyword(tokens, K_DIR_KEY_EXPIRES);
   if (parse_iso_time(tok->args[0], &cert->expires) < 0) {
-     goto err;
+    goto err;
   }
 
-  tok = smartlist_get(tokens, smartlist_len(tokens)-1);
+  tok = smartlist_get(tokens, smartlist_len(tokens) - 1);
   if (tok->tp != K_DIR_KEY_CERTIFICATION) {
     log_warn(LD_DIR, "Certificate didn't end with dir-key-certification.");
     goto err;
   }
 
   /* If we already have this cert, don't bother checking the signature. */
-  old_cert = authority_cert_get_by_digests(
-                                     cert->cache_info.identity_digest,
-                                     cert->signing_key_digest);
+  old_cert = authority_cert_get_by_digests(cert->cache_info.identity_digest,
+                                           cert->signing_key_digest);
   found = 0;
   if (old_cert) {
     /* XXXX We could just compare signed_descriptor_digest, but that wouldn't
@@ -167,29 +169,26 @@ authority_cert_parse_from_string(const char *s, size_t maxlen,
         old_cert->cache_info.signed_descriptor_body &&
         tor_memeq(s, old_cert->cache_info.signed_descriptor_body, len)) {
       log_debug(LD_DIR, "We already checked the signature on this "
-                "certificate; no need to do so again.");
+                        "certificate; no need to do so again.");
       found = 1;
     }
   }
-  if (!found) {
+  if (! found) {
     if (check_signature_token(digest, DIGEST_LEN, tok, cert->identity_key, 0,
                               "key certificate")) {
       goto err;
     }
 
     tok = find_by_keyword(tokens, K_DIR_KEY_CROSSCERT);
-    if (check_signature_token(cert->cache_info.identity_digest,
-                              DIGEST_LEN,
-                              tok,
-                              cert->signing_key,
-                              CST_NO_CHECK_OBJTYPE,
+    if (check_signature_token(cert->cache_info.identity_digest, DIGEST_LEN,
+                              tok, cert->signing_key, CST_NO_CHECK_OBJTYPE,
                               "key cross-certification")) {
       goto err;
     }
   }
 
   cert->cache_info.signed_descriptor_len = len;
-  cert->cache_info.signed_descriptor_body = tor_malloc(len+1);
+  cert->cache_info.signed_descriptor_body = tor_malloc(len + 1);
   memcpy(cert->cache_info.signed_descriptor_body, s, len);
   cert->cache_info.signed_descriptor_body[len] = 0;
   cert->cache_info.saved_location = SAVED_NOWHERE;
@@ -204,7 +203,7 @@ authority_cert_parse_from_string(const char *s, size_t maxlen,
     memarea_drop_all(area);
   }
   return cert;
- err:
+err:
   dump_desc(s_dup, "authority cert");
   authority_cert_free(cert);
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));

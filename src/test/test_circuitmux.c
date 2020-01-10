@@ -23,7 +23,7 @@
 static int
 mock_has_queued_writes_true(channel_t *c)
 {
-  (void) c;
+  (void)c;
   return 1;
 }
 
@@ -40,7 +40,7 @@ test_cmux_destroy_cell_queue(void *arg)
 
   MOCK(scheduler_release_channel, scheduler_release_channel_mock);
 
-  (void) arg;
+  (void)arg;
 
   ch = new_fake_channel();
   ch->has_queued_writes = mock_has_queued_writes_true;
@@ -69,7 +69,7 @@ test_cmux_destroy_cell_queue(void *arg)
 
   tt_int_op(circuitmux_num_cells(cmux), OP_EQ, 2);
 
- done:
+done:
   free_fake_channel(ch);
   packed_cell_free(pc);
   tor_free(dc);
@@ -81,7 +81,7 @@ static void
 test_cmux_compute_ticks(void *arg)
 {
   const int64_t NS_PER_S = 1000 * 1000 * 1000;
-  const int64_t START_NS = UINT64_C(1217709000)*NS_PER_S;
+  const int64_t START_NS = UINT64_C(1217709000) * NS_PER_S;
   int64_t now;
   double rem;
   unsigned tick;
@@ -96,7 +96,7 @@ test_cmux_compute_ticks(void *arg)
   tt_double_op(rem, OP_LT, 1e-9);
 
   /* 1.5 second later and we should still be in the same tick. */
-  now = START_NS + NS_PER_S + NS_PER_S/2;
+  now = START_NS + NS_PER_S + NS_PER_S / 2;
   monotime_coarse_set_mock_time_nsec(now);
   tick = cell_ewma_get_current_tick_and_fraction(&rem);
   tt_uint_op(tick, OP_EQ, tick_zero);
@@ -114,8 +114,7 @@ test_cmux_compute_ticks(void *arg)
   tt_uint_op(tick, OP_EQ, tick_zero + 2);
   tt_double_op(fabs(rem - .5), OP_LT, tolerance);
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -123,7 +122,7 @@ test_cmux_allocate(void *arg)
 {
   circuitmux_t *cmux = NULL;
 
-  (void) arg;
+  (void)arg;
 
   cmux = circuitmux_alloc();
   tt_assert(cmux);
@@ -139,7 +138,7 @@ test_cmux_allocate(void *arg)
 
   tt_assert(TOR_SIMPLEQ_EMPTY(&cmux->destroy_cell_queue.head));
 
- done:
+done:
   circuitmux_free(cmux);
 }
 
@@ -152,7 +151,7 @@ test_cmux_attach_circuit(void *arg)
   cell_direction_t cdir;
   unsigned int n_cells;
 
-  (void) arg;
+  (void)arg;
 
   pchan = new_fake_channel();
   tt_assert(pchan);
@@ -238,7 +237,7 @@ test_cmux_attach_circuit(void *arg)
   circuitmux_attach_circuit(pchan->cmux, circ, CELL_DIRECTION_IN);
   tt_int_op(circuitmux_is_circuit_active(pchan->cmux, circ), OP_EQ, 1);
 
- done:
+done:
   free_fake_orcirc(orcirc);
   free_fake_channel(pchan);
   free_fake_channel(nchan);
@@ -251,7 +250,7 @@ test_cmux_detach_circuit(void *arg)
   or_circuit_t *orcirc = NULL;
   channel_t *pchan = NULL, *nchan = NULL;
 
-  (void) arg;
+  (void)arg;
 
   pchan = new_fake_channel();
   tt_assert(pchan);
@@ -278,7 +277,7 @@ test_cmux_detach_circuit(void *arg)
   tt_uint_op(circuitmux_num_circuits(nchan->cmux), OP_EQ, 0);
   tt_int_op(circuitmux_is_circuit_attached(nchan->cmux, circ), OP_EQ, 0);
 
- done:
+done:
   free_fake_orcirc(orcirc);
   free_fake_channel(pchan);
   free_fake_channel(nchan);
@@ -292,7 +291,7 @@ test_cmux_detach_all_circuits(void *arg)
   channel_t *pchan = NULL, *nchan = NULL;
   smartlist_t *detached_out = smartlist_new();
 
-  (void) arg;
+  (void)arg;
 
   /* Channels need to be registered in order for the detach all circuit
    * function to find them. */
@@ -329,7 +328,7 @@ test_cmux_detach_all_circuits(void *arg)
   tt_int_op(circuitmux_is_circuit_attached(nchan->cmux, circ), OP_EQ, 0);
   tt_int_op(circuitmux_is_circuit_active(nchan->cmux, circ), OP_EQ, 0);
 
- done:
+done:
   smartlist_free(detached_out);
   free_fake_orcirc(orcirc);
   free_fake_channel(pchan);
@@ -343,7 +342,7 @@ test_cmux_policy(void *arg)
   or_circuit_t *orcirc = NULL;
   channel_t *pchan = NULL, *nchan = NULL;
 
-  (void) arg;
+  (void)arg;
 
   pchan = new_fake_channel();
   tt_assert(pchan);
@@ -370,7 +369,7 @@ test_cmux_policy(void *arg)
   /* Set back the EWMA policy. */
   circuitmux_set_policy(pchan->cmux, &ewma_policy);
 
- done:
+done:
   free_fake_orcirc(orcirc);
   free_fake_channel(pchan);
   free_fake_channel(nchan);
@@ -383,7 +382,7 @@ test_cmux_xmit_cell(void *arg)
   or_circuit_t *orcirc = NULL;
   channel_t *pchan = NULL, *nchan = NULL;
 
-  (void) arg;
+  (void)arg;
 
   pchan = new_fake_channel();
   tt_assert(pchan);
@@ -420,14 +419,14 @@ test_cmux_xmit_cell(void *arg)
   circuitmux_append_destroy_cell(pchan, pchan->cmux, orcirc->p_circ_id, 0);
   tt_i64_op(pchan->cmux->destroy_ctr, OP_EQ, 1);
   tt_int_op(pchan->cmux->destroy_cell_queue.n, OP_EQ, 1);
-  tt_i64_op(circuitmux_count_queued_destroy_cells(pchan, pchan->cmux),
-            OP_EQ, 1);
+  tt_i64_op(circuitmux_count_queued_destroy_cells(pchan, pchan->cmux), OP_EQ,
+            1);
 
   /* Emit the DESTROY cell. */
   circuitmux_notify_xmit_destroy(pchan->cmux);
   tt_i64_op(pchan->cmux->destroy_ctr, OP_EQ, 0);
 
- done:
+done:
   free_fake_orcirc(orcirc);
   free_fake_channel(pchan);
   free_fake_channel(nchan);
@@ -438,7 +437,7 @@ cmux_setup_test(const struct testcase_t *tc)
 {
   static int whatever;
 
-  (void) tc;
+  (void)tc;
 
   cell_ewma_initialize_ticks();
   return &whatever;
@@ -447,8 +446,8 @@ cmux_setup_test(const struct testcase_t *tc)
 static int
 cmux_cleanup_test(const struct testcase_t *tc, void *ptr)
 {
-  (void) tc;
-  (void) ptr;
+  (void)tc;
+  (void)ptr;
 
   circuitmux_ewma_free_all();
 
@@ -456,25 +455,21 @@ cmux_cleanup_test(const struct testcase_t *tc, void *ptr)
 }
 
 static struct testcase_setup_t cmux_test_setup = {
-  .setup_fn = cmux_setup_test,
-  .cleanup_fn = cmux_cleanup_test,
+    .setup_fn = cmux_setup_test,
+    .cleanup_fn = cmux_cleanup_test,
 };
 
-#define TEST_CMUX(name) \
-  { #name, test_cmux_##name, TT_FORK, &cmux_test_setup, NULL }
+#define TEST_CMUX(name)                                      \
+  {                                                          \
+#    name, test_cmux_##name, TT_FORK, &cmux_test_setup, NULL \
+  }
 
 struct testcase_t circuitmux_tests[] = {
-  /* Test circuitmux_t object */
-  TEST_CMUX(allocate),
-  TEST_CMUX(attach_circuit),
-  TEST_CMUX(detach_circuit),
-  TEST_CMUX(detach_all_circuits),
-  TEST_CMUX(policy),
-  TEST_CMUX(xmit_cell),
+    /* Test circuitmux_t object */
+    TEST_CMUX(allocate), TEST_CMUX(attach_circuit), TEST_CMUX(detach_circuit),
+    TEST_CMUX(detach_all_circuits), TEST_CMUX(policy), TEST_CMUX(xmit_cell),
 
-  /* Misc. */
-  TEST_CMUX(compute_ticks),
-  TEST_CMUX(destroy_cell_queue),
+    /* Misc. */
+    TEST_CMUX(compute_ticks), TEST_CMUX(destroy_cell_queue),
 
-  END_OF_TESTCASES
-};
+    END_OF_TESTCASES};

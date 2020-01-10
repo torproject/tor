@@ -27,8 +27,11 @@
 #include "feature/relay/routermode.h"
 
 /* Copied from config.c, we will refactor later in 29211. */
-#define REJECT(arg) \
-  STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
+#define REJECT(arg)         \
+  STMT_BEGIN                \
+    *msg = tor_strdup(arg); \
+    return -1;              \
+  STMT_END
 
 /** Given a ServerTransportListenAddr <b>line</b>, return its
  *  <address:port> string. Return NULL if the line was not
@@ -51,10 +54,11 @@ get_bindaddr_from_transport_listen_line(const char *line,
 
   items = smartlist_new();
   smartlist_split_string(items, line, NULL,
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+                         SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, -1);
 
   if (smartlist_len(items) < 2) {
-    log_warn(LD_CONFIG,"Too few arguments on ServerTransportListenAddr line.");
+    log_warn(LD_CONFIG,
+             "Too few arguments on ServerTransportListenAddr line.");
     goto err;
   }
 
@@ -66,20 +70,22 @@ get_bindaddr_from_transport_listen_line(const char *line,
     goto err;
 
   /* Validate addrport */
-  if (tor_addr_port_parse(LOG_WARN, addrport, &addr, &port, -1)<0) {
-    log_warn(LD_CONFIG, "Error parsing ServerTransportListenAddr "
-             "address '%s'", addrport);
+  if (tor_addr_port_parse(LOG_WARN, addrport, &addr, &port, -1) < 0) {
+    log_warn(LD_CONFIG,
+             "Error parsing ServerTransportListenAddr "
+             "address '%s'",
+             addrport);
     goto err;
   }
 
   goto done;
 
- err:
+err:
   tor_free(addrport);
   addrport = NULL;
 
- done:
-  SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+done:
+  SMARTLIST_FOREACH(items, char *, s, tor_free(s));
   smartlist_free(items);
 
   return addrport;
@@ -97,7 +103,7 @@ pt_get_bindaddr_from_config(const char *transport)
 
   for (cl = options->ServerTransportListenAddr; cl; cl = cl->next) {
     char *bindaddr =
-      get_bindaddr_from_transport_listen_line(cl->value, transport);
+        get_bindaddr_from_transport_listen_line(cl->value, transport);
     if (bindaddr)
       return bindaddr;
   }
@@ -122,10 +128,10 @@ get_options_from_transport_options_line(const char *line,
   const char *parsed_transport = NULL;
 
   smartlist_split_string(items, line, NULL,
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+                         SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, -1);
 
   if (smartlist_len(items) < 2) {
-    log_warn(LD_CONFIG,"Too few arguments on ServerTransportOptions line.");
+    log_warn(LD_CONFIG, "Too few arguments on ServerTransportOptions line.");
     goto err;
   }
 
@@ -134,12 +140,12 @@ get_options_from_transport_options_line(const char *line,
   if (transport && strcmp(transport, parsed_transport))
     goto err;
 
-  SMARTLIST_FOREACH_BEGIN(items, const char *, option) {
+  SMARTLIST_FOREACH_BEGIN (items, const char *, option) {
     if (option_sl_idx == 0) /* skip the transport field (first field)*/
       continue;
 
     /* validate that it's a k=v value */
-    if (!string_is_key_value(LOG_WARN, option)) {
+    if (! string_is_key_value(LOG_WARN, option)) {
       log_warn(LD_CONFIG, "%s is not a k=v value.", escaped(option));
       goto err;
     }
@@ -147,17 +153,17 @@ get_options_from_transport_options_line(const char *line,
     /* add it to the options smartlist */
     smartlist_add_strdup(pt_options, option);
     log_debug(LD_CONFIG, "Added %s to the list of options", escaped(option));
-  } SMARTLIST_FOREACH_END(option);
+  } SMARTLIST_FOREACH_END (option);
 
   goto done;
 
- err:
-  SMARTLIST_FOREACH(pt_options, char*, s, tor_free(s));
+err:
+  SMARTLIST_FOREACH(pt_options, char *, s, tor_free(s));
   smartlist_free(pt_options);
   pt_options = NULL;
 
- done:
-  SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+done:
+  SMARTLIST_FOREACH(items, char *, s, tor_free(s));
   smartlist_free(items);
 
   return pt_options;
@@ -175,7 +181,7 @@ pt_get_options_for_server_transport(const char *transport)
 
   for (cl = options->ServerTransportOptions; cl; cl = cl->next) {
     smartlist_t *options_sl =
-      get_options_from_transport_options_line(cl->value, transport);
+        get_options_from_transport_options_line(cl->value, transport);
     if (options_sl)
       return options_sl;
   }
@@ -192,30 +198,30 @@ pt_get_options_for_server_transport(const char *transport)
  */
 int
 options_validate_server_transport(const or_options_t *old_options,
-                                  or_options_t *options,
-                                  char **msg)
+                                  or_options_t *options, char **msg)
 {
   (void)old_options;
 
-  if (BUG(!options))
+  if (BUG(! options))
     return -1;
 
-  if (BUG(!msg))
+  if (BUG(! msg))
     return -1;
 
   config_line_t *cl;
 
-  if (options->ServerTransportPlugin && !server_mode(options)) {
-    log_notice(LD_GENERAL, "Tor is not configured as a relay but you specified"
+  if (options->ServerTransportPlugin && ! server_mode(options)) {
+    log_notice(LD_GENERAL,
+               "Tor is not configured as a relay but you specified"
                " a ServerTransportPlugin line (%s). The ServerTransportPlugin "
                "line will be ignored.",
                escaped(options->ServerTransportPlugin->value));
   }
 
-  if (options->ServerTransportListenAddr && !options->ServerTransportPlugin) {
+  if (options->ServerTransportListenAddr && ! options->ServerTransportPlugin) {
     log_notice(LD_GENERAL, "You need at least a single managed-proxy to "
-               "specify a transport listen address. The "
-               "ServerTransportListenAddr line will be ignored.");
+                           "specify a transport listen address. The "
+                           "ServerTransportListenAddr line will be ignored.");
   }
 
   for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
@@ -228,7 +234,7 @@ options_validate_server_transport(const or_options_t *old_options,
         'transport' being NULL, it means that something went wrong
         while parsing the ServerTransportListenAddr line. */
     char *bindaddr = get_bindaddr_from_transport_listen_line(cl->value, NULL);
-    if (!bindaddr)
+    if (! bindaddr)
       REJECT("ServerTransportListenAddr did not parse. See logs for details.");
     tor_free(bindaddr);
   }
@@ -238,8 +244,8 @@ options_validate_server_transport(const or_options_t *old_options,
         'transport' being NULL, it means that something went wrong
         while parsing the ServerTransportOptions line. */
     smartlist_t *options_sl =
-      get_options_from_transport_options_line(cl->value, NULL);
-    if (!options_sl)
+        get_options_from_transport_options_line(cl->value, NULL);
+    if (! options_sl)
       REJECT("ServerTransportOptions did not parse. See logs for details.");
 
     SMARTLIST_FOREACH(options_sl, char *, cp, tor_free(cp));
@@ -270,9 +276,9 @@ options_act_server_transport(const or_options_t *old_options)
 
   /* If we are a bridge with a pluggable transport proxy but no
      Extended ORPort, inform the user that they are missing out. */
-  if (options->ServerTransportPlugin &&
-      !options->ExtORPort_lines) {
-    log_notice(LD_CONFIG, "We use pluggable transports but the Extended "
+  if (options->ServerTransportPlugin && ! options->ExtORPort_lines) {
+    log_notice(LD_CONFIG,
+               "We use pluggable transports but the Extended "
                "ORPort is disabled. Tor and your pluggable transports proxy "
                "communicate with each other via the Extended ORPort so it "
                "is suggested you enable it: it will also allow your Bridge "
@@ -283,19 +289,18 @@ options_act_server_transport(const or_options_t *old_options)
 
   /* If we have an ExtORPort, initialize its auth cookie. */
   if (running_tor &&
-      init_ext_or_cookie_authentication(!!options->ExtORPort_lines) < 0) {
-    log_warn(LD_CONFIG,"Error creating Extended ORPort cookie file.");
+      init_ext_or_cookie_authentication(! ! options->ExtORPort_lines) < 0) {
+    log_warn(LD_CONFIG, "Error creating Extended ORPort cookie file.");
     return -1;
   }
 
-  if (!options->DisableNetwork) {
+  if (! options->DisableNetwork) {
     if (options->ServerTransportPlugin) {
       for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
         if (pt_parse_transport_line(options, cl->value, 0, 1) < 0) {
           // LCOV_EXCL_START
-          log_warn(LD_BUG,
-                   "Previously validated ServerTransportPlugin line "
-                   "could not be added!");
+          log_warn(LD_BUG, "Previously validated ServerTransportPlugin line "
+                           "could not be added!");
           return -1;
           // LCOV_EXCL_STOP
         }

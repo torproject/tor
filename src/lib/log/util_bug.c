@@ -13,8 +13,8 @@
 #include "lib/err/backtrace.h"
 #include "lib/err/torerr.h"
 #ifdef TOR_UNIT_TESTS
-#include "lib/smartlist_core/smartlist_core.h"
-#include "lib/smartlist_core/smartlist_foreach.h"
+#  include "lib/smartlist_core/smartlist_core.h"
+#  include "lib/smartlist_core/smartlist_foreach.h"
 #endif
 #include "lib/malloc/malloc.h"
 #include "lib/string/printf.h"
@@ -26,7 +26,7 @@
 static void (*failed_assertion_cb)(void) = NULL;
 static int n_bugs_to_capture = 0;
 static smartlist_t *bug_messages = NULL;
-#define capturing_bugs() (bug_messages != NULL && n_bugs_to_capture)
+#  define capturing_bugs() (bug_messages != NULL && n_bugs_to_capture)
 void
 tor_capture_bugs_(int n)
 {
@@ -38,7 +38,7 @@ void
 tor_end_capture_bugs_(void)
 {
   n_bugs_to_capture = 0;
-  if (!bug_messages)
+  if (! bug_messages)
     return;
   SMARTLIST_FOREACH(bug_messages, char *, cp, tor_free(cp));
   smartlist_free(bug_messages);
@@ -65,37 +65,38 @@ tor_set_failed_assertion_callback(void (*fn)(void))
   failed_assertion_cb = fn;
 }
 #else /* !defined(TOR_UNIT_TESTS) */
-#define capturing_bugs() (0)
-#define add_captured_bug(s) do { } while (0)
+#  define capturing_bugs() (0)
+#  define add_captured_bug(s) \
+    do {                      \
+    } while (0)
 #endif /* defined(TOR_UNIT_TESTS) */
 
 /** Helper for tor_assert: report the assertion failure. */
 void
-tor_assertion_failed_(const char *fname, unsigned int line,
-                      const char *func, const char *expr,
-                      const char *fmt, ...)
+tor_assertion_failed_(const char *fname, unsigned int line, const char *func,
+                      const char *expr, const char *fmt, ...)
 {
   char *buf = NULL;
   char *extra = NULL;
   va_list ap;
 
 #ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wformat-nonliteral"
 #endif
   if (fmt) {
-    va_start(ap,fmt);
+    va_start(ap, fmt);
     tor_vasprintf(&extra, fmt, ap);
     va_end(ap);
   }
 #ifdef __clang__
-#pragma clang diagnostic pop
+#  pragma clang diagnostic pop
 #endif
 
-  log_err(LD_BUG, "%s:%u: %s: Assertion %s failed; aborting.",
-          fname, line, func, expr);
-  tor_asprintf(&buf, "Assertion %s failed in %s at %s:%u: %s",
-               expr, func, fname, line, extra ? extra : "");
+  log_err(LD_BUG, "%s:%u: %s: Assertion %s failed; aborting.", fname, line,
+          func, expr);
+  tor_asprintf(&buf, "Assertion %s failed in %s at %s:%u: %s", expr, func,
+               fname, line, extra ? extra : "");
   tor_free(extra);
   log_backtrace(LOG_ERR, LD_BUG, buf);
   tor_free(buf);
@@ -103,13 +104,12 @@ tor_assertion_failed_(const char *fname, unsigned int line,
 
 /** Helper for tor_assert_nonfatal: report the assertion failure. */
 void
-tor_bug_occurred_(const char *fname, unsigned int line,
-                  const char *func, const char *expr,
-                  int once, const char *fmt, ...)
+tor_bug_occurred_(const char *fname, unsigned int line, const char *func,
+                  const char *expr, int once, const char *fmt, ...)
 {
   char *buf = NULL;
-  const char *once_str = once ?
-    " (Future instances of this warning will be silenced.)": "";
+  const char *once_str =
+      once ? " (Future instances of this warning will be silenced.)" : "";
   if (! expr) {
     if (capturing_bugs()) {
       add_captured_bug("This line should not have been reached.");
@@ -117,9 +117,8 @@ tor_bug_occurred_(const char *fname, unsigned int line,
     }
     log_warn(LD_BUG, "%s:%u: %s: This line should not have been reached.%s",
              fname, line, func, once_str);
-    tor_asprintf(&buf,
-                 "Line unexpectedly reached at %s at %s:%u",
-                 func, fname, line);
+    tor_asprintf(&buf, "Line unexpectedly reached at %s at %s:%u", func, fname,
+                 line);
   } else {
     if (capturing_bugs()) {
       add_captured_bug(expr);
@@ -130,20 +129,20 @@ tor_bug_occurred_(const char *fname, unsigned int line,
     char *extra = NULL;
 
 #ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wformat-nonliteral"
 #endif
     if (fmt) {
-      va_start(ap,fmt);
+      va_start(ap, fmt);
       tor_vasprintf(&extra, fmt, ap);
       va_end(ap);
     }
 #ifdef __clang__
-#pragma clang diagnostic pop
+#  pragma clang diagnostic pop
 #endif
 
-    log_warn(LD_BUG, "%s:%u: %s: Non-fatal assertion %s failed.%s",
-             fname, line, func, expr, once_str);
+    log_warn(LD_BUG, "%s:%u: %s: Non-fatal assertion %s failed.%s", fname,
+             line, func, expr, once_str);
     tor_asprintf(&buf, "Non-fatal assertion %s failed in %s at %s:%u%s%s",
                  expr, func, fname, line, fmt ? " : " : "",
                  extra ? extra : "");
@@ -188,11 +187,11 @@ tor_fix_source_file(const char *fname)
   cp1 = strrchr(fname, '/');
   cp2 = strrchr(fname, '\\');
   if (cp1 && cp2) {
-    r = (cp1<cp2)?(cp2+1):(cp1+1);
+    r = (cp1 < cp2) ? (cp2 + 1) : (cp1 + 1);
   } else if (cp1) {
-    r = cp1+1;
+    r = cp1 + 1;
   } else if (cp2) {
-    r = cp2+1;
+    r = cp2 + 1;
   } else {
     r = fname;
   }

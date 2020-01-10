@@ -24,11 +24,9 @@
 #include "core/mainloop/periodic.h"
 
 #ifndef COCCI
-#define DECLARE_EVENT(name, roles, flags)         \
-  static periodic_event_item_t name ## _event =   \
-    PERIODIC_EVENT(name,                          \
-                   PERIODIC_EVENT_ROLE_##roles,   \
-                   flags)
+#  define DECLARE_EVENT(name, roles, flags)     \
+    static periodic_event_item_t name##_event = \
+        PERIODIC_EVENT(name, PERIODIC_EVENT_ROLE_##roles, flags)
 #endif /* !defined(COCCI) */
 
 #define FL(name) (PERIODIC_EVENT_FLAG_##name)
@@ -45,7 +43,7 @@ check_authority_cert_callback(time_t now, const or_options_t *options)
   /* 1e. Periodically, if we're a v3 authority, we check whether our cert is
    * close to expiring and warn the admin if it is. */
   v3_authority_check_key_expiry();
-#define CHECK_V3_CERTIFICATE_INTERVAL (5*60)
+#define CHECK_V3_CERTIFICATE_INTERVAL (5 * 60)
   return CHECK_V3_CERTIFICATE_INTERVAL;
 }
 
@@ -60,7 +58,7 @@ DECLARE_EVENT(check_authority_cert, DIRAUTH, 0);
 static int
 dirvote_callback(time_t now, const or_options_t *options)
 {
-  if (!authdir_mode_v3(options)) {
+  if (! authdir_mode_v3(options)) {
     tor_assert_nonfatal_unreached();
     return 3600;
   }
@@ -95,11 +93,11 @@ static int
 save_stability_callback(time_t now, const or_options_t *options)
 {
   if (authdir_mode_tests_reachability(options)) {
-    if (rep_hist_record_mtbf_data(now, 1)<0) {
+    if (rep_hist_record_mtbf_data(now, 1) < 0) {
       log_warn(LD_GENERAL, "Couldn't store mtbf data.");
     }
   }
-#define SAVE_STABILITY_INTERVAL (30*60)
+#define SAVE_STABILITY_INTERVAL (30 * 60)
   return SAVE_STABILITY_INTERVAL;
 }
 
@@ -112,8 +110,7 @@ DECLARE_EVENT(save_stability, AUTHORITIES, 0);
 static int
 launch_reachability_tests_callback(time_t now, const or_options_t *options)
 {
-  if (authdir_mode_tests_reachability(options) &&
-      !net_is_disabled()) {
+  if (authdir_mode_tests_reachability(options) && ! net_is_disabled()) {
     /* try to determine reachability of the other Tor relays */
     dirserv_test_reachability(now);
   }
@@ -148,8 +145,8 @@ write_bridge_ns_callback(time_t now, const or_options_t *options)
 {
   if (options->BridgeAuthoritativeDir) {
     bridgeauth_dump_bridge_status_to_file(now);
-#define BRIDGE_STATUSFILE_INTERVAL (30*60)
-     return BRIDGE_STATUSFILE_INTERVAL;
+#define BRIDGE_STATUSFILE_INTERVAL (30 * 60)
+    return BRIDGE_STATUSFILE_INTERVAL;
   }
   return PERIODIC_EVENT_NO_UPDATE;
 }

@@ -11,13 +11,15 @@
 #include "test/test.h"
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
 static void
 dummy_cb_fn(int severity, log_domain_mask_t domain, const char *msg)
 {
-  (void)severity; (void)domain; (void)msg;
+  (void)severity;
+  (void)domain;
+  (void)msg;
 }
 
 static void
@@ -26,7 +28,7 @@ test_get_sigsafe_err_fds(void *arg)
   const int *fds;
   int n;
   log_severity_list_t include_bug, no_bug, no_bug2;
-  (void) arg;
+  (void)arg;
   init_logging(1);
 
   n = tor_log_get_sigsafe_err_fds(&fds);
@@ -35,7 +37,7 @@ test_get_sigsafe_err_fds(void *arg)
 
   set_log_severity_config(LOG_WARN, LOG_ERR, &include_bug);
   set_log_severity_config(LOG_WARN, LOG_ERR, &no_bug);
-  no_bug.masks[SEVERITY_MASK_IDX(LOG_ERR)] &= ~(LD_BUG|LD_GENERAL);
+  no_bug.masks[SEVERITY_MASK_IDX(LOG_ERR)] &= ~(LD_BUG | LD_GENERAL);
   set_log_severity_config(LOG_INFO, LOG_NOTICE, &no_bug2);
 
   /* Add some logs; make sure the output is as expected. */
@@ -72,7 +74,7 @@ test_get_sigsafe_err_fds(void *arg)
   /* Don't overflow the array. */
   {
     int i;
-    for (i=5; i<20; ++i) {
+    for (i = 5; i < 20; ++i) {
       add_stream_log(&include_bug, "x-dummy", i);
     }
   }
@@ -80,15 +82,14 @@ test_get_sigsafe_err_fds(void *arg)
   n = tor_log_get_sigsafe_err_fds(&fds);
   tt_int_op(n, OP_EQ, 8);
 
- done:
-  ;
+done:;
 }
 
 static void
 test_sigsafe_err(void *arg)
 {
-  const char *fn=get_fname("sigsafe_err_log");
-  char *content=NULL;
+  const char *fn = get_fname("sigsafe_err_log");
+  char *content = NULL;
   log_severity_list_t include_bug;
   smartlist_t *lines = smartlist_new();
   (void)arg;
@@ -105,11 +106,9 @@ test_sigsafe_err(void *arg)
   log_err(LD_BUG, "Say, this isn't too cool.");
   tor_log_err_sigsafe("Minimal.\n", NULL);
 
-  set_log_time_granularity(100*1000);
-  tor_log_err_sigsafe("Testing any ",
-                      "attempt to manually log ",
-                      "from a signal.\n",
-                      NULL);
+  set_log_time_granularity(100 * 1000);
+  tor_log_err_sigsafe("Testing any ", "attempt to manually log ",
+                      "from a signal.\n", NULL);
   mark_logs_temp();
   close_temp_logs();
   close(STDERR_FILENO);
@@ -127,14 +126,14 @@ test_sigsafe_err(void *arg)
 
   tt_assert(strstr(smartlist_get(lines, 0), "Say, this isn't too cool"));
   tt_str_op(smartlist_get(lines, 1), OP_EQ, "");
-  tt_assert(!strcmpstart(smartlist_get(lines, 2), "=============="));
-  tt_assert(!strcmpstart(smartlist_get(lines, 3), "Minimal."));
+  tt_assert(! strcmpstart(smartlist_get(lines, 2), "=============="));
+  tt_assert(! strcmpstart(smartlist_get(lines, 3), "Minimal."));
   tt_str_op(smartlist_get(lines, 4), OP_EQ, "");
-  tt_assert(!strcmpstart(smartlist_get(lines, 5), "=============="));
+  tt_assert(! strcmpstart(smartlist_get(lines, 5), "=============="));
   tt_str_op(smartlist_get(lines, 6), OP_EQ,
             "Testing any attempt to manually log from a signal.");
 
- done:
+done:
   tor_free(content);
   SMARTLIST_FOREACH(lines, char *, x, tor_free(x));
   smartlist_free(lines);
@@ -143,8 +142,8 @@ test_sigsafe_err(void *arg)
 static void
 test_ratelim(void *arg)
 {
-  (void) arg;
-  ratelim_t ten_min = RATELIM_INIT(10*60);
+  (void)arg;
+  ratelim_t ten_min = RATELIM_INIT(10 * 60);
 
   const time_t start = 1466091600;
   time_t now = start;
@@ -173,13 +172,12 @@ test_ratelim(void *arg)
   tt_ptr_op(msg, OP_NE, NULL);
   tt_str_op(msg, OP_EQ,
             " [9 similar message(s) suppressed in last 600 seconds]");
- done:
+done:
   tor_free(msg);
 }
 
 struct testcase_t logging_tests[] = {
-  { "sigsafe_err_fds", test_get_sigsafe_err_fds, TT_FORK, NULL, NULL },
-  { "sigsafe_err", test_sigsafe_err, TT_FORK, NULL, NULL },
-  { "ratelim", test_ratelim, 0, NULL, NULL },
-  END_OF_TESTCASES
-};
+    {"sigsafe_err_fds", test_get_sigsafe_err_fds, TT_FORK, NULL, NULL},
+    {"sigsafe_err", test_sigsafe_err, TT_FORK, NULL, NULL},
+    {"ratelim", test_ratelim, 0, NULL, NULL},
+    END_OF_TESTCASES};

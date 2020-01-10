@@ -17,7 +17,7 @@
  * publish this message if we are publishing it, or subscribe to it if we are
  * subscribing to it.
  */
-#define DISP_FLAG_EXCL (1u<<0)
+#define DISP_FLAG_EXCL (1u << 0)
 
 /**
  * Flag for registering a message: declare that this message is a stub, and we
@@ -27,6 +27,6 @@
  * We use this so that messages aren't treated as "dangling" if they are
  * potentially used by some other build of Tor.
  */
-#define DISP_FLAG_STUB (1u<<1)
+#define DISP_FLAG_STUB (1u << 1)
 
 #endif /* !defined(TOR_PUBSUB_FLAGS_H) */

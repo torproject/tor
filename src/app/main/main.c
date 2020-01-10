@@ -83,17 +83,17 @@
 #include "core/or/port_cfg_st.h"
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
 #ifdef HAVE_SYSTEMD
-#   if defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__)
+#  if defined(__COVERITY__) && ! defined(__INCLUDE_LEVEL__)
 /* Systemd's use of gcc's __INCLUDE_LEVEL__ extension macro appears to confuse
  * Coverity. Here's a kludge to unconfuse it.
  */
-#   define __INCLUDE_LEVEL__ 2
-#endif /* defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__) */
-#include <systemd/sd-daemon.h>
+#    define __INCLUDE_LEVEL__ 2
+#  endif /* defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__) */
+#  include <systemd/sd-daemon.h>
 #endif /* defined(HAVE_SYSTEMD) */
 
 #ifdef HAVE_RUST
@@ -115,8 +115,8 @@ do_hup(void)
 {
   const or_options_t *options = get_options();
 
-  log_notice(LD_GENERAL,"Received reload signal (hup). Reloading config and "
-             "resetting internal state.");
+  log_notice(LD_GENERAL, "Received reload signal (hup). Reloading config and "
+                         "resetting internal state.");
   if (accounting_is_enabled(options))
     accounting_record_bandwidth_usage(time(NULL), get_or_state());
 
@@ -127,8 +127,8 @@ do_hup(void)
     /* no need to provide argc/v, they've been cached in init_from_config */
     int init_rv = options_init_from_torrc(0, NULL);
     if (init_rv < 0) {
-      log_err(LD_CONFIG,"Reading config failed--see warnings above. "
-              "For usage, try -h.");
+      log_err(LD_CONFIG, "Reading config failed--see warnings above. "
+                         "For usage, try -h.");
       return -1;
     } else if (BUG(init_rv > 0)) {
       // LCOV_EXCL_START
@@ -146,10 +146,10 @@ do_hup(void)
   } else {
     char *msg = NULL;
     log_notice(LD_GENERAL, "Not reloading config file: the controller told "
-               "us not to.");
+                           "us not to.");
     /* Make stuff get rescanned, reloaded, etc. */
-    if (set_options((or_options_t*)options, &msg) < 0) {
-      if (!msg)
+    if (set_options((or_options_t *)options, &msg) < 0) {
+      if (! msg)
         msg = tor_strdup("Unknown error");
       log_warn(LD_GENERAL, "Unable to re-set previous options: %s", msg);
       tor_free(msg);
@@ -160,7 +160,7 @@ do_hup(void)
     if (dirserv_load_fingerprint_file() < 0) {
       /* warnings are logged from dirserv_load_fingerprint_file() directly */
       log_info(LD_GENERAL, "Error reloading fingerprints. "
-               "Continuing with old list.");
+                           "Continuing with old list.");
     }
   }
 
@@ -172,7 +172,7 @@ do_hup(void)
   /* retry appropriate downloads */
   router_reset_status_download_failures();
   router_reset_descriptor_download_failures();
-  if (!net_is_disabled())
+  if (! net_is_disabled())
     update_networkstatus_downloads(time(NULL));
 
   /* We'll retry routerstatus downloads in about 10 seconds; no need to
@@ -214,15 +214,14 @@ signal_callback(evutil_socket_t fd, short events, void *arg)
 static void
 process_signal(int sig)
 {
-  switch (sig)
-    {
+  switch (sig) {
     case SIGTERM:
-      log_notice(LD_GENERAL,"Catching signal TERM, exiting cleanly.");
+      log_notice(LD_GENERAL, "Catching signal TERM, exiting cleanly.");
       tor_shutdown_event_loop_and_exit(0);
       break;
     case SIGINT:
-      if (!server_mode(get_options())) { /* do it now */
-        log_notice(LD_GENERAL,"Interrupt: exiting cleanly.");
+      if (! server_mode(get_options())) { /* do it now */
+        log_notice(LD_GENERAL, "Interrupt: exiting cleanly.");
         tor_shutdown_event_loop_and_exit(0);
         return;
       }
@@ -233,18 +232,19 @@ process_signal(int sig)
       break;
 #ifdef SIGPIPE
     case SIGPIPE:
-      log_debug(LD_GENERAL,"Caught SIGPIPE. Ignoring.");
+      log_debug(LD_GENERAL, "Caught SIGPIPE. Ignoring.");
       break;
 #endif
     case SIGUSR1:
       /* prefer to log it at INFO, but make sure we always see it */
-      dumpstats(get_min_log_level()<LOG_INFO ? get_min_log_level() : LOG_INFO);
+      dumpstats(get_min_log_level() < LOG_INFO ? get_min_log_level()
+                                               : LOG_INFO);
       control_event_signal(sig);
       break;
     case SIGUSR2:
       switch_logs_debug();
-      log_debug(LD_GENERAL,"Caught USR2, going to loglevel debug. "
-                "Send HUP to change back.");
+      log_debug(LD_GENERAL, "Caught USR2, going to loglevel debug. "
+                            "Send HUP to change back.");
       control_event_signal(sig);
       break;
     case SIGHUP:
@@ -252,7 +252,7 @@ process_signal(int sig)
       sd_notify(0, "RELOADING=1");
 #endif
       if (do_hup() < 0) {
-        log_warn(LD_CONFIG,"Restart failed (config error?). Exiting.");
+        log_warn(LD_CONFIG, "Restart failed (config error?). Exiting.");
         tor_shutdown_event_loop_and_exit(1);
         return;
       }
@@ -301,8 +301,8 @@ static void
 dumpmemusage(int severity)
 {
   connection_dump_buffer_mem_stats(severity);
-  tor_log(severity, LD_GENERAL, "In rephist: %"PRIu64" used by %d Tors.",
-      (rephist_total_alloc), rephist_total_num);
+  tor_log(severity, LD_GENERAL, "In rephist: %" PRIu64 " used by %d Tors.",
+          (rephist_total_alloc), rephist_total_num);
   dump_routerlist_mem_usage(severity);
   dump_cell_pool_usage(severity);
   dump_dns_mem_usage(severity);
@@ -320,76 +320,76 @@ dumpstats(int severity)
 
   tor_log(severity, LD_GENERAL, "Dumping stats:");
 
-  SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
+  SMARTLIST_FOREACH_BEGIN (get_connection_array(), connection_t *, conn) {
     int i = conn_sl_idx;
-    tor_log(severity, LD_GENERAL,
+    tor_log(
+        severity, LD_GENERAL,
         "Conn %d (socket %d) type %d (%s), state %d (%s), created %d secs ago",
         i, (int)conn->s, conn->type, conn_type_to_string(conn->type),
         conn->state, conn_state_to_string(conn->type, conn->state),
         (int)(now - conn->timestamp_created));
-    if (!connection_is_listener(conn)) {
-      tor_log(severity,LD_GENERAL,
-          "Conn %d is to %s:%d.", i,
-          safe_str_client(conn->address),
-          conn->port);
-      tor_log(severity,LD_GENERAL,
+    if (! connection_is_listener(conn)) {
+      tor_log(severity, LD_GENERAL, "Conn %d is to %s:%d.", i,
+              safe_str_client(conn->address), conn->port);
+      tor_log(
+          severity, LD_GENERAL,
           "Conn %d: %d bytes waiting on inbuf (len %d, last read %d secs ago)",
-          i,
-          (int)connection_get_inbuf_len(conn),
+          i, (int)connection_get_inbuf_len(conn),
           (int)buf_allocation(conn->inbuf),
           (int)(now - conn->timestamp_last_read_allowed));
-      tor_log(severity,LD_GENERAL,
-          "Conn %d: %d bytes waiting on outbuf "
-          "(len %d, last written %d secs ago)",i,
-          (int)connection_get_outbuf_len(conn),
-          (int)buf_allocation(conn->outbuf),
-          (int)(now - conn->timestamp_last_write_allowed));
+      tor_log(severity, LD_GENERAL,
+              "Conn %d: %d bytes waiting on outbuf "
+              "(len %d, last written %d secs ago)",
+              i, (int)connection_get_outbuf_len(conn),
+              (int)buf_allocation(conn->outbuf),
+              (int)(now - conn->timestamp_last_write_allowed));
       if (conn->type == CONN_TYPE_OR) {
         or_connection_t *or_conn = TO_OR_CONN(conn);
         if (or_conn->tls) {
           if (tor_tls_get_buffer_sizes(or_conn->tls, &rbuf_cap, &rbuf_len,
                                        &wbuf_cap, &wbuf_len) == 0) {
             tor_log(severity, LD_GENERAL,
-                "Conn %d: %d/%d bytes used on OpenSSL read buffer; "
-                "%d/%d bytes used on write buffer.",
-                i, (int)rbuf_len, (int)rbuf_cap, (int)wbuf_len, (int)wbuf_cap);
+                    "Conn %d: %d/%d bytes used on OpenSSL read buffer; "
+                    "%d/%d bytes used on write buffer.",
+                    i, (int)rbuf_len, (int)rbuf_cap, (int)wbuf_len,
+                    (int)wbuf_cap);
           }
         }
       }
     }
     circuit_dump_by_conn(conn, severity); /* dump info about all the circuits
                                            * using this conn */
-  } SMARTLIST_FOREACH_END(conn);
+  } SMARTLIST_FOREACH_END (conn);
 
   channel_dumpstats(severity);
   channel_listener_dumpstats(severity);
 
   tor_log(severity, LD_NET,
-      "Cells processed: %"PRIu64" padding\n"
-      "                 %"PRIu64" create\n"
-      "                 %"PRIu64" created\n"
-      "                 %"PRIu64" relay\n"
-      "                        (%"PRIu64" relayed)\n"
-      "                        (%"PRIu64" delivered)\n"
-      "                 %"PRIu64" destroy",
-      (stats_n_padding_cells_processed),
-      (stats_n_create_cells_processed),
-      (stats_n_created_cells_processed),
-      (stats_n_relay_cells_processed),
-      (stats_n_relay_cells_relayed),
-      (stats_n_relay_cells_delivered),
-      (stats_n_destroy_cells_processed));
+          "Cells processed: %" PRIu64 " padding\n"
+          "                 %" PRIu64 " create\n"
+          "                 %" PRIu64 " created\n"
+          "                 %" PRIu64 " relay\n"
+          "                        (%" PRIu64 " relayed)\n"
+          "                        (%" PRIu64 " delivered)\n"
+          "                 %" PRIu64 " destroy",
+          (stats_n_padding_cells_processed), (stats_n_create_cells_processed),
+          (stats_n_created_cells_processed), (stats_n_relay_cells_processed),
+          (stats_n_relay_cells_relayed), (stats_n_relay_cells_delivered),
+          (stats_n_destroy_cells_processed));
   if (stats_n_data_cells_packaged)
-    tor_log(severity,LD_NET,"Average packaged cell fullness: %2.3f%%",
-        100*(((double)stats_n_data_bytes_packaged) /
-             ((double)stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
+    tor_log(severity, LD_NET, "Average packaged cell fullness: %2.3f%%",
+            100 *
+                (((double)stats_n_data_bytes_packaged) /
+                 ((double)stats_n_data_cells_packaged * RELAY_PAYLOAD_SIZE)));
   if (stats_n_data_cells_received)
-    tor_log(severity,LD_NET,"Average delivered cell fullness: %2.3f%%",
-        100*(((double)stats_n_data_bytes_received) /
-             ((double)stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
+    tor_log(severity, LD_NET, "Average delivered cell fullness: %2.3f%%",
+            100 *
+                (((double)stats_n_data_bytes_received) /
+                 ((double)stats_n_data_cells_received * RELAY_PAYLOAD_SIZE)));
 
   cpuworker_log_onionskin_overhead(severity, ONION_HANDSHAKE_TYPE_TAP, "TAP");
-  cpuworker_log_onionskin_overhead(severity, ONION_HANDSHAKE_TYPE_NTOR,"ntor");
+  cpuworker_log_onionskin_overhead(severity, ONION_HANDSHAKE_TYPE_NTOR,
+                                   "ntor");
 
   if (now - time_of_process_start >= 0)
     elapsed = now - time_of_process_start;
@@ -398,28 +398,26 @@ dumpstats(int severity)
 
   if (elapsed) {
     tor_log(severity, LD_NET,
-        "Average bandwidth: %"PRIu64"/%d = %d bytes/sec reading",
-        (get_bytes_read()),
-        (int)elapsed,
-        (int) (get_bytes_read()/elapsed));
+            "Average bandwidth: %" PRIu64 "/%d = %d bytes/sec reading",
+            (get_bytes_read()), (int)elapsed,
+            (int)(get_bytes_read() / elapsed));
     tor_log(severity, LD_NET,
-        "Average bandwidth: %"PRIu64"/%d = %d bytes/sec writing",
-        (get_bytes_written()),
-        (int)elapsed,
-        (int) (get_bytes_written()/elapsed));
+            "Average bandwidth: %" PRIu64 "/%d = %d bytes/sec writing",
+            (get_bytes_written()), (int)elapsed,
+            (int)(get_bytes_written() / elapsed));
   }
 
   tor_log(severity, LD_NET, "--------------- Dumping memory information:");
   dumpmemusage(severity);
 
-  rep_hist_dump_stats(now,severity);
+  rep_hist_dump_stats(now, severity);
   rend_service_dump_stats(severity);
 }
 
 #ifdef _WIN32
-#define UNIX_ONLY 0
+#  define UNIX_ONLY 0
 #else
-#define UNIX_ONLY 1
+#  define UNIX_ONLY 1
 #endif
 
 static struct {
@@ -433,37 +431,36 @@ static struct {
   struct event *signal_event;
 } signal_handlers[] = {
 #ifdef SIGINT
-  { SIGINT, UNIX_ONLY, NULL }, /* do a controlled slow shutdown */
+    {SIGINT, UNIX_ONLY, NULL}, /* do a controlled slow shutdown */
 #endif
 #ifdef SIGTERM
-  { SIGTERM, UNIX_ONLY, NULL }, /* to terminate now */
+    {SIGTERM, UNIX_ONLY, NULL}, /* to terminate now */
 #endif
 #ifdef SIGPIPE
-  { SIGPIPE, UNIX_ONLY, NULL }, /* otherwise SIGPIPE kills us */
+    {SIGPIPE, UNIX_ONLY, NULL}, /* otherwise SIGPIPE kills us */
 #endif
 #ifdef SIGUSR1
-  { SIGUSR1, UNIX_ONLY, NULL }, /* dump stats */
+    {SIGUSR1, UNIX_ONLY, NULL}, /* dump stats */
 #endif
 #ifdef SIGUSR2
-  { SIGUSR2, UNIX_ONLY, NULL }, /* go to loglevel debug */
+    {SIGUSR2, UNIX_ONLY, NULL}, /* go to loglevel debug */
 #endif
 #ifdef SIGHUP
-  { SIGHUP, UNIX_ONLY, NULL }, /* to reload config, retry conns, etc */
+    {SIGHUP, UNIX_ONLY, NULL}, /* to reload config, retry conns, etc */
 #endif
 #ifdef SIGXFSZ
-  { SIGXFSZ, UNIX_ONLY, NULL }, /* handle file-too-big resource exhaustion */
+    {SIGXFSZ, UNIX_ONLY, NULL}, /* handle file-too-big resource exhaustion */
 #endif
 #ifdef SIGCHLD
-  { SIGCHLD, UNIX_ONLY, NULL }, /* handle dns/cpu workers that exit */
+    {SIGCHLD, UNIX_ONLY, NULL}, /* handle dns/cpu workers that exit */
 #endif
-  /* These are controller-only */
-  { SIGNEWNYM, 0, NULL },
-  { SIGCLEARDNSCACHE, 0, NULL },
-  { SIGHEARTBEAT, 0, NULL },
-  { SIGACTIVE, 0, NULL },
-  { SIGDORMANT, 0, NULL },
-  { -1, -1, NULL }
-};
+    /* These are controller-only */
+    {SIGNEWNYM, 0, NULL},
+    {SIGCLEARDNSCACHE, 0, NULL},
+    {SIGHEARTBEAT, 0, NULL},
+    {SIGACTIVE, 0, NULL},
+    {SIGDORMANT, 0, NULL},
+    {-1, -1, NULL}};
 
 /** Set up the signal handler events for this process, and register them
  * with libevent if appropriate. */
@@ -471,7 +468,7 @@ void
 handle_signals(void)
 {
   int i;
-  const int enabled = !get_options()->DisableSignalHandlers;
+  const int enabled = ! get_options()->DisableSignalHandlers;
 
   for (i = 0; signal_handlers[i].signal_value >= 0; ++i) {
     /* Signal handlers are only registered with libevent if they need to catch
@@ -480,20 +477,18 @@ handle_signals(void)
      * command.
      */
     if (enabled && signal_handlers[i].try_to_register) {
-      signal_handlers[i].signal_event =
-        tor_evsignal_new(tor_libevent_get_base(),
-                         signal_handlers[i].signal_value,
-                         signal_callback,
-                         &signal_handlers[i].signal_value);
+      signal_handlers[i].signal_event = tor_evsignal_new(
+          tor_libevent_get_base(), signal_handlers[i].signal_value,
+          signal_callback, &signal_handlers[i].signal_value);
       if (event_add(signal_handlers[i].signal_event, NULL))
-        log_warn(LD_BUG, "Error from libevent when adding "
+        log_warn(LD_BUG,
+                 "Error from libevent when adding "
                  "event for signal %d",
                  signal_handlers[i].signal_value);
     } else {
       signal_handlers[i].signal_event =
-        tor_event_new(tor_libevent_get_base(), -1,
-                      EV_SIGNAL, signal_callback,
-                      &signal_handlers[i].signal_value);
+          tor_event_new(tor_libevent_get_base(), -1, EV_SIGNAL,
+                        signal_callback, &signal_handlers[i].signal_value);
     }
   }
 }
@@ -546,33 +541,36 @@ tor_init(int argc, char *argv[])
     parsed_cmdline_free(cmdline);
   }
 
- /* give it somewhere to log to initially */
+  /* give it somewhere to log to initially */
   add_default_log_for_quiet_level(quiet);
   quiet_level = quiet;
 
   {
     const char *version = get_version();
 
-    log_notice(LD_GENERAL, "Tor %s running on %s with Libevent %s, "
-               "%s %s, Zlib %s, Liblzma %s, and Libzstd %s.", version,
-               get_uname(),
-               tor_libevent_get_version_str(),
-               crypto_get_library_name(),
-               crypto_get_library_version_string(),
-               tor_compress_supports_method(ZLIB_METHOD) ?
-                 tor_compress_version_str(ZLIB_METHOD) : "N/A",
-               tor_compress_supports_method(LZMA_METHOD) ?
-                 tor_compress_version_str(LZMA_METHOD) : "N/A",
-               tor_compress_supports_method(ZSTD_METHOD) ?
-                 tor_compress_version_str(ZSTD_METHOD) : "N/A");
+    log_notice(LD_GENERAL,
+               "Tor %s running on %s with Libevent %s, "
+               "%s %s, Zlib %s, Liblzma %s, and Libzstd %s.",
+               version, get_uname(), tor_libevent_get_version_str(),
+               crypto_get_library_name(), crypto_get_library_version_string(),
+               tor_compress_supports_method(ZLIB_METHOD)
+                   ? tor_compress_version_str(ZLIB_METHOD)
+                   : "N/A",
+               tor_compress_supports_method(LZMA_METHOD)
+                   ? tor_compress_version_str(LZMA_METHOD)
+                   : "N/A",
+               tor_compress_supports_method(ZSTD_METHOD)
+                   ? tor_compress_version_str(ZSTD_METHOD)
+                   : "N/A");
 
-    log_notice(LD_GENERAL, "Tor can't help you if you use it wrong! "
+    log_notice(LD_GENERAL,
+               "Tor can't help you if you use it wrong! "
                "Learn how to be safe at "
                "https://www.torproject.org/download/download#warning");
 
     if (strstr(version, "alpha") || strstr(version, "beta"))
       log_notice(LD_GENERAL, "This version is not a stable Tor release. "
-                 "Expect more bugs than usual.");
+                             "Expect more bugs than usual.");
 
     tor_compress_log_init_warnings();
   }
@@ -581,9 +579,9 @@ tor_init(int argc, char *argv[])
   rust_log_welcome_string();
 #endif /* defined(HAVE_RUST) */
 
-  int init_rv = options_init_from_torrc(argc,argv);
+  int init_rv = options_init_from_torrc(argc, argv);
   if (init_rv < 0) {
-    log_err(LD_CONFIG,"Reading config failed--see warnings above.");
+    log_err(LD_CONFIG, "Reading config failed--see warnings above.");
     return -1;
   } else if (init_rv > 0) {
     // We succeeded, and should exit anyway -- probably the user just said
@@ -607,9 +605,9 @@ tor_init(int argc, char *argv[])
   predicted_ports_init();
 
 #ifndef _WIN32
-  if (geteuid()==0)
-    log_warn(LD_GENERAL,"You are running Tor as root. You don't need to, "
-             "and you probably shouldn't.");
+  if (geteuid() == 0)
+    log_warn(LD_GENERAL, "You are running Tor as root. You don't need to, "
+                         "and you probably shouldn't.");
 #endif
 
   /* Scan/clean unparseable descriptors; after reading config */
@@ -638,10 +636,11 @@ try_locking(const or_options_t *options, int err_if_locked)
     int already_locked = 0;
     tor_lockfile_t *lf = tor_lockfile_lock(fname, 0, &already_locked);
     tor_free(fname);
-    if (!lf) {
+    if (! lf) {
       if (err_if_locked && already_locked) {
         int r;
-        log_warn(LD_GENERAL, "It looks like another Tor process is running "
+        log_warn(LD_GENERAL,
+                 "It looks like another Tor process is running "
                  "with the same data directory.  Waiting 5 seconds to see "
                  "if it goes away.");
 #ifndef _WIN32
@@ -650,7 +649,7 @@ try_locking(const or_options_t *options, int err_if_locked)
         Sleep(5000);
 #endif
         r = try_locking(options, 0);
-        if (r<0) {
+        if (r < 0) {
           log_err(LD_GENERAL, "No, it's still there.  Exiting.");
           return -1;
         }
@@ -688,8 +687,7 @@ void
 tor_remove_file(const char *filename)
 {
   if (filename && tor_unlink(filename) != 0 && errno != ENOENT) {
-    log_warn(LD_FS, "Couldn't unlink %s: %s",
-               filename, strerror(errno));
+    log_warn(LD_FS, "Couldn't unlink %s: %s", filename, strerror(errno));
   }
 }
 
@@ -697,25 +695,25 @@ tor_remove_file(const char *filename)
 static int
 do_list_fingerprint(void)
 {
-  char buf[FINGERPRINT_LEN+1];
+  char buf[FINGERPRINT_LEN + 1];
   crypto_pk_t *k;
   const char *nickname = get_options()->Nickname;
   sandbox_disable_getaddrinfo_cache();
-  if (!server_mode(get_options())) {
+  if (! server_mode(get_options())) {
     log_err(LD_GENERAL,
             "Clients don't have long-term identity keys. Exiting.");
     return -1;
   }
   tor_assert(nickname);
   if (init_keys() < 0) {
-    log_err(LD_GENERAL,"Error initializing keys; exiting.");
+    log_err(LD_GENERAL, "Error initializing keys; exiting.");
     return -1;
   }
-  if (!(k = get_server_identity_key())) {
-    log_err(LD_GENERAL,"Error: missing identity key.");
+  if (! (k = get_server_identity_key())) {
+    log_err(LD_GENERAL, "Error: missing identity key.");
     return -1;
   }
-  if (crypto_pk_get_fingerprint(k, buf, 1)<0) {
+  if (crypto_pk_get_fingerprint(k, buf, 1) < 0) {
     log_err(LD_BUG, "Error computing fingerprint");
     return -1;
   }
@@ -728,17 +726,16 @@ do_list_fingerprint(void)
 static void
 do_hash_password(void)
 {
-
   char output[256];
-  char key[S2K_RFC2440_SPECIFIER_LEN+DIGEST_LEN];
+  char key[S2K_RFC2440_SPECIFIER_LEN + DIGEST_LEN];
 
-  crypto_rand(key, S2K_RFC2440_SPECIFIER_LEN-1);
-  key[S2K_RFC2440_SPECIFIER_LEN-1] = (uint8_t)96; /* Hash 64 K of data. */
-  secret_to_key_rfc2440(key+S2K_RFC2440_SPECIFIER_LEN, DIGEST_LEN,
-                get_options()->command_arg, strlen(get_options()->command_arg),
-                key);
+  crypto_rand(key, S2K_RFC2440_SPECIFIER_LEN - 1);
+  key[S2K_RFC2440_SPECIFIER_LEN - 1] = (uint8_t)96; /* Hash 64 K of data. */
+  secret_to_key_rfc2440(key + S2K_RFC2440_SPECIFIER_LEN, DIGEST_LEN,
+                        get_options()->command_arg,
+                        strlen(get_options()->command_arg), key);
   base16_encode(output, sizeof(output), key, sizeof(key));
-  printf("16:%s\n",output);
+  printf("16:%s\n", output);
 }
 
 /** Entry point for configuration dumping: write the configuration to
@@ -751,11 +748,11 @@ do_dump_config(void)
   int how;
   char *opts;
 
-  if (!strcmp(arg, "short")) {
+  if (! strcmp(arg, "short")) {
     how = OPTIONS_DUMP_MINIMAL;
-  } else if (!strcmp(arg, "non-builtin")) {
+  } else if (! strcmp(arg, "non-builtin")) {
     how = OPTIONS_DUMP_DEFAULTS;
-  } else if (!strcmp(arg, "full")) {
+  } else if (! strcmp(arg, "full")) {
     how = OPTIONS_DUMP_ALL;
   } else {
     fprintf(stderr, "No valid argument to --dump-config found!\n");
@@ -788,48 +785,50 @@ init_addrinfo(void)
   tor_add_addrinfo(hname);
 }
 
-static sandbox_cfg_t*
+static sandbox_cfg_t *
 sandbox_init_filter(void)
 {
   const or_options_t *options = get_options();
   sandbox_cfg_t *cfg = sandbox_cfg_new();
   int i;
 
-  sandbox_cfg_allow_openat_filename(&cfg,
-      get_cachedir_fname("cached-status"));
+  sandbox_cfg_allow_openat_filename(&cfg, get_cachedir_fname("cached-status"));
 
-#define OPEN(name)                              \
-  sandbox_cfg_allow_open_filename(&cfg, tor_strdup(name))
+#define OPEN(name) sandbox_cfg_allow_open_filename(&cfg, tor_strdup(name))
 
-#define OPEN_DATADIR(name)                      \
+#define OPEN_DATADIR(name) \
   sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname(name))
 
-#define OPEN_DATADIR2(name, name2)                       \
+#define OPEN_DATADIR2(name, name2) \
   sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname2((name), (name2)))
 
-#define OPEN_DATADIR_SUFFIX(name, suffix) do {  \
-    OPEN_DATADIR(name);                         \
-    OPEN_DATADIR(name suffix);                  \
+#define OPEN_DATADIR_SUFFIX(name, suffix) \
+  do {                                    \
+    OPEN_DATADIR(name);                   \
+    OPEN_DATADIR(name suffix);            \
   } while (0)
 
-#define OPEN_DATADIR2_SUFFIX(name, name2, suffix) do {  \
-    OPEN_DATADIR2(name, name2);                         \
-    OPEN_DATADIR2(name, name2 suffix);                  \
+#define OPEN_DATADIR2_SUFFIX(name, name2, suffix) \
+  do {                                            \
+    OPEN_DATADIR2(name, name2);                   \
+    OPEN_DATADIR2(name, name2 suffix);            \
   } while (0)
 
 #define OPEN_KEY_DIRECTORY() \
   sandbox_cfg_allow_open_filename(&cfg, tor_strdup(options->KeyDirectory))
-#define OPEN_CACHEDIR(name)                      \
+#define OPEN_CACHEDIR(name) \
   sandbox_cfg_allow_open_filename(&cfg, get_cachedir_fname(name))
-#define OPEN_CACHEDIR_SUFFIX(name, suffix) do {  \
-    OPEN_CACHEDIR(name);                         \
-    OPEN_CACHEDIR(name suffix);                  \
+#define OPEN_CACHEDIR_SUFFIX(name, suffix) \
+  do {                                     \
+    OPEN_CACHEDIR(name);                   \
+    OPEN_CACHEDIR(name suffix);            \
   } while (0)
-#define OPEN_KEYDIR(name)                      \
+#define OPEN_KEYDIR(name) \
   sandbox_cfg_allow_open_filename(&cfg, get_keydir_fname(name))
-#define OPEN_KEYDIR_SUFFIX(name, suffix) do {    \
-    OPEN_KEYDIR(name);                           \
-    OPEN_KEYDIR(name suffix);                    \
+#define OPEN_KEYDIR_SUFFIX(name, suffix) \
+  do {                                   \
+    OPEN_KEYDIR(name);                   \
+    OPEN_KEYDIR(name suffix);            \
   } while (0)
 
   OPEN(options->DataDirectory);
@@ -867,8 +866,8 @@ sandbox_init_filter(void)
     OPEN_DATADIR("approved-routers");
 
   if (options->ServerDNSResolvConfFile)
-    sandbox_cfg_allow_open_filename(&cfg,
-                                tor_strdup(options->ServerDNSResolvConfFile));
+    sandbox_cfg_allow_open_filename(
+        &cfg, tor_strdup(options->ServerDNSResolvConfFile));
   else
     sandbox_cfg_allow_open_filename(&cfg, tor_strdup("/etc/resolv.conf"));
 
@@ -878,29 +877,23 @@ sandbox_init_filter(void)
     }
   }
 
-  SMARTLIST_FOREACH(options->FilesOpenedByIncludes, char *, f, {
-    OPEN(f);
-  });
+  SMARTLIST_FOREACH(options->FilesOpenedByIncludes, char *, f, { OPEN(f); });
 
-#define RENAME_SUFFIX(name, suffix)        \
-  sandbox_cfg_allow_rename(&cfg,           \
-      get_datadir_fname(name suffix),      \
-      get_datadir_fname(name))
+#define RENAME_SUFFIX(name, suffix)                              \
+  sandbox_cfg_allow_rename(&cfg, get_datadir_fname(name suffix), \
+                           get_datadir_fname(name))
 
-#define RENAME_SUFFIX2(prefix, name, suffix) \
-  sandbox_cfg_allow_rename(&cfg,                                        \
-                           get_datadir_fname2(prefix, name suffix),     \
+#define RENAME_SUFFIX2(prefix, name, suffix)                              \
+  sandbox_cfg_allow_rename(&cfg, get_datadir_fname2(prefix, name suffix), \
                            get_datadir_fname2(prefix, name))
 
-#define RENAME_CACHEDIR_SUFFIX(name, suffix)        \
-  sandbox_cfg_allow_rename(&cfg,           \
-      get_cachedir_fname(name suffix),      \
-      get_cachedir_fname(name))
+#define RENAME_CACHEDIR_SUFFIX(name, suffix)                      \
+  sandbox_cfg_allow_rename(&cfg, get_cachedir_fname(name suffix), \
+                           get_cachedir_fname(name))
 
-#define RENAME_KEYDIR_SUFFIX(name, suffix)    \
-  sandbox_cfg_allow_rename(&cfg,           \
-      get_keydir_fname(name suffix),      \
-      get_keydir_fname(name))
+#define RENAME_KEYDIR_SUFFIX(name, suffix)                      \
+  sandbox_cfg_allow_rename(&cfg, get_keydir_fname(name suffix), \
+                           get_keydir_fname(name))
 
   RENAME_CACHEDIR_SUFFIX("cached-certs", ".tmp");
   RENAME_CACHEDIR_SUFFIX("cached-consensus", ".tmp");
@@ -925,13 +918,13 @@ sandbox_init_filter(void)
   if (options->BridgeAuthoritativeDir)
     RENAME_SUFFIX("networkstatus-bridges", ".tmp");
 
-#define STAT_DATADIR(name)                      \
+#define STAT_DATADIR(name) \
   sandbox_cfg_allow_stat_filename(&cfg, get_datadir_fname(name))
 
-#define STAT_CACHEDIR(name)                                             \
+#define STAT_CACHEDIR(name) \
   sandbox_cfg_allow_stat_filename(&cfg, get_cachedir_fname(name))
 
-#define STAT_DATADIR2(name, name2)                                      \
+#define STAT_DATADIR2(name, name2) \
   sandbox_cfg_allow_stat_filename(&cfg, get_datadir_fname2((name), (name2)))
 
 #define STAT_KEY_DIRECTORY() \
@@ -961,8 +954,8 @@ sandbox_init_filter(void)
     SMARTLIST_FOREACH(files, char *, file_name, {
       char *tmp_name = NULL;
       tor_asprintf(&tmp_name, "%s.tmp", file_name);
-      sandbox_cfg_allow_rename(&cfg,
-                               tor_strdup(tmp_name), tor_strdup(file_name));
+      sandbox_cfg_allow_rename(&cfg, tor_strdup(tmp_name),
+                               tor_strdup(file_name));
       /* steals references */
       sandbox_cfg_allow_open_filename(&cfg, file_name);
       sandbox_cfg_allow_open_filename(&cfg, tmp_name);
@@ -985,8 +978,8 @@ sandbox_init_filter(void)
     }
   }
 
-  SMARTLIST_FOREACH_BEGIN(get_configured_ports(), port_cfg_t *, port) {
-    if (!port->is_unix_addr)
+  SMARTLIST_FOREACH_BEGIN (get_configured_ports(), port_cfg_t *, port) {
+    if (! port->is_unix_addr)
       continue;
     /* When we open an AF_UNIX address, we want permission to open the
      * directory that holds it. */
@@ -997,7 +990,7 @@ sandbox_init_filter(void)
     tor_free(dirname);
     sandbox_cfg_allow_chmod_filename(&cfg, tor_strdup(port->unix_addr));
     sandbox_cfg_allow_chown_filename(&cfg, tor_strdup(port->unix_addr));
-  } SMARTLIST_FOREACH_END(port);
+  } SMARTLIST_FOREACH_END (port);
 
   if (options->DirPortFrontPage) {
     sandbox_cfg_allow_open_filename(&cfg,
@@ -1006,7 +999,6 @@ sandbox_init_filter(void)
 
   // orport
   if (server_mode(get_options())) {
-
     OPEN_KEYDIR_SUFFIX("secret_id_key", ".tmp");
     OPEN_KEYDIR_SUFFIX("secret_onion_key", ".tmp");
     OPEN_KEYDIR_SUFFIX("secret_onion_key_ntor", ".tmp");
@@ -1062,12 +1054,10 @@ sandbox_init_filter(void)
     RENAME_KEYDIR_SUFFIX("ed25519_signing_secret_key", ".tmp");
     RENAME_KEYDIR_SUFFIX("ed25519_signing_cert", ".tmp");
 
-    sandbox_cfg_allow_rename(&cfg,
-             get_keydir_fname("secret_onion_key"),
-             get_keydir_fname("secret_onion_key.old"));
-    sandbox_cfg_allow_rename(&cfg,
-             get_keydir_fname("secret_onion_key_ntor"),
-             get_keydir_fname("secret_onion_key_ntor.old"));
+    sandbox_cfg_allow_rename(&cfg, get_keydir_fname("secret_onion_key"),
+                             get_keydir_fname("secret_onion_key.old"));
+    sandbox_cfg_allow_rename(&cfg, get_keydir_fname("secret_onion_key_ntor"),
+                             get_keydir_fname("secret_onion_key_ntor.old"));
 
     STAT_KEY_DIRECTORY();
     OPEN_DATADIR("stats");
@@ -1108,12 +1098,14 @@ run_tor_main_loop(void)
   if (authdir_mode_v3(get_options())) {
     char *fname = get_datadir_fname("key-pinning-journal");
     int r = 0;
-    if (keypin_load_journal(fname)<0) {
-      log_err(LD_DIR, "Error loading key-pinning journal: %s",strerror(errno));
+    if (keypin_load_journal(fname) < 0) {
+      log_err(LD_DIR, "Error loading key-pinning journal: %s",
+              strerror(errno));
       r = -1;
     }
-    if (keypin_open_journal(fname)<0) {
-      log_err(LD_DIR, "Error opening key-pinning journal: %s",strerror(errno));
+    if (keypin_open_journal(fname) < 0) {
+      log_err(LD_DIR, "Error opening key-pinning journal: %s",
+              strerror(errno));
       r = -1;
     }
     tor_free(fname);
@@ -1166,9 +1158,10 @@ run_tor_main_loop(void)
   if (dns_init() < 0) {
     if (get_options()->ServerDNSAllowBrokenConfig)
       log_warn(LD_GENERAL, "Couldn't set up any working nameservers. "
-               "Network not up yet?  Will try again soon.");
+                           "Network not up yet?  Will try again soon.");
     else {
-      log_err(LD_GENERAL,"Error initializing dns subsystem; exiting.  To "
+      log_err(LD_GENERAL,
+              "Error initializing dns subsystem; exiting.  To "
               "retry instead, set the ServerDNSAllowBrokenResolvConf option.");
     }
   }
@@ -1194,11 +1187,11 @@ run_tor_main_loop(void)
 static void
 pubsub_install(void)
 {
-    pubsub_builder_t *builder = pubsub_builder_new();
-    int r = subsystems_add_pubsub(builder);
-    tor_assert(r == 0);
-    r = tor_mainloop_connect_pubsub(builder); // consumes builder
-    tor_assert(r == 0);
+  pubsub_builder_t *builder = pubsub_builder_new();
+  int r = subsystems_add_pubsub(builder);
+  tor_assert(r == 0);
+  r = tor_mainloop_connect_pubsub(builder); // consumes builder
+  tor_assert(r == 0);
 }
 
 /** Connect the mainloop to its publish/subscribe message delivery events if
@@ -1232,19 +1225,19 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
   init_protocol_warning_severity_level();
 
   int argc = tor_cfg->argc + tor_cfg->argc_owned;
-  char **argv = tor_calloc(argc, sizeof(char*));
-  memcpy(argv, tor_cfg->argv, tor_cfg->argc*sizeof(char*));
+  char **argv = tor_calloc(argc, sizeof(char *));
+  memcpy(argv, tor_cfg->argv, tor_cfg->argc * sizeof(char *));
   if (tor_cfg->argc_owned)
     memcpy(argv + tor_cfg->argc, tor_cfg->argv_owned,
-           tor_cfg->argc_owned*sizeof(char*));
+           tor_cfg->argc_owned * sizeof(char *));
 
 #ifdef NT_SERVICE
   {
-     int done = 0;
-     result = nt_service_parse_options(argc, argv, &done);
-     if (done) {
-       goto done;
-     }
+    int done = 0;
+    result = nt_service_parse_options(argc, argv, &done);
+    if (done) {
+      goto done;
+    }
   }
 #endif /* defined(NT_SERVICE) */
 
@@ -1262,11 +1255,11 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
   pubsub_connect();
 
   if (get_options()->Sandbox && get_options()->command == CMD_RUN_TOR) {
-    sandbox_cfg_t* cfg = sandbox_init_filter();
+    sandbox_cfg_t *cfg = sandbox_init_filter();
 
     if (sandbox_init(cfg)) {
       tor_free(argv);
-      log_err(LD_BUG,"Failed to create syscall sandbox filter");
+      log_err(LD_BUG, "Failed to create syscall sandbox filter");
       tor_free_all(0);
       return -1;
     }
@@ -1275,48 +1268,48 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
     // registering libevent rng
 #ifdef HAVE_EVUTIL_SECURE_RNG_SET_URANDOM_DEVICE_FILE
     evutil_secure_rng_set_urandom_device_file(
-        (char*) sandbox_intern_string("/dev/urandom"));
+        (char *)sandbox_intern_string("/dev/urandom"));
 #endif
   }
 
   switch (get_options()->command) {
-  case CMD_RUN_TOR:
+    case CMD_RUN_TOR:
 #ifdef NT_SERVICE
-    nt_service_set_state(SERVICE_RUNNING);
+      nt_service_set_state(SERVICE_RUNNING);
 #endif
-    result = run_tor_main_loop();
-    break;
-  case CMD_KEYGEN:
-    result = load_ed_keys(get_options(), time(NULL)) < 0;
-    break;
-  case CMD_KEY_EXPIRATION:
-    init_keys();
-    result = log_cert_expiration();
-    break;
-  case CMD_LIST_FINGERPRINT:
-    result = do_list_fingerprint();
-    break;
-  case CMD_HASH_PASSWORD:
-    do_hash_password();
-    result = 0;
-    break;
-  case CMD_VERIFY_CONFIG:
-    if (quiet_level == QUIET_NONE)
-      printf("Configuration was valid\n");
-    result = 0;
-    break;
-  case CMD_DUMP_CONFIG:
-    result = do_dump_config();
-    break;
-  case CMD_RUN_UNITTESTS: /* only set by test.c */
-  case CMD_IMMEDIATE: /* Handled in config.c */
-  default:
-    log_warn(LD_BUG,"Illegal command number %d: internal error.",
-             get_options()->command);
-    result = -1;
+      result = run_tor_main_loop();
+      break;
+    case CMD_KEYGEN:
+      result = load_ed_keys(get_options(), time(NULL)) < 0;
+      break;
+    case CMD_KEY_EXPIRATION:
+      init_keys();
+      result = log_cert_expiration();
+      break;
+    case CMD_LIST_FINGERPRINT:
+      result = do_list_fingerprint();
+      break;
+    case CMD_HASH_PASSWORD:
+      do_hash_password();
+      result = 0;
+      break;
+    case CMD_VERIFY_CONFIG:
+      if (quiet_level == QUIET_NONE)
+        printf("Configuration was valid\n");
+      result = 0;
+      break;
+    case CMD_DUMP_CONFIG:
+      result = do_dump_config();
+      break;
+    case CMD_RUN_UNITTESTS: /* only set by test.c */
+    case CMD_IMMEDIATE: /* Handled in config.c */
+    default:
+      log_warn(LD_BUG, "Illegal command number %d: internal error.",
+               get_options()->command);
+      result = -1;
   }
   tor_cleanup();
- done:
+done:
   tor_free(argv);
   return result;
 }

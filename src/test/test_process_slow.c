@@ -16,13 +16,13 @@
 #include "test/test.h"
 
 #ifndef BUILDDIR
-#define BUILDDIR "."
+#  define BUILDDIR "."
 #endif
 
 #ifdef _WIN32
-#define TEST_PROCESS "test-process.exe"
+#  define TEST_PROCESS "test-process.exe"
 #else
-#define TEST_PROCESS BUILDDIR "/src/test/test-process"
+#  define TEST_PROCESS BUILDDIR "/src/test/test-process"
 #endif /* defined(_WIN32) */
 
 /** Timer that ticks once a second and stop the event loop after 5 ticks. */
@@ -77,7 +77,7 @@ process_stdout_callback(process_t *process, const char *data, size_t size)
   process_data_t *process_data = process_get_data(process);
   smartlist_add(process_data->stdout_data, tor_strdup(data));
 
- done:
+done:
   return;
 }
 
@@ -91,7 +91,7 @@ process_stderr_callback(process_t *process, const char *data, size_t size)
   process_data_t *process_data = process_get_data(process);
   smartlist_add(process_data->stderr_data, tor_strdup(data));
 
- done:
+done:
   return;
 }
 
@@ -110,7 +110,7 @@ process_exit_callback(process_t *process, process_exit_code_t exit_code)
   status = process_get_status(process);
   tt_int_op(status, OP_EQ, PROCESS_STATUS_NOT_RUNNING);
 
- done:
+done:
   /* Do not free up our process_t. */
   return false;
 }
@@ -132,7 +132,7 @@ get_win32_test_binary_path(void)
   memcpy(offset, TEST_PROCESS, strlen(TEST_PROCESS));
 
   return buffer;
- done:
+done:
   return NULL;
 }
 #endif /* defined(_WIN32) */
@@ -162,7 +162,7 @@ main_loop_timeout_cb(periodic_timer_t *timer, void *data)
 #endif
 
   return;
- done:
+done:
   /* Exit with an error. */
   tor_shutdown_event_loop_and_exit(-1);
 }
@@ -176,10 +176,8 @@ run_main_loop(process_data_t *process_data)
   static const struct timeval interval = {1, 0};
 
   timer_tick_count = 0;
-  main_loop_timeout_timer = periodic_timer_new(tor_libevent_get_base(),
-                                               &interval,
-                                               main_loop_timeout_cb,
-                                               process_data);
+  main_loop_timeout_timer = periodic_timer_new(
+      tor_libevent_get_base(), &interval, main_loop_timeout_cb, process_data);
 
   /* Run our main loop. */
   ret = run_main_loop_until_done();
@@ -187,7 +185,7 @@ run_main_loop(process_data_t *process_data)
   /* Clean up our main loop timeout timer. */
   tt_int_op(ret, OP_EQ, 0);
 
- done:
+done:
   periodic_timer_free(main_loop_timeout_timer);
 }
 
@@ -244,8 +242,8 @@ test_callbacks(void *arg)
 
   /* Check stdout output. */
   char argv0_expected[256];
-  tor_snprintf(argv0_expected, sizeof(argv0_expected),
-               "argv[0] = '%s'", filename);
+  tor_snprintf(argv0_expected, sizeof(argv0_expected), "argv[0] = '%s'",
+               filename);
 
   tt_str_op(smartlist_get(process_data->stdout_data, 0), OP_EQ,
             argv0_expected);
@@ -280,7 +278,7 @@ test_callbacks(void *arg)
   tt_str_op(smartlist_get(process_data->stderr_data, 2), OP_EQ,
             "Partial line on stderr ...end of partial line on stderr");
 
- done:
+done:
   process_data_free(process_data);
   process_free(process);
 }
@@ -323,7 +321,7 @@ test_callbacks_terminate(void *arg)
   /* Check if we did exit. */
   tt_assert(process_data->did_exit);
 
- done:
+done:
   process_data_free(process_data);
   process_free(process);
 }
@@ -352,14 +350,13 @@ test_nonexistent_executable(void *arg)
    */
   tt_assert(process_data->did_exit);
 
- done:
+done:
   process_data_free(process_data);
   process_free(process);
 }
 
 struct testcase_t slow_process_tests[] = {
-  { "callbacks", test_callbacks, 0, NULL, NULL },
-  { "callbacks_terminate", test_callbacks_terminate, 0, NULL, NULL },
-  { "nonexistent_executable", test_nonexistent_executable, 0, NULL, NULL },
-  END_OF_TESTCASES
-};
+    {"callbacks", test_callbacks, 0, NULL, NULL},
+    {"callbacks_terminate", test_callbacks_terminate, 0, NULL, NULL},
+    {"nonexistent_executable", test_nonexistent_executable, 0, NULL, NULL},
+    END_OF_TESTCASES};

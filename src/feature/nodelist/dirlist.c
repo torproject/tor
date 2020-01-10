@@ -55,11 +55,10 @@ int
 get_n_authorities(dirinfo_type_t type)
 {
   int n = 0;
-  if (!trusted_dir_servers)
+  if (! trusted_dir_servers)
     return 0;
   SMARTLIST_FOREACH(trusted_dir_servers, dir_server_t *, ds,
-                    if (ds->type & type)
-                      ++n);
+                    if (ds->type & type)++ n);
   return n;
 }
 
@@ -70,7 +69,7 @@ get_n_authorities(dirinfo_type_t type)
 smartlist_t *
 router_get_trusted_dir_servers_mutable(void)
 {
-  if (!trusted_dir_servers)
+  if (! trusted_dir_servers)
     trusted_dir_servers = smartlist_new();
 
   return trusted_dir_servers;
@@ -79,7 +78,7 @@ router_get_trusted_dir_servers_mutable(void)
 smartlist_t *
 router_get_fallback_dir_servers_mutable(void)
 {
-  if (!fallback_dir_servers)
+  if (! fallback_dir_servers)
     fallback_dir_servers = smartlist_new();
 
   return fallback_dir_servers;
@@ -111,14 +110,13 @@ router_reset_status_download_failures(void)
 dir_server_t *
 router_get_trusteddirserver_by_digest(const char *digest)
 {
-  if (!trusted_dir_servers)
+  if (! trusted_dir_servers)
     return NULL;
 
-  SMARTLIST_FOREACH(trusted_dir_servers, dir_server_t *, ds,
-     {
-       if (tor_memeq(ds->digest, digest, DIGEST_LEN))
-         return ds;
-     });
+  SMARTLIST_FOREACH(trusted_dir_servers, dir_server_t *, ds, {
+    if (tor_memeq(ds->digest, digest, DIGEST_LEN))
+      return ds;
+  });
 
   return NULL;
 }
@@ -132,17 +130,16 @@ router_get_trusteddirserver_by_digest(const char *digest)
 dir_server_t *
 router_get_fallback_dirserver_by_digest(const char *digest)
 {
-  if (!fallback_dir_servers)
+  if (! fallback_dir_servers)
     return NULL;
 
-  if (!digest)
+  if (! digest)
     return NULL;
 
-  SMARTLIST_FOREACH(fallback_dir_servers, dir_server_t *, ds,
-     {
-       if (tor_memeq(ds->digest, digest, DIGEST_LEN))
-         return ds;
-     });
+  SMARTLIST_FOREACH(fallback_dir_servers, dir_server_t *, ds, {
+    if (tor_memeq(ds->digest, digest, DIGEST_LEN))
+      return ds;
+  });
 
   return NULL;
 }
@@ -164,17 +161,17 @@ router_digest_is_fallback_dir(const char *digest)
  * is known.
  */
 MOCK_IMPL(dir_server_t *,
-trusteddirserver_get_by_v3_auth_digest, (const char *digest))
+trusteddirserver_get_by_v3_auth_digest,
+          (const char *digest))
 {
-  if (!trusted_dir_servers)
+  if (! trusted_dir_servers)
     return NULL;
 
-  SMARTLIST_FOREACH(trusted_dir_servers, dir_server_t *, ds,
-     {
-       if (tor_memeq(ds->v3_identity_digest, digest, DIGEST_LEN) &&
-           (ds->type & V3_DIRINFO))
-         return ds;
-     });
+  SMARTLIST_FOREACH(trusted_dir_servers, dir_server_t *, ds, {
+    if (tor_memeq(ds->v3_identity_digest, digest, DIGEST_LEN) &&
+        (ds->type & V3_DIRINFO))
+      return ds;
+  });
 
   return NULL;
 }
@@ -184,7 +181,7 @@ void
 mark_all_dirservers_up(smartlist_t *server_list)
 {
   if (server_list) {
-    SMARTLIST_FOREACH_BEGIN(server_list, dir_server_t *, dir) {
+    SMARTLIST_FOREACH_BEGIN (server_list, dir_server_t *, dir) {
       routerstatus_t *rs;
       node_t *node;
       dir->is_running = 1;
@@ -196,7 +193,7 @@ mark_all_dirservers_up(smartlist_t *server_list)
         rs->last_dir_503_at = 0;
         control_event_networkstatus_changed_single(rs);
       }
-    } SMARTLIST_FOREACH_END(dir);
+    } SMARTLIST_FOREACH_END (dir);
   }
   router_dir_info_changed();
 }
@@ -207,14 +204,15 @@ mark_all_dirservers_up(smartlist_t *server_list)
 int
 router_digest_is_trusted_dir_type(const char *digest, dirinfo_type_t type)
 {
-  if (!trusted_dir_servers)
+  if (! trusted_dir_servers)
     return 0;
   if (authdir_mode(get_options()) && router_digest_is_me(digest))
     return 1;
-  SMARTLIST_FOREACH(trusted_dir_servers, dir_server_t *, ent,
-    if (tor_memeq(digest, ent->digest, DIGEST_LEN)) {
-      return (!type) || ((type & ent->type) != 0);
-    });
+  SMARTLIST_FOREACH(
+      trusted_dir_servers, dir_server_t *, ent,
+      if (tor_memeq(digest, ent->digest, DIGEST_LEN)) {
+        return (! type) || ((type & ent->type) != 0);
+      });
   return 0;
 }
 
@@ -223,15 +221,10 @@ router_digest_is_trusted_dir_type(const char *digest, dirinfo_type_t type)
  * add ourself.  If <b>is_authority</b>, this is a directory authority.  Return
  * the new directory server entry on success or NULL on failure. */
 static dir_server_t *
-dir_server_new(int is_authority,
-               const char *nickname,
-               const tor_addr_t *addr,
-               const char *hostname,
-               uint16_t dir_port, uint16_t or_port,
-               const tor_addr_port_t *addrport_ipv6,
-               const char *digest, const char *v3_auth_digest,
-               dirinfo_type_t type,
-               double weight)
+dir_server_new(int is_authority, const char *nickname, const tor_addr_t *addr,
+               const char *hostname, uint16_t dir_port, uint16_t or_port,
+               const tor_addr_port_t *addrport_ipv6, const char *digest,
+               const char *v3_auth_digest, dirinfo_type_t type, double weight)
 {
   dir_server_t *ent;
   uint32_t a;
@@ -247,7 +240,7 @@ dir_server_new(int is_authority,
   else
     return NULL;
 
-  if (!hostname)
+  if (! hostname)
     hostname_ = tor_addr_to_str_dup(addr);
   else
     hostname_ = tor_strdup(hostname);
@@ -282,8 +275,8 @@ dir_server_new(int is_authority,
     tor_asprintf(&ent->description, "directory server \"%s\" at %s:%d",
                  nickname, hostname_, (int)dir_port);
   else
-    tor_asprintf(&ent->description, "directory server at %s:%d",
-                 hostname_, (int)dir_port);
+    tor_asprintf(&ent->description, "directory server at %s:%d", hostname_,
+                 (int)dir_port);
 
   ent->fake_status.addr = ent->addr;
   tor_addr_copy(&ent->fake_status.ipv6_addr, &ent->ipv6_addr);
@@ -313,18 +306,17 @@ trusted_dir_server_new(const char *nickname, const char *address,
 {
   uint32_t a;
   tor_addr_t addr;
-  char *hostname=NULL;
+  char *hostname = NULL;
   dir_server_t *result;
 
-  if (!address) { /* The address is us; we should guess. */
-    if (resolve_my_address(LOG_WARN, get_options(),
-                           &a, NULL, &hostname) < 0) {
+  if (! address) { /* The address is us; we should guess. */
+    if (resolve_my_address(LOG_WARN, get_options(), &a, NULL, &hostname) < 0) {
       log_warn(LD_CONFIG,
                "Couldn't find a suitable address when adding ourself as a "
                "trusted directory server.");
       return NULL;
     }
-    if (!hostname)
+    if (! hostname)
       hostname = tor_dup_ip(a);
   } else {
     if (tor_lookup_hostname(address, &a)) {
@@ -337,11 +329,8 @@ trusted_dir_server_new(const char *nickname, const char *address,
   }
   tor_addr_from_ipv4h(&addr, a);
 
-  result = dir_server_new(1, nickname, &addr, hostname,
-                          dir_port, or_port,
-                          ipv6_addrport,
-                          digest,
-                          v3_auth_digest, type, weight);
+  result = dir_server_new(1, nickname, &addr, hostname, dir_port, or_port,
+                          ipv6_addrport, digest, v3_auth_digest, type, weight);
   tor_free(hostname);
   return result;
 }
@@ -350,24 +339,21 @@ trusted_dir_server_new(const char *nickname, const char *address,
  * <b>addr</b>:<b>or_port</b>/<b>dir_port</b>, with identity key digest
  * <b>id_digest</b> */
 dir_server_t *
-fallback_dir_server_new(const tor_addr_t *addr,
-                        uint16_t dir_port, uint16_t or_port,
-                        const tor_addr_port_t *addrport_ipv6,
+fallback_dir_server_new(const tor_addr_t *addr, uint16_t dir_port,
+                        uint16_t or_port, const tor_addr_port_t *addrport_ipv6,
                         const char *id_digest, double weight)
 {
-  return dir_server_new(0, NULL, addr, NULL, dir_port, or_port,
-                        addrport_ipv6,
-                        id_digest,
-                        NULL, ALL_DIRINFO, weight);
+  return dir_server_new(0, NULL, addr, NULL, dir_port, or_port, addrport_ipv6,
+                        id_digest, NULL, ALL_DIRINFO, weight);
 }
 
 /** Add a directory server to the global list(s). */
 void
 dir_server_add(dir_server_t *ent)
 {
-  if (!trusted_dir_servers)
+  if (! trusted_dir_servers)
     trusted_dir_servers = smartlist_new();
-  if (!fallback_dir_servers)
+  if (! fallback_dir_servers)
     fallback_dir_servers = smartlist_new();
 
   if (ent->is_authority)
@@ -384,7 +370,7 @@ dir_server_add(dir_server_t *ent)
 static void
 dir_server_free_(dir_server_t *ds)
 {
-  if (!ds)
+  if (! ds)
     return;
 
   tor_free(ds->nickname);

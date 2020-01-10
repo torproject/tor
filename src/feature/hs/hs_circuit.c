@@ -51,17 +51,17 @@ circuit_purpose_is_correct_for_rend(unsigned int circ_purpose,
 {
   if (is_service_side) {
     if (circ_purpose != CIRCUIT_PURPOSE_S_CONNECT_REND) {
-      log_warn(LD_BUG,
-            "HS e2e circuit setup with wrong purpose (%d)", circ_purpose);
+      log_warn(LD_BUG, "HS e2e circuit setup with wrong purpose (%d)",
+               circ_purpose);
       return 0;
     }
   }
 
-  if (!is_service_side) {
+  if (! is_service_side) {
     if (circ_purpose != CIRCUIT_PURPOSE_C_REND_READY &&
         circ_purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
-      log_warn(LD_BUG,
-            "Client e2e circuit setup with wrong purpose (%d)", circ_purpose);
+      log_warn(LD_BUG, "Client e2e circuit setup with wrong purpose (%d)",
+               circ_purpose);
       return 0;
     }
   }
@@ -83,8 +83,8 @@ create_rend_cpath(const uint8_t *ntor_key_seed, size_t seed_len,
   crypt_path_t *cpath = NULL;
 
   /* Do the key expansion */
-  if (hs_ntor_circuit_key_expansion(ntor_key_seed, seed_len,
-                                    keys, sizeof(keys)) < 0) {
+  if (hs_ntor_circuit_key_expansion(ntor_key_seed, seed_len, keys,
+                                    sizeof(keys)) < 0) {
     goto err;
   }
 
@@ -92,13 +92,13 @@ create_rend_cpath(const uint8_t *ntor_key_seed, size_t seed_len,
   cpath = tor_malloc_zero(sizeof(crypt_path_t));
   cpath->magic = CRYPT_PATH_MAGIC;
 
-  if (cpath_init_circuit_crypto(cpath, (char*)keys, sizeof(keys),
+  if (cpath_init_circuit_crypto(cpath, (char *)keys, sizeof(keys),
                                 is_service_side, 1) < 0) {
     tor_free(cpath);
     goto err;
   }
 
- err:
+err:
   memwipe(keys, 0, sizeof(keys));
   return cpath;
 }
@@ -113,7 +113,7 @@ static crypt_path_t *
 create_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
 {
   crypt_path_t *hop = NULL;
-  char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN];
+  char keys[DIGEST_LEN + CPATH_KEY_MATERIAL_LEN];
 
   /* first DH1024_KEY_LEN bytes are g^y from the service. Finish the dh
    * handshake...*/
@@ -123,19 +123,18 @@ create_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
 
   tor_assert(hop->rend_dh_handshake_state);
   if (crypto_dh_compute_secret(LOG_PROTOCOL_WARN, hop->rend_dh_handshake_state,
-                               (char*)rend_cell_body, DH1024_KEY_LEN,
-                               keys, DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
+                               (char *)rend_cell_body, DH1024_KEY_LEN, keys,
+                               DIGEST_LEN + CPATH_KEY_MATERIAL_LEN) < 0) {
     log_warn(LD_GENERAL, "Couldn't complete DH handshake.");
     goto err;
   }
   /* ... and set up cpath. */
-  if (cpath_init_circuit_crypto(hop,
-                                keys+DIGEST_LEN, sizeof(keys)-DIGEST_LEN,
-                                0, 0) < 0)
+  if (cpath_init_circuit_crypto(hop, keys + DIGEST_LEN,
+                                sizeof(keys) - DIGEST_LEN, 0, 0) < 0)
     goto err;
 
   /* Check whether the digest is right... */
-  if (tor_memneq(keys, rend_cell_body+DH1024_KEY_LEN, DIGEST_LEN)) {
+  if (tor_memneq(keys, rend_cell_body + DH1024_KEY_LEN, DIGEST_LEN)) {
     log_warn(LD_PROTOCOL, "Incorrect digest of key material.");
     goto err;
   }
@@ -146,10 +145,10 @@ create_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
 
   goto done;
 
- err:
+err:
   hop = NULL;
 
- done:
+done:
   memwipe(keys, 0, sizeof(keys));
   return hop;
 }
@@ -164,8 +163,8 @@ finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
   tor_assert(hop);
 
   /* Notify the circuit state machine that we are splicing this circuit */
-  int new_circ_purpose = is_service_side ?
-    CIRCUIT_PURPOSE_S_REND_JOINED : CIRCUIT_PURPOSE_C_REND_JOINED;
+  int new_circ_purpose = is_service_side ? CIRCUIT_PURPOSE_S_REND_JOINED
+                                         : CIRCUIT_PURPOSE_C_REND_JOINED;
   circuit_change_purpose(TO_CIRCUIT(circ), new_circ_purpose);
 
   /* All is well. Extend the circuit. */
@@ -190,7 +189,7 @@ finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
   }
 
   /* Finally, mark circuit as ready to be used for client streams */
-  if (!is_service_side) {
+  if (! is_service_side) {
     circuit_try_attaching_streams(circ);
   }
 }
@@ -198,8 +197,7 @@ finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
 /** For a given circuit and a service introduction point object, register the
  * intro circuit to the circuitmap. This supports legacy intro point. */
 static void
-register_intro_circ(const hs_service_intro_point_t *ip,
-                    origin_circuit_t *circ)
+register_intro_circ(const hs_service_intro_point_t *ip, origin_circuit_t *circ)
 {
   tor_assert(ip);
   tor_assert(circ);
@@ -209,7 +207,7 @@ register_intro_circ(const hs_service_intro_point_t *ip,
                                                       ip->legacy_key_digest);
   } else {
     hs_circuitmap_register_intro_circ_v3_service_side(circ,
-                                         &ip->auth_key_kp.pubkey);
+                                                      &ip->auth_key_kp.pubkey);
   }
 }
 
@@ -224,8 +222,8 @@ count_opened_desc_intro_point_circuits(const hs_service_t *service,
   tor_assert(service);
   tor_assert(desc);
 
-  DIGEST256MAP_FOREACH(desc->intro_points.map, key,
-                       const hs_service_intro_point_t *, ip) {
+  DIGEST256MAP_FOREACH (desc->intro_points.map, key,
+                        const hs_service_intro_point_t *, ip) {
     const circuit_t *circ;
     const origin_circuit_t *ocirc = hs_circ_service_get_intro_circ(ip);
     if (ocirc == NULL) {
@@ -238,10 +236,11 @@ count_opened_desc_intro_point_circuits(const hs_service_t *service,
     tor_assert(ed25519_pubkey_eq(&service->keys.identity_pk,
                                  &ocirc->hs_ident->identity_pk));
     /* Only count opened circuit and skip circuit that will be closed. */
-    if (!circ->marked_for_close && circ->state == CIRCUIT_STATE_OPEN) {
+    if (! circ->marked_for_close && circ->state == CIRCUIT_STATE_OPEN) {
       count++;
     }
-  } DIGEST256MAP_FOREACH_END;
+  }
+  DIGEST256MAP_FOREACH_END;
   return count;
 }
 
@@ -307,8 +306,8 @@ create_intro_circuit_identifier(const hs_service_t *service,
  * that the circuit is not established anymore which is important for the
  * retry mechanism. */
 static void
-send_establish_intro(const hs_service_t *service,
-                     hs_service_intro_point_t *ip, origin_circuit_t *circ)
+send_establish_intro(const hs_service_t *service, hs_service_intro_point_t *ip,
+                     origin_circuit_t *circ)
 {
   ssize_t cell_len;
   uint8_t payload[RELAY_PAYLOAD_SIZE];
@@ -321,20 +320,21 @@ send_establish_intro(const hs_service_t *service,
   cell_len = hs_cell_build_establish_intro(circ->cpath->prev->rend_circ_nonce,
                                            &service->config, ip, payload);
   if (cell_len < 0) {
-    log_warn(LD_REND, "Unable to encode ESTABLISH_INTRO cell for service %s "
-                      "on circuit %u. Closing circuit.",
+    log_warn(LD_REND,
+             "Unable to encode ESTABLISH_INTRO cell for service %s "
+             "on circuit %u. Closing circuit.",
              safe_str_client(service->onion_address),
              TO_CIRCUIT(circ)->n_circ_id);
     goto err;
   }
 
   /* Send the cell on the circuit. */
-  if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(circ),
-                                   RELAY_COMMAND_ESTABLISH_INTRO,
-                                   (char *) payload, cell_len,
-                                   circ->cpath->prev) < 0) {
-    log_info(LD_REND, "Unable to send ESTABLISH_INTRO cell for service %s "
-                      "on circuit %u.",
+  if (relay_send_command_from_edge(
+          CONTROL_CELL_ID, TO_CIRCUIT(circ), RELAY_COMMAND_ESTABLISH_INTRO,
+          (char *)payload, cell_len, circ->cpath->prev) < 0) {
+    log_info(LD_REND,
+             "Unable to send ESTABLISH_INTRO cell for service %s "
+             "on circuit %u.",
              safe_str_client(service->onion_address),
              TO_CIRCUIT(circ)->n_circ_id);
     /* On error, the circuit has been closed. */
@@ -345,9 +345,9 @@ send_establish_intro(const hs_service_t *service,
   pathbias_count_use_attempt(circ);
   goto done;
 
- err:
+err:
   circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
- done:
+done:
   memwipe(payload, 0, sizeof(payload));
 }
 
@@ -385,8 +385,7 @@ launch_rendezvous_point_circuit(const hs_service_t *service,
 
   /* Get the extend info data structure for the chosen rendezvous point
    * specified by the given link specifiers. */
-  info = hs_get_extend_info_from_lspecs(data->link_specifiers,
-                                        &data->onion_pk,
+  info = hs_get_extend_info_from_lspecs(data->link_specifiers, &data->onion_pk,
                                         service->config.is_single_onion);
   if (info == NULL) {
     /* We are done here, we can't extend to the rendezvous point. */
@@ -420,17 +419,19 @@ launch_rendezvous_point_circuit(const hs_service_t *service,
     }
   }
   if (circ == NULL) {
-    log_warn(LD_REND, "Giving up on launching a rendezvous circuit to %s "
-                      "for %s service %s",
+    log_warn(LD_REND,
+             "Giving up on launching a rendezvous circuit to %s "
+             "for %s service %s",
              safe_str_client(extend_info_describe(info)),
              get_service_anonymity_string(service),
              safe_str_client(service->onion_address));
     goto end;
   }
-  log_info(LD_REND, "Rendezvous circuit launched to %s with cookie %s "
-                    "for %s service %s",
+  log_info(LD_REND,
+           "Rendezvous circuit launched to %s with cookie %s "
+           "for %s service %s",
            safe_str_client(extend_info_describe(info)),
-           safe_str_client(hex_str((const char *) data->rendezvous_cookie,
+           safe_str_client(hex_str((const char *)data->rendezvous_cookie,
                                    REND_COOKIE_LEN)),
            get_service_anonymity_string(service),
            safe_str_client(service->onion_address));
@@ -448,26 +449,25 @@ launch_rendezvous_point_circuit(const hs_service_t *service,
      * circuit once opened. */
     curve25519_keypair_generate(&ephemeral_kp, 0);
     if (hs_ntor_service_get_rendezvous1_keys(&ip->auth_key_kp.pubkey,
-                                             &ip->enc_key_kp,
-                                             &ephemeral_kp, &data->client_pk,
-                                             &keys) < 0) {
+                                             &ip->enc_key_kp, &ephemeral_kp,
+                                             &data->client_pk, &keys) < 0) {
       /* This should not really happened but just in case, don't make tor
        * freak out, close the circuit and move on. */
-      log_info(LD_REND, "Unable to get RENDEZVOUS1 key material for "
-                        "service %s",
+      log_info(LD_REND,
+               "Unable to get RENDEZVOUS1 key material for "
+               "service %s",
                safe_str_client(service->onion_address));
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
       goto end;
     }
-    circ->hs_ident = create_rp_circuit_identifier(service,
-                                                  data->rendezvous_cookie,
-                                                  &ephemeral_kp.pubkey, &keys);
+    circ->hs_ident = create_rp_circuit_identifier(
+        service, data->rendezvous_cookie, &ephemeral_kp.pubkey, &keys);
     memwipe(&ephemeral_kp, 0, sizeof(ephemeral_kp));
     memwipe(&keys, 0, sizeof(keys));
     tor_assert(circ->hs_ident);
   }
 
- end:
+end:
   extend_info_free(info);
 }
 
@@ -486,10 +486,11 @@ can_relaunch_service_rendezvous_point(const origin_circuit_t *circ)
   /* Avoid to relaunch twice a circuit to the same rendezvous point at the
    * same time. */
   if (circ->hs_service_side_rend_circ_has_been_relaunched) {
-    log_info(LD_REND, "Rendezvous circuit to %s has already been retried. "
-                      "Skipping retry.",
-             safe_str_client(
-                  extend_info_describe(circ->build_state->chosen_exit)));
+    log_info(
+        LD_REND,
+        "Rendezvous circuit to %s has already been retried. "
+        "Skipping retry.",
+        safe_str_client(extend_info_describe(circ->build_state->chosen_exit)));
     goto disallow;
   }
 
@@ -502,19 +503,20 @@ can_relaunch_service_rendezvous_point(const origin_circuit_t *circ)
    * we skip relaunching. */
   if (circ->build_state->failure_count > max_rend_failures ||
       circ->build_state->expiry_time <= time(NULL)) {
-    log_info(LD_REND, "Attempt to build a rendezvous circuit to %s has "
-                      "failed with %d attempts and expiry time %ld. "
-                      "Giving up building.",
-             safe_str_client(
-                  extend_info_describe(circ->build_state->chosen_exit)),
-             circ->build_state->failure_count,
-             (long int) circ->build_state->expiry_time);
+    log_info(
+        LD_REND,
+        "Attempt to build a rendezvous circuit to %s has "
+        "failed with %d attempts and expiry time %ld. "
+        "Giving up building.",
+        safe_str_client(extend_info_describe(circ->build_state->chosen_exit)),
+        circ->build_state->failure_count,
+        (long int)circ->build_state->expiry_time);
     goto disallow;
   }
 
   /* Allowed to relaunch. */
   return 1;
- disallow:
+disallow:
   return 0;
 }
 
@@ -559,11 +561,11 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
 
   /* Transfer build state information to the new circuit state in part to
    * catch any other failures. */
-  new_circ->build_state->failure_count = bstate->failure_count+1;
+  new_circ->build_state->failure_count = bstate->failure_count + 1;
   new_circ->build_state->expiry_time = bstate->expiry_time;
   new_circ->hs_ident = hs_ident_circuit_dup(circ->hs_ident);
 
- done:
+done:
   return;
 }
 
@@ -576,8 +578,7 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
  * introduce1 data from the RP node. In other word, it means the RP node is
  * unusable to use in the introduction. */
 static int
-setup_introduce1_data(const hs_desc_intro_point_t *ip,
-                      const node_t *rp_node,
+setup_introduce1_data(const hs_desc_intro_point_t *ip, const node_t *rp_node,
                       const uint8_t *subcredential,
                       hs_cell_introduce1_data_t *intro1_data)
 {
@@ -616,7 +617,7 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
   /* Success, we have valid introduce data. */
   ret = 0;
 
- end:
+end:
   return ret;
 }
 
@@ -651,7 +652,7 @@ hs_circ_service_get_intro_circ(const hs_service_intro_point_t *ip)
     return hs_circuitmap_get_intro_circ_v2_service_side(ip->legacy_key_digest);
   } else {
     return hs_circuitmap_get_intro_circ_v3_service_side(
-                                        &ip->auth_key_kp.pubkey);
+        &ip->auth_key_kp.pubkey);
   }
 }
 
@@ -668,13 +669,13 @@ hs_circ_service_get_established_intro_circ(const hs_service_intro_point_t *ip)
   if (ip->base.is_only_legacy) {
     circ = hs_circuitmap_get_intro_circ_v2_service_side(ip->legacy_key_digest);
   } else {
-    circ = hs_circuitmap_get_intro_circ_v3_service_side(
-                                        &ip->auth_key_kp.pubkey);
+    circ =
+        hs_circuitmap_get_intro_circ_v3_service_side(&ip->auth_key_kp.pubkey);
   }
 
   /* Only return circuit if it is established. */
-  return (circ && TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO) ?
-          circ : NULL;
+  return (circ && TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO) ? circ
+                                                                        : NULL;
 }
 
 /** Called when we fail building a rendezvous circuit at some point other than
@@ -698,7 +699,7 @@ hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ)
   tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
 
   /* Check if we are allowed to relaunch to the rendezvous point of circ. */
-  if (!can_relaunch_service_rendezvous_point(circ)) {
+  if (! can_relaunch_service_rendezvous_point(circ)) {
     goto done;
   }
 
@@ -713,7 +714,7 @@ hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ)
     rend_service_relaunch_rendezvous(circ);
   }
 
- done:
+done:
   return;
 }
 
@@ -726,8 +727,7 @@ hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ)
 int
 hs_circ_launch_intro_point(hs_service_t *service,
                            const hs_service_intro_point_t *ip,
-                           extend_info_t *ei,
-                           bool direct_conn)
+                           extend_info_t *ei, bool direct_conn)
 {
   /* Standard flags for introduction circuit. */
   int ret = -1, circ_flags = CIRCLAUNCH_NEED_UPTIME | CIRCLAUNCH_IS_INTERNAL;
@@ -741,7 +741,7 @@ hs_circ_launch_intro_point(hs_service_t *service,
    * direct connection. */
   tor_assert_nonfatal(ip->circuit_retries > 0);
   /* Only single onion services can make direct conns */
-  if (BUG(!service->config.is_single_onion && direct_conn)) {
+  if (BUG(! service->config.is_single_onion && direct_conn)) {
     goto end;
   }
   /* We only use a one-hop path on the first attempt. If the first attempt
@@ -760,8 +760,8 @@ hs_circ_launch_intro_point(hs_service_t *service,
    * be launched, we still want to respect the retry period to avoid stress on
    * the circuit subsystem. */
   service->state.num_intro_circ_launched++;
-  circ = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO,
-                                       ei, circ_flags);
+  circ = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, ei,
+                                       circ_flags);
   if (circ == NULL) {
     goto end;
   }
@@ -774,7 +774,7 @@ hs_circ_launch_intro_point(hs_service_t *service,
 
   /* Success. */
   ret = 0;
- end:
+end:
   return ret;
 }
 
@@ -810,9 +810,10 @@ hs_circ_service_intro_has_opened(hs_service_t *service,
      * added here. I can only assume in case our ExcludeNodes list changes but
      * in that case, all circuit are flagged unusable (config.c). --dgoulet */
 
-    log_info(LD_CIRC | LD_REND, "Introduction circuit just opened but we "
-                                "have enough for service %s. Repurposing "
-                                "it to general and leaving internal.",
+    log_info(LD_CIRC | LD_REND,
+             "Introduction circuit just opened but we "
+             "have enough for service %s. Repurposing "
+             "it to general and leaving internal.",
              safe_str_client(service->onion_address));
     tor_assert(circ->build_state->is_internal);
     /* Remove it from the circuitmap. */
@@ -843,7 +844,7 @@ hs_circ_service_intro_has_opened(hs_service_t *service,
    * makes sure the circuit gets closed. */
   send_establish_intro(service, ip, circ);
 
- done:
+done:
   return ret;
 }
 
@@ -863,53 +864,52 @@ hs_circ_service_rp_has_opened(const hs_service_t *service,
   tor_assert(circ->hs_ident);
 
   /* Some useful logging. */
-  log_info(LD_REND, "Rendezvous circuit %u has opened with cookie %s "
-                    "for service %s",
+  log_info(LD_REND,
+           "Rendezvous circuit %u has opened with cookie %s "
+           "for service %s",
            TO_CIRCUIT(circ)->n_circ_id,
-           hex_str((const char *) circ->hs_ident->rendezvous_cookie,
+           hex_str((const char *)circ->hs_ident->rendezvous_cookie,
                    REND_COOKIE_LEN),
            safe_str_client(service->onion_address));
   circuit_log_path(LOG_INFO, LD_REND, circ);
 
   /* This can't fail. */
   payload_len = hs_cell_build_rendezvous1(
-                        circ->hs_ident->rendezvous_cookie,
-                        sizeof(circ->hs_ident->rendezvous_cookie),
-                        circ->hs_ident->rendezvous_handshake_info,
-                        sizeof(circ->hs_ident->rendezvous_handshake_info),
-                        payload);
+      circ->hs_ident->rendezvous_cookie,
+      sizeof(circ->hs_ident->rendezvous_cookie),
+      circ->hs_ident->rendezvous_handshake_info,
+      sizeof(circ->hs_ident->rendezvous_handshake_info), payload);
 
   /* Pad the payload with random bytes so it matches the size of a legacy cell
    * which is normally always bigger. Also, the size of a legacy cell is
    * always smaller than the RELAY_PAYLOAD_SIZE so this is safe. */
   if (payload_len < HS_LEGACY_RENDEZVOUS_CELL_SIZE) {
-    crypto_rand((char *) payload + payload_len,
+    crypto_rand((char *)payload + payload_len,
                 HS_LEGACY_RENDEZVOUS_CELL_SIZE - payload_len);
     payload_len = HS_LEGACY_RENDEZVOUS_CELL_SIZE;
   }
 
-  if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(circ),
-                                   RELAY_COMMAND_RENDEZVOUS1,
-                                   (const char *) payload, payload_len,
-                                   circ->cpath->prev) < 0) {
+  if (relay_send_command_from_edge(
+          CONTROL_CELL_ID, TO_CIRCUIT(circ), RELAY_COMMAND_RENDEZVOUS1,
+          (const char *)payload, payload_len, circ->cpath->prev) < 0) {
     /* On error, circuit is closed. */
-    log_warn(LD_REND, "Unable to send RENDEZVOUS1 cell on circuit %u "
-                      "for service %s",
+    log_warn(LD_REND,
+             "Unable to send RENDEZVOUS1 cell on circuit %u "
+             "for service %s",
              TO_CIRCUIT(circ)->n_circ_id,
              safe_str_client(service->onion_address));
     goto done;
   }
 
   /* Setup end-to-end rendezvous circuit between the client and us. */
-  if (hs_circuit_setup_e2e_rend_circ(circ,
-                       circ->hs_ident->rendezvous_ntor_key_seed,
-                       sizeof(circ->hs_ident->rendezvous_ntor_key_seed),
-                       1) < 0) {
+  if (hs_circuit_setup_e2e_rend_circ(
+          circ, circ->hs_ident->rendezvous_ntor_key_seed,
+          sizeof(circ->hs_ident->rendezvous_ntor_key_seed), 1) < 0) {
     log_warn(LD_GENERAL, "Failed to setup circ");
     goto done;
   }
 
- done:
+done:
   memwipe(payload, 0, sizeof(payload));
 }
 
@@ -937,10 +937,11 @@ hs_circ_handle_intro_established(const hs_service_t *service,
   /* Try to parse the payload into a cell making sure we do actually have a
    * valid cell. For a legacy node, it's an empty payload so as long as we
    * have the cell, we are good. */
-  if (!ip->base.is_only_legacy &&
+  if (! ip->base.is_only_legacy &&
       hs_cell_parse_intro_established(payload, payload_len) < 0) {
-    log_warn(LD_REND, "Unable to parse the INTRO_ESTABLISHED cell on "
-                      "circuit %u for service %s",
+    log_warn(LD_REND,
+             "Unable to parse the INTRO_ESTABLISHED cell on "
+             "circuit %u for service %s",
              TO_CIRCUIT(circ)->n_circ_id,
              safe_str_client(service->onion_address));
     goto done;
@@ -954,7 +955,7 @@ hs_circ_handle_intro_established(const hs_service_t *service,
   /* Success. */
   ret = 0;
 
- done:
+done:
   return ret;
 }
 
@@ -966,8 +967,8 @@ int
 hs_circ_handle_introduce2(const hs_service_t *service,
                           const origin_circuit_t *circ,
                           hs_service_intro_point_t *ip,
-                          const uint8_t *subcredential,
-                          const uint8_t *payload, size_t payload_len)
+                          const uint8_t *subcredential, const uint8_t *payload,
+                          size_t payload_len)
 {
   int ret = -1;
   time_t elapsed;
@@ -995,18 +996,18 @@ hs_circ_handle_introduce2(const hs_service_t *service,
 
   /* Check whether we've seen this REND_COOKIE before to detect repeats. */
   if (replaycache_add_test_and_elapsed(
-           service->state.replay_cache_rend_cookie,
-           data.rendezvous_cookie, sizeof(data.rendezvous_cookie),
-           &elapsed)) {
+          service->state.replay_cache_rend_cookie, data.rendezvous_cookie,
+          sizeof(data.rendezvous_cookie), &elapsed)) {
     /* A Tor client will send a new INTRODUCE1 cell with the same REND_COOKIE
      * as its previous one if its intro circ times out while in state
      * CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT. If we received the first
      * INTRODUCE1 cell (the intro-point relay converts it into an INTRODUCE2
      * cell), we are already trying to connect to that rend point (and may
      * have already succeeded); drop this cell. */
-    log_info(LD_REND, "We received an INTRODUCE2 cell with same REND_COOKIE "
-                      "field %ld seconds ago. Dropping cell.",
-             (long int) elapsed);
+    log_info(LD_REND,
+             "We received an INTRODUCE2 cell with same REND_COOKIE "
+             "field %ld seconds ago. Dropping cell.",
+             (long int)elapsed);
     goto done;
   }
 
@@ -1019,7 +1020,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   /* Success. */
   ret = 0;
 
- done:
+done:
   link_specifier_smartlist_free(data.link_specifiers);
   memwipe(&data, 0, sizeof(data));
   return ret;
@@ -1037,14 +1038,14 @@ hs_circuit_setup_e2e_rend_circ(origin_circuit_t *circ,
                                const uint8_t *ntor_key_seed, size_t seed_len,
                                int is_service_side)
 {
-  if (BUG(!circuit_purpose_is_correct_for_rend(TO_CIRCUIT(circ)->purpose,
-                                        is_service_side))) {
+  if (BUG(! circuit_purpose_is_correct_for_rend(TO_CIRCUIT(circ)->purpose,
+                                                is_service_side))) {
     return -1;
   }
 
-  crypt_path_t *hop = create_rend_cpath(ntor_key_seed, seed_len,
-                                        is_service_side);
-  if (!hop) {
+  crypt_path_t *hop =
+      create_rend_cpath(ntor_key_seed, seed_len, is_service_side);
+  if (! hop) {
     log_warn(LD_REND, "Couldn't get v3 %s cpath!",
              is_service_side ? "service-side" : "client-side");
     return -1;
@@ -1063,14 +1064,13 @@ int
 hs_circuit_setup_e2e_rend_circ_legacy_client(origin_circuit_t *circ,
                                              const uint8_t *rend_cell_body)
 {
-
-  if (BUG(!circuit_purpose_is_correct_for_rend(
-                                      TO_CIRCUIT(circ)->purpose, 0))) {
+  if (BUG(! circuit_purpose_is_correct_for_rend(TO_CIRCUIT(circ)->purpose,
+                                                0))) {
     return -1;
   }
 
   crypt_path_t *hop = create_rend_cpath_legacy(circ, rend_cell_body);
-  if (!hop) {
+  if (! hop) {
     log_warn(LD_GENERAL, "Couldn't get v2 cpath.");
     return -1;
   }
@@ -1113,8 +1113,10 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
    * object which is used to build the content of the cell. */
   const node_t *exit_node = build_state_get_exit_node(rend_circ->build_state);
   if (exit_node == NULL) {
-    log_info(LD_REND, "Unable to get rendezvous point for circuit %u. "
-             "Failing.", TO_CIRCUIT(intro_circ)->n_circ_id);
+    log_info(LD_REND,
+             "Unable to get rendezvous point for circuit %u. "
+             "Failing.",
+             TO_CIRCUIT(intro_circ)->n_circ_id);
     goto done;
   }
 
@@ -1143,10 +1145,9 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
     goto close;
   }
 
-  if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(intro_circ),
-                                   RELAY_COMMAND_INTRODUCE1,
-                                   (const char *) payload, payload_len,
-                                   intro_circ->cpath->prev) < 0) {
+  if (relay_send_command_from_edge(
+          CONTROL_CELL_ID, TO_CIRCUIT(intro_circ), RELAY_COMMAND_INTRODUCE1,
+          (const char *)payload, payload_len, intro_circ->cpath->prev) < 0) {
     /* On error, circuit is closed. */
     log_warn(LD_REND, "Unable to send INTRODUCE1 cell on circuit %u.",
              TO_CIRCUIT(intro_circ)->n_circ_id);
@@ -1157,9 +1158,9 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
   ret = 0;
   goto done;
 
- close:
+close:
   circuit_mark_for_close(TO_CIRCUIT(rend_circ), END_CIRC_REASON_INTERNAL);
- done:
+done:
   hs_cell_introduce1_data_clear(&intro1_data);
   memwipe(payload, 0, sizeof(payload));
   return ret;
@@ -1188,31 +1189,32 @@ hs_circ_send_establish_rendezvous(origin_circuit_t *circ)
 
   /* Generate the RENDEZVOUS_COOKIE and place it in the identifier so we can
    * complete the handshake when receiving the acknowledgement. */
-  crypto_rand((char *) circ->hs_ident->rendezvous_cookie, HS_REND_COOKIE_LEN);
+  crypto_rand((char *)circ->hs_ident->rendezvous_cookie, HS_REND_COOKIE_LEN);
   /* Generate the client keypair. No need to be extra strong, not long term */
   curve25519_keypair_generate(&circ->hs_ident->rendezvous_client_kp, 0);
 
-  cell_len =
-    hs_cell_build_establish_rendezvous(circ->hs_ident->rendezvous_cookie,
-                                       cell);
+  cell_len = hs_cell_build_establish_rendezvous(
+      circ->hs_ident->rendezvous_cookie, cell);
   if (BUG(cell_len < 0)) {
     goto err;
   }
 
   if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(circ),
                                    RELAY_COMMAND_ESTABLISH_RENDEZVOUS,
-                                   (const char *) cell, cell_len,
+                                   (const char *)cell, cell_len,
                                    circ->cpath->prev) < 0) {
     /* Circuit has been marked for close */
-    log_warn(LD_REND, "Unable to send ESTABLISH_RENDEZVOUS cell on "
-                      "circuit %u", TO_CIRCUIT(circ)->n_circ_id);
+    log_warn(LD_REND,
+             "Unable to send ESTABLISH_RENDEZVOUS cell on "
+             "circuit %u",
+             TO_CIRCUIT(circ)->n_circ_id);
     memwipe(cell, 0, cell_len);
     goto err;
   }
 
   memwipe(cell, 0, cell_len);
   return 0;
- err:
+err:
   return -1;
 }
 

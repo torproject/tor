@@ -26,8 +26,7 @@
 /* Helper: assert that short_policy parses and writes back out as itself,
    or as <b>expected</b> if that's provided. */
 static void
-test_short_policy_parse(const char *input,
-                        const char *expected)
+test_short_policy_parse(const char *input, const char *expected)
 {
   short_policy_t *short_policy = NULL;
   char *out = NULL;
@@ -40,7 +39,7 @@ test_short_policy_parse(const char *input,
   out = write_short_policy(short_policy);
   tt_str_op(out, OP_EQ, expected);
 
- done:
+done:
   tor_free(out);
   short_policy_free(short_policy);
 }
@@ -62,28 +61,27 @@ test_policy_summary_helper_family_flags(const char *policy_str,
   short_policy_t *short_policy = NULL;
   int success = 0;
 
-  line.key = (char*)"foo";
+  line.key = (char *)"foo";
   line.value = (char *)policy_str;
   line.next = NULL;
 
-  r = policies_parse_exit_policy(&line, &policy,
-                                 options, NULL);
-  tt_int_op(r,OP_EQ, 0);
+  r = policies_parse_exit_policy(&line, &policy, options, NULL);
+  tt_int_op(r, OP_EQ, 0);
 
   summary = policy_summarize(policy, family);
 
   tt_ptr_op(summary, OP_NE, NULL);
-  tt_str_op(summary,OP_EQ, expected_summary);
+  tt_str_op(summary, OP_EQ, expected_summary);
 
   short_policy = parse_short_policy(summary);
   tt_assert(short_policy);
   summary_after = write_short_policy(short_policy);
-  tt_str_op(summary,OP_EQ, summary_after);
+  tt_str_op(summary, OP_EQ, summary_after);
 
   success = 1;
- done:
+done:
   /* If we don't print the flags on failure, it's very hard to diagnose bugs */
-  if (!success)
+  if (! success)
     TT_DECLARE("CTXT", ("\n     IPv%d\n     Options: %x\n     Policy: %s",
                         family == AF_INET ? 4 : 6, options, policy_str));
   tor_free(summary_after);
@@ -100,10 +98,9 @@ test_policy_summary_helper_family(const char *policy_str,
                                   const char *expected_summary,
                                   sa_family_t family)
 {
-  for (exit_policy_parser_cfg_t opt = 0;
-       opt <= EXIT_POLICY_OPTION_ALL;
+  for (exit_policy_parser_cfg_t opt = 0; opt <= EXIT_POLICY_OPTION_ALL;
        opt++) {
-    if (family == AF_INET6 && !(opt & EXIT_POLICY_IPV6_ENABLED))
+    if (family == AF_INET6 && ! (opt & EXIT_POLICY_IPV6_ENABLED))
       /* Skip the test: IPv6 addresses need IPv6 enabled */
       continue;
 
@@ -161,29 +158,31 @@ test_policies_general(void *arg)
   p = router_parse_addr_policy_item_from_string("reject 192.168.0.0/16:*", -1,
                                                 &malformed_list);
   tt_ptr_op(p, OP_NE, NULL);
-  tt_int_op(ADDR_POLICY_REJECT,OP_EQ, p->policy_type);
+  tt_int_op(ADDR_POLICY_REJECT, OP_EQ, p->policy_type);
   tor_addr_from_ipv4h(&tar, 0xc0a80000u);
-  tt_int_op(0,OP_EQ, tor_addr_compare(&p->addr, &tar, CMP_EXACT));
-  tt_int_op(16,OP_EQ, p->maskbits);
-  tt_int_op(1,OP_EQ, p->prt_min);
-  tt_int_op(65535,OP_EQ, p->prt_max);
+  tt_int_op(0, OP_EQ, tor_addr_compare(&p->addr, &tar, CMP_EXACT));
+  tt_int_op(16, OP_EQ, p->maskbits);
+  tt_int_op(1, OP_EQ, p->prt_min);
+  tt_int_op(65535, OP_EQ, p->prt_max);
 
   smartlist_add(policy, p);
 
   tor_addr_from_ipv4h(&tar, 0x01020304u);
   tt_assert(ADDR_POLICY_ACCEPTED ==
-          compare_tor_addr_to_addr_policy(&tar, 2, policy));
+            compare_tor_addr_to_addr_policy(&tar, 2, policy));
   tor_addr_make_unspec(&tar);
   tt_assert(ADDR_POLICY_PROBABLY_ACCEPTED ==
-          compare_tor_addr_to_addr_policy(&tar, 2, policy));
+            compare_tor_addr_to_addr_policy(&tar, 2, policy));
   tor_addr_from_ipv4h(&tar, 0xc0a80102);
   tt_assert(ADDR_POLICY_REJECTED ==
-          compare_tor_addr_to_addr_policy(&tar, 2, policy));
+            compare_tor_addr_to_addr_policy(&tar, 2, policy));
 
-  tt_int_op(0, OP_EQ, policies_parse_exit_policy(NULL, &policy2,
-                                              EXIT_POLICY_IPV6_ENABLED |
-                                              EXIT_POLICY_REJECT_PRIVATE |
-                                              EXIT_POLICY_ADD_DEFAULT, NULL));
+  tt_int_op(0, OP_EQ,
+            policies_parse_exit_policy(NULL, &policy2,
+                                       EXIT_POLICY_IPV6_ENABLED |
+                                           EXIT_POLICY_REJECT_PRIVATE |
+                                           EXIT_POLICY_ADD_DEFAULT,
+                                       NULL));
 
   tt_assert(policy2);
 
@@ -192,11 +191,12 @@ test_policies_general(void *arg)
   addr_list = smartlist_new();
   smartlist_add(addr_list, &tar);
   smartlist_add(addr_list, &tar2);
-  tt_int_op(0, OP_EQ, policies_parse_exit_policy(NULL, &policy12,
-                                                 EXIT_POLICY_IPV6_ENABLED |
-                                                 EXIT_POLICY_REJECT_PRIVATE |
-                                                 EXIT_POLICY_ADD_DEFAULT,
-                                                 addr_list));
+  tt_int_op(0, OP_EQ,
+            policies_parse_exit_policy(NULL, &policy12,
+                                       EXIT_POLICY_IPV6_ENABLED |
+                                           EXIT_POLICY_REJECT_PRIVATE |
+                                           EXIT_POLICY_ADD_DEFAULT,
+                                       addr_list));
   smartlist_free(addr_list);
   addr_list = NULL;
 
@@ -235,8 +235,8 @@ test_policies_general(void *arg)
                                                 &malformed_list);
   tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy5, p);
-  p = router_parse_addr_policy_item_from_string("reject 192.168.0.0/16:*",
-                                                -1, &malformed_list);
+  p = router_parse_addr_policy_item_from_string("reject 192.168.0.0/16:*", -1,
+                                                &malformed_list);
   tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy5, p);
   p = router_parse_addr_policy_item_from_string("reject 10.0.0.0/8:*", -1,
@@ -276,18 +276,19 @@ test_policies_general(void *arg)
   tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy7, p);
 
-  tt_int_op(0, OP_EQ, policies_parse_exit_policy(NULL, &policy8,
-                                                 EXIT_POLICY_IPV6_ENABLED |
-                                                 EXIT_POLICY_REJECT_PRIVATE |
-                                                 EXIT_POLICY_ADD_DEFAULT,
-                                                 NULL));
+  tt_int_op(0, OP_EQ,
+            policies_parse_exit_policy(NULL, &policy8,
+                                       EXIT_POLICY_IPV6_ENABLED |
+                                           EXIT_POLICY_REJECT_PRIVATE |
+                                           EXIT_POLICY_ADD_DEFAULT,
+                                       NULL));
 
   tt_assert(policy8);
 
-  tt_int_op(0, OP_EQ, policies_parse_exit_policy(NULL, &policy9,
-                                                 EXIT_POLICY_REJECT_PRIVATE |
-                                                 EXIT_POLICY_ADD_DEFAULT,
-                                                 NULL));
+  tt_int_op(0, OP_EQ,
+            policies_parse_exit_policy(
+                NULL, &policy9,
+                EXIT_POLICY_REJECT_PRIVATE | EXIT_POLICY_ADD_DEFAULT, NULL));
 
   tt_assert(policy9);
 
@@ -304,120 +305,108 @@ test_policies_general(void *arg)
   tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy11, p);
 
-  tt_assert(!exit_policy_is_general_exit(policy));
+  tt_assert(! exit_policy_is_general_exit(policy));
   tt_assert(exit_policy_is_general_exit(policy2));
-  tt_assert(!exit_policy_is_general_exit(NULL));
-  tt_assert(!exit_policy_is_general_exit(policy3));
-  tt_assert(!exit_policy_is_general_exit(policy4));
-  tt_assert(!exit_policy_is_general_exit(policy5));
-  tt_assert(!exit_policy_is_general_exit(policy6));
-  tt_assert(!exit_policy_is_general_exit(policy7));
+  tt_assert(! exit_policy_is_general_exit(NULL));
+  tt_assert(! exit_policy_is_general_exit(policy3));
+  tt_assert(! exit_policy_is_general_exit(policy4));
+  tt_assert(! exit_policy_is_general_exit(policy5));
+  tt_assert(! exit_policy_is_general_exit(policy6));
+  tt_assert(! exit_policy_is_general_exit(policy7));
   tt_assert(exit_policy_is_general_exit(policy8));
   tt_assert(exit_policy_is_general_exit(policy9));
-  tt_assert(!exit_policy_is_general_exit(policy10));
-  tt_assert(!exit_policy_is_general_exit(policy11));
+  tt_assert(! exit_policy_is_general_exit(policy10));
+  tt_assert(! exit_policy_is_general_exit(policy11));
 
-  tt_assert(!addr_policies_eq(policy, policy2));
-  tt_assert(!addr_policies_eq(policy, NULL));
+  tt_assert(! addr_policies_eq(policy, policy2));
+  tt_assert(! addr_policies_eq(policy, NULL));
   tt_assert(addr_policies_eq(policy2, policy2));
   tt_assert(addr_policies_eq(NULL, NULL));
 
-  tt_assert(!policy_is_reject_star(policy2, AF_INET, 1));
+  tt_assert(! policy_is_reject_star(policy2, AF_INET, 1));
   tt_assert(policy_is_reject_star(policy, AF_INET, 1));
   tt_assert(policy_is_reject_star(policy10, AF_INET, 1));
-  tt_assert(!policy_is_reject_star(policy10, AF_INET6, 1));
+  tt_assert(! policy_is_reject_star(policy10, AF_INET6, 1));
   tt_assert(policy_is_reject_star(policy11, AF_INET, 1));
   tt_assert(policy_is_reject_star(policy11, AF_INET6, 1));
   tt_assert(policy_is_reject_star(NULL, AF_INET, 1));
   tt_assert(policy_is_reject_star(NULL, AF_INET6, 1));
-  tt_assert(!policy_is_reject_star(NULL, AF_INET, 0));
-  tt_assert(!policy_is_reject_star(NULL, AF_INET6, 0));
+  tt_assert(! policy_is_reject_star(NULL, AF_INET, 0));
+  tt_assert(! policy_is_reject_star(NULL, AF_INET6, 0));
 
   addr_policy_list_free(policy);
   policy = NULL;
 
   /* make sure assume_action works */
   malformed_list = 0;
-  p = router_parse_addr_policy_item_from_string("127.0.0.1",
-                                                ADDR_POLICY_ACCEPT,
-                                                &malformed_list);
+  p = router_parse_addr_policy_item_from_string(
+      "127.0.0.1", ADDR_POLICY_ACCEPT, &malformed_list);
   tt_assert(p);
   addr_policy_free(p);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
 
-  p = router_parse_addr_policy_item_from_string("127.0.0.1:*",
-                                                ADDR_POLICY_ACCEPT,
-                                                &malformed_list);
+  p = router_parse_addr_policy_item_from_string(
+      "127.0.0.1:*", ADDR_POLICY_ACCEPT, &malformed_list);
   tt_assert(p);
   addr_policy_free(p);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
 
-  p = router_parse_addr_policy_item_from_string("[::]",
-                                                ADDR_POLICY_ACCEPT,
+  p = router_parse_addr_policy_item_from_string("[::]", ADDR_POLICY_ACCEPT,
                                                 &malformed_list);
   tt_assert(p);
   addr_policy_free(p);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
 
-  p = router_parse_addr_policy_item_from_string("[::]:*",
-                                                ADDR_POLICY_ACCEPT,
+  p = router_parse_addr_policy_item_from_string("[::]:*", ADDR_POLICY_ACCEPT,
                                                 &malformed_list);
   tt_assert(p);
   addr_policy_free(p);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
 
-  p = router_parse_addr_policy_item_from_string("[face::b]",
-                                                ADDR_POLICY_ACCEPT,
-                                                &malformed_list);
+  p = router_parse_addr_policy_item_from_string(
+      "[face::b]", ADDR_POLICY_ACCEPT, &malformed_list);
   tt_assert(p);
   addr_policy_free(p);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
 
-  p = router_parse_addr_policy_item_from_string("[b::aaaa]",
-                                                ADDR_POLICY_ACCEPT,
-                                                &malformed_list);
+  p = router_parse_addr_policy_item_from_string(
+      "[b::aaaa]", ADDR_POLICY_ACCEPT, &malformed_list);
   tt_assert(p);
   addr_policy_free(p);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
 
-  p = router_parse_addr_policy_item_from_string("*",
-                                                ADDR_POLICY_ACCEPT,
+  p = router_parse_addr_policy_item_from_string("*", ADDR_POLICY_ACCEPT,
                                                 &malformed_list);
   tt_assert(p);
   addr_policy_free(p);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
 
-  p = router_parse_addr_policy_item_from_string("*4",
-                                                ADDR_POLICY_ACCEPT,
+  p = router_parse_addr_policy_item_from_string("*4", ADDR_POLICY_ACCEPT,
                                                 &malformed_list);
   tt_assert(p);
   addr_policy_free(p);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
 
-  p = router_parse_addr_policy_item_from_string("*6",
-                                                ADDR_POLICY_ACCEPT,
+  p = router_parse_addr_policy_item_from_string("*6", ADDR_POLICY_ACCEPT,
                                                 &malformed_list);
   tt_assert(p);
   addr_policy_free(p);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
 
   /* These are all ambiguous IPv6 addresses, it's good that we reject them */
-  p = router_parse_addr_policy_item_from_string("acce::abcd",
-                                                ADDR_POLICY_ACCEPT,
+  p = router_parse_addr_policy_item_from_string(
+      "acce::abcd", ADDR_POLICY_ACCEPT, &malformed_list);
+  tt_ptr_op(p, OP_EQ, NULL);
+  tt_assert(malformed_list);
+  malformed_list = 0;
+
+  p = router_parse_addr_policy_item_from_string("7:1234", ADDR_POLICY_ACCEPT,
                                                 &malformed_list);
   tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(malformed_list);
   malformed_list = 0;
 
-  p = router_parse_addr_policy_item_from_string("7:1234",
-                                                ADDR_POLICY_ACCEPT,
-                                                &malformed_list);
-  tt_ptr_op(p, OP_EQ, NULL);
-  tt_assert(malformed_list);
-  malformed_list = 0;
-
-  p = router_parse_addr_policy_item_from_string("::",
-                                                ADDR_POLICY_ACCEPT,
+  p = router_parse_addr_policy_item_from_string("::", ADDR_POLICY_ACCEPT,
                                                 &malformed_list);
   tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(malformed_list);
@@ -425,17 +414,18 @@ test_policies_general(void *arg)
 
   /* make sure compacting logic works. */
   policy = NULL;
-  line.key = (char*)"foo";
-  line.value = (char*)"accept *:80,reject private:*,reject *:*";
+  line.key = (char *)"foo";
+  line.value = (char *)"accept *:80,reject private:*,reject *:*";
   line.next = NULL;
-  tt_int_op(0, OP_EQ, policies_parse_exit_policy(&line,&policy,
-                                              EXIT_POLICY_IPV6_ENABLED |
-                                              EXIT_POLICY_ADD_DEFAULT, NULL));
+  tt_int_op(0, OP_EQ,
+            policies_parse_exit_policy(
+                &line, &policy,
+                EXIT_POLICY_IPV6_ENABLED | EXIT_POLICY_ADD_DEFAULT, NULL));
   tt_assert(policy);
 
-  //test_streq(policy->string, "accept *:80");
-  //test_streq(policy->next->string, "reject *:*");
-  tt_int_op(smartlist_len(policy),OP_EQ, 4);
+  // test_streq(policy->string, "accept *:80");
+  // test_streq(policy->next->string, "reject *:*");
+  tt_int_op(smartlist_len(policy), OP_EQ, 4);
 
   /* test policy summaries */
   /* check if we properly ignore private IP addresses */
@@ -451,21 +441,22 @@ test_policies_general(void *arg)
                              "reject 12.0.0.0/9:80,"
                              "reject 13.0.0.0/9:80,"
                              "reject 14.0.0.0/9:80,"
-                             "accept *:*", "accept 1-65535");
+                             "accept *:*",
+                             "accept 1-65535");
   test_policy_summary_helper("reject 11.0.0.0/9:80,"
                              "reject 12.0.0.0/9:80,"
                              "reject 13.0.0.0/9:80,"
                              "reject 14.0.0.0/9:80,"
                              "reject 15.0.0.0:81,"
-                             "accept *:*", "accept 1-65535");
+                             "accept *:*",
+                             "accept 1-65535");
   test_policy_summary_helper6("reject 11.0.0.0/9:80,"
                               "reject 12.0.0.0/9:80,"
                               "reject 13.0.0.0/9:80,"
                               "reject 14.0.0.0/9:80,"
                               "reject 15.0.0.0:80,"
                               "accept *:*",
-                              "reject 80",
-                              "accept 1-65535");
+                              "reject 80", "accept 1-65535");
   /* no exits */
   test_policy_summary_helper("accept 11.0.0.0/9:80,"
                              "reject *:*",
@@ -960,9 +951,9 @@ test_policies_general(void *arg)
   test_short_policy_parse("reject ,1-10,,,,30-40", "reject 1-10,30-40");
 
   /* Try parsing various broken short policies */
-#define TT_BAD_SHORT_POLICY(s)                                          \
-  do {                                                                  \
-    tt_ptr_op(NULL, OP_EQ, (short_parsed = parse_short_policy((s))));      \
+#define TT_BAD_SHORT_POLICY(s)                                        \
+  do {                                                                \
+    tt_ptr_op(NULL, OP_EQ, (short_parsed = parse_short_policy((s)))); \
   } while (0)
   TT_BAD_SHORT_POLICY("accept 200-199");
   TT_BAD_SHORT_POLICY("");
@@ -982,17 +973,17 @@ test_policies_general(void *arg)
   p = router_parse_addr_policy_item_from_string("accept6 1.2.3.4:*", -1,
                                                 &malformed_list);
   tt_ptr_op(p, OP_EQ, NULL);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
 
   p = router_parse_addr_policy_item_from_string("reject6 2.4.6.0/24:*", -1,
                                                 &malformed_list);
   tt_ptr_op(p, OP_EQ, NULL);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
 
   p = router_parse_addr_policy_item_from_string("accept6 *4:*", -1,
                                                 &malformed_list);
   tt_ptr_op(p, OP_EQ, NULL);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
 
   /* Make sure malformed policies are detected as such. */
   p = router_parse_addr_policy_item_from_string("bad_token *4:*", -1,
@@ -1045,43 +1036,56 @@ test_policies_general(void *arg)
     char *policy_strng = NULL;
     smartlist_t *chunks = smartlist_new();
     smartlist_add_strdup(chunks, "accept ");
-    for (i=1; i<10000; ++i)
+    for (i = 1; i < 10000; ++i)
       smartlist_add_asprintf(chunks, "%d,", i);
     smartlist_add_strdup(chunks, "20000");
     policy_strng = smartlist_join_strings(chunks, "", 0, NULL);
     SMARTLIST_FOREACH(chunks, char *, ch, tor_free(ch));
     smartlist_free(chunks);
-    short_parsed = parse_short_policy(policy_strng);/* shouldn't be accepted */
+    short_parsed =
+        parse_short_policy(policy_strng); /* shouldn't be accepted */
     tor_free(policy_strng);
     tt_ptr_op(NULL, OP_EQ, short_parsed);
   }
 
   /* truncation ports */
   sm = smartlist_new();
-  for (i=1; i<2000; i+=2) {
+  for (i = 1; i < 2000; i += 2) {
     char buf[POLICY_BUF_LEN];
     tor_snprintf(buf, sizeof(buf), "reject *:%d", i);
     smartlist_add_strdup(sm, buf);
   }
   smartlist_add_strdup(sm, "accept *:*");
   policy_str = smartlist_join_strings(sm, ",", 0, NULL);
-  test_policy_summary_helper( policy_str,
-    "accept 2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,"
-    "46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,"
-    "92,94,96,98,100,102,104,106,108,110,112,114,116,118,120,122,124,126,128,"
-    "130,132,134,136,138,140,142,144,146,148,150,152,154,156,158,160,162,164,"
-    "166,168,170,172,174,176,178,180,182,184,186,188,190,192,194,196,198,200,"
-    "202,204,206,208,210,212,214,216,218,220,222,224,226,228,230,232,234,236,"
-    "238,240,242,244,246,248,250,252,254,256,258,260,262,264,266,268,270,272,"
-    "274,276,278,280,282,284,286,288,290,292,294,296,298,300,302,304,306,308,"
-    "310,312,314,316,318,320,322,324,326,328,330,332,334,336,338,340,342,344,"
-    "346,348,350,352,354,356,358,360,362,364,366,368,370,372,374,376,378,380,"
-    "382,384,386,388,390,392,394,396,398,400,402,404,406,408,410,412,414,416,"
-    "418,420,422,424,426,428,430,432,434,436,438,440,442,444,446,448,450,452,"
-    "454,456,458,460,462,464,466,468,470,472,474,476,478,480,482,484,486,488,"
-    "490,492,494,496,498,500,502,504,506,508,510,512,514,516,518,520,522");
+  test_policy_summary_helper(
+      policy_str,
+      "accept 2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,"
+      "46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,"
+      "92,94,96,98,100,102,104,106,108,110,112,114,116,118,120,122,124,126,"
+      "128,"
+      "130,132,134,136,138,140,142,144,146,148,150,152,154,156,158,160,162,"
+      "164,"
+      "166,168,170,172,174,176,178,180,182,184,186,188,190,192,194,196,198,"
+      "200,"
+      "202,204,206,208,210,212,214,216,218,220,222,224,226,228,230,232,234,"
+      "236,"
+      "238,240,242,244,246,248,250,252,254,256,258,260,262,264,266,268,270,"
+      "272,"
+      "274,276,278,280,282,284,286,288,290,292,294,296,298,300,302,304,306,"
+      "308,"
+      "310,312,314,316,318,320,322,324,326,328,330,332,334,336,338,340,342,"
+      "344,"
+      "346,348,350,352,354,356,358,360,362,364,366,368,370,372,374,376,378,"
+      "380,"
+      "382,384,386,388,390,392,394,396,398,400,402,404,406,408,410,412,414,"
+      "416,"
+      "418,420,422,424,426,428,430,432,434,436,438,440,442,444,446,448,450,"
+      "452,"
+      "454,456,458,460,462,464,466,468,470,472,474,476,478,480,482,484,486,"
+      "488,"
+      "490,492,494,496,498,500,502,504,506,508,510,512,514,516,518,520,522");
 
- done:
+done:
   addr_policy_list_free(policy);
   addr_policy_list_free(policy2);
   addr_policy_list_free(policy3);
@@ -1112,15 +1116,15 @@ test_policy_has_address_helper(const smartlist_t *policy_list,
   tt_assert(policy_list);
   tt_assert(addr);
 
-  SMARTLIST_FOREACH_BEGIN(policy_list, addr_policy_t*, p) {
+  SMARTLIST_FOREACH_BEGIN (policy_list, addr_policy_t *, p) {
     if (tor_addr_eq(&p->addr, addr)) {
       found = 1;
     }
-  } SMARTLIST_FOREACH_END(p);
+  } SMARTLIST_FOREACH_END (p);
 
   return found;
 
- done:
+done:
   return 0;
 }
 
@@ -1200,7 +1204,7 @@ test_policies_reject_exit_address(void *arg)
   policy = NULL;
 
   /* test that IPv6 addresses are rejected on an IPv4/IPv6 exit */
-  policies_parse_exit_policy_reject_private(&policy, 1, ipv6_list,  0, 0);
+  policies_parse_exit_policy_reject_private(&policy, 1, ipv6_list, 0, 0);
   tt_assert(policy);
   tt_int_op(smartlist_len(policy), OP_EQ, 1);
   tt_assert(test_policy_has_address_helper(policy, &ipv6_addr));
@@ -1208,7 +1212,7 @@ test_policies_reject_exit_address(void *arg)
   policy = NULL;
 
   /* test that IPv4 and IPv6 addresses are rejected on an IPv4/IPv6 exit */
-  policies_parse_exit_policy_reject_private(&policy, 1, both_list,  0, 0);
+  policies_parse_exit_policy_reject_private(&policy, 1, both_list, 0, 0);
   tt_assert(policy);
   tt_int_op(smartlist_len(policy), OP_EQ, 2);
   tt_assert(test_policy_has_address_helper(policy, &ipv4_addr));
@@ -1217,7 +1221,7 @@ test_policies_reject_exit_address(void *arg)
   policy = NULL;
 
   /* Test that lists with duplicate entries produce the same results */
-  policies_parse_exit_policy_reject_private(&policy, 1, dupl_list,  0, 0);
+  policies_parse_exit_policy_reject_private(&policy, 1, dupl_list, 0, 0);
   tt_assert(policy);
   tt_int_op(smartlist_len(policy), OP_EQ, 2);
   tt_assert(test_policy_has_address_helper(policy, &ipv4_addr));
@@ -1225,7 +1229,7 @@ test_policies_reject_exit_address(void *arg)
   addr_policy_list_free(policy);
   policy = NULL;
 
- done:
+done:
   addr_policy_list_free(policy);
   smartlist_free(ipv4_list);
   smartlist_free(ipv6_list);
@@ -1285,11 +1289,11 @@ test_policies_reject_port_address(void *arg)
   addr_policy_list_free(policy);
   policy = NULL;
 
- done:
+done:
   addr_policy_list_free(policy);
   if (test_configured_ports) {
-    SMARTLIST_FOREACH(test_configured_ports,
-                      port_cfg_t *, p, port_cfg_free(p));
+    SMARTLIST_FOREACH(test_configured_ports, port_cfg_t *, p,
+                      port_cfg_free(p));
     smartlist_free(test_configured_ports);
     test_configured_ports = NULL;
   }
@@ -1302,9 +1306,8 @@ static smartlist_t *mock_ipv6_addrs = NULL;
 /* mock get_interface_address6_list, returning a deep copy of the template
  * address list ipv4_interface_address_list or ipv6_interface_address_list */
 static smartlist_t *
-mock_get_interface_address6_list(int severity,
-                            sa_family_t family,
-                            int include_internal)
+mock_get_interface_address6_list(int severity, sa_family_t family,
+                                 int include_internal)
 {
   (void)severity;
   (void)include_internal;
@@ -1321,16 +1324,16 @@ mock_get_interface_address6_list(int severity,
 
   tt_assert(template_list);
 
-  SMARTLIST_FOREACH_BEGIN(template_list, tor_addr_t *, src_addr) {
+  SMARTLIST_FOREACH_BEGIN (template_list, tor_addr_t *, src_addr) {
     tor_addr_t *dest_addr = tor_malloc(sizeof(tor_addr_t));
     memset(dest_addr, 0, sizeof(*dest_addr));
     tor_addr_copy_tight(dest_addr, src_addr);
     smartlist_add(clone_list, dest_addr);
-  } SMARTLIST_FOREACH_END(src_addr);
+  } SMARTLIST_FOREACH_END (src_addr);
 
   return clone_list;
 
- done:
+done:
   interface_address6_list_free(clone_list);
   return NULL;
 }
@@ -1342,9 +1345,9 @@ test_policies_reject_interface_address(void *arg)
 {
   smartlist_t *policy = NULL;
   smartlist_t *public_ipv4_addrs =
-    get_interface_address6_list(LOG_INFO, AF_INET, 0);
+      get_interface_address6_list(LOG_INFO, AF_INET, 0);
   smartlist_t *public_ipv6_addrs =
-    get_interface_address6_list(LOG_INFO, AF_INET6, 0);
+      get_interface_address6_list(LOG_INFO, AF_INET6, 0);
   tor_addr_t ipv4_addr, ipv6_addr;
   (void)arg;
 
@@ -1366,8 +1369,8 @@ test_policies_reject_interface_address(void *arg)
    * exit (and allow for duplicates) */
   policies_parse_exit_policy_reject_private(&policy, 1, NULL, 1, 0);
   if (policy) {
-    tt_assert(smartlist_len(policy) <= (smartlist_len(public_ipv4_addrs)
-                                        + smartlist_len(public_ipv6_addrs)));
+    tt_assert(smartlist_len(policy) <= (smartlist_len(public_ipv4_addrs) +
+                                        smartlist_len(public_ipv6_addrs)));
     addr_policy_list_free(policy);
     policy = NULL;
   }
@@ -1399,12 +1402,12 @@ test_policies_reject_interface_address(void *arg)
    * exit */
   policies_parse_exit_policy_reject_private(&policy, 1, NULL, 1, 0);
   tt_assert(policy);
-  tt_assert(smartlist_len(policy) == (smartlist_len(mock_ipv4_addrs)
-                                      + smartlist_len(mock_ipv6_addrs)));
+  tt_assert(smartlist_len(policy) ==
+            (smartlist_len(mock_ipv4_addrs) + smartlist_len(mock_ipv6_addrs)));
   addr_policy_list_free(policy);
   policy = NULL;
 
- done:
+done:
   addr_policy_list_free(policy);
   interface_address6_list_free(public_ipv4_addrs);
   interface_address6_list_free(public_ipv6_addrs);
@@ -1422,90 +1425,89 @@ test_policies_reject_interface_address(void *arg)
 static void
 test_dump_exit_policy_to_string(void *arg)
 {
- char *ep;
- addr_policy_t *policy_entry;
- int malformed_list = -1;
+  char *ep;
+  addr_policy_t *policy_entry;
+  int malformed_list = -1;
 
- routerinfo_t *ri = tor_malloc_zero(sizeof(routerinfo_t));
+  routerinfo_t *ri = tor_malloc_zero(sizeof(routerinfo_t));
 
- (void)arg;
+  (void)arg;
 
- ri->policy_is_reject_star = 1;
- ri->exit_policy = NULL; // expecting "reject *:*"
- ep = router_dump_exit_policy_to_string(ri,1,1);
+  ri->policy_is_reject_star = 1;
+  ri->exit_policy = NULL; // expecting "reject *:*"
+  ep = router_dump_exit_policy_to_string(ri, 1, 1);
 
- tt_str_op("reject *:*",OP_EQ, ep);
+  tt_str_op("reject *:*", OP_EQ, ep);
 
- tor_free(ep);
+  tor_free(ep);
 
- ri->exit_policy = smartlist_new();
- ri->policy_is_reject_star = 0;
+  ri->exit_policy = smartlist_new();
+  ri->policy_is_reject_star = 0;
 
- policy_entry = router_parse_addr_policy_item_from_string("accept *:*", -1,
-                                                          &malformed_list);
+  policy_entry = router_parse_addr_policy_item_from_string("accept *:*", -1,
+                                                           &malformed_list);
 
- smartlist_add(ri->exit_policy,policy_entry);
+  smartlist_add(ri->exit_policy, policy_entry);
 
- ep = router_dump_exit_policy_to_string(ri,1,1);
+  ep = router_dump_exit_policy_to_string(ri, 1, 1);
 
- tt_str_op("accept *:*",OP_EQ, ep);
+  tt_str_op("accept *:*", OP_EQ, ep);
 
- tor_free(ep);
+  tor_free(ep);
 
- policy_entry = router_parse_addr_policy_item_from_string("reject *:25", -1,
-                                                          &malformed_list);
+  policy_entry = router_parse_addr_policy_item_from_string("reject *:25", -1,
+                                                           &malformed_list);
 
- smartlist_add(ri->exit_policy,policy_entry);
+  smartlist_add(ri->exit_policy, policy_entry);
 
- ep = router_dump_exit_policy_to_string(ri,1,1);
+  ep = router_dump_exit_policy_to_string(ri, 1, 1);
 
- tt_str_op("accept *:*\nreject *:25",OP_EQ, ep);
+  tt_str_op("accept *:*\nreject *:25", OP_EQ, ep);
 
- tor_free(ep);
+  tor_free(ep);
 
- policy_entry =
- router_parse_addr_policy_item_from_string("reject 8.8.8.8:*", -1,
-                                           &malformed_list);
+  policy_entry = router_parse_addr_policy_item_from_string(
+      "reject 8.8.8.8:*", -1, &malformed_list);
 
- smartlist_add(ri->exit_policy,policy_entry);
+  smartlist_add(ri->exit_policy, policy_entry);
 
- ep = router_dump_exit_policy_to_string(ri,1,1);
+  ep = router_dump_exit_policy_to_string(ri, 1, 1);
 
- tt_str_op("accept *:*\nreject *:25\nreject 8.8.8.8:*",OP_EQ, ep);
- tor_free(ep);
+  tt_str_op("accept *:*\nreject *:25\nreject 8.8.8.8:*", OP_EQ, ep);
+  tor_free(ep);
 
- policy_entry =
- router_parse_addr_policy_item_from_string("reject6 [FC00::]/7:*", -1,
-                                           &malformed_list);
+  policy_entry = router_parse_addr_policy_item_from_string(
+      "reject6 [FC00::]/7:*", -1, &malformed_list);
 
- smartlist_add(ri->exit_policy,policy_entry);
+  smartlist_add(ri->exit_policy, policy_entry);
 
- ep = router_dump_exit_policy_to_string(ri,1,1);
+  ep = router_dump_exit_policy_to_string(ri, 1, 1);
 
- tt_str_op("accept *:*\nreject *:25\nreject 8.8.8.8:*\n"
-            "reject6 [fc00::]/7:*",OP_EQ, ep);
- tor_free(ep);
+  tt_str_op("accept *:*\nreject *:25\nreject 8.8.8.8:*\n"
+            "reject6 [fc00::]/7:*",
+            OP_EQ, ep);
+  tor_free(ep);
 
- policy_entry =
- router_parse_addr_policy_item_from_string("accept6 [c000::]/3:*", -1,
-                                           &malformed_list);
+  policy_entry = router_parse_addr_policy_item_from_string(
+      "accept6 [c000::]/3:*", -1, &malformed_list);
 
- smartlist_add(ri->exit_policy,policy_entry);
+  smartlist_add(ri->exit_policy, policy_entry);
 
- ep = router_dump_exit_policy_to_string(ri,1,1);
+  ep = router_dump_exit_policy_to_string(ri, 1, 1);
 
- tt_str_op("accept *:*\nreject *:25\nreject 8.8.8.8:*\n"
-            "reject6 [fc00::]/7:*\naccept6 [c000::]/3:*",OP_EQ, ep);
+  tt_str_op("accept *:*\nreject *:25\nreject 8.8.8.8:*\n"
+            "reject6 [fc00::]/7:*\naccept6 [c000::]/3:*",
+            OP_EQ, ep);
 
- done:
+done:
 
- if (ri->exit_policy) {
-   SMARTLIST_FOREACH(ri->exit_policy, addr_policy_t *,
-                     entry, addr_policy_free(entry));
-   smartlist_free(ri->exit_policy);
- }
- tor_free(ri);
- tor_free(ep);
+  if (ri->exit_policy) {
+    SMARTLIST_FOREACH(ri->exit_policy, addr_policy_t *, entry,
+                      addr_policy_free(entry));
+    smartlist_free(ri->exit_policy);
+  }
+  tor_free(ri);
+  tor_free(ep);
 }
 
 static routerinfo_t *mock_desc_routerinfo = NULL;
@@ -1581,30 +1583,28 @@ test_policies_getinfo_helper_policies(void *arg)
   tt_assert(strlen(answer) == 0);
   tor_free(answer);
 
-  rv = getinfo_helper_policies(NULL, "exit-policy/ipv4", &answer,
-                               &errmsg);
+  rv = getinfo_helper_policies(NULL, "exit-policy/ipv4", &answer, &errmsg);
   tt_int_op(rv, OP_EQ, 0);
   tt_ptr_op(answer, OP_NE, NULL);
   ipv4_len = strlen(answer);
   tt_assert(ipv4_len == 0 || ipv4_len == strlen(DEFAULT_POLICY_STRING));
-  tt_assert(ipv4_len == 0 || !strcasecmp(answer, DEFAULT_POLICY_STRING));
+  tt_assert(ipv4_len == 0 || ! strcasecmp(answer, DEFAULT_POLICY_STRING));
   tor_free(answer);
 
-  rv = getinfo_helper_policies(NULL, "exit-policy/ipv6", &answer,
-                               &errmsg);
+  rv = getinfo_helper_policies(NULL, "exit-policy/ipv6", &answer, &errmsg);
   tt_int_op(rv, OP_EQ, 0);
   tt_ptr_op(answer, OP_NE, NULL);
   ipv6_len = strlen(answer);
   tt_assert(ipv6_len == 0 || ipv6_len == strlen(DEFAULT_POLICY_STRING));
-  tt_assert(ipv6_len == 0 || !strcasecmp(answer, DEFAULT_POLICY_STRING));
+  tt_assert(ipv6_len == 0 || ! strcasecmp(answer, DEFAULT_POLICY_STRING));
   tor_free(answer);
 
-  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
-                               &errmsg);
+  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer, &errmsg);
   tt_int_op(rv, OP_EQ, 0);
   tt_ptr_op(answer, OP_NE, NULL);
   /* It's either empty or it's the default */
-  tt_assert(strlen(answer) == 0 || !strcasecmp(answer, DEFAULT_POLICY_STRING));
+  tt_assert(strlen(answer) == 0 ||
+            ! strcasecmp(answer, DEFAULT_POLICY_STRING));
   tor_free(answer);
 
   mock_my_routerinfo.addr = TEST_IPV4_ADDR;
@@ -1616,9 +1616,8 @@ test_policies_getinfo_helper_policies(void *arg)
   tor_addr_from_ipv4h(
       &mock_options.OutboundBindAddresses[OUTBOUND_ADDR_EXIT][0],
       TEST_IPV4_ADDR);
-  tor_addr_parse(
-      &mock_options.OutboundBindAddresses[OUTBOUND_ADDR_EXIT][1],
-      TEST_IPV6_ADDR);
+  tor_addr_parse(&mock_options.OutboundBindAddresses[OUTBOUND_ADDR_EXIT][1],
+                 TEST_IPV6_ADDR);
 
   mock_options.ExitPolicyRejectPrivate = 1;
   mock_options.ExitPolicyRejectLocalInterfaces = 1;
@@ -1660,24 +1659,21 @@ test_policies_getinfo_helper_policies(void *arg)
   tt_assert(strlen(answer) == 0);
   tor_free(answer);
 
-  rv = getinfo_helper_policies(NULL, "exit-policy/ipv4", &answer,
-                               &errmsg);
+  rv = getinfo_helper_policies(NULL, "exit-policy/ipv4", &answer, &errmsg);
   tt_int_op(rv, OP_EQ, 0);
   tt_ptr_op(answer, OP_NE, NULL);
   ipv4_len = strlen(answer);
   tt_assert(ipv4_len > 0);
   tor_free(answer);
 
-  rv = getinfo_helper_policies(NULL, "exit-policy/ipv6", &answer,
-                               &errmsg);
+  rv = getinfo_helper_policies(NULL, "exit-policy/ipv6", &answer, &errmsg);
   tt_int_op(rv, OP_EQ, 0);
   tt_ptr_op(answer, OP_NE, NULL);
   ipv6_len = strlen(answer);
   tt_assert(ipv6_len > 0);
   tor_free(answer);
 
-  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
-                               &errmsg);
+  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer, &errmsg);
   tt_int_op(rv, OP_EQ, 0);
   tt_ptr_op(answer, OP_NE, NULL);
   tt_assert(strlen(answer) > 0);
@@ -1685,32 +1681,28 @@ test_policies_getinfo_helper_policies(void *arg)
   tor_free(answer);
 
   routerinfo_err = TOR_ROUTERINFO_ERROR_NO_EXT_ADDR;
-  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
-                               &errmsg);
+  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer, &errmsg);
   tt_int_op(rv, OP_EQ, -1);
   tt_ptr_op(answer, OP_EQ, NULL);
   tt_ptr_op(errmsg, OP_NE, NULL);
   tt_str_op(errmsg, OP_EQ, "No known exit address yet");
 
   routerinfo_err = TOR_ROUTERINFO_ERROR_CANNOT_PARSE;
-  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
-                               &errmsg);
+  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer, &errmsg);
   tt_int_op(rv, OP_EQ, -1);
   tt_ptr_op(answer, OP_EQ, NULL);
   tt_ptr_op(errmsg, OP_NE, NULL);
   tt_str_op(errmsg, OP_EQ, "Cannot parse descriptor");
 
   routerinfo_err = TOR_ROUTERINFO_ERROR_NOT_A_SERVER;
-  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
-                               &errmsg);
+  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer, &errmsg);
   tt_int_op(rv, OP_EQ, 0);
   tt_ptr_op(answer, OP_EQ, NULL);
   tt_ptr_op(errmsg, OP_NE, NULL);
   tt_str_op(errmsg, OP_EQ, "Not running in server mode");
 
   routerinfo_err = TOR_ROUTERINFO_ERROR_DIGEST_FAILED;
-  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
-                               &errmsg);
+  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer, &errmsg);
 
   tt_int_op(rv, OP_EQ, -1);
   tt_ptr_op(answer, OP_EQ, NULL);
@@ -1718,22 +1710,20 @@ test_policies_getinfo_helper_policies(void *arg)
   tt_str_op(errmsg, OP_EQ, "Key digest failed");
 
   routerinfo_err = TOR_ROUTERINFO_ERROR_CANNOT_GENERATE;
-  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
-                               &errmsg);
+  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer, &errmsg);
   tt_int_op(rv, OP_EQ, -1);
   tt_ptr_op(answer, OP_EQ, NULL);
   tt_ptr_op(errmsg, OP_NE, NULL);
   tt_str_op(errmsg, OP_EQ, "Cannot generate descriptor");
 
   routerinfo_err = TOR_ROUTERINFO_ERROR_DESC_REBUILDING;
-  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
-                               &errmsg);
+  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer, &errmsg);
   tt_int_op(rv, OP_EQ, -1);
   tt_ptr_op(answer, OP_EQ, NULL);
   tt_ptr_op(errmsg, OP_NE, NULL);
   tt_str_op(errmsg, OP_EQ, "Descriptor still rebuilding - not ready yet");
 
- done:
+done:
   tor_free(answer);
   UNMOCK(get_options);
   UNMOCK(router_get_my_routerinfo);
@@ -1770,32 +1760,26 @@ test_policies_fascist_firewall_allows_address(void *arg)
   MOCK(get_options, mock_get_options);
 
   policy = smartlist_new();
-  item = router_parse_addr_policy_item_from_string("accept "
-                                                   TEST_IPV4_ADDR_STR ":*",
-                                                   ADDR_POLICY_ACCEPT,
-                                                   &malformed_list);
+  item = router_parse_addr_policy_item_from_string(
+      "accept " TEST_IPV4_ADDR_STR ":*", ADDR_POLICY_ACCEPT, &malformed_list);
   tt_assert(item);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
   smartlist_add(policy, item);
-  item = router_parse_addr_policy_item_from_string("accept "
-                                                   TEST_IPV6_ADDR_STR,
-                                                   ADDR_POLICY_ACCEPT,
-                                                   &malformed_list);
+  item = router_parse_addr_policy_item_from_string(
+      "accept " TEST_IPV6_ADDR_STR, ADDR_POLICY_ACCEPT, &malformed_list);
   tt_assert(item);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
   smartlist_add(policy, item);
   /* Normally, policy_expand_unspec would do this for us */
-  item = router_parse_addr_policy_item_from_string(REJECT_IPv4_FINAL_STR,
-                                                   ADDR_POLICY_ACCEPT,
-                                                   &malformed_list);
+  item = router_parse_addr_policy_item_from_string(
+      REJECT_IPv4_FINAL_STR, ADDR_POLICY_ACCEPT, &malformed_list);
   tt_assert(item);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
   smartlist_add(policy, item);
-  item = router_parse_addr_policy_item_from_string(REJECT_IPv6_FINAL_STR,
-                                                   ADDR_POLICY_ACCEPT,
-                                                   &malformed_list);
+  item = router_parse_addr_policy_item_from_string(
+      REJECT_IPv6_FINAL_STR, ADDR_POLICY_ACCEPT, &malformed_list);
   tt_assert(item);
-  tt_assert(!malformed_list);
+  tt_assert(! malformed_list);
   smartlist_add(policy, item);
   item = NULL;
 
@@ -1973,7 +1957,7 @@ test_policies_fascist_firewall_allows_address(void *arg)
   tt_int_op(fascist_firewall_allows_address(&ipv6_addr, port, e_policy, 0, 0),
             OP_EQ, 1);
 
- done:
+done:
   addr_policy_free(item);
   addr_policy_list_free(policy);
   addr_policy_list_free(e_policy);
@@ -1985,143 +1969,143 @@ test_policies_fascist_firewall_allows_address(void *arg)
 #undef OTHER_IPV4_ADDR_STR
 #undef OTHER_IPV6_ADDR_STR
 
-#define TEST_IPV4_OR_PORT  1234
+#define TEST_IPV4_OR_PORT 1234
 #define TEST_IPV4_DIR_PORT 2345
-#define TEST_IPV6_OR_PORT  61234
+#define TEST_IPV6_OR_PORT 61234
 #define TEST_IPV6_DIR_PORT 62345
 
 /* Check that fascist_firewall_choose_address_rs() returns the expected
  * results. */
 #define CHECK_CHOSEN_ADDR_RS(fake_rs, fw_connection, pref_only, expect_rv, \
-                             expect_ap) \
-  STMT_BEGIN \
-    tor_addr_port_t chosen_rs_ap; \
-    tor_addr_make_null(&chosen_rs_ap.addr, AF_INET); \
-    chosen_rs_ap.port = 0; \
-    fascist_firewall_choose_address_rs(&(fake_rs), (fw_connection), \
-                                       (pref_only), &chosen_rs_ap); \
-    tt_assert(tor_addr_eq(&(expect_ap).addr, &chosen_rs_ap.addr)); \
-    tt_int_op((expect_ap).port, OP_EQ, chosen_rs_ap.port); \
+                             expect_ap)                                    \
+  STMT_BEGIN                                                               \
+    tor_addr_port_t chosen_rs_ap;                                          \
+    tor_addr_make_null(&chosen_rs_ap.addr, AF_INET);                       \
+    chosen_rs_ap.port = 0;                                                 \
+    fascist_firewall_choose_address_rs(&(fake_rs), (fw_connection),        \
+                                       (pref_only), &chosen_rs_ap);        \
+    tt_assert(tor_addr_eq(&(expect_ap).addr, &chosen_rs_ap.addr));         \
+    tt_int_op((expect_ap).port, OP_EQ, chosen_rs_ap.port);                 \
   STMT_END
 
 /* Check that fascist_firewall_choose_address_node() returns the expected
  * results. */
-#define CHECK_CHOSEN_ADDR_NODE(fake_node, fw_connection, pref_only, \
-                               expect_rv, expect_ap) \
-  STMT_BEGIN \
-    tor_addr_port_t chosen_node_ap; \
-    tor_addr_make_null(&chosen_node_ap.addr, AF_INET); \
-    chosen_node_ap.port = 0; \
-    fascist_firewall_choose_address_node(&(fake_node),(fw_connection), \
+#define CHECK_CHOSEN_ADDR_NODE(fake_node, fw_connection, pref_only,     \
+                               expect_rv, expect_ap)                    \
+  STMT_BEGIN                                                            \
+    tor_addr_port_t chosen_node_ap;                                     \
+    tor_addr_make_null(&chosen_node_ap.addr, AF_INET);                  \
+    chosen_node_ap.port = 0;                                            \
+    fascist_firewall_choose_address_node(&(fake_node), (fw_connection), \
                                          (pref_only), &chosen_node_ap); \
-    tt_assert(tor_addr_eq(&(expect_ap).addr, &chosen_node_ap.addr)); \
-    tt_int_op((expect_ap).port, OP_EQ, chosen_node_ap.port); \
+    tt_assert(tor_addr_eq(&(expect_ap).addr, &chosen_node_ap.addr));    \
+    tt_int_op((expect_ap).port, OP_EQ, chosen_node_ap.port);            \
   STMT_END
 
 /* Check that fascist_firewall_choose_address_rs and
  * fascist_firewall_choose_address_node() both return the expected results. */
 #define CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, fw_connection, pref_only, \
-                             expect_rv, expect_ap) \
-  STMT_BEGIN \
-    CHECK_CHOSEN_ADDR_RS(fake_rs, fw_connection, pref_only, expect_rv, \
-                         expect_ap); \
+                             expect_rv, expect_ap)                         \
+  STMT_BEGIN                                                               \
+    CHECK_CHOSEN_ADDR_RS(fake_rs, fw_connection, pref_only, expect_rv,     \
+                         expect_ap);                                       \
     CHECK_CHOSEN_ADDR_NODE(fake_node, fw_connection, pref_only, expect_rv, \
-                           expect_ap); \
+                           expect_ap);                                     \
   STMT_END
 
 /* Check that fascist_firewall_choose_address_ls() returns the expected
  * results. */
-#define CHECK_CHOSEN_ADDR_NULL_LS() \
-  STMT_BEGIN \
-    tor_addr_port_t chosen_ls_ap; \
-    tor_addr_make_null(&chosen_ls_ap.addr, AF_UNSPEC); \
-    chosen_ls_ap.port = 0; \
-    setup_full_capture_of_logs(LOG_WARN); \
-    fascist_firewall_choose_address_ls(NULL, 1, &chosen_ls_ap); \
+#define CHECK_CHOSEN_ADDR_NULL_LS()                              \
+  STMT_BEGIN                                                     \
+    tor_addr_port_t chosen_ls_ap;                                \
+    tor_addr_make_null(&chosen_ls_ap.addr, AF_UNSPEC);           \
+    chosen_ls_ap.port = 0;                                       \
+    setup_full_capture_of_logs(LOG_WARN);                        \
+    fascist_firewall_choose_address_ls(NULL, 1, &chosen_ls_ap);  \
     expect_single_log_msg("Unknown or missing link specifiers"); \
-    teardown_capture_of_logs(); \
+    teardown_capture_of_logs();                                  \
   STMT_END
 
-#define CHECK_CHOSEN_ADDR_LS(fake_ls, pref_only, expect_rv, expect_ap) \
-  STMT_BEGIN \
-    tor_addr_port_t chosen_ls_ap; \
-    tor_addr_make_null(&chosen_ls_ap.addr, AF_UNSPEC); \
-    chosen_ls_ap.port = 0; \
-    setup_full_capture_of_logs(LOG_WARN); \
+#define CHECK_CHOSEN_ADDR_LS(fake_ls, pref_only, expect_rv, expect_ap)     \
+  STMT_BEGIN                                                               \
+    tor_addr_port_t chosen_ls_ap;                                          \
+    tor_addr_make_null(&chosen_ls_ap.addr, AF_UNSPEC);                     \
+    chosen_ls_ap.port = 0;                                                 \
+    setup_full_capture_of_logs(LOG_WARN);                                  \
     fascist_firewall_choose_address_ls(fake_ls, pref_only, &chosen_ls_ap); \
-    if (smartlist_len(fake_ls) == 0) { \
-      expect_single_log_msg("Link specifiers are empty"); \
-    } else { \
-      expect_no_log_entry(); \
-      tt_assert(tor_addr_eq(&(expect_ap).addr, &chosen_ls_ap.addr)); \
-      tt_int_op((expect_ap).port, OP_EQ, chosen_ls_ap.port); \
-    } \
-    teardown_capture_of_logs(); \
+    if (smartlist_len(fake_ls) == 0) {                                     \
+      expect_single_log_msg("Link specifiers are empty");                  \
+    } else {                                                               \
+      expect_no_log_entry();                                               \
+      tt_assert(tor_addr_eq(&(expect_ap).addr, &chosen_ls_ap.addr));       \
+      tt_int_op((expect_ap).port, OP_EQ, chosen_ls_ap.port);               \
+    }                                                                      \
+    teardown_capture_of_logs();                                            \
   STMT_END
 
-#define CHECK_LS_LEGACY_ONLY(fake_ls) \
-  STMT_BEGIN \
-    tor_addr_port_t chosen_ls_ap; \
-    tor_addr_make_null(&chosen_ls_ap.addr, AF_UNSPEC); \
-    chosen_ls_ap.port = 0; \
-    setup_full_capture_of_logs(LOG_WARN); \
-    fascist_firewall_choose_address_ls(fake_ls, 0, &chosen_ls_ap); \
+#define CHECK_LS_LEGACY_ONLY(fake_ls)                                       \
+  STMT_BEGIN                                                                \
+    tor_addr_port_t chosen_ls_ap;                                           \
+    tor_addr_make_null(&chosen_ls_ap.addr, AF_UNSPEC);                      \
+    chosen_ls_ap.port = 0;                                                  \
+    setup_full_capture_of_logs(LOG_WARN);                                   \
+    fascist_firewall_choose_address_ls(fake_ls, 0, &chosen_ls_ap);          \
     expect_single_log_msg("None of our link specifiers have IPv4 or IPv6"); \
-    teardown_capture_of_logs(); \
+    teardown_capture_of_logs();                                             \
   STMT_END
 
-#define CHECK_HS_EXTEND_INFO_ADDR_LS(fake_ls, direct_conn, expect_ap) \
-  STMT_BEGIN \
-    curve25519_secret_key_t seckey; \
-    curve25519_secret_key_generate(&seckey, 0); \
-    curve25519_public_key_t pubkey; \
-    curve25519_public_key_generate(&pubkey, &seckey); \
-    setup_full_capture_of_logs(LOG_WARN); \
-    extend_info_t *ei = hs_get_extend_info_from_lspecs(fake_ls, &pubkey, \
-                                                       direct_conn); \
-    if (fake_ls == NULL) { \
-      tt_ptr_op(ei, OP_EQ, NULL); \
-      expect_single_log_msg("Specified link specifiers is null"); \
-    } else { \
-      expect_no_log_entry(); \
-      tt_assert(tor_addr_eq(&(expect_ap).addr, &ei->addr)); \
-      tt_int_op((expect_ap).port, OP_EQ, ei->port); \
-      extend_info_free(ei); \
-    } \
-    teardown_capture_of_logs(); \
+#define CHECK_HS_EXTEND_INFO_ADDR_LS(fake_ls, direct_conn, expect_ap)  \
+  STMT_BEGIN                                                           \
+    curve25519_secret_key_t seckey;                                    \
+    curve25519_secret_key_generate(&seckey, 0);                        \
+    curve25519_public_key_t pubkey;                                    \
+    curve25519_public_key_generate(&pubkey, &seckey);                  \
+    setup_full_capture_of_logs(LOG_WARN);                              \
+    extend_info_t *ei =                                                \
+        hs_get_extend_info_from_lspecs(fake_ls, &pubkey, direct_conn); \
+    if (fake_ls == NULL) {                                             \
+      tt_ptr_op(ei, OP_EQ, NULL);                                      \
+      expect_single_log_msg("Specified link specifiers is null");      \
+    } else {                                                           \
+      expect_no_log_entry();                                           \
+      tt_assert(tor_addr_eq(&(expect_ap).addr, &ei->addr));            \
+      tt_int_op((expect_ap).port, OP_EQ, ei->port);                    \
+      extend_info_free(ei);                                            \
+    }                                                                  \
+    teardown_capture_of_logs();                                        \
   STMT_END
 
-#define CHECK_HS_EXTEND_INFO_ADDR_LS_NULL_KEY(fake_ls) \
-  STMT_BEGIN \
-    setup_full_capture_of_logs(LOG_WARN); \
+#define CHECK_HS_EXTEND_INFO_ADDR_LS_NULL_KEY(fake_ls)                    \
+  STMT_BEGIN                                                              \
+    setup_full_capture_of_logs(LOG_WARN);                                 \
     extend_info_t *ei = hs_get_extend_info_from_lspecs(fake_ls, NULL, 0); \
-    tt_ptr_op(ei, OP_EQ, NULL); \
-    expect_single_log_msg("Specified onion key is null"); \
-    teardown_capture_of_logs(); \
+    tt_ptr_op(ei, OP_EQ, NULL);                                           \
+    expect_single_log_msg("Specified onion key is null");                 \
+    teardown_capture_of_logs();                                           \
   STMT_END
 
 #define CHECK_HS_EXTEND_INFO_ADDR_LS_EXPECT_NULL(fake_ls, direct_conn) \
-  STMT_BEGIN \
-    curve25519_secret_key_t seckey; \
-    curve25519_secret_key_generate(&seckey, 0); \
-    curve25519_public_key_t pubkey; \
-    curve25519_public_key_generate(&pubkey, &seckey); \
-    extend_info_t *ei = hs_get_extend_info_from_lspecs(fake_ls, &pubkey, \
-                                                       direct_conn); \
-    tt_ptr_op(ei, OP_EQ, NULL); \
+  STMT_BEGIN                                                           \
+    curve25519_secret_key_t seckey;                                    \
+    curve25519_secret_key_generate(&seckey, 0);                        \
+    curve25519_public_key_t pubkey;                                    \
+    curve25519_public_key_generate(&pubkey, &seckey);                  \
+    extend_info_t *ei =                                                \
+        hs_get_extend_info_from_lspecs(fake_ls, &pubkey, direct_conn); \
+    tt_ptr_op(ei, OP_EQ, NULL);                                        \
   STMT_END
 
-#define CHECK_HS_EXTEND_INFO_ADDR_LS_EXPECT_MSG(fake_ls, msg_level, msg) \
-  STMT_BEGIN \
-    curve25519_secret_key_t seckey; \
-    curve25519_secret_key_generate(&seckey, 0); \
-    curve25519_public_key_t pubkey; \
-    curve25519_public_key_generate(&pubkey, &seckey); \
-    setup_full_capture_of_logs(msg_level); \
+#define CHECK_HS_EXTEND_INFO_ADDR_LS_EXPECT_MSG(fake_ls, msg_level, msg)     \
+  STMT_BEGIN                                                                 \
+    curve25519_secret_key_t seckey;                                          \
+    curve25519_secret_key_generate(&seckey, 0);                              \
+    curve25519_public_key_t pubkey;                                          \
+    curve25519_public_key_generate(&pubkey, &seckey);                        \
+    setup_full_capture_of_logs(msg_level);                                   \
     extend_info_t *ei = hs_get_extend_info_from_lspecs(fake_ls, &pubkey, 0); \
-    tt_ptr_op(ei, OP_EQ, NULL); \
-    expect_single_log_msg(msg); \
-    teardown_capture_of_logs(); \
+    tt_ptr_op(ei, OP_EQ, NULL);                                              \
+    expect_single_log_msg(msg);                                              \
+    teardown_capture_of_logs();                                              \
   STMT_END
 
 /** Mock the preferred address function to return zero (prefer IPv4). */
@@ -2174,41 +2158,41 @@ test_policies_fascist_firewall_choose_address(void *arg)
 
   /* Prefer IPv4 */
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 1,
-                                            FIREWALL_OR_CONNECTION, 0, 0)
-            == &ipv4_or_ap);
+                                            FIREWALL_OR_CONNECTION, 0,
+                                            0) == &ipv4_or_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 1,
-                                            FIREWALL_OR_CONNECTION, 1, 0)
-            == &ipv4_or_ap);
+                                            FIREWALL_OR_CONNECTION, 1,
+                                            0) == &ipv4_or_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 1,
-                                            FIREWALL_DIR_CONNECTION, 0, 0)
-            == &ipv4_dir_ap);
+                                            FIREWALL_DIR_CONNECTION, 0,
+                                            0) == &ipv4_dir_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 1,
-                                            FIREWALL_DIR_CONNECTION, 1, 0)
-            == &ipv4_dir_ap);
+                                            FIREWALL_DIR_CONNECTION, 1,
+                                            0) == &ipv4_dir_ap);
 
   /* Prefer IPv6 */
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
-                                            FIREWALL_OR_CONNECTION, 0, 1)
-            == &ipv6_or_ap);
+                                            FIREWALL_OR_CONNECTION, 0,
+                                            1) == &ipv6_or_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
-                                            FIREWALL_OR_CONNECTION, 1, 1)
-            == &ipv6_or_ap);
+                                            FIREWALL_OR_CONNECTION, 1,
+                                            1) == &ipv6_or_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
-                                            FIREWALL_DIR_CONNECTION, 0, 1)
-            == &ipv6_dir_ap);
+                                            FIREWALL_DIR_CONNECTION, 0,
+                                            1) == &ipv6_dir_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
-                                            FIREWALL_DIR_CONNECTION, 1, 1)
-            == &ipv6_dir_ap);
+                                            FIREWALL_DIR_CONNECTION, 1,
+                                            1) == &ipv6_dir_ap);
 
   /* Unusual inputs */
 
   /* null preferred OR addresses */
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &n_ipv6_ap, 0,
-                                            FIREWALL_OR_CONNECTION, 0, 1)
-            == &ipv4_or_ap);
+                                            FIREWALL_OR_CONNECTION, 0,
+                                            1) == &ipv4_or_ap);
   tt_assert(fascist_firewall_choose_address(&n_ipv4_ap, &ipv6_or_ap, 1,
-                                            FIREWALL_OR_CONNECTION, 0, 0)
-            == &ipv6_or_ap);
+                                            FIREWALL_OR_CONNECTION, 0,
+                                            0) == &ipv6_or_ap);
 
   /* null both OR addresses */
   tt_ptr_op(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 0,
@@ -2220,11 +2204,11 @@ test_policies_fascist_firewall_choose_address(void *arg)
 
   /* null preferred Dir addresses */
   tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &n_ipv6_ap, 0,
-                                            FIREWALL_DIR_CONNECTION, 0, 1)
-            == &ipv4_dir_ap);
+                                            FIREWALL_DIR_CONNECTION, 0,
+                                            1) == &ipv4_dir_ap);
   tt_assert(fascist_firewall_choose_address(&n_ipv4_ap, &ipv6_dir_ap, 1,
-                                            FIREWALL_DIR_CONNECTION, 0, 0)
-            == &ipv6_dir_ap);
+                                            FIREWALL_DIR_CONNECTION, 0,
+                                            0) == &ipv6_dir_ap);
 
   /* null both Dir addresses */
   tt_ptr_op(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 0,
@@ -2236,19 +2220,19 @@ test_policies_fascist_firewall_choose_address(void *arg)
 
   /* Prefer IPv4 but want IPv6 (contradictory) */
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
-                                            FIREWALL_OR_CONNECTION, 0, 0)
-            == &ipv4_or_ap);
+                                            FIREWALL_OR_CONNECTION, 0,
+                                            0) == &ipv4_or_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
-                                            FIREWALL_OR_CONNECTION, 1, 0)
-            == &ipv4_or_ap);
+                                            FIREWALL_OR_CONNECTION, 1,
+                                            0) == &ipv4_or_ap);
 
   /* Prefer IPv6 but want IPv4 (contradictory) */
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 1,
-                                            FIREWALL_OR_CONNECTION, 0, 1)
-            == &ipv6_or_ap);
+                                            FIREWALL_OR_CONNECTION, 0,
+                                            1) == &ipv6_or_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 1,
-                                            FIREWALL_OR_CONNECTION, 1, 1)
-            == &ipv6_or_ap);
+                                            FIREWALL_OR_CONNECTION, 1,
+                                            1) == &ipv6_or_ap);
 
   /* Make a fake rs. There will be no corresponding node.
    * This is what happens when there's no consensus and we're bootstrapping
@@ -2266,7 +2250,7 @@ test_policies_fascist_firewall_choose_address(void *arg)
   ipv6_dir_ap.port = TEST_IPV4_DIR_PORT;
 
   /* Make a fake node. Even though it contains the fake_rs, a lookup won't
-  * find the node from the rs, because they're not in the hash table. */
+   * find the node from the rs, because they're not in the hash table. */
   node_t fake_node;
   memset(&fake_node, 0, sizeof(node_t));
   fake_node.rs = &fake_rs;
@@ -2281,8 +2265,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
   mock_options.ClientPreferIPv6ORPort = 0;
   mock_options.ClientPreferIPv6DirPort = 0;
   /* Simulate the initialisation of fake_node.ipv6_preferred */
-  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
-                                                                &mock_options);
+  fake_node.ipv6_preferred =
+      fascist_firewall_prefer_ipv6_orport(&mock_options);
 
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
                        ipv4_or_ap);
@@ -2297,8 +2281,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
   mock_options.ClientPreferIPv6ORPort = -1;
   mock_options.ClientPreferIPv6DirPort = -1;
   /* Simulate the initialisation of fake_node.ipv6_preferred */
-  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
-                                                                &mock_options);
+  fake_node.ipv6_preferred =
+      fascist_firewall_prefer_ipv6_orport(&mock_options);
 
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
                        ipv4_or_ap);
@@ -2313,8 +2297,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
   mock_options.ClientPreferIPv6ORPort = 1;
   mock_options.ClientPreferIPv6DirPort = 1;
   /* Simulate the initialisation of fake_node.ipv6_preferred */
-  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
-                                                                &mock_options);
+  fake_node.ipv6_preferred =
+      fascist_firewall_prefer_ipv6_orport(&mock_options);
 
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
                        ipv6_or_ap);
@@ -2329,8 +2313,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
   mock_options.ClientPreferIPv6ORPort = 0;
   mock_options.ClientPreferIPv6DirPort = 1;
   /* Simulate the initialisation of fake_node.ipv6_preferred */
-  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
-                                                                &mock_options);
+  fake_node.ipv6_preferred =
+      fascist_firewall_prefer_ipv6_orport(&mock_options);
 
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
                        ipv4_or_ap);
@@ -2345,8 +2329,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
   mock_options.ClientPreferIPv6ORPort = 1;
   mock_options.ClientPreferIPv6DirPort = 0;
   /* Simulate the initialisation of fake_node.ipv6_preferred */
-  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
-                                                                &mock_options);
+  fake_node.ipv6_preferred =
+      fascist_firewall_prefer_ipv6_orport(&mock_options);
 
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
                        ipv6_or_ap);
@@ -2367,8 +2351,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
   mock_options.ClientPreferIPv6ORPort = 0;
   mock_options.ClientPreferIPv6DirPort = 0;
   /* Simulate the initialisation of fake_node.ipv6_preferred */
-  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
-                                                                &mock_options);
+  fake_node.ipv6_preferred =
+      fascist_firewall_prefer_ipv6_orport(&mock_options);
 
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
                        ipv4_or_ap);
@@ -2418,8 +2402,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
   mock_options.ClientPreferIPv6ORPort = 1;
   mock_options.ClientPreferIPv6DirPort = 1;
   /* Simulate the initialisation of fake_node.ipv6_preferred */
-  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
-                                                                &mock_options);
+  fake_node.ipv6_preferred =
+      fascist_firewall_prefer_ipv6_orport(&mock_options);
 
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
                        ipv6_or_ap);
@@ -2467,8 +2451,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
   mock_options.ClientUseIPv4 = 1;
   mock_options.ClientUseIPv6 = 0;
   /* Simulate the initialisation of fake_node.ipv6_preferred */
-  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
-                                                                &mock_options);
+  fake_node.ipv6_preferred =
+      fascist_firewall_prefer_ipv6_orport(&mock_options);
 
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
                        ipv4_or_ap);
@@ -2484,8 +2468,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
   mock_options.ClientUseIPv4 = 0;
   mock_options.ClientUseIPv6 = 1;
   /* Simulate the initialisation of fake_node.ipv6_preferred */
-  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
-                                                                &mock_options);
+  fake_node.ipv6_preferred =
+      fascist_firewall_prefer_ipv6_orport(&mock_options);
 
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
                        ipv6_or_ap);
@@ -2502,8 +2486,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
   mock_options.ClientUseIPv4 = 0;
   mock_options.ClientUseIPv6 = 0;
   /* Simulate the initialisation of fake_node.ipv6_preferred */
-  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
-                                                                &mock_options);
+  fake_node.ipv6_preferred =
+      fascist_firewall_prefer_ipv6_orport(&mock_options);
 
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
                        ipv6_or_ap);
@@ -2524,8 +2508,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
   mock_options.ClientPreferIPv6DirPort = 1;
 
   /* Simulate the initialisation of fake_node.ipv6_preferred */
-  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
-                                                                &mock_options);
+  fake_node.ipv6_preferred =
+      fascist_firewall_prefer_ipv6_orport(&mock_options);
 
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
                        ipv4_or_ap);
@@ -2544,8 +2528,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
   MOCK(fascist_firewall_rand_prefer_ipv6_addr,
        mock_fascist_firewall_rand_prefer_ipv6_addr_use_ipv4);
   /* Simulate the initialisation of fake_node.ipv6_preferred */
-  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
-                                                                &mock_options);
+  fake_node.ipv6_preferred =
+      fascist_firewall_prefer_ipv6_orport(&mock_options);
 
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
                        ipv4_or_ap);
@@ -2562,8 +2546,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
   MOCK(fascist_firewall_rand_prefer_ipv6_addr,
        mock_fascist_firewall_rand_prefer_ipv6_addr_use_ipv6);
   /* Simulate the initialisation of fake_node.ipv6_preferred */
-  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
-                                                                &mock_options);
+  fake_node.ipv6_preferred =
+      fascist_firewall_prefer_ipv6_orport(&mock_options);
 
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
                        ipv6_or_ap);
@@ -2574,10 +2558,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
 
   /* Test firewall_choose_address_ls(). To do this, we make a fake link
    * specifier. */
-  smartlist_t *lspecs = smartlist_new(),
-              *lspecs_blank = smartlist_new(),
-              *lspecs_v4 = smartlist_new(),
-              *lspecs_v6 = smartlist_new(),
+  smartlist_t *lspecs = smartlist_new(), *lspecs_blank = smartlist_new(),
+              *lspecs_v4 = smartlist_new(), *lspecs_v6 = smartlist_new(),
               *lspecs_no_legacy = smartlist_new(),
               *lspecs_legacy_only = smartlist_new();
   link_specifier_t *fake_ls;
@@ -2589,7 +2571,7 @@ test_policies_fascist_firewall_choose_address(void *arg)
                                   tor_addr_to_ipv4h(&ipv4_or_ap.addr));
   link_specifier_set_un_ipv4_port(fake_ls, ipv4_or_ap.port);
   link_specifier_set_ls_len(fake_ls, sizeof(ipv4_or_ap.addr.addr.in_addr) +
-                            sizeof(ipv4_or_ap.port));
+                                         sizeof(ipv4_or_ap.port));
   smartlist_add(lspecs, fake_ls);
   smartlist_add(lspecs_v4, fake_ls);
   smartlist_add(lspecs_no_legacy, fake_ls);
@@ -2619,9 +2601,9 @@ test_policies_fascist_firewall_choose_address(void *arg)
   smartlist_add(lspecs_v6, fake_ls);
 
   /* Check with bogus requests. */
-  tor_addr_port_t null_ap; \
-  tor_addr_make_null(&null_ap.addr, AF_UNSPEC); \
-  null_ap.port = 0; \
+  tor_addr_port_t null_ap;
+  tor_addr_make_null(&null_ap.addr, AF_UNSPEC);
+  null_ap.port = 0;
 
   /* Check for a null link state. */
   CHECK_CHOSEN_ADDR_NULL_LS();
@@ -2703,11 +2685,11 @@ test_policies_fascist_firewall_choose_address(void *arg)
   smartlist_free(lspecs_v4);
   smartlist_free(lspecs_v6);
 
-  SMARTLIST_FOREACH(lspecs, link_specifier_t *, lspec, \
-                    link_specifier_free(lspec)); \
+  SMARTLIST_FOREACH(lspecs, link_specifier_t *, lspec,
+                    link_specifier_free(lspec));
   smartlist_free(lspecs);
 
- done:
+done:
   UNMOCK(get_options);
 }
 
@@ -2723,18 +2705,17 @@ test_policies_fascist_firewall_choose_address(void *arg)
 #undef CHECK_CHOSEN_ADDR_RN
 
 struct testcase_t policy_tests[] = {
-  { "router_dump_exit_policy_to_string", test_dump_exit_policy_to_string, 0,
-    NULL, NULL },
-  { "general", test_policies_general, 0, NULL, NULL },
-  { "getinfo_helper_policies", test_policies_getinfo_helper_policies, 0, NULL,
-    NULL },
-  { "reject_exit_address", test_policies_reject_exit_address, 0, NULL, NULL },
-  { "reject_interface_address", test_policies_reject_interface_address, 0,
-    NULL, NULL },
-  { "reject_port_address", test_policies_reject_port_address, 0, NULL, NULL },
-  { "fascist_firewall_allows_address",
-    test_policies_fascist_firewall_allows_address, 0, NULL, NULL },
-  { "fascist_firewall_choose_address",
-    test_policies_fascist_firewall_choose_address, 0, NULL, NULL },
-  END_OF_TESTCASES
-};
+    {"router_dump_exit_policy_to_string", test_dump_exit_policy_to_string, 0,
+     NULL, NULL},
+    {"general", test_policies_general, 0, NULL, NULL},
+    {"getinfo_helper_policies", test_policies_getinfo_helper_policies, 0, NULL,
+     NULL},
+    {"reject_exit_address", test_policies_reject_exit_address, 0, NULL, NULL},
+    {"reject_interface_address", test_policies_reject_interface_address, 0,
+     NULL, NULL},
+    {"reject_port_address", test_policies_reject_port_address, 0, NULL, NULL},
+    {"fascist_firewall_allows_address",
+     test_policies_fascist_firewall_allows_address, 0, NULL, NULL},
+    {"fascist_firewall_choose_address",
+     test_policies_fascist_firewall_choose_address, 0, NULL, NULL},
+    END_OF_TESTCASES};

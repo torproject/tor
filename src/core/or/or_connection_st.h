@@ -50,24 +50,24 @@ struct or_connection_t {
   channel_tls_t *chan;
 
   tor_addr_t real_addr; /**< The actual address that this connection came from
-                       * or went to.  The <b>addr</b> field is prone to
-                       * getting overridden by the address from the router
-                       * descriptor matching <b>identity_digest</b>. */
+                         * or went to.  The <b>addr</b> field is prone to
+                         * getting overridden by the address from the router
+                         * descriptor matching <b>identity_digest</b>. */
 
   /** Should this connection be used for extending circuits to the server
    * matching the <b>identity_digest</b> field?  Set to true if we're pretty
    * sure we aren't getting MITMed, either because we're connected to an
    * address listed in a server descriptor, or because an authenticated
    * NETINFO cell listed the address we're connected to as recognized. */
-  unsigned int is_canonical:1;
+  unsigned int is_canonical : 1;
 
   /** True iff this is an outgoing connection. */
-  unsigned int is_outgoing:1;
-  unsigned int proxy_type:3; /**< One of PROXY_NONE...PROXY_HAPROXY */
-  unsigned int wide_circ_ids:1;
+  unsigned int is_outgoing : 1;
+  unsigned int proxy_type : 3; /**< One of PROXY_NONE...PROXY_HAPROXY */
+  unsigned int wide_circ_ids : 1;
   /** True iff this connection has had its bootstrap failure logged with
    * control_event_bootstrap_problem. */
-  unsigned int have_noted_bootstrap_problem:1;
+  unsigned int have_noted_bootstrap_problem : 1;
   /** True iff this is a client connection and its address has been put in the
    * geoip cache and handled by the DoS mitigation subsystem. We use this to
    * insure we have a coherent count of concurrent connection. */
@@ -87,7 +87,7 @@ struct or_connection_t {
   time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
 
   token_bucket_rw_t bucket; /**< Used for rate limiting when the connection is
-                          * in state CONN_OPEN. */
+                             * in state CONN_OPEN. */
 
   /*
    * Count the number of bytes flushed out on this orconn, and the number of

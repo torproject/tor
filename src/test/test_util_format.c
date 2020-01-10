@@ -15,25 +15,24 @@ test_util_format_unaligned_accessors(void *ignored)
   (void)ignored;
   char buf[9] = "onionsoup"; // 6f6e696f6e736f7570
 
-  tt_u64_op(get_uint64(buf+1), OP_EQ,
-      tor_htonll(UINT64_C(0x6e696f6e736f7570)));
-  tt_uint_op(get_uint32(buf+1), OP_EQ, htonl(0x6e696f6e));
-  tt_uint_op(get_uint16(buf+1), OP_EQ, htons(0x6e69));
-  tt_uint_op(get_uint8(buf+1), OP_EQ, 0x6e);
+  tt_u64_op(get_uint64(buf + 1), OP_EQ,
+            tor_htonll(UINT64_C(0x6e696f6e736f7570)));
+  tt_uint_op(get_uint32(buf + 1), OP_EQ, htonl(0x6e696f6e));
+  tt_uint_op(get_uint16(buf + 1), OP_EQ, htons(0x6e69));
+  tt_uint_op(get_uint8(buf + 1), OP_EQ, 0x6e);
 
-  set_uint8(buf+7, 0x61);
+  set_uint8(buf + 7, 0x61);
   tt_mem_op(buf, OP_EQ, "onionsoap", 9);
 
-  set_uint16(buf+6, htons(0x746f));
+  set_uint16(buf + 6, htons(0x746f));
   tt_mem_op(buf, OP_EQ, "onionstop", 9);
 
-  set_uint32(buf+1, htonl(0x78696465));
+  set_uint32(buf + 1, htonl(0x78696465));
   tt_mem_op(buf, OP_EQ, "oxidestop", 9);
 
-  set_uint64(buf+1, tor_htonll(UINT64_C(0x6266757363617465)));
+  set_uint64(buf + 1, tor_htonll(UINT64_C(0x6266757363617465)));
   tt_mem_op(buf, OP_EQ, "obfuscate", 9);
- done:
-  ;
+done:;
 }
 
 static void
@@ -48,7 +47,7 @@ test_util_format_base64_encode(void *ignored)
   src = tor_malloc_zero(256);
   dst = tor_malloc_zero(1000);
 
-  for (i=0;i<256;i++) {
+  for (i = 0; i < 256; i++) {
     src[i] = (char)i;
   }
 
@@ -61,15 +60,16 @@ test_util_format_base64_encode(void *ignored)
   res = base64_encode(dst, 1, src, 10, 0);
   tt_int_op(res, OP_EQ, -1);
 
-  res = base64_encode(dst, SSIZE_MAX-1, src, 1, 0);
+  res = base64_encode(dst, SSIZE_MAX - 1, src, 1, 0);
   tt_int_op(res, OP_EQ, -1);
 
-  res = base64_encode(dst, SSIZE_MAX-1, src, 10, 0);
+  res = base64_encode(dst, SSIZE_MAX - 1, src, 10, 0);
   tt_int_op(res, OP_EQ, -1);
 
   res = base64_encode(dst, 1000, src, 256, 0);
   tt_int_op(res, OP_EQ, 344);
-  tt_str_op(dst, OP_EQ, "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh"
+  tt_str_op(dst, OP_EQ,
+            "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh"
             "8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZH"
             "SElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3"
             "BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeY"
@@ -79,18 +79,19 @@ test_util_format_base64_encode(void *ignored)
 
   res = base64_encode(dst, 1000, src, 256, BASE64_ENCODE_MULTILINE);
   tt_int_op(res, OP_EQ, 350);
-  tt_str_op(dst, OP_EQ,
-          "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4v\n"
-          "MDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5f\n"
-          "YGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6P\n"
-          "kJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/\n"
-          "wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v\n"
-          "8PHy8/T19vf4+fr7/P3+/w==\n");
+  tt_str_op(
+      dst, OP_EQ,
+      "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4v\n"
+      "MDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5f\n"
+      "YGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6P\n"
+      "kJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/\n"
+      "wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v\n"
+      "8PHy8/T19vf4+fr7/P3+/w==\n");
 
-  res = base64_encode(dst, 1000, src+1, 255, BASE64_ENCODE_MULTILINE);
+  res = base64_encode(dst, 1000, src + 1, 255, BASE64_ENCODE_MULTILINE);
   tt_int_op(res, OP_EQ, 346);
 
-  for (i = 0;i<50;i++) {
+  for (i = 0; i < 50; i++) {
     src[i] = 0;
   }
   src[50] = (char)255;
@@ -101,31 +102,31 @@ test_util_format_base64_encode(void *ignored)
   res = base64_encode(dst, 1000, src, 54, BASE64_ENCODE_MULTILINE);
   tt_int_op(res, OP_EQ, 74);
 
-  res = base64_encode(dst, 1000, src+1, 53, BASE64_ENCODE_MULTILINE);
+  res = base64_encode(dst, 1000, src + 1, 53, BASE64_ENCODE_MULTILINE);
   tt_int_op(res, OP_EQ, 74);
 
-  res = base64_encode(dst, 1000, src+2, 52, BASE64_ENCODE_MULTILINE);
+  res = base64_encode(dst, 1000, src + 2, 52, BASE64_ENCODE_MULTILINE);
   tt_int_op(res, OP_EQ, 74);
 
-  res = base64_encode(dst, 1000, src+3, 51, BASE64_ENCODE_MULTILINE);
+  res = base64_encode(dst, 1000, src + 3, 51, BASE64_ENCODE_MULTILINE);
   tt_int_op(res, OP_EQ, 70);
 
-  res = base64_encode(dst, 1000, src+4, 50, BASE64_ENCODE_MULTILINE);
+  res = base64_encode(dst, 1000, src + 4, 50, BASE64_ENCODE_MULTILINE);
   tt_int_op(res, OP_EQ, 70);
 
-  res = base64_encode(dst, 1000, src+5, 49, BASE64_ENCODE_MULTILINE);
+  res = base64_encode(dst, 1000, src + 5, 49, BASE64_ENCODE_MULTILINE);
   tt_int_op(res, OP_EQ, 70);
 
-  res = base64_encode(dst, 1000, src+6, 48, BASE64_ENCODE_MULTILINE);
+  res = base64_encode(dst, 1000, src + 6, 48, BASE64_ENCODE_MULTILINE);
   tt_int_op(res, OP_EQ, 65);
 
-  res = base64_encode(dst, 1000, src+7, 47, BASE64_ENCODE_MULTILINE);
+  res = base64_encode(dst, 1000, src + 7, 47, BASE64_ENCODE_MULTILINE);
   tt_int_op(res, OP_EQ, 65);
 
-  res = base64_encode(dst, 1000, src+8, 46, BASE64_ENCODE_MULTILINE);
+  res = base64_encode(dst, 1000, src + 8, 46, BASE64_ENCODE_MULTILINE);
   tt_int_op(res, OP_EQ, 65);
 
- done:
+done:
   tor_free(src);
   tor_free(dst);
 }
@@ -147,7 +148,7 @@ test_util_format_base64_decode_oddsize(void *ignored)
   src = tor_malloc_zero(256);
   dst = tor_malloc_zero(1000);
 
-  for (i=0;i<256;i++) {
+  for (i = 0; i < 256; i++) {
     src[i] = (char)i;
   }
 
@@ -176,7 +177,7 @@ test_util_format_base64_decode_oddsize(void *ignored)
   tt_int_op(res, OP_EQ, 40);
   tt_mem_op(dst, OP_EQ, expected40, 40);
 
- done:
+done:
   tor_free(src);
   tor_free(dst);
 }
@@ -196,7 +197,7 @@ test_util_format_base64_decode(void *ignored)
   dst = tor_malloc_zero(1000);
   real_dst = tor_malloc_zero(10);
 
-  for (i=0;i<256;i++) {
+  for (i = 0; i < 256; i++) {
     src[i] = (char)i;
   }
 
@@ -225,7 +226,7 @@ test_util_format_base64_decode(void *ignored)
   tt_int_op(res, OP_EQ, 7);
   tt_mem_op(real_dst, OP_EQ, expected, 7);
 
- done:
+done:
   tor_free(src);
   tor_free(dst);
   tor_free(real_dst);
@@ -246,7 +247,7 @@ test_util_format_base16_decode(void *ignored)
   dst = tor_malloc_zero(1000);
   real_dst = tor_malloc_zero(10);
 
-  for (i=0;i<256;i++) {
+  for (i = 0; i < 256; i++) {
     src[i] = (char)i;
   }
 
@@ -256,7 +257,7 @@ test_util_format_base16_decode(void *ignored)
   res = base16_decode(dst, 1, src, 10);
   tt_int_op(res, OP_EQ, -1);
 
-  res = base16_decode(dst, ((size_t)INT_MAX)+1, src, 10);
+  res = base16_decode(dst, ((size_t)INT_MAX) + 1, src, 10);
   tt_int_op(res, OP_EQ, -1);
 
   res = base16_decode(dst, 1000, "", 0);
@@ -276,7 +277,7 @@ test_util_format_base16_decode(void *ignored)
   tt_int_op(res, OP_EQ, 7);
   tt_mem_op(real_dst, OP_EQ, expected, 7);
 
- done:
+done:
   tor_free(src);
   tor_free(dst);
   tor_free(real_dst);
@@ -285,7 +286,7 @@ test_util_format_base16_decode(void *ignored)
 static void
 test_util_format_base32_encode(void *arg)
 {
-  (void) arg;
+  (void)arg;
   size_t real_dstlen = 32;
   char *dst = tor_malloc_zero(real_dstlen);
 
@@ -323,14 +324,14 @@ test_util_format_base32_encode(void *arg)
     tt_mem_op(expected, OP_EQ, dst, strlen(expected));
   }
 
- done:
+done:
   tor_free(dst);
 }
 
 static void
 test_util_format_base32_decode(void *arg)
 {
-  (void) arg;
+  (void)arg;
   int ret;
   size_t real_dstlen = 32;
   char *dst = tor_malloc_zero(real_dstlen);
@@ -367,7 +368,7 @@ test_util_format_base32_decode(void *arg)
     tt_int_op(fast_mem_is_zero(dst, real_dstlen), OP_EQ, 1);
   }
 
- done:
+done:
   tor_free(dst);
 }
 
@@ -398,22 +399,18 @@ test_util_format_encoded_size(void *arg)
     tt_int_op(i, OP_LE, base64_decode_maxsize(strlen(outbuf)));
   }
 
- done:
-  ;
+done:;
 }
 
 struct testcase_t util_format_tests[] = {
-  { "unaligned_accessors", test_util_format_unaligned_accessors, 0,
-    NULL, NULL },
-  { "base64_encode", test_util_format_base64_encode, 0, NULL, NULL },
-  { "base64_decode_oddsize", test_util_format_base64_decode_oddsize, 0,
-    NULL, NULL },
-  { "base64_decode", test_util_format_base64_decode, 0, NULL, NULL },
-  { "base16_decode", test_util_format_base16_decode, 0, NULL, NULL },
-  { "base32_encode", test_util_format_base32_encode, 0,
-    NULL, NULL },
-  { "base32_decode", test_util_format_base32_decode, 0,
-    NULL, NULL },
-  { "encoded_size", test_util_format_encoded_size, 0, NULL, NULL },
-  END_OF_TESTCASES
-};
+    {"unaligned_accessors", test_util_format_unaligned_accessors, 0, NULL,
+     NULL},
+    {"base64_encode", test_util_format_base64_encode, 0, NULL, NULL},
+    {"base64_decode_oddsize", test_util_format_base64_decode_oddsize, 0, NULL,
+     NULL},
+    {"base64_decode", test_util_format_base64_decode, 0, NULL, NULL},
+    {"base16_decode", test_util_format_base16_decode, 0, NULL, NULL},
+    {"base32_encode", test_util_format_base32_encode, 0, NULL, NULL},
+    {"base32_decode", test_util_format_base32_decode, 0, NULL, NULL},
+    {"encoded_size", test_util_format_encoded_size, 0, NULL, NULL},
+    END_OF_TESTCASES};

@@ -28,7 +28,7 @@ static int attr_initialized = 0;
 void
 tor_locking_init(void)
 {
-  if (!attr_initialized) {
+  if (! attr_initialized) {
     pthread_mutexattr_init(&attr_recursive);
     pthread_mutexattr_settype(&attr_recursive, PTHREAD_MUTEX_RECURSIVE);
     attr_initialized = 1;
@@ -40,7 +40,7 @@ tor_locking_init(void)
 void
 tor_mutex_init(tor_mutex_t *mutex)
 {
-  if (PREDICT_UNLIKELY(!attr_initialized))
+  if (PREDICT_UNLIKELY(! attr_initialized))
     tor_locking_init(); // LCOV_EXCL_LINE
   const int err = pthread_mutex_init(&mutex->mutex, &attr_recursive);
   if (PREDICT_UNLIKELY(err)) {
@@ -56,7 +56,7 @@ void
 tor_mutex_init_nonrecursive(tor_mutex_t *mutex)
 {
   int err;
-  if (!attr_initialized)
+  if (! attr_initialized)
     tor_locking_init(); // LCOV_EXCL_LINE
   err = pthread_mutex_init(&mutex->mutex, NULL);
   if (PREDICT_UNLIKELY(err)) {

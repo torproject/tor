@@ -20,14 +20,14 @@
 #include "lib/string/util_string.h"
 
 #ifdef HAVE_ARPA_INET_H
-#include <arpa/inet.h>
+#  include <arpa/inet.h>
 #endif
 
 #include <stdlib.h>
 #include <string.h>
 
 #ifdef _WIN32
-#include <winsock2.h>
+#  include <winsock2.h>
 #endif
 
 /** Set *addr to the IP address (in dotted-quad notation) stored in *str.
@@ -41,11 +41,15 @@ tor_inet_aton(const char *str, struct in_addr *addr)
   char more;
   if (tor_sscanf(str, "%3u.%3u.%3u.%3u%c", &a, &b, &c, &d, &more) != 4)
     return 0;
-  if (a > 255) return 0;
-  if (b > 255) return 0;
-  if (c > 255) return 0;
-  if (d > 255) return 0;
-  addr->s_addr = htonl((a<<24) | (b<<16) | (c<<8) | d);
+  if (a > 255)
+    return 0;
+  if (b > 255)
+    return 0;
+  if (c > 255)
+    return 0;
+  if (d > 255)
+    return 0;
+  addr->s_addr = htonl((a << 24) | (b << 16) | (c << 8) | d);
   return 1;
 }
 
@@ -58,11 +62,10 @@ int
 tor_inet_ntoa(const struct in_addr *in, char *buf, size_t buf_len)
 {
   uint32_t a = ntohl(in->s_addr);
-  return tor_snprintf(buf, buf_len, "%d.%d.%d.%d",
-                      (int)(uint8_t)((a>>24)&0xff),
-                      (int)(uint8_t)((a>>16)&0xff),
-                      (int)(uint8_t)((a>>8 )&0xff),
-                      (int)(uint8_t)((a    )&0xff));
+  return tor_snprintf(
+      buf, buf_len, "%d.%d.%d.%d", (int)(uint8_t)((a >> 24) & 0xff),
+      (int)(uint8_t)((a >> 16) & 0xff), (int)(uint8_t)((a >> 8) & 0xff),
+      (int)(uint8_t)((a)&0xff));
 }
 
 /** Given <b>af</b>==AF_INET and <b>src</b> a struct in_addr, or
@@ -84,24 +87,24 @@ tor_inet_ntop(int af, const void *src, char *dst, size_t len)
   } else if (af == AF_INET6) {
     const struct in6_addr *addr = src;
     char buf[64], *cp;
-    int longestGapLen = 0, longestGapPos = -1, i,
-      curGapPos = -1, curGapLen = 0;
+    int longestGapLen = 0, longestGapPos = -1, i, curGapPos = -1,
+        curGapLen = 0;
     uint16_t words[8];
     for (i = 0; i < 8; ++i) {
-      words[i] = (((uint16_t)addr->s6_addr[2*i])<<8) + addr->s6_addr[2*i+1];
+      words[i] =
+          (((uint16_t)addr->s6_addr[2 * i]) << 8) + addr->s6_addr[2 * i + 1];
     }
     if (words[0] == 0 && words[1] == 0 && words[2] == 0 && words[3] == 0 &&
-        words[4] == 0 && ((words[5] == 0 && words[6] && words[7]) ||
-                          (words[5] == 0xffff))) {
+        words[4] == 0 &&
+        ((words[5] == 0 && words[6] && words[7]) || (words[5] == 0xffff))) {
       /* This is an IPv4 address. */
       if (words[5] == 0) {
-        tor_snprintf(buf, sizeof(buf), "::%d.%d.%d.%d",
-                     addr->s6_addr[12], addr->s6_addr[13],
-                     addr->s6_addr[14], addr->s6_addr[15]);
+        tor_snprintf(buf, sizeof(buf), "::%d.%d.%d.%d", addr->s6_addr[12],
+                     addr->s6_addr[13], addr->s6_addr[14], addr->s6_addr[15]);
       } else {
         tor_snprintf(buf, sizeof(buf), "::%x:%d.%d.%d.%d", words[5],
-                     addr->s6_addr[12], addr->s6_addr[13],
-                     addr->s6_addr[14], addr->s6_addr[15]);
+                     addr->s6_addr[12], addr->s6_addr[13], addr->s6_addr[14],
+                     addr->s6_addr[15]);
       }
       if ((strlen(buf) + 1) > len) /* +1 for \0 */
         return NULL;
@@ -113,8 +116,9 @@ tor_inet_ntop(int af, const void *src, char *dst, size_t len)
       if (words[i] == 0) {
         curGapPos = i++;
         curGapLen = 1;
-        while (i<8 && words[i] == 0) {
-          ++i; ++curGapLen;
+        while (i < 8 && words[i] == 0) {
+          ++i;
+          ++curGapLen;
         }
         if (curGapLen > longestGapLen) {
           longestGapPos = curGapPos;
@@ -124,7 +128,7 @@ tor_inet_ntop(int af, const void *src, char *dst, size_t len)
         ++i;
       }
     }
-    if (longestGapLen<=1)
+    if (longestGapLen <= 1)
       longestGapPos = -1;
 
     cp = buf;
@@ -137,7 +141,7 @@ tor_inet_ntop(int af, const void *src, char *dst, size_t len)
           ++i;
         --i; /* to compensate for loop increment. */
       } else {
-        tor_snprintf(cp, sizeof(buf)-(cp-buf), "%x", (unsigned)words[i]);
+        tor_snprintf(cp, sizeof(buf) - (cp - buf), "%x", (unsigned)words[i]);
         cp += strlen(cp);
         if (i != 7)
           *cp++ = ':';
@@ -177,18 +181,18 @@ tor_inet_pton(int af, const char *src, void *dst)
 
     struct in6_addr *out = dst;
     uint16_t words[8];
-    int gapPos = -1, i, setWords=0;
+    int gapPos = -1, i, setWords = 0;
     const char *dot = strchr(src, '.');
     const char *eow; /* end of words. */
     memset(words, 0xf8, sizeof(words));
     if (dot == src)
       return 0;
-    else if (!dot)
-      eow = src+strlen(src);
+    else if (! dot)
+      eow = src + strlen(src);
     else {
-      unsigned byte1,byte2,byte3,byte4;
+      unsigned byte1, byte2, byte3, byte4;
       char more;
-      for (eow = dot-1; eow > src && TOR_ISDIGIT(*eow); --eow)
+      for (eow = dot - 1; eow > src && TOR_ISDIGIT(*eow); --eow)
         ;
       if (*eow != ':')
         return 0;
@@ -196,15 +200,15 @@ tor_inet_pton(int af, const char *src, void *dst)
 
       /* We use "scanf" because some platform inet_aton()s are too lax
        * about IPv4 addresses of the form "1.2.3" */
-      if (tor_sscanf(eow, "%3u.%3u.%3u.%3u%c",
-                     &byte1,&byte2,&byte3,&byte4,&more) != 4)
+      if (tor_sscanf(eow, "%3u.%3u.%3u.%3u%c", &byte1, &byte2, &byte3, &byte4,
+                     &more) != 4)
         return 0;
 
       if (byte1 > 255 || byte2 > 255 || byte3 > 255 || byte4 > 255)
         return 0;
 
-      words[6] = (byte1<<8) | byte2;
-      words[7] = (byte3<<8) | byte4;
+      words[6] = (byte1 << 8) | byte2;
+      words[7] = (byte3 << 8) | byte4;
       setWords += 2;
     }
 
@@ -225,7 +229,7 @@ tor_inet_pton(int af, const char *src, void *dst)
         len = *next == '\0' ? eow - src : next - src;
         if (len > 4)
           return 0;
-        if (len > 1 && !TOR_ISXDIGIT(src[1]))
+        if (len > 1 && ! TOR_ISXDIGIT(src[1]))
           return 0; /* 0x is not valid */
 
         tor_assert(r >= 0);
@@ -239,7 +243,7 @@ tor_inet_pton(int af, const char *src, void *dst)
       } else if (*src == ':' && i > 0 && gapPos == -1) {
         gapPos = i;
         ++src;
-      } else if (*src == ':' && i == 0 && src+1 < eow && src[1] == ':' &&
+      } else if (*src == ':' && i == 0 && src + 1 < eow && src[1] == ':' &&
                  gapPos == -1) {
         gapPos = i;
         src += 2;
@@ -248,8 +252,7 @@ tor_inet_pton(int af, const char *src, void *dst)
       }
     }
 
-    if (setWords > 8 ||
-        (setWords == 8 && gapPos != -1) ||
+    if (setWords > 8 || (setWords == 8 && gapPos != -1) ||
         (setWords < 8 && gapPos == -1))
       return 0;
 
@@ -257,13 +260,13 @@ tor_inet_pton(int af, const char *src, void *dst)
       int nToMove = setWords - (dot ? 2 : 0) - gapPos;
       int gapLen = 8 - setWords;
       tor_assert(nToMove >= 0);
-      memmove(&words[gapPos+gapLen], &words[gapPos],
-              sizeof(uint16_t)*nToMove);
-      memset(&words[gapPos], 0, sizeof(uint16_t)*gapLen);
+      memmove(&words[gapPos + gapLen], &words[gapPos],
+              sizeof(uint16_t) * nToMove);
+      memset(&words[gapPos], 0, sizeof(uint16_t) * gapLen);
     }
     for (i = 0; i < 8; ++i) {
-      out->s6_addr[2*i  ] = words[i] >> 8;
-      out->s6_addr[2*i+1] = words[i] & 0xff;
+      out->s6_addr[2 * i] = words[i] >> 8;
+      out->s6_addr[2 * i + 1] = words[i] & 0xff;
     }
 
     return 1;

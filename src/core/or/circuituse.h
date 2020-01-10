@@ -36,20 +36,19 @@ void circuit_try_attaching_streams(origin_circuit_t *circ);
 void circuit_build_failed(origin_circuit_t *circ);
 
 /** Flag to set when a circuit should have only a single hop. */
-#define CIRCLAUNCH_ONEHOP_TUNNEL  (1<<0)
+#define CIRCLAUNCH_ONEHOP_TUNNEL (1 << 0)
 /** Flag to set when a circuit needs to be built of high-uptime nodes */
-#define CIRCLAUNCH_NEED_UPTIME    (1<<1)
+#define CIRCLAUNCH_NEED_UPTIME (1 << 1)
 /** Flag to set when a circuit needs to be built of high-capacity nodes */
-#define CIRCLAUNCH_NEED_CAPACITY  (1<<2)
+#define CIRCLAUNCH_NEED_CAPACITY (1 << 2)
 /** Flag to set when the last hop of a circuit doesn't need to be an
  * exit node. */
-#define CIRCLAUNCH_IS_INTERNAL    (1<<3)
+#define CIRCLAUNCH_IS_INTERNAL (1 << 3)
 /** Flag to set when we are trying to launch a v3 rendezvous circuit. We need
  *  to apply some additional filters on the node picked. */
-#define CIRCLAUNCH_IS_V3_RP (1<<4)
-origin_circuit_t *circuit_launch_by_extend_info(uint8_t purpose,
-                                                extend_info_t *info,
-                                                int flags);
+#define CIRCLAUNCH_IS_V3_RP (1 << 4)
+origin_circuit_t *
+circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *info, int flags);
 origin_circuit_t *circuit_launch(uint8_t purpose, int flags);
 void circuit_reset_failure_count(int timeout);
 int connection_ap_handshake_attach_chosen_circuit(entry_connection_t *conn,
@@ -82,16 +81,12 @@ void circuit_read_valid_data(origin_circuit_t *circ, uint16_t relay_body_len);
 
 STATIC int circuit_is_available_for_use(const circuit_t *circ);
 
-STATIC int needs_exit_circuits(time_t now,
-                               int *port_needs_uptime,
+STATIC int needs_exit_circuits(time_t now, int *port_needs_uptime,
                                int *port_needs_capacity);
-STATIC int needs_hs_server_circuits(time_t now,
-                                    int num_uptime_internal);
+STATIC int needs_hs_server_circuits(time_t now, int num_uptime_internal);
 
-STATIC int needs_hs_client_circuits(time_t now,
-                                    int *needs_uptime,
-                                    int *needs_capacity,
-                                    int num_internal,
+STATIC int needs_hs_client_circuits(time_t now, int *needs_uptime,
+                                    int *needs_capacity, int num_internal,
                                     int num_uptime_internal);
 
 STATIC int needs_circuits_for_build(int num);
@@ -99,4 +94,3 @@ STATIC int needs_circuits_for_build(int num);
 #endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* !defined(TOR_CIRCUITUSE_H) */
-

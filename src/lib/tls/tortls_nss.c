@@ -15,8 +15,8 @@
 #define TOR_X509_PRIVATE
 
 #ifdef _WIN32
-  #include <winsock2.h>
-  #include <ws2tcpip.h>
+#  include <winsock2.h>
+#  include <ws2tcpip.h>
 #endif
 
 #include "lib/crypt_ops/crypto_cipher.h"
@@ -47,25 +47,25 @@ ENABLE_GCC_WARNING("-Wstrict-prototypes")
 static SECStatus always_accept_cert_cb(void *, PRFileDesc *, PRBool, PRBool);
 
 MOCK_IMPL(void,
-try_to_extract_certs_from_tls,(int severity, tor_tls_t *tls,
-                               tor_x509_cert_impl_t **cert_out,
-                               tor_x509_cert_impl_t **id_cert_out))
+try_to_extract_certs_from_tls,
+          (int severity, tor_tls_t *tls, tor_x509_cert_impl_t **cert_out,
+           tor_x509_cert_impl_t **id_cert_out))
 {
   tor_assert(tls);
   tor_assert(cert_out);
   tor_assert(id_cert_out);
-  (void) severity;
+  (void)severity;
 
   *cert_out = *id_cert_out = NULL;
 
   CERTCertificate *peer = SSL_PeerCertificate(tls->ssl);
-  if (!peer)
+  if (! peer)
     return;
   *cert_out = peer; /* Now owns pointer. */
 
   CERTCertList *chain = SSL_PeerCertificateChain(tls->ssl);
   CERTCertListNode *c = CERT_LIST_HEAD(chain);
-  for (; !CERT_LIST_END(c, chain); c = CERT_LIST_NEXT(c)) {
+  for (; ! CERT_LIST_END(c, chain); c = CERT_LIST_NEXT(c)) {
     if (CERT_CompareCerts(c->cert, peer) == PR_FALSE) {
       *id_cert_out = CERT_DupCertificate(c->cert);
       break;
@@ -78,38 +78,61 @@ static bool
 we_like_ssl_cipher(SSLCipherAlgorithm ca)
 {
   switch (ca) {
-    case ssl_calg_null: return false;
-    case ssl_calg_rc4: return false;
-    case ssl_calg_rc2: return false;
-    case ssl_calg_des: return false;
-    case ssl_calg_3des: return false; /* ???? */
-    case ssl_calg_idea: return false;
-    case ssl_calg_fortezza: return false;
-    case ssl_calg_camellia: return false;
-    case ssl_calg_seed: return false;
+    case ssl_calg_null:
+      return false;
+    case ssl_calg_rc4:
+      return false;
+    case ssl_calg_rc2:
+      return false;
+    case ssl_calg_des:
+      return false;
+    case ssl_calg_3des:
+      return false; /* ???? */
+    case ssl_calg_idea:
+      return false;
+    case ssl_calg_fortezza:
+      return false;
+    case ssl_calg_camellia:
+      return false;
+    case ssl_calg_seed:
+      return false;
 
-    case ssl_calg_aes: return true;
-    case ssl_calg_aes_gcm: return true;
-    case ssl_calg_chacha20: return true;
-    default: return true;
+    case ssl_calg_aes:
+      return true;
+    case ssl_calg_aes_gcm:
+      return true;
+    case ssl_calg_chacha20:
+      return true;
+    default:
+      return true;
   }
 }
 static bool
 we_like_ssl_kea(SSLKEAType kt)
 {
   switch (kt) {
-    case ssl_kea_null: return false;
-    case ssl_kea_rsa: return false; /* ??? */
-    case ssl_kea_fortezza: return false;
-    case ssl_kea_ecdh_psk: return false;
-    case ssl_kea_dh_psk: return false;
+    case ssl_kea_null:
+      return false;
+    case ssl_kea_rsa:
+      return false; /* ??? */
+    case ssl_kea_fortezza:
+      return false;
+    case ssl_kea_ecdh_psk:
+      return false;
+    case ssl_kea_dh_psk:
+      return false;
 
-    case ssl_kea_dh: return true;
-    case ssl_kea_ecdh: return true;
-    case ssl_kea_tls13_any: return true;
+    case ssl_kea_dh:
+      return true;
+    case ssl_kea_ecdh:
+      return true;
+    case ssl_kea_tls13_any:
+      return true;
 
-    case ssl_kea_size: return true; /* prevent a warning. */
-    default: return true;
+    case ssl_kea_size:
+      return true; /* prevent a warning. */
+    default:
+      return true;
   }
 }
 
@@ -117,16 +140,25 @@ static bool
 we_like_mac_algorithm(SSLMACAlgorithm ma)
 {
   switch (ma) {
-    case ssl_mac_null: return false;
-    case ssl_mac_md5: return false;
-    case ssl_hmac_md5: return false;
+    case ssl_mac_null:
+      return false;
+    case ssl_mac_md5:
+      return false;
+    case ssl_hmac_md5:
+      return false;
 
-    case ssl_mac_sha: return true;
-    case ssl_hmac_sha: return true;
-    case ssl_hmac_sha256: return true;
-    case ssl_mac_aead: return true;
-    case ssl_hmac_sha384: return true;
-    default: return true;
+    case ssl_mac_sha:
+      return true;
+    case ssl_hmac_sha:
+      return true;
+    case ssl_hmac_sha256:
+      return true;
+    case ssl_mac_aead:
+      return true;
+    case ssl_hmac_sha384:
+      return true;
+    default:
+      return true;
   }
 }
 
@@ -134,21 +166,34 @@ static bool
 we_like_auth_type(SSLAuthType at)
 {
   switch (at) {
-    case ssl_auth_null: return false;
-    case ssl_auth_rsa_decrypt: return false;
-    case ssl_auth_dsa: return false;
-    case ssl_auth_kea: return false;
+    case ssl_auth_null:
+      return false;
+    case ssl_auth_rsa_decrypt:
+      return false;
+    case ssl_auth_dsa:
+      return false;
+    case ssl_auth_kea:
+      return false;
 
-    case ssl_auth_ecdsa: return true;
-    case ssl_auth_ecdh_rsa: return true;
-    case ssl_auth_ecdh_ecdsa: return true;
-    case ssl_auth_rsa_sign: return true;
-    case ssl_auth_rsa_pss: return true;
-    case ssl_auth_psk: return true;
-    case ssl_auth_tls13_any: return true;
+    case ssl_auth_ecdsa:
+      return true;
+    case ssl_auth_ecdh_rsa:
+      return true;
+    case ssl_auth_ecdh_ecdsa:
+      return true;
+    case ssl_auth_rsa_sign:
+      return true;
+    case ssl_auth_rsa_pss:
+      return true;
+    case ssl_auth_psk:
+      return true;
+    case ssl_auth_tls13_any:
+      return true;
 
-    case ssl_auth_size: return true; /* prevent a warning. */
-    default: return true;
+    case ssl_auth_size:
+      return true; /* prevent a warning. */
+    default:
+      return true;
   }
 }
 
@@ -179,8 +224,8 @@ ciphersuite_has_nss_export_bug(const SSLCipherSuiteInfo *info)
 }
 
 tor_tls_context_t *
-tor_tls_context_new(crypto_pk_t *identity,
-                    unsigned int key_lifetime, unsigned flags, int is_client)
+tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
+                    unsigned flags, int is_client)
 {
   SECStatus s;
   tor_assert(identity);
@@ -191,8 +236,8 @@ tor_tls_context_new(crypto_pk_t *identity,
   ctx->refcnt = 1;
 
   if (! is_client) {
-    if (tor_tls_context_init_certificates(ctx, identity,
-                                          key_lifetime, flags) < 0) {
+    if (tor_tls_context_init_certificates(ctx, identity, key_lifetime, flags) <
+        0) {
       goto err;
     }
   }
@@ -200,24 +245,23 @@ tor_tls_context_new(crypto_pk_t *identity,
   {
     /* Create the "model" PRFileDesc that we will use to base others on. */
     PRFileDesc *tcp = PR_NewTCPSocket();
-    if (!tcp)
+    if (! tcp)
       goto err;
 
     ctx->ctx = SSL_ImportFD(NULL, tcp);
-    if (!ctx->ctx) {
+    if (! ctx->ctx) {
       PR_Close(tcp);
       goto err;
     }
   }
 
   // Configure the certificate.
-  if (!is_client) {
-    s = SSL_ConfigServerCert(ctx->ctx,
-                             ctx->my_link_cert->cert,
-                             (SECKEYPrivateKey *)
-                               crypto_pk_get_nss_privkey(ctx->link_key),
-                             NULL, /* ExtraServerCertData */
-                             0 /* DataLen */);
+  if (! is_client) {
+    s = SSL_ConfigServerCert(
+        ctx->ctx, ctx->my_link_cert->cert,
+        (SECKEYPrivateKey *)crypto_pk_get_nss_privkey(ctx->link_key),
+        NULL, /* ExtraServerCertData */
+        0 /* DataLen */);
     if (s != SECSuccess)
       goto err;
   }
@@ -242,9 +286,9 @@ tor_tls_context_new(crypto_pk_t *identity,
   // XXXX SSL_ENABLE_ALPN??
 
   // Force client-mode or server_mode.
-  s = SSL_OptionSet(ctx->ctx,
-                is_client ? SSL_HANDSHAKE_AS_CLIENT : SSL_HANDSHAKE_AS_SERVER,
-                PR_TRUE);
+  s = SSL_OptionSet(
+      ctx->ctx, is_client ? SSL_HANDSHAKE_AS_CLIENT : SSL_HANDSHAKE_AS_SERVER,
+      PR_TRUE);
   if (s != SECSuccess)
     goto err;
 
@@ -275,12 +319,11 @@ tor_tls_context_new(crypto_pk_t *identity,
         goto err;
       if (BUG(info.cipherSuite != ciphers[i]))
         goto err;
-      int disable = info.effectiveKeyBits < 128 ||
-        info.macBits < 128 ||
-        !we_like_ssl_cipher(info.symCipher) ||
-        !we_like_ssl_kea(info.keaType) ||
-        !we_like_mac_algorithm(info.macAlgorithm) ||
-        !we_like_auth_type(info.authType)/* Requires NSS 3.24 */;
+      int disable = info.effectiveKeyBits < 128 || info.macBits < 128 ||
+                    ! we_like_ssl_cipher(info.symCipher) ||
+                    ! we_like_ssl_kea(info.keaType) ||
+                    ! we_like_mac_algorithm(info.macAlgorithm) ||
+                    ! we_like_auth_type(info.authType) /* Requires NSS 3.24 */;
 
       if (ciphersuite_has_nss_export_bug(&info)) {
         /* SSL_ExportKeyingMaterial will fail; we can't use this cipher.
@@ -327,17 +370,17 @@ tor_tls_context_new(crypto_pk_t *identity,
   //   Compression
 
   goto done;
- err:
+err:
   tor_tls_context_decref(ctx);
   ctx = NULL;
- done:
+done:
   return ctx;
 }
 
 void
 tor_tls_context_impl_free_(tor_tls_context_impl_t *ctx)
 {
-  if (!ctx)
+  if (! ctx)
     return;
   PR_Close(ctx);
 }
@@ -349,7 +392,7 @@ tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz)
   (void)buf;
   (void)sz;
   // AFAICT, NSS doesn't expose its internal state.
-  buf[0]=0;
+  buf[0] = 0;
 }
 
 void
@@ -359,8 +402,7 @@ tor_tls_init(void)
 }
 
 void
-tls_log_errors(tor_tls_t *tls, int severity, int domain,
-               const char *doing)
+tls_log_errors(tor_tls_t *tls, int severity, int domain, const char *doing)
 {
   /* This implementation is a little different for NSS than it is for OpenSSL
      -- it logs the last error whether anything actually failed or not. So we
@@ -374,9 +416,9 @@ tls_log_errors(tor_tls_t *tls, int severity, int domain,
   const char *string = PORT_ErrorToString(code);
   const char *name = PORT_ErrorToName(code);
   char buf[16];
-  if (!string)
+  if (! string)
     string = "<unrecognized>";
-  if (!name) {
+  if (! name) {
     tor_snprintf(buf, sizeof(buf), "%d", code);
     name = buf;
   }
@@ -384,11 +426,10 @@ tls_log_errors(tor_tls_t *tls, int severity, int domain,
   const char *with = addr ? " with " : "";
   addr = addr ? addr : "";
   if (doing) {
-    log_fn(severity, domain, "TLS error %s while %s%s%s: %s",
-           name, doing, with, addr, string);
+    log_fn(severity, domain, "TLS error %s while %s%s%s: %s", name, doing,
+           with, addr, string);
   } else {
-    log_fn(severity, domain, "TLS error %s%s%s: %s", name, string,
-           with, addr);
+    log_fn(severity, domain, "TLS error %s%s%s: %s", name, string, with, addr);
   }
 }
 
@@ -405,7 +446,7 @@ tor_tls_new(tor_socket_t sock, int is_server)
     tcp = PR_NewTCPSocket();
   }
 
-  if (!tcp)
+  if (! tcp)
     return NULL;
 
   PRFileDesc *count = tor_wrap_prfiledesc_with_byte_counter(tcp);
@@ -413,7 +454,7 @@ tor_tls_new(tor_socket_t sock, int is_server)
     return NULL;
 
   PRFileDesc *ssl = SSL_ImportFD(ctx->ctx, count);
-  if (!ssl) {
+  if (! ssl) {
     PR_Close(tcp);
     return NULL;
   }
@@ -425,11 +466,11 @@ tor_tls_new(tor_socket_t sock, int is_server)
   tls->ssl = ssl;
   tls->socket = sock;
   tls->state = TOR_TLS_ST_HANDSHAKE;
-  tls->isServer = !!is_server;
+  tls->isServer = ! ! is_server;
 
-  if (!is_server) {
+  if (! is_server) {
     /* Set a random SNI */
-    char *fake_hostname = crypto_random_hostname(4,25, "www.",".com");
+    char *fake_hostname = crypto_random_hostname(4, 25, "www.", ".com");
     SSL_SetURL(tls->ssl, fake_hostname);
     tor_free(fake_hostname);
   }
@@ -443,8 +484,7 @@ tor_tls_new(tor_socket_t sock, int is_server)
 
 void
 tor_tls_set_renegotiate_callback(tor_tls_t *tls,
-                                 void (*cb)(tor_tls_t *, void *arg),
-                                 void *arg)
+                                 void (*cb)(tor_tls_t *, void *arg), void *arg)
 {
   tor_assert(tls);
   (void)cb;
@@ -475,10 +515,10 @@ tor_tls_release_socket(tor_tls_t *tls)
    * redesign the mainloop code enough to make this function unnecessary.
    */
   tor_socket_t sock =
-    tor_open_socket_nonblocking(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+      tor_open_socket_nonblocking(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (! SOCKET_OK(sock)) {
     log_warn(LD_NET, "Out of sockets when trying to shut down an NSS "
-             "connection");
+                     "connection");
     return;
   }
 
@@ -499,7 +539,7 @@ tor_tls_impl_free_(tor_tls_impl_t *tls)
 {
   // XXXX This will close the underlying fd, which our OpenSSL version does
   // not do!
-  if (!tls)
+  if (! tls)
     return;
 
   PR_Close(tls);
@@ -515,7 +555,7 @@ tor_tls_peer_has_cert(tor_tls_t *tls)
 }
 
 MOCK_IMPL(tor_x509_cert_t *,
-tor_tls_get_peer_cert,(tor_tls_t *tls))
+tor_tls_get_peer_cert, (tor_tls_t * tls))
 {
   CERTCertificate *cert = SSL_PeerCertificate(tls->ssl);
   if (cert)
@@ -525,7 +565,7 @@ tor_tls_get_peer_cert,(tor_tls_t *tls))
 }
 
 MOCK_IMPL(tor_x509_cert_t *,
-tor_tls_get_own_cert,(tor_tls_t *tls))
+tor_tls_get_own_cert, (tor_tls_t * tls))
 {
   tor_assert(tls);
   CERTCertificate *cert = SSL_LocalCertificate(tls->ssl);
@@ -536,7 +576,7 @@ tor_tls_get_own_cert,(tor_tls_t *tls))
 }
 
 MOCK_IMPL(int,
-tor_tls_read, (tor_tls_t *tls, char *cp, size_t len))
+tor_tls_read, (tor_tls_t * tls, char *cp, size_t len))
 {
   tor_assert(tls);
   tor_assert(cp);
@@ -651,8 +691,7 @@ tor_tls_get_forced_write_size(tor_tls_t *tls)
 }
 
 void
-tor_tls_get_n_raw_bytes(tor_tls_t *tls,
-                        size_t *n_read, size_t *n_written)
+tor_tls_get_n_raw_bytes(tor_tls_t *tls, size_t *n_read, size_t *n_written)
 {
   tor_assert(tls);
   tor_assert(n_read);
@@ -671,9 +710,9 @@ tor_tls_get_n_raw_bytes(tor_tls_t *tls,
 }
 
 int
-tor_tls_get_buffer_sizes(tor_tls_t *tls,
-                         size_t *rbuf_capacity, size_t *rbuf_bytes,
-                         size_t *wbuf_capacity, size_t *wbuf_bytes)
+tor_tls_get_buffer_sizes(tor_tls_t *tls, size_t *rbuf_capacity,
+                         size_t *rbuf_bytes, size_t *wbuf_capacity,
+                         size_t *wbuf_bytes)
 {
   tor_assert(tls);
   tor_assert(rbuf_capacity);
@@ -710,15 +749,15 @@ tor_tls_server_got_renegotiate(tor_tls_t *tls)
 }
 
 MOCK_IMPL(int,
-tor_tls_cert_matches_key,(const tor_tls_t *tls,
-                          const struct tor_x509_cert_t *cert))
+tor_tls_cert_matches_key,
+          (const tor_tls_t *tls, const struct tor_x509_cert_t *cert))
 {
   tor_assert(tls);
   tor_assert(cert);
   int rv = 0;
 
   CERTCertificate *peercert = SSL_PeerCertificate(tls->ssl);
-  if (!peercert)
+  if (! peercert)
     goto done;
   CERTSubjectPublicKeyInfo *peer_info = &peercert->subjectPublicKeyInfo;
   CERTSubjectPublicKeyInfo *cert_info = &cert->cert->subjectPublicKeyInfo;
@@ -727,14 +766,14 @@ tor_tls_cert_matches_key,(const tor_tls_t *tls,
        SECITEM_ItemsAreEqual(&peer_info->subjectPublicKey,
                              &cert_info->subjectPublicKey);
 
- done:
+done:
   if (peercert)
     CERT_DestroyCertificate(peercert);
   return rv;
 }
 
 MOCK_IMPL(int,
-tor_tls_get_tlssecrets,(tor_tls_t *tls, uint8_t *secrets_out))
+tor_tls_get_tlssecrets, (tor_tls_t * tls, uint8_t *secrets_out))
 {
   tor_assert(tls);
   tor_assert(secrets_out);
@@ -745,10 +784,9 @@ tor_tls_get_tlssecrets,(tor_tls_t *tls, uint8_t *secrets_out))
 }
 
 MOCK_IMPL(int,
-tor_tls_export_key_material,(tor_tls_t *tls, uint8_t *secrets_out,
-                             const uint8_t *context,
-                             size_t context_len,
-                             const char *label))
+tor_tls_export_key_material,
+          (tor_tls_t * tls, uint8_t *secrets_out, const uint8_t *context,
+           size_t context_len, const char *label))
 {
   tor_assert(tls);
   tor_assert(secrets_out);
@@ -762,8 +800,7 @@ tor_tls_export_key_material,(tor_tls_t *tls, uint8_t *secrets_out,
    * any error code set after a failure was in fact caused by
    * SSL_ExportKeyingMaterial. */
   PR_SetError(PR_UNKNOWN_ERROR, 0);
-  s = SSL_ExportKeyingMaterial(tls->ssl,
-                               label, (unsigned)strlen(label),
+  s = SSL_ExportKeyingMaterial(tls->ssl, label, (unsigned)strlen(label),
                                PR_TRUE, context, (unsigned)context_len,
                                secrets_out, DIGEST256_LEN);
   if (s != SECSuccess) {
@@ -785,13 +822,13 @@ tor_tls_get_ciphersuite_name(tor_tls_t *tls)
   memset(&channel_info, 0, sizeof(channel_info));
   memset(&cipher_info, 0, sizeof(cipher_info));
 
-  SECStatus s = SSL_GetChannelInfo(tls->ssl,
-                                   &channel_info, sizeof(channel_info));
+  SECStatus s =
+      SSL_GetChannelInfo(tls->ssl, &channel_info, sizeof(channel_info));
   if (s != SECSuccess)
     return NULL;
 
-  s = SSL_GetCipherSuiteInfo(channel_info.cipherSuite,
-                             &cipher_info, sizeof(cipher_info));
+  s = SSL_GetCipherSuiteInfo(channel_info.cipherSuite, &cipher_info,
+                             sizeof(cipher_info));
   if (s != SECSuccess)
     return NULL;
 
@@ -806,17 +843,17 @@ evaluate_ecgroup_for_tls(const char *ecgroup)
 {
   SECOidTag tag;
 
-  if (!ecgroup)
+  if (! ecgroup)
     tag = SEC_OID_TOR_DEFAULT_ECDHE_GROUP;
-  else if (!strcasecmp(ecgroup, "P256"))
+  else if (! strcasecmp(ecgroup, "P256"))
     tag = SEC_OID_ANSIX962_EC_PRIME256V1;
-  else if (!strcasecmp(ecgroup, "P224"))
+  else if (! strcasecmp(ecgroup, "P224"))
     tag = SEC_OID_SECG_EC_SECP224R1;
   else
     return 0;
 
   /* I don't think we need any additional tests here for NSS */
-  (void) tag;
+  (void)tag;
 
   return 1;
 }

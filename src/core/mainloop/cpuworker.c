@@ -58,7 +58,7 @@ worker_state_new(void *arg)
 static void
 worker_state_free_(worker_state_t *ws)
 {
-  if (!ws)
+  if (! ws)
     return;
   server_onion_keys_free(ws->onion_keys);
   tor_free(ws);
@@ -82,10 +82,10 @@ static int max_pending_tasks = 128;
 void
 cpu_init(void)
 {
-  if (!replyqueue) {
+  if (! replyqueue) {
     replyqueue = replyqueue_new(0);
   }
-  if (!threadpool) {
+  if (! threadpool) {
     /*
       In our threadpool implementation, half the threads are permissive and
       half are strict (when it comes to running lower-priority tasks). So we
@@ -93,11 +93,8 @@ cpu_init(void)
       least one thread of each kind.
     */
     const int n_threads = get_num_cpus(get_options()) + 1;
-    threadpool = threadpool_new(n_threads,
-                                replyqueue,
-                                worker_state_new,
-                                worker_state_free_void,
-                                NULL);
+    threadpool = threadpool_new(n_threads, replyqueue, worker_state_new,
+                                worker_state_free_void, NULL);
 
     int r = threadpool_register_reply_event(threadpool, NULL);
 
@@ -187,16 +184,14 @@ update_state_threadfn(void *state_, void *work_)
 void
 cpuworkers_rotate_keyinfo(void)
 {
-  if (!threadpool) {
+  if (! threadpool) {
     /* If we're a client, then we won't have cpuworkers, and we won't need
      * to tell them to rotate their state.
      */
     return;
   }
-  if (threadpool_queue_update(threadpool,
-                              worker_state_new,
-                              update_state_threadfn,
-                              worker_state_free_void,
+  if (threadpool_queue_update(threadpool, worker_state_new,
+                              update_state_threadfn, worker_state_free_void,
                               NULL)) {
     log_warn(LD_OR, "Failed to queue key update for worker threads.");
   }
@@ -204,20 +199,20 @@ cpuworkers_rotate_keyinfo(void)
 
 /** Indexed by handshake type: how many onionskins have we processed and
  * counted of that type? */
-static uint64_t onionskins_n_processed[MAX_ONION_HANDSHAKE_TYPE+1];
+static uint64_t onionskins_n_processed[MAX_ONION_HANDSHAKE_TYPE + 1];
 /** Indexed by handshake type, corresponding to the onionskins counted in
  * onionskins_n_processed: how many microseconds have we spent in cpuworkers
  * processing that kind of onionskin? */
-static uint64_t onionskins_usec_internal[MAX_ONION_HANDSHAKE_TYPE+1];
+static uint64_t onionskins_usec_internal[MAX_ONION_HANDSHAKE_TYPE + 1];
 /** Indexed by handshake type, corresponding to onionskins counted in
  * onionskins_n_processed: how many microseconds have we spent waiting for
  * cpuworkers to give us answers for that kind of onionskin?
  */
-static uint64_t onionskins_usec_roundtrip[MAX_ONION_HANDSHAKE_TYPE+1];
+static uint64_t onionskins_usec_roundtrip[MAX_ONION_HANDSHAKE_TYPE + 1];
 
 /** If any onionskin takes longer than this, we clip them to this
  * time. (microseconds) */
-#define MAX_BELIEVABLE_ONIONSKIN_DELAY (2*1000*1000)
+#define MAX_BELIEVABLE_ONIONSKIN_DELAY (2 * 1000 * 1000)
 
 /** Return true iff we'd like to measure a handshake of type
  * <b>onionskin_type</b>. Call only from the main thread. */
@@ -255,7 +250,7 @@ estimated_usec_for_onionskins(uint32_t n_requests, uint16_t onionskin_type)
      * onionskins.  But that's 5e5 * 1e6 * 1e6, which is still less than
      * UINT64_MAX. */
     return (onionskins_usec_internal[onionskin_type] * n_requests) /
-      onionskins_n_processed[onionskin_type];
+           onionskins_n_processed[onionskin_type];
   }
 }
 
@@ -278,7 +273,7 @@ get_overhead_for_onionskins(uint32_t *usec_out, double *frac_out,
     return -1;
 
   overhead = onionskins_usec_roundtrip[onionskin_type] -
-    onionskins_usec_internal[onionskin_type];
+             onionskins_usec_internal[onionskin_type];
 
   *usec_out = (uint32_t)(overhead / onionskins_n_processed[onionskin_type]);
   *frac_out = ((double)overhead) / onionskins_usec_internal[onionskin_type];
@@ -296,15 +291,15 @@ cpuworker_log_onionskin_overhead(int severity, int onionskin_type,
   double relative_overhead;
   int r;
 
-  r = get_overhead_for_onionskins(&overhead,  &relative_overhead,
+  r = get_overhead_for_onionskins(&overhead, &relative_overhead,
                                   onionskin_type);
-  if (!overhead || r<0)
+  if (! overhead || r < 0)
     return;
 
   log_fn(severity, LD_OR,
          "%s onionskins have averaged %u usec overhead (%.2f%%) in "
          "cpuworker code ",
-         onionskin_type_name, (unsigned)overhead, relative_overhead*100);
+         onionskin_type_name, (unsigned)overhead, relative_overhead * 100);
 }
 
 /** Handle a reply from the worker threads. */
@@ -331,7 +326,7 @@ cpuworker_onion_handshake_replyfn(void *work_)
     int64_t usec_roundtrip;
     tor_gettimeofday(&tv_end);
     timersub(&tv_end, &rpl.started_at, &tv_diff);
-    usec_roundtrip = ((int64_t)tv_diff.tv_sec)*1000000 + tv_diff.tv_usec;
+    usec_roundtrip = ((int64_t)tv_diff.tv_sec) * 1000000 + tv_diff.tv_usec;
     if (usec_roundtrip >= 0 &&
         usec_roundtrip < MAX_BELIEVABLE_ONIONSKIN_DELAY) {
       ++onionskins_n_processed[rpl.handshake_type];
@@ -349,9 +344,8 @@ cpuworker_onion_handshake_replyfn(void *work_)
 
   circ = job->circ;
 
-  log_debug(LD_OR,
-            "Unpacking cpuworker reply %p, circ=%p, success=%d",
-            job, circ, rpl.success);
+  log_debug(LD_OR, "Unpacking cpuworker reply %p, circ=%p, success=%d", job,
+            circ, rpl.success);
 
   if (circ->base_.magic == DEAD_CIRCUIT_MAGIC) {
     /* The circuit was supposed to get freed while the reply was
@@ -367,29 +361,26 @@ cpuworker_onion_handshake_replyfn(void *work_)
 
   if (TO_CIRCUIT(circ)->marked_for_close) {
     /* We already marked this circuit; we can't call it open. */
-    log_debug(LD_OR,"circuit is already marked.");
+    log_debug(LD_OR, "circuit is already marked.");
     goto done_processing;
   }
 
   if (rpl.success == 0) {
-    log_debug(LD_OR,
-              "decoding onionskin failed. "
-              "(Old key or bad software.) Closing.");
+    log_debug(LD_OR, "decoding onionskin failed. "
+                     "(Old key or bad software.) Closing.");
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
     goto done_processing;
   }
 
-  if (onionskin_answer(circ,
-                       &rpl.created_cell,
-                       (const char*)rpl.keys, sizeof(rpl.keys),
-                       rpl.rend_auth_material) < 0) {
-    log_warn(LD_OR,"onionskin_answer failed. Closing.");
+  if (onionskin_answer(circ, &rpl.created_cell, (const char *)rpl.keys,
+                       sizeof(rpl.keys), rpl.rend_auth_material) < 0) {
+    log_warn(LD_OR, "onionskin_answer failed. Closing.");
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
     goto done_processing;
   }
-  log_debug(LD_OR,"onionskin_answer succeeded. Yay.");
+  log_debug(LD_OR, "onionskin_answer succeeded. Yay.");
 
- done_processing:
+done_processing:
   memwipe(&rpl, 0, sizeof(rpl));
   memwipe(job, 0, sizeof(*job));
   tor_free(job);
@@ -415,38 +406,39 @@ cpuworker_onion_handshake_threadfn(void *state_, void *work_)
 
   const create_cell_t *cc = &req.create_cell;
   created_cell_t *cell_out = &rpl.created_cell;
-  struct timeval tv_start = {0,0}, tv_end;
+  struct timeval tv_start = {0, 0}, tv_end;
   int n;
   rpl.timed = req.timed;
   rpl.started_at = req.started_at;
   rpl.handshake_type = cc->handshake_type;
   if (req.timed)
     tor_gettimeofday(&tv_start);
-  n = onion_skin_server_handshake(cc->handshake_type,
-                                  cc->onionskin, cc->handshake_len,
-                                  onion_keys,
-                                  cell_out->reply,
-                                  rpl.keys, CPATH_KEY_MATERIAL_LEN,
-                                  rpl.rend_auth_material);
+  n = onion_skin_server_handshake(
+      cc->handshake_type, cc->onionskin, cc->handshake_len, onion_keys,
+      cell_out->reply, rpl.keys, CPATH_KEY_MATERIAL_LEN,
+      rpl.rend_auth_material);
   if (n < 0) {
     /* failure */
-    log_debug(LD_OR,"onion_skin_server_handshake failed.");
+    log_debug(LD_OR, "onion_skin_server_handshake failed.");
     memset(&rpl, 0, sizeof(rpl));
     rpl.success = 0;
   } else {
     /* success */
-    log_debug(LD_OR,"onion_skin_server_handshake succeeded.");
+    log_debug(LD_OR, "onion_skin_server_handshake succeeded.");
     cell_out->handshake_len = n;
     switch (cc->cell_type) {
-    case CELL_CREATE:
-      cell_out->cell_type = CELL_CREATED; break;
-    case CELL_CREATE2:
-      cell_out->cell_type = CELL_CREATED2; break;
-    case CELL_CREATE_FAST:
-      cell_out->cell_type = CELL_CREATED_FAST; break;
-    default:
-      tor_assert(0);
-      return WQ_RPL_SHUTDOWN;
+      case CELL_CREATE:
+        cell_out->cell_type = CELL_CREATED;
+        break;
+      case CELL_CREATE2:
+        cell_out->cell_type = CELL_CREATED2;
+        break;
+      case CELL_CREATE_FAST:
+        cell_out->cell_type = CELL_CREATED_FAST;
+        break;
+      default:
+        tor_assert(0);
+        return WQ_RPL_SHUTDOWN;
     }
     rpl.success = 1;
   }
@@ -456,11 +448,11 @@ cpuworker_onion_handshake_threadfn(void *state_, void *work_)
     int64_t usec;
     tor_gettimeofday(&tv_end);
     timersub(&tv_end, &tv_start, &tv_diff);
-    usec = ((int64_t)tv_diff.tv_sec)*1000000 + tv_diff.tv_usec;
+    usec = ((int64_t)tv_diff.tv_sec) * 1000000 + tv_diff.tv_usec;
     if (usec < 0 || usec > MAX_BELIEVABLE_ONIONSKIN_DELAY)
       rpl.n_usec = MAX_BELIEVABLE_ONIONSKIN_DELAY;
     else
-      rpl.n_usec = (uint32_t) usec;
+      rpl.n_usec = (uint32_t)usec;
   }
 
   memcpy(&job->u.reply, &rpl, sizeof(rpl));
@@ -480,27 +472,24 @@ queue_pending_tasks(void)
   while (total_pending_tasks < max_pending_tasks) {
     circ = onion_next_task(&onionskin);
 
-    if (!circ)
+    if (! circ)
       return;
 
     if (assign_onionskin_to_cpuworker(circ, onionskin) < 0)
-      log_info(LD_OR,"assign_to_cpuworker failed. Ignoring.");
+      log_info(LD_OR, "assign_to_cpuworker failed. Ignoring.");
   }
 }
 
 /** DOCDOC */
 MOCK_IMPL(workqueue_entry_t *,
-cpuworker_queue_work,(workqueue_priority_t priority,
-                      workqueue_reply_t (*fn)(void *, void *),
-                      void (*reply_fn)(void *),
-                      void *arg))
+cpuworker_queue_work,
+          (workqueue_priority_t priority,
+           workqueue_reply_t (*fn)(void *, void *), void (*reply_fn)(void *),
+           void *arg))
 {
   tor_assert(threadpool);
 
-  return threadpool_queue_work_priority(threadpool,
-                                        priority,
-                                        fn,
-                                        reply_fn,
+  return threadpool_queue_work_priority(threadpool, priority, fn, reply_fn,
                                         arg);
 }
 
@@ -510,8 +499,7 @@ cpuworker_queue_work,(workqueue_priority_t priority,
  * Return 0 if we successfully assign the task, or -1 on failure.
  */
 int
-assign_onionskin_to_cpuworker(or_circuit_t *circ,
-                              create_cell_t *onionskin)
+assign_onionskin_to_cpuworker(or_circuit_t *circ, create_cell_t *onionskin)
 {
   workqueue_entry_t *queue_entry;
   cpuworker_job_t *job;
@@ -520,14 +508,14 @@ assign_onionskin_to_cpuworker(or_circuit_t *circ,
 
   tor_assert(threadpool);
 
-  if (!circ->p_chan) {
-    log_info(LD_OR,"circ->p_chan gone. Failing circ.");
+  if (! circ->p_chan) {
+    log_info(LD_OR, "circ->p_chan gone. Failing circ.");
     tor_free(onionskin);
     return -1;
   }
 
   if (total_pending_tasks >= max_pending_tasks) {
-    log_debug(LD_OR,"No idle cpuworkers. Queuing.");
+    log_debug(LD_OR, "No idle cpuworkers. Queuing.");
     if (onion_pending_add(circ, onionskin) < 0) {
       tor_free(onionskin);
       return -1;
@@ -535,7 +523,7 @@ assign_onionskin_to_cpuworker(or_circuit_t *circ,
     return 0;
   }
 
-  if (!channel_is_client(circ->p_chan))
+  if (! channel_is_client(circ->p_chan))
     rep_hist_note_circuit_handshake_assigned(onionskin->handshake_type);
 
   should_time = should_time_request(onionskin->handshake_type);
@@ -556,19 +544,17 @@ assign_onionskin_to_cpuworker(or_circuit_t *circ,
   memwipe(&req, 0, sizeof(req));
 
   ++total_pending_tasks;
-  queue_entry = threadpool_queue_work_priority(threadpool,
-                                      WQ_PRI_HIGH,
-                                      cpuworker_onion_handshake_threadfn,
-                                      cpuworker_onion_handshake_replyfn,
-                                      job);
-  if (!queue_entry) {
+  queue_entry = threadpool_queue_work_priority(
+      threadpool, WQ_PRI_HIGH, cpuworker_onion_handshake_threadfn,
+      cpuworker_onion_handshake_replyfn, job);
+  if (! queue_entry) {
     log_warn(LD_BUG, "Couldn't queue work on threadpool");
     tor_free(job);
     return -1;
   }
 
-  log_debug(LD_OR, "Queued task %p (qe=%p, circ=%p)",
-            job, queue_entry, job->circ);
+  log_debug(LD_OR, "Queued task %p (qe=%p, circ=%p)", job, queue_entry,
+            job->circ);
 
   circ->workqueue_entry = queue_entry;
 

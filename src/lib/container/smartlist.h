@@ -20,10 +20,9 @@
 #include "lib/smartlist_core/smartlist_split.h"
 
 void smartlist_add_asprintf(struct smartlist_t *sl, const char *pattern, ...)
-  CHECK_PRINTF(2, 3);
+    CHECK_PRINTF(2, 3);
 void smartlist_add_vasprintf(struct smartlist_t *sl, const char *pattern,
-                             va_list args)
-  CHECK_PRINTF(2, 0);
+                             va_list args) CHECK_PRINTF(2, 0);
 void smartlist_reverse(smartlist_t *sl);
 void smartlist_string_remove(smartlist_t *sl, const char *element);
 int smartlist_contains_string(const smartlist_t *sl, const char *element);
@@ -38,14 +37,14 @@ int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2);
 
-int smartlist_ptrs_eq(const smartlist_t *s1,
-                      const smartlist_t *s2);
+int smartlist_ptrs_eq(const smartlist_t *s1, const smartlist_t *s2);
 
 void smartlist_sort(smartlist_t *sl,
                     int (*compare)(const void **a, const void **b));
 void *smartlist_get_most_frequent_(const smartlist_t *sl,
-                    int (*compare)(const void **a, const void **b),
-                    int *count_out);
+                                   int (*compare)(const void **a,
+                                                  const void **b),
+                                   int *count_out);
 #define smartlist_get_most_frequent(sl, compare) \
   smartlist_get_most_frequent_((sl), (compare), NULL)
 void smartlist_uniq(smartlist_t *sl,
@@ -73,15 +72,13 @@ int smartlist_bsearch_idx(const smartlist_t *sl, const void *key,
 
 void smartlist_pqueue_add(smartlist_t *sl,
                           int (*compare)(const void *a, const void *b),
-                          ptrdiff_t idx_field_offset,
-                          void *item);
+                          ptrdiff_t idx_field_offset, void *item);
 void *smartlist_pqueue_pop(smartlist_t *sl,
                            int (*compare)(const void *a, const void *b),
                            ptrdiff_t idx_field_offset);
 void smartlist_pqueue_remove(smartlist_t *sl,
                              int (*compare)(const void *a, const void *b),
-                             ptrdiff_t idx_field_offset,
-                             void *item);
+                             ptrdiff_t idx_field_offset, void *item);
 void smartlist_pqueue_assert_ok(smartlist_t *sl,
                                 int (*compare)(const void *a, const void *b),
                                 ptrdiff_t idx_field_offset);
@@ -89,8 +86,8 @@ void smartlist_pqueue_assert_ok(smartlist_t *sl,
 char *smartlist_join_strings(smartlist_t *sl, const char *join, int terminate,
                              size_t *len_out) ATTR_MALLOC;
 char *smartlist_join_strings2(smartlist_t *sl, const char *join,
-                              size_t join_len, int terminate, size_t *len_out)
-  ATTR_MALLOC;
+                              size_t join_len, int terminate,
+                              size_t *len_out) ATTR_MALLOC;
 
 #ifndef COCCI
 /* Helper: Given two lists of items, possibly of different types, such that
@@ -137,35 +134,35 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
  *    }
  *  }
  */
-#define SMARTLIST_FOREACH_JOIN(sl1, type1, var1, sl2, type2, var2,      \
-                                cmpexpr, unmatched_var2)                \
-  STMT_BEGIN                                                            \
-  int var1 ## _sl_idx = 0, var1 ## _sl_len=(sl1)->num_used;             \
-  int var2 ## _sl_idx = 0, var2 ## _sl_len=(sl2)->num_used;             \
-  int var1 ## _ ## var2 ## _cmp;                                        \
-  type1 var1;                                                           \
-  type2 var2;                                                           \
-  for (; var2##_sl_idx < var2##_sl_len; ++var2##_sl_idx) {              \
-    var2 = (sl2)->list[var2##_sl_idx];                                  \
-    while (var1##_sl_idx < var1##_sl_len) {                             \
-      var1 = (sl1)->list[var1##_sl_idx];                                \
-      var1##_##var2##_cmp = (cmpexpr);                                  \
-      if (var1##_##var2##_cmp > 0) {                                    \
-        break;                                                          \
-      } else if (var1##_##var2##_cmp == 0) {                            \
-        goto matched_##var2;                                            \
-      } else {                                                          \
-        ++var1##_sl_idx;                                                \
-      }                                                                 \
-    }                                                                   \
-    /* Ran out of v1, or no match for var2. */                          \
-    unmatched_var2;                                                     \
-    continue;                                                           \
-    matched_##var2: ;                                                   \
+#  define SMARTLIST_FOREACH_JOIN(sl1, type1, var1, sl2, type2, var2, cmpexpr, \
+                                 unmatched_var2)                              \
+    STMT_BEGIN                                                                \
+      int var1##_sl_idx = 0, var1##_sl_len = (sl1)->num_used;                 \
+      int var2##_sl_idx = 0, var2##_sl_len = (sl2)->num_used;                 \
+      int var1##_##var2##_cmp;                                                \
+      type1 var1;                                                             \
+      type2 var2;                                                             \
+      for (; var2##_sl_idx < var2##_sl_len; ++var2##_sl_idx) {                \
+        var2 = (sl2)->list[var2##_sl_idx];                                    \
+        while (var1##_sl_idx < var1##_sl_len) {                               \
+          var1 = (sl1)->list[var1##_sl_idx];                                  \
+          var1##_##var2##_cmp = (cmpexpr);                                    \
+          if (var1##_##var2##_cmp > 0) {                                      \
+            break;                                                            \
+          } else if (var1##_##var2##_cmp == 0) {                              \
+            goto matched_##var2;                                              \
+          } else {                                                            \
+            ++var1##_sl_idx;                                                  \
+          }                                                                   \
+        }                                                                     \
+        /* Ran out of v1, or no match for var2. */                            \
+        unmatched_var2;                                                       \
+        continue;                                                             \
+        matched_##var2:;
 
-#define SMARTLIST_FOREACH_JOIN_END(var1, var2)  \
-  }                                             \
-  STMT_END
+#  define SMARTLIST_FOREACH_JOIN_END(var1, var2) \
+    }                                            \
+    STMT_END
 #endif /* !defined(COCCI) */
 
 #endif /* !defined(TOR_SMARTLIST_H) */

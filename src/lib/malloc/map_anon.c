@@ -14,17 +14,17 @@
 #include "lib/err/torerr.h"
 
 #ifdef HAVE_SYS_MMAN_H
-#include <sys/mman.h>
+#  include <sys/mman.h>
 #endif
 #ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
+#  include <sys/types.h>
 #endif
 #ifdef HAVE_MACH_VM_INHERIT_H
-#include <mach/vm_inherit.h>
+#  include <mach/vm_inherit.h>
 #endif
 
 #ifdef _WIN32
-#include <windows.h>
+#  include <windows.h>
 #endif
 
 #include <string.h>
@@ -36,9 +36,9 @@
  * what it should.
  */
 #if SIZEOF_SIZE_T > 4
-#define HIGH_SIZE_T_BYTES(sz) ((sz) >> 32)
+#  define HIGH_SIZE_T_BYTES(sz) ((sz) >> 32)
 #else
-#define HIGH_SIZE_T_BYTES(sz) (0)
+#  define HIGH_SIZE_T_BYTES(sz) (0)
 #endif
 
 /* Here we define a MINHERIT macro that is minherit() or madvise(), depending
@@ -49,37 +49,37 @@
  * FLAG_NOINHERIT to be that flag.
  */
 #if defined(HAVE_MINHERIT)
-#define MINHERIT minherit
+#  define MINHERIT minherit
 
-#ifdef INHERIT_ZERO
-#define FLAG_ZERO INHERIT_ZERO
-#elif defined(MAP_INHERIT_ZERO)
-#define FLAG_ZERO MAP_INHERIT_ZERO
-#endif
-#ifdef INHERIT_NONE
-#define FLAG_NOINHERIT INHERIT_NONE
-#elif defined(VM_INHERIT_NONE)
-#define FLAG_NOINHERIT VM_INHERIT_NONE
-#elif defined(MAP_INHERIT_NONE)
-#define FLAG_NOINHERIT MAP_INHERIT_NONE
-#endif /* defined(INHERIT_NONE) || ... */
+#  ifdef INHERIT_ZERO
+#    define FLAG_ZERO INHERIT_ZERO
+#  elif defined(MAP_INHERIT_ZERO)
+#    define FLAG_ZERO MAP_INHERIT_ZERO
+#  endif
+#  ifdef INHERIT_NONE
+#    define FLAG_NOINHERIT INHERIT_NONE
+#  elif defined(VM_INHERIT_NONE)
+#    define FLAG_NOINHERIT VM_INHERIT_NONE
+#  elif defined(MAP_INHERIT_NONE)
+#    define FLAG_NOINHERIT MAP_INHERIT_NONE
+#  endif /* defined(INHERIT_NONE) || ... */
 
 #elif defined(HAVE_MADVISE)
 
-#define MINHERIT madvise
+#  define MINHERIT madvise
 
-#ifdef MADV_WIPEONFORK
-#define FLAG_ZERO MADV_WIPEONFORK
-#endif
-#ifdef MADV_DONTFORK
-#define FLAG_NOINHERIT MADV_DONTFORK
-#endif
+#  ifdef MADV_WIPEONFORK
+#    define FLAG_ZERO MADV_WIPEONFORK
+#  endif
+#  ifdef MADV_DONTFORK
+#    define FLAG_NOINHERIT MADV_DONTFORK
+#  endif
 
 #endif /* defined(HAVE_MINHERIT) || ... */
 
-#if defined(HAVE_MINHERIT) && !defined(FLAG_ZERO) && !defined(FLAG_NOINHERIT)
-#warning "minherit() is defined, but we couldn't find the right flag for it."
-#warning "This is probably a bug in Tor's support for this platform."
+#if defined(HAVE_MINHERIT) && ! defined(FLAG_ZERO) && ! defined(FLAG_NOINHERIT)
+#  warning "minherit() is defined, but we couldn't find the right flag for it."
+#  warning "This is probably a bug in Tor's support for this platform."
 #endif
 
 /**
@@ -95,8 +95,8 @@ lock_mem(void *mem, size_t sz)
 #elif defined(HAVE_MLOCK)
   return mlock(mem, sz);
 #else
-  (void) mem;
-  (void) sz;
+  (void)mem;
+  (void)sz;
 
   return 0;
 #endif /* defined(_WIN32) || ... */
@@ -117,14 +117,13 @@ nodump_mem(void *mem, size_t sz)
   } else if (errno == ENOSYS || errno == EINVAL) {
     return 0; // syscall not supported, or flag not supported.
   } else {
-    tor_log_err_sigsafe("Unexpected error from madvise: ",
-                        strerror(errno),
+    tor_log_err_sigsafe("Unexpected error from madvise: ", strerror(errno),
                         NULL);
     return -1;
   }
 #else /* !defined(MADV_DONTDUMP) */
-  (void) mem;
-  (void) sz;
+  (void)mem;
+  (void)sz;
   return 0;
 #endif /* defined(MADV_DONTDUMP) */
 }
@@ -165,8 +164,7 @@ noinherit_mem(void *mem, size_t sz, inherit_res_t *inherit_result_out)
     /* Syscall not supported, or flag not supported. */
     return 0;
   } else {
-    tor_log_err_sigsafe("Unexpected error from minherit: ",
-                        strerror(errno),
+    tor_log_err_sigsafe("Unexpected error from minherit: ", strerror(errno),
                         NULL);
     return -1;
   }
@@ -204,30 +202,23 @@ tor_mmap_anonymous(size_t sz, unsigned flags,
                    inherit_res_t *inherit_result_out)
 {
   void *ptr;
-  inherit_res_t itmp=0;
+  inherit_res_t itmp = 0;
   if (inherit_result_out == NULL) {
     inherit_result_out = &itmp;
   }
   *inherit_result_out = INHERIT_RES_KEEP;
 
 #if defined(_WIN32)
-  HANDLE mapping = CreateFileMapping(INVALID_HANDLE_VALUE,
-                                     NULL, /*attributes*/
-                                     PAGE_READWRITE,
-                                     HIGH_SIZE_T_BYTES(sz),
-                                     sz & 0xffffffff,
-                                     NULL /* name */);
+  HANDLE mapping = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, /*attributes*/
+                                     PAGE_READWRITE, HIGH_SIZE_T_BYTES(sz),
+                                     sz & 0xffffffff, NULL /* name */);
   raw_assert(mapping != NULL);
-  ptr = MapViewOfFile(mapping, FILE_MAP_WRITE,
-                      0, 0, /* Offset */
+  ptr = MapViewOfFile(mapping, FILE_MAP_WRITE, 0, 0, /* Offset */
                       0 /* Extend to end of mapping */);
   raw_assert(ptr);
   CloseHandle(mapping); /* mapped view holds a reference */
 #elif defined(HAVE_SYS_MMAN_H)
-  ptr = mmap(NULL, sz,
-             PROT_READ|PROT_WRITE,
-             MAP_ANON|MAP_PRIVATE,
-             -1, 0);
+  ptr = mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
   raw_assert(ptr != MAP_FAILED);
   raw_assert(ptr != NULL);
 #else
@@ -256,7 +247,7 @@ tor_mmap_anonymous(size_t sz, unsigned flags,
 void
 tor_munmap_anonymous(void *mapping, size_t sz)
 {
-  if (!mapping)
+  if (! mapping)
     return;
 
 #if defined(_WIN32)

@@ -30,18 +30,15 @@
  *
  * (PRTime is based in microseconds since the Unix
  * epoch.) */
-#define PRTIME_PER_SEC (1000*1000)
-
-static tor_x509_cert_impl_t *tor_x509_cert_decode_internal(
-                      const uint8_t *certificate, int certificate_len);
+#define PRTIME_PER_SEC (1000 * 1000)
 
 static tor_x509_cert_impl_t *
-tor_tls_create_certificate_internal(crypto_pk_t *rsa,
-                                    crypto_pk_t *rsa_sign,
-                                    CERTName *subject_dn,
-                                    CERTName *issuer_dn,
-                                    time_t start_time,
-                                    time_t end_time)
+tor_x509_cert_decode_internal(const uint8_t *certificate, int certificate_len);
+
+static tor_x509_cert_impl_t *
+tor_tls_create_certificate_internal(crypto_pk_t *rsa, crypto_pk_t *rsa_sign,
+                                    CERTName *subject_dn, CERTName *issuer_dn,
+                                    time_t start_time, time_t end_time)
 {
   if (! crypto_pk_key_is_private(rsa_sign)) {
     return NULL;
@@ -55,8 +52,8 @@ tor_tls_create_certificate_internal(crypto_pk_t *rsa,
   CERTCertificateRequest *request = NULL;
   CERTValidity *validity = NULL;
   CERTCertificate *cert = NULL;
-  SECItem der = { .data = NULL, .len = 0 };
-  SECItem signed_der = { .data = NULL, .len = 0 };
+  SECItem der = {.data = NULL, .len = 0};
+  SECItem signed_der = {.data = NULL, .len = 0};
 
   CERTCertificate *result_cert = NULL;
 
@@ -70,26 +67,22 @@ tor_tls_create_certificate_internal(crypto_pk_t *rsa,
   }
 
   unsigned long serial_number;
-  crypto_rand((char*)&serial_number, sizeof(serial_number));
+  crypto_rand((char *)&serial_number, sizeof(serial_number));
 
   subject_spki = SECKEY_CreateSubjectPublicKeyInfo(subject_key);
-  if (!subject_spki)
+  if (! subject_spki)
     goto err;
 
   /* Make a CSR ... */
   // XXX do we need to set any attributes?
-  request = CERT_CreateCertificateRequest(subject_dn,
-                                          subject_spki,
+  request = CERT_CreateCertificateRequest(subject_dn, subject_spki,
                                           NULL /* attributes */);
-  if (!request)
+  if (! request)
     goto err;
 
   /* Put it into a certificate ... */
-  cert = CERT_CreateCertificate(serial_number,
-                                issuer_dn,
-                                validity,
-                                request);
-  if (!cert)
+  cert = CERT_CreateCertificate(serial_number, issuer_dn, validity, request);
+  if (! cert)
     goto err;
 
   /* version 3 cert */
@@ -100,8 +93,8 @@ tor_tls_create_certificate_internal(crypto_pk_t *rsa,
 
   /* Sign it. */
   KeyType privkey_type = SECKEY_GetPrivateKeyType(signing_key);
-  SECOidTag oid_tag = SEC_GetSignatureAlgorithmOidTag(privkey_type,
-                                                      SEC_OID_SHA256);
+  SECOidTag oid_tag =
+      SEC_GetSignatureAlgorithmOidTag(privkey_type, SEC_OID_SHA256);
   if (oid_tag == SEC_OID_UNKNOWN)
     goto err;
   s = SECOID_SetAlgorithmID(cert->arena, &cert->signature, oid_tag, NULL);
@@ -111,7 +104,7 @@ tor_tls_create_certificate_internal(crypto_pk_t *rsa,
   void *tmp;
   tmp = SEC_ASN1EncodeItem(cert->arena, &der, cert,
                            SEC_ASN1_GET(CERT_CertificateTemplate));
-  if (!tmp)
+  if (! tmp)
     goto err;
 
 #if 0
@@ -121,10 +114,8 @@ tor_tls_create_certificate_internal(crypto_pk_t *rsa,
                                      (SECKEYPrivateKey *)signing_key,//const
                                      &cert->signature);
 #else /* !(0) */
-  s = SEC_DerSignData(cert->arena,
-                      &signed_der,
-                      der.data, der.len,
-                      (SECKEYPrivateKey *)signing_key,//const
+  s = SEC_DerSignData(cert->arena, &signed_der, der.data, der.len,
+                      (SECKEYPrivateKey *)signing_key, // const
                       SEC_OID_PKCS1_SHA256_WITH_RSA_ENCRYPTION);
 #endif /* 0 */
 
@@ -139,15 +130,15 @@ tor_tls_create_certificate_internal(crypto_pk_t *rsa,
   {
     // Can we check the cert we just signed?
     tor_assert(result_cert);
-    SECKEYPublicKey *issuer_pk = (SECKEYPublicKey *)
-      crypto_pk_get_nss_pubkey(rsa_sign);
+    SECKEYPublicKey *issuer_pk =
+        (SECKEYPublicKey *)crypto_pk_get_nss_pubkey(rsa_sign);
     SECStatus cert_ok = CERT_VerifySignedDataWithPublicKey(
-                               &result_cert->signatureWrap, issuer_pk, NULL);
+        &result_cert->signatureWrap, issuer_pk, NULL);
     tor_assert(cert_ok == SECSuccess);
   }
 #endif /* 1 */
 
- err:
+err:
   if (subject_spki)
     SECKEY_DestroySubjectPublicKeyInfo(subject_spki);
   if (request)
@@ -156,8 +147,8 @@ tor_tls_create_certificate_internal(crypto_pk_t *rsa,
     CERT_DestroyValidity(validity);
 
   // unnecessary, since these are allocated in the cert's arena.
-  //SECITEM_FreeItem(&der, PR_FALSE);
-  //SECITEM_FreeItem(&signed_der, PR_FALSE);
+  // SECITEM_FreeItem(&der, PR_FALSE);
+  // SECITEM_FreeItem(&signed_der, PR_FALSE);
   if (cert)
     CERT_DestroyCertificate(cert);
 
@@ -165,11 +156,9 @@ tor_tls_create_certificate_internal(crypto_pk_t *rsa,
 }
 
 MOCK_IMPL(tor_x509_cert_impl_t *,
-tor_tls_create_certificate,(crypto_pk_t *rsa,
-                            crypto_pk_t *rsa_sign,
-                            const char *cname,
-                            const char *cname_sign,
-                            unsigned int cert_lifetime))
+tor_tls_create_certificate,
+          (crypto_pk_t * rsa, crypto_pk_t *rsa_sign, const char *cname,
+           const char *cname_sign, unsigned int cert_lifetime))
 {
   tor_assert(rsa);
   tor_assert(rsa_sign);
@@ -187,19 +176,15 @@ tor_tls_create_certificate,(crypto_pk_t *rsa,
 
   subject_dn = CERT_AsciiToName(cname_rfc_1485);
   issuer_dn = CERT_AsciiToName(cname_sign_rfc_1485);
-  if (!subject_dn || !issuer_dn)
+  if (! subject_dn || ! issuer_dn)
     goto err;
 
-  tor_tls_pick_certificate_lifetime(time(NULL), cert_lifetime,
-                                    &start_time, &end_time);
+  tor_tls_pick_certificate_lifetime(time(NULL), cert_lifetime, &start_time,
+                                    &end_time);
 
-  result = tor_tls_create_certificate_internal(rsa,
-                                               rsa_sign,
-                                               subject_dn,
-                                               issuer_dn,
-                                               start_time,
-                                               end_time);
- err:
+  result = tor_tls_create_certificate_internal(
+      rsa, rsa_sign, subject_dn, issuer_dn, start_time, end_time);
+err:
   tor_free(cname_rfc_1485);
   tor_free(cname_sign_rfc_1485);
   if (subject_dn)
@@ -213,8 +198,8 @@ tor_tls_create_certificate,(crypto_pk_t *rsa,
 /** Set *<b>encoded_out</b> and *<b>size_out</b> to <b>cert</b>'s encoded DER
  * representation and length, respectively. */
 void
-tor_x509_cert_get_der(const tor_x509_cert_t *cert,
-                 const uint8_t **encoded_out, size_t *size_out)
+tor_x509_cert_get_der(const tor_x509_cert_t *cert, const uint8_t **encoded_out,
+                      size_t *size_out)
 {
   tor_assert(cert);
   tor_assert(cert->cert);
@@ -244,33 +229,29 @@ tor_x509_cert_impl_dup_(tor_x509_cert_impl_t *cert)
 
 /**
  * As tor_x509_cert_decode, but return the NSS certificate type
-*/
+ */
 static tor_x509_cert_impl_t *
-tor_x509_cert_decode_internal(const uint8_t *certificate,
-                              int certificate_len)
+tor_x509_cert_decode_internal(const uint8_t *certificate, int certificate_len)
 {
   tor_assert(certificate);
   if (certificate_len > INT_MAX)
     return NULL;
 
-  SECItem der = { .type = siBuffer,
-                  .data = (unsigned char *)certificate,
-                  .len = certificate_len };
+  SECItem der = {.type = siBuffer,
+                 .data = (unsigned char *)certificate,
+                 .len = certificate_len};
   CERTCertDBHandle *certdb = CERT_GetDefaultCertDB();
   tor_assert(certdb);
-  return CERT_NewTempCertificate(certdb,
-                                 &der,
-                                 NULL /* nickname */,
+  return CERT_NewTempCertificate(certdb, &der, NULL /* nickname */,
                                  PR_FALSE, /* isPerm */
                                  PR_TRUE /* CopyDER */);
 }
 
 tor_x509_cert_t *
-tor_x509_cert_decode(const uint8_t *certificate,
-                     size_t certificate_len)
+tor_x509_cert_decode(const uint8_t *certificate, size_t certificate_len)
 {
-  CERTCertificate *cert = tor_x509_cert_decode_internal(certificate,
-                                                        (int)certificate_len);
+  CERTCertificate *cert =
+      tor_x509_cert_decode_internal(certificate, (int)certificate_len);
   if (! cert) {
     crypto_nss_log_errors(LOG_INFO, "decoding certificate");
     return NULL;
@@ -299,10 +280,8 @@ tor_tls_cert_get_key(tor_x509_cert_t *cert)
 }
 
 int
-tor_tls_cert_is_valid(int severity,
-                      const tor_x509_cert_t *cert,
-                      const tor_x509_cert_t *signing_cert,
-                      time_t now,
+tor_tls_cert_is_valid(int severity, const tor_x509_cert_t *cert,
+                      const tor_x509_cert_t *signing_cert, time_t now,
                       int check_rsa_1024)
 {
   int result = 0;
@@ -317,17 +296,15 @@ tor_tls_cert_is_valid(int severity,
     goto fail;
   }
 
-  SECStatus s = CERT_VerifySignedDataWithPublicKey(&cert->cert->signatureWrap,
-                                                   pk, NULL);
+  SECStatus s =
+      CERT_VerifySignedDataWithPublicKey(&cert->cert->signatureWrap, pk, NULL);
   if (s != SECSuccess) {
     log_fn(severity, LD_CRYPTO,
            "Invalid certificate: could not validate signature.");
     goto fail;
   }
 
-  if (tor_x509_check_cert_lifetime_internal(severity,
-                                            cert->cert,
-                                            now,
+  if (tor_x509_check_cert_lifetime_internal(severity, cert->cert, now,
                                             TOR_X509_PAST_SLOP,
                                             TOR_X509_FUTURE_SLOP) < 0)
     goto fail;
@@ -341,7 +318,7 @@ tor_tls_cert_is_valid(int severity,
     }
   } else {
     /* We require that this key is at least minimally strong. */
-    unsigned min_bits = (SECKEY_GetPublicKeyType(pk) == ecKey) ? 128: 1024;
+    unsigned min_bits = (SECKEY_GetPublicKeyType(pk) == ecKey) ? 128 : 1024;
     if (SECKEY_PublicKeyStrengthInBits(pk) < min_bits) {
       log_fn(severity, LD_CRYPTO, "Invalid certificate: Key is too weak.");
       goto fail;
@@ -351,26 +328,24 @@ tor_tls_cert_is_valid(int severity,
   /* The certificate is valid. */
   result = 1;
 
- fail:
+fail:
   if (pk)
     SECKEY_DestroyPublicKey(pk);
   return result;
 }
 
 static void
-log_cert_lifetime(int severity,
-                  const char *status,
-                  time_t now,
-                  PRTime notBefore,
-                  PRTime notAfter)
+log_cert_lifetime(int severity, const char *status, time_t now,
+                  PRTime notBefore, PRTime notAfter)
 {
   log_fn(severity, LD_GENERAL,
          "Certificate %s. Either their clock is set wrong, or your clock "
-         "is incorrect.", status);
+         "is incorrect.",
+         status);
 
-  char nowbuf[ISO_TIME_LEN+1];
-  char nbbuf[ISO_TIME_LEN+1];
-  char nabuf[ISO_TIME_LEN+1];
+  char nowbuf[ISO_TIME_LEN + 1];
+  char nbbuf[ISO_TIME_LEN + 1];
+  char nabuf[ISO_TIME_LEN + 1];
 
   format_iso_time(nowbuf, now);
   format_iso_time(nbbuf, notBefore / PRTIME_PER_SEC);
@@ -384,13 +359,12 @@ log_cert_lifetime(int severity,
 int
 tor_x509_check_cert_lifetime_internal(int severity,
                                       const tor_x509_cert_impl_t *cert,
-                                      time_t now,
-                                      int past_tolerance,
+                                      time_t now, int past_tolerance,
                                       int future_tolerance)
 {
   tor_assert(cert);
 
-  PRTime notBefore=0, notAfter=0;
+  PRTime notBefore = 0, notAfter = 0;
   int64_t t;
   SECStatus r = CERT_GetCertTimes(cert, &notBefore, &notAfter);
   if (r != SECSuccess) {
@@ -402,16 +376,14 @@ tor_x509_check_cert_lifetime_internal(int severity,
   t = ((int64_t)now) + future_tolerance;
   t *= PRTIME_PER_SEC;
   if (notBefore > t) {
-    log_cert_lifetime(severity, "not yet valid", now,
-                      notBefore, notAfter);
+    log_cert_lifetime(severity, "not yet valid", now, notBefore, notAfter);
     return -1;
   }
 
   t = ((int64_t)now) - past_tolerance;
   t *= PRTIME_PER_SEC;
   if (notAfter < t) {
-    log_cert_lifetime(severity, "already expired", now,
-                      notBefore, notAfter);
+    log_cert_lifetime(severity, "already expired", now, notBefore, notAfter);
     return -1;
   }
 
@@ -427,7 +399,7 @@ tor_x509_cert_replace_expiration(const tor_x509_cert_t *inp,
   tor_assert(inp);
   tor_assert(signing_key);
 
-  PRTime notBefore=0, notAfter=0;
+  PRTime notBefore = 0, notAfter = 0;
   SECStatus r = CERT_GetCertTimes(inp->cert, &notBefore, &notAfter);
   if (r != SECSuccess)
     return NULL;
@@ -439,17 +411,14 @@ tor_x509_cert_replace_expiration(const tor_x509_cert_t *inp,
   }
 
   crypto_pk_t *subject_key = tor_tls_cert_get_key((tor_x509_cert_t *)inp);
-  if (!subject_key)
+  if (! subject_key)
     return NULL;
 
   CERTCertificate *newcert;
 
-  newcert = tor_tls_create_certificate_internal(subject_key,
-                                                signing_key,
-                                                &inp->cert->subject,
-                                                &inp->cert->issuer,
-                                                start_time,
-                                                new_expiration_time);
+  newcert = tor_tls_create_certificate_internal(
+      subject_key, signing_key, &inp->cert->subject, &inp->cert->issuer,
+      start_time, new_expiration_time);
 
   crypto_pk_free(subject_key);
 

@@ -54,14 +54,14 @@ typedef struct onion_queue_head_t onion_queue_head_t;
 
 /** Array of queues of circuits waiting for CPU workers. An element is NULL
  * if that queue is empty.*/
-static onion_queue_head_t ol_list[MAX_ONION_HANDSHAKE_TYPE+1] =
-{ TOR_TAILQ_HEAD_INITIALIZER(ol_list[0]), /* tap */
-  TOR_TAILQ_HEAD_INITIALIZER(ol_list[1]), /* fast */
-  TOR_TAILQ_HEAD_INITIALIZER(ol_list[2]), /* ntor */
+static onion_queue_head_t ol_list[MAX_ONION_HANDSHAKE_TYPE + 1] = {
+    TOR_TAILQ_HEAD_INITIALIZER(ol_list[0]), /* tap */
+    TOR_TAILQ_HEAD_INITIALIZER(ol_list[1]), /* fast */
+    TOR_TAILQ_HEAD_INITIALIZER(ol_list[2]), /* ntor */
 };
 
 /** Number of entries of each type currently in each element of ol_list[]. */
-static int ol_entries[MAX_ONION_HANDSHAKE_TYPE+1];
+static int ol_entries[MAX_ONION_HANDSHAKE_TYPE + 1];
 
 static int num_ntors_per_tap(void);
 static void onion_queue_entry_remove(onion_queue_t *victim);
@@ -91,39 +91,45 @@ have_room_for_onionskin(uint16_t type)
    * onionskins in various combinations of the queues. */
 
   /* How long would it take to process all the TAP cells in the queue? */
-  tap_usec  = estimated_usec_for_onionskins(
-                                    ol_entries[ONION_HANDSHAKE_TYPE_TAP],
-                                    ONION_HANDSHAKE_TYPE_TAP) / num_cpus;
+  tap_usec =
+      estimated_usec_for_onionskins(ol_entries[ONION_HANDSHAKE_TYPE_TAP],
+                                    ONION_HANDSHAKE_TYPE_TAP) /
+      num_cpus;
 
   /* How long would it take to process all the NTor cells in the queue? */
-  ntor_usec = estimated_usec_for_onionskins(
-                                    ol_entries[ONION_HANDSHAKE_TYPE_NTOR],
-                                    ONION_HANDSHAKE_TYPE_NTOR) / num_cpus;
+  ntor_usec =
+      estimated_usec_for_onionskins(ol_entries[ONION_HANDSHAKE_TYPE_NTOR],
+                                    ONION_HANDSHAKE_TYPE_NTOR) /
+      num_cpus;
 
   /* How long would it take to process the tap cells that we expect to
    * process while draining the ntor queue? */
-  tap_during_ntor_usec  = estimated_usec_for_onionskins(
-    MIN(ol_entries[ONION_HANDSHAKE_TYPE_TAP],
-        ol_entries[ONION_HANDSHAKE_TYPE_NTOR] / num_ntors_per_tap()),
-                                    ONION_HANDSHAKE_TYPE_TAP) / num_cpus;
+  tap_during_ntor_usec =
+      estimated_usec_for_onionskins(
+          MIN(ol_entries[ONION_HANDSHAKE_TYPE_TAP],
+              ol_entries[ONION_HANDSHAKE_TYPE_NTOR] / num_ntors_per_tap()),
+          ONION_HANDSHAKE_TYPE_TAP) /
+      num_cpus;
 
   /* How long would it take to process the ntor cells that we expect to
    * process while draining the tap queue? */
-  ntor_during_tap_usec  = estimated_usec_for_onionskins(
-    MIN(ol_entries[ONION_HANDSHAKE_TYPE_NTOR],
-        ol_entries[ONION_HANDSHAKE_TYPE_TAP] * num_ntors_per_tap()),
-                                    ONION_HANDSHAKE_TYPE_NTOR) / num_cpus;
+  ntor_during_tap_usec =
+      estimated_usec_for_onionskins(
+          MIN(ol_entries[ONION_HANDSHAKE_TYPE_NTOR],
+              ol_entries[ONION_HANDSHAKE_TYPE_TAP] * num_ntors_per_tap()),
+          ONION_HANDSHAKE_TYPE_NTOR) /
+      num_cpus;
 
   /* See whether that exceeds MaxOnionQueueDelay. If so, we can't queue
    * this. */
   if (type == ONION_HANDSHAKE_TYPE_NTOR &&
       (ntor_usec + tap_during_ntor_usec) / 1000 >
-       (uint64_t)options->MaxOnionQueueDelay)
+          (uint64_t)options->MaxOnionQueueDelay)
     return 0;
 
   if (type == ONION_HANDSHAKE_TYPE_TAP &&
       (tap_usec + ntor_during_tap_usec) / 1000 >
-       (uint64_t)options->MaxOnionQueueDelay)
+          (uint64_t)options->MaxOnionQueueDelay)
     return 0;
 
   /* If we support the ntor handshake, then don't let TAP handshakes use
@@ -159,10 +165,10 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
   tmp->onionskin = onionskin;
   tmp->when_added = now;
 
-  if (!have_room_for_onionskin(onionskin->handshake_type)) {
+  if (! have_room_for_onionskin(onionskin->handshake_type)) {
 #define WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL (60)
     static ratelim_t last_warned =
-      RATELIM_INIT(WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL);
+        RATELIM_INIT(WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL);
     char *m;
     if (onionskin->handshake_type == ONION_HANDSHAKE_TYPE_NTOR &&
         (m = rate_limit_log(&last_warned, approx_time()))) {
@@ -170,7 +176,8 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
                "Your computer is too slow to handle this many circuit "
                "creation requests! Please consider using the "
                "MaxAdvertisedBandwidth config option or choosing a more "
-               "restricted exit policy.%s",m);
+               "restricted exit policy.%s",
+               m);
       tor_free(m);
     }
     tor_free(tmp);
@@ -179,9 +186,10 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
 
   ++ol_entries[onionskin->handshake_type];
   log_info(LD_OR, "New create (%s). Queues now ntor=%d and tap=%d.",
-    onionskin->handshake_type == ONION_HANDSHAKE_TYPE_NTOR ? "ntor" : "tap",
-    ol_entries[ONION_HANDSHAKE_TYPE_NTOR],
-    ol_entries[ONION_HANDSHAKE_TYPE_TAP]);
+           onionskin->handshake_type == ONION_HANDSHAKE_TYPE_NTOR ? "ntor"
+                                                                  : "tap",
+           ol_entries[ONION_HANDSHAKE_TYPE_NTOR],
+           ol_entries[ONION_HANDSHAKE_TYPE_TAP]);
 
   circ->onionqueue_entry = tmp;
   TOR_TAILQ_INSERT_TAIL(&ol_list[onionskin->handshake_type], tmp, next);
@@ -214,10 +222,9 @@ num_ntors_per_tap(void)
 #define MIN_NUM_NTORS_PER_TAP 1
 #define MAX_NUM_NTORS_PER_TAP 100000
 
-  int result = networkstatus_get_param(NULL, "NumNTorsPerTAP",
-                                       DEFAULT_NUM_NTORS_PER_TAP,
-                                       MIN_NUM_NTORS_PER_TAP,
-                                       MAX_NUM_NTORS_PER_TAP);
+  int result = networkstatus_get_param(
+      NULL, "NumNTorsPerTAP", DEFAULT_NUM_NTORS_PER_TAP, MIN_NUM_NTORS_PER_TAP,
+      MAX_NUM_NTORS_PER_TAP);
   tor_assert(result > 0);
   return result;
 }
@@ -231,11 +238,10 @@ decide_next_handshake_type(void)
   /* The number of times we've chosen ntor lately when both were available. */
   static int recently_chosen_ntors = 0;
 
-  if (!ol_entries[ONION_HANDSHAKE_TYPE_NTOR])
+  if (! ol_entries[ONION_HANDSHAKE_TYPE_NTOR])
     return ONION_HANDSHAKE_TYPE_TAP; /* no ntors? try tap */
 
-  if (!ol_entries[ONION_HANDSHAKE_TYPE_TAP]) {
-
+  if (! ol_entries[ONION_HANDSHAKE_TYPE_TAP]) {
     /* Nick wants us to prioritize new tap requests when there aren't
      * any in the queue and we've processed k ntor cells since the last
      * tap cell. This strategy is maybe a good idea, since it starves tap
@@ -272,21 +278,21 @@ onion_next_task(create_cell_t **onionskin_out)
   uint16_t handshake_to_choose = decide_next_handshake_type();
   onion_queue_t *head = TOR_TAILQ_FIRST(&ol_list[handshake_to_choose]);
 
-  if (!head)
+  if (! head)
     return NULL; /* no onions pending, we're done */
 
   tor_assert(head->circ);
   tor_assert(head->handshake_type <= MAX_ONION_HANDSHAKE_TYPE);
-//  tor_assert(head->circ->p_chan); /* make sure it's still valid */
-/* XXX I only commented out the above line to make the unit tests
- * more manageable. That's probably not good long-term. -RD */
+  //  tor_assert(head->circ->p_chan); /* make sure it's still valid */
+  /* XXX I only commented out the above line to make the unit tests
+   * more manageable. That's probably not good long-term. -RD */
   circ = head->circ;
   if (head->onionskin)
     --ol_entries[head->handshake_type];
   log_info(LD_OR, "Processing create (%s). Queues now ntor=%d and tap=%d.",
-    head->handshake_type == ONION_HANDSHAKE_TYPE_NTOR ? "ntor" : "tap",
-    ol_entries[ONION_HANDSHAKE_TYPE_NTOR],
-    ol_entries[ONION_HANDSHAKE_TYPE_TAP]);
+           head->handshake_type == ONION_HANDSHAKE_TYPE_NTOR ? "ntor" : "tap",
+           ol_entries[ONION_HANDSHAKE_TYPE_NTOR],
+           ol_entries[ONION_HANDSHAKE_TYPE_TAP]);
 
   *onionskin_out = head->onionskin;
   head->onionskin = NULL; /* prevent free. */
@@ -311,7 +317,7 @@ onion_pending_remove(or_circuit_t *circ)
 {
   onion_queue_t *victim;
 
-  if (!circ)
+  if (! circ)
     return;
 
   victim = circ->onionqueue_entry;
@@ -354,9 +360,9 @@ clear_pending_onions(void)
 {
   onion_queue_t *victim, *next;
   int i;
-  for (i=0; i<=MAX_ONION_HANDSHAKE_TYPE; i++) {
+  for (i = 0; i <= MAX_ONION_HANDSHAKE_TYPE; i++) {
     for (victim = TOR_TAILQ_FIRST(&ol_list[i]); victim; victim = next) {
-      next = TOR_TAILQ_NEXT(victim,next);
+      next = TOR_TAILQ_NEXT(victim, next);
       onion_queue_entry_remove(victim);
     }
     tor_assert(TOR_TAILQ_EMPTY(&ol_list[i]));

@@ -73,36 +73,36 @@ clear_options(void)
 }
 
 static int32_t
-mock_vanilla_networkstatus_get_param(
-    const networkstatus_t *ns, const char *param_name, int32_t default_val,
-    int32_t min_val, int32_t max_val)
+mock_vanilla_networkstatus_get_param(const networkstatus_t *ns,
+                                     const char *param_name,
+                                     int32_t default_val, int32_t min_val,
+                                     int32_t max_val)
 {
   (void)ns;
   (void)default_val;
   (void)min_val;
   (void)max_val;
   // only support KISTSchedRunInterval right now
-  tor_assert(strcmp(param_name, "KISTSchedRunInterval")==0);
+  tor_assert(strcmp(param_name, "KISTSchedRunInterval") == 0);
   return 0;
 }
 
 static int32_t
-mock_kist_networkstatus_get_param(
-    const networkstatus_t *ns, const char *param_name, int32_t default_val,
-    int32_t min_val, int32_t max_val)
+mock_kist_networkstatus_get_param(const networkstatus_t *ns,
+                                  const char *param_name, int32_t default_val,
+                                  int32_t min_val, int32_t max_val)
 {
   (void)ns;
   (void)default_val;
   (void)min_val;
   (void)max_val;
   // only support KISTSchedRunInterval right now
-  tor_assert(strcmp(param_name, "KISTSchedRunInterval")==0);
+  tor_assert(strcmp(param_name, "KISTSchedRunInterval") == 0);
   return 12;
 }
 
 static int
-scheduler_compare_channels_mock(const void *c1_v,
-                                const void *c2_v)
+scheduler_compare_channels_mock(const void *c1_v, const void *c2_v)
 {
   uintptr_t p1, p2;
 
@@ -111,9 +111,12 @@ scheduler_compare_channels_mock(const void *c1_v,
 
   ++scheduler_compare_channels_mock_ctr;
 
-  if (p1 == p2) return 0;
-  else if (p1 < p2) return 1;
-  else return -1;
+  if (p1 == p2)
+    return 0;
+  else if (p1 < p2)
+    return 1;
+  else
+    return -1;
 }
 
 static void
@@ -136,18 +139,20 @@ circuitmux_get_policy_mock(circuitmux_t *cmux)
 
   tt_assert(cmux != NULL);
   if (cmux) {
-    if (cmux == mock_cgp_tgt_1) result = mock_cgp_val_1;
-    else if (cmux == mock_cgp_tgt_2) result = mock_cgp_val_2;
-    else result = circuitmux_get_policy__real(cmux);
+    if (cmux == mock_cgp_tgt_1)
+      result = mock_cgp_val_1;
+    else if (cmux == mock_cgp_tgt_2)
+      result = mock_cgp_val_2;
+    else
+      result = circuitmux_get_policy__real(cmux);
   }
 
- done:
+done:
   return result;
 }
 
 static int
-circuitmux_compare_muxes_mock(circuitmux_t *cmux_1,
-                              circuitmux_t *cmux_2)
+circuitmux_compare_muxes_mock(circuitmux_t *cmux_1, circuitmux_t *cmux_2)
 {
   int result = 0;
 
@@ -155,11 +160,13 @@ circuitmux_compare_muxes_mock(circuitmux_t *cmux_1,
   tt_assert(cmux_2 != NULL);
 
   if (cmux_1 != cmux_2) {
-    if (cmux_1 == mock_ccm_tgt_1 && cmux_2 == mock_ccm_tgt_2) result = -1;
+    if (cmux_1 == mock_ccm_tgt_1 && cmux_2 == mock_ccm_tgt_2)
+      result = -1;
     else if (cmux_1 == mock_ccm_tgt_2 && cmux_2 == mock_ccm_tgt_1) {
       result = 1;
     } else {
-      if (cmux_1 == mock_ccm_tgt_1 || cmux_1 == mock_ccm_tgt_2) result = -1;
+      if (cmux_1 == mock_ccm_tgt_1 || cmux_1 == mock_ccm_tgt_2)
+        result = -1;
       else if (cmux_2 == mock_ccm_tgt_1 || cmux_2 == mock_ccm_tgt_2) {
         result = 1;
       } else {
@@ -169,7 +176,7 @@ circuitmux_compare_muxes_mock(circuitmux_t *cmux_1,
   }
   /* else result = 0 always */
 
- done:
+done:
   return result;
 }
 
@@ -184,12 +191,11 @@ static void
 channel_flush_some_cells_mock_free_all(void)
 {
   if (chans_for_flush_mock) {
-    SMARTLIST_FOREACH_BEGIN(chans_for_flush_mock,
-                            flush_mock_channel_t *,
-                            flush_mock_ch) {
+    SMARTLIST_FOREACH_BEGIN (chans_for_flush_mock, flush_mock_channel_t *,
+                             flush_mock_ch) {
       SMARTLIST_DEL_CURRENT(chans_for_flush_mock, flush_mock_ch);
       tor_free(flush_mock_ch);
-    } SMARTLIST_FOREACH_END(flush_mock_ch);
+    } SMARTLIST_FOREACH_END (flush_mock_ch);
 
     smartlist_free(chans_for_flush_mock);
     chans_for_flush_mock = NULL;
@@ -201,16 +207,17 @@ channel_flush_some_cells_mock_set(channel_t *chan, ssize_t num_cells)
 {
   int found = 0;
 
-  if (!chan) return;
-  if (num_cells <= 0) return;
+  if (! chan)
+    return;
+  if (num_cells <= 0)
+    return;
 
-  if (!chans_for_flush_mock) {
+  if (! chans_for_flush_mock) {
     chans_for_flush_mock = smartlist_new();
   }
 
-  SMARTLIST_FOREACH_BEGIN(chans_for_flush_mock,
-                          flush_mock_channel_t *,
-                          flush_mock_ch) {
+  SMARTLIST_FOREACH_BEGIN (chans_for_flush_mock, flush_mock_channel_t *,
+                           flush_mock_ch) {
     if (flush_mock_ch != NULL && flush_mock_ch->chan != NULL) {
       if (flush_mock_ch->chan == chan) {
         /* Found it */
@@ -223,7 +230,7 @@ channel_flush_some_cells_mock_set(channel_t *chan, ssize_t num_cells)
       SMARTLIST_DEL_CURRENT(chans_for_flush_mock, flush_mock_ch);
       tor_free(flush_mock_ch);
     }
-  } SMARTLIST_FOREACH_END(flush_mock_ch);
+  } SMARTLIST_FOREACH_END (flush_mock_ch);
 
   if (! found) {
     /* The loop didn't find it */
@@ -242,9 +249,8 @@ channel_more_to_flush_mock(channel_t *chan)
 
   flush_mock_channel_t *found_mock_ch = NULL;
 
-  SMARTLIST_FOREACH_BEGIN(chans_for_flush_mock,
-                          flush_mock_channel_t *,
-                          flush_mock_ch) {
+  SMARTLIST_FOREACH_BEGIN (chans_for_flush_mock, flush_mock_channel_t *,
+                           flush_mock_ch) {
     if (flush_mock_ch != NULL && flush_mock_ch->chan != NULL) {
       if (flush_mock_ch->chan == chan) {
         /* Found it */
@@ -256,21 +262,21 @@ channel_more_to_flush_mock(channel_t *chan)
       SMARTLIST_DEL_CURRENT(chans_for_flush_mock, flush_mock_ch);
       tor_free(flush_mock_ch);
     }
-  } SMARTLIST_FOREACH_END(flush_mock_ch);
+  } SMARTLIST_FOREACH_END (flush_mock_ch);
 
   tor_assert(found_mock_ch);
 
   /* Check if any circuits would like to queue some */
   /* special for the mock: return the number of cells (instead of 1), or zero
    * if nothing to flush */
-  return (found_mock_ch->cells > 0 ? (int)found_mock_ch->cells : 0 );
+  return (found_mock_ch->cells > 0 ? (int)found_mock_ch->cells : 0);
 }
 
 static void
 channel_write_to_kernel_mock(channel_t *chan)
 {
   (void)chan;
-  //log_debug(LD_SCHED, "chan=%d writing to kernel",
+  // log_debug(LD_SCHED, "chan=%d writing to kernel",
   //    (int)chan->global_identifier);
 }
 
@@ -282,14 +288,14 @@ channel_should_write_to_kernel_mock(outbuf_table_t *ot, channel_t *chan)
   return 1;
   /* We could make this more complicated if we wanted. But I don't think doing
    * so tests much of anything */
-  //static int called_counter = 0;
-  //if (++called_counter >= 3) {
+  // static int called_counter = 0;
+  // if (++called_counter >= 3) {
   //  called_counter -= 3;
   //  log_debug(LD_SCHED, "chan=%d should write to kernel",
   //      (int)chan->global_identifier);
   //  return 1;
   //}
-  //return 0;
+  // return 0;
 }
 
 static ssize_t
@@ -308,9 +314,8 @@ channel_flush_some_cells_mock(channel_t *chan, ssize_t num_cells)
 
     /* Check if we have it */
     if (chans_for_flush_mock != NULL) {
-      SMARTLIST_FOREACH_BEGIN(chans_for_flush_mock,
-                              flush_mock_channel_t *,
-                              flush_mock_ch) {
+      SMARTLIST_FOREACH_BEGIN (chans_for_flush_mock, flush_mock_channel_t *,
+                               flush_mock_ch) {
         if (flush_mock_ch != NULL && flush_mock_ch->chan != NULL) {
           if (flush_mock_ch->chan == chan) {
             /* Found it */
@@ -322,14 +327,17 @@ channel_flush_some_cells_mock(channel_t *chan, ssize_t num_cells)
           SMARTLIST_DEL_CURRENT(chans_for_flush_mock, flush_mock_ch);
           tor_free(flush_mock_ch);
         }
-      } SMARTLIST_FOREACH_END(flush_mock_ch);
+      } SMARTLIST_FOREACH_END (flush_mock_ch);
 
       if (found) {
         /* We found one */
-        if (found->cells < 0) found->cells = 0;
+        if (found->cells < 0)
+          found->cells = 0;
 
-        if (unlimited) max = found->cells;
-        else max = MIN(found->cells, num_cells);
+        if (unlimited)
+          max = found->cells;
+        else
+          max = MIN(found->cells, num_cells);
 
         flushed += max;
         found->cells -= max;
@@ -337,7 +345,7 @@ channel_flush_some_cells_mock(channel_t *chan, ssize_t num_cells)
     }
   }
 
- done:
+done:
   return flushed;
 }
 
@@ -371,7 +379,7 @@ perform_channel_state_tests(int KISTSchedRunInterval, int sched_type)
    * Disable scheduler_run so we can just check the state transitions
    * without having to make everything it might call work too.
    */
-  ((scheduler_t *) the_scheduler)->run = scheduler_run_noop_mock;
+  ((scheduler_t *)the_scheduler)->run = scheduler_run_noop_mock;
 
   tt_int_op(smartlist_len(channels_pending), OP_EQ, 0);
 
@@ -465,7 +473,7 @@ perform_channel_state_tests(int KISTSchedRunInterval, int sched_type)
   channel_free_all();
   scheduler_free_all();
 
- done:
+done:
   tor_free(ch1);
   tor_free(ch2);
 
@@ -504,7 +512,7 @@ test_scheduler_compare_channels(void *arg)
    */
   mock_cgp_val_1 = tor_malloc_zero(16);
   mock_cgp_val_2 = tor_malloc_zero(16);
-  if ( ((uintptr_t) mock_cgp_val_1) > ((uintptr_t) mock_cgp_val_2) ) {
+  if (((uintptr_t)mock_cgp_val_1) > ((uintptr_t)mock_cgp_val_2)) {
     void *tmp = mock_cgp_val_1;
     mock_cgp_val_1 = mock_cgp_val_2;
     mock_cgp_val_2 = tmp;
@@ -535,7 +543,7 @@ test_scheduler_compare_channels(void *arg)
   result = scheduler_compare_channels(&c2, &c1);
   tt_int_op(result, OP_EQ, 1);
 
- done:
+done:
 
   UNMOCK(circuitmux_compare_muxes);
   mock_ccm_tgt_1 = NULL;
@@ -586,7 +594,7 @@ test_scheduler_loop_vanilla(void *arg)
    * without having to make everything it might call work too.
    */
   run_func_ptr = the_scheduler->run;
-  ((scheduler_t *) the_scheduler)->run = scheduler_run_noop_mock;
+  ((scheduler_t *)the_scheduler)->run = scheduler_run_noop_mock;
 
   tt_int_op(smartlist_len(channels_pending), OP_EQ, 0);
 
@@ -723,7 +731,7 @@ test_scheduler_loop_vanilla(void *arg)
   channel_free_all();
   scheduler_free_all();
 
- done:
+done:
   tor_free(ch1);
   tor_free(ch2);
   cleanup_scheduler_options();
@@ -736,7 +744,7 @@ test_scheduler_loop_vanilla(void *arg)
 static void
 test_scheduler_loop_kist(void *arg)
 {
-  (void) arg;
+  (void)arg;
 
 #ifndef HAVE_KIST_SUPPORT
   return;
@@ -815,7 +823,7 @@ test_scheduler_loop_kist(void *arg)
   tt_int_op(ch3->scheduler_state, OP_EQ, SCHED_CHAN_IDLE);
   tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 0);
 
- done:
+done:
   /* Prep the channel so the free() function doesn't explode. */
   ch1->state = ch2->state = ch3->state = CHANNEL_STATE_CLOSED;
   ch1->registered = ch2->registered = ch3->registered = 0;
@@ -870,7 +878,7 @@ test_scheduler_initfree(void *arg)
   tt_ptr_op(channels_pending, OP_EQ, NULL);
   tt_ptr_op(run_sched_ev, OP_EQ, NULL);
 
- done:
+done:
   UNMOCK(get_options);
   cleanup_scheduler_options();
   return;
@@ -932,7 +940,7 @@ test_scheduler_can_use_kist(void *arg)
   tt_int_op(res_freq, OP_EQ, 0);
   UNMOCK(networkstatus_get_param);
 
- done:
+done:
   UNMOCK(get_options);
   return;
 }
@@ -940,7 +948,7 @@ test_scheduler_can_use_kist(void *arg)
 static void
 test_scheduler_ns_changed(void *arg)
 {
-  (void) arg;
+  (void)arg;
 
   /*
    * Currently no scheduler implementations use the old/new consensuses passed
@@ -994,7 +1002,7 @@ test_scheduler_ns_changed(void *arg)
   UNMOCK(networkstatus_get_param);
   tt_ptr_op(the_scheduler, OP_EQ, get_vanilla_scheduler());
 
- done:
+done:
   UNMOCK(get_options);
   cleanup_scheduler_options();
   return;
@@ -1011,8 +1019,8 @@ static int mock_update_socket_info_limit = 0;
 static ssize_t
 channel_flush_some_cells_mock_var(channel_t *chan, ssize_t num_cells)
 {
-  (void) chan;
-  (void) num_cells;
+  (void)chan;
+  (void)num_cells;
   return mock_flush_some_cells_num;
 }
 
@@ -1031,14 +1039,14 @@ channel_write_to_kernel_mock_trigger_24700(channel_t *chan)
 
   scheduler_channel_wants_writes(chan);
 
- done:
+done:
   return;
 }
 
 static int
 channel_more_to_flush_mock_var(channel_t *chan)
 {
-  (void) chan;
+  (void)chan;
   return mock_more_to_flush;
 }
 
@@ -1052,7 +1060,7 @@ update_socket_info_impl_mock_var(socket_table_ent_t *ent)
 static void
 test_scheduler_kist_pending_list(void *arg)
 {
-  (void) arg;
+  (void)arg;
 
 #ifndef HAVE_KIST_SUPPORT
   return;
@@ -1250,7 +1258,7 @@ test_scheduler_kist_pending_list(void *arg)
   tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_PENDING);
   tt_int_op(chan2->scheduler_state, OP_EQ, SCHED_CHAN_PENDING);
 
- done:
+done:
   chan1->state = chan2->state = CHANNEL_STATE_CLOSED;
   chan1->registered = chan2->registered = 0;
   channel_free(chan1);
@@ -1266,16 +1274,13 @@ test_scheduler_kist_pending_list(void *arg)
 }
 
 struct testcase_t scheduler_tests[] = {
-  { "compare_channels", test_scheduler_compare_channels,
-    TT_FORK, NULL, NULL },
-  { "channel_states", test_scheduler_channel_states, TT_FORK, NULL, NULL },
-  { "initfree", test_scheduler_initfree, TT_FORK, NULL, NULL },
-  { "loop_vanilla", test_scheduler_loop_vanilla, TT_FORK, NULL, NULL },
-  { "loop_kist", test_scheduler_loop_kist, TT_FORK, NULL, NULL },
-  { "ns_changed", test_scheduler_ns_changed, TT_FORK, NULL, NULL},
-  { "should_use_kist", test_scheduler_can_use_kist, TT_FORK, NULL, NULL },
-  { "kist_pending_list", test_scheduler_kist_pending_list, TT_FORK,
-    NULL, NULL },
-  END_OF_TESTCASES
-};
-
+    {"compare_channels", test_scheduler_compare_channels, TT_FORK, NULL, NULL},
+    {"channel_states", test_scheduler_channel_states, TT_FORK, NULL, NULL},
+    {"initfree", test_scheduler_initfree, TT_FORK, NULL, NULL},
+    {"loop_vanilla", test_scheduler_loop_vanilla, TT_FORK, NULL, NULL},
+    {"loop_kist", test_scheduler_loop_kist, TT_FORK, NULL, NULL},
+    {"ns_changed", test_scheduler_ns_changed, TT_FORK, NULL, NULL},
+    {"should_use_kist", test_scheduler_can_use_kist, TT_FORK, NULL, NULL},
+    {"kist_pending_list", test_scheduler_kist_pending_list, TT_FORK, NULL,
+     NULL},
+    END_OF_TESTCASES};

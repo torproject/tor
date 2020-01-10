@@ -16,7 +16,7 @@
 #include "lib/log/log.h"
 
 #ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
+#  include <sys/socket.h>
 #endif
 
 struct listener_connection_t;
@@ -106,8 +106,7 @@ struct buf_t;
  * by new connection described by port configuration. Only used when
  * moving listeners to/from wildcard IP address.
  */
-typedef struct
-{
+typedef struct {
   struct connection_t *old_conn; /* Old listener connection to be replaced */
   const struct port_cfg_t *new_port; /* New port configuration */
 } listener_replacement_t;
@@ -124,20 +123,21 @@ struct control_connection_t *control_connection_new(int socket_family);
 struct listener_connection_t *listener_connection_new(int type,
                                                       int socket_family);
 struct connection_t *connection_new(int type, int socket_family);
-int connection_init_accepted_conn(struct connection_t *conn,
-                                const struct listener_connection_t *listener);
+int
+connection_init_accepted_conn(struct connection_t *conn,
+                              const struct listener_connection_t *listener);
 void connection_link_connections(struct connection_t *conn_a,
                                  struct connection_t *conn_b);
-MOCK_DECL(void,connection_free_,(struct connection_t *conn));
+MOCK_DECL(void, connection_free_, (struct connection_t * conn));
 #define connection_free(conn) \
   FREE_AND_NULL(struct connection_t, connection_free_, (conn))
 void connection_free_all(void);
 void connection_about_to_close_connection(struct connection_t *conn);
 void connection_close_immediate(struct connection_t *conn);
-void connection_mark_for_close_(struct connection_t *conn,
-                                int line, const char *file);
+void connection_mark_for_close_(struct connection_t *conn, int line,
+                                const char *file);
 MOCK_DECL(void, connection_mark_for_close_internal_,
-          (struct connection_t *conn, int line, const char *file));
+          (struct connection_t * conn, int line, const char *file));
 
 #define connection_mark_for_close(c) \
   connection_mark_for_close_((c), __LINE__, SHORT_FILE__)
@@ -154,41 +154,41 @@ MOCK_DECL(void, connection_mark_for_close_internal_,
  * For all other cases, use connection_mark_and_flush() instead, which
  * checks for struct or_connection_t properly, instead.  See below.
  */
-#define connection_mark_and_flush_internal_(c,line,file)                \
-  do {                                                                  \
-    struct connection_t *tmp_conn__ = (c);                              \
-    connection_mark_for_close_internal_(tmp_conn__, (line), (file));    \
-    tmp_conn__->hold_open_until_flushed = 1;                            \
+#define connection_mark_and_flush_internal_(c, line, file)           \
+  do {                                                               \
+    struct connection_t *tmp_conn__ = (c);                           \
+    connection_mark_for_close_internal_(tmp_conn__, (line), (file)); \
+    tmp_conn__->hold_open_until_flushed = 1;                         \
   } while (0)
 
-#define connection_mark_and_flush_internal(c)            \
+#define connection_mark_and_flush_internal(c) \
   connection_mark_and_flush_internal_((c), __LINE__, SHORT_FILE__)
 
 /**
  * Mark 'c' for close, but try to hold it open until all the data is written.
  */
-#define connection_mark_and_flush_(c,line,file)                           \
-  do {                                                                    \
-    struct connection_t *tmp_conn_ = (c);                                 \
-    if (tmp_conn_->type == CONN_TYPE_OR) {                                \
-      log_warn(LD_CHANNEL | LD_BUG,                                       \
-               "Something tried to close (and flush) an or_connection_t"  \
-               " without going through channels at %s:%d",                \
-               file, line);                                               \
-      connection_or_close_for_error(TO_OR_CONN(tmp_conn_), 1);            \
-    } else {                                                              \
-      connection_mark_and_flush_internal_(c, line, file);                 \
-    }                                                                     \
+#define connection_mark_and_flush_(c, line, file)                        \
+  do {                                                                   \
+    struct connection_t *tmp_conn_ = (c);                                \
+    if (tmp_conn_->type == CONN_TYPE_OR) {                               \
+      log_warn(LD_CHANNEL | LD_BUG,                                      \
+               "Something tried to close (and flush) an or_connection_t" \
+               " without going through channels at %s:%d",               \
+               file, line);                                              \
+      connection_or_close_for_error(TO_OR_CONN(tmp_conn_), 1);           \
+    } else {                                                             \
+      connection_mark_and_flush_internal_(c, line, file);                \
+    }                                                                    \
   } while (0)
 
-#define connection_mark_and_flush(c)            \
+#define connection_mark_and_flush(c) \
   connection_mark_and_flush_((c), __LINE__, SHORT_FILE__)
 
 void connection_expire_held_open(void);
 
 int connection_connect(struct connection_t *conn, const char *address,
-                       const struct tor_addr_t *addr,
-                       uint16_t port, int *socket_error);
+                       const struct tor_addr_t *addr, uint16_t port,
+                       int *socket_error);
 
 #ifdef HAVE_SYS_UN_H
 
@@ -203,14 +203,14 @@ int connection_connect_unix(struct connection_t *conn, const char *socket_path,
 
 /** Total maximum size of information that we can fit into SOCKS5
     username and password fields. */
-#define MAX_SOCKS5_AUTH_SIZE_TOTAL 2*MAX_SOCKS5_AUTH_FIELD_SIZE
+#define MAX_SOCKS5_AUTH_SIZE_TOTAL 2 * MAX_SOCKS5_AUTH_FIELD_SIZE
 
 int connection_proxy_connect(struct connection_t *conn, int type);
 int connection_read_proxy_handshake(struct connection_t *conn);
 void log_failed_proxy_connection(struct connection_t *conn);
 int get_proxy_addrport(struct tor_addr_t *addr, uint16_t *port,
-                       int *proxy_type,
-                       int *is_pt_out, const struct connection_t *conn);
+                       int *proxy_type, int *is_pt_out,
+                       const struct connection_t *conn);
 
 int retry_all_listeners(struct smartlist_t *new_conns,
                         int close_all_noncontrol);
@@ -219,12 +219,11 @@ void connection_mark_all_noncontrol_listeners(void);
 void connection_mark_all_noncontrol_connections(void);
 
 ssize_t connection_bucket_write_limit(struct connection_t *conn, time_t now);
-int global_write_bucket_low(struct connection_t *conn,
-                            size_t attempt, int priority);
+int global_write_bucket_low(struct connection_t *conn, size_t attempt,
+                            int priority);
 void connection_bucket_init(void);
 void connection_bucket_adjust(const struct or_options_t *options);
-void connection_bucket_refill_all(time_t now,
-                                  uint32_t now_ts);
+void connection_bucket_refill_all(time_t now, uint32_t now_ts);
 void connection_read_bw_exhausted(struct connection_t *conn,
                                   bool is_global_bw);
 void connection_write_bw_exhausted(struct connection_t *conn,
@@ -239,9 +238,9 @@ int connection_buf_get_bytes(char *string, size_t len,
 int connection_buf_get_line(struct connection_t *conn, char *data,
                             size_t *data_len);
 int connection_fetch_from_buf_http(struct connection_t *conn,
-                               char **headers_out, size_t max_headerlen,
-                               char **body_out, size_t *body_used,
-                               size_t max_bodylen, int force_complete);
+                                   char **headers_out, size_t max_headerlen,
+                                   char **body_out, size_t *body_used,
+                                   size_t max_bodylen, int force_complete);
 
 int connection_wants_to_flush(struct connection_t *conn);
 int connection_outbuf_too_full(struct connection_t *conn);
@@ -253,7 +252,7 @@ MOCK_DECL(void, connection_write_to_buf_impl_,
            int zlib));
 /* DOCDOC connection_write_to_buf */
 static void connection_buf_add(const char *string, size_t len,
-                                    struct connection_t *conn);
+                               struct connection_t *conn);
 void connection_dir_buf_add(const char *string, size_t len,
                             struct dir_connection_t *dir_conn, int done);
 static inline void
@@ -270,24 +269,20 @@ size_t connection_get_outbuf_len(struct connection_t *conn);
 struct connection_t *connection_get_by_global_id(uint64_t id);
 
 struct connection_t *connection_get_by_type(int type);
-MOCK_DECL(struct connection_t *,connection_get_by_type_nonlinked,(int type));
-MOCK_DECL(struct connection_t *,connection_get_by_type_addr_port_purpose,
-                                               (int type,
-                                                const struct tor_addr_t *addr,
-                                                uint16_t port, int purpose));
+MOCK_DECL(struct connection_t *, connection_get_by_type_nonlinked, (int type));
+MOCK_DECL(struct connection_t *, connection_get_by_type_addr_port_purpose,
+          (int type, const struct tor_addr_t *addr, uint16_t port,
+           int purpose));
 struct connection_t *connection_get_by_type_state(int type, int state);
-struct connection_t *connection_get_by_type_state_rendquery(
-                                                     int type, int state,
-                                                     const char *rendquery);
+struct connection_t *
+connection_get_by_type_state_rendquery(int type, int state,
+                                       const char *rendquery);
 struct smartlist_t *connection_list_by_type_state(int type, int state);
 struct smartlist_t *connection_list_by_type_purpose(int type, int purpose);
-struct smartlist_t *connection_dir_list_by_purpose_and_resource(
-                                                  int purpose,
-                                                  const char *resource);
+struct smartlist_t *
+connection_dir_list_by_purpose_and_resource(int purpose, const char *resource);
 struct smartlist_t *connection_dir_list_by_purpose_resource_and_state(
-                                                  int purpose,
-                                                  const char *resource,
-                                                  int state);
+    int purpose, const char *resource, int state);
 
 #define CONN_LEN_AND_FREE_TEMPLATE(sl) \
   STMT_BEGIN                           \
@@ -299,29 +294,23 @@ struct smartlist_t *connection_dir_list_by_purpose_resource_and_state(
 /** Return a count of directory connections that are fetching the item
  * described by <b>purpose</b>/<b>resource</b>. */
 static inline int
-connection_dir_count_by_purpose_and_resource(
-                                             int purpose,
-                                             const char *resource)
+connection_dir_count_by_purpose_and_resource(int purpose, const char *resource)
 {
-  struct smartlist_t *conns = connection_dir_list_by_purpose_and_resource(
-                                                                   purpose,
-                                                                   resource);
+  struct smartlist_t *conns =
+      connection_dir_list_by_purpose_and_resource(purpose, resource);
   CONN_LEN_AND_FREE_TEMPLATE(conns);
 }
 
 /** Return a count of directory connections that are fetching the item
  * described by <b>purpose</b>/<b>resource</b>/<b>state</b>. */
 static inline int
-connection_dir_count_by_purpose_resource_and_state(
-                                                   int purpose,
+connection_dir_count_by_purpose_resource_and_state(int purpose,
                                                    const char *resource,
                                                    int state)
 {
   struct smartlist_t *conns =
-    connection_dir_list_by_purpose_resource_and_state(
-                                                      purpose,
-                                                      resource,
-                                                      state);
+      connection_dir_list_by_purpose_resource_and_state(purpose, resource,
+                                                        state);
   CONN_LEN_AND_FREE_TEMPLATE(conns);
 }
 
@@ -355,30 +344,29 @@ void connection_check_oos(int n_socks, int failed);
  *
  * Stmt must not contain any return or goto statements.
  */
-#define CONN_LOG_PROTECT(conn, stmt)                                    \
-  STMT_BEGIN                                                            \
-    int _log_conn_is_control;                                           \
-    tor_assert(conn);                                                   \
-    _log_conn_is_control = (conn->type == CONN_TYPE_CONTROL);           \
-    if (_log_conn_is_control)                                           \
-      disable_control_logging();                                        \
-  STMT_BEGIN stmt; STMT_END;                                            \
-    if (_log_conn_is_control)                                           \
-      enable_control_logging();                                         \
+#define CONN_LOG_PROTECT(conn, stmt)                          \
+  STMT_BEGIN                                                  \
+    int _log_conn_is_control;                                 \
+    tor_assert(conn);                                         \
+    _log_conn_is_control = (conn->type == CONN_TYPE_CONTROL); \
+    if (_log_conn_is_control)                                 \
+      disable_control_logging();                              \
+    STMT_BEGIN                                                \
+      stmt;                                                   \
+    STMT_END;                                                 \
+    if (_log_conn_is_control)                                 \
+      enable_control_logging();                               \
   STMT_END
 
 #ifdef CONNECTION_PRIVATE
 STATIC void connection_free_minimal(struct connection_t *conn);
 
 /* Used only by connection.c and test*.c */
-MOCK_DECL(STATIC int,connection_connect_sockaddr,
-                                            (struct connection_t *conn,
-                                             const struct sockaddr *sa,
-                                             socklen_t sa_len,
-                                             const struct sockaddr *bindaddr,
-                                             socklen_t bindaddr_len,
-                                             int *socket_error));
-MOCK_DECL(STATIC void, kill_conn_list_for_oos, (struct smartlist_t *conns));
+MOCK_DECL(STATIC int, connection_connect_sockaddr,
+          (struct connection_t * conn, const struct sockaddr *sa,
+           socklen_t sa_len, const struct sockaddr *bindaddr,
+           socklen_t bindaddr_len, int *socket_error));
+MOCK_DECL(STATIC void, kill_conn_list_for_oos, (struct smartlist_t * conns));
 MOCK_DECL(STATIC struct smartlist_t *, pick_oos_victims, (int n));
 
 #endif /* defined(CONNECTION_PRIVATE) */

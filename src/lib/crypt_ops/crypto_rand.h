@@ -20,10 +20,10 @@
 
 /* random numbers */
 int crypto_seed_rng(void) ATTR_WUR;
-MOCK_DECL(void,crypto_rand,(char *to, size_t n));
+MOCK_DECL(void, crypto_rand, (char *to, size_t n));
 void crypto_rand_unmocked(char *to, size_t n);
 void crypto_strongest_rand(uint8_t *out, size_t out_len);
-MOCK_DECL(void,crypto_strongest_rand_,(uint8_t *out, size_t out_len));
+MOCK_DECL(void, crypto_strongest_rand_, (uint8_t * out, size_t out_len));
 int crypto_rand_int(unsigned int max);
 unsigned crypto_rand_uint(unsigned limit);
 int crypto_rand_int_range(unsigned int min, unsigned int max);
@@ -61,14 +61,14 @@ crypto_fast_rng_t *crypto_fast_rng_new(void);
 crypto_fast_rng_t *crypto_fast_rng_new_from_seed(const uint8_t *seed);
 void crypto_fast_rng_getbytes(crypto_fast_rng_t *rng, uint8_t *out, size_t n);
 void crypto_fast_rng_free_(crypto_fast_rng_t *);
-#define crypto_fast_rng_free(c)                                 \
+#define crypto_fast_rng_free(c) \
   FREE_AND_NULL(crypto_fast_rng_t, crypto_fast_rng_free_, (c))
 
 unsigned crypto_fast_rng_get_uint(crypto_fast_rng_t *rng, unsigned limit);
 uint64_t crypto_fast_rng_get_uint64(crypto_fast_rng_t *rng, uint64_t limit);
 uint32_t crypto_fast_rng_get_u32(crypto_fast_rng_t *rng);
-uint64_t crypto_fast_rng_uint64_range(crypto_fast_rng_t *rng,
-                                      uint64_t min, uint64_t max);
+uint64_t crypto_fast_rng_uint64_range(crypto_fast_rng_t *rng, uint64_t min,
+                                      uint64_t max);
 double crypto_fast_rng_get_double(crypto_fast_rng_t *rng);
 
 /**
@@ -77,7 +77,7 @@ double crypto_fast_rng_get_double(crypto_fast_rng_t *rng);
  *
  * <b>n</b> must not be zero.
  **/
-#define crypto_fast_rng_one_in_n(rng, n)        \
+#define crypto_fast_rng_one_in_n(rng, n) \
   (0 == (crypto_fast_rng_get_uint((rng), (n))))
 
 crypto_fast_rng_t *get_thread_fast_rng(void);
@@ -102,10 +102,10 @@ crypto_fast_rng_t *crypto_replace_thread_fast_rng(crypto_fast_rng_t *rng);
 
 STATIC int crypto_strongest_rand_raw(uint8_t *out, size_t out_len);
 
-#ifdef TOR_UNIT_TESTS
+#  ifdef TOR_UNIT_TESTS
 extern int break_strongest_rng_syscall;
 extern int break_strongest_rng_fallback;
-#endif
+#  endif
 #endif /* defined(CRYPTO_RAND_PRIVATE) */
 
 #endif /* !defined(TOR_CRYPTO_RAND_H) */

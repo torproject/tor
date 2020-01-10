@@ -15,8 +15,8 @@
 
 #ifdef PUBSUB_PRIVATE
 
-#include <stdbool.h>
-#include <stddef.h>
+#  include <stdbool.h>
+#  include <stddef.h>
 
 struct dispatch_cfg_t;
 struct smartlist_t;

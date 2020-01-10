@@ -31,19 +31,19 @@
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 
-static const routerinfo_t * rtr_tests_router_get_my_routerinfo(void);
+static const routerinfo_t *rtr_tests_router_get_my_routerinfo(void);
 ATTR_UNUSED static int rtr_tests_router_get_my_routerinfo_called = 0;
 
-static routerinfo_t* mock_routerinfo;
+static routerinfo_t *mock_routerinfo;
 
-static const routerinfo_t*
+static const routerinfo_t *
 rtr_tests_router_get_my_routerinfo(void)
 {
-  crypto_pk_t* ident_key;
-  crypto_pk_t* tap_key;
+  crypto_pk_t *ident_key;
+  crypto_pk_t *tap_key;
   time_t now;
 
-  if (!mock_routerinfo) {
+  if (! mock_routerinfo) {
     /* Mock the published timestamp, otherwise router_dump_router_to_string()
      * will poop its pants. */
     time(&now);
@@ -78,17 +78,16 @@ rtr_tests_router_get_my_routerinfo(void)
 static void
 test_router_dump_router_to_string_no_bridge_distribution_method(void *arg)
 {
-  const char* needle = "bridge-distribution-request any";
-  or_options_t* options = get_options_mutable();
-  routerinfo_t* router = NULL;
+  const char *needle = "bridge-distribution-request any";
+  or_options_t *options = get_options_mutable();
+  routerinfo_t *router = NULL;
   curve25519_keypair_t ntor_keypair;
   ed25519_keypair_t signing_keypair;
-  char* desc = NULL;
-  char* found = NULL;
+  char *desc = NULL;
+  char *found = NULL;
   (void)arg;
 
-  MOCK(router_get_my_routerinfo,
-       rtr_tests_router_get_my_routerinfo);
+  MOCK(router_get_my_routerinfo, rtr_tests_router_get_my_routerinfo);
 
   options->ORPort_set = 1;
   options->BridgeRelay = 1;
@@ -99,7 +98,7 @@ test_router_dump_router_to_string_no_bridge_distribution_method(void *arg)
 
   /* Set up part of our routerinfo_t so that we don't trigger any other
    * assertions in router_dump_router_to_string(). */
-  router = (routerinfo_t*)router_get_my_routerinfo();
+  router = (routerinfo_t *)router_get_my_routerinfo();
   tt_ptr_op(router, OP_NE, NULL);
 
   /* The real router_get_my_routerinfo() looks up onion_curve25519_pkey using
@@ -109,19 +108,17 @@ test_router_dump_router_to_string_no_bridge_distribution_method(void *arg)
 
   /* Generate our server descriptor and ensure that the substring
    * "bridge-distribution-request any" occurs somewhere within it. */
-  crypto_pk_t *onion_pkey = router_get_rsa_onion_pkey(router->onion_pkey,
-                                                      router->onion_pkey_len);
-  desc = router_dump_router_to_string(router,
-                                      router->identity_pkey,
-                                      onion_pkey,
-                                      &ntor_keypair,
-                                      &signing_keypair);
+  crypto_pk_t *onion_pkey =
+      router_get_rsa_onion_pkey(router->onion_pkey, router->onion_pkey_len);
+  desc =
+      router_dump_router_to_string(router, router->identity_pkey, onion_pkey,
+                                   &ntor_keypair, &signing_keypair);
   crypto_pk_free(onion_pkey);
   tt_ptr_op(desc, OP_NE, NULL);
   found = strstr(desc, needle);
   tt_ptr_op(found, OP_NE, NULL);
 
- done:
+done:
   UNMOCK(router_get_my_routerinfo);
 
   tor_free(desc);
@@ -138,13 +135,13 @@ mock_router_get_my_routerinfo(void)
 static long
 mock_get_uptime_3h(void)
 {
-  return 3*60*60;
+  return 3 * 60 * 60;
 }
 
 static long
 mock_get_uptime_1d(void)
 {
-  return 24*60*60;
+  return 24 * 60 * 60;
 }
 
 static int
@@ -184,7 +181,7 @@ test_router_check_descriptor_bandwidth_changed(void *arg)
   setup_full_capture_of_logs(LOG_INFO);
   check_descriptor_bandwidth_changed(time(NULL));
   expect_log_msg_not_containing(
-     "Measured bandwidth has changed; rebuilding descriptor.");
+      "Measured bandwidth has changed; rebuilding descriptor.");
   teardown_capture_of_logs();
 
   /* When uptime is less than 24h, previous bandwidth,
@@ -194,7 +191,7 @@ test_router_check_descriptor_bandwidth_changed(void *arg)
   setup_full_capture_of_logs(LOG_INFO);
   check_descriptor_bandwidth_changed(time(NULL));
   expect_log_msg_containing(
-     "Measured bandwidth has changed; rebuilding descriptor.");
+      "Measured bandwidth has changed; rebuilding descriptor.");
   teardown_capture_of_logs();
 
   /* When uptime is less than 24h, previous bandwidth,
@@ -207,7 +204,7 @@ test_router_check_descriptor_bandwidth_changed(void *arg)
   setup_full_capture_of_logs(LOG_INFO);
   check_descriptor_bandwidth_changed(time(NULL));
   expect_log_msg_not_containing(
-     "Measured bandwidth has changed; rebuilding descriptor.");
+      "Measured bandwidth has changed; rebuilding descriptor.");
   teardown_capture_of_logs();
   UNMOCK(we_are_hibernating);
   MOCK(we_are_hibernating, mock_we_are_not_hibernating);
@@ -217,16 +214,16 @@ test_router_check_descriptor_bandwidth_changed(void *arg)
   setup_full_capture_of_logs(LOG_INFO);
   check_descriptor_bandwidth_changed(time(NULL));
   expect_log_msg_not_containing(
-     "Measured bandwidth has changed; rebuilding descriptor.");
+      "Measured bandwidth has changed; rebuilding descriptor.");
   teardown_capture_of_logs();
 
   /* When uptime is less than 24h and bandwidthcapacity does not change
    * Uptime: 10800, last_changed: x, Previous bw: 10000, Current bw: 20001 */
   MOCK(rep_hist_bandwidth_assess, mock_rep_hist_bandwidth_assess);
   setup_full_capture_of_logs(LOG_INFO);
-  check_descriptor_bandwidth_changed(time(NULL) + 6*60*60 + 1);
+  check_descriptor_bandwidth_changed(time(NULL) + 6 * 60 * 60 + 1);
   expect_log_msg_containing(
-     "Measured bandwidth has changed; rebuilding descriptor.");
+      "Measured bandwidth has changed; rebuilding descriptor.");
   UNMOCK(get_uptime);
   UNMOCK(rep_hist_bandwidth_assess);
   teardown_capture_of_logs();
@@ -236,10 +233,10 @@ test_router_check_descriptor_bandwidth_changed(void *arg)
   setup_full_capture_of_logs(LOG_INFO);
   check_descriptor_bandwidth_changed(time(NULL));
   expect_log_msg_not_containing(
-     "Measured bandwidth has changed; rebuilding descriptor.");
+      "Measured bandwidth has changed; rebuilding descriptor.");
   teardown_capture_of_logs();
 
- done:
+done:
   UNMOCK(get_uptime);
   UNMOCK(router_get_my_routerinfo);
   UNMOCK(we_are_hibernating);
@@ -276,20 +273,20 @@ test_router_mark_if_too_old(void *arg)
   memset(&rs, 0, sizeof(rs));
   memset(&ns, 0, sizeof(ns));
   mock_ns = &ns;
-  mock_ns->valid_after = now-3600;
+  mock_ns->valid_after = now - 3600;
   mock_rs = &rs;
   mock_rs->published_on = now - 10;
 
   // no reason to mark this time.
-  desc_clean_since = now-10;
+  desc_clean_since = now - 10;
   desc_dirty_reason = NULL;
   mark_my_descriptor_dirty_if_too_old(now);
-  tt_i64_op(desc_clean_since, OP_EQ, now-10);
+  tt_i64_op(desc_clean_since, OP_EQ, now - 10);
 
   // Doesn't appear in consensus?  Still don't mark it.
   mock_ns = NULL;
   mark_my_descriptor_dirty_if_too_old(now);
-  tt_i64_op(desc_clean_since, OP_EQ, now-10);
+  tt_i64_op(desc_clean_since, OP_EQ, now - 10);
   mock_ns = &ns;
 
   // No new descriptor in a long time?  Mark it.
@@ -320,8 +317,7 @@ test_router_mark_if_too_old(void *arg)
   mock_rs->is_staledesc = 1;
   mark_my_descriptor_dirty_if_too_old(now);
   tt_i64_op(desc_clean_since, OP_EQ, 0);
-  tt_str_op(desc_dirty_reason, OP_EQ,
-            "listed as stale in consensus");
+  tt_str_op(desc_dirty_reason, OP_EQ, "listed as stale in consensus");
 
   // same deal if we're absent from the consensus.
   desc_clean_since = now - 2 * 3600;
@@ -329,10 +325,9 @@ test_router_mark_if_too_old(void *arg)
   mock_rs = NULL;
   mark_my_descriptor_dirty_if_too_old(now);
   tt_i64_op(desc_clean_since, OP_EQ, 0);
-  tt_str_op(desc_dirty_reason, OP_EQ,
-            "not listed in consensus");
+  tt_str_op(desc_dirty_reason, OP_EQ, "not listed in consensus");
 
- done:
+done:
   UNMOCK(networkstatus_get_live_consensus);
   UNMOCK(networkstatus_vote_find_entry);
 }
@@ -342,7 +337,7 @@ static const node_t *
 mock_node_get_by_nickname(const char *name, unsigned flags)
 {
   (void)flags;
-  if (!strcasecmp(name, "crumpet"))
+  if (! strcasecmp(name, "crumpet"))
     return &fake_node;
   else
     return NULL;
@@ -358,7 +353,7 @@ test_router_get_my_family(void *arg)
   // Overwrite the result of router_get_my_identity_digest().  This
   // happens to be okay, but only for testing.
   set_server_identity_key_digest_testing(
-                                   (const uint8_t*)"holeinthebottomofthe");
+      (const uint8_t *)"holeinthebottomofthe");
 
   setup_capture_of_logs(LOG_WARN);
 
@@ -367,13 +362,14 @@ test_router_get_my_family(void *arg)
   tt_ptr_op(sl, OP_EQ, NULL);
   expect_no_log_entry();
 
-#define CLEAR() do {                                    \
-    if (sl) {                                           \
-      SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));  \
-      smartlist_free(sl);                               \
-    }                                                   \
-    tor_free(join);                                     \
-    mock_clean_saved_logs();                            \
+#define CLEAR()                                        \
+  do {                                                 \
+    if (sl) {                                          \
+      SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp)); \
+      smartlist_free(sl);                              \
+    }                                                  \
+    tor_free(join);                                    \
+    mock_clean_saved_logs();                           \
   } while (0)
 
   // Add a single nice friendly hex member.  This should be enough
@@ -407,8 +403,7 @@ test_router_get_my_family(void *arg)
   CLEAR();
 
   // Nickname lookup will fail, so a nickname will appear verbatim.
-  config_line_append(&options->MyFamily, "MyFamily",
-                     "BAGEL");
+  config_line_append(&options->MyFamily, "MyFamily", "BAGEL");
   sl = get_my_declared_family(options);
   tt_ptr_op(sl, OP_NE, NULL);
   tt_int_op(smartlist_len(sl), OP_EQ, 4);
@@ -419,13 +414,12 @@ test_router_get_my_family(void *arg)
             "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA "
             "bagel");
   expect_single_log_msg_containing(
-           "There is a router named \"BAGEL\" in my declared family, but "
-           "I have no descriptor for it.");
+      "There is a router named \"BAGEL\" in my declared family, but "
+      "I have no descriptor for it.");
   CLEAR();
 
   // A bogus digest should fail entirely.
-  config_line_append(&options->MyFamily, "MyFamily",
-                     "$painauchocolat");
+  config_line_append(&options->MyFamily, "MyFamily", "$painauchocolat");
   sl = get_my_declared_family(options);
   tt_ptr_op(sl, OP_NE, NULL);
   tt_int_op(smartlist_len(sl), OP_EQ, 4);
@@ -438,8 +432,8 @@ test_router_get_my_family(void *arg)
   // "BAGEL" is still there, but it won't make a warning, because we already
   // warned about it.
   expect_single_log_msg_containing(
-           "There is a router named \"$painauchocolat\" in my declared "
-           "family, but that isn't a legal digest or nickname. Skipping it.");
+      "There is a router named \"$painauchocolat\" in my declared "
+      "family, but that isn't a legal digest or nickname. Skipping it.");
   CLEAR();
 
   // Let's introduce a node we can look up by nickname
@@ -447,8 +441,7 @@ test_router_get_my_family(void *arg)
   memcpy(fake_node.identity, "whydoyouasknonononon", DIGEST_LEN);
   MOCK(node_get_by_nickname, mock_node_get_by_nickname);
 
-  config_line_append(&options->MyFamily, "MyFamily",
-                     "CRUmpeT");
+  config_line_append(&options->MyFamily, "MyFamily", "CRUmpeT");
   sl = get_my_declared_family(options);
   tt_ptr_op(sl, OP_NE, NULL);
   tt_int_op(smartlist_len(sl), OP_EQ, 5);
@@ -462,10 +455,10 @@ test_router_get_my_family(void *arg)
   // "BAGEL" is still there, but it won't make a warning, because we already
   // warned about it.  Some with "$painauchocolat".
   expect_single_log_msg_containing(
-           "There is a router named \"CRUmpeT\" in my declared "
-           "family, but it wasn't listed by digest. Please consider saying "
-           "$776879646F796F7561736B6E6F6E6F6E6F6E6F6E instead, if that's "
-           "what you meant.");
+      "There is a router named \"CRUmpeT\" in my declared "
+      "family, but it wasn't listed by digest. Please consider saying "
+      "$776879646F796F7561736B6E6F6E6F6E6F6E6F6E instead, if that's "
+      "what you meant.");
   CLEAR();
   UNMOCK(node_get_by_nickname);
 
@@ -477,7 +470,7 @@ test_router_get_my_family(void *arg)
   tt_ptr_op(sl, OP_EQ, NULL);
   expect_no_log_entry();
 
- done:
+done:
   or_options_free(options);
   teardown_capture_of_logs();
   CLEAR();
@@ -486,13 +479,13 @@ test_router_get_my_family(void *arg)
 #undef CLEAR
 }
 
-#define ROUTER_TEST(name, flags)                          \
-  { #name, test_router_ ## name, flags, NULL, NULL }
+#define ROUTER_TEST(name, flags)                 \
+  {                                              \
+#    name, test_router_##name, flags, NULL, NULL \
+  }
 
 struct testcase_t router_tests[] = {
-  ROUTER_TEST(check_descriptor_bandwidth_changed, TT_FORK),
-  ROUTER_TEST(dump_router_to_string_no_bridge_distribution_method, TT_FORK),
-  ROUTER_TEST(mark_if_too_old, TT_FORK),
-  ROUTER_TEST(get_my_family, TT_FORK),
-  END_OF_TESTCASES
-};
+    ROUTER_TEST(check_descriptor_bandwidth_changed, TT_FORK),
+    ROUTER_TEST(dump_router_to_string_no_bridge_distribution_method, TT_FORK),
+    ROUTER_TEST(mark_if_too_old, TT_FORK), ROUTER_TEST(get_my_family, TT_FORK),
+    END_OF_TESTCASES};

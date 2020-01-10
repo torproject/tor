@@ -58,7 +58,8 @@ static inline void
 geoip_increment_client_history_cache_size(size_t bytes)
 {
   /* This is shockingly high, lets log it so it can be reported. */
-  IF_BUG_ONCE(geoip_client_history_cache_size > (SIZE_MAX - bytes)) {
+  IF_BUG_ONCE(geoip_client_history_cache_size > (SIZE_MAX - bytes))
+  {
     geoip_client_history_cache_size = SIZE_MAX;
     return;
   }
@@ -73,7 +74,8 @@ geoip_decrement_client_history_cache_size(size_t bytes)
   /* Going below 0 means that we either allocated an entry without
    * incrementing the counter or we have different sizes when allocating and
    * freeing. It shouldn't happened so log it. */
-  IF_BUG_ONCE(geoip_client_history_cache_size < bytes) {
+  IF_BUG_ONCE(geoip_client_history_cache_size < bytes)
+  {
     geoip_client_history_cache_size = 0;
     return;
   }
@@ -95,11 +97,11 @@ increment_v3_ns_request(country_t country)
     else
       new_len = n_v3_ns_requests_len * 2;
     if (new_len <= (size_t)country)
-      new_len = ((size_t)country)+1;
-    n_v3_ns_requests = tor_reallocarray(n_v3_ns_requests, new_len,
-                                        sizeof(uint32_t));
+      new_len = ((size_t)country) + 1;
+    n_v3_ns_requests =
+        tor_reallocarray(n_v3_ns_requests, new_len, sizeof(uint32_t));
     memset(n_v3_ns_requests + n_v3_ns_requests_len, 0,
-           sizeof(uint32_t)*(new_len - n_v3_ns_requests_len));
+           sizeof(uint32_t) * (new_len - n_v3_ns_requests_len));
     n_v3_ns_requests_len = new_len;
   }
 
@@ -120,17 +122,16 @@ should_record_bridge_info(const or_options_t *options)
 #define MAX_LAST_SEEN_IN_MINUTES 0X3FFFFFFFu
 
 /** Map from client IP address to last time seen. */
-static HT_HEAD(clientmap, clientmap_entry_t) client_history =
-     HT_INITIALIZER();
+static HT_HEAD(clientmap, clientmap_entry_t) client_history = HT_INITIALIZER();
 
 /** Hashtable helper: compute a hash of a clientmap_entry_t. */
 static inline unsigned
 clientmap_entry_hash(const clientmap_entry_t *a)
 {
-  unsigned h = (unsigned) tor_addr_hash(&a->addr);
+  unsigned h = (unsigned)tor_addr_hash(&a->addr);
 
   if (a->transport_name)
-    h += (unsigned) siphash24g(a->transport_name, strlen(a->transport_name));
+    h += (unsigned)siphash24g(a->transport_name, strlen(a->transport_name));
 
   return h;
 }
@@ -141,7 +142,7 @@ clientmap_entries_eq(const clientmap_entry_t *a, const clientmap_entry_t *b)
   if (strcmp_opt(a->transport_name, b->transport_name))
     return 0;
 
-  return !tor_addr_compare(&a->addr, &b->addr, CMP_EXACT) &&
+  return ! tor_addr_compare(&a->addr, &b->addr, CMP_EXACT) &&
          a->action == b->action;
 }
 
@@ -166,7 +167,7 @@ clientmap_entry_size(const clientmap_entry_t *ent)
 static void
 clientmap_entry_free_(clientmap_entry_t *ent)
 {
-  if (!ent)
+  if (! ent)
     return;
 
   /* This entry is about to be freed so pass it to the DoS subsystem to see if
@@ -208,8 +209,7 @@ static void
 client_history_clear(void)
 {
   clientmap_entry_t **ent, **next, *this;
-  for (ent = HT_START(clientmap, &client_history); ent != NULL;
-       ent = next) {
+  for (ent = HT_START(clientmap, &client_history); ent != NULL; ent = next) {
     if ((*ent)->action == GEOIP_CLIENT_CONNECT) {
       this = *ent;
       next = HT_NEXT_RMV(clientmap, &client_history, ent);
@@ -224,10 +224,8 @@ client_history_clear(void)
  * at time <b>now</b>. Ignored by all but bridges and directories if
  * configured accordingly. */
 void
-geoip_note_client_seen(geoip_client_action_t action,
-                       const tor_addr_t *addr,
-                       const char *transport_name,
-                       time_t now)
+geoip_note_client_seen(geoip_client_action_t action, const tor_addr_t *addr,
+                       const char *transport_name, time_t now)
 {
   const or_options_t *options = get_options();
   clientmap_entry_t *ent;
@@ -235,15 +233,15 @@ geoip_note_client_seen(geoip_client_action_t action,
   if (action == GEOIP_CLIENT_CONNECT) {
     /* Only remember statistics if the DoS mitigation subsystem is enabled. If
      * not, only if as entry guard or as bridge. */
-    if (!dos_enabled()) {
-      if (!options->EntryStatistics && !should_record_bridge_info(options)) {
+    if (! dos_enabled()) {
+      if (! options->EntryStatistics && ! should_record_bridge_info(options)) {
         return;
       }
     }
   } else {
     /* Only gather directory-request statistics if configured, and
      * forcibly disable them on bridge authorities. */
-    if (!options->DirReqStatistics || options->BridgeAuthoritativeDir)
+    if (! options->DirReqStatistics || options->BridgeAuthoritativeDir)
       return;
   }
 
@@ -257,7 +255,7 @@ geoip_note_client_seen(geoip_client_action_t action,
     HT_INSERT(clientmap, &client_history, ent);
   }
   if (now / 60 <= (int)MAX_LAST_SEEN_IN_MINUTES && now >= 0)
-    ent->last_seen_in_minutes = (unsigned)(now/60);
+    ent->last_seen_in_minutes = (unsigned)(now / 60);
   else
     ent->last_seen_in_minutes = 0;
 
@@ -265,10 +263,11 @@ geoip_note_client_seen(geoip_client_action_t action,
     int country_idx = geoip_get_country_by_addr(addr);
     if (country_idx < 0)
       country_idx = 0; /** unresolved requests are stored at index 0. */
-    IF_BUG_ONCE(country_idx > COUNTRY_MAX) {
+    IF_BUG_ONCE(country_idx > COUNTRY_MAX)
+    {
       return;
     }
-    increment_v3_ns_request((country_t) country_idx);
+    increment_v3_ns_request((country_t)country_idx);
   }
 }
 
@@ -277,7 +276,7 @@ geoip_note_client_seen(geoip_client_action_t action,
 static int
 remove_old_client_helper_(struct clientmap_entry_t *ent, void *_cutoff)
 {
-  time_t cutoff = *(time_t*)_cutoff / 60;
+  time_t cutoff = *(time_t *)_cutoff / 60;
   if (ent->last_seen_in_minutes < cutoff) {
     clientmap_entry_free(ent);
     return 1;
@@ -290,9 +289,7 @@ remove_old_client_helper_(struct clientmap_entry_t *ent, void *_cutoff)
 void
 geoip_remove_old_clients(time_t cutoff)
 {
-  clientmap_HT_FOREACH_FN(&client_history,
-                          remove_old_client_helper_,
-                          &cutoff);
+  clientmap_HT_FOREACH_FN(&client_history, remove_old_client_helper_, &cutoff);
 }
 
 /* Return a client entry object matching the given address, transport name and
@@ -309,7 +306,7 @@ geoip_lookup_client(const tor_addr_t *addr, const char *transport_name,
   /* We always look for a client connection with no transport. */
   tor_addr_copy(&lookup.addr, addr);
   lookup.action = action;
-  lookup.transport_name = (char *) transport_name;
+  lookup.transport_name = (char *)transport_name;
 
   return HT_FIND(clientmap, &client_history, &lookup);
 }
@@ -393,9 +390,9 @@ void
 geoip_note_ns_response(geoip_ns_response_t response)
 {
   static int arrays_initialized = 0;
-  if (!get_options()->DirReqStatistics)
+  if (! get_options()->DirReqStatistics)
     return;
-  if (!arrays_initialized) {
+  if (! arrays_initialized) {
     memset(ns_v3_responses, 0, sizeof(ns_v3_responses));
     arrays_initialized = 1;
   }
@@ -438,7 +435,7 @@ c_hist_compare_(const void **_a, const void **_b)
 /** When there are incomplete directory requests at the end of a 24-hour
  * period, consider those requests running for longer than this timeout as
  * failed, the others as still running. */
-#define DIRREQ_TIMEOUT (10*60)
+#define DIRREQ_TIMEOUT (10 * 60)
 
 /** Entry in a map from either chan->global_identifier for direct requests
  * or a unique circuit identifier for tunneled requests to request time,
@@ -452,9 +449,9 @@ typedef struct dirreq_map_entry_t {
    * locally unique identifier of a circuit (tunneled request). This ID is
    * only unique among other direct or tunneled requests, respectively. */
   uint64_t dirreq_id;
-  unsigned int state:3; /**< State of this directory request. */
-  unsigned int type:1; /**< Is this a direct or a tunneled request? */
-  unsigned int completed:1; /**< Is this request complete? */
+  unsigned int state : 3; /**< State of this directory request. */
+  unsigned int type : 1; /**< Is this a direct or a tunneled request? */
+  unsigned int completed : 1; /**< Is this request complete? */
   /** When did we receive the request and started sending the response? */
   struct timeval request_time;
   size_t response_size; /**< What is the size of the response in bytes? */
@@ -464,12 +461,10 @@ typedef struct dirreq_map_entry_t {
 /** Map of all directory requests asking for v2 or v3 network statuses in
  * the current geoip-stats interval. Values are
  * of type *<b>dirreq_map_entry_t</b>. */
-static HT_HEAD(dirreqmap, dirreq_map_entry_t) dirreq_map =
-     HT_INITIALIZER();
+static HT_HEAD(dirreqmap, dirreq_map_entry_t) dirreq_map = HT_INITIALIZER();
 
 static int
-dirreq_map_ent_eq(const dirreq_map_entry_t *a,
-                  const dirreq_map_entry_t *b)
+dirreq_map_ent_eq(const dirreq_map_entry_t *a, const dirreq_map_entry_t *b)
 {
   return a->dirreq_id == b->dirreq_id && a->type == b->type;
 }
@@ -478,7 +473,7 @@ dirreq_map_ent_eq(const dirreq_map_entry_t *a,
 static unsigned
 dirreq_map_ent_hash(const dirreq_map_entry_t *entry)
 {
-  unsigned u = (unsigned) entry->dirreq_id;
+  unsigned u = (unsigned)entry->dirreq_id;
   u += entry->type << 20;
   return u;
 }
@@ -493,7 +488,7 @@ HT_GENERATE2(dirreqmap, dirreq_map_entry_t, node, dirreq_map_ent_hash,
  * already an entry for that key, print out a BUG warning and return. */
 static void
 dirreq_map_put_(dirreq_map_entry_t *entry, dirreq_type_t type,
-               uint64_t dirreq_id)
+                uint64_t dirreq_id)
 {
   dirreq_map_entry_t *old_ent;
   tor_assert(entry->type == type);
@@ -504,7 +499,8 @@ dirreq_map_put_(dirreq_map_entry_t *entry, dirreq_type_t type,
    * critical-path, it's sane to leave it alone. */
   old_ent = HT_REPLACE(dirreqmap, &dirreq_map, entry);
   if (old_ent && old_ent != entry) {
-    log_warn(LD_BUG, "Error when putting directory request into local "
+    log_warn(LD_BUG,
+             "Error when putting directory request into local "
              "map. There was already an entry for the same identifier.");
     return;
   }
@@ -530,7 +526,7 @@ geoip_start_dirreq(uint64_t dirreq_id, size_t response_size,
                    dirreq_type_t type)
 {
   dirreq_map_entry_t *ent;
-  if (!get_options()->DirReqStatistics)
+  if (! get_options()->DirReqStatistics)
     return;
   ent = tor_malloc_zero(sizeof(dirreq_map_entry_t));
   ent->dirreq_id = dirreq_id;
@@ -551,10 +547,10 @@ geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
                           dirreq_state_t new_state)
 {
   dirreq_map_entry_t *ent;
-  if (!get_options()->DirReqStatistics)
+  if (! get_options()->DirReqStatistics)
     return;
   ent = dirreq_map_get_(type, dirreq_id);
-  if (!ent)
+  if (! ent)
     return;
   if (new_state == DIRREQ_IS_FOR_NETWORK_STATUS)
     return;
@@ -562,9 +558,9 @@ geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
     return;
   ent->state = new_state;
   if ((type == DIRREQ_DIRECT &&
-         new_state == DIRREQ_FLUSHING_DIR_CONN_FINISHED) ||
+       new_state == DIRREQ_FLUSHING_DIR_CONN_FINISHED) ||
       (type == DIRREQ_TUNNELED &&
-         new_state == DIRREQ_CHANNEL_BUFFER_FLUSHED)) {
+       new_state == DIRREQ_CHANNEL_BUFFER_FLUSHED)) {
     tor_gettimeofday(&ent->completion_time);
     ent->completed = 1;
   }
@@ -587,7 +583,7 @@ geoip_get_transport_history(void)
   /* Special string to signify that no transport was used for this
      connection. Pluggable transport names can't have symbols in their
      names, so this string will never collide with a real transport. */
-  static const char* no_transport_str = "<OR>";
+  static const char *no_transport_str = "<OR>";
 
   clientmap_entry_t **ent;
   smartlist_t *string_chunks = smartlist_new();
@@ -608,58 +604,57 @@ geoip_get_transport_history(void)
    *  c) We concatenate string_chunks to form the final string.
    */
 
-  log_debug(LD_GENERAL,"Starting iteration for transport history. %d clients.",
+  log_debug(LD_GENERAL,
+            "Starting iteration for transport history. %d clients.",
             HT_SIZE(&client_history));
 
   /* Loop through all clients. */
-  HT_FOREACH(ent, clientmap, &client_history) {
+  HT_FOREACH (ent, clientmap, &client_history) {
     uintptr_t val;
     void *ptr;
     const char *transport_name = (*ent)->transport_name;
-    if (!transport_name)
+    if (! transport_name)
       transport_name = no_transport_str;
 
     /* Increase the count for this transport name. */
     ptr = strmap_get(transport_counts, transport_name);
     val = (uintptr_t)ptr;
     val++;
-    ptr = (void*)val;
+    ptr = (void *)val;
     strmap_set(transport_counts, transport_name, ptr);
 
     /* If it's the first time we see this transport, note it. */
     if (val == 1)
       smartlist_add_strdup(transports_used, transport_name);
 
-    log_debug(LD_GENERAL, "Client from '%s' with transport '%s'. "
+    log_debug(LD_GENERAL,
+              "Client from '%s' with transport '%s'. "
               "I've now seen %d clients.",
               safe_str_client(fmt_addr(&(*ent)->addr)),
-              transport_name ? transport_name : "<no transport>",
-              (int)val);
+              transport_name ? transport_name : "<no transport>", (int)val);
   }
 
   /* Sort the transport names (helps with unit testing). */
   smartlist_sort_strings(transports_used);
 
   /* Loop through all seen transports. */
-  SMARTLIST_FOREACH_BEGIN(transports_used, const char *, transport_name) {
+  SMARTLIST_FOREACH_BEGIN (transports_used, const char *, transport_name) {
     void *transport_count_ptr = strmap_get(transport_counts, transport_name);
-    uintptr_t transport_count = (uintptr_t) transport_count_ptr;
+    uintptr_t transport_count = (uintptr_t)transport_count_ptr;
 
-    log_debug(LD_GENERAL, "We got %"PRIu64" clients with transport '%s'.",
+    log_debug(LD_GENERAL, "We got %" PRIu64 " clients with transport '%s'.",
               ((uint64_t)transport_count), transport_name);
 
-    smartlist_add_asprintf(string_chunks, "%s=%"PRIu64,
-                           transport_name,
+    smartlist_add_asprintf(string_chunks, "%s=%" PRIu64, transport_name,
                            (round_uint64_to_next_multiple_of(
-                                               (uint64_t)transport_count,
-                                               granularity)));
-  } SMARTLIST_FOREACH_END(transport_name);
+                               (uint64_t)transport_count, granularity)));
+  } SMARTLIST_FOREACH_END (transport_name);
 
   the_string = smartlist_join_strings(string_chunks, ",", 0, NULL);
 
   log_debug(LD_GENERAL, "Final bridge-ip-transports string: '%s'", the_string);
 
- done:
+done:
   strmap_free(transport_counts, NULL);
   SMARTLIST_FOREACH(transports_used, char *, s, tor_free(s));
   smartlist_free(transports_used);
@@ -707,15 +702,14 @@ geoip_get_dirreq_history(dirreq_type_t type)
     }
   }
 #define DIR_REQ_GRANULARITY 4
-  complete = round_uint32_to_next_multiple_of(complete,
-                                              DIR_REQ_GRANULARITY);
-  timeouts = round_uint32_to_next_multiple_of(timeouts,
-                                              DIR_REQ_GRANULARITY);
-  running = round_uint32_to_next_multiple_of(running,
-                                             DIR_REQ_GRANULARITY);
+  complete = round_uint32_to_next_multiple_of(complete, DIR_REQ_GRANULARITY);
+  timeouts = round_uint32_to_next_multiple_of(timeouts, DIR_REQ_GRANULARITY);
+  running = round_uint32_to_next_multiple_of(running, DIR_REQ_GRANULARITY);
   buf = buf_new_with_capacity(1024);
-  buf_add_printf(buf, "complete=%u,timeout=%u,"
-                 "running=%u", complete, timeouts, running);
+  buf_add_printf(buf,
+                 "complete=%u,timeout=%u,"
+                 "running=%u",
+                 complete, timeouts, running);
 
 #define MIN_DIR_REQ_RESPONSES 16
   if (complete >= MIN_DIR_REQ_RESPONSES) {
@@ -724,34 +718,29 @@ geoip_get_dirreq_history(dirreq_type_t type)
      * real value. */
     complete = smartlist_len(dirreq_completed);
     dltimes = tor_calloc(complete, sizeof(uint32_t));
-    SMARTLIST_FOREACH_BEGIN(dirreq_completed, dirreq_map_entry_t *, ent) {
+    SMARTLIST_FOREACH_BEGIN (dirreq_completed, dirreq_map_entry_t *, ent) {
       uint32_t bytes_per_second;
-      uint32_t time_diff_ = (uint32_t) tv_mdiff(&ent->request_time,
-                                               &ent->completion_time);
+      uint32_t time_diff_ =
+          (uint32_t)tv_mdiff(&ent->request_time, &ent->completion_time);
       if (time_diff_ == 0)
         time_diff_ = 1; /* Avoid DIV/0; "instant" answers are impossible
-                        * by law of nature or something, but a millisecond
-                        * is a bit greater than "instantly" */
+                         * by law of nature or something, but a millisecond
+                         * is a bit greater than "instantly" */
       bytes_per_second = (uint32_t)(1000 * ent->response_size / time_diff_);
       dltimes[ent_sl_idx] = bytes_per_second;
-    } SMARTLIST_FOREACH_END(ent);
+    } SMARTLIST_FOREACH_END (ent);
     median_uint32(dltimes, complete); /* sorts as a side effect. */
-    buf_add_printf(buf,
-                           ",min=%u,d1=%u,d2=%u,q1=%u,d3=%u,d4=%u,md=%u,"
-                           "d6=%u,d7=%u,q3=%u,d8=%u,d9=%u,max=%u",
-                           dltimes[0],
-                           dltimes[1*complete/10-1],
-                           dltimes[2*complete/10-1],
-                           dltimes[1*complete/4-1],
-                           dltimes[3*complete/10-1],
-                           dltimes[4*complete/10-1],
-                           dltimes[5*complete/10-1],
-                           dltimes[6*complete/10-1],
-                           dltimes[7*complete/10-1],
-                           dltimes[3*complete/4-1],
-                           dltimes[8*complete/10-1],
-                           dltimes[9*complete/10-1],
-                           dltimes[complete-1]);
+    buf_add_printf(
+        buf,
+        ",min=%u,d1=%u,d2=%u,q1=%u,d3=%u,d4=%u,md=%u,"
+        "d6=%u,d7=%u,q3=%u,d8=%u,d9=%u,max=%u",
+        dltimes[0], dltimes[1 * complete / 10 - 1],
+        dltimes[2 * complete / 10 - 1], dltimes[1 * complete / 4 - 1],
+        dltimes[3 * complete / 10 - 1], dltimes[4 * complete / 10 - 1],
+        dltimes[5 * complete / 10 - 1], dltimes[6 * complete / 10 - 1],
+        dltimes[7 * complete / 10 - 1], dltimes[3 * complete / 4 - 1],
+        dltimes[8 * complete / 10 - 1], dltimes[9 * complete / 10 - 1],
+        dltimes[complete - 1]);
     tor_free(dltimes);
   }
 
@@ -779,8 +768,8 @@ geoip_get_dirreq_history(dirreq_type_t type)
  *
  * Return 0 on success and -1 if we're missing geoip data. */
 int
-geoip_get_client_history(geoip_client_action_t action,
-                         char **country_str, char **ipver_str)
+geoip_get_client_history(geoip_client_action_t action, char **country_str,
+                         char **ipver_str)
 {
   unsigned granularity = IP_GRANULARITY;
   smartlist_t *entries = NULL;
@@ -791,11 +780,11 @@ geoip_get_client_history(geoip_client_action_t action,
   unsigned total = 0;
   unsigned ipv4_count = 0, ipv6_count = 0;
 
-  if (!geoip_is_loaded(AF_INET) && !geoip_is_loaded(AF_INET6))
+  if (! geoip_is_loaded(AF_INET) && ! geoip_is_loaded(AF_INET6))
     return -1;
 
   counts = tor_calloc(n_countries, sizeof(unsigned));
-  HT_FOREACH(cm_ent, clientmap, &client_history) {
+  HT_FOREACH (cm_ent, clientmap, &client_history) {
     int country;
     if ((*cm_ent)->action != (int)action)
       continue;
@@ -806,12 +795,12 @@ geoip_get_client_history(geoip_client_action_t action,
     ++counts[country];
     ++total;
     switch (tor_addr_family(&(*cm_ent)->addr)) {
-    case AF_INET:
-      ipv4_count++;
-      break;
-    case AF_INET6:
-      ipv6_count++;
-      break;
+      case AF_INET:
+        ipv4_count++;
+        break;
+      case AF_INET6:
+        ipv6_count++;
+        break;
     }
   }
   if (ipver_str) {
@@ -856,8 +845,8 @@ geoip_get_client_history(geoip_client_action_t action,
   if (country_str) {
     smartlist_t *chunks = smartlist_new();
     SMARTLIST_FOREACH(entries, c_hist_t *, ch, {
-        smartlist_add_asprintf(chunks, "%s=%u", ch->country, ch->total);
-      });
+      smartlist_add_asprintf(chunks, "%s=%u", ch->country, ch->total);
+    });
     *country_str = smartlist_join_strings(chunks, ",", 0, NULL);
     SMARTLIST_FOREACH(chunks, char *, c, tor_free(c));
     smartlist_free(chunks);
@@ -881,25 +870,25 @@ geoip_get_request_history(void)
   unsigned granularity = IP_GRANULARITY;
 
   entries = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(geoip_get_countries(), const geoip_country_t *, c) {
-      uint32_t tot = 0;
-      c_hist_t *ent;
-      if ((size_t)c_sl_idx < n_v3_ns_requests_len)
-        tot = n_v3_ns_requests[c_sl_idx];
-      else
-        tot = 0;
-      if (!tot)
-        continue;
-      ent = tor_malloc_zero(sizeof(c_hist_t));
-      strlcpy(ent->country, c->countrycode, sizeof(ent->country));
-      ent->total = round_to_next_multiple_of(tot, granularity);
-      smartlist_add(entries, ent);
-  } SMARTLIST_FOREACH_END(c);
+  SMARTLIST_FOREACH_BEGIN (geoip_get_countries(), const geoip_country_t *, c) {
+    uint32_t tot = 0;
+    c_hist_t *ent;
+    if ((size_t)c_sl_idx < n_v3_ns_requests_len)
+      tot = n_v3_ns_requests[c_sl_idx];
+    else
+      tot = 0;
+    if (! tot)
+      continue;
+    ent = tor_malloc_zero(sizeof(c_hist_t));
+    strlcpy(ent->country, c->countrycode, sizeof(ent->country));
+    ent->total = round_to_next_multiple_of(tot, granularity);
+    smartlist_add(entries, ent);
+  } SMARTLIST_FOREACH_END (c);
   smartlist_sort(entries, c_hist_compare_);
 
   strings = smartlist_new();
   SMARTLIST_FOREACH(entries, c_hist_t *, ent, {
-      smartlist_add_asprintf(strings, "%s=%u", ent->country, ent->total);
+    smartlist_add_asprintf(strings, "%s=%u", ent->country, ent->total);
   });
   result = smartlist_join_strings(strings, ",", 0, NULL);
   SMARTLIST_FOREACH(strings, char *, cp, tor_free(cp));
@@ -924,12 +913,10 @@ geoip_dirreq_stats_init(time_t now)
 void
 geoip_reset_dirreq_stats(time_t now)
 {
-  memset(n_v3_ns_requests, 0,
-         n_v3_ns_requests_len * sizeof(uint32_t));
+  memset(n_v3_ns_requests, 0, n_v3_ns_requests_len * sizeof(uint32_t));
   {
     clientmap_entry_t **ent, **next, *this;
-    for (ent = HT_START(clientmap, &client_history); ent != NULL;
-         ent = next) {
+    for (ent = HT_START(clientmap, &client_history); ent != NULL; ent = next) {
       if ((*ent)->action == GEOIP_CLIENT_NETWORKSTATUS) {
         this = *ent;
         next = HT_NEXT_RMV(clientmap, &client_history, ent);
@@ -965,13 +952,13 @@ geoip_dirreq_stats_term(void)
 char *
 geoip_format_dirreq_stats(time_t now)
 {
-  char t[ISO_TIME_LEN+1];
+  char t[ISO_TIME_LEN + 1];
   int i;
   char *v3_ips_string = NULL, *v3_reqs_string = NULL,
        *v3_direct_dl_string = NULL, *v3_tunneled_dl_string = NULL;
   char *result = NULL;
 
-  if (!start_of_dirreq_stats_interval)
+  if (! start_of_dirreq_stats_interval)
     return NULL; /* Not initialized. */
 
   tor_assert(now >= start_of_dirreq_stats_interval);
@@ -983,7 +970,7 @@ geoip_format_dirreq_stats(time_t now)
 #define RESPONSE_GRANULARITY 8
   for (i = 0; i < GEOIP_NS_RESPONSE_NUM; i++) {
     ns_v3_responses[i] = round_uint32_to_next_multiple_of(
-                               ns_v3_responses[i], RESPONSE_GRANULARITY);
+        ns_v3_responses[i], RESPONSE_GRANULARITY);
   }
 #undef RESPONSE_GRANULARITY
 
@@ -991,25 +978,25 @@ geoip_format_dirreq_stats(time_t now)
   v3_tunneled_dl_string = geoip_get_dirreq_history(DIRREQ_TUNNELED);
 
   /* Put everything together into a single string. */
-  tor_asprintf(&result, "dirreq-stats-end %s (%d s)\n"
-              "dirreq-v3-ips %s\n"
-              "dirreq-v3-reqs %s\n"
-              "dirreq-v3-resp ok=%u,not-enough-sigs=%u,unavailable=%u,"
-                   "not-found=%u,not-modified=%u,busy=%u\n"
-              "dirreq-v3-direct-dl %s\n"
-              "dirreq-v3-tunneled-dl %s\n",
-              t,
-              (unsigned) (now - start_of_dirreq_stats_interval),
-              v3_ips_string ? v3_ips_string : "",
-              v3_reqs_string ? v3_reqs_string : "",
-              ns_v3_responses[GEOIP_SUCCESS],
-              ns_v3_responses[GEOIP_REJECT_NOT_ENOUGH_SIGS],
-              ns_v3_responses[GEOIP_REJECT_UNAVAILABLE],
-              ns_v3_responses[GEOIP_REJECT_NOT_FOUND],
-              ns_v3_responses[GEOIP_REJECT_NOT_MODIFIED],
-              ns_v3_responses[GEOIP_REJECT_BUSY],
-              v3_direct_dl_string ? v3_direct_dl_string : "",
-              v3_tunneled_dl_string ? v3_tunneled_dl_string : "");
+  tor_asprintf(&result,
+               "dirreq-stats-end %s (%d s)\n"
+               "dirreq-v3-ips %s\n"
+               "dirreq-v3-reqs %s\n"
+               "dirreq-v3-resp ok=%u,not-enough-sigs=%u,unavailable=%u,"
+               "not-found=%u,not-modified=%u,busy=%u\n"
+               "dirreq-v3-direct-dl %s\n"
+               "dirreq-v3-tunneled-dl %s\n",
+               t, (unsigned)(now - start_of_dirreq_stats_interval),
+               v3_ips_string ? v3_ips_string : "",
+               v3_reqs_string ? v3_reqs_string : "",
+               ns_v3_responses[GEOIP_SUCCESS],
+               ns_v3_responses[GEOIP_REJECT_NOT_ENOUGH_SIGS],
+               ns_v3_responses[GEOIP_REJECT_UNAVAILABLE],
+               ns_v3_responses[GEOIP_REJECT_NOT_FOUND],
+               ns_v3_responses[GEOIP_REJECT_NOT_MODIFIED],
+               ns_v3_responses[GEOIP_REJECT_BUSY],
+               v3_direct_dl_string ? v3_direct_dl_string : "",
+               v3_tunneled_dl_string ? v3_tunneled_dl_string : "");
 
   /* Free partial strings. */
   tor_free(v3_ips_string);
@@ -1030,7 +1017,7 @@ geoip_dirreq_stats_write(time_t now)
 {
   char *str = NULL;
 
-  if (!start_of_dirreq_stats_interval)
+  if (! start_of_dirreq_stats_interval)
     return 0; /* Not initialized. */
   if (start_of_dirreq_stats_interval + WRITE_STATS_INTERVAL > now)
     goto done; /* Not ready to write. */
@@ -1044,13 +1031,13 @@ geoip_dirreq_stats_write(time_t now)
     goto done;
 
   /* Write dirreq-stats string to disk. */
-  if (!check_or_create_data_subdir("stats")) {
+  if (! check_or_create_data_subdir("stats")) {
     write_to_data_subdir("stats", "dirreq-stats", str, "dirreq statistics");
     /* Reset measurement interval start. */
     geoip_reset_dirreq_stats(now);
   }
 
- done:
+done:
   tor_free(str);
   return start_of_dirreq_stats_interval + WRITE_STATS_INTERVAL;
 }
@@ -1081,8 +1068,8 @@ geoip_bridge_stats_term(void)
 static int
 validate_bridge_stats(const char *stats_str, time_t now)
 {
-  char stats_end_str[ISO_TIME_LEN+1], stats_start_str[ISO_TIME_LEN+1],
-       *eos;
+  char stats_end_str[ISO_TIME_LEN + 1], stats_start_str[ISO_TIME_LEN + 1],
+      *eos;
 
   const char *BRIDGE_STATS_END = "bridge-stats-end ";
   const char *BRIDGE_IPS = "bridge-ips ";
@@ -1097,7 +1084,7 @@ validate_bridge_stats(const char *stats_str, time_t now)
   /* Parse timestamp and number of seconds from
     "bridge-stats-end YYYY-MM-DD HH:MM:SS (N s)" */
   tmp = find_str_at_start_of_line(stats_str, BRIDGE_STATS_END);
-  if (!tmp)
+  if (! tmp)
     return 0;
   tmp += strlen(BRIDGE_STATS_END);
 
@@ -1106,29 +1093,29 @@ validate_bridge_stats(const char *stats_str, time_t now)
   strlcpy(stats_end_str, tmp, sizeof(stats_end_str));
   if (parse_iso_time(stats_end_str, &stats_end_time) < 0)
     return 0;
-  if (stats_end_time < now - (25*60*60) ||
-      stats_end_time > now + (1*60*60))
+  if (stats_end_time < now - (25 * 60 * 60) ||
+      stats_end_time > now + (1 * 60 * 60))
     return 0;
   seconds = (int)strtol(tmp + ISO_TIME_LEN + 2, &eos, 10);
-  if (!eos || seconds < 23*60*60)
+  if (! eos || seconds < 23 * 60 * 60)
     return 0;
   format_iso_time(stats_start_str, stats_end_time - seconds);
 
   /* Parse: "bridge-ips CC=N,CC=N,..." */
   tmp = find_str_at_start_of_line(stats_str, BRIDGE_IPS);
-  if (!tmp) {
+  if (! tmp) {
     /* Look if there is an empty "bridge-ips" line */
     tmp = find_str_at_start_of_line(stats_str, BRIDGE_IPS_EMPTY_LINE);
-    if (!tmp)
+    if (! tmp)
       return 0;
   }
 
   /* Parse: "bridge-ip-transports PT=N,PT=N,..." */
   tmp = find_str_at_start_of_line(stats_str, BRIDGE_TRANSPORTS);
-  if (!tmp) {
+  if (! tmp) {
     /* Look if there is an empty "bridge-ip-transports" line */
     tmp = find_str_at_start_of_line(stats_str, BRIDGE_TRANSPORTS_EMPTY_LINE);
-    if (!tmp)
+    if (! tmp)
       return 0;
   }
 
@@ -1148,11 +1135,11 @@ geoip_format_bridge_stats(time_t now)
   char *out = NULL;
   char *country_data = NULL, *ipver_data = NULL, *transport_data = NULL;
   long duration = now - start_of_bridge_stats_interval;
-  char written[ISO_TIME_LEN+1];
+  char written[ISO_TIME_LEN + 1];
 
   if (duration < 0)
     return NULL;
-  if (!start_of_bridge_stats_interval)
+  if (! start_of_bridge_stats_interval)
     return NULL; /* Not initialized. */
 
   format_iso_time(written, now);
@@ -1164,8 +1151,7 @@ geoip_format_bridge_stats(time_t now)
                "bridge-ips %s\n"
                "bridge-ip-versions %s\n"
                "bridge-ip-transports %s\n",
-               written, duration,
-               country_data ? country_data : "",
+               written, duration, country_data ? country_data : "",
                ipver_data ? ipver_data : "",
                transport_data ? transport_data : "");
   tor_free(country_data);
@@ -1182,16 +1168,14 @@ static char *
 format_bridge_stats_controller(time_t now)
 {
   char *out = NULL, *country_data = NULL, *ipver_data = NULL;
-  char started[ISO_TIME_LEN+1];
-  (void) now;
+  char started[ISO_TIME_LEN + 1];
+  (void)now;
 
   format_iso_time(started, start_of_bridge_stats_interval);
   geoip_get_client_history(GEOIP_CLIENT_CONNECT, &country_data, &ipver_data);
 
-  tor_asprintf(&out,
-               "TimeStarted=\"%s\" CountrySummary=%s IPVersions=%s",
-               started,
-               country_data ? country_data : "",
+  tor_asprintf(&out, "TimeStarted=\"%s\" CountrySummary=%s IPVersions=%s",
+               started, country_data ? country_data : "",
                ipver_data ? ipver_data : "");
   tor_free(country_data);
   tor_free(ipver_data);
@@ -1208,13 +1192,13 @@ format_client_stats_heartbeat(time_t now)
   char *out = NULL;
   int n_clients = 0;
   clientmap_entry_t **ent;
-  unsigned cutoff = (unsigned)( (now-n_hours*3600)/60 );
+  unsigned cutoff = (unsigned)((now - n_hours * 3600) / 60);
 
-  if (!start_of_bridge_stats_interval)
+  if (! start_of_bridge_stats_interval)
     return NULL; /* Not initialized. */
 
   /* count unique IPs */
-  HT_FOREACH(ent, clientmap, &client_history) {
+  HT_FOREACH (ent, clientmap, &client_history) {
     /* only count directly connecting clients */
     if ((*ent)->action != GEOIP_CLIENT_CONNECT)
       continue;
@@ -1223,10 +1207,10 @@ format_client_stats_heartbeat(time_t now)
     n_clients++;
   }
 
-  tor_asprintf(&out, "Heartbeat: "
+  tor_asprintf(&out,
+               "Heartbeat: "
                "In the last %d hours, I have seen %d unique clients.",
-               n_hours,
-               n_clients);
+               n_hours, n_clients);
 
   return out;
 }
@@ -1256,9 +1240,9 @@ geoip_bridge_stats_write(time_t now)
   start_of_bridge_stats_interval = now;
 
   /* Write it to disk. */
-  if (!check_or_create_data_subdir("stats")) {
-    write_to_data_subdir("stats", "bridge-stats",
-                         bridge_stats_extrainfo, "bridge statistics");
+  if (! check_or_create_data_subdir("stats")) {
+    write_to_data_subdir("stats", "bridge-stats", bridge_stats_extrainfo,
+                         "bridge statistics");
 
     /* Tell the controller, "hey, there are clients!" */
     {
@@ -1269,7 +1253,7 @@ geoip_bridge_stats_write(time_t now)
     }
   }
 
- done:
+done:
   return start_of_bridge_stats_interval + WRITE_STATS_INTERVAL;
 }
 
@@ -1344,11 +1328,11 @@ geoip_entry_stats_term(void)
 char *
 geoip_format_entry_stats(time_t now)
 {
-  char t[ISO_TIME_LEN+1];
+  char t[ISO_TIME_LEN + 1];
   char *data = NULL;
   char *result;
 
-  if (!start_of_entry_stats_interval)
+  if (! start_of_entry_stats_interval)
     return NULL; /* Not initialized. */
 
   tor_assert(now >= start_of_entry_stats_interval);
@@ -1358,7 +1342,7 @@ geoip_format_entry_stats(time_t now)
   tor_asprintf(&result,
                "entry-stats-end %s (%u s)\n"
                "entry-ips %s\n",
-               t, (unsigned) (now - start_of_entry_stats_interval),
+               t, (unsigned)(now - start_of_entry_stats_interval),
                data ? data : "");
   tor_free(data);
   return result;
@@ -1373,7 +1357,7 @@ geoip_entry_stats_write(time_t now)
 {
   char *str = NULL;
 
-  if (!start_of_entry_stats_interval)
+  if (! start_of_entry_stats_interval)
     return 0; /* Not initialized. */
   if (start_of_entry_stats_interval + WRITE_STATS_INTERVAL > now)
     goto done; /* Not ready to write. */
@@ -1385,14 +1369,14 @@ geoip_entry_stats_write(time_t now)
   str = geoip_format_entry_stats(now);
 
   /* Write entry-stats string to disk. */
-  if (!check_or_create_data_subdir("stats")) {
+  if (! check_or_create_data_subdir("stats")) {
     write_to_data_subdir("stats", "entry-stats", str, "entry statistics");
 
     /* Reset measurement interval start. */
     geoip_reset_entry_stats(now);
   }
 
- done:
+done:
   tor_free(str);
   return start_of_entry_stats_interval + WRITE_STATS_INTERVAL;
 }

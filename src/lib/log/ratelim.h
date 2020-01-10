@@ -46,9 +46,12 @@ typedef struct ratelim_t {
 } ratelim_t;
 
 #ifndef COCCI
-#define RATELIM_INIT(r) { (r), 0, 0 }
+#  define RATELIM_INIT(r) \
+    {                     \
+      (r), 0, 0           \
+    }
 #endif
-#define RATELIM_TOOMANY (16*1000*1000)
+#define RATELIM_TOOMANY (16 * 1000 * 1000)
 
 char *rate_limit_log(ratelim_t *lim, time_t now);
 

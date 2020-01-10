@@ -12,7 +12,7 @@
 
 #include <stddef.h>
 
-const char *decode_qstring(const char *start, size_t in_len_max,
-                           char **out, size_t *out_len);
+const char *decode_qstring(const char *start, size_t in_len_max, char **out,
+                           size_t *out_len);
 
 #endif /* !defined(TOR_ENCODING_QSTRING_H) */

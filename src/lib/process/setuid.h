@@ -14,9 +14,9 @@
 int have_capability_support(void);
 
 /** Flag for switch_id; see switch_id() for documentation */
-#define SWITCH_ID_KEEP_BINDLOW    (1<<0)
+#define SWITCH_ID_KEEP_BINDLOW (1 << 0)
 /** Flag for switch_id; see switch_id() for documentation */
-#define SWITCH_ID_WARN_IF_NO_CAPS (1<<1)
+#define SWITCH_ID_WARN_IF_NO_CAPS (1 << 1)
 int switch_id(const char *user, unsigned flags);
 
 #endif /* !defined(TOR_SETUID_H) */

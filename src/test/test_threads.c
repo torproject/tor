@@ -12,8 +12,7 @@
 static tor_mutex_t *thread_test_mutex_ = NULL;
 /** mutexes for the thread test to make sure that the threads have to
  * interleave somewhat. */
-static tor_mutex_t *thread_test_start1_ = NULL,
-                   *thread_test_start2_ = NULL;
+static tor_mutex_t *thread_test_start1_ = NULL, *thread_test_start2_ = NULL;
 /** Shared strmap for the thread test. */
 static strmap_t *thread_test_strmap_ = NULL;
 /** The name of thread1 for the thread test */
@@ -25,7 +24,7 @@ static int thread_fns_failed = 0;
 
 static unsigned long thread_fn_tid1, thread_fn_tid2;
 
-static void thread_test_func_(void* _s) ATTR_NORETURN;
+static void thread_test_func_(void *_s) ATTR_NORETURN;
 
 /** How many iterations have the threads in the unit test run? */
 static tor_threadlocal_t count;
@@ -35,7 +34,7 @@ static tor_threadlocal_t count;
  * should start, then it repeatedly alters _test_thread_strmap protected by
  * thread_test_mutex_. */
 static void
-thread_test_func_(void* _s)
+thread_test_func_(void *_s)
 {
   char *s = _s;
   int i;
@@ -44,7 +43,7 @@ thread_test_func_(void* _s)
   char **cp;
   int *mycount = tor_malloc_zero(sizeof(int));
   tor_threadlocal_set(&count, mycount);
-  if (!strcmp(s, "thread 1")) {
+  if (! strcmp(s, "thread 1")) {
     m = thread_test_start1_;
     cp = &thread1_name_;
     thread_fn_tid1 = tor_get_thread_id();
@@ -59,7 +58,7 @@ thread_test_func_(void* _s)
 
   tor_mutex_acquire(m);
 
-  for (i=0; i<10000; ++i) {
+  for (i = 0; i < 10000; ++i) {
     tor_mutex_acquire(thread_test_mutex_);
     strmap_set(thread_test_strmap_, "last to run", *cp);
     tor_mutex_release(thread_test_mutex_);
@@ -87,7 +86,7 @@ test_threads_basic(void *arg)
   char *s1 = NULL, *s2 = NULL;
   int done = 0, timedout = 0;
   time_t started;
-  (void) arg;
+  (void)arg;
   tt_int_op(tor_threadlocal_init(&count), OP_EQ, 0);
 
   set_main_thread();
@@ -105,7 +104,7 @@ test_threads_basic(void *arg)
   tor_mutex_release(thread_test_start2_);
   tor_mutex_release(thread_test_start1_);
   started = time(NULL);
-  while (!done) {
+  while (! done) {
     tor_mutex_acquire(thread_test_mutex_);
     strmap_assert_ok(thread_test_strmap_);
     if (strmap_get(thread_test_strmap_, "thread 1") &&
@@ -128,21 +127,21 @@ test_threads_basic(void *arg)
   if (timedout) {
     tt_assert(strmap_get(thread_test_strmap_, "thread 1"));
     tt_assert(strmap_get(thread_test_strmap_, "thread 2"));
-    tt_assert(!timedout);
+    tt_assert(! timedout);
   }
 
   /* different thread IDs. */
   tt_assert(strcmp(strmap_get(thread_test_strmap_, "thread 1"),
-                     strmap_get(thread_test_strmap_, "thread 2")));
-  tt_assert(!strcmp(strmap_get(thread_test_strmap_, "thread 1"),
-                      strmap_get(thread_test_strmap_, "last to run")) ||
-              !strcmp(strmap_get(thread_test_strmap_, "thread 2"),
-                      strmap_get(thread_test_strmap_, "last to run")));
+                   strmap_get(thread_test_strmap_, "thread 2")));
+  tt_assert(! strcmp(strmap_get(thread_test_strmap_, "thread 1"),
+                     strmap_get(thread_test_strmap_, "last to run")) ||
+            ! strcmp(strmap_get(thread_test_strmap_, "thread 2"),
+                     strmap_get(thread_test_strmap_, "last to run")));
 
   tt_int_op(thread_fns_failed, OP_EQ, 0);
   tt_int_op(thread_fn_tid1, OP_NE, thread_fn_tid2);
 
- done:
+done:
   tor_free(s1);
   tor_free(s2);
   tor_free(thread1_name_);
@@ -180,7 +179,7 @@ cv_testinfo_new(void)
 static void
 cv_testinfo_free(cv_testinfo_t *i)
 {
-  if (!i)
+  if (! i)
     return;
   tor_cond_free(i->cond);
   tor_mutex_free(i->mutex);
@@ -198,7 +197,7 @@ cv_test_thr_fn_(void *arg)
   tor_mutex_acquire(i->mutex);
   tid = i->n_threads++;
   tor_mutex_release(i->mutex);
-  (void) tid;
+  (void)tid;
 
   tor_mutex_acquire(i->mutex);
   while (1) {
@@ -226,23 +225,23 @@ cv_test_thr_fn_(void *arg)
 static void
 test_threads_conditionvar(void *arg)
 {
-  cv_testinfo_t *ti=NULL;
-  const struct timeval msec100 = { 0, 100*1000 };
-  const int timeout = !strcmp(arg, "tv");
+  cv_testinfo_t *ti = NULL;
+  const struct timeval msec100 = {0, 100 * 1000};
+  const int timeout = ! strcmp(arg, "tv");
 
   ti = cv_testinfo_new();
   if (timeout) {
     ti->tv = &msec100;
   }
 
-#define SPIN_UNTIL(condition,sleep_msec)        \
-  while (1) {                                   \
-    tor_mutex_acquire(ti->mutex);               \
-    if (condition) {                            \
-      break;                                    \
-    }                                           \
-    tor_mutex_release(ti->mutex);               \
-    tor_sleep_msec(sleep_msec);                 \
+#define SPIN_UNTIL(condition, sleep_msec) \
+  while (1) {                             \
+    tor_mutex_acquire(ti->mutex);         \
+    if (condition) {                      \
+      break;                              \
+    }                                     \
+    tor_mutex_release(ti->mutex);         \
+    tor_sleep_msec(sleep_msec);           \
   }
 
   spawn_func(cv_test_thr_fn_, ti);
@@ -259,8 +258,7 @@ test_threads_conditionvar(void *arg)
   tor_cond_signal_one(ti->cond);
   tor_mutex_release(ti->mutex);
 
-#define SPIN()                                  \
-  SPIN_UNTIL(ti->addend == 0, 0)
+#define SPIN() SPIN_UNTIL(ti->addend == 0, 0)
 
   SPIN();
 
@@ -271,12 +269,14 @@ test_threads_conditionvar(void *arg)
   SPIN();
 
   ti->addend = 1000;
-  if (! timeout) ti->shutdown = 1;
+  if (! timeout)
+    ti->shutdown = 1;
   tor_cond_signal_one(ti->cond);
   tor_mutex_release(ti->mutex);
   SPIN();
   ti->addend = 300;
-  if (! timeout) ti->shutdown = 1;
+  if (! timeout)
+    ti->shutdown = 1;
   tor_cond_signal_all(ti->cond);
   tor_mutex_release(ti->mutex);
 
@@ -284,29 +284,31 @@ test_threads_conditionvar(void *arg)
   tor_mutex_release(ti->mutex);
 
   tt_int_op(ti->value, OP_EQ, 1337);
-  if (!timeout) {
+  if (! timeout) {
     tt_int_op(ti->n_shutdown, OP_EQ, 4);
   } else {
     const int GIVE_UP_AFTER_SEC = 30;
-    SPIN_UNTIL((ti->n_timeouts == 2 ||
-                time(NULL) >= started_at + GIVE_UP_AFTER_SEC), 10);
+    SPIN_UNTIL(
+        (ti->n_timeouts == 2 || time(NULL) >= started_at + GIVE_UP_AFTER_SEC),
+        10);
     tt_int_op(ti->n_shutdown, OP_EQ, 2);
     tt_int_op(ti->n_timeouts, OP_EQ, 2);
     tor_mutex_release(ti->mutex);
   }
 
- done:
+done:
   cv_testinfo_free(ti);
 }
 
-#define THREAD_TEST(name)                                               \
-  { #name, test_threads_##name, TT_FORK, NULL, NULL }
+#define THREAD_TEST(name)                           \
+  {                                                 \
+#    name, test_threads_##name, TT_FORK, NULL, NULL \
+  }
 
 struct testcase_t thread_tests[] = {
-  THREAD_TEST(basic),
-  { "conditionvar", test_threads_conditionvar, TT_FORK,
-    &passthrough_setup, (void*)"no-tv" },
-  { "conditionvar_timeout", test_threads_conditionvar, TT_FORK,
-    &passthrough_setup, (void*)"tv" },
-  END_OF_TESTCASES
-};
+    THREAD_TEST(basic),
+    {"conditionvar", test_threads_conditionvar, TT_FORK, &passthrough_setup,
+     (void *)"no-tv"},
+    {"conditionvar_timeout", test_threads_conditionvar, TT_FORK,
+     &passthrough_setup, (void *)"tv"},
+    END_OF_TESTCASES};

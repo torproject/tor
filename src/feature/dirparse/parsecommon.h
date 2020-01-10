@@ -16,10 +16,10 @@ struct crypto_pk_t;
 struct memarea_t;
 
 /** Enumeration of possible token types.  The ones starting with K_ correspond
-* to directory 'keywords'. A_ is for an annotation, R or C is related to
-* hidden services, ERR_ is an error in the tokenizing process, EOF_ is an
-* end-of-file marker, and NIL_ is used to encode not-a-token.
-*/
+ * to directory 'keywords'. A_ is for an annotation, R or C is related to
+ * hidden services, ERR_ is an error in the tokenizing process, EOF_ is an
+ * end-of-file marker, and NIL_ is used to encode not-a-token.
+ */
 typedef enum {
   K_ACCEPT = 0,
   K_ACCEPT6,
@@ -199,29 +199,30 @@ typedef enum {
  * the heap, or token_clear() won't work.
  */
 typedef struct directory_token_t {
-  directory_keyword tp;        /**< Type of the token. */
-  int n_args:30;               /**< Number of elements in args */
-  char **args;                 /**< Array of arguments from keyword line. */
+  directory_keyword tp; /**< Type of the token. */
+  int n_args : 30; /**< Number of elements in args */
+  char **args; /**< Array of arguments from keyword line. */
 
-  char *object_type;           /**< -----BEGIN [object_type]-----*/
-  size_t object_size;          /**< Bytes in object_body */
-  char *object_body;           /**< Contents of object, base64-decoded. */
+  char *object_type; /**< -----BEGIN [object_type]-----*/
+  size_t object_size; /**< Bytes in object_body */
+  char *object_body; /**< Contents of object, base64-decoded. */
 
-  struct crypto_pk_t *key;     /**< For public keys only.  Heap-allocated. */
+  struct crypto_pk_t *key; /**< For public keys only.  Heap-allocated. */
 
-  char *error;                 /**< For ERR_ tokens only. */
+  char *error; /**< For ERR_ tokens only. */
 } directory_token_t;
 
 /** We use a table of rules to decide how to parse each token type. */
 
 /** Rules for whether the keyword needs an object. */
 typedef enum {
-  NO_OBJ,        /**< No object, ever. */
-  NEED_OBJ,      /**< Object is required. */
-  NEED_SKEY_1024,/**< Object is required, and must be a 1024 bit private key */
+  NO_OBJ, /**< No object, ever. */
+  NEED_OBJ, /**< Object is required. */
+  NEED_SKEY_1024, /**< Object is required, and must be a 1024 bit private key
+                   */
   NEED_KEY_1024, /**< Object is required, and must be a 1024 bit public key */
-  NEED_KEY,      /**< Object is required, and must be a public key. */
-  OBJ_OK,        /**< Object is optional. */
+  NEED_KEY, /**< Object is required, and must be a public key. */
+  OBJ_OK, /**< Object is optional. */
 } obj_syntax;
 
 #define AT_START 1
@@ -241,34 +242,61 @@ typedef enum {
 /**@{*/
 
 /** Appears to indicate the end of a table. */
-#define END_OF_TABLE { NULL, NIL_, 0,0,0, NO_OBJ, 0, INT_MAX, 0, 0 }
+#define END_OF_TABLE                              \
+  {                                               \
+    NULL, NIL_, 0, 0, 0, NO_OBJ, 0, INT_MAX, 0, 0 \
+  }
 /** An item with no restrictions: used for obsolete document types */
-#define T(s,t,a,o)    { s, t, a, o, 0, INT_MAX, 0, 0 }
+#define T(s, t, a, o)            \
+  {                              \
+    s, t, a, o, 0, INT_MAX, 0, 0 \
+  }
 /** An item with no restrictions on multiplicity or location. */
-#define T0N(s,t,a,o)  { s, t, a, o, 0, INT_MAX, 0, 0 }
+#define T0N(s, t, a, o)          \
+  {                              \
+    s, t, a, o, 0, INT_MAX, 0, 0 \
+  }
 /** An item that must appear exactly once */
-#define T1(s,t,a,o)   { s, t, a, o, 1, 1, 0, 0 }
+#define T1(s, t, a, o)     \
+  {                        \
+    s, t, a, o, 1, 1, 0, 0 \
+  }
 /** An item that must appear exactly once, at the start of the document */
-#define T1_START(s,t,a,o)   { s, t, a, o, 1, 1, AT_START, 0 }
+#define T1_START(s, t, a, o)      \
+  {                               \
+    s, t, a, o, 1, 1, AT_START, 0 \
+  }
 /** An item that must appear exactly once, at the end of the document */
-#define T1_END(s,t,a,o)   { s, t, a, o, 1, 1, AT_END, 0 }
+#define T1_END(s, t, a, o)      \
+  {                             \
+    s, t, a, o, 1, 1, AT_END, 0 \
+  }
 /** An item that must appear one or more times */
-#define T1N(s,t,a,o)  { s, t, a, o, 1, INT_MAX, 0, 0 }
+#define T1N(s, t, a, o)          \
+  {                              \
+    s, t, a, o, 1, INT_MAX, 0, 0 \
+  }
 /** An item that must appear no more than once */
-#define T01(s,t,a,o)  { s, t, a, o, 0, 1, 0, 0 }
+#define T01(s, t, a, o)    \
+  {                        \
+    s, t, a, o, 0, 1, 0, 0 \
+  }
 /** An annotation that must appear no more than once */
-#define A01(s,t,a,o)  { s, t, a, o, 0, 1, 0, 1 }
+#define A01(s, t, a, o)    \
+  {                        \
+    s, t, a, o, 0, 1, 0, 1 \
+  }
 
 /** Argument multiplicity: any number of arguments. */
-#define ARGS        0,INT_MAX,0
+#define ARGS 0, INT_MAX, 0
 /** Argument multiplicity: no arguments. */
-#define NO_ARGS     0,0,0
+#define NO_ARGS 0, 0, 0
 /** Argument multiplicity: concatenate all arguments. */
-#define CONCAT_ARGS 1,1,1
+#define CONCAT_ARGS 1, 1, 1
 /** Argument multiplicity: at least <b>n</b> arguments. */
-#define GE(n)       n,INT_MAX,0
+#define GE(n) n, INT_MAX, 0
 /** Argument multiplicity: exactly <b>n</b> arguments. */
-#define EQ(n)       n,n,0
+#define EQ(n) n, n, 0
 /**@}*/
 
 /** Determines the parsing rules for a single token type. */
@@ -299,26 +327,21 @@ typedef struct token_rule_t {
 
 void token_clear(directory_token_t *tok);
 
-int tokenize_string(struct memarea_t *area,
-                    const char *start, const char *end,
-                    struct smartlist_t *out,
-                    const token_rule_t *table,
+int tokenize_string(struct memarea_t *area, const char *start, const char *end,
+                    struct smartlist_t *out, const token_rule_t *table,
                     int flags);
-directory_token_t *get_next_token(struct memarea_t *area,
-                                  const char **s,
-                                  const char *eos,
-                                  const token_rule_t *table);
+directory_token_t *get_next_token(struct memarea_t *area, const char **s,
+                                  const char *eos, const token_rule_t *table);
 
 directory_token_t *find_by_keyword_(struct smartlist_t *s,
                                     directory_keyword keyword,
                                     const char *keyword_str);
 
-#define find_by_keyword(s, keyword) \
-  find_by_keyword_((s), (keyword), #keyword)
+#define find_by_keyword(s, keyword) find_by_keyword_((s), (keyword), #keyword)
 
 directory_token_t *find_opt_by_keyword(const struct smartlist_t *s,
                                        directory_keyword keyword);
-struct smartlist_t * find_all_by_keyword(const struct smartlist_t *s,
-                                         directory_keyword k);
+struct smartlist_t *find_all_by_keyword(const struct smartlist_t *s,
+                                        directory_keyword k);
 
 #endif /* !defined(TOR_PARSECOMMON_H) */

@@ -19,9 +19,13 @@
 #define TOR_TLS_MAGIC 0x71571571
 
 typedef enum {
-    TOR_TLS_ST_HANDSHAKE, TOR_TLS_ST_OPEN, TOR_TLS_ST_GOTCLOSE,
-    TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED, TOR_TLS_ST_RENEGOTIATE,
-    TOR_TLS_ST_BUFFEREVENT
+  TOR_TLS_ST_HANDSHAKE,
+  TOR_TLS_ST_OPEN,
+  TOR_TLS_ST_GOTCLOSE,
+  TOR_TLS_ST_SENTCLOSE,
+  TOR_TLS_ST_CLOSED,
+  TOR_TLS_ST_RENEGOTIATE,
+  TOR_TLS_ST_BUFFEREVENT
 } tor_tls_state_t;
 #define tor_tls_state_bitfield_t ENUM_BF(tor_tls_state_t)
 
@@ -48,14 +52,14 @@ struct tor_tls_t {
   tor_tls_state_bitfield_t state : 3; /**< The current SSL state,
                                        * depending on which operations
                                        * have completed successfully. */
-  unsigned int isServer:1; /**< True iff this is a server-side connection */
-  unsigned int wasV2Handshake:1; /**< True iff the original handshake for
-                                  * this connection used the updated version
-                                  * of the connection protocol (client sends
-                                  * different cipher list, server sends only
-                                  * one certificate). */
+  unsigned int isServer : 1; /**< True iff this is a server-side connection */
+  unsigned int wasV2Handshake : 1; /**< True iff the original handshake for
+                                    * this connection used the updated version
+                                    * of the connection protocol (client sends
+                                    * different cipher list, server sends only
+                                    * one certificate). */
   /** True iff we should call negotiated_callback when we're done reading. */
-  unsigned int got_renegotiate:1;
+  unsigned int got_renegotiate : 1;
 #ifdef ENABLE_OPENSSL
   /** Return value from tor_tls_classify_client_ciphers, or 0 if we haven't
    * called that function yet. */

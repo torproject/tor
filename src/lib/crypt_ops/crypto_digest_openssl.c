@@ -39,11 +39,11 @@ ENABLE_GCC_WARNING("-Wredundant-decls")
  * Return 0 on success, -1 on failure.
  */
 MOCK_IMPL(int,
-crypto_digest,(char *digest, const char *m, size_t len))
+crypto_digest, (char *digest, const char *m, size_t len))
 {
   tor_assert(m);
   tor_assert(digest);
-  if (SHA1((const unsigned char*)m,len,(unsigned char*)digest) == NULL) {
+  if (SHA1((const unsigned char *)m, len, (unsigned char *)digest) == NULL) {
     return -1;
   }
   return 0;
@@ -62,18 +62,18 @@ crypto_digest256(char *digest, const char *m, size_t len,
 
   int ret = 0;
   if (algorithm == DIGEST_SHA256) {
-    ret = (SHA256((const uint8_t*)m,len,(uint8_t*)digest) != NULL);
+    ret = (SHA256((const uint8_t *)m, len, (uint8_t *)digest) != NULL);
   } else {
 #ifdef OPENSSL_HAS_SHA3
     unsigned int dlen = DIGEST256_LEN;
-    ret = EVP_Digest(m, len, (uint8_t*)digest, &dlen, EVP_sha3_256(), NULL);
+    ret = EVP_Digest(m, len, (uint8_t *)digest, &dlen, EVP_sha3_256(), NULL);
 #else
-    ret = (sha3_256((uint8_t *)digest, DIGEST256_LEN,(const uint8_t *)m, len)
-           > -1);
+    ret = (sha3_256((uint8_t *)digest, DIGEST256_LEN, (const uint8_t *)m,
+                    len) > -1);
 #endif /* defined(OPENSSL_HAS_SHA3) */
   }
 
-  if (!ret)
+  if (! ret)
     return -1;
   return 0;
 }
@@ -91,19 +91,19 @@ crypto_digest512(char *digest, const char *m, size_t len,
 
   int ret = 0;
   if (algorithm == DIGEST_SHA512) {
-    ret = (SHA512((const unsigned char*)m,len,(unsigned char*)digest)
-           != NULL);
+    ret = (SHA512((const unsigned char *)m, len, (unsigned char *)digest) !=
+           NULL);
   } else {
 #ifdef OPENSSL_HAS_SHA3
     unsigned int dlen = DIGEST512_LEN;
-    ret = EVP_Digest(m, len, (uint8_t*)digest, &dlen, EVP_sha3_512(), NULL);
+    ret = EVP_Digest(m, len, (uint8_t *)digest, &dlen, EVP_sha3_512(), NULL);
 #else
-    ret = (sha3_512((uint8_t*)digest, DIGEST512_LEN, (const uint8_t*)m, len)
-           > -1);
+    ret = (sha3_512((uint8_t *)digest, DIGEST512_LEN, (const uint8_t *)m,
+                    len) > -1);
 #endif /* defined(OPENSSL_HAS_SHA3) */
   }
 
-  if (!ret)
+  if (! ret)
     return -1;
   return 0;
 }
@@ -111,10 +111,10 @@ crypto_digest512(char *digest, const char *m, size_t len,
 /** Intermediate information about the digest of a stream of data. */
 struct crypto_digest_t {
   digest_algorithm_t algorithm; /**< Which algorithm is in use? */
-   /** State for the digest we're using.  Only one member of the
-    * union is usable, depending on the value of <b>algorithm</b>. Note also
-    * that space for other members might not even be allocated!
-    */
+  /** State for the digest we're using.  Only one member of the
+   * union is usable, depending on the value of <b>algorithm</b>. Note also
+   * that space for other members might not even be allocated!
+   */
   union {
     SHA_CTX sha1; /**< state for SHA1 */
     SHA256_CTX sha2; /**< state for SHA256 */
@@ -148,10 +148,10 @@ static size_t
 crypto_digest_alloc_bytes(digest_algorithm_t alg)
 {
   /** Helper: returns the number of bytes in the 'f' field of 'st' */
-#define STRUCT_FIELD_SIZE(st, f) (sizeof( ((st*)0)->f ))
+#define STRUCT_FIELD_SIZE(st, f) (sizeof(((st *)0)->f))
   /** Gives the length of crypto_digest_t through the end of the field 'd' */
-#define END_OF_FIELD(f) (offsetof(crypto_digest_t, f) + \
-                         STRUCT_FIELD_SIZE(crypto_digest_t, f))
+#define END_OF_FIELD(f) \
+  (offsetof(crypto_digest_t, f) + STRUCT_FIELD_SIZE(crypto_digest_t, f))
   switch (alg) {
     case DIGEST_SHA1:
       return END_OF_FIELD(d.sha1);
@@ -170,7 +170,7 @@ crypto_digest_alloc_bytes(digest_algorithm_t alg)
 #endif /* defined(OPENSSL_HAS_SHA3) */
     default:
       tor_assert(0); // LCOV_EXCL_LINE
-      return 0;      // LCOV_EXCL_LINE
+      return 0; // LCOV_EXCL_LINE
   }
 #undef END_OF_FIELD
 #undef STRUCT_FIELD_SIZE
@@ -186,8 +186,7 @@ crypto_digest_new_internal(digest_algorithm_t algorithm)
   crypto_digest_t *r = tor_malloc(crypto_digest_alloc_bytes(algorithm));
   r->algorithm = algorithm;
 
-  switch (algorithm)
-    {
+  switch (algorithm) {
     case DIGEST_SHA1:
       SHA1_Init(&r->d.sha1);
       break;
@@ -200,14 +199,14 @@ crypto_digest_new_internal(digest_algorithm_t algorithm)
 #ifdef OPENSSL_HAS_SHA3
     case DIGEST_SHA3_256:
       r->d.md = EVP_MD_CTX_new();
-      if (!EVP_DigestInit(r->d.md, EVP_sha3_256())) {
+      if (! EVP_DigestInit(r->d.md, EVP_sha3_256())) {
         crypto_digest_free(r);
         return NULL;
       }
       break;
     case DIGEST_SHA3_512:
       r->d.md = EVP_MD_CTX_new();
-      if (!EVP_DigestInit(r->d.md, EVP_sha3_512())) {
+      if (! EVP_DigestInit(r->d.md, EVP_sha3_512())) {
         crypto_digest_free(r);
         return NULL;
       }
@@ -222,7 +221,7 @@ crypto_digest_new_internal(digest_algorithm_t algorithm)
 #endif /* defined(OPENSSL_HAS_SHA3) */
     default:
       tor_assert_unreached();
-    }
+  }
 
   return r;
 }
@@ -262,7 +261,7 @@ crypto_digest512_new(digest_algorithm_t algorithm)
 void
 crypto_digest_free_(crypto_digest_t *digest)
 {
-  if (!digest)
+  if (! digest)
     return;
 #ifdef OPENSSL_HAS_SHA3
   if (digest->algorithm == DIGEST_SHA3_256 ||
@@ -283,8 +282,7 @@ crypto_digest_free_(crypto_digest_t *digest)
  * C_RUST_COUPLED: `crypto::digest::Sha256::process`
  */
 void
-crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
-                        size_t len)
+crypto_digest_add_bytes(crypto_digest_t *digest, const char *data, size_t len)
 {
   tor_assert(digest);
   tor_assert(data);
@@ -295,21 +293,20 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
    */
   switch (digest->algorithm) {
     case DIGEST_SHA1:
-      SHA1_Update(&digest->d.sha1, (void*)data, len);
+      SHA1_Update(&digest->d.sha1, (void *)data, len);
       break;
     case DIGEST_SHA256:
-      SHA256_Update(&digest->d.sha2, (void*)data, len);
+      SHA256_Update(&digest->d.sha2, (void *)data, len);
       break;
     case DIGEST_SHA512:
-      SHA512_Update(&digest->d.sha512, (void*)data, len);
+      SHA512_Update(&digest->d.sha512, (void *)data, len);
       break;
 #ifdef OPENSSL_HAS_SHA3
     case DIGEST_SHA3_256: /* FALLSTHROUGH */
     case DIGEST_SHA3_512: {
       int r = EVP_DigestUpdate(digest->d.md, data, len);
       tor_assert(r);
-  }
-      break;
+    } break;
 #else /* !defined(OPENSSL_HAS_SHA3) */
     case DIGEST_SHA3_256: /* FALLSTHROUGH */
     case DIGEST_SHA3_512:
@@ -332,8 +329,7 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
  * C_RUST_COUPLED: `impl digest::FixedOutput for Sha256`
  */
 void
-crypto_digest_get_digest(crypto_digest_t *digest,
-                         char *out, size_t out_len)
+crypto_digest_get_digest(crypto_digest_t *digest, char *out, size_t out_len)
 {
   unsigned char r[DIGEST512_LEN];
   tor_assert(digest);
@@ -345,8 +341,8 @@ crypto_digest_get_digest(crypto_digest_t *digest,
   if (digest->algorithm == DIGEST_SHA3_256 ||
       digest->algorithm == DIGEST_SHA3_512) {
 #ifdef OPENSSL_HAS_SHA3
-    unsigned dlen = (unsigned)
-      crypto_digest_algorithm_get_length(digest->algorithm);
+    unsigned dlen =
+        (unsigned)crypto_digest_algorithm_get_length(digest->algorithm);
     EVP_MD_CTX *tmp = EVP_MD_CTX_new();
     EVP_MD_CTX_copy(tmp, digest->d.md);
     memset(r, 0xff, sizeof(r));
@@ -376,7 +372,7 @@ crypto_digest_get_digest(crypto_digest_t *digest,
     case DIGEST_SHA512:
       SHA512_Final(r, &tmpenv.d.sha512);
       break;
-//LCOV_EXCL_START
+      //LCOV_EXCL_START
     case DIGEST_SHA3_256: /* FALLSTHROUGH */
     case DIGEST_SHA3_512:
     default:
@@ -384,10 +380,10 @@ crypto_digest_get_digest(crypto_digest_t *digest,
       /* This is fatal, because it should never happen. */
       tor_assert_unreached();
       break;
-//LCOV_EXCL_STOP
+      //LCOV_EXCL_STOP
   }
 #ifdef OPENSSL_HAS_SHA3
- done:
+done:
 #endif
   memcpy(out, r, out_len);
   memwipe(r, 0, sizeof(r));
@@ -444,8 +440,7 @@ crypto_digest_restore(crypto_digest_t *digest,
  * have the same digest type.
  */
 void
-crypto_digest_assign(crypto_digest_t *into,
-                     const crypto_digest_t *from)
+crypto_digest_assign(crypto_digest_t *into, const crypto_digest_t *from)
 {
   tor_assert(into);
   tor_assert(from);
@@ -460,7 +455,7 @@ crypto_digest_assign(crypto_digest_t *into,
   }
 #endif /* defined(OPENSSL_HAS_SHA3) */
 
-  memcpy(into,from,alloc_bytes);
+  memcpy(into, from, alloc_bytes);
 }
 
 /** Given a list of strings in <b>lst</b>, set the <b>len_out</b>-byte digest
@@ -470,8 +465,7 @@ crypto_digest_assign(crypto_digest_t *into,
  * <b>out_len</b> must be \<= DIGEST512_LEN. */
 void
 crypto_digest_smartlist(char *digest_out, size_t len_out,
-                        const smartlist_t *lst,
-                        const char *append,
+                        const smartlist_t *lst, const char *append,
                         digest_algorithm_t alg)
 {
   crypto_digest_smartlist_prefix(digest_out, len_out, NULL, lst, append, alg);
@@ -485,10 +479,8 @@ crypto_digest_smartlist(char *digest_out, size_t len_out,
  * <b>len_out</b> must be \<= DIGEST512_LEN. */
 void
 crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
-                        const char *prepend,
-                        const smartlist_t *lst,
-                        const char *append,
-                        digest_algorithm_t alg)
+                               const char *prepend, const smartlist_t *lst,
+                               const char *append, digest_algorithm_t alg)
 {
   crypto_digest_t *d = crypto_digest_new_internal(alg);
   if (prepend)
@@ -506,8 +498,7 @@ crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
  * result in <b>hmac_out</b>. Asserts on failure.
  */
 void
-crypto_hmac_sha256(char *hmac_out,
-                   const char *key, size_t key_len,
+crypto_hmac_sha256(char *hmac_out, const char *key, size_t key_len,
                    const char *msg, size_t msg_len)
 {
   /* If we've got OpenSSL >=0.9.8 we can use its hmac implementation. */
@@ -515,7 +506,7 @@ crypto_hmac_sha256(char *hmac_out,
   tor_assert(msg_len < INT_MAX);
   tor_assert(hmac_out);
   unsigned char *rv = NULL;
-  rv = HMAC(EVP_sha256(), key, (int)key_len, (unsigned char*)msg, (int)msg_len,
-            (unsigned char*)hmac_out, NULL);
+  rv = HMAC(EVP_sha256(), key, (int)key_len, (unsigned char *)msg,
+            (int)msg_len, (unsigned char *)hmac_out, NULL);
   tor_assert(rv);
 }

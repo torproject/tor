@@ -14,26 +14,29 @@
 /** Flags to be passed to control router_choose_random_node() to indicate what
  * kind of nodes to pick according to what algorithm. */
 typedef enum router_crn_flags_t {
-  CRN_NEED_UPTIME = 1<<0,
-  CRN_NEED_CAPACITY = 1<<1,
-  CRN_NEED_GUARD = 1<<2,
+  CRN_NEED_UPTIME = 1 << 0,
+  CRN_NEED_CAPACITY = 1 << 1,
+  CRN_NEED_GUARD = 1 << 2,
   /* XXXX not used, apparently. */
-  CRN_WEIGHT_AS_EXIT = 1<<5,
-  CRN_NEED_DESC = 1<<6,
+  CRN_WEIGHT_AS_EXIT = 1 << 5,
+  CRN_NEED_DESC = 1 << 6,
   /* On clients, only provide nodes that satisfy ClientPreferIPv6OR */
-  CRN_PREF_ADDR = 1<<7,
+  CRN_PREF_ADDR = 1 << 7,
   /* On clients, only provide nodes that we can connect to directly, based on
    * our firewall rules */
-  CRN_DIRECT_CONN = 1<<8,
+  CRN_DIRECT_CONN = 1 << 8,
   /* On clients, only provide nodes with HSRend >= 2 protocol version which
    * is required for hidden service version >= 3. */
-  CRN_RENDEZVOUS_V3 = 1<<9,
+  CRN_RENDEZVOUS_V3 = 1 << 9,
 } router_crn_flags_t;
 
 /** Possible ways to weight routers when choosing one randomly.  See
  * routerlist_sl_choose_by_bandwidth() for more information.*/
 typedef enum bandwidth_weight_rule_t {
-  NO_WEIGHTING, WEIGHT_FOR_EXIT, WEIGHT_FOR_MID, WEIGHT_FOR_GUARD,
+  NO_WEIGHTING,
+  WEIGHT_FOR_EXIT,
+  WEIGHT_FOR_MID,
+  WEIGHT_FOR_GUARD,
   WEIGHT_FOR_DIR
 } bandwidth_weight_rule_t;
 
@@ -41,30 +44,30 @@ typedef enum bandwidth_weight_rule_t {
 /** Flag to indicate that we should not automatically be willing to use
  * ourself to answer a directory request.
  * Passed to router_pick_directory_server (et al).*/
-#define PDS_ALLOW_SELF                 (1<<0)
+#define PDS_ALLOW_SELF (1 << 0)
 /** Flag to indicate that if no servers seem to be up, we should mark all
  * directory servers as up and try again.
  * Passed to router_pick_directory_server (et al).*/
-#define PDS_RETRY_IF_NO_SERVERS        (1<<1)
+#define PDS_RETRY_IF_NO_SERVERS (1 << 1)
 /** Flag to indicate that we should not exclude directory servers that
  * our ReachableAddress settings would exclude.  This usually means that
  * we're going to connect to the server over Tor, and so we don't need to
  * worry about our firewall telling us we can't.
  * Passed to router_pick_directory_server (et al).*/
-#define PDS_IGNORE_FASCISTFIREWALL     (1<<2)
+#define PDS_IGNORE_FASCISTFIREWALL (1 << 2)
 /** Flag to indicate that we should not use any directory authority to which
  * we have an existing directory connection for downloading server descriptors
  * or extrainfo documents.
  *
  * Passed to router_pick_directory_server (et al)
  */
-#define PDS_NO_EXISTING_SERVERDESC_FETCH (1<<3)
+#define PDS_NO_EXISTING_SERVERDESC_FETCH (1 << 3)
 /** Flag to indicate that we should not use any directory authority to which
  * we have an existing directory connection for downloading microdescs.
  *
  * Passed to router_pick_directory_server (et al)
  */
-#define PDS_NO_EXISTING_MICRODESC_FETCH (1<<4)
+#define PDS_NO_EXISTING_MICRODESC_FETCH (1 << 4)
 
 const routerstatus_t *router_pick_directory_server(dirinfo_type_t type,
                                                    int flags);
@@ -90,11 +93,10 @@ STATIC int choose_array_element_by_weight(const uint64_t *entries,
                                           int n_entries);
 STATIC void scale_array_elements_to_u64(uint64_t *entries_out,
                                         const double *entries_in,
-                                        int n_entries,
-                                        uint64_t *total_out);
-STATIC const routerstatus_t *router_pick_directory_server_impl(
-                                           dirinfo_type_t auth, int flags,
-                                           int *n_busy_out);
+                                        int n_entries, uint64_t *total_out);
+STATIC const routerstatus_t *
+router_pick_directory_server_impl(dirinfo_type_t auth, int flags,
+                                  int *n_busy_out);
 STATIC int router_is_already_dir_fetching(const tor_addr_port_t *ap,
                                           int serverdesc, int microdesc);
 #endif /* defined(NODE_SELECT_PRIVATE) */

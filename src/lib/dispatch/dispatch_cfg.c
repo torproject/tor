@@ -42,15 +42,14 @@ dcfg_new(void)
  * different type was previously associated with the message ID.
  **/
 int
-dcfg_msg_set_type(dispatch_cfg_t *cfg, message_id_t msg,
-                  msg_type_id_t type)
+dcfg_msg_set_type(dispatch_cfg_t *cfg, message_id_t msg, msg_type_id_t type)
 {
-  smartlist_grow(cfg->type_by_msg, msg+1);
+  smartlist_grow(cfg->type_by_msg, msg + 1);
   msg_type_id_t *oldval = smartlist_get(cfg->type_by_msg, msg);
   if (oldval != NULL && *oldval != type) {
     return -1;
   }
-  if (!oldval)
+  if (! oldval)
     smartlist_set(cfg->type_by_msg, msg, tor_memdup(&type, sizeof(type)));
   return 0;
 }
@@ -60,15 +59,14 @@ dcfg_msg_set_type(dispatch_cfg_t *cfg, message_id_t msg,
  * different channel was previously associated with the message ID.
  **/
 int
-dcfg_msg_set_chan(dispatch_cfg_t *cfg, message_id_t msg,
-                  channel_id_t chan)
+dcfg_msg_set_chan(dispatch_cfg_t *cfg, message_id_t msg, channel_id_t chan)
 {
-  smartlist_grow(cfg->chan_by_msg, msg+1);
+  smartlist_grow(cfg->chan_by_msg, msg + 1);
   channel_id_t *oldval = smartlist_get(cfg->chan_by_msg, msg);
   if (oldval != NULL && *oldval != chan) {
     return -1;
   }
-  if (!oldval)
+  if (! oldval)
     smartlist_set(cfg->chan_by_msg, msg, tor_memdup(&chan, sizeof(chan)));
   return 0;
 }
@@ -81,12 +79,12 @@ int
 dcfg_type_set_fns(dispatch_cfg_t *cfg, msg_type_id_t type,
                   const dispatch_typefns_t *fns)
 {
-  smartlist_grow(cfg->fns_by_type, type+1);
+  smartlist_grow(cfg->fns_by_type, type + 1);
   dispatch_typefns_t *oldfns = smartlist_get(cfg->fns_by_type, type);
-  if (oldfns && (oldfns->free_fn != fns->free_fn ||
-                 oldfns->fmt_fn != fns->fmt_fn))
+  if (oldfns &&
+      (oldfns->free_fn != fns->free_fn || oldfns->fmt_fn != fns->fmt_fn))
     return -1;
-  if (!oldfns)
+  if (! oldfns)
     smartlist_set(cfg->fns_by_type, type, tor_memdup(fns, sizeof(*fns)));
   return 0;
 }
@@ -98,12 +96,12 @@ dcfg_type_set_fns(dispatch_cfg_t *cfg, msg_type_id_t type,
  * Return 0 on success, on failure.
  **/
 int
-dcfg_add_recv(dispatch_cfg_t *cfg, message_id_t msg,
-              subsys_id_t sys, recv_fn_t fn)
+dcfg_add_recv(dispatch_cfg_t *cfg, message_id_t msg, subsys_id_t sys,
+              recv_fn_t fn)
 {
-  smartlist_grow(cfg->recv_by_msg, msg+1);
+  smartlist_grow(cfg->recv_by_msg, msg + 1);
   smartlist_t *receivers = smartlist_get(cfg->recv_by_msg, msg);
-  if (!receivers) {
+  if (! receivers) {
     receivers = smartlist_new();
     smartlist_set(cfg->recv_by_msg, msg, receivers);
   }
@@ -112,7 +110,7 @@ dcfg_add_recv(dispatch_cfg_t *cfg, message_id_t msg,
   rcv->sys = sys;
   rcv->enabled = true;
   rcv->fn = fn;
-  smartlist_add(receivers, (void*)rcv);
+  smartlist_add(receivers, (void *)rcv);
   return 0;
 }
 
@@ -120,7 +118,7 @@ dcfg_add_recv(dispatch_cfg_t *cfg, message_id_t msg,
 void
 dcfg_free_(dispatch_cfg_t *cfg)
 {
-  if (!cfg)
+  if (! cfg)
     return;
 
   SMARTLIST_FOREACH(cfg->type_by_msg, msg_type_id_t *, id, tor_free(id));
@@ -129,12 +127,12 @@ dcfg_free_(dispatch_cfg_t *cfg)
   smartlist_free(cfg->type_by_msg);
   smartlist_free(cfg->chan_by_msg);
   smartlist_free(cfg->fns_by_type);
-  SMARTLIST_FOREACH_BEGIN(cfg->recv_by_msg, smartlist_t *, receivers) {
-    if (!receivers)
+  SMARTLIST_FOREACH_BEGIN (cfg->recv_by_msg, smartlist_t *, receivers) {
+    if (! receivers)
       continue;
     SMARTLIST_FOREACH(receivers, dispatch_rcv_t *, rcv, tor_free(rcv));
     smartlist_free(receivers);
-  } SMARTLIST_FOREACH_END(receivers);
+  } SMARTLIST_FOREACH_END (receivers);
   smartlist_free(cfg->recv_by_msg);
 
   tor_free(cfg);

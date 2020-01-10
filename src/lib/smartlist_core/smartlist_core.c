@@ -23,7 +23,7 @@
 /** Allocate and return an empty smartlist.
  */
 MOCK_IMPL(smartlist_t *,
-smartlist_new,(void))
+smartlist_new, (void))
 {
   smartlist_t *sl = tor_malloc(sizeof(smartlist_t));
   sl->num_used = 0;
@@ -36,9 +36,9 @@ smartlist_new,(void))
  * list's elements.
  */
 MOCK_IMPL(void,
-smartlist_free_,(smartlist_t *sl))
+smartlist_free_, (smartlist_t * sl))
 {
-  if (!sl)
+  if (! sl)
     return;
   tor_free(sl->list);
   tor_free(sl);
@@ -54,7 +54,7 @@ smartlist_clear(smartlist_t *sl)
 }
 
 #if SIZE_MAX < INT_MAX
-#error "We don't support systems where size_t is smaller than int."
+#  error "We don't support systems where size_t is smaller than int."
 #endif
 
 /** Make sure that <b>sl</b> can hold at least <b>size</b> entries. */
@@ -62,27 +62,26 @@ static inline void
 smartlist_ensure_capacity(smartlist_t *sl, size_t size)
 {
   /* Set MAX_CAPACITY to MIN(INT_MAX, SIZE_MAX / sizeof(void*)) */
-#if (SIZE_MAX/SIZEOF_VOID_P) > INT_MAX
-#define MAX_CAPACITY (INT_MAX)
+#if (SIZE_MAX / SIZEOF_VOID_P) > INT_MAX
+#  define MAX_CAPACITY (INT_MAX)
 #else
-#define MAX_CAPACITY (int)((SIZE_MAX / (sizeof(void*))))
+#  define MAX_CAPACITY (int)((SIZE_MAX / (sizeof(void *))))
 #endif
 
   raw_assert(size <= MAX_CAPACITY);
 
-  if (size > (size_t) sl->capacity) {
-    size_t higher = (size_t) sl->capacity;
-    if (PREDICT_UNLIKELY(size > MAX_CAPACITY/2)) {
+  if (size > (size_t)sl->capacity) {
+    size_t higher = (size_t)sl->capacity;
+    if (PREDICT_UNLIKELY(size > MAX_CAPACITY / 2)) {
       higher = MAX_CAPACITY;
     } else {
       while (size > higher)
         higher *= 2;
     }
-    sl->list = tor_reallocarray(sl->list, sizeof(void *),
-                                ((size_t)higher));
+    sl->list = tor_reallocarray(sl->list, sizeof(void *), ((size_t)higher));
     memset(sl->list + sl->capacity, 0,
            sizeof(void *) * (higher - sl->capacity));
-    sl->capacity = (int) higher;
+    sl->capacity = (int)higher;
   }
 #undef ASSERT_CAPACITY
 #undef MAX_CAPACITY
@@ -116,7 +115,7 @@ smartlist_grow(smartlist_t *sl, size_t new_size)
 void
 smartlist_add(smartlist_t *sl, void *element)
 {
-  smartlist_ensure_capacity(sl, ((size_t) sl->num_used)+1);
+  smartlist_ensure_capacity(sl, ((size_t)sl->num_used) + 1);
   sl->list[sl->num_used++] = element;
 }
 
@@ -125,11 +124,11 @@ void
 smartlist_add_all(smartlist_t *s1, const smartlist_t *s2)
 {
   size_t new_size = (size_t)s1->num_used + (size_t)s2->num_used;
-  raw_assert(new_size >= (size_t) s1->num_used); /* check for overflow. */
+  raw_assert(new_size >= (size_t)s1->num_used); /* check for overflow. */
   smartlist_ensure_capacity(s1, new_size);
-  memcpy(s1->list + s1->num_used, s2->list, s2->num_used*sizeof(void*));
+  memcpy(s1->list + s1->num_used, s2->list, s2->num_used * sizeof(void *));
   raw_assert(new_size <= INT_MAX); /* redundant. */
-  s1->num_used = (int) new_size;
+  s1->num_used = (int)new_size;
 }
 
 /** Append a copy of string to sl */
@@ -153,7 +152,7 @@ smartlist_remove(smartlist_t *sl, const void *element)
   int i;
   if (element == NULL)
     return;
-  for (i=0; i < sl->num_used; i++)
+  for (i = 0; i < sl->num_used; i++)
     if (sl->list[i] == element) {
       sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
       i--; /* so we process the new i'th element */
@@ -170,7 +169,7 @@ smartlist_remove_keeporder(smartlist_t *sl, const void *element)
   if (element == NULL)
     return;
 
-  for (i=j=0; j < num_used_orig; ++j) {
+  for (i = j = 0; j < num_used_orig; ++j) {
     if (sl->list[j] == element) {
       --sl->num_used;
     } else {
@@ -201,7 +200,7 @@ int
 smartlist_contains(const smartlist_t *sl, const void *element)
 {
   int i;
-  for (i=0; i < sl->num_used; i++)
+  for (i = 0; i < sl->num_used; i++)
     if (sl->list[i] == element)
       return 1;
   return 0;
@@ -214,7 +213,7 @@ void
 smartlist_del(smartlist_t *sl, int idx)
 {
   raw_assert(sl);
-  raw_assert(idx>=0);
+  raw_assert(idx >= 0);
   raw_assert(idx < sl->num_used);
   sl->list[idx] = sl->list[--sl->num_used];
   sl->list[sl->num_used] = NULL;
@@ -228,11 +227,12 @@ void
 smartlist_del_keeporder(smartlist_t *sl, int idx)
 {
   raw_assert(sl);
-  raw_assert(idx>=0);
+  raw_assert(idx >= 0);
   raw_assert(idx < sl->num_used);
   --sl->num_used;
   if (idx < sl->num_used)
-    memmove(sl->list+idx, sl->list+idx+1, sizeof(void*)*(sl->num_used-idx));
+    memmove(sl->list + idx, sl->list + idx + 1,
+            sizeof(void *) * (sl->num_used - idx));
   sl->list[sl->num_used] = NULL;
 }
 
@@ -244,16 +244,16 @@ void
 smartlist_insert(smartlist_t *sl, int idx, void *val)
 {
   raw_assert(sl);
-  raw_assert(idx>=0);
+  raw_assert(idx >= 0);
   raw_assert(idx <= sl->num_used);
   if (idx == sl->num_used) {
     smartlist_add(sl, val);
   } else {
-    smartlist_ensure_capacity(sl, ((size_t) sl->num_used)+1);
+    smartlist_ensure_capacity(sl, ((size_t)sl->num_used) + 1);
     /* Move other elements away */
     if (idx < sl->num_used)
       memmove(sl->list + idx + 1, sl->list + idx,
-              sizeof(void*)*(sl->num_used-idx));
+              sizeof(void *) * (sl->num_used - idx));
     sl->num_used++;
     sl->list[idx] = val;
   }

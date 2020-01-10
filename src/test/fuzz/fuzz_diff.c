@@ -63,8 +63,8 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
     tor_assert(c4);
     int equal = (c2_len == strlen(c4)) && fast_memeq(c2, c4, c2_len);
     if (! equal) {
-      //printf("%s\n", escaped(c1));
-      //printf("%s\n", escaped(c2));
+      // printf("%s\n", escaped(c1));
+      // printf("%s\n", escaped(c2));
       printf("%s\n", escaped(c3));
       printf("%s\n", escaped(c4));
     }

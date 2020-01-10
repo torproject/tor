@@ -18,36 +18,36 @@
 #include <stdlib.h>
 
 #ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
+#  include <sys/time.h>
 #endif
 
 #ifdef _WIN32
-#include <windows.h>
+#  include <windows.h>
 #endif
 
 #ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
+#  include <sys/types.h>
 #endif
 
 #ifndef HAVE_GETTIMEOFDAY
-#ifdef HAVE_FTIME
-#include <sys/timeb.h>
-#endif
+#  ifdef HAVE_FTIME
+#    include <sys/timeb.h>
+#  endif
 #endif
 
 /** Set *timeval to the current time of day.  On error, log and terminate.
  * (Same as gettimeofday(timeval,NULL), but never returns -1.)
  */
 MOCK_IMPL(void,
-tor_gettimeofday, (struct timeval *timeval))
+tor_gettimeofday, (struct timeval * timeval))
 {
 #ifdef _WIN32
   /* Epoch bias copied from perl: number of units between windows epoch and
    * Unix epoch. */
-#define EPOCH_BIAS UINT64_C(116444736000000000)
-#define UNITS_PER_SEC UINT64_C(10000000)
-#define USEC_PER_SEC UINT64_C(1000000)
-#define UNITS_PER_USEC UINT64_C(10)
+#  define EPOCH_BIAS UINT64_C(116444736000000000)
+#  define UNITS_PER_SEC UINT64_C(10000000)
+#  define USEC_PER_SEC UINT64_C(1000000)
+#  define UNITS_PER_USEC UINT64_C(10)
   union {
     uint64_t ft_64;
     FILETIME ft_ft;
@@ -60,8 +60,8 @@ tor_gettimeofday, (struct timeval *timeval))
     /* LCOV_EXCL_STOP */
   }
   ft.ft_64 -= EPOCH_BIAS;
-  timeval->tv_sec = (unsigned) (ft.ft_64 / UNITS_PER_SEC);
-  timeval->tv_usec = (unsigned) ((ft.ft_64 / UNITS_PER_USEC) % USEC_PER_SEC);
+  timeval->tv_sec = (unsigned)(ft.ft_64 / UNITS_PER_SEC);
+  timeval->tv_usec = (unsigned)((ft.ft_64 / UNITS_PER_USEC) % USEC_PER_SEC);
 #elif defined(HAVE_GETTIMEOFDAY)
   if (gettimeofday(timeval, NULL)) {
     /* LCOV_EXCL_START */
@@ -76,7 +76,7 @@ tor_gettimeofday, (struct timeval *timeval))
   timeval->tv_sec = tb.time;
   timeval->tv_usec = tb.millitm * 1000;
 #else
-#error "No way to get time."
+#  error "No way to get time."
 #endif /* defined(_WIN32) || ... */
   return;
 }

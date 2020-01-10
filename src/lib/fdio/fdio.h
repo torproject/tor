@@ -14,7 +14,7 @@
 
 #include <stddef.h>
 #ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
+#  include <sys/types.h>
 #endif
 
 off_t tor_fd_getpos(int fd);

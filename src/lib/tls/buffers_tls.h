@@ -15,9 +15,9 @@
 struct buf_t;
 struct tor_tls_t;
 
-int buf_read_from_tls(struct buf_t *buf,
-                      struct tor_tls_t *tls, size_t at_most);
-int buf_flush_to_tls(struct buf_t *buf, struct tor_tls_t *tls,
-                     size_t sz, size_t *buf_flushlen);
+int buf_read_from_tls(struct buf_t *buf, struct tor_tls_t *tls,
+                      size_t at_most);
+int buf_flush_to_tls(struct buf_t *buf, struct tor_tls_t *tls, size_t sz,
+                     size_t *buf_flushlen);
 
 #endif /* !defined(TOR_BUFFERS_TLS_H) */

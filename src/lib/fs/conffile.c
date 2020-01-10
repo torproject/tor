@@ -73,19 +73,19 @@ config_get_file_list(const char *path, smartlist_t *opened_files)
     return file_list;
   } else if (file_type == FN_DIR) {
     smartlist_t *all_files = tor_listdir(path);
-    if (!all_files) {
+    if (! all_files) {
       smartlist_free(file_list);
       return NULL;
     }
     smartlist_sort_strings(all_files);
-    SMARTLIST_FOREACH_BEGIN(all_files, char *, f) {
+    SMARTLIST_FOREACH_BEGIN (all_files, char *, f) {
       if (f[0] == '.') {
         tor_free(f);
         continue;
       }
 
       char *fullname;
-      tor_asprintf(&fullname, "%s"PATH_SEPARATOR"%s", path, f);
+      tor_asprintf(&fullname, "%s" PATH_SEPARATOR "%s", path, f);
       tor_free(f);
 
       if (opened_files) {
@@ -97,11 +97,11 @@ config_get_file_list(const char *path, smartlist_t *opened_files)
         continue;
       }
       smartlist_add(file_list, fullname);
-    } SMARTLIST_FOREACH_END(f);
+    } SMARTLIST_FOREACH_END (f);
     smartlist_free(all_files);
     return file_list;
   } else if (file_type == FN_EMPTY) {
-      return file_list;
+    return file_list;
   } else {
     smartlist_free(file_list);
     return NULL;
@@ -118,12 +118,12 @@ config_get_included_config(const char *path, int recursion_level, int extended,
                            smartlist_t *opened_lst)
 {
   char *included_conf = read_file_to_str(path, 0, NULL);
-  if (!included_conf) {
+  if (! included_conf) {
     return -1;
   }
 
   if (config_get_lines_aux(included_conf, config, extended, 1, NULL,
-                           opened_lst, recursion_level+1, config_last,
+                           opened_lst, recursion_level + 1, config_last,
                            config_process_include) < 0) {
     tor_free(included_conf);
     return -1;
@@ -146,12 +146,12 @@ config_process_include(const char *path, int recursion_level, int extended,
   config_line_t **next = &ret_list;
 
   smartlist_t *config_files = config_get_file_list(path, opened_lst);
-  if (!config_files) {
+  if (! config_files) {
     return -1;
   }
 
   int rv = -1;
-  SMARTLIST_FOREACH_BEGIN(config_files, const char *, config_file) {
+  SMARTLIST_FOREACH_BEGIN (config_files, const char *, config_file) {
     config_line_t *included_config = NULL;
     config_line_t *included_config_last = NULL;
     if (config_get_included_config(config_file, recursion_level, extended,
@@ -165,11 +165,11 @@ config_process_include(const char *path, int recursion_level, int extended,
       next = &included_config_last->next;
       *list_last = included_config_last;
     }
-  } SMARTLIST_FOREACH_END(config_file);
+  } SMARTLIST_FOREACH_END (config_file);
   *list = ret_list;
   rv = 0;
 
- done:
+done:
   SMARTLIST_FOREACH(config_files, char *, f, tor_free(f));
   smartlist_free(config_files);
   return rv;

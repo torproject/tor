@@ -16,17 +16,17 @@
 #include <string.h>
 
 #ifdef _WIN32
-#include <winsock2.h>
-#include <windows.h>
-#include <wincrypt.h>
+#  include <winsock2.h>
+#  include <windows.h>
+#  include <wincrypt.h>
 #endif /* defined(_WIN32) */
 
 #include <stdlib.h>
 
 #ifdef ENABLE_OPENSSL
 DISABLE_GCC_WARNING("-Wredundant-decls")
-#include <openssl/err.h>
-#include <openssl/crypto.h>
+#  include <openssl/err.h>
+#  include <openssl/crypto.h>
 ENABLE_GCC_WARNING("-Wredundant-decls")
 #endif /* defined(ENABLE_OPENSSL) */
 
@@ -69,9 +69,9 @@ memwipe(void *mem, uint8_t byte, size_t sz)
 
 #if defined(SecureZeroMemory) || defined(HAVE_SECUREZEROMEMORY)
   /* Here's what you do on windows. */
-  SecureZeroMemory(mem,sz);
+  SecureZeroMemory(mem, sz);
 #elif defined(HAVE_RTLSECUREZEROMEMORY)
-  RtlSecureZeroMemory(mem,sz);
+  RtlSecureZeroMemory(mem, sz);
 #elif defined(HAVE_EXPLICIT_BZERO)
   /* The BSDs provide this. */
   explicit_bzero(mem, sz);
@@ -94,7 +94,8 @@ memwipe(void *mem, uint8_t byte, size_t sz)
 #else
   memset(mem, 0, sz);
   asm volatile("" ::: "memory");
-#endif /* defined(SecureZeroMemory) || defined(HAVE_SECUREZEROMEMORY) || ... */
+#endif /* defined(SecureZeroMemory) || defined(HAVE_SECUREZEROMEMORY) || ... \
+        */
 
   /* Just in case some caller of memwipe() is relying on getting a buffer
    * filled with a particular value, fill the buffer.

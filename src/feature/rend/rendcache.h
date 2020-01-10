@@ -14,12 +14,12 @@
 
 /** How old do we let hidden service descriptors get before discarding
  * them as too old? */
-#define REND_CACHE_MAX_AGE (2*24*60*60)
+#define REND_CACHE_MAX_AGE (2 * 24 * 60 * 60)
 /** How wrong do we assume our clock may be when checking whether hidden
  * services are too old or too new? */
-#define REND_CACHE_MAX_SKEW (24*60*60)
+#define REND_CACHE_MAX_SKEW (24 * 60 * 60)
 /** How old do we keep an intro point failure entry in the failure cache? */
-#define REND_CACHE_FAILURE_MAX_AGE (5*60)
+#define REND_CACHE_FAILURE_MAX_AGE (5 * 60)
 
 /* Do not allow more than this many introduction points in a hidden service
  * descriptor */
@@ -49,7 +49,7 @@ typedef struct rend_cache_failure_t {
 } rend_cache_failure_t;
 
 typedef enum {
-  REND_CACHE_TYPE_CLIENT  = 1,
+  REND_CACHE_TYPE_CLIENT = 1,
   REND_CACHE_TYPE_SERVICE = 2,
 } rend_cache_type_t;
 
@@ -93,40 +93,37 @@ void rend_cache_increment_allocation(size_t n);
 
 STATIC size_t rend_cache_entry_allocation(const rend_cache_entry_t *e);
 STATIC void rend_cache_entry_free_(rend_cache_entry_t *e);
-#define rend_cache_entry_free(e) \
-  FREE_AND_NULL(rend_cache_entry_t, rend_cache_entry_free_, (e))
-STATIC void rend_cache_failure_intro_entry_free_(rend_cache_failure_intro_t
-                                                 *entry);
-#define rend_cache_failure_intro_entry_free(e)                          \
-  FREE_AND_NULL(rend_cache_failure_intro_t,                   \
-                          rend_cache_failure_intro_entry_free_, (e))
+#  define rend_cache_entry_free(e) \
+    FREE_AND_NULL(rend_cache_entry_t, rend_cache_entry_free_, (e))
+STATIC void
+rend_cache_failure_intro_entry_free_(rend_cache_failure_intro_t *entry);
+#  define rend_cache_failure_intro_entry_free(e) \
+    FREE_AND_NULL(rend_cache_failure_intro_t,    \
+                  rend_cache_failure_intro_entry_free_, (e))
 STATIC void rend_cache_failure_entry_free_(rend_cache_failure_t *entry);
-#define rend_cache_failure_entry_free(e)                        \
-  FREE_AND_NULL(rend_cache_failure_t,                 \
-                          rend_cache_failure_entry_free_, (e))
-STATIC int cache_failure_intro_lookup(const uint8_t *identity,
-                                      const char *service_id,
-                                      rend_cache_failure_intro_t
-                                      **intro_entry);
-STATIC rend_cache_failure_intro_t *rend_cache_failure_intro_entry_new(
-                                      rend_intro_point_failure_t failure);
+#  define rend_cache_failure_entry_free(e) \
+    FREE_AND_NULL(rend_cache_failure_t, rend_cache_failure_entry_free_, (e))
+STATIC int
+cache_failure_intro_lookup(const uint8_t *identity, const char *service_id,
+                           rend_cache_failure_intro_t **intro_entry);
+STATIC rend_cache_failure_intro_t *
+rend_cache_failure_intro_entry_new(rend_intro_point_failure_t failure);
 STATIC rend_cache_failure_t *rend_cache_failure_entry_new(void);
 STATIC void rend_cache_failure_remove(rend_service_descriptor_t *desc);
 STATIC void cache_failure_intro_add(const uint8_t *identity,
                                     const char *service_id,
                                     rend_intro_point_failure_t failure);
 STATIC void validate_intro_point_failure(const rend_service_descriptor_t *desc,
-                                        const char *service_id);
+                                         const char *service_id);
 
 STATIC void rend_cache_failure_entry_free_void(void *entry);
 
-#ifdef TOR_UNIT_TESTS
+#  ifdef TOR_UNIT_TESTS
 extern strmap_t *rend_cache;
 extern strmap_t *rend_cache_failure;
 extern digestmap_t *rend_cache_v2_dir;
 extern size_t rend_cache_total_allocation;
-#endif /* defined(TOR_UNIT_TESTS) */
+#  endif /* defined(TOR_UNIT_TESTS) */
 #endif /* defined(RENDCACHE_PRIVATE) */
 
 #endif /* !defined(TOR_RENDCACHE_H) */
-

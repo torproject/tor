@@ -28,7 +28,7 @@ add_default_log_for_quiet_level(quiet_level_t quiet)
       /* --quiet: no initial logging */
       return;
     case QUIET_HUSH:
-    /* --hush: log at warning or higher. */
+      /* --hush: log at warning or higher. */
       add_default_log(LOG_WARN);
       break;
     case QUIET_NONE: /* fall through */

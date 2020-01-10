@@ -33,7 +33,7 @@ unescape_string(const char *s, char **result, size_t *size_out)
   char *out;
   if (s[0] != '\"')
     return NULL;
-  cp = s+1;
+  cp = s + 1;
   while (1) {
     switch (*cp) {
       case '\0':
@@ -43,15 +43,17 @@ unescape_string(const char *s, char **result, size_t *size_out)
         goto end_of_loop;
       case '\\':
         if (cp[1] == 'x' || cp[1] == 'X') {
-          if (!(TOR_ISXDIGIT(cp[2]) && TOR_ISXDIGIT(cp[3])))
+          if (! (TOR_ISXDIGIT(cp[2]) && TOR_ISXDIGIT(cp[3])))
             return NULL;
           cp += 4;
         } else if (TOR_ISODIGIT(cp[1])) {
           cp += 2;
-          if (TOR_ISODIGIT(*cp)) ++cp;
-          if (TOR_ISODIGIT(*cp)) ++cp;
-        } else if (cp[1] == 'n' || cp[1] == 'r' || cp[1] == 't' || cp[1] == '"'
-                   || cp[1] == '\\' || cp[1] == '\'') {
+          if (TOR_ISODIGIT(*cp))
+            ++cp;
+          if (TOR_ISODIGIT(*cp))
+            ++cp;
+        } else if (cp[1] == 'n' || cp[1] == 'r' || cp[1] == 't' ||
+                   cp[1] == '"' || cp[1] == '\\' || cp[1] == '\'') {
           cp += 2;
         } else {
           return NULL;
@@ -62,16 +64,16 @@ unescape_string(const char *s, char **result, size_t *size_out)
         break;
     }
   }
- end_of_loop:
-  out = *result = tor_malloc(cp-s + 1);
-  cp = s+1;
+end_of_loop:
+  out = *result = tor_malloc(cp - s + 1);
+  cp = s + 1;
   while (1) {
-    switch (*cp)
-      {
+    switch (*cp) {
       case '\"':
         *out = '\0';
-        if (size_out) *size_out = out - *result;
-        return cp+1;
+        if (size_out)
+          *size_out = out - *result;
+        return cp + 1;
 
         /* LCOV_EXCL_START -- we caught this in parse_config_from_line. */
       case '\0':
@@ -80,41 +82,61 @@ unescape_string(const char *s, char **result, size_t *size_out)
         return NULL;
         /* LCOV_EXCL_STOP */
       case '\\':
-        switch (cp[1])
-          {
-          case 'n': *out++ = '\n'; cp += 2; break;
-          case 'r': *out++ = '\r'; cp += 2; break;
-          case 't': *out++ = '\t'; cp += 2; break;
-          case 'x': case 'X':
-            {
-              int x1, x2;
-
-              x1 = hex_decode_digit(cp[2]);
-              x2 = hex_decode_digit(cp[3]);
-              if (x1 == -1 || x2 == -1) {
-                /* LCOV_EXCL_START */
-                /* we caught this above in the initial loop. */
-                tor_assert_nonfatal_unreached();
-                tor_free(*result);
-                return NULL;
-                /* LCOV_EXCL_STOP */
-              }
-
-              *out++ = ((x1<<4) + x2);
-              cp += 4;
-            }
+        switch (cp[1]) {
+          case 'n':
+            *out++ = '\n';
+            cp += 2;
             break;
-          case '0': case '1': case '2': case '3': case '4': case '5':
-          case '6': case '7':
-            {
-              int n = cp[1]-'0';
-              cp += 2;
-              if (TOR_ISODIGIT(*cp)) { n = n*8 + *cp-'0'; cp++; }
-              if (TOR_ISODIGIT(*cp)) { n = n*8 + *cp-'0'; cp++; }
-              if (n > 255) { tor_free(*result); return NULL; }
-              *out++ = (char)n;
-            }
+          case 'r':
+            *out++ = '\r';
+            cp += 2;
             break;
+          case 't':
+            *out++ = '\t';
+            cp += 2;
+            break;
+          case 'x':
+          case 'X': {
+            int x1, x2;
+
+            x1 = hex_decode_digit(cp[2]);
+            x2 = hex_decode_digit(cp[3]);
+            if (x1 == -1 || x2 == -1) {
+              /* LCOV_EXCL_START */
+              /* we caught this above in the initial loop. */
+              tor_assert_nonfatal_unreached();
+              tor_free(*result);
+              return NULL;
+              /* LCOV_EXCL_STOP */
+            }
+
+            *out++ = ((x1 << 4) + x2);
+            cp += 4;
+          } break;
+          case '0':
+          case '1':
+          case '2':
+          case '3':
+          case '4':
+          case '5':
+          case '6':
+          case '7': {
+            int n = cp[1] - '0';
+            cp += 2;
+            if (TOR_ISODIGIT(*cp)) {
+              n = n * 8 + *cp - '0';
+              cp++;
+            }
+            if (TOR_ISODIGIT(*cp)) {
+              n = n * 8 + *cp - '0';
+              cp++;
+            }
+            if (n > 255) {
+              tor_free(*result);
+              return NULL;
+            }
+            *out++ = (char)n;
+          } break;
           case '\'':
           case '\"':
           case '\\':
@@ -127,12 +149,13 @@ unescape_string(const char *s, char **result, size_t *size_out)
           default:
             /* we caught this above in the initial loop. */
             tor_assert_nonfatal_unreached();
-            tor_free(*result); return NULL;
+            tor_free(*result);
+            return NULL;
             /* LCOV_EXCL_STOP */
-          }
+        }
         break;
       default:
         *out++ = *cp++;
-      }
+    }
   }
 }

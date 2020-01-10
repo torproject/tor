@@ -18,7 +18,7 @@
 #define CRYPTO_CURVE25519_PRIVATE
 #include "orconfig.h"
 #ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
+#  include <sys/stat.h>
 #endif
 #include "lib/ctime/di_ops.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
@@ -38,15 +38,15 @@
    ============================== */
 
 #ifdef USE_CURVE25519_DONNA
-int curve25519_donna(uint8_t *mypublic,
-                     const uint8_t *secret, const uint8_t *basepoint);
+int curve25519_donna(uint8_t *mypublic, const uint8_t *secret,
+                     const uint8_t *basepoint);
 #endif
 #ifdef USE_CURVE25519_NACL
-#ifdef HAVE_CRYPTO_SCALARMULT_CURVE25519_H
-#include <crypto_scalarmult_curve25519.h>
-#elif defined(HAVE_NACL_CRYPTO_SCALARMULT_CURVE25519_H)
-#include <nacl/crypto_scalarmult_curve25519.h>
-#endif
+#  ifdef HAVE_CRYPTO_SCALARMULT_CURVE25519_H
+#    include <crypto_scalarmult_curve25519.h>
+#  elif defined(HAVE_NACL_CRYPTO_SCALARMULT_CURVE25519_H)
+#    include <nacl/crypto_scalarmult_curve25519.h>
+#  endif
 #endif /* defined(USE_CURVE25519_NACL) */
 
 static void pick_curve25519_basepoint_impl(void);
@@ -62,8 +62,7 @@ static int curve25519_use_ed = -1;
  * "output".  Return 0 on success, negative on failure.
  **/
 STATIC int
-curve25519_impl(uint8_t *output, const uint8_t *secret,
-                const uint8_t *point)
+curve25519_impl(uint8_t *output, const uint8_t *secret, const uint8_t *point)
 {
   uint8_t bp[CURVE25519_PUBKEY_LEN];
   int r;
@@ -75,7 +74,7 @@ curve25519_impl(uint8_t *output, const uint8_t *secret,
 #elif defined(USE_CURVE25519_NACL)
   r = crypto_scalarmult_curve25519(output, secret, bp);
 #else
-#error "No implementation of curve25519 is available."
+#  error "No implementation of curve25519 is available."
 #endif /* defined(USE_CURVE25519_DONNA) || ... */
   memwipe(bp, 0, sizeof(bp));
   return r;
@@ -131,7 +130,7 @@ curve25519_set_impl_params(int use_ed)
 int
 curve25519_public_key_is_ok(const curve25519_public_key_t *key)
 {
-  return !safe_mem_is_zero(key->public_key, CURVE25519_PUBKEY_LEN);
+  return ! safe_mem_is_zero(key->public_key, CURVE25519_PUBKEY_LEN);
 }
 
 /**
@@ -149,7 +148,7 @@ curve25519_rand_seckey_bytes(uint8_t *out, int extra_strong)
   if (extra_strong)
     crypto_strongest_rand(out, CURVE25519_SECKEY_LEN);
   else
-    crypto_rand((char*)out, CURVE25519_SECKEY_LEN);
+    crypto_rand((char *)out, CURVE25519_SECKEY_LEN);
 
   return 0;
 }
@@ -205,20 +204,16 @@ curve25519_keypair_generate(curve25519_keypair_t *keypair_out,
  * the metaformat used for these keys.*/
 int
 curve25519_keypair_write_to_file(const curve25519_keypair_t *keypair,
-                                 const char *fname,
-                                 const char *tag)
+                                 const char *fname, const char *tag)
 {
   uint8_t contents[CURVE25519_SECKEY_LEN + CURVE25519_PUBKEY_LEN];
   int r;
 
   memcpy(contents, keypair->seckey.secret_key, CURVE25519_SECKEY_LEN);
-  memcpy(contents+CURVE25519_SECKEY_LEN,
-         keypair->pubkey.public_key, CURVE25519_PUBKEY_LEN);
+  memcpy(contents + CURVE25519_SECKEY_LEN, keypair->pubkey.public_key,
+         CURVE25519_PUBKEY_LEN);
 
-  r = crypto_write_tagged_contents_to_file(fname,
-                                           "c25519v1",
-                                           tag,
-                                           contents,
+  r = crypto_write_tagged_contents_to_file(fname, "c25519v1", tag, contents,
                                            sizeof(contents));
 
   memwipe(contents, 0, sizeof(contents));
@@ -231,8 +226,7 @@ curve25519_keypair_write_to_file(const curve25519_keypair_t *keypair,
  * Return 0 on success, and -1 on failure. */
 int
 curve25519_keypair_read_from_file(curve25519_keypair_t *keypair_out,
-                                  char **tag_out,
-                                  const char *fname)
+                                  char **tag_out, const char *fname)
 {
   uint8_t content[CURVE25519_SECKEY_LEN + CURVE25519_PUBKEY_LEN];
   ssize_t len;
@@ -247,13 +241,12 @@ curve25519_keypair_read_from_file(curve25519_keypair_t *keypair_out,
   memcpy(keypair_out->seckey.secret_key, content, CURVE25519_SECKEY_LEN);
   curve25519_public_key_generate(&keypair_out->pubkey, &keypair_out->seckey);
   if (tor_memneq(keypair_out->pubkey.public_key,
-                 content + CURVE25519_SECKEY_LEN,
-                 CURVE25519_PUBKEY_LEN))
+                 content + CURVE25519_SECKEY_LEN, CURVE25519_PUBKEY_LEN))
     goto end;
 
   r = 0;
 
- end:
+end:
   memwipe(content, 0, sizeof(content));
   if (r != 0) {
     memset(keypair_out, 0, sizeof(*keypair_out));
@@ -265,8 +258,7 @@ curve25519_keypair_read_from_file(curve25519_keypair_t *keypair_out,
 /** Perform the curve25519 ECDH handshake with <b>skey</b> and <b>pkey</b>,
  * writing CURVE25519_OUTPUT_LEN bytes of output into <b>output</b>. */
 void
-curve25519_handshake(uint8_t *output,
-                     const curve25519_secret_key_t *skey,
+curve25519_handshake(uint8_t *output, const curve25519_secret_key_t *skey,
                      const curve25519_public_key_t *pkey)
 {
   curve25519_impl(output, skey->secret_key, pkey->public_key);
@@ -278,30 +270,26 @@ static int
 curve25519_basepoint_spot_check(void)
 {
   static const uint8_t alicesk[32] = {
-    0x77,0x07,0x6d,0x0a,0x73,0x18,0xa5,0x7d,
-    0x3c,0x16,0xc1,0x72,0x51,0xb2,0x66,0x45,
-    0xdf,0x4c,0x2f,0x87,0xeb,0xc0,0x99,0x2a,
-    0xb1,0x77,0xfb,0xa5,0x1d,0xb9,0x2c,0x2a
-  };
+      0x77, 0x07, 0x6d, 0x0a, 0x73, 0x18, 0xa5, 0x7d, 0x3c, 0x16, 0xc1,
+      0x72, 0x51, 0xb2, 0x66, 0x45, 0xdf, 0x4c, 0x2f, 0x87, 0xeb, 0xc0,
+      0x99, 0x2a, 0xb1, 0x77, 0xfb, 0xa5, 0x1d, 0xb9, 0x2c, 0x2a};
   static const uint8_t alicepk[32] = {
-    0x85,0x20,0xf0,0x09,0x89,0x30,0xa7,0x54,
-    0x74,0x8b,0x7d,0xdc,0xb4,0x3e,0xf7,0x5a,
-    0x0d,0xbf,0x3a,0x0d,0x26,0x38,0x1a,0xf4,
-    0xeb,0xa4,0xa9,0x8e,0xaa,0x9b,0x4e,0x6a
-  };
-  const int loop_max=8;
+      0x85, 0x20, 0xf0, 0x09, 0x89, 0x30, 0xa7, 0x54, 0x74, 0x8b, 0x7d,
+      0xdc, 0xb4, 0x3e, 0xf7, 0x5a, 0x0d, 0xbf, 0x3a, 0x0d, 0x26, 0x38,
+      0x1a, 0xf4, 0xeb, 0xa4, 0xa9, 0x8e, 0xaa, 0x9b, 0x4e, 0x6a};
+  const int loop_max = 8;
   int save_use_ed = curve25519_use_ed;
   unsigned char e1[32], e2[32];
-  unsigned char x[32],y[32];
+  unsigned char x[32], y[32];
   int i;
-  int r=0;
+  int r = 0;
 
   memset(x, 0, sizeof(x));
   memset(y, 0, sizeof(y));
   memset(e1, 0, sizeof(e1));
   memset(e2, 0, sizeof(e2));
-  e1[0]=5;
-  e2[0]=5;
+  e1[0] = 5;
+  e2[0] = 5;
 
   /* Check the most basic possible sanity via the test secret/public key pair
    * used in "Cryptography in NaCl - 2. Secret keys and public keys".  This
@@ -321,19 +309,19 @@ curve25519_basepoint_spot_check(void)
     r |= curve25519_basepoint_impl(x, e1);
     curve25519_use_ed = 1;
     r |= curve25519_basepoint_impl(y, e2);
-    if (fast_memneq(x,y,32))
+    if (fast_memneq(x, y, 32))
       goto fail;
     memcpy(e1, x, 32);
     memcpy(e2, x, 32);
   }
 
   goto end;
- // LCOV_EXCL_START -- we can only hit this code if there is a bug in our
- // curve25519-basepoint implementation.
- fail:
+// LCOV_EXCL_START -- we can only hit this code if there is a bug in our
+// curve25519-basepoint implementation.
+fail:
   r = -1;
- // LCOV_EXCL_STOP
- end:
+// LCOV_EXCL_STOP
+end:
   curve25519_use_ed = save_use_ed;
   return r;
 }
@@ -350,7 +338,8 @@ pick_curve25519_basepoint_impl(void)
 
   /* LCOV_EXCL_START
    * only reachable if our basepoint implementation broken */
-  log_warn(LD_BUG|LD_CRYPTO, "The ed25519-based curve25519 basepoint "
+  log_warn(LD_BUG | LD_CRYPTO,
+           "The ed25519-based curve25519 basepoint "
            "multiplication seems broken; using the curve25519 "
            "implementation.");
   curve25519_use_ed = 0;

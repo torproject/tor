@@ -41,7 +41,7 @@ mock_transport_get_by_name(const char *name)
   int socksv = 9;
   char *args = tor_strdup("foo=bar");
 
-  if (!mock_transport) {
+  if (! mock_transport) {
     tor_addr_parse(addr, "99.99.99.99");
     mock_transport = transport_new(addr, port, name, socksv, args);
   }
@@ -68,10 +68,11 @@ helper_add_bridges_to_bridgelist(void *arg)
   char *bridge0 = tor_strdup("6.6.6.6:6666");
   char *bridge1 = tor_strdup("6.6.6.7:6667 "
                              "A10C4F666D27364036B562823E5830BC448E046A");
-  char *bridge2 = tor_strdup("obfs4 198.245.60.51:443 "
-                             "752CF7825B3B9EA6A98C83AC41F7099D67007EA5 "
-                  "cert=xpmQtKUqQ/6v5X7ijgYE/f03+l2/EuQ1dexjyUhh16wQlu/"
-                             "cpXUGalmhDIlhuiQPNEKmKw iat-mode=0");
+  char *bridge2 =
+      tor_strdup("obfs4 198.245.60.51:443 "
+                 "752CF7825B3B9EA6A98C83AC41F7099D67007EA5 "
+                 "cert=xpmQtKUqQ/6v5X7ijgYE/f03+l2/EuQ1dexjyUhh16wQlu/"
+                 "cpXUGalmhDIlhuiQPNEKmKw iat-mode=0");
   char *bridge3 = tor_strdup("banana 5.5.5.5:5555 "
                              "9D6AE1BD4FDF39721CE908966E79E16F9BFCCF2F");
   char *bridge4 = tor_strdup("obfs4 1.2.3.4:1234 "
@@ -83,13 +84,13 @@ helper_add_bridges_to_bridgelist(void *arg)
 
   mark_bridge_list();
 
-#define ADD_BRIDGE(bridge)                                          \
-  bridge_line_t *bridge_line_ ##bridge = parse_bridge_line(bridge); \
-  if (!bridge_line_ ##bridge) {                                     \
-    printf("Unparseable bridge line: '%s'", #bridge);               \
-  } else {                                                          \
-    bridge_add_from_config(bridge_line_ ##bridge);                  \
-  }                                                                 \
+#define ADD_BRIDGE(bridge)                                         \
+  bridge_line_t *bridge_line_##bridge = parse_bridge_line(bridge); \
+  if (! bridge_line_##bridge) {                                    \
+    printf("Unparseable bridge line: '%s'", #bridge);              \
+  } else {                                                         \
+    bridge_add_from_config(bridge_line_##bridge);                  \
+  }                                                                \
   tor_free(bridge);
 
   ADD_BRIDGE(bridge0);
@@ -113,7 +114,7 @@ test_bridges_helper_func_add_bridges_to_bridgelist(void *arg)
   helper_add_bridges_to_bridgelist(arg);
   tt_finished();
 
- done:
+done:
   mark_bridge_list();
   sweep_bridge_list();
 }
@@ -131,7 +132,7 @@ test_bridges_bridge_list_get_creates_new_bridgelist(void *arg)
 
   tt_ptr_op(bridgelist, OP_NE, NULL);
 
- done:
+done:
   return;
 }
 
@@ -157,7 +158,7 @@ test_bridges_clear_bridge_list(void *arg)
   tt_ptr_op(bridgelist_after, OP_NE, NULL);
   tt_int_op(smartlist_len(bridgelist_after), OP_EQ, 0);
 
- done:
+done:
   return;
 }
 
@@ -174,7 +175,7 @@ test_bridges_bridge_get_addrport(void *arg)
   const tor_addr_port_t *addrport;
 
   helper_add_bridges_to_bridgelist(arg);
-  bridgelist = (smartlist_t*)bridge_list_get();
+  bridgelist = (smartlist_t *)bridge_list_get();
   tt_ptr_op(bridgelist, OP_NE, NULL);
 
   // This should be the bridge at 6.6.6.6:6666 with fingerprint
@@ -185,7 +186,7 @@ test_bridges_bridge_get_addrport(void *arg)
   addrport = bridge_get_addr_port(bridge);
   tt_int_op(addrport->port, OP_EQ, 6666);
 
- done:
+done:
   mark_bridge_list();
   sweep_bridge_list();
 }
@@ -220,9 +221,9 @@ test_bridges_get_configured_bridge_by_orports_digest(void *arg)
   bridge2 = smartlist_get(bridgelist, 1);
   tt_ptr_op(bridge2, OP_NE, NULL);
 
-  addrport1 = (tor_addr_port_t*)bridge_get_addr_port(bridge1);
+  addrport1 = (tor_addr_port_t *)bridge_get_addr_port(bridge1);
   tt_int_op(addrport1->port, OP_EQ, 6666);
-  addrport2 = (tor_addr_port_t*)bridge_get_addr_port(bridge2);
+  addrport2 = (tor_addr_port_t *)bridge_get_addr_port(bridge2);
   tt_int_op(addrport2->port, OP_EQ, 6667);
 
   orports = smartlist_new();
@@ -236,7 +237,7 @@ test_bridges_get_configured_bridge_by_orports_digest(void *arg)
 
   tt_assert(tor_addr_port_eq(addrport1, bridge_get_addr_port(ret)));
 
- done:
+done:
   smartlist_free(orports);
 
   mark_bridge_list();
@@ -254,7 +255,7 @@ test_bridges_get_configured_bridge_by_addr_port_digest_digest_only(void *arg)
   char digest[DIGEST_LEN];
   bridge_info_t *bridge;
   const char fingerprint[HEX_DIGEST_LEN] =
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   tor_addr_t *addr = tor_malloc(sizeof(tor_addr_t));
   char ret_addr[16];
   uint16_t port = 11111;
@@ -273,7 +274,7 @@ test_bridges_get_configured_bridge_by_addr_port_digest_digest_only(void *arg)
   tor_addr_to_str(ret_addr, &bridge_get_addr_port(bridge)->addr, 16, 0);
   tt_str_op("4.4.4.4", OP_EQ, ret_addr);
 
- done:
+done:
   tor_free(addr);
 
   mark_bridge_list();
@@ -305,7 +306,7 @@ test_bridges_get_configured_bridge_by_addr_port_digest_address_only(void *arg)
   tor_addr_to_str(ret_addr, &bridge_get_addr_port(bridge)->addr, 16, 0);
   tt_str_op("6.6.6.6", OP_EQ, ret_addr);
 
- done:
+done:
   tor_free(addr);
 
   mark_bridge_list();
@@ -322,7 +323,7 @@ test_bridges_get_configured_bridge_by_exact_addr_port_digest_donly(void *arg)
   char digest[DIGEST_LEN];
   bridge_info_t *bridge;
   const char fingerprint[HEX_DIGEST_LEN] =
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   tor_addr_t *addr = tor_malloc(sizeof(tor_addr_t));
   uint16_t port = 11111;
   int ret;
@@ -337,7 +338,7 @@ test_bridges_get_configured_bridge_by_exact_addr_port_digest_donly(void *arg)
   bridge = get_configured_bridge_by_exact_addr_port_digest(addr, port, digest);
   tt_ptr_op(bridge, OP_EQ, NULL);
 
- done:
+done:
   tor_free(addr);
 
   mark_bridge_list();
@@ -354,7 +355,7 @@ test_bridges_get_configured_bridge_by_exact_addr_port_digest_both(void *arg)
   char digest[DIGEST_LEN];
   bridge_info_t *bridge;
   const char fingerprint[HEX_DIGEST_LEN] =
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   tor_addr_t *addr = tor_malloc(sizeof(tor_addr_t));
   uint16_t port = 4444;
   char ret_addr[16];
@@ -372,7 +373,7 @@ test_bridges_get_configured_bridge_by_exact_addr_port_digest_both(void *arg)
   tor_addr_to_str(ret_addr, &bridge_get_addr_port(bridge)->addr, 16, 0);
   tt_str_op("4.4.4.4", OP_EQ, ret_addr);
 
- done:
+done:
   tor_free(addr);
 
   mark_bridge_list();
@@ -403,7 +404,7 @@ test_bridges_get_configured_bridge_by_exact_addr_port_digest_aonly(void *arg)
   tor_addr_to_str(ret_addr, &bridge_get_addr_port(bridge)->addr, 16, 0);
   tt_str_op("4.4.4.4", OP_EQ, ret_addr);
 
- done:
+done:
   tor_free(addr);
 
   mark_bridge_list();
@@ -420,7 +421,7 @@ test_bridges_find_bridge_by_digest_known(void *arg)
   char digest1[DIGEST_LEN];
   bridge_info_t *bridge;
   const char fingerprint[HEX_DIGEST_LEN] =
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
   helper_add_bridges_to_bridgelist(arg);
 
@@ -433,9 +434,9 @@ test_bridges_find_bridge_by_digest_known(void *arg)
    * struct is opaquely defined in bridges.h. */
   const uint8_t *digest2 = bridge_get_rsa_id_digest(bridge);
 
-  tt_mem_op((char*)digest2, OP_EQ, digest1, DIGEST_LEN);
+  tt_mem_op((char *)digest2, OP_EQ, digest1, DIGEST_LEN);
 
- done:
+done:
   mark_bridge_list();
   sweep_bridge_list();
 }
@@ -456,7 +457,7 @@ test_bridges_find_bridge_by_digest_unknown(void *arg)
 
   tt_ptr_op(bridge, OP_EQ, NULL);
 
- done:
+done:
   mark_bridge_list();
   sweep_bridge_list();
 }
@@ -479,15 +480,15 @@ test_bridges_bridge_resolve_conflicts(void *arg)
   ret = tor_addr_parse(addr, "4.4.4.4");
   tt_int_op(ret, OP_EQ, 2); // it returns the address family on success
 
-  bridge_resolve_conflicts((const tor_addr_t*)addr, port, digest, transport);
+  bridge_resolve_conflicts((const tor_addr_t *)addr, port, digest, transport);
 
   /* The bridge should now be marked for removal, and removed when we sweep the
    * bridge_list */
   sweep_bridge_list();
-  ret = addr_is_a_configured_bridge((const tor_addr_t*)addr, port, digest);
+  ret = addr_is_a_configured_bridge((const tor_addr_t *)addr, port, digest);
   tt_int_op(ret, OP_EQ, 0);
 
- done:
+done:
   tor_free(addr);
 
   mark_bridge_list();
@@ -511,7 +512,7 @@ test_bridges_transport_is_needed(void *arg)
   ret = transport_is_needed("apowefjaoewpaief");
   tt_int_op(ret, OP_EQ, 0);
 
- done:
+done:
   mark_bridge_list();
   sweep_bridge_list();
 }
@@ -538,12 +539,12 @@ test_bridges_get_transport_by_bridge_addrport_no_ptlist(void *arg)
    * transport_get_by_name() has nothing to return, even the the bridge *did*
    * say it had an obfs4 transport.
    */
-  ret = get_transport_by_bridge_addrport((const tor_addr_t*)addr, port,
-                                         (const transport_t**)&transport);
+  ret = get_transport_by_bridge_addrport((const tor_addr_t *)addr, port,
+                                         (const transport_t **)&transport);
   tt_int_op(ret, OP_EQ, -1); // returns -1 on failure
   tt_ptr_op(transport, OP_EQ, NULL);
 
- done:
+done:
   tor_free(addr);
 
   mark_bridge_list();
@@ -573,13 +574,13 @@ test_bridges_get_transport_by_bridge_addrport(void *arg)
    * the name it was asked for, the call should succeed.
    */
   MOCK(transport_get_by_name, mock_transport_get_by_name);
-  ret = get_transport_by_bridge_addrport((const tor_addr_t*)addr, port,
-                                         (const transport_t**)&transport);
+  ret = get_transport_by_bridge_addrport((const tor_addr_t *)addr, port,
+                                         (const transport_t **)&transport);
   tt_int_op(ret, OP_EQ, 0); // returns 0 on success
   tt_ptr_op(transport, OP_NE, NULL);
   tt_str_op(transport->name, OP_EQ, "obfs4");
 
- done:
+done:
   UNMOCK(transport_get_by_name);
 
   tor_free(addr);
@@ -592,18 +593,18 @@ test_bridges_get_transport_by_bridge_addrport(void *arg)
 static void
 test_bridges_node_is_a_configured_bridge(void *arg)
 {
-  routerinfo_t ri_ipv4 = { .addr = 0x06060606, .or_port = 6666 };
-  routerstatus_t rs_ipv4 = { .addr = 0x06060606, .or_port = 6666 };
+  routerinfo_t ri_ipv4 = {.addr = 0x06060606, .or_port = 6666};
+  routerstatus_t rs_ipv4 = {.addr = 0x06060606, .or_port = 6666};
 
-  routerinfo_t ri_ipv6 = { .ipv6_orport = 6666 };
+  routerinfo_t ri_ipv6 = {.ipv6_orport = 6666};
   tor_addr_parse(&(ri_ipv6.ipv6_addr),
                  "2001:0db8:85a3:0000:0000:8a2e:0370:7334");
 
-  routerstatus_t rs_ipv6 = { .ipv6_orport = 6666 };
+  routerstatus_t rs_ipv6 = {.ipv6_orport = 6666};
   tor_addr_parse(&(rs_ipv6.ipv6_addr),
                  "2001:0db8:85a3:0000:0000:8a2e:0370:7334");
 
-  microdesc_t md_ipv6 = { .ipv6_orport = 6666 };
+  microdesc_t md_ipv6 = {.ipv6_orport = 6666};
   tor_addr_parse(&(md_ipv6.ipv6_addr),
                  "2001:0db8:85a3:0000:0000:8a2e:0370:7334");
 
@@ -613,17 +614,17 @@ test_bridges_node_is_a_configured_bridge(void *arg)
   memset(&node_with_digest, 0, sizeof(node_with_digest));
 
   const char fingerprint[HEX_DIGEST_LEN] =
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
   const char fingerprint2[HEX_DIGEST_LEN] =
-    "ffffffffffffffffffffffffffffffffffffffff";
+      "ffffffffffffffffffffffffffffffffffffffff";
 
-  base16_decode(node_with_digest.identity, DIGEST_LEN,
-                fingerprint, HEX_DIGEST_LEN);
+  base16_decode(node_with_digest.identity, DIGEST_LEN, fingerprint,
+                HEX_DIGEST_LEN);
 
-  node_t node_ri_ipv4 = { .ri = &ri_ipv4 };
-  base16_decode(node_ri_ipv4.identity, DIGEST_LEN,
-                fingerprint2, HEX_DIGEST_LEN);
+  node_t node_ri_ipv4 = {.ri = &ri_ipv4};
+  base16_decode(node_ri_ipv4.identity, DIGEST_LEN, fingerprint2,
+                HEX_DIGEST_LEN);
   tt_assert(node_is_a_configured_bridge(&node_ri_ipv4));
 
   /* This will still match bridge0, since bridge0 has no digest set. */
@@ -640,63 +641,64 @@ test_bridges_node_is_a_configured_bridge(void *arg)
                 "A10C4F666D27364036B562823E5830BC448E046A", HEX_DIGEST_LEN);
   tt_assert(node_is_a_configured_bridge(&node_ri_ipv4));
 
-  node_t node_rs_ipv4 = { .rs = &rs_ipv4 };
-  base16_decode(node_rs_ipv4.identity, DIGEST_LEN,
-                fingerprint2, HEX_DIGEST_LEN);
+  node_t node_rs_ipv4 = {.rs = &rs_ipv4};
+  base16_decode(node_rs_ipv4.identity, DIGEST_LEN, fingerprint2,
+                HEX_DIGEST_LEN);
   tt_assert(node_is_a_configured_bridge(&node_rs_ipv4));
 
-  node_t node_ri_ipv6 = { .ri = &ri_ipv6 };
-  base16_decode(node_ri_ipv6.identity, DIGEST_LEN,
-                fingerprint2, HEX_DIGEST_LEN);
+  node_t node_ri_ipv6 = {.ri = &ri_ipv6};
+  base16_decode(node_ri_ipv6.identity, DIGEST_LEN, fingerprint2,
+                HEX_DIGEST_LEN);
   tt_assert(node_is_a_configured_bridge(&node_ri_ipv6));
 
-  node_t node_rs_ipv6 = { .rs = &rs_ipv6 };
-  base16_decode(node_rs_ipv6.identity, DIGEST_LEN,
-                fingerprint2, HEX_DIGEST_LEN);
+  node_t node_rs_ipv6 = {.rs = &rs_ipv6};
+  base16_decode(node_rs_ipv6.identity, DIGEST_LEN, fingerprint2,
+                HEX_DIGEST_LEN);
   tt_assert(node_is_a_configured_bridge(&node_rs_ipv6));
 
-  node_t node_md_ipv6 = { .md = &md_ipv6 };
-  base16_decode(node_md_ipv6.identity, DIGEST_LEN,
-                fingerprint2, HEX_DIGEST_LEN);
+  node_t node_md_ipv6 = {.md = &md_ipv6};
+  base16_decode(node_md_ipv6.identity, DIGEST_LEN, fingerprint2,
+                HEX_DIGEST_LEN);
   tt_assert(node_is_a_configured_bridge(&node_md_ipv6));
 
   mark_bridge_list();
   sweep_bridge_list();
 
-  tt_assert(!node_is_a_configured_bridge(&node_with_digest));
-  tt_assert(!node_is_a_configured_bridge(&node_ri_ipv4));
-  tt_assert(!node_is_a_configured_bridge(&node_ri_ipv6));
-  tt_assert(!node_is_a_configured_bridge(&node_rs_ipv4));
-  tt_assert(!node_is_a_configured_bridge(&node_rs_ipv6));
-  tt_assert(!node_is_a_configured_bridge(&node_md_ipv6));
+  tt_assert(! node_is_a_configured_bridge(&node_with_digest));
+  tt_assert(! node_is_a_configured_bridge(&node_ri_ipv4));
+  tt_assert(! node_is_a_configured_bridge(&node_ri_ipv6));
+  tt_assert(! node_is_a_configured_bridge(&node_rs_ipv4));
+  tt_assert(! node_is_a_configured_bridge(&node_rs_ipv6));
+  tt_assert(! node_is_a_configured_bridge(&node_md_ipv6));
 
- done:
+done:
   mark_bridge_list();
   sweep_bridge_list();
 }
 
 #undef PT_PRIVATE /* defined(PT_PRIVATE) */
 
-#define B_TEST(name, flags) \
-  { #name, test_bridges_ ##name, (flags), NULL, NULL }
+#define B_TEST(name, flags)                         \
+  {                                                 \
+#    name, test_bridges_##name, (flags), NULL, NULL \
+  }
 
 struct testcase_t bridges_tests[] = {
-  B_TEST(helper_func_add_bridges_to_bridgelist, 0),
-  B_TEST(bridge_list_get_creates_new_bridgelist, 0),
-  B_TEST(clear_bridge_list, 0),
-  B_TEST(bridge_get_addrport, 0),
-  B_TEST(get_configured_bridge_by_orports_digest, 0),
-  B_TEST(get_configured_bridge_by_addr_port_digest_digest_only, 0),
-  B_TEST(get_configured_bridge_by_addr_port_digest_address_only, 0),
-  B_TEST(get_configured_bridge_by_exact_addr_port_digest_donly, 0),
-  B_TEST(get_configured_bridge_by_exact_addr_port_digest_both, 0),
-  B_TEST(get_configured_bridge_by_exact_addr_port_digest_aonly, 0),
-  B_TEST(find_bridge_by_digest_known, 0),
-  B_TEST(find_bridge_by_digest_unknown, 0),
-  B_TEST(bridge_resolve_conflicts, 0),
-  B_TEST(get_transport_by_bridge_addrport_no_ptlist, 0),
-  B_TEST(get_transport_by_bridge_addrport, 0),
-  B_TEST(transport_is_needed, 0),
-  B_TEST(node_is_a_configured_bridge, 0),
-  END_OF_TESTCASES
-};
+    B_TEST(helper_func_add_bridges_to_bridgelist, 0),
+    B_TEST(bridge_list_get_creates_new_bridgelist, 0),
+    B_TEST(clear_bridge_list, 0),
+    B_TEST(bridge_get_addrport, 0),
+    B_TEST(get_configured_bridge_by_orports_digest, 0),
+    B_TEST(get_configured_bridge_by_addr_port_digest_digest_only, 0),
+    B_TEST(get_configured_bridge_by_addr_port_digest_address_only, 0),
+    B_TEST(get_configured_bridge_by_exact_addr_port_digest_donly, 0),
+    B_TEST(get_configured_bridge_by_exact_addr_port_digest_both, 0),
+    B_TEST(get_configured_bridge_by_exact_addr_port_digest_aonly, 0),
+    B_TEST(find_bridge_by_digest_known, 0),
+    B_TEST(find_bridge_by_digest_unknown, 0),
+    B_TEST(bridge_resolve_conflicts, 0),
+    B_TEST(get_transport_by_bridge_addrport_no_ptlist, 0),
+    B_TEST(get_transport_by_bridge_addrport, 0),
+    B_TEST(transport_is_needed, 0),
+    B_TEST(node_is_a_configured_bridge, 0),
+    END_OF_TESTCASES};

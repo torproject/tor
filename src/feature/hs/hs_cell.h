@@ -108,7 +108,7 @@ void hs_cell_introduce1_data_clear(hs_cell_introduce1_data_t *data);
 
 #ifdef TOR_UNIT_TESTS
 
-#include "trunnel/hs/cell_common.h"
+#  include "trunnel/hs/cell_common.h"
 
 STATIC trn_cell_extension_t *
 build_establish_intro_extensions(const hs_service_config_t *service_config,

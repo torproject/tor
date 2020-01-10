@@ -23,7 +23,6 @@ typedef struct bloomfilt_t digestset_t;
 digestset_t *digestset_new(int max_addresses_guess);
 #define digestset_free(set) bloomfilt_free(set)
 void digestset_add(digestset_t *set, const char *addr);
-int digestset_probably_contains(const digestset_t *set,
-                                const char *addr);
+int digestset_probably_contains(const digestset_t *set, const char *addr);
 
 #endif /* !defined(TOR_DIGESTSET_H) */

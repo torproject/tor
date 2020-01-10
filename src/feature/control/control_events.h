@@ -30,19 +30,19 @@ typedef enum circuit_status_minor_event_t {
 typedef enum stream_status_event_t {
   STREAM_EVENT_SENT_CONNECT = 0,
   STREAM_EVENT_SENT_RESOLVE = 1,
-  STREAM_EVENT_SUCCEEDED    = 2,
-  STREAM_EVENT_FAILED       = 3,
-  STREAM_EVENT_CLOSED       = 4,
-  STREAM_EVENT_NEW          = 5,
-  STREAM_EVENT_NEW_RESOLVE  = 6,
+  STREAM_EVENT_SUCCEEDED = 2,
+  STREAM_EVENT_FAILED = 3,
+  STREAM_EVENT_CLOSED = 4,
+  STREAM_EVENT_NEW = 5,
+  STREAM_EVENT_NEW_RESOLVE = 6,
   STREAM_EVENT_FAILED_RETRIABLE = 7,
-  STREAM_EVENT_REMAP        = 8
+  STREAM_EVENT_REMAP = 8
 } stream_status_event_t;
 
 /** Used to indicate the type of a buildtime event */
 typedef enum buildtimeout_set_event_t {
-  BUILDTIMEOUT_SET_EVENT_COMPUTED  = 0,
-  BUILDTIMEOUT_SET_EVENT_RESET     = 1,
+  BUILDTIMEOUT_SET_EVENT_COMPUTED = 0,
+  BUILDTIMEOUT_SET_EVENT_RESET = 1,
   BUILDTIMEOUT_SET_EVENT_SUSPENDED = 2,
   BUILDTIMEOUT_SET_EVENT_DISCARD = 3,
   BUILDTIMEOUT_SET_EVENT_RESUME = 4
@@ -51,45 +51,45 @@ typedef enum buildtimeout_set_event_t {
 /** Enum describing various stages of bootstrapping, for use with controller
  * bootstrap status events. The values range from 0 to 100. */
 typedef enum {
-  BOOTSTRAP_STATUS_UNDEF=-1,
-  BOOTSTRAP_STATUS_STARTING=0,
+  BOOTSTRAP_STATUS_UNDEF = -1,
+  BOOTSTRAP_STATUS_STARTING = 0,
 
   /* Initial connection to any relay */
 
-  BOOTSTRAP_STATUS_CONN_PT=1,
-  BOOTSTRAP_STATUS_CONN_DONE_PT=2,
-  BOOTSTRAP_STATUS_CONN_PROXY=3,
-  BOOTSTRAP_STATUS_CONN_DONE_PROXY=4,
-  BOOTSTRAP_STATUS_CONN=5,
-  BOOTSTRAP_STATUS_CONN_DONE=10,
-  BOOTSTRAP_STATUS_HANDSHAKE=14,
-  BOOTSTRAP_STATUS_HANDSHAKE_DONE=15,
+  BOOTSTRAP_STATUS_CONN_PT = 1,
+  BOOTSTRAP_STATUS_CONN_DONE_PT = 2,
+  BOOTSTRAP_STATUS_CONN_PROXY = 3,
+  BOOTSTRAP_STATUS_CONN_DONE_PROXY = 4,
+  BOOTSTRAP_STATUS_CONN = 5,
+  BOOTSTRAP_STATUS_CONN_DONE = 10,
+  BOOTSTRAP_STATUS_HANDSHAKE = 14,
+  BOOTSTRAP_STATUS_HANDSHAKE_DONE = 15,
 
   /* Loading directory info */
 
-  BOOTSTRAP_STATUS_ONEHOP_CREATE=20,
-  BOOTSTRAP_STATUS_REQUESTING_STATUS=25,
-  BOOTSTRAP_STATUS_LOADING_STATUS=30,
-  BOOTSTRAP_STATUS_LOADING_KEYS=40,
-  BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS=45,
-  BOOTSTRAP_STATUS_LOADING_DESCRIPTORS=50,
-  BOOTSTRAP_STATUS_ENOUGH_DIRINFO=75,
+  BOOTSTRAP_STATUS_ONEHOP_CREATE = 20,
+  BOOTSTRAP_STATUS_REQUESTING_STATUS = 25,
+  BOOTSTRAP_STATUS_LOADING_STATUS = 30,
+  BOOTSTRAP_STATUS_LOADING_KEYS = 40,
+  BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS = 45,
+  BOOTSTRAP_STATUS_LOADING_DESCRIPTORS = 50,
+  BOOTSTRAP_STATUS_ENOUGH_DIRINFO = 75,
 
   /* Connecting to a relay for AP circuits */
 
-  BOOTSTRAP_STATUS_AP_CONN_PT=76,
-  BOOTSTRAP_STATUS_AP_CONN_DONE_PT=77,
-  BOOTSTRAP_STATUS_AP_CONN_PROXY=78,
-  BOOTSTRAP_STATUS_AP_CONN_DONE_PROXY=79,
-  BOOTSTRAP_STATUS_AP_CONN=80,
-  BOOTSTRAP_STATUS_AP_CONN_DONE=85,
-  BOOTSTRAP_STATUS_AP_HANDSHAKE=89,
-  BOOTSTRAP_STATUS_AP_HANDSHAKE_DONE=90,
+  BOOTSTRAP_STATUS_AP_CONN_PT = 76,
+  BOOTSTRAP_STATUS_AP_CONN_DONE_PT = 77,
+  BOOTSTRAP_STATUS_AP_CONN_PROXY = 78,
+  BOOTSTRAP_STATUS_AP_CONN_DONE_PROXY = 79,
+  BOOTSTRAP_STATUS_AP_CONN = 80,
+  BOOTSTRAP_STATUS_AP_CONN_DONE = 85,
+  BOOTSTRAP_STATUS_AP_HANDSHAKE = 89,
+  BOOTSTRAP_STATUS_AP_HANDSHAKE_DONE = 90,
 
   /* Creating AP circuits */
 
-  BOOTSTRAP_STATUS_CIRCUIT_CREATE=95,
-  BOOTSTRAP_STATUS_DONE=100
+  BOOTSTRAP_STATUS_CIRCUIT_CREATE = 95,
+  BOOTSTRAP_STATUS_DONE = 100
 } bootstrap_status_t;
 
 /** Reason for remapping an AP connection's address: we have a cached
@@ -114,12 +114,10 @@ int control_event_circuit_status(origin_circuit_t *circ,
                                  circuit_status_event_t e, int reason);
 int control_event_circuit_purpose_changed(origin_circuit_t *circ,
                                           int old_purpose);
-int control_event_circuit_cannibalized(origin_circuit_t *circ,
-                                       int old_purpose,
+int control_event_circuit_cannibalized(origin_circuit_t *circ, int old_purpose,
                                        const struct timeval *old_tv_created);
 int control_event_stream_status(entry_connection_t *conn,
-                                stream_status_event_t e,
-                                int reason);
+                                stream_status_event_t e, int reason);
 int control_event_or_conn_status(or_connection_t *conn,
                                  or_conn_status_event_t e, int reason);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
@@ -144,18 +142,15 @@ int control_event_networkstatus_changed(smartlist_t *statuses);
 int control_event_newconsensus(const networkstatus_t *consensus);
 int control_event_networkstatus_changed_single(const routerstatus_t *rs);
 int control_event_general_status(int severity, const char *format, ...)
-  CHECK_PRINTF(2,3);
+    CHECK_PRINTF(2, 3);
 int control_event_client_status(int severity, const char *format, ...)
-  CHECK_PRINTF(2,3);
+    CHECK_PRINTF(2, 3);
 int control_event_server_status(int severity, const char *format, ...)
-  CHECK_PRINTF(2,3);
+    CHECK_PRINTF(2, 3);
 
-int control_event_general_error(const char *format, ...)
-  CHECK_PRINTF(1,2);
-int control_event_client_error(const char *format, ...)
-  CHECK_PRINTF(1,2);
-int control_event_server_error(const char *format, ...)
-  CHECK_PRINTF(1,2);
+int control_event_general_error(const char *format, ...) CHECK_PRINTF(1, 2);
+int control_event_client_error(const char *format, ...) CHECK_PRINTF(1, 2);
+int control_event_server_error(const char *format, ...) CHECK_PRINTF(1, 2);
 
 int control_event_guard(const char *nickname, const char *digest,
                         const char *status);
@@ -165,9 +160,8 @@ int control_event_buildtimeout_set(buildtimeout_set_event_t type,
 int control_event_signal(uintptr_t signal);
 
 void control_event_bootstrap(bootstrap_status_t status, int progress);
-MOCK_DECL(void, control_event_bootstrap_prob_or,(const char *warn,
-                                                 int reason,
-                                                 or_connection_t *or_conn));
+MOCK_DECL(void, control_event_bootstrap_prob_or,
+          (const char *warn, int reason, or_connection_t *or_conn));
 void control_event_boot_dir(bootstrap_status_t status, int progress);
 void control_event_boot_first_orconn(void);
 void control_event_bootstrap_problem(const char *warn, const char *reason,
@@ -188,8 +182,7 @@ void control_event_hs_descriptor_requested(const char *onion_address,
                                            const char *desc_id,
                                            const char *hsdir_index);
 void control_event_hs_descriptor_created(const char *onion_address,
-                                         const char *desc_id,
-                                         int replica);
+                                         const char *desc_id, int replica);
 void control_event_hs_descriptor_upload(const char *onion_address,
                                         const char *desc_id,
                                         const char *hs_dir,
@@ -243,64 +236,62 @@ typedef uint64_t event_mask_t;
  * into the bitfield to determine which controllers want which events.
  */
 /* This bitfield has no event zero    0x0000 */
-#define EVENT_MIN_                    0x0001
-#define EVENT_CIRCUIT_STATUS          0x0001
-#define EVENT_STREAM_STATUS           0x0002
-#define EVENT_OR_CONN_STATUS          0x0003
-#define EVENT_BANDWIDTH_USED          0x0004
-#define EVENT_CIRCUIT_STATUS_MINOR    0x0005
-#define EVENT_NEW_DESC                0x0006
-#define EVENT_DEBUG_MSG               0x0007
-#define EVENT_INFO_MSG                0x0008
-#define EVENT_NOTICE_MSG              0x0009
-#define EVENT_WARN_MSG                0x000A
-#define EVENT_ERR_MSG                 0x000B
-#define EVENT_ADDRMAP                 0x000C
+#  define EVENT_MIN_ 0x0001
+#  define EVENT_CIRCUIT_STATUS 0x0001
+#  define EVENT_STREAM_STATUS 0x0002
+#  define EVENT_OR_CONN_STATUS 0x0003
+#  define EVENT_BANDWIDTH_USED 0x0004
+#  define EVENT_CIRCUIT_STATUS_MINOR 0x0005
+#  define EVENT_NEW_DESC 0x0006
+#  define EVENT_DEBUG_MSG 0x0007
+#  define EVENT_INFO_MSG 0x0008
+#  define EVENT_NOTICE_MSG 0x0009
+#  define EVENT_WARN_MSG 0x000A
+#  define EVENT_ERR_MSG 0x000B
+#  define EVENT_ADDRMAP 0x000C
 /* There was an AUTHDIR_NEWDESCS event, but it no longer exists.  We
    can reclaim 0x000D. */
-#define EVENT_DESCCHANGED             0x000E
+#  define EVENT_DESCCHANGED 0x000E
 /* Exposed above */
 // #define EVENT_NS                   0x000F
-#define EVENT_STATUS_CLIENT           0x0010
-#define EVENT_STATUS_SERVER           0x0011
-#define EVENT_STATUS_GENERAL          0x0012
-#define EVENT_GUARD                   0x0013
-#define EVENT_STREAM_BANDWIDTH_USED   0x0014
-#define EVENT_CLIENTS_SEEN            0x0015
-#define EVENT_NEWCONSENSUS            0x0016
-#define EVENT_BUILDTIMEOUT_SET        0x0017
-#define EVENT_GOT_SIGNAL              0x0018
-#define EVENT_CONF_CHANGED            0x0019
-#define EVENT_CONN_BW                 0x001A
-#define EVENT_CELL_STATS              0x001B
+#  define EVENT_STATUS_CLIENT 0x0010
+#  define EVENT_STATUS_SERVER 0x0011
+#  define EVENT_STATUS_GENERAL 0x0012
+#  define EVENT_GUARD 0x0013
+#  define EVENT_STREAM_BANDWIDTH_USED 0x0014
+#  define EVENT_CLIENTS_SEEN 0x0015
+#  define EVENT_NEWCONSENSUS 0x0016
+#  define EVENT_BUILDTIMEOUT_SET 0x0017
+#  define EVENT_GOT_SIGNAL 0x0018
+#  define EVENT_CONF_CHANGED 0x0019
+#  define EVENT_CONN_BW 0x001A
+#  define EVENT_CELL_STATS 0x001B
 /* UNUSED :                           0x001C */
-#define EVENT_CIRC_BANDWIDTH_USED     0x001D
-#define EVENT_TRANSPORT_LAUNCHED      0x0020
-#define EVENT_HS_DESC                 0x0021
-#define EVENT_HS_DESC_CONTENT         0x0022
-#define EVENT_NETWORK_LIVENESS        0x0023
-#define EVENT_PT_LOG                  0x0024
-#define EVENT_PT_STATUS               0x0025
-#define EVENT_MAX_                    0x0025
+#  define EVENT_CIRC_BANDWIDTH_USED 0x001D
+#  define EVENT_TRANSPORT_LAUNCHED 0x0020
+#  define EVENT_HS_DESC 0x0021
+#  define EVENT_HS_DESC_CONTENT 0x0022
+#  define EVENT_NETWORK_LIVENESS 0x0023
+#  define EVENT_PT_LOG 0x0024
+#  define EVENT_PT_STATUS 0x0025
+#  define EVENT_MAX_ 0x0025
 
 /* sizeof(control_connection_t.event_mask) in bits, currently a uint64_t */
-#define EVENT_CAPACITY_               0x0040
+#  define EVENT_CAPACITY_ 0x0040
 
 /* If EVENT_MAX_ ever hits 0x0040, we need to make the mask into a
  * different structure, as it can only handle a maximum left shift of 1<<63. */
 CTASSERT(EVENT_MAX_ < EVENT_CAPACITY_);
 
-#define EVENT_MASK_(e)               (((uint64_t)1)<<(e))
+#  define EVENT_MASK_(e) (((uint64_t)1) << (e))
 
-#define EVENT_MASK_NONE_             ((uint64_t)0x0)
+#  define EVENT_MASK_NONE_ ((uint64_t)0x0)
 
-#define EVENT_MASK_ABOVE_MIN_        ((~((uint64_t)0x0)) << EVENT_MIN_)
-#define EVENT_MASK_BELOW_MAX_        ((~((uint64_t)0x0)) \
-                                      >> (EVENT_CAPACITY_ - EVENT_MAX_ \
-                                          - EVENT_MIN_))
+#  define EVENT_MASK_ABOVE_MIN_ ((~((uint64_t)0x0)) << EVENT_MIN_)
+#  define EVENT_MASK_BELOW_MAX_ \
+    ((~((uint64_t)0x0)) >> (EVENT_CAPACITY_ - EVENT_MAX_ - EVENT_MIN_))
 
-#define EVENT_MASK_ALL_              (EVENT_MASK_ABOVE_MIN_ \
-                                      & EVENT_MASK_BELOW_MAX_)
+#  define EVENT_MASK_ALL_ (EVENT_MASK_ABOVE_MIN_ & EVENT_MASK_BELOW_MAX_)
 
 /** Helper structure: temporarily stores cell statistics for a circuit. */
 typedef struct cell_stats_t {
@@ -318,10 +309,8 @@ typedef struct cell_stats_t {
   uint64_t total_time_exitward[CELL_COMMAND_MAX_ + 1];
 } cell_stats_t;
 
-void sum_up_cell_stats_by_command(circuit_t *circ,
-                                  cell_stats_t *cell_stats);
-void append_cell_stats_by_command(smartlist_t *event_parts,
-                                  const char *key,
+void sum_up_cell_stats_by_command(circuit_t *circ, cell_stats_t *cell_stats);
+void append_cell_stats_by_command(smartlist_t *event_parts, const char *key,
                                   const uint64_t *include_if_non_zero,
                                   const uint64_t *number_to_include);
 void format_cell_stats(char **event_string, circuit_t *circ,
@@ -335,16 +324,16 @@ struct control_event_t {
 
 extern const struct control_event_t control_event_table[];
 
-#ifdef TOR_UNIT_TESTS
-MOCK_DECL(STATIC void,
-          send_control_event_string,(uint16_t event, const char *msg));
+#  ifdef TOR_UNIT_TESTS
+MOCK_DECL(STATIC void, send_control_event_string,
+          (uint16_t event, const char *msg));
 
-MOCK_DECL(STATIC void,
-          queue_control_event_string,(uint16_t event, char *msg));
+MOCK_DECL(STATIC void, queue_control_event_string,
+          (uint16_t event, char *msg));
 
 void control_testing_set_global_event_mask(uint64_t mask);
 
-#endif /* defined(TOR_UNIT_TESTS) */
+#  endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(CONTROL_EVENTS_PRIVATE) */
 

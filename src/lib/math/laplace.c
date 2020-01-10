@@ -36,8 +36,8 @@ sample_laplace_distribution(double mu, double b, double p)
     return INT64_MIN;
   }
 
-  result = mu - b * (p > 0.5 ? 1.0 : -1.0)
-                  * tor_mathlog(1.0 - 2.0 * fabs(p - 0.5));
+  result =
+      mu - b * (p > 0.5 ? 1.0 : -1.0) * tor_mathlog(1.0 - 2.0 * fabs(p - 0.5));
 
   return clamp_double_to_int64(result);
 }
@@ -59,9 +59,7 @@ add_laplace_noise(int64_t signal_, double random_, double delta_f,
   tor_assert(delta_f > 0.0);
 
   /* Just add noise, no further signal */
-  noise = sample_laplace_distribution(0.0,
-                                      delta_f / epsilon,
-                                      random_);
+  noise = sample_laplace_distribution(0.0, delta_f / epsilon, random_);
 
   /* Clip (signal + noise) to [INT64_MIN, INT64_MAX] */
   if (noise > 0 && INT64_MAX - noise < signal_)

@@ -20,9 +20,9 @@
 #include "test/test.h"
 
 static const char KEY_MATERIAL[3][CPATH_KEY_MATERIAL_LEN] = {
-  "    'My public key is in this signed x509 object', said Tom assertively.",
-  "'Let's chart the pedal phlanges in the tomb', said Tom cryptographically",
-  "     'Segmentation fault bugs don't _just happen_', said Tom seethingly.",
+    "    'My public key is in this signed x509 object', said Tom assertively.",
+    "'Let's chart the pedal phlanges in the tomb', said Tom cryptographically",
+    "     'Segmentation fault bugs don't _just happen_', said Tom seethingly.",
 };
 
 typedef struct testing_circuitset_t {
@@ -39,17 +39,16 @@ testing_circuitset_setup(const struct testcase_t *testcase)
   testing_circuitset_t *cs = tor_malloc_zero(sizeof(testing_circuitset_t));
   int i;
 
-  for (i=0; i<3; ++i) {
+  for (i = 0; i < 3; ++i) {
     cs->or_circ[i] = or_circuit_new(0, NULL);
     tt_int_op(0, OP_EQ,
-              relay_crypto_init(&cs->or_circ[i]->crypto,
-                                KEY_MATERIAL[i], sizeof(KEY_MATERIAL[i]),
-                                0, 0));
+              relay_crypto_init(&cs->or_circ[i]->crypto, KEY_MATERIAL[i],
+                                sizeof(KEY_MATERIAL[i]), 0, 0));
   }
 
   cs->origin_circ = origin_circuit_new();
   cs->origin_circ->base_.purpose = CIRCUIT_PURPOSE_C_GENERAL;
-  for (i=0; i<3; ++i) {
+  for (i = 0; i < 3; ++i) {
     crypt_path_t *hop = tor_malloc_zero(sizeof(*hop));
     relay_crypto_init(&hop->pvt_crypto, KEY_MATERIAL[i],
                       sizeof(KEY_MATERIAL[i]), 0, 0);
@@ -59,7 +58,7 @@ testing_circuitset_setup(const struct testcase_t *testcase)
   }
 
   return cs;
- done:
+done:
   testing_circuitset_teardown(testcase, cs);
   return NULL;
 }
@@ -70,7 +69,7 @@ testing_circuitset_teardown(const struct testcase_t *testcase, void *ptr)
   (void)testcase;
   testing_circuitset_t *cs = ptr;
   int i;
-  for (i=0; i<3; ++i) {
+  for (i = 0; i < 3; ++i) {
     circuit_free_(TO_CIRCUIT(cs->or_circ[i]));
   }
   circuit_free_(TO_CIRCUIT(cs->origin_circ));
@@ -79,8 +78,7 @@ testing_circuitset_teardown(const struct testcase_t *testcase, void *ptr)
 }
 
 static const struct testcase_setup_t relaycrypt_setup = {
-  testing_circuitset_setup, testing_circuitset_teardown
-};
+    testing_circuitset_setup, testing_circuitset_teardown};
 
 /* Test encrypting a cell to the final hop on a circuit, decrypting it
  * at each hop, and recognizing it at the other end.  Then do it again
@@ -113,10 +111,8 @@ test_relaycrypt_outbound(void *arg)
     for (j = 0; j < 3; ++j) {
       crypt_path_t *layer_hint = NULL;
       char recognized = 0;
-      int r = relay_decrypt_cell(TO_CIRCUIT(cs->or_circ[j]),
-                                 &encrypted,
-                                 CELL_DIRECTION_OUT,
-                                 &layer_hint, &recognized);
+      int r = relay_decrypt_cell(TO_CIRCUIT(cs->or_circ[j]), &encrypted,
+                                 CELL_DIRECTION_OUT, &layer_hint, &recognized);
       tt_int_op(r, OP_EQ, 0);
       tt_ptr_op(layer_hint, OP_EQ, NULL);
       tt_int_op(recognized != 0, OP_EQ, j == 2);
@@ -125,8 +121,7 @@ test_relaycrypt_outbound(void *arg)
     tt_mem_op(orig.payload, OP_EQ, encrypted.payload, CELL_PAYLOAD_SIZE);
   }
 
- done:
-  ;
+done:;
 }
 
 /* As above, but simulate inbound cells from the last hop. */
@@ -158,35 +153,28 @@ test_relaycrypt_inbound(void *arg)
     char recognized = 0;
     int r;
     for (j = 1; j >= 0; --j) {
-      r = relay_decrypt_cell(TO_CIRCUIT(cs->or_circ[j]),
-                             &encrypted,
-                             CELL_DIRECTION_IN,
-                             &layer_hint, &recognized);
+      r = relay_decrypt_cell(TO_CIRCUIT(cs->or_circ[j]), &encrypted,
+                             CELL_DIRECTION_IN, &layer_hint, &recognized);
       tt_int_op(r, OP_EQ, 0);
       tt_ptr_op(layer_hint, OP_EQ, NULL);
       tt_int_op(recognized, OP_EQ, 0);
     }
 
-    relay_decrypt_cell(TO_CIRCUIT(cs->origin_circ),
-                       &encrypted,
-                       CELL_DIRECTION_IN,
-                       &layer_hint, &recognized);
+    relay_decrypt_cell(TO_CIRCUIT(cs->origin_circ), &encrypted,
+                       CELL_DIRECTION_IN, &layer_hint, &recognized);
     tt_int_op(r, OP_EQ, 0);
     tt_int_op(recognized, OP_EQ, 1);
     tt_ptr_op(layer_hint, OP_EQ, cs->origin_circ->cpath->prev);
 
     tt_mem_op(orig.payload, OP_EQ, encrypted.payload, CELL_PAYLOAD_SIZE);
   }
- done:
-  ;
+done:;
 }
 
-#define TEST(name) \
-  { # name, test_relaycrypt_ ## name, 0, &relaycrypt_setup, NULL }
+#define TEST(name)                                            \
+  {                                                           \
+#    name, test_relaycrypt_##name, 0, &relaycrypt_setup, NULL \
+  }
 
-struct testcase_t relaycrypt_tests[] = {
-  TEST(outbound),
-  TEST(inbound),
-  END_OF_TESTCASES
-};
-
+struct testcase_t relaycrypt_tests[] = {TEST(outbound), TEST(inbound),
+                                        END_OF_TESTCASES};

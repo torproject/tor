@@ -12,15 +12,15 @@
 
 #ifdef _WIN32
 
-#include <windows.h>
-#include <process.h>
-#include "lib/thread/threads.h"
-#include "lib/log/log.h"
-#include "lib/log/util_bug.h"
-#include "lib/log/win32err.h"
+#  include <windows.h>
+#  include <process.h>
+#  include "lib/thread/threads.h"
+#  include "lib/log/log.h"
+#  include "lib/log/util_bug.h"
+#  include "lib/log/win32err.h"
 
 /* This value is more or less total cargo-cult */
-#define SPIN_COUNT 2000
+#  define SPIN_COUNT 2000
 
 /** Minimalist interface to run a void function in the background.  On
  * Unix calls fork, on win32 calls beginthread.  Returns -1 on failure.
@@ -48,8 +48,8 @@ spawn_exit(void)
 {
   _endthread();
   // LCOV_EXCL_START
-  //we should never get here. my compiler thinks that _endthread returns, this
-  //is an attempt to fool it.
+  // we should never get here. my compiler thinks that _endthread returns, this
+  // is an attempt to fool it.
   tor_assert(0);
   _exit(0); // exit ok: unreachable.
   // LCOV_EXCL_STOP
@@ -65,10 +65,10 @@ int
 tor_cond_init(tor_cond_t *cond)
 {
   memset(cond, 0, sizeof(tor_cond_t));
-  if (InitializeCriticalSectionAndSpinCount(&cond->lock, SPIN_COUNT)==0) {
+  if (InitializeCriticalSectionAndSpinCount(&cond->lock, SPIN_COUNT) == 0) {
     return -1;
   }
-  if ((cond->event = CreateEvent(NULL,TRUE,FALSE,NULL)) == NULL) {
+  if ((cond->event = CreateEvent(NULL, TRUE, FALSE, NULL)) == NULL) {
     DeleteCriticalSection(&cond->lock);
     return -1;
   }
@@ -139,7 +139,7 @@ void
 tor_threadlocal_set(tor_threadlocal_t *threadlocal, void *value)
 {
   BOOL ok = TlsSetValue(threadlocal->index, value);
-  if (!ok) {
+  if (! ok) {
     DWORD err = GetLastError();
     char *msg = format_win32_error(err);
     log_err(LD_GENERAL, "Error adjusting thread-local value: %s", msg);
@@ -157,7 +157,7 @@ tor_cond_wait(tor_cond_t *cond, tor_mutex_t *lock_, const struct timeval *tv)
   int result = -1;
   DWORD ms = INFINITE, ms_orig = INFINITE, startTime, endTime;
   if (tv)
-    ms_orig = ms = tv->tv_sec*1000 + (tv->tv_usec+999)/1000;
+    ms_orig = ms = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
 
   EnterCriticalSection(&cond->lock);
   ++cond->n_waiting;
@@ -171,15 +171,14 @@ tor_cond_wait(tor_cond_t *cond, tor_mutex_t *lock_, const struct timeval *tv)
     DWORD res;
     res = WaitForSingleObject(cond->event, ms);
     EnterCriticalSection(&cond->lock);
-    if (cond->n_to_wake &&
-        cond->generation != generation_at_start) {
+    if (cond->n_to_wake && cond->generation != generation_at_start) {
       --cond->n_to_wake;
       --cond->n_waiting;
       result = 0;
       waiting = 0;
       goto out;
     } else if (res != WAIT_OBJECT_0) {
-      result = (res==WAIT_TIMEOUT) ? 1 : -1;
+      result = (res == WAIT_TIMEOUT) ? 1 : -1;
       --cond->n_waiting;
       waiting = 0;
       goto out;
@@ -207,7 +206,7 @@ tor_cond_wait(tor_cond_t *cond, tor_mutex_t *lock_, const struct timeval *tv)
   EnterCriticalSection(lock);
 
   EnterCriticalSection(&cond->lock);
-  if (!cond->n_waiting)
+  if (! cond->n_waiting)
     ResetEvent(cond->event);
   LeaveCriticalSection(&cond->lock);
 

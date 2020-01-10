@@ -46,22 +46,22 @@
 #include "lib/log/util_bug.h"
 
 #ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
+#  include <sys/types.h>
 #endif
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
 #include <string.h>
 
 #ifdef NOINHERIT_CAN_FAIL
-#define CHECK_PID
+#  define CHECK_PID
 #endif
 
 #ifdef CHECK_PID
-#define PID_FIELD_LEN sizeof(pid_t)
+#  define PID_FIELD_LEN sizeof(pid_t)
 #else
-#define PID_FIELD_LEN 0
+#  define PID_FIELD_LEN 0
 #endif
 
 /* Alias for CRYPTO_FAST_RNG_SEED_LEN to make our code shorter.
@@ -75,7 +75,7 @@
 /* The number of random bytes that we can yield to the user after each
  * time we fill a crypto_fast_rng_t's buffer.
  */
-#define BUFLEN (MAPLEN - 2*sizeof(uint16_t) - SEED_LEN - PID_FIELD_LEN)
+#define BUFLEN (MAPLEN - 2 * sizeof(uint16_t) - SEED_LEN - PID_FIELD_LEN)
 
 /* The number of buffer refills after which we should fetch more
  * entropy from crypto_strongest_rand().
@@ -123,7 +123,7 @@ struct crypto_fast_rng_t {
 
 /* alignof(uint8_t) should be 1, so there shouldn't be any padding in cbuf_t.
  */
-CTASSERT(sizeof(struct cbuf_t) == BUFLEN+SEED_LEN);
+CTASSERT(sizeof(struct cbuf_t) == BUFLEN + SEED_LEN);
 /* We're trying to fit all of the RNG state into a nice mmapable chunk.
  */
 CTASSERT(sizeof(crypto_fast_rng_t) <= MAPLEN);
@@ -160,9 +160,8 @@ crypto_fast_rng_new_from_seed(const uint8_t *seed)
   /* We try to allocate this object as securely as we can, to avoid
    * having it get dumped, swapped, or shared after fork.
    */
-  crypto_fast_rng_t *result = tor_mmap_anonymous(sizeof(*result),
-                                ANONMAP_PRIVATE | ANONMAP_NOINHERIT,
-                                &inherit);
+  crypto_fast_rng_t *result = tor_mmap_anonymous(
+      sizeof(*result), ANONMAP_PRIVATE | ANONMAP_NOINHERIT, &inherit);
   memcpy(result->buf.seed, seed, SEED_LEN);
   /* Causes an immediate refill once the user asks for data. */
   result->bytes_left = 0;
@@ -209,7 +208,7 @@ crypto_fast_rng_disable_reseed(crypto_fast_rng_t *rng)
 static inline crypto_cipher_t *
 cipher_from_seed(const uint8_t *seed)
 {
-  return crypto_cipher_new_with_iv_and_bits(seed, seed+KEY_LEN, KEY_BITS);
+  return crypto_cipher_new_with_iv_and_bits(seed, seed + KEY_LEN, KEY_BITS);
 }
 
 /**
@@ -260,7 +259,7 @@ crypto_fast_rng_refill(crypto_fast_rng_t *rng)
    * that seed value. */
   crypto_cipher_t *c = cipher_from_seed(rng->buf.seed);
   memset(&rng->buf, 0, sizeof(rng->buf));
-  crypto_cipher_crypt_inplace(c, (char*)&rng->buf, sizeof(rng->buf));
+  crypto_cipher_crypt_inplace(c, (char *)&rng->buf, sizeof(rng->buf));
   crypto_cipher_free(c);
 
   rng->bytes_left = sizeof(rng->buf.bytes);
@@ -272,7 +271,7 @@ crypto_fast_rng_refill(crypto_fast_rng_t *rng)
 void
 crypto_fast_rng_free_(crypto_fast_rng_t *rng)
 {
-  if (!rng)
+  if (! rng)
     return;
   memwipe(rng, 0, sizeof(*rng));
   tor_munmap_anonymous(rng, sizeof(*rng));
@@ -316,8 +315,8 @@ crypto_fast_rng_getbytes_impl(crypto_fast_rng_t *rng, uint8_t *out,
     const size_t to_copy = MIN(rng->bytes_left, bytes_to_yield);
 
     tor_assert(sizeof(rng->buf.bytes) >= rng->bytes_left);
-    uint8_t *copy_from = rng->buf.bytes +
-      (sizeof(rng->buf.bytes) - rng->bytes_left);
+    uint8_t *copy_from =
+        rng->buf.bytes + (sizeof(rng->buf.bytes) - rng->bytes_left);
     memcpy(out, copy_from, to_copy);
     memset(copy_from, 0, to_copy);
 
@@ -342,7 +341,7 @@ crypto_fast_rng_getbytes(crypto_fast_rng_t *rng, uint8_t *out, size_t n)
     crypto_fast_rng_getbytes_impl(rng, seed, SEED_LEN);
     crypto_cipher_t *c = cipher_from_seed(seed);
     memset(out, 0, n);
-    crypto_cipher_crypt_inplace(c, (char*)out, n);
+    crypto_cipher_crypt_inplace(c, (char *)out, n);
     crypto_cipher_free(c);
     memwipe(seed, 0, sizeof(seed));
     return;
@@ -394,7 +393,7 @@ void
 destroy_thread_fast_rng(void)
 {
   crypto_fast_rng_t *rng = tor_threadlocal_get(&thread_rng);
-  if (!rng)
+  if (! rng)
     return;
   crypto_fast_rng_free(rng);
   tor_threadlocal_set(&thread_rng, NULL);
@@ -408,7 +407,7 @@ destroy_thread_fast_rng(void)
 crypto_fast_rng_t *
 crypto_replace_thread_fast_rng(crypto_fast_rng_t *rng)
 {
-  crypto_fast_rng_t *old_rng =  tor_threadlocal_get(&thread_rng);
+  crypto_fast_rng_t *old_rng = tor_threadlocal_get(&thread_rng);
   tor_threadlocal_set(&thread_rng, rng);
   return old_rng;
 }

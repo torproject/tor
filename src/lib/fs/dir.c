@@ -24,26 +24,26 @@
 #include "lib/string/compat_string.h"
 
 #ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
+#  include <sys/types.h>
 #endif
 #ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
+#  include <sys/stat.h>
 #endif
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #ifdef HAVE_FCNTL_H
-#include <fcntl.h>
+#  include <fcntl.h>
 #endif
 
 #ifdef _WIN32
-#include <io.h>
-#include <direct.h>
-#include <windows.h>
+#  include <io.h>
+#  include <direct.h>
+#  include <windows.h>
 #else /* !(defined(_WIN32)) */
-#include <dirent.h>
-#include <pwd.h>
-#include <grp.h>
+#  include <dirent.h>
+#  include <pwd.h>
+#  include <grp.h>
 #endif /* defined(_WIN32) */
 
 #include <errno.h>
@@ -67,8 +67,8 @@
  * and its primary group.
  */
 MOCK_IMPL(int,
-check_private_dir,(const char *dirname, cpd_check_t check,
-                   const char *effective_user))
+check_private_dir,
+          (const char *dirname, cpd_check_t check, const char *effective_user))
 {
   int r;
   struct stat st;
@@ -98,7 +98,6 @@ check_private_dir,(const char *dirname, cpd_check_t check,
 
   /* Was there an error? Maybe the directory does not exist? */
   if (fd == -1) {
-
     if (errno != ENOENT) {
       /* Other directory error */
       log_warn(LD_FS, "Directory %s cannot be read: %s", dirname,
@@ -120,7 +119,7 @@ check_private_dir,(const char *dirname, cpd_check_t check,
       /* check for mkdir() error */
       if (r) {
         log_warn(LD_FS, "Error creating directory %s: %s", dirname,
-            strerror(errno));
+                 strerror(errno));
         return -1;
       }
 
@@ -130,14 +129,13 @@ check_private_dir,(const char *dirname, cpd_check_t check,
 
       if (fd == -1) {
         log_warn(LD_FS, "Could not reopen recently created directory %s: %s",
-                 dirname,
-                 strerror(errno));
+                 dirname, strerror(errno));
         return -1;
       } else {
         close(fd);
       }
 
-    } else if (!(check & CPD_CHECK)) {
+    } else if (! (check & CPD_CHECK)) {
       log_warn(LD_FS, "Directory %s does not exist.", dirname);
       return -1;
     }
@@ -149,20 +147,20 @@ check_private_dir,(const char *dirname, cpd_check_t check,
 
   tor_assert(fd >= 0);
 
-  //f = tor_strdup(dirname);
-  //clean_name_for_stat(f);
+  // f = tor_strdup(dirname);
+  // clean_name_for_stat(f);
   log_debug(LD_FS, "stat()ing %s", dirname);
-  //r = stat(sandbox_intern_string(f), &st);
+  // r = stat(sandbox_intern_string(f), &st);
   r = fstat(fd, &st);
   if (r == -1) {
-      log_warn(LD_FS, "fstat() on directory %s failed.", dirname);
-      close(fd);
-      return -1;
+    log_warn(LD_FS, "fstat() on directory %s failed.", dirname);
+    close(fd);
+    return -1;
   }
-  //tor_free(f);
+  // tor_free(f);
 
   /* check that dirname is a directory */
-  if (!(st.st_mode & S_IFDIR)) {
+  if (! (st.st_mode & S_IFDIR)) {
     log_warn(LD_FS, "%s is not a directory", dirname);
     close(fd);
     return -1;
@@ -189,45 +187,47 @@ check_private_dir,(const char *dirname, cpd_check_t check,
 
     {
       const struct passwd *pw_running = tor_getpwuid(running_uid);
-      process_ownername = pw_running ? tor_strdup(pw_running->pw_name) :
-        tor_strdup("<unknown>");
+      process_ownername = pw_running ? tor_strdup(pw_running->pw_name)
+                                     : tor_strdup("<unknown>");
     }
 
     {
       const struct passwd *pw_stat = tor_getpwuid(st.st_uid);
-      file_ownername = pw_stat ? tor_strdup(pw_stat->pw_name) :
-        tor_strdup("<unknown>");
+      file_ownername =
+          pw_stat ? tor_strdup(pw_stat->pw_name) : tor_strdup("<unknown>");
     }
 
-    log_warn(LD_FS, "%s is not owned by this user (%s, %d) but by "
-        "%s (%d). Perhaps you are running Tor as the wrong user?",
-             dirname, process_ownername, (int)running_uid,
-             file_ownername, (int)st.st_uid);
+    log_warn(LD_FS,
+             "%s is not owned by this user (%s, %d) but by "
+             "%s (%d). Perhaps you are running Tor as the wrong user?",
+             dirname, process_ownername, (int)running_uid, file_ownername,
+             (int)st.st_uid);
 
     tor_free(process_ownername);
     tor_free(file_ownername);
     close(fd);
     return -1;
   }
-  if ( (check & (CPD_GROUP_OK|CPD_GROUP_READ))
-       && (st.st_gid != running_gid) && (st.st_gid != 0)) {
+  if ((check & (CPD_GROUP_OK | CPD_GROUP_READ)) &&
+      (st.st_gid != running_gid) && (st.st_gid != 0)) {
     struct group *gr;
     char *process_groupname = NULL;
     gr = getgrgid(running_gid);
     process_groupname = gr ? tor_strdup(gr->gr_name) : tor_strdup("<unknown>");
     gr = getgrgid(st.st_gid);
 
-    log_warn(LD_FS, "%s is not owned by this group (%s, %d) but by group "
+    log_warn(LD_FS,
+             "%s is not owned by this group (%s, %d) but by group "
              "%s (%d).  Are you running Tor as the wrong user?",
              dirname, process_groupname, (int)running_gid,
-             gr ?  gr->gr_name : "<unknown>", (int)st.st_gid);
+             gr ? gr->gr_name : "<unknown>", (int)st.st_gid);
 
     tor_free(process_groupname);
     close(fd);
     return -1;
   }
   unsigned unwanted_bits = 0;
-  if (check & (CPD_GROUP_OK|CPD_GROUP_READ)) {
+  if (check & (CPD_GROUP_OK | CPD_GROUP_READ)) {
     unwanted_bits = 0027;
   } else {
     unwanted_bits = 0077;
@@ -285,13 +285,13 @@ check_private_dir,(const char *dirname, cpd_check_t check,
                  strerror(errno));
         return -1;
       }
-    } else if (!(check & CPD_CHECK)) {
+    } else if (! (check & CPD_CHECK)) {
       log_warn(LD_FS, "Directory %s does not exist.", dirname);
       return -1;
     }
     return 0;
   }
-  if (!(st.st_mode & S_IFDIR)) {
+  if (! (st.st_mode & S_IFDIR)) {
     log_warn(LD_FS, "%s is not a directory", dirname);
     return -1;
   }
@@ -308,34 +308,33 @@ tor_listdir, (const char *dirname))
 {
   smartlist_t *result;
 #ifdef _WIN32
-  char *pattern=NULL;
+  char *pattern = NULL;
   TCHAR tpattern[MAX_PATH] = {0};
-  char name[MAX_PATH*2+1] = {0};
+  char name[MAX_PATH * 2 + 1] = {0};
   HANDLE handle;
   WIN32_FIND_DATA findData;
   tor_asprintf(&pattern, "%s\\*", dirname);
-#ifdef UNICODE
-  mbstowcs(tpattern,pattern,MAX_PATH);
-#else
+#  ifdef UNICODE
+  mbstowcs(tpattern, pattern, MAX_PATH);
+#  else
   strlcpy(tpattern, pattern, MAX_PATH);
-#endif
+#  endif
   if (INVALID_HANDLE_VALUE == (handle = FindFirstFile(tpattern, &findData))) {
     tor_free(pattern);
     return NULL;
   }
   result = smartlist_new();
   while (1) {
-#ifdef UNICODE
-    wcstombs(name,findData.cFileName,MAX_PATH);
-    name[sizeof(name)-1] = '\0';
-#else
-    strlcpy(name,findData.cFileName,sizeof(name));
-#endif /* defined(UNICODE) */
-    if (strcmp(name, ".") &&
-        strcmp(name, "..")) {
+#  ifdef UNICODE
+    wcstombs(name, findData.cFileName, MAX_PATH);
+    name[sizeof(name) - 1] = '\0';
+#  else
+    strlcpy(name, findData.cFileName, sizeof(name));
+#  endif /* defined(UNICODE) */
+    if (strcmp(name, ".") && strcmp(name, "..")) {
       smartlist_add_strdup(result, name);
     }
-    if (!FindNextFile(handle, &findData)) {
+    if (! FindNextFile(handle, &findData)) {
       DWORD err;
       if ((err = GetLastError()) != ERROR_NO_MORE_FILES) {
         char *errstr = format_win32_error(err);
@@ -351,13 +350,12 @@ tor_listdir, (const char *dirname))
   const char *prot_dname = sandbox_intern_string(dirname);
   DIR *d;
   struct dirent *de;
-  if (!(d = opendir(prot_dname)))
+  if (! (d = opendir(prot_dname)))
     return NULL;
 
   result = smartlist_new();
   while ((de = readdir(d))) {
-    if (!strcmp(de->d_name, ".") ||
-        !strcmp(de->d_name, ".."))
+    if (! strcmp(de->d_name, ".") || ! strcmp(de->d_name, ".."))
       continue;
     smartlist_add_strdup(result, de->d_name);
   }

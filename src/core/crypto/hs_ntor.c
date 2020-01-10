@@ -48,18 +48,22 @@
 
 /** Helper macro: copy <b>len</b> bytes from <b>inp</b> to <b>ptr</b> and
  *advance <b>ptr</b> by the number of bytes copied. Stolen from onion_ntor.c */
-#define APPEND(ptr, inp, len)                   \
-  STMT_BEGIN {                                  \
-    memcpy(ptr, (inp), (len));                  \
-    ptr += len;                                 \
-  } STMT_END
+#define APPEND(ptr, inp, len)    \
+  STMT_BEGIN                     \
+    {                            \
+      memcpy(ptr, (inp), (len)); \
+      ptr += len;                \
+    }                            \
+  STMT_END
 
 /* Length of EXP(X,y) | EXP(X,b) | AUTH_KEY | B | X | Y | PROTOID */
-#define REND_SECRET_HS_INPUT_LEN (CURVE25519_OUTPUT_LEN * 2 + \
-  ED25519_PUBKEY_LEN + CURVE25519_PUBKEY_LEN * 3 + PROTOID_LEN)
+#define REND_SECRET_HS_INPUT_LEN                    \
+  (CURVE25519_OUTPUT_LEN * 2 + ED25519_PUBKEY_LEN + \
+   CURVE25519_PUBKEY_LEN * 3 + PROTOID_LEN)
 /* Length of auth_input = verify | AUTH_KEY | B | Y | X | PROTOID | "Server" */
-#define REND_AUTH_INPUT_LEN (DIGEST256_LEN + ED25519_PUBKEY_LEN + \
-  CURVE25519_PUBKEY_LEN * 3 + PROTOID_LEN + SERVER_STR_LEN)
+#define REND_AUTH_INPUT_LEN                                         \
+  (DIGEST256_LEN + ED25519_PUBKEY_LEN + CURVE25519_PUBKEY_LEN * 3 + \
+   PROTOID_LEN + SERVER_STR_LEN)
 
 /** Helper function: Compute the last part of the HS ntor handshake which
  *  derives key material necessary to create and handle RENDEZVOUS1
@@ -79,12 +83,13 @@
  *  The final results of NTOR_KEY_SEED and auth_input_mac are placed in
  *  <b>hs_ntor_rend_cell_keys_out</b>. Return 0 if everything went fine. */
 static int
-get_rendezvous1_key_material(const uint8_t *rend_secret_hs_input,
-                  const ed25519_public_key_t *intro_auth_pubkey,
-                  const curve25519_public_key_t *intro_enc_pubkey,
-                  const curve25519_public_key_t *service_ephemeral_rend_pubkey,
-                  const curve25519_public_key_t *client_ephemeral_enc_pubkey,
-                  hs_ntor_rend_cell_keys_t *hs_ntor_rend_cell_keys_out)
+get_rendezvous1_key_material(
+    const uint8_t *rend_secret_hs_input,
+    const ed25519_public_key_t *intro_auth_pubkey,
+    const curve25519_public_key_t *intro_enc_pubkey,
+    const curve25519_public_key_t *service_ephemeral_rend_pubkey,
+    const curve25519_public_key_t *client_ephemeral_enc_pubkey,
+    hs_ntor_rend_cell_keys_t *hs_ntor_rend_cell_keys_out)
 {
   int bad = 0;
   uint8_t ntor_key_seed[DIGEST256_LEN];
@@ -100,9 +105,9 @@ get_rendezvous1_key_material(const uint8_t *rend_secret_hs_input,
   bad |= safe_mem_is_zero(ntor_key_seed, DIGEST256_LEN);
 
   /* Let's build ntor_verify */
-  crypto_mac_sha3_256(ntor_verify, sizeof(ntor_verify),
-                      rend_secret_hs_input, REND_SECRET_HS_INPUT_LEN,
-                      (const uint8_t *)T_HSVERIFY, strlen(T_HSVERIFY));
+  crypto_mac_sha3_256(ntor_verify, sizeof(ntor_verify), rend_secret_hs_input,
+                      REND_SECRET_HS_INPUT_LEN, (const uint8_t *)T_HSVERIFY,
+                      strlen(T_HSVERIFY));
   bad |= safe_mem_is_zero(ntor_verify, DIGEST256_LEN);
 
   /* Let's build auth_input: */
@@ -114,11 +119,10 @@ get_rendezvous1_key_material(const uint8_t *rend_secret_hs_input,
   /* Append B */
   APPEND(ptr, intro_enc_pubkey->public_key, CURVE25519_PUBKEY_LEN);
   /* Append Y */
-  APPEND(ptr,
-         service_ephemeral_rend_pubkey->public_key, CURVE25519_PUBKEY_LEN);
+  APPEND(ptr, service_ephemeral_rend_pubkey->public_key,
+         CURVE25519_PUBKEY_LEN);
   /* Append X */
-  APPEND(ptr,
-         client_ephemeral_enc_pubkey->public_key, CURVE25519_PUBKEY_LEN);
+  APPEND(ptr, client_ephemeral_enc_pubkey->public_key, CURVE25519_PUBKEY_LEN);
   /* Append PROTOID */
   APPEND(ptr, PROTOID, strlen(PROTOID));
   /* Append "Server" */
@@ -126,16 +130,16 @@ get_rendezvous1_key_material(const uint8_t *rend_secret_hs_input,
   tor_assert(ptr == rend_auth_input + sizeof(rend_auth_input));
 
   /* Let's build auth_input_mac that goes in RENDEZVOUS1 cell */
-  crypto_mac_sha3_256(rend_cell_auth, sizeof(rend_cell_auth),
-                      rend_auth_input, sizeof(rend_auth_input),
-                      (const uint8_t *)T_HSMAC, strlen(T_HSMAC));
+  crypto_mac_sha3_256(rend_cell_auth, sizeof(rend_cell_auth), rend_auth_input,
+                      sizeof(rend_auth_input), (const uint8_t *)T_HSMAC,
+                      strlen(T_HSMAC));
   bad |= safe_mem_is_zero(ntor_verify, DIGEST256_LEN);
 
   { /* Get the computed RENDEZVOUS1 material! */
-    memcpy(&hs_ntor_rend_cell_keys_out->rend_cell_auth_mac,
-           rend_cell_auth, DIGEST256_LEN);
-    memcpy(&hs_ntor_rend_cell_keys_out->ntor_key_seed,
-           ntor_key_seed, DIGEST256_LEN);
+    memcpy(&hs_ntor_rend_cell_keys_out->rend_cell_auth_mac, rend_cell_auth,
+           DIGEST256_LEN);
+    memcpy(&hs_ntor_rend_cell_keys_out->ntor_key_seed, ntor_key_seed,
+           DIGEST256_LEN);
   }
 
   memwipe(rend_cell_auth, 0, sizeof(rend_cell_auth));
@@ -146,8 +150,9 @@ get_rendezvous1_key_material(const uint8_t *rend_secret_hs_input,
 }
 
 /** Length of secret_input = EXP(B,x) | AUTH_KEY | X | B | PROTOID */
-#define INTRO_SECRET_HS_INPUT_LEN (CURVE25519_OUTPUT_LEN +ED25519_PUBKEY_LEN +\
-  CURVE25519_PUBKEY_LEN + CURVE25519_PUBKEY_LEN + PROTOID_LEN)
+#define INTRO_SECRET_HS_INPUT_LEN                                       \
+  (CURVE25519_OUTPUT_LEN + ED25519_PUBKEY_LEN + CURVE25519_PUBKEY_LEN + \
+   CURVE25519_PUBKEY_LEN + PROTOID_LEN)
 /* Length of info = m_hsexpand | subcredential */
 #define INFO_BLOB_LEN (M_HSEXPAND_LEN + DIGEST256_LEN)
 /* Length of KDF input = intro_secret_hs_input | t_hsenc | info */
@@ -169,9 +174,9 @@ get_rendezvous1_key_material(const uint8_t *rend_secret_hs_input,
  * If everything went well, fill <b>hs_ntor_intro_cell_keys_out</b> with the
  * necessary key material, and return 0. */
 static void
-get_introduce1_key_material(const uint8_t *secret_input,
-                        const uint8_t *subcredential,
-                        hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out)
+get_introduce1_key_material(
+    const uint8_t *secret_input, const uint8_t *subcredential,
+    hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out)
 {
   uint8_t keystream[CIPHER256_KEY_LEN + DIGEST256_LEN];
   uint8_t info_blob[INFO_BLOB_LEN];
@@ -192,17 +197,17 @@ get_introduce1_key_material(const uint8_t *secret_input,
   tor_assert(ptr == kdf_input + sizeof(kdf_input));
 
   /* Now we need to run kdf_input over SHAKE-256 */
-  crypto_xof(keystream, sizeof(keystream),
-             kdf_input, sizeof(kdf_input));
+  crypto_xof(keystream, sizeof(keystream), kdf_input, sizeof(kdf_input));
 
   { /* Get the keys */
-    memcpy(&hs_ntor_intro_cell_keys_out->enc_key, keystream,CIPHER256_KEY_LEN);
+    memcpy(&hs_ntor_intro_cell_keys_out->enc_key, keystream,
+           CIPHER256_KEY_LEN);
     memcpy(&hs_ntor_intro_cell_keys_out->mac_key,
-           keystream+CIPHER256_KEY_LEN, DIGEST256_LEN);
+           keystream + CIPHER256_KEY_LEN, DIGEST256_LEN);
   }
 
-  memwipe(keystream,  0, sizeof(keystream));
-  memwipe(kdf_input,  0, sizeof(kdf_input));
+  memwipe(keystream, 0, sizeof(keystream));
+  memwipe(kdf_input, 0, sizeof(kdf_input));
 }
 
 /** Helper function: Calculate the 'intro_secret_hs_input' element used by the
@@ -222,11 +227,10 @@ get_introduce1_key_material(const uint8_t *secret_input,
  * <b>client_ephemeral_enc_pubkey</b> is X, and <b>intro_enc_pubkey</b> is B.
  */
 static void
-get_intro_secret_hs_input(const uint8_t *dh_result,
-                    const ed25519_public_key_t *intro_auth_pubkey,
-                    const curve25519_public_key_t *client_ephemeral_enc_pubkey,
-                    const curve25519_public_key_t *intro_enc_pubkey,
-                    uint8_t *secret_input_out)
+get_intro_secret_hs_input(
+    const uint8_t *dh_result, const ed25519_public_key_t *intro_auth_pubkey,
+    const curve25519_public_key_t *client_ephemeral_enc_pubkey,
+    const curve25519_public_key_t *intro_enc_pubkey, uint8_t *secret_input_out)
 {
   uint8_t *ptr;
 
@@ -262,12 +266,13 @@ get_intro_secret_hs_input(const uint8_t *dh_result,
  * <b>service_ephemeral_rend_pubkey</b> is Y.
  */
 static void
-get_rend_secret_hs_input(const uint8_t *dh_result1, const uint8_t *dh_result2,
-                  const ed25519_public_key_t *intro_auth_pubkey,
-                  const curve25519_public_key_t *intro_enc_pubkey,
-                  const curve25519_public_key_t *client_ephemeral_enc_pubkey,
-                  const curve25519_public_key_t *service_ephemeral_rend_pubkey,
-                  uint8_t *rend_secret_hs_input_out)
+get_rend_secret_hs_input(
+    const uint8_t *dh_result1, const uint8_t *dh_result2,
+    const ed25519_public_key_t *intro_auth_pubkey,
+    const curve25519_public_key_t *intro_enc_pubkey,
+    const curve25519_public_key_t *client_ephemeral_enc_pubkey,
+    const curve25519_public_key_t *service_ephemeral_rend_pubkey,
+    uint8_t *rend_secret_hs_input_out)
 {
   uint8_t *ptr;
 
@@ -281,11 +286,10 @@ get_rend_secret_hs_input(const uint8_t *dh_result1, const uint8_t *dh_result2,
   /* Append B */
   APPEND(ptr, intro_enc_pubkey->public_key, CURVE25519_PUBKEY_LEN);
   /* Append X */
-  APPEND(ptr,
-         client_ephemeral_enc_pubkey->public_key, CURVE25519_PUBKEY_LEN);
+  APPEND(ptr, client_ephemeral_enc_pubkey->public_key, CURVE25519_PUBKEY_LEN);
   /* Append Y */
-  APPEND(ptr,
-         service_ephemeral_rend_pubkey->public_key, CURVE25519_PUBKEY_LEN);
+  APPEND(ptr, service_ephemeral_rend_pubkey->public_key,
+         CURVE25519_PUBKEY_LEN);
   /* Append PROTOID */
   APPEND(ptr, PROTOID, strlen(PROTOID));
   tor_assert(ptr == rend_secret_hs_input_out + REND_SECRET_HS_INPUT_LEN);
@@ -314,11 +318,11 @@ get_rend_secret_hs_input(const uint8_t *dh_result1, const uint8_t *dh_result2,
  * DIGEST256_LEN). */
 int
 hs_ntor_client_get_introduce1_keys(
-                      const ed25519_public_key_t *intro_auth_pubkey,
-                      const curve25519_public_key_t *intro_enc_pubkey,
-                      const curve25519_keypair_t *client_ephemeral_enc_keypair,
-                      const uint8_t *subcredential,
-                      hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out)
+    const ed25519_public_key_t *intro_auth_pubkey,
+    const curve25519_public_key_t *intro_enc_pubkey,
+    const curve25519_keypair_t *client_ephemeral_enc_keypair,
+    const uint8_t *subcredential,
+    hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out)
 {
   int bad = 0;
   uint8_t secret_input[INTRO_SECRET_HS_INPUT_LEN];
@@ -331,8 +335,7 @@ hs_ntor_client_get_introduce1_keys(
   tor_assert(hs_ntor_intro_cell_keys_out);
 
   /* Calculate EXP(B,x) */
-  curve25519_handshake(dh_result,
-                       &client_ephemeral_enc_keypair->seckey,
+  curve25519_handshake(dh_result, &client_ephemeral_enc_keypair->seckey,
                        intro_enc_pubkey);
   bad |= safe_mem_is_zero(dh_result, CURVE25519_OUTPUT_LEN);
 
@@ -347,7 +350,7 @@ hs_ntor_client_get_introduce1_keys(
                               hs_ntor_intro_cell_keys_out);
 
   /* Cleanup */
-  memwipe(secret_input,  0, sizeof(secret_input));
+  memwipe(secret_input, 0, sizeof(secret_input));
   if (bad) {
     memwipe(hs_ntor_intro_cell_keys_out, 0, sizeof(hs_ntor_intro_cell_keys_t));
   }
@@ -375,11 +378,11 @@ hs_ntor_client_get_introduce1_keys(
  * <b>service_ephemeral_rend_pubkey</b> is Y (SERVER_PK in RENDEZVOUS1 cell) */
 int
 hs_ntor_client_get_rendezvous1_keys(
-                  const ed25519_public_key_t *intro_auth_pubkey,
-                  const curve25519_keypair_t *client_ephemeral_enc_keypair,
-                  const curve25519_public_key_t *intro_enc_pubkey,
-                  const curve25519_public_key_t *service_ephemeral_rend_pubkey,
-                  hs_ntor_rend_cell_keys_t *hs_ntor_rend_cell_keys_out)
+    const ed25519_public_key_t *intro_auth_pubkey,
+    const curve25519_keypair_t *client_ephemeral_enc_keypair,
+    const curve25519_public_key_t *intro_enc_pubkey,
+    const curve25519_public_key_t *service_ephemeral_rend_pubkey,
+    hs_ntor_rend_cell_keys_t *hs_ntor_rend_cell_keys_out)
 {
   int bad = 0;
   uint8_t rend_secret_hs_input[REND_SECRET_HS_INPUT_LEN];
@@ -393,31 +396,26 @@ hs_ntor_client_get_rendezvous1_keys(
   tor_assert(hs_ntor_rend_cell_keys_out);
 
   /* Compute EXP(Y, x) */
-  curve25519_handshake(dh_result1,
-                       &client_ephemeral_enc_keypair->seckey,
+  curve25519_handshake(dh_result1, &client_ephemeral_enc_keypair->seckey,
                        service_ephemeral_rend_pubkey);
   bad |= safe_mem_is_zero(dh_result1, CURVE25519_OUTPUT_LEN);
 
   /* Compute EXP(B, x) */
-  curve25519_handshake(dh_result2,
-                       &client_ephemeral_enc_keypair->seckey,
+  curve25519_handshake(dh_result2, &client_ephemeral_enc_keypair->seckey,
                        intro_enc_pubkey);
   bad |= safe_mem_is_zero(dh_result2, CURVE25519_OUTPUT_LEN);
 
   /* Get rend_secret_hs_input */
-  get_rend_secret_hs_input(dh_result1, dh_result2,
-                           intro_auth_pubkey, intro_enc_pubkey,
-                           &client_ephemeral_enc_keypair->pubkey,
-                           service_ephemeral_rend_pubkey,
-                           rend_secret_hs_input);
+  get_rend_secret_hs_input(
+      dh_result1, dh_result2, intro_auth_pubkey, intro_enc_pubkey,
+      &client_ephemeral_enc_keypair->pubkey, service_ephemeral_rend_pubkey,
+      rend_secret_hs_input);
 
   /* Get NTOR_KEY_SEED and the auth_input MAC */
-  bad |= get_rendezvous1_key_material(rend_secret_hs_input,
-                                      intro_auth_pubkey,
-                                      intro_enc_pubkey,
-                                      service_ephemeral_rend_pubkey,
-                                      &client_ephemeral_enc_keypair->pubkey,
-                                      hs_ntor_rend_cell_keys_out);
+  bad |= get_rendezvous1_key_material(
+      rend_secret_hs_input, intro_auth_pubkey, intro_enc_pubkey,
+      service_ephemeral_rend_pubkey, &client_ephemeral_enc_keypair->pubkey,
+      hs_ntor_rend_cell_keys_out);
 
   memwipe(rend_secret_hs_input, 0, sizeof(rend_secret_hs_input));
   if (bad) {
@@ -447,11 +445,11 @@ hs_ntor_client_get_rendezvous1_keys(
  * <b>subcredential</b> is the HS subcredential (of size DIGEST256_LEN) */
 int
 hs_ntor_service_get_introduce1_keys(
-                    const ed25519_public_key_t *intro_auth_pubkey,
-                    const curve25519_keypair_t *intro_enc_keypair,
-                    const curve25519_public_key_t *client_ephemeral_enc_pubkey,
-                    const uint8_t *subcredential,
-                    hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out)
+    const ed25519_public_key_t *intro_auth_pubkey,
+    const curve25519_keypair_t *intro_enc_keypair,
+    const curve25519_public_key_t *client_ephemeral_enc_pubkey,
+    const uint8_t *subcredential,
+    hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out)
 {
   int bad = 0;
   uint8_t secret_input[INTRO_SECRET_HS_INPUT_LEN];
@@ -464,23 +462,21 @@ hs_ntor_service_get_introduce1_keys(
   tor_assert(hs_ntor_intro_cell_keys_out);
 
   /* Compute EXP(X, b) */
-  curve25519_handshake(dh_result,
-                       &intro_enc_keypair->seckey,
+  curve25519_handshake(dh_result, &intro_enc_keypair->seckey,
                        client_ephemeral_enc_pubkey);
   bad |= safe_mem_is_zero(dh_result, CURVE25519_OUTPUT_LEN);
 
   /* Get intro_secret_hs_input */
   get_intro_secret_hs_input(dh_result, intro_auth_pubkey,
                             client_ephemeral_enc_pubkey,
-                            &intro_enc_keypair->pubkey,
-                            secret_input);
+                            &intro_enc_keypair->pubkey, secret_input);
   bad |= safe_mem_is_zero(secret_input, CURVE25519_OUTPUT_LEN);
 
   /* Get ENC_KEY and MAC_KEY! */
   get_introduce1_key_material(secret_input, subcredential,
                               hs_ntor_intro_cell_keys_out);
 
-  memwipe(secret_input,  0, sizeof(secret_input));
+  memwipe(secret_input, 0, sizeof(secret_input));
   if (bad) {
     memwipe(hs_ntor_intro_cell_keys_out, 0, sizeof(hs_ntor_intro_cell_keys_t));
   }
@@ -508,11 +504,11 @@ hs_ntor_service_get_introduce1_keys(
  * <b>client_ephemeral_enc_pubkey</b> is X (CLIENT_PK in INTRODUCE2 cell) */
 int
 hs_ntor_service_get_rendezvous1_keys(
-                    const ed25519_public_key_t *intro_auth_pubkey,
-                    const curve25519_keypair_t *intro_enc_keypair,
-                    const curve25519_keypair_t *service_ephemeral_rend_keypair,
-                    const curve25519_public_key_t *client_ephemeral_enc_pubkey,
-                    hs_ntor_rend_cell_keys_t *hs_ntor_rend_cell_keys_out)
+    const ed25519_public_key_t *intro_auth_pubkey,
+    const curve25519_keypair_t *intro_enc_keypair,
+    const curve25519_keypair_t *service_ephemeral_rend_keypair,
+    const curve25519_public_key_t *client_ephemeral_enc_pubkey,
+    hs_ntor_rend_cell_keys_t *hs_ntor_rend_cell_keys_out)
 {
   int bad = 0;
   uint8_t rend_secret_hs_input[REND_SECRET_HS_INPUT_LEN];
@@ -526,32 +522,26 @@ hs_ntor_service_get_rendezvous1_keys(
   tor_assert(hs_ntor_rend_cell_keys_out);
 
   /* Compute EXP(X, y) */
-  curve25519_handshake(dh_result1,
-                       &service_ephemeral_rend_keypair->seckey,
+  curve25519_handshake(dh_result1, &service_ephemeral_rend_keypair->seckey,
                        client_ephemeral_enc_pubkey);
   bad |= safe_mem_is_zero(dh_result1, CURVE25519_OUTPUT_LEN);
 
   /* Compute EXP(X, b) */
-  curve25519_handshake(dh_result2,
-                       &intro_enc_keypair->seckey,
+  curve25519_handshake(dh_result2, &intro_enc_keypair->seckey,
                        client_ephemeral_enc_pubkey);
   bad |= safe_mem_is_zero(dh_result2, CURVE25519_OUTPUT_LEN);
 
   /* Get rend_secret_hs_input */
-  get_rend_secret_hs_input(dh_result1, dh_result2,
-                           intro_auth_pubkey,
-                           &intro_enc_keypair->pubkey,
-                           client_ephemeral_enc_pubkey,
-                           &service_ephemeral_rend_keypair->pubkey,
-                           rend_secret_hs_input);
+  get_rend_secret_hs_input(
+      dh_result1, dh_result2, intro_auth_pubkey, &intro_enc_keypair->pubkey,
+      client_ephemeral_enc_pubkey, &service_ephemeral_rend_keypair->pubkey,
+      rend_secret_hs_input);
 
   /* Get NTOR_KEY_SEED and AUTH_INPUT_MAC! */
-  bad |= get_rendezvous1_key_material(rend_secret_hs_input,
-                                      intro_auth_pubkey,
-                                      &intro_enc_keypair->pubkey,
-                                      &service_ephemeral_rend_keypair->pubkey,
-                                      client_ephemeral_enc_pubkey,
-                                      hs_ntor_rend_cell_keys_out);
+  bad |= get_rendezvous1_key_material(
+      rend_secret_hs_input, intro_auth_pubkey, &intro_enc_keypair->pubkey,
+      &service_ephemeral_rend_keypair->pubkey, client_ephemeral_enc_pubkey,
+      hs_ntor_rend_cell_keys_out);
 
   memwipe(rend_secret_hs_input, 0, sizeof(rend_secret_hs_input));
   if (bad) {
@@ -566,14 +556,14 @@ hs_ntor_service_get_rendezvous1_keys(
  *  if the MAC is good, otherwise return 0. */
 int
 hs_ntor_client_rendezvous2_mac_is_good(
-                        const hs_ntor_rend_cell_keys_t *hs_ntor_rend_cell_keys,
-                        const uint8_t *rcvd_mac)
+    const hs_ntor_rend_cell_keys_t *hs_ntor_rend_cell_keys,
+    const uint8_t *rcvd_mac)
 {
   tor_assert(rcvd_mac);
   tor_assert(hs_ntor_rend_cell_keys);
 
-  return tor_memeq(hs_ntor_rend_cell_keys->rend_cell_auth_mac,
-                   rcvd_mac, DIGEST256_LEN);
+  return tor_memeq(hs_ntor_rend_cell_keys->rend_cell_auth_mac, rcvd_mac,
+                   DIGEST256_LEN);
 }
 
 /* Input length to KDF for key expansion */
@@ -607,8 +597,8 @@ hs_ntor_circuit_key_expansion(const uint8_t *ntor_key_seed, size_t seed_len,
   tor_assert(ptr == kdf_input + sizeof(kdf_input));
 
   /* Generate the keys */
-  crypto_xof(keys_out, HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN,
-             kdf_input, sizeof(kdf_input));
+  crypto_xof(keys_out, HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN, kdf_input,
+             sizeof(kdf_input));
 
   return 0;
 }

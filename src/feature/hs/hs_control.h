@@ -53,4 +53,3 @@ void hs_control_hsfetch_command(const ed25519_public_key_t *onion_identity_pk,
                                 const smartlist_t *hsdirs);
 
 #endif /* !defined(TOR_HS_CONTROL_H) */
-

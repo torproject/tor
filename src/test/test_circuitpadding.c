@@ -43,8 +43,8 @@
 /* Start our monotime mocking at 1 second past whatever monotime_init()
  * thought the actual wall clock time was, for platforms with bad resolution
  * and weird timevalues during monotime_init() before mocking. */
-#define MONOTIME_MOCK_START   (monotime_absolute_nsec()+\
-                               TOR_NSEC_PER_USEC*TOR_USEC_PER_SEC)
+#define MONOTIME_MOCK_START \
+  (monotime_absolute_nsec() + TOR_NSEC_PER_USEC * TOR_USEC_PER_SEC)
 
 extern smartlist_t *connection_array;
 void circuit_expire_old_circuits_clientside(void);
@@ -63,9 +63,8 @@ void test_circuitpadding_rtt(void *arg);
 void test_circuitpadding_tokens(void *arg);
 void test_circuitpadding_state_length(void *arg);
 
-static void
-simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
-                           int padding);
+static void simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
+                                       int padding);
 void free_fake_origin_circuit(origin_circuit_t *circ);
 
 static int deliver_negotiated = 1;
@@ -80,7 +79,7 @@ static circpad_machine_spec_t circ_client_machine;
 static void
 timers_advance_and_run(int64_t msec_update)
 {
-  curr_mocked_time += msec_update*TOR_NSEC_PER_MSEC;
+  curr_mocked_time += msec_update * TOR_NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(curr_mocked_time);
   monotime_set_mock_time_nsec(curr_mocked_time);
   timers_run_pending();
@@ -119,8 +118,8 @@ node_get_by_id_mock(const char *identity_digest)
 static const node_t *
 circuit_get_nth_node_mock(origin_circuit_t *circ, int hop)
 {
-  (void) circ;
-  (void) hop;
+  (void)circ;
+  (void)hop;
 
   return &padding_node;
 }
@@ -135,7 +134,7 @@ free_fake_origin_circuit(origin_circuit_t *circ)
 
 void dummy_nop_timer(void);
 
-//static int dont_stop_libevent = 0;
+// static int dont_stop_libevent = 0;
 
 static circuit_t *client_side;
 static circuit_t *relay_side;
@@ -143,15 +142,14 @@ static circuit_t *relay_side;
 static int n_client_cells = 0;
 static int n_relay_cells = 0;
 
-static int
-circuit_package_relay_cell_mock(cell_t *cell, circuit_t *circ,
-                           cell_direction_t cell_direction,
-                           crypt_path_t *layer_hint, streamid_t on_stream,
-                           const char *filename, int lineno);
+static int circuit_package_relay_cell_mock(cell_t *cell, circuit_t *circ,
+                                           cell_direction_t cell_direction,
+                                           crypt_path_t *layer_hint,
+                                           streamid_t on_stream,
+                                           const char *filename, int lineno);
 
-static void
-circuitmux_attach_circuit_mock(circuitmux_t *cmux, circuit_t *circ,
-                               cell_direction_t direction);
+static void circuitmux_attach_circuit_mock(circuitmux_t *cmux, circuit_t *circ,
+                                           cell_direction_t direction);
 
 static void
 circuitmux_attach_circuit_mock(circuitmux_t *cmux, circuit_t *circ,
@@ -166,30 +164,32 @@ circuitmux_attach_circuit_mock(circuitmux_t *cmux, circuit_t *circ,
 
 static int
 circuit_package_relay_cell_mock(cell_t *cell, circuit_t *circ,
-                           cell_direction_t cell_direction,
-                           crypt_path_t *layer_hint, streamid_t on_stream,
-                           const char *filename, int lineno)
+                                cell_direction_t cell_direction,
+                                crypt_path_t *layer_hint, streamid_t on_stream,
+                                const char *filename, int lineno)
 {
-  (void)cell; (void)on_stream; (void)filename; (void)lineno;
+  (void)cell;
+  (void)on_stream;
+  (void)filename;
+  (void)lineno;
 
   if (circ == client_side) {
     if (cell->payload[0] == RELAY_COMMAND_PADDING_NEGOTIATE) {
       // Deliver to relay
       circpad_handle_padding_negotiate(relay_side, cell);
     } else {
-
-      int is_target_hop = circpad_padding_is_from_expected_hop(circ,
-                                                             layer_hint);
+      int is_target_hop =
+          circpad_padding_is_from_expected_hop(circ, layer_hint);
       tt_int_op(cell_direction, OP_EQ, CELL_DIRECTION_OUT);
       tt_int_op(is_target_hop, OP_EQ, 1);
 
       // No need to pretend a padding cell was sent: This event is
       // now emitted internally when the circuitpadding code sends them.
-      //circpad_cell_event_padding_sent(client_side);
+      // circpad_cell_event_padding_sent(client_side);
 
       // Receive padding cell at middle
       circpad_deliver_recognized_relay_cell_events(relay_side,
-              cell->payload[0], NULL);
+                                                   cell->payload[0], NULL);
     }
     n_client_cells++;
   } else if (circ == relay_side) {
@@ -198,26 +198,25 @@ circuit_package_relay_cell_mock(cell_t *cell, circuit_t *circ,
     if (cell->payload[0] == RELAY_COMMAND_PADDING_NEGOTIATED) {
       // XXX: blah need right layer_hint..
       if (deliver_negotiated)
-        circpad_handle_padding_negotiated(client_side, cell,
-                                          TO_ORIGIN_CIRCUIT(client_side)
-                                             ->cpath->next);
+        circpad_handle_padding_negotiated(
+            client_side, cell, TO_ORIGIN_CIRCUIT(client_side)->cpath->next);
     } else if (cell->payload[0] == RELAY_COMMAND_PADDING_NEGOTIATE) {
       circpad_handle_padding_negotiate(client_side, cell);
     } else {
       // No need to pretend a padding cell was sent: This event is
       // now emitted internally when the circuitpadding code sends them.
-      //circpad_cell_event_padding_sent(relay_side);
+      // circpad_cell_event_padding_sent(relay_side);
 
       // Receive padding cell at client
-      circpad_deliver_recognized_relay_cell_events(client_side,
-              cell->payload[0],
-              TO_ORIGIN_CIRCUIT(client_side)->cpath->next);
+      circpad_deliver_recognized_relay_cell_events(
+          client_side, cell->payload[0],
+          TO_ORIGIN_CIRCUIT(client_side)->cpath->next);
     }
 
     n_relay_cells++;
   }
 
- done:
+done:
   timers_advance_and_run(1);
   return 0;
 }
@@ -234,11 +233,11 @@ circpad_send_command_to_hop_mock(origin_circuit_t *circ, uint8_t hopnum,
                                  uint8_t relay_command, const uint8_t *payload,
                                  ssize_t payload_len)
 {
-  (void) circ;
-  (void) hopnum;
-  (void) relay_command;
-  (void) payload;
-  (void) payload_len;
+  (void)circ;
+  (void)hopnum;
+  (void)relay_command;
+  (void)payload;
+  (void)payload_len;
   return 0;
 }
 
@@ -278,15 +277,15 @@ test_circuitpadding_rtt(void *arg)
   circpad_machines_init();
   helper_create_basic_machine();
 
-  MOCK(circuit_package_relay_cell,
-       circuit_package_relay_cell_mock);
+  MOCK(circuit_package_relay_cell, circuit_package_relay_cell_mock);
 
   client_side->padding_machine[0] = &circ_client_machine;
-  client_side->padding_info[0] = circpad_circuit_machineinfo_new(client_side,
-                                                                 0);
+  client_side->padding_info[0] =
+      circpad_circuit_machineinfo_new(client_side, 0);
 
   relay_side->padding_machine[0] = &circ_client_machine;
-  relay_side->padding_info[0] = circpad_circuit_machineinfo_new(client_side,0);
+  relay_side->padding_info[0] =
+      circpad_circuit_machineinfo_new(client_side, 0);
 
   /* Test 1: Test measuring RTT */
   circpad_cell_event_nonpadding_received(relay_side);
@@ -301,9 +300,9 @@ test_circuitpadding_rtt(void *arg)
   tt_int_op(relay_side->padding_info[0]->rtt_estimate_usec, OP_LE, 30000);
   tt_int_op(circpad_histogram_bin_to_usec(relay_side->padding_info[0], 0),
             OP_EQ,
-            relay_side->padding_info[0]->rtt_estimate_usec+
-            circpad_machine_current_state(
-             relay_side->padding_info[0])->histogram_edges[0]);
+            relay_side->padding_info[0]->rtt_estimate_usec +
+                circpad_machine_current_state(relay_side->padding_info[0])
+                    ->histogram_edges[0]);
 
   circpad_cell_event_nonpadding_received(relay_side);
   circpad_cell_event_nonpadding_received(relay_side);
@@ -317,9 +316,9 @@ test_circuitpadding_rtt(void *arg)
   tt_int_op(relay_side->padding_info[0]->rtt_estimate_usec, OP_LE, 21000);
   tt_int_op(circpad_histogram_bin_to_usec(relay_side->padding_info[0], 0),
             OP_EQ,
-            relay_side->padding_info[0]->rtt_estimate_usec+
-            circpad_machine_current_state(
-             relay_side->padding_info[0])->histogram_edges[0]);
+            relay_side->padding_info[0]->rtt_estimate_usec +
+                circpad_machine_current_state(relay_side->padding_info[0])
+                    ->histogram_edges[0]);
 
   /* Test 2: Termination of RTT measurement (from the previous test) */
   tt_int_op(relay_side->padding_info[0]->stop_rtt_update, OP_EQ, 1);
@@ -335,9 +334,9 @@ test_circuitpadding_rtt(void *arg)
   tt_int_op(relay_side->padding_info[0]->stop_rtt_update, OP_EQ, 1);
   tt_int_op(circpad_histogram_bin_to_usec(relay_side->padding_info[0], 0),
             OP_EQ,
-            relay_side->padding_info[0]->rtt_estimate_usec+
-            circpad_machine_current_state(
-             relay_side->padding_info[0])->histogram_edges[0]);
+            relay_side->padding_info[0]->rtt_estimate_usec +
+                circpad_machine_current_state(relay_side->padding_info[0])
+                    ->histogram_edges[0]);
 
   /* Test 3: Make sure client side machine properly ignores RTT */
   circpad_cell_event_nonpadding_received(client_side);
@@ -352,9 +351,9 @@ test_circuitpadding_rtt(void *arg)
             OP_NE, client_side->padding_info[0]->rtt_estimate_usec);
   tt_int_op(circpad_histogram_bin_to_usec(client_side->padding_info[0], 0),
             OP_EQ,
-            circpad_machine_current_state(
-                client_side->padding_info[0])->histogram_edges[0]);
- done:
+            circpad_machine_current_state(client_side->padding_info[0])
+                ->histogram_edges[0]);
+done:
   free_fake_orcirc(TO_OR_CIRCUIT(relay_side));
   circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
   circuitmux_free(dummy_channel.cmux);
@@ -376,17 +375,17 @@ helper_create_basic_machine(void)
 
   circ_client_machine.name = "basic";
 
-  circ_client_machine.states[CIRCPAD_STATE_START].
-      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
+  circ_client_machine.states[CIRCPAD_STATE_START]
+      .next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
   circ_client_machine.states[CIRCPAD_STATE_START].use_rtt_estimate = 1;
 
-  circ_client_machine.states[CIRCPAD_STATE_BURST].
-      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_BURST;
-  circ_client_machine.states[CIRCPAD_STATE_BURST].
-      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
+  circ_client_machine.states[CIRCPAD_STATE_BURST]
+      .next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_BURST;
+  circ_client_machine.states[CIRCPAD_STATE_BURST]
+      .next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
 
-  circ_client_machine.states[CIRCPAD_STATE_BURST].
-      next_state[CIRCPAD_EVENT_NONPADDING_SENT] = CIRCPAD_STATE_CANCEL;
+  circ_client_machine.states[CIRCPAD_STATE_BURST]
+      .next_state[CIRCPAD_EVENT_NONPADDING_SENT] = CIRCPAD_STATE_CANCEL;
 
   circ_client_machine.states[CIRCPAD_STATE_BURST].token_removal =
       CIRCPAD_TOKEN_REMOVAL_HIGHER;
@@ -423,15 +422,16 @@ helper_create_machine_with_big_histogram(circpad_removal_t removal_strategy)
   circpad_machine_states_init(&circ_client_machine, 2);
 
   circpad_state_t *burst_state =
-    &circ_client_machine.states[CIRCPAD_STATE_BURST];
+      &circ_client_machine.states[CIRCPAD_STATE_BURST];
 
-  circ_client_machine.states[CIRCPAD_STATE_START].
-    next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
+  circ_client_machine.states[CIRCPAD_STATE_START]
+      .next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
 
   burst_state->next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_BURST;
-  burst_state->next_state[CIRCPAD_EVENT_NONPADDING_RECV] =CIRCPAD_STATE_BURST;
+  burst_state->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
 
-  burst_state->next_state[CIRCPAD_EVENT_NONPADDING_SENT] =CIRCPAD_STATE_CANCEL;
+  burst_state->next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
+      CIRCPAD_STATE_CANCEL;
 
   burst_state->token_removal = CIRCPAD_TOKEN_REMOVAL_HIGHER;
 
@@ -439,7 +439,7 @@ helper_create_machine_with_big_histogram(circpad_removal_t removal_strategy)
 
   int n_tokens = 0;
   int i;
-  for (i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+  for (i = 0; i < BIG_HISTOGRAM_LEN; i++) {
     burst_state->histogram[i] = tokens_per_bin;
     n_tokens += tokens_per_bin;
   }
@@ -487,7 +487,8 @@ test_circuitpadding_token_removal_higher(void *arg)
 
   /* Mock it up */
   MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
-  MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+  MOCK(circpad_machine_schedule_padding,
+       circpad_machine_schedule_padding_mock);
   testing_enable_reproducible_rng();
 
   /* Setup test environment (time etc.) */
@@ -499,7 +500,7 @@ test_circuitpadding_token_removal_higher(void *arg)
   helper_create_machine_with_big_histogram(CIRCPAD_TOKEN_REMOVAL_HIGHER);
   client_side->padding_machine[0] = &circ_client_machine;
   client_side->padding_info[0] =
-    circpad_circuit_machineinfo_new(client_side, 0);
+      circpad_circuit_machineinfo_new(client_side, 0);
 
   /* move the machine to the right state */
   circpad_cell_event_nonpadding_received(client_side);
@@ -515,23 +516,23 @@ test_circuitpadding_token_removal_higher(void *arg)
   uint64_t current_time = monotime_absolute_usec();
 
   /* Test left boundaries of each histogram bin: */
-  const circpad_delay_t bin_left_bounds[] =
-    {0, 1,    7,  15,  31,  62,  125, 250, 500, 1000, CIRCPAD_DELAY_INFINITE};
-  for (int i = 0; i <= BIG_HISTOGRAM_LEN ; i++) {
+  const circpad_delay_t bin_left_bounds[] = {
+      0, 1, 7, 15, 31, 62, 125, 250, 500, 1000, CIRCPAD_DELAY_INFINITE};
+  for (int i = 0; i <= BIG_HISTOGRAM_LEN; i++) {
     tt_uint_op(bin_left_bounds[i], OP_EQ,
                circpad_histogram_bin_to_usec(mi, i));
   }
 
   /* Test right boundaries of each histogram bin: */
-  const circpad_delay_t bin_right_bounds[] =
-    {0,    6,  14,  30,  61,  124, 249, 499, 999, CIRCPAD_DELAY_INFINITE-1};
-  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+  const circpad_delay_t bin_right_bounds[] = {
+      0, 6, 14, 30, 61, 124, 249, 499, 999, CIRCPAD_DELAY_INFINITE - 1};
+  for (int i = 0; i < BIG_HISTOGRAM_LEN; i++) {
     tt_uint_op(bin_right_bounds[i], OP_EQ,
                histogram_get_bin_upper_bound(mi, i));
   }
 
   /* Check that all bins have two tokens right now */
-  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+  for (int i = 0; i < BIG_HISTOGRAM_LEN; i++) {
     tt_int_op(mi->histogram[i], OP_EQ, 2);
   }
 
@@ -543,10 +544,10 @@ test_circuitpadding_token_removal_higher(void *arg)
   unsigned i;
 
   /* Remove all tokens from all bins apart from the infinity bin */
-  for (i = 0; i < sizeof(bin_removal_order)/sizeof(int) ; i++) {
+  for (i = 0; i < sizeof(bin_removal_order) / sizeof(int); i++) {
     int bin_to_remove = bin_removal_order[i];
-    log_debug(LD_GENERAL, "Testing that %d attempt removes %d bin",
-              i, bin_to_remove);
+    log_debug(LD_GENERAL, "Testing that %d attempt removes %d bin", i,
+              bin_to_remove);
 
     tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 2);
 
@@ -566,7 +567,7 @@ test_circuitpadding_token_removal_higher(void *arg)
   }
 
   /* Check that all lower bins are not touched */
-  for (i=0; i < 4 ; i++) {
+  for (i = 0; i < 4; i++) {
     tt_int_op(mi->histogram[i], OP_EQ, 2);
   }
 
@@ -578,7 +579,7 @@ test_circuitpadding_token_removal_higher(void *arg)
   circpad_cell_event_nonpadding_sent(client_side);
   tt_int_op(mi->histogram[0], OP_EQ, 1);
 
- done:
+done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   monotime_disable_test_mocking();
   tor_free(circ_client_machine.states);
@@ -594,7 +595,8 @@ test_circuitpadding_token_removal_lower(void *arg)
 
   /* Mock it up */
   MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
-  MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+  MOCK(circpad_machine_schedule_padding,
+       circpad_machine_schedule_padding_mock);
   testing_enable_reproducible_rng();
 
   /* Setup test environment (time etc.) */
@@ -606,7 +608,7 @@ test_circuitpadding_token_removal_lower(void *arg)
   helper_create_machine_with_big_histogram(CIRCPAD_TOKEN_REMOVAL_LOWER);
   client_side->padding_machine[0] = &circ_client_machine;
   client_side->padding_info[0] =
-    circpad_circuit_machineinfo_new(client_side, 0);
+      circpad_circuit_machineinfo_new(client_side, 0);
 
   /* move the machine to the right state */
   circpad_cell_event_nonpadding_received(client_side);
@@ -622,15 +624,15 @@ test_circuitpadding_token_removal_lower(void *arg)
   uint64_t current_time = monotime_absolute_usec();
 
   /* Test left boundaries of each histogram bin: */
-  const circpad_delay_t bin_left_bounds[] =
-    {0, 1,    7,  15,  31,  62,  125, 250, 500, 1000, CIRCPAD_DELAY_INFINITE};
-  for (int i = 0; i <= BIG_HISTOGRAM_LEN ; i++) {
+  const circpad_delay_t bin_left_bounds[] = {
+      0, 1, 7, 15, 31, 62, 125, 250, 500, 1000, CIRCPAD_DELAY_INFINITE};
+  for (int i = 0; i <= BIG_HISTOGRAM_LEN; i++) {
     tt_uint_op(bin_left_bounds[i], OP_EQ,
                circpad_histogram_bin_to_usec(mi, i));
   }
 
   /* Check that all bins have two tokens right now */
-  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+  for (int i = 0; i < BIG_HISTOGRAM_LEN; i++) {
     tt_int_op(mi->histogram[i], OP_EQ, 2);
   }
 
@@ -642,10 +644,10 @@ test_circuitpadding_token_removal_lower(void *arg)
   unsigned i;
 
   /* Remove all tokens from all bins apart from the infinity bin */
-  for (i = 0; i < sizeof(bin_removal_order)/sizeof(int) ; i++) {
+  for (i = 0; i < sizeof(bin_removal_order) / sizeof(int); i++) {
     int bin_to_remove = bin_removal_order[i];
-    log_debug(LD_GENERAL, "Testing that %d attempt removes %d bin",
-              i, bin_to_remove);
+    log_debug(LD_GENERAL, "Testing that %d attempt removes %d bin", i,
+              bin_to_remove);
 
     tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 2);
 
@@ -665,20 +667,20 @@ test_circuitpadding_token_removal_lower(void *arg)
   }
 
   /* Check that all higher bins are untouched */
-  for (i = 5; i < BIG_HISTOGRAM_LEN ; i++) {
+  for (i = 5; i < BIG_HISTOGRAM_LEN; i++) {
     tt_int_op(mi->histogram[i], OP_EQ, 2);
   }
 
   /* Test above the highest bin, for coverage */
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_BURST);
-  circ_client_machine.states[CIRCPAD_STATE_BURST].
-    histogram_edges[BIG_HISTOGRAM_LEN-2] = 100;
+  circ_client_machine.states[CIRCPAD_STATE_BURST]
+      .histogram_edges[BIG_HISTOGRAM_LEN - 2] = 100;
   mi->padding_scheduled_at_usec = current_time - 29202;
   circpad_cell_event_nonpadding_sent(client_side);
-  tt_int_op(mi->histogram[BIG_HISTOGRAM_LEN-2], OP_EQ, 1);
+  tt_int_op(mi->histogram[BIG_HISTOGRAM_LEN - 2], OP_EQ, 1);
 
- done:
+done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   monotime_disable_test_mocking();
   tor_free(circ_client_machine.states);
@@ -694,7 +696,8 @@ test_circuitpadding_closest_token_removal(void *arg)
 
   /* Mock it up */
   MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
-  MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+  MOCK(circpad_machine_schedule_padding,
+       circpad_machine_schedule_padding_mock);
   testing_enable_reproducible_rng();
 
   /* Setup test environment (time etc.) */
@@ -706,7 +709,7 @@ test_circuitpadding_closest_token_removal(void *arg)
   helper_create_machine_with_big_histogram(CIRCPAD_TOKEN_REMOVAL_CLOSEST);
   client_side->padding_machine[0] = &circ_client_machine;
   client_side->padding_info[0] =
-    circpad_circuit_machineinfo_new(client_side, 0);
+      circpad_circuit_machineinfo_new(client_side, 0);
 
   /* move the machine to the right state */
   circpad_cell_event_nonpadding_received(client_side);
@@ -722,15 +725,15 @@ test_circuitpadding_closest_token_removal(void *arg)
   uint64_t current_time = monotime_absolute_usec();
 
   /* Test left boundaries of each histogram bin: */
-  const circpad_delay_t bin_left_bounds[] =
-    {0, 1,    7,  15,  31,  62,  125, 250, 500, 1000, CIRCPAD_DELAY_INFINITE};
-  for (int i = 0; i <= BIG_HISTOGRAM_LEN ; i++) {
+  const circpad_delay_t bin_left_bounds[] = {
+      0, 1, 7, 15, 31, 62, 125, 250, 500, 1000, CIRCPAD_DELAY_INFINITE};
+  for (int i = 0; i <= BIG_HISTOGRAM_LEN; i++) {
     tt_uint_op(bin_left_bounds[i], OP_EQ,
                circpad_histogram_bin_to_usec(mi, i));
   }
 
   /* Check that all bins have two tokens right now */
-  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+  for (int i = 0; i < BIG_HISTOGRAM_LEN; i++) {
     tt_int_op(mi->histogram[i], OP_EQ, 2);
   }
 
@@ -741,10 +744,10 @@ test_circuitpadding_closest_token_removal(void *arg)
   const int bin_removal_order[] = {4, 3, 5, 2, 6, 1, 7, 0, 8, 9};
 
   /* Remove all tokens from all bins apart from the infinity bin */
-  for (int i = 0; i < BIG_HISTOGRAM_LEN-1 ; i++) {
+  for (int i = 0; i < BIG_HISTOGRAM_LEN - 1; i++) {
     int bin_to_remove = bin_removal_order[i];
-    log_debug(LD_GENERAL, "Testing that %d attempt removes %d bin",
-              i, bin_to_remove);
+    log_debug(LD_GENERAL, "Testing that %d attempt removes %d bin", i,
+              bin_to_remove);
 
     tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 2);
 
@@ -764,7 +767,7 @@ test_circuitpadding_closest_token_removal(void *arg)
   }
 
   /* Check that all bins have been refilled */
-  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+  for (int i = 0; i < BIG_HISTOGRAM_LEN; i++) {
     tt_int_op(mi->histogram[i], OP_EQ, 2);
   }
 
@@ -784,9 +787,9 @@ test_circuitpadding_closest_token_removal(void *arg)
             CIRCPAD_STATE_BURST);
   mi->padding_scheduled_at_usec = current_time - 29202;
   circpad_cell_event_nonpadding_sent(client_side);
-  tt_int_op(mi->histogram[BIG_HISTOGRAM_LEN-2], OP_EQ, 1);
+  tt_int_op(mi->histogram[BIG_HISTOGRAM_LEN - 2], OP_EQ, 1);
 
- done:
+done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   monotime_disable_test_mocking();
   tor_free(circ_client_machine.states);
@@ -802,7 +805,8 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
 
   /* Mock it up */
   MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
-  MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+  MOCK(circpad_machine_schedule_padding,
+       circpad_machine_schedule_padding_mock);
   testing_enable_reproducible_rng();
 
   /* Setup test environment (time etc.) */
@@ -814,7 +818,7 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
   helper_create_machine_with_big_histogram(CIRCPAD_TOKEN_REMOVAL_CLOSEST_USEC);
   client_side->padding_machine[0] = &circ_client_machine;
   client_side->padding_info[0] =
-    circpad_circuit_machineinfo_new(client_side, 0);
+      circpad_circuit_machineinfo_new(client_side, 0);
 
   /* move the machine to the right state */
   circpad_cell_event_nonpadding_received(client_side);
@@ -830,9 +834,9 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
   uint64_t current_time = monotime_absolute_usec();
 
   /* Test left boundaries of each histogram bin: */
-  const circpad_delay_t bin_left_bounds[] =
-    {0, 1,    7,  15,  31,  62,  125, 250, 500, 1000, CIRCPAD_DELAY_INFINITE};
-  for (int i = 0; i <= BIG_HISTOGRAM_LEN ; i++) {
+  const circpad_delay_t bin_left_bounds[] = {
+      0, 1, 7, 15, 31, 62, 125, 250, 500, 1000, CIRCPAD_DELAY_INFINITE};
+  for (int i = 0; i <= BIG_HISTOGRAM_LEN; i++) {
     tt_uint_op(bin_left_bounds[i], OP_EQ,
                circpad_histogram_bin_to_usec(mi, i));
   }
@@ -841,7 +845,7 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
      circpad_machine_remove_closest_token() with usec */
 
   /* Check that all bins have two tokens right now */
-  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+  for (int i = 0; i < BIG_HISTOGRAM_LEN; i++) {
     tt_int_op(mi->histogram[i], OP_EQ, 2);
   }
 
@@ -852,10 +856,10 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
   const int bin_removal_order[] = {4, 3, 5, 2, 1, 0, 6, 7, 8, 9};
 
   /* Remove all tokens from all bins apart from the infinity bin */
-  for (int i = 0; i < BIG_HISTOGRAM_LEN-1 ; i++) {
+  for (int i = 0; i < BIG_HISTOGRAM_LEN - 1; i++) {
     int bin_to_remove = bin_removal_order[i];
-    log_debug(LD_GENERAL, "Testing that %d attempt removes %d bin",
-              i, bin_to_remove);
+    log_debug(LD_GENERAL, "Testing that %d attempt removes %d bin", i,
+              bin_to_remove);
 
     tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 2);
 
@@ -875,7 +879,7 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
   }
 
   /* Check that all bins have been refilled */
-  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+  for (int i = 0; i < BIG_HISTOGRAM_LEN; i++) {
     tt_int_op(mi->histogram[i], OP_EQ, 2);
   }
 
@@ -893,13 +897,13 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
   /* Test above the highest bin, for coverage */
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_BURST);
-  circ_client_machine.states[CIRCPAD_STATE_BURST].
-    histogram_edges[BIG_HISTOGRAM_LEN-2] = 100;
+  circ_client_machine.states[CIRCPAD_STATE_BURST]
+      .histogram_edges[BIG_HISTOGRAM_LEN - 2] = 100;
   mi->padding_scheduled_at_usec = current_time - 29202;
   circpad_cell_event_nonpadding_sent(client_side);
-  tt_int_op(mi->histogram[BIG_HISTOGRAM_LEN-2], OP_EQ, 1);
+  tt_int_op(mi->histogram[BIG_HISTOGRAM_LEN - 2], OP_EQ, 1);
 
- done:
+done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   monotime_disable_test_mocking();
   tor_free(circ_client_machine.states);
@@ -915,7 +919,8 @@ test_circuitpadding_token_removal_exact(void *arg)
 
   /* Mock it up */
   MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
-  MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+  MOCK(circpad_machine_schedule_padding,
+       circpad_machine_schedule_padding_mock);
   testing_enable_reproducible_rng();
 
   /* Setup test environment (time etc.) */
@@ -927,7 +932,7 @@ test_circuitpadding_token_removal_exact(void *arg)
   helper_create_machine_with_big_histogram(CIRCPAD_TOKEN_REMOVAL_EXACT);
   client_side->padding_machine[0] = &circ_client_machine;
   client_side->padding_info[0] =
-    circpad_circuit_machineinfo_new(client_side, 0);
+      circpad_circuit_machineinfo_new(client_side, 0);
 
   /* move the machine to the right state */
   circpad_cell_event_nonpadding_received(client_side);
@@ -954,13 +959,13 @@ test_circuitpadding_token_removal_exact(void *arg)
    * this is what the exact strategy dictates */
   mi->padding_scheduled_at_usec = current_time - 57;
   circpad_cell_event_nonpadding_sent(client_side);
-  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+  for (int i = 0; i < BIG_HISTOGRAM_LEN; i++) {
     if (i != 4) {
       tt_int_op(mi->histogram[i], OP_EQ, 2);
     }
   }
 
- done:
+done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   monotime_disable_test_mocking();
   tor_free(circ_client_machine.states);
@@ -1016,8 +1021,8 @@ test_circuitpadding_tokens(void *arg)
 
   helper_create_basic_machine();
   client_side->padding_machine[0] = &circ_client_machine;
-  client_side->padding_info[0] = circpad_circuit_machineinfo_new(client_side,
-                                                                 0);
+  client_side->padding_info[0] =
+      circpad_circuit_machineinfo_new(client_side, 0);
 
   mi = client_side->padding_info[0];
 
@@ -1038,47 +1043,46 @@ test_circuitpadding_tokens(void *arg)
   for (int bin = 0; bin < 2; bin++) {
     circpad_delay_t usec =
         circpad_histogram_bin_to_usec(client_side->padding_info[0], bin);
-    int bin2 = circpad_histogram_usec_to_bin(client_side->padding_info[0],
-                                             usec);
+    int bin2 =
+        circpad_histogram_usec_to_bin(client_side->padding_info[0], usec);
     tt_int_op(bin, OP_EQ, bin2);
   }
-  for (int bin = 2; bin < state->histogram_len-1; bin++) {
+  for (int bin = 2; bin < state->histogram_len - 1; bin++) {
     circpad_delay_t usec =
         circpad_histogram_bin_to_usec(client_side->padding_info[0], bin);
-    int bin2 = circpad_histogram_usec_to_bin(client_side->padding_info[0],
-                                             usec);
+    int bin2 =
+        circpad_histogram_usec_to_bin(client_side->padding_info[0], usec);
     tt_int_op(bin, OP_EQ, bin2);
     /* Verify we round down */
-    bin2 = circpad_histogram_usec_to_bin(client_side->padding_info[0],
-                                             usec+3);
+    bin2 =
+        circpad_histogram_usec_to_bin(client_side->padding_info[0], usec + 3);
     tt_int_op(bin, OP_EQ, bin2);
 
-    bin2 = circpad_histogram_usec_to_bin(client_side->padding_info[0],
-                                             usec-1);
-    tt_int_op(bin, OP_EQ, bin2+1);
+    bin2 =
+        circpad_histogram_usec_to_bin(client_side->padding_info[0], usec - 1);
+    tt_int_op(bin, OP_EQ, bin2 + 1);
   }
 
   // Test 1: converting usec->bin->usec->bin
   // Bin 0+1 have different semantics.
   for (circpad_delay_t i = 0; i <= state->histogram_edges[0]; i++) {
-    int bin = circpad_histogram_usec_to_bin(client_side->padding_info[0],
-                                            i);
+    int bin = circpad_histogram_usec_to_bin(client_side->padding_info[0], i);
     circpad_delay_t usec =
         circpad_histogram_bin_to_usec(client_side->padding_info[0], bin);
-    int bin2 = circpad_histogram_usec_to_bin(client_side->padding_info[0],
-                                             usec);
+    int bin2 =
+        circpad_histogram_usec_to_bin(client_side->padding_info[0], usec);
     tt_int_op(bin, OP_EQ, bin2);
     tt_int_op(i, OP_LE, usec);
   }
-  for (circpad_delay_t i = state->histogram_edges[0]+1;
+  for (circpad_delay_t i = state->histogram_edges[0] + 1;
        i <= state->histogram_edges[0] +
-         state->histogram_edges[state->histogram_len-2]; i++) {
-    int bin = circpad_histogram_usec_to_bin(client_side->padding_info[0],
-                                            i);
+                state->histogram_edges[state->histogram_len - 2];
+       i++) {
+    int bin = circpad_histogram_usec_to_bin(client_side->padding_info[0], i);
     circpad_delay_t usec =
         circpad_histogram_bin_to_usec(client_side->padding_info[0], bin);
-    int bin2 = circpad_histogram_usec_to_bin(client_side->padding_info[0],
-                                             usec);
+    int bin2 =
+        circpad_histogram_usec_to_bin(client_side->padding_info[0], usec);
     tt_int_op(bin, OP_EQ, bin2);
     tt_int_op(i, OP_GE, usec);
   }
@@ -1087,36 +1091,36 @@ test_circuitpadding_tokens(void *arg)
   {
     tt_int_op(mi->histogram[2], OP_EQ, 2);
     tt_int_op(mi->histogram[3], OP_EQ, 2);
-    circpad_machine_remove_higher_token(mi,
-         circpad_histogram_bin_to_usec(mi, 2)+1);
+    circpad_machine_remove_higher_token(
+        mi, circpad_histogram_bin_to_usec(mi, 2) + 1);
     tt_int_op(mi->histogram[3], OP_EQ, 2);
     tt_int_op(mi->histogram[2], OP_EQ, 1);
 
-    circpad_machine_remove_higher_token(mi,
-         circpad_histogram_bin_to_usec(mi, 2)+1);
+    circpad_machine_remove_higher_token(
+        mi, circpad_histogram_bin_to_usec(mi, 2) + 1);
     tt_int_op(mi->histogram[2], OP_EQ, 0);
 
     tt_int_op(mi->histogram[3], OP_EQ, 2);
-    circpad_machine_remove_higher_token(mi,
-         circpad_histogram_bin_to_usec(mi, 2)+1);
-    circpad_machine_remove_higher_token(mi,
-         circpad_histogram_bin_to_usec(mi, 2)+1);
+    circpad_machine_remove_higher_token(
+        mi, circpad_histogram_bin_to_usec(mi, 2) + 1);
+    circpad_machine_remove_higher_token(
+        mi, circpad_histogram_bin_to_usec(mi, 2) + 1);
     tt_int_op(mi->histogram[3], OP_EQ, 0);
-    circpad_machine_remove_higher_token(mi,
-         circpad_histogram_bin_to_usec(mi, 2)+1);
+    circpad_machine_remove_higher_token(
+        mi, circpad_histogram_bin_to_usec(mi, 2) + 1);
     tt_int_op(mi->histogram[3], OP_EQ, 0);
   }
 
   /* 2.b. Higher Infinity bin */
   {
     tt_int_op(mi->histogram[4], OP_EQ, inf_bin);
-    circpad_machine_remove_higher_token(mi,
-         circpad_histogram_bin_to_usec(mi, 2)+1);
+    circpad_machine_remove_higher_token(
+        mi, circpad_histogram_bin_to_usec(mi, 2) + 1);
     tt_int_op(mi->histogram[4], OP_EQ, inf_bin);
 
     /* Test past the infinity bin */
-    circpad_machine_remove_higher_token(mi,
-         circpad_histogram_bin_to_usec(mi, 5)+1000000);
+    circpad_machine_remove_higher_token(
+        mi, circpad_histogram_bin_to_usec(mi, 5) + 1000000);
 
     tt_int_op(mi->histogram[4], OP_EQ, inf_bin);
   }
@@ -1125,7 +1129,7 @@ test_circuitpadding_tokens(void *arg)
   {
     tt_int_op(mi->histogram[0], OP_EQ, 0);
     mi->histogram[0] = 1;
-    circpad_machine_remove_higher_token(mi, state->histogram_edges[0]/2);
+    circpad_machine_remove_higher_token(mi, state->histogram_edges[0] / 2);
     tt_int_op(mi->histogram[0], OP_EQ, 0);
   }
 
@@ -1144,26 +1148,26 @@ test_circuitpadding_tokens(void *arg)
   /* 3.a. Bin 0 */
   {
     tt_int_op(mi->histogram[0], OP_EQ, 1);
-    circpad_machine_remove_higher_token(mi, state->histogram_edges[0]/2);
+    circpad_machine_remove_higher_token(mi, state->histogram_edges[0] / 2);
     tt_int_op(mi->histogram[0], OP_EQ, 0);
   }
 
   /* 3.b. Test remove lower normal bin */
   {
     tt_int_op(mi->histogram[3], OP_EQ, 2);
-    circpad_machine_remove_lower_token(mi,
-         circpad_histogram_bin_to_usec(mi, 3)+1);
-    circpad_machine_remove_lower_token(mi,
-         circpad_histogram_bin_to_usec(mi, 3)+1);
+    circpad_machine_remove_lower_token(
+        mi, circpad_histogram_bin_to_usec(mi, 3) + 1);
+    circpad_machine_remove_lower_token(
+        mi, circpad_histogram_bin_to_usec(mi, 3) + 1);
     tt_int_op(mi->histogram[3], OP_EQ, 0);
     tt_int_op(mi->histogram[2], OP_EQ, 2);
-    circpad_machine_remove_lower_token(mi,
-         circpad_histogram_bin_to_usec(mi, 3)+1);
-    circpad_machine_remove_lower_token(mi,
-         circpad_histogram_bin_to_usec(mi, 3)+1);
+    circpad_machine_remove_lower_token(
+        mi, circpad_histogram_bin_to_usec(mi, 3) + 1);
+    circpad_machine_remove_lower_token(
+        mi, circpad_histogram_bin_to_usec(mi, 3) + 1);
     /* 3.c. No lower */
-    circpad_machine_remove_lower_token(mi,
-         circpad_histogram_bin_to_usec(mi, 3)+1);
+    circpad_machine_remove_lower_token(
+        mi, circpad_histogram_bin_to_usec(mi, 3) + 1);
     tt_int_op(mi->histogram[2], OP_EQ, 0);
   }
 
@@ -1175,24 +1179,24 @@ test_circuitpadding_tokens(void *arg)
    */
   circpad_machine_setup_tokens(mi);
   tt_int_op(mi->histogram[2], OP_EQ, 2);
-  circpad_machine_remove_closest_token(mi,
-         circpad_histogram_bin_to_usec(mi, 2)+1, 0);
-  circpad_machine_remove_closest_token(mi,
-         circpad_histogram_bin_to_usec(mi, 2)+1, 0);
+  circpad_machine_remove_closest_token(
+      mi, circpad_histogram_bin_to_usec(mi, 2) + 1, 0);
+  circpad_machine_remove_closest_token(
+      mi, circpad_histogram_bin_to_usec(mi, 2) + 1, 0);
   tt_int_op(mi->histogram[2], OP_EQ, 0);
   tt_int_op(mi->histogram[3], OP_EQ, 2);
-  circpad_machine_remove_closest_token(mi,
-         circpad_histogram_bin_to_usec(mi, 2)+1, 0);
-  circpad_machine_remove_closest_token(mi,
-         circpad_histogram_bin_to_usec(mi, 2)+1, 0);
+  circpad_machine_remove_closest_token(
+      mi, circpad_histogram_bin_to_usec(mi, 2) + 1, 0);
+  circpad_machine_remove_closest_token(
+      mi, circpad_histogram_bin_to_usec(mi, 2) + 1, 0);
   tt_int_op(mi->histogram[3], OP_EQ, 0);
   tt_int_op(mi->histogram[0], OP_EQ, 1);
-  circpad_machine_remove_closest_token(mi,
-         circpad_histogram_bin_to_usec(mi, 2)+1, 0);
+  circpad_machine_remove_closest_token(
+      mi, circpad_histogram_bin_to_usec(mi, 2) + 1, 0);
   tt_int_op(mi->histogram[0], OP_EQ, 0);
   tt_int_op(mi->histogram[4], OP_EQ, 2);
-  circpad_machine_remove_closest_token(mi,
-         circpad_histogram_bin_to_usec(mi, 2)+1, 0);
+  circpad_machine_remove_closest_token(
+      mi, circpad_histogram_bin_to_usec(mi, 2) + 1, 0);
   tt_int_op(mi->histogram[4], OP_EQ, 2);
 
   /* 5. Test remove closest usec
@@ -1204,31 +1208,31 @@ test_circuitpadding_tokens(void *arg)
   circpad_machine_setup_tokens(mi);
 
   tt_int_op(mi->histogram[0], OP_EQ, 1);
-  circpad_machine_remove_closest_token(mi,
-         circpad_histogram_bin_to_usec(mi, 0)/3, 1);
+  circpad_machine_remove_closest_token(
+      mi, circpad_histogram_bin_to_usec(mi, 0) / 3, 1);
   tt_int_op(mi->histogram[0], OP_EQ, 0);
   tt_int_op(mi->histogram[2], OP_EQ, 2);
-  circpad_machine_remove_closest_token(mi,
-         circpad_histogram_bin_to_usec(mi, 0)/3, 1);
-  circpad_machine_remove_closest_token(mi,
-         circpad_histogram_bin_to_usec(mi, 0)/3, 1);
+  circpad_machine_remove_closest_token(
+      mi, circpad_histogram_bin_to_usec(mi, 0) / 3, 1);
+  circpad_machine_remove_closest_token(
+      mi, circpad_histogram_bin_to_usec(mi, 0) / 3, 1);
   tt_int_op(mi->histogram[2], OP_EQ, 0);
   tt_int_op(mi->histogram[3], OP_EQ, 2);
-  circpad_machine_remove_closest_token(mi,
-         circpad_histogram_bin_to_usec(mi, 4), 1);
-  circpad_machine_remove_closest_token(mi,
-         circpad_histogram_bin_to_usec(mi, 4), 1);
+  circpad_machine_remove_closest_token(
+      mi, circpad_histogram_bin_to_usec(mi, 4), 1);
+  circpad_machine_remove_closest_token(
+      mi, circpad_histogram_bin_to_usec(mi, 4), 1);
   tt_int_op(mi->histogram[3], OP_EQ, 0);
   tt_int_op(mi->histogram[4], OP_EQ, 2);
-  circpad_machine_remove_closest_token(mi,
-         circpad_histogram_bin_to_usec(mi, 4), 1);
-  circpad_machine_remove_closest_token(mi,
-         circpad_histogram_bin_to_usec(mi, 4), 1);
+  circpad_machine_remove_closest_token(
+      mi, circpad_histogram_bin_to_usec(mi, 4), 1);
+  circpad_machine_remove_closest_token(
+      mi, circpad_histogram_bin_to_usec(mi, 4), 1);
   tt_int_op(mi->histogram[4], OP_EQ, 2);
 
   // XXX: Need more coverage of the actual usec branches
 
- done:
+done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   monotime_disable_test_mocking();
   tor_free(circ_client_machine.states);
@@ -1259,13 +1263,13 @@ test_circuitpadding_wronghop(void *arg)
 
   /* Mock this function so that our cell counting tests don't get confused by
    * padding that gets sent by scheduled timers. */
-  MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+  MOCK(circpad_machine_schedule_padding,
+       circpad_machine_schedule_padding_mock);
   testing_enable_reproducible_rng();
 
   client_side = TO_CIRCUIT(origin_circuit_new());
   dummy_channel.cmux = circuitmux_alloc();
-  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel,
-                                            &dummy_channel));
+  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel, &dummy_channel));
   orig_client = TO_ORIGIN_CIRCUIT(client_side);
 
   relay_side->purpose = CIRCUIT_PURPOSE_OR;
@@ -1282,11 +1286,9 @@ test_circuitpadding_wronghop(void *arg)
   timers_initialize();
   circpad_machines_init();
 
-  MOCK(node_get_by_id,
-       node_get_by_id_mock);
+  MOCK(node_get_by_id, node_get_by_id_mock);
 
-  MOCK(circuit_package_relay_cell,
-       circuit_package_relay_cell_mock);
+  MOCK(circuit_package_relay_cell, circuit_package_relay_cell_mock);
 
   /* Build three hops */
   simulate_single_hop_extend(client_side, relay_side, 1);
@@ -1305,63 +1307,52 @@ test_circuitpadding_wronghop(void *arg)
   overhead_bw = orig_client->n_overhead_read_circ_bw;
 
   /* 1. Test padding from first and third hop */
-  circpad_deliver_recognized_relay_cell_events(client_side,
-              RELAY_COMMAND_DROP,
-              TO_ORIGIN_CIRCUIT(client_side)->cpath);
-  tt_int_op(read_bw, OP_EQ,
-            orig_client->n_delivered_read_circ_bw);
-  tt_int_op(overhead_bw, OP_EQ,
-            orig_client->n_overhead_read_circ_bw);
+  circpad_deliver_recognized_relay_cell_events(
+      client_side, RELAY_COMMAND_DROP, TO_ORIGIN_CIRCUIT(client_side)->cpath);
+  tt_int_op(read_bw, OP_EQ, orig_client->n_delivered_read_circ_bw);
+  tt_int_op(overhead_bw, OP_EQ, orig_client->n_overhead_read_circ_bw);
 
-  circpad_deliver_recognized_relay_cell_events(client_side,
-              RELAY_COMMAND_DROP,
-              TO_ORIGIN_CIRCUIT(client_side)->cpath->next->next);
-  tt_int_op(read_bw, OP_EQ,
-            orig_client->n_delivered_read_circ_bw);
-  tt_int_op(overhead_bw, OP_EQ,
-            orig_client->n_overhead_read_circ_bw);
+  circpad_deliver_recognized_relay_cell_events(
+      client_side, RELAY_COMMAND_DROP,
+      TO_ORIGIN_CIRCUIT(client_side)->cpath->next->next);
+  tt_int_op(read_bw, OP_EQ, orig_client->n_delivered_read_circ_bw);
+  tt_int_op(overhead_bw, OP_EQ, orig_client->n_overhead_read_circ_bw);
 
-  circpad_deliver_recognized_relay_cell_events(client_side,
-              RELAY_COMMAND_DROP,
-              TO_ORIGIN_CIRCUIT(client_side)->cpath->next);
-  tt_int_op(read_bw, OP_EQ,
-            orig_client->n_delivered_read_circ_bw);
-  tt_int_op(overhead_bw, OP_LT,
-            orig_client->n_overhead_read_circ_bw);
+  circpad_deliver_recognized_relay_cell_events(
+      client_side, RELAY_COMMAND_DROP,
+      TO_ORIGIN_CIRCUIT(client_side)->cpath->next);
+  tt_int_op(read_bw, OP_EQ, orig_client->n_delivered_read_circ_bw);
+  tt_int_op(overhead_bw, OP_LT, orig_client->n_overhead_read_circ_bw);
 
   /* 2. Test padding negotiated not handled from hops 1,3 */
-  ret = circpad_handle_padding_negotiated(client_side, &cell,
-          TO_ORIGIN_CIRCUIT(client_side)->cpath);
+  ret = circpad_handle_padding_negotiated(
+      client_side, &cell, TO_ORIGIN_CIRCUIT(client_side)->cpath);
   tt_int_op(ret, OP_EQ, -1);
 
-  ret = circpad_handle_padding_negotiated(client_side, &cell,
-          TO_ORIGIN_CIRCUIT(client_side)->cpath->next->next);
+  ret = circpad_handle_padding_negotiated(
+      client_side, &cell, TO_ORIGIN_CIRCUIT(client_side)->cpath->next->next);
   tt_int_op(ret, OP_EQ, -1);
 
   /* 3. Garbled negotiated cell */
   memset(&cell, 255, sizeof(cell));
-  ret = circpad_handle_padding_negotiated(client_side, &cell,
-          TO_ORIGIN_CIRCUIT(client_side)->cpath->next);
+  ret = circpad_handle_padding_negotiated(
+      client_side, &cell, TO_ORIGIN_CIRCUIT(client_side)->cpath->next);
   tt_int_op(ret, OP_EQ, -1);
 
   /* 4. Test that negotiate is dropped at origin */
   read_bw = orig_client->n_delivered_read_circ_bw;
   overhead_bw = orig_client->n_overhead_read_circ_bw;
-  relay_send_command_from_edge(0, relay_side,
-                               RELAY_COMMAND_PADDING_NEGOTIATE,
-                               (void*)cell.payload,
-                               (size_t)3, NULL);
-  tt_int_op(read_bw, OP_EQ,
-            orig_client->n_delivered_read_circ_bw);
-  tt_int_op(overhead_bw, OP_EQ,
-            orig_client->n_overhead_read_circ_bw);
+  relay_send_command_from_edge(0, relay_side, RELAY_COMMAND_PADDING_NEGOTIATE,
+                               (void *)cell.payload, (size_t)3, NULL);
+  tt_int_op(read_bw, OP_EQ, orig_client->n_delivered_read_circ_bw);
+  tt_int_op(overhead_bw, OP_EQ, orig_client->n_overhead_read_circ_bw);
 
   tt_int_op(n_relay_cells, OP_EQ, 2);
   tt_int_op(n_client_cells, OP_EQ, 1);
 
   /* 5. Test that asking to stop the wrong machine does nothing */
-  circpad_negotiate_padding(TO_ORIGIN_CIRCUIT(client_side),
-                            255, 2, CIRCPAD_COMMAND_STOP);
+  circpad_negotiate_padding(TO_ORIGIN_CIRCUIT(client_side), 255, 2,
+                            CIRCPAD_COMMAND_STOP);
   tt_ptr_op(client_side->padding_machine[0], OP_NE, NULL);
   tt_ptr_op(client_side->padding_info[0], OP_NE, NULL);
   tt_ptr_op(relay_side->padding_machine[0], OP_NE, NULL);
@@ -1384,8 +1375,7 @@ test_circuitpadding_wronghop(void *arg)
   free_fake_orcirc(TO_OR_CIRCUIT(relay_side));
 
   client_side = TO_CIRCUIT(origin_circuit_new());
-  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel,
-                                            &dummy_channel));
+  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel, &dummy_channel));
   relay_side->purpose = CIRCUIT_PURPOSE_OR;
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
 
@@ -1406,25 +1396,21 @@ test_circuitpadding_wronghop(void *arg)
   simulate_single_hop_extend(client_side, relay_side, 1);
 
   /* Spoof padding negotiated on circuit with no padding */
-  circpad_padding_negotiated(relay_side,
-                             CIRCPAD_MACHINE_CIRC_SETUP,
-                             CIRCPAD_COMMAND_START,
-                             CIRCPAD_RESPONSE_OK);
+  circpad_padding_negotiated(relay_side, CIRCPAD_MACHINE_CIRC_SETUP,
+                             CIRCPAD_COMMAND_START, CIRCPAD_RESPONSE_OK);
 
   /* verify no padding was negotiated */
   tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
   tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
 
-  circpad_padding_negotiated(relay_side,
-                             CIRCPAD_MACHINE_CIRC_SETUP,
-                             CIRCPAD_COMMAND_START,
-                             CIRCPAD_RESPONSE_ERR);
+  circpad_padding_negotiated(relay_side, CIRCPAD_MACHINE_CIRC_SETUP,
+                             CIRCPAD_COMMAND_START, CIRCPAD_RESPONSE_ERR);
 
   /* verify no padding was negotiated */
   tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
   tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
 
- done:
+done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   free_fake_orcirc(TO_OR_CIRCUIT(relay_side));
   circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
@@ -1472,11 +1458,9 @@ test_circuitpadding_negotiation(void *arg)
   timers_initialize();
   circpad_machines_init();
 
-  MOCK(node_get_by_id,
-       node_get_by_id_mock);
+  MOCK(node_get_by_id, node_get_by_id_mock);
 
-  MOCK(circuit_package_relay_cell,
-       circuit_package_relay_cell_mock);
+  MOCK(circuit_package_relay_cell, circuit_package_relay_cell_mock);
 
   /* Build two hops */
   simulate_single_hop_extend(client_side, relay_side, 1);
@@ -1520,8 +1504,8 @@ test_circuitpadding_negotiation(void *arg)
 
   /* Force negotiate padding. */
   circpad_negotiate_padding(TO_ORIGIN_CIRCUIT(client_side),
-                            CIRCPAD_MACHINE_CIRC_SETUP,
-                            2, CIRCPAD_COMMAND_START);
+                            CIRCPAD_MACHINE_CIRC_SETUP, 2,
+                            CIRCPAD_COMMAND_START);
 
   /* verify no padding was negotiated */
   tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
@@ -1540,9 +1524,9 @@ test_circuitpadding_negotiation(void *arg)
   relay_side->purpose = CIRCUIT_PURPOSE_OR;
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
 
-  SMARTLIST_FOREACH(relay_padding_machines,
-          circpad_machine_spec_t *,
-          m, tor_free(m->states); tor_free(m));
+  SMARTLIST_FOREACH(relay_padding_machines, circpad_machine_spec_t *, m,
+                    tor_free(m->states);
+                    tor_free(m));
   smartlist_free(relay_padding_machines);
   relay_padding_machines = smartlist_new();
 
@@ -1559,7 +1543,7 @@ test_circuitpadding_negotiation(void *arg)
   tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
   tt_ptr_op(relay_side->padding_info[0], OP_EQ, NULL);
 
- done:
+done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   free_fake_orcirc(TO_OR_CIRCUIT(relay_side));
   circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
@@ -1607,10 +1591,8 @@ simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
   // (set the first byte of the digest for our mocked node_get_by_id)
   digest[0] = padding;
 
-  hop->extend_info = extend_info_new(
-          padding ? "padding" : "non-padding",
-          digest, NULL, NULL, NULL,
-          &addr, padding);
+  hop->extend_info = extend_info_new(padding ? "padding" : "non-padding",
+                                     digest, NULL, NULL, NULL, &addr, padding);
 
   cpath_init_circuit_crypto(hop, whatevs_key, sizeof(whatevs_key), 0, 0);
 
@@ -1625,26 +1607,25 @@ static circpad_machine_spec_t *
 helper_create_length_machine(void)
 {
   circpad_machine_spec_t *ret =
-    tor_malloc_zero(sizeof(circpad_machine_spec_t));
+      tor_malloc_zero(sizeof(circpad_machine_spec_t));
 
   /* Start, burst */
   circpad_machine_states_init(ret, 2);
 
-  ret->states[CIRCPAD_STATE_START].
-      next_state[CIRCPAD_EVENT_PADDING_SENT] = CIRCPAD_STATE_BURST;
+  ret->states[CIRCPAD_STATE_START].next_state[CIRCPAD_EVENT_PADDING_SENT] =
+      CIRCPAD_STATE_BURST;
 
-  ret->states[CIRCPAD_STATE_BURST].
-      next_state[CIRCPAD_EVENT_PADDING_SENT] = CIRCPAD_STATE_BURST;
+  ret->states[CIRCPAD_STATE_BURST].next_state[CIRCPAD_EVENT_PADDING_SENT] =
+      CIRCPAD_STATE_BURST;
 
-  ret->states[CIRCPAD_STATE_BURST].
-      next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
+  ret->states[CIRCPAD_STATE_BURST].next_state[CIRCPAD_EVENT_LENGTH_COUNT] =
+      CIRCPAD_STATE_END;
 
-  ret->states[CIRCPAD_STATE_BURST].
-      next_state[CIRCPAD_EVENT_BINS_EMPTY] = CIRCPAD_STATE_END;
+  ret->states[CIRCPAD_STATE_BURST].next_state[CIRCPAD_EVENT_BINS_EMPTY] =
+      CIRCPAD_STATE_END;
 
   /* No token removal.. end via state_length only */
-  ret->states[CIRCPAD_STATE_BURST].token_removal =
-      CIRCPAD_TOKEN_REMOVAL_NONE;
+  ret->states[CIRCPAD_STATE_BURST].token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
 
   /* Let's have this one end after 12 packets */
   ret->states[CIRCPAD_STATE_BURST].length_dist.type = CIRCPAD_DIST_UNIFORM;
@@ -1674,23 +1655,22 @@ static circpad_machine_spec_t *
 helper_create_conditional_machine(void)
 {
   circpad_machine_spec_t *ret =
-    tor_malloc_zero(sizeof(circpad_machine_spec_t));
+      tor_malloc_zero(sizeof(circpad_machine_spec_t));
 
   /* Start, burst */
   circpad_machine_states_init(ret, 2);
 
-  ret->states[CIRCPAD_STATE_START].
-      next_state[CIRCPAD_EVENT_PADDING_SENT] = CIRCPAD_STATE_BURST;
+  ret->states[CIRCPAD_STATE_START].next_state[CIRCPAD_EVENT_PADDING_SENT] =
+      CIRCPAD_STATE_BURST;
 
-  ret->states[CIRCPAD_STATE_BURST].
-      next_state[CIRCPAD_EVENT_PADDING_SENT] = CIRCPAD_STATE_BURST;
+  ret->states[CIRCPAD_STATE_BURST].next_state[CIRCPAD_EVENT_PADDING_SENT] =
+      CIRCPAD_STATE_BURST;
 
-  ret->states[CIRCPAD_STATE_BURST].
-      next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
+  ret->states[CIRCPAD_STATE_BURST].next_state[CIRCPAD_EVENT_LENGTH_COUNT] =
+      CIRCPAD_STATE_END;
 
   /* Use EXACT removal strategy, otherwise setup_tokens() does not work */
-  ret->states[CIRCPAD_STATE_BURST].token_removal =
-      CIRCPAD_TOKEN_REMOVAL_EXACT;
+  ret->states[CIRCPAD_STATE_BURST].token_removal = CIRCPAD_TOKEN_REMOVAL_EXACT;
 
   ret->states[CIRCPAD_STATE_BURST].histogram_len = 3;
 
@@ -1714,9 +1694,9 @@ helper_create_conditional_machines(void)
 {
   circpad_machine_spec_t *add = helper_create_conditional_machine();
 
-  if (!origin_padding_machines)
+  if (! origin_padding_machines)
     origin_padding_machines = smartlist_new();
-  if (!relay_padding_machines)
+  if (! relay_padding_machines)
     relay_padding_machines = smartlist_new();
 
   add->machine_num = 2;
@@ -1732,8 +1712,9 @@ helper_create_conditional_machines(void)
 
   add->conditions.requires_vanguards = 0;
   add->conditions.min_hops = 2;
-  add->conditions.state_mask = CIRCPAD_CIRC_BUILDING|
-           CIRCPAD_CIRC_NO_STREAMS|CIRCPAD_CIRC_HAS_RELAY_EARLY;
+  add->conditions.state_mask = CIRCPAD_CIRC_BUILDING |
+                               CIRCPAD_CIRC_NO_STREAMS |
+                               CIRCPAD_CIRC_HAS_RELAY_EARLY;
   add->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
   circpad_register_padding_machine(add, origin_padding_machines);
 
@@ -1751,8 +1732,8 @@ helper_create_conditional_machines(void)
 
   add->conditions.requires_vanguards = 1;
   add->conditions.min_hops = 3;
-  add->conditions.state_mask = CIRCPAD_CIRC_OPENED|
-           CIRCPAD_CIRC_STREAMS|CIRCPAD_CIRC_HAS_NO_RELAY_EARLY;
+  add->conditions.state_mask = CIRCPAD_CIRC_OPENED | CIRCPAD_CIRC_STREAMS |
+                               CIRCPAD_CIRC_HAS_NO_RELAY_EARLY;
   add->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
   circpad_register_padding_machine(add, origin_padding_machines);
 
@@ -1784,8 +1765,7 @@ test_circuitpadding_state_length(void *arg)
 
   nodes_init();
   dummy_channel.cmux = circuitmux_alloc();
-  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel,
-                                            &dummy_channel));
+  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel, &dummy_channel));
   client_side = TO_CIRCUIT(origin_circuit_new());
   relay_side->purpose = CIRCUIT_PURPOSE_OR;
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
@@ -1801,17 +1781,14 @@ test_circuitpadding_state_length(void *arg)
   note_user_activity(20);
 
   timers_initialize();
-  circpad_machine_spec_t *client_machine =
-      helper_create_length_machine();
+  circpad_machine_spec_t *client_machine = helper_create_length_machine();
 
-  MOCK(circuit_package_relay_cell,
-       circuit_package_relay_cell_mock);
-  MOCK(node_get_by_id,
-       node_get_by_id_mock);
+  MOCK(circuit_package_relay_cell, circuit_package_relay_cell_mock);
+  MOCK(node_get_by_id, node_get_by_id_mock);
 
   client_side->padding_machine[0] = client_machine;
   client_side->padding_info[0] =
-    circpad_circuit_machineinfo_new(client_side, 0);
+      circpad_circuit_machineinfo_new(client_side, 0);
   circpad_machine_runtime_t *mi = client_side->padding_info[0];
 
   circpad_cell_event_padding_sent(client_side);
@@ -1823,7 +1800,7 @@ test_circuitpadding_state_length(void *arg)
   tt_i64_op(mi->state_length, OP_EQ, 12);
 
   /* verify that sending padding changes our state length */
-  for (uint64_t i = mi->state_length-1; i > 0; i--) {
+  for (uint64_t i = mi->state_length - 1; i > 0; i--) {
     circpad_send_padding_cell_for_callback(mi);
     tt_i64_op(mi->state_length, OP_EQ, i);
   }
@@ -1842,7 +1819,7 @@ test_circuitpadding_state_length(void *arg)
   tt_i64_op(mi->state_length, OP_EQ, 12);
 
   /* Verify that non-padding does change our state length now */
-  for (uint64_t i = mi->state_length-1; i > 0; i--) {
+  for (uint64_t i = mi->state_length - 1; i > 0; i--) {
     circpad_cell_event_nonpadding_sent(client_side);
     tt_i64_op(mi->state_length, OP_EQ, i);
   }
@@ -1864,7 +1841,7 @@ test_circuitpadding_state_length(void *arg)
 
   /* verify that sending padding changes our state length and
    * our histogram now */
-  for (uint32_t i = mi->histogram[2]-1; i > 0; i--) {
+  for (uint32_t i = mi->histogram[2] - 1; i > 0; i--) {
     circpad_send_padding_cell_for_callback(mi);
     tt_int_op(mi->chosen_bin, OP_EQ, 2);
     tt_int_op(mi->histogram[2], OP_EQ, i);
@@ -1876,7 +1853,7 @@ test_circuitpadding_state_length(void *arg)
   circpad_send_padding_cell_for_callback(mi);
   tt_int_op(mi->current_state, OP_EQ, CIRCPAD_STATE_END);
 
- done:
+done:
   tor_free(client_machine->states);
   tor_free(client_machine);
 
@@ -1919,8 +1896,7 @@ test_circuitpadding_conditions(void *arg)
 
   nodes_init();
   dummy_channel.cmux = circuitmux_alloc();
-  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel,
-                                            &dummy_channel));
+  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel, &dummy_channel));
   client_side = TO_CIRCUIT(origin_circuit_new());
   relay_side->purpose = CIRCUIT_PURPOSE_OR;
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
@@ -1938,10 +1914,8 @@ test_circuitpadding_conditions(void *arg)
   timers_initialize();
   helper_create_conditional_machines();
 
-  MOCK(circuit_package_relay_cell,
-       circuit_package_relay_cell_mock);
-  MOCK(node_get_by_id,
-       node_get_by_id_mock);
+  MOCK(circuit_package_relay_cell, circuit_package_relay_cell_mock);
+  MOCK(node_get_by_id, node_get_by_id_mock);
 
   /* Simulate extend. This should result in the original machine getting
    * added, since the circuit is not built */
@@ -1982,12 +1956,12 @@ test_circuitpadding_conditions(void *arg)
 
   TO_ORIGIN_CIRCUIT(client_side)->remaining_relay_early_cells = 0;
   circpad_machine_event_circ_has_no_relay_early(
-          TO_ORIGIN_CIRCUIT(client_side));
+      TO_ORIGIN_CIRCUIT(client_side));
   tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 2);
   tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 2);
 
-  get_options_mutable()->HSLayer2Nodes = (void*)1;
-  TO_ORIGIN_CIRCUIT(client_side)->p_streams = (void*)1;
+  get_options_mutable()->HSLayer2Nodes = (void *)1;
+  TO_ORIGIN_CIRCUIT(client_side)->p_streams = (void *)1;
   circpad_machine_event_circ_has_streams(TO_ORIGIN_CIRCUIT(client_side));
 
   /* Verify different machine is added */
@@ -2018,7 +1992,7 @@ test_circuitpadding_conditions(void *arg)
   tt_ptr_op(client_side->padding_info[0], OP_NE, NULL);
   tt_ptr_op(relay_side->padding_info[0], OP_NE, NULL);
 
- done:
+done:
   /* XXX: Free everything */
   testing_disable_reproducible_rng();
   return;
@@ -2345,7 +2319,7 @@ test_circuitpadding_sample_distribution(void *arg)
   int n_samples;
   int n_states;
 
-  (void) arg;
+  (void)arg;
 
   /* mock this function so that we dont actually schedule any padding */
   MOCK(circpad_machine_schedule_padding,
@@ -2361,12 +2335,12 @@ test_circuitpadding_sample_distribution(void *arg)
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
   client_side->padding_machine[0] = &circ_client_machine;
   client_side->padding_info[0] =
-    circpad_circuit_machineinfo_new(client_side, 0);
+      circpad_circuit_machineinfo_new(client_side, 0);
   mi = client_side->padding_info[0];
 
   /* For every state, sample a bunch of values from the distribution and ensure
    * they fall within range. */
-  for (n_states = 0 ; n_states < 6; n_states++) {
+  for (n_states = 0; n_states < 6; n_states++) {
     /* Make sure we in the right state */
     tt_int_op(client_side->padding_info[0]->current_state, OP_EQ, n_states);
 
@@ -2380,7 +2354,7 @@ test_circuitpadding_sample_distribution(void *arg)
     circpad_cell_event_nonpadding_received(client_side);
   }
 
- done:
+done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   UNMOCK(circpad_machine_schedule_padding);
   testing_disable_reproducible_rng();
@@ -2388,10 +2362,10 @@ test_circuitpadding_sample_distribution(void *arg)
 
 static circpad_decision_t
 circpad_machine_spec_transition_mock(circpad_machine_runtime_t *mi,
-                                circpad_event_t event)
+                                     circpad_event_t event)
 {
-  (void) mi;
-  (void) event;
+  (void)mi;
+  (void)event;
 
   return CIRCPAD_STATE_UNCHANGED;
 }
@@ -2400,7 +2374,7 @@ circpad_machine_spec_transition_mock(circpad_machine_runtime_t *mi,
 static void
 test_circuitpadding_machine_rate_limiting(void *arg)
 {
-  (void) arg;
+  (void)arg;
   bool retval;
   circpad_machine_runtime_t *mi;
   int i;
@@ -2417,7 +2391,7 @@ test_circuitpadding_machine_rate_limiting(void *arg)
   helper_create_basic_machine();
   client_side->padding_machine[0] = &circ_client_machine;
   client_side->padding_info[0] =
-    circpad_circuit_machineinfo_new(client_side, 0);
+      circpad_circuit_machineinfo_new(client_side, 0);
   mi = client_side->padding_info[0];
   /* Set up the machine info so that we can get through the basic functions */
   mi->state_length = CIRCPAD_STATE_LENGTH_INFINITE;
@@ -2432,7 +2406,7 @@ test_circuitpadding_machine_rate_limiting(void *arg)
 
   /* Send 99 padding cells which is below circpad_global_allowed_cells=100, so
    * the rate limit will not trigger */
-  for (i=0;i<99;i++) {
+  for (i = 0; i < 99; i++) {
     circpad_send_padding_cell_for_callback(mi);
   }
   retval = circpad_machine_reached_padding_limit(mi);
@@ -2448,20 +2422,20 @@ test_circuitpadding_machine_rate_limiting(void *arg)
   tt_int_op(retval, OP_EQ, CIRCPAD_STATE_UNCHANGED);
 
   /* Cover wrap */
-  for (;i<UINT16_MAX;i++) {
+  for (; i < UINT16_MAX; i++) {
     circpad_send_padding_cell_for_callback(mi);
   }
-  tt_int_op(mi->padding_sent, OP_EQ, UINT16_MAX/2+1);
+  tt_int_op(mi->padding_sent, OP_EQ, UINT16_MAX / 2 + 1);
 
   tt_ptr_op(client_side->padding_info[0], OP_EQ, mi);
-  for (i=0;i<UINT16_MAX;i++) {
+  for (i = 0; i < UINT16_MAX; i++) {
     circpad_cell_event_nonpadding_sent(client_side);
   }
 
-  tt_int_op(mi->nonpadding_sent, OP_EQ, UINT16_MAX/2);
-  tt_int_op(mi->padding_sent, OP_EQ, UINT16_MAX/4+1);
+  tt_int_op(mi->nonpadding_sent, OP_EQ, UINT16_MAX / 2);
+  tt_int_op(mi->padding_sent, OP_EQ, UINT16_MAX / 4 + 1);
 
- done:
+done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   testing_disable_reproducible_rng();
 }
@@ -2470,7 +2444,7 @@ test_circuitpadding_machine_rate_limiting(void *arg)
 static void
 test_circuitpadding_global_rate_limiting(void *arg)
 {
-  (void) arg;
+  (void)arg;
   bool retval;
   circpad_machine_runtime_t *mi;
   int i;
@@ -2480,8 +2454,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
    * really care about padding counts */
   MOCK(circpad_machine_spec_transition, circpad_machine_spec_transition_mock);
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
-  MOCK(circuit_package_relay_cell,
-       circuit_package_relay_cell_mock);
+  MOCK(circuit_package_relay_cell, circuit_package_relay_cell_mock);
   MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
   testing_enable_reproducible_rng();
 
@@ -2502,8 +2475,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
   relay_side->purpose = CIRCUIT_PURPOSE_OR;
   helper_create_basic_machine();
   relay_side->padding_machine[0] = &circ_client_machine;
-  relay_side->padding_info[0] =
-    circpad_circuit_machineinfo_new(relay_side, 0);
+  relay_side->padding_info[0] = circpad_circuit_machineinfo_new(relay_side, 0);
   mi = relay_side->padding_info[0];
   /* Set up the machine info so that we can get through the basic functions */
   mi->state_length = CIRCPAD_STATE_LENGTH_INFINITE;
@@ -2514,9 +2486,10 @@ test_circuitpadding_global_rate_limiting(void *arg)
   /* Now test the global limits by setting up the consensus */
   networkstatus_t vote1;
   vote1.net_params = smartlist_new();
-  smartlist_split_string(vote1.net_params,
-         "circpad_global_allowed_cells=100 circpad_global_max_padding_pct=50",
-                         NULL, 0, 0);
+  smartlist_split_string(
+      vote1.net_params,
+      "circpad_global_allowed_cells=100 circpad_global_max_padding_pct=50",
+      NULL, 0, 0);
   /* Register global limits with the padding subsystem */
   circpad_new_consensus_params(&vote1);
 
@@ -2526,7 +2499,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
 
   /* Send 99 padding cells which is below circpad_global_allowed_cells=100, so
    * the rate limit will not trigger */
-  for (i=0;i<99;i++) {
+  for (i = 0; i < 99; i++) {
     circpad_send_padding_cell_for_callback(mi);
   }
   retval = circpad_machine_reached_padding_limit(mi);
@@ -2545,7 +2518,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
    * circpad_global_max_padding_pct=50 limit; in particular with 96 non-padding
    * cells, the padding traffic is still 51% of total traffic so limit should
    * trigger */
-  for (i=0;i<92;i++) {
+  for (i = 0; i < 92; i++) {
     circpad_cell_event_nonpadding_sent(relay_side);
   }
   retval = circpad_machine_reached_padding_limit(mi);
@@ -2557,7 +2530,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
   retval = circpad_machine_reached_padding_limit(mi);
   tt_int_op(retval, OP_EQ, 0);
 
- done:
+done:
   free_fake_orcirc(TO_OR_CIRCUIT(relay_side));
   circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
   circuitmux_free(dummy_channel.cmux);
@@ -2570,7 +2543,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
 static void
 test_circuitpadding_reduce_disable(void *arg)
 {
-  (void) arg;
+  (void)arg;
   int64_t actual_mocked_monotime_start;
 
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
@@ -2578,8 +2551,7 @@ test_circuitpadding_reduce_disable(void *arg)
 
   nodes_init();
   dummy_channel.cmux = circuitmux_alloc();
-  relay_side = (circuit_t *)new_fake_orcirc(&dummy_channel,
-                                            &dummy_channel);
+  relay_side = (circuit_t *)new_fake_orcirc(&dummy_channel, &dummy_channel);
   client_side = (circuit_t *)origin_circuit_new();
   relay_side->purpose = CIRCUIT_PURPOSE_OR;
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
@@ -2598,10 +2570,8 @@ test_circuitpadding_reduce_disable(void *arg)
   /* This is needed so that we are not considered to be dormant */
   note_user_activity(20);
 
-  MOCK(circuit_package_relay_cell,
-       circuit_package_relay_cell_mock);
-  MOCK(node_get_by_id,
-       node_get_by_id_mock);
+  MOCK(circuit_package_relay_cell, circuit_package_relay_cell_mock);
+  MOCK(node_get_by_id, node_get_by_id_mock);
 
   /* Simulate extend. This should result in the original machine getting
    * added, since the circuit is not built */
@@ -2626,8 +2596,8 @@ test_circuitpadding_reduce_disable(void *arg)
   /* Now test the reduced padding machine by setting up the consensus */
   networkstatus_t vote1;
   vote1.net_params = smartlist_new();
-  smartlist_split_string(vote1.net_params,
-         "circpad_padding_reduced=1", NULL, 0, 0);
+  smartlist_split_string(vote1.net_params, "circpad_padding_reduced=1", NULL,
+                         0, 0);
 
   /* Register reduced padding machine with the padding subsystem */
   circpad_new_consensus_params(&vote1);
@@ -2639,28 +2609,25 @@ test_circuitpadding_reduce_disable(void *arg)
   tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 2);
 
   tt_int_op(
-    circpad_machine_reached_padding_limit(client_side->padding_info[0]),
-    OP_EQ, 0);
-  tt_int_op(
-    circpad_machine_reached_padding_limit(relay_side->padding_info[0]),
-    OP_EQ, 0);
+      circpad_machine_reached_padding_limit(client_side->padding_info[0]),
+      OP_EQ, 0);
+  tt_int_op(circpad_machine_reached_padding_limit(relay_side->padding_info[0]),
+            OP_EQ, 0);
 
   /* Test that machines get torn down when padding is disabled */
   SMARTLIST_FOREACH(vote1.net_params, char *, cp, tor_free(cp));
   smartlist_free(vote1.net_params);
   vote1.net_params = smartlist_new();
-  smartlist_split_string(vote1.net_params,
-         "circpad_padding_disabled=1", NULL, 0, 0);
+  smartlist_split_string(vote1.net_params, "circpad_padding_disabled=1", NULL,
+                         0, 0);
 
   /* Register reduced padding machine with the padding subsystem */
   circpad_new_consensus_params(&vote1);
 
-  tt_int_op(
-    circpad_machine_schedule_padding(client_side->padding_info[0]),
-    OP_EQ, CIRCPAD_STATE_UNCHANGED);
-  tt_int_op(
-    circpad_machine_schedule_padding(relay_side->padding_info[0]),
-    OP_EQ, CIRCPAD_STATE_UNCHANGED);
+  tt_int_op(circpad_machine_schedule_padding(client_side->padding_info[0]),
+            OP_EQ, CIRCPAD_STATE_UNCHANGED);
+  tt_int_op(circpad_machine_schedule_padding(relay_side->padding_info[0]),
+            OP_EQ, CIRCPAD_STATE_UNCHANGED);
 
   /* Signal that circuit is built: this event causes us to re-evaluate
    * machine conditions (which don't apply because padding is disabled). */
@@ -2685,20 +2652,17 @@ test_circuitpadding_reduce_disable(void *arg)
   tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 2);
 
   tt_int_op(
-    circpad_machine_reached_padding_limit(client_side->padding_info[0]),
-    OP_EQ, 0);
-  tt_int_op(
-    circpad_machine_reached_padding_limit(relay_side->padding_info[0]),
-    OP_EQ, 0);
+      circpad_machine_reached_padding_limit(client_side->padding_info[0]),
+      OP_EQ, 0);
+  tt_int_op(circpad_machine_reached_padding_limit(relay_side->padding_info[0]),
+            OP_EQ, 0);
 
   get_options_mutable()->CircuitPadding = 0;
 
-  tt_int_op(
-    circpad_machine_schedule_padding(client_side->padding_info[0]),
-    OP_EQ, CIRCPAD_STATE_UNCHANGED);
-  tt_int_op(
-    circpad_machine_schedule_padding(relay_side->padding_info[0]),
-    OP_EQ, CIRCPAD_STATE_UNCHANGED);
+  tt_int_op(circpad_machine_schedule_padding(client_side->padding_info[0]),
+            OP_EQ, CIRCPAD_STATE_UNCHANGED);
+  tt_int_op(circpad_machine_schedule_padding(relay_side->padding_info[0]),
+            OP_EQ, CIRCPAD_STATE_UNCHANGED);
 
   /* Signal that circuit is built: this event causes us to re-evaluate
    * machine conditions (which don't apply because padding is disabled). */
@@ -2710,7 +2674,7 @@ test_circuitpadding_reduce_disable(void *arg)
   tt_ptr_op(relay_side->padding_info[0], OP_EQ, NULL);
   tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
 
- done:
+done:
   free_fake_orcirc(TO_OR_CIRCUIT(relay_side));
   circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
   circuitmux_free(dummy_channel.cmux);
@@ -2724,8 +2688,8 @@ helper_create_ender_machine(void)
   /* Start, burst */
   circpad_machine_states_init(&circ_client_machine, 2);
 
-  circ_client_machine.states[CIRCPAD_STATE_START].
-      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_END;
+  circ_client_machine.states[CIRCPAD_STATE_START]
+      .next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_END;
 
   circ_client_machine.conditions.state_mask = CIRCPAD_STATE_ALL;
   circ_client_machine.conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
@@ -2751,7 +2715,7 @@ test_circuitpadding_manage_circuit_lifetime(void *arg)
 {
   circpad_machine_runtime_t *mi;
 
-  (void) arg;
+  (void)arg;
 
   client_side = (circuit_t *)origin_circuit_new();
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
@@ -2767,7 +2731,7 @@ test_circuitpadding_manage_circuit_lifetime(void *arg)
   /* Test setup */
   client_side->padding_machine[0] = &circ_client_machine;
   client_side->padding_info[0] =
-    circpad_circuit_machineinfo_new(client_side, 0);
+      circpad_circuit_machineinfo_new(client_side, 0);
   mi = client_side->padding_info[0];
 
   tt_int_op(mi->current_state, OP_EQ, CIRCPAD_STATE_START);
@@ -2778,7 +2742,7 @@ test_circuitpadding_manage_circuit_lifetime(void *arg)
 
   /* Mark this circuit for close due to a remote reason */
   circuit_mark_for_close(client_side,
-                         END_CIRC_REASON_FLAG_REMOTE|END_CIRC_REASON_NONE);
+                         END_CIRC_REASON_FLAG_REMOTE | END_CIRC_REASON_NONE);
   tt_ptr_op(client_side->padding_info[0], OP_NE, NULL);
   tt_int_op(client_side->marked_for_close, OP_NE, 0);
   tt_int_op(client_side->purpose, OP_EQ, CIRCUIT_PURPOSE_C_GENERAL);
@@ -2843,7 +2807,7 @@ test_circuitpadding_manage_circuit_lifetime(void *arg)
 
   client_side->padding_machine[0] = &circ_client_machine;
   client_side->padding_info[0] =
-    circpad_circuit_machineinfo_new(client_side, 0);
+      circpad_circuit_machineinfo_new(client_side, 0);
   mi = client_side->padding_info[0];
 
   /* Check we are in START. */
@@ -2864,10 +2828,10 @@ test_circuitpadding_manage_circuit_lifetime(void *arg)
 
   /* Runaway circpad test: if the machine does not transition to end,
    * test that after CIRCPAD_DELAY_MAX_SECS, we get marked anyway */
-  mocked_timeofday = client_side->timestamp_dirty
-      + get_options()->MaxCircuitDirtiness + 2;
+  mocked_timeofday =
+      client_side->timestamp_dirty + get_options()->MaxCircuitDirtiness + 2;
   client_side->padding_info[0]->last_cell_time_sec =
-      approx_time()-(CIRCPAD_DELAY_MAX_SECS+10);
+      approx_time() - (CIRCPAD_DELAY_MAX_SECS + 10);
   circuit_expire_old_circuits_clientside();
   tt_int_op(client_side->marked_for_close, OP_NE, 0);
 
@@ -2891,12 +2855,12 @@ test_circuitpadding_manage_circuit_lifetime(void *arg)
   mocked_timeofday = client_side->timestamp_dirty;
   circuit_expire_old_circuits_clientside();
   tt_int_op(client_side->marked_for_close, OP_EQ, 0);
-  mocked_timeofday = client_side->timestamp_dirty
-      + get_options()->MaxCircuitDirtiness + 2;
+  mocked_timeofday =
+      client_side->timestamp_dirty + get_options()->MaxCircuitDirtiness + 2;
   circuit_expire_old_circuits_clientside();
   tt_int_op(client_side->marked_for_close, OP_NE, 0);
 
- done:
+done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   tor_free(circ_client_machine.states);
   monotime_disable_test_mocking();
@@ -2936,13 +2900,14 @@ helper_test_hs_machines(bool test_intro_circs)
 
   /* Attaching the client machine now won't work here because of a wrong
    * purpose */
-  tt_assert(!client_side->padding_machine[0]);
+  tt_assert(! client_side->padding_machine[0]);
   circpad_add_matching_machines(origin_client_side, origin_padding_machines);
-  tt_assert(!client_side->padding_machine[0]);
+  tt_assert(! client_side->padding_machine[0]);
 
   /* Change the purpose, see the machine getting attached */
-  client_side->purpose = test_intro_circs ?
-    CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT : CIRCUIT_PURPOSE_C_REND_JOINED;
+  client_side->purpose = test_intro_circs
+                             ? CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT
+                             : CIRCUIT_PURPOSE_C_REND_JOINED;
   circpad_add_matching_machines(origin_client_side, origin_padding_machines);
   tt_ptr_op(client_side->padding_info[0], OP_NE, NULL);
   tt_ptr_op(client_side->padding_machine[0], OP_NE, NULL);
@@ -2954,7 +2919,7 @@ helper_test_hs_machines(bool test_intro_circs)
   tt_str_op(client_side->padding_machine[0]->name, OP_EQ,
             test_intro_circs ? "client_ip_circ" : "client_rp_circ");
   tt_str_op(relay_side->padding_machine[0]->name, OP_EQ,
-            test_intro_circs ? "relay_ip_circ": "relay_rp_circ");
+            test_intro_circs ? "relay_ip_circ" : "relay_rp_circ");
 
   /***********************************/
 
@@ -2975,9 +2940,9 @@ helper_test_hs_machines(bool test_intro_circs)
 
   /* Check that the state lengths have been sampled and are within range */
   circpad_machine_runtime_t *client_machine_runtime =
-    client_side->padding_info[0];
+      client_side->padding_info[0];
   circpad_machine_runtime_t *relay_machine_runtime =
-    relay_side->padding_info[0];
+      relay_side->padding_info[0];
 
   if (test_intro_circs) {
     /* on the client side, we don't send any padding so
@@ -2997,7 +2962,7 @@ helper_test_hs_machines(bool test_intro_circs)
     int i;
     /* Send state_length worth of padding from the relay and see that the
      * client state goes to END */
-    for (i = (int) relay_machine_runtime->state_length ; i > 0 ; i--) {
+    for (i = (int)relay_machine_runtime->state_length; i > 0; i--) {
       circpad_send_padding_cell_for_callback(relay_machine_runtime);
     }
     /* See that the machine has been teared down after all the length has been
@@ -3007,7 +2972,7 @@ helper_test_hs_machines(bool test_intro_circs)
   } else {
     int i;
     /* Send state_length worth of padding and see that the state goes to END */
-    for (i = (int) client_machine_runtime->state_length ; i > 0 ; i--) {
+    for (i = (int)client_machine_runtime->state_length; i > 0; i--) {
       circpad_send_padding_cell_for_callback(client_machine_runtime);
     }
     /* See that the machine has been teared down after all the length has been
@@ -3016,7 +2981,7 @@ helper_test_hs_machines(bool test_intro_circs)
               CIRCPAD_STATE_END);
   }
 
- done:
+done:
   free_fake_orcirc(TO_OR_CIRCUIT(relay_side));
   circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
   circuitmux_free(dummy_channel.cmux);
@@ -3036,12 +3001,13 @@ test_circuitpadding_hs_machines(void *arg)
    *
    * 2) Call helper_test_hs_machines() to perform tests for the intro circuit
    *    machines and for the rend circuit machines.
-  */
+   */
 
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
   MOCK(circuit_package_relay_cell, circuit_package_relay_cell_mock);
   MOCK(circuit_get_nth_node, circuit_get_nth_node_mock);
-  MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+  MOCK(circpad_machine_schedule_padding,
+       circpad_machine_schedule_padding_mock);
 
   origin_padding_machines = smartlist_new();
   relay_padding_machines = smartlist_new();
@@ -3050,9 +3016,9 @@ test_circuitpadding_hs_machines(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1 * TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1 * TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1 * TOR_NSEC_PER_USEC;
 
   timers_initialize();
 
@@ -3077,15 +3043,15 @@ test_circuitpadding_hs_machines(void *arg)
   timers_shutdown();
   monotime_disable_test_mocking();
 
-  SMARTLIST_FOREACH_BEGIN(origin_padding_machines,
-                          circpad_machine_spec_t *, m) {
+  SMARTLIST_FOREACH_BEGIN (origin_padding_machines, circpad_machine_spec_t *,
+                           m) {
     machine_spec_free(m);
-  } SMARTLIST_FOREACH_END(m);
+  } SMARTLIST_FOREACH_END (m);
 
-  SMARTLIST_FOREACH_BEGIN(relay_padding_machines,
-                          circpad_machine_spec_t *, m) {
+  SMARTLIST_FOREACH_BEGIN (relay_padding_machines, circpad_machine_spec_t *,
+                           m) {
     machine_spec_free(m);
-  } SMARTLIST_FOREACH_END(m);
+  } SMARTLIST_FOREACH_END (m);
 
   smartlist_free(origin_padding_machines);
   smartlist_free(relay_padding_machines);
@@ -3103,7 +3069,7 @@ test_circuitpadding_ignore_non_padding_cells(void *arg)
   int retval;
   relay_header_t rh;
 
-  (void) arg;
+  (void)arg;
 
   client_side = (circuit_t *)origin_circuit_new();
   client_side->purpose = CIRCUIT_PURPOSE_C_CIRCUIT_PADDING;
@@ -3115,33 +3081,33 @@ test_circuitpadding_ignore_non_padding_cells(void *arg)
   tt_int_op(retval, OP_EQ, 0);
   expect_log_msg_containing("Ignored cell");
 
- done:
-  ;
+done:;
 }
 
-#define TEST_CIRCUITPADDING(name, flags) \
-    { #name, test_##name, (flags), NULL, NULL }
+#define TEST_CIRCUITPADDING(name, flags)    \
+  {                                         \
+#    name, test_##name, (flags), NULL, NULL \
+  }
 
 struct testcase_t circuitpadding_tests[] = {
-  TEST_CIRCUITPADDING(circuitpadding_tokens, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_state_length, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_negotiation, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_wronghop, TT_FORK),
-  /** Disabled unstable test until #29298 is implemented (see #29122) */
-  //  TEST_CIRCUITPADDING(circuitpadding_circuitsetup_machine, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_conditions, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_rtt, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_sample_distribution, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_machine_rate_limiting, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_global_rate_limiting, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_reduce_disable, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_token_removal_lower, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_token_removal_higher, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_closest_token_removal, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_closest_token_removal_usec, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_token_removal_exact, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_manage_circuit_lifetime, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_hs_machines, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_ignore_non_padding_cells, TT_FORK),
-  END_OF_TESTCASES
-};
+    TEST_CIRCUITPADDING(circuitpadding_tokens, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_state_length, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_negotiation, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_wronghop, TT_FORK),
+    /** Disabled unstable test until #29298 is implemented (see #29122) */
+    //  TEST_CIRCUITPADDING(circuitpadding_circuitsetup_machine, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_conditions, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_rtt, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_sample_distribution, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_machine_rate_limiting, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_global_rate_limiting, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_reduce_disable, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_token_removal_lower, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_token_removal_higher, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_closest_token_removal, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_closest_token_removal_usec, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_token_removal_exact, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_manage_circuit_lifetime, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_hs_machines, TT_FORK),
+    TEST_CIRCUITPADDING(circuitpadding_ignore_non_padding_cells, TT_FORK),
+    END_OF_TESTCASES};

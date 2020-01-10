@@ -75,31 +75,31 @@
  * }
  * </pre>
  */
-#define SMARTLIST_FOREACH_BEGIN(sl, type, var)  \
-  STMT_BEGIN                                                    \
-    int var ## _sl_idx, var ## _sl_len=(sl)->num_used;          \
-    type var;                                                   \
-    for (var ## _sl_idx = 0; var ## _sl_idx < var ## _sl_len;   \
-         ++var ## _sl_idx) {                                    \
-      var = (sl)->list[var ## _sl_idx];
+#define SMARTLIST_FOREACH_BEGIN(sl, type, var)                            \
+  STMT_BEGIN                                                              \
+    int var##_sl_idx, var##_sl_len = (sl)->num_used;                      \
+    type var;                                                             \
+    for (var##_sl_idx = 0; var##_sl_idx < var##_sl_len; ++var##_sl_idx) { \
+      var = (sl)->list[var##_sl_idx];
 
 /** Iterates over the items in smartlist <b>sl</b> in reverse order, similar to
  *  SMARTLIST_FOREACH_BEGIN
  *
  * NOTE: This macro is incompatible with SMARTLIST_DEL_CURRENT.
  */
-#define SMARTLIST_FOREACH_REVERSE_BEGIN(sl, type, var)  \
-  STMT_BEGIN                                                       \
-    int var ## _sl_idx, var ## _sl_len=(sl)->num_used;             \
-    type var;                                                      \
-    for (var ## _sl_idx = var ## _sl_len-1; var ## _sl_idx >= 0;   \
-         --var ## _sl_idx) {                                       \
-      var = (sl)->list[var ## _sl_idx];
+#define SMARTLIST_FOREACH_REVERSE_BEGIN(sl, type, var)       \
+  STMT_BEGIN                                                 \
+    int var##_sl_idx, var##_sl_len = (sl)->num_used;         \
+    type var;                                                \
+    for (var##_sl_idx = var##_sl_len - 1; var##_sl_idx >= 0; \
+         --var##_sl_idx) {                                   \
+      var = (sl)->list[var##_sl_idx];
 
-#define SMARTLIST_FOREACH_END(var)              \
-    var = NULL;                                 \
-    (void) var ## _sl_idx;                      \
-  } STMT_END
+#define SMARTLIST_FOREACH_END(var) \
+  var = NULL;                      \
+  (void)var##_sl_idx;              \
+  }                                \
+  STMT_END
 
 /**
  * An alias for SMARTLIST_FOREACH_BEGIN and SMARTLIST_FOREACH_END, using
@@ -109,29 +109,30 @@
  * By convention, we do not use this for loops which nest, or for loops over
  * 10 lines or so.  Use SMARTLIST_FOREACH_{BEGIN,END} for those.
  */
-#define SMARTLIST_FOREACH(sl, type, var, cmd)                   \
-  SMARTLIST_FOREACH_BEGIN(sl,type,var) {                        \
-    cmd;                                                        \
-  } SMARTLIST_FOREACH_END(var)
+#define SMARTLIST_FOREACH(sl, type, var, cmd) \
+  SMARTLIST_FOREACH_BEGIN (sl, type, var) {   \
+    cmd;                                      \
+  }                                           \
+  SMARTLIST_FOREACH_END(var)
 
 /** Helper: While in a SMARTLIST_FOREACH loop over the list <b>sl</b> indexed
  * with the variable <b>var</b>, remove the current element in a way that
  * won't confuse the loop. */
-#define SMARTLIST_DEL_CURRENT(sl, var)          \
-  STMT_BEGIN                                    \
-    smartlist_del(sl, var ## _sl_idx);          \
-    --var ## _sl_idx;                           \
-    --var ## _sl_len;                           \
+#define SMARTLIST_DEL_CURRENT(sl, var) \
+  STMT_BEGIN                           \
+    smartlist_del(sl, var##_sl_idx);   \
+    --var##_sl_idx;                    \
+    --var##_sl_len;                    \
   STMT_END
 
 /** Helper: While in a SMARTLIST_FOREACH loop over the list <b>sl</b> indexed
  * with the variable <b>var</b>, remove the current element in a way that
  * won't confuse the loop. */
-#define SMARTLIST_DEL_CURRENT_KEEPORDER(sl, var)          \
-  STMT_BEGIN                                              \
-     smartlist_del_keeporder(sl, var ## _sl_idx);         \
-     --var ## _sl_idx;                                    \
-     --var ## _sl_len;                                    \
+#define SMARTLIST_DEL_CURRENT_KEEPORDER(sl, var) \
+  STMT_BEGIN                                     \
+    smartlist_del_keeporder(sl, var##_sl_idx);   \
+    --var##_sl_idx;                              \
+    --var##_sl_len;                              \
   STMT_END
 
 /** Helper: While in a SMARTLIST_FOREACH loop over the list <b>sl</b> indexed
@@ -140,7 +141,7 @@
  */
 #define SMARTLIST_REPLACE_CURRENT(sl, var, val) \
   STMT_BEGIN                                    \
-    smartlist_set(sl, var ## _sl_idx, val);     \
+    smartlist_set(sl, var##_sl_idx, val);       \
   STMT_END
 
 #endif /* !defined(TOR_SMARTLIST_FOREACH_H) */

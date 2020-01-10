@@ -22,37 +22,40 @@
 int
 dir_server_mode(const or_options_t *options)
 {
-  if (!options->DirCache)
+  if (! options->DirCache)
     return 0;
   return options->DirPort_set ||
-    (server_mode(options) && router_has_bandwidth_to_be_dirserver(options));
+         (server_mode(options) &&
+          router_has_bandwidth_to_be_dirserver(options));
 }
 
 /** Return true iff we are trying to be a server.
  */
 MOCK_IMPL(int,
-server_mode,(const or_options_t *options))
+server_mode, (const or_options_t *options))
 {
-  if (options->ClientOnly) return 0;
+  if (options->ClientOnly)
+    return 0;
   return (options->ORPort_set);
 }
 
 /** Return true iff we are trying to be a non-bridge server.
  */
 MOCK_IMPL(int,
-public_server_mode,(const or_options_t *options))
+public_server_mode, (const or_options_t *options))
 {
-  if (!server_mode(options)) return 0;
-  return (!options->BridgeRelay);
+  if (! server_mode(options))
+    return 0;
+  return (! options->BridgeRelay);
 }
 
 /** Remember if we've advertised ourselves to the dirservers. */
-static int server_is_advertised=0;
+static int server_is_advertised = 0;
 
 /** Return true iff we have published our descriptor lately.
  */
 MOCK_IMPL(int,
-advertised_server_mode,(void))
+advertised_server_mode, (void))
 {
   return server_is_advertised;
 }

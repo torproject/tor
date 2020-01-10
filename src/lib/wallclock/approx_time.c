@@ -58,10 +58,10 @@ subsys_wallclock_initialize(void)
  * Subsystem function table describing the "wallclock" subsystem.
  **/
 const subsys_fns_t sys_wallclock = {
-  .name = "wallclock",
-  .supported = true,
-  /* Approximate time is a diagnostic feature, we want it to init right after
-   * low-level error handling. */
-  .level = -98,
-  .initialize = subsys_wallclock_initialize,
+    .name = "wallclock",
+    .supported = true,
+    /* Approximate time is a diagnostic feature, we want it to init right after
+     * low-level error handling. */
+    .level = -98,
+    .initialize = subsys_wallclock_initialize,
 };

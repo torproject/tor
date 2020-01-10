@@ -21,13 +21,12 @@
 #undef CONF_CONTEXT
 
 static const config_format_t dirauth_options_stub_fmt = {
-  .vars = dirauth_options_t_vars,
+    .vars = dirauth_options_t_vars,
 };
 
-const struct subsys_fns_t sys_dirauth = {
-  .name = "dirauth",
-  .supported = false,
-  .level = DIRAUTH_SUBSYS_LEVEL,
+const struct subsys_fns_t sys_dirauth = {.name = "dirauth",
+                                         .supported = false,
+                                         .level = DIRAUTH_SUBSYS_LEVEL,
 
-  .options_format = &dirauth_options_stub_fmt
-};
+                                         .options_format =
+                                             &dirauth_options_stub_fmt};

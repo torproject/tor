@@ -22,18 +22,19 @@
 #define MIN_ANNOTATION A_PURPOSE
 #define MAX_ANNOTATION A_UNKNOWN_
 
-#define ALLOC_ZERO(sz) memarea_alloc_zero(area,sz)
-#define ALLOC(sz) memarea_alloc(area,sz)
-#define STRDUP(str) memarea_strdup(area,str)
-#define STRNDUP(str,n) memarea_strndup(area,(str),(n))
+#define ALLOC_ZERO(sz) memarea_alloc_zero(area, sz)
+#define ALLOC(sz) memarea_alloc(area, sz)
+#define STRDUP(str) memarea_strdup(area, str)
+#define STRNDUP(str, n) memarea_strndup(area, (str), (n))
 
-#define RET_ERR(msg)                                               \
-  STMT_BEGIN                                                       \
-    if (tok) token_clear(tok);                                      \
-    tok = ALLOC_ZERO(sizeof(directory_token_t));                   \
-    tok->tp = ERR_;                                                \
-    tok->error = STRDUP(msg);                                      \
-    goto done_tokenizing;                                          \
+#define RET_ERR(msg)                             \
+  STMT_BEGIN                                     \
+    if (tok)                                     \
+      token_clear(tok);                          \
+    tok = ALLOC_ZERO(sizeof(directory_token_t)); \
+    tok->tp = ERR_;                              \
+    tok->error = STRDUP(msg);                    \
+    goto done_tokenizing;                        \
   STMT_END
 
 /** Free all resources allocated for <b>tok</b> */
@@ -50,9 +51,8 @@ token_clear(directory_token_t *tok)
  * entire string.
  */
 int
-tokenize_string(memarea_t *area,
-                const char *start, const char *end, smartlist_t *out,
-                const token_rule_t *table, int flags)
+tokenize_string(memarea_t *area, const char *start, const char *end,
+                smartlist_t *out, const token_rule_t *table, int flags)
 {
   const char **s;
   directory_token_t *tok = NULL;
@@ -63,11 +63,11 @@ tokenize_string(memarea_t *area,
   tor_assert(area);
 
   s = &start;
-  if (!end) {
-    end = start+strlen(start);
+  if (! end) {
+    end = start + strlen(start);
   } else {
     /* it's only meaningful to check for nuls if we got an end-of-string ptr */
-    if (memchr(start, '\0', end-start)) {
+    if (memchr(start, '\0', end - start)) {
       log_warn(LD_DIR, "parse error: internal NUL character.");
       return -1;
     }
@@ -77,7 +77,7 @@ tokenize_string(memarea_t *area,
 
   SMARTLIST_FOREACH(out, const directory_token_t *, t, ++counts[t->tp]);
 
-  while (*s < end && (!tok || tok->tp != EOF_)) {
+  while (*s < end && (! tok || tok->tp != EOF_)) {
     tok = get_next_token(area, s, end, table);
     if (tok->tp == ERR_) {
       log_warn(LD_DIR, "parse error: %s", tok->error);
@@ -105,7 +105,7 @@ tokenize_string(memarea_t *area,
       log_warn(LD_DIR, "parse error: item contains only annotations");
       return -1;
     }
-    for (i=first_nonannotation;  i < smartlist_len(out); ++i) {
+    for (i = first_nonannotation; i < smartlist_len(out); ++i) {
       tok = smartlist_get(out, i);
       if (tok->tp >= MIN_ANNOTATION && tok->tp <= MAX_ANNOTATION) {
         log_warn(LD_DIR, "parse error: Annotations mixed with keywords");
@@ -119,7 +119,7 @@ tokenize_string(memarea_t *area,
       }
     }
   } else {
-    for (i=0;  i < smartlist_len(out); ++i) {
+    for (i = 0; i < smartlist_len(out); ++i) {
       tok = smartlist_get(out, i);
       if (tok->tp >= MIN_ANNOTATION && tok->tp <= MAX_ANNOTATION) {
         log_warn(LD_DIR, "parse error: no annotations allowed.");
@@ -146,7 +146,8 @@ tokenize_string(memarea_t *area,
     }
     if (table[i].pos & AT_END) {
       if (smartlist_len(out) < 1 ||
-          (tok = smartlist_get(out, smartlist_len(out)-1))->tp != table[i].v) {
+          (tok = smartlist_get(out, smartlist_len(out) - 1))->tp !=
+              table[i].v) {
         log_warn(LD_DIR, "Parse error: last item is not %s.", table[i].t);
         return -1;
       }
@@ -161,12 +162,12 @@ tokenize_string(memarea_t *area,
  * all storage in <b>area</b>.  Return the number of arguments parsed, or
  * return -1 if there was an insanely high number of arguments. */
 static inline int
-get_token_arguments(memarea_t *area, directory_token_t *tok,
-                    const char *s, const char *eol)
+get_token_arguments(memarea_t *area, directory_token_t *tok, const char *s,
+                    const char *eol)
 {
 /** Largest number of arguments we'll accept to any token, ever. */
 #define MAX_ARGS 512
-  char *mem = memarea_strndup(area, s, eol-s);
+  char *mem = memarea_strndup(area, s, eol - s);
   char *cp = mem;
   int j = 0;
   char *args[MAX_ARGS];
@@ -174,14 +175,14 @@ get_token_arguments(memarea_t *area, directory_token_t *tok,
     if (j == MAX_ARGS)
       return -1;
     args[j++] = cp;
-    cp = (char*)find_whitespace(cp);
-    if (!cp || !*cp)
+    cp = (char *)find_whitespace(cp);
+    if (! cp || ! *cp)
       break; /* End of the line. */
     *cp++ = '\0';
-    cp = (char*)eat_whitespace(cp);
+    cp = (char *)eat_whitespace(cp);
   }
   tok->n_args = j;
-  tok->args = memarea_memdup(area, args, j*sizeof(char*));
+  tok->args = memarea_memdup(area, args, j * sizeof(char *));
   return j;
 #undef MAX_ARGS
 }
@@ -192,8 +193,8 @@ get_token_arguments(memarea_t *area, directory_token_t *tok,
  * conform to the syntax we wanted.
  **/
 static inline directory_token_t *
-token_check_object(memarea_t *area, const char *kwd,
-                   directory_token_t *tok, obj_syntax o_syn)
+token_check_object(memarea_t *area, const char *kwd, directory_token_t *tok,
+                   obj_syntax o_syn)
 {
   char ebuf[128];
   switch (o_syn) {
@@ -210,34 +211,36 @@ token_check_object(memarea_t *area, const char *kwd,
       break;
     case NEED_OBJ:
       /* There must be a (non-key) object. */
-      if (!tok->object_body) {
+      if (! tok->object_body) {
         tor_snprintf(ebuf, sizeof(ebuf), "Missing object for %s", kwd);
         RET_ERR(ebuf);
       }
       break;
     case NEED_KEY_1024: /* There must be a 1024-bit public key. */
     case NEED_SKEY_1024: /* There must be a 1024-bit private key. */
-      if (tok->key && crypto_pk_num_bits(tok->key) != PK_BYTES*8) {
+      if (tok->key && crypto_pk_num_bits(tok->key) != PK_BYTES * 8) {
         tor_snprintf(ebuf, sizeof(ebuf), "Wrong size on key for %s: %d bits",
                      kwd, crypto_pk_num_bits(tok->key));
         RET_ERR(ebuf);
       }
       /* fall through */
     case NEED_KEY: /* There must be some kind of key. */
-      if (!tok->key) {
+      if (! tok->key) {
         tor_snprintf(ebuf, sizeof(ebuf), "Missing public key for %s", kwd);
         RET_ERR(ebuf);
       }
       if (o_syn != NEED_SKEY_1024) {
         if (crypto_pk_key_is_private(tok->key)) {
           tor_snprintf(ebuf, sizeof(ebuf),
-               "Private key given for %s, which wants a public key", kwd);
+                       "Private key given for %s, which wants a public key",
+                       kwd);
           RET_ERR(ebuf);
         }
       } else { /* o_syn == NEED_SKEY_1024 */
-        if (!crypto_pk_key_is_private(tok->key)) {
+        if (! crypto_pk_key_is_private(tok->key)) {
           tor_snprintf(ebuf, sizeof(ebuf),
-               "Public key given for %s, which wants a private key", kwd);
+                       "Public key given for %s, which wants a private key",
+                       kwd);
           RET_ERR(ebuf);
         }
       }
@@ -247,7 +250,7 @@ token_check_object(memarea_t *area, const char *kwd,
       break;
   }
 
- done_tokenizing:
+done_tokenizing:
   return tok;
 }
 
@@ -266,15 +269,15 @@ mem_eq_token(const void *mem, size_t memlen, const char *token)
  * of tokens in <b>table</b>.
  */
 directory_token_t *
-get_next_token(memarea_t *area,
-               const char **s, const char *eos, const token_rule_t *table)
+get_next_token(memarea_t *area, const char **s, const char *eos,
+               const token_rule_t *table)
 {
   /** Reject any object at least this big; it is probably an overflow, an
    * attack, a bug, or some other nonsense. */
-#define MAX_UNPARSED_OBJECT_SIZE (128*1024)
+#define MAX_UNPARSED_OBJECT_SIZE (128 * 1024)
   /** Reject any line at least this big; it is probably an overflow, an
    * attack, a bug, or some other nonsense. */
-#define MAX_LINE_LENGTH (128*1024)
+#define MAX_LINE_LENGTH (128 * 1024)
 
   const char *next, *eol;
   size_t obname_len;
@@ -291,8 +294,8 @@ get_next_token(memarea_t *area,
   /* Set *s to first token, eol to end-of-line, next to after first token */
   *s = eat_whitespace_eos(*s, eos); /* eat multi-line whitespace */
   tor_assert(eos >= *s);
-  eol = memchr(*s, '\n', eos-*s);
-  if (!eol)
+  eol = memchr(*s, '\n', eos - *s);
+  if (! eol)
     eol = eos;
   if (eol - *s > MAX_LINE_LENGTH) {
     RET_ERR("Line far too long");
@@ -300,18 +303,18 @@ get_next_token(memarea_t *area,
 
   next = find_whitespace_eos(*s, eol);
 
-  if (mem_eq_token(*s, next-*s, "opt")) {
+  if (mem_eq_token(*s, next - *s, "opt")) {
     /* Skip past an "opt" at the start of the line. */
     *s = eat_whitespace_eos_no_nl(next, eol);
     next = find_whitespace_eos(*s, eol);
-  } else if (*s == eos) {  /* If no "opt", and end-of-line, line is invalid */
+  } else if (*s == eos) { /* If no "opt", and end-of-line, line is invalid */
     RET_ERR("Unexpected EOF");
   }
 
   /* Search the table for the appropriate entry.  (I tried a binary search
    * instead, but it wasn't any faster.) */
-  for (i = 0; table[i].t ; ++i) {
-    if (mem_eq_token(*s, next-*s, table[i].t)) {
+  for (i = 0; table[i].t; ++i) {
+    if (mem_eq_token(*s, next - *s, table[i].t)) {
       /* We've found the keyword. */
       kwd = table[i].t;
       tok->tp = table[i].v;
@@ -321,13 +324,14 @@ get_next_token(memarea_t *area,
        * always set if we want arguments. */
       if (table[i].concat_args) {
         /* The keyword takes the line as a single argument */
-        tok->args = ALLOC(sizeof(char*));
-        tok->args[0] = STRNDUP(*s,eol-*s); /* Grab everything on line */
+        tok->args = ALLOC(sizeof(char *));
+        tok->args[0] = STRNDUP(*s, eol - *s); /* Grab everything on line */
         tok->n_args = 1;
       } else {
         /* This keyword takes multiple arguments. */
-        if (get_token_arguments(area, tok, *s, eol)<0) {
-          tor_snprintf(ebuf, sizeof(ebuf),"Far too many arguments to %s", kwd);
+        if (get_token_arguments(area, tok, *s, eol) < 0) {
+          tor_snprintf(ebuf, sizeof(ebuf), "Far too many arguments to %s",
+                       kwd);
           RET_ERR(ebuf);
         }
         *s = eol;
@@ -349,44 +353,47 @@ get_next_token(memarea_t *area,
       tok->tp = A_UNKNOWN_;
     else
       tok->tp = K_OPT;
-    tok->args = ALLOC(sizeof(char*));
-    tok->args[0] = STRNDUP(*s, eol-*s);
+    tok->args = ALLOC(sizeof(char *));
+    tok->args[0] = STRNDUP(*s, eol - *s);
     tok->n_args = 1;
     o_syn = OBJ_OK;
   }
 
   /* Check whether there's an object present */
-  *s = eat_whitespace_eos(eol, eos);  /* Scan from end of first line */
+  *s = eat_whitespace_eos(eol, eos); /* Scan from end of first line */
   tor_assert(eos >= *s);
-  eol = memchr(*s, '\n', eos-*s);
-  if (!eol || eol-*s<11 || strcmpstart(*s, "-----BEGIN ")) /* No object. */
+  eol = memchr(*s, '\n', eos - *s);
+  if (! eol || eol - *s < 11 ||
+      strcmpstart(*s, "-----BEGIN ")) /* No object. */
     goto check_object;
 
-  if (eol - *s <= 16 || memchr(*s+11,'\0',eol-*s-16) || /* no short lines, */
-      !mem_eq_token(eol-5, 5, "-----") ||   /* nuls or invalid endings */
-      (eol-*s) > MAX_UNPARSED_OBJECT_SIZE) {     /* name too long */
+  if (eol - *s <= 16 ||
+      memchr(*s + 11, '\0', eol - *s - 16) || /* no short lines, */
+      ! mem_eq_token(eol - 5, 5, "-----") || /* nuls or invalid endings */
+      (eol - *s) > MAX_UNPARSED_OBJECT_SIZE) { /* name too long */
     RET_ERR("Malformed object: bad begin line");
   }
-  tok->object_type = STRNDUP(*s+11, eol-*s-16);
-  obname_len = eol-*s-16; /* store objname length here to avoid a strlen() */
-  *s = eol+1;    /* Set *s to possible start of object data (could be eos) */
+  tok->object_type = STRNDUP(*s + 11, eol - *s - 16);
+  obname_len =
+      eol - *s - 16; /* store objname length here to avoid a strlen() */
+  *s = eol + 1; /* Set *s to possible start of object data (could be eos) */
 
   /* Go to the end of the object */
-  next = tor_memstr(*s, eos-*s, "-----END ");
-  if (!next) {
+  next = tor_memstr(*s, eos - *s, "-----END ");
+  if (! next) {
     RET_ERR("Malformed object: missing object end line");
   }
   tor_assert(eos >= next);
-  eol = memchr(next, '\n', eos-next);
-  if (!eol)  /* end-of-line marker, or eos if there's no '\n' */
+  eol = memchr(next, '\n', eos - next);
+  if (! eol) /* end-of-line marker, or eos if there's no '\n' */
     eol = eos;
   /* Validate the ending tag, which should be 9 + NAME + 5 + eol */
-  if ((size_t)(eol-next) != 9+obname_len+5 ||
-      !mem_eq_token(next+9, obname_len, tok->object_type) ||
-      !mem_eq_token(eol-5, 5, "-----")) {
+  if ((size_t)(eol - next) != 9 + obname_len + 5 ||
+      ! mem_eq_token(next + 9, obname_len, tok->object_type) ||
+      ! mem_eq_token(eol - 5, 5, "-----")) {
     tor_snprintf(ebuf, sizeof(ebuf), "Malformed object: mismatched end tag %s",
-             tok->object_type);
-    ebuf[sizeof(ebuf)-1] = '\0';
+                 tok->object_type);
+    ebuf[sizeof(ebuf) - 1] = '\0';
     RET_ERR(ebuf);
   }
   if (next - *s > MAX_UNPARSED_OBJECT_SIZE)
@@ -394,30 +401,31 @@ get_next_token(memarea_t *area,
 
   {
     int r;
-    size_t maxsize = base64_decode_maxsize(next-*s);
+    size_t maxsize = base64_decode_maxsize(next - *s);
     tok->object_body = ALLOC(maxsize);
-    r = base64_decode(tok->object_body, maxsize, *s, next-*s);
-    if (r<0)
+    r = base64_decode(tok->object_body, maxsize, *s, next - *s);
+    if (r < 0)
       RET_ERR("Malformed object: bad base64-encoded data");
     tok->object_size = r;
   }
 
-  if (!strcmp(tok->object_type, "RSA PUBLIC KEY")) { /* If it's a public key */
+  if (! strcmp(tok->object_type,
+               "RSA PUBLIC KEY")) { /* If it's a public key */
     tok->key = crypto_pk_asn1_decode(tok->object_body, tok->object_size);
     if (! tok->key)
       RET_ERR("Couldn't parse public key.");
-  } else if (!strcmp(tok->object_type, "RSA PRIVATE KEY")) { /* private key */
-    tok->key = crypto_pk_asn1_decode_private(tok->object_body,
-                                             tok->object_size);
+  } else if (! strcmp(tok->object_type, "RSA PRIVATE KEY")) { /* private key */
+    tok->key =
+        crypto_pk_asn1_decode_private(tok->object_body, tok->object_size);
     if (! tok->key)
       RET_ERR("Couldn't parse private key.");
   }
   *s = eol;
 
- check_object:
+check_object:
   tok = token_check_object(area, kwd, tok, o_syn);
 
- done_tokenizing:
+done_tokenizing:
   return tok;
 
 #undef RET_ERR
@@ -435,9 +443,11 @@ find_by_keyword_(smartlist_t *s, directory_keyword keyword,
                  const char *keyword_as_string)
 {
   directory_token_t *tok = find_opt_by_keyword(s, keyword);
-  if (PREDICT_UNLIKELY(!tok)) {
-    log_err(LD_BUG, "Missing %s [%d] in directory object that should have "
-         "been validated. Internal error.", keyword_as_string, (int)keyword);
+  if (PREDICT_UNLIKELY(! tok)) {
+    log_err(LD_BUG,
+            "Missing %s [%d] in directory object that should have "
+            "been validated. Internal error.",
+            keyword_as_string, (int)keyword);
     tor_assert(tok);
   }
   return tok;
@@ -461,11 +471,11 @@ smartlist_t *
 find_all_by_keyword(const smartlist_t *s, directory_keyword k)
 {
   smartlist_t *out = NULL;
-  SMARTLIST_FOREACH(s, directory_token_t *, t,
-                    if (t->tp == k) {
-                    if (!out)
-                    out = smartlist_new();
-                    smartlist_add(out, t);
-                    });
+  SMARTLIST_FOREACH(
+      s, directory_token_t *, t, if (t->tp == k) {
+        if (! out)
+          out = smartlist_new();
+        smartlist_add(out, t);
+      });
   return out;
 }

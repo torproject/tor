@@ -29,30 +29,50 @@ stream_end_reason_to_control_string(int reason)
 {
   reason &= END_STREAM_REASON_MASK;
   switch (reason) {
-    case END_STREAM_REASON_MISC: return "MISC";
-    case END_STREAM_REASON_RESOLVEFAILED: return "RESOLVEFAILED";
-    case END_STREAM_REASON_CONNECTREFUSED: return "CONNECTREFUSED";
-    case END_STREAM_REASON_EXITPOLICY: return "EXITPOLICY";
-    case END_STREAM_REASON_DESTROY: return "DESTROY";
-    case END_STREAM_REASON_DONE: return "DONE";
-    case END_STREAM_REASON_TIMEOUT: return "TIMEOUT";
-    case END_STREAM_REASON_NOROUTE: return "NOROUTE";
-    case END_STREAM_REASON_HIBERNATING: return "HIBERNATING";
-    case END_STREAM_REASON_INTERNAL: return "INTERNAL";
-    case END_STREAM_REASON_RESOURCELIMIT: return "RESOURCELIMIT";
-    case END_STREAM_REASON_CONNRESET: return "CONNRESET";
-    case END_STREAM_REASON_TORPROTOCOL: return "TORPROTOCOL";
-    case END_STREAM_REASON_NOTDIRECTORY: return "NOTDIRECTORY";
+    case END_STREAM_REASON_MISC:
+      return "MISC";
+    case END_STREAM_REASON_RESOLVEFAILED:
+      return "RESOLVEFAILED";
+    case END_STREAM_REASON_CONNECTREFUSED:
+      return "CONNECTREFUSED";
+    case END_STREAM_REASON_EXITPOLICY:
+      return "EXITPOLICY";
+    case END_STREAM_REASON_DESTROY:
+      return "DESTROY";
+    case END_STREAM_REASON_DONE:
+      return "DONE";
+    case END_STREAM_REASON_TIMEOUT:
+      return "TIMEOUT";
+    case END_STREAM_REASON_NOROUTE:
+      return "NOROUTE";
+    case END_STREAM_REASON_HIBERNATING:
+      return "HIBERNATING";
+    case END_STREAM_REASON_INTERNAL:
+      return "INTERNAL";
+    case END_STREAM_REASON_RESOURCELIMIT:
+      return "RESOURCELIMIT";
+    case END_STREAM_REASON_CONNRESET:
+      return "CONNRESET";
+    case END_STREAM_REASON_TORPROTOCOL:
+      return "TORPROTOCOL";
+    case END_STREAM_REASON_NOTDIRECTORY:
+      return "NOTDIRECTORY";
 
-    case END_STREAM_REASON_CANT_ATTACH: return "CANT_ATTACH";
-    case END_STREAM_REASON_NET_UNREACHABLE: return "NET_UNREACHABLE";
-    case END_STREAM_REASON_SOCKSPROTOCOL: return "SOCKS_PROTOCOL";
+    case END_STREAM_REASON_CANT_ATTACH:
+      return "CANT_ATTACH";
+    case END_STREAM_REASON_NET_UNREACHABLE:
+      return "NET_UNREACHABLE";
+    case END_STREAM_REASON_SOCKSPROTOCOL:
+      return "SOCKS_PROTOCOL";
     // XXXX Controlspec
-    case END_STREAM_REASON_HTTPPROTOCOL: return "HTTP_PROTOCOL";
+    case END_STREAM_REASON_HTTPPROTOCOL:
+      return "HTTP_PROTOCOL";
 
-    case END_STREAM_REASON_PRIVATE_ADDR: return "PRIVATE_ADDR";
+    case END_STREAM_REASON_PRIVATE_ADDR:
+      return "PRIVATE_ADDR";
 
-    default: return NULL;
+    default:
+      return NULL;
   }
 }
 
@@ -68,23 +88,37 @@ stream_end_reason_to_string(int reason)
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "End cell arrived with length 0. Should be at least 1.");
       return "MALFORMED";
-    case END_STREAM_REASON_MISC:           return "misc error";
-    case END_STREAM_REASON_RESOLVEFAILED:  return "resolve failed";
-    case END_STREAM_REASON_CONNECTREFUSED: return "connection refused";
-    case END_STREAM_REASON_EXITPOLICY:     return "exit policy failed";
-    case END_STREAM_REASON_DESTROY:        return "destroyed";
-    case END_STREAM_REASON_DONE:           return "closed normally";
-    case END_STREAM_REASON_TIMEOUT:        return "gave up (timeout)";
-    case END_STREAM_REASON_NOROUTE:        return "no route to host";
-    case END_STREAM_REASON_HIBERNATING:    return "server is hibernating";
-    case END_STREAM_REASON_INTERNAL:       return "internal error at server";
-    case END_STREAM_REASON_RESOURCELIMIT:  return "server out of resources";
-    case END_STREAM_REASON_CONNRESET:      return "connection reset";
-    case END_STREAM_REASON_TORPROTOCOL:    return "Tor protocol error";
-    case END_STREAM_REASON_NOTDIRECTORY:   return "not a directory";
+    case END_STREAM_REASON_MISC:
+      return "misc error";
+    case END_STREAM_REASON_RESOLVEFAILED:
+      return "resolve failed";
+    case END_STREAM_REASON_CONNECTREFUSED:
+      return "connection refused";
+    case END_STREAM_REASON_EXITPOLICY:
+      return "exit policy failed";
+    case END_STREAM_REASON_DESTROY:
+      return "destroyed";
+    case END_STREAM_REASON_DONE:
+      return "closed normally";
+    case END_STREAM_REASON_TIMEOUT:
+      return "gave up (timeout)";
+    case END_STREAM_REASON_NOROUTE:
+      return "no route to host";
+    case END_STREAM_REASON_HIBERNATING:
+      return "server is hibernating";
+    case END_STREAM_REASON_INTERNAL:
+      return "internal error at server";
+    case END_STREAM_REASON_RESOURCELIMIT:
+      return "server out of resources";
+    case END_STREAM_REASON_CONNRESET:
+      return "connection reset";
+    case END_STREAM_REASON_TORPROTOCOL:
+      return "Tor protocol error";
+    case END_STREAM_REASON_NOTDIRECTORY:
+      return "not a directory";
     default:
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Reason for ending (%d) not recognized.",reason);
+             "Reason for ending (%d) not recognized.", reason);
       return "unknown";
   }
 }
@@ -153,7 +187,8 @@ stream_end_reason_to_socks5_response(int reason)
     default:
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Reason for ending (%d) not recognized; "
-             "sending generic socks error.", reason);
+             "sending generic socks error.",
+             reason);
       return SOCKS5_GENERAL_ERROR;
   }
 }
@@ -164,11 +199,13 @@ stream_end_reason_to_socks5_response(int reason)
  * version, and S_CASE is for errors where windows has only a WSAEFOO
  * version.  (The E is for 'error', the S is for 'socket'). */
 #ifdef _WIN32
-#define E_CASE(s) case s: case WSA ## s
-#define S_CASE(s) case WSA ## s
+#  define E_CASE(s) \
+    case s:         \
+    case WSA##s
+#  define S_CASE(s) case WSA##s
 #else
-#define E_CASE(s) case s
-#define S_CASE(s) case s
+#  define E_CASE(s) case s
+#  define S_CASE(s) case s
 #endif /* defined(_WIN32) */
 
 /** Given an errno from a failed exit connection, return a reason code
@@ -182,35 +219,27 @@ errno_to_stream_end_reason(int e)
   switch (e) {
     case EPIPE:
       return END_STREAM_REASON_DONE;
-    E_CASE(EBADF):
-    E_CASE(EFAULT):
-    E_CASE(EINVAL):
-    S_CASE(EISCONN):
-    S_CASE(ENOTSOCK):
-    S_CASE(EPROTONOSUPPORT):
-    S_CASE(EAFNOSUPPORT):
-    S_CASE(ENOTCONN):
-      return END_STREAM_REASON_INTERNAL;
-    S_CASE(ENETUNREACH):
-    S_CASE(EHOSTUNREACH):
-    E_CASE(EACCES):
-    case EPERM:
-      return END_STREAM_REASON_NOROUTE;
-    S_CASE(ECONNREFUSED):
-      return END_STREAM_REASON_CONNECTREFUSED;
-    S_CASE(ECONNRESET):
-      return END_STREAM_REASON_CONNRESET;
-    S_CASE(ETIMEDOUT):
-      return END_STREAM_REASON_TIMEOUT;
-    S_CASE(ENOBUFS):
-    case ENOMEM:
-    case ENFILE:
-    S_CASE(EADDRINUSE):
-    S_CASE(EADDRNOTAVAIL):
-    E_CASE(EMFILE):
-      return END_STREAM_REASON_RESOURCELIMIT;
+      E_CASE(EBADF)
+          : E_CASE(EFAULT)
+          : E_CASE(EINVAL)
+          : S_CASE(EISCONN)
+          : S_CASE(ENOTSOCK)
+          : S_CASE(EPROTONOSUPPORT)
+          : S_CASE(EAFNOSUPPORT)
+          : S_CASE(ENOTCONN) : return END_STREAM_REASON_INTERNAL;
+      S_CASE(ENETUNREACH)
+          : S_CASE(EHOSTUNREACH)
+          : E_CASE(EACCES) : case EPERM : return END_STREAM_REASON_NOROUTE;
+      S_CASE(ECONNREFUSED) : return END_STREAM_REASON_CONNECTREFUSED;
+      S_CASE(ECONNRESET) : return END_STREAM_REASON_CONNRESET;
+      S_CASE(ETIMEDOUT) : return END_STREAM_REASON_TIMEOUT;
+      S_CASE(ENOBUFS)
+          : case ENOMEM : case ENFILE : S_CASE(EADDRINUSE)
+          : S_CASE(EADDRNOTAVAIL)
+          : E_CASE(EMFILE) : return END_STREAM_REASON_RESOURCELIMIT;
     default:
-      log_info(LD_EXIT, "Didn't recognize errno %d (%s); telling the client "
+      log_info(LD_EXIT,
+               "Didn't recognize errno %d (%s); telling the client "
                "that we are ending a stream for 'misc' reason.",
                e, tor_socket_strerror(e));
       return END_STREAM_REASON_MISC;
@@ -289,29 +318,22 @@ errno_to_orconn_end_reason(int e)
   switch (e) {
     case EPIPE:
       return END_OR_CONN_REASON_DONE;
-    S_CASE(ENOTCONN):
-    S_CASE(ENETUNREACH):
-    S_CASE(ENETDOWN):
-    S_CASE(EHOSTUNREACH):
-      return END_OR_CONN_REASON_NO_ROUTE;
-    S_CASE(ECONNREFUSED):
-      return END_OR_CONN_REASON_REFUSED;
-    S_CASE(ECONNRESET):
-      return END_OR_CONN_REASON_CONNRESET;
-    S_CASE(ETIMEDOUT):
-      return END_OR_CONN_REASON_TIMEOUT;
-    S_CASE(ENOBUFS):
-    case ENOMEM:
-    case ENFILE:
-    E_CASE(EMFILE):
-    E_CASE(EACCES):
-    E_CASE(EBADF):
-    E_CASE(EFAULT):
-    E_CASE(EINVAL):
-      return END_OR_CONN_REASON_RESOURCE_LIMIT;
+      S_CASE(ENOTCONN)
+          : S_CASE(ENETUNREACH)
+          : S_CASE(ENETDOWN)
+          : S_CASE(EHOSTUNREACH) : return END_OR_CONN_REASON_NO_ROUTE;
+      S_CASE(ECONNREFUSED) : return END_OR_CONN_REASON_REFUSED;
+      S_CASE(ECONNRESET) : return END_OR_CONN_REASON_CONNRESET;
+      S_CASE(ETIMEDOUT) : return END_OR_CONN_REASON_TIMEOUT;
+      S_CASE(ENOBUFS)
+          : case ENOMEM : case ENFILE : E_CASE(EMFILE)
+          : E_CASE(EACCES)
+          : E_CASE(EBADF)
+          : E_CASE(EFAULT)
+          : E_CASE(EINVAL) : return END_OR_CONN_REASON_RESOURCE_LIMIT;
     default:
-      log_info(LD_OR, "Didn't recognize errno %d (%s).",
-               e, tor_socket_strerror(e));
+      log_info(LD_OR, "Didn't recognize errno %d (%s).", e,
+               tor_socket_strerror(e));
       return END_OR_CONN_REASON_MISC;
   }
 }
@@ -374,11 +396,10 @@ circuit_end_reason_to_control_string(int reason)
          * do note that the someone we're talking to is speaking the Tor
          * protocol with a weird accent.
          */
-        log_warn(LD_PROTOCOL,
-                 "Remote server sent bogus reason code %d", reason);
+        log_warn(LD_PROTOCOL, "Remote server sent bogus reason code %d",
+                 reason);
       } else {
-        log_warn(LD_BUG,
-                 "Unrecognized reason code %d", reason);
+        log_warn(LD_BUG, "Unrecognized reason code %d", reason);
       }
       return NULL;
   }
@@ -434,8 +455,7 @@ socks5_response_code_to_string(uint8_t code)
 const char *
 bandwidth_weight_rule_to_string(bandwidth_weight_rule_t rule)
 {
-  switch (rule)
-    {
+  switch (rule) {
     case NO_WEIGHTING:
       return "no weighting";
     case WEIGHT_FOR_EXIT:

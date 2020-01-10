@@ -44,7 +44,7 @@ connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
   char *buf = NULL;
   int len;
 
-  va_start(ap,format);
+  va_start(ap, format);
   len = tor_vasprintf(&buf, format, ap);
   va_end(ap);
 
@@ -71,12 +71,12 @@ size_t
 write_escaped_data(const char *data, size_t len, char **out)
 {
   tor_assert(len < SIZE_MAX - 9);
-  size_t sz_out = len+8+1;
+  size_t sz_out = len + 8 + 1;
   char *outp;
   const char *start = data, *end;
   size_t i;
   int start_of_line;
-  for (i=0; i < len; ++i) {
+  for (i = 0; i < len; ++i) {
     if (data[i] == '\n') {
       sz_out += 2; /* Maybe add a CR; maybe add a dot. */
       if (sz_out >= SIZE_T_CEILING) {
@@ -87,7 +87,7 @@ write_escaped_data(const char *data, size_t len, char **out)
     }
   }
   *out = outp = tor_malloc(sz_out);
-  end = data+len;
+  end = data + len;
   start_of_line = 1;
   while (data < end) {
     if (*data == '\n') {
@@ -104,7 +104,7 @@ write_escaped_data(const char *data, size_t len, char **out)
     }
     *outp++ = *data++;
   }
-  if (outp < *out+2 || fast_memcmp(outp-2, "\r\n", 2)) {
+  if (outp < *out + 2 || fast_memcmp(outp - 2, "\r\n", 2)) {
     *outp++ = '\r';
     *outp++ = '\n';
   }
@@ -133,27 +133,27 @@ read_escaped_data(const char *data, size_t len, char **out)
   const char *next;
   const char *end;
 
-  *out = outp = tor_malloc(len+1);
+  *out = outp = tor_malloc(len + 1);
 
-  end = data+len;
+  end = data + len;
 
   while (data < end) {
     /* we're at the start of a line. */
     if (*data == '.')
       ++data;
-    next = memchr(data, '\n', end-data);
+    next = memchr(data, '\n', end - data);
     if (next) {
-      size_t n_to_copy = next-data;
+      size_t n_to_copy = next - data;
       /* Don't copy a CR that precedes this LF. */
-      if (n_to_copy && *(next-1) == '\r')
+      if (n_to_copy && *(next - 1) == '\r')
         --n_to_copy;
       memcpy(outp, data, n_to_copy);
       outp += n_to_copy;
-      data = next+1; /* This will point at the start of the next line,
-                      * or the end of the string, or a period. */
+      data = next + 1; /* This will point at the start of the next line,
+                        * or the end of the string, or a period. */
     } else {
-      memcpy(outp, data, end-data);
-      outp += (end-data);
+      memcpy(outp, data, end - data);
+      outp += (end - data);
       *outp = '\0';
       return outp - *out;
     }
@@ -179,8 +179,8 @@ send_control_done(control_connection_t *conn)
  * @param s string reply content
  */
 MOCK_IMPL(void,
-control_write_reply, (control_connection_t *conn, int code, int c,
-                      const char *s))
+control_write_reply,
+          (control_connection_t * conn, int code, int c, const char *s))
 {
   connection_printf_to_buf(conn, "%03d%c%s\r\n", code, c, s);
 }
@@ -218,8 +218,8 @@ control_write_endreply(control_connection_t *conn, int code, const char *s)
 
 /** Write a formatted EndReplyLine */
 void
-control_printf_endreply(control_connection_t *conn, int code,
-                        const char *fmt, ...)
+control_printf_endreply(control_connection_t *conn, int code, const char *fmt,
+                        ...)
 {
   va_list ap;
 
@@ -318,11 +318,11 @@ control_write_reply_lines(control_connection_t *conn, smartlist_t *lines)
 {
   bool lastone = false;
 
-  SMARTLIST_FOREACH_BEGIN(lines, control_reply_line_t *, line) {
+  SMARTLIST_FOREACH_BEGIN (lines, control_reply_line_t *, line) {
     if (line_sl_idx >= line_sl_len - 1)
       lastone = true;
     control_write_reply_line(conn, line, lastone);
-  } SMARTLIST_FOREACH_END(line);
+  } SMARTLIST_FOREACH_END (line);
 }
 
 /** Add a single key-value pair as a new reply line to a control reply
@@ -374,7 +374,7 @@ control_reply_append_kv(smartlist_t *reply, const char *key, const char *val)
 void
 control_reply_add_str(smartlist_t *reply, int code, const char *s)
 {
-  control_reply_add_one_kv(reply, code, KV_OMIT_KEYS|KV_RAW, "", s);
+  control_reply_add_one_kv(reply, code, KV_OMIT_KEYS | KV_RAW, "", s);
 }
 
 /** Format a new reply line
@@ -408,7 +408,7 @@ control_reply_add_done(smartlist_t *reply)
 void
 control_reply_line_free_(control_reply_line_t *line)
 {
-  if (!line)
+  if (! line)
     return;
   config_free_lines(line->kvline);
   tor_free_(line);

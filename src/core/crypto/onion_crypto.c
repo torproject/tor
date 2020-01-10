@@ -79,25 +79,25 @@ void
 onion_handshake_state_release(onion_handshake_state_t *state)
 {
   switch (state->tag) {
-  case ONION_HANDSHAKE_TYPE_TAP:
-    crypto_dh_free(state->u.tap);
-    state->u.tap = NULL;
-    break;
-  case ONION_HANDSHAKE_TYPE_FAST:
-    fast_handshake_state_free(state->u.fast);
-    state->u.fast = NULL;
-    break;
-  case ONION_HANDSHAKE_TYPE_NTOR:
-    ntor_handshake_state_free(state->u.ntor);
-    state->u.ntor = NULL;
-    break;
-  default:
-    /* LCOV_EXCL_START
-     * This state should not even exist. */
-    log_warn(LD_BUG, "called with unknown handshake state type %d",
-             (int)state->tag);
-    tor_fragile_assert();
-    /* LCOV_EXCL_STOP */
+    case ONION_HANDSHAKE_TYPE_TAP:
+      crypto_dh_free(state->u.tap);
+      state->u.tap = NULL;
+      break;
+    case ONION_HANDSHAKE_TYPE_FAST:
+      fast_handshake_state_free(state->u.fast);
+      state->u.fast = NULL;
+      break;
+    case ONION_HANDSHAKE_TYPE_NTOR:
+      ntor_handshake_state_free(state->u.ntor);
+      state->u.ntor = NULL;
+      break;
+    default:
+      /* LCOV_EXCL_START
+       * This state should not even exist. */
+      log_warn(LD_BUG, "called with unknown handshake state type %d",
+               (int)state->tag);
+      tor_fragile_assert();
+      /* LCOV_EXCL_STOP */
   }
 }
 
@@ -107,53 +107,49 @@ onion_handshake_state_release(onion_handshake_state_t *state)
  * Return -1 on failure, and the length of the onionskin on acceptance.
  */
 int
-onion_skin_create(int type,
-                  const extend_info_t *node,
-                  onion_handshake_state_t *state_out,
-                  uint8_t *onion_skin_out)
+onion_skin_create(int type, const extend_info_t *node,
+                  onion_handshake_state_t *state_out, uint8_t *onion_skin_out)
 {
   int r = -1;
 
   switch (type) {
-  case ONION_HANDSHAKE_TYPE_TAP:
-    if (!node->onion_key)
-      return -1;
+    case ONION_HANDSHAKE_TYPE_TAP:
+      if (! node->onion_key)
+        return -1;
 
-    if (onion_skin_TAP_create(node->onion_key,
-                              &state_out->u.tap,
-                              (char*)onion_skin_out) < 0)
-      return -1;
+      if (onion_skin_TAP_create(node->onion_key, &state_out->u.tap,
+                                (char *)onion_skin_out) < 0)
+        return -1;
 
-    r = TAP_ONIONSKIN_CHALLENGE_LEN;
-    break;
-  case ONION_HANDSHAKE_TYPE_FAST:
-    if (fast_onionskin_create(&state_out->u.fast, onion_skin_out) < 0)
-      return -1;
+      r = TAP_ONIONSKIN_CHALLENGE_LEN;
+      break;
+    case ONION_HANDSHAKE_TYPE_FAST:
+      if (fast_onionskin_create(&state_out->u.fast, onion_skin_out) < 0)
+        return -1;
 
-    r = CREATE_FAST_LEN;
-    break;
-  case ONION_HANDSHAKE_TYPE_NTOR:
-    if (!extend_info_supports_ntor(node))
-      return -1;
-    if (onion_skin_ntor_create((const uint8_t*)node->identity_digest,
-                               &node->curve25519_onion_key,
-                               &state_out->u.ntor,
-                               onion_skin_out) < 0)
-      return -1;
+      r = CREATE_FAST_LEN;
+      break;
+    case ONION_HANDSHAKE_TYPE_NTOR:
+      if (! extend_info_supports_ntor(node))
+        return -1;
+      if (onion_skin_ntor_create((const uint8_t *)node->identity_digest,
+                                 &node->curve25519_onion_key,
+                                 &state_out->u.ntor, onion_skin_out) < 0)
+        return -1;
 
-    r = NTOR_ONIONSKIN_LEN;
-    break;
-  default:
-    /* LCOV_EXCL_START
-     * We should never try to create an impossible handshake type. */
-    log_warn(LD_BUG, "called with unknown handshake state type %d", type);
-    tor_fragile_assert();
-    r = -1;
-    /* LCOV_EXCL_STOP */
+      r = NTOR_ONIONSKIN_LEN;
+      break;
+    default:
+      /* LCOV_EXCL_START
+       * We should never try to create an impossible handshake type. */
+      log_warn(LD_BUG, "called with unknown handshake state type %d", type);
+      tor_fragile_assert();
+      r = -1;
+      /* LCOV_EXCL_STOP */
   }
 
   if (r > 0)
-    state_out->tag = (uint16_t) type;
+    state_out->tag = (uint16_t)type;
 
   return r;
 }
@@ -171,65 +167,62 @@ onion_skin_create(int type,
  * and return the length of the reply. On failure, return -1.
  */
 int
-onion_skin_server_handshake(int type,
-                      const uint8_t *onion_skin, size_t onionskin_len,
-                      const server_onion_keys_t *keys,
-                      uint8_t *reply_out,
-                      uint8_t *keys_out, size_t keys_out_len,
-                      uint8_t *rend_nonce_out)
+onion_skin_server_handshake(int type, const uint8_t *onion_skin,
+                            size_t onionskin_len,
+                            const server_onion_keys_t *keys,
+                            uint8_t *reply_out, uint8_t *keys_out,
+                            size_t keys_out_len, uint8_t *rend_nonce_out)
 {
   int r = -1;
 
   switch (type) {
-  case ONION_HANDSHAKE_TYPE_TAP:
-    if (onionskin_len != TAP_ONIONSKIN_CHALLENGE_LEN)
-      return -1;
-    if (onion_skin_TAP_server_handshake((const char*)onion_skin,
-                                        keys->onion_key, keys->last_onion_key,
-                                        (char*)reply_out,
-                                        (char*)keys_out, keys_out_len)<0)
-      return -1;
-    r = TAP_ONIONSKIN_REPLY_LEN;
-    memcpy(rend_nonce_out, reply_out+DH1024_KEY_LEN, DIGEST_LEN);
-    break;
-  case ONION_HANDSHAKE_TYPE_FAST:
-    if (onionskin_len != CREATE_FAST_LEN)
-      return -1;
-    if (fast_server_handshake(onion_skin, reply_out, keys_out, keys_out_len)<0)
-      return -1;
-    r = CREATED_FAST_LEN;
-    memcpy(rend_nonce_out, reply_out+DIGEST_LEN, DIGEST_LEN);
-    break;
-  case ONION_HANDSHAKE_TYPE_NTOR:
-    if (onionskin_len < NTOR_ONIONSKIN_LEN)
-      return -1;
-    {
-      size_t keys_tmp_len = keys_out_len + DIGEST_LEN;
-      tor_assert(keys_tmp_len <= MAX_KEYS_TMP_LEN);
-      uint8_t keys_tmp[MAX_KEYS_TMP_LEN];
-
-      if (onion_skin_ntor_server_handshake(
-                                   onion_skin, keys->curve25519_key_map,
-                                   keys->junk_keypair,
-                                   keys->my_identity,
-                                   reply_out, keys_tmp, keys_tmp_len)<0) {
-        /* no need to memwipe here, since the output will never be used */
+    case ONION_HANDSHAKE_TYPE_TAP:
+      if (onionskin_len != TAP_ONIONSKIN_CHALLENGE_LEN)
         return -1;
-      }
+      if (onion_skin_TAP_server_handshake(
+              (const char *)onion_skin, keys->onion_key, keys->last_onion_key,
+              (char *)reply_out, (char *)keys_out, keys_out_len) < 0)
+        return -1;
+      r = TAP_ONIONSKIN_REPLY_LEN;
+      memcpy(rend_nonce_out, reply_out + DH1024_KEY_LEN, DIGEST_LEN);
+      break;
+    case ONION_HANDSHAKE_TYPE_FAST:
+      if (onionskin_len != CREATE_FAST_LEN)
+        return -1;
+      if (fast_server_handshake(onion_skin, reply_out, keys_out,
+                                keys_out_len) < 0)
+        return -1;
+      r = CREATED_FAST_LEN;
+      memcpy(rend_nonce_out, reply_out + DIGEST_LEN, DIGEST_LEN);
+      break;
+    case ONION_HANDSHAKE_TYPE_NTOR:
+      if (onionskin_len < NTOR_ONIONSKIN_LEN)
+        return -1;
+      {
+        size_t keys_tmp_len = keys_out_len + DIGEST_LEN;
+        tor_assert(keys_tmp_len <= MAX_KEYS_TMP_LEN);
+        uint8_t keys_tmp[MAX_KEYS_TMP_LEN];
 
-      memcpy(keys_out, keys_tmp, keys_out_len);
-      memcpy(rend_nonce_out, keys_tmp+keys_out_len, DIGEST_LEN);
-      memwipe(keys_tmp, 0, sizeof(keys_tmp));
-      r = NTOR_REPLY_LEN;
-    }
-    break;
-  default:
-    /* LCOV_EXCL_START
-     * We should have rejected this far before this point */
-    log_warn(LD_BUG, "called with unknown handshake state type %d", type);
-    tor_fragile_assert();
-    return -1;
-    /* LCOV_EXCL_STOP */
+        if (onion_skin_ntor_server_handshake(
+                onion_skin, keys->curve25519_key_map, keys->junk_keypair,
+                keys->my_identity, reply_out, keys_tmp, keys_tmp_len) < 0) {
+          /* no need to memwipe here, since the output will never be used */
+          return -1;
+        }
+
+        memcpy(keys_out, keys_tmp, keys_out_len);
+        memcpy(rend_nonce_out, keys_tmp + keys_out_len, DIGEST_LEN);
+        memwipe(keys_tmp, 0, sizeof(keys_tmp));
+        r = NTOR_REPLY_LEN;
+      }
+      break;
+    default:
+      /* LCOV_EXCL_START
+       * We should have rejected this far before this point */
+      log_warn(LD_BUG, "called with unknown handshake state type %d", type);
+      tor_fragile_assert();
+      return -1;
+      /* LCOV_EXCL_STOP */
   }
 
   return r;
@@ -245,67 +238,66 @@ onion_skin_server_handshake(int type,
  * complaining to the user about. */
 int
 onion_skin_client_handshake(int type,
-                      const onion_handshake_state_t *handshake_state,
-                      const uint8_t *reply, size_t reply_len,
-                      uint8_t *keys_out, size_t keys_out_len,
-                      uint8_t *rend_authenticator_out,
-                      const char **msg_out)
+                            const onion_handshake_state_t *handshake_state,
+                            const uint8_t *reply, size_t reply_len,
+                            uint8_t *keys_out, size_t keys_out_len,
+                            uint8_t *rend_authenticator_out,
+                            const char **msg_out)
 {
   if (handshake_state->tag != type)
     return -1;
 
   switch (type) {
-  case ONION_HANDSHAKE_TYPE_TAP:
-    if (reply_len != TAP_ONIONSKIN_REPLY_LEN) {
-      if (msg_out)
-        *msg_out = "TAP reply was not of the correct length.";
-      return -1;
-    }
-    if (onion_skin_TAP_client_handshake(handshake_state->u.tap,
-                                        (const char*)reply,
-                                        (char *)keys_out, keys_out_len,
-                                        msg_out) < 0)
-      return -1;
-
-    memcpy(rend_authenticator_out, reply+DH1024_KEY_LEN, DIGEST_LEN);
-
-    return 0;
-  case ONION_HANDSHAKE_TYPE_FAST:
-    if (reply_len != CREATED_FAST_LEN) {
-      if (msg_out)
-        *msg_out = "TAP reply was not of the correct length.";
-      return -1;
-    }
-    if (fast_client_handshake(handshake_state->u.fast, reply,
-                              keys_out, keys_out_len, msg_out) < 0)
-      return -1;
-
-    memcpy(rend_authenticator_out, reply+DIGEST_LEN, DIGEST_LEN);
-    return 0;
-  case ONION_HANDSHAKE_TYPE_NTOR:
-    if (reply_len < NTOR_REPLY_LEN) {
-      if (msg_out)
-        *msg_out = "ntor reply was not of the correct length.";
-      return -1;
-    }
-    {
-      size_t keys_tmp_len = keys_out_len + DIGEST_LEN;
-      uint8_t *keys_tmp = tor_malloc(keys_tmp_len);
-      if (onion_skin_ntor_client_handshake(handshake_state->u.ntor,
-                                        reply,
-                                        keys_tmp, keys_tmp_len, msg_out) < 0) {
-        tor_free(keys_tmp);
+    case ONION_HANDSHAKE_TYPE_TAP:
+      if (reply_len != TAP_ONIONSKIN_REPLY_LEN) {
+        if (msg_out)
+          *msg_out = "TAP reply was not of the correct length.";
         return -1;
       }
-      memcpy(keys_out, keys_tmp, keys_out_len);
-      memcpy(rend_authenticator_out, keys_tmp + keys_out_len, DIGEST_LEN);
-      memwipe(keys_tmp, 0, keys_tmp_len);
-      tor_free(keys_tmp);
-    }
-    return 0;
-  default:
-    log_warn(LD_BUG, "called with unknown handshake state type %d", type);
-    tor_fragile_assert();
-    return -1;
+      if (onion_skin_TAP_client_handshake(
+              handshake_state->u.tap, (const char *)reply, (char *)keys_out,
+              keys_out_len, msg_out) < 0)
+        return -1;
+
+      memcpy(rend_authenticator_out, reply + DH1024_KEY_LEN, DIGEST_LEN);
+
+      return 0;
+    case ONION_HANDSHAKE_TYPE_FAST:
+      if (reply_len != CREATED_FAST_LEN) {
+        if (msg_out)
+          *msg_out = "TAP reply was not of the correct length.";
+        return -1;
+      }
+      if (fast_client_handshake(handshake_state->u.fast, reply, keys_out,
+                                keys_out_len, msg_out) < 0)
+        return -1;
+
+      memcpy(rend_authenticator_out, reply + DIGEST_LEN, DIGEST_LEN);
+      return 0;
+    case ONION_HANDSHAKE_TYPE_NTOR:
+      if (reply_len < NTOR_REPLY_LEN) {
+        if (msg_out)
+          *msg_out = "ntor reply was not of the correct length.";
+        return -1;
+      }
+      {
+        size_t keys_tmp_len = keys_out_len + DIGEST_LEN;
+        uint8_t *keys_tmp = tor_malloc(keys_tmp_len);
+        if (onion_skin_ntor_client_handshake(handshake_state->u.ntor, reply,
+                                             keys_tmp, keys_tmp_len,
+                                             msg_out) < 0) {
+          tor_free(keys_tmp);
+          return -1;
+        }
+        memcpy(keys_out, keys_tmp, keys_out_len);
+        memcpy(rend_authenticator_out, keys_tmp + keys_out_len, DIGEST_LEN);
+        memwipe(keys_tmp, 0, keys_tmp_len);
+        tor_free(keys_tmp);
+      }
+      return 0;
+    default:
+      log_warn(LD_BUG, "called with unknown handshake state type %d", type);
+      tor_fragile_assert();
+      return -1;
   }
 }

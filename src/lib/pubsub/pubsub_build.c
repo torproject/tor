@@ -25,7 +25,7 @@
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"
 
- #include <string.h>
+#include <string.h>
 
 /** Construct and return a new empty pubsub_items_t. */
 static pubsub_items_t *
@@ -44,8 +44,8 @@ pubsub_items_free_(pubsub_items_t *cfg)
   if (! cfg)
     return;
   SMARTLIST_FOREACH(cfg->items, pubsub_cfg_t *, item, tor_free(item));
-  SMARTLIST_FOREACH(cfg->type_items,
-                    pubsub_type_cfg_t *, item, tor_free(item));
+  SMARTLIST_FOREACH(cfg->type_items, pubsub_type_cfg_t *, item,
+                    tor_free(item));
   smartlist_free(cfg->items);
   smartlist_free(cfg->type_items);
   tor_free(cfg);
@@ -86,8 +86,7 @@ pubsub_builder_free_(pubsub_builder_t *pb)
  * <b>builder</b>.
  **/
 pubsub_connector_t *
-pubsub_connector_for_subsystem(pubsub_builder_t *builder,
-                               subsys_id_t subsys)
+pubsub_connector_for_subsystem(pubsub_builder_t *builder, subsys_id_t subsys)
 {
   tor_assert(builder);
   ++builder->n_connectors;
@@ -106,7 +105,7 @@ pubsub_connector_for_subsystem(pubsub_builder_t *builder,
 void
 pubsub_connector_free_(pubsub_connector_t *con)
 {
-  if (!con)
+  if (! con)
     return;
 
   if (con->builder) {
@@ -121,14 +120,9 @@ pubsub_connector_free_(pubsub_connector_t *con)
  * <b>msg</b> with auxiliary data of <b>type</b> on <b>channel</b>.
  **/
 int
-pubsub_add_pub_(pubsub_connector_t *con,
-                pub_binding_t *out,
-                channel_id_t channel,
-                message_id_t msg,
-                msg_type_id_t type,
-                unsigned flags,
-                const char *file,
-                unsigned line)
+pubsub_add_pub_(pubsub_connector_t *con, pub_binding_t *out,
+                channel_id_t channel, message_id_t msg, msg_type_id_t type,
+                unsigned flags, const char *file, unsigned line)
 {
   pubsub_cfg_t *cfg = tor_malloc_zero(sizeof(*cfg));
 
@@ -157,7 +151,7 @@ pubsub_add_pub_(pubsub_connector_t *con,
     goto err;
 
   return 0;
- err:
+err:
   ++con->builder->n_errors;
   return -1;
 }
@@ -168,14 +162,9 @@ pubsub_add_pub_(pubsub_connector_t *con,
  * passing them to the callback in <b>recv_fn</b>.
  **/
 int
-pubsub_add_sub_(pubsub_connector_t *con,
-                recv_fn_t recv_fn,
-                channel_id_t channel,
-                message_id_t msg,
-                msg_type_id_t type,
-                unsigned flags,
-                const char *file,
-                unsigned line)
+pubsub_add_sub_(pubsub_connector_t *con, recv_fn_t recv_fn,
+                channel_id_t channel, message_id_t msg, msg_type_id_t type,
+                unsigned flags, const char *file, unsigned line)
 {
   pubsub_cfg_t *cfg = tor_malloc_zero(sizeof(*cfg));
 
@@ -202,7 +191,7 @@ pubsub_add_sub_(pubsub_connector_t *con,
   }
 
   return 0;
- err:
+err:
   ++con->builder->n_errors;
   return -1;
 }
@@ -213,10 +202,8 @@ pubsub_add_sub_(pubsub_connector_t *con,
  * no-ops.
  **/
 int
-pubsub_connector_register_type_(pubsub_connector_t *con,
-                                msg_type_id_t type,
-                                dispatch_typefns_t *fns,
-                                const char *file,
+pubsub_connector_register_type_(pubsub_connector_t *con, msg_type_id_t type,
+                                dispatch_typefns_t *fns, const char *file,
                                 unsigned line)
 {
   pubsub_type_cfg_t *cfg = tor_malloc_zero(sizeof(*cfg));
@@ -232,7 +219,7 @@ pubsub_connector_register_type_(pubsub_connector_t *con,
     goto err;
 
   return 0;
- err:
+err:
   ++con->builder->n_errors;
   return -1;
 }
@@ -242,16 +229,15 @@ pubsub_connector_register_type_(pubsub_connector_t *con,
  * for <b>d</b>.
  */
 static void
-pubsub_items_install_bindings(pubsub_items_t *items,
-                              dispatch_t *d)
+pubsub_items_install_bindings(pubsub_items_t *items, dispatch_t *d)
 {
-  SMARTLIST_FOREACH_BEGIN(items->items, pubsub_cfg_t *, cfg) {
+  SMARTLIST_FOREACH_BEGIN (items->items, pubsub_cfg_t *, cfg) {
     if (cfg->pub_binding) {
       // XXXX we could skip this for STUB publishers, and for any publishers
       // XXXX where all subscribers are STUB.
       cfg->pub_binding->dispatch_ptr = d;
     }
-  } SMARTLIST_FOREACH_END(cfg);
+  } SMARTLIST_FOREACH_END (cfg);
 }
 
 /**
@@ -262,11 +248,11 @@ pubsub_items_install_bindings(pubsub_items_t *items,
 void
 pubsub_items_clear_bindings(pubsub_items_t *items)
 {
-  SMARTLIST_FOREACH_BEGIN(items->items, pubsub_cfg_t *, cfg) {
+  SMARTLIST_FOREACH_BEGIN (items->items, pubsub_cfg_t *, cfg) {
     if (cfg->pub_binding) {
       cfg->pub_binding->dispatch_ptr = NULL;
     }
-  } SMARTLIST_FOREACH_END(cfg);
+  } SMARTLIST_FOREACH_END (cfg);
 }
 
 /**
@@ -275,8 +261,7 @@ pubsub_items_clear_bindings(pubsub_items_t *items)
  * Consumes and frees its input.
  **/
 dispatch_t *
-pubsub_builder_finalize(pubsub_builder_t *builder,
-                        pubsub_items_t **items_out)
+pubsub_builder_finalize(pubsub_builder_t *builder, pubsub_items_t **items_out)
 {
   dispatch_t *dispatcher = NULL;
   tor_assert_nonfatal(builder->n_connectors == 0);
@@ -286,13 +271,13 @@ pubsub_builder_finalize(pubsub_builder_t *builder,
 
   if (builder->n_errors) {
     log_warn(LD_GENERAL, "At least one error occurred previously when "
-             "configuring the dispatcher.");
+                         "configuring the dispatcher.");
     goto err;
   }
 
   dispatcher = dispatch_new(builder->cfg);
 
-  if (!dispatcher)
+  if (! dispatcher)
     goto err;
 
   pubsub_items_install_bindings(builder->items, dispatcher);
@@ -301,7 +286,7 @@ pubsub_builder_finalize(pubsub_builder_t *builder,
     builder->items = NULL; /* Prevent free */
   }
 
- err:
+err:
   pubsub_builder_free(builder);
   return dispatcher;
 }

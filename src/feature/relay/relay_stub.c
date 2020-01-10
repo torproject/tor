@@ -14,7 +14,7 @@
 #include "lib/subsys/subsys.h"
 
 const struct subsys_fns_t sys_relay = {
-  .name = "relay",
-  .supported = false,
-  .level = RELAY_SUBSYS_LEVEL,
+    .name = "relay",
+    .supported = false,
+    .level = RELAY_SUBSYS_LEVEL,
 };

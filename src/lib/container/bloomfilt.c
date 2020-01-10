@@ -35,8 +35,7 @@ struct bloomfilt_t {
 
 /** Add the element <b>item</b> to <b>set</b>. */
 void
-bloomfilt_add(bloomfilt_t *set,
-              const void *item)
+bloomfilt_add(bloomfilt_t *set, const void *item)
 {
   int i;
   for (i = 0; i < BLOOMFILT_N_HASHES; ++i) {
@@ -51,8 +50,7 @@ bloomfilt_add(bloomfilt_t *set,
 /** If <b>item</b> is in <b>set</b>, return nonzero.  Otherwise,
  * <em>probably</em> return zero. */
 int
-bloomfilt_probably_contains(const bloomfilt_t *set,
-                            const void *item)
+bloomfilt_probably_contains(const bloomfilt_t *set, const void *item)
 {
   int i, matches = 0;
   for (i = 0; i < BLOOMFILT_N_HASHES; ++i) {
@@ -61,8 +59,8 @@ bloomfilt_probably_contains(const bloomfilt_t *set,
     uint32_t low_bits = (uint32_t)(h);
     // Note that !! is necessary here, since bitarray_is_set does not
     // necessarily return 1 on true.
-    matches += !! bitarray_is_set(set->ba, BIT(set, high_bits));
-    matches += !! bitarray_is_set(set->ba, BIT(set, low_bits));
+    matches += ! ! bitarray_is_set(set->ba, BIT(set, high_bits));
+    matches += ! ! bitarray_is_set(set->ba, BIT(set, low_bits));
   }
   return matches == N_BITS_PER_ITEM;
 }
@@ -75,8 +73,7 @@ bloomfilt_probably_contains(const bloomfilt_t *set,
  * key the hash.  There must be BLOOMFILT_KEY_LEN bytes in the supplied key.
  **/
 bloomfilt_t *
-bloomfilt_new(int max_elements,
-              bloomfilt_hash_fn hashfn,
+bloomfilt_new(int max_elements, bloomfilt_hash_fn hashfn,
               const uint8_t *random_key)
 {
   /* The probability of false positives is about P=(1 - exp(-kn/m))^k, where k
@@ -89,7 +86,7 @@ bloomfilt_new(int max_elements,
    * positive rate by going for k==13, and m==18.5n, but we also want to
    * conserve CPU, and k==13 is pretty big.
    */
-  int n_bits = 1u << (tor_log2(max_elements)+5);
+  int n_bits = 1u << (tor_log2(max_elements) + 5);
   bloomfilt_t *r = tor_malloc(sizeof(bloomfilt_t));
   r->mask = n_bits - 1;
   r->ba = bitarray_init_zero(n_bits);
@@ -106,7 +103,7 @@ bloomfilt_new(int max_elements,
 void
 bloomfilt_free_(bloomfilt_t *set)
 {
-  if (!set)
+  if (! set)
     return;
   bitarray_free(set->ba);
   tor_free(set);

@@ -28,33 +28,33 @@ long find_nth_long(long *array, int n_elements, int nth);
 static inline int
 median_int(int *array, int n_elements)
 {
-  return find_nth_int(array, n_elements, (n_elements-1)/2);
+  return find_nth_int(array, n_elements, (n_elements - 1) / 2);
 }
 static inline time_t
 median_time(time_t *array, int n_elements)
 {
-  return find_nth_time(array, n_elements, (n_elements-1)/2);
+  return find_nth_time(array, n_elements, (n_elements - 1) / 2);
 }
 static inline double
 median_double(double *array, int n_elements)
 {
-  return find_nth_double(array, n_elements, (n_elements-1)/2);
+  return find_nth_double(array, n_elements, (n_elements - 1) / 2);
 }
 static inline uint32_t
 median_uint32(uint32_t *array, int n_elements)
 {
-  return find_nth_uint32(array, n_elements, (n_elements-1)/2);
+  return find_nth_uint32(array, n_elements, (n_elements - 1) / 2);
 }
 static inline int32_t
 median_int32(int32_t *array, int n_elements)
 {
-  return find_nth_int32(array, n_elements, (n_elements-1)/2);
+  return find_nth_int32(array, n_elements, (n_elements - 1) / 2);
 }
 
 static inline uint32_t
 third_quartile_uint32(uint32_t *array, int n_elements)
 {
-  return find_nth_uint32(array, n_elements, (n_elements*3)/4);
+  return find_nth_uint32(array, n_elements, (n_elements * 3) / 4);
 }
 
 #endif /* !defined(TOR_ORDER_H) */

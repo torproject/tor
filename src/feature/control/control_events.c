@@ -56,59 +56,54 @@ static int disable_log_messages = 0;
 
 /** Macro: true if any control connection is interested in events of type
  * <b>e</b>. */
-#define EVENT_IS_INTERESTING(e) \
-  (!! (global_event_mask & EVENT_MASK_(e)))
+#define EVENT_IS_INTERESTING(e) (! ! (global_event_mask & EVENT_MASK_(e)))
 
 /** Macro: true if any event from the bitfield 'e' is interesting. */
-#define ANY_EVENT_IS_INTERESTING(e) \
-  (!! (global_event_mask & (e)))
+#define ANY_EVENT_IS_INTERESTING(e) (! ! (global_event_mask & (e)))
 
-static void send_control_event_impl(uint16_t event,
-                                    const char *format, va_list ap)
-  CHECK_PRINTF(2,0);
+static void send_control_event_impl(uint16_t event, const char *format,
+                                    va_list ap) CHECK_PRINTF(2, 0);
 static int control_event_status(int type, int severity, const char *format,
-                                va_list args)
-  CHECK_PRINTF(3,0);
+                                va_list args) CHECK_PRINTF(3, 0);
 
-static void send_control_event(uint16_t event,
-                               const char *format, ...)
-  CHECK_PRINTF(2,3);
+static void send_control_event(uint16_t event, const char *format, ...)
+    CHECK_PRINTF(2, 3);
 
 /** Table mapping event values to their names.  Used to implement SETEVENTS
  * and GETINFO events/names, and to keep they in sync. */
 const struct control_event_t control_event_table[] = {
-  { EVENT_CIRCUIT_STATUS, "CIRC" },
-  { EVENT_CIRCUIT_STATUS_MINOR, "CIRC_MINOR" },
-  { EVENT_STREAM_STATUS, "STREAM" },
-  { EVENT_OR_CONN_STATUS, "ORCONN" },
-  { EVENT_BANDWIDTH_USED, "BW" },
-  { EVENT_DEBUG_MSG, "DEBUG" },
-  { EVENT_INFO_MSG, "INFO" },
-  { EVENT_NOTICE_MSG, "NOTICE" },
-  { EVENT_WARN_MSG, "WARN" },
-  { EVENT_ERR_MSG, "ERR" },
-  { EVENT_NEW_DESC, "NEWDESC" },
-  { EVENT_ADDRMAP, "ADDRMAP" },
-  { EVENT_DESCCHANGED, "DESCCHANGED" },
-  { EVENT_NS, "NS" },
-  { EVENT_STATUS_GENERAL, "STATUS_GENERAL" },
-  { EVENT_STATUS_CLIENT, "STATUS_CLIENT" },
-  { EVENT_STATUS_SERVER, "STATUS_SERVER" },
-  { EVENT_GUARD, "GUARD" },
-  { EVENT_STREAM_BANDWIDTH_USED, "STREAM_BW" },
-  { EVENT_CLIENTS_SEEN, "CLIENTS_SEEN" },
-  { EVENT_NEWCONSENSUS, "NEWCONSENSUS" },
-  { EVENT_BUILDTIMEOUT_SET, "BUILDTIMEOUT_SET" },
-  { EVENT_GOT_SIGNAL, "SIGNAL" },
-  { EVENT_CONF_CHANGED, "CONF_CHANGED"},
-  { EVENT_CONN_BW, "CONN_BW" },
-  { EVENT_CELL_STATS, "CELL_STATS" },
-  { EVENT_CIRC_BANDWIDTH_USED, "CIRC_BW" },
-  { EVENT_TRANSPORT_LAUNCHED, "TRANSPORT_LAUNCHED" },
-  { EVENT_HS_DESC, "HS_DESC" },
-  { EVENT_HS_DESC_CONTENT, "HS_DESC_CONTENT" },
-  { EVENT_NETWORK_LIVENESS, "NETWORK_LIVENESS" },
-  { 0, NULL },
+    {EVENT_CIRCUIT_STATUS, "CIRC"},
+    {EVENT_CIRCUIT_STATUS_MINOR, "CIRC_MINOR"},
+    {EVENT_STREAM_STATUS, "STREAM"},
+    {EVENT_OR_CONN_STATUS, "ORCONN"},
+    {EVENT_BANDWIDTH_USED, "BW"},
+    {EVENT_DEBUG_MSG, "DEBUG"},
+    {EVENT_INFO_MSG, "INFO"},
+    {EVENT_NOTICE_MSG, "NOTICE"},
+    {EVENT_WARN_MSG, "WARN"},
+    {EVENT_ERR_MSG, "ERR"},
+    {EVENT_NEW_DESC, "NEWDESC"},
+    {EVENT_ADDRMAP, "ADDRMAP"},
+    {EVENT_DESCCHANGED, "DESCCHANGED"},
+    {EVENT_NS, "NS"},
+    {EVENT_STATUS_GENERAL, "STATUS_GENERAL"},
+    {EVENT_STATUS_CLIENT, "STATUS_CLIENT"},
+    {EVENT_STATUS_SERVER, "STATUS_SERVER"},
+    {EVENT_GUARD, "GUARD"},
+    {EVENT_STREAM_BANDWIDTH_USED, "STREAM_BW"},
+    {EVENT_CLIENTS_SEEN, "CLIENTS_SEEN"},
+    {EVENT_NEWCONSENSUS, "NEWCONSENSUS"},
+    {EVENT_BUILDTIMEOUT_SET, "BUILDTIMEOUT_SET"},
+    {EVENT_GOT_SIGNAL, "SIGNAL"},
+    {EVENT_CONF_CHANGED, "CONF_CHANGED"},
+    {EVENT_CONN_BW, "CONN_BW"},
+    {EVENT_CELL_STATS, "CELL_STATS"},
+    {EVENT_CIRC_BANDWIDTH_USED, "CIRC_BW"},
+    {EVENT_TRANSPORT_LAUNCHED, "TRANSPORT_LAUNCHED"},
+    {EVENT_HS_DESC, "HS_DESC"},
+    {EVENT_HS_DESC_CONTENT, "HS_DESC_CONTENT"},
+    {EVENT_NETWORK_LIVENESS, "NETWORK_LIVENESS"},
+    {0, NULL},
 };
 
 /** Given a log severity, return the corresponding control event code. */
@@ -116,12 +111,18 @@ static inline int
 log_severity_to_event(int severity)
 {
   switch (severity) {
-    case LOG_DEBUG: return EVENT_DEBUG_MSG;
-    case LOG_INFO: return EVENT_INFO_MSG;
-    case LOG_NOTICE: return EVENT_NOTICE_MSG;
-    case LOG_WARN: return EVENT_WARN_MSG;
-    case LOG_ERR: return EVENT_ERR_MSG;
-    default: return -1;
+    case LOG_DEBUG:
+      return EVENT_DEBUG_MSG;
+    case LOG_INFO:
+      return EVENT_INFO_MSG;
+    case LOG_NOTICE:
+      return EVENT_NOTICE_MSG;
+    case LOG_WARN:
+      return EVENT_WARN_MSG;
+    case LOG_ERR:
+      return EVENT_ERR_MSG;
+    default:
+      return -1;
   }
 }
 
@@ -130,15 +131,14 @@ static void
 clear_circ_bw_fields(void)
 {
   origin_circuit_t *ocirc;
-  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
-    if (!CIRCUIT_IS_ORIGIN(circ))
+  SMARTLIST_FOREACH_BEGIN (circuit_get_global_list(), circuit_t *, circ) {
+    if (! CIRCUIT_IS_ORIGIN(circ))
       continue;
     ocirc = TO_ORIGIN_CIRCUIT(circ);
     ocirc->n_written_circ_bw = ocirc->n_read_circ_bw = 0;
     ocirc->n_overhead_written_circ_bw = ocirc->n_overhead_read_circ_bw = 0;
     ocirc->n_delivered_written_circ_bw = ocirc->n_delivered_read_circ_bw = 0;
-  }
-  SMARTLIST_FOREACH_END(circ);
+  } SMARTLIST_FOREACH_END (circ);
 }
 
 /** Set <b>global_event_mask*</b> to the bitwise OR of each live control
@@ -152,10 +152,8 @@ control_update_global_event_mask(void)
   int any_old_per_sec_events = control_any_per_second_event_enabled();
 
   global_event_mask = 0;
-  SMARTLIST_FOREACH(conns, connection_t *, _conn,
-  {
-    if (_conn->type == CONN_TYPE_CONTROL &&
-        STATE_IS_OPEN(_conn->state)) {
+  SMARTLIST_FOREACH(conns, connection_t *, _conn, {
+    if (_conn->type == CONN_TYPE_CONTROL && STATE_IS_OPEN(_conn->state)) {
       control_connection_t *conn = TO_CONTROL_CONN(_conn);
       global_event_mask |= conn->event_mask;
     }
@@ -168,14 +166,12 @@ control_update_global_event_mask(void)
   control_adjust_event_log_severity();
 
   /* Macro: true if ev was false before and is true now. */
-#define NEWLY_ENABLED(ev) \
-  (! (old_mask & (ev)) && (new_mask & (ev)))
+#define NEWLY_ENABLED(ev) (! (old_mask & (ev)) && (new_mask & (ev)))
 
   /* ...then, if we've started logging stream or circ bw, clear the
    * appropriate fields. */
   if (NEWLY_ENABLED(EVENT_STREAM_BANDWIDTH_USED)) {
-    SMARTLIST_FOREACH(conns, connection_t *, conn,
-    {
+    SMARTLIST_FOREACH(conns, connection_t *, conn, {
       if (conn->type == CONN_TYPE_AP) {
         edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
         edge_conn->n_written = edge_conn->n_read = 0;
@@ -202,12 +198,18 @@ static inline int
 event_to_log_severity(int event)
 {
   switch (event) {
-    case EVENT_DEBUG_MSG: return LOG_DEBUG;
-    case EVENT_INFO_MSG: return LOG_INFO;
-    case EVENT_NOTICE_MSG: return LOG_NOTICE;
-    case EVENT_WARN_MSG: return LOG_WARN;
-    case EVENT_ERR_MSG: return LOG_ERR;
-    default: return -1;
+    case EVENT_DEBUG_MSG:
+      return LOG_DEBUG;
+    case EVENT_INFO_MSG:
+      return LOG_INFO;
+    case EVENT_NOTICE_MSG:
+      return LOG_NOTICE;
+    case EVENT_WARN_MSG:
+      return LOG_WARN;
+    case EVENT_ERR_MSG:
+      return LOG_ERR;
+    default:
+      return -1;
   }
 }
 
@@ -218,7 +220,7 @@ void
 control_adjust_event_log_severity(void)
 {
   int i;
-  int min_log_event=EVENT_ERR_MSG, max_log_event=EVENT_DEBUG_MSG;
+  int min_log_event = EVENT_ERR_MSG, max_log_event = EVENT_DEBUG_MSG;
 
   for (i = EVENT_DEBUG_MSG; i <= EVENT_ERR_MSG; ++i) {
     if (EVENT_IS_INTERESTING(i)) {
@@ -243,8 +245,7 @@ control_adjust_event_log_severity(void)
                                  event_to_log_severity(max_log_event),
                                  control_event_logmsg);
   else
-    change_callback_log_severity(LOG_ERR, LOG_ERR,
-                                 control_event_logmsg);
+    change_callback_log_severity(LOG_ERR, LOG_ERR, control_event_logmsg);
 }
 
 /** Return true iff the event with code <b>c</b> is being sent to any current
@@ -262,12 +263,9 @@ int
 control_any_per_second_event_enabled(void)
 {
   return ANY_EVENT_IS_INTERESTING(
-      EVENT_MASK_(EVENT_BANDWIDTH_USED) |
-      EVENT_MASK_(EVENT_CELL_STATS) |
-      EVENT_MASK_(EVENT_CIRC_BANDWIDTH_USED) |
-      EVENT_MASK_(EVENT_CONN_BW) |
-      EVENT_MASK_(EVENT_STREAM_BANDWIDTH_USED)
-  );
+      EVENT_MASK_(EVENT_BANDWIDTH_USED) | EVENT_MASK_(EVENT_CELL_STATS) |
+      EVENT_MASK_(EVENT_CIRC_BANDWIDTH_USED) | EVENT_MASK_(EVENT_CONN_BW) |
+      EVENT_MASK_(EVENT_STREAM_BANDWIDTH_USED));
 }
 
 /* The value of 'get_bytes_read()' the previous time that
@@ -284,8 +282,7 @@ static uint64_t stats_prev_n_written = 0;
  * Call this only from the main thread.
  */
 static void
-control_get_bytes_rw_last_sec(uint64_t *n_read,
-                              uint64_t *n_written)
+control_get_bytes_rw_last_sec(uint64_t *n_read, uint64_t *n_written)
 {
   const uint64_t stats_n_bytes_read = get_bytes_read();
   const uint64_t stats_n_bytes_written = get_bytes_written();
@@ -303,12 +300,12 @@ control_get_bytes_rw_last_sec(uint64_t *n_read,
 void
 control_per_second_events(void)
 {
-  if (!control_any_per_second_event_enabled())
+  if (! control_any_per_second_event_enabled())
     return;
 
   uint64_t bytes_read, bytes_written;
   control_get_bytes_rw_last_sec(&bytes_read, &bytes_written);
-  control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
+  control_event_bandwidth_used((uint32_t)bytes_read, (uint32_t)bytes_written);
 
   control_event_stream_bandwidth_used();
   control_event_conn_bandwidth_used();
@@ -352,7 +349,7 @@ control_initialize_event_queue(void)
     struct event_base *b = tor_libevent_get_base();
     if (b) {
       flush_queued_events_event =
-        mainloop_event_new(flush_queued_events_cb, NULL);
+          mainloop_event_new(flush_queued_events_cb, NULL);
       tor_assert(flush_queued_events_event);
     }
   }
@@ -386,11 +383,11 @@ get_block_event_queue(void)
  * of Tor.
  */
 MOCK_IMPL(STATIC void,
-queue_control_event_string,(uint16_t event, char *msg))
+queue_control_event_string, (uint16_t event, char *msg))
 {
   /* This is redundant with checks done elsewhere, but it's a last-ditch
    * attempt to avoid queueing something we shouldn't have to queue. */
-  if (PREDICT_UNLIKELY( ! EVENT_IS_INTERESTING(event) )) {
+  if (PREDICT_UNLIKELY(! EVENT_IS_INTERESTING(event))) {
     tor_free(msg);
     return;
   }
@@ -474,34 +471,33 @@ queued_events_flush_all(int force)
   tor_mutex_release(queued_control_events_lock);
 
   /* Gather all the controllers that will care... */
-  SMARTLIST_FOREACH_BEGIN(all_conns, connection_t *, conn) {
-    if (conn->type == CONN_TYPE_CONTROL &&
-        !conn->marked_for_close &&
+  SMARTLIST_FOREACH_BEGIN (all_conns, connection_t *, conn) {
+    if (conn->type == CONN_TYPE_CONTROL && ! conn->marked_for_close &&
         conn->state == CONTROL_CONN_STATE_OPEN) {
       control_connection_t *control_conn = TO_CONTROL_CONN(conn);
 
       smartlist_add(controllers, control_conn);
     }
-  } SMARTLIST_FOREACH_END(conn);
+  } SMARTLIST_FOREACH_END (conn);
 
-  SMARTLIST_FOREACH_BEGIN(queued_events, queued_event_t *, ev) {
+  SMARTLIST_FOREACH_BEGIN (queued_events, queued_event_t *, ev) {
     const event_mask_t bit = ((event_mask_t)1) << ev->event;
     const size_t msg_len = strlen(ev->msg);
-    SMARTLIST_FOREACH_BEGIN(controllers, control_connection_t *,
-                            control_conn) {
+    SMARTLIST_FOREACH_BEGIN (controllers, control_connection_t *,
+                             control_conn) {
       if (control_conn->event_mask & bit) {
         connection_buf_add(ev->msg, msg_len, TO_CONN(control_conn));
       }
-    } SMARTLIST_FOREACH_END(control_conn);
+    } SMARTLIST_FOREACH_END (control_conn);
 
     queued_event_free(ev);
-  } SMARTLIST_FOREACH_END(ev);
+  } SMARTLIST_FOREACH_END (ev);
 
   if (force) {
-    SMARTLIST_FOREACH_BEGIN(controllers, control_connection_t *,
-                            control_conn) {
+    SMARTLIST_FOREACH_BEGIN (controllers, control_connection_t *,
+                             control_conn) {
       connection_flush(TO_CONN(control_conn));
-    } SMARTLIST_FOREACH_END(control_conn);
+    } SMARTLIST_FOREACH_END (control_conn);
   }
 
   smartlist_free(queued_events);
@@ -515,8 +511,8 @@ queued_events_flush_all(int force)
 static void
 flush_queued_events_cb(mainloop_event_t *event, void *arg)
 {
-  (void) event;
-  (void) arg;
+  (void)event;
+  (void)arg;
   queued_events_flush_all(0);
 }
 
@@ -526,8 +522,8 @@ flush_queued_events_cb(mainloop_event_t *event, void *arg)
  * The EXTENDED_FORMAT and NONEXTENDED_FORMAT flags behave similarly with
  * respect to the EXTENDED_EVENTS feature. */
 MOCK_IMPL(STATIC void,
-send_control_event_string,(uint16_t event,
-                           const char *msg))
+send_control_event_string,
+          (uint16_t event, const char *msg))
 {
   tor_assert(event >= EVENT_MIN_ && event <= EVENT_MAX_);
   queue_control_event_string(event, tor_strdup(msg));
@@ -538,8 +534,7 @@ send_control_event_string,(uint16_t event,
  * <b>event</b>.  The event's body is created by the printf-style format in
  * <b>format</b>, and other arguments as provided. */
 static void
-send_control_event_impl(uint16_t event,
-                        const char *format, va_list ap)
+send_control_event_impl(uint16_t event, const char *format, va_list ap)
 {
   char *buf = NULL;
   int len;
@@ -557,8 +552,7 @@ send_control_event_impl(uint16_t event,
  * <b>event</b>.  The event's body is created by the printf-style format in
  * <b>format</b>, and other arguments as provided. */
 static void
-send_control_event(uint16_t event,
-                   const char *format, ...)
+send_control_event(uint16_t event, const char *format, ...)
 {
   va_list ap;
   va_start(ap, format);
@@ -575,27 +569,36 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
   const char *status;
   char reasons[64] = "";
 
-  if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
+  if (! EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
     return 0;
   tor_assert(circ);
 
-  switch (tp)
-    {
-    case CIRC_EVENT_LAUNCHED: status = "LAUNCHED"; break;
-    case CIRC_EVENT_BUILT: status = "BUILT"; break;
-    case CIRC_EVENT_EXTENDED: status = "EXTENDED"; break;
-    case CIRC_EVENT_FAILED: status = "FAILED"; break;
-    case CIRC_EVENT_CLOSED: status = "CLOSED"; break;
+  switch (tp) {
+    case CIRC_EVENT_LAUNCHED:
+      status = "LAUNCHED";
+      break;
+    case CIRC_EVENT_BUILT:
+      status = "BUILT";
+      break;
+    case CIRC_EVENT_EXTENDED:
+      status = "EXTENDED";
+      break;
+    case CIRC_EVENT_FAILED:
+      status = "FAILED";
+      break;
+    case CIRC_EVENT_CLOSED:
+      status = "CLOSED";
+      break;
     default:
       log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
       tor_fragile_assert();
       return 0;
-    }
+  }
 
   if (tp == CIRC_EVENT_FAILED || tp == CIRC_EVENT_CLOSED) {
     const char *reason_str = circuit_end_reason_to_control_string(reason_code);
     char unk_reason_buf[16];
-    if (!reason_str) {
+    if (! reason_str) {
       tor_snprintf(unk_reason_buf, 16, "UNKNOWN_%d", reason_code);
       reason_str = unk_reason_buf;
     }
@@ -603,20 +606,16 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
       tor_snprintf(reasons, sizeof(reasons),
                    " REASON=DESTROYED REMOTE_REASON=%s", reason_str);
     } else {
-      tor_snprintf(reasons, sizeof(reasons),
-                   " REASON=%s", reason_str);
+      tor_snprintf(reasons, sizeof(reasons), " REASON=%s", reason_str);
     }
   }
 
   {
     char *circdesc = circuit_describe_status_for_controller(circ);
     const char *sp = strlen(circdesc) ? " " : "";
-    send_control_event(EVENT_CIRCUIT_STATUS,
-                                "650 CIRC %lu %s%s%s%s\r\n",
-                                (unsigned long)circ->global_identifier,
-                                status, sp,
-                                circdesc,
-                                reasons);
+    send_control_event(EVENT_CIRCUIT_STATUS, "650 CIRC %lu %s%s%s%s\r\n",
+                       (unsigned long)circ->global_identifier, status, sp,
+                       circdesc, reasons);
     tor_free(circdesc);
   }
 
@@ -627,26 +626,24 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
  * interested control connections. */
 static int
 control_event_circuit_status_minor(origin_circuit_t *circ,
-                                   circuit_status_minor_event_t e,
-                                   int purpose, const struct timeval *tv)
+                                   circuit_status_minor_event_t e, int purpose,
+                                   const struct timeval *tv)
 {
   const char *event_desc;
   char event_tail[160] = "";
-  if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS_MINOR))
+  if (! EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS_MINOR))
     return 0;
   tor_assert(circ);
 
-  switch (e)
-    {
+  switch (e) {
     case CIRC_MINOR_EVENT_PURPOSE_CHANGED:
       event_desc = "PURPOSE_CHANGED";
 
       {
         /* event_tail can currently be up to 68 chars long */
         const char *hs_state_str =
-          circuit_purpose_to_controller_hs_state_string(purpose);
-        tor_snprintf(event_tail, sizeof(event_tail),
-                     " OLD_PURPOSE=%s%s%s",
+            circuit_purpose_to_controller_hs_state_string(purpose);
+        tor_snprintf(event_tail, sizeof(event_tail), " OLD_PURPOSE=%s%s%s",
                      circuit_purpose_to_controller_string(purpose),
                      (hs_state_str != NULL) ? " OLD_HS_STATE=" : "",
                      (hs_state_str != NULL) ? hs_state_str : "");
@@ -659,17 +656,16 @@ control_event_circuit_status_minor(origin_circuit_t *circ,
       {
         /* event_tail can currently be up to 130 chars long */
         const char *hs_state_str =
-          circuit_purpose_to_controller_hs_state_string(purpose);
+            circuit_purpose_to_controller_hs_state_string(purpose);
         const struct timeval *old_timestamp_began = tv;
-        char tbuf[ISO_TIME_USEC_LEN+1];
+        char tbuf[ISO_TIME_USEC_LEN + 1];
         format_iso_time_nospace_usec(tbuf, old_timestamp_began);
 
         tor_snprintf(event_tail, sizeof(event_tail),
                      " OLD_PURPOSE=%s%s%s OLD_TIME_CREATED=%s",
                      circuit_purpose_to_controller_string(purpose),
                      (hs_state_str != NULL) ? " OLD_HS_STATE=" : "",
-                     (hs_state_str != NULL) ? hs_state_str : "",
-                     tbuf);
+                     (hs_state_str != NULL) ? hs_state_str : "", tbuf);
       }
 
       break;
@@ -677,17 +673,15 @@ control_event_circuit_status_minor(origin_circuit_t *circ,
       log_warn(LD_BUG, "Unrecognized status code %d", (int)e);
       tor_fragile_assert();
       return 0;
-    }
+  }
 
   {
     char *circdesc = circuit_describe_status_for_controller(circ);
     const char *sp = strlen(circdesc) ? " " : "";
     send_control_event(EVENT_CIRCUIT_STATUS_MINOR,
                        "650 CIRC_MINOR %lu %s%s%s%s\r\n",
-                       (unsigned long)circ->global_identifier,
-                       event_desc, sp,
-                       circdesc,
-                       event_tail);
+                       (unsigned long)circ->global_identifier, event_desc, sp,
+                       circdesc, event_tail);
     tor_free(circdesc);
   }
 
@@ -699,13 +693,10 @@ control_event_circuit_status_minor(origin_circuit_t *circ,
  * interested controllers.
  */
 int
-control_event_circuit_purpose_changed(origin_circuit_t *circ,
-                                      int old_purpose)
+control_event_circuit_purpose_changed(origin_circuit_t *circ, int old_purpose)
 {
-  return control_event_circuit_status_minor(circ,
-                                            CIRC_MINOR_EVENT_PURPOSE_CHANGED,
-                                            old_purpose,
-                                            NULL);
+  return control_event_circuit_status_minor(
+      circ, CIRC_MINOR_EVENT_PURPOSE_CHANGED, old_purpose, NULL);
 }
 
 /**
@@ -713,14 +704,11 @@ control_event_circuit_purpose_changed(origin_circuit_t *circ,
  * created-time from <b>old_tv_created</b>: tell any interested controllers.
  */
 int
-control_event_circuit_cannibalized(origin_circuit_t *circ,
-                                   int old_purpose,
+control_event_circuit_cannibalized(origin_circuit_t *circ, int old_purpose,
                                    const struct timeval *old_tv_created)
 {
-  return control_event_circuit_status_minor(circ,
-                                            CIRC_MINOR_EVENT_CANNIBALIZED,
-                                            old_purpose,
-                                            old_tv_created);
+  return control_event_circuit_status_minor(
+      circ, CIRC_MINOR_EVENT_CANNIBALIZED, old_purpose, old_tv_created);
 }
 
 /** Something has happened to the stream associated with AP connection
@@ -738,7 +726,7 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
   const char *purpose = "";
   tor_assert(conn->socks_request);
 
-  if (!EVENT_IS_INTERESTING(EVENT_STREAM_STATUS))
+  if (! EVENT_IS_INTERESTING(EVENT_STREAM_STATUS))
     return 0;
 
   if (tp == STREAM_EVENT_CLOSED &&
@@ -748,27 +736,43 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
   write_stream_target_to_buf(conn, buf, sizeof(buf));
 
   reason_buf[0] = '\0';
-  switch (tp)
-    {
-    case STREAM_EVENT_SENT_CONNECT: status = "SENTCONNECT"; break;
-    case STREAM_EVENT_SENT_RESOLVE: status = "SENTRESOLVE"; break;
-    case STREAM_EVENT_SUCCEEDED: status = "SUCCEEDED"; break;
-    case STREAM_EVENT_FAILED: status = "FAILED"; break;
-    case STREAM_EVENT_CLOSED: status = "CLOSED"; break;
-    case STREAM_EVENT_NEW: status = "NEW"; break;
-    case STREAM_EVENT_NEW_RESOLVE: status = "NEWRESOLVE"; break;
-    case STREAM_EVENT_FAILED_RETRIABLE: status = "DETACHED"; break;
-    case STREAM_EVENT_REMAP: status = "REMAP"; break;
+  switch (tp) {
+    case STREAM_EVENT_SENT_CONNECT:
+      status = "SENTCONNECT";
+      break;
+    case STREAM_EVENT_SENT_RESOLVE:
+      status = "SENTRESOLVE";
+      break;
+    case STREAM_EVENT_SUCCEEDED:
+      status = "SUCCEEDED";
+      break;
+    case STREAM_EVENT_FAILED:
+      status = "FAILED";
+      break;
+    case STREAM_EVENT_CLOSED:
+      status = "CLOSED";
+      break;
+    case STREAM_EVENT_NEW:
+      status = "NEW";
+      break;
+    case STREAM_EVENT_NEW_RESOLVE:
+      status = "NEWRESOLVE";
+      break;
+    case STREAM_EVENT_FAILED_RETRIABLE:
+      status = "DETACHED";
+      break;
+    case STREAM_EVENT_REMAP:
+      status = "REMAP";
+      break;
     default:
       log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
       return 0;
-    }
-  if (reason_code && (tp == STREAM_EVENT_FAILED ||
-                      tp == STREAM_EVENT_CLOSED ||
+  }
+  if (reason_code && (tp == STREAM_EVENT_FAILED || tp == STREAM_EVENT_CLOSED ||
                       tp == STREAM_EVENT_FAILED_RETRIABLE)) {
     const char *reason_str = stream_end_reason_to_control_string(reason_code);
     char *r = NULL;
-    if (!reason_str) {
+    if (! reason_str) {
       tor_asprintf(&r, " UNKNOWN_%d", reason_code);
       reason_str = r;
     }
@@ -776,22 +780,21 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
       tor_snprintf(reason_buf, sizeof(reason_buf),
                    " REASON=END REMOTE_REASON=%s", reason_str);
     else
-      tor_snprintf(reason_buf, sizeof(reason_buf),
-                   " REASON=%s", reason_str);
+      tor_snprintf(reason_buf, sizeof(reason_buf), " REASON=%s", reason_str);
     tor_free(r);
   } else if (reason_code && tp == STREAM_EVENT_REMAP) {
     switch (reason_code) {
-    case REMAP_STREAM_SOURCE_CACHE:
-      strlcpy(reason_buf, " SOURCE=CACHE", sizeof(reason_buf));
-      break;
-    case REMAP_STREAM_SOURCE_EXIT:
-      strlcpy(reason_buf, " SOURCE=EXIT", sizeof(reason_buf));
-      break;
-    default:
-      tor_snprintf(reason_buf, sizeof(reason_buf), " REASON=UNKNOWN_%d",
-                   reason_code);
-      /* XXX do we want SOURCE=UNKNOWN_%d above instead? -RD */
-      break;
+      case REMAP_STREAM_SOURCE_CACHE:
+        strlcpy(reason_buf, " SOURCE=CACHE", sizeof(reason_buf));
+        break;
+      case REMAP_STREAM_SOURCE_EXIT:
+        strlcpy(reason_buf, " SOURCE=EXIT", sizeof(reason_buf));
+        break;
+      default:
+        tor_snprintf(reason_buf, sizeof(reason_buf), " REASON=UNKNOWN_%d",
+                     reason_code);
+        /* XXX do we want SOURCE=UNKNOWN_%d above instead? -RD */
+        break;
     }
   }
 
@@ -802,7 +805,7 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
      * dnsserv.c.
      */
     if (strcmp(ENTRY_TO_CONN(conn)->address, "(Tor_internal)") != 0) {
-      tor_snprintf(addrport_buf,sizeof(addrport_buf), " SOURCE_ADDR=%s:%d",
+      tor_snprintf(addrport_buf, sizeof(addrport_buf), " SOURCE_ADDR=%s:%d",
                    ENTRY_TO_CONN(conn)->address, ENTRY_TO_CONN(conn)->port);
     } else {
       /*
@@ -838,13 +841,11 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
   {
     char *conndesc = entry_connection_describe_status_for_controller(conn);
     const char *sp = strlen(conndesc) ? " " : "";
-    send_control_event(EVENT_STREAM_STATUS,
-                        "650 STREAM %"PRIu64" %s %lu %s%s%s%s%s%s\r\n",
-                     (ENTRY_TO_CONN(conn)->global_identifier),
-                     status,
-                        origin_circ?
-                           (unsigned long)origin_circ->global_identifier : 0ul,
-                        buf, reason_buf, addrport_buf, purpose, sp, conndesc);
+    send_control_event(
+        EVENT_STREAM_STATUS, "650 STREAM %" PRIu64 " %s %lu %s%s%s%s%s%s\r\n",
+        (ENTRY_TO_CONN(conn)->global_identifier), status,
+        origin_circ ? (unsigned long)origin_circ->global_identifier : 0ul, buf,
+        reason_buf, addrport_buf, purpose, sp, conndesc);
     tor_free(conndesc);
   }
 
@@ -867,20 +868,29 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
   char name[128];
   char ncircs_buf[32] = {0}; /* > 8 + log10(2^32)=10 + 2 */
 
-  if (!EVENT_IS_INTERESTING(EVENT_OR_CONN_STATUS))
+  if (! EVENT_IS_INTERESTING(EVENT_OR_CONN_STATUS))
     return 0;
 
-  switch (tp)
-    {
-    case OR_CONN_EVENT_LAUNCHED: status = "LAUNCHED"; break;
-    case OR_CONN_EVENT_CONNECTED: status = "CONNECTED"; break;
-    case OR_CONN_EVENT_FAILED: status = "FAILED"; break;
-    case OR_CONN_EVENT_CLOSED: status = "CLOSED"; break;
-    case OR_CONN_EVENT_NEW: status = "NEW"; break;
+  switch (tp) {
+    case OR_CONN_EVENT_LAUNCHED:
+      status = "LAUNCHED";
+      break;
+    case OR_CONN_EVENT_CONNECTED:
+      status = "CONNECTED";
+      break;
+    case OR_CONN_EVENT_FAILED:
+      status = "FAILED";
+      break;
+    case OR_CONN_EVENT_CLOSED:
+      status = "CLOSED";
+      break;
+    case OR_CONN_EVENT_NEW:
+      status = "NEW";
+      break;
     default:
       log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
       return 0;
-    }
+  }
   if (conn->chan) {
     ncircs = circuit_count_pending_on_channel(TLS_CHAN_TO_BASE(conn->chan));
   } else {
@@ -893,12 +903,10 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
 
   orconn_target_get_name(name, sizeof(name), conn);
   send_control_event(EVENT_OR_CONN_STATUS,
-                              "650 ORCONN %s %s%s%s%s ID=%"PRIu64"\r\n",
-                              name, status,
-                              reason ? " REASON=" : "",
-                              orconn_end_reason_to_control_string(reason),
-                              ncircs_buf,
-                              (conn->base_.global_identifier));
+                     "650 ORCONN %s %s%s%s%s ID=%" PRIu64 "\r\n", name, status,
+                     reason ? " REASON=" : "",
+                     orconn_end_reason_to_control_string(reason), ncircs_buf,
+                     (conn->base_.global_identifier));
 
   return 0;
 }
@@ -910,19 +918,18 @@ int
 control_event_stream_bandwidth(edge_connection_t *edge_conn)
 {
   struct timeval now;
-  char tbuf[ISO_TIME_USEC_LEN+1];
+  char tbuf[ISO_TIME_USEC_LEN + 1];
   if (EVENT_IS_INTERESTING(EVENT_STREAM_BANDWIDTH_USED)) {
-    if (!edge_conn->n_read && !edge_conn->n_written)
+    if (! edge_conn->n_read && ! edge_conn->n_written)
       return 0;
 
     tor_gettimeofday(&now);
     format_iso_time_nospace_usec(tbuf, &now);
     send_control_event(EVENT_STREAM_BANDWIDTH_USED,
-                       "650 STREAM_BW %"PRIu64" %lu %lu %s\r\n",
+                       "650 STREAM_BW %" PRIu64 " %lu %lu %s\r\n",
                        (edge_conn->base_.global_identifier),
                        (unsigned long)edge_conn->n_read,
-                       (unsigned long)edge_conn->n_written,
-                       tbuf);
+                       (unsigned long)edge_conn->n_written, tbuf);
 
     edge_conn->n_written = edge_conn->n_read = 0;
   }
@@ -939,28 +946,25 @@ control_event_stream_bandwidth_used(void)
     smartlist_t *conns = get_connection_array();
     edge_connection_t *edge_conn;
     struct timeval now;
-    char tbuf[ISO_TIME_USEC_LEN+1];
+    char tbuf[ISO_TIME_USEC_LEN + 1];
 
-    SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn)
-    {
-        if (conn->type != CONN_TYPE_AP)
-          continue;
-        edge_conn = TO_EDGE_CONN(conn);
-        if (!edge_conn->n_read && !edge_conn->n_written)
-          continue;
+    SMARTLIST_FOREACH_BEGIN (conns, connection_t *, conn) {
+      if (conn->type != CONN_TYPE_AP)
+        continue;
+      edge_conn = TO_EDGE_CONN(conn);
+      if (! edge_conn->n_read && ! edge_conn->n_written)
+        continue;
 
-        tor_gettimeofday(&now);
-        format_iso_time_nospace_usec(tbuf, &now);
-        send_control_event(EVENT_STREAM_BANDWIDTH_USED,
-                           "650 STREAM_BW %"PRIu64" %lu %lu %s\r\n",
-                           (edge_conn->base_.global_identifier),
-                           (unsigned long)edge_conn->n_read,
-                           (unsigned long)edge_conn->n_written,
-                           tbuf);
+      tor_gettimeofday(&now);
+      format_iso_time_nospace_usec(tbuf, &now);
+      send_control_event(EVENT_STREAM_BANDWIDTH_USED,
+                         "650 STREAM_BW %" PRIu64 " %lu %lu %s\r\n",
+                         (edge_conn->base_.global_identifier),
+                         (unsigned long)edge_conn->n_read,
+                         (unsigned long)edge_conn->n_written, tbuf);
 
-        edge_conn->n_written = edge_conn->n_read = 0;
-    }
-    SMARTLIST_FOREACH_END(conn);
+      edge_conn->n_written = edge_conn->n_read = 0;
+    } SMARTLIST_FOREACH_END (conn);
   }
 
   return 0;
@@ -971,16 +975,15 @@ control_event_stream_bandwidth_used(void)
 int
 control_event_circ_bandwidth_used(void)
 {
-  if (!EVENT_IS_INTERESTING(EVENT_CIRC_BANDWIDTH_USED))
+  if (! EVENT_IS_INTERESTING(EVENT_CIRC_BANDWIDTH_USED))
     return 0;
 
-  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
-    if (!CIRCUIT_IS_ORIGIN(circ))
+  SMARTLIST_FOREACH_BEGIN (circuit_get_global_list(), circuit_t *, circ) {
+    if (! CIRCUIT_IS_ORIGIN(circ))
       continue;
 
     control_event_circ_bandwidth_used_for_circ(TO_ORIGIN_CIRCUIT(circ));
-  }
-  SMARTLIST_FOREACH_END(circ);
+  } SMARTLIST_FOREACH_END (circ);
 
   return 0;
 }
@@ -997,11 +1000,11 @@ int
 control_event_circ_bandwidth_used_for_circ(origin_circuit_t *ocirc)
 {
   struct timeval now;
-  char tbuf[ISO_TIME_USEC_LEN+1];
+  char tbuf[ISO_TIME_USEC_LEN + 1];
 
   tor_assert(ocirc);
 
-  if (!EVENT_IS_INTERESTING(EVENT_CIRC_BANDWIDTH_USED))
+  if (! EVENT_IS_INTERESTING(EVENT_CIRC_BANDWIDTH_USED))
     return 0;
 
   /* n_read_circ_bw and n_written_circ_bw are always updated
@@ -1010,7 +1013,7 @@ control_event_circ_bandwidth_used_for_circ(origin_circuit_t *ocirc)
    *
    * Therefore, checking them is sufficient to determine if there
    * is new data to report. */
-  if (!ocirc->n_read_circ_bw && !ocirc->n_written_circ_bw)
+  if (! ocirc->n_read_circ_bw && ! ocirc->n_written_circ_bw)
     return 0;
 
   tor_gettimeofday(&now);
@@ -1021,8 +1024,7 @@ control_event_circ_bandwidth_used_for_circ(origin_circuit_t *ocirc)
                      "DELIVERED_WRITTEN=%lu OVERHEAD_WRITTEN=%lu\r\n",
                      ocirc->global_identifier,
                      (unsigned long)ocirc->n_read_circ_bw,
-                     (unsigned long)ocirc->n_written_circ_bw,
-                     tbuf,
+                     (unsigned long)ocirc->n_written_circ_bw, tbuf,
                      (unsigned long)ocirc->n_delivered_read_circ_bw,
                      (unsigned long)ocirc->n_overhead_read_circ_bw,
                      (unsigned long)ocirc->n_delivered_written_circ_bw,
@@ -1035,15 +1037,15 @@ control_event_circ_bandwidth_used_for_circ(origin_circuit_t *ocirc)
 }
 
 /** Print out CONN_BW event for a single OR/DIR/EXIT <b>conn</b> and reset
-  * bandwidth counters. */
+ * bandwidth counters. */
 int
 control_event_conn_bandwidth(connection_t *conn)
 {
   const char *conn_type_str;
-  if (!get_options()->TestingEnableConnBwEvent ||
-      !EVENT_IS_INTERESTING(EVENT_CONN_BW))
+  if (! get_options()->TestingEnableConnBwEvent ||
+      ! EVENT_IS_INTERESTING(EVENT_CONN_BW))
     return 0;
-  if (!conn->n_read_conn_bw && !conn->n_written_conn_bw)
+  if (! conn->n_read_conn_bw && ! conn->n_written_conn_bw)
     return 0;
   switch (conn->type) {
     case CONN_TYPE_OR:
@@ -1059,10 +1061,9 @@ control_event_conn_bandwidth(connection_t *conn)
       return 0;
   }
   send_control_event(EVENT_CONN_BW,
-                     "650 CONN_BW ID=%"PRIu64" TYPE=%s "
+                     "650 CONN_BW ID=%" PRIu64 " TYPE=%s "
                      "READ=%lu WRITTEN=%lu\r\n",
-                     (conn->global_identifier),
-                     conn_type_str,
+                     (conn->global_identifier), conn_type_str,
                      (unsigned long)conn->n_read_conn_bw,
                      (unsigned long)conn->n_written_conn_bw);
   conn->n_written_conn_bw = conn->n_read_conn_bw = 0;
@@ -1090,21 +1091,21 @@ void
 sum_up_cell_stats_by_command(circuit_t *circ, cell_stats_t *cell_stats)
 {
   memset(cell_stats, 0, sizeof(cell_stats_t));
-  SMARTLIST_FOREACH_BEGIN(circ->testing_cell_stats,
-                          const testing_cell_stats_entry_t *, ent) {
+  SMARTLIST_FOREACH_BEGIN (circ->testing_cell_stats,
+                           const testing_cell_stats_entry_t *, ent) {
     tor_assert(ent->command <= CELL_COMMAND_MAX_);
-    if (!ent->removed && !ent->exitward) {
+    if (! ent->removed && ! ent->exitward) {
       cell_stats->added_cells_appward[ent->command] += 1;
-    } else if (!ent->removed && ent->exitward) {
+    } else if (! ent->removed && ent->exitward) {
       cell_stats->added_cells_exitward[ent->command] += 1;
-    } else if (!ent->exitward) {
+    } else if (! ent->exitward) {
       cell_stats->removed_cells_appward[ent->command] += 1;
       cell_stats->total_time_appward[ent->command] += ent->waiting_time * 10;
     } else {
       cell_stats->removed_cells_exitward[ent->command] += 1;
       cell_stats->total_time_exitward[ent->command] += ent->waiting_time * 10;
     }
-  } SMARTLIST_FOREACH_END(ent);
+  } SMARTLIST_FOREACH_END (ent);
   circuit_clear_testing_cell_stats(circ);
 }
 
@@ -1126,7 +1127,7 @@ append_cell_stats_by_command(smartlist_t *event_parts, const char *key,
   int i;
   for (i = 0; i <= CELL_COMMAND_MAX_; i++) {
     if (include_if_non_zero[i] > 0) {
-      smartlist_add_asprintf(key_value_strings, "%s:%"PRIu64,
+      smartlist_add_asprintf(key_value_strings, "%s:%" PRIu64,
                              cell_command_to_string(i),
                              (number_to_include[i]));
     }
@@ -1150,13 +1151,13 @@ format_cell_stats(char **event_string, circuit_t *circ,
   if (CIRCUIT_IS_ORIGIN(circ)) {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
     smartlist_add_asprintf(event_parts, "ID=%lu",
-                 (unsigned long)ocirc->global_identifier);
+                           (unsigned long)ocirc->global_identifier);
   } else if (TO_OR_CIRCUIT(circ)->p_chan) {
     or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
     smartlist_add_asprintf(event_parts, "InboundQueue=%lu",
-                 (unsigned long)or_circ->p_circ_id);
-    smartlist_add_asprintf(event_parts, "InboundConn=%"PRIu64,
-                 (or_circ->p_chan->global_identifier));
+                           (unsigned long)or_circ->p_circ_id);
+    smartlist_add_asprintf(event_parts, "InboundConn=%" PRIu64,
+                           (or_circ->p_chan->global_identifier));
     append_cell_stats_by_command(event_parts, "InboundAdded",
                                  cell_stats->added_cells_appward,
                                  cell_stats->added_cells_appward);
@@ -1169,9 +1170,9 @@ format_cell_stats(char **event_string, circuit_t *circ,
   }
   if (circ->n_chan) {
     smartlist_add_asprintf(event_parts, "OutboundQueue=%lu",
-                     (unsigned long)circ->n_circ_id);
-    smartlist_add_asprintf(event_parts, "OutboundConn=%"PRIu64,
-                 (circ->n_chan->global_identifier));
+                           (unsigned long)circ->n_circ_id);
+    smartlist_add_asprintf(event_parts, "OutboundConn=%" PRIu64,
+                           (circ->n_chan->global_identifier));
     append_cell_stats_by_command(event_parts, "OutboundAdded",
                                  cell_stats->added_cells_exitward,
                                  cell_stats->added_cells_exitward);
@@ -1194,20 +1195,19 @@ control_event_circuit_cell_stats(void)
 {
   cell_stats_t *cell_stats;
   char *event_string;
-  if (!get_options()->TestingEnableCellStatsEvent ||
-      !EVENT_IS_INTERESTING(EVENT_CELL_STATS))
+  if (! get_options()->TestingEnableCellStatsEvent ||
+      ! EVENT_IS_INTERESTING(EVENT_CELL_STATS))
     return 0;
   cell_stats = tor_malloc(sizeof(cell_stats_t));
-  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
-    if (!circ->testing_cell_stats)
+  SMARTLIST_FOREACH_BEGIN (circuit_get_global_list(), circuit_t *, circ) {
+    if (! circ->testing_cell_stats)
       continue;
     sum_up_cell_stats_by_command(circ, cell_stats);
     format_cell_stats(&event_string, circ, cell_stats);
-    send_control_event(EVENT_CELL_STATS,
-                       "650 CELL_STATS %s\r\n", event_string);
+    send_control_event(EVENT_CELL_STATS, "650 CELL_STATS %s\r\n",
+                       event_string);
     tor_free(event_string);
-  }
-  SMARTLIST_FOREACH_END(circ);
+  } SMARTLIST_FOREACH_END (circ);
   tor_free(cell_stats);
   return 0;
 }
@@ -1236,10 +1236,8 @@ control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
     ++n_measurements;
 
   if (EVENT_IS_INTERESTING(EVENT_BANDWIDTH_USED)) {
-    send_control_event(EVENT_BANDWIDTH_USED,
-                       "650 BW %lu %lu\r\n",
-                       (unsigned long)n_read,
-                       (unsigned long)n_written);
+    send_control_event(EVENT_BANDWIDTH_USED, "650 BW %lu %lu\r\n",
+                       (unsigned long)n_read, (unsigned long)n_written);
   }
 
   return 0;
@@ -1249,8 +1247,8 @@ char *
 get_bw_samples(void)
 {
   int i;
-  int idx = (next_measurement_idx + N_BW_EVENTS_TO_CACHE - n_measurements)
-    % N_BW_EVENTS_TO_CACHE;
+  int idx = (next_measurement_idx + N_BW_EVENTS_TO_CACHE - n_measurements) %
+            N_BW_EVENTS_TO_CACHE;
   tor_assert(0 <= idx && idx < N_BW_EVENTS_TO_CACHE);
 
   smartlist_t *elements = smartlist_new();
@@ -1259,8 +1257,7 @@ get_bw_samples(void)
     tor_assert(0 <= idx && idx < N_BW_EVENTS_TO_CACHE);
     const struct cached_bw_event_t *bwe = &cached_bw_events[idx];
 
-    smartlist_add_asprintf(elements, "%u,%u",
-                           (unsigned)bwe->n_read,
+    smartlist_add_asprintf(elements, "%u,%u", (unsigned)bwe->n_read,
                            (unsigned)bwe->n_written);
 
     idx = (idx + 1) % N_BW_EVENTS_TO_CACHE;
@@ -1327,15 +1324,27 @@ control_event_logmsg(int severity, log_domain_mask_t domain, const char *msg)
           *cp = ' ';
     }
     switch (severity) {
-      case LOG_DEBUG: s = "DEBUG"; break;
-      case LOG_INFO: s = "INFO"; break;
-      case LOG_NOTICE: s = "NOTICE"; break;
-      case LOG_WARN: s = "WARN"; break;
-      case LOG_ERR: s = "ERR"; break;
-      default: s = "UnknownLogSeverity"; break;
+      case LOG_DEBUG:
+        s = "DEBUG";
+        break;
+      case LOG_INFO:
+        s = "INFO";
+        break;
+      case LOG_NOTICE:
+        s = "NOTICE";
+        break;
+      case LOG_WARN:
+        s = "WARN";
+        break;
+      case LOG_ERR:
+        s = "ERR";
+        break;
+      default:
+        s = "UnknownLogSeverity";
+        break;
     }
     ++disable_log_messages;
-    send_control_event(event,  "650 %s %s\r\n", s, b?b:msg);
+    send_control_event(event, "650 %s %s\r\n", s, b ? b : msg);
     if (severity == LOG_ERR) {
       /* Force a flush, since we may be about to die horribly */
       queued_events_flush_all(1);
@@ -1371,20 +1380,20 @@ control_event_descriptors_changed(smartlist_t *routers)
 {
   char *msg;
 
-  if (!EVENT_IS_INTERESTING(EVENT_NEW_DESC))
+  if (! EVENT_IS_INTERESTING(EVENT_NEW_DESC))
     return 0;
 
   {
     smartlist_t *names = smartlist_new();
     char *ids;
     SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
-        char *b = tor_malloc(MAX_VERBOSE_NICKNAME_LEN+1);
-        router_get_verbose_nickname(b, ri);
-        smartlist_add(names, b);
-      });
+      char *b = tor_malloc(MAX_VERBOSE_NICKNAME_LEN + 1);
+      router_get_verbose_nickname(b, ri);
+      smartlist_add(names, b);
+    });
     ids = smartlist_join_strings(names, " ", 0, NULL);
     tor_asprintf(&msg, "650 NEWDESC %s\r\n", ids);
-    send_control_event_string(EVENT_NEW_DESC,  msg);
+    send_control_event_string(EVENT_NEW_DESC, msg);
     tor_free(ids);
     tor_free(msg);
     SMARTLIST_FOREACH(names, char *, cp, tor_free(cp));
@@ -1402,26 +1411,25 @@ int
 control_event_address_mapped(const char *from, const char *to, time_t expires,
                              const char *error, const int cached)
 {
-  if (!EVENT_IS_INTERESTING(EVENT_ADDRMAP))
+  if (! EVENT_IS_INTERESTING(EVENT_ADDRMAP))
     return 0;
 
   if (expires < 3 || expires == TIME_MAX)
     send_control_event(EVENT_ADDRMAP,
-                                "650 ADDRMAP %s %s NEVER %s%s"
-                                "CACHED=\"%s\"\r\n",
-                                  from, to, error?error:"", error?" ":"",
-                                cached?"YES":"NO");
+                       "650 ADDRMAP %s %s NEVER %s%s"
+                       "CACHED=\"%s\"\r\n",
+                       from, to, error ? error : "", error ? " " : "",
+                       cached ? "YES" : "NO");
   else {
-    char buf[ISO_TIME_LEN+1];
-    char buf2[ISO_TIME_LEN+1];
-    format_local_iso_time(buf,expires);
-    format_iso_time(buf2,expires);
+    char buf[ISO_TIME_LEN + 1];
+    char buf2[ISO_TIME_LEN + 1];
+    format_local_iso_time(buf, expires);
+    format_iso_time(buf2, expires);
     send_control_event(EVENT_ADDRMAP,
-                                "650 ADDRMAP %s %s \"%s\""
-                                " %s%sEXPIRES=\"%s\" CACHED=\"%s\"\r\n",
-                                from, to, buf,
-                                error?error:"", error?" ":"",
-                                buf2, cached?"YES":"NO");
+                       "650 ADDRMAP %s %s \"%s\""
+                       " %s%sEXPIRES=\"%s\" CACHED=\"%s\"\r\n",
+                       from, to, buf, error ? error : "", error ? " " : "",
+                       buf2, cached ? "YES" : "NO");
   }
 
   return 0;
@@ -1466,28 +1474,27 @@ control_event_networkstatus_changed_helper(smartlist_t *statuses,
 {
   smartlist_t *strs;
   char *s, *esc = NULL;
-  if (!EVENT_IS_INTERESTING(event) || !smartlist_len(statuses))
+  if (! EVENT_IS_INTERESTING(event) || ! smartlist_len(statuses))
     return 0;
 
   strs = smartlist_new();
   smartlist_add_strdup(strs, "650+");
   smartlist_add_strdup(strs, event_string);
   smartlist_add_strdup(strs, "\r\n");
-  SMARTLIST_FOREACH(statuses, const routerstatus_t *, rs,
-    {
-      s = networkstatus_getinfo_helper_single(rs);
-      if (!s) continue;
-      smartlist_add(strs, s);
-    });
+  SMARTLIST_FOREACH(statuses, const routerstatus_t *, rs, {
+    s = networkstatus_getinfo_helper_single(rs);
+    if (! s)
+      continue;
+    smartlist_add(strs, s);
+  });
 
   s = smartlist_join_strings(strs, "", 0, NULL);
   write_escaped_data(s, strlen(s), &esc);
   SMARTLIST_FOREACH(strs, char *, cp, tor_free(cp));
   smartlist_free(strs);
   tor_free(s);
-  send_control_event_string(event,  esc);
-  send_control_event_string(event,
-                            "650 OK\r\n");
+  send_control_event_string(event, esc);
+  send_control_event_string(event, "650 OK\r\n");
 
   tor_free(esc);
   return 0;
@@ -1506,20 +1513,19 @@ control_event_networkstatus_changed(smartlist_t *statuses)
 int
 control_event_newconsensus(const networkstatus_t *consensus)
 {
-  if (!control_event_is_interesting(EVENT_NEWCONSENSUS))
+  if (! control_event_is_interesting(EVENT_NEWCONSENSUS))
     return 0;
   return control_event_networkstatus_changed_helper(
-           consensus->routerstatus_list, EVENT_NEWCONSENSUS, "NEWCONSENSUS");
+      consensus->routerstatus_list, EVENT_NEWCONSENSUS, "NEWCONSENSUS");
 }
 
 /** Called when we compute a new circuitbuildtimeout */
 int
-control_event_buildtimeout_set(buildtimeout_set_event_t type,
-                               const char *args)
+control_event_buildtimeout_set(buildtimeout_set_event_t type, const char *args)
 {
   const char *type_string = NULL;
 
-  if (!control_event_is_interesting(EVENT_BUILDTIMEOUT_SET))
+  if (! control_event_is_interesting(EVENT_BUILDTIMEOUT_SET))
     return 0;
 
   switch (type) {
@@ -1543,8 +1549,7 @@ control_event_buildtimeout_set(buildtimeout_set_event_t type,
       break;
   }
 
-  send_control_event(EVENT_BUILDTIMEOUT_SET,
-                     "650 BUILDTIMEOUT_SET %s %s\r\n",
+  send_control_event(EVENT_BUILDTIMEOUT_SET, "650 BUILDTIMEOUT_SET %s %s\r\n",
                      type_string, args);
 
   return 0;
@@ -1556,7 +1561,7 @@ control_event_signal(uintptr_t signal_num)
 {
   const char *signal_string = NULL;
 
-  if (!control_event_is_interesting(EVENT_GOT_SIGNAL))
+  if (! control_event_is_interesting(EVENT_GOT_SIGNAL))
     return 0;
 
   switch (signal_num) {
@@ -1584,8 +1589,7 @@ control_event_signal(uintptr_t signal_num)
       return -1;
   }
 
-  send_control_event(EVENT_GOT_SIGNAL,  "650 SIGNAL %s\r\n",
-                     signal_string);
+  send_control_event(EVENT_GOT_SIGNAL, "650 SIGNAL %s\r\n", signal_string);
   return 0;
 }
 
@@ -1597,11 +1601,11 @@ control_event_networkstatus_changed_single(const routerstatus_t *rs)
   smartlist_t *statuses;
   int r;
 
-  if (!EVENT_IS_INTERESTING(EVENT_NS))
+  if (! EVENT_IS_INTERESTING(EVENT_NS))
     return 0;
 
   statuses = smartlist_new();
-  smartlist_add(statuses, (void*)rs);
+  smartlist_add(statuses, (void *)rs);
   r = control_event_networkstatus_changed(statuses);
   smartlist_free(statuses);
   return r;
@@ -1612,7 +1616,7 @@ control_event_networkstatus_changed_single(const routerstatus_t *rs)
 int
 control_event_my_descriptor_changed(void)
 {
-  send_control_event(EVENT_DESCCHANGED,  "650 DESCCHANGED\r\n");
+  send_control_event(EVENT_DESCCHANGED, "650 DESCCHANGED\r\n");
   return 0;
 }
 
@@ -1655,33 +1659,33 @@ control_event_status(int type, int severity, const char *format, va_list args)
       log_warn(LD_BUG, "Unrecognized status severity %d", severity);
       return -1;
   }
-  if (tor_snprintf(format_buf, sizeof(format_buf), "650 %s %s",
-                   status, sev)<0) {
+  if (tor_snprintf(format_buf, sizeof(format_buf), "650 %s %s", status, sev) <
+      0) {
     log_warn(LD_BUG, "Format string too long.");
     return -1;
   }
-  if (tor_vasprintf(&user_buf, format, args)<0) {
+  if (tor_vasprintf(&user_buf, format, args) < 0) {
     log_warn(LD_BUG, "Failed to create user buffer.");
     return -1;
   }
 
-  send_control_event(type,  "%s %s\r\n", format_buf, user_buf);
+  send_control_event(type, "%s %s\r\n", format_buf, user_buf);
   tor_free(user_buf);
   return 0;
 }
 
 #ifndef COCCI
-#define CONTROL_EVENT_STATUS_BODY(event, sev)                   \
-  int r;                                                        \
-  do {                                                          \
-    va_list ap;                                                 \
-    if (!EVENT_IS_INTERESTING(event))                           \
-      return 0;                                                 \
-                                                                \
-    va_start(ap, format);                                       \
-    r = control_event_status((event), (sev), format, ap);       \
-    va_end(ap);                                                 \
-  } while (0)
+#  define CONTROL_EVENT_STATUS_BODY(event, sev)             \
+    int r;                                                  \
+    do {                                                    \
+      va_list ap;                                           \
+      if (! EVENT_IS_INTERESTING(event))                    \
+        return 0;                                           \
+                                                            \
+      va_start(ap, format);                                 \
+      r = control_event_status((event), (sev), format, ap); \
+      va_end(ap);                                           \
+    } while (0)
 #endif /* !defined(COCCI) */
 
 /** Format and send an EVENT_STATUS_GENERAL event whose main text is obtained
@@ -1751,21 +1755,20 @@ int
 control_event_guard(const char *nickname, const char *digest,
                     const char *status)
 {
-  char hbuf[HEX_DIGEST_LEN+1];
+  char hbuf[HEX_DIGEST_LEN + 1];
   base16_encode(hbuf, sizeof(hbuf), digest, DIGEST_LEN);
-  if (!EVENT_IS_INTERESTING(EVENT_GUARD))
+  if (! EVENT_IS_INTERESTING(EVENT_GUARD))
     return 0;
 
   {
-    char buf[MAX_VERBOSE_NICKNAME_LEN+1];
+    char buf[MAX_VERBOSE_NICKNAME_LEN + 1];
     const node_t *node = node_get_by_id(digest);
     if (node) {
       node_get_verbose_nickname(node, buf);
     } else {
       tor_snprintf(buf, sizeof(buf), "$%s~%s", hbuf, nickname);
     }
-    send_control_event(EVENT_GUARD,
-                       "650 GUARD ENTRY %s %s\r\n", buf, status);
+    send_control_event(EVENT_GUARD, "650 GUARD ENTRY %s %s\r\n", buf, status);
   }
   return 0;
 }
@@ -1780,7 +1783,7 @@ control_event_conf_changed(const config_line_t *changes)
 {
   char *result;
   smartlist_t *lines;
-  if (!EVENT_IS_INTERESTING(EVENT_CONF_CHANGED) || !changes) {
+  if (! EVENT_IS_INTERESTING(EVENT_CONF_CHANGED) || ! changes) {
     return;
   }
   lines = smartlist_new();
@@ -1793,7 +1796,7 @@ control_event_conf_changed(const config_line_t *changes)
   }
   result = smartlist_join_strings(lines, "\r\n", 0, NULL);
   send_control_event(EVENT_CONF_CHANGED,
-    "650-CONF_CHANGED\r\n%s\r\n650 OK\r\n", result);
+                     "650-CONF_CHANGED\r\n%s\r\n650 OK\r\n", result);
   tor_free(result);
   SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
   smartlist_free(lines);
@@ -1805,8 +1808,8 @@ control_event_conf_changed(const config_line_t *changes)
 void
 control_event_clients_seen(const char *controller_str)
 {
-  send_control_event(EVENT_CLIENTS_SEEN,
-    "650 CLIENTS_SEEN %s\r\n", controller_str);
+  send_control_event(EVENT_CLIENTS_SEEN, "650 CLIENTS_SEEN %s\r\n",
+                     controller_str);
 }
 
 /** A new pluggable transport called <b>transport_name</b> was
@@ -1820,8 +1823,8 @@ control_event_transport_launched(const char *mode, const char *transport_name,
                                  tor_addr_t *addr, uint16_t port)
 {
   send_control_event(EVENT_TRANSPORT_LAUNCHED,
-                     "650 TRANSPORT_LAUNCHED %s %s %s %u\r\n",
-                     mode, transport_name, fmt_addr(addr), port);
+                     "650 TRANSPORT_LAUNCHED %s %s %s %u\r\n", mode,
+                     transport_name, fmt_addr(addr), port);
 }
 
 /** A pluggable transport called <b>pt_name</b> has emitted a log message
@@ -1829,9 +1832,7 @@ control_event_transport_launched(const char *mode, const char *transport_name,
 void
 control_event_pt_log(const char *log)
 {
-  send_control_event(EVENT_PT_LOG,
-                     "650 PT_LOG %s\r\n",
-                     log);
+  send_control_event(EVENT_PT_LOG, "650 PT_LOG %s\r\n", log);
 }
 
 /** A pluggable transport has emitted a STATUS message found in
@@ -1839,9 +1840,7 @@ control_event_pt_log(const char *log)
 void
 control_event_pt_status(const char *status)
 {
-  send_control_event(EVENT_PT_STATUS,
-                     "650 PT_STATUS %s\r\n",
-                     status);
+  send_control_event(EVENT_PT_STATUS, "650 PT_STATUS %s\r\n", status);
 }
 
 /** Convert rendezvous auth type to string for HS_DESC control events
@@ -1877,7 +1876,7 @@ rend_hsaddress_str_or_unknown(const char *onion_address)
   const char *str_ret = str_unknown;
 
   /* No valid pointer, unknown it is. */
-  if (!onion_address) {
+  if (! onion_address) {
     goto end;
   }
   /* Empty onion address thus we don't know, unknown it is. */
@@ -1887,7 +1886,7 @@ rend_hsaddress_str_or_unknown(const char *onion_address)
   /* All checks are good so return the given onion address. */
   str_ret = onion_address;
 
- end:
+end:
   return str_ret;
 }
 
@@ -1907,7 +1906,7 @@ control_event_hs_descriptor_requested(const char *onion_address,
 {
   char *hsdir_index_field = NULL;
 
-  if (BUG(!id_digest || !desc_id)) {
+  if (BUG(! id_digest || ! desc_id)) {
     return;
   }
 
@@ -1915,12 +1914,10 @@ control_event_hs_descriptor_requested(const char *onion_address,
     tor_asprintf(&hsdir_index_field, " HSDIR_INDEX=%s", hsdir_index);
   }
 
-  send_control_event(EVENT_HS_DESC,
-                     "650 HS_DESC REQUESTED %s %s %s %s%s\r\n",
+  send_control_event(EVENT_HS_DESC, "650 HS_DESC REQUESTED %s %s %s %s%s\r\n",
                      rend_hsaddress_str_or_unknown(onion_address),
                      rend_auth_type_to_string(auth_type),
-                     node_describe_longname_by_id(id_digest),
-                     desc_id,
+                     node_describe_longname_by_id(id_digest), desc_id,
                      hsdir_index_field ? hsdir_index_field : "");
   tor_free(hsdir_index_field);
 }
@@ -1934,12 +1931,11 @@ control_event_hs_descriptor_requested(const char *onion_address,
  */
 void
 control_event_hs_descriptor_created(const char *onion_address,
-                                    const char *desc_id,
-                                    int replica)
+                                    const char *desc_id, int replica)
 {
   char *replica_field = NULL;
 
-  if (BUG(!onion_address || !desc_id)) {
+  if (BUG(! onion_address || ! desc_id)) {
     return;
   }
 
@@ -1947,10 +1943,9 @@ control_event_hs_descriptor_created(const char *onion_address,
     tor_asprintf(&replica_field, " REPLICA=%d", replica);
   }
 
-  send_control_event(EVENT_HS_DESC,
-                     "650 HS_DESC CREATED %s UNKNOWN UNKNOWN %s%s\r\n",
-                     onion_address, desc_id,
-                     replica_field ? replica_field : "");
+  send_control_event(
+      EVENT_HS_DESC, "650 HS_DESC CREATED %s UNKNOWN UNKNOWN %s%s\r\n",
+      onion_address, desc_id, replica_field ? replica_field : "");
   tor_free(replica_field);
 }
 
@@ -1962,13 +1957,12 @@ control_event_hs_descriptor_created(const char *onion_address,
  */
 void
 control_event_hs_descriptor_upload(const char *onion_address,
-                                   const char *id_digest,
-                                   const char *desc_id,
+                                   const char *id_digest, const char *desc_id,
                                    const char *hsdir_index)
 {
   char *hsdir_index_field = NULL;
 
-  if (BUG(!onion_address || !id_digest || !desc_id)) {
+  if (BUG(! onion_address || ! id_digest || ! desc_id)) {
     return;
   }
 
@@ -1978,10 +1972,8 @@ control_event_hs_descriptor_upload(const char *onion_address,
 
   send_control_event(EVENT_HS_DESC,
                      "650 HS_DESC UPLOAD %s UNKNOWN %s %s%s\r\n",
-                     onion_address,
-                     node_describe_longname_by_id(id_digest),
-                     desc_id,
-                     hsdir_index_field ? hsdir_index_field : "");
+                     onion_address, node_describe_longname_by_id(id_digest),
+                     desc_id, hsdir_index_field ? hsdir_index_field : "");
   tor_free(hsdir_index_field);
 }
 
@@ -1995,8 +1987,7 @@ control_event_hs_descriptor_upload(const char *onion_address,
  * So do not call this function directly.
  */
 static void
-event_hs_descriptor_receive_end(const char *action,
-                                const char *onion_address,
+event_hs_descriptor_receive_end(const char *action, const char *onion_address,
                                 const char *desc_id,
                                 rend_auth_type_t auth_type,
                                 const char *hsdir_id_digest,
@@ -2004,7 +1995,7 @@ event_hs_descriptor_receive_end(const char *action,
 {
   char *reason_field = NULL;
 
-  if (BUG(!action || !onion_address)) {
+  if (BUG(! action || ! onion_address)) {
     return;
   }
 
@@ -2012,16 +2003,13 @@ event_hs_descriptor_receive_end(const char *action,
     tor_asprintf(&reason_field, " REASON=%s", reason);
   }
 
-  send_control_event(EVENT_HS_DESC,
-                     "650 HS_DESC %s %s %s %s%s%s\r\n",
-                     action,
+  send_control_event(EVENT_HS_DESC, "650 HS_DESC %s %s %s %s%s%s\r\n", action,
                      rend_hsaddress_str_or_unknown(onion_address),
                      rend_auth_type_to_string(auth_type),
-                     hsdir_id_digest ?
-                        node_describe_longname_by_id(hsdir_id_digest) :
-                        "UNKNOWN",
-                     desc_id ? desc_id : "",
-                     reason_field ? reason_field : "");
+                     hsdir_id_digest
+                         ? node_describe_longname_by_id(hsdir_id_digest)
+                         : "UNKNOWN",
+                     desc_id ? desc_id : "", reason_field ? reason_field : "");
 
   tor_free(reason_field);
 }
@@ -2042,7 +2030,7 @@ control_event_hs_descriptor_upload_end(const char *action,
 {
   char *reason_field = NULL;
 
-  if (BUG(!action || !id_digest)) {
+  if (BUG(! action || ! id_digest)) {
     return;
   }
 
@@ -2050,10 +2038,8 @@ control_event_hs_descriptor_upload_end(const char *action,
     tor_asprintf(&reason_field, " REASON=%s", reason);
   }
 
-  send_control_event(EVENT_HS_DESC,
-                     "650 HS_DESC %s %s UNKNOWN %s%s\r\n",
-                     action,
-                     rend_hsaddress_str_or_unknown(onion_address),
+  send_control_event(EVENT_HS_DESC, "650 HS_DESC %s %s UNKNOWN %s%s\r\n",
+                     action, rend_hsaddress_str_or_unknown(onion_address),
                      node_describe_longname_by_id(id_digest),
                      reason_field ? reason_field : "");
 
@@ -2075,14 +2061,14 @@ get_desc_id_from_query(const rend_data_t *rend_data, const char *hsdir_fp)
 
   /* Possible if the fetch was done using a descriptor ID. This means that
    * the HSFETCH command was used. */
-  if (!tor_digest_is_zero(rend_data_v2->desc_id_fetch)) {
+  if (! tor_digest_is_zero(rend_data_v2->desc_id_fetch)) {
     desc_id = rend_data_v2->desc_id_fetch;
     goto end;
   }
 
   /* Without a directory fingerprint at this stage, we can't do much. */
   if (hsdir_fp == NULL) {
-     goto end;
+    goto end;
   }
 
   /* OK, we have an onion address so now let's find which descriptor ID
@@ -2091,16 +2077,16 @@ get_desc_id_from_query(const rend_data_t *rend_data, const char *hsdir_fp)
        replica++) {
     const char *digest = rend_data_get_desc_id(rend_data, replica, NULL);
 
-    SMARTLIST_FOREACH_BEGIN(rend_data->hsdirs_fp, char *, fingerprint) {
+    SMARTLIST_FOREACH_BEGIN (rend_data->hsdirs_fp, char *, fingerprint) {
       if (tor_memcmp(fingerprint, hsdir_fp, DIGEST_LEN) == 0) {
         /* Found it! This descriptor ID is the right one. */
         desc_id = digest;
         goto end;
       }
-    } SMARTLIST_FOREACH_END(fingerprint);
+    } SMARTLIST_FOREACH_END (fingerprint);
   }
 
- end:
+end:
   return desc_id;
 }
 
@@ -2116,7 +2102,7 @@ control_event_hsv2_descriptor_received(const char *onion_address,
   char *desc_id_field = NULL;
   const char *desc_id;
 
-  if (BUG(!rend_data || !hsdir_id_digest || !onion_address)) {
+  if (BUG(! rend_data || ! hsdir_id_digest || ! onion_address)) {
     return;
   }
 
@@ -2124,8 +2110,7 @@ control_event_hsv2_descriptor_received(const char *onion_address,
   if (desc_id != NULL) {
     char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
     /* Set the descriptor ID digest to base32 so we can send it. */
-    base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
-                  DIGEST_LEN);
+    base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id, DIGEST_LEN);
     /* Extra whitespace is needed before the value. */
     tor_asprintf(&desc_id_field, " %s", desc_id_base32);
   }
@@ -2146,7 +2131,7 @@ control_event_hsv3_descriptor_received(const char *onion_address,
 {
   char *desc_id_field = NULL;
 
-  if (BUG(!onion_address || !desc_id || !hsdir_id_digest)) {
+  if (BUG(! onion_address || ! desc_id || ! hsdir_id_digest)) {
     return;
   }
 
@@ -2167,12 +2152,12 @@ void
 control_event_hs_descriptor_uploaded(const char *id_digest,
                                      const char *onion_address)
 {
-  if (BUG(!id_digest)) {
+  if (BUG(! id_digest)) {
     return;
   }
 
-  control_event_hs_descriptor_upload_end("UPLOADED", onion_address,
-                                         id_digest, NULL);
+  control_event_hs_descriptor_upload_end("UPLOADED", onion_address, id_digest,
+                                         NULL);
 }
 
 /** Send HS_DESC event to inform controller that query <b>rend_data</b>
@@ -2188,7 +2173,7 @@ control_event_hsv2_descriptor_failed(const rend_data_t *rend_data,
   char *desc_id_field = NULL;
   const char *desc_id;
 
-  if (BUG(!rend_data)) {
+  if (BUG(! rend_data)) {
     return;
   }
 
@@ -2196,16 +2181,14 @@ control_event_hsv2_descriptor_failed(const rend_data_t *rend_data,
   if (desc_id != NULL) {
     char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
     /* Set the descriptor ID digest to base32 so we can send it. */
-    base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
-                  DIGEST_LEN);
+    base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id, DIGEST_LEN);
     /* Extra whitespace is needed before the value. */
     tor_asprintf(&desc_id_field, " %s", desc_id_base32);
   }
 
-  event_hs_descriptor_receive_end("FAILED", rend_data_get_address(rend_data),
-                                  desc_id_field,
-                                  TO_REND_DATA_V2(rend_data)->auth_type,
-                                  hsdir_id_digest, reason);
+  event_hs_descriptor_receive_end(
+      "FAILED", rend_data_get_address(rend_data), desc_id_field,
+      TO_REND_DATA_V2(rend_data)->auth_type, hsdir_id_digest, reason);
   tor_free(desc_id_field);
 }
 
@@ -2222,7 +2205,7 @@ control_event_hsv3_descriptor_failed(const char *onion_address,
 {
   char *desc_id_field = NULL;
 
-  if (BUG(!onion_address || !desc_id || !reason)) {
+  if (BUG(! onion_address || ! desc_id || ! reason)) {
     return;
   }
 
@@ -2249,7 +2232,7 @@ control_event_hs_descriptor_content(const char *onion_address,
   static const char *event_name = "HS_DESC_CONTENT";
   char *esc_content = NULL;
 
-  if (!onion_address || !desc_id) {
+  if (! onion_address || ! desc_id) {
     log_warn(LD_BUG, "Called with onion_address==%p, desc_id==%p, ",
              onion_address, desc_id);
     return;
@@ -2261,15 +2244,12 @@ control_event_hs_descriptor_content(const char *onion_address,
   }
   write_escaped_data(content, strlen(content), &esc_content);
 
-  send_control_event(EVENT_HS_DESC_CONTENT,
-                     "650+%s %s %s %s\r\n%s650 OK\r\n",
-                     event_name,
-                     rend_hsaddress_str_or_unknown(onion_address),
-                     desc_id,
-                     hsdir_id_digest ?
-                        node_describe_longname_by_id(hsdir_id_digest) :
-                        "UNKNOWN",
-                     esc_content);
+  send_control_event(
+      EVENT_HS_DESC_CONTENT, "650+%s %s %s %s\r\n%s650 OK\r\n", event_name,
+      rend_hsaddress_str_or_unknown(onion_address), desc_id,
+      hsdir_id_digest ? node_describe_longname_by_id(hsdir_id_digest)
+                      : "UNKNOWN",
+      esc_content);
   tor_free(esc_content);
 }
 
@@ -2282,11 +2262,11 @@ control_event_hs_descriptor_upload_failed(const char *id_digest,
                                           const char *onion_address,
                                           const char *reason)
 {
-  if (BUG(!id_digest)) {
+  if (BUG(! id_digest)) {
     return;
   }
-  control_event_hs_descriptor_upload_end("FAILED", onion_address,
-                                         id_digest, reason);
+  control_event_hs_descriptor_upload_end("FAILED", onion_address, id_digest,
+                                         reason);
 }
 
 void

@@ -60,37 +60,37 @@ static int
 check_create_cell(const create_cell_t *cell, int unknown_ok)
 {
   switch (cell->cell_type) {
-  case CELL_CREATE:
-    if (cell->handshake_type != ONION_HANDSHAKE_TYPE_TAP &&
-        cell->handshake_type != ONION_HANDSHAKE_TYPE_NTOR)
+    case CELL_CREATE:
+      if (cell->handshake_type != ONION_HANDSHAKE_TYPE_TAP &&
+          cell->handshake_type != ONION_HANDSHAKE_TYPE_NTOR)
+        return -1;
+      break;
+    case CELL_CREATE_FAST:
+      if (cell->handshake_type != ONION_HANDSHAKE_TYPE_FAST)
+        return -1;
+      break;
+    case CELL_CREATE2:
+      break;
+    default:
       return -1;
-    break;
-  case CELL_CREATE_FAST:
-    if (cell->handshake_type != ONION_HANDSHAKE_TYPE_FAST)
-      return -1;
-    break;
-  case CELL_CREATE2:
-    break;
-  default:
-    return -1;
   }
 
   switch (cell->handshake_type) {
-  case ONION_HANDSHAKE_TYPE_TAP:
-    if (cell->handshake_len != TAP_ONIONSKIN_CHALLENGE_LEN)
-      return -1;
-    break;
-  case ONION_HANDSHAKE_TYPE_FAST:
-    if (cell->handshake_len != CREATE_FAST_LEN)
-      return -1;
-    break;
-  case ONION_HANDSHAKE_TYPE_NTOR:
-    if (cell->handshake_len != NTOR_ONIONSKIN_LEN)
-      return -1;
-    break;
-  default:
-    if (! unknown_ok)
-      return -1;
+    case ONION_HANDSHAKE_TYPE_TAP:
+      if (cell->handshake_len != TAP_ONIONSKIN_CHALLENGE_LEN)
+        return -1;
+      break;
+    case ONION_HANDSHAKE_TYPE_FAST:
+      if (cell->handshake_len != CREATE_FAST_LEN)
+        return -1;
+      break;
+    case ONION_HANDSHAKE_TYPE_NTOR:
+      if (cell->handshake_len != NTOR_ONIONSKIN_LEN)
+        return -1;
+      break;
+    default:
+      if (! unknown_ok)
+        return -1;
   }
 
   return 0;
@@ -128,7 +128,7 @@ parse_create2_payload(create_cell_t *cell_out, const uint8_t *p, size_t p_len)
     return -1;
 
   handshake_type = ntohs(get_uint16(p));
-  handshake_len = ntohs(get_uint16(p+2));
+  handshake_len = ntohs(get_uint16(p + 2));
 
   if (handshake_len > CELL_PAYLOAD_SIZE - 4 || handshake_len > p_len - 4)
     return -1;
@@ -136,7 +136,7 @@ parse_create2_payload(create_cell_t *cell_out, const uint8_t *p, size_t p_len)
     return -1;
 
   create_cell_init(cell_out, CELL_CREATE2, handshake_type, handshake_len,
-                   p+4);
+                   p + 4);
   return 0;
 }
 
@@ -155,26 +155,26 @@ int
 create_cell_parse(create_cell_t *cell_out, const cell_t *cell_in)
 {
   switch (cell_in->command) {
-  case CELL_CREATE:
-    if (tor_memeq(cell_in->payload, NTOR_CREATE_MAGIC, 16)) {
-      create_cell_init(cell_out, CELL_CREATE, ONION_HANDSHAKE_TYPE_NTOR,
-                       NTOR_ONIONSKIN_LEN, cell_in->payload+16);
-    } else {
-      create_cell_init(cell_out, CELL_CREATE, ONION_HANDSHAKE_TYPE_TAP,
-                       TAP_ONIONSKIN_CHALLENGE_LEN, cell_in->payload);
-    }
-    break;
-  case CELL_CREATE_FAST:
-    create_cell_init(cell_out, CELL_CREATE_FAST, ONION_HANDSHAKE_TYPE_FAST,
-                     CREATE_FAST_LEN, cell_in->payload);
-    break;
-  case CELL_CREATE2:
-    if (parse_create2_payload(cell_out, cell_in->payload,
-                              CELL_PAYLOAD_SIZE) < 0)
+    case CELL_CREATE:
+      if (tor_memeq(cell_in->payload, NTOR_CREATE_MAGIC, 16)) {
+        create_cell_init(cell_out, CELL_CREATE, ONION_HANDSHAKE_TYPE_NTOR,
+                         NTOR_ONIONSKIN_LEN, cell_in->payload + 16);
+      } else {
+        create_cell_init(cell_out, CELL_CREATE, ONION_HANDSHAKE_TYPE_TAP,
+                         TAP_ONIONSKIN_CHALLENGE_LEN, cell_in->payload);
+      }
+      break;
+    case CELL_CREATE_FAST:
+      create_cell_init(cell_out, CELL_CREATE_FAST, ONION_HANDSHAKE_TYPE_FAST,
+                       CREATE_FAST_LEN, cell_in->payload);
+      break;
+    case CELL_CREATE2:
+      if (parse_create2_payload(cell_out, cell_in->payload,
+                                CELL_PAYLOAD_SIZE) < 0)
+        return -1;
+      break;
+    default:
       return -1;
-    break;
-  default:
-    return -1;
   }
 
   return check_create_cell(cell_out, 0);
@@ -185,19 +185,19 @@ static int
 check_created_cell(const created_cell_t *cell)
 {
   switch (cell->cell_type) {
-  case CELL_CREATED:
-    if (cell->handshake_len != TAP_ONIONSKIN_REPLY_LEN &&
-        cell->handshake_len != NTOR_REPLY_LEN)
-      return -1;
-    break;
-  case CELL_CREATED_FAST:
-    if (cell->handshake_len != CREATED_FAST_LEN)
-      return -1;
-    break;
-  case CELL_CREATED2:
-    if (cell->handshake_len > RELAY_PAYLOAD_SIZE-2)
-      return -1;
-    break;
+    case CELL_CREATED:
+      if (cell->handshake_len != TAP_ONIONSKIN_REPLY_LEN &&
+          cell->handshake_len != NTOR_REPLY_LEN)
+        return -1;
+      break;
+    case CELL_CREATED_FAST:
+      if (cell->handshake_len != CREATED_FAST_LEN)
+        return -1;
+      break;
+    case CELL_CREATED2:
+      if (cell->handshake_len > RELAY_PAYLOAD_SIZE - 2)
+        return -1;
+      break;
   }
 
   return 0;
@@ -211,24 +211,23 @@ created_cell_parse(created_cell_t *cell_out, const cell_t *cell_in)
   memset(cell_out, 0, sizeof(*cell_out));
 
   switch (cell_in->command) {
-  case CELL_CREATED:
-    cell_out->cell_type = CELL_CREATED;
-    cell_out->handshake_len = TAP_ONIONSKIN_REPLY_LEN;
-    memcpy(cell_out->reply, cell_in->payload, TAP_ONIONSKIN_REPLY_LEN);
-    break;
-  case CELL_CREATED_FAST:
-    cell_out->cell_type = CELL_CREATED_FAST;
-    cell_out->handshake_len = CREATED_FAST_LEN;
-    memcpy(cell_out->reply, cell_in->payload, CREATED_FAST_LEN);
-    break;
-  case CELL_CREATED2:
-    {
+    case CELL_CREATED:
+      cell_out->cell_type = CELL_CREATED;
+      cell_out->handshake_len = TAP_ONIONSKIN_REPLY_LEN;
+      memcpy(cell_out->reply, cell_in->payload, TAP_ONIONSKIN_REPLY_LEN);
+      break;
+    case CELL_CREATED_FAST:
+      cell_out->cell_type = CELL_CREATED_FAST;
+      cell_out->handshake_len = CREATED_FAST_LEN;
+      memcpy(cell_out->reply, cell_in->payload, CREATED_FAST_LEN);
+      break;
+    case CELL_CREATED2: {
       const uint8_t *p = cell_in->payload;
       cell_out->cell_type = CELL_CREATED2;
       cell_out->handshake_len = ntohs(get_uint16(p));
       if (cell_out->handshake_len > CELL_PAYLOAD_SIZE - 2)
         return -1;
-      memcpy(cell_out->reply, p+2, cell_out->handshake_len);
+      memcpy(cell_out->reply, p + 2, cell_out->handshake_len);
       break;
     }
   }
@@ -240,7 +239,7 @@ created_cell_parse(created_cell_t *cell_out, const cell_t *cell_in)
 static int
 check_extend_cell(const extend_cell_t *cell)
 {
-  if (tor_digest_is_zero((const char*)cell->node_id))
+  if (tor_digest_is_zero((const char *)cell->node_id))
     return -1;
   /* We don't currently allow EXTEND2 cells without an IPv4 address */
   if (tor_addr_family(&cell->orport_ipv4.addr) == AF_UNSPEC)
@@ -310,8 +309,8 @@ create_cell_from_create2_cell_body(create_cell_t *cell_out,
   cell_out->handshake_type = cell->handshake_type;
   cell_out->handshake_len = cell->handshake_len;
   memcpy(cell_out->onionskin,
-       create2_cell_body_getconstarray_handshake_data(cell),
-       cell->handshake_len);
+         create2_cell_body_getconstarray_handshake_data(cell),
+         cell->handshake_len);
   return 0;
 }
 
@@ -364,7 +363,7 @@ extend_cell_from_extend2_cell_body(extend_cell_t *cell_out,
     }
   }
 
-  if (!found_rsa_id || !found_ipv4) /* These are mandatory */
+  if (! found_rsa_id || ! found_ipv4) /* These are mandatory */
     return -1;
 
   return create_cell_from_create2_cell_body(&cell_out->create_cell,
@@ -378,7 +377,6 @@ int
 extend_cell_parse(extend_cell_t *cell_out, const uint8_t command,
                   const uint8_t *payload, size_t payload_length)
 {
-
   tor_assert(cell_out);
   tor_assert(payload);
 
@@ -386,10 +384,9 @@ extend_cell_parse(extend_cell_t *cell_out, const uint8_t command,
     return -1;
 
   switch (command) {
-  case RELAY_COMMAND_EXTEND:
-    {
+    case RELAY_COMMAND_EXTEND: {
       extend1_cell_body_t *cell = NULL;
-      if (extend1_cell_body_parse(&cell, payload, payload_length)<0 ||
+      if (extend1_cell_body_parse(&cell, payload, payload_length) < 0 ||
           cell == NULL) {
         if (cell)
           extend1_cell_body_free(cell);
@@ -399,10 +396,8 @@ extend_cell_parse(extend_cell_t *cell_out, const uint8_t command,
       extend1_cell_body_free(cell);
       if (r < 0)
         return r;
-    }
-    break;
-  case RELAY_COMMAND_EXTEND2:
-    {
+    } break;
+    case RELAY_COMMAND_EXTEND2: {
       extend2_cell_body_t *cell = NULL;
       if (extend2_cell_body_parse(&cell, payload, payload_length) < 0 ||
           cell == NULL) {
@@ -414,10 +409,9 @@ extend_cell_parse(extend_cell_t *cell_out, const uint8_t command,
       extend2_cell_body_free(cell);
       if (r < 0)
         return r;
-    }
-    break;
-  default:
-    return -1;
+    } break;
+    default:
+      return -1;
   }
 
   return check_extend_cell(cell_out);
@@ -445,9 +439,8 @@ check_extended_cell(const extended_cell_t *cell)
  * <b>payload_length</b> bytes of <b>payload</b> into <b>cell_out</b>. Return
  * 0 on success, -1 on failure. */
 int
-extended_cell_parse(extended_cell_t *cell_out,
-                    const uint8_t command, const uint8_t *payload,
-                    size_t payload_len)
+extended_cell_parse(extended_cell_t *cell_out, const uint8_t command,
+                    const uint8_t *payload, size_t payload_len)
 {
   tor_assert(cell_out);
   tor_assert(payload);
@@ -457,28 +450,26 @@ extended_cell_parse(extended_cell_t *cell_out,
     return -1;
 
   switch (command) {
-  case RELAY_COMMAND_EXTENDED:
-    if (payload_len != TAP_ONIONSKIN_REPLY_LEN)
-      return -1;
-    cell_out->cell_type = RELAY_COMMAND_EXTENDED;
-    cell_out->created_cell.cell_type = CELL_CREATED;
-    cell_out->created_cell.handshake_len = TAP_ONIONSKIN_REPLY_LEN;
-    memcpy(cell_out->created_cell.reply, payload, TAP_ONIONSKIN_REPLY_LEN);
-    break;
-  case RELAY_COMMAND_EXTENDED2:
-    {
+    case RELAY_COMMAND_EXTENDED:
+      if (payload_len != TAP_ONIONSKIN_REPLY_LEN)
+        return -1;
+      cell_out->cell_type = RELAY_COMMAND_EXTENDED;
+      cell_out->created_cell.cell_type = CELL_CREATED;
+      cell_out->created_cell.handshake_len = TAP_ONIONSKIN_REPLY_LEN;
+      memcpy(cell_out->created_cell.reply, payload, TAP_ONIONSKIN_REPLY_LEN);
+      break;
+    case RELAY_COMMAND_EXTENDED2: {
       cell_out->cell_type = RELAY_COMMAND_EXTENDED2;
       cell_out->created_cell.cell_type = CELL_CREATED2;
       cell_out->created_cell.handshake_len = ntohs(get_uint16(payload));
       if (cell_out->created_cell.handshake_len > RELAY_PAYLOAD_SIZE - 2 ||
           cell_out->created_cell.handshake_len > payload_len - 2)
         return -1;
-      memcpy(cell_out->created_cell.reply, payload+2,
+      memcpy(cell_out->created_cell.reply, payload + 2,
              cell_out->created_cell.handshake_len);
-    }
-    break;
-  default:
-    return -1;
+    } break;
+    default:
+      return -1;
   }
 
   return check_extended_cell(cell_out);
@@ -503,25 +494,26 @@ create_cell_format_impl(cell_t *cell_out, const create_cell_t *cell_in,
   space = sizeof(cell_out->payload);
 
   switch (cell_in->cell_type) {
-  case CELL_CREATE:
-    if (cell_in->handshake_type == ONION_HANDSHAKE_TYPE_NTOR) {
-      memcpy(p, NTOR_CREATE_MAGIC, 16);
-      p += 16;
-      space -= 16;
-    }
-    /* Fall through */
-  case CELL_CREATE_FAST:
-    tor_assert(cell_in->handshake_len <= space);
-    memcpy(p, cell_in->onionskin, cell_in->handshake_len);
-    break;
-  case CELL_CREATE2:
-    tor_assert(cell_in->handshake_len <= sizeof(cell_out->payload)-4);
-    set_uint16(cell_out->payload, htons(cell_in->handshake_type));
-    set_uint16(cell_out->payload+2, htons(cell_in->handshake_len));
-    memcpy(cell_out->payload + 4, cell_in->onionskin, cell_in->handshake_len);
-    break;
-  default:
-    return -1;
+    case CELL_CREATE:
+      if (cell_in->handshake_type == ONION_HANDSHAKE_TYPE_NTOR) {
+        memcpy(p, NTOR_CREATE_MAGIC, 16);
+        p += 16;
+        space -= 16;
+      }
+      /* Fall through */
+    case CELL_CREATE_FAST:
+      tor_assert(cell_in->handshake_len <= space);
+      memcpy(p, cell_in->onionskin, cell_in->handshake_len);
+      break;
+    case CELL_CREATE2:
+      tor_assert(cell_in->handshake_len <= sizeof(cell_out->payload) - 4);
+      set_uint16(cell_out->payload, htons(cell_in->handshake_type));
+      set_uint16(cell_out->payload + 2, htons(cell_in->handshake_len));
+      memcpy(cell_out->payload + 4, cell_in->onionskin,
+             cell_in->handshake_len);
+      break;
+    default:
+      return -1;
   }
 
   return 0;
@@ -552,18 +544,18 @@ created_cell_format(cell_t *cell_out, const created_cell_t *cell_in)
   cell_out->command = cell_in->cell_type;
 
   switch (cell_in->cell_type) {
-  case CELL_CREATED:
-  case CELL_CREATED_FAST:
-    tor_assert(cell_in->handshake_len <= sizeof(cell_out->payload));
-    memcpy(cell_out->payload, cell_in->reply, cell_in->handshake_len);
-    break;
-  case CELL_CREATED2:
-    tor_assert(cell_in->handshake_len <= sizeof(cell_out->payload)-2);
-    set_uint16(cell_out->payload, htons(cell_in->handshake_len));
-    memcpy(cell_out->payload + 2, cell_in->reply, cell_in->handshake_len);
-    break;
-  default:
-    return -1;
+    case CELL_CREATED:
+    case CELL_CREATED_FAST:
+      tor_assert(cell_in->handshake_len <= sizeof(cell_out->payload));
+      memcpy(cell_out->payload, cell_in->reply, cell_in->handshake_len);
+      break;
+    case CELL_CREATED2:
+      tor_assert(cell_in->handshake_len <= sizeof(cell_out->payload) - 2);
+      set_uint16(cell_out->payload, htons(cell_in->handshake_len));
+      memcpy(cell_out->payload + 2, cell_in->reply, cell_in->handshake_len);
+      break;
+    default:
+      return -1;
   }
   return 0;
 }
@@ -577,10 +569,8 @@ should_include_ed25519_id_extend_cells(const networkstatus_t *ns,
   if (options->ExtendByEd25519ID != -1)
     return options->ExtendByEd25519ID; /* The user has an opinion. */
 
-  return (int) networkstatus_get_param(ns, "ExtendByEd25519ID",
-                                       0 /* default */,
-                                       0 /* min */,
-                                       1 /*max*/);
+  return (int)networkstatus_get_param(ns, "ExtendByEd25519ID", 0 /* default */,
+                                      0 /* min */, 1 /*max*/);
 }
 
 /** Format the EXTEND{,2} cell in <b>cell_in</b>, storing its relay payload in
@@ -600,24 +590,22 @@ extend_cell_format(uint8_t *command_out, uint16_t *len_out,
   memset(p, 0, RELAY_PAYLOAD_SIZE);
 
   switch (cell_in->cell_type) {
-  case RELAY_COMMAND_EXTEND:
-    {
+    case RELAY_COMMAND_EXTEND: {
       *command_out = RELAY_COMMAND_EXTEND;
       *len_out = 6 + TAP_ONIONSKIN_CHALLENGE_LEN + DIGEST_LEN;
       set_uint32(p, tor_addr_to_ipv4n(&cell_in->orport_ipv4.addr));
-      set_uint16(p+4, htons(cell_in->orport_ipv4.port));
+      set_uint16(p + 4, htons(cell_in->orport_ipv4.port));
       if (cell_in->create_cell.handshake_type == ONION_HANDSHAKE_TYPE_NTOR) {
-        memcpy(p+6, NTOR_CREATE_MAGIC, 16);
-        memcpy(p+22, cell_in->create_cell.onionskin, NTOR_ONIONSKIN_LEN);
+        memcpy(p + 6, NTOR_CREATE_MAGIC, 16);
+        memcpy(p + 22, cell_in->create_cell.onionskin, NTOR_ONIONSKIN_LEN);
       } else {
-        memcpy(p+6, cell_in->create_cell.onionskin,
+        memcpy(p + 6, cell_in->create_cell.onionskin,
                TAP_ONIONSKIN_CHALLENGE_LEN);
       }
-      memcpy(p+6+TAP_ONIONSKIN_CHALLENGE_LEN, cell_in->node_id, DIGEST_LEN);
-    }
-    break;
-  case RELAY_COMMAND_EXTEND2:
-    {
+      memcpy(p + 6 + TAP_ONIONSKIN_CHALLENGE_LEN, cell_in->node_id,
+             DIGEST_LEN);
+    } break;
+    case RELAY_COMMAND_EXTEND2: {
       uint8_t n_specifiers = 2;
       *command_out = RELAY_COMMAND_EXTEND2;
       extend2_cell_body_t *cell = extend2_cell_body_new();
@@ -640,7 +628,7 @@ extend_cell_format(uint8_t *command_out, uint16_t *len_out,
         memcpy(ls->un_legacy_id, cell_in->node_id, DIGEST_LEN);
       }
       if (should_include_ed25519_id_extend_cells(NULL, get_options()) &&
-          !ed25519_public_key_is_zero(&cell_in->ed_pubkey)) {
+          ! ed25519_public_key_is_zero(&cell_in->ed_pubkey)) {
         /* Then, maybe, the ed25519 id! */
         ++n_specifiers;
         ls = link_specifier_new();
@@ -655,23 +643,21 @@ extend_cell_format(uint8_t *command_out, uint16_t *len_out,
       cell->create2 = create2_cell_body_new();
       cell->create2->handshake_type = cell_in->create_cell.handshake_type;
       cell->create2->handshake_len = cell_in->create_cell.handshake_len;
-      create2_cell_body_setlen_handshake_data(cell->create2,
-                                         cell_in->create_cell.handshake_len);
+      create2_cell_body_setlen_handshake_data(
+          cell->create2, cell_in->create_cell.handshake_len);
       memcpy(create2_cell_body_getarray_handshake_data(cell->create2),
              cell_in->create_cell.onionskin,
              cell_in->create_cell.handshake_len);
 
-      ssize_t len_encoded = extend2_cell_body_encode(
-                             payload_out, RELAY_PAYLOAD_SIZE,
-                             cell);
+      ssize_t len_encoded =
+          extend2_cell_body_encode(payload_out, RELAY_PAYLOAD_SIZE, cell);
       extend2_cell_body_free(cell);
       if (len_encoded < 0 || len_encoded > UINT16_MAX)
         return -1;
-      *len_out = (uint16_t) len_encoded;
-    }
-    break;
-  default:
-    return -1;
+      *len_out = (uint16_t)len_encoded;
+    } break;
+    default:
+      return -1;
   }
 
   return 0;
@@ -693,27 +679,23 @@ extended_cell_format(uint8_t *command_out, uint16_t *len_out,
   memset(p, 0, RELAY_PAYLOAD_SIZE);
 
   switch (cell_in->cell_type) {
-  case RELAY_COMMAND_EXTENDED:
-    {
+    case RELAY_COMMAND_EXTENDED: {
       *command_out = RELAY_COMMAND_EXTENDED;
       *len_out = TAP_ONIONSKIN_REPLY_LEN;
       memcpy(payload_out, cell_in->created_cell.reply,
              TAP_ONIONSKIN_REPLY_LEN);
-    }
-    break;
-  case RELAY_COMMAND_EXTENDED2:
-    {
+    } break;
+    case RELAY_COMMAND_EXTENDED2: {
       *command_out = RELAY_COMMAND_EXTENDED2;
       *len_out = 2 + cell_in->created_cell.handshake_len;
       set_uint16(payload_out, htons(cell_in->created_cell.handshake_len));
-      if (2+cell_in->created_cell.handshake_len > RELAY_PAYLOAD_SIZE)
+      if (2 + cell_in->created_cell.handshake_len > RELAY_PAYLOAD_SIZE)
         return -1;
-      memcpy(payload_out+2, cell_in->created_cell.reply,
+      memcpy(payload_out + 2, cell_in->created_cell.reply,
              cell_in->created_cell.handshake_len);
-    }
-    break;
-  default:
-    return -1;
+    } break;
+    default:
+      return -1;
   }
 
   return 0;

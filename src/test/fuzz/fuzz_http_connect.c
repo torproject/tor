@@ -83,8 +83,8 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
   conn.socks_request = tor_malloc_zero(sizeof(socks_request_t));
   conn.socks_request->listener_type = CONN_TYPE_AP_HTTP_CONNECT_LISTENER;
 
-  conn.edge_.base_.inbuf = buf_new_with_data((char*)stdin_buf, data_size);
-  if (!conn.edge_.base_.inbuf) {
+  conn.edge_.base_.inbuf = buf_new_with_data((char *)stdin_buf, data_size);
+  if (! conn.edge_.base_.inbuf) {
     log_debug(LD_GENERAL, "Zero-Length-Input\n");
     goto done;
   }
@@ -98,7 +98,7 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
 
   goto done;
 
- done:
+done:
   /* Reset. */
   socks_request_free(conn.socks_request);
   buf_free(conn.edge_.base_.inbuf);
@@ -106,4 +106,3 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
 
   return 0;
 }
-

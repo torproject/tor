@@ -31,8 +31,8 @@ int circuit_build_times_parse_state(circuit_build_times_t *cbt,
                                     or_state_t *state);
 void circuit_build_times_count_timeout(circuit_build_times_t *cbt,
                                        int did_onehop);
-int circuit_build_times_count_close(circuit_build_times_t *cbt,
-                                    int did_onehop, time_t start_time);
+int circuit_build_times_count_close(circuit_build_times_t *cbt, int did_onehop,
+                                    time_t start_time);
 void circuit_build_times_set_timeout(circuit_build_times_t *cbt);
 int circuit_build_times_add_time(circuit_build_times_t *cbt,
                                  build_time_t time);
@@ -66,7 +66,7 @@ void circuit_build_times_mark_circ_as_measurement_only(origin_circuit_t *circ);
  * CBT_BUILD_ABANDONED is our flag value to represent a force-closed
  * circuit (Aka a 'right-censored' pareto value).
  */
-#define CBT_BUILD_ABANDONED ((build_time_t)(INT32_MAX-1))
+#define CBT_BUILD_ABANDONED ((build_time_t)(INT32_MAX - 1))
 #define CBT_BUILD_TIME_MAX ((build_time_t)(INT32_MAX))
 
 /** Save state every 10 circuits */
@@ -98,7 +98,8 @@ void circuit_build_times_mark_circ_as_measurement_only(origin_circuit_t *circ);
  * the timeout back to whatever circuit_build_times_get_initial_timeout()
  * gives us.
  */
-#define CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT (CBT_DEFAULT_RECENT_CIRCUITS*9/10)
+#define CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT \
+  (CBT_DEFAULT_RECENT_CIRCUITS * 9 / 10)
 #define CBT_MIN_MAX_RECENT_TIMEOUT_COUNT 3
 #define CBT_MAX_MAX_RECENT_TIMEOUT_COUNT 10000
 
@@ -124,24 +125,24 @@ double circuit_build_times_quantile_cutoff(void);
 #define CBT_MAX_TIMEOUT_MIN_VALUE INT32_MAX
 
 /** Initial circuit build timeout in milliseconds */
-#define CBT_DEFAULT_TIMEOUT_INITIAL_VALUE (60*1000)
+#define CBT_DEFAULT_TIMEOUT_INITIAL_VALUE (60 * 1000)
 #define CBT_MIN_TIMEOUT_INITIAL_VALUE CBT_MIN_TIMEOUT_MIN_VALUE
 #define CBT_MAX_TIMEOUT_INITIAL_VALUE INT32_MAX
 int32_t circuit_build_times_initial_timeout(void);
 
 #if CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT < CBT_MIN_MAX_RECENT_TIMEOUT_COUNT
-#error "RECENT_CIRCUITS is set too low."
+#  error "RECENT_CIRCUITS is set too low."
 #endif
 
 #ifdef CIRCUITSTATS_PRIVATE
 STATIC double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
-                                             double quantile);
+                                                    double quantile);
 STATIC int circuit_build_times_update_alpha(circuit_build_times_t *cbt);
 STATIC void circuit_build_times_reset(circuit_build_times_t *cbt);
 
 /* Network liveness functions */
-STATIC int circuit_build_times_network_check_changed(
-                                             circuit_build_times_t *cbt);
+STATIC int
+circuit_build_times_network_check_changed(circuit_build_times_t *cbt);
 #endif /* defined(CIRCUITSTATS_PRIVATE) */
 
 #ifdef TOR_UNIT_TESTS
@@ -206,7 +207,6 @@ struct circuit_build_times_t {
   /** Total closed counts.  Old measurements may be scaled downward if
    * we've seen a lot of circuits.*/
   uint32_t num_circ_closed;
-
 };
 #endif /* defined(CIRCUITSTATS_PRIVATE) */
 

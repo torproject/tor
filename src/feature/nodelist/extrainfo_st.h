@@ -20,7 +20,7 @@ struct extrainfo_t {
   /** SHA256 digest of this document */
   uint8_t digest256[DIGEST256_LEN];
   /** The router's nickname. */
-  char nickname[MAX_NICKNAME_LEN+1];
+  char nickname[MAX_NICKNAME_LEN + 1];
   /** True iff we found the right key for this extra-info, verified the
    * signature, and found it to be bad. */
   unsigned int bad_sig : 1;

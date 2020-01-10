@@ -66,7 +66,7 @@ new_establish_intro_cell(const char *circ_nonce,
   tt_assert(cell);
   *cell_out = cell;
 
- done:
+done:
   if (*cell_out == NULL)
     trn_cell_establish_intro_free(cell);
 
@@ -90,7 +90,7 @@ new_establish_intro_encoded_cell(const char *circ_nonce, uint8_t *cell_out)
   cell_len = hs_cell_build_establish_intro(circ_nonce, &config, ip, cell_out);
   tt_i64_op(cell_len, OP_GT, 0);
 
- done:
+done:
   service_intro_point_free(ip);
   return cell_len;
 }
@@ -99,7 +99,7 @@ new_establish_intro_encoded_cell(const char *circ_nonce, uint8_t *cell_out)
 static int
 mock_send_intro_established_cell(or_circuit_t *circ)
 {
-  (void) circ;
+  (void)circ;
   return 0;
 }
 
@@ -110,14 +110,14 @@ mock_relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
                                   crypt_path_t *cpath_layer,
                                   const char *filename, int lineno)
 {
-  (void) stream_id;
-  (void) circ;
-  (void) relay_command;
-  (void) payload;
-  (void) payload_len;
-  (void) cpath_layer;
-  (void) filename;
-  (void) lineno;
+  (void)stream_id;
+  (void)circ;
+  (void)relay_command;
+  (void)payload;
+  (void)payload_len;
+  (void)cpath_layer;
+  (void)filename;
+  (void)lineno;
   return 0;
 }
 
@@ -128,8 +128,8 @@ helper_create_intro_circuit(void)
   tt_assert(circ);
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_OR);
   token_bucket_ctr_init(&circ->introduce2_bucket, 100, 100,
-                        (uint32_t) approx_time());
- done:
+                        (uint32_t)approx_time());
+done:
   return circ;
 }
 
@@ -150,8 +150,8 @@ helper_create_introduce1_cell(void)
   /* Set the auth key. */
   {
     size_t auth_key_len = sizeof(auth_key_kp.pubkey);
-    trn_cell_introduce1_set_auth_key_type(cell,
-                                     TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519);
+    trn_cell_introduce1_set_auth_key_type(
+        cell, TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519);
     trn_cell_introduce1_set_auth_key_len(cell, auth_key_len);
     trn_cell_introduce1_setlen_auth_key(cell, auth_key_len);
     uint8_t *auth_key_ptr = trn_cell_introduce1_getarray_auth_key(cell);
@@ -174,8 +174,8 @@ helper_create_introduce1_cell(void)
   }
 
   return cell;
- err:
- done:
+err:
+done:
   trn_cell_introduce1_free(cell);
   return NULL;
 }
@@ -189,7 +189,7 @@ test_establish_intro_wrong_purpose(void *arg)
   ssize_t cell_len = 0;
   char circ_nonce[DIGEST_LEN] = {0};
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
+  or_circuit_t *intro_circ = or_circuit_new(0, NULL);
 
   (void)arg;
 
@@ -212,7 +212,7 @@ test_establish_intro_wrong_purpose(void *arg)
   teardown_capture_of_logs();
   tt_int_op(retval, OP_EQ, -1);
 
- done:
+done:
   circuit_free_(TO_CIRCUIT(intro_circ));
 }
 
@@ -230,10 +230,10 @@ static void
 test_establish_intro_wrong_keytype(void *arg)
 {
   int retval;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
+  or_circuit_t *intro_circ = or_circuit_new(0, NULL);
   char circ_nonce[DIGEST_LEN] = {0};
 
-  (void) arg;
+  (void)arg;
 
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
@@ -241,12 +241,12 @@ test_establish_intro_wrong_keytype(void *arg)
 
   /* Receive the cell. Should fail. */
   setup_full_capture_of_logs(LOG_INFO);
-  retval = hs_intro_received_establish_intro(intro_circ, (uint8_t *) "", 0);
+  retval = hs_intro_received_establish_intro(intro_circ, (uint8_t *)"", 0);
   expect_log_msg_containing("Empty ESTABLISH_INTRO cell.");
   teardown_capture_of_logs();
   tt_int_op(retval, OP_EQ, -1);
 
- done:
+done:
   circuit_free_(TO_CIRCUIT(intro_circ));
 }
 
@@ -258,9 +258,9 @@ test_establish_intro_wrong_keytype2(void *arg)
   char circ_nonce[DIGEST_LEN] = {0};
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
+  or_circuit_t *intro_circ = or_circuit_new(0, NULL);
 
-  (void) arg;
+  (void)arg;
 
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
@@ -281,7 +281,7 @@ test_establish_intro_wrong_keytype2(void *arg)
   teardown_capture_of_logs();
   tt_int_op(retval, OP_EQ, -1);
 
- done:
+done:
   circuit_free_(TO_CIRCUIT(intro_circ));
 }
 
@@ -294,9 +294,9 @@ test_establish_intro_wrong_mac(void *arg)
   ssize_t cell_len = 0;
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   trn_cell_establish_intro_t *cell = NULL;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
+  or_circuit_t *intro_circ = or_circuit_new(0, NULL);
 
-  (void) arg;
+  (void)arg;
 
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
@@ -310,7 +310,7 @@ test_establish_intro_wrong_mac(void *arg)
 
   /* Mangle one byte of the MAC. */
   uint8_t *handshake_ptr =
-    trn_cell_establish_intro_getarray_handshake_mac(cell);
+      trn_cell_establish_intro_getarray_handshake_mac(cell);
   handshake_ptr[TRUNNEL_SHA3_256_LEN - 1]++;
   /* We need to resign the payload with that change. */
   {
@@ -320,26 +320,23 @@ test_establish_intro_wrong_mac(void *arg)
      * key material generated earlier when creating the cell. */
     retval = ed25519_keypair_generate(&key_struct, 0);
     tt_int_op(retval, OP_EQ, 0);
-    uint8_t *auth_key_ptr =
-      trn_cell_establish_intro_getarray_auth_key(cell);
+    uint8_t *auth_key_ptr = trn_cell_establish_intro_getarray_auth_key(cell);
     memcpy(auth_key_ptr, key_struct.pubkey.pubkey, ED25519_PUBKEY_LEN);
     /* Encode payload so we can sign it. */
-    cell_len = trn_cell_establish_intro_encode(cell_body, sizeof(cell_body),
-                                               cell);
+    cell_len =
+        trn_cell_establish_intro_encode(cell_body, sizeof(cell_body), cell);
     tt_i64_op(cell_len, OP_GT, 0);
 
-    retval = ed25519_sign_prefixed(&sig, cell_body,
-                                   cell_len -
-                                   (ED25519_SIG_LEN + sizeof(cell->sig_len)),
-                                   ESTABLISH_INTRO_SIG_PREFIX, &key_struct);
+    retval = ed25519_sign_prefixed(
+        &sig, cell_body, cell_len - (ED25519_SIG_LEN + sizeof(cell->sig_len)),
+        ESTABLISH_INTRO_SIG_PREFIX, &key_struct);
     tt_int_op(retval, OP_EQ, 0);
     /* And write the signature to the cell */
-    uint8_t *sig_ptr =
-      trn_cell_establish_intro_getarray_sig(cell);
+    uint8_t *sig_ptr = trn_cell_establish_intro_getarray_sig(cell);
     memcpy(sig_ptr, sig.sig, cell->sig_len);
     /* Re-encode with the new signature. */
-    cell_len = trn_cell_establish_intro_encode(cell_body, sizeof(cell_body),
-                                               cell);
+    cell_len =
+        trn_cell_establish_intro_encode(cell_body, sizeof(cell_body), cell);
     tt_i64_op(cell_len, OP_GT, 0);
   }
 
@@ -350,7 +347,7 @@ test_establish_intro_wrong_mac(void *arg)
   teardown_capture_of_logs();
   tt_int_op(retval, OP_EQ, -1);
 
- done:
+done:
   trn_cell_establish_intro_free(cell);
   circuit_free_(TO_CIRCUIT(intro_circ));
 }
@@ -366,9 +363,9 @@ test_establish_intro_wrong_auth_key_len(void *arg)
   ssize_t cell_len = 0;
   size_t bad_auth_key_len = ED25519_PUBKEY_LEN - 1;
   trn_cell_establish_intro_t *cell = NULL;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
+  or_circuit_t *intro_circ = or_circuit_new(0, NULL);
 
-  (void) arg;
+  (void)arg;
 
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
@@ -384,8 +381,8 @@ test_establish_intro_wrong_auth_key_len(void *arg)
   trn_cell_establish_intro_set_auth_key_len(cell, bad_auth_key_len);
   trn_cell_establish_intro_setlen_auth_key(cell, bad_auth_key_len);
   /* Encode cell. */
-  cell_len = trn_cell_establish_intro_encode(cell_body, sizeof(cell_body),
-                                             cell);
+  cell_len =
+      trn_cell_establish_intro_encode(cell_body, sizeof(cell_body), cell);
   tt_int_op(cell_len, OP_GT, 0);
 
   /* Receive the cell. Should fail. */
@@ -395,7 +392,7 @@ test_establish_intro_wrong_auth_key_len(void *arg)
   teardown_capture_of_logs();
   tt_int_op(retval, OP_EQ, -1);
 
- done:
+done:
   trn_cell_establish_intro_free(cell);
   circuit_free_(TO_CIRCUIT(intro_circ));
 }
@@ -411,9 +408,9 @@ test_establish_intro_wrong_sig_len(void *arg)
   ssize_t cell_len = 0;
   size_t bad_sig_len = ED25519_SIG_LEN - 1;
   trn_cell_establish_intro_t *cell = NULL;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
+  or_circuit_t *intro_circ = or_circuit_new(0, NULL);
 
-  (void) arg;
+  (void)arg;
 
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
@@ -429,8 +426,8 @@ test_establish_intro_wrong_sig_len(void *arg)
   trn_cell_establish_intro_set_sig_len(cell, bad_sig_len);
   trn_cell_establish_intro_setlen_sig(cell, bad_sig_len);
   /* Encode cell. */
-  cell_len = trn_cell_establish_intro_encode(cell_body, sizeof(cell_body),
-                                             cell);
+  cell_len =
+      trn_cell_establish_intro_encode(cell_body, sizeof(cell_body), cell);
   tt_int_op(cell_len, OP_GT, 0);
 
   /* Receive the cell. Should fail. */
@@ -440,7 +437,7 @@ test_establish_intro_wrong_sig_len(void *arg)
   teardown_capture_of_logs();
   tt_int_op(retval, OP_EQ, -1);
 
- done:
+done:
   trn_cell_establish_intro_free(cell);
   circuit_free_(TO_CIRCUIT(intro_circ));
 }
@@ -454,9 +451,9 @@ test_establish_intro_wrong_sig(void *arg)
   char circ_nonce[DIGEST_LEN] = {0};
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
+  or_circuit_t *intro_circ = or_circuit_new(0, NULL);
 
-  (void) arg;
+  (void)arg;
 
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
@@ -478,7 +475,7 @@ test_establish_intro_wrong_sig(void *arg)
   teardown_capture_of_logs();
   tt_int_op(retval, OP_EQ, -1);
 
- done:
+done:
   circuit_free_(TO_CIRCUIT(intro_circ));
 }
 
@@ -504,16 +501,16 @@ helper_establish_intro_v3(or_circuit_t *intro_circ)
   cell_len = new_establish_intro_cell(circ_nonce, &cell);
   tt_i64_op(cell_len, OP_GT, 0);
   tt_assert(cell);
-  cell_len = trn_cell_establish_intro_encode(cell_body, sizeof(cell_body),
-                                             cell);
+  cell_len =
+      trn_cell_establish_intro_encode(cell_body, sizeof(cell_body), cell);
   tt_int_op(cell_len, OP_GT, 0);
 
   /* Receive the cell */
   retval = hs_intro_received_establish_intro(intro_circ, cell_body,
-                                             (size_t) cell_len);
+                                             (size_t)cell_len);
   tt_int_op(retval, OP_EQ, 0);
 
- done:
+done:
   return cell;
 }
 
@@ -539,17 +536,15 @@ helper_establish_intro_v2(or_circuit_t *intro_circ)
 
   /* Use old circ_nonce why not */
   cell_len = rend_service_encode_establish_intro_cell(
-                                           (char*)cell_body,
-                                           sizeof(cell_body), key1,
-                                           circ_nonce);
+      (char *)cell_body, sizeof(cell_body), key1, circ_nonce);
   tt_int_op(cell_len, OP_GT, 0);
 
   /* Receive legacy establish_intro */
-  retval = hs_intro_received_establish_intro(intro_circ,
-                                             cell_body, (size_t) cell_len);
+  retval = hs_intro_received_establish_intro(intro_circ, cell_body,
+                                             (size_t)cell_len);
   tt_int_op(retval, OP_EQ, 0);
 
- done:
+done:
   return key1;
 }
 
@@ -567,8 +562,7 @@ test_circuitmap_free_all(void)
   hs_circuitmap_free_all();
   the_hs_circuitmap = get_hs_circuitmap();
   tt_ptr_op(the_hs_circuitmap, OP_EQ, NULL);
- done:
-  ;
+done:;
 }
 
 /** Successfully register a v2 intro point and a v3 intro point. Ensure that HS
@@ -588,7 +582,7 @@ test_intro_point_registration(void *arg)
 
   or_circuit_t *returned_intro_circ = NULL;
 
-  (void) arg;
+  (void)arg;
 
   MOCK(hs_intro_send_intro_established_cell, mock_send_intro_established_cell);
 
@@ -600,7 +594,8 @@ test_intro_point_registration(void *arg)
     tt_assert(the_hs_circuitmap);
     tt_int_op(0, OP_EQ, HT_SIZE(the_hs_circuitmap));
     /* Do a circuitmap query in any case */
-    returned_intro_circ =hs_circuitmap_get_intro_circ_v3_relay_side(&auth_key);
+    returned_intro_circ =
+        hs_circuitmap_get_intro_circ_v3_relay_side(&auth_key);
     tt_ptr_op(returned_intro_circ, OP_EQ, NULL);
   }
 
@@ -617,7 +612,7 @@ test_intro_point_registration(void *arg)
     get_auth_key_from_cell(&auth_key, RELAY_COMMAND_ESTABLISH_INTRO,
                            establish_intro_cell);
     returned_intro_circ =
-      hs_circuitmap_get_intro_circ_v3_relay_side(&auth_key);
+        hs_circuitmap_get_intro_circ_v3_relay_side(&auth_key);
     tt_ptr_op(intro_circ, OP_EQ, returned_intro_circ);
   }
 
@@ -639,14 +634,14 @@ test_intro_point_registration(void *arg)
     retval = crypto_pk_get_digest(legacy_auth_key, key_digest);
     tt_int_op(retval, OP_EQ, 0);
     returned_intro_circ =
-      hs_circuitmap_get_intro_circ_v2_relay_side((uint8_t*)key_digest);
+        hs_circuitmap_get_intro_circ_v2_relay_side((uint8_t *)key_digest);
     tt_ptr_op(legacy_intro_circ, OP_EQ, returned_intro_circ);
   }
 
   /* XXX Continue test and try to register a second v3 intro point with the
    * same auth key. Make sure that old intro circuit gets closed. */
 
- done:
+done:
   crypto_pk_free(legacy_auth_key);
   circuit_free_(TO_CIRCUIT(intro_circ));
   circuit_free_(TO_CIRCUIT(legacy_intro_circ));
@@ -662,7 +657,7 @@ test_introduce1_suitable_circuit(void *arg)
   int ret;
   or_circuit_t *circ = NULL;
 
-  (void) arg;
+  (void)arg;
 
   /* Valid suitable circuit. */
   {
@@ -687,7 +682,7 @@ test_introduce1_suitable_circuit(void *arg)
     circ = or_circuit_new(0, NULL);
     circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_OR);
     /* Bogus pointer, the check is against NULL on n_chan. */
-    circ->base_.n_chan = (channel_t *) circ;
+    circ->base_.n_chan = (channel_t *)circ;
     ret = circuit_is_suitable_for_introduce1(circ);
     circuit_free_(TO_CIRCUIT(circ));
     tt_int_op(ret, OP_EQ, 0);
@@ -715,8 +710,7 @@ test_introduce1_suitable_circuit(void *arg)
     tt_int_op(ret, OP_EQ, 0);
   }
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -725,7 +719,7 @@ test_introduce1_is_legacy(void *arg)
   int ret;
   uint8_t request[256];
 
-  (void) arg;
+  (void)arg;
 
   /* For a cell to be considered legacy, according to the specification, the
    * first 20 bytes MUST BE non-zero else it's a v3 cell. */
@@ -740,8 +734,7 @@ test_introduce1_is_legacy(void *arg)
   ret = introduce1_cell_is_legacy(request);
   tt_int_op(ret, OP_EQ, 0);
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -750,7 +743,7 @@ test_introduce1_validation(void *arg)
   int ret;
   trn_cell_introduce1_t *cell = NULL;
 
-  (void) arg;
+  (void)arg;
 
   /* Create our decoy cell that we'll modify as we go to test the validation
    * function of that parsed cell. */
@@ -806,7 +799,7 @@ test_introduce1_validation(void *arg)
   ret = validate_introduce1_parsed_cell(cell);
   tt_int_op(ret, OP_EQ, 0);
 
- done:
+done:
   trn_cell_introduce1_free(cell);
 }
 
@@ -818,7 +811,7 @@ test_received_introduce1_handling(void *arg)
   trn_cell_introduce1_t *cell = NULL;
   or_circuit_t *circ = NULL;
 
-  (void) arg;
+  (void)arg;
 
   MOCK(relay_send_command_from_edge_, mock_relay_send_command_from_edge);
 
@@ -855,7 +848,7 @@ test_received_introduce1_handling(void *arg)
     tt_int_op((int)request_len, OP_GT, 0);
     request = tor_malloc_zero(request_len);
     ssize_t encoded_len =
-      trn_cell_introduce1_encode(request, request_len, cell);
+        trn_cell_introduce1_encode(request, request_len, cell);
     tt_int_op((int)encoded_len, OP_GT, 0);
 
     circ = helper_create_intro_circuit();
@@ -865,7 +858,7 @@ test_received_introduce1_handling(void *arg)
     /* Register the circuit in the map for the auth key of the cell. */
     ed25519_public_key_t auth_key;
     const uint8_t *cell_auth_key =
-      trn_cell_introduce1_getconstarray_auth_key(cell);
+        trn_cell_introduce1_getconstarray_auth_key(cell);
     memcpy(auth_key.pubkey, cell_auth_key, ED25519_PUBKEY_LEN);
     hs_circuitmap_register_intro_circ_v3_relay_side(service_circ, &auth_key);
     ret = hs_intro_received_introduce1(circ, request, request_len);
@@ -886,7 +879,7 @@ test_received_introduce1_handling(void *arg)
     tt_size_op(request_len, OP_GT, 0);
     request = tor_malloc_zero(request_len + 256);
     ssize_t encoded_len =
-      trn_cell_introduce1_encode(request, request_len, cell);
+        trn_cell_introduce1_encode(request, request_len, cell);
     tt_int_op((int)encoded_len, OP_GT, 0);
 
     circ = helper_create_intro_circuit();
@@ -903,7 +896,7 @@ test_received_introduce1_handling(void *arg)
     tt_int_op(ret, OP_EQ, 0);
   }
 
- done:
+done:
   trn_cell_introduce1_free(cell);
   tor_free(request);
   hs_circuitmap_free_all();
@@ -919,9 +912,9 @@ test_received_establish_intro_dos_ext(void *arg)
   char circ_nonce[DIGEST_LEN] = {0};
   hs_service_intro_point_t *ip = NULL;
   hs_service_config_t config;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
+  or_circuit_t *intro_circ = or_circuit_new(0, NULL);
 
-  (void) arg;
+  (void)arg;
 
   MOCK(relay_send_command_from_edge_, mock_relay_send_command_from_edge);
 
@@ -958,7 +951,7 @@ test_received_establish_intro_dos_ext(void *arg)
 
   /* Need to reset the circuit in between test cases. */
   circuit_free_(TO_CIRCUIT(intro_circ));
-  intro_circ = or_circuit_new(0,NULL);
+  intro_circ = or_circuit_new(0, NULL);
   helper_prepare_circ_for_intro(intro_circ, circ_nonce);
 
   /* Case 2: Build encoded cell. Bad DoS parameters. */
@@ -981,7 +974,7 @@ test_received_establish_intro_dos_ext(void *arg)
 
   /* Need to reset the circuit in between test cases. */
   circuit_free_(TO_CIRCUIT(intro_circ));
-  intro_circ = or_circuit_new(0,NULL);
+  intro_circ = or_circuit_new(0, NULL);
   helper_prepare_circ_for_intro(intro_circ, circ_nonce);
 
   /* Case 3: Build encoded cell. Burst is smaller than rate. Not allowed. */
@@ -1004,7 +997,7 @@ test_received_establish_intro_dos_ext(void *arg)
 
   /* Need to reset the circuit in between test cases. */
   circuit_free_(TO_CIRCUIT(intro_circ));
-  intro_circ = or_circuit_new(0,NULL);
+  intro_circ = or_circuit_new(0, NULL);
   helper_prepare_circ_for_intro(intro_circ, circ_nonce);
 
   /* Case 4: Build encoded cell. Rate is 0 but burst is not 0. Disables the
@@ -1028,7 +1021,7 @@ test_received_establish_intro_dos_ext(void *arg)
 
   /* Need to reset the circuit in between test cases. */
   circuit_free_(TO_CIRCUIT(intro_circ));
-  intro_circ = or_circuit_new(0,NULL);
+  intro_circ = or_circuit_new(0, NULL);
   helper_prepare_circ_for_intro(intro_circ, circ_nonce);
 
   /* Case 5: Build encoded cell. Burst is 0 but rate is not 0. Disables the
@@ -1050,7 +1043,7 @@ test_received_establish_intro_dos_ext(void *arg)
   tt_int_op(intro_circ->introduce2_dos_defense_enabled, OP_EQ,
             HS_CONFIG_V3_DOS_DEFENSE_DEFAULT);
 
- done:
+done:
   circuit_free_(TO_CIRCUIT(intro_circ));
   service_intro_point_free(ip);
   hs_circuitmap_free_all();
@@ -1060,7 +1053,7 @@ test_received_establish_intro_dos_ext(void *arg)
 static void *
 hs_subsystem_setup_fn(const struct testcase_t *tc)
 {
-  (void) tc;
+  (void)tc;
 
   return NULL;
 }
@@ -1068,55 +1061,53 @@ hs_subsystem_setup_fn(const struct testcase_t *tc)
 static int
 hs_subsystem_cleanup_fn(const struct testcase_t *tc, void *arg)
 {
-  (void) tc;
-  (void) arg;
+  (void)tc;
+  (void)arg;
 
   return 1;
 }
 
-static struct testcase_setup_t test_setup = {
-  hs_subsystem_setup_fn, hs_subsystem_cleanup_fn
-};
+static struct testcase_setup_t test_setup = {hs_subsystem_setup_fn,
+                                             hs_subsystem_cleanup_fn};
 
 struct testcase_t hs_intropoint_tests[] = {
-  { "intro_point_registration",
-    test_intro_point_registration, TT_FORK, NULL, &test_setup},
+    {"intro_point_registration", test_intro_point_registration, TT_FORK, NULL,
+     &test_setup},
 
-  { "receive_establish_intro_wrong_keytype",
-    test_establish_intro_wrong_keytype, TT_FORK, NULL, &test_setup},
+    {"receive_establish_intro_wrong_keytype",
+     test_establish_intro_wrong_keytype, TT_FORK, NULL, &test_setup},
 
-  { "receive_establish_intro_wrong_keytype2",
-    test_establish_intro_wrong_keytype2, TT_FORK, NULL, &test_setup},
+    {"receive_establish_intro_wrong_keytype2",
+     test_establish_intro_wrong_keytype2, TT_FORK, NULL, &test_setup},
 
-  { "receive_establish_intro_wrong_purpose",
-    test_establish_intro_wrong_purpose, TT_FORK, NULL, &test_setup},
+    {"receive_establish_intro_wrong_purpose",
+     test_establish_intro_wrong_purpose, TT_FORK, NULL, &test_setup},
 
-  { "receive_establish_intro_wrong_sig",
-    test_establish_intro_wrong_sig, TT_FORK, NULL, &test_setup},
+    {"receive_establish_intro_wrong_sig", test_establish_intro_wrong_sig,
+     TT_FORK, NULL, &test_setup},
 
-  { "receive_establish_intro_wrong_sig_len",
-    test_establish_intro_wrong_sig_len, TT_FORK, NULL, &test_setup},
+    {"receive_establish_intro_wrong_sig_len",
+     test_establish_intro_wrong_sig_len, TT_FORK, NULL, &test_setup},
 
-  { "receive_establish_intro_wrong_auth_key_len",
-    test_establish_intro_wrong_auth_key_len, TT_FORK, NULL, &test_setup},
+    {"receive_establish_intro_wrong_auth_key_len",
+     test_establish_intro_wrong_auth_key_len, TT_FORK, NULL, &test_setup},
 
-  { "receive_establish_intro_wrong_mac",
-    test_establish_intro_wrong_mac, TT_FORK, NULL, &test_setup},
+    {"receive_establish_intro_wrong_mac", test_establish_intro_wrong_mac,
+     TT_FORK, NULL, &test_setup},
 
-  { "introduce1_suitable_circuit",
-    test_introduce1_suitable_circuit, TT_FORK, NULL, &test_setup},
+    {"introduce1_suitable_circuit", test_introduce1_suitable_circuit, TT_FORK,
+     NULL, &test_setup},
 
-  { "introduce1_is_legacy",
-    test_introduce1_is_legacy, TT_FORK, NULL, &test_setup},
+    {"introduce1_is_legacy", test_introduce1_is_legacy, TT_FORK, NULL,
+     &test_setup},
 
-  { "introduce1_validation",
-    test_introduce1_validation, TT_FORK, NULL, &test_setup},
+    {"introduce1_validation", test_introduce1_validation, TT_FORK, NULL,
+     &test_setup},
 
-  { "received_introduce1_handling",
-    test_received_introduce1_handling, TT_FORK, NULL, &test_setup},
+    {"received_introduce1_handling", test_received_introduce1_handling,
+     TT_FORK, NULL, &test_setup},
 
-  { "received_establish_intro_dos_ext",
-    test_received_establish_intro_dos_ext, TT_FORK, NULL, &test_setup},
+    {"received_establish_intro_dos_ext", test_received_establish_intro_dos_ext,
+     TT_FORK, NULL, &test_setup},
 
-  END_OF_TESTCASES
-};
+    END_OF_TESTCASES};

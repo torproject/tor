@@ -23,7 +23,7 @@
     /* We ignore any values that are >= 'cutoff,' to avoid biasing */   \
     /* the distribution with clipping at the upper end of the type's */ \
     /* range. */                                                        \
-    cutoff = (maxval) - ((maxval)%(limit));                             \
+    cutoff = (maxval) - ((maxval) % (limit));                           \
     while (1) {                                                         \
       fill_stmt;                                                        \
       if (val < cutoff)                                                 \
@@ -40,7 +40,7 @@ crypto_rand_uint(unsigned limit)
 {
   tor_assert(limit < UINT_MAX);
   IMPLEMENT_RAND_UNSIGNED(unsigned, UINT_MAX, limit,
-                          crypto_rand((char*)&val, sizeof(val)));
+                          crypto_rand((char *)&val, sizeof(val)));
 }
 
 /**
@@ -55,7 +55,7 @@ crypto_rand_int(unsigned int max)
    * to return a signed type. Instead we make sure that the range is
    * reasonable for a nonnegative int, use crypto_rand_uint(), and cast.
    */
-  tor_assert(max <= ((unsigned int)INT_MAX)+1);
+  tor_assert(max <= ((unsigned int)INT_MAX) + 1);
 
   return (int)crypto_rand_uint(max);
 }
@@ -107,15 +107,15 @@ crypto_rand_uint64(uint64_t max)
 {
   tor_assert(max < UINT64_MAX);
   IMPLEMENT_RAND_UNSIGNED(uint64_t, UINT64_MAX, max,
-                          crypto_rand((char*)&val, sizeof(val)));
+                          crypto_rand((char *)&val, sizeof(val)));
 }
 
 #if SIZEOF_INT == 4
-#define UINT_MAX_AS_DOUBLE 4294967296.0
+#  define UINT_MAX_AS_DOUBLE 4294967296.0
 #elif SIZEOF_INT == 8
-#define UINT_MAX_AS_DOUBLE 1.8446744073709552e+19
+#  define UINT_MAX_AS_DOUBLE 1.8446744073709552e+19
 #else
-#error SIZEOF_INT is neither 4 nor 8
+#  error SIZEOF_INT is neither 4 nor 8
 #endif /* SIZEOF_INT == 4 || ... */
 
 /**
@@ -128,7 +128,7 @@ crypto_rand_double(void)
   /* We just use an unsigned int here; we don't really care about getting
    * more than 32 bits of resolution */
   unsigned int u;
-  crypto_rand((char*)&u, sizeof(u));
+  crypto_rand((char *)&u, sizeof(u));
   return ((double)u) / UINT_MAX_AS_DOUBLE;
 }
 
@@ -139,8 +139,9 @@ unsigned
 crypto_fast_rng_get_uint(crypto_fast_rng_t *rng, unsigned limit)
 {
   tor_assert(limit < UINT_MAX);
-  IMPLEMENT_RAND_UNSIGNED(unsigned, UINT_MAX, limit,
-                  crypto_fast_rng_getbytes(rng, (void*)&val, sizeof(val)));
+  IMPLEMENT_RAND_UNSIGNED(
+      unsigned, UINT_MAX, limit,
+      crypto_fast_rng_getbytes(rng, (void *)&val, sizeof(val)));
 }
 
 /**
@@ -150,8 +151,9 @@ uint64_t
 crypto_fast_rng_get_uint64(crypto_fast_rng_t *rng, uint64_t limit)
 {
   tor_assert(limit < UINT64_MAX);
-  IMPLEMENT_RAND_UNSIGNED(uint64_t, UINT64_MAX, limit,
-                  crypto_fast_rng_getbytes(rng, (void*)&val, sizeof(val)));
+  IMPLEMENT_RAND_UNSIGNED(
+      uint64_t, UINT64_MAX, limit,
+      crypto_fast_rng_getbytes(rng, (void *)&val, sizeof(val)));
 }
 
 /**
@@ -161,7 +163,7 @@ uint32_t
 crypto_fast_rng_get_u32(crypto_fast_rng_t *rng)
 {
   uint32_t val;
-  crypto_fast_rng_getbytes(rng, (void*)&val, sizeof(val));
+  crypto_fast_rng_getbytes(rng, (void *)&val, sizeof(val));
   return val;
 }
 
@@ -170,8 +172,8 @@ crypto_fast_rng_get_u32(crypto_fast_rng_t *rng)
  * crypto_fast_rng_t.
  */
 uint64_t
-crypto_fast_rng_uint64_range(crypto_fast_rng_t *rng,
-                             uint64_t min, uint64_t max)
+crypto_fast_rng_uint64_range(crypto_fast_rng_t *rng, uint64_t min,
+                             uint64_t max)
 {
   /* Handle corrupted input */
   if (BUG(min >= max)) {
@@ -188,7 +190,6 @@ double
 crypto_fast_rng_get_double(crypto_fast_rng_t *rng)
 {
   unsigned int u;
-  crypto_fast_rng_getbytes(rng, (void*)&u, sizeof(u));
+  crypto_fast_rng_getbytes(rng, (void *)&u, sizeof(u));
   return ((double)u) / UINT_MAX_AS_DOUBLE;
 }
-

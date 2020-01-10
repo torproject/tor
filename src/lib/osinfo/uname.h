@@ -13,6 +13,6 @@
 
 #include "lib/testsupport/testsupport.h"
 
-MOCK_DECL(const char *, get_uname,(void));
+MOCK_DECL(const char *, get_uname, (void));
 
 #endif /* !defined(HAVE_TOR_UNAME_H) */

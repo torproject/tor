@@ -57,11 +57,11 @@
 /** Used to indicate the type of an OR connection event passed to the
  * controller.  The various types are defined in control-spec.txt */
 typedef enum or_conn_status_event_t {
-  OR_CONN_EVENT_LAUNCHED     = 0,
-  OR_CONN_EVENT_CONNECTED    = 1,
-  OR_CONN_EVENT_FAILED       = 2,
-  OR_CONN_EVENT_CLOSED       = 3,
-  OR_CONN_EVENT_NEW          = 4,
+  OR_CONN_EVENT_LAUNCHED = 0,
+  OR_CONN_EVENT_CONNECTED = 1,
+  OR_CONN_EVENT_FAILED = 2,
+  OR_CONN_EVENT_CLOSED = 3,
+  OR_CONN_EVENT_NEW = 4,
 } or_conn_status_event_t;
 
 /**
@@ -73,10 +73,10 @@ typedef enum or_conn_status_event_t {
  * decisions.
  **/
 typedef struct orconn_state_msg_t {
-  uint64_t gid;                 /**< connection's global ID */
-  uint64_t chan;                /**< associated channel ID */
-  int proxy_type;               /**< connection's proxy type */
-  uint8_t state;                /**< new connection state */
+  uint64_t gid; /**< connection's global ID */
+  uint64_t chan; /**< associated channel ID */
+  int proxy_type; /**< connection's proxy type */
+  uint8_t state; /**< new connection state */
 } orconn_state_msg_t;
 
 DECLARE_MESSAGE(orconn_state, orconn_state, orconn_state_msg_t *);
@@ -88,9 +88,9 @@ DECLARE_MESSAGE(orconn_state, orconn_state, orconn_state_msg_t *);
  * events.
  **/
 typedef struct orconn_status_msg_t {
-  uint64_t gid;                 /**< connection's global ID */
-  int status;                   /**< or_conn_status_event_t */
-  int reason;                   /**< reason */
+  uint64_t gid; /**< connection's global ID */
+  int status; /**< or_conn_status_event_t */
+  int reason; /**< reason */
 } orconn_status_msg_t;
 
 DECLARE_MESSAGE(orconn_status, orconn_status, orconn_status_msg_t *);

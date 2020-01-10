@@ -26,18 +26,18 @@
  * Requires that <b>nlen</b> be greater than zero.
  */
 const void *
-tor_memmem(const void *_haystack, size_t hlen,
-           const void *_needle, size_t nlen)
+tor_memmem(const void *_haystack, size_t hlen, const void *_needle,
+           size_t nlen)
 {
-#if defined(HAVE_MEMMEM) && (!defined(__GNUC__) || __GNUC__ >= 2)
+#if defined(HAVE_MEMMEM) && (! defined(__GNUC__) || __GNUC__ >= 2)
   raw_assert(nlen);
   return memmem(_haystack, hlen, _needle, nlen);
 #else
   /* This isn't as fast as the GLIBC implementation, but it doesn't need to
    * be. */
   const char *p, *last_possible_start;
-  const char *haystack = (const char*)_haystack;
-  const char *needle = (const char*)_needle;
+  const char *haystack = (const char *)_haystack;
+  const char *needle = (const char *)_needle;
   char first;
   raw_assert(nlen);
 
@@ -47,7 +47,7 @@ tor_memmem(const void *_haystack, size_t hlen,
   p = haystack;
   /* Last position at which the needle could start. */
   last_possible_start = haystack + hlen - nlen;
-  first = *(const char*)needle;
+  first = *(const char *)needle;
   while ((p = memchr(p, first, last_possible_start + 1 - p))) {
     if (fast_memeq(p, needle, nlen))
       return p;
@@ -74,7 +74,8 @@ int
 fast_mem_is_zero(const char *mem, size_t len)
 {
   static const char ZERO[] = {
-    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   };
   while (len >= sizeof(ZERO)) {
     /* It's safe to use fast_memcmp here, since the very worst thing an
@@ -149,7 +150,7 @@ int
 tor_strisprint(const char *s)
 {
   while (*s) {
-    if (!TOR_ISPRINT(*s))
+    if (! TOR_ISPRINT(*s))
       return 0;
     s++;
   }
@@ -175,7 +176,7 @@ int
 tor_strisspace(const char *s)
 {
   while (*s) {
-    if (!TOR_ISSPACE(*s))
+    if (! TOR_ISSPACE(*s))
       return 0;
     s++;
   }
@@ -187,12 +188,12 @@ tor_strisspace(const char *s)
 int
 strcmp_opt(const char *s1, const char *s2)
 {
-  if (!s1) {
-    if (!s2)
+  if (! s1) {
+    if (! s2)
       return 0;
     else
       return -1;
-  } else if (!s2) {
+  } else if (! s2) {
     return 1;
   } else {
     return strcmp(s1, s2);
@@ -226,8 +227,7 @@ strcasecmpstart(const char *s1, const char *s2)
  * less than strlen(prefix).]
  */
 int
-fast_memcmpstart(const void *mem, size_t memlen,
-                const char *prefix)
+fast_memcmpstart(const void *mem, size_t memlen, const char *prefix)
 {
   size_t plen = strlen(prefix);
   if (memlen < plen)
@@ -242,10 +242,10 @@ int
 strcmpend(const char *s1, const char *s2)
 {
   size_t n1 = strlen(s1), n2 = strlen(s2);
-  if (n2>n1)
-    return strcmp(s1,s2);
+  if (n2 > n1)
+    return strcmp(s1, s2);
   else
-    return strncmp(s1+(n1-n2), s2, n2);
+    return strncmp(s1 + (n1 - n2), s2, n2);
 }
 
 /** Compares the last strlen(s2) characters of s1 with s2.  Returns as for
@@ -255,10 +255,10 @@ int
 strcasecmpend(const char *s1, const char *s2)
 {
   size_t n1 = strlen(s1), n2 = strlen(s2);
-  if (n2>n1) /* then they can't be the same; figure out which is bigger */
-    return strcasecmp(s1,s2);
+  if (n2 > n1) /* then they can't be the same; figure out which is bigger */
+    return strcasecmp(s1, s2);
   else
-    return strncasecmp(s1+(n1-n2), s2, n2);
+    return strncasecmp(s1 + (n1 - n2), s2, n2);
 }
 
 /** Return a pointer to the first char of s that is not whitespace and
@@ -271,19 +271,19 @@ eat_whitespace(const char *s)
 
   while (1) {
     switch (*s) {
-    case '\0':
-    default:
-      return s;
-    case ' ':
-    case '\t':
-    case '\n':
-    case '\r':
-      ++s;
-      break;
-    case '#':
-      ++s;
-      while (*s && *s != '\n')
+      case '\0':
+      default:
+        return s;
+      case ' ':
+      case '\t':
+      case '\n':
+      case '\r':
         ++s;
+        break;
+      case '#':
+        ++s;
+        while (*s && *s != '\n')
+          ++s;
     }
   }
 }
@@ -299,19 +299,19 @@ eat_whitespace_eos(const char *s, const char *eos)
 
   while (s < eos) {
     switch (*s) {
-    case '\0':
-    default:
-      return s;
-    case ' ':
-    case '\t':
-    case '\n':
-    case '\r':
-      ++s;
-      break;
-    case '#':
-      ++s;
-      while (s < eos && *s && *s != '\n')
+      case '\0':
+      default:
+        return s;
+      case ' ':
+      case '\t':
+      case '\n':
+      case '\r':
         ++s;
+        break;
+      case '#':
+        ++s;
+        while (s < eos && *s && *s != '\n')
+          ++s;
     }
   }
   return s;
@@ -345,17 +345,16 @@ find_whitespace(const char *s)
 {
   /* tor_assert(s); */
   while (1) {
-    switch (*s)
-    {
-    case '\0':
-    case '#':
-    case ' ':
-    case '\r':
-    case '\n':
-    case '\t':
-      return s;
-    default:
-      ++s;
+    switch (*s) {
+      case '\0':
+      case '#':
+      case ' ':
+      case '\r':
+      case '\n':
+      case '\t':
+        return s;
+      default:
+        ++s;
     }
   }
 }
@@ -367,17 +366,16 @@ find_whitespace_eos(const char *s, const char *eos)
 {
   /* tor_assert(s); */
   while (s < eos) {
-    switch (*s)
-    {
-    case '\0':
-    case '#':
-    case ' ':
-    case '\r':
-    case '\n':
-    case '\t':
-      return s;
-    default:
-      ++s;
+    switch (*s) {
+      case '\0':
+      case '#':
+      case ' ':
+      case '\r':
+      case '\n':
+      case '\t':
+        return s;
+      default:
+        ++s;
     }
   }
   return s;
@@ -393,11 +391,11 @@ find_str_at_start_of_line(const char *haystack, const char *needle)
   size_t needle_len = strlen(needle);
 
   do {
-    if (!strncmp(haystack, needle, needle_len))
+    if (! strncmp(haystack, needle, needle_len))
       return haystack;
 
     haystack = strchr(haystack, '\n');
-    if (!haystack)
+    if (! haystack)
       return NULL;
     else
       ++haystack;
@@ -415,18 +413,16 @@ string_is_C_identifier(const char *string)
 {
   size_t iter;
   size_t length = strlen(string);
-  if (!length)
+  if (! length)
     return 0;
 
-  for (iter = 0; iter < length ; iter++) {
+  for (iter = 0; iter < length; iter++) {
     if (iter == 0) {
-      if (!(TOR_ISALPHA(string[iter]) ||
-            string[iter] == '_'))
+      if (! (TOR_ISALPHA(string[iter]) || string[iter] == '_'))
         return 0;
     } else {
-      if (!(TOR_ISALPHA(string[iter]) ||
-            TOR_ISDIGIT(string[iter]) ||
-            string[iter] == '_'))
+      if (! (TOR_ISALPHA(string[iter]) || TOR_ISDIGIT(string[iter]) ||
+             string[iter] == '_'))
         return 0;
     }
   }
@@ -480,7 +476,7 @@ validate_char(const uint8_t *c, uint8_t len)
 
   mask = LOW_BITS(6); // bitmask for continuation bytes.
   for (uint8_t i = 1; i < len; i++) {
-    if (!is_continuation_byte(c[i]))
+    if (! is_continuation_byte(c[i]))
       return false;
     codepoint <<= 6;
     codepoint |= (c[i] & mask);
@@ -507,7 +503,7 @@ int
 string_is_utf8(const char *str, size_t len)
 {
   // If str is NULL, don't try to read it
-  if (!str) {
+  if (! str) {
     // We could test for this case, but the low-level logs would produce
     // confusing test output.
     // LCOV_EXCL_START
@@ -515,7 +511,7 @@ string_is_utf8(const char *str, size_t len)
       // Use the low-level logging function, so that the log module can
       // validate UTF-8 (if needed in future code)
       tor_log_err_sigsafe(
-        "BUG: string_is_utf8() called with NULL str but non-zero len.");
+          "BUG: string_is_utf8() called with NULL str but non-zero len.");
       // Since it's a bug, we should probably reject this string
       return false;
     }
@@ -534,7 +530,7 @@ string_is_utf8(const char *str, size_t len)
 
     // Validate the continuation bytes in this multi-byte character,
     // and advance to the next character in the string.
-    if (!validate_char((const uint8_t*)&str[i], num_bytes))
+    if (! validate_char((const uint8_t *)&str[i], num_bytes))
       return false;
     i = next_char;
   }
@@ -547,8 +543,8 @@ string_is_utf8(const char *str, size_t len)
 int
 string_is_utf8_no_bom(const char *str, size_t len)
 {
-  if (str && len >= 3 && (!strcmpstart(str, "\uFEFF") ||
-                          !strcmpstart(str, "\uFFFE"))) {
+  if (str && len >= 3 &&
+      (! strcmpstart(str, "\uFEFF") || ! strcmpstart(str, "\uFFFE"))) {
     return false;
   }
   return string_is_utf8(str, len);

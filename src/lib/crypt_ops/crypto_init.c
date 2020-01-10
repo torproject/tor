@@ -47,7 +47,7 @@ crypto_init_siphash_key(void)
   if (have_seeded_siphash)
     return 0;
 
-  crypto_rand((char*) &key, sizeof(key));
+  crypto_rand((char *)&key, sizeof(key));
   siphash_set_global_key(&key);
   have_seeded_siphash = 1;
   return 0;
@@ -58,8 +58,7 @@ crypto_init_siphash_key(void)
 int
 crypto_early_init(void)
 {
-  if (!crypto_early_initialized_) {
-
+  if (! crypto_early_initialized_) {
     crypto_early_initialized_ = 1;
 
 #ifdef ENABLE_OPENSSL
@@ -87,7 +86,7 @@ crypto_early_init(void)
 int
 crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 {
-  if (!crypto_global_initialized_) {
+  if (! crypto_global_initialized_) {
     if (crypto_early_init() < 0)
       return -1;
 
@@ -269,7 +268,7 @@ crypto_options_validate(const void *arg, char **msg_out)
   tor_assert(opt->magic == CRYPTO_OPTIONS_MAGIC);
   tor_assert(msg_out);
 
-  if (opt->AccelDir && !opt->AccelName) {
+  if (opt->AccelDir && ! opt->AccelName) {
     *msg_out = tor_strdup("Can't use hardware crypto accelerator dir "
                           "without engine name.");
     return -1;
@@ -287,12 +286,11 @@ crypto_options_validate(const void *arg, char **msg_out)
  * Declares the configuration options for this module.
  **/
 static const config_format_t crypto_options_fmt = {
-  .size = sizeof(crypto_options_t),
-  .magic = { "crypto_options_t",
-             CRYPTO_OPTIONS_MAGIC,
-             offsetof(crypto_options_t, magic) },
-  .vars = crypto_options_t_vars,
-  .validate_fn = crypto_options_validate,
+    .size = sizeof(crypto_options_t),
+    .magic = {"crypto_options_t", CRYPTO_OPTIONS_MAGIC,
+              offsetof(crypto_options_t, magic)},
+    .vars = crypto_options_t_vars,
+    .validate_fn = crypto_options_validate,
 };
 
 /**
@@ -306,8 +304,7 @@ crypto_set_options(void *arg)
 
   // This call already checks for crypto_global_initialized_, so it
   // will only initialize the subsystem the first time it's called.
-  if (crypto_global_init(hardware_accel,
-                         options->AccelName,
+  if (crypto_global_init(hardware_accel, options->AccelName,
                          options->AccelDir)) {
     log_err(LD_BUG, "Unable to initialize the crypto subsystem. Exiting.");
     return -1;
@@ -316,15 +313,15 @@ crypto_set_options(void *arg)
 }
 
 const struct subsys_fns_t sys_crypto = {
-  .name = "crypto",
-  .supported = true,
-  .level = -60,
-  .initialize = subsys_crypto_initialize,
-  .shutdown = subsys_crypto_shutdown,
-  .prefork = subsys_crypto_prefork,
-  .postfork = subsys_crypto_postfork,
-  .thread_cleanup = subsys_crypto_thread_cleanup,
+    .name = "crypto",
+    .supported = true,
+    .level = -60,
+    .initialize = subsys_crypto_initialize,
+    .shutdown = subsys_crypto_shutdown,
+    .prefork = subsys_crypto_prefork,
+    .postfork = subsys_crypto_postfork,
+    .thread_cleanup = subsys_crypto_thread_cleanup,
 
-  .options_format = &crypto_options_fmt,
-  .set_options = crypto_set_options,
+    .options_format = &crypto_options_fmt,
+    .set_options = crypto_set_options,
 };

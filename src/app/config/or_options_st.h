@@ -25,9 +25,12 @@ struct routerset_t;
 
 /** Enumeration of outbound address configuration types:
  * Exit-only, OR-only, or both */
-typedef enum {OUTBOUND_ADDR_EXIT, OUTBOUND_ADDR_OR,
-              OUTBOUND_ADDR_EXIT_AND_OR,
-              OUTBOUND_ADDR_MAX} outbound_addr_t;
+typedef enum {
+  OUTBOUND_ADDR_EXIT,
+  OUTBOUND_ADDR_OR,
+  OUTBOUND_ADDR_EXIT_AND_OR,
+  OUTBOUND_ADDR_MAX
+} outbound_addr_t;
 
 /** Which protocol to use for TCPProxy. */
 typedef enum {
@@ -44,7 +47,7 @@ struct or_options_t {
   char *command_arg; /**< Argument for command-line option. */
 
   struct config_line_t *Logs; /**< New-style list of configuration lines
-                        * for logs */
+                               * for logs */
   int LogTimeGranularity; /**< Log resolution in milliseconds. */
 
   int LogMessageDomains; /**< Boolean: Should we log the domain(s) in which
@@ -61,12 +64,12 @@ struct or_options_t {
   int DataDirectoryGroupReadable; /**< Boolean: Is the DataDirectory g+r? */
 
   char *KeyDirectory_option; /**< Where to store keys, as
-                               * configured by the user. */
+                              * configured by the user. */
   char *KeyDirectory; /**< Where to store keys data, as modified. */
   int KeyDirectoryGroupReadable; /**< Boolean: Is the KeyDirectory g+r? */
 
   char *CacheDirectory_option; /**< Where to store cached data, as
-                               * configured by the user. */
+                                * configured by the user. */
   char *CacheDirectory; /**< Where to store cached data, as modified. */
   int CacheDirectoryGroupReadable; /**< Boolean: Is the CacheDirectory g+r? */
 
@@ -75,25 +78,26 @@ struct or_options_t {
   char *PidFile; /**< Where to store PID of Tor process. */
 
   struct routerset_t *ExitNodes; /**< Structure containing nicknames, digests,
-                           * country codes and IP address patterns of ORs to
-                           * consider as exits. */
-  struct routerset_t *MiddleNodes; /**< Structure containing nicknames,
-                             * digests, country codes and IP address patterns
-                             * of ORs to consider as middles. */
-  struct routerset_t *EntryNodes;/**< Structure containing nicknames, digests,
-                           * country codes and IP address patterns of ORs to
-                           * consider as entry points. */
+                                  * country codes and IP address patterns of
+                                  * ORs to consider as exits. */
+  struct routerset_t
+      *MiddleNodes; /**< Structure containing nicknames,
+                     * digests, country codes and IP address patterns
+                     * of ORs to consider as middles. */
+  struct routerset_t *EntryNodes; /**< Structure containing nicknames, digests,
+                                   * country codes and IP address patterns of
+                                   * ORs to consider as entry points. */
   int StrictNodes; /**< Boolean: When none of our EntryNodes or ExitNodes
                     * are up, or we need to access a node in ExcludeNodes,
                     * do we just fail instead? */
-  struct routerset_t *ExcludeNodes;/**< Structure containing nicknames,
-                             * digests, country codes and IP address patterns
-                             * of ORs not to use in circuits. But see
-                             * StrictNodes above. */
-  struct routerset_t *ExcludeExitNodes;/**< Structure containing nicknames,
-                                 * digests, country codes and IP address
-                                 * patterns of ORs not to consider as
-                                 * exits. */
+  struct routerset_t *ExcludeNodes; /**< Structure containing nicknames,
+                                     * digests, country codes and IP address
+                                     * patterns of ORs not to use in circuits.
+                                     * But see StrictNodes above. */
+  struct routerset_t *ExcludeExitNodes; /**< Structure containing nicknames,
+                                         * digests, country codes and IP
+                                         * address patterns of ORs not to
+                                         * consider as exits. */
 
   /** Union of ExcludeNodes and ExcludeExitNodes */
   struct routerset_t *ExcludeExitNodesUnion_;
@@ -132,7 +136,7 @@ struct or_options_t {
   /** Whether routers accept EXTEND cells to routers with private IPs. */
   int ExtendAllowPrivateAddresses;
   char *User; /**< Name of user to run Tor as. */
-   /** Ports to listen on for OR connections. */
+  /** Ports to listen on for OR connections. */
   struct config_line_t *ORPort_lines;
   /** Ports to listen on for extended OR connections. */
   struct config_line_t *ExtORPort_lines;
@@ -154,7 +158,7 @@ struct or_options_t {
   /** Ports to listen on for HTTP Tunnel connections. */
   struct config_line_t *HTTPTunnelPort_lines;
   struct config_line_t *ControlPort_lines; /**< Ports to listen on for control
-                               * connections. */
+                                            * connections. */
   /** List of Unix Domain Sockets to listen on for control connections. */
   struct config_line_t *ControlSocket;
 
@@ -168,7 +172,7 @@ struct or_options_t {
   /* MaxMemInQueues value as input by the user. We clean this up to be
    * MaxMemInQueues. */
   uint64_t MaxMemInQueues_raw;
-  uint64_t MaxMemInQueues;/**< If we have more memory than this allocated
+  uint64_t MaxMemInQueues; /**< If we have more memory than this allocated
                             * for queues and buffers, run the OOM handler */
   /** Above this value, consider ourselves low on RAM. */
   uint64_t MaxMemInQueues_low_threshold;
@@ -318,8 +322,8 @@ struct or_options_t {
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */
   int FascistFirewall; /**< Whether to prefer ORs reachable on open ports. */
   struct smartlist_t *FirewallPorts; /**< Which ports our firewall allows
-                               * (strings). */
-   /** IP:ports our firewall allows. */
+                                      * (strings). */
+  /** IP:ports our firewall allows. */
   struct config_line_t *ReachableAddresses;
   struct config_line_t *ReachableORAddresses; /**< IP:ports for OR conns. */
   struct config_line_t *ReachableDirAddresses; /**< IP:ports for Dir conns. */
@@ -388,7 +392,7 @@ struct or_options_t {
   uint64_t MaxAdvertisedBandwidth; /**< How much bandwidth are we willing to
                                     * tell other nodes we have? */
   uint64_t RelayBandwidthRate; /**< How much bandwidth, on average, are we
-                                 * willing to use for all relayed conns? */
+                                * willing to use for all relayed conns? */
   uint64_t RelayBandwidthBurst; /**< How much bandwidth, at maximum, will we
                                  * use in a second for all relayed conns? */
   uint64_t PerConnBWRate; /**< Long-term bw on a single TLS conn, if set. */
@@ -397,8 +401,8 @@ struct or_options_t {
   struct config_line_t *RendConfigLines; /**< List of configuration lines
                                           * for rendezvous services. */
   struct config_line_t *HidServAuth; /**< List of configuration lines for
-                               * client-side authorizations for hidden
-                               * services */
+                                      * client-side authorizations for hidden
+                                      * services */
   char *ClientOnionAuthDir; /**< Directory to keep client
                              * onion service authorization secret keys */
   char *ContactInfo; /**< Contact info to be published in the directory. */
@@ -458,15 +462,15 @@ struct or_options_t {
   struct config_line_t *MyFamily; /**< Declared family for this OR,
                                      normalized */
   struct config_line_t *NodeFamilies; /**< List of config lines for
-                                * node families */
+                                       * node families */
   /** List of parsed NodeFamilies values. */
   struct smartlist_t *NodeFamilySets;
   struct config_line_t *AuthDirBadExit; /**< Address policy for descriptors to
-                                  * mark as bad exits. */
+                                         * mark as bad exits. */
   struct config_line_t *AuthDirReject; /**< Address policy for descriptors to
-                                 * reject. */
+                                        * reject. */
   struct config_line_t *AuthDirInvalid; /**< Address policy for descriptors to
-                                  * never mark as valid. */
+                                         * never mark as valid. */
   /** @name AuthDir...CC
    *
    * Lists of country codes to mark as BadExit, or Invalid, or to
@@ -515,13 +519,13 @@ struct or_options_t {
   char *CookieAuthFile; /**< Filesystem location of a ControlPort
                          *   authentication cookie. */
   char *ExtORPortCookieAuthFile; /**< Filesystem location of Extended
-                                 *   ORPort authentication cookie. */
+                                  *   ORPort authentication cookie. */
   int CookieAuthFileGroupReadable; /**< Boolean: Is the CookieAuthFile g+r? */
   int ExtORPortCookieAuthFileGroupReadable; /**< Boolean: Is the
                                              * ExtORPortCookieAuthFile g+r? */
   int LeaveStreamsUnattached; /**< Boolean: Does Tor attach new streams to
-                          * circuits itself (0), or does it expect a controller
-                          * to cope? (1) */
+                               * circuits itself (0), or does it expect a
+                               * controller to cope? (1) */
   int DisablePredictedCircuits; /**< Boolean: does Tor preemptively
                                  * make circuits in the background (0),
                                  * or not (1)? */
@@ -538,7 +542,9 @@ struct or_options_t {
 
   /* Derived from SafeLogging */
   enum {
-    SAFELOG_SCRUB_ALL, SAFELOG_SCRUB_RELAY, SAFELOG_SCRUB_NONE
+    SAFELOG_SCRUB_ALL,
+    SAFELOG_SCRUB_RELAY,
+    SAFELOG_SCRUB_NONE
   } SafeLogging_;
 
   int Sandbox; /**< Boolean: should sandboxing be enabled? */
@@ -590,15 +596,16 @@ struct or_options_t {
   char *VirtualAddrNetworkIPv6; /**< Address and mask to hand out for virtual
                                  * MAPADDRESS requests for IPv6 addresses */
   int ServerDNSSearchDomains; /**< Boolean: If set, we don't force exit
-                      * addresses to be FQDNs, but rather search for them in
-                      * the local domains. */
+                               * addresses to be FQDNs, but rather search for
+                               * them in the local domains. */
   int ServerDNSDetectHijacking; /**< Boolean: If true, check for DNS failure
                                  * hijacking. */
   int ServerDNSRandomizeCase; /**< Boolean: Use the 0x20-hack to prevent
                                * DNS poisoning attacks. */
   char *ServerDNSResolvConfFile; /**< If provided, we configure our internal
-                     * resolver from the file here rather than from
-                     * /etc/resolv.conf (Unix) or the registry (Windows). */
+                                  * resolver from the file here rather than
+                                  * from /etc/resolv.conf (Unix) or the
+                                  * registry (Windows). */
   char *DirPortFrontPage; /**< This is a full path to a file with an html
                     disclaimer. This allows a server administrator to show
                     that they're running Tor and anyone visiting their server
@@ -992,7 +999,7 @@ struct or_options_t {
   int OfflineMasterKey;
 
   enum {
-    FORCE_PASSPHRASE_AUTO=0,
+    FORCE_PASSPHRASE_AUTO = 0,
     FORCE_PASSPHRASE_ON,
     FORCE_PASSPHRASE_OFF
   } keygen_force_passphrase;

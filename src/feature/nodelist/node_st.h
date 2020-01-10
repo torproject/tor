@@ -60,33 +60,34 @@ struct node_t {
    * on experience.  Authorities set this stuff directly.  Note that
    * these reflect knowledge of the primary (IPv4) OR port only.  */
 
-  unsigned int is_running:1; /**< As far as we know, is this OR currently
-                              * running? */
-  unsigned int is_valid:1; /**< Has a trusted dirserver validated this OR?
-                            *  (For Authdir: Have we validated this OR?) */
-  unsigned int is_fast:1; /** Do we think this is a fast OR? */
-  unsigned int is_stable:1; /** Do we think this is a stable OR? */
-  unsigned int is_possible_guard:1; /**< Do we think this is an OK guard? */
-  unsigned int is_exit:1; /**< Do we think this is an OK exit? */
-  unsigned int is_bad_exit:1; /**< Do we think this exit is censored, borked,
-                               * or otherwise nasty? */
-  unsigned int is_hs_dir:1; /**< True iff this router is a hidden service
-                             * directory according to the authorities. */
+  unsigned int is_running : 1; /**< As far as we know, is this OR currently
+                                * running? */
+  unsigned int is_valid : 1; /**< Has a trusted dirserver validated this OR?
+                              *  (For Authdir: Have we validated this OR?) */
+  unsigned int is_fast : 1; /** Do we think this is a fast OR? */
+  unsigned int is_stable : 1; /** Do we think this is a stable OR? */
+  unsigned int is_possible_guard : 1; /**< Do we think this is an OK guard? */
+  unsigned int is_exit : 1; /**< Do we think this is an OK exit? */
+  unsigned int is_bad_exit : 1; /**< Do we think this exit is censored, borked,
+                                 * or otherwise nasty? */
+  unsigned int is_hs_dir : 1; /**< True iff this router is a hidden service
+                               * directory according to the authorities. */
 
   /* Local info: warning state. */
 
-  unsigned int name_lookup_warned:1; /**< Have we warned the user for referring
-                                      * to this (unnamed) router by nickname?
-                                      */
+  unsigned int
+      name_lookup_warned : 1; /**< Have we warned the user for referring
+                               * to this (unnamed) router by nickname?
+                               */
 
   /** Local info: we treat this node as if it rejects everything */
-  unsigned int rejects_all:1;
+  unsigned int rejects_all : 1;
 
   /* Local info: derived. */
 
   /** True if the IPv6 OR port is preferred over the IPv4 OR port.
    * XX/teor - can this become out of date if the torrc changes? */
-  unsigned int ipv6_preferred:1;
+  unsigned int ipv6_preferred : 1;
 
   /** According to the geoip db what country is this router in? */
   /* XXXprop186 what is this suppose to mean with multiple OR ports? */
@@ -96,8 +97,8 @@ struct node_t {
    * reachability testing. */
 
   /** When was the last time we could reach this OR? */
-  time_t last_reachable;        /* IPv4. */
-  time_t last_reachable6;       /* IPv6. */
+  time_t last_reachable; /* IPv4. */
+  time_t last_reachable6; /* IPv6. */
 
   /* Hidden service directory index data. This is used by a service or client
    * in order to know what's the hs directory index for this node at the time

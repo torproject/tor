@@ -64,7 +64,7 @@ get_my_v3_authority_cert_m(void)
 }
 
 /* 4 digests + 3 sep + pre + post + NULL */
-static char output[4*BASE64_DIGEST256_LEN+3+2+2+1];
+static char output[4 * BASE64_DIGEST256_LEN + 3 + 2 + 2 + 1];
 
 static void
 mock_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
@@ -77,8 +77,7 @@ mock_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
   (void)want_authority;
   tt_assert(resource);
   strlcpy(output, resource, sizeof(output));
- done:
-  ;
+done:;
 }
 
 static void
@@ -89,31 +88,32 @@ test_routerlist_initiate_descriptor_downloads(void *arg)
   (void)arg;
 
   for (int i = 0; i < 20; i++) {
-    smartlist_add(digests, (char*)prose);
+    smartlist_add(digests, (char *)prose);
   }
 
   MOCK(directory_get_from_dirserver, mock_get_from_dirserver);
-  initiate_descriptor_downloads(NULL, DIR_PURPOSE_FETCH_MICRODESC,
-                                digests, 3, 7, 0);
+  initiate_descriptor_downloads(NULL, DIR_PURPOSE_FETCH_MICRODESC, digests, 3,
+                                7, 0);
   UNMOCK(directory_get_from_dirserver);
 
-  tt_str_op(output, OP_EQ, "d/"
+  tt_str_op(output, OP_EQ,
+            "d/"
             "dW5odXJyaWVkIGFuZCB3aXNlLCB3ZSBwZXJjZWl2ZS4-"
             "dW5odXJyaWVkIGFuZCB3aXNlLCB3ZSBwZXJjZWl2ZS4-"
             "dW5odXJyaWVkIGFuZCB3aXNlLCB3ZSBwZXJjZWl2ZS4-"
             "dW5odXJyaWVkIGFuZCB3aXNlLCB3ZSBwZXJjZWl2ZS4"
             ".z");
 
- done:
+done:
   smartlist_free(digests);
 }
 
 static int count = 0;
 
 static void
-mock_initiate_descriptor_downloads(const routerstatus_t *source,
-                                   int purpose, smartlist_t *digests,
-                                   int lo, int hi, int pds_flags)
+mock_initiate_descriptor_downloads(const routerstatus_t *source, int purpose,
+                                   smartlist_t *digests, int lo, int hi,
+                                   int pds_flags)
 {
   (void)source;
   (void)purpose;
@@ -140,12 +140,12 @@ test_routerlist_launch_descriptor_downloads(void *arg)
   }
 
   MOCK(initiate_descriptor_downloads, mock_initiate_descriptor_downloads);
-  launch_descriptor_downloads(DIR_PURPOSE_FETCH_MICRODESC, downloadable,
-                              NULL, now);
+  launch_descriptor_downloads(DIR_PURPOSE_FETCH_MICRODESC, downloadable, NULL,
+                              now);
   tt_int_op(3, OP_EQ, count);
   UNMOCK(initiate_descriptor_downloads);
 
- done:
+done:
   SMARTLIST_FOREACH(downloadable, char *, cp1, tor_free(cp1));
   smartlist_free(downloadable);
 }
@@ -156,36 +156,35 @@ construct_consensus(char **consensus_text_md, time_t now)
   networkstatus_t *vote = NULL;
   networkstatus_t *v1 = NULL, *v2 = NULL, *v3 = NULL;
   networkstatus_voter_info_t *voter = NULL;
-  authority_cert_t *cert1=NULL, *cert2=NULL, *cert3=NULL;
-  crypto_pk_t *sign_skey_1=NULL, *sign_skey_2=NULL, *sign_skey_3=NULL;
-  crypto_pk_t *sign_skey_leg=NULL;
+  authority_cert_t *cert1 = NULL, *cert2 = NULL, *cert3 = NULL;
+  crypto_pk_t *sign_skey_1 = NULL, *sign_skey_2 = NULL, *sign_skey_3 = NULL;
+  crypto_pk_t *sign_skey_leg = NULL;
   smartlist_t *votes = NULL;
   int n_vrs;
 
-  tt_assert(!dir_common_authority_pk_init(&cert1, &cert2, &cert3,
-                                          &sign_skey_1, &sign_skey_2,
-                                          &sign_skey_3));
+  tt_assert(! dir_common_authority_pk_init(
+      &cert1, &cert2, &cert3, &sign_skey_1, &sign_skey_2, &sign_skey_3));
   sign_skey_leg = pk_generate(4);
 
   dir_common_construct_vote_1(&vote, cert1, sign_skey_1,
-                              &dir_common_gen_routerstatus_for_v3ns,
-                              &v1, &n_vrs, now, 1);
+                              &dir_common_gen_routerstatus_for_v3ns, &v1,
+                              &n_vrs, now, 1);
   networkstatus_vote_free(vote);
   tt_assert(v1);
   tt_int_op(n_vrs, OP_EQ, 4);
   tt_int_op(smartlist_len(v1->routerstatus_list), OP_EQ, 4);
 
   dir_common_construct_vote_2(&vote, cert2, sign_skey_2,
-                              &dir_common_gen_routerstatus_for_v3ns,
-                              &v2, &n_vrs, now, 1);
+                              &dir_common_gen_routerstatus_for_v3ns, &v2,
+                              &n_vrs, now, 1);
   networkstatus_vote_free(vote);
   tt_assert(v2);
   tt_int_op(n_vrs, OP_EQ, 4);
   tt_int_op(smartlist_len(v2->routerstatus_list), OP_EQ, 4);
 
   dir_common_construct_vote_3(&vote, cert3, sign_skey_3,
-                              &dir_common_gen_routerstatus_for_v3ns,
-                              &v3, &n_vrs, now, 1);
+                              &dir_common_gen_routerstatus_for_v3ns, &v3,
+                              &n_vrs, now, 1);
 
   tt_assert(v3);
   tt_int_op(n_vrs, OP_EQ, 4);
@@ -196,16 +195,13 @@ construct_consensus(char **consensus_text_md, time_t now)
   smartlist_add(votes, v2);
   smartlist_add(votes, v3);
 
-  *consensus_text_md = networkstatus_compute_consensus(votes, 3,
-                                                   cert1->identity_key,
-                                                   sign_skey_1,
-                                                   "AAAAAAAAAAAAAAAAAAAA",
-                                                   sign_skey_leg,
-                                                   FLAV_MICRODESC);
+  *consensus_text_md = networkstatus_compute_consensus(
+      votes, 3, cert1->identity_key, sign_skey_1, "AAAAAAAAAAAAAAAAAAAA",
+      sign_skey_leg, FLAV_MICRODESC);
 
   tt_assert(*consensus_text_md);
 
- done:
+done:
   tor_free(voter);
   networkstatus_vote_free(v1);
   networkstatus_vote_free(v2);
@@ -235,7 +231,7 @@ test_router_pick_directory_server_impl(void *arg)
 
   networkstatus_t *con_md = NULL;
   char *consensus_text_md = NULL;
-  int flags = PDS_IGNORE_FASCISTFIREWALL|PDS_RETRY_IF_NO_SERVERS;
+  int flags = PDS_IGNORE_FASCISTFIREWALL | PDS_RETRY_IF_NO_SERVERS;
   or_options_t *options = get_options_mutable();
   const routerstatus_t *rs = NULL;
   options->UseMicrodescriptors = 1;
@@ -254,59 +250,56 @@ test_router_pick_directory_server_impl(void *arg)
   mock_usable_consensus_flavor_value = FLAV_NS;
   tt_assert(networkstatus_consensus_is_bootstrapping(now));
   tt_assert(networkstatus_consensus_is_bootstrapping(now + 2000));
-  tt_assert(networkstatus_consensus_is_bootstrapping(now + 2*24*60*60));
-  tt_assert(networkstatus_consensus_is_bootstrapping(now - 2*24*60*60));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now + 2 * 24 * 60 * 60));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now - 2 * 24 * 60 * 60));
 
   mock_usable_consensus_flavor_value = FLAV_MICRODESC;
   tt_assert(networkstatus_consensus_is_bootstrapping(now));
   tt_assert(networkstatus_consensus_is_bootstrapping(now + 2000));
-  tt_assert(networkstatus_consensus_is_bootstrapping(now + 2*24*60*60));
-  tt_assert(networkstatus_consensus_is_bootstrapping(now - 2*24*60*60));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now + 2 * 24 * 60 * 60));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now - 2 * 24 * 60 * 60));
 
   /* Init SR subsystem. */
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
   mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
-                                               strlen(AUTHORITY_CERT_1),
-                                               NULL);
+                                               strlen(AUTHORITY_CERT_1), NULL);
   sr_init(0);
   UNMOCK(get_my_v3_authority_cert);
 
   /* No consensus available, fail early */
-  rs = router_pick_directory_server_impl(V3_DIRINFO, (const int) 0, NULL);
+  rs = router_pick_directory_server_impl(V3_DIRINFO, (const int)0, NULL);
   tt_ptr_op(rs, OP_EQ, NULL);
 
   construct_consensus(&consensus_text_md, now);
   tt_assert(consensus_text_md);
-  con_md = networkstatus_parse_vote_from_string(consensus_text_md,
-                                                strlen(consensus_text_md),
-                                                NULL,
-                                                NS_TYPE_CONSENSUS);
+  con_md = networkstatus_parse_vote_from_string(
+      consensus_text_md, strlen(consensus_text_md), NULL, NS_TYPE_CONSENSUS);
   tt_assert(con_md);
-  tt_int_op(con_md->flavor,OP_EQ, FLAV_MICRODESC);
+  tt_int_op(con_md->flavor, OP_EQ, FLAV_MICRODESC);
   tt_assert(con_md->routerstatus_list);
   tt_int_op(smartlist_len(con_md->routerstatus_list), OP_EQ, 3);
-  tt_assert(!networkstatus_set_current_consensus_from_ns(con_md,
-                                                 "microdesc"));
+  tt_assert(
+      ! networkstatus_set_current_consensus_from_ns(con_md, "microdesc"));
 
   /* If the consensus time or flavor doesn't match, we are still
    * bootstrapping */
   mock_usable_consensus_flavor_value = FLAV_NS;
   tt_assert(networkstatus_consensus_is_bootstrapping(now));
   tt_assert(networkstatus_consensus_is_bootstrapping(now + 2000));
-  tt_assert(networkstatus_consensus_is_bootstrapping(now + 2*24*60*60));
-  tt_assert(networkstatus_consensus_is_bootstrapping(now - 2*24*60*60));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now + 2 * 24 * 60 * 60));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now - 2 * 24 * 60 * 60));
 
   /* With a valid consensus for the current time and flavor, we stop
    * bootstrapping, even if we have no certificates */
   mock_usable_consensus_flavor_value = FLAV_MICRODESC;
-  tt_assert(!networkstatus_consensus_is_bootstrapping(now + 2000));
-  tt_assert(!networkstatus_consensus_is_bootstrapping(con_md->valid_after));
-  tt_assert(!networkstatus_consensus_is_bootstrapping(con_md->valid_until));
-  tt_assert(!networkstatus_consensus_is_bootstrapping(con_md->valid_until
-                                                      + 24*60*60));
+  tt_assert(! networkstatus_consensus_is_bootstrapping(now + 2000));
+  tt_assert(! networkstatus_consensus_is_bootstrapping(con_md->valid_after));
+  tt_assert(! networkstatus_consensus_is_bootstrapping(con_md->valid_until));
+  tt_assert(! networkstatus_consensus_is_bootstrapping(con_md->valid_until +
+                                                       24 * 60 * 60));
   /* These times are outside the test validity period */
-  tt_assert(networkstatus_consensus_is_bootstrapping(now + 2*24*60*60));
-  tt_assert(networkstatus_consensus_is_bootstrapping(now - 2*24*60*60));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now + 2 * 24 * 60 * 60));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now - 2 * 24 * 60 * 60));
 
   nodelist_set_consensus(con_md);
   nodelist_assert_ok();
@@ -374,7 +367,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router3->rs->last_dir_503_at = 0;
 
   /* Set a Fascist firewall */
-  flags &= ~ PDS_IGNORE_FASCISTFIREWALL;
+  flags &= ~PDS_IGNORE_FASCISTFIREWALL;
   policy_line = tor_malloc_zero(sizeof(config_line_t));
   policy_line->key = tor_strdup("ReachableORAddresses");
   policy_line->value = tor_strdup("accept *:442, reject *:*");
@@ -422,7 +415,7 @@ test_router_pick_directory_server_impl(void *arg)
   tt_assert(tor_memeq(rs->identity_digest, router1_id, DIGEST_LEN));
   node_router1->rs->last_dir_503_at = 0;
 
- done:
+done:
   UNMOCK(usable_consensus_flavor);
 
   if (router1_id)
@@ -431,8 +424,7 @@ test_router_pick_directory_server_impl(void *arg)
     tor_free(router2_id);
   if (router3_id)
     tor_free(router3_id);
-  if (options->ReachableORAddresses ||
-      options->ReachableDirAddresses)
+  if (options->ReachableORAddresses || options->ReachableDirAddresses)
     policies_free_all();
   tor_free(consensus_text_md);
   networkstatus_vote_free(con_md);
@@ -454,11 +446,11 @@ mock_directory_initiate_request(directory_request_t *req)
 
 static circuit_guard_state_t *
 mock_circuit_guard_state_new(entry_guard_t *guard, unsigned state,
-                        entry_guard_restriction_t *rst)
+                             entry_guard_restriction_t *rst)
 {
-  (void) guard;
-  (void) state;
-  (void) rst;
+  (void)guard;
+  (void)state;
+  (void)rst;
   return NULL;
 }
 
@@ -472,15 +464,14 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
   or_options_t *options = get_options_mutable();
   time_t now = time(NULL);
 
-  (void) arg;
+  (void)arg;
 
   hibernate_set_state_for_testing_(HIBERNATE_STATE_LIVE);
 
   /* Initialize the SRV subsystem */
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
   mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
-                                               strlen(AUTHORITY_CERT_1),
-                                               NULL);
+                                               strlen(AUTHORITY_CERT_1), NULL);
   sr_init(0);
   UNMOCK(get_my_v3_authority_cert);
 
@@ -527,7 +518,7 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
   args.body_len = strlen(consensus_text_md);
 
   /* Update approx time so that the consensus is considered live */
-  update_approx_time(now+1010);
+  update_approx_time(now + 1010);
 
   setup_capture_of_logs(LOG_DEBUG);
 
@@ -538,7 +529,7 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
   /* Make sure that our primary guard was chosen */
   expect_log_msg_containing("Selected primary guard router3");
 
- done:
+done:
   tor_free(consensus_text_md);
   tor_free(dummy_state);
   connection_free_minimal(TO_CONN(conn));
@@ -551,8 +542,7 @@ static connection_t *mocked_connection = NULL;
 /* Mock connection_get_by_type_addr_port_purpose by returning
  * mocked_connection. */
 static connection_t *
-mock_connection_get_by_type_addr_port_purpose(int type,
-                                              const tor_addr_t *addr,
+mock_connection_get_by_type_addr_port_purpose(int type, const tor_addr_t *addr,
                                               uint16_t port, int purpose)
 {
   (void)type;
@@ -606,7 +596,7 @@ test_routerlist_router_is_already_dir_fetching(void *arg)
   tt_int_op(router_is_already_dir_fetching(&null_addr_ap, 1, 1), OP_EQ, 0);
   tt_int_op(router_is_already_dir_fetching(&zero_port_ap, 1, 1), OP_EQ, 0);
 
- done:
+done:
   /* If a connection is never set up, connection_free chokes on it. */
   if (mocked_connection) {
     buf_free(mocked_connection->inbuf);
@@ -634,8 +624,7 @@ mock_clock_skew_warning(const connection_t *conn, long apparent_skew,
   tt_i64_op(domain, OP_EQ, LD_GENERAL);
   tt_str_op(received, OP_EQ, "microdesc flavor consensus");
   tt_str_op(source, OP_EQ, "CONSENSUS");
- done:
-  ;
+done:;
 }
 
 /** Do common setup for test_timely_consensus() and
@@ -654,8 +643,7 @@ test_skew_common(void *arg, time_t now, unsigned long *offset)
   /* Initialize the SRV subsystem */
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
   mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
-                                               strlen(AUTHORITY_CERT_1),
-                                               NULL);
+                                               strlen(AUTHORITY_CERT_1), NULL);
   sr_init(0);
   UNMOCK(get_my_v3_authority_cert);
 
@@ -670,10 +658,9 @@ test_skew_common(void *arg, time_t now, unsigned long *offset)
   /* Caller will call teardown_capture_of_logs() */
   setup_capture_of_logs(LOG_WARN);
   retval = networkstatus_set_current_consensus(consensus, strlen(consensus),
-                                               "microdesc", 0,
-                                               NULL);
+                                               "microdesc", 0, NULL);
 
- done:
+done:
   tor_free(consensus);
   return retval;
 }
@@ -691,7 +678,7 @@ test_timely_consensus(void *arg)
   expect_no_log_msg_containing("behind the time published in the consensus");
   tt_int_op(retval, OP_EQ, 0);
   tt_int_op(mock_apparent_skew, OP_EQ, 0);
- done:
+done:
   teardown_capture_of_logs();
   UNMOCK(clock_skew_warning);
 }
@@ -710,22 +697,21 @@ test_early_consensus(void *arg)
   tt_int_op(retval, OP_EQ, 0);
   /* This depends on construct_consensus() setting valid_after=now+1000 */
   tt_int_op(mock_apparent_skew, OP_EQ, offset - 1000);
- done:
+done:
   teardown_capture_of_logs();
   UNMOCK(clock_skew_warning);
 }
 
 /** Test warn_early_consensus(), expecting no warning  */
 static void
-test_warn_early_consensus_no(const networkstatus_t *c, time_t now,
-                             long offset)
+test_warn_early_consensus_no(const networkstatus_t *c, time_t now, long offset)
 {
   mock_apparent_skew = 0;
   setup_capture_of_logs(LOG_WARN);
   warn_early_consensus(c, "microdesc", now + offset);
   expect_no_log_msg_containing("behind the time published in the consensus");
   tt_int_op(mock_apparent_skew, OP_EQ, 0);
- done:
+done:
   teardown_capture_of_logs();
 }
 
@@ -740,7 +726,7 @@ test_warn_early_consensus_yes(const networkstatus_t *c, time_t now,
   /* Can't use expect_single_log_msg() because of unrecognized authorities */
   expect_log_msg_containing("behind the time published in the consensus");
   tt_int_op(mock_apparent_skew, OP_EQ, offset);
- done:
+done:
   teardown_capture_of_logs();
 }
 
@@ -771,31 +757,36 @@ test_warn_early_consensus(void *arg)
   tor_free(c);
 }
 
-#define NODE(name, flags) \
-  { #name, test_routerlist_##name, (flags), NULL, NULL }
-#define ROUTER(name,flags) \
-  { #name, test_router_##name, (flags), NULL, NULL }
+#define NODE(name, flags)                              \
+  {                                                    \
+#    name, test_routerlist_##name, (flags), NULL, NULL \
+  }
+#define ROUTER(name, flags)                        \
+  {                                                \
+#    name, test_router_##name, (flags), NULL, NULL \
+  }
 
-#define TIMELY(name, arg)                                     \
-  { name, test_timely_consensus, TT_FORK, &passthrough_setup, \
-    (char *)(arg) }
-#define EARLY(name, arg) \
-  { name, test_early_consensus, TT_FORK, &passthrough_setup, \
-    (char *)(arg) }
+#define TIMELY(name, arg)                                                   \
+  {                                                                         \
+    name, test_timely_consensus, TT_FORK, &passthrough_setup, (char *)(arg) \
+  }
+#define EARLY(name, arg)                                                   \
+  {                                                                        \
+    name, test_early_consensus, TT_FORK, &passthrough_setup, (char *)(arg) \
+  }
 
 struct testcase_t routerlist_tests[] = {
-  NODE(initiate_descriptor_downloads, 0),
-  NODE(launch_descriptor_downloads, 0),
-  NODE(router_is_already_dir_fetching, TT_FORK),
-  ROUTER(pick_directory_server_impl, TT_FORK),
-  { "directory_guard_fetch_with_no_dirinfo",
-    test_directory_guard_fetch_with_no_dirinfo, TT_FORK, NULL, NULL },
-  /* These depend on construct_consensus() setting
-   * valid_after=now+1000 and dist_seconds=250 */
-  TIMELY("timely_consensus1", "1010"),
-  TIMELY("timely_consensus2", "1000"),
-  TIMELY("timely_consensus3", "690"),
-  EARLY("early_consensus1", "689"),
-  { "warn_early_consensus", test_warn_early_consensus, 0, NULL, NULL },
-  END_OF_TESTCASES
-};
+    NODE(initiate_descriptor_downloads, 0),
+    NODE(launch_descriptor_downloads, 0),
+    NODE(router_is_already_dir_fetching, TT_FORK),
+    ROUTER(pick_directory_server_impl, TT_FORK),
+    {"directory_guard_fetch_with_no_dirinfo",
+     test_directory_guard_fetch_with_no_dirinfo, TT_FORK, NULL, NULL},
+    /* These depend on construct_consensus() setting
+     * valid_after=now+1000 and dist_seconds=250 */
+    TIMELY("timely_consensus1", "1010"),
+    TIMELY("timely_consensus2", "1000"),
+    TIMELY("timely_consensus3", "690"),
+    EARLY("early_consensus1", "689"),
+    {"warn_early_consensus", test_warn_early_consensus, 0, NULL, NULL},
+    END_OF_TESTCASES};

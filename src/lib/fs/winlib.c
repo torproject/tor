@@ -13,7 +13,7 @@
  **/
 
 #ifdef _WIN32
-#include "lib/fs/winlib.h"
+#  include "lib/fs/winlib.h"
 
 HANDLE
 load_windows_system_library(const TCHAR *library_name)

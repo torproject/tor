@@ -24,36 +24,34 @@
  * Return 0 on success and -1 on failure.
  */
 int
-router_get_hash_impl_helper(const char *s, size_t s_len,
-                            const char *start_str,
-                            const char *end_str, char end_c,
-                            int log_severity,
+router_get_hash_impl_helper(const char *s, size_t s_len, const char *start_str,
+                            const char *end_str, char end_c, int log_severity,
                             const char **start_out, const char **end_out)
 {
   const char *start, *end;
   start = tor_memstr(s, s_len, start_str);
-  if (!start) {
-    log_fn(log_severity,LD_DIR,
-           "couldn't find start of hashed material \"%s\"",start_str);
+  if (! start) {
+    log_fn(log_severity, LD_DIR,
+           "couldn't find start of hashed material \"%s\"", start_str);
     return -1;
   }
-  if (start != s && *(start-1) != '\n') {
-    log_fn(log_severity,LD_DIR,
-             "first occurrence of \"%s\" is not at the start of a line",
-             start_str);
+  if (start != s && *(start - 1) != '\n') {
+    log_fn(log_severity, LD_DIR,
+           "first occurrence of \"%s\" is not at the start of a line",
+           start_str);
     return -1;
   }
-  end = tor_memstr(start+strlen(start_str),
-                   s_len - (start-s) - strlen(start_str), end_str);
-  if (!end) {
-    log_fn(log_severity,LD_DIR,
-           "couldn't find end of hashed material \"%s\"",end_str);
+  end = tor_memstr(start + strlen(start_str),
+                   s_len - (start - s) - strlen(start_str), end_str);
+  if (! end) {
+    log_fn(log_severity, LD_DIR, "couldn't find end of hashed material \"%s\"",
+           end_str);
     return -1;
   }
-  end = memchr(end+strlen(end_str), end_c, s_len - (end-s) - strlen(end_str));
-  if (!end) {
-    log_fn(log_severity,LD_DIR,
-           "couldn't find EOL");
+  end = memchr(end + strlen(end_str), end_c,
+               s_len - (end - s) - strlen(end_str));
+  if (! end) {
+    log_fn(log_severity, LD_DIR, "couldn't find EOL");
     return -1;
   }
   ++end;
@@ -72,34 +70,33 @@ router_get_hash_impl_helper(const char *s, size_t s_len,
  */
 int
 router_get_hash_impl(const char *s, size_t s_len, char *digest,
-                     const char *start_str,
-                     const char *end_str, char end_c,
+                     const char *start_str, const char *end_str, char end_c,
                      digest_algorithm_t alg)
 {
-  const char *start=NULL, *end=NULL;
-  if (router_get_hash_impl_helper(s,s_len,start_str,end_str,end_c,LOG_WARN,
-                                  &start,&end)<0)
+  const char *start = NULL, *end = NULL;
+  if (router_get_hash_impl_helper(s, s_len, start_str, end_str, end_c,
+                                  LOG_WARN, &start, &end) < 0)
     return -1;
 
-  return router_compute_hash_final(digest, start, end-start, alg);
+  return router_compute_hash_final(digest, start, end - start, alg);
 }
 
 /** Compute the digest of the <b>len</b>-byte directory object at
  * <b>start</b>, using <b>alg</b>. Store the result in <b>digest</b>, which
  * must be long enough to hold it. */
 MOCK_IMPL(STATIC int,
-router_compute_hash_final,(char *digest,
-                           const char *start, size_t len,
-                           digest_algorithm_t alg))
+router_compute_hash_final,
+          (char *digest, const char *start, size_t len,
+           digest_algorithm_t alg))
 {
   if (alg == DIGEST_SHA1) {
     if (crypto_digest(digest, start, len) < 0) {
-      log_warn(LD_BUG,"couldn't compute digest");
+      log_warn(LD_BUG, "couldn't compute digest");
       return -1;
     }
   } else {
     if (crypto_digest256(digest, start, len, alg) < 0) {
-      log_warn(LD_BUG,"couldn't compute digest");
+      log_warn(LD_BUG, "couldn't compute digest");
       return -1;
     }
   }
@@ -110,16 +107,15 @@ router_compute_hash_final,(char *digest,
 /** As router_get_hash_impl, but compute all hashes. */
 int
 router_get_hashes_impl(const char *s, size_t s_len, common_digests_t *digests,
-                       const char *start_str,
-                       const char *end_str, char end_c)
+                       const char *start_str, const char *end_str, char end_c)
 {
-  const char *start=NULL, *end=NULL;
-  if (router_get_hash_impl_helper(s,s_len,start_str,end_str,end_c,LOG_WARN,
-                                  &start,&end)<0)
+  const char *start = NULL, *end = NULL;
+  if (router_get_hash_impl_helper(s, s_len, start_str, end_str, end_c,
+                                  LOG_WARN, &start, &end) < 0)
     return -1;
 
-  if (crypto_common_digests(digests, start, end-start)) {
-    log_warn(LD_BUG,"couldn't compute digests");
+  if (crypto_common_digests(digests, start, end - start)) {
+    log_warn(LD_BUG, "couldn't compute digests");
     return -1;
   }
 
@@ -127,7 +123,8 @@ router_get_hashes_impl(const char *s, size_t s_len, common_digests_t *digests,
 }
 
 MOCK_IMPL(STATIC int,
-signed_digest_equals, (const uint8_t *d1, const uint8_t *d2, size_t len))
+signed_digest_equals,
+          (const uint8_t *d1, const uint8_t *d2, size_t len))
 {
   return tor_memeq(d1, d2, len);
 }
@@ -140,11 +137,8 @@ signed_digest_equals, (const uint8_t *d1, const uint8_t *d2, size_t len))
  * on failure.
  */
 int
-check_signature_token(const char *digest,
-                      ssize_t digest_len,
-                      directory_token_t *tok,
-                      crypto_pk_t *pkey,
-                      int flags,
+check_signature_token(const char *digest, ssize_t digest_len,
+                      directory_token_t *tok, crypto_pk_t *pkey, int flags,
                       const char *doctype)
 {
   char *signed_digest;
@@ -165,9 +159,8 @@ check_signature_token(const char *digest,
 
   keysize = crypto_pk_keysize(pkey);
   signed_digest = tor_malloc(keysize);
-  if (crypto_pk_public_checksig(pkey, signed_digest, keysize,
-                                tok->object_body, tok->object_size)
-      < digest_len) {
+  if (crypto_pk_public_checksig(pkey, signed_digest, keysize, tok->object_body,
+                                tok->object_size) < digest_len) {
     log_warn(LD_DIR, "Error reading %s: invalid signature.", doctype);
     tor_free(signed_digest);
     return -1;

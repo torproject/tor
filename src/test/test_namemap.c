@@ -34,7 +34,7 @@ test_namemap_empty(void *arg)
   tt_uint_op(NAMEMAP_ERR, OP_EQ, namemap_get_id(&m2, ""));
   tt_uint_op(0, OP_EQ, namemap_get_size(&m));
 
- done:
+done:
   namemap_clear(&m);
   namemap_clear(&m2);
 }
@@ -48,11 +48,11 @@ test_namemap_toolong(void *arg)
   char *toolong = NULL;
   namemap_init(&m);
 
-  ok = tor_malloc_zero(MAX_NAMEMAP_NAME_LEN+1);
+  ok = tor_malloc_zero(MAX_NAMEMAP_NAME_LEN + 1);
   memset(ok, 'x', MAX_NAMEMAP_NAME_LEN);
 
-  toolong = tor_malloc_zero(MAX_NAMEMAP_NAME_LEN+2);
-  memset(toolong, 'x', MAX_NAMEMAP_NAME_LEN+1);
+  toolong = tor_malloc_zero(MAX_NAMEMAP_NAME_LEN + 2);
+  memset(toolong, 'x', MAX_NAMEMAP_NAME_LEN + 1);
 
   tt_uint_op(NAMEMAP_ERR, OP_EQ, namemap_get_id(&m, ok));
   tt_uint_op(NAMEMAP_ERR, OP_EQ, namemap_get_id(&m, toolong));
@@ -66,7 +66,7 @@ test_namemap_toolong(void *arg)
   tt_str_op(ok, OP_EQ, namemap_get_name(&m, u2));
   tt_ptr_op(NULL, OP_EQ, namemap_get_name(&m, u1));
 
- done:
+done:
   tor_free(ok);
   tor_free(toolong);
   namemap_clear(&m);
@@ -113,7 +113,7 @@ test_namemap_blackbox(void *arg)
 
   tt_ptr_op(NULL, OP_EQ, namemap_get_name(&m2, u3 + 10));
 
- done:
+done:
   namemap_clear(&m1);
   namemap_clear(&m2);
 }
@@ -138,7 +138,7 @@ test_namemap_internals(void *arg)
   tt_uint_op(1, OP_EQ, namemap_get_or_create_id(&m, "is"));
   tt_uint_op(2, OP_EQ, namemap_get_or_create_id(&m, "not"));
 
- done:
+done:
   namemap_clear(&m);
 }
 
@@ -157,18 +157,14 @@ test_namemap_fmt(void *arg)
   tt_int_op(b, OP_NE, 100);
   tt_str_op(namemap_fmt_name(&m, 100), OP_EQ, "{100}");
 
- done:
+done:
   namemap_clear(&m);
 }
 
-#define T(name) \
-  { #name, test_namemap_ ## name , 0, NULL, NULL }
+#define T(name)                               \
+  {                                           \
+#    name, test_namemap_##name, 0, NULL, NULL \
+  }
 
 struct testcase_t namemap_tests[] = {
-  T(empty),
-  T(toolong),
-  T(blackbox),
-  T(internals),
-  T(fmt),
-  END_OF_TESTCASES
-};
+    T(empty), T(toolong), T(blackbox), T(internals), T(fmt), END_OF_TESTCASES};

@@ -23,7 +23,7 @@
 #ifdef HAVE_EVDNS_BASE_GET_NAMESERVER_ADDR
 
 static or_options_t options = {
-  .ORPort_set = 1,
+    .ORPort_set = 1,
 };
 
 static const or_options_t *
@@ -51,7 +51,7 @@ test_dns_configure_ns_fallback(void *arg)
   tt_assert(tor_addr_family(nameserver_addr) == AF_INET);
   tt_assert(tor_addr_eq_ipv4h(nameserver_addr, 0x7f000001));
 
-#ifndef _WIN32
+#  ifndef _WIN32
   tor_free(nameserver_addr);
 
   options.ServerDNSResolvConfFile = (char *)"/dev/null";
@@ -64,11 +64,11 @@ test_dns_configure_ns_fallback(void *arg)
 
   tt_assert(tor_addr_family(nameserver_addr) == AF_INET);
   tt_assert(tor_addr_eq_ipv4h(nameserver_addr, 0x7f000001));
-#endif /* !defined(_WIN32) */
+#  endif /* !defined(_WIN32) */
 
   UNMOCK(get_options);
 
- done:
+done:
   tor_free(nameserver_addr);
   return;
 }
@@ -82,11 +82,11 @@ test_dns_clip_ttl(void *arg)
 
   uint32_t ttl_mid = MIN_DNS_TTL_AT_EXIT / 2 + MAX_DNS_TTL_AT_EXIT / 2;
 
-  tt_int_op(dns_clip_ttl(MIN_DNS_TTL_AT_EXIT - 1),OP_EQ,MIN_DNS_TTL_AT_EXIT);
-  tt_int_op(dns_clip_ttl(ttl_mid),OP_EQ,MAX_DNS_TTL_AT_EXIT);
-  tt_int_op(dns_clip_ttl(MAX_DNS_TTL_AT_EXIT + 1),OP_EQ,MAX_DNS_TTL_AT_EXIT);
+  tt_int_op(dns_clip_ttl(MIN_DNS_TTL_AT_EXIT - 1), OP_EQ, MIN_DNS_TTL_AT_EXIT);
+  tt_int_op(dns_clip_ttl(ttl_mid), OP_EQ, MAX_DNS_TTL_AT_EXIT);
+  tt_int_op(dns_clip_ttl(MAX_DNS_TTL_AT_EXIT + 1), OP_EQ, MAX_DNS_TTL_AT_EXIT);
 
-  done:
+done:
   return;
 }
 
@@ -98,9 +98,10 @@ static cached_resolve_t *cache_entry_mock = NULL;
 static int n_fake_impl = 0;
 
 static int dns_resolve_dns_resolve_impl(edge_connection_t *exitconn,
-                     int is_resolve, or_circuit_t *oncirc,
-                     char **hostname_out, int *made_connection_pending_out,
-                     cached_resolve_t **resolve_out);
+                                        int is_resolve, or_circuit_t *oncirc,
+                                        char **hostname_out,
+                                        int *made_connection_pending_out,
+                                        cached_resolve_t **resolve_out);
 ATTR_UNUSED static int dns_resolve_dns_resolve_impl_called = 0;
 
 /** This will be our configurable substitute for <b>dns_resolve_impl</b> in
@@ -113,9 +114,9 @@ ATTR_UNUSED static int dns_resolve_dns_resolve_impl_called = 0;
  */
 static int
 dns_resolve_dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
-                     or_circuit_t *oncirc, char **hostname_out,
-                     int *made_connection_pending_out,
-                     cached_resolve_t **resolve_out)
+                             or_circuit_t *oncirc, char **hostname_out,
+                             int *made_connection_pending_out,
+                             cached_resolve_t **resolve_out)
 {
   (void)oncirc;
   (void)exitconn;
@@ -143,7 +144,7 @@ static cached_resolve_t *last_resolved;
 
 static void
 dns_resolve_send_resolved_cell(edge_connection_t *conn, uint8_t answer_type,
-                       const cached_resolve_t *resolved)
+                               const cached_resolve_t *resolved)
 {
   conn_for_resolved_cell = conn;
 
@@ -159,7 +160,7 @@ static char *last_resolved_hostname = NULL;
 
 static void
 dns_resolve_send_resolved_hostname_cell(edge_connection_t *conn,
-                                const char *hostname)
+                                        const char *hostname)
 {
   conn_for_resolved_cell = conn;
 
@@ -174,7 +175,7 @@ static int n_dns_cancel_pending_resolve_replacement = 0;
 static void
 dns_resolve_dns_cancel_pending_resolve(const char *address)
 {
-  (void) address;
+  (void)address;
   n_dns_cancel_pending_resolve_replacement++;
 }
 
@@ -184,15 +185,15 @@ static connection_t *last_freed_conn = NULL;
 static void
 dns_resolve_connection_free_(connection_t *conn)
 {
-   n_connection_free++;
+  n_connection_free++;
 
-   last_freed_conn = conn;
+  last_freed_conn = conn;
 }
 
 static void
 test_dns_resolve(void *arg)
 {
-  (void) arg;
+  (void)arg;
   int retval;
   int prev_n_send_resolved_hostname_cell_replacement;
   int prev_n_send_resolved_cell_replacement;
@@ -202,19 +203,16 @@ test_dns_resolve(void *arg)
   edge_connection_t *nextconn = tor_malloc(sizeof(edge_connection_t));
 
   or_circuit_t *on_circuit = tor_malloc(sizeof(or_circuit_t));
-  memset(on_circuit,0,sizeof(or_circuit_t));
+  memset(on_circuit, 0, sizeof(or_circuit_t));
   on_circuit->base_.magic = OR_CIRCUIT_MAGIC;
 
-  memset(fake_resolved,0,sizeof(cached_resolve_t));
-  memset(exitconn,0,sizeof(edge_connection_t));
-  memset(nextconn,0,sizeof(edge_connection_t));
+  memset(fake_resolved, 0, sizeof(cached_resolve_t));
+  memset(exitconn, 0, sizeof(edge_connection_t));
+  memset(nextconn, 0, sizeof(edge_connection_t));
 
-  MOCK(dns_resolve_impl,
-       dns_resolve_dns_resolve_impl);
-  MOCK(send_resolved_cell,
-       dns_resolve_send_resolved_cell);
-  MOCK(send_resolved_hostname_cell,
-       dns_resolve_send_resolved_hostname_cell);
+  MOCK(dns_resolve_impl, dns_resolve_dns_resolve_impl);
+  MOCK(send_resolved_cell, dns_resolve_send_resolved_cell);
+  MOCK(send_resolved_hostname_cell, dns_resolve_send_resolved_hostname_cell);
 
   /*
    * CASE 1: dns_resolve_impl returns 1 and sets a hostname. purpose is
@@ -226,7 +224,7 @@ test_dns_resolve(void *arg)
    */
 
   prev_n_send_resolved_hostname_cell_replacement =
-  n_send_resolved_hostname_cell_replacement;
+      n_send_resolved_hostname_cell_replacement;
 
   exitconn->base_.purpose = EXIT_PURPOSE_RESOLVE;
   exitconn->on_circuit = &(on_circuit->base_);
@@ -236,10 +234,10 @@ test_dns_resolve(void *arg)
 
   retval = dns_resolve(exitconn);
 
-  tt_int_op(retval,OP_EQ,1);
-  tt_str_op(resolved_name,OP_EQ,last_resolved_hostname);
+  tt_int_op(retval, OP_EQ, 1);
+  tt_str_op(resolved_name, OP_EQ, last_resolved_hostname);
   tt_assert(conn_for_resolved_cell == exitconn);
-  tt_int_op(n_send_resolved_hostname_cell_replacement,OP_EQ,
+  tt_int_op(n_send_resolved_hostname_cell_replacement, OP_EQ,
             prev_n_send_resolved_hostname_cell_replacement + 1);
   tt_assert(exitconn->on_circuit == NULL);
 
@@ -260,17 +258,16 @@ test_dns_resolve(void *arg)
 
   cache_entry_mock = fake_resolved;
 
-  prev_n_send_resolved_cell_replacement =
-  n_send_resolved_cell_replacement;
+  prev_n_send_resolved_cell_replacement = n_send_resolved_cell_replacement;
 
   retval = dns_resolve(exitconn);
 
-  tt_int_op(retval,OP_EQ,1);
+  tt_int_op(retval, OP_EQ, 1);
   tt_assert(conn_for_resolved_cell == exitconn);
-  tt_int_op(n_send_resolved_cell_replacement,OP_EQ,
+  tt_int_op(n_send_resolved_cell_replacement, OP_EQ,
             prev_n_send_resolved_cell_replacement + 1);
   tt_assert(last_resolved == fake_resolved);
-  tt_int_op(last_answer_type,OP_EQ,0xff);
+  tt_int_op(last_answer_type, OP_EQ, 0xff);
   tt_assert(exitconn->on_circuit == NULL);
 
   /* CASE 3: The purpose of exit connection is not EXIT_PURPOSE_RESOLVE
@@ -285,20 +282,19 @@ test_dns_resolve(void *arg)
 
   on_circuit->n_streams = nextconn;
 
-  prev_n_send_resolved_cell_replacement =
-  n_send_resolved_cell_replacement;
+  prev_n_send_resolved_cell_replacement = n_send_resolved_cell_replacement;
 
   prev_n_send_resolved_hostname_cell_replacement =
-  n_send_resolved_hostname_cell_replacement;
+      n_send_resolved_hostname_cell_replacement;
 
   retval = dns_resolve(exitconn);
 
-  tt_int_op(retval,OP_EQ,1);
+  tt_int_op(retval, OP_EQ, 1);
   tt_assert(on_circuit->n_streams == exitconn);
   tt_assert(exitconn->next_stream == nextconn);
-  tt_int_op(prev_n_send_resolved_cell_replacement,OP_EQ,
+  tt_int_op(prev_n_send_resolved_cell_replacement, OP_EQ,
             n_send_resolved_cell_replacement);
-  tt_int_op(prev_n_send_resolved_hostname_cell_replacement,OP_EQ,
+  tt_int_op(prev_n_send_resolved_hostname_cell_replacement, OP_EQ,
             n_send_resolved_hostname_cell_replacement);
 
   /* CASE 4: _impl returns 0.
@@ -317,8 +313,8 @@ test_dns_resolve(void *arg)
 
   retval = dns_resolve(exitconn);
 
-  tt_int_op(retval,OP_EQ,0);
-  tt_int_op(exitconn->base_.state,OP_EQ,EXIT_CONN_STATE_RESOLVING);
+  tt_int_op(retval, OP_EQ, 0);
+  tt_int_op(exitconn->base_.state, OP_EQ, EXIT_CONN_STATE_RESOLVING);
   tt_assert(on_circuit->resolving_streams == exitconn);
   tt_assert(exitconn->next_stream == nextconn);
 
@@ -327,32 +323,29 @@ test_dns_resolve(void *arg)
    * on exitconn with type being RESOLVED_TYPE_ERROR.
    */
 
-  MOCK(dns_cancel_pending_resolve,
-       dns_resolve_dns_cancel_pending_resolve);
-  MOCK(connection_free_,
-       dns_resolve_connection_free_);
+  MOCK(dns_cancel_pending_resolve, dns_resolve_dns_cancel_pending_resolve);
+  MOCK(connection_free_, dns_resolve_connection_free_);
 
   exitconn->on_circuit = &(on_circuit->base_);
   exitconn->base_.purpose = EXIT_PURPOSE_RESOLVE;
 
   resolve_retval = -1;
 
-  prev_n_send_resolved_cell_replacement =
-  n_send_resolved_cell_replacement;
+  prev_n_send_resolved_cell_replacement = n_send_resolved_cell_replacement;
 
   prev_n_connection_free = n_connection_free;
 
   retval = dns_resolve(exitconn);
 
-  tt_int_op(retval,OP_EQ,-1);
-  tt_int_op(n_send_resolved_cell_replacement,OP_EQ,
+  tt_int_op(retval, OP_EQ, -1);
+  tt_int_op(n_send_resolved_cell_replacement, OP_EQ,
             prev_n_send_resolved_cell_replacement + 1);
-  tt_int_op(last_answer_type,OP_EQ,RESOLVED_TYPE_ERROR);
-  tt_int_op(n_dns_cancel_pending_resolve_replacement,OP_EQ,1);
-  tt_int_op(n_connection_free,OP_EQ,prev_n_connection_free + 1);
+  tt_int_op(last_answer_type, OP_EQ, RESOLVED_TYPE_ERROR);
+  tt_int_op(n_dns_cancel_pending_resolve_replacement, OP_EQ, 1);
+  tt_int_op(n_connection_free, OP_EQ, prev_n_connection_free + 1);
   tt_assert(last_freed_conn == TO_CONN(exitconn));
 
-  done:
+done:
   UNMOCK(dns_resolve_impl);
   UNMOCK(send_resolved_cell);
   UNMOCK(send_resolved_hostname_cell);
@@ -408,16 +401,15 @@ test_dns_impl_addr_is_ip(void *arg)
 
   TO_CONN(exitconn)->address = tor_strdup("8.8.8.8");
 
-  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending,
-                            NULL);
+  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending, NULL);
 
   resolved_addr = &(exitconn->base_.addr);
 
-  tt_int_op(retval,OP_EQ,1);
+  tt_int_op(retval, OP_EQ, 1);
   tt_assert(tor_addr_eq(resolved_addr, (const tor_addr_t *)&addr_to_compare));
-  tt_int_op(exitconn->address_ttl,OP_EQ,DEFAULT_DNS_TTL);
+  tt_int_op(exitconn->address_ttl, OP_EQ, DEFAULT_DNS_TTL);
 
-  done:
+done:
   tor_free(on_circ);
   tor_free(TO_CONN(exitconn)->address);
   tor_free(exitconn);
@@ -449,12 +441,11 @@ test_dns_impl_non_exit(void *arg)
   MOCK(router_my_exit_policy_is_reject_star,
        dns_impl_non_exit_router_my_exit_policy_is_reject_star);
 
-  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending,
-                            NULL);
+  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending, NULL);
 
-  tt_int_op(retval,OP_EQ,-1);
+  tt_int_op(retval, OP_EQ, -1);
 
-  done:
+done:
   tor_free(TO_CONN(exitconn)->address);
   tor_free(exitconn);
   tor_free(on_circ);
@@ -489,12 +480,11 @@ test_dns_impl_addr_is_invalid_dest(void *arg)
 
   TO_CONN(exitconn)->address = tor_strdup("invalid#@!.org");
 
-  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending,
-                            NULL);
+  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending, NULL);
 
-  tt_int_op(retval,OP_EQ,-1);
+  tt_int_op(retval, OP_EQ, -1);
 
-  done:
+done:
   UNMOCK(router_my_exit_policy_is_reject_star);
   tor_free(TO_CONN(exitconn)->address);
   tor_free(exitconn);
@@ -528,22 +518,20 @@ test_dns_impl_malformed_ptr(void *arg)
   MOCK(router_my_exit_policy_is_reject_star,
        dns_impl_malformed_ptr_router_my_exit_policy_is_reject_star);
 
-  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending,
-                            NULL);
+  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending, NULL);
 
-  tt_int_op(retval,OP_EQ,-1);
+  tt_int_op(retval, OP_EQ, -1);
 
   tor_free(TO_CONN(exitconn)->address);
 
   TO_CONN(exitconn)->address =
-  tor_strdup("z01234567890123456789.in-addr.arpa");
+      tor_strdup("z01234567890123456789.in-addr.arpa");
 
-  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending,
-                            NULL);
+  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending, NULL);
 
-  tt_int_op(retval,OP_EQ,-1);
+  tt_int_op(retval, OP_EQ, -1);
 
-  done:
+done:
   UNMOCK(router_my_exit_policy_is_reject_star);
   tor_free(TO_CONN(exitconn)->address);
   tor_free(exitconn);
@@ -593,18 +581,17 @@ test_dns_impl_cache_hit_pending(void *arg)
 
   dns_insert_cache_entry(cache_entry);
 
-  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending,
-                            NULL);
+  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending, NULL);
 
-  tt_int_op(retval,OP_EQ,0);
-  tt_int_op(made_pending,OP_EQ,1);
+  tt_int_op(retval, OP_EQ, 0);
+  tt_int_op(made_pending, OP_EQ, 1);
 
   pending_conn = cache_entry->pending_connections;
 
   tt_assert(pending_conn != NULL);
   tt_assert(pending_conn->conn == exitconn);
 
-  done:
+done:
   UNMOCK(router_my_exit_policy_is_reject_star);
   tor_free(on_circ);
   tor_free(TO_CONN(exitconn)->address);
@@ -629,9 +616,8 @@ static cached_resolve_t *last_resolve = NULL;
 
 static int
 dns_impl_cache_hit_cached_set_exitconn_info_from_resolve(
-                                   edge_connection_t *exitconn,
-                                   const cached_resolve_t *resolve,
-                                   char **hostname_out)
+    edge_connection_t *exitconn, const cached_resolve_t *resolve,
+    char **hostname_out)
 {
   last_exitconn = exitconn;
   last_resolve = (cached_resolve_t *)resolve;
@@ -677,14 +663,14 @@ test_dns_impl_cache_hit_cached(void *arg)
   retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending,
                             &resolve_out);
 
-  tt_int_op(retval,OP_EQ,0);
-  tt_int_op(made_pending,OP_EQ,0);
+  tt_int_op(retval, OP_EQ, 0);
+  tt_int_op(made_pending, OP_EQ, 0);
   tt_assert(resolve_out == cache_entry);
 
   tt_assert(last_exitconn == exitconn);
   tt_assert(last_resolve == cache_entry);
 
-  done:
+done:
   UNMOCK(router_my_exit_policy_is_reject_star);
   UNMOCK(set_exitconn_info_from_resolve);
   tor_free(on_circ);
@@ -738,16 +724,14 @@ test_dns_impl_cache_miss(void *arg)
 
   MOCK(router_my_exit_policy_is_reject_star,
        dns_impl_cache_miss_router_my_exit_policy_is_reject_star);
-  MOCK(launch_resolve,
-       dns_impl_cache_miss_launch_resolve);
+  MOCK(launch_resolve, dns_impl_cache_miss_launch_resolve);
 
   dns_init();
 
-  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending,
-                            NULL);
+  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending, NULL);
 
-  tt_int_op(retval,OP_EQ,0);
-  tt_int_op(made_pending,OP_EQ,1);
+  tt_int_op(retval, OP_EQ, 0);
+  tt_int_op(made_pending, OP_EQ, 1);
 
   cache_entry = dns_get_cache_entry(&query);
 
@@ -759,9 +743,9 @@ test_dns_impl_cache_miss(void *arg)
   tt_assert(pending_conn->conn == exitconn);
 
   tt_assert(last_launched_resolve == cache_entry);
-  tt_str_op(cache_entry->address,OP_EQ,TO_CONN(exitconn)->address);
+  tt_str_op(cache_entry->address, OP_EQ, TO_CONN(exitconn)->address);
 
-  done:
+done:
   UNMOCK(router_my_exit_policy_is_reject_star);
   UNMOCK(launch_resolve);
   tor_free(on_circ);
@@ -775,20 +759,19 @@ test_dns_impl_cache_miss(void *arg)
 
 struct testcase_t dns_tests[] = {
 #ifdef HAVE_EVDNS_BASE_GET_NAMESERVER_ADDR
-   { "configure_ns_fallback", test_dns_configure_ns_fallback,
-     TT_FORK, NULL, NULL },
+    {"configure_ns_fallback", test_dns_configure_ns_fallback, TT_FORK, NULL,
+     NULL},
 #endif
-   { "clip_ttl", test_dns_clip_ttl, TT_FORK, NULL, NULL },
-   { "resolve", test_dns_resolve, TT_FORK, NULL, NULL },
-   { "impl_addr_is_ip", test_dns_impl_addr_is_ip, TT_FORK, NULL, NULL },
-   { "impl_non_exit", test_dns_impl_non_exit, TT_FORK, NULL, NULL },
-   { "impl_addr_is_invalid_dest", test_dns_impl_addr_is_invalid_dest,
-     TT_FORK, NULL, NULL },
-   { "impl_malformed_ptr", test_dns_impl_malformed_ptr, TT_FORK, NULL, NULL },
-   { "impl_cache_hit_pending", test_dns_impl_cache_hit_pending,
-     TT_FORK, NULL, NULL },
-   { "impl_cache_hit_cached", test_dns_impl_cache_hit_cached,
-     TT_FORK, NULL, NULL },
-   { "impl_cache_miss", test_dns_impl_cache_miss, TT_FORK, NULL, NULL },
-   END_OF_TESTCASES
-};
+    {"clip_ttl", test_dns_clip_ttl, TT_FORK, NULL, NULL},
+    {"resolve", test_dns_resolve, TT_FORK, NULL, NULL},
+    {"impl_addr_is_ip", test_dns_impl_addr_is_ip, TT_FORK, NULL, NULL},
+    {"impl_non_exit", test_dns_impl_non_exit, TT_FORK, NULL, NULL},
+    {"impl_addr_is_invalid_dest", test_dns_impl_addr_is_invalid_dest, TT_FORK,
+     NULL, NULL},
+    {"impl_malformed_ptr", test_dns_impl_malformed_ptr, TT_FORK, NULL, NULL},
+    {"impl_cache_hit_pending", test_dns_impl_cache_hit_pending, TT_FORK, NULL,
+     NULL},
+    {"impl_cache_hit_cached", test_dns_impl_cache_hit_cached, TT_FORK, NULL,
+     NULL},
+    {"impl_cache_miss", test_dns_impl_cache_miss, TT_FORK, NULL, NULL},
+    END_OF_TESTCASES};

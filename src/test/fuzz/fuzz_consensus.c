@@ -18,9 +18,8 @@ mock_dump_desc__nodump(const char *desc, const char *type)
 }
 
 static int
-mock_router_produce_hash_final__nohash(char *digest,
-                                       const char *start, size_t len,
-                                       digest_algorithm_t alg)
+mock_router_produce_hash_final__nohash(char *digest, const char *start,
+                                       size_t len, digest_algorithm_t alg)
 {
   (void)start;
   (void)len;
@@ -36,7 +35,7 @@ static int
 mock_signed_digest_equals__yes(const uint8_t *d1, const uint8_t *d2,
                                size_t len)
 {
-  (void) tor_memeq(d1, d2, len);
+  (void)tor_memeq(d1, d2, len);
   return 1;
 }
 
@@ -66,10 +65,7 @@ fuzz_main(const uint8_t *data, size_t sz)
   if (tor_memstr(data, MIN(sz, 1024), "tus vote"))
     tp = NS_TYPE_VOTE;
   const char *what = (tp == NS_TYPE_CONSENSUS) ? "consensus" : "vote";
-  ns = networkstatus_parse_vote_from_string((const char *)data,
-                                            sz,
-                                            &eos,
-                                            tp);
+  ns = networkstatus_parse_vote_from_string((const char *)data, sz, &eos, tp);
   if (ns) {
     log_debug(LD_GENERAL, "Parsing as %s okay", what);
     networkstatus_vote_free(ns);

@@ -21,7 +21,7 @@ static const uint32_t BURST = 50;
 static void
 test_token_bucket_ctr_init(void *arg)
 {
-  (void) arg;
+  (void)arg;
   token_bucket_ctr_t tb;
 
   token_bucket_ctr_init(&tb, RATE, BURST, START_TS);
@@ -30,14 +30,13 @@ test_token_bucket_ctr_init(void *arg)
   tt_uint_op(tb.last_refilled_at_timestamp, OP_EQ, START_TS);
   tt_int_op(tb.counter.bucket, OP_EQ, BURST);
 
- done:
-  ;
+done:;
 }
 
 static void
 test_token_bucket_ctr_adjust(void *arg)
 {
-  (void) arg;
+  (void)arg;
   token_bucket_ctr_t tb;
 
   token_bucket_ctr_init(&tb, RATE, BURST, START_TS);
@@ -66,14 +65,13 @@ test_token_bucket_ctr_adjust(void *arg)
   tt_uint_op(tb.counter.bucket, OP_EQ, BURST - 1);
   tt_uint_op(tb.cfg.burst, OP_EQ, BURST);
 
- done:
-  ;
+done:;
 }
 
 static void
 test_token_bucket_ctr_dec(void *arg)
 {
-  (void) arg;
+  (void)arg;
   token_bucket_ctr_t tb;
 
   token_bucket_ctr_init(&tb, RATE, BURST, START_TS);
@@ -93,16 +91,15 @@ test_token_bucket_ctr_dec(void *arg)
 
   /* Keep underflowing shouldn't flag the bucket as empty. */
   tt_uint_op(false, OP_EQ, token_bucket_ctr_dec(&tb, BURST));
-  tt_int_op(tb.counter.bucket, OP_EQ, - (int32_t) (BURST + 1));
+  tt_int_op(tb.counter.bucket, OP_EQ, -(int32_t)(BURST + 1));
 
- done:
-  ;
+done:;
 }
 
 static void
 test_token_bucket_ctr_refill(void *arg)
 {
-  (void) arg;
+  (void)arg;
   token_bucket_ctr_t tb;
 
   token_bucket_ctr_init(&tb, RATE, BURST, START_TS);
@@ -136,17 +133,14 @@ test_token_bucket_ctr_refill(void *arg)
   tt_int_op(tb.last_refilled_at_timestamp, OP_EQ, START_TS + 101);
   tt_int_op(tb.counter.bucket, OP_EQ, RATE * 2);
 
- done:
-  ;
+done:;
 }
 
-#define TOKEN_BUCKET(name)                                          \
-  { #name, test_token_bucket_ ## name , 0, NULL, NULL }
+#define TOKEN_BUCKET(name)                         \
+  {                                                \
+#    name, test_token_bucket_##name, 0, NULL, NULL \
+  }
 
 struct testcase_t token_bucket_tests[] = {
-  TOKEN_BUCKET(ctr_init),
-  TOKEN_BUCKET(ctr_adjust),
-  TOKEN_BUCKET(ctr_dec),
-  TOKEN_BUCKET(ctr_refill),
-  END_OF_TESTCASES
-};
+    TOKEN_BUCKET(ctr_init), TOKEN_BUCKET(ctr_adjust), TOKEN_BUCKET(ctr_dec),
+    TOKEN_BUCKET(ctr_refill), END_OF_TESTCASES};

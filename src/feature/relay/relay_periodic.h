@@ -19,12 +19,10 @@ void reschedule_descriptor_update_check(void);
 
 #else /* !defined(HAVE_MODULE_RELAY) */
 
-#include "lib/cc/compat_compiler.h"
+#  include "lib/cc/compat_compiler.h"
 
-#define relay_register_periodic_events() \
-  STMT_NIL
-#define reschedule_descriptor_update_check() \
-  STMT_NIL
+#  define relay_register_periodic_events() STMT_NIL
+#  define reschedule_descriptor_update_check() STMT_NIL
 
 #endif /* defined(HAVE_MODULE_RELAY) */
 

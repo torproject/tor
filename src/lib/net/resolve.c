@@ -21,13 +21,13 @@
 #include "ext/ht.h"
 
 #ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
+#  include <sys/types.h>
 #endif
 #ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
+#  include <sys/socket.h>
 #endif
 #ifdef HAVE_NETDB_H
-#include <netdb.h>
+#  include <netdb.h>
 #endif
 
 #include <string.h>
@@ -43,12 +43,12 @@
  */
 
 MOCK_IMPL(int,
-tor_lookup_hostname,(const char *name, uint32_t *addr))
+tor_lookup_hostname, (const char *name, uint32_t *addr))
 {
   tor_addr_t myaddr;
   int ret;
 
-  if (BUG(!addr))
+  if (BUG(! addr))
     return -1;
 
   *addr = 0;
@@ -72,13 +72,12 @@ tor_lookup_hostname,(const char *name, uint32_t *addr))
  * See tor_addr_lookup() for details.
  */
 MOCK_IMPL(STATIC int,
-tor_addr_lookup_host_impl,(const char *name,
-                          uint16_t family,
-                          tor_addr_t *addr))
+tor_addr_lookup_host_impl,
+          (const char *name, uint16_t family, tor_addr_t *addr))
 {
   int err;
-  struct addrinfo *res=NULL, *res_p;
-  struct addrinfo *best=NULL;
+  struct addrinfo *res = NULL, *res_p;
+  struct addrinfo *best = NULL;
   struct addrinfo hints;
   int result = -1;
   memset(&hints, 0, sizeof(hints));
@@ -87,14 +86,14 @@ tor_addr_lookup_host_impl,(const char *name,
   err = tor_getaddrinfo(name, NULL, &hints, &res);
   /* The check for 'res' here shouldn't be necessary, but it makes static
    * analysis tools happy. */
-  if (!err && res) {
+  if (! err && res) {
     best = NULL;
     for (res_p = res; res_p; res_p = res_p->ai_next) {
       if (family == AF_UNSPEC) {
         if (res_p->ai_family == AF_INET) {
           best = res_p;
           break;
-        } else if (res_p->ai_family == AF_INET6 && !best) {
+        } else if (res_p->ai_family == AF_INET6 && ! best) {
           best = res_p;
         }
       } else if (family == res_p->ai_family) {
@@ -102,15 +101,14 @@ tor_addr_lookup_host_impl,(const char *name,
         break;
       }
     }
-    if (!best)
+    if (! best)
       best = res;
     if (best->ai_family == AF_INET) {
-      tor_addr_from_in(addr,
-                       &((struct sockaddr_in*)best->ai_addr)->sin_addr);
+      tor_addr_from_in(addr, &((struct sockaddr_in *)best->ai_addr)->sin_addr);
       result = 0;
     } else if (best->ai_family == AF_INET6) {
       tor_addr_from_in6(addr,
-                        &((struct sockaddr_in6*)best->ai_addr)->sin6_addr);
+                        &((struct sockaddr_in6 *)best->ai_addr)->sin6_addr);
       result = 0;
     }
     tor_freeaddrinfo(res);
@@ -127,51 +125,50 @@ tor_addr_lookup_host_impl,(const char *name,
  * See tor_addr_lookup() for details.
  */
 MOCK_IMPL(STATIC int,
-tor_addr_lookup_host_impl,(const char *name,
-                          uint16_t family,
-                           tor_addr_t *addr))
+tor_addr_lookup_host_impl,
+          (const char *name, uint16_t family, tor_addr_t *addr))
 {
-  (void) family;
+  (void)family;
   struct hostent *ent;
   int err;
-#ifdef HAVE_GETHOSTBYNAME_R_6_ARG
+#  ifdef HAVE_GETHOSTBYNAME_R_6_ARG
   char buf[2048];
   struct hostent hostent;
   int r;
   r = gethostbyname_r(name, &hostent, buf, sizeof(buf), &ent, &err);
-#elif defined(HAVE_GETHOSTBYNAME_R_5_ARG)
+#  elif defined(HAVE_GETHOSTBYNAME_R_5_ARG)
   char buf[2048];
   struct hostent hostent;
   ent = gethostbyname_r(name, &hostent, buf, sizeof(buf), &err);
-#elif defined(HAVE_GETHOSTBYNAME_R_3_ARG)
+#  elif defined(HAVE_GETHOSTBYNAME_R_3_ARG)
   struct hostent_data data;
   struct hostent hent;
   memset(&data, 0, sizeof(data));
   err = gethostbyname_r(name, &hent, &data);
   ent = err ? NULL : &hent;
-#else
+#  else
   ent = gethostbyname(name);
-#ifdef _WIN32
+#    ifdef _WIN32
   err = WSAGetLastError();
-#else
+#    else
   err = h_errno;
-#endif /* defined(_WIN32) */
-#endif /* defined(HAVE_GETHOSTBYNAME_R_6_ARG) || ... */
+#    endif /* defined(_WIN32) */
+#  endif /* defined(HAVE_GETHOSTBYNAME_R_6_ARG) || ... */
   if (ent) {
     if (ent->h_addrtype == AF_INET) {
-      tor_addr_from_in(addr, (struct in_addr*) ent->h_addr);
+      tor_addr_from_in(addr, (struct in_addr *)ent->h_addr);
     } else if (ent->h_addrtype == AF_INET6) {
-      tor_addr_from_in6(addr, (struct in6_addr*) ent->h_addr);
+      tor_addr_from_in6(addr, (struct in6_addr *)ent->h_addr);
     } else {
       tor_assert(0); // LCOV_EXCL_LINE: gethostbyname() returned bizarre type
     }
     return 0;
   }
-#ifdef _WIN32
+#  ifdef _WIN32
   return (err == WSATRY_AGAIN) ? 1 : -1;
-#else
+#  else
   return (err == TRY_AGAIN) ? 1 : -1;
-#endif
+#  endif
 }
 #endif /* defined(HAVE_GETADDRINFO) */
 
@@ -187,7 +184,8 @@ tor_addr_lookup_host_impl,(const char *name,
  * Return 0 on success, -1 on failure; 1 on transient failure.
  */
 MOCK_IMPL(int,
-tor_addr_lookup,(const char *name, uint16_t family, tor_addr_t *addr))
+tor_addr_lookup,
+          (const char *name, uint16_t family, tor_addr_t *addr))
 {
   /* Perhaps eventually this should be replaced by a tor_getaddrinfo or
    * something.
@@ -199,7 +197,7 @@ tor_addr_lookup,(const char *name, uint16_t family, tor_addr_t *addr))
   tor_assert(addr);
   tor_assert(family == AF_INET || family == AF_INET6 || family == AF_UNSPEC);
 
-  if (!*name) {
+  if (! *name) {
     /* Empty address is an error. */
     goto permfail;
   }
@@ -221,16 +219,16 @@ tor_addr_lookup,(const char *name, uint16_t family, tor_addr_t *addr))
     goto done;
   }
 
- /* If we weren't successful, and haven't already set the result,
-  * assume it's a permanent failure */
- permfail:
+/* If we weren't successful, and haven't already set the result,
+ * assume it's a permanent failure */
+permfail:
   result = -1;
   goto done;
- success:
+success:
   result = 0;
 
- /* We have set the result, now it's time to clean up */
- done:
+/* We have set the result, now it's time to clean up */
+done:
   if (result) {
     /* Clear the address on error */
     memset(addr, 0, sizeof(tor_addr_t));
@@ -297,22 +295,22 @@ tor_addr_port_lookup(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
   if (tor_addr_lookup(tmp, AF_UNSPEC, &addr) != 0)
     goto err;
 
- success:
+success:
   if (port_out)
     *port_out = portval;
   tor_addr_copy(addr_out, &addr);
   result = 0;
   goto done;
 
- err:
+err:
   /* Clear the address and port on error */
   memset(addr_out, 0, sizeof(tor_addr_t));
   if (port_out)
     *port_out = 0;
   result = -1;
 
- /* We have set the result, now it's time to clean up */
- done:
+/* We have set the result, now it's time to clean up */
+done:
   tor_free(tmp);
   return result;
 }
@@ -351,9 +349,9 @@ cached_getaddrinfo_items_eq(const cached_getaddrinfo_item_t *a,
   return (a->family == b->family) && 0 == strcmp(a->name, b->name);
 }
 
-#define cached_getaddrinfo_item_free(item)              \
-  FREE_AND_NULL(cached_getaddrinfo_item_t,              \
-                cached_getaddrinfo_item_free_, (item))
+#  define cached_getaddrinfo_item_free(item)                                \
+    FREE_AND_NULL(cached_getaddrinfo_item_t, cached_getaddrinfo_item_free_, \
+                  (item))
 
 static void
 cached_getaddrinfo_item_free_(cached_getaddrinfo_item_t *item)
@@ -367,16 +365,14 @@ cached_getaddrinfo_item_free_(cached_getaddrinfo_item_t *item)
   tor_free(item);
 }
 
-static HT_HEAD(getaddrinfo_cache, cached_getaddrinfo_item_t)
-     getaddrinfo_cache = HT_INITIALIZER();
+static HT_HEAD(getaddrinfo_cache,
+               cached_getaddrinfo_item_t) getaddrinfo_cache = HT_INITIALIZER();
 
 HT_PROTOTYPE(getaddrinfo_cache, cached_getaddrinfo_item_t, node,
-             cached_getaddrinfo_item_hash,
-             cached_getaddrinfo_items_eq)
+             cached_getaddrinfo_item_hash, cached_getaddrinfo_items_eq)
 HT_GENERATE2(getaddrinfo_cache, cached_getaddrinfo_item_t, node,
-             cached_getaddrinfo_item_hash,
-             cached_getaddrinfo_items_eq,
-             0.6, tor_reallocarray_, tor_free_)
+             cached_getaddrinfo_item_hash, cached_getaddrinfo_items_eq, 0.6,
+             tor_reallocarray_, tor_free_)
 
 /** If true, don't try to cache getaddrinfo results. */
 static int sandbox_getaddrinfo_cache_disabled = 0;
@@ -399,8 +395,7 @@ tor_freeaddrinfo(struct addrinfo *ai)
 
 int
 tor_getaddrinfo(const char *name, const char *servname,
-                const struct addrinfo *hints,
-                struct addrinfo **res)
+                const struct addrinfo *hints, struct addrinfo **res)
 {
   int err;
   struct cached_getaddrinfo_item_t search, *item;
@@ -421,7 +416,7 @@ tor_getaddrinfo(const char *name, const char *servname,
   *res = NULL;
 
   memset(&search, 0, sizeof(search));
-  search.name = (char *) name;
+  search.name = (char *)name;
   search.family = hints ? hints->ai_family : AF_UNSPEC;
   item = HT_FIND(getaddrinfo_cache, &getaddrinfo_cache, &search);
 
@@ -430,7 +425,8 @@ tor_getaddrinfo(const char *name, const char *servname,
        result. */
 
     err = getaddrinfo(name, NULL, hints, res);
-    log_info(LD_NET,"(Sandbox) getaddrinfo %s.", err ? "failed" : "succeeded");
+    log_info(LD_NET, "(Sandbox) getaddrinfo %s.",
+             err ? "failed" : "succeeded");
 
     if (! item) {
       item = tor_malloc_zero(sizeof(*item));
@@ -456,7 +452,7 @@ tor_getaddrinfo(const char *name, const char *servname,
   }
 
   /* getting here means something went wrong */
-  log_err(LD_BUG,"(Sandbox) failed to get address %s!", name);
+  log_err(LD_BUG, "(Sandbox) failed to get address %s!", name);
   return EAI_NONAME;
 }
 
@@ -466,7 +462,7 @@ tor_add_addrinfo(const char *name)
   struct addrinfo *res;
   struct addrinfo hints;
   int i;
-  static const int families[] = { AF_INET, AF_INET6, AF_UNSPEC };
+  static const int families[] = {AF_INET, AF_INET6, AF_UNSPEC};
 
   memset(&hints, 0, sizeof(hints));
   hints.ai_socktype = SOCK_STREAM;
@@ -474,7 +470,7 @@ tor_add_addrinfo(const char *name)
     hints.ai_family = families[i];
 
     res = NULL;
-    (void) tor_getaddrinfo(name, NULL, &hints, &res);
+    (void)tor_getaddrinfo(name, NULL, &hints, &res);
     if (res)
       tor_freeaddrinfo(res);
   }
@@ -487,8 +483,7 @@ tor_free_getaddrinfo_cache(void)
 {
   cached_getaddrinfo_item_t **next, **item, *this;
 
-  for (item = HT_START(getaddrinfo_cache, &getaddrinfo_cache);
-       item;
+  for (item = HT_START(getaddrinfo_cache, &getaddrinfo_cache); item;
        item = next) {
     this = *item;
     next = HT_NEXT_RMV(getaddrinfo_cache, &getaddrinfo_cache, item);

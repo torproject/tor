@@ -14,9 +14,9 @@
 
 struct buf_t;
 
-int fetch_from_buf_http(struct buf_t *buf,
-                        char **headers_out, size_t max_headerlen,
-                        char **body_out, size_t *body_used, size_t max_bodylen,
+int fetch_from_buf_http(struct buf_t *buf, char **headers_out,
+                        size_t max_headerlen, char **body_out,
+                        size_t *body_used, size_t max_bodylen,
                         int force_complete);
 int peek_buf_has_http_command(const struct buf_t *buf);
 

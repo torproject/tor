@@ -20,7 +20,7 @@ test_cmux_ewma_active_circuit(void *arg)
   circuit_t circ; /* garbage */
   circuitmux_policy_circ_data_t *circ_data = NULL;
 
-  (void) arg;
+  (void)arg;
 
   pol_data = ewma_policy.alloc_cmux_data(&cmux);
   tt_assert(pol_data);
@@ -36,7 +36,7 @@ test_cmux_ewma_active_circuit(void *arg)
   circuit_t *entry = ewma_policy.pick_active_circuit(&cmux, pol_data);
   tt_mem_op(entry, OP_EQ, &circ, sizeof(circ));
 
- done:
+done:
   ewma_policy.free_circ_data(&cmux, pol_data, &circ, circ_data);
   ewma_policy.free_cmux_data(&cmux, pol_data);
 }
@@ -52,7 +52,7 @@ test_cmux_ewma_xmit_cell(void *arg)
   ewma_policy_circ_data_t *ewma_data;
   double old_cell_count;
 
-  (void) arg;
+  (void)arg;
 
   pol_data = ewma_policy.alloc_cmux_data(&cmux);
   tt_assert(pol_data);
@@ -69,7 +69,7 @@ test_cmux_ewma_xmit_cell(void *arg)
    * circuit when emitting a cell. */
   ewma_pol_data->active_circuit_pqueue_last_recalibrated -= 100;
   ewma_data->cell_ewma.last_adjusted_tick =
-    ewma_pol_data->active_circuit_pqueue_last_recalibrated;
+      ewma_pol_data->active_circuit_pqueue_last_recalibrated;
 
   /* Grab old cell count. */
   old_cell_count = ewma_data->cell_ewma.cell_count;
@@ -80,7 +80,7 @@ test_cmux_ewma_xmit_cell(void *arg)
    * a cell and thus we scale. */
   tt_double_op(old_cell_count, OP_LT, ewma_data->cell_ewma.cell_count);
 
- done:
+done:
   ewma_policy.free_circ_data(&cmux, pol_data, &circ, circ_data);
   ewma_policy.free_cmux_data(&cmux, pol_data);
 }
@@ -94,7 +94,7 @@ test_cmux_ewma_notify_circ(void *arg)
   circuitmux_policy_circ_data_t *circ_data = NULL;
   const ewma_policy_data_t *ewma_pol_data;
 
-  (void) arg;
+  (void)arg;
 
   pol_data = ewma_policy.alloc_cmux_data(&cmux);
   tt_assert(pol_data);
@@ -118,7 +118,7 @@ test_cmux_ewma_notify_circ(void *arg)
   tt_int_op(smartlist_len(ewma_pol_data->active_circuit_pqueue), OP_EQ, 0);
   tt_uint_op(ewma_pol_data->active_circuit_pqueue_last_recalibrated, OP_NE, 0);
 
- done:
+done:
   ewma_policy.free_circ_data(&cmux, pol_data, &circ, circ_data);
   ewma_policy.free_cmux_data(&cmux, pol_data);
 }
@@ -132,7 +132,7 @@ test_cmux_ewma_policy_circ_data(void *arg)
   circuitmux_policy_circ_data_t *circ_data = NULL;
   const ewma_policy_circ_data_t *ewma_data;
 
-  (void) arg;
+  (void)arg;
 
   /* Currently, alloc_circ_data() ignores every parameter _except_ the cell
    * direction so it is OK to pass garbage. They can not be NULL. */
@@ -159,7 +159,7 @@ test_cmux_ewma_policy_circ_data(void *arg)
   tt_int_op(ewma_data->cell_ewma.heap_index, OP_EQ, -1);
   tt_uint_op(ewma_data->cell_ewma.is_for_p_chan, OP_EQ, 1);
 
- done:
+done:
   ewma_policy.free_circ_data(&cmux, &pol_data, &circ, circ_data);
 }
 
@@ -170,7 +170,7 @@ test_cmux_ewma_policy_data(void *arg)
   circuitmux_policy_data_t *pol_data = NULL;
   const ewma_policy_data_t *ewma_pol_data;
 
-  (void) arg;
+  (void)arg;
 
   pol_data = ewma_policy.alloc_cmux_data(&cmux);
   tt_assert(pol_data);
@@ -181,7 +181,7 @@ test_cmux_ewma_policy_data(void *arg)
   tt_assert(ewma_pol_data->active_circuit_pqueue);
   tt_uint_op(ewma_pol_data->active_circuit_pqueue_last_recalibrated, OP_NE, 0);
 
- done:
+done:
   ewma_policy.free_cmux_data(&cmux, pol_data);
 }
 
@@ -190,7 +190,7 @@ cmux_ewma_setup_test(const struct testcase_t *tc)
 {
   static int whatever;
 
-  (void) tc;
+  (void)tc;
 
   cell_ewma_initialize_ticks();
   cmux_ewma_set_options(NULL, NULL);
@@ -201,8 +201,8 @@ cmux_ewma_setup_test(const struct testcase_t *tc)
 static int
 cmux_ewma_cleanup_test(const struct testcase_t *tc, void *ptr)
 {
-  (void) tc;
-  (void) ptr;
+  (void)tc;
+  (void)ptr;
 
   circuitmux_ewma_free_all();
 
@@ -210,19 +210,19 @@ cmux_ewma_cleanup_test(const struct testcase_t *tc, void *ptr)
 }
 
 static struct testcase_setup_t cmux_ewma_test_setup = {
-  .setup_fn = cmux_ewma_setup_test,
-  .cleanup_fn = cmux_ewma_cleanup_test,
+    .setup_fn = cmux_ewma_setup_test,
+    .cleanup_fn = cmux_ewma_cleanup_test,
 };
 
-#define TEST_CMUX_EWMA(name) \
-  { #name, test_cmux_ewma_##name, TT_FORK, &cmux_ewma_test_setup, NULL }
+#define TEST_CMUX_EWMA(name)                                           \
+  {                                                                    \
+#    name, test_cmux_ewma_##name, TT_FORK, &cmux_ewma_test_setup, NULL \
+  }
 
-struct testcase_t circuitmux_ewma_tests[] = {
-  TEST_CMUX_EWMA(active_circuit),
-  TEST_CMUX_EWMA(policy_data),
-  TEST_CMUX_EWMA(policy_circ_data),
-  TEST_CMUX_EWMA(notify_circ),
-  TEST_CMUX_EWMA(xmit_cell),
+struct testcase_t circuitmux_ewma_tests[] = {TEST_CMUX_EWMA(active_circuit),
+                                             TEST_CMUX_EWMA(policy_data),
+                                             TEST_CMUX_EWMA(policy_circ_data),
+                                             TEST_CMUX_EWMA(notify_circ),
+                                             TEST_CMUX_EWMA(xmit_cell),
 
-  END_OF_TESTCASES
-};
+                                             END_OF_TESTCASES};

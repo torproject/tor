@@ -30,34 +30,27 @@ typedef enum workqueue_reply_t {
 /** Possible priorities for work.  Lower numeric values are more important. */
 typedef enum workqueue_priority_t {
   WQ_PRI_HIGH = 0,
-  WQ_PRI_MED  = 1,
-  WQ_PRI_LOW  = 2,
+  WQ_PRI_MED = 1,
+  WQ_PRI_LOW = 2,
 } workqueue_priority_t;
 
-workqueue_entry_t *threadpool_queue_work_priority(threadpool_t *pool,
-                                    workqueue_priority_t prio,
-                                    workqueue_reply_t (*fn)(void *,
-                                                            void *),
-                                    void (*reply_fn)(void *),
-                                    void *arg);
+workqueue_entry_t *
+threadpool_queue_work_priority(threadpool_t *pool, workqueue_priority_t prio,
+                               workqueue_reply_t (*fn)(void *, void *),
+                               void (*reply_fn)(void *), void *arg);
 
 workqueue_entry_t *threadpool_queue_work(threadpool_t *pool,
                                          workqueue_reply_t (*fn)(void *,
                                                                  void *),
-                                         void (*reply_fn)(void *),
-                                         void *arg);
+                                         void (*reply_fn)(void *), void *arg);
 
-int threadpool_queue_update(threadpool_t *pool,
-                            void *(*dup_fn)(void *),
+int threadpool_queue_update(threadpool_t *pool, void *(*dup_fn)(void *),
                             workqueue_reply_t (*fn)(void *, void *),
-                            void (*free_fn)(void *),
-                            void *arg);
+                            void (*free_fn)(void *), void *arg);
 void *workqueue_entry_cancel(workqueue_entry_t *pending_work);
-threadpool_t *threadpool_new(int n_threads,
-                             replyqueue_t *replyqueue,
-                             void *(*new_thread_state_fn)(void*),
-                             void (*free_thread_state_fn)(void*),
-                             void *arg);
+threadpool_t *threadpool_new(int n_threads, replyqueue_t *replyqueue,
+                             void *(*new_thread_state_fn)(void *),
+                             void (*free_thread_state_fn)(void *), void *arg);
 replyqueue_t *threadpool_get_replyqueue(threadpool_t *tp);
 
 replyqueue_t *replyqueue_new(uint32_t alertsocks_flags);

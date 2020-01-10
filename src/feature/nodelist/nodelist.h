@@ -15,21 +15,23 @@
 struct ed25519_public_key_t;
 struct curve25519_public_key_t;
 
-#define node_assert_ok(n) STMT_BEGIN {                          \
-    tor_assert((n)->ri || (n)->rs);                             \
-  } STMT_END
+#define node_assert_ok(n)             \
+  STMT_BEGIN                          \
+    {                                 \
+      tor_assert((n)->ri || (n)->rs); \
+    }                                 \
+  STMT_END
 
-MOCK_DECL(node_t *, node_get_mutable_by_id,(const char *identity_digest));
+MOCK_DECL(node_t *, node_get_mutable_by_id, (const char *identity_digest));
 MOCK_DECL(const node_t *, node_get_by_id, (const char *identity_digest));
-node_t *node_get_mutable_by_ed25519_id(
-                            const struct ed25519_public_key_t *ed_id);
+node_t *
+node_get_mutable_by_ed25519_id(const struct ed25519_public_key_t *ed_id);
 MOCK_DECL(const node_t *, node_get_by_ed25519_id,
           (const struct ed25519_public_key_t *ed_id));
 
-#define NNF_NO_WARN_UNNAMED (1u<<0)
+#define NNF_NO_WARN_UNNAMED (1u << 0)
 
-const node_t *node_get_by_hex_id(const char *identity_digest,
-                                 unsigned flags);
+const node_t *node_get_by_hex_id(const char *identity_digest, unsigned flags);
 node_t *nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out);
 node_t *nodelist_add_microdesc(microdesc_t *md);
 void nodelist_set_consensus(networkstatus_t *ns);
@@ -46,15 +48,13 @@ void nodelist_assert_ok(void);
 
 MOCK_DECL(const node_t *, node_get_by_nickname,
           (const char *nickname, unsigned flags));
-void node_get_verbose_nickname(const node_t *node,
-                               char *verbose_name_out);
+void node_get_verbose_nickname(const node_t *node, char *verbose_name_out);
 void node_get_verbose_nickname_by_id(const char *id_digest,
-                                char *verbose_name_out);
+                                     char *verbose_name_out);
 int node_is_dir(const node_t *node);
 int node_is_good_exit(const node_t *node);
 int node_has_any_descriptor(const node_t *node);
-int node_has_preferred_descriptor(const node_t *node,
-                                  int for_direct_connect);
+int node_has_preferred_descriptor(const node_t *node, int for_direct_connect);
 int node_get_purpose(const node_t *node);
 #define node_is_bridge(node) \
   (node_get_purpose((node)) == ROUTER_PURPOSE_BRIDGE)
@@ -98,8 +98,8 @@ void node_get_prim_dirport(const node_t *node, tor_addr_port_t *ap_out);
 void node_get_pref_dirport(const node_t *node, tor_addr_port_t *ap_out);
 void node_get_pref_ipv6_dirport(const node_t *node, tor_addr_port_t *ap_out);
 int node_has_curve25519_onion_key(const node_t *node);
-const struct curve25519_public_key_t *node_get_curve25519_onion_key(
-                                  const node_t *node);
+const struct curve25519_public_key_t *
+node_get_curve25519_onion_key(const node_t *node);
 crypto_pk_t *node_get_rsa_onion_key(const node_t *node);
 
 MOCK_DECL(const smartlist_t *, nodelist_get_list, (void));
@@ -116,12 +116,11 @@ int nodes_in_same_family(const node_t *node1, const node_t *node2);
 const node_t *router_find_exact_exit_enclave(const char *address,
                                              uint16_t port);
 int node_is_unreliable(const node_t *router, int need_uptime,
-                         int need_capacity, int need_guard);
+                       int need_capacity, int need_guard);
 int router_exit_policy_all_nodes_reject(const tor_addr_t *addr, uint16_t port,
                                         int need_uptime);
 void router_set_status(const char *digest, int up);
-int addrs_in_same_network_family(const tor_addr_t *a1,
-                                 const tor_addr_t *a2);
+int addrs_in_same_network_family(const tor_addr_t *a1, const tor_addr_t *a2);
 
 /** router_have_minimum_dir_info tests to see if we have enough
  * descriptor information to create circuits.
@@ -130,7 +129,7 @@ int addrs_in_same_network_family(const tor_addr_t *a1,
  * no exits in the consensus, we wait for enough info to create internal
  * paths, and should avoid creating exit paths, as they will simply fail.
  * We make sure we create all available circuit types at the same time. */
-MOCK_DECL(int, router_have_minimum_dir_info,(void));
+MOCK_DECL(int, router_have_minimum_dir_info, (void));
 
 /** Set to CONSENSUS_PATH_EXIT if there is at least one exit node
  * in the consensus. We update this flag in compute_frac_paths_available if
@@ -167,11 +166,11 @@ STATIC int node_family_contains(const node_t *n1, const node_t *n2);
 STATIC bool node_has_declared_family(const node_t *node);
 STATIC void node_lookup_declared_family(smartlist_t *out, const node_t *node);
 
-#ifdef TOR_UNIT_TESTS
+#  ifdef TOR_UNIT_TESTS
 
 STATIC void node_set_hsdir_index(node_t *node, const networkstatus_t *ns);
 
-#endif /* defined(TOR_UNIT_TESTS) */
+#  endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(NODELIST_PRIVATE) */
 
