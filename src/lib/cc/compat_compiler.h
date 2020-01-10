@@ -25,11 +25,11 @@
 #endif /* defined(__has_feature) */
 
 #ifndef NULL_REP_IS_ZERO_BYTES
-#error "It seems your platform does not represent NULL as zero. We can't cope."
+#error "Your platform does not represent NULL as zero. We can't cope."
 #endif
 
 #ifndef DOUBLE_0_REP_IS_ZERO_BYTES
-#error "It seems your platform does not represent 0.0 as zeros. We can't cope."
+#error "Your platform does not represent 0.0 as zeros. We can't cope."
 #endif
 
 #if 'a'!=97 || 'z'!=122 || 'A'!=65 || ' '!=32
