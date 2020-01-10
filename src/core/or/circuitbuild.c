@@ -1639,7 +1639,7 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
     break;
   }
 
-  if (BUG(exit_ei && !known_purpose)) {
+  if (BUG(exit_ei && ! known_purpose)) {
     log_warn(LD_BUG, "Unhandled purpose %d with a chosen exit; "
              "assuming routelen %d.", purpose, routelen);
   }

@@ -122,7 +122,7 @@ test_new_route_len_unhandled_exit(void *arg)
   tt_int_op(DEFAULT_ROUTE_LEN + 1, OP_EQ, r);
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
   tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
-            "!(exit_ei && !known_purpose)");
+            "!(exit_ei && ! known_purpose)");
   expect_single_log_msg_containing("Unhandled purpose");
   expect_single_log_msg_containing("with a chosen exit; assuming routelen");
   teardown_capture_of_logs();
