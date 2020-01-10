@@ -207,7 +207,7 @@ for my $fn (@ARGV) {
             if ($in_func_head ||
                 ($fn !~ /\.h$/ && /^[a-zA-Z0-9_]/ &&
                  ! /^(?:const |static )*(?:typedef|struct|union)[^\(]*$/ &&
-                 ! /= *\{$/ && ! /;$/)) {
+                 ! /= *\{$/ && ! /;$/) && ! /^[a-zA-Z0-9_]+\s*:/) {
                 if (/.\{$/){
                     msg "fn() {:$fn:$.\n";
                     $in_func_head = 0;
