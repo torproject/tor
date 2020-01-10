@@ -12,6 +12,7 @@
 #ifndef TOR_CONTROL_EVENTS_H
 #define TOR_CONTROL_EVENTS_H
 
+#include "lib/cc/ctassert.h"
 #include "core/or/ocirc_event.h"
 #include "core/or/orconn_event.h"
 
@@ -287,10 +288,7 @@ typedef uint64_t event_mask_t;
 
 /* If EVENT_MAX_ ever hits 0x0040, we need to make the mask into a
  * different structure, as it can only handle a maximum left shift of 1<<63. */
-
-#if EVENT_MAX_ >= EVENT_CAPACITY_
-#error control_connection_t.event_mask has an event greater than its capacity
-#endif
+CTASSERT(EVENT_MAX_ < EVENT_CAPACITY_);
 
 #define EVENT_MASK_(e)               (((uint64_t)1)<<(e))
 
