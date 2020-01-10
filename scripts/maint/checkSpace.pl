@@ -128,12 +128,12 @@ for my $fn (@ARGV) {
 
             if ($isheader) {
                 if ($seenguard == 0) {
-                    if (/ifndef\s+(\S+)/) {
+                    if (/^\s*\#\s*ifndef\s+(\S+)/) {
                         ++$seenguard;
                         $guardname = $1;
                     }
                 } elsif ($seenguard == 1) {
-                    if (/^\#define (\S+)/) {
+                    if (/^\s*\#\s*define (\S+)/) {
                         ++$seenguard;
                         if ($1 ne $guardname) {
                             msg "GUARD:$fn:$.: Header guard macro mismatch.\n";
