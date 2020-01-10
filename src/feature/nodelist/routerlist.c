@@ -117,9 +117,9 @@
 /* Typed wrappers for different digestmap types; used to avoid type
  * confusion. */
 
-DECLARE_TYPED_DIGESTMAP_FNS(sdmap_, digest_sd_map_t, signed_descriptor_t)
-DECLARE_TYPED_DIGESTMAP_FNS(rimap_, digest_ri_map_t, routerinfo_t)
-DECLARE_TYPED_DIGESTMAP_FNS(eimap_, digest_ei_map_t, extrainfo_t)
+DECLARE_TYPED_DIGESTMAP_FNS(sdmap, digest_sd_map_t, signed_descriptor_t)
+DECLARE_TYPED_DIGESTMAP_FNS(rimap, digest_ri_map_t, routerinfo_t)
+DECLARE_TYPED_DIGESTMAP_FNS(eimap, digest_ei_map_t, extrainfo_t)
 #define SDMAP_FOREACH(map, keyvar, valvar)                              \
   DIGESTMAP_FOREACH(sdmap_to_digestmap(map), keyvar, signed_descriptor_t *, \
                     valvar)
