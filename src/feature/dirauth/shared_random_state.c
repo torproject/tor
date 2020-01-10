@@ -60,6 +60,7 @@ DUMMY_TYPECHECK_INSTANCE(sr_disk_state_t);
 #define SR_DISK_STATE_MAGIC 0x98AB1254
 
 /** Array of variables that are saved to disk as a persistent state. */
+// clang-format off
 static const config_var_t state_vars[] = {
   V(Version,                    POSINT, "0"),
   V(TorVersion,                 STRING, NULL),
@@ -73,6 +74,7 @@ static const config_var_t state_vars[] = {
   VAR("SharedRandCurrentValue", LINELIST_S, SharedRandValues, NULL),
   END_OF_CONFIG_VARS
 };
+// clang-format on
 
 /** "Extra" variable in the state that receives lines we can't parse. This
  * lets us preserve options from versions of Tor newer than us. */

@@ -28,6 +28,7 @@
 #include "feature/nodelist/microdesc_st.h"
 
 /** List of tokens recognized in microdescriptors */
+// clang-format off
 static token_rule_t microdesc_token_table[] = {
   T1_START("onion-key",        K_ONION_KEY,        NO_ARGS,     NEED_KEY_1024),
   T01("ntor-onion-key",        K_ONION_KEY_NTOR,   GE(1),       NO_OBJ ),
@@ -39,6 +40,7 @@ static token_rule_t microdesc_token_table[] = {
   A01("@last-listed",          A_LAST_LISTED,      CONCAT_ARGS, NO_OBJ ),
   END_OF_TABLE
 };
+// clang-format on
 
 /** Assuming that s starts with a microdesc, return the start of the
  * *NEXT* one.  Return NULL on "not found." */
