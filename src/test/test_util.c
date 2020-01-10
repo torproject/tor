@@ -6305,41 +6305,41 @@ test_util_map_anon_nofork(void *arg)
 
 #ifndef COCCI
 #define UTIL_LEGACY(name)                                               \
-  { #name, test_util_ ## name , 0, NULL, NULL }
+  { (#name), test_util_ ## name , 0, NULL, NULL }
 
 #define UTIL_TEST(name, flags)                          \
-  { #name, test_util_ ## name, flags, NULL, NULL }
+  { (#name), test_util_ ## name, flags, NULL, NULL }
 
 #define COMPRESS(name, identifier)              \
-  { "compress/" #name, test_util_compress, 0, &compress_setup,          \
+  { ("compress/" #name), test_util_compress, 0, &compress_setup,        \
     (char*)(identifier) }
 
 #define COMPRESS_CONCAT(name, identifier)                               \
-  { "compress_concat/" #name, test_util_decompress_concatenated, 0,     \
+  { ("compress_concat/" #name), test_util_decompress_concatenated, 0,   \
     &compress_setup,                                                    \
     (char*)(identifier) }
 
 #define COMPRESS_JUNK(name, identifier)                                 \
-  { "compress_junk/" #name, test_util_decompress_junk, 0,               \
+  { ("compress_junk/" #name), test_util_decompress_junk, 0,             \
     &compress_setup,                                                    \
     (char*)(identifier) }
 
 #define COMPRESS_DOS(name, identifier)                                  \
-  { "compress_dos/" #name, test_util_decompress_dos, 0,                 \
+  { ("compress_dos/" #name), test_util_decompress_dos, 0,               \
     &compress_setup,                                                    \
     (char*)(identifier) }
-#endif /* !defined(COCCI) */
 
 #ifdef _WIN32
 #define UTIL_TEST_WIN_ONLY(n, f) UTIL_TEST(n, (f))
 #else
-#define UTIL_TEST_WIN_ONLY(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
+#define UTIL_TEST_WIN_ONLY(n, f) { (#n), NULL, TT_SKIP, NULL, NULL }
 #endif
 
 #ifdef DISABLE_PWDB_TESTS
-#define UTIL_TEST_PWDB(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
+#define UTIL_TEST_PWDB(n, f) { (#n), NULL, TT_SKIP, NULL, NULL }
 #else
 #define UTIL_TEST_PWDB(n, f) UTIL_TEST(n, (f))
+#endif
 #endif
 
 struct testcase_t util_tests[] = {

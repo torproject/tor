@@ -2272,7 +2272,7 @@ typedef struct control_cmd_def_t {
  **/
 #define ONE_LINE(name, flags)                                   \
   {                                                             \
-    #name,                                                      \
+    (#name),                                                    \
       handle_control_ ##name,                                   \
       flags,                                                    \
       &name##_syntax,                                           \
@@ -2283,7 +2283,7 @@ typedef struct control_cmd_def_t {
  * flags.
  **/
 #define MULTLINE(name, flags)                                   \
-  { "+"#name,                                                   \
+  { ("+"#name),                                                 \
       handle_control_ ##name,                                   \
       flags,                                                    \
       &name##_syntax                                            \

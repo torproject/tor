@@ -182,7 +182,7 @@ static const char unix_q_socket_prefix[] = "unix:\"";
  * *DowloadInitialDelay . */
 #ifndef COCCI
 #define DOWNLOAD_SCHEDULE(name) \
-  { #name "DownloadSchedule", #name "DownloadInitialDelay", 0, 1 }
+  { (#name "DownloadSchedule"), (#name "DownloadInitialDelay"), 0, 1 }
 #else
 #define DOWNLOAD_SCHEDULE(name) { NULL, NULL, 0, 1 }
 #endif /* !defined(COCCI) */
