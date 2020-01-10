@@ -51,6 +51,7 @@
 #include "feature/rend/rendservice.h"
 #include "feature/stats/predict_ports.h"
 
+#include "lib/cc/ctassert.h"
 #include "lib/compress/compress.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_util.h"
@@ -1443,9 +1444,7 @@ compare_strs_(const void **a, const void **b)
 }
 
 #define CONDITIONAL_CONSENSUS_FPR_LEN 3
-#if (CONDITIONAL_CONSENSUS_FPR_LEN > DIGEST_LEN)
-#error "conditional consensus fingerprint length is larger than digest length"
-#endif
+CTASSERT(CONDITIONAL_CONSENSUS_FPR_LEN <= DIGEST_LEN);
 
 /** Return the URL we should use for a consensus download.
  *

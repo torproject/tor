@@ -72,10 +72,10 @@ tor_memcmp(const void *a, const void *b, size_t len)
      * actually implementation-defined in standard C.  So how do we
      * get away with assuming it?  Easy.  We check.) */
 #if ((-60 >> 8) != -1)
-#error "According to cpp, right-shift doesn't perform sign-extension."
+#error "cpp says right-shift doesn't perform sign-extension."
 #endif
 #ifndef RSHIFT_DOES_SIGN_EXTEND
-#error "According to configure, right-shift doesn't perform sign-extension."
+#error "configure says right-shift doesn't perform sign-extension."
 #endif
 
     /* If v1 == v2, equal_p is ~0, so this will leave retval
