@@ -23,6 +23,12 @@ if ($ARGV[0] =~ /^-/) {
     $C = ($lang eq '-C');
 }
 
+# hashmap of things where we allow spaces between them and (.
+our %allow_space_after= map {$_, 1} qw{
+    if while for switch return int unsigned elsif WINAPI
+    void __attribute__ op size_t double uint64_t workqueue_reply_t bool
+};
+
 our %basenames = ();
 
 our %guardnames = ();
@@ -177,12 +183,7 @@ for my $fn (@ARGV) {
             #   (Don't put a space between the name of a function and its
             #   arguments.)
             if (/(\w+)\s\(([A-Z]*)/) {
-                if ($1 ne "if" and $1 ne "while" and $1 ne "for" and
-                    $1 ne "switch" and $1 ne "return" and $1 ne "int" and
-                    $1 ne "elsif" and $1 ne "WINAPI" and $2 ne "WINAPI" and
-                    $1 ne "void" and $1 ne "__attribute__" and $1 ne "op" and
-                    $1 ne "size_t" and $1 ne "double" and $1 ne "uint64_t" and
-                    $1 ne "workqueue_reply_t" and $1 ne "bool") {
+                if (! $allow_space_after{$1} && $2 ne 'WINAPI') {
                     msg "fn ():$fn:$.\n";
                 }
             }
