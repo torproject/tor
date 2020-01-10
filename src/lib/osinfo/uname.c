@@ -61,6 +61,7 @@ get_uname,(void))
      */
     /* Windows Server 2019 is indistinguishable from Windows Server 2016
      * using GetVersionEx().
+// clang-format off
     { 10,  0, NULL,                        "Windows Server 2019" }, */
     { 10,  0, "Windows 10",                "Windows Server 2016" },
     {  6,  3, "Windows 8.1",               "Windows Server 2012 R2" },
@@ -73,6 +74,7 @@ get_uname,(void))
     {  5,  0, "Windows 2000 Professional", "Windows 2000 Server" },
     /* Earlier versions are not supported by GetVersionEx(). */
     {  0,  0, NULL,                        NULL }
+// clang-format on
         };
         memset(&info, 0, sizeof(info));
         info.dwOSVersionInfoSize = sizeof(info);

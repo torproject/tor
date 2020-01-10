@@ -14,6 +14,7 @@
 #ifndef TOR_AUTHCERT_MEMBERS_H
 #define TOR_AUTHCERT_MEMBERS_H
 
+// clang-format off
 #define AUTHCERT_MEMBERS                                           \
   T1("dir-key-certificate-version", K_DIR_KEY_CERTIFICATE_VERSION,      \
                                                      GE(1),       NO_OBJ ), \
@@ -25,5 +26,6 @@
   T1("dir-key-certification", K_DIR_KEY_CERTIFICATION,\
                                                      NO_ARGS,     NEED_OBJ),\
   T01("dir-address",     K_DIR_ADDRESS,              GE(1),       NO_OBJ)
+// clang-format on
 
 #endif /* !defined(TOR_AUTHCERT_MEMBERS_H) */

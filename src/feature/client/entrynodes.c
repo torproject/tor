@@ -1974,10 +1974,12 @@ get_retry_schedule(time_t failing_since, time_t now,
   const struct {
     time_t maximum; int primary_delay; int nonprimary_delay;
   } delays[] = {
+    // clang-format off
     { SIX_HOURS,    10*60,  1*60*60 },
     { FOUR_DAYS,    90*60,  4*60*60 },
     { SEVEN_DAYS, 4*60*60, 18*60*60 },
     { TIME_MAX,   9*60*60, 36*60*60 }
+    // clang-format on
   };
 
   unsigned i;

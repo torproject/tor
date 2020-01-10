@@ -43,6 +43,7 @@
 
 /** List of tokens recognized in the body part of v3 networkstatus
  * documents. */
+// clang-format off
 static token_rule_t rtrstatus_token_table[] = {
   T01("p",                   K_P,               CONCAT_ARGS, NO_OBJ ),
   T1( "r",                   K_R,                   GE(7),   NO_OBJ ),
@@ -56,8 +57,10 @@ static token_rule_t rtrstatus_token_table[] = {
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   END_OF_TABLE
 };
+// clang-format on
 
 /** List of tokens recognized in V3 networkstatus votes. */
+// clang-format off
 static token_rule_t networkstatus_token_table[] = {
   T1_START("network-status-version", K_NETWORK_STATUS_VERSION,
                                                    GE(1),       NO_OBJ ),
@@ -98,8 +101,10 @@ static token_rule_t networkstatus_token_table[] = {
 
   END_OF_TABLE
 };
+// clang-format on
 
 /** List of tokens recognized in V3 networkstatus consensuses. */
+// clang-format off
 static token_rule_t networkstatus_consensus_token_table[] = {
   T1_START("network-status-version", K_NETWORK_STATUS_VERSION,
                                                    GE(1),       NO_OBJ ),
@@ -136,14 +141,17 @@ static token_rule_t networkstatus_consensus_token_table[] = {
 
   END_OF_TABLE
 };
+// clang-format on
 
 /** List of tokens recognized in the footer of v1 directory footers. */
+// clang-format off
 static token_rule_t networkstatus_vote_footer_token_table[] = {
   T01("directory-footer",    K_DIRECTORY_FOOTER,    NO_ARGS,   NO_OBJ ),
   T01("bandwidth-weights",   K_BW_WEIGHTS,          ARGS,      NO_OBJ ),
   T(  "directory-signature", K_DIRECTORY_SIGNATURE, GE(2),     NEED_OBJ ),
   END_OF_TABLE
 };
+// clang-format on
 
 /** Try to find the start and end of the signed portion of a networkstatus
  * document in <b>s</b>. On success, set <b>start_out</b> to the first
