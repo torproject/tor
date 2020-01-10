@@ -1284,15 +1284,16 @@ sample_genpareto_locscale(uint32_t s, double p0, double mu, double sigma,
 /**
  * Deterministically sample from the geometric distribution with
  * per-trial success probability p.
- *
+ **/
+// clang-format off
+/*
  * XXX Quantify the error (KL divergence?) of this
  * ceiling-of-exponential sampler from a true geometric distribution,
  * which we could get by rejection sampling.  Relevant papers:
  *
  *      John F. Monahan, `Accuracy in Random Number Generation',
  *      Mathematics of Computation 45(172), October 1984, pp. 559--568.
-*https://pdfs.semanticscholar.org/aca6/74b96da1df77b2224e8cfc5dd6d61a471632.pdf
- *
+https://pdfs.semanticscholar.org/aca6/74b96da1df77b2224e8cfc5dd6d61a471632.pdf
  *      Karl Bringmann and Tobias Friedrich, `Exact and Efficient
  *      Generation of Geometric Random Variates and Random Graphs', in
  *      Proceedings of the 40th International Colloaquium on Automata,
@@ -1301,6 +1302,7 @@ sample_genpareto_locscale(uint32_t s, double p0, double mu, double sigma,
  *      https://doi.org/10.1007/978-3-642-39206-1_23
  *      https://people.mpi-inf.mpg.de/~kbringma/paper/2013ICALP-1.pdf
  */
+// clang-format on
 static double
 sample_geometric(uint32_t s, double p0, double p)
 {
