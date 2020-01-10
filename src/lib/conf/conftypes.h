@@ -260,6 +260,7 @@ typedef struct config_deprecation_t {
   const char *why_deprecated;
 } config_deprecation_t;
 
+#ifndef COCCI
 /**
  * Handy macro for declaring "In the config file or on the command line, you
  * can abbreviate <b>tok</b>s as <b>tok</b>". Used inside an array of
@@ -268,7 +269,8 @@ typedef struct config_deprecation_t {
  * For example, to declare "NumCpu" as an abbreviation for "NumCPUs",
  * you can say PLURAL(NumCpu).
  **/
-#define PLURAL(tok) { #tok, #tok "s", 0, 0 }
+#define PLURAL(tok) { (#tok), (#tok "s"), 0, 0 }
+#endif /* !defined(COCCI) */
 
 /**
  * Validation function: verify whether a configuation object is well-formed
