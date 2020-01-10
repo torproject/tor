@@ -208,7 +208,7 @@ for my $fn (@ARGV) {
                 ($fn !~ /\.h$/ && /^[a-zA-Z0-9_]/ &&
                  ! /^(?:const |static )*(?:typedef|struct|union)[^\(]*$/ &&
                  ! /= *\{$/ && ! /;$/) && ! /^[a-zA-Z0-9_]+\s*:/) {
-                if (/.\{$/){
+                if (/[^,\s]\s*\{$/){
                     msg "fn() {:$fn:$.\n";
                     $in_func_head = 0;
                 } elsif (/^\S[^\(]* +\**[a-zA-Z0-9_]+\(/) {
