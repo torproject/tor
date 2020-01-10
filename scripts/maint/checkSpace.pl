@@ -26,7 +26,20 @@ if ($ARGV[0] =~ /^-/) {
 # hashmap of things where we allow spaces between them and (.
 our %allow_space_after= map {$_, 1} qw{
     if while for switch return int unsigned elsif WINAPI
-    void __attribute__ op size_t double uint64_t workqueue_reply_t bool
+    void __attribute__ op size_t double uint64_t
+    bool ssize_t
+    workqueue_reply_t hs_desc_decode_status_t
+    PRStatus
+    SMARTLIST_FOREACH_BEGIN SMARTLIST_FOREACH_END
+    HT_FOREACH
+    DIGESTMAP_FOREACH_MODIFY DIGESTMAP_FOREACH
+    DIGEST256MAP_FOREACH_MODIFY DIGEST256MAP_FOREACH
+    STRMAP_FOREACH_MODIFY STRMAP_FOREACH
+    SDMAP_FOREACH EIMAP_FOREACH RIMAP_FOREACH
+    MAP_FOREACH_MODIFY MAP_FOREACH
+    TOR_SIMPLEQ_FOREACH TOR_SIMPLEQ_FOREACH_SAFE
+    TOR_LIST_FOREACH TOR_LIST_FOREACH_SAFE
+    TOR_SLIST_FOREACH TOR_SLIST_FOREACH_SAFE
 };
 
 our %basenames = ();
