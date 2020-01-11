@@ -881,6 +881,43 @@ router_write_fingerprint(int hashed)
   return result;
 }
 
+STATIC int
+router_write_ed25519_identity(void)
+{
+  char *keydir = NULL, *cp = NULL;
+  const char *fname = "ed25519_identity";
+  char ed25519_id[BASE64_DIGEST256_LEN+1];
+  const or_options_t *options = get_options();
+  char *id_line = NULL;
+  int result = -1;
+
+  keydir = get_datadir_fname(fname);
+  log_info(LD_GENERAL, "Dumping ed25519 identity key to \"%s\"...", keydir);
+  digest256_to_base64(ed25519_id, (const char *)
+                                  get_master_identity_key()->pubkey);
+
+  tor_asprintf(&id_line, "%s %s\n", options->Nickname, ed25519_id);
+
+  /* Check whether we need to write the ed25519_identity file. */
+  cp = read_file_to_str(keydir, RFTS_IGNORE_MISSING, NULL);
+  if (!cp || strcmp(cp, id_line)) {
+    if (write_str_to_file(keydir, id_line, 0)) {
+      log_err(LD_FS, "Error writing ed25519_identity line to file");
+      goto done;
+    }
+  }
+
+  log_notice(LD_GENERAL, "Your Tor server's ed25519 identity key is '%s %s'",
+             options->Nickname, ed25519_id);
+
+  result = 0;
+ done:
+  tor_free(cp);
+  tor_free(keydir);
+  tor_free(id_line);
+  return result;
+}
+
 static int
 init_keys_common(void)
 {
@@ -1107,13 +1144,18 @@ init_keys(void)
     }
   }
 
-  /* 5. Dump fingerprint and possibly hashed fingerprint to files. */
+  /* 5. Dump fingerprint, ed25519 identity and possibly hashed fingerprint
+   * to files. */
   if (router_write_fingerprint(0)) {
     log_err(LD_FS, "Error writing fingerprint to file");
     return -1;
   }
   if (!public_server_mode(options) && router_write_fingerprint(1)) {
     log_err(LD_FS, "Error writing hashed fingerprint to file");
+    return -1;
+  }
+  if (router_write_ed25519_identity()) {
+    log_err(LD_FS, "Error writing ed25519 identity to file");
     return -1;
   }
 

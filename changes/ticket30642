@@ -1,0 +1,4 @@
+  o Minor features (ed25519, relay):
+    - Save a relay's base64-encoded ed25519 identity key to the data
+      directory in a file named ed25519_identity. Closes ticket 30642.
+      Patch by Neel Chauhan.
