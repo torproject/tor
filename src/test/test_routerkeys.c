@@ -51,7 +51,7 @@ test_routerkeys_write_fingerprint(void *arg)
   tt_int_op(crypto_pk_cmp_keys(get_server_identity_key(),key),OP_EQ,0);
 
   /* Write fingerprint file */
-  tt_int_op(0, OP_EQ, router_write_fingerprint(0));
+  tt_int_op(0, OP_EQ, router_write_fingerprint(0, 0));
   cp = read_file_to_str(get_fname("write_fingerprint/fingerprint"),
                         0, NULL);
   crypto_pk_get_fingerprint(key, fp, 0);
@@ -61,7 +61,7 @@ test_routerkeys_write_fingerprint(void *arg)
   tor_free(cp2);
 
   /* Write hashed-fingerprint file */
-  tt_int_op(0, OP_EQ, router_write_fingerprint(1));
+  tt_int_op(0, OP_EQ, router_write_fingerprint(1, 0));
   cp = read_file_to_str(get_fname("write_fingerprint/hashed-fingerprint"),
                         0, NULL);
   crypto_pk_get_hashed_fingerprint(key, fp);
@@ -73,7 +73,7 @@ test_routerkeys_write_fingerprint(void *arg)
   /* Replace outdated file */
   write_str_to_file(get_fname("write_fingerprint/hashed-fingerprint"),
                     "junk goes here", 0);
-  tt_int_op(0, OP_EQ, router_write_fingerprint(1));
+  tt_int_op(0, OP_EQ, router_write_fingerprint(1, 0));
   cp = read_file_to_str(get_fname("write_fingerprint/hashed-fingerprint"),
                         0, NULL);
   crypto_pk_get_hashed_fingerprint(key, fp);
@@ -87,6 +87,52 @@ test_routerkeys_write_fingerprint(void *arg)
   set_client_identity_key(NULL);
   tor_free(cp);
   tor_free(cp2);
+}
+
+static void
+test_routerkeys_write_ed25519_identity(void *arg)
+{
+  crypto_pk_t *key = pk_generate(2);
+  or_options_t *options = get_options_mutable();
+  time_t now = time(NULL);
+  const char *ddir = get_fname("write_fingerprint");
+  char *cp = NULL, *cp2 = NULL;
+  char ed25519_id[BASE64_DIGEST256_LEN + 1];
+
+  (void) arg;
+
+  tt_assert(key);
+
+  options->ORPort_set = 1; /* So that we can get the server ID key */
+  tor_free(options->DataDirectory);
+  options->DataDirectory = tor_strdup(ddir);
+  options->Nickname = tor_strdup("haflinger");
+  set_server_identity_key(key);
+  set_client_identity_key(crypto_pk_dup_key(key));
+
+  load_ed_keys(options, now);
+  generate_ed_link_cert(options, now, 0);
+  tt_assert(get_master_identity_key());
+
+  tt_int_op(0, OP_EQ, check_private_dir(ddir, CPD_CREATE, NULL));
+
+  /* Write fingerprint file */
+  tt_int_op(0, OP_EQ, router_write_fingerprint(0, 1));
+  cp = read_file_to_str(get_fname("write_fingerprint/fingerprint-ed25519"),
+                        0, NULL);
+  digest256_to_base64(ed25519_id,
+                      (const char *) get_master_identity_key()->pubkey);
+  tor_asprintf(&cp2, "haflinger %s\n", ed25519_id);
+  tt_str_op(cp, OP_EQ, cp2);
+  tor_free(cp);
+  tor_free(cp2);
+
+ done:
+  crypto_pk_free(key);
+  set_client_identity_key(NULL);
+  tor_free(cp);
+  tor_free(cp2);
+  routerkeys_free_all();
 }
 
 static void
@@ -695,6 +741,7 @@ test_routerkeys_rsa_ed_crosscert(void *arg)
 
 struct testcase_t routerkeys_tests[] = {
   TEST(write_fingerprint, TT_FORK),
+  TEST(write_ed25519_identity, TT_FORK),
   TEST(ed_certs, TT_FORK),
   TEST(ed_key_create, TT_FORK),
   TEST(ed_key_init_basic, TT_FORK),
