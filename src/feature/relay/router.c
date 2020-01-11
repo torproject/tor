@@ -831,30 +831,37 @@ router_initialize_tls_context(void)
  * -1 if Tor should die,
  */
 STATIC int
-router_write_fingerprint(int hashed)
+router_write_fingerprint(int hashed, int ed25519_identity)
 {
   char *keydir = NULL, *cp = NULL;
   const char *fname = hashed ? "hashed-fingerprint" :
-                               "fingerprint";
+                      (ed25519_identity ? "fingerprint-ed25519" :
+                                          "fingerprint");
   char fingerprint[FINGERPRINT_LEN+1];
   const or_options_t *options = get_options();
   char *fingerprint_line = NULL;
   int result = -1;
 
   keydir = get_datadir_fname(fname);
-  log_info(LD_GENERAL,"Dumping %sfingerprint to \"%s\"...",
-           hashed ? "hashed " : "", keydir);
-  if (!hashed) {
-    if (crypto_pk_get_fingerprint(get_server_identity_key(),
-                                  fingerprint, 0) < 0) {
-      log_err(LD_GENERAL,"Error computing fingerprint");
-      goto done;
-    }
-  } else {
-    if (crypto_pk_get_hashed_fingerprint(get_server_identity_key(),
-                                         fingerprint) < 0) {
-      log_err(LD_GENERAL,"Error computing hashed fingerprint");
-      goto done;
+  log_info(LD_GENERAL,"Dumping %s%s to \"%s\"...", hashed ? "hashed " : "",
+           ed25519_identity ? "ed25519 identity" : "fingerprint", keydir);
+
+  if (ed25519_identity) { /* ed25519 identity */
+    digest256_to_base64(fingerprint, (const char *)
+                                     get_master_identity_key()->pubkey);
+  } else { /* RSA identity */
+    if (!hashed) {
+      if (crypto_pk_get_fingerprint(get_server_identity_key(),
+                                    fingerprint, 0) < 0) {
+        log_err(LD_GENERAL,"Error computing fingerprint");
+        goto done;
+      }
+    } else {
+      if (crypto_pk_get_hashed_fingerprint(get_server_identity_key(),
+                                           fingerprint) < 0) {
+        log_err(LD_GENERAL,"Error computing hashed fingerprint");
+        goto done;
+      }
     }
   }
 
@@ -865,15 +872,17 @@ router_write_fingerprint(int hashed)
   cp = read_file_to_str(keydir, RFTS_IGNORE_MISSING, NULL);
   if (!cp || strcmp(cp, fingerprint_line)) {
     if (write_str_to_file(keydir, fingerprint_line, 0)) {
-      log_err(LD_FS, "Error writing %sfingerprint line to file",
-              hashed ? "hashed " : "");
+      log_err(LD_FS, "Error writing %s%s line to file",
+              hashed ? "hashed " : "",
+              ed25519_identity ? "ed25519 identity" : "fingerprint");
       goto done;
     }
   }
 
-  log_notice(LD_GENERAL, "Your Tor %s identity key fingerprint is '%s %s'",
-             hashed ? "bridge's hashed" : "server's", options->Nickname,
-             fingerprint);
+  log_notice(LD_GENERAL, "Your Tor %s identity key %s is '%s %s'",
+             hashed ? "bridge's hashed" : "server's",
+             ed25519_identity ? "ed25519 key" : "fingerprint",
+             options->Nickname, fingerprint);
 
   result = 0;
  done:
@@ -1109,13 +1118,18 @@ init_keys(void)
     }
   }
 
-  /* 5. Dump fingerprint and possibly hashed fingerprint to files. */
-  if (router_write_fingerprint(0)) {
+  /* 5. Dump fingerprint, ed25519 identity and possibly hashed fingerprint
+   * to files. */
+  if (router_write_fingerprint(0, 0)) {
     log_err(LD_FS, "Error writing fingerprint to file");
     return -1;
   }
-  if (!public_server_mode(options) && router_write_fingerprint(1)) {
+  if (!public_server_mode(options) && router_write_fingerprint(1, 0)) {
     log_err(LD_FS, "Error writing hashed fingerprint to file");
+    return -1;
+  }
+  if (router_write_fingerprint(0, 1)) {
+    log_err(LD_FS, "Error writing ed25519 identity to file");
     return -1;
   }
 
