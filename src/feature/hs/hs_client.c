@@ -1741,12 +1741,16 @@ hs_client_circuit_cleanup_on_free(const circuit_t *circ)
   bool has_timed_out;
   rend_intro_point_failure_t failure = INTRO_POINT_FAILURE_GENERIC;
   const origin_circuit_t *orig_circ = NULL;
+  origin_circuit_t *intro_circ = NULL;
 
   tor_assert(circ);
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
 
   orig_circ = CONST_TO_ORIGIN_CIRCUIT(circ);
   tor_assert(orig_circ->hs_ident);
+
+  intro_circ = hs_circuitmap_get_intro_circ_v3_service_side(
+                                          &orig_circ->hs_ident->intro_auth_pk);
 
   has_timed_out =
     (circ->marked_for_close_orig_reason == END_CIRC_REASON_TIMEOUT);
@@ -1777,6 +1781,18 @@ hs_client_circuit_cleanup_on_free(const circuit_t *circ)
     hs_cache_client_intro_state_note(&orig_circ->hs_ident->identity_pk,
                                      &orig_circ->hs_ident->intro_auth_pk,
                                      failure);
+    break;
+  case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
+    if (has_timed_out && intro_circ->hs_ident->num_tries >= 2) {
+      log_info(LD_REND, "Failed v3 intro circ for service %s to intro point "
+                        "%s (rendevous point failed).",
+          safe_str_client(ed25519_fmt(&intro_circ->hs_ident->identity_pk)),
+          safe_str_client(build_state_get_exit_nickname(
+                                                    intro_circ->build_state)));
+        hs_cache_client_intro_state_note(&intro_circ->hs_ident->identity_pk,
+                                         &intro_circ->hs_ident->intro_auth_pk,
+                                         failure);
+    }
     break;
   default:
     break;

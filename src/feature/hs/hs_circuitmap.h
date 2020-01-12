@@ -39,9 +39,9 @@ smartlist_t *hs_circuitmap_get_all_intro_circ_relay_side(void);
 
 /** Public service-side API: */
 
-struct origin_circuit_t *
-hs_circuitmap_get_intro_circ_v3_service_side(const
-                                     struct ed25519_public_key_t *auth_key);
+MOCK_DECL(struct origin_circuit_t *,
+          hs_circuitmap_get_intro_circ_v3_service_side, (const
+                                     struct ed25519_public_key_t *auth_key));
 struct origin_circuit_t *
 hs_circuitmap_get_intro_circ_v2_service_side(const uint8_t *digest);
 struct origin_circuit_t *

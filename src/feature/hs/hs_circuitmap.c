@@ -371,9 +371,9 @@ hs_circuitmap_register_intro_circ_v3_relay_side(or_circuit_t *circ,
 /** Public function: Return v3 introduction circuit with <b>auth_key</b>
  * originating from this hidden service. Return NULL if no such circuit is
  * found in the circuitmap. */
-origin_circuit_t *
-hs_circuitmap_get_intro_circ_v3_service_side(const
-                                             ed25519_public_key_t *auth_key)
+MOCK_IMPL(origin_circuit_t *,
+hs_circuitmap_get_intro_circ_v3_service_side, (const
+                                               ed25519_public_key_t *auth_key))
 {
   origin_circuit_t *circ = NULL;
 

@@ -284,6 +284,18 @@ test_e2e_rend_circuit_setup_legacy(void *arg)
   circuit_free_(TO_CIRCUIT(or_circ));
 }
 
+static origin_circuit_t origin_circuit;
+
+static origin_circuit_t *
+mock_hs_circuitmap_get_intro_circ_v3_service_side(const
+                                               ed25519_public_key_t *auth_key)
+{
+  (void) auth_key;
+  struct hs_ident_circuit_t hs_ident;
+  origin_circuit.hs_ident = &hs_ident;
+  return &origin_circuit;
+}
+
 /* Test: Ensure that setting up v3 rendezvous circuits works correctly. */
 static void
 test_e2e_rend_circuit_setup(void *arg)
@@ -304,6 +316,8 @@ test_e2e_rend_circuit_setup(void *arg)
 
   MOCK(connection_ap_handshake_send_begin,
        mock_connection_ap_handshake_send_begin);
+  MOCK(hs_circuitmap_get_intro_circ_v3_service_side,
+       mock_hs_circuitmap_get_intro_circ_v3_service_side);
 
   /* Setup */
   retval = helper_get_circ_and_stream_for_test(&or_circ, &conn, 0);
@@ -351,6 +365,7 @@ test_e2e_rend_circuit_setup(void *arg)
   if (or_circ)
     tor_free(TO_CIRCUIT(or_circ)->n_chan);
   circuit_free_(TO_CIRCUIT(or_circ));
+  UNMOCK(hs_circuitmap_get_intro_circ_v3_service_side);
 }
 
 /** Test client logic for picking intro points from a descriptor. Also test how
@@ -1235,6 +1250,9 @@ test_close_intro_circuit_failure(void *arg)
 
   (void) arg;
 
+  MOCK(hs_circuitmap_get_intro_circ_v3_service_side,
+       mock_hs_circuitmap_get_intro_circ_v3_service_side);
+
   hs_init();
 
   /* Generate service keypair */
@@ -1328,6 +1346,7 @@ test_close_intro_circuit_failure(void *arg)
  done:
   circuit_free(circ);
   hs_free_all();
+  UNMOCK(hs_circuitmap_get_intro_circ_v3_service_side);
 }
 
 struct testcase_t hs_client_tests[] = {
