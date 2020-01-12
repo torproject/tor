@@ -371,7 +371,7 @@ static const config_var_t option_vars_[] = {
 #endif /* defined(HAVE_MODULE_RELAY) || defined(TOR_UNIT_TESTS) */
   V(ClientPreferIPv6ORPort,      AUTOBOOL, "auto"),
   V(ClientPreferIPv6DirPort,     AUTOBOOL, "auto"),
-  V(ClientAutoIPv6ORPort,        BOOL,     "0"),
+  OBSOLETE("ClientAutoIPv6ORPort"),
   V(ClientRejectInternalAddresses, BOOL,   "1"),
   V(ClientTransportPlugin,       LINELIST, NULL),
   V(ClientUseIPv6,               BOOL,     "0"),
