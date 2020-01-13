@@ -526,8 +526,15 @@ rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
   rend_cache_entry_t *entry = NULL;
   static const int default_version = 2;
 
-  tor_assert(rend_cache);
   tor_assert(query);
+
+  /* This is possible if we are in the shutdown process and the cache was
+   * freed while some other subsystem might do a lookup to the cache for
+   * cleanup reasons such HS circuit cleanup for instance. */
+  if (!rend_cache) {
+    ret = -ENOENT;
+    goto end;
+  }
 
   if (!rend_valid_v2_service_id(query)) {
     ret = -EINVAL;
