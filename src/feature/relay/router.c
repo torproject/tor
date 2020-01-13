@@ -1464,12 +1464,11 @@ router_get_advertised_ipv6_or_ap(const or_options_t *options,
    * authorities, disallow internal IPs. Otherwise, allow them. */
   const int default_auth = using_default_dir_authorities(options);
   if (tor_addr_is_internal(addr, 0) && default_auth) {
-    char addrbuf[TOR_ADDR_BUF_LEN];
     log_warn(LD_CONFIG,
-             "Unable to use configured IPv6 address \"%s\" in a "
+             "Unable to use configured IPv6 ORPort \"%s\" in a "
              "descriptor. Skipping it. "
              "Try specifying a globally reachable address explicitly.",
-             tor_addr_to_str(addrbuf, addr, sizeof(addrbuf), 1));
+             fmt_addrport(addr, port));
     return;
   }
 
