@@ -179,6 +179,10 @@ void hs_build_address(const struct ed25519_public_key_t *key, uint8_t version,
 int hs_address_is_valid(const char *address);
 int hs_parse_address(const char *address, struct ed25519_public_key_t *key_out,
                      uint8_t *checksum_out, uint8_t *version_out);
+int hs_parse_address_no_log(const char *address,
+                            struct ed25519_public_key_t *key_out,
+                            uint8_t *checksum_out, uint8_t *version_out,
+                            const char **errmsg);
 
 void hs_build_blinded_pubkey(const struct ed25519_public_key_t *pubkey,
                              const uint8_t *secret, size_t secret_len,

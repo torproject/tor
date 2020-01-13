@@ -909,30 +909,35 @@ hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn)
  * case the caller would want only one field. checksum_out MUST at least be 2
  * bytes long.
  *
- * Return 0 if parsing went well; return -1 in case of error. */
+ * Return 0 if parsing went well; return -1 in case of error and if errmsg is
+ * non NULL, a human readable string message is set. */
 int
-hs_parse_address(const char *address, ed25519_public_key_t *key_out,
-                 uint8_t *checksum_out, uint8_t *version_out)
+hs_parse_address_no_log(const char *address, ed25519_public_key_t *key_out,
+                        uint8_t *checksum_out, uint8_t *version_out,
+                        const char **errmsg)
 {
   char decoded[HS_SERVICE_ADDR_LEN];
 
   tor_assert(address);
 
+  if (errmsg) {
+    *errmsg = NULL;
+  }
+
   /* Obvious length check. */
   if (strlen(address) != HS_SERVICE_ADDR_LEN_BASE32) {
-    log_warn(LD_REND, "Service address %s has an invalid length. "
-                      "Expected %lu but got %lu.",
-             escaped_safe_str(address),
-             (unsigned long) HS_SERVICE_ADDR_LEN_BASE32,
-             (unsigned long) strlen(address));
+    if (errmsg) {
+      *errmsg = "Invalid length";
+    }
     goto invalid;
   }
 
   /* Decode address so we can extract needed fields. */
   if (base32_decode(decoded, sizeof(decoded), address, strlen(address))
       != sizeof(decoded)) {
-    log_warn(LD_REND, "Service address %s can't be decoded.",
-             escaped_safe_str(address));
+    if (errmsg) {
+      *errmsg = "Unable to base32 decode";
+    }
     goto invalid;
   }
 
@@ -942,6 +947,22 @@ hs_parse_address(const char *address, ed25519_public_key_t *key_out,
   return 0;
  invalid:
   return -1;
+}
+
+/** Same has hs_parse_address_no_log() but emits a log warning on parsing
+ * failure. */
+int
+hs_parse_address(const char *address, ed25519_public_key_t *key_out,
+                 uint8_t *checksum_out, uint8_t *version_out)
+{
+  const char *errmsg = NULL;
+  int ret = hs_parse_address_no_log(address, key_out, checksum_out,
+                                    version_out, &errmsg);
+  if (ret < 0) {
+    log_warn(LD_REND, "Service address %s failed to be parsed: %s",
+             escaped_safe_str(address), errmsg);
+  }
+  return ret;
 }
 
 /** Validate a given onion address. The length, the base32 decoding, and

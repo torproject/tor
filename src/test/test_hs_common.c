@@ -53,14 +53,14 @@ test_validate_address(void *arg)
   setup_full_capture_of_logs(LOG_WARN);
   ret = hs_address_is_valid("blah");
   tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg_containing("has an invalid length");
+  expect_log_msg_containing("Invalid length");
   teardown_capture_of_logs();
 
   setup_full_capture_of_logs(LOG_WARN);
   ret = hs_address_is_valid(
            "p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnadb");
   tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg_containing("has an invalid length");
+  expect_log_msg_containing("Invalid length");
   teardown_capture_of_logs();
 
   /* Invalid checksum (taken from prop224) */
@@ -83,7 +83,7 @@ test_validate_address(void *arg)
   ret = hs_address_is_valid(
            "????????????????????????????????????????????????????????");
   tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg_containing("can't be decoded");
+  expect_log_msg_containing("Unable to base32 decode");
   teardown_capture_of_logs();
 
   /* Valid address. */
