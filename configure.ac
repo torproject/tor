@@ -2206,12 +2206,12 @@ fi
 
 # OS X Lion started deprecating the system openssl. Let's just disable
 # all deprecation warnings on OS X. Also, to potentially make the binary
-# a little smaller, let's enable dead_strip.
+# a little smaller, let's enable dead_strip and bind_at_load.
 case "$host_os" in
 
  darwin*)
     CFLAGS="$CFLAGS -Wno-deprecated-declarations"
-    LDFLAGS="$LDFLAGS -dead_strip" ;;
+    LDFLAGS="$LDFLAGS -dead_strip -bind_at_load" ;;
 esac
 
 TOR_WARNING_FLAGS=""
