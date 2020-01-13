@@ -1,6 +1,7 @@
 #!/bin/sh
 
 umask 077
+unset TOR_DISABLE_PRACTRACKER
 
 TMPDIR=""
 clean () {
