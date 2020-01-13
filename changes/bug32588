@@ -1,0 +1,6 @@
+  o Minor bugfixes (relays, brudges, memory safety):
+    - Stop advertising incorrect IPv6 ORPorts in relay and bridge descriptors,
+      when the IPv6 port was configured as "auto". This may be a low-severity
+      memory safety issue, because the published port number may be derived
+      from uninitialised or out-of-bounds memory reads.
+      Fixes bug 32588; bugfix on 0.2.3.9-alpha
