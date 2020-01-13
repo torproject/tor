@@ -192,12 +192,9 @@ def get_include_am_location(fname):
        not (yet) consistent.
     """
     td = topdir_file(fname)
-    m = re.match(r'^lib/([a-z0-9_]*)/', td)
+    m = re.match(r'^(lib|core|feature|app)/([a-z0-9_]*)/', td)
     if m:
-        return "src/lib/{}/include.am".format(m.group(1))
-
-    if re.match(r'^(core|feature|app)/', td):
-        return "src/core/include.am"
+        return "src/{}/{}/include.am".format(m.group(1),m.group(2))
 
     if re.match(r'^test/', td):
         return "src/test/include.am"
