@@ -1434,13 +1434,15 @@ router_get_advertised_or_port_by_af(const or_options_t *options,
 }
 
 /** As router_get_advertised_or_port(), but returns the IPv6 address and
- *  port. Returns a null address and zero port, if no ORPort is found. */
+ *  port in ipv6_ap_out, which must not be NULL. Returns a null address and
+ * zero port, if no ORPort is found. */
 void
 router_get_advertised_ipv6_or_ap(const or_options_t *options,
                                  tor_addr_port_t *ipv6_ap_out)
 {
-  if (BUG(!ipv6_ap_out))
-    return;
+  /* Bug in calling function, we can't return a sensible result, and it
+   * shouldn't use the NULL pointer once we return. */
+  tor_assert(ipv6_ap_out);
 
   /* If there is no valid IPv6 ORPort, return a null address and port. */
   tor_addr_make_null(&ipv6_ap_out->addr, AF_INET6);
