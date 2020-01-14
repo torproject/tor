@@ -250,7 +250,7 @@ problem function-size /src/feature/hs/hs_cell.c:hs_cell_parse_introduce2() 152
 problem function-size /src/feature/hs/hs_client.c:send_introduce1() 103
 problem function-size /src/feature/hs/hs_client.c:hs_config_client_authorization() 107
 problem function-size /src/feature/hs/hs_common.c:hs_get_responsible_hsdirs() 102
-problem function-size /src/feature/hs/hs_config.c:config_service_v3() 107
+problem function-size /src/feature/hs/hs_config.c:config_service_v3() 128
 problem function-size /src/feature/hs/hs_config.c:config_generic_service() 138
 problem function-size /src/feature/hs/hs_descriptor.c:desc_encode_v3() 101
 problem function-size /src/feature/hs/hs_descriptor.c:decrypt_desc_layer() 111
