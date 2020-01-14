@@ -15,6 +15,11 @@ if test "${PRACTRACKER_DIR}" = "" ||
     PRACTRACKER_DIR=$(dirname "$0")
 fi
 
+# Change to the tor directory, and canonicalise PRACTRACKER_DIR,
+# so paths in practracker output are consistent, even in out-of-tree builds
+cd "${PRACTRACKER_DIR}"/../../..
+PRACTRACKER_DIR="scripts/maint/practracker"
+
 TMPDIR="$(mktemp -d -t pracktracker.test.XXXXXX)"
 if test -z "${TMPDIR}" || test ! -d "${TMPDIR}" ; then
     echo >&2 "mktemp failed."
