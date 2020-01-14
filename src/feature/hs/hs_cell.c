@@ -916,7 +916,7 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
    * file. This is because the master identity key and the blinded key is put
    * in the INTRODUCE2 cell by the client thus it will never validate with
    * this instance default public key. */
-  if (service->config.ob_master_pubkeys) {
+  if (hs_ob_service_is_instance(service)) {
     intro_keys = get_intro2_keys_as_ob(&service->config, data,
                                        encrypted_section,
                                        encrypted_section_len);

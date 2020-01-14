@@ -193,6 +193,24 @@ build_subcredential(const ed25519_public_key_t *pkey, uint64_t tp,
  * Public API.
  */
 
+/** Return true iff the given service is configured as an onion balance
+ * instance. To satisfy that condition, there must at least be one master
+ * ed25519 public key configured. */
+bool
+hs_ob_service_is_instance(const hs_service_t *service)
+{
+  if (BUG(service == NULL)) {
+    return false;
+  }
+
+  /* No list, we are not an instance. */
+  if (!service->config.ob_master_pubkeys) {
+    return false;
+  }
+
+  return smartlist_len(service->config.ob_master_pubkeys) > 0;
+}
+
 /** Read and parse the config file at fname on disk. The service config object
  * is populated with the options if any.
  *
