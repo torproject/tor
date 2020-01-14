@@ -217,23 +217,6 @@ command_process_cell(channel_t *chan, cell_t *cell)
   }
 }
 
-/** Process an incoming var_cell from a channel; in the current protocol all
- * the var_cells are handshake-related and handled below the channel layer,
- * so this just logs a warning and drops the cell.
- */
-
-void
-command_process_var_cell(channel_t *chan, var_cell_t *var_cell)
-{
-  tor_assert(chan);
-  tor_assert(var_cell);
-
-  log_info(LD_PROTOCOL,
-           "Received unexpected var_cell above the channel layer of type %d"
-           "; dropping it.",
-           var_cell->command);
-}
-
 /** Process a 'create' <b>cell</b> that just arrived from <b>chan</b>. Make a
  * new circuit with the p_circ_id specified in cell. Put the circuit in state
  * onionskin_pending, and pass the onionskin to the cpuworker. Circ will get
@@ -685,8 +668,7 @@ command_setup_channel(channel_t *chan)
   tor_assert(chan);
 
   channel_set_cell_handlers(chan,
-                            command_process_cell,
-                            command_process_var_cell);
+                            command_process_cell);
 }
 
 /** Given a listener, install the right handler to process incoming
