@@ -3,7 +3,7 @@
 
 /**
  * \file events.h
- * \brief Header file for Tor event tracing.
+ * \brief Header file for Tor tracing instrumentation definition.
  **/
 
 #ifndef TOR_LIB_TRACE_EVENTS_H
@@ -13,14 +13,19 @@
 
 #ifdef HAVE_TRACING
 
-#define tor_trace(subsystem, event_name, ...)           \
-  do {                                                  \
-    TOR_TRACE_LOG_DEBUG(tor_ ## subsystem, event_name); \
+#define tor_trace(subsystem, event_name, ...)                       \
+  do {                                                              \
+    TOR_TRACE_LOG_DEBUG(tor_ ## subsystem, event_name);             \
+    TOR_TRACE_USDT(tor_ ## subsystem, event_name, ## __VA_ARGS__);  \
   } while (0)
 
 /* This corresponds to the --enable-tracing-instrumentation-log-debug
  * configure option which maps all tracepoints to a log_debug() statement. */
 #include "lib/trace/debug.h"
+
+/* This corresponds to the --enable-tracing-instrumentation-usdt configure
+ * option which will generate USDT probes for each tracepoints. */
+#include "lib/trace/usdt/usdt.h"
 
 #else /* !defined(HAVE_TRACING) */
 
