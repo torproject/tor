@@ -18,6 +18,10 @@ TRACEHEADERS += \
 	src/lib/trace/debug.h
 endif
 
+if USE_TRACING_INSTRUMENTATION_USDT
+include src/lib/trace/usdt/include.am
+endif
+
 src_lib_libtor_trace_a_SOURCES = $(LIBTOR_TRACE_A_SOURCES)
 
 noinst_HEADERS+= $(TRACEHEADERS)
