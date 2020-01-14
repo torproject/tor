@@ -10,3 +10,4 @@ problem function-size b.c:bar() 5
 problem file-size header.h 8
 problem include-count header.h 4
 problem dependency-violation header.h 3
+practracker exit status: 11

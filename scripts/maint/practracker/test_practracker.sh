@@ -40,7 +40,7 @@ run_practracker() {
         --max-h-include-count=0 \
         --max-include-count=0 \
         --terse \
-        "${DATA}/" "$@" || true
+        "${DATA}/" "$@" || echo "practracker exit status: $?"
 }
 compare() {
     # we can't use cmp because we need to use -b for windows
