@@ -166,6 +166,7 @@ src_test_test_SOURCES += \
 	src/test/test_hs_client.c  \
 	src/test/test_hs_intropoint.c \
 	src/test/test_hs_control.c \
+	src/test/test_hs_ob.c \
 	src/test/test_handles.c \
 	src/test/test_hs_cache.c \
 	src/test/test_hs_descriptor.c \
