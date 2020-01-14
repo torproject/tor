@@ -776,6 +776,12 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
    * in the cell is at the end of the encrypted section. */
   {
     uint8_t mac[DIGEST256_LEN];
+
+    /* Make sure we are now about to underflow. */
+    if (encrypted_section_len < sizeof(mac)) {
+      goto err;
+    }
+
     /* The MAC field is at the very end of the ENCRYPTED section. */
     size_t mac_offset = encrypted_section_len - sizeof(mac);
     /* Compute the MAC. Use the entire encoded payload with a length up to the
@@ -785,7 +791,7 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
                           encrypted_section, encrypted_section_len,
                           intro_keys->mac_key, sizeof(intro_keys->mac_key),
                           mac, sizeof(mac));
-    if (tor_memcmp(mac, encrypted_section + mac_offset, sizeof(mac))) {
+    if (tor_memneq(mac, encrypted_section + mac_offset, sizeof(mac))) {
       log_info(LD_REND, "Invalid MAC validation for INTRODUCE2 cell");
       goto err;
     }
