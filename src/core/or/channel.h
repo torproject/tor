@@ -22,7 +22,6 @@ struct tor_timer_t;
 /* Channel handler function pointer typedefs */
 typedef void (*channel_listener_fn_ptr)(channel_listener_t *, channel_t *);
 typedef void (*channel_cell_handler_fn_ptr)(channel_t *, cell_t *);
-typedef void (*channel_var_cell_handler_fn_ptr)(channel_t *, var_cell_t *);
 
 /**
  * This enum is used by channelpadding to decide when to pad channels.
@@ -320,7 +319,6 @@ struct channel_t {
 
   /** Registered handlers for incoming cells */
   channel_cell_handler_fn_ptr cell_handler;
-  channel_var_cell_handler_fn_ptr var_cell_handler;
 
   /* Methods implemented by the lower layer */
 
