@@ -1,0 +1,4 @@
+# Relay tests
+# explicit IPv4 ORPort auto and IPv6 ORPort auto
+ORPort 127.0.0.1:auto
+ORPort [::1]:auto
