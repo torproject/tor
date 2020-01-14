@@ -297,5 +297,7 @@ variable.
 
 if __name__ == '__main__':
     if os.environ.get("TOR_DISABLE_PRACTRACKER"):
+        print("TOR_DISABLE_PRACTRACKER is set, skipping practracker tests.",
+              file=sys.stderr)
         sys.exit(0)
     main(sys.argv)
