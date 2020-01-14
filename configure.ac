@@ -251,6 +251,20 @@ AC_ARG_ENABLE(libscrypt,
 
 dnl --- Tracing Options. ---
 
+dnl USDT instrumentation option.
+AC_ARG_ENABLE(tracing-instrumentation-usdt,
+              AS_HELP_STRING([--enable-tracing-instrumentation-usdt],
+                             [build with tracing USDT instrumentation]))
+AM_CONDITIONAL([USE_TRACING_INSTRUMENTATION_USDT],
+               [test "x$enable_tracing_instrumentation_usdt" = "xyes"])
+
+if test "x$enable_tracing_instrumentation_usdt" = "xyes"; then
+  AC_CHECK_HEADERS([sys/sdt.h], [],
+                   [AC_MSG_ERROR([USDT instrumentation requires sys/sdt.h header.
+                                  On Debian, apt install systemtap-sdt-dev])], [])
+  AC_DEFINE([USE_TRACING_INSTRUMENTATION_USDT], [1], [Using USDT instrumentation])
+fi
+
 dnl Tracepoints event to debug logs.
 AC_ARG_ENABLE(tracing-instrumentation-log-debug,
      AS_HELP_STRING([--enable-tracing-instrumentation-log-debug],
@@ -260,8 +274,10 @@ AC_ARG_ENABLE(tracing-instrumentation-log-debug,
 AM_CONDITIONAL([USE_TRACING_INSTRUMENTATION_LOG_DEBUG],
                [test "x$enable_tracing_instrumentation_log_debug" = "xyes"])
 
-dnl Define that tracing is supported.
+dnl Define that tracing is supported if any instrumentation is used.
 AM_COND_IF([USE_TRACING_INSTRUMENTATION_LOG_DEBUG],
+           AC_DEFINE([HAVE_TRACING], [1], [Compiled with tracing support]))
+AM_COND_IF([USE_TRACING_INSTRUMENTATION_USDT],
            AC_DEFINE([HAVE_TRACING], [1], [Compiled with tracing support]))
 
 dnl -- End Tracing Options. --
@@ -2694,6 +2710,9 @@ PPRINT_SUBTITLE([Tracing])
 
 test "x$enable_tracing_instrumentation_log_debug" = "xyes" && value=1 || value=0
 PPRINT_PROP_BOOL([Tracepoints to log_debug() (--enable-tracing-instrumentation-log-debug)], $value)
+
+test "x$enable_tracing_instrumentation_usdt" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([USDT Instrumentation (--enable-tracing-instrumentation-usdt)], $value)
 
 AS_ECHO
 PPRINT_SUBTITLE([Install Directories])
