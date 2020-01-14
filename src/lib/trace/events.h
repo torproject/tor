@@ -15,7 +15,8 @@
 
 #define tor_trace(subsystem, event_name, args...) \
   TOR_TRACE_LOG_DEBUG(subsystem, event_name);     \
-  TOR_TRACE_USDT(subsystem, event_name, args);
+  TOR_TRACE_USDT(subsystem, event_name, args);    \
+  TOR_TRACE_LTTNG(subsystem, event_name, args);   \
 
 /* This corresponds to the --enable-tracing-instrumentation-log-debug
  * configure option which maps all tracepoints to a log_debug() statement. */
@@ -24,6 +25,10 @@
 /* This corresponds to the --enable-tracing-instrumentation-usdt configure
  * option which will generate USDT probes for each tracepoints. */
 #include "lib/trace/usdt/usdt.h"
+
+/* This corresponds to the --enable-tracing-instrumentation-lttng configure
+ * option which will generate LTTng probes for each tracepoints. */
+#include "lib/trace/lttng/lttng.h"
 
 #else /* !defined(HAVE_TRACING) */
 

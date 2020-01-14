@@ -1,0 +1,7 @@
+# ADD_C_FILE: INSERT SOURCES HERE.
+LIBTOR_TRACE_A_SOURCES += \
+	src/lib/trace/lttng/probes.c
+
+# ADD_C_FILE: INSERT HEADERS HERE.
+TRACEHEADERS += \
+	src/lib/trace/lttng/lttng.h

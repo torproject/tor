@@ -251,6 +251,24 @@ AC_ARG_ENABLE(libscrypt,
 
 dnl --- Tracing Options. ---
 
+TOR_TRACE_LIBS=
+
+dnl LTTng instrumentation option.
+AC_ARG_ENABLE(tracing-instrumentation-lttng,
+              AS_HELP_STRING([--enable-tracing-instrumentation-lttng],
+                             [build with LTTng-UST instrumentation]))
+AM_CONDITIONAL([USE_TRACING_INSTRUMENTATION_LTTNG],
+               [test "x$enable_tracing_instrumentation_lttng" = "xyes"])
+
+if test "x$enable_tracing_instrumentation_lttng" = "xyes"; then
+  AC_CHECK_HEADERS([lttng/tracepoint.h], [],
+                   [AC_MSG_ERROR([LTTng instrumentation headers not found.
+                                  On Debian, apt install liblttng-ust-dev"])], [])
+  AC_DEFINE([USE_TRACING_INSTRUMENTATION_LTTNG], [1], [Using LTTng instrumentation])
+  TOR_TRACE_LIBS="-llttng-ust -ldl"
+fi
+
+
 dnl USDT instrumentation option.
 AC_ARG_ENABLE(tracing-instrumentation-usdt,
               AS_HELP_STRING([--enable-tracing-instrumentation-usdt],
@@ -262,6 +280,9 @@ if test "x$enable_tracing_instrumentation_usdt" = "xyes"; then
   AC_CHECK_HEADERS([sys/sdt.h], [],
                    [AC_MSG_ERROR([USDT instrumentation requires sys/sdt.h header.
                                   On Debian, apt install systemtap-sdt-dev])], [])
+  dnl LTTng generates USDT probes if the UST library was built with
+  dnl --with-sdt. There is unfortunately no way to check that so we always
+  dnl build the USDT probes even though LTTng instrumentation was requested.
   AC_DEFINE([USE_TRACING_INSTRUMENTATION_USDT], [1], [Using USDT instrumentation])
 fi
 
@@ -279,6 +300,11 @@ AM_COND_IF([USE_TRACING_INSTRUMENTATION_LOG_DEBUG],
            AC_DEFINE([HAVE_TRACING], [1], [Compiled with tracing support]))
 AM_COND_IF([USE_TRACING_INSTRUMENTATION_USDT],
            AC_DEFINE([HAVE_TRACING], [1], [Compiled with tracing support]))
+AM_COND_IF([USE_TRACING_INSTRUMENTATION_LTTNG],
+           AC_DEFINE([HAVE_TRACING], [1], [Compiled with tracing support]))
+
+dnl Finally, define the trace libs.
+AC_SUBST([TOR_TRACE_LIBS])
 
 dnl -- End Tracing Options. --
 
@@ -2713,6 +2739,9 @@ PPRINT_PROP_BOOL([Tracepoints to log_debug() (--enable-tracing-instrumentation-l
 
 test "x$enable_tracing_instrumentation_usdt" = "xyes" && value=1 || value=0
 PPRINT_PROP_BOOL([USDT Instrumentation (--enable-tracing-instrumentation-usdt)], $value)
+
+test "x$enable_tracing_instrumentation_lttng" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([LTTng Instrumentation (--enable-tracing-instrumentation-lttng)], $value)
 
 AS_ECHO
 PPRINT_SUBTITLE([Install Directories])
