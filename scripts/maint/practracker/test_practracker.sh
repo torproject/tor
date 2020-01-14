@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Fail if any subprocess fails unexpectedly
+set -e
+
 umask 077
 
 TMPDIR=""
@@ -37,11 +40,11 @@ run_practracker() {
         --max-h-include-count=0 \
         --max-include-count=0 \
         --terse \
-        "${DATA}/" "$@";
+        "${DATA}/" "$@" || true
 }
 compare() {
     # we can't use cmp because we need to use -b for windows
-    diff -b -u "$@" > "${TMPDIR}/test-diff"
+    diff -b -u "$@" > "${TMPDIR}/test-diff" || true
     if test -z "$(cat "${TMPDIR}"/test-diff)"; then
         echo "OK"
     else
@@ -53,7 +56,7 @@ compare() {
 
 echo "unit tests:"
 
-"${PYTHON:-python}" "${PRACTRACKER_DIR}/practracker_tests.py" || exit 1
+"${PYTHON:-python}" "${PRACTRACKER_DIR}/practracker_tests.py"
 
 echo "ex0:"
 
