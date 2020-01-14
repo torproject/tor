@@ -1,0 +1,5 @@
+  o Code simplification and refactoring (windows services):
+    - The windows service logic now uses the tor_api.h entry points, to
+      avoid needless code duplication, and to prevent bugs related to
+      the different entry points getting out of sync.  Closes ticket
+      32883.

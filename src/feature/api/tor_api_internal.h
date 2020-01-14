@@ -29,6 +29,11 @@ struct tor_main_configuration_t {
 
   /** Socket that Tor will use as an owning control socket. Owned. */
   tor_socket_t owning_controller_socket;
+
+  /** Disable commands other than "run tor". Not for use from outside Tor
+   * itself; if you need to use this for embedding, please contact the tor
+   * developers.  */
+  int run_tor_only;
 };
 
 #endif /* !defined(TOR_API_INTERNAL_H) */

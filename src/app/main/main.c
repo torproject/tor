@@ -1238,15 +1238,10 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
     memcpy(argv + tor_cfg->argc, tor_cfg->argv_owned,
            tor_cfg->argc_owned*sizeof(char*));
 
-#ifdef NT_SERVICE
-  {
-     int done = 0;
-     result = nt_service_parse_options(argc, argv, &done);
-     if (done) {
-       goto done;
-     }
-  }
-#endif /* defined(NT_SERVICE) */
+  int done = 0;
+  result = nt_service_parse_options(argc, argv, &done);
+  if (done)
+    goto done;
 
   pubsub_install();
 
@@ -1279,11 +1274,16 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
 #endif
   }
 
+  if (tor_cfg->run_tor_only && get_options()->command != CMD_RUN_TOR) {
+    log_err(LD_CONFIG, "Unsupported command when running as an NT service.");
+    result = -1;
+    tor_cleanup();
+    goto done;
+  }
+
   switch (get_options()->command) {
   case CMD_RUN_TOR:
-#ifdef NT_SERVICE
     nt_service_set_state(SERVICE_RUNNING);
-#endif
     result = run_tor_main_loop();
     break;
   case CMD_KEYGEN:
