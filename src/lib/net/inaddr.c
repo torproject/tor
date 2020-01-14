@@ -39,7 +39,7 @@ tor_inet_aton(const char *str, struct in_addr *addr)
 {
   unsigned a,b,c,d;
   char more;
-  char octet[4];
+  char octet[4] = {0};
   size_t octet_id = 0;
   if (tor_sscanf(str, "%3u.%3u.%3u.%3u%c", &a, &b, &c, &d, &more) != 4)
     return 0;
