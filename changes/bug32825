@@ -1,0 +1,4 @@
+  o Minor features (portability, android):
+    - When building for Android, disable some tests that depend on
+      $HOME and/or pwdb, which Android doesn't have. Closes ticket 32825.
+      Patch from Hans-Christoph Steiner.
