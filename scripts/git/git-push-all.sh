@@ -21,7 +21,7 @@ function usage()
   echo "   -r: push to remote-name, rather than the default upstream remote."
   echo "       (default: $DEFAULT_UPSTREAM_REMOTE, current: $UPSTREAM_REMOTE)"
   echo "   -t: test branch mode: push test branches to remote-name. Pushes"
-  echo "       branches prefix_029, prefix_035, ... , prefix_master."
+  echo "       branches prefix_035, prefix_040,  ... , prefix_master."
   echo "       (default: push maint-*, release-*, and master)"
   echo "   -s: push branches whose tips match upstream maint, release, or"
   echo "       master branches. The default is to skip these branches,"
@@ -175,7 +175,6 @@ if [ "$DEFAULT_UPSTREAM_REMOTE" != "$UPSTREAM_REMOTE" ]; then
     "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.4.1 \
     "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.4.0 \
     "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.3.5 \
-    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.2.9 \
     )
 fi
 
@@ -185,7 +184,6 @@ UPSTREAM_BRANCHES=$(echo \
   "$UPSTREAM_REMOTE"/{release,maint}-0.4.1 \
   "$UPSTREAM_REMOTE"/{release,maint}-0.4.0 \
   "$UPSTREAM_REMOTE"/{release,maint}-0.3.5 \
-  "$UPSTREAM_REMOTE"/{release,maint}-0.2.9 \
   )
 
 ########################
@@ -198,7 +196,6 @@ PUSH_BRANCHES=$(echo \
   {release,maint}-0.4.1 \
   {release,maint}-0.4.0 \
   {release,maint}-0.3.5 \
-  {release,maint}-0.2.9 \
   )
 
 if [ -z "$TEST_BRANCH_PREFIX" ]; then
@@ -212,12 +209,9 @@ if [ -z "$TEST_BRANCH_PREFIX" ]; then
     {release,maint}-0.4.1 \
     {release,maint}-0.4.0 \
     {release,maint}-0.3.5 \
-    {release,maint}-0.2.9 \
     )
 else
 
-  # Test branch mode: merge to maint only, and create a new branch for 0.2.9
-  #
   # List of branches to push. Ordering is not important.
   PUSH_BRANCHES=" \
     ${TEST_BRANCH_PREFIX}_master \
@@ -225,7 +219,6 @@ else
     ${TEST_BRANCH_PREFIX}_041 \
     ${TEST_BRANCH_PREFIX}_040 \
     ${TEST_BRANCH_PREFIX}_035 \
-    ${TEST_BRANCH_PREFIX}_029 \
     "
 fi
 

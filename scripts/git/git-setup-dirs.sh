@@ -96,14 +96,12 @@ GITHUB_PUSH=${TOR_GITHUB_PUSH:-"No_Pushing_To_GitHub"}
 #
 # First set of arrays are the maint-* branch and then the release-* branch.
 # New arrays need to be in the WORKTREE= array else they aren't considered.
-MAINT_029=( "maint-0.2.9" "$GIT_PATH/$TOR_WKT_NAME/maint-0.2.9" )
 MAINT_035=( "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/maint-0.3.5" )
 MAINT_040=( "maint-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.0" )
 MAINT_041=( "maint-0.4.1" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.1" )
 MAINT_042=( "maint-0.4.2" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.2" )
 MAINT_MASTER=( "master" "$GIT_PATH/$TOR_MASTER_NAME" )
 
-RELEASE_029=( "release-0.2.9" "$GIT_PATH/$TOR_WKT_NAME/release-0.2.9" )
 RELEASE_035=( "release-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/release-0.3.5" )
 RELEASE_040=( "release-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.0" )
 RELEASE_041=( "release-0.4.1" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.1" )
@@ -116,13 +114,11 @@ ORIGIN_PATH="$GIT_PATH/$TOR_MASTER_NAME"
 
 # SC2034 -- shellcheck thinks that these are unused.  We know better.
 ACTUALLY_THESE_ARE_USED=<<EOF
-${MAINT_029[0]}
 ${MAINT_035[0]}
 ${MAINT_040[0]}
 ${MAINT_041[0]}
 ${MAINT_042[0]}
 ${MAINT_MASTER[0]}
-${RELEASE_029[0]}
 ${RELEASE_035[0]}
 ${RELEASE_040[0]}
 ${RELEASE_041[0]}
@@ -166,9 +162,6 @@ done
 ###########################
 
 WORKTREE=(
-  MAINT_029[@]
-  RELEASE_029[@]
-
   MAINT_035[@]
   RELEASE_035[@]
 

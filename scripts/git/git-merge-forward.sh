@@ -11,8 +11,8 @@ function usage()
   echo "   -n: dry run mode"
   echo "       (default: run commands)"
   echo "   -t: test branch mode: create new branches from the commits checked"
-  echo "       out in each maint directory. Call these branches prefix_029,"
-  echo "       prefix_035, ... , prefix_master."
+  echo "       out in each maint directory. Call these branches prefix_035,"
+  echo "       prefix_040, ... , prefix_master."
   echo "       (default: merge forward maint-*, release-*, and master)"
   echo "   -u: in test branch mode, if a prefix_* branch already exists,"
   echo "       skip creating that branch. Use after a merge error, to"
@@ -89,8 +89,6 @@ TOR_WKT_NAME=${TOR_WKT_NAME:-"tor-wkt"}
 # Only used in test branch mode
 # There is no previous branch to merge forward, so the second and fifth items
 # must be blank ("")
-MAINT_029_TB=( "maint-0.2.9" "" "$GIT_PATH/$TOR_WKT_NAME/maint-0.2.9" \
-    "_029" "")
 # Used in maint/release merge and test branch modes
 MAINT_035=( "maint-0.3.5" "maint-0.2.9" "$GIT_PATH/$TOR_WKT_NAME/maint-0.3.5" \
     "_035" "_029")
@@ -103,7 +101,6 @@ MAINT_042=( "maint-0.4.2" "maint-0.4.1" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.2" \
 MAINT_MASTER=( "master" "maint-0.4.2" "$GIT_PATH/$TOR_MASTER_NAME" \
     "_master" "_042")
 
-RELEASE_029=( "release-0.2.9" "maint-0.2.9" "$GIT_PATH/$TOR_WKT_NAME/release-0.2.9" )
 RELEASE_035=( "release-0.3.5" "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/release-0.3.5" )
 RELEASE_040=( "release-0.4.0" "maint-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.0" )
 RELEASE_041=( "release-0.4.1" "maint-0.4.1" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.1" )
@@ -116,13 +113,11 @@ ORIGIN_PATH="$GIT_PATH/$TOR_MASTER_NAME"
 
 # SC2034 -- shellcheck thinks that these are unused.  We know better.
 ACTUALLY_THESE_ARE_USED=<<EOF
-${MAINT_029_TB[0]}
 ${MAINT_035[0]}
 ${MAINT_040[0]}
 ${MAINT_041[0]}
 ${MAINT_042[0]}
 ${MAINT_MASTER[0]}
-${RELEASE_029[0]}
 ${RELEASE_035[0]}
 ${RELEASE_040[0]}
 ${RELEASE_041[0]}
@@ -139,7 +134,7 @@ DRY_RUN=0
 
 # Controlled by the -t <test-branch-prefix> option. The test branch base
 # name option makes git-merge-forward.sh create new test branches:
-# <tbbn>_029, <tbbn>_035, ... , <tbbn>_master, and merge forward.
+# <tbbn>_035, <tbbn>_040, ... , <tbbn>_master, and merge forward.
 TEST_BRANCH_PREFIX=
 
 # Controlled by the -u option. The use existing option checks for existing
@@ -180,8 +175,6 @@ if [ -z "$TEST_BRANCH_PREFIX" ]; then
   # List of all worktrees to work on. All defined above. Ordering is important.
   # Always the maint-* branch BEFORE then the release-*.
   WORKTREE=(
-    RELEASE_029[@]
-
     MAINT_035[@]
     RELEASE_035[@]
 
@@ -199,10 +192,8 @@ if [ -z "$TEST_BRANCH_PREFIX" ]; then
 
 else
 
-  # Test branch mode: merge to maint only, and create a new branch for 0.2.9
+  # Test branch mode: merge to maint only
   WORKTREE=(
-    MAINT_029_TB[@]
-
     MAINT_035[@]
 
     MAINT_040[@]
@@ -427,9 +418,9 @@ for ((i=0; i<COUNT; i++)); do
   fi
   # Merge the previous branch into the target branch
   # Merge Forward Example:
-  #   merge maint-0.2.9 into maint-0.3.5.
+  #   merge maint-0.3.5 into maint-0.4.0.
   # Test Branch Example:
-  #   merge bug99999_029 into bug99999_035.
+  #   merge bug99999_035 into bug99999_040.
   # Skip the merge if the previous branch does not exist
   # (there's nothing to merge forward into the oldest test branch)
   if [ "$target_previous" ]; then
