@@ -831,6 +831,11 @@ static const config_deprecation_t option_deprecation_notes_[] = {
     "effect on clients since 0.2.8." },
   /* End of options deprecated since 0.3.2.2-alpha. */
 
+  /* Options deprecated since 0.4.3.1-alpha. */
+  { "ClientAutoIPv6ORPort", "This option is unreliable if a connection isn't "
+    "reliably dual-stack."},
+  /* End of options deprecated since 0.4.3.1-alpha. */
+
   { NULL, NULL }
 };
 

@@ -1045,7 +1045,8 @@ The following options are useful only for clients (that is, if
     If this option is set to 1, Tor clients randomly prefer a node's IPv4 or
     IPv6 ORPort. The random preference is set every time a node is loaded
     from a new consensus or bridge config. When this option is set to 1,
-    **ClientPreferIPv6ORPort** is ignored. (Default: 0)
+    **ClientPreferIPv6ORPort** is ignored. (Default: 0) (DEPRECATED: This
+    option is unreliable if a connection isn't reliably dual-stack.)
 
 [[ClientBootstrapConsensusAuthorityDownloadInitialDelay]] **ClientBootstrapConsensusAuthorityDownloadInitialDelay** __N__::
     Initial delay in seconds for when clients should download consensuses from authorities
