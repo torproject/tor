@@ -1,0 +1,7 @@
+  o Minor bugfixes (testing):
+    - When TOR_DISABLE_PRACTRACKER is set, do not apply it to the
+      test_practracker.sh script.  Doing so caused a test failure.
+      Fixes bug 32705; bugfix on 0.4.2.1-alpha.
+    - When TOR_DISABLE_PRACTRACKER is set, log a notice to stderr
+      when skipping practracker checks.
+      Fixes bug 32705; bugfix on 0.4.2.1-alpha.
