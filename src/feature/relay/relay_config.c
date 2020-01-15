@@ -468,7 +468,6 @@ compute_publishserverdescriptor(or_options_t *options)
  * - "https"
  * - "email"
  * - "moat"
- * - "hyphae"
  *
  * If the option string is unrecognised, a warning will be logged and 0 is
  * returned.  If the option string contains an invalid character, -1 is
@@ -481,7 +480,7 @@ check_bridge_distribution_setting(const char *bd)
     return 0;
 
   const char *RECOGNIZED[] = {
-    "none", "any", "https", "email", "moat", "hyphae"
+    "none", "any", "https", "email", "moat"
   };
   unsigned i;
   for (i = 0; i < ARRAY_LENGTH(RECOGNIZED); ++i) {
