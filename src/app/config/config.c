@@ -2733,6 +2733,9 @@ list_enabled_modules(void)
 {
   printf("%s: %s\n", "relay", have_module_relay() ? "yes" : "no");
   printf("%s: %s\n", "dirauth", have_module_dirauth() ? "yes" : "no");
+  // We don't list dircache, because it cannot be enabled or disabled
+  // independently from relay.  Listing it here would proliferate
+  // tests in test_parseconf.c to no useful purpose.
 }
 
 /** Last value actually set by resolve_my_address. */
