@@ -77,7 +77,7 @@
 #include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dircache/consdiffmgr.h"
-#include "feature/dircache/dirserv.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/dircommon/directory.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_cache.h"

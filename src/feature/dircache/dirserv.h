@@ -80,14 +80,9 @@ int dir_split_resource_into_spoolable(const char *resource,
                                       int *compressed_out,
                                       int flags);
 
-int directory_fetches_from_authorities(const or_options_t *options);
-int directory_fetches_dir_info_early(const or_options_t *options);
-int directory_fetches_dir_info_later(const or_options_t *options);
 int directory_caches_unknown_auth_certs(const or_options_t *options);
 int directory_caches_dir_info(const or_options_t *options);
 int directory_permits_begindir_requests(const or_options_t *options);
-int directory_too_idle_to_fetch_descriptors(const or_options_t *options,
-                                            time_t now);
 
 MOCK_DECL(cached_dir_t *, dirserv_get_consensus, (const char *flavor_name));
 void dirserv_set_cached_consensus_networkstatus(const char *consensus,

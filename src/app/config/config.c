@@ -88,7 +88,7 @@
 #include "feature/control/control.h"
 #include "feature/control/control_auth.h"
 #include "feature/control/control_events.h"
-#include "feature/dircache/dirserv.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_config.h"
 #include "feature/nodelist/dirlist.h"

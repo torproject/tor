@@ -51,7 +51,7 @@
 #include "feature/client/entrynodes.h"
 #include "feature/control/control_events.h"
 #include "feature/dirauth/process_descs.h"
-#include "feature/dircache/dirserv.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_common.h"
 #include "feature/nodelist/describe.h"

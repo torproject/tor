@@ -73,6 +73,7 @@
 #include "feature/dirauth/reachability.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dirclient/dirclient.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/dirclient/dlstatus.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/authcert.h"
