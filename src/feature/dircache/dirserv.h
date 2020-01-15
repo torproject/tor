@@ -80,10 +80,10 @@ int dir_split_resource_into_spoolable(const char *resource,
                                       int *compressed_out,
                                       int flags);
 
+#ifdef HAVE_MODULE_DIRCACHE
 int directory_caches_unknown_auth_certs(const or_options_t *options);
 int directory_caches_dir_info(const or_options_t *options);
 int directory_permits_begindir_requests(const or_options_t *options);
-
 MOCK_DECL(cached_dir_t *, dirserv_get_consensus, (const char *flavor_name));
 void dirserv_set_cached_consensus_networkstatus(const char *consensus,
                                               size_t consensus_len,
@@ -91,6 +91,26 @@ void dirserv_set_cached_consensus_networkstatus(const char *consensus,
                                               const common_digests_t *digests,
                                               const uint8_t *sha3_as_signed,
                                               time_t published);
+#else
+#define directory_caches_unknown_auth_certs(opt) \
+  ((void)(opt), 0)
+#define directory_caches_dir_info(opt) \
+  ((void)(opt), 0)
+#define directory_permits_begindir_requests(opt) \
+  ((void)(opt), 0)
+#define dirserv_get_consensus(flav) \
+  ((void)(flav), NULL)
+#define dirserv_set_cached_consensus_networkstatus(a,b,c,d,e,f) \
+  STMT_BEGIN {                                                  \
+    (void)(a);                                                  \
+    (void)(b);                                                  \
+    (void)(c);                                                  \
+    (void)(d);                                                  \
+    (void)(e);                                                  \
+    (void)(f);                                                  \
+  } STMT_END
+#endif
+
 void dirserv_clear_old_networkstatuses(time_t cutoff);
 int dirserv_get_routerdesc_spool(smartlist_t *spools_out, const char *key,
                                  dir_spool_source_t source,
