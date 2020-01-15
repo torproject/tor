@@ -124,7 +124,6 @@ void router_free_all(void);
 /* Used only by router.c and the unit tests */
 STATIC void get_platform_str(char *platform, size_t len);
 STATIC int router_write_fingerprint(int hashed, int ed25519_identity);
-STATIC int router_write_ed25519_identity(void);
 STATIC smartlist_t *get_my_declared_family(const or_options_t *options);
 
 #ifdef TOR_UNIT_TESTS
