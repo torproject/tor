@@ -104,7 +104,6 @@ int networkstatus_consensus_can_use_multiple_directories(
 MOCK_DECL(int, networkstatus_consensus_can_use_extra_fallbacks,(
                                                 const or_options_t *options));
 int networkstatus_consensus_is_already_downloading(const char *resource);
-int networkstatus_consensus_has_ipv6(const or_options_t* options);
 
 #define NSSET_FROM_CACHE 1
 #define NSSET_WAS_WAITING_FOR_CERTS 2
