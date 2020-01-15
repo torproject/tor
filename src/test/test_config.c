@@ -28,6 +28,7 @@
 #include "feature/control/control.h"
 #include "core/mainloop/cpuworker.h"
 #include "feature/dircache/dirserv.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/relay/dns.h"
 #include "feature/client/entrynodes.h"

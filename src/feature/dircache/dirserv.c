@@ -68,55 +68,7 @@ static cached_dir_t *lookup_cached_dir_by_fp(const uint8_t *fp);
 /********************************************************************/
 
 /* A set of functions to answer questions about how we'd like to behave
- * as a directory mirror/client. */
-
-/** Return 1 if we fetch our directory material directly from the
- * authorities, rather than from a mirror. */
-int
-directory_fetches_from_authorities(const or_options_t *options)
-{
-  const routerinfo_t *me;
-  uint32_t addr;
-  int refuseunknown;
-  if (options->FetchDirInfoEarly)
-    return 1;
-  if (options->BridgeRelay == 1)
-    return 0;
-  if (server_mode(options) &&
-      router_pick_published_address(options, &addr, 1) < 0)
-    return 1; /* we don't know our IP address; ask an authority. */
-  refuseunknown = ! router_my_exit_policy_is_reject_star() &&
-    should_refuse_unknown_exits(options);
-  if (!dir_server_mode(options) && !refuseunknown)
-    return 0;
-  if (!server_mode(options) || !advertised_server_mode())
-    return 0;
-  me = router_get_my_routerinfo();
-  if (!me || (!me->supports_tunnelled_dir_requests && !refuseunknown))
-    return 0; /* if we don't service directory requests, return 0 too */
-  return 1;
-}
-
-/** Return 1 if we should fetch new networkstatuses, descriptors, etc
- * on the "mirror" schedule rather than the "client" schedule.
- */
-int
-directory_fetches_dir_info_early(const or_options_t *options)
-{
-  return directory_fetches_from_authorities(options);
-}
-
-/** Return 1 if we should fetch new networkstatuses, descriptors, etc
- * on a very passive schedule -- waiting long enough for ordinary clients
- * to probably have the info we want. These would include bridge users,
- * and maybe others in the future e.g. if a Tor client uses another Tor
- * client as a directory guard.
- */
-int
-directory_fetches_dir_info_later(const or_options_t *options)
-{
-  return options->UseBridges != 0;
-}
+ * as a directory mirror */
 
 /** Return true iff we want to serve certificates for authorities
  * that we don't acknowledge as authorities ourself.
@@ -158,19 +110,6 @@ int
 directory_permits_begindir_requests(const or_options_t *options)
 {
   return options->BridgeRelay != 0 || dir_server_mode(options);
-}
-
-/** Return 1 if we have no need to fetch new descriptors. This generally
- * happens when we're not a dir cache and we haven't built any circuits
- * lately.
- */
-int
-directory_too_idle_to_fetch_descriptors(const or_options_t *options,
-                                        time_t now)
-{
-  return !directory_caches_dir_info(options) &&
-         !options->FetchUselessDescriptors &&
-         rep_hist_circbuilding_dormant(now);
 }
 
 /********************************************************************/

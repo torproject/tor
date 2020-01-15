@@ -31,27 +31,6 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
 }
 
 int
-directory_fetches_from_authorities(const or_options_t *options)
-{
-  (void) options;
-  return 0;
-}
-
-int
-directory_fetches_dir_info_early(const or_options_t *options)
-{
-  (void) options;
-  return 0;
-}
-
-int
-directory_fetches_dir_info_later(const or_options_t *options)
-{
-  (void) options;
-  return 0;
-}
-
-int
 directory_caches_unknown_auth_certs(const or_options_t *options)
 {
   (void) options;
@@ -69,15 +48,6 @@ int
 directory_permits_begindir_requests(const or_options_t *options)
 {
   (void) options;
-  return 0;
-}
-
-int
-directory_too_idle_to_fetch_descriptors(const or_options_t *options,
-                                        time_t now)
-{
-  (void)options;
-  (void)now;
   return 0;
 }
 
