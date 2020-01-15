@@ -41,12 +41,11 @@ def srcdir_file(name):
        but outputs a path that is relative to tor's src directory.)"""
     return os.path.normpath(os.path.relpath(name, 'src'))
 
-def guard_macro(name):
-    """Return the guard macro that should be used for the header file 'name'.
-       This function takes paths relative to the top-level tor directory,
-       but its output is relative to tor's src directory.
+def guard_macro(src_fname):
+    """Return the guard macro that should be used for the header file
+       'src_fname'. This function takes paths relative to tor's src directory.
     """
-    td = srcdir_file(name).replace(".", "_").replace("/", "_").upper()
+    td = src_fname.replace(".", "_").replace("/", "_").upper()
     return "TOR_{}".format(td)
 
 def makeext(name, new_extension):
@@ -58,26 +57,27 @@ def makeext(name, new_extension):
     base = os.path.splitext(name)[0]
     return base + "." + new_extension
 
-def instantiate_template(template, output_fname):
+def instantiate_template(template, tor_fname):
     """
     Fill in a template with string using the fields that should be used
-    for 'output_fname'.
+    for 'tor_fname'.
 
     This function takes paths relative to the top-level tor directory,
     but the paths in the completed template are relative to tor's src
     directory. (Except for one of the fields, which is just a basename).
     """
+    src_fname = srcdir_file(tor_fname)
     names = {
         # The relative location of the header file.
-        'header_path' : makeext(srcdir_file(output_fname), "h"),
+        'header_path' : makeext(src_fname, "h"),
         # The relative location of the C file file.
-        'c_file_path' : makeext(srcdir_file(output_fname), "c"),
+        'c_file_path' : makeext(src_fname, "c"),
         # The truncated name of the file.
-        'short_name' : os.path.basename(output_fname),
+        'short_name' : os.path.basename(src_fname),
         # The current year, for the copyright notice
         'this_year' : time.localtime().tm_year,
         # An appropriate guard macro, for the header.
-        'guard_macro' : guard_macro(output_fname),
+        'guard_macro' : guard_macro(src_fname),
     }
 
     return template.format(**names)
