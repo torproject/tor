@@ -163,6 +163,60 @@ TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, idle_timeout,
   TP_ARGS(const origin_circuit_t *, circ)
 )
 
+/*
+ * General circuit events.
+ */
+
+TRACEPOINT_EVENT(tor_circuit, free,
+  TP_ARGS(const circuit_t *, circ),
+  TP_FIELDS(
+    ctf_integer(uint32_t, circ_id,
+                (CIRCUIT_IS_ORIGIN(circ) ?
+                 TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0))
+    ctf_enum(tor_circuit, purpose, int, purpose, circ->purpose)
+    ctf_enum(tor_circuit, state, int, state, circ->state)
+  )
+)
+
+TRACEPOINT_EVENT(tor_circuit, mark_for_close,
+  TP_ARGS(const circuit_t *, circ),
+  TP_FIELDS(
+    ctf_integer(uint32_t, circ_id,
+                (CIRCUIT_IS_ORIGIN(circ) ?
+                 TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0))
+    ctf_enum(tor_circuit, purpose, int, purpose, circ->purpose)
+    ctf_enum(tor_circuit, state, int, state, circ->state)
+    ctf_enum(tor_circuit, end_reason, int, close_reason,
+             circ->marked_for_close_reason)
+    ctf_enum(tor_circuit, end_reason, int, orig_close_reason,
+             circ->marked_for_close_orig_reason)
+  )
+)
+
+TRACEPOINT_EVENT(tor_circuit, change_purpose,
+  TP_ARGS(const circuit_t *, circ, int, old_purpose, int, new_purpose),
+  TP_FIELDS(
+    ctf_integer(uint32_t, circ_id,
+                (CIRCUIT_IS_ORIGIN(circ) ?
+                 TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0))
+    ctf_enum(tor_circuit, state, int, state, circ->state)
+    ctf_enum(tor_circuit, purpose, int, purpose, old_purpose)
+    ctf_enum(tor_circuit, purpose, int, new, new_purpose)
+  )
+)
+
+TRACEPOINT_EVENT(tor_circuit, change_state,
+  TP_ARGS(const circuit_t *, circ, int, old_state, int, new_state),
+  TP_FIELDS(
+    ctf_integer(uint32_t, circ_id,
+                (CIRCUIT_IS_ORIGIN(circ) ?
+                 TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0))
+    ctf_enum(tor_circuit, purpose, int, purpose, circ->purpose)
+    ctf_enum(tor_circuit, state, int, old, old_state)
+    ctf_enum(tor_circuit, state, int, new, new_state)
+  )
+)
+
 #endif /* TOR_TRACE_PROBES_CIRCUIT_H */
 
 /* Must be include after the probes declaration. */
