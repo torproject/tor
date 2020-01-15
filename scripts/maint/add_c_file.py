@@ -29,17 +29,17 @@ import os
 import re
 import time
 
-def tordir_file(name):
-    """Make name relative to the current directory, which should be the
+def tordir_file(fname):
+    """Make fname relative to the current directory, which should be the
        top-level tor directory. Also performs basic path simplifications."""
-    return os.path.normpath(os.path.relpath(name))
+    return os.path.normpath(os.path.relpath(fname))
 
-def srcdir_file(name):
-    """Make name relative to tor's "src" directory.
+def srcdir_file(tor_fname):
+    """Make tor_fname relative to tor's "src" directory.
        Also performs basic path simplifications.
        (This function takes paths relative to the top-level tor directory,
        but outputs a path that is relative to tor's src directory.)"""
-    return os.path.normpath(os.path.relpath(name, 'src'))
+    return os.path.normpath(os.path.relpath(tor_fname, 'src'))
 
 def guard_macro(src_fname):
     """Return the guard macro that should be used for the header file
@@ -48,13 +48,13 @@ def guard_macro(src_fname):
     td = src_fname.replace(".", "_").replace("/", "_").upper()
     return "TOR_{}".format(td)
 
-def makeext(name, new_extension):
-    """Replace the extension for the file called 'name' with 'new_extension'.
+def makeext(fname, new_extension):
+    """Replace the extension for the file called 'fname' with 'new_extension'.
        This function takes and returns paths relative to either the top-level
        tor directory, or tor's src directory, and returns the same kind
        of path.
     """
-    base = os.path.splitext(name)[0]
+    base = os.path.splitext(fname)[0]
     return base + "." + new_extension
 
 def instantiate_template(template, tor_fname):
@@ -154,11 +154,11 @@ class AutomakeChunk:
 
         return False
 
-    def insertMember(self, member):
+    def insertMember(self, new_tor_fname):
         """
-        Add a new member to this chunk.  Try to insert it in alphabetical
-        order with matching indentation, but don't freak out too much if the
-        source isn't consistent.
+        Add a new file name new_tor_fname to this chunk.  Try to insert it in
+        alphabetical order with matching indentation, but don't freak out too
+        much if the source isn't consistent.
 
         Assumes that this chunk is of the form:
            FOOBAR = \
@@ -175,20 +175,21 @@ class AutomakeChunk:
             m = re.match(r'(\s+)(\S+)(\s+)\\', line)
             if not m:
                 continue
-            prespace, fname, postspace = m.groups()
-            if fname > member:
-                self.insert_before(lineno, member, prespace, postspace)
+            prespace, cur_tor_fname, postspace = m.groups()
+            if cur_tor_fname > new_tor_fname:
+                self.insert_before(lineno, new_tor_fname, prespace, postspace)
                 return
-        self.insert_at_end(member, prespace, postspace)
+        self.insert_at_end(new_tor_fname, prespace, postspace)
 
-    def insert_before(self, lineno, member, prespace, postspace):
+    def insert_before(self, lineno, new_tor_fname, prespace, postspace):
         self.lines.insert(lineno,
-                          "{}{}{}\\\n".format(prespace, member, postspace))
+                          "{}{}{}\\\n".format(prespace, new_tor_fname,
+                                              postspace))
 
-    def insert_at_end(self, member, prespace, postspace):
+    def insert_at_end(self, new_tor_fname, prespace, postspace):
         lastline = self.lines[-1].strip()
         self.lines[-1] = '{}{}{}\\\n'.format(prespace, lastline, postspace)
-        self.lines.append("{}{}\n".format(prespace, member))
+        self.lines.append("{}{}\n".format(prespace, new_tor_fname))
 
     def dump(self, f):
         """Write all the lines in this chunk to the file 'f'."""
@@ -215,15 +216,15 @@ class ParsedAutomake:
         self.chunks.append(chunk)
         self.by_type[chunk.kind.lower()] = chunk
 
-    def add_file(self, fname, kind):
-        """Insert a file of kind 'kind' to the appropriate section of this
-           file. Return True if we added it.
+    def add_file(self, tor_fname, kind):
+        """Insert a file tor_fname of kind 'kind' to the appropriate
+           section of this file. Return True if we added it.
 
            This function operates on paths relative to the top-level tor
            directory.
         """
         if kind.lower() in self.by_type:
-            self.by_type[kind.lower()].insertMember(fname)
+            self.by_type[kind.lower()].insertMember(tor_fname)
             return True
         else:
             return False
@@ -233,9 +234,9 @@ class ParsedAutomake:
         for chunk in self.chunks:
             chunk.dump(f)
 
-def get_include_am_location(fname):
-    """Find the right include.am file for introducing a new file.  Return None
-       if we can't guess one.
+def get_include_am_location(tor_fname):
+    """Find the right include.am file for introducing a new file
+       tor_fname.  Return None if we can't guess one.
 
        Note that this function is imperfect because our include.am layout is
        not (yet) consistent.
@@ -243,23 +244,23 @@ def get_include_am_location(fname):
        This function operates on paths relative to the top-level tor directory.
     """
     # Strip src for pattern matching, but add it back when returning the path
-    td = srcdir_file(fname)
-    m = re.match(r'^lib/([a-z0-9_]*)/', td)
+    src_fname = srcdir_file(tor_fname)
+    m = re.match(r'^lib/([a-z0-9_]*)/', src_fname)
     if m:
         return "src/lib/{}/include.am".format(m.group(1))
 
-    if re.match(r'^(core|feature|app)/', td):
+    if re.match(r'^(core|feature|app)/', src_fname):
         return "src/core/include.am"
 
-    if re.match(r'^test/', td):
+    if re.match(r'^test/', src_fname):
         return "src/test/include.am"
 
     return None
 
-def run(fn):
+def run(fname):
     """
-    Create a new C file and H file corresponding to the filename "fn", and
-    add them to the corresponding include.am.
+    Create a new C file and H file corresponding to the filename "fname",
+    and add them to the corresponding include.am.
 
     This function operates on paths relative to the top-level tor directory.
     """
@@ -269,31 +270,31 @@ def run(fn):
     assert(os.path.isdir("src"))
 
     # Make the file name relative to the top-level tor directory
-    fn = tordir_file(fn)
+    tor_fname = tordir_file(fname)
     # And check that we're adding files to the "src" directory,
     # with canonical paths
-    assert(fn[:4] == "src/")
+    assert(tor_fname[:4] == "src/")
 
-    cf = makeext(fn, "c")
-    hf = makeext(fn, "h")
+    c_tor_fname = makeext(tor_fname, "c")
+    h_tor_fname = makeext(tor_fname, "h")
 
-    if os.path.exists(cf):
-        print("{} already exists".format(cf))
+    if os.path.exists(c_tor_fname):
+        print("{} already exists".format(c_tor_fname))
         return 1
-    if os.path.exists(hf):
-        print("{} already exists".format(hf))
+    if os.path.exists(h_tor_fname):
+        print("{} already exists".format(h_tor_fname))
         return 1
 
-    with open(cf, 'w') as f:
-        f.write(instantiate_template(C_FILE_TEMPLATE, cf))
+    with open(c_tor_fname, 'w') as f:
+        f.write(instantiate_template(C_FILE_TEMPLATE, c_tor_fname))
 
-    with open(hf, 'w') as f:
-        f.write(instantiate_template(HEADER_TEMPLATE, hf))
+    with open(h_tor_fname, 'w') as f:
+        f.write(instantiate_template(HEADER_TEMPLATE, h_tor_fname))
 
-    iam = get_include_am_location(cf)
+    iam = get_include_am_location(c_tor_fname)
     if iam is None or not os.path.exists(iam):
         print("Made files successfully but couldn't identify include.am for {}"
-              .format(cf))
+              .format(c_tor_fname))
         return 1
 
     amfile = ParsedAutomake()
@@ -305,8 +306,8 @@ def run(fn):
                 cur_chunk = AutomakeChunk()
         amfile.addChunk(cur_chunk)
 
-    amfile.add_file(cf, "sources")
-    amfile.add_file(hf, "headers")
+    amfile.add_file(c_tor_fname, "sources")
+    amfile.add_file(h_tor_fname, "headers")
 
     with open(iam+".tmp", 'w') as f:
         amfile.dump(f)
