@@ -89,9 +89,9 @@ TOR_WKT_NAME=${TOR_WKT_NAME:-"tor-wkt"}
 # Only used in test branch mode
 # There is no previous branch to merge forward, so the second and fifth items
 # must be blank ("")
+MAINT_035_TB=( "maint-0.3.5" "" "$GIT_PATH/$TOR_WKT_NAME/maint-0.3.5" \
+    "_035" "")
 # Used in maint/release merge and test branch modes
-MAINT_035=( "maint-0.3.5" "maint-0.2.9" "$GIT_PATH/$TOR_WKT_NAME/maint-0.3.5" \
-    "_035" "_029")
 MAINT_040=( "maint-0.4.0" "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.0" \
     "_040" "_035")
 MAINT_041=( "maint-0.4.1" "maint-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.1" \
@@ -113,7 +113,7 @@ ORIGIN_PATH="$GIT_PATH/$TOR_MASTER_NAME"
 
 # SC2034 -- shellcheck thinks that these are unused.  We know better.
 ACTUALLY_THESE_ARE_USED=<<EOF
-${MAINT_035[0]}
+${MAINT_035_TB[0]}
 ${MAINT_040[0]}
 ${MAINT_041[0]}
 ${MAINT_042[0]}
@@ -175,7 +175,8 @@ if [ -z "$TEST_BRANCH_PREFIX" ]; then
   # List of all worktrees to work on. All defined above. Ordering is important.
   # Always the maint-* branch BEFORE then the release-*.
   WORKTREE=(
-    MAINT_035[@]
+    # We don't merge forward into MAINT_035_TB[@], because it's the earliest
+    # maint branch
     RELEASE_035[@]
 
     MAINT_040[@]
@@ -194,7 +195,8 @@ else
 
   # Test branch mode: merge to maint only
   WORKTREE=(
-    MAINT_035[@]
+    # We want a test branch based on the earliest maint branch
+    MAINT_035_TB[@]
 
     MAINT_040[@]
 

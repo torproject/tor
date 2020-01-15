@@ -99,7 +99,7 @@ PUSH_SAME=${TOR_PUSH_SAME:-0}
 
 # Controlled by the -t <test-branch-prefix> option. The test branch base
 # name option makes git-merge-forward.sh create new test branches:
-# <tbbn>_029, <tbbn>_035, ... , <tbbn>_master, and merge forward.
+# <tbbn>_035, <tbbn>_040, ... , <tbbn>_master, and merge forward.
 TEST_BRANCH_PREFIX=
 
 while getopts ":hr:st:" opt; do
