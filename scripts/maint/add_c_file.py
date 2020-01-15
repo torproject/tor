@@ -4,6 +4,17 @@
    Add a C file with matching header to the Tor codebase.  Creates
    both files from templates, and adds them to the right include.am file.
 
+   This script takes paths relative to the top-level tor directory.
+   It creates files, and inserts them into include.am, also relative to
+   the top-level tor directory.
+
+   But the template content in those files is relative to tor's src
+   directory. (This script strips "src" from the paths used to create
+   templated comments and macros.)
+
+   This script expects posix paths, so it should be run with a python
+   where os.path is posixpath. (Rather than ntpath.)
+
    Example usage:
 
    % add_c_file.py ./src/feature/dirauth/ocelot.c
@@ -25,17 +36,24 @@ def tordir_file(name):
 
 def srcdir_file(name):
     """Make name relative to tor's "src" directory.
-       Also performs basic path simplifications."""
+       Also performs basic path simplifications.
+       (This function takes paths relative to the top-level tor directory,
+       but outputs a path that is relative to tor's src directory.)"""
     return os.path.normpath(os.path.relpath(name, 'src'))
 
 def guard_macro(name):
     """Return the guard macro that should be used for the header file 'name'.
+       This function takes paths relative to the top-level tor directory,
+       but its output is relative to tor's src directory.
     """
     td = srcdir_file(name).replace(".", "_").replace("/", "_").upper()
     return "TOR_{}".format(td)
 
 def makeext(name, new_extension):
     """Replace the extension for the file called 'name' with 'new_extension'.
+       This function takes and returns paths relative to either the top-level
+       tor directory, or tor's src directory, and returns the same kind
+       of path.
     """
     base = os.path.splitext(name)[0]
     return base + "." + new_extension
@@ -44,6 +62,10 @@ def instantiate_template(template, output_fname):
     """
     Fill in a template with string using the fields that should be used
     for 'output_fname'.
+
+    This function takes paths relative to the top-level tor directory,
+    but the paths in the completed template are relative to tor's src
+    directory. (Except for one of the fields, which is just a basename).
     """
     names = {
         # The relative location of the header file.
@@ -60,6 +82,7 @@ def instantiate_template(template, output_fname):
 
     return template.format(**names)
 
+# This template operates on paths relative to tor's src directory
 HEADER_TEMPLATE = """\
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
@@ -78,6 +101,7 @@ HEADER_TEMPLATE = """\
 #endif /* !defined({guard_macro}) */
 """
 
+# This template operates on paths relative to the tor's src directory
 C_FILE_TEMPLATE = """\
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
@@ -99,6 +123,8 @@ class AutomakeChunk:
     Represents part of an automake file.  If it is decorated with
     an ADD_C_FILE comment, it has a "kind" based on what to add to it.
     Otherwise, it only has a bunch of lines in it.
+
+    This class operates on paths relative to the top-level tor directory.
     """
     pat = re.compile(r'# ADD_C_FILE: INSERT (\S*) HERE', re.I)
 
@@ -139,6 +165,9 @@ class AutomakeChunk:
               X     \
               Y     \
               Z
+
+        This function operates on paths relative to the top-level tor
+        directory.
         """
         prespace = "\t"
         postspace = "\t\t"
@@ -174,6 +203,8 @@ class AutomakeChunk:
 class ParsedAutomake:
     """A sort-of-parsed automake file, with identified chunks into which
        headers and c files can be inserted.
+
+       This class operates on paths relative to the top-level tor directory.
     """
     def __init__(self):
         self.chunks = []
@@ -187,6 +218,9 @@ class ParsedAutomake:
     def add_file(self, fname, kind):
         """Insert a file of kind 'kind' to the appropriate section of this
            file. Return True if we added it.
+
+           This function operates on paths relative to the top-level tor
+           directory.
         """
         if kind.lower() in self.by_type:
             self.by_type[kind.lower()].insertMember(fname)
@@ -205,6 +239,8 @@ def get_include_am_location(fname):
 
        Note that this function is imperfect because our include.am layout is
        not (yet) consistent.
+
+       This function operates on paths relative to the top-level tor directory.
     """
     # Strip src for pattern matching, but add it back when returning the path
     td = srcdir_file(fname)
@@ -223,7 +259,9 @@ def get_include_am_location(fname):
 def run(fn):
     """
     Create a new C file and H file corresponding to the filename "fn", and
-    add them to include.am.
+    add them to the corresponding include.am.
+
+    This function operates on paths relative to the top-level tor directory.
     """
 
     # Make sure we're in the top-level tor directory,
