@@ -1,5 +1,6 @@
 
 # The Directory Authority module.
+
 # ADD_C_FILE: INSERT SOURCES HERE.
 MODULE_DIRAUTH_SOURCES =					\
 	src/feature/dirauth/authmode.c				\
