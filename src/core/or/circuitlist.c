@@ -1081,6 +1081,7 @@ origin_circuit_new(void)
               prediction_time_remaining);
   }
 
+  tor_trace(circuit, new_origin, circ);
   return circ;
 }
 
@@ -1103,6 +1104,7 @@ or_circuit_new(circid_t p_circ_id, channel_t *p_chan)
 
   init_circuit_base(TO_CIRCUIT(circ));
 
+  tor_trace(circuit, new_or, circ);
   return circ;
 }
 
