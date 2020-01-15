@@ -42,7 +42,7 @@ tor_inet_aton(const char *str, struct in_addr *addr)
   unsigned a,b,c,d;
   char more;
   bool is_octal = false;
-  smartlist_t *sl = smartlist_new();
+  smartlist_t *sl = NULL;
 
   if (tor_sscanf(str, "%3u.%3u.%3u.%3u%c", &a, &b, &c, &d, &more) != 4)
     return 0;
@@ -55,6 +55,7 @@ tor_inet_aton(const char *str, struct in_addr *addr)
    * overread because idx == strlen(str) does not read further.
    *
    * Also, the tor_sscanf() call above prevents an overflow from occuring. */
+  sl = smartlist_new();
   smartlist_split_string(sl, str, ".", 0, 0);
   SMARTLIST_FOREACH(sl, const char *, octet, {
     is_octal = (strlen(octet) > 1 && octet[0] == '0');
