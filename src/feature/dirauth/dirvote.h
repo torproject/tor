@@ -49,10 +49,6 @@
 #define MIN_VOTE_INTERVAL_TESTING_INITIAL \
                 ((MIN_VOTE_SECONDS_TESTING)+(MIN_DIST_SECONDS_TESTING)+1)
 
-/* A placeholder for routerstatus_format_entry() when the consensus method
- * argument is not applicable. */
-#define ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD 0
-
 /** The lowest consensus method that we currently support. */
 #define MIN_SUPPORTED_CONSENSUS_METHOD 28
 
