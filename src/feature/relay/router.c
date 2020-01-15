@@ -2911,15 +2911,20 @@ router_dump_router_to_string(routerinfo_t *router,
   }
 
   if (options->BridgeRelay) {
-    const char *bd;
+    char *bd = NULL;
+
     if (options->BridgeDistribution && strlen(options->BridgeDistribution)) {
-      bd = options->BridgeDistribution;
+      bd = tor_strdup(options->BridgeDistribution);
     } else {
-      bd = "any";
+      bd = tor_strdup("any");
     }
-    if (strchr(bd, '\n') || strchr(bd, '\r'))
-      bd = escaped(bd);
+
+    // Make sure our value is lowercased in the descriptor instead of just
+    // forwarding what the user wrote in their torrc directly.
+    tor_strlower(bd);
+
     smartlist_add_asprintf(chunks, "bridge-distribution-request %s\n", bd);
+    tor_free(bd);
   }
 
   if (router->onion_curve25519_pkey) {
