@@ -51,6 +51,7 @@
 #include "core/or/ocirc_event.h"
 #include "core/or/policies.h"
 #include "core/or/relay.h"
+#include "core/or/trace_probes_circuit.h"
 #include "core/or/crypt_path.h"
 #include "feature/client/bridges.h"
 #include "feature/client/circpathbias.h"
@@ -72,6 +73,7 @@
 #include "feature/rend/rendcommon.h"
 #include "feature/stats/predict_ports.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/trace/events.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/cpath_build_state_st.h"
@@ -500,6 +502,8 @@ circuit_establish_circuit(uint8_t purpose, extend_info_t *exit_ei, int flags)
     circuit_mark_for_close(TO_CIRCUIT(circ), -err_reason);
     return NULL;
   }
+
+  tor_trace(circuit, establish, circ);
   return circ;
 }
 
