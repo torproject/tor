@@ -87,8 +87,10 @@ TOR_WKT_NAME=${TOR_WKT_NAME:-"tor-wkt"}
 # New arrays need to be in the WORKTREE= array else they aren't considered.
 #
 # Only used in test branch mode
-# There is no previous branch to merge forward, so the second and fifth items
-# must be blank ("")
+# We create a test branch for the earliest maint branch.
+# But it's the earliest maint branch, so we don't merge forward into it.
+# Since we don't merge forward into it, the second and fifth items must be
+# blank ("").
 MAINT_035_TB=( "maint-0.3.5" "" "$GIT_PATH/$TOR_WKT_NAME/maint-0.3.5" \
     "_035" "")
 # Used in maint/release merge and test branch modes
@@ -172,8 +174,8 @@ if [ -z "$TEST_BRANCH_PREFIX" ]; then
 
   # maint/release merge mode
   #
-  # List of all worktrees to work on. All defined above. Ordering is important.
-  # Always the maint-* branch BEFORE then the release-*.
+  # List of all worktrees to merge forward into. All defined above.
+  # Ordering is important. Always the maint-* branch BEFORE the release-*.
   WORKTREE=(
     # We don't merge forward into MAINT_035_TB[@], because it's the earliest
     # maint branch
@@ -193,7 +195,10 @@ if [ -z "$TEST_BRANCH_PREFIX" ]; then
 
 else
 
-  # Test branch mode: merge to maint only
+  # Test branch mode: base test branches on maint branches only
+  #
+  # List of all worktrees to create test branches from. All defined above.
+  # Ordering is important. All maint-* branches, including the earliest one.
   WORKTREE=(
     # We want a test branch based on the earliest maint branch
     MAINT_035_TB[@]

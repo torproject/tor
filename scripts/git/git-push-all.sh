@@ -97,9 +97,10 @@ PUSH_SAME=${TOR_PUSH_SAME:-0}
 # Argument processing #
 #######################
 
-# Controlled by the -t <test-branch-prefix> option. The test branch base
-# name option makes git-merge-forward.sh create new test branches:
-# <tbbn>_035, <tbbn>_040, ... , <tbbn>_master, and merge forward.
+# Controlled by the -t <test-branch-prefix> option. The test branch prefix
+# option makes git-merge-forward.sh create new test branches:
+# <tbp>_035, <tbp>_040, ... , <tbp>_master, and merge each branch forward into
+# the next one.
 TEST_BRANCH_PREFIX=
 
 while getopts ":hr:st:" opt; do
@@ -200,7 +201,7 @@ PUSH_BRANCHES=$(echo \
 
 if [ -z "$TEST_BRANCH_PREFIX" ]; then
 
-  # maint/release push mode
+  # maint/release push mode: push all branches.
   #
   # List of branches to push. Ordering is not important.
   PUSH_BRANCHES=$(echo \
@@ -212,6 +213,8 @@ if [ -z "$TEST_BRANCH_PREFIX" ]; then
     )
 else
 
+  # Test branch push mode: push test branches, based on each maint branch.
+  #
   # List of branches to push. Ordering is not important.
   PUSH_BRANCHES=" \
     ${TEST_BRANCH_PREFIX}_master \

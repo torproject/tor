@@ -91,8 +91,7 @@ EOF
 # Git worktrees to manage #
 ###########################
 
-# List of all worktrees to work on. All defined above. Ordering is important.
-# Always the maint-* branch first then the release-*.
+# List of all worktrees to pull. All defined above. Ordering is not important.
 WORKTREE=(
   MAINT_035[@]
   RELEASE_035[@]
