@@ -51,7 +51,7 @@ test_routerkeys_write_fingerprint(void *arg)
   tt_int_op(crypto_pk_cmp_keys(get_server_identity_key(),key),OP_EQ,0);
 
   /* Write fingerprint file */
-  tt_int_op(0, OP_EQ, router_write_fingerprint(0));
+  tt_int_op(0, OP_EQ, router_write_fingerprint(0, 0));
   cp = read_file_to_str(get_fname("write_fingerprint/fingerprint"),
                         0, NULL);
   crypto_pk_get_fingerprint(key, fp, 0);
@@ -61,7 +61,7 @@ test_routerkeys_write_fingerprint(void *arg)
   tor_free(cp2);
 
   /* Write hashed-fingerprint file */
-  tt_int_op(0, OP_EQ, router_write_fingerprint(1));
+  tt_int_op(0, OP_EQ, router_write_fingerprint(1, 0));
   cp = read_file_to_str(get_fname("write_fingerprint/hashed-fingerprint"),
                         0, NULL);
   crypto_pk_get_hashed_fingerprint(key, fp);
@@ -73,7 +73,7 @@ test_routerkeys_write_fingerprint(void *arg)
   /* Replace outdated file */
   write_str_to_file(get_fname("write_fingerprint/hashed-fingerprint"),
                     "junk goes here", 0);
-  tt_int_op(0, OP_EQ, router_write_fingerprint(1));
+  tt_int_op(0, OP_EQ, router_write_fingerprint(1, 0));
   cp = read_file_to_str(get_fname("write_fingerprint/hashed-fingerprint"),
                         0, NULL);
   crypto_pk_get_hashed_fingerprint(key, fp);
@@ -117,7 +117,7 @@ test_routerkeys_write_ed25519_identity(void *arg)
   tt_int_op(0, OP_EQ, check_private_dir(ddir, CPD_CREATE, NULL));
 
   /* Write fingerprint file */
-  tt_int_op(0, OP_EQ, router_write_ed25519_identity());
+  tt_int_op(0, OP_EQ, router_write_fingerprint(0, 1));
   cp = read_file_to_str(get_fname("write_fingerprint/ed25519_identity"),
                         0, NULL);
   digest256_to_base64(ed25519_id, (const char *)
