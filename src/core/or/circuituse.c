@@ -3133,6 +3133,7 @@ circuit_change_purpose(circuit_t *circ, uint8_t new_purpose)
 
   old_purpose = circ->purpose;
   circ->purpose = new_purpose;
+  tor_trace(circuit, change_purpose, circ, old_purpose, new_purpose);
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
     control_event_circuit_purpose_changed(TO_ORIGIN_CIRCUIT(circ),

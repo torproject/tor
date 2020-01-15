@@ -98,6 +98,7 @@
 #include "lib/compress/compress_zlib.h"
 #include "lib/compress/compress_zstd.h"
 #include "lib/buf/buffers.h"
+#include "lib/trace/events.h"
 
 #include "core/or/ocirc_event.h"
 
@@ -564,6 +565,8 @@ circuit_set_state(circuit_t *circ, uint8_t state)
   }
   if (state == CIRCUIT_STATE_GUARD_WAIT || state == CIRCUIT_STATE_OPEN)
     tor_assert(!circ->n_chan_create_cell);
+
+  tor_trace(circuit, change_state, circ, circ->state, state);
   circ->state = state;
   if (CIRCUIT_IS_ORIGIN(circ))
     circuit_state_publish(circ);
@@ -1251,6 +1254,10 @@ circuit_free_(circuit_t *circ)
 
   /* Clear all dangling handle references. */
   circuit_handles_clear(circ);
+
+  /* Tracepoint. Data within the circuit object is recorded so do this before
+   * the actual memory free. */
+  tor_trace(circuit, free, circ);
 
   if (should_free) {
     memwipe(mem, 0xAA, memlen); /* poison memory */
@@ -2274,6 +2281,7 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
            CIRCUIT_IS_ORIGIN(circ) ?
               TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0,
            file, line, orig_reason, reason);
+  tor_trace(circuit, mark_for_close, circ);
 }
 
 /** Called immediately before freeing a marked circuit <b>circ</b> from
