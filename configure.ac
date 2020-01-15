@@ -2750,16 +2750,16 @@ test "x$enable_oss_fuzz" = "xyes" && value=1 || value=0
 PPRINT_PROP_BOOL([OSS-Fuzz support (--enable-oss-fuzz)], $value)
 
 AS_ECHO
-PPRINT_SUBTITLE([Tracing])
+PPRINT_SUBTITLE([Tracing (--enable-tracing-instrumentation-<type>)])
 
 test "x$enable_tracing_instrumentation_log_debug" = "xyes" && value=1 || value=0
-PPRINT_PROP_BOOL([Tracepoints to log_debug() (--enable-tracing-instrumentation-log-debug)], $value)
+PPRINT_PROP_BOOL([Tracepoints to log_debug() (log-debug)], $value)
 
 test "x$enable_tracing_instrumentation_usdt" = "xyes" && value=1 || value=0
-PPRINT_PROP_BOOL([USDT Instrumentation (--enable-tracing-instrumentation-usdt)], $value)
+PPRINT_PROP_BOOL([USDT Instrumentation (usdt)], $value)
 
 test "x$enable_tracing_instrumentation_lttng" = "xyes" && value=1 || value=0
-PPRINT_PROP_BOOL([LTTng Instrumentation (--enable-tracing-instrumentation-lttng)], $value)
+PPRINT_PROP_BOOL([LTTng Instrumentation (lttng)], $value)
 
 AS_ECHO
 PPRINT_SUBTITLE([Install Directories])
