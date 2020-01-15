@@ -1163,7 +1163,7 @@ update_consensus_networkstatus_fetch_time_impl(time_t now, int flav)
       }
     }
 
-    if (directory_fetches_dir_info_early(options)) {
+    if (dirclient_fetches_dir_info_early(options)) {
       /* We want to cache the next one at some point after this one
        * is no longer fresh... */
       start = (time_t)(c->fresh_until + min_sec_before_caching);
@@ -1185,7 +1185,7 @@ update_consensus_networkstatus_fetch_time_impl(time_t now, int flav)
 
       /* If we're a bridge user, make use of the numbers we just computed
        * to choose the rest of the interval *after* them. */
-      if (directory_fetches_dir_info_later(options)) {
+      if (dirclient_fetches_dir_info_later(options)) {
         /* Give all the *clients* enough time to download the consensus. */
         start = (time_t)(start + dl_interval + min_sec_before_caching);
         /* But try to get it before ours actually expires. */
@@ -1538,7 +1538,7 @@ networkstatus_consensus_can_use_extra_fallbacks,(const or_options_t *options))
              >= smartlist_len(router_get_trusted_dir_servers()));
   /* If we don't fetch from the authorities, and we have additional mirrors,
    * we can use them. */
-  return (!directory_fetches_from_authorities(options)
+  return (!dirclient_fetches_from_authorities(options)
           && (smartlist_len(router_get_fallback_dir_servers())
               > smartlist_len(router_get_trusted_dir_servers())));
 }

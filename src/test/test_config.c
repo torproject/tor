@@ -3706,7 +3706,7 @@ test_config_directory_fetch(void *arg)
   options->ClientOnly = 1;
   tt_assert(server_mode(options) == 0);
   tt_assert(public_server_mode(options) == 0);
-  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 0);
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 1);
 
@@ -3716,7 +3716,7 @@ test_config_directory_fetch(void *arg)
   options->UseBridges = 1;
   tt_assert(server_mode(options) == 0);
   tt_assert(public_server_mode(options) == 0);
-  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 0);
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 1);
 
@@ -3728,7 +3728,7 @@ test_config_directory_fetch(void *arg)
   options->ORPort_set = 1;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 0);
-  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 0);
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 1);
 
@@ -3739,7 +3739,7 @@ test_config_directory_fetch(void *arg)
   options->FetchDirInfoEarly = 1;
   tt_assert(server_mode(options) == 0);
   tt_assert(public_server_mode(options) == 0);
-  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 1);
+  tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 1);
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 1);
 
@@ -3753,14 +3753,14 @@ test_config_directory_fetch(void *arg)
   mock_router_pick_published_address_result = -1;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 1);
+  tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 1);
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 0);
 
   mock_router_pick_published_address_result = 0;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 0);
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 0);
 
@@ -3781,7 +3781,7 @@ test_config_directory_fetch(void *arg)
   options->RefuseUnknownExits = 1;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 1);
+  tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 1);
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 0);
 
@@ -3789,7 +3789,7 @@ test_config_directory_fetch(void *arg)
   mock_router_pick_published_address_result = 0;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 0);
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 0);
 
@@ -3811,7 +3811,7 @@ test_config_directory_fetch(void *arg)
   mock_router_get_my_routerinfo_result = &routerinfo;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 1);
+  tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 1);
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 0);
 
@@ -3820,7 +3820,7 @@ test_config_directory_fetch(void *arg)
   mock_router_get_my_routerinfo_result = &routerinfo;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 0);
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 0);
 
@@ -3828,7 +3828,7 @@ test_config_directory_fetch(void *arg)
   mock_router_get_my_routerinfo_result = NULL;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 0);
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 0);
 
@@ -3838,7 +3838,7 @@ test_config_directory_fetch(void *arg)
   mock_router_get_my_routerinfo_result = &routerinfo;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 0);
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 0);
 
@@ -3848,7 +3848,7 @@ test_config_directory_fetch(void *arg)
   mock_router_get_my_routerinfo_result = &routerinfo;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 1);
+  tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 1);
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 0);
 
