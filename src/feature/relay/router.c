@@ -2920,8 +2920,7 @@ router_dump_router_to_string(routerinfo_t *router,
     // forwarding what the user wrote in their torrc directly.
     tor_strlower(bd);
 
-    smartlist_add_asprintf(chunks, "bridge-distribution-request %s\n",
-                           escaped(bd));
+    smartlist_add_asprintf(chunks, "bridge-distribution-request %s\n", bd);
     tor_free(bd);
   }
 
