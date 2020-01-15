@@ -81,6 +81,8 @@ int dir_split_resource_into_spoolable(const char *resource,
                                       int flags);
 
 #ifdef HAVE_MODULE_DIRCACHE
+/** Is the dircache module enabled? */
+#define have_module_dircache() (1)
 int directory_caches_unknown_auth_certs(const or_options_t *options);
 int directory_caches_dir_info(const or_options_t *options);
 int directory_permits_begindir_requests(const or_options_t *options);
@@ -92,6 +94,7 @@ void dirserv_set_cached_consensus_networkstatus(const char *consensus,
                                               const uint8_t *sha3_as_signed,
                                               time_t published);
 #else
+#define have_module_dircache() (0)
 #define directory_caches_unknown_auth_certs(opt) \
   ((void)(opt), 0)
 #define directory_caches_dir_info(opt) \
