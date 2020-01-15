@@ -20,7 +20,7 @@ The relay code is located in a directory named `src/*/*relay`, which is
 being progressively refactored and disabled.
 
 The dircache code is located in `src/*/*dircache`.  Right now, it is
-enabled if and only if the relay module is disabled.  (We are treating
+disabled if and only if the relay module is disabled.  (We are treating
 them as separate modules because they are logically independent, not
 because you would actually want to run one without the other.)
 
