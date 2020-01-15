@@ -18,14 +18,20 @@ import os
 import re
 import time
 
-def topdir_file(name):
-    """Strip opening "src" from a filename"""
-    return os.path.relpath(name, './src')
+def tordir_file(name):
+    """Make name relative to the current directory, which should be the
+       top-level tor directory. Also performs basic path simplifications."""
+    return os.path.normpath(os.path.relpath(name))
+
+def srcdir_file(name):
+    """Make name relative to tor's "src" directory.
+       Also performs basic path simplifications."""
+    return os.path.normpath(os.path.relpath(name, 'src'))
 
 def guard_macro(name):
     """Return the guard macro that should be used for the header file 'name'.
     """
-    td = topdir_file(name).replace(".", "_").replace("/", "_").upper()
+    td = srcdir_file(name).replace(".", "_").replace("/", "_").upper()
     return "TOR_{}".format(td)
 
 def makeext(name, new_extension):
@@ -41,9 +47,9 @@ def instantiate_template(template, output_fname):
     """
     names = {
         # The relative location of the header file.
-        'header_path' : makeext(topdir_file(output_fname), "h"),
+        'header_path' : makeext(srcdir_file(output_fname), "h"),
         # The relative location of the C file file.
-        'c_file_path' : makeext(topdir_file(output_fname), "c"),
+        'c_file_path' : makeext(srcdir_file(output_fname), "c"),
         # The truncated name of the file.
         'short_name' : os.path.basename(output_fname),
         # The current year, for the copyright notice
@@ -200,7 +206,8 @@ def get_include_am_location(fname):
        Note that this function is imperfect because our include.am layout is
        not (yet) consistent.
     """
-    td = topdir_file(fname)
+    # Strip src for pattern matching, but add it back when returning the path
+    td = srcdir_file(fname)
     m = re.match(r'^lib/([a-z0-9_]*)/', td)
     if m:
         return "src/lib/{}/include.am".format(m.group(1))
@@ -219,8 +226,15 @@ def run(fn):
     add them to include.am.
     """
 
-    if fn.startswith("./"):
-        fn = fn[2:]
+    # Make sure we're in the top-level tor directory,
+    # which contains the src directory
+    assert(os.path.isdir("src"))
+
+    # Make the file name relative to the top-level tor directory
+    fn = tordir_file(fn)
+    # And check that we're adding files to the "src" directory,
+    # with canonical paths
+    assert(fn[:4] == "src/")
 
     cf = makeext(fn, "c")
     hf = makeext(fn, "h")
