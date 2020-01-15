@@ -219,6 +219,9 @@ def run(fn):
     add them to include.am.
     """
 
+    if fn.startswith("./"):
+        fn = fn[2:]
+
     cf = makeext(fn, "c")
     hf = makeext(fn, "h")
 
