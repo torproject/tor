@@ -27,10 +27,6 @@
  * allocated character buffer.  Use the same format as in network-status
  * documents.  If <b>version</b> is non-NULL, add a "v" line for the platform.
  *
- * consensus_method is the current consensus method when format is
- * NS_V3_CONSENSUS or NS_V3_CONSENSUS_MICRODESC. It is ignored for other
- * formats: pass ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD.
- *
  * Return 0 on success, -1 on failure.
  *
  * The format argument has one of the following values:
@@ -47,11 +43,8 @@ char *
 routerstatus_format_entry(const routerstatus_t *rs, const char *version,
                           const char *protocols,
                           routerstatus_format_type_t format,
-                          int consensus_method,
                           const vote_routerstatus_t *vrs)
 {
-  (void) consensus_method;
-
   char *summary;
   char *result = NULL;
 
