@@ -227,4 +227,17 @@
 #define EAT_SEMICOLON                                   \
   struct dummy_semicolon_eater__
 
+/**
+ * Tell our static analysis tool to believe that (clang's scan-build or
+ * coverity scan) that an expression might be true.  We use this to suppress
+ * dead-code warnings.
+ **/
+#if defined(__COVERITY__) || defined(__clang_analyzer__)
+/* By calling getenv, we force the analyzer not to conclude that 'expr' is
+ * false. */
+#define POSSIBLE(expr) ((expr) || getenv("STATIC_ANALYZER_DEADCODE_DUMMY_"))
+#else
+#define POSSIBLE(expr) (expr)
+#endif
+
 #endif /* !defined(TOR_COMPAT_COMPILER_H) */
