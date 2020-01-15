@@ -19,6 +19,8 @@
 #include <lttng/tracepoint.h>
 
 #include "core/or/circuitlist.h"
+#include "core/or/crypt_path_st.h"
+#include "core/or/extend_info_st.h"
 #include "core/or/or.h"
 #include "core/or/origin_circuit_st.h"
 
@@ -159,6 +161,28 @@ TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, timeout,
 
 TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, idle_timeout,
   TP_ARGS(const origin_circuit_t *, circ)
+)
+
+TRACEPOINT_EVENT(tor_circuit, first_onion_skin,
+  TP_ARGS(const origin_circuit_t *, circ, const crypt_path_t *, hop),
+  TP_FIELDS(
+    ctf_integer(uint32_t, circ_id, circ->global_identifier)
+    ctf_enum(tor_circuit, purpose, int, purpose, TO_CIRCUIT(circ)->purpose)
+    ctf_enum(tor_circuit, state, int, state, TO_CIRCUIT(circ)->state)
+    ctf_array_hex(char, fingerprint, hop->extend_info->identity_digest,
+                  DIGEST_LEN)
+  )
+)
+
+TRACEPOINT_EVENT(tor_circuit, intermediate_onion_skin,
+  TP_ARGS(const origin_circuit_t *, circ, const crypt_path_t *, hop),
+  TP_FIELDS(
+    ctf_integer(uint32_t, circ_id, circ->global_identifier)
+    ctf_enum(tor_circuit, purpose, int, purpose, TO_CIRCUIT(circ)->purpose)
+    ctf_enum(tor_circuit, state, int, state, TO_CIRCUIT(circ)->state)
+    ctf_array_hex(char, fingerprint, hop->extend_info->identity_digest,
+                  DIGEST_LEN)
+  )
 )
 
 /*
