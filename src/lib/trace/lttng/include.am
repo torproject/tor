@@ -4,4 +4,6 @@ LIBTOR_TRACE_A_SOURCES += \
 
 # ADD_C_FILE: INSERT HEADERS HERE.
 TRACEHEADERS += \
-	src/lib/trace/lttng/lttng.h
+	src/lib/trace/lttng/lttng.h							\
+	src/lib/trace/lttng/providers.h					\
+	src/lib/trace/lttng/provider_circuit.h

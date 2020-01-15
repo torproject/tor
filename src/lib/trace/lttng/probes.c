@@ -11,3 +11,6 @@
  */
 #define TRACEPOINT_DEFINE
 #define TRACEPOINT_CREATE_PROBES
+
+/* Included here in order to build the probes. */
+#include "providers.h"

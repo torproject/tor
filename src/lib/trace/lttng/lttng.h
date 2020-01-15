@@ -14,8 +14,11 @@
 #include <lttng/tracepoint.h>
 
 /* Map event to an LTTng tracepoint. */
-#define TOR_TRACE_LTTNG(subsystem, event_name, ...) \
-  tracepoint(subsystem, event_name, ## __VA_ARGS__);
+#define TOR_TRACE_LTTNG(subsystem, event_name, args...) \
+  tracepoint(tor_##subsystem, event_name, args)
+
+/* Contains the tracepoint event definition. */
+#include "providers.h"
 
 #else /* !defined(USE_TRACING_INSTRUMENTATION_LTTNG) */
 
