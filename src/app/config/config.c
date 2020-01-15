@@ -2419,10 +2419,10 @@ options_act,(const or_options_t *old_options))
 
   /* We may need to reschedule some directory stuff if our status changed. */
   if (old_options) {
-    if (!bool_eq(directory_fetches_dir_info_early(options),
-                 directory_fetches_dir_info_early(old_options)) ||
-        !bool_eq(directory_fetches_dir_info_later(options),
-                 directory_fetches_dir_info_later(old_options)) ||
+    if (!bool_eq(dirclient_fetches_dir_info_early(options),
+                 dirclient_fetches_dir_info_early(old_options)) ||
+        !bool_eq(dirclient_fetches_dir_info_later(options),
+                 dirclient_fetches_dir_info_later(old_options)) ||
         !config_lines_eq(old_options->Bridges, options->Bridges)) {
       /* Make sure update_router_have_minimum_dir_info() gets called. */
       router_dir_info_changed();

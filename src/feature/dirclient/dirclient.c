@@ -454,7 +454,7 @@ directory_get_from_dirserver,(
 {
   const routerstatus_t *rs = NULL;
   const or_options_t *options = get_options();
-  int prefer_authority = (directory_fetches_from_authorities(options)
+  int prefer_authority = (dirclient_fetches_from_authorities(options)
                           || want_authority == DL_WANT_AUTHORITY);
   int require_authority = 0;
   int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose,
@@ -673,7 +673,7 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
   if (indirection == DIRIND_DIRECT_CONN ||
       indirection == DIRIND_ANON_DIRPORT ||
       (indirection == DIRIND_ONEHOP
-       && !directory_must_use_begindir(options))) {
+       && !dirclient_must_use_begindir(options))) {
     fascist_firewall_choose_address_rs(status, FIREWALL_DIR_CONNECTION, 0,
                                        use_dir_ap);
     have_dir = tor_addr_port_is_valid_ap(use_dir_ap, 0);
@@ -923,7 +923,7 @@ directory_command_should_use_begindir(const or_options_t *options,
   }
   /* Reasons why we want to avoid using begindir */
   if (indirection == DIRIND_ONEHOP) {
-    if (!directory_must_use_begindir(options)) {
+    if (!dirclient_must_use_begindir(options)) {
       *reason = "in relay mode";
       return 0;
     }
@@ -1285,7 +1285,7 @@ directory_initiate_request,(directory_request_t *request))
 
   /* use encrypted begindir connections for everything except relays
    * this provides better protection for directory fetches */
-  if (!use_begindir && directory_must_use_begindir(options)) {
+  if (!use_begindir && dirclient_must_use_begindir(options)) {
     log_warn(LD_BUG, "Client could not use begindir connection: %s",
              begindir_reason ? begindir_reason : "(NULL)");
     return;
@@ -3084,7 +3084,7 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
 {
   char digest[DIGEST_LEN];
   time_t now = time(NULL);
-  int server = directory_fetches_from_authorities(get_options());
+  int server = dirclient_fetches_from_authorities(get_options());
   if (!was_descriptor_digests) {
     if (router_purpose == ROUTER_PURPOSE_BRIDGE) {
       tor_assert(!was_extrainfo);
@@ -3129,7 +3129,7 @@ dir_microdesc_download_failed(smartlist_t *failed,
   routerstatus_t *rs;
   download_status_t *dls;
   time_t now = time(NULL);
-  int server = directory_fetches_from_authorities(get_options());
+  int server = dirclient_fetches_from_authorities(get_options());
 
   if (! consensus)
     return;

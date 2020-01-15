@@ -14,11 +14,11 @@
 
 struct or_options_t;
 
-int directory_must_use_begindir(const or_options_t *options);
-int directory_fetches_from_authorities(const struct or_options_t *options);
-int directory_fetches_dir_info_early(const struct or_options_t *options);
-int directory_fetches_dir_info_later(const struct or_options_t *options);
-int directory_too_idle_to_fetch_descriptors(const struct or_options_t *options,
+int dirclient_must_use_begindir(const or_options_t *options);
+int dirclient_fetches_from_authorities(const struct or_options_t *options);
+int dirclient_fetches_dir_info_early(const struct or_options_t *options);
+int dirclient_fetches_dir_info_later(const struct or_options_t *options);
+int dirclient_too_idle_to_fetch_descriptors(const struct or_options_t *options,
                                             time_t now);
 
 #endif /* !defined(TOR_FEATURE_DIRCLIENT_DIRCLIENT_MODES_H) */

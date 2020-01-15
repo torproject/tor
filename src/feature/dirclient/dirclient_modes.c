@@ -26,7 +26,7 @@
 /* Should this tor instance only use begindir for all its directory requests?
  */
 int
-directory_must_use_begindir(const or_options_t *options)
+dirclient_must_use_begindir(const or_options_t *options)
 {
   /* Clients, onion services, and bridges must use begindir,
    * relays and authorities do not have to */
@@ -36,7 +36,7 @@ directory_must_use_begindir(const or_options_t *options)
 /** Return 1 if we fetch our directory material directly from the
  * authorities, rather than from a mirror. */
 int
-directory_fetches_from_authorities(const or_options_t *options)
+dirclient_fetches_from_authorities(const or_options_t *options)
 {
   const routerinfo_t *me;
   uint32_t addr;
@@ -64,9 +64,9 @@ directory_fetches_from_authorities(const or_options_t *options)
  * on the "mirror" schedule rather than the "client" schedule.
  */
 int
-directory_fetches_dir_info_early(const or_options_t *options)
+dirclient_fetches_dir_info_early(const or_options_t *options)
 {
-  return directory_fetches_from_authorities(options);
+  return dirclient_fetches_from_authorities(options);
 }
 
 /** Return 1 if we should fetch new networkstatuses, descriptors, etc
@@ -76,7 +76,7 @@ directory_fetches_dir_info_early(const or_options_t *options)
  * client as a directory guard.
  */
 int
-directory_fetches_dir_info_later(const or_options_t *options)
+dirclient_fetches_dir_info_later(const or_options_t *options)
 {
   return options->UseBridges != 0;
 }
@@ -86,7 +86,7 @@ directory_fetches_dir_info_later(const or_options_t *options)
  * lately.
  */
 int
-directory_too_idle_to_fetch_descriptors(const or_options_t *options,
+dirclient_too_idle_to_fetch_descriptors(const or_options_t *options,
                                         time_t now)
 {
   return !directory_caches_dir_info(options) &&

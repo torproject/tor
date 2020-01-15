@@ -2405,7 +2405,7 @@ max_dl_per_request(const or_options_t *options, int purpose)
   }
   /* If we're going to tunnel our connections, we can ask for a lot more
    * in a request. */
-  if (directory_must_use_begindir(options)) {
+  if (dirclient_must_use_begindir(options)) {
     max = 500;
   }
   return max;
@@ -2448,7 +2448,7 @@ launch_descriptor_downloads(int purpose,
   if (!n_downloadable)
     return;
 
-  if (!directory_fetches_dir_info_early(options)) {
+  if (!dirclient_fetches_dir_info_early(options)) {
     if (n_downloadable >= MAX_DL_TO_DELAY) {
       log_debug(LD_DIR,
                 "There are enough downloadable %ss to launch requests.",
@@ -2539,7 +2539,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
   int n_delayed=0, n_have=0, n_would_reject=0, n_wouldnt_use=0,
     n_inprogress=0, n_in_oldrouters=0;
 
-  if (directory_too_idle_to_fetch_descriptors(options, now))
+  if (dirclient_too_idle_to_fetch_descriptors(options, now))
     goto done;
   if (!consensus)
     goto done;
