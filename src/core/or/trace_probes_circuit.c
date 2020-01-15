@@ -16,6 +16,8 @@
 
 /* Header files that the probes need. */
 #include "core/or/circuitlist.h"
+#include "core/or/crypt_path_st.h"
+#include "core/or/extend_info_st.h"
 #include "core/or/or.h"
 #include "core/or/origin_circuit_st.h"
 
