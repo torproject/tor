@@ -2914,9 +2914,8 @@ router_dump_router_to_string(routerinfo_t *router,
     } else {
       bd = "any";
     }
-    if (strchr(bd, '\n') || strchr(bd, '\r'))
-      bd = escaped(bd);
-    smartlist_add_asprintf(chunks, "bridge-distribution-request %s\n", bd);
+    smartlist_add_asprintf(chunks, "bridge-distribution-request %s\n",
+                           escaped(bd));
   }
 
   if (router->onion_curve25519_pkey) {
