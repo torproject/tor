@@ -30,34 +30,6 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
   return -1;
 }
 
-int
-directory_caches_unknown_auth_certs(const or_options_t *options)
-{
-  (void) options;
-  return 0;
-}
-
-int
-directory_caches_dir_info(const or_options_t *options)
-{
-  (void) options;
-  return 0;
-}
-
-int
-directory_permits_begindir_requests(const or_options_t *options)
-{
-  (void) options;
-  return 0;
-}
-
-cached_dir_t *
-dirserv_get_consensus(const char *flavor_name)
-{
-  (void) flavor_name;
-  return NULL;
-}
-
 void
 dir_conn_clear_spool(dir_connection_t *conn)
 {
