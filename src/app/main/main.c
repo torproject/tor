@@ -1240,7 +1240,7 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
 
   int done = 0;
   result = nt_service_parse_options(argc, argv, &done);
-  if (done)
+  if (POSSIBLE(done))
     goto done;
 
   pubsub_install();
