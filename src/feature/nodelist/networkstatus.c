@@ -1595,7 +1595,7 @@ networkstatus_consensus_has_ipv6(const or_options_t* options)
     return 0;
   }
 
-  /* All supported consensus flavors have IPv6 addresses. */
+  /* All supported consensus methods have IPv6 addresses. */
   return 1;
 }
 
