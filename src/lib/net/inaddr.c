@@ -11,7 +11,9 @@
 #include "lib/net/inaddr.h"
 
 #include "lib/cc/torint.h"
+#include "lib/container/smartlist.h"
 #include "lib/log/util_bug.h"
+#include "lib/malloc/malloc.h"
 #include "lib/net/inaddr_st.h"
 #include "lib/string/compat_ctype.h"
 #include "lib/string/compat_string.h"
@@ -39,8 +41,9 @@ tor_inet_aton(const char *str, struct in_addr *addr)
 {
   unsigned a,b,c,d;
   char more;
-  char octet[4] = {0};
-  size_t octet_id = 0;
+  bool is_octal = false;
+  smartlist_t *sl = smartlist_new();
+
   if (tor_sscanf(str, "%3u.%3u.%3u.%3u%c", &a, &b, &c, &d, &more) != 4)
     return 0;
 
@@ -52,17 +55,18 @@ tor_inet_aton(const char *str, struct in_addr *addr)
    * overread because idx == strlen(str) does not read further.
    *
    * Also, the tor_sscanf() call above prevents an overflow from occuring. */
-  for (size_t idx = 0; idx <= strlen(str); idx++) {
-    if (str[idx] == '.' || idx == strlen(str)) {
-      if (strlen(octet) > 1 && octet[0] == '0')
-        return 0;
-      memset(octet, 0, sizeof(octet));
-      octet_id = 0;
-    } else {
-      octet[octet_id++] = str[idx];
-      octet[octet_id] = '\0';
+  smartlist_split_string(sl, str, ".", 0, 0);
+  SMARTLIST_FOREACH(sl, const char *, octet, {
+    is_octal = (strlen(octet) > 1 && octet[0] == '0');
+    if (is_octal) {
+        break;
     }
-  }
+  });
+  SMARTLIST_FOREACH(sl, char *, octet, tor_free(octet));
+  smartlist_free(sl);
+
+  if (is_octal)
+    return 0;
 
   if (a > 255) return 0;
   if (b > 255) return 0;
