@@ -290,7 +290,7 @@ AM_COND_IF(BUILD_MODULE_RELAY,
                      [Compile with Relay feature support]))
 
 dnl Dircache module.  (This cannot be enabled or disabled independently of
-dnl the relay module.)
+dnl the relay module.  It is not listed by --list-modules for this reason.)
 AM_CONDITIONAL(BUILD_MODULE_DIRCACHE,
                [test "x$enable_module_relay" != "xno"])
 AM_COND_IF(BUILD_MODULE_DIRCACHE,
