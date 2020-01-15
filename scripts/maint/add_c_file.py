@@ -99,10 +99,14 @@ class AutomakeChunk:
     def __init__(self):
         self.lines = []
         self.kind = ""
+        self.hasBlank = False # true if we end with a blank line.
 
     def addLine(self, line):
         """
         Insert a line into this chunk while parsing the automake file.
+
+        Return True if we have just read the last line in the chunk, and
+        False otherwise.
         """
         m = self.pat.match(line)
         if m:
@@ -110,9 +114,11 @@ class AutomakeChunk:
                 raise ValueError("control line not preceded by a blank line")
             self.kind = m.group(1)
 
-        self.lines.append(line)
         if line.strip() == "":
+            self.hasBlank = True
             return True
+
+        self.lines.append(line)
 
         return False
 
@@ -145,8 +151,8 @@ class AutomakeChunk:
                           "{}{}{}\\\n".format(prespace, member, postspace))
 
     def insert_at_end(self, member, prespace, postspace):
-        lastline = self.lines[-1]
-        self.lines[-1] += '{}\\\n'.format(postspace)
+        lastline = self.lines[-1].strip()
+        self.lines[-1] = '{}{}{}\\\n'.format(prespace, lastline, postspace)
         self.lines.append("{}{}\n".format(prespace, member))
 
     def dump(self, f):
@@ -155,6 +161,9 @@ class AutomakeChunk:
             f.write(line)
             if not line.endswith("\n"):
                 f.write("\n")
+
+        if self.hasBlank:
+            f.write("\n")
 
 class ParsedAutomake:
     """A sort-of-parsed automake file, with identified chunks into which
