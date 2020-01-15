@@ -872,16 +872,6 @@ connection_dir_download_cert_failed(dir_connection_t *conn, int status)
   update_certificate_downloads(time(NULL));
 }
 
-/* Should this tor instance only use begindir for all its directory requests?
- */
-int
-directory_must_use_begindir(const or_options_t *options)
-{
-  /* Clients, onion services, and bridges must use begindir,
-   * relays and authorities do not have to */
-  return !public_server_mode(options);
-}
-
 /** Evaluate the situation and decide if we should use an encrypted
  * "begindir-style" connection for this directory request.
  * 0) If there is no DirPort, yes.
