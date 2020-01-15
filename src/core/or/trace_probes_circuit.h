@@ -147,6 +147,22 @@ TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, opened,
   TP_ARGS(const origin_circuit_t *, circ)
 )
 
+TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, establish,
+  TP_ARGS(const origin_circuit_t *, circ)
+)
+
+TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, cannibalized,
+  TP_ARGS(const origin_circuit_t *, circ)
+)
+
+TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, timeout,
+  TP_ARGS(const origin_circuit_t *, circ)
+)
+
+TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, idle_timeout,
+  TP_ARGS(const origin_circuit_t *, circ)
+)
+
 #endif /* TOR_TRACE_PROBES_CIRCUIT_H */
 
 /* Must be include after the probes declaration. */
