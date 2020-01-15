@@ -19,6 +19,7 @@
 #include "core/or/crypt_path_st.h"
 #include "core/or/extend_info_st.h"
 #include "core/or/or.h"
+#include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
 
 #define TRACEPOINT_DEFINE

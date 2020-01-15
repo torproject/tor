@@ -139,9 +139,21 @@ TRACEPOINT_EVENT_CLASS(tor_circuit, origin_circuit_t_class,
   )
 )
 
+TRACEPOINT_EVENT_CLASS(tor_circuit, or_circuit_t_class,
+  TP_ARGS(const or_circuit_t *, circ),
+  TP_FIELDS(
+    ctf_enum(tor_circuit, purpose, int, purpose, TO_CIRCUIT(circ)->purpose)
+    ctf_enum(tor_circuit, state, int, state, TO_CIRCUIT(circ)->state)
+  )
+)
+
 /*
  * Origin circuit events.
  */
+
+TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, new_origin,
+  TP_ARGS(const origin_circuit_t *, circ)
+)
 
 TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, opened,
   TP_ARGS(const origin_circuit_t *, circ)
@@ -183,6 +195,14 @@ TRACEPOINT_EVENT(tor_circuit, intermediate_onion_skin,
     ctf_array_hex(char, fingerprint, hop->extend_info->identity_digest,
                   DIGEST_LEN)
   )
+)
+
+/*
+ * OR circuit events.
+ */
+
+TRACEPOINT_EVENT_INSTANCE(tor_circuit, or_circuit_t_class, new_or,
+  TP_ARGS(const or_circuit_t *, circ)
 )
 
 /*
