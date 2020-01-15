@@ -14,6 +14,7 @@
 
 struct or_options_t;
 
+int directory_must_use_begindir(const or_options_t *options);
 int directory_fetches_from_authorities(const struct or_options_t *options);
 int directory_fetches_dir_info_early(const struct or_options_t *options);
 int directory_fetches_dir_info_later(const struct or_options_t *options);

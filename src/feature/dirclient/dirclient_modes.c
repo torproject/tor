@@ -23,6 +23,16 @@
 #include "app/config/or_options_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 
+/* Should this tor instance only use begindir for all its directory requests?
+ */
+int
+directory_must_use_begindir(const or_options_t *options)
+{
+  /* Clients, onion services, and bridges must use begindir,
+   * relays and authorities do not have to */
+  return !public_server_mode(options);
+}
+
 /** Return 1 if we fetch our directory material directly from the
  * authorities, rather than from a mirror. */
 int

@@ -19,6 +19,7 @@
 #include "core/or/reasons.h"
 #include "feature/client/entrynodes.h"
 #include "feature/dirclient/dirclient.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/dirlist.h"
