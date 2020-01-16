@@ -1611,8 +1611,7 @@ networkstatus_consensus_has_ipv6(const or_options_t* options)
  * and the printing function routerstatus_format_entry in
  * NS_CONTROL_PORT mode.
  **/
-
-static int
+STATIC int
 routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
 {
   tor_assert(tor_memeq(a->identity_digest, b->identity_digest, DIGEST_LEN));

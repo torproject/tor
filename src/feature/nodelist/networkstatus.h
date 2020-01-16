@@ -164,6 +164,8 @@ STATIC void warn_early_consensus(const networkstatus_t *c, const char *flavor,
 extern networkstatus_t *current_ns_consensus;
 extern networkstatus_t *current_md_consensus;
 #endif /* defined(TOR_UNIT_TESTS) */
+STATIC int routerstatus_has_changed(const routerstatus_t *a,
+                                    const routerstatus_t *b);
 #endif /* defined(NETWORKSTATUS_PRIVATE) */
 
 #endif /* !defined(TOR_NETWORKSTATUS_H) */
