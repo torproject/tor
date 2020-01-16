@@ -41,8 +41,6 @@ typedef enum {
   DIRIND_ANON_DIRPORT,
 } dir_indirection_t;
 
-int directory_must_use_begindir(const or_options_t *options);
-
 /**
  * A directory_request_t describes the information about a directory request
  * at the client side.  It describes what we're going to ask for, which

@@ -51,7 +51,7 @@
 #include "feature/client/entrynodes.h"
 #include "feature/control/control_events.h"
 #include "feature/dirauth/process_descs.h"
-#include "feature/dircache/dirserv.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_common.h"
 #include "feature/nodelist/describe.h"
@@ -2752,7 +2752,7 @@ update_router_have_minimum_dir_info(void)
 
   /* If paths have just become unavailable in this update. */
   if (!res && have_min_dir_info) {
-    int quiet = directory_too_idle_to_fetch_descriptors(options, now);
+    int quiet = dirclient_too_idle_to_fetch_descriptors(options, now);
     tor_log(quiet ? LOG_INFO : LOG_NOTICE, LD_DIR,
         "Our directory information is no longer up-to-date "
         "enough to build circuits: %s", dir_info_status);

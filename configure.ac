@@ -278,7 +278,7 @@ dnl Tor modules options. These options are namespaced with --disable-module-XXX
 dnl ---
 
 dnl All our modules.
-m4_define(MODULES, relay dirauth)
+m4_define(MODULES, relay dirauth dircache)
 
 dnl Relay module.
 AC_ARG_ENABLE([module-relay],
@@ -288,6 +288,14 @@ AM_CONDITIONAL(BUILD_MODULE_RELAY, [test "x$enable_module_relay" != "xno"])
 AM_COND_IF(BUILD_MODULE_RELAY,
            AC_DEFINE([HAVE_MODULE_RELAY], [1],
                      [Compile with Relay feature support]))
+
+dnl Dircache module.  (This cannot be enabled or disabled independently of
+dnl the relay module.  It is not listed by --list-modules for this reason.)
+AM_CONDITIONAL(BUILD_MODULE_DIRCACHE,
+               [test "x$enable_module_relay" != "xno"])
+AM_COND_IF(BUILD_MODULE_DIRCACHE,
+           AC_DEFINE([HAVE_MODULE_DIRCACHE], [1],
+                     [Compile with directory cache support]))
 
 dnl Directory Authority module.
 AC_ARG_ENABLE([module-dirauth],

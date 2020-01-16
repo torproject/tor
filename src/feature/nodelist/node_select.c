@@ -19,6 +19,7 @@
 #include "core/or/reasons.h"
 #include "feature/client/entrynodes.h"
 #include "feature/dirclient/dirclient.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/dirlist.h"
@@ -322,7 +323,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
 
   const int skip_or_fw = router_skip_or_reachability(options, try_ip_pref);
   const int skip_dir_fw = router_skip_dir_reachability(options, try_ip_pref);
-  const int must_have_or = directory_must_use_begindir(options);
+  const int must_have_or = dirclient_must_use_begindir(options);
 
   /* Find all the running dirservers we know about. */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
@@ -1121,7 +1122,7 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
 
   const int skip_or_fw = router_skip_or_reachability(options, try_ip_pref);
   const int skip_dir_fw = router_skip_dir_reachability(options, try_ip_pref);
-  const int must_have_or = directory_must_use_begindir(options);
+  const int must_have_or = dirclient_must_use_begindir(options);
 
   SMARTLIST_FOREACH_BEGIN(sourcelist, const dir_server_t *, d)
     {
