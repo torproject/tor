@@ -15,8 +15,9 @@ bool hs_ob_service_is_instance(const hs_service_t *service);
 
 int hs_ob_parse_config_file(hs_service_config_t *config);
 
+struct hs_subcredential_t;
 size_t hs_ob_get_subcredentials(const hs_service_config_t *config,
-                                uint8_t **subcredentials);
+                                struct hs_subcredential_t **subcredentials);
 
 #ifdef HS_OB_PRIVATE
 

@@ -140,7 +140,7 @@ hs_helper_build_hs_desc_impl(unsigned int no_ip,
   desc->plaintext_data.lifetime_sec = 3 * 60 * 60;
 
   hs_get_subcredential(&signing_kp->pubkey, &blinded_kp.pubkey,
-                    desc->subcredential);
+                    &desc->subcredential);
 
   /* Setup superencrypted data section. */
   ret = curve25519_keypair_generate(&auth_ephemeral_kp, 0);
@@ -186,7 +186,7 @@ hs_helper_build_hs_desc_impl(unsigned int no_ip,
  *  an HS. Used to decrypt descriptors in unittests. */
 void
 hs_helper_get_subcred_from_identity_keypair(ed25519_keypair_t *signing_kp,
-                                            uint8_t *subcred_out)
+                                            hs_subcredential_t *subcred_out)
 {
   ed25519_keypair_t blinded_kp;
   uint64_t current_time_period = hs_get_time_period_num(approx_time());
@@ -233,7 +233,7 @@ hs_helper_build_hs_desc_with_client_auth(
   memcpy(&desc->superencrypted_data.auth_ephemeral_pubkey,
          &auth_ephemeral_kp.pubkey, sizeof(curve25519_public_key_t));
 
-  hs_desc_build_authorized_client(desc->subcredential, client_pk,
+  hs_desc_build_authorized_client(&desc->subcredential, client_pk,
                                   &auth_ephemeral_kp.seckey,
                                   descriptor_cookie, desc_client);
   smartlist_add(desc->superencrypted_data.clients, desc_client);

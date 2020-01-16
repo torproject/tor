@@ -178,7 +178,7 @@ ob_option_parse(hs_service_config_t *config, const ob_options_t *opts)
  * least DIGEST256_LEN in size. */
 static void
 build_subcredential(const ed25519_public_key_t *pkey, uint64_t tp,
-                    uint8_t *subcredential)
+                    hs_subcredential_t *subcredential)
 {
   ed25519_public_key_t blinded_pubkey;
 
@@ -275,13 +275,12 @@ hs_ob_parse_config_file(hs_service_config_t *config)
  * Otherwise, this can't fail. */
 size_t
 hs_ob_get_subcredentials(const hs_service_config_t *config,
-                         uint8_t **subcredentials)
+                         hs_subcredential_t **subcredentials)
 {
   unsigned int num_pkeys, idx = 0;
-  uint8_t *subcreds = NULL;
+  hs_subcredential_t *subcreds = NULL;
   const int steps[3] = {0, -1, 1};
   const unsigned int num_steps = ARRAY_LENGTH(steps);
-  const size_t subcred_len = DIGEST256_LEN;
   const uint64_t tp = hs_get_time_period_num(0);
 
   tor_assert(config);
@@ -319,14 +318,13 @@ hs_ob_get_subcredentials(const hs_service_config_t *config,
    * number of time period we need to compute and finally multiplied by the
    * total number of keys we are about to process. In other words, for each
    * key, we allocate 3 subcredential slots. */
-  subcreds = tor_malloc_zero(subcred_len * num_steps * num_pkeys);
+  subcreds = tor_calloc(num_steps * num_pkeys, sizeof(hs_subcredential_t));
 
   /* For each time period step. */
   for (unsigned int i = 0; i < num_steps; i++) {
     SMARTLIST_FOREACH_BEGIN(config->ob_master_pubkeys,
                             const ed25519_public_key_t *, pkey) {
-      build_subcredential(pkey, tp + steps[i],
-                          &(subcreds[idx * subcred_len]));
+      build_subcredential(pkey, tp + steps[i], &subcreds[idx]);
       idx++;
     } SMARTLIST_FOREACH_END(pkey);
   }

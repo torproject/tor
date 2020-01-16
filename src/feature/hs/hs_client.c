@@ -641,7 +641,7 @@ send_introduce1(origin_circuit_t *intro_circ,
 
   /* Send the INTRODUCE1 cell. */
   if (hs_circ_send_introduce1(intro_circ, rend_circ, ip,
-                              desc->subcredential) < 0) {
+                              &desc->subcredential) < 0) {
     if (TO_CIRCUIT(intro_circ)->marked_for_close) {
       /* If the introduction circuit was closed, we were unable to send the
        * cell for some reasons. In any case, the intro circuit has to be
@@ -1817,7 +1817,7 @@ hs_client_decode_descriptor(const char *desc_str,
                             hs_descriptor_t **desc)
 {
   hs_desc_decode_status_t ret;
-  uint8_t subcredential[DIGEST256_LEN];
+  hs_subcredential_t subcredential;
   ed25519_public_key_t blinded_pubkey;
   hs_client_service_authorization_t *client_auth = NULL;
   curve25519_secret_key_t *client_auht_sk = NULL;
@@ -1837,13 +1837,14 @@ hs_client_decode_descriptor(const char *desc_str,
     uint64_t current_time_period = hs_get_time_period_num(0);
     hs_build_blinded_pubkey(service_identity_pk, NULL, 0, current_time_period,
                             &blinded_pubkey);
-    hs_get_subcredential(service_identity_pk, &blinded_pubkey, subcredential);
+    hs_get_subcredential(service_identity_pk, &blinded_pubkey, &
+                         subcredential);
   }
 
   /* Parse descriptor */
-  ret = hs_desc_decode_descriptor(desc_str, subcredential,
+  ret = hs_desc_decode_descriptor(desc_str, &subcredential,
                                   client_auht_sk, desc);
-  memwipe(subcredential, 0, sizeof(subcredential));
+  memwipe(&subcredential, 0, sizeof(subcredential));
   if (ret != HS_DESC_DECODE_OK) {
     goto err;
   }
@@ -2456,4 +2457,3 @@ set_hs_client_auths_map(digest256map_t *map)
 }
 
 #endif /* defined(TOR_UNIT_TESTS) */
-

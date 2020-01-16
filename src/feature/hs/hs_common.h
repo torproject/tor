@@ -214,9 +214,10 @@ const uint8_t *rend_data_get_pk_digest(const rend_data_t *rend_data,
 
 routerstatus_t *pick_hsdir(const char *desc_id, const char *desc_id_base32);
 
+struct hs_subcredential_t;
 void hs_get_subcredential(const struct ed25519_public_key_t *identity_pk,
                           const struct ed25519_public_key_t *blinded_pk,
-                          uint8_t *subcred_out);
+                          struct hs_subcredential_t *subcred_out);
 
 uint64_t hs_get_previous_time_period_num(time_t now);
 uint64_t hs_get_time_period_num(time_t now);

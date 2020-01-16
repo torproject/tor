@@ -75,7 +75,7 @@ compute_introduce_mac(const uint8_t *encoded_cell, size_t encoded_cell_len,
 static hs_ntor_intro_cell_keys_t *
 get_introduce2_key_material(const ed25519_public_key_t *auth_key,
                             const curve25519_keypair_t *enc_key,
-                            const uint8_t *subcredential,
+                            const hs_subcredential_t *subcredential,
                             const uint8_t *encrypted_section,
                             curve25519_public_key_t *client_pk)
 {
@@ -820,7 +820,7 @@ get_intro2_keys_as_ob(const hs_service_config_t *config,
                       const uint8_t *encrypted_section,
                       size_t encrypted_section_len)
 {
-  uint8_t *ob_subcreds = NULL;
+  hs_subcredential_t *ob_subcreds = NULL;
   size_t ob_num_subcreds;
   hs_ntor_intro_cell_keys_t *intro_keys = NULL;
 
@@ -835,7 +835,7 @@ get_intro2_keys_as_ob(const hs_service_config_t *config,
     /* Copy current data into a new INTRO2 cell data. We will then change the
      * subcredential in order to validate. */
     hs_cell_introduce2_data_t new_data = *data;
-    new_data.subcredential = &(ob_subcreds[idx * DIGEST256_LEN]);
+    new_data.subcredential = &ob_subcreds[idx];
     intro_keys = get_introduce2_keys_and_verify_mac(&new_data,
                                                     encrypted_section,
                                                     encrypted_section_len);

@@ -1769,7 +1769,8 @@ build_service_desc_superencrypted(const hs_service_t *service,
          sizeof(curve25519_public_key_t));
 
   /* Test that subcred is not zero because we might use it below */
-  if (BUG(fast_mem_is_zero((char*)desc->desc->subcredential, DIGEST256_LEN))) {
+  if (BUG(fast_mem_is_zero((char*)desc->desc->subcredential.subcred,
+                           DIGEST256_LEN))) {
     return -1;
   }
 
@@ -1786,7 +1787,7 @@ build_service_desc_superencrypted(const hs_service_t *service,
 
       /* Prepare the client for descriptor and then add to the list in the
        * superencrypted part of the descriptor */
-      hs_desc_build_authorized_client(desc->desc->subcredential,
+      hs_desc_build_authorized_client(&desc->desc->subcredential,
                                       &client->client_pk,
                                       &desc->auth_ephemeral_kp.seckey,
                                       desc->descriptor_cookie, desc_client);
@@ -1842,7 +1843,7 @@ build_service_desc_plaintext(const hs_service_t *service,
 
   /* Set the subcredential. */
   hs_get_subcredential(&service->keys.identity_pk, &desc->blinded_kp.pubkey,
-                       desc->desc->subcredential);
+                       &desc->desc->subcredential);
 
   plaintext = &desc->desc->plaintext_data;
 
@@ -3374,7 +3375,7 @@ service_handle_introduce2(origin_circuit_t *circ, const uint8_t *payload,
 
   /* The following will parse, decode and launch the rendezvous point circuit.
    * Both current and legacy cells are handled. */
-  if (hs_circ_handle_introduce2(service, circ, ip, desc->desc->subcredential,
+  if (hs_circ_handle_introduce2(service, circ, ip, &desc->desc->subcredential,
                                 payload, payload_len) < 0) {
     goto err;
   }
