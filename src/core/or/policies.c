@@ -933,49 +933,6 @@ fascist_firewall_choose_address_ipv4h(uint32_t ipv4h_addr,
                                        pref_ipv6, ap);
 }
 
-/* Some microdescriptor consensus methods have no IPv6 addresses in rs: they
- * are in the microdescriptors. For these consensus methods, we can't rely on
- * the node's IPv6 address until its microdescriptor is available (when using
- * microdescs).
- * But for bridges, rewrite_node_address_for_bridge() updates node->ri with
- * the configured address, so we can trust bridge addresses.
- * (Bridges could gain an IPv6 address if their microdescriptor arrives, but
- * this will never be their preferred address: that is in the config.)
- * Returns true if the node needs a microdescriptor for its IPv6 address, and
- * false if the addresses in the node are already up-to-date.
- */
-static int
-node_awaiting_ipv6(const or_options_t* options, const node_t *node)
-{
-  tor_assert(node);
-
-  /* There's no point waiting for an IPv6 address if we'd never use it */
-  if (!fascist_firewall_use_ipv6(options)) {
-    return 0;
-  }
-
-  /* If the node has an IPv6 address, we're not waiting */
-  if (node_has_ipv6_addr(node)) {
-    return 0;
-  }
-
-  /* If the current consensus method and flavour has IPv6 addresses, we're not
-   * waiting */
-  if (networkstatus_consensus_has_ipv6(options)) {
-    return 0;
-  }
-
-  /* Bridge clients never use the address from a bridge's md, so there's no
-   * need to wait for it. */
-  if (node_is_a_configured_bridge(node)) {
-    return 0;
-  }
-
-  /* We are waiting if we_use_microdescriptors_for_circuits() and we have no
-   * md. */
-  return (!node->md && we_use_microdescriptors_for_circuits(options));
-}
-
 /** Like fascist_firewall_choose_address_base(), but takes <b>rs</b>.
  * Consults the corresponding node, then falls back to rs if node is NULL.
  * This should only happen when there's no valid consensus, and rs doesn't
@@ -998,7 +955,7 @@ fascist_firewall_choose_address_rs(const routerstatus_t *rs,
   const or_options_t *options = get_options();
   const node_t *node = node_get_by_id(rs->identity_digest);
 
-  if (node && !node_awaiting_ipv6(options, node)) {
+  if (node) {
     fascist_firewall_choose_address_node(node, fw_connection, pref_only, ap);
   } else {
     /* There's no node-specific IPv6 preference, so use the generic IPv6
@@ -1111,17 +1068,6 @@ fascist_firewall_choose_address_node(const node_t *node,
   }
 
   node_assert_ok(node);
-  /* Calling fascist_firewall_choose_address_node() when the node is missing
-   * IPv6 information breaks IPv6-only clients.
-   * If the node is a hard-coded fallback directory or authority, call
-   * fascist_firewall_choose_address_rs() on the fake (hard-coded) routerstatus
-   * for the node.
-   * If it is not hard-coded, check that the node has a microdescriptor, full
-   * descriptor (routerinfo), or is one of our configured bridges before
-   * calling this function. */
-  if (BUG(node_awaiting_ipv6(get_options(), node))) {
-    return;
-  }
 
   const int pref_ipv6_node = (fw_connection == FIREWALL_OR_CONNECTION
                               ? node_ipv6_or_preferred(node)

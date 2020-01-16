@@ -35,7 +35,6 @@ char *routerstatus_format_entry(
                               const char *version,
                               const char *protocols,
                               routerstatus_format_type_t format,
-                              int consensus_method,
                               const vote_routerstatus_t *vrs);
 
 #endif /* !defined(TOR_FMT_ROUTERSTATUS_H) */

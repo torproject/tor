@@ -384,7 +384,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     rsf = routerstatus_format_entry(&vrs->status,
                                     vrs->version, vrs->protocols,
                                     NS_V3_VOTE,
-                                    ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD,
                                     vrs);
     if (rsf)
       smartlist_add(chunks, rsf);
@@ -1540,14 +1539,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
     consensus_method = MAX_SUPPORTED_CONSENSUS_METHOD;
   }
 
-  if (consensus_method >= MIN_METHOD_FOR_INIT_BW_WEIGHTS_ONE) {
+  {
     /* It's smarter to initialize these weights to 1, so that later on,
      * we can't accidentally divide by zero. */
     G = M = E = D = 1;
     T = 4;
-  } else {
-    /* ...but originally, they were set to zero. */
-    G = M = E = D = T = 0;
   }
 
   /* Compute medians of time-related things, and figure out how many
@@ -2248,7 +2244,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         /* Okay!! Now we can write the descriptor... */
         /*     First line goes into "buf". */
         buf = routerstatus_format_entry(&rs_out, NULL, NULL,
-                                        rs_format, consensus_method, NULL);
+                                        rs_format, NULL);
         if (buf)
           smartlist_add(chunks, buf);
       }
@@ -2268,8 +2264,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         smartlist_add_strdup(chunks, chosen_version);
       }
       smartlist_add_strdup(chunks, "\n");
-      if (chosen_protocol_list &&
-          consensus_method >= MIN_METHOD_FOR_RS_PROTOCOLS) {
+      if (chosen_protocol_list) {
         smartlist_add_asprintf(chunks, "pr %s\n", chosen_protocol_list);
       }
       /*     Now the weight line. */
@@ -3805,13 +3800,6 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
     smartlist_add_asprintf(chunks, "ntor-onion-key %s", kbuf);
   }
 
-  /* We originally put a lines in the micrdescriptors, but then we worked out
-   * that we needed them in the microdesc consensus. See #20916. */
-  if (consensus_method < MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC &&
-      !tor_addr_is_null(&ri->ipv6_addr) && ri->ipv6_orport)
-    smartlist_add_asprintf(chunks, "a %s\n",
-                           fmt_addrport(&ri->ipv6_addr, ri->ipv6_orport));
-
   if (family) {
     if (consensus_method < MIN_METHOD_FOR_CANONICAL_FAMILIES_IN_MICRODESCS) {
       smartlist_add_asprintf(chunks, "family %s\n", family);
@@ -3917,8 +3905,7 @@ static const struct consensus_method_range_t {
   int low;
   int high;
 } microdesc_consensus_methods[] = {
-  {MIN_SUPPORTED_CONSENSUS_METHOD, MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC - 1},
-  {MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC,
+  {MIN_SUPPORTED_CONSENSUS_METHOD,
    MIN_METHOD_FOR_CANONICAL_FAMILIES_IN_MICRODESCS - 1},
   {MIN_METHOD_FOR_CANONICAL_FAMILIES_IN_MICRODESCS,
    MAX_SUPPORTED_CONSENSUS_METHOD},

@@ -1577,32 +1577,6 @@ networkstatus_consensus_is_already_downloading(const char *resource)
   return answer;
 }
 
-/* Does the current, reasonably live consensus have IPv6 addresses?
- * Returns 1 if there is a reasonably live consensus and its consensus method
- * includes IPv6 addresses in the consensus.
- * Otherwise, if there is no consensus, or the method does not include IPv6
- * addresses, returns 0. */
-int
-networkstatus_consensus_has_ipv6(const or_options_t* options)
-{
-  const networkstatus_t *cons = networkstatus_get_reasonably_live_consensus(
-                                                    approx_time(),
-                                                    usable_consensus_flavor());
-
-  /* If we have no consensus, we have no IPv6 in it */
-  if (!cons) {
-    return 0;
-  }
-
-  /* Different flavours of consensus gained IPv6 at different times */
-  if (we_use_microdescriptors_for_circuits(options)) {
-    return
-       cons->consensus_method >= MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS;
-  } else {
-    return 1;
-  }
-}
-
 /** Given two router status entries for the same router identity, return 1 if
  * if the contents have changed between them. Otherwise, return 0. */
 static int
@@ -2364,7 +2338,6 @@ char *
 networkstatus_getinfo_helper_single(const routerstatus_t *rs)
 {
   return routerstatus_format_entry(rs, NULL, NULL, NS_CONTROL_PORT,
-                                   ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD,
                                    NULL);
 }
 
