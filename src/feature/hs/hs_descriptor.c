@@ -1018,12 +1018,6 @@ desc_encode_v3(const hs_descriptor_t *desc,
   tor_assert(encoded_out);
   tor_assert(desc->plaintext_data.version == 3);
 
-  /* This is impossible; this is a member of desc.
-  if (BUG(desc->subcredential == NULL)) {
-    goto err;
-  }
-  */
-
   /* Build the non-encrypted values. */
   {
     char *encoded_cert;
