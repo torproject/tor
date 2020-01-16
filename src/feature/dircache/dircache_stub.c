@@ -43,22 +43,6 @@ consdiffmgr_enable_background_compression(void)
 {
 }
 
-void
-dirserv_set_cached_consensus_networkstatus(const char *networkstatus,
-                                           size_t networkstatus_len,
-                                           const char *flavor_name,
-                                           const common_digests_t *digests,
-                                           const uint8_t *sha3_as_signed,
-                                           time_t published)
-{
-  (void)networkstatus;
-  (void)networkstatus_len;
-  (void)flavor_name;
-  (void)digests;
-  (void)sha3_as_signed;
-  (void)published;
-}
-
 int
 consdiffmgr_add_consensus(const char *consensus,
                           size_t consensus_len,

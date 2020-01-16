@@ -99,7 +99,7 @@ void dirserv_set_cached_consensus_networkstatus(const char *consensus,
   ((void)(opt), 0)
 #define directory_caches_dir_info(opt) \
   ((void)(opt), 0)
-#define directory_permits_begindir_request(opt) \
+#define directory_permits_begindir_requests(opt) \
   ((void)(opt), 0)
 #define dirserv_get_consensus(flav) \
   ((void)(flav), NULL)
