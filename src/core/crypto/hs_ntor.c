@@ -453,6 +453,28 @@ hs_ntor_service_get_introduce1_keys(
                     const hs_subcredential_t *subcredential,
                     hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out)
 {
+  return hs_ntor_service_get_introduce1_keys_multi(
+                             intro_auth_pubkey,
+                             intro_enc_keypair,
+                             client_ephemeral_enc_pubkey,
+                             1,
+                             subcredential,
+                             hs_ntor_intro_cell_keys_out);
+}
+
+/**
+ * As hs_ntor_service_get_introduce1_keys(), but take multiple subcredentials
+ * as input, and yield multiple sets of keys as output.
+ **/
+int
+hs_ntor_service_get_introduce1_keys_multi(
+            const struct ed25519_public_key_t *intro_auth_pubkey,
+            const struct curve25519_keypair_t *intro_enc_keypair,
+            const struct curve25519_public_key_t *client_ephemeral_enc_pubkey,
+            int n_subcredentials,
+            const hs_subcredential_t *subcredentials,
+            hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out)
+{
   int bad = 0;
   uint8_t secret_input[INTRO_SECRET_HS_INPUT_LEN];
   uint8_t dh_result[CURVE25519_OUTPUT_LEN];
@@ -460,7 +482,8 @@ hs_ntor_service_get_introduce1_keys(
   tor_assert(intro_auth_pubkey);
   tor_assert(intro_enc_keypair);
   tor_assert(client_ephemeral_enc_pubkey);
-  tor_assert(subcredential);
+  tor_assert(n_subcredentials >= 1);
+  tor_assert(subcredentials);
   tor_assert(hs_ntor_intro_cell_keys_out);
 
   /* Compute EXP(X, b) */
@@ -476,13 +499,16 @@ hs_ntor_service_get_introduce1_keys(
                             secret_input);
   bad |= safe_mem_is_zero(secret_input, CURVE25519_OUTPUT_LEN);
 
-  /* Get ENC_KEY and MAC_KEY! */
-  get_introduce1_key_material(secret_input, subcredential,
-                              hs_ntor_intro_cell_keys_out);
+  for (int i = 0; i < n_subcredentials; ++i) {
+    /* Get ENC_KEY and MAC_KEY! */
+    get_introduce1_key_material(secret_input, &subcredentials[i],
+                                &hs_ntor_intro_cell_keys_out[i]);
+  }
 
   memwipe(secret_input,  0, sizeof(secret_input));
   if (bad) {
-    memwipe(hs_ntor_intro_cell_keys_out, 0, sizeof(hs_ntor_intro_cell_keys_t));
+    memwipe(hs_ntor_intro_cell_keys_out, 0,
+            sizeof(hs_ntor_intro_cell_keys_t) * n_subcredentials);
   }
 
   return bad ? -1 : 0;
