@@ -190,7 +190,7 @@ test_get_subcredentials(void *arg)
   ed25519_keypair_generate(&onion_addr_kp_1, 0);
   smartlist_add(config.ob_master_pubkeys, &onion_addr_kp_1.pubkey);
 
-  uint8_t *subcreds = NULL;
+  hs_subcredential_t *subcreds = NULL;
   size_t num = hs_ob_get_subcredentials(&config, &subcreds);
   tt_uint_op(num, OP_EQ, 3);
 
@@ -200,14 +200,14 @@ test_get_subcredentials(void *arg)
   const int steps[3] = {0, -1, 1};
 
   for (unsigned int i = 0; i < num; i++) {
-    uint8_t subcredential[DIGEST256_LEN];
+    hs_subcredential_t subcredential;
     ed25519_public_key_t blinded_pubkey;
     hs_build_blinded_pubkey(&onion_addr_kp_1.pubkey, NULL, 0, tp + steps[i],
                             &blinded_pubkey);
     hs_get_subcredential(&onion_addr_kp_1.pubkey, &blinded_pubkey,
-                         subcredential);
-    tt_mem_op(&(subcreds[i * sizeof(subcredential)]), OP_EQ, subcredential,
-              sizeof(subcredential));
+                         &subcredential);
+    tt_mem_op(subcreds[i].subcred, OP_EQ, subcredential.subcred,
+              SUBCRED_LEN);
   }
 
  done:
@@ -228,4 +228,3 @@ struct testcase_t hs_ob_tests[] = {
 
   END_OF_TESTCASES
 };
-

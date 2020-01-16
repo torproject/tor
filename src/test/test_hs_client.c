@@ -416,9 +416,10 @@ test_client_pick_intro(void *arg)
     const hs_descriptor_t *fetched_desc =
       hs_cache_lookup_as_client(&service_kp.pubkey);
     tt_assert(fetched_desc);
-    tt_mem_op(fetched_desc->subcredential, OP_EQ, desc->subcredential,
-              DIGEST256_LEN);
-    tt_assert(!fast_mem_is_zero((char*)fetched_desc->subcredential,
+    tt_mem_op(fetched_desc->subcredential.subcred,
+              OP_EQ, desc->subcredential.subcred,
+              SUBCRED_LEN);
+    tt_assert(!fast_mem_is_zero((char*)fetched_desc->subcredential.subcred,
                                DIGEST256_LEN));
     tor_free(encoded);
   }

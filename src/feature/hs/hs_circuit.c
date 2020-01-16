@@ -578,7 +578,7 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
 static int
 setup_introduce1_data(const hs_desc_intro_point_t *ip,
                       const node_t *rp_node,
-                      const uint8_t *subcredential,
+                      const hs_subcredential_t *subcredential,
                       hs_cell_introduce1_data_t *intro1_data)
 {
   int ret = -1;
@@ -966,7 +966,7 @@ int
 hs_circ_handle_introduce2(const hs_service_t *service,
                           const origin_circuit_t *circ,
                           hs_service_intro_point_t *ip,
-                          const uint8_t *subcredential,
+                          const hs_subcredential_t *subcredential,
                           const uint8_t *payload, size_t payload_len)
 {
   int ret = -1;
@@ -1092,7 +1092,7 @@ int
 hs_circ_send_introduce1(origin_circuit_t *intro_circ,
                         origin_circuit_t *rend_circ,
                         const hs_desc_intro_point_t *ip,
-                        const uint8_t *subcredential)
+                        const hs_subcredential_t *subcredential)
 {
   int ret = -1;
   ssize_t payload_len;

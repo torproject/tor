@@ -808,12 +808,12 @@ hs_parse_address_impl(const char *address, ed25519_public_key_t *key_out,
 }
 
 /** Using the given identity public key and a blinded public key, compute the
- * subcredential and put it in subcred_out (must be of size DIGEST256_LEN).
+ * subcredential and put it in subcred_out.
  * This can't fail. */
 void
 hs_get_subcredential(const ed25519_public_key_t *identity_pk,
                      const ed25519_public_key_t *blinded_pk,
-                     uint8_t *subcred_out)
+                     hs_subcredential_t *subcred_out)
 {
   uint8_t credential[DIGEST256_LEN];
   crypto_digest_t *digest;
@@ -841,7 +841,8 @@ hs_get_subcredential(const ed25519_public_key_t *identity_pk,
                           sizeof(credential));
   crypto_digest_add_bytes(digest, (const char *) blinded_pk->pubkey,
                           ED25519_PUBKEY_LEN);
-  crypto_digest_get_digest(digest, (char *) subcred_out, DIGEST256_LEN);
+  crypto_digest_get_digest(digest, (char *) subcred_out->subcred,
+                           SUBCRED_LEN);
   crypto_digest_free(digest);
 
   memwipe(credential, 0, sizeof(credential));

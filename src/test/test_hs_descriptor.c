@@ -221,7 +221,7 @@ test_decode_descriptor(void *arg)
   hs_descriptor_t *desc = NULL;
   hs_descriptor_t *decoded = NULL;
   hs_descriptor_t *desc_no_ip = NULL;
-  uint8_t subcredential[DIGEST256_LEN];
+  hs_subcredential_t subcredential;
 
   (void) arg;
 
@@ -230,10 +230,10 @@ test_decode_descriptor(void *arg)
   desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
 
   hs_helper_get_subcred_from_identity_keypair(&signing_kp,
-                                              subcredential);
+                                              &subcredential);
 
   /* Give some bad stuff to the decoding function. */
-  ret = hs_desc_decode_descriptor("hladfjlkjadf", subcredential,
+  ret = hs_desc_decode_descriptor("hladfjlkjadf", &subcredential,
                                   NULL, &decoded);
   tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
 
@@ -241,7 +241,7 @@ test_decode_descriptor(void *arg)
   tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
   tt_assert(encoded);
 
-  ret = hs_desc_decode_descriptor(encoded, subcredential, NULL, &decoded);
+  ret = hs_desc_decode_descriptor(encoded, &subcredential, NULL, &decoded);
   tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
   tt_assert(decoded);
 
@@ -253,7 +253,7 @@ test_decode_descriptor(void *arg)
     ret = ed25519_keypair_generate(&signing_kp_no_ip, 0);
     tt_int_op(ret, OP_EQ, 0);
     hs_helper_get_subcred_from_identity_keypair(&signing_kp_no_ip,
-                                                subcredential);
+                                                &subcredential);
     desc_no_ip = hs_helper_build_hs_desc_no_ip(&signing_kp_no_ip);
     tt_assert(desc_no_ip);
     tor_free(encoded);
@@ -262,7 +262,7 @@ test_decode_descriptor(void *arg)
     tt_int_op(ret, OP_EQ, 0);
     tt_assert(encoded);
     hs_descriptor_free(decoded);
-    ret = hs_desc_decode_descriptor(encoded, subcredential, NULL, &decoded);
+    ret = hs_desc_decode_descriptor(encoded, &subcredential, NULL, &decoded);
     tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
     tt_assert(decoded);
   }
@@ -286,14 +286,14 @@ test_decode_descriptor(void *arg)
            &auth_ephemeral_kp.pubkey, CURVE25519_PUBKEY_LEN);
 
     hs_helper_get_subcred_from_identity_keypair(&signing_kp,
-                                                subcredential);
+                                                &subcredential);
 
     /* Build and add the auth client to the descriptor. */
     clients = desc->superencrypted_data.clients;
     if (!clients) {
       clients = smartlist_new();
     }
-    hs_desc_build_authorized_client(subcredential,
+    hs_desc_build_authorized_client(&subcredential,
                                     &client_kp.pubkey,
                                     &auth_ephemeral_kp.seckey,
                                     descriptor_cookie, client);
@@ -315,21 +315,21 @@ test_decode_descriptor(void *arg)
 
     /* If we do not have the client secret key, the decoding must fail. */
     hs_descriptor_free(decoded);
-    ret = hs_desc_decode_descriptor(encoded, subcredential,
+    ret = hs_desc_decode_descriptor(encoded, &subcredential,
                                     NULL, &decoded);
     tt_int_op(ret, OP_EQ, HS_DESC_DECODE_NEED_CLIENT_AUTH);
     tt_assert(!decoded);
 
     /* If we have an invalid client secret key, the decoding must fail. */
     hs_descriptor_free(decoded);
-    ret = hs_desc_decode_descriptor(encoded, subcredential,
+    ret = hs_desc_decode_descriptor(encoded, &subcredential,
                                     &invalid_client_kp.seckey, &decoded);
     tt_int_op(ret, OP_EQ, HS_DESC_DECODE_BAD_CLIENT_AUTH);
     tt_assert(!decoded);
 
     /* If we have the client secret key, the decoding must succeed and the
      * decoded descriptor must be correct. */
-    ret = hs_desc_decode_descriptor(encoded, subcredential,
+    ret = hs_desc_decode_descriptor(encoded, &subcredential,
                                     &client_kp.seckey, &decoded);
     tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
     tt_assert(decoded);
@@ -762,7 +762,7 @@ test_build_authorized_client(void *arg)
     "07d087f1d8c68393721f6e70316d3b29";
   const char client_pubkey_b16[] =
     "8c1298fa6050e372f8598f6deca32e27b0ad457741422c2629ebb132cf7fae37";
-  uint8_t subcredential[DIGEST256_LEN];
+  hs_subcredential_t subcredential;
   char *mem_op_hex_tmp=NULL;
 
   (void) arg;
@@ -774,7 +774,7 @@ test_build_authorized_client(void *arg)
   tt_int_op(ret, OP_EQ, 0);
   curve25519_public_key_generate(&client_auth_pk, &client_auth_sk);
 
-  memset(subcredential, 42, sizeof(subcredential));
+  memset(subcredential.subcred, 42, sizeof(subcredential));
 
   desc_client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
 
@@ -795,7 +795,7 @@ test_build_authorized_client(void *arg)
 
   testing_enable_prefilled_rng("\x01", 1);
 
-  hs_desc_build_authorized_client(subcredential,
+  hs_desc_build_authorized_client(&subcredential,
                                   &client_auth_pk, &auth_ephemeral_sk,
                                   descriptor_cookie, desc_client);
 

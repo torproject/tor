@@ -170,7 +170,7 @@ get_rendezvous1_key_material(const uint8_t *rend_secret_hs_input,
  * necessary key material, and return 0. */
 static void
 get_introduce1_key_material(const uint8_t *secret_input,
-                        const uint8_t *subcredential,
+                        const hs_subcredential_t *subcredential,
                         hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out)
 {
   uint8_t keystream[CIPHER256_KEY_LEN + DIGEST256_LEN];
@@ -181,7 +181,7 @@ get_introduce1_key_material(const uint8_t *secret_input,
   /* Let's build info */
   ptr = info_blob;
   APPEND(ptr, M_HSEXPAND, strlen(M_HSEXPAND));
-  APPEND(ptr, subcredential, DIGEST256_LEN);
+  APPEND(ptr, subcredential->subcred, SUBCRED_LEN);
   tor_assert(ptr == info_blob + sizeof(info_blob));
 
   /* Let's build the input to the KDF */
@@ -317,7 +317,7 @@ hs_ntor_client_get_introduce1_keys(
                       const ed25519_public_key_t *intro_auth_pubkey,
                       const curve25519_public_key_t *intro_enc_pubkey,
                       const curve25519_keypair_t *client_ephemeral_enc_keypair,
-                      const uint8_t *subcredential,
+                      const hs_subcredential_t *subcredential,
                       hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out)
 {
   int bad = 0;
@@ -450,7 +450,7 @@ hs_ntor_service_get_introduce1_keys(
                     const ed25519_public_key_t *intro_auth_pubkey,
                     const curve25519_keypair_t *intro_enc_keypair,
                     const curve25519_public_key_t *client_ephemeral_enc_pubkey,
-                    const uint8_t *subcredential,
+                    const hs_subcredential_t *subcredential,
                     hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out)
 {
   int bad = 0;

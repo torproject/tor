@@ -35,11 +35,20 @@ typedef struct hs_ntor_rend_cell_keys_t {
   uint8_t ntor_key_seed[DIGEST256_LEN];
 } hs_ntor_rend_cell_keys_t;
 
+#define SUBCRED_LEN DIGEST256_LEN
+
+/**
+ * A 'subcredential' used to prove knowledge of a hidden service.
+ **/
+typedef struct hs_subcredential_t {
+  uint8_t subcred[SUBCRED_LEN];
+} hs_subcredential_t;
+
 int hs_ntor_client_get_introduce1_keys(
               const struct ed25519_public_key_t *intro_auth_pubkey,
               const struct curve25519_public_key_t *intro_enc_pubkey,
               const struct curve25519_keypair_t *client_ephemeral_enc_keypair,
-              const uint8_t *subcredential,
+              const hs_subcredential_t *subcredential,
               hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out);
 
 int hs_ntor_client_get_rendezvous1_keys(
@@ -53,7 +62,7 @@ int hs_ntor_service_get_introduce1_keys(
             const struct ed25519_public_key_t *intro_auth_pubkey,
             const struct curve25519_keypair_t *intro_enc_keypair,
             const struct curve25519_public_key_t *client_ephemeral_enc_pubkey,
-            const uint8_t *subcredential,
+            const hs_subcredential_t *subcredential,
             hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out);
 
 int hs_ntor_service_get_rendezvous1_keys(
