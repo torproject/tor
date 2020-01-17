@@ -1282,21 +1282,21 @@ test_nodelist_routerstatus_has_changed(void *arg)
   STMT_END
 #define ASSERT_SAME() \
   STMT_BEGIN                                                    \
-    tt_assert(! routerstatus_has_changed(&rs_orig, &rs));       \
+    tt_assert(! routerstatus_has_visibly_changed(&rs_orig, &rs));       \
     FORMAT();                                                   \
     tt_str_op(fmt_orig, OP_EQ, fmt);                            \
     COPY();                                                     \
   STMT_END
 #define ASSERT_CHANGED() \
   STMT_BEGIN                                                    \
-    tt_assert(routerstatus_has_changed(&rs_orig, &rs));         \
+    tt_assert(routerstatus_has_visibly_changed(&rs_orig, &rs));         \
     FORMAT();                                                   \
     tt_str_op(fmt_orig, OP_NE, fmt);                            \
     COPY();                                                     \
   STMT_END
 #define ASSERT_CHANGED_NO_FORMAT() \
   STMT_BEGIN                                                    \
-    tt_assert(routerstatus_has_changed(&rs_orig, &rs));         \
+    tt_assert(routerstatus_has_visibly_changed(&rs_orig, &rs));         \
     COPY();                                                     \
   STMT_END
 
@@ -1432,6 +1432,6 @@ struct testcase_t nodelist_tests[] = {
   NODE(routerstatus_describe, 0),
   NODE(extend_info_describe, 0),
   NODE(router_get_verbose_nickname, 0),
-  NODE(routerstatus_has_changed, 0),
+  NODE(routerstatus_has_visibly_changed, 0),
   END_OF_TESTCASES
 };

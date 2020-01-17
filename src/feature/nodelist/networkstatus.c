@@ -1612,7 +1612,7 @@ networkstatus_consensus_has_ipv6(const or_options_t* options)
  * NS_CONTROL_PORT mode.
  **/
 STATIC int
-routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
+routerstatus_has_visibly_changed(const routerstatus_t *a, const routerstatus_t *b)
 {
   tor_assert(tor_memeq(a->identity_digest, b->identity_digest, DIGEST_LEN));
 
@@ -1670,7 +1670,7 @@ notify_control_networkstatus_changed(const networkstatus_t *old_c,
                      tor_memcmp(rs_old->identity_digest,
                             rs_new->identity_digest, DIGEST_LEN),
                      smartlist_add(changed, (void*) rs_new)) {
-    if (routerstatus_has_changed(rs_old, rs_new))
+    if (routerstatus_has_visibly_changed(rs_old, rs_new))
       smartlist_add(changed, (void*)rs_new);
   } SMARTLIST_FOREACH_JOIN_END(rs_old, rs_new);
 
