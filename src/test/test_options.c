@@ -991,19 +991,6 @@ test_options_validate__authdir(void *ignored)
             "but ClientOnly also set.");
   tor_free(msg);
 
-  free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3);
-  /* We have to set this value manually, because it won't parse */
-  get_dirauth_options(tdata->opt)->MinUptimeHidServDirectoryV2 = -1;
-  mock_clean_saved_logs();
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg("MinUptimeHidServDirectoryV2 "
-                 "option must be at least 0 seconds. Changing to 0.\n");
-  tt_int_op(get_dirauth_options(tdata->opt)->MinUptimeHidServDirectoryV2,
-            OP_EQ, 0);
-  tor_free(msg);
-
  done:
   teardown_capture_of_logs();
   //  sandbox_free_getaddrinfo_cache();
@@ -3878,13 +3865,6 @@ test_options_validate__testing_options(void *ignored)
   expect_log_msg( #name " is insanely high.\n"); \
   tor_free(msg); \
   STMT_END
-
-  TEST_TESTING_OPTION(TestingAuthDirTimeToLearnReachability,
-                      get_dirauth_options, -1, 8000,
-                      "must be non-negative.", ENABLE_AUTHORITY_V3);
-  TEST_TESTING_OPTION(TestingAuthDirTimeToLearnReachability,
-                      get_dirauth_options, -1, 8000,
-                      "must be non-negative.", ENABLE_AUTHORITY_BRIDGE);
 
   TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, , -1, 3601,
                       "must be non-negative.", "");

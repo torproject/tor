@@ -403,12 +403,6 @@ dirauth_options_pre_normalize(void *arg, char **msg_out)
                                   "AuthDirGuardBWGuarantee", msg_out) < 0)
     return -1;
 
-  if (options->MinUptimeHidServDirectoryV2 < 0) {
-    log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
-             "least 0 seconds. Changing to 0.");
-    options->MinUptimeHidServDirectoryV2 = 0;
-  }
-
   return 0;
 }
 
@@ -437,9 +431,7 @@ dirauth_options_validate(const void *arg, char **msg)
   t = format_recommended_version_list(options->RecommendedServerVersions, 1);
   tor_free(t);
 
-  if (options->TestingAuthDirTimeToLearnReachability < 0) {
-    REJECT("TestingAuthDirTimeToLearnReachability must be non-negative.");
-  } else if (options->TestingAuthDirTimeToLearnReachability > 2*60*60) {
+  if (options->TestingAuthDirTimeToLearnReachability > 2*60*60) {
     COMPLAIN("TestingAuthDirTimeToLearnReachability is insanely high.");
   }
 
