@@ -122,11 +122,6 @@ struct or_options_t {
    * [][0] is IPv4, [][1] is IPv6
    */
   tor_addr_t OutboundBindAddresses[OUTBOUND_ADDR_MAX][2];
-  /** Directory server only: which versions of
-   * Tor should we tell users to run? */
-  struct config_line_t *RecommendedVersions;
-  struct config_line_t *RecommendedClientVersions;
-  struct config_line_t *RecommendedServerVersions;
   /** Whether dirservers allow router descriptors with private IPs. */
   int DirAllowPrivateAddresses;
   /** Whether routers accept EXTEND cells to routers with private IPs. */
@@ -201,9 +196,6 @@ struct or_options_t {
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int V3AuthoritativeDir; /**< Boolean: is this an authoritative directory
                            * for version 3 directories? */
-  int VersioningAuthoritativeDir; /**< Boolean: is this an authoritative
-                                   * directory that's willing to recommend
-                                   * versions? */
   int BridgeAuthoritativeDir; /**< Boolean: is this an authoritative directory
                                * that aggregates bridge descriptors? */
 
@@ -273,9 +265,6 @@ struct or_options_t {
   int PublishHidServDescriptors;
   int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
   int FetchHidServDescriptors; /**< and hidden service descriptors? */
-
-  int MinUptimeHidServDirectoryV2; /**< As directory authority, accept hidden
-                                    * service directories after what time? */
 
   int FetchUselessDescriptors; /**< Do we fetch non-running descriptors too? */
   int AllDirActionsPrivate; /**< Should every directory action be sent
@@ -478,19 +467,6 @@ struct or_options_t {
   struct smartlist_t *AuthDirInvalidCCs;
   struct smartlist_t *AuthDirRejectCCs;
   /**@}*/
-
-  int AuthDirListBadExits; /**< True iff we should list bad exits,
-                            * and vote for all other exits as good. */
-  int AuthDirHasIPv6Connectivity; /**< Boolean: are we on IPv6?  */
-  int AuthDirPinKeys; /**< Boolean: Do we enforce key-pinning? */
-
-  /** If non-zero, always vote the Fast flag for any relay advertising
-   * this amount of capacity or more. */
-  uint64_t AuthDirFastGuarantee;
-
-  /** If non-zero, this advertised capacity or more is always sufficient
-   * to satisfy the bandwidth requirement for the Guard flag. */
-  uint64_t AuthDirGuardBWGuarantee;
 
   char *AccountingStart; /**< How long is the accounting interval, and when
                           * does it start? */
@@ -708,14 +684,6 @@ struct or_options_t {
   /** Location of guardfraction file */
   char *GuardfractionFile;
 
-  /** Authority only: key=value pairs that we add to our networkstatus
-   * consensus vote on the 'params' line. */
-  char *ConsensusParams;
-
-  /** Authority only: minimum number of measured bandwidths we must see
-   * before we only believe measured bandwidths to assign flags. */
-  int MinMeasuredBWsForAuthToIgnoreAdvertised;
-
   /** The length of time that we think an initial consensus should be fresh.
    * Only altered on testing networks. */
   int TestingV3AuthInitialVotingInterval;
@@ -731,11 +699,6 @@ struct or_options_t {
   /** Offset in seconds added to the starting time for consensus
       voting. Only altered on testing networks. */
   int TestingV3AuthVotingStartOffset;
-
-  /** If an authority has been around for less than this amount of time, it
-   * does not believe its reachability information is accurate.  Only
-   * altered on testing networks. */
-  int TestingAuthDirTimeToLearnReachability;
 
   /** Schedule for when servers should download things in general.  Only
    * altered on testing networks. */
@@ -809,27 +772,6 @@ struct or_options_t {
    * couple of other configuration options and allow to change the values
    * of certain configuration options. */
   int TestingTorNetwork;
-
-  /** Minimum value for the Exit flag threshold on testing networks. */
-  uint64_t TestingMinExitFlagThreshold;
-
-  /** Minimum value for the Fast flag threshold on testing networks. */
-  uint64_t TestingMinFastFlagThreshold;
-
-  /** Relays in a testing network which should be voted Exit
-   * regardless of exit policy. */
-  struct routerset_t *TestingDirAuthVoteExit;
-  int TestingDirAuthVoteExitIsStrict;
-
-  /** Relays in a testing network which should be voted Guard
-   * regardless of uptime and bandwidth. */
-  struct routerset_t *TestingDirAuthVoteGuard;
-  int TestingDirAuthVoteGuardIsStrict;
-
-  /** Relays in a testing network which should be voted HSDir
-   * regardless of uptime and DirPort. */
-  struct routerset_t *TestingDirAuthVoteHSDir;
-  int TestingDirAuthVoteHSDirIsStrict;
 
   /** Enable CONN_BW events.  Only altered on testing networks. */
   int TestingEnableConnBwEvent;
@@ -1009,23 +951,12 @@ struct or_options_t {
    */
   uint64_t MaxUnparseableDescSizeToLog;
 
-  /** Bool (default: 1): Switch for the shared random protocol. Only
-   * relevant to a directory authority. If off, the authority won't
-   * participate in the protocol. If on (default), a flag is added to the
-   * vote indicating participation. */
-  int AuthDirSharedRandomness;
-
   /** If 1, we skip all OOS checks. */
   int DisableOOSCheck;
 
   /** Autobool: Should we include Ed25519 identities in extend2 cells?
    * If -1, we should do whatever the consensus parameter says. */
   int ExtendByEd25519ID;
-
-  /** Bool (default: 1): When testing routerinfos as a directory authority,
-   * do we enforce Ed25519 identity match? */
-  /* NOTE: remove this option someday. */
-  int AuthDirTestEd25519LinkKeys;
 
   /** Bool (default: 0): Tells if a %include was used on torrc */
   int IncludeUsed;

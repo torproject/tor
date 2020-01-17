@@ -9,6 +9,7 @@
 #define BWAUTH_PRIVATE
 #define CONFIG_PRIVATE
 #define CONTROL_GETINFO_PRIVATE
+#define DIRAUTH_SYS_PRIVATE
 #define DIRCACHE_PRIVATE
 #define DIRCLIENT_PRIVATE
 #define DIRVOTE_PRIVATE
@@ -33,6 +34,7 @@
 #include "feature/client/entrynodes.h"
 #include "feature/control/control_getinfo.h"
 #include "feature/dirauth/bwauth.h"
+#include "feature/dirauth/dirauth_sys.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/dsigs_parse.h"
 #include "feature/dirauth/process_descs.h"
@@ -71,10 +73,12 @@
 #include "lib/memarea/memarea.h"
 #include "lib/osinfo/uname.h"
 #include "test/log_test_helpers.h"
+#include "test/opts_test_helpers.h"
 #include "test/test.h"
 #include "test/test_dir_common.h"
 
 #include "core/or/addr_policy_st.h"
+#include "feature/dirauth/dirauth_options_st.h"
 #include "feature/nodelist/authority_cert_st.h"
 #include "feature/nodelist/document_signature_st.h"
 #include "feature/nodelist/extrainfo_st.h"
@@ -4689,10 +4693,13 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   (void)arg;
 
   /* Init options */
+  dirauth_options_t *dirauth_options =
+    tor_malloc_zero(sizeof(dirauth_options_t));
+
   mock_options = tor_malloc(sizeof(or_options_t));
   reset_options(mock_options, &mock_get_options_calls);
-
   MOCK(get_options, mock_get_options);
+  dirauth_set_options(dirauth_options);
 
   /* Init routersets */
   routerset_t *routerset_all  = routerset_new();
@@ -4732,16 +4739,15 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   /* Check that "*" sets flags on all routers: Exit
    * Check the flags aren't being confused with each other */
   reset_options(mock_options, &mock_get_options_calls);
+  memset(dirauth_options, 0, sizeof(*dirauth_options));
   reset_routerstatus(rs_a, ROUTER_A_ID_STR, ROUTER_A_IPV4);
   reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
 
-  mock_options->TestingDirAuthVoteExit = routerset_all;
-  mock_options->TestingDirAuthVoteExitIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteExit = routerset_all;
+  dirauth_options->TestingDirAuthVoteExitIsStrict = 0;
 
   dirserv_set_routerstatus_testing(rs_a);
-  tt_int_op(mock_get_options_calls, OP_EQ, 1);
   dirserv_set_routerstatus_testing(rs_b);
-  tt_int_op(mock_get_options_calls, OP_EQ, 2);
 
   tt_uint_op(rs_a->is_exit, OP_EQ, 1);
   tt_uint_op(rs_b->is_exit, OP_EQ, 1);
@@ -4754,18 +4760,17 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   /* Check that "*" sets flags on all routers: Guard & HSDir
    * Cover the remaining flags in one test */
   reset_options(mock_options, &mock_get_options_calls);
+  memset(dirauth_options, 0, sizeof(*dirauth_options));
   reset_routerstatus(rs_a, ROUTER_A_ID_STR, ROUTER_A_IPV4);
   reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
 
-  mock_options->TestingDirAuthVoteGuard = routerset_all;
-  mock_options->TestingDirAuthVoteGuardIsStrict = 0;
-  mock_options->TestingDirAuthVoteHSDir = routerset_all;
-  mock_options->TestingDirAuthVoteHSDirIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteGuard = routerset_all;
+  dirauth_options->TestingDirAuthVoteGuardIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteHSDir = routerset_all;
+  dirauth_options->TestingDirAuthVoteHSDirIsStrict = 0;
 
   dirserv_set_routerstatus_testing(rs_a);
-  tt_int_op(mock_get_options_calls, OP_EQ, 1);
   dirserv_set_routerstatus_testing(rs_b);
-  tt_int_op(mock_get_options_calls, OP_EQ, 2);
 
   tt_uint_op(rs_a->is_possible_guard, OP_EQ, 1);
   tt_uint_op(rs_b->is_possible_guard, OP_EQ, 1);
@@ -4778,20 +4783,19 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   /* Check routerset A sets all flags on router A,
    * but leaves router B unmodified */
   reset_options(mock_options, &mock_get_options_calls);
+  memset(dirauth_options, 0, sizeof(*dirauth_options));
   reset_routerstatus(rs_a, ROUTER_A_ID_STR, ROUTER_A_IPV4);
   reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
 
-  mock_options->TestingDirAuthVoteExit = routerset_a;
-  mock_options->TestingDirAuthVoteExitIsStrict = 0;
-  mock_options->TestingDirAuthVoteGuard = routerset_a;
-  mock_options->TestingDirAuthVoteGuardIsStrict = 0;
-  mock_options->TestingDirAuthVoteHSDir = routerset_a;
-  mock_options->TestingDirAuthVoteHSDirIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteExit = routerset_a;
+  dirauth_options->TestingDirAuthVoteExitIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteGuard = routerset_a;
+  dirauth_options->TestingDirAuthVoteGuardIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteHSDir = routerset_a;
+  dirauth_options->TestingDirAuthVoteHSDirIsStrict = 0;
 
   dirserv_set_routerstatus_testing(rs_a);
-  tt_int_op(mock_get_options_calls, OP_EQ, 1);
   dirserv_set_routerstatus_testing(rs_b);
-  tt_int_op(mock_get_options_calls, OP_EQ, 2);
 
   tt_uint_op(rs_a->is_exit, OP_EQ, 1);
   tt_uint_op(rs_b->is_exit, OP_EQ, 0);
@@ -4802,21 +4806,21 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
 
   /* Check routerset A unsets all flags on router B when Strict is set */
   reset_options(mock_options, &mock_get_options_calls);
+  memset(dirauth_options, 0, sizeof(*dirauth_options));
   reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
 
-  mock_options->TestingDirAuthVoteExit = routerset_a;
-  mock_options->TestingDirAuthVoteExitIsStrict = 1;
-  mock_options->TestingDirAuthVoteGuard = routerset_a;
-  mock_options->TestingDirAuthVoteGuardIsStrict = 1;
-  mock_options->TestingDirAuthVoteHSDir = routerset_a;
-  mock_options->TestingDirAuthVoteHSDirIsStrict = 1;
+  dirauth_options->TestingDirAuthVoteExit = routerset_a;
+  dirauth_options->TestingDirAuthVoteExitIsStrict = 1;
+  dirauth_options->TestingDirAuthVoteGuard = routerset_a;
+  dirauth_options->TestingDirAuthVoteGuardIsStrict = 1;
+  dirauth_options->TestingDirAuthVoteHSDir = routerset_a;
+  dirauth_options->TestingDirAuthVoteHSDirIsStrict = 1;
 
   rs_b->is_exit = 1;
   rs_b->is_possible_guard = 1;
   rs_b->is_hs_dir = 1;
 
   dirserv_set_routerstatus_testing(rs_b);
-  tt_int_op(mock_get_options_calls, OP_EQ, 1);
 
   tt_uint_op(rs_b->is_exit, OP_EQ, 0);
   tt_uint_op(rs_b->is_possible_guard, OP_EQ, 0);
@@ -4824,21 +4828,21 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
 
   /* Check routerset A doesn't modify flags on router B without Strict set */
   reset_options(mock_options, &mock_get_options_calls);
+  memset(dirauth_options, 0, sizeof(*dirauth_options));
   reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
 
-  mock_options->TestingDirAuthVoteExit = routerset_a;
-  mock_options->TestingDirAuthVoteExitIsStrict = 0;
-  mock_options->TestingDirAuthVoteGuard = routerset_a;
-  mock_options->TestingDirAuthVoteGuardIsStrict = 0;
-  mock_options->TestingDirAuthVoteHSDir = routerset_a;
-  mock_options->TestingDirAuthVoteHSDirIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteExit = routerset_a;
+  dirauth_options->TestingDirAuthVoteExitIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteGuard = routerset_a;
+  dirauth_options->TestingDirAuthVoteGuardIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteHSDir = routerset_a;
+  dirauth_options->TestingDirAuthVoteHSDirIsStrict = 0;
 
   rs_b->is_exit = 1;
   rs_b->is_possible_guard = 1;
   rs_b->is_hs_dir = 1;
 
   dirserv_set_routerstatus_testing(rs_b);
-  tt_int_op(mock_get_options_calls, OP_EQ, 1);
 
   tt_uint_op(rs_b->is_exit, OP_EQ, 1);
   tt_uint_op(rs_b->is_possible_guard, OP_EQ, 1);
@@ -4847,21 +4851,21 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   /* Check the empty routerset zeroes all flags
    * on routers A & B with Strict set */
   reset_options(mock_options, &mock_get_options_calls);
+  memset(dirauth_options, 0, sizeof(*dirauth_options));
   reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
 
-  mock_options->TestingDirAuthVoteExit = routerset_none;
-  mock_options->TestingDirAuthVoteExitIsStrict = 1;
-  mock_options->TestingDirAuthVoteGuard = routerset_none;
-  mock_options->TestingDirAuthVoteGuardIsStrict = 1;
-  mock_options->TestingDirAuthVoteHSDir = routerset_none;
-  mock_options->TestingDirAuthVoteHSDirIsStrict = 1;
+  dirauth_options->TestingDirAuthVoteExit = routerset_none;
+  dirauth_options->TestingDirAuthVoteExitIsStrict = 1;
+  dirauth_options->TestingDirAuthVoteGuard = routerset_none;
+  dirauth_options->TestingDirAuthVoteGuardIsStrict = 1;
+  dirauth_options->TestingDirAuthVoteHSDir = routerset_none;
+  dirauth_options->TestingDirAuthVoteHSDirIsStrict = 1;
 
   rs_b->is_exit = 1;
   rs_b->is_possible_guard = 1;
   rs_b->is_hs_dir = 1;
 
   dirserv_set_routerstatus_testing(rs_b);
-  tt_int_op(mock_get_options_calls, OP_EQ, 1);
 
   tt_uint_op(rs_b->is_exit, OP_EQ, 0);
   tt_uint_op(rs_b->is_possible_guard, OP_EQ, 0);
@@ -4870,24 +4874,23 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   /* Check the empty routerset doesn't modify any flags
    * on A or B without Strict set */
   reset_options(mock_options, &mock_get_options_calls);
+  memset(dirauth_options, 0, sizeof(*dirauth_options));
   reset_routerstatus(rs_a, ROUTER_A_ID_STR, ROUTER_A_IPV4);
   reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
 
-  mock_options->TestingDirAuthVoteExit = routerset_none;
-  mock_options->TestingDirAuthVoteExitIsStrict = 0;
-  mock_options->TestingDirAuthVoteGuard = routerset_none;
-  mock_options->TestingDirAuthVoteGuardIsStrict = 0;
-  mock_options->TestingDirAuthVoteHSDir = routerset_none;
-  mock_options->TestingDirAuthVoteHSDirIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteExit = routerset_none;
+  dirauth_options->TestingDirAuthVoteExitIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteGuard = routerset_none;
+  dirauth_options->TestingDirAuthVoteGuardIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteHSDir = routerset_none;
+  dirauth_options->TestingDirAuthVoteHSDirIsStrict = 0;
 
   rs_b->is_exit = 1;
   rs_b->is_possible_guard = 1;
   rs_b->is_hs_dir = 1;
 
   dirserv_set_routerstatus_testing(rs_a);
-  tt_int_op(mock_get_options_calls, OP_EQ, 1);
   dirserv_set_routerstatus_testing(rs_b);
-  tt_int_op(mock_get_options_calls, OP_EQ, 2);
 
   tt_uint_op(rs_a->is_exit, OP_EQ, 0);
   tt_uint_op(rs_a->is_possible_guard, OP_EQ, 0);
@@ -4898,6 +4901,7 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
 
  done:
   tor_free(mock_options);
+  tor_free(dirauth_options);
   mock_options = NULL;
 
   UNMOCK(get_options);
@@ -7466,7 +7470,7 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(clip_unmeasured_bw_kb),
   DIR_LEGACY(clip_unmeasured_bw_kb_alt),
   DIR(fmt_control_ns, 0),
-  DIR(dirserv_set_routerstatus_testing, 0),
+  DIR(dirserv_set_routerstatus_testing, TT_FORK),
   DIR(http_handling, 0),
   DIR(purpose_needs_anonymity_returns_true_for_bridges, 0),
   DIR(purpose_needs_anonymity_returns_false_for_own_bridge_desc, 0),

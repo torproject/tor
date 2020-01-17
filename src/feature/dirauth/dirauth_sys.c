@@ -11,6 +11,7 @@
 
 #include "core/or/or.h"
 
+#define DIRAUTH_SYS_PRIVATE
 #include "feature/dirauth/bwauth.h"
 #include "feature/dirauth/dirauth_sys.h"
 #include "feature/dirauth/dirvote.h"
@@ -49,7 +50,7 @@ dirauth_get_options(void)
   return global_dirauth_options;
 }
 
-static int
+STATIC int
 dirauth_set_options(void *arg)
 {
   dirauth_options_t *opts = arg;

@@ -22,10 +22,6 @@ int options_validate_dirauth_mode(const struct or_options_t *old_options,
                                   struct or_options_t *options,
                                   char **msg);
 
-int options_validate_dirauth_bandwidth(const struct or_options_t *old_options,
-                                       struct or_options_t *options,
-                                       char **msg);
-
 int options_validate_dirauth_schedule(const struct or_options_t *old_options,
                                       struct or_options_t *options,
                                       char **msg);
@@ -67,8 +63,6 @@ options_validate_dirauth_mode(const struct or_options_t *old_options,
   return 0;
 }
 
-#define options_validate_dirauth_bandwidth(old_options, options, msg) \
-  (((void)(old_options)),((void)(options)),((void)(msg)),0)
 #define options_validate_dirauth_schedule(old_options, options, msg) \
   (((void)(old_options)),((void)(options)),((void)(msg)),0)
 #define options_validate_dirauth_testing(old_options, options, msg) \

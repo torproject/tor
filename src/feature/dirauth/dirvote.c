@@ -4406,6 +4406,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                                         authority_cert_t *cert)
 {
   const or_options_t *options = get_options();
+  const dirauth_options_t *d_options = dirauth_get_options();
   networkstatus_t *v3_out = NULL;
   uint32_t addr;
   char *hostname = NULL, *client_versions = NULL, *server_versions = NULL;
@@ -4413,7 +4414,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   smartlist_t *routers, *routerstatuses;
   char identity_digest[DIGEST_LEN];
   char signing_key_digest[DIGEST_LEN];
-  int listbadexits = options->AuthDirListBadExits;
+  const int listbadexits = d_options->AuthDirListBadExits;
   routerlist_t *rl = router_get_routerlist();
   time_t now = time(NULL);
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
@@ -4445,11 +4446,11 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     hostname = tor_dup_ip(addr);
   }
 
-  if (options->VersioningAuthoritativeDir) {
+  if (d_options->VersioningAuthoritativeDirectory) {
     client_versions =
-      format_recommended_version_list(options->RecommendedClientVersions, 0);
+      format_recommended_version_list(d_options->RecommendedClientVersions, 0);
     server_versions =
-      format_recommended_version_list(options->RecommendedServerVersions, 0);
+      format_recommended_version_list(d_options->RecommendedServerVersions, 0);
   }
 
   contact = get_options()->ContactInfo;
@@ -4650,10 +4651,10 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     smartlist_add_strdup(v3_out->known_flags, "BadExit");
   smartlist_sort_strings(v3_out->known_flags);
 
-  if (options->ConsensusParams) {
+  if (d_options->ConsensusParams) {
     v3_out->net_params = smartlist_new();
     smartlist_split_string(v3_out->net_params,
-                           options->ConsensusParams, NULL, 0, 0);
+                           d_options->ConsensusParams, NULL, 0, 0);
     smartlist_sort_strings(v3_out->net_params);
   }
   v3_out->bw_file_headers = bw_file_headers;

@@ -6,15 +6,17 @@
 #define CONFIG_PRIVATE
 #define RELAY_CONFIG_PRIVATE
 #define LOG_PRIVATE
+#define ROUTERSET_PRIVATE
 #include "core/or/or.h"
 #include "lib/confmgt/confmgt.h"
 #include "app/config/config.h"
 #include "feature/dirauth/dirauth_config.h"
+#include "feature/dirauth/dirauth_options_st.h"
+#include "feature/dirauth/dirauth_sys.h"
 #include "feature/relay/relay_config.h"
 #include "test/test.h"
 #include "lib/geoip/geoip.h"
 
-#define ROUTERSET_PRIVATE
 #include "feature/nodelist/routerset.h"
 #include "core/mainloop/mainloop.h"
 #include "app/main/subsysmgr.h"
@@ -29,6 +31,7 @@
 #include "lib/encoding/confline.h"
 #include "core/or/policies.h"
 #include "test/test_helpers.h"
+#include "test/opts_test_helpers.h"
 #include "lib/net/resolve.h"
 
 #ifdef HAVE_SYS_PARAM_H
@@ -760,6 +763,7 @@ test_options_validate__authdir(void *ignored)
   options_test_data_t *tdata = get_options_test_data(
                                  ENABLE_AUTHORITY_V3_MIN
                                  "Address this.should.not!exist!.example.org");
+  const dirauth_options_t *da_opt;
 
   sandbox_disable_getaddrinfo_cache();
 
@@ -818,8 +822,9 @@ test_options_validate__authdir(void *ignored)
                                 "RecommendedVersions 1.2, 3.14\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
-  tt_str_op(tdata->opt->RecommendedClientVersions->value, OP_EQ, "1.2, 3.14");
-  tt_str_op(tdata->opt->RecommendedServerVersions->value, OP_EQ, "1.2, 3.14");
+  da_opt = get_dirauth_options(tdata->opt);
+  tt_str_op(da_opt->RecommendedClientVersions->value, OP_EQ, "1.2, 3.14");
+  tt_str_op(da_opt->RecommendedServerVersions->value, OP_EQ, "1.2, 3.14");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -829,8 +834,9 @@ test_options_validate__authdir(void *ignored)
                                 "RecommendedServerVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
-  tt_str_op(tdata->opt->RecommendedClientVersions->value, OP_EQ, "25");
-  tt_str_op(tdata->opt->RecommendedServerVersions->value, OP_EQ, "4.18");
+  da_opt = get_dirauth_options(tdata->opt);
+  tt_str_op(da_opt->RecommendedClientVersions->value, OP_EQ, "25");
+  tt_str_op(da_opt->RecommendedServerVersions->value, OP_EQ, "4.18");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -841,6 +847,7 @@ test_options_validate__authdir(void *ignored)
                                 "RecommendedServerVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
+  da_opt = get_dirauth_options(tdata->opt);
   tt_str_op(msg, OP_EQ, "AuthoritativeDir is set, but none of (Bridge/V3)"
             "AuthoritativeDir is set.");
   tor_free(msg);
@@ -851,6 +858,7 @@ test_options_validate__authdir(void *ignored)
                                 "RecommendedServerVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
+  da_opt = get_dirauth_options(tdata->opt);
   tt_str_op(msg, OP_EQ, "Versioning authoritative dir servers must set "
             "Recommended*Versions.");
   tor_free(msg);
@@ -861,9 +869,11 @@ test_options_validate__authdir(void *ignored)
                                 "RecommendedClientVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
+  da_opt = get_dirauth_options(tdata->opt);
   tt_str_op(msg, OP_EQ, "Versioning authoritative dir servers must set "
             "Recommended*Versions.");
   tor_free(msg);
+  da_opt = NULL;
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(ENABLE_AUTHORITY_V3
@@ -977,18 +987,6 @@ test_options_validate__authdir(void *ignored)
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "Running as authoritative directory, "
             "but ClientOnly also set.");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3);
-  /* We have to set this value manually, because it won't parse */
-  tdata->opt->MinUptimeHidServDirectoryV2 = -1;
-  mock_clean_saved_logs();
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg("MinUptimeHidServDirectoryV2 "
-                 "option must be at least 0 seconds. Changing to 0.\n");
-  tt_int_op(tdata->opt->MinUptimeHidServDirectoryV2, OP_EQ, 0);
   tor_free(msg);
 
  done:
@@ -3842,14 +3840,15 @@ test_options_validate__testing_options(void *ignored)
   options_test_data_t *tdata = NULL;
   setup_capture_of_logs(LOG_WARN);
 
-#define TEST_TESTING_OPTION(name, low_val, high_val, err_low, EXTRA_OPT_STR) \
+#define TEST_TESTING_OPTION(name, accessor, \
+                            low_val, high_val, err_low, EXTRA_OPT_STR)  \
   STMT_BEGIN                                                            \
     free_options_test_data(tdata);                                      \
   tdata = get_options_test_data(EXTRA_OPT_STR                           \
                                 VALID_DIR_AUTH                          \
                                 "TestingTorNetwork 1\n"                 \
                                 );                                      \
-  tdata->opt-> name = low_val;                                       \
+  accessor(tdata->opt)->name = low_val;                                 \
   ret = options_validate(NULL, tdata->opt,  &msg);            \
   tt_int_op(ret, OP_EQ, -1);                                            \
   tt_str_op(msg, OP_EQ, #name " " err_low);                \
@@ -3860,7 +3859,7 @@ test_options_validate__testing_options(void *ignored)
                                 VALID_DIR_AUTH                          \
                                 "TestingTorNetwork 1\n"                 \
                                 );                                      \
-  tdata->opt->  name = high_val;                                      \
+  accessor(tdata->opt)->name = high_val;                                \
   mock_clean_saved_logs();                                              \
   ret = options_validate(NULL, tdata->opt,  &msg);            \
   tt_int_op(ret, OP_EQ, 0);                                             \
@@ -3869,24 +3868,19 @@ test_options_validate__testing_options(void *ignored)
   tor_free(msg); \
   STMT_END
 
-  TEST_TESTING_OPTION(TestingAuthDirTimeToLearnReachability, -1, 8000,
-                      "must be non-negative.", ENABLE_AUTHORITY_V3);
-  TEST_TESTING_OPTION(TestingAuthDirTimeToLearnReachability, -1, 8000,
-                      "must be non-negative.", ENABLE_AUTHORITY_BRIDGE);
-
-  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, -1, 3601,
+  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, , -1, 3601,
                       "is way too low.", "");
-  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
+  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, , 1, 3601,
                       "is way too low.", "");
 
-  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, -1, 3601,
+  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, , -1, 3601,
                       "is way too low.", ENABLE_AUTHORITY_V3);
-  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
+  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, , 1, 3601,
                       "is way too low.", ENABLE_AUTHORITY_V3);
 
-  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, -1, 3601,
+  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, , -1, 3601,
                       "is way too low.", ENABLE_AUTHORITY_BRIDGE);
-  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
+  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, , 1, 3601,
                       "is way too low.", ENABLE_AUTHORITY_BRIDGE);
 
   free_options_test_data(tdata);
@@ -3982,14 +3976,6 @@ test_options_validate__testing_options(void *ignored)
   teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
-}
-
-static crypto_options_t *
-get_crypto_options(or_options_t *opt)
-{
-  int idx = subsystems_get_options_idx(&sys_crypto);
-  tor_assert(idx >= 0);
-  return config_mgr_get_obj_mutable(get_options_mgr(), opt, idx);
 }
 
 static void

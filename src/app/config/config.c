@@ -329,16 +329,11 @@ static const config_var_t option_vars_[] = {
   V(AuthDirBadExitCCs,           CSV,      ""),
   V(AuthDirInvalid,              LINELIST, NULL),
   V(AuthDirInvalidCCs,           CSV,      ""),
-  V(AuthDirFastGuarantee,        MEMUNIT,  "100 KB"),
-  V(AuthDirGuardBWGuarantee,     MEMUNIT,  "2 MB"),
-  V(AuthDirPinKeys,              BOOL,     "1"),
   V(AuthDirReject,               LINELIST, NULL),
   V(AuthDirRejectCCs,            CSV,      ""),
   OBSOLETE("AuthDirRejectUnlisted"),
   OBSOLETE("AuthDirListBadDirs"),
-  V(AuthDirListBadExits,         BOOL,     "0"),
   OBSOLETE("AuthDirMaxServersPerAuthAddr"),
-  V(AuthDirHasIPv6Connectivity,  BOOL,     "0"),
   VAR("AuthoritativeDirectory",  BOOL, AuthoritativeDir,    "0"),
   V(AutomapHostsOnResolve,       BOOL,     "0"),
   V(AutomapHostsSuffixes,        CSV,      ".onion,.exit"),
@@ -376,7 +371,6 @@ static const config_var_t option_vars_[] = {
   V(ClientTransportPlugin,       LINELIST, NULL),
   V(ClientUseIPv6,               BOOL,     "0"),
   V(ClientUseIPv4,               BOOL,     "1"),
-  V(ConsensusParams,             STRING,   NULL),
   V(ConnLimit,                   POSINT,     "1000"),
   V(ConnDirectionStatistics,     BOOL,     "0"),
   V(ConstrainedSockets,          BOOL,     "0"),
@@ -398,7 +392,6 @@ static const config_var_t option_vars_[] = {
   V(DisableOOSCheck,             BOOL,     "1"),
   V(DisableNetwork,              BOOL,     "0"),
   V(DirAllowPrivateAddresses,    BOOL,     "0"),
-  V(TestingAuthDirTimeToLearnReachability, INTERVAL, "30 minutes"),
   OBSOLETE("DirListenAddress"),
   V(DirPolicy,                   LINELIST, NULL),
   VPORT(DirPort),
@@ -562,7 +555,6 @@ static const config_var_t option_vars_[] = {
   OBSOLETE("MaxOnionsPending"),
   V(MaxOnionQueueDelay,          MSEC_INTERVAL, "1750 msec"),
   V(MaxUnparseableDescSizeToLog, MEMUNIT, "10 MB"),
-  V(MinMeasuredBWsForAuthToIgnoreAdvertised, INT, "500"),
   VAR("MyFamily",                LINELIST, MyFamily_lines,       NULL),
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
   OBSOLETE("NamingAuthoritativeDirectory"),
@@ -605,8 +597,6 @@ static const config_var_t option_vars_[] = {
   V(PerConnBWRate,               MEMUNIT,  "0"),
   V_IMMUTABLE(PidFile,           FILENAME,   NULL),
   V_IMMUTABLE(TestingTorNetwork, BOOL,     "0"),
-  V(TestingMinExitFlagThreshold, MEMUNIT,  "0"),
-  V(TestingMinFastFlagThreshold, MEMUNIT,  "0"),
 
   V(TestingLinkCertLifetime,          INTERVAL, "2 days"),
   V(TestingAuthKeyLifetime,          INTERVAL, "2 days"),
@@ -624,9 +614,6 @@ static const config_var_t option_vars_[] = {
   V(ReachableAddresses,          LINELIST, NULL),
   V(ReachableDirAddresses,       LINELIST, NULL),
   V(ReachableORAddresses,        LINELIST, NULL),
-  V(RecommendedVersions,         LINELIST, NULL),
-  V(RecommendedClientVersions,   LINELIST, NULL),
-  V(RecommendedServerVersions,   LINELIST, NULL),
   OBSOLETE("RecommendedPackages"),
   V(ReducedConnectionPadding,    BOOL,     "0"),
   V(ConnectionPadding,           AUTOBOOL, "auto"),
@@ -688,8 +675,6 @@ static const config_var_t option_vars_[] = {
   OBSOLETE("UseNTorHandshake"),
   V_IMMUTABLE(User,              STRING,   NULL),
   OBSOLETE("UserspaceIOCPBuffers"),
-  V(AuthDirSharedRandomness,     BOOL,     "1"),
-  V(AuthDirTestEd25519LinkKeys,  BOOL,     "1"),
   OBSOLETE("V1AuthoritativeDirectory"),
   OBSOLETE("V2AuthoritativeDirectory"),
   VAR("V3AuthoritativeDirectory",BOOL, V3AuthoritativeDir,   "0"),
@@ -704,7 +689,6 @@ static const config_var_t option_vars_[] = {
   V(V3AuthUseLegacyKey,          BOOL,     "0"),
   V(V3BandwidthsFile,            FILENAME, NULL),
   V(GuardfractionFile,           FILENAME, NULL),
-  VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   OBSOLETE("VoteOnHidServDirectoriesV2"),
   V(VirtualAddrNetworkIPv4,      STRING,   "127.192.0.0/10"),
   V(VirtualAddrNetworkIPv6,      STRING,   "[FE80::]/10"),
@@ -724,7 +708,6 @@ static const config_var_t option_vars_[] = {
                        OwningControllerProcess, NULL),
   VAR_NODUMP_IMMUTABLE("__OwningControllerFD", UINT64, OwningControllerFD,
              UINT64_MAX_STRING),
-  V(MinUptimeHidServDirectoryV2, INTERVAL, "96 hours"),
   V(TestingServerDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(TestingClientDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(TestingServerConsensusDownloadInitialDelay, CSV_INTERVAL, "0"),
@@ -770,12 +753,6 @@ static const config_var_t option_vars_[] = {
   OBSOLETE("TestingDescriptorMaxDownloadTries"),
   OBSOLETE("TestingMicrodescMaxDownloadTries"),
   OBSOLETE("TestingCertMaxDownloadTries"),
-  V_D(TestingDirAuthVoteExit, ROUTERSET, NULL),
-  V(TestingDirAuthVoteExitIsStrict,  BOOL,     "0"),
-  V_D(TestingDirAuthVoteGuard, ROUTERSET, NULL),
-  V(TestingDirAuthVoteGuardIsStrict,  BOOL,     "0"),
-  V_D(TestingDirAuthVoteHSDir, ROUTERSET, NULL),
-  V(TestingDirAuthVoteHSDirIsStrict,  BOOL,     "0"),
   VAR_INVIS("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_,
             "0"),
 
@@ -3888,8 +3865,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
     return -1;
 
   if (options_validate_relay_bandwidth(old_options, options, msg) < 0)
-    return -1;
-  if (options_validate_dirauth_bandwidth(old_options, options, msg) < 0)
     return -1;
 
   if (options->BandwidthRate > options->BandwidthBurst)

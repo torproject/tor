@@ -13,10 +13,12 @@
 #include "feature/dirauth/bwauth.h"
 
 #include "app/config/config.h"
+#include "feature/dirauth/dirauth_sys.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/dirparse/ns_parse.h"
 
+#include "feature/dirauth/dirauth_options_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/vote_routerstatus_st.h"
 
@@ -182,7 +184,7 @@ dirserv_get_credible_bandwidth_kb(const routerinfo_t *ri)
   /* Check if we have a measured bandwidth, and check the threshold if not */
   if (!(dirserv_query_measured_bw_cache_kb(ri->cache_info.identity_digest,
                                        &mbw_kb, NULL))) {
-    threshold = get_options()->MinMeasuredBWsForAuthToIgnoreAdvertised;
+    threshold = dirauth_get_options()->MinMeasuredBWsForAuthToIgnoreAdvertised;
     if (routers_with_measured_bw > threshold) {
       /* Return zero for unmeasured bandwidth if we are above threshold */
       bw_kb = 0;

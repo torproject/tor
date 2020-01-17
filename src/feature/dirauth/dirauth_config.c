@@ -73,24 +73,6 @@ options_validate_dirauth_mode(const or_options_t *old_options,
 
   if (!options->ContactInfo && !options->TestingTorNetwork)
     REJECT("Authoritative directory servers must set ContactInfo");
-  if (!options->RecommendedClientVersions)
-    options->RecommendedClientVersions =
-      config_lines_dup(options->RecommendedVersions);
-  if (!options->RecommendedServerVersions)
-    options->RecommendedServerVersions =
-      config_lines_dup(options->RecommendedVersions);
-  if (options->VersioningAuthoritativeDir &&
-      (!options->RecommendedClientVersions ||
-       !options->RecommendedServerVersions))
-    REJECT("Versioning authoritative dir servers must set "
-           "Recommended*Versions.");
-
-  char *t;
-  /* Call these functions to produce warnings only. */
-  t = format_recommended_version_list(options->RecommendedClientVersions, 1);
-  tor_free(t);
-  t = format_recommended_version_list(options->RecommendedServerVersions, 1);
-  tor_free(t);
 
   if (options->UseEntryGuards) {
     log_info(LD_CONFIG, "Authoritative directory servers can't set "
@@ -125,45 +107,6 @@ options_validate_dirauth_mode(const or_options_t *old_options,
 
   if (options->ClientOnly)
     REJECT("Running as authoritative directory, but ClientOnly also set.");
-
-  if (options->MinUptimeHidServDirectoryV2 < 0) {
-    log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
-             "least 0 seconds. Changing to 0.");
-    options->MinUptimeHidServDirectoryV2 = 0;
-  }
-
-  return 0;
-}
-
-/**
- * Legacy validation/normalization function for the dirauth bandwidth options
- * in options. Uses old_options as the previous options.
- *
- * Returns 0 on success, returns -1 and sets *msg to a newly allocated string
- * on error.
- */
-int
-options_validate_dirauth_bandwidth(const or_options_t *old_options,
-                                   or_options_t *options,
-                                   char **msg)
-{
-  (void)old_options;
-
-  if (BUG(!options))
-    return -1;
-
-  if (BUG(!msg))
-    return -1;
-
-  if (!authdir_mode(options))
-    return 0;
-
-  if (config_ensure_bandwidth_cap(&options->AuthDirFastGuarantee,
-                           "AuthDirFastGuarantee", msg) < 0)
-    return -1;
-  if (config_ensure_bandwidth_cap(&options->AuthDirGuardBWGuarantee,
-                           "AuthDirGuardBWGuarantee", msg) < 0)
-    return -1;
 
   return 0;
 }
@@ -269,12 +212,6 @@ options_validate_dirauth_testing(const or_options_t *old_options,
 
   if (!authdir_mode(options))
     return 0;
-
-  if (options->TestingAuthDirTimeToLearnReachability < 0) {
-    REJECT("TestingAuthDirTimeToLearnReachability must be non-negative.");
-  } else if (options->TestingAuthDirTimeToLearnReachability > 2*60*60) {
-    COMPLAIN("TestingAuthDirTimeToLearnReachability is insanely high.");
-  }
 
   if (!authdir_mode_v3(options))
     return 0;
@@ -441,6 +378,66 @@ options_act_dirauth_stats(const or_options_t *old_options,
   return 0;
 }
 
+/**
+ * Make any necessary modifications to a dirauth_options_t that occur
+ * before validation.  On success return 0; on failure return -1 and
+ * set *<b>msg_out</b> to a newly allocated error string.
+ **/
+static int
+dirauth_options_pre_normalize(void *arg, char **msg_out)
+{
+  dirauth_options_t *options = arg;
+  (void)msg_out;
+
+  if (!options->RecommendedClientVersions)
+    options->RecommendedClientVersions =
+      config_lines_dup(options->RecommendedVersions);
+  if (!options->RecommendedServerVersions)
+    options->RecommendedServerVersions =
+      config_lines_dup(options->RecommendedVersions);
+
+  if (config_ensure_bandwidth_cap(&options->AuthDirFastGuarantee,
+                           "AuthDirFastGuarantee", msg_out) < 0)
+    return -1;
+  if (config_ensure_bandwidth_cap(&options->AuthDirGuardBWGuarantee,
+                                  "AuthDirGuardBWGuarantee", msg_out) < 0)
+    return -1;
+
+  return 0;
+}
+
+/**
+ * Check whether a dirauth_options_t is correct.
+ *
+ * On success return 0; on failure return -1 and set *<b>msg_out</b> to a
+ * newly allocated error string.
+ **/
+static int
+dirauth_options_validate(const void *arg, char **msg)
+{
+  const dirauth_options_t *options = arg;
+
+  if (options->VersioningAuthoritativeDirectory &&
+      (!options->RecommendedClientVersions ||
+       !options->RecommendedServerVersions)) {
+      REJECT("Versioning authoritative dir servers must set "
+           "Recommended*Versions.");
+  }
+
+  char *t;
+  /* Call these functions to produce warnings only. */
+  t = format_recommended_version_list(options->RecommendedClientVersions, 1);
+  tor_free(t);
+  t = format_recommended_version_list(options->RecommendedServerVersions, 1);
+  tor_free(t);
+
+  if (options->TestingAuthDirTimeToLearnReachability > 2*60*60) {
+    COMPLAIN("TestingAuthDirTimeToLearnReachability is insanely high.");
+  }
+
+  return 0;
+}
+
 /* Declare the options field table for dirauth_options */
 #define CONF_CONTEXT TABLE
 #include "feature/dirauth/dirauth_options.inc"
@@ -458,5 +455,7 @@ const config_format_t dirauth_options_fmt = {
              DIRAUTH_OPTIONS_MAGIC,
              offsetof(dirauth_options_t, magic) },
   .vars = dirauth_options_t_vars,
-};
 
+  .pre_normalize_fn = dirauth_options_pre_normalize,
+  .validate_fn = dirauth_options_validate
+};
