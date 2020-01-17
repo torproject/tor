@@ -18,6 +18,8 @@
 #include "feature/nodelist/torcert.h"
 
 #include "core/or/extend_info_st.h"
+#include "feature/dirauth/dirvote.h"
+#include "feature/nodelist/fmt_routerstatus.h"
 #include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/networkstatus_st.h"
 #include "feature/nodelist/node_st.h"
@@ -1252,6 +1254,7 @@ test_nodelist_routerstatus_has_changed(void *arg)
 {
   (void)arg;
   routerstatus_t rs_orig, rs;
+  char *fmt_orig = NULL, *fmt = NULL;
   memset(&rs_orig, 0, sizeof(rs_orig));
   strlcpy(rs_orig.nickname, "friendly", sizeof(rs_orig.nickname));
   memcpy(rs_orig.identity_digest, "abcdefghijklmnopqrst", 20);
@@ -1259,14 +1262,39 @@ test_nodelist_routerstatus_has_changed(void *arg)
   rs_orig.addr = 0x7f000001;
   rs_orig.or_port = 3;
   rs_orig.published_on = time(NULL);
+  rs_orig.has_bandwidth = 1;
+  rs_orig.bandwidth_kb = 20;
 
 #define COPY() memcpy(&rs, &rs_orig, sizeof(rs))
+#define FORMAT() \
+  STMT_BEGIN \
+    tor_free(fmt_orig);                                                   \
+    tor_free(fmt);                                                        \
+    fmt_orig = routerstatus_format_entry(&rs_orig, NULL, NULL,            \
+                          NS_CONTROL_PORT,                                \
+                          ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD,        \
+                          NULL);                                          \
+    fmt = routerstatus_format_entry(&rs, NULL, NULL, NS_CONTROL_PORT,     \
+                          ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD,        \
+                          NULL);                                          \
+    tt_assert(fmt_orig);                                                  \
+    tt_assert(fmt);                                                       \
+  STMT_END
 #define ASSERT_SAME() \
   STMT_BEGIN                                                    \
     tt_assert(! routerstatus_has_changed(&rs_orig, &rs));       \
+    FORMAT();                                                   \
+    tt_str_op(fmt_orig, OP_EQ, fmt);                            \
     COPY();                                                     \
   STMT_END
 #define ASSERT_CHANGED() \
+  STMT_BEGIN                                                    \
+    tt_assert(routerstatus_has_changed(&rs_orig, &rs));         \
+    FORMAT();                                                   \
+    tt_str_op(fmt_orig, OP_NE, fmt);                            \
+    COPY();                                                     \
+  STMT_END
+#define ASSERT_CHANGED_NO_FORMAT() \
   STMT_BEGIN                                                    \
     tt_assert(routerstatus_has_changed(&rs_orig, &rs));         \
     COPY();                                                     \
@@ -1296,6 +1324,9 @@ test_nodelist_routerstatus_has_changed(void *arg)
   tor_addr_parse(&rs.ipv6_addr, "1234::56");
   ASSERT_CHANGED();
 
+  tor_addr_parse(&rs_orig.ipv6_addr, "1234::56");
+  rs_orig.ipv6_orport = 99;
+  COPY();
   rs.ipv6_orport = 22;
   ASSERT_CHANGED();
 
@@ -1314,13 +1345,13 @@ test_nodelist_routerstatus_has_changed(void *arg)
   rs.is_flagged_running = 1;
   ASSERT_CHANGED();
 
-  // Isn't this obsolete?
+  // This option is obsolete and not actually formatted.
   rs.is_named = 1;
-  ASSERT_CHANGED();
+  ASSERT_CHANGED_NO_FORMAT();
 
-  // Isn't this obsolete?
+  // This option is obsolete and not actually formatted.
   rs.is_unnamed = 1;
-  ASSERT_CHANGED();
+  ASSERT_CHANGED_NO_FORMAT();
 
   rs.is_valid = 1;
   ASSERT_CHANGED();
@@ -1340,10 +1371,12 @@ test_nodelist_routerstatus_has_changed(void *arg)
   rs.is_staledesc = 1;
   ASSERT_CHANGED();
 
-  rs.has_bandwidth = 1;
-  ASSERT_CHANGED();
+  // Setting this to zero crashes us with an assertion failure in
+  // routerstatus_format_entry() if we don't have a descriptor.
+  rs.has_bandwidth = 0;
+  ASSERT_CHANGED_NO_FORMAT();
 
-  // Does not actually matter unless exitsummary changes.
+  // Does not actually matter; not visible to controller.
   rs.has_exitsummary = 1;
   ASSERT_SAME();
 
@@ -1374,6 +1407,8 @@ test_nodelist_routerstatus_has_changed(void *arg)
 #undef COPY
 #undef ASSERT_SAME
 #undef ASSERT_CHANGED
+  tor_free(fmt_orig);
+  tor_free(fmt);
   return;
 }
 
