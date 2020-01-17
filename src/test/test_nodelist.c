@@ -1250,7 +1250,7 @@ test_nodelist_router_get_verbose_nickname(void *arg)
 }
 
 static void
-test_nodelist_routerstatus_has_changed(void *arg)
+test_nodelist_routerstatus_has_visibly_changed(void *arg)
 {
   (void)arg;
   routerstatus_t rs_orig, rs;
