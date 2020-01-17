@@ -824,7 +824,8 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
 
  err:
   if (intro_keys) {
-    memwipe(intro_keys, 0, sizeof(hs_ntor_intro_cell_keys_t));
+    memwipe(intro_keys, 0,
+            sizeof(hs_ntor_intro_cell_keys_t) * data->n_subcredentials);
     tor_free(intro_keys);
   }
 
