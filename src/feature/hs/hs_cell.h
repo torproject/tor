@@ -57,9 +57,14 @@ typedef struct hs_cell_introduce2_data_t {
      owned by the introduction point object through which we received the
      INTRO2 cell*/
   const curve25519_keypair_t *enc_kp;
-  /** Subcredentials of the service. Pointer owned by the descriptor that owns
-     the introduction point through which we received the INTRO2 cell. */
-  const struct hs_subcredential_t *subcredential;
+  /**
+   * Length of the subcredentials array below.
+   **/
+  int n_subcredentials;
+  /** Array of <b>n_subcredentials</b> subcredentials for the service. Pointer
+   * owned by the descriptor that owns the introduction point through which we
+   * received the INTRO2 cell. */
+  const struct hs_subcredential_t *subcredentials;
   /** Payload of the received encoded cell. */
   const uint8_t *payload;
   /** Size of the payload of the received encoded cell. */
