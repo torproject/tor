@@ -23,7 +23,7 @@ CONF_VAR(AuthDirGuardBWGuarantee, MEMUNIT, 0, "2 MB")
 /** Boolean: are we on IPv6?  */
 CONF_VAR(AuthDirHasIPv6Connectivity, BOOL, 0, "0")
 
-/** True iff we should list bad exits, * and vote for all other exits as
+/** True iff we should list bad exits, and vote for all other exits as
  * good. */
 CONF_VAR(AuthDirListBadExits, BOOL, 0, "0")
 
