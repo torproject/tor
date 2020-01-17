@@ -68,14 +68,17 @@ compute_introduce_mac(const uint8_t *encoded_cell, size_t encoded_cell_len,
   memwipe(mac_msg, 0, sizeof(mac_msg));
 }
 
-/** From a set of keys, subcredential and the ENCRYPTED section of an
- * INTRODUCE2 cell, return a newly allocated intro cell keys structure.
- * Finally, the client public key is copied in client_pk. On error, return
- * NULL. */
+/**
+ * From a set of keys, a list of subcredentials, and the ENCRYPTED section of
+ * an INTRODUCE2 cell, return an array of newly allocated intro cell keys
+ * structures.  Finally, the client public key is copied in client_pk. On
+ * error, return NULL.
+ **/
 static hs_ntor_intro_cell_keys_t *
 get_introduce2_key_material(const ed25519_public_key_t *auth_key,
                             const curve25519_keypair_t *enc_key,
-                            const hs_subcredential_t *subcredential,
+                            int n_subcredentials,
+                            const hs_subcredential_t *subcredentials,
                             const uint8_t *encrypted_section,
                             curve25519_public_key_t *client_pk)
 {
@@ -83,17 +86,19 @@ get_introduce2_key_material(const ed25519_public_key_t *auth_key,
 
   tor_assert(auth_key);
   tor_assert(enc_key);
-  tor_assert(subcredential);
+  tor_assert(n_subcredentials > 0);
+  tor_assert(subcredentials);
   tor_assert(encrypted_section);
   tor_assert(client_pk);
 
-  keys = tor_malloc_zero(sizeof(*keys));
+  keys = tor_calloc(n_subcredentials, sizeof(hs_ntor_intro_cell_keys_t));
 
   /* First bytes of the ENCRYPTED section are the client public key. */
   memcpy(client_pk->public_key, encrypted_section, CURVE25519_PUBKEY_LEN);
 
-  if (hs_ntor_service_get_introduce1_keys(auth_key, enc_key, client_pk,
-                                          subcredential, keys) < 0) {
+  if (hs_ntor_service_get_introduce1_keys_multi(auth_key, enc_key, client_pk,
+                                                n_subcredentials,
+                                                subcredentials, keys) < 0) {
     /* Don't rely on the caller to wipe this on error. */
     memwipe(client_pk, 0, sizeof(curve25519_public_key_t));
     tor_free(keys);
@@ -760,10 +765,12 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
                                    size_t encrypted_section_len)
 {
   hs_ntor_intro_cell_keys_t *intro_keys = NULL;
+  hs_ntor_intro_cell_keys_t *intro_keys_result = NULL;
 
   /* Build the key material out of the key material found in the cell. */
   intro_keys = get_introduce2_key_material(data->auth_pk, data->enc_kp,
-                                           data->subcredential,
+                                           data->n_subcredentials,
+                                           data->subcredentials,
                                            encrypted_section,
                                            &data->client_pk);
   if (intro_keys == NULL) {
@@ -774,10 +781,11 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
 
   /* Validate MAC from the cell and our computed key material. The MAC field
    * in the cell is at the end of the encrypted section. */
-  {
+  int found_idx = -1;
+  for (int i = 0; i < data->n_subcredentials; ++i) {
     uint8_t mac[DIGEST256_LEN];
 
-    /* Make sure we are now about to underflow. */
+    /* Make sure we are not about to underflow. */
     if (encrypted_section_len < sizeof(mac)) {
       goto err;
     }
@@ -789,15 +797,30 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
     compute_introduce_mac(data->payload,
                           data->payload_len - encrypted_section_len,
                           encrypted_section, encrypted_section_len,
-                          intro_keys->mac_key, sizeof(intro_keys->mac_key),
+                          intro_keys[i].mac_key,
+                          sizeof(intro_keys[i].mac_key),
                           mac, sizeof(mac));
-    if (tor_memneq(mac, encrypted_section + mac_offset, sizeof(mac))) {
-      log_info(LD_REND, "Invalid MAC validation for INTRODUCE2 cell");
-      goto err;
+    if (tor_memeq(mac, encrypted_section + mac_offset, sizeof(mac))) {
+      found_idx = i;
+      break;
     }
   }
 
-  goto done;
+  if (found_idx == -1) {
+    log_info(LD_REND, "Invalid MAC validation for INTRODUCE2 cell");
+    goto err;
+  }
+
+  /* We found a match! */
+  if (data->n_subcredentials == 1) {
+    /* There was only one; steal it. */
+    intro_keys_result = intro_keys;
+    intro_keys = NULL;
+  } else {
+    /* Copy out the one we wanted. */
+    intro_keys_result = tor_memdup(&intro_keys[found_idx],
+                                   sizeof(hs_ntor_intro_cell_keys_t));
+  }
 
  err:
   if (intro_keys) {
@@ -805,8 +828,7 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
     tor_free(intro_keys);
   }
 
- done:
-  return intro_keys;
+  return intro_keys_result;
 }
 
 /** Return the newly allocated intro keys using the given service
@@ -831,18 +853,22 @@ get_intro2_keys_as_ob(const hs_service_config_t *config,
     goto end;
   }
 
-  for (size_t idx = 0; idx < ob_num_subcreds; idx++) {
-    /* Copy current data into a new INTRO2 cell data. We will then change the
-     * subcredential in order to validate. */
-    hs_cell_introduce2_data_t new_data = *data;
-    new_data.subcredential = &ob_subcreds[idx];
-    intro_keys = get_introduce2_keys_and_verify_mac(&new_data,
-                                                    encrypted_section,
-                                                    encrypted_section_len);
-    if (intro_keys) {
-      /* It validates. We have a hit as an onion balance instance. */
-      goto end;
-    }
+  /* Copy current data into a new INTRO2 cell data. We will then change the
+   * subcredential in order to validate. */
+  hs_cell_introduce2_data_t new_data = *data;
+  /* XXXX This list should have been the descriptor's subcredentials all
+   * XXXX along.
+   */
+  new_data.n_subcredentials = (int)ob_num_subcreds;
+  new_data.subcredentials = ob_subcreds;
+
+  intro_keys = get_introduce2_keys_and_verify_mac(&new_data,
+                                                  encrypted_section,
+                                                  encrypted_section_len);
+  memwipe(&new_data, 0, sizeof(new_data));
+  if (intro_keys) {
+    /* It validates. We have a hit as an onion balance instance. */
+    goto end;
   }
 
  end:

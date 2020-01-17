@@ -983,7 +983,10 @@ hs_circ_handle_introduce2(const hs_service_t *service,
    * parsed, decrypted and key material computed correctly. */
   data.auth_pk = &ip->auth_key_kp.pubkey;
   data.enc_kp = &ip->enc_key_kp;
-  data.subcredential = subcredential;
+  // XXXX We should replace these elements with something precomputed for
+  // XXXX the onionbalance case.
+  data.n_subcredentials = 1;
+  data.subcredentials = subcredential;
   data.payload = payload;
   data.payload_len = payload_len;
   data.link_specifiers = smartlist_new();
