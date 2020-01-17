@@ -719,11 +719,7 @@ connection_free_minimal(connection_t *conn)
     tor_free(dir_conn->requested_resource);
 
     tor_compress_free(dir_conn->compress_state);
-    if (dir_conn->spool) {
-      SMARTLIST_FOREACH(dir_conn->spool, spooled_resource_t *, spooled,
-                        spooled_resource_free(spooled));
-      smartlist_free(dir_conn->spool);
-    }
+    dir_conn_clear_spool(dir_conn);
 
     rend_data_free(dir_conn->rend_data);
     hs_ident_dir_conn_free(dir_conn->hs_ident);

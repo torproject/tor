@@ -77,7 +77,7 @@
 #include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dircache/consdiffmgr.h"
-#include "feature/dircache/dirserv.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/dircommon/directory.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_cache.h"
@@ -1133,14 +1133,14 @@ directory_info_has_arrived(time_t now, int from_cache, int suppress_logs)
 
   if (!router_have_minimum_dir_info()) {
     int quiet = suppress_logs || from_cache ||
-                directory_too_idle_to_fetch_descriptors(options, now);
+                dirclient_too_idle_to_fetch_descriptors(options, now);
     tor_log(quiet ? LOG_INFO : LOG_NOTICE, LD_DIR,
         "I learned some more directory information, but not enough to "
         "build a circuit: %s", get_dir_info_status_string());
     update_all_descriptor_downloads(now);
     return;
   } else {
-    if (directory_fetches_from_authorities(options)) {
+    if (dirclient_fetches_from_authorities(options)) {
       update_all_descriptor_downloads(now);
     }
 
@@ -2069,7 +2069,7 @@ fetch_networkstatus_callback(time_t now, const or_options_t *options)
    * documents? */
   const int we_are_bootstrapping = networkstatus_consensus_is_bootstrapping(
                                                                         now);
-  const int prefer_mirrors = !directory_fetches_from_authorities(
+  const int prefer_mirrors = !dirclient_fetches_from_authorities(
                                                               get_options());
   int networkstatus_dl_check_interval = 60;
   /* check more often when testing, or when bootstrapping from mirrors

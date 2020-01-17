@@ -88,7 +88,7 @@
 #include "feature/control/control.h"
 #include "feature/control/control_auth.h"
 #include "feature/control/control_events.h"
-#include "feature/dircache/dirserv.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_config.h"
 #include "feature/nodelist/dirlist.h"
@@ -2424,10 +2424,10 @@ options_act,(const or_options_t *old_options))
 
   /* We may need to reschedule some directory stuff if our status changed. */
   if (old_options) {
-    if (!bool_eq(directory_fetches_dir_info_early(options),
-                 directory_fetches_dir_info_early(old_options)) ||
-        !bool_eq(directory_fetches_dir_info_later(options),
-                 directory_fetches_dir_info_later(old_options)) ||
+    if (!bool_eq(dirclient_fetches_dir_info_early(options),
+                 dirclient_fetches_dir_info_early(old_options)) ||
+        !bool_eq(dirclient_fetches_dir_info_later(options),
+                 dirclient_fetches_dir_info_later(old_options)) ||
         !config_lines_eq(old_options->Bridges, options->Bridges)) {
       /* Make sure update_router_have_minimum_dir_info() gets called. */
       router_dir_info_changed();
@@ -2738,6 +2738,9 @@ list_enabled_modules(void)
 {
   printf("%s: %s\n", "relay", have_module_relay() ? "yes" : "no");
   printf("%s: %s\n", "dirauth", have_module_dirauth() ? "yes" : "no");
+  // We don't list dircache, because it cannot be enabled or disabled
+  // independently from relay.  Listing it here would proliferate
+  // test variants in test_parseconf.sh to no useful purpose.
 }
 
 /** Last value actually set by resolve_my_address. */

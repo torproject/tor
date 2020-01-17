@@ -18,6 +18,7 @@
 #include "feature/client/entrynodes.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dirclient/dlstatus.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/dircommon/directory.h"
 #include "feature/dirparse/microdesc_parse.h"
 #include "feature/nodelist/dirlist.h"
@@ -997,7 +998,7 @@ update_microdesc_downloads(time_t now)
 
   if (should_delay_dir_fetches(options, NULL))
     return;
-  if (directory_too_idle_to_fetch_descriptors(options, now))
+  if (dirclient_too_idle_to_fetch_descriptors(options, now))
     return;
 
   /* Give up if we don't have a reasonably live consensus. */
