@@ -279,3 +279,30 @@ select_array_member_cumulative_timei(const uint64_t *entries, int n_entries,
 
   return i_chosen;
 }
+
+/**
+ * If <b>s</b> is true, then copy <b>n</b> bytes from <b>src</d> to
+ * <b>dest</b>.  Otherwise leave <b>dest</b> alone.
+ *
+ * This function behaves the same as
+ *
+ *      if (s)
+ *         memcpy(dest, src, n);
+ *
+ * except that it tries to run in the same amount of time whether <b>s</b> is
+ * true or not.
+ **/
+void
+memcpy_if_true_timei(bool s, void *dest, const void *src, size_t n)
+{
+  // If s is true, mask will be ~0.  If s is false, mask will be 0.
+  const char mask = (char) -(signed char)s;
+
+  char *destp = dest;
+  const char *srcp = src;
+  for (size_t i = 0; i < n; ++i) {
+    *destp = (*destp & ~mask) | (*srcp & mask);
+    ++destp;
+    ++srcp;
+  }
+}

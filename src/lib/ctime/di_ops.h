@@ -73,4 +73,6 @@ int select_array_member_cumulative_timei(const uint64_t *entries,
                                          int n_entries,
                                          uint64_t total, uint64_t rand_val);
 
+void memcpy_if_true_timei(bool s, void *dest, const void *src, size_t n);
+
 #endif /* !defined(TOR_DI_OPS_H) */
