@@ -1347,26 +1347,26 @@ test_nodelist_routerstatus_has_changed(void *arg)
   rs.has_exitsummary = 1;
   ASSERT_SAME();
 
-  // Does not actually matter?  Shouldn't it? XXXX
+  // Does not actually matter; not visible to the controller.
   rs.bw_is_unmeasured = 1;
   ASSERT_SAME();
 
   rs.bandwidth_kb = 2000;
   ASSERT_CHANGED();
 
-  // XXX Shoudn't this count as a change?
+  // not visible to the controller.
   rs.has_guardfraction = 1;
   rs.guardfraction_percentage = 22;
   ASSERT_SAME();
 
-  // XXX Shoudn't this count as a change?
+  // not visible to the controller.
   rs_orig.has_guardfraction = 1;
   rs_orig.guardfraction_percentage = 20;
   COPY();
   rs.guardfraction_percentage = 25;
   ASSERT_SAME();
 
-  // Shouldn't this count as a change?
+  // not visible to the controller.
   rs.exitsummary = (char*)"accept 1-2";
   ASSERT_SAME();
 
