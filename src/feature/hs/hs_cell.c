@@ -776,19 +776,19 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
   if (intro_keys == NULL) {
     log_info(LD_REND, "Invalid INTRODUCE2 encrypted data. Unable to "
              "compute key material");
-    goto err;
+    return NULL;
+  }
+
+  /* Make sure we are not about to underflow. */
+  if (BUG(encrypted_section_len < DIGEST256_LEN)) {
+    return NULL;
   }
 
   /* Validate MAC from the cell and our computed key material. The MAC field
    * in the cell is at the end of the encrypted section. */
-  int found_idx = -1;
+  intro_keys_result = tor_malloc_zero(sizeof(*intro_keys_result));
   for (int i = 0; i < data->n_subcredentials; ++i) {
     uint8_t mac[DIGEST256_LEN];
-
-    /* Make sure we are not about to underflow. */
-    if (encrypted_section_len < sizeof(mac)) {
-      goto err;
-    }
 
     /* The MAC field is at the very end of the ENCRYPTED section. */
     size_t mac_offset = encrypted_section_len - sizeof(mac);
@@ -800,33 +800,22 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
                           intro_keys[i].mac_key,
                           sizeof(intro_keys[i].mac_key),
                           mac, sizeof(mac));
-    if (tor_memeq(mac, encrypted_section + mac_offset, sizeof(mac))) {
-      found_idx = i;
-      break;
-    }
+    /* Time-invariant conditional copy: if the MAC is what we expected, then
+     * set intro_keys_result to intro_keys[i]. Otherwise, don't: but don't
+     * leak which one it was! */
+    bool equal = tor_memeq(mac, encrypted_section + mac_offset, sizeof(mac));
+    memcpy_if_true_timei(equal, intro_keys_result, &intro_keys[i],
+                         sizeof(*intro_keys_result));
   }
 
-  if (found_idx == -1) {
+  /* We no longer need intro_keys. */
+  memwipe(intro_keys, 0,
+          sizeof(hs_ntor_intro_cell_keys_t) * data->n_subcredentials);
+  tor_free(intro_keys);
+
+  if (safe_mem_is_zero(intro_keys_result, sizeof(*intro_keys_result))) {
     log_info(LD_REND, "Invalid MAC validation for INTRODUCE2 cell");
-    goto err;
-  }
-
-  /* We found a match! */
-  if (data->n_subcredentials == 1) {
-    /* There was only one; steal it. */
-    intro_keys_result = intro_keys;
-    intro_keys = NULL;
-  } else {
-    /* Copy out the one we wanted. */
-    intro_keys_result = tor_memdup(&intro_keys[found_idx],
-                                   sizeof(hs_ntor_intro_cell_keys_t));
-  }
-
- err:
-  if (intro_keys) {
-    memwipe(intro_keys, 0,
-            sizeof(hs_ntor_intro_cell_keys_t) * data->n_subcredentials);
-    tor_free(intro_keys);
+    tor_free(intro_keys_result); /* sets intro_keys_result to NULL */
   }
 
   return intro_keys_result;
