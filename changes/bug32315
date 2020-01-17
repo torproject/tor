@@ -1,4 +1,4 @@
   o Major bugfixes (networking):
     - Correctly handle IPv6 addresses in SOCKS5 RESOLVE_PTR requests,
       and accept strings as well as binary addresses. Fixes bug 32315;
-      bugfix on Tor 0.3.5.1-alpha.
+      bugfix on 0.3.5.1-alpha.
