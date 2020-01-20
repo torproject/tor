@@ -1703,7 +1703,9 @@ The following options are useful only for clients (that is, if
     connections via SOCKS. Set it to "auto" to have Tor pick a port for
     you. This directive can be specified multiple times to bind
     to multiple addresses/ports. If a unix domain socket is used, you may
-    quote the path using standard C escape sequences.
+    quote the path using standard C escape sequences. Most flags are off by
+    default, except where specified. Flags that are on by default can be
+    disabled by putting "No" before the flag name.
     (Default: 9050) +
      +
         NOTE: Although this option allows you to specify an IP address
@@ -1802,11 +1804,11 @@ The following options are useful only for clients (that is, if
     **UseDNSCache**;;
         Tells the client to use any cached DNS answers we have when making
         requests via this connection.
-    **PreferIPv6Automap**;;
+    **NoPreferIPv6Automap**;;
         When serving a hostname lookup request on this port that
         should get automapped (according to AutomapHostsOnResolve),
         if we could return either an IPv4 or an IPv6 answer, prefer
-        an IPv6 answer. (On by default.)
+        an IPv4 answer. (Tor prefers IPv6 by default.)
     **PreferSOCKSNoAuth**;;
         Ordinarily, when an application offers both "username/password
         authentication" and "no authentication" to Tor via SOCKS5, Tor
