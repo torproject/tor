@@ -5886,6 +5886,7 @@ port_cfg_new(size_t namelen)
   port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t) + namelen + 1);
   cfg->entry_cfg.ipv4_traffic = 1;
   cfg->entry_cfg.ipv6_traffic = 1;
+  cfg->entry_cfg.prefer_ipv6 = 1;
   cfg->entry_cfg.dns_request = 1;
   cfg->entry_cfg.onion_traffic = 1;
   cfg->entry_cfg.prefer_ipv6_virtaddr = 1;
@@ -6133,7 +6134,7 @@ port_parse_config(smartlist_t *out,
     /* This must be kept in sync with port_cfg_new's defaults */
     int no_listen = 0, no_advertise = 0, all_addrs = 0,
       bind_ipv4_only = 0, bind_ipv6_only = 0,
-      ipv4_traffic = 1, ipv6_traffic = 1, prefer_ipv6 = 0, dns_request = 1,
+      ipv4_traffic = 1, ipv6_traffic = 1, prefer_ipv6 = 1, dns_request = 1,
       onion_traffic = 1,
       cache_ipv4 = 0, use_cached_ipv4 = 0,
       cache_ipv6 = 0, use_cached_ipv6 = 0,

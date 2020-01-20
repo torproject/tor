@@ -1516,7 +1516,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   if (type != CONN_TYPE_AP_LISTENER) {
     lis_conn->entry_cfg.ipv4_traffic = 1;
     lis_conn->entry_cfg.ipv6_traffic = 1;
-    lis_conn->entry_cfg.prefer_ipv6 = 0;
+    lis_conn->entry_cfg.prefer_ipv6 = 1;
   }
 
   if (connection_add(conn) < 0) { /* no space, forget it */
