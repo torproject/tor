@@ -1272,10 +1272,8 @@ test_nodelist_routerstatus_has_visibly_changed(void *arg)
     tor_free(fmt);                                                        \
     fmt_orig = routerstatus_format_entry(&rs_orig, NULL, NULL,            \
                           NS_CONTROL_PORT,                                \
-                          ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD,        \
                           NULL);                                          \
     fmt = routerstatus_format_entry(&rs, NULL, NULL, NS_CONTROL_PORT,     \
-                          ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD,        \
                           NULL);                                          \
     tt_assert(fmt_orig);                                                  \
     tt_assert(fmt);                                                       \
