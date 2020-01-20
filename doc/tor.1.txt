@@ -1755,14 +1755,16 @@ The following options are useful only for clients (that is, if
     Other recognized __flags__ for a SocksPort are:
     **NoIPv4Traffic**;;
         Tell exits to not connect to IPv4 addresses in response to SOCKS
-        requests on this connection.
-    **IPv6Traffic**;;
-        Tell exits to allow IPv6 addresses in response to SOCKS requests on
-        this connection, so long as SOCKS5 is in use.  (SOCKS4 can't handle
-        IPv6.)
-    **PreferIPv6**;;
+        requests on this connection. (Allowing IPv4 is the default.)
+    **NoIPv6Traffic**;;
+        Tell exits to not connect to IPv6 addresses in response to SOCKS
+        requests on this connection. This option is only relevant when SOCKS5
+        is in use, because SOCKS4 can't handle IPv6.  (Allowing IPv6 is the
+        default.)
+    **NoPreferIPv6**;;
         Tells exits that, if a host has both an IPv4 and an IPv6 address,
-        we would prefer to connect to it via IPv6. (IPv4 is the default.)
+        we would prefer to connect to it via IPv4. (IPv6 is the default in
+        recent versions of Tor.)
     **NoDNSRequest**;;
         Do not ask exits to resolve DNS addresses in SOCKS5 requests. Tor will
         connect to IPv4 addresses, IPv6 addresses (if IPv6Traffic is set) and
