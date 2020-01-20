@@ -4,16 +4,20 @@
    Add a C file with matching header to the Tor codebase.  Creates
    both files from templates, and adds them to the right include.am file.
 
-   This script takes paths relative to the top-level tor directory.
-   It creates files, and inserts them into include.am, also relative to
-   the top-level tor directory.
+   This script takes paths relative to the top-level tor directory. It
+   expects to be run from that directory.
+
+   This script creates files, and inserts them into include.am, also
+   relative to the top-level tor directory.
 
    But the template content in those files is relative to tor's src
    directory. (This script strips "src" from the paths used to create
    templated comments and macros.)
 
    This script expects posix paths, so it should be run with a python
-   where os.path is posixpath. (Rather than ntpath.)
+   where os.path is posixpath. (Rather than ntpath.) This probably means
+   Linux, macOS, or BSD, although it might work on Windows if your python
+   was compiled with mingw, MSYS, or cygwin.
 
    Example usage:
 
