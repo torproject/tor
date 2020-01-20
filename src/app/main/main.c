@@ -1191,7 +1191,7 @@ run_tor_main_loop(void)
 }
 
 /** Install the publish/subscribe relationships for all the subsystems. */
-static void
+void
 pubsub_install(void)
 {
     pubsub_builder_t *builder = pubsub_builder_new();
@@ -1203,7 +1203,7 @@ pubsub_install(void)
 
 /** Connect the mainloop to its publish/subscribe message delivery events if
  * appropriate, and configure the global channels appropriately. */
-static void
+void
 pubsub_connect(void)
 {
   if (get_options()->command == CMD_RUN_TOR) {
@@ -1272,13 +1272,6 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
     evutil_secure_rng_set_urandom_device_file(
         (char*) sandbox_intern_string("/dev/urandom"));
 #endif
-  }
-
-  if (tor_cfg->run_tor_only && get_options()->command != CMD_RUN_TOR) {
-    log_err(LD_CONFIG, "Unsupported command when running as an NT service.");
-    result = -1;
-    tor_cleanup();
-    goto done;
   }
 
   switch (get_options()->command) {

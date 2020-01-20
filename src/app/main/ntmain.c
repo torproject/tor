@@ -29,8 +29,6 @@
 #include "lib/evloop/compat_libevent.h"
 #include "lib/fs/winlib.h"
 #include "lib/log/win32err.h"
-#include "feature/api/tor_api.h"
-#include "feature/api/tor_api_internal.h"
 
 #include <windows.h>
 #define GENSRV_SERVICENAME  "tor"
@@ -265,6 +263,7 @@ nt_service_control(DWORD request)
 static void
 nt_service_body(int argc, char **argv)
 {
+  int r;
   (void) argc; /* unused */
   (void) argv; /* unused */
   nt_service_loadlibrary();
@@ -284,20 +283,28 @@ nt_service_body(int argc, char **argv)
     return;
   }
 
-  tor_main_configuration_t *cfg = tor_main_configuration_new();
-  cfg->run_tor_only = 1;
-  if (tor_main_configuration_set_command_line(cfg, backup_argc,
-                                              backup_argv) < 0)
+  pubsub_install();
+  r = tor_init(backup_argc, backup_argv);
+
+  if (r) {
+    /* Failed to start the Tor service */
+    r = NT_SERVICE_ERROR_TORINIT_FAILED;
+    service_status.dwCurrentState = SERVICE_STOPPED;
+    service_status.dwWin32ExitCode = r;
+    service_status.dwServiceSpecificExitCode = r;
+    service_fns.SetServiceStatus_fn(hStatus, &service_status);
     return;
+  }
+
+  pubsub_connect();
 
   /* Set the service's status to SERVICE_RUNNING and start the main
    * event loop */
   service_status.dwCurrentState = SERVICE_RUNNING;
   service_fns.SetServiceStatus_fn(hStatus, &service_status);
-
-  tor_run_main(cfg);
-
-  tor_main_configuration_free(cfg);
+  set_main_thread();
+  run_tor_main_loop();
+  tor_cleanup();
 }
 
 /** Main service entry point. Starts the service control dispatcher and waits
@@ -319,15 +326,33 @@ nt_service_main(void)
     errmsg = format_win32_error(result);
     printf("Service error %d : %s\n", (int) result, errmsg);
     tor_free(errmsg);
-    if (result == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
-      tor_main_configuration_t *cfg = tor_main_configuration_new();
-      cfg->run_tor_only = 1;
-      if (tor_main_configuration_set_command_line(cfg, backup_argc,
-                                                  backup_argv) < 0)
-        return;
 
-      tor_run_main(cfg);
-      tor_main_configuration_free(cfg);
+    pubsub_install();
+    if (result == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
+      if (tor_init(backup_argc, backup_argv))
+        return;
+      pubsub_connect();
+      switch (get_options()->command) {
+      case CMD_RUN_TOR:
+        run_tor_main_loop();
+        break;
+      case CMD_LIST_FINGERPRINT:
+      case CMD_HASH_PASSWORD:
+      case CMD_VERIFY_CONFIG:
+      case CMD_DUMP_CONFIG:
+      case CMD_KEYGEN:
+      case CMD_KEY_EXPIRATION:
+        log_err(LD_CONFIG, "Unsupported command (--list-fingerprint, "
+               "--hash-password, --keygen, --dump-config, --verify-config, "
+               "or --key-expiration) in NT service.");
+        break;
+      case CMD_RUN_UNITTESTS:
+      case CMD_IMMEDIATE:
+      default:
+        log_err(LD_CONFIG, "Illegal command number %d: internal error.",
+                get_options()->command);
+      }
+      tor_cleanup();
     }
   }
 }
