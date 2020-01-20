@@ -265,6 +265,8 @@ def run(fname):
     # Make sure we're in the top-level tor directory,
     # which contains the src directory
     assert(os.path.isdir("src"))
+    # And it looks like a tor/src directory
+    assert(os.path.isfile("src/include.am"))
 
     # Make the file name relative to the top-level tor directory
     tor_fname = tordir_file(fname)
