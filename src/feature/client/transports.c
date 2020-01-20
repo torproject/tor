@@ -1858,7 +1858,9 @@ managed_proxy_stderr_callback(process_t *process,
   if (BUG(mp == NULL))
     return;
 
-  log_warn(LD_PT, "Managed proxy at '%s' reported: %s", mp->argv[0], line);
+  log_debug(LD_PT,
+            "Managed proxy at '%s' reported via standard error: %s",
+            mp->argv[0], line);
 }
 
 /** Callback function that is called when our PT process terminates. The

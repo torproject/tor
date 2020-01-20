@@ -1,0 +1,3 @@
+  o Minor bugfixes (pluggable transports):
+    - Lower the log level of standard error messages from a PT from warning to
+      debug. Fixes bug 32034; bugfix on 0.4.0.1-alpha.
