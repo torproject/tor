@@ -268,15 +268,26 @@ def run(fname):
 
     # Make sure we're in the top-level tor directory,
     # which contains the src directory
-    assert(os.path.isdir("src"))
+    if not os.path.isdir("src"):
+        raise RuntimeError("Could not find './src/'. "
+                           "Run this script from the top-level tor source "
+                           "directory.")
+
     # And it looks like a tor/src directory
-    assert(os.path.isfile("src/include.am"))
+    if not os.path.isfile("src/include.am"):
+        raise RuntimeError("Could not find './src/include.am'. "
+                           "Run this script from the top-level tor source "
+                           "directory.")
 
     # Make the file name relative to the top-level tor directory
     tor_fname = tordir_file(fname)
     # And check that we're adding files to the "src" directory,
     # with canonical paths
-    assert(tor_fname[:4] == "src/")
+    if tor_fname[:4] != "src/":
+        raise ValueError("Requested file path '{}' canonicalized to '{}', "
+                         "but the canonical path did not start with 'src/'. "
+                         "Please add files to the src directory."
+                         .format(fname, tor_fname))
 
     c_tor_fname = makeext(tor_fname, "c")
     h_tor_fname = makeext(tor_fname, "h")
