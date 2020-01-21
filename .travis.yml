@@ -41,44 +41,6 @@ env:
 matrix:
   ## include creates builds with gcc, linux, unless we override those defaults
   include:
-    ## We run basic tests on macOS
-    - compiler: clang
-      os: osx
-      ## Turn off some newer features, turn on clang's -Wtypedef-redefinition
-      env: C_DIALECT_OPTIONS="-std=gnu99"
-    ## We check NSS
-    ## Use -std=gnu99 to turn off some newer features, and maybe turn on some
-    ## extra gcc warnings?
-    - env: NSS_OPTIONS="--enable-nss" C_DIALECT_OPTIONS="-std=gnu99"
-    ## We run chutney on Linux, because it's faster than chutney on macOS
-    ## Chutney is a fast job, clang is slower on Linux, so we do Chutney clang
-    - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
-      compiler: clang
-    ## We check asciidoc with distcheck, to make sure we remove doc products
-    ## We use Linux clang, because there are no other Linux clang jobs
-    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
-      compiler: clang
-    ## We include a single coverage build with the best options for coverage
-    - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS="" TOR_TEST_RNG_SEED="636f766572616765"
-    ## We run rust on Linux, because it's faster than rust on macOS
-    ## We check rust offline
-    - env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
-    ## We check asciidoc with distcheck, to make sure we remove doc products
-    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
-    ## We check disable module relay
-    - env: MODULES_OPTIONS="--disable-module-relay"
-    ## We check disable module dirauth
-    - env: MODULES_OPTIONS="--disable-module-dirauth"
-    ## macOS builds are very slow, and we have a limited number of
-    ## concurrent macOS jobs. We're not actively developing Rust, so it is
-    ## the lowest priority.
-    ## We run rust on macOS, because we have seen macOS rust failures before
-    #- env: RUST_VERSION="nightly" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
-    #  compiler: clang
-    #  os: osx
-    ## We run chutney on macOS, because macOS Travis has IPv6
-    - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
-      os: osx
     ## We clone our stem repo and run `make test-stem`
     - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
 
@@ -97,8 +59,6 @@ matrix:
       os: osx
     - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
       os: osx
-    ## test-stem sometimes hangs on Travis
-    - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
 
 ## (Linux only) Use a recent Linux image (Ubuntu Bionic)
 dist: bionic
