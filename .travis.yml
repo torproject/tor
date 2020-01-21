@@ -192,7 +192,7 @@ script:
   - if [[ "$CHUTNEY" != "" ]]; then make test-network-all; fi
   ## Diagnostic for bug 29437: kill stem if it hangs for 9.5 minutes
   ## Travis will kill the job after 10 minutes with no output
-  - if [[ "$TEST_STEM" != "" ]]; then make src/app/tor; timelimit -p -t 540 -s USR1 -T 30 -S ABRT python3 "$STEM_SOURCE_DIR"/run_tests.py --tor src/app/tor --integ --test control.controller --test control.base_controller --test process --log TRACE --log-file stem.log; fi
+  - if [[ "$TEST_STEM" != "" ]]; then make src/app/tor; timelimit -p -t 540 -s USR1 -T 30 -S ABRT python3 "$STEM_SOURCE_DIR"/run_tests.py --tor src/app/tor --integ --test process.test_take_ownership_via_controller --log TRACE --log-file stem.log; fi
   ## If this build was one that produced coverage, upload it.
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p' || echo "Coverage failed"; fi
 
