@@ -58,6 +58,8 @@ subsys_winprocess_initialize(void)
 
 const subsys_fns_t sys_winprocess = {
   .name = "winprocess",
+  /* HeapEnableTerminationOnCorruption and setdeppolicy() are security
+   * features, we want them to run first. */
   .level = -100,
   .supported = WINPROCESS_SYS_ENABLED,
   .initialize = subsys_winprocess_initialize,
