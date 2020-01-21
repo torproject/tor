@@ -217,7 +217,7 @@
 #define USING_TWOS_COMPLEMENT
 
 /* Version number of package */
-#define VERSION "0.4.3.0-alpha-dev"
+#define VERSION "0.4.3.1-alpha"
 
 #define HAVE_STRUCT_SOCKADDR_IN6
 #define HAVE_STRUCT_IN6_ADDR
