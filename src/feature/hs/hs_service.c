@@ -4112,6 +4112,7 @@ hs_service_free_all(void)
 {
   rend_service_free_all();
   service_free_all();
+  hs_config_free_all();
 }
 
 #ifdef TOR_UNIT_TESTS

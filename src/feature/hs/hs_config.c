@@ -31,7 +31,62 @@
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendservice.h"
 #include "lib/encoding/confline.h"
+#include "lib/conf/confdecl.h"
+#include "lib/confmgt/confmgt.h"
+
+#include "feature/hs/hs_opts_st.h"
 #include "app/config/or_options_st.h"
+
+/* Declare the table mapping hs options to hs_opts_t */
+#define CONF_CONTEXT TABLE
+#include "feature/hs/hs_options.inc"
+#undef CONF_CONTEXT
+
+/** Magic number for hs_opts_t. */
+#define HS_OPTS_MAGIC 0x6f6e796e
+
+static const config_format_t hs_opts_fmt = {
+  .size = sizeof(hs_opts_t),
+  .magic = { "hs_opts_t",
+             HS_OPTS_MAGIC,
+             offsetof(hs_opts_t, magic) },
+  .vars = hs_opts_t_vars,
+};
+
+/** Global configuration manager to handle HS sections*/
+static config_mgr_t *hs_opts_mgr = NULL;
+
+/**
+ * Return a configuration manager for the hs_opts_t configuration type.
+ **/
+static const config_mgr_t *
+get_hs_opts_mgr(void)
+{
+  if (PREDICT_UNLIKELY(hs_opts_mgr == NULL)) {
+    hs_opts_mgr = config_mgr_new(&hs_opts_fmt);
+    config_mgr_freeze(hs_opts_mgr);
+  }
+  return hs_opts_mgr;
+}
+
+/**
+ * Allocate, initialize, and return a new hs_opts_t.
+ **/
+static hs_opts_t *
+hs_opts_new(void)
+{
+  const config_mgr_t *mgr = get_hs_opts_mgr();
+  hs_opts_t *r = config_new(mgr);
+  tor_assert(r);
+  config_init(mgr, r);
+  return r;
+}
+
+/**
+ * Free an hs_opts_t.
+ **/
+#define hs_opts_free(opts) \
+  config_free(get_hs_opts_mgr(), (opts))
 
 /** Using the given list of services, stage them into our global state. Every
  * service version are handled. This function can remove entries in the given
@@ -607,11 +662,13 @@ config_generic_service(const config_line_t *line,
  * the service to the given list and return 0. On error, nothing is added to
  * the list and a negative value is returned. */
 static int
-config_service(const config_line_t *line, const or_options_t *options,
+config_service(config_line_t *line, const or_options_t *options,
                smartlist_t *service_list)
 {
   int ret;
   hs_service_t *service = NULL;
+  hs_opts_t *hs_opts = NULL;
+  char *msg = NULL;
 
   tor_assert(line);
   tor_assert(options);
@@ -619,6 +676,22 @@ config_service(const config_line_t *line, const or_options_t *options,
 
   /* We have a new hidden service. */
   service = hs_service_new(options);
+
+  /* Try to validate and parse the configuration lines into 'hs_opts' */
+  hs_opts = hs_opts_new();
+  ret = config_assign(get_hs_opts_mgr(), hs_opts, line, 0, &msg);
+  if (ret < 0) {
+    log_warn(LD_REND, "Can't parse configuration for onion service: %s", msg);
+    goto err;
+  }
+  tor_assert_nonfatal(msg == NULL);
+  validation_status_t vs = config_validate(get_hs_opts_mgr(), NULL,
+                                           hs_opts, &msg);
+  if (vs < 0) {
+    log_warn(LD_REND, "Bad configuration for onion service: %s", msg);
+    goto err;
+  }
+  tor_assert_nonfatal(msg == NULL);
 
   /* We'll configure that service as a generic one and then pass it to a
    * specific function according to the configured version number. */
@@ -679,11 +752,14 @@ config_service(const config_line_t *line, const or_options_t *options,
 
   /* Passes, add it to the given list. */
   smartlist_add(service_list, service);
+  hs_opts_free(hs_opts);
 
   return 0;
 
  err:
   hs_service_free(service);
+  hs_opts_free(hs_opts);
+  tor_free(msg);
   return -1;
 }
 
@@ -779,4 +855,13 @@ hs_config_client_auth_all(const or_options_t *options, int validate_only)
   ret = 0;
  done:
   return ret;
+}
+
+/**
+ * Free all resources held by the hs_config.c module.
+ **/
+void
+hs_config_free_all(void)
+{
+  config_mgr_free(hs_opts_mgr);
 }
