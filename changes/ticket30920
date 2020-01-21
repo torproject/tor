@@ -1,3 +1,0 @@
-  o Minor bugfix (configuration):
-    - Check for multiplication overflow when parsing memory units inside
-      configuration. Fixes bug 30920; bugfix on 0.0.9rc1~46.

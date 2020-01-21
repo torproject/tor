@@ -1,3 +1,465 @@
+Changes in version 0.4.3.1-alpha - 2020-01-2?
+  This is the first alpha release in the 0.4.3.x series. BLURB MORE
+
+  o Major feature (onion service, SOCKS5):
+    - Introduce a new SocksPort flag named: ExtendedErrors. Detailed in
+      proposal 304, a number of onion service error codes are now sent back,
+      if this flag is set, with the SOCKS5 protocol using new custom error
+      values. Closes ticket 30382;
+
+  o Major features (build system):
+    - Create an optional relay module, which can be disabled using the
+      --disable-module-relay configure option. When it is set, also disable
+      the dirauth module. Add a minimal implemention, which disables the
+      relay and dircache modes in tor. Closes ticket 32123.
+
+  o Major features (controller):
+    - New ONION_CLIENT_AUTH_ADD control port command to add client-side onion
+      service client authorization credentials. Closes part of ticket 30381.
+    - New ONION_CLIENT_AUTH_REMOVE control port command to remove client-side
+      onion service client authorization credentials. Closes part of ticket
+      30381.
+    - New ONION_CLIENT_AUTH_VIEW control port command to view stored
+      client-side onion service client authorization credentials. Closes part
+      of ticket 30381.
+
+  o Major features (directory authority, ed25519):
+      Add support for banning a relay's ed25519 keys in the approved-routers
+      file. This will allow us to migrate away from RSA keys in the future.
+      Previously, only RSA keys could be banned in approved-routers. Resolves
+      ticket 22029. Patch by Neel Chauhan.
+
+  o Major features (documentation):
+    - Provide a Circuit Padding Framework quickstart guide and developer
+      documentation for researchers to implement and study Circuit Padding
+      machines. Closes ticket 28804.
+
+  o Major features (proxy):
+    - In addition to HTTP CONNECT, SOCKS4, and SOCKS5, Tor can make all OR
+      connections through the HAProxy server. A new torrc option was added to
+      specify the address/port of the server: TCPProxy <protocol>
+      <host>:<port>. Currently the only supported protocol in the option is
+      haproxy. Close ticket 31518. Patch done by Suphanat Chunhapanya (haxxpop).
+
+  o Major bugfixes (networking):
+    - Correctly handle IPv6 addresses in SOCKS5 RESOLVE_PTR requests,
+      and accept strings as well as binary addresses. Fixes bug 32315;
+      bugfix on 0.3.5.1-alpha.
+
+  o Major bugfixes (onion service):
+    - Report back HS circuit failure back into the HS subsytem so we take
+      appropriate action with regards to the client introduction point failure
+      cache. This improves reachability of onion services, since now clients
+      notice failing introduction circuits properly. Fixes bug 32020; bugfix on
+      0.3.2.1-alpha;
+
+  o Minor feature (configure, build system):
+    - Output enabled/disabled features at the end of the configure process in a
+      pleasing way. Closes ticket 31373.
+
+  o Minor feature (heartbeat, onion service):
+    - Add the DoS INTRODUCE2 defenses counter to the heartbeat DoS message.
+      Closes ticket 31371.
+
+  o Minor features (configuration validation):
+    - Configuration validation can now be done by per-module callbacks,
+      rather than a global validation function.  This will let us reduce the
+      size of config.c and some of its more cumbersome functions.  Closes
+      ticket 31241.
+
+  o Minor features (configuration):
+    - If the configured hardware crypto accelerator in AccelName
+      is prefixed with "!", Tor now exits when it cannot be found.
+      Closes ticket 32406.
+    - We use a flag-driven logic to warn about obsolete configuration fields,
+      so that we can include their names.  In 0.4.2, we used
+      a special type, which prevented us from generating good warnings.
+      Implements ticket 32404.
+
+  o Minor features (continuous integration):
+    - Call the check_cocci_parse.sh script from Travis CI. Closes ticket 31919.
+
+  o Minor features (controller):
+    - Add stream isolation data to STREAM event. Closes ticket 19859.
+    - Implement a new GETINFO command to fetch microdescriptor consensus.
+      Closes ticket 31684.
+
+  o Minor features (debugging, directory system):
+    - Don't crash when we find a non-guard with a guard-fraction value set.
+      Instead, log a bug warning, in an attempt to figure out how this
+      happened. Diagnostic for ticket 32868.
+
+  o Minor features (defense in depth):
+    - Add additional sanity checks around tor_vasprintf() usage in case the
+      function returns an error. Patch by Tobias Stoeckmann. Fixes ticket 31147.
+
+  o Minor features (developer tooling):
+    - Remove 0.2.9 series branches from git scripts (git-merge-forward.sh,
+      git-pull-all.sh, git-push-all.sh, git-setup-dirs.sh). Closes ticket
+      32772.
+
+  o Minor features (developer tools):
+    - Add a check_cocci_parse.sh script that checks that new code
+      is parseable by Coccinelle. Add an exceptions file for unparseable
+      files. Closes ticket 31919.
+    - Add a rename_c_identifiers.py tool to rename a bunch of C
+      identifiers at once, and generate a well-formed commit message
+      describing the change. This should help with refactoring. Closes
+      ticket 32237.
+    - Add some scripts in "scripts/coccinelle" to invoke the Coccinelle
+      semantic patching tool with the correct flags.  These flags are fairly
+      easy to forget, and these scripts should help us use Coccinelle more
+      effectively in the future. Closes ticket 31705.
+    - Call the check_cocci_parse.sh script from a 'check-cocci' Makefile
+      target. Closes ticket 31919.
+
+  o Minor features (disabling relay support):
+    - When Tor is compiled --disable-module-relay, we also omit the
+      code used to act as a directory cache. Closes ticket 32487.
+
+  o Minor features (documentation):
+    - Make sure that doxygen outputs documentation for all of our C files.
+      Previously, some were missing @file declarations, causing them to be
+      ignored. Closes ticket 32307.
+
+  o Minor features (Doxygen):
+    - Update Doxygen configuration file to a more recent template (from
+      1.8.15).  Closes ticket 32110.
+    - "make doxygen" now works with out-of-tree builds. Closes ticket
+      32113.
+    - Our "make doxygen" target now respects --enable-fatal-warnings by
+      default, and does not warn about items that are missing documentation.
+      To warn about missing documentation, run configure with the
+      "--enable-missing-doc-warnings" flag: doing so suspends fatal warnings
+      for doxygen. Closes ticket 32385.
+
+  o Minor features (git scripts):
+    - Add TOR_EXTRA_CLONE_ARGS to git-setup-dirs.sh for git clone
+      customisation. Closes ticket 32347.
+    - Add TOR_EXTRA_REMOTE_* to git-setup-dirs.sh for a custom extra remote.
+      Closes ticket 32347.
+    - Add git-setup-dirs.sh, which sets up an upstream git repository and
+      worktrees for tor maintainers. Closes ticket 29603.
+    - Call the check_cocci_parse.sh script from the git commit and push hooks.
+      Closes ticket 31919.
+    - Make git-push-all.sh skip unchanged branches when pushing to upstream.
+      The script already skipped unchanged test branches.
+      Closes ticket 32216.
+    - Make git-setup-dirs.sh create a master symlink in the worktree directory.
+      Closes ticket 32347.
+    - Skip unmodified source files when doing some existing git hook checks.
+      Related to ticket 31919.
+
+  o Minor features (IPv6, client):
+    - Make Tor clients tell dual-stack exits that they prefer IPv6
+      connections. This change is equivalent to setting the PreferIPv6 flag
+      on SOCKSPorts (and most other listener ports). Tor Browser has been
+      setting this flag for some time, and we want to remove a client
+      distinguisher at exits. Closes ticket 32637.
+
+  o Minor features (portability, android):
+    - When building for Android, disable some tests that depend on
+      $HOME and/or pwdb, which Android doesn't have. Closes ticket 32825.
+      Patch from Hans-Christoph Steiner.
+
+  o Minor features (relay module):
+    - Split the relay and server pluggable transport config code into
+      separate files in the relay module. Disable this code when the relay
+      module is disabled. Closes ticket 32213.
+    - When the relay module is disabled, reject attempts to set the
+      ORPort, DirPort, DirCache, BridgeRelay, ExtORPort, or
+      ServerTransport* options, rather than ignoring the values of these
+      options. Closes ticket 32213.
+
+  o Minor features (relay):
+    - When the relay module is disabled, change the default config so that
+      DirCache is 0, and ClientOnly is 1. Closes ticket 32410.
+
+  o Minor features (release tools):
+    - Port our changelog formatting and sorting tools to Python 3.
+      Closes ticket 32704.
+
+  o Minor features (testing):
+    - Add common failure cases for test_parseconf.sh in
+      src/test/conf_failures. Closes ticket 32451.
+    - Allow test_parseconf.sh to test expected log outputs for successful
+      configs, as well as failed configs. Closes ticket 32451.
+    - test_parseconf.sh now supports result variants for any combination
+      of the optional libraries lzma, nss, and zstd.
+      Closes ticket 32397.
+
+  o Minor features (tests, Android):
+    - When running the unit tests on Android, create temporary files
+      in a subdirectory of /data/local/tmp. Closes ticket
+      32172. Based on a patch from Hans-Christoph Steiner.
+
+  o Minor bugfix (configuration):
+    - Check for multiplication overflow when parsing memory units inside
+      configuration. Fixes bug 30920; bugfix on 0.0.9rc1~46.
+
+  o Minor bugfixes (bridges):
+    - Lowercase the value of BridgeDistribution from torrc before adding it to
+      the descriptor. Fixes bug 32753; bugfix on 0.3.2.3-alpha.
+
+  o Minor bugfixes (build):
+    - Fix "make autostyle" for out-of-tree builds.
+      Fixes bug 32370; bugfix on 0.4.1.2-alpha.
+
+  o Minor bugfixes (config):
+    - When dumping the config, stop adding a trailing space after the option
+      name, when there is no option value. This issue only affects options
+      that accept an empty value or list. (Most options reject empty values,
+      or delete the entire line from the dumped options.)
+      Fixes bug 32352; bugfix on 0.0.9pre6.
+
+  o Minor bugfixes (configuration handling):
+    - Make control_event_conf_changed() take in a config_line_t instead of
+      a smartlist(k, v, k, v, ...) where keys are followed by values. Fixes
+      bug 31531; bugfix on 0.2.3.3-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (configuration):
+    - Avoid changing the user's value of HardwareAccel as stored by SAVECONF,
+      when AccelName is set but HardwareAccel is not.
+      Fixes bug 32382; bugfix on 0.2.2.1-alpha.
+    - When creating a KeyDirectory with the same location as the
+      DataDirectory (not recommended), respect the DataDirectory's
+      group-readable setting if one has not been set for the KeyDirectory.
+      Fixes bug 27992; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (controller):
+    - In routerstatus_has_changed(), check all the fields that are output over the control port.
+      Fixes bug 20218; bugfix on 0.1.1.11-alpha
+
+  o Minor bugfixes (correctness checks):
+    - Use GCC/Clang's printf-checking feature to make sure that
+      tor_assertf() arguments are correctly typed. Fixes bug 32765;
+      bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (developer tools):
+    - Allow paths starting with ./ in scripts/add_c_file.py. Fixes bug
+      31336; bugfix on 0.4.1.2-alpha.
+
+  o Minor bugfixes (dirauth module):
+    - Split the dirauth config code into a separate file in the dirauth
+      module. Disable this code when the dirauth module is disabled.
+      Closes ticket 32213.
+    - When the dirauth module is disabled, reject attempts to set the
+      AuthoritativeDir option, rather than ignoring the value of the
+      option. Fixes bug 32213; bugfix on 0.3.4.1-alpha.
+
+  o Minor bugfixes (embedded Tor):
+    - When starting Tor any time after the first time in a process, register
+      the thread in which it is running as the main thread.  Previously, we
+      only did this on Windows, which could lead to bugs like 23081 on
+      non-Windows platforms.  Fixes bug 32884; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (git scripts):
+    - Avoid sleeping before the last push in git-push-all.sh.
+      Closes ticket 32216.
+    - Forward all unrecognised arguments in git-push-all.sh to git push.
+      Closes ticket 32216.
+
+  o Minor bugfixes (hidden service v3):
+    - Do not rely on a "circuit established" flag for intro circuit but instead
+      always query the HS circuit map. This is to avoid sync issue with that
+      flag and the map. Fixes bug 32094; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (linux seccomp sandbox):
+    - Correct how we use libseccomp. Particularly, stop assuming that
+      rules are applied in a particular order or that more rules are
+      processed after the first match. Neither is the case! In libseccomp
+      <2.4.0 this lead to some rules having no effect. Libseccomp 2.4.0
+      changed how rules are generated leading to a different ordering
+      which in turn lead to a fatal crash during startup. Fixes bug
+      29819; bugfix on 0.2.5.1-alpha. Patch by Peter Gerber.
+    - Fix crash when reloading logging configuration while the
+      experimental sandbox is enabled. Fixes bug 32841; bugfix
+      on 0.4.1.7. Patch by Peter Gerber.
+
+  o Minor bugfixes (logging, crash):
+    - Avoid a possible crash when trying to log a (fatal) assertion failure
+      about mismatched magic numbers in configuration objects. Fixes bug 32771;
+      bugfix on 0.4.2.1-alpha.
+
+  o Minor bugfixes (onion service v2):
+    - When sending the INTRO cell for a v2 Onion Service, look at the failure
+      cache alongside timeout values to check if the intro point is marked
+      as failed. Previously, we only looked at if the relay timeout values.
+      Fixes bug 25568; bugfix on 0.2.7.3-rc. Patch by Neel Chauhan.
+
+  o Minor bugfixes (onion services v3, client):
+    - Properly handle the client rendezvous circuit timeout. This results in
+      better reachability because tor doesn't timeout a rendezvous circuit
+      awaiting the introduction ACK and thus preventing tor to re-establish all
+      circuits because the rendezvous circuit timed out too early. Fixes bug
+      32021; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (onion services):
+    - In cancel_descriptor_fetches(), use connection_list_by_type_purpose()
+      instead of connection_list_by_type_state(). Fixes bug 32639; bugfix on
+      0.3.2.1-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (scripts):
+    - Fix update_versions.py for out-of-tree builds.
+      Fixes bug 32371; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (test):
+    - Use the same code to find the tor binary in all of our test scripts.
+      This change makes sure we are always using the coverage binary, when
+      coverage is enabled. Fixes bug 32368; bugfix on 0.2.7.3-rc.
+
+  o Minor bugfixes (testing):
+    - Stop ignoring "tor --dump-config" errors in test_parseconf.sh.
+      Fixes bug 32468; bugfix on 0.4.2.1-alpha.
+    - When TOR_DISABLE_PRACTRACKER is set, do not apply it to the
+      test_practracker.sh script.  Doing so caused a test failure.
+      Fixes bug 32705; bugfix on 0.4.2.1-alpha.
+    - When TOR_DISABLE_PRACTRACKER is set, log a notice to stderr
+      when skipping practracker checks.
+      Fixes bug 32705; bugfix on 0.4.2.1-alpha.
+
+  o Minor bugfixes (tests):
+    - Our option-validation tests no longer depend on specially configured
+      non-default, non-passing set of options.  Previously, the tests had
+      been written to assume that options would _not_ be set to their
+      defaults, which led to needless complexity and verbosity.
+      Fixes bug 32175; bugfix on 0.2.8.1-alpha.
+
+  o Minor bugfixes (windows service):
+    - Initialize publish/subscribe system when running as a windows service.
+      Fixes bug 32778; bugfix on 0.4.1.1-alpha.
+
+  o Code simplification and refactoring (channel):
+    - Channel layer had a variable length cell handler that was not used and
+      thus removed. Closes ticket 32892.
+
+  o Code simplification and refactoring (controller):
+    - Create a helper function that can fetch network status or microdesc
+      consensuses. Closes ticket 31684.
+
+  o Code simplification and refactoring:
+    - Add numerous missing dependencies to our include files, so that
+      they can be included in different reasonable orders and still
+      compile. Addresses part of ticket 32764.
+    - Create a new abstraction for formatting control protocol reply
+      lines based on key-value pairs.  Refactor some existing control
+      protocol code to take advantage of this.  Closes ticket 30984.
+    - Disable relay_periodic when the relay module is disabled.
+      Closes ticket 32244.
+    - Disable relay_sys when the relay module is disabled.
+      Closes ticket 32245.
+    - Fix some parts of our code that were difficult for Coccinelle to parse.
+      Related to ticket 31705.
+    - Fix some small issues in our code that prevented automatic
+      formatting tools from working.
+      Addresses part of ticket 32764.
+    - Immutability is now implemented as a flag on individual configuration
+      options rather than as part of the option-transition checking
+      code.  Closes ticket 32344.
+    - Instead of keeping a list of configuration options to check for
+      relative paths, check all the options whose type is "FILENAME".
+      Solves part of ticket 32339.
+    - Make all the structs we declare follow the same naming convention
+      of ending with "_t".  Closes ticket 32415.
+    - Move and rename some configuration-related code for clarity.
+      Closes ticket 32304.
+    - Our default log (which ordinarily sends NOTICE-level message to
+      standard output) is now handled in a more logical manner. Previously,
+      we replaced the configured log options if they were empty.
+      Now, we interpret an empty set of log options as meaning "use the
+      default log". Closes ticket 31999.
+    - Our include.am files are now broken up by subdirectory.  Previously,
+      src/core/include.am covered all of the subdirectories in "core",
+      "feature", and "app". Closes ticket 32137.
+    - Remove some unused arguments from the options_validate() function,
+      to simplify our code and tests. Closes ticket 32187.
+    - Remove the last remaining HAVE_MODULE_DIRAUTH inside a function.
+      Closes ticket 32163.
+    - Remove underused NS*() macros from test code: they make our
+      tests more confusing, especially for code-formatting tools.
+      Closes ticket 32887.
+    - Replace some confusing identifiers in process_descs.c.
+      Closes ticket 29826.
+    - Simplify some relay and dirauth config code. Closes ticket 32213.
+    - Simplify the options_validate() code so that it looks at the default
+      options directly, rather than taking default options as an argument.
+      This change lets us simplify its interface. Closes ticket 32185.
+    - Use our new configuration architecture to move most authority-related
+      options to the directory authority module. Closes ticket 32806.
+    - When parsing the command line, handle options that determine our "quiet
+      level" and our mode of operation (e.g., --dump-config and so on)
+      all in one table. Closes ticket 32003.
+
+  o Deprecated features:
+   - Deprecate the ClientAutoIPv6ORPort option. This option was not true
+     Happy Eyeballs, and often failed on connections that weren't reliably
+     dual-stack. Closes ticket 32942. Patch by Neel Chauhan.
+
+  o Documentation (manpage):
+    - Alphabetize the Client Options section of the tor manpage.
+      Closes ticket 32846.
+    - Alphabetize the General Options section of the tor
+      manpage.  Closes ticket 32708.
+    - In the tor(1) manpage, reword and improve formatting of the
+      COMMAND-LINE OPTIONS and DESCRIPTION sections.  Closes ticket
+      32277.  Based on work by Swati Thacker as part of Google Season
+      of Docs.
+    - In the tor(1) manpage, reword and improve formatting of the
+      FILES, SEE ALSO, and BUGS sections.  Closes ticket 32176.  Based
+      on work by Swati Thacker as part of Google Season of Docs.
+
+  o Documentation:
+    - Add documentation in 'HelpfulTools.md' to describe how to build a tag
+      file. Closes ticket 32779.
+    - Create a high-level description of the long-term software
+      architecture goals.  Closes ticket 32206.
+    - Describe the --dump-config command in the manual page. Closes ticket
+      32467.
+    - Unite coding advice from this_not_that.md in torguts repo into our
+      coding standards document. Resolves ticket 31853.
+
+  o New system requirements:
+    - When building Tor, you now need to have Python 3 in order to
+      run the integration tests. (Python 2 is officially unsupported
+      upstream, as of 1 Jan 2020.) Closes ticket 32608.
+
+  o Removed features:
+    - Our Doxygen configuration no longer generates LaTeX output.  The
+      reference manual produced by doing this was over 4000 pages long,
+      and generally unusable.  Closes ticket 32099.
+    - The option "TestingEstimatedDescriptorPropagationTime" is now marked as
+      obsolete.  It has had no effect since 0.3.0.7, when clients stopped
+      rejecting consensuses "from the future".  Closes ticket 32807.
+    - We no longer support consensus methods before method 28; these
+      methods were only used by authorities running versions of Tor that
+      are now at end-of-life. In effect, this means that clients and
+      relays, and authorities now assume that authorities will be
+      running version 0.3.5.x or later. Closes ticket 32695.
+
+  o Testing (circuit, EWMA):
+    - Add unit tests for circuitmux and EWMA subsystems. Closes ticket 32196.
+
+  o Testing (continuous integration):
+    - Use zstd in our Travis Linux builds. Closes ticket 32242.
+
+  o Testing:
+    - Add more test cases for tor's UTF-8 validation function. Also, check the
+      arguments passed to the function for consistency.
+      Closes ticket 32845.
+    - Improve test coverage for relay and dirauth config code, focusing on
+      option validation and normalization. Closes ticket 32213.
+    - Improve the consistency of test_parseconf.sh output, and run all the
+      tests, even if one fails. Closes ticket 32213.
+    - Re-enable the Travis CI macOS Chutney build, but allow the job to finish
+      before it finishes, because the Travis macOS jobs are slow.
+      Closes ticket 32629.
+    - Run the practracker unit tests in the pre-commit git hook.
+      Closes ticket 32609.
+    - Turn off Tor's Sandbox in Chutney jobs, and run those jobs on Ubuntu
+      Bionic. Turning off the Sandbox is a work-around, until we fix the
+      sandbox errors in 32722. Closes ticket 32240.
+
+
 Changes in version 0.4.2.5 - 2019-12-09
   This is the first stable release in the 0.4.2.x series. This series
   improves reliability and stability, and includes several stability and

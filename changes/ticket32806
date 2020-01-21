@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Use our new configuration architecture to move most authority-related
-      options to the directory authority module. Closes ticket 32806.

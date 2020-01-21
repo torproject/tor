@@ -1,3 +1,0 @@
-  o Testing:
-    - Run the practracker unit tests in the pre-commit git hook.
-      Closes ticket 32609.

@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - When parsing the command line, handle options that determine our "quiet
-      level" and our mode of operation (e.g., --dump-config and so on)
-      all in one table. Closes ticket 32003.

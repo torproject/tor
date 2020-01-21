@@ -1,4 +1,0 @@
-  o Minor features (Doxygen):
-
-    - Update Doxygen configuration file to a more recent template (from
-      1.8.15).  Closes ticket 32110.

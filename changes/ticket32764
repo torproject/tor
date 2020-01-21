@@ -1,9 +1,0 @@
-  o Code simplification and refactoring:
-
-    - Add numerous missing dependencies to our include files, so that
-      they can be included in different reasonable orders and still
-      compile. Addresses part of ticket 32764.
-
-    - Fix some small issues in our code that prevented automatic
-      formatting tools from working.
-      Addresses part of ticket 32764.

@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Simplify the options_validate() code so that it looks at the default
-      options directly, rather than taking default options as an argument.
-      This change lets us simplify its interface. Closes ticket 32185.

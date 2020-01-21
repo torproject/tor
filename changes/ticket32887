@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Remove underused NS*() macros from test code: they make our
-      tests more confusing, especially for code-formatting tools.
-      Closes ticket 32887.

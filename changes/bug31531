@@ -1,4 +1,0 @@
-  o Minor bugfixes (configuration handling):
-    - Make control_event_conf_changed() take in a config_line_t instead of
-      a smartlist(k, v, k, v, ...) where keys are followed by values. Fixes
-      bug 31531; bugfix on 0.2.3.3-alpha. Patch by Neel Chauhan.

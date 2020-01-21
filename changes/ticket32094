@@ -1,4 +1,0 @@
-  o Minor bugfixes (hidden service v3):
-    - Do not rely on a "circuit established" flag for intro circuit but instead
-      always query the HS circuit map. This is to avoid sync issue with that
-      flag and the map. Fixes bug 32094; bugfix on 0.3.2.1-alpha.

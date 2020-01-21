@@ -1,4 +1,0 @@
-  o Minor features (documentation):
-    - Make sure that doxygen outputs documentation for all of our C files.
-      Previously, some were missing @file declarations, causing them to be
-      ignored. Closes ticket 32307.

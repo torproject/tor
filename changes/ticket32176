@@ -1,4 +1,0 @@
-  o Documentation (manpage):
-    - In the tor(1) manpage, reword and improve formatting of the
-      FILES, SEE ALSO, and BUGS sections.  Closes ticket 32176.  Based
-      on work by Swati Thacker as part of Google Season of Docs.

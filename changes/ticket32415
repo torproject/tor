@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Make all the structs we declare follow the same naming convention
-      of ending with "_t".  Closes ticket 32415.

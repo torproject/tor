@@ -1,4 +1,0 @@
-  o Testing:
-    - Add more test cases for tor's UTF-8 validation function. Also, check the
-      arguments passed to the function for consistency.
-      Closes ticket 32845.

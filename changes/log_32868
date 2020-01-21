@@ -1,4 +1,0 @@
-  o Minor features (debugging, directory system):
-    - Don't crash when we find a non-guard with a guard-fraction value set.
-      Instead, log a bug warning, in an attempt to figure out how this
-      happened. Diagnostic for ticket 32868.

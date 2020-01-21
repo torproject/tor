@@ -1,3 +1,0 @@
-  o Minor bugfixes (scripts):
-    - Fix update_versions.py for out-of-tree builds.
-      Fixes bug 32371; bugfix on 0.4.0.1-alpha.

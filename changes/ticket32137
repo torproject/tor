@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Our include.am files are now broken up by subdirectory.  Previously,
-      src/core/include.am covered all of the subdirectories in "core",
-      "feature", and "app". Closes ticket 32137.

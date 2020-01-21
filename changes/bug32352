@@ -1,6 +1,0 @@
-  o Minor bugfixes (config):
-    - When dumping the config, stop adding a trailing space after the option
-      name, when there is no option value. This issue only affects options
-      that accept an empty value or list. (Most options reject empty values,
-      or delete the entire line from the dumped options.)
-      Fixes bug 32352; bugfix on 0.0.9pre6.

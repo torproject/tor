@@ -1,6 +1,0 @@
-  o Minor features (IPv6, client):
-    - Make Tor clients tell dual-stack exits that they prefer IPv6
-      connections. This change is equivalent to setting the PreferIPv6 flag
-      on SOCKSPorts (and most other listener ports). Tor Browser has been
-      setting this flag for some time, and we want to remove a client
-      distinguisher at exits. Closes ticket 32637.

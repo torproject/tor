@@ -1,4 +1,0 @@
-  o Deprecated features:
-   - Deprecate the ClientAutoIPv6ORPort option. This option was not true
-     Happy Eyeballs, and often failed on connections that weren't reliably
-     dual-stack. Closes ticket 32942. Patch by Neel Chauhan.

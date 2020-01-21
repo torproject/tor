@@ -1,3 +1,0 @@
-  o Minor features (disabling relay support):
-    - When Tor is compiled --disable-module-relay, we also omit the
-      code used to act as a directory cache. Closes ticket 32487.

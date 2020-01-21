@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Replace some confusing identifiers in process_descs.c.
-      Closes ticket 29826.

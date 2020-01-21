@@ -1,3 +1,0 @@
-  o Testing:
-    - Improve the consistency of test_parseconf.sh output, and run all the
-      tests, even if one fails. Closes ticket 32213.

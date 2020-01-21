@@ -1,4 +1,0 @@
-  o Minor features (developer tooling):
-    - Remove 0.2.9 series branches from git scripts (git-merge-forward.sh,
-      git-pull-all.sh, git-push-all.sh, git-setup-dirs.sh). Closes ticket
-      32772.

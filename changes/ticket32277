@@ -1,5 +1,0 @@
-  o Documentation (manpage):
-    - In the tor(1) manpage, reword and improve formatting of the
-      COMMAND-LINE OPTIONS and DESCRIPTION sections.  Closes ticket
-      32277.  Based on work by Swati Thacker as part of Google Season
-      of Docs.

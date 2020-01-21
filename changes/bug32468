@@ -1,3 +1,0 @@
-  o Minor bugfixes (testing):
-    - Stop ignoring "tor --dump-config" errors in test_parseconf.sh.
-      Fixes bug 32468; bugfix on 0.4.2.1-alpha.
