@@ -28,7 +28,9 @@ struct dir_connection_t {
   * fingerprints.
   **/
   char *requested_resource;
-  unsigned int dirconn_direct:1; /**< Is this dirconn direct, or via Tor? */
+  /** Is this dirconn direct, or via a multi-hop Tor circuit?
+   * Direct connections can use the DirPort, or BEGINDIR over the ORPort. */
+  unsigned int dirconn_direct:1;
 
   /** If we're fetching descriptors, what router purpose shall we assign
    * to them? */
