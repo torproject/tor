@@ -1,0 +1,5 @@
+  o Major bugfixes (directory authority):
+    - Directory authorities will now send a 503 (not enough bandwidth) code to
+      clients. Known relays and other authorities will always be answered
+      regardless of the bandwidth limitation. Fixes bug 33029; bugfix on
+      0.1.2.5-alpha.

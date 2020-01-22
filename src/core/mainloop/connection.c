@@ -96,6 +96,7 @@
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_ident.h"
+#include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/relay/dns.h"
@@ -3298,8 +3299,21 @@ connection_dir_is_global_write_low(connection_t *conn, size_t attempt,
   size_t smaller_bucket =
     MIN(token_bucket_rw_get_write(&global_bucket),
         token_bucket_rw_get_write(&global_relayed_bucket));
-  if (authdir_mode(get_options()) && priority>1)
-    return 0; /* there's always room to answer v2 if we're an auth dir */
+
+  /* Special case for v3 directory authorities. */
+  if (authdir_mode_v3(get_options())) {
+    /* Always, regardless of the request version, answer a v3 directory
+     * authority. They must be able to talk to each other at all time. */
+    if (dirlist_addr_is_v3_trusted_dir(&conn->addr)) {
+      return 0;
+    }
+    /* Always answer v2 and later requests from known relays. The following
+     * will lookup the relays for which we have their descriptors (uploaded by
+     * them or fetched from another authority). */
+    if (priority > 1 && nodelist_probably_contains_address(&conn->addr)) {
+      return 0;
+    }
+  }
 
   if (!connection_is_rate_limited(conn))
     return 0; /* local conns don't get limited */

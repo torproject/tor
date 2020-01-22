@@ -22,3 +22,5 @@ lib/log/*.h
 
 core/mainloop/*.h
 core/mainloop/*.inc
+
+feature/nodelist/dirlist.h
