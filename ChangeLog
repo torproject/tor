@@ -1,4 +1,4 @@
-Changes in version 0.4.3.1-alpha - 2020-01-2?
+Changes in version 0.4.3.1-alpha - 2020-01-22
   This is the first alpha release in the 0.4.3.x series. It includes
   improved support for application integration of onion services, support
   for building in a client-only mode, and newly improved internal
