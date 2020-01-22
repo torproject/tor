@@ -81,6 +81,8 @@ matrix:
       os: osx
     ## We clone our stem repo and run `make test-stem`
     - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
+    ## We run `make doxygen` without `make check`.
+    - env: SKIP_MAKE_CHECK="yes" DOXYGEN="yes"
 
   ## Allow the build to report success (with non-required sub-builds
   ## continuing to run) if all required sub-builds have succeeded.
@@ -129,6 +131,7 @@ addons:
       - docbook-xsl
       - docbook-xml
       - xmlto
+      - doxygen
       ## Utilities
       ## preventing or diagnosing hangs
       - timelimit
@@ -233,6 +236,7 @@ script:
   ## Diagnostic for bug 29437: kill stem if it hangs for 9.5 minutes
   ## Travis will kill the job after 10 minutes with no output
   - if [[ "$TEST_STEM" != "" ]]; then make src/app/tor; timelimit -p -t 540 -s USR1 -T 30 -S ABRT python3 "$STEM_SOURCE_DIR"/run_tests.py --tor src/app/tor --integ --test control.controller --test control.base_controller --test process --log TRACE --log-file stem.log; fi
+  - if [[ "$DOXYGEN" != "" ]]; then make doxygen; fi
   ## If this build was one that produced coverage, upload it.
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p' || echo "Coverage failed"; fi
 
