@@ -1,10 +1,11 @@
 Changes in version 0.4.3.1-alpha - 2020-01-2?
-  This is the first alpha release in the 0.4.3.x series. It includes improved
-  support for application integration of onion services, support for building
-  in a client-only mode, and newly improved internal documentation (which you
-  can read at https://src-ref.docs.torproject.org/tor/). It also has numerous
-  other small bugfixes and features, as well as improvements to our code's
-  internal organization that should help us write better code in the future.
+  This is the first alpha release in the 0.4.3.x series. It includes
+  improved support for application integration of onion services, support
+  for building in a client-only mode, and newly improved internal
+  documentation (online at https://src-ref.docs.torproject.org/tor/). It
+  also has numerous other small bugfixes and features, as well as
+  improvements to our code's internal organization that should help us
+  write better code in the future.
 
   o New system requirements:
     - When building Tor, you now need to have Python 3 in order to run
@@ -41,15 +42,15 @@ Changes in version 0.4.3.1-alpha - 2020-01-2?
       HAProxy server. A new torrc option was added to specify the
       address/port of the server: TCPProxy <protocol> <host>:<port>.
       Currently the only supported protocol for the option is haproxy.
-      Close ticket 31518. Patch done by Suphanat Chunhapanya (haxxpop).
+      Closes ticket 31518. Patch done by Suphanat Chunhapanya (haxxpop).
 
   o Major bugfixes (linux seccomp sandbox):
     - Correct how we use libseccomp. Particularly, stop assuming that
       rules are applied in a particular order or that more rules are
       processed after the first match. Neither is the case! In
       libseccomp <2.4.0 this lead to some rules having no effect.
-      Libseccomp 2.4.0 changed how rules are generated leading to a
-      different ordering which in turn lead to a fatal crash during
+      libseccomp 2.4.0 changed how rules are generated, leading to a
+      different ordering, which in turn led to a fatal crash during
       startup. Fixes bug 29819; bugfix on 0.2.5.1-alpha. Patch by
       Peter Gerber.
     - Fix crash when reloading logging configuration while the
@@ -62,11 +63,11 @@ Changes in version 0.4.3.1-alpha - 2020-01-2?
       bugfix on 0.3.5.1-alpha.
 
   o Major bugfixes (onion service):
-    - Report back HS circuit failure back into the HS subsytem so we
-      take appropriate action with regards to the client introduction
-      point failure cache. This improves reachability of onion services,
-      since now clients notice failing introduction circuits properly.
-      Fixes bug 32020; bugfix on 0.3.2.1-alpha.
+    - Report HS circuit failure back into the HS subsystem so we take
+      appropriate action with regards to the client introduction point
+      failure cache. This improves reachability of onion services, since
+      now clients notice failing introduction circuits properly. Fixes
+      bug 32020; bugfix on 0.3.2.1-alpha.
 
   o Minor feature (configure, build system):
     - Output a list of enabled/disabled features at the end of the
@@ -143,10 +144,10 @@ Changes in version 0.4.3.1-alpha - 2020-01-2?
   o Minor features (git scripts):
     - Add TOR_EXTRA_CLONE_ARGS to git-setup-dirs.sh for git clone
       customisation. Closes ticket 32347.
-    - Add TOR_EXTRA_REMOTE_* to git-setup-dirs.sh for a custom extra
-      remote. Closes ticket 32347.
     - Add git-setup-dirs.sh, which sets up an upstream git repository
       and worktrees for tor maintainers. Closes ticket 29603.
+    - Add TOR_EXTRA_REMOTE_* to git-setup-dirs.sh for a custom extra
+      remote. Closes ticket 32347.
     - Call the check_cocci_parse.sh script from the git commit and push
       hooks. Closes ticket 31919.
     - Make git-push-all.sh skip unchanged branches when pushing to
@@ -265,7 +266,7 @@ Changes in version 0.4.3.1-alpha - 2020-01-2?
       Closes ticket 32216.
 
   o Minor bugfixes (hidden service v3):
-    - Do not rely on a "circuit established" flag for intro circuit but
+    - Do not rely on a "circuit established" flag for intro circuits but
       instead always query the HS circuit map. This is to avoid sync
       issue with that flag and the map. Fixes bug 32094; bugfix
       on 0.3.2.1-alpha.
@@ -278,7 +279,7 @@ Changes in version 0.4.3.1-alpha - 2020-01-2?
   o Minor bugfixes (onion service v2):
     - When sending the INTRO cell for a v2 Onion Service, look at the
       failure cache alongside timeout values to check if the intro point
-      is marked as failed. Previously, we only looked at if the relay
+      is marked as failed. Previously, we only looked at the relay
       timeout values. Fixes bug 25568; bugfix on 0.2.7.3-rc. Patch by
       Neel Chauhan.
 
@@ -317,7 +318,7 @@ Changes in version 0.4.3.1-alpha - 2020-01-2?
 
   o Minor bugfixes (tests):
     - Our option-validation tests no longer depend on specially
-      configured non-default, non-passing set of options. Previously,
+      configured non-default, non-passing sets of options. Previously,
       the tests had been written to assume that options would _not_ be
       set to their defaults, which led to needless complexity and
       verbosity. Fixes bug 32175; bugfix on 0.2.8.1-alpha.
@@ -328,12 +329,13 @@ Changes in version 0.4.3.1-alpha - 2020-01-2?
 
   o Deprecated features:
     - Deprecate the ClientAutoIPv6ORPort option. This option was not
-      true Happy Eyeballs, and often failed on connections that weren't
-      reliably dual-stack. Closes ticket 32942. Patch by Neel Chauhan.
+      true "Happy Eyeballs", and often failed on connections that
+      weren't reliably dual-stack. Closes ticket 32942. Patch by
+      Neel Chauhan.
 
   o Documentation:
-    - Provide a quickstart guide for our a Circuit Padding Framework,
-      and documentation for researchers to implement and study circuit
+    - Provide a quickstart guide for a Circuit Padding Framework, and
+      documentation for researchers to implement and study circuit
       padding machines. Closes ticket 28804.
     - Add documentation in 'HelpfulTools.md' to describe how to build a
       tag file. Closes ticket 32779.
@@ -354,7 +356,7 @@ Changes in version 0.4.3.1-alpha - 2020-01-2?
       ticket 32807.
     - We no longer support consensus methods before method 28; these
       methods were only used by authorities running versions of Tor that
-      are now at end-of-life. In effect, this means that clients and
+      are now at end-of-life. In effect, this means that clients,
       relays, and authorities now assume that authorities will be
       running version 0.3.5.x or later. Closes ticket 32695.
 
@@ -366,8 +368,9 @@ Changes in version 0.4.3.1-alpha - 2020-01-2?
       on option validation and normalization. Closes ticket 32213.
     - Improve the consistency of test_parseconf.sh output, and run all
       the tests, even if one fails. Closes ticket 32213.
-    - Re-enable the Travis CI macOS Chutney build, but allow the job to
-      finish before it finishes, because the Travis macOS jobs are slow.
+    - Re-enable the Travis CI macOS Chutney build, but don't let it
+      prevent the Travis job from finishing. (The Travis macOS jobs are
+      slow, so we don't want to have it delay the whole CI process.)
       Closes ticket 32629.
     - Run the practracker unit tests in the pre-commit git hook. Closes
       ticket 32609.
@@ -386,7 +389,7 @@ Changes in version 0.4.3.1-alpha - 2020-01-2?
     - Instead of keeping a list of configuration options to check for
       relative paths, check all the options whose type is "FILENAME".
       Solves part of ticket 32339.
-    - Our default log (which ordinarily sends NOTICE-level message to
+    - Our default log (which ordinarily sends NOTICE-level messages to
       standard output) is now handled in a more logical manner.
       Previously, we replaced the configured log options if they were
       empty. Now, we interpret an empty set of log options as meaning
