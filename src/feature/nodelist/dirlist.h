@@ -30,6 +30,11 @@ int router_digest_is_trusted_dir_type(const char *digest,
 #define router_digest_is_trusted_dir(d) \
   router_digest_is_trusted_dir_type((d), NO_DIRINFO)
 
+bool dirlist_addr_is_trusted_dir_by_type(const tor_addr_t *addr,
+                                         const dirinfo_type_t type);
+#define dirlist_addr_is_v3_trusted_dir(addr) \
+  dirlist_addr_is_trusted_dir_by_type((addr), V3_DIRINFO)
+
 dir_server_t *trusted_dir_server_new(const char *nickname, const char *address,
                        uint16_t dir_port, uint16_t or_port,
                        const tor_addr_port_t *addrport_ipv6,

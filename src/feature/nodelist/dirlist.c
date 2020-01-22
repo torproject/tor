@@ -49,6 +49,31 @@ static smartlist_t *trusted_dir_servers = NULL;
  * and all fallback directory servers. */
 static smartlist_t *fallback_dir_servers = NULL;
 
+/** Return true iff the given v4 address is the one of a configured directory
+ * authority matching the given type.
+ *
+ * This needs to be fast because it can be called at each directory connection
+ * in order to learn if the request is from an authority or not. */
+bool
+dirlist_addr_is_trusted_dir_by_type(const tor_addr_t *addr,
+                                    const dirinfo_type_t type)
+{
+  if (BUG(!addr) || BUG(!trusted_dir_servers)) {
+    return false;
+  }
+
+  /* Go over all trusted directories. We have very few of these so this should
+   * be fairly fast. In the future, if this shows up in the profile, we can
+   * move to have an address set instead. */
+  SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, const dir_server_t *, ds) {
+    if ((ds->type & type) && tor_addr_eq_ipv4h(addr, ds->addr)) {
+      return true;
+    }
+  } SMARTLIST_FOREACH_END(ds);
+
+  return false;
+}
+
 /** Return the number of directory authorities whose type matches some bit set
  * in <b>type</b>  */
 int
