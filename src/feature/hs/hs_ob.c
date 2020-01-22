@@ -394,3 +394,10 @@ hs_ob_refresh_keys(hs_service_t *service)
   service->ob_subcreds = ob_subcreds;
   service->n_ob_subcreds = num_subcreds;
 }
+
+/** Free any memory allocated by the onionblance subsystem. */
+void
+hs_ob_free_all(void)
+{
+  config_mgr_free(config_options_mgr);
+}

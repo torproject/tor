@@ -22,6 +22,7 @@
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_dos.h"
+#include "feature/hs/hs_ob.h"
 #include "feature/hs/hs_ident.h"
 #include "feature/hs/hs_service.h"
 #include "feature/hs_common/shared_random_client.h"
@@ -1829,6 +1830,7 @@ hs_free_all(void)
   hs_service_free_all();
   hs_cache_free_all();
   hs_client_free_all();
+  hs_ob_free_all();
 }
 
 /** For the given origin circuit circ, decrement the number of rendezvous
