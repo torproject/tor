@@ -3611,6 +3611,7 @@ test_config_default_dir_servers(void *arg)
   (void)arg;
   int trusted_count = 0;
   int fallback_count = 0;
+  tor_addr_t addr;
 
   /* new set of options should stop fallback parsing */
   opts = options_new();
@@ -3626,6 +3627,15 @@ test_config_default_dir_servers(void *arg)
   tt_int_op(trusted_count, OP_GE, 7);
   /* if we disable the default fallbacks, there must not be any extra */
   tt_assert(fallback_count == trusted_count);
+
+  /* Test if the dirlist sees a default dirauth address as a trusted
+   * directory. */
+  tor_addr_parse(&addr, "128.31.0.39"); /* moria1. */
+  tt_int_op(dirlist_addr_is_v3_trusted_dir(&addr), OP_EQ, 1);
+  tor_addr_parse(&addr, "171.25.193.9"); /* maatuska. */
+  tt_int_op(dirlist_addr_is_v3_trusted_dir(&addr), OP_EQ, 1);
+  tor_addr_parse(&addr, "8.8.8.8"); /* Oh dear never Google. */
+  tt_int_op(dirlist_addr_is_v3_trusted_dir(&addr), OP_EQ, 0);
 
   opts = options_new();
   opts->UseDefaultFallbackDirs = 1;
