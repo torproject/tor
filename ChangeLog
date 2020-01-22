@@ -1,5 +1,10 @@
 Changes in version 0.4.3.1-alpha - 2020-01-2?
-  This is the first alpha release in the 0.4.3.x series. BLURB MORE
+  This is the first alpha release in the 0.4.3.x series. It includes improved
+  support for application integration of onion services, support for building
+  in a client-only mode, and newly improved internal documentation (which you
+  can read at https://src-ref.docs.torproject.org/tor/). It also has numerous
+  other small bugfixes and features, as well as improvements to our code's
+  internal organization that should help us write better code in the future.
 
   o New system requirements:
     - When building Tor, you now need to have Python 3 in order to run
