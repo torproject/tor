@@ -821,44 +821,6 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
   return intro_keys_result;
 }
 
-/** Return the newly allocated intro keys using the given service
- * configuration and INTRODUCE2 data for the cell encrypted section.
- *
- * Every onion balance configured master key will be tried. If NULL is
- * returned, no hit was found for the onion balance keys. */
-static hs_ntor_intro_cell_keys_t *
-get_intro2_keys_as_ob(const hs_service_t *service,
-                      const hs_cell_introduce2_data_t *data,
-                      const uint8_t *encrypted_section,
-                      size_t encrypted_section_len)
-{
-  hs_ntor_intro_cell_keys_t *intro_keys = NULL;
-
-  if (!service->ob_subcreds) {
-    /* We are _not_ an OB instance since no configured master onion key(s)
-     * were found and thus no subcredentials were built. */
-    goto end;
-  }
-
-  /* Copy current data into a new INTRO2 cell data. We will then change the
-   * subcredential in order to validate. */
-  hs_cell_introduce2_data_t new_data = *data;
-  new_data.n_subcredentials = (int) service->n_ob_subcreds;
-  new_data.subcredentials = service->ob_subcreds;
-
-  intro_keys = get_introduce2_keys_and_verify_mac(&new_data,
-                                                  encrypted_section,
-                                                  encrypted_section_len);
-  memwipe(&new_data, 0, sizeof(new_data));
-  if (intro_keys) {
-    /* It validates. We have a hit as an onion balance instance. */
-    goto end;
-  }
-
- end:
-  return intro_keys;
-}
-
 /** Parse the INTRODUCE2 cell using data which contains everything we need to
  * do so and contains the destination buffers of information we extract and
  * compute from the cell. Return 0 on success else a negative value. The
@@ -920,29 +882,14 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
   memcpy(&data->client_pk.public_key, encrypted_section,
          CURVE25519_PUBKEY_LEN);
 
-  /* If we are configured as an Onion Balance instance, we need to try
-   * validation with the configured master public keys given in the config
-   * file. This is because the master identity key and the blinded key is put
-   * in the INTRODUCE2 cell by the client thus it will never validate with
-   * this instance default public key. */
-  if (hs_ob_service_is_instance(service)) {
-    intro_keys = get_intro2_keys_as_ob(service, data,
-                                       encrypted_section,
-                                       encrypted_section_len);
-  }
+  /* Get the right INTRODUCE2 ntor keys and verify the cell MAC */
+  intro_keys = get_introduce2_keys_and_verify_mac(data, encrypted_section,
+                                                  encrypted_section_len);
   if (!intro_keys) {
-    /* We are not an onion balance instance or no keys matched, fallback to
-     * our default values. */
-
-    /* Get the right INTRODUCE2 ntor keys and verify the cell MAC */
-    intro_keys = get_introduce2_keys_and_verify_mac(data, encrypted_section,
-                                                    encrypted_section_len);
-    if (!intro_keys) {
-      log_info(LD_REND, "Could not get valid INTRO2 keys on circuit %u "
-                        "for service %s", TO_CIRCUIT(circ)->n_circ_id,
-               safe_str_client(service->onion_address));
-      goto done;
-    }
+    log_warn(LD_REND, "Could not get valid INTRO2 keys on circuit %u "
+             "for service %s", TO_CIRCUIT(circ)->n_circ_id,
+             safe_str_client(service->onion_address));
+    goto done;
   }
 
   {

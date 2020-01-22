@@ -19,6 +19,7 @@
 #include "feature/client/circpathbias.h"
 #include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_circuit.h"
+#include "feature/hs/hs_ob.h"
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_ident.h"
@@ -958,6 +959,42 @@ hs_circ_handle_intro_established(const hs_service_t *service,
   return ret;
 }
 
+/**
+ *  Go into <b>data</b> and add the right subcredential to be able to handle
+ *  this incoming cell.
+ *
+ *  <b>desc_subcred</b> is the subcredential of the descriptor that corresponds
+ *  to the intro point that received this intro request. This subcredential
+ *  should be used if we are not an onionbalance instance.
+ *
+ *  Return 0 if everything went well, or -1 in case of internal error.
+ */
+static int
+get_subcredential_for_handling_intro2_cell(const hs_service_t *service,
+                                        hs_cell_introduce2_data_t *data,
+                                        const hs_subcredential_t *desc_subcred)
+{
+  /* Handle the simple case first: We are not an onionbalance instance and we
+   * should just use the regular descriptor subcredential */
+  if (!hs_ob_service_is_instance(service)) {
+    data->n_subcredentials = 1;
+    data->subcredentials = desc_subcred;
+    return 0;
+  }
+
+  /* This should not happen since we should have made onionbalance
+   * subcredentials when we created our descriptors. */
+  if (BUG(!service->ob_subcreds)) {
+    return -1;
+  }
+
+  /* We are an onionbalance instance: */
+  data->n_subcredentials = (int) service->n_ob_subcreds;
+  data->subcredentials = service->ob_subcreds;
+
+  return 0;
+}
+
 /** We just received an INTRODUCE2 cell on the established introduction circuit
  * circ.  Handle the INTRODUCE2 payload of size payload_len for the given
  * circuit and service. This cell is associated with the intro point object ip
@@ -983,14 +1020,15 @@ hs_circ_handle_introduce2(const hs_service_t *service,
    * parsed, decrypted and key material computed correctly. */
   data.auth_pk = &ip->auth_key_kp.pubkey;
   data.enc_kp = &ip->enc_key_kp;
-  // XXXX We should replace these elements with something precomputed for
-  // XXXX the onionbalance case.
-  data.n_subcredentials = 1;
-  data.subcredentials = subcredential;
   data.payload = payload;
   data.payload_len = payload_len;
   data.link_specifiers = smartlist_new();
   data.replay_cache = ip->replay_cache;
+
+  if (get_subcredential_for_handling_intro2_cell(service,
+                                                 &data, subcredential)) {
+    goto done;
+  }
 
   if (hs_cell_parse_introduce2(&data, circ, service) < 0) {
     goto done;
