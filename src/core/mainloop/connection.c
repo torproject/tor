@@ -3272,9 +3272,9 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
                                      global_bucket_val, conn_bucket);
 }
 
-/** Return 1 if the global write buckets are low enough that we
+/** Return true iff the global write buckets are low enough that we
  * shouldn't send <b>attempt</b> bytes of low-priority directory stuff
- * out to <b>conn</b>. Else return 0.
+ * out to <b>conn</b>.
 
  * Priority was 1 for v1 requests (directories and running-routers),
  * and 2 for v2 requests and later (statuses and descriptors).
@@ -3292,7 +3292,8 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
  *   that's harder to quantify and harder to keep track of.
  */
 int
-global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
+connection_dir_is_global_write_low(connection_t *conn, size_t attempt,
+                                   int priority)
 {
   size_t smaller_bucket =
     MIN(token_bucket_rw_get_write(&global_bucket),
