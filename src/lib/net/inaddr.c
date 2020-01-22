@@ -47,14 +47,7 @@ tor_inet_aton(const char *str, struct in_addr *addr)
   if (tor_sscanf(str, "%3u.%3u.%3u.%3u%c", &a, &b, &c, &d, &more) != 4)
     return 0;
 
-  /* Parse the octets and check them for leading zeros. This avoids using the
-   * heap.
-   *
-   * Here, we run until idx <= strlen(str) so we don't skip the last character
-   * and therefore can process it carefully. However, we cannot do a buffer
-   * overread because idx == strlen(str) does not read further.
-   *
-   * Also, the tor_sscanf() call above prevents an overflow from occuring. */
+  /* Parse the octets and check them for leading zeros. */
   sl = smartlist_new();
   smartlist_split_string(sl, str, ".", 0, 0);
   SMARTLIST_FOREACH(sl, const char *, octet, {
