@@ -323,10 +323,8 @@ handle_control_getconf(control_connection_t *conn,
     send_control_done(conn);
   }
 
-  SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
-  smartlist_free(answers);
-  smartlist_free(unrecognized);
-
+  control_reply_free(answers);
+  control_reply_free(unrecognized);
   return 0;
 }
 
