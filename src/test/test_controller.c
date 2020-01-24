@@ -2027,6 +2027,91 @@ test_control_reply(void *arg)
   return;
 }
 
+static void
+test_control_getconf(void *arg)
+{
+  (void)arg;
+  control_connection_t conn;
+  char *args = NULL;
+  int r = -1;
+
+  memset(&conn, 0, sizeof(conn));
+  conn.current_cmd = tor_strdup("GETCONF");
+
+  MOCK(control_write_reply, mock_control_write_reply_list);
+  reply_strs = smartlist_new();
+
+  args = tor_strdup("");
+  r = handle_control_command(&conn, (uint32_t)strlen(args), args);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 1);
+  tt_str_op((char *)smartlist_get(reply_strs, 0), OP_EQ, "250 OK");
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_clear(reply_strs);
+  tor_free(args);
+
+  args = tor_strdup("NoSuch");
+  r = handle_control_command(&conn, (uint32_t)strlen(args), args);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 1);
+  tt_str_op((char *)smartlist_get(reply_strs, 0), OP_EQ,
+            "552 Unrecognized configuration key \"NoSuch\"");
+  tor_free(args);
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_clear(reply_strs);
+
+  args = tor_strdup("NoSuch1 NoSuch2");
+  r = handle_control_command(&conn, (uint32_t)strlen(args), args);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 2);
+  tt_str_op((char *)smartlist_get(reply_strs, 0), OP_EQ,
+            "552-Unrecognized configuration key \"NoSuch1\"");
+  tt_str_op((char *)smartlist_get(reply_strs, 1), OP_EQ,
+            "552 Unrecognized configuration key \"NoSuch2\"");
+  tor_free(args);
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_clear(reply_strs);
+
+  args = tor_strdup("ControlPort NoSuch");
+  r = handle_control_command(&conn, (uint32_t)strlen(args), args);
+  tt_int_op(r, OP_EQ, 0);
+  /* Valid keys ignored if there are any invalid ones */
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 1);
+  tt_str_op((char *)smartlist_get(reply_strs, 0), OP_EQ,
+            "552 Unrecognized configuration key \"NoSuch\"");
+  tor_free(args);
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_clear(reply_strs);
+
+  args = tor_strdup("ClientOnly");
+  r = handle_control_command(&conn, (uint32_t)strlen(args), args);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 1);
+  /* According to config.c, this is an exception for the unit tests */
+  tt_str_op((char *)smartlist_get(reply_strs, 0), OP_EQ, "250 ClientOnly=0");
+  tor_free(args);
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_clear(reply_strs);
+
+  args = tor_strdup("BridgeRelay ClientOnly");
+  r = handle_control_command(&conn, (uint32_t)strlen(args), args);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 2);
+  /* Change if config.c changes BridgeRelay default (unlikely) */
+  tt_str_op((char *)smartlist_get(reply_strs, 0), OP_EQ, "250-BridgeRelay=0");
+  tt_str_op((char *)smartlist_get(reply_strs, 1), OP_EQ, "250 ClientOnly=0");
+  tor_free(args);
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_clear(reply_strs);
+
+ done:
+  tor_free(conn.current_cmd);
+  tor_free(args);
+  UNMOCK(control_write_reply);
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_free(reply_strs);
+}
+
 #ifndef COCCI
 #define PARSER_TEST(type)                                             \
   { "parse/" #type, test_controller_parse_cmd, 0, &passthrough_setup, \
@@ -2060,5 +2145,6 @@ struct testcase_t controller_tests[] = {
   { "current_time", test_current_time, 0, NULL, NULL },
   { "getinfo_md_all", test_getinfo_md_all, 0, NULL, NULL },
   { "control_reply", test_control_reply, 0, NULL, NULL },
+  { "control_getconf", test_control_getconf, 0, NULL, NULL },
   END_OF_TESTCASES
 };
