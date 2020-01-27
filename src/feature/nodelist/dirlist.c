@@ -66,8 +66,14 @@ dirlist_addr_is_trusted_dir_by_type(const tor_addr_t *addr,
    * be fairly fast. In the future, if this shows up in the profile, we can
    * move to have an address set instead. */
   SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, const dir_server_t *, ds) {
-    if ((ds->type & type) && tor_addr_eq_ipv4h(addr, ds->addr)) {
-      return true;
+    if (ds->type & type) {
+      if (tor_addr_is_v4(addr) && tor_addr_eq_ipv4h(addr, ds->addr)) {
+        return true;
+      }
+      /* Probably an IPv6. */
+      if (tor_addr_eq(addr, &ds->ipv6_addr)) {
+        return true;
+      }
     }
   } SMARTLIST_FOREACH_END(ds);
 
