@@ -41,6 +41,11 @@ env:
 matrix:
   ## include creates builds with gcc, linux, unless we override those defaults
   include:
+    - language: python
+      python: 2.7
+      before_install: pip install --upgrade pip
+      install: pip install flake8
+      script: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
     ## We run basic tests on macOS
     - compiler: clang
       os: osx
