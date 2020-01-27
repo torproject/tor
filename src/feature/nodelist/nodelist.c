@@ -1213,8 +1213,8 @@ node_get_rsa_id_digest(const node_t *node)
  * If node is NULL, returns an empty smartlist.
  *
  * The smartlist must be freed using link_specifier_smartlist_free(). */
-smartlist_t *
-node_get_link_specifier_smartlist(const node_t *node, bool direct_conn)
+MOCK_IMPL(smartlist_t *,
+node_get_link_specifier_smartlist,(const node_t *node, bool direct_conn))
 {
   link_specifier_t *ls;
   tor_addr_port_t ap;

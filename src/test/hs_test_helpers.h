@@ -8,9 +8,11 @@
 #include "feature/hs/hs_descriptor.h"
 
 /* Set of functions to help build and test descriptors. */
-hs_desc_intro_point_t *hs_helper_build_intro_point(
-                          const ed25519_keypair_t *signing_kp, time_t now,
-                          const char *addr, int legacy);
+hs_desc_intro_point_t *
+hs_helper_build_intro_point(const ed25519_keypair_t *signing_kp, time_t now,
+                            const char *addr, int legacy,
+                            const ed25519_keypair_t *intro_auth_kp,
+                            const curve25519_keypair_t *intro_enc_kp);
 hs_descriptor_t *hs_helper_build_hs_desc_no_ip(
                                  const ed25519_keypair_t *signing_kp);
 hs_descriptor_t *hs_helper_build_hs_desc_with_ip(

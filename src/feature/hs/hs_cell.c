@@ -869,7 +869,7 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
   /* Check our replay cache for this introduction point. */
   if (replaycache_add_test_and_elapsed(data->replay_cache, encrypted_section,
                                        encrypted_section_len, &elapsed)) {
-    log_warn(LD_REND, "Possible replay detected! An INTRODUCE2 cell with the"
+    log_warn(LD_REND, "Possible replay detected! An INTRODUCE2 cell with the "
                       "same ENCRYPTED section was seen %ld seconds ago. "
                       "Dropping cell.", (long int) elapsed);
     goto done;

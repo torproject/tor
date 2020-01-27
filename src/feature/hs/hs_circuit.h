@@ -79,6 +79,12 @@ create_rp_circuit_identifier(const hs_service_t *service,
                              const curve25519_public_key_t *server_pk,
                              const struct hs_ntor_rend_cell_keys_t *keys);
 
+struct hs_cell_introduce2_data_t;
+MOCK_DECL(STATIC void,
+launch_rendezvous_point_circuit,(const hs_service_t *service,
+                                 const hs_service_intro_point_t *ip,
+                                const struct hs_cell_introduce2_data_t *data));
+
 #endif /* defined(HS_CIRCUIT_PRIVATE) */
 
 #endif /* !defined(TOR_HS_CIRCUIT_H) */

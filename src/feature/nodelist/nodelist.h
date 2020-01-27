@@ -78,8 +78,8 @@ int node_supports_ed25519_hs_intro(const node_t *node);
 int node_supports_v3_rendezvous_point(const node_t *node);
 int node_supports_establish_intro_dos_extension(const node_t *node);
 const uint8_t *node_get_rsa_id_digest(const node_t *node);
-smartlist_t *node_get_link_specifier_smartlist(const node_t *node,
-                                               bool direct_conn);
+MOCK_DECL(smartlist_t *,node_get_link_specifier_smartlist,(const node_t *node,
+                                                           bool direct_conn));
 void link_specifier_smartlist_free_(smartlist_t *ls_list);
 #define link_specifier_smartlist_free(ls_list) \
   FREE_AND_NULL(smartlist_t, link_specifier_smartlist_free_, (ls_list))

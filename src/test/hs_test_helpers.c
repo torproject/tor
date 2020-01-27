@@ -13,9 +13,22 @@
 #include "feature/hs/hs_service.h"
 #include "test/hs_test_helpers.h"
 
+/**
+ * Create an introduction point taken straight out of an HSv3 descriptor.
+ *
+ * Use 'signing_kp' to sign the introduction point certificates.
+ *
+ * If 'intro_auth_kp' is provided use that as the introduction point
+ * authentication keypair, otherwise generate one on the fly.
+ *
+ * If 'intro_enc_kp' is provided use that as the introduction point encryption
+ * keypair, otherwise generate one on the fly.
+ */
 hs_desc_intro_point_t *
 hs_helper_build_intro_point(const ed25519_keypair_t *signing_kp, time_t now,
-                            const char *addr, int legacy)
+                            const char *addr, int legacy,
+                            const ed25519_keypair_t *intro_auth_kp,
+                            const curve25519_keypair_t *intro_enc_kp)
 {
   int ret;
   ed25519_keypair_t auth_kp;
@@ -56,8 +69,12 @@ hs_helper_build_intro_point(const ed25519_keypair_t *signing_kp, time_t now,
     smartlist_add(ip->link_specifiers, ls_ip);
   }
 
-  ret = ed25519_keypair_generate(&auth_kp, 0);
-  tt_int_op(ret, OP_EQ, 0);
+  if (intro_auth_kp) {
+    memcpy(&auth_kp, intro_auth_kp, sizeof(ed25519_keypair_t));
+  } else {
+    ret = ed25519_keypair_generate(&auth_kp, 0);
+    tt_int_op(ret, OP_EQ, 0);
+  }
   ip->auth_key_cert = tor_cert_create(signing_kp, CERT_TYPE_AUTH_HS_IP_KEY,
                                       &auth_kp.pubkey, now,
                                       HS_DESC_CERT_LIFETIME,
@@ -85,8 +102,12 @@ hs_helper_build_intro_point(const ed25519_keypair_t *signing_kp, time_t now,
     ed25519_keypair_t ed25519_kp;
     tor_cert_t *cross_cert;
 
-    ret = curve25519_keypair_generate(&curve25519_kp, 0);
-    tt_int_op(ret, OP_EQ, 0);
+    if (intro_enc_kp) {
+      memcpy(&curve25519_kp, intro_enc_kp, sizeof(curve25519_keypair_t));
+    } else {
+      ret = curve25519_keypair_generate(&curve25519_kp, 0);
+      tt_int_op(ret, OP_EQ, 0);
+    }
     ed25519_keypair_from_curve25519_keypair(&ed25519_kp, &signbit,
                                             &curve25519_kp);
     cross_cert = tor_cert_create(signing_kp, CERT_TYPE_CROSS_HS_IP_KEYS,
@@ -95,6 +116,8 @@ hs_helper_build_intro_point(const ed25519_keypair_t *signing_kp, time_t now,
                                  CERT_FLAG_INCLUDE_SIGNING_KEY);
     tt_assert(cross_cert);
     ip->enc_key_cert = cross_cert;
+    memcpy(ip->enc_key.public_key, curve25519_kp.pubkey.public_key,
+           CURVE25519_PUBKEY_LEN);
   }
 
   intro_point = ip;
@@ -165,13 +188,17 @@ hs_helper_build_hs_desc_impl(unsigned int no_ip,
   if (!no_ip) {
     /* Add four intro points. */
     smartlist_add(desc->encrypted_data.intro_points,
-              hs_helper_build_intro_point(signing_kp, now, "1.2.3.4", 0));
+                  hs_helper_build_intro_point(signing_kp, now, "1.2.3.4", 0,
+                                              NULL, NULL));
     smartlist_add(desc->encrypted_data.intro_points,
-              hs_helper_build_intro_point(signing_kp, now, "[2600::1]", 0));
+                  hs_helper_build_intro_point(signing_kp, now, "[2600::1]", 0,
+                                              NULL, NULL));
     smartlist_add(desc->encrypted_data.intro_points,
-              hs_helper_build_intro_point(signing_kp, now, "3.2.1.4", 1));
+                  hs_helper_build_intro_point(signing_kp, now, "3.2.1.4", 1,
+                                              NULL, NULL));
     smartlist_add(desc->encrypted_data.intro_points,
-              hs_helper_build_intro_point(signing_kp, now, "5.6.7.8", 1));
+                  hs_helper_build_intro_point(signing_kp, now, "5.6.7.8", 1,
+                                              NULL, NULL));
   }
 
   descp = desc;

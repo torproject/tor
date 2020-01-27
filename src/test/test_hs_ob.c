@@ -169,6 +169,7 @@ static void
 test_get_subcredentials(void *arg)
 {
   int ret;
+  hs_service_t *service = NULL;
   hs_service_config_t config;
 
   (void) arg;
@@ -192,7 +193,7 @@ test_get_subcredentials(void *arg)
   smartlist_add(config.ob_master_pubkeys, &onion_addr_kp_1.pubkey);
 
   /* Set up an instance */
-  hs_service_t *service = tor_malloc_zero(sizeof(hs_service_t));
+  service = tor_malloc_zero(sizeof(hs_service_t));
   service->config = config;
   service->desc_current = service_descriptor_new();
   service->desc_next = service_descriptor_new();
@@ -234,7 +235,12 @@ test_get_subcredentials(void *arg)
 
  done:
   tor_free(subcreds);
+
   smartlist_free(config.ob_master_pubkeys);
+  if (service) {
+    memset(&service->config, 0, sizeof(hs_service_config_t));
+    hs_service_free(service);
+  }
 
   UNMOCK(networkstatus_get_live_consensus);
 }
