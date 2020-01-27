@@ -397,11 +397,6 @@ struct or_options_t {
   int MainloopStats; /**< Log main loop statistics as part of the
                       * heartbeat messages. */
 
-  char *HTTPProxy; /**< hostname[:port] to use as http proxy, if any. */
-  tor_addr_t HTTPProxyAddr; /**< Parsed IPv4 addr for http proxy, if any. */
-  uint16_t HTTPProxyPort; /**< Parsed port for http proxy, if any. */
-  char *HTTPProxyAuthenticator; /**< username:password string, if any. */
-
   char *HTTPSProxy; /**< hostname[:port] to use as https proxy, if any. */
   tor_addr_t HTTPSProxyAddr; /**< Parsed addr for https proxy, if any. */
   uint16_t HTTPSProxyPort; /**< Parsed port for https proxy, if any. */

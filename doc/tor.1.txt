@@ -613,18 +613,6 @@ forward slash (/) in the configuration file and on the command line.
     __password__". You can provide several acceptable passwords by using more
     than one HashedControlPassword line.
 
-[[HTTPProxy]] **HTTPProxy** __host__[:__port__]::
-    Tor will make all its directory requests through this host:port (or host:80
-    if port is not specified), rather than connecting directly to any directory
-    servers. (DEPRECATED: As of 0.3.1.0-alpha you should use HTTPSProxy.)
-
-[[HTTPProxyAuthenticator]] **HTTPProxyAuthenticator** __username:password__::
-    If defined, Tor will use this username:password for Basic HTTP proxy
-    authentication, as in RFC 2617. This is currently the only form of HTTP
-    proxy authentication that Tor supports; feel free to submit a patch if you
-    want it to support others. (DEPRECATED: As of 0.3.1.0-alpha you should use
-    HTTPSProxyAuthenticator.)
-
 [[HTTPSProxy]] **HTTPSProxy** __host__[:__port__]::
     Tor will make all its OR (SSL) connections through this host:port (or
     host:443 if port is not specified), via HTTP CONNECT rather than connecting

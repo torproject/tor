@@ -2663,54 +2663,6 @@ test_options_validate__proxy(void *ignored)
   MOCK(tor_addr_lookup, mock_tor_addr_lookup__fail_on_bad_addrs);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("HttpProxy 127.0.42.1\n");
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(tdata->opt->HTTPProxyPort, OP_EQ, 80);
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("HttpProxy 127.0.42.1:444\n");
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(tdata->opt->HTTPProxyPort, OP_EQ, 444);
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-
-  tdata = get_options_test_data("HttpProxy not_so_valid!\n");
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "HTTPProxy failed to parse or resolve. Please fix.");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("HttpProxyAuthenticator "
-                                "onetwothreonetwothreonetwothreonetwothreonetw"
-                                "othreonetwothreonetwothreonetwothreonetwothre"
-                                "onetwothreonetwothreonetwothreonetwothreonetw"
-                                "othreonetwothreonetwothreonetwothreonetwothre"
-                                "onetwothreonetwothreonetwothreonetwothreonetw"
-                                "othreonetwothreonetwothreonetwothreonetwothre"
-                                "onetwothreonetwothreonetwothreonetwothreonetw"
-                                "othreonetwothreonetwothreonetwothreonetwothre"
-                                "onetwothreonetwothreonetwothreonetwothreonetw"
-                                "othreonetwothreonetwothreonetwothreonetwothre"
-                                "onetwothreonetwothreonetwothreonetwothreonetw"
-                                "othreonetwothreeonetwothreeonetwothree"
-                                );
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "HTTPProxyAuthenticator is too long (>= 512 chars).");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("HttpProxyAuthenticator validauth\n");
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  tor_free(msg);
-
-  free_options_test_data(tdata);
   tdata = get_options_test_data("HttpsProxy 127.0.42.1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -2808,54 +2760,6 @@ test_options_validate__proxy(void *ignored)
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "You have configured more than one proxy type. "
             "(Socks4Proxy|Socks5Proxy|HTTPSProxy|TCPProxy)");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("HttpProxy 215.1.1.1\n");
-  mock_clean_saved_logs();
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg("HTTPProxy configured, but no SOCKS proxy, "
-            "HTTPS proxy, or any other TCP proxy configured. Watch out: "
-            "this configuration will proxy unencrypted directory "
-            "connections only.\n");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("HttpProxy 215.1.1.1\n"
-                                "Socks4Proxy 215.1.1.1\n"
-                                );
-  mock_clean_saved_logs();
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  expect_no_log_msg("HTTPProxy configured, but no SOCKS "
-            "proxy or HTTPS proxy configured. Watch out: this configuration "
-            "will proxy unencrypted directory connections only.\n");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("HttpProxy 215.1.1.1\n"
-                                "Socks5Proxy 215.1.1.1\n"
-                                );
-  mock_clean_saved_logs();
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  expect_no_log_msg("HTTPProxy configured, but no SOCKS "
-            "proxy or HTTPS proxy configured. Watch out: this configuration "
-            "will proxy unencrypted directory connections only.\n");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("HttpProxy 215.1.1.1\n"
-                                "HttpsProxy 215.1.1.1\n"
-                                );
-  mock_clean_saved_logs();
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  expect_no_log_msg(
-            "HTTPProxy configured, but no SOCKS proxy or HTTPS proxy "
-            "configured. Watch out: this configuration will proxy "
-            "unencrypted directory connections only.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);

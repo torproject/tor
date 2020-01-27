@@ -517,8 +517,8 @@ static const config_var_t option_vars_[] = {
   OBSOLETE("CloseHSServiceRendCircuitsImmediatelyOnTimeout"),
   V_IMMUTABLE(HiddenServiceSingleHopMode,  BOOL,     "0"),
   V_IMMUTABLE(HiddenServiceNonAnonymousMode,BOOL,    "0"),
-  V(HTTPProxy,                   STRING,   NULL),
-  V(HTTPProxyAuthenticator,      STRING,   NULL),
+  OBSOLETE("HTTPProxy"),
+  OBSOLETE("HTTPProxyAuthenticator"),
   V(HTTPSProxy,                  STRING,   NULL),
   V(HTTPSProxyAuthenticator,     STRING,   NULL),
   VPORT(HTTPTunnelPort),
@@ -794,13 +794,6 @@ static const struct {
 #undef OBSOLETE
 
 static const config_deprecation_t option_deprecation_notes_[] = {
-  /* Deprecated since 0.3.2.0-alpha. */
-  { "HTTPProxy", "It only applies to direct unencrypted HTTP connections "
-    "to your directory server, which your Tor probably wasn't using." },
-  { "HTTPProxyAuthenticator", "HTTPProxy is deprecated in favor of HTTPSProxy "
-    "which should be used with HTTPSProxyAuthenticator." },
-  /* End of options deprecated since 0.3.2.1-alpha */
-
   /* Options deprecated since 0.3.2.2-alpha */
   { "ReachableDirAddresses", "It has no effect on relays, and has had no "
     "effect on clients since 0.2.8." },
@@ -3876,20 +3869,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (options_validate_relay_mode(old_options, options, msg) < 0)
     return -1;
 
-  if (options->HTTPProxy) { /* parse it now */
-    if (tor_addr_port_lookup(options->HTTPProxy,
-                        &options->HTTPProxyAddr, &options->HTTPProxyPort) < 0)
-      REJECT("HTTPProxy failed to parse or resolve. Please fix.");
-    if (options->HTTPProxyPort == 0) { /* give it a default */
-      options->HTTPProxyPort = 80;
-    }
-  }
-
-  if (options->HTTPProxyAuthenticator) {
-    if (strlen(options->HTTPProxyAuthenticator) >= 512)
-      REJECT("HTTPProxyAuthenticator is too long (>= 512 chars).");
-  }
-
   if (options->HTTPSProxy) { /* parse it now */
     if (tor_addr_port_lookup(options->HTTPSProxy,
                         &options->HTTPSProxyAddr, &options->HTTPSProxyPort) <0)
@@ -3938,16 +3917,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
            "(Socks4Proxy|Socks5Proxy|HTTPSProxy|TCPProxy)");
 
   /* Check if the proxies will give surprising behavior. */
-  if (options->HTTPProxy && !(options->Socks4Proxy ||
-                              options->Socks5Proxy ||
-                              options->HTTPSProxy ||
-                              options->TCPProxy)) {
-    log_warn(LD_CONFIG, "HTTPProxy configured, but no SOCKS proxy, "
-             "HTTPS proxy, or any other TCP proxy configured. Watch out: "
-             "this configuration will proxy unencrypted directory "
-             "connections only.");
-  }
-
   if (options->Socks5ProxyUsername) {
     size_t len;
 

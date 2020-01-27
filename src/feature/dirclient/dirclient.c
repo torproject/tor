@@ -1293,7 +1293,7 @@ directory_initiate_request,(directory_request_t *request))
 
   /* ensure that we don't make direct connections when a SOCKS server is
    * configured. */
-  if (!anonymized_connection && !use_begindir && !options->HTTPProxy &&
+  if (!anonymized_connection && !use_begindir &&
       (options->Socks4Proxy || options->Socks5Proxy)) {
     log_warn(LD_DIR, "Cannot connect to a directory server through a "
                      "SOCKS proxy!");
@@ -1346,11 +1346,6 @@ directory_initiate_request,(directory_request_t *request))
 
   if (!anonymized_connection && !use_begindir) {
     /* then we want to connect to dirport directly */
-
-    if (options->HTTPProxy) {
-      tor_addr_copy(&addr, &options->HTTPProxyAddr);
-      port = options->HTTPProxyPort;
-    }
 
     // In this case we should not have picked a directory guard.
     if (BUG(guard_state)) {
@@ -1531,7 +1526,6 @@ directory_send_command(dir_connection_t *conn,
   const time_t if_modified_since = req->if_modified_since;
   const int anonymized_connection = dirind_is_anon(req->indirection);
 
-  char proxystring[256];
   char hoststring[128];
   /* NEEDS to be the same size hoststring.
    Will be decorated with brackets around it if it is ipv6. */
@@ -1572,27 +1566,6 @@ directory_send_command(dir_connection_t *conn,
     char b[RFC1123_TIME_LEN+1];
     format_rfc1123_time(b, if_modified_since);
     smartlist_add_asprintf(headers, "If-Modified-Since: %s\r\n", b);
-  }
-
-  /* come up with some proxy lines, if we're using one. */
-  if (direct && get_options()->HTTPProxy) {
-    char *base64_authenticator=NULL;
-    const char *authenticator = get_options()->HTTPProxyAuthenticator;
-
-    tor_snprintf(proxystring, sizeof(proxystring),"http://%s", hoststring);
-    if (authenticator) {
-      base64_authenticator = alloc_http_authenticator(authenticator);
-      if (!base64_authenticator)
-        log_warn(LD_BUG, "Encoding http authenticator failed");
-    }
-    if (base64_authenticator) {
-      smartlist_add_asprintf(headers,
-                   "Proxy-Authorization: Basic %s\r\n",
-                   base64_authenticator);
-      tor_free(base64_authenticator);
-    }
-  } else {
-    proxystring[0] = 0;
   }
 
   if (! anonymized_connection) {
@@ -1709,14 +1682,14 @@ directory_send_command(dir_connection_t *conn,
   }
 
   /* warn in the non-tunneled case */
-  if (direct && (strlen(proxystring) + strlen(url) >= 4096)) {
+  if (direct && strlen(url) >= 4096) {
     log_warn(LD_BUG,
              "Squid does not like URLs longer than 4095 bytes, and this "
-             "one is %d bytes long: %s%s",
-             (int)(strlen(proxystring) + strlen(url)), proxystring, url);
+             "one is %d bytes long: %s",
+             (int)(strlen(url)), url);
   }
 
-  tor_snprintf(request, sizeof(request), "%s %s", httpcommand, proxystring);
+  strlcpy(request, httpcommand, sizeof(request));
 
   request_len = strlen(request);
   total_request_len += request_len;
