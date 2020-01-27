@@ -827,17 +827,14 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
  * Every onion balance configured master key will be tried. If NULL is
  * returned, no hit was found for the onion balance keys. */
 static hs_ntor_intro_cell_keys_t *
-get_intro2_keys_as_ob(const hs_service_config_t *config,
+get_intro2_keys_as_ob(const hs_service_t *service,
                       const hs_cell_introduce2_data_t *data,
                       const uint8_t *encrypted_section,
                       size_t encrypted_section_len)
 {
-  hs_subcredential_t *ob_subcreds = NULL;
-  size_t ob_num_subcreds;
   hs_ntor_intro_cell_keys_t *intro_keys = NULL;
 
-  ob_num_subcreds = hs_ob_get_subcredentials(config, &ob_subcreds);
-  if (!ob_num_subcreds) {
+  if (!service->ob_subcreds) {
     /* We are _not_ an OB instance since no configured master onion key(s)
      * were found and thus no subcredentials were built. */
     goto end;
@@ -846,11 +843,8 @@ get_intro2_keys_as_ob(const hs_service_config_t *config,
   /* Copy current data into a new INTRO2 cell data. We will then change the
    * subcredential in order to validate. */
   hs_cell_introduce2_data_t new_data = *data;
-  /* XXXX This list should have been the descriptor's subcredentials all
-   * XXXX along.
-   */
-  new_data.n_subcredentials = (int)ob_num_subcreds;
-  new_data.subcredentials = ob_subcreds;
+  new_data.n_subcredentials = (int) service->n_ob_subcreds;
+  new_data.subcredentials = service->ob_subcreds;
 
   intro_keys = get_introduce2_keys_and_verify_mac(&new_data,
                                                   encrypted_section,
@@ -862,7 +856,6 @@ get_intro2_keys_as_ob(const hs_service_config_t *config,
   }
 
  end:
-  tor_free(ob_subcreds);
   return intro_keys;
 }
 
@@ -933,7 +926,7 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
    * in the INTRODUCE2 cell by the client thus it will never validate with
    * this instance default public key. */
   if (hs_ob_service_is_instance(service)) {
-    intro_keys = get_intro2_keys_as_ob(&service->config, data,
+    intro_keys = get_intro2_keys_as_ob(service, data,
                                        encrypted_section,
                                        encrypted_section_len);
   }

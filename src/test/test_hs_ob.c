@@ -8,6 +8,7 @@
 
 #define CONFIG_PRIVATE
 #define HS_SERVICE_PRIVATE
+#define HS_OB_PRIVATE
 
 #include "test/test.h"
 #include "test/test_helpers.h"
@@ -191,7 +192,7 @@ test_get_subcredentials(void *arg)
   smartlist_add(config.ob_master_pubkeys, &onion_addr_kp_1.pubkey);
 
   hs_subcredential_t *subcreds = NULL;
-  size_t num = hs_ob_get_subcredentials(&config, &subcreds);
+  size_t num = compute_subcredentials(&config, &subcreds);
   tt_uint_op(num, OP_EQ, 3);
 
   /* Validate the subcredentials we just got. We'll build them oursevles with

@@ -41,6 +41,7 @@
 #include "feature/hs/hs_intropoint.h"
 #include "feature/hs/hs_service.h"
 #include "feature/hs/hs_stats.h"
+#include "feature/hs/hs_ob.h"
 
 #include "feature/dircommon/dir_connection_st.h"
 #include "core/or/edge_connection_st.h"
@@ -1986,9 +1987,15 @@ build_service_descriptor(hs_service_t *service, uint64_t time_period_num,
 
   /* Assign newly built descriptor to the next slot. */
   *desc_out = desc;
+
   /* Fire a CREATED control port event. */
   hs_control_desc_event_created(service->onion_address,
                                 &desc->blinded_kp.pubkey);
+
+  /* If we are an onionbalance instance, we refresh our keys when we rotate
+   * descriptors. */
+  hs_ob_refresh_keys(service);
+
   return;
 
  err:
@@ -4046,6 +4053,11 @@ hs_service_free_(hs_service_t *service)
   /* Free replay cache from state. */
   if (service->state.replay_cache_rend_cookie) {
     replaycache_free(service->state.replay_cache_rend_cookie);
+  }
+
+  /* Free onionbalance subcredentials (if any) */
+  if (service->ob_subcreds) {
+    tor_free(service->ob_subcreds);
   }
 
   /* Wipe service keys. */

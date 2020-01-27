@@ -4,13 +4,14 @@
 /**
  * \file hs_ob.c
  * \brief Implement Onion Balance specific code.
- *
- * \details
- *
- * XXX:
  **/
 
 #define HS_OB_PRIVATE
+
+#include "feature/hs/hs_service.h"
+
+#include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/networkstatus_st.h"
 
 #include "lib/confmgt/confmgt.h"
 #include "lib/encoding/confline.h"
@@ -273,9 +274,9 @@ hs_ob_parse_config_file(hs_service_config_t *config)
  * returned and subcredentials is set to NULL.
  *
  * Otherwise, this can't fail. */
-size_t
-hs_ob_get_subcredentials(const hs_service_config_t *config,
-                         hs_subcredential_t **subcredentials)
+STATIC size_t
+compute_subcredentials(const hs_service_t *service,
+                       hs_subcredential_t **subcredentials)
 {
   unsigned int num_pkeys, idx = 0;
   hs_subcredential_t *subcreds = NULL;
@@ -286,10 +287,9 @@ hs_ob_get_subcredentials(const hs_service_config_t *config,
   tor_assert(config);
   tor_assert(subcredentials);
 
+  /* Our caller made sure that we are an OB instance */
   num_pkeys = smartlist_len(config->ob_master_pubkeys);
-  if (!num_pkeys) {
-    goto end;
-  }
+  tor_assert(num_pkeys > 0);
 
   /* Time to build all the subcredentials for each time period: the previous
    * one (-1), the current one (0) and the next one (1) for each configured
@@ -310,9 +310,7 @@ hs_ob_get_subcredentials(const hs_service_config_t *config,
    * our chance of success. */
 
   /* We use a flat array, not a smartlist_t, in order to minimize memory
-   * allocation. This function is called for _each_ INTRODUCE2 cell arriving
-   * on this instance and thus the less we allocate small chunks often,
-   * usually the healthier our overall memory will be.
+   * allocation.
    *
    * Size of array is: length of a single subcredential multiplied by the
    * number of time period we need to compute and finally multiplied by the
@@ -329,7 +327,43 @@ hs_ob_get_subcredentials(const hs_service_config_t *config,
     } SMARTLIST_FOREACH_END(pkey);
   }
 
- end:
   *subcredentials = subcreds;
   return idx;
+}
+
+/**
+ *  If we are an Onionbalance instance, refresh our keys.
+ *
+ *  If we are not an Onionbalance instance or we are not ready to do so, this
+ *  is a NOP.
+ *
+ *  This function is called everytime we build a new descriptor. That's because
+ *  we want our Onionbalance keys to always use up-to-date subcredentials both
+ *  for the instance (ourselves) and for the onionbalance frontend.
+ */
+void
+hs_ob_refresh_keys(hs_service_t *service)
+{
+  const networkstatus_t *ns;
+  hs_subcredential_t *ob_subcreds = NULL;
+  size_t num_subcreds;
+
+  tor_assert(service);
+
+  /* Don't do any of this if we are not configured as an OB instance */
+  if (!hs_ob_service_is_instance(service)) {
+    return;
+  }
+
+  /* Get a new set of subcreds */
+  num_subcreds = compute_subcredentials(service, &ob_subcreds);
+  tor_assert(num_subcreds > 0);
+
+  /* Delete old subcredentials if any */
+  if (service->ob_subcreds) {
+    tor_free(service->ob_subcreds);
+  }
+
+  service->ob_subcreds = ob_subcreds;
+  service->n_ob_subcreds = num_subcreds;
 }

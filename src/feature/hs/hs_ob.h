@@ -16,10 +16,15 @@ bool hs_ob_service_is_instance(const hs_service_t *service);
 int hs_ob_parse_config_file(hs_service_config_t *config);
 
 struct hs_subcredential_t;
-size_t hs_ob_get_subcredentials(const hs_service_config_t *config,
-                                struct hs_subcredential_t **subcredentials);
+
+void hs_ob_free_all(void);
+
+void hs_ob_refresh_keys(hs_service_t *service);
 
 #ifdef HS_OB_PRIVATE
+
+STATIC size_t compute_subcredentials(const hs_service_t *service,
+                                   struct hs_subcredential_t **subcredentials);
 
 typedef struct ob_options_t {
   /** Magic number to identify the structure in memory. */

@@ -305,8 +305,13 @@ typedef struct hs_service_t {
   /** Next descriptor. */
   hs_service_descriptor_t *desc_next;
 
-  /* XXX: Credential (client auth.) #20700. */
-
+  /* If this is an onionbalance instance, this is an array of subcredentials
+   * that should be used when decrypting an INTRO2 cell. If this is not an
+   * onionbalance instance, this is NULL.
+   * See [ONIONBALANCE] section in rend-spec-v3.txt for more details . */
+  hs_subcredential_t *ob_subcreds;
+  /* Number of OB subcredentials */
+  size_t n_ob_subcreds;
 } hs_service_t;
 
 /** For the service global hash map, we define a specific type for it which
