@@ -191,16 +191,34 @@ test_get_subcredentials(void *arg)
   ed25519_keypair_generate(&onion_addr_kp_1, 0);
   smartlist_add(config.ob_master_pubkeys, &onion_addr_kp_1.pubkey);
 
+  /* Set up an instance */
+  hs_service_t *service = tor_malloc_zero(sizeof(hs_service_t));
+  service->config = config;
+  service->desc_current = service_descriptor_new();
+  service->desc_next = service_descriptor_new();
+
+  /* Set up the instance subcredentials */
+  char current_subcred[SUBCRED_LEN];
+  char next_subcred[SUBCRED_LEN];
+  memset(current_subcred, 'C', SUBCRED_LEN);
+  memset(next_subcred, 'N', SUBCRED_LEN);
+  memcpy(service->desc_current->desc->subcredential.subcred, current_subcred,
+         SUBCRED_LEN);
+  memcpy(service->desc_next->desc->subcredential.subcred, next_subcred,
+         SUBCRED_LEN);
+
   hs_subcredential_t *subcreds = NULL;
-  size_t num = compute_subcredentials(&config, &subcreds);
-  tt_uint_op(num, OP_EQ, 3);
+  size_t num = compute_subcredentials(service, &subcreds);
+  /* 5 subcredentials: 3 for the frontend, 2 for the instance */
+  tt_uint_op(num, OP_EQ, 5);
 
   /* Validate the subcredentials we just got. We'll build them oursevles with
    * the right time period steps and compare. */
   const uint64_t tp = hs_get_time_period_num(0);
   const int steps[3] = {0, -1, 1};
 
-  for (unsigned int i = 0; i < num; i++) {
+  unsigned int i;
+  for (i = 0; i < 3; i++) {
     hs_subcredential_t subcredential;
     ed25519_public_key_t blinded_pubkey;
     hs_build_blinded_pubkey(&onion_addr_kp_1.pubkey, NULL, 0, tp + steps[i],
@@ -210,6 +228,9 @@ test_get_subcredentials(void *arg)
     tt_mem_op(subcreds[i].subcred, OP_EQ, subcredential.subcred,
               SUBCRED_LEN);
   }
+
+  tt_mem_op(subcreds[i++].subcred, OP_EQ, current_subcred, SUBCRED_LEN);
+  tt_mem_op(subcreds[i++].subcred, OP_EQ, next_subcred, SUBCRED_LEN);
 
  done:
   tor_free(subcreds);

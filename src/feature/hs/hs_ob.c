@@ -284,16 +284,20 @@ compute_subcredentials(const hs_service_t *service,
   const unsigned int num_steps = ARRAY_LENGTH(steps);
   const uint64_t tp = hs_get_time_period_num(0);
 
-  tor_assert(config);
+  tor_assert(service);
   tor_assert(subcredentials);
+  /* Our caller has checked these too */
+  tor_assert(service->desc_current);
+  tor_assert(service->desc_next);
 
   /* Our caller made sure that we are an OB instance */
-  num_pkeys = smartlist_len(config->ob_master_pubkeys);
+  num_pkeys = smartlist_len(service->config.ob_master_pubkeys);
   tor_assert(num_pkeys > 0);
 
-  /* Time to build all the subcredentials for each time period: the previous
-   * one (-1), the current one (0) and the next one (1) for each configured
-   * key in order to accomodate client and service consensus skew.
+  /* Time to build all the subcredentials for each time period: two for each
+   * instance descriptor plus three for the onionbalance frontend service: the
+   * previous one (-1), the current one (0) and the next one (1) for each
+   * configured key in order to accomodate client and service consensus skew.
    *
    * If the client consensus after_time is at 23:00 but the service one is at
    * 01:00, the client will be using the previous time period where the
@@ -315,17 +319,29 @@ compute_subcredentials(const hs_service_t *service,
    * Size of array is: length of a single subcredential multiplied by the
    * number of time period we need to compute and finally multiplied by the
    * total number of keys we are about to process. In other words, for each
-   * key, we allocate 3 subcredential slots. */
-  subcreds = tor_calloc(num_steps * num_pkeys, sizeof(hs_subcredential_t));
+   * key, we allocate 3 subcredential slots. Then in the end we also add two
+   * subcredentials for this instance's active descriptors. */
+  subcreds =
+    tor_calloc((num_steps * num_pkeys) + 2, sizeof(hs_subcredential_t));
 
-  /* For each time period step. */
+  /* For each master pubkey we add 3 subcredentials: */
   for (unsigned int i = 0; i < num_steps; i++) {
-    SMARTLIST_FOREACH_BEGIN(config->ob_master_pubkeys,
+    SMARTLIST_FOREACH_BEGIN(service->config.ob_master_pubkeys,
                             const ed25519_public_key_t *, pkey) {
       build_subcredential(pkey, tp + steps[i], &subcreds[idx]);
       idx++;
     } SMARTLIST_FOREACH_END(pkey);
   }
+
+  /* And then in the end we add the two subcredentials of the current active
+   * instance descriptors */
+  memcpy(&subcreds[idx++],
+         service->desc_current->desc->subcredential.subcred, SUBCRED_LEN);
+  memcpy(&subcreds[idx++],
+         service->desc_next->desc->subcredential.subcred, SUBCRED_LEN);
+
+  log_info(LD_REND, "Refreshing %u onionbalance keys (TP #%d).",
+             idx, (int)tp);
 
   *subcredentials = subcreds;
   return idx;
@@ -344,7 +360,6 @@ compute_subcredentials(const hs_service_t *service,
 void
 hs_ob_refresh_keys(hs_service_t *service)
 {
-  const networkstatus_t *ns;
   hs_subcredential_t *ob_subcreds = NULL;
   size_t num_subcreds;
 
@@ -352,6 +367,18 @@ hs_ob_refresh_keys(hs_service_t *service)
 
   /* Don't do any of this if we are not configured as an OB instance */
   if (!hs_ob_service_is_instance(service)) {
+    return;
+  }
+
+  /* We need both service descriptors created to make onionbalance keys.
+   *
+   * That's because we fetch our own (the instance's) subcredentials from our
+   * own descriptors which should always include the latest subcredentials that
+   * clients would use.
+   *
+   * This function is called with each descriptor build, so we will be
+   * eventually be called when both descriptors are created. */
+  if (!service->desc_current || !service->desc_next) {
     return;
   }
 
