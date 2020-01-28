@@ -3211,8 +3211,21 @@ connection_dir_is_global_write_low(const connection_t *conn, size_t attempt)
   size_t smaller_bucket =
     MIN(token_bucket_rw_get_write(&global_bucket),
         token_bucket_rw_get_write(&global_relayed_bucket));
-  if (authdir_mode(get_options()))
-    return false; /* there's always room to answer v2 if we're an auth dir */
+
+  /* Special case for authorities (directory only). */
+  if (authdir_mode_v3(get_options())) {
+    /* Are we configured to possibly reject requests under load? */
+    if (!get_options()->AuthDirRejectRequestsUnderLoad) {
+      /* Answer request no matter what. */
+      return false;
+    }
+    /* Always answer requests from a known relay which includes the other
+     * authorities. The following looks up the addresses for relays that we
+     * have their descriptor _and_ any configured trusted directories. */
+    if (nodelist_probably_contains_address(&conn->addr)) {
+      return false;
+    }
+  }
 
   if (!connection_is_rate_limited(conn))
     return false; /* local conns don't get limited */
