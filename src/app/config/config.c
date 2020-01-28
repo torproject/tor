@@ -612,7 +612,7 @@ static const config_var_t option_vars_[] = {
   V(PublishServerDescriptor,     CSV,      "1"),
   V(PublishHidServDescriptors,   BOOL,     "1"),
   V(ReachableAddresses,          LINELIST, NULL),
-  V(ReachableDirAddresses,       LINELIST, NULL),
+  OBSOLETE("ReachableDirAddresses"),
   V(ReachableORAddresses,        LINELIST, NULL),
   OBSOLETE("RecommendedPackages"),
   V(ReducedConnectionPadding,    BOOL,     "0"),
@@ -795,8 +795,6 @@ static const struct {
 
 static const config_deprecation_t option_deprecation_notes_[] = {
   /* Options deprecated since 0.3.2.2-alpha */
-  { "ReachableDirAddresses", "It has no effect on relays, and has had no "
-    "effect on clients since 0.2.8." },
   { "ClientPreferIPv6DirPort", "It has no effect on relays, and has had no "
     "effect on clients since 0.2.8." },
   /* End of options deprecated since 0.3.2.2-alpha. */
@@ -2016,7 +2014,6 @@ options_transition_affects_guards(const or_options_t *old_options,
   YES_IF_CHANGED_SMARTLIST(FirewallPorts);
   YES_IF_CHANGED_LINELIST(Bridges);
   YES_IF_CHANGED_LINELIST(ReachableORAddresses);
-  YES_IF_CHANGED_LINELIST(ReachableDirAddresses);
 
   return 0;
 }
@@ -3584,8 +3581,8 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (options->FascistFirewall && !options->ReachableAddresses) {
     if (options->FirewallPorts && smartlist_len(options->FirewallPorts)) {
       /* We already have firewall ports set, so migrate them to
-       * ReachableAddresses, which will set ReachableORAddresses and
-       * ReachableDirAddresses if they aren't set explicitly. */
+       * ReachableAddresses, which will set ReachableORAddresses
+       * if it isn't set explicitly. */
       smartlist_t *instead = smartlist_new();
       config_line_t *new_line = tor_malloc_zero(sizeof(config_line_t));
       new_line->key = tor_strdup("ReachableAddresses");
@@ -3607,16 +3604,8 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
       SMARTLIST_FOREACH(instead, char *, cp, tor_free(cp));
       smartlist_free(instead);
     } else {
-      /* We do not have FirewallPorts set, so add 80 to
-       * ReachableDirAddresses, and 443 to ReachableORAddresses. */
-      if (!options->ReachableDirAddresses) {
-        config_line_t *new_line = tor_malloc_zero(sizeof(config_line_t));
-        new_line->key = tor_strdup("ReachableDirAddresses");
-        new_line->value = tor_strdup("*:80");
-        options->ReachableDirAddresses = new_line;
-        log_notice(LD_CONFIG, "Converting FascistFirewall config option "
-            "to new format: \"ReachableDirAddresses *:80\"");
-      }
+      /* We do not have FirewallPorts set, so add 443 to
+         ReachableORAddresses. */
       if (!options->ReachableORAddresses) {
         config_line_t *new_line = tor_malloc_zero(sizeof(config_line_t));
         new_line->key = tor_strdup("ReachableORAddresses");
@@ -3630,7 +3619,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
 
   if ((options->ReachableAddresses ||
        options->ReachableORAddresses ||
-       options->ReachableDirAddresses ||
        options->ClientUseIPv4 == 0) &&
       server_mode(options))
     REJECT("Servers must be able to freely connect to the rest "

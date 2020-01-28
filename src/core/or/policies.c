@@ -63,6 +63,10 @@ static smartlist_t *authdir_badexit_policy = NULL;
 static smartlist_t *reachable_or_addr_policy = NULL;
 /** Parsed addr_policy_t describing which addresses we believe we can connect
  * to directories at. */
+/* XXXX This is an alias for ReachableAddresses; it is no longer separately
+ * configurable.  In the long run it should be removed, since
+ * relays aren't allowed to set ReachableAddresses, and clients don't use
+ * DirPorts. */
 static smartlist_t *reachable_dir_addr_policy = NULL;
 
 /** Element of an exit policy summary */
@@ -259,13 +263,6 @@ parse_reachable_addresses(void)
   const or_options_t *options = get_options();
   int ret = 0;
 
-  if (options->ReachableDirAddresses &&
-      options->ReachableORAddresses &&
-      options->ReachableAddresses) {
-    log_warn(LD_CONFIG,
-             "Both ReachableDirAddresses and ReachableORAddresses are set. "
-             "ReachableAddresses setting will be ignored.");
-  }
   addr_policy_list_free(reachable_or_addr_policy);
   reachable_or_addr_policy = NULL;
   if (!options->ReachableORAddresses && options->ReachableAddresses)
@@ -283,16 +280,11 @@ parse_reachable_addresses(void)
 
   addr_policy_list_free(reachable_dir_addr_policy);
   reachable_dir_addr_policy = NULL;
-  if (!options->ReachableDirAddresses && options->ReachableAddresses)
-    log_info(LD_CONFIG,
-             "Using ReachableAddresses as ReachableDirAddresses");
-  if (parse_addr_policy(options->ReachableDirAddresses ?
-                          options->ReachableDirAddresses :
-                          options->ReachableAddresses,
+  if (parse_addr_policy(options->ReachableAddresses,
                         &reachable_dir_addr_policy, ADDR_POLICY_ACCEPT)) {
-    if (options->ReachableDirAddresses)
+    if (options->ReachableAddresses)
       log_warn(LD_CONFIG,
-               "Error parsing ReachableDirAddresses entry; ignoring.");
+               "Error parsing ReachableAddresses entry; ignoring.");
     ret = -1;
   }
 
@@ -301,30 +293,29 @@ parse_reachable_addresses(void)
     if (policy_is_reject_star(reachable_or_addr_policy, AF_UNSPEC, 0)
         || policy_is_reject_star(reachable_dir_addr_policy, AF_UNSPEC,0)) {
       log_warn(LD_CONFIG, "Tor cannot connect to the Internet if "
-               "ReachableAddresses, ReachableORAddresses, or "
-               "ReachableDirAddresses reject all addresses. Please accept "
+               "ReachableAddresses or ReachableORAddresses"
+               "reject all addresses. Please accept "
                "some addresses in these options.");
     } else if (options->ClientUseIPv4 == 1
        && (policy_is_reject_star(reachable_or_addr_policy, AF_INET, 0)
            || policy_is_reject_star(reachable_dir_addr_policy, AF_INET, 0))) {
           log_warn(LD_CONFIG, "You have set ClientUseIPv4 1, but "
-                   "ReachableAddresses, ReachableORAddresses, or "
-                   "ReachableDirAddresses reject all IPv4 addresses. "
+                   "ReachableAddresses or ReachableORAddresses "
+                   "reject all IPv4 addresses. "
                    "Tor will not connect using IPv4.");
     } else if (fascist_firewall_use_ipv6(options)
        && (policy_is_reject_star(reachable_or_addr_policy, AF_INET6, 0)
          || policy_is_reject_star(reachable_dir_addr_policy, AF_INET6, 0))) {
           log_warn(LD_CONFIG, "You have configured tor to use or prefer IPv6 "
                    "(or UseBridges 1), but "
-                   "ReachableAddresses, ReachableORAddresses, or "
-                   "ReachableDirAddresses reject all IPv6 addresses. "
+                   "ReachableAddresses or ReachableORAddresses "
+                   "reject all IPv6 addresses. "
                    "Tor will not connect using IPv6.");
     }
   }
 
   /* Append a reject *:* to reachable_(or|dir)_addr_policy */
-  if (!ret && (options->ReachableDirAddresses ||
-               options->ReachableORAddresses ||
+  if (!ret && (options->ReachableORAddresses ||
                options->ReachableAddresses)) {
     append_exit_policy_string(&reachable_or_addr_policy, "reject *:*");
     append_exit_policy_string(&reachable_dir_addr_policy, "reject *:*");
@@ -1246,9 +1237,6 @@ validate_addr_policies(const or_options_t *options, char **msg)
   if (parse_addr_policy(options->ReachableORAddresses, &addr_policy,
                         ADDR_POLICY_ACCEPT))
     REJECT("Error in ReachableORAddresses entry.");
-  if (parse_addr_policy(options->ReachableDirAddresses, &addr_policy,
-                        ADDR_POLICY_ACCEPT))
-    REJECT("Error in ReachableDirAddresses entry.");
 
  err:
   addr_policy_list_free(addr_policy);

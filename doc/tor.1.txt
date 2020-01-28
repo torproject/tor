@@ -1631,14 +1631,6 @@ The following options are useful only for clients (that is, if
     99, rejects port 80 connections to net 18, and accepts connections to port
     80 otherwise. (Default: \'accept \*:*'.)
 
-[[ReachableDirAddresses]] **ReachableDirAddresses** __IP__[/__MASK__][:__PORT__]...::
-    Like **ReachableAddresses**, a list of addresses and ports. Tor will obey
-    these restrictions when fetching directory information, using standard HTTP
-    GET requests. If not set explicitly then the value of
-    **ReachableAddresses** is used. If **HTTPProxy** is set then these
-    connections will go through that proxy.   (DEPRECATED: This option has
-    had no effect for some time.)
-
 [[ReachableORAddresses]] **ReachableORAddresses** __IP__[/__MASK__][:__PORT__]...::
     Like **ReachableAddresses**, a list of addresses and ports. Tor will obey
     these restrictions when connecting to Onion Routers, using TLS/SSL. If not
@@ -1646,8 +1638,8 @@ The following options are useful only for clients (that is, if
     **HTTPSProxy** is set then these connections will go through that proxy. +
      +
     The separation between **ReachableORAddresses** and
-    **ReachableDirAddresses** is only interesting when you are connecting
-    through proxies (see **HTTPProxy** and **HTTPSProxy**). Most proxies limit
+    **ReachableAddresses** is only interesting when you are connecting
+    through proxies (see **HTTPSProxy**). Most proxies limit
     TLS connections (which Tor uses to connect to Onion Routers) to port 443,
     and some limit HTTP GET requests (which Tor uses for fetching directory
     information) to port 80.

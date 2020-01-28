@@ -408,7 +408,6 @@ test_router_pick_directory_server_impl(void *arg)
   policy_line = tor_malloc_zero(sizeof(config_line_t));
   policy_line->key = tor_strdup("ReachableAddresses");
   policy_line->value = tor_strdup("accept *:80, reject *:*");
-  options->ReachableDirAddresses = policy_line;
   policies_parse_from_options(options);
   node_router1->rs->or_port = 442;
   node_router2->rs->or_port = 441;
@@ -431,8 +430,7 @@ test_router_pick_directory_server_impl(void *arg)
     tor_free(router2_id);
   if (router3_id)
     tor_free(router3_id);
-  if (options->ReachableORAddresses ||
-      options->ReachableDirAddresses)
+  if (options->ReachableORAddresses)
     policies_free_all();
   tor_free(consensus_text_md);
   networkstatus_vote_free(con_md);

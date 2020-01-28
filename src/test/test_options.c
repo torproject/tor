@@ -1543,9 +1543,6 @@ test_options_validate__reachable_addresses(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg("Converting FascistFirewall config "
-            "option to new format: \"ReachableDirAddresses *:80\"\n");
-  tt_str_op(tdata->opt->ReachableDirAddresses->value, OP_EQ, "*:80");
-  expect_log_msg("Converting FascistFirewall config "
             "option to new format: \"ReachableORAddresses *:443\"\n");
   tt_str_op(tdata->opt->ReachableORAddresses->value, OP_EQ, "*:443");
   tor_free(msg);
@@ -1553,7 +1550,6 @@ test_options_validate__reachable_addresses(void *ignored)
   free_options_test_data(tdata);
   mock_clean_saved_logs();
   tdata = get_options_test_data("FascistFirewall 1\n"
-                                "ReachableDirAddresses *:81\n"
                                 "ReachableORAddresses *:444\n");
   tt_assert(tdata->opt->FirewallPorts);
   SMARTLIST_FOREACH(tdata->opt->FirewallPorts, char *, cp, tor_free(cp));
@@ -1565,7 +1561,6 @@ test_options_validate__reachable_addresses(void *ignored)
    * logs before. */
   expect_log_entry();
 #endif
-  tt_str_op(tdata->opt->ReachableDirAddresses->value, OP_EQ, "*:81");
   tt_str_op(tdata->opt->ReachableORAddresses->value, OP_EQ, "*:444");
   tor_free(msg);
 
@@ -1624,15 +1619,6 @@ test_options_validate__reachable_addresses(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ReachableORAddresses *:82\n"
-                                "ORPort 127.0.0.1:5555\n");
-
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, SERVERS_REACHABLE_MSG);
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("ReachableDirAddresses *:82\n"
                                 "ORPort 127.0.0.1:5555\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);

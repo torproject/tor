@@ -311,7 +311,6 @@ struct or_options_t {
    /** IP:ports our firewall allows. */
   struct config_line_t *ReachableAddresses;
   struct config_line_t *ReachableORAddresses; /**< IP:ports for OR conns. */
-  struct config_line_t *ReachableDirAddresses; /**< IP:ports for Dir conns. */
 
   int ConstrainedSockets; /**< Shrink xmit and recv socket buffers. */
   uint64_t ConstrainedSockSize; /**< Size of constrained buffers. */
