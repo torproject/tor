@@ -1,0 +1,4 @@
+  o Removed features:
+    - The deprecated options HTTPProxy, HTTPProxyAuthenticator, and
+      ReachableDirAddresses are now removed and marked as obsolete.
+      Closes ticket 31180.
