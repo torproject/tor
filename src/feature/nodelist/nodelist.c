@@ -455,20 +455,41 @@ node_add_to_address_set(const node_t *node)
 
   if (node->rs) {
     if (node->rs->addr)
-      address_set_add_ipv4h(the_nodelist->node_addrs, node->rs->addr);
+      nodelist_add_addr4_to_address_set(node->rs->addr);
     if (!tor_addr_is_null(&node->rs->ipv6_addr))
-      address_set_add(the_nodelist->node_addrs, &node->rs->ipv6_addr);
+      nodelist_add_addr6_to_address_set(&node->rs->ipv6_addr);
   }
   if (node->ri) {
     if (node->ri->addr)
-      address_set_add_ipv4h(the_nodelist->node_addrs, node->ri->addr);
+      nodelist_add_addr4_to_address_set(node->ri->addr);
     if (!tor_addr_is_null(&node->ri->ipv6_addr))
-      address_set_add(the_nodelist->node_addrs, &node->ri->ipv6_addr);
+      nodelist_add_addr6_to_address_set(&node->ri->ipv6_addr);
   }
   if (node->md) {
     if (!tor_addr_is_null(&node->md->ipv6_addr))
-      address_set_add(the_nodelist->node_addrs, &node->md->ipv6_addr);
+      nodelist_add_addr6_to_address_set(&node->md->ipv6_addr);
   }
+}
+
+/** Add the given v4 address into the nodelist address set. */
+void
+nodelist_add_addr4_to_address_set(const uint32_t addr)
+{
+  if (!the_nodelist || !the_nodelist->node_addrs || addr == 0) {
+    return;
+  }
+  address_set_add_ipv4h(the_nodelist->node_addrs, addr);
+}
+
+/** Add the given v6 address into the nodelist address set. */
+void
+nodelist_add_addr6_to_address_set(const tor_addr_t *addr)
+{
+  if (BUG(!addr) || tor_addr_is_null(addr) || tor_addr_is_v4(addr) ||
+      !the_nodelist || !the_nodelist->node_addrs) {
+    return;
+  }
+  address_set_add(the_nodelist->node_addrs, addr);
 }
 
 /** Return true if <b>addr</b> is the address of some node in the nodelist.
