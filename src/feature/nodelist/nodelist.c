@@ -633,9 +633,12 @@ nodelist_set_consensus(networkstatus_t *ns)
   SMARTLIST_FOREACH(the_nodelist->nodes, node_t *, node,
                     node->rs = NULL);
 
-  /* Conservatively estimate that every node will have 2 addresses. */
-  const int estimated_addresses = smartlist_len(ns->routerstatus_list) *
-                                  get_estimated_address_per_node();
+  /* Conservatively estimate that every node will have 2 addresses (v4 and
+   * v6). Then we add the number of configured trusted authorities we have. */
+  int estimated_addresses = smartlist_len(ns->routerstatus_list) *
+                            get_estimated_address_per_node();
+  estimated_addresses += (get_n_authorities(V3_DIRINFO & BRIDGE_DIRINFO) *
+                          get_estimated_address_per_node());
   address_set_free(the_nodelist->node_addrs);
   the_nodelist->node_addrs = address_set_new(estimated_addresses);
 
@@ -686,6 +689,9 @@ nodelist_set_consensus(networkstatus_t *ns)
   SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
     node_add_to_address_set(node);
   } SMARTLIST_FOREACH_END(node);
+  /* Then, add all trusted configured directories. Some might not be in the
+   * consensus so make sure we know them. */
+  dirlist_add_trusted_addresses();
 
   if (! authdir) {
     SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
