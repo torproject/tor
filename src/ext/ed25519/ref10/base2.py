@@ -57,9 +57,9 @@ def radix255(x):
 Bi = B
 
 for i in range(8):
-  print " {"
-  print "  {",radix255(Bi[1]+Bi[0]),"},"
-  print "  {",radix255(Bi[1]-Bi[0]),"},"
-  print "  {",radix255(2*d*Bi[0]*Bi[1]),"},"
-  print " },"
+  print(" {")
+  print("  {",radix255(Bi[1]+Bi[0]),"},")
+  print("  {",radix255(Bi[1]-Bi[0]),"},")
+  print("  {",radix255(2*d*Bi[0]*Bi[1]),"},")
+  print(" },")
   Bi = edwards(B,edwards(B,Bi))

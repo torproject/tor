@@ -87,7 +87,7 @@ def parseHostAndPort(h):
         try:
             port = int(h[i+1:])
         except ValueError:
-            print "Bad hostname %r"%h
+            print("Bad hostname %r"%h)
             sys.exit(1)
     elif h:
         try:
@@ -123,15 +123,15 @@ def resolve(hostname, sockshost, socksport, socksver=4, reverse=0):
             return None
         answer += more
         result = parse(answer)
-    print "Got answer",result
+    print("Got answer",result)
     m = s.recv(1)
     if m:
-        print "Got extra data too: %r"%m
+        print("Got extra data too: %r"%m)
     return result
 
 if __name__ == '__main__':
     if len(sys.argv) not in (2,3,4):
-        print "Syntax: resolve.py [-4|-5] hostname [sockshost:socksport]"
+        print("Syntax: resolve.py [-4|-5] hostname [sockshost:socksport]")
         sys.exit(0)
     socksver = 4
     reverse = 0
@@ -146,7 +146,7 @@ if __name__ == '__main__':
             break
 
     if len(sys.argv) >= 4:
-        print "Syntax: resolve.py [-x] [-4|-5] hostname [sockshost:socksport]"
+        print("Syntax: resolve.py [-x] [-4|-5] hostname [sockshost:socksport]")
         sys.exit(0)
     if len(sys.argv) == 3:
         sh,sp = parseHostAndPort(sys.argv[2])

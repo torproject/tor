@@ -34,10 +34,10 @@ def buildWarnings():
 
 def count(fn):
     if os.path.abspath(fn) not in warnings:
-        print "0\t%s"%fn
+        print("0\t%s"%fn)
     else:
         n = len(warnings[os.path.abspath(fn)])
-        print "%d\t%s"%(n,fn)
+        print("%d\t%s"%(n,fn))
 
 def getIndentation(line):
     s = line.lstrip()
@@ -67,7 +67,7 @@ def annotate(filename):
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
-        print "Usage: locatemissingdoxygen.py [-A] filename... <doxygen_log"
+        print("Usage: locatemissingdoxygen.py [-A] filename... <doxygen_log")
         sys.exit(1)
     buildWarnings()
     if sys.argv[1] == '-A':
