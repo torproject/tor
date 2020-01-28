@@ -3043,6 +3043,12 @@ on the public Tor network.
     before it will treat advertised bandwidths as wholly
     unreliable. (Default: 500)
 
+[[AuthDirRejectRequestsUnderLoad]] **AuthDirRejectRequestsUnderLoad** **0**|**1**::
+    If set, the directory authority will start rejecting directory requests
+    from non relay connections by sending a 503 error code if it is under
+    bandwidth pressure (reaching the configured limit if any). Relays will
+    always tried to be answered even if this is on. (Default: 1)
+
 == HIDDEN SERVICE OPTIONS
 
 The following options are used to configure a hidden service. Some options
@@ -3652,7 +3658,7 @@ __DataDirectory__/**`approved-routers`**::
     __DataDirectory__ for an example fingerprint line. If the status is
     **!reject** then descriptors from the given identity (fingerprint/pubkey)
     are rejected by this server. If it is **!invalid** then descriptors are
-    accepted but marked in the directory as not valid, that is, not 
+    accepted but marked in the directory as not valid, that is, not
     recommended.
 
 __DataDirectory__/**`v3-status-votes`**::

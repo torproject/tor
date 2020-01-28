@@ -27,6 +27,7 @@
 #include "feature/dirauth/authmode.h"
 #include "feature/dirauth/bwauth.h"
 #include "feature/dirauth/dirauth_periodic.h"
+#include "feature/dirauth/dirauth_sys.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/guardfraction.h"
 #include "feature/dirauth/dirauth_options_st.h"
@@ -44,6 +45,14 @@
 
 #define YES_IF_CHANGED_INT(opt) \
   if (!CFG_EQ_INT(old_options, new_options, opt)) return 1;
+
+/** Return true iff we are configured to reject request under load for non
+ * relay connections. */
+bool
+dirauth_should_reject_requests_under_load(void)
+{
+  return !!dirauth_get_options()->AuthDirRejectRequestsUnderLoad;
+}
 
 /**
  * Legacy validation/normalization function for the dirauth mode options in
