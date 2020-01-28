@@ -3189,9 +3189,6 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
 /** Return true iff the global write buckets are low enough that we
  * shouldn't send <b>attempt</b> bytes of low-priority directory stuff
  * out to <b>conn</b>.
-
- * Priority was 1 for v1 requests (directories and running-routers),
- * and 2 for v2 requests and later (statuses and descriptors).
  *
  * There are a lot of parameters we could use here:
  * - global_relayed_write_bucket. Low is bad.
@@ -3206,37 +3203,24 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
  *   that's harder to quantify and harder to keep track of.
  */
 int
-connection_dir_is_global_write_low(connection_t *conn, size_t attempt,
-                                   int priority)
+connection_dir_is_global_write_low(connection_t *conn, size_t attempt)
 {
   size_t smaller_bucket =
     MIN(token_bucket_rw_get_write(&global_bucket),
         token_bucket_rw_get_write(&global_relayed_bucket));
-  if (authdir_mode(get_options()) && priority>1)
+  if (authdir_mode(get_options()))
     return 0; /* there's always room to answer v2 if we're an auth dir */
 
   if (!connection_is_rate_limited(conn))
     return 0; /* local conns don't get limited */
 
   if (smaller_bucket < attempt)
-    return 1; /* not enough space no matter the priority */
+    return 1; /* not enough space. */
 
   {
     const time_t diff = approx_time() - write_buckets_last_empty_at;
     if (diff <= 1)
       return 1; /* we're already hitting our limits, no more please */
-  }
-
-  if (priority == 1) { /* old-style v1 query */
-    /* Could we handle *two* of these requests within the next two seconds? */
-    const or_options_t *options = get_options();
-    size_t can_write = (size_t) (smaller_bucket
-      + 2*(options->RelayBandwidthRate ? options->RelayBandwidthRate :
-           options->BandwidthRate));
-    if (can_write < 2*attempt)
-      return 1;
-  } else { /* v2 query */
-    /* no further constraints yet */
   }
   return 0;
 }

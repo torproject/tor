@@ -197,7 +197,7 @@ void connection_mark_all_noncontrol_connections(void);
 
 ssize_t connection_bucket_write_limit(struct connection_t *conn, time_t now);
 int connection_dir_is_global_write_low(struct connection_t *conn,
-                                       size_t attempt, int priority);
+                                       size_t attempt);
 void connection_bucket_init(void);
 void connection_bucket_adjust(const or_options_t *options);
 void connection_bucket_refill_all(time_t now,
