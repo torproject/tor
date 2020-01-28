@@ -3051,7 +3051,7 @@ connection_mark_all_noncontrol_connections(void)
  * uses pluggable transports, since we should then limit it even if it
  * comes from an internal IP address. */
 static int
-connection_is_rate_limited(connection_t *conn)
+connection_is_rate_limited(const connection_t *conn)
 {
   const or_options_t *options = get_options();
   if (conn->linked)
@@ -3190,7 +3190,10 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
  * shouldn't send <b>attempt</b> bytes of low-priority directory stuff
  * out to <b>conn</b>.
  *
- * There are a lot of parameters we could use here:
+ * If we are a directory authority, always answer dir requests thus true is
+ * always returned.
+ *
+ * Note: There are a lot of parameters we could use here:
  * - global_relayed_write_bucket. Low is bad.
  * - global_write_bucket. Low is bad.
  * - bandwidthrate. Low is bad.
@@ -3202,27 +3205,27 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
  *   mean is "total directory bytes added to outbufs recently", but
  *   that's harder to quantify and harder to keep track of.
  */
-int
-connection_dir_is_global_write_low(connection_t *conn, size_t attempt)
+bool
+connection_dir_is_global_write_low(const connection_t *conn, size_t attempt)
 {
   size_t smaller_bucket =
     MIN(token_bucket_rw_get_write(&global_bucket),
         token_bucket_rw_get_write(&global_relayed_bucket));
   if (authdir_mode(get_options()))
-    return 0; /* there's always room to answer v2 if we're an auth dir */
+    return false; /* there's always room to answer v2 if we're an auth dir */
 
   if (!connection_is_rate_limited(conn))
-    return 0; /* local conns don't get limited */
+    return false; /* local conns don't get limited */
 
   if (smaller_bucket < attempt)
-    return 1; /* not enough space. */
+    return true; /* not enough space. */
 
   {
     const time_t diff = approx_time() - write_buckets_last_empty_at;
     if (diff <= 1)
-      return 1; /* we're already hitting our limits, no more please */
+      return true; /* we're already hitting our limits, no more please */
   }
-  return 0;
+  return false;
 }
 
 /** When did we last tell the accounting subsystem about transmitted
