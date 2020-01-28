@@ -41,7 +41,8 @@ env:
 matrix:
   ## include creates builds with gcc, linux, unless we override those defaults
   include:
-    - language: python
+    - name: Detect Python syntax errors
+      language: python
       python: 2.7
       before_install: pip install --upgrade pip
       install: pip install flake8
