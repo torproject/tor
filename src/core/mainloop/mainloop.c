@@ -2273,18 +2273,23 @@ systemd_watchdog_callback(periodic_timer_t *timer, void *arg)
 
 #define UPTIME_CUTOFF_FOR_NEW_BANDWIDTH_TEST (6*60*60)
 
-/** Called when our IP address seems to have changed. <b>at_interface</b>
- * should be true if we detected a change in our interface, and false if we
- * detected a change in our published address. */
+/** Called when our IP address seems to have changed. <b>on_client_conn</b>
+ * should be true if:
+ *   - we detected a change in our interface address, using an outbound
+ *     connection, and therefore
+ *   - our client TLS keys need to be rotated.
+ * Otherwise, it should be false, and:
+ *   - we detected a change in our published address
+ *     (using some other method), and therefore
+ *   - the published addresses in our descriptor need to change.
+ */
 void
-ip_address_changed(int at_interface)
+ip_address_changed(int on_client_conn)
 {
   const or_options_t *options = get_options();
   int server = server_mode(options);
-  int exit_reject_interfaces = (server && options->ExitRelay
-                                && options->ExitPolicyRejectLocalInterfaces);
 
-  if (at_interface) {
+  if (on_client_conn) {
     if (! server) {
       /* Okay, change our keys. */
       if (init_keys_client() < 0)
@@ -2296,13 +2301,12 @@ ip_address_changed(int at_interface)
         reset_bandwidth_test();
       reset_uptime();
       router_reset_reachability();
+      /* All relays include their IP addresses as their ORPort addresses in
+       * their descriptor.
+       * Exit relays also incorporate interface addresses in their exit
+       * policies, when ExitPolicyRejectLocalInterfaces is set. */
+      mark_my_descriptor_dirty("IP address changed");
     }
-  }
-
-  /* Exit relays incorporate interface addresses in their exit policies when
-   * ExitPolicyRejectLocalInterfaces is set */
-  if (exit_reject_interfaces || (server && !at_interface)) {
-    mark_my_descriptor_dirty("IP address changed");
   }
 
   dns_servers_relaunch_checks();

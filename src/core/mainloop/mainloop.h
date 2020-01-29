@@ -56,7 +56,7 @@ MOCK_DECL(int, connection_count_moribund, (void));
 void directory_all_unreachable(time_t now);
 void directory_info_has_arrived(time_t now, int from_cache, int suppress_logs);
 
-void ip_address_changed(int at_interface);
+void ip_address_changed(int on_client_conn);
 void dns_servers_relaunch_checks(void);
 void reset_all_main_loop_timers(void);
 void reschedule_directory_downloads(void);
