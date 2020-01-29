@@ -1237,7 +1237,7 @@ run_tor_main_loop(void)
 }
 
 /** Install the publish/subscribe relationships for all the subsystems. */
-static void
+void
 pubsub_install(void)
 {
     pubsub_builder_t *builder = pubsub_builder_new();
@@ -1249,7 +1249,7 @@ pubsub_install(void)
 
 /** Connect the mainloop to its publish/subscribe message delivery events if
  * appropriate, and configure the global channels appropriately. */
-static void
+void
 pubsub_connect(void)
 {
   if (get_options()->command == CMD_RUN_TOR) {
