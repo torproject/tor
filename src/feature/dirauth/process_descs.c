@@ -818,6 +818,15 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
     goto fail;
   }
 
+  /* If the extrainfo descriptor contains an internal address, reject it. */
+  if (dirserv_router_has_valid_address(ri) < 0) {
+    log_notice(LD_DIR, "Rejecting an extrainfo descriptor '%s' "
+               "with an internal address.", ri->nickname);
+    *msg = "Router extrainfo descriptor contained an internal address.";
+    rv = ROUTER_AUTHDIR_REJECTS;
+    goto fail;
+  }
+
   if ((r = routerinfo_incompatible_with_extrainfo(ri->identity_pkey, ei,
                                                   &ri->cache_info, msg))) {
     if (r<0) {

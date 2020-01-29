@@ -16,7 +16,7 @@
 
 #include "lib/encoding/confline.h"
 #include "lib/encoding/keyval.h"
-
+#include "lib/net/address.h"
 #include "lib/container/smartlist.h"
 
 /* Required for dirinfo_type_t in or_options_t */
@@ -230,6 +230,21 @@ options_validate_server_transport(const or_options_t *old_options,
     char *bindaddr = get_bindaddr_from_transport_listen_line(cl->value, NULL);
     if (!bindaddr)
       REJECT("ServerTransportListenAddr did not parse. See logs for details.");
+
+    tor_addr_t tor_addr;
+    uint16_t tor_port;
+    int parse_rv = tor_addr_port_parse(LOG_WARN, bindaddr, &tor_addr, &tor_port, 0);
+    if (parse_rv < 0) {
+        log_notice(LD_CONFIG, "Your ServerTransportListenAddr failed to parse "
+                              "as a Tor address; check your configuration.");
+    }
+    if (parse_rv == 0 &&
+        tor_addr_is_internal(&tor_addr, 0) &&
+        options->PublishServerDescriptor_ == BRIDGE_DIRINFO &&
+        !options->AlternateBridgeAuthority)
+      REJECT("ServerTransportListenAddr is an internal address, "
+             "refusing to publish this bridge to the default bridge authorities.");
+
     tor_free(bindaddr);
   }
 

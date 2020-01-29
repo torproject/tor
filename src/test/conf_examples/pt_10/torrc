@@ -1,0 +1,9 @@
+# Relay PT tests
+# Options from relay/transport_config.c
+# Try a valid minimal config, with a bad ServerTransportListenAddr
+ORPort 2
+ExtORPort 1
+BridgeRelay 1
+ServerTransportPlugin bad3 exec /
+ServerTransportListenAddr bad3 10.1.2.3:4567
+PublishServerDescriptor 1
