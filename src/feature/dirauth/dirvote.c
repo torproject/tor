@@ -2963,7 +2963,7 @@ dirvote_perform_vote(void)
   if (!contents)
     return -1;
 
-  pending_vote = dirvote_add_vote(contents, &msg, &status);
+  pending_vote = dirvote_add_vote(contents, 0, &msg, &status);
   tor_free(contents);
   if (!pending_vote) {
     log_warn(LD_DIR, "Couldn't store my own vote! (I told myself, '%s'.)",
@@ -3125,7 +3125,8 @@ list_v3_auth_ids(void)
  * *<b>status_out</b> to an HTTP response and status code.  (V3 authority
  * only) */
 pending_vote_t *
-dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
+dirvote_add_vote(const char *vote_body, time_t time_posted,
+                 const char **msg_out, int *status_out)
 {
   networkstatus_t *vote;
   networkstatus_voter_info_t *vi;
@@ -3197,6 +3198,25 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
     log_warn(LD_DIR, "Rejecting vote from %s with valid-after time of %s; "
              "we were expecting %s", vi->address, tbuf1, tbuf2);
     *msg_out = "Bad valid-after time";
+    goto err;
+  }
+
+  if (!time_posted) { /* I imported this one myself */
+    log_notice(LD_DIR, "Retrieved vote from %s.", vi->address);
+  }
+
+  /* Check if we received it, as a post, after the cutoff when we
+   * start asking other dir auths for it. If we do, the best plan
+   * is to discard it, because using it greatly increases the chances
+   * of a split vote for this round (some dir auths got it in time,
+   * some didn't). */
+  if (time_posted && time_posted > voting_schedule.fetch_missing_votes) {
+    char tbuf1[ISO_TIME_LEN+1], tbuf2[ISO_TIME_LEN+1];
+    format_iso_time(tbuf1, time_posted);
+    format_iso_time(tbuf2, voting_schedule.fetch_missing_votes);
+    log_warn(LD_DIR, "Rejecting vote from %s received at %s; "
+             "our cutoff for received votes is %s", vi->address, tbuf1, tbuf2);
+    *msg_out = "Vote received too late, would be dangerous to count it";
     goto err;
   }
 

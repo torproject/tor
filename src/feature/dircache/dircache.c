@@ -1696,7 +1696,7 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
       !strcmp(url,"/tor/post/vote")) { /* v3 networkstatus vote */
     const char *msg = "OK";
     int status;
-    if (dirvote_add_vote(body, &msg, &status)) {
+    if (dirvote_add_vote(body, approx_time(), &msg, &status)) {
       write_short_http_response(conn, status, "Vote stored");
     } else {
       tor_assert(msg);

@@ -94,6 +94,7 @@ void dirvote_dirreq_get_status_vote(const char *url, smartlist_t *items,
 
 /* Storing signatures and votes functions */
 struct pending_vote_t * dirvote_add_vote(const char *vote_body,
+                                         time_t time_posted,
                                          const char **msg_out,
                                          int *status_out);
 int dirvote_add_signatures(const char *detached_signatures_body,
