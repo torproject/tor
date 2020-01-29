@@ -490,24 +490,6 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     }
   }
 
-  rc = seccomp_rule_add_1(ctx, SCMP_ACT_ERRNO(EACCES), SCMP_SYS(open),
-                SCMP_CMP_MASKED(1, O_CLOEXEC|O_NONBLOCK|O_NOCTTY|O_NOFOLLOW,
-                                O_RDONLY));
-  if (rc != 0) {
-    log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
-        "error %d", rc);
-    return rc;
-  }
-
-  rc = seccomp_rule_add_1(ctx, SCMP_ACT_ERRNO(EACCES), SCMP_SYS(openat),
-                SCMP_CMP_MASKED(2, O_CLOEXEC|O_NONBLOCK|O_NOCTTY|O_NOFOLLOW,
-                                O_RDONLY));
-  if (rc != 0) {
-    log_err(LD_BUG,"(Sandbox) failed to add openat syscall, received "
-            "libseccomp error %d", rc);
-    return rc;
-  }
-
   return 0;
 }
 
@@ -556,23 +538,6 @@ sb_chown(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
         return rc;
       }
     }
-  }
-
-  return 0;
-}
-
-static int
-sb__sysctl(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
-{
-  int rc;
-  (void) filter;
-  (void) ctx;
-
-  rc = seccomp_rule_add_0(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(_sysctl));
-  if (rc != 0) {
-    log_err(LD_BUG,"(Sandbox) failed to add _sysctl syscall, "
-        "received libseccomp error %d", rc);
-    return rc;
   }
 
   return 0;
@@ -1146,7 +1111,6 @@ static sandbox_filter_func_t filter_func[] = {
     sb_chmod,
     sb_open,
     sb_openat,
-    sb__sysctl,
     sb_rename,
 #ifdef __NR_fcntl64
     sb_fcntl64,
@@ -1523,14 +1487,14 @@ install_syscall_filter(sandbox_cfg_t* cfg)
   int rc = 0;
   scmp_filter_ctx ctx;
 
-  ctx = seccomp_init(SCMP_ACT_TRAP);
+  ctx = seccomp_init(SCMP_ACT_ERRNO(EPERM));
   if (ctx == NULL) {
     log_err(LD_BUG,"(Sandbox) failed to initialise libseccomp context");
     rc = -1;
     goto end;
   }
 
-  // protectign sandbox parameter strings
+  // protecting sandbox parameter strings
   if ((rc = prot_strings(ctx, cfg))) {
     goto end;
   }
