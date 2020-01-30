@@ -1,4 +1,4 @@
-Changes in version 0.4.1.8 - 2019-01-3x
+Changes in version 0.4.1.8 - 2020-01-30
   This release backports several bugfixes from later release series,
   including some that had affected the Linux seccomp2 sandbox or Windows
   services. If you're running with one of those configurations, you'll
