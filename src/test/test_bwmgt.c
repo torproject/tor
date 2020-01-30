@@ -357,32 +357,36 @@ test_bwmgt_dir_conn_global_write_low(void *arg)
    * warning that our limit is too low. */
   addr_family = tor_addr_parse(&conn->addr, "1.1.1.1");
   tt_int_op(addr_family, OP_EQ, AF_INET);
-  ret = connection_dir_is_global_write_low(conn, INT_MAX);
+  ret = connection_dir_is_global_write_low(conn, INT_MAX, NO_METHOD);
   tt_int_op(ret, OP_EQ, 1);
 
   /* Now, lets try with a connection address from moria1. It should always
    * pass even though our limit is too low. */
   addr_family = tor_addr_parse(&conn->addr, "128.31.0.39");
   tt_int_op(addr_family, OP_EQ, AF_INET);
-  ret = connection_dir_is_global_write_low(conn, INT_MAX);
+  ret = connection_dir_is_global_write_low(conn, INT_MAX, NO_METHOD);
   tt_int_op(ret, OP_EQ, 0);
 
   /* IPv6 testing of gabelmoo. */
   addr_family = tor_addr_parse(&conn->addr, "[2001:638:a000:4140::ffff:189]");
   tt_int_op(addr_family, OP_EQ, AF_INET6);
-  ret = connection_dir_is_global_write_low(conn, INT_MAX);
+  ret = connection_dir_is_global_write_low(conn, INT_MAX, NO_METHOD);
   tt_int_op(ret, OP_EQ, 0);
 
   /* Lets retry with a known relay address. It should pass. Possible due to
    * our consensus setting above. */
   memcpy(&conn->addr, &relay_addr, sizeof(tor_addr_t));
-  ret = connection_dir_is_global_write_low(conn, INT_MAX);
+  ret = connection_dir_is_global_write_low(conn, INT_MAX, NO_METHOD);
   tt_int_op(ret, OP_EQ, 0);
 
   /* Lets retry with a random IP that is not an authority nor a relay. */
   addr_family = tor_addr_parse(&conn->addr, "1.2.3.4");
   tt_int_op(addr_family, OP_EQ, AF_INET);
-  ret = connection_dir_is_global_write_low(conn, INT_MAX);
+  ret = connection_dir_is_global_write_low(conn, INT_MAX, NO_METHOD);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* Compress method should always let us through. */
+  ret = connection_dir_is_global_write_low(conn, INT_MAX, ZLIB_METHOD);
   tt_int_op(ret, OP_EQ, 0);
 
   /* Finally, just make sure it still denies an IP if we are _not_ a v3
@@ -390,13 +394,13 @@ test_bwmgt_dir_conn_global_write_low(void *arg)
   mock_options.V3AuthoritativeDir = 0;
   addr_family = tor_addr_parse(&conn->addr, "1.2.3.4");
   tt_int_op(addr_family, OP_EQ, AF_INET);
-  ret = connection_dir_is_global_write_low(conn, INT_MAX);
+  ret = connection_dir_is_global_write_low(conn, INT_MAX, NO_METHOD);
   tt_int_op(ret, OP_EQ, 1);
 
   /* Random IPv6 should not be allowed. */
   addr_family = tor_addr_parse(&conn->addr, "[CAFE::ACAB]");
   tt_int_op(addr_family, OP_EQ, AF_INET6);
-  ret = connection_dir_is_global_write_low(conn, INT_MAX);
+  ret = connection_dir_is_global_write_low(conn, INT_MAX, NO_METHOD);
   tt_int_op(ret, OP_EQ, 1);
 
  done:
