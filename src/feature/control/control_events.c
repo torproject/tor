@@ -1552,29 +1552,17 @@ control_event_signal(uintptr_t signal_num)
   if (!control_event_is_interesting(EVENT_GOT_SIGNAL))
     return 0;
 
-  switch (signal_num) {
-    case SIGHUP:
-      signal_string = "RELOAD";
+  for (unsigned i = 0; signal_table[i].signal_name != NULL; ++i) {
+    if ((int)signal_num == signal_table[i].sig) {
+      signal_string = signal_table[i].signal_name;
       break;
-    case SIGUSR1:
-      signal_string = "DUMP";
-      break;
-    case SIGUSR2:
-      signal_string = "DEBUG";
-      break;
-    case SIGNEWNYM:
-      signal_string = "NEWNYM";
-      break;
-    case SIGCLEARDNSCACHE:
-      signal_string = "CLEARDNSCACHE";
-      break;
-    case SIGHEARTBEAT:
-      signal_string = "HEARTBEAT";
-      break;
-    default:
-      log_warn(LD_BUG, "Unrecognized signal %lu in control_event_signal",
-               (unsigned long)signal_num);
-      return -1;
+    }
+  }
+
+  if (signal_string == NULL) {
+    log_warn(LD_BUG, "Unrecognized signal %lu in control_event_signal",
+             (unsigned long)signal_num);
+    return -1;
   }
 
   send_control_event(EVENT_GOT_SIGNAL,  "650 SIGNAL %s\r\n",
