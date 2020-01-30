@@ -1,4 +1,0 @@
-  o Testing:
-    - Turn off Tor's Sandbox in Chutney jobs, and run those jobs on Ubuntu
-      Bionic. Turning off the Sandbox is a work-around, until we fix the
-      sandbox errors in 32722. Closes ticket 32240.
