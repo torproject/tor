@@ -16,8 +16,8 @@ compiler:
 os:
   - linux
 
-## We don't use the build matrix cross-product, because it makes too many jobs
-## Instead, we list each job under matrix: include:
+## We don't use the build jobs cross-product, because it makes too many jobs
+## Instead, we list each job under jobs: include:
 env:
   global:
     ## The Travis CI environment allows us two cores, so let's use both.  Also,
@@ -34,11 +34,11 @@ env:
     ## Turn off tor's sandbox in chutney, until we fix sandbox errors that are
     ## triggered by Ubuntu Xenial and Bionic. See #32722.
     - CHUTNEY_TOR_SANDBOX="0"
-  matrix:
-    ## This matrix entry is required, but it doesn't actually create any jobs
+  jobs:
+    ## This jobs entry is required, but it doesn't actually create any jobs
     -
 
-matrix:
+jobs:
   ## include creates builds with gcc, linux, unless we override those defaults
   include:
     - name: Detect Python syntax errors
