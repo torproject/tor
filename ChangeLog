@@ -1,5 +1,9 @@
 Changes in version 0.4.2.6 - 2020-01-3x
-  This is the second stable release in the 0.4.2.x series.
+  This is the second stable release in the 0.4.2.x series. It backports
+  several bugfixes from 0.4.3.1-alpha, including some that had affected
+  the Linux seccomp2 sandbox or Windows services. If you're running with
+  one of those configurations, you'll probably want to upgrade;
+  otherwise, you should be fine with 0.4.2.5.
 
   o Major bugfixes (linux seccomp sandbox, backport from 0.4.3.1-alpha):
     - Correct how we use libseccomp. Particularly, stop assuming that
