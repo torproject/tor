@@ -2,6 +2,61 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.2.6 - 2020-01-30
+  This is the second stable release in the 0.4.2.x series. It backports
+  several bugfixes from 0.4.3.1-alpha, including some that had affected
+  the Linux seccomp2 sandbox or Windows services. If you're running with
+  one of those configurations, you'll probably want to upgrade;
+  otherwise, you should be fine with 0.4.2.5.
+
+  o Major bugfixes (linux seccomp sandbox, backport from 0.4.3.1-alpha):
+    - Correct how we use libseccomp. Particularly, stop assuming that
+      rules are applied in a particular order or that more rules are
+      processed after the first match. Neither is the case! In
+      libseccomp <2.4.0 this lead to some rules having no effect.
+      libseccomp 2.4.0 changed how rules are generated, leading to a
+      different ordering, which in turn led to a fatal crash during
+      startup. Fixes bug 29819; bugfix on 0.2.5.1-alpha. Patch by
+      Peter Gerber.
+    - Fix crash when reloading logging configuration while the
+      experimental sandbox is enabled. Fixes bug 32841; bugfix on
+      0.4.1.7. Patch by Peter Gerber.
+
+  o Minor bugfixes (correctness checks, backport from 0.4.3.1-alpha):
+    - Use GCC/Clang's printf-checking feature to make sure that
+      tor_assertf() arguments are correctly typed. Fixes bug 32765;
+      bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (logging, crash, backport from 0.4.3.1-alpha):
+    - Avoid a possible crash when trying to log a (fatal) assertion
+      failure about mismatched magic numbers in configuration objects.
+      Fixes bug 32771; bugfix on 0.4.2.1-alpha.
+
+  o Minor bugfixes (testing, backport from 0.4.3.1-alpha):
+    - When TOR_DISABLE_PRACTRACKER is set, do not apply it to the
+      test_practracker.sh script. Doing so caused a test failure. Fixes
+      bug 32705; bugfix on 0.4.2.1-alpha.
+    - When TOR_DISABLE_PRACTRACKER is set, log a notice to stderr when
+      skipping practracker checks. Fixes bug 32705; bugfix
+      on 0.4.2.1-alpha.
+
+  o Minor bugfixes (windows service, backport from 0.4.3.1-alpha):
+    - Initialize the publish/subscribe system when running as a windows
+      service. Fixes bug 32778; bugfix on 0.4.1.1-alpha.
+
+  o Testing (backport from 0.4.3.1-alpha):
+    - Turn off Tor's Sandbox in Chutney jobs, and run those jobs on
+      Ubuntu Bionic. Turning off the Sandbox is a work-around, until we
+      fix the sandbox errors in 32722. Closes ticket 32240.
+    - Re-enable the Travis CI macOS Chutney build, but don't let it
+      prevent the Travis job from finishing. (The Travis macOS jobs are
+      slow, so we don't want to have it delay the whole CI process.)
+      Closes ticket 32629.
+
+  o Testing (continuous integration, backport from 0.4.3.1-alpha):
+    - Use zstd in our Travis Linux builds. Closes ticket 32242.
+
+
 Changes in version 0.4.2.5 - 2019-12-09
   This is the first stable release in the 0.4.2.x series. This series
   improves reliability and stability, and includes several stability and
