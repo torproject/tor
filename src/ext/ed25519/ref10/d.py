@@ -30,4 +30,4 @@ def radix255(x):
   return result
 
 d = -121665 * inv(121666)
-print radix255(d)
+print(radix255(d))

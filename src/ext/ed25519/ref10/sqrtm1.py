@@ -30,4 +30,4 @@ def radix255(x):
   return result
 
 I = expmod(2,(q-1)/4,q)
-print radix255(I)
+print(radix255(I))

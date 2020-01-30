@@ -30,6 +30,11 @@ import slow_ed25519
 import slownacl_curve25519
 import ed25519_exts_ref
 
+try:
+    xrange  # Python 2
+except NameError:
+    xrange = range  # Python 3
+
 # Pull in the openssl stuff we need.
 
 crypt = ctypes.CDLL(ctypes.util.find_library('crypto'))
@@ -303,10 +308,10 @@ def signdesc(body, args_out=None):
     return body.rstrip()
 
 def print_c_string(ident, body):
-    print "static const char %s[] =" % ident
+    print("static const char %s[] =" % ident)
     for line in body.split("\n"):
-        print '  "%s\\n"' %(line)
-    print "  ;"
+        print('  "%s\\n"' %(line))
+    print("  ;")
 
 def emit_ri(name, body):
     info = OnDemandKeys()
@@ -320,8 +325,8 @@ def emit_ei(name, body):
     body = info.sign_desc(body)
     print_c_string("EX_EI_%s"%name.upper(), body)
 
-    print 'const char EX_EI_{NAME}_FP[] = "{d.RSA_FINGERPRINT_NOSPACE}";'.format(
-        d=info, NAME=name.upper())
+    print('const char EX_EI_{NAME}_FP[] = "{d.RSA_FINGERPRINT_NOSPACE}";'.format(
+        d=info, NAME=name.upper()))
     print_c_string("EX_EI_%s_KEY"%name.upper(), info.RSA_IDENTITY)
 
 def analyze(s):
