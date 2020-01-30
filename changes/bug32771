@@ -1,4 +1,0 @@
-  o Minor bugfixes (logging, crash):
-    - Avoid a possible crash when trying to log a (fatal) assertion failure
-      about mismatched magic numbers in configuration objects. Fixes bug 32771;
-      bugfix on 0.4.2.1-alpha.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (linux seccomp sandbox):
-    - Fix crash when reloading logging configuration while the
-      experimental sandbox is enabled. Fixes bug 32841; bugfix
-      on 0.4.1.7. Patch by Peter Gerber.

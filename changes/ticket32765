@@ -1,4 +1,0 @@
-  o Minor bugfixes (correctness checks):
-    - Use GCC/Clang's printf-checking feature to make sure that
-      tor_assertf() arguments are correctly typed. Fixes bug 32765;
-      bugfix on 0.4.1.1-alpha.
