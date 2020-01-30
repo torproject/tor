@@ -4970,10 +4970,10 @@ connection_finished_flushing(connection_t *conn)
   }
 }
 
-/** Called when our attempt to connect() to another server has just
- * succeeded.
+/** Called when our attempt to connect() to a server has just succeeded.
  *
- * This function just passes conn to the connection-specific
+ * This function checks if the interface address has changed (clients only),
+ * and then passes conn to the connection-specific
  * connection_*_finished_connecting() function.
  */
 static int

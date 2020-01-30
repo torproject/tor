@@ -1,0 +1,3 @@
+  o Code simplification and refactoring (mainloop):
+    - Simplify the ip_address_changed() function by removing redundant checks.
+      Closes ticket 33091.
