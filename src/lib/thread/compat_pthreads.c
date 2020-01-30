@@ -49,6 +49,7 @@ tor_pthread_helper_fn(void *_data)
   arg = data->data;
   tor_free(_data);
   func(arg);
+  tor_run_thread_cleanup_fn();
   return NULL;
 }
 /**
@@ -92,6 +93,7 @@ spawn_func(void (*func)(void *), void *data)
 void
 spawn_exit(void)
 {
+  tor_run_thread_cleanup_fn();
   pthread_exit(NULL);
 }
 

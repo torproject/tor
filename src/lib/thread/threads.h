@@ -31,6 +31,8 @@ void spawn_exit(void) ATTR_NORETURN;
 
 unsigned long tor_get_thread_id(void);
 void tor_threads_init(void);
+void tor_set_thread_cleanup_fn(void (*fn)(void));
+void tor_run_thread_cleanup_fn(void);
 
 /** Conditions need nonrecursive mutexes with pthreads. */
 #define tor_mutex_init_for_cond(m) tor_mutex_init_nonrecursive(m)

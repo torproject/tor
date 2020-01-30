@@ -22,6 +22,29 @@
 /* This value is more or less total cargo-cult */
 #define SPIN_COUNT 2000
 
+typedef struct tor_winthread_data_t {
+  void (*func)(void *);
+  void *data;
+} tor_winthread_data_t;
+
+/**
+ * Helper function to run the main body of a windows thread.
+ *
+ * It takes a tor_winthread_data_t object, and acts as if it were calling that
+ * object's function on its data, except that it also runs our thread cleanup
+ * function if and when the function returns.
+ **/
+static void
+tor_winthread_helper_fn(void *data_)
+{
+  tor_winthread_data_t *data = data_;
+  void (*func)(void*) = data->func;
+  void *arg = data->data;
+  tor_free(data);
+  func(arg);
+  tor_run_thread_cleanup_fn();
+}
+
 /** Minimalist interface to run a void function in the background.  On
  * Unix calls fork, on win32 calls beginthread.  Returns -1 on failure.
  * func should not return, but rather should call spawn_exit.
@@ -35,9 +58,14 @@ int
 spawn_func(void (*func)(void *), void *data)
 {
   int rv;
-  rv = (int)_beginthread(func, 0, data);
-  if (rv == (int)-1)
+  tor_winthread_data_t *tdata = tor_malloc_zero(sizeof(tor_winthread_data_t));
+  tdata->func = func;
+  tdata->data = data;
+  rv = (int)_beginthread(tor_winthread_helper_fn, 0, tdata);
+  if (rv == (int)-1) {
+    tor_free(tdata);
     return -1;
+  }
   return 0;
 }
 
@@ -46,6 +74,7 @@ spawn_func(void (*func)(void *), void *data)
 void
 spawn_exit(void)
 {
+  tor_run_thread_cleanup_fn();
   _endthread();
   // LCOV_EXCL_START
   //we should never get here. my compiler thinks that _endthread returns, this

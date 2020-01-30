@@ -22,6 +22,35 @@
 
 #include <string.h>
 
+/** A function to be run when a thread (other than the main thread) is
+ * about to exit. */
+static void (*thread_cleanup_fn)(void) = NULL;
+
+/**
+ * Set a function to be run when a thread (other than the main thread)
+ * exits. Only one function can be set at a time.
+ *
+ * In general, our code shouldn't use this function for thread cleanup logic.
+ * Instead, create a subsystem, and use a .thread_cleanup method on that
+ * subsystem.
+ ***/
+void
+tor_set_thread_cleanup_fn(void (*fn)(void))
+{
+  thread_cleanup_fn = fn;
+}
+
+/**
+ * To be called when a thread is about to exit: run the function set by
+ * tor_set_thread_cleanup_fn().
+ **/
+void
+tor_run_thread_cleanup_fn(void)
+{
+  if (thread_cleanup_fn)
+    thread_cleanup_fn();
+}
+
 /** Allocate and return a new condition variable. */
 tor_cond_t *
 tor_cond_new(void)
