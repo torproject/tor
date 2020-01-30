@@ -23,6 +23,7 @@
 #include "lib/malloc/malloc.h"
 #include "lib/pubsub/pubsub_build.h"
 #include "lib/pubsub/pubsub_connect.h"
+#include "lib/thread/threads.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,6 +80,8 @@ check_and_setup(void)
 {
   if (subsystem_array_validated)
     return;
+
+  tor_set_thread_cleanup_fn(subsystems_thread_cleanup);
 
   raw_assert(ARRAY_LENGTH(sys_status) >= n_tor_subsystems);
   memset(sys_status, 0, sizeof(sys_status));

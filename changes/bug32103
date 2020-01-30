@@ -1,0 +1,4 @@
+  o Minor bugfixes (embedded Tor):
+    - Run a per-thread cleanup function to free thread-local resources when
+      each thread exits.  Formerly, these functions existed, but we never
+      called. Fixes bug 32103; bugfix on 0.4.1.1-alpha.
