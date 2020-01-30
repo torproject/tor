@@ -1,0 +1,3 @@
+  o Minor bugfixes (build system):
+    - Some configure options were either missing or incorrect from the configure
+      summary. Fixes bug 32230; bugfix on 0.4.2.1-alpha.

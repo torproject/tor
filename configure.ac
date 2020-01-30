@@ -2591,20 +2591,17 @@ PPRINT_PROP_STRING([Compiler], [$CC])
 PPRINT_PROP_STRING([Host OS], [$host_os])
 AS_ECHO
 
-test "x$enable_gcc_warnings" = "xyes" && value=1 || value=0
-PPRINT_PROP_BOOL([Verbose Warnings (--enable-gcc-warnings)], $value)
-
 test "x$enable_fatal_warnings" = "xyes" && value=1 || value=0
 PPRINT_PROP_BOOL([Warnings are fatal (--enable-fatal-warnings)], $value)
 
 test "x$enable_rust" = "xyes" && value=1 || value=0
 PPRINT_PROP_BOOL([Rust support (--enable-rust)], $value)
 
+test "x$enable_cargo_online_mode" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Cargo Online Fetch (--enable-cargo-online-mode)], $value)
+
 test "x$enable_android" = "xyes" && value=1 || value=0
 PPRINT_PROP_BOOL([Android support (--enable-android)], $value)
-
-test "x$enable_systemd" = "xyes" && value=1 || value=0
-PPRINT_PROP_BOOL([Systemd support (--enable-systemd)], $value)
 
 AS_ECHO
 PPRINT_SUBTITLE([Static Build])
@@ -2642,6 +2639,15 @@ PPRINT_PROP_BOOL([libseccomp (--disable-seccomp)], $value)
 test "x$enable_libscrypt" != "xno" && value=1 || value=0
 PPRINT_PROP_BOOL([libscrypt (--disable-libscrypt)], $value)
 
+test "x$enable_systemd" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Systemd support (--enable-systemd)], $value)
+
+test "x$enable_lzma" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([liblzma (--enable-lzma)], $value)
+
+test "x$enable_zstd" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([libzstd (--enable-zstd)], $value)
+
 AS_ECHO
 PPRINT_SUBTITLE([Hardening])
 
@@ -2651,20 +2657,24 @@ PPRINT_PROP_BOOL([Compiler Hardening (--disable-gcc-hardening)], $value)
 test "x$enable_linker_hardening" != "xno" && value=1 || value=0
 PPRINT_PROP_BOOL([Linker Hardening (--disable-linker-hardening)], $value)
 
-test "x$enable_fragile_hardening" = "xyes" && value=1 || value=0
+test "x$fragile_hardening" = "xyes" && value=1 || value=0
 PPRINT_PROP_BOOL([Fragile Hardening (--enable-fragile-hardening, dev only)], $value)
 
 AS_ECHO
 PPRINT_SUBTITLE([Modules])
 
-test "x$enable_module_dirauth" != "xno" && value=1 || value=0
-PPRINT_PROP_BOOL([Directory Authority (--disable-module-dirauth)], $value)
-
-test "x$enable_module_relay" != "xno" && value=1 || value=0
-PPRINT_PROP_BOOL([Relay (--disable-module-relay)], $value)
+m4_foreach_w([mname], MODULES,
+  [
+    test "xenable_module_mname" != "xno" && value=1 || value=0
+    PPRINT_PROP_BOOL([mname (--disable-module-mname)], $value)
+  ]
+)
 
 AS_ECHO
 PPRINT_SUBTITLE([Documentation])
+
+test "x$enable_asciidoc" != "xno" && value=1 || value=0
+PPRINT_PROP_BOOL([AsciiDoc (--disable-asciidoc)], $value)
 
 test "x$enable_manpage" != "xno" && value=1 || value=0
 PPRINT_PROP_BOOL([Man Pages (--disable-manpage)], $value)
@@ -2679,7 +2689,7 @@ test "x$enable_unittests" != "xno" && value=1 || value=0
 PPRINT_PROP_BOOL([Unit tests (--disable-unittests)], $value)
 
 test "x$enable_asserts_in_tests" = "xno" && value=1 || value=0
-PPRINT_PROP_BOOL([assert()s disabled (--disable-asserts-in-tests, dev only)], $value)
+PPRINT_PROP_BOOL([assert()s enabled (--enable-asserts-in-tests, dev only)], $value)
 
 test "x$enable_coverage" = "xyes" && value=1 || value=0
 PPRINT_PROP_BOOL([Code Coverage (--enable-coverage)], $value)
