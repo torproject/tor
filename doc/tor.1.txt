@@ -998,18 +998,6 @@ The following options are useful only for clients (that is, if
     the documentation of the pluggable transport for details of what
     arguments it supports.
 
-// Out of order because it logically belongs before the CircuitBuildTimeout option
-[[LearnCircuitBuildTimeout]] **LearnCircuitBuildTimeout** **0**|**1**::
-    If 0, CircuitBuildTimeout adaptive learning is disabled. (Default: 1)
-
-[[CircuitBuildTimeout]] **CircuitBuildTimeout** __NUM__::
-
-    Try for at most NUM seconds when building circuits. If the circuit isn't
-    open in that time, give up on it. If LearnCircuitBuildTimeout is 1, this
-    value serves as the initial value to use before a timeout is learned. If
-    LearnCircuitBuildTimeout is 0, this value is the only value used.
-    (Default: 60 seconds)
-
 [[CircuitPadding]] **CircuitPadding** **0**|**1**::
     If set to 0, Tor will not pad client circuits with additional cover
     traffic. Only clients may set this option. This option should be offered
@@ -1024,22 +1012,6 @@ The following options are useful only for clients (that is, if
     overhead. Only clients may set this option. This option should be offered
     via the UI to mobile users for use where bandwidth may be expensive.
     (Default: 0)
-
-[[CircuitsAvailableTimeout]] **CircuitsAvailableTimeout** __NUM__::
-    Tor will attempt to keep at least one open, unused circuit available for
-    this amount of time. This option governs how long idle circuits are kept
-    open, as well as the amount of time Tor will keep a circuit open to each
-    of the recently used ports. This way when the Tor client is entirely
-    idle, it can expire all of its circuits, and then expire its TLS
-    connections. Note that the actual timeout value is uniformly randomized
-    from the specified value to twice that amount. (Default: 30 minutes;
-    Max: 24 hours)
-
-[[CircuitStreamTimeout]] **CircuitStreamTimeout** __NUM__::
-    If non-zero, this option overrides our internal timeout schedule for how
-    many seconds until we detach a stream from a circuit and try a new circuit.
-    If your network is particularly slow, you might want to set this to a
-    number like 60. (Default: 0)
 
 [[ClientAutoIPv6ORPort]] **ClientAutoIPv6ORPort** **0**|**1**::
     If this option is set to 1, Tor clients randomly prefer a node's IPv4 or
@@ -1181,13 +1153,6 @@ The following options are useful only for clients (that is, if
     is launched for some other reason (for example, by a startup
     process, or by an application that launches itself on every login.)
 
-[[DormantClientTimeout]] **DormantClientTimeout**  __N__ **minutes**|**hours**|**days**|**weeks**::
-    If Tor spends this much time without any client activity,
-    enter a dormant state where automatic circuits are not built, and
-    directory information is not fetched.
-    Does not affect servers or onion services. Must be at least 10 minutes.
-    (Default: 24 hours)
-
 [[DormantOnFirstStartup]] **DormantOnFirstStartup** **0**|**1**::
     If true, then the first time Tor starts up with a fresh DataDirectory,
     it starts in dormant mode, and takes no actions until the user has made
@@ -1197,11 +1162,6 @@ The following options are useful only for clients (that is, if
      +
     After the first time Tor starts, it begins in dormant mode if it was
     dormant before, and not otherwise. (Default: 0)
-
-[[DormantTimeoutDisabledByIdleStreams]] **DormantTimeoutDisabledByIdleStreams**  **0**|**1**::
-    If true, then any open client stream (even one not reading or writing)
-    counts as client activity for the purpose of DormantClientTimeout.
-    If false, then only network activity counts. (Default: 1)
 
 [[DownloadExtraInfo]] **DownloadExtraInfo** **0**|**1**::
     If true, Tor downloads and caches "extra-info" documents. These documents
@@ -1213,76 +1173,6 @@ The following options are useful only for clients (that is, if
     If 1, Tor will not put two servers whose IP addresses are "too close" on
     the same circuit. Currently, two addresses are "too close" if they lie in
     the same /16 range. (Default: 1)
-
-[[EntryNodes]] **EntryNodes** __node__,__node__,__...__::
-    A list of identity fingerprints and country codes of nodes
-    to use for the first hop in your normal circuits.
-    Normal circuits include all
-    circuits except for direct connections to directory servers.  The Bridge
-    option overrides this option; if you have configured bridges and
-    UseBridges is 1, the Bridges are used as your entry nodes. +
-     +
-    The ExcludeNodes option overrides this option: any node listed in both
-    EntryNodes and ExcludeNodes is treated as excluded. See
-    the **ExcludeNodes** option for more information on how to specify nodes.
-
-[[ExcludeNodes]] **ExcludeNodes** __node__,__node__,__...__::
-    A list of identity fingerprints, country codes, and address
-    patterns of nodes to avoid when building a circuit. Country codes are
-    2-letter ISO3166 codes, and must
-    be wrapped in braces; fingerprints may be preceded by a dollar sign.
-    (Example:
-    ExcludeNodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
-     +
-    By default, this option is treated as a preference that Tor is allowed
-    to override in order to keep working.
-    For example, if you try to connect to a hidden service,
-    but you have excluded all of the hidden service's introduction points,
-    Tor will connect to one of them anyway.  If you do not want this
-    behavior, set the StrictNodes option (documented below).  +
-     +
-    Note also that if you are a relay, this (and the other node selection
-    options below) only affects your own circuits that Tor builds for you.
-    Clients can still build circuits through you to any node.  Controllers
-    can tell Tor to build circuits through any node. +
-     +
-    Country codes are case-insensitive. The code "\{??}" refers to nodes whose
-    country can't be identified. No country code, including \{??}, works if
-    no GeoIPFile can be loaded. See also the GeoIPExcludeUnknown option below.
-
-// Out of order because it logically belongs after the ExcludeNodes option
-[[ExcludeExitNodes]] **ExcludeExitNodes** __node__,__node__,__...__::
-    A list of identity fingerprints, country codes, and address
-    patterns of nodes to never use when picking an exit node---that is, a
-    node that delivers traffic for you *outside* the Tor network.   Note that any
-    node listed in ExcludeNodes is automatically considered to be part of this
-    list too.  See
-    the **ExcludeNodes** option for more information on how to specify
-    nodes. See also the caveats on the "ExitNodes" option below.
-
-[[ExitNodes]] **ExitNodes** __node__,__node__,__...__::
-    A list of identity fingerprints, country codes, and address
-    patterns of nodes to use as exit node---that is, a
-    node that delivers traffic for you *outside* the Tor network.  See
-    the **ExcludeNodes** option for more information on how to specify nodes. +
-     +
-    Note that if you list too few nodes here, or if you exclude too many exit
-    nodes with ExcludeExitNodes, you can degrade functionality.  For example,
-    if none of the exits you list allows traffic on port 80 or 443, you won't
-    be able to browse the web. +
-     +
-    Note also that not every circuit is used to deliver traffic *outside* of
-    the Tor network.  It is normal to see non-exit circuits (such as those
-    used to connect to hidden services, those that do directory fetches,
-    those used for relay reachability self-tests, and so on) that end
-    at a non-exit node.  To
-    keep a node from being used entirely, see ExcludeNodes and StrictNodes. +
-     +
-    The ExcludeNodes option overrides this option: any node listed in both
-    ExitNodes and ExcludeNodes is treated as excluded. +
-     +
-    The .exit address notation, if enabled via MapAddress, overrides
-    this option.
 
 [[FascistFirewall]] **FascistFirewall** **0**|**1**::
     If 1, Tor will only create outgoing connections to ORs running on ports
@@ -1297,14 +1187,6 @@ The following options are useful only for clients (that is, if
     **FascistFirewall** is set. This option is deprecated; use ReachableAddresses
     instead. (Default: 80, 443)
 
-[[GeoIPExcludeUnknown]] **GeoIPExcludeUnknown** **0**|**1**|**auto**::
-    If this option is set to 'auto', then whenever any country code is set in
-    ExcludeNodes or ExcludeExitNodes, all nodes with unknown country (\{??} and
-    possibly \{A1}) are treated as excluded as well. If this option is set to
-    '1', then all unknown countries are treated as excluded in ExcludeNodes
-    and ExcludeExitNodes.  This option has no effect when a GeoIP file isn't
-    configured or can't be found.  (Default: auto)
-
 [[HidServAuth]] **HidServAuth** __onion-address__ __auth-cookie__ [__service-name__]::
     Client authorization for a v2 hidden service. Valid onion addresses contain 16
     characters in a-z2-7 plus ".onion", and valid auth cookies contain 22
@@ -1314,116 +1196,6 @@ The following options are useful only for clients (that is, if
     this option is not set, the hidden service is not accessible. Hidden
     services can be configured to require authorization using the
     **HiddenServiceAuthorizeClient** option.
-
-[[HSLayer2Nodes]] **HSLayer2Nodes** __node__,__node__,__...__::
-    A list of identity fingerprints, nicknames, country codes, and
-    address patterns of nodes that are allowed to be used as the
-    second hop in all client or service-side Onion Service circuits.
-    This option mitigates attacks where the adversary runs middle nodes
-    and induces your client or service to create many circuits, in order
-    to discover your primary guard node.
-    (Default: Any node in the network may be used in the second hop.)
-     +
-    (Example:
-    HSLayer2Nodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
-     +
-    When this is set, the resulting hidden service paths will
-    look like:
-     +
-        C - G - L2 - M - Rend +
-        C - G - L2 - M - HSDir +
-        C - G - L2 - M - Intro +
-        S - G - L2 - M - Rend +
-        S - G - L2 - M - HSDir +
-        S - G - L2 - M - Intro +
-     +
-    where C is this client, S is the service, G is the Guard node,
-    L2 is a node from this option, and M is a random middle node.
-    Rend, HSDir, and Intro point selection is not affected by this
-    option.
-     +
-    This option may be combined with HSLayer3Nodes to create
-    paths of the form:
-     +
-        C - G - L2 - L3 - Rend +
-        C - G - L2 - L3 - M - HSDir +
-        C - G - L2 - L3 - M - Intro +
-        S - G - L2 - L3 - M - Rend +
-        S - G - L2 - L3 - HSDir +
-        S - G - L2 - L3 - Intro +
-     +
-    ExcludeNodes have higher priority than HSLayer2Nodes,
-    which means that nodes specified in ExcludeNodes will not be
-    picked.
-     +
-    When either this option or HSLayer3Nodes are set, the /16 subnet
-    and node family restrictions are removed for hidden service
-    circuits. Additionally, we allow the guard node to be present
-    as the Rend, HSDir, and IP node, and as the hop before it. This
-    is done to prevent the adversary from inferring information
-    about our guard, layer2, and layer3 node choices at later points
-    in the path.
-     +
-    This option is meant to be managed by a Tor controller such as
-    https://github.com/mikeperry-tor/vanguards that selects and
-    updates this set of nodes for you. Hence it does not do load
-    balancing if fewer than 20 nodes are selected, and if no nodes in
-    HSLayer2Nodes are currently available for use, Tor will not work.
-    Please use extreme care if you are setting this option manually.
-
-[[HSLayer3Nodes]] **HSLayer3Nodes** __node__,__node__,__...__::
-    A list of identity fingerprints, nicknames, country codes, and
-    address patterns of nodes that are allowed to be used as the
-    third hop in all client and service-side Onion Service circuits.
-    This option mitigates attacks where the adversary runs middle nodes
-    and induces your client or service to create many circuits, in order
-    to discover your primary or Layer2 guard nodes.
-    (Default: Any node in the network may be used in the third hop.)
-     +
-    (Example:
-    HSLayer3Nodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
-     +
-    When this is set by itself, the resulting hidden service paths
-    will look like: +
-        C - G - M - L3 - Rend +
-        C - G - M - L3 - M - HSDir +
-        C - G - M - L3 - M - Intro +
-        S - G - M - L3 - M - Rend +
-        S - G - M - L3 - HSDir +
-        S - G - M - L3 - Intro +
-    where C is this client, S is the service, G is the Guard node,
-    L2 is a node from this option, and M is a random middle node.
-    Rend, HSDir, and Intro point selection is not affected by this
-    option.
-     +
-    While it is possible to use this option by itself, it should be
-    combined with HSLayer2Nodes to create paths of the form:
-     +
-        C - G - L2 - L3 - Rend +
-        C - G - L2 - L3 - M - HSDir +
-        C - G - L2 - L3 - M - Intro +
-        S - G - L2 - L3 - M - Rend +
-        S - G - L2 - L3 - HSDir +
-        S - G - L2 - L3 - Intro +
-     +
-    ExcludeNodes have higher priority than HSLayer3Nodes,
-    which means that nodes specified in ExcludeNodes will not be
-    picked.
-     +
-    When either this option or HSLayer2Nodes are set, the /16 subnet
-    and node family restrictions are removed for hidden service
-    circuits. Additionally, we allow the guard node to be present
-    as the Rend, HSDir, and IP node, and as the hop before it. This
-    is done to prevent the adversary from inferring information
-    about our guard, layer2, and layer3 node choices at later points
-    in the path.
-  +
-    This option is meant to be managed by a Tor controller such as
-    https://github.com/mikeperry-tor/vanguards that selects and
-    updates this set of nodes for you. Hence it does not do load
-    balancing if fewer than 20 nodes are selected, and if no nodes in
-    HSLayer3Nodes are currently available for use, Tor will not work.
-    Please use extreme care if you are setting this option manually.
 
 [[HTTPTunnelPort]] **HTTPTunnelPort** ['address'**:**]{empty}__port__|**auto** [_isolation flags_]::
     Open this port to listen for proxy connections using the "HTTP CONNECT"
@@ -1509,26 +1281,6 @@ The following options are useful only for clients (that is, if
     Do not allow more than NUM circuits to be pending at a time for handling
     client streams. A circuit is pending if we have begun constructing it,
     but it has not yet been completely constructed.  (Default: 32)
-
-[[MiddleNodes]] **MiddleNodes** __node__,__node__,__...__::
-    A list of identity fingerprints and country codes of nodes
-    to use for "middle" hops in your normal circuits.
-    Normal circuits include all circuits except for direct connections
-    to directory servers. Middle hops are all hops other than exit and entry. +
-+
-    This is an **experimental** feature that is meant to be used by researchers
-    and developers to test new features in the Tor network safely. Using it
-    without care will strongly influence your anonymity. This feature might get
-    removed in the future.
-+
-    The HSLayer2Node and HSLayer3Node options override this option for onion
-    service circuits, if they are set. The vanguards addon will read this
-    option, and if set, it will set HSLayer2Nodes and HSLayer3Nodes to nodes
-    from this set.
-+
-    The ExcludeNodes option overrides this option: any node listed in both
-    MiddleNodes and ExcludeNodes is treated as excluded. See
-    the **ExcludeNodes** option for more information on how to specify nodes.
 
 [[NATDPort]] **NATDPort** ['address'**:**]{empty}__port__|**auto** [_isolation flags_]::
     Open this port to listen for connections from old versions of ipfw (as
@@ -1871,24 +1623,6 @@ The following options are useful only for clients (that is, if
     line is used, and all earlier flags are ignored. No error is issued for
     conflicting flags.
 
-[[SocksTimeout]] **SocksTimeout** __NUM__::
-    Let a socks connection wait NUM seconds handshaking, and NUM seconds
-    unattached waiting for an appropriate circuit, before we fail it. (Default:
-    2 minutes)
-
-[[StrictNodes]] **StrictNodes** **0**|**1**::
-    If StrictNodes is set to 1, Tor will treat solely the ExcludeNodes option
-    as a requirement to follow for all the circuits you generate, even if
-    doing so will break functionality for you (StrictNodes does not apply to
-    ExcludeExitNodes, ExitNodes, MiddleNodes, or MapAddress).  If StrictNodes
-    is set to 0, Tor will still try to avoid nodes in the ExcludeNodes list,
-    but it will err on the side of avoiding unexpected errors.
-    Specifically, StrictNodes 0 tells Tor that it is okay to use an excluded
-    node when it is *necessary* to perform relay reachability self-tests,
-    connect to a hidden service, provide a hidden service to a client,
-    fulfill a .exit request, upload directory information, or download
-    directory information.  (Default: 0)
-
 [[TokenBucketRefillInterval]] **TokenBucketRefillInterval** __NUM__ [**msec**|**second**]::
     Set the refill delay interval of Tor's token bucket to NUM milliseconds.
     NUM must be between 1 and 1000, inclusive.  When Tor is out of bandwidth,
@@ -2033,6 +1767,278 @@ The following options are useful only for clients (that is, if
     used IP. For local use, no change to the default VirtualAddrNetwork setting
     is needed.
 
+== TIMEOUT OPTIONS
+
+The following options are useful for configuring timeouts:
+
+[[CircuitsAvailableTimeout]] **CircuitsAvailableTimeout** __NUM__::
+    Tor will attempt to keep at least one open, unused circuit available for
+    this amount of time. This option governs how long idle circuits are kept
+    open, as well as the amount of time Tor will keep a circuit open to each
+    of the recently used ports. This way when the Tor client is entirely
+    idle, it can expire all of its circuits, and then expire its TLS
+    connections. Note that the actual timeout value is uniformly randomized
+    from the specified value to twice that amount. (Default: 30 minutes;
+    Max: 24 hours)
+
+// Out of order because it logically belongs before the CircuitBuildTimeout option
+[[LearnCircuitBuildTimeout]] **LearnCircuitBuildTimeout** **0**|**1**::
+    If 0, CircuitBuildTimeout adaptive learning is disabled. (Default: 1)
+
+[[CircuitBuildTimeout]] **CircuitBuildTimeout** __NUM__::
+    Try for at most NUM seconds when building circuits. If the circuit isn't
+    open in that time, give up on it. If LearnCircuitBuildTimeout is 1, this
+    value serves as the initial value to use before a timeout is learned. If
+    LearnCircuitBuildTimeout is 0, this value is the only value used.
+    (Default: 60 seconds)
+
+[[CircuitStreamTimeout]] **CircuitStreamTimeout** __NUM__::
+    If non-zero, this option overrides our internal timeout schedule for how
+    many seconds until we detach a stream from a circuit and try a new circuit.
+    If your network is particularly slow, you might want to set this to a
+    number like 60. (Default: 0)
+
+[[DormantClientTimeout]] **DormantClientTimeout**  __N__ **minutes**|**hours**|**days**|**weeks**::
+    If Tor spends this much time without any client activity,
+    enter a dormant state where automatic circuits are not built, and
+    directory information is not fetched.
+    Does not affect servers or onion services. Must be at least 10 minutes.
+    (Default: 24 hours)
+
+[[DormantTimeoutDisabledByIdleStreams]] **DormantTimeoutDisabledByIdleStreams**  **0**|**1**::
+    If true, then any open client stream (even one not reading or writing)
+    counts as client activity for the purpose of DormantClientTimeout.
+    If false, then only network activity counts. (Default: 1)
+
+[[SocksTimeout]] **SocksTimeout** __NUM__::
+    Let a socks connection wait NUM seconds handshaking, and NUM seconds
+    unattached waiting for an appropriate circuit, before we fail it. (Default:
+    2 minutes)
+
+== ADVANCED OPTIONS
+
+The following options include Tor nodes:
+
+[[EntryNodes]] **EntryNodes** __node__,__node__,__...__::
+    A list of identity fingerprints and country codes of nodes
+    to use for the first hop in your normal circuits.
+    Normal circuits include all
+    circuits except for direct connections to directory servers.  The Bridge
+    option overrides this option; if you have configured bridges and
+    UseBridges is 1, the Bridges are used as your entry nodes. +
+     +
+    The ExcludeNodes option overrides this option: any node listed in both
+    EntryNodes and ExcludeNodes is treated as excluded. See
+    the **ExcludeNodes** option for more information on how to specify nodes.
+
+[[ExcludeNodes]] **ExcludeNodes** __node__,__node__,__...__::
+    A list of identity fingerprints, country codes, and address
+    patterns of nodes to avoid when building a circuit. Country codes are
+    2-letter ISO3166 codes, and must
+    be wrapped in braces; fingerprints may be preceded by a dollar sign.
+    (Example:
+    ExcludeNodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
+     +
+    By default, this option is treated as a preference that Tor is allowed
+    to override in order to keep working.
+    For example, if you try to connect to a hidden service,
+    but you have excluded all of the hidden service's introduction points,
+    Tor will connect to one of them anyway.  If you do not want this
+    behavior, set the StrictNodes option (documented below).  +
+     +
+    Note also that if you are a relay, this (and the other node selection
+    options below) only affects your own circuits that Tor builds for you.
+    Clients can still build circuits through you to any node.  Controllers
+    can tell Tor to build circuits through any node. +
+     +
+    Country codes are case-insensitive. The code "\{??}" refers to nodes whose
+    country can't be identified. No country code, including \{??}, works if
+    no GeoIPFile can be loaded. See also the GeoIPExcludeUnknown option below.
+
+// Out of order because it logically belongs after the ExcludeNodes option
+[[ExcludeExitNodes]] **ExcludeExitNodes** __node__,__node__,__...__::
+    A list of identity fingerprints, country codes, and address
+    patterns of nodes to never use when picking an exit node---that is, a
+    node that delivers traffic for you *outside* the Tor network.   Note that any
+    node listed in ExcludeNodes is automatically considered to be part of this
+    list too.  See
+    the **ExcludeNodes** option for more information on how to specify
+    nodes. See also the caveats on the "ExitNodes" option below.
+
+[[ExitNodes]] **ExitNodes** __node__,__node__,__...__::
+    A list of identity fingerprints, country codes, and address
+    patterns of nodes to use as exit node---that is, a
+    node that delivers traffic for you *outside* the Tor network.  See
+    the **ExcludeNodes** option for more information on how to specify nodes. +
+     +
+    Note that if you list too few nodes here, or if you exclude too many exit
+    nodes with ExcludeExitNodes, you can degrade functionality.  For example,
+    if none of the exits you list allows traffic on port 80 or 443, you won't
+    be able to browse the web. +
+     +
+    Note also that not every circuit is used to deliver traffic *outside* of
+    the Tor network.  It is normal to see non-exit circuits (such as those
+    used to connect to hidden services, those that do directory fetches,
+    those used for relay reachability self-tests, and so on) that end
+    at a non-exit node.  To
+    keep a node from being used entirely, see ExcludeNodes and StrictNodes. +
+     +
+    The ExcludeNodes option overrides this option: any node listed in both
+    ExitNodes and ExcludeNodes is treated as excluded. +
+     +
+    The .exit address notation, if enabled via MapAddress, overrides
+    this option.
+
+[[GeoIPExcludeUnknown]] **GeoIPExcludeUnknown** **0**|**1**|**auto**::
+    If this option is set to 'auto', then whenever any country code is set in
+    ExcludeNodes or ExcludeExitNodes, all nodes with unknown country (\{??} and
+    possibly \{A1}) are treated as excluded as well. If this option is set to
+    '1', then all unknown countries are treated as excluded in ExcludeNodes
+    and ExcludeExitNodes.  This option has no effect when a GeoIP file isn't
+    configured or can't be found.  (Default: auto)
+
+[[HSLayer2Nodes]] **HSLayer2Nodes** __node__,__node__,__...__::
+    A list of identity fingerprints, nicknames, country codes, and
+    address patterns of nodes that are allowed to be used as the
+    second hop in all client or service-side Onion Service circuits.
+    This option mitigates attacks where the adversary runs middle nodes
+    and induces your client or service to create many circuits, in order
+    to discover your primary guard node.
+    (Default: Any node in the network may be used in the second hop.)
+     +
+    (Example:
+    HSLayer2Nodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
+     +
+    When this is set, the resulting hidden service paths will
+    look like:
+     +
+        C - G - L2 - M - Rend +
+        C - G - L2 - M - HSDir +
+        C - G - L2 - M - Intro +
+        S - G - L2 - M - Rend +
+        S - G - L2 - M - HSDir +
+        S - G - L2 - M - Intro +
+     +
+    where C is this client, S is the service, G is the Guard node,
+    L2 is a node from this option, and M is a random middle node.
+    Rend, HSDir, and Intro point selection is not affected by this
+    option.
+     +
+    This option may be combined with HSLayer3Nodes to create
+    paths of the form:
+     +
+        C - G - L2 - L3 - Rend +
+        C - G - L2 - L3 - M - HSDir +
+        C - G - L2 - L3 - M - Intro +
+        S - G - L2 - L3 - M - Rend +
+        S - G - L2 - L3 - HSDir +
+        S - G - L2 - L3 - Intro +
+     +
+    ExcludeNodes have higher priority than HSLayer2Nodes,
+    which means that nodes specified in ExcludeNodes will not be
+    picked.
+     +
+    When either this option or HSLayer3Nodes are set, the /16 subnet
+    and node family restrictions are removed for hidden service
+    circuits. Additionally, we allow the guard node to be present
+    as the Rend, HSDir, and IP node, and as the hop before it. This
+    is done to prevent the adversary from inferring information
+    about our guard, layer2, and layer3 node choices at later points
+    in the path.
+     +
+    This option is meant to be managed by a Tor controller such as
+    https://github.com/mikeperry-tor/vanguards that selects and
+    updates this set of nodes for you. Hence it does not do load
+    balancing if fewer than 20 nodes are selected, and if no nodes in
+    HSLayer2Nodes are currently available for use, Tor will not work.
+    Please use extreme care if you are setting this option manually.
+
+[[HSLayer3Nodes]] **HSLayer3Nodes** __node__,__node__,__...__::
+    A list of identity fingerprints, nicknames, country codes, and
+    address patterns of nodes that are allowed to be used as the
+    third hop in all client and service-side Onion Service circuits.
+    This option mitigates attacks where the adversary runs middle nodes
+    and induces your client or service to create many circuits, in order
+    to discover your primary or Layer2 guard nodes.
+    (Default: Any node in the network may be used in the third hop.)
+     +
+    (Example:
+    HSLayer3Nodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
+     +
+    When this is set by itself, the resulting hidden service paths
+    will look like: +
+        C - G - M - L3 - Rend +
+        C - G - M - L3 - M - HSDir +
+        C - G - M - L3 - M - Intro +
+        S - G - M - L3 - M - Rend +
+        S - G - M - L3 - HSDir +
+        S - G - M - L3 - Intro +
+    where C is this client, S is the service, G is the Guard node,
+    L2 is a node from this option, and M is a random middle node.
+    Rend, HSDir, and Intro point selection is not affected by this
+    option.
+     +
+    While it is possible to use this option by itself, it should be
+    combined with HSLayer2Nodes to create paths of the form:
+     +
+        C - G - L2 - L3 - Rend +
+        C - G - L2 - L3 - M - HSDir +
+        C - G - L2 - L3 - M - Intro +
+        S - G - L2 - L3 - M - Rend +
+        S - G - L2 - L3 - HSDir +
+        S - G - L2 - L3 - Intro +
+     +
+    ExcludeNodes have higher priority than HSLayer3Nodes,
+    which means that nodes specified in ExcludeNodes will not be
+    picked.
+     +
+    When either this option or HSLayer2Nodes are set, the /16 subnet
+    and node family restrictions are removed for hidden service
+    circuits. Additionally, we allow the guard node to be present
+    as the Rend, HSDir, and IP node, and as the hop before it. This
+    is done to prevent the adversary from inferring information
+    about our guard, layer2, and layer3 node choices at later points
+    in the path.
+  +
+    This option is meant to be managed by a Tor controller such as
+    https://github.com/mikeperry-tor/vanguards that selects and
+    updates this set of nodes for you. Hence it does not do load
+    balancing if fewer than 20 nodes are selected, and if no nodes in
+    HSLayer3Nodes are currently available for use, Tor will not work.
+    Please use extreme care if you are setting this option manually.
+
+[[MiddleNodes]] **MiddleNodes** __node__,__node__,__...__::
+    A list of identity fingerprints and country codes of nodes
+    to use for "middle" hops in your normal circuits.
+    Normal circuits include all circuits except for direct connections
+    to directory servers. Middle hops are all hops other than exit and entry. +
++
+    This is an **experimental** feature that is meant to be used by researchers
+    and developers to test new features in the Tor network safely. Using it
+    without care will strongly influence your anonymity. This feature might get
+    removed in the future.
++
+    The HSLayer2Node and HSLayer3Node options override this option for onion
+    service circuits, if they are set. The vanguards addon will read this
+    option, and if set, it will set HSLayer2Nodes and HSLayer3Nodes to nodes
+    from this set.
++
+    The ExcludeNodes option overrides this option: any node listed in both
+    MiddleNodes and ExcludeNodes is treated as excluded. See
+    the **ExcludeNodes** option for more information on how to specify nodes.
+
+[[StrictNodes]] **StrictNodes** **0**|**1**::
+    If StrictNodes is set to 1, Tor will treat solely the ExcludeNodes option
+    as a requirement to follow for all the circuits you generate, even if
+    doing so will break functionality for you (StrictNodes does not apply to
+    ExcludeExitNodes, ExitNodes, MiddleNodes, or MapAddress).  If StrictNodes
+    is set to 0, Tor will still try to avoid nodes in the ExcludeNodes list,
+    but it will err on the side of avoiding unexpected errors.
+    Specifically, StrictNodes 0 tells Tor that it is okay to use an excluded
+    node when it is *necessary* to perform relay reachability self-tests,
+    connect to a hidden service, provide a hidden service to a client,
+    fulfill a .exit request, upload directory information, or download
+    directory information.  (Default: 0)
 
 == SERVER OPTIONS
 
@@ -3652,7 +3658,7 @@ __DataDirectory__/**`approved-routers`**::
     __DataDirectory__ for an example fingerprint line. If the status is
     **!reject** then descriptors from the given identity (fingerprint/pubkey)
     are rejected by this server. If it is **!invalid** then descriptors are
-    accepted but marked in the directory as not valid, that is, not 
+    accepted but marked in the directory as not valid, that is, not
     recommended.
 
 __DataDirectory__/**`v3-status-votes`**::
