@@ -30,6 +30,7 @@ import metrics
 import util
 import problem
 import includes
+import shutil
 
 # The filename of the exceptions file (it should be placed in the practracker directory)
 EXCEPTIONS_FNAME = "./exceptions.txt"
@@ -275,7 +276,7 @@ def main(argv):
 
     if args.regen:
         tmpfile.close()
-        os.rename(tmpname, exceptions_file)
+        shutil.move(tmpname, exceptions_file)
         sys.exit(0)
 
     if args.regen_overbroad:
@@ -285,7 +286,7 @@ def main(argv):
         for item in ProblemVault.list_exceptions_without_overbroad():
             print(item, file=tmpfile)
         tmpfile.close()
-        os.rename(tmpname, exceptions_file)
+        shutil.move(tmpname, exceptions_file)
         sys.exit(0)
 
     # If new issues were found, try to give out some advice to the developer on how to resolve it.
