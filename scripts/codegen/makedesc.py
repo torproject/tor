@@ -24,7 +24,6 @@ import os
 import re
 import struct
 import time
-import UserDict
 
 import slow_ed25519
 import slownacl_curve25519
