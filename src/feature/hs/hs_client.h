@@ -162,6 +162,8 @@ MOCK_DECL(STATIC hs_client_fetch_status_t,
 
 STATIC void retry_all_socks_conn_waiting_for_desc(void);
 
+STATIC void purge_ephemeral_client_auth(void);
+
 #ifdef TOR_UNIT_TESTS
 
 STATIC void set_hs_client_auths_map(digest256map_t *map);
