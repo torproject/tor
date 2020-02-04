@@ -1769,6 +1769,9 @@ The following options are useful only for clients (that is, if
 
 == TIMEOUT OPTIONS
 
+// These options are in alphabetical order, with exceptions as noted.
+// Please keep them that way!
+
 The following options are useful for configuring timeouts:
 
 [[CircuitsAvailableTimeout]] **CircuitsAvailableTimeout** __NUM__::
@@ -1815,9 +1818,15 @@ The following options are useful for configuring timeouts:
     unattached waiting for an appropriate circuit, before we fail it. (Default:
     2 minutes)
 
-== ADVANCED OPTIONS
+== NODE SELECTION OPTIONS
 
-The following options include Tor nodes:
+// These options are in alphabetical order, with exceptions as noted.
+// Please keep them that way!
+
+The following options restrict the nodes that a tor client
+(or onion service) can use while building a circuit:
+
+These options can weaken your anonymity by making your client behavior different from other Tor clients:
 
 [[EntryNodes]] **EntryNodes** __node__,__node__,__...__::
     A list of identity fingerprints and country codes of nodes
