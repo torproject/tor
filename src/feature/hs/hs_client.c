@@ -1249,6 +1249,26 @@ can_client_refetch_desc(const ed25519_public_key_t *identity_pk,
   return 0;
 }
 
+/** Purge the client authorization cache of all ephemeral entries that is the
+ * entries that are not flagged with CLIENT_AUTH_FLAG_IS_PERMANENT.
+ *
+ * This is called from the hs_client_purge_state() used by a SIGNEWNYM. */
+STATIC void
+purge_ephemeral_client_auth(void)
+{
+  DIGEST256MAP_FOREACH_MODIFY(client_auths, key,
+                              hs_client_service_authorization_t *, auth) {
+    /* Cleanup every entry that are _NOT_ permanent that is ephemeral. */
+    if (!(auth->flags & CLIENT_AUTH_FLAG_IS_PERMANENT)) {
+      MAP_DEL_CURRENT(key);
+      client_service_authorization_free(auth);
+    }
+  } DIGESTMAP_FOREACH_END;
+
+  log_info(LD_REND, "Client onion service ephemeral authorization "
+                    "cache has been purged.");
+}
+
 /** Return the client auth in the map using the service identity public key.
  * Return NULL if it does not exist in the map. */
 static hs_client_service_authorization_t *
@@ -2433,6 +2453,8 @@ hs_client_purge_state(void)
   hs_cache_purge_as_client();
   /* Purge the last hidden service request cache. */
   hs_purge_last_hid_serv_requests();
+  /* Purge ephemeral client authorization. */
+  purge_ephemeral_client_auth();
 
   log_info(LD_REND, "Hidden service client state has been purged.");
 }
