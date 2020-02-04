@@ -645,6 +645,59 @@ test_client_cache_decrypt(void *arg)
   UNMOCK(networkstatus_get_live_consensus);
 }
 
+static void
+test_client_cache_remove(void *arg)
+{
+  int ret;
+  ed25519_keypair_t service_kp;
+  hs_descriptor_t *desc1 = NULL;
+
+  (void) arg;
+
+  hs_init();
+
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+
+  /* Set consensus time. Lookup will not return the entry if it has expired
+   * and it is checked against the consensus valid_after time. */
+  parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+                     &mock_ns.valid_after);
+  parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
+                     &mock_ns.fresh_until);
+  parse_rfc1123_time("Sat, 26 Oct 1985 16:00:00 UTC",
+                     &mock_ns.valid_until);
+
+  /* Generate service keypair */
+  tt_int_op(0, OP_EQ, ed25519_keypair_generate(&service_kp, 0));
+
+  /* Build a descriptor and cache it. */
+  {
+    char *encoded;
+    desc1 = hs_helper_build_hs_desc_with_ip(&service_kp);
+    tt_assert(desc1);
+    ret = hs_desc_encode_descriptor(desc1, &service_kp, NULL, &encoded);
+    tt_int_op(ret, OP_EQ, 0);
+    tt_assert(encoded);
+
+    /* Store it */
+    ret = hs_cache_store_as_client(encoded, &service_kp.pubkey);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
+    tor_free(encoded);
+    tt_assert(hs_cache_lookup_as_client(&service_kp.pubkey));
+  }
+
+  /* Remove the cached entry. */
+  hs_cache_remove_as_client(&service_kp.pubkey);
+  tt_assert(!hs_cache_lookup_as_client(&service_kp.pubkey));
+
+ done:
+  hs_descriptor_free(desc1);
+  hs_free_all();
+
+  UNMOCK(networkstatus_get_live_consensus);
+}
+
 struct testcase_t hs_cache[] = {
   /* Encoding tests. */
   { "directory", test_directory, TT_FORK,
@@ -658,6 +711,8 @@ struct testcase_t hs_cache[] = {
   { "client_cache", test_client_cache, TT_FORK,
     NULL, NULL },
   { "client_cache_decrypt", test_client_cache_decrypt, TT_FORK,
+    NULL, NULL },
+  { "client_cache_remove", test_client_cache_remove, TT_FORK,
     NULL, NULL },
 
   END_OF_TESTCASES
