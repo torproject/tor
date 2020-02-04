@@ -218,6 +218,8 @@ test_hs_control_good_onion_client_auth_add(void *arg)
   char *cp1 = NULL;
   size_t sz;
 
+  hs_init();
+
   { /* Setup the control conn */
     memset(&conn, 0, sizeof(control_connection_t));
     TO_CONN(&conn)->outbuf = buf_new();
@@ -415,6 +417,8 @@ test_hs_control_bad_onion_client_auth_add(void *arg)
   size_t sz;
   char *args = NULL;
 
+  hs_init();
+
   { /* Setup the control conn */
     memset(&conn, 0, sizeof(control_connection_t));
     TO_CONN(&conn)->outbuf = buf_new();
@@ -492,6 +496,8 @@ test_hs_control_store_permanent_creds(void *arg)
   char *creds_fname = NULL;
 
   size_t sz;
+
+  hs_init();
 
   { /* Setup the control conn */
     memset(&conn, 0, sizeof(control_connection_t));
