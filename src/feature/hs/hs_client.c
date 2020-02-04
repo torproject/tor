@@ -1735,6 +1735,9 @@ hs_client_remove_auth_credentials(const char *hsaddress)
       find_and_remove_client_auth_creds_file(cred);
     }
 
+    /* Remove associated descriptor if any. */
+    hs_cache_remove_as_client(&service_identity_pk);
+
     client_service_authorization_free(cred);
     return REMOVAL_SUCCESS;
   }
