@@ -251,16 +251,16 @@ Now you can run Tor with profiling enabled, and use the pprof utility to look at
 performance! See the gperftools manual for more info, but basically:
 
 2. Run `env CPUPROFILE=/tmp/profile src/app/tor -f <path/torrc>`. The profile file
-   is not written to until Tor finishes execuction.
+   is not written to until Tor finishes execution.
 
-3. Run `pprof src/app/tor /tm/profile` to start the REPL.
+3. Run `pprof src/app/tor /tmp/profile` to start the REPL.
 
 Generating and analyzing a callgraph
 ------------------------------------
 
 0. Build Tor on linux or mac, ideally with -O0 or -fno-inline.
 
-1. Clone 'https://gitweb.torproject.org/user/nickm/calltool.git/' .
+1. Clone 'https://git.torproject.org/user/nickm/calltool.git/' .
    Follow the README in that repository.
 
 Note that currently the callgraph generator can't detect calls that pass
@@ -396,7 +396,7 @@ source code. Here's how to use it:
   6. See the Doxygen manual for more information; this summary just
      scratches the surface.
 
-Style and best-pratices checking
+Style and best-practices checking
 --------------------------------
 
 We use scripts to check for various problems in the formatting and style
