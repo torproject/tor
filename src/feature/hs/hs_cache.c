@@ -872,6 +872,15 @@ hs_cache_remove_as_client(const ed25519_public_key_t *key)
   /* Remove and free. */
   remove_v3_desc_as_client(cached_desc);
   cache_client_desc_free(cached_desc);
+
+  /* Logging. */
+  {
+    char key_b64[BASE64_DIGEST256_LEN + 1];
+    digest256_to_base64(key_b64, (const char *) key);
+    log_info(LD_REND, "Onion service v3 descriptor '%s' removed "
+                      "from client cache",
+             safe_str_client(key_b64));
+  }
 }
 
 /** Clean all client caches using the current time now. */
