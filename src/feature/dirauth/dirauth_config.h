@@ -36,6 +36,7 @@ int options_act_dirauth_stats(const struct or_options_t *old_options,
                               bool *print_notice_out);
 
 bool dirauth_should_reject_requests_under_load(void);
+bool dirauth_should_reject_uncompressed_requests(void);
 
 extern const struct config_format_t dirauth_options_fmt;
 
@@ -81,6 +82,7 @@ options_validate_dirauth_mode(const struct or_options_t *old_options,
   (((void)(old_options)),((void)(print_notice_out)),0)
 
 #define dirauth_should_reject_requests_under_load() (false)
+#define dirauth_should_reject_uncompressed_requests() (false)
 
 #endif /* defined(HAVE_MODULE_DIRAUTH) */
 
