@@ -566,9 +566,12 @@ crypto_pk_asn1_encode_private(const crypto_pk_t *pk, char *dest,
 
 /** Decode an ASN.1-encoded private key from <b>str</b>; return the result on
  * success and NULL on failure.
+ *
+ * If <b>max_bits</b> is nonnegative, reject any key longer than max_bits
+ * without performing any expensive validation on it.
  */
 crypto_pk_t *
-crypto_pk_asn1_decode_private(const char *str, size_t len)
+crypto_pk_asn1_decode_private(const char *str, size_t len, int max_bits)
 {
   RSA *rsa;
   unsigned char *buf;
@@ -578,7 +581,11 @@ crypto_pk_asn1_decode_private(const char *str, size_t len)
   rsa = d2i_RSAPrivateKey(NULL, &cp, len);
   tor_free(buf);
   if (!rsa) {
-    crypto_openssl_log_errors(LOG_WARN,"decoding public key");
+    crypto_openssl_log_errors(LOG_WARN,"decoding private key");
+    return NULL;
+  }
+  if (max_bits >= 0 && RSA_bits(rsa) > max_bits) {
+    log_info(LD_CRYPTO, "Private key longer than expected.");
     return NULL;
   }
   crypto_pk_t *result = crypto_new_pk_from_openssl_rsa_(rsa);
