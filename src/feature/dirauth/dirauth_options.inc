@@ -102,4 +102,8 @@ CONF_VAR(VersioningAuthoritativeDirectory, BOOL, 0, "0")
 * pressure or not. */
 CONF_VAR(AuthDirRejectRequestsUnderLoad, BOOL, 0, "1")
 
+/** Boolean: If set, reject uncompressed directory requests. A 503 error code
+* is returned. */
+CONF_VAR(AuthDirRejectUncompressedRequests, BOOL, 0, "1")
+
 END_CONF_STRUCT(dirauth_options_t)

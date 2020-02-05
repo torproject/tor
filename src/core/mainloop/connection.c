@@ -3305,6 +3305,12 @@ connection_dir_is_global_write_low(const connection_t *conn, size_t attempt,
 
   /* Special case for authorities (directory only). */
   if (authdir_mode_v3(get_options())) {
+    /* If this requests is uncompressed and we are configured to reject those,
+     * indicate that we reached the limit. */
+    if (c_method == NO_METHOD &&
+        dirauth_should_reject_uncompressed_requests()) {
+      return true;
+    }
     if (c_method != NO_METHOD) {
       /* Always answer compressed request. */
       return false;

@@ -54,6 +54,14 @@ dirauth_should_reject_requests_under_load(void)
   return !!dirauth_get_options()->AuthDirRejectRequestsUnderLoad;
 }
 
+/** Return true iff we are configured to reject uncompressed directory
+ * requests. */
+bool
+dirauth_should_reject_uncompressed_requests(void)
+{
+  return !!dirauth_get_options()->AuthDirRejectUncompressedRequests;
+}
+
 /**
  * Legacy validation/normalization function for the dirauth mode options in
  * options. Uses old_options as the previous options.
