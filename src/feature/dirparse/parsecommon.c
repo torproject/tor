@@ -384,10 +384,16 @@ get_next_token(memarea_t *area,
     RET_ERR("Couldn't parse object: missing footer or object much too big.");
 
   if (!strcmp(tok->object_type, "RSA PUBLIC KEY")) { /* If it's a public key */
+    if (o_syn != NEED_KEY && o_syn != NEED_KEY_1024 && o_syn != OBJ_OK) {
+      RET_ERR("Unexpected public key.");
+    }
     tok->key = crypto_pk_new();
     if (crypto_pk_read_public_key_from_string(tok->key, obstart, eol-obstart))
       RET_ERR("Couldn't parse public key.");
   } else if (!strcmp(tok->object_type, "RSA PRIVATE KEY")) { /* private key */
+    if (o_syn != NEED_SKEY_1024 && o_syn != OBJ_OK) {
+      RET_ERR("Unexpected private key.");
+    }
     tok->key = crypto_pk_new();
     if (crypto_pk_read_private_key1024_from_string(tok->key,
                                                    obstart, eol-obstart))
