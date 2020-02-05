@@ -3092,6 +3092,11 @@ on the public Tor network.
     authorities provide this service optionally. See <<RecommendedVersions,RecommendedVersions>>,
     <<RecommendedClientVersions,RecommendedClientVersions>>, and <<RecommendedServerVersions,RecommendedServerVersions>>.
 
+[[AuthDirRejectUncompressedRequests]] **AuthDirRejectUncompressedRequests** **0**|**1**::
+    If set, the directory authority will reject every uncompressed directory
+    requests that is requests not ending with ".z" and lacking
+    "Accept-Encoding". (Default: 1)
+
 == HIDDEN SERVICE OPTIONS
 
 The following options are used to configure a hidden service. Some options
