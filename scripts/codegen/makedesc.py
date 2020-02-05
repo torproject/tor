@@ -256,8 +256,8 @@ class OnDemandKeys(object):
 
 
 def signdesc(body, args_out=None):
-    rsa, ident_pem, id_digest = make_key()
-    _, onion_pem, _ = make_key()
+    rsa, ident_pem, id_digest = make_rsa_key()
+    _, onion_pem, _ = make_rsa_key()
 
     need_ed = '{ED25519-CERT}' in body or '{ED25519-SIGNATURE}' in body
     if need_ed:
