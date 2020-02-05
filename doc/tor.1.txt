@@ -1298,16 +1298,6 @@ The following options are useful only for clients (that is, if
     Every NUM seconds consider whether to build a new circuit. (Default: 30
     seconds)
 
-[[NodeFamily]] **NodeFamily** __node__,__node__,__...__::
-    The Tor servers, defined by their identity fingerprints,
-    constitute a "family" of similar or co-administered servers, so never use
-    any two of them in the same circuit. Defining a NodeFamily is only needed
-    when a server doesn't list the family itself (with MyFamily). This option
-    can be used multiple times; each instance defines a separate family.  In
-    addition to nodes, you can also list IP address and ranges and country
-    codes in {curly braces}. See the **ExcludeNodes** option for more
-    information on how to specify nodes.
-
 [[OptimisticData]] **OptimisticData** **0**|**1**|**auto**::
     When this option is set, and Tor is using an exit node that supports
     the feature, it will try optimistically to send data to the exit node
@@ -1824,9 +1814,9 @@ The following options are useful for configuring timeouts:
 // Please keep them that way!
 
 The following options restrict the nodes that a tor client
-(or onion service) can use while building a circuit:
-
-These options can weaken your anonymity by making your client behavior different from other Tor clients:
+(or onion service) can use while building a circuit.
+These options can weaken your anonymity by making your client behavior
+different from other Tor clients:
 
 [[EntryNodes]] **EntryNodes** __node__,__node__,__...__::
     A list of identity fingerprints and country codes of nodes
@@ -2035,6 +2025,16 @@ These options can weaken your anonymity by making your client behavior different
     The ExcludeNodes option overrides this option: any node listed in both
     MiddleNodes and ExcludeNodes is treated as excluded. See
     the **ExcludeNodes** option for more information on how to specify nodes.
+
+[[NodeFamily]] **NodeFamily** __node__,__node__,__...__::
+    The Tor servers, defined by their identity fingerprints,
+    constitute a "family" of similar or co-administered servers, so never use
+    any two of them in the same circuit. Defining a NodeFamily is only needed
+    when a server doesn't list the family itself (with MyFamily). This option
+    can be used multiple times; each instance defines a separate family.  In
+    addition to nodes, you can also list IP address and ranges and country
+    codes in {curly braces}. See the **ExcludeNodes** option for more
+    information on how to specify nodes.
 
 [[StrictNodes]] **StrictNodes** **0**|**1**::
     If StrictNodes is set to 1, Tor will treat solely the ExcludeNodes option
