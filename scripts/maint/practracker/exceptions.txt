@@ -60,7 +60,7 @@ problem dependency-violation /src/core/crypto/onion_crypto.c 5
 problem dependency-violation /src/core/crypto/onion_fast.c 1
 problem dependency-violation /src/core/crypto/onion_tap.c 3
 problem dependency-violation /src/core/crypto/relay_crypto.c 9
-problem file-size /src/core/mainloop/connection.c 5577
+problem file-size /src/core/mainloop/connection.c 5694
 problem include-count /src/core/mainloop/connection.c 62
 problem function-size /src/core/mainloop/connection.c:connection_free_minimal() 181
 problem function-size /src/core/mainloop/connection.c:connection_listener_new() 324
