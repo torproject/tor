@@ -77,7 +77,7 @@ compute_introduce_mac(const uint8_t *encoded_cell, size_t encoded_cell_len,
 static hs_ntor_intro_cell_keys_t *
 get_introduce2_key_material(const ed25519_public_key_t *auth_key,
                             const curve25519_keypair_t *enc_key,
-                            int n_subcredentials,
+                            size_t n_subcredentials,
                             const hs_subcredential_t *subcredentials,
                             const uint8_t *encrypted_section,
                             curve25519_public_key_t *client_pk)
@@ -787,7 +787,7 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
   /* Validate MAC from the cell and our computed key material. The MAC field
    * in the cell is at the end of the encrypted section. */
   intro_keys_result = tor_malloc_zero(sizeof(*intro_keys_result));
-  for (int i = 0; i < data->n_subcredentials; ++i) {
+  for (unsigned i = 0; i < data->n_subcredentials; ++i) {
     uint8_t mac[DIGEST256_LEN];
 
     /* The MAC field is at the very end of the ENCRYPTED section. */

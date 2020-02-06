@@ -989,7 +989,7 @@ get_subcredential_for_handling_intro2_cell(const hs_service_t *service,
   }
 
   /* We are an onionbalance instance: */
-  data->n_subcredentials = (int) service->n_ob_subcreds;
+  data->n_subcredentials = service->n_ob_subcreds;
   data->subcredentials = service->ob_subcreds;
 
   return 0;

@@ -471,7 +471,7 @@ hs_ntor_service_get_introduce1_keys_multi(
             const struct ed25519_public_key_t *intro_auth_pubkey,
             const struct curve25519_keypair_t *intro_enc_keypair,
             const struct curve25519_public_key_t *client_ephemeral_enc_pubkey,
-            int n_subcredentials,
+            size_t n_subcredentials,
             const hs_subcredential_t *subcredentials,
             hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out)
 {
@@ -499,7 +499,7 @@ hs_ntor_service_get_introduce1_keys_multi(
                             secret_input);
   bad |= safe_mem_is_zero(secret_input, CURVE25519_OUTPUT_LEN);
 
-  for (int i = 0; i < n_subcredentials; ++i) {
+  for (unsigned i = 0; i < n_subcredentials; ++i) {
     /* Get ENC_KEY and MAC_KEY! */
     get_introduce1_key_material(secret_input, &subcredentials[i],
                                 &hs_ntor_intro_cell_keys_out[i]);

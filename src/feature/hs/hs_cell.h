@@ -60,7 +60,7 @@ typedef struct hs_cell_introduce2_data_t {
   /**
    * Length of the subcredentials array below.
    **/
-  int n_subcredentials;
+  size_t n_subcredentials;
   /** Array of <b>n_subcredentials</b> subcredentials for the service. Pointer
    * owned by the descriptor that owns the introduction point through which we
    * received the INTRO2 cell. */

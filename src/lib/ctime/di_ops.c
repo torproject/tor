@@ -281,7 +281,7 @@ select_array_member_cumulative_timei(const uint64_t *entries, int n_entries,
 }
 
 /**
- * If <b>s</b> is true, then copy <b>n</b> bytes from <b>src</d> to
+ * If <b>s</b> is true, then copy <b>n</b> bytes from <b>src</b> to
  * <b>dest</b>.  Otherwise leave <b>dest</b> alone.
  *
  * This function behaves the same as
