@@ -3277,7 +3277,7 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
  * shouldn't send <b>attempt</b> bytes of low-priority directory stuff
  * out to <b>conn</b>.
  *
- * If we are are a directory authority, true is returned (indicating that we
+ * If we are a directory authority, false is returned (indicating that we
  * should answer the request) if one of these conditions is met:
  *  - Connection is from a known relay (address is looked up).
  *  - AuthDirRejectRequestsUnderLoad is set to 0.
