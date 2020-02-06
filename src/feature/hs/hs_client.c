@@ -602,7 +602,7 @@ send_introduce1(origin_circuit_t *intro_circ,
      * be ready. Which results in this situation where we can't find the
      * corresponding intro point within the descriptor of the service. */
     log_info(LD_REND, "Unable to find introduction point for service %s "
-                      "while trying to send an INTRODUCE1 cell.".
+                      "while trying to send an INTRODUCE1 cell.",
              safe_str_client(onion_address));
     goto perm_err;
   }
