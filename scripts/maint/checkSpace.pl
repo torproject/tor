@@ -130,7 +130,7 @@ for my $fn (@ARGV) {
         ## Terminals are still 80 columns wide in my world.  I refuse to
         ## accept double-line lines.
         #   (Don't make lines wider than 80 characters, including newline.)
-        if (/^.{80}/) {
+        if (/^.{80}/ and not /LCOV_EXCL/) {
             msg "Wide:$fn:$.\n";
         }
         ### Juju to skip over comments and strings, since the tests
