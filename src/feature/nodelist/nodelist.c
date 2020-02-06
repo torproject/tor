@@ -691,7 +691,7 @@ nodelist_set_consensus(networkstatus_t *ns)
   } SMARTLIST_FOREACH_END(node);
   /* Then, add all trusted configured directories. Some might not be in the
    * consensus so make sure we know them. */
-  dirlist_add_trusted_addresses();
+  dirlist_add_trusted_dir_addresses();
 
   if (! authdir) {
     SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
