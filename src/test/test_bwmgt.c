@@ -8,11 +8,13 @@
 
 #define CONFIG_PRIVATE
 #define CONNECTION_PRIVATE
+#define DIRAUTH_SYS_PRIVATE
 #define TOKEN_BUCKET_PRIVATE
 
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "core/or/or.h"
+#include "feature/dirauth/dirauth_sys.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
@@ -25,6 +27,7 @@
 #include "lib/evloop/token_bucket.h"
 
 #include "core/or/connection_st.h"
+#include "feature/dirauth/dirauth_options_st.h"
 #include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/networkstatus_st.h"
 #include "feature/nodelist/routerinfo_st.h"
@@ -276,6 +279,7 @@ test_bwmgt_dir_conn_global_write_low(void *arg)
   connection_t *conn = NULL;
   routerstatus_t *rs = NULL; microdesc_t *md = NULL; routerinfo_t *ri = NULL;
   tor_addr_t relay_addr;
+  dirauth_options_t *dirauth_opts = NULL;
 
   (void) arg;
 
@@ -328,6 +332,11 @@ test_bwmgt_dir_conn_global_write_low(void *arg)
 
   nodelist_set_consensus(dummy_ns);
 
+  dirauth_opts = tor_malloc_zero(sizeof(dirauth_options_t));
+  dirauth_opts->AuthDirRejectUncompressedRequests = 0;
+  dirauth_opts->AuthDirRejectRequestsUnderLoad = 0;
+  dirauth_set_options(dirauth_opts);
+
   /* Ok, now time to control which options we use. */
   MOCK(get_options, mock_get_options);
 
@@ -353,8 +362,18 @@ test_bwmgt_dir_conn_global_write_low(void *arg)
                                   DIR_PURPOSE_MIN_);
   tt_assert(conn);
 
-  /* First try a non authority non relay IP thus a client. We should get a
-   * warning that our limit is too low. */
+  /* First try a non authority non relay IP thus a client but we are not
+   * configured to reject requests under load so we should get a false value
+   * that our limit is _not_ low. */
+  addr_family = tor_addr_parse(&conn->addr, "1.1.1.1");
+  tt_int_op(addr_family, OP_EQ, AF_INET);
+  ret = connection_dir_is_global_write_low(conn, INT_MAX, NO_METHOD);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* Now, we will reject requests under load so try again a non authority non
+   * relay IP thus a client. We should get a warning that our limit is too
+   * low. */
+  dirauth_opts->AuthDirRejectRequestsUnderLoad = 1;
   addr_family = tor_addr_parse(&conn->addr, "1.1.1.1");
   tt_int_op(addr_family, OP_EQ, AF_INET);
   ret = connection_dir_is_global_write_low(conn, INT_MAX, NO_METHOD);
@@ -389,6 +408,11 @@ test_bwmgt_dir_conn_global_write_low(void *arg)
   ret = connection_dir_is_global_write_low(conn, INT_MAX, ZLIB_METHOD);
   tt_int_op(ret, OP_EQ, 0);
 
+  /* Lets configure ourselves to reject uncompressed requests. */
+  dirauth_opts->AuthDirRejectUncompressedRequests = 1;
+  ret = connection_dir_is_global_write_low(conn, INT_MAX, NO_METHOD);
+  tt_int_op(ret, OP_EQ, 1);
+
   /* Finally, just make sure it still denies an IP if we are _not_ a v3
    * directory authority. */
   mock_options.V3AuthoritativeDir = 0;
@@ -408,6 +432,7 @@ test_bwmgt_dir_conn_global_write_low(void *arg)
   routerstatus_free(rs); routerinfo_free(ri); microdesc_free(md);
   smartlist_clear(dummy_ns->routerstatus_list);
   networkstatus_vote_free(dummy_ns);
+  tor_free(dirauth_opts);
 
   UNMOCK(get_estimated_address_per_node);
   UNMOCK(networkstatus_get_latest_consensus);
