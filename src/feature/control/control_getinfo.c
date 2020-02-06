@@ -1735,6 +1735,7 @@ handle_control_getinfo(control_connection_t *conn,
       }
     } else {
       control_reply_add_one_kv(answers, 250, KV_RAW, q, ans);
+      tor_free(ans);
     }
   } SMARTLIST_FOREACH_END(q);
 
