@@ -1138,31 +1138,6 @@ The following options are useful only for clients (that is, if
     addresses/ports. See SocksPort for an explanation of isolation
     flags. (Default: 0)
 
-[[DormantCanceledByStartup]] **DormantCanceledByStartup** **0**|**1**::
-    By default, Tor starts in active mode if it was active the last time
-    it was shut down, and in dormant mode if it was dormant.  But if
-    this option is true, Tor treats every startup event as user
-    activity, and Tor will never start in Dormant mode, even if it has
-    been unused for a long time on previous runs. (Default: 0)
-     +
-    Note: Packagers and application developers should change the value of
-    this option only with great caution: it has the potential to
-    create spurious traffic on the network.  This option should only
-    be used if Tor is started by an affirmative user activity (like
-    clicking on an applcation or running a command), and not if Tor
-    is launched for some other reason (for example, by a startup
-    process, or by an application that launches itself on every login.)
-
-[[DormantOnFirstStartup]] **DormantOnFirstStartup** **0**|**1**::
-    If true, then the first time Tor starts up with a fresh DataDirectory,
-    it starts in dormant mode, and takes no actions until the user has made
-    a request.  (This mode is recommended if installing a Tor client for a
-    user who might not actually use it.)  If false, Tor bootstraps the first
-    time it is started, whether it sees a user request or not.
-     +
-    After the first time Tor starts, it begins in dormant mode if it was
-    dormant before, and not otherwise. (Default: 0)
-
 [[DownloadExtraInfo]] **DownloadExtraInfo** **0**|**1**::
     If true, Tor downloads and caches "extra-info" documents. These documents
     contain information about servers other than the information in their
@@ -1757,7 +1732,7 @@ The following options are useful only for clients (that is, if
     used IP. For local use, no change to the default VirtualAddrNetwork setting
     is needed.
 
-== TIMEOUT OPTIONS
+== CIRCUIT TIMEOUT OPTIONS
 
 // These options are in alphabetical order, with exceptions as noted.
 // Please keep them that way!
@@ -1791,6 +1766,34 @@ The following options are useful for configuring timeouts:
     If your network is particularly slow, you might want to set this to a
     number like 60. (Default: 0)
 
+[[SocksTimeout]] **SocksTimeout** __NUM__::
+    Let a socks connection wait NUM seconds handshaking, and NUM seconds
+    unattached waiting for an appropriate circuit, before we fail it. (Default:
+    2 minutes)
+
+== DORMANT MODE OPTIONS
+
+// These options are in alphabetical order, with exceptions as noted.
+// Please keep them that way!
+
+The following options can be used to configure Tor
+when the client is running in dormant mode:
+
+[[DormantCanceledByStartup]] **DormantCanceledByStartup** **0**|**1**::
+    By default, Tor starts in active mode if it was active the last time
+    it was shut down, and in dormant mode if it was dormant.  But if
+    this option is true, Tor treats every startup event as user
+    activity, and Tor will never start in Dormant mode, even if it has
+    been unused for a long time on previous runs. (Default: 0)
+     +
+    Note: Packagers and application developers should change the value of
+    this option only with great caution: it has the potential to
+    create spurious traffic on the network.  This option should only
+    be used if Tor is started by an affirmative user activity (like
+    clicking on an applcation or running a command), and not if Tor
+    is launched for some other reason (for example, by a startup
+    process, or by an application that launches itself on every login.)
+
 [[DormantClientTimeout]] **DormantClientTimeout**  __N__ **minutes**|**hours**|**days**|**weeks**::
     If Tor spends this much time without any client activity,
     enter a dormant state where automatic circuits are not built, and
@@ -1798,15 +1801,20 @@ The following options are useful for configuring timeouts:
     Does not affect servers or onion services. Must be at least 10 minutes.
     (Default: 24 hours)
 
+[[DormantOnFirstStartup]] **DormantOnFirstStartup** **0**|**1**::
+    If true, then the first time Tor starts up with a fresh DataDirectory,
+    it starts in dormant mode, and takes no actions until the user has made
+    a request.  (This mode is recommended if installing a Tor client for a
+    user who might not actually use it.)  If false, Tor bootstraps the first
+    time it is started, whether it sees a user request or not.
+     +
+    After the first time Tor starts, it begins in dormant mode if it was
+    dormant before, and not otherwise. (Default: 0)
+
 [[DormantTimeoutDisabledByIdleStreams]] **DormantTimeoutDisabledByIdleStreams**  **0**|**1**::
     If true, then any open client stream (even one not reading or writing)
     counts as client activity for the purpose of DormantClientTimeout.
     If false, then only network activity counts. (Default: 1)
-
-[[SocksTimeout]] **SocksTimeout** __NUM__::
-    Let a socks connection wait NUM seconds handshaking, and NUM seconds
-    unattached waiting for an appropriate circuit, before we fail it. (Default:
-    2 minutes)
 
 == NODE SELECTION OPTIONS
 
