@@ -1,0 +1,4 @@
+  o Minor features (best practices tracker):
+    - Practracker now supports a --regen-overbroad option to regenerate
+      the exceptions file, but only to revise exceptions to be _less_
+      tolerant of best-practices violations.  Closes ticket 32372.

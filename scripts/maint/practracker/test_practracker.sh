@@ -82,3 +82,15 @@ run_practracker --exceptions "${DATA}/ex1.txt" --list-overbroad \
 
 compare "${TMPDIR}/ex1-overbroad-received.txt" \
         "${DATA}/ex1-overbroad-expected.txt"
+
+echo "ex1.regen:"
+
+cp "${DATA}/ex1.txt" "${TMPDIR}/ex1-copy.txt"
+run_practracker --exceptions "${TMPDIR}/ex1-copy.txt" --regen >/dev/null 2>&1
+compare "${TMPDIR}/ex1-copy.txt" "${DATA}/ex1-regen-expected.txt"
+
+echo "ex1.regen_overbroad:"
+
+cp "${DATA}/ex1.txt" "${TMPDIR}/ex1-copy.txt"
+run_practracker --exceptions "${TMPDIR}/ex1-copy.txt" --regen-overbroad >/dev/null 2>&1
+compare "${TMPDIR}/ex1-copy.txt" "${DATA}/ex1-regen-overbroad-expected.txt"

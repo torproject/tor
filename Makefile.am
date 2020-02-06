@@ -196,6 +196,8 @@ EXTRA_DIST+= \
 	scripts/maint/practracker/testdata/ex1-expected.txt		\
 	scripts/maint/practracker/testdata/ex1.txt			\
 	scripts/maint/practracker/testdata/ex1-overbroad-expected.txt	\
+	scripts/maint/practracker/testdata/ex1-regen-expected.txt	\
+	scripts/maint/practracker/testdata/ex1-regen-overbroad-expected.txt \
 	scripts/maint/practracker/testdata/ex.txt			\
 	scripts/maint/practracker/testdata/header.h			\
 	scripts/maint/practracker/testdata/not_c_file			\
