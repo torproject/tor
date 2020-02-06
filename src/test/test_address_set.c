@@ -33,7 +33,7 @@ mock_networkstatus_get_latest_consensus_by_flavor(consensus_flavor_t f)
 }
 
 static void
-mock_dirlist_add_trusted_addresses(void)
+mock_dirlist_add_trusted_dir_addresses(void)
 {
   return;
 }
@@ -105,8 +105,8 @@ test_nodelist(void *arg)
        mock_networkstatus_get_latest_consensus_by_flavor);
   MOCK(get_estimated_address_per_node,
        mock_get_estimated_address_per_node);
-  MOCK(dirlist_add_trusted_addresses,
-       mock_dirlist_add_trusted_addresses);
+  MOCK(dirlist_add_trusted_dir_addresses,
+       mock_dirlist_add_trusted_dir_addresses);
 
   dummy_ns = tor_malloc_zero(sizeof(*dummy_ns));
   dummy_ns->flavor = FLAV_MICRODESC;
@@ -123,8 +123,9 @@ test_nodelist(void *arg)
   addr_per_node = 1024;
 
   /* No node no nothing. The lookups should be empty. We've mocked the
-   * dirlist_add_trusted_addresses in order for _no_ authorities to be added
-   * to the filter else it makes this test to trigger many false positive. */
+   * dirlist_add_trusted_dir_addresses in order for _no_ authorities to be
+   * added to the filter else it makes this test to trigger many false
+   * positive. */
   nodelist_set_consensus(dummy_ns);
 
   /* The address set should be empty. */
@@ -178,7 +179,7 @@ test_nodelist(void *arg)
   UNMOCK(networkstatus_get_latest_consensus);
   UNMOCK(networkstatus_get_latest_consensus_by_flavor);
   UNMOCK(get_estimated_address_per_node);
-  UNMOCK(dirlist_add_trusted_addresses);
+  UNMOCK(dirlist_add_trusted_dir_addresses);
 }
 
 struct testcase_t address_set_tests[] = {
