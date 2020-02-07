@@ -37,7 +37,7 @@ static void *
 tor_pthread_helper_fn(void *_data)
 {
   tor_pthread_data_t *data = _data;
-  void (*func)(void*);
+  void (*func)(void *);
   void *arg;
   /* mask signals to worker threads to avoid SIGPIPE, etc */
   sigset_t sigs;
@@ -123,20 +123,19 @@ tor_cond_init(tor_cond_t *cond)
   }
 
 #if defined(HAVE_CLOCK_GETTIME)
-#if defined(HAVE_PTHREAD_CONDATTR_SETCLOCK) && \
-  defined(CLOCK_MONOTONIC)
+#  if defined(HAVE_PTHREAD_CONDATTR_SETCLOCK) && defined(CLOCK_MONOTONIC)
   /* Use monotonic time so when we timedwait() on it, any clock adjustment
    * won't affect the timeout value. */
   if (pthread_condattr_setclock(&condattr, CLOCK_MONOTONIC)) {
     return -1;
   }
-#define USE_COND_CLOCK CLOCK_MONOTONIC
-#else /* !(defined(HAVE_PTHREAD_CONDATTR_SETCLOCK) && ...) */
+#    define USE_COND_CLOCK CLOCK_MONOTONIC
+#  else /* !(defined(HAVE_PTHREAD_CONDATTR_SETCLOCK) && ...) */
   /* On OSX Sierra, there is no pthread_condattr_setclock, so we are stuck
    * with the realtime clock.
    */
-#define USE_COND_CLOCK CLOCK_REALTIME
-#endif /* defined(HAVE_PTHREAD_CONDATTR_SETCLOCK) && ... */
+#    define USE_COND_CLOCK CLOCK_REALTIME
+#  endif /* defined(HAVE_PTHREAD_CONDATTR_SETCLOCK) && ... */
 #endif /* defined(HAVE_CLOCK_GETTIME) */
   if (pthread_cond_init(&cond->cond, &condattr)) {
     return -1;
@@ -151,7 +150,7 @@ tor_cond_uninit(tor_cond_t *cond)
 {
   if (pthread_cond_destroy(&cond->cond)) {
     // LCOV_EXCL_START
-    log_warn(LD_GENERAL,"Error freeing condition: %s", strerror(errno));
+    log_warn(LD_GENERAL, "Error freeing condition: %s", strerror(errno));
     return;
     // LCOV_EXCL_STOP
   }
@@ -259,10 +258,10 @@ tor_threads_init(void)
     const int ret1 = pthread_attr_init(&attr_detached);
     tor_assert(ret1 == 0);
 #ifndef PTHREAD_CREATE_DETACHED
-#define PTHREAD_CREATE_DETACHED 1
+#  define PTHREAD_CREATE_DETACHED 1
 #endif
     const int ret2 =
-      pthread_attr_setdetachstate(&attr_detached, PTHREAD_CREATE_DETACHED);
+        pthread_attr_setdetachstate(&attr_detached, PTHREAD_CREATE_DETACHED);
     tor_assert(ret2 == 0);
     threads_initialized = 1;
   }

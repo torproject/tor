@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
 #include "lib/cc/compat_compiler.h"
@@ -23,12 +23,12 @@
  * -Wredundant-decl. */
 DISABLE_GCC_WARNING("-Wredundant-decls")
 
-#include <openssl/evp.h>
-#include <openssl/pem.h>
-#include <openssl/rsa.h>
-#include <openssl/objects.h>
-#include <openssl/obj_mac.h>
-#include <openssl/err.h>
+#  include <openssl/evp.h>
+#  include <openssl/pem.h>
+#  include <openssl/rsa.h>
+#  include <openssl/objects.h>
+#  include <openssl/obj_mac.h>
+#  include <openssl/err.h>
 
 ENABLE_GCC_WARNING("-Wredundant-decls")
 #endif /* defined(ENABLE_OPENSSL) */
@@ -75,7 +75,8 @@ static EVP_PKEY *signing_key = NULL;
 static void
 show_help(void)
 {
-  fprintf(stderr, "Syntax:\n"
+  fprintf(stderr,
+          "Syntax:\n"
           "tor-gencert [-h|--help] [-v] [-r|--reuse] [--create-identity-key]\n"
           "        [-i identity_key_file] [-s signing_key_file] "
           "[-c certificate_file]\n"
@@ -102,7 +103,7 @@ load_passphrase(void)
   if (cp == NULL) {
     passphrase_len = n;
   } else {
-    passphrase_len = cp-buf;
+    passphrase_len = cp - buf;
   }
   passphrase = tor_strndup(buf, passphrase_len);
   memwipe(buf, 0, sizeof(buf));
@@ -131,7 +132,7 @@ parse_commandline(int argc, char **argv)
       show_help();
       return 1;
     } else if (!strcmp(argv[i], "-i")) {
-      if (i+1>=argc) {
+      if (i + 1 >= argc) {
         fprintf(stderr, "No argument to -i\n");
         return 1;
       }
@@ -141,7 +142,7 @@ parse_commandline(int argc, char **argv)
       }
       identity_key_file = tor_strdup(argv[++i]);
     } else if (!strcmp(argv[i], "-s")) {
-      if (i+1>=argc) {
+      if (i + 1 >= argc) {
         fprintf(stderr, "No argument to -s\n");
         return 1;
       }
@@ -151,7 +152,7 @@ parse_commandline(int argc, char **argv)
       }
       signing_key_file = tor_strdup(argv[++i]);
     } else if (!strcmp(argv[i], "-c")) {
-      if (i+1>=argc) {
+      if (i + 1 >= argc) {
         fprintf(stderr, "No argument to -c\n");
         return 1;
       }
@@ -161,7 +162,7 @@ parse_commandline(int argc, char **argv)
       }
       certificate_file = tor_strdup(argv[++i]);
     } else if (!strcmp(argv[i], "-m")) {
-      if (i+1>=argc) {
+      if (i + 1 >= argc) {
         fprintf(stderr, "No argument to -m\n");
         return 1;
       }
@@ -177,12 +178,12 @@ parse_commandline(int argc, char **argv)
     } else if (!strcmp(argv[i], "-a")) {
       tor_addr_t addr;
       uint16_t port;
-      if (i+1>=argc) {
+      if (i + 1 >= argc) {
         fprintf(stderr, "No argument to -a\n");
         return 1;
       }
       const char *addr_arg = argv[++i];
-      if (tor_addr_port_lookup(addr_arg, &addr, &port)<0) {
+      if (tor_addr_port_lookup(addr_arg, &addr, &port) < 0) {
         fprintf(stderr, "Can't resolve address/port for %s", addr_arg);
         return 1;
       }
@@ -195,7 +196,7 @@ parse_commandline(int argc, char **argv)
     } else if (!strcmp(argv[i], "--create-identity-key")) {
       make_new_id = 1;
     } else if (!strcmp(argv[i], "--passphrase-fd")) {
-      if (i+1>=argc) {
+      if (i + 1 >= argc) {
         fprintf(stderr, "No argument to --passphrase-fd\n");
         return 1;
       }
@@ -229,7 +230,7 @@ parse_commandline(int argc, char **argv)
              certificate_file);
   }
   if (passphrase_fd >= 0) {
-    if (load_passphrase()<0)
+    if (load_passphrase() < 0)
       return 1;
   }
   return 0;
@@ -240,10 +241,10 @@ generate_key(int bits)
 {
   RSA *rsa = NULL;
   crypto_pk_t *env = crypto_pk_new();
-  if (crypto_pk_generate_key_with_bits(env,bits)<0)
+  if (crypto_pk_generate_key_with_bits(env, bits) < 0)
     goto done;
   rsa = crypto_pk_get_openssl_rsa_(env);
- done:
+done:
   crypto_pk_free(env);
   return rsa;
 }
@@ -262,8 +263,10 @@ load_identity_key(void)
     open_file_t *open_file = NULL;
     RSA *key;
     if (status != FN_NOENT) {
-      log_err(LD_GENERAL, "--create-identity-key was specified, but %s "
-              "already exists.", identity_key_file);
+      log_err(LD_GENERAL,
+              "--create-identity-key was specified, but %s "
+              "already exists.",
+              identity_key_file);
       return 1;
     }
     log_notice(LD_GENERAL, "Generating %d-bit RSA identity key.",
@@ -286,10 +289,9 @@ load_identity_key(void)
 
     /* Write the key to the file.  If passphrase is not set, takes it from
      * the terminal. */
-    if (!PEM_write_PKCS8PrivateKey_nid(f, identity_key,
-                                       NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
-                                       passphrase, (int)passphrase_len,
-                                       NULL, NULL)) {
+    if (!PEM_write_PKCS8PrivateKey_nid(
+            f, identity_key, NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
+            passphrase, (int)passphrase_len, NULL, NULL)) {
       log_err(LD_GENERAL, "Couldn't write identity key to %s",
               identity_key_file);
       crypto_openssl_log_errors(LOG_ERR, "Writing identity key");
@@ -302,7 +304,8 @@ load_identity_key(void)
       log_err(LD_GENERAL,
               "No identity key found in %s.  To specify a location "
               "for an identity key, use -i.  To generate a new identity key, "
-              "use --create-identity-key.", identity_key_file);
+              "use --create-identity-key.",
+              identity_key_file);
       return 1;
     }
 
@@ -332,8 +335,8 @@ load_signing_key(void)
 {
   FILE *f;
   if (!(f = fopen(signing_key_file, "r"))) {
-    log_err(LD_GENERAL, "Couldn't open %s for reading: %s",
-            signing_key_file, strerror(errno));
+    log_err(LD_GENERAL, "Couldn't open %s for reading: %s", signing_key_file,
+            strerror(errno));
     return 1;
   }
   if (!(signing_key = PEM_read_PrivateKey(f, NULL, NULL, NULL))) {
@@ -366,9 +369,8 @@ generate_signing_key(void)
     return 1;
   }
 
-  if (!(f = start_writing_to_stdio_file(signing_key_file,
-                                        OPEN_FLAGS_REPLACE | O_TEXT, 0600,
-                                        &open_file)))
+  if (!(f = start_writing_to_stdio_file(
+            signing_key_file, OPEN_FLAGS_REPLACE | O_TEXT, 0600, &open_file)))
     return 1;
 
   /* Write signing key with no encryption. */
@@ -447,10 +449,10 @@ generate_certificate(void)
   char buf[8192];
   time_t now = time(NULL);
   struct tm tm;
-  char published[ISO_TIME_LEN+1];
-  char expires[ISO_TIME_LEN+1];
+  char published[ISO_TIME_LEN + 1];
+  char expires[ISO_TIME_LEN + 1];
   char id_digest[DIGEST_LEN];
-  char fingerprint[FINGERPRINT_LEN+1];
+  char fingerprint[FINGERPRINT_LEN + 1];
   FILE *f;
   size_t signed_len;
   char digest[DIGEST_LEN];
@@ -482,52 +484,48 @@ generate_certificate(void)
                "dir-signing-key\n%s"
                "dir-key-crosscert\n"
                "-----BEGIN ID SIGNATURE-----\n",
-               address?"\ndir-address ":"", address?address:"",
-               fingerprint, published, expires, ident, signing
-               );
+               address ? "\ndir-address " : "", address ? address : "",
+               fingerprint, published, expires, ident, signing);
   tor_free(ident);
   tor_free(signing);
 
   /* Append a cross-certification */
   RSA *rsa = EVP_PKEY_get1_RSA(signing_key);
-  r = RSA_private_encrypt(DIGEST_LEN, (unsigned char*)id_digest,
-                          (unsigned char*)signature,
-                          rsa,
-                          RSA_PKCS1_PADDING);
+  r = RSA_private_encrypt(DIGEST_LEN, (unsigned char *)id_digest,
+                          (unsigned char *)signature, rsa, RSA_PKCS1_PADDING);
   RSA_free(rsa);
 
   signed_len = strlen(buf);
-  base64_encode(buf+signed_len, sizeof(buf)-signed_len, signature, r,
+  base64_encode(buf + signed_len, sizeof(buf) - signed_len, signature, r,
                 BASE64_ENCODE_MULTILINE);
 
   strlcat(buf,
           "-----END ID SIGNATURE-----\n"
-          "dir-key-certification\n", sizeof(buf));
+          "dir-key-certification\n",
+          sizeof(buf));
 
   signed_len = strlen(buf);
-  SHA1((const unsigned char*)buf,signed_len,(unsigned char*)digest);
+  SHA1((const unsigned char *)buf, signed_len, (unsigned char *)digest);
 
   rsa = EVP_PKEY_get1_RSA(identity_key);
-  r = RSA_private_encrypt(DIGEST_LEN, (unsigned char*)digest,
-                          (unsigned char*)signature,
-                          rsa,
-                          RSA_PKCS1_PADDING);
+  r = RSA_private_encrypt(DIGEST_LEN, (unsigned char *)digest,
+                          (unsigned char *)signature, rsa, RSA_PKCS1_PADDING);
   RSA_free(rsa);
   strlcat(buf, "-----BEGIN SIGNATURE-----\n", sizeof(buf));
   signed_len = strlen(buf);
-  base64_encode(buf+signed_len, sizeof(buf)-signed_len, signature, r,
+  base64_encode(buf + signed_len, sizeof(buf) - signed_len, signature, r,
                 BASE64_ENCODE_MULTILINE);
   strlcat(buf, "-----END SIGNATURE-----\n", sizeof(buf));
 
   if (!(f = fopen(certificate_file, "w"))) {
-    log_err(LD_GENERAL, "Couldn't open %s for writing: %s",
-            certificate_file, strerror(errno));
+    log_err(LD_GENERAL, "Couldn't open %s for writing: %s", certificate_file,
+            strerror(errno));
     return 1;
   }
 
   if (fputs(buf, f) < 0) {
-    log_err(LD_GENERAL, "Couldn't write to %s: %s",
-            certificate_file, strerror(errno));
+    log_err(LD_GENERAL, "Couldn't write to %s: %s", certificate_file,
+            strerror(errno));
     fclose(f);
     return 1;
   }
@@ -569,7 +567,7 @@ main(int argc, char **argv)
     goto done;
 
   r = 0;
- done:
+done:
   clear_passphrase();
   if (identity_key)
     EVP_PKEY_free(identity_key);

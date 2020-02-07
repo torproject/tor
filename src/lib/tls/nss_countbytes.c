@@ -29,7 +29,7 @@ static PRIOMethods countbytes_methods;
 
 /** Default close function provided by NSPR.  We use this to help
  *  implement our own close function.*/
-static PRStatus(*default_close_fn)(PRFileDesc *fd);
+static PRStatus (*default_close_fn)(PRFileDesc *fd);
 
 static PRStatus countbytes_close_fn(PRFileDesc *fd);
 static PRInt32 countbytes_read_fn(PRFileDesc *fd, void *buf, PRInt32 amount);
@@ -85,17 +85,19 @@ static tor_nss_bytecounts_t *
 get_counts(PRFileDesc *fd)
 {
   tor_assert(fd->identity == countbytes_layer_id);
-  return (tor_nss_bytecounts_t*) fd->secret;
+  return (tor_nss_bytecounts_t *)fd->secret;
 }
 
 /** Helper: increment the read-count of an fd by n. */
-#define INC_READ(fd, n) STMT_BEGIN                      \
-    get_counts(fd)->n_read += (n);                      \
+#define INC_READ(fd, n)            \
+  STMT_BEGIN                       \
+    get_counts(fd)->n_read += (n); \
   STMT_END
 
 /** Helper: increment the write-count of an fd by n. */
-#define INC_WRITTEN(fd, n) STMT_BEGIN                      \
-    get_counts(fd)->n_written += (n);                      \
+#define INC_WRITTEN(fd, n)            \
+  STMT_BEGIN                          \
+    get_counts(fd)->n_written += (n); \
   STMT_END
 
 /** Implementation for PR_Close: frees the 'secret' field, then passes control
@@ -141,8 +143,8 @@ countbytes_write_fn(PRFileDesc *fd, const void *buf, PRInt32 amount)
 /** Implementation for PR_Writev: Calls the lower-level writev function,
  * and records what it said. */
 static PRInt32
-countbytes_writev_fn(PRFileDesc *fd, const PRIOVec *iov,
-                     PRInt32 size, PRIntervalTime timeout)
+countbytes_writev_fn(PRFileDesc *fd, const PRIOVec *iov, PRInt32 size,
+                     PRIntervalTime timeout)
 {
   tor_assert(fd);
   tor_assert(fd->lower);
@@ -155,14 +157,14 @@ countbytes_writev_fn(PRFileDesc *fd, const PRIOVec *iov,
 /** Implementation for PR_Send: Calls the lower-level send function,
  * and records what it said. */
 static PRInt32
-countbytes_send_fn(PRFileDesc *fd, const void *buf,
-                   PRInt32 amount, PRIntn flags, PRIntervalTime timeout)
+countbytes_send_fn(PRFileDesc *fd, const void *buf, PRInt32 amount,
+                   PRIntn flags, PRIntervalTime timeout)
 {
   tor_assert(fd);
   tor_assert(fd->lower);
 
-  PRInt32 result = (fd->lower->methods->send)(fd->lower, buf, amount, flags,
-                                              timeout);
+  PRInt32 result =
+      (fd->lower->methods->send)(fd->lower, buf, amount, flags, timeout);
   if (result > 0)
     INC_WRITTEN(fd, result);
   return result;
@@ -170,14 +172,14 @@ countbytes_send_fn(PRFileDesc *fd, const void *buf,
 /** Implementation for PR_Recv: Calls the lower-level recv function,
  * and records what it said. */
 static PRInt32
-countbytes_recv_fn(PRFileDesc *fd, void *buf, PRInt32 amount,
-                                  PRIntn flags, PRIntervalTime timeout)
+countbytes_recv_fn(PRFileDesc *fd, void *buf, PRInt32 amount, PRIntn flags,
+                   PRIntervalTime timeout)
 {
   tor_assert(fd);
   tor_assert(fd->lower);
 
-  PRInt32 result = (fd->lower->methods->recv)(fd->lower, buf, amount, flags,
-                                              timeout);
+  PRInt32 result =
+      (fd->lower->methods->recv)(fd->lower, buf, amount, flags, timeout);
   if (result > 0)
     INC_READ(fd, result);
   return result;
@@ -192,14 +194,14 @@ countbytes_recv_fn(PRFileDesc *fd, void *buf, PRInt32 amount,
 PRFileDesc *
 tor_wrap_prfiledesc_with_byte_counter(PRFileDesc *stack)
 {
-  if (BUG(! countbytes_initialized)) {
+  if (BUG(!countbytes_initialized)) {
     tor_nss_countbytes_init();
   }
 
   tor_nss_bytecounts_t *bytecounts = tor_malloc_zero(sizeof(*bytecounts));
 
-  PRFileDesc *newfd = PR_CreateIOLayerStub(countbytes_layer_id,
-                                           &countbytes_methods);
+  PRFileDesc *newfd =
+      PR_CreateIOLayerStub(countbytes_layer_id, &countbytes_methods);
   tor_assert(newfd);
   newfd->secret = (PRFilePrivate *)bytecounts;
 
@@ -222,11 +224,10 @@ tor_wrap_prfiledesc_with_byte_counter(PRFileDesc *stack)
  * Return 0 on success, -1 on failure.
  */
 int
-tor_get_prfiledesc_byte_counts(PRFileDesc *fd,
-                               uint64_t *n_read_out,
+tor_get_prfiledesc_byte_counts(PRFileDesc *fd, uint64_t *n_read_out,
                                uint64_t *n_written_out)
 {
-  if (BUG(! countbytes_initialized)) {
+  if (BUG(!countbytes_initialized)) {
     tor_nss_countbytes_init();
   }
 

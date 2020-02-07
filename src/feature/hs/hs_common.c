@@ -47,10 +47,10 @@
 /** Ed25519 Basepoint value. Taken from section 5 of
  * https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03 */
 static const char *str_ed25519_basepoint =
-  "(15112221349535400772501151409588531511"
-  "454012693041857206046113283949847762202, "
-  "463168356949264781694283940034751631413"
-  "07993866256225615783033603165251855960)";
+    "(15112221349535400772501151409588531511"
+    "454012693041857206046113283949847762202, "
+    "463168356949264781694283940034751631413"
+    "07993866256225615783033603165251855960)";
 
 #ifdef HAVE_SYS_UN_H
 
@@ -91,16 +91,16 @@ set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)
 static int
 set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)
 {
-  (void) conn;
-  (void) p;
+  (void)conn;
+  (void)p;
   return -ENOSYS;
 }
 
 static int
 add_unix_port(smartlist_t *ports, rend_service_port_config_t *p)
 {
-  (void) ports;
-  (void) p;
+  (void)ports;
+  (void)p;
   return -ENOSYS;
 }
 
@@ -131,7 +131,7 @@ compare_digest_to_store_first_hsdir_index(const void *_key,
  * next hsdir_index. */
 static int
 compare_digest_to_store_second_hsdir_index(const void *_key,
-                                          const void **_member)
+                                           const void **_member)
 {
   const char *key = _key;
   const node_t *node = *_member;
@@ -142,10 +142,9 @@ compare_digest_to_store_second_hsdir_index(const void *_key,
 static int
 compare_node_fetch_hsdir_index(const void **a, const void **b)
 {
-  const node_t *node1= *a;
+  const node_t *node1 = *a;
   const node_t *node2 = *b;
-  return tor_memcmp(node1->hsdir_index.fetch,
-                    node2->hsdir_index.fetch,
+  return tor_memcmp(node1->hsdir_index.fetch, node2->hsdir_index.fetch,
                     DIGEST256_LEN);
 }
 
@@ -153,22 +152,20 @@ compare_node_fetch_hsdir_index(const void **a, const void **b)
 static int
 compare_node_store_first_hsdir_index(const void **a, const void **b)
 {
-  const node_t *node1= *a;
+  const node_t *node1 = *a;
   const node_t *node2 = *b;
   return tor_memcmp(node1->hsdir_index.store_first,
-                    node2->hsdir_index.store_first,
-                    DIGEST256_LEN);
+                    node2->hsdir_index.store_first, DIGEST256_LEN);
 }
 
 /** Helper function: Compare two node_t objects next hsdir_index. */
 static int
 compare_node_store_second_hsdir_index(const void **a, const void **b)
 {
-  const node_t *node1= *a;
+  const node_t *node1 = *a;
   const node_t *node2 = *b;
   return tor_memcmp(node1->hsdir_index.store_second,
-                    node2->hsdir_index.store_second,
-                    DIGEST256_LEN);
+                    node2->hsdir_index.store_second, DIGEST256_LEN);
 }
 
 /** Allocate and return a string containing the path to filename in directory.
@@ -233,8 +230,7 @@ hs_get_service_max_rend_failures(void)
 {
   return networkstatus_get_param(NULL, "hs_service_max_rdv_failures",
                                  MAX_REND_FAILURES_DEFAULT,
-                                 MAX_REND_FAILURES_MIN,
-                                 MAX_REND_FAILURES_MAX);
+                                 MAX_REND_FAILURES_MIN, MAX_REND_FAILURES_MAX);
 }
 
 /** Get the default HS time period length in minutes from the consensus. */
@@ -252,14 +248,13 @@ get_time_period_length(void)
     return sr_state_get_protocol_run_duration() / 60;
   }
 
-  int32_t time_period_length = networkstatus_get_param(NULL, "hsdir_interval",
-                                             HS_TIME_PERIOD_LENGTH_DEFAULT,
-                                             HS_TIME_PERIOD_LENGTH_MIN,
-                                             HS_TIME_PERIOD_LENGTH_MAX);
+  int32_t time_period_length = networkstatus_get_param(
+      NULL, "hsdir_interval", HS_TIME_PERIOD_LENGTH_DEFAULT,
+      HS_TIME_PERIOD_LENGTH_MIN, HS_TIME_PERIOD_LENGTH_MAX);
   /* Make sure it's a positive value. */
   tor_assert(time_period_length > 0);
   /* uint64_t will always be able to contain a positive int32_t */
-  return (uint64_t) time_period_length;
+  return (uint64_t)time_period_length;
 }
 
 /** Get the HS time period number at time <b>now</b>. If <b>now</b> is not set,
@@ -324,7 +319,8 @@ hs_get_start_time_of_next_time_period(time_t now)
 
   /* Get start time of next time period */
   uint64_t next_time_period_num = hs_get_next_time_period_num(now);
-  uint64_t start_of_next_tp_in_mins = next_time_period_num *time_period_length;
+  uint64_t start_of_next_tp_in_mins =
+      next_time_period_num * time_period_length;
 
   /* Apply rotation offset as specified by prop224 section [TIME-PERIODS] */
   unsigned int time_period_rotation_offset = sr_state_get_phase_duration();
@@ -339,8 +335,7 @@ rend_data_alloc(uint32_t version)
   rend_data_t *rend_data = NULL;
 
   switch (version) {
-  case HS_VERSION_TWO:
-  {
+  case HS_VERSION_TWO: {
     rend_data_v2_t *v2 = tor_malloc_zero(sizeof(*v2));
     v2->base_.version = HS_VERSION_TWO;
     v2->base_.hsdirs_fp = smartlist_new();
@@ -369,8 +364,7 @@ rend_data_free_(rend_data_t *data)
   smartlist_free(data->hsdirs_fp);
   /* Depending on the version, cleanup. */
   switch (data->version) {
-  case HS_VERSION_TWO:
-  {
+  case HS_VERSION_TWO: {
     rend_data_v2_t *v2_data = TO_REND_DATA_V2(data);
     tor_free(v2_data);
     break;
@@ -394,10 +388,9 @@ rend_data_dup(const rend_data_t *data)
                     smartlist_add(hsdirs_fp, tor_memdup(fp, DIGEST_LEN)));
 
   switch (data->version) {
-  case HS_VERSION_TWO:
-  {
-    rend_data_v2_t *v2_data = tor_memdup(TO_REND_DATA_V2(data),
-                                         sizeof(*v2_data));
+  case HS_VERSION_TWO: {
+    rend_data_v2_t *v2_data =
+        tor_memdup(TO_REND_DATA_V2(data), sizeof(*v2_data));
     data_dup = &v2_data->base_;
     data_dup->hsdirs_fp = hsdirs_fp;
     break;
@@ -424,16 +417,14 @@ compute_desc_id(rend_data_t *rend_data)
   tor_assert(rend_data);
 
   switch (rend_data->version) {
-  case HS_VERSION_TWO:
-  {
+  case HS_VERSION_TWO: {
     rend_data_v2_t *v2_data = TO_REND_DATA_V2(rend_data);
     /* Compute descriptor ID for each replicas. */
     for (replica = 0; replica < ARRAY_LENGTH(v2_data->descriptor_id);
          replica++) {
       ret = rend_compute_v2_desc_id(v2_data->descriptor_id[replica],
                                     v2_data->onion_address,
-                                    v2_data->descriptor_cookie,
-                                    now, replica);
+                                    v2_data->descriptor_cookie, now, replica);
       if (ret < 0) {
         goto end;
       }
@@ -444,7 +435,7 @@ compute_desc_id(rend_data_t *rend_data)
     tor_assert(0);
   }
 
- end:
+end:
   return ret;
 }
 
@@ -462,7 +453,7 @@ rend_data_service_create(const char *onion_address, const char *pk_digest,
 {
   /* Create a rend_data_t object for version 2. */
   rend_data_t *rend_data = rend_data_alloc(HS_VERSION_TWO);
-  rend_data_v2_t *v2= TO_REND_DATA_V2(rend_data);
+  rend_data_v2_t *v2 = TO_REND_DATA_V2(rend_data);
 
   /* We need at least one else the call is wrong. */
   tor_assert(onion_address != NULL);
@@ -494,7 +485,7 @@ rend_data_client_create(const char *onion_address, const char *desc_id,
 {
   /* Create a rend_data_t object for version 2. */
   rend_data_t *rend_data = rend_data_alloc(HS_VERSION_TWO);
-  rend_data_v2_t *v2= TO_REND_DATA_V2(rend_data);
+  rend_data_v2_t *v2 = TO_REND_DATA_V2(rend_data);
 
   /* We need at least one else the call is wrong. */
   tor_assert(onion_address != NULL || desc_id != NULL);
@@ -516,7 +507,7 @@ rend_data_client_create(const char *onion_address, const char *desc_id,
 
   return rend_data;
 
- error:
+error:
   rend_data_free(rend_data);
   return NULL;
 }
@@ -569,13 +560,12 @@ rend_data_get_pk_digest(const rend_data_t *rend_data, size_t *len_out)
   tor_assert(rend_data);
 
   switch (rend_data->version) {
-  case HS_VERSION_TWO:
-  {
+  case HS_VERSION_TWO: {
     const rend_data_v2_t *v2_data = TO_REND_DATA_V2(rend_data);
     if (len_out) {
       *len_out = sizeof(v2_data->rend_pk_digest);
     }
-    return (const uint8_t *) v2_data->rend_pk_digest;
+    return (const uint8_t *)v2_data->rend_pk_digest;
   }
   default:
     /* We should always have a supported version. */
@@ -602,18 +592,18 @@ compute_disaster_srv(uint64_t time_period_num, uint8_t *srv_out)
   /* Setup INT_8(period_length) | INT_8(period_num) */
   {
     uint64_t time_period_length = get_time_period_length();
-    char period_stuff[sizeof(uint64_t)*2];
+    char period_stuff[sizeof(uint64_t) * 2];
     size_t offset = 0;
     set_uint64(period_stuff, tor_htonll(time_period_length));
     offset += sizeof(uint64_t);
-    set_uint64(period_stuff+offset, tor_htonll(time_period_num));
+    set_uint64(period_stuff + offset, tor_htonll(time_period_num));
     offset += sizeof(uint64_t);
     tor_assert(offset == sizeof(period_stuff));
 
-    crypto_digest_add_bytes(digest, period_stuff,  sizeof(period_stuff));
+    crypto_digest_add_bytes(digest, period_stuff, sizeof(period_stuff));
   }
 
-  crypto_digest_get_digest(digest, (char *) srv_out, DIGEST256_LEN);
+  crypto_digest_get_digest(digest, (char *)srv_out, DIGEST256_LEN);
   crypto_digest_free(digest);
 }
 
@@ -709,17 +699,17 @@ build_blinded_key_param(const ed25519_public_key_t *pubkey,
    *    h = H(BLIND_STRING | pubkey | [secret] | ed25519-basepoint | N) */
   digest = crypto_digest256_new(DIGEST_SHA3_256);
   crypto_digest_add_bytes(digest, blind_str, sizeof(blind_str));
-  crypto_digest_add_bytes(digest, (char *) pubkey, ED25519_PUBKEY_LEN);
+  crypto_digest_add_bytes(digest, (char *)pubkey, ED25519_PUBKEY_LEN);
   /* Optional secret. */
   if (secret) {
-    crypto_digest_add_bytes(digest, (char *) secret, secret_len);
+    crypto_digest_add_bytes(digest, (char *)secret, secret_len);
   }
   crypto_digest_add_bytes(digest, str_ed25519_basepoint,
                           strlen(str_ed25519_basepoint));
-  crypto_digest_add_bytes(digest, (char *) nonce, sizeof(nonce));
+  crypto_digest_add_bytes(digest, (char *)nonce, sizeof(nonce));
 
   /* Extract digest and put it in the param. */
-  crypto_digest_get_digest(digest, (char *) param_out, DIGEST256_LEN);
+  crypto_digest_get_digest(digest, (char *)param_out, DIGEST256_LEN);
   crypto_digest_free(digest);
 
   memwipe(nonce, 0, sizeof(nonce));
@@ -748,8 +738,7 @@ build_hs_checksum(const ed25519_public_key_t *key, uint8_t version,
   tor_assert(offset == HS_SERVICE_ADDR_CHECKSUM_INPUT_LEN);
 
   /* Hash the data payload to create the checksum. */
-  crypto_digest256((char *) checksum_out, data, sizeof(data),
-                   DIGEST_SHA3_256);
+  crypto_digest256((char *)checksum_out, data, sizeof(data), DIGEST_SHA3_256);
 }
 
 /** Using an ed25519 public key, checksum and version to build the binary
@@ -827,9 +816,9 @@ hs_get_subcredential(const ed25519_public_key_t *identity_pk,
   digest = crypto_digest256_new(DIGEST_SHA3_256);
   crypto_digest_add_bytes(digest, HS_CREDENTIAL_PREFIX,
                           HS_CREDENTIAL_PREFIX_LEN);
-  crypto_digest_add_bytes(digest, (const char *) identity_pk->pubkey,
+  crypto_digest_add_bytes(digest, (const char *)identity_pk->pubkey,
                           ED25519_PUBKEY_LEN);
-  crypto_digest_get_digest(digest, (char *) credential, DIGEST256_LEN);
+  crypto_digest_get_digest(digest, (char *)credential, DIGEST256_LEN);
   crypto_digest_free(digest);
 
   /* Now, compute the subcredential. Construction is as follow:
@@ -837,11 +826,11 @@ hs_get_subcredential(const ed25519_public_key_t *identity_pk,
   digest = crypto_digest256_new(DIGEST_SHA3_256);
   crypto_digest_add_bytes(digest, HS_SUBCREDENTIAL_PREFIX,
                           HS_SUBCREDENTIAL_PREFIX_LEN);
-  crypto_digest_add_bytes(digest, (const char *) credential,
+  crypto_digest_add_bytes(digest, (const char *)credential,
                           sizeof(credential));
-  crypto_digest_add_bytes(digest, (const char *) blinded_pk->pubkey,
+  crypto_digest_add_bytes(digest, (const char *)blinded_pk->pubkey,
                           ED25519_PUBKEY_LEN);
-  crypto_digest_get_digest(digest, (char *) subcred_out, DIGEST256_LEN);
+  crypto_digest_get_digest(digest, (char *)subcred_out, DIGEST256_LEN);
   crypto_digest_free(digest);
 
   memwipe(credential, 0, sizeof(credential));
@@ -861,7 +850,7 @@ hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn)
   tor_assert(conn);
 
   matching_ports = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(ports, rend_service_port_config_t *, p) {
+  SMARTLIST_FOREACH_BEGIN (ports, rend_service_port_config_t *, p) {
     if (TO_CONN(conn)->port != p->virtual_port) {
       continue;
     }
@@ -871,15 +860,16 @@ hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn)
       if (add_unix_port(matching_ports, p)) {
         if (!warn_once) {
           /* Unix port not supported so warn only once. */
-          log_warn(LD_REND, "Saw AF_UNIX virtual port mapping for port %d "
-                            "which is unsupported on this platform. "
-                            "Ignoring it.",
+          log_warn(LD_REND,
+                   "Saw AF_UNIX virtual port mapping for port %d "
+                   "which is unsupported on this platform. "
+                   "Ignoring it.",
                    TO_CONN(conn)->port);
         }
         warn_once++;
       }
     }
-  } SMARTLIST_FOREACH_END(p);
+  } SMARTLIST_FOREACH_END (p);
 
   chosen_port = smartlist_choose(matching_ports);
   smartlist_free(matching_ports);
@@ -920,17 +910,18 @@ hs_parse_address(const char *address, ed25519_public_key_t *key_out,
 
   /* Obvious length check. */
   if (strlen(address) != HS_SERVICE_ADDR_LEN_BASE32) {
-    log_warn(LD_REND, "Service address %s has an invalid length. "
-                      "Expected %lu but got %lu.",
+    log_warn(LD_REND,
+             "Service address %s has an invalid length. "
+             "Expected %lu but got %lu.",
              escaped_safe_str(address),
-             (unsigned long) HS_SERVICE_ADDR_LEN_BASE32,
-             (unsigned long) strlen(address));
+             (unsigned long)HS_SERVICE_ADDR_LEN_BASE32,
+             (unsigned long)strlen(address));
     goto invalid;
   }
 
   /* Decode address so we can extract needed fields. */
-  if (base32_decode(decoded, sizeof(decoded), address, strlen(address))
-      != sizeof(decoded)) {
+  if (base32_decode(decoded, sizeof(decoded), address, strlen(address)) !=
+      sizeof(decoded)) {
     log_warn(LD_REND, "Service address %s can't be decoded.",
              escaped_safe_str(address));
     goto invalid;
@@ -940,7 +931,7 @@ hs_parse_address(const char *address, ed25519_public_key_t *key_out,
   hs_parse_address_impl(decoded, key_out, checksum_out, version_out);
 
   return 0;
- invalid:
+invalid:
   return -1;
 }
 
@@ -979,7 +970,7 @@ hs_address_is_valid(const char *address)
 
   /* Valid address. */
   return 1;
- invalid:
+invalid:
   return 0;
 }
 
@@ -1018,9 +1009,8 @@ hs_build_address(const ed25519_public_key_t *key, uint8_t version,
  * the client side because the client only has access to the identity public
  * key of the service. */
 void
-hs_build_blinded_pubkey(const ed25519_public_key_t *pk,
-                        const uint8_t *secret, size_t secret_len,
-                        uint64_t time_period_num,
+hs_build_blinded_pubkey(const ed25519_public_key_t *pk, const uint8_t *secret,
+                        size_t secret_len, uint64_t time_period_num,
                         ed25519_public_key_t *blinded_pk_out)
 {
   /* Our blinding key API requires a 32 bytes parameter. */
@@ -1028,10 +1018,10 @@ hs_build_blinded_pubkey(const ed25519_public_key_t *pk,
 
   tor_assert(pk);
   tor_assert(blinded_pk_out);
-  tor_assert(!fast_mem_is_zero((char *) pk, ED25519_PUBKEY_LEN));
+  tor_assert(!fast_mem_is_zero((char *)pk, ED25519_PUBKEY_LEN));
 
-  build_blinded_key_param(pk, secret, secret_len,
-                          time_period_num, get_time_period_length(), param);
+  build_blinded_key_param(pk, secret, secret_len, time_period_num,
+                          get_time_period_length(), param);
   ed25519_public_blind(blinded_pk_out, pk, param);
 
   memwipe(param, 0, sizeof(param));
@@ -1042,9 +1032,8 @@ hs_build_blinded_pubkey(const ed25519_public_key_t *pk,
  * only useful by the service side because the client doesn't have access to
  * the identity secret key. */
 void
-hs_build_blinded_keypair(const ed25519_keypair_t *kp,
-                         const uint8_t *secret, size_t secret_len,
-                         uint64_t time_period_num,
+hs_build_blinded_keypair(const ed25519_keypair_t *kp, const uint8_t *secret,
+                         size_t secret_len, uint64_t time_period_num,
                          ed25519_keypair_t *blinded_kp_out)
 {
   /* Our blinding key API requires a 32 bytes parameter. */
@@ -1053,11 +1042,11 @@ hs_build_blinded_keypair(const ed25519_keypair_t *kp,
   tor_assert(kp);
   tor_assert(blinded_kp_out);
   /* Extra safety. A zeroed key is bad. */
-  tor_assert(!fast_mem_is_zero((char *) &kp->pubkey, ED25519_PUBKEY_LEN));
-  tor_assert(!fast_mem_is_zero((char *) &kp->seckey, ED25519_SECKEY_LEN));
+  tor_assert(!fast_mem_is_zero((char *)&kp->pubkey, ED25519_PUBKEY_LEN));
+  tor_assert(!fast_mem_is_zero((char *)&kp->seckey, ED25519_SECKEY_LEN));
 
-  build_blinded_key_param(&kp->pubkey, secret, secret_len,
-                          time_period_num, get_time_period_length(), param);
+  build_blinded_key_param(&kp->pubkey, secret, secret_len, time_period_num,
+                          get_time_period_length(), param);
   ed25519_keypair_blind(blinded_kp_out, kp, param);
 
   memwipe(param, 0, sizeof(param));
@@ -1078,7 +1067,8 @@ hs_build_blinded_keypair(const ed25519_keypair_t *kp,
  *    +------------------------------------------------------------------+
  */
 MOCK_IMPL(int,
-hs_in_period_between_tp_and_srv,(const networkstatus_t *consensus, time_t now))
+hs_in_period_between_tp_and_srv,
+          (const networkstatus_t *consensus, time_t now))
 {
   time_t valid_after;
   time_t srv_start_time, tp_start_time;
@@ -1110,12 +1100,12 @@ hs_service_requires_uptime_circ(const smartlist_t *ports)
 {
   tor_assert(ports);
 
-  SMARTLIST_FOREACH_BEGIN(ports, rend_service_port_config_t *, p) {
+  SMARTLIST_FOREACH_BEGIN (ports, rend_service_port_config_t *, p) {
     if (smartlist_contains_int_as_string(get_options()->LongLivedPorts,
                                          p->virtual_port)) {
       return 1;
     }
-  } SMARTLIST_FOREACH_END(p);
+  } SMARTLIST_FOREACH_END (p);
   return 0;
 }
 
@@ -1138,26 +1128,26 @@ hs_build_hs_index(uint64_t replica, const ed25519_public_key_t *blinded_pk,
   /* Build hs_index. See construction at top of function comment. */
   digest = crypto_digest256_new(DIGEST_SHA3_256);
   crypto_digest_add_bytes(digest, HS_INDEX_PREFIX, HS_INDEX_PREFIX_LEN);
-  crypto_digest_add_bytes(digest, (const char *) blinded_pk->pubkey,
+  crypto_digest_add_bytes(digest, (const char *)blinded_pk->pubkey,
                           ED25519_PUBKEY_LEN);
 
   /* Now setup INT_8(replicanum) | INT_8(period_length) | INT_8(period_num) */
   {
     uint64_t period_length = get_time_period_length();
-    char buf[sizeof(uint64_t)*3];
+    char buf[sizeof(uint64_t) * 3];
     size_t offset = 0;
     set_uint64(buf, tor_htonll(replica));
     offset += sizeof(uint64_t);
-    set_uint64(buf+offset, tor_htonll(period_length));
+    set_uint64(buf + offset, tor_htonll(period_length));
     offset += sizeof(uint64_t);
-    set_uint64(buf+offset, tor_htonll(period_num));
+    set_uint64(buf + offset, tor_htonll(period_num));
     offset += sizeof(uint64_t);
     tor_assert(offset == sizeof(buf));
 
     crypto_digest_add_bytes(digest, buf, sizeof(buf));
   }
 
-  crypto_digest_get_digest(digest, (char *) hs_index_out, DIGEST256_LEN);
+  crypto_digest_get_digest(digest, (char *)hs_index_out, DIGEST256_LEN);
   crypto_digest_free(digest);
 }
 
@@ -1181,24 +1171,24 @@ hs_build_hsdir_index(const ed25519_public_key_t *identity_pk,
   /* Build hsdir_index. See construction at top of function comment. */
   digest = crypto_digest256_new(DIGEST_SHA3_256);
   crypto_digest_add_bytes(digest, HSDIR_INDEX_PREFIX, HSDIR_INDEX_PREFIX_LEN);
-  crypto_digest_add_bytes(digest, (const char *) identity_pk->pubkey,
+  crypto_digest_add_bytes(digest, (const char *)identity_pk->pubkey,
                           ED25519_PUBKEY_LEN);
-  crypto_digest_add_bytes(digest, (const char *) srv_value, DIGEST256_LEN);
+  crypto_digest_add_bytes(digest, (const char *)srv_value, DIGEST256_LEN);
 
   {
     uint64_t time_period_length = get_time_period_length();
-    char period_stuff[sizeof(uint64_t)*2];
+    char period_stuff[sizeof(uint64_t) * 2];
     size_t offset = 0;
     set_uint64(period_stuff, tor_htonll(period_num));
     offset += sizeof(uint64_t);
-    set_uint64(period_stuff+offset, tor_htonll(time_period_length));
+    set_uint64(period_stuff + offset, tor_htonll(time_period_length));
     offset += sizeof(uint64_t);
     tor_assert(offset == sizeof(period_stuff));
 
-    crypto_digest_add_bytes(digest, period_stuff,  sizeof(period_stuff));
+    crypto_digest_add_bytes(digest, period_stuff, sizeof(period_stuff));
   }
 
-  crypto_digest_get_digest(digest, (char *) hsdir_index_out, DIGEST256_LEN);
+  crypto_digest_get_digest(digest, (char *)hsdir_index_out, DIGEST256_LEN);
   crypto_digest_free(digest);
 }
 
@@ -1286,16 +1276,16 @@ node_has_hsdir_index(const node_t *node)
 
   /* At this point, since the node has a desc, this node must also have an
    * hsdir index. If not, something went wrong, so BUG out. */
-  if (BUG(fast_mem_is_zero((const char*)node->hsdir_index.fetch,
-                          DIGEST256_LEN))) {
+  if (BUG(fast_mem_is_zero((const char *)node->hsdir_index.fetch,
+                           DIGEST256_LEN))) {
     return 0;
   }
-  if (BUG(fast_mem_is_zero((const char*)node->hsdir_index.store_first,
-                          DIGEST256_LEN))) {
+  if (BUG(fast_mem_is_zero((const char *)node->hsdir_index.store_first,
+                           DIGEST256_LEN))) {
     return 0;
   }
-  if (BUG(fast_mem_is_zero((const char*)node->hsdir_index.store_second,
-                          DIGEST256_LEN))) {
+  if (BUG(fast_mem_is_zero((const char *)node->hsdir_index.store_second,
+                           DIGEST256_LEN))) {
     return 0;
   }
 
@@ -1331,9 +1321,9 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
   /* Make sure we actually have a live consensus */
   networkstatus_t *c = networkstatus_get_live_consensus(approx_time());
   if (!c || smartlist_len(c->routerstatus_list) == 0) {
-      log_warn(LD_REND, "No live consensus so we can't get the responsible "
-               "hidden service directories.");
-      goto done;
+    log_warn(LD_REND, "No live consensus so we can't get the responsible "
+                      "hidden service directories.");
+    goto done;
   }
 
   /* Ensure the nodelist is fresh, since it contains the HSDir indices. */
@@ -1342,7 +1332,8 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
   /* Add every node_t that support HSDir v3 for which we do have a valid
    * hsdir_index already computed for them for this consensus. */
   {
-    SMARTLIST_FOREACH_BEGIN(c->routerstatus_list, const routerstatus_t *, rs) {
+    SMARTLIST_FOREACH_BEGIN (c->routerstatus_list, const routerstatus_t *,
+                             rs) {
       /* Even though this node_t object won't be modified and should be const,
        * we can't add const object in a smartlist_t. */
       node_t *n = node_get_mutable_by_id(rs->identity_digest);
@@ -1355,7 +1346,7 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
         }
         smartlist_add(sorted_nodes, n);
       }
-    } SMARTLIST_FOREACH_END(rs);
+    } SMARTLIST_FOREACH_END (rs);
   }
   if (smartlist_len(sorted_nodes) == 0) {
     log_warn(LD_REND, "No nodes found to be HSDir or supporting v3.");
@@ -1384,14 +1375,14 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
     uint8_t hs_index[DIGEST256_LEN] = {0};
     /* Number of node to add to the responsible dirs list depends on if we are
      * trying to fetch or store. A client always fetches. */
-    int n_to_add = (for_fetching) ? hs_get_hsdir_spread_fetch() :
-                                    hs_get_hsdir_spread_store();
+    int n_to_add = (for_fetching) ? hs_get_hsdir_spread_fetch()
+                                  : hs_get_hsdir_spread_store();
 
     /* Get the index that we should use to select the node. */
     hs_build_hs_index(replica, blinded_pk, time_period_num, hs_index);
     /* The compare function pointer has been set correctly earlier. */
-    start = idx = smartlist_bsearch_idx(sorted_nodes, hs_index, cmp_fct,
-                                        &found);
+    start = idx =
+        smartlist_bsearch_idx(sorted_nodes, hs_index, cmp_fct, &found);
     /* Getting the length of the list if no member is greater than the key we
      * are looking for so start at the first element. */
     if (idx == smartlist_len(sorted_nodes)) {
@@ -1416,7 +1407,7 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
     }
   }
 
- done:
+done:
   smartlist_free(sorted_nodes);
 }
 
@@ -1469,8 +1460,7 @@ get_last_hid_serv_requests(void)
  * most recent request time, or 0 if no such request has been sent before. */
 time_t
 hs_lookup_last_hid_serv_request(routerstatus_t *hs_dir,
-                                const char *req_key_str,
-                                time_t now, int set)
+                                const char *req_key_str, time_t now, int set)
 {
   char hsdir_id_base32[BASE32_DIGEST_LEN + 1];
   char *hsdir_desc_comb_id = NULL;
@@ -1490,8 +1480,7 @@ hs_lookup_last_hid_serv_request(routerstatus_t *hs_dir,
                         last_request_ptr);
     tor_free(oldptr);
   } else {
-    last_request_ptr = strmap_get(last_hid_serv_requests,
-                                  hsdir_desc_comb_id);
+    last_request_ptr = strmap_get(last_hid_serv_requests, hsdir_desc_comb_id);
   }
 
   tor_free(hsdir_desc_comb_id);
@@ -1508,12 +1497,12 @@ hs_clean_last_hid_serv_requests(time_t now)
   time_t cutoff = now - hs_hsdir_requery_period(get_options());
   strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
   for (iter = strmap_iter_init(last_hid_serv_requests);
-       !strmap_iter_done(iter); ) {
+       !strmap_iter_done(iter);) {
     const char *key;
     void *val;
     time_t *ent;
     strmap_iter_get(iter, &key, &val);
-    ent = (time_t *) val;
+    ent = (time_t *)val;
     if (*ent < cutoff) {
       iter = strmap_iter_next_rmv(last_hid_serv_requests, iter);
       tor_free(ent);
@@ -1537,7 +1526,7 @@ hs_purge_hid_serv_from_last_hid_serv_requests(const char *req_key_str)
   strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
 
   for (iter = strmap_iter_init(last_hid_serv_requests);
-       !strmap_iter_done(iter); ) {
+       !strmap_iter_done(iter);) {
     const char *key;
     void *val;
     strmap_iter_get(iter, &key, &val);
@@ -1574,7 +1563,7 @@ hs_purge_hid_serv_from_last_hid_serv_requests(const char *req_key_str)
 void
 hs_purge_last_hid_serv_requests(void)
 {
- /* Don't create the table if it doesn't exist yet (and it may very
+  /* Don't create the table if it doesn't exist yet (and it may very
    * well not exist if the user hasn't accessed any HSes)... */
   strmap_t *old_last_hid_serv_requests = last_hid_serv_requests_;
   /* ... and let get_last_hid_serv_requests re-create it for us if
@@ -1624,11 +1613,11 @@ hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str,
    * directly, since we always use the key information in the
    * consensus-indexed node descriptors for building the index.
    **/
-  SMARTLIST_FOREACH_BEGIN(responsible_dirs, routerstatus_t *, dir) {
+  SMARTLIST_FOREACH_BEGIN (responsible_dirs, routerstatus_t *, dir) {
     time_t last = hs_lookup_last_hid_serv_request(dir, req_key_str, 0, 0);
     const node_t *node = node_get_by_id(dir->identity_digest);
-    if (last + hs_hsdir_requery_period(options) >= now ||
-        !node || !node_has_preferred_descriptor(node, 0)) {
+    if (last + hs_hsdir_requery_period(options) >= now || !node ||
+        !node_has_preferred_descriptor(node, 0)) {
       SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
       rate_limited_count++;
       continue;
@@ -1636,14 +1625,14 @@ hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str,
     if (!routerset_contains_node(options->ExcludeNodes, node)) {
       smartlist_add(usable_responsible_dirs, dir);
     }
-  } SMARTLIST_FOREACH_END(dir);
+  } SMARTLIST_FOREACH_END (dir);
 
   if (rate_limited_count > 0 || responsible_dirs_count > 0) {
     rate_limited = rate_limited_count == responsible_dirs_count;
   }
 
   excluded_some =
-    smartlist_len(usable_responsible_dirs) < smartlist_len(responsible_dirs);
+      smartlist_len(usable_responsible_dirs) < smartlist_len(responsible_dirs);
 
   hs_dir = smartlist_choose(usable_responsible_dirs);
   if (!hs_dir && !options->StrictNodes) {
@@ -1653,12 +1642,16 @@ hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str,
   smartlist_free(responsible_dirs);
   smartlist_free(usable_responsible_dirs);
   if (!hs_dir) {
-    const char *warn_str = (rate_limited) ? "we are rate limited." :
-                              "we requested them all recently without success";
-    log_info(LD_REND, "Could not pick one of the responsible hidden "
-                      "service directories, because %s.", warn_str);
+    const char *warn_str =
+        (rate_limited) ? "we are rate limited."
+                       : "we requested them all recently without success";
+    log_info(LD_REND,
+             "Could not pick one of the responsible hidden "
+             "service directories, because %s.",
+             warn_str);
     if (options->StrictNodes && excluded_some) {
-      log_warn(LD_REND, "Could not pick a hidden service directory for the "
+      log_warn(LD_REND,
+               "Could not pick a hidden service directory for the "
                "requested hidden service: they are all either down or "
                "excluded, and StrictNodes is set.");
     }
@@ -1716,16 +1709,16 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
     goto done;
   }
 
-  SMARTLIST_FOREACH_BEGIN(lspecs, const link_specifier_t *, ls) {
+  SMARTLIST_FOREACH_BEGIN (lspecs, const link_specifier_t *, ls) {
     switch (link_specifier_get_ls_type(ls)) {
     case LS_IPV4:
       /* Skip if we already seen a v4. If direct_conn is true, we skip this
        * block because fascist_firewall_choose_address_ls() will set ap. If
        * direct_conn is false, set ap to the first IPv4 address and port in
        * the link specifiers.*/
-      if (have_v4 || direct_conn) continue;
-      tor_addr_from_ipv4h(&ap.addr,
-                          link_specifier_get_un_ipv4_addr(ls));
+      if (have_v4 || direct_conn)
+        continue;
+      tor_addr_from_ipv4h(&ap.addr, link_specifier_get_un_ipv4_addr(ls));
       ap.port = link_specifier_get_un_ipv4_port(ls);
       have_v4 = 1;
       break;
@@ -1739,8 +1732,7 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
       have_legacy_id = 1;
       break;
     case LS_ED25519_ID:
-      memcpy(ed25519_pk.pubkey,
-             link_specifier_getconstarray_un_ed25519_id(ls),
+      memcpy(ed25519_pk.pubkey, link_specifier_getconstarray_un_ed25519_id(ls),
              ED25519_PUBKEY_LEN);
       have_ed25519_id = 1;
       break;
@@ -1748,7 +1740,7 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
       /* Ignore unknown. */
       break;
     }
-  } SMARTLIST_FOREACH_END(ls);
+  } SMARTLIST_FOREACH_END (ls);
 
   /* Choose a preferred address first, but fall back to an allowed address. */
   if (direct_conn)
@@ -1774,15 +1766,16 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
   if (!extend_info_addr_is_allowed(&ap.addr)) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
            "Requested address is private and we are not allowed to extend to "
-           "it: %s:%u", fmt_addr(&ap.addr), ap.port);
+           "it: %s:%u",
+           fmt_addr(&ap.addr), ap.port);
     goto done;
   }
 
   /* We do have everything for which we think we can connect successfully. */
-  info = extend_info_new(NULL, legacy_id,
-                         (have_ed25519_id) ? &ed25519_pk : NULL, NULL,
-                         onion_key, &ap.addr, ap.port);
- done:
+  info =
+      extend_info_new(NULL, legacy_id, (have_ed25519_id) ? &ed25519_pk : NULL,
+                      NULL, onion_key, &ap.addr, ap.port);
+done:
   return info;
 }
 
@@ -1860,9 +1853,8 @@ link_specifier_dup(const link_specifier_t *src)
   }
 
   buf = tor_malloc_zero(encoded_len_alloc);
-  ssize_t encoded_len_data = link_specifier_encode(buf,
-                                                   encoded_len_alloc,
-                                                   src);
+  ssize_t encoded_len_data =
+      link_specifier_encode(buf, encoded_len_alloc, src);
   if (BUG(encoded_len_data < 0)) {
     goto err;
   }
@@ -1874,10 +1866,10 @@ link_specifier_dup(const link_specifier_t *src)
 
   goto done;
 
- err:
+err:
   dup = NULL;
 
- done:
+done:
   tor_free(buf);
   return dup;
 }

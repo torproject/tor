@@ -18,12 +18,9 @@ int directories_have_accepted_server_descriptor(void);
 void directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                                   dirinfo_type_t type, const char *payload,
                                   size_t payload_len, size_t extrainfo_len);
-MOCK_DECL(void, directory_get_from_dirserver, (
-                          uint8_t dir_purpose,
-                          uint8_t router_purpose,
-                          const char *resource,
-                          int pds_flags,
-                          download_want_authority_t want_authority));
+MOCK_DECL(void, directory_get_from_dirserver,
+          (uint8_t dir_purpose, uint8_t router_purpose, const char *resource,
+           int pds_flags, download_want_authority_t want_authority));
 void directory_get_from_all_authorities(uint8_t dir_purpose,
                                         uint8_t router_purpose,
                                         const char *resource);
@@ -32,9 +29,9 @@ void directory_get_from_all_authorities(uint8_t dir_purpose,
 typedef enum {
   /** Default: connect over a one-hop Tor circuit. Relays fall back to direct
    * DirPort connections, clients, onion services, and bridges do not */
-  DIRIND_ONEHOP=0,
+  DIRIND_ONEHOP = 0,
   /** Connect over a multi-hop anonymizing Tor circuit */
-  DIRIND_ANONYMOUS=1,
+  DIRIND_ANONYMOUS = 1,
   /** Connect to the DirPort directly */
   DIRIND_DIRECT_CONN,
   /** Connect over a multi-hop anonymizing Tor circuit to our dirport */
@@ -68,8 +65,7 @@ void directory_request_set_indirection(directory_request_t *req,
 void directory_request_set_resource(directory_request_t *req,
                                     const char *resource);
 void directory_request_set_payload(directory_request_t *req,
-                                   const char *payload,
-                                   size_t payload_len);
+                                   const char *payload, size_t payload_len);
 void directory_request_set_if_modified_since(directory_request_t *req,
                                              time_t if_modified_since);
 void directory_request_set_rend_query(directory_request_t *req,
@@ -81,16 +77,15 @@ void directory_request_fetch_set_hs_ident(directory_request_t *req,
 
 void directory_request_set_routerstatus(directory_request_t *req,
                                         const routerstatus_t *rs);
-void directory_request_add_header(directory_request_t *req,
-                                  const char *key,
+void directory_request_add_header(directory_request_t *req, const char *key,
                                   const char *val);
-MOCK_DECL(void, directory_initiate_request, (directory_request_t *request));
+MOCK_DECL(void, directory_initiate_request, (directory_request_t * request));
 
 int router_supports_extrainfo(const char *identity_digest, int is_authority);
 
 void connection_dir_client_request_failed(dir_connection_t *conn);
-void connection_dir_client_refetch_hsdesc_if_needed(
-                                          dir_connection_t *dir_conn);
+void
+connection_dir_client_refetch_hsdesc_if_needed(dir_connection_t *dir_conn);
 
 #ifdef DIRCLIENT_PRIVATE
 struct directory_request_t {
@@ -146,22 +141,25 @@ typedef struct response_handler_args_t {
 } response_handler_args_t;
 
 enum compress_method_t;
-STATIC int allowed_anonymous_connection_compression_method(
-                                               enum compress_method_t);
-STATIC void warn_disallowed_anonymous_compression_method(
-                                               enum compress_method_t);
+STATIC int
+    allowed_anonymous_connection_compression_method(enum compress_method_t);
+STATIC void
+    warn_disallowed_anonymous_compression_method(enum compress_method_t);
 
 STATIC int should_use_directory_guards(const or_options_t *options);
 STATIC char *accept_encoding_header(void);
 STATIC const char *dir_conn_purpose_to_string(int purpose);
 
-STATIC int handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
-                                          const response_handler_args_t *args);
-STATIC int handle_response_fetch_microdesc(dir_connection_t *conn,
-                                 const response_handler_args_t *args);
+STATIC int
+handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
+                                const response_handler_args_t *args);
+STATIC int
+handle_response_fetch_microdesc(dir_connection_t *conn,
+                                const response_handler_args_t *args);
 
-STATIC int handle_response_fetch_consensus(dir_connection_t *conn,
-                                         const response_handler_args_t *args);
+STATIC int
+handle_response_fetch_consensus(dir_connection_t *conn,
+                                const response_handler_args_t *args);
 
 STATIC dirinfo_type_t dir_fetch_type(int dir_purpose, int router_purpose,
                                      const char *resource);

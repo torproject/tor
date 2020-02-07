@@ -33,11 +33,8 @@
  * If buf is NULL, return a string constant describing the error.
  */
 STATIC const char *
-format_node_description(char *buf,
-                        const char *id_digest,
-                        const char *nickname,
-                        const tor_addr_t *addr,
-                        uint32_t addr32h)
+format_node_description(char *buf, const char *id_digest, const char *nickname,
+                        const tor_addr_t *addr, uint32_t addr32h)
 {
   size_t rv = 0;
   bool has_addr = addr && !tor_addr_is_null(addr);
@@ -61,11 +58,10 @@ format_node_description(char *buf,
   tor_assert_nonfatal(rv < NODE_DESC_BUF_LEN);
 
   {
-    char hex_digest[HEX_DIGEST_LEN+1];
+    char hex_digest[HEX_DIGEST_LEN + 1];
     memset(hex_digest, 0, sizeof(hex_digest));
 
-    base16_encode(hex_digest, sizeof(hex_digest),
-                  id_digest, DIGEST_LEN);
+    base16_encode(hex_digest, sizeof(hex_digest), id_digest, DIGEST_LEN);
     rv = strlcat(buf, hex_digest, NODE_DESC_BUF_LEN);
     tor_assert_nonfatal(rv < NODE_DESC_BUF_LEN);
   }
@@ -127,11 +123,8 @@ router_describe(const routerinfo_t *ri)
   if (!ri)
     return "<null>";
 
-  return format_node_description(buf,
-                                 ri->cache_info.identity_digest,
-                                 ri->nickname,
-                                 &ri->ipv6_addr,
-                                 ri->addr);
+  return format_node_description(buf, ri->cache_info.identity_digest,
+                                 ri->nickname, &ri->ipv6_addr, ri->addr);
 }
 
 /** Return a human-readable description of the node_t <b>node</b>.
@@ -168,10 +161,7 @@ node_describe(const node_t *node)
     return "<null rs and ri>";
   }
 
-  return format_node_description(buf,
-                                 node->identity,
-                                 nickname,
-                                 ipv6_addr,
+  return format_node_description(buf, node->identity, nickname, ipv6_addr,
                                  addr32h);
 }
 
@@ -188,11 +178,8 @@ routerstatus_describe(const routerstatus_t *rs)
   if (!rs)
     return "<null>";
 
-  return format_node_description(buf,
-                                 rs->identity_digest,
-                                 rs->nickname,
-                                 &rs->ipv6_addr,
-                                 rs->addr);
+  return format_node_description(buf, rs->identity_digest, rs->nickname,
+                                 &rs->ipv6_addr, rs->addr);
 }
 
 /** Return a human-readable description of the extend_info_t <b>ei</b>.
@@ -208,11 +195,8 @@ extend_info_describe(const extend_info_t *ei)
   if (!ei)
     return "<null>";
 
-  return format_node_description(buf,
-                                 ei->identity_digest,
-                                 ei->nickname,
-                                 &ei->addr,
-                                 0);
+  return format_node_description(buf, ei->identity_digest, ei->nickname,
+                                 &ei->addr, 0);
 }
 
 /** Set <b>buf</b> (which must have MAX_VERBOSE_NICKNAME_LEN+1 bytes) to the
@@ -230,34 +214,34 @@ router_get_verbose_nickname(char *buf, const routerinfo_t *router)
   if (!buf)
     return;
 
-  memset(buf, 0, MAX_VERBOSE_NICKNAME_LEN+1);
+  memset(buf, 0, MAX_VERBOSE_NICKNAME_LEN + 1);
 
   if (!router) {
     /* strlcpy() returns the length of the source string it attempted to copy,
      * ignoring any required truncation due to the buffer length. */
-    rv = strlcpy(buf, "<null>", MAX_VERBOSE_NICKNAME_LEN+1);
-    tor_assert_nonfatal(rv < MAX_VERBOSE_NICKNAME_LEN+1);
+    rv = strlcpy(buf, "<null>", MAX_VERBOSE_NICKNAME_LEN + 1);
+    tor_assert_nonfatal(rv < MAX_VERBOSE_NICKNAME_LEN + 1);
     return;
   }
 
   /* strlcat() returns the length of the concatenated string it attempted to
    * create, ignoring any required truncation due to the buffer length.  */
-  rv = strlcat(buf, "$", MAX_VERBOSE_NICKNAME_LEN+1);
-  tor_assert_nonfatal(rv < MAX_VERBOSE_NICKNAME_LEN+1);
+  rv = strlcat(buf, "$", MAX_VERBOSE_NICKNAME_LEN + 1);
+  tor_assert_nonfatal(rv < MAX_VERBOSE_NICKNAME_LEN + 1);
 
   {
-    char hex_digest[HEX_DIGEST_LEN+1];
+    char hex_digest[HEX_DIGEST_LEN + 1];
     memset(hex_digest, 0, sizeof(hex_digest));
 
     base16_encode(hex_digest, sizeof(hex_digest),
                   router->cache_info.identity_digest, DIGEST_LEN);
-    rv = strlcat(buf, hex_digest, MAX_VERBOSE_NICKNAME_LEN+1);
-    tor_assert_nonfatal(rv < MAX_VERBOSE_NICKNAME_LEN+1);
+    rv = strlcat(buf, hex_digest, MAX_VERBOSE_NICKNAME_LEN + 1);
+    tor_assert_nonfatal(rv < MAX_VERBOSE_NICKNAME_LEN + 1);
   }
 
-  rv = strlcat(buf, "~", MAX_VERBOSE_NICKNAME_LEN+1);
-  tor_assert_nonfatal(rv < MAX_VERBOSE_NICKNAME_LEN+1);
+  rv = strlcat(buf, "~", MAX_VERBOSE_NICKNAME_LEN + 1);
+  tor_assert_nonfatal(rv < MAX_VERBOSE_NICKNAME_LEN + 1);
 
-  rv = strlcat(buf, router->nickname, MAX_VERBOSE_NICKNAME_LEN+1);
-  tor_assert_nonfatal(rv < MAX_VERBOSE_NICKNAME_LEN+1);
+  rv = strlcat(buf, router->nickname, MAX_VERBOSE_NICKNAME_LEN + 1);
+  tor_assert_nonfatal(rv < MAX_VERBOSE_NICKNAME_LEN + 1);
 }

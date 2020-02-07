@@ -19,12 +19,12 @@
  * functions here. Call tor_compress_supports_method() to check if a given
  * compression schema is supported by Tor. */
 typedef enum compress_method_t {
-  NO_METHOD=0, // This method must be first.
-  GZIP_METHOD=1,
-  ZLIB_METHOD=2,
-  LZMA_METHOD=3,
-  ZSTD_METHOD=4,
-  UNKNOWN_METHOD=5, // This method must be last. Add new ones in the middle.
+  NO_METHOD = 0, // This method must be first.
+  GZIP_METHOD = 1,
+  ZLIB_METHOD = 2,
+  LZMA_METHOD = 3,
+  ZSTD_METHOD = 4,
+  UNKNOWN_METHOD = 5, // This method must be last. Add new ones in the middle.
 } compress_method_t;
 
 /**
@@ -33,23 +33,23 @@ typedef enum compress_method_t {
  * memory.
  **/
 typedef enum compression_level_t {
-  BEST_COMPRESSION, HIGH_COMPRESSION, MEDIUM_COMPRESSION, LOW_COMPRESSION
+  BEST_COMPRESSION,
+  HIGH_COMPRESSION,
+  MEDIUM_COMPRESSION,
+  LOW_COMPRESSION
 } compression_level_t;
 
-int tor_compress(char **out, size_t *out_len,
-                 const char *in, size_t in_len,
+int tor_compress(char **out, size_t *out_len, const char *in, size_t in_len,
                  compress_method_t method);
 
-int tor_uncompress(char **out, size_t *out_len,
-                   const char *in, size_t in_len,
-                   compress_method_t method,
-                   int complete_only,
+int tor_uncompress(char **out, size_t *out_len, const char *in, size_t in_len,
+                   compress_method_t method, int complete_only,
                    int protocol_warn_level);
 
 compress_method_t detect_compression_method(const char *in, size_t in_len);
 
-MOCK_DECL(int,tor_compress_is_compression_bomb,(size_t size_in,
-                                                size_t size_out));
+MOCK_DECL(int, tor_compress_is_compression_bomb,
+          (size_t size_in, size_t size_out));
 
 int tor_compress_supports_method(compress_method_t method);
 unsigned tor_compress_get_supported_method_bitmask(void);
@@ -75,8 +75,7 @@ typedef enum {
 /** Internal state for an incremental compression/decompression. */
 typedef struct tor_compress_state_t tor_compress_state_t;
 
-tor_compress_state_t *tor_compress_new(int compress,
-                                       compress_method_t method,
+tor_compress_state_t *tor_compress_new(int compress, compress_method_t method,
                                        compression_level_t level);
 
 tor_compress_output_t tor_compress_process(tor_compress_state_t *state,

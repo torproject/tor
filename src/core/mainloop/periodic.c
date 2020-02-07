@@ -45,8 +45,7 @@ static smartlist_t *the_periodic_events = NULL;
 /** Set the event <b>event</b> to run in <b>next_interval</b> seconds from
  * now. */
 static void
-periodic_event_set_interval(periodic_event_item_t *event,
-                            time_t next_interval)
+periodic_event_set_interval(periodic_event_item_t *event, time_t next_interval)
 {
   tor_assert(next_interval < MAX_INTERVAL);
   struct timeval tv;
@@ -66,7 +65,7 @@ periodic_event_dispatch(mainloop_event_t *ev, void *data)
   time_t now = time(NULL);
   update_current_time(now);
   const or_options_t *options = get_options();
-//  log_debug(LD_GENERAL, "Dispatching %s", event->name);
+  //  log_debug(LD_GENERAL, "Dispatching %s", event->name);
   int r = event->fn(now, options);
   int next_interval = 0;
 
@@ -77,9 +76,9 @@ periodic_event_dispatch(mainloop_event_t *ev, void *data)
   }
 
   /* update the last run time if action was taken */
-  if (r==0) {
+  if (r == 0) {
     log_err(LD_BUG, "Invalid return value for periodic event from %s.",
-                      event->name);
+            event->name);
     tor_assert(r != 0);
   } else if (r > 0) {
     event->last_action_time = now;
@@ -95,9 +94,9 @@ periodic_event_dispatch(mainloop_event_t *ev, void *data)
     next_interval = 1;
   }
 
-//  log_debug(LD_GENERAL, "Scheduling %s for %d seconds", event->name,
-//           next_interval);
-  struct timeval tv = { next_interval , 0 };
+  //  log_debug(LD_GENERAL, "Scheduling %s for %d seconds", event->name,
+  //           next_interval);
+  struct timeval tv = {next_interval, 0};
   mainloop_event_schedule(ev, &tv);
 }
 
@@ -121,8 +120,7 @@ periodic_event_connect(periodic_event_item_t *event)
     tor_assert(0);
   }
 
-  event->ev = mainloop_event_new(periodic_event_dispatch,
-                                 event);
+  event->ev = mainloop_event_new(periodic_event_dispatch, event);
   tor_assert(event->ev);
 }
 
@@ -131,7 +129,7 @@ periodic_event_connect(periodic_event_item_t *event)
 void
 periodic_event_launch(periodic_event_item_t *event)
 {
-  if (! event->ev) { /* Not setup? This is a bug */
+  if (!event->ev) { /* Not setup? This is a bug */
     log_err(LD_BUG, "periodic_event_launch without periodic_event_connect");
     tor_assert(0);
   }
@@ -233,14 +231,15 @@ periodic_events_register(periodic_event_item_t *item)
 void
 periodic_events_connect_all(void)
 {
-  if (! the_periodic_events)
+  if (!the_periodic_events)
     return;
 
-  SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
+  SMARTLIST_FOREACH_BEGIN (the_periodic_events, periodic_event_item_t *,
+                           item) {
     if (item->ev)
       continue;
     periodic_event_connect(item);
-  } SMARTLIST_FOREACH_END(item);
+  } SMARTLIST_FOREACH_END (item);
 }
 
 /**
@@ -253,15 +252,16 @@ periodic_events_connect_all(void)
 void
 periodic_events_reset_all(void)
 {
-  if (! the_periodic_events)
+  if (!the_periodic_events)
     return;
 
-  SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
+  SMARTLIST_FOREACH_BEGIN (the_periodic_events, periodic_event_item_t *,
+                           item) {
     if (!item->ev)
       continue;
 
     periodic_event_reschedule(item);
-  } SMARTLIST_FOREACH_END(item);
+  } SMARTLIST_FOREACH_END (item);
 }
 
 /**
@@ -271,13 +271,14 @@ periodic_events_reset_all(void)
 periodic_event_item_t *
 periodic_events_find(const char *name)
 {
-  if (! the_periodic_events)
+  if (!the_periodic_events)
     return NULL;
 
-  SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
+  SMARTLIST_FOREACH_BEGIN (the_periodic_events, periodic_event_item_t *,
+                           item) {
     if (strcmp(name, item->name) == 0)
       return item;
-  } SMARTLIST_FOREACH_END(item);
+  } SMARTLIST_FOREACH_END (item);
   return NULL;
 }
 
@@ -290,18 +291,18 @@ periodic_events_find(const char *name)
 void
 periodic_events_rescan_by_roles(int roles, bool net_disabled)
 {
-  if (! the_periodic_events)
+  if (!the_periodic_events)
     return;
 
-  SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
+  SMARTLIST_FOREACH_BEGIN (the_periodic_events, periodic_event_item_t *,
+                           item) {
     if (!item->ev)
       continue;
 
     int enable = !!(item->roles & roles);
 
     /* Handle the event flags. */
-    if (net_disabled &&
-        (item->flags & PERIODIC_EVENT_FLAG_NEED_NET)) {
+    if (net_disabled && (item->flags & PERIODIC_EVENT_FLAG_NEED_NET)) {
       enable = 0;
     }
 
@@ -318,7 +319,7 @@ periodic_events_rescan_by_roles(int roles, bool net_disabled)
         periodic_event_disable(item);
       }
     }
-  } SMARTLIST_FOREACH_END(item);
+  } SMARTLIST_FOREACH_END (item);
 }
 
 /**
@@ -330,12 +331,13 @@ periodic_events_rescan_by_roles(int roles, bool net_disabled)
 void
 periodic_events_disconnect_all(void)
 {
-  if (! the_periodic_events)
+  if (!the_periodic_events)
     return;
 
-  SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
+  SMARTLIST_FOREACH_BEGIN (the_periodic_events, periodic_event_item_t *,
+                           item) {
     periodic_event_disconnect(item);
-  } SMARTLIST_FOREACH_END(item);
+  } SMARTLIST_FOREACH_END (item);
 
   smartlist_free(the_periodic_events);
 }

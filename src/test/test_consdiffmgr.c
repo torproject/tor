@@ -50,7 +50,7 @@ consdiffmgr_test_setup(const struct testcase_t *arg)
   get_options_mutable()->CacheDirectory = ddir_fname; // now owns the pointer.
   check_private_dir(ddir_fname, CPD_CREATE, NULL);
 
-  consdiff_cfg_t consdiff_cfg = { 300 };
+  consdiff_cfg_t consdiff_cfg = {300};
   consdiffmgr_configure(&consdiff_cfg);
   return (void *)1; // must return something non-null.
 }
@@ -62,10 +62,8 @@ consdiffmgr_test_teardown(const struct testcase_t *arg, void *ignore)
   consdiffmgr_free_all();
   return 1;
 }
-static struct testcase_setup_t setup_diffmgr = {
-  consdiffmgr_test_setup,
-  consdiffmgr_test_teardown
-};
+static struct testcase_setup_t setup_diffmgr = {consdiffmgr_test_setup,
+                                                consdiffmgr_test_teardown};
 
 // ============================== NS faking functions
 // These functions are for making quick fake consensus objects and
@@ -85,7 +83,7 @@ static char *
 fake_ns_body_new(consensus_flavor_t flav, time_t valid_after)
 {
   const char *flavor_string = flav == FLAV_NS ? "" : " microdesc";
-  char valid_after_string[ISO_TIME_LEN+1];
+  char valid_after_string[ISO_TIME_LEN + 1];
 
   format_iso_time(valid_after_string, valid_after);
   char *random_stuff = crypto_random_hostname(3, 25, "junk ", "");
@@ -101,10 +99,7 @@ fake_ns_body_new(consensus_flavor_t flav, time_t valid_after)
                "%s\n"
                "directory-signature hello-there\n"
                "directory-signature %s\n",
-               flavor_string,
-               valid_after_string,
-               random_stuff,
-               random_stuff2);
+               flavor_string, valid_after_string, random_stuff, random_stuff2);
   tor_free(random_stuff);
   tor_free(random_stuff2);
   return consensus;
@@ -122,12 +117,11 @@ typedef struct fake_work_queue_ent_t {
 static struct workqueue_entry_t *
 mock_cpuworker_queue_work(workqueue_priority_t prio,
                           enum workqueue_reply_t (*fn)(void *, void *),
-                          void (*reply_fn)(void *),
-                          void *arg)
+                          void (*reply_fn)(void *), void *arg)
 {
-  (void) prio;
+  (void)prio;
 
-  if (! fake_cpuworker_queue)
+  if (!fake_cpuworker_queue)
     fake_cpuworker_queue = smartlist_new();
 
   fake_work_queue_ent_t *ent = tor_malloc_zero(sizeof(*ent));
@@ -140,23 +134,23 @@ mock_cpuworker_queue_work(workqueue_priority_t prio,
 static int
 mock_cpuworker_run_work(void)
 {
-  if (! fake_cpuworker_queue)
+  if (!fake_cpuworker_queue)
     return 0;
   SMARTLIST_FOREACH(fake_cpuworker_queue, fake_work_queue_ent_t *, ent, {
-      enum workqueue_reply_t r = ent->fn(NULL, ent->arg);
-      if (r != WQ_RPL_REPLY)
-        return -1;
+    enum workqueue_reply_t r = ent->fn(NULL, ent->arg);
+    if (r != WQ_RPL_REPLY)
+      return -1;
   });
   return 0;
 }
 static void
 mock_cpuworker_handle_replies(void)
 {
-  if (! fake_cpuworker_queue)
+  if (!fake_cpuworker_queue)
     return;
   SMARTLIST_FOREACH(fake_cpuworker_queue, fake_work_queue_ent_t *, ent, {
-      ent->reply_fn(ent->arg);
-      tor_free(ent);
+    ent->reply_fn(ent->arg);
+    tor_free(ent);
   });
   smartlist_free(fake_cpuworker_queue);
   fake_cpuworker_queue = NULL;
@@ -165,24 +159,21 @@ mock_cpuworker_handle_replies(void)
 // ==============================  Other helpers
 
 static consdiff_status_t
-lookup_diff_from(consensus_cache_entry_t **out,
-                 consensus_flavor_t flav,
+lookup_diff_from(consensus_cache_entry_t **out, consensus_flavor_t flav,
                  const char *str1)
 {
   uint8_t digest[DIGEST256_LEN];
-  if (router_get_networkstatus_v3_sha3_as_signed(digest,
-                                                 str1, strlen(str1))<0) {
+  if (router_get_networkstatus_v3_sha3_as_signed(digest, str1, strlen(str1)) <
+      0) {
     TT_FAIL(("Unable to compute sha3-as-signed"));
     return CONSDIFF_NOT_FOUND;
   }
-  return consdiffmgr_find_diff_from(out, flav,
-                                    DIGEST_SHA3_256, digest, sizeof(digest),
-                                    NO_METHOD);
+  return consdiffmgr_find_diff_from(out, flav, DIGEST_SHA3_256, digest,
+                                    sizeof(digest), NO_METHOD);
 }
 
 static int
-lookup_apply_and_verify_diff(consensus_flavor_t flav,
-                             const char *str1,
+lookup_apply_and_verify_diff(consensus_flavor_t flav, const char *str1,
                              const char *str2)
 {
   consensus_cache_entry_t *ent = NULL;
@@ -259,7 +250,7 @@ test_consdiffmgr_init_failure(void *arg)
 static void
 test_consdiffmgr_sha3_helper(void *arg)
 {
-  (void) arg;
+  (void)arg;
   consensus_cache_t *cache = cdm_cache_get(); // violate abstraction barrier
   config_line_t *lines = NULL;
   char *mem_op_hex_tmp = NULL;
@@ -276,7 +267,7 @@ test_consdiffmgr_sha3_helper(void *arg)
                       "F00DF00DF00DF00DF00DF00DF00DF00D"
                       "F00DF00DF00DF00DF00DF00DF00DXXXX");
   consensus_cache_entry_t *ent =
-    consensus_cache_add(cache, lines, (const uint8_t *)"Hi there", 8);
+      consensus_cache_add(cache, lines, (const uint8_t *)"Hi there", 8);
 
   uint8_t buf[DIGEST256_LEN];
   tt_int_op(-1, OP_EQ, cdm_entry_get_sha3_value(buf, NULL, "good-sha"));
@@ -289,7 +280,7 @@ test_consdiffmgr_sha3_helper(void *arg)
   tt_int_op(-2, OP_EQ, cdm_entry_get_sha3_value(buf, ent, "long-sha"));
   tt_int_op(-2, OP_EQ, cdm_entry_get_sha3_value(buf, ent, "not-sha"));
 
- done:
+done:
   consensus_cache_entry_decref(ent);
   config_free_lines(lines);
   tor_free(mem_op_hex_tmp);
@@ -298,7 +289,7 @@ test_consdiffmgr_sha3_helper(void *arg)
 static void
 test_consdiffmgr_add(void *arg)
 {
-  (void) arg;
+  (void)arg;
   time_t now = approx_time();
 
   const char *body = NULL;
@@ -340,7 +331,7 @@ test_consdiffmgr_add(void *arg)
   expect_log_msg_containing("it's too old.");
 
   /* Try looking up a consensuses. */
-  ent = cdm_cache_lookup_consensus(FLAV_NS, now-60);
+  ent = cdm_cache_lookup_consensus(FLAV_NS, now - 60);
   tt_assert(ent);
   consensus_cache_entry_incref(ent);
   size_t s;
@@ -353,7 +344,7 @@ test_consdiffmgr_add(void *arg)
   tt_ptr_op(cdm_cache_lookup_consensus(FLAV_MICRODESC, now - 60), OP_EQ, NULL);
   tt_ptr_op(cdm_cache_lookup_consensus(FLAV_NS, now - 61), OP_EQ, NULL);
 
- done:
+done:
   networkstatus_vote_free(ns_tmp);
   teardown_capture_of_logs();
   consensus_cache_entry_decref(ent);
@@ -380,15 +371,15 @@ test_consdiffmgr_make_diffs(void *arg)
   tt_ptr_op(NULL, OP_EQ, fake_cpuworker_queue);
 
   // Make two consensuses, 1 hour sec ago.
-  ns = fake_ns_new(FLAV_NS, now-3600);
-  ns_body = fake_ns_body_new(FLAV_NS, now-3600);
+  ns = fake_ns_new(FLAV_NS, now - 3600);
+  ns_body = fake_ns_body_new(FLAV_NS, now - 3600);
   r = consdiffmgr_add_consensus(ns_body, ns);
   networkstatus_vote_free(ns);
   tor_free(ns_body);
   tt_int_op(r, OP_EQ, 0);
 
-  ns = fake_ns_new(FLAV_MICRODESC, now-3600);
-  md_ns_body = fake_ns_body_new(FLAV_MICRODESC, now-3600);
+  ns = fake_ns_new(FLAV_MICRODESC, now - 3600);
+  md_ns_body = fake_ns_body_new(FLAV_MICRODESC, now - 3600);
   r = consdiffmgr_add_consensus(md_ns_body, ns);
   router_get_networkstatus_v3_sha3_as_signed(md_ns_sha3, md_ns_body,
                                              strlen(md_ns_body));
@@ -401,8 +392,8 @@ test_consdiffmgr_make_diffs(void *arg)
 
   // Add a MD consensus from 45 minutes ago. This should cause one diff
   // worth of work to get queued.
-  ns = fake_ns_new(FLAV_MICRODESC, now-45*60);
-  md_ns_body_2 = fake_ns_body_new(FLAV_MICRODESC, now-45*60);
+  ns = fake_ns_new(FLAV_MICRODESC, now - 45 * 60);
+  md_ns_body_2 = fake_ns_body_new(FLAV_MICRODESC, now - 45 * 60);
   r = consdiffmgr_add_consensus(md_ns_body_2, ns);
   networkstatus_vote_free(ns);
   tt_int_op(r, OP_EQ, 0);
@@ -410,10 +401,9 @@ test_consdiffmgr_make_diffs(void *arg)
   consdiffmgr_rescan();
   tt_ptr_op(NULL, OP_NE, fake_cpuworker_queue);
   tt_int_op(1, OP_EQ, smartlist_len(fake_cpuworker_queue));
-  diff_status = consdiffmgr_find_diff_from(&diff, FLAV_MICRODESC,
-                                           DIGEST_SHA3_256,
-                                           md_ns_sha3, DIGEST256_LEN,
-                                           NO_METHOD);
+  diff_status =
+      consdiffmgr_find_diff_from(&diff, FLAV_MICRODESC, DIGEST_SHA3_256,
+                                 md_ns_sha3, DIGEST256_LEN, NO_METHOD);
   tt_int_op(CONSDIFF_IN_PROGRESS, OP_EQ, diff_status);
 
   // Now run that process and get the diff.
@@ -422,10 +412,9 @@ test_consdiffmgr_make_diffs(void *arg)
   mock_cpuworker_handle_replies();
 
   // At this point we should be able to get that diff.
-  diff_status = consdiffmgr_find_diff_from(&diff, FLAV_MICRODESC,
-                                           DIGEST_SHA3_256,
-                                           md_ns_sha3, DIGEST256_LEN,
-                                           NO_METHOD);
+  diff_status =
+      consdiffmgr_find_diff_from(&diff, FLAV_MICRODESC, DIGEST_SHA3_256,
+                                 md_ns_sha3, DIGEST256_LEN, NO_METHOD);
   tt_int_op(CONSDIFF_AVAILABLE, OP_EQ, diff_status);
   tt_assert(diff);
 
@@ -443,7 +432,7 @@ test_consdiffmgr_make_diffs(void *arg)
   consdiffmgr_rescan();
   tt_ptr_op(NULL, OP_EQ, fake_cpuworker_queue);
 
- done:
+done:
   tor_free(md_ns_body);
   tor_free(md_ns_body_2);
   tor_free(diff_text);
@@ -497,30 +486,35 @@ test_consdiffmgr_diff_rules(void *arg)
 
   /* At this point, we should actually have working diffs! */
   tt_int_op(0, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_NS, ns_body[0], ns_body[5]));
+            lookup_apply_and_verify_diff(FLAV_NS, ns_body[0], ns_body[5]));
   tt_int_op(0, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_NS, ns_body[1], ns_body[5]));
+            lookup_apply_and_verify_diff(FLAV_NS, ns_body[1], ns_body[5]));
 
-  tt_int_op(0, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[4]));
-  tt_int_op(0, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[2], md_body[4]));
-  tt_int_op(0, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[3], md_body[4]));
+  tt_int_op(
+      0, OP_EQ,
+      lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[4]));
+  tt_int_op(
+      0, OP_EQ,
+      lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[2], md_body[4]));
+  tt_int_op(
+      0, OP_EQ,
+      lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[3], md_body[4]));
 
   /* Self-to-self diff won't be present */
   consensus_cache_entry_t *ent;
   tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
-       lookup_diff_from(&ent, FLAV_NS, ns_body[5]));
+            lookup_diff_from(&ent, FLAV_NS, ns_body[5]));
   /* No diff from 2 has been added yet */
   tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
-       lookup_diff_from(&ent, FLAV_NS, ns_body[2]));
+            lookup_diff_from(&ent, FLAV_NS, ns_body[2]));
   /* No diff arriving at old things. */
-  tt_int_op(-1, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[2]));
+  tt_int_op(
+      -1, OP_EQ,
+      lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[2]));
   /* No backwards diff */
-  tt_int_op(-1, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[4], md_body[3]));
+  tt_int_op(
+      -1, OP_EQ,
+      lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[4], md_body[3]));
 
   /* Now, an update: add number 2 and make sure it's the only one whose diff
    * is regenerated. */
@@ -538,20 +532,23 @@ test_consdiffmgr_diff_rules(void *arg)
   cdm_reload();
 
   tt_int_op(0, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_NS, ns_body[0], ns_body[5]));
+            lookup_apply_and_verify_diff(FLAV_NS, ns_body[0], ns_body[5]));
   tt_int_op(0, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_NS, ns_body[2], ns_body[5]));
+            lookup_apply_and_verify_diff(FLAV_NS, ns_body[2], ns_body[5]));
   tt_int_op(0, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_NS, ns_body[1], ns_body[5]));
+            lookup_apply_and_verify_diff(FLAV_NS, ns_body[1], ns_body[5]));
 
-  tt_int_op(0, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[4]));
-  tt_int_op(0, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[2], md_body[4]));
-  tt_int_op(0, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[3], md_body[4]));
+  tt_int_op(
+      0, OP_EQ,
+      lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[4]));
+  tt_int_op(
+      0, OP_EQ,
+      lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[2], md_body[4]));
+  tt_int_op(
+      0, OP_EQ,
+      lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[3], md_body[4]));
 
- done:
+done:
   for (i = 0; i < N; ++i) {
     tor_free(md_body[i]);
     tor_free(ns_body[i]);
@@ -574,8 +571,8 @@ test_consdiffmgr_diff_failure(void *arg)
   networkstatus_t *ns2 = NULL;
   int r;
 
-  ns1 = fake_ns_new(FLAV_NS, approx_time()-100);
-  ns2 = fake_ns_new(FLAV_NS, approx_time()-50);
+  ns1 = fake_ns_new(FLAV_NS, approx_time() - 100);
+  ns2 = fake_ns_new(FLAV_NS, approx_time() - 50);
   r = consdiffmgr_add_consensus("foo bar baz\n", ns1);
   tt_int_op(r, OP_EQ, 0);
   // We refuse to compute a diff to or from a line holding only a single dot.
@@ -599,7 +596,7 @@ test_consdiffmgr_diff_failure(void *arg)
   tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
             lookup_diff_from(&ent, FLAV_NS, "foo bar baz\n"));
 
- done:
+done:
   teardown_capture_of_logs();
   UNMOCK(cpuworker_queue_work);
   networkstatus_vote_free(ns1);
@@ -644,12 +641,14 @@ test_consdiffmgr_diff_pending(void *arg)
   tt_int_op(0, OP_EQ, mock_cpuworker_run_work());
   mock_cpuworker_handle_replies();
 
-  tt_int_op(0, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[0], md_body[2]));
-  tt_int_op(0, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[2]));
+  tt_int_op(
+      0, OP_EQ,
+      lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[0], md_body[2]));
+  tt_int_op(
+      0, OP_EQ,
+      lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[2]));
 
- done:
+done:
   UNMOCK(cpuworker_queue_work);
   for (i = 0; i < N; ++i) {
     tor_free(md_body[i]);
@@ -669,9 +668,8 @@ test_consdiffmgr_cleanup_old(void *arg)
   /* This item will be will be cleanable because it has a valid-after
    * time far in the past. */
   config_line_prepend(&labels, "document-type", "confribble-blarg");
-  config_line_prepend(&labels, "consensus-valid-after",
-                      "1980-10-10T10:10:10");
-  ent = consensus_cache_add(cache, labels, (const uint8_t*)"Foo", 3);
+  config_line_prepend(&labels, "consensus-valid-after", "1980-10-10T10:10:10");
+  ent = consensus_cache_add(cache, labels, (const uint8_t *)"Foo", 3);
   tt_assert(ent);
   consensus_cache_entry_decref(ent);
 
@@ -680,7 +678,7 @@ test_consdiffmgr_cleanup_old(void *arg)
   expect_log_msg_containing("Deleting entry because its consensus-valid-"
                             "after value (1980-10-10T10:10:10) was too old");
 
- done:
+done:
   teardown_capture_of_logs();
   config_free_lines(labels);
 }
@@ -699,7 +697,7 @@ test_consdiffmgr_cleanup_bad_valid_after(void *arg)
   config_line_prepend(&labels, "document-type", "consensus");
   config_line_prepend(&labels, "consensus-valid-after",
                       "whan that aprille with his shoures soote"); // (~1385?)
-  ent = consensus_cache_add(cache, labels, (const uint8_t*)"Foo", 3);
+  ent = consensus_cache_add(cache, labels, (const uint8_t *)"Foo", 3);
   tt_assert(ent);
   consensus_cache_entry_decref(ent);
 
@@ -709,7 +707,7 @@ test_consdiffmgr_cleanup_bad_valid_after(void *arg)
                             "after value (\"whan that aprille with his "
                             "shoures soote\") was unparseable");
 
- done:
+done:
   teardown_capture_of_logs();
   config_free_lines(labels);
 }
@@ -727,7 +725,7 @@ test_consdiffmgr_cleanup_no_valid_after(void *arg)
   config_line_prepend(&labels, "document-type", "consensus");
   config_line_prepend(&labels, "confrooble-voolid-oofter",
                       "2010-10-10T09:08:07");
-  ent = consensus_cache_add(cache, labels, (const uint8_t*)"Foo", 3);
+  ent = consensus_cache_add(cache, labels, (const uint8_t *)"Foo", 3);
   tt_assert(ent);
   consensus_cache_entry_decref(ent);
 
@@ -736,7 +734,7 @@ test_consdiffmgr_cleanup_no_valid_after(void *arg)
   expect_log_msg_containing("Ignoring entry because it had no consensus-"
                             "valid-after label");
 
- done:
+done:
   teardown_capture_of_logs();
   config_free_lines(labels);
 }
@@ -778,10 +776,12 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
 
   /* Nothing is deletable now */
   tt_int_op(0, OP_EQ, consdiffmgr_cleanup());
-  tt_int_op(0, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[0], md_body[2]));
-  tt_int_op(0, OP_EQ,
-       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[2]));
+  tt_int_op(
+      0, OP_EQ,
+      lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[0], md_body[2]));
+  tt_int_op(
+      0, OP_EQ,
+      lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[2]));
 
   tt_int_op(CONSDIFF_AVAILABLE, OP_EQ,
             lookup_diff_from(&hold_ent, FLAV_MICRODESC, md_body[1]));
@@ -791,8 +791,8 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
    * diffs deletable, and make delete */
   tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[3], md_ns[3]));
   tt_int_op(2 * n_diff_compression_methods() +
-            (n_consensus_compression_methods() - 1) , OP_EQ,
-            consdiffmgr_cleanup());
+                (n_consensus_compression_methods() - 1),
+            OP_EQ, consdiffmgr_cleanup());
 
   tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
             lookup_diff_from(&ent, FLAV_MICRODESC, md_body[0]));
@@ -822,7 +822,7 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
   tt_int_op(r, OP_EQ, 0);
   tt_assert(t1);
 
- done:
+done:
   for (i = 0; i < N; ++i) {
     tor_free(md_body[i]);
     networkstatus_vote_free(md_ns[i]);
@@ -892,30 +892,24 @@ test_consdiffmgr_validate(void *arg)
   consensus_cache_find_all(vals, cache, "id", "bad sha3");
   tt_int_op(smartlist_len(vals), OP_EQ, 0);
 
- done:
+done:
   smartlist_free(vals);
 }
 
-#define TEST(name)                                      \
-  { #name, test_consdiffmgr_ ## name , TT_FORK, &setup_diffmgr, NULL }
+#define TEST(name)                                                \
+  {                                                               \
+#    name, test_consdiffmgr_##name, TT_FORK, &setup_diffmgr, NULL \
+  }
 
 struct testcase_t consdiffmgr_tests[] = {
 #if 0
   { "init_failure", test_consdiffmgr_init_failure, TT_FORK, NULL, NULL },
 #endif
-  TEST(sha3_helper),
-  TEST(add),
-  TEST(make_diffs),
-  TEST(diff_rules),
-  TEST(diff_failure),
-  TEST(diff_pending),
-  TEST(cleanup_old),
-  TEST(cleanup_bad_valid_after),
-  TEST(cleanup_no_valid_after),
-  TEST(cleanup_old_diffs),
-  TEST(validate),
+    TEST(sha3_helper), TEST(add), TEST(make_diffs), TEST(diff_rules),
+    TEST(diff_failure), TEST(diff_pending), TEST(cleanup_old),
+    TEST(cleanup_bad_valid_after), TEST(cleanup_no_valid_after),
+    TEST(cleanup_old_diffs), TEST(validate),
 
-  // XXXX Test: non-cacheing cases of replyfn().
+    // XXXX Test: non-cacheing cases of replyfn().
 
-  END_OF_TESTCASES
-};
+    END_OF_TESTCASES};

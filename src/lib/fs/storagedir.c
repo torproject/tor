@@ -29,13 +29,13 @@
 #include "lib/string/util_string.h"
 
 #ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
+#  include <sys/types.h>
 #endif
 #ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
+#  include <sys/stat.h>
 #endif
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #include <stdlib.h>
 #include <errno.h>
@@ -114,8 +114,8 @@ storage_dir_register_with_sandbox(storage_dir_t *d, sandbox_cfg_t **cfg)
     problems += sandbox_cfg_allow_open_filename(cfg, tor_strdup(tmppath));
     problems += sandbox_cfg_allow_stat_filename(cfg, tor_strdup(path));
     problems += sandbox_cfg_allow_stat_filename(cfg, tor_strdup(tmppath));
-    problems += sandbox_cfg_allow_rename(cfg,
-                                      tor_strdup(tmppath), tor_strdup(path));
+    problems +=
+        sandbox_cfg_allow_rename(cfg, tor_strdup(tmppath), tor_strdup(path));
 
     tor_free(path);
     tor_free(tmppath);
@@ -134,21 +134,23 @@ storage_dir_clean_tmpfiles(storage_dir_t *d)
 {
   if (!d->contents)
     return;
-  SMARTLIST_FOREACH_BEGIN(d->contents, char *, fname) {
+  SMARTLIST_FOREACH_BEGIN (d->contents, char *, fname) {
     if (strcmpend(fname, ".tmp"))
       continue;
     char *path = NULL;
     tor_asprintf(&path, "%s/%s", d->directory, fname);
     if (unlink(sandbox_intern_string(path))) {
-      log_warn(LD_FS, "Unable to unlink %s while cleaning "
-               "temporary files: %s", escaped(path), strerror(errno));
+      log_warn(LD_FS,
+               "Unable to unlink %s while cleaning "
+               "temporary files: %s",
+               escaped(path), strerror(errno));
       tor_free(path);
       continue;
     }
     tor_free(path);
     SMARTLIST_DEL_CURRENT(d->contents, fname);
     tor_free(fname);
-  } SMARTLIST_FOREACH_END(fname);
+  } SMARTLIST_FOREACH_END (fname);
 
   d->usage_known = 0;
 }
@@ -178,7 +180,7 @@ storage_dir_rescan(storage_dir_t *d)
 const smartlist_t *
 storage_dir_list(storage_dir_t *d)
 {
-  if (! d->contents)
+  if (!d->contents)
     storage_dir_rescan(d);
   return d->contents;
 }
@@ -193,7 +195,7 @@ storage_dir_get_usage(storage_dir_t *d)
     return d->usage;
 
   uint64_t total = 0;
-  SMARTLIST_FOREACH_BEGIN(storage_dir_list(d), const char *, cp) {
+  SMARTLIST_FOREACH_BEGIN (storage_dir_list(d), const char *, cp) {
     char *path = NULL;
     struct stat st;
     tor_asprintf(&path, "%s/%s", d->directory, cp);
@@ -201,7 +203,7 @@ storage_dir_get_usage(storage_dir_t *d)
       total += st.st_size;
     }
     tor_free(path);
-  } SMARTLIST_FOREACH_END(cp);
+  } SMARTLIST_FOREACH_END (cp);
 
   d->usage = total;
   d->usage_known = 1;
@@ -240,11 +242,11 @@ storage_dir_read(storage_dir_t *d, const char *fname, int bin, size_t *sz_out)
 #if UINT64_MAX > SIZE_MAX
     tor_assert((uint64_t)st.st_size <= SIZE_MAX);
 #endif
-    *sz_out = (size_t) st.st_size;
+    *sz_out = (size_t)st.st_size;
   }
 
   tor_free(path);
-  return (uint8_t *) contents;
+  return (uint8_t *)contents;
 }
 
 /** Helper: Find an unused filename within the directory */
@@ -272,10 +274,8 @@ find_unused_fname(storage_dir_t *d)
 /** Helper: As storage_dir_save_bytes_to_file, but store a smartlist of
  * sized_chunk_t rather than a single byte array. */
 static int
-storage_dir_save_chunks_to_file(storage_dir_t *d,
-                                const smartlist_t *chunks,
-                                int binary,
-                                char **fname_out)
+storage_dir_save_chunks_to_file(storage_dir_t *d, const smartlist_t *chunks,
+                                int binary, char **fname_out)
 {
   uint64_t total_length = 0;
   char *fname = find_unused_fname(d);
@@ -308,14 +308,11 @@ storage_dir_save_chunks_to_file(storage_dir_t *d,
  * newly allocated string containing the filename.  On failure, return
  * -1. */
 int
-storage_dir_save_bytes_to_file(storage_dir_t *d,
-                               const uint8_t *data,
-                               size_t length,
-                               int binary,
-                               char **fname_out)
+storage_dir_save_bytes_to_file(storage_dir_t *d, const uint8_t *data,
+                               size_t length, int binary, char **fname_out)
 {
   smartlist_t *chunks = smartlist_new();
-  sized_chunk_t chunk = { (const char *)data, length };
+  sized_chunk_t chunk = {(const char *)data, length};
   smartlist_add(chunks, &chunk);
   int r = storage_dir_save_chunks_to_file(d, chunks, binary, fname_out);
   smartlist_free(chunks);
@@ -327,13 +324,11 @@ storage_dir_save_bytes_to_file(storage_dir_t *d,
  * <b>str</b>.
  */
 int
-storage_dir_save_string_to_file(storage_dir_t *d,
-                                const char *str,
-                                int binary,
+storage_dir_save_string_to_file(storage_dir_t *d, const char *str, int binary,
                                 char **fname_out)
 {
-  return storage_dir_save_bytes_to_file(d,
-                (const uint8_t*)str, strlen(str), binary, fname_out);
+  return storage_dir_save_bytes_to_file(d, (const uint8_t *)str, strlen(str),
+                                        binary, fname_out);
 }
 
 /**
@@ -342,11 +337,9 @@ storage_dir_save_string_to_file(storage_dir_t *d,
  * recovered with storage_dir_map_labeled() or storage_dir_read_labeled().
  */
 int
-storage_dir_save_labeled_to_file(storage_dir_t *d,
-                                  const config_line_t *labels,
-                                  const uint8_t *data,
-                                  size_t length,
-                                  char **fname_out)
+storage_dir_save_labeled_to_file(storage_dir_t *d, const config_line_t *labels,
+                                 const uint8_t *data, size_t length,
+                                 char **fname_out)
 {
   /*
    * The storage format is to prefix the data with the key-value pairs in
@@ -396,20 +389,18 @@ storage_dir_save_labeled_to_file(storage_dir_t *d,
  * format expected.
  */
 tor_mmap_t *
-storage_dir_map_labeled(storage_dir_t *dir,
-                         const char *fname,
-                         config_line_t **labels_out,
-                         const uint8_t **data_out,
-                         size_t *sz_out)
+storage_dir_map_labeled(storage_dir_t *dir, const char *fname,
+                        config_line_t **labels_out, const uint8_t **data_out,
+                        size_t *sz_out)
 {
   tor_mmap_t *m = storage_dir_map(dir, fname);
   int errval;
-  if (! m) {
+  if (!m) {
     errval = errno;
     goto err;
   }
   const char *nulp = memchr(m->data, '\0', m->size);
-  if (! nulp) {
+  if (!nulp) {
     errval = EINVAL;
     goto err;
   }
@@ -423,7 +414,7 @@ storage_dir_map_labeled(storage_dir_t *dir,
   *sz_out = m->size - offset;
 
   return m;
- err:
+err:
   tor_munmap_file(m);
   errno = errval;
   return NULL;
@@ -432,14 +423,12 @@ storage_dir_map_labeled(storage_dir_t *dir,
 /** As storage_dir_map_labeled, but return a new byte array containing the
  * data. */
 uint8_t *
-storage_dir_read_labeled(storage_dir_t *dir,
-                          const char *fname,
-                          config_line_t **labels_out,
-                          size_t *sz_out)
+storage_dir_read_labeled(storage_dir_t *dir, const char *fname,
+                         config_line_t **labels_out, size_t *sz_out)
 {
   const uint8_t *data = NULL;
-  tor_mmap_t *m = storage_dir_map_labeled(dir, fname, labels_out,
-                                           &data, sz_out);
+  tor_mmap_t *m =
+      storage_dir_map_labeled(dir, fname, labels_out, &data, sz_out);
   if (m == NULL)
     return NULL;
   uint8_t *result = tor_memdup(data, *sz_out);
@@ -453,7 +442,7 @@ static void
 storage_dir_reduce_usage(storage_dir_t *d, uint64_t removed_file_size)
 {
   if (d->usage_known) {
-    if (! BUG(d->usage < removed_file_size)) {
+    if (!BUG(d->usage < removed_file_size)) {
       /* This bug can also be triggered if an external process resized a file
        * between the call to storage_dir_get_usage() that last checked
        * actual usage (rather than relaying on cached usage), and the call to
@@ -477,8 +466,7 @@ storage_dir_reduce_usage(storage_dir_t *d, uint64_t removed_file_size)
  * Remove the file called <b>fname</b> from <b>d</b>.
  */
 void
-storage_dir_remove_file(storage_dir_t *d,
-                        const char *fname)
+storage_dir_remove_file(storage_dir_t *d, const char *fname)
 {
   char *path = NULL;
   tor_asprintf(&path, "%s/%s", d->directory, fname);
@@ -537,9 +525,7 @@ shrinking_dir_entry_compare(const void *a_, const void *b_)
  * Return 0 on success; -1 on failure.
  */
 int
-storage_dir_shrink(storage_dir_t *d,
-                   uint64_t target_size,
-                   int min_to_remove)
+storage_dir_shrink(storage_dir_t *d, uint64_t target_size, int min_to_remove)
 {
   if (d->usage_known && d->usage <= target_size && !min_to_remove) {
     /* Already small enough. */
@@ -557,7 +543,7 @@ storage_dir_shrink(storage_dir_t *d,
 
   const int n = smartlist_len(d->contents);
   shrinking_dir_entry_t *ents = tor_calloc(n, sizeof(shrinking_dir_entry_t));
-  SMARTLIST_FOREACH_BEGIN(d->contents, const char *, fname) {
+  SMARTLIST_FOREACH_BEGIN (d->contents, const char *, fname) {
     shrinking_dir_entry_t *ent = &ents[fname_sl_idx];
     struct stat st;
     tor_asprintf(&ent->path, "%s/%s", d->directory, fname);
@@ -565,7 +551,7 @@ storage_dir_shrink(storage_dir_t *d,
       ent->mtime = st.st_mtime;
       ent->size = st.st_size;
     }
-  } SMARTLIST_FOREACH_END(fname);
+  } SMARTLIST_FOREACH_END (fname);
 
   qsort(ents, n, sizeof(shrinking_dir_entry_t), shrinking_dir_entry_compare);
 

@@ -88,24 +88,42 @@ const char *
 cell_command_to_string(uint8_t command)
 {
   switch (command) {
-    case CELL_PADDING: return "padding";
-    case CELL_CREATE: return "create";
-    case CELL_CREATED: return "created";
-    case CELL_RELAY: return "relay";
-    case CELL_DESTROY: return "destroy";
-    case CELL_CREATE_FAST: return "create_fast";
-    case CELL_CREATED_FAST: return "created_fast";
-    case CELL_VERSIONS: return "versions";
-    case CELL_NETINFO: return "netinfo";
-    case CELL_RELAY_EARLY: return "relay_early";
-    case CELL_CREATE2: return "create2";
-    case CELL_CREATED2: return "created2";
-    case CELL_VPADDING: return "vpadding";
-    case CELL_CERTS: return "certs";
-    case CELL_AUTH_CHALLENGE: return "auth_challenge";
-    case CELL_AUTHENTICATE: return "authenticate";
-    case CELL_AUTHORIZE: return "authorize";
-    default: return "unrecognized";
+  case CELL_PADDING:
+    return "padding";
+  case CELL_CREATE:
+    return "create";
+  case CELL_CREATED:
+    return "created";
+  case CELL_RELAY:
+    return "relay";
+  case CELL_DESTROY:
+    return "destroy";
+  case CELL_CREATE_FAST:
+    return "create_fast";
+  case CELL_CREATED_FAST:
+    return "created_fast";
+  case CELL_VERSIONS:
+    return "versions";
+  case CELL_NETINFO:
+    return "netinfo";
+  case CELL_RELAY_EARLY:
+    return "relay_early";
+  case CELL_CREATE2:
+    return "create2";
+  case CELL_CREATED2:
+    return "created2";
+  case CELL_VPADDING:
+    return "vpadding";
+  case CELL_CERTS:
+    return "certs";
+  case CELL_AUTH_CHALLENGE:
+    return "auth_challenge";
+  case CELL_AUTHENTICATE:
+    return "authenticate";
+  case CELL_AUTHORIZE:
+    return "authorize";
+  default:
+    return "unrecognized";
   }
 }
 
@@ -116,7 +134,7 @@ cell_command_to_string(uint8_t command)
  */
 static void
 command_time_process_cell(cell_t *cell, channel_t *chan, int *time,
-                               void (*func)(cell_t *, channel_t *))
+                          void (*func)(cell_t *, channel_t *))
 {
   struct timeval start, end;
   long time_passed;
@@ -126,13 +144,13 @@ command_time_process_cell(cell_t *cell, channel_t *chan, int *time,
   (*func)(cell, chan);
 
   tor_gettimeofday(&end);
-  time_passed = tv_udiff(&start, &end) ;
+  time_passed = tv_udiff(&start, &end);
 
   if (time_passed > 10000) { /* more than 10ms */
-    log_debug(LD_OR,"That call just took %ld ms.",time_passed/1000);
+    log_debug(LD_OR, "That call just took %ld ms.", time_passed / 1000);
   }
   if (time_passed < 0) {
-    log_info(LD_GENERAL,"That call took us back in time!");
+    log_info(LD_GENERAL, "That call took us back in time!");
     time_passed = 0;
   }
   *time += time_passed;
@@ -150,9 +168,10 @@ command_process_cell(channel_t *chan, cell_t *cell)
 #ifdef KEEP_TIMING_STATS
   /* how many of each cell have we seen so far this second? needs better
    * name. */
-  static int num_create=0, num_created=0, num_relay=0, num_destroy=0;
+  static int num_create = 0, num_created = 0, num_relay = 0, num_destroy = 0;
   /* how long has it taken to process each type of cell? */
-  static int create_time=0, created_time=0, relay_time=0, destroy_time=0;
+  static int create_time = 0, created_time = 0, relay_time = 0,
+             destroy_time = 0;
   static time_t current_second = 0; /* from previous calls to time */
 
   time_t now = time(NULL);
@@ -160,12 +179,10 @@ command_process_cell(channel_t *chan, cell_t *cell)
   if (now > current_second) { /* the second has rolled over */
     /* print stats */
     log_info(LD_OR,
-         "At end of second: %d creates (%d ms), %d createds (%d ms), "
-         "%d relays (%d ms), %d destroys (%d ms)",
-         num_create, create_time/1000,
-         num_created, created_time/1000,
-         num_relay, relay_time/1000,
-         num_destroy, destroy_time/1000);
+             "At end of second: %d creates (%d ms), %d createds (%d ms), "
+             "%d relays (%d ms), %d destroys (%d ms)",
+             num_create, create_time / 1000, num_created, created_time / 1000,
+             num_relay, relay_time / 1000, num_destroy, destroy_time / 1000);
 
     /* zero out stats */
     num_create = num_created = num_relay = num_destroy = 0;
@@ -177,43 +194,46 @@ command_process_cell(channel_t *chan, cell_t *cell)
 #endif /* defined(KEEP_TIMING_STATS) */
 
 #ifdef KEEP_TIMING_STATS
-#define PROCESS_CELL(tp, cl, cn) STMT_BEGIN {                   \
-    ++num ## tp;                                                \
-    command_time_process_cell(cl, cn, & tp ## time ,            \
-                              command_process_ ## tp ## _cell);  \
-  } STMT_END
+#  define PROCESS_CELL(tp, cl, cn)                              \
+    STMT_BEGIN                                                  \
+      {                                                         \
+        ++num##tp;                                              \
+        command_time_process_cell(cl, cn, &tp##time,            \
+                                  command_process_##tp##_cell); \
+      }                                                         \
+    STMT_END
 #else /* !defined(KEEP_TIMING_STATS) */
-#define PROCESS_CELL(tp, cl, cn) command_process_ ## tp ## _cell(cl, cn)
+#  define PROCESS_CELL(tp, cl, cn) command_process_##tp##_cell(cl, cn)
 #endif /* defined(KEEP_TIMING_STATS) */
 
   switch (cell->command) {
-    case CELL_CREATE:
-    case CELL_CREATE_FAST:
-    case CELL_CREATE2:
-      ++stats_n_create_cells_processed;
-      PROCESS_CELL(create, cell, chan);
-      break;
-    case CELL_CREATED:
-    case CELL_CREATED_FAST:
-    case CELL_CREATED2:
-      ++stats_n_created_cells_processed;
-      PROCESS_CELL(created, cell, chan);
-      break;
-    case CELL_RELAY:
-    case CELL_RELAY_EARLY:
-      ++stats_n_relay_cells_processed;
-      PROCESS_CELL(relay, cell, chan);
-      break;
-    case CELL_DESTROY:
-      ++stats_n_destroy_cells_processed;
-      PROCESS_CELL(destroy, cell, chan);
-      break;
-    default:
-      log_fn(LOG_INFO, LD_PROTOCOL,
-             "Cell of unknown or unexpected type (%d) received.  "
-             "Dropping.",
-             cell->command);
-      break;
+  case CELL_CREATE:
+  case CELL_CREATE_FAST:
+  case CELL_CREATE2:
+    ++stats_n_create_cells_processed;
+    PROCESS_CELL(create, cell, chan);
+    break;
+  case CELL_CREATED:
+  case CELL_CREATED_FAST:
+  case CELL_CREATED2:
+    ++stats_n_created_cells_processed;
+    PROCESS_CELL(created, cell, chan);
+    break;
+  case CELL_RELAY:
+  case CELL_RELAY_EARLY:
+    ++stats_n_relay_cells_processed;
+    PROCESS_CELL(relay, cell, chan);
+    break;
+  case CELL_DESTROY:
+    ++stats_n_destroy_cells_processed;
+    PROCESS_CELL(destroy, cell, chan);
+    break;
+  default:
+    log_fn(LOG_INFO, LD_PROTOCOL,
+           "Cell of unknown or unexpected type (%d) received.  "
+           "Dropping.",
+           cell->command);
+    break;
   }
 }
 
@@ -234,10 +254,8 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   tor_assert(chan);
 
   log_debug(LD_OR,
-            "Got a CREATE cell for circ_id %u on channel %"PRIu64
-            " (%p)",
-            (unsigned)cell->circ_id,
-            (chan->global_identifier), chan);
+            "Got a CREATE cell for circ_id %u on channel %" PRIu64 " (%p)",
+            (unsigned)cell->circ_id, (chan->global_identifier), chan);
 
   /* First thing we do, even though the cell might be invalid, is inform the
    * DoS mitigation subsystem layer of this event. Validation is done by this
@@ -250,8 +268,8 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   if (cell->circ_id == 0) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Received a create cell (type %d) from %s with zero circID; "
-           " ignoring.", (int)cell->command,
-           channel_get_actual_remote_descr(chan));
+           " ignoring.",
+           (int)cell->command, channel_get_actual_remote_descr(chan));
     return;
   }
 
@@ -265,8 +283,7 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     if (node) {
       char *p = esc_for_log(node_get_platform(node));
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Details: router %s, platform %s.",
-             node_describe(node), p);
+             "Details: router %s, platform %s.", node_describe(node), p);
       tor_free(p);
     }
     return;
@@ -276,15 +293,13 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     log_info(LD_OR,
              "Received create cell but we're shutting down. Sending back "
              "destroy.");
-    channel_send_destroy(cell->circ_id, chan,
-                         END_CIRC_REASON_HIBERNATING);
+    channel_send_destroy(cell->circ_id, chan, END_CIRC_REASON_HIBERNATING);
     return;
   }
 
   /* Check if we should apply a defense for this channel. */
   if (dos_cc_get_defense_type(chan) == DOS_CC_DEFENSE_REFUSE_CELL) {
-    channel_send_destroy(cell->circ_id, chan,
-                         END_CIRC_REASON_RESOURCELIMIT);
+    channel_send_destroy(cell->circ_id, chan, END_CIRC_REASON_RESOURCELIMIT);
     return;
   }
 
@@ -295,26 +310,22 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
            "to it as a client. "
            "Sending back a destroy.",
            (int)cell->command, channel_get_canonical_remote_descr(chan));
-    channel_send_destroy(cell->circ_id, chan,
-                         END_CIRC_REASON_TORPROTOCOL);
+    channel_send_destroy(cell->circ_id, chan, END_CIRC_REASON_TORPROTOCOL);
     return;
   }
 
   /* If the high bit of the circuit ID is not as expected, close the
    * circ. */
   if (chan->wide_circ_ids)
-    id_is_high = cell->circ_id & (1u<<31);
+    id_is_high = cell->circ_id & (1u << 31);
   else
-    id_is_high = cell->circ_id & (1u<<15);
-  if ((id_is_high &&
-       chan->circ_id_type == CIRC_ID_TYPE_HIGHER) ||
-      (!id_is_high &&
-       chan->circ_id_type == CIRC_ID_TYPE_LOWER)) {
+    id_is_high = cell->circ_id & (1u << 15);
+  if ((id_is_high && chan->circ_id_type == CIRC_ID_TYPE_HIGHER) ||
+      (!id_is_high && chan->circ_id_type == CIRC_ID_TYPE_LOWER)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Received create cell with unexpected circ_id %u. Closing.",
            (unsigned)cell->circ_id);
-    channel_send_destroy(cell->circ_id, chan,
-                         END_CIRC_REASON_TORPROTOCOL);
+    channel_send_destroy(cell->circ_id, chan, END_CIRC_REASON_TORPROTOCOL);
     return;
   }
 
@@ -340,11 +351,11 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     /* hand it off to the cpuworkers, and then return. */
 
     if (assign_onionskin_to_cpuworker(circ, create_cell) < 0) {
-      log_debug(LD_GENERAL,"Failed to hand off onionskin. Closing.");
+      log_debug(LD_GENERAL, "Failed to hand off onionskin. Closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_RESOURCELIMIT);
       return;
     }
-    log_debug(LD_OR,"success: handed off onionskin.");
+    log_debug(LD_OR, "success: handed off onionskin.");
   } else {
     /* This is a CREATE_FAST cell; we can handle it immediately without using
      * a CPU worker. */
@@ -354,26 +365,22 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     created_cell_t created_cell;
 
     memset(&created_cell, 0, sizeof(created_cell));
-    len = onion_skin_server_handshake(ONION_HANDSHAKE_TYPE_FAST,
-                                       create_cell->onionskin,
-                                       create_cell->handshake_len,
-                                       NULL,
-                                       created_cell.reply,
-                                       keys, CPATH_KEY_MATERIAL_LEN,
-                                       rend_circ_nonce);
+    len = onion_skin_server_handshake(
+        ONION_HANDSHAKE_TYPE_FAST, create_cell->onionskin,
+        create_cell->handshake_len, NULL, created_cell.reply, keys,
+        CPATH_KEY_MATERIAL_LEN, rend_circ_nonce);
     tor_free(create_cell);
     if (len < 0) {
-      log_warn(LD_OR,"Failed to generate key material. Closing.");
+      log_warn(LD_OR, "Failed to generate key material. Closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
       return;
     }
     created_cell.cell_type = CELL_CREATED_FAST;
     created_cell.handshake_len = len;
 
-    if (onionskin_answer(circ, &created_cell,
-                         (const char *)keys, sizeof(keys),
-                         rend_circ_nonce)<0) {
-      log_warn(LD_OR,"Failed to reply to CREATE_FAST cell. Closing.");
+    if (onionskin_answer(circ, &created_cell, (const char *)keys, sizeof(keys),
+                         rend_circ_nonce) < 0) {
+      log_warn(LD_OR, "Failed to reply to CREATE_FAST cell. Closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
       return;
     }
@@ -400,12 +407,13 @@ command_process_created_cell(cell_t *cell, channel_t *chan)
   if (!circ) {
     log_info(LD_OR,
              "(circID %u) unknown circ (probably got a destroy earlier). "
-             "Dropping.", (unsigned)cell->circ_id);
+             "Dropping.",
+             (unsigned)cell->circ_id);
     return;
   }
 
   if (circ->n_circ_id != cell->circ_id || circ->n_chan != chan) {
-    log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "got created cell from Tor client? Closing.");
     circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
     return;
@@ -420,22 +428,22 @@ command_process_created_cell(cell_t *cell, channel_t *chan)
   if (CIRCUIT_IS_ORIGIN(circ)) { /* we're the OP. Handshake this. */
     origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
     int err_reason = 0;
-    log_debug(LD_OR,"at OP. Finishing handshake.");
-    if ((err_reason = circuit_finish_handshake(origin_circ,
-                                        &extended_cell.created_cell)) < 0) {
+    log_debug(LD_OR, "at OP. Finishing handshake.");
+    if ((err_reason = circuit_finish_handshake(
+             origin_circ, &extended_cell.created_cell)) < 0) {
       circuit_mark_for_close(circ, -err_reason);
       return;
     }
-    log_debug(LD_OR,"Moving to next skin.");
+    log_debug(LD_OR, "Moving to next skin.");
     if ((err_reason = circuit_send_next_onion_skin(origin_circ)) < 0) {
-      log_info(LD_OR,"circuit_send_next_onion_skin failed.");
+      log_info(LD_OR, "circuit_send_next_onion_skin failed.");
       /* XXX push this circuit_close lower */
       circuit_mark_for_close(circ, -err_reason);
       return;
     }
   } else { /* pack it into an extended relay cell, and send it. */
-    uint8_t command=0;
-    uint16_t len=0;
+    uint8_t command = 0;
+    uint16_t len = 0;
     uint8_t payload[RELAY_PAYLOAD_SIZE];
     log_debug(LD_OR,
               "Converting created cell to extended relay cell, sending.");
@@ -450,8 +458,8 @@ command_process_created_cell(cell_t *cell, channel_t *chan)
       return;
     }
 
-    relay_send_command_from_edge(0, circ, command,
-                                 (const char*)payload, len, NULL);
+    relay_send_command_from_edge(0, circ, command, (const char *)payload, len,
+                                 NULL);
   }
 }
 
@@ -471,15 +479,14 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
   circ = circuit_get_by_circid_channel(cell->circ_id, chan);
 
   if (!circ) {
-    log_debug(LD_OR,
-              "unknown circuit %u on connection from %s. Dropping.",
+    log_debug(LD_OR, "unknown circuit %u on connection from %s. Dropping.",
               (unsigned)cell->circ_id,
               channel_get_canonical_remote_descr(chan));
     return;
   }
 
   if (circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
-    log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit in create_wait. Closing.");
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "circuit in create_wait. Closing.");
     circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
     return;
   }
@@ -497,8 +504,8 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
 
     /* Count the payload bytes only. We don't care about cell headers */
-    ocirc->n_read_circ_bw = tor_add_u32_nowrap(ocirc->n_read_circ_bw,
-                                               CELL_PAYLOAD_SIZE);
+    ocirc->n_read_circ_bw =
+        tor_add_u32_nowrap(ocirc->n_read_circ_bw, CELL_PAYLOAD_SIZE);
 
     /* Stash the original delivered and overhead values. These values are
      * updated by circuit_read_valid_data() during cell processing by
@@ -510,8 +517,7 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
     orig_overhead_bw = ocirc->n_overhead_read_circ_bw;
   }
 
-  if (!CIRCUIT_IS_ORIGIN(circ) &&
-      chan == TO_OR_CIRCUIT(circ)->p_chan &&
+  if (!CIRCUIT_IS_ORIGIN(circ) && chan == TO_OR_CIRCUIT(circ)->p_chan &&
       cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id)
     direction = CELL_DIRECTION_OUT;
   else
@@ -555,9 +561,10 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
   }
 
   if ((reason = circuit_receive_relay_cell(cell, circ, direction)) < 0) {
-    log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit_receive_relay_cell "
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "circuit_receive_relay_cell "
            "(%s) failed. Closing.",
-           direction==CELL_DIRECTION_OUT?"forward":"backward");
+           direction == CELL_DIRECTION_OUT ? "forward" : "backward");
     /* Always emit a bandwidth event for closed circs */
     if (CIRCUIT_IS_ORIGIN(circ)) {
       control_event_circ_bandwidth_used_for_circ(TO_ORIGIN_CIRCUIT(circ));
@@ -587,8 +594,7 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
 
   /* If this is a cell in an RP circuit, count it as part of the
      hidden service stats */
-  if (options->HiddenServiceStatistics &&
-      !CIRCUIT_IS_ORIGIN(circ) &&
+  if (options->HiddenServiceStatistics && !CIRCUIT_IS_ORIGIN(circ) &&
       TO_OR_CIRCUIT(circ)->circuit_carries_hs_traffic_stats) {
     rep_hist_seen_new_rp_cell();
   }
@@ -615,32 +621,31 @@ command_process_destroy_cell(cell_t *cell, channel_t *chan)
 
   circ = circuit_get_by_circid_channel(cell->circ_id, chan);
   if (!circ) {
-    log_info(LD_OR,"unknown circuit %u on connection from %s. Dropping.",
+    log_info(LD_OR, "unknown circuit %u on connection from %s. Dropping.",
              (unsigned)cell->circ_id,
              channel_get_canonical_remote_descr(chan));
     return;
   }
-  log_debug(LD_OR,"Received for circID %u.",(unsigned)cell->circ_id);
+  log_debug(LD_OR, "Received for circID %u.", (unsigned)cell->circ_id);
 
   reason = (uint8_t)cell->payload[0];
   circ->received_destroy = 1;
 
-  if (!CIRCUIT_IS_ORIGIN(circ) &&
-      chan == TO_OR_CIRCUIT(circ)->p_chan &&
+  if (!CIRCUIT_IS_ORIGIN(circ) && chan == TO_OR_CIRCUIT(circ)->p_chan &&
       cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id) {
     /* the destroy came from behind */
     circuit_set_p_circid_chan(TO_OR_CIRCUIT(circ), 0, NULL);
-    circuit_mark_for_close(circ, reason|END_CIRC_REASON_FLAG_REMOTE);
+    circuit_mark_for_close(circ, reason | END_CIRC_REASON_FLAG_REMOTE);
   } else { /* the destroy came from ahead */
     circuit_set_n_circid_chan(circ, 0, NULL);
     if (CIRCUIT_IS_ORIGIN(circ)) {
-      circuit_mark_for_close(circ, reason|END_CIRC_REASON_FLAG_REMOTE);
+      circuit_mark_for_close(circ, reason | END_CIRC_REASON_FLAG_REMOTE);
     } else {
       char payload[1];
       log_debug(LD_OR, "Delivering 'truncated' back.");
       payload[0] = (char)reason;
-      relay_send_command_from_edge(0, circ, RELAY_COMMAND_TRUNCATED,
-                                   payload, sizeof(payload), NULL);
+      relay_send_command_from_edge(0, circ, RELAY_COMMAND_TRUNCATED, payload,
+                                   sizeof(payload), NULL);
     }
   }
 }
@@ -667,8 +672,7 @@ command_setup_channel(channel_t *chan)
 {
   tor_assert(chan);
 
-  channel_set_cell_handlers(chan,
-                            command_process_cell);
+  channel_set_cell_handlers(chan, command_process_cell);
 }
 
 /** Given a listener, install the right handler to process incoming

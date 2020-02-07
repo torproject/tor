@@ -67,7 +67,7 @@ ddmap_entry_new(int n_votes)
 static unsigned
 ddmap_entry_hash(const ddmap_entry_t *ent)
 {
-  return (unsigned) siphash24g(ent->d, sizeof(ent->d));
+  return (unsigned)siphash24g(ent->d, sizeof(ent->d));
 }
 
 /** Helper: return true if <b>a</b> and <b>b</b> have the same
@@ -81,8 +81,7 @@ ddmap_entry_eq(const ddmap_entry_t *a, const ddmap_entry_t *b)
 /** Record the RSA identity of <b>ent</b> as <b>rsa_sha1</b>, and the
  * ed25519 identity as <b>ed25519</b>.  Both must be provided. */
 static void
-ddmap_entry_set_digests(ddmap_entry_t *ent,
-                        const uint8_t *rsa_sha1,
+ddmap_entry_set_digests(ddmap_entry_t *ent, const uint8_t *rsa_sha1,
                         const uint8_t *ed25519)
 {
   memcpy(ent->d, rsa_sha1, DIGEST_LEN);
@@ -102,17 +101,15 @@ HT_GENERATE2(double_digest_map, ddmap_entry_t, node, ddmap_entry_hash,
  * Requires that the vote is well-formed -- that is, that it has no duplicate
  * routerstatus entries.  We already checked for that when parsing the vote. */
 static void
-dircollator_add_routerstatus(dircollator_t *dc,
-                             int vote_num,
-                             networkstatus_t *vote,
-                             vote_routerstatus_t *vrs)
+dircollator_add_routerstatus(dircollator_t *dc, int vote_num,
+                             networkstatus_t *vote, vote_routerstatus_t *vrs)
 {
   const char *id = vrs->status.identity_digest;
 
   /* Clear this flag; we might set it later during the voting process */
   vrs->ed25519_reflects_consensus = 0;
 
-  (void) vote; // We don't currently need this.
+  (void)vote; // We don't currently need this.
 
   /* First, add this item to the appropriate RSA-SHA-Id array. */
   vote_routerstatus_t **vrs_lst = digestmap_get(dc->by_rsa_sha1, id);
@@ -125,7 +122,7 @@ dircollator_add_routerstatus(dircollator_t *dc,
 
   const uint8_t *ed = vrs->ed25519_id;
 
-  if (! vrs->has_ed25519_listing)
+  if (!vrs->has_ed25519_listing)
     return;
 
   /* Now add it to the appropriate <Ed,RSA-SHA-Id> array. */
@@ -175,8 +172,8 @@ dircollator_free_(dircollator_t *dc)
   smartlist_free(dc->all_rsa_sha1_lst);
 
   ddmap_entry_t **e, **next, *this;
-  for (e = HT_START(double_digest_map, &dc->by_both_ids);
-       e != NULL; e = next) {
+  for (e = HT_START(double_digest_map, &dc->by_both_ids); e != NULL;
+       e = next) {
     this = *e;
     next = HT_NEXT_RMV(double_digest_map, &dc->by_both_ids, e);
     ddmap_entry_free(this);
@@ -199,9 +196,9 @@ dircollator_add_vote(dircollator_t *dc, networkstatus_t *v)
 
   const int votenum = dc->next_vote_num++;
 
-  SMARTLIST_FOREACH_BEGIN(v->routerstatus_list, vote_routerstatus_t *, vrs) {
+  SMARTLIST_FOREACH_BEGIN (v->routerstatus_list, vote_routerstatus_t *, vrs) {
     dircollator_add_routerstatus(dc, votenum, v, vrs);
-  } SMARTLIST_FOREACH_END(vrs);
+  } SMARTLIST_FOREACH_END (vrs);
 }
 
 /** Sort the entries in <b>dc</b> according to <b>consensus_method</b>, so
@@ -210,7 +207,7 @@ dircollator_add_vote(dircollator_t *dc, networkstatus_t *v)
 void
 dircollator_collate(dircollator_t *dc, int consensus_method)
 {
-  (void) consensus_method;
+  (void)consensus_method;
 
   tor_assert(!dc->is_collated);
   dc->all_rsa_sha1_lst = smartlist_new();
@@ -244,7 +241,7 @@ dircollator_collate_by_ed25519(dircollator_t *dc)
   ddmap_entry_t **iter;
 
   /* Go over all <ed,rsa> pairs */
-  HT_FOREACH(iter, double_digest_map, &dc->by_both_ids) {
+  HT_FOREACH (iter, double_digest_map, &dc->by_both_ids) {
     ddmap_entry_t *ent = *iter;
     int n = 0, i;
     for (i = 0; i < dc->n_votes; ++i) {
@@ -259,27 +256,27 @@ dircollator_collate_by_ed25519(dircollator_t *dc)
 
     /* Now consider whether there are any other entries with the same
      * RSA key (but with possibly different or missing ed value). */
-    vote_routerstatus_t **vrs_lst2 = digestmap_get(dc->by_rsa_sha1,
-                                                   (char*)ent->d);
+    vote_routerstatus_t **vrs_lst2 =
+        digestmap_get(dc->by_rsa_sha1, (char *)ent->d);
     tor_assert(vrs_lst2);
 
     for (i = 0; i < dc->n_votes; ++i) {
       if (ent->vrs_lst[i] != NULL) {
         ent->vrs_lst[i]->ed25519_reflects_consensus = 1;
-      } else if (vrs_lst2[i] && ! vrs_lst2[i]->has_ed25519_listing) {
+      } else if (vrs_lst2[i] && !vrs_lst2[i]->has_ed25519_listing) {
         ent->vrs_lst[i] = vrs_lst2[i];
       }
     }
 
     /* Record that we have seen this RSA digest. */
-    digestmap_set(rsa_digests, (char*)ent->d, ent->vrs_lst);
+    digestmap_set(rsa_digests, (char *)ent->d, ent->vrs_lst);
     smartlist_add(dc->all_rsa_sha1_lst, ent->d);
   }
 
   /* Now look over all entries with an RSA digest, looking for RSA digests
    * we didn't put in yet.
    */
-  DIGESTMAP_FOREACH(dc->by_rsa_sha1, k, vote_routerstatus_t **, vrs_lst) {
+  DIGESTMAP_FOREACH (dc->by_rsa_sha1, k, vote_routerstatus_t **, vrs_lst) {
     if (digestmap_get(rsa_digests, k) != NULL)
       continue; /* We already included this RSA digest */
 
@@ -294,7 +291,8 @@ dircollator_collate_by_ed25519(dircollator_t *dc)
 
     digestmap_set(rsa_digests, k, vrs_lst);
     smartlist_add(dc->all_rsa_sha1_lst, (char *)k);
-  } DIGESTMAP_FOREACH_END;
+  }
+  DIGESTMAP_FOREACH_END;
 
   dc->by_collated_rsa_sha1 = rsa_digests;
 }
@@ -324,4 +322,3 @@ dircollator_get_votes_for_router(dircollator_t *dc, int idx)
   return digestmap_get(dc->by_collated_rsa_sha1,
                        smartlist_get(dc->all_rsa_sha1_lst, idx));
 }
-

@@ -26,25 +26,25 @@ void add_connection_to_closeable_list(connection_t *conn);
 int connection_is_on_closeable_list(connection_t *conn);
 
 MOCK_DECL(smartlist_t *, get_connection_array, (void));
-MOCK_DECL(uint64_t,get_bytes_read,(void));
-MOCK_DECL(uint64_t,get_bytes_written,(void));
+MOCK_DECL(uint64_t, get_bytes_read, (void));
+MOCK_DECL(uint64_t, get_bytes_written, (void));
 void stats_increment_bytes_read_and_written(uint64_t r, uint64_t w);
 
 /** Bitmask for events that we can turn on and off with
  * connection_watch_events. */
 typedef enum watchable_events {
   /* Yes, it is intentional that these match Libevent's EV_READ and EV_WRITE */
-  READ_EVENT=0x02, /**< We want to know when a connection is readable */
-  WRITE_EVENT=0x04 /**< We want to know when a connection is writable */
+  READ_EVENT = 0x02, /**< We want to know when a connection is readable */
+  WRITE_EVENT = 0x04 /**< We want to know when a connection is writable */
 } watchable_events_t;
 void connection_watch_events(connection_t *conn, watchable_events_t events);
 int connection_is_reading(connection_t *conn);
-MOCK_DECL(void,connection_stop_reading,(connection_t *conn));
-MOCK_DECL(void,connection_start_reading,(connection_t *conn));
+MOCK_DECL(void, connection_stop_reading, (connection_t * conn));
+MOCK_DECL(void, connection_start_reading, (connection_t * conn));
 
 int connection_is_writing(connection_t *conn);
-MOCK_DECL(void,connection_stop_writing,(connection_t *conn));
-MOCK_DECL(void,connection_start_writing,(connection_t *conn));
+MOCK_DECL(void, connection_stop_writing, (connection_t * conn));
+MOCK_DECL(void, connection_start_writing, (connection_t * conn));
 
 void tor_shutdown_event_loop_and_exit(int exitcode);
 int tor_event_loop_shutdown_is_pending(void);
@@ -63,12 +63,12 @@ void reschedule_directory_downloads(void);
 void reschedule_or_state_save(void);
 void mainloop_schedule_postloop_cleanup(void);
 void rescan_periodic_events(const or_options_t *options);
-MOCK_DECL(void, schedule_rescan_periodic_events,(void));
+MOCK_DECL(void, schedule_rescan_periodic_events, (void));
 
 void update_current_time(time_t now);
 
-MOCK_DECL(long,get_uptime,(void));
-MOCK_DECL(void,reset_uptime,(void));
+MOCK_DECL(long, get_uptime, (void));
+MOCK_DECL(void, reset_uptime, (void));
 
 unsigned get_signewnym_epoch(void);
 
@@ -105,13 +105,13 @@ STATIC int get_my_roles(const or_options_t *);
 STATIC int check_network_participation_callback(time_t now,
                                                 const or_options_t *options);
 
-#ifdef TOR_UNIT_TESTS
+#  ifdef TOR_UNIT_TESTS
 extern smartlist_t *connection_array;
 
 /* We need the periodic_event_item_t definition. */
-#include "core/mainloop/periodic.h"
+#    include "core/mainloop/periodic.h"
 extern periodic_event_item_t mainloop_periodic_events[];
-#endif /* defined(TOR_UNIT_TESTS) */
+#  endif /* defined(TOR_UNIT_TESTS) */
 #endif /* defined(MAINLOOP_PRIVATE) */
 
 #endif /* !defined(TOR_MAINLOOP_H) */

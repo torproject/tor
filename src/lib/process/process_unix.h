@@ -13,10 +13,10 @@
 
 #ifndef _WIN32
 
-#include "orconfig.h"
-#include "lib/malloc/malloc.h"
+#  include "orconfig.h"
+#  include "lib/malloc/malloc.h"
 
-#include <event2/event.h>
+#  include <event2/event.h>
 
 struct process_t;
 
@@ -25,8 +25,8 @@ typedef struct process_unix_t process_unix_t;
 
 process_unix_t *process_unix_new(void);
 void process_unix_free_(process_unix_t *unix_process);
-#define process_unix_free(s) \
-  FREE_AND_NULL(process_unix_t, process_unix_free_, (s))
+#  define process_unix_free(s) \
+    FREE_AND_NULL(process_unix_t, process_unix_free_, (s))
 
 process_status_t process_unix_exec(struct process_t *process);
 bool process_unix_terminate(struct process_t *process);
@@ -37,7 +37,7 @@ int process_unix_write(struct process_t *process, buf_t *buffer);
 int process_unix_read_stdout(struct process_t *process, buf_t *buffer);
 int process_unix_read_stderr(struct process_t *process, buf_t *buffer);
 
-#ifdef PROCESS_UNIX_PRIVATE
+#  ifdef PROCESS_UNIX_PRIVATE
 struct process_unix_handle_t;
 typedef struct process_unix_handle_t process_unix_handle_t;
 
@@ -55,13 +55,11 @@ STATIC void process_unix_waitpid_callback(int status, void *data);
 
 STATIC void process_unix_setup_handle(process_t *process,
                                       process_unix_handle_t *handle,
-                                      short flags,
-                                      event_callback_fn callback);
-STATIC int process_unix_read_handle(process_t *,
-                                    process_unix_handle_t *,
+                                      short flags, event_callback_fn callback);
+STATIC int process_unix_read_handle(process_t *, process_unix_handle_t *,
                                     buf_t *);
 STATIC bool process_unix_close_file_descriptors(process_unix_t *);
-#endif /* defined(PROCESS_UNIX_PRIVATE) */
+#  endif /* defined(PROCESS_UNIX_PRIVATE) */
 
 #endif /* !defined(_WIN32) */
 

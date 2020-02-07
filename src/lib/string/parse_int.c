@@ -19,28 +19,32 @@
  * strtoll is correct. */
 #define CHECK_STRTOX_RESULT()                           \
   STMT_BEGIN                                            \
-  /* Did an overflow occur? */                          \
-  if (errno == ERANGE)                                  \
-    goto err;                                           \
-  /* Was at least one character converted? */           \
-  if (endptr == s)                                      \
-    goto err;                                           \
-  /* Were there unexpected unconverted characters? */   \
-  if (!next && *endptr)                                 \
-    goto err;                                           \
-  /* Illogical (max, min) inputs? */                    \
-  if (max < min)                                        \
-    goto err;                                           \
-  /* Is r within limits? */                             \
-  if (r < min || r > max)                               \
-    goto err;                                           \
-  if (ok) *ok = 1;                                      \
-  if (next) *next = endptr;                             \
-  return r;                                             \
- err:                                                   \
-  if (ok) *ok = 0;                                      \
-  if (next) *next = endptr;                             \
-  return 0;                                             \
+    /* Did an overflow occur? */                        \
+    if (errno == ERANGE)                                \
+      goto err;                                         \
+    /* Was at least one character converted? */         \
+    if (endptr == s)                                    \
+      goto err;                                         \
+    /* Were there unexpected unconverted characters? */ \
+    if (!next && *endptr)                               \
+      goto err;                                         \
+    /* Illogical (max, min) inputs? */                  \
+    if (max < min)                                      \
+      goto err;                                         \
+    /* Is r within limits? */                           \
+    if (r < min || r > max)                             \
+      goto err;                                         \
+    if (ok)                                             \
+      *ok = 1;                                          \
+    if (next)                                           \
+      *next = endptr;                                   \
+    return r;                                           \
+  err:                                                  \
+    if (ok)                                             \
+      *ok = 0;                                          \
+    if (next)                                           \
+      *next = endptr;                                   \
+    return 0;                                           \
   STMT_END
 
 /** Extract a long from the start of <b>s</b>, in the given numeric
@@ -56,8 +60,8 @@
  * to 0.
  */
 long
-tor_parse_long(const char *s, int base, long min, long max,
-               int *ok, char **next)
+tor_parse_long(const char *s, int base, long min, long max, int *ok,
+               char **next)
 {
   char *endptr;
   long r;
@@ -75,8 +79,8 @@ tor_parse_long(const char *s, int base, long min, long max,
 
 /** As tor_parse_long(), but return an unsigned long. */
 unsigned long
-tor_parse_ulong(const char *s, int base, unsigned long min,
-                unsigned long max, int *ok, char **next)
+tor_parse_ulong(const char *s, int base, unsigned long min, unsigned long max,
+                int *ok, char **next)
 {
   char *endptr;
   unsigned long r;
@@ -107,8 +111,8 @@ tor_parse_double(const char *s, double min, double max, int *ok, char **next)
 /** As tor_parse_long, but return a uint64_t.  Only base 10 is guaranteed to
  * work for now. */
 uint64_t
-tor_parse_uint64(const char *s, int base, uint64_t min,
-                 uint64_t max, int *ok, char **next)
+tor_parse_uint64(const char *s, int base, uint64_t min, uint64_t max, int *ok,
+                 char **next)
 {
   char *endptr;
   uint64_t r;
@@ -127,7 +131,7 @@ tor_parse_uint64(const char *s, int base, uint64_t min,
 #elif SIZEOF_LONG == 8
   r = (uint64_t)strtoul(s, &endptr, base);
 #else
-#error "I don't know how to parse 64-bit numbers."
+#  error "I don't know how to parse 64-bit numbers."
 #endif /* defined(HAVE_STRTOULL) || ... */
 
   CHECK_STRTOX_RESULT();

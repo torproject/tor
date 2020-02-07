@@ -36,6 +36,6 @@ struct smartlist_t *get_current_process_environment_variables(void);
 
 void set_environment_variable_in_smartlist(struct smartlist_t *env_vars,
                                            const char *new_var,
-                                           void (*free_old)(void*),
+                                           void (*free_old)(void *),
                                            int free_p);
 #endif /* !defined(TOR_ENV_H) */

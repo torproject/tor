@@ -30,7 +30,7 @@
 static const char default_fname[] = "sr-state";
 
 /** String representation of a protocol phase. */
-static const char *phase_str[] = { "unknown", "commit", "reveal" };
+static const char *phase_str[] = {"unknown", "commit", "reveal"};
 
 /** Our shared random protocol state. There is only one possible state per
  * protocol run so this is the global state which is reset at every run once
@@ -51,9 +51,9 @@ static const char dstate_cur_srv_key[] = "SharedRandCurrentValue";
  * members with CONF_CHECK_VAR_TYPE. */
 DUMMY_TYPECHECK_INSTANCE(sr_disk_state_t);
 
-#define VAR(varname,conftype,member,initvalue)                          \
+#define VAR(varname, conftype, member, initvalue) \
   CONFIG_VAR_ETYPE(sr_disk_state_t, varname, conftype, member, 0, initvalue)
-#define V(member,conftype,initvalue)            \
+#define V(member, conftype, initvalue) \
   VAR(#member, conftype, member, initvalue)
 
 /** Our persistent state magic number. */
@@ -79,21 +79,22 @@ static const config_var_t state_vars[] = {
 /** "Extra" variable in the state that receives lines we can't parse. This
  * lets us preserve options from versions of Tor newer than us. */
 static const struct_member_t state_extra_var = {
-  .name = "__extra",
-  .type = CONFIG_TYPE_LINELIST,
-  .offset = offsetof(sr_disk_state_t, ExtraLines),
+    .name = "__extra",
+    .type = CONFIG_TYPE_LINELIST,
+    .offset = offsetof(sr_disk_state_t, ExtraLines),
 };
 
 /** Configuration format of sr_disk_state_t. */
 static const config_format_t state_format = {
-  .size = sizeof(sr_disk_state_t),
-  .magic = {
-   "sr_disk_state_t",
-   SR_DISK_STATE_MAGIC,
-   offsetof(sr_disk_state_t, magic_),
-  },
-  .vars = state_vars,
-  .extra = &state_extra_var,
+    .size = sizeof(sr_disk_state_t),
+    .magic =
+        {
+            "sr_disk_state_t",
+            SR_DISK_STATE_MAGIC,
+            offsetof(sr_disk_state_t, magic_),
+        },
+    .vars = state_vars,
+    .extra = &state_extra_var,
 };
 
 /** Global configuration manager for the shared-random state file */
@@ -193,15 +194,15 @@ commit_add_to_state(sr_commit_t *commit, sr_state_t *state)
   tor_assert(commit);
   tor_assert(state);
 
-  saved_commit = digestmap_set(state->commits, commit->rsa_identity,
-                               commit);
+  saved_commit = digestmap_set(state->commits, commit->rsa_identity, commit);
   if (saved_commit != NULL) {
     /* This means we already have that commit in our state so adding twice
      * the same commit is either a code flow error, a corrupted disk state
      * or some new unknown issue. */
-    log_warn(LD_DIR, "SR: Commit from %s exists in our state while "
-                     "adding it: '%s'", sr_commit_get_rsa_fpr(commit),
-                     commit->encoded_commit);
+    log_warn(LD_DIR,
+             "SR: Commit from %s exists in our state while "
+             "adding it: '%s'",
+             sr_commit_get_rsa_fpr(commit), commit->encoded_commit);
     sr_commit_free(saved_commit);
   }
 }
@@ -214,8 +215,7 @@ commit_free_(void *p)
   sr_commit_free_(p);
 }
 
-#define state_free(val) \
-  FREE_AND_NULL(sr_state_t, state_free_, (val))
+#define state_free(val) FREE_AND_NULL(sr_state_t, state_free_, (val))
 
 /** Free a state that was allocated with state_new(). */
 static void
@@ -332,15 +332,14 @@ disk_state_validate(const sr_disk_state_t *state)
 
   return 0;
 
- invalid:
+invalid:
   return -1;
 }
 
 /** Parse the Commit line(s) in the disk state and translate them to the
  * the memory state. Return 0 on success else -1 on error. */
 static int
-disk_state_parse_commits(sr_state_t *state,
-                         const sr_disk_state_t *disk_state)
+disk_state_parse_commits(sr_state_t *state, const sr_disk_state_t *disk_state)
 {
   config_line_t *line;
   smartlist_t *args = NULL;
@@ -352,15 +351,14 @@ disk_state_parse_commits(sr_state_t *state,
     sr_commit_t *commit = NULL;
 
     /* Extra safety. */
-    if (strcasecmp(line->key, dstate_commit_key) ||
-        line->value == NULL) {
+    if (strcasecmp(line->key, dstate_commit_key) || line->value == NULL) {
       /* Ignore any lines that are not commits. */
       tor_fragile_assert();
       continue;
     }
     args = smartlist_new();
     smartlist_split_string(args, line->value, " ",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+                           SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, 0);
     if (smartlist_len(args) < 3) {
       log_warn(LD_BUG, "SR: Too few arguments in Commit Line: %s",
                escaped(line->value));
@@ -385,7 +383,7 @@ disk_state_parse_commits(sr_state_t *state,
 
   return 0;
 
- error:
+error:
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
   smartlist_free(args);
   return -1;
@@ -405,10 +403,12 @@ disk_state_parse_srv(const char *value, sr_srv_t *dst)
 
   args = smartlist_new();
   smartlist_split_string(args, value, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+                         SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(args) < 2) {
-    log_warn(LD_BUG, "SR: Too few arguments in shared random value. "
-             "Line: %s", escaped(value));
+    log_warn(LD_BUG,
+             "SR: Too few arguments in shared random value. "
+             "Line: %s",
+             escaped(value));
     goto error;
   }
   srv = sr_parse_srv(args);
@@ -420,7 +420,7 @@ disk_state_parse_srv(const char *value, sr_srv_t *dst)
   tor_free(srv);
   ret = 0;
 
- error:
+error:
   SMARTLIST_FOREACH(args, char *, s, tor_free(s));
   smartlist_free(args);
   return ret;
@@ -472,7 +472,7 @@ disk_state_parse_sr_values(sr_state_t *state,
   }
 
   return 0;
- bad:
+bad:
   tor_free(srv);
   return -1;
 }
@@ -506,7 +506,7 @@ disk_state_parse(const sr_disk_state_t *new_disk_state)
   /* Great! This new state contains everything we had on disk. */
   return new_state;
 
- error:
+error:
   state_free(new_state);
   return NULL;
 }
@@ -522,15 +522,13 @@ disk_state_put_commit_line(const sr_commit_t *commit, config_line_t *line)
   tor_assert(line);
 
   if (!fast_mem_is_zero(commit->encoded_reveal,
-                       sizeof(commit->encoded_reveal))) {
+                        sizeof(commit->encoded_reveal))) {
     /* Add extra whitespace so we can format the line correctly. */
     tor_asprintf(&reveal_str, " %s", commit->encoded_reveal);
   }
-  tor_asprintf(&line->value, "%u %s %s %s%s",
-               SR_PROTO_VERSION,
+  tor_asprintf(&line->value, "%u %s %s %s%s", SR_PROTO_VERSION,
                crypto_digest_algorithm_get_name(commit->alg),
-               sr_commit_get_rsa_fpr(commit),
-               commit->encoded_commit,
+               sr_commit_get_rsa_fpr(commit), commit->encoded_commit,
                reveal_str != NULL ? reveal_str : "");
   if (reveal_str != NULL) {
     memwipe(reveal_str, 0, strlen(reveal_str));
@@ -611,12 +609,13 @@ disk_state_update(void)
 
   /* Parse the commits and construct config line(s). */
   next = &sr_disk_state->Commit;
-  DIGESTMAP_FOREACH(sr_state->commits, key, sr_commit_t *, commit) {
+  DIGESTMAP_FOREACH (sr_state->commits, key, sr_commit_t *, commit) {
     *next = line = tor_malloc_zero(sizeof(*line));
     line->key = tor_strdup(dstate_commit_key);
     disk_state_put_commit_line(commit, line);
     next = &(line->next);
-  } DIGESTMAP_FOREACH_END;
+  }
+  DIGESTMAP_FOREACH_END;
 }
 
 /** Load state from disk and put it into our disk state. If the state passes
@@ -648,8 +647,7 @@ disk_state_load_from_disk_impl(const char *fname)
 
   /* Read content of file so we can parse it. */
   if ((content = read_file_to_str(fname, 0, NULL)) == NULL) {
-    log_warn(LD_FS, "SR: Unable to read SR state file %s",
-             escaped(fname));
+    log_warn(LD_FS, "SR: Unable to read SR state file %s", escaped(fname));
     ret = -errno;
     goto error;
   }
@@ -693,7 +691,7 @@ disk_state_load_from_disk_impl(const char *fname)
   log_info(LD_DIR, "SR: State loaded successfully from file %s", fname);
   return 0;
 
- error:
+error:
   disk_state_free(disk_state);
   tor_free(content);
   return ret;
@@ -737,7 +735,7 @@ disk_state_save_to_disk(void)
   ret = 0;
   log_debug(LD_DIR, "SR: Saved state to file %s", fname);
 
- done:
+done:
   tor_free(fname);
   tor_free(content);
   return ret;
@@ -788,8 +786,8 @@ new_protocol_run(time_t valid_after)
            sr_state->n_protocol_runs);
 
   /* Generate fresh commitments for this protocol run */
-  our_commitment = sr_generate_our_commit(valid_after,
-                                          get_my_v3_authority_cert());
+  our_commitment =
+      sr_generate_our_commit(valid_after, get_my_v3_authority_cert());
   if (our_commitment) {
     /* Add our commitment to our state. In case we are unable to create one
      * (highly unlikely), we won't vote for this protocol run since our
@@ -826,8 +824,7 @@ state_query_get_(sr_state_object_t obj_type, const void *data)
   void *obj = NULL;
 
   switch (obj_type) {
-  case SR_STATE_OBJ_COMMIT:
-  {
+  case SR_STATE_OBJ_COMMIT: {
     obj = state_query_get_commit(data);
     break;
   }
@@ -860,8 +857,7 @@ state_query_put_(sr_state_object_t obj_type, void *data)
     return;
 
   switch (obj_type) {
-  case SR_STATE_OBJ_COMMIT:
-  {
+  case SR_STATE_OBJ_COMMIT: {
     sr_commit_t *commit = data;
     tor_assert(commit);
     /* commit_add_to_state() frees the old commit, if there is one */
@@ -869,29 +865,29 @@ state_query_put_(sr_state_object_t obj_type, void *data)
     break;
   }
   case SR_STATE_OBJ_CURSRV:
-      /* Check if the new pointer is the same as the old one: if it is, it's
-       * probably a bug. The caller may have confused current and previous,
-       * or they may have forgotten to sr_srv_dup().
-       * Putting NULL multiple times is allowed. */
-    if (!BUG(data && sr_state->current_srv == (sr_srv_t *) data)) {
+    /* Check if the new pointer is the same as the old one: if it is, it's
+     * probably a bug. The caller may have confused current and previous,
+     * or they may have forgotten to sr_srv_dup().
+     * Putting NULL multiple times is allowed. */
+    if (!BUG(data && sr_state->current_srv == (sr_srv_t *)data)) {
       /* We own the old SRV, so we need to free it.  */
       state_query_del_(SR_STATE_OBJ_CURSRV, NULL);
-      sr_state->current_srv = (sr_srv_t *) data;
+      sr_state->current_srv = (sr_srv_t *)data;
     }
     break;
   case SR_STATE_OBJ_PREVSRV:
-      /* Check if the new pointer is the same as the old one: if it is, it's
-       * probably a bug. The caller may have confused current and previous,
-       * or they may have forgotten to sr_srv_dup().
-       * Putting NULL multiple times is allowed. */
-    if (!BUG(data && sr_state->previous_srv == (sr_srv_t *) data)) {
+    /* Check if the new pointer is the same as the old one: if it is, it's
+     * probably a bug. The caller may have confused current and previous,
+     * or they may have forgotten to sr_srv_dup().
+     * Putting NULL multiple times is allowed. */
+    if (!BUG(data && sr_state->previous_srv == (sr_srv_t *)data)) {
       /* We own the old SRV, so we need to free it.  */
       state_query_del_(SR_STATE_OBJ_PREVSRV, NULL);
-      sr_state->previous_srv = (sr_srv_t *) data;
+      sr_state->previous_srv = (sr_srv_t *)data;
     }
     break;
   case SR_STATE_OBJ_VALID_AFTER:
-    sr_state->valid_after = *((time_t *) data);
+    sr_state->valid_after = *((time_t *)data);
     break;
   /* It's not allowed to change the phase nor the full commitments map from
    * the state. The phase is decided during a strict process post voting and
@@ -912,13 +908,13 @@ state_query_del_all_(sr_state_object_t obj_type)
     return;
 
   switch (obj_type) {
-  case SR_STATE_OBJ_COMMIT:
-  {
+  case SR_STATE_OBJ_COMMIT: {
     /* We are in a new protocol run so cleanup commitments. */
-    DIGESTMAP_FOREACH_MODIFY(sr_state->commits, key, sr_commit_t *, c) {
+    DIGESTMAP_FOREACH_MODIFY (sr_state->commits, key, sr_commit_t *, c) {
       sr_commit_free(c);
       MAP_DEL_CURRENT(key);
-    } DIGESTMAP_FOREACH_END;
+    }
+    DIGESTMAP_FOREACH_END;
     break;
   }
   /* The following objects are _NOT_ supposed to be removed. */
@@ -937,7 +933,7 @@ state_query_del_all_(sr_state_object_t obj_type)
 static void
 state_query_del_(sr_state_object_t obj_type, void *data)
 {
-  (void) data;
+  (void)data;
 
   if (BUG(!sr_state))
     return;
@@ -970,8 +966,8 @@ state_query_del_(sr_state_object_t obj_type, void *data)
  * This should be the only entry point to our memory state. It's used by all
  * our state accessors and should be in the future. */
 static void
-state_query(sr_state_action_t action, sr_state_object_t obj_type,
-            void *data, void **out)
+state_query(sr_state_action_t action, sr_state_object_t obj_type, void *data,
+            void **out)
 {
   switch (action) {
   case SR_STATE_ACTION_GET:
@@ -1034,7 +1030,7 @@ void
 sr_state_set_valid_after(time_t valid_after)
 {
   state_query(SR_STATE_ACTION_PUT, SR_STATE_OBJ_VALID_AFTER,
-              (void *) &valid_after, NULL);
+              (void *)&valid_after, NULL);
 }
 
 /** Return the phase we are currently in according to our state. */
@@ -1043,7 +1039,7 @@ sr_state_get_phase(void)
 {
   void *ptr;
   state_query(SR_STATE_ACTION_GET, SR_STATE_OBJ_PHASE, NULL, &ptr);
-  return *(sr_phase_t *) ptr;
+  return *(sr_phase_t *)ptr;
 }
 
 /** Return the previous SRV value from our state. Value CAN be NULL.
@@ -1053,8 +1049,7 @@ const sr_srv_t *
 sr_state_get_previous_srv(void)
 {
   const sr_srv_t *srv;
-  state_query(SR_STATE_ACTION_GET, SR_STATE_OBJ_PREVSRV, NULL,
-              (void *) &srv);
+  state_query(SR_STATE_ACTION_GET, SR_STATE_OBJ_PREVSRV, NULL, (void *)&srv);
   return srv;
 }
 
@@ -1063,8 +1058,7 @@ sr_state_get_previous_srv(void)
 void
 sr_state_set_previous_srv(const sr_srv_t *srv)
 {
-  state_query(SR_STATE_ACTION_PUT, SR_STATE_OBJ_PREVSRV, (void *) srv,
-              NULL);
+  state_query(SR_STATE_ACTION_PUT, SR_STATE_OBJ_PREVSRV, (void *)srv, NULL);
 }
 
 /** Return the current SRV value from our state. Value CAN be NULL.
@@ -1074,8 +1068,7 @@ const sr_srv_t *
 sr_state_get_current_srv(void)
 {
   const sr_srv_t *srv;
-  state_query(SR_STATE_ACTION_GET, SR_STATE_OBJ_CURSRV, NULL,
-              (void *) &srv);
+  state_query(SR_STATE_ACTION_GET, SR_STATE_OBJ_CURSRV, NULL, (void *)&srv);
   return srv;
 }
 
@@ -1084,8 +1077,7 @@ sr_state_get_current_srv(void)
 void
 sr_state_set_current_srv(const sr_srv_t *srv)
 {
-  state_query(SR_STATE_ACTION_PUT, SR_STATE_OBJ_CURSRV, (void *) srv,
-              NULL);
+  state_query(SR_STATE_ACTION_PUT, SR_STATE_OBJ_CURSRV, (void *)srv, NULL);
 }
 
 /** Clean all the SRVs in our state. */
@@ -1102,8 +1094,8 @@ digestmap_t *
 sr_state_get_commits(void)
 {
   digestmap_t *commits;
-  state_query(SR_STATE_ACTION_GET, SR_STATE_OBJ_COMMITS,
-              NULL, (void *) &commits);
+  state_query(SR_STATE_ACTION_GET, SR_STATE_OBJ_COMMITS, NULL,
+              (void *)&commits);
   tor_assert(commits);
   return commits;
 }
@@ -1141,7 +1133,7 @@ sr_state_update(time_t valid_after)
      * and have no commit, generate one. Chances are that we are booting up
      * so let's have a commit in our state for the next voting period. */
     sr_commit_t *our_commit =
-      sr_generate_our_commit(valid_after, get_my_v3_authority_cert());
+        sr_generate_our_commit(valid_after, get_my_v3_authority_cert());
     if (our_commit) {
       /* Add our commitment to our state. In case we are unable to create one
        * (highly unlikely), we won't vote for this protocol run since our
@@ -1165,10 +1157,11 @@ sr_state_update(time_t valid_after)
   { /* Debugging. */
     char tbuf[ISO_TIME_LEN + 1];
     format_iso_time(tbuf, valid_after);
-    log_info(LD_DIR, "SR: State prepared for upcoming voting period (%s). "
+    log_info(LD_DIR,
+             "SR: State prepared for upcoming voting period (%s). "
              "Upcoming phase is %s (counters: %d commit & %d reveal rounds).",
-             tbuf, get_phase_str(sr_state->phase),
-             sr_state->n_commit_rounds, sr_state->n_reveal_rounds);
+             tbuf, get_phase_str(sr_state->phase), sr_state->n_commit_rounds,
+             sr_state->n_reveal_rounds);
   }
 }
 
@@ -1181,8 +1174,8 @@ sr_state_get_commit(const char *rsa_identity)
 
   tor_assert(rsa_identity);
 
-  state_query(SR_STATE_ACTION_GET, SR_STATE_OBJ_COMMIT,
-              (void *) rsa_identity, (void *) &commit);
+  state_query(SR_STATE_ACTION_GET, SR_STATE_OBJ_COMMIT, (void *)rsa_identity,
+              (void *)&commit);
   return commit;
 }
 
@@ -1194,8 +1187,7 @@ sr_state_add_commit(sr_commit_t *commit)
   tor_assert(commit);
 
   /* Put the commit to the global state. */
-  state_query(SR_STATE_ACTION_PUT, SR_STATE_OBJ_COMMIT,
-              (void *) commit, NULL);
+  state_query(SR_STATE_ACTION_PUT, SR_STATE_OBJ_COMMIT, (void *)commit, NULL);
 
   log_debug(LD_DIR, "SR: Commit from %s has been added to our state.",
             sr_commit_get_rsa_fpr(commit));
@@ -1309,21 +1301,20 @@ sr_state_init(int save_to_disk, int read_from_disk)
       /* We have a state on disk but it contains something we couldn't parse
        * or an invalid entry in the state file. Let's remove it since it's
        * obviously unusable and replace it by an new fresh state below. */
-    case ENOENT:
-      {
-        /* No state on disk so allocate our states for the first time. */
-        sr_state_t *new_state = state_new(default_fname, now);
-        sr_disk_state_t *new_disk_state = disk_state_new(now);
-        state_set(new_state);
-        /* It's important to set our disk state pointer since the save call
-         * below uses it to synchronized it with our memory state.  */
-        disk_state_set(new_disk_state);
-        /* No entry, let's save our new state to disk. */
-        if (save_to_disk && disk_state_save_to_disk() < 0) {
-          goto error;
-        }
-        break;
+    case ENOENT: {
+      /* No state on disk so allocate our states for the first time. */
+      sr_state_t *new_state = state_new(default_fname, now);
+      sr_disk_state_t *new_disk_state = disk_state_new(now);
+      state_set(new_state);
+      /* It's important to set our disk state pointer since the save call
+       * below uses it to synchronized it with our memory state.  */
+      disk_state_set(new_disk_state);
+      /* No entry, let's save our new state to disk. */
+      if (save_to_disk && disk_state_save_to_disk() < 0) {
+        goto error;
       }
+      break;
+    }
     default:
       /* Big problem. Not possible. */
       tor_assert(0);
@@ -1337,7 +1328,7 @@ sr_state_init(int save_to_disk, int read_from_disk)
   }
   return 0;
 
- error:
+error:
   return -1;
 }
 

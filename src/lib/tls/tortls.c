@@ -24,8 +24,8 @@
 #include "lib/subsys/subsys.h"
 
 #ifdef _WIN32
-  #include <winsock2.h>
-  #include <ws2tcpip.h>
+#  include <winsock2.h>
+#  include <ws2tcpip.h>
 #endif
 
 #include <time.h>
@@ -53,17 +53,17 @@ int
 tor_errno_to_tls_error(int e)
 {
   switch (e) {
-    case SOCK_ERRNO(ECONNRESET): // most common
-      return TOR_TLS_ERROR_CONNRESET;
-    case SOCK_ERRNO(ETIMEDOUT):
-      return TOR_TLS_ERROR_TIMEOUT;
-    case SOCK_ERRNO(EHOSTUNREACH):
-    case SOCK_ERRNO(ENETUNREACH):
-      return TOR_TLS_ERROR_NO_ROUTE;
-    case SOCK_ERRNO(ECONNREFUSED):
-      return TOR_TLS_ERROR_CONNREFUSED; // least common
-    default:
-      return TOR_TLS_ERROR_MISC;
+  case SOCK_ERRNO(ECONNRESET): // most common
+    return TOR_TLS_ERROR_CONNRESET;
+  case SOCK_ERRNO(ETIMEDOUT):
+    return TOR_TLS_ERROR_TIMEOUT;
+  case SOCK_ERRNO(EHOSTUNREACH):
+  case SOCK_ERRNO(ENETUNREACH):
+    return TOR_TLS_ERROR_NO_ROUTE;
+  case SOCK_ERRNO(ECONNREFUSED):
+    return TOR_TLS_ERROR_CONNREFUSED; // least common
+  default:
+    return TOR_TLS_ERROR_MISC;
   }
 }
 
@@ -73,8 +73,7 @@ tor_errno_to_tls_error(int e)
  * that we use in server mode (auth, ID); otherwise, provide the certs that we
  * use in client mode. (link, ID) */
 int
-tor_tls_get_my_certs(int server,
-                     const tor_x509_cert_t **link_cert_out,
+tor_tls_get_my_certs(int server, const tor_x509_cert_t **link_cert_out,
                      const tor_x509_cert_t **id_cert_out)
 {
   tor_tls_context_t *ctx = tor_tls_context_get(server);
@@ -101,7 +100,7 @@ crypto_pk_t *
 tor_tls_get_my_client_auth_key(void)
 {
   tor_tls_context_t *context = tor_tls_context_get(0);
-  if (! context)
+  if (!context)
     return NULL;
   return context->auth_key;
 }
@@ -157,16 +156,26 @@ tor_tls_err_to_string(int err)
   if (err >= 0)
     return "[Not an error.]";
   switch (err) {
-    case TOR_TLS_ERROR_MISC: return "misc error";
-    case TOR_TLS_ERROR_IO: return "unexpected close";
-    case TOR_TLS_ERROR_CONNREFUSED: return "connection refused";
-    case TOR_TLS_ERROR_CONNRESET: return "connection reset";
-    case TOR_TLS_ERROR_NO_ROUTE: return "host unreachable";
-    case TOR_TLS_ERROR_TIMEOUT: return "connection timed out";
-    case TOR_TLS_CLOSE: return "closed";
-    case TOR_TLS_WANTREAD: return "want to read";
-    case TOR_TLS_WANTWRITE: return "want to write";
-    default: return "(unknown error code)";
+  case TOR_TLS_ERROR_MISC:
+    return "misc error";
+  case TOR_TLS_ERROR_IO:
+    return "unexpected close";
+  case TOR_TLS_ERROR_CONNREFUSED:
+    return "connection refused";
+  case TOR_TLS_ERROR_CONNRESET:
+    return "connection reset";
+  case TOR_TLS_ERROR_NO_ROUTE:
+    return "host unreachable";
+  case TOR_TLS_ERROR_TIMEOUT:
+    return "connection timed out";
+  case TOR_TLS_CLOSE:
+    return "closed";
+  case TOR_TLS_WANTREAD:
+    return "want to read";
+  case TOR_TLS_WANTWRITE:
+    return "want to write";
+  default:
+    return "(unknown error code)";
   }
 }
 
@@ -179,10 +188,8 @@ tor_tls_err_to_string(int err)
  * is set in <b>flags</b>, use that ECDHE group if possible; otherwise use
  * the default ECDHE group. */
 int
-tor_tls_context_init(unsigned flags,
-                     crypto_pk_t *client_identity,
-                     crypto_pk_t *server_identity,
-                     unsigned int key_lifetime)
+tor_tls_context_init(unsigned flags, crypto_pk_t *client_identity,
+                     crypto_pk_t *server_identity, unsigned int key_lifetime)
 {
   int rv1 = 0;
   int rv2 = 0;
@@ -195,8 +202,7 @@ tor_tls_context_init(unsigned flags,
 
     tor_assert(server_identity != NULL);
 
-    rv1 = tor_tls_context_init_one(&server_tls_context,
-                                   server_identity,
+    rv1 = tor_tls_context_init_one(&server_tls_context, server_identity,
                                    key_lifetime, flags, 0);
 
     if (rv1 >= 0) {
@@ -209,16 +215,12 @@ tor_tls_context_init(unsigned flags,
         tor_tls_context_decref(old_ctx);
       }
     } else {
-      tls_log_errors(NULL, LOG_WARN, LD_CRYPTO,
-                     "constructing a TLS context");
+      tls_log_errors(NULL, LOG_WARN, LD_CRYPTO, "constructing a TLS context");
     }
   } else {
     if (server_identity != NULL) {
-      rv1 = tor_tls_context_init_one(&server_tls_context,
-                                     server_identity,
-                                     key_lifetime,
-                                     flags,
-                                     0);
+      rv1 = tor_tls_context_init_one(&server_tls_context, server_identity,
+                                     key_lifetime, flags, 0);
       if (rv1 < 0)
         tls_log_errors(NULL, LOG_WARN, LD_CRYPTO,
                        "constructing a server TLS context");
@@ -231,14 +233,11 @@ tor_tls_context_init(unsigned flags,
       }
     }
 
-    rv2 = tor_tls_context_init_one(&client_tls_context,
-                                   client_identity,
-                                   key_lifetime,
-                                   flags,
-                                   1);
+    rv2 = tor_tls_context_init_one(&client_tls_context, client_identity,
+                                   key_lifetime, flags, 1);
     if (rv2 < 0)
-        tls_log_errors(NULL, LOG_WARN, LD_CRYPTO,
-                       "constructing a client TLS context");
+      tls_log_errors(NULL, LOG_WARN, LD_CRYPTO,
+                     "constructing a client TLS context");
   }
 
   return MIN(rv1, rv2);
@@ -251,16 +250,12 @@ tor_tls_context_init(unsigned flags,
  * the new SSL context.
  */
 int
-tor_tls_context_init_one(tor_tls_context_t **ppcontext,
-                         crypto_pk_t *identity,
-                         unsigned int key_lifetime,
-                         unsigned int flags,
+tor_tls_context_init_one(tor_tls_context_t **ppcontext, crypto_pk_t *identity,
+                         unsigned int key_lifetime, unsigned int flags,
                          int is_client)
 {
-  tor_tls_context_t *new_ctx = tor_tls_context_new(identity,
-                                                   key_lifetime,
-                                                   flags,
-                                                   is_client);
+  tor_tls_context_t *new_ctx =
+      tor_tls_context_new(identity, key_lifetime, flags, is_client);
   tor_tls_context_t *old_ctx = *ppcontext;
 
   if (new_ctx != NULL) {
@@ -281,7 +276,7 @@ tor_tls_context_init_one(tor_tls_context_t **ppcontext,
 #define RSA_LINK_KEY_BITS 2048
 
 /** How long do identity certificates live? (sec) */
-#define IDENTITY_CERT_LIFETIME  (365*24*60*60)
+#define IDENTITY_CERT_LIFETIME (365 * 24 * 60 * 60)
 
 /**
  * Initialize the certificates and keys for a TLS context <b>result</b>
@@ -290,8 +285,7 @@ tor_tls_context_init_one(tor_tls_context_t **ppcontext,
  */
 int
 tor_tls_context_init_certificates(tor_tls_context_t *result,
-                                  crypto_pk_t *identity,
-                                  unsigned key_lifetime,
+                                  crypto_pk_t *identity, unsigned key_lifetime,
                                   unsigned flags)
 {
   (void)flags;
@@ -311,19 +305,19 @@ tor_tls_context_init_certificates(tor_tls_context_t *result,
   /* Generate short-term RSA key for use with TLS. */
   if (!(rsa = crypto_pk_new()))
     goto error;
-  if (crypto_pk_generate_key_with_bits(rsa, RSA_LINK_KEY_BITS)<0)
+  if (crypto_pk_generate_key_with_bits(rsa, RSA_LINK_KEY_BITS) < 0)
     goto error;
 
   /* Generate short-term RSA key for use in the in-protocol ("v3")
    * authentication handshake. */
   if (!(rsa_auth = crypto_pk_new()))
     goto error;
-  if (crypto_pk_generate_key(rsa_auth)<0)
+  if (crypto_pk_generate_key(rsa_auth) < 0)
     goto error;
 
   /* Create a link certificate signed by identity key. */
-  cert = tor_tls_create_certificate(rsa, identity, nickname, nn2,
-                                    key_lifetime);
+  cert =
+      tor_tls_create_certificate(rsa, identity, nickname, nn2, key_lifetime);
   /* Create self-signed certificate for identity key. */
   idcert = tor_tls_create_certificate(identity, identity, nn2, nn2,
                                       IDENTITY_CERT_LIFETIME);
@@ -349,7 +343,7 @@ tor_tls_context_init_certificates(tor_tls_context_t *result,
   rsa_auth = NULL;
 
   rv = 0;
- error:
+error:
 
   tor_free(nickname);
   tor_free(nn2);
@@ -392,8 +386,9 @@ tor_tls_free_(tor_tls_t *tls)
     return;
   tor_assert(tls->ssl);
   {
-    size_t r,w;
-    tor_tls_get_n_raw_bytes(tls,&r,&w); /* ensure written_by_tls is updated */
+    size_t r, w;
+    tor_tls_get_n_raw_bytes(tls, &r,
+                            &w); /* ensure written_by_tls is updated */
   }
   tor_tls_impl_free(tls->ssl);
   tls->ssl = NULL;
@@ -425,21 +420,21 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_t **identity)
   if (!cert)
     goto done;
   if (!id_cert) {
-    log_fn(severity,LD_PROTOCOL,"No distinct identity certificate found");
+    log_fn(severity, LD_PROTOCOL, "No distinct identity certificate found");
     goto done;
   }
   peer_x509 = tor_x509_cert_new(cert);
   id_x509 = tor_x509_cert_new(id_cert);
   cert = id_cert = NULL; /* Prevent double-free */
 
-  if (! tor_tls_cert_is_valid(severity, peer_x509, id_x509, time(NULL), 0)) {
+  if (!tor_tls_cert_is_valid(severity, peer_x509, id_x509, time(NULL), 0)) {
     goto done;
   }
 
   *identity = tor_tls_cert_get_key(id_x509);
   rv = 0;
 
- done:
+done:
   tor_x509_cert_impl_free(cert);
   tor_x509_cert_impl_free(id_cert);
   tor_x509_cert_free(peer_x509);
@@ -455,7 +450,4 @@ subsys_tortls_shutdown(void)
 }
 
 const subsys_fns_t sys_tortls = {
-  .name = "tortls",
-  .level = -50,
-  .shutdown = subsys_tortls_shutdown
-};
+    .name = "tortls", .level = -50, .shutdown = subsys_tortls_shutdown};

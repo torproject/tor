@@ -27,26 +27,26 @@
    I hope that zlib 1.2.6 doesn't break these too.
 */
 #ifndef _LARGEFILE64_SOURCE
-#define _LARGEFILE64_SOURCE 0
+#  define _LARGEFILE64_SOURCE 0
 #endif
 #ifndef _LFS64_LARGEFILE
-#define _LFS64_LARGEFILE 0
+#  define _LFS64_LARGEFILE 0
 #endif
 #ifndef _FILE_OFFSET_BITS
-#define _FILE_OFFSET_BITS 0
+#  define _FILE_OFFSET_BITS 0
 #endif
 #ifndef off64_t
-#define off64_t int64_t
+#  define off64_t int64_t
 #endif
 
 #include <zlib.h>
 
 #if defined ZLIB_VERNUM && ZLIB_VERNUM < 0x1200
-#error "We require zlib version 1.2 or later."
+#  error "We require zlib version 1.2 or later."
 #endif
 
-static size_t tor_zlib_state_size_precalc(int inflate,
-                                          int windowbits, int memlevel);
+static size_t tor_zlib_state_size_precalc(int inflate, int windowbits,
+                                          int memlevel);
 
 /** Total number of bytes allocated for zlib state */
 static atomic_counter_t total_zlib_allocation;
@@ -56,11 +56,15 @@ static int
 memory_level(compression_level_t level)
 {
   switch (level) {
-    default:
-    case BEST_COMPRESSION: return 9;
-    case HIGH_COMPRESSION: return 8;
-    case MEDIUM_COMPRESSION: return 7;
-    case LOW_COMPRESSION: return 6;
+  default:
+  case BEST_COMPRESSION:
+    return 9;
+  case HIGH_COMPRESSION:
+    return 8;
+  case MEDIUM_COMPRESSION:
+    return 7;
+  case LOW_COMPRESSION:
+    return 6;
   }
 }
 
@@ -71,11 +75,14 @@ method_bits(compress_method_t method, compression_level_t level)
   /* Bits+16 means "use gzip" in zlib >= 1.2 */
   const int flag = method == GZIP_METHOD ? 16 : 0;
   switch (level) {
-    default:
-    case BEST_COMPRESSION:
-    case HIGH_COMPRESSION: return flag + 15;
-    case MEDIUM_COMPRESSION: return flag + 13;
-    case LOW_COMPRESSION: return flag + 11;
+  default:
+  case BEST_COMPRESSION:
+  case HIGH_COMPRESSION:
+    return flag + 15;
+  case MEDIUM_COMPRESSION:
+    return flag + 13;
+  case LOW_COMPRESSION:
+    return flag + 11;
   }
 }
 
@@ -98,7 +105,7 @@ tor_zlib_get_version_str(void)
 }
 
 /** Return a string representation of the version of the version of zlib
-* used at compilation. */
+ * used at compilation. */
 const char *
 tor_zlib_get_header_version_str(void)
 {
@@ -137,7 +144,7 @@ tor_zlib_state_size_precalc(int inflate_, int windowbits, int memlevel)
        for small objects."
     */
     return sizeof(tor_zlib_compress_state_t) + sizeof(struct z_stream_s) +
-      (1 << 15) + A_FEW_KILOBYTES;
+           (1 << 15) + A_FEW_KILOBYTES;
   } else {
     /* Also from zconf.h:
 
@@ -146,7 +153,7 @@ tor_zlib_state_size_precalc(int inflate_, int windowbits, int memlevel)
         ... plus a few kilobytes for small objects."
     */
     return sizeof(tor_zlib_compress_state_t) + sizeof(struct z_stream_s) +
-      (1 << (windowbits + 2)) + (1 << (memlevel + 9)) + A_FEW_KILOBYTES;
+           (1 << (windowbits + 2)) + (1 << (memlevel + 9)) + A_FEW_KILOBYTES;
   }
 #undef A_FEW_KILOBYTES
 }
@@ -155,14 +162,13 @@ tor_zlib_state_size_precalc(int inflate_, int windowbits, int memlevel)
  * <b>method</b>. If <b>compress</b>, it's for compression; otherwise it's for
  * decompression. */
 tor_zlib_compress_state_t *
-tor_zlib_compress_new(int compress_,
-                      compress_method_t method,
+tor_zlib_compress_new(int compress_, compress_method_t method,
                       compression_level_t compression_level)
 {
   tor_zlib_compress_state_t *out;
   int bits, memlevel;
 
-  if (! compress_) {
+  if (!compress_) {
     /* use this setting for decompression, since we might have the
      * max number of window bits */
     compression_level = BEST_COMPRESSION;
@@ -176,10 +182,9 @@ tor_zlib_compress_new(int compress_,
   bits = method_bits(method, compression_level);
   memlevel = memory_level(compression_level);
   if (compress_) {
-    if (deflateInit2(&out->stream, Z_BEST_COMPRESSION, Z_DEFLATED,
-                     bits, memlevel,
-                     Z_DEFAULT_STRATEGY) != Z_OK)
-    goto err; // LCOV_EXCL_LINE
+    if (deflateInit2(&out->stream, Z_BEST_COMPRESSION, Z_DEFLATED, bits,
+                     memlevel, Z_DEFAULT_STRATEGY) != Z_OK)
+      goto err; // LCOV_EXCL_LINE
   } else {
     if (inflateInit2(&out->stream, bits) != Z_OK)
       goto err; // LCOV_EXCL_LINE
@@ -190,7 +195,7 @@ tor_zlib_compress_new(int compress_,
 
   return out;
 
- err:
+err:
   tor_free(out);
   return NULL;
 }
@@ -207,21 +212,19 @@ tor_zlib_compress_new(int compress_,
  * Return TOR_COMPRESS_ERROR if the stream is corrupt.
  */
 tor_compress_output_t
-tor_zlib_compress_process(tor_zlib_compress_state_t *state,
-                          char **out, size_t *out_len,
-                          const char **in, size_t *in_len,
+tor_zlib_compress_process(tor_zlib_compress_state_t *state, char **out,
+                          size_t *out_len, const char **in, size_t *in_len,
                           int finish)
 {
   int err;
   tor_assert(state != NULL);
-  if (*in_len > UINT_MAX ||
-      *out_len > UINT_MAX) {
+  if (*in_len > UINT_MAX || *out_len > UINT_MAX) {
     return TOR_COMPRESS_ERROR;
   }
 
-  state->stream.next_in = (unsigned char*) *in;
+  state->stream.next_in = (unsigned char *)*in;
   state->stream.avail_in = (unsigned int)*in_len;
-  state->stream.next_out = (unsigned char*) *out;
+  state->stream.next_out = (unsigned char *)*out;
   state->stream.avail_out = (unsigned int)*out_len;
 
   if (state->compress) {
@@ -230,38 +233,36 @@ tor_zlib_compress_process(tor_zlib_compress_state_t *state,
     err = inflate(&state->stream, finish ? Z_FINISH : Z_SYNC_FLUSH);
   }
 
-  state->input_so_far += state->stream.next_in - ((unsigned char*)*in);
-  state->output_so_far += state->stream.next_out - ((unsigned char*)*out);
+  state->input_so_far += state->stream.next_in - ((unsigned char *)*in);
+  state->output_so_far += state->stream.next_out - ((unsigned char *)*out);
 
-  *out = (char*) state->stream.next_out;
+  *out = (char *)state->stream.next_out;
   *out_len = state->stream.avail_out;
-  *in = (const char *) state->stream.next_in;
+  *in = (const char *)state->stream.next_in;
   *in_len = state->stream.avail_in;
 
-  if (! state->compress &&
-      tor_compress_is_compression_bomb(state->input_so_far,
-                                       state->output_so_far)) {
+  if (!state->compress && tor_compress_is_compression_bomb(
+                              state->input_so_far, state->output_so_far)) {
     log_warn(LD_DIR, "Possible zlib bomb; abandoning stream.");
     return TOR_COMPRESS_ERROR;
   }
 
-  switch (err)
-    {
-    case Z_STREAM_END:
-      return TOR_COMPRESS_DONE;
-    case Z_BUF_ERROR:
-      if (state->stream.avail_in == 0 && !finish)
-        return TOR_COMPRESS_OK;
-      return TOR_COMPRESS_BUFFER_FULL;
-    case Z_OK:
-      if (state->stream.avail_out == 0 || finish)
-        return TOR_COMPRESS_BUFFER_FULL;
+  switch (err) {
+  case Z_STREAM_END:
+    return TOR_COMPRESS_DONE;
+  case Z_BUF_ERROR:
+    if (state->stream.avail_in == 0 && !finish)
       return TOR_COMPRESS_OK;
-    default:
-      log_warn(LD_GENERAL, "Gzip returned an error: %s",
-               state->stream.msg ? state->stream.msg : "<no message>");
-      return TOR_COMPRESS_ERROR;
-    }
+    return TOR_COMPRESS_BUFFER_FULL;
+  case Z_OK:
+    if (state->stream.avail_out == 0 || finish)
+      return TOR_COMPRESS_BUFFER_FULL;
+    return TOR_COMPRESS_OK;
+  default:
+    log_warn(LD_GENERAL, "Gzip returned an error: %s",
+             state->stream.msg ? state->stream.msg : "<no message>");
+    return TOR_COMPRESS_ERROR;
+  }
 }
 
 /** Deallocate <b>state</b>. */

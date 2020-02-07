@@ -107,7 +107,7 @@ process_stdout_callback(process_t *process, const char *data, size_t size)
   process_data_t *process_data = process_get_data(process);
   smartlist_add(process_data->stdout_data, tor_strdup(data));
 
- done:
+done:
   return;
 }
 
@@ -121,7 +121,7 @@ process_stderr_callback(process_t *process, const char *data, size_t size)
   process_data_t *process_data = process_get_data(process);
   smartlist_add(process_data->stderr_data, tor_strdup(data));
 
- done:
+done:
   return;
 }
 
@@ -133,7 +133,7 @@ process_exit_callback(process_t *process, process_exit_code_t exit_code)
   process_data_t *process_data = process_get_data(process);
   process_data->exit_code = exit_code;
 
- done:
+done:
   /* Do not free up our process_t. */
   return false;
 }
@@ -157,17 +157,15 @@ test_default_values(void *arg)
   tt_str_op("/path/to/nothing", OP_EQ, process_get_command(process));
 
   /* Make sure we are listed in the list of proccesses. */
-  tt_assert(smartlist_contains(process_get_all_processes(),
-                               process));
+  tt_assert(smartlist_contains(process_get_all_processes(), process));
 
   /* Default PID is 0. */
   tt_u64_op(0, OP_EQ, process_get_pid(process));
 
   /* Our arguments should be empty. */
-  tt_int_op(0, OP_EQ,
-            smartlist_len(process_get_arguments(process)));
+  tt_int_op(0, OP_EQ, smartlist_len(process_get_arguments(process)));
 
- done:
+done:
   process_free(process);
 }
 
@@ -184,16 +182,11 @@ test_environment(void *arg)
   process_set_environment(process, "A", "B");
 
   env = process_get_environment(process);
-  tt_mem_op(env->windows_environment_block, OP_EQ,
-            "A=B\0C=D\0E=F\0", 12);
-  tt_str_op(env->unixoid_environment_block[0], OP_EQ,
-            "A=B");
-  tt_str_op(env->unixoid_environment_block[1], OP_EQ,
-            "C=D");
-  tt_str_op(env->unixoid_environment_block[2], OP_EQ,
-            "E=F");
-  tt_ptr_op(env->unixoid_environment_block[3], OP_EQ,
-            NULL);
+  tt_mem_op(env->windows_environment_block, OP_EQ, "A=B\0C=D\0E=F\0", 12);
+  tt_str_op(env->unixoid_environment_block[0], OP_EQ, "A=B");
+  tt_str_op(env->unixoid_environment_block[1], OP_EQ, "C=D");
+  tt_str_op(env->unixoid_environment_block[2], OP_EQ, "E=F");
+  tt_ptr_op(env->unixoid_environment_block[3], OP_EQ, NULL);
   process_environment_free(env);
 
   /* Reset our environment. */
@@ -205,16 +198,13 @@ test_environment(void *arg)
   smartlist_free(new_env);
 
   env = process_get_environment(process);
-  tt_mem_op(env->windows_environment_block, OP_EQ,
-            "FOO=bar\0HELLO=world\0", 20);
-  tt_str_op(env->unixoid_environment_block[0], OP_EQ,
-            "FOO=bar");
-  tt_str_op(env->unixoid_environment_block[1], OP_EQ,
-            "HELLO=world");
-  tt_ptr_op(env->unixoid_environment_block[2], OP_EQ,
-            NULL);
+  tt_mem_op(env->windows_environment_block, OP_EQ, "FOO=bar\0HELLO=world\0",
+            20);
+  tt_str_op(env->unixoid_environment_block[0], OP_EQ, "FOO=bar");
+  tt_str_op(env->unixoid_environment_block[1], OP_EQ, "HELLO=world");
+  tt_ptr_op(env->unixoid_environment_block[2], OP_EQ, NULL);
 
- done:
+done:
   process_environment_free(env);
   process_free(process);
 }
@@ -233,10 +223,9 @@ test_stringified_types(void *arg)
             process_status_to_string(PROCESS_STATUS_NOT_RUNNING));
   tt_str_op("running", OP_EQ,
             process_status_to_string(PROCESS_STATUS_RUNNING));
-  tt_str_op("error", OP_EQ,
-            process_status_to_string(PROCESS_STATUS_ERROR));
+  tt_str_op("error", OP_EQ, process_status_to_string(PROCESS_STATUS_ERROR));
 
- done:
+done:
   return;
 }
 
@@ -280,7 +269,7 @@ test_line_protocol_simple(void *arg)
   tt_str_op(smartlist_get(process_data->stderr_data, 0), OP_EQ,
             "Hello stderr");
 
- done:
+done:
   process_data_free(process_data);
   process_free(process);
 
@@ -326,19 +315,16 @@ test_line_protocol_multi(void *arg)
             "Hello stdout");
   tt_str_op(smartlist_get(process_data->stdout_data, 1), OP_EQ,
             "Onion Onion Onion");
-  tt_str_op(smartlist_get(process_data->stdout_data, 2), OP_EQ,
-            "A B C D");
-  tt_str_op(smartlist_get(process_data->stdout_data, 3), OP_EQ,
-            "");
+  tt_str_op(smartlist_get(process_data->stdout_data, 2), OP_EQ, "A B C D");
+  tt_str_op(smartlist_get(process_data->stdout_data, 3), OP_EQ, "");
 
   tt_str_op(smartlist_get(process_data->stderr_data, 0), OP_EQ,
             "Hello stderr");
-  tt_str_op(smartlist_get(process_data->stderr_data, 1), OP_EQ,
-            "Foo bar baz");
+  tt_str_op(smartlist_get(process_data->stderr_data, 1), OP_EQ, "Foo bar baz");
   tt_str_op(smartlist_get(process_data->stderr_data, 2), OP_EQ,
             "Onion Onion Onion");
 
- done:
+done:
   process_data_free(process_data);
   process_free(process);
 
@@ -405,20 +391,18 @@ test_line_protocol_partial(void *arg)
 
   /* Check if the data is correct. */
   tt_str_op(smartlist_get(process_data->stdout_data, 0), OP_EQ,
-                          "Hello stdout this is a partial line ... the end");
+            "Hello stdout this is a partial line ... the end");
   tt_str_op(smartlist_get(process_data->stdout_data, 1), OP_EQ,
-                          "Another partial string goes here ... the end");
-  tt_str_op(smartlist_get(process_data->stdout_data, 2), OP_EQ,
-                          "Foo bar baz");
+            "Another partial string goes here ... the end");
+  tt_str_op(smartlist_get(process_data->stdout_data, 2), OP_EQ, "Foo bar baz");
 
   tt_str_op(smartlist_get(process_data->stderr_data, 0), OP_EQ,
-                          "Hello stderr this is a partial line ... the end");
+            "Hello stderr this is a partial line ... the end");
   tt_str_op(smartlist_get(process_data->stderr_data, 1), OP_EQ,
-                          "Another partial string goes here ... the end");
-  tt_str_op(smartlist_get(process_data->stderr_data, 2), OP_EQ,
-                          "Foo bar baz");
+            "Another partial string goes here ... the end");
+  tt_str_op(smartlist_get(process_data->stderr_data, 2), OP_EQ, "Foo bar baz");
 
- done:
+done:
   process_data_free(process_data);
   process_free(process);
 
@@ -484,7 +468,7 @@ test_raw_protocol_simple(void *arg)
   tt_str_op(smartlist_get(process_data->stderr_data, 1), OP_EQ,
             "Hello, again, stderr\nThis contains multiple lines");
 
- done:
+done:
   process_data_free(process_data);
   process_free(process);
 
@@ -512,7 +496,7 @@ test_write_simple(void *arg)
   process_notify_event_stdin(process);
   tt_int_op(2, OP_EQ, smartlist_len(process_data->stdin_data));
 
- done:
+done:
   process_data_free(process_data);
   process_free(process);
 
@@ -544,7 +528,7 @@ test_exit_simple(void *arg)
   tt_int_op(process_get_status(process), OP_EQ, PROCESS_STATUS_NOT_RUNNING);
   tt_u64_op(1337, OP_EQ, process_data->exit_code);
 
- done:
+done:
   process_set_data(process, process_data);
   process_data_free(process_data);
   process_free(process);
@@ -564,8 +548,7 @@ test_argv_simple(void *arg)
   process_append_argument(process, "baz");
 
   /* Check the number of elements. */
-  tt_int_op(3, OP_EQ,
-            smartlist_len(process_get_arguments(process)));
+  tt_int_op(3, OP_EQ, smartlist_len(process_get_arguments(process)));
 
   /* Let's try to convert it into a Unix style char **argv. */
   argv = process_get_argv(process);
@@ -577,7 +560,7 @@ test_argv_simple(void *arg)
   tt_str_op(argv[3], OP_EQ, "baz");
   tt_ptr_op(argv[4], OP_EQ, NULL);
 
- done:
+done:
   tor_free(argv);
   process_free(process);
 }
@@ -592,7 +575,7 @@ test_unix(void *arg)
   /* On Unix all processes should have a Unix process handle. */
   tt_ptr_op(NULL, OP_NE, process_get_unix_process(process));
 
- done:
+done:
   process_free(process);
 #endif /* !defined(_WIN32) */
 }
@@ -614,56 +597,55 @@ test_win32(void *arg)
    * i.e. we never embed quoted strings in arguments. */
 
   const char *argvs[][4] = {
-    {"a", "bb", "CCC", NULL}, // Normal
-    {NULL, NULL, NULL, NULL}, // Empty argument list
-    {"", NULL, NULL, NULL}, // Empty argument
-    {"\"a", "b\"b", "CCC\"", NULL}, // Quotes
-    {"a\tbc", "dd  dd", "E", NULL}, // Whitespace
-    {"a\\\\\\b", "de fg", "H", NULL}, // Backslashes
-    {"a\\\"b", "\\c", "D\\", NULL}, // Backslashes before quote
-    {"a\\\\b c", "d", "E", NULL}, // Backslashes not before quote
-    { NULL } // Terminator
+      {"a", "bb", "CCC", NULL}, // Normal
+      {NULL, NULL, NULL, NULL}, // Empty argument list
+      {"", NULL, NULL, NULL}, // Empty argument
+      {"\"a", "b\"b", "CCC\"", NULL}, // Quotes
+      {"a\tbc", "dd  dd", "E", NULL}, // Whitespace
+      {"a\\\\\\b", "de fg", "H", NULL}, // Backslashes
+      {"a\\\"b", "\\c", "D\\", NULL}, // Backslashes before quote
+      {"a\\\\b c", "d", "E", NULL}, // Backslashes not before quote
+      {NULL} // Terminator
   };
 
   const char *cmdlines[] = {
-    "a bb CCC",
-    "",
-    "\"\"",
-    "\\\"a b\\\"b CCC\\\"",
-    "\"a\tbc\" \"dd  dd\" E",
-    "a\\\\\\b \"de fg\" H",
-    "a\\\\\\\"b \\c D\\",
-    "\"a\\\\b c\" d E",
-    NULL // Terminator
+      "a bb CCC",
+      "",
+      "\"\"",
+      "\\\"a b\\\"b CCC\\\"",
+      "\"a\tbc\" \"dd  dd\" E",
+      "a\\\\\\b \"de fg\" H",
+      "a\\\\\\\"b \\c D\\",
+      "\"a\\\\b c\" d E",
+      NULL // Terminator
   };
 
   int i;
 
-  for (i=0; cmdlines[i]!=NULL; i++) {
+  for (i = 0; cmdlines[i] != NULL; i++) {
     log_info(LD_GENERAL, "Joining argvs[%d], expecting <%s>", i, cmdlines[i]);
     joined_argv = tor_join_win_cmdline(argvs[i]);
-    tt_str_op(cmdlines[i],OP_EQ, joined_argv);
+    tt_str_op(cmdlines[i], OP_EQ, joined_argv);
     tor_free(joined_argv);
   }
 
- done:
+done:
   tor_free(joined_argv);
   process_free(process);
 #endif /* defined(_WIN32) */
 }
 
 struct testcase_t process_tests[] = {
-  { "default_values", test_default_values, TT_FORK, NULL, NULL },
-  { "environment", test_environment, TT_FORK, NULL, NULL },
-  { "stringified_types", test_stringified_types, TT_FORK, NULL, NULL },
-  { "line_protocol_simple", test_line_protocol_simple, TT_FORK, NULL, NULL },
-  { "line_protocol_multi", test_line_protocol_multi, TT_FORK, NULL, NULL },
-  { "line_protocol_partial", test_line_protocol_partial, TT_FORK, NULL, NULL },
-  { "raw_protocol_simple", test_raw_protocol_simple, TT_FORK, NULL, NULL },
-  { "write_simple", test_write_simple, TT_FORK, NULL, NULL },
-  { "exit_simple", test_exit_simple, TT_FORK, NULL, NULL },
-  { "argv_simple", test_argv_simple, TT_FORK, NULL, NULL },
-  { "unix", test_unix, TT_FORK, NULL, NULL },
-  { "win32", test_win32, TT_FORK, NULL, NULL },
-  END_OF_TESTCASES
-};
+    {"default_values", test_default_values, TT_FORK, NULL, NULL},
+    {"environment", test_environment, TT_FORK, NULL, NULL},
+    {"stringified_types", test_stringified_types, TT_FORK, NULL, NULL},
+    {"line_protocol_simple", test_line_protocol_simple, TT_FORK, NULL, NULL},
+    {"line_protocol_multi", test_line_protocol_multi, TT_FORK, NULL, NULL},
+    {"line_protocol_partial", test_line_protocol_partial, TT_FORK, NULL, NULL},
+    {"raw_protocol_simple", test_raw_protocol_simple, TT_FORK, NULL, NULL},
+    {"write_simple", test_write_simple, TT_FORK, NULL, NULL},
+    {"exit_simple", test_exit_simple, TT_FORK, NULL, NULL},
+    {"argv_simple", test_argv_simple, TT_FORK, NULL, NULL},
+    {"unix", test_unix, TT_FORK, NULL, NULL},
+    {"win32", test_win32, TT_FORK, NULL, NULL},
+    END_OF_TESTCASES};

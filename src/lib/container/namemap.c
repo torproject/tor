@@ -31,13 +31,12 @@ mapped_name_eq(const mapped_name_t *a, const mapped_name_t *b)
 static inline unsigned
 mapped_name_hash(const mapped_name_t *a)
 {
-  return (unsigned) siphash24g(a->name, strlen(a->name));
+  return (unsigned)siphash24g(a->name, strlen(a->name));
 }
 
-HT_PROTOTYPE(namemap_ht, mapped_name_t, node, mapped_name_hash,
-             mapped_name_eq)
-HT_GENERATE2(namemap_ht, mapped_name_t, node, mapped_name_hash,
-             mapped_name_eq, 0.6, tor_reallocarray_, tor_free_)
+HT_PROTOTYPE(namemap_ht, mapped_name_t, node, mapped_name_hash, mapped_name_eq)
+HT_GENERATE2(namemap_ht, mapped_name_t, node, mapped_name_hash, mapped_name_eq,
+             0.6, tor_reallocarray_, tor_free_)
 
 /** Set up an uninitialized <b>map</b>. */
 void
@@ -86,8 +85,7 @@ namemap_fmt_name(const namemap_t *map, unsigned id)
  * MAX_NAMEMAP_NAME_LEN.
  */
 static unsigned
-namemap_get_id_unchecked(const namemap_t *map,
-                         const char *name,
+namemap_get_id_unchecked(const namemap_t *map, const char *name,
                          size_t namelen)
 {
   union {
@@ -111,8 +109,7 @@ namemap_get_id_unchecked(const namemap_t *map,
  * <b>name</b>, or NAMEMAP_ERR if no such identifier exists.
  **/
 unsigned
-namemap_get_id(const namemap_t *map,
-               const char *name)
+namemap_get_id(const namemap_t *map, const char *name)
 {
   size_t namelen = strlen(name);
   if (namelen > MAX_NAMEMAP_NAME_LEN) {
@@ -130,8 +127,7 @@ namemap_get_id(const namemap_t *map,
  * identifiers we can allocate.
  **/
 unsigned
-namemap_get_or_create_id(namemap_t *map,
-                         const char *name)
+namemap_get_or_create_id(namemap_t *map, const char *name)
 {
   size_t namelen = strlen(name);
   if (namelen > MAX_NAMEMAP_NAME_LEN) {
@@ -149,9 +145,9 @@ namemap_get_or_create_id(namemap_t *map,
   if (new_id == NAMEMAP_ERR)
     return NAMEMAP_ERR; /* Can't allocate any more. */
 
-  mapped_name_t *insert = tor_malloc_zero(
-                       offsetof(mapped_name_t, name) + namelen + 1);
-  memcpy(insert->name, name, namelen+1);
+  mapped_name_t *insert =
+      tor_malloc_zero(offsetof(mapped_name_t, name) + namelen + 1);
+  memcpy(insert->name, name, namelen + 1);
   insert->intval = new_id;
 
   HT_INSERT(namemap_ht, &map->ht, insert);
@@ -181,8 +177,7 @@ namemap_clear(namemap_t *map)
 
   HT_CLEAR(namemap_ht, &map->ht);
   if (map->names) {
-    SMARTLIST_FOREACH(map->names, mapped_name_t *, n,
-                      tor_free(n));
+    SMARTLIST_FOREACH(map->names, mapped_name_t *, n, tor_free(n));
     smartlist_free(map->names);
   }
   memset(map, 0, sizeof(*map));

@@ -20,7 +20,7 @@
 #include "lib/process/env.h"
 
 #ifdef HAVE_STDDEF_H
-#include <stddef.h>
+#  include <stddef.h>
 #endif
 
 /** A list of all <b>process_t</b> instances currently allocated. */
@@ -216,7 +216,7 @@ process_new(const char *command)
 void
 process_free_(process_t *process)
 {
-  if (! process)
+  if (!process)
     return;
 
   /* Cleanup parameters. */
@@ -344,8 +344,7 @@ process_set_stderr_read_callback(process_t *process,
  * <b>callback</b> function will be called every time your child process have
  * terminated. */
 void
-process_set_exit_callback(process_t *process,
-                          process_exit_callback_t callback)
+process_set_exit_callback(process_t *process, process_exit_callback_t callback)
 {
   tor_assert(process);
   process->exit_callback = callback;
@@ -455,11 +454,11 @@ process_get_argv(const process_t *process)
   argv[0] = filename;
 
   /* Put in the rest of the values from arguments. */
-  SMARTLIST_FOREACH_BEGIN(arguments, char *, arg_val) {
+  SMARTLIST_FOREACH_BEGIN (arguments, char *, arg_val) {
     tor_assert(arg_val != NULL);
 
     argv[arg_val_sl_idx + 1] = arg_val;
-  } SMARTLIST_FOREACH_END(arg_val);
+  } SMARTLIST_FOREACH_END (arg_val);
 
   return argv;
 }
@@ -484,9 +483,7 @@ process_reset_environment(process_t *process, const smartlist_t *env)
 /** Set the given <b>key</b>/<b>value</b> pair as environment variable in the
  * given process. */
 void
-process_set_environment(process_t *process,
-                        const char *key,
-                        const char *value)
+process_set_environment(process_t *process, const char *key, const char *value)
 {
   tor_assert(process);
   tor_assert(key);
@@ -527,8 +524,7 @@ process_get_win32_process(const process_t *process)
 /** Write <b>size</b> bytes of <b>data</b> to the given process's standard
  * input. */
 void
-process_write(process_t *process,
-              const uint8_t *data, size_t size)
+process_write(process_t *process, const uint8_t *data, size_t size)
 {
   tor_assert(process);
   tor_assert(data);
@@ -540,8 +536,7 @@ process_write(process_t *process,
 /** As tor_vsnprintf(), but write the data to the given process's standard
  * input. */
 void
-process_vprintf(process_t *process,
-                const char *format, va_list args)
+process_vprintf(process_t *process, const char *format, va_list args)
 {
   tor_assert(process);
   tor_assert(format);
@@ -558,8 +553,7 @@ process_vprintf(process_t *process,
 /** As tor_snprintf(), but write the data to the given process's standard
  * input. */
 void
-process_printf(process_t *process,
-               const char *format, ...)
+process_printf(process_t *process, const char *format, ...)
 {
   tor_assert(process);
   tor_assert(format);
@@ -582,8 +576,7 @@ process_notify_event_stdout(process_t *process)
   ret = process_read_stdout(process, process->stdout_buffer);
 
   if (ret > 0)
-    process_read_data(process,
-                      process->stdout_buffer,
+    process_read_data(process, process->stdout_buffer,
                       process->stdout_read_callback);
 }
 
@@ -599,8 +592,7 @@ process_notify_event_stderr(process_t *process)
   ret = process_read_stderr(process, process->stderr_buffer);
 
   if (ret > 0)
-    process_read_data(process,
-                      process->stderr_buffer,
+    process_read_data(process, process->stderr_buffer,
                       process->stderr_read_callback);
 }
 
@@ -624,8 +616,8 @@ process_notify_event_exit(process_t *process, process_exit_code_t exit_code)
 {
   tor_assert(process);
 
-  log_debug(LD_PROCESS,
-            "Process terminated with exit code: %"PRIu64, exit_code);
+  log_debug(LD_PROCESS, "Process terminated with exit code: %" PRIu64,
+            exit_code);
 
   /* Update our state. */
   process_set_status(process, PROCESS_STATUS_NOT_RUNNING);
@@ -645,7 +637,9 @@ process_notify_event_exit(process_t *process, process_exit_code_t exit_code)
 /** This function is called whenever the Process backend have notified us that
  * there is data to be read from its standard out handle. Returns the number of
  * bytes that have been put into the given buffer. */
-MOCK_IMPL(STATIC int, process_read_stdout, (process_t *process, buf_t *buffer))
+MOCK_IMPL(STATIC int,
+process_read_stdout,
+          (process_t * process, buf_t *buffer))
 {
   tor_assert(process);
   tor_assert(buffer);
@@ -660,7 +654,9 @@ MOCK_IMPL(STATIC int, process_read_stdout, (process_t *process, buf_t *buffer))
 /** This function is called whenever the Process backend have notified us that
  * there is data to be read from its standard error handle. Returns the number
  * of bytes that have been put into the given buffer. */
-MOCK_IMPL(STATIC int, process_read_stderr, (process_t *process, buf_t *buffer))
+MOCK_IMPL(STATIC int,
+process_read_stderr,
+          (process_t * process, buf_t *buffer))
 {
   tor_assert(process);
   tor_assert(buffer);
@@ -674,8 +670,9 @@ MOCK_IMPL(STATIC int, process_read_stderr, (process_t *process, buf_t *buffer))
 
 /** This function calls the backend function for the given process whenever
  * there is data to be written to the backends' file handles. */
-MOCK_IMPL(STATIC void, process_write_stdin,
-          (process_t *process, buf_t *buffer))
+MOCK_IMPL(STATIC void,
+process_write_stdin,
+          (process_t * process, buf_t *buffer))
 {
   tor_assert(process);
   tor_assert(buffer);
@@ -692,8 +689,7 @@ MOCK_IMPL(STATIC void, process_write_stdin,
  * <b>process_read_buffer()</b> for <b>PROCESS_PROTOCOL_RAW</b> and
  * <b>process_read_lines()</b> for <b>PROCESS_PROTOCOL_LINE</b>. */
 STATIC void
-process_read_data(process_t *process,
-                  buf_t *buffer,
+process_read_data(process_t *process, buf_t *buffer,
                   process_read_callback_t callback)
 {
   tor_assert(process);
@@ -719,8 +715,7 @@ process_read_data(process_t *process,
  * is added to the end of the data such that the given callback implementation
  * can threat the content as a ASCIIZ string. */
 STATIC void
-process_read_buffer(process_t *process,
-                    buf_t *buffer,
+process_read_buffer(process_t *process, buf_t *buffer,
                     process_read_callback_t callback)
 {
   tor_assert(process);
@@ -746,8 +741,7 @@ process_read_buffer(process_t *process,
  * from the line. If we are unable to extract a complete line we leave the data
  * in the buffer for next call. */
 STATIC void
-process_read_lines(process_t *process,
-                   buf_t *buffer,
+process_read_lines(process_t *process, buf_t *buffer,
                    process_read_callback_t callback)
 {
   tor_assert(process);

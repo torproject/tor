@@ -42,12 +42,12 @@ dirserv_count_measured_bws(const smartlist_t *routers)
   routers_with_measured_bw = 0;
 
   /* Iterate over the routerlist and count measured bandwidths */
-  SMARTLIST_FOREACH_BEGIN(routers, const routerinfo_t *, ri) {
+  SMARTLIST_FOREACH_BEGIN (routers, const routerinfo_t *, ri) {
     /* Check if we know a measured bandwidth for this one */
     if (dirserv_has_measured_bw(ri->cache_info.identity_digest)) {
       ++routers_with_measured_bw;
     }
-  } SMARTLIST_FOREACH_END(ri);
+  } SMARTLIST_FOREACH_END (ri);
 }
 
 /** Return the last-computed result from dirserv_count_mesured_bws(). */
@@ -70,15 +70,15 @@ static digestmap_t *mbw_cache = NULL;
 /** Store a measured bandwidth cache entry when reading the measured
  * bandwidths file. */
 STATIC void
-dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
-                          time_t as_of)
+dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line, time_t as_of)
 {
   mbw_cache_entry_t *e = NULL;
 
   tor_assert(parsed_line);
 
   /* Allocate a cache if we need */
-  if (!mbw_cache) mbw_cache = digestmap_new();
+  if (!mbw_cache)
+    mbw_cache = digestmap_new();
 
   /* Check if we have an existing entry */
   e = digestmap_get(mbw_cache, parsed_line->node_id);
@@ -113,15 +113,15 @@ dirserv_clear_measured_bw_cache(void)
 STATIC void
 dirserv_expire_measured_bw_cache(time_t now)
 {
-
   if (mbw_cache) {
     /* Iterate through the cache and check each entry */
-    DIGESTMAP_FOREACH_MODIFY(mbw_cache, k, mbw_cache_entry_t *, e) {
+    DIGESTMAP_FOREACH_MODIFY (mbw_cache, k, mbw_cache_entry_t *, e) {
       if (now > e->as_of + MAX_MEASUREMENT_AGE) {
         tor_free(e);
         MAP_DEL_CURRENT(k);
       }
-    } DIGESTMAP_FOREACH_END;
+    }
+    DIGESTMAP_FOREACH_END;
 
     /* Check if we cleared the whole thing and free if so */
     if (digestmap_size(mbw_cache) == 0) {
@@ -146,8 +146,10 @@ dirserv_query_measured_bw_cache_kb(const char *node_id, long *bw_kb_out,
     if (v) {
       /* Found something */
       rv = 1;
-      if (bw_kb_out) *bw_kb_out = v->mbw_kb;
-      if (as_of_out) *as_of_out = v->as_of;
+      if (bw_kb_out)
+        *bw_kb_out = v->mbw_kb;
+      if (as_of_out)
+        *as_of_out = v->as_of;
     }
   }
 
@@ -165,8 +167,10 @@ dirserv_has_measured_bw(const char *node_id)
 int
 dirserv_get_measured_bw_cache_size(void)
 {
-  if (mbw_cache) return digestmap_size(mbw_cache);
-  else return 0;
+  if (mbw_cache)
+    return digestmap_size(mbw_cache);
+  else
+    return 0;
 }
 
 /** Return the bandwidth we believe for assigning flags; prefer measured
@@ -183,7 +187,7 @@ dirserv_get_credible_bandwidth_kb(const routerinfo_t *ri)
   tor_assert(ri);
   /* Check if we have a measured bandwidth, and check the threshold if not */
   if (!(dirserv_query_measured_bw_cache_kb(ri->cache_info.identity_digest,
-                                       &mbw_kb, NULL))) {
+                                           &mbw_kb, NULL))) {
     threshold = dirauth_get_options()->MinMeasuredBWsForAuthToIgnoreAdvertised;
     if (routers_with_measured_bw > threshold) {
       /* Return zero for unmeasured bandwidth if we are above threshold */
@@ -238,7 +242,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
   int applied_lines = 0;
   time_t file_time, now;
   int ok;
-   /* This flag will be 1 only when the first successful bw measurement line
+  /* This flag will be 1 only when the first successful bw measurement line
    * has been encountered, so that measured_bw_line_parse don't give warnings
    * if there are additional header lines, as introduced in Bandwidth List spec
    * version 1.1.0 */
@@ -254,21 +258,21 @@ dirserv_read_measured_bandwidths(const char *from_file,
     goto err;
   }
 
-  if (tor_getline(&line,&n,fp) <= 0) {
+  if (tor_getline(&line, &n, fp) <= 0) {
     log_warn(LD_DIRSERV, "Empty bandwidth file");
     goto err;
   }
   /* If the line could be gotten, add it to the digest */
-  crypto_digest_add_bytes(digest, (const char *) line, strlen(line));
+  crypto_digest_add_bytes(digest, (const char *)line, strlen(line));
 
-  if (!strlen(line) || line[strlen(line)-1] != '\n') {
+  if (!strlen(line) || line[strlen(line) - 1] != '\n') {
     log_warn(LD_DIRSERV, "Long or truncated time in bandwidth file: %s",
              escaped(line));
     /* Continue adding lines to the digest. */
     goto continue_digest;
   }
 
-  line[strlen(line)-1] = '\0';
+  line[strlen(line) - 1] = '\0';
   file_time = (time_t)tor_parse_ulong(line, 10, 0, ULONG_MAX, &ok, NULL);
   if (!ok) {
     log_warn(LD_DIRSERV, "Non-integer time in bandwidth file: %s",
@@ -295,9 +299,9 @@ dirserv_read_measured_bandwidths(const char *from_file,
   while (!feof(fp)) {
     measured_bw_line_t parsed_line;
     if (tor_getline(&line, &n, fp) >= 0) {
-      crypto_digest_add_bytes(digest, (const char *) line, strlen(line));
-      if (measured_bw_line_parse(&parsed_line, line,
-                                 line_is_after_headers) != -1) {
+      crypto_digest_add_bytes(digest, (const char *)line, strlen(line));
+      if (measured_bw_line_parse(&parsed_line, line, line_is_after_headers) !=
+          -1) {
         /* This condition will be true when the first complete valid bw line
          * has been encountered, which means the end of the header lines. */
         line_is_after_headers = 1;
@@ -305,22 +309,20 @@ dirserv_read_measured_bandwidths(const char *from_file,
         dirserv_cache_measured_bw(&parsed_line, file_time);
         if (measured_bw_line_apply(&parsed_line, routerstatuses) > 0)
           applied_lines++;
-      /* if the terminator is found, it is the end of header lines, set the
-       * flag but do not store anything */
+        /* if the terminator is found, it is the end of header lines, set the
+         * flag but do not store anything */
       } else if (strcmp(line, BW_FILE_HEADERS_TERMINATOR) == 0) {
         line_is_after_headers = 1;
-      /* if the line was not a correct relay line nor the terminator and
-       * the end of the header lines has not been detected yet
-       * and it is key_value and bw_file_headers did not reach the maximum
-       * number of headers,
-       * then assume this line is a header and add it to bw_file_headers */
-      } else if (bw_file_headers &&
-              (line_is_after_headers == 0) &&
-              string_is_key_value(LOG_DEBUG, line) &&
-              !strchr(line, ' ') &&
-              (smartlist_len(bw_file_headers)
-               < MAX_BW_FILE_HEADER_COUNT_IN_VOTE)) {
-        line[strlen(line)-1] = '\0';
+        /* if the line was not a correct relay line nor the terminator and
+         * the end of the header lines has not been detected yet
+         * and it is key_value and bw_file_headers did not reach the maximum
+         * number of headers,
+         * then assume this line is a header and add it to bw_file_headers */
+      } else if (bw_file_headers && (line_is_after_headers == 0) &&
+                 string_is_key_value(LOG_DEBUG, line) && !strchr(line, ' ') &&
+                 (smartlist_len(bw_file_headers) <
+                  MAX_BW_FILE_HEADER_COUNT_IN_VOTE)) {
+        line[strlen(line) - 1] = '\0';
         smartlist_add_strdup(bw_file_headers, line);
       };
     }
@@ -331,18 +333,19 @@ dirserv_read_measured_bandwidths(const char *from_file,
 
   log_info(LD_DIRSERV,
            "Bandwidth measurement file successfully read. "
-           "Applied %d measurements.", applied_lines);
+           "Applied %d measurements.",
+           applied_lines);
   rv = 0;
 
- continue_digest:
+continue_digest:
   /* Continue parsing lines to return the digest of the Bandwidth File. */
   while (!feof(fp)) {
     if (tor_getline(&line, &n, fp) >= 0) {
-      crypto_digest_add_bytes(digest, (const char *) line, strlen(line));
+      crypto_digest_add_bytes(digest, (const char *)line, strlen(line));
     }
   }
 
- err:
+err:
   if (line) {
     // we need to raw_free this buffer because we got it from tor_getdelim()
     raw_free(line);
@@ -350,7 +353,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
   if (fp)
     fclose(fp);
   if (digest_out)
-    crypto_digest_get_digest(digest, (char *) digest_out, DIGEST256_LEN);
+    crypto_digest_get_digest(digest, (char *)digest_out, DIGEST256_LEN);
   crypto_digest_free(digest);
   return rv;
 }
@@ -401,7 +404,7 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line,
     return -1;
   }
 
-  if (orig_line[strlen(orig_line)-1] != '\n') {
+  if (orig_line[strlen(orig_line) - 1] != '\n') {
     log_warn(LD_DIRSERV, "Incomplete line in bandwidth file: %s",
              escaped(orig_line));
     tor_free(line);
@@ -411,8 +414,10 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line,
   do {
     // If the line contains vote=0, ignore it.
     if (strcmpstart(cp, "vote=0") == 0) {
-      log_debug(LD_DIRSERV, "Ignoring bandwidth file line that contains "
-                "vote=0: %s",escaped(orig_line));
+      log_debug(LD_DIRSERV,
+                "Ignoring bandwidth file line that contains "
+                "vote=0: %s",
+                escaped(orig_line));
       tor_free(line);
       return -1;
     } else if (strcmpstart(cp, "bw=") == 0) {
@@ -424,7 +429,7 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line,
         tor_free(line);
         return -1;
       }
-      cp+=strlen("bw=");
+      cp += strlen("bw=");
 
       out->bw_kb = tor_parse_long(cp, 10, 0, LONG_MAX, &parse_ok, &endptr);
       if (!parse_ok || (*endptr && !TOR_ISSPACE(*endptr))) {
@@ -433,7 +438,7 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line,
         tor_free(line);
         return -1;
       }
-      got_bw=1;
+      got_bw = 1;
     } else if (strcmpstart(cp, "node_id=$") == 0) {
       if (got_node_id) {
         log_warn(LD_DIRSERV, "Double node_id= in bandwidth file line: %s",
@@ -441,18 +446,18 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line,
         tor_free(line);
         return -1;
       }
-      cp+=strlen("node_id=$");
+      cp += strlen("node_id=$");
 
       if (strlen(cp) != HEX_DIGEST_LEN ||
-          base16_decode(out->node_id, DIGEST_LEN,
-                        cp, HEX_DIGEST_LEN) != DIGEST_LEN) {
+          base16_decode(out->node_id, DIGEST_LEN, cp, HEX_DIGEST_LEN) !=
+              DIGEST_LEN) {
         log_warn(LD_DIRSERV, "Invalid node_id in bandwidth file line: %s",
                  escaped(orig_line));
         tor_free(line);
         return -1;
       }
       strlcpy(out->node_hex, cp, sizeof(out->node_hex));
-      got_node_id=1;
+      got_node_id = 1;
     }
   } while ((cp = tor_strtok_r(NULL, " \t", &strtok_state)));
 
@@ -463,7 +468,7 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line,
     /* There could be additional header lines, therefore do not give warnings
      * but returns -1 since it's not a complete bw line. */
     log_debug(LD_DIRSERV, "Missing bw or node_id in bandwidth file line: %s",
-             escaped(orig_line));
+              escaped(orig_line));
     tor_free(line);
     return -1;
   } else {

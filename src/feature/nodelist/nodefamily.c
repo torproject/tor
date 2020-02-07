@@ -38,7 +38,7 @@ static nodefamily_t *
 nodefamily_alloc(int n_members)
 {
   size_t alloc_len = offsetof(nodefamily_t, family_members) +
-    NODEFAMILY_ARRAY_SIZE(n_members);
+                     NODEFAMILY_ARRAY_SIZE(n_members);
   nodefamily_t *nf = tor_malloc_zero(alloc_len);
   nf->n_members = n_members;
   return nf;
@@ -50,8 +50,8 @@ nodefamily_alloc(int n_members)
 static inline unsigned int
 nodefamily_hash(const nodefamily_t *nf)
 {
-  return (unsigned) siphash24g(nf->family_members,
-                               NODEFAMILY_ARRAY_SIZE(nf->n_members));
+  return (unsigned)siphash24g(nf->family_members,
+                              NODEFAMILY_ARRAY_SIZE(nf->n_members));
 }
 
 /**
@@ -61,12 +61,12 @@ static inline unsigned int
 nodefamily_eq(const nodefamily_t *a, const nodefamily_t *b)
 {
   return (a->n_members == b->n_members) &&
-    fast_memeq(a->family_members, b->family_members,
-               NODEFAMILY_ARRAY_SIZE(a->n_members));
+         fast_memeq(a->family_members, b->family_members,
+                    NODEFAMILY_ARRAY_SIZE(a->n_members));
 }
 
-static HT_HEAD(nodefamily_map, nodefamily_t) the_node_families
-  = HT_INITIALIZER();
+static HT_HEAD(nodefamily_map,
+               nodefamily_t) the_node_families = HT_INITIALIZER();
 
 HT_PROTOTYPE(nodefamily_map, nodefamily_t, ht_ent, nodefamily_hash,
              nodefamily_eq)
@@ -88,11 +88,11 @@ HT_GENERATE2(nodefamily_map, nodefamily_t, ht_ent, nodefamily_hash,
  * elements as an error. (By default, we simply omit them.)
  **/
 nodefamily_t *
-nodefamily_parse(const char *s, const uint8_t *rsa_id_self,
-                 unsigned flags)
+nodefamily_parse(const char *s, const uint8_t *rsa_id_self, unsigned flags)
 {
   smartlist_t *sl = smartlist_new();
-  smartlist_split_string(sl, s, NULL, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  smartlist_split_string(sl, s, NULL, SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK,
+                         0);
   nodefamily_t *result = nodefamily_from_members(sl, rsa_id_self, flags, NULL);
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_free(sl);
@@ -113,13 +113,14 @@ nodefamily_canonicalize(const char *s, const uint8_t *rsa_id_self,
 {
   smartlist_t *sl = smartlist_new();
   smartlist_t *result_members = smartlist_new();
-  smartlist_split_string(sl, s, NULL, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  nodefamily_t *nf = nodefamily_from_members(sl, rsa_id_self, flags,
-                                             result_members);
+  smartlist_split_string(sl, s, NULL, SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK,
+                         0);
+  nodefamily_t *nf =
+      nodefamily_from_members(sl, rsa_id_self, flags, result_members);
 
   char *formatted = nodefamily_format(nf);
   smartlist_split_string(result_members, formatted, NULL,
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+                         SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, 0);
   smartlist_sort_strings(result_members);
   char *combined = smartlist_join_strings(result_members, " ", 0, NULL);
 
@@ -156,10 +157,8 @@ compare_members(const void *a, const void *b)
  * members.  (Note that malformed $hexids are not considered unrecognized.)
  **/
 nodefamily_t *
-nodefamily_from_members(const smartlist_t *members,
-                        const uint8_t *rsa_id_self,
-                        unsigned flags,
-                        smartlist_t *unrecognized_out)
+nodefamily_from_members(const smartlist_t *members, const uint8_t *rsa_id_self,
+                        unsigned flags, smartlist_t *unrecognized_out)
 {
   const int n_self = rsa_id_self ? 1 : 0;
   int n_bad_elements = 0;
@@ -167,22 +166,22 @@ nodefamily_from_members(const smartlist_t *members,
   nodefamily_t *tmp = nodefamily_alloc(n_members);
   uint8_t *ptr = NODEFAMILY_MEMBER_PTR(tmp, 0);
 
-  SMARTLIST_FOREACH_BEGIN(members, const char *, cp) {
+  SMARTLIST_FOREACH_BEGIN (members, const char *, cp) {
     bool bad_element = true;
     if (is_legal_nickname(cp)) {
       ptr[0] = NODEFAMILY_BY_NICKNAME;
       tor_assert(strlen(cp) < DIGEST_LEN); // guaranteed by is_legal_nickname
-      memcpy(ptr+1, cp, strlen(cp));
-      tor_strlower((char*) ptr+1);
+      memcpy(ptr + 1, cp, strlen(cp));
+      tor_strlower((char *)ptr + 1);
       bad_element = false;
     } else if (is_legal_hexdigest(cp)) {
       char digest_buf[DIGEST_LEN];
-      char nn_buf[MAX_NICKNAME_LEN+1];
-      char nn_char=0;
-      if (hex_digest_nickname_decode(cp, digest_buf, &nn_char, nn_buf)==0) {
+      char nn_buf[MAX_NICKNAME_LEN + 1];
+      char nn_char = 0;
+      if (hex_digest_nickname_decode(cp, digest_buf, &nn_char, nn_buf) == 0) {
         bad_element = false;
         ptr[0] = NODEFAMILY_BY_RSA_ID;
-        memcpy(ptr+1, digest_buf, DIGEST_LEN);
+        memcpy(ptr + 1, digest_buf, DIGEST_LEN);
       }
     } else {
       if (unrecognized_out)
@@ -192,13 +191,12 @@ nodefamily_from_members(const smartlist_t *members,
     if (bad_element) {
       const int severity = (flags & NF_WARN_MALFORMED) ? LOG_WARN : LOG_INFO;
       log_fn(severity, LD_GENERAL,
-             "Bad element %s while parsing a node family.",
-             escaped(cp));
+             "Bad element %s while parsing a node family.", escaped(cp));
       ++n_bad_elements;
     } else {
       ptr += NODEFAMILY_MEMBER_LEN;
     }
-  } SMARTLIST_FOREACH_END(cp);
+  } SMARTLIST_FOREACH_END (cp);
 
   if (n_bad_elements && (flags & NF_REJECT_MALFORMED))
     goto err;
@@ -206,7 +204,7 @@ nodefamily_from_members(const smartlist_t *members,
   if (rsa_id_self) {
     /* Add self. */
     ptr[0] = NODEFAMILY_BY_RSA_ID;
-    memcpy(ptr+1, rsa_id_self, DIGEST_LEN);
+    memcpy(ptr + 1, rsa_id_self, DIGEST_LEN);
   }
 
   n_members -= n_bad_elements;
@@ -217,11 +215,11 @@ nodefamily_from_members(const smartlist_t *members,
 
   /* Remove duplicates. */
   int i;
-  for (i = 0; i < n_members-1; ++i) {
+  for (i = 0; i < n_members - 1; ++i) {
     uint8_t *thisptr = NODEFAMILY_MEMBER_PTR(tmp, i);
-    uint8_t *nextptr = NODEFAMILY_MEMBER_PTR(tmp, i+1);
+    uint8_t *nextptr = NODEFAMILY_MEMBER_PTR(tmp, i + 1);
     if (fast_memeq(thisptr, nextptr, NODEFAMILY_MEMBER_LEN)) {
-      memmove(thisptr, nextptr, (n_members-i-1)*NODEFAMILY_MEMBER_LEN);
+      memmove(thisptr, nextptr, (n_members - i - 1) * NODEFAMILY_MEMBER_LEN);
       --n_members;
       --i;
     }
@@ -252,7 +250,7 @@ nodefamily_from_members(const smartlist_t *members,
     return tmp;
   }
 
- err:
+err:
   tor_free(tmp);
   return NULL;
 }
@@ -280,8 +278,7 @@ nodefamily_free_(nodefamily_t *family)
  * <b>rsa_id</b>.
  */
 bool
-nodefamily_contains_rsa_id(const nodefamily_t *family,
-                           const uint8_t *rsa_id)
+nodefamily_contains_rsa_id(const nodefamily_t *family, const uint8_t *rsa_id)
 {
   if (family == NULL)
     return false;
@@ -290,7 +287,7 @@ nodefamily_contains_rsa_id(const nodefamily_t *family,
   for (i = 0; i < family->n_members; ++i) {
     const uint8_t *ptr = NODEFAMILY_MEMBER_PTR(family, i);
     if (ptr[0] == NODEFAMILY_BY_RSA_ID &&
-        fast_memeq(ptr+1, rsa_id, DIGEST_LEN)) {
+        fast_memeq(ptr + 1, rsa_id, DIGEST_LEN)) {
       return true;
     }
   }
@@ -301,8 +298,7 @@ nodefamily_contains_rsa_id(const nodefamily_t *family,
  * Return true iff <b>family</b> contains the nickname <b>name</b>.
  */
 bool
-nodefamily_contains_nickname(const nodefamily_t *family,
-                             const char *name)
+nodefamily_contains_nickname(const nodefamily_t *family, const char *name)
 {
   if (family == NULL)
     return false;
@@ -313,7 +309,8 @@ nodefamily_contains_nickname(const nodefamily_t *family,
     // note that the strcasecmp() is safe because there is always at least one
     // NUL in the encoded nickname, because all legal nicknames are less than
     // DIGEST_LEN bytes long.
-    if (ptr[0] == NODEFAMILY_BY_NICKNAME && !strcasecmp((char*)ptr+1, name)) {
+    if (ptr[0] == NODEFAMILY_BY_NICKNAME &&
+        !strcasecmp((char *)ptr + 1, name)) {
       return true;
     }
   }
@@ -325,13 +322,10 @@ nodefamily_contains_nickname(const nodefamily_t *family,
  * <b>node</b>
  **/
 bool
-nodefamily_contains_node(const nodefamily_t *family,
-                         const node_t *node)
+nodefamily_contains_node(const nodefamily_t *family, const node_t *node)
 {
-  return
-    nodefamily_contains_nickname(family, node_get_nickname(node))
-    ||
-    nodefamily_contains_rsa_id(family, node_get_rsa_id_digest(node));
+  return nodefamily_contains_nickname(family, node_get_nickname(node)) ||
+         nodefamily_contains_rsa_id(family, node_get_rsa_id_digest(node));
 }
 
 /**
@@ -339,8 +333,7 @@ nodefamily_contains_node(const nodefamily_t *family,
  * node_t to <b>out</b>.
  **/
 void
-nodefamily_add_nodes_to_smartlist(const nodefamily_t *family,
-                                  smartlist_t *out)
+nodefamily_add_nodes_to_smartlist(const nodefamily_t *family, smartlist_t *out)
 {
   if (!family)
     return;
@@ -350,17 +343,17 @@ nodefamily_add_nodes_to_smartlist(const nodefamily_t *family,
     const uint8_t *ptr = NODEFAMILY_MEMBER_PTR(family, i);
     const node_t *node = NULL;
     switch (ptr[0]) {
-      case NODEFAMILY_BY_NICKNAME:
-        node = node_get_by_nickname((char*)ptr+1, NNF_NO_WARN_UNNAMED);
-        break;
-      case NODEFAMILY_BY_RSA_ID:
-        node = node_get_by_id((char*)ptr+1);
-        break;
-      default:
-        /* LCOV_EXCL_START */
-        tor_assert_nonfatal_unreached();
-        break;
-        /* LCOV_EXCL_STOP */
+    case NODEFAMILY_BY_NICKNAME:
+      node = node_get_by_nickname((char *)ptr + 1, NNF_NO_WARN_UNNAMED);
+      break;
+    case NODEFAMILY_BY_RSA_ID:
+      node = node_get_by_id((char *)ptr + 1);
+      break;
+    default:
+      /* LCOV_EXCL_START */
+      tor_assert_nonfatal_unreached();
+      break;
+      /* LCOV_EXCL_STOP */
     }
     if (node)
       smartlist_add(out, (void *)node);
@@ -381,22 +374,22 @@ nodefamily_format(const nodefamily_t *family)
   for (i = 0; i < family->n_members; ++i) {
     const uint8_t *ptr = NODEFAMILY_MEMBER_PTR(family, i);
     switch (ptr[0]) {
-      case NODEFAMILY_BY_NICKNAME:
-        smartlist_add_strdup(sl, (char*)ptr+1);
-        break;
-      case NODEFAMILY_BY_RSA_ID: {
-        char buf[HEX_DIGEST_LEN+2];
-        buf[0]='$';
-        base16_encode(buf+1, sizeof(buf)-1, (char*)ptr+1, DIGEST_LEN);
-        tor_strupper(buf);
-        smartlist_add_strdup(sl, buf);
-        break;
-      }
-      default:
-        /* LCOV_EXCL_START */
-        tor_assert_nonfatal_unreached();
-        break;
-        /* LCOV_EXCL_STOP */
+    case NODEFAMILY_BY_NICKNAME:
+      smartlist_add_strdup(sl, (char *)ptr + 1);
+      break;
+    case NODEFAMILY_BY_RSA_ID: {
+      char buf[HEX_DIGEST_LEN + 2];
+      buf[0] = '$';
+      base16_encode(buf + 1, sizeof(buf) - 1, (char *)ptr + 1, DIGEST_LEN);
+      tor_strupper(buf);
+      smartlist_add_strdup(sl, buf);
+      break;
+    }
+    default:
+      /* LCOV_EXCL_START */
+      tor_assert_nonfatal_unreached();
+      break;
+      /* LCOV_EXCL_STOP */
     }
   }
 

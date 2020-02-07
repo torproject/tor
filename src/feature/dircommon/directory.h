@@ -79,18 +79,16 @@ dir_connection_t *TO_DIR_CONN(connection_t *c);
 
 /** True iff <b>p</b> is a purpose corresponding to uploading
  * data to a directory server. */
-#define DIR_PURPOSE_IS_UPLOAD(p)                \
-  ((p)==DIR_PURPOSE_UPLOAD_DIR ||               \
-   (p)==DIR_PURPOSE_UPLOAD_VOTE ||              \
-   (p)==DIR_PURPOSE_UPLOAD_SIGNATURES ||        \
-   (p)==DIR_PURPOSE_UPLOAD_RENDDESC_V2 ||       \
-   (p)==DIR_PURPOSE_UPLOAD_HSDESC)
+#define DIR_PURPOSE_IS_UPLOAD(p)                                      \
+  ((p) == DIR_PURPOSE_UPLOAD_DIR || (p) == DIR_PURPOSE_UPLOAD_VOTE || \
+   (p) == DIR_PURPOSE_UPLOAD_SIGNATURES ||                            \
+   (p) == DIR_PURPOSE_UPLOAD_RENDDESC_V2 || (p) == DIR_PURPOSE_UPLOAD_HSDESC)
 
 enum compress_method_t;
 int parse_http_response(const char *headers, int *code, time_t *date,
                         enum compress_method_t *compression, char **response);
-int parse_http_command(const char *headers,
-                       char **command_out, char **url_out);
+int parse_http_command(const char *headers, char **command_out,
+                       char **url_out);
 char *http_get_header(const char *headers, const char *which);
 
 int connection_dir_is_encrypted(const dir_connection_t *conn);
@@ -101,13 +99,13 @@ int connection_dir_finished_flushing(dir_connection_t *conn);
 int connection_dir_finished_connecting(dir_connection_t *conn);
 void connection_dir_about_to_close(dir_connection_t *dir_conn);
 
-#define DSR_HEX       (1<<0)
-#define DSR_BASE64    (1<<1)
-#define DSR_DIGEST256 (1<<2)
-#define DSR_SORT_UNIQ (1<<3)
+#define DSR_HEX (1 << 0)
+#define DSR_BASE64 (1 << 1)
+#define DSR_DIGEST256 (1 << 2)
+#define DSR_SORT_UNIQ (1 << 3)
 int dir_split_resource_into_fingerprints(const char *resource,
-                                     smartlist_t *fp_out, int *compressed_out,
-                                     int flags);
+                                         smartlist_t *fp_out,
+                                         int *compressed_out, int flags);
 int dir_split_resource_into_fingerprint_pairs(const char *res,
                                               smartlist_t *pairs_out);
 char *directory_dump_request_log(void);

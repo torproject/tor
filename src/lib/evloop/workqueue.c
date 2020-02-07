@@ -42,7 +42,7 @@
 
 #define WORKQUEUE_PRIORITY_FIRST WQ_PRI_HIGH
 #define WORKQUEUE_PRIORITY_LAST WQ_PRI_LOW
-#define WORKQUEUE_N_PRIORITIES (((int) WORKQUEUE_PRIORITY_LAST)+1)
+#define WORKQUEUE_N_PRIORITIES (((int)WORKQUEUE_PRIORITY_LAST) + 1)
 
 TOR_TAILQ_HEAD(work_tailq_t, workqueue_entry_t);
 typedef struct work_tailq_t work_tailq_t;
@@ -82,8 +82,8 @@ struct threadpool_t {
   replyqueue_t *reply_queue;
 
   /** Functions used to allocate and free thread state. */
-  void *(*new_thread_state_fn)(void*);
-  void (*free_thread_state_fn)(void*);
+  void *(*new_thread_state_fn)(void *);
+  void (*free_thread_state_fn)(void *);
   void *new_thread_state_arg;
 };
 
@@ -145,9 +145,8 @@ static void queue_reply(replyqueue_t *queue, workqueue_entry_t *work);
  * <b>fn</b> in the worker thread, and <b>reply_fn</b> in the main
  * thread. See threadpool_queue_work() for full documentation. */
 static workqueue_entry_t *
-workqueue_entry_new(workqueue_reply_t (*fn)(void*, void*),
-                    void (*reply_fn)(void*),
-                    void *arg)
+workqueue_entry_new(workqueue_reply_t (*fn)(void *, void *),
+                    void (*reply_fn)(void *), void *arg)
 {
   workqueue_entry_t *ent = tor_malloc_zero(sizeof(workqueue_entry_t));
   ent->fn = fn;
@@ -216,7 +215,7 @@ worker_thread_has_work(workerthread_t *thread)
   unsigned i;
   for (i = WORKQUEUE_PRIORITY_FIRST; i <= WORKQUEUE_PRIORITY_LAST; ++i) {
     if (!TOR_TAILQ_EMPTY(&thread->in_pool->work[i]))
-        return 1;
+      return 1;
   }
   return thread->generation != thread->in_pool->generation;
 }
@@ -235,8 +234,8 @@ worker_thread_extract_next_work(workerthread_t *thread)
     this_queue = &pool->work[i];
     if (!TOR_TAILQ_EMPTY(this_queue)) {
       queue = this_queue;
-      if (! crypto_fast_rng_one_in_n(get_thread_fast_rng(),
-                                     thread->lower_priority_chance)) {
+      if (!crypto_fast_rng_one_in_n(get_thread_fast_rng(),
+                                    thread->lower_priority_chance)) {
         /* Usually we'll just break now, so that we can get out of the loop
          * and use the queue where we found work. But with a small
          * probability, we'll keep looking for lower priority work, so that
@@ -274,7 +273,7 @@ worker_thread_main(void *thread_)
       if (thread->in_pool->generation != thread->generation) {
         void *arg = thread->in_pool->update_args[thread->index];
         thread->in_pool->update_args[thread->index] = NULL;
-        workqueue_reply_t (*update_fn)(void*,void*) =
+        workqueue_reply_t (*update_fn)(void *, void *) =
             thread->in_pool->update_fn;
         thread->generation = thread->in_pool->generation;
         tor_mutex_release(&pool->lock);
@@ -339,8 +338,8 @@ queue_reply(replyqueue_t *queue, workqueue_entry_t *work)
 /** Allocate and start a new worker thread to use state object <b>state</b>,
  * and send responses to <b>replyqueue</b>. */
 static workerthread_t *
-workerthread_new(int32_t lower_priority_chance,
-                 void *state, threadpool_t *pool, replyqueue_t *replyqueue)
+workerthread_new(int32_t lower_priority_chance, void *state,
+                 threadpool_t *pool, replyqueue_t *replyqueue)
 {
   workerthread_t *thr = tor_malloc_zero(sizeof(workerthread_t));
   thr->state = state;
@@ -383,11 +382,9 @@ workerthread_new(int32_t lower_priority_chance,
  * be executed strictly in order.
  */
 workqueue_entry_t *
-threadpool_queue_work_priority(threadpool_t *pool,
-                               workqueue_priority_t prio,
+threadpool_queue_work_priority(threadpool_t *pool, workqueue_priority_t prio,
                                workqueue_reply_t (*fn)(void *, void *),
-                               void (*reply_fn)(void *),
-                               void *arg)
+                               void (*reply_fn)(void *), void *arg)
 {
   tor_assert(((int)prio) >= WORKQUEUE_PRIORITY_FIRST &&
              ((int)prio) <= WORKQUEUE_PRIORITY_LAST);
@@ -412,8 +409,7 @@ threadpool_queue_work_priority(threadpool_t *pool,
 workqueue_entry_t *
 threadpool_queue_work(threadpool_t *pool,
                       workqueue_reply_t (*fn)(void *, void *),
-                      void (*reply_fn)(void *),
-                      void *arg)
+                      void (*reply_fn)(void *), void *arg)
 {
   return threadpool_queue_work_priority(pool, WQ_PRI_HIGH, fn, reply_fn, arg);
 }
@@ -434,11 +430,9 @@ threadpool_queue_work(threadpool_t *pool,
  * Return 0 on success, -1 on failure.
  */
 int
-threadpool_queue_update(threadpool_t *pool,
-                         void *(*dup_fn)(void *),
-                         workqueue_reply_t (*fn)(void *, void *),
-                         void (*free_fn)(void *),
-                         void *arg)
+threadpool_queue_update(threadpool_t *pool, void *(*dup_fn)(void *),
+                        workqueue_reply_t (*fn)(void *, void *),
+                        void (*free_fn)(void *), void *arg)
 {
   int i, n_threads;
   void (*old_args_free_fn)(void *arg);
@@ -450,7 +444,7 @@ threadpool_queue_update(threadpool_t *pool,
   old_args = pool->update_args;
   old_args_free_fn = pool->free_update_arg_fn;
 
-  new_args = tor_calloc(n_threads, sizeof(void*));
+  new_args = tor_calloc(n_threads, sizeof(void *));
   for (i = 0; i < n_threads; ++i) {
     if (dup_fn)
       new_args[i] = dup_fn(arg);
@@ -501,8 +495,8 @@ threadpool_start_threads(threadpool_t *pool, int n)
   tor_mutex_acquire(&pool->lock);
 
   if (pool->n_threads < n)
-    pool->threads = tor_reallocarray(pool->threads,
-                                     sizeof(workerthread_t*), n);
+    pool->threads =
+        tor_reallocarray(pool->threads, sizeof(workerthread_t *), n);
 
   while (pool->n_threads < n) {
     /* For half of our threads, we'll choose lower priorities permissively;
@@ -511,8 +505,8 @@ threadpool_start_threads(threadpool_t *pool, int n)
     int32_t chance = (pool->n_threads & 1) ? CHANCE_STRICT : CHANCE_PERMISSIVE;
 
     void *state = pool->new_thread_state_fn(pool->new_thread_state_arg);
-    workerthread_t *thr = workerthread_new(chance,
-                                           state, pool, pool->reply_queue);
+    workerthread_t *thr =
+        workerthread_new(chance, state, pool, pool->reply_queue);
 
     if (!thr) {
       //LCOV_EXCL_START
@@ -538,11 +532,9 @@ threadpool_start_threads(threadpool_t *pool, int n)
  * <b>free_thread_state_fn</b> on their states.
  */
 threadpool_t *
-threadpool_new(int n_threads,
-               replyqueue_t *replyqueue,
-               void *(*new_thread_state_fn)(void*),
-               void (*free_thread_state_fn)(void*),
-               void *arg)
+threadpool_new(int n_threads, replyqueue_t *replyqueue,
+               void *(*new_thread_state_fn)(void *),
+               void (*free_thread_state_fn)(void *), void *arg)
 {
   threadpool_t *pool;
   pool = tor_malloc_zero(sizeof(threadpool_t));
@@ -607,8 +599,8 @@ static void
 reply_event_cb(evutil_socket_t sock, short events, void *arg)
 {
   threadpool_t *tp = arg;
-  (void) sock;
-  (void) events;
+  (void)sock;
+  (void)events;
   replyqueue_process(tp->reply_queue);
   if (tp->reply_cb)
     tp->reply_cb(tp);
@@ -620,19 +612,15 @@ reply_event_cb(evutil_socket_t sock, short events, void *arg)
  * success, -1 on failure.
  */
 int
-threadpool_register_reply_event(threadpool_t *tp,
-                                void (*cb)(threadpool_t *tp))
+threadpool_register_reply_event(threadpool_t *tp, void (*cb)(threadpool_t *tp))
 {
   struct event_base *base = tor_libevent_get_base();
 
   if (tp->reply_event) {
     tor_event_free(tp->reply_event);
   }
-  tp->reply_event = tor_event_new(base,
-                                  tp->reply_queue->alert.read_fd,
-                                  EV_READ|EV_PERSIST,
-                                  reply_event_cb,
-                                  tp);
+  tp->reply_event = tor_event_new(base, tp->reply_queue->alert.read_fd,
+                                  EV_READ | EV_PERSIST, reply_event_cb, tp);
   tor_assert(tp->reply_event);
   tp->reply_cb = cb;
   return event_add(tp->reply_event, NULL);
@@ -651,8 +639,7 @@ replyqueue_process(replyqueue_t *queue)
     //LCOV_EXCL_START
     static ratelim_t warn_limit = RATELIM_INIT(7200);
     log_fn_ratelim(&warn_limit, LOG_WARN, LD_GENERAL,
-                 "Failure from drain_fd: %s",
-                   tor_socket_strerror(-r));
+                   "Failure from drain_fd: %s", tor_socket_strerror(-r));
     //LCOV_EXCL_STOP
   }
 

@@ -326,7 +326,7 @@ void hs_service_free_(hs_service_t *service);
  **/
 #define hs_service_free(s) FREE_AND_NULL(hs_service_t, hs_service_free_, (s))
 
-MOCK_DECL(unsigned int, hs_service_get_num_services,(void));
+MOCK_DECL(unsigned int, hs_service_get_num_services, (void));
 void hs_service_stage_services(const smartlist_t *service_list);
 int hs_service_load_all_keys(void);
 int hs_service_get_version_from_key(const hs_service_t *service);
@@ -343,8 +343,7 @@ int hs_service_receive_intro_established(origin_circuit_t *circ,
                                          const uint8_t *payload,
                                          size_t payload_len);
 int hs_service_receive_introduce2(origin_circuit_t *circ,
-                                  const uint8_t *payload,
-                                  size_t payload_len);
+                                  const uint8_t *payload, size_t payload_len);
 
 char *hs_service_lookup_current_desc(const ed25519_public_key_t *pk);
 
@@ -366,16 +365,16 @@ hs_service_exports_circuit_id(const ed25519_public_key_t *pk);
 
 #ifdef HS_SERVICE_PRIVATE
 
-#ifdef TOR_UNIT_TESTS
+#  ifdef TOR_UNIT_TESTS
 /* Useful getters for unit tests. */
 STATIC unsigned int get_hs_service_map_size(void);
 STATIC int get_hs_service_staging_list_size(void);
 STATIC hs_service_ht *get_hs_service_map(void);
 STATIC hs_service_t *get_first_service(void);
-STATIC hs_service_intro_point_t *service_intro_point_find_by_ident(
-                                         const hs_service_t *service,
-                                         const hs_ident_circuit_t *ident);
-#endif /* defined(TOR_UNIT_TESTS) */
+STATIC hs_service_intro_point_t *
+service_intro_point_find_by_ident(const hs_service_t *service,
+                                  const hs_ident_circuit_t *ident);
+#  endif /* defined(TOR_UNIT_TESTS) */
 
 /* Service accessors. */
 STATIC hs_service_t *find_service(hs_service_ht *map,
@@ -385,21 +384,20 @@ STATIC int register_service(hs_service_ht *map, hs_service_t *service);
 /* Service introduction point functions. */
 STATIC hs_service_intro_point_t *service_intro_point_new(const node_t *node);
 STATIC void service_intro_point_free_(hs_service_intro_point_t *ip);
-#define service_intro_point_free(ip)                            \
-  FREE_AND_NULL(hs_service_intro_point_t,             \
-                          service_intro_point_free_, (ip))
+#  define service_intro_point_free(ip) \
+    FREE_AND_NULL(hs_service_intro_point_t, service_intro_point_free_, (ip))
 STATIC void service_intro_point_add(digest256map_t *map,
                                     hs_service_intro_point_t *ip);
 STATIC void service_intro_point_remove(const hs_service_t *service,
                                        const hs_service_intro_point_t *ip);
-STATIC hs_service_intro_point_t *service_intro_point_find(
-                                 const hs_service_t *service,
-                                 const ed25519_public_key_t *auth_key);
+STATIC hs_service_intro_point_t *
+service_intro_point_find(const hs_service_t *service,
+                         const ed25519_public_key_t *auth_key);
 /* Service descriptor functions. */
 STATIC hs_service_descriptor_t *service_descriptor_new(void);
-STATIC hs_service_descriptor_t *service_desc_find_by_intro(
-                                         const hs_service_t *service,
-                                         const hs_service_intro_point_t *ip);
+STATIC hs_service_descriptor_t *
+service_desc_find_by_intro(const hs_service_t *service,
+                           const hs_service_intro_point_t *ip);
 /* Helper functions. */
 STATIC int client_filename_is_valid(const char *filename);
 STATIC hs_service_authorized_client_t *
@@ -410,8 +408,7 @@ STATIC void get_objects_from_ident(const hs_ident_circuit_t *ident,
                                    hs_service_descriptor_t **desc);
 STATIC const node_t *
 get_node_from_intro_point(const hs_service_intro_point_t *ip);
-STATIC int can_service_launch_intro_circuit(hs_service_t *service,
-                                            time_t now);
+STATIC int can_service_launch_intro_circuit(hs_service_t *service, time_t now);
 STATIC int intro_point_should_expire(const hs_service_intro_point_t *ip,
                                      time_t now);
 STATIC void run_housekeeping_event(time_t now);
@@ -421,32 +418,30 @@ STATIC void update_all_descriptors_intro_points(time_t now);
 STATIC void run_upload_descriptor_event(time_t now);
 
 STATIC void service_descriptor_free_(hs_service_descriptor_t *desc);
-#define service_descriptor_free(d) \
-  FREE_AND_NULL(hs_service_descriptor_t, \
-                           service_descriptor_free_, (d))
+#  define service_descriptor_free(d) \
+    FREE_AND_NULL(hs_service_descriptor_t, service_descriptor_free_, (d))
 
 STATIC void
 service_authorized_client_free_(hs_service_authorized_client_t *client);
-#define service_authorized_client_free(c) \
-  FREE_AND_NULL(hs_service_authorized_client_t, \
-                           service_authorized_client_free_, (c))
+#  define service_authorized_client_free(c)       \
+    FREE_AND_NULL(hs_service_authorized_client_t, \
+                  service_authorized_client_free_, (c))
 
-STATIC int
-write_address_to_file(const hs_service_t *service, const char *fname_);
+STATIC int write_address_to_file(const hs_service_t *service,
+                                 const char *fname_);
 
 STATIC void upload_descriptor_to_all(const hs_service_t *service,
                                      hs_service_descriptor_t *desc);
 
 STATIC void service_desc_schedule_upload(hs_service_descriptor_t *desc,
-                                         time_t now,
-                                         int descriptor_changed);
+                                         time_t now, int descriptor_changed);
 
 STATIC int service_desc_hsdirs_changed(const hs_service_t *service,
-                                const hs_service_descriptor_t *desc);
+                                       const hs_service_descriptor_t *desc);
 
-STATIC int service_authorized_client_config_equal(
-                                         const hs_service_config_t *config1,
-                                         const hs_service_config_t *config2);
+STATIC int
+service_authorized_client_config_equal(const hs_service_config_t *config1,
+                                       const hs_service_config_t *config2);
 
 STATIC void service_clear_config(hs_service_config_t *config);
 

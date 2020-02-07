@@ -88,20 +88,20 @@ static int cdm_cache_loaded = 0;
  * Possible status values for cdm_diff_t.cdm_diff_status
  **/
 typedef enum cdm_diff_status_t {
-  CDM_DIFF_PRESENT=1,
-  CDM_DIFF_IN_PROGRESS=2,
-  CDM_DIFF_ERROR=3,
+  CDM_DIFF_PRESENT = 1,
+  CDM_DIFF_IN_PROGRESS = 2,
+  CDM_DIFF_ERROR = 3,
 } cdm_diff_status_t;
 
 /** Which methods do we use for precompressing diffs? */
 static const compress_method_t compress_diffs_with[] = {
-  NO_METHOD,
-  GZIP_METHOD,
+    NO_METHOD,
+    GZIP_METHOD,
 #ifdef HAVE_LZMA
-  LZMA_METHOD,
+    LZMA_METHOD,
 #endif
 #ifdef HAVE_ZSTD
-  ZSTD_METHOD,
+    ZSTD_METHOD,
 #endif
 };
 
@@ -122,12 +122,12 @@ n_diff_compression_methods(void)
 
 /** Which methods do we use for precompressing consensuses? */
 static const compress_method_t compress_consensus_with[] = {
-  ZLIB_METHOD,
+    ZLIB_METHOD,
 #ifdef HAVE_LZMA
-  LZMA_METHOD,
+    LZMA_METHOD,
 #endif
 #ifdef HAVE_ZSTD
-  ZSTD_METHOD,
+    ZSTD_METHOD,
 #endif
 };
 
@@ -146,9 +146,9 @@ n_consensus_compression_methods(void)
 
 /** Handles pointing to the latest consensus entries as compressed and
  * stored. */
-static consensus_cache_entry_handle_t *
-                  latest_consensus[N_CONSENSUS_FLAVORS]
-                                  [ARRAY_LENGTH(compress_consensus_with)];
+static consensus_cache_entry_handle_t
+    *latest_consensus[N_CONSENSUS_FLAVORS]
+                     [ARRAY_LENGTH(compress_consensus_with)];
 
 /** Hashtable node used to remember the current status of the diff
  * from a given sha3 digest to the current consensus.  */
@@ -181,11 +181,10 @@ static HT_HEAD(cdm_diff_ht, cdm_diff_t) cdm_diff_ht = HT_INITIALIZER();
  * Configuration for this module
  */
 static consdiff_cfg_t consdiff_cfg = {
-  // XXXX I'd like to make this number bigger, but it interferes with the
-  // XXXX seccomp2 syscall filter, which tops out at BPF_MAXINS (4096)
-  // XXXX rules.
-  /* .cache_max_num = */ 128
-};
+    // XXXX I'd like to make this number bigger, but it interferes with the
+    // XXXX seccomp2 syscall filter, which tops out at BPF_MAXINS (4096)
+    // XXXX rules.
+    /* .cache_max_num = */ 128};
 
 static int consdiffmgr_ensure_space_for_files(int n);
 static int consensus_queue_compression_work(const char *consensus,
@@ -205,25 +204,24 @@ cdm_diff_hash(const cdm_diff_t *diff)
 {
   uint8_t tmp[DIGEST256_LEN + 2];
   memcpy(tmp, diff->from_sha3, DIGEST256_LEN);
-  tmp[DIGEST256_LEN] = (uint8_t) diff->flavor;
-  tmp[DIGEST256_LEN+1] = (uint8_t) diff->compress_method;
-  return (unsigned) siphash24g(tmp, sizeof(tmp));
+  tmp[DIGEST256_LEN] = (uint8_t)diff->flavor;
+  tmp[DIGEST256_LEN + 1] = (uint8_t)diff->compress_method;
+  return (unsigned)siphash24g(tmp, sizeof(tmp));
 }
 /** Helper: compare two cdm_diff_t objects for key equality */
 static int
 cdm_diff_eq(const cdm_diff_t *diff1, const cdm_diff_t *diff2)
 {
   return fast_memeq(diff1->from_sha3, diff2->from_sha3, DIGEST256_LEN) &&
-    diff1->flavor == diff2->flavor &&
-    diff1->compress_method == diff2->compress_method;
+         diff1->flavor == diff2->flavor &&
+         diff1->compress_method == diff2->compress_method;
 }
 
 HT_PROTOTYPE(cdm_diff_ht, cdm_diff_t, node, cdm_diff_hash, cdm_diff_eq)
-HT_GENERATE2(cdm_diff_ht, cdm_diff_t, node, cdm_diff_hash, cdm_diff_eq,
-             0.6, tor_reallocarray, tor_free_)
+HT_GENERATE2(cdm_diff_ht, cdm_diff_t, node, cdm_diff_hash, cdm_diff_eq, 0.6,
+             tor_reallocarray, tor_free_)
 
-#define cdm_diff_free(diff) \
-  FREE_AND_NULL(cdm_diff_t, cdm_diff_free_, (diff))
+#define cdm_diff_free(diff) FREE_AND_NULL(cdm_diff_t, cdm_diff_free_, (diff))
 
 /** Release all storage held in <b>diff</b>. */
 static void
@@ -238,10 +236,8 @@ cdm_diff_free_(cdm_diff_t *diff)
 /** Create and return a new cdm_diff_t with the given values.  Does not
  * add it to the hashtable. */
 static cdm_diff_t *
-cdm_diff_new(consensus_flavor_t flav,
-             const uint8_t *from_sha3,
-             const uint8_t *target_sha3,
-             compress_method_t method)
+cdm_diff_new(consensus_flavor_t flav, const uint8_t *from_sha3,
+             const uint8_t *target_sha3, compress_method_t method)
 {
   cdm_diff_t *ent;
   ent = tor_malloc_zero(sizeof(cdm_diff_t));
@@ -294,12 +290,9 @@ cdm_diff_ht_check_and_note_pending(consensus_flavor_t flav,
  * is NULL, then the old handle (if any) is freed, and replaced with NULL.
  */
 static void
-cdm_diff_ht_set_status(consensus_flavor_t flav,
-                       const uint8_t *from_sha3,
-                       const uint8_t *to_sha3,
-                       compress_method_t method,
-                       int status,
-                       consensus_cache_entry_handle_t *handle)
+cdm_diff_ht_set_status(consensus_flavor_t flav, const uint8_t *from_sha3,
+                       const uint8_t *to_sha3, compress_method_t method,
+                       int status, consensus_cache_entry_handle_t *handle)
 {
   if (handle == NULL) {
     tor_assert_nonfatal(status != CDM_DIFF_PRESENT);
@@ -347,7 +340,6 @@ cdm_diff_ht_purge(consensus_flavor_t flav,
 
     if ((*diff)->cdm_diff_status == CDM_DIFF_PRESENT &&
         flav == (*diff)->flavor) {
-
       if (BUG((*diff)->entry == NULL) ||
           consensus_cache_entry_handle_get((*diff)->entry) == NULL) {
         /* the underlying entry has gone away; drop this. */
@@ -388,7 +380,7 @@ cdm_cache_init(void)
     consdiffmgr_set_cache_flags();
   }
   consdiffmgr_rescan_ev =
-    mainloop_event_postloop_new(consdiffmgr_rescan_cb, NULL);
+      mainloop_event_postloop_new(consdiffmgr_rescan_cb, NULL);
   mark_cdm_cache_dirty();
   cdm_cache_loaded = 0;
 }
@@ -412,17 +404,15 @@ cdm_cache_get(void)
  * with <b>label</b> as its label.
  */
 static void
-cdm_labels_prepend_sha3(config_line_t **labels,
-                        const char *label,
-                        const uint8_t *body,
-                        size_t bodylen)
+cdm_labels_prepend_sha3(config_line_t **labels, const char *label,
+                        const uint8_t *body, size_t bodylen)
 {
   uint8_t sha3_digest[DIGEST256_LEN];
-  char hexdigest[HEX_DIGEST256_LEN+1];
-  crypto_digest256((char *)sha3_digest,
-                   (const char *)body, bodylen, DIGEST_SHA3_256);
-  base16_encode(hexdigest, sizeof(hexdigest),
-                (const char *)sha3_digest, sizeof(sha3_digest));
+  char hexdigest[HEX_DIGEST256_LEN + 1];
+  crypto_digest256((char *)sha3_digest, (const char *)body, bodylen,
+                   DIGEST_SHA3_256);
+  base16_encode(hexdigest, sizeof(hexdigest), (const char *)sha3_digest,
+                sizeof(sha3_digest));
 
   config_line_prepend(labels, label, hexdigest);
 }
@@ -432,8 +422,7 @@ cdm_labels_prepend_sha3(config_line_t **labels,
  *
  * Return -1 if there is no such label, and -2 if it is badly formatted. */
 STATIC int
-cdm_entry_get_sha3_value(uint8_t *digest_out,
-                         consensus_cache_entry_t *ent,
+cdm_entry_get_sha3_value(uint8_t *digest_out, consensus_cache_entry_t *ent,
                          const char *label)
 {
   if (ent == NULL)
@@ -443,7 +432,7 @@ cdm_entry_get_sha3_value(uint8_t *digest_out,
   if (hex == NULL)
     return -1;
 
-  int n = base16_decode((char*)digest_out, DIGEST256_LEN, hex, strlen(hex));
+  int n = base16_decode((char *)digest_out, DIGEST256_LEN, hex, strlen(hex));
   if (n != DIGEST256_LEN)
     return -2;
   else
@@ -458,7 +447,7 @@ cdm_entry_get_sha3_value(uint8_t *digest_out,
 STATIC consensus_cache_entry_t *
 cdm_cache_lookup_consensus(consensus_flavor_t flavor, time_t valid_after)
 {
-  char formatted_time[ISO_TIME_LEN+1];
+  char formatted_time[ISO_TIME_LEN + 1];
   format_iso_time_nospace(formatted_time, valid_after);
   const char *flavname = networkstatus_get_flavor_name(flavor);
 
@@ -467,8 +456,8 @@ cdm_cache_lookup_consensus(consensus_flavor_t flavor, time_t valid_after)
   /* We could add an extra hashtable here, but since we only do this scan
    * when adding a new consensus, it probably doesn't matter much. */
   smartlist_t *matches = smartlist_new();
-  consensus_cache_find_all(matches, cdm_cache_get(),
-                           LABEL_VALID_AFTER, formatted_time);
+  consensus_cache_find_all(matches, cdm_cache_get(), LABEL_VALID_AFTER,
+                           formatted_time);
   consensus_cache_filter_list(matches, LABEL_FLAVOR, flavname);
   consensus_cache_filter_list(matches, LABEL_DOCTYPE, DOCTYPE_CONSENSUS);
 
@@ -503,11 +492,9 @@ get_max_age_to_cache(void)
   }
 
   /* The parameter is in hours, so we multiply */
-  return 3600 * networkstatus_get_param(NULL,
-                                        MAX_AGE_TO_CACHE_NAME,
-                                        DEFAULT_MAX_AGE_TO_CACHE,
-                                        MIN_MAX_AGE_TO_CACHE,
-                                        MAX_MAX_AGE_TO_CACHE);
+  return 3600 * networkstatus_get_param(
+                    NULL, MAX_AGE_TO_CACHE_NAME, DEFAULT_MAX_AGE_TO_CACHE,
+                    MIN_MAX_AGE_TO_CACHE, MAX_MAX_AGE_TO_CACHE);
 }
 
 #ifdef TOR_UNIT_TESTS
@@ -536,8 +523,7 @@ consdiffmgr_add_consensus_nulterm(const char *consensus,
  * Return 0 on success and -1 on failure.
  */
 int
-consdiffmgr_add_consensus(const char *consensus,
-                          size_t consensus_len,
+consdiffmgr_add_consensus(const char *consensus, size_t consensus_len,
                           const networkstatus_t *as_parsed)
 {
   if (BUG(consensus == NULL) || BUG(as_parsed == NULL))
@@ -550,13 +536,13 @@ consdiffmgr_add_consensus(const char *consensus,
 
   if (valid_after < approx_time() - get_max_age_to_cache()) {
     log_info(LD_DIRSERV, "We don't care about this consensus document; it's "
-             "too old.");
+                         "too old.");
     return -1;
   }
 
   /* Do we already have this one? */
   consensus_cache_entry_t *entry =
-    cdm_cache_lookup_consensus(flavor, valid_after);
+      cdm_cache_lookup_consensus(flavor, valid_after);
   if (entry) {
     log_info(LD_DIRSERV, "We already have a copy of that consensus");
     return -1;
@@ -617,15 +603,14 @@ consensus_compression_method_pos(compress_method_t method)
  */
 consdiff_status_t
 consdiffmgr_find_consensus(struct consensus_cache_entry_t **entry_out,
-                           consensus_flavor_t flavor,
-                           compress_method_t method)
+                           consensus_flavor_t flavor, compress_method_t method)
 {
   tor_assert(entry_out);
   tor_assert((int)flavor < N_CONSENSUS_FLAVORS);
 
   int pos = consensus_compression_method_pos(method);
   if (pos < 0) {
-     // We don't compress consensuses with this method.
+    // We don't compress consensuses with this method.
     return CONSDIFF_NOT_FOUND;
   }
   consensus_cache_entry_handle_t *handle = latest_consensus[flavor][pos];
@@ -648,14 +633,11 @@ consdiffmgr_find_consensus(struct consensus_cache_entry_t **entry_out,
  */
 consdiff_status_t
 consdiffmgr_find_diff_from(consensus_cache_entry_t **entry_out,
-                           consensus_flavor_t flavor,
-                           int digest_type,
-                           const uint8_t *digest,
-                           size_t digestlen,
+                           consensus_flavor_t flavor, int digest_type,
+                           const uint8_t *digest, size_t digestlen,
                            compress_method_t method)
 {
-  if (BUG(digest_type != DIGEST_SHA3_256) ||
-      BUG(digestlen != DIGEST256_LEN)) {
+  if (BUG(digest_type != DIGEST_SHA3_256) || BUG(digestlen != DIGEST256_LEN)) {
     return CONSDIFF_NOT_FOUND; // LCOV_EXCL_LINE
   }
 
@@ -667,8 +649,7 @@ consdiffmgr_find_diff_from(consensus_cache_entry_t **entry_out,
   memcpy(search.from_sha3, digest, DIGEST256_LEN);
   ent = HT_FIND(cdm_diff_ht, &cdm_diff_ht, &search);
 
-  if (ent == NULL ||
-      ent->cdm_diff_status == CDM_DIFF_ERROR) {
+  if (ent == NULL || ent->cdm_diff_status == CDM_DIFF_ERROR) {
     return CONSDIFF_NOT_FOUND;
   } else if (ent->cdm_diff_status == CDM_DIFF_IN_PROGRESS) {
     return CONSDIFF_IN_PROGRESS;
@@ -721,62 +702,64 @@ consdiffmgr_cleanup(void)
   // 1. Delete any consensus or diff or anything whose valid_after is too old.
   const time_t valid_after_cutoff = approx_time() - get_max_age_to_cache();
 
-  consensus_cache_find_all(objects, cdm_cache_get(),
-                           NULL, NULL);
-  SMARTLIST_FOREACH_BEGIN(objects, consensus_cache_entry_t *, ent) {
+  consensus_cache_find_all(objects, cdm_cache_get(), NULL, NULL);
+  SMARTLIST_FOREACH_BEGIN (objects, consensus_cache_entry_t *, ent) {
     const char *lv_valid_after =
-      consensus_cache_entry_get_value(ent, LABEL_VALID_AFTER);
-    if (! lv_valid_after) {
+        consensus_cache_entry_get_value(ent, LABEL_VALID_AFTER);
+    if (!lv_valid_after) {
       log_debug(LD_DIRSERV, "Ignoring entry because it had no %s label",
                 LABEL_VALID_AFTER);
       continue;
     }
     time_t valid_after = 0;
     if (parse_iso_time_nospace(lv_valid_after, &valid_after) < 0) {
-      log_debug(LD_DIRSERV, "Ignoring entry because its %s value (%s) was "
-                "unparseable", LABEL_VALID_AFTER, escaped(lv_valid_after));
+      log_debug(LD_DIRSERV,
+                "Ignoring entry because its %s value (%s) was "
+                "unparseable",
+                LABEL_VALID_AFTER, escaped(lv_valid_after));
       continue;
     }
     if (valid_after < valid_after_cutoff) {
-      log_debug(LD_DIRSERV, "Deleting entry because its %s value (%s) was "
-                "too old", LABEL_VALID_AFTER, lv_valid_after);
+      log_debug(LD_DIRSERV,
+                "Deleting entry because its %s value (%s) was "
+                "too old",
+                LABEL_VALID_AFTER, lv_valid_after);
       consensus_cache_entry_mark_for_removal(ent);
       ++n_to_delete;
     }
-  } SMARTLIST_FOREACH_END(ent);
+  } SMARTLIST_FOREACH_END (ent);
 
   // 2. Delete all diffs that lead to a consensus whose valid-after is not the
   // latest.
   for (int flav = 0; flav < N_CONSENSUS_FLAVORS; ++flav) {
     const char *flavname = networkstatus_get_flavor_name(flav);
     /* Determine the most recent consensus of this flavor */
-    consensus_cache_find_all(consensuses, cdm_cache_get(),
-                             LABEL_DOCTYPE, DOCTYPE_CONSENSUS);
+    consensus_cache_find_all(consensuses, cdm_cache_get(), LABEL_DOCTYPE,
+                             DOCTYPE_CONSENSUS);
     consensus_cache_filter_list(consensuses, LABEL_FLAVOR, flavname);
     consensus_cache_entry_t *most_recent =
-      sort_and_find_most_recent(consensuses);
+        sort_and_find_most_recent(consensuses);
     if (most_recent == NULL)
       continue;
-    const char *most_recent_sha3 =
-      consensus_cache_entry_get_value(most_recent,
-                                      LABEL_SHA3_DIGEST_UNCOMPRESSED);
+    const char *most_recent_sha3 = consensus_cache_entry_get_value(
+        most_recent, LABEL_SHA3_DIGEST_UNCOMPRESSED);
     if (BUG(most_recent_sha3 == NULL))
       continue; // LCOV_EXCL_LINE
 
     /* consider all such-flavored diffs, and look to see if they match. */
-    consensus_cache_find_all(diffs, cdm_cache_get(),
-                             LABEL_DOCTYPE, DOCTYPE_CONSENSUS_DIFF);
+    consensus_cache_find_all(diffs, cdm_cache_get(), LABEL_DOCTYPE,
+                             DOCTYPE_CONSENSUS_DIFF);
     consensus_cache_filter_list(diffs, LABEL_FLAVOR, flavname);
-    SMARTLIST_FOREACH_BEGIN(diffs, consensus_cache_entry_t *, diff) {
+    SMARTLIST_FOREACH_BEGIN (diffs, consensus_cache_entry_t *, diff) {
       const char *this_diff_target_sha3 =
-        consensus_cache_entry_get_value(diff, LABEL_TARGET_SHA3_DIGEST);
+          consensus_cache_entry_get_value(diff, LABEL_TARGET_SHA3_DIGEST);
       if (!this_diff_target_sha3)
         continue;
       if (strcmp(this_diff_target_sha3, most_recent_sha3)) {
         consensus_cache_entry_mark_for_removal(diff);
         ++n_to_delete;
       }
-    } SMARTLIST_FOREACH_END(diff);
+    } SMARTLIST_FOREACH_END (diff);
     smartlist_clear(consensuses);
     smartlist_clear(diffs);
   }
@@ -786,35 +769,35 @@ consdiffmgr_cleanup(void)
   for (int flav = 0; flav < N_CONSENSUS_FLAVORS; ++flav) {
     const char *flavname = networkstatus_get_flavor_name(flav);
     /* Determine the most recent consensus of this flavor */
-    consensus_cache_find_all(consensuses, cdm_cache_get(),
-                             LABEL_DOCTYPE, DOCTYPE_CONSENSUS);
+    consensus_cache_find_all(consensuses, cdm_cache_get(), LABEL_DOCTYPE,
+                             DOCTYPE_CONSENSUS);
     consensus_cache_filter_list(consensuses, LABEL_FLAVOR, flavname);
     consensus_cache_entry_t *most_recent =
-      sort_and_find_most_recent(consensuses);
+        sort_and_find_most_recent(consensuses);
     if (most_recent == NULL)
       continue;
     const char *most_recent_sha3_uncompressed =
-      consensus_cache_entry_get_value(most_recent,
-                                      LABEL_SHA3_DIGEST_UNCOMPRESSED);
-    const char *retain_methodname = compression_method_get_name(
-                               RETAIN_CONSENSUS_COMPRESSED_WITH_METHOD);
+        consensus_cache_entry_get_value(most_recent,
+                                        LABEL_SHA3_DIGEST_UNCOMPRESSED);
+    const char *retain_methodname =
+        compression_method_get_name(RETAIN_CONSENSUS_COMPRESSED_WITH_METHOD);
 
     if (BUG(most_recent_sha3_uncompressed == NULL))
       continue;
-    SMARTLIST_FOREACH_BEGIN(consensuses, consensus_cache_entry_t *, ent) {
+    SMARTLIST_FOREACH_BEGIN (consensuses, consensus_cache_entry_t *, ent) {
       const char *lv_sha3_uncompressed =
-        consensus_cache_entry_get_value(ent, LABEL_SHA3_DIGEST_UNCOMPRESSED);
-      if (BUG(! lv_sha3_uncompressed))
+          consensus_cache_entry_get_value(ent, LABEL_SHA3_DIGEST_UNCOMPRESSED);
+      if (BUG(!lv_sha3_uncompressed))
         continue;
       if (!strcmp(lv_sha3_uncompressed, most_recent_sha3_uncompressed))
         continue; // This _is_ the most recent.
       const char *lv_methodname =
-        consensus_cache_entry_get_value(ent, LABEL_COMPRESSION_TYPE);
-      if (! lv_methodname || strcmp(lv_methodname, retain_methodname)) {
+          consensus_cache_entry_get_value(ent, LABEL_COMPRESSION_TYPE);
+      if (!lv_methodname || strcmp(lv_methodname, retain_methodname)) {
         consensus_cache_entry_mark_for_removal(ent);
         ++n_to_delete;
       }
-    } SMARTLIST_FOREACH_END(ent);
+    } SMARTLIST_FOREACH_END (ent);
   }
 
   smartlist_free(objects);
@@ -836,7 +819,7 @@ consdiffmgr_configure(const consdiff_cfg_t *cfg)
   if (cfg)
     memcpy(&consdiff_cfg, cfg, sizeof(consdiff_cfg));
 
-  (void) cdm_cache_get();
+  (void)cdm_cache_get();
 }
 
 /**
@@ -861,9 +844,8 @@ consdiffmgr_validate(void)
   int problems = 0;
 
   smartlist_t *objects = smartlist_new();
-  consensus_cache_find_all(objects, cdm_cache_get(),
-                           NULL, NULL);
-  SMARTLIST_FOREACH_BEGIN(objects, consensus_cache_entry_t *, obj) {
+  consensus_cache_find_all(objects, cdm_cache_get(), NULL, NULL);
+  SMARTLIST_FOREACH_BEGIN (objects, consensus_cache_entry_t *, obj) {
     uint8_t sha3_expected[DIGEST256_LEN];
     uint8_t sha3_received[DIGEST256_LEN];
     int r = cdm_entry_get_sha3_value(sha3_expected, obj, LABEL_SHA3_DIGEST);
@@ -897,8 +879,7 @@ consdiffmgr_validate(void)
       consensus_cache_entry_mark_for_removal(obj);
       continue;
     }
-
-  } SMARTLIST_FOREACH_END(obj);
+  } SMARTLIST_FOREACH_END (obj);
   smartlist_free(objects);
   return problems;
 }
@@ -920,25 +901,26 @@ consdiffmgr_rescan_flavor_(consensus_flavor_t flavor)
 
   // 1. find the most recent consensus, and the ones that we might want
   //    to diff to it.
-  const char *methodname = compression_method_get_name(
-                             RETAIN_CONSENSUS_COMPRESSED_WITH_METHOD);
+  const char *methodname =
+      compression_method_get_name(RETAIN_CONSENSUS_COMPRESSED_WITH_METHOD);
 
   matches = smartlist_new();
-  consensus_cache_find_all(matches, cdm_cache_get(),
-                           LABEL_FLAVOR, flavname);
+  consensus_cache_find_all(matches, cdm_cache_get(), LABEL_FLAVOR, flavname);
   consensus_cache_filter_list(matches, LABEL_DOCTYPE, DOCTYPE_CONSENSUS);
   consensus_cache_filter_list(matches, LABEL_COMPRESSION_TYPE, methodname);
   consensus_cache_entry_t *most_recent = sort_and_find_most_recent(matches);
   if (!most_recent) {
-    log_info(LD_DIRSERV, "No 'most recent' %s consensus found; "
-             "not making diffs", flavname);
+    log_info(LD_DIRSERV,
+             "No 'most recent' %s consensus found; "
+             "not making diffs",
+             flavname);
     goto done;
   }
   tor_assert(smartlist_len(matches));
   smartlist_del(matches, smartlist_len(matches) - 1);
 
   const char *most_recent_valid_after =
-    consensus_cache_entry_get_value(most_recent, LABEL_VALID_AFTER);
+      consensus_cache_entry_get_value(most_recent, LABEL_VALID_AFTER);
   if (BUG(most_recent_valid_after == NULL))
     goto done; //LCOV_EXCL_LINE
   uint8_t most_recent_sha3[DIGEST256_LEN];
@@ -949,23 +931,23 @@ consdiffmgr_rescan_flavor_(consensus_flavor_t flavor)
   // 2. Find all the relevant diffs _to_ this consensus. These are ones
   //    that we don't need to compute.
   diffs = smartlist_new();
-  consensus_cache_find_all(diffs, cdm_cache_get(),
-                           LABEL_VALID_AFTER, most_recent_valid_after);
+  consensus_cache_find_all(diffs, cdm_cache_get(), LABEL_VALID_AFTER,
+                           most_recent_valid_after);
   consensus_cache_filter_list(diffs, LABEL_DOCTYPE, DOCTYPE_CONSENSUS_DIFF);
   consensus_cache_filter_list(diffs, LABEL_FLAVOR, flavname);
   have_diff_from = strmap_new();
-  SMARTLIST_FOREACH_BEGIN(diffs, consensus_cache_entry_t *, diff) {
-    const char *va = consensus_cache_entry_get_value(diff,
-                                                     LABEL_FROM_VALID_AFTER);
+  SMARTLIST_FOREACH_BEGIN (diffs, consensus_cache_entry_t *, diff) {
+    const char *va =
+        consensus_cache_entry_get_value(diff, LABEL_FROM_VALID_AFTER);
     if (BUG(va == NULL))
       continue; // LCOV_EXCL_LINE
     strmap_set(have_diff_from, va, diff);
-  } SMARTLIST_FOREACH_END(diff);
+  } SMARTLIST_FOREACH_END (diff);
 
   // 3. See which consensuses in 'matches' don't have diffs yet.
   smartlist_reverse(matches); // from newest to oldest.
   compute_diffs_from = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(matches, consensus_cache_entry_t *, ent) {
+  SMARTLIST_FOREACH_BEGIN (matches, consensus_cache_entry_t *, ent) {
     const char *va = consensus_cache_entry_get_value(ent, LABEL_VALID_AFTER);
     if (BUG(va == NULL))
       continue; // LCOV_EXCL_LINE
@@ -976,17 +958,15 @@ consdiffmgr_rescan_flavor_(consensus_flavor_t flavor)
      * any more, we should stop keeping it mmap'd when it's not in use.
      */
     consensus_cache_entry_mark_for_aggressive_release(ent);
-  } SMARTLIST_FOREACH_END(ent);
+  } SMARTLIST_FOREACH_END (ent);
 
   log_info(LD_DIRSERV,
            "The most recent %s consensus is valid-after %s. We have diffs to "
            "this consensus for %d/%d older %s consensuses. Generating diffs "
            "for the other %d.",
-           flavname,
-           most_recent_valid_after,
+           flavname, most_recent_valid_after,
            smartlist_len(matches) - smartlist_len(compute_diffs_from),
-           smartlist_len(matches),
-           flavname,
+           smartlist_len(matches), flavname,
            smartlist_len(compute_diffs_from));
 
   // 4. Update the hashtable; remove entries in this flavor to other
@@ -994,26 +974,26 @@ consdiffmgr_rescan_flavor_(consensus_flavor_t flavor)
   cdm_diff_ht_purge(flavor, most_recent_sha3);
 
   // 5. Actually launch the requests.
-  SMARTLIST_FOREACH_BEGIN(compute_diffs_from, consensus_cache_entry_t *, c) {
+  SMARTLIST_FOREACH_BEGIN (compute_diffs_from, consensus_cache_entry_t *, c) {
     if (BUG(c == most_recent))
       continue; // LCOV_EXCL_LINE
 
     uint8_t this_sha3[DIGEST256_LEN];
-    if (cdm_entry_get_sha3_value(this_sha3, c,
-                                 LABEL_SHA3_DIGEST_AS_SIGNED)<0) {
+    if (cdm_entry_get_sha3_value(this_sha3, c, LABEL_SHA3_DIGEST_AS_SIGNED) <
+        0) {
       // Not actually a bug, since we might be running with a directory
       // with stale files from before the #22143 fixes.
       continue;
     }
-    if (cdm_diff_ht_check_and_note_pending(flavor,
-                                           this_sha3, most_recent_sha3)) {
+    if (cdm_diff_ht_check_and_note_pending(flavor, this_sha3,
+                                           most_recent_sha3)) {
       // This is already pending, or we encountered an error.
       continue;
     }
     consensus_diff_queue_diff_work(c, most_recent);
-  } SMARTLIST_FOREACH_END(c);
+  } SMARTLIST_FOREACH_END (c);
 
- done:
+done:
   smartlist_free(matches);
   smartlist_free(diffs);
   smartlist_free(compute_diffs_from);
@@ -1031,15 +1011,13 @@ consdiffmgr_consensus_load(void)
   for (int flav = 0; flav < N_CONSENSUS_FLAVORS; ++flav) {
     const char *flavname = networkstatus_get_flavor_name(flav);
     smartlist_clear(matches);
-    consensus_cache_find_all(matches, cdm_cache_get(),
-                             LABEL_FLAVOR, flavname);
+    consensus_cache_find_all(matches, cdm_cache_get(), LABEL_FLAVOR, flavname);
     consensus_cache_filter_list(matches, LABEL_DOCTYPE, DOCTYPE_CONSENSUS);
     consensus_cache_entry_t *most_recent = sort_and_find_most_recent(matches);
-    if (! most_recent)
+    if (!most_recent)
       continue; // no consensuses.
-    const char *most_recent_sha3 =
-      consensus_cache_entry_get_value(most_recent,
-                                      LABEL_SHA3_DIGEST_UNCOMPRESSED);
+    const char *most_recent_sha3 = consensus_cache_entry_get_value(
+        most_recent, LABEL_SHA3_DIGEST_UNCOMPRESSED);
     if (BUG(most_recent_sha3 == NULL))
       continue; // LCOV_EXCL_LINE
     consensus_cache_filter_list(matches, LABEL_SHA3_DIGEST_UNCOMPRESSED,
@@ -1047,17 +1025,17 @@ consdiffmgr_consensus_load(void)
 
     // Everything that remains matches the most recent consensus of this
     // flavor.
-    SMARTLIST_FOREACH_BEGIN(matches, consensus_cache_entry_t *, ent) {
+    SMARTLIST_FOREACH_BEGIN (matches, consensus_cache_entry_t *, ent) {
       const char *lv_compression =
-        consensus_cache_entry_get_value(ent, LABEL_COMPRESSION_TYPE);
+          consensus_cache_entry_get_value(ent, LABEL_COMPRESSION_TYPE);
       compress_method_t method =
-        compression_method_get_by_name(lv_compression);
+          compression_method_get_by_name(lv_compression);
       int pos = consensus_compression_method_pos(method);
       if (pos < 0)
         continue;
       consensus_cache_entry_handle_free(latest_consensus[flav][pos]);
       latest_consensus[flav][pos] = consensus_cache_entry_handle_new(ent);
-    } SMARTLIST_FOREACH_END(ent);
+    } SMARTLIST_FOREACH_END (ent);
   }
   smartlist_free(matches);
 }
@@ -1069,18 +1047,18 @@ static void
 consdiffmgr_diffs_load(void)
 {
   smartlist_t *diffs = smartlist_new();
-  consensus_cache_find_all(diffs, cdm_cache_get(),
-                           LABEL_DOCTYPE, DOCTYPE_CONSENSUS_DIFF);
-  SMARTLIST_FOREACH_BEGIN(diffs, consensus_cache_entry_t *, diff) {
+  consensus_cache_find_all(diffs, cdm_cache_get(), LABEL_DOCTYPE,
+                           DOCTYPE_CONSENSUS_DIFF);
+  SMARTLIST_FOREACH_BEGIN (diffs, consensus_cache_entry_t *, diff) {
     const char *lv_flavor =
-      consensus_cache_entry_get_value(diff, LABEL_FLAVOR);
+        consensus_cache_entry_get_value(diff, LABEL_FLAVOR);
     if (!lv_flavor)
       continue;
     int flavor = networkstatus_parse_flavor_name(lv_flavor);
     if (flavor < 0)
       continue;
     const char *lv_compression =
-      consensus_cache_entry_get_value(diff, LABEL_COMPRESSION_TYPE);
+        consensus_cache_entry_get_value(diff, LABEL_COMPRESSION_TYPE);
     compress_method_t method = NO_METHOD;
     if (lv_compression) {
       method = compression_method_get_by_name(lv_compression);
@@ -1091,16 +1069,15 @@ consdiffmgr_diffs_load(void)
 
     uint8_t from_sha3[DIGEST256_LEN];
     uint8_t to_sha3[DIGEST256_LEN];
-    if (cdm_entry_get_sha3_value(from_sha3, diff, LABEL_FROM_SHA3_DIGEST)<0)
+    if (cdm_entry_get_sha3_value(from_sha3, diff, LABEL_FROM_SHA3_DIGEST) < 0)
       continue;
-    if (cdm_entry_get_sha3_value(to_sha3, diff, LABEL_TARGET_SHA3_DIGEST)<0)
+    if (cdm_entry_get_sha3_value(to_sha3, diff, LABEL_TARGET_SHA3_DIGEST) < 0)
       continue;
 
-    cdm_diff_ht_set_status(flavor, from_sha3, to_sha3,
-                           method,
+    cdm_diff_ht_set_status(flavor, from_sha3, to_sha3, method,
                            CDM_DIFF_PRESENT,
                            consensus_cache_entry_handle_new(diff));
-  } SMARTLIST_FOREACH_END(diff);
+  } SMARTLIST_FOREACH_END (diff);
   smartlist_free(diffs);
 }
 
@@ -1124,7 +1101,7 @@ consdiffmgr_rescan(void)
   }
 
   for (int flav = 0; flav < N_CONSENSUS_FLAVORS; ++flav) {
-    consdiffmgr_rescan_flavor_((consensus_flavor_t) flav);
+    consdiffmgr_rescan_flavor_((consensus_flavor_t)flav);
   }
 
   cdm_cache_dirty = 0;
@@ -1211,11 +1188,11 @@ consdiffmgr_ensure_space_for_files(int n)
   consensus_cache_find_all(objects, cache, NULL, NULL);
   smartlist_sort(objects, compare_by_staleness_);
   int n_marked = 0;
-  SMARTLIST_FOREACH_BEGIN(objects, consensus_cache_entry_t *, ent) {
+  SMARTLIST_FOREACH_BEGIN (objects, consensus_cache_entry_t *, ent) {
     consensus_cache_entry_mark_for_removal(ent);
     if (++n_marked >= n_to_remove)
       break;
-  } SMARTLIST_FOREACH_END(ent);
+  } SMARTLIST_FOREACH_END (ent);
   smartlist_free(objects);
 
   consensus_cache_delete_pending(cache, 1);
@@ -1244,9 +1221,9 @@ consdiffmgr_set_cache_flags(void)
   smartlist_t *objects = smartlist_new();
   consensus_cache_find_all(objects, cdm_cache_get(), LABEL_DOCTYPE,
                            DOCTYPE_CONSENSUS);
-  SMARTLIST_FOREACH_BEGIN(objects, consensus_cache_entry_t *, ent) {
+  SMARTLIST_FOREACH_BEGIN (objects, consensus_cache_entry_t *, ent) {
     consensus_cache_entry_mark_for_aggressive_release(ent);
-  } SMARTLIST_FOREACH_END(ent);
+  } SMARTLIST_FOREACH_END (ent);
   smartlist_free(objects);
 }
 
@@ -1303,9 +1280,8 @@ typedef struct compressed_result_t {
  */
 static int
 compress_multiple(compressed_result_t *results_out, int n_methods,
-                  const compress_method_t *methods,
-                  const uint8_t *input, size_t len,
-                  const config_line_t *labels_in)
+                  const compress_method_t *methods, const uint8_t *input,
+                  size_t len, const config_line_t *labels_in)
 {
   int rv = 0;
   int i;
@@ -1314,15 +1290,13 @@ compress_multiple(compressed_result_t *results_out, int n_methods,
     const char *methodname = compression_method_get_name(method);
     char *result;
     size_t sz;
-    if (0 == tor_compress(&result, &sz, (const char*)input, len, method)) {
-      results_out[i].body = (uint8_t*)result;
+    if (0 == tor_compress(&result, &sz, (const char *)input, len, method)) {
+      results_out[i].body = (uint8_t *)result;
       results_out[i].bodylen = sz;
       results_out[i].labels = config_lines_dup(labels_in);
       cdm_labels_prepend_sha3(&results_out[i].labels, LABEL_SHA3_DIGEST,
-                              results_out[i].body,
-                              results_out[i].bodylen);
-      config_line_prepend(&results_out[i].labels,
-                          LABEL_COMPRESSION_TYPE,
+                              results_out[i].body, results_out[i].bodylen);
+      config_line_prepend(&results_out[i].labels, LABEL_COMPRESSION_TYPE,
                           methodname);
     } else {
       rv = -1;
@@ -1341,11 +1315,9 @@ compress_multiple(compressed_result_t *results_out, int n_methods,
  * was stored.
  */
 static cdm_diff_status_t
-store_multiple(consensus_cache_entry_handle_t **handles_out,
-               int n,
+store_multiple(consensus_cache_entry_handle_t **handles_out, int n,
                const compress_method_t *methods,
-               const compressed_result_t *results,
-               const char *description)
+               const compressed_result_t *results, const char *description)
 {
   cdm_diff_status_t status = CDM_DIFF_ERROR;
   consdiffmgr_ensure_space_for_files(n);
@@ -1359,16 +1331,13 @@ store_multiple(consensus_cache_entry_handle_t **handles_out,
     const char *methodname = compression_method_get_name(method);
     if (body_out && bodylen_out && labels) {
       /* Success! Store the results */
-      log_info(LD_DIRSERV, "Adding %s, compressed with %s",
-               description, methodname);
+      log_info(LD_DIRSERV, "Adding %s, compressed with %s", description,
+               methodname);
 
       consensus_cache_entry_t *ent =
-        consensus_cache_add(cdm_cache_get(),
-                            labels,
-                            body_out,
-                            bodylen_out);
+          consensus_cache_add(cdm_cache_get(), labels, body_out, bodylen_out);
       if (ent == NULL) {
-        static ratelim_t cant_store_ratelim = RATELIM_INIT(5*60);
+        static ratelim_t cant_store_ratelim = RATELIM_INIT(5 * 60);
         log_fn_ratelim(&cant_store_ratelim, LOG_WARN, LD_FS,
                        "Unable to store object %s compressed with %s.",
                        description, methodname);
@@ -1412,8 +1381,7 @@ typedef struct consensus_diff_worker_job_t {
  * <b>outlen</b> to its extent in memory.  Return 0 on success, -1 on failure.
  **/
 STATIC int
-uncompress_or_set_ptr(const char **out, size_t *outlen,
-                      char **owned_out,
+uncompress_or_set_ptr(const char **out, size_t *outlen, char **owned_out,
                       consensus_cache_entry_t *ent)
 {
   const uint8_t *body;
@@ -1425,7 +1393,7 @@ uncompress_or_set_ptr(const char **out, size_t *outlen,
     return -1;
 
   const char *lv_compression =
-    consensus_cache_entry_get_value(ent, LABEL_COMPRESSION_TYPE);
+      consensus_cache_entry_get_value(ent, LABEL_COMPRESSION_TYPE);
   compress_method_t method = NO_METHOD;
 
   if (lv_compression)
@@ -1437,8 +1405,8 @@ uncompress_or_set_ptr(const char **out, size_t *outlen,
     *outlen = bodylen;
     rv = 0;
   } else {
-    rv = tor_uncompress(owned_out, outlen, (const char *)body, bodylen,
-                        method, 1, LOG_WARN);
+    rv = tor_uncompress(owned_out, outlen, (const char *)body, bodylen, method,
+                        1, LOG_WARN);
     *out = *owned_out;
   }
   return rv;
@@ -1466,39 +1434,35 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
     return WQ_RPL_REPLY; // LCOV_EXCL_LINE
 
   const char *lv_to_valid_after =
-    consensus_cache_entry_get_value(job->diff_to, LABEL_VALID_AFTER);
+      consensus_cache_entry_get_value(job->diff_to, LABEL_VALID_AFTER);
   const char *lv_to_fresh_until =
-    consensus_cache_entry_get_value(job->diff_to, LABEL_FRESH_UNTIL);
+      consensus_cache_entry_get_value(job->diff_to, LABEL_FRESH_UNTIL);
   const char *lv_to_valid_until =
-    consensus_cache_entry_get_value(job->diff_to, LABEL_VALID_UNTIL);
+      consensus_cache_entry_get_value(job->diff_to, LABEL_VALID_UNTIL);
   const char *lv_to_signatories =
-    consensus_cache_entry_get_value(job->diff_to, LABEL_SIGNATORIES);
+      consensus_cache_entry_get_value(job->diff_to, LABEL_SIGNATORIES);
   const char *lv_from_valid_after =
-    consensus_cache_entry_get_value(job->diff_from, LABEL_VALID_AFTER);
-  const char *lv_from_digest =
-    consensus_cache_entry_get_value(job->diff_from,
-                                    LABEL_SHA3_DIGEST_AS_SIGNED);
+      consensus_cache_entry_get_value(job->diff_from, LABEL_VALID_AFTER);
+  const char *lv_from_digest = consensus_cache_entry_get_value(
+      job->diff_from, LABEL_SHA3_DIGEST_AS_SIGNED);
   const char *lv_from_flavor =
-    consensus_cache_entry_get_value(job->diff_from, LABEL_FLAVOR);
+      consensus_cache_entry_get_value(job->diff_from, LABEL_FLAVOR);
   const char *lv_to_flavor =
-    consensus_cache_entry_get_value(job->diff_to, LABEL_FLAVOR);
-  const char *lv_to_digest =
-    consensus_cache_entry_get_value(job->diff_to,
-                                    LABEL_SHA3_DIGEST_UNCOMPRESSED);
+      consensus_cache_entry_get_value(job->diff_to, LABEL_FLAVOR);
+  const char *lv_to_digest = consensus_cache_entry_get_value(
+      job->diff_to, LABEL_SHA3_DIGEST_UNCOMPRESSED);
 
-  if (! lv_from_digest) {
+  if (!lv_from_digest) {
     /* This isn't a bug right now, since it can happen if you're migrating
      * from an older version of master to a newer one.  The older ones didn't
      * annotate their stored consensus objects with sha3-digest-as-signed.
-    */
+     */
     return WQ_RPL_REPLY; // LCOV_EXCL_LINE
   }
 
   /* All these values are mandatory on the input */
-  if (BUG(!lv_to_valid_after) ||
-      BUG(!lv_from_valid_after) ||
-      BUG(!lv_from_flavor) ||
-      BUG(!lv_to_flavor)) {
+  if (BUG(!lv_to_valid_after) || BUG(!lv_from_valid_after) ||
+      BUG(!lv_from_flavor) || BUG(!lv_to_flavor)) {
     return WQ_RPL_REPLY; // LCOV_EXCL_LINE
   }
   /* The flavors need to match */
@@ -1527,10 +1491,8 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
     // XXXX ugh; this is going to calculate the SHA3 of both its
     // XXXX inputs again, even though we already have that. Maybe it's time
     // XXXX to change the API here?
-    consensus_diff = consensus_diff_generate(diff_from_nt,
-                                             diff_from_nt_len,
-                                             diff_to_nt,
-                                             diff_to_nt_len);
+    consensus_diff = consensus_diff_generate(diff_from_nt, diff_from_nt_len,
+                                             diff_to_nt, diff_to_nt_len);
     tor_free(owned1);
     tor_free(owned2);
   }
@@ -1542,7 +1504,7 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
   /* Compress the results and send the reply */
   tor_assert(compress_diffs_with[0] == NO_METHOD);
   size_t difflen = strlen(consensus_diff);
-  job->out[0].body = (uint8_t *) consensus_diff;
+  job->out[0].body = (uint8_t *)consensus_diff;
   job->out[0].bodylen = difflen;
 
   config_line_t *common_labels = NULL;
@@ -1552,40 +1514,31 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
     config_line_prepend(&common_labels, LABEL_FRESH_UNTIL, lv_to_fresh_until);
   if (lv_to_signatories)
     config_line_prepend(&common_labels, LABEL_SIGNATORIES, lv_to_signatories);
-  cdm_labels_prepend_sha3(&common_labels,
-                          LABEL_SHA3_DIGEST_UNCOMPRESSED,
-                          job->out[0].body,
-                          job->out[0].bodylen);
+  cdm_labels_prepend_sha3(&common_labels, LABEL_SHA3_DIGEST_UNCOMPRESSED,
+                          job->out[0].body, job->out[0].bodylen);
   config_line_prepend(&common_labels, LABEL_FROM_VALID_AFTER,
                       lv_from_valid_after);
-  config_line_prepend(&common_labels, LABEL_VALID_AFTER,
-                      lv_to_valid_after);
+  config_line_prepend(&common_labels, LABEL_VALID_AFTER, lv_to_valid_after);
   config_line_prepend(&common_labels, LABEL_FLAVOR, lv_from_flavor);
-  config_line_prepend(&common_labels, LABEL_FROM_SHA3_DIGEST,
-                      lv_from_digest);
-  config_line_prepend(&common_labels, LABEL_TARGET_SHA3_DIGEST,
-                      lv_to_digest);
-  config_line_prepend(&common_labels, LABEL_DOCTYPE,
-                      DOCTYPE_CONSENSUS_DIFF);
+  config_line_prepend(&common_labels, LABEL_FROM_SHA3_DIGEST, lv_from_digest);
+  config_line_prepend(&common_labels, LABEL_TARGET_SHA3_DIGEST, lv_to_digest);
+  config_line_prepend(&common_labels, LABEL_DOCTYPE, DOCTYPE_CONSENSUS_DIFF);
 
   job->out[0].labels = config_lines_dup(common_labels);
-  cdm_labels_prepend_sha3(&job->out[0].labels,
-                          LABEL_SHA3_DIGEST,
-                          job->out[0].body,
-                          job->out[0].bodylen);
+  cdm_labels_prepend_sha3(&job->out[0].labels, LABEL_SHA3_DIGEST,
+                          job->out[0].body, job->out[0].bodylen);
 
-  compress_multiple(job->out+1,
-                    n_diff_compression_methods()-1,
-                    compress_diffs_with+1,
-                    (const uint8_t*)consensus_diff, difflen, common_labels);
+  compress_multiple(job->out + 1, n_diff_compression_methods() - 1,
+                    compress_diffs_with + 1, (const uint8_t *)consensus_diff,
+                    difflen, common_labels);
 
   config_free_lines(common_labels);
   return WQ_RPL_REPLY;
 }
 
-#define consensus_diff_worker_job_free(job)             \
-  FREE_AND_NULL(consensus_diff_worker_job_t,            \
-                consensus_diff_worker_job_free_, (job))
+#define consensus_diff_worker_job_free(job)                                   \
+  FREE_AND_NULL(consensus_diff_worker_job_t, consensus_diff_worker_job_free_, \
+                (job))
 
 /**
  * Helper: release all storage held in <b>job</b>.
@@ -1618,14 +1571,12 @@ consensus_diff_worker_replyfn(void *work_)
 
   consensus_diff_worker_job_t *job = work_;
 
-  const char *lv_from_digest =
-    consensus_cache_entry_get_value(job->diff_from,
-                                    LABEL_SHA3_DIGEST_AS_SIGNED);
-  const char *lv_to_digest =
-    consensus_cache_entry_get_value(job->diff_to,
-                                    LABEL_SHA3_DIGEST_UNCOMPRESSED);
+  const char *lv_from_digest = consensus_cache_entry_get_value(
+      job->diff_from, LABEL_SHA3_DIGEST_AS_SIGNED);
+  const char *lv_to_digest = consensus_cache_entry_get_value(
+      job->diff_to, LABEL_SHA3_DIGEST_UNCOMPRESSED);
   const char *lv_flavor =
-    consensus_cache_entry_get_value(job->diff_to, LABEL_FLAVOR);
+      consensus_cache_entry_get_value(job->diff_to, LABEL_FLAVOR);
   if (BUG(lv_from_digest == NULL))
     lv_from_digest = "???"; // LCOV_EXCL_LINE
   if (BUG(lv_to_digest == NULL))
@@ -1652,20 +1603,17 @@ consensus_diff_worker_replyfn(void *work_)
 
   char description[128];
   tor_snprintf(description, sizeof(description),
-               "consensus diff from %s to %s",
-               lv_from_digest, lv_to_digest);
+               "consensus diff from %s to %s", lv_from_digest, lv_to_digest);
 
-  int status = store_multiple(handles,
-                              n_diff_compression_methods(),
-                              compress_diffs_with,
-                              job->out,
-                              description);
+  int status = store_multiple(handles, n_diff_compression_methods(),
+                              compress_diffs_with, job->out, description);
 
   if (status != CDM_DIFF_PRESENT) {
     /* Failure! Nothing to do but complain */
     log_warn(LD_DIRSERV,
              "Worker was unable to compute consensus diff "
-             "from %s to %s", lv_from_digest, lv_to_digest);
+             "from %s to %s",
+             lv_from_digest, lv_to_digest);
     /* Cache this error so we don't try to compute this one again. */
     status = CDM_DIFF_ERROR;
   }
@@ -1715,15 +1663,13 @@ consensus_diff_queue_diff_work(consensus_cache_entry_t *diff_from,
     goto err;
 
   workqueue_entry_t *work;
-  work = cpuworker_queue_work(WQ_PRI_LOW,
-                              consensus_diff_worker_threadfn,
-                              consensus_diff_worker_replyfn,
-                              job);
+  work = cpuworker_queue_work(WQ_PRI_LOW, consensus_diff_worker_threadfn,
+                              consensus_diff_worker_replyfn, job);
   if (!work)
     goto err;
 
   return 0;
- err:
+err:
   consensus_diff_worker_job_free(job); // includes decrefs.
   return -1;
 }
@@ -1739,7 +1685,7 @@ typedef struct consensus_compress_worker_job_t {
   compressed_result_t out[ARRAY_LENGTH(compress_consensus_with)];
 } consensus_compress_worker_job_t;
 
-#define consensus_compress_worker_job_free(job) \
+#define consensus_compress_worker_job_free(job)  \
   FREE_AND_NULL(consensus_compress_worker_job_t, \
                 consensus_compress_worker_job_free_, (job))
 
@@ -1783,19 +1729,17 @@ consensus_compress_worker_threadfn(void *state_, void *work_)
     if (router_get_networkstatus_v3_signed_boundaries(consensus, bodylen,
                                                       &start, &end) < 0) {
       start = consensus;
-      end = consensus+bodylen;
+      end = consensus + bodylen;
     }
     cdm_labels_prepend_sha3(&labels, LABEL_SHA3_DIGEST_AS_SIGNED,
-                            (const uint8_t *)start,
-                            end - start);
+                            (const uint8_t *)start, end - start);
   }
   config_line_prepend(&labels, LABEL_FLAVOR, flavname);
   config_line_prepend(&labels, LABEL_DOCTYPE, DOCTYPE_CONSENSUS);
 
-  compress_multiple(job->out,
-                    n_consensus_compression_methods(),
-                    compress_consensus_with,
-                    (const uint8_t*)consensus, bodylen, labels);
+  compress_multiple(job->out, n_consensus_compression_methods(),
+                    compress_consensus_with, (const uint8_t *)consensus,
+                    bodylen, labels);
   config_free_lines(labels);
   return WQ_RPL_REPLY;
 }
@@ -1810,15 +1754,12 @@ consensus_compress_worker_replyfn(void *work_)
 {
   consensus_compress_worker_job_t *job = work_;
 
-  consensus_cache_entry_handle_t *handles[
-                               ARRAY_LENGTH(compress_consensus_with)];
+  consensus_cache_entry_handle_t
+      *handles[ARRAY_LENGTH(compress_consensus_with)];
   memset(handles, 0, sizeof(handles));
 
-  store_multiple(handles,
-                 n_consensus_compression_methods(),
-                 compress_consensus_with,
-                 job->out,
-                 "consensus");
+  store_multiple(handles, n_consensus_compression_methods(),
+                 compress_consensus_with, job->out, "consensus");
   mark_cdm_cache_dirty();
 
   unsigned u;
@@ -1844,8 +1785,7 @@ static int background_compression = 0;
  * text in the cache.
  */
 static int
-consensus_queue_compression_work(const char *consensus,
-                                 size_t consensus_len,
+consensus_queue_compression_work(const char *consensus, size_t consensus_len,
                                  const networkstatus_t *as_parsed)
 {
   tor_assert(consensus);
@@ -1856,9 +1796,9 @@ consensus_queue_compression_work(const char *consensus,
   job->consensus_len = strlen(job->consensus);
   job->flavor = as_parsed->flavor;
 
-  char va_str[ISO_TIME_LEN+1];
-  char vu_str[ISO_TIME_LEN+1];
-  char fu_str[ISO_TIME_LEN+1];
+  char va_str[ISO_TIME_LEN + 1];
+  char vu_str[ISO_TIME_LEN + 1];
+  char fu_str[ISO_TIME_LEN + 1];
   format_iso_time_nospace(va_str, as_parsed->valid_after);
   format_iso_time_nospace(fu_str, as_parsed->fresh_until);
   format_iso_time_nospace(vu_str, as_parsed->valid_until);
@@ -1867,14 +1807,14 @@ consensus_queue_compression_work(const char *consensus,
   config_line_append(&job->labels_in, LABEL_VALID_UNTIL, vu_str);
   if (as_parsed->voters) {
     smartlist_t *hexvoters = smartlist_new();
-    SMARTLIST_FOREACH_BEGIN(as_parsed->voters,
-                            networkstatus_voter_info_t *, vi) {
+    SMARTLIST_FOREACH_BEGIN (as_parsed->voters, networkstatus_voter_info_t *,
+                             vi) {
       if (smartlist_len(vi->sigs) == 0)
         continue; // didn't sign.
-      char d[HEX_DIGEST_LEN+1];
+      char d[HEX_DIGEST_LEN + 1];
       base16_encode(d, sizeof(d), vi->identity_digest, DIGEST_LEN);
       smartlist_add_strdup(hexvoters, d);
-    } SMARTLIST_FOREACH_END(vi);
+    } SMARTLIST_FOREACH_END (vi);
     char *signers = smartlist_join_strings(hexvoters, ",", 0, NULL);
     config_line_prepend(&job->labels_in, LABEL_SIGNATORIES, signers);
     tor_free(signers);
@@ -1884,10 +1824,8 @@ consensus_queue_compression_work(const char *consensus,
 
   if (background_compression) {
     workqueue_entry_t *work;
-    work = cpuworker_queue_work(WQ_PRI_LOW,
-                                consensus_compress_worker_threadfn,
-                                consensus_compress_worker_replyfn,
-                                job);
+    work = cpuworker_queue_work(WQ_PRI_LOW, consensus_compress_worker_threadfn,
+                                consensus_compress_worker_replyfn, job);
     if (!work) {
       consensus_compress_worker_job_free(job);
       return -1;
@@ -1924,7 +1862,7 @@ consensus_cache_entry_get_voter_id_digests(const consensus_cache_entry_t *ent,
   s = consensus_cache_entry_get_value(ent, LABEL_SIGNATORIES);
   if (s == NULL)
     return -1;
-  smartlist_split_string(out, s, ",", SPLIT_SKIP_SPACE|SPLIT_STRIP_SPACE, 0);
+  smartlist_split_string(out, s, ",", SPLIT_SKIP_SPACE | SPLIT_STRIP_SPACE, 0);
   return 0;
 }
 

@@ -46,7 +46,7 @@ test_contains(void *arg)
   int ret;
   address_set_t *set = NULL;
 
-  (void) arg;
+  (void)arg;
 
   /* Setup an IPv4 and IPv6 addresses. */
   tor_addr_t addr_v6;
@@ -80,7 +80,7 @@ test_contains(void *arg)
   ret = address_set_probably_contains(set, &dummy_addr);
   tt_int_op(ret, OP_EQ, 0);
 
- done:
+done:
   address_set_free(set);
 }
 
@@ -88,16 +88,17 @@ static void
 test_nodelist(void *arg)
 {
   int ret;
-  routerstatus_t *rs = NULL; microdesc_t *md = NULL; routerinfo_t *ri = NULL;
+  routerstatus_t *rs = NULL;
+  microdesc_t *md = NULL;
+  routerinfo_t *ri = NULL;
 
-  (void) arg;
+  (void)arg;
 
   MOCK(networkstatus_get_latest_consensus,
        mock_networkstatus_get_latest_consensus);
   MOCK(networkstatus_get_latest_consensus_by_flavor,
        mock_networkstatus_get_latest_consensus_by_flavor);
-  MOCK(get_estimated_address_per_node,
-       mock_get_estimated_address_per_node);
+  MOCK(get_estimated_address_per_node, mock_get_estimated_address_per_node);
 
   dummy_ns = tor_malloc_zero(sizeof(*dummy_ns));
   dummy_ns->flavor = FLAV_MICRODESC;
@@ -160,8 +161,10 @@ test_nodelist(void *arg)
   ret = nodelist_probably_contains_address(&dummy_addr);
   tt_int_op(ret, OP_EQ, 0);
 
- done:
-  routerstatus_free(rs); routerinfo_free(ri); microdesc_free(md);
+done:
+  routerstatus_free(rs);
+  routerinfo_free(ri);
+  microdesc_free(md);
   smartlist_clear(dummy_ns->routerstatus_list);
   networkstatus_vote_free(dummy_ns);
   UNMOCK(networkstatus_get_latest_consensus);
@@ -170,11 +173,7 @@ test_nodelist(void *arg)
 }
 
 struct testcase_t address_set_tests[] = {
-  { "contains", test_contains, TT_FORK,
-    NULL, NULL },
-  { "nodelist", test_nodelist, TT_FORK,
-    NULL, NULL },
+    {"contains", test_contains, TT_FORK, NULL, NULL},
+    {"nodelist", test_nodelist, TT_FORK, NULL, NULL},
 
-  END_OF_TESTCASES
-};
-
+    END_OF_TESTCASES};

@@ -7,7 +7,7 @@
 #include <time.h>
 
 #include "trunnel/ed25519_cert.h"
-#include "lib/cc/torint.h"  /* TOR_PRIdSZ */
+#include "lib/cc/torint.h" /* TOR_PRIdSZ */
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/malloc/malloc.h"
 #include "lib/encoding/time_fmt.h"
@@ -16,7 +16,7 @@ int
 main(int argc, char **argv)
 {
   ed25519_cert_t *cert = NULL;
-  char rfc1123_buf[RFC1123_TIME_LEN+1] = "";
+  char rfc1123_buf[RFC1123_TIME_LEN + 1] = "";
 
   if (argc != 2) {
     fprintf(stderr, "Usage:\n");
@@ -29,12 +29,13 @@ main(int argc, char **argv)
 
   uint8_t certbuf[256];
   ssize_t cert_body_len = crypto_read_tagged_contents_from_file(
-                 filepath, "ed25519v1-cert",
-                 &got_tag, certbuf, sizeof(certbuf));
+      filepath, "ed25519v1-cert", &got_tag, certbuf, sizeof(certbuf));
 
   if (cert_body_len <= 0) {
-    fprintf(stderr, "crypto_read_tagged_contents_from_file failed with "
-                    "error: %s\n", strerror(errno));
+    fprintf(stderr,
+            "crypto_read_tagged_contents_from_file failed with "
+            "error: %s\n",
+            strerror(errno));
     return -2;
   }
 
@@ -52,8 +53,9 @@ main(int argc, char **argv)
 
   ssize_t parsed = ed25519_cert_parse(&cert, certbuf, cert_body_len);
   if (parsed <= 0) {
-    fprintf(stderr, "ed25519_cert_parse failed with return value %" TOR_PRIdSZ
-                    "\n", parsed);
+    fprintf(stderr,
+            "ed25519_cert_parse failed with return value %" TOR_PRIdSZ "\n",
+            parsed);
     return -5;
   }
 

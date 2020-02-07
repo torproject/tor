@@ -30,10 +30,9 @@
 STATIC int
 get_emit_min_version(void)
 {
-  return networkstatus_get_param(NULL, "sendme_emit_min_version",
-                                 SENDME_EMIT_MIN_VERSION_DEFAULT,
-                                 SENDME_EMIT_MIN_VERSION_MIN,
-                                 SENDME_EMIT_MIN_VERSION_MAX);
+  return networkstatus_get_param(
+      NULL, "sendme_emit_min_version", SENDME_EMIT_MIN_VERSION_DEFAULT,
+      SENDME_EMIT_MIN_VERSION_MIN, SENDME_EMIT_MIN_VERSION_MAX);
 }
 
 /* Return the minimum version given by the consensus (if any) that should be
@@ -41,10 +40,9 @@ get_emit_min_version(void)
 STATIC int
 get_accept_min_version(void)
 {
-  return networkstatus_get_param(NULL, "sendme_accept_min_version",
-                                 SENDME_ACCEPT_MIN_VERSION_DEFAULT,
-                                 SENDME_ACCEPT_MIN_VERSION_MIN,
-                                 SENDME_ACCEPT_MIN_VERSION_MAX);
+  return networkstatus_get_param(
+      NULL, "sendme_accept_min_version", SENDME_ACCEPT_MIN_VERSION_DEFAULT,
+      SENDME_ACCEPT_MIN_VERSION_MIN, SENDME_ACCEPT_MIN_VERSION_MAX);
 }
 
 /* Pop the first cell digset on the given circuit from the SENDME last digests
@@ -133,22 +131,24 @@ cell_version_can_be_handled(uint8_t cell_version)
   /* Then, is this version below the accepted version from the consensus? If
    * yes, we must not handle it. */
   if (cell_version < accept_version) {
-    log_info(LD_PROTOCOL, "Unacceptable SENDME version %u. Only "
-                          "accepting %u (from consensus). Closing circuit.",
+    log_info(LD_PROTOCOL,
+             "Unacceptable SENDME version %u. Only "
+             "accepting %u (from consensus). Closing circuit.",
              cell_version, accept_version);
     goto invalid;
   }
 
   /* Is this cell version supported by us? */
   if (cell_version > SENDME_MAX_SUPPORTED_VERSION) {
-    log_info(LD_PROTOCOL, "SENDME cell version %u is not supported by us. "
-                          "We only support <= %u",
+    log_info(LD_PROTOCOL,
+             "SENDME cell version %u is not supported by us. "
+             "We only support <= %u",
              cell_version, SENDME_MAX_SUPPORTED_VERSION);
     goto invalid;
   }
 
   return true;
- invalid:
+invalid:
   return false;
 }
 
@@ -227,7 +227,7 @@ sendme_is_valid(const circuit_t *circ, const uint8_t *cell_payload,
   sendme_cell_free(cell);
   tor_free(circ_digest);
   return true;
- invalid:
+invalid:
   sendme_cell_free(cell);
   tor_free(circ_digest);
   return false;
@@ -297,13 +297,15 @@ send_circuit_level_sendme(circuit_t *circ, crypt_path_t *layer_hint,
   default:
     /* Unknown version, fallback to version 0 meaning no payload. */
     payload_len = 0;
-    log_debug(LD_PROTOCOL, "Emitting SENDME version 0 cell. "
-                           "Consensus emit version is %d", emit_version);
+    log_debug(LD_PROTOCOL,
+              "Emitting SENDME version 0 cell. "
+              "Consensus emit version is %d",
+              emit_version);
     break;
   }
 
   if (relay_send_command_from_edge(0, circ, RELAY_COMMAND_SENDME,
-                                   (char *) payload, payload_len,
+                                   (char *)payload, payload_len,
                                    layer_hint) < 0) {
     log_warn(LD_CIRC,
              "SENDME relay_send_command_from_edge failed. Circuit's closed.");
@@ -396,15 +398,15 @@ sendme_connection_edge_consider_sending(edge_connection_t *conn)
     log_debug(log_domain, "Outbuf %" TOR_PRIuSZ ", queuing stream SENDME.",
               TO_CONN(conn)->outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
-    if (connection_edge_send_command(conn, RELAY_COMMAND_SENDME,
-                                     NULL, 0) < 0) {
+    if (connection_edge_send_command(conn, RELAY_COMMAND_SENDME, NULL, 0) <
+        0) {
       log_warn(LD_BUG, "connection_edge_send_command failed while sending "
                        "a SENDME. Circuit probably closed, skipping.");
       goto end; /* The circuit's closed, don't continue */
     }
   }
 
- end:
+end:
   return;
 }
 
@@ -421,8 +423,8 @@ sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint)
   const uint8_t *digest;
 
   while ((layer_hint ? layer_hint->deliver_window : circ->deliver_window) <=
-          CIRCWINDOW_START - CIRCWINDOW_INCREMENT) {
-    log_debug(LD_CIRC,"Queuing circuit sendme.");
+         CIRCWINDOW_START - CIRCWINDOW_INCREMENT) {
+    log_debug(LD_CIRC, "Queuing circuit sendme.");
     if (layer_hint) {
       layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
       digest = cpath_get_sendme_digest(layer_hint);
@@ -454,8 +456,8 @@ sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint)
  * On error, a negative value is returned, which indicates that the
  * circuit must be closed using the value as the reason for it. */
 int
-sendme_process_circuit_level(crypt_path_t *layer_hint,
-                             circuit_t *circ, const uint8_t *cell_payload,
+sendme_process_circuit_level(crypt_path_t *layer_hint, circuit_t *circ,
+                             const uint8_t *cell_payload,
                              uint16_t cell_payload_len)
 {
   tor_assert(circ);
@@ -493,12 +495,12 @@ sendme_process_circuit_level(crypt_path_t *layer_hint,
   } else {
     /* We aren't the origin of this circuit so we are the Exit and thus we
      * track the package window with the circuit object. */
-    if ((circ->package_window + CIRCWINDOW_INCREMENT) >
-        CIRCWINDOW_START_MAX) {
+    if ((circ->package_window + CIRCWINDOW_INCREMENT) > CIRCWINDOW_START_MAX) {
       static struct ratelim_t client_warn_ratelim = RATELIM_INIT(600);
       log_fn_ratelim(&client_warn_ratelim, LOG_PROTOCOL_WARN, LD_PROTOCOL,
                      "Unexpected sendme cell from client. "
-                     "Closing circ (window %d).", circ->package_window);
+                     "Closing circ (window %d).",
+                     circ->package_window);
       return -END_CIRC_REASON_TORPROTOCOL;
     }
     circ->package_window += CIRCWINDOW_INCREMENT;
@@ -654,7 +656,7 @@ sendme_record_cell_digest_on_circ(circuit_t *circ, crypt_path_t *cpath)
     sendme_digest = cpath_get_sendme_digest(cpath);
   } else {
     sendme_digest =
-      relay_crypto_get_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto);
+        relay_crypto_get_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto);
   }
 
   record_cell_digest_on_circ(circ, sendme_digest);
@@ -669,8 +671,8 @@ sendme_record_received_cell_digest(circuit_t *circ, crypt_path_t *cpath)
   tor_assert(circ);
 
   /* Only record if the next cell is expected to be a SENDME. */
-  if (!circuit_sendme_cell_is_next(cpath ? cpath->deliver_window :
-                                           circ->deliver_window)) {
+  if (!circuit_sendme_cell_is_next(cpath ? cpath->deliver_window
+                                         : circ->deliver_window)) {
     return;
   }
 
@@ -692,8 +694,8 @@ sendme_record_sending_cell_digest(circuit_t *circ, crypt_path_t *cpath)
   tor_assert(circ);
 
   /* Only record if the next cell is expected to be a SENDME. */
-  if (!circuit_sendme_cell_is_next(cpath ? cpath->package_window :
-                                           circ->package_window)) {
+  if (!circuit_sendme_cell_is_next(cpath ? cpath->package_window
+                                         : circ->package_window)) {
     goto end;
   }
 
@@ -705,6 +707,6 @@ sendme_record_sending_cell_digest(circuit_t *circ, crypt_path_t *cpath)
     relay_crypto_record_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto, false);
   }
 
- end:
+end:
   return;
 }

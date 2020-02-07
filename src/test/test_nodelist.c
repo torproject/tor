@@ -37,16 +37,16 @@
 static void
 test_nodelist_node_get_verbose_nickname_by_id_null_node(void *arg)
 {
-  char vname[MAX_VERBOSE_NICKNAME_LEN+1];
+  char vname[MAX_VERBOSE_NICKNAME_LEN + 1];
   const char ID[] = "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
                     "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA";
-  (void) arg;
+  (void)arg;
 
   /* make sure node_get_by_id returns NULL */
   tt_assert(!node_get_by_id(ID));
   node_get_verbose_nickname_by_id(ID, vname);
-  tt_str_op(vname,OP_EQ, "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
- done:
+  tt_str_op(vname, OP_EQ, "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+done:
   return;
 }
 
@@ -59,9 +59,9 @@ test_nodelist_node_get_verbose_nickname_not_named(void *arg)
   node_t mock_node;
   routerstatus_t mock_rs;
 
-  char vname[MAX_VERBOSE_NICKNAME_LEN+1];
+  char vname[MAX_VERBOSE_NICKNAME_LEN + 1];
 
-  (void) arg;
+  (void)arg;
 
   memset(&mock_node, 0, sizeof(node_t));
   memset(&mock_rs, 0, sizeof(routerstatus_t));
@@ -70,13 +70,13 @@ test_nodelist_node_get_verbose_nickname_not_named(void *arg)
   strlcpy(mock_rs.nickname, "TestOR", sizeof(mock_rs.nickname));
   mock_node.rs = &mock_rs;
   memcpy(mock_node.identity,
-          "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
-          "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA",
-          DIGEST_LEN);
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
+         "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA",
+         DIGEST_LEN);
   node_get_verbose_nickname(&mock_node, vname);
-  tt_str_op(vname,OP_EQ, "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR");
+  tt_str_op(vname, OP_EQ, "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR");
 
- done:
+done:
   return;
 }
 
@@ -105,7 +105,7 @@ test_nodelist_node_is_dir(void *arg)
 
   rs.is_v2_dir = 0;
   rs.dir_port = 1;
-  tt_assert(! node_is_dir(&node));
+  tt_assert(!node_is_dir(&node));
 
   node.rs = NULL;
   tt_assert(!node_is_dir(&node));
@@ -114,9 +114,9 @@ test_nodelist_node_is_dir(void *arg)
   tt_assert(node_is_dir(&node));
   ri.supports_tunnelled_dir_requests = 0;
   ri.dir_port = 1;
-  tt_assert(! node_is_dir(&node));
+  tt_assert(!node_is_dir(&node));
 
- done:
+done:
   return;
 }
 
@@ -163,7 +163,7 @@ test_nodelist_ed_id(void *arg)
 
     crypto_rand(md[i]->digest, sizeof(md[i]->digest));
     md[i]->ed25519_identity_pkey = tor_malloc(sizeof(ed25519_public_key_t));
-    crypto_rand((char*)md[i]->ed25519_identity_pkey,
+    crypto_rand((char *)md[i]->ed25519_identity_pkey,
                 sizeof(ed25519_public_key_t));
     crypto_rand(rs[i]->identity_digest, sizeof(rs[i]->identity_digest));
     memcpy(ri[i]->cache_info.identity_digest, rs[i]->identity_digest,
@@ -224,7 +224,7 @@ test_nodelist_ed_id(void *arg)
   tt_ptr_op(n3, OP_EQ, node_get_by_ed25519_id(md[3]->ed25519_identity_pkey));
   expect_log_msg_containing("Reused ed25519_id");
 
- done:
+done:
   teardown_capture_of_logs();
   for (i = 0; i < N_NODES; ++i) {
     tor_free(rs[i]);
@@ -253,14 +253,14 @@ test_nodelist_nodefamily(void *arg)
 
   /* binary ID digests */
   uint8_t d1[DIGEST_LEN], d2[DIGEST_LEN], d3[DIGEST_LEN], d4[DIGEST_LEN],
-    d5[DIGEST_LEN];
-  base16_decode((char*)d1, sizeof(d1), h1, strlen(h1));
-  base16_decode((char*)d2, sizeof(d2), h2, strlen(h2));
-  base16_decode((char*)d3, sizeof(d3), h3, strlen(h3));
-  base16_decode((char*)d4, sizeof(d4), h4, strlen(h4));
-  base16_decode((char*)d5, sizeof(d5), h5, strlen(h5));
+      d5[DIGEST_LEN];
+  base16_decode((char *)d1, sizeof(d1), h1, strlen(h1));
+  base16_decode((char *)d2, sizeof(d2), h2, strlen(h2));
+  base16_decode((char *)d3, sizeof(d3), h3, strlen(h3));
+  base16_decode((char *)d4, sizeof(d4), h4, strlen(h4));
+  base16_decode((char *)d5, sizeof(d5), h5, strlen(h5));
 
-  char *enc=NULL, *enc2=NULL;
+  char *enc = NULL, *enc2 = NULL;
 
   nodefamily_t *nf1 = NULL;
   nodefamily_t *nf2 = NULL;
@@ -289,10 +289,10 @@ test_nodelist_nodefamily(void *arg)
   tor_free(enc);
 
   tt_assert(nodefamily_contains_rsa_id(nf1, d1));
-  tt_assert(! nodefamily_contains_rsa_id(nf1, d2));
+  tt_assert(!nodefamily_contains_rsa_id(nf1, d2));
   tt_assert(nodefamily_contains_nickname(nf1, "hello"));
   tt_assert(nodefamily_contains_nickname(nf1, "HELLO"));
-  tt_assert(! nodefamily_contains_nickname(nf1, "goodbye"));
+  tt_assert(!nodefamily_contains_nickname(nf1, "goodbye"));
 
   tt_int_op(nf1->refcnt, OP_EQ, 3);
   nodefamily_free(nf3);
@@ -319,10 +319,10 @@ test_nodelist_nodefamily(void *arg)
   tor_free(enc);
 
   tt_assert(nodefamily_contains_rsa_id(nf3, d3));
-  tt_assert(! nodefamily_contains_rsa_id(nf3, d2));
-  tt_assert(! nodefamily_contains_rsa_id(nf3, d1));
+  tt_assert(!nodefamily_contains_rsa_id(nf3, d2));
+  tt_assert(!nodefamily_contains_rsa_id(nf3, d1));
   tt_assert(nodefamily_contains_nickname(nf3, "hello"));
-  tt_assert(! nodefamily_contains_nickname(nf3, "goodbye"));
+  tt_assert(!nodefamily_contains_nickname(nf3, "goodbye"));
 
   nodefamily_free(nf1);
   nodefamily_free(nf2);
@@ -340,7 +340,7 @@ test_nodelist_nodefamily(void *arg)
   tt_assert(nodefamily_contains_rsa_id(nf1, d5));
   /* Nicknames aren't preserved when ids are present, since node naming is
    * deprecated */
-  tt_assert(! nodefamily_contains_nickname(nf3, "res"));
+  tt_assert(!nodefamily_contains_nickname(nf3, "res"));
   tor_free(enc);
   tor_asprintf(&enc, "$%s $%s $%s $%s $%s", h4, h3, h1, h5, h2);
   enc2 = nodefamily_format(nf1);
@@ -355,18 +355,18 @@ test_nodelist_nodefamily(void *arg)
   tt_assert(nf3);
   tt_ptr_op(nf2, OP_NE, nf3);
 
-  tt_assert(! nodefamily_contains_rsa_id(nf2, d4));
+  tt_assert(!nodefamily_contains_rsa_id(nf2, d4));
   tt_assert(nodefamily_contains_rsa_id(nf3, d4));
-  tt_assert(! nodefamily_contains_rsa_id(nf2, d5));
-  tt_assert(! nodefamily_contains_rsa_id(nf3, d5));
-  tt_assert(! nodefamily_contains_nickname(nf2, "fred"));
-  tt_assert(! nodefamily_contains_nickname(nf3, "bosco"));
+  tt_assert(!nodefamily_contains_rsa_id(nf2, d5));
+  tt_assert(!nodefamily_contains_rsa_id(nf3, d5));
+  tt_assert(!nodefamily_contains_nickname(nf2, "fred"));
+  tt_assert(!nodefamily_contains_nickname(nf3, "bosco"));
 
   /* The NULL family should contain nothing. */
-  tt_assert(! nodefamily_contains_rsa_id(NULL, d4));
-  tt_assert(! nodefamily_contains_rsa_id(NULL, d5));
+  tt_assert(!nodefamily_contains_rsa_id(NULL, d4));
+  tt_assert(!nodefamily_contains_rsa_id(NULL, d5));
 
- done:
+done:
   tor_free(enc);
   tor_free(enc2);
   nodefamily_free(nf1);
@@ -382,13 +382,13 @@ test_nodelist_nodefamily_parse_err(void *arg)
   nodefamily_t *nf1 = NULL;
   char *enc = NULL;
   const char *semibogus =
-    "sdakljfdslkfjdsaklfjdkl9sdf " // too long for nickname
-    "$jkASDFLkjsadfjhkl " // not hex
-    "$7468696e67732d696e2d7468656d73656c766573 " // ok
-    "reticulatogranulate "// ok
-    "$73656d69616e7468726f706f6c6f676963616c6c79 " // too long for hex
-    "$616273656e746d696e6465646e6573736573" // too short for hex
-    ;
+      "sdakljfdslkfjdsaklfjdkl9sdf " // too long for nickname
+      "$jkASDFLkjsadfjhkl " // not hex
+      "$7468696e67732d696e2d7468656d73656c766573 " // ok
+      "reticulatogranulate " // ok
+      "$73656d69616e7468726f706f6c6f676963616c6c79 " // too long for hex
+      "$616273656e746d696e6465646e6573736573" // too short for hex
+      ;
 
   setup_capture_of_logs(LOG_WARN);
 
@@ -419,7 +419,7 @@ test_nodelist_nodefamily_parse_err(void *arg)
     }
   }
 
- done:
+done:
   tor_free(enc);
   nodefamily_free(nf1);
   teardown_capture_of_logs();
@@ -468,7 +468,8 @@ test_nodelist_nodefamily_lookup(void *arg)
   nf1 = nodefamily_parse("$EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE "
                          "$2121212121212121212121212121212121212121 "
                          "$3333333333333333333333333333333333333333 "
-                         "erewhon nonesuch", NULL, 0);
+                         "erewhon nonesuch",
+                         NULL, 0);
   tt_assert(nf1);
   nodefamily_add_nodes_to_smartlist(nf1, sl);
   // There were 5 elements; 2 were dropped because the mocked lookup failed.
@@ -481,7 +482,7 @@ test_nodelist_nodefamily_lookup(void *arg)
   n = smartlist_get(sl, 2);
   tt_str_op(n->identity, OP_EQ, "erewhon");
 
- done:
+done:
   UNMOCK(node_get_by_nickname);
   UNMOCK(node_get_by_id);
   SMARTLIST_FOREACH(sl, node_t *, fake_node, tor_free(fake_node));
@@ -504,7 +505,7 @@ test_nodelist_nickname_matches(void *arg)
   memcpy(mock_node.identity, ".forabettertomorrow.", DIGEST_LEN);
 
 #define match(x) tt_assert(node_nickname_matches(&mock_node, (x)))
-#define no_match(x) tt_assert(! node_nickname_matches(&mock_node, (x)))
+#define no_match(x) tt_assert(!node_nickname_matches(&mock_node, (x)))
 
   match("evilgeniuses");
   match("EvilGeniuses");
@@ -523,8 +524,7 @@ test_nodelist_nickname_matches(void *arg)
   no_match("2E666F7261626574746572746F6D6F72726FFFFF");
   no_match("$2E666F7261626574746572746F6D6F72726F772E~fred");
   no_match("$2E666F7261626574746572746F6D6F72726F772E=EVILGENIUSES");
- done:
-  ;
+done:;
 }
 
 static void
@@ -538,7 +538,7 @@ test_nodelist_node_nodefamily(void *arg)
   node_t mock_node2;
   routerinfo_t mock_ri;
 
-  smartlist_t *nodes=smartlist_new();
+  smartlist_t *nodes = smartlist_new();
 
   memset(&mock_node1, 0, sizeof(mock_node1));
   memset(&mock_node2, 0, sizeof(mock_node2));
@@ -558,26 +558,26 @@ test_nodelist_node_nodefamily(void *arg)
   memcpy(mock_node2.identity, "SecondNodeWe'reTestn", DIGEST_LEN);
 
   // empty families.
-  tt_assert(! node_family_contains(&mock_node1, &mock_node2));
-  tt_assert(! node_family_contains(&mock_node2, &mock_node1));
+  tt_assert(!node_family_contains(&mock_node1, &mock_node2));
+  tt_assert(!node_family_contains(&mock_node2, &mock_node1));
 
   // Families contain nodes, but not these nodes
   mock_ri.declared_family = smartlist_new();
-  smartlist_add(mock_ri.declared_family, (char*)"NodeThree");
+  smartlist_add(mock_ri.declared_family, (char *)"NodeThree");
   mock_md.family = nodefamily_parse("NodeFour", NULL, 0);
-  tt_assert(! node_family_contains(&mock_node1, &mock_node2));
-  tt_assert(! node_family_contains(&mock_node2, &mock_node1));
+  tt_assert(!node_family_contains(&mock_node1, &mock_node2));
+  tt_assert(!node_family_contains(&mock_node2, &mock_node1));
 
   // Families contain one another.
-  smartlist_add(mock_ri.declared_family, (char*)
-                "4e6f64654f6e654e6f6465314e6f64654f6e6531");
-  tt_assert(! node_family_contains(&mock_node1, &mock_node2));
+  smartlist_add(mock_ri.declared_family,
+                (char *)"4e6f64654f6e654e6f6465314e6f64654f6e6531");
+  tt_assert(!node_family_contains(&mock_node1, &mock_node2));
   tt_assert(node_family_contains(&mock_node2, &mock_node1));
 
   nodefamily_free(mock_md.family);
-  mock_md.family = nodefamily_parse(
-            "NodeFour "
-            "5365636f6e644e6f64655765277265546573746e", NULL, 0);
+  mock_md.family = nodefamily_parse("NodeFour "
+                                    "5365636f6e644e6f64655765277265546573746e",
+                                    NULL, 0);
   tt_assert(node_family_contains(&mock_node1, &mock_node2));
   tt_assert(node_family_contains(&mock_node2, &mock_node1));
 
@@ -604,7 +604,7 @@ test_nodelist_node_nodefamily(void *arg)
   n = smartlist_get(nodes, 1);
   tt_str_op(n->identity, OP_EQ, "4e6f64654f6e654e6f6");
 
- done:
+done:
   UNMOCK(node_get_by_nickname);
   UNMOCK(node_get_by_id);
   smartlist_free(mock_ri.declared_family);
@@ -627,21 +627,21 @@ test_nodelist_nodefamily_canonicalize(void *arg)
 
   uint8_t own_id[20];
   memset(own_id, 0, sizeof(own_id));
-  c = nodefamily_canonicalize(
-           "alice BOB caroL %potrzebie !!!@#@# "
-           "$bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb=fred "
-           "ffffffffffffffffffffffffffffffffffffffff "
-           "$cccccccccccccccccccccccccccccccccccccccc ", own_id, 0);
+  c = nodefamily_canonicalize("alice BOB caroL %potrzebie !!!@#@# "
+                              "$bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb=fred "
+                              "ffffffffffffffffffffffffffffffffffffffff "
+                              "$cccccccccccccccccccccccccccccccccccccccc ",
+                              own_id, 0);
   tt_str_op(c, OP_EQ,
-           "!!!@#@# "
-           "$0000000000000000000000000000000000000000 "
-           "$BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB "
-           "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC "
-           "$FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF "
-           "%potrzebie "
-           "alice bob carol");
+            "!!!@#@# "
+            "$0000000000000000000000000000000000000000 "
+            "$BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB "
+            "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC "
+            "$FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF "
+            "%potrzebie "
+            "alice bob carol");
 
- done:
+done:
   tor_free(c);
 }
 
@@ -653,7 +653,7 @@ static void
 test_nodelist_format_node_description(void *arg)
 {
   char mock_digest[DIGEST_LEN];
-  char mock_nickname[MAX_NICKNAME_LEN+1];
+  char mock_nickname[MAX_NICKNAME_LEN + 1];
   tor_addr_t mock_null_ip;
   tor_addr_t mock_ipv4;
   tor_addr_t mock_ipv6;
@@ -661,7 +661,7 @@ test_nodelist_format_node_description(void *arg)
   char ndesc[NODE_DESC_BUF_LEN];
   const char *rv = NULL;
 
-  (void) arg;
+  (void)arg;
 
   /* Clear variables */
   memset(ndesc, 0, sizeof(ndesc));
@@ -681,58 +681,38 @@ test_nodelist_format_node_description(void *arg)
   tor_addr_parse(&mock_ipv6, "[1111:2222:3333:4444:5555:6666:7777:8888]");
 
   /* Test function with variables */
-  rv = format_node_description(ndesc,
-                               mock_digest,
-                               NULL,
-                               NULL,
-                               0);
+  rv = format_node_description(ndesc, mock_digest, NULL, NULL, 0);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ, "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 
   /* format node description should use ~ because named is deprecated */
-  rv = format_node_description(ndesc,
-                               mock_digest,
-                               mock_nickname,
-                               NULL,
-                               0);
+  rv = format_node_description(ndesc, mock_digest, mock_nickname, NULL, 0);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ,
-            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~""TestOR7890123456789");
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~"
+            "TestOR7890123456789");
 
   /* Try a null IP address, rather than NULL */
-  rv = format_node_description(ndesc,
-                               mock_digest,
-                               mock_nickname,
-                               &mock_null_ip,
-                               0);
+  rv = format_node_description(ndesc, mock_digest, mock_nickname,
+                               &mock_null_ip, 0);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ,
             "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789");
 
   /* Try some real IP addresses */
-  rv = format_node_description(ndesc,
-                               mock_digest,
-                               NULL,
-                               &mock_ipv4,
-                               0);
+  rv = format_node_description(ndesc, mock_digest, NULL, &mock_ipv4, 0);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ,
             "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA at 111.222.233.244");
 
-  rv = format_node_description(ndesc,
-                               mock_digest,
-                               mock_nickname,
-                               &mock_ipv6,
+  rv = format_node_description(ndesc, mock_digest, mock_nickname, &mock_ipv6,
                                0);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ,
             "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
             "[1111:2222:3333:4444:5555:6666:7777:8888]");
 
-  rv = format_node_description(ndesc,
-                               mock_digest,
-                               mock_nickname,
-                               &mock_ipv6,
+  rv = format_node_description(ndesc, mock_digest, mock_nickname, &mock_ipv6,
                                tor_addr_to_ipv4h(&mock_ipv4));
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ,
@@ -747,7 +727,7 @@ test_nodelist_format_node_description(void *arg)
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(rv, OP_EQ, "<NULL ID DIGEST>");
 
- done:
+done:
   return;
 }
 
@@ -760,7 +740,7 @@ test_nodelist_format_node_description(void *arg)
 static void
 test_nodelist_router_describe(void *arg)
 {
-  char mock_nickname[MAX_NICKNAME_LEN+1];
+  char mock_nickname[MAX_NICKNAME_LEN + 1];
   tor_addr_t mock_ipv4;
   routerinfo_t mock_ri_ipv4;
   routerinfo_t mock_ri_ipv6;
@@ -768,7 +748,7 @@ test_nodelist_router_describe(void *arg)
 
   const char *rv = NULL;
 
-  (void) arg;
+  (void)arg;
 
   /* Clear variables */
   memset(mock_nickname, 0, sizeof(mock_nickname));
@@ -848,7 +828,7 @@ test_nodelist_router_describe(void *arg)
             "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
             "111.222.233.244 and [1111:2222:3333:4444:5555:6666:7777:8888]");
 
- done:
+done:
   return;
 }
 
@@ -862,12 +842,12 @@ test_nodelist_router_describe(void *arg)
 static void
 test_nodelist_node_describe(void *arg)
 {
-  char mock_nickname[MAX_NICKNAME_LEN+1];
+  char mock_nickname[MAX_NICKNAME_LEN + 1];
   tor_addr_t mock_ipv4;
 
   const char *rv = NULL;
 
-  (void) arg;
+  (void)arg;
 
   /* Routerinfos */
   routerinfo_t mock_ri_dual;
@@ -903,12 +883,10 @@ test_nodelist_node_describe(void *arg)
          "\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB"
          "\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB",
          sizeof(mock_rs_dual.identity_digest));
-  strlcpy(mock_rs_dual.nickname, "Bbb",
-          sizeof(mock_rs_dual.nickname));
+  strlcpy(mock_rs_dual.nickname, "Bbb", sizeof(mock_rs_dual.nickname));
   tor_addr_parse(&mock_ipv4, "2.2.2.2");
   mock_rs_dual.addr = tor_addr_to_ipv4h(&mock_ipv4);
-  tor_addr_parse(&mock_rs_dual.ipv6_addr,
-                 "[bbbb::bbbb]");
+  tor_addr_parse(&mock_rs_dual.ipv6_addr, "[bbbb::bbbb]");
 
   /* Create and modify the other routerstatus. */
   memcpy(&mock_rs_ipv4, &mock_rs_dual, sizeof(mock_rs_ipv4));
@@ -924,8 +902,7 @@ test_nodelist_node_describe(void *arg)
   memset(&mock_md_ipv6, 0, sizeof(mock_md_ipv6));
 
   /* Set up the microdesc */
-  tor_addr_parse(&mock_md_ipv6.ipv6_addr,
-                 "[eeee::6000:6000]");
+  tor_addr_parse(&mock_md_ipv6.ipv6_addr, "[eeee::6000:6000]");
 
   /* Set up the node */
   node_t mock_node;
@@ -1054,10 +1031,9 @@ test_nodelist_node_describe(void *arg)
   mock_node.rs = NULL;
   mock_node.md = NULL;
   rv = node_describe(&mock_node);
-  tt_str_op(rv, OP_EQ,
-            "<null rs and ri>");
+  tt_str_op(rv, OP_EQ, "<null rs and ri>");
 
- done:
+done:
   return;
 }
 
@@ -1077,7 +1053,7 @@ test_nodelist_routerstatus_describe(void *arg)
 
   const char *rv = NULL;
 
-  (void) arg;
+  (void)arg;
 
   /* Clear variables */
   memset(&mock_ipv4, 0, sizeof(mock_ipv4));
@@ -1154,7 +1130,7 @@ test_nodelist_routerstatus_describe(void *arg)
             "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
             "111.222.233.244 and [1111:2222:3333:4444:5555:6666:7777:8888]");
 
- done:
+done:
   return;
 }
 
@@ -1169,7 +1145,7 @@ test_nodelist_extend_info_describe(void *arg)
 
   const char *rv = NULL;
 
-  (void) arg;
+  (void)arg;
 
   /* Clear variables */
   memset(&mock_ei_ipv4, 0, sizeof(mock_ei_ipv4));
@@ -1209,7 +1185,7 @@ test_nodelist_extend_info_describe(void *arg)
   rv = extend_info_describe(NULL);
   tt_str_op(rv, OP_EQ, "<null>");
 
- done:
+done:
   return;
 }
 
@@ -1219,11 +1195,11 @@ static void
 test_nodelist_router_get_verbose_nickname(void *arg)
 {
   routerinfo_t mock_ri;
-  char mock_nickname[MAX_NICKNAME_LEN+1];
+  char mock_nickname[MAX_NICKNAME_LEN + 1];
 
-  char vname[MAX_VERBOSE_NICKNAME_LEN+1];
+  char vname[MAX_VERBOSE_NICKNAME_LEN + 1];
 
-  (void) arg;
+  (void)arg;
 
   memset(&mock_ri, 0, sizeof(routerinfo_t));
   memset(mock_nickname, 0, sizeof(mock_nickname));
@@ -1245,7 +1221,7 @@ test_nodelist_router_get_verbose_nickname(void *arg)
   router_get_verbose_nickname(NULL, &mock_ri);
   router_get_verbose_nickname(NULL, NULL);
 
- done:
+done:
   return;
 }
 
@@ -1266,35 +1242,33 @@ test_nodelist_routerstatus_has_visibly_changed(void *arg)
   rs_orig.bandwidth_kb = 20;
 
 #define COPY() memcpy(&rs, &rs_orig, sizeof(rs))
-#define FORMAT() \
-  STMT_BEGIN \
-    tor_free(fmt_orig);                                                   \
-    tor_free(fmt);                                                        \
-    fmt_orig = routerstatus_format_entry(&rs_orig, NULL, NULL,            \
-                          NS_CONTROL_PORT,                                \
-                          NULL);                                          \
-    fmt = routerstatus_format_entry(&rs, NULL, NULL, NS_CONTROL_PORT,     \
-                          NULL);                                          \
-    tt_assert(fmt_orig);                                                  \
-    tt_assert(fmt);                                                       \
+#define FORMAT()                                                             \
+  STMT_BEGIN                                                                 \
+    tor_free(fmt_orig);                                                      \
+    tor_free(fmt);                                                           \
+    fmt_orig = routerstatus_format_entry(&rs_orig, NULL, NULL,               \
+                                         NS_CONTROL_PORT, NULL);             \
+    fmt = routerstatus_format_entry(&rs, NULL, NULL, NS_CONTROL_PORT, NULL); \
+    tt_assert(fmt_orig);                                                     \
+    tt_assert(fmt);                                                          \
   STMT_END
-#define ASSERT_SAME() \
-  STMT_BEGIN                                                    \
-    tt_assert(! routerstatus_has_visibly_changed(&rs_orig, &rs));       \
-    FORMAT();                                                   \
-    tt_str_op(fmt_orig, OP_EQ, fmt);                            \
-    COPY();                                                     \
+#define ASSERT_SAME()                                            \
+  STMT_BEGIN                                                     \
+    tt_assert(!routerstatus_has_visibly_changed(&rs_orig, &rs)); \
+    FORMAT();                                                    \
+    tt_str_op(fmt_orig, OP_EQ, fmt);                             \
+    COPY();                                                      \
   STMT_END
-#define ASSERT_CHANGED() \
+#define ASSERT_CHANGED()                                        \
   STMT_BEGIN                                                    \
-    tt_assert(routerstatus_has_visibly_changed(&rs_orig, &rs));         \
+    tt_assert(routerstatus_has_visibly_changed(&rs_orig, &rs)); \
     FORMAT();                                                   \
     tt_str_op(fmt_orig, OP_NE, fmt);                            \
     COPY();                                                     \
   STMT_END
-#define ASSERT_CHANGED_NO_FORMAT() \
+#define ASSERT_CHANGED_NO_FORMAT()                              \
   STMT_BEGIN                                                    \
-    tt_assert(routerstatus_has_visibly_changed(&rs_orig, &rs));         \
+    tt_assert(routerstatus_has_visibly_changed(&rs_orig, &rs)); \
     COPY();                                                     \
   STMT_END
 
@@ -1398,10 +1372,10 @@ test_nodelist_routerstatus_has_visibly_changed(void *arg)
   ASSERT_SAME();
 
   // not visible to the controller.
-  rs.exitsummary = (char*)"accept 1-2";
+  rs.exitsummary = (char *)"accept 1-2";
   ASSERT_SAME();
 
- done:
+done:
 #undef COPY
 #undef ASSERT_SAME
 #undef ASSERT_CHANGED
@@ -1410,26 +1384,27 @@ test_nodelist_routerstatus_has_visibly_changed(void *arg)
   return;
 }
 
-#define NODE(name, flags) \
-  { #name, test_nodelist_##name, (flags), NULL, NULL }
+#define NODE(name, flags)                            \
+  {                                                  \
+#    name, test_nodelist_##name, (flags), NULL, NULL \
+  }
 
 struct testcase_t nodelist_tests[] = {
-  NODE(node_get_verbose_nickname_by_id_null_node, TT_FORK),
-  NODE(node_get_verbose_nickname_not_named, TT_FORK),
-  NODE(node_is_dir, TT_FORK),
-  NODE(ed_id, TT_FORK),
-  NODE(nodefamily, TT_FORK),
-  NODE(nodefamily_parse_err, TT_FORK),
-  NODE(nodefamily_lookup, TT_FORK),
-  NODE(nickname_matches, 0),
-  NODE(node_nodefamily, TT_FORK),
-  NODE(nodefamily_canonicalize, 0),
-  NODE(format_node_description, 0),
-  NODE(router_describe, 0),
-  NODE(node_describe, 0),
-  NODE(routerstatus_describe, 0),
-  NODE(extend_info_describe, 0),
-  NODE(router_get_verbose_nickname, 0),
-  NODE(routerstatus_has_visibly_changed, 0),
-  END_OF_TESTCASES
-};
+    NODE(node_get_verbose_nickname_by_id_null_node, TT_FORK),
+    NODE(node_get_verbose_nickname_not_named, TT_FORK),
+    NODE(node_is_dir, TT_FORK),
+    NODE(ed_id, TT_FORK),
+    NODE(nodefamily, TT_FORK),
+    NODE(nodefamily_parse_err, TT_FORK),
+    NODE(nodefamily_lookup, TT_FORK),
+    NODE(nickname_matches, 0),
+    NODE(node_nodefamily, TT_FORK),
+    NODE(nodefamily_canonicalize, 0),
+    NODE(format_node_description, 0),
+    NODE(router_describe, 0),
+    NODE(node_describe, 0),
+    NODE(routerstatus_describe, 0),
+    NODE(extend_info_describe, 0),
+    NODE(router_get_verbose_nickname, 0),
+    NODE(routerstatus_has_visibly_changed, 0),
+    END_OF_TESTCASES};

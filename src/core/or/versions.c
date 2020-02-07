@@ -24,9 +24,8 @@
 time_t
 tor_get_approx_release_date(void)
 {
-  char tbuf[ISO_TIME_LEN+1];
-  tor_snprintf(tbuf, sizeof(tbuf),
-               "%s 00:00:00", APPROX_RELEASE_DATE);
+  char tbuf[ISO_TIME_LEN + 1];
+  tor_snprintf(tbuf, sizeof(tbuf), "%s 00:00:00", APPROX_RELEASE_DATE);
   time_t result = 0;
   int r = parse_iso_time(tbuf, &result);
   if (BUG(r < 0)) {
@@ -54,15 +53,15 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
 {
   tor_version_t mine, other;
   int found_newer = 0, found_older = 0, found_newer_in_series = 0,
-    found_any_in_series = 0, r, same;
+      found_any_in_series = 0, r, same;
   version_status_t ret = VS_UNRECOMMENDED;
   smartlist_t *version_sl;
 
-  log_debug(LD_CONFIG,"Checking whether version '%s' is in '%s'",
-            myversion, versionlist);
+  log_debug(LD_CONFIG, "Checking whether version '%s' is in '%s'", myversion,
+            versionlist);
 
   if (tor_version_parse(myversion, &mine)) {
-    log_err(LD_BUG,"I couldn't parse my own version (%s)", myversion);
+    log_err(LD_BUG, "I couldn't parse my own version (%s)", myversion);
     tor_assert(0);
   }
   version_sl = smartlist_new();
@@ -73,7 +72,7 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
     goto done;
   }
 
-  SMARTLIST_FOREACH_BEGIN(version_sl, const char *, cp) {
+  SMARTLIST_FOREACH_BEGIN (version_sl, const char *, cp) {
     if (!strcmpstart(cp, "Tor "))
       cp += 4;
 
@@ -84,18 +83,18 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
       if (same)
         found_any_in_series = 1;
       r = tor_version_compare(&mine, &other);
-      if (r==0) {
+      if (r == 0) {
         ret = VS_RECOMMENDED;
         goto done;
-      } else if (r<0) {
+      } else if (r < 0) {
         found_newer = 1;
         if (same)
           found_newer_in_series = 1;
-      } else if (r>0) {
+      } else if (r > 0) {
         found_older = 1;
       }
     }
-  } SMARTLIST_FOREACH_END(cp);
+  } SMARTLIST_FOREACH_END (cp);
 
   /* We didn't find the listed version. Is it new or old? */
   if (found_any_in_series && !found_newer_in_series && found_newer) {
@@ -108,7 +107,7 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
     ret = VS_UNRECOMMENDED;
   }
 
- done:
+done:
   SMARTLIST_FOREACH(version_sl, char *, version, tor_free(version));
   smartlist_free(version_sl);
   return ret;
@@ -124,37 +123,35 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
  * (like negative numbers) counts as a parsing failure.
  */
 int
-tor_version_parse_platform(const char *platform,
-                           tor_version_t *router_version,
+tor_version_parse_platform(const char *platform, tor_version_t *router_version,
                            int strict)
 {
   char tmp[128];
   char *s, *s2, *start;
 
-  if (strcmpstart(platform,"Tor ")) /* nonstandard Tor; say 0. */
+  if (strcmpstart(platform, "Tor ")) /* nonstandard Tor; say 0. */
     return 0;
 
-  start = (char *)eat_whitespace(platform+3);
-  if (!*start) return -1;
-  s = (char *)find_whitespace(start); /* also finds '\0', which is fine */
-  s2 = (char*)eat_whitespace(s);
-  if (!strcmpstart(s2, "(r") || !strcmpstart(s2, "(git-"))
-    s = (char*)find_whitespace(s2);
-
-  if ((size_t)(s-start+1) >= sizeof(tmp)) /* too big, no */
+  start = (char *)eat_whitespace(platform + 3);
+  if (!*start)
     return -1;
-  strlcpy(tmp, start, s-start+1);
+  s = (char *)find_whitespace(start); /* also finds '\0', which is fine */
+  s2 = (char *)eat_whitespace(s);
+  if (!strcmpstart(s2, "(r") || !strcmpstart(s2, "(git-"))
+    s = (char *)find_whitespace(s2);
 
-  if (tor_version_parse(tmp, router_version)<0) {
-    log_info(LD_DIR,"Router version '%s' unparseable.",tmp);
+  if ((size_t)(s - start + 1) >= sizeof(tmp)) /* too big, no */
+    return -1;
+  strlcpy(tmp, start, s - start + 1);
+
+  if (tor_version_parse(tmp, router_version) < 0) {
+    log_info(LD_DIR, "Router version '%s' unparseable.", tmp);
     return -1;
   }
 
   if (strict) {
-    if (router_version->major < 0 ||
-        router_version->minor < 0 ||
-        router_version->micro < 0 ||
-        router_version->patchlevel < 0 ||
+    if (router_version->major < 0 || router_version->minor < 0 ||
+        router_version->micro < 0 || router_version->patchlevel < 0 ||
         router_version->svn_revision < 0) {
       return -1;
     }
@@ -174,8 +171,8 @@ tor_version_as_new_as(const char *platform, const char *cutoff)
   int r;
   tor_assert(platform);
 
-  if (tor_version_parse(cutoff, &cutoff_version)<0) {
-    log_warn(LD_BUG,"cutoff version '%s' unparseable.",cutoff);
+  if (tor_version_parse(cutoff, &cutoff_version) < 0) {
+    log_warn(LD_BUG, "cutoff version '%s' unparseable.", cutoff);
     return 0;
   }
 
@@ -205,8 +202,8 @@ tor_version_as_new_as(const char *platform, const char *cutoff)
 int
 tor_version_parse(const char *s, tor_version_t *out)
 {
-  char *eos=NULL;
-  const char *cp=NULL;
+  char *eos = NULL;
+  const char *cp = NULL;
   int ok = 1;
   /* Format is:
    *   "Tor " ? NUM dot NUM [ dot NUM [ ( pre | rc | dot ) NUM ] ] [ - tag ]
@@ -221,23 +218,23 @@ tor_version_parse(const char *s, tor_version_t *out)
 
   cp = s;
 
-#define NUMBER(m)                               \
-  do {                                          \
-    if (!cp || *cp < '0' || *cp > '9')          \
-      return -1;                                \
-    out->m = (int)tor_parse_uint64(cp, 10, 0, INT32_MAX, &ok, &eos);    \
-    if (!ok)                                    \
-      return -1;                                \
-    if (!eos || eos == cp)                      \
-      return -1;                                \
-    cp = eos;                                   \
+#define NUMBER(m)                                                    \
+  do {                                                               \
+    if (!cp || *cp < '0' || *cp > '9')                               \
+      return -1;                                                     \
+    out->m = (int)tor_parse_uint64(cp, 10, 0, INT32_MAX, &ok, &eos); \
+    if (!ok)                                                         \
+      return -1;                                                     \
+    if (!eos || eos == cp)                                           \
+      return -1;                                                     \
+    cp = eos;                                                        \
   } while (0)
 
-#define DOT()                                   \
-  do {                                          \
-    if (*cp != '.')                             \
-      return -1;                                \
-    ++cp;                                       \
+#define DOT()       \
+  do {              \
+    if (*cp != '.') \
+      return -1;    \
+    ++cp;           \
   } while (0)
 
   NUMBER(major);
@@ -257,10 +254,10 @@ tor_version_parse(const char *s, tor_version_t *out)
     ++cp;
   } else if (*cp == '-') {
     goto status_tag;
-  } else if (0==strncmp(cp, "pre", 3)) {
+  } else if (0 == strncmp(cp, "pre", 3)) {
     out->status = VER_PRE;
     cp += 3;
-  } else if (0==strncmp(cp, "rc", 2)) {
+  } else if (0 == strncmp(cp, "rc", 2)) {
     out->status = VER_RC;
     cp += 2;
   } else {
@@ -269,39 +266,39 @@ tor_version_parse(const char *s, tor_version_t *out)
 
   NUMBER(patchlevel);
 
- status_tag:
+status_tag:
   /* Get status tag. */
   if (*cp == '-' || *cp == '.')
     ++cp;
-  eos = (char*) find_whitespace(cp);
-  if (eos-cp >= (int)sizeof(out->status_tag))
+  eos = (char *)find_whitespace(cp);
+  if (eos - cp >= (int)sizeof(out->status_tag))
     strlcpy(out->status_tag, cp, sizeof(out->status_tag));
   else {
-    memcpy(out->status_tag, cp, eos-cp);
-    out->status_tag[eos-cp] = 0;
+    memcpy(out->status_tag, cp, eos - cp);
+    out->status_tag[eos - cp] = 0;
   }
   cp = eat_whitespace(eos);
 
   if (!strcmpstart(cp, "(r")) {
     cp += 2;
-    out->svn_revision = (int) strtol(cp,&eos,10);
+    out->svn_revision = (int)strtol(cp, &eos, 10);
   } else if (!strcmpstart(cp, "(git-")) {
     char *close_paren = strchr(cp, ')');
     int hexlen;
     char digest[DIGEST_LEN];
-    if (! close_paren)
+    if (!close_paren)
       return -1;
     cp += 5;
-    if (close_paren-cp > HEX_DIGEST_LEN)
+    if (close_paren - cp > HEX_DIGEST_LEN)
       return -1;
-    hexlen = (int)(close_paren-cp);
+    hexlen = (int)(close_paren - cp);
     memwipe(digest, 0, sizeof(digest));
-    if ( hexlen == 0 || (hexlen % 2) == 1)
+    if (hexlen == 0 || (hexlen % 2) == 1)
       return -1;
-    if (base16_decode(digest, hexlen/2, cp, hexlen) != hexlen/2)
+    if (base16_decode(digest, hexlen / 2, cp, hexlen) != hexlen / 2)
       return -1;
-    memcpy(out->git_tag, digest, hexlen/2);
-    out->git_tag_len = hexlen/2;
+    memcpy(out->git_tag, digest, hexlen / 2);
+    out->git_tag_len = hexlen / 2;
   }
 
   return 0;
@@ -323,14 +320,15 @@ tor_version_compare(tor_version_t *a, tor_version_t *b)
    * only important difference here is that this method doesn't cause
    * a signed integer underflow.
    */
-#define CMP(field) do {                               \
-    unsigned aval = (unsigned) a->field;              \
-    unsigned bval = (unsigned) b->field;              \
-    int result = (int) (aval - bval);                 \
-    if (result < 0)                                   \
-      return -1;                                      \
-    else if (result > 0)                              \
-      return 1;                                       \
+#define CMP(field)                      \
+  do {                                  \
+    unsigned aval = (unsigned)a->field; \
+    unsigned bval = (unsigned)b->field; \
+    int result = (int)(aval - bval);    \
+    if (result < 0)                     \
+      return -1;                        \
+    else if (result > 0)                \
+      return 1;                         \
   } while (0)
 
   CMP(major);
@@ -339,13 +337,13 @@ tor_version_compare(tor_version_t *a, tor_version_t *b)
   CMP(status);
   CMP(patchlevel);
   if ((i = strcmp(a->status_tag, b->status_tag)))
-     return i;
+    return i;
   CMP(svn_revision);
   CMP(git_tag_len);
   if (a->git_tag_len)
-     return fast_memcmp(a->git_tag, b->git_tag, a->git_tag_len);
+    return fast_memcmp(a->git_tag, b->git_tag, a->git_tag_len);
   else
-     return 0;
+    return 0;
 
 #undef CMP
 }
@@ -357,8 +355,7 @@ tor_version_same_series(tor_version_t *a, tor_version_t *b)
 {
   tor_assert(a);
   tor_assert(b);
-  return ((a->major == b->major) &&
-          (a->minor == b->minor) &&
+  return ((a->major == b->major) && (a->minor == b->minor) &&
           (a->micro == b->micro));
 }
 
@@ -375,7 +372,7 @@ compare_tor_version_str_ptr_(const void **_a, const void **_b)
   cb = tor_version_parse(b, &vb);
   /* If they both parse, compare them. */
   if (!ca && !cb)
-    return tor_version_compare(&va,&vb);
+    return tor_version_compare(&va, &vb);
   /* If one parses, it comes first. */
   if (!ca && cb)
     return -1;
@@ -383,7 +380,7 @@ compare_tor_version_str_ptr_(const void **_a, const void **_b)
     return 1;
   /* If neither parses, compare strings.  Also, the directory server admin
   ** needs to be smacked upside the head.  But Tor is tolerant and gentle. */
-  return strcmp(a,b);
+  return strcmp(a, b);
 }
 
 /** Sort a list of string-representations of versions in ascending order. */
@@ -410,8 +407,7 @@ static strmap_t *protover_summary_map = NULL;
  * to its summary, and memoize the result in <b>protover_summary_map</b>.
  */
 static void
-memoize_protover_summary(protover_summary_flags_t *out,
-                         const char *protocols)
+memoize_protover_summary(protover_summary_flags_t *out, const char *protocols)
 {
   if (!protover_summary_map)
     protover_summary_map = strmap_new();
@@ -423,7 +419,7 @@ memoize_protover_summary(protover_summary_flags_t *out,
   }
 
   const protover_summary_flags_t *cached =
-    strmap_get(protover_summary_map, protocols);
+      strmap_get(protover_summary_map, protocols);
 
   if (cached != NULL) {
     /* We found a cached entry; no need to parse this one. */
@@ -435,24 +431,21 @@ memoize_protover_summary(protover_summary_flags_t *out,
   memset(out, 0, sizeof(*out));
   out->protocols_known = 1;
   out->supports_extend2_cells =
-    protocol_list_supports_protocol(protocols, PRT_RELAY, 2);
+      protocol_list_supports_protocol(protocols, PRT_RELAY, 2);
   out->supports_ed25519_link_handshake_compat =
-    protocol_list_supports_protocol(protocols, PRT_LINKAUTH, 3);
+      protocol_list_supports_protocol(protocols, PRT_LINKAUTH, 3);
   out->supports_ed25519_link_handshake_any =
-    protocol_list_supports_protocol_or_later(protocols, PRT_LINKAUTH, 3);
+      protocol_list_supports_protocol_or_later(protocols, PRT_LINKAUTH, 3);
   out->supports_ed25519_hs_intro =
-    protocol_list_supports_protocol(protocols, PRT_HSINTRO, 4);
+      protocol_list_supports_protocol(protocols, PRT_HSINTRO, 4);
   out->supports_v3_hsdir =
-    protocol_list_supports_protocol(protocols, PRT_HSDIR,
-                                    PROTOVER_HSDIR_V3);
-  out->supports_v3_rendezvous_point =
-    protocol_list_supports_protocol(protocols, PRT_HSREND,
-                                    PROTOVER_HS_RENDEZVOUS_POINT_V3);
-  out->supports_hs_setup_padding =
-    protocol_list_supports_protocol(protocols, PRT_PADDING,
-                                    PROTOVER_HS_SETUP_PADDING);
+      protocol_list_supports_protocol(protocols, PRT_HSDIR, PROTOVER_HSDIR_V3);
+  out->supports_v3_rendezvous_point = protocol_list_supports_protocol(
+      protocols, PRT_HSREND, PROTOVER_HS_RENDEZVOUS_POINT_V3);
+  out->supports_hs_setup_padding = protocol_list_supports_protocol(
+      protocols, PRT_PADDING, PROTOVER_HS_SETUP_PADDING);
   out->supports_establish_intro_dos_extension =
-    protocol_list_supports_protocol(protocols, PRT_HSINTRO, 5);
+      protocol_list_supports_protocol(protocols, PRT_HSINTRO, 5);
 
   protover_summary_flags_t *new_cached = tor_memdup(out, sizeof(*out));
   cached = strmap_set(protover_summary_map, protocols, new_cached);
@@ -463,8 +456,7 @@ memoize_protover_summary(protover_summary_flags_t *out,
  * falling back or correcting them based on <b>version</b> as appropriate.
  */
 void
-summarize_protover_flags(protover_summary_flags_t *out,
-                         const char *protocols,
+summarize_protover_flags(protover_summary_flags_t *out, const char *protocols,
                          const char *version)
 {
   tor_assert(out);
@@ -478,7 +470,7 @@ summarize_protover_flags(protover_summary_flags_t *out,
        * list of protocol versions that we should be looking at instead. */
 
       out->supports_extend2_cells =
-        tor_version_as_new_as(version, "0.2.4.8-alpha");
+          tor_version_as_new_as(version, "0.2.4.8-alpha");
       out->protocols_known = 1;
     } else {
       /* Bug #22447 forces us to filter on this version. */

@@ -47,17 +47,17 @@ main(void)
    */
   printf("mpfr 53-bit\t%.17g\n", nextafter(mpfr_get_d(r, MPFR_RNDN), 0), 0);
   volatile double p0 = .49999;
-  printf("log1p\t\t%.17g\n", nextafter(-log1p((1 - 2*p0)/p0), 0));
-  volatile double x = (1 - 2*p0)/p0;
+  printf("log1p\t\t%.17g\n", nextafter(-log1p((1 - 2 * p0) / p0), 0));
+  volatile double x = (1 - 2 * p0) / p0;
   volatile double xp1 = x + 1;
-  printf("Goldberg\t%.17g\n", -x*log(xp1)/(xp1 - 1));
+  printf("Goldberg\t%.17g\n", -x * log(xp1) / (xp1 - 1));
 
   /*
    * Print a bad approximation, using the naive expression, to see a
    * lot of wrong digits, far beyond the 10 eps relative error attained
    * by -log1p((1 - 2*p)/p).
    */
-  printf("naive\t\t%.17g\n", log(p0/(1 - p0)));
+  printf("naive\t\t%.17g\n", log(p0 / (1 - p0)));
 
   fflush(stdout);
   return ferror(stdout);

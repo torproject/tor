@@ -25,20 +25,20 @@
 
 #ifdef TOR_EVENT_TRACING_ENABLED
 /* Map every trace event to a per subsystem macro. */
-#define tor_trace(subsystem, name, ...) \
-  tor_trace_##subsystem(name, __VA_ARGS__)
+#  define tor_trace(subsystem, name, ...) \
+    tor_trace_##subsystem(name, __VA_ARGS__)
 
 /* Enable event tracing for the debug framework where all trace events are
  * mapped to a log_debug(). */
-#ifdef USE_EVENT_TRACING_DEBUG
-#include "lib/trace/debug.h"
-#endif
+#  ifdef USE_EVENT_TRACING_DEBUG
+#    include "lib/trace/debug.h"
+#  endif
 
 #else /* !defined(TOR_EVENT_TRACING_ENABLED) */
 
 /* Reaching this point, we NOP every event declaration because event tracing
  * is not been enabled at compile time. */
-#define tor_trace(subsystem, name, args...)
+#  define tor_trace(subsystem, name, args...)
 
 #endif /* defined(TOR_EVENT_TRACING_ENABLED) */
 

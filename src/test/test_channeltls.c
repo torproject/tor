@@ -31,12 +31,9 @@ static void test_channeltls_overhead_estimate(void *arg);
 
 /* Mocks used by channeltls unit tests */
 static size_t tlschan_buf_datalen_mock(const buf_t *buf);
-static or_connection_t * tlschan_connection_or_connect_mock(
-    const tor_addr_t *addr,
-    uint16_t port,
-    const char *digest,
-    const ed25519_public_key_t *ed_id,
-    channel_tls_t *tlschan);
+static or_connection_t *tlschan_connection_or_connect_mock(
+    const tor_addr_t *addr, uint16_t port, const char *digest,
+    const ed25519_public_key_t *ed_id, channel_tls_t *tlschan);
 static int tlschan_is_local_addr_mock(const tor_addr_t *addr);
 
 /* Fake close method */
@@ -44,7 +41,7 @@ static void tlschan_fake_close_method(channel_t *chan);
 
 /* Flags controlling behavior of channeltls unit test mocks */
 static int tlschan_local = 0;
-static const buf_t * tlschan_buf_datalen_mock_target = NULL;
+static const buf_t *tlschan_buf_datalen_mock_target = NULL;
 static size_t tlschan_buf_datalen_mock_size = 0;
 
 /* Thing to cast to fake tor_tls_t * to appease assert_connection_ok() */
@@ -56,8 +53,8 @@ test_channeltls_create(void *arg)
   tor_addr_t test_addr;
   channel_t *ch = NULL;
   const char test_digest[DIGEST_LEN] = {
-    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
-    0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14 };
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
+      0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14};
 
   (void)arg;
 
@@ -77,7 +74,7 @@ test_channeltls_create(void *arg)
   ch = channel_tls_connect(&test_addr, 567, test_digest, NULL);
   tt_ptr_op(ch, OP_NE, NULL);
 
- done:
+done:
   if (ch) {
     MOCK(scheduler_release_channel, scheduler_release_channel_mock);
     /*
@@ -102,8 +99,8 @@ test_channeltls_num_bytes_queued(void *arg)
   tor_addr_t test_addr;
   channel_t *ch = NULL;
   const char test_digest[DIGEST_LEN] = {
-    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
-    0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14 };
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
+      0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14};
   channel_tls_t *tlschan = NULL;
   size_t len;
   int fake_outbuf = 0, n;
@@ -163,7 +160,7 @@ test_channeltls_num_bytes_queued(void *arg)
     TO_CONN(tlschan->conn)->outbuf = NULL;
   }
 
- done:
+done:
   if (ch) {
     MOCK(scheduler_release_channel, scheduler_release_channel_mock);
     /*
@@ -188,8 +185,8 @@ test_channeltls_overhead_estimate(void *arg)
   tor_addr_t test_addr;
   channel_t *ch = NULL;
   const char test_digest[DIGEST_LEN] = {
-    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
-    0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14 };
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
+      0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14};
   double r;
   channel_tls_t *tlschan = NULL;
 
@@ -237,7 +234,7 @@ test_channeltls_overhead_estimate(void *arg)
   r = ch->get_overhead_estimate(ch);
   tt_assert(fabs(r - 2.0) < 1E-12);
 
- done:
+done:
   if (ch) {
     MOCK(scheduler_release_channel, scheduler_release_channel_mock);
     /*
@@ -267,14 +264,13 @@ tlschan_buf_datalen_mock(const buf_t *buf)
 }
 
 static or_connection_t *
-tlschan_connection_or_connect_mock(const tor_addr_t *addr,
-                                   uint16_t port,
+tlschan_connection_or_connect_mock(const tor_addr_t *addr, uint16_t port,
                                    const char *digest,
                                    const ed25519_public_key_t *ed_id,
                                    channel_tls_t *tlschan)
 {
   or_connection_t *result = NULL;
-  (void) ed_id; // XXXX Not yet used.
+  (void)ed_id; // XXXX Not yet used.
 
   tt_ptr_op(addr, OP_NE, NULL);
   tt_uint_op(port, OP_NE, 0);
@@ -295,7 +291,7 @@ tlschan_connection_or_connect_mock(const tor_addr_t *addr,
   memcpy(&(result->real_addr), addr, sizeof(tor_addr_t));
   result->tls = (tor_tls_t *)((void *)(&fake_tortls));
 
- done:
+done:
   return result;
 }
 
@@ -316,7 +312,7 @@ tlschan_fake_close_method(channel_t *chan)
 
   channel_closed(chan);
 
- done:
+done:
   return;
 }
 
@@ -325,15 +321,14 @@ tlschan_is_local_addr_mock(const tor_addr_t *addr)
 {
   tt_ptr_op(addr, OP_NE, NULL);
 
- done:
+done:
   return tlschan_local;
 }
 
 struct testcase_t channeltls_tests[] = {
-  { "create", test_channeltls_create, TT_FORK, NULL, NULL },
-  { "num_bytes_queued", test_channeltls_num_bytes_queued,
-    TT_FORK, NULL, NULL },
-  { "overhead_estimate", test_channeltls_overhead_estimate,
-    TT_FORK, NULL, NULL },
-  END_OF_TESTCASES
-};
+    {"create", test_channeltls_create, TT_FORK, NULL, NULL},
+    {"num_bytes_queued", test_channeltls_num_bytes_queued, TT_FORK, NULL,
+     NULL},
+    {"overhead_estimate", test_channeltls_overhead_estimate, TT_FORK, NULL,
+     NULL},
+    END_OF_TESTCASES};

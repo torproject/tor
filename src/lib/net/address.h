@@ -18,11 +18,11 @@
 #include "lib/net/nettypes.h"
 
 #ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
+#  include <netinet/in.h>
 #endif
 #ifdef _WIN32
-#include <winsock2.h>
-#include <windows.h>
+#  include <winsock2.h>
+#  include <windows.h>
 #endif
 
 #include <stddef.h>
@@ -30,29 +30,29 @@
 
 #ifdef ADDRESS_PRIVATE
 
-#if defined(HAVE_SYS_IOCTL_H)
-#include <sys/ioctl.h>
-#endif
+#  if defined(HAVE_SYS_IOCTL_H)
+#    include <sys/ioctl.h>
+#  endif
 
-#ifdef HAVE_GETIFADDRS
-#define HAVE_IFADDRS_TO_SMARTLIST
-#endif
+#  ifdef HAVE_GETIFADDRS
+#    define HAVE_IFADDRS_TO_SMARTLIST
+#  endif
 
-#ifdef _WIN32
-#define HAVE_IP_ADAPTER_TO_SMARTLIST
-#endif
+#  ifdef _WIN32
+#    define HAVE_IP_ADAPTER_TO_SMARTLIST
+#  endif
 
-#if defined(SIOCGIFCONF) && defined(HAVE_IOCTL)
-#define HAVE_IFCONF_TO_SMARTLIST
-#endif
+#  if defined(SIOCGIFCONF) && defined(HAVE_IOCTL)
+#    define HAVE_IFCONF_TO_SMARTLIST
+#  endif
 
-#if defined(HAVE_NET_IF_H)
-#include <net/if.h> // for struct ifconf
-#endif
+#  if defined(HAVE_NET_IF_H)
+#    include <net/if.h> // for struct ifconf
+#  endif
 
-#if defined(HAVE_IFADDRS_TO_SMARTLIST)
-#include <ifaddrs.h>
-#endif
+#  if defined(HAVE_IFADDRS_TO_SMARTLIST)
+#    include <ifaddrs.h>
+#  endif
 
 // TODO win32 specific includes
 #endif /* defined(ADDRESS_PRIVATE) */
@@ -65,8 +65,7 @@ struct in_addr;
 
 /** Holds an IPv4 or IPv6 address.  (Uses less memory than struct
  * sockaddr_storage.) */
-typedef struct tor_addr_t
-{
+typedef struct tor_addr_t {
   sa_family_t family;
   union {
     uint32_t dummy_; /* This field is here so we have something to initialize
@@ -77,20 +76,25 @@ typedef struct tor_addr_t
 } tor_addr_t;
 
 /** Holds an IP address and a TCP/UDP port.  */
-typedef struct tor_addr_port_t
-{
+typedef struct tor_addr_port_t {
   tor_addr_t addr;
   uint16_t port;
 } tor_addr_port_t;
 
-#define TOR_ADDR_NULL {AF_UNSPEC, {0}}
+#define TOR_ADDR_NULL \
+  {                   \
+    AF_UNSPEC,        \
+    {                 \
+      0               \
+    }                 \
+  }
 
 /* XXXX To do: extract all of the functions here that can possibly invoke
  * XXXX resolver, and make sure they have distinctive names. */
 
 static inline const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
-static inline const struct in6_addr *tor_addr_to_in6_assert(
-    const tor_addr_t *a);
+static inline const struct in6_addr *
+tor_addr_to_in6_assert(const tor_addr_t *a);
 static inline uint32_t tor_addr_to_ipv4n(const tor_addr_t *a);
 static inline uint32_t tor_addr_to_ipv4h(const tor_addr_t *a);
 static inline uint32_t tor_addr_to_mapped_ipv4h(const tor_addr_t *a);
@@ -221,19 +225,18 @@ char *tor_addr_to_str_dup(const tor_addr_t *addr) ATTR_MALLOC;
 
 const char *fmt_addr_impl(const tor_addr_t *addr, int decorate);
 const char *fmt_addrport(const tor_addr_t *addr, uint16_t port);
-const char * fmt_addr32(uint32_t addr);
+const char *fmt_addr32(uint32_t addr);
 
-MOCK_DECL(int,get_interface_address6,(int severity, sa_family_t family,
-tor_addr_t *addr));
+MOCK_DECL(int, get_interface_address6,
+          (int severity, sa_family_t family, tor_addr_t *addr));
 
 struct smartlist_t;
-void interface_address6_list_free_(struct smartlist_t * addrs);
+void interface_address6_list_free_(struct smartlist_t *addrs);
 #define interface_address6_list_free(addrs) \
   FREE_AND_NULL(struct smartlist_t, interface_address6_list_free_, (addrs))
 
-MOCK_DECL(struct smartlist_t *,get_interface_address6_list,(int severity,
-                                                     sa_family_t family,
-                                                     int include_internal));
+MOCK_DECL(struct smartlist_t *, get_interface_address6_list,
+          (int severity, sa_family_t family, int include_internal));
 
 /** Flag to specify how to do a comparison between addresses.  In an "exact"
  * comparison, addresses are equivalent only if they are in the same family
@@ -250,7 +253,7 @@ int tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
                             maskbits_t mask, tor_addr_comparison_t how);
 /** Return true iff a and b are the same address.  The comparison is done
  * "exactly". */
-#define tor_addr_eq(a,b) (0==tor_addr_compare((a),(b),CMP_EXACT))
+#define tor_addr_eq(a, b) (0 == tor_addr_compare((a), (b), CMP_EXACT))
 
 uint64_t tor_addr_hash(const tor_addr_t *addr);
 struct sipkey;
@@ -266,10 +269,9 @@ int tor_addr_is_multicast(const tor_addr_t *a);
 /** Longest length that can be required for a reverse lookup name. */
 /* 32 nybbles, 32 dots, 8 characters of "ip6.arpa", 1 NUL: 73 characters. */
 #define REVERSE_LOOKUP_NAME_BUF_LEN 73
-int tor_addr_to_PTR_name(char *out, size_t outlen,
-                                    const tor_addr_t *addr);
+int tor_addr_to_PTR_name(char *out, size_t outlen, const tor_addr_t *addr);
 int tor_addr_parse_PTR_name(tor_addr_t *result, const char *address,
-                                       int family, int accept_regular);
+                            int family, int accept_regular);
 
 /* Does the address * yield an AF_UNSPEC wildcard address (1),
  * which expands to corresponding wildcard IPv4 and IPv6 rules, and do we
@@ -278,17 +280,17 @@ int tor_addr_parse_PTR_name(tor_addr_t *result, const char *address,
 #define TAPMP_EXTENDED_STAR 1
 /* Does the address * yield an IPv4 wildcard address rule (1);
  * or does it yield wildcard IPv4 and IPv6 rules (0) */
-#define TAPMP_STAR_IPV4_ONLY     (1 << 1)
+#define TAPMP_STAR_IPV4_ONLY (1 << 1)
 /* Does the address * yield an IPv6 wildcard address rule (1);
  * or does it yield wildcard IPv4 and IPv6 rules (0) */
-#define TAPMP_STAR_IPV6_ONLY     (1 << 2)
+#define TAPMP_STAR_IPV6_ONLY (1 << 2)
 /* TAPMP_STAR_IPV4_ONLY and TAPMP_STAR_IPV6_ONLY are mutually exclusive. */
 int tor_addr_parse_mask_ports(const char *s, unsigned flags,
                               tor_addr_t *addr_out, maskbits_t *mask_out,
                               uint16_t *port_min_out, uint16_t *port_max_out);
 
-const char * tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len,
-                             int decorate);
+const char *tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len,
+                            int decorate);
 int tor_addr_parse(tor_addr_t *addr, const char *src);
 void tor_addr_copy(tor_addr_t *dest, const tor_addr_t *src);
 void tor_addr_copy_tight(tor_addr_t *dest, const tor_addr_t *src);
@@ -296,12 +298,11 @@ void tor_addr_copy_tight(tor_addr_t *dest, const tor_addr_t *src);
 void tor_addr_from_ipv4n(tor_addr_t *dest, uint32_t v4addr);
 /** Set <b>dest</b> to the IPv4 address encoded in <b>v4addr</b> in host
  * order. */
-#define tor_addr_from_ipv4h(dest, v4addr)       \
+#define tor_addr_from_ipv4h(dest, v4addr) \
   tor_addr_from_ipv4n((dest), htonl(v4addr))
 void tor_addr_from_ipv6_bytes(tor_addr_t *dest, const char *bytes);
 /** Set <b>dest</b> to the IPv4 address incoded in <b>in</b>. */
-#define tor_addr_from_in(dest, in) \
-  tor_addr_from_ipv4n((dest), (in)->s_addr);
+#define tor_addr_from_in(dest, in) tor_addr_from_ipv4n((dest), (in)->s_addr);
 void tor_addr_from_in6(tor_addr_t *dest, const struct in6_addr *in6);
 
 int tor_addr_is_null(const tor_addr_t *addr);
@@ -310,27 +311,27 @@ int tor_addr_is_loopback(const tor_addr_t *addr);
 int tor_addr_is_valid(const tor_addr_t *addr, int for_listening);
 int tor_addr_is_valid_ipv4n(uint32_t v4n_addr, int for_listening);
 #define tor_addr_is_valid_ipv4h(v4h_addr, for_listening) \
-        tor_addr_is_valid_ipv4n(htonl(v4h_addr), (for_listening))
+  tor_addr_is_valid_ipv4n(htonl(v4h_addr), (for_listening))
 int tor_port_is_valid(uint16_t port, int for_listening);
 
 /* Are addr and port both valid? */
 #define tor_addr_port_is_valid(addr, port, for_listening) \
-        (tor_addr_is_valid((addr), (for_listening)) &&    \
-         tor_port_is_valid((port), (for_listening)))
+  (tor_addr_is_valid((addr), (for_listening)) &&          \
+   tor_port_is_valid((port), (for_listening)))
 /* Are ap->addr and ap->port both valid? */
 #define tor_addr_port_is_valid_ap(ap, for_listening) \
-        tor_addr_port_is_valid(&(ap)->addr, (ap)->port, (for_listening))
+  tor_addr_port_is_valid(&(ap)->addr, (ap)->port, (for_listening))
 /* Are the network-order v4addr and port both valid? */
 #define tor_addr_port_is_valid_ipv4n(v4n_addr, port, for_listening) \
-        (tor_addr_is_valid_ipv4n((v4n_addr), (for_listening)) &&    \
-         tor_port_is_valid((port), (for_listening)))
+  (tor_addr_is_valid_ipv4n((v4n_addr), (for_listening)) &&          \
+   tor_port_is_valid((port), (for_listening)))
 /* Are the host-order v4addr and port both valid? */
 #define tor_addr_port_is_valid_ipv4h(v4h_addr, port, for_listening) \
-        (tor_addr_is_valid_ipv4h((v4h_addr), (for_listening)) &&    \
-         tor_port_is_valid((port), (for_listening)))
+  (tor_addr_is_valid_ipv4h((v4h_addr), (for_listening)) &&          \
+   tor_port_is_valid((port), (for_listening)))
 
-int tor_addr_port_split(int severity, const char *addrport,
-                        char **address_out, uint16_t *port_out);
+int tor_addr_port_split(int severity, const char *addrport, char **address_out,
+                        uint16_t *port_out);
 
 int tor_addr_port_parse(int severity, const char *addrport,
                         tor_addr_t *address_out, uint16_t *port_out,
@@ -344,9 +345,8 @@ int parse_port_range(const char *port, uint16_t *port_min_out,
 int addr_mask_get_bits(uint32_t mask);
 char *tor_dup_ip(uint32_t addr) ATTR_MALLOC;
 
-MOCK_DECL(int,get_interface_address,(int severity, uint32_t *addr));
-#define interface_address_list_free(lst)\
-  interface_address6_list_free(lst)
+MOCK_DECL(int, get_interface_address, (int severity, uint32_t *addr));
+#define interface_address_list_free(lst) interface_address6_list_free(lst)
 
 /** Return a smartlist of the IPv4 addresses of all interfaces on the server.
  * Excludes loopback and multicast addresses. Only includes internal addresses
@@ -363,8 +363,7 @@ get_interface_address_list(int severity, int include_internal)
 }
 
 tor_addr_port_t *tor_addr_port_new(const tor_addr_t *addr, uint16_t port);
-int tor_addr_port_eq(const tor_addr_port_t *a,
-                     const tor_addr_port_t *b);
+int tor_addr_port_eq(const tor_addr_port_t *a, const tor_addr_port_t *b);
 
 int string_is_valid_dest(const char *string);
 int string_is_valid_nonrfc_hostname(const char *string);
@@ -372,32 +371,30 @@ int string_is_valid_ipv4_address(const char *string);
 int string_is_valid_ipv6_address(const char *string);
 
 #ifdef ADDRESS_PRIVATE
-MOCK_DECL(struct smartlist_t *,get_interface_addresses_raw,(int severity,
-                                                     sa_family_t family));
-MOCK_DECL(int,get_interface_address6_via_udp_socket_hack,(int severity,
-                                                          sa_family_t family,
-                                                          tor_addr_t *addr));
+MOCK_DECL(struct smartlist_t *, get_interface_addresses_raw,
+          (int severity, sa_family_t family));
+MOCK_DECL(int, get_interface_address6_via_udp_socket_hack,
+          (int severity, sa_family_t family, tor_addr_t *addr));
 
-#ifdef HAVE_IFADDRS_TO_SMARTLIST
+#  ifdef HAVE_IFADDRS_TO_SMARTLIST
 STATIC struct smartlist_t *ifaddrs_to_smartlist(const struct ifaddrs *ifa,
-                                         sa_family_t family);
+                                                sa_family_t family);
 STATIC struct smartlist_t *get_interface_addresses_ifaddrs(int severity,
-                                                    sa_family_t family);
-#endif /* defined(HAVE_IFADDRS_TO_SMARTLIST) */
+                                                           sa_family_t family);
+#  endif /* defined(HAVE_IFADDRS_TO_SMARTLIST) */
 
-#ifdef HAVE_IP_ADAPTER_TO_SMARTLIST
-STATIC struct smartlist_t *ip_adapter_addresses_to_smartlist(
-                                        const IP_ADAPTER_ADDRESSES *addresses);
+#  ifdef HAVE_IP_ADAPTER_TO_SMARTLIST
+STATIC struct smartlist_t *
+ip_adapter_addresses_to_smartlist(const IP_ADAPTER_ADDRESSES *addresses);
 STATIC struct smartlist_t *get_interface_addresses_win32(int severity,
-                                                  sa_family_t family);
-#endif /* defined(HAVE_IP_ADAPTER_TO_SMARTLIST) */
+                                                         sa_family_t family);
+#  endif /* defined(HAVE_IP_ADAPTER_TO_SMARTLIST) */
 
-#ifdef HAVE_IFCONF_TO_SMARTLIST
-STATIC struct smartlist_t *ifreq_to_smartlist(char *ifr,
-                                       size_t buflen);
+#  ifdef HAVE_IFCONF_TO_SMARTLIST
+STATIC struct smartlist_t *ifreq_to_smartlist(char *ifr, size_t buflen);
 STATIC struct smartlist_t *get_interface_addresses_ioctl(int severity,
-                                                  sa_family_t family);
-#endif /* defined(HAVE_IFCONF_TO_SMARTLIST) */
+                                                         sa_family_t family);
+#  endif /* defined(HAVE_IFCONF_TO_SMARTLIST) */
 
 #endif /* defined(ADDRESS_PRIVATE) */
 

@@ -34,10 +34,9 @@ fuzz_cleanup(void)
 int
 fuzz_main(const uint8_t *data, size_t sz)
 {
-  const char *str = (const char*) data;
-  smartlist_t *result = microdescs_parse_from_string((const char *)str,
-                                                     str+sz,
-                                                     0, SAVED_NOWHERE, NULL);
+  const char *str = (const char *)data;
+  smartlist_t *result = microdescs_parse_from_string(
+      (const char *)str, str + sz, 0, SAVED_NOWHERE, NULL);
   if (result) {
     log_debug(LD_GENERAL, "Parsing okay: %d", smartlist_len(result));
     SMARTLIST_FOREACH(result, microdesc_t *, md, microdesc_free(md));

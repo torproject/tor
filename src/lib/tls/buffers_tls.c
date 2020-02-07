@@ -20,14 +20,13 @@
 #include "lib/tls/tortls.h"
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
 /** As read_to_chunk(), but return (negative) error code on error, blocking,
  * or TLS, and the number of bytes read otherwise. */
 static inline int
-read_to_chunk_tls(buf_t *buf, chunk_t *chunk, tor_tls_t *tls,
-                  size_t at_most)
+read_to_chunk_tls(buf_t *buf, chunk_t *chunk, tor_tls_t *tls, size_t at_most)
 {
   int read_result;
 
@@ -69,9 +68,9 @@ buf_read_from_tls(buf_t *buf, tor_tls_t *tls, size_t at_most)
   check_no_tls_errors();
 
   IF_BUG_ONCE(buf->datalen >= INT_MAX)
-    return TOR_TLS_ERROR_MISC;
+  return TOR_TLS_ERROR_MISC;
   IF_BUG_ONCE(buf->datalen >= INT_MAX - at_most)
-    return TOR_TLS_ERROR_MISC;
+  return TOR_TLS_ERROR_MISC;
 
   while (at_most > total_read) {
     size_t readlen = at_most - total_read;
@@ -90,7 +89,7 @@ buf_read_from_tls(buf_t *buf, tor_tls_t *tls, size_t at_most)
     r = read_to_chunk_tls(buf, chunk, tls, readlen);
     if (r < 0)
       return r; /* Error */
-    tor_assert(total_read+r < INT_MAX);
+    tor_assert(total_read + r < INT_MAX);
     total_read += r;
     if ((size_t)r < readlen) /* eof, block, or no more to read. */
       break;
@@ -105,8 +104,8 @@ buf_read_from_tls(buf_t *buf, tor_tls_t *tls, size_t at_most)
  * written on success, and a TOR_TLS error code on failure or blocking.
  */
 static inline int
-flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
-                size_t sz, size_t *buf_flushlen)
+flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk, size_t sz,
+                size_t *buf_flushlen)
 {
   int r;
   size_t forced;
@@ -130,8 +129,8 @@ flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
   else
     *buf_flushlen = 0;
   buf_drain(buf, r);
-  log_debug(LD_NET,"flushed %d bytes, %d ready to flush, %d remain.",
-            r,(int)*buf_flushlen,(int)buf->datalen);
+  log_debug(LD_NET, "flushed %d bytes, %d ready to flush, %d remain.", r,
+            (int)*buf_flushlen, (int)buf->datalen);
   return r;
 }
 
@@ -140,19 +139,21 @@ flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
  */
 int
 buf_flush_to_tls(buf_t *buf, tor_tls_t *tls, size_t flushlen,
-              size_t *buf_flushlen)
+                 size_t *buf_flushlen)
 {
   int r;
   size_t flushed = 0;
   ssize_t sz;
   tor_assert(buf_flushlen);
-  IF_BUG_ONCE(*buf_flushlen > buf->datalen) {
+  IF_BUG_ONCE(*buf_flushlen > buf->datalen)
+  {
     *buf_flushlen = buf->datalen;
   }
-  IF_BUG_ONCE(flushlen > *buf_flushlen) {
+  IF_BUG_ONCE(flushlen > *buf_flushlen)
+  {
     flushlen = *buf_flushlen;
   }
-  sz = (ssize_t) flushlen;
+  sz = (ssize_t)flushlen;
 
   /* we want to let tls write even if flushlen is zero, because it might
    * have a partial record pending */

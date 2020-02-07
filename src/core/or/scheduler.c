@@ -205,8 +205,8 @@ get_scheduler_type_string(scheduler_types_t type)
 static void
 scheduler_evt_callback(mainloop_event_t *event, void *arg)
 {
-  (void) event;
-  (void) arg;
+  (void)event;
+  (void)arg;
 
   log_debug(LD_SCHED, "Scheduler event callback called");
 
@@ -245,7 +245,7 @@ select_scheduler(void)
 
   /* This list is ordered that is first entry has the first priority. Thus, as
    * soon as we find a scheduler type that we can use, we use it and stop. */
-  SMARTLIST_FOREACH_BEGIN(get_options()->SchedulerTypes_, int *, type) {
+  SMARTLIST_FOREACH_BEGIN (get_options()->SchedulerTypes_, int *, type) {
     switch (*type) {
     case SCHEDULER_VANILLA:
       new_scheduler = get_vanilla_scheduler();
@@ -292,9 +292,9 @@ select_scheduler(void)
       /* Our option validation should have caught this. */
       tor_assert_unreached();
     }
-  } SMARTLIST_FOREACH_END(type);
+  } SMARTLIST_FOREACH_END (type);
 
- end:
+end:
   if (new_scheduler == NULL) {
     log_err(LD_SCHED, "Tor was unable to select a scheduler type. Please "
                       "make sure Schedulers is correctly configured with "
@@ -385,9 +385,9 @@ void
 scheduler_set_channel_state(channel_t *chan, int new_state)
 {
   log_debug(LD_SCHED, "chan %" PRIu64 " changed from scheduler state %s to %s",
-      chan->global_identifier,
-      get_scheduler_state_string(chan->scheduler_state),
-      get_scheduler_state_string(new_state));
+            chan->global_identifier,
+            get_scheduler_state_string(chan->scheduler_state),
+            get_scheduler_state_string(new_state));
   chan->scheduler_state = new_state;
 }
 
@@ -400,7 +400,8 @@ get_channels_pending(void)
 
 /** Comparison function to use when sorting pending channels. */
 MOCK_IMPL(int,
-scheduler_compare_channels, (const void *c1_v, const void *c2_v))
+scheduler_compare_channels,
+          (const void *c1_v, const void *c2_v))
 {
   const channel_t *c1 = NULL, *c2 = NULL;
   /* These are a workaround for -Wbad-function-cast throwing a fit */
@@ -414,8 +415,7 @@ scheduler_compare_channels, (const void *c1_v, const void *c2_v))
   c2 = (const channel_t *)(c2_v);
 
   if (c1 != c2) {
-    if (circuitmux_get_policy(c1->cmux) ==
-        circuitmux_get_policy(c2->cmux)) {
+    if (circuitmux_get_policy(c1->cmux) == circuitmux_get_policy(c2->cmux)) {
       /* Same cmux policy, so use the mux comparison */
       return circuitmux_compare_muxes(c1->cmux, c2->cmux);
     } else {
@@ -504,12 +504,14 @@ scheduler_free_all(void)
 
 /** Mark a channel as no longer ready to accept writes. */
 MOCK_IMPL(void,
-scheduler_channel_doesnt_want_writes,(channel_t *chan))
+scheduler_channel_doesnt_want_writes, (channel_t * chan))
 {
-  IF_BUG_ONCE(!chan) {
+  IF_BUG_ONCE(!chan)
+  {
     return;
   }
-  IF_BUG_ONCE(!channels_pending) {
+  IF_BUG_ONCE(!channels_pending)
+  {
     return;
   }
 
@@ -520,10 +522,8 @@ scheduler_channel_doesnt_want_writes,(channel_t *chan))
      * the other lists.  It can't write any more, so it goes to
      * channels_waiting_to_write.
      */
-    smartlist_pqueue_remove(channels_pending,
-                            scheduler_compare_channels,
-                            offsetof(channel_t, sched_heap_idx),
-                            chan);
+    smartlist_pqueue_remove(channels_pending, scheduler_compare_channels,
+                            offsetof(channel_t, sched_heap_idx), chan);
     scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_TO_WRITE);
   } else {
     /*
@@ -539,12 +539,14 @@ scheduler_channel_doesnt_want_writes,(channel_t *chan))
 
 /** Mark a channel as having waiting cells. */
 MOCK_IMPL(void,
-scheduler_channel_has_waiting_cells,(channel_t *chan))
+scheduler_channel_has_waiting_cells, (channel_t * chan))
 {
-  IF_BUG_ONCE(!chan) {
+  IF_BUG_ONCE(!chan)
+  {
     return;
   }
-  IF_BUG_ONCE(!channels_pending) {
+  IF_BUG_ONCE(!channels_pending)
+  {
     return;
   }
 
@@ -557,10 +559,8 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
      */
     scheduler_set_channel_state(chan, SCHED_CHAN_PENDING);
     if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
-      smartlist_pqueue_add(channels_pending,
-                           scheduler_compare_channels,
-                           offsetof(channel_t, sched_heap_idx),
-                           chan);
+      smartlist_pqueue_add(channels_pending, scheduler_compare_channels,
+                           offsetof(channel_t, sched_heap_idx), chan);
     }
     /* If we made a channel pending, we potentially have scheduling work to
      * do. */
@@ -586,8 +586,10 @@ scheduler_ev_add(const struct timeval *next_run)
   tor_assert(run_sched_ev);
   tor_assert(next_run);
   if (BUG(mainloop_event_schedule(run_sched_ev, next_run) < 0)) {
-    log_warn(LD_SCHED, "Adding to libevent failed. Next run time was set to: "
-                       "%ld.%06ld", next_run->tv_sec, (long)next_run->tv_usec);
+    log_warn(LD_SCHED,
+             "Adding to libevent failed. Next run time was set to: "
+             "%ld.%06ld",
+             next_run->tv_sec, (long)next_run->tv_usec);
     return;
   }
 }
@@ -611,9 +613,10 @@ scheduler_init(void)
   log_debug(LD_SCHED, "Initting scheduler");
 
   // Two '!' because we really do want to check if the pointer is non-NULL
-  IF_BUG_ONCE(!!run_sched_ev) {
+  IF_BUG_ONCE(!!run_sched_ev)
+  {
     log_warn(LD_SCHED, "We should not already have a libevent scheduler event."
-             "I'll clean the old one up, but this is odd.");
+                       "I'll clean the old one up, but this is odd.");
     mainloop_event_free(run_sched_ev);
     run_sched_ev = NULL;
   }
@@ -630,12 +633,14 @@ scheduler_init(void)
  * state specific to this channel.
  */
 MOCK_IMPL(void,
-scheduler_release_channel,(channel_t *chan))
+scheduler_release_channel, (channel_t * chan))
 {
-  IF_BUG_ONCE(!chan) {
+  IF_BUG_ONCE(!chan)
+  {
     return;
   }
-  IF_BUG_ONCE(!channels_pending) {
+  IF_BUG_ONCE(!channels_pending)
+  {
     return;
   }
 
@@ -650,10 +655,8 @@ scheduler_release_channel,(channel_t *chan))
    * channel when it changes state to close and a second time when we free it.
    * Not ideal at all but for now that is the way it is. */
   if (chan->sched_heap_idx != -1) {
-    smartlist_pqueue_remove(channels_pending,
-                            scheduler_compare_channels,
-                            offsetof(channel_t, sched_heap_idx),
-                            chan);
+    smartlist_pqueue_remove(channels_pending, scheduler_compare_channels,
+                            offsetof(channel_t, sched_heap_idx), chan);
   }
 
   if (the_scheduler->on_channel_free) {
@@ -667,10 +670,12 @@ scheduler_release_channel,(channel_t *chan))
 void
 scheduler_channel_wants_writes(channel_t *chan)
 {
-  IF_BUG_ONCE(!chan) {
+  IF_BUG_ONCE(!chan)
+  {
     return;
   }
-  IF_BUG_ONCE(!channels_pending) {
+  IF_BUG_ONCE(!channels_pending)
+  {
     return;
   }
 
@@ -681,10 +686,8 @@ scheduler_channel_wants_writes(channel_t *chan)
      */
     scheduler_set_channel_state(chan, SCHED_CHAN_PENDING);
     if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
-      smartlist_pqueue_add(channels_pending,
-                           scheduler_compare_channels,
-                           offsetof(channel_t, sched_heap_idx),
-                           chan);
+      smartlist_pqueue_add(channels_pending, scheduler_compare_channels,
+                           offsetof(channel_t, sched_heap_idx), chan);
     }
     /* We just made a channel pending, we have scheduling work to do. */
     the_scheduler->schedule();
@@ -709,16 +712,14 @@ scheduler_bug_occurred(const channel_t *chan)
   char buf[128];
 
   if (chan != NULL) {
-    const size_t outbuf_len =
-      buf_datalen(TO_CONN(BASE_CHAN_TO_TLS((channel_t *) chan)->conn)->outbuf);
+    const size_t outbuf_len = buf_datalen(
+        TO_CONN(BASE_CHAN_TO_TLS((channel_t *)chan)->conn)->outbuf);
     tor_snprintf(buf, sizeof(buf),
                  "Channel %" PRIu64 " in state %s and scheduler state %s."
                  " Num cells on cmux: %d. Connection outbuf len: %lu.",
-                 chan->global_identifier,
-                 channel_state_to_string(chan->state),
+                 chan->global_identifier, channel_state_to_string(chan->state),
                  get_scheduler_state_string(chan->scheduler_state),
-                 circuitmux_num_cells(chan->cmux),
-                 (unsigned long)outbuf_len);
+                 circuitmux_num_cells(chan->cmux), (unsigned long)outbuf_len);
   }
 
   {
@@ -727,8 +728,9 @@ scheduler_bug_occurred(const channel_t *chan)
      * know something is stuck/wrong. It *should* be loud but not too much. */
     static ratelim_t rlimit = RATELIM_INIT(60);
     if ((msg = rate_limit_log(&rlimit, approx_time()))) {
-      log_warn(LD_BUG, "%s Num pending channels: %d. "
-                       "Channel in pending list: %s.%s",
+      log_warn(LD_BUG,
+               "%s Num pending channels: %d. "
+               "Channel in pending list: %s.%s",
                (chan != NULL) ? buf : "No channel in bug context.",
                smartlist_len(channels_pending),
                (smartlist_pos(channels_pending, chan) == -1) ? "no" : "yes",
@@ -746,20 +748,17 @@ scheduler_bug_occurred(const channel_t *chan)
 void
 scheduler_touch_channel(channel_t *chan)
 {
-  IF_BUG_ONCE(!chan) {
+  IF_BUG_ONCE(!chan)
+  {
     return;
   }
 
   if (chan->scheduler_state == SCHED_CHAN_PENDING) {
     /* Remove and re-add it */
-    smartlist_pqueue_remove(channels_pending,
-                            scheduler_compare_channels,
-                            offsetof(channel_t, sched_heap_idx),
-                            chan);
-    smartlist_pqueue_add(channels_pending,
-                         scheduler_compare_channels,
-                         offsetof(channel_t, sched_heap_idx),
-                         chan);
+    smartlist_pqueue_remove(channels_pending, scheduler_compare_channels,
+                            offsetof(channel_t, sched_heap_idx), chan);
+    smartlist_pqueue_add(channels_pending, scheduler_compare_channels,
+                         offsetof(channel_t, sched_heap_idx), chan);
   }
   /* else no-op, since it isn't in the queue */
 }

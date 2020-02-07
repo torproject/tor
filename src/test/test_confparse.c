@@ -48,59 +48,55 @@ typedef struct test_struct_t {
 
 static test_struct_t test_struct_t_dummy;
 
-#define VAR(varname,conftype,member,initvalue)                          \
+#define VAR(varname, conftype, member, initvalue) \
   CONFIG_VAR_ETYPE(test_struct_t, varname, conftype, member, 0, initvalue)
-#define V(member,conftype,initvalue)            \
+#define V(member, conftype, initvalue) \
   VAR(#member, conftype, member, initvalue)
-#define OBSOLETE(varname)                       \
-  CONFIG_VAR_OBSOLETE(varname)
+#define OBSOLETE(varname) CONFIG_VAR_OBSOLETE(varname)
 
 static const config_var_t test_vars[] = {
-  V(s, STRING, "hello"),
-  V(fn, FILENAME, NULL),
-  V(pos, POSINT, NULL),
-  V(i, INT, "-10"),
-  V(deprecated_int, INT, "3"),
-  V(u64, UINT64, NULL),
-  V(interval, INTERVAL, "10 seconds"),
-  V(msec_interval, MSEC_INTERVAL, "150 msec"),
-  V(mem, MEMUNIT, "10 MB"),
-  V(dbl, DOUBLE, NULL),
-  V(boolean, BOOL, "0"),
-  V(autobool, AUTOBOOL, "auto"),
-  V(time, ISOTIME, NULL),
-  V(csv, CSV, NULL),
-  V(csv_interval, CSV_INTERVAL, "5 seconds"),
-  V(lines, LINELIST, NULL),
-  VAR("MixedLines", LINELIST_V, mixed_lines, NULL),
-  VAR("LineTypeA", LINELIST_S, mixed_lines, NULL),
-  VAR("LineTypeB", LINELIST_S, mixed_lines, NULL),
-  OBSOLETE("obsolete"),
-  {
-   .member = { .name = "routerset",
-               .type = CONFIG_TYPE_EXTENDED,
-               .type_def = &ROUTERSET_type_defn,
-               .offset = offsetof(test_struct_t, routerset),
-             },
-  },
-  VAR("__HiddenInt", POSINT, hidden_int, "0"),
-  VAR("MixedHiddenLines", LINELIST_V, mixed_hidden_lines, NULL),
-  VAR("__HiddenLineA", LINELIST_S, mixed_hidden_lines, NULL),
-  VAR("VisibleLineB", LINELIST_S, mixed_hidden_lines, NULL),
+    V(s, STRING, "hello"),
+    V(fn, FILENAME, NULL),
+    V(pos, POSINT, NULL),
+    V(i, INT, "-10"),
+    V(deprecated_int, INT, "3"),
+    V(u64, UINT64, NULL),
+    V(interval, INTERVAL, "10 seconds"),
+    V(msec_interval, MSEC_INTERVAL, "150 msec"),
+    V(mem, MEMUNIT, "10 MB"),
+    V(dbl, DOUBLE, NULL),
+    V(boolean, BOOL, "0"),
+    V(autobool, AUTOBOOL, "auto"),
+    V(time, ISOTIME, NULL),
+    V(csv, CSV, NULL),
+    V(csv_interval, CSV_INTERVAL, "5 seconds"),
+    V(lines, LINELIST, NULL),
+    VAR("MixedLines", LINELIST_V, mixed_lines, NULL),
+    VAR("LineTypeA", LINELIST_S, mixed_lines, NULL),
+    VAR("LineTypeB", LINELIST_S, mixed_lines, NULL),
+    OBSOLETE("obsolete"),
+    {
+        .member =
+            {
+                .name = "routerset",
+                .type = CONFIG_TYPE_EXTENDED,
+                .type_def = &ROUTERSET_type_defn,
+                .offset = offsetof(test_struct_t, routerset),
+            },
+    },
+    VAR("__HiddenInt", POSINT, hidden_int, "0"),
+    VAR("MixedHiddenLines", LINELIST_V, mixed_hidden_lines, NULL),
+    VAR("__HiddenLineA", LINELIST_S, mixed_hidden_lines, NULL),
+    VAR("VisibleLineB", LINELIST_S, mixed_hidden_lines, NULL),
 
-  END_OF_CONFIG_VARS,
+    END_OF_CONFIG_VARS,
 };
 
 static config_abbrev_t test_abbrevs[] = {
-  { "uint", "pos", 0, 0 },
-  { "float", "dbl", 0, 1 },
-  { NULL, NULL, 0, 0 }
-};
+    {"uint", "pos", 0, 0}, {"float", "dbl", 0, 1}, {NULL, NULL, 0, 0}};
 
 static config_deprecation_t test_deprecation_notes[] = {
-  { "deprecated_int", "This integer is deprecated." },
-  { NULL, NULL }
-};
+    {"deprecated_int", "This integer is deprecated."}, {NULL, NULL}};
 
 static int
 test_validate_cb(const void *old_options, void *options, char **msg)
@@ -119,16 +115,17 @@ test_validate_cb(const void *old_options, void *options, char **msg)
 #define TEST_MAGIC 0x1337
 
 static const config_format_t test_fmt = {
-  .size = sizeof(test_struct_t),
-  .magic = {
-   "test_struct_t",
-   TEST_MAGIC,
-   offsetof(test_struct_t, magic),
-  },
-  .abbrevs = test_abbrevs,
-  .deprecations = test_deprecation_notes,
-  .vars = test_vars,
-  .legacy_validate_fn = test_validate_cb,
+    .size = sizeof(test_struct_t),
+    .magic =
+        {
+            "test_struct_t",
+            TEST_MAGIC,
+            offsetof(test_struct_t, magic),
+        },
+    .abbrevs = test_abbrevs,
+    .deprecations = test_deprecation_notes,
+    .vars = test_vars,
+    .legacy_validate_fn = test_validate_cb,
 };
 
 /* Make sure that config_init sets everything to the right defaults. */
@@ -162,34 +159,34 @@ test_confparse_init(void *arg)
   tt_ptr_op(tst->mixed_lines, OP_EQ, NULL);
   tt_int_op(tst->hidden_int, OP_EQ, 0);
 
- done:
+done:
   config_free(mgr, tst);
   config_mgr_free(mgr);
 }
 
 static const char simple_settings[] =
-      "s this is a \n"
-      "fn /simple/test of the\n"
-      "uint 77\n" // this is an abbrev
-      "i 3\n"
-      "u64   1000000000000  \n"
-      "interval 5 minutes \n"
-      "msec_interval 5 minutes \n"
-      "mem 10\n"
-      "dbl 6.060842\n"
-      "BOOLEAN 1\n"
-      "aUtObOOl 0\n"
-      "time 2019-06-14 13:58:51\n"
-      "csv configuration, parsing  , system  \n"
-      "csv_interval 10 seconds, 5 seconds, 10 hours\n"
-      "lines hello\n"
-      "LINES world\n"
-      "linetypea i d\n"
-      "linetypeb i c\n"
-      "routerset $FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\n"
-      "__hiddenint 11\n"
-      "__hiddenlineA XYZ\n"
-      "visiblelineB ABC\n";
+    "s this is a \n"
+    "fn /simple/test of the\n"
+    "uint 77\n" // this is an abbrev
+    "i 3\n"
+    "u64   1000000000000  \n"
+    "interval 5 minutes \n"
+    "msec_interval 5 minutes \n"
+    "mem 10\n"
+    "dbl 6.060842\n"
+    "BOOLEAN 1\n"
+    "aUtObOOl 0\n"
+    "time 2019-06-14 13:58:51\n"
+    "csv configuration, parsing  , system  \n"
+    "csv_interval 10 seconds, 5 seconds, 10 hours\n"
+    "lines hello\n"
+    "LINES world\n"
+    "linetypea i d\n"
+    "linetypeb i c\n"
+    "routerset $FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\n"
+    "__hiddenint 11\n"
+    "__hiddenlineA XYZ\n"
+    "visiblelineB ABC\n";
 
 /* Return a configuration object set up from simple_settings above. */
 static test_struct_t *
@@ -210,7 +207,7 @@ get_simple_config(const config_mgr_t *mgr)
 
   result = tst;
   tst = NULL; // prevent free
- done:
+done:
   tor_free(msg);
   config_free_lines(lines);
   config_free(mgr, tst);
@@ -274,7 +271,7 @@ test_confparse_assign_simple(void *arg)
 
   tt_assert(config_check_ok(mgr, tst, LOG_ERR));
 
- done:
+done:
   config_free(mgr, tst);
   config_mgr_free(mgr);
 }
@@ -292,8 +289,7 @@ test_confparse_assign_obsolete(void *arg)
 
   config_init(mgr, tst);
 
-  int r = config_get_lines("obsolete option here",
-                           &lines, 0);
+  int r = config_get_lines("obsolete option here", &lines, 0);
   tt_int_op(r, OP_EQ, 0);
   setup_capture_of_logs(LOG_WARN);
   r = config_assign(mgr, tst, lines, 0, &msg);
@@ -301,7 +297,7 @@ test_confparse_assign_obsolete(void *arg)
   tt_ptr_op(msg, OP_EQ, NULL);
   expect_single_log_msg_containing("Skipping obsolete configuration option");
 
- done:
+done:
   teardown_capture_of_logs();
   config_free(mgr, tst);
   config_free_lines(lines);
@@ -323,8 +319,7 @@ test_confparse_assign_deprecated(void *arg)
 
   config_init(mgr, tst);
 
-  int r = config_get_lines("deprecated_int 7",
-                           &lines, 0);
+  int r = config_get_lines("deprecated_int 7", &lines, 0);
   tt_int_op(r, OP_EQ, 0);
   setup_capture_of_logs(LOG_WARN);
   r = config_assign(mgr, tst, lines, CAL_WARN_DEPRECATIONS, &msg);
@@ -336,7 +331,7 @@ test_confparse_assign_deprecated(void *arg)
 
   tt_assert(config_check_ok(mgr, tst, LOG_ERR));
 
- done:
+done:
   teardown_capture_of_logs();
   config_free(mgr, tst);
   config_free_lines(lines);
@@ -369,7 +364,7 @@ test_confparse_assign_replaced(void *arg)
   tt_double_op(tst->dbl, OP_GT, 999.999);
   tt_double_op(tst->dbl, OP_LT, 1000.001);
 
- done:
+done:
   teardown_capture_of_logs();
   config_free(mgr, tst);
   config_free_lines(lines);
@@ -398,7 +393,7 @@ test_confparse_assign_emptystring(void *arg)
   tt_ptr_op(msg, OP_EQ, NULL);
   expect_single_log_msg_containing("has no value");
 
- done:
+done:
   teardown_capture_of_logs();
   config_free(mgr, tst);
   config_free_lines(lines);
@@ -420,7 +415,8 @@ test_confparse_assign_twice(void *arg)
   config_init(mgr, tst);
 
   int r = config_get_lines("pos 10\n"
-                           "pos 99\n", &lines, 0);
+                           "pos 99\n",
+                           &lines, 0);
   tt_int_op(r, OP_EQ, 0);
   setup_capture_of_logs(LOG_WARN);
   r = config_assign(mgr, tst, lines, 0, &msg);
@@ -428,7 +424,7 @@ test_confparse_assign_twice(void *arg)
   tt_ptr_op(msg, OP_EQ, NULL);
   expect_single_log_msg_containing("used more than once");
 
- done:
+done:
   teardown_capture_of_logs();
   config_free(mgr, tst);
   config_free_lines(lines);
@@ -461,11 +457,11 @@ test_confparse_assign_badval(void *arg)
   r = config_assign(mgr, tst, lines, 0, &msg);
   tt_int_op(r, OP_LT, 0);
   tt_ptr_op(msg, OP_NE, NULL);
-  if (! strstr(msg, bt->expect_msg)) {
-    TT_DIE(("'%s' did not contain '%s'" , msg, bt->expect_msg));
+  if (!strstr(msg, bt->expect_msg)) {
+    TT_DIE(("'%s' did not contain '%s'", msg, bt->expect_msg));
   }
 
- done:
+done:
   teardown_capture_of_logs();
   config_free(mgr, tst);
   config_free_lines(lines);
@@ -479,33 +475,29 @@ test_confparse_assign_badval(void *arg)
  * are writing these tests before a refactoring that we expect will
  * change them.
  */
-static const badval_test_t bv_notint = { "pos X\n", "malformed" };
-static const badval_test_t bv_negint = { "pos -10\n", "out of bounds" };
-static const badval_test_t bv_badu64 = { "u64 u64\n", "malformed" };
-static const badval_test_t bv_dbl1 = { "dbl xxx\n", "Could not convert" };
-static const badval_test_t bv_dbl2 = { "dbl 1.0 xx\n", "Could not convert" };
-static const badval_test_t bv_dbl3 = {
-   "dbl 1e-10000\n", "too small to express" };
-static const badval_test_t bv_dbl4 = {
-   "dbl 1e1000\n", "too large to express" };
-static const badval_test_t bv_dbl5 = {
-   "dbl -1e-10000\n", "too small to express" };
-static const badval_test_t bv_dbl6 = {
-   "dbl -1e1000\n", "too large to express" };
-static const badval_test_t bv_badcsvi1 =
-  { "csv_interval 10 wl\n", "malformed" };
-static const badval_test_t bv_badcsvi2 =
-  { "csv_interval cl,10\n", "malformed" };
-static const badval_test_t bv_nonoption = { "fnord 10\n", "Unknown option" };
-static const badval_test_t bv_badmem = { "mem 3 trits\n", "malformed" };
-static const badval_test_t bv_badbool = { "boolean 7\n", "Unrecognized value"};
-static const badval_test_t bv_badabool =
-  { "autobool 7\n", "Unrecognized value" };
-static const badval_test_t bv_badtime = { "time lunchtime\n", "Invalid time" };
-static const badval_test_t bv_virt = { "MixedLines 7\n", "virtual option" };
-static const badval_test_t bv_rs = { "Routerset 2.2.2.2.2\n", "Invalid" };
-static const badval_test_t bv_big_interval =
-  { "interval 1000 months", "too large" };
+static const badval_test_t bv_notint = {"pos X\n", "malformed"};
+static const badval_test_t bv_negint = {"pos -10\n", "out of bounds"};
+static const badval_test_t bv_badu64 = {"u64 u64\n", "malformed"};
+static const badval_test_t bv_dbl1 = {"dbl xxx\n", "Could not convert"};
+static const badval_test_t bv_dbl2 = {"dbl 1.0 xx\n", "Could not convert"};
+static const badval_test_t bv_dbl3 = {"dbl 1e-10000\n",
+                                      "too small to express"};
+static const badval_test_t bv_dbl4 = {"dbl 1e1000\n", "too large to express"};
+static const badval_test_t bv_dbl5 = {"dbl -1e-10000\n",
+                                      "too small to express"};
+static const badval_test_t bv_dbl6 = {"dbl -1e1000\n", "too large to express"};
+static const badval_test_t bv_badcsvi1 = {"csv_interval 10 wl\n", "malformed"};
+static const badval_test_t bv_badcsvi2 = {"csv_interval cl,10\n", "malformed"};
+static const badval_test_t bv_nonoption = {"fnord 10\n", "Unknown option"};
+static const badval_test_t bv_badmem = {"mem 3 trits\n", "malformed"};
+static const badval_test_t bv_badbool = {"boolean 7\n", "Unrecognized value"};
+static const badval_test_t bv_badabool = {"autobool 7\n",
+                                          "Unrecognized value"};
+static const badval_test_t bv_badtime = {"time lunchtime\n", "Invalid time"};
+static const badval_test_t bv_virt = {"MixedLines 7\n", "virtual option"};
+static const badval_test_t bv_rs = {"Routerset 2.2.2.2.2\n", "Invalid"};
+static const badval_test_t bv_big_interval = {"interval 1000 months",
+                                              "too large"};
 
 /* Try config_dump(), and make sure it behaves correctly */
 static void
@@ -592,7 +584,7 @@ test_confparse_dump(void *arg)
             "time 2019-06-14 13:58:51\n"
             "u64 1000000000000\n");
 
- done:
+done:
   config_free(mgr, tst);
   tor_free(dumped);
   config_mgr_free(mgr);
@@ -617,7 +609,7 @@ test_confparse_reset(void *arg)
   config_reset_line(mgr, tst, "routerset", 0);
   tt_ptr_op(tst->routerset, OP_EQ, NULL);
 
- done:
+done:
   config_free(mgr, tst);
   config_mgr_free(mgr);
 }
@@ -634,14 +626,13 @@ test_confparse_reassign(void *arg)
   config_line_t *lines = NULL;
   char *msg = NULL, *rs = NULL;
 
-  int r = config_get_lines(
-         "s eleven\n"
-         "i 12\n"
-         "lines 13\n"
-         "csv 14,15\n"
-         "routerset 127.0.0.1\n",
-         &lines, 0);
-  r = config_assign(mgr, tst,lines, 0, &msg);
+  int r = config_get_lines("s eleven\n"
+                           "i 12\n"
+                           "lines 13\n"
+                           "csv 14,15\n"
+                           "routerset 127.0.0.1\n",
+                           &lines, 0);
+  r = config_assign(mgr, tst, lines, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
 
@@ -661,8 +652,7 @@ test_confparse_reassign(void *arg)
   tt_str_op(rs, OP_EQ, "127.0.0.1");
 
   // Try again with the CLEAR_FIRST and USE_DEFAULTS flags
-  r = config_assign(mgr, tst, lines,
-                    CAL_CLEAR_FIRST|CAL_USE_DEFAULTS, &msg);
+  r = config_assign(mgr, tst, lines, CAL_CLEAR_FIRST | CAL_USE_DEFAULTS, &msg);
   tt_int_op(r, OP_EQ, 0);
 
   tt_ptr_op(msg, OP_EQ, NULL);
@@ -671,7 +661,7 @@ test_confparse_reassign(void *arg)
   // tt_int_op(tst->pos, OP_EQ, 0); //XXXX why is this not cleared?
   tt_int_op(tst->i, OP_EQ, 12);
 
- done:
+done:
   config_free(mgr, tst);
   config_free_lines(lines);
   tor_free(msg);
@@ -691,11 +681,9 @@ test_confparse_reassign_extend(void *arg)
   config_line_t *lines = NULL;
   char *msg = NULL;
 
-  int r = config_get_lines(
-         "+lines 13\n",
-         &lines, 1); // allow extended format.
+  int r = config_get_lines("+lines 13\n", &lines, 1); // allow extended format.
   tt_int_op(r, OP_EQ, 0);
-  r = config_assign(mgr, tst,lines, 0, &msg);
+  r = config_assign(mgr, tst, lines, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
 
@@ -711,9 +699,7 @@ test_confparse_reassign_extend(void *arg)
   tt_assert(tst->lines->next->next->next == NULL);
   config_free_lines(lines);
 
-  r = config_get_lines(
-         "/lines\n",
-         &lines, 1); // allow extended format.
+  r = config_get_lines("/lines\n", &lines, 1); // allow extended format.
   tt_int_op(r, OP_EQ, 0);
   r = config_assign(mgr, tst, lines, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
@@ -723,16 +709,14 @@ test_confparse_reassign_extend(void *arg)
 
   config_free(mgr, tst);
   tst = get_simple_config(mgr);
-  r = config_get_lines(
-         "/lines away!\n",
-         &lines, 1); // allow extended format.
+  r = config_get_lines("/lines away!\n", &lines, 1); // allow extended format.
   tt_int_op(r, OP_EQ, 0);
   r = config_assign(mgr, tst, lines, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
   tt_assert(tst->lines == NULL);
 
- done:
+done:
   config_free(mgr, tst);
   config_free_lines(lines);
   tor_free(msg);
@@ -796,7 +780,7 @@ test_confparse_get_assigned(void *arg)
   tt_assert(lines->next == NULL);
   config_free_lines(lines);
 
- done:
+done:
   config_free(mgr, tst);
   config_free_lines(lines);
   config_mgr_free(mgr);
@@ -806,23 +790,24 @@ test_confparse_get_assigned(void *arg)
 #define ETEST_MAGIC 13371337
 
 static struct_member_t extra = {
-  .name = "__extra",
-  .type = CONFIG_TYPE_LINELIST,
-  .offset = offsetof(test_struct_t, extra_lines),
+    .name = "__extra",
+    .type = CONFIG_TYPE_LINELIST,
+    .offset = offsetof(test_struct_t, extra_lines),
 };
 
 static config_format_t etest_fmt = {
-  .size = sizeof(test_struct_t),
-  .magic = {
-   "test_struct_t (with extra lines)",
-   ETEST_MAGIC,
-   offsetof(test_struct_t, magic),
-  },
-  .abbrevs = test_abbrevs,
-  .deprecations = test_deprecation_notes,
-  .vars = test_vars,
-  .legacy_validate_fn = test_validate_cb,
-  .extra = &extra,
+    .size = sizeof(test_struct_t),
+    .magic =
+        {
+            "test_struct_t (with extra lines)",
+            ETEST_MAGIC,
+            offsetof(test_struct_t, magic),
+        },
+    .abbrevs = test_abbrevs,
+    .deprecations = test_deprecation_notes,
+    .vars = test_vars,
+    .legacy_validate_fn = test_validate_cb,
+    .extra = &extra,
 };
 
 /* Try out the feature where we can store unrecognized lines and dump them
@@ -839,10 +824,10 @@ test_confparse_extra_lines(void *arg)
 
   config_init(mgr, tst);
 
-  int r = config_get_lines(
-      "unknotty addita\n"
-      "pos 99\n"
-      "wombat knish\n", &lines, 0);
+  int r = config_get_lines("unknotty addita\n"
+                           "pos 99\n"
+                           "wombat knish\n",
+                           &lines, 0);
   tt_int_op(r, OP_EQ, 0);
   r = config_assign(mgr, tst, lines, 0, &msg);
   tt_int_op(r, OP_EQ, 0);
@@ -852,11 +837,11 @@ test_confparse_extra_lines(void *arg)
 
   dump = config_dump(mgr, NULL, tst, 1, 0);
   tt_str_op(dump, OP_EQ,
-      "pos 99\n"
-      "unknotty addita\n"
-      "wombat knish\n");
+            "pos 99\n"
+            "unknotty addita\n"
+            "wombat knish\n");
 
- done:
+done:
   tor_free(msg);
   tor_free(dump);
   config_free_lines(lines);
@@ -870,23 +855,24 @@ test_confparse_unitparse(void *args)
   (void)args;
   /* spot-check a few memunit values. */
   int ok = 3;
-  tt_u64_op(config_parse_memunit("100 MB", &ok), OP_EQ, 100<<20);
+  tt_u64_op(config_parse_memunit("100 MB", &ok), OP_EQ, 100 << 20);
   tt_assert(ok);
-  tt_u64_op(config_parse_memunit("100 TB", &ok), OP_EQ, UINT64_C(100)<<40);
+  tt_u64_op(config_parse_memunit("100 TB", &ok), OP_EQ, UINT64_C(100) << 40);
   tt_assert(ok);
   // This is a floating-point value, but note that 1.5 can be represented
   // precisely.
-  tt_u64_op(config_parse_memunit("1.5 MB", &ok), OP_EQ, 3<<19);
+  tt_u64_op(config_parse_memunit("1.5 MB", &ok), OP_EQ, 3 << 19);
   tt_assert(ok);
 
   /* Try some good intervals and msec intervals */
-  tt_int_op(config_parse_interval("2 days", &ok), OP_EQ, 48*3600);
+  tt_int_op(config_parse_interval("2 days", &ok), OP_EQ, 48 * 3600);
   tt_assert(ok);
   tt_int_op(config_parse_interval("1.5 hour", &ok), OP_EQ, 5400);
   tt_assert(ok);
   tt_u64_op(config_parse_interval("1 minute", &ok), OP_EQ, 60);
   tt_assert(ok);
-  tt_int_op(config_parse_msec_interval("2 days", &ok), OP_EQ, 48*3600*1000);
+  tt_int_op(config_parse_msec_interval("2 days", &ok), OP_EQ,
+            48 * 3600 * 1000);
   tt_assert(ok);
   tt_int_op(config_parse_msec_interval("10 msec", &ok), OP_EQ, 10);
   tt_assert(ok);
@@ -930,8 +916,7 @@ test_confparse_unitparse(void *args)
   tt_int_op(config_parse_msec_interval("1 kalpa", &ok), OP_EQ, 0);
   tt_assert(!ok);
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -942,9 +927,9 @@ test_confparse_check_ok_fail(void *arg)
   config_mgr_freeze(mgr);
   test_struct_t *tst = config_new(mgr);
   tst->pos = -10;
-  tt_assert(! config_check_ok(mgr, tst, LOG_INFO));
+  tt_assert(!config_check_ok(mgr, tst, LOG_INFO));
 
- done:
+done:
   config_free(mgr, tst);
   config_mgr_free(mgr);
 }
@@ -960,7 +945,7 @@ test_confparse_list_vars(void *arg)
 
   tt_assert(vars);
   SMARTLIST_FOREACH(vars, config_var_t *, cv,
-                    smartlist_add(varnames, (void*)cv->member.name));
+                    smartlist_add(varnames, (void *)cv->member.name));
   smartlist_sort_strings(varnames);
   joined = smartlist_join_strings(varnames, "::", 0, NULL);
   tt_str_op(joined, OP_EQ,
@@ -990,7 +975,7 @@ test_confparse_list_vars(void *arg)
             "time::"
             "u64");
 
- done:
+done:
   tor_free(joined);
   smartlist_free(varnames);
   smartlist_free(vars);
@@ -1011,7 +996,7 @@ test_confparse_list_deprecated(void *arg)
 
   tt_str_op(joined, OP_EQ, "deprecated_int");
 
- done:
+done:
   tor_free(joined);
   smartlist_free(vars);
   config_mgr_free(mgr);
@@ -1036,56 +1021,58 @@ test_confparse_find_option_name(void *arg)
   // no match
   tt_ptr_op(config_find_option_name(mgr, "absent"), OP_EQ, NULL);
 
- done:
+done:
   config_mgr_free(mgr);
 }
 
 #ifndef COCCI
-#define CONFPARSE_TEST(name, flags)                          \
-  { #name, test_confparse_ ## name, flags, NULL, NULL }
+#  define CONFPARSE_TEST(name, flags)                 \
+    {                                                 \
+#      name, test_confparse_##name, flags, NULL, NULL \
+    }
 
-#define BADVAL_TEST(name)                               \
-  { "badval_" #name, test_confparse_assign_badval, 0,   \
-      &passthrough_setup, (void*)&bv_ ## name }
+#  define BADVAL_TEST(name)                                                 \
+    {                                                                       \
+      "badval_" #name, test_confparse_assign_badval, 0, &passthrough_setup, \
+          (void *)&bv_##name                                                \
+    }
 #endif /* !defined(COCCI) */
 
-struct testcase_t confparse_tests[] = {
-  CONFPARSE_TEST(init, 0),
-  CONFPARSE_TEST(assign_simple, 0),
-  CONFPARSE_TEST(assign_obsolete, 0),
-  CONFPARSE_TEST(assign_deprecated, 0),
-  CONFPARSE_TEST(assign_replaced, 0),
-  CONFPARSE_TEST(assign_emptystring, 0),
-  CONFPARSE_TEST(assign_twice, 0),
-  BADVAL_TEST(notint),
-  BADVAL_TEST(negint),
-  BADVAL_TEST(badu64),
-  BADVAL_TEST(dbl1),
-  BADVAL_TEST(dbl2),
-  BADVAL_TEST(dbl3),
-  BADVAL_TEST(dbl4),
-  BADVAL_TEST(dbl5),
-  BADVAL_TEST(dbl6),
-  BADVAL_TEST(badcsvi1),
-  BADVAL_TEST(badcsvi2),
-  BADVAL_TEST(nonoption),
-  BADVAL_TEST(badmem),
-  BADVAL_TEST(badbool),
-  BADVAL_TEST(badabool),
-  BADVAL_TEST(badtime),
-  BADVAL_TEST(virt),
-  BADVAL_TEST(rs),
-  BADVAL_TEST(big_interval),
-  CONFPARSE_TEST(dump, 0),
-  CONFPARSE_TEST(reset, 0),
-  CONFPARSE_TEST(reassign, 0),
-  CONFPARSE_TEST(reassign_extend, 0),
-  CONFPARSE_TEST(get_assigned, 0),
-  CONFPARSE_TEST(extra_lines, 0),
-  CONFPARSE_TEST(unitparse, 0),
-  CONFPARSE_TEST(check_ok_fail, 0),
-  CONFPARSE_TEST(list_vars, 0),
-  CONFPARSE_TEST(list_deprecated, 0),
-  CONFPARSE_TEST(find_option_name, 0),
-  END_OF_TESTCASES
-};
+struct testcase_t confparse_tests[] = {CONFPARSE_TEST(init, 0),
+                                       CONFPARSE_TEST(assign_simple, 0),
+                                       CONFPARSE_TEST(assign_obsolete, 0),
+                                       CONFPARSE_TEST(assign_deprecated, 0),
+                                       CONFPARSE_TEST(assign_replaced, 0),
+                                       CONFPARSE_TEST(assign_emptystring, 0),
+                                       CONFPARSE_TEST(assign_twice, 0),
+                                       BADVAL_TEST(notint),
+                                       BADVAL_TEST(negint),
+                                       BADVAL_TEST(badu64),
+                                       BADVAL_TEST(dbl1),
+                                       BADVAL_TEST(dbl2),
+                                       BADVAL_TEST(dbl3),
+                                       BADVAL_TEST(dbl4),
+                                       BADVAL_TEST(dbl5),
+                                       BADVAL_TEST(dbl6),
+                                       BADVAL_TEST(badcsvi1),
+                                       BADVAL_TEST(badcsvi2),
+                                       BADVAL_TEST(nonoption),
+                                       BADVAL_TEST(badmem),
+                                       BADVAL_TEST(badbool),
+                                       BADVAL_TEST(badabool),
+                                       BADVAL_TEST(badtime),
+                                       BADVAL_TEST(virt),
+                                       BADVAL_TEST(rs),
+                                       BADVAL_TEST(big_interval),
+                                       CONFPARSE_TEST(dump, 0),
+                                       CONFPARSE_TEST(reset, 0),
+                                       CONFPARSE_TEST(reassign, 0),
+                                       CONFPARSE_TEST(reassign_extend, 0),
+                                       CONFPARSE_TEST(get_assigned, 0),
+                                       CONFPARSE_TEST(extra_lines, 0),
+                                       CONFPARSE_TEST(unitparse, 0),
+                                       CONFPARSE_TEST(check_ok_fail, 0),
+                                       CONFPARSE_TEST(list_vars, 0),
+                                       CONFPARSE_TEST(list_deprecated, 0),
+                                       CONFPARSE_TEST(find_option_name, 0),
+                                       END_OF_TESTCASES};

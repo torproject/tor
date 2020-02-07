@@ -13,7 +13,7 @@
 
 #include "orconfig.h"
 #ifdef HAVE_SYS_RESOURCE_H
-#include <sys/resource.h>
+#  include <sys/resource.h>
 #endif
 
 int tor_disable_debugger_attach(void);

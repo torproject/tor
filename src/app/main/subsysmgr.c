@@ -88,13 +88,15 @@ check_and_setup(void)
   for (unsigned i = 0; i < n_tor_subsystems; ++i) {
     const subsys_fns_t *sys = tor_subsystems[i];
     if (sys->level < MIN_SUBSYS_LEVEL || sys->level > MAX_SUBSYS_LEVEL) {
-      fprintf(stderr, "BUG: Subsystem %s (at %u) has an invalid level %d. "
+      fprintf(stderr,
+              "BUG: Subsystem %s (at %u) has an invalid level %d. "
               "It is supposed to be between %d and %d (inclusive).\n",
               sys->name, i, sys->level, MIN_SUBSYS_LEVEL, MAX_SUBSYS_LEVEL);
       raw_assert_unreached_msg("There is a bug in subsystem_list.c");
     }
     if (sys->level < last_level) {
-      fprintf(stderr, "BUG: Subsystem %s (at #%u) is in the wrong position. "
+      fprintf(stderr,
+              "BUG: Subsystem %s (at #%u) is in the wrong position. "
               "Its level is %d; but the previous subsystem's level was %d.\n",
               sys->name, i, sys->level, last_level);
       raw_assert_unreached_msg("There is a bug in subsystem_list.c");
@@ -157,8 +159,7 @@ subsystems_init_upto(int target_level)
  * initialized subsystems of level no more than <b>target_level</b>.
  **/
 int
-subsystems_add_pubsub_upto(pubsub_builder_t *builder,
-                           int target_level)
+subsystems_add_pubsub_upto(pubsub_builder_t *builder, int target_level)
 {
   for (unsigned i = 0; i < n_tor_subsystems; ++i) {
     const subsys_fns_t *sys = tor_subsystems[i];
@@ -166,7 +167,7 @@ subsystems_add_pubsub_upto(pubsub_builder_t *builder,
       continue;
     if (sys->level > target_level)
       break;
-    if (! sys_status[i].initialized)
+    if (!sys_status[i].initialized)
       continue;
     int r = 0;
     if (sys->add_pubsub) {
@@ -178,8 +179,10 @@ subsystems_add_pubsub_upto(pubsub_builder_t *builder,
       pubsub_connector_free(connector);
     }
     if (r < 0) {
-      fprintf(stderr, "BUG: subsystem %s (at %u) could not connect to "
-              "publish/subscribe system.", sys->name, sys->level);
+      fprintf(stderr,
+              "BUG: subsystem %s (at %u) could not connect to "
+              "publish/subscribe system.",
+              sys->name, sys->level);
       raw_assert_unreached_msg("A subsystem couldn't be connected.");
     }
   }
@@ -220,7 +223,7 @@ subsystems_shutdown_downto(int target_level)
       continue;
     if (sys->level <= target_level)
       break;
-    if (! sys_status[i].initialized)
+    if (!sys_status[i].initialized)
       continue;
     if (sys->shutdown) {
       log_debug(LD_GENERAL, "Shutting down %s", sys->name);
@@ -242,7 +245,7 @@ subsystems_prefork(void)
     const subsys_fns_t *sys = tor_subsystems[i];
     if (!sys->supported)
       continue;
-    if (! sys_status[i].initialized)
+    if (!sys_status[i].initialized)
       continue;
     if (sys->prefork) {
       log_debug(LD_GENERAL, "Pre-fork: %s", sys->name);
@@ -263,7 +266,7 @@ subsystems_postfork(void)
     const subsys_fns_t *sys = tor_subsystems[i];
     if (!sys->supported)
       continue;
-    if (! sys_status[i].initialized)
+    if (!sys_status[i].initialized)
       continue;
     if (sys->postfork) {
       log_debug(LD_GENERAL, "Post-fork: %s", sys->name);
@@ -284,7 +287,7 @@ subsystems_thread_cleanup(void)
     const subsys_fns_t *sys = tor_subsystems[i];
     if (!sys->supported)
       continue;
-    if (! sys_status[i].initialized)
+    if (!sys_status[i].initialized)
       continue;
     if (sys->thread_cleanup) {
       log_debug(LD_GENERAL, "Thread cleanup: %s", sys->name);
@@ -401,12 +404,14 @@ subsystems_set_options(const config_mgr_t *mgr, struct or_options_t *options)
   for (unsigned i = 0; i < n_tor_subsystems; ++i) {
     const subsys_fns_t *sys = tor_subsystems[i];
     if (sys_status[i].options_idx >= 0 && sys->set_options) {
-      void *obj = config_mgr_get_obj_mutable(mgr, options,
-                                             sys_status[i].options_idx);
+      void *obj =
+          config_mgr_get_obj_mutable(mgr, options, sys_status[i].options_idx);
       int rv = sys->set_options(obj);
       if (rv < 0) {
-        log_err(LD_CONFIG, "Error when handling option for %s; "
-                "cannot proceed.", sys->name);
+        log_err(LD_CONFIG,
+                "Error when handling option for %s; "
+                "cannot proceed.",
+                sys->name);
         return -1;
       }
     }
@@ -425,12 +430,14 @@ subsystems_set_state(const config_mgr_t *mgr, struct or_state_t *state)
   for (unsigned i = 0; i < n_tor_subsystems; ++i) {
     const subsys_fns_t *sys = tor_subsystems[i];
     if (sys_status[i].state_idx >= 0 && sys->set_state) {
-      void *obj = config_mgr_get_obj_mutable(mgr, state,
-                                             sys_status[i].state_idx);
+      void *obj =
+          config_mgr_get_obj_mutable(mgr, state, sys_status[i].state_idx);
       int rv = sys->set_state(obj);
       if (rv < 0) {
-        log_err(LD_CONFIG, "Error when handling state for %s; "
-                "cannot proceed.", sys->name);
+        log_err(LD_CONFIG,
+                "Error when handling state for %s; "
+                "cannot proceed.",
+                sys->name);
         return -1;
       }
     }
@@ -450,12 +457,12 @@ subsystems_flush_state(const config_mgr_t *mgr, struct or_state_t *state)
   for (unsigned i = 0; i < n_tor_subsystems; ++i) {
     const subsys_fns_t *sys = tor_subsystems[i];
     if (sys_status[i].state_idx >= 0 && sys->flush_state) {
-      void *obj = config_mgr_get_obj_mutable(mgr, state,
-                                             sys_status[i].state_idx);
+      void *obj =
+          config_mgr_get_obj_mutable(mgr, state, sys_status[i].state_idx);
       int rv = sys->flush_state(obj);
       if (rv < 0) {
         log_warn(LD_CONFIG, "Error when flushing state to state object for %s",
-                sys->name);
+                 sys->name);
         result = -1;
       }
     }

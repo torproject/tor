@@ -54,12 +54,10 @@ typedef uint16_t ope_val_t;
 static inline ope_val_t
 ope_val_from_le(ope_val_t x)
 {
-  return
-    ((x) >> 8) |
-    (((x)&0xff) << 8);
+  return ((x) >> 8) | (((x)&0xff) << 8);
 }
 #else /* !defined(WORDS_BIGENDIAN) */
-#define ope_val_from_le(x) (x)
+#  define ope_val_from_le(x) (x)
 #endif /* defined(WORDS_BIGENDIAN) */
 
 /**
@@ -78,9 +76,7 @@ ope_get_cipher(const crypto_ope_t *ope, uint32_t initial_idx)
   memset(iv, 0, sizeof(iv));
   memcpy(iv + CIPHER_IV_LEN - sizeof(n), &n, sizeof(n));
 
-  return crypto_cipher_new_with_iv_and_bits(ope->key,
-                                            iv,
-                                            OPE_KEY_LEN * 8);
+  return crypto_cipher_new_with_iv_and_bits(ope->key, iv, OPE_KEY_LEN * 8);
 }
 
 /**
@@ -102,7 +98,7 @@ sum_values_from_cipher(crypto_cipher_t *c, size_t n)
   unsigned i;
   while (n >= BUFSZ) {
     memset(buf, 0, sizeof(buf));
-    crypto_cipher_crypt_inplace(c, (char*)buf, BUFSZ*sizeof(ope_val_t));
+    crypto_cipher_crypt_inplace(c, (char *)buf, BUFSZ * sizeof(ope_val_t));
 
     for (i = 0; i < BUFSZ; ++i) {
       total += ope_val_from_le(buf[i]);
@@ -111,8 +107,8 @@ sum_values_from_cipher(crypto_cipher_t *c, size_t n)
     n -= BUFSZ;
   }
 
-  memset(buf, 0, n*sizeof(ope_val_t));
-  crypto_cipher_crypt_inplace(c, (char*)buf, n*sizeof(ope_val_t));
+  memset(buf, 0, n * sizeof(ope_val_t));
+  crypto_cipher_crypt_inplace(c, (char *)buf, n * sizeof(ope_val_t));
   for (i = 0; i < n; ++i) {
     total += ope_val_from_le(buf[i]);
     total += 1;
@@ -169,14 +165,15 @@ crypto_ope_encrypt(const crypto_ope_t *ope, int plaintext)
 
   const int sample_idx = (plaintext / SAMPLE_INTERVAL);
   const int starting_iv = sample_idx * SAMPLE_INTERVAL;
-  const int remaining_values =  plaintext - starting_iv;
+  const int remaining_values = plaintext - starting_iv;
   uint64_t v;
   if (sample_idx == 0) {
     v = 0;
   } else {
     v = ope->samples[sample_idx - 1];
   }
-  crypto_cipher_t *cipher = ope_get_cipher(ope, starting_iv*sizeof(ope_val_t));
+  crypto_cipher_t *cipher =
+      ope_get_cipher(ope, starting_iv * sizeof(ope_val_t));
 
   v += sum_values_from_cipher(cipher, remaining_values);
 

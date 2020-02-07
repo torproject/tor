@@ -59,7 +59,7 @@ test_mainloop_update_time_normal(void *arg)
   tt_int_op(get_uptime(), OP_EQ, 1);
 
   now += 2; // two-second jump is unremarkable.
-  mt_now += 2*BILLION;
+  mt_now += 2 * BILLION;
   update_current_time(now);
   monotime_coarse_set_mock_time_nsec(mt_now);
   tt_int_op(approx_time(), OP_EQ, now);
@@ -70,7 +70,7 @@ test_mainloop_update_time_normal(void *arg)
   tt_int_op(approx_time(), OP_EQ, now); // it changes the approx time...
   tt_int_op(get_uptime(), OP_EQ, 3); // but it doesn't roll back our uptime
 
- done:
+done:
   monotime_disable_test_mocking();
 }
 
@@ -92,7 +92,7 @@ test_mainloop_update_time_jumps(void *arg)
 
   /* Put some uptime on the clock.. */
   now += 3;
-  mt_now += 3*BILLION;
+  mt_now += 3 * BILLION;
   monotime_coarse_set_mock_time_nsec(mt_now);
   update_current_time(now);
   tt_int_op(approx_time(), OP_EQ, now);
@@ -104,7 +104,7 @@ test_mainloop_update_time_jumps(void *arg)
   now += 1800;
   update_current_time(now);
   expect_single_log_msg_containing(
-               "Your system clock just jumped 1800 seconds forward");
+      "Your system clock just jumped 1800 seconds forward");
   tt_int_op(approx_time(), OP_EQ, now);
   tt_int_op(get_uptime(), OP_EQ, 3); // no uptime change.
   mock_clean_saved_logs();
@@ -112,14 +112,14 @@ test_mainloop_update_time_jumps(void *arg)
   now -= 600;
   update_current_time(now);
   expect_single_log_msg_containing(
-               "Your system clock just jumped 600 seconds backward");
+      "Your system clock just jumped 600 seconds backward");
   tt_int_op(approx_time(), OP_EQ, now);
   tt_int_op(get_uptime(), OP_EQ, 3); // no uptime change.
   mock_clean_saved_logs();
 
   /* uptime tracking should go normally now if the clock moves sensibly. */
   now += 2;
-  mt_now += 2*BILLION;
+  mt_now += 2 * BILLION;
   update_current_time(now);
   tt_int_op(approx_time(), OP_EQ, now);
   tt_int_op(get_uptime(), OP_EQ, 5);
@@ -127,7 +127,7 @@ test_mainloop_update_time_jumps(void *arg)
   /* If we skip forward by a few minutes but the monotonic clock agrees,
    * we've just been idle: that counts as not worth warning about. */
   now += 1800;
-  mt_now += 1800*BILLION;
+  mt_now += 1800 * BILLION;
   monotime_coarse_set_mock_time_nsec(mt_now);
   update_current_time(now);
   expect_no_log_entry();
@@ -137,14 +137,14 @@ test_mainloop_update_time_jumps(void *arg)
   /* If we skip forward by a long time, even if the clock agrees, it's
    * idnless that counts. */
   now += 4000;
-  mt_now += 4000*BILLION;
+  mt_now += 4000 * BILLION;
   monotime_coarse_set_mock_time_nsec(mt_now);
   update_current_time(now);
   expect_single_log_msg_containing("Tor has been idle for 4000 seconds");
   tt_int_op(approx_time(), OP_EQ, now);
   tt_int_op(get_uptime(), OP_EQ, 5);
 
- done:
+done:
   teardown_capture_of_logs();
   monotime_disable_test_mocking();
 }
@@ -172,41 +172,41 @@ test_mainloop_user_activity(void *arg)
 
   // reset can move backwards and forwards, but does not change network
   // participation.
-  reset_user_activity(start-10);
-  tt_i64_op(get_last_user_activity_time(), OP_EQ, start-10);
-  reset_user_activity(start+10);
-  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+10);
+  reset_user_activity(start - 10);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start - 10);
+  reset_user_activity(start + 10);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start + 10);
 
   tt_int_op(schedule_rescan_called, OP_EQ, 0);
   tt_int_op(false, OP_EQ, is_participating_on_network());
 
   // "note" can only move forward.  Calling it from a non-participating
   // state makes us rescan the periodic callbacks and set participation.
-  note_user_activity(start+20);
-  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+20);
+  note_user_activity(start + 20);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start + 20);
   tt_int_op(true, OP_EQ, is_participating_on_network());
   tt_int_op(schedule_rescan_called, OP_EQ, 1);
 
   // Calling it again will move us forward, but not call rescan again.
-  note_user_activity(start+25);
-  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+25);
+  note_user_activity(start + 25);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start + 25);
   tt_int_op(true, OP_EQ, is_participating_on_network());
   tt_int_op(schedule_rescan_called, OP_EQ, 1);
 
   // We won't move backwards.
-  note_user_activity(start+20);
-  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+25);
+  note_user_activity(start + 20);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start + 25);
   tt_int_op(true, OP_EQ, is_participating_on_network());
   tt_int_op(schedule_rescan_called, OP_EQ, 1);
 
   // We _will_ adjust if the clock jumps though.
   netstatus_note_clock_jumped(500);
-  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+525);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start + 525);
 
   netstatus_note_clock_jumped(-400);
-  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+125);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start + 125);
 
- done:
+done:
   UNMOCK(schedule_rescan_periodic_events);
 }
 
@@ -219,7 +219,7 @@ mock_get_num_services(void)
 static connection_t *
 mock_connection_gbtu(int type)
 {
-  (void) type;
+  (void)type;
   return (void *)"hello fellow connections";
 }
 
@@ -229,61 +229,61 @@ test_mainloop_check_participation(void *arg)
   (void)arg;
   or_options_t *options = options_new();
   const time_t start = 1542658829;
-  const time_t ONE_DAY = 24*60*60;
+  const time_t ONE_DAY = 24 * 60 * 60;
 
   // Suppose we've been idle for a day or two
-  reset_user_activity(start - 2*ONE_DAY);
+  reset_user_activity(start - 2 * ONE_DAY);
   set_network_participation(true);
   check_network_participation_callback(start, options);
   tt_int_op(is_participating_on_network(), OP_EQ, false);
-  tt_i64_op(get_last_user_activity_time(), OP_EQ, start-2*ONE_DAY);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start - 2 * ONE_DAY);
 
   // suppose we've been idle for 2 days... but we are a server.
-  reset_user_activity(start - 2*ONE_DAY);
+  reset_user_activity(start - 2 * ONE_DAY);
   options->ORPort_set = 1;
   set_network_participation(true);
-  check_network_participation_callback(start+2, options);
+  check_network_participation_callback(start + 2, options);
   tt_int_op(is_participating_on_network(), OP_EQ, true);
-  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+2);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start + 2);
   options->ORPort_set = 0;
 
   // idle for 2 days, but we have a hidden service.
-  reset_user_activity(start - 2*ONE_DAY);
+  reset_user_activity(start - 2 * ONE_DAY);
   set_network_participation(true);
   MOCK(hs_service_get_num_services, mock_get_num_services);
-  check_network_participation_callback(start+3, options);
+  check_network_participation_callback(start + 3, options);
   tt_int_op(is_participating_on_network(), OP_EQ, true);
-  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+3);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start + 3);
   UNMOCK(hs_service_get_num_services);
 
   // idle for 2 days but we have at least one user connection
   MOCK(connection_get_by_type_nonlinked, mock_connection_gbtu);
-  reset_user_activity(start - 2*ONE_DAY);
+  reset_user_activity(start - 2 * ONE_DAY);
   set_network_participation(true);
   options->DormantTimeoutDisabledByIdleStreams = 1;
-  check_network_participation_callback(start+10, options);
+  check_network_participation_callback(start + 10, options);
   tt_int_op(is_participating_on_network(), OP_EQ, true);
-  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+10);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start + 10);
 
   // as above, but DormantTimeoutDisabledByIdleStreams is not set
-  reset_user_activity(start - 2*ONE_DAY);
+  reset_user_activity(start - 2 * ONE_DAY);
   set_network_participation(true);
   options->DormantTimeoutDisabledByIdleStreams = 0;
-  check_network_participation_callback(start+13, options);
+  check_network_participation_callback(start + 13, options);
   tt_int_op(is_participating_on_network(), OP_EQ, false);
-  tt_i64_op(get_last_user_activity_time(), OP_EQ, start-2*ONE_DAY);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start - 2 * ONE_DAY);
   UNMOCK(connection_get_by_type_nonlinked);
   options->DormantTimeoutDisabledByIdleStreams = 1;
 
   // idle for 2 days but DormantClientTimeout is 3 days
-  reset_user_activity(start - 2*ONE_DAY);
+  reset_user_activity(start - 2 * ONE_DAY);
   set_network_participation(true);
   options->DormantClientTimeout = ONE_DAY * 3;
-  check_network_participation_callback(start+30, options);
+  check_network_participation_callback(start + 30, options);
   tt_int_op(is_participating_on_network(), OP_EQ, true);
-  tt_i64_op(get_last_user_activity_time(), OP_EQ, start-2*ONE_DAY);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start - 2 * ONE_DAY);
 
- done:
+done:
   or_options_free(options);
   UNMOCK(hs_service_get_num_services);
   UNMOCK(connection_get_by_type_nonlinked);
@@ -318,7 +318,7 @@ test_mainloop_dormant_load_state(void *arg)
   // makes us dormant.
   state->Dormant = 1;
   netstatus_load_from_state(state, start);
-  tt_assert(! is_participating_on_network());
+  tt_assert(!is_participating_on_network());
   tt_i64_op(get_last_user_activity_time(), OP_EQ, 0);
 
   // Initializing from non-dormant sets the last user activity time, and
@@ -327,7 +327,7 @@ test_mainloop_dormant_load_state(void *arg)
   state->MinutesSinceUserActivity = 123;
   netstatus_load_from_state(state, start);
   tt_assert(is_participating_on_network());
-  tt_i64_op(get_last_user_activity_time(), OP_EQ, start - 123*60);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start - 123 * 60);
 
   // If we would start dormant, but DormantCanceledByStartup is set, then
   // we start up non-dormant.
@@ -337,7 +337,7 @@ test_mainloop_dormant_load_state(void *arg)
   tt_assert(is_participating_on_network());
   tt_i64_op(get_last_user_activity_time(), OP_EQ, start);
 
- done:
+done:
   or_state_free(or_state);
 }
 
@@ -363,19 +363,19 @@ test_mainloop_dormant_save_state(void *arg)
   tt_int_op(state->Dormant, OP_EQ, 1);
   tt_int_op(state->MinutesSinceUserActivity, OP_EQ, 0);
 
- done:
+done:
   tor_free(state);
 }
 
-#define MAINLOOP_TEST(name) \
-  { #name, test_mainloop_## name , TT_FORK, NULL, NULL }
+#define MAINLOOP_TEST(name)                          \
+  {                                                  \
+#    name, test_mainloop_##name, TT_FORK, NULL, NULL \
+  }
 
-struct testcase_t mainloop_tests[] = {
-  MAINLOOP_TEST(update_time_normal),
-  MAINLOOP_TEST(update_time_jumps),
-  MAINLOOP_TEST(user_activity),
-  MAINLOOP_TEST(check_participation),
-  MAINLOOP_TEST(dormant_load_state),
-  MAINLOOP_TEST(dormant_save_state),
-  END_OF_TESTCASES
-};
+struct testcase_t mainloop_tests[] = {MAINLOOP_TEST(update_time_normal),
+                                      MAINLOOP_TEST(update_time_jumps),
+                                      MAINLOOP_TEST(user_activity),
+                                      MAINLOOP_TEST(check_participation),
+                                      MAINLOOP_TEST(dormant_load_state),
+                                      MAINLOOP_TEST(dormant_save_state),
+                                      END_OF_TESTCASES};

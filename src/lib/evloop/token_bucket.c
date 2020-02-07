@@ -33,9 +33,7 @@
  * so on.
  */
 void
-token_bucket_cfg_init(token_bucket_cfg_t *cfg,
-                      uint32_t rate,
-                      uint32_t burst)
+token_bucket_cfg_init(token_bucket_cfg_t *cfg, uint32_t rate, uint32_t burst)
 {
   tor_assert_nonfatal(rate > 0);
   tor_assert_nonfatal(burst > 0);
@@ -101,8 +99,7 @@ token_bucket_raw_refill_steps(token_bucket_raw_t *bucket,
  * must be nonnegative.
  */
 int
-token_bucket_raw_dec(token_bucket_raw_t *bucket,
-                     ssize_t n)
+token_bucket_raw_dec(token_bucket_raw_t *bucket, ssize_t n)
 {
   if (BUG(n < 0))
     return 0;
@@ -121,9 +118,9 @@ rate_per_sec_to_rate_per_step(uint32_t rate)
     (rate / 1000) * to_approximate_msec(TICKS_PER_STEP).  But to minimize
     rounding error, we do it this way instead, and divide last.
   */
-  uint64_t units = (uint64_t) rate * TICKS_PER_STEP;
-  uint32_t val = (uint32_t)
-    (monotime_coarse_stamp_units_to_approx_msec(units) / 1000);
+  uint64_t units = (uint64_t)rate * TICKS_PER_STEP;
+  uint32_t val =
+      (uint32_t)(monotime_coarse_stamp_units_to_approx_msec(units) / 1000);
   return val ? val : 1;
 }
 
@@ -134,9 +131,7 @@ rate_per_sec_to_rate_per_step(uint32_t rate)
  * starts out full.
  */
 void
-token_bucket_rw_init(token_bucket_rw_t *bucket,
-                     uint32_t rate,
-                     uint32_t burst,
+token_bucket_rw_init(token_bucket_rw_t *bucket, uint32_t rate, uint32_t burst,
                      uint32_t now_ts)
 {
   memset(bucket, 0, sizeof(token_bucket_rw_t));
@@ -149,12 +144,10 @@ token_bucket_rw_init(token_bucket_rw_t *bucket,
  * for the token bucket in *<b>bucket</b>.
  */
 void
-token_bucket_rw_adjust(token_bucket_rw_t *bucket,
-                       uint32_t rate,
+token_bucket_rw_adjust(token_bucket_rw_t *bucket, uint32_t rate,
                        uint32_t burst)
 {
-  token_bucket_cfg_init(&bucket->cfg,
-                        rate_per_sec_to_rate_per_step(rate),
+  token_bucket_cfg_init(&bucket->cfg, rate_per_sec_to_rate_per_step(rate),
                         burst);
   token_bucket_raw_adjust(&bucket->read_bucket, &bucket->cfg);
   token_bucket_raw_adjust(&bucket->write_bucket, &bucket->cfg);
@@ -164,8 +157,7 @@ token_bucket_rw_adjust(token_bucket_rw_t *bucket,
  * Reset <b>bucket</b> to be full, as of timestamp <b>now_ts</b>.
  */
 void
-token_bucket_rw_reset(token_bucket_rw_t *bucket,
-                      uint32_t now_ts)
+token_bucket_rw_reset(token_bucket_rw_t *bucket, uint32_t now_ts)
 {
   token_bucket_raw_reset(&bucket->read_bucket, &bucket->cfg);
   token_bucket_raw_reset(&bucket->write_bucket, &bucket->cfg);
@@ -180,12 +172,10 @@ token_bucket_rw_reset(token_bucket_rw_t *bucket,
  * nonempty, and TB_WRITE iff the write bucket was empty and became nonempty.
  */
 int
-token_bucket_rw_refill(token_bucket_rw_t *bucket,
-                       uint32_t now_ts)
+token_bucket_rw_refill(token_bucket_rw_t *bucket, uint32_t now_ts)
 {
-  const uint32_t elapsed_ticks =
-    (now_ts - bucket->last_refilled_at_timestamp);
-  if (elapsed_ticks > UINT32_MAX-(300*1000)) {
+  const uint32_t elapsed_ticks = (now_ts - bucket->last_refilled_at_timestamp);
+  if (elapsed_ticks > UINT32_MAX - (300 * 1000)) {
     /* Either about 48 days have passed since the last refill, or the
      * monotonic clock has somehow moved backwards. (We're looking at you,
      * Windows.).  We accept up to a 5 minute jump backwards as
@@ -203,11 +193,11 @@ token_bucket_rw_refill(token_bucket_rw_t *bucket,
   }
 
   int flags = 0;
-  if (token_bucket_raw_refill_steps(&bucket->read_bucket,
-                                    &bucket->cfg, elapsed_steps))
+  if (token_bucket_raw_refill_steps(&bucket->read_bucket, &bucket->cfg,
+                                    elapsed_steps))
     flags |= TB_READ;
-  if (token_bucket_raw_refill_steps(&bucket->write_bucket,
-                                    &bucket->cfg, elapsed_steps))
+  if (token_bucket_raw_refill_steps(&bucket->write_bucket, &bucket->cfg,
+                                    elapsed_steps))
     flags |= TB_WRITE;
 
   bucket->last_refilled_at_timestamp = now_ts;
@@ -221,8 +211,7 @@ token_bucket_rw_refill(token_bucket_rw_t *bucket,
  * otherwise.
  */
 int
-token_bucket_rw_dec_read(token_bucket_rw_t *bucket,
-                         ssize_t n)
+token_bucket_rw_dec_read(token_bucket_rw_t *bucket, ssize_t n)
 {
   return token_bucket_raw_dec(&bucket->read_bucket, n);
 }
@@ -234,8 +223,7 @@ token_bucket_rw_dec_read(token_bucket_rw_t *bucket,
  * otherwise.
  */
 int
-token_bucket_rw_dec_write(token_bucket_rw_t *bucket,
-                          ssize_t n)
+token_bucket_rw_dec_write(token_bucket_rw_t *bucket, ssize_t n)
 {
   return token_bucket_raw_dec(&bucket->write_bucket, n);
 }
@@ -246,8 +234,8 @@ token_bucket_rw_dec_write(token_bucket_rw_t *bucket,
  * which buckets became empty.
  */
 int
-token_bucket_rw_dec(token_bucket_rw_t *bucket,
-                    ssize_t n_read, ssize_t n_written)
+token_bucket_rw_dec(token_bucket_rw_t *bucket, ssize_t n_read,
+                    ssize_t n_written)
 {
   int flags = 0;
   if (token_bucket_rw_dec_read(bucket, n_read))
@@ -293,9 +281,8 @@ token_bucket_ctr_reset(token_bucket_ctr_t *bucket, uint32_t now_ts)
 void
 token_bucket_ctr_refill(token_bucket_ctr_t *bucket, uint32_t now_ts)
 {
-  const uint32_t elapsed_ticks =
-    (now_ts - bucket->last_refilled_at_timestamp);
-  if (elapsed_ticks > UINT32_MAX-(300*1000)) {
+  const uint32_t elapsed_ticks = (now_ts - bucket->last_refilled_at_timestamp);
+  if (elapsed_ticks > UINT32_MAX - (300 * 1000)) {
     /* Either about 48 days have passed since the last refill, or the
      * monotonic clock has somehow moved backwards. (We're looking at you,
      * Windows.).  We accept up to a 5 minute jump backwards as
@@ -304,7 +291,6 @@ token_bucket_ctr_refill(token_bucket_ctr_t *bucket, uint32_t now_ts)
     return;
   }
 
-  token_bucket_raw_refill_steps(&bucket->counter, &bucket->cfg,
-                                elapsed_ticks);
+  token_bucket_raw_refill_steps(&bucket->counter, &bucket->cfg, elapsed_ticks);
   bucket->last_refilled_at_timestamp = now_ts;
 }

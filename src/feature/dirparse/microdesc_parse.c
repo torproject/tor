@@ -52,16 +52,18 @@ find_start_of_next_microdesc(const char *s, const char *eos)
   if (!s)
     return NULL;
 
-#define CHECK_LENGTH() STMT_BEGIN \
-    if (eos - s < 32)             \
-      return NULL;                \
+#define CHECK_LENGTH() \
+  STMT_BEGIN           \
+    if (eos - s < 32)  \
+      return NULL;     \
   STMT_END
 
-#define NEXT_LINE() STMT_BEGIN            \
-    s = memchr(s, '\n', eos-s);           \
-    if (!s || eos - s <= 1)               \
-      return NULL;                        \
-    s++;                                  \
+#define NEXT_LINE()               \
+  STMT_BEGIN                      \
+    s = memchr(s, '\n', eos - s); \
+    if (!s || eos - s <= 1)       \
+      return NULL;                \
+    s++;                          \
   STMT_END
 
   CHECK_LENGTH();
@@ -109,18 +111,18 @@ saved_location_to_string(saved_location_t where)
 {
   const char *location;
   switch (where) {
-    case SAVED_NOWHERE:
-      location = "download or generated string";
-      break;
-    case SAVED_IN_CACHE:
-      location = "cache";
-      break;
-    case SAVED_IN_JOURNAL:
-      location = "journal";
-      break;
-    default:
-      location = "unknown location";
-      break;
+  case SAVED_NOWHERE:
+    location = "download or generated string";
+    break;
+  case SAVED_IN_CACHE:
+    location = "cache";
+    break;
+  case SAVED_IN_JOURNAL:
+    location = "journal";
+    break;
+  default:
+    location = "unknown location";
+    break;
   }
   return location;
 }
@@ -137,14 +139,13 @@ saved_location_to_string(saved_location_t where)
  * otherwise.
  **/
 static int
-microdesc_extract_body(microdesc_t *md,
-                       const char *start,
-                       const char *s, const char *start_of_next_microdesc,
+microdesc_extract_body(microdesc_t *md, const char *start, const char *s,
+                       const char *start_of_next_microdesc,
                        saved_location_t where)
 {
   const bool copy_body = (where != SAVED_IN_CACHE);
 
-  const char *cp = tor_memstr(s, start_of_next_microdesc-s, "onion-key");
+  const char *cp = tor_memstr(s, start_of_next_microdesc - s, "onion-key");
 
   const bool no_onion_key = (cp == NULL);
   if (no_onion_key) {
@@ -156,7 +157,7 @@ microdesc_extract_body(microdesc_t *md,
   if (copy_body)
     md->body = tor_memdup_nulterm(cp, md->bodylen);
   else
-    md->body = (char*)cp;
+    md->body = (char *)cp;
   md->off = cp - start;
 
   crypto_digest256(md->digest, md->body, md->bodylen, DIGEST_SHA256);
@@ -174,11 +175,9 @@ microdesc_extract_body(microdesc_t *md,
  * On success, return 0; otherwise return -1.
  **/
 static int
-microdesc_parse_fields(microdesc_t *md,
-                       memarea_t *area,
-                       const char *s, const char *start_of_next_microdesc,
-                       int allow_annotations,
-                       saved_location_t where)
+microdesc_parse_fields(microdesc_t *md, memarea_t *area, const char *s,
+                       const char *start_of_next_microdesc,
+                       int allow_annotations, saved_location_t where)
 {
   smartlist_t *tokens = smartlist_new();
   int rv = -1;
@@ -201,8 +200,7 @@ microdesc_parse_fields(microdesc_t *md,
 
   tok = find_by_keyword(tokens, K_ONION_KEY);
   if (!crypto_pk_public_exponent_ok(tok->key)) {
-    log_warn(LD_DIR,
-             "Relay's onion key had invalid exponent.");
+    log_warn(LD_DIR, "Relay's onion key had invalid exponent.");
     goto err;
   }
   md->onion_pkey = tor_memdup(tok->object_body, tok->object_size);
@@ -217,12 +215,12 @@ microdesc_parse_fields(microdesc_t *md,
       goto err;
     }
     md->onion_curve25519_pkey =
-      tor_memdup(&k, sizeof(curve25519_public_key_t));
+        tor_memdup(&k, sizeof(curve25519_public_key_t));
   }
 
   smartlist_t *id_lines = find_all_by_keyword(tokens, K_ID);
   if (id_lines) {
-    SMARTLIST_FOREACH_BEGIN(id_lines, directory_token_t *, t) {
+    SMARTLIST_FOREACH_BEGIN (id_lines, directory_token_t *, t) {
       tor_assert(t->n_args >= 2);
       if (!strcmp(t->args[0], "ed25519")) {
         if (md->ed25519_identity_pkey) {
@@ -231,14 +229,14 @@ microdesc_parse_fields(microdesc_t *md,
           goto err;
         }
         ed25519_public_key_t k;
-        if (ed25519_public_from_base64(&k, t->args[1])<0) {
+        if (ed25519_public_from_base64(&k, t->args[1]) < 0) {
           log_warn(LD_DIR, "Bogus ed25519 key in microdesc");
           smartlist_free(id_lines);
           goto err;
         }
         md->ed25519_identity_pkey = tor_memdup(&k, sizeof(k));
       }
-    } SMARTLIST_FOREACH_END(t);
+    } SMARTLIST_FOREACH_END (t);
     smartlist_free(id_lines);
   }
 
@@ -251,9 +249,7 @@ microdesc_parse_fields(microdesc_t *md,
   }
 
   if ((tok = find_opt_by_keyword(tokens, K_FAMILY))) {
-    md->family = nodefamily_parse(tok->args[0],
-                                  NULL,
-                                  NF_WARN_MALFORMED);
+    md->family = nodefamily_parse(tok->args[0], NULL, NF_WARN_MALFORMED);
   }
 
   if ((tok = find_opt_by_keyword(tokens, K_P))) {
@@ -269,7 +265,7 @@ microdesc_parse_fields(microdesc_t *md,
   }
 
   rv = 0;
- err:
+err:
 
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   memarea_clear(area);
@@ -291,8 +287,7 @@ microdesc_parse_fields(microdesc_t *md,
  * formed. (This may cause duplicates) */
 smartlist_t *
 microdescs_parse_from_string(const char *s, const char *eos,
-                             int allow_annotations,
-                             saved_location_t where,
+                             int allow_annotations, saved_location_t where,
                              smartlist_t *invalid_digests_out)
 {
   smartlist_t *result;
@@ -309,7 +304,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
   result = smartlist_new();
 
   while (s < eos) {
-   bool okay = false;
+    bool okay = false;
 
     start_of_next_microdesc = find_start_of_next_microdesc(s, eos);
     if (!start_of_next_microdesc)
@@ -319,9 +314,8 @@ microdescs_parse_from_string(const char *s, const char *eos,
     uint8_t md_digest[DIGEST256_LEN];
     {
       const bool body_not_found =
-        microdesc_extract_body(md, start, s,
-                               start_of_next_microdesc,
-                               where) < 0;
+          microdesc_extract_body(md, start, s, start_of_next_microdesc,
+                                 where) < 0;
 
       memcpy(md_digest, md->digest, DIGEST256_LEN);
       if (body_not_found) {
@@ -338,9 +332,8 @@ microdescs_parse_from_string(const char *s, const char *eos,
     }
 
   next:
-    if (! okay && invalid_digests_out) {
-      smartlist_add(invalid_digests_out,
-                    tor_memdup(md_digest, DIGEST256_LEN));
+    if (!okay && invalid_digests_out) {
+      smartlist_add(invalid_digests_out, tor_memdup(md_digest, DIGEST256_LEN));
     }
     microdesc_free(md);
     md = NULL;

@@ -17,9 +17,9 @@
 
 #ifdef _WIN32
 /* For mkdir() */
-#include <direct.h>
+#  include <direct.h>
 #else
-#include <dirent.h>
+#  include <dirent.h>
 #endif /* defined(_WIN32) */
 
 #include <math.h>
@@ -68,9 +68,10 @@ test_stats(void *arg)
   rep_hist_note_exit_bytes(443, 100, 10000);
   s = rep_hist_format_exit_stats(now + 86400);
   tt_str_op("exit-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-             "exit-kibibytes-written 80=1,443=1,other=0\n"
-             "exit-kibibytes-read 80=10,443=20,other=0\n"
-             "exit-streams-opened 80=4,443=4,other=0\n",OP_EQ, s);
+            "exit-kibibytes-written 80=1,443=1,other=0\n"
+            "exit-kibibytes-read 80=10,443=20,other=0\n"
+            "exit-streams-opened 80=4,443=4,other=0\n",
+            OP_EQ, s);
   tor_free(s);
 
   /* Add a few bytes on 10 more ports and ensure that only the top 10
@@ -81,12 +82,13 @@ test_stats(void *arg)
   }
   s = rep_hist_format_exit_stats(now + 86400);
   tt_str_op("exit-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-             "exit-kibibytes-written 52=1,53=1,54=1,55=1,56=1,57=1,58=1,"
-             "59=1,80=1,443=1,other=1\n"
-             "exit-kibibytes-read 52=1,53=1,54=1,55=1,56=1,57=1,58=1,"
-             "59=1,80=10,443=20,other=1\n"
-             "exit-streams-opened 52=4,53=4,54=4,55=4,56=4,57=4,58=4,"
-             "59=4,80=4,443=4,other=4\n",OP_EQ, s);
+            "exit-kibibytes-written 52=1,53=1,54=1,55=1,56=1,57=1,58=1,"
+            "59=1,80=1,443=1,other=1\n"
+            "exit-kibibytes-read 52=1,53=1,54=1,55=1,56=1,57=1,58=1,"
+            "59=1,80=10,443=20,other=1\n"
+            "exit-streams-opened 52=4,53=4,54=4,55=4,56=4,57=4,58=4,"
+            "59=4,80=4,443=4,other=4\n",
+            OP_EQ, s);
   tor_free(s);
 
   /* Stop collecting stats, add some bytes, and ensure we don't generate
@@ -104,9 +106,10 @@ test_stats(void *arg)
   rep_hist_reset_exit_stats(now);
   s = rep_hist_format_exit_stats(now + 86400);
   tt_str_op("exit-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-             "exit-kibibytes-written other=0\n"
-             "exit-kibibytes-read other=0\n"
-             "exit-streams-opened other=0\n",OP_EQ, s);
+            "exit-kibibytes-written other=0\n"
+            "exit-kibibytes-read other=0\n"
+            "exit-streams-opened other=0\n",
+            OP_EQ, s);
   tor_free(s);
 
   /* Continue with testing connection statistics; we shouldn't collect
@@ -122,7 +125,8 @@ test_stats(void *arg)
   rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 10);
   rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 15);
   s = rep_hist_format_conn_stats(now + 86400);
-  tt_str_op("conn-bi-direct 2010-08-12 13:27:30 (86400 s) 0,0,1,0\n",OP_EQ, s);
+  tt_str_op("conn-bi-direct 2010-08-12 13:27:30 (86400 s) 0,0,1,0\n", OP_EQ,
+            s);
   tor_free(s);
 
   /* Stop collecting stats, add some bytes, and ensure we don't generate
@@ -141,7 +145,8 @@ test_stats(void *arg)
   rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 15);
   rep_hist_reset_conn_stats(now);
   s = rep_hist_format_conn_stats(now + 86400);
-  tt_str_op("conn-bi-direct 2010-08-12 13:27:30 (86400 s) 0,0,0,0\n",OP_EQ, s);
+  tt_str_op("conn-bi-direct 2010-08-12 13:27:30 (86400 s) 0,0,0,0\n", OP_EQ,
+            s);
   tor_free(s);
 
   /* Continue with testing buffer statistics; we shouldn't collect buffer
@@ -156,11 +161,12 @@ test_stats(void *arg)
   rep_hist_add_buffer_stats(2.0, 2.0, 20);
   s = rep_hist_format_buffer_stats(now + 86400);
   tt_str_op("cell-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-             "cell-processed-cells 20,0,0,0,0,0,0,0,0,0\n"
-             "cell-queued-cells 2.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,"
-                               "0.00,0.00\n"
-             "cell-time-in-queue 2,0,0,0,0,0,0,0,0,0\n"
-             "cell-circuits-per-decile 1\n",OP_EQ, s);
+            "cell-processed-cells 20,0,0,0,0,0,0,0,0,0\n"
+            "cell-queued-cells 2.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,"
+            "0.00,0.00\n"
+            "cell-time-in-queue 2,0,0,0,0,0,0,0,0,0\n"
+            "cell-circuits-per-decile 1\n",
+            OP_EQ, s);
   tor_free(s);
 
   /* Add nineteen more circuit statistics to the one that's already in the
@@ -171,11 +177,12 @@ test_stats(void *arg)
     rep_hist_add_buffer_stats(3.5, 3.5, i);
   s = rep_hist_format_buffer_stats(now + 86400);
   tt_str_op("cell-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-             "cell-processed-cells 29,28,27,26,25,24,23,22,21,20\n"
-             "cell-queued-cells 2.75,2.75,2.75,2.75,2.75,2.75,2.75,2.75,"
-                               "2.75,2.75\n"
-             "cell-time-in-queue 3,3,3,3,3,3,3,3,3,3\n"
-             "cell-circuits-per-decile 2\n",OP_EQ, s);
+            "cell-processed-cells 29,28,27,26,25,24,23,22,21,20\n"
+            "cell-queued-cells 2.75,2.75,2.75,2.75,2.75,2.75,2.75,2.75,"
+            "2.75,2.75\n"
+            "cell-time-in-queue 3,3,3,3,3,3,3,3,3,3\n"
+            "cell-circuits-per-decile 2\n",
+            OP_EQ, s);
   tor_free(s);
 
   /* Stop collecting stats, add statistics for one circuit, and ensure we
@@ -192,13 +199,14 @@ test_stats(void *arg)
   rep_hist_reset_buffer_stats(now);
   s = rep_hist_format_buffer_stats(now + 86400);
   tt_str_op("cell-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-             "cell-processed-cells 0,0,0,0,0,0,0,0,0,0\n"
-             "cell-queued-cells 0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,"
-                               "0.00,0.00\n"
-             "cell-time-in-queue 0,0,0,0,0,0,0,0,0,0\n"
-             "cell-circuits-per-decile 0\n",OP_EQ, s);
+            "cell-processed-cells 0,0,0,0,0,0,0,0,0,0\n"
+            "cell-queued-cells 0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,"
+            "0.00,0.00\n"
+            "cell-time-in-queue 0,0,0,0,0,0,0,0,0,0\n"
+            "cell-circuits-per-decile 0\n",
+            OP_EQ, s);
 
- done:
+done:
   tor_free(s);
 }
 
@@ -209,7 +217,7 @@ test_rephist_mtbf(void *arg)
   (void)arg;
 
   time_t now = 1572500000; /* 2010-10-31 05:33:20 UTC */
-  time_t far_future = MAX(now, time(NULL)) + 365*24*60*60;
+  time_t far_future = MAX(now, time(NULL)) + 365 * 24 * 60 * 60;
   int r;
 
   /* Make a temporary datadir for these tests */
@@ -240,19 +248,20 @@ test_rephist_mtbf(void *arg)
   tt_int_op(r, OP_EQ, 0);
   rep_history_clean(far_future);
 
- done:
+done:
   rep_history_clean(far_future);
   tor_free(ddir_fname);
 }
 
-#define ENT(name)                                                       \
-  { #name, test_ ## name , 0, NULL, NULL }
-#define FORK(name)                                                      \
-  { #name, test_ ## name , TT_FORK, NULL, NULL }
+#define ENT(name)                     \
+  {                                   \
+#    name, test_##name, 0, NULL, NULL \
+  }
+#define FORK(name)                          \
+  {                                         \
+#    name, test_##name, TT_FORK, NULL, NULL \
+  }
 
-struct testcase_t stats_tests[] = {
-  FORK(stats),
-  ENT(rephist_mtbf),
+struct testcase_t stats_tests[] = {FORK(stats), ENT(rephist_mtbf),
 
-  END_OF_TESTCASES
-};
+                                   END_OF_TESTCASES};

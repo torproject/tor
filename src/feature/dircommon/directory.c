@@ -102,8 +102,8 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose,
     return 1;
 
   if (router_purpose == ROUTER_PURPOSE_BRIDGE) {
-    if (dir_purpose == DIR_PURPOSE_FETCH_SERVERDESC
-        && resource && !strcmp(resource, "authority.z")) {
+    if (dir_purpose == DIR_PURPOSE_FETCH_SERVERDESC && resource &&
+        !strcmp(resource, "authority.z")) {
       /* We are asking a bridge for its own descriptor. That doesn't need
          anonymity. */
       return 0;
@@ -113,32 +113,31 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose,
                * needed to be safe. */
   }
 
-  switch (dir_purpose)
-  {
-    case DIR_PURPOSE_UPLOAD_DIR:
-    case DIR_PURPOSE_UPLOAD_VOTE:
-    case DIR_PURPOSE_UPLOAD_SIGNATURES:
-    case DIR_PURPOSE_FETCH_STATUS_VOTE:
-    case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
-    case DIR_PURPOSE_FETCH_CONSENSUS:
-    case DIR_PURPOSE_FETCH_CERTIFICATE:
-    case DIR_PURPOSE_FETCH_SERVERDESC:
-    case DIR_PURPOSE_FETCH_EXTRAINFO:
-    case DIR_PURPOSE_FETCH_MICRODESC:
-      return 0;
-    case DIR_PURPOSE_HAS_FETCHED_HSDESC:
-    case DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2:
-    case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
-    case DIR_PURPOSE_FETCH_RENDDESC_V2:
-    case DIR_PURPOSE_FETCH_HSDESC:
-    case DIR_PURPOSE_UPLOAD_HSDESC:
-      return 1;
-    case DIR_PURPOSE_SERVER:
-    default:
-      log_warn(LD_BUG, "Called with dir_purpose=%d, router_purpose=%d",
-               dir_purpose, router_purpose);
-      tor_assert_nonfatal_unreached();
-      return 1; /* Assume it needs anonymity; better safe than sorry. */
+  switch (dir_purpose) {
+  case DIR_PURPOSE_UPLOAD_DIR:
+  case DIR_PURPOSE_UPLOAD_VOTE:
+  case DIR_PURPOSE_UPLOAD_SIGNATURES:
+  case DIR_PURPOSE_FETCH_STATUS_VOTE:
+  case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
+  case DIR_PURPOSE_FETCH_CONSENSUS:
+  case DIR_PURPOSE_FETCH_CERTIFICATE:
+  case DIR_PURPOSE_FETCH_SERVERDESC:
+  case DIR_PURPOSE_FETCH_EXTRAINFO:
+  case DIR_PURPOSE_FETCH_MICRODESC:
+    return 0;
+  case DIR_PURPOSE_HAS_FETCHED_HSDESC:
+  case DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2:
+  case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
+  case DIR_PURPOSE_FETCH_RENDDESC_V2:
+  case DIR_PURPOSE_FETCH_HSDESC:
+  case DIR_PURPOSE_UPLOAD_HSDESC:
+    return 1;
+  case DIR_PURPOSE_SERVER:
+  default:
+    log_warn(LD_BUG, "Called with dir_purpose=%d, router_purpose=%d",
+             dir_purpose, router_purpose);
+    tor_assert_nonfatal_unreached();
+    return 1; /* Assume it needs anonymity; better safe than sorry. */
   }
 }
 
@@ -150,9 +149,9 @@ authdir_type_to_string(dirinfo_type_t auth)
   char *result;
   smartlist_t *lst = smartlist_new();
   if (auth & V3_DIRINFO)
-    smartlist_add(lst, (void*)"V3");
+    smartlist_add(lst, (void *)"V3");
   if (auth & BRIDGE_DIRINFO)
-    smartlist_add(lst, (void*)"Bridge");
+    smartlist_add(lst, (void *)"Bridge");
   if (smartlist_len(lst)) {
     result = smartlist_join_strings(lst, ", ", 0, NULL);
   } else {
@@ -217,7 +216,7 @@ connection_dir_is_anonymous(const dir_connection_t *dir_conn)
     return false;
   }
 
-  edge_conn = TO_EDGE_CONN((connection_t *) linked_conn);
+  edge_conn = TO_EDGE_CONN((connection_t *)linked_conn);
   circ = edge_conn->on_circuit;
 
   /* Can't be a circuit we initiated and without a circuit, no channel. */
@@ -262,26 +261,30 @@ parse_http_command(const char *headers, char **command_out, char **url_out)
   char *s, *start, *tmp;
 
   s = (char *)eat_whitespace_no_nl(headers);
-  if (!*s) return -1;
+  if (!*s)
+    return -1;
   command = s;
   s = (char *)find_whitespace(s); /* get past GET/POST */
-  if (!*s) return -1;
+  if (!*s)
+    return -1;
   end_of_command = s;
   s = (char *)eat_whitespace_no_nl(s);
-  if (!*s) return -1;
+  if (!*s)
+    return -1;
   start = s; /* this is the URL, assuming it's valid */
   s = (char *)find_whitespace(start);
-  if (!*s) return -1;
+  if (!*s)
+    return -1;
 
   /* tolerate the http[s] proxy style of putting the hostname in the url */
-  if (s-start >= 4 && !strcmpstart(start,"http")) {
+  if (s - start >= 4 && !strcmpstart(start, "http")) {
     tmp = start + 4;
     if (*tmp == 's')
       tmp++;
-    if (s-tmp >= 3 && !strcmpstart(tmp,"://")) {
-      tmp = strchr(tmp+3, '/');
+    if (s - tmp >= 3 && !strcmpstart(tmp, "://")) {
+      tmp = strchr(tmp + 3, '/');
       if (tmp && tmp < s) {
-        log_debug(LD_DIR,"Skipping over 'http[s]://hostname/' string");
+        log_debug(LD_DIR, "Skipping over 'http[s]://hostname/' string");
         start = tmp;
       }
     }
@@ -300,7 +303,7 @@ parse_http_command(const char *headers, char **command_out, char **url_out)
       return -1;
   }
 
-  *url_out = tor_memdup_nulterm(start, s-start);
+  *url_out = tor_memdup_nulterm(start, s - start);
   *command_out = tor_memdup_nulterm(command, end_of_command - command);
   return 0;
 }
@@ -317,8 +320,8 @@ http_get_header(const char *headers, const char *which)
     if (!strcasecmpstart(cp, which)) {
       char *eos;
       cp += strlen(which);
-      if ((eos = strchr(cp,'\r')))
-        return tor_strndup(cp, eos-cp);
+      if ((eos = strchr(cp, '\r')))
+        return tor_strndup(cp, eos - cp);
       else
         return tor_strdup(cp);
     }
@@ -349,30 +352,30 @@ parse_http_response(const char *headers, int *code, time_t *date,
                     compress_method_t *compression, char **reason)
 {
   unsigned n1, n2;
-  char datestr[RFC1123_TIME_LEN+1];
+  char datestr[RFC1123_TIME_LEN + 1];
   smartlist_t *parsed_headers;
   tor_assert(headers);
   tor_assert(code);
 
-  while (TOR_ISSPACE(*headers)) headers++; /* tolerate leading whitespace */
+  while (TOR_ISSPACE(*headers))
+    headers++; /* tolerate leading whitespace */
 
   if (tor_sscanf(headers, "HTTP/1.%u %u", &n1, &n2) < 2 ||
-      (n1 != 0 && n1 != 1) ||
-      (n2 < 100 || n2 >= 600)) {
-    log_warn(LD_HTTP,"Failed to parse header %s",escaped(headers));
+      (n1 != 0 && n1 != 1) || (n2 < 100 || n2 >= 600)) {
+    log_warn(LD_HTTP, "Failed to parse header %s", escaped(headers));
     return -1;
   }
   *code = n2;
 
   parsed_headers = smartlist_new();
   smartlist_split_string(parsed_headers, headers, "\n",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+                         SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, -1);
   if (reason) {
     smartlist_t *status_line_elements = smartlist_new();
     tor_assert(smartlist_len(parsed_headers));
     smartlist_split_string(status_line_elements,
-                           smartlist_get(parsed_headers, 0),
-                           " ", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 3);
+                           smartlist_get(parsed_headers, 0), " ",
+                           SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, 3);
     tor_assert(smartlist_len(status_line_elements) <= 3);
     if (smartlist_len(status_line_elements) == 3) {
       *reason = smartlist_get(status_line_elements, 2);
@@ -383,22 +386,24 @@ parse_http_response(const char *headers, int *code, time_t *date,
   }
   if (date) {
     *date = 0;
-    SMARTLIST_FOREACH(parsed_headers, const char *, s,
-      if (!strcmpstart(s, "Date: ")) {
-        strlcpy(datestr, s+6, sizeof(datestr));
-        /* This will do nothing on failure, so we don't need to check
-           the result.   We shouldn't warn, since there are many other valid
-           date formats besides the one we use. */
-        parse_rfc1123_time(datestr, date);
-        break;
-      });
+    SMARTLIST_FOREACH(
+        parsed_headers, const char *, s, if (!strcmpstart(s, "Date: ")) {
+          strlcpy(datestr, s + 6, sizeof(datestr));
+          /* This will do nothing on failure, so we don't need to check
+             the result.   We shouldn't warn, since there are many other valid
+             date formats besides the one we use. */
+          parse_rfc1123_time(datestr, date);
+          break;
+        });
   }
   if (compression) {
     const char *enc = NULL;
-    SMARTLIST_FOREACH(parsed_headers, const char *, s,
-      if (!strcmpstart(s, "Content-Encoding: ")) {
-        enc = s+18; break;
-      });
+    SMARTLIST_FOREACH(
+        parsed_headers, const char *, s,
+        if (!strcmpstart(s, "Content-Encoding: ")) {
+          enc = s + 18;
+          break;
+        });
 
     if (enc == NULL)
       *compression = NO_METHOD;
@@ -420,7 +425,7 @@ parse_http_response(const char *headers, int *code, time_t *date,
  * getting DoS'd.  (As of 0.1.2.x, raw directories are about 1MB, and we never
  * ask for more than 96 router descriptors at a time.)
  */
-#define MAX_DIRECTORY_OBJECT_SIZE (10*(1<<20))
+#define MAX_DIRECTORY_OBJECT_SIZE (10 * (1 << 20))
 
 #define MAX_VOTE_DL_SIZE (MAX_DIRECTORY_OBJECT_SIZE * 5)
 
@@ -449,9 +454,9 @@ connection_dir_process_inbuf(dir_connection_t *conn)
     return 0;
   }
 
-  max_size =
-    (TO_CONN(conn)->purpose == DIR_PURPOSE_FETCH_STATUS_VOTE) ?
-    MAX_VOTE_DL_SIZE : MAX_DIRECTORY_OBJECT_SIZE;
+  max_size = (TO_CONN(conn)->purpose == DIR_PURPOSE_FETCH_STATUS_VOTE)
+                 ? MAX_VOTE_DL_SIZE
+                 : MAX_DIRECTORY_OBJECT_SIZE;
 
   if (connection_get_inbuf_len(TO_CONN(conn)) > max_size) {
     log_warn(LD_HTTP,
@@ -463,7 +468,7 @@ connection_dir_process_inbuf(dir_connection_t *conn)
   }
 
   if (!conn->base_.inbuf_reached_eof)
-    log_debug(LD_HTTP,"Got data, not eof. Leaving on inbuf.");
+    log_debug(LD_HTTP, "Got data, not eof. Leaving on inbuf.");
   return 0;
 }
 
@@ -503,29 +508,27 @@ connection_dir_finished_flushing(dir_connection_t *conn)
     geoip_change_dirreq_state(conn->dirreq_id, DIRREQ_TUNNELED,
                               DIRREQ_FLUSHING_DIR_CONN_FINISHED);
   else
-    geoip_change_dirreq_state(TO_CONN(conn)->global_identifier,
-                              DIRREQ_DIRECT,
+    geoip_change_dirreq_state(TO_CONN(conn)->global_identifier, DIRREQ_DIRECT,
                               DIRREQ_FLUSHING_DIR_CONN_FINISHED);
   switch (conn->base_.state) {
-    case DIR_CONN_STATE_CONNECTING:
-    case DIR_CONN_STATE_CLIENT_SENDING:
-      log_debug(LD_DIR,"client finished sending command.");
-      conn->base_.state = DIR_CONN_STATE_CLIENT_READING;
-      return 0;
-    case DIR_CONN_STATE_SERVER_WRITING:
-      if (conn->spool) {
-        log_warn(LD_BUG, "Emptied a dirserv buffer, but it's still spooling!");
-        connection_mark_for_close(TO_CONN(conn));
-      } else {
-        log_debug(LD_DIRSERV, "Finished writing server response. Closing.");
-        connection_mark_for_close(TO_CONN(conn));
-      }
-      return 0;
-    default:
-      log_warn(LD_BUG,"called in unexpected state %d.",
-               conn->base_.state);
-      tor_fragile_assert();
-      return -1;
+  case DIR_CONN_STATE_CONNECTING:
+  case DIR_CONN_STATE_CLIENT_SENDING:
+    log_debug(LD_DIR, "client finished sending command.");
+    conn->base_.state = DIR_CONN_STATE_CLIENT_READING;
+    return 0;
+  case DIR_CONN_STATE_SERVER_WRITING:
+    if (conn->spool) {
+      log_warn(LD_BUG, "Emptied a dirserv buffer, but it's still spooling!");
+      connection_mark_for_close(TO_CONN(conn));
+    } else {
+      log_debug(LD_DIRSERV, "Finished writing server response. Closing.");
+      connection_mark_for_close(TO_CONN(conn));
+    }
+    return 0;
+  default:
+    log_warn(LD_BUG, "called in unexpected state %d.", conn->base_.state);
+    tor_fragile_assert();
+    return -1;
   }
   return 0;
 }
@@ -540,8 +543,8 @@ connection_dir_finished_connecting(dir_connection_t *conn)
   tor_assert(conn->base_.type == CONN_TYPE_DIR);
   tor_assert(conn->base_.state == DIR_CONN_STATE_CONNECTING);
 
-  log_debug(LD_HTTP,"Dir connection to router %s:%u established.",
-            conn->base_.address,conn->base_.port);
+  log_debug(LD_HTTP, "Dir connection to router %s:%u established.",
+            conn->base_.address, conn->base_.port);
 
   /* start flushing conn */
   conn->base_.state = DIR_CONN_STATE_CLIENT_SENDING;
@@ -574,32 +577,32 @@ dir_split_resource_into_fingerprint_pairs(const char *res,
 
   smartlist_split_string(pairs_tmp, res, "+", 0, 0);
   if (smartlist_len(pairs_tmp)) {
-    char *last = smartlist_get(pairs_tmp,smartlist_len(pairs_tmp)-1);
+    char *last = smartlist_get(pairs_tmp, smartlist_len(pairs_tmp) - 1);
     size_t last_len = strlen(last);
-    if (last_len > 2 && !strcmp(last+last_len-2, ".z")) {
-      last[last_len-2] = '\0';
+    if (last_len > 2 && !strcmp(last + last_len - 2, ".z")) {
+      last[last_len - 2] = '\0';
     }
   }
-  SMARTLIST_FOREACH_BEGIN(pairs_tmp, char *, cp) {
-    if (strlen(cp) != HEX_DIGEST_LEN*2+1) {
-      log_info(LD_DIR,
-             "Skipping digest pair %s with non-standard length.", escaped(cp));
+  SMARTLIST_FOREACH_BEGIN (pairs_tmp, char *, cp) {
+    if (strlen(cp) != HEX_DIGEST_LEN * 2 + 1) {
+      log_info(LD_DIR, "Skipping digest pair %s with non-standard length.",
+               escaped(cp));
     } else if (cp[HEX_DIGEST_LEN] != '-') {
-      log_info(LD_DIR,
-             "Skipping digest pair %s with missing dash.", escaped(cp));
+      log_info(LD_DIR, "Skipping digest pair %s with missing dash.",
+               escaped(cp));
     } else {
       fp_pair_t pair;
-      if (base16_decode(pair.first, DIGEST_LEN,
-                        cp, HEX_DIGEST_LEN) != DIGEST_LEN ||
-          base16_decode(pair.second,DIGEST_LEN,
-                        cp+HEX_DIGEST_LEN+1, HEX_DIGEST_LEN) != DIGEST_LEN) {
+      if (base16_decode(pair.first, DIGEST_LEN, cp, HEX_DIGEST_LEN) !=
+              DIGEST_LEN ||
+          base16_decode(pair.second, DIGEST_LEN, cp + HEX_DIGEST_LEN + 1,
+                        HEX_DIGEST_LEN) != DIGEST_LEN) {
         log_info(LD_DIR, "Skipping non-decodable digest pair %s", escaped(cp));
       } else {
         smartlist_add(pairs_result, tor_memdup(&pair, sizeof(pair)));
       }
     }
     tor_free(cp);
-  } SMARTLIST_FOREACH_END(cp);
+  } SMARTLIST_FOREACH_END (cp);
   smartlist_free(pairs_tmp);
 
   /* Uniq-and-sort */
@@ -625,9 +628,8 @@ dir_split_resource_into_fingerprint_pairs(const char *res,
  * If (flags & DSR_SORT_UNIQ), then sort the list and remove all duplicates.
  */
 int
-dir_split_resource_into_fingerprints(const char *resource,
-                                     smartlist_t *fp_out, int *compressed_out,
-                                     int flags)
+dir_split_resource_into_fingerprints(const char *resource, smartlist_t *fp_out,
+                                     int *compressed_out, int flags)
 {
   const int decode_hex = flags & DSR_HEX;
   const int decode_base64 = flags & DSR_BASE64;
@@ -635,23 +637,23 @@ dir_split_resource_into_fingerprints(const char *resource,
   const int sort_uniq = flags & DSR_SORT_UNIQ;
 
   const int digest_len = digests_are_256 ? DIGEST256_LEN : DIGEST_LEN;
-  const int hex_digest_len = digests_are_256 ?
-    HEX_DIGEST256_LEN : HEX_DIGEST_LEN;
-  const int base64_digest_len = digests_are_256 ?
-    BASE64_DIGEST256_LEN : BASE64_DIGEST_LEN;
+  const int hex_digest_len =
+      digests_are_256 ? HEX_DIGEST256_LEN : HEX_DIGEST_LEN;
+  const int base64_digest_len =
+      digests_are_256 ? BASE64_DIGEST256_LEN : BASE64_DIGEST_LEN;
   smartlist_t *fp_tmp = smartlist_new();
 
   tor_assert(!(decode_hex && decode_base64));
   tor_assert(fp_out);
 
-  smartlist_split_string(fp_tmp, resource, decode_base64?"-":"+", 0, 0);
+  smartlist_split_string(fp_tmp, resource, decode_base64 ? "-" : "+", 0, 0);
   if (compressed_out)
     *compressed_out = 0;
   if (smartlist_len(fp_tmp)) {
-    char *last = smartlist_get(fp_tmp,smartlist_len(fp_tmp)-1);
+    char *last = smartlist_get(fp_tmp, smartlist_len(fp_tmp) - 1);
     size_t last_len = strlen(last);
-    if (last_len > 2 && !strcmp(last+last_len-2, ".z")) {
-      last[last_len-2] = '\0';
+    if (last_len > 2 && !strcmp(last + last_len - 2, ".z")) {
+      last[last_len - 2] = '\0';
       if (compressed_out)
         *compressed_out = 1;
     }
@@ -663,19 +665,19 @@ dir_split_resource_into_fingerprints(const char *resource,
     for (i = 0; i < smartlist_len(fp_tmp); ++i) {
       cp = smartlist_get(fp_tmp, i);
       if (strlen(cp) != encoded_len) {
-        log_info(LD_DIR,
-                 "Skipping digest %s with non-standard length.", escaped(cp));
+        log_info(LD_DIR, "Skipping digest %s with non-standard length.",
+                 escaped(cp));
         smartlist_del_keeporder(fp_tmp, i--);
         goto again;
       }
       d = tor_malloc_zero(digest_len);
-      if (decode_hex ?
-          (base16_decode(d, digest_len, cp, hex_digest_len) != digest_len) :
-          (base64_decode(d, digest_len, cp, base64_digest_len)
-                         != digest_len)) {
-          log_info(LD_DIR, "Skipping non-decodable digest %s", escaped(cp));
-          smartlist_del_keeporder(fp_tmp, i--);
-          goto again;
+      if (decode_hex ? (base16_decode(d, digest_len, cp, hex_digest_len) !=
+                        digest_len)
+                     : (base64_decode(d, digest_len, cp, base64_digest_len) !=
+                        digest_len)) {
+        log_info(LD_DIR, "Skipping non-decodable digest %s", escaped(cp));
+        smartlist_del_keeporder(fp_tmp, i--);
+        goto again;
       }
       smartlist_set(fp_tmp, i, d);
       d = NULL;

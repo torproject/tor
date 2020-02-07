@@ -20,17 +20,17 @@ haproxy_format_proxy_header_line(const tor_addr_port_t *addr_port)
   const char *src_addr_string = NULL;
 
   switch (family) {
-    case AF_INET:
-      family_string = "TCP4";
-      src_addr_string = "0.0.0.0";
-      break;
-    case AF_INET6:
-      family_string = "TCP6";
-      src_addr_string = "::";
-      break;
-    default:
-      /* Unknown family. */
-      return NULL;
+  case AF_INET:
+    family_string = "TCP4";
+    src_addr_string = "0.0.0.0";
+    break;
+  case AF_INET6:
+    family_string = "TCP6";
+    src_addr_string = "::";
+    break;
+  default:
+    /* Unknown family. */
+    return NULL;
   }
 
   char *buf;
@@ -39,7 +39,7 @@ haproxy_format_proxy_header_line(const tor_addr_port_t *addr_port)
   tor_addr_to_str(addrbuf, &addr_port->addr, sizeof(addrbuf), 0);
 
   tor_asprintf(&buf, "PROXY %s %s %s 0 %d\r\n", family_string, src_addr_string,
-                                                addrbuf, addr_port->port);
+               addrbuf, addr_port->port);
 
   return buf;
 }

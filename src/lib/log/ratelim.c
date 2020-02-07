@@ -45,13 +45,13 @@ rate_limit_log(ratelim_t *lim, time_t now)
     if (n == 1) {
       return tor_strdup("");
     } else {
-      char *cp=NULL;
+      char *cp = NULL;
       const char *opt_over = (n >= RATELIM_TOOMANY) ? "over " : "";
       /* XXXX this is not exactly correct: the messages could have occurred
        * any time between the old value of lim->allowed and now. */
       tor_asprintf(&cp,
                    " [%s%d similar message(s) suppressed in last %d seconds]",
-                   opt_over, n-1, lim->rate);
+                   opt_over, n - 1, lim->rate);
       return cp;
     }
   } else {

@@ -13,7 +13,7 @@
 #include "test/test_helpers.h"
 
 #ifndef _WIN32
-#include <sys/stat.h>
+#  include <sys/stat.h>
 
 /**
  * Check whether fname is readable. On success set
@@ -27,22 +27,23 @@ get_file_mode(const char *fname, unsigned *permissions_out)
   int r = stat(fname, &st);
   if (r < 0)
     return -1;
-  *permissions_out = (unsigned) st.st_mode;
+  *permissions_out = (unsigned)st.st_mode;
   return 0;
 }
-#define assert_mode(fn,mask,expected) STMT_BEGIN                 \
-  unsigned mode_;                                                \
-  int tmp_ = get_file_mode((fn), &mode_);                        \
-  if (tmp_ < 0) {                                                \
-    TT_DIE(("Couldn't stat %s: %s", (fn), strerror(errno)));     \
-  }                                                              \
-  if ((mode_ & (mask)) != (expected)) {                          \
-    TT_DIE(("Bad mode %o on %s", mode_, (fn)));                  \
-  }                                                              \
-  STMT_END
+#  define assert_mode(fn, mask, expected)                        \
+    STMT_BEGIN                                                   \
+      unsigned mode_;                                            \
+      int tmp_ = get_file_mode((fn), &mode_);                    \
+      if (tmp_ < 0) {                                            \
+        TT_DIE(("Couldn't stat %s: %s", (fn), strerror(errno))); \
+      }                                                          \
+      if ((mode_ & (mask)) != (expected)) {                      \
+        TT_DIE(("Bad mode %o on %s", mode_, (fn)));              \
+      }                                                          \
+    STMT_END
 #else /* defined(_WIN32) */
 /* "group-readable" isn't meaningful on windows */
-#define assert_mode(fn,mask,expected) STMT_NIL
+#  define assert_mode(fn, mask, expected) STMT_NIL
 #endif /* !defined(_WIN32) */
 
 static or_options_t *mock_opts;
@@ -160,7 +161,7 @@ test_options_act_create_dirs(void *arg)
   or_options_free(opts);
   tor_free(msg);
 
- done:
+done:
   UNMOCK(get_options);
   or_options_free(opts);
   mock_opts = NULL;
@@ -188,7 +189,7 @@ test_options_act_log_transition(void *arg)
 
   // commit, see that there is a change.
   options_commit_log_transaction(lt);
-  lt=NULL;
+  lt = NULL;
   tt_int_op(get_min_log_level(), OP_EQ, LOG_NOTICE);
 
   // Now drop to debug.
@@ -203,7 +204,7 @@ test_options_act_log_transition(void *arg)
 
   setup_full_capture_of_logs(LOG_NOTICE);
   options_commit_log_transaction(lt);
-  lt=NULL;
+  lt = NULL;
   expect_single_log_msg_containing("may contain sensitive information");
   tt_int_op(get_min_log_level(), OP_EQ, LOG_DEBUG);
 
@@ -219,7 +220,7 @@ test_options_act_log_transition(void *arg)
   tt_assert(lt);
   tt_assert(!msg);
   options_commit_log_transaction(lt);
-  lt=NULL;
+  lt = NULL;
   expect_single_log_msg_containing("may contain sensitive information");
   tt_int_op(get_min_log_level(), OP_EQ, LOG_DEBUG);
 
@@ -251,7 +252,7 @@ test_options_act_log_transition(void *arg)
   expect_single_log_msg_containing("Couldn't parse");
   tt_int_op(get_min_log_level(), OP_EQ, LOG_DEBUG);
 
- done:
+done:
   UNMOCK(get_options);
   or_options_free(opts);
   or_options_free(old_opts);
@@ -262,11 +263,11 @@ test_options_act_log_transition(void *arg)
 }
 
 #ifndef COCCI
-#define T(name) { #name, test_options_act_##name, TT_FORK, NULL, NULL }
+#  define T(name)                                         \
+    {                                                     \
+#      name, test_options_act_##name, TT_FORK, NULL, NULL \
+    }
 #endif
 
-struct testcase_t options_act_tests[] = {
-  T(create_dirs),
-  T(log_transition),
-  END_OF_TESTCASES
-};
+struct testcase_t options_act_tests[] = {T(create_dirs), T(log_transition),
+                                         END_OF_TESTCASES};

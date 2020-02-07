@@ -27,7 +27,7 @@ test_buffers_basic(void *arg)
 
   int j;
   size_t r;
-  (void) arg;
+  (void)arg;
 
   /****
    * buf_new
@@ -35,131 +35,131 @@ test_buffers_basic(void *arg)
   if (!(buf = buf_new()))
     TT_DIE(("Assertion failed."));
 
-  //test_eq(buf_capacity(buf), 4096);
-  tt_int_op(buf_datalen(buf),OP_EQ, 0);
+  // test_eq(buf_capacity(buf), 4096);
+  tt_int_op(buf_datalen(buf), OP_EQ, 0);
 
   /****
    * General pointer frobbing
    */
-  for (j=0;j<256;++j) {
+  for (j = 0; j < 256; ++j) {
     str[j] = (char)j;
   }
   buf_add(buf, str, 256);
   buf_add(buf, str, 256);
-  tt_int_op(buf_datalen(buf),OP_EQ, 512);
+  tt_int_op(buf_datalen(buf), OP_EQ, 512);
   buf_get_bytes(buf, str2, 200);
-  tt_mem_op(str,OP_EQ, str2, 200);
-  tt_int_op(buf_datalen(buf),OP_EQ, 312);
+  tt_mem_op(str, OP_EQ, str2, 200);
+  tt_int_op(buf_datalen(buf), OP_EQ, 312);
   memset(str2, 0, sizeof(str2));
 
   buf_get_bytes(buf, str2, 256);
-  tt_mem_op(str+200,OP_EQ, str2, 56);
-  tt_mem_op(str,OP_EQ, str2+56, 200);
-  tt_int_op(buf_datalen(buf),OP_EQ, 56);
+  tt_mem_op(str + 200, OP_EQ, str2, 56);
+  tt_mem_op(str, OP_EQ, str2 + 56, 200);
+  tt_int_op(buf_datalen(buf), OP_EQ, 56);
   memset(str2, 0, sizeof(str2));
   /* Okay, now we should be 512 bytes into the 4096-byte buffer.  If we add
    * another 3584 bytes, we hit the end. */
-  for (j=0;j<15;++j) {
+  for (j = 0; j < 15; ++j) {
     buf_add(buf, str, 256);
   }
   buf_assert_ok(buf);
-  tt_int_op(buf_datalen(buf),OP_EQ, 3896);
+  tt_int_op(buf_datalen(buf), OP_EQ, 3896);
   buf_get_bytes(buf, str2, 56);
-  tt_int_op(buf_datalen(buf),OP_EQ, 3840);
-  tt_mem_op(str+200,OP_EQ, str2, 56);
-  for (j=0;j<15;++j) {
+  tt_int_op(buf_datalen(buf), OP_EQ, 3840);
+  tt_mem_op(str + 200, OP_EQ, str2, 56);
+  for (j = 0; j < 15; ++j) {
     memset(str2, 0, sizeof(str2));
     buf_get_bytes(buf, str2, 256);
-    tt_mem_op(str,OP_EQ, str2, 256);
+    tt_mem_op(str, OP_EQ, str2, 256);
   }
-  tt_int_op(buf_datalen(buf),OP_EQ, 0);
+  tt_int_op(buf_datalen(buf), OP_EQ, 0);
   buf_free(buf);
   buf = NULL;
 
   /* Okay, now make sure growing can work. */
   buf = buf_new_with_capacity(16);
-  //test_eq(buf_capacity(buf), 16);
-  buf_add(buf, str+1, 255);
-  //test_eq(buf_capacity(buf), 256);
+  // test_eq(buf_capacity(buf), 16);
+  buf_add(buf, str + 1, 255);
+  // test_eq(buf_capacity(buf), 256);
   buf_get_bytes(buf, str2, 254);
-  tt_mem_op(str+1,OP_EQ, str2, 254);
-  //test_eq(buf_capacity(buf), 256);
+  tt_mem_op(str + 1, OP_EQ, str2, 254);
+  // test_eq(buf_capacity(buf), 256);
   buf_assert_ok(buf);
   buf_add(buf, str, 32);
-  //test_eq(buf_capacity(buf), 256);
+  // test_eq(buf_capacity(buf), 256);
   buf_assert_ok(buf);
   buf_add(buf, str, 256);
   buf_assert_ok(buf);
-  //test_eq(buf_capacity(buf), 512);
-  tt_int_op(buf_datalen(buf),OP_EQ, 33+256);
+  // test_eq(buf_capacity(buf), 512);
+  tt_int_op(buf_datalen(buf), OP_EQ, 33 + 256);
   buf_get_bytes(buf, str2, 33);
-  tt_int_op(*str2,OP_EQ, str[255]);
+  tt_int_op(*str2, OP_EQ, str[255]);
 
-  tt_mem_op(str2+1,OP_EQ, str, 32);
-  //test_eq(buf_capacity(buf), 512);
-  tt_int_op(buf_datalen(buf),OP_EQ, 256);
+  tt_mem_op(str2 + 1, OP_EQ, str, 32);
+  // test_eq(buf_capacity(buf), 512);
+  tt_int_op(buf_datalen(buf), OP_EQ, 256);
   buf_get_bytes(buf, str2, 256);
-  tt_mem_op(str,OP_EQ, str2, 256);
+  tt_mem_op(str, OP_EQ, str2, 256);
 
   /* now try shrinking: case 1. */
   buf_free(buf);
   buf = buf_new_with_capacity(33668);
-  for (j=0;j<67;++j) {
-    buf_add(buf, str,255);
+  for (j = 0; j < 67; ++j) {
+    buf_add(buf, str, 255);
   }
-  //test_eq(buf_capacity(buf), 33668);
-  tt_int_op(buf_datalen(buf),OP_EQ, 17085);
-  for (j=0; j < 40; ++j) {
+  // test_eq(buf_capacity(buf), 33668);
+  tt_int_op(buf_datalen(buf), OP_EQ, 17085);
+  for (j = 0; j < 40; ++j) {
     buf_get_bytes(buf, str2, 255);
-    tt_mem_op(str2,OP_EQ, str, 255);
+    tt_mem_op(str2, OP_EQ, str, 255);
   }
 
   /* now try shrinking: case 2. */
   buf_free(buf);
   buf = buf_new_with_capacity(33668);
-  for (j=0;j<67;++j) {
+  for (j = 0; j < 67; ++j) {
     buf_add(buf, str, 255);
   }
-  for (j=0; j < 20; ++j) {
+  for (j = 0; j < 20; ++j) {
     buf_get_bytes(buf, str2, 255);
-    tt_mem_op(str2,OP_EQ, str, 255);
+    tt_mem_op(str2, OP_EQ, str, 255);
   }
-  for (j=0;j<80;++j) {
+  for (j = 0; j < 80; ++j) {
     buf_add(buf, str, 255);
   }
-  //test_eq(buf_capacity(buf),33668);
-  for (j=0; j < 120; ++j) {
+  // test_eq(buf_capacity(buf),33668);
+  for (j = 0; j < 120; ++j) {
     buf_get_bytes(buf, str2, 255);
-    tt_mem_op(str2,OP_EQ, str, 255);
+    tt_mem_op(str2, OP_EQ, str, 255);
   }
 
   /* Move from buf to buf. */
   buf_free(buf);
   buf = buf_new_with_capacity(4096);
   buf2 = buf_new_with_capacity(4096);
-  for (j=0;j<100;++j)
+  for (j = 0; j < 100; ++j)
     buf_add(buf, str, 255);
-  tt_int_op(buf_datalen(buf),OP_EQ, 25500);
-  for (j=0;j<100;++j) {
+  tt_int_op(buf_datalen(buf), OP_EQ, 25500);
+  for (j = 0; j < 100; ++j) {
     r = 10;
     buf_move_to_buf(buf2, buf, &r);
-    tt_int_op(r,OP_EQ, 0);
+    tt_int_op(r, OP_EQ, 0);
   }
-  tt_int_op(buf_datalen(buf),OP_EQ, 24500);
-  tt_int_op(buf_datalen(buf2),OP_EQ, 1000);
-  for (j=0;j<3;++j) {
+  tt_int_op(buf_datalen(buf), OP_EQ, 24500);
+  tt_int_op(buf_datalen(buf2), OP_EQ, 1000);
+  for (j = 0; j < 3; ++j) {
     buf_get_bytes(buf2, str2, 255);
-    tt_mem_op(str2,OP_EQ, str, 255);
+    tt_mem_op(str2, OP_EQ, str, 255);
   }
   r = 8192; /*big move*/
   buf_move_to_buf(buf2, buf, &r);
-  tt_int_op(r,OP_EQ, 0);
+  tt_int_op(r, OP_EQ, 0);
   r = 30000; /* incomplete move */
   buf_move_to_buf(buf2, buf, &r);
-  tt_int_op(r,OP_EQ, 13692);
-  for (j=0;j<97;++j) {
+  tt_int_op(r, OP_EQ, 13692);
+  for (j = 0; j < 97; ++j) {
     buf_get_bytes(buf2, str2, 255);
-    tt_mem_op(str2,OP_EQ, str, 255);
+    tt_mem_op(str2, OP_EQ, str, 255);
   }
   buf_free(buf);
   buf_free(buf2);
@@ -168,17 +168,17 @@ test_buffers_basic(void *arg)
   buf = buf_new_with_capacity(5);
   cp = "Testing. This is a moderately long Testing string.";
   for (j = 0; cp[j]; j++)
-    buf_add(buf, cp+j, 1);
-  tt_int_op(0,OP_EQ, buf_find_string_offset(buf, "Testing", 7));
-  tt_int_op(1,OP_EQ, buf_find_string_offset(buf, "esting", 6));
-  tt_int_op(1,OP_EQ, buf_find_string_offset(buf, "est", 3));
-  tt_int_op(39,OP_EQ, buf_find_string_offset(buf, "ing str", 7));
-  tt_int_op(35,OP_EQ, buf_find_string_offset(buf, "Testing str", 11));
-  tt_int_op(32,OP_EQ, buf_find_string_offset(buf, "ng ", 3));
-  tt_int_op(43,OP_EQ, buf_find_string_offset(buf, "string.", 7));
-  tt_int_op(-1,OP_EQ, buf_find_string_offset(buf, "shrdlu", 6));
-  tt_int_op(-1,OP_EQ, buf_find_string_offset(buf, "Testing thing", 13));
-  tt_int_op(-1,OP_EQ, buf_find_string_offset(buf, "ngx", 3));
+    buf_add(buf, cp + j, 1);
+  tt_int_op(0, OP_EQ, buf_find_string_offset(buf, "Testing", 7));
+  tt_int_op(1, OP_EQ, buf_find_string_offset(buf, "esting", 6));
+  tt_int_op(1, OP_EQ, buf_find_string_offset(buf, "est", 3));
+  tt_int_op(39, OP_EQ, buf_find_string_offset(buf, "ing str", 7));
+  tt_int_op(35, OP_EQ, buf_find_string_offset(buf, "Testing str", 11));
+  tt_int_op(32, OP_EQ, buf_find_string_offset(buf, "ng ", 3));
+  tt_int_op(43, OP_EQ, buf_find_string_offset(buf, "string.", 7));
+  tt_int_op(-1, OP_EQ, buf_find_string_offset(buf, "shrdlu", 6));
+  tt_int_op(-1, OP_EQ, buf_find_string_offset(buf, "Testing thing", 13));
+  tt_int_op(-1, OP_EQ, buf_find_string_offset(buf, "ngx", 3));
   buf_free(buf);
   buf = NULL;
 
@@ -194,7 +194,7 @@ test_buffers_basic(void *arg)
     buf = NULL;
   }
 
- done:
+done:
   if (buf)
     buf_free(buf);
   if (buf2)
@@ -233,7 +233,7 @@ test_buffer_pullup(void *arg)
   /* Let's add some data. */
   crypto_rand(stuff, 16384);
   buf_add(buf, stuff, 3000);
-  buf_add(buf, stuff+3000, 3000);
+  buf_add(buf, stuff + 3000, 3000);
   buf_pullup(buf, 0, &cp, &sz);
   tt_ptr_op(cp, OP_NE, NULL);
   tt_int_op(sz, OP_LE, 4096);
@@ -241,24 +241,24 @@ test_buffer_pullup(void *arg)
   /* Make room for 3000 bytes in the first chunk, so that the pullup-move code
    * can get tested. */
   tt_int_op(buf_get_bytes(buf, tmp, 3000), OP_EQ, 3000);
-  tt_mem_op(tmp,OP_EQ, stuff, 3000);
+  tt_mem_op(tmp, OP_EQ, stuff, 3000);
   buf_pullup(buf, 2048, &cp, &sz);
   buf_assert_ok(buf);
   tt_ptr_op(cp, OP_NE, NULL);
   tt_int_op(sz, OP_GE, 2048);
-  tt_mem_op(cp,OP_EQ, stuff+3000, 2048);
+  tt_mem_op(cp, OP_EQ, stuff + 3000, 2048);
   tt_int_op(3000, OP_EQ, buf_datalen(buf));
   tt_int_op(buf_get_bytes(buf, tmp, 3000), OP_EQ, 0);
-  tt_mem_op(tmp,OP_EQ, stuff+3000, 2048);
+  tt_mem_op(tmp, OP_EQ, stuff + 3000, 2048);
 
   buf_free(buf);
 
   /* Now try the large-chunk case. */
   buf = buf_new_with_capacity(3000); /* rounds up to next power of 2. */
   buf_add(buf, stuff, 4000);
-  buf_add(buf, stuff+4000, 4000);
-  buf_add(buf, stuff+8000, 4000);
-  buf_add(buf, stuff+12000, 4000);
+  buf_add(buf, stuff + 4000, 4000);
+  buf_add(buf, stuff + 8000, 4000);
+  buf_add(buf, stuff + 12000, 4000);
   tt_int_op(buf_datalen(buf), OP_EQ, 16000);
   buf_pullup(buf, 0, &cp, &sz);
   tt_ptr_op(cp, OP_NE, NULL);
@@ -268,35 +268,35 @@ test_buffer_pullup(void *arg)
   buf_assert_ok(buf);
   tt_ptr_op(cp, OP_NE, NULL);
   tt_int_op(sz, OP_GE, 12500);
-  tt_mem_op(cp,OP_EQ, stuff, 12500);
+  tt_mem_op(cp, OP_EQ, stuff, 12500);
   tt_int_op(buf_datalen(buf), OP_EQ, 16000);
 
   buf_get_bytes(buf, tmp, 12400);
-  tt_mem_op(tmp,OP_EQ, stuff, 12400);
+  tt_mem_op(tmp, OP_EQ, stuff, 12400);
   tt_int_op(buf_datalen(buf), OP_EQ, 3600);
   buf_get_bytes(buf, tmp, 3500);
-  tt_mem_op(tmp,OP_EQ, stuff+12400, 3500);
+  tt_mem_op(tmp, OP_EQ, stuff + 12400, 3500);
   buf_get_bytes(buf, tmp, 100);
-  tt_mem_op(tmp,OP_EQ, stuff+15900, 10);
+  tt_mem_op(tmp, OP_EQ, stuff + 15900, 10);
 
   buf_free(buf);
 
   /* Make sure that the pull-up-whole-buffer case works */
   buf = buf_new_with_capacity(3000); /* rounds up to next power of 2. */
   buf_add(buf, stuff, 4000);
-  buf_add(buf, stuff+4000, 4000);
+  buf_add(buf, stuff + 4000, 4000);
   buf_get_bytes(buf, tmp, 100); /* dump 100 bytes from first chunk */
   buf_pullup(buf, 16000, &cp, &sz);
   buf_assert_ok(buf);
   tt_ptr_op(cp, OP_NE, NULL);
   tt_int_op(sz, OP_EQ, 7900);
-  tt_mem_op(cp,OP_EQ, stuff+100, 7900);
+  tt_mem_op(cp, OP_EQ, stuff + 100, 7900);
 
   buf_free(buf);
   buf = NULL;
 
   tt_int_op(buf_get_total_allocation(), OP_EQ, 0);
- done:
+done:
   buf_free(buf);
   tor_free(stuff);
   tor_free(tmp);
@@ -305,7 +305,7 @@ test_buffer_pullup(void *arg)
 static void
 test_buffer_copy(void *arg)
 {
-  buf_t *buf=NULL, *buf2=NULL;
+  buf_t *buf = NULL, *buf2 = NULL;
   const char *s;
   size_t len;
   char b[256];
@@ -340,27 +340,27 @@ test_buffer_copy(void *arg)
   tt_mem_op(b, OP_EQ, s, len);
   /* Clear buf for next test */
   buf_get_bytes(buf, b, len);
-  tt_int_op(buf_datalen(buf),OP_EQ,0);
+  tt_int_op(buf_datalen(buf), OP_EQ, 0);
 
   /* Okay, now let's try a bigger buffer. */
   s = "Quis autem vel eum iure reprehenderit qui in ea voluptate velit "
-    "esse quam nihil molestiae consequatur, vel illum qui dolorem eum "
-    "fugiat quo voluptas nulla pariatur?";
+      "esse quam nihil molestiae consequatur, vel illum qui dolorem eum "
+      "fugiat quo voluptas nulla pariatur?";
   len = strlen(s);
   for (i = 0; i < 256; ++i) {
-    b[0]=i;
+    b[0] = i;
     buf_add(buf, b, 1);
     buf_add(buf, s, len);
   }
   tt_int_op(0, OP_EQ, buf_set_to_copy(&buf2, buf));
   tt_int_op(buf_datalen(buf2), OP_EQ, buf_datalen(buf));
   for (i = 0; i < 256; ++i) {
-    buf_get_bytes(buf2, b, len+1);
-    tt_int_op((unsigned char)b[0],OP_EQ,i);
-    tt_mem_op(b+1, OP_EQ, s, len);
+    buf_get_bytes(buf2, b, len + 1);
+    tt_int_op((unsigned char)b[0], OP_EQ, i);
+    tt_mem_op(b + 1, OP_EQ, s, len);
   }
 
- done:
+done:
   if (buf)
     buf_free(buf);
   if (buf2)
@@ -398,7 +398,7 @@ test_buffer_allocation_tracking(void *arg)
   tt_int_op(buf_get_total_allocation(), OP_EQ, 16384);
 
   buf_get_bytes(buf1, junk, 4096); /* drop a 1k chunk... */
-  tt_int_op(buf_allocation(buf1), OP_EQ, 3*4096); /* now 3 4k chunks */
+  tt_int_op(buf_allocation(buf1), OP_EQ, 3 * 4096); /* now 3 4k chunks */
 
   tt_int_op(buf_get_total_allocation(), OP_EQ, 12288); /* that chunk was really
                                                        freed. */
@@ -411,8 +411,8 @@ test_buffer_allocation_tracking(void *arg)
   tt_int_op(buf_get_total_allocation(), OP_EQ, 16384);
   buf_add(buf2, junk, 4000);
   tt_int_op(buf_allocation(buf2), OP_EQ, 8192); /* another 4k chunk. */
-  tt_int_op(buf_get_total_allocation(),
-            OP_EQ, 5*4096); /* that chunk was new. */
+  tt_int_op(buf_get_total_allocation(), OP_EQ,
+            5 * 4096); /* that chunk was new. */
 
   /* Make a really huge buffer */
   for (i = 0; i < 1000; ++i) {
@@ -429,7 +429,7 @@ test_buffer_allocation_tracking(void *arg)
   buf1 = NULL;
   tt_int_op(buf_get_total_allocation(), OP_EQ, 0);
 
- done:
+done:
   buf_free(buf1);
   buf_free(buf2);
   tor_free(junk);
@@ -438,7 +438,7 @@ test_buffer_allocation_tracking(void *arg)
 static void
 test_buffer_time_tracking(void *arg)
 {
-  buf_t *buf=NULL, *buf2=NULL;
+  buf_t *buf = NULL, *buf2 = NULL;
   const time_t START = 1389288246;
   const uint64_t START_NSEC = ((uint64_t)START) * 1000000000;
   int i;
@@ -457,15 +457,15 @@ test_buffer_time_tracking(void *arg)
 
   /* Empty buffer means the timestamp is 0. */
   tt_int_op(0, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_TS));
-  tt_int_op(0, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_TS+1000));
+  tt_int_op(0, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_TS + 1000));
 
   buf_add(buf, "ABCDEFG", 7);
-  tt_int_op(1000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_TS+1000));
+  tt_int_op(1000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_TS + 1000));
 
   buf2 = buf_copy(buf);
   tt_assert(buf2);
   tt_int_op(1234, OP_EQ,
-            buf_get_oldest_chunk_timestamp(buf2, START_TS+1234));
+            buf_get_oldest_chunk_timestamp(buf2, START_TS + 1234));
 
   /* Now add more bytes; enough to overflow the first chunk. */
   monotime_coarse_set_mock_time_nsec(START_NSEC + 123 * (uint64_t)1000000);
@@ -475,18 +475,18 @@ test_buffer_time_tracking(void *arg)
   tt_int_op(4207, OP_EQ, buf_datalen(buf));
 
   /* The oldest bytes are still in the front. */
-  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_TS+2000));
+  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_TS + 2000));
 
   /* Once those bytes are dropped, the chunk is still on the first
    * timestamp. */
   buf_get_bytes(buf, tmp, 100);
-  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_TS+2000));
+  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_TS + 2000));
 
   /* But once we discard the whole first chunk, we get the data in the second
    * chunk. */
   buf_get_bytes(buf, tmp, 4000);
   tt_int_op(107, OP_EQ, buf_datalen(buf));
-  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, TS2+2000));
+  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, TS2 + 2000));
 
   /* This time we'll be grabbing a chunk from the freelist, and making sure
      its time gets updated */
@@ -496,13 +496,13 @@ test_buffer_time_tracking(void *arg)
     buf_add(buf, "ABCDEFG", 7);
   tt_int_op(4307, OP_EQ, buf_datalen(buf));
 
-  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, TS2+2000));
+  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, TS2 + 2000));
   buf_get_bytes(buf, tmp, 4000);
   buf_get_bytes(buf, tmp, 306);
   tt_int_op(0, OP_EQ, buf_get_oldest_chunk_timestamp(buf, TS3));
-  tt_int_op(383, OP_EQ, buf_get_oldest_chunk_timestamp(buf, TS3+383));
+  tt_int_op(383, OP_EQ, buf_get_oldest_chunk_timestamp(buf, TS3 + 383));
 
- done:
+done:
   buf_free(buf);
   buf_free(buf2);
   monotime_disable_test_mocking();
@@ -530,7 +530,7 @@ test_buffers_compress_fin_at_chunk_end_impl(compress_method_t method,
   /* Fill up the chunk so the compression stuff won't fit in one chunk. */
   tt_uint_op(buf->head->memlen, OP_LT, sz);
   headerjunk = buf->head->memlen - 7;
-  buf_add(buf, msg, headerjunk-1);
+  buf_add(buf, msg, headerjunk - 1);
   tt_uint_op(buf->head->datalen, OP_EQ, headerjunk);
   tt_uint_op(buf_datalen(buf), OP_EQ, headerjunk);
   /* Write an empty string, with finalization on. */
@@ -548,16 +548,14 @@ test_buffers_compress_fin_at_chunk_end_impl(compress_method_t method,
     tt_uint_op(in_len, OP_GT, headerjunk);
   }
 
-  tt_int_op(0, OP_EQ, tor_uncompress(&expanded, &out_len,
-                                     contents + headerjunk,
-                                     in_len - headerjunk,
-                                     method, 1,
-                                     LOG_WARN));
+  tt_int_op(0, OP_EQ,
+            tor_uncompress(&expanded, &out_len, contents + headerjunk,
+                           in_len - headerjunk, method, 1, LOG_WARN));
 
   tt_int_op(out_len, OP_EQ, 0);
   tt_assert(expanded);
 
- done:
+done:
   buf_free(buf);
   tor_compress_free(compress_state);
   tor_free(contents);
@@ -566,8 +564,7 @@ test_buffers_compress_fin_at_chunk_end_impl(compress_method_t method,
 }
 
 static void
-test_buffers_compress_impl(compress_method_t method,
-                           compression_level_t level,
+test_buffers_compress_impl(compress_method_t method, compression_level_t level,
                            int finalize_with_nil)
 {
   char *msg = NULL;
@@ -583,15 +580,14 @@ test_buffers_compress_impl(compress_method_t method,
 
   msg = tor_malloc(512);
   crypto_rand(msg, 512);
-  tt_int_op(buf_add_compress(buf, compress_state,
-                                  msg, 128, 0), OP_EQ, 0);
-  tt_int_op(buf_add_compress(buf, compress_state,
-                                  msg+128, 128, 0), OP_EQ, 0);
-  tt_int_op(buf_add_compress(buf, compress_state,
-                                  msg+256, 256, 0), OP_EQ, 0);
+  tt_int_op(buf_add_compress(buf, compress_state, msg, 128, 0), OP_EQ, 0);
+  tt_int_op(buf_add_compress(buf, compress_state, msg + 128, 128, 0), OP_EQ,
+            0);
+  tt_int_op(buf_add_compress(buf, compress_state, msg + 256, 256, 0), OP_EQ,
+            0);
   done = !finalize_with_nil;
-  tt_int_op(buf_add_compress(buf, compress_state,
-                                  "all done", 9, done), OP_EQ, 0);
+  tt_int_op(buf_add_compress(buf, compress_state, "all done", 9, done), OP_EQ,
+            0);
   if (finalize_with_nil) {
     tt_int_op(buf_add_compress(buf, compress_state, "", 0, 1), OP_EQ, 0);
   }
@@ -601,19 +597,18 @@ test_buffers_compress_impl(compress_method_t method,
 
   tt_int_op(buf_get_bytes(buf, contents, in_len), OP_EQ, 0);
 
-  tt_int_op(0, OP_EQ, tor_uncompress(&expanded, &out_len,
-                                     contents, in_len,
-                                     method, 1,
-                                     LOG_WARN));
+  tt_int_op(0, OP_EQ,
+            tor_uncompress(&expanded, &out_len, contents, in_len, method, 1,
+                           LOG_WARN));
 
   tt_int_op(out_len, OP_GE, 128);
   tt_mem_op(msg, OP_EQ, expanded, 128);
   tt_int_op(out_len, OP_GE, 512);
   tt_mem_op(msg, OP_EQ, expanded, 512);
-  tt_int_op(out_len, OP_EQ, 512+9);
-  tt_mem_op("all done", OP_EQ, expanded+512, 9);
+  tt_int_op(out_len, OP_EQ, 512 + 9);
+  tt_mem_op("all done", OP_EQ, expanded + 512, 9);
 
- done:
+done:
   buf_free(buf);
   tor_compress_free(compress_state);
   tor_free(contents);
@@ -630,16 +625,12 @@ test_buffers_compress(void *arg)
   compress_method_t method = compression_method_get_by_name(methodname);
   tt_int_op(method, OP_NE, UNKNOWN_METHOD);
 
-  if (! tor_compress_supports_method(method)) {
+  if (!tor_compress_supports_method(method)) {
     tt_skip();
   }
 
-  compression_level_t levels[] = {
-    BEST_COMPRESSION,
-    HIGH_COMPRESSION,
-    MEDIUM_COMPRESSION,
-    LOW_COMPRESSION
-  };
+  compression_level_t levels[] = {BEST_COMPRESSION, HIGH_COMPRESSION,
+                                  MEDIUM_COMPRESSION, LOW_COMPRESSION};
 
   for (unsigned l = 0; l < ARRAY_LENGTH(levels); ++l) {
     compression_level_t level = levels[l];
@@ -649,8 +640,7 @@ test_buffers_compress(void *arg)
     test_buffers_compress_fin_at_chunk_end_impl(method, level);
   }
 
- done:
-  ;
+done:;
 }
 
 static const uint8_t *tls_read_ptr;
@@ -672,7 +662,7 @@ mock_tls_read(tor_tls_t *tls, char *cp, size_t len)
     tls_read_ptr += max;
   }
 
-  memmove(next_reply_val, next_reply_val + 1, 15*sizeof(int));
+  memmove(next_reply_val, next_reply_val + 1, 15 * sizeof(int));
   return rv;
 }
 
@@ -683,10 +673,10 @@ test_buffers_tls_read_mocked(void *arg)
   buf_t *buf;
   (void)arg;
 
-  mem = tor_malloc(64*1024);
-  crypto_rand((char*)mem, 64*1024);
+  mem = tor_malloc(64 * 1024);
+  crypto_rand((char *)mem, 64 * 1024);
   tls_read_ptr = mem;
-  n_remaining = 64*1024;
+  n_remaining = 64 * 1024;
 
   MOCK(tor_tls_read, mock_tls_read);
 
@@ -699,7 +689,7 @@ test_buffers_tls_read_mocked(void *arg)
   next_reply_val[1] = 5000;
   tt_int_op(6000, OP_EQ, buf_read_from_tls(buf, NULL, 6000));
 
- done:
+done:
   UNMOCK(tor_tls_read);
   tor_free(mem);
   buf_free(buf);
@@ -719,11 +709,10 @@ test_buffers_chunk_size(void *arg)
   /* Here, we're implicitly saying that the chunk header overhead is
    * between 1 and 100 bytes. 24..48 would probably be more accurate. */
   tt_uint_op(buf_preferred_chunk_size(65536), OP_GT, 65536);
-  tt_uint_op(buf_preferred_chunk_size(65536), OP_LT, 65536+100);
+  tt_uint_op(buf_preferred_chunk_size(65536), OP_LT, 65536 + 100);
   tt_uint_op(buf_preferred_chunk_size(165536), OP_GT, 165536);
-  tt_uint_op(buf_preferred_chunk_size(165536), OP_LT, 165536+100);
- done:
-  ;
+  tt_uint_op(buf_preferred_chunk_size(165536), OP_LT, 165536 + 100);
+done:;
 }
 
 static void
@@ -734,21 +723,20 @@ test_buffers_find_contentlen(void *arg)
     int r;
     int contentlen;
   } results[] = {
-    { "Blah blah\r\nContent-Length: 1\r\n\r\n", 1, 1 },
-    { "Blah blah\r\n\r\n", 0, 0 }, /* no content-len */
-    { "Blah blah Content-Length: 1\r\n", 0, 0 }, /* no content-len. */
-    { "Blah blah\r\nContent-Length: 100000\r\n", 1, 100000},
-    { "Blah blah\r\nContent-Length: 1000000000000000000000000\r\n", -1, 0},
-    { "Blah blah\r\nContent-Length: 0\r\n", 1, 0},
-    { "Blah blah\r\nContent-Length: -1\r\n", -1, 0},
-    { "Blah blah\r\nContent-Length: 1x\r\n", -1, 0},
-    { "Blah blah\r\nContent-Length: 1 x\r\n", -1, 0},
-    { "Blah blah\r\nContent-Length: 1 \r\n", 1, 1},
-    { "Blah blah\r\nContent-Length:  \r\n", -1, 0},
-    { "Blah blah\r\nContent-Length: ", -1, 0},
-    { "Blah blah\r\nContent-Length: 5050", -1, 0},
-    { NULL, 0, 0 }
-  };
+      {"Blah blah\r\nContent-Length: 1\r\n\r\n", 1, 1},
+      {"Blah blah\r\n\r\n", 0, 0}, /* no content-len */
+      {"Blah blah Content-Length: 1\r\n", 0, 0}, /* no content-len. */
+      {"Blah blah\r\nContent-Length: 100000\r\n", 1, 100000},
+      {"Blah blah\r\nContent-Length: 1000000000000000000000000\r\n", -1, 0},
+      {"Blah blah\r\nContent-Length: 0\r\n", 1, 0},
+      {"Blah blah\r\nContent-Length: -1\r\n", -1, 0},
+      {"Blah blah\r\nContent-Length: 1x\r\n", -1, 0},
+      {"Blah blah\r\nContent-Length: 1 x\r\n", -1, 0},
+      {"Blah blah\r\nContent-Length: 1 \r\n", 1, 1},
+      {"Blah blah\r\nContent-Length:  \r\n", -1, 0},
+      {"Blah blah\r\nContent-Length: ", -1, 0},
+      {"Blah blah\r\nContent-Length: 5050", -1, 0},
+      {NULL, 0, 0}};
   int i;
 
   (void)arg;
@@ -757,7 +745,7 @@ test_buffers_find_contentlen(void *arg)
     int r;
     size_t sz;
     size_t headerlen = strlen(results[i].headers);
-    char * tmp = tor_memdup(results[i].headers, headerlen);/* ensure no eos */
+    char *tmp = tor_memdup(results[i].headers, headerlen); /* ensure no eos */
     sz = 999; /* to ensure it gets set */
     r = buf_http_find_content_length(tmp, headerlen, &sz);
     tor_free(tmp);
@@ -765,8 +753,7 @@ test_buffers_find_contentlen(void *arg)
     tt_int_op(r, OP_EQ, results[i].r);
     tt_int_op(sz, OP_EQ, results[i].contentlen);
   }
- done:
-  ;
+done:;
 }
 
 static void
@@ -778,7 +765,7 @@ test_buffer_peek_startswith(void *arg)
   tt_ptr_op(buf, OP_NE, NULL);
 
   tt_assert(buf_peek_startswith(buf, ""));
-  tt_assert(! buf_peek_startswith(buf, "X"));
+  tt_assert(!buf_peek_startswith(buf, "X"));
 
   buf_add(buf, "Tor", 3);
 
@@ -786,38 +773,36 @@ test_buffer_peek_startswith(void *arg)
   tt_assert(buf_peek_startswith(buf, "T"));
   tt_assert(buf_peek_startswith(buf, "To"));
   tt_assert(buf_peek_startswith(buf, "Tor"));
-  tt_assert(! buf_peek_startswith(buf, "Top"));
-  tt_assert(! buf_peek_startswith(buf, "For"));
-  tt_assert(! buf_peek_startswith(buf, "Tork"));
-  tt_assert(! buf_peek_startswith(buf, "Torpor"));
+  tt_assert(!buf_peek_startswith(buf, "Top"));
+  tt_assert(!buf_peek_startswith(buf, "For"));
+  tt_assert(!buf_peek_startswith(buf, "Tork"));
+  tt_assert(!buf_peek_startswith(buf, "Torpor"));
 
- done:
+done:
   buf_free(buf);
 }
 
 struct testcase_t buffer_tests[] = {
-  { "basic", test_buffers_basic, TT_FORK, NULL, NULL },
-  { "copy", test_buffer_copy, TT_FORK, NULL, NULL },
-  { "pullup", test_buffer_pullup, TT_FORK, NULL, NULL },
-  { "startswith", test_buffer_peek_startswith, 0, NULL, NULL },
-  { "allocation_tracking", test_buffer_allocation_tracking, TT_FORK,
-    NULL, NULL },
-  { "time_tracking", test_buffer_time_tracking, TT_FORK, NULL, NULL },
-  { "tls_read_mocked", test_buffers_tls_read_mocked, 0,
-    NULL, NULL },
-  { "chunk_size", test_buffers_chunk_size, 0, NULL, NULL },
-  { "find_contentlen", test_buffers_find_contentlen, 0, NULL, NULL },
+    {"basic", test_buffers_basic, TT_FORK, NULL, NULL},
+    {"copy", test_buffer_copy, TT_FORK, NULL, NULL},
+    {"pullup", test_buffer_pullup, TT_FORK, NULL, NULL},
+    {"startswith", test_buffer_peek_startswith, 0, NULL, NULL},
+    {"allocation_tracking", test_buffer_allocation_tracking, TT_FORK, NULL,
+     NULL},
+    {"time_tracking", test_buffer_time_tracking, TT_FORK, NULL, NULL},
+    {"tls_read_mocked", test_buffers_tls_read_mocked, 0, NULL, NULL},
+    {"chunk_size", test_buffers_chunk_size, 0, NULL, NULL},
+    {"find_contentlen", test_buffers_find_contentlen, 0, NULL, NULL},
 
-  { "compress/zlib", test_buffers_compress, TT_FORK,
-    &passthrough_setup, (char*)"deflate" },
-  { "compress/gzip", test_buffers_compress, TT_FORK,
-    &passthrough_setup, (char*)"gzip" },
-  { "compress/zstd", test_buffers_compress, TT_FORK,
-    &passthrough_setup, (char*)"x-zstd" },
-  { "compress/lzma", test_buffers_compress, TT_FORK,
-    &passthrough_setup, (char*)"x-tor-lzma" },
-  { "compress/none", test_buffers_compress, TT_FORK,
-    &passthrough_setup, (char*)"identity" },
+    {"compress/zlib", test_buffers_compress, TT_FORK, &passthrough_setup,
+     (char *)"deflate"},
+    {"compress/gzip", test_buffers_compress, TT_FORK, &passthrough_setup,
+     (char *)"gzip"},
+    {"compress/zstd", test_buffers_compress, TT_FORK, &passthrough_setup,
+     (char *)"x-zstd"},
+    {"compress/lzma", test_buffers_compress, TT_FORK, &passthrough_setup,
+     (char *)"x-tor-lzma"},
+    {"compress/none", test_buffers_compress, TT_FORK, &passthrough_setup,
+     (char *)"identity"},
 
-  END_OF_TESTCASES
-};
+    END_OF_TESTCASES};

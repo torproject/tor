@@ -49,28 +49,39 @@
 static char *global_dirfrontpagecontents = NULL;
 
 /* Copied from config.c, we will refactor later in 29211. */
-#define REJECT(arg) \
-  STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
+#define REJECT(arg)         \
+  STMT_BEGIN                \
+    *msg = tor_strdup(arg); \
+    return -1;              \
+  STMT_END
 #if defined(__GNUC__) && __GNUC__ <= 3
-#define COMPLAIN(args...) \
-  STMT_BEGIN log_warn(LD_CONFIG, args); STMT_END
+#  define COMPLAIN(args...)      \
+    STMT_BEGIN                   \
+      log_warn(LD_CONFIG, args); \
+    STMT_END
 #else
-#define COMPLAIN(args, ...)                                     \
-  STMT_BEGIN log_warn(LD_CONFIG, args, ##__VA_ARGS__); STMT_END
+#  define COMPLAIN(args, ...)                   \
+    STMT_BEGIN                                  \
+      log_warn(LD_CONFIG, args, ##__VA_ARGS__); \
+    STMT_END
 #endif /* defined(__GNUC__) && __GNUC__ <= 3 */
 
 /* Used in the various options_transition_affects* functions. */
-#define YES_IF_CHANGED_BOOL(opt) \
-  if (!CFG_EQ_BOOL(old_options, new_options, opt)) return 1;
-#define YES_IF_CHANGED_INT(opt) \
-  if (!CFG_EQ_INT(old_options, new_options, opt)) return 1;
-#define YES_IF_CHANGED_STRING(opt) \
-  if (!CFG_EQ_STRING(old_options, new_options, opt)) return 1;
-#define YES_IF_CHANGED_LINELIST(opt) \
-  if (!CFG_EQ_LINELIST(old_options, new_options, opt)) return 1;
+#define YES_IF_CHANGED_BOOL(opt)                   \
+  if (!CFG_EQ_BOOL(old_options, new_options, opt)) \
+    return 1;
+#define YES_IF_CHANGED_INT(opt)                   \
+  if (!CFG_EQ_INT(old_options, new_options, opt)) \
+    return 1;
+#define YES_IF_CHANGED_STRING(opt)                   \
+  if (!CFG_EQ_STRING(old_options, new_options, opt)) \
+    return 1;
+#define YES_IF_CHANGED_LINELIST(opt)                   \
+  if (!CFG_EQ_LINELIST(old_options, new_options, opt)) \
+    return 1;
 
 /** Return the contents of our frontpage string, or NULL if not configured. */
-MOCK_IMPL(const char*,
+MOCK_IMPL(const char *,
 relay_get_dirportfrontpage, (void))
 {
   return global_dirfrontpagecontents;
@@ -116,20 +127,21 @@ relay_get_effective_bwburst(const or_options_t *options)
 void
 port_warn_nonlocal_ext_orports(const smartlist_t *ports, const char *portname)
 {
-  SMARTLIST_FOREACH_BEGIN(ports, const port_cfg_t *, port) {
+  SMARTLIST_FOREACH_BEGIN (ports, const port_cfg_t *, port) {
     if (port->type != CONN_TYPE_EXT_OR_LISTENER)
       continue;
     if (port->is_unix_addr)
       continue;
     /* XXX maybe warn even if address is RFC1918? */
     if (!tor_addr_is_internal(&port->addr, 1)) {
-      log_warn(LD_CONFIG, "You specified a public address '%s' for %sPort. "
+      log_warn(LD_CONFIG,
+               "You specified a public address '%s' for %sPort. "
                "This is not advised; this address is supposed to only be "
                "exposed on localhost so that your pluggable transport "
                "proxies can connect to it.",
                fmt_addrport(&port->addr, port->port), portname);
     }
-  } SMARTLIST_FOREACH_END(port);
+  } SMARTLIST_FOREACH_END (port);
 }
 
 /** Given a list of <b>port_cfg_t</b> in <b>ports</b>, check them for internal
@@ -137,8 +149,7 @@ port_warn_nonlocal_ext_orports(const smartlist_t *ports, const char *portname)
  * *<b>n_low_ports_out</b> to the number of sub-1024 ports we will be
  * binding, and warn if we may be unable to re-bind after hibernation. */
 static int
-check_server_ports(const smartlist_t *ports,
-                   const or_options_t *options,
+check_server_ports(const smartlist_t *ports, const or_options_t *options,
                    int *n_low_ports_out)
 {
   if (BUG(!ports))
@@ -158,19 +169,19 @@ check_server_ports(const smartlist_t *ports,
   int n_low_port = 0;
   int r = 0;
 
-  SMARTLIST_FOREACH_BEGIN(ports, const port_cfg_t *, port) {
+  SMARTLIST_FOREACH_BEGIN (ports, const port_cfg_t *, port) {
     if (port->type == CONN_TYPE_DIR_LISTENER) {
-      if (! port->server_cfg.no_advertise)
+      if (!port->server_cfg.no_advertise)
         ++n_dirport_advertised;
-      if (! port->server_cfg.no_listen)
+      if (!port->server_cfg.no_listen)
         ++n_dirport_listeners;
     } else if (port->type == CONN_TYPE_OR_LISTENER) {
-      if (! port->server_cfg.no_advertise) {
+      if (!port->server_cfg.no_advertise) {
         ++n_orport_advertised;
         if (port_binds_ipv4(port))
           ++n_orport_advertised_ipv4;
       }
-      if (! port->server_cfg.no_listen)
+      if (!port->server_cfg.no_listen)
         ++n_orport_listeners;
     } else {
       continue;
@@ -179,15 +190,16 @@ check_server_ports(const smartlist_t *ports,
     if (!port->server_cfg.no_listen && port->port < 1024)
       ++n_low_port;
 #endif
-  } SMARTLIST_FOREACH_END(port);
+  } SMARTLIST_FOREACH_END (port);
 
   if (n_orport_advertised && !n_orport_listeners) {
     log_warn(LD_CONFIG, "We are advertising an ORPort, but not actually "
-             "listening on one.");
+                        "listening on one.");
     r = -1;
   }
   if (n_orport_listeners && !n_orport_advertised) {
-    log_warn(LD_CONFIG, "We are listening on an ORPort, but not advertising "
+    log_warn(LD_CONFIG,
+             "We are listening on an ORPort, but not advertising "
              "any ORPorts. This will keep us from building a %s "
              "descriptor, and make us impossible to use.",
              options->BridgeRelay ? "bridge" : "router");
@@ -195,7 +207,7 @@ check_server_ports(const smartlist_t *ports,
   }
   if (n_dirport_advertised && !n_dirport_listeners) {
     log_warn(LD_CONFIG, "We are advertising a DirPort, but not actually "
-             "listening on one.");
+                        "listening on one.");
     r = -1;
   }
   if (n_dirport_advertised > 1) {
@@ -204,7 +216,8 @@ check_server_ports(const smartlist_t *ports,
   }
   if (n_orport_advertised && !n_orport_advertised_ipv4 &&
       !options->BridgeRelay) {
-    log_warn(LD_CONFIG, "Configured public relay to listen only on an IPv6 "
+    log_warn(LD_CONFIG,
+             "Configured public relay to listen only on an IPv6 "
              "address. Tor needs to listen on an IPv4 address too.");
     r = -1;
   }
@@ -215,13 +228,14 @@ check_server_ports(const smartlist_t *ports,
     if (options->KeepBindCapabilities == 0 && have_capability_support())
       extra = ", and you have disabled KeepBindCapabilities.";
     log_warn(LD_CONFIG,
-          "You have set AccountingMax to use hibernation. You have also "
-          "chosen a low DirPort or OrPort%s."
-          "This combination can make Tor stop "
-          "working when it tries to re-attach the port after a period of "
-          "hibernation. Please choose a different port or turn off "
-          "hibernation unless you know this combination will work on your "
-          "platform.", extra);
+             "You have set AccountingMax to use hibernation. You have also "
+             "chosen a low DirPort or OrPort%s."
+             "This combination can make Tor stop "
+             "working when it tries to re-attach the port after a period of "
+             "hibernation. Please choose a different port or turn off "
+             "hibernation unless you know this combination will work on your "
+             "platform.",
+             extra);
   }
 
   if (n_low_ports_out)
@@ -235,10 +249,8 @@ check_server_ports(const smartlist_t *ports,
  * of the problem and return -1.
  **/
 int
-port_parse_ports_relay(or_options_t *options,
-                  char **msg,
-                  smartlist_t *ports_out,
-                  int *have_low_ports_out)
+port_parse_ports_relay(or_options_t *options, char **msg,
+                       smartlist_t *ports_out, int *have_low_ports_out)
 {
   int retval = -1;
   smartlist_t *ports = smartlist_new();
@@ -261,26 +273,20 @@ port_parse_ports_relay(or_options_t *options,
     goto err;
   }
 
-  if (port_parse_config(ports,
-                        options->ORPort_lines,
-                        "OR", CONN_TYPE_OR_LISTENER,
-                        "0.0.0.0", 0,
+  if (port_parse_config(ports, options->ORPort_lines, "OR",
+                        CONN_TYPE_OR_LISTENER, "0.0.0.0", 0,
                         CL_PORT_SERVER_OPTIONS) < 0) {
     *msg = tor_strdup("Invalid ORPort configuration");
     goto err;
   }
-  if (port_parse_config(ports,
-                        options->ExtORPort_lines,
-                        "ExtOR", CONN_TYPE_EXT_OR_LISTENER,
-                        "127.0.0.1", 0,
-                        CL_PORT_SERVER_OPTIONS|CL_PORT_WARN_NONLOCAL) < 0) {
+  if (port_parse_config(ports, options->ExtORPort_lines, "ExtOR",
+                        CONN_TYPE_EXT_OR_LISTENER, "127.0.0.1", 0,
+                        CL_PORT_SERVER_OPTIONS | CL_PORT_WARN_NONLOCAL) < 0) {
     *msg = tor_strdup("Invalid ExtORPort configuration");
     goto err;
   }
-  if (port_parse_config(ports,
-                        options->DirPort_lines,
-                        "Dir", CONN_TYPE_DIR_LISTENER,
-                        "0.0.0.0", 0,
+  if (port_parse_config(ports, options->DirPort_lines, "Dir",
+                        CONN_TYPE_DIR_LISTENER, "0.0.0.0", 0,
                         CL_PORT_SERVER_OPTIONS) < 0) {
     *msg = tor_strdup("Invalid DirPort configuration");
     goto err;
@@ -296,7 +302,7 @@ port_parse_ports_relay(or_options_t *options,
   ports = NULL;
   retval = 0;
 
- err:
+err:
   if (*have_low_ports_out < 0)
     *have_low_ports_out = (n_low_ports > 0);
   if (ports) {
@@ -308,8 +314,7 @@ port_parse_ports_relay(or_options_t *options,
 
 /** Update the relay *Port_set values in <b>options</b> from <b>ports</b>. */
 void
-port_update_port_set_relay(or_options_t *options,
-                      const smartlist_t *ports)
+port_update_port_set_relay(or_options_t *options, const smartlist_t *ports)
 {
   if (BUG(!options))
     return;
@@ -323,11 +328,11 @@ port_update_port_set_relay(or_options_t *options,
   /* Update the relay *Port_set options.  The !! here is to force a boolean
    * out of an integer. */
   options->ORPort_set =
-    !! port_count_real_listeners(ports, CONN_TYPE_OR_LISTENER, 0);
+      !!port_count_real_listeners(ports, CONN_TYPE_OR_LISTENER, 0);
   options->DirPort_set =
-    !! port_count_real_listeners(ports, CONN_TYPE_DIR_LISTENER, 0);
+      !!port_count_real_listeners(ports, CONN_TYPE_DIR_LISTENER, 0);
   options->ExtORPort_set =
-    !! port_count_real_listeners(ports, CONN_TYPE_EXT_OR_LISTENER, 0);
+      !!port_count_real_listeners(ports, CONN_TYPE_EXT_OR_LISTENER, 0);
 }
 
 /**
@@ -338,8 +343,7 @@ port_update_port_set_relay(or_options_t *options,
  */
 int
 options_validate_relay_os(const or_options_t *old_options,
-                          or_options_t *options,
-                          char **msg)
+                          or_options_t *options, char **msg)
 {
   (void)old_options;
 
@@ -354,13 +358,14 @@ options_validate_relay_os(const or_options_t *old_options,
 
   const char *uname = get_uname();
 
-  if (!strcmpstart(uname, "Windows 95") ||
-      !strcmpstart(uname, "Windows 98") ||
+  if (!strcmpstart(uname, "Windows 95") || !strcmpstart(uname, "Windows 98") ||
       !strcmpstart(uname, "Windows Me")) {
-    log_warn(LD_CONFIG, "Tor is running as a server, but you are "
-        "running %s; this probably won't work. See "
-        "https://www.torproject.org/docs/faq.html#BestOSForRelay "
-        "for details.", uname);
+    log_warn(LD_CONFIG,
+             "Tor is running as a server, but you are "
+             "running %s; this probably won't work. See "
+             "https://www.torproject.org/docs/faq.html#BestOSForRelay "
+             "for details.",
+             uname);
   }
 
   return 0;
@@ -375,8 +380,7 @@ options_validate_relay_os(const or_options_t *old_options,
  */
 int
 options_validate_relay_info(const or_options_t *old_options,
-                            or_options_t *options,
-                            char **msg)
+                            or_options_t *options, char **msg)
 {
   (void)old_options;
 
@@ -392,7 +396,8 @@ options_validate_relay_info(const or_options_t *old_options,
     }
   } else {
     if (!is_legal_nickname(options->Nickname)) {
-      tor_asprintf(msg,
+      tor_asprintf(
+          msg,
           "Nickname '%s', nicknames must be between 1 and 19 characters "
           "inclusive, and must contain only the characters [a-zA-Z0-9].",
           options->Nickname);
@@ -401,7 +406,9 @@ options_validate_relay_info(const or_options_t *old_options,
   }
 
   if (server_mode(options) && !options->ContactInfo)
-    log_notice(LD_CONFIG, "Your ContactInfo config option is not set. "
+    log_notice(
+        LD_CONFIG,
+        "Your ContactInfo config option is not set. "
         "Please consider setting it, so we can contact you if your server is "
         "misconfigured or something else goes wrong.");
 
@@ -426,7 +433,7 @@ compute_publishserverdescriptor(or_options_t *options)
   *auth = NO_DIRINFO;
   if (!list) /* empty list, answer is none */
     return 0;
-  SMARTLIST_FOREACH_BEGIN(list, const char *, string) {
+  SMARTLIST_FOREACH_BEGIN (list, const char *, string) {
     if (!strcasecmp(string, "v1"))
       log_warn(LD_CONFIG, "PublishServerDescriptor v1 has no effect, because "
                           "there are no v1 directory authorities anymore.");
@@ -443,14 +450,13 @@ compute_publishserverdescriptor(or_options_t *options)
     else if (!strcasecmp(string, "bridge"))
       *auth |= BRIDGE_DIRINFO;
     else if (!strcasecmp(string, "hidserv"))
-      log_warn(LD_CONFIG,
-               "PublishServerDescriptor hidserv is invalid. See "
-               "PublishHidServDescriptors.");
+      log_warn(LD_CONFIG, "PublishServerDescriptor hidserv is invalid. See "
+                          "PublishHidServDescriptors.");
     else if (!strcasecmp(string, "") || !strcmp(string, "0"))
       /* no authority */;
     else
       return -1;
-  } SMARTLIST_FOREACH_END(string);
+  } SMARTLIST_FOREACH_END (string);
   return 0;
 }
 
@@ -479,9 +485,7 @@ check_bridge_distribution_setting(const char *bd)
   if (bd == NULL)
     return 0;
 
-  const char *RECOGNIZED[] = {
-    "none", "any", "https", "email", "moat"
-  };
+  const char *RECOGNIZED[] = {"none", "any", "https", "email", "moat"};
   unsigned i;
   for (i = 0; i < ARRAY_LENGTH(RECOGNIZED); ++i) {
     if (!strcasecmp(bd, RECOGNIZED[i]))
@@ -494,8 +498,10 @@ check_bridge_distribution_setting(const char *bd)
     ++cp;
 
   if (*cp == 0) {
-    log_warn(LD_CONFIG, "Unrecognized BridgeDistribution value %s. I'll "
-           "assume you know what you are doing...", escaped(bd));
+    log_warn(LD_CONFIG,
+             "Unrecognized BridgeDistribution value %s. I'll "
+             "assume you know what you are doing...",
+             escaped(bd));
     return 0; // we reached the end of the string; all is well
   } else {
     return -1; // we found a bad character in the string.
@@ -511,8 +517,7 @@ check_bridge_distribution_setting(const char *bd)
  */
 int
 options_validate_publish_server(const or_options_t *old_options,
-                                or_options_t *options,
-                                char **msg)
+                                or_options_t *options, char **msg)
 {
   (void)old_options;
 
@@ -527,9 +532,9 @@ options_validate_publish_server(const or_options_t *old_options,
     return -1;
   }
 
-  if ((options->BridgeRelay
-        || options->PublishServerDescriptor_ & BRIDGE_DIRINFO)
-      && (options->PublishServerDescriptor_ & V3_DIRINFO)) {
+  if ((options->BridgeRelay ||
+       options->PublishServerDescriptor_ & BRIDGE_DIRINFO) &&
+      (options->PublishServerDescriptor_ & V3_DIRINFO)) {
     REJECT("Bridges are not supposed to publish router descriptors to the "
            "directory authorities. Please correct your "
            "PublishServerDescriptor line.");
@@ -568,8 +573,7 @@ options_validate_publish_server(const or_options_t *old_options,
  */
 int
 options_validate_relay_padding(const or_options_t *old_options,
-                               or_options_t *options,
-                               char **msg)
+                               or_options_t *options, char **msg)
 {
   (void)old_options;
 
@@ -610,8 +614,7 @@ options_validate_relay_padding(const or_options_t *old_options,
  */
 int
 options_validate_relay_bandwidth(const or_options_t *old_options,
-                                 or_options_t *options,
-                                 char **msg)
+                                 or_options_t *options, char **msg)
 {
   (void)old_options;
 
@@ -622,21 +625,21 @@ options_validate_relay_bandwidth(const or_options_t *old_options,
     return -1;
 
   /* 31851: the tests expect us to validate bandwidths, even when we are not
-  * in relay mode. */
+   * in relay mode. */
   if (config_ensure_bandwidth_cap(&options->MaxAdvertisedBandwidth,
-                           "MaxAdvertisedBandwidth", msg) < 0)
+                                  "MaxAdvertisedBandwidth", msg) < 0)
     return -1;
   if (config_ensure_bandwidth_cap(&options->RelayBandwidthRate,
-                           "RelayBandwidthRate", msg) < 0)
+                                  "RelayBandwidthRate", msg) < 0)
     return -1;
   if (config_ensure_bandwidth_cap(&options->RelayBandwidthBurst,
-                           "RelayBandwidthBurst", msg) < 0)
+                                  "RelayBandwidthBurst", msg) < 0)
     return -1;
-  if (config_ensure_bandwidth_cap(&options->PerConnBWRate,
-                           "PerConnBWRate", msg) < 0)
+  if (config_ensure_bandwidth_cap(&options->PerConnBWRate, "PerConnBWRate",
+                                  msg) < 0)
     return -1;
-  if (config_ensure_bandwidth_cap(&options->PerConnBWBurst,
-                           "PerConnBWBurst", msg) < 0)
+  if (config_ensure_bandwidth_cap(&options->PerConnBWBurst, "PerConnBWBurst",
+                                  msg) < 0)
     return -1;
 
   if (options->RelayBandwidthRate && !options->RelayBandwidthBurst)
@@ -645,34 +648,31 @@ options_validate_relay_bandwidth(const or_options_t *old_options,
     options->RelayBandwidthRate = options->RelayBandwidthBurst;
 
   if (server_mode(options)) {
-    const unsigned required_min_bw =
-      public_server_mode(options) ?
-       RELAY_REQUIRED_MIN_BANDWIDTH : BRIDGE_REQUIRED_MIN_BANDWIDTH;
-    const char * const optbridge =
-      public_server_mode(options) ? "" : "bridge ";
+    const unsigned required_min_bw = public_server_mode(options)
+                                         ? RELAY_REQUIRED_MIN_BANDWIDTH
+                                         : BRIDGE_REQUIRED_MIN_BANDWIDTH;
+    const char *const optbridge = public_server_mode(options) ? "" : "bridge ";
     if (options->BandwidthRate < required_min_bw) {
       tor_asprintf(msg,
-                       "BandwidthRate is set to %d bytes/second. "
-                       "For %sservers, it must be at least %u.",
-                       (int)options->BandwidthRate, optbridge,
-                       required_min_bw);
+                   "BandwidthRate is set to %d bytes/second. "
+                   "For %sservers, it must be at least %u.",
+                   (int)options->BandwidthRate, optbridge, required_min_bw);
       return -1;
-    } else if (options->MaxAdvertisedBandwidth <
-               required_min_bw/2) {
+    } else if (options->MaxAdvertisedBandwidth < required_min_bw / 2) {
       tor_asprintf(msg,
-                       "MaxAdvertisedBandwidth is set to %d bytes/second. "
-                       "For %sservers, it must be at least %u.",
-                       (int)options->MaxAdvertisedBandwidth, optbridge,
-                       required_min_bw/2);
+                   "MaxAdvertisedBandwidth is set to %d bytes/second. "
+                   "For %sservers, it must be at least %u.",
+                   (int)options->MaxAdvertisedBandwidth, optbridge,
+                   required_min_bw / 2);
       return -1;
     }
     if (options->RelayBandwidthRate &&
-      options->RelayBandwidthRate < required_min_bw) {
+        options->RelayBandwidthRate < required_min_bw) {
       tor_asprintf(msg,
-                       "RelayBandwidthRate is set to %d bytes/second. "
-                       "For %sservers, it must be at least %u.",
-                       (int)options->RelayBandwidthRate, optbridge,
-                       required_min_bw);
+                   "RelayBandwidthRate is set to %d bytes/second. "
+                   "For %sservers, it must be at least %u.",
+                   (int)options->RelayBandwidthRate, optbridge,
+                   required_min_bw);
       return -1;
     }
   }
@@ -702,8 +702,7 @@ options_validate_relay_bandwidth(const or_options_t *old_options,
  */
 int
 options_validate_relay_accounting(const or_options_t *old_options,
-                                  or_options_t *options,
-                                  char **msg)
+                                  or_options_t *options, char **msg)
 {
   (void)old_options;
 
@@ -715,18 +714,20 @@ options_validate_relay_accounting(const or_options_t *old_options,
 
   /* 31851: the tests expect us to validate accounting, even when we are not
    * in relay mode. */
-  if (accounting_parse_options(options, 1)<0)
+  if (accounting_parse_options(options, 1) < 0)
     REJECT("Failed to parse accounting options. See logs for details.");
 
   if (options->AccountingMax) {
     if (options->RendConfigLines && server_mode(options)) {
-      log_warn(LD_CONFIG, "Using accounting with a hidden service and an "
+      log_warn(LD_CONFIG,
+               "Using accounting with a hidden service and an "
                "ORPort is risky: your hidden service(s) and your public "
                "address will all turn off at the same time, which may alert "
                "observers that they are being run by the same party.");
-    } else if (config_count_key(options->RendConfigLines,
-                                "HiddenServiceDir") > 1) {
-      log_warn(LD_CONFIG, "Using accounting with multiple hidden services is "
+    } else if (config_count_key(options->RendConfigLines, "HiddenServiceDir") >
+               1) {
+      log_warn(LD_CONFIG,
+               "Using accounting with multiple hidden services is "
                "risky: they will all turn off at the same time, which may "
                "alert observers that they are being run by the same party.");
     }
@@ -757,8 +758,7 @@ options_validate_relay_accounting(const or_options_t *old_options,
  */
 static int
 normalize_nickname_list(config_line_t **normalized_out,
-                        const config_line_t *lst, const char *name,
-                        char **msg)
+                        const config_line_t *lst, const char *name, char **msg)
 {
   if (!lst)
     return 0;
@@ -774,10 +774,10 @@ normalize_nickname_list(config_line_t **normalized_out,
 
     int valid_line = 1;
     smartlist_t *sl = smartlist_new();
-    smartlist_split_string(sl, line, ",",
-      SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK|SPLIT_STRIP_SPACE, 0);
-    SMARTLIST_FOREACH_BEGIN(sl, char *, s)
-    {
+    smartlist_split_string(
+        sl, line, ",",
+        SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK | SPLIT_STRIP_SPACE, 0);
+    SMARTLIST_FOREACH_BEGIN (sl, char *, s) {
       char *normalized = NULL;
       if (!is_legal_nickname_or_hexdigest(s)) {
         // check if first char is dollar
@@ -812,7 +812,7 @@ normalize_nickname_list(config_line_t **normalized_out,
 
       *new_nicknames_next = next;
       new_nicknames_next = &next->next;
-    } SMARTLIST_FOREACH_END(s);
+    } SMARTLIST_FOREACH_END (s);
 
     SMARTLIST_FOREACH(sl, char *, s, tor_free(s));
     smartlist_free(sl);
@@ -832,7 +832,7 @@ normalize_nickname_list(config_line_t **normalized_out,
 
 /* If we have less than 300 MB suggest disabling dircache */
 #define DIRCACHE_MIN_MEM_MB 300
-#define DIRCACHE_MIN_MEM_BYTES (DIRCACHE_MIN_MEM_MB*ONE_MEGABYTE)
+#define DIRCACHE_MIN_MEM_BYTES (DIRCACHE_MIN_MEM_MB * ONE_MEGABYTE)
 #define STRINGIFY(val) #val
 
 /** Create a warning message for emitting if we are a dircache but may not have
@@ -847,27 +847,32 @@ have_enough_mem_for_dircache(const or_options_t *options, size_t total_mem,
    * unconditionally.  Or we should believe total_mem unconditionally. */
   if (total_mem == 0) {
     if (get_total_system_memory(&total_mem) < 0) {
-      total_mem = options->MaxMemInQueues >= SIZE_MAX ?
-        SIZE_MAX : (size_t)options->MaxMemInQueues;
+      total_mem = options->MaxMemInQueues >= SIZE_MAX
+                      ? SIZE_MAX
+                      : (size_t)options->MaxMemInQueues;
     }
   }
   if (options->DirCache) {
     if (total_mem < DIRCACHE_MIN_MEM_BYTES) {
       if (options->BridgeRelay) {
-        tor_asprintf(msg, "Running a Bridge with less than %d MB of memory "
-                       "is not recommended.", DIRCACHE_MIN_MEM_MB);
+        tor_asprintf(msg,
+                     "Running a Bridge with less than %d MB of memory "
+                     "is not recommended.",
+                     DIRCACHE_MIN_MEM_MB);
       } else {
-        tor_asprintf(msg, "Being a directory cache (default) with less than "
-                       "%d MB of memory is not recommended and may consume "
-                       "most of the available resources. Consider disabling "
-                       "this functionality by setting the DirCache option "
-                       "to 0.", DIRCACHE_MIN_MEM_MB);
+        tor_asprintf(msg,
+                     "Being a directory cache (default) with less than "
+                     "%d MB of memory is not recommended and may consume "
+                     "most of the available resources. Consider disabling "
+                     "this functionality by setting the DirCache option "
+                     "to 0.",
+                     DIRCACHE_MIN_MEM_MB);
       }
     }
   } else {
     if (total_mem >= DIRCACHE_MIN_MEM_BYTES) {
       *msg = tor_strdup("DirCache is disabled and we are configured as a "
-               "relay. We will not become a Guard.");
+                        "relay. We will not become a Guard.");
     }
   }
   return *msg == NULL ? 0 : -1;
@@ -883,8 +888,7 @@ have_enough_mem_for_dircache(const or_options_t *options, size_t total_mem,
  */
 int
 options_validate_relay_mode(const or_options_t *old_options,
-                            or_options_t *options,
-                            char **msg)
+                            or_options_t *options, char **msg)
 {
   (void)old_options;
 
@@ -895,7 +899,8 @@ options_validate_relay_mode(const or_options_t *old_options,
     return -1;
 
   if (server_mode(options) && options->RendConfigLines)
-    log_warn(LD_CONFIG,
+    log_warn(
+        LD_CONFIG,
         "Tor is currently configured as a relay and a hidden service. "
         "That's not very secure: you should probably run your hidden service "
         "in a separate Tor process, at least -- see "
@@ -903,7 +908,7 @@ options_validate_relay_mode(const or_options_t *old_options,
 
   if (options->BridgeRelay && options->DirPort_set) {
     log_warn(LD_CONFIG, "Can't set a DirPort on a bridge relay; disabling "
-             "DirPort");
+                        "DirPort");
     config_free_lines(options->DirPort_lines);
     options->DirPort_lines = NULL;
     options->DirPort_set = 0;
@@ -919,7 +924,7 @@ options_validate_relay_mode(const or_options_t *old_options,
            "DirCache.");
   }
 
-  if (options->BridgeRelay == 1 && ! options->ORPort_set)
+  if (options->BridgeRelay == 1 && !options->ORPort_set)
     REJECT("BridgeRelay is 1, ORPort is not set. This is an invalid "
            "combination.");
 
@@ -932,17 +937,19 @@ options_validate_relay_mode(const or_options_t *old_options,
   }
 
   if (options->MyFamily_lines && options->BridgeRelay) {
-    log_warn(LD_CONFIG, "Listing a family for a bridge relay is not "
+    log_warn(LD_CONFIG,
+             "Listing a family for a bridge relay is not "
              "supported: it can reveal bridge fingerprints to censors. "
              "You should also make sure you aren't listing this bridge's "
              "fingerprint in any other MyFamily.");
   }
   if (options->MyFamily_lines && !options->ContactInfo) {
-    log_warn(LD_CONFIG, "MyFamily is set but ContactInfo is not configured. "
+    log_warn(LD_CONFIG,
+             "MyFamily is set but ContactInfo is not configured. "
              "ContactInfo should always be set when MyFamily option is too.");
   }
-  if (normalize_nickname_list(&options->MyFamily,
-                              options->MyFamily_lines, "MyFamily", msg))
+  if (normalize_nickname_list(&options->MyFamily, options->MyFamily_lines,
+                              "MyFamily", msg))
     return -1;
 
   if (options->ConstrainedSockets) {
@@ -968,8 +975,7 @@ options_validate_relay_mode(const or_options_t *old_options,
  */
 int
 options_validate_relay_testing(const or_options_t *old_options,
-                               or_options_t *options,
-                               char **msg)
+                               or_options_t *options, char **msg)
 {
   (void)old_options;
 
@@ -979,11 +985,11 @@ options_validate_relay_testing(const or_options_t *old_options,
   if (BUG(!msg))
     return -1;
 
-  if (options->SigningKeyLifetime < options->TestingSigningKeySlop*2)
+  if (options->SigningKeyLifetime < options->TestingSigningKeySlop * 2)
     REJECT("SigningKeyLifetime is too short.");
-  if (options->TestingLinkCertLifetime < options->TestingAuthKeySlop*2)
+  if (options->TestingLinkCertLifetime < options->TestingAuthKeySlop * 2)
     REJECT("LinkCertLifetime is too short.");
-  if (options->TestingAuthKeyLifetime < options->TestingLinkKeySlop*2)
+  if (options->TestingAuthKeyLifetime < options->TestingLinkKeySlop * 2)
     REJECT("TestingAuthKeyLifetime is too short.");
 
   return 0;
@@ -1046,9 +1052,9 @@ options_transition_affects_descriptor(const or_options_t *old_options,
   YES_IF_CHANGED_BOOL(AssumeReachable);
 
   if (relay_get_effective_bwrate(old_options) !=
-        relay_get_effective_bwrate(new_options) ||
+          relay_get_effective_bwrate(new_options) ||
       relay_get_effective_bwburst(old_options) !=
-        relay_get_effective_bwburst(new_options) ||
+          relay_get_effective_bwburst(new_options) ||
       public_server_mode(old_options) != public_server_mode(new_options))
     return 1;
 
@@ -1071,15 +1077,15 @@ options_act_relay(const or_options_t *old_options)
   const or_options_t *options = get_options();
 
   const int transition_affects_workers =
-    old_options && options_transition_affects_workers(old_options, options);
+      old_options && options_transition_affects_workers(old_options, options);
 
   /* We want to reinit keys as needed before we do much of anything else:
      keys are important, and other things can depend on them. */
   if (transition_affects_workers ||
-      (authdir_mode_v3(options) && (!old_options ||
-                                    !authdir_mode_v3(old_options)))) {
+      (authdir_mode_v3(options) &&
+       (!old_options || !authdir_mode_v3(old_options)))) {
     if (init_keys() < 0) {
-      log_warn(LD_BUG,"Error initializing keys; exiting");
+      log_warn(LD_BUG, "Error initializing keys; exiting");
       return -1;
     }
   }
@@ -1099,9 +1105,9 @@ options_act_relay(const or_options_t *old_options)
       log_info(LD_GENERAL,
                "Worker-related options changed. Rotating workers.");
       const int server_mode_turned_on =
-        server_mode(options) && !server_mode(old_options);
+          server_mode(options) && !server_mode(old_options);
       const int dir_server_mode_turned_on =
-        dir_server_mode(options) && !dir_server_mode(old_options);
+          dir_server_mode(options) && !dir_server_mode(old_options);
 
       if (server_mode_turned_on || dir_server_mode_turned_on) {
         cpu_init();
@@ -1137,9 +1143,9 @@ options_act_relay_accounting(const or_options_t *old_options)
   const or_options_t *options = get_options();
 
   /* Set up accounting */
-  if (accounting_parse_options(options, 0)<0) {
+  if (accounting_parse_options(options, 0) < 0) {
     // LCOV_EXCL_START
-    log_warn(LD_BUG,"Error in previously validated accounting options");
+    log_warn(LD_BUG, "Error in previously validated accounting options");
     return -1;
     // LCOV_EXCL_STOP
   }
@@ -1202,22 +1208,26 @@ options_act_bridge_stats(const or_options_t *old_options)
 
   /* Check for transitions that need action. */
   if (old_options) {
-    if (! bool_eq(options->BridgeRelay, old_options->BridgeRelay)) {
+    if (!bool_eq(options->BridgeRelay, old_options->BridgeRelay)) {
       int was_relay = 0;
       if (options->BridgeRelay) {
         time_t int_start = time(NULL);
-        if (config_lines_eq(old_options->ORPort_lines,options->ORPort_lines)) {
+        if (config_lines_eq(old_options->ORPort_lines,
+                            options->ORPort_lines)) {
           int_start += RELAY_BRIDGE_STATS_DELAY;
           was_relay = 1;
         }
         geoip_bridge_stats_init(int_start);
-        log_info(LD_CONFIG, "We are acting as a bridge now.  Starting new "
-                 "GeoIP stats interval%s.", was_relay ? " in 6 "
-                 "hours from now" : "");
+        log_info(LD_CONFIG,
+                 "We are acting as a bridge now.  Starting new "
+                 "GeoIP stats interval%s.",
+                 was_relay ? " in 6 "
+                             "hours from now"
+                           : "");
       } else {
         geoip_bridge_stats_term();
         log_info(LD_GENERAL, "We are no longer acting as a bridge.  "
-                 "Forgetting GeoIP stats.");
+                             "Forgetting GeoIP stats.");
       }
     }
   }
@@ -1253,8 +1263,7 @@ options_act_relay_stats(const or_options_t *old_options,
 
   if (options->CellStatistics || options->DirReqStatistics ||
       options->EntryStatistics || options->ExitPortStatistics ||
-      options->ConnDirectionStatistics ||
-      options->HiddenServiceStatistics) {
+      options->ConnDirectionStatistics || options->HiddenServiceStatistics) {
     time_t now = time(NULL);
     int print_notice = 0;
 
@@ -1317,14 +1326,12 @@ options_act_relay_stats(const or_options_t *old_options,
 
   /* If we used to have statistics enabled but we just disabled them,
      stop gathering them.  */
-  if (old_options && old_options->CellStatistics &&
-      !options->CellStatistics)
+  if (old_options && old_options->CellStatistics && !options->CellStatistics)
     rep_hist_buffer_stats_term();
   if (old_options && old_options->DirReqStatistics &&
       !options->DirReqStatistics)
     geoip_dirreq_stats_term();
-  if (old_options && old_options->EntryStatistics &&
-      !options->EntryStatistics)
+  if (old_options && old_options->EntryStatistics && !options->EntryStatistics)
     geoip_entry_stats_term();
   if (old_options && old_options->HiddenServiceStatistics &&
       !options->HiddenServiceStatistics)
@@ -1344,8 +1351,8 @@ void
 options_act_relay_stats_msg(void)
 {
   log_notice(LD_CONFIG, "Configured to measure statistics. Look for "
-             "the *-stats files that will first be written to the "
-             "data directory in 24 hours from now.");
+                        "the *-stats files that will first be written to the "
+                        "data directory in 24 hours from now.");
 }
 
 /** Fetch the active option list, and take relay descriptor actions based on
@@ -1427,7 +1434,7 @@ options_act_relay_dir(const or_options_t *old_options)
   tor_free(global_dirfrontpagecontents);
   if (options->DirPortFrontPage) {
     global_dirfrontpagecontents =
-      read_file_to_str(options->DirPortFrontPage, 0, NULL);
+        read_file_to_str(options->DirPortFrontPage, 0, NULL);
     if (!global_dirfrontpagecontents) {
       log_warn(LD_CONFIG,
                "DirPortFrontPage file '%s' not found. Continuing anyway.",

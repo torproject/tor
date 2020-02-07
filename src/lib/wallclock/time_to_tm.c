@@ -23,7 +23,7 @@
 #if !defined(_WIN32)
 /** Defined iff we need to add locks when defining fake versions of reentrant
  * versions of time-related functions. */
-#define TIME_FNS_NEED_LOCKS
+#  define TIME_FNS_NEED_LOCKS
 #endif
 
 /** Helper: Deal with confused or out-of-bounds values from localtime_r and
@@ -50,8 +50,8 @@ correct_tm(int islocal, const time_t *timep, struct tm *resultbuf,
       r->tm_hour = 23;
       r->tm_min = 59;
       r->tm_sec = 59;
-    } else if (r->tm_year < (1-1900)) {
-      r->tm_year = (1-1900);
+    } else if (r->tm_year < (1 - 1900)) {
+      r->tm_year = (1 - 1900);
       r->tm_mon = 0;
       r->tm_mday = 1;
       r->tm_yday = 0;
@@ -75,7 +75,7 @@ correct_tm(int islocal, const time_t *timep, struct tm *resultbuf,
       r->tm_yday = 0;
       r->tm_wday = 0;
       r->tm_hour = 0;
-      r->tm_min = 0 ;
+      r->tm_min = 0;
       r->tm_sec = 0;
       outcome = "Rounding up to 1970";
       goto done;
@@ -101,15 +101,13 @@ correct_tm(int islocal, const time_t *timep, struct tm *resultbuf,
   /* LCOV_EXCL_START */
   r = resultbuf;
   memset(resultbuf, 0, sizeof(struct tm));
-  outcome="can't recover";
+  outcome = "can't recover";
   /* LCOV_EXCL_STOP */
- done:
+done:
   if (err_out) {
-    tor_asprintf(err_out, "%s(%"PRId64") failed with error %s: %s",
-                 islocal?"localtime":"gmtime",
-                 timep?((int64_t)*timep):0,
-                 strerror(errno),
-                 outcome);
+    tor_asprintf(err_out, "%s(%" PRId64 ") failed with error %s: %s",
+                 islocal ? "localtime" : "gmtime",
+                 timep ? ((int64_t)*timep) : 0, strerror(errno), outcome);
   }
   return r;
 }
@@ -133,8 +131,10 @@ struct tm *
 tor_localtime_r_msg(const time_t *timep, struct tm *result, char **err_out)
 {
   struct tm *r;
-  static tor_mutex_t *m=NULL;
-  if (!m) { m=tor_mutex_new(); }
+  static tor_mutex_t *m = NULL;
+  if (!m) {
+    m = tor_mutex_new();
+  }
   raw_assert(result);
   tor_mutex_acquire(m);
   r = localtime(timep);
@@ -176,8 +176,10 @@ struct tm *
 tor_gmtime_r_msg(const time_t *timep, struct tm *result, char **err_out)
 {
   struct tm *r;
-  static tor_mutex_t *m=NULL;
-  if (!m) { m=tor_mutex_new(); }
+  static tor_mutex_t *m = NULL;
+  if (!m) {
+    m = tor_mutex_new();
+  }
   raw_assert(result);
   tor_mutex_acquire(m);
   r = gmtime(timep);

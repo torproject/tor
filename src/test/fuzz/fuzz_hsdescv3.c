@@ -25,36 +25,36 @@ mock_rsa_ed25519_crosscert_check(const uint8_t *crosscert,
                                  const ed25519_public_key_t *master_key,
                                  const time_t reject_if_expired_before)
 {
-  (void) crosscert;
-  (void) crosscert_len;
-  (void) rsa_id_key;
-  (void) master_key;
-  (void) reject_if_expired_before;
+  (void)crosscert;
+  (void)crosscert_len;
+  (void)rsa_id_key;
+  (void)master_key;
+  (void)reject_if_expired_before;
   return 0;
 }
 
 static size_t
 mock_decrypt_desc_layer(const hs_descriptor_t *desc,
                         const uint8_t *descriptor_cookie,
-                        bool is_superencrypted_layer,
-                        char **decrypted_out)
+                        bool is_superencrypted_layer, char **decrypted_out)
 {
   (void)is_superencrypted_layer;
   (void)desc;
   (void)descriptor_cookie;
   const size_t overhead = HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN;
-  const uint8_t *encrypted_blob = (is_superencrypted_layer)
-    ? desc->plaintext_data.superencrypted_blob
-    : desc->superencrypted_data.encrypted_blob;
-  size_t encrypted_blob_size = (is_superencrypted_layer)
-    ? desc->plaintext_data.superencrypted_blob_size
-    : desc->superencrypted_data.encrypted_blob_size;
+  const uint8_t *encrypted_blob =
+      (is_superencrypted_layer) ? desc->plaintext_data.superencrypted_blob
+                                : desc->superencrypted_data.encrypted_blob;
+  size_t encrypted_blob_size =
+      (is_superencrypted_layer)
+          ? desc->plaintext_data.superencrypted_blob_size
+          : desc->superencrypted_data.encrypted_blob_size;
 
   if (encrypted_blob_size < overhead)
     return 0;
-  *decrypted_out = tor_memdup_nulterm(
-                   encrypted_blob + HS_DESC_ENCRYPTED_SALT_LEN,
-                   encrypted_blob_size - overhead);
+  *decrypted_out =
+      tor_memdup_nulterm(encrypted_blob + HS_DESC_ENCRYPTED_SALT_LEN,
+                         encrypted_blob_size - overhead);
   size_t result = strlen(*decrypted_out);
   if (result) {
     return result;
@@ -101,4 +101,3 @@ fuzz_main(const uint8_t *data, size_t sz)
   tor_free(fuzzing_data);
   return 0;
 }
-

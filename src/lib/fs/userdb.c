@@ -12,13 +12,13 @@
 #include "lib/fs/userdb.h"
 
 #ifndef _WIN32
-#include "lib/malloc/malloc.h"
-#include "lib/log/log.h"
-#include "lib/log/util_bug.h"
+#  include "lib/malloc/malloc.h"
+#  include "lib/log/log.h"
+#  include "lib/log/util_bug.h"
 
-#include <pwd.h>
-#include <stddef.h>
-#include <string.h>
+#  include <pwd.h>
+#  include <stddef.h>
+#  include <string.h>
 
 /** Cached struct from the last getpwname() call we did successfully. */
 static struct passwd *passwd_cached = NULL;
@@ -42,8 +42,8 @@ tor_passwd_dup(const struct passwd *pw)
   return new_pw;
 }
 
-#define tor_passwd_free(pw) \
-  FREE_AND_NULL(struct passwd, tor_passwd_free_, (pw))
+#  define tor_passwd_free(pw) \
+    FREE_AND_NULL(struct passwd, tor_passwd_free_, (pw))
 
 /** Helper: free one of our cached 'struct passwd' values. */
 static void
@@ -80,16 +80,16 @@ tor_getpwnam(const char *username)
   if ((pw = getpwnam(username))) {
     tor_passwd_free(passwd_cached);
     passwd_cached = tor_passwd_dup(pw);
-    log_info(LD_GENERAL, "Caching new entry %s for %s",
-             passwd_cached->pw_name, username);
+    log_info(LD_GENERAL, "Caching new entry %s for %s", passwd_cached->pw_name,
+             username);
     return pw;
   }
 
   /* Lookup failed */
-  if (! passwd_cached || ! passwd_cached->pw_name)
+  if (!passwd_cached || !passwd_cached->pw_name)
     return NULL;
 
-  if (! strcmp(username, passwd_cached->pw_name))
+  if (!strcmp(username, passwd_cached->pw_name))
     return passwd_cached; // LCOV_EXCL_LINE - would need to make getpwnam flaky
 
   return NULL;
@@ -112,7 +112,7 @@ tor_getpwuid(uid_t uid)
   }
 
   /* Lookup failed */
-  if (! passwd_cached)
+  if (!passwd_cached)
     return NULL;
 
   if (uid == passwd_cached->pw_uid)
@@ -130,7 +130,7 @@ get_user_homedir(const char *username)
   tor_assert(username);
 
   if (!(pw = tor_getpwnam(username))) {
-    log_err(LD_CONFIG,"User \"%s\" not found.", username);
+    log_err(LD_CONFIG, "User \"%s\" not found.", username);
     return NULL;
   }
   return tor_strdup(pw->pw_dir);

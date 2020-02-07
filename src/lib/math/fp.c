@@ -62,7 +62,7 @@ clamp_double_to_int64(double number)
 {
   int exponent;
 
-#if (defined(MINGW_ANY)||defined(__FreeBSD__)) && GCC_VERSION >= 409
+#if (defined(MINGW_ANY) || defined(__FreeBSD__)) && GCC_VERSION >= 409
 /*
   Mingw's math.h uses gcc's __builtin_choose_expr() facility to declare
   isnan, isfinite, and signbit.  But as implemented in at least some
@@ -73,8 +73,8 @@ clamp_double_to_int64(double number)
   based on sizeof -- again, this can generate type warnings from
   branches that are not taken.
 */
-#define PROBLEMATIC_FLOAT_CONVERSION_WARNING
-DISABLE_GCC_WARNING("-Wfloat-conversion")
+#  define PROBLEMATIC_FLOAT_CONVERSION_WARNING
+  DISABLE_GCC_WARNING("-Wfloat-conversion")
 #endif /* (defined(MINGW_ANY)||defined(__FreeBSD__)) && GCC_VERSION >= 409 */
 
 /*
@@ -82,10 +82,10 @@ DISABLE_GCC_WARNING("-Wfloat-conversion")
   since clang thinks we're promoting a double to a long double.
  */
 #if defined(__clang__)
-#if __has_warning("-Wdouble-promotion")
-#define PROBLEMATIC_DOUBLE_PROMOTION_WARNING
-DISABLE_GCC_WARNING("-Wdouble-promotion")
-#endif
+#  if __has_warning("-Wdouble-promotion")
+#    define PROBLEMATIC_DOUBLE_PROMOTION_WARNING
+  DISABLE_GCC_WARNING("-Wdouble-promotion")
+#  endif
 #endif /* defined(__clang__) */
 
   /* NaN is a special case that can't be used with the logic below. */
@@ -115,10 +115,10 @@ DISABLE_GCC_WARNING("-Wdouble-promotion")
   return signbit(number) ? INT64_MIN : INT64_MAX;
 
 #ifdef PROBLEMATIC_DOUBLE_PROMOTION_WARNING
-ENABLE_GCC_WARNING("-Wdouble-promotion")
+  ENABLE_GCC_WARNING("-Wdouble-promotion")
 #endif
 #ifdef PROBLEMATIC_FLOAT_CONVERSION_WARNING
-ENABLE_GCC_WARNING("-Wfloat-conversion")
+  ENABLE_GCC_WARNING("-Wfloat-conversion")
 #endif
 }
 
@@ -128,16 +128,16 @@ tor_isinf(double x)
 {
   /* Same as above, work around the "double promotion" warnings */
 #ifdef PROBLEMATIC_FLOAT_CONVERSION_WARNING
-DISABLE_GCC_WARNING("-Wfloat-conversion")
+  DISABLE_GCC_WARNING("-Wfloat-conversion")
 #endif
 #ifdef PROBLEMATIC_DOUBLE_PROMOTION_WARNING
-DISABLE_GCC_WARNING("-Wdouble-promotion")
+  DISABLE_GCC_WARNING("-Wdouble-promotion")
 #endif
   return isinf(x);
 #ifdef PROBLEMATIC_DOUBLE_PROMOTION_WARNING
-ENABLE_GCC_WARNING("-Wdouble-promotion")
+  ENABLE_GCC_WARNING("-Wdouble-promotion")
 #endif
 #ifdef PROBLEMATIC_FLOAT_CONVERSION_WARNING
-ENABLE_GCC_WARNING("-Wfloat-conversion")
+  ENABLE_GCC_WARNING("-Wfloat-conversion")
 #endif
 }

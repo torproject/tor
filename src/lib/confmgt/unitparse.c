@@ -141,21 +141,21 @@ config_parse_units(const char *val, const unit_table_t *u, int *ok)
 
     // LCOV_EXCL_START
     *ok = 1;
-    v = use_float ? ((uint64_t)d) :  v;
+    v = use_float ? ((uint64_t)d) : v;
     goto done;
     // LCOV_EXCL_STOP
   }
 
-  cp = (char*) eat_whitespace(cp);
+  cp = (char *)eat_whitespace(cp);
 
-  for ( ;u->unit;++u) {
+  for (; u->unit; ++u) {
     if (!strcasecmp(u->unit, cp)) {
       if (use_float) {
         d = u->multiplier * d;
 
         if (d < 0) {
-          log_warn(LD_CONFIG, "Got a negative value while parsing %s %s",
-                   val, u->unit);
+          log_warn(LD_CONFIG, "Got a negative value while parsing %s %s", val,
+                   u->unit);
           *ok = 0;
           goto done;
         }
@@ -163,19 +163,19 @@ config_parse_units(const char *val, const unit_table_t *u, int *ok)
         // Some compilers may warn about casting a double to an unsigned type
         // because they don't know if d is >= 0
         if (d >= 0 && (d > (double)INT64_MAX || (uint64_t)d > INT64_MAX)) {
-          log_warn(LD_CONFIG, "Overflow detected while parsing %s %s",
-                   val, u->unit);
+          log_warn(LD_CONFIG, "Overflow detected while parsing %s %s", val,
+                   u->unit);
           *ok = 0;
           goto done;
         }
 
-        v = (uint64_t) d;
+        v = (uint64_t)d;
       } else {
         v = tor_mul_u64_nowrap(v, u->multiplier);
 
         if (v > INT64_MAX) {
-          log_warn(LD_CONFIG, "Overflow detected while parsing %s %s",
-                   val, u->unit);
+          log_warn(LD_CONFIG, "Overflow detected while parsing %s %s", val,
+                   u->unit);
           *ok = 0;
           goto done;
         }
@@ -187,7 +187,7 @@ config_parse_units(const char *val, const unit_table_t *u, int *ok)
   }
   log_warn(LD_CONFIG, "Unknown unit '%s'.", cp);
   *ok = 0;
- done:
+done:
 
   if (*ok)
     return v;

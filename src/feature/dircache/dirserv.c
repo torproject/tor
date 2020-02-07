@@ -51,17 +51,16 @@
  */
 
 static void clear_cached_dir(cached_dir_t *d);
-static const signed_descriptor_t *get_signed_descriptor_by_fp(
-                                                        const uint8_t *fp,
-                                                        int extrainfo);
+static const signed_descriptor_t *
+get_signed_descriptor_by_fp(const uint8_t *fp, int extrainfo);
 
 static int spooled_resource_lookup_body(const spooled_resource_t *spooled,
                                         int conn_is_encrypted,
                                         const uint8_t **body_out,
                                         size_t *size_out,
                                         time_t *published_out);
-static cached_dir_t *spooled_resource_lookup_cached_dir(
-                                   const spooled_resource_t *spooled,
+static cached_dir_t *
+spooled_resource_lookup_cached_dir(const spooled_resource_t *spooled,
                                    time_t *published_out);
 static cached_dir_t *lookup_cached_dir_by_fp(const uint8_t *fp);
 
@@ -99,8 +98,8 @@ directory_caches_dir_info(const or_options_t *options)
     return 0;
   /* We need an up-to-date view of network info if we're going to try to
    * block exit attempts from unknown relays. */
-  return ! router_my_exit_policy_is_reject_star() &&
-    should_refuse_unknown_exits(options);
+  return !router_my_exit_policy_is_reject_star() &&
+         should_refuse_unknown_exits(options);
 }
 
 /** Return 1 if we want to allow remote clients to ask us directory
@@ -139,8 +138,8 @@ new_cached_dir(char *s, time_t published)
   d->dir = s;
   d->dir_len = strlen(s);
   d->published = published;
-  if (tor_compress(&(d->dir_compressed), &(d->dir_compressed_len),
-                   d->dir, d->dir_len, ZLIB_METHOD)) {
+  if (tor_compress(&(d->dir_compressed), &(d->dir_compressed_len), d->dir,
+                   d->dir_len, ZLIB_METHOD)) {
     log_warn(LD_BUG, "Error compressing directory");
   }
   return d;
@@ -183,14 +182,13 @@ dirserv_set_cached_consensus_networkstatus(const char *networkstatus,
   if (!cached_consensuses)
     cached_consensuses = strmap_new();
 
-  new_networkstatus =
-    new_cached_dir(tor_memdup_nulterm(networkstatus, networkstatus_len),
-                   published);
+  new_networkstatus = new_cached_dir(
+      tor_memdup_nulterm(networkstatus, networkstatus_len), published);
   memcpy(&new_networkstatus->digests, digests, sizeof(common_digests_t));
   memcpy(&new_networkstatus->digest_sha3_as_signed, sha3_as_signed,
          DIGEST256_LEN);
-  old_networkstatus = strmap_set(cached_consensuses, flavor_name,
-                                 new_networkstatus);
+  old_networkstatus =
+      strmap_set(cached_consensuses, flavor_name, new_networkstatus);
   if (old_networkstatus)
     cached_dir_decref(old_networkstatus);
 }
@@ -198,7 +196,7 @@ dirserv_set_cached_consensus_networkstatus(const char *networkstatus,
 /** Return the latest downloaded consensus networkstatus in encoded, signed,
  * optionally compressed format, suitable for sending to clients. */
 MOCK_IMPL(cached_dir_t *,
-dirserv_get_consensus,(const char *flavor_name))
+dirserv_get_consensus, (const char *flavor_name))
 {
   if (!cached_consensuses)
     return NULL;
@@ -211,26 +209,25 @@ dirserv_get_consensus,(const char *flavor_name))
 int
 dir_split_resource_into_spoolable(const char *resource,
                                   dir_spool_source_t source,
-                                  smartlist_t *spool_out,
-                                  int *compressed_out,
+                                  smartlist_t *spool_out, int *compressed_out,
                                   int flags)
 {
   smartlist_t *fingerprints = smartlist_new();
 
-  tor_assert(flags & (DSR_HEX|DSR_BASE64));
+  tor_assert(flags & (DSR_HEX | DSR_BASE64));
   const size_t digest_len =
-    (flags & DSR_DIGEST256) ? DIGEST256_LEN : DIGEST_LEN;
+      (flags & DSR_DIGEST256) ? DIGEST256_LEN : DIGEST_LEN;
 
   int r = dir_split_resource_into_fingerprints(resource, fingerprints,
                                                compressed_out, flags);
   /* This is not a very efficient implementation XXXX */
-  SMARTLIST_FOREACH_BEGIN(fingerprints, uint8_t *, digest) {
+  SMARTLIST_FOREACH_BEGIN (fingerprints, uint8_t *, digest) {
     spooled_resource_t *spooled =
-      spooled_resource_new(source, digest, digest_len);
+        spooled_resource_new(source, digest, digest_len);
     if (spooled)
       smartlist_add(spool_out, spooled);
     tor_free(digest);
-  } SMARTLIST_FOREACH_END(digest);
+  } SMARTLIST_FOREACH_END (digest);
 
   smartlist_free(fingerprints);
   return r;
@@ -242,57 +239,55 @@ dir_split_resource_into_spoolable(const char *resource,
  * requests, adds identity digests.
  */
 int
-dirserv_get_routerdesc_spool(smartlist_t *spool_out,
-                             const char *key,
-                             dir_spool_source_t source,
-                             int conn_is_encrypted,
+dirserv_get_routerdesc_spool(smartlist_t *spool_out, const char *key,
+                             dir_spool_source_t source, int conn_is_encrypted,
                              const char **msg_out)
 {
   *msg_out = NULL;
 
   if (!strcmp(key, "all")) {
     const routerlist_t *rl = router_get_routerlist();
-    SMARTLIST_FOREACH_BEGIN(rl->routers, const routerinfo_t *, r) {
+    SMARTLIST_FOREACH_BEGIN (rl->routers, const routerinfo_t *, r) {
       spooled_resource_t *spooled;
-      spooled = spooled_resource_new(source,
-                              (const uint8_t *)r->cache_info.identity_digest,
-                              DIGEST_LEN);
+      spooled = spooled_resource_new(
+          source, (const uint8_t *)r->cache_info.identity_digest, DIGEST_LEN);
       /* Treat "all" requests as if they were unencrypted */
       conn_is_encrypted = 0;
       smartlist_add(spool_out, spooled);
-    } SMARTLIST_FOREACH_END(r);
+    } SMARTLIST_FOREACH_END (r);
   } else if (!strcmp(key, "authority")) {
     const routerinfo_t *ri = router_get_my_routerinfo();
     if (ri)
-      smartlist_add(spool_out,
-                    spooled_resource_new(source,
-                             (const uint8_t *)ri->cache_info.identity_digest,
-                             DIGEST_LEN));
+      smartlist_add(
+          spool_out,
+          spooled_resource_new(source,
+                               (const uint8_t *)ri->cache_info.identity_digest,
+                               DIGEST_LEN));
   } else if (!strcmpstart(key, "d/")) {
     key += strlen("d/");
     dir_split_resource_into_spoolable(key, source, spool_out, NULL,
-                                  DSR_HEX|DSR_SORT_UNIQ);
+                                      DSR_HEX | DSR_SORT_UNIQ);
   } else if (!strcmpstart(key, "fp/")) {
     key += strlen("fp/");
     dir_split_resource_into_spoolable(key, source, spool_out, NULL,
-                                  DSR_HEX|DSR_SORT_UNIQ);
+                                      DSR_HEX | DSR_SORT_UNIQ);
   } else {
     *msg_out = "Not found";
     return -1;
   }
 
-  if (! conn_is_encrypted) {
+  if (!conn_is_encrypted) {
     /* Remove anything that insists it not be sent unencrypted. */
-    SMARTLIST_FOREACH_BEGIN(spool_out, spooled_resource_t *, spooled) {
+    SMARTLIST_FOREACH_BEGIN (spool_out, spooled_resource_t *, spooled) {
       const uint8_t *body = NULL;
       size_t bodylen = 0;
-      int r = spooled_resource_lookup_body(spooled, conn_is_encrypted,
-                                           &body, &bodylen, NULL);
+      int r = spooled_resource_lookup_body(spooled, conn_is_encrypted, &body,
+                                           &bodylen, NULL);
       if (r < 0 || body == NULL || bodylen == 0) {
         SMARTLIST_DEL_CURRENT(spool_out, spooled);
         spooled_resource_free(spooled);
       }
-    } SMARTLIST_FOREACH_END(spooled);
+    } SMARTLIST_FOREACH_END (spooled);
   }
 
   if (!smartlist_len(spool_out)) {
@@ -307,26 +302,26 @@ dirserv_get_routerdesc_spool(smartlist_t *spool_out,
  * ========== */
 
 spooled_resource_t *
-spooled_resource_new(dir_spool_source_t source,
-                     const uint8_t *digest, size_t digestlen)
+spooled_resource_new(dir_spool_source_t source, const uint8_t *digest,
+                     size_t digestlen)
 {
   spooled_resource_t *spooled = tor_malloc_zero(sizeof(spooled_resource_t));
   spooled->spool_source = source;
   switch (source) {
-    case DIR_SPOOL_NETWORKSTATUS:
-      spooled->spool_eagerly = 0;
-      break;
-    case DIR_SPOOL_SERVER_BY_DIGEST:
-    case DIR_SPOOL_SERVER_BY_FP:
-    case DIR_SPOOL_EXTRA_BY_DIGEST:
-    case DIR_SPOOL_EXTRA_BY_FP:
-    case DIR_SPOOL_MICRODESC:
-    default:
-      spooled->spool_eagerly = 1;
-      break;
-    case DIR_SPOOL_CONSENSUS_CACHE_ENTRY:
-      tor_assert_unreached();
-      break;
+  case DIR_SPOOL_NETWORKSTATUS:
+    spooled->spool_eagerly = 0;
+    break;
+  case DIR_SPOOL_SERVER_BY_DIGEST:
+  case DIR_SPOOL_SERVER_BY_FP:
+  case DIR_SPOOL_EXTRA_BY_DIGEST:
+  case DIR_SPOOL_EXTRA_BY_FP:
+  case DIR_SPOOL_MICRODESC:
+  default:
+    spooled->spool_eagerly = 1;
+    break;
+  case DIR_SPOOL_CONSENSUS_CACHE_ENTRY:
+    tor_assert_unreached();
+    break;
   }
   tor_assert(digestlen <= sizeof(spooled->digest));
   if (digest)
@@ -350,8 +345,7 @@ spooled_resource_new_from_cache_entry(consensus_cache_entry_t *entry)
   consensus_cache_entry_incref(entry);
   spooled->consensus_cache_entry = entry;
 
-  int r = consensus_cache_entry_get_body(entry,
-                                         &spooled->cce_body,
+  int r = consensus_cache_entry_get_body(entry, &spooled->cce_body,
                                          &spooled->cce_len);
   if (r == 0) {
     return spooled;
@@ -390,7 +384,7 @@ estimate_compression_ratio(dir_spool_source_t source)
 {
   /* We should put in better estimates here, depending on the number of
      objects and their type */
-  (void) source;
+  (void)source;
   return 0.5;
 }
 
@@ -402,8 +396,7 @@ estimate_compression_ratio(dir_spool_source_t source)
  */
 static size_t
 spooled_resource_estimate_size(const spooled_resource_t *spooled,
-                               dir_connection_t *conn,
-                               int compressed,
+                               dir_connection_t *conn, int compressed,
                                time_t *published_out)
 {
   if (spooled->spool_eagerly) {
@@ -411,8 +404,7 @@ spooled_resource_estimate_size(const spooled_resource_t *spooled,
     size_t bodylen = 0;
     int r = spooled_resource_lookup_body(spooled,
                                          connection_dir_is_encrypted(conn),
-                                         &body, &bodylen,
-                                         published_out);
+                                         &body, &bodylen, published_out);
     if (r == -1 || body == NULL || bodylen == 0)
       return 0;
     if (compressed) {
@@ -424,8 +416,8 @@ spooled_resource_estimate_size(const spooled_resource_t *spooled,
     cached_dir_t *cached;
     if (spooled->consensus_cache_entry) {
       if (published_out) {
-        consensus_cache_entry_get_valid_after(
-            spooled->consensus_cache_entry, published_out);
+        consensus_cache_entry_get_valid_after(spooled->consensus_cache_entry,
+                                              published_out);
       }
 
       return spooled->cce_len;
@@ -433,8 +425,7 @@ spooled_resource_estimate_size(const spooled_resource_t *spooled,
     if (spooled->cached_dir_ref) {
       cached = spooled->cached_dir_ref;
     } else {
-      cached = spooled_resource_lookup_cached_dir(spooled,
-                                                  published_out);
+      cached = spooled_resource_lookup_cached_dir(spooled, published_out);
     }
     if (cached == NULL) {
       return 0;
@@ -464,15 +455,14 @@ spooled_resource_flush_some(spooled_resource_t *spooled,
     /* Spool_eagerly resources are sent all-at-once. */
     const uint8_t *body = NULL;
     size_t bodylen = 0;
-    int r = spooled_resource_lookup_body(spooled,
-                                         connection_dir_is_encrypted(conn),
-                                         &body, &bodylen, NULL);
+    int r = spooled_resource_lookup_body(
+        spooled, connection_dir_is_encrypted(conn), &body, &bodylen, NULL);
     if (r == -1 || body == NULL || bodylen == 0) {
       /* Absent objects count as "done". */
       return SRFS_DONE;
     }
 
-    connection_dir_buf_add((const char*)body, bodylen, conn, 0);
+    connection_dir_buf_add((const char *)body, bodylen, conn, 0);
 
     return SRFS_DONE;
   } else {
@@ -481,7 +471,7 @@ spooled_resource_flush_some(spooled_resource_t *spooled,
     if (cached == NULL && cce == NULL) {
       /* The cached_dir_t hasn't been materialized yet. So let's look it up. */
       cached = spooled->cached_dir_ref =
-        spooled_resource_lookup_cached_dir(spooled, NULL);
+          spooled_resource_lookup_cached_dir(spooled, NULL);
       if (!cached) {
         /* Absent objects count as done. */
         return SRFS_DONE;
@@ -507,10 +497,9 @@ spooled_resource_flush_some(spooled_resource_t *spooled,
     remaining = total_len - spooled->cached_dir_offset;
     if (BUG(remaining < 0))
       return SRFS_ERR;
-    ssize_t bytes = (ssize_t) MIN(DIRSERV_CACHED_DIR_CHUNK_SIZE, remaining);
+    ssize_t bytes = (ssize_t)MIN(DIRSERV_CACHED_DIR_CHUNK_SIZE, remaining);
 
-    connection_dir_buf_add(ptr + spooled->cached_dir_offset,
-                           bytes, conn, 0);
+    connection_dir_buf_add(ptr + spooled->cached_dir_offset, bytes, conn, 0);
 
     spooled->cached_dir_offset += bytes;
     if (spooled->cached_dir_offset >= (off_t)total_len) {
@@ -549,52 +538,49 @@ spooled_resource_lookup_cached_dir(const spooled_resource_t *spooled,
  * On failure return -1. */
 static int
 spooled_resource_lookup_body(const spooled_resource_t *spooled,
-                             int conn_is_encrypted,
-                             const uint8_t **body_out,
-                             size_t *size_out,
-                             time_t *published_out)
+                             int conn_is_encrypted, const uint8_t **body_out,
+                             size_t *size_out, time_t *published_out)
 {
   tor_assert(spooled->spool_eagerly == 1);
 
   const signed_descriptor_t *sd = NULL;
 
   switch (spooled->spool_source) {
-    case DIR_SPOOL_EXTRA_BY_FP: {
-      sd = get_signed_descriptor_by_fp(spooled->digest, 1);
-      break;
-    }
-    case DIR_SPOOL_SERVER_BY_FP: {
-      sd = get_signed_descriptor_by_fp(spooled->digest, 0);
-      break;
-    }
-    case DIR_SPOOL_SERVER_BY_DIGEST: {
-      sd = router_get_by_descriptor_digest((const char *)spooled->digest);
-      break;
-    }
-    case DIR_SPOOL_EXTRA_BY_DIGEST: {
-      sd = extrainfo_get_by_descriptor_digest((const char *)spooled->digest);
-      break;
-    }
-    case DIR_SPOOL_MICRODESC: {
-      microdesc_t *md = microdesc_cache_lookup_by_digest256(
-                                  get_microdesc_cache(),
-                                  (const char *)spooled->digest);
-      if (! md || ! md->body) {
-        return -1;
-      }
-      *body_out = (const uint8_t *)md->body;
-      *size_out = md->bodylen;
-      if (published_out)
-        *published_out = TIME_MAX;
-      return 0;
-    }
-    case DIR_SPOOL_NETWORKSTATUS:
-    case DIR_SPOOL_CONSENSUS_CACHE_ENTRY:
-    default:
-      /* LCOV_EXCL_START */
-      tor_assert_nonfatal_unreached();
+  case DIR_SPOOL_EXTRA_BY_FP: {
+    sd = get_signed_descriptor_by_fp(spooled->digest, 1);
+    break;
+  }
+  case DIR_SPOOL_SERVER_BY_FP: {
+    sd = get_signed_descriptor_by_fp(spooled->digest, 0);
+    break;
+  }
+  case DIR_SPOOL_SERVER_BY_DIGEST: {
+    sd = router_get_by_descriptor_digest((const char *)spooled->digest);
+    break;
+  }
+  case DIR_SPOOL_EXTRA_BY_DIGEST: {
+    sd = extrainfo_get_by_descriptor_digest((const char *)spooled->digest);
+    break;
+  }
+  case DIR_SPOOL_MICRODESC: {
+    microdesc_t *md = microdesc_cache_lookup_by_digest256(
+        get_microdesc_cache(), (const char *)spooled->digest);
+    if (!md || !md->body) {
       return -1;
-      /* LCOV_EXCL_STOP */
+    }
+    *body_out = (const uint8_t *)md->body;
+    *size_out = md->bodylen;
+    if (published_out)
+      *published_out = TIME_MAX;
+    return 0;
+  }
+  case DIR_SPOOL_NETWORKSTATUS:
+  case DIR_SPOOL_CONSENSUS_CACHE_ENTRY:
+  default:
+    /* LCOV_EXCL_START */
+    tor_assert_nonfatal_unreached();
+    return -1;
+    /* LCOV_EXCL_STOP */
   }
 
   /* If we get here, then we tried to set "sd" to a signed_descriptor_t. */
@@ -602,14 +588,14 @@ spooled_resource_lookup_body(const spooled_resource_t *spooled,
   if (sd == NULL) {
     return -1;
   }
-  if (sd->send_unencrypted == 0 && ! conn_is_encrypted) {
+  if (sd->send_unencrypted == 0 && !conn_is_encrypted) {
     /* we did this check once before (so we could have an accurate size
      * estimate and maybe send a 404 if somebody asked for only bridges on
      * a connection), but we need to do it again in case a previously
      * unknown bridge descriptor has shown up between then and now. */
     return -1;
   }
-  *body_out = (const uint8_t *) signed_descriptor_get_body(sd);
+  *body_out = (const uint8_t *)signed_descriptor_get_body(sd);
   *size_out = sd->signed_descriptor_len;
   if (published_out)
     *published_out = sd->published_on;
@@ -642,8 +628,7 @@ lookup_cached_dir_by_fp(const uint8_t *fp)
  * objects removed for being too old. */
 void
 dirserv_spool_remove_missing_and_guess_size(dir_connection_t *conn,
-                                            time_t cutoff,
-                                            int compression,
+                                            time_t cutoff, int compression,
                                             size_t *size_out,
                                             int *n_expired_out)
 {
@@ -660,10 +645,10 @@ dirserv_spool_remove_missing_and_guess_size(dir_connection_t *conn,
   }
   int n_expired = 0;
   uint64_t total = 0;
-  SMARTLIST_FOREACH_BEGIN(spool, spooled_resource_t *, spooled) {
+  SMARTLIST_FOREACH_BEGIN (spool, spooled_resource_t *, spooled) {
     time_t published = TIME_MAX;
-    size_t sz = spooled_resource_estimate_size(spooled, conn,
-                                               compression, &published);
+    size_t sz =
+        spooled_resource_estimate_size(spooled, conn, compression, &published);
     if (published < cutoff) {
       ++n_expired;
       SMARTLIST_DEL_CURRENT(spool, spooled);
@@ -674,7 +659,7 @@ dirserv_spool_remove_missing_and_guess_size(dir_connection_t *conn,
     } else {
       total += sz;
     }
-  } SMARTLIST_FOREACH_END(spooled);
+  } SMARTLIST_FOREACH_END (spooled);
 
   if (size_out) {
     *size_out = (total > SIZE_MAX) ? SIZE_MAX : (size_t)total;
@@ -718,7 +703,7 @@ get_signed_descriptor_by_fp(const uint8_t *fp, int extrainfo)
     if (ri) {
       if (extrainfo)
         return extrainfo_get_by_descriptor_digest(
-                                     ri->cache_info.extra_info_digest);
+            ri->cache_info.extra_info_digest);
       else
         return &ri->cache_info;
     }
@@ -748,7 +733,7 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
   while (connection_get_outbuf_len(TO_CONN(conn)) < DIRSERV_BUFFER_MIN &&
          smartlist_len(conn->spool)) {
     spooled_resource_t *spooled =
-      smartlist_get(conn->spool, smartlist_len(conn->spool)-1);
+        smartlist_get(conn->spool, smartlist_len(conn->spool) - 1);
     spooled_resource_flush_status_t status;
     status = spooled_resource_flush_some(spooled, conn);
     if (status == SRFS_ERR) {
@@ -786,7 +771,7 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
 void
 dir_conn_clear_spool(dir_connection_t *conn)
 {
-  if (!conn || ! conn->spool)
+  if (!conn || !conn->spool)
     return;
   SMARTLIST_FOREACH(conn->spool, spooled_resource_t *, s,
                     spooled_resource_free(s));

@@ -60,7 +60,7 @@ kill_conn_list_mock(smartlist_t *conns)
 
   kill_conn_list_killed += smartlist_len(conns);
 
- done:
+done:
   return;
 }
 
@@ -86,14 +86,15 @@ pick_oos_victims_mock(int n)
      * we do need to check the parameter.
      */
     l = smartlist_new();
-    for (i = 0; i < n; ++i) smartlist_add(l, NULL);
+    for (i = 0; i < n; ++i)
+      smartlist_add(l, NULL);
   } else {
     l = NULL;
   }
 
   pick_oos_mock_last_n = n;
 
- done:
+done:
   return l;
 }
 
@@ -235,7 +236,7 @@ test_oos_connection_check_oos(void *arg)
   tt_int_op(pick_oos_mock_calls, OP_EQ, 7);
   tt_int_op(kill_conn_list_calls, OP_EQ, 6);
 
- done:
+done:
 
   UNMOCK(pick_oos_victims);
   UNMOCK(kill_conn_list_for_oos);
@@ -255,15 +256,14 @@ close_for_error_mock(or_connection_t *orconn, int flush)
   tt_ptr_op(orconn, OP_NE, NULL);
   ++cfe_calls;
 
- done:
+done:
   return;
 }
 
 static int mark_calls = 0;
 
 static void
-mark_for_close_oos_mock(connection_t *conn,
-                        int line, const char *file)
+mark_for_close_oos_mock(connection_t *conn, int line, const char *file)
 {
   (void)line;
   (void)file;
@@ -271,7 +271,7 @@ mark_for_close_oos_mock(connection_t *conn,
   tt_ptr_op(conn, OP_NE, NULL);
   ++mark_calls;
 
- done:
+done:
   return;
 }
 
@@ -317,12 +317,13 @@ test_oos_kill_conn_list(void *arg)
   tt_int_op(mark_calls, OP_EQ, 1);
   tt_int_op(cfe_calls, OP_EQ, 1);
 
- done:
+done:
 
   UNMOCK(connection_or_close_for_error);
   UNMOCK(connection_mark_for_close_internal_);
 
-  if (l) smartlist_free(l);
+  if (l)
+    smartlist_free(l);
   tor_free(or_c1);
   tor_free(dir_c2);
 
@@ -356,7 +357,7 @@ get_num_circuits_mock(or_connection_t *conn)
     circs = 1;
   }
 
- done:
+done:
   return circs;
 }
 
@@ -429,7 +430,7 @@ test_oos_pick_oos_victims(void *arg)
   tt_assert(smartlist_contains(picked, smartlist_get(conns_for_mock, 1)));
   smartlist_free(picked);
 
- done:
+done:
 
   /* Free leftover stuff */
   if (conns_with_circs) {
@@ -451,9 +452,8 @@ test_oos_pick_oos_victims(void *arg)
 }
 
 struct testcase_t oos_tests[] = {
-  { "connection_check_oos", test_oos_connection_check_oos,
-    TT_FORK, NULL, NULL },
-  { "kill_conn_list", test_oos_kill_conn_list, TT_FORK, NULL, NULL },
-  { "pick_oos_victims", test_oos_pick_oos_victims, TT_FORK, NULL, NULL },
-  END_OF_TESTCASES
-};
+    {"connection_check_oos", test_oos_connection_check_oos, TT_FORK, NULL,
+     NULL},
+    {"kill_conn_list", test_oos_kill_conn_list, TT_FORK, NULL, NULL},
+    {"pick_oos_victims", test_oos_pick_oos_victims, TT_FORK, NULL, NULL},
+    END_OF_TESTCASES};

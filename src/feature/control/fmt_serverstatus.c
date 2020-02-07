@@ -13,7 +13,7 @@
 
 #include "app/config/config.h"
 #include "feature/dirauth/authmode.h"
-#include "feature/dirauth/voteflags.h"// XXXX remove
+#include "feature/dirauth/voteflags.h" // XXXX remove
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/nodelist.h"
 
@@ -31,7 +31,7 @@
 static char *
 list_single_server_status(const routerinfo_t *desc, int is_live)
 {
-  char buf[MAX_NICKNAME_LEN+HEX_DIGEST_LEN+4]; /* !nickname=$hexdigest\0 */
+  char buf[MAX_NICKNAME_LEN + HEX_DIGEST_LEN + 4]; /* !nickname=$hexdigest\0 */
   char *cp;
   const node_t *node;
 
@@ -43,12 +43,12 @@ list_single_server_status(const routerinfo_t *desc, int is_live)
   }
   node = node_get_by_id(desc->cache_info.identity_digest);
   if (node && node->is_valid) {
-    strlcpy(cp, desc->nickname, sizeof(buf)-(cp-buf));
+    strlcpy(cp, desc->nickname, sizeof(buf) - (cp - buf));
     cp += strlen(cp);
     *cp++ = '=';
   }
   *cp++ = '$';
-  base16_encode(cp, HEX_DIGEST_LEN+1, desc->cache_info.identity_digest,
+  base16_encode(cp, HEX_DIGEST_LEN + 1, desc->cache_info.identity_digest,
                 DIGEST_LEN);
   return tor_strdup(buf);
 }
@@ -78,21 +78,21 @@ list_server_status_v1(smartlist_t *routers, char **router_status_out,
 
   rs_entries = smartlist_new();
 
-  SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
+  SMARTLIST_FOREACH_BEGIN (routers, routerinfo_t *, ri) {
     const node_t *node = node_get_by_id(ri->cache_info.identity_digest);
     tor_assert(node);
     if (for_controller) {
-      char name_buf[MAX_VERBOSE_NICKNAME_LEN+2];
+      char name_buf[MAX_VERBOSE_NICKNAME_LEN + 2];
       char *cp = name_buf;
       if (!node->is_running)
         *cp++ = '!';
       router_get_verbose_nickname(cp, ri);
       smartlist_add_strdup(rs_entries, name_buf);
     } else if (ri->cache_info.published_on >= cutoff) {
-      smartlist_add(rs_entries, list_single_server_status(ri,
-                                                          node->is_running));
+      smartlist_add(rs_entries,
+                    list_single_server_status(ri, node->is_running));
     }
-  } SMARTLIST_FOREACH_END(ri);
+  } SMARTLIST_FOREACH_END (ri);
 
   *router_status_out = smartlist_join_strings(rs_entries, " ", 0, NULL);
 

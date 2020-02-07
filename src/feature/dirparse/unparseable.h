@@ -14,20 +14,21 @@
 
 #include "lib/cc/torint.h"
 
-MOCK_DECL(void,dump_desc,(const char *desc, const char *type));
+MOCK_DECL(void, dump_desc, (const char *desc, const char *type));
 void dump_desc_fifo_cleanup(void);
 void dump_desc_init(void);
 
 #undef DEBUG_AREA_ALLOC
 #ifdef DEBUG_AREA_ALLOC
-#define DUMP_AREA(a,name) STMT_BEGIN                              \
-  size_t alloc=0, used=0;                                         \
-  memarea_get_stats((a),&alloc,&used);                            \
-  log_debug(LD_MM, "Area for %s has %lu allocated; using %lu.",   \
-            name, (unsigned long)alloc, (unsigned long)used);     \
-  STMT_END
+#  define DUMP_AREA(a, name)                                              \
+    STMT_BEGIN                                                            \
+      size_t alloc = 0, used = 0;                                         \
+      memarea_get_stats((a), &alloc, &used);                              \
+      log_debug(LD_MM, "Area for %s has %lu allocated; using %lu.", name, \
+                (unsigned long)alloc, (unsigned long)used);               \
+    STMT_END
 #else /* !defined(DEBUG_AREA_ALLOC) */
-#define DUMP_AREA(a,name) STMT_NIL
+#  define DUMP_AREA(a, name) STMT_NIL
 #endif /* defined(DEBUG_AREA_ALLOC) */
 
 #ifdef UNPARSEABLE_PRIVATE
@@ -49,7 +50,7 @@ EXTERN(uint64_t, len_descs_dumped)
 EXTERN(struct smartlist_t *, descs_dumped)
 
 MOCK_DECL(STATIC dumped_desc_t *, dump_desc_populate_one_file,
-    (const char *dirname, const char *f));
+          (const char *dirname, const char *f));
 STATIC void dump_desc_populate_fifo_from_directory(const char *dirname);
 #endif /* defined(UNPARSEABLE_PRIVATE) */
 

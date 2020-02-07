@@ -26,27 +26,23 @@
 
 #define SOCKS_VER_5 0x05 /* First octet of non-auth SOCKS5 messages */
 #define SOCKS_VER_4 0x04 /*                SOCKS4 messages */
-#define SOCKS_AUTH  0x01 /*                SOCKS5 auth messages */
+#define SOCKS_AUTH 0x01 /*                SOCKS5 auth messages */
 
 typedef enum {
-  SOCKS_RESULT_INVALID       = -1, /* Message invalid. */
-  SOCKS_RESULT_TRUNCATED     =  0, /* Message incomplete/truncated. */
-  SOCKS_RESULT_DONE          =  1, /* OK, we're done. */
-  SOCKS_RESULT_MORE_EXPECTED =  2, /* OK, more messages expected. */
+  SOCKS_RESULT_INVALID = -1, /* Message invalid. */
+  SOCKS_RESULT_TRUNCATED = 0, /* Message incomplete/truncated. */
+  SOCKS_RESULT_DONE = 1, /* OK, we're done. */
+  SOCKS_RESULT_MORE_EXPECTED = 2, /* OK, more messages expected. */
 } socks_result_t;
 
 static void socks_request_set_socks5_error(socks_request_t *req,
-                              socks5_reply_status_t reason);
+                                           socks5_reply_status_t reason);
 
-static socks_result_t parse_socks(const char *data,
-                                  size_t datalen,
-                                  socks_request_t *req,
-                                  int log_sockstype,
-                                  int safe_socks,
-                                  size_t *drain_out);
-static int parse_socks_client(const uint8_t *data, size_t datalen,
-                              int state, char **reason,
-                              ssize_t *drain_out);
+static socks_result_t parse_socks(const char *data, size_t datalen,
+                                  socks_request_t *req, int log_sockstype,
+                                  int safe_socks, size_t *drain_out);
+static int parse_socks_client(const uint8_t *data, size_t datalen, int state,
+                              char **reason, ssize_t *drain_out);
 /**
  * Wait this many seconds before warning the user about using SOCKS unsafely
  * again. */
@@ -62,16 +58,15 @@ log_unsafe_socks_warning(int socks_protocol, const char *address,
   static ratelim_t socks_ratelim = RATELIM_INIT(SOCKS_WARN_INTERVAL);
 
   if (safe_socks) {
-    log_fn_ratelim(&socks_ratelim, LOG_WARN, LD_APP,
-             "Your application (using socks%d to port %d) is giving "
-             "Tor only an IP address. Applications that do DNS resolves "
-             "themselves may leak information. Consider using Socks4A "
-             "(e.g. via privoxy or socat) instead. For more information, "
-             "please see https://wiki.torproject.org/TheOnionRouter/"
-             "TorFAQ#SOCKSAndDNS.%s",
-             socks_protocol,
-             (int)port,
-             safe_socks ? " Rejecting." : "");
+    log_fn_ratelim(
+        &socks_ratelim, LOG_WARN, LD_APP,
+        "Your application (using socks%d to port %d) is giving "
+        "Tor only an IP address. Applications that do DNS resolves "
+        "themselves may leak information. Consider using Socks4A "
+        "(e.g. via privoxy or socat) instead. For more information, "
+        "please see https://wiki.torproject.org/TheOnionRouter/"
+        "TorFAQ#SOCKSAndDNS.%s",
+        socks_protocol, (int)port, safe_socks ? " Rejecting." : "");
   }
   control_event_client_status(LOG_WARN,
                               "DANGEROUS_SOCKS PROTOCOL=SOCKS%d ADDRESS=%s:%d",
@@ -137,7 +132,7 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
   socks4_client_request_t *trunnel_req;
 
   ssize_t parsed =
-  socks4_client_request_parse(&trunnel_req, raw_data, datalen);
+      socks4_client_request_parse(&trunnel_req, raw_data, datalen);
 
   if (parsed == -1) {
     log_warn(LD_APP, "socks4: parsing failed - invalid request.");
@@ -161,8 +156,7 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
   req->port = socks4_client_request_get_port(trunnel_req);
   uint32_t dest_ip = socks4_client_request_get_addr(trunnel_req);
 
-  if ((!req->port && req->command != SOCKS_COMMAND_RESOLVE) ||
-      dest_ip == 0) {
+  if ((!req->port && req->command != SOCKS_COMMAND_RESOLVE) || dest_ip == 0) {
     log_warn(LD_APP, "socks4: Port or DestIP is zero. Rejecting.");
     res = SOCKS_RESULT_INVALID;
     goto end;
@@ -188,13 +182,13 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
   if (*is_socks4a) {
     // We cannot rely on trunnel here, as we want to detect if
     // we have abnormally long hostname field.
-    const char *hostname = (char *)raw_data + SOCKS4_NETWORK_LEN +
-     usernamelen + 1;
+    const char *hostname =
+        (char *)raw_data + SOCKS4_NETWORK_LEN + usernamelen + 1;
     size_t hostname_len = (char *)raw_data + datalen - hostname;
 
     if (hostname_len <= sizeof(req->address)) {
       const char *trunnel_hostname =
-      socks4_client_request_get_socks4a_addr_hostname(trunnel_req);
+          socks4_client_request_get_socks4a_addr_hostname(trunnel_req);
 
       if (trunnel_hostname)
         strlcpy(req->address, trunnel_hostname, sizeof(req->address));
@@ -206,14 +200,13 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
   } else {
     tor_addr_from_ipv4h(&destaddr, dest_ip);
 
-    if (!tor_addr_to_str(req->address, &destaddr,
-                         MAX_SOCKS_ADDR_LEN, 0)) {
+    if (!tor_addr_to_str(req->address, &destaddr, MAX_SOCKS_ADDR_LEN, 0)) {
       res = SOCKS_RESULT_INVALID;
       goto end;
     }
   }
 
-  end:
+end:
   socks4_client_request_free(trunnel_req);
 
   return res;
@@ -254,7 +247,8 @@ process_socks4_request(const socks_request_t *req, int is_socks4a,
       log_notice(LD_APP,
                  "Your application (using socks4a to port %d) instructed "
                  "Tor to take care of the DNS resolution itself if "
-                 "necessary. This is good.", req->port);
+                 "necessary. This is good.",
+                 req->port);
   }
 
   if (!string_is_valid_dest(req->address)) {
@@ -262,7 +256,7 @@ process_socks4_request(const socks_request_t *req, int is_socks4a,
              "Your application (using socks4 to port %d) gave Tor "
              "a malformed hostname: %s. Rejecting the connection.",
              req->port, escaped_safe_str_client(req->address));
-     return SOCKS_RESULT_INVALID;
+    return SOCKS_RESULT_INVALID;
   }
 
   return SOCKS_RESULT_DONE;
@@ -287,8 +281,8 @@ parse_socks5_methods_request(const uint8_t *raw_data, socks_request_t *req,
   socks_result_t res = SOCKS_RESULT_DONE;
   socks5_client_version_t *trunnel_req;
 
-  ssize_t parsed = socks5_client_version_parse(&trunnel_req, raw_data,
-                                               datalen);
+  ssize_t parsed =
+      socks5_client_version_parse(&trunnel_req, raw_data, datalen);
 
   (void)req;
 
@@ -326,8 +320,7 @@ parse_socks5_methods_request(const uint8_t *raw_data, socks_request_t *req,
   *have_user_pass = 0;
 
   for (size_t i = 0; i < n_methods; i++) {
-    uint8_t method = socks5_client_version_get_methods(trunnel_req,
-                                                       i);
+    uint8_t method = socks5_client_version_get_methods(trunnel_req, i);
 
     if (method == SOCKS_USER_PASS) {
       *have_user_pass = 1;
@@ -336,7 +329,7 @@ parse_socks5_methods_request(const uint8_t *raw_data, socks_request_t *req,
     }
   }
 
-  end:
+end:
   socks5_client_version_free(trunnel_req);
 
   return res;
@@ -370,31 +363,28 @@ process_socks5_methods_request(socks_request_t *req, int have_user_pass,
     // FIXME: come up with better way to remember
     // that we negotiated auth
 
-    log_debug(LD_APP,"socks5: accepted method 2 (username/password)");
+    log_debug(LD_APP, "socks5: accepted method 2 (username/password)");
   } else if (have_no_auth) {
     req->auth_type = SOCKS_NO_AUTH;
     socks5_server_method_set_method(trunnel_resp, SOCKS_NO_AUTH);
 
     req->socks_version = SOCKS_VER_5;
 
-    log_debug(LD_APP,"socks5: accepted method 0 (no authentication)");
+    log_debug(LD_APP, "socks5: accepted method 0 (no authentication)");
   } else {
-    log_warn(LD_APP,
-             "socks5: offered methods don't include 'no auth' or "
-             "username/password. Rejecting.");
+    log_warn(LD_APP, "socks5: offered methods don't include 'no auth' or "
+                     "username/password. Rejecting.");
     socks5_server_method_set_method(trunnel_resp, 0xFF); // reject all
     res = SOCKS_RESULT_INVALID;
   }
 
   const char *errmsg = socks5_server_method_check(trunnel_resp);
   if (errmsg) {
-    log_warn(LD_APP, "socks5: method selection validation failed: %s",
-             errmsg);
+    log_warn(LD_APP, "socks5: method selection validation failed: %s", errmsg);
     res = SOCKS_RESULT_INVALID;
   } else {
-    ssize_t encoded =
-    socks5_server_method_encode(req->reply, sizeof(req->reply),
-                                trunnel_resp);
+    ssize_t encoded = socks5_server_method_encode(
+        req->reply, sizeof(req->reply), trunnel_resp);
 
     if (encoded < 0) {
       log_warn(LD_APP, "socks5: method selection encoding failed");
@@ -424,8 +414,8 @@ parse_socks5_userpass_auth(const uint8_t *raw_data, socks_request_t *req,
 {
   socks_result_t res = SOCKS_RESULT_DONE;
   socks5_client_userpass_auth_t *trunnel_req = NULL;
-  ssize_t parsed = socks5_client_userpass_auth_parse(&trunnel_req, raw_data,
-                                                     datalen);
+  ssize_t parsed =
+      socks5_client_userpass_auth_parse(&trunnel_req, raw_data, datalen);
   tor_assert(drain_out);
   *drain_out = 0;
 
@@ -443,13 +433,13 @@ parse_socks5_userpass_auth(const uint8_t *raw_data, socks_request_t *req,
   *drain_out = (size_t)parsed;
 
   uint8_t usernamelen =
-   socks5_client_userpass_auth_get_username_len(trunnel_req);
+      socks5_client_userpass_auth_get_username_len(trunnel_req);
   uint8_t passwordlen =
-   socks5_client_userpass_auth_get_passwd_len(trunnel_req);
+      socks5_client_userpass_auth_get_passwd_len(trunnel_req);
   const char *username =
-   socks5_client_userpass_auth_getconstarray_username(trunnel_req);
+      socks5_client_userpass_auth_getconstarray_username(trunnel_req);
   const char *password =
-   socks5_client_userpass_auth_getconstarray_passwd(trunnel_req);
+      socks5_client_userpass_auth_getconstarray_passwd(trunnel_req);
 
   if (usernamelen && username) {
     tor_free(req->username);
@@ -471,7 +461,7 @@ parse_socks5_userpass_auth(const uint8_t *raw_data, socks_request_t *req,
    */
   req->got_auth = 1;
 
-  end:
+end:
   socks5_client_userpass_auth_free(trunnel_req);
   return res;
 }
@@ -487,7 +477,7 @@ process_socks5_userpass_auth(socks_request_t *req)
 {
   socks_result_t res = SOCKS_RESULT_DONE;
   socks5_server_userpass_auth_t *trunnel_resp =
-    socks5_server_userpass_auth_new();
+      socks5_server_userpass_auth_new();
   tor_assert(trunnel_resp);
 
   if (req->socks_version != SOCKS_VER_5) {
@@ -495,8 +485,7 @@ process_socks5_userpass_auth(socks_request_t *req)
     goto end;
   }
 
-  if (req->auth_type != SOCKS_USER_PASS &&
-      req->auth_type != SOCKS_NO_AUTH) {
+  if (req->auth_type != SOCKS_USER_PASS && req->auth_type != SOCKS_NO_AUTH) {
     res = SOCKS_RESULT_INVALID;
     goto end;
   }
@@ -512,9 +501,8 @@ process_socks5_userpass_auth(socks_request_t *req)
     goto end;
   }
 
-  ssize_t encoded = socks5_server_userpass_auth_encode(req->reply,
-                                                       sizeof(req->reply),
-                                                       trunnel_resp);
+  ssize_t encoded = socks5_server_userpass_auth_encode(
+      req->reply, sizeof(req->reply), trunnel_resp);
 
   if (encoded < 0) {
     log_warn(LD_APP, "socks5: server userpass auth encoding failed");
@@ -524,7 +512,7 @@ process_socks5_userpass_auth(socks_request_t *req)
 
   req->replylen = (size_t)encoded;
 
-  end:
+end:
   socks5_server_userpass_auth_free(trunnel_resp);
   return res;
 }
@@ -546,7 +534,7 @@ parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
   tor_addr_t destaddr;
   socks5_client_request_t *trunnel_req = NULL;
   ssize_t parsed =
-   socks5_client_request_parse(&trunnel_req, raw_data, datalen);
+      socks5_client_request_parse(&trunnel_req, raw_data, datalen);
   if (parsed == -1) {
     log_warn(LD_APP, "socks5: parsing failed - invalid client request");
     res = SOCKS_RESULT_INVALID;
@@ -572,34 +560,34 @@ parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
   req->socks5_atyp = atype;
 
   switch (atype) {
-    case 1: {
-      uint32_t ipv4 = socks5_client_request_get_dest_addr_ipv4(trunnel_req);
-      tor_addr_from_ipv4h(&destaddr, ipv4);
+  case 1: {
+    uint32_t ipv4 = socks5_client_request_get_dest_addr_ipv4(trunnel_req);
+    tor_addr_from_ipv4h(&destaddr, ipv4);
 
-      tor_addr_to_str(req->address, &destaddr, sizeof(req->address), 1);
-    } break;
-    case 3: {
-      const struct domainname_st *dns_name =
+    tor_addr_to_str(req->address, &destaddr, sizeof(req->address), 1);
+  } break;
+  case 3: {
+    const struct domainname_st *dns_name =
         socks5_client_request_getconst_dest_addr_domainname(trunnel_req);
 
-      const char *hostname = domainname_getconstarray_name(dns_name);
+    const char *hostname = domainname_getconstarray_name(dns_name);
 
-      strlcpy(req->address, hostname, sizeof(req->address));
-    } break;
-    case 4: {
-      const char *ipv6 =
+    strlcpy(req->address, hostname, sizeof(req->address));
+  } break;
+  case 4: {
+    const char *ipv6 =
         (const char *)socks5_client_request_getarray_dest_addr_ipv6(
-          trunnel_req);
-      tor_addr_from_ipv6_bytes(&destaddr, ipv6);
+            trunnel_req);
+    tor_addr_from_ipv6_bytes(&destaddr, ipv6);
 
-      tor_addr_to_str(req->address, &destaddr, sizeof(req->address), 1);
-    } break;
-    default: {
-      res = -1;
-    } break;
+    tor_addr_to_str(req->address, &destaddr, sizeof(req->address), 1);
+  } break;
+  default: {
+    res = -1;
+  } break;
   }
 
-  end:
+end:
   socks5_client_request_free(trunnel_req);
   return res;
 }
@@ -615,8 +603,7 @@ parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
  * SOCKS_RESULT_INVALID on failure.
  */
 static socks_result_t
-process_socks5_client_request(socks_request_t *req,
-                              int log_sockstype,
+process_socks5_client_request(socks_request_t *req, int log_sockstype,
                               int safe_socks)
 {
   socks_result_t res = SOCKS_RESULT_DONE;
@@ -625,7 +612,7 @@ process_socks5_client_request(socks_request_t *req,
   if (req->command != SOCKS_COMMAND_CONNECT &&
       req->command != SOCKS_COMMAND_RESOLVE &&
       req->command != SOCKS_COMMAND_RESOLVE_PTR) {
-    socks_request_set_socks5_error(req,SOCKS5_COMMAND_NOT_SUPPORTED);
+    socks_request_set_socks5_error(req, SOCKS5_COMMAND_NOT_SUPPORTED);
     res = SOCKS_RESULT_INVALID;
     goto end;
   }
@@ -654,7 +641,7 @@ process_socks5_client_request(socks_request_t *req,
 
   if (req->socks5_atyp == 1 || req->socks5_atyp == 4) {
     if (req->command != SOCKS_COMMAND_RESOLVE_PTR &&
-        !addressmap_have_mapping(req->address,0)) {
+        !addressmap_have_mapping(req->address, 0)) {
       log_unsafe_socks_warning(5, req->address, req->port, safe_socks);
       if (safe_socks) {
         socks_request_set_socks5_error(req, SOCKS5_NOT_ALLOWED);
@@ -666,11 +653,12 @@ process_socks5_client_request(socks_request_t *req,
 
   if (log_sockstype)
     log_notice(LD_APP,
-              "Your application (using socks5 to port %d) instructed "
-              "Tor to take care of the DNS resolution itself if "
-              "necessary. This is good.", req->port);
+               "Your application (using socks5 to port %d) instructed "
+               "Tor to take care of the DNS resolution itself if "
+               "necessary. This is good.",
+               req->port);
 
-  end:
+end:
   return res;
 }
 
@@ -698,8 +686,8 @@ process_socks5_client_request(socks_request_t *req,
  */
 static socks_result_t
 handle_socks_message(const uint8_t *raw_data, size_t datalen,
-                     socks_request_t *req, int log_sockstype,
-                     int safe_socks, size_t *drain_out)
+                     socks_request_t *req, int log_sockstype, int safe_socks,
+                     size_t *drain_out)
 {
   socks_result_t res = SOCKS_RESULT_DONE;
 
@@ -722,8 +710,7 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen,
       goto end;
     }
 
-    res = process_socks4_request(req, is_socks4a,log_sockstype,
-                                 safe_socks);
+    res = process_socks4_request(req, is_socks4a, log_sockstype, safe_socks);
 
     if (res != SOCKS_RESULT_DONE) {
       goto end;
@@ -736,10 +723,9 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen,
       goto end;
     }
     /* RFC1929 SOCKS5 username/password subnegotiation. */
-    if (!req->got_auth && (raw_data[0] == 1 ||
-        req->auth_type == SOCKS_USER_PASS)) {
-      res = parse_socks5_userpass_auth(raw_data, req, datalen,
-                                       drain_out);
+    if (!req->got_auth &&
+        (raw_data[0] == 1 || req->auth_type == SOCKS_USER_PASS)) {
+      res = parse_socks5_userpass_auth(raw_data, req, datalen, drain_out);
 
       if (res != SOCKS_RESULT_DONE) {
         goto end;
@@ -753,18 +739,15 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen,
       res = SOCKS_RESULT_MORE_EXPECTED;
       goto end;
     } else if (req->socks_version != SOCKS_VER_5) {
-      int have_user_pass=0, have_no_auth=0;
-      res = parse_socks5_methods_request(raw_data, req, datalen,
-                                         &have_user_pass,
-                                         &have_no_auth,
-                                         drain_out);
+      int have_user_pass = 0, have_no_auth = 0;
+      res = parse_socks5_methods_request(
+          raw_data, req, datalen, &have_user_pass, &have_no_auth, drain_out);
 
       if (res != SOCKS_RESULT_DONE) {
         goto end;
       }
 
-      res = process_socks5_methods_request(req, have_user_pass,
-                                           have_no_auth);
+      res = process_socks5_methods_request(req, have_user_pass, have_no_auth);
 
       if (res != SOCKS_RESULT_DONE) {
         goto end;
@@ -773,15 +756,13 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen,
       res = SOCKS_RESULT_MORE_EXPECTED;
       goto end;
     } else {
-      res = parse_socks5_client_request(raw_data, req,
-                                        datalen, drain_out);
+      res = parse_socks5_client_request(raw_data, req, datalen, drain_out);
       if (res != SOCKS_RESULT_DONE) {
         socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
         goto end;
       }
 
-      res = process_socks5_client_request(req, log_sockstype,
-                                          safe_socks);
+      res = process_socks5_client_request(req, log_sockstype, safe_socks);
 
       if (res != SOCKS_RESULT_DONE) {
         goto end;
@@ -792,7 +773,7 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen,
     res = SOCKS_RESULT_INVALID;
   }
 
-  end:
+end:
   return res;
 }
 
@@ -822,8 +803,8 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen,
  * undefined.
  */
 int
-fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
-                     int log_sockstype, int safe_socks)
+fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype,
+                     int safe_socks)
 {
   int res = 0;
   size_t datalen = buf_datalen(buf);
@@ -843,8 +824,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
     buf_pullup(buf, n_pullup, &head, &datalen);
     tor_assert(head && datalen >= 2);
 
-    socks_res = parse_socks(head, datalen, req, log_sockstype,
-                            safe_socks, &n_drain);
+    socks_res =
+        parse_socks(head, datalen, req, log_sockstype, safe_socks, &n_drain);
 
     if (socks_res == SOCKS_RESULT_INVALID)
       buf_clear(buf);
@@ -852,23 +833,23 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
       buf_drain(buf, n_drain);
 
     switch (socks_res) {
-      case SOCKS_RESULT_INVALID:
-        res = -1;
-        break;
-      case SOCKS_RESULT_DONE:
-        res = 1;
-        break;
-      case SOCKS_RESULT_TRUNCATED:
-        if (datalen == n_pullup)
-          return 0;
-        /* FALLTHRU */
-      case SOCKS_RESULT_MORE_EXPECTED:
-        res = 0;
-        break;
+    case SOCKS_RESULT_INVALID:
+      res = -1;
+      break;
+    case SOCKS_RESULT_DONE:
+      res = 1;
+      break;
+    case SOCKS_RESULT_TRUNCATED:
+      if (datalen == n_pullup)
+        return 0;
+      /* FALLTHRU */
+    case SOCKS_RESULT_MORE_EXPECTED:
+      res = 0;
+      break;
     }
   } while (res == 0 && head && buf_datalen(buf) >= 2);
 
-  end:
+end:
   return res;
 }
 
@@ -877,7 +858,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
  */
 static void
 socks_request_set_socks5_error(socks_request_t *req,
-                  socks5_reply_status_t reason)
+                               socks5_reply_status_t reason)
 {
   socks5_server_reply_t *trunnel_resp = socks5_server_reply_new();
   tor_assert(trunnel_resp);
@@ -888,50 +869,47 @@ socks_request_set_socks5_error(socks_request_t *req,
 
   const char *errmsg = socks5_server_reply_check(trunnel_resp);
   if (errmsg) {
-    log_warn(LD_APP, "socks5: reply validation failed: %s",
-             errmsg);
+    log_warn(LD_APP, "socks5: reply validation failed: %s", errmsg);
     goto end;
   }
 
-  ssize_t encoded = socks5_server_reply_encode(req->reply,
-                                               sizeof(req->reply),
-                                               trunnel_resp);
+  ssize_t encoded =
+      socks5_server_reply_encode(req->reply, sizeof(req->reply), trunnel_resp);
   if (encoded < 0) {
-    log_warn(LD_APP, "socks5: reply encoding failed: %d",
-             (int)encoded);
+    log_warn(LD_APP, "socks5: reply encoding failed: %d", (int)encoded);
   } else {
     req->replylen = (size_t)encoded;
   }
 
-  end:
+end:
   socks5_server_reply_free(trunnel_resp);
 }
 
 static const char SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG[] =
-  "HTTP/1.0 501 Tor is not an HTTP Proxy\r\n"
-  "Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
-  "<html>\n"
-  "<head>\n"
-  "<title>This is a SOCKS Proxy, Not An HTTP Proxy</title>\n"
-  "</head>\n"
-  "<body>\n"
-  "<h1>This is a SOCKs proxy, not an HTTP proxy.</h1>\n"
-  "<p>\n"
-  "It appears you have configured your web browser to use this Tor port as\n"
-  "an HTTP proxy.\n"
-  "</p><p>\n"
-  "This is not correct: This port is configured as a SOCKS proxy, not\n"
-  "an HTTP proxy. If you need an HTTP proxy tunnel, use the HTTPTunnelPort\n"
-  "configuration option in place of, or in addition to, SOCKSPort.\n"
-  "Please configure your client accordingly.\n"
-  "</p>\n"
-  "<p>\n"
-  "See <a href=\"https://www.torproject.org/documentation.html\">"
-  "https://www.torproject.org/documentation.html</a> for more "
-  "information.\n"
-  "</p>\n"
-  "</body>\n"
-  "</html>\n";
+    "HTTP/1.0 501 Tor is not an HTTP Proxy\r\n"
+    "Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
+    "<html>\n"
+    "<head>\n"
+    "<title>This is a SOCKS Proxy, Not An HTTP Proxy</title>\n"
+    "</head>\n"
+    "<body>\n"
+    "<h1>This is a SOCKs proxy, not an HTTP proxy.</h1>\n"
+    "<p>\n"
+    "It appears you have configured your web browser to use this Tor port as\n"
+    "an HTTP proxy.\n"
+    "</p><p>\n"
+    "This is not correct: This port is configured as a SOCKS proxy, not\n"
+    "an HTTP proxy. If you need an HTTP proxy tunnel, use the HTTPTunnelPort\n"
+    "configuration option in place of, or in addition to, SOCKSPort.\n"
+    "Please configure your client accordingly.\n"
+    "</p>\n"
+    "<p>\n"
+    "See <a href=\"https://www.torproject.org/documentation.html\">"
+    "https://www.torproject.org/documentation.html</a> for more "
+    "information.\n"
+    "</p>\n"
+    "</body>\n"
+    "</html>\n";
 
 /** Implementation helper to implement fetch_from_*_socks.  Instead of looking
  * at a buffer's contents, we look at the <b>datalen</b> bytes of data in
@@ -960,28 +938,27 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
   }
 
   switch (first_octet) { /* which version of socks? */
-    case 'G': /* get */
-    case 'H': /* head */
-    case 'P': /* put/post */
-    case 'C': /* connect */
-      strlcpy((char*)req->reply, SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG,
-              MAX_SOCKS_REPLY_LEN);
-      req->replylen = strlen((char*)req->reply)+1;
-      /* fall through */
-    default: /* version is not socks4 or socks5 */
-      log_warn(LD_APP,
-               "Socks version %d not recognized. (This port is not an "
-               "HTTP proxy; did you want to use HTTPTunnelPort?)",
-               *(data));
-      {
-        /* Tell the controller the first 8 bytes. */
-        char *tmp = tor_strndup(data, datalen < 8 ? datalen : 8);
-        control_event_client_status(LOG_WARN,
-                                    "SOCKS_UNKNOWN_PROTOCOL DATA=\"%s\"",
-                                    escaped(tmp));
-        tor_free(tmp);
-      }
-      return -1;
+  case 'G': /* get */
+  case 'H': /* head */
+  case 'P': /* put/post */
+  case 'C': /* connect */
+    strlcpy((char *)req->reply, SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG,
+            MAX_SOCKS_REPLY_LEN);
+    req->replylen = strlen((char *)req->reply) + 1;
+    /* fall through */
+  default: /* version is not socks4 or socks5 */
+    log_warn(LD_APP,
+             "Socks version %d not recognized. (This port is not an "
+             "HTTP proxy; did you want to use HTTPTunnelPort?)",
+             *(data));
+    {
+      /* Tell the controller the first 8 bytes. */
+      char *tmp = tor_strndup(data, datalen < 8 ? datalen : 8);
+      control_event_client_status(
+          LOG_WARN, "SOCKS_UNKNOWN_PROTOCOL DATA=\"%s\"", escaped(tmp));
+      tor_free(tmp);
+    }
+    return -1;
   }
 
   tor_assert_unreached();
@@ -1011,8 +988,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
   buf_pullup(buf, MAX_SOCKS_MESSAGE_LEN, &head, &datalen);
   tor_assert(head && datalen >= 2);
 
-  r = parse_socks_client((uint8_t*)head, datalen,
-                         state, reason, &drain);
+  r = parse_socks_client((uint8_t *)head, datalen, state, reason, &drain);
   if (drain > 0)
     buf_drain(buf, drain);
   else if (drain < 0)
@@ -1023,9 +999,8 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
 
 /** Implementation logic for fetch_from_*_socks_client. */
 static int
-parse_socks_client(const uint8_t *data, size_t datalen,
-                   int state, char **reason,
-                   ssize_t *drain_out)
+parse_socks_client(const uint8_t *data, size_t datalen, int state,
+                   char **reason, ssize_t *drain_out)
 {
   unsigned int addrlen;
   *drain_out = 0;
@@ -1033,100 +1008,100 @@ parse_socks_client(const uint8_t *data, size_t datalen,
     return 0;
 
   switch (state) {
-    case PROXY_SOCKS4_WANT_CONNECT_OK:
-      /* Wait for the complete response */
-      if (datalen < 8)
-        return 0;
+  case PROXY_SOCKS4_WANT_CONNECT_OK:
+    /* Wait for the complete response */
+    if (datalen < 8)
+      return 0;
 
-      if (data[1] != 0x5a) {
-        *reason = tor_strdup(socks4_response_code_to_string(data[1]));
-        return -1;
-      }
-
-      /* Success */
-      *drain_out = 8;
-      return 1;
-
-    case PROXY_SOCKS5_WANT_AUTH_METHOD_NONE:
-      /* we don't have any credentials */
-      if (data[1] != 0x00) {
-        *reason = tor_strdup("server doesn't support any of our "
-                             "available authentication methods");
-        return -1;
-      }
-
-      log_info(LD_NET, "SOCKS 5 client: continuing without authentication");
-      *drain_out = -1;
-      return 1;
-
-    case PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929:
-      /* we have a username and password. return 1 if we can proceed without
-       * providing authentication, or 2 otherwise. */
-      switch (data[1]) {
-        case 0x00:
-          log_info(LD_NET, "SOCKS 5 client: we have auth details but server "
-                            "doesn't require authentication.");
-          *drain_out = -1;
-          return 1;
-        case 0x02:
-          log_info(LD_NET, "SOCKS 5 client: need authentication.");
-          *drain_out = -1;
-          return 2;
-        /* fall through */
-      }
-
-      *reason = tor_strdup("server doesn't support any of our available "
-                           "authentication methods");
+    if (data[1] != 0x5a) {
+      *reason = tor_strdup(socks4_response_code_to_string(data[1]));
       return -1;
+    }
 
-    case PROXY_SOCKS5_WANT_AUTH_RFC1929_OK:
-      /* handle server reply to rfc1929 authentication */
-      if (data[1] != 0x00) {
-        *reason = tor_strdup("authentication failed");
-        return -1;
-      }
+    /* Success */
+    *drain_out = 8;
+    return 1;
 
-      log_info(LD_NET, "SOCKS 5 client: authentication successful.");
+  case PROXY_SOCKS5_WANT_AUTH_METHOD_NONE:
+    /* we don't have any credentials */
+    if (data[1] != 0x00) {
+      *reason = tor_strdup("server doesn't support any of our "
+                           "available authentication methods");
+      return -1;
+    }
+
+    log_info(LD_NET, "SOCKS 5 client: continuing without authentication");
+    *drain_out = -1;
+    return 1;
+
+  case PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929:
+    /* we have a username and password. return 1 if we can proceed without
+     * providing authentication, or 2 otherwise. */
+    switch (data[1]) {
+    case 0x00:
+      log_info(LD_NET, "SOCKS 5 client: we have auth details but server "
+                       "doesn't require authentication.");
       *drain_out = -1;
       return 1;
+    case 0x02:
+      log_info(LD_NET, "SOCKS 5 client: need authentication.");
+      *drain_out = -1;
+      return 2;
+      /* fall through */
+    }
 
-    case PROXY_SOCKS5_WANT_CONNECT_OK:
-      /* response is variable length. BND.ADDR, etc, isn't needed
-       * (don't bother with buf_pullup()), but make sure to eat all
-       * the data used */
+    *reason = tor_strdup("server doesn't support any of our available "
+                         "authentication methods");
+    return -1;
 
-      /* wait for address type field to arrive */
-      if (datalen < 4)
+  case PROXY_SOCKS5_WANT_AUTH_RFC1929_OK:
+    /* handle server reply to rfc1929 authentication */
+    if (data[1] != 0x00) {
+      *reason = tor_strdup("authentication failed");
+      return -1;
+    }
+
+    log_info(LD_NET, "SOCKS 5 client: authentication successful.");
+    *drain_out = -1;
+    return 1;
+
+  case PROXY_SOCKS5_WANT_CONNECT_OK:
+    /* response is variable length. BND.ADDR, etc, isn't needed
+     * (don't bother with buf_pullup()), but make sure to eat all
+     * the data used */
+
+    /* wait for address type field to arrive */
+    if (datalen < 4)
+      return 0;
+
+    switch (data[3]) {
+    case 0x01: /* ip4 */
+      addrlen = 4;
+      break;
+    case 0x04: /* ip6 */
+      addrlen = 16;
+      break;
+    case 0x03: /* fqdn (can this happen here?) */
+      if (datalen < 5)
         return 0;
+      addrlen = 1 + data[4];
+      break;
+    default:
+      *reason = tor_strdup("invalid response to connect request");
+      return -1;
+    }
 
-      switch (data[3]) {
-        case 0x01: /* ip4 */
-          addrlen = 4;
-          break;
-        case 0x04: /* ip6 */
-          addrlen = 16;
-          break;
-        case 0x03: /* fqdn (can this happen here?) */
-          if (datalen < 5)
-            return 0;
-          addrlen = 1 + data[4];
-          break;
-        default:
-          *reason = tor_strdup("invalid response to connect request");
-          return -1;
-      }
+    /* wait for address and port */
+    if (datalen < 6 + addrlen)
+      return 0;
 
-      /* wait for address and port */
-      if (datalen < 6 + addrlen)
-        return 0;
+    if (data[1] != 0x00) {
+      *reason = tor_strdup(socks5_response_code_to_string(data[1]));
+      return -1;
+    }
 
-      if (data[1] != 0x00) {
-        *reason = tor_strdup(socks5_response_code_to_string(data[1]));
-        return -1;
-      }
-
-      *drain_out = 6 + addrlen;
-      return 1;
+    *drain_out = 6 + addrlen;
+    return 1;
   }
 
   /* LCOV_EXCL_START */

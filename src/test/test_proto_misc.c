@@ -48,7 +48,8 @@ test_proto_var_cell(void *arg)
           "\x01\x02\x03\x04" /* circid */
           "\x07" /* VERSIONS */
           "\x00\x04" /* 4 bytes long */
-          "\x00" /* incomplete */, 8);
+          "\x00" /* incomplete */,
+          8);
   tt_int_op(1, OP_EQ, fetch_var_cell_from_buf(buf, &cell, 4));
   tt_ptr_op(cell, OP_EQ, NULL);
   /* Complete it, and it's a variable-length cell. Leave a byte on the end for
@@ -69,7 +70,8 @@ test_proto_var_cell(void *arg)
    * ensure that gets handled correctly. */
   buf_add(buf,
           "\x23\x45\x81\x00\x06" /* command 81; 6 bytes long */
-          "coraje", 11);
+          "coraje",
+          11);
   tt_int_op(1, OP_EQ, fetch_var_cell_from_buf(buf, &cell, 3));
   tt_ptr_op(cell, OP_NE, NULL);
   tt_int_op(cell->command, OP_EQ, 129);
@@ -83,12 +85,14 @@ test_proto_var_cell(void *arg)
   /* In link protocol 2, only VERSIONS cells counted as variable-length */
   buf_add(buf,
           "\x23\x45\x81\x00\x06"
-          "coraje", 11); /* As above */
+          "coraje",
+          11); /* As above */
   tt_int_op(0, OP_EQ, fetch_var_cell_from_buf(buf, &cell, 2));
   buf_clear(buf);
   buf_add(buf,
           "\x23\x45\x07\x00\x06"
-          "futuro", 11);
+          "futuro",
+          11);
   tt_int_op(1, OP_EQ, fetch_var_cell_from_buf(buf, &cell, 2));
   tt_ptr_op(cell, OP_NE, NULL);
   tt_int_op(cell->command, OP_EQ, 7);
@@ -98,7 +102,7 @@ test_proto_var_cell(void *arg)
   var_cell_free(cell);
   cell = NULL;
 
- done:
+done:
   buf_free(buf);
   var_cell_free(cell);
   tor_free(mem_op_hex_tmp);
@@ -129,10 +133,14 @@ test_proto_control0(void *arg)
 
   /* Control0 command header in buf: make sure we detect it. */
   buf_clear(buf);
-  buf_add(buf, "\x09\x05" "\x00\x05" "blah", 8);
+  buf_add(buf,
+          "\x09\x05"
+          "\x00\x05"
+          "blah",
+          8);
   tt_int_op(1, OP_EQ, peek_buf_has_control0_command(buf));
 
- done:
+done:
   buf_free(buf);
 }
 
@@ -142,7 +150,7 @@ test_proto_ext_or_cmd(void *arg)
   ext_or_cmd_t *cmd = NULL;
   buf_t *buf = buf_new();
   char *tmp = NULL;
-  (void) arg;
+  (void)arg;
 
   /* Empty -- should give "not there. */
   tt_int_op(0, OP_EQ, fetch_ext_or_command_from_buf(buf, &cmd));
@@ -165,7 +173,10 @@ test_proto_ext_or_cmd(void *arg)
   cmd = NULL;
 
   /* Now try a length-6 command with one byte missing. */
-  buf_add(buf, "\x10\x21\x00\x06""abcde", 9);
+  buf_add(buf,
+          "\x10\x21\x00\x06"
+          "abcde",
+          9);
   tt_int_op(0, OP_EQ, fetch_ext_or_command_from_buf(buf, &cmd));
   tt_ptr_op(NULL, OP_EQ, cmd);
   buf_add(buf, "f", 1);
@@ -203,7 +214,7 @@ test_proto_ext_or_cmd(void *arg)
   ext_or_cmd_free(cmd);
   cmd = NULL;
 
- done:
+done:
   ext_or_cmd_free(cmd);
   buf_free(buf);
   tor_free(tmp);
@@ -215,7 +226,7 @@ test_proto_line(void *arg)
   (void)arg;
   char tmp[60];
   buf_t *buf = buf_new();
-#define S(str) str, sizeof(str)-1
+#define S(str) str, sizeof(str) - 1
   const struct {
     const char *input;
     size_t input_len;
@@ -223,13 +234,13 @@ test_proto_line(void *arg)
     const char *output;
     int returnval;
   } cases[] = {
-    { S("Hello world"), 0, NULL, 0 },
-    { S("Hello world\n"), 12, "Hello world\n", 1 },
-    { S("Hello world\nMore"), 12, "Hello world\n", 1 },
-    { S("\n oh hello world\nMore"), 1, "\n", 1 },
-    { S("Hello worpd\n\nMore"), 12, "Hello worpd\n", 1 },
-    { S("------------------------------------------------------------\n"), 0,
-      NULL, -1 },
+      {S("Hello world"), 0, NULL, 0},
+      {S("Hello world\n"), 12, "Hello world\n", 1},
+      {S("Hello world\nMore"), 12, "Hello world\n", 1},
+      {S("\n oh hello world\nMore"), 1, "\n", 1},
+      {S("Hello worpd\n\nMore"), 12, "Hello worpd\n", 1},
+      {S("------------------------------------------------------------\n"), 0,
+       NULL, -1},
   };
   unsigned i;
   for (i = 0; i < ARRAY_LENGTH(cases); ++i) {
@@ -240,7 +251,7 @@ test_proto_line(void *arg)
     tt_int_op(rv, OP_EQ, cases[i].returnval);
     if (rv == 1) {
       tt_int_op(sz, OP_LT, sizeof(tmp));
-      tt_mem_op(cases[i].output, OP_EQ, tmp, sz+1);
+      tt_mem_op(cases[i].output, OP_EQ, tmp, sz + 1);
       tt_int_op(buf_datalen(buf), OP_EQ, cases[i].input_len - strlen(tmp));
       tt_int_op(sz, OP_EQ, cases[i].line_len);
     } else {
@@ -250,16 +261,14 @@ test_proto_line(void *arg)
     buf_clear(buf);
   }
 
- done:
+done:
   buf_free(buf);
 }
 
 struct testcase_t proto_misc_tests[] = {
-  { "var_cell", test_proto_var_cell, 0, NULL, NULL },
-  { "control0", test_proto_control0, 0, NULL, NULL },
-  { "ext_or_cmd", test_proto_ext_or_cmd, TT_FORK, NULL, NULL },
-  { "line", test_proto_line, 0, NULL, NULL },
+    {"var_cell", test_proto_var_cell, 0, NULL, NULL},
+    {"control0", test_proto_control0, 0, NULL, NULL},
+    {"ext_or_cmd", test_proto_ext_or_cmd, TT_FORK, NULL, NULL},
+    {"line", test_proto_line, 0, NULL, NULL},
 
-  END_OF_TESTCASES
-};
-
+    END_OF_TESTCASES};

@@ -48,16 +48,14 @@ bto_chan_eq_(bt_orconn_t *a, bt_orconn_t *b)
 
 HT_HEAD(bto_gid_ht, bt_orconn_t);
 HT_PROTOTYPE(bto_gid_ht, bt_orconn_t, node, bto_gid_hash_, bto_gid_eq_)
-HT_GENERATE2(bto_gid_ht, bt_orconn_t, node,
-             bto_gid_hash_, bto_gid_eq_, 0.6,
+HT_GENERATE2(bto_gid_ht, bt_orconn_t, node, bto_gid_hash_, bto_gid_eq_, 0.6,
              tor_reallocarray_, tor_free_)
 static struct bto_gid_ht *bto_gid_map;
 
 HT_HEAD(bto_chan_ht, bt_orconn_t);
 HT_PROTOTYPE(bto_chan_ht, bt_orconn_t, chan_node, bto_chan_hash_, bto_chan_eq_)
-HT_GENERATE2(bto_chan_ht, bt_orconn_t, chan_node,
-             bto_chan_hash_, bto_chan_eq_, 0.6,
-             tor_reallocarray_, tor_free_)
+HT_GENERATE2(bto_chan_ht, bt_orconn_t, chan_node, bto_chan_hash_, bto_chan_eq_,
+             0.6, tor_reallocarray_, tor_free_)
 static struct bto_chan_ht *bto_chan_map;
 
 /** Clear the GID hash map, freeing any bt_orconn_t objects that become
@@ -67,9 +65,7 @@ bto_gid_clear_map(void)
 {
   bt_orconn_t **elt, **next, *c;
 
-  for (elt = HT_START(bto_gid_ht, bto_gid_map);
-       elt;
-       elt = next) {
+  for (elt = HT_START(bto_gid_ht, bto_gid_map); elt; elt = next) {
     c = *elt;
     next = HT_NEXT_RMV(bto_gid_ht, bto_gid_map, elt);
 
@@ -89,9 +85,7 @@ bto_chan_clear_map(void)
 {
   bt_orconn_t **elt, **next, *c;
 
-  for (elt = HT_START(bto_chan_ht, bto_chan_map);
-       elt;
-       elt = next) {
+  for (elt = HT_START(bto_chan_ht, bto_chan_map); elt; elt = next) {
     c = *elt;
     next = HT_NEXT_RMV(bto_chan_ht, bto_chan_map, elt);
 
@@ -115,7 +109,7 @@ bto_delete(uint64_t gid)
   bto = HT_FIND(bto_gid_ht, bto_gid_map, &key);
   if (!bto) {
     /* The orconn might be unregistered because it's an EXT_OR_CONN? */
-    log_debug(LD_BTRACK, "tried to delete unregistered ORCONN gid=%"PRIu64,
+    log_debug(LD_BTRACK, "tried to delete unregistered ORCONN gid=%" PRIu64,
               gid);
     return;
   }
@@ -140,7 +134,7 @@ bto_update(bt_orconn_t *bto, const bt_orconn_t *key)
   tor_assert(!bto->gid || !key->gid || bto->gid == key->gid);
   if (!bto->gid && key->gid) {
     /* Got a gid when we didn't already have one; insert into gid map */
-    log_debug(LD_BTRACK, "ORCONN chan=%"PRIu64" newgid=%"PRIu64, key->chan,
+    log_debug(LD_BTRACK, "ORCONN chan=%" PRIu64 " newgid=%" PRIu64, key->chan,
               key->gid);
     bto->gid = key->gid;
     HT_INSERT(bto_gid_ht, bto_gid_map, bto);
@@ -149,8 +143,8 @@ bto_update(bt_orconn_t *bto, const bt_orconn_t *key)
   tor_assert(!bto->chan || !key->chan || bto->chan == key->chan);
   if (!bto->chan && key->chan) {
     /* Got a chan when we didn't already have one; insert into chan map */
-    log_debug(LD_BTRACK, "ORCONN gid=%"PRIu64" newchan=%"PRIu64,
-              bto->gid, key->chan);
+    log_debug(LD_BTRACK, "ORCONN gid=%" PRIu64 " newchan=%" PRIu64, bto->gid,
+              key->chan);
     bto->chan = key->chan;
     HT_INSERT(bto_chan_ht, bto_chan_map, bto);
   }

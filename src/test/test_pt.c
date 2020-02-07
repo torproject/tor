@@ -46,25 +46,25 @@ test_pt_parsing(void *arg)
   mp->transports = smartlist_new();
 
   /* incomplete cmethod */
-  strlcpy(line,"CMETHOD trebuchet",sizeof(line));
+  strlcpy(line, "CMETHOD trebuchet", sizeof(line));
   tt_int_op(parse_cmethod_line(line, mp), OP_LT, 0);
 
   reset_mp(mp);
 
   /* wrong proxy type */
-  strlcpy(line,"CMETHOD trebuchet dog 127.0.0.1:1999",sizeof(line));
+  strlcpy(line, "CMETHOD trebuchet dog 127.0.0.1:1999", sizeof(line));
   tt_int_op(parse_cmethod_line(line, mp), OP_LT, 0);
 
   reset_mp(mp);
 
   /* wrong addrport */
-  strlcpy(line,"CMETHOD trebuchet socks4 abcd",sizeof(line));
+  strlcpy(line, "CMETHOD trebuchet socks4 abcd", sizeof(line));
   tt_int_op(parse_cmethod_line(line, mp), OP_LT, 0);
 
   reset_mp(mp);
 
   /* correct line */
-  strlcpy(line,"CMETHOD trebuchet socks5 127.0.0.1:1999",sizeof(line));
+  strlcpy(line, "CMETHOD trebuchet socks5 127.0.0.1:1999", sizeof(line));
   tt_int_op(parse_cmethod_line(line, mp), OP_EQ, 0);
   tt_int_op(smartlist_len(mp->transports), OP_EQ, 1);
   transport = smartlist_get(mp->transports, 0);
@@ -76,24 +76,24 @@ test_pt_parsing(void *arg)
   /* test registered SOCKS version of transport */
   tt_int_op(transport->socks_version, OP_EQ, PROXY_SOCKS5);
   /* test registered name of transport */
-  tt_str_op(transport->name,OP_EQ, "trebuchet");
+  tt_str_op(transport->name, OP_EQ, "trebuchet");
 
   reset_mp(mp);
 
   /* incomplete smethod */
-  strlcpy(line,"SMETHOD trebuchet",sizeof(line));
+  strlcpy(line, "SMETHOD trebuchet", sizeof(line));
   tt_int_op(parse_smethod_line(line, mp), OP_LT, 0);
 
   reset_mp(mp);
 
   /* wrong addr type */
-  strlcpy(line,"SMETHOD trebuchet abcd",sizeof(line));
+  strlcpy(line, "SMETHOD trebuchet abcd", sizeof(line));
   tt_int_op(parse_smethod_line(line, mp), OP_LT, 0);
 
   reset_mp(mp);
 
   /* cowwect */
-  strlcpy(line,"SMETHOD trebuchy 127.0.0.2:2999",sizeof(line));
+  strlcpy(line, "SMETHOD trebuchy 127.0.0.2:2999", sizeof(line));
   tt_int_op(parse_smethod_line(line, mp), OP_EQ, 0);
   tt_int_op(smartlist_len(mp->transports), OP_EQ, 1);
   transport = smartlist_get(mp->transports, 0);
@@ -103,12 +103,13 @@ test_pt_parsing(void *arg)
   /* test registered port of transport */
   tt_uint_op(transport->port, OP_EQ, 2999);
   /* test registered name of transport */
-  tt_str_op(transport->name,OP_EQ, "trebuchy");
+  tt_str_op(transport->name, OP_EQ, "trebuchy");
 
   reset_mp(mp);
 
   /* Include some arguments. Good ones. */
-  strlcpy(line,"SMETHOD trebuchet 127.0.0.1:9999 "
+  strlcpy(line,
+          "SMETHOD trebuchet 127.0.0.1:9999 "
           "ARGS:counterweight=3,sling=snappy",
           sizeof(line));
   tt_int_op(parse_smethod_line(line, mp), OP_EQ, 0);
@@ -125,18 +126,18 @@ test_pt_parsing(void *arg)
   reset_mp(mp);
 
   /* unsupported version */
-  strlcpy(line,"VERSION 666",sizeof(line));
+  strlcpy(line, "VERSION 666", sizeof(line));
   tt_int_op(parse_version(line, mp), OP_LT, 0);
 
   /* incomplete VERSION */
-  strlcpy(line,"VERSION ",sizeof(line));
+  strlcpy(line, "VERSION ", sizeof(line));
   tt_int_op(parse_version(line, mp), OP_LT, 0);
 
   /* correct VERSION */
-  strlcpy(line,"VERSION 1",sizeof(line));
+  strlcpy(line, "VERSION 1", sizeof(line));
   tt_int_op(parse_version(line, mp), OP_EQ, 0);
 
- done:
+done:
   reset_mp(mp);
   smartlist_free(mp->transports);
   tor_free(mp);
@@ -153,7 +154,7 @@ test_pt_get_transport_options(void *arg)
   config_line_t *cl = NULL;
   (void)arg;
 
-  execve_args = tor_malloc(sizeof(char*)*2);
+  execve_args = tor_malloc(sizeof(char *) * 2);
   execve_args[0] = tor_strdup("cheeseshop");
   execve_args[1] = NULL;
 
@@ -187,7 +188,7 @@ test_pt_get_transport_options(void *arg)
             "gruyere:melty=10;gruyere:hardness=se\\;ven;"
             "stnectaire:melty=4;stnectaire:hardness=three");
 
- done:
+done:
   tor_free(opt_str);
   config_free_lines(cl);
   managed_proxy_destroy(mp, 0);
@@ -208,36 +209,36 @@ test_pt_protocol(void *arg)
 
   /* various wrong protocol runs: */
 
-  strlcpy(line,"VERSION 1",sizeof(line));
+  strlcpy(line, "VERSION 1", sizeof(line));
   handle_proxy_line(line, mp);
   tt_assert(mp->conf_state == PT_PROTO_ACCEPTING_METHODS);
 
-  strlcpy(line,"VERSION 1",sizeof(line));
+  strlcpy(line, "VERSION 1", sizeof(line));
   handle_proxy_line(line, mp);
   tt_assert(mp->conf_state == PT_PROTO_BROKEN);
 
   reset_mp(mp);
 
-  strlcpy(line,"CMETHOD trebuchet socks5 127.0.0.1:1999",sizeof(line));
+  strlcpy(line, "CMETHOD trebuchet socks5 127.0.0.1:1999", sizeof(line));
   handle_proxy_line(line, mp);
   tt_assert(mp->conf_state == PT_PROTO_BROKEN);
 
   reset_mp(mp);
 
   /* correct protocol run: */
-  strlcpy(line,"VERSION 1",sizeof(line));
+  strlcpy(line, "VERSION 1", sizeof(line));
   handle_proxy_line(line, mp);
   tt_assert(mp->conf_state == PT_PROTO_ACCEPTING_METHODS);
 
-  strlcpy(line,"CMETHOD trebuchet socks5 127.0.0.1:1999",sizeof(line));
+  strlcpy(line, "CMETHOD trebuchet socks5 127.0.0.1:1999", sizeof(line));
   handle_proxy_line(line, mp);
   tt_assert(mp->conf_state == PT_PROTO_ACCEPTING_METHODS);
 
-  strlcpy(line,"CMETHODS DONE",sizeof(line));
+  strlcpy(line, "CMETHODS DONE", sizeof(line));
   handle_proxy_line(line, mp);
   tt_assert(mp->conf_state == PT_PROTO_CONFIGURED);
 
- done:
+done:
   reset_mp(mp);
   smartlist_free(mp->transports);
   tor_free(mp->argv[0]);
@@ -253,13 +254,13 @@ test_pt_get_extrainfo_string(void *arg)
   smartlist_t *t1 = smartlist_new(), *t2 = smartlist_new();
   int r;
   char *s = NULL;
-  (void) arg;
+  (void)arg;
 
-  argv1 = tor_malloc_zero(sizeof(char*)*3);
+  argv1 = tor_malloc_zero(sizeof(char *) * 3);
   argv1[0] = tor_strdup("ewige");
   argv1[1] = tor_strdup("Blumenkraft");
   argv1[2] = NULL;
-  argv2 = tor_malloc_zero(sizeof(char*)*4);
+  argv2 = tor_malloc_zero(sizeof(char *) * 4);
   argv2[0] = tor_strdup("und");
   argv2[1] = tor_strdup("ewige");
   argv2[2] = tor_strdup("Schlangenkraft");
@@ -283,7 +284,7 @@ test_pt_get_extrainfo_string(void *arg)
             "transport hagbard 127.0.0.1:5555\n"
             "transport celine 127.0.0.1:1723 card=no-enemy\n");
 
- done:
+done:
   /* XXXX clean up better */
   smartlist_free(t1);
   smartlist_free(t2);
@@ -301,8 +302,8 @@ process_read_stdout_replacement(process_t *process, buf_t *buffer)
   times_called++;
 
   if (times_called <= 5) {
-    buf_add_printf(buffer, "SMETHOD mock%d 127.0.0.1:555%d\n",
-                           times_called, times_called);
+    buf_add_printf(buffer, "SMETHOD mock%d 127.0.0.1:555%d\n", times_called,
+                   times_called);
   } else if (times_called <= 6) {
     buf_add_string(buffer, "SMETHODS DONE\n");
   } else if (times_called <= 7) {
@@ -349,15 +350,13 @@ test_pt_configure_proxy(void *arg)
 {
   int i, retval;
   managed_proxy_t *mp = NULL;
-  (void) arg;
+  (void)arg;
 
   dummy_state = or_state_new();
 
   MOCK(process_read_stdout, process_read_stdout_replacement);
-  MOCK(get_or_state,
-       get_or_state_replacement);
-  MOCK(queue_control_event_string,
-       queue_control_event_string_replacement);
+  MOCK(get_or_state, get_or_state_replacement);
+  MOCK(queue_control_event_string, queue_control_event_string_replacement);
 
   control_testing_set_global_event_mask(EVENT_TRANSPORT_LAUNCHED);
 
@@ -365,7 +364,7 @@ test_pt_configure_proxy(void *arg)
   mp->conf_state = PT_PROTO_ACCEPTING_METHODS;
   mp->transports = smartlist_new();
   mp->transports_to_launch = smartlist_new();
-  mp->argv = tor_malloc_zero(sizeof(char*)*2);
+  mp->argv = tor_malloc_zero(sizeof(char *) * 2);
   mp->argv[0] = tor_strdup("<testcase>");
   mp->is_server = 1;
 
@@ -377,7 +376,7 @@ test_pt_configure_proxy(void *arg)
   /* Test the return value of configure_proxy() by calling it some
      times while it is uninitialized and then finally finalizing its
      configuration. */
-  for (i = 0 ; i < 5 ; i++) {
+  for (i = 0; i < 5; i++) {
     /* force a read from our mocked stdout reader. */
     process_notify_event_stdout(mp->process);
     /* try to configure our proxy. */
@@ -385,7 +384,7 @@ test_pt_configure_proxy(void *arg)
     /* retval should be zero because proxy hasn't finished configuring yet */
     tt_int_op(retval, OP_EQ, 0);
     /* check the number of registered transports */
-    tt_int_op(smartlist_len(mp->transports), OP_EQ, i+1);
+    tt_int_op(smartlist_len(mp->transports), OP_EQ, i + 1);
     /* check that the mp is still waiting for transports */
     tt_assert(mp->conf_state == PT_PROTO_ACCEPTING_METHODS);
   }
@@ -468,8 +467,8 @@ test_pt_configure_proxy(void *arg)
        that the mocked tor_get_lines_from_handle() generated. */
     transport_in_state = get_transport_in_state_by_name("mock1");
     tt_assert(transport_in_state);
-    smartlist_split_string(transport_info_sl, transport_in_state->value,
-                           NULL, 0, 0);
+    smartlist_split_string(transport_info_sl, transport_in_state->value, NULL,
+                           0, 0);
     name_of_transport = smartlist_get(transport_info_sl, 0);
     bindaddr = smartlist_get(transport_info_sl, 1);
     tt_str_op(name_of_transport, OP_EQ, "mock1");
@@ -479,7 +478,7 @@ test_pt_configure_proxy(void *arg)
     smartlist_free(transport_info_sl);
   }
 
- done:
+done:
   teardown_capture_of_logs();
   or_state_free(dummy_state);
   UNMOCK(process_read_stdout);
@@ -508,7 +507,7 @@ test_get_pt_proxy_uri(void *arg)
   or_options_t *options = get_options_mutable();
   char *uri = NULL;
   int ret;
-  (void) arg;
+  (void)arg;
 
   /* Test with no proxy. */
   uri = get_pt_proxy_uri();
@@ -516,8 +515,7 @@ test_get_pt_proxy_uri(void *arg)
 
   /* Test with a SOCKS4 proxy. */
   options->Socks4Proxy = tor_strdup("192.0.2.1:1080");
-  ret = tor_addr_port_lookup(options->Socks4Proxy,
-                             &options->Socks4ProxyAddr,
+  ret = tor_addr_port_lookup(options->Socks4Proxy, &options->Socks4ProxyAddr,
                              &options->Socks4ProxyPort);
   tt_int_op(ret, OP_EQ, 0);
   uri = get_pt_proxy_uri();
@@ -527,8 +525,7 @@ test_get_pt_proxy_uri(void *arg)
 
   /* Test with a SOCKS5 proxy, no username/password. */
   options->Socks5Proxy = tor_strdup("192.0.2.1:1080");
-  ret = tor_addr_port_lookup(options->Socks5Proxy,
-                             &options->Socks5ProxyAddr,
+  ret = tor_addr_port_lookup(options->Socks5Proxy, &options->Socks5ProxyAddr,
                              &options->Socks5ProxyPort);
   tt_int_op(ret, OP_EQ, 0);
   uri = get_pt_proxy_uri();
@@ -547,8 +544,7 @@ test_get_pt_proxy_uri(void *arg)
 
   /* Test with a HTTPS proxy, no authenticator. */
   options->HTTPSProxy = tor_strdup("192.0.2.1:80");
-  ret = tor_addr_port_lookup(options->HTTPSProxy,
-                             &options->HTTPSProxyAddr,
+  ret = tor_addr_port_lookup(options->HTTPSProxy, &options->HTTPSProxyAddr,
                              &options->HTTPSProxyPort);
   tt_int_op(ret, OP_EQ, 0);
   uri = get_pt_proxy_uri();
@@ -565,8 +561,7 @@ test_get_pt_proxy_uri(void *arg)
 
   /* Token nod to the fact that IPv6 exists. */
   options->Socks4Proxy = tor_strdup("[2001:db8::1]:1080");
-  ret = tor_addr_port_lookup(options->Socks4Proxy,
-                             &options->Socks4ProxyAddr,
+  ret = tor_addr_port_lookup(options->Socks4Proxy, &options->Socks4ProxyAddr,
                              &options->Socks4ProxyPort);
   tt_int_op(ret, OP_EQ, 0);
   uri = get_pt_proxy_uri();
@@ -574,26 +569,25 @@ test_get_pt_proxy_uri(void *arg)
   tor_free(uri);
   tor_free(options->Socks4Proxy);
 
- done:
+done:
   if (uri)
     tor_free(uri);
 }
 
 #ifndef COCCI
-#define PT_LEGACY(name)                                               \
-  { (#name), test_pt_ ## name , 0, NULL, NULL }
+#  define PT_LEGACY(name)                    \
+    {                                        \
+      (#name), test_pt_##name, 0, NULL, NULL \
+    }
 #endif
 
 struct testcase_t pt_tests[] = {
-  PT_LEGACY(parsing),
-  PT_LEGACY(protocol),
-  { "get_transport_options", test_pt_get_transport_options, TT_FORK,
-    NULL, NULL },
-  { "get_extrainfo_string", test_pt_get_extrainfo_string, TT_FORK,
-    NULL, NULL },
-  { "configure_proxy",test_pt_configure_proxy, TT_FORK,
-    NULL, NULL },
-  { "get_pt_proxy_uri", test_get_pt_proxy_uri, TT_FORK,
-    NULL, NULL },
-  END_OF_TESTCASES
-};
+    PT_LEGACY(parsing),
+    PT_LEGACY(protocol),
+    {"get_transport_options", test_pt_get_transport_options, TT_FORK, NULL,
+     NULL},
+    {"get_extrainfo_string", test_pt_get_extrainfo_string, TT_FORK, NULL,
+     NULL},
+    {"configure_proxy", test_pt_configure_proxy, TT_FORK, NULL, NULL},
+    {"get_pt_proxy_uri", test_get_pt_proxy_uri, TT_FORK, NULL, NULL},
+    END_OF_TESTCASES};

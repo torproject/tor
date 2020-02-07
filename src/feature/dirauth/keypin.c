@@ -33,14 +33,14 @@
 #include "siphash.h"
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #ifdef HAVE_FCNTL_H
-#include <fcntl.h>
+#  include <fcntl.h>
 #endif
 
 #ifdef _WIN32
-#include <io.h>
+#  include <io.h>
 #endif
 
 #include <errno.h>
@@ -80,8 +80,7 @@ static int keypin_journal_append_entry(const uint8_t *rsa_id_digest,
                                        const uint8_t *ed25519_id_key);
 static int keypin_check_and_add_impl(const uint8_t *rsa_id_digest,
                                      const uint8_t *ed25519_id_key,
-                                     const int do_not_add,
-                                     const int replace);
+                                     const int do_not_add, const int replace);
 static int keypin_add_or_replace_entry_in_map(keypin_ent_t *ent);
 
 static HT_HEAD(rsamap, keypin_ent_st) the_rsa_map = HT_INITIALIZER();
@@ -99,7 +98,7 @@ keypin_ents_eq_rsa(const keypin_ent_t *a, const keypin_ent_t *b)
 static inline unsigned
 keypin_ent_hash_rsa(const keypin_ent_t *a)
 {
-return (unsigned) siphash24g(a->rsa_id, sizeof(a->rsa_id));
+  return (unsigned)siphash24g(a->rsa_id, sizeof(a->rsa_id));
 }
 
 /** Hashtable helper: compare two keypin table entries and return true iff
@@ -114,18 +113,18 @@ keypin_ents_eq_ed(const keypin_ent_t *a, const keypin_ent_t *b)
 static inline unsigned
 keypin_ent_hash_ed(const keypin_ent_t *a)
 {
-return (unsigned) siphash24g(a->ed25519_key, sizeof(a->ed25519_key));
+  return (unsigned)siphash24g(a->ed25519_key, sizeof(a->ed25519_key));
 }
 
 HT_PROTOTYPE(rsamap, keypin_ent_st, rsamap_node, keypin_ent_hash_rsa,
-               keypin_ents_eq_rsa)
+             keypin_ents_eq_rsa)
 HT_GENERATE2(rsamap, keypin_ent_st, rsamap_node, keypin_ent_hash_rsa,
-               keypin_ents_eq_rsa, 0.6, tor_reallocarray, tor_free_)
+             keypin_ents_eq_rsa, 0.6, tor_reallocarray, tor_free_)
 
 HT_PROTOTYPE(edmap, keypin_ent_st, edmap_node, keypin_ent_hash_ed,
-               keypin_ents_eq_ed)
+             keypin_ents_eq_ed)
 HT_GENERATE2(edmap, keypin_ent_st, edmap_node, keypin_ent_hash_ed,
-               keypin_ents_eq_ed, 0.6, tor_reallocarray, tor_free_)
+             keypin_ents_eq_ed, 0.6, tor_reallocarray, tor_free_)
 
 /**
  * Check whether we already have an entry in the key pinning table for a
@@ -152,8 +151,7 @@ keypin_check_and_add(const uint8_t *rsa_id_digest,
  * we would add.
  */
 int
-keypin_check(const uint8_t *rsa_id_digest,
-             const uint8_t *ed25519_id_key)
+keypin_check(const uint8_t *rsa_id_digest, const uint8_t *ed25519_id_key)
 {
   return keypin_check_and_add_impl(rsa_id_digest, ed25519_id_key, 1, 0);
 }
@@ -163,8 +161,7 @@ keypin_check(const uint8_t *rsa_id_digest,
  */
 static int
 keypin_check_and_add_impl(const uint8_t *rsa_id_digest,
-                          const uint8_t *ed25519_id_key,
-                          const int do_not_add,
+                          const uint8_t *ed25519_id_key, const int do_not_add,
                           const int replace)
 {
   keypin_ent_t search, *ent;
@@ -176,7 +173,8 @@ keypin_check_and_add_impl(const uint8_t *rsa_id_digest,
   ent = HT_FIND(rsamap, &the_rsa_map, &search);
   if (ent) {
     tor_assert(fast_memeq(ent->rsa_id, rsa_id_digest, sizeof(ent->rsa_id)));
-    if (tor_memeq(ent->ed25519_key, ed25519_id_key,sizeof(ent->ed25519_key))) {
+    if (tor_memeq(ent->ed25519_key, ed25519_id_key,
+                  sizeof(ent->ed25519_key))) {
       return KEYPIN_FOUND; /* Match on both keys. Great. */
     } else {
       if (!replace)
@@ -185,7 +183,7 @@ keypin_check_and_add_impl(const uint8_t *rsa_id_digest,
   }
 
   /* See if we know a different RSA key for this ed key */
-  if (! replace) {
+  if (!replace) {
     ent = HT_FIND(edmap, &the_ed_map, &search);
     if (ent) {
       /* If we got here, then the ed key matches and the RSA doesn't */
@@ -202,7 +200,7 @@ keypin_check_and_add_impl(const uint8_t *rsa_id_digest,
 
   ent = tor_memdup(&search, sizeof(search));
   int r = keypin_add_or_replace_entry_in_map(ent);
-  if (! replace) {
+  if (!replace) {
     tor_assert(r == 1);
   } else {
     tor_assert(r != 0);
@@ -215,7 +213,7 @@ keypin_check_and_add_impl(const uint8_t *rsa_id_digest,
  * Helper: add <b>ent</b> to the hash tables.
  */
 MOCK_IMPL(STATIC void,
-keypin_add_entry_to_map, (keypin_ent_t *ent))
+keypin_add_entry_to_map, (keypin_ent_t * ent))
 {
   HT_INSERT(rsamap, &the_rsa_map, ent);
   HT_INSERT(edmap, &the_ed_map, ent);
@@ -234,8 +232,7 @@ keypin_add_or_replace_entry_in_map(keypin_ent_t *ent)
   int r = 1;
   keypin_ent_t *ent2 = HT_FIND(rsamap, &the_rsa_map, ent);
   keypin_ent_t *ent3 = HT_FIND(edmap, &the_ed_map, ent);
-  if (ent2 &&
-      fast_memeq(ent2->ed25519_key, ent->ed25519_key, DIGEST256_LEN)) {
+  if (ent2 && fast_memeq(ent2->ed25519_key, ent->ed25519_key, DIGEST256_LEN)) {
     /* We already have this mapping stored. Ignore it. */
     tor_free(ent);
     return 0;
@@ -303,9 +300,10 @@ int
 keypin_open_journal(const char *fname)
 {
 #ifndef O_SYNC
-#define O_SYNC 0
+#  define O_SYNC 0
 #endif
-  int fd = tor_open_cloexec(fname, O_WRONLY|O_CREAT|O_BINARY|O_SYNC, 0600);
+  int fd =
+      tor_open_cloexec(fname, O_WRONLY | O_CREAT | O_BINARY | O_SYNC, 0600);
   if (fd < 0)
     goto err;
 
@@ -318,7 +316,7 @@ keypin_open_journal(const char *fname)
 
   /* Add something about when we opened this file. */
   char buf[80];
-  char tbuf[ISO_TIME_LEN+1];
+  char tbuf[ISO_TIME_LEN + 1];
   format_iso_time(tbuf, approx_time());
   tor_snprintf(buf, sizeof(buf), "@opened-at %s\n", tbuf);
   if (write_all_to_fd(fd, buf, strlen(buf)) < 0)
@@ -326,7 +324,7 @@ keypin_open_journal(const char *fname)
 
   keypin_journal_fd = fd;
   return 0;
- err:
+err:
   if (fd >= 0)
     close(fd);
   return -1;
@@ -354,15 +352,17 @@ keypin_journal_append_entry(const uint8_t *rsa_id_digest,
   if (keypin_journal_fd == -1)
     return -1;
   char line[JOURNAL_LINE_LEN];
-  digest_to_base64(line, (const char*)rsa_id_digest);
+  digest_to_base64(line, (const char *)rsa_id_digest);
   line[BASE64_DIGEST_LEN] = ' ';
   digest256_to_base64(line + BASE64_DIGEST_LEN + 1,
-                      (const char*)ed25519_id_key);
-  line[BASE64_DIGEST_LEN+1+BASE64_DIGEST256_LEN] = '\n';
+                      (const char *)ed25519_id_key);
+  line[BASE64_DIGEST_LEN + 1 + BASE64_DIGEST256_LEN] = '\n';
 
-  if (write_all_to_fd(keypin_journal_fd, line, JOURNAL_LINE_LEN)<0) {
-    log_warn(LD_DIRSERV, "Error while adding a line to the key-pinning "
-             "journal: %s", strerror(errno));
+  if (write_all_to_fd(keypin_journal_fd, line, JOURNAL_LINE_LEN) < 0) {
+    log_warn(LD_DIRSERV,
+             "Error while adding a line to the key-pinning "
+             "journal: %s",
+             strerror(errno));
     keypin_close_journal();
     return -1;
   }
@@ -383,7 +383,7 @@ keypin_load_journal_impl(const char *data, size_t size)
   int n_conflicts = 0;
 
   for (const char *cp = start; cp < end; cp = next) {
-    const char *eol = memchr(cp, '\n', end-cp);
+    const char *eol = memchr(cp, '\n', end - cp);
     const char *eos = eol ? eol : end;
     const size_t len = eos - cp;
 
@@ -407,7 +407,7 @@ keypin_load_journal_impl(const char *data, size_t size)
       /* Lines with a bad length are corrupt unless they are empty.
        * Ignore them either way */
       for (const char *s = cp; s < eos; ++s) {
-        if (! TOR_ISSPACE(*s)) {
+        if (!TOR_ISSPACE(*s)) {
           ++n_corrupt_lines;
           break;
         }
@@ -472,11 +472,12 @@ keypin_parse_journal_line(const char *cp)
   /* XXXX assumes !USE_OPENSSL_BASE64 */
   keypin_ent_t *ent = tor_malloc_zero(sizeof(keypin_ent_t));
 
-  if (base64_decode((char*)ent->rsa_id, sizeof(ent->rsa_id),
-             cp, BASE64_DIGEST_LEN) != DIGEST_LEN ||
+  if (base64_decode((char *)ent->rsa_id, sizeof(ent->rsa_id), cp,
+                    BASE64_DIGEST_LEN) != DIGEST_LEN ||
       cp[BASE64_DIGEST_LEN] != ' ' ||
-      base64_decode((char*)ent->ed25519_key, sizeof(ent->ed25519_key),
-             cp+BASE64_DIGEST_LEN+1, BASE64_DIGEST256_LEN) != DIGEST256_LEN) {
+      base64_decode((char *)ent->ed25519_key, sizeof(ent->ed25519_key),
+                    cp + BASE64_DIGEST_LEN + 1,
+                    BASE64_DIGEST256_LEN) != DIGEST256_LEN) {
     tor_free(ent);
     return NULL;
   } else {
@@ -503,8 +504,8 @@ keypin_clear(void)
   }
   bad_entries += HT_SIZE(&the_ed_map);
 
-  HT_CLEAR(edmap,&the_ed_map);
-  HT_CLEAR(rsamap,&the_rsa_map);
+  HT_CLEAR(edmap, &the_ed_map);
+  HT_CLEAR(rsamap, &the_rsa_map);
 
   if (bad_entries) {
     log_warn(LD_BUG, "Found %d discrepencies in the keypin database.",

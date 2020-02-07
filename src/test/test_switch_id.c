@@ -5,31 +5,29 @@
 #include "lib/process/setuid.h"
 
 #ifdef HAVE_SYS_CAPABILITY_H
-#include <sys/capability.h>
+#  include <sys/capability.h>
 #endif
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
-#define TEST_BUILT_WITH_CAPS         0
-#define TEST_HAVE_CAPS               1
-#define TEST_ROOT_CAN_BIND_LOW       2
-#define TEST_SETUID                  3
-#define TEST_SETUID_KEEPCAPS         4
-#define TEST_SETUID_STRICT           5
+#define TEST_BUILT_WITH_CAPS 0
+#define TEST_HAVE_CAPS 1
+#define TEST_ROOT_CAN_BIND_LOW 2
+#define TEST_SETUID 3
+#define TEST_SETUID_KEEPCAPS 4
+#define TEST_SETUID_STRICT 5
 
 static const struct {
   const char *name;
   int test_id;
-} which_test[] = {
-  { "built-with-caps",    TEST_BUILT_WITH_CAPS },
-  { "have-caps",          TEST_HAVE_CAPS },
-  { "root-bind-low",      TEST_ROOT_CAN_BIND_LOW },
-  { "setuid",             TEST_SETUID },
-  { "setuid-keepcaps",    TEST_SETUID_KEEPCAPS },
-  { "setuid-strict",      TEST_SETUID_STRICT },
-  { NULL, 0 }
-};
+} which_test[] = {{"built-with-caps", TEST_BUILT_WITH_CAPS},
+                  {"have-caps", TEST_HAVE_CAPS},
+                  {"root-bind-low", TEST_ROOT_CAN_BIND_LOW},
+                  {"setuid", TEST_SETUID},
+                  {"setuid-keepcaps", TEST_SETUID_KEEPCAPS},
+                  {"setuid-strict", TEST_SETUID_STRICT},
+                  {NULL, 0}};
 
 #if !defined(_WIN32)
 /* 0 on no, 1 on yes, -1 on failure. */
@@ -44,13 +42,13 @@ check_can_bind_low_ports(void)
   for (port = 600; port < 1024; ++port) {
     sin.sin_port = htons(port);
     tor_socket_t fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (! SOCKET_OK(fd)) {
+    if (!SOCKET_OK(fd)) {
       perror("socket");
       return -1;
     }
 
     int one = 1;
-    if (setsockopt(fd, SOL_SOCKET,SO_REUSEADDR, (void*)&one,
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *)&one,
                    (socklen_t)sizeof(one))) {
       perror("setsockopt");
       tor_close_socket_simple(fd);
@@ -81,9 +79,9 @@ int
 main(int argc, char **argv)
 {
 #if defined(_WIN32)
-  (void) argc;
-  (void) argv;
-  (void) which_test;
+  (void)argc;
+  (void)argv;
+  (void)which_test;
 
   fprintf(stderr, "This test is not supported on your OS.\n");
   return 77;
@@ -113,11 +111,11 @@ main(int argc, char **argv)
     return 1;
   }
 
-#ifdef HAVE_LINUX_CAPABILITIES
+#  ifdef HAVE_LINUX_CAPABILITIES
   const int have_cap_support = 1;
-#else
+#  else
   const int have_cap_support = 0;
-#endif
+#  endif
 
   int okay;
 
@@ -127,27 +125,26 @@ main(int argc, char **argv)
   set_log_severity_config(LOG_WARN, LOG_ERR, &sev);
   add_stream_log(&sev, "", fileno(stderr));
 
-  switch (test_id)
-    {
-    case TEST_BUILT_WITH_CAPS:
-      /* Succeed if we were built with capability support. */
-      okay = have_cap_support;
-      break;
-    case TEST_HAVE_CAPS:
-      /* Succeed if "capabilities work" == "we were built with capability
-       * support." */
-      okay = have_cap_support == have_capability_support();
-      break;
-    case TEST_ROOT_CAN_BIND_LOW:
-      /* Succeed if root can bind low ports. */
-      okay = check_can_bind_low_ports() == 1;
-      break;
-    case TEST_SETUID:
-      /* Succeed if we can do a setuid with no capability retention, and doing
-       * so makes us lose the ability to bind low ports */
-    case TEST_SETUID_KEEPCAPS:
-      /* Succeed if we can do a setuid with capability retention, and doing so
-       * does not make us lose the ability to bind low ports */
+  switch (test_id) {
+  case TEST_BUILT_WITH_CAPS:
+    /* Succeed if we were built with capability support. */
+    okay = have_cap_support;
+    break;
+  case TEST_HAVE_CAPS:
+    /* Succeed if "capabilities work" == "we were built with capability
+     * support." */
+    okay = have_cap_support == have_capability_support();
+    break;
+  case TEST_ROOT_CAN_BIND_LOW:
+    /* Succeed if root can bind low ports. */
+    okay = check_can_bind_low_ports() == 1;
+    break;
+  case TEST_SETUID:
+    /* Succeed if we can do a setuid with no capability retention, and doing
+     * so makes us lose the ability to bind low ports */
+  case TEST_SETUID_KEEPCAPS:
+    /* Succeed if we can do a setuid with capability retention, and doing so
+     * does not make us lose the ability to bind low ports */
     {
       int keepcaps = (test_id == TEST_SETUID_KEEPCAPS);
       okay = switch_id(username, keepcaps ? SWITCH_ID_KEEP_BINDLOW : 0) == 0;
@@ -156,35 +153,35 @@ main(int argc, char **argv)
       }
       break;
     }
-    case TEST_SETUID_STRICT:
-      /* Succeed if, after a setuid, we cannot setuid back, and we cannot
-       * re-grab any capabilities. */
-      okay = switch_id(username, SWITCH_ID_KEEP_BINDLOW) == 0;
-      if (okay) {
-        /* We'd better not be able to setuid back! */
-        if (setuid(0) == 0 || errno != EPERM) {
-          okay = 0;
-        }
+  case TEST_SETUID_STRICT:
+    /* Succeed if, after a setuid, we cannot setuid back, and we cannot
+     * re-grab any capabilities. */
+    okay = switch_id(username, SWITCH_ID_KEEP_BINDLOW) == 0;
+    if (okay) {
+      /* We'd better not be able to setuid back! */
+      if (setuid(0) == 0 || errno != EPERM) {
+        okay = 0;
       }
-#ifdef HAVE_LINUX_CAPABILITIES
-      if (okay) {
-        cap_t caps = cap_get_proc();
-        const cap_value_t caplist[] = {
-          CAP_SETUID,
-        };
-        cap_set_flag(caps, CAP_PERMITTED, 1, caplist, CAP_SET);
-        if (cap_set_proc(caps) == 0 || errno != EPERM) {
-          okay = 0;
-        }
-        cap_free(caps);
-      }
-#endif /* defined(HAVE_LINUX_CAPABILITIES) */
-      break;
-    default:
-      fprintf(stderr, "Unsupported test '%s'\n", testname);
-      okay = 0;
-      break;
     }
+#  ifdef HAVE_LINUX_CAPABILITIES
+    if (okay) {
+      cap_t caps = cap_get_proc();
+      const cap_value_t caplist[] = {
+          CAP_SETUID,
+      };
+      cap_set_flag(caps, CAP_PERMITTED, 1, caplist, CAP_SET);
+      if (cap_set_proc(caps) == 0 || errno != EPERM) {
+        okay = 0;
+      }
+      cap_free(caps);
+    }
+#  endif /* defined(HAVE_LINUX_CAPABILITIES) */
+    break;
+  default:
+    fprintf(stderr, "Unsupported test '%s'\n", testname);
+    okay = 0;
+    break;
+  }
 
   if (!okay) {
     fprintf(stderr, "Test %s failed!\n", testname);

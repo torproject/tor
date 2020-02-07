@@ -48,8 +48,8 @@ dirclient_fetches_from_authorities(const or_options_t *options)
   if (server_mode(options) &&
       router_pick_published_address(options, &addr, 1) < 0)
     return 1; /* we don't know our IP address; ask an authority. */
-  refuseunknown = ! router_my_exit_policy_is_reject_star() &&
-    should_refuse_unknown_exits(options);
+  refuseunknown = !router_my_exit_policy_is_reject_star() &&
+                  should_refuse_unknown_exits(options);
   if (!dir_server_mode(options) && !refuseunknown)
     return 0;
   if (!server_mode(options) || !advertised_server_mode())

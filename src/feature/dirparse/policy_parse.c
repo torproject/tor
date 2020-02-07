@@ -9,7 +9,7 @@
  * \brief Code to parse address policies.
  **/
 
-#define  ROUTERDESC_TOKEN_TABLE_PRIVATE
+#define ROUTERDESC_TOKEN_TABLE_PRIVATE
 
 #include "core/or/or.h"
 
@@ -40,8 +40,8 @@ static addr_policy_t *router_parse_addr_policy_private(directory_token_t *tok);
  * of AF_INET and AF_INET6 items.
  */
 MOCK_IMPL(addr_policy_t *,
-router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
-                                           int *malformed_list))
+router_parse_addr_policy_item_from_string,
+          (const char *s, int assume_action, int *malformed_list))
 {
   directory_token_t *tok = NULL;
   const char *cp, *eos;
@@ -54,7 +54,7 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
    * IPv6 address. But making the buffer shorter might cause valid long lines,
    * which parsed in previous versions, to fail to parse in new versions.
    * (These lines would have to have excessive amounts of whitespace.) */
-  char line[TOR_ADDR_BUF_LEN*2 + 32];
+  char line[TOR_ADDR_BUF_LEN * 2 + 32];
   addr_policy_t *r;
   memarea_t *area = NULL;
 
@@ -66,7 +66,8 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
    * and ":" (port separator) are ambiguous */
   if ((*s == '*' || *s == '[' || TOR_ISDIGIT(*s)) && assume_action >= 0) {
     if (tor_snprintf(line, sizeof(line), "%s %s",
-               assume_action == ADDR_POLICY_ACCEPT?"accept":"reject", s)<0) {
+                     assume_action == ADDR_POLICY_ACCEPT ? "accept" : "reject",
+                     s) < 0) {
       log_warn(LD_DIR, "Policy %s is too long.", escaped(s));
       return NULL;
     }
@@ -83,8 +84,8 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
     log_warn(LD_DIR, "Error reading address policy: %s", tok->error);
     goto err;
   }
-  if (tok->tp != K_ACCEPT && tok->tp != K_ACCEPT6 &&
-      tok->tp != K_REJECT && tok->tp != K_REJECT6) {
+  if (tok->tp != K_ACCEPT && tok->tp != K_ACCEPT6 && tok->tp != K_REJECT &&
+      tok->tp != K_REJECT6) {
     log_warn(LD_DIR, "Expected 'accept' or 'reject'.");
     goto err;
   }
@@ -102,10 +103,11 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
    * Unlike descriptors, torrcs exit policy accept/reject can be followed by
    * either an IPv4 or IPv6 address. */
   if ((tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6) &&
-       tor_addr_family(&r->addr) != AF_INET6) {
+      tor_addr_family(&r->addr) != AF_INET6) {
     /* This is a non-fatal error, just ignore this one entry. */
     *malformed_list = 0;
-    log_warn(LD_DIR, "IPv4 address '%s' with accept6/reject6 field type in "
+    log_warn(LD_DIR,
+             "IPv4 address '%s' with accept6/reject6 field type in "
              "exit policy. Ignoring, but continuing to parse rules. (Use "
              "accept/reject with IPv4 addresses.)",
              tok->n_args == 1 ? tok->args[0] : "");
@@ -115,10 +117,10 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
   }
 
   goto done;
- err:
+err:
   *malformed_list = 1;
   r = NULL;
- done:
+done:
   token_clear(tok);
   if (area) {
     DUMP_AREA(area, "policy item");
@@ -145,7 +147,7 @@ router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
     return NULL;
   arg = tok->args[0];
 
-  if (!strcmpstart(arg,"private"))
+  if (!strcmpstart(arg, "private"))
     return router_parse_addr_policy_private(tok);
 
   memset(&newe, 0, sizeof(newe));
@@ -157,14 +159,14 @@ router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
 
   /* accept6/reject6 * produces an IPv6 wildcard address only.
    * (accept/reject * produces rules for IPv4 and IPv6 wildcard addresses.) */
-  if ((fmt_flags & TAPMP_EXTENDED_STAR)
-      && (tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6)) {
+  if ((fmt_flags & TAPMP_EXTENDED_STAR) &&
+      (tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6)) {
     fmt_flags |= TAPMP_STAR_IPV6_ONLY;
   }
 
   if (tor_addr_parse_mask_ports(arg, fmt_flags, &newe.addr, &newe.maskbits,
                                 &newe.prt_min, &newe.prt_max) < 0) {
-    log_warn(LD_DIR,"Couldn't parse line %s. Dropping", escaped(arg));
+    log_warn(LD_DIR, "Couldn't parse line %s. Dropping", escaped(arg));
     return NULL;
   }
 
@@ -197,11 +199,11 @@ router_parse_addr_policy_private(directory_token_t *tok)
     return NULL;
 
   arg += strlen("private");
-  arg = (char*) eat_whitespace(arg);
+  arg = (char *)eat_whitespace(arg);
   if (!arg || *arg != ':')
     return NULL;
 
-  if (parse_port_range(arg+1, &port_min, &port_max)<0)
+  if (parse_port_range(arg + 1, &port_min, &port_max) < 0)
     return NULL;
 
   memset(&result, 0, sizeof(result));
@@ -217,7 +219,8 @@ router_parse_addr_policy_private(directory_token_t *tok)
     log_warn(LD_GENERAL,
              "'%s' expands into rules which apply to all private IPv4 and "
              "IPv6 addresses. (Use accept/reject private:* for IPv4 and "
-             "IPv6.)", tok->n_args == 1 ? tok->args[0] : "");
+             "IPv6.)",
+             tok->n_args == 1 ? tok->args[0] : "");
   }
 
   return addr_policy_get_canonical_entry(&result);

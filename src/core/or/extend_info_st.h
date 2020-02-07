@@ -20,8 +20,8 @@
  * connection, and onion_key to create the onionskin. Note that for onehop
  * general-purpose tunnels, the onion_key is NULL. */
 struct extend_info_t {
-  char nickname[MAX_HEX_NICKNAME_LEN+1]; /**< This router's nickname for
-                                          * display. */
+  char nickname[MAX_HEX_NICKNAME_LEN + 1]; /**< This router's nickname for
+                                            * display. */
   /** Hash of this router's RSA identity key. */
   char identity_digest[DIGEST_LEN];
   /** Ed25519 identity for this router, if any. */

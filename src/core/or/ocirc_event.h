@@ -18,17 +18,17 @@
  * The various types are defined in control-spec.txt */
 typedef enum circuit_status_event_t {
   CIRC_EVENT_LAUNCHED = 0,
-  CIRC_EVENT_BUILT    = 1,
+  CIRC_EVENT_BUILT = 1,
   CIRC_EVENT_EXTENDED = 2,
-  CIRC_EVENT_FAILED   = 3,
-  CIRC_EVENT_CLOSED   = 4,
+  CIRC_EVENT_FAILED = 3,
+  CIRC_EVENT_CLOSED = 4,
 } circuit_status_event_t;
 
 /** Message for origin circuit state update */
 typedef struct ocirc_state_msg_t {
-  uint32_t gid;       /**< global ID (only origin circuits have them) */
-  int state;          /**< new circuit state */
-  bool onehop;        /**< one-hop circuit? */
+  uint32_t gid; /**< global ID (only origin circuits have them) */
+  int state; /**< new circuit state */
+  bool onehop; /**< one-hop circuit? */
 } ocirc_state_msg_t;
 
 DECLARE_MESSAGE(ocirc_state, ocirc_state, ocirc_state_msg_t *);
@@ -42,9 +42,9 @@ DECLARE_MESSAGE(ocirc_state, ocirc_state, ocirc_state_msg_t *);
  * the n_chan field.
  */
 typedef struct ocirc_chan_msg_t {
-  uint32_t gid;                 /**< global ID */
-  uint64_t chan;                /**< channel ID */
-  bool onehop;                  /**< one-hop circuit? */
+  uint32_t gid; /**< global ID */
+  uint64_t chan; /**< channel ID */
+  bool onehop; /**< one-hop circuit? */
 } ocirc_chan_msg_t;
 
 DECLARE_MESSAGE(ocirc_chan, ocirc_chan, ocirc_chan_msg_t *);
@@ -55,10 +55,10 @@ DECLARE_MESSAGE(ocirc_chan, ocirc_chan, ocirc_chan_msg_t *);
  * This contains information that ends up in CIRC control protocol events.
  */
 typedef struct ocirc_cevent_msg_t {
-  uint32_t gid;                 /**< global ID */
-  int evtype;                   /**< event type */
-  int reason;                   /**< reason */
-  bool onehop;                  /**< one-hop circuit? */
+  uint32_t gid; /**< global ID */
+  int evtype; /**< event type */
+  int reason; /**< reason */
+  bool onehop; /**< one-hop circuit? */
 } ocirc_cevent_msg_t;
 
 DECLARE_MESSAGE(ocirc_cevent, ocirc_cevent, ocirc_cevent_msg_t *);

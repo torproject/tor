@@ -8,16 +8,12 @@
 
 #include <stdint.h>
 
-void *
-cast_intptr_to_voidstar(intptr_t x);
+void *cast_intptr_to_voidstar(intptr_t x);
 
-intptr_t
-cast_voidstar_to_intptr(void *x);
+intptr_t cast_voidstar_to_intptr(void *x);
 
-void *
-cast_uintptr_to_voidstar(uintptr_t x);
+void *cast_uintptr_to_voidstar(uintptr_t x);
 
-uintptr_t
-cast_voidstar_to_uintptr(void *x);
+uintptr_t cast_voidstar_to_uintptr(void *x);
 
 #endif /* !defined(TOR_PTR_HELPERS_H) */

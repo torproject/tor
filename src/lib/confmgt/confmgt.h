@@ -27,8 +27,7 @@ typedef struct config_mgr_t config_mgr_t;
 
 config_mgr_t *config_mgr_new(const config_format_t *toplevel_fmt);
 void config_mgr_free_(config_mgr_t *mgr);
-int config_mgr_add_format(config_mgr_t *mgr,
-                          const config_format_t *fmt);
+int config_mgr_add_format(config_mgr_t *mgr, const config_format_t *fmt);
 void config_mgr_freeze(config_mgr_t *mgr);
 #define config_mgr_free(mgr) \
   FREE_AND_NULL(config_mgr_t, config_mgr_free_, (mgr))
@@ -47,7 +46,7 @@ typedef struct config_suite_t config_suite_t;
  * (An option is "reset" when it is set to an empty value, or as described in
  * CAL_CLEAR_FIRST).
  **/
-#define CAL_USE_DEFAULTS      (1u<<0)
+#define CAL_USE_DEFAULTS (1u << 0)
 /**
  * Flag for config_assign: if set, then we reset every provided config
  * option before we set it.
@@ -56,27 +55,29 @@ typedef struct config_suite_t config_suite_t;
  * config_assign will cause any previous value to be extended. But if this
  * flag is set, then a multi-line option will replace any previous value.
  **/
-#define CAL_CLEAR_FIRST       (1u<<1)
+#define CAL_CLEAR_FIRST (1u << 1)
 /**
  * Flag for config_assign: if set, we warn about deprecated options.
  **/
-#define CAL_WARN_DEPRECATIONS (1u<<2)
+#define CAL_WARN_DEPRECATIONS (1u << 2)
 
 void *config_new(const config_mgr_t *fmt);
 void config_free_(const config_mgr_t *fmt, void *options);
-#define config_free(mgr, options) do {                \
-    config_free_((mgr), (options));                   \
-    (options) = NULL;                                 \
+#define config_free(mgr, options)   \
+  do {                              \
+    config_free_((mgr), (options)); \
+    (options) = NULL;               \
   } while (0)
 
 struct config_line_t *config_get_assigned_option(const config_mgr_t *mgr,
-                                          const void *options, const char *key,
-                                          int escape_val);
-int config_is_same(const config_mgr_t *fmt,
-                   const void *o1, const void *o2,
+                                                 const void *options,
+                                                 const char *key,
+                                                 int escape_val);
+int config_is_same(const config_mgr_t *fmt, const void *o1, const void *o2,
                    const char *name);
 struct config_line_t *config_get_changes(const config_mgr_t *mgr,
-                                  const void *options1, const void *options2);
+                                         const void *options1,
+                                         const void *options2);
 void config_init(const config_mgr_t *mgr, void *options);
 
 /** An enumeration to report which validation step failed. */
@@ -94,21 +95,15 @@ validation_status_t config_validate(const config_mgr_t *mgr,
                                     char **msg_out);
 void *config_dup(const config_mgr_t *mgr, const void *old);
 char *config_dump(const config_mgr_t *mgr, const void *default_options,
-                  const void *options, int minimal,
-                  int comment_defaults);
-void config_check_toplevel_magic(const config_mgr_t *mgr,
-                                 const void *object);
+                  const void *options, int minimal, int comment_defaults);
+void config_check_toplevel_magic(const config_mgr_t *mgr, const void *object);
 bool config_check_ok(const config_mgr_t *mgr, const void *options,
                      int severity);
 int config_assign(const config_mgr_t *mgr, void *options,
-                  struct config_line_t *list,
-                  unsigned flags, char **msg);
-const char *config_find_deprecation(const config_mgr_t *mgr,
-                                    const char *key);
-const char *config_find_option_name(const config_mgr_t *mgr,
-                                    const char *key);
-const char *config_expand_abbrev(const config_mgr_t *mgr,
-                                 const char *option,
+                  struct config_line_t *list, unsigned flags, char **msg);
+const char *config_find_deprecation(const config_mgr_t *mgr, const char *key);
+const char *config_find_option_name(const config_mgr_t *mgr, const char *key);
+const char *config_expand_abbrev(const config_mgr_t *mgr, const char *option,
                                  int command_line, int warn_obsolete);
 void warn_deprecated_option(const char *what, const char *why);
 
@@ -116,17 +111,17 @@ bool config_var_is_settable(const config_var_t *var);
 bool config_var_is_listable(const config_var_t *var);
 
 /* Helper macros to compare an option across two configuration objects */
-#define CFG_EQ_BOOL(a,b,opt) ((a)->opt == (b)->opt)
-#define CFG_EQ_INT(a,b,opt) ((a)->opt == (b)->opt)
-#define CFG_EQ_STRING(a,b,opt) (!strcmp_opt((a)->opt, (b)->opt))
-#define CFG_EQ_SMARTLIST(a,b,opt) smartlist_strings_eq((a)->opt, (b)->opt)
-#define CFG_EQ_LINELIST(a,b,opt) config_lines_eq((a)->opt, (b)->opt)
-#define CFG_EQ_ROUTERSET(a,b,opt) routerset_equal((a)->opt, (b)->opt)
+#define CFG_EQ_BOOL(a, b, opt) ((a)->opt == (b)->opt)
+#define CFG_EQ_INT(a, b, opt) ((a)->opt == (b)->opt)
+#define CFG_EQ_STRING(a, b, opt) (!strcmp_opt((a)->opt, (b)->opt))
+#define CFG_EQ_SMARTLIST(a, b, opt) smartlist_strings_eq((a)->opt, (b)->opt)
+#define CFG_EQ_LINELIST(a, b, opt) config_lines_eq((a)->opt, (b)->opt)
+#define CFG_EQ_ROUTERSET(a, b, opt) routerset_equal((a)->opt, (b)->opt)
 
-void *config_mgr_get_obj_mutable(const config_mgr_t *mgr,
-                                 void *toplevel, int idx);
-const void *config_mgr_get_obj(const config_mgr_t *mgr,
-                               const void *toplevel, int idx);
+void *config_mgr_get_obj_mutable(const config_mgr_t *mgr, void *toplevel,
+                                 int idx);
+const void *config_mgr_get_obj(const config_mgr_t *mgr, const void *toplevel,
+                               int idx);
 
 #ifdef CONFMGT_PRIVATE
 STATIC void config_reset_line(const config_mgr_t *mgr, void *options,

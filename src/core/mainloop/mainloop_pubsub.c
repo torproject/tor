@@ -63,14 +63,14 @@ tor_mainloop_connect_pubsub(struct pubsub_builder_t *builder)
   tor_mainloop_disconnect_pubsub();
 
   the_dispatcher = pubsub_builder_finalize(builder, &the_pubsub_items);
-  if (! the_dispatcher)
+  if (!the_dispatcher)
     goto err;
 
   rv = 0;
   goto done;
- err:
+err:
   tor_mainloop_disconnect_pubsub();
- done:
+done:
   return rv;
 }
 
@@ -84,14 +84,14 @@ void
 tor_mainloop_connect_pubsub_events(void)
 {
   tor_assert(the_dispatcher);
-  tor_assert(! alert_events);
+  tor_assert(!alert_events);
 
   const size_t num_channels = get_num_channel_ids();
   alert_events = smartlist_new();
   for (size_t i = 0; i < num_channels; ++i) {
     smartlist_add(alert_events,
                   mainloop_event_postloop_new(flush_channel_event,
-                                              (void*)(uintptr_t)(i)));
+                                              (void *)(uintptr_t)(i)));
   }
 }
 
@@ -126,7 +126,7 @@ alertfn_prompt(dispatch_t *d, channel_id_t chan, void *arg)
 static void
 alertfn_immediate(dispatch_t *d, channel_id_t chan, void *arg)
 {
-  (void) arg;
+  (void)arg;
   dispatch_flush(d, chan, INT_MAX);
 }
 
@@ -141,21 +141,20 @@ tor_mainloop_set_delivery_strategy(const char *msg_channel_name,
                                    deliv_strategy_t strategy)
 {
   channel_id_t chan = get_channel_id(msg_channel_name);
-  if (BUG(chan == ERROR_ID) ||
-      BUG(chan >= smartlist_len(alert_events)))
+  if (BUG(chan == ERROR_ID) || BUG(chan >= smartlist_len(alert_events)))
     return -1;
 
   switch (strategy) {
-    case DELIV_NEVER:
-      dispatch_set_alert_fn(the_dispatcher, chan, alertfn_never, NULL);
-      break;
-    case DELIV_PROMPT:
-      dispatch_set_alert_fn(the_dispatcher, chan, alertfn_prompt,
-                            smartlist_get(alert_events, chan));
-      break;
-    case DELIV_IMMEDIATE:
-      dispatch_set_alert_fn(the_dispatcher, chan, alertfn_immediate, NULL);
-      break;
+  case DELIV_NEVER:
+    dispatch_set_alert_fn(the_dispatcher, chan, alertfn_never, NULL);
+    break;
+  case DELIV_PROMPT:
+    dispatch_set_alert_fn(the_dispatcher, chan, alertfn_prompt,
+                          smartlist_get(alert_events, chan));
+    break;
+  case DELIV_IMMEDIATE:
+    dispatch_set_alert_fn(the_dispatcher, chan, alertfn_immediate, NULL);
+    break;
   }
   return 0;
 }

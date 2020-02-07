@@ -16,27 +16,27 @@
 #include <string.h>
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
+#  include <netinet/in.h>
 #endif
 
 #ifdef _WIN32
-#include <winsock2.h>
-#include <windows.h>
-#define socket_errno() (WSAGetLastError())
-#define SOCKET_EPROTONOSUPPORT WSAEPROTONOSUPPORT
+#  include <winsock2.h>
+#  include <windows.h>
+#  define socket_errno() (WSAGetLastError())
+#  define SOCKET_EPROTONOSUPPORT WSAEPROTONOSUPPORT
 #else /* !defined(_WIN32) */
-#define closesocket(x) close(x)
-#define socket_errno() (errno)
-#define SOCKET_EPROTONOSUPPORT EPROTONOSUPPORT
+#  define closesocket(x) close(x)
+#  define socket_errno() (errno)
+#  define SOCKET_EPROTONOSUPPORT EPROTONOSUPPORT
 #endif /* defined(_WIN32) */
 
 #ifdef NEED_ERSATZ_SOCKETPAIR
 
 // Avoid warning about call to memcmp.
-#define raw_memcmp memcmp
+#  define raw_memcmp memcmp
 
 /**
  * Return a new socket that is bound and listening on the loopback interface
@@ -61,12 +61,12 @@ get_local_listener(int family, int type)
   }
 
   if (family == AF_INET) {
-    sa = (struct sockaddr *) &sin;
+    sa = (struct sockaddr *)&sin;
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = tor_htonl(0x7f000001);
     len = sizeof(sin);
   } else {
-    sa = (struct sockaddr *) &sin6;
+    sa = (struct sockaddr *)&sin6;
     sin6.sin6_family = AF_INET6;
     sin6.sin6_addr.s6_addr[15] = 1;
     len = sizeof(sin6);
@@ -78,7 +78,7 @@ get_local_listener(int family, int type)
     goto err;
 
   return sock;
- err:
+err:
   closesocket(sock);
   return TOR_INVALID_SOCKET;
 }
@@ -93,15 +93,16 @@ sockaddr_eq(struct sockaddr *sa1, struct sockaddr *sa2)
     return 0;
 
   if (sa1->sa_family == AF_INET6) {
-    struct sockaddr_in6 *sin6_1 = (struct sockaddr_in6 *) sa1;
-    struct sockaddr_in6 *sin6_2 = (struct sockaddr_in6 *) sa2;
+    struct sockaddr_in6 *sin6_1 = (struct sockaddr_in6 *)sa1;
+    struct sockaddr_in6 *sin6_2 = (struct sockaddr_in6 *)sa2;
     return sin6_1->sin6_port == sin6_2->sin6_port &&
-      0==raw_memcmp(sin6_1->sin6_addr.s6_addr, sin6_2->sin6_addr.s6_addr, 16);
+           0 == raw_memcmp(sin6_1->sin6_addr.s6_addr,
+                           sin6_2->sin6_addr.s6_addr, 16);
   } else if (sa1->sa_family == AF_INET) {
-    struct sockaddr_in *sin_1 = (struct sockaddr_in *) sa1;
-    struct sockaddr_in *sin_2 = (struct sockaddr_in *) sa2;
+    struct sockaddr_in *sin_1 = (struct sockaddr_in *)sa1;
+    struct sockaddr_in *sin_2 = (struct sockaddr_in *)sa2;
     return sin_1->sin_port == sin_2->sin_port &&
-      sin_1->sin_addr.s_addr == sin_2->sin_addr.s_addr;
+           sin_1->sin_addr.s_addr == sin_2->sin_addr.s_addr;
   } else {
     return 0;
   }
@@ -129,8 +130,8 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
   tor_socket_t acceptor = TOR_INVALID_SOCKET;
   struct sockaddr_storage accepted_addr_ss;
   struct sockaddr_storage connect_addr_ss;
-  struct sockaddr *connect_addr = (struct sockaddr *) &connect_addr_ss;
-  struct sockaddr *accepted_addr = (struct sockaddr *) &accepted_addr_ss;
+  struct sockaddr *connect_addr = (struct sockaddr *)&connect_addr_ss;
+  struct sockaddr *accepted_addr = (struct sockaddr *)&accepted_addr_ss;
   socklen_t size;
   int saved_errno = -1;
   int ersatz_domain = AF_INET;
@@ -140,15 +141,15 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
   memset(&connect_addr_ss, 0, sizeof(connect_addr_ss));
 
   if (protocol
-#ifdef AF_UNIX
+#  ifdef AF_UNIX
       || family != AF_UNIX
-#endif
-      ) {
-#ifdef _WIN32
+#  endif
+  ) {
+#  ifdef _WIN32
     return -WSAEAFNOSUPPORT;
-#else
+#  else
     return -EAFNOSUPPORT;
-#endif
+#  endif
   }
   if (!fd) {
     return -EINVAL;
@@ -203,13 +204,13 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
   fd[1] = acceptor;
   return 0;
 
- abort_tidy_up_and_fail:
-#ifdef _WIN32
+abort_tidy_up_and_fail:
+#  ifdef _WIN32
   saved_errno = WSAECONNABORTED;
-#else
+#  else
   saved_errno = ECONNABORTED; /* I hope this is portable and appropriate.  */
-#endif
- tidy_up_and_fail:
+#  endif
+tidy_up_and_fail:
   if (saved_errno < 0)
     saved_errno = errno;
   if (SOCKET_OK(listener))

@@ -19,7 +19,7 @@
 #include "lib/cc/torint.h"
 
 #ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
+#  include <netinet/in.h>
 #endif
 
 #include "lib/log/log.h"
@@ -55,13 +55,14 @@ static atomic_counter_t total_compress_allocation;
  * anything under 50 is probably sufficient.
  */
 #define MAX_UNCOMPRESSION_FACTOR 25
-#define CHECK_FOR_COMPRESSION_BOMB_AFTER (1024*64)
+#define CHECK_FOR_COMPRESSION_BOMB_AFTER (1024 * 64)
 /** @} */
 
 /** Return true if uncompressing an input of size <b>in_size</b> to an input of
  * size at least <b>size_out</b> looks like a compression bomb. */
 MOCK_IMPL(int,
-tor_compress_is_compression_bomb,(size_t size_in, size_t size_out))
+tor_compress_is_compression_bomb,
+          (size_t size_in, size_t size_out))
 {
   if (size_in == 0 || size_out < CHECK_FOR_COMPRESSION_BOMB_AFTER)
     return 0;
@@ -73,8 +74,7 @@ tor_compress_is_compression_bomb,(size_t size_in, size_t size_out))
  * decompression. */
 static size_t
 guess_compress_size(int compress, compress_method_t method,
-                    compression_level_t compression_level,
-                    size_t in_len)
+                    compression_level_t compression_level, size_t in_len)
 {
   // ignore these for now.
   (void)compression_level;
@@ -88,7 +88,7 @@ guess_compress_size(int compress, compress_method_t method,
   if (compress) {
     in_len /= 2;
   } else {
-    if (in_len < SIZE_T_CEILING/2)
+    if (in_len < SIZE_T_CEILING / 2)
       in_len *= 2;
   }
   return MAX(in_len, 1024);
@@ -98,12 +98,9 @@ guess_compress_size(int compress, compress_method_t method,
  * whether <b>compress</b> is set.  All arguments are as for tor_compress or
  * tor_uncompress. */
 static int
-tor_compress_impl(int compress,
-                  char **out, size_t *out_len,
-                  const char *in, size_t in_len,
-                  compress_method_t method,
-                  compression_level_t compression_level,
-                  int complete_only,
+tor_compress_impl(int compress, char **out, size_t *out_len, const char *in,
+                  size_t in_len, compress_method_t method,
+                  compression_level_t compression_level, int complete_only,
                   int protocol_warn_level)
 {
   tor_compress_state_t *stream;
@@ -113,9 +110,9 @@ tor_compress_impl(int compress,
 
   if (stream == NULL) {
     log_warn(LD_GENERAL, "NULL stream while %scompressing",
-             compress?"":"de");
-    log_debug(LD_GENERAL, "method: %d level: %d at len: %lu",
-              method, compression_level, (unsigned long)in_len);
+             compress ? "" : "de");
+    log_debug(LD_GENERAL, "method: %d level: %d at len: %lu", method,
+              compression_level, (unsigned long)in_len);
     return -1;
   }
 
@@ -124,93 +121,92 @@ tor_compress_impl(int compress,
   char *outptr;
 
   out_remaining = out_alloc =
-    guess_compress_size(compress, method, compression_level, in_len);
+      guess_compress_size(compress, method, compression_level, in_len);
   *out = outptr = tor_malloc(out_remaining);
 
   const int finish = complete_only || compress;
 
   while (1) {
-    switch (tor_compress_process(stream,
-                                 &outptr, &out_remaining,
-                                 &in, &in_len, finish)) {
-      case TOR_COMPRESS_DONE:
-        if (in_len == 0 || compress) {
-          goto done;
-        } else {
-          // More data is present, and we're decompressing.  So we may need to
-          // reinitialize the stream if we are handling multiple concatenated
-          // inputs.
-          tor_compress_free(stream);
-          stream = tor_compress_new(compress, method, compression_level);
-          if (stream == NULL) {
-            log_warn(LD_GENERAL, "NULL stream while %scompressing",
-                     compress?"":"de");
-            goto err;
-          }
-        }
-        break;
-      case TOR_COMPRESS_OK:
-        if (compress || complete_only) {
-          log_fn(protocol_warn_level, LD_PROTOCOL,
-                 "Unexpected %s while %scompressing",
-                 complete_only?"end of input":"result",
-                 compress?"":"de");
-          log_debug(LD_GENERAL, "method: %d level: %d at len: %lu",
-                    method, compression_level, (unsigned long)in_len);
-          goto err;
-        } else {
-          if (in_len == 0) {
-            goto done;
-          }
-        }
-        break;
-      case TOR_COMPRESS_BUFFER_FULL: {
-        if (!compress && outptr < *out+out_alloc) {
-          // A buffer error in this case means that we have a problem
-          // with our input.
-          log_fn(protocol_warn_level, LD_PROTOCOL,
-                 "Possible truncated or corrupt compressed data");
+    switch (tor_compress_process(stream, &outptr, &out_remaining, &in, &in_len,
+                                 finish)) {
+    case TOR_COMPRESS_DONE:
+      if (in_len == 0 || compress) {
+        goto done;
+      } else {
+        // More data is present, and we're decompressing.  So we may need to
+        // reinitialize the stream if we are handling multiple concatenated
+        // inputs.
+        tor_compress_free(stream);
+        stream = tor_compress_new(compress, method, compression_level);
+        if (stream == NULL) {
+          log_warn(LD_GENERAL, "NULL stream while %scompressing",
+                   compress ? "" : "de");
           goto err;
         }
-        if (out_alloc >= SIZE_T_CEILING / 2) {
-          log_warn(LD_GENERAL, "While %scompressing data: ran out of space.",
-                   compress?"":"un");
-          goto err;
-        }
-        if (!compress &&
-            tor_compress_is_compression_bomb(in_len_orig, out_alloc)) {
-          // This should already have been caught down in the backend logic.
-          // LCOV_EXCL_START
-          tor_assert_nonfatal_unreached();
-          goto err;
-          // LCOV_EXCL_STOP
-        }
-        const size_t offset = outptr - *out;
-        out_alloc *= 2;
-        *out = tor_realloc(*out, out_alloc);
-        outptr = *out + offset;
-        out_remaining = out_alloc - offset;
-        break;
       }
-      case TOR_COMPRESS_ERROR:
-        log_fn(protocol_warn_level, LD_GENERAL,
-               "Error while %scompressing data: bad input?",
-               compress?"":"un");
-        goto err; // bad data.
-
+      break;
+    case TOR_COMPRESS_OK:
+      if (compress || complete_only) {
+        log_fn(protocol_warn_level, LD_PROTOCOL,
+               "Unexpected %s while %scompressing",
+               complete_only ? "end of input" : "result",
+               compress ? "" : "de");
+        log_debug(LD_GENERAL, "method: %d level: %d at len: %lu", method,
+                  compression_level, (unsigned long)in_len);
+        goto err;
+      } else {
+        if (in_len == 0) {
+          goto done;
+        }
+      }
+      break;
+    case TOR_COMPRESS_BUFFER_FULL: {
+      if (!compress && outptr < *out + out_alloc) {
+        // A buffer error in this case means that we have a problem
+        // with our input.
+        log_fn(protocol_warn_level, LD_PROTOCOL,
+               "Possible truncated or corrupt compressed data");
+        goto err;
+      }
+      if (out_alloc >= SIZE_T_CEILING / 2) {
+        log_warn(LD_GENERAL, "While %scompressing data: ran out of space.",
+                 compress ? "" : "un");
+        goto err;
+      }
+      if (!compress &&
+          tor_compress_is_compression_bomb(in_len_orig, out_alloc)) {
+        // This should already have been caught down in the backend logic.
         // LCOV_EXCL_START
-      default:
         tor_assert_nonfatal_unreached();
         goto err;
         // LCOV_EXCL_STOP
+      }
+      const size_t offset = outptr - *out;
+      out_alloc *= 2;
+      *out = tor_realloc(*out, out_alloc);
+      outptr = *out + offset;
+      out_remaining = out_alloc - offset;
+      break;
+    }
+    case TOR_COMPRESS_ERROR:
+      log_fn(protocol_warn_level, LD_GENERAL,
+             "Error while %scompressing data: bad input?",
+             compress ? "" : "un");
+      goto err; // bad data.
+
+      // LCOV_EXCL_START
+    default:
+      tor_assert_nonfatal_unreached();
+      goto err;
+      // LCOV_EXCL_STOP
     }
   }
- done:
+done:
   *out_len = outptr - *out;
   if (compress && tor_compress_is_compression_bomb(*out_len, in_len_orig)) {
     log_warn(LD_BUG, "We compressed something and got an insanely high "
-             "compression factor; other Tors would think this was a "
-             "compression bomb.");
+                     "compression factor; other Tors would think this was a "
+                     "compression bomb.");
     goto err;
   }
   if (!compress) {
@@ -222,13 +218,13 @@ tor_compress_impl(int compress,
   rv = 0;
   goto out;
 
- err:
+err:
   tor_free(*out);
   *out_len = 0;
   rv = -1;
   goto out;
 
- out:
+out:
   tor_compress_free(stream);
   return rv;
 }
@@ -239,13 +235,11 @@ tor_compress_impl(int compress,
  * Return 0 on success, -1 on failure.
  */
 int
-tor_compress(char **out, size_t *out_len,
-             const char *in, size_t in_len,
+tor_compress(char **out, size_t *out_len, const char *in, size_t in_len,
              compress_method_t method)
 {
   return tor_compress_impl(1, out, out_len, in, in_len, method,
-                           BEST_COMPRESSION,
-                           1, LOG_WARN);
+                           BEST_COMPRESSION, 1, LOG_WARN);
 }
 
 /** Given zero or more compressed strings of total length <b>in_len</b> bytes
@@ -265,15 +259,13 @@ tor_compress(char **out, size_t *out_len,
  * or corrupt inputs at <b>protocol_warn_level</b>.
  */
 int
-tor_uncompress(char **out, size_t *out_len,
-               const char *in, size_t in_len,
-               compress_method_t method,
-               int complete_only,
+tor_uncompress(char **out, size_t *out_len, const char *in, size_t in_len,
+               compress_method_t method, int complete_only,
                int protocol_warn_level)
 {
   return tor_compress_impl(0, out, out_len, in, in_len, method,
-                           BEST_COMPRESSION,
-                           complete_only, protocol_warn_level);
+                           BEST_COMPRESSION, complete_only,
+                           protocol_warn_level);
 }
 
 /** Try to tell whether the <b>in_len</b>-byte string in <b>in</b> is likely
@@ -288,11 +280,9 @@ detect_compression_method(const char *in, size_t in_len)
   } else if (in_len > 2 && (in[0] & 0x0f) == 8 &&
              (tor_ntohs(get_uint16(in)) % 31) == 0) {
     return ZLIB_METHOD;
-  } else if (in_len > 2 &&
-             fast_memeq(in, "\x5d\x00\x00", 3)) {
+  } else if (in_len > 2 && fast_memeq(in, "\x5d\x00\x00", 3)) {
     return LZMA_METHOD;
-  } else if (in_len > 3 &&
-             fast_memeq(in, "\x28\xb5\x2f\xfd", 4)) {
+  } else if (in_len > 3 && fast_memeq(in, "\x28\xb5\x2f\xfd", 4)) {
     return ZSTD_METHOD;
   } else {
     return UNKNOWN_METHOD;
@@ -304,18 +294,18 @@ int
 tor_compress_supports_method(compress_method_t method)
 {
   switch (method) {
-    case GZIP_METHOD:
-    case ZLIB_METHOD:
-      return tor_zlib_method_supported();
-    case LZMA_METHOD:
-      return tor_lzma_method_supported();
-    case ZSTD_METHOD:
-      return tor_zstd_method_supported();
-    case NO_METHOD:
-      return 1;
-    case UNKNOWN_METHOD:
-    default:
-      return 0;
+  case GZIP_METHOD:
+  case ZLIB_METHOD:
+    return tor_zlib_method_supported();
+  case LZMA_METHOD:
+    return tor_lzma_method_supported();
+  case ZSTD_METHOD:
+    return tor_zstd_method_supported();
+  case NO_METHOD:
+    return 1;
+  case UNKNOWN_METHOD:
+  default:
+    return 0;
   }
 }
 
@@ -345,17 +335,17 @@ static const struct {
   const char *name;
   compress_method_t method;
 } compression_method_names[] = {
-  { "gzip", GZIP_METHOD },
-  { "deflate", ZLIB_METHOD },
-  // We call this "x-tor-lzma" rather than "x-lzma", because we impose a
-  // lower maximum memory usage on the decoding side.
-  { "x-tor-lzma", LZMA_METHOD },
-  { "x-zstd" , ZSTD_METHOD },
-  { "identity", NO_METHOD },
+    {"gzip", GZIP_METHOD},
+    {"deflate", ZLIB_METHOD},
+    // We call this "x-tor-lzma" rather than "x-lzma", because we impose a
+    // lower maximum memory usage on the decoding side.
+    {"x-tor-lzma", LZMA_METHOD},
+    {"x-zstd", ZSTD_METHOD},
+    {"identity", NO_METHOD},
 
-  /* Later entries in this table are not canonical; these are recognized but
-   * not emitted. */
-  { "x-gzip", GZIP_METHOD },
+    /* Later entries in this table are not canonical; these are recognized but
+     * not emitted. */
+    {"x-gzip", GZIP_METHOD},
 };
 
 /** Return the canonical string representation of the compression method
@@ -376,12 +366,12 @@ static const struct {
   compress_method_t method;
   const char *name;
 } compression_method_human_names[] = {
-  { NO_METHOD, "uncompressed" },
-  { GZIP_METHOD, "gzipped" },
-  { ZLIB_METHOD, "deflated" },
-  { LZMA_METHOD, "LZMA compressed" },
-  { ZSTD_METHOD, "Zstandard compressed" },
-  { UNKNOWN_METHOD, "unknown encoding" },
+    {NO_METHOD, "uncompressed"},
+    {GZIP_METHOD, "gzipped"},
+    {ZLIB_METHOD, "deflated"},
+    {LZMA_METHOD, "LZMA compressed"},
+    {ZSTD_METHOD, "Zstandard compressed"},
+    {UNKNOWN_METHOD, "unknown encoding"},
 };
 
 /** Return a human readable string representation of the compression method
@@ -417,17 +407,17 @@ const char *
 tor_compress_version_str(compress_method_t method)
 {
   switch (method) {
-    case GZIP_METHOD:
-    case ZLIB_METHOD:
-      return tor_zlib_get_version_str();
-    case LZMA_METHOD:
-      return tor_lzma_get_version_str();
-    case ZSTD_METHOD:
-      return tor_zstd_get_version_str();
-    case NO_METHOD:
-    case UNKNOWN_METHOD:
-    default:
-      return NULL;
+  case GZIP_METHOD:
+  case ZLIB_METHOD:
+    return tor_zlib_get_version_str();
+  case LZMA_METHOD:
+    return tor_lzma_get_version_str();
+  case ZSTD_METHOD:
+    return tor_zstd_get_version_str();
+  case NO_METHOD:
+  case UNKNOWN_METHOD:
+  default:
+    return NULL;
   }
 }
 
@@ -438,17 +428,17 @@ const char *
 tor_compress_header_version_str(compress_method_t method)
 {
   switch (method) {
-    case GZIP_METHOD:
-    case ZLIB_METHOD:
-      return tor_zlib_get_header_version_str();
-    case LZMA_METHOD:
-      return tor_lzma_get_header_version_str();
-    case ZSTD_METHOD:
-      return tor_zstd_get_header_version_str();
-    case NO_METHOD:
-    case UNKNOWN_METHOD:
-    default:
-      return NULL;
+  case GZIP_METHOD:
+  case ZLIB_METHOD:
+    return tor_zlib_get_header_version_str();
+  case LZMA_METHOD:
+    return tor_lzma_get_header_version_str();
+  case ZSTD_METHOD:
+    return tor_zstd_get_header_version_str();
+  case NO_METHOD:
+  case UNKNOWN_METHOD:
+  default:
+    return NULL;
   }
 }
 
@@ -458,8 +448,7 @@ size_t
 tor_compress_get_total_allocation(void)
 {
   return atomic_counter_get(&total_compress_allocation) +
-         tor_zlib_get_total_allocation() +
-         tor_lzma_get_total_allocation() +
+         tor_zlib_get_total_allocation() + tor_lzma_get_total_allocation() +
          tor_zstd_get_total_allocation();
 }
 
@@ -487,49 +476,48 @@ tor_compress_new(int compress, compress_method_t method,
   state->method = method;
 
   switch (method) {
-    case GZIP_METHOD:
-    case ZLIB_METHOD: {
-      tor_zlib_compress_state_t *zlib_state =
+  case GZIP_METHOD:
+  case ZLIB_METHOD: {
+    tor_zlib_compress_state_t *zlib_state =
         tor_zlib_compress_new(compress, method, compression_level);
 
-      if (zlib_state == NULL)
-        goto err;
+    if (zlib_state == NULL)
+      goto err;
 
-      state->u.zlib_state = zlib_state;
-      break;
-    }
-    case LZMA_METHOD: {
-      tor_lzma_compress_state_t *lzma_state =
+    state->u.zlib_state = zlib_state;
+    break;
+  }
+  case LZMA_METHOD: {
+    tor_lzma_compress_state_t *lzma_state =
         tor_lzma_compress_new(compress, method, compression_level);
 
-      if (lzma_state == NULL)
-        goto err;
+    if (lzma_state == NULL)
+      goto err;
 
-      state->u.lzma_state = lzma_state;
-      break;
-    }
-    case ZSTD_METHOD: {
-      tor_zstd_compress_state_t *zstd_state =
+    state->u.lzma_state = lzma_state;
+    break;
+  }
+  case ZSTD_METHOD: {
+    tor_zstd_compress_state_t *zstd_state =
         tor_zstd_compress_new(compress, method, compression_level);
 
-      if (zstd_state == NULL)
-        goto err;
-
-      state->u.zstd_state = zstd_state;
-      break;
-    }
-    case NO_METHOD: {
-      break;
-    }
-    case UNKNOWN_METHOD:
+    if (zstd_state == NULL)
       goto err;
+
+    state->u.zstd_state = zstd_state;
+    break;
+  }
+  case NO_METHOD: {
+    break;
+  }
+  case UNKNOWN_METHOD:
+    goto err;
   }
 
-  atomic_counter_add(&total_compress_allocation,
-                     sizeof(tor_compress_state_t));
+  atomic_counter_add(&total_compress_allocation, sizeof(tor_compress_state_t));
   return state;
 
- err:
+err:
   tor_free(state);
   return NULL;
 }
@@ -546,10 +534,8 @@ tor_compress_new(int compress, compress_method_t method,
  * Return TOR_COMPRESS_ERROR if the stream is corrupt.
  */
 tor_compress_output_t
-tor_compress_process(tor_compress_state_t *state,
-                     char **out, size_t *out_len,
-                     const char **in, size_t *in_len,
-                     int finish)
+tor_compress_process(tor_compress_state_t *state, char **out, size_t *out_len,
+                     const char **in, size_t *in_len, int finish)
 {
   tor_assert(state != NULL);
   const size_t in_len_orig = *in_len;
@@ -564,32 +550,27 @@ tor_compress_process(tor_compress_state_t *state,
   }
 
   switch (state->method) {
-    case GZIP_METHOD:
-    case ZLIB_METHOD:
-      rv = tor_zlib_compress_process(state->u.zlib_state,
-                                     out, out_len, in, in_len,
-                                     finish);
-      break;
-    case LZMA_METHOD:
-      rv = tor_lzma_compress_process(state->u.lzma_state,
-                                     out, out_len, in, in_len,
-                                     finish);
-      break;
-    case ZSTD_METHOD:
-      rv = tor_zstd_compress_process(state->u.zstd_state,
-                                     out, out_len, in, in_len,
-                                     finish);
-      break;
-    case NO_METHOD:
-      rv = tor_cnone_compress_process(out, out_len, in, in_len,
-                                      finish);
-      break;
-    default:
-    case UNKNOWN_METHOD:
-      goto err;
+  case GZIP_METHOD:
+  case ZLIB_METHOD:
+    rv = tor_zlib_compress_process(state->u.zlib_state, out, out_len, in,
+                                   in_len, finish);
+    break;
+  case LZMA_METHOD:
+    rv = tor_lzma_compress_process(state->u.lzma_state, out, out_len, in,
+                                   in_len, finish);
+    break;
+  case ZSTD_METHOD:
+    rv = tor_zstd_compress_process(state->u.zstd_state, out, out_len, in,
+                                   in_len, finish);
+    break;
+  case NO_METHOD:
+    rv = tor_cnone_compress_process(out, out_len, in, in_len, finish);
+    break;
+  default:
+  case UNKNOWN_METHOD:
+    goto err;
   }
-  if (BUG((rv == TOR_COMPRESS_OK) &&
-          *in_len == in_len_orig &&
+  if (BUG((rv == TOR_COMPRESS_OK) && *in_len == in_len_orig &&
           *out_len == out_len_orig)) {
     log_warn(LD_GENERAL,
              "More info on the bug: method == %s, finish == %d, "
@@ -601,7 +582,7 @@ tor_compress_process(tor_compress_state_t *state,
   }
 
   return rv;
- err:
+err:
   return TOR_COMPRESS_ERROR;
 }
 
@@ -613,24 +594,23 @@ tor_compress_free_(tor_compress_state_t *state)
     return;
 
   switch (state->method) {
-    case GZIP_METHOD:
-    case ZLIB_METHOD:
-      tor_zlib_compress_free(state->u.zlib_state);
-      break;
-    case LZMA_METHOD:
-      tor_lzma_compress_free(state->u.lzma_state);
-      break;
-    case ZSTD_METHOD:
-      tor_zstd_compress_free(state->u.zstd_state);
-      break;
-    case NO_METHOD:
-      break;
-    case UNKNOWN_METHOD:
-      break;
+  case GZIP_METHOD:
+  case ZLIB_METHOD:
+    tor_zlib_compress_free(state->u.zlib_state);
+    break;
+  case LZMA_METHOD:
+    tor_lzma_compress_free(state->u.lzma_state);
+    break;
+  case ZSTD_METHOD:
+    tor_zstd_compress_free(state->u.zstd_state);
+    break;
+  case NO_METHOD:
+    break;
+  case UNKNOWN_METHOD:
+    break;
   }
 
-  atomic_counter_sub(&total_compress_allocation,
-                     sizeof(tor_compress_state_t));
+  atomic_counter_sub(&total_compress_allocation, sizeof(tor_compress_state_t));
   tor_free(state);
 }
 
@@ -643,19 +623,19 @@ tor_compress_state_size(const tor_compress_state_t *state)
   size_t size = sizeof(tor_compress_state_t);
 
   switch (state->method) {
-    case GZIP_METHOD:
-    case ZLIB_METHOD:
-      size += tor_zlib_compress_state_size(state->u.zlib_state);
-      break;
-    case LZMA_METHOD:
-      size += tor_lzma_compress_state_size(state->u.lzma_state);
-      break;
-    case ZSTD_METHOD:
-      size += tor_zstd_compress_state_size(state->u.zstd_state);
-      break;
-    case NO_METHOD:
-    case UNKNOWN_METHOD:
-      break;
+  case GZIP_METHOD:
+  case ZLIB_METHOD:
+    size += tor_zlib_compress_state_size(state->u.zlib_state);
+    break;
+  case LZMA_METHOD:
+    size += tor_lzma_compress_state_size(state->u.lzma_state);
+    break;
+  case ZSTD_METHOD:
+    size += tor_zstd_compress_state_size(state->u.zstd_state);
+    break;
+  case NO_METHOD:
+  case UNKNOWN_METHOD:
+    break;
   }
 
   return size;
@@ -693,8 +673,8 @@ subsys_compress_initialize(void)
 }
 
 const subsys_fns_t sys_compress = {
-  .name = "compress",
-  .supported = true,
-  .level = -70,
-  .initialize = subsys_compress_initialize,
+    .name = "compress",
+    .supported = true,
+    .level = -70,
+    .initialize = subsys_compress_initialize,
 };

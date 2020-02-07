@@ -41,15 +41,15 @@
  * way we resist attacks where an attacker doubles the size of the
  * network using allegedly high-uptime nodes, displacing all the
  * current guards. */
-#define UPTIME_TO_GUARANTEE_STABLE (3600*24*30)
+#define UPTIME_TO_GUARANTEE_STABLE (3600 * 24 * 30)
 /** If a router's MTBF is at least this value, then it is always stable.
  * See above.  (Corresponds to about 7 days for current decay rates.) */
-#define MTBF_TO_GUARANTEE_STABLE (60*60*24*5)
+#define MTBF_TO_GUARANTEE_STABLE (60 * 60 * 24 * 5)
 /** Similarly, every node with at least this much weighted time known can be
  * considered familiar enough to be a guard.  Corresponds to about 20 days for
  * current decay rates.
  */
-#define TIME_KNOWN_TO_GUARANTEE_FAMILIAR (8*24*60*60)
+#define TIME_KNOWN_TO_GUARANTEE_FAMILIAR (8 * 24 * 60 * 60)
 /** Similarly, every node with sufficient WFU is around enough to be a guard.
  */
 #define WFU_TO_GUARANTEE_GUARD (0.98)
@@ -97,8 +97,7 @@ real_uptime(const routerinfo_t *router, time_t now)
  * bandwidth.
  */
 static int
-dirserv_thinks_router_is_unreliable(time_t now,
-                                    const routerinfo_t *router,
+dirserv_thinks_router_is_unreliable(time_t now, const routerinfo_t *router,
                                     int need_uptime, int need_capacity)
 {
   if (need_uptime) {
@@ -115,9 +114,8 @@ dirserv_thinks_router_is_unreliable(time_t now,
         return 1;
     } else {
       double mtbf =
-        rep_hist_get_stability(router->cache_info.identity_digest, now);
-      if (mtbf < stable_mtbf &&
-          mtbf < MTBF_TO_GUARANTEE_STABLE)
+          rep_hist_get_stability(router->cache_info.identity_digest, now);
+      if (mtbf < stable_mtbf && mtbf < MTBF_TO_GUARANTEE_STABLE)
         return 1;
     }
   }
@@ -170,10 +168,9 @@ router_is_active(const routerinfo_t *ri, const node_t *node, time_t now)
  * been set.
  */
 static int
-dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
-                                const node_t *node, time_t now)
+dirserv_thinks_router_is_hs_dir(const routerinfo_t *router, const node_t *node,
+                                time_t now)
 {
-
   long uptime;
 
   /* If we haven't been running for at least
@@ -183,16 +180,15 @@ dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
    * tests aren't instant. If we haven't been running long enough,
    * trust the relay. */
 
-  if (get_uptime() >
-      dirauth_get_options()->MinUptimeHidServDirectoryV2 * 1.1)
+  if (get_uptime() > dirauth_get_options()->MinUptimeHidServDirectoryV2 * 1.1)
     uptime = MIN(rep_hist_get_uptime(router->cache_info.identity_digest, now),
                  real_uptime(router, now));
   else
     uptime = real_uptime(router, now);
 
   return (router->wants_to_be_hs_dir &&
-          router->supports_tunnelled_dir_requests &&
-          node->is_stable && node->is_fast &&
+          router->supports_tunnelled_dir_requests && node->is_stable &&
+          node->is_fast &&
           uptime >= dirauth_get_options()->MinUptimeHidServDirectoryV2 &&
           router_is_active(router, node, now));
 }
@@ -212,8 +208,7 @@ router_counts_toward_thresholds(const node_t *node, time_t now,
                                 int require_mbw)
 {
   /* Have measured bw? */
-  int have_mbw =
-    dirserv_has_measured_bw(node->identity);
+  int have_mbw = dirserv_has_measured_bw(node->identity);
   uint64_t min_bw_kb = ABSOLUTE_MIN_BW_VALUE_TO_CONSIDER_KB;
   const or_options_t *options = get_options();
   const dirauth_options_t *dirauth_options = dirauth_get_options();
@@ -223,9 +218,9 @@ router_counts_toward_thresholds(const node_t *node, time_t now,
   }
 
   return node->ri && router_is_active(node->ri, node, now) &&
-    !digestmap_get(omit_as_sybil, node->identity) &&
-    (dirserv_get_credible_bandwidth_kb(node->ri) >= min_bw_kb) &&
-    (have_mbw || !require_mbw);
+         !digestmap_get(omit_as_sybil, node->identity) &&
+         (dirserv_get_credible_bandwidth_kb(node->ri) >= min_bw_kb) &&
+         (have_mbw || !require_mbw);
 }
 
 /** Look through the routerlist, the Mean Time Between Failure history, and
@@ -248,9 +243,10 @@ dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil)
   const dirauth_options_t *dirauth_options = dirauth_get_options();
 
   /* Require mbw? */
-  int require_mbw =
-    (dirserv_get_last_n_measured_bws() >
-     dirauth_options->MinMeasuredBWsForAuthToIgnoreAdvertised) ? 1 : 0;
+  int require_mbw = (dirserv_get_last_n_measured_bws() >
+                     dirauth_options->MinMeasuredBWsForAuthToIgnoreAdvertised)
+                        ? 1
+                        : 0;
 
   /* initialize these all here, in case there are no routers */
   stable_uptime = 0;
@@ -273,7 +269,7 @@ dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil)
   bandwidths_kb = tor_calloc(smartlist_len(nodelist), sizeof(uint32_t));
   /* Bandwidth for every active non-exit router. */
   bandwidths_excluding_exits_kb =
-    tor_calloc(smartlist_len(nodelist), sizeof(uint32_t));
+      tor_calloc(smartlist_len(nodelist), sizeof(uint32_t));
   /* Weighted mean time between failure for each active router. */
   mtbfs = tor_calloc(smartlist_len(nodelist), sizeof(double));
   /* Time-known for each active router. */
@@ -282,9 +278,8 @@ dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil)
   wfus = tor_calloc(smartlist_len(nodelist), sizeof(double));
 
   /* Now, fill in the arrays. */
-  SMARTLIST_FOREACH_BEGIN(nodelist, node_t *, node) {
-    if (options->BridgeAuthoritativeDir &&
-        node->ri &&
+  SMARTLIST_FOREACH_BEGIN (nodelist, node_t *, node) {
+    if (options->BridgeAuthoritativeDir && node->ri &&
         node->ri->purpose != ROUTER_PURPOSE_BRIDGE)
       continue;
 
@@ -304,7 +299,7 @@ dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil)
 
       uptimes[n_active] = (uint32_t)real_uptime(ri, now);
       mtbfs[n_active] = rep_hist_get_stability(id, now);
-      tks  [n_active] = rep_hist_get_weighted_time_known(id, now);
+      tks[n_active] = rep_hist_get_weighted_time_known(id, now);
       bandwidths_kb[n_active] = bw_kb = dirserv_get_credible_bandwidth_kb(ri);
       if (!node->is_exit || node->is_bad_exit) {
         bandwidths_excluding_exits_kb[n_active_nonexit] = bw_kb;
@@ -312,7 +307,7 @@ dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil)
       }
       ++n_active;
     }
-  } SMARTLIST_FOREACH_END(node);
+  } SMARTLIST_FOREACH_END (node);
 
   /* Now, compute thresholds. */
   if (n_active) {
@@ -321,13 +316,13 @@ dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil)
     /* The median mtbf is stable, if we have enough mtbf info */
     stable_mtbf = median_double(mtbfs, n_active);
     /* The 12.5th percentile bandwidth is fast. */
-    fast_bandwidth_kb = find_nth_uint32(bandwidths_kb, n_active, n_active/8);
+    fast_bandwidth_kb = find_nth_uint32(bandwidths_kb, n_active, n_active / 8);
     /* (Now bandwidths is sorted.) */
-    if (fast_bandwidth_kb < RELAY_REQUIRED_MIN_BANDWIDTH/(2 * 1000))
-      fast_bandwidth_kb = bandwidths_kb[n_active/4];
+    if (fast_bandwidth_kb < RELAY_REQUIRED_MIN_BANDWIDTH / (2 * 1000))
+      fast_bandwidth_kb = bandwidths_kb[n_active / 4];
     guard_bandwidth_including_exits_kb =
-      third_quartile_uint32(bandwidths_kb, n_active);
-    guard_tk = find_nth_long(tks, n_active, n_active/8);
+        third_quartile_uint32(bandwidths_kb, n_active);
+    guard_tk = find_nth_long(tks, n_active, n_active / 8);
   }
 
   if (guard_tk > TIME_KNOWN_TO_GUARANTEE_FAMILIAR)
@@ -337,15 +332,14 @@ dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil)
     /* We can vote on a parameter for the minimum and maximum. */
 #define ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG 4
     int32_t min_fast_kb, max_fast_kb, min_fast, max_fast;
-    min_fast = networkstatus_get_param(NULL, "FastFlagMinThreshold",
-      ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG,
-      ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG,
-      INT32_MAX);
+    min_fast = networkstatus_get_param(
+        NULL, "FastFlagMinThreshold", ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG,
+        ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG, INT32_MAX);
     if (options->TestingTorNetwork) {
       min_fast = (int32_t)dirauth_options->TestingMinFastFlagThreshold;
     }
-    max_fast = networkstatus_get_param(NULL, "FastFlagMaxThreshold",
-                                       INT32_MAX, min_fast, INT32_MAX);
+    max_fast = networkstatus_get_param(NULL, "FastFlagMaxThreshold", INT32_MAX,
+                                       min_fast, INT32_MAX);
     min_fast_kb = min_fast / 1000;
     max_fast_kb = max_fast / 1000;
 
@@ -366,17 +360,17 @@ dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil)
    * fill wfus with the wfu of every such "familiar" router. */
   n_familiar = 0;
 
-  SMARTLIST_FOREACH_BEGIN(nodelist, node_t *, node) {
-      if (router_counts_toward_thresholds(node, now,
-                                          omit_as_sybil, require_mbw)) {
-        routerinfo_t *ri = node->ri;
-        const char *id = ri->cache_info.identity_digest;
-        long tk = rep_hist_get_weighted_time_known(id, now);
-        if (tk < guard_tk)
-          continue;
-        wfus[n_familiar++] = rep_hist_get_weighted_fractional_uptime(id, now);
-      }
-  } SMARTLIST_FOREACH_END(node);
+  SMARTLIST_FOREACH_BEGIN (nodelist, node_t *, node) {
+    if (router_counts_toward_thresholds(node, now, omit_as_sybil,
+                                        require_mbw)) {
+      routerinfo_t *ri = node->ri;
+      const char *id = ri->cache_info.identity_digest;
+      long tk = rep_hist_get_weighted_time_known(id, now);
+      if (tk < guard_tk)
+        continue;
+      wfus[n_familiar++] = rep_hist_get_weighted_fractional_uptime(id, now);
+    }
+  } SMARTLIST_FOREACH_END (node);
   if (n_familiar)
     guard_wfu = median_double(wfus, n_familiar);
   if (guard_wfu > WFU_TO_GUARANTEE_GUARD)
@@ -386,24 +380,22 @@ dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil)
 
   if (n_active_nonexit) {
     guard_bandwidth_excluding_exits_kb =
-      find_nth_uint32(bandwidths_excluding_exits_kb,
-                      n_active_nonexit, n_active_nonexit*3/4);
+        find_nth_uint32(bandwidths_excluding_exits_kb, n_active_nonexit,
+                        n_active_nonexit * 3 / 4);
   }
 
   log_info(LD_DIRSERV,
-      "Cutoffs: For Stable, %lu sec uptime, %lu sec MTBF. "
-      "For Fast: %lu kilobytes/sec. "
-      "For Guard: WFU %.03f%%, time-known %lu sec, "
-      "and bandwidth %lu or %lu kilobytes/sec. "
-      "We%s have enough stability data.",
-      (unsigned long)stable_uptime,
-      (unsigned long)stable_mtbf,
-      (unsigned long)fast_bandwidth_kb,
-      guard_wfu*100,
-      (unsigned long)guard_tk,
-      (unsigned long)guard_bandwidth_including_exits_kb,
-      (unsigned long)guard_bandwidth_excluding_exits_kb,
-      enough_mtbf_info ? "" : " don't");
+           "Cutoffs: For Stable, %lu sec uptime, %lu sec MTBF. "
+           "For Fast: %lu kilobytes/sec. "
+           "For Guard: WFU %.03f%%, time-known %lu sec, "
+           "and bandwidth %lu or %lu kilobytes/sec. "
+           "We%s have enough stability data.",
+           (unsigned long)stable_uptime, (unsigned long)stable_mtbf,
+           (unsigned long)fast_bandwidth_kb, guard_wfu * 100,
+           (unsigned long)guard_tk,
+           (unsigned long)guard_bandwidth_including_exits_kb,
+           (unsigned long)guard_bandwidth_excluding_exits_kb,
+           enough_mtbf_info ? "" : " don't");
 
   tor_free(uptimes);
   tor_free(mtbfs);
@@ -432,27 +424,24 @@ dirserv_compute_bridge_flag_thresholds(void)
 char *
 dirserv_get_flag_thresholds_line(void)
 {
-  char *result=NULL;
+  char *result = NULL;
   const int measured_threshold =
-    dirauth_get_options()->MinMeasuredBWsForAuthToIgnoreAdvertised;
+      dirauth_get_options()->MinMeasuredBWsForAuthToIgnoreAdvertised;
   const int enough_measured_bw =
-    dirserv_get_last_n_measured_bws() > measured_threshold;
+      dirserv_get_last_n_measured_bws() > measured_threshold;
 
   tor_asprintf(&result,
-      "stable-uptime=%lu stable-mtbf=%lu "
-      "fast-speed=%lu "
-      "guard-wfu=%.03f%% guard-tk=%lu "
-      "guard-bw-inc-exits=%lu guard-bw-exc-exits=%lu "
-      "enough-mtbf=%d ignoring-advertised-bws=%d",
-      (unsigned long)stable_uptime,
-      (unsigned long)stable_mtbf,
-      (unsigned long)fast_bandwidth_kb*1000,
-      guard_wfu*100,
-      (unsigned long)guard_tk,
-      (unsigned long)guard_bandwidth_including_exits_kb*1000,
-      (unsigned long)guard_bandwidth_excluding_exits_kb*1000,
-      enough_mtbf_info ? 1 : 0,
-      enough_measured_bw ? 1 : 0);
+               "stable-uptime=%lu stable-mtbf=%lu "
+               "fast-speed=%lu "
+               "guard-wfu=%.03f%% guard-tk=%lu "
+               "guard-bw-inc-exits=%lu guard-bw-exc-exits=%lu "
+               "enough-mtbf=%d ignoring-advertised-bws=%d",
+               (unsigned long)stable_uptime, (unsigned long)stable_mtbf,
+               (unsigned long)fast_bandwidth_kb * 1000, guard_wfu * 100,
+               (unsigned long)guard_tk,
+               (unsigned long)guard_bandwidth_including_exits_kb * 1000,
+               (unsigned long)guard_bandwidth_excluding_exits_kb * 1000,
+               enough_mtbf_info ? 1 : 0, enough_measured_bw ? 1 : 0);
 
   return result;
 }
@@ -462,19 +451,19 @@ int
 running_long_enough_to_decide_unreachable(void)
 {
   const dirauth_options_t *opts = dirauth_get_options();
-  return time_of_process_start +
-    opts->TestingAuthDirTimeToLearnReachability < approx_time();
+  return time_of_process_start + opts->TestingAuthDirTimeToLearnReachability <
+         approx_time();
 }
 
 /** Each server needs to have passed a reachability test no more
  * than this number of seconds ago, or it is listed as down in
  * the directory. */
-#define REACHABLE_TIMEOUT (45*60)
+#define REACHABLE_TIMEOUT (45 * 60)
 
 /** If we tested a router and found it reachable _at least this long_ after it
  * declared itself hibernating, it is probably done hibernating and we just
  * missed a descriptor from it. */
-#define HIBERNATION_PUBLICATION_SKEW (60*60)
+#define HIBERNATION_PUBLICATION_SKEW (60 * 60)
 
 /** Treat a router as alive if
  *    - It's me, and I'm not hibernating.
@@ -494,10 +483,10 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
 
   if (router_is_me(router)) {
     /* We always know if we are shutting down or hibernating ourselves. */
-    answer = ! we_are_hibernating();
+    answer = !we_are_hibernating();
   } else if (router->is_hibernating &&
-             (router->cache_info.published_on +
-              HIBERNATION_PUBLICATION_SKEW) > node->last_reachable) {
+             (router->cache_info.published_on + HIBERNATION_PUBLICATION_SKEW) >
+                 node->last_reachable) {
     /* A hibernating router is down unless we (somehow) had contact with it
      * since it declared itself to be hibernating. */
     answer = 0;
@@ -549,9 +538,9 @@ should_publish_node_ipv6(const node_t *node, const routerinfo_t *ri,
   const dirauth_options_t *options = dirauth_get_options();
 
   return options->AuthDirHasIPv6Connectivity == 1 &&
-    !tor_addr_is_null(&ri->ipv6_addr) &&
-    ((node->last_reachable6 >= now - REACHABLE_TIMEOUT) ||
-     router_is_me(ri));
+         !tor_addr_is_null(&ri->ipv6_addr) &&
+         ((node->last_reachable6 >= now - REACHABLE_TIMEOUT) ||
+          router_is_me(ri));
 }
 
 /**
@@ -561,10 +550,8 @@ should_publish_node_ipv6(const node_t *node, const routerinfo_t *ri,
  * in from the authority subsystem.
  */
 void
-dirauth_set_routerstatus_from_routerinfo(routerstatus_t *rs,
-                                         node_t *node,
-                                         const routerinfo_t *ri,
-                                         time_t now,
+dirauth_set_routerstatus_from_routerinfo(routerstatus_t *rs, node_t *node,
+                                         const routerinfo_t *ri, time_t now,
                                          int listbadexits)
 {
   const or_options_t *options = get_options();
@@ -585,10 +572,8 @@ dirauth_set_routerstatus_from_routerinfo(routerstatus_t *rs,
       ((bw_opt && routerbw_kb >= bw_opt / 1000) ||
        routerbw_kb >= MIN(guard_bandwidth_including_exits_kb,
                           guard_bandwidth_excluding_exits_kb))) {
-    long tk = rep_hist_get_weighted_time_known(
-                                      node->identity, now);
-    double wfu = rep_hist_get_weighted_fractional_uptime(
-                                      node->identity, now);
+    long tk = rep_hist_get_weighted_time_known(node->identity, now);
+    double wfu = rep_hist_get_weighted_fractional_uptime(node->identity, now);
     rs->is_possible_guard = (wfu >= guard_wfu && tk >= guard_tk) ? 1 : 0;
   } else {
     rs->is_possible_guard = 0;
@@ -599,9 +584,9 @@ dirauth_set_routerstatus_from_routerinfo(routerstatus_t *rs,
 
   /* Set rs->is_staledesc. */
   rs->is_staledesc =
-    (ri->cache_info.published_on + DESC_IS_STALE_INTERVAL) < now;
+      (ri->cache_info.published_on + DESC_IS_STALE_INTERVAL) < now;
 
-  if (! should_publish_node_ipv6(node, ri, now)) {
+  if (!should_publish_node_ipv6(node, ri, now)) {
     /* We're not configured as having IPv6 connectivity or the node isn't:
      * zero its IPv6 information. */
     tor_addr_make_null(&rs->ipv6_addr, AF_INET6);
@@ -624,22 +609,22 @@ dirserv_set_routerstatus_testing(routerstatus_t *rs)
 
   tor_assert(get_options()->TestingTorNetwork);
 
-  if (routerset_contains_routerstatus(options->TestingDirAuthVoteExit,
-                                      rs, 0)) {
+  if (routerset_contains_routerstatus(options->TestingDirAuthVoteExit, rs,
+                                      0)) {
     rs->is_exit = 1;
   } else if (options->TestingDirAuthVoteExitIsStrict) {
     rs->is_exit = 0;
   }
 
-  if (routerset_contains_routerstatus(options->TestingDirAuthVoteGuard,
-                                      rs, 0)) {
+  if (routerset_contains_routerstatus(options->TestingDirAuthVoteGuard, rs,
+                                      0)) {
     rs->is_possible_guard = 1;
   } else if (options->TestingDirAuthVoteGuardIsStrict) {
     rs->is_possible_guard = 0;
   }
 
-  if (routerset_contains_routerstatus(options->TestingDirAuthVoteHSDir,
-                                      rs, 0)) {
+  if (routerset_contains_routerstatus(options->TestingDirAuthVoteHSDir, rs,
+                                      0)) {
     rs->is_hs_dir = 1;
   } else if (options->TestingDirAuthVoteHSDirIsStrict) {
     rs->is_hs_dir = 0;
@@ -657,8 +642,8 @@ dirserv_set_bridges_running(time_t now)
 {
   routerlist_t *rl = router_get_routerlist();
 
-  SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, ri) {
+  SMARTLIST_FOREACH_BEGIN (rl->routers, routerinfo_t *, ri) {
     if (ri->purpose == ROUTER_PURPOSE_BRIDGE)
       dirserv_set_router_is_running(ri, now);
-  } SMARTLIST_FOREACH_END(ri);
+  } SMARTLIST_FOREACH_END (ri);
 }

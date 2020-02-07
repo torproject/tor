@@ -60,12 +60,12 @@ secs_to_uptime(long secs)
     tor_asprintf(&uptime_string, "%d:%02d hours", hours, minutes);
     break;
   case 1:
-    tor_asprintf(&uptime_string, "%ld day %d:%02d hours",
-                 days, hours, minutes);
+    tor_asprintf(&uptime_string, "%ld day %d:%02d hours", days, hours,
+                 minutes);
     break;
   default:
-    tor_asprintf(&uptime_string, "%ld days %d:%02d hours",
-                 days, hours, minutes);
+    tor_asprintf(&uptime_string, "%ld days %d:%02d hours", days, hours,
+                 minutes);
     break;
   }
 
@@ -79,14 +79,14 @@ bytes_to_usage(uint64_t bytes)
 {
   char *bw_string = NULL;
 
-  if (bytes < (1<<20)) { /* Less than a megabyte. */
-    tor_asprintf(&bw_string, "%"PRIu64" kB", (bytes>>10));
-  } else if (bytes < (1<<30)) { /* Megabytes. Let's add some precision. */
+  if (bytes < (1 << 20)) { /* Less than a megabyte. */
+    tor_asprintf(&bw_string, "%" PRIu64 " kB", (bytes >> 10));
+  } else if (bytes < (1 << 30)) { /* Megabytes. Let's add some precision. */
     double bw = ((double)bytes);
-    tor_asprintf(&bw_string, "%.2f MB", bw/(1<<20));
+    tor_asprintf(&bw_string, "%.2f MB", bw / (1 << 20));
   } else { /* Gigabytes. */
     double bw = ((double)bytes);
-    tor_asprintf(&bw_string, "%.2f GB", bw/(1<<30));
+    tor_asprintf(&bw_string, "%.2f GB", bw / (1 << 30));
   }
 
   return bw_string;
@@ -131,20 +131,21 @@ log_heartbeat(time_t now)
     /* Let's check if we are in the current cached consensus. */
     if (!(me = router_get_my_routerinfo()))
       return -1; /* Something stinks, we won't even attempt this. */
-    else
-      if (!node_get_by_id(me->cache_info.identity_digest))
-        log_fn(LOG_NOTICE, LD_HEARTBEAT, "Heartbeat: It seems like we are not "
-               "in the cached consensus.");
+    else if (!node_get_by_id(me->cache_info.identity_digest))
+      log_fn(LOG_NOTICE, LD_HEARTBEAT,
+             "Heartbeat: It seems like we are not "
+             "in the cached consensus.");
   }
 
   uptime = secs_to_uptime(get_uptime());
   bw_rcvd = bytes_to_usage(get_bytes_read());
   bw_sent = bytes_to_usage(get_bytes_written());
 
-  log_fn(LOG_NOTICE, LD_HEARTBEAT, "Heartbeat: Tor's uptime is %s, with %d "
+  log_fn(LOG_NOTICE, LD_HEARTBEAT,
+         "Heartbeat: Tor's uptime is %s, with %d "
          "circuits open. I've sent %s and received %s.%s",
          uptime, count_circuits(), bw_sent, bw_rcvd,
-         hibernating?" We are currently hibernating.":"");
+         hibernating ? " We are currently hibernating." : "");
 
   if (server_mode(options) && accounting_is_enabled(options) && !hibernating) {
     log_accounting(now, options);
@@ -153,21 +154,23 @@ log_heartbeat(time_t now)
   double fullness_pct = 100;
   if (stats_n_data_cells_packaged && !hibernating) {
     fullness_pct =
-      100*(((double)stats_n_data_bytes_packaged) /
-           ((double)stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE));
+        100 * (((double)stats_n_data_bytes_packaged) /
+               ((double)stats_n_data_cells_packaged * RELAY_PAYLOAD_SIZE));
   }
-  const double overhead_pct = ( r - 1.0 ) * 100.0;
+  const double overhead_pct = (r - 1.0) * 100.0;
 
 #define FULLNESS_PCT_THRESHOLD 80
 #define TLS_OVERHEAD_THRESHOLD 15
 
   const int severity = (fullness_pct < FULLNESS_PCT_THRESHOLD ||
                         overhead_pct > TLS_OVERHEAD_THRESHOLD)
-    ? LOG_NOTICE : LOG_INFO;
+                           ? LOG_NOTICE
+                           : LOG_INFO;
 
   log_fn(severity, LD_HEARTBEAT,
          "Average packaged cell fullness: %2.3f%%. "
-         "TLS write overhead: %.f%%", fullness_pct, overhead_pct);
+         "TLS write overhead: %.f%%",
+         fullness_pct, overhead_pct);
 
   if (public_server_mode(options)) {
     rep_hist_log_circuit_handshake_stats(now);
@@ -190,13 +193,13 @@ log_heartbeat(time_t now)
     const uint64_t main_loop_error_count = get_main_loop_error_count();
     const uint64_t main_loop_idle_count = get_main_loop_idle_count();
 
-    log_fn(LOG_NOTICE, LD_HEARTBEAT, "Main event loop statistics: "
-         "%"PRIu64 " successful returns, "
-         "%"PRIu64 " erroneous returns, and "
-         "%"PRIu64 " idle returns.",
-         (main_loop_success_count),
-         (main_loop_error_count),
-         (main_loop_idle_count));
+    log_fn(LOG_NOTICE, LD_HEARTBEAT,
+           "Main event loop statistics: "
+           "%" PRIu64 " successful returns, "
+           "%" PRIu64 " erroneous returns, and "
+           "%" PRIu64 " idle returns.",
+           (main_loop_success_count), (main_loop_error_count),
+           (main_loop_idle_count));
   }
 
   /** Now, if we are an HS service, log some stats about our usage */
@@ -227,22 +230,29 @@ log_accounting(const time_t now, const or_options_t *options)
 
   const char *acc_rule;
   switch (options->AccountingRule) {
-    case ACCT_MAX: acc_rule = "max";
+  case ACCT_MAX:
+    acc_rule = "max";
     break;
-    case ACCT_SUM: acc_rule = "sum";
+  case ACCT_SUM:
+    acc_rule = "sum";
     break;
-    case ACCT_OUT: acc_rule = "out";
+  case ACCT_OUT:
+    acc_rule = "out";
     break;
-    case ACCT_IN: acc_rule = "in";
+  case ACCT_IN:
+    acc_rule = "in";
     break;
-    default: acc_rule = "max";
+  default:
+    acc_rule = "max";
     break;
   }
 
-  log_notice(LD_HEARTBEAT, "Heartbeat: Accounting enabled. "
-      "Sent: %s, Received: %s, Used: %s / %s, Rule: %s. The "
-      "current accounting interval ends on %s, in %s.",
-      acc_sent, acc_rcvd, acc_used, acc_max, acc_rule, end_buf, remaining);
+  log_notice(LD_HEARTBEAT,
+             "Heartbeat: Accounting enabled. "
+             "Sent: %s, Received: %s, Used: %s / %s, Rule: %s. The "
+             "current accounting interval ends on %s, in %s.",
+             acc_sent, acc_rcvd, acc_used, acc_max, acc_rule, end_buf,
+             remaining);
 
   tor_free(acc_rcvd);
   tor_free(acc_sent);

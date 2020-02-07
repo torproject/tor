@@ -22,7 +22,7 @@
 #include "test/rng_test_helpers.h"
 
 #ifndef TOR_UNIT_TESTS
-#error "No. Never link this code into Tor proper."
+#  error "No. Never link this code into Tor proper."
 #endif
 
 /**
@@ -63,7 +63,7 @@ testing_dump_reproducible_rng_seed(void)
 {
   printf("\n"
          "Seed: %s\n",
-         hex_str((const char*)rng_seed, sizeof(rng_seed)));
+         hex_str((const char *)rng_seed, sizeof(rng_seed)));
 }
 
 /** Produce deterministic randomness for the stochastic tests using the global
@@ -77,7 +77,7 @@ crypto_rand_deterministic(char *out, size_t n)
 {
   tor_assert(rng_xof);
   tor_mutex_acquire(rng_mutex);
-  crypto_xof_squeeze_bytes(rng_xof, (uint8_t*)out, n);
+  crypto_xof_squeeze_bytes(rng_xof, (uint8_t *)out, n);
   tor_mutex_release(rng_mutex);
 }
 
@@ -105,8 +105,8 @@ enable_deterministic_rng_impl(const uint8_t *seed, size_t seed_len)
 
   uint8_t fast_rng_seed[CRYPTO_FAST_RNG_SEED_LEN];
   memset(fast_rng_seed, 0xff, sizeof(fast_rng_seed));
-  memcpy(fast_rng_seed, rng_seed, MIN(sizeof(rng_seed),
-                                      sizeof(fast_rng_seed)));
+  memcpy(fast_rng_seed, rng_seed,
+         MIN(sizeof(rng_seed), sizeof(fast_rng_seed)));
   crypto_fast_rng_t *fast_rng = crypto_fast_rng_new_from_seed(fast_rng_seed);
   crypto_fast_rng_disable_reseed(fast_rng);
   stored_fast_rng = crypto_replace_thread_fast_rng(fast_rng);
@@ -129,7 +129,7 @@ testing_enable_reproducible_rng(void)
     size_t hexlen = strlen(provided_seed);
     size_t seedlen = hexlen / 2;
     uint8_t *seed = tor_malloc(hexlen / 2);
-    if (base16_decode((char*)seed, seedlen, provided_seed, hexlen) < 0) {
+    if (base16_decode((char *)seed, seedlen, provided_seed, hexlen) < 0) {
       puts("Cannot decode value in TOR_TEST_RNG_SEED");
       exit(1);
     }
@@ -137,7 +137,7 @@ testing_enable_reproducible_rng(void)
     tor_free(seed);
   } else {
     uint8_t seed[16];
-    crypto_rand((char*)seed, sizeof(seed));
+    crypto_rand((char *)seed, sizeof(seed));
     enable_deterministic_rng_impl(seed, sizeof(seed));
   }
 }
@@ -156,8 +156,8 @@ void
 testing_enable_deterministic_rng(void)
 {
   static const uint8_t quotation[] =
-    "What will it be? A tree? A weed? "
-    "Each one is started from a seed."; // -- Mary Ann Hoberman
+      "What will it be? A tree? A weed? "
+      "Each one is started from a seed."; // -- Mary Ann Hoberman
   enable_deterministic_rng_impl(quotation, sizeof(quotation));
 }
 

@@ -14,57 +14,62 @@
 #define DEBUG_SMARTLIST 1
 
 #include "tinytest.h"
-#define TT_EXIT_TEST_FUNCTION STMT_BEGIN goto done; STMT_END
+#define TT_EXIT_TEST_FUNCTION \
+  STMT_BEGIN                  \
+    goto done;                \
+  STMT_END
 #include "tinytest_macros.h"
 
 #ifdef __GNUC__
-#define PRETTY_FUNCTION __PRETTY_FUNCTION__
+#  define PRETTY_FUNCTION __PRETTY_FUNCTION__
 #else
-#define PRETTY_FUNCTION ""
+#  define PRETTY_FUNCTION ""
 #endif
 
 /* As test_mem_op, but decodes 'hex' before comparing.  There must be a
  * local char* variable called mem_op_hex_tmp for this to work. */
-#define test_mem_op_hex(expr1, op, hex)                                 \
-  STMT_BEGIN                                                            \
-  size_t length = strlen(hex);                                          \
-  tor_free(mem_op_hex_tmp);                                             \
-  mem_op_hex_tmp = tor_malloc(length/2);                                \
-  tor_assert((length&1)==0);                                            \
-  base16_decode(mem_op_hex_tmp, length/2, hex, length);                 \
-  tt_mem_op(expr1, op, mem_op_hex_tmp, length/2);                       \
+#define test_mem_op_hex(expr1, op, hex)                     \
+  STMT_BEGIN                                                \
+    size_t length = strlen(hex);                            \
+    tor_free(mem_op_hex_tmp);                               \
+    mem_op_hex_tmp = tor_malloc(length / 2);                \
+    tor_assert((length & 1) == 0);                          \
+    base16_decode(mem_op_hex_tmp, length / 2, hex, length); \
+    tt_mem_op(expr1, op, mem_op_hex_tmp, length / 2);       \
   STMT_END
 
 #define test_memeq_hex(expr1, hex) test_mem_op_hex(expr1, OP_EQ, hex)
 
 #ifndef COCCI
-#define tt_double_op(a,op,b)                                            \
-  tt_assert_test_type(a,b,#a" "#op" "#b,double,(val1_ op val2_),"%g",   \
-                      TT_EXIT_TEST_FUNCTION)
+#  define tt_double_op(a, op, b)                                           \
+    tt_assert_test_type(a, b, #a " " #op " " #b, double, (val1_ op val2_), \
+                        "%g", TT_EXIT_TEST_FUNCTION)
 
 /* Declare "double equal" in a sneaky way, so compiler won't complain about
  * comparing floats with == or !=.  Of course, only do this if you know what
  * you're doing. */
-#define tt_double_eq(a,b)     \
-  STMT_BEGIN                  \
-  tt_double_op((a), OP_GE, (b)); \
-  tt_double_op((a), OP_LE, (b)); \
-  STMT_END
+#  define tt_double_eq(a, b)         \
+    STMT_BEGIN                       \
+      tt_double_op((a), OP_GE, (b)); \
+      tt_double_op((a), OP_LE, (b)); \
+    STMT_END
 
-#define tt_size_op(a,op,b)                                              \
-  tt_assert_test_fmt_type(a,b,#a" "#op" "#b,size_t,(val1_ op val2_),    \
-    size_t, "%"TOR_PRIuSZ,                                              \
-    {print_ = (size_t) value_;}, {}, TT_EXIT_TEST_FUNCTION)
+#  define tt_size_op(a, op, b)                                     \
+    tt_assert_test_fmt_type(                                       \
+        a, b, #a " " #op " " #b, size_t, (val1_ op val2_), size_t, \
+        "%" TOR_PRIuSZ, { print_ = (size_t)value_; }, {},          \
+        TT_EXIT_TEST_FUNCTION)
 
-#define tt_u64_op(a,op,b)                                              \
-  tt_assert_test_fmt_type(a,b,#a" "#op" "#b,uint64_t,(val1_ op val2_), \
-    uint64_t, "%"PRIu64,                                               \
-    {print_ = (uint64_t) value_;}, {}, TT_EXIT_TEST_FUNCTION)
+#  define tt_u64_op(a, op, b)                                          \
+    tt_assert_test_fmt_type(                                           \
+        a, b, #a " " #op " " #b, uint64_t, (val1_ op val2_), uint64_t, \
+        "%" PRIu64, { print_ = (uint64_t)value_; }, {},                \
+        TT_EXIT_TEST_FUNCTION)
 
-#define tt_i64_op(a,op,b)                                              \
-  tt_assert_test_fmt_type(a,b,#a" "#op" "#b,int64_t,(val1_ op val2_),  \
-    int64_t, "%"PRId64,                                                \
-    {print_ = (int64_t) value_;}, {}, TT_EXIT_TEST_FUNCTION)
+#  define tt_i64_op(a, op, b)                                        \
+    tt_assert_test_fmt_type(                                         \
+        a, b, #a " " #op " " #b, int64_t, (val1_ op val2_), int64_t, \
+        "%" PRId64, { print_ = (int64_t)value_; }, {}, TT_EXIT_TEST_FUNCTION)
 #endif /* !defined(COCCI) */
 
 /**

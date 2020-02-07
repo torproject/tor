@@ -68,15 +68,15 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
   req->flags |= 0x80; /* set RA */
 
   /* First, check whether the requesting address matches our SOCKSPolicy. */
-  if ((addrlen = evdns_server_request_get_requesting_addr(req,
-                      (struct sockaddr*)&addr, (socklen_t)sizeof(addr))) < 0) {
+  if ((addrlen = evdns_server_request_get_requesting_addr(
+           req, (struct sockaddr *)&addr, (socklen_t)sizeof(addr))) < 0) {
     log_warn(LD_APP, "Couldn't get requesting address.");
     evdns_server_request_respond(req, DNS_ERR_SERVERFAILED);
     return;
   }
-  (void) addrlen;
-  sa = (struct sockaddr*) &addr;
-  if (tor_addr_from_sockaddr(&tor_addr, sa, &port)<0) {
+  (void)addrlen;
+  sa = (struct sockaddr *)&addr;
+  if (tor_addr_from_sockaddr(&tor_addr, sa, &port) < 0) {
     log_warn(LD_APP, "Requesting address wasn't recognized.");
     evdns_server_request_respond(req, DNS_ERR_SERVERFAILED);
     return;
@@ -98,36 +98,37 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
     return;
   }
   if (req->nquestions > 1) {
-    log_info(LD_APP, "Got a DNS request with more than one question; I only "
+    log_info(LD_APP,
+             "Got a DNS request with more than one question; I only "
              "handle one question at a time for now.  Skipping the extras.");
   }
   for (i = 0; i < req->nquestions; ++i) {
     if (req->questions[i]->dns_question_class != EVDNS_CLASS_INET)
       continue;
     switch (req->questions[i]->type) {
-      case EVDNS_TYPE_A:
-      case EVDNS_TYPE_AAAA:
-      case EVDNS_TYPE_PTR:
-        /* We always pick the first one of these questions, if there is
-           one. */
-        if (! supported_q)
-          supported_q = req->questions[i];
-        break;
-      default:
-        break;
-      }
+    case EVDNS_TYPE_A:
+    case EVDNS_TYPE_AAAA:
+    case EVDNS_TYPE_PTR:
+      /* We always pick the first one of these questions, if there is
+         one. */
+      if (!supported_q)
+        supported_q = req->questions[i];
+      break;
+    default:
+      break;
+    }
   }
   if (supported_q)
     q = supported_q;
   if (!q) {
     log_info(LD_APP, "None of the questions we got were ones we're willing "
-             "to support. Sending NOTIMPL.");
+                     "to support. Sending NOTIMPL.");
     evdns_server_request_respond(req, DNS_ERR_NOTIMPL);
     return;
   }
 
   /* Make sure the name isn't too long: This should be impossible, I think. */
-  if (err == DNS_ERR_NONE && strlen(q->name) > MAX_SOCKS_ADDR_LEN-1)
+  if (err == DNS_ERR_NONE && strlen(q->name) > MAX_SOCKS_ADDR_LEN - 1)
     err = DNS_ERR_FORMAT;
 
   if (err != DNS_ERR_NONE || !supported_q) {
@@ -187,9 +188,9 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
   control_event_stream_status(entry_conn, STREAM_EVENT_NEW_RESOLVE, 0);
 
   /* Now, unless a controller asked us to leave streams unattached,
-  * throw the connection over to get rewritten (which will
-  * answer it immediately if it's in the cache, or completely bogus, or
-  * automapped), and then attached to a circuit. */
+   * throw the connection over to get rewritten (which will
+   * answer it immediately if it's in the cache, or completely bogus, or
+   * automapped), and then attached to a circuit. */
   log_info(LD_APP, "Passing request for %s to rewrite_and_attach.",
            escaped_safe_str_client(q->name));
   q_name = tor_strdup(q->name); /* q could be freed in rewrite_and_attach */
@@ -259,7 +260,7 @@ dnsserv_launch_request(const char *name, int reverse,
   entry_conn->nym_epoch = get_signewnym_epoch();
   entry_conn->entry_cfg.isolation_flags = ISO_DEFAULT;
 
-  if (connection_add(TO_CONN(conn))<0) {
+  if (connection_add(TO_CONN(conn)) < 0) {
     log_warn(LD_APP, "Couldn't register dummy connection for RESOLVE request");
     connection_free_(TO_CONN(conn));
     return -1;
@@ -268,9 +269,9 @@ dnsserv_launch_request(const char *name, int reverse,
   control_event_stream_status(entry_conn, STREAM_EVENT_NEW_RESOLVE, 0);
 
   /* Now, unless a controller asked us to leave streams unattached,
-  * throw the connection over to get rewritten (which will
-  * answer it immediately if it's in the cache, or completely bogus, or
-  * automapped), and then attached to a circuit. */
+   * throw the connection over to get rewritten (which will
+   * answer it immediately if it's in the cache, or completely bogus, or
+   * automapped), and then attached to a circuit. */
   log_info(LD_APP, "Passing request for %s to rewrite_and_attach.",
            escaped_safe_str_client(name));
   q_name = tor_strdup(name); /* q could be freed in rewrite_and_attach */
@@ -299,8 +300,8 @@ dnsserv_reject_request(entry_connection_t *conn)
  * to preserve case in order to facilitate clients using 0x20-hacks to avoid
  * DNS poisoning. */
 static const char *
-evdns_get_orig_address(const struct evdns_server_request *req,
-                       int rtype, const char *addr)
+evdns_get_orig_address(const struct evdns_server_request *req, int rtype,
+                       const char *addr)
 {
   int i, type;
 
@@ -316,7 +317,7 @@ evdns_get_orig_address(const struct evdns_server_request *req,
     break;
   case RESOLVED_TYPE_ERROR:
   case RESOLVED_TYPE_ERROR_TRANSIENT:
-     /* Addr doesn't matter, since we're not sending it back in the reply.*/
+    /* Addr doesn't matter, since we're not sending it back in the reply.*/
     return addr;
   default:
     tor_fragile_assert();
@@ -336,19 +337,16 @@ evdns_get_orig_address(const struct evdns_server_request *req,
  * <b>answer_len</b>, in <b>answer</b>, with TTL <b>ttl</b>.  Doesn't do
  * any caching; that's handled elsewhere. */
 void
-dnsserv_resolved(entry_connection_t *conn,
-                 int answer_type,
-                 size_t answer_len,
-                 const char *answer,
-                 int ttl)
+dnsserv_resolved(entry_connection_t *conn, int answer_type, size_t answer_len,
+                 const char *answer, int ttl)
 {
   struct evdns_server_request *req = conn->dns_server_request;
   const char *name;
   int err = DNS_ERR_NONE;
   if (!req)
     return;
-  name = evdns_get_orig_address(req, answer_type,
-                                conn->socks_request->address);
+  name =
+      evdns_get_orig_address(req, answer_type, conn->socks_request->address);
 
   /* XXXX Re-do; this is dumb. */
   if (ttl < 60)
@@ -358,21 +356,14 @@ dnsserv_resolved(entry_connection_t *conn,
    * or more of the questions in the request); then, call
    * evdns_server_request_respond. */
   if (answer_type == RESOLVED_TYPE_IPV6) {
-    evdns_server_request_add_aaaa_reply(req,
-                                        name,
-                                        1, answer, ttl);
+    evdns_server_request_add_aaaa_reply(req, name, 1, answer, ttl);
   } else if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4 &&
              conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
-    evdns_server_request_add_a_reply(req,
-                                     name,
-                                     1, answer, ttl);
-  } else if (answer_type == RESOLVED_TYPE_HOSTNAME &&
-             answer_len < 256 &&
+    evdns_server_request_add_a_reply(req, name, 1, answer, ttl);
+  } else if (answer_type == RESOLVED_TYPE_HOSTNAME && answer_len < 256 &&
              conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR) {
     char *ans = tor_strndup(answer, answer_len);
-    evdns_server_request_add_ptr_reply(req, NULL,
-                                       name,
-                                       ans, ttl);
+    evdns_server_request_add_ptr_reply(req, NULL, name, ans, ttl);
     tor_free(ans);
   } else if (answer_type == RESOLVED_TYPE_ERROR) {
     err = DNS_ERR_NOTEXIST;
@@ -396,9 +387,8 @@ dnsserv_configure_listener(connection_t *conn)
   tor_assert(conn->type == CONN_TYPE_AP_DNS_LISTENER);
 
   listener_conn = TO_LISTENER_CONN(conn);
-  listener_conn->dns_server_port =
-    tor_evdns_add_server_port(conn->s, 0, evdns_server_callback,
-                              listener_conn);
+  listener_conn->dns_server_port = tor_evdns_add_server_port(
+      conn->s, 0, evdns_server_callback, listener_conn);
 }
 
 /** Free the evdns server port for <b>conn</b>, which must be an

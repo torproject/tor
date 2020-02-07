@@ -33,12 +33,12 @@ struct onion_handshake_state_t {
  *
  *  Renames 'x' to 'x_crypt_path_private_field'.
  */
-#define CRYPT_PATH_PRIV_FIELD(x) x ## _crypt_path_private_field
+#define CRYPT_PATH_PRIV_FIELD(x) x##_crypt_path_private_field
 
 #ifdef CRYPT_PATH_PRIVATE
 
 /* Helper macro to access private members of a struct. */
-#define pvt_crypto CRYPT_PATH_PRIV_FIELD(crypto)
+#  define pvt_crypto CRYPT_PATH_PRIV_FIELD(crypto)
 
 #endif /* defined(CRYPT_PATH_PRIVATE) */
 
@@ -55,7 +55,7 @@ struct crypt_path_t {
   struct crypto_dh_t *rend_dh_handshake_state;
 
   /** Negotiated key material shared with the OR at this step. */
-  char rend_circ_nonce[DIGEST_LEN];/* KH in tor-spec.txt */
+  char rend_circ_nonce[DIGEST_LEN]; /* KH in tor-spec.txt */
 
   /** Information to extend to the OR at this step. */
   extend_info_t *extend_info;

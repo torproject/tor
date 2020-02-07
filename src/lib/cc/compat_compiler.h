@@ -21,46 +21,46 @@
  * clang rejects because it is off the end of a less-than-3. Clang hates this,
  * even though those references never actually happen. */
 #    undef strcmp
-#endif /* __has_feature(address_sanitizer) */
+#  endif /* __has_feature(address_sanitizer) */
 #endif /* defined(__has_feature) */
 
 #ifndef NULL_REP_IS_ZERO_BYTES
-#error "Your platform does not represent NULL as zero. We can't cope."
+#  error "Your platform does not represent NULL as zero. We can't cope."
 #endif
 
 #ifndef DOUBLE_0_REP_IS_ZERO_BYTES
-#error "Your platform does not represent 0.0 as zeros. We can't cope."
+#  error "Your platform does not represent 0.0 as zeros. We can't cope."
 #endif
 
-#if 'a'!=97 || 'z'!=122 || 'A'!=65 || ' '!=32
-#error "It seems that you encode characters in something other than ASCII."
+#if 'a' != 97 || 'z' != 122 || 'A' != 65 || ' ' != 32
+#  error "It seems that you encode characters in something other than ASCII."
 #endif
 
 /* GCC can check printf and scanf types on arbitrary functions. */
 #ifdef __GNUC__
-#define CHECK_PRINTF(formatIdx, firstArg) \
-   __attribute__ ((format(printf, formatIdx, firstArg)))
+#  define CHECK_PRINTF(formatIdx, firstArg) \
+    __attribute__((format(printf, formatIdx, firstArg)))
 #else
-#define CHECK_PRINTF(formatIdx, firstArg)
+#  define CHECK_PRINTF(formatIdx, firstArg)
 #endif /* defined(__GNUC__) */
 #ifdef __GNUC__
-#define CHECK_SCANF(formatIdx, firstArg) \
-   __attribute__ ((format(scanf, formatIdx, firstArg)))
+#  define CHECK_SCANF(formatIdx, firstArg) \
+    __attribute__((format(scanf, formatIdx, firstArg)))
 #else
-#define CHECK_SCANF(formatIdx, firstArg)
+#  define CHECK_SCANF(formatIdx, firstArg)
 #endif /* defined(__GNUC__) */
 
 /* What GCC do we have? */
 #ifdef __GNUC__
-#define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
+#  define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
 #else
-#define GCC_VERSION 0
+#  define GCC_VERSION 0
 #endif
 
 /* Temporarily enable and disable warnings. */
 #ifdef __GNUC__
 /* Support for macro-generated pragmas (c99) */
-#  define PRAGMA_(x) _Pragma (#x)
+#  define PRAGMA_(x) _Pragma(#  x)
 #  ifdef __clang__
 #    define PRAGMA_DIAGNOSTIC_(x) PRAGMA_(clang diagnostic x)
 #  else
@@ -69,65 +69,64 @@
 #  if defined(__clang__) || GCC_VERSION >= 406
 /* we have push/pop support */
 #    define DISABLE_GCC_WARNING(warningopt) \
-          PRAGMA_DIAGNOSTIC_(push) \
-          PRAGMA_DIAGNOSTIC_(ignored warningopt)
-#    define ENABLE_GCC_WARNING(warningopt) \
-          PRAGMA_DIAGNOSTIC_(pop)
-#else /* !(defined(__clang__) || GCC_VERSION >= 406) */
+      PRAGMA_DIAGNOSTIC_(push)              \
+      PRAGMA_DIAGNOSTIC_(ignored warningopt)
+#    define ENABLE_GCC_WARNING(warningopt) PRAGMA_DIAGNOSTIC_(pop)
+#  else /* !(defined(__clang__) || GCC_VERSION >= 406) */
 /* older version of gcc: no push/pop support. */
 #    define DISABLE_GCC_WARNING(warningopt) \
-         PRAGMA_DIAGNOSTIC_(ignored warningopt)
+      PRAGMA_DIAGNOSTIC_(ignored warningopt)
 #    define ENABLE_GCC_WARNING(warningopt) \
-         PRAGMA_DIAGNOSTIC_(warning warningopt)
-#endif /* defined(__clang__) || GCC_VERSION >= 406 */
+      PRAGMA_DIAGNOSTIC_(warning warningopt)
+#  endif /* defined(__clang__) || GCC_VERSION >= 406 */
 #else /* !defined(__GNUC__) */
 /* not gcc at all */
-# define DISABLE_GCC_WARNING(warning)
-# define ENABLE_GCC_WARNING(warning)
+#  define DISABLE_GCC_WARNING(warning)
+#  define ENABLE_GCC_WARNING(warning)
 #endif /* defined(__GNUC__) */
 
 /* inline is __inline on windows. */
 #ifdef _WIN32
-#define inline __inline
+#  define inline __inline
 #endif
 
 /* Try to get a reasonable __func__ substitute in place. */
 #if defined(_MSC_VER)
 
-#define __func__ __FUNCTION__
+#  define __func__ __FUNCTION__
 
 #else
 /* For platforms where autoconf works, make sure __func__ is defined
  * sanely. */
-#ifndef HAVE_MACRO__func__
-#ifdef HAVE_MACRO__FUNCTION__
-#define __func__ __FUNCTION__
-#elif HAVE_MACRO__FUNC__
-#define __func__ __FUNC__
-#else
-#define __func__ "???"
-#endif /* defined(HAVE_MACRO__FUNCTION__) || ... */
-#endif /* !defined(HAVE_MACRO__func__) */
+#  ifndef HAVE_MACRO__func__
+#    ifdef HAVE_MACRO__FUNCTION__
+#      define __func__ __FUNCTION__
+#    elif HAVE_MACRO__FUNC__
+#      define __func__ __FUNC__
+#    else
+#      define __func__ "???"
+#    endif /* defined(HAVE_MACRO__FUNCTION__) || ... */
+#  endif /* !defined(HAVE_MACRO__func__) */
 #endif /* defined(_MSC_VER) */
 
 #ifdef ENUM_VALS_ARE_SIGNED
-#define ENUM_BF(t) unsigned
+#  define ENUM_BF(t) unsigned
 #else
 /** Wrapper for having a bitfield of an enumerated type. Where possible, we
  * just use the enumerated type (so the compiler can help us and notice
  * problems), but if enumerated types are unsigned, we must use unsigned,
  * so that the loss of precision doesn't make large values negative. */
-#define ENUM_BF(t) t
+#  define ENUM_BF(t) t
 #endif /* defined(ENUM_VALS_ARE_SIGNED) */
 
 /* GCC has several useful attributes. */
 #if defined(__GNUC__) && __GNUC__ >= 3
-#define ATTR_NORETURN __attribute__((noreturn))
-#define ATTR_CONST __attribute__((const))
-#define ATTR_MALLOC __attribute__((malloc))
-#define ATTR_NORETURN __attribute__((noreturn))
-#define ATTR_WUR __attribute__((warn_unused_result))
-#define ATTR_UNUSED __attribute__ ((unused))
+#  define ATTR_NORETURN __attribute__((noreturn))
+#  define ATTR_CONST __attribute__((const))
+#  define ATTR_MALLOC __attribute__((malloc))
+#  define ATTR_NORETURN __attribute__((noreturn))
+#  define ATTR_WUR __attribute__((warn_unused_result))
+#  define ATTR_UNUSED __attribute__((unused))
 
 /** Macro: Evaluates to <b>exp</b> and hints the compiler that the value
  * of <b>exp</b> will probably be true.
@@ -136,7 +135,7 @@
  * except that it tells the compiler that the branch will be taken most of the
  * time.  This can generate slightly better code with some CPUs.
  */
-#define PREDICT_LIKELY(exp) __builtin_expect(!!(exp), 1)
+#  define PREDICT_LIKELY(exp) __builtin_expect(!!(exp), 1)
 /** Macro: Evaluates to <b>exp</b> and hints the compiler that the value
  * of <b>exp</b> will probably be false.
  *
@@ -144,16 +143,16 @@
  * except that it tells the compiler that the branch will usually not be
  * taken.  This can generate slightly better code with some CPUs.
  */
-#define PREDICT_UNLIKELY(exp) __builtin_expect(!!(exp), 0)
+#  define PREDICT_UNLIKELY(exp) __builtin_expect(!!(exp), 0)
 #else /* !(defined(__GNUC__) && __GNUC__ >= 3) */
-#define ATTR_NORETURN
-#define ATTR_CONST
-#define ATTR_MALLOC
-#define ATTR_NORETURN
-#define ATTR_UNUSED
-#define ATTR_WUR
-#define PREDICT_LIKELY(exp) (exp)
-#define PREDICT_UNLIKELY(exp) (exp)
+#  define ATTR_NORETURN
+#  define ATTR_CONST
+#  define ATTR_MALLOC
+#  define ATTR_NORETURN
+#  define ATTR_UNUSED
+#  define ATTR_WUR
+#  define PREDICT_LIKELY(exp) (exp)
+#  define PREDICT_UNLIKELY(exp) (exp)
 #endif /* defined(__GNUC__) && __GNUC__ >= 3 */
 
 /** Expands to a syntactically valid empty statement.  */
@@ -161,19 +160,27 @@
 
 /** Expands to a syntactically valid empty statement, explicitly (void)ing its
  * argument. */
-#define STMT_VOID(a) while (0) { (void)(a); }
+#define STMT_VOID(a) \
+  while (0) {        \
+    (void)(a);       \
+  }
 
 #ifdef __GNUC__
 /** STMT_BEGIN and STMT_END are used to wrap blocks inside macros so that
  * the macro can be used as if it were a single C statement. */
-#define STMT_BEGIN (void) ({
-#define STMT_END })
+#  define STMT_BEGIN (void) ({
+#  define STMT_END \
+    })
 #elif defined(sun) || defined(__sun__)
-#define STMT_BEGIN if (1) {
-#define STMT_END } else STMT_NIL
+#  define STMT_BEGIN if (1) {
+#  define STMT_END \
+    }              \
+    else STMT_NIL
 #else
-#define STMT_BEGIN do {
-#define STMT_END } while (0)
+#  define STMT_BEGIN do {
+#  define STMT_END \
+    }              \
+    while (0)
 #endif /* defined(__GNUC__) || ... */
 
 /* Some tools (like coccinelle) don't like to see operators as macro
@@ -186,7 +193,7 @@
 #define OP_NE !=
 
 #if defined(__MINGW32__) || defined(__MINGW64__)
-#define MINGW_ANY
+#  define MINGW_ANY
 #endif
 
 /** Macro: yield a pointer to the field at position <b>off</b> within the
@@ -198,7 +205,7 @@
  *   *bar_p = 3;
  * </pre>
  */
-#define STRUCT_VAR_P(st, off) ((void*) ( ((char*)(st)) + (off) ) )
+#define STRUCT_VAR_P(st, off) ((void *)(((char *)(st)) + (off)))
 
 /** Macro: yield a pointer to an enclosing structure given a pointer to
  * a substructure at offset <b>off</b>. Example:
@@ -210,7 +217,7 @@
  * </pre>
  */
 #define SUBTYPE_P(p, subtype, basemember) \
-  ((void*) ( ((char*)(p)) - offsetof(subtype, basemember) ))
+  ((void *)(((char *)(p)) - offsetof(subtype, basemember)))
 
 /** Macro: Yields the number of elements in array x. */
 #define ARRAY_LENGTH(x) ((sizeof(x)) / sizeof(x[0]))
@@ -224,8 +231,7 @@
  * This declaration of a struct can be repeated any number of times, and takes
  * a trailing semicolon afterwards.
  **/
-#define EAT_SEMICOLON                                   \
-  struct dummy_semicolon_eater__
+#define EAT_SEMICOLON struct dummy_semicolon_eater__
 
 /**
  * Tell our static analysis tool to believe that (clang's scan-build or
@@ -235,9 +241,9 @@
 #if defined(__COVERITY__) || defined(__clang_analyzer__)
 /* By calling getenv, we force the analyzer not to conclude that 'expr' is
  * false. */
-#define POSSIBLE(expr) ((expr) || getenv("STATIC_ANALYZER_DEADCODE_DUMMY_"))
+#  define POSSIBLE(expr) ((expr) || getenv("STATIC_ANALYZER_DEADCODE_DUMMY_"))
 #else
-#define POSSIBLE(expr) (expr)
+#  define POSSIBLE(expr) (expr)
 #endif
 
 #endif /* !defined(TOR_COMPAT_COMPILER_H) */

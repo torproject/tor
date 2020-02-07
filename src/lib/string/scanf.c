@@ -36,22 +36,23 @@ scan_unsigned(const char **bufp, unsigned long *out, int width, unsigned base)
 {
   unsigned long result = 0;
   int scanned_so_far = 0;
-  const int hex = base==16;
+  const int hex = base == 16;
   raw_assert(base == 10 || base == 16);
   if (!bufp || !*bufp || !out)
     return -1;
-  if (width<0)
-    width=MAX_SCANF_WIDTH;
+  if (width < 0)
+    width = MAX_SCANF_WIDTH;
 
-  while (**bufp && (hex?TOR_ISXDIGIT(**bufp):TOR_ISDIGIT(**bufp))
-         && scanned_so_far < width) {
-    unsigned digit = hex?hex_decode_digit(*(*bufp)++):digit_to_num(*(*bufp)++);
+  while (**bufp && (hex ? TOR_ISXDIGIT(**bufp) : TOR_ISDIGIT(**bufp)) &&
+         scanned_so_far < width) {
+    unsigned digit =
+        hex ? hex_decode_digit(*(*bufp)++) : digit_to_num(*(*bufp)++);
     // Check for overflow beforehand, without actually causing any overflow
     // This preserves functionality on compilers that don't wrap overflow
     // (i.e. that trap or optimise away overflow)
     // result * base + digit > ULONG_MAX
     // result * base > ULONG_MAX - digit
-    if (result > (ULONG_MAX - digit)/base)
+    if (result > (ULONG_MAX - digit) / base)
       return -1; /* Processing this digit would overflow */
     result = result * base + digit;
     ++scanned_so_far;
@@ -76,8 +77,8 @@ scan_signed(const char **bufp, long *out, int width)
 
   if (!bufp || !*bufp || !out)
     return -1;
-  if (width<0)
-    width=MAX_SCANF_WIDTH;
+  if (width < 0)
+    width = MAX_SCANF_WIDTH;
 
   if (**bufp == '-') {
     neg = 1;
@@ -122,8 +123,8 @@ scan_double(const char **bufp, double *out, int width)
 
   if (!bufp || !*bufp || !out)
     return -1;
-  if (width<0)
-    width=MAX_SCANF_WIDTH;
+  if (width < 0)
+    width = MAX_SCANF_WIDTH;
 
   if (**bufp == '-') {
     neg = 1;
@@ -164,7 +165,7 @@ scan_string(const char **bufp, char *out, int width)
   int scanned_so_far = 0;
   if (!bufp || !out || width < 0)
     return -1;
-  while (**bufp && ! TOR_ISSPACE(**bufp) && scanned_so_far < width) {
+  while (**bufp && !TOR_ISSPACE(**bufp) && scanned_so_far < width) {
     *out++ = *(*bufp)++;
     ++scanned_so_far;
   }
@@ -213,7 +214,7 @@ tor_vsscanf(const char *buf, const char *pattern, va_list ap)
         const int base = (*pattern == 'u') ? 10 : 16;
         if (!*buf)
           return n_matched;
-        if (scan_unsigned(&buf, &u, width, base)<0)
+        if (scan_unsigned(&buf, &u, width, base) < 0)
           return n_matched;
         if (longmod) {
           unsigned long *out = va_arg(ap, unsigned long *);
@@ -222,7 +223,7 @@ tor_vsscanf(const char *buf, const char *pattern, va_list ap)
           unsigned *out = va_arg(ap, unsigned *);
           if (u > UINT_MAX)
             return n_matched;
-          *out = (unsigned) u;
+          *out = (unsigned)u;
         }
         ++pattern;
         ++n_matched;
@@ -232,13 +233,13 @@ tor_vsscanf(const char *buf, const char *pattern, va_list ap)
           return -1; /* float not supported */
         if (!*buf)
           return n_matched;
-        if (scan_double(&buf, d, width)<0)
+        if (scan_double(&buf, d, width) < 0)
           return n_matched;
         ++pattern;
         ++n_matched;
       } else if (*pattern == 'd') {
-        long lng=0;
-        if (scan_signed(&buf, &lng, width)<0)
+        long lng = 0;
+        if (scan_signed(&buf, &lng, width) < 0)
           return n_matched;
         if (longmod) {
           long *out = va_arg(ap, long *);
@@ -259,7 +260,7 @@ tor_vsscanf(const char *buf, const char *pattern, va_list ap)
           return -1;
         if (width < 0)
           return -1;
-        if (scan_string(&buf, s, width)<0)
+        if (scan_string(&buf, s, width) < 0)
           return n_matched;
         ++pattern;
         ++n_matched;

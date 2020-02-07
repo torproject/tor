@@ -55,13 +55,13 @@
 #ifndef COCCI
 /** Declare a function that downcasts from a generic dist struct to the actual
  *  subtype probablity distribution it represents. */
-#define DECLARE_PROB_DISTR_DOWNCAST_FN(name) \
-  static inline                           \
-  const struct name##_t *                             \
-  dist_to_const_##name(const struct dist_t *obj) {    \
-    tor_assert(obj->ops == &name##_ops);            \
-    return SUBTYPE_P(obj, struct name ## _t, base);   \
-  }
+#  define DECLARE_PROB_DISTR_DOWNCAST_FN(name)                 \
+    static inline const struct name##_t *dist_to_const_##name( \
+        const struct dist_t *obj)                              \
+    {                                                          \
+      tor_assert(obj->ops == &name##_ops);                     \
+      return SUBTYPE_P(obj, struct name##_t, base);            \
+    }
 DECLARE_PROB_DISTR_DOWNCAST_FN(uniform)
 DECLARE_PROB_DISTR_DOWNCAST_FN(geometric)
 DECLARE_PROB_DISTR_DOWNCAST_FN(logistic)
@@ -76,7 +76,6 @@ DECLARE_PROB_DISTR_DOWNCAST_FN(weibull)
 static unsigned
 bitcount32(uint32_t x)
 {
-
   /* Count two-bit groups.  */
   x -= (x >> 1) & UINT32_C(0x55555555);
 
@@ -96,7 +95,6 @@ bitcount32(uint32_t x)
 static unsigned
 clz32(uint32_t x)
 {
-
   /* Round up to a power of two.  */
   x |= x >> 1;
   x |= x >> 2;
@@ -192,7 +190,7 @@ clz32(uint32_t x)
 STATIC double
 logistic(double x)
 {
-  if (x <= log(DBL_EPSILON/2)) {
+  if (x <= log(DBL_EPSILON / 2)) {
     /*
      * If x <= log(DBL_EPSILON/2) = log(eps), then e^x <= eps. In this case
      * we will approximate the logistic() function with e^x because the
@@ -207,7 +205,7 @@ logistic(double x)
      *     <= eps.
      */
     return exp(x); /* return e^x */
-  } else if (x <= -log(DBL_EPSILON/2)) {
+  } else if (x <= -log(DBL_EPSILON / 2)) {
     /*
      * e^{-x} > 0, so 1 + e^{-x} > 1, and 0 < 1/(1 +
      * e^{-x}) < 1; further, since e^{-x} < 1 + e^{-x}, we
@@ -244,7 +242,7 @@ logistic(double x)
      *     <= 4|d0| + 2|d1| + 2|d0 d1|
      *     <= 6 eps + 2 eps^2.
      */
-    return 1/(1 + exp(-x));
+    return 1 / (1 + exp(-x));
   } else {
     /*
      * e^{-x} <= eps, so the relative error of 1 from 1/(1
@@ -279,9 +277,8 @@ logistic(double x)
 STATIC double
 logit(double p)
 {
-
   /* logistic(-1) <= p <= logistic(+1) */
-  if (1/(1 + exp(1)) <= p && p <= 1/(1 + exp(-1))) {
+  if (1 / (1 + exp(1)) <= p && p <= 1 / (1 + exp(-1))) {
     /*
      * For inputs near 1/2, we want to compute log1p(near
      * 0) rather than log(near 1), so write this as:
@@ -311,7 +308,7 @@ logit(double p)
      *     <= |d1| + 8|d0| + 8|d1 d0|
      *     <= 9 eps + 8 eps^2.
      */
-    return -log1p((1 - 2*p)/p);
+    return -log1p((1 - 2 * p) / p);
   } else {
     /*
      * For inputs near 0, although 1 - p may be rounded to
@@ -344,7 +341,7 @@ logit(double p)
      *     <= |d2| + 4|d0| + 4|d1| + 4|d2 d0| + 4|d1 d0|
      *     <= 9 eps + 8 eps^2.
      */
-    return log(p/(1 - p));
+    return log(p / (1 - p));
   }
 }
 
@@ -359,8 +356,7 @@ logit(double p)
 STATIC double
 logithalf(double p0)
 {
-
-  if (fabs(p0) <= 0.5 - 1/(1 + exp(1))) {
+  if (fabs(p0) <= 0.5 - 1 / (1 + exp(1))) {
     /*
      * logit(1/2 + p0)
      * = log((1/2 + p0)/(1 - (1/2 + p0)))
@@ -392,7 +388,7 @@ logithalf(double p0)
      *  <= |d1| + 32 |d0| + 32 |d1 d0|
      *  <= 33 eps + 32 eps^2.
      */
-    return log1p(2*p0/(0.5 - p0));
+    return log1p(2 * p0 / (0.5 - p0));
   } else {
     /*
      * We have a choice of computing logit(1/2 + p0) or
@@ -427,7 +423,7 @@ logithalf(double p0)
      *       <= |d1| + 4|d0| + 4|d2| + 4|d1 d0| + 4|d1 d2|
      *       <= 9 eps + 8 eps^2.
      */
-    return log((0.5 + p0)/(0.5 - p0));
+    return log((0.5 + p0) / (0.5 - p0));
   }
 }
 
@@ -479,7 +475,7 @@ random_uniform_01(void)
   lo = crypto_fast_rng_get_u32(get_thread_fast_rng()) | UINT32_C(0x00000001);
 
   /* Round to nearest scaled significand in [2^63, 2^64].  */
-  s = hi*(double)4294967296 + lo;
+  s = hi * (double)4294967296 + lo;
 
   /* Rescale into [1/2, 1] and apply exponent in one swell foop.  */
   return s * ldexp(1, -(64 + z));
@@ -510,7 +506,7 @@ random_uniform_01(void)
 STATIC double
 cdf_logistic(double x, double mu, double sigma)
 {
-  return logistic((x - mu)/sigma);
+  return logistic((x - mu) / sigma);
 }
 
 /**
@@ -522,7 +518,7 @@ cdf_logistic(double x, double mu, double sigma)
 STATIC double
 sf_logistic(double x, double mu, double sigma)
 {
-  return logistic(-(x - mu)/sigma);
+  return logistic(-(x - mu) / sigma);
 }
 
 /**
@@ -533,7 +529,7 @@ sf_logistic(double x, double mu, double sigma)
 STATIC double
 icdf_logistic(double p, double mu, double sigma)
 {
-  return mu + sigma*logit(p);
+  return mu + sigma * logit(p);
 }
 
 /**
@@ -544,7 +540,7 @@ icdf_logistic(double p, double mu, double sigma)
 STATIC double
 isf_logistic(double p, double mu, double sigma)
 {
-  return mu - sigma*logit(p);
+  return mu - sigma * logit(p);
 }
 
 /*
@@ -637,7 +633,7 @@ cdf_log_logistic(double x, double alpha, double beta)
    * Roughly, |d'| = |(1 + d0)^{-beta} - 1| grows like beta eps,
    * until it levels off at 1.
    */
-  return 1/(1 + pow(x/alpha, -beta));
+  return 1 / (1 + pow(x / alpha, -beta));
 }
 
 /**
@@ -663,7 +659,7 @@ sf_log_logistic(double x, double alpha, double beta)
    * cdf_log_logistic, except that rather than levelling off at
    * 1, |(1 + d0)^beta - 1| grows unbounded.
    */
-  return 1/(1 + pow(x/alpha, beta));
+  return 1 / (1 + pow(x / alpha, beta));
 }
 
 /**
@@ -674,7 +670,7 @@ sf_log_logistic(double x, double alpha, double beta)
 STATIC double
 icdf_log_logistic(double p, double alpha, double beta)
 {
-  return alpha*pow(p/(1 - p), 1/beta);
+  return alpha * pow(p / (1 - p), 1 / beta);
 }
 
 /**
@@ -685,7 +681,7 @@ icdf_log_logistic(double p, double alpha, double beta)
 STATIC double
 isf_log_logistic(double p, double alpha, double beta)
 {
-  return alpha*pow((1 - p)/p, 1/beta);
+  return alpha * pow((1 - p) / p, 1 / beta);
 }
 
 /*
@@ -710,7 +706,7 @@ isf_log_logistic(double p, double alpha, double beta)
 STATIC double
 cdf_weibull(double x, double lambda, double k)
 {
-  return -expm1(-pow(x/lambda, k));
+  return -expm1(-pow(x / lambda, k));
 }
 
 /**
@@ -725,7 +721,7 @@ cdf_weibull(double x, double lambda, double k)
 STATIC double
 sf_weibull(double x, double lambda, double k)
 {
-  return exp(-pow(x/lambda, k));
+  return exp(-pow(x / lambda, k));
 }
 
 /**
@@ -738,7 +734,7 @@ sf_weibull(double x, double lambda, double k)
 STATIC double
 icdf_weibull(double p, double lambda, double k)
 {
-  return lambda*pow(-log1p(-p), 1/k);
+  return lambda * pow(-log1p(-p), 1 / k);
 }
 
 /**
@@ -751,7 +747,7 @@ icdf_weibull(double p, double lambda, double k)
 STATIC double
 isf_weibull(double p, double lambda, double k)
 {
-  return lambda*pow(-log(p), 1/k);
+  return lambda * pow(-log(p), 1 / k);
 }
 
 /*
@@ -791,7 +787,7 @@ isf_weibull(double p, double lambda, double k)
 STATIC double
 cdf_genpareto(double x, double mu, double sigma, double xi)
 {
-  double x_0 = (x - mu)/sigma;
+  double x_0 = (x - mu) / sigma;
 
   /*
    * log(1 + xi x_0)/xi
@@ -814,10 +810,10 @@ cdf_genpareto(double x, double mu, double sigma, double xi)
    * for any 0 < eps < 2.  Thus, the relative error of x_0 from
    * log(1 + xi x_0)/xi is bounded by eps.
    */
-  if (fabs(xi) < 1e-17/x_0)
+  if (fabs(xi) < 1e-17 / x_0)
     return -expm1(-x_0);
   else
-    return -expm1(-log1p(xi*x_0)/xi);
+    return -expm1(-log1p(xi * x_0) / xi);
 }
 
 /**
@@ -835,12 +831,12 @@ cdf_genpareto(double x, double mu, double sigma, double xi)
 STATIC double
 sf_genpareto(double x, double mu, double sigma, double xi)
 {
-  double x_0 = (x - mu)/sigma;
+  double x_0 = (x - mu) / sigma;
 
-  if (fabs(xi) < 1e-17/x_0)
+  if (fabs(xi) < 1e-17 / x_0)
     return exp(-x_0);
   else
-    return exp(-log1p(xi*x_0)/xi);
+    return exp(-log1p(xi * x_0) / xi);
 }
 
 /**
@@ -884,9 +880,9 @@ icdf_genpareto(double p, double mu, double sigma, double xi)
    * eps/4000 and attain <1ulp error from series truncation.
    */
   if (fabs(xi) <= 1e-20)
-    return mu - sigma*log1p(-p);
+    return mu - sigma * log1p(-p);
   else
-    return mu + sigma*expm1(-xi*log1p(-p))/xi;
+    return mu + sigma * expm1(-xi * log1p(-p)) / xi;
 }
 
 /**
@@ -899,9 +895,9 @@ STATIC double
 isf_genpareto(double p, double mu, double sigma, double xi)
 {
   if (fabs(xi) <= 1e-20)
-    return mu - sigma*log(p);
+    return mu - sigma * log(p);
   else
-    return mu + sigma*expm1(-xi*log(p))/xi;
+    return mu + sigma * expm1(-xi * log(p)) / xi;
 }
 
 /*******************************************************************/
@@ -956,7 +952,7 @@ sample_uniform_interval(double p0, double a, double b)
      * Further, clearly at 0 and 1 it attains a and b,
      * respectively.  Hence it is bounded within [a, b].
      */
-    return (1 - p0)*a + p0*b;
+    return (1 - p0) * a + p0 * b;
   } else {
     /*
      * a + (b - a) t is monotonic -- it is obviously a
@@ -1081,7 +1077,7 @@ sample_uniform_interval(double p0, double a, double b)
     /* p0 is restricted to [0,1], but we use >= to silence -Wfloat-equal.  */
     if (p0 >= 1)
       return b;
-    return a + (b - a)*p0;
+    return a + (b - a) * p0;
   }
 }
 
@@ -1117,7 +1113,7 @@ sample_logistic(uint32_t s, double t, double p0)
    * 1/2 - 1/(1 + e)] sample and compute the inverse CDF of p =
    * 1/2 - p0.
    */
-  if (t <= 2/(1 + exp(1))) {
+  if (t <= 2 / (1 + exp(1))) {
     /* p uniform in (0, 1/(1 + e)], represented by p.  */
     p0 /= 1 + exp(1);
     r = logit(p0);
@@ -1127,7 +1123,7 @@ sample_logistic(uint32_t s, double t, double p0)
      * by p0 = 1/2 - p uniform in (0, 1/2 - 1/(1 + e)], so
      * that p = 1/2 - p.
      */
-    p0 *= 0.5 - 1/(1 + exp(1));
+    p0 *= 0.5 - 1 / (1 + exp(1));
     r = logithalf(p0);
   }
 
@@ -1136,7 +1132,7 @@ sample_logistic(uint32_t s, double t, double p0)
    * logistic distribution, which is symmetric with the positive
    * half.  Now use the sign to choose uniformly between them.
    */
-  return sign*r;
+  return sign * r;
 }
 
 /**
@@ -1145,10 +1141,9 @@ sample_logistic(uint32_t s, double t, double p0)
  */
 static double
 sample_logistic_locscale(uint32_t s, double t, double p0, double mu,
-    double sigma)
+                         double sigma)
 {
-
-  return mu + sigma*sample_logistic(s, t, p0);
+  return mu + sigma * sample_logistic(s, t, p0);
 }
 
 /**
@@ -1159,7 +1154,6 @@ sample_logistic_locscale(uint32_t s, double t, double p0, double mu,
 STATIC double
 sample_log_logistic(uint32_t s, double p0)
 {
-
   /*
    * Carve up the interval (0, 1) into (0, 1/2] and [1/2, 1); the
    * condition numbers of the icdf and the isf coincide at 1/2.
@@ -1167,10 +1161,10 @@ sample_log_logistic(uint32_t s, double p0)
   p0 *= 0.5;
   if ((s & 1) == 0) {
     /* p = p0 in (0, 1/2] */
-    return p0/(1 - p0);
+    return p0 / (1 - p0);
   } else {
     /* p = 1 - p0 in [1/2, 1) */
-    return (1 - p0)/p0;
+    return (1 - p0) / p0;
   }
 }
 
@@ -1180,11 +1174,11 @@ sample_log_logistic(uint32_t s, double p0)
  */
 static double
 sample_log_logistic_scaleshape(uint32_t s, double p0, double alpha,
-    double beta)
+                               double beta)
 {
   double x = sample_log_logistic(s, p0);
 
-  return alpha*pow(x, 1/beta);
+  return alpha * pow(x, 1 / beta);
 }
 
 /**
@@ -1218,8 +1212,7 @@ sample_exponential(uint32_t s, double p0)
 STATIC double
 sample_weibull(uint32_t s, double p0, double lambda, double k)
 {
-
-  return lambda*pow(sample_exponential(s, p0), 1/k);
+  return lambda * pow(sample_exponential(s, p0), 1 / k);
 }
 
 /**
@@ -1266,7 +1259,7 @@ sample_genpareto(uint32_t s, double p0, double xi)
    * We can safely cut xi off at 1e-20 < eps/4000 and attain an
    * error bounded by 0.5 ulp for this expression.
    */
-  return (fabs(xi) < 1e-20 ? x : expm1(xi*x)/xi);
+  return (fabs(xi) < 1e-20 ? x : expm1(xi * x) / xi);
 }
 
 /**
@@ -1275,10 +1268,9 @@ sample_genpareto(uint32_t s, double p0, double xi)
  */
 static double
 sample_genpareto_locscale(uint32_t s, double p0, double mu, double sigma,
-    double xi)
+                          double xi)
 {
-
-  return mu + sigma*sample_genpareto(s, p0, xi);
+  return mu + sigma * sample_genpareto(s, p0, xi);
 }
 
 /**
@@ -1313,7 +1305,7 @@ sample_geometric(uint32_t s, double p0, double p)
   if (p >= 1)
     return 1;
 
-  return ceil(-x/log1p(-p));
+  return ceil(-x / log1p(-p));
 }
 
 /*******************************************************************/
@@ -1386,7 +1378,7 @@ uniform_cdf(const struct dist_t *dist, double x)
   if (x < U->a)
     return 0;
   else if (x < U->b)
-    return (x - U->a)/(U->b - U->a);
+    return (x - U->a) / (U->b - U->a);
   else
     return 1;
 }
@@ -1399,7 +1391,7 @@ uniform_sf(const struct dist_t *dist, double x)
   if (x > U->b)
     return 0;
   else if (x > U->a)
-    return (U->b - x)/(U->b - U->a);
+    return (U->b - x) / (U->b - U->a);
   else
     return 1;
 }
@@ -1410,7 +1402,7 @@ uniform_icdf(const struct dist_t *dist, double p)
   const struct uniform_t *U = dist_to_const_uniform(dist);
   double w = U->b - U->a;
 
-  return (p < 0.5 ? (U->a + w*p) : (U->b - w*(1 - p)));
+  return (p < 0.5 ? (U->a + w * p) : (U->b - w * (1 - p)));
 }
 
 static double
@@ -1419,16 +1411,16 @@ uniform_isf(const struct dist_t *dist, double p)
   const struct uniform_t *U = dist_to_const_uniform(dist);
   double w = U->b - U->a;
 
-  return (p < 0.5 ? (U->b - w*p) : (U->a + w*(1 - p)));
+  return (p < 0.5 ? (U->b - w * p) : (U->a + w * (1 - p)));
 }
 
 const struct dist_ops_t uniform_ops = {
-  .name = "uniform",
-  .sample = uniform_sample,
-  .cdf = uniform_cdf,
-  .sf = uniform_sf,
-  .icdf = uniform_icdf,
-  .isf = uniform_isf,
+    .name = "uniform",
+    .sample = uniform_sample,
+    .cdf = uniform_cdf,
+    .sf = uniform_sf,
+    .icdf = uniform_icdf,
+    .isf = uniform_isf,
 };
 
 /*******************************************************************/
@@ -1477,12 +1469,12 @@ logistic_isf(const struct dist_t *dist, double p)
 }
 
 const struct dist_ops_t logistic_ops = {
-  .name = "logistic",
-  .sample = logistic_sample,
-  .cdf = logistic_cdf,
-  .sf = logistic_sf,
-  .icdf = logistic_icdf,
-  .isf = logistic_isf,
+    .name = "logistic",
+    .sample = logistic_sample,
+    .cdf = logistic_cdf,
+    .sf = logistic_sf,
+    .icdf = logistic_icdf,
+    .isf = logistic_isf,
 };
 
 /** Functions for log-logistic distribution: */
@@ -1526,12 +1518,12 @@ log_logistic_isf(const struct dist_t *dist, double p)
 }
 
 const struct dist_ops_t log_logistic_ops = {
-  .name = "log logistic",
-  .sample = log_logistic_sample,
-  .cdf = log_logistic_cdf,
-  .sf = log_logistic_sf,
-  .icdf = log_logistic_icdf,
-  .isf = log_logistic_isf,
+    .name = "log logistic",
+    .sample = log_logistic_sample,
+    .cdf = log_logistic_cdf,
+    .sf = log_logistic_sf,
+    .icdf = log_logistic_icdf,
+    .isf = log_logistic_isf,
 };
 
 /** Functions for Weibull distribution */
@@ -1575,12 +1567,12 @@ weibull_isf(const struct dist_t *dist, double p)
 }
 
 const struct dist_ops_t weibull_ops = {
-  .name = "Weibull",
-  .sample = weibull_sample,
-  .cdf = weibull_cdf,
-  .sf = weibull_sf,
-  .icdf = weibull_icdf,
-  .isf = weibull_isf,
+    .name = "Weibull",
+    .sample = weibull_sample,
+    .cdf = weibull_cdf,
+    .sf = weibull_sf,
+    .icdf = weibull_icdf,
+    .isf = weibull_isf,
 };
 
 /** Functions for generalized Pareto distributions */
@@ -1624,12 +1616,12 @@ genpareto_isf(const struct dist_t *dist, double p)
 }
 
 const struct dist_ops_t genpareto_ops = {
-  .name = "generalized Pareto",
-  .sample = genpareto_sample,
-  .cdf = genpareto_cdf,
-  .sf = genpareto_sf,
-  .icdf = genpareto_icdf,
-  .isf = genpareto_isf,
+    .name = "generalized Pareto",
+    .sample = genpareto_sample,
+    .cdf = genpareto_cdf,
+    .sf = genpareto_sf,
+    .icdf = genpareto_icdf,
+    .isf = genpareto_isf,
 };
 
 /** Functions for geometric distribution on number of trials before success */
@@ -1652,7 +1644,7 @@ geometric_cdf(const struct dist_t *dist, double x)
   if (x < 1)
     return 0;
   /* 1 - (1 - p)^floor(x) = 1 - e^{floor(x) log(1 - p)} */
-  return -expm1(floor(x)*log1p(-G->p));
+  return -expm1(floor(x) * log1p(-G->p));
 }
 
 static double
@@ -1663,7 +1655,7 @@ geometric_sf(const struct dist_t *dist, double x)
   if (x < 1)
     return 0;
   /* (1 - p)^floor(x) = e^{ceil(x) log(1 - p)} */
-  return exp(floor(x)*log1p(-G->p));
+  return exp(floor(x) * log1p(-G->p));
 }
 
 static double
@@ -1671,7 +1663,7 @@ geometric_icdf(const struct dist_t *dist, double p)
 {
   const struct geometric_t *G = dist_to_const_geometric(dist);
 
-  return log1p(-p)/log1p(-G->p);
+  return log1p(-p) / log1p(-G->p);
 }
 
 static double
@@ -1679,14 +1671,14 @@ geometric_isf(const struct dist_t *dist, double p)
 {
   const struct geometric_t *G = dist_to_const_geometric(dist);
 
-  return log(p)/log1p(-G->p);
+  return log(p) / log1p(-G->p);
 }
 
 const struct dist_ops_t geometric_ops = {
-  .name = "geometric (1-based)",
-  .sample = geometric_sample,
-  .cdf = geometric_cdf,
-  .sf = geometric_sf,
-  .icdf = geometric_icdf,
-  .isf = geometric_isf,
+    .name = "geometric (1-based)",
+    .sample = geometric_sample,
+    .cdf = geometric_cdf,
+    .sf = geometric_sf,
+    .icdf = geometric_icdf,
+    .isf = geometric_isf,
 };

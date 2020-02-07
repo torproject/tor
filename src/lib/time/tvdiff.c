@@ -15,10 +15,10 @@
 #include "lib/log/log.h"
 
 #ifdef _WIN32
-#include <winsock2.h>
+#  include <winsock2.h>
 #endif
 #ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
+#  include <sys/time.h>
 #endif
 
 /** Return the difference between start->tv_sec and end->tv_sec.
@@ -54,15 +54,17 @@ tv_udiff(const struct timeval *start, const struct timeval *end)
 {
   /* Sanity check tv_usec */
   if (start->tv_usec > TOR_USEC_PER_SEC || start->tv_usec < 0) {
-    log_warn(LD_GENERAL, "comparing times on microsecond detail with bad "
-             "start tv_usec: %"PRId64 " microseconds",
+    log_warn(LD_GENERAL,
+             "comparing times on microsecond detail with bad "
+             "start tv_usec: %" PRId64 " microseconds",
              (int64_t)start->tv_usec);
     return LONG_MAX;
   }
 
   if (end->tv_usec > TOR_USEC_PER_SEC || end->tv_usec < 0) {
-    log_warn(LD_GENERAL, "comparing times on microsecond detail with bad "
-             "end tv_usec: %"PRId64 " microseconds",
+    log_warn(LD_GENERAL,
+             "comparing times on microsecond detail with bad "
+             "end tv_usec: %" PRId64 " microseconds",
              (int64_t)end->tv_usec);
     return LONG_MAX;
   }
@@ -73,16 +75,19 @@ tv_udiff(const struct timeval *start, const struct timeval *end)
   const int64_t secdiff = tv_secdiff_impl(start, end);
 
   /* end->tv_usec - start->tv_usec can be up to 1 second either way */
-  if (secdiff > (int64_t)(LONG_MAX/1000000 - 1) ||
-      secdiff < (int64_t)(LONG_MIN/1000000 + 1)) {
-    log_warn(LD_GENERAL, "comparing times on microsecond detail too far "
-             "apart: %"PRId64 " seconds", (secdiff));
+  if (secdiff > (int64_t)(LONG_MAX / 1000000 - 1) ||
+      secdiff < (int64_t)(LONG_MIN / 1000000 + 1)) {
+    log_warn(LD_GENERAL,
+             "comparing times on microsecond detail too far "
+             "apart: %" PRId64 " seconds",
+             (secdiff));
     return LONG_MAX;
   }
 
   /* we'll never get an overflow here, because we check that both usecs are
    * between 0 and TV_USEC_PER_SEC. */
-  udiff = secdiff*1000000 + ((int64_t)end->tv_usec - (int64_t)start->tv_usec);
+  udiff =
+      secdiff * 1000000 + ((int64_t)end->tv_usec - (int64_t)start->tv_usec);
 
   /* Some compilers are smart enough to work out this is a no-op on L64 */
 #if SIZEOF_LONG < 8
@@ -103,15 +108,17 @@ tv_mdiff(const struct timeval *start, const struct timeval *end)
 {
   /* Sanity check tv_usec */
   if (start->tv_usec > TOR_USEC_PER_SEC || start->tv_usec < 0) {
-    log_warn(LD_GENERAL, "comparing times on millisecond detail with bad "
-             "start tv_usec: %"PRId64 " microseconds",
+    log_warn(LD_GENERAL,
+             "comparing times on millisecond detail with bad "
+             "start tv_usec: %" PRId64 " microseconds",
              (int64_t)start->tv_usec);
     return LONG_MAX;
   }
 
   if (end->tv_usec > TOR_USEC_PER_SEC || end->tv_usec < 0) {
-    log_warn(LD_GENERAL, "comparing times on millisecond detail with bad "
-             "end tv_usec: %"PRId64 " microseconds",
+    log_warn(LD_GENERAL,
+             "comparing times on millisecond detail with bad "
+             "end tv_usec: %" PRId64 " microseconds",
              (int64_t)end->tv_usec);
     return LONG_MAX;
   }
@@ -125,23 +132,27 @@ tv_mdiff(const struct timeval *start, const struct timeval *end)
    * mdiff calculation may add another temporary second for rounding.
    * Whether this actually causes overflow depends on the compiler's constant
    * folding and order of operations. */
-  if (secdiff > (int64_t)(LONG_MAX/1000 - 2) ||
-      secdiff < (int64_t)(LONG_MIN/1000 + 1)) {
-    log_warn(LD_GENERAL, "comparing times on millisecond detail too far "
-             "apart: %"PRId64 " seconds", (int64_t)secdiff);
+  if (secdiff > (int64_t)(LONG_MAX / 1000 - 2) ||
+      secdiff < (int64_t)(LONG_MIN / 1000 + 1)) {
+    log_warn(LD_GENERAL,
+             "comparing times on millisecond detail too far "
+             "apart: %" PRId64 " seconds",
+             (int64_t)secdiff);
     return LONG_MAX;
   }
 
   /* Subtract and round */
-  mdiff = secdiff*1000 +
+  mdiff =
+      secdiff * 1000 +
       /* We add a million usec here to ensure that the result is positive,
        * so that the round-towards-zero behavior of the division will give
        * the right result for rounding to the nearest msec. Later we subtract
        * 1000 in order to get the correct result.
        * We'll never get an overflow here, because we check that both usecs are
        * between 0 and TV_USEC_PER_SEC. */
-      ((int64_t)end->tv_usec - (int64_t)start->tv_usec + 500 + 1000000) / 1000
-      - 1000;
+      ((int64_t)end->tv_usec - (int64_t)start->tv_usec + 500 + 1000000) /
+          1000 -
+      1000;
 
   /* Some compilers are smart enough to work out this is a no-op on L64 */
 #if SIZEOF_LONG < 8
@@ -159,9 +170,9 @@ tv_mdiff(const struct timeval *start, const struct timeval *end)
 int64_t
 tv_to_msec(const struct timeval *tv)
 {
-  int64_t conv = ((int64_t)tv->tv_sec)*1000L;
+  int64_t conv = ((int64_t)tv->tv_sec) * 1000L;
   /* Round ghetto-style */
-  conv += ((int64_t)tv->tv_usec+500)/1000L;
+  conv += ((int64_t)tv->tv_usec + 500) / 1000L;
   return conv;
 }
 
@@ -185,4 +196,3 @@ time_diff(const time_t t1, const time_t t2)
 
   return TIME_MAX;
 }
-

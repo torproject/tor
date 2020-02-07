@@ -39,20 +39,18 @@ crypto_nss_get_header_version_str(void)
 
 /** A password function that always returns NULL. */
 static char *
-nss_password_func_always_fail(PK11SlotInfo *slot,
-                              PRBool retry,
-                              void *arg)
+nss_password_func_always_fail(PK11SlotInfo *slot, PRBool retry, void *arg)
 {
-  (void) slot;
-  (void) retry;
-  (void) arg;
+  (void)slot;
+  (void)retry;
+  (void)arg;
   return NULL;
 }
 
 void
 crypto_nss_early_init(int nss_only)
 {
-  if (! nss_only) {
+  if (!nss_only) {
     PR_Init(PR_USER_THREAD, PR_PRIORITY_NORMAL, 0);
     PK11_SetPasswordFunc(nss_password_func_always_fail);
   }
@@ -96,8 +94,8 @@ crypto_nss_log_errors(int severity, const char *doing)
     name = buf;
   }
   if (doing) {
-    tor_log(severity, LD_CRYPTO, "NSS error %s while %s: %s",
-            name, doing, string);
+    tor_log(severity, LD_CRYPTO, "NSS error %s while %s: %s", name, doing,
+            string);
   } else {
     tor_log(severity, LD_CRYPTO, "NSS error %s: %s", name, string);
   }

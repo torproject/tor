@@ -61,7 +61,7 @@ smartlist_reverse(smartlist_t *sl)
   int i, j;
   void *tmp;
   tor_assert(sl);
-  for (i = 0, j = sl->num_used-1; i < j; ++i, --j) {
+  for (i = 0, j = sl->num_used - 1; i < j; ++i, --j) {
     tmp = sl->list[i];
     sl->list[i] = sl->list[j];
     sl->list[j] = tmp;
@@ -93,9 +93,10 @@ int
 smartlist_contains_string(const smartlist_t *sl, const char *element)
 {
   int i;
-  if (!sl) return 0;
-  for (i=0; i < sl->num_used; i++)
-    if (strcmp((const char*)sl->list[i],element)==0)
+  if (!sl)
+    return 0;
+  for (i = 0; i < sl->num_used; i++)
+    if (strcmp((const char *)sl->list[i], element) == 0)
       return 1;
   return 0;
 }
@@ -106,9 +107,10 @@ int
 smartlist_string_pos(const smartlist_t *sl, const char *element)
 {
   int i;
-  if (!sl) return -1;
-  for (i=0; i < sl->num_used; i++)
-    if (strcmp((const char*)sl->list[i],element)==0)
+  if (!sl)
+    return -1;
+  for (i = 0; i < sl->num_used; i++)
+    if (strcmp((const char *)sl->list[i], element) == 0)
       return i;
   return -1;
 }
@@ -119,8 +121,9 @@ int
 smartlist_pos(const smartlist_t *sl, const void *element)
 {
   int i;
-  if (!sl) return -1;
-  for (i=0; i < sl->num_used; i++)
+  if (!sl)
+    return -1;
+  for (i = 0; i < sl->num_used; i++)
     if (element == sl->list[i])
       return i;
   return -1;
@@ -133,9 +136,10 @@ int
 smartlist_contains_string_case(const smartlist_t *sl, const char *element)
 {
   int i;
-  if (!sl) return 0;
-  for (i=0; i < sl->num_used; i++)
-    if (strcasecmp((const char*)sl->list[i],element)==0)
+  if (!sl)
+    return 0;
+  for (i = 0; i < sl->num_used; i++)
+    if (strcasecmp((const char *)sl->list[i], element) == 0)
       return 1;
   return 0;
 }
@@ -147,7 +151,7 @@ int
 smartlist_contains_int_as_string(const smartlist_t *sl, int num)
 {
   char buf[32]; /* long enough for 64-bit int, and then some. */
-  tor_snprintf(buf,sizeof(buf),"%d", num);
+  tor_snprintf(buf, sizeof(buf), "%d", num);
   return smartlist_contains_string(sl, buf);
 }
 
@@ -163,10 +167,10 @@ smartlist_strings_eq(const smartlist_t *sl1, const smartlist_t *sl2)
   if (smartlist_len(sl1) != smartlist_len(sl2))
     return 0;
   SMARTLIST_FOREACH(sl1, const char *, cp1, {
-      const char *cp2 = smartlist_get(sl2, cp1_sl_idx);
-      if (strcmp(cp1, cp2))
-        return 0;
-    });
+    const char *cp2 = smartlist_get(sl2, cp1_sl_idx);
+    if (strcmp(cp1, cp2))
+      return 0;
+  });
   return 1;
 }
 
@@ -182,10 +186,10 @@ smartlist_ints_eq(const smartlist_t *sl1, const smartlist_t *sl2)
   if (smartlist_len(sl1) != smartlist_len(sl2))
     return 0;
   SMARTLIST_FOREACH(sl1, int *, cp1, {
-      int *cp2 = smartlist_get(sl2, cp1_sl_idx);
-      if (*cp1 != *cp2)
-        return 0;
-    });
+    int *cp2 = smartlist_get(sl2, cp1_sl_idx);
+    if (*cp1 != *cp2)
+      return 0;
+  });
   return 1;
 }
 
@@ -223,9 +227,10 @@ int
 smartlist_contains_digest(const smartlist_t *sl, const char *element)
 {
   int i;
-  if (!sl) return 0;
-  for (i=0; i < sl->num_used; i++)
-    if (tor_memeq((const char*)sl->list[i],element,DIGEST_LEN))
+  if (!sl)
+    return 0;
+  for (i = 0; i < sl->num_used; i++)
+    if (tor_memeq((const char *)sl->list[i], element, DIGEST_LEN))
       return 1;
   return 0;
 }
@@ -236,7 +241,7 @@ int
 smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2)
 {
   int i;
-  for (i=0; i < sl2->num_used; i++)
+  for (i = 0; i < sl2->num_used; i++)
     if (smartlist_contains(sl1, sl2->list[i]))
       return 1;
   return 0;
@@ -249,7 +254,7 @@ void
 smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2)
 {
   int i;
-  for (i=0; i < sl1->num_used; i++)
+  for (i = 0; i < sl1->num_used; i++)
     if (!smartlist_contains(sl2, sl1->list[i])) {
       sl1->list[i] = sl1->list[--sl1->num_used]; /* swap with the end */
       i--; /* so we process the new i'th element */
@@ -264,7 +269,7 @@ void
 smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2)
 {
   int i;
-  for (i=0; i < sl2->num_used; i++)
+  for (i = 0; i < sl2->num_used; i++)
     smartlist_remove(sl1, sl2->list[i]);
 }
 
@@ -276,10 +281,10 @@ smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2)
  * NUL-terminated string.
  */
 char *
-smartlist_join_strings(smartlist_t *sl, const char *join,
-                       int terminate, size_t *len_out)
+smartlist_join_strings(smartlist_t *sl, const char *join, int terminate,
+                       size_t *len_out)
 {
-  return smartlist_join_strings2(sl,join,strlen(join),terminate,len_out);
+  return smartlist_join_strings2(sl, join, strlen(join), terminate, len_out);
 }
 
 /** As smartlist_join_strings, but instead of separating/terminated with a
@@ -288,8 +293,8 @@ smartlist_join_strings(smartlist_t *sl, const char *join,
  * strings.)
  */
 char *
-smartlist_join_strings2(smartlist_t *sl, const char *join,
-                        size_t join_len, int terminate, size_t *len_out)
+smartlist_join_strings2(smartlist_t *sl, const char *join, size_t join_len,
+                        int terminate, size_t *len_out)
 {
   int i;
   size_t n = 0;
@@ -303,12 +308,12 @@ smartlist_join_strings2(smartlist_t *sl, const char *join,
 
   for (i = 0; i < sl->num_used; ++i) {
     n += strlen(sl->list[i]);
-    if (i+1 < sl->num_used) /* avoid double-counting the last one */
+    if (i + 1 < sl->num_used) /* avoid double-counting the last one */
       n += join_len;
   }
-  dst = r = tor_malloc(n+1);
-  for (i = 0; i < sl->num_used; ) {
-    for (src = sl->list[i]; *src; )
+  dst = r = tor_malloc(n + 1);
+  for (i = 0; i < sl->num_used;) {
+    for (src = sl->list[i]; *src;)
       *dst++ = *src++;
     if (++i < sl->num_used) {
       memcpy(dst, join, join_len);
@@ -322,7 +327,7 @@ smartlist_join_strings2(smartlist_t *sl, const char *join,
   *dst = '\0';
 
   if (len_out)
-    *len_out = dst-r;
+    *len_out = dst - r;
   return r;
 }
 
@@ -335,8 +340,8 @@ smartlist_sort(smartlist_t *sl, int (*compare)(const void **a, const void **b))
 {
   if (!sl->num_used)
     return;
-  qsort(sl->list, sl->num_used, sizeof(void*),
-        (int (*)(const void *,const void*))compare);
+  qsort(sl->list, sl->num_used, sizeof(void *),
+        (int (*)(const void *, const void *))compare);
 }
 
 /** Given a smartlist <b>sl</b> sorted with the function <b>compare</b>,
@@ -353,7 +358,7 @@ smartlist_get_most_frequent_(const smartlist_t *sl,
   int most_frequent_count = 0;
 
   const void *cur = NULL;
-  int i, count=0;
+  int i, count = 0;
 
   if (!sl->num_used) {
     if (count_out)
@@ -379,7 +384,7 @@ smartlist_get_most_frequent_(const smartlist_t *sl,
   }
   if (count_out)
     *count_out = most_frequent_count;
-  return (void*)most_frequent;
+  return (void *)most_frequent;
 }
 
 /** Given a sorted smartlist <b>sl</b> and the comparison function used to
@@ -387,13 +392,12 @@ smartlist_get_most_frequent_(const smartlist_t *sl,
  * free_fn on each duplicate.  Otherwise, just removes them.  Preserves order.
  */
 void
-smartlist_uniq(smartlist_t *sl,
-               int (*compare)(const void **a, const void **b),
+smartlist_uniq(smartlist_t *sl, int (*compare)(const void **a, const void **b),
                void (*free_fn)(void *a))
 {
   int i;
-  for (i=1; i < sl->num_used; ++i) {
-    if (compare((const void **)&(sl->list[i-1]),
+  for (i = 1; i < sl->num_used; ++i) {
+    if (compare((const void **)&(sl->list[i - 1]),
                 (const void **)&(sl->list[i])) == 0) {
       if (free_fn)
         free_fn(sl->list[i]);
@@ -464,7 +468,7 @@ smartlist_bsearch_idx(const smartlist_t *sl, const void *key,
      * then hi = lo + diff, mid = (lo + lo + diff) / 2 = lo + (diff / 2).
      */
     mid = lo + (diff / 2);
-    cmp = compare(key, (const void**) &(sl->list[mid]));
+    cmp = compare(key, (const void **)&(sl->list[mid]));
     if (cmp == 0) {
       /* sl[mid] == key; we found it */
       *found_out = 1;
@@ -525,10 +529,10 @@ smartlist_bsearch_idx(const smartlist_t *sl, const void *key,
   tor_assert(hi <= len);
 
   if (lo < len) {
-    cmp = compare(key, (const void **) &(sl->list[lo]));
+    cmp = compare(key, (const void **)&(sl->list[lo]));
     tor_assert(cmp < 0);
   } else {
-    cmp = compare(key, (const void **) &(sl->list[len-1]));
+    cmp = compare(key, (const void **)&(sl->list[len - 1]));
     tor_assert(cmp > 0);
   }
 
@@ -540,7 +544,7 @@ smartlist_bsearch_idx(const smartlist_t *sl, const void *key,
 static int
 compare_string_ptrs_(const void **_a, const void **_b)
 {
-  return strcmp((const char*)*_a, (const char*)*_b);
+  return strcmp((const char *)*_a, (const char *)*_b);
 }
 
 /** Sort a smartlist <b>sl</b> containing strings into lexically ascending
@@ -581,9 +585,9 @@ static int
 compare_ptrs_(const void **_a, const void **_b)
 {
   const void *a = *_a, *b = *_b;
-  if (a<b)
+  if (a < b)
     return -1;
-  else if (a==b)
+  else if (a == b)
     return 0;
   else
     return 1;
@@ -649,9 +653,9 @@ smartlist_sort_pointers(smartlist_t *sl)
 /* If this is true, then i is small enough to potentially have children
  * in the smartlist, and it is save to use LEFT_CHILD/RIGHT_CHILD on it. */
 #define IDX_MAY_HAVE_CHILDREN(i) ((i) <= MAX_PARENT_IDX)
-#define LEFT_CHILD(i)  ( 2*(i) + 1 )
-#define RIGHT_CHILD(i) ( 2*(i) + 2 )
-#define PARENT(i)      ( ((i)-1) / 2 )
+#define LEFT_CHILD(i) (2 * (i) + 1)
+#define RIGHT_CHILD(i) (2 * (i) + 2)
+#define PARENT(i) (((i)-1) / 2)
 /** }@ */
 
 /** @{ */
@@ -662,11 +666,12 @@ smartlist_sort_pointers(smartlist_t *sl)
  * UPDATE_IDX(i) sets the index of the element at <b>i</b> to the correct
  * value (that is, to <b>i</b>).
  */
-#define IDXP(p) ((int*)STRUCT_VAR_P(p, idx_field_offset))
+#define IDXP(p) ((int *)STRUCT_VAR_P(p, idx_field_offset))
 
-#define UPDATE_IDX(i)  do {                            \
-    void *updated = sl->list[i];                       \
-    *IDXP(updated) = i;                                \
+#define UPDATE_IDX(i)            \
+  do {                           \
+    void *updated = sl->list[i]; \
+    *IDXP(updated) = i;          \
   } while (0)
 
 #define IDX_OF_ITEM(p) (*IDXP(p))
@@ -678,11 +683,10 @@ smartlist_sort_pointers(smartlist_t *sl)
 static inline void
 smartlist_heapify(smartlist_t *sl,
                   int (*compare)(const void *a, const void *b),
-                  ptrdiff_t idx_field_offset,
-                  int idx)
+                  ptrdiff_t idx_field_offset, int idx)
 {
   while (1) {
-    if (! IDX_MAY_HAVE_CHILDREN(idx)) {
+    if (!IDX_MAY_HAVE_CHILDREN(idx)) {
       /* idx is so large that it cannot have any children, since doing so
        * would mean the smartlist was over-capacity. Therefore it cannot
        * violate the heap property by being greater than a child (since it
@@ -695,12 +699,12 @@ smartlist_heapify(smartlist_t *sl,
 
     if (left_idx >= sl->num_used)
       return;
-    if (compare(sl->list[idx],sl->list[left_idx]) < 0)
+    if (compare(sl->list[idx], sl->list[left_idx]) < 0)
       best_idx = idx;
     else
       best_idx = left_idx;
-    if (left_idx+1 < sl->num_used &&
-        compare(sl->list[left_idx+1],sl->list[best_idx]) < 0)
+    if (left_idx + 1 < sl->num_used &&
+        compare(sl->list[left_idx + 1], sl->list[best_idx]) < 0)
       best_idx = left_idx + 1;
 
     if (best_idx == idx) {
@@ -725,14 +729,13 @@ smartlist_heapify(smartlist_t *sl,
 void
 smartlist_pqueue_add(smartlist_t *sl,
                      int (*compare)(const void *a, const void *b),
-                     ptrdiff_t idx_field_offset,
-                     void *item)
+                     ptrdiff_t idx_field_offset, void *item)
 {
   int idx;
-  smartlist_add(sl,item);
-  UPDATE_IDX(sl->num_used-1);
+  smartlist_add(sl, item);
+  UPDATE_IDX(sl->num_used - 1);
 
-  for (idx = sl->num_used - 1; idx; ) {
+  for (idx = sl->num_used - 1; idx;) {
     int parent = PARENT(idx);
     if (compare(sl->list[idx], sl->list[parent]) < 0) {
       void *tmp = sl->list[parent];
@@ -760,7 +763,7 @@ smartlist_pqueue_pop(smartlist_t *sl,
   tor_assert(sl->num_used);
 
   top = sl->list[0];
-  *IDXP(top)=-1;
+  *IDXP(top) = -1;
   if (--sl->num_used) {
     sl->list[0] = sl->list[sl->num_used];
     sl->list[sl->num_used] = NULL;
@@ -778,8 +781,7 @@ smartlist_pqueue_pop(smartlist_t *sl,
 void
 smartlist_pqueue_remove(smartlist_t *sl,
                         int (*compare)(const void *a, const void *b),
-                        ptrdiff_t idx_field_offset,
-                        void *item)
+                        ptrdiff_t idx_field_offset, void *item)
 {
   int idx = IDX_OF_ITEM(item);
   tor_assert(idx >= 0);
@@ -806,7 +808,7 @@ smartlist_pqueue_assert_ok(smartlist_t *sl,
 {
   int i;
   for (i = sl->num_used - 1; i >= 0; --i) {
-    if (i>0)
+    if (i > 0)
       tor_assert(compare(sl->list[PARENT(i)], sl->list[i]) <= 0);
     tor_assert(IDX_OF_ITEM(sl->list[i]) == i);
   }
@@ -816,7 +818,7 @@ smartlist_pqueue_assert_ok(smartlist_t *sl,
 static int
 compare_digests_(const void **_a, const void **_b)
 {
-  return tor_memcmp((const char*)*_a, (const char*)*_b, DIGEST_LEN);
+  return tor_memcmp((const char *)*_a, (const char *)*_b, DIGEST_LEN);
 }
 
 /** Sort the list of DIGEST_LEN-byte digests into ascending order. */
@@ -838,7 +840,7 @@ smartlist_uniq_digests(smartlist_t *sl)
 static int
 compare_digests256_(const void **_a, const void **_b)
 {
-  return tor_memcmp((const char*)*_a, (const char*)*_b, DIGEST256_LEN);
+  return tor_memcmp((const char *)*_a, (const char *)*_b, DIGEST256_LEN);
 }
 
 /** Sort the list of DIGEST256_LEN-byte digests into ascending order. */

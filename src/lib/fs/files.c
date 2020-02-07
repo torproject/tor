@@ -10,7 +10,7 @@
  **/
 
 #ifdef _WIN32
-#include <windows.h>
+#  include <windows.h>
 #endif
 
 #include "lib/fs/files.h"
@@ -27,22 +27,22 @@
 #include "lib/fdio/fdio.h"
 
 #ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
+#  include <sys/types.h>
 #endif
 #ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
+#  include <sys/stat.h>
 #endif
 #ifdef HAVE_UTIME_H
-#include <utime.h>
+#  include <utime.h>
 #endif
 #ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
+#  include <sys/time.h>
 #endif
 #ifdef HAVE_FCNTL_H
-#include <fcntl.h>
+#  include <fcntl.h>
 #endif
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #include <errno.h>
 #include <stdio.h>
@@ -56,7 +56,7 @@ tor_open_cloexec(const char *path, int flags, unsigned mode)
   int fd;
   const char *p = sandbox_intern_string(path);
 #ifdef O_CLOEXEC
-  fd = open(p, flags|O_CLOEXEC, mode);
+  fd = open(p, flags | O_CLOEXEC, mode);
   if (fd >= 0)
     return fd;
   /* If we got an error, see if it is EINVAL. EINVAL might indicate that,
@@ -71,7 +71,7 @@ tor_open_cloexec(const char *path, int flags, unsigned mode)
 #ifdef FD_CLOEXEC
   if (fd >= 0) {
     if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
-      log_warn(LD_FS,"Couldn't set FD_CLOEXEC: %s", strerror(errno));
+      log_warn(LD_FS, "Couldn't set FD_CLOEXEC: %s", strerror(errno));
       close(fd);
       return -1;
     }
@@ -89,7 +89,7 @@ tor_fopen_cloexec(const char *path, const char *mode)
 #ifdef FD_CLOEXEC
   if (result != NULL) {
     if (fcntl(fileno(result), F_SETFD, FD_CLOEXEC) == -1) {
-      log_warn(LD_FS,"Couldn't set FD_CLOEXEC: %s", strerror(errno));
+      log_warn(LD_FS, "Couldn't set FD_CLOEXEC: %s", strerror(errno));
       fclose(result);
       return NULL;
     }
@@ -119,21 +119,21 @@ replace_file(const char *from, const char *to)
 #ifndef _WIN32
   return tor_rename(from, to);
 #else
-  switch (file_status(to))
-    {
-    case FN_NOENT:
-      break;
-    case FN_FILE:
-    case FN_EMPTY:
-      if (unlink(to)) return -1;
-      break;
-    case FN_ERROR:
+  switch (file_status(to)) {
+  case FN_NOENT:
+    break;
+  case FN_FILE:
+  case FN_EMPTY:
+    if (unlink(to))
       return -1;
-    case FN_DIR:
-      errno = EISDIR;
-      return -1;
-    }
-  return tor_rename(from,to);
+    break;
+  case FN_ERROR:
+    return -1;
+  case FN_DIR:
+    errno = EISDIR;
+    return -1;
+  }
+  return tor_rename(from, to);
 #endif /* !defined(_WIN32) */
 }
 
@@ -141,7 +141,7 @@ replace_file(const char *from, const char *to)
 int
 touch_file(const char *fname)
 {
-  if (utime(fname, NULL)!=0)
+  if (utime(fname, NULL) != 0)
     return -1;
   return 0;
 }
@@ -151,7 +151,7 @@ touch_file(const char *fname)
  */
 
 MOCK_IMPL(int,
-tor_unlink,(const char *pathname))
+tor_unlink, (const char *pathname))
 {
   return unlink(pathname);
 }
@@ -166,8 +166,8 @@ write_all_to_fd(int fd, const char *buf, size_t count)
   raw_assert(count < SSIZE_MAX);
 
   while (written != count) {
-    result = write(fd, buf+written, count-written);
-    if (result<0)
+    result = write(fd, buf + written, count - written);
+    if (result < 0)
       return -1;
     written += result;
   }
@@ -189,8 +189,8 @@ read_all_from_fd(int fd, char *buf, size_t count)
   }
 
   while (numread < count) {
-    result = read(fd, buf+numread, count-numread);
-    if (result<0)
+    result = read(fd, buf + numread, count - numread);
+    if (result < 0)
       return -1;
     else if (result == 0)
       break;
@@ -255,7 +255,8 @@ file_status(const char *fname)
  * with mode 0600.
  */
 MOCK_IMPL(int,
-write_str_to_file,(const char *fname, const char *str, int bin))
+write_str_to_file,
+          (const char *fname, const char *str, int bin))
 {
 #ifdef _WIN32
   if (!bin && strchr(str, '\r')) {
@@ -273,8 +274,8 @@ write_str_to_file,(const char *fname, const char *str, int bin))
 struct open_file_t {
   char *tempname; /**< Name of the temporary file. */
   char *filename; /**< Name of the original file. */
-  unsigned rename_on_close:1; /**< Are we using the temporary file or not? */
-  unsigned binary:1; /**< Did we open in binary mode? */
+  unsigned rename_on_close : 1; /**< Are we using the temporary file or not? */
+  unsigned binary : 1; /**< Did we open in binary mode? */
   int fd; /**< fd for the open file. */
   FILE *stdio_file; /**< stdio wrapper for <b>fd</b>. */
 };
@@ -308,7 +309,7 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
   tor_assert(fname);
   tor_assert(data_out);
 #if (O_BINARY != 0 && O_TEXT != 0)
-  tor_assert((open_flags & (O_BINARY|O_TEXT)) != 0);
+  tor_assert((open_flags & (O_BINARY | O_TEXT)) != 0);
 #endif
   new_file->fd = -1;
   new_file->filename = tor_strdup(fname);
@@ -321,7 +322,7 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
     tor_asprintf(&new_file->tempname, "%s.tmp", fname);
     open_name = new_file->tempname;
     /* We always replace an existing temporary file if there is one. */
-    open_flags |= O_CREAT|O_TRUNC;
+    open_flags |= O_CREAT | O_TRUNC;
     open_flags &= ~O_EXCL;
     new_file->rename_on_close = 1;
   }
@@ -332,8 +333,8 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
 
   new_file->fd = tor_open_cloexec(open_name, open_flags, mode);
   if (new_file->fd < 0) {
-    log_warn(LD_FS, "Couldn't open \"%s\" (%s) for writing: %s",
-        open_name, fname, strerror(errno));
+    log_warn(LD_FS, "Couldn't open \"%s\" (%s) for writing: %s", open_name,
+             fname, strerror(errno));
     goto err;
   }
   if (append) {
@@ -348,7 +349,7 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
 
   return new_file->fd;
 
- err:
+err:
   if (new_file->fd >= 0)
     close(new_file->fd);
   *data_out = NULL;
@@ -368,8 +369,8 @@ fdopen_file(open_file_t *file_data)
   if (file_data->stdio_file)
     return file_data->stdio_file;
   tor_assert(file_data->fd >= 0);
-  if (!(file_data->stdio_file = fdopen(file_data->fd,
-                                       file_data->binary?"ab":"a"))) {
+  if (!(file_data->stdio_file =
+            fdopen(file_data->fd, file_data->binary ? "ab" : "a"))) {
     log_warn(LD_FS, "Couldn't fdopen \"%s\" [%d]: %s", file_data->filename,
              file_data->fd, strerror(errno));
   }
@@ -383,7 +384,7 @@ start_writing_to_stdio_file(const char *fname, int open_flags, int mode,
                             open_file_t **data_out)
 {
   FILE *res;
-  if (start_writing_to_file(fname, open_flags, mode, data_out)<0)
+  if (start_writing_to_file(fname, open_flags, mode, data_out) < 0)
     return NULL;
   if (!(res = fdopen_file(*data_out))) {
     abort_writing_to_file(*data_out);
@@ -428,8 +429,8 @@ finish_writing_to_file_impl(open_file_t *file_data, int abort_write)
       int res = unlink(file_data->tempname);
       if (res != 0) {
         /* We couldn't unlink and we'll leave a mess behind */
-        log_warn(LD_FS, "Failed to unlink %s: %s",
-                 file_data->tempname, strerror(errno));
+        log_warn(LD_FS, "Failed to unlink %s: %s", file_data->tempname,
+                 strerror(errno));
         r = -1;
       }
     }
@@ -471,21 +472,19 @@ write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
   int fd;
   ssize_t result;
   fd = start_writing_to_file(fname, open_flags, 0600, &file);
-  if (fd<0)
+  if (fd < 0)
     return -1;
-  SMARTLIST_FOREACH(chunks, sized_chunk_t *, chunk,
-  {
+  SMARTLIST_FOREACH(chunks, sized_chunk_t *, chunk, {
     result = write_all_to_fd(fd, chunk->bytes, chunk->len);
     if (result < 0) {
-      log_warn(LD_FS, "Error writing to \"%s\": %s", fname,
-          strerror(errno));
+      log_warn(LD_FS, "Error writing to \"%s\": %s", fname, strerror(errno));
       goto err;
     }
     tor_assert((size_t)result == chunk->len);
   });
 
   return finish_writing_to_file(file);
- err:
+err:
   abort_writing_to_file(file);
   return -1;
 }
@@ -498,7 +497,7 @@ int
 write_chunks_to_file(const char *fname, const smartlist_t *chunks, int bin,
                      int no_tempfile)
 {
-  int flags = OPEN_FLAGS_REPLACE|(bin?O_BINARY:O_TEXT);
+  int flags = OPEN_FLAGS_REPLACE | (bin ? O_BINARY : O_TEXT);
 
   if (no_tempfile) {
     /* O_APPEND stops write_chunks_to_file from using tempfiles */
@@ -514,7 +513,7 @@ write_bytes_to_file_impl(const char *fname, const char *str, size_t len,
                          int flags)
 {
   int r;
-  sized_chunk_t c = { str, len };
+  sized_chunk_t c = {str, len};
   smartlist_t *chunks = smartlist_new();
   smartlist_add(chunks, &c);
   r = write_chunks_to_file_impl(fname, chunks, flags);
@@ -525,21 +524,20 @@ write_bytes_to_file_impl(const char *fname, const char *str, size_t len,
 /** As write_str_to_file, but does not assume a NUL-terminated
  * string. Instead, we write <b>len</b> bytes, starting at <b>str</b>. */
 MOCK_IMPL(int,
-write_bytes_to_file,(const char *fname, const char *str, size_t len,
-                     int bin))
+write_bytes_to_file,
+          (const char *fname, const char *str, size_t len, int bin))
 {
-  return write_bytes_to_file_impl(fname, str, len,
-                                  OPEN_FLAGS_REPLACE|(bin?O_BINARY:O_TEXT));
+  return write_bytes_to_file_impl(
+      fname, str, len, OPEN_FLAGS_REPLACE | (bin ? O_BINARY : O_TEXT));
 }
 
 /** As write_bytes_to_file, but if the file already exists, append the bytes
  * to the end of the file instead of overwriting it. */
 int
-append_bytes_to_file(const char *fname, const char *str, size_t len,
-                     int bin)
+append_bytes_to_file(const char *fname, const char *str, size_t len, int bin)
 {
-  return write_bytes_to_file_impl(fname, str, len,
-                                  OPEN_FLAGS_APPEND|(bin?O_BINARY:O_TEXT));
+  return write_bytes_to_file_impl(
+      fname, str, len, OPEN_FLAGS_APPEND | (bin ? O_BINARY : O_TEXT));
 }
 
 /** Like write_str_to_file(), but also return -1 if there was a file
@@ -548,9 +546,8 @@ int
 write_bytes_to_new_file(const char *fname, const char *str, size_t len,
                         int bin)
 {
-  return write_bytes_to_file_impl(fname, str, len,
-                                  OPEN_FLAGS_DONT_REPLACE|
-                                  (bin?O_BINARY:O_TEXT));
+  return write_bytes_to_file_impl(
+      fname, str, len, OPEN_FLAGS_DONT_REPLACE | (bin ? O_BINARY : O_TEXT));
 }
 
 /**
@@ -568,7 +565,7 @@ read_file_to_str_until_eof(int fd, size_t max_bytes_to_read, size_t *sz_out)
   char *string = NULL;
   size_t string_max = 0;
 
-  if (max_bytes_to_read+1 >= SIZE_T_CEILING) {
+  if (max_bytes_to_read + 1 >= SIZE_T_CEILING) {
     errno = EINVAL;
     return NULL;
   }
@@ -616,7 +613,8 @@ read_file_to_str_until_eof(int fd, size_t max_bytes_to_read, size_t *sz_out)
  * be truncated.
  */
 MOCK_IMPL(char *,
-read_file_to_str, (const char *filename, int flags, struct stat *stat_out))
+read_file_to_str,
+          (const char *filename, int flags, struct stat *stat_out))
 {
   int fd; /* router file */
   struct stat statbuf;
@@ -626,22 +624,22 @@ read_file_to_str, (const char *filename, int flags, struct stat *stat_out))
 
   tor_assert(filename);
 
-  fd = tor_open_cloexec(filename,O_RDONLY|(bin?O_BINARY:O_TEXT),0);
-  if (fd<0) {
+  fd = tor_open_cloexec(filename, O_RDONLY | (bin ? O_BINARY : O_TEXT), 0);
+  if (fd < 0) {
     int severity = LOG_WARN;
     int save_errno = errno;
     if (errno == ENOENT && (flags & RFTS_IGNORE_MISSING))
       severity = LOG_INFO;
-    log_fn(severity, LD_FS,"Could not open \"%s\": %s",filename,
+    log_fn(severity, LD_FS, "Could not open \"%s\": %s", filename,
            strerror(errno));
     errno = save_errno;
     return NULL;
   }
 
-  if (fstat(fd, &statbuf)<0) {
+  if (fstat(fd, &statbuf) < 0) {
     int save_errno = errno;
     close(fd);
-    log_warn(LD_FS,"Could not fstat \"%s\".",filename);
+    log_warn(LD_FS, "Could not fstat \"%s\".", filename);
     errno = save_errno;
     return NULL;
   }
@@ -649,7 +647,7 @@ read_file_to_str, (const char *filename, int flags, struct stat *stat_out))
 #ifndef _WIN32
 /** When we detect that we're reading from a FIFO, don't read more than
  * this many bytes.  It's insane overkill for most uses. */
-#define FIFO_READ_MAX (1024*1024)
+#  define FIFO_READ_MAX (1024 * 1024)
   if (S_ISFIFO(statbuf.st_mode)) {
     size_t sz = 0;
     string = read_file_to_str_until_eof(fd, FIFO_READ_MAX, &sz);
@@ -665,18 +663,18 @@ read_file_to_str, (const char *filename, int flags, struct stat *stat_out))
   }
 #endif /* !defined(_WIN32) */
 
-  if ((uint64_t)(statbuf.st_size)+1 >= SIZE_T_CEILING) {
+  if ((uint64_t)(statbuf.st_size) + 1 >= SIZE_T_CEILING) {
     close(fd);
     errno = EINVAL;
     return NULL;
   }
 
-  string = tor_malloc((size_t)(statbuf.st_size+1));
+  string = tor_malloc((size_t)(statbuf.st_size + 1));
 
-  r = read_all_from_fd(fd,string,(size_t)statbuf.st_size);
-  if (r<0) {
+  r = read_all_from_fd(fd, string, (size_t)statbuf.st_size);
+  if (r < 0) {
     int save_errno = errno;
-    log_warn(LD_FS,"Error reading from file \"%s\": %s", filename,
+    log_warn(LD_FS, "Error reading from file \"%s\": %s", filename,
              strerror(errno));
     tor_free(string);
     close(fd);
@@ -687,27 +685,28 @@ read_file_to_str, (const char *filename, int flags, struct stat *stat_out))
 
 #if defined(_WIN32) || defined(__CYGWIN__)
   if (!bin && strchr(string, '\r')) {
-    log_debug(LD_FS, "We didn't convert CRLF to LF as well as we hoped "
+    log_debug(LD_FS,
+              "We didn't convert CRLF to LF as well as we hoped "
               "when reading %s. Coping.",
               filename);
     tor_strstrip(string, "\r");
     r = strlen(string);
   }
   if (!bin) {
-    statbuf.st_size = (size_t) r;
+    statbuf.st_size = (size_t)r;
   } else
 #endif /* defined(_WIN32) || defined(__CYGWIN__) */
-    if (r != statbuf.st_size) {
-      /* Unless we're using text mode on win32, we'd better have an exact
-       * match for size. */
-      int save_errno = errno;
-      log_warn(LD_FS,"Could read only %d of %ld bytes of file \"%s\".",
-               (int)r, (long)statbuf.st_size,filename);
-      tor_free(string);
-      close(fd);
-      errno = save_errno;
-      return NULL;
-    }
+      if (r != statbuf.st_size) {
+    /* Unless we're using text mode on win32, we'd better have an exact
+     * match for size. */
+    int save_errno = errno;
+    log_warn(LD_FS, "Could read only %d of %ld bytes of file \"%s\".", (int)r,
+             (long)statbuf.st_size, filename);
+    tor_free(string);
+    close(fd);
+    errno = save_errno;
+    return NULL;
+  }
   close(fd);
   if (stat_out) {
     memcpy(stat_out, &statbuf, sizeof(struct stat));
@@ -717,5 +716,5 @@ read_file_to_str, (const char *filename, int flags, struct stat *stat_out))
 }
 
 #if !defined(HAVE_GETDELIM) || defined(TOR_UNIT_TESTS)
-#include "ext/getdelim.c"
+#  include "ext/getdelim.c"
 #endif

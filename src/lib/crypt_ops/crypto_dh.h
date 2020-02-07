@@ -35,14 +35,13 @@ int crypto_dh_generate_public(crypto_dh_t *dh);
 int crypto_dh_get_public(crypto_dh_t *dh, char *pubkey_out,
                          size_t pubkey_out_len);
 ssize_t crypto_dh_compute_secret(int severity, crypto_dh_t *dh,
-                             const char *pubkey, size_t pubkey_len,
-                             char *secret_out, size_t secret_out_len);
+                                 const char *pubkey, size_t pubkey_len,
+                                 char *secret_out, size_t secret_out_len);
 void crypto_dh_free_(crypto_dh_t *dh);
 #define crypto_dh_free(dh) FREE_AND_NULL(crypto_dh_t, crypto_dh_free_, (dh))
 
-ssize_t crypto_dh_handshake(int severity, crypto_dh_t *dh,
-                            const char *pubkey, size_t pubkey_len,
-                            unsigned char *secret_out,
+ssize_t crypto_dh_handshake(int severity, crypto_dh_t *dh, const char *pubkey,
+                            size_t pubkey_len, unsigned char *secret_out,
                             size_t secret_bytes_out);
 
 void crypto_dh_free_all(void);

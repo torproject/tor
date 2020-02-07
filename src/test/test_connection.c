@@ -33,46 +33,44 @@
 #include "feature/nodelist/routerinfo_st.h"
 #include "core/or/socks_request_st.h"
 
-static void * test_conn_get_basic_setup(const struct testcase_t *tc);
+static void *test_conn_get_basic_setup(const struct testcase_t *tc);
 static int test_conn_get_basic_teardown(const struct testcase_t *tc,
                                         void *arg);
 
-static void * test_conn_get_rend_setup(const struct testcase_t *tc);
-static int test_conn_get_rend_teardown(const struct testcase_t *tc,
-                                        void *arg);
+static void *test_conn_get_rend_setup(const struct testcase_t *tc);
+static int test_conn_get_rend_teardown(const struct testcase_t *tc, void *arg);
 
-static void * test_conn_get_rsrc_setup(const struct testcase_t *tc);
-static int test_conn_get_rsrc_teardown(const struct testcase_t *tc,
-                                        void *arg);
+static void *test_conn_get_rsrc_setup(const struct testcase_t *tc);
+static int test_conn_get_rsrc_teardown(const struct testcase_t *tc, void *arg);
 
 /* Arbitrary choice - IPv4 Directory Connection to localhost */
-#define TEST_CONN_TYPE          (CONN_TYPE_DIR)
+#define TEST_CONN_TYPE (CONN_TYPE_DIR)
 /* We assume every machine has IPv4 localhost, is that ok? */
-#define TEST_CONN_ADDRESS       "127.0.0.1"
-#define TEST_CONN_PORT          (12345)
-#define TEST_CONN_ADDRESS_PORT  "127.0.0.1:12345"
-#define TEST_CONN_FAMILY        (AF_INET)
-#define TEST_CONN_STATE         (DIR_CONN_STATE_MIN_)
-#define TEST_CONN_ADDRESS_2     "127.0.0.2"
+#define TEST_CONN_ADDRESS "127.0.0.1"
+#define TEST_CONN_PORT (12345)
+#define TEST_CONN_ADDRESS_PORT "127.0.0.1:12345"
+#define TEST_CONN_FAMILY (AF_INET)
+#define TEST_CONN_STATE (DIR_CONN_STATE_MIN_)
+#define TEST_CONN_ADDRESS_2 "127.0.0.2"
 
 #define TEST_CONN_BASIC_PURPOSE (DIR_PURPOSE_MIN_)
 
-#define TEST_CONN_REND_ADDR     "cfs3rltphxxvabci"
-#define TEST_CONN_REND_PURPOSE  (DIR_PURPOSE_FETCH_RENDDESC_V2)
+#define TEST_CONN_REND_ADDR "cfs3rltphxxvabci"
+#define TEST_CONN_REND_PURPOSE (DIR_PURPOSE_FETCH_RENDDESC_V2)
 #define TEST_CONN_REND_PURPOSE_SUCCESSFUL (DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2)
-#define TEST_CONN_REND_TYPE_2   (CONN_TYPE_AP)
-#define TEST_CONN_REND_ADDR_2   "icbavxxhptlr3sfc"
+#define TEST_CONN_REND_TYPE_2 (CONN_TYPE_AP)
+#define TEST_CONN_REND_ADDR_2 "icbavxxhptlr3sfc"
 
-#define TEST_CONN_RSRC          (networkstatus_get_flavor_name(FLAV_MICRODESC))
-#define TEST_CONN_RSRC_PURPOSE  (DIR_PURPOSE_FETCH_CONSENSUS)
+#define TEST_CONN_RSRC (networkstatus_get_flavor_name(FLAV_MICRODESC))
+#define TEST_CONN_RSRC_PURPOSE (DIR_PURPOSE_FETCH_CONSENSUS)
 #define TEST_CONN_RSRC_STATE_SUCCESSFUL (DIR_CONN_STATE_CLIENT_FINISHED)
-#define TEST_CONN_RSRC_2        (networkstatus_get_flavor_name(FLAV_NS))
+#define TEST_CONN_RSRC_2 (networkstatus_get_flavor_name(FLAV_NS))
 
-#define TEST_CONN_DL_STATE      (DIR_CONN_STATE_CLIENT_READING)
+#define TEST_CONN_DL_STATE (DIR_CONN_STATE_CLIENT_READING)
 
 /* see AP_CONN_STATE_IS_UNATTACHED() */
 #define TEST_CONN_UNATTACHED_STATE (AP_CONN_STATE_CIRCUIT_WAIT)
-#define TEST_CONN_ATTACHED_STATE   (AP_CONN_STATE_CONNECT_WAIT)
+#define TEST_CONN_ATTACHED_STATE (AP_CONN_STATE_CONNECT_WAIT)
 
 void
 test_conn_lookup_addr_helper(const char *address, int family, tor_addr_t *addr)
@@ -89,7 +87,7 @@ test_conn_lookup_addr_helper(const char *address, int family, tor_addr_t *addr)
 
   return;
 
- done:
+done:
   tor_addr_make_null(addr, TEST_CONN_FAMILY);
 }
 
@@ -132,7 +130,7 @@ test_conn_get_basic_teardown(const struct testcase_t *tc, void *arg)
         /* Suppress warnings about all the stuff we didn't do */
         TO_EDGE_CONN(conn->linked_conn)->edge_has_sent_end = 1;
         TO_EDGE_CONN(conn->linked_conn)->end_reason =
-          END_STREAM_REASON_INTERNAL;
+            END_STREAM_REASON_INTERNAL;
         if (conn->linked_conn->type == CONN_TYPE_AP) {
           TO_ENTRY_CONN(conn->linked_conn)->socks_request->has_finished = 1;
         }
@@ -174,18 +172,17 @@ test_conn_get_basic_teardown(const struct testcase_t *tc, void *arg)
   return 1;
 
   /* When conn == NULL, we can't cleanup anything */
- done:
+done:
   return 0;
 }
 
 static void *
 test_conn_get_rend_setup(const struct testcase_t *tc)
 {
-  dir_connection_t *conn = DOWNCAST(dir_connection_t,
-                                    test_conn_get_connection(
-                                                    TEST_CONN_STATE,
-                                                    TEST_CONN_TYPE,
-                                                    TEST_CONN_REND_PURPOSE));
+  dir_connection_t *conn =
+      DOWNCAST(dir_connection_t,
+               test_conn_get_connection(TEST_CONN_STATE, TEST_CONN_TYPE,
+                                        TEST_CONN_REND_PURPOSE));
   tt_assert(conn);
   assert_connection_ok(&conn->base_, time(NULL));
 
@@ -193,13 +190,13 @@ test_conn_get_rend_setup(const struct testcase_t *tc)
 
   /* TODO: use directory_initiate_request() to do this - maybe? */
   tor_assert(strlen(TEST_CONN_REND_ADDR) == REND_SERVICE_ID_LEN_BASE32);
-  conn->rend_data = rend_data_client_create(TEST_CONN_REND_ADDR, NULL, NULL,
-                                            REND_NO_AUTH);
+  conn->rend_data =
+      rend_data_client_create(TEST_CONN_REND_ADDR, NULL, NULL, REND_NO_AUTH);
   assert_connection_ok(&conn->base_, time(NULL));
   return conn;
 
   /* On failure */
- done:
+done:
   test_conn_get_rend_teardown(tc, conn);
   /* Returning NULL causes the unit test to fail */
   return NULL;
@@ -219,7 +216,7 @@ test_conn_get_rend_teardown(const struct testcase_t *tc, void *arg)
 
   /* connection_free_() cleans up rend_data */
   rv = test_conn_get_basic_teardown(tc, arg);
- done:
+done:
   rend_cache_free_all();
   return rv;
 }
@@ -227,11 +224,10 @@ test_conn_get_rend_teardown(const struct testcase_t *tc, void *arg)
 static dir_connection_t *
 test_conn_download_status_add_a_connection(const char *resource)
 {
-  dir_connection_t *conn = DOWNCAST(dir_connection_t,
-                                    test_conn_get_connection(
-                                                      TEST_CONN_STATE,
-                                                      TEST_CONN_TYPE,
-                                                      TEST_CONN_RSRC_PURPOSE));
+  dir_connection_t *conn =
+      DOWNCAST(dir_connection_t,
+               test_conn_get_connection(TEST_CONN_STATE, TEST_CONN_TYPE,
+                                        TEST_CONN_RSRC_PURPOSE));
 
   tt_assert(conn);
   assert_connection_ok(&conn->base_, time(NULL));
@@ -247,7 +243,7 @@ test_conn_download_status_add_a_connection(const char *resource)
 
   return conn;
 
- done:
+done:
   test_conn_get_rsrc_teardown(NULL, conn);
   return NULL;
 }
@@ -282,14 +278,14 @@ test_conn_get_rsrc_teardown(const struct testcase_t *tc, void *arg)
   /* connection_free_() cleans up requested_resource */
   rv = test_conn_get_basic_teardown(tc, conn);
 
- done:
+done:
   return rv;
 }
 
 static void *
 test_conn_download_status_setup(const struct testcase_t *tc)
 {
-  return (void*)tc;
+  return (void *)tc;
 }
 
 static int
@@ -299,7 +295,7 @@ test_conn_download_status_teardown(const struct testcase_t *tc, void *arg)
   int rv = 0;
 
   /* Ignore arg, and just loop through the connection array */
-  SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
+  SMARTLIST_FOREACH_BEGIN (get_connection_array(), connection_t *, conn) {
     if (conn) {
       assert_connection_ok(conn, time(NULL));
 
@@ -307,9 +303,9 @@ test_conn_download_status_teardown(const struct testcase_t *tc, void *arg)
       rv = test_conn_get_rsrc_teardown(tc, conn);
       tt_int_op(rv, OP_EQ, 1);
     }
-  } SMARTLIST_FOREACH_END(conn);
+  } SMARTLIST_FOREACH_END (conn);
 
- done:
+done:
   return rv;
 }
 
@@ -328,7 +324,7 @@ test_conn_proxy_connect_teardown(const struct testcase_t *tc, void *arg)
   tt_assert(conn);
   assert_connection_ok(&conn->base_, time(NULL));
 
- done:
+done:
   return 1;
 }
 
@@ -340,8 +336,7 @@ test_conn_get_linked_connection(connection_t *l_conn, uint8_t state)
   assert_connection_ok(l_conn, time(NULL));
 
   /* AP connections don't seem to have purposes */
-  connection_t *conn = test_conn_get_connection(state, CONN_TYPE_AP,
-                                                       0);
+  connection_t *conn = test_conn_get_connection(state, CONN_TYPE_AP, 0);
 
   tt_assert(conn);
   assert_connection_ok(conn, time(NULL));
@@ -359,35 +354,30 @@ test_conn_get_linked_connection(connection_t *l_conn, uint8_t state)
 
   return conn;
 
- done:
+done:
   test_conn_download_status_teardown(NULL, NULL);
   return NULL;
 }
 
 static struct testcase_setup_t test_conn_get_basic_st = {
-  test_conn_get_basic_setup, test_conn_get_basic_teardown
-};
+    test_conn_get_basic_setup, test_conn_get_basic_teardown};
 
 static struct testcase_setup_t test_conn_get_rend_st = {
-  test_conn_get_rend_setup, test_conn_get_rend_teardown
-};
+    test_conn_get_rend_setup, test_conn_get_rend_teardown};
 
 static struct testcase_setup_t test_conn_get_rsrc_st = {
-  test_conn_get_rsrc_setup, test_conn_get_rsrc_teardown
-};
+    test_conn_get_rsrc_setup, test_conn_get_rsrc_teardown};
 
 static struct testcase_setup_t test_conn_download_status_st = {
-  test_conn_download_status_setup, test_conn_download_status_teardown
-};
+    test_conn_download_status_setup, test_conn_download_status_teardown};
 
 static struct testcase_setup_t test_conn_proxy_connect_st = {
-  test_conn_proxy_connect_setup, test_conn_proxy_connect_teardown
-};
+    test_conn_proxy_connect_setup, test_conn_proxy_connect_teardown};
 
 static void
 test_conn_get_basic(void *arg)
 {
-  connection_t *conn = (connection_t*)arg;
+  connection_t *conn = (connection_t *)arg;
   tor_addr_t addr, addr2;
 
   tt_assert(conn);
@@ -410,82 +400,48 @@ test_conn_get_basic(void *arg)
   tt_ptr_op(connection_get_by_type(!conn->type), OP_EQ, NULL);
   tt_ptr_op(connection_get_by_type(!TEST_CONN_TYPE), OP_EQ, NULL);
 
-  tt_assert(connection_get_by_type_state(conn->type, conn->state)
-            == conn);
-  tt_assert(connection_get_by_type_state(TEST_CONN_TYPE, TEST_CONN_STATE)
-            == conn);
-  tt_assert(connection_get_by_type_state(!conn->type, !conn->state)
-            == NULL);
-  tt_assert(connection_get_by_type_state(!TEST_CONN_TYPE, !TEST_CONN_STATE)
-            == NULL);
+  tt_assert(connection_get_by_type_state(conn->type, conn->state) == conn);
+  tt_assert(connection_get_by_type_state(TEST_CONN_TYPE, TEST_CONN_STATE) ==
+            conn);
+  tt_assert(connection_get_by_type_state(!conn->type, !conn->state) == NULL);
+  tt_assert(connection_get_by_type_state(!TEST_CONN_TYPE, !TEST_CONN_STATE) ==
+            NULL);
 
   /* Match on the connection fields themselves */
-  tt_assert(connection_get_by_type_addr_port_purpose(conn->type,
-                                                     &conn->addr,
-                                                     conn->port,
-                                                     conn->purpose)
-            == conn);
+  tt_assert(connection_get_by_type_addr_port_purpose(
+                conn->type, &conn->addr, conn->port, conn->purpose) == conn);
   /* Match on the original inputs to the connection */
   tt_assert(connection_get_by_type_addr_port_purpose(TEST_CONN_TYPE,
-                                                     &conn->addr,
-                                                     conn->port,
-                                                     conn->purpose)
-            == conn);
-  tt_assert(connection_get_by_type_addr_port_purpose(conn->type,
-                                                     &addr,
-                                                     conn->port,
-                                                     conn->purpose)
-            == conn);
-  tt_assert(connection_get_by_type_addr_port_purpose(conn->type,
-                                                     &conn->addr,
+                                                     &conn->addr, conn->port,
+                                                     conn->purpose) == conn);
+  tt_assert(connection_get_by_type_addr_port_purpose(
+                conn->type, &addr, conn->port, conn->purpose) == conn);
+  tt_assert(connection_get_by_type_addr_port_purpose(conn->type, &conn->addr,
                                                      TEST_CONN_PORT,
-                                                     conn->purpose)
-            == conn);
-  tt_assert(connection_get_by_type_addr_port_purpose(conn->type,
-                                                     &conn->addr,
-                                                     conn->port,
-                                                     TEST_CONN_BASIC_PURPOSE)
-            == conn);
-  tt_assert(connection_get_by_type_addr_port_purpose(TEST_CONN_TYPE,
-                                                     &addr,
-                                                     TEST_CONN_PORT,
-                                                     TEST_CONN_BASIC_PURPOSE)
-            == conn);
+                                                     conn->purpose) == conn);
+  tt_assert(connection_get_by_type_addr_port_purpose(
+                conn->type, &conn->addr, conn->port,
+                TEST_CONN_BASIC_PURPOSE) == conn);
+  tt_assert(connection_get_by_type_addr_port_purpose(
+                TEST_CONN_TYPE, &addr, TEST_CONN_PORT,
+                TEST_CONN_BASIC_PURPOSE) == conn);
   /* Then try each of the not-matching combinations */
-  tt_assert(connection_get_by_type_addr_port_purpose(!conn->type,
-                                                     &conn->addr,
-                                                     conn->port,
-                                                     conn->purpose)
-            == NULL);
-  tt_assert(connection_get_by_type_addr_port_purpose(conn->type,
-                                                     &addr2,
-                                                     conn->port,
-                                                     conn->purpose)
-            == NULL);
-  tt_assert(connection_get_by_type_addr_port_purpose(conn->type,
-                                                     &conn->addr,
-                                                     !conn->port,
-                                                     conn->purpose)
-            == NULL);
-  tt_assert(connection_get_by_type_addr_port_purpose(conn->type,
-                                                     &conn->addr,
-                                                     conn->port,
-                                                     !conn->purpose)
-            == NULL);
+  tt_assert(connection_get_by_type_addr_port_purpose(
+                !conn->type, &conn->addr, conn->port, conn->purpose) == NULL);
+  tt_assert(connection_get_by_type_addr_port_purpose(
+                conn->type, &addr2, conn->port, conn->purpose) == NULL);
+  tt_assert(connection_get_by_type_addr_port_purpose(
+                conn->type, &conn->addr, !conn->port, conn->purpose) == NULL);
+  tt_assert(connection_get_by_type_addr_port_purpose(
+                conn->type, &conn->addr, conn->port, !conn->purpose) == NULL);
   /* Then try everything not-matching */
-  tt_assert(connection_get_by_type_addr_port_purpose(!conn->type,
-                                                     &addr2,
-                                                     !conn->port,
-                                                     !conn->purpose)
-            == NULL);
-  tt_assert(connection_get_by_type_addr_port_purpose(!TEST_CONN_TYPE,
-                                                     &addr2,
-                                                     !TEST_CONN_PORT,
-                                                     !TEST_CONN_BASIC_PURPOSE)
-            == NULL);
+  tt_assert(connection_get_by_type_addr_port_purpose(
+                !conn->type, &addr2, !conn->port, !conn->purpose) == NULL);
+  tt_assert(connection_get_by_type_addr_port_purpose(
+                !TEST_CONN_TYPE, &addr2, !TEST_CONN_PORT,
+                !TEST_CONN_BASIC_PURPOSE) == NULL);
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -496,42 +452,35 @@ test_conn_get_rend(void *arg)
   assert_connection_ok(&conn->base_, time(NULL));
 
   tt_assert(connection_get_by_type_state_rendquery(
-                                            conn->base_.type,
-                                            conn->base_.state,
-                                            rend_data_get_address(
-                                                      conn->rend_data))
-            == TO_CONN(conn));
+                conn->base_.type, conn->base_.state,
+                rend_data_get_address(conn->rend_data)) == TO_CONN(conn));
   tt_assert(connection_get_by_type_state_rendquery(
-                                            TEST_CONN_TYPE,
-                                            TEST_CONN_STATE,
-                                            TEST_CONN_REND_ADDR)
-            == TO_CONN(conn));
-  tt_assert(connection_get_by_type_state_rendquery(TEST_CONN_REND_TYPE_2,
-                                                   !conn->base_.state,
-                                                   "")
-            == NULL);
-  tt_assert(connection_get_by_type_state_rendquery(TEST_CONN_REND_TYPE_2,
-                                                   !TEST_CONN_STATE,
-                                                   TEST_CONN_REND_ADDR_2)
-            == NULL);
+                TEST_CONN_TYPE, TEST_CONN_STATE, TEST_CONN_REND_ADDR) ==
+            TO_CONN(conn));
+  tt_assert(connection_get_by_type_state_rendquery(
+                TEST_CONN_REND_TYPE_2, !conn->base_.state, "") == NULL);
+  tt_assert(connection_get_by_type_state_rendquery(
+                TEST_CONN_REND_TYPE_2, !TEST_CONN_STATE,
+                TEST_CONN_REND_ADDR_2) == NULL);
 
- done:
-  ;
+done:;
 }
 
-#define sl_is_conn_assert(sl_input, conn) \
+#define sl_is_conn_assert(sl_input, conn)            \
   do {                                               \
     the_sl = (sl_input);                             \
-    tt_int_op(smartlist_len((the_sl)), OP_EQ, 1);         \
+    tt_int_op(smartlist_len((the_sl)), OP_EQ, 1);    \
     tt_assert(smartlist_get((the_sl), 0) == (conn)); \
-    smartlist_free(the_sl); the_sl = NULL;           \
+    smartlist_free(the_sl);                          \
+    the_sl = NULL;                                   \
   } while (0)
 
-#define sl_no_conn_assert(sl_input)          \
-  do {                                       \
-    the_sl = (sl_input);                     \
+#define sl_no_conn_assert(sl_input)               \
+  do {                                            \
+    the_sl = (sl_input);                          \
     tt_int_op(smartlist_len((the_sl)), OP_EQ, 0); \
-    smartlist_free(the_sl); the_sl = NULL;   \
+    smartlist_free(the_sl);                       \
+    the_sl = NULL;                                \
   } while (0)
 
 static void
@@ -543,67 +492,57 @@ test_conn_get_rsrc(void *arg)
   assert_connection_ok(&conn->base_, time(NULL));
 
   sl_is_conn_assert(connection_dir_list_by_purpose_and_resource(
-                                                    conn->base_.purpose,
-                                                    conn->requested_resource),
+                        conn->base_.purpose, conn->requested_resource),
                     conn);
   sl_is_conn_assert(connection_dir_list_by_purpose_and_resource(
-                                                    TEST_CONN_RSRC_PURPOSE,
-                                                    TEST_CONN_RSRC),
+                        TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC),
                     conn);
+  sl_no_conn_assert(
+      connection_dir_list_by_purpose_and_resource(!conn->base_.purpose, ""));
   sl_no_conn_assert(connection_dir_list_by_purpose_and_resource(
-                                                    !conn->base_.purpose,
-                                                    ""));
-  sl_no_conn_assert(connection_dir_list_by_purpose_and_resource(
-                                                    !TEST_CONN_RSRC_PURPOSE,
-                                                    TEST_CONN_RSRC_2));
+      !TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC_2));
 
-  sl_is_conn_assert(connection_dir_list_by_purpose_resource_and_state(
-                                                    conn->base_.purpose,
-                                                    conn->requested_resource,
-                                                    conn->base_.state),
-                    conn);
-  sl_is_conn_assert(connection_dir_list_by_purpose_resource_and_state(
-                                                    TEST_CONN_RSRC_PURPOSE,
-                                                    TEST_CONN_RSRC,
-                                                    TEST_CONN_STATE),
-                    conn);
+  sl_is_conn_assert(
+      connection_dir_list_by_purpose_resource_and_state(
+          conn->base_.purpose, conn->requested_resource, conn->base_.state),
+      conn);
+  sl_is_conn_assert(
+      connection_dir_list_by_purpose_resource_and_state(
+          TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC, TEST_CONN_STATE),
+      conn);
   sl_no_conn_assert(connection_dir_list_by_purpose_resource_and_state(
-                                                    !conn->base_.purpose,
-                                                    "",
-                                                    !conn->base_.state));
+      !conn->base_.purpose, "", !conn->base_.state));
   sl_no_conn_assert(connection_dir_list_by_purpose_resource_and_state(
-                                                    !TEST_CONN_RSRC_PURPOSE,
-                                                    TEST_CONN_RSRC_2,
-                                                    !TEST_CONN_STATE));
+      !TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC_2, !TEST_CONN_STATE));
 
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                 conn->base_.purpose, conn->requested_resource),
+                conn->base_.purpose, conn->requested_resource),
             OP_EQ, 1);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                 TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC),
+                TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC),
             OP_EQ, 1);
+  tt_int_op(
+      connection_dir_count_by_purpose_and_resource(!conn->base_.purpose, ""),
+      OP_EQ, 0);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                 !conn->base_.purpose, ""),
-            OP_EQ, 0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(
-                 !TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC_2),
+                !TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC_2),
             OP_EQ, 0);
 
+  tt_int_op(
+      connection_dir_count_by_purpose_resource_and_state(
+          conn->base_.purpose, conn->requested_resource, conn->base_.state),
+      OP_EQ, 1);
   tt_int_op(connection_dir_count_by_purpose_resource_and_state(
-                 conn->base_.purpose, conn->requested_resource,
-                 conn->base_.state),
+                TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC, TEST_CONN_STATE),
             OP_EQ, 1);
   tt_int_op(connection_dir_count_by_purpose_resource_and_state(
-                 TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC, TEST_CONN_STATE),
-            OP_EQ, 1);
-  tt_int_op(connection_dir_count_by_purpose_resource_and_state(
-                 !conn->base_.purpose, "", !conn->base_.state),
+                !conn->base_.purpose, "", !conn->base_.state),
             OP_EQ, 0);
   tt_int_op(connection_dir_count_by_purpose_resource_and_state(
-                 !TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC_2, !TEST_CONN_STATE),
+                !TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC_2, !TEST_CONN_STATE),
             OP_EQ, 0);
 
- done:
+done:
   smartlist_free(the_sl);
 }
 
@@ -620,9 +559,8 @@ test_conn_download_status(void *arg)
 
   /* The "other flavor" trick only works if there are two flavors */
   tor_assert(N_CONSENSUS_FLAVORS == 2);
-  consensus_flavor_t other_flavor = ((usable_flavor == FLAV_NS)
-                                     ? FLAV_MICRODESC
-                                     : FLAV_NS);
+  consensus_flavor_t other_flavor =
+      ((usable_flavor == FLAV_NS) ? FLAV_MICRODESC : FLAV_NS);
   const char *res = networkstatus_get_flavor_name(usable_flavor);
   const char *other_res = networkstatus_get_flavor_name(other_flavor);
 
@@ -631,10 +569,10 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, res),
+                TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 0);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, other_res),
+                TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* one connection, not downloading */
@@ -643,10 +581,10 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, res),
+                TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 1);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, other_res),
+                TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* one connection, downloading but not linked (not possible on a client,
@@ -656,10 +594,10 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, res),
+                TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 1);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, other_res),
+                TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* one connection, downloading and linked, but not yet attached */
@@ -669,22 +607,22 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, res),
+                TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 1);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, other_res),
+                TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
-    /* one connection, downloading and linked and attached */
+  /* one connection, downloading and linked and attached */
   ap_conn->state = TEST_CONN_ATTACHED_STATE;
   tt_int_op(networkstatus_consensus_is_already_downloading(res), OP_EQ, 1);
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, res),
+                TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 1);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, other_res),
+                TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* one connection, linked and attached but not downloading */
@@ -693,10 +631,10 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, res),
+                TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 1);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, other_res),
+                TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* two connections, both not downloading */
@@ -705,10 +643,10 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, res),
+                TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 2);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, other_res),
+                TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* two connections, one downloading */
@@ -717,10 +655,10 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, res),
+                TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 2);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, other_res),
+                TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
   conn->base_.state = TEST_CONN_STATE;
 
@@ -731,10 +669,10 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, res),
+                TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 3);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, other_res),
+                TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* more connections, one downloading */
@@ -743,10 +681,10 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, res),
+                TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 3);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, other_res),
+                TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* more connections, two downloading (should never happen, but needs
@@ -759,10 +697,10 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, res),
+                TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 3);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, other_res),
+                TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
   conn->base_.state = TEST_CONN_STATE;
 
@@ -771,10 +709,10 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, res),
+                TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 3);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                           TEST_CONN_RSRC_PURPOSE, other_res),
+                TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* a connection for the other flavor (could happen if a client is set to
@@ -785,10 +723,10 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                   TEST_CONN_RSRC_PURPOSE, res),
+                TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 3);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                   TEST_CONN_RSRC_PURPOSE, other_res),
+                TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 1);
 
   /* a connection for the other flavor (could happen if a client is set to
@@ -802,14 +740,14 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             1);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                   TEST_CONN_RSRC_PURPOSE, res),
+                TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 3);
   tt_int_op(connection_dir_count_by_purpose_and_resource(
-                                   TEST_CONN_RSRC_PURPOSE, other_res),
+                TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 1);
 
- done:
-  /* the teardown function removes all the connections in the global list*/;
+done:
+    /* the teardown function removes all the connections in the global list*/;
 }
 
 static void
@@ -826,7 +764,7 @@ test_conn_https_proxy_connect(void *arg)
   buf = buf_get_contents(conn->base_.outbuf, &sz);
   tt_str_op(buf, OP_EQ, "CONNECT 127.0.0.1:12345 HTTP/1.0\r\n\r\n");
 
- done:
+done:
   UNMOCK(connection_or_change_state);
   tor_free(buf);
 }
@@ -864,7 +802,7 @@ test_conn_haproxy_proxy_connect(void *arg)
   tt_int_op(conn->base_.proxy_state, OP_EQ, PROXY_CONNECTED);
   tt_int_op(handshake_start_called, OP_EQ, 1);
 
- done:
+done:
   UNMOCK(connection_or_change_state);
   UNMOCK(connection_tls_start_handshake);
   tor_free(buf);
@@ -875,7 +813,7 @@ static node_t test_node;
 static node_t *
 mock_node_get_mutable_by_id(const char *digest)
 {
-  (void) digest;
+  (void)digest;
   static routerinfo_t node_ri;
   memset(&node_ri, 0, sizeof(node_ri));
 
@@ -893,7 +831,7 @@ mock_node_get_mutable_by_id(const char *digest)
 static const node_t *
 mock_node_get_by_id(const char *digest)
 {
-  (void) digest;
+  (void)digest;
   memset(test_node.identity, 'c', sizeof(test_node.identity));
   return &test_node;
 }
@@ -902,18 +840,18 @@ mock_node_get_by_id(const char *digest)
 static void
 test_failed_orconn_tracker(void *arg)
 {
-  (void) arg;
+  (void)arg;
 
   int can_connect;
   time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
-  (void) now;
+  (void)now;
 
   update_approx_time(now);
 
   /* Prepare the OR connection that will be used in this test */
   or_connection_t or_conn;
-  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&or_conn.real_addr, "18.0.0.1"));
-  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&or_conn.base_.addr, "18.0.0.1"));
+  tt_int_op(AF_INET, OP_EQ, tor_addr_parse(&or_conn.real_addr, "18.0.0.1"));
+  tt_int_op(AF_INET, OP_EQ, tor_addr_parse(&or_conn.base_.addr, "18.0.0.1"));
   or_conn.base_.port = 1;
   memset(or_conn.identity_digest, 'c', sizeof(or_conn.identity_digest));
 
@@ -959,43 +897,41 @@ test_failed_orconn_tracker(void *arg)
   can_connect = should_connect_to_relay(&or_conn);
   tt_int_op(can_connect, OP_EQ, 1);
 
- done:
-  ;
+done:;
 }
 
 #ifndef COCCI
-#define CONNECTION_TESTCASE(name, fork, setup)                           \
-  { #name, test_conn_##name, fork, &setup, NULL }
+#  define CONNECTION_TESTCASE(name, fork, setup)  \
+    {                                             \
+#      name, test_conn_##name, fork, &setup, NULL \
+    }
 
-#define STR(x) #x
+#  define STR(x) #  x
 /* where arg is an expression (constant, variable, compound expression) */
-#define CONNECTION_TESTCASE_ARG(name, fork, setup, arg)                 \
-  { #name "_" STR(x),                                                   \
-      test_conn_##name,                                                 \
-      fork,                                                             \
-      &setup,                                                           \
-      (void *)arg }
+#  define CONNECTION_TESTCASE_ARG(name, fork, setup, arg)           \
+    {                                                               \
+#      name "_" STR(x), test_conn_##name, fork, &setup, (void *)arg \
+    }
 #endif /* !defined(COCCI) */
 
 static const unsigned int PROXY_CONNECT_ARG = PROXY_CONNECT;
 static const unsigned int PROXY_HAPROXY_ARG = PROXY_HAPROXY;
 
 struct testcase_t connection_tests[] = {
-  CONNECTION_TESTCASE(get_basic, TT_FORK, test_conn_get_basic_st),
-  CONNECTION_TESTCASE(get_rend,  TT_FORK, test_conn_get_rend_st),
-  CONNECTION_TESTCASE(get_rsrc,  TT_FORK, test_conn_get_rsrc_st),
+    CONNECTION_TESTCASE(get_basic, TT_FORK, test_conn_get_basic_st),
+    CONNECTION_TESTCASE(get_rend, TT_FORK, test_conn_get_rend_st),
+    CONNECTION_TESTCASE(get_rsrc, TT_FORK, test_conn_get_rsrc_st),
 
-  CONNECTION_TESTCASE_ARG(download_status,       TT_FORK,
-                          test_conn_download_status_st, FLAV_MICRODESC),
-  CONNECTION_TESTCASE_ARG(download_status,       TT_FORK,
-                          test_conn_download_status_st, FLAV_NS),
+    CONNECTION_TESTCASE_ARG(download_status, TT_FORK,
+                            test_conn_download_status_st, FLAV_MICRODESC),
+    CONNECTION_TESTCASE_ARG(download_status, TT_FORK,
+                            test_conn_download_status_st, FLAV_NS),
 
-  CONNECTION_TESTCASE_ARG(https_proxy_connect,   TT_FORK,
-                          test_conn_proxy_connect_st, &PROXY_CONNECT_ARG),
-  CONNECTION_TESTCASE_ARG(haproxy_proxy_connect, TT_FORK,
-                          test_conn_proxy_connect_st, &PROXY_HAPROXY_ARG),
+    CONNECTION_TESTCASE_ARG(https_proxy_connect, TT_FORK,
+                            test_conn_proxy_connect_st, &PROXY_CONNECT_ARG),
+    CONNECTION_TESTCASE_ARG(haproxy_proxy_connect, TT_FORK,
+                            test_conn_proxy_connect_st, &PROXY_HAPROXY_ARG),
 
-//CONNECTION_TESTCASE(func_suffix, TT_FORK, setup_func_pair),
-  { "failed_orconn_tracker", test_failed_orconn_tracker, TT_FORK, NULL, NULL },
-  END_OF_TESTCASES
-};
+    // CONNECTION_TESTCASE(func_suffix, TT_FORK, setup_func_pair),
+    {"failed_orconn_tracker", test_failed_orconn_tracker, TT_FORK, NULL, NULL},
+    END_OF_TESTCASES};

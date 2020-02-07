@@ -47,15 +47,13 @@ get_auth_key_from_cell(ed25519_public_key_t *auth_key_out,
   tor_assert(cell);
 
   switch (cell_type) {
-  case RELAY_COMMAND_ESTABLISH_INTRO:
-  {
+  case RELAY_COMMAND_ESTABLISH_INTRO: {
     const trn_cell_establish_intro_t *c_cell = cell;
     key_array = trn_cell_establish_intro_getconstarray_auth_key(c_cell);
     auth_key_len = trn_cell_establish_intro_getlen_auth_key(c_cell);
     break;
   }
-  case RELAY_COMMAND_INTRODUCE1:
-  {
+  case RELAY_COMMAND_INTRODUCE1: {
     const trn_cell_introduce1_t *c_cell = cell;
     key_array = trn_cell_introduce1_getconstarray_auth_key(cell);
     auth_key_len = trn_cell_introduce1_getlen_auth_key(c_cell);
@@ -101,7 +99,7 @@ verify_establish_intro_cell(const trn_cell_establish_intro_t *cell,
   {
     ed25519_signature_t sig_struct;
     const uint8_t *sig_array =
-      trn_cell_establish_intro_getconstarray_sig(cell);
+        trn_cell_establish_intro_getconstarray_sig(cell);
 
     /* Make sure the signature length is of the right size. For EXTRA safety,
      * we check both the size of the array and the length which must be the
@@ -119,10 +117,8 @@ verify_establish_intro_cell(const trn_cell_establish_intro_t *cell,
     get_auth_key_from_cell(&auth_key, RELAY_COMMAND_ESTABLISH_INTRO, cell);
 
     const size_t sig_msg_len = cell->end_sig_fields - msg;
-    int sig_mismatch = ed25519_checksig_prefixed(&sig_struct,
-                                                 msg, sig_msg_len,
-                                                 ESTABLISH_INTRO_SIG_PREFIX,
-                                                 &auth_key);
+    int sig_mismatch = ed25519_checksig_prefixed(
+        &sig_struct, msg, sig_msg_len, ESTABLISH_INTRO_SIG_PREFIX, &auth_key);
     if (sig_mismatch) {
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "ESTABLISH_INTRO signature not as expected");
@@ -134,9 +130,8 @@ verify_establish_intro_cell(const trn_cell_establish_intro_t *cell,
   {
     const size_t auth_msg_len = cell->end_mac_fields - msg;
     uint8_t mac[DIGEST256_LEN];
-    crypto_mac_sha3_256(mac, sizeof(mac),
-                        circuit_key_material, circuit_key_material_len,
-                        msg, auth_msg_len);
+    crypto_mac_sha3_256(mac, sizeof(mac), circuit_key_material,
+                        circuit_key_material_len, msg, auth_msg_len);
     if (tor_memneq(mac, cell->handshake_mac, sizeof(mac))) {
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "ESTABLISH_INTRO handshake_auth not as expected");
@@ -149,7 +144,7 @@ verify_establish_intro_cell(const trn_cell_establish_intro_t *cell,
 
 /** Send an INTRO_ESTABLISHED cell to <b>circ</b>. */
 MOCK_IMPL(int,
-hs_intro_send_intro_established_cell,(or_circuit_t *circ))
+hs_intro_send_intro_established_cell, (or_circuit_t * circ))
 {
   int ret;
   uint8_t *encoded_cell = NULL;
@@ -168,14 +163,13 @@ hs_intro_send_intro_established_cell,(or_circuit_t *circ))
   encoded_len = trn_cell_intro_established_encoded_len(cell);
   tor_assert(encoded_len > 0);
   encoded_cell = tor_malloc_zero(encoded_len);
-  result_len = trn_cell_intro_established_encode(encoded_cell, encoded_len,
-                                                cell);
+  result_len =
+      trn_cell_intro_established_encode(encoded_cell, encoded_len, cell);
   tor_assert(encoded_len == result_len);
 
   ret = relay_send_command_from_edge(0, TO_CIRCUIT(circ),
                                      RELAY_COMMAND_INTRO_ESTABLISHED,
-                                     (char *) encoded_cell, encoded_len,
-                                     NULL);
+                                     (char *)encoded_cell, encoded_len, NULL);
   /* On failure, the above function will close the circuit. */
   trn_cell_intro_established_free(cell);
   tor_free(encoded_cell);
@@ -197,7 +191,8 @@ cell_dos_extension_parameters_are_valid(uint64_t intro2_rate_per_sec,
   if (intro2_rate_per_sec < HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
            "Intro point DoS defenses rate per second is "
-           "too small. Received value: %" PRIu64, intro2_rate_per_sec);
+           "too small. Received value: %" PRIu64,
+           intro2_rate_per_sec);
     goto end;
   }
 #endif /* HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN > 0 */
@@ -206,7 +201,8 @@ cell_dos_extension_parameters_are_valid(uint64_t intro2_rate_per_sec,
   if (intro2_rate_per_sec > HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
            "Intro point DoS defenses rate per second is "
-           "too big. Received value: %" PRIu64, intro2_rate_per_sec);
+           "too big. Received value: %" PRIu64,
+           intro2_rate_per_sec);
     goto end;
   }
 
@@ -215,7 +211,8 @@ cell_dos_extension_parameters_are_valid(uint64_t intro2_rate_per_sec,
   if (intro2_burst_per_sec < HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
            "Intro point DoS defenses burst per second is "
-           "too small. Received value: %" PRIu64, intro2_burst_per_sec);
+           "too small. Received value: %" PRIu64,
+           intro2_burst_per_sec);
     goto end;
   }
 #endif /* HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN > 0 */
@@ -224,15 +221,17 @@ cell_dos_extension_parameters_are_valid(uint64_t intro2_rate_per_sec,
   if (intro2_burst_per_sec > HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MAX) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
            "Intro point DoS defenses burst per second is "
-           "too big. Received value: %" PRIu64, intro2_burst_per_sec);
+           "too big. Received value: %" PRIu64,
+           intro2_burst_per_sec);
     goto end;
   }
 
   /* In a rate limiting scenario, burst can never be smaller than the rate. At
    * best it can be equal. */
   if (intro2_burst_per_sec < intro2_rate_per_sec) {
-    log_info(LD_REND, "Intro point DoS defenses burst is smaller than rate. "
-                      "Rate: %" PRIu64 " vs Burst: %" PRIu64,
+    log_info(LD_REND,
+             "Intro point DoS defenses burst is smaller than rate. "
+             "Rate: %" PRIu64 " vs Burst: %" PRIu64,
              intro2_rate_per_sec, intro2_burst_per_sec);
     goto end;
   }
@@ -240,7 +239,7 @@ cell_dos_extension_parameters_are_valid(uint64_t intro2_rate_per_sec,
   /* Passing validation. */
   ret = true;
 
- end:
+end:
   return ret;
 }
 
@@ -249,8 +248,7 @@ cell_dos_extension_parameters_are_valid(uint64_t intro2_rate_per_sec,
  * values, the DoS defenses is disabled on the circuit. */
 static void
 handle_establish_intro_cell_dos_extension(
-                                const trn_cell_extension_field_t *field,
-                                or_circuit_t *circ)
+    const trn_cell_extension_field_t *field, or_circuit_t *circ)
 {
   ssize_t ret;
   uint64_t intro2_rate_per_sec = 0, intro2_burst_per_sec = 0;
@@ -259,16 +257,16 @@ handle_establish_intro_cell_dos_extension(
   tor_assert(field);
   tor_assert(circ);
 
-  ret = trn_cell_extension_dos_parse(&dos,
-                 trn_cell_extension_field_getconstarray_field(field),
-                 trn_cell_extension_field_getlen_field(field));
+  ret = trn_cell_extension_dos_parse(
+      &dos, trn_cell_extension_field_getconstarray_field(field),
+      trn_cell_extension_field_getlen_field(field));
   if (ret < 0) {
     goto end;
   }
 
   for (size_t i = 0; i < trn_cell_extension_dos_get_n_params(dos); i++) {
     const trn_cell_extension_dos_param_t *param =
-      trn_cell_extension_dos_getconst_params(dos, i);
+        trn_cell_extension_dos_getconst_params(dos, i);
     if (BUG(param == NULL)) {
       goto end;
     }
@@ -288,8 +286,9 @@ handle_establish_intro_cell_dos_extension(
   /* A value of 0 is valid in the sense that we accept it but we still disable
    * the defenses so return false. */
   if (intro2_rate_per_sec == 0 || intro2_burst_per_sec == 0) {
-    log_info(LD_REND, "Intro point DoS defenses parameter set to 0. "
-                      "Disabling INTRO2 DoS defenses on circuit id %u",
+    log_info(LD_REND,
+             "Intro point DoS defenses parameter set to 0. "
+             "Disabling INTRO2 DoS defenses on circuit id %u",
              circ->p_circ_id);
     circ->introduce2_dos_defense_enabled = 0;
     goto end;
@@ -308,15 +307,15 @@ handle_establish_intro_cell_dos_extension(
   circ->introduce2_dos_defense_enabled = 1;
 
   /* Initialize the INTRODUCE2 token bucket for the rate limiting. */
-  token_bucket_ctr_init(&circ->introduce2_bucket,
-                        (uint32_t) intro2_rate_per_sec,
-                        (uint32_t) intro2_burst_per_sec,
-                        (uint32_t) approx_time());
-  log_info(LD_REND, "Intro point DoS defenses enabled. Rate is %" PRIu64
-                    " and Burst is %" PRIu64,
+  token_bucket_ctr_init(
+      &circ->introduce2_bucket, (uint32_t)intro2_rate_per_sec,
+      (uint32_t)intro2_burst_per_sec, (uint32_t)approx_time());
+  log_info(LD_REND,
+           "Intro point DoS defenses enabled. Rate is %" PRIu64
+           " and Burst is %" PRIu64,
            intro2_rate_per_sec, intro2_burst_per_sec);
 
- end:
+end:
   trn_cell_extension_dos_free(dos);
   return;
 }
@@ -324,8 +323,7 @@ handle_establish_intro_cell_dos_extension(
 /** Parse every cell extension in the given ESTABLISH_INTRO cell. */
 static void
 handle_establish_intro_cell_extensions(
-                            const trn_cell_establish_intro_t *parsed_cell,
-                            or_circuit_t *circ)
+    const trn_cell_establish_intro_t *parsed_cell, or_circuit_t *circ)
 {
   const trn_cell_extension_t *extensions;
 
@@ -340,7 +338,7 @@ handle_establish_intro_cell_extensions(
   /* Go over all extensions. */
   for (size_t idx = 0; idx < trn_cell_extension_get_num(extensions); idx++) {
     const trn_cell_extension_field_t *field =
-      trn_cell_extension_getconst_fields(extensions, idx);
+        trn_cell_extension_getconst_fields(extensions, idx);
     if (BUG(field == NULL)) {
       /* The number of extensions should match the number of fields. */
       break;
@@ -357,7 +355,7 @@ handle_establish_intro_cell_extensions(
     }
   }
 
- end:
+end:
   return;
 }
 
@@ -365,8 +363,8 @@ handle_establish_intro_cell_extensions(
  *  well-formed and passed our verifications. Perform appropriate actions to
  *  establish an intro point. */
 static int
-handle_verified_establish_intro_cell(or_circuit_t *circ,
-                               const trn_cell_establish_intro_t *parsed_cell)
+handle_verified_establish_intro_cell(
+    or_circuit_t *circ, const trn_cell_establish_intro_t *parsed_cell)
 {
   /* Get the auth key of this intro point */
   ed25519_public_key_t auth_key;
@@ -417,8 +415,8 @@ handle_establish_intro(or_circuit_t *circ, const uint8_t *request,
   }
 
   /* Parse the cell */
-  ssize_t parsing_result = trn_cell_establish_intro_parse(&parsed_cell,
-                                                         request, request_len);
+  ssize_t parsing_result =
+      trn_cell_establish_intro_parse(&parsed_cell, request, request_len);
   if (parsing_result < 0) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Rejecting %s ESTABLISH_INTRO cell.",
@@ -427,7 +425,7 @@ handle_establish_intro(or_circuit_t *circ, const uint8_t *request,
   }
 
   cell_ok = verify_establish_intro_cell(parsed_cell,
-                                        (uint8_t *) circ->rend_circ_nonce,
+                                        (uint8_t *)circ->rend_circ_nonce,
                                         sizeof(circ->rend_circ_nonce));
   if (cell_ok < 0) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
@@ -445,14 +443,14 @@ handle_establish_intro(or_circuit_t *circ, const uint8_t *request,
   retval = 0;
   goto done;
 
- err:
+err:
   /* When sending the intro establish ack, on error the circuit can be marked
    * as closed so avoid a double close. */
   if (!TO_CIRCUIT(circ)->marked_for_close) {
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
   }
 
- done:
+done:
   trn_cell_establish_intro_free(parsed_cell);
   return retval;
 }
@@ -467,14 +465,14 @@ circuit_is_suitable_intro_point(const or_circuit_t *circ,
 
   /* Basic circuit state sanity checks. */
   if (circ->base_.purpose != CIRCUIT_PURPOSE_OR) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Rejecting %s on non-OR circuit.", log_cell_type_str);
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Rejecting %s on non-OR circuit.",
+           log_cell_type_str);
     return 0;
   }
 
   if (circ->base_.n_chan) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Rejecting %s on non-edge circuit.", log_cell_type_str);
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Rejecting %s on non-edge circuit.",
+           log_cell_type_str);
     return 0;
   }
 
@@ -493,7 +491,7 @@ hs_intro_circuit_is_suitable_for_establish_intro(const or_circuit_t *circ)
  * a legacy or a next gen cell, and pass it to the appropriate handler. */
 int
 hs_intro_received_establish_intro(or_circuit_t *circ, const uint8_t *request,
-                            size_t request_len)
+                                  size_t request_len)
 {
   tor_assert(circ);
   tor_assert(request);
@@ -507,18 +505,18 @@ hs_intro_received_establish_intro(or_circuit_t *circ, const uint8_t *request,
    * ESTABLISH_INTRO and pass it to the appropriate cell handler */
   const uint8_t first_byte = request[0];
   switch (first_byte) {
-    case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0:
-    case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1:
-      return rend_mid_establish_intro_legacy(circ, request, request_len);
-    case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519:
-      return handle_establish_intro(circ, request, request_len);
-    default:
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Unrecognized AUTH_KEY_TYPE %u.", first_byte);
-      goto err;
+  case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0:
+  case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1:
+    return rend_mid_establish_intro_legacy(circ, request, request_len);
+  case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519:
+    return handle_establish_intro(circ, request, request_len);
+  default:
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Unrecognized AUTH_KEY_TYPE %u.",
+           first_byte);
+    goto err;
   }
 
- err:
+err:
   circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
   return -1;
 }
@@ -559,8 +557,7 @@ send_introduce_ack_cell(or_circuit_t *circ, uint16_t status)
 
   ret = relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(circ),
                                      RELAY_COMMAND_INTRODUCE_ACK,
-                                     (char *) encoded_cell, encoded_len,
-                                     NULL);
+                                     (char *)encoded_cell, encoded_len, NULL);
   /* On failure, the above function will close the circuit. */
   trn_cell_introduce_ack_free(cell);
   tor_free(encoded_cell);
@@ -581,7 +578,7 @@ validate_introduce1_parsed_cell(const trn_cell_introduce1_t *cell)
    * safety net here. The legacy ID must be zeroes in this case. */
   legacy_key_id_len = trn_cell_introduce1_getlen_legacy_key_id(cell);
   legacy_key_id = trn_cell_introduce1_getconstarray_legacy_key_id(cell);
-  if (BUG(!fast_mem_is_zero((char *) legacy_key_id, legacy_key_id_len))) {
+  if (BUG(!fast_mem_is_zero((char *)legacy_key_id, legacy_key_id_len))) {
     goto invalid;
   }
 
@@ -609,7 +606,7 @@ validate_introduce1_parsed_cell(const trn_cell_introduce1_t *cell)
   }
 
   return 0;
- invalid:
+invalid:
   return -1;
 }
 
@@ -633,8 +630,8 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
   /* Parse cell. Note that we can only parse the non encrypted section for
    * which we'll use the authentication key to find the service introduction
    * circuit and relay the cell on it. */
-  ssize_t cell_size = trn_cell_introduce1_parse(&parsed_cell, request,
-                                               request_len);
+  ssize_t cell_size =
+      trn_cell_introduce1_parse(&parsed_cell, request, request_len);
   if (cell_size < 0) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Rejecting %s INTRODUCE1 cell. Responding with NACK.",
@@ -659,9 +656,10 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
     if (service_circ == NULL) {
       char b64_key[ED25519_BASE64_LEN + 1];
       ed25519_public_to_base64(b64_key, &auth_key);
-      log_info(LD_REND, "No intro circuit found for INTRODUCE1 cell "
-                        "with auth key %s from circuit %" PRIu32 ". "
-                        "Responding with NACK.",
+      log_info(LD_REND,
+               "No intro circuit found for INTRODUCE1 cell "
+               "with auth key %s from circuit %" PRIu32 ". "
+               "Responding with NACK.",
                safe_str(b64_key), client_circ->p_circ_id);
       /* Inform the client that we don't know the requested service ID. */
       status = TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID;
@@ -686,8 +684,8 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
   /* Relay the cell to the service on its intro circuit with an INTRODUCE2
    * cell which is the same exact payload. */
   if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(service_circ),
-                                   RELAY_COMMAND_INTRODUCE2,
-                                   (char *) request, request_len, NULL)) {
+                                   RELAY_COMMAND_INTRODUCE2, (char *)request,
+                                   request_len, NULL)) {
     log_warn(LD_PROTOCOL, "Unable to send INTRODUCE2 cell to the service.");
     /* Inform the client that we can't relay the cell. Use the unknown ID
      * status code since it means that we do not know the service. */
@@ -699,15 +697,17 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
   status = TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS;
   ret = 0;
 
- send_ack:
+send_ack:
   /* Send INTRODUCE_ACK or INTRODUCE_NACK to client */
   if (send_introduce_ack_cell(client_circ, status) < 0) {
-    log_warn(LD_PROTOCOL, "Unable to send an INTRODUCE ACK status %d "
-                          "to client.", status);
+    log_warn(LD_PROTOCOL,
+             "Unable to send an INTRODUCE ACK status %d "
+             "to client.",
+             status);
     /* Circuit has been closed on failure of transmission. */
     goto done;
   }
- done:
+done:
   trn_cell_introduce1_free(parsed_cell);
   return ret;
 }
@@ -721,7 +721,7 @@ introduce1_cell_is_legacy(const uint8_t *request)
 
   /* If the first 20 bytes of the cell (DIGEST_LEN) are NOT zeroes, it
    * indicates a legacy cell (v2). */
-  if (!fast_mem_is_zero((const char *) request, DIGEST_LEN)) {
+  if (!fast_mem_is_zero((const char *)request, DIGEST_LEN)) {
     /* Legacy cell. */
     return 1;
   }
@@ -799,7 +799,7 @@ hs_intro_received_introduce1(or_circuit_t *circ, const uint8_t *request,
   }
   return ret;
 
- err:
+err:
   circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
   return -1;
 }

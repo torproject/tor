@@ -20,8 +20,7 @@
 /** Wrap our hash function to have the signature that the bloom filter
  * needs. */
 static uint64_t
-bloomfilt_addr_hash(const struct sipkey *key,
-                    const void *item)
+bloomfilt_addr_hash(const struct sipkey *key, const void *item)
 {
   return tor_addr_keyed_hash(key, item);
 }
@@ -34,7 +33,7 @@ address_set_t *
 address_set_new(int max_addresses_guess)
 {
   uint8_t k[BLOOMFILT_KEY_LEN];
-  crypto_rand((void*)k, sizeof(k));
+  crypto_rand((void *)k, sizeof(k));
   return bloomfilt_new(max_addresses_guess, bloomfilt_addr_hash, k);
 }
 

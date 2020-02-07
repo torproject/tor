@@ -30,7 +30,7 @@
 
 int channelpadding_get_netflow_inactive_timeout_ms(channel_t *chan);
 int64_t channelpadding_compute_time_until_pad_for_netflow(channel_t *chan);
-int channelpadding_send_disable_command(channel_t*);
+int channelpadding_send_disable_command(channel_t *);
 int channelpadding_find_timerslot(channel_t *chan);
 
 void test_channelpadding_timers(void *arg);
@@ -41,7 +41,7 @@ void test_channelpadding_killonehop(void *arg);
 
 void dummy_nop_timer(void);
 
-#define NSEC_PER_MSEC (1000*1000)
+#define NSEC_PER_MSEC (1000 * 1000)
 
 /* Thing to cast to fake tor_tls_t * to appease assert_connection_ok() */
 static int fake_tortls = 0; /* Bleh... */
@@ -49,8 +49,8 @@ static int fake_tortls = 0; /* Bleh... */
 static int dont_stop_libevent = 0;
 
 // From test_channel.c
-channel_t * new_fake_channel(void);
-void free_fake_channel(channel_t*);
+channel_t *new_fake_channel(void);
+void free_fake_channel(channel_t *);
 
 static int
 mock_channel_has_queued_writes(channel_t *chan)
@@ -71,7 +71,7 @@ mock_channel_write_cell_relay2(channel_t *chan, cell_t *cell)
 {
   (void)chan;
   tried_to_write_cell++;
-  channel_tls_handle_cell(cell, ((channel_tls_t*)relay1_relay2)->conn);
+  channel_tls_handle_cell(cell, ((channel_tls_t *)relay1_relay2)->conn);
   tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
   return 0;
 }
@@ -81,7 +81,7 @@ mock_channel_write_cell_relay1(channel_t *chan, cell_t *cell)
 {
   (void)chan;
   tried_to_write_cell++;
-  channel_tls_handle_cell(cell, ((channel_tls_t*)relay2_relay1)->conn);
+  channel_tls_handle_cell(cell, ((channel_tls_t *)relay2_relay1)->conn);
   tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
   return 0;
 }
@@ -91,7 +91,7 @@ mock_channel_write_cell_relay3(channel_t *chan, cell_t *cell)
 {
   (void)chan;
   tried_to_write_cell++;
-  channel_tls_handle_cell(cell, ((channel_tls_t*)client_relay3)->conn);
+  channel_tls_handle_cell(cell, ((channel_tls_t *)client_relay3)->conn);
   tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
   return 0;
 }
@@ -101,7 +101,7 @@ mock_channel_write_cell_client(channel_t *chan, cell_t *cell)
 {
   (void)chan;
   tried_to_write_cell++;
-  channel_tls_handle_cell(cell, ((channel_tls_t*)relay3_client)->conn);
+  channel_tls_handle_cell(cell, ((channel_tls_t *)relay3_client)->conn);
   tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
   return 0;
 }
@@ -110,7 +110,7 @@ static int
 mock_channel_write_cell(channel_t *chan, cell_t *cell)
 {
   tried_to_write_cell++;
-  channel_tls_handle_cell(cell, ((channel_tls_t*)chan)->conn);
+  channel_tls_handle_cell(cell, ((channel_tls_t *)chan)->conn);
   if (!dont_stop_libevent)
     tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
   return 0;
@@ -119,8 +119,8 @@ mock_channel_write_cell(channel_t *chan, cell_t *cell)
 static void
 setup_fake_connection_for_channel(channel_tls_t *chan)
 {
-  or_connection_t *conn = (or_connection_t*)connection_new(CONN_TYPE_OR,
-                                                           AF_INET);
+  or_connection_t *conn =
+      (or_connection_t *)connection_new(CONN_TYPE_OR, AF_INET);
 
   conn->base_.conn_array_index = smartlist_len(connection_array);
   smartlist_add(connection_array, conn);
@@ -165,10 +165,10 @@ free_fake_channeltls(channel_tls_t *chan)
 {
   channel_unregister(&chan->base_);
 
-  tor_free(((channel_tls_t*)chan)->conn->base_.address);
-  buf_free(((channel_tls_t*)chan)->conn->base_.inbuf);
-  buf_free(((channel_tls_t*)chan)->conn->base_.outbuf);
-  tor_free(((channel_tls_t*)chan)->conn);
+  tor_free(((channel_tls_t *)chan)->conn->base_.address);
+  buf_free(((channel_tls_t *)chan)->conn->base_.inbuf);
+  buf_free(((channel_tls_t *)chan)->conn->base_.outbuf);
+  tor_free(((channel_tls_t *)chan)->conn);
 
   timer_free(chan->base_.padding_timer);
   channel_handle_free(chan->base_.timer_handle);
@@ -182,8 +182,8 @@ free_fake_channeltls(channel_tls_t *chan)
 static void
 setup_mock_consensus(void)
 {
-  current_md_consensus = current_ns_consensus
-        = tor_malloc_zero(sizeof(networkstatus_t));
+  current_md_consensus = current_ns_consensus =
+      tor_malloc_zero(sizeof(networkstatus_t));
   current_md_consensus->net_params = smartlist_new();
   current_md_consensus->routerstatus_list = smartlist_new();
   channelpadding_new_consensus_params(current_md_consensus);
@@ -206,21 +206,21 @@ setup_mock_network(void)
   if (!connection_array)
     connection_array = smartlist_new();
 
-  relay1_relay2 = (channel_t*)new_fake_channeltls(2);
+  relay1_relay2 = (channel_t *)new_fake_channeltls(2);
   relay1_relay2->write_cell = mock_channel_write_cell_relay1;
   channel_timestamp_active(relay1_relay2);
   relay = tor_malloc_zero(sizeof(routerstatus_t));
   relay->identity_digest[0] = 1;
   smartlist_add(current_md_consensus->routerstatus_list, relay);
 
-  relay2_relay1 = (channel_t*)new_fake_channeltls(1);
+  relay2_relay1 = (channel_t *)new_fake_channeltls(1);
   relay2_relay1->write_cell = mock_channel_write_cell_relay2;
   channel_timestamp_active(relay2_relay1);
   relay = tor_malloc_zero(sizeof(routerstatus_t));
   relay->identity_digest[0] = 2;
   smartlist_add(current_md_consensus->routerstatus_list, relay);
 
-  relay3_client = (channel_t*)new_fake_channeltls(0);
+  relay3_client = (channel_t *)new_fake_channeltls(0);
   relay3_client->write_cell = mock_channel_write_cell_relay3;
   relay3_client->is_client = 1;
   channel_timestamp_active(relay3_client);
@@ -228,7 +228,7 @@ setup_mock_network(void)
   relay->identity_digest[0] = 3;
   smartlist_add(current_md_consensus->routerstatus_list, relay);
 
-  client_relay3 = (channel_t*)new_fake_channeltls(3);
+  client_relay3 = (channel_t *)new_fake_channeltls(3);
   client_relay3->write_cell = mock_channel_write_cell_client;
   channel_timestamp_active(client_relay3);
 
@@ -241,10 +241,10 @@ setup_mock_network(void)
 static void
 free_mock_network(void)
 {
-  free_fake_channeltls((channel_tls_t*)relay1_relay2);
-  free_fake_channeltls((channel_tls_t*)relay2_relay1);
-  free_fake_channeltls((channel_tls_t*)relay3_client);
-  free_fake_channeltls((channel_tls_t*)client_relay3);
+  free_fake_channeltls((channel_tls_t *)relay1_relay2);
+  free_fake_channeltls((channel_tls_t *)relay2_relay1);
+  free_fake_channeltls((channel_tls_t *)relay3_client);
+  free_fake_channeltls((channel_tls_t *)client_relay3);
 
   smartlist_free(connection_array);
 }
@@ -252,7 +252,9 @@ free_mock_network(void)
 static void
 dummy_timer_cb(tor_timer_t *t, void *arg, const monotime_t *now_mono)
 {
-  (void)t; (void)arg; (void)now_mono;
+  (void)t;
+  (void)arg;
+  (void)now_mono;
   tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
   return;
 }
@@ -277,7 +279,7 @@ dummy_nop_timer(void)
 }
 
 #define CHANNELPADDING_MAX_TIMERS 25
-#define CHANNELS_TO_TEST (CHANNELPADDING_MAX_TIMERS*4)
+#define CHANNELS_TO_TEST (CHANNELPADDING_MAX_TIMERS * 4)
 /**
  * Tests to ensure that we handle more than the max number of pending
  * timers properly.
@@ -302,7 +304,7 @@ test_channelpadding_timers(void *arg)
   channelpadding_new_consensus_params(NULL);
 
   for (int i = 0; i < CHANNELS_TO_TEST; i++) {
-    chans[i] = (channel_t*)new_fake_channeltls(0);
+    chans[i] = (channel_t *)new_fake_channeltls(0);
     channel_timestamp_active(chans[i]);
   }
 
@@ -316,8 +318,7 @@ test_channelpadding_timers(void *arg)
     /* This loop fills our timerslot array with timers of increasing time
      * until they fire */
     for (; i < CHANNELPADDING_MAX_TIMERS; i++) {
-      monotime_coarse_add_msec(&chans[i]->next_padding_time,
-                        &now, 10 + i*4);
+      monotime_coarse_add_msec(&chans[i]->next_padding_time, &now, 10 + i * 4);
       decision = channelpadding_decide_to_pad_channel(chans[i]);
       tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
       tt_assert(chans[i]->pending_padding_callback);
@@ -326,9 +327,8 @@ test_channelpadding_timers(void *arg)
 
     /* This loop should add timers to the first position in the timerslot
      * array, since its timeout is before all other timers. */
-    for (; i < CHANNELS_TO_TEST/3; i++) {
-      monotime_coarse_add_msec(&chans[i]->next_padding_time,
-                        &now, 1);
+    for (; i < CHANNELS_TO_TEST / 3; i++) {
+      monotime_coarse_add_msec(&chans[i]->next_padding_time, &now, 1);
       decision = channelpadding_decide_to_pad_channel(chans[i]);
       tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
       tt_assert(chans[i]->pending_padding_callback);
@@ -338,9 +338,9 @@ test_channelpadding_timers(void *arg)
     /* This loop should add timers to our existing lists in a weak
      * pseudorandom pattern.  It ensures that the lists can grow with multiple
      * timers in them. */
-    for (; i < CHANNELS_TO_TEST/2; i++) {
-      monotime_coarse_add_msec(&chans[i]->next_padding_time,
-                        &now, 10 + i*3 % CHANNELPADDING_MAX_TIMERS);
+    for (; i < CHANNELS_TO_TEST / 2; i++) {
+      monotime_coarse_add_msec(&chans[i]->next_padding_time, &now,
+                               10 + i * 3 % CHANNELPADDING_MAX_TIMERS);
       decision = channelpadding_decide_to_pad_channel(chans[i]);
       tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
       tt_assert(chans[i]->pending_padding_callback);
@@ -350,8 +350,8 @@ test_channelpadding_timers(void *arg)
     /* This loop should add timers to the last position in the timerslot
      * array, since its timeout is after all other timers. */
     for (; i < CHANNELS_TO_TEST; i++) {
-      monotime_coarse_add_msec(&chans[i]->next_padding_time,
-                               &now, 500 + i % CHANNELPADDING_MAX_TIMERS);
+      monotime_coarse_add_msec(&chans[i]->next_padding_time, &now,
+                               500 + i % CHANNELPADDING_MAX_TIMERS);
       decision = channelpadding_decide_to_pad_channel(chans[i]);
       tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
       tt_assert(chans[i]->pending_padding_callback);
@@ -372,9 +372,9 @@ test_channelpadding_timers(void *arg)
     }
   }
 
- done:
+done:
   for (int i = 0; i < CHANNELS_TO_TEST; i++) {
-    free_fake_channeltls((channel_tls_t*)chans[i]);
+    free_fake_channeltls((channel_tls_t *)chans[i]);
   }
   smartlist_free(connection_array);
 
@@ -441,7 +441,7 @@ test_channelpadding_killonehop(void *arg)
 
   // Then test disabling each via consensus param
   smartlist_add(current_md_consensus->net_params,
-                (void*)"nf_pad_single_onion=0");
+                (void *)"nf_pad_single_onion=0");
   channelpadding_new_consensus_params(current_md_consensus);
 
   // Before the client tries to pad, the relay will still pad:
@@ -477,10 +477,10 @@ test_channelpadding_killonehop(void *arg)
   get_options_mutable()->HiddenServiceSingleHopMode = 0;
   get_options_mutable()->HiddenServiceNonAnonymousMode = 0;
   tt_int_op(channelpadding_decide_to_pad_channel(relay3_client), OP_EQ,
-      CHANNELPADDING_WONTPAD);
+            CHANNELPADDING_WONTPAD);
   tt_assert(!relay3_client->padding_enabled);
 
- done:
+done:
   free_mock_consensus();
   free_mock_network();
   tor_free(relay);
@@ -527,7 +527,7 @@ test_channelpadding_consensus(void *arg)
 
   if (!connection_array)
     connection_array = smartlist_new();
-  chan = (channel_t*)new_fake_channeltls(0);
+  chan = (channel_t *)new_fake_channeltls(0);
   channel_timestamp_active(chan);
 
   setup_mock_consensus();
@@ -546,7 +546,7 @@ test_channelpadding_consensus(void *arg)
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_ALREADY_SCHEDULED);
 
   // Wait for the timer
-  new_time += 101*NSEC_PER_MSEC;
+  new_time += 101 * NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
   monotime_coarse_get(&now);
@@ -554,10 +554,8 @@ test_channelpadding_consensus(void *arg)
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!chan->pending_padding_callback);
 
-  smartlist_add(current_md_consensus->net_params,
-                (void*)"nf_ito_low=0");
-  smartlist_add(current_md_consensus->net_params,
-                (void*)"nf_ito_high=0");
+  smartlist_add(current_md_consensus->net_params, (void *)"nf_ito_low=0");
+  smartlist_add(current_md_consensus->net_params, (void *)"nf_ito_high=0");
   get_options_mutable()->ConnectionPadding = 1;
   channelpadding_new_consensus_params(current_md_consensus);
 
@@ -585,10 +583,8 @@ test_channelpadding_consensus(void *arg)
 
   /* Test 3: Negotiation can't increase padding from relays beyond consensus
    * values */
-  smartlist_add(current_md_consensus->net_params,
-                (void*)"nf_ito_low=100");
-  smartlist_add(current_md_consensus->net_params,
-                (void*)"nf_ito_high=200");
+  smartlist_add(current_md_consensus->net_params, (void *)"nf_ito_low=100");
+  smartlist_add(current_md_consensus->net_params, (void *)"nf_ito_high=200");
   channelpadding_new_consensus_params(current_md_consensus);
 
   tried_to_write_cell = 0;
@@ -604,7 +600,7 @@ test_channelpadding_consensus(void *arg)
   tt_i64_op(val, OP_LE, 200);
 
   // Wait for the timer
-  new_time += 201*NSEC_PER_MSEC;
+  new_time += 201 * NSEC_PER_MSEC;
   monotime_set_mock_time_nsec(new_time);
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_coarse_get(&now);
@@ -613,10 +609,8 @@ test_channelpadding_consensus(void *arg)
   tt_assert(!chan->pending_padding_callback);
 
   smartlist_clear(current_md_consensus->net_params);
-  smartlist_add(current_md_consensus->net_params,
-                (void*)"nf_ito_low=1500");
-  smartlist_add(current_md_consensus->net_params,
-                (void*)"nf_ito_high=4500");
+  smartlist_add(current_md_consensus->net_params, (void *)"nf_ito_low=1500");
+  smartlist_add(current_md_consensus->net_params, (void *)"nf_ito_high=4500");
   channelpadding_new_consensus_params(current_md_consensus);
 
   channelpadding_send_enable_command(chan, 100, 200);
@@ -633,7 +627,7 @@ test_channelpadding_consensus(void *arg)
   /* Test 4: Relay-to-relay padding can be enabled/disabled in consensus */
   /* Make this channel a relay's channel */
   memcpy(relay->identity_digest,
-          ((channel_tls_t *)chan)->conn->identity_digest, DIGEST_LEN);
+         ((channel_tls_t *)chan)->conn->identity_digest, DIGEST_LEN);
   smartlist_add(current_md_consensus->routerstatus_list, relay);
   relay = NULL; /* Prevent double-free */
 
@@ -642,8 +636,7 @@ test_channelpadding_consensus(void *arg)
   tt_int_op(decision, OP_EQ, CHANNELPADDING_WONTPAD);
   tt_assert(!chan->pending_padding_callback);
 
-  smartlist_add(current_md_consensus->net_params,
-                (void*)"nf_pad_relays=1");
+  smartlist_add(current_md_consensus->net_params, (void *)"nf_pad_relays=1");
   channelpadding_new_consensus_params(current_md_consensus);
 
   decision = channelpadding_decide_to_pad_channel(chan);
@@ -657,7 +650,7 @@ test_channelpadding_consensus(void *arg)
 
   /* Test 5: If we disable padding before channel usage, does that work? */
   smartlist_add(current_md_consensus->net_params,
-                (void*)"nf_pad_before_usage=0");
+                (void *)"nf_pad_before_usage=0");
   channelpadding_new_consensus_params(current_md_consensus);
   tried_to_write_cell = 0;
   decision = channelpadding_decide_to_pad_channel(chan);
@@ -667,47 +660,47 @@ test_channelpadding_consensus(void *arg)
   /* Test 6: Can we control circ and TLS conn lifetime from the consensus? */
   val = channelpadding_get_channel_idle_timeout(NULL, 0);
   tt_i64_op(val, OP_GE, 180);
-  tt_i64_op(val, OP_LE, 180+90);
+  tt_i64_op(val, OP_LE, 180 + 90);
   val = channelpadding_get_channel_idle_timeout(chan, 0);
   tt_i64_op(val, OP_GE, 180);
-  tt_i64_op(val, OP_LE, 180+90);
+  tt_i64_op(val, OP_LE, 180 + 90);
   options->ReducedConnectionPadding = 1;
   val = channelpadding_get_channel_idle_timeout(chan, 0);
-  tt_i64_op(val, OP_GE, 180/2);
-  tt_i64_op(val, OP_LE, (180+90)/2);
+  tt_i64_op(val, OP_GE, 180 / 2);
+  tt_i64_op(val, OP_LE, (180 + 90) / 2);
 
   options->ReducedConnectionPadding = 0;
   options->ORPort_set = 1;
   smartlist_add(current_md_consensus->net_params,
-                (void*)"nf_conntimeout_relays=600");
+                (void *)"nf_conntimeout_relays=600");
   channelpadding_new_consensus_params(current_md_consensus);
   val = channelpadding_get_channel_idle_timeout(chan, 1);
   tt_i64_op(val, OP_GE, 450);
   tt_i64_op(val, OP_LE, 750);
 
   val = channelpadding_get_circuits_available_timeout();
-  tt_i64_op(val, OP_GE, 30*60);
-  tt_i64_op(val, OP_LE, 30*60*2);
+  tt_i64_op(val, OP_GE, 30 * 60);
+  tt_i64_op(val, OP_LE, 30 * 60 * 2);
 
   options->ReducedConnectionPadding = 1;
   smartlist_add(current_md_consensus->net_params,
-                (void*)"nf_conntimeout_clients=600");
+                (void *)"nf_conntimeout_clients=600");
   channelpadding_new_consensus_params(current_md_consensus);
   val = channelpadding_get_circuits_available_timeout();
-  tt_i64_op(val, OP_GE, 600/2);
-  tt_i64_op(val, OP_LE, 600*2/2);
+  tt_i64_op(val, OP_GE, 600 / 2);
+  tt_i64_op(val, OP_LE, 600 * 2 / 2);
 
   options->ReducedConnectionPadding = 0;
-  options->CircuitsAvailableTimeout = 24*60*60;
+  options->CircuitsAvailableTimeout = 24 * 60 * 60;
   val = channelpadding_get_circuits_available_timeout();
-  tt_i64_op(val, OP_GE, 24*60*60);
-  tt_i64_op(val, OP_LE, 24*60*60*2);
+  tt_i64_op(val, OP_GE, 24 * 60 * 60);
+  tt_i64_op(val, OP_LE, 24 * 60 * 60 * 2);
 
- done:
+done:
   tor_free(relay);
 
   free_mock_consensus();
-  free_fake_channeltls((channel_tls_t*)chan);
+  free_fake_channeltls((channel_tls_t *)chan);
   smartlist_free(connection_array);
 
   timers_shutdown();
@@ -751,7 +744,7 @@ test_channelpadding_negotiation(void *arg)
   get_options_mutable()->ORPort_set = 1;
   channelpadding_disable_padding_on_channel(client_relay3);
   tt_int_op(channelpadding_decide_to_pad_channel(relay3_client), OP_EQ,
-      CHANNELPADDING_WONTPAD);
+            CHANNELPADDING_WONTPAD);
   tt_assert(!relay3_client->padding_enabled);
   relay3_client->padding_enabled = 1;
   client_relay3->padding_enabled = 1;
@@ -765,7 +758,7 @@ test_channelpadding_negotiation(void *arg)
   channelpadding_disable_padding_on_channel(client_relay3);
   tt_assert(!relay3_client->padding_enabled);
   tt_int_op(channelpadding_decide_to_pad_channel(relay3_client), OP_EQ,
-      CHANNELPADDING_WONTPAD);
+            CHANNELPADDING_WONTPAD);
   relay3_client->padding_enabled = 1;
   client_relay3->padding_enabled = 1;
   get_options_mutable()->BridgeRelay = 0;
@@ -773,14 +766,14 @@ test_channelpadding_negotiation(void *arg)
 
   /* Test case #2: Torrc options */
   /* ConnectionPadding auto; Relay doesn't support us */
-  ((channel_tls_t*)relay3_client)->conn->link_proto = 4;
+  ((channel_tls_t *)relay3_client)->conn->link_proto = 4;
   relay3_client->padding_enabled = 0;
   tried_to_write_cell = 0;
   decision = channelpadding_decide_to_pad_channel(relay3_client);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_WONTPAD);
   tt_assert(!relay3_client->pending_padding_callback);
   tt_int_op(tried_to_write_cell, OP_EQ, 0);
-  ((channel_tls_t*)relay3_client)->conn->link_proto = 5;
+  ((channel_tls_t *)relay3_client)->conn->link_proto = 5;
   relay3_client->padding_enabled = 1;
 
   /* ConnectionPadding 1; Relay doesn't support us */
@@ -806,7 +799,7 @@ test_channelpadding_negotiation(void *arg)
   client_relay3->write_cell(client_relay3, &cell);
   tt_assert(relay3_client->padding_enabled);
   tt_int_op(channelpadding_update_padding_for_channel(client_relay3, &disable),
-          OP_EQ, -1);
+            OP_EQ, -1);
   tt_assert(client_relay3->padding_enabled);
 
   disable.version = 0;
@@ -836,10 +829,10 @@ test_channelpadding_negotiation(void *arg)
   tt_int_op(val, OP_GE, 9000);
   tt_int_op(val, OP_LE, 14000);
   int64_t val64 =
-    channelpadding_compute_time_until_pad_for_netflow(client_relay3);
+      channelpadding_compute_time_until_pad_for_netflow(client_relay3);
   tt_i64_op(val64, OP_LE, 14000);
 
- done:
+done:
   free_mock_network();
   free_mock_consensus();
 
@@ -904,7 +897,7 @@ test_channelpadding_decide_to_pad_channel(void *arg)
   setup_full_capture_of_logs(LOG_WARN);
   channelpadding_new_consensus_params(NULL);
 
-  chan = (channel_t*)new_fake_channeltls(0);
+  chan = (channel_t *)new_fake_channeltls(0);
   channel_timestamp_active(chan);
 
   /* Test case #1: Channel that has "sent a packet" before the timeout. */
@@ -934,7 +927,7 @@ test_channelpadding_decide_to_pad_channel(void *arg)
   monotime_coarse_t now_minus_100s;
   monotime_coarse_add_msec(&now_minus_100s, &now, 900);
   // Wait for the timer from case #2b
-  new_time += 1000*NSEC_PER_MSEC;
+  new_time += 1000 * NSEC_PER_MSEC;
   monotime_set_mock_time_nsec(new_time);
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_coarse_get(&now);
@@ -955,7 +948,7 @@ test_channelpadding_decide_to_pad_channel(void *arg)
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_ALREADY_SCHEDULED);
 
   // Wait for the timer
-  new_time += 101*NSEC_PER_MSEC;
+  new_time += 101 * NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
   monotime_coarse_get(&now);
@@ -992,7 +985,7 @@ test_channelpadding_decide_to_pad_channel(void *arg)
 
   // We don't expect any timer callbacks here. Make a dummy one to be sure.
   // Wait for the timer
-  new_time += 101*NSEC_PER_MSEC;
+  new_time += 101 * NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
   monotime_coarse_get(&now);
@@ -1013,7 +1006,7 @@ test_channelpadding_decide_to_pad_channel(void *arg)
   chan->state = CHANNEL_STATE_MAINT;
 
   // We don't expect any timer callbacks here. Make a dummy one to be sure.
-  new_time += 101*NSEC_PER_MSEC;
+  new_time += 101 * NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
   monotime_coarse_get(&now);
@@ -1032,7 +1025,7 @@ test_channelpadding_decide_to_pad_channel(void *arg)
   tt_int_op(tried_to_write_cell, OP_EQ, 0);
 
   // Wait for the timer
-  new_time += 101*NSEC_PER_MSEC;
+  new_time += 101 * NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
   monotime_coarse_get(&now);
@@ -1061,10 +1054,10 @@ test_channelpadding_decide_to_pad_channel(void *arg)
   tt_assert(chan->pending_padding_callback);
 
   // Close the connection while the timer is scheduled
-  free_fake_channeltls((channel_tls_t*)chan);
+  free_fake_channeltls((channel_tls_t *)chan);
 
   // We don't expect any timer callbacks here. Make a dummy one to be sure.
-  new_time = 101*NSEC_PER_MSEC;
+  new_time = 101 * NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
   monotime_coarse_get(&now);
@@ -1072,7 +1065,7 @@ test_channelpadding_decide_to_pad_channel(void *arg)
 
   tt_int_op(tried_to_write_cell, OP_EQ, 0);
 
- done:
+done:
   smartlist_free(connection_array);
 
   teardown_capture_of_logs();
@@ -1083,15 +1076,16 @@ test_channelpadding_decide_to_pad_channel(void *arg)
   return;
 }
 
-#define TEST_CHANNELPADDING(name, flags) \
-    { #name, test_##name, (flags), NULL, NULL }
+#define TEST_CHANNELPADDING(name, flags)    \
+  {                                         \
+#    name, test_##name, (flags), NULL, NULL \
+  }
 
 struct testcase_t channelpadding_tests[] = {
-  //TEST_CHANNELPADDING(channelpadding_decide_to_pad_channel, 0),
-  TEST_CHANNELPADDING(channelpadding_decide_to_pad_channel, TT_FORK),
-  TEST_CHANNELPADDING(channelpadding_negotiation, TT_FORK),
-  TEST_CHANNELPADDING(channelpadding_consensus, TT_FORK),
-  TEST_CHANNELPADDING(channelpadding_killonehop, TT_FORK),
-  TEST_CHANNELPADDING(channelpadding_timers, TT_FORK),
-  END_OF_TESTCASES
-};
+    // TEST_CHANNELPADDING(channelpadding_decide_to_pad_channel, 0),
+    TEST_CHANNELPADDING(channelpadding_decide_to_pad_channel, TT_FORK),
+    TEST_CHANNELPADDING(channelpadding_negotiation, TT_FORK),
+    TEST_CHANNELPADDING(channelpadding_consensus, TT_FORK),
+    TEST_CHANNELPADDING(channelpadding_killonehop, TT_FORK),
+    TEST_CHANNELPADDING(channelpadding_timers, TT_FORK),
+    END_OF_TESTCASES};

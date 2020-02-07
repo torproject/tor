@@ -40,12 +40,12 @@
 #include "lib/time/compat_time.h"
 
 #ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
+#  include <sys/time.h>
 #endif
 
 #ifdef _WIN32
 // For struct timeval.
-#include <winsock2.h>
+#  include <winsock2.h>
 #endif
 
 struct timeout_cb_t {
@@ -57,13 +57,13 @@ struct timeout_cb_t {
  * These definitions are for timeouts.c  and timeouts.h.
  */
 #ifdef COCCI
-#define TIMEOUT_PUBLIC
+#  define TIMEOUT_PUBLIC
 #elif defined(__GNUC__)
 /* We're not exposing any of the functions outside this file. */
-#define TIMEOUT_PUBLIC __attribute__((__unused__)) static
+#  define TIMEOUT_PUBLIC __attribute__((__unused__)) static
 #else
 /* We're not exposing any of the functions outside this file. */
-#define TIMEOUT_PUBLIC static
+#  define TIMEOUT_PUBLIC static
 #endif /* defined(COCCI) || ... */
 /* We're not using periodic events. */
 #define TIMEOUT_DISABLE_INTERVALS
@@ -80,7 +80,7 @@ struct timeout_cb_t {
 #if SIZEOF_VOID_P == 4
 /* On 32-bit platforms, we want to override wheel_bit, so that timeout.c will
  * use 32-bit math. */
-#define WHEEL_BIT 5
+#  define WHEEL_BIT 5
 #endif
 
 #include "ext/timeouts/timeout.c"
@@ -142,8 +142,8 @@ timeout_to_tv(timeout_t t, struct timeval *tv_out)
 static void
 timer_advance_to_cur_time(const monotime_t *now)
 {
-  timeout_t cur_tick = CEIL_DIV(monotime_diff_usec(&start_of_time, now),
-                                USEC_PER_TICK);
+  timeout_t cur_tick =
+      CEIL_DIV(monotime_diff_usec(&start_of_time, now), USEC_PER_TICK);
   timeouts_update(global_timeouts, cur_tick);
 }
 
@@ -262,7 +262,7 @@ timer_new(timer_cb_fn_t cb, void *arg)
 void
 timer_free_(tor_timer_t *t)
 {
-  if (! t)
+  if (!t)
     return;
 
   timeouts_del(global_timeouts, t);
@@ -284,8 +284,7 @@ timer_set_cb(tor_timer_t *t, timer_cb_fn_t cb, void *arg)
  * and *<b>arg_out</b> (if provided) to this timer's callback argument.
  */
 void
-timer_get_cb(const tor_timer_t *t,
-             timer_cb_fn_t *cb_out, void **arg_out)
+timer_get_cb(const tor_timer_t *t, timer_cb_fn_t *cb_out, void **arg_out)
 {
   if (cb_out)
     *cb_out = t->callback.cb;

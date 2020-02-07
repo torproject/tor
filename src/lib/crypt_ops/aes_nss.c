@@ -21,19 +21,17 @@ DISABLE_GCC_WARNING("-Wstrict-prototypes")
 ENABLE_GCC_WARNING("-Wstrict-prototypes")
 
 aes_cnt_cipher_t *
-aes_new_cipher(const uint8_t *key, const uint8_t *iv,
-               int key_bits)
+aes_new_cipher(const uint8_t *key, const uint8_t *iv, int key_bits)
 {
   const CK_MECHANISM_TYPE ckm = CKM_AES_CTR;
-  SECItem keyItem = { .type = siBuffer,
-                      .data = (unsigned char *)key,
-                      .len = (key_bits / 8) };
+  SECItem keyItem = {
+      .type = siBuffer, .data = (unsigned char *)key, .len = (key_bits / 8)};
   CK_AES_CTR_PARAMS params;
   params.ulCounterBits = 128;
   memcpy(params.cb, iv, 16);
-  SECItem ivItem = { .type = siBuffer,
-                     .data = (unsigned char *)&params,
-                     .len = sizeof(params) };
+  SECItem ivItem = {.type = siBuffer,
+                    .data = (unsigned char *)&params,
+                    .len = sizeof(params)};
   PK11SlotInfo *slot = NULL;
   PK11SymKey *keyObj = NULL;
   SECItem *ivObj = NULL;
@@ -43,8 +41,8 @@ aes_new_cipher(const uint8_t *key, const uint8_t *iv,
   if (!slot)
     goto err;
 
-  keyObj = PK11_ImportSymKey(slot, ckm, PK11_OriginUnwrap,
-                             CKA_ENCRYPT, &keyItem, NULL);
+  keyObj = PK11_ImportSymKey(slot, ckm, PK11_OriginUnwrap, CKA_ENCRYPT,
+                             &keyItem, NULL);
   if (!keyObj)
     goto err;
 
@@ -55,7 +53,7 @@ aes_new_cipher(const uint8_t *key, const uint8_t *iv,
   PORT_SetError(SEC_ERROR_IO);
   result = PK11_CreateContextBySymKey(ckm, CKA_ENCRYPT, keyObj, ivObj);
 
- err:
+err:
   memwipe(&params, 0, sizeof(params));
   if (ivObj)
     SECITEM_FreeItem(ivObj, PR_TRUE);
@@ -73,7 +71,7 @@ aes_cipher_free_(aes_cnt_cipher_t *cipher)
 {
   if (!cipher)
     return;
-  PK11_DestroyContext((PK11Context*) cipher, PR_TRUE);
+  PK11_DestroyContext((PK11Context *)cipher, PR_TRUE);
 }
 
 void
@@ -82,9 +80,9 @@ aes_crypt_inplace(aes_cnt_cipher_t *cipher, char *data_, size_t len_)
   tor_assert(len_ <= INT_MAX);
 
   SECStatus s;
-  PK11Context *ctx = (PK11Context*)cipher;
+  PK11Context *ctx = (PK11Context *)cipher;
   unsigned char *data = (unsigned char *)data_;
-  int len = (int) len_;
+  int len = (int)len_;
   int result_len = 0;
 
   s = PK11_CipherOp(ctx, data, &result_len, len, data, len);

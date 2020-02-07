@@ -11,15 +11,13 @@
 #include "test/fuzz/fuzzing.h"
 
 static int
-mock_check_tap_onion_key_crosscert__nocheck(const uint8_t *crosscert,
-                                   int crosscert_len,
-                                   const crypto_pk_t *onion_pkey,
-                                   const ed25519_public_key_t *master_id_pkey,
-                                   const uint8_t *rsa_id_digest)
+mock_check_tap_onion_key_crosscert__nocheck(
+    const uint8_t *crosscert, int crosscert_len, const crypto_pk_t *onion_pkey,
+    const ed25519_public_key_t *master_id_pkey, const uint8_t *rsa_id_digest)
 {
   tor_assert(crosscert && onion_pkey && master_id_pkey && rsa_id_digest);
   /* we could look at crosscert[..] */
-  (void) crosscert_len;
+  (void)crosscert_len;
   return 0;
 }
 
@@ -31,9 +29,8 @@ mock_dump_desc__nodump(const char *desc, const char *type)
 }
 
 static int
-mock_router_produce_hash_final__nohash(char *digest,
-                                       const char *start, size_t len,
-                                       digest_algorithm_t alg)
+mock_router_produce_hash_final__nohash(char *digest, const char *start,
+                                       size_t len, digest_algorithm_t alg)
 {
   (void)start;
   (void)len;
@@ -67,10 +64,9 @@ int
 fuzz_main(const uint8_t *data, size_t sz)
 {
   routerinfo_t *ri;
-  const char *str = (const char*) data;
-  ri = router_parse_entry_from_string((const char *)str,
-                                      str+sz,
-                                      0, 0, 0, NULL);
+  const char *str = (const char *)data;
+  ri = router_parse_entry_from_string((const char *)str, str + sz, 0, 0, 0,
+                                      NULL);
   if (ri) {
     log_debug(LD_GENERAL, "Parsing okay");
     routerinfo_free(ri);

@@ -15,7 +15,7 @@
 
 #include "orconfig.h"
 #ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
+#  include <sys/types.h>
 #endif
 
 struct tm;
@@ -29,7 +29,7 @@ int tor_timegm(const struct tm *tm, time_t *time_out);
 void format_rfc1123_time(char *buf, time_t t);
 int parse_rfc1123_time(const char *buf, time_t *t);
 #define ISO_TIME_LEN 19
-#define ISO_TIME_USEC_LEN (ISO_TIME_LEN+7)
+#define ISO_TIME_USEC_LEN (ISO_TIME_LEN + 7)
 void format_local_iso_time(char *buf, time_t t);
 void format_iso_time(char *buf, time_t t);
 void format_local_iso_time_nospace(char *buf, time_t t);

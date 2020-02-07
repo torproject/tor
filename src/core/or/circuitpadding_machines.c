@@ -62,8 +62,8 @@
 void
 circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
 {
-  circpad_machine_spec_t *client_machine
-      = tor_malloc_zero(sizeof(circpad_machine_spec_t));
+  circpad_machine_spec_t *client_machine =
+      tor_malloc_zero(sizeof(circpad_machine_spec_t));
 
   client_machine->name = "client_ip_circ";
 
@@ -103,9 +103,9 @@ circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
    * continue)" portion of the trace (aka the rest of an HTTPS response body).
    */
   client_machine->conditions.purpose_mask =
-    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT)|
-    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_INTRODUCE_ACKED)|
-    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
+      circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) |
+      circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_INTRODUCE_ACKED) |
+      circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
 
   /* Keep the circuit alive even after the introduction has been finished,
    * otherwise the short-term lifetime of the circuit will blow our cover */
@@ -121,9 +121,9 @@ circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
   /* For the origin-side machine, we transition to OBFUSCATE_CIRC_SETUP after
    * sending PADDING_NEGOTIATE, and we stay there (without sending any padding)
    * until we receive a STOP from the other side. */
-  client_machine->states[CIRCPAD_STATE_START].
-    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
-    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
+  client_machine->states[CIRCPAD_STATE_START]
+      .next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
+      CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
 
   /* origin-side machine has no event reactions while in
    * CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP, so no more state transitions here. */
@@ -147,8 +147,8 @@ circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
 void
 circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
 {
-  circpad_machine_spec_t *relay_machine
-      = tor_malloc_zero(sizeof(circpad_machine_spec_t));
+  circpad_machine_spec_t *relay_machine =
+      tor_malloc_zero(sizeof(circpad_machine_spec_t));
 
   relay_machine->name = "relay_ip_circ";
 
@@ -172,30 +172,30 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
   /* For the relay-side machine, we want to transition
    * START -> OBFUSCATE_CIRC_SETUP upon first non-padding
    * cell sent (PADDING_NEGOTIATED in this case).  */
-  relay_machine->states[CIRCPAD_STATE_START].
-    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
-    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
+  relay_machine->states[CIRCPAD_STATE_START]
+      .next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
+      CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
 
   /* For the relay-side, we want to transition from OBFUSCATE_CIRC_SETUP to END
    * state when the length finishes. */
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-      next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
 
   /* Now let's define the OBF -> OBF transitions that maintain our padding
    * flow:
    *
    * For the relay-side machine, we want to keep on sending padding bytes even
    * when nothing else happens on this circuit. */
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    next_state[CIRCPAD_EVENT_PADDING_SENT] =
-    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .next_state[CIRCPAD_EVENT_PADDING_SENT] =
+      CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
   /* For the relay-side machine, we need this transition so that we re-enter
      the state, after PADDING_NEGOTIATED is sent. Otherwise, the remove token
      function will disable the timer, and nothing will restart it since there
      is no other motion on an intro circuit. */
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
-    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
+      CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
 
   /* Token removal strategy for OBFUSCATE_CIRC_SETUP state: Don't
    * remove any tokens.
@@ -204,41 +204,40 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
    * the mallocs required to copy the histograms for token removal,
    * and to avoid monotime calls needed to determine histogram
    * bins for token removal. */
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].token_removal =
+      CIRCPAD_TOKEN_REMOVAL_NONE;
 
   /* Figure out the length of the OBFUSCATE_CIRC_SETUP state so that it's
    * randomized. The relay side will send between INTRO_MACHINE_MINIMUM_PADDING
    * and INTRO_MACHINE_MAXIMUM_PADDING padding cells towards the client. */
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    length_dist.type = CIRCPAD_DIST_UNIFORM;
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    length_dist.param1 = INTRO_MACHINE_MINIMUM_PADDING;
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    length_dist.param2 = INTRO_MACHINE_MAXIMUM_PADDING;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].length_dist.type =
+      CIRCPAD_DIST_UNIFORM;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .length_dist.param1 = INTRO_MACHINE_MINIMUM_PADDING;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .length_dist.param2 = INTRO_MACHINE_MAXIMUM_PADDING;
 
   /* Configure histogram */
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-     histogram_len = 2;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].histogram_len = 2;
 
   /* For the relay-side machine we want to batch padding instantly to pretend
    * its an incoming directory download. So set the histogram edges tight:
    * (1, 10ms, infinity). */
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    histogram_edges[0] = 1000;
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    histogram_edges[1] = 10000;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .histogram_edges[0] = 1000;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .histogram_edges[1] = 10000;
 
   /* We put all our tokens in bin 0, which means we want 100% probability
    * for choosing a inter-packet delay of between 1000 and 10000 microseconds
    * (1 to 10ms). Since we only have 1 bin, it doesn't matter how many tokens
    * there are, 1000 out of 1000 is 100% */
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    histogram[0] = 1000;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].histogram[0] =
+      1000;
 
   /* just one bin, so setup the total tokens */
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    histogram_total_tokens =
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .histogram_total_tokens =
       relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].histogram[0];
 
   /* Register the machine */
@@ -257,8 +256,8 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
 void
 circpad_machine_client_hide_rend_circuits(smartlist_t *machines_sl)
 {
-  circpad_machine_spec_t *client_machine
-      = tor_malloc_zero(sizeof(circpad_machine_spec_t));
+  circpad_machine_spec_t *client_machine =
+      tor_malloc_zero(sizeof(circpad_machine_spec_t));
 
   client_machine->name = "client_rp_circ";
 
@@ -300,9 +299,9 @@ circpad_machine_client_hide_rend_circuits(smartlist_t *machines_sl)
    * Hence this way we make rendezvous circuits look like general circuits up
    * till the end of the circuit setup. */
   client_machine->conditions.purpose_mask =
-    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_REND_JOINED)|
-    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_REND_READY)|
-    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED);
+      circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_REND_JOINED) |
+      circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_REND_READY) |
+      circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED);
 
   /* Set padding machine limits to help guard against excessive padding */
   client_machine->allowed_padding_count = 1;
@@ -313,52 +312,50 @@ circpad_machine_client_hide_rend_circuits(smartlist_t *machines_sl)
 
   /* START -> OBFUSCATE_CIRC_SETUP transition upon sending the first
    * non-padding cell (which is PADDING_NEGOTIATE) */
-  client_machine->states[CIRCPAD_STATE_START].
-    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
-    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
+  client_machine->states[CIRCPAD_STATE_START]
+      .next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
+      CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
 
   /* OBFUSCATE_CIRC_SETUP -> END transition when we send our first
    * padding packet and/or hit the state length (the state length is 1). */
-  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_END;
-  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-      next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_END;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
 
   /* Don't use a token removal strategy since we don't want to use monotime
    * functions and we want to avoid mallocing histogram copies. We want
    * this machine to be light. */
-  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].token_removal =
+      CIRCPAD_TOKEN_REMOVAL_NONE;
 
   /* Instead, to control the volume of padding (we just want to send a single
    * padding cell) we will use a static state length. We just want one token,
    * since we want to make the following pattern:
    * [PADDING_NEGOTIATE] -> [DROP] -> PADDING_NEGOTIATED -> DROP */
-  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    length_dist.type = CIRCPAD_DIST_UNIFORM;
-  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    length_dist.param1 = 1;
-  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    length_dist.param2 = 2; // rand(1,2) is always 1
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].length_dist.type =
+      CIRCPAD_DIST_UNIFORM;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .length_dist.param1 = 1;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .length_dist.param2 = 2; // rand(1,2) is always 1
 
   /* Histogram is: (0 msecs, 1 msec, infinity). We want this to be fast so
    * that we send our outgoing [DROP] before the PADDING_NEGOTIATED comes
    * back from the relay side. */
-  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    histogram_len = 2;
-  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    histogram_edges[0] = 0;
-  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    histogram_edges[1] = 1000;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].histogram_len = 2;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .histogram_edges[0] = 0;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .histogram_edges[1] = 1000;
 
   /* We want a 100% probability of choosing an inter-packet delay of
    * between 0 and 1ms. Since we don't use token removal,
    * the number of tokens does not matter. (And also, state_length
    * governs how many packets we send). */
-  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    histogram[0] = 1;
-  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    histogram_total_tokens = 1;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].histogram[0] = 1;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .histogram_total_tokens = 1;
 
   /* Register the machine */
   client_machine->machine_num = smartlist_len(machines_sl);
@@ -376,8 +373,8 @@ circpad_machine_client_hide_rend_circuits(smartlist_t *machines_sl)
 void
 circpad_machine_relay_hide_rend_circuits(smartlist_t *machines_sl)
 {
-  circpad_machine_spec_t *relay_machine
-    = tor_malloc_zero(sizeof(circpad_machine_spec_t));
+  circpad_machine_spec_t *relay_machine =
+      tor_malloc_zero(sizeof(circpad_machine_spec_t));
 
   relay_machine->name = "relay_rp_circ";
 
@@ -397,52 +394,50 @@ circpad_machine_relay_hide_rend_circuits(smartlist_t *machines_sl)
 
   /* START -> OBFUSCATE_CIRC_SETUP transition upon sending the first
    * non-padding cell (which is PADDING_NEGOTIATED) */
-  relay_machine->states[CIRCPAD_STATE_START].
-    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
-    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
+  relay_machine->states[CIRCPAD_STATE_START]
+      .next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
+      CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
 
   /* OBFUSCATE_CIRC_SETUP -> END transition when we send our first
    * padding packet and/or hit the state length (the state length is 1). */
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-      next_state[CIRCPAD_EVENT_PADDING_SENT] = CIRCPAD_STATE_END;
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-      next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .next_state[CIRCPAD_EVENT_PADDING_SENT] = CIRCPAD_STATE_END;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
 
   /* Don't use a token removal strategy since we don't want to use monotime
    * functions and we want to avoid mallocing histogram copies. We want
    * this machine to be light. */
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].token_removal =
+      CIRCPAD_TOKEN_REMOVAL_NONE;
 
   /* Instead, to control the volume of padding (we just want to send a single
    * padding cell) we will use a static state length. We just want one token,
    * since we want to make the following pattern:
    * [PADDING_NEGOTIATE] -> [DROP] -> PADDING_NEGOTIATED -> DROP */
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    length_dist.type = CIRCPAD_DIST_UNIFORM;
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    length_dist.param1 = 1;
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    length_dist.param2 = 2; // rand(1,2) is always 1
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].length_dist.type =
+      CIRCPAD_DIST_UNIFORM;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .length_dist.param1 = 1;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .length_dist.param2 = 2; // rand(1,2) is always 1
 
   /* Histogram is: (0 msecs, 1 msec, infinity). We want this to be fast so
    * that the outgoing DROP cell is sent immediately after the
    * PADDING_NEGOTIATED. */
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    histogram_len = 2;
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    histogram_edges[0] = 0;
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    histogram_edges[1] = 1000;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].histogram_len = 2;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .histogram_edges[0] = 0;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .histogram_edges[1] = 1000;
 
   /* We want a 100% probability of choosing an inter-packet delay of
    * between 0 and 1ms. Since we don't use token removal,
    * the number of tokens does not matter. (And also, state_length
    * governs how many packets we send). */
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    histogram[0] = 1;
-  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    histogram_total_tokens = 1;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].histogram[0] = 1;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]
+      .histogram_total_tokens = 1;
 
   /* Register the machine */
   relay_machine->machine_num = smartlist_len(machines_sl);

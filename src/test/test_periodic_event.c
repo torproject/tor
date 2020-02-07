@@ -27,8 +27,8 @@
 static int
 dumb_event_fn(time_t now, const or_options_t *options)
 {
-  (void) now;
-  (void) options;
+  (void)now;
+  (void)options;
 
   /* Will get rescheduled in 300 seconds. It just can't be 0. */
   return 300;
@@ -39,13 +39,13 @@ register_dummy_hidden_service(hs_service_t *service)
 {
   memset(service, 0, sizeof(hs_service_t));
   memset(&service->keys.identity_pk, 'A', sizeof(service->keys.identity_pk));
-  (void) register_service(get_hs_service_map(), service);
+  (void)register_service(get_hs_service_map(), service);
 }
 
 static void
 test_pe_initialize(void *arg)
 {
-  (void) arg;
+  (void)arg;
 
   /* Initialize the events but the callback won't get called since we would
    * need to run the main loop and then wait for a second delaying the unit
@@ -64,11 +64,11 @@ test_pe_initialize(void *arg)
     /* Every event must have role(s) assign to it. This is done statically. */
     tt_u64_op(item->roles, OP_NE, 0);
     int should_be_enabled = (item->roles & PERIODIC_EVENT_ROLE_ALL) &&
-      !(item->flags & PERIODIC_EVENT_FLAG_NEED_NET);
+                            !(item->flags & PERIODIC_EVENT_FLAG_NEED_NET);
     tt_uint_op(periodic_event_is_enabled(item), OP_EQ, should_be_enabled);
   }
 
- done:
+done:
   teardown_periodic_events();
 }
 
@@ -78,7 +78,7 @@ test_pe_launch(void *arg)
   hs_service_t service, *to_remove = NULL;
   or_options_t *options;
 
-  (void) arg;
+  (void)arg;
 
   hs_init();
   /* We need to put tor in hibernation live state so the events requiring
@@ -116,8 +116,8 @@ test_pe_launch(void *arg)
   /* Now that we've initialized, rescan the list to launch. */
   periodic_events_on_new_options(options);
 
-  int mask = PERIODIC_EVENT_ROLE_CLIENT|PERIODIC_EVENT_ROLE_ALL|
-    PERIODIC_EVENT_ROLE_NET_PARTICIPANT;
+  int mask = PERIODIC_EVENT_ROLE_CLIENT | PERIODIC_EVENT_ROLE_ALL |
+             PERIODIC_EVENT_ROLE_NET_PARTICIPANT;
   for (int i = 0; mainloop_periodic_events[i].name; ++i) {
     periodic_event_item_t *item = &mainloop_periodic_events[i];
     int should_be_enabled = !!(item->roles & mask);
@@ -133,8 +133,9 @@ test_pe_launch(void *arg)
 
   unsigned roles = get_my_roles(options);
   tt_uint_op(roles, OP_EQ,
-             PERIODIC_EVENT_ROLE_RELAY|PERIODIC_EVENT_ROLE_DIRSERVER|
-             PERIODIC_EVENT_ROLE_ALL|PERIODIC_EVENT_ROLE_NET_PARTICIPANT);
+             PERIODIC_EVENT_ROLE_RELAY | PERIODIC_EVENT_ROLE_DIRSERVER |
+                 PERIODIC_EVENT_ROLE_ALL |
+                 PERIODIC_EVENT_ROLE_NET_PARTICIPANT);
 
   for (int i = 0; mainloop_periodic_events[i].name; ++i) {
     periodic_event_item_t *item = &mainloop_periodic_events[i];
@@ -161,14 +162,17 @@ test_pe_launch(void *arg)
   for (int i = 0; mainloop_periodic_events[i].name; ++i) {
     periodic_event_item_t *item = &mainloop_periodic_events[i];
     int should_be_enabled = (item->roles & PERIODIC_EVENT_ROLE_ALL) &&
-      !(item->flags & PERIODIC_EVENT_FLAG_NEED_NET);
+                            !(item->flags & PERIODIC_EVENT_FLAG_NEED_NET);
     tt_int_op(periodic_event_is_enabled(item), OP_EQ, should_be_enabled);
   }
 
   /* Enable everything. */
-  options->SocksPort_set = 1; options->ORPort_set = 1;
-  options->BridgeRelay = 1; options->AuthoritativeDir = 1;
-  options->V3AuthoritativeDir = 1; options->BridgeAuthoritativeDir = 1;
+  options->SocksPort_set = 1;
+  options->ORPort_set = 1;
+  options->BridgeRelay = 1;
+  options->AuthoritativeDir = 1;
+  options->V3AuthoritativeDir = 1;
+  options->BridgeAuthoritativeDir = 1;
   options->DisableNetwork = 0;
   set_network_participation(true);
   register_dummy_hidden_service(&service);
@@ -185,7 +189,7 @@ test_pe_launch(void *arg)
               (item->roles != PERIODIC_EVENT_ROLE_CONTROLEV));
   }
 
- done:
+done:
   if (to_remove) {
     remove_service(get_hs_service_map(), to_remove);
   }
@@ -197,7 +201,7 @@ test_pe_get_roles(void *arg)
 {
   int roles;
 
-  (void) arg;
+  (void)arg;
 
   /* Just so the HS global map exists. */
   hs_init();
@@ -206,8 +210,8 @@ test_pe_get_roles(void *arg)
   tt_assert(options);
   set_network_participation(true);
 
-  const int ALL = PERIODIC_EVENT_ROLE_ALL |
-    PERIODIC_EVENT_ROLE_NET_PARTICIPANT;
+  const int ALL =
+      PERIODIC_EVENT_ROLE_ALL | PERIODIC_EVENT_ROLE_NET_PARTICIPANT;
 
   /* Nothing configured, should be no roles. */
   tt_assert(net_is_disabled());
@@ -217,7 +221,7 @@ test_pe_get_roles(void *arg)
   /* Indicate we have a SocksPort, roles should be come Client. */
   options->SocksPort_set = 1;
   roles = get_my_roles(options);
-  tt_int_op(roles, OP_EQ, PERIODIC_EVENT_ROLE_CLIENT|ALL);
+  tt_int_op(roles, OP_EQ, PERIODIC_EVENT_ROLE_CLIENT | ALL);
 
   /* Now, we'll add a ORPort so should now be a Relay + Client. */
   options->ORPort_set = 1;
@@ -238,8 +242,7 @@ test_pe_get_roles(void *arg)
   options->SocksPort_set = 0;
   roles = get_my_roles(options);
   tt_int_op(roles, OP_EQ,
-            PERIODIC_EVENT_ROLE_ROUTER | PERIODIC_EVENT_ROLE_DIRSERVER |
-            ALL);
+            PERIODIC_EVENT_ROLE_ROUTER | PERIODIC_EVENT_ROLE_DIRSERVER | ALL);
 
   /* Reset options so we can test authorities. */
   options->SocksPort_set = 0;
@@ -254,7 +257,7 @@ test_pe_get_roles(void *arg)
   options->V3AuthoritativeDir = 1;
   roles = get_my_roles(options);
   tt_int_op(roles, OP_EQ,
-            PERIODIC_EVENT_ROLE_DIRAUTH|PERIODIC_EVENT_ROLE_DIRSERVER|ALL);
+            PERIODIC_EVENT_ROLE_DIRAUTH | PERIODIC_EVENT_ROLE_DIRSERVER | ALL);
   tt_assert(roles & PERIODIC_EVENT_ROLE_AUTHORITIES);
 
   /* Now Bridge Authority. */
@@ -262,15 +265,16 @@ test_pe_get_roles(void *arg)
   options->BridgeAuthoritativeDir = 1;
   roles = get_my_roles(options);
   tt_int_op(roles, OP_EQ,
-            PERIODIC_EVENT_ROLE_BRIDGEAUTH|PERIODIC_EVENT_ROLE_DIRSERVER|ALL);
+            PERIODIC_EVENT_ROLE_BRIDGEAUTH | PERIODIC_EVENT_ROLE_DIRSERVER |
+                ALL);
   tt_assert(roles & PERIODIC_EVENT_ROLE_AUTHORITIES);
 
   /* Move that bridge auth to become a relay. */
   options->ORPort_set = 1;
   roles = get_my_roles(options);
   tt_int_op(roles, OP_EQ,
-            (PERIODIC_EVENT_ROLE_BRIDGEAUTH | PERIODIC_EVENT_ROLE_RELAY
-             | PERIODIC_EVENT_ROLE_DIRSERVER|ALL));
+            (PERIODIC_EVENT_ROLE_BRIDGEAUTH | PERIODIC_EVENT_ROLE_RELAY |
+             PERIODIC_EVENT_ROLE_DIRSERVER | ALL));
   tt_assert(roles & PERIODIC_EVENT_ROLE_AUTHORITIES);
 
   /* And now an Hidden service. */
@@ -285,7 +289,7 @@ test_pe_get_roles(void *arg)
              ALL));
   tt_assert(roles & PERIODIC_EVENT_ROLE_AUTHORITIES);
 
- done:
+done:
   hs_free_all();
 }
 
@@ -294,7 +298,7 @@ test_pe_hs_service(void *arg)
 {
   hs_service_t service, *to_remove = NULL;
 
-  (void) arg;
+  (void)arg;
 
   hs_init();
   /* We need to put tor in hibernation live state so the events requiring
@@ -339,21 +343,20 @@ test_pe_hs_service(void *arg)
     }
   }
 
- done:
+done:
   if (to_remove) {
     remove_service(get_hs_service_map(), to_remove);
   }
   hs_free_all();
 }
 
-#define PE_TEST(name) \
-  { #name, test_pe_## name , TT_FORK, NULL, NULL }
+#define PE_TEST(name)                          \
+  {                                            \
+#    name, test_pe_##name, TT_FORK, NULL, NULL \
+  }
 
 struct testcase_t periodic_event_tests[] = {
-  PE_TEST(initialize),
-  PE_TEST(launch),
-  PE_TEST(get_roles),
-  PE_TEST(hs_service),
+    PE_TEST(initialize), PE_TEST(launch), PE_TEST(get_roles),
+    PE_TEST(hs_service),
 
-  END_OF_TESTCASES
-};
+    END_OF_TESTCASES};

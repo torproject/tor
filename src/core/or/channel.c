@@ -111,20 +111,19 @@ static HT_HEAD(channel_gid_map, channel_t) channel_gid_map = HT_INITIALIZER();
 static unsigned
 channel_id_hash(const channel_t *chan)
 {
-  return (unsigned) chan->global_identifier;
+  return (unsigned)chan->global_identifier;
 }
 static int
 channel_id_eq(const channel_t *a, const channel_t *b)
 {
   return a->global_identifier == b->global_identifier;
 }
-HT_PROTOTYPE(channel_gid_map, channel_t, gidmap_node,
-             channel_id_hash, channel_id_eq)
-HT_GENERATE2(channel_gid_map, channel_t, gidmap_node,
-             channel_id_hash, channel_id_eq,
-             0.6, tor_reallocarray_, tor_free_)
+HT_PROTOTYPE(channel_gid_map, channel_t, gidmap_node, channel_id_hash,
+             channel_id_eq)
+HT_GENERATE2(channel_gid_map, channel_t, gidmap_node, channel_id_hash,
+             channel_id_eq, 0.6, tor_reallocarray_, tor_free_)
 
-HANDLE_IMPL(channel, channel_t,)
+HANDLE_IMPL(channel, channel_t, )
 
 /* Counter for ID numbers */
 static uint64_t n_channels_allocated = 0;
@@ -137,8 +136,8 @@ static uint64_t n_channels_allocated = 0;
  * If more than one channel exists, follow the next_with_same_id pointer
  * as a linked list.
  */
-static HT_HEAD(channel_idmap, channel_idmap_entry_t) channel_identity_map =
-  HT_INITIALIZER();
+static HT_HEAD(channel_idmap,
+               channel_idmap_entry_t) channel_identity_map = HT_INITIALIZER();
 
 typedef struct channel_idmap_entry_t {
   HT_ENTRY(channel_idmap_entry_t) node;
@@ -149,12 +148,12 @@ typedef struct channel_idmap_entry_t {
 static inline unsigned
 channel_idmap_hash(const channel_idmap_entry_t *ent)
 {
-  return (unsigned) siphash24g(ent->digest, DIGEST_LEN);
+  return (unsigned)siphash24g(ent->digest, DIGEST_LEN);
 }
 
 static inline int
 channel_idmap_eq(const channel_idmap_entry_t *a,
-                  const channel_idmap_entry_t *b)
+                 const channel_idmap_entry_t *b)
 {
   return tor_memeq(a->digest, b->digest, DIGEST_LEN);
 }
@@ -162,16 +161,15 @@ channel_idmap_eq(const channel_idmap_entry_t *a,
 HT_PROTOTYPE(channel_idmap, channel_idmap_entry_t, node, channel_idmap_hash,
              channel_idmap_eq)
 HT_GENERATE2(channel_idmap, channel_idmap_entry_t, node, channel_idmap_hash,
-             channel_idmap_eq, 0.5,  tor_reallocarray_, tor_free_)
+             channel_idmap_eq, 0.5, tor_reallocarray_, tor_free_)
 
 /* Functions to maintain the digest map */
 static void channel_remove_from_digest_map(channel_t *chan);
 
 static void channel_force_xfree(channel_t *chan);
-static void channel_free_list(smartlist_t *channels,
-                               int mark_for_close);
+static void channel_free_list(smartlist_t *channels, int mark_for_close);
 static void channel_listener_free_list(smartlist_t *channels,
-                                        int mark_for_close);
+                                       int mark_for_close);
 static void channel_listener_force_xfree(channel_listener_t *chan_l);
 
 /***********************************
@@ -187,17 +185,17 @@ channel_state_is_valid(channel_state_t state)
   int is_valid;
 
   switch (state) {
-    case CHANNEL_STATE_CLOSED:
-    case CHANNEL_STATE_CLOSING:
-    case CHANNEL_STATE_ERROR:
-    case CHANNEL_STATE_MAINT:
-    case CHANNEL_STATE_OPENING:
-    case CHANNEL_STATE_OPEN:
-      is_valid = 1;
-      break;
-    case CHANNEL_STATE_LAST:
-    default:
-      is_valid = 0;
+  case CHANNEL_STATE_CLOSED:
+  case CHANNEL_STATE_CLOSING:
+  case CHANNEL_STATE_ERROR:
+  case CHANNEL_STATE_MAINT:
+  case CHANNEL_STATE_OPENING:
+  case CHANNEL_STATE_OPEN:
+    is_valid = 1;
+    break;
+  case CHANNEL_STATE_LAST:
+  default:
+    is_valid = 0;
   }
 
   return is_valid;
@@ -212,15 +210,15 @@ channel_listener_state_is_valid(channel_listener_state_t state)
   int is_valid;
 
   switch (state) {
-    case CHANNEL_LISTENER_STATE_CLOSED:
-    case CHANNEL_LISTENER_STATE_LISTENING:
-    case CHANNEL_LISTENER_STATE_CLOSING:
-    case CHANNEL_LISTENER_STATE_ERROR:
-      is_valid = 1;
-      break;
-    case CHANNEL_LISTENER_STATE_LAST:
-    default:
-      is_valid = 0;
+  case CHANNEL_LISTENER_STATE_CLOSED:
+  case CHANNEL_LISTENER_STATE_LISTENING:
+  case CHANNEL_LISTENER_STATE_CLOSING:
+  case CHANNEL_LISTENER_STATE_ERROR:
+    is_valid = 1;
+    break;
+  case CHANNEL_LISTENER_STATE_LAST:
+  default:
+    is_valid = 0;
   }
 
   return is_valid;
@@ -239,34 +237,30 @@ channel_state_can_transition(channel_state_t from, channel_state_t to)
   int is_valid;
 
   switch (from) {
-    case CHANNEL_STATE_CLOSED:
-      is_valid = (to == CHANNEL_STATE_OPENING);
-      break;
-    case CHANNEL_STATE_CLOSING:
-      is_valid = (to == CHANNEL_STATE_CLOSED ||
-                  to == CHANNEL_STATE_ERROR);
-      break;
-    case CHANNEL_STATE_ERROR:
-      is_valid = 0;
-      break;
-    case CHANNEL_STATE_MAINT:
-      is_valid = (to == CHANNEL_STATE_CLOSING ||
-                  to == CHANNEL_STATE_ERROR ||
-                  to == CHANNEL_STATE_OPEN);
-      break;
-    case CHANNEL_STATE_OPENING:
-      is_valid = (to == CHANNEL_STATE_CLOSING ||
-                  to == CHANNEL_STATE_ERROR ||
-                  to == CHANNEL_STATE_OPEN);
-      break;
-    case CHANNEL_STATE_OPEN:
-      is_valid = (to == CHANNEL_STATE_CLOSING ||
-                  to == CHANNEL_STATE_ERROR ||
-                  to == CHANNEL_STATE_MAINT);
-      break;
-    case CHANNEL_STATE_LAST:
-    default:
-      is_valid = 0;
+  case CHANNEL_STATE_CLOSED:
+    is_valid = (to == CHANNEL_STATE_OPENING);
+    break;
+  case CHANNEL_STATE_CLOSING:
+    is_valid = (to == CHANNEL_STATE_CLOSED || to == CHANNEL_STATE_ERROR);
+    break;
+  case CHANNEL_STATE_ERROR:
+    is_valid = 0;
+    break;
+  case CHANNEL_STATE_MAINT:
+    is_valid = (to == CHANNEL_STATE_CLOSING || to == CHANNEL_STATE_ERROR ||
+                to == CHANNEL_STATE_OPEN);
+    break;
+  case CHANNEL_STATE_OPENING:
+    is_valid = (to == CHANNEL_STATE_CLOSING || to == CHANNEL_STATE_ERROR ||
+                to == CHANNEL_STATE_OPEN);
+    break;
+  case CHANNEL_STATE_OPEN:
+    is_valid = (to == CHANNEL_STATE_CLOSING || to == CHANNEL_STATE_ERROR ||
+                to == CHANNEL_STATE_MAINT);
+    break;
+  case CHANNEL_STATE_LAST:
+  default:
+    is_valid = 0;
   }
 
   return is_valid;
@@ -286,23 +280,23 @@ channel_listener_state_can_transition(channel_listener_state_t from,
   int is_valid;
 
   switch (from) {
-    case CHANNEL_LISTENER_STATE_CLOSED:
-      is_valid = (to == CHANNEL_LISTENER_STATE_LISTENING);
-      break;
-    case CHANNEL_LISTENER_STATE_CLOSING:
-      is_valid = (to == CHANNEL_LISTENER_STATE_CLOSED ||
-                  to == CHANNEL_LISTENER_STATE_ERROR);
-      break;
-    case CHANNEL_LISTENER_STATE_ERROR:
-      is_valid = 0;
-      break;
-    case CHANNEL_LISTENER_STATE_LISTENING:
-      is_valid = (to == CHANNEL_LISTENER_STATE_CLOSING ||
-                  to == CHANNEL_LISTENER_STATE_ERROR);
-      break;
-    case CHANNEL_LISTENER_STATE_LAST:
-    default:
-      is_valid = 0;
+  case CHANNEL_LISTENER_STATE_CLOSED:
+    is_valid = (to == CHANNEL_LISTENER_STATE_LISTENING);
+    break;
+  case CHANNEL_LISTENER_STATE_CLOSING:
+    is_valid = (to == CHANNEL_LISTENER_STATE_CLOSED ||
+                to == CHANNEL_LISTENER_STATE_ERROR);
+    break;
+  case CHANNEL_LISTENER_STATE_ERROR:
+    is_valid = 0;
+    break;
+  case CHANNEL_LISTENER_STATE_LISTENING:
+    is_valid = (to == CHANNEL_LISTENER_STATE_CLOSING ||
+                to == CHANNEL_LISTENER_STATE_ERROR);
+    break;
+  case CHANNEL_LISTENER_STATE_LAST:
+  default:
+    is_valid = 0;
   }
 
   return is_valid;
@@ -317,27 +311,27 @@ channel_state_to_string(channel_state_t state)
   const char *descr;
 
   switch (state) {
-    case CHANNEL_STATE_CLOSED:
-      descr = "closed";
-      break;
-    case CHANNEL_STATE_CLOSING:
-      descr = "closing";
-      break;
-    case CHANNEL_STATE_ERROR:
-      descr = "channel error";
-      break;
-    case CHANNEL_STATE_MAINT:
-      descr = "temporarily suspended for maintenance";
-      break;
-    case CHANNEL_STATE_OPENING:
-      descr = "opening";
-      break;
-    case CHANNEL_STATE_OPEN:
-      descr = "open";
-      break;
-    case CHANNEL_STATE_LAST:
-    default:
-      descr = "unknown or invalid channel state";
+  case CHANNEL_STATE_CLOSED:
+    descr = "closed";
+    break;
+  case CHANNEL_STATE_CLOSING:
+    descr = "closing";
+    break;
+  case CHANNEL_STATE_ERROR:
+    descr = "channel error";
+    break;
+  case CHANNEL_STATE_MAINT:
+    descr = "temporarily suspended for maintenance";
+    break;
+  case CHANNEL_STATE_OPENING:
+    descr = "opening";
+    break;
+  case CHANNEL_STATE_OPEN:
+    descr = "open";
+    break;
+  case CHANNEL_STATE_LAST:
+  default:
+    descr = "unknown or invalid channel state";
   }
 
   return descr;
@@ -352,21 +346,21 @@ channel_listener_state_to_string(channel_listener_state_t state)
   const char *descr;
 
   switch (state) {
-    case CHANNEL_LISTENER_STATE_CLOSED:
-      descr = "closed";
-      break;
-    case CHANNEL_LISTENER_STATE_CLOSING:
-      descr = "closing";
-      break;
-    case CHANNEL_LISTENER_STATE_ERROR:
-      descr = "channel listener error";
-      break;
-    case CHANNEL_LISTENER_STATE_LISTENING:
-      descr = "listening";
-      break;
-    case CHANNEL_LISTENER_STATE_LAST:
-    default:
-      descr = "unknown or invalid channel listener state";
+  case CHANNEL_LISTENER_STATE_CLOSED:
+    descr = "closed";
+    break;
+  case CHANNEL_LISTENER_STATE_CLOSING:
+    descr = "closing";
+    break;
+  case CHANNEL_LISTENER_STATE_ERROR:
+    descr = "channel listener error";
+    break;
+  case CHANNEL_LISTENER_STATE_LISTENING:
+    descr = "listening";
+    break;
+  case CHANNEL_LISTENER_STATE_LAST:
+  default:
+    descr = "unknown or invalid channel listener state";
   }
 
   return descr;
@@ -389,30 +383,34 @@ channel_register(channel_t *chan)
   tor_assert(chan->global_identifier);
 
   /* No-op if already registered */
-  if (chan->registered) return;
+  if (chan->registered)
+    return;
 
   log_debug(LD_CHANNEL,
-            "Registering channel %p (ID %"PRIu64 ") "
+            "Registering channel %p (ID %" PRIu64 ") "
             "in state %s (%d) with digest %s",
             chan, (chan->global_identifier),
             channel_state_to_string(chan->state), chan->state,
             hex_str(chan->identity_digest, DIGEST_LEN));
 
   /* Make sure we have all_channels, then add it */
-  if (!all_channels) all_channels = smartlist_new();
+  if (!all_channels)
+    all_channels = smartlist_new();
   smartlist_add(all_channels, chan);
   channel_t *oldval = HT_REPLACE(channel_gid_map, &channel_gid_map, chan);
-  tor_assert(! oldval);
+  tor_assert(!oldval);
 
   /* Is it finished? */
   if (CHANNEL_FINISHED(chan)) {
     /* Put it in the finished list, creating it if necessary */
-    if (!finished_channels) finished_channels = smartlist_new();
+    if (!finished_channels)
+      finished_channels = smartlist_new();
     smartlist_add(finished_channels, chan);
     mainloop_schedule_postloop_cleanup();
   } else {
     /* Put it in the active list, creating it if necessary */
-    if (!active_channels) active_channels = smartlist_new();
+    if (!active_channels)
+      active_channels = smartlist_new();
     smartlist_add(active_channels, chan);
 
     if (!CHANNEL_IS_CLOSING(chan)) {
@@ -422,10 +420,10 @@ channel_register(channel_t *chan)
         channel_add_to_digest_map(chan);
       } else {
         log_info(LD_CHANNEL,
-                "Channel %p (global ID %"PRIu64 ") "
-                "in state %s (%d) registered with no identity digest",
-                chan, (chan->global_identifier),
-                channel_state_to_string(chan->state), chan->state);
+                 "Channel %p (global ID %" PRIu64 ") "
+                 "in state %s (%d) registered with no identity digest",
+                 chan, (chan->global_identifier),
+                 channel_state_to_string(chan->state), chan->state);
       }
     }
   }
@@ -446,19 +444,23 @@ channel_unregister(channel_t *chan)
   tor_assert(chan);
 
   /* No-op if not registered */
-  if (!(chan->registered)) return;
+  if (!(chan->registered))
+    return;
 
   /* Is it finished? */
   if (CHANNEL_FINISHED(chan)) {
     /* Get it out of the finished list */
-    if (finished_channels) smartlist_remove(finished_channels, chan);
+    if (finished_channels)
+      smartlist_remove(finished_channels, chan);
   } else {
     /* Get it out of the active list */
-    if (active_channels) smartlist_remove(active_channels, chan);
+    if (active_channels)
+      smartlist_remove(active_channels, chan);
   }
 
   /* Get it out of all_channels */
-  if (all_channels) smartlist_remove(all_channels, chan);
+  if (all_channels)
+    smartlist_remove(all_channels, chan);
   channel_t *oldval = HT_REMOVE(channel_gid_map, &channel_gid_map, chan);
   tor_assert(oldval == NULL || oldval == chan);
 
@@ -485,28 +487,31 @@ channel_listener_register(channel_listener_t *chan_l)
   tor_assert(chan_l);
 
   /* No-op if already registered */
-  if (chan_l->registered) return;
+  if (chan_l->registered)
+    return;
 
   log_debug(LD_CHANNEL,
-            "Registering channel listener %p (ID %"PRIu64 ") "
+            "Registering channel listener %p (ID %" PRIu64 ") "
             "in state %s (%d)",
             chan_l, (chan_l->global_identifier),
-            channel_listener_state_to_string(chan_l->state),
-            chan_l->state);
+            channel_listener_state_to_string(chan_l->state), chan_l->state);
 
   /* Make sure we have all_listeners, then add it */
-  if (!all_listeners) all_listeners = smartlist_new();
+  if (!all_listeners)
+    all_listeners = smartlist_new();
   smartlist_add(all_listeners, chan_l);
 
   /* Is it finished? */
   if (chan_l->state == CHANNEL_LISTENER_STATE_CLOSED ||
       chan_l->state == CHANNEL_LISTENER_STATE_ERROR) {
     /* Put it in the finished list, creating it if necessary */
-    if (!finished_listeners) finished_listeners = smartlist_new();
+    if (!finished_listeners)
+      finished_listeners = smartlist_new();
     smartlist_add(finished_listeners, chan_l);
   } else {
     /* Put it in the active list, creating it if necessary */
-    if (!active_listeners) active_listeners = smartlist_new();
+    if (!active_listeners)
+      active_listeners = smartlist_new();
     smartlist_add(active_listeners, chan_l);
   }
 
@@ -526,20 +531,24 @@ channel_listener_unregister(channel_listener_t *chan_l)
   tor_assert(chan_l);
 
   /* No-op if not registered */
-  if (!(chan_l->registered)) return;
+  if (!(chan_l->registered))
+    return;
 
   /* Is it finished? */
   if (chan_l->state == CHANNEL_LISTENER_STATE_CLOSED ||
       chan_l->state == CHANNEL_LISTENER_STATE_ERROR) {
     /* Get it out of the finished list */
-    if (finished_listeners) smartlist_remove(finished_listeners, chan_l);
+    if (finished_listeners)
+      smartlist_remove(finished_listeners, chan_l);
   } else {
     /* Get it out of the active list */
-    if (active_listeners) smartlist_remove(active_listeners, chan_l);
+    if (active_listeners)
+      smartlist_remove(active_listeners, chan_l);
   }
 
   /* Get it out of all_listeners */
- if (all_listeners) smartlist_remove(all_listeners, chan_l);
+  if (all_listeners)
+    smartlist_remove(all_listeners, chan_l);
 
   /* Mark it as unregistered */
   chan_l->registered = 0;
@@ -571,7 +580,7 @@ channel_add_to_digest_map(channel_t *chan)
 
   memcpy(search.digest, chan->identity_digest, DIGEST_LEN);
   ent = HT_FIND(channel_idmap, &channel_identity_map, &search);
-  if (! ent) {
+  if (!ent) {
     ent = tor_malloc(sizeof(channel_idmap_entry_t));
     memcpy(ent->digest, chan->identity_digest, DIGEST_LEN);
     TOR_LIST_INIT(&ent->channel_list);
@@ -580,7 +589,7 @@ channel_add_to_digest_map(channel_t *chan)
   TOR_LIST_INSERT_HEAD(&ent->channel_list, chan, next_with_same_id);
 
   log_debug(LD_CHANNEL,
-            "Added channel %p (global ID %"PRIu64 ") "
+            "Added channel %p (global ID %" PRIu64 ") "
             "to identity map in state %s (%d) with digest %s",
             chan, (chan->global_identifier),
             channel_state_to_string(chan->state), chan->state,
@@ -619,7 +628,7 @@ channel_remove_from_digest_map(channel_t *chan)
     }
 
     log_debug(LD_CHANNEL,
-              "Removed channel %p (global ID %"PRIu64 ") from "
+              "Removed channel %p (global ID %" PRIu64 ") from "
               "identity map in state %s (%d) with digest %s",
               chan, (chan->global_identifier),
               channel_state_to_string(chan->state), chan->state,
@@ -627,7 +636,7 @@ channel_remove_from_digest_map(channel_t *chan)
   } else {
     /* Shouldn't happen */
     log_warn(LD_BUG,
-             "Trying to remove channel %p (global ID %"PRIu64 ") with "
+             "Trying to remove channel %p (global ID %" PRIu64 ") with "
              "digest %s from identity map, but couldn't find any with "
              "that digest",
              chan, (chan->global_identifier),
@@ -714,7 +723,7 @@ channel_find_by_remote_identity(const char *rsa_id_digest,
   if (ent) {
     rv = TOR_LIST_FIRST(&ent->channel_list);
   }
-  while (rv && ! channel_remote_identity_matches(rv, rsa_id_digest, ed_id)) {
+  while (rv && !channel_remote_identity_matches(rv, rsa_id_digest, ed_id)) {
     rv = channel_next_with_rsa_identity(rv);
   }
 
@@ -754,43 +763,47 @@ channel_check_for_duplicates(void)
   int total_gt_one_connection = 0, total_gt_two_connections = 0;
   int total_gt_four_connections = 0;
 
-  HT_FOREACH(iter, channel_idmap, &channel_identity_map) {
+  HT_FOREACH (iter, channel_idmap, &channel_identity_map) {
     int connections_to_relay = 0;
 
     /* Only consider relay connections */
-    if (!connection_or_digest_is_known_relay((char*)(*iter)->digest))
+    if (!connection_or_digest_is_known_relay((char *)(*iter)->digest))
       continue;
 
     total_relays++;
 
     for (chan = TOR_LIST_FIRST(&(*iter)->channel_list); chan;
-        chan = channel_next_with_rsa_identity(chan)) {
-
+         chan = channel_next_with_rsa_identity(chan)) {
       if (CHANNEL_CONDEMNED(chan) || !CHANNEL_IS_OPEN(chan))
         continue;
 
       connections_to_relay++;
       total_relay_connections++;
 
-      if (chan->is_canonical(chan, 0)) total_canonical++;
+      if (chan->is_canonical(chan, 0))
+        total_canonical++;
 
-      if (!chan->is_canonical_to_peer && chan->is_canonical(chan, 0)
-          && chan->is_canonical(chan, 1)) {
+      if (!chan->is_canonical_to_peer && chan->is_canonical(chan, 0) &&
+          chan->is_canonical(chan, 1)) {
         total_half_canonical++;
       }
     }
 
-    if (connections_to_relay > 1) total_gt_one_connection++;
-    if (connections_to_relay > 2) total_gt_two_connections++;
-    if (connections_to_relay > 4) total_gt_four_connections++;
+    if (connections_to_relay > 1)
+      total_gt_one_connection++;
+    if (connections_to_relay > 2)
+      total_gt_two_connections++;
+    if (connections_to_relay > 4)
+      total_gt_four_connections++;
   }
 
 #define MIN_RELAY_CONNECTIONS_TO_WARN 5
 
   /* If we average 1.5 or more connections per relay, something is wrong */
   if (total_relays > MIN_RELAY_CONNECTIONS_TO_WARN &&
-          total_relay_connections >= 1.5*total_relays) {
-    log_notice(LD_OR,
+      total_relay_connections >= 1.5 * total_relays) {
+    log_notice(
+        LD_OR,
         "Your relay has a very large number of connections to other relays. "
         "Is your outbound address the same as your relay address? "
         "Found %d connections to %d relays. Found %d current canonical "
@@ -801,14 +814,15 @@ channel_check_for_duplicates(void)
         total_half_canonical, total_gt_one_connection,
         total_gt_two_connections, total_gt_four_connections);
   } else {
-    log_info(LD_OR, "Performed connection pruning. "
-        "Found %d connections to %d relays. Found %d current canonical "
-        "connections, in %d of which we were a non-canonical peer. "
-        "%d relays had more than 1 connection, %d had more than 2, and "
-        "%d had more than 4 connections.",
-        total_relay_connections, total_relays, total_canonical,
-        total_half_canonical, total_gt_one_connection,
-        total_gt_two_connections, total_gt_four_connections);
+    log_info(LD_OR,
+             "Performed connection pruning. "
+             "Found %d connections to %d relays. Found %d current canonical "
+             "connections, in %d of which we were a non-canonical peer. "
+             "%d relays had more than 1 connection, %d had more than 2, and "
+             "%d had more than 4 connections.",
+             total_relay_connections, total_relays, total_canonical,
+             total_half_canonical, total_gt_one_connection,
+             total_gt_two_connections, total_gt_four_connections);
   }
 }
 
@@ -875,7 +889,8 @@ channel_init_listener(channel_listener_t *chan_l)
 void
 channel_free_(channel_t *chan)
 {
-  if (!chan) return;
+  if (!chan)
+    return;
 
   /* It must be closed or errored */
   tor_assert(CHANNEL_FINISHED(chan));
@@ -883,8 +898,7 @@ channel_free_(channel_t *chan)
   /* It must be deregistered */
   tor_assert(!(chan->registered));
 
-  log_debug(LD_CHANNEL,
-            "Freeing channel %"PRIu64 " at %p",
+  log_debug(LD_CHANNEL, "Freeing channel %" PRIu64 " at %p",
             (chan->global_identifier), chan);
 
   /* Get this one out of the scheduler */
@@ -904,7 +918,8 @@ channel_free_(channel_t *chan)
   channel_handles_clear(chan);
 
   /* Call a free method if there is one */
-  if (chan->free_fn) chan->free_fn(chan);
+  if (chan->free_fn)
+    chan->free_fn(chan);
 
   channel_clear_remote_end(chan);
 
@@ -927,12 +942,11 @@ channel_free_(channel_t *chan)
 void
 channel_listener_free_(channel_listener_t *chan_l)
 {
-  if (!chan_l) return;
+  if (!chan_l)
+    return;
 
-  log_debug(LD_CHANNEL,
-            "Freeing channel_listener_t %"PRIu64 " at %p",
-            (chan_l->global_identifier),
-            chan_l);
+  log_debug(LD_CHANNEL, "Freeing channel_listener_t %" PRIu64 " at %p",
+            (chan_l->global_identifier), chan_l);
 
   /* It must be closed or errored */
   tor_assert(chan_l->state == CHANNEL_LISTENER_STATE_CLOSED ||
@@ -941,7 +955,8 @@ channel_listener_free_(channel_listener_t *chan_l)
   tor_assert(!(chan_l->registered));
 
   /* Call a free method if there is one */
-  if (chan_l->free_fn) chan_l->free_fn(chan_l);
+  if (chan_l->free_fn)
+    chan_l->free_fn(chan_l);
 
   tor_free(chan_l);
 }
@@ -956,8 +971,7 @@ channel_force_xfree(channel_t *chan)
 {
   tor_assert(chan);
 
-  log_debug(LD_CHANNEL,
-            "Force-freeing channel %"PRIu64 " at %p",
+  log_debug(LD_CHANNEL, "Force-freeing channel %" PRIu64 " at %p",
             (chan->global_identifier), chan);
 
   /* Get this one out of the scheduler */
@@ -977,7 +991,8 @@ channel_force_xfree(channel_t *chan)
   channel_handles_clear(chan);
 
   /* Call a free method if there is one */
-  if (chan->free_fn) chan->free_fn(chan);
+  if (chan->free_fn)
+    chan->free_fn(chan);
 
   channel_clear_remote_end(chan);
 
@@ -1000,13 +1015,12 @@ channel_listener_force_xfree(channel_listener_t *chan_l)
 {
   tor_assert(chan_l);
 
-  log_debug(LD_CHANNEL,
-            "Force-freeing channel_listener_t %"PRIu64 " at %p",
-            (chan_l->global_identifier),
-            chan_l);
+  log_debug(LD_CHANNEL, "Force-freeing channel_listener_t %" PRIu64 " at %p",
+            (chan_l->global_identifier), chan_l);
 
   /* Call a free method if there is one */
-  if (chan_l->free_fn) chan_l->free_fn(chan_l);
+  if (chan_l->free_fn)
+    chan_l->free_fn(chan_l);
 
   /*
    * The incoming list just gets emptied and freed; we request close on
@@ -1014,10 +1028,9 @@ channel_listener_force_xfree(channel_listener_t *chan_l)
    * down they will get deregistered and freed elsewhere anyway.
    */
   if (chan_l->incoming_list) {
-    SMARTLIST_FOREACH_BEGIN(chan_l->incoming_list,
-                            channel_t *, qchan) {
+    SMARTLIST_FOREACH_BEGIN (chan_l->incoming_list, channel_t *, qchan) {
       channel_mark_for_close(qchan);
-    } SMARTLIST_FOREACH_END(qchan);
+    } SMARTLIST_FOREACH_END (qchan);
 
     smartlist_free(chan_l->incoming_list);
     chan_l->incoming_list = NULL;
@@ -1034,19 +1047,19 @@ channel_listener_force_xfree(channel_listener_t *chan_l)
  */
 void
 channel_listener_set_listener_fn(channel_listener_t *chan_l,
-                                channel_listener_fn_ptr listener)
+                                 channel_listener_fn_ptr listener)
 {
   tor_assert(chan_l);
   tor_assert(chan_l->state == CHANNEL_LISTENER_STATE_LISTENING);
 
   log_debug(LD_CHANNEL,
-           "Setting listener callback for channel listener %p "
-           "(global ID %"PRIu64 ") to %p",
-           chan_l, (chan_l->global_identifier),
-           listener);
+            "Setting listener callback for channel listener %p "
+            "(global ID %" PRIu64 ") to %p",
+            chan_l, (chan_l->global_identifier), listener);
 
   chan_l->listener = listener;
-  if (chan_l->listener) channel_listener_process_incoming(chan_l);
+  if (chan_l->listener)
+    channel_listener_process_incoming(chan_l);
 }
 
 /**
@@ -1079,9 +1092,8 @@ channel_set_cell_handlers(channel_t *chan,
   tor_assert(chan);
   tor_assert(CHANNEL_CAN_HANDLE_CELLS(chan));
 
-  log_debug(LD_CHANNEL,
-           "Setting cell_handler callback for channel %p to %p",
-           chan, cell_handler);
+  log_debug(LD_CHANNEL, "Setting cell_handler callback for channel %p to %p",
+            chan, cell_handler);
 
   /* Change them */
   chan->cell_handler = cell_handler;
@@ -1118,7 +1130,7 @@ channel_mark_for_close(channel_t *chan)
     return;
 
   log_debug(LD_CHANNEL,
-            "Closing channel %p (global ID %"PRIu64 ") "
+            "Closing channel %p (global ID %" PRIu64 ") "
             "by request",
             chan, (chan->global_identifier));
 
@@ -1155,10 +1167,11 @@ channel_listener_mark_for_close(channel_listener_t *chan_l)
   /* If it's already in CLOSING, CLOSED or ERROR, this is a no-op */
   if (chan_l->state == CHANNEL_LISTENER_STATE_CLOSING ||
       chan_l->state == CHANNEL_LISTENER_STATE_CLOSED ||
-      chan_l->state == CHANNEL_LISTENER_STATE_ERROR) return;
+      chan_l->state == CHANNEL_LISTENER_STATE_ERROR)
+    return;
 
   log_debug(LD_CHANNEL,
-            "Closing channel listener %p (global ID %"PRIu64 ") "
+            "Closing channel listener %p (global ID %" PRIu64 ") "
             "by request",
             chan_l, (chan_l->global_identifier));
 
@@ -1196,7 +1209,7 @@ channel_close_from_lower_layer(channel_t *chan)
     return;
 
   log_debug(LD_CHANNEL,
-            "Closing channel %p (global ID %"PRIu64 ") "
+            "Closing channel %p (global ID %" PRIu64 ") "
             "due to lower-layer event",
             chan, (chan->global_identifier));
 
@@ -1223,9 +1236,7 @@ channel_close_for_error(channel_t *chan)
   if (CHANNEL_CONDEMNED(chan))
     return;
 
-  log_debug(LD_CHANNEL,
-            "Closing channel %p due to lower-layer error",
-            chan);
+  log_debug(LD_CHANNEL, "Closing channel %p due to lower-layer error", chan);
 
   /* Note closing by event from below */
   chan->reason_for_closing = CHANNEL_CLOSE_FOR_ERROR;
@@ -1253,7 +1264,7 @@ channel_closed(channel_t *chan)
 
   /* Inform any pending (not attached) circs that they should
    * give up. */
-  if (! chan->has_been_open)
+  if (!chan->has_been_open)
     circuit_n_chan_done(chan, 0, 0);
 
   /* Now close all the attached circuits on it. */
@@ -1281,7 +1292,7 @@ channel_clear_identity_digest(channel_t *chan)
 
   log_debug(LD_CHANNEL,
             "Clearing remote endpoint digest on channel %p with "
-            "global ID %"PRIu64,
+            "global ID %" PRIu64,
             chan, (chan->global_identifier));
 
   state_not_in_map = CHANNEL_CONDEMNED(chan);
@@ -1291,8 +1302,7 @@ channel_clear_identity_digest(channel_t *chan)
     /* if it's registered get it out of the digest map */
     channel_remove_from_digest_map(chan);
 
-  memset(chan->identity_digest, 0,
-         sizeof(chan->identity_digest));
+  memset(chan->identity_digest, 0, sizeof(chan->identity_digest));
 }
 
 /**
@@ -1302,8 +1312,7 @@ channel_clear_identity_digest(channel_t *chan)
  * channel; this is intended for use by the lower layer.
  */
 void
-channel_set_identity_digest(channel_t *chan,
-                            const char *identity_digest,
+channel_set_identity_digest(channel_t *chan, const char *identity_digest,
                             const ed25519_public_key_t *ed_identity)
 {
   int was_in_digest_map, should_be_in_digest_map, state_not_in_map;
@@ -1312,22 +1321,17 @@ channel_set_identity_digest(channel_t *chan,
 
   log_debug(LD_CHANNEL,
             "Setting remote endpoint digest on channel %p with "
-            "global ID %"PRIu64 " to digest %s",
+            "global ID %" PRIu64 " to digest %s",
             chan, (chan->global_identifier),
-            identity_digest ?
-              hex_str(identity_digest, DIGEST_LEN) : "(null)");
+            identity_digest ? hex_str(identity_digest, DIGEST_LEN) : "(null)");
 
   state_not_in_map = CHANNEL_CONDEMNED(chan);
 
-  was_in_digest_map =
-    !state_not_in_map &&
-    chan->registered &&
-    !tor_digest_is_zero(chan->identity_digest);
+  was_in_digest_map = !state_not_in_map && chan->registered &&
+                      !tor_digest_is_zero(chan->identity_digest);
   should_be_in_digest_map =
-    !state_not_in_map &&
-    chan->registered &&
-    (identity_digest &&
-     !tor_digest_is_zero(identity_digest));
+      !state_not_in_map && chan->registered &&
+      (identity_digest && !tor_digest_is_zero(identity_digest));
 
   if (was_in_digest_map)
     /* We should always remove it; we'll add it back if we're writing
@@ -1336,12 +1340,10 @@ channel_set_identity_digest(channel_t *chan,
     channel_remove_from_digest_map(chan);
 
   if (identity_digest) {
-    memcpy(chan->identity_digest,
-           identity_digest,
+    memcpy(chan->identity_digest, identity_digest,
            sizeof(chan->identity_digest));
   } else {
-    memset(chan->identity_digest, 0,
-           sizeof(chan->identity_digest));
+    memset(chan->identity_digest, 0, sizeof(chan->identity_digest));
   }
   if (ed_identity) {
     memcpy(&chan->ed25519_identity, ed_identity, sizeof(*ed_identity));
@@ -1369,7 +1371,7 @@ channel_clear_remote_end(channel_t *chan)
 
   log_debug(LD_CHANNEL,
             "Clearing remote endpoint identity on channel %p with "
-            "global ID %"PRIu64,
+            "global ID %" PRIu64,
             chan, (chan->global_identifier));
 
   state_not_in_map = CHANNEL_CONDEMNED(chan);
@@ -1379,8 +1381,7 @@ channel_clear_remote_end(channel_t *chan)
     /* if it's registered get it out of the digest map */
     channel_remove_from_digest_map(chan);
 
-  memset(chan->identity_digest, 0,
-         sizeof(chan->identity_digest));
+  memset(chan->identity_digest, 0, sizeof(chan->identity_digest));
 }
 
 /**
@@ -1440,7 +1441,7 @@ write_packed_cell(channel_t *chan, packed_cell_t *cell)
       rep_hist_padding_count_write(PADDING_TYPE_ENABLED_CELL);
   }
 
- done:
+done:
   return ret;
 }
 
@@ -1463,18 +1464,20 @@ channel_write_packed_cell(channel_t *chan, packed_cell_t *cell)
   tor_assert(cell);
 
   if (CHANNEL_IS_CLOSING(chan)) {
-    log_debug(LD_CHANNEL, "Discarding %p on closing channel %p with "
-              "global ID %"PRIu64, cell, chan,
-              (chan->global_identifier));
+    log_debug(LD_CHANNEL,
+              "Discarding %p on closing channel %p with "
+              "global ID %" PRIu64,
+              cell, chan, (chan->global_identifier));
     goto end;
   }
   log_debug(LD_CHANNEL,
             "Writing %p to channel %p with global ID "
-            "%"PRIu64, cell, chan, (chan->global_identifier));
+            "%" PRIu64,
+            cell, chan, (chan->global_identifier));
 
   ret = write_packed_cell(chan, cell);
 
- end:
+end:
   /* Whatever happens, we free the cell. Either an error occurred or the cell
    * was put on the connection outbuf, both cases we have ownership of the
    * cell and we free it. */
@@ -1507,24 +1510,22 @@ channel_change_state_(channel_t *chan, channel_state_t to_state)
   if (from_state == to_state) {
     log_debug(LD_CHANNEL,
               "Got no-op transition from \"%s\" to itself on channel %p"
-              "(global ID %"PRIu64 ")",
-              channel_state_to_string(to_state),
-              chan, (chan->global_identifier));
+              "(global ID %" PRIu64 ")",
+              channel_state_to_string(to_state), chan,
+              (chan->global_identifier));
     return;
   }
 
   /* If we're going to a closing or closed state, we must have a reason set */
-  if (to_state == CHANNEL_STATE_CLOSING ||
-      to_state == CHANNEL_STATE_CLOSED ||
+  if (to_state == CHANNEL_STATE_CLOSING || to_state == CHANNEL_STATE_CLOSED ||
       to_state == CHANNEL_STATE_ERROR) {
     tor_assert(chan->reason_for_closing != CHANNEL_NOT_CLOSING);
   }
 
   log_debug(LD_CHANNEL,
-            "Changing state of channel %p (global ID %"PRIu64
+            "Changing state of channel %p (global ID %" PRIu64
             ") from \"%s\" to \"%s\"",
-            chan,
-            (chan->global_identifier),
+            chan, (chan->global_identifier),
             channel_state_to_string(chan->state),
             channel_state_to_string(to_state));
 
@@ -1534,20 +1535,24 @@ channel_change_state_(channel_t *chan, channel_state_t to_state)
   if (chan->registered) {
     was_active = !(from_state == CHANNEL_STATE_CLOSED ||
                    from_state == CHANNEL_STATE_ERROR);
-    is_active = !(to_state == CHANNEL_STATE_CLOSED ||
-                  to_state == CHANNEL_STATE_ERROR);
+    is_active =
+        !(to_state == CHANNEL_STATE_CLOSED || to_state == CHANNEL_STATE_ERROR);
 
     /* Need to take off active list and put on finished list? */
     if (was_active && !is_active) {
-      if (active_channels) smartlist_remove(active_channels, chan);
-      if (!finished_channels) finished_channels = smartlist_new();
+      if (active_channels)
+        smartlist_remove(active_channels, chan);
+      if (!finished_channels)
+        finished_channels = smartlist_new();
       smartlist_add(finished_channels, chan);
       mainloop_schedule_postloop_cleanup();
     }
     /* Need to put on active list? */
     else if (!was_active && is_active) {
-      if (finished_channels) smartlist_remove(finished_channels, chan);
-      if (!active_channels) active_channels = smartlist_new();
+      if (finished_channels)
+        smartlist_remove(finished_channels, chan);
+      if (!active_channels)
+        active_channels = smartlist_new();
       smartlist_add(active_channels, chan);
     }
 
@@ -1560,7 +1565,8 @@ channel_change_state_(channel_t *chan, channel_state_t to_state)
                        to_state == CHANNEL_STATE_CLOSED ||
                        to_state == CHANNEL_STATE_ERROR);
 
-      if (!was_in_id_map && is_in_id_map) channel_add_to_digest_map(chan);
+      if (!was_in_id_map && is_in_id_map)
+        channel_add_to_digest_map(chan);
       else if (was_in_id_map && !is_in_id_map)
         channel_remove_from_digest_map(chan);
     }
@@ -1570,8 +1576,7 @@ channel_change_state_(channel_t *chan, channel_state_t to_state)
    * If we're going to a closed/closing state, we don't need scheduling any
    * more; in CHANNEL_STATE_MAINT we can't accept writes.
    */
-  if (to_state == CHANNEL_STATE_CLOSING ||
-      to_state == CHANNEL_STATE_CLOSED ||
+  if (to_state == CHANNEL_STATE_CLOSING || to_state == CHANNEL_STATE_CLOSED ||
       to_state == CHANNEL_STATE_ERROR) {
     scheduler_release_channel(chan);
   } else if (to_state == CHANNEL_STATE_MAINT) {
@@ -1627,9 +1632,9 @@ channel_listener_change_state(channel_listener_t *chan_l,
   if (from_state == to_state) {
     log_debug(LD_CHANNEL,
               "Got no-op transition from \"%s\" to itself on channel "
-              "listener %p (global ID %"PRIu64 ")",
-              channel_listener_state_to_string(to_state),
-              chan_l, (chan_l->global_identifier));
+              "listener %p (global ID %" PRIu64 ")",
+              channel_listener_state_to_string(to_state), chan_l,
+              (chan_l->global_identifier));
     return;
   }
 
@@ -1641,7 +1646,7 @@ channel_listener_change_state(channel_listener_t *chan_l,
   }
 
   log_debug(LD_CHANNEL,
-            "Changing state of channel listener %p (global ID %"PRIu64
+            "Changing state of channel listener %p (global ID %" PRIu64
             "from \"%s\" to \"%s\"",
             chan_l, (chan_l->global_identifier),
             channel_listener_state_to_string(chan_l->state),
@@ -1658,15 +1663,19 @@ channel_listener_change_state(channel_listener_t *chan_l,
 
     /* Need to take off active list and put on finished list? */
     if (was_active && !is_active) {
-      if (active_listeners) smartlist_remove(active_listeners, chan_l);
-      if (!finished_listeners) finished_listeners = smartlist_new();
+      if (active_listeners)
+        smartlist_remove(active_listeners, chan_l);
+      if (!finished_listeners)
+        finished_listeners = smartlist_new();
       smartlist_add(finished_listeners, chan_l);
       mainloop_schedule_postloop_cleanup();
     }
     /* Need to put on active list? */
     else if (!was_active && is_active) {
-      if (finished_listeners) smartlist_remove(finished_listeners, chan_l);
-      if (!active_listeners) active_listeners = smartlist_new();
+      if (finished_listeners)
+        smartlist_remove(finished_listeners, chan_l);
+      if (!active_listeners)
+        active_listeners = smartlist_new();
       smartlist_add(active_listeners, chan_l);
     }
   }
@@ -1674,7 +1683,7 @@ channel_listener_change_state(channel_listener_t *chan_l,
   if (to_state == CHANNEL_LISTENER_STATE_CLOSED ||
       to_state == CHANNEL_LISTENER_STATE_ERROR) {
     tor_assert(!(chan_l->incoming_list) ||
-                smartlist_len(chan_l->incoming_list) == 0);
+               smartlist_len(chan_l->incoming_list) == 0);
   }
 }
 
@@ -1701,7 +1710,8 @@ channel_listener_change_state(channel_listener_t *chan_l,
  *
  * This function is part of the fast path. */
 MOCK_IMPL(ssize_t,
-channel_flush_some_cells, (channel_t *chan, ssize_t num_cells))
+channel_flush_some_cells,
+          (channel_t * chan, ssize_t num_cells))
 {
   unsigned int unlimited = 0;
   ssize_t flushed = 0;
@@ -1709,8 +1719,10 @@ channel_flush_some_cells, (channel_t *chan, ssize_t num_cells))
 
   tor_assert(chan);
 
-  if (num_cells < 0) unlimited = 1;
-  if (!unlimited && num_cells <= flushed) goto done;
+  if (num_cells < 0)
+    unlimited = 1;
+  if (!unlimited && num_cells <= flushed)
+    goto done;
 
   /* If we aren't in CHANNEL_STATE_OPEN, nothing goes through */
   if (CHANNEL_IS_OPEN(chan)) {
@@ -1728,12 +1740,12 @@ channel_flush_some_cells, (channel_t *chan, ssize_t num_cells))
       }
 
       /* Try to get more cells from any active circuits */
-      flushed = channel_flush_from_first_active_circuit(
-          chan, clamped_num_cells);
+      flushed =
+          channel_flush_from_first_active_circuit(chan, clamped_num_cells);
     }
   }
 
- done:
+done:
   return flushed;
 }
 
@@ -1744,11 +1756,12 @@ channel_flush_some_cells, (channel_t *chan, ssize_t num_cells))
  * after a scheduling round.
  */
 MOCK_IMPL(int,
-channel_more_to_flush, (channel_t *chan))
+channel_more_to_flush, (channel_t * chan))
 {
   tor_assert(chan);
 
-  if (circuitmux_num_cells(chan->cmux) > 0) return 1;
+  if (circuitmux_num_cells(chan->cmux) > 0)
+    return 1;
 
   /* Else no */
   return 0;
@@ -1766,8 +1779,7 @@ channel_notify_flushed(channel_t *chan)
   tor_assert(chan);
 
   if (chan->dirreq_id != 0)
-    geoip_change_dirreq_state(chan->dirreq_id,
-                              DIRREQ_TUNNELED,
+    geoip_change_dirreq_state(chan->dirreq_id, DIRREQ_TUNNELED,
                               DIRREQ_CHANNEL_BUFFER_FLUSHED);
 }
 
@@ -1792,26 +1804,24 @@ channel_listener_process_incoming(channel_listener_t *listener)
 
   log_debug(LD_CHANNEL,
             "Processing queue of incoming connections for channel "
-            "listener %p (global ID %"PRIu64 ")",
+            "listener %p (global ID %" PRIu64 ")",
             listener, (listener->global_identifier));
 
-  if (!(listener->incoming_list)) return;
+  if (!(listener->incoming_list))
+    return;
 
-  SMARTLIST_FOREACH_BEGIN(listener->incoming_list,
-                          channel_t *, chan) {
+  SMARTLIST_FOREACH_BEGIN (listener->incoming_list, channel_t *, chan) {
     tor_assert(chan);
 
     log_debug(LD_CHANNEL,
-              "Handling incoming channel %p (%"PRIu64 ") "
-              "for listener %p (%"PRIu64 ")",
-              chan,
-              (chan->global_identifier),
-              listener,
+              "Handling incoming channel %p (%" PRIu64 ") "
+              "for listener %p (%" PRIu64 ")",
+              chan, (chan->global_identifier), listener,
               (listener->global_identifier));
     /* Make sure this is set correctly */
     channel_mark_incoming(chan);
     listener->listener(listener, chan);
-  } SMARTLIST_FOREACH_END(chan);
+  } SMARTLIST_FOREACH_END (chan);
 
   smartlist_free(listener->incoming_list);
   listener->incoming_list = NULL;
@@ -1853,9 +1863,8 @@ channel_do_open_actions(channel_t *chan)
         if (chan->get_transport_name(chan, &transport_name) < 0)
           transport_name = NULL;
 
-        geoip_note_client_seen(GEOIP_CLIENT_CONNECT,
-                               &remote_addr, transport_name,
-                               now);
+        geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &remote_addr,
+                               transport_name, now);
         tor_free(transport_name);
         /* Notify the DoS subsystem of a new client. */
         if (tlschan && tlschan->conn) {
@@ -1872,8 +1881,7 @@ channel_do_open_actions(channel_t *chan)
       /* Disable if torrc disabled */
       channelpadding_disable_padding_on_channel(chan);
     } else if (rend_service_allow_non_anonymous_connection(get_options()) &&
-               !networkstatus_get_param(NULL,
-                                        CHANNELPADDING_SOS_PARAM,
+               !networkstatus_get_param(NULL, CHANNELPADDING_SOS_PARAM,
                                         CHANNELPADDING_SOS_DEFAULT, 0, 1)) {
       /* Disable if we're using RSOS and the consensus disabled padding
        * for RSOS */
@@ -1906,15 +1914,15 @@ channel_listener_queue_incoming(channel_listener_t *listener,
   tor_assert(incoming);
 
   log_debug(LD_CHANNEL,
-            "Queueing incoming channel %p (global ID %"PRIu64 ") on "
-            "channel listener %p (global ID %"PRIu64 ")",
-            incoming, (incoming->global_identifier),
-            listener, (listener->global_identifier));
+            "Queueing incoming channel %p (global ID %" PRIu64 ") on "
+            "channel listener %p (global ID %" PRIu64 ")",
+            incoming, (incoming->global_identifier), listener,
+            (listener->global_identifier));
 
   /* Do we need to queue it, or can we just call the listener right away? */
-  if (!(listener->listener)) need_to_queue = 1;
-  if (listener->incoming_list &&
-      (smartlist_len(listener->incoming_list) > 0))
+  if (!(listener->listener))
+    need_to_queue = 1;
+  if (listener->incoming_list && (smartlist_len(listener->incoming_list) > 0))
     need_to_queue = 1;
 
   /* If we need to queue and have no queue, create one */
@@ -1939,7 +1947,8 @@ channel_listener_queue_incoming(channel_listener_t *listener,
   else {
     tor_assert(listener->incoming_list);
     smartlist_add(listener->incoming_list, incoming);
-    if (listener->listener) channel_listener_process_incoming(listener);
+    if (listener->listener)
+      channel_listener_process_incoming(listener);
   }
 }
 
@@ -1966,8 +1975,8 @@ channel_process_cell(channel_t *chan, cell_t *cell)
 
   log_debug(LD_CHANNEL,
             "Processing incoming cell_t %p for channel %p (global ID "
-            "%"PRIu64 ")", cell, chan,
-            (chan->global_identifier));
+            "%" PRIu64 ")",
+            cell, chan, (chan->global_identifier));
   chan->cell_handler(chan, cell);
 }
 
@@ -1976,8 +1985,7 @@ channel_process_cell(channel_t *chan, cell_t *cell)
  * false. */
 /* XXXX Move this function. */
 int
-packed_cell_is_destroy(channel_t *chan,
-                       const packed_cell_t *packed_cell,
+packed_cell_is_destroy(channel_t *chan, const packed_cell_t *packed_cell,
                        circid_t *circid_out)
 {
   if (chan->wide_circ_ids) {
@@ -2006,11 +2014,11 @@ channel_send_destroy(circid_t circ_id, channel_t *chan, int reason)
 {
   tor_assert(chan);
   if (circ_id == 0) {
-    log_warn(LD_BUG, "Attempted to send a destroy cell for circID 0 "
-             "on a channel %"PRIu64 " at %p in state %s (%d)",
-             (chan->global_identifier),
-             chan, channel_state_to_string(chan->state),
-             chan->state);
+    log_warn(LD_BUG,
+             "Attempted to send a destroy cell for circID 0 "
+             "on a channel %" PRIu64 " at %p in state %s (%d)",
+             (chan->global_identifier), chan,
+             channel_state_to_string(chan->state), chan->state);
     return 0;
   }
 
@@ -2020,16 +2028,14 @@ channel_send_destroy(circid_t circ_id, channel_t *chan, int reason)
     circuitmux_append_destroy_cell(chan, chan->cmux, circ_id, reason);
     log_debug(LD_OR,
               "Sending destroy (circID %u) on channel %p "
-              "(global ID %"PRIu64 ")",
-              (unsigned)circ_id, chan,
-              (chan->global_identifier));
+              "(global ID %" PRIu64 ")",
+              (unsigned)circ_id, chan, (chan->global_identifier));
   } else {
     log_warn(LD_BUG,
              "Someone called channel_send_destroy() for circID %u "
-             "on a channel %"PRIu64 " at %p in state %s (%d)",
-             (unsigned)circ_id, (chan->global_identifier),
-             chan, channel_state_to_string(chan->state),
-             chan->state);
+             "on a channel %" PRIu64 " at %p in state %s (%d)",
+             (unsigned)circ_id, (chan->global_identifier), chan,
+             channel_state_to_string(chan->state), chan->state);
   }
 
   return 0;
@@ -2045,24 +2051,20 @@ void
 channel_dumpstats(int severity)
 {
   if (all_channels && smartlist_len(all_channels) > 0) {
+    tor_log(severity, LD_GENERAL, "Dumping statistics about %d channels:",
+            smartlist_len(all_channels));
     tor_log(severity, LD_GENERAL,
-        "Dumping statistics about %d channels:",
-        smartlist_len(all_channels));
-    tor_log(severity, LD_GENERAL,
-        "%d are active, and %d are done and waiting for cleanup",
-        (active_channels != NULL) ?
-          smartlist_len(active_channels) : 0,
-        (finished_channels != NULL) ?
-          smartlist_len(finished_channels) : 0);
+            "%d are active, and %d are done and waiting for cleanup",
+            (active_channels != NULL) ? smartlist_len(active_channels) : 0,
+            (finished_channels != NULL) ? smartlist_len(finished_channels)
+                                        : 0);
 
     SMARTLIST_FOREACH(all_channels, channel_t *, chan,
                       channel_dump_statistics(chan, severity));
 
-    tor_log(severity, LD_GENERAL,
-        "Done spamming about channels now");
+    tor_log(severity, LD_GENERAL, "Done spamming about channels now");
   } else {
-    tor_log(severity, LD_GENERAL,
-        "No channels to dump");
+    tor_log(severity, LD_GENERAL, "No channels to dump");
   }
 }
 
@@ -2077,23 +2079,20 @@ channel_listener_dumpstats(int severity)
 {
   if (all_listeners && smartlist_len(all_listeners) > 0) {
     tor_log(severity, LD_GENERAL,
-        "Dumping statistics about %d channel listeners:",
-        smartlist_len(all_listeners));
+            "Dumping statistics about %d channel listeners:",
+            smartlist_len(all_listeners));
     tor_log(severity, LD_GENERAL,
-        "%d are active and %d are done and waiting for cleanup",
-        (active_listeners != NULL) ?
-          smartlist_len(active_listeners) : 0,
-        (finished_listeners != NULL) ?
-          smartlist_len(finished_listeners) : 0);
+            "%d are active and %d are done and waiting for cleanup",
+            (active_listeners != NULL) ? smartlist_len(active_listeners) : 0,
+            (finished_listeners != NULL) ? smartlist_len(finished_listeners)
+                                         : 0);
 
     SMARTLIST_FOREACH(all_listeners, channel_listener_t *, chan_l,
                       channel_listener_dump_statistics(chan_l, severity));
 
-    tor_log(severity, LD_GENERAL,
-        "Done spamming about channel listeners now");
+    tor_log(severity, LD_GENERAL, "Done spamming about channel listeners now");
   } else {
-    tor_log(severity, LD_GENERAL,
-        "No channel listeners to dump");
+    tor_log(severity, LD_GENERAL, "No channel listeners to dump");
   }
 }
 
@@ -2109,10 +2108,11 @@ channel_run_cleanup(void)
   channel_t *tmp = NULL;
 
   /* Check if we need to do anything */
-  if (!finished_channels || smartlist_len(finished_channels) == 0) return;
+  if (!finished_channels || smartlist_len(finished_channels) == 0)
+    return;
 
   /* Iterate through finished_channels and get rid of them */
-  SMARTLIST_FOREACH_BEGIN(finished_channels, channel_t *, curr) {
+  SMARTLIST_FOREACH_BEGIN (finished_channels, channel_t *, curr) {
     tmp = curr;
     /* Remove it from the list */
     SMARTLIST_DEL_CURRENT(finished_channels, curr);
@@ -2120,7 +2120,7 @@ channel_run_cleanup(void)
     channel_unregister(tmp);
     /* ... and free it */
     channel_free(tmp);
-  } SMARTLIST_FOREACH_END(curr);
+  } SMARTLIST_FOREACH_END (curr);
 }
 
 /**
@@ -2135,10 +2135,11 @@ channel_listener_run_cleanup(void)
   channel_listener_t *tmp = NULL;
 
   /* Check if we need to do anything */
-  if (!finished_listeners || smartlist_len(finished_listeners) == 0) return;
+  if (!finished_listeners || smartlist_len(finished_listeners) == 0)
+    return;
 
   /* Iterate through finished_channels and get rid of them */
-  SMARTLIST_FOREACH_BEGIN(finished_listeners, channel_listener_t *, curr) {
+  SMARTLIST_FOREACH_BEGIN (finished_listeners, channel_listener_t *, curr) {
     tmp = curr;
     /* Remove it from the list */
     SMARTLIST_DEL_CURRENT(finished_listeners, curr);
@@ -2146,7 +2147,7 @@ channel_listener_run_cleanup(void)
     channel_listener_unregister(tmp);
     /* ... and free it */
     channel_listener_free(tmp);
-  } SMARTLIST_FOREACH_END(curr);
+  } SMARTLIST_FOREACH_END (curr);
 }
 
 /**
@@ -2155,13 +2156,14 @@ channel_listener_run_cleanup(void)
 static void
 channel_free_list(smartlist_t *channels, int mark_for_close)
 {
-  if (!channels) return;
+  if (!channels)
+    return;
 
-  SMARTLIST_FOREACH_BEGIN(channels, channel_t *, curr) {
+  SMARTLIST_FOREACH_BEGIN (channels, channel_t *, curr) {
     /* Deregister and free it */
     tor_assert(curr);
     log_debug(LD_CHANNEL,
-              "Cleaning up channel %p (global ID %"PRIu64 ") "
+              "Cleaning up channel %p (global ID %" PRIu64 ") "
               "in state %s (%d)",
               curr, (curr->global_identifier),
               channel_state_to_string(curr->state), curr->state);
@@ -2176,8 +2178,9 @@ channel_free_list(smartlist_t *channels, int mark_for_close)
         channel_mark_for_close(curr);
       }
       channel_force_xfree(curr);
-    } else channel_free(curr);
-  } SMARTLIST_FOREACH_END(curr);
+    } else
+      channel_free(curr);
+  } SMARTLIST_FOREACH_END (curr);
 }
 
 /**
@@ -2186,13 +2189,14 @@ channel_free_list(smartlist_t *channels, int mark_for_close)
 static void
 channel_listener_free_list(smartlist_t *listeners, int mark_for_close)
 {
-  if (!listeners) return;
+  if (!listeners)
+    return;
 
-  SMARTLIST_FOREACH_BEGIN(listeners, channel_listener_t *, curr) {
+  SMARTLIST_FOREACH_BEGIN (listeners, channel_listener_t *, curr) {
     /* Deregister and free it */
     tor_assert(curr);
     log_debug(LD_CHANNEL,
-              "Cleaning up channel listener %p (global ID %"PRIu64 ") "
+              "Cleaning up channel listener %p (global ID %" PRIu64 ") "
               "in state %s (%d)",
               curr, (curr->global_identifier),
               channel_listener_state_to_string(curr->state), curr->state);
@@ -2204,8 +2208,9 @@ channel_listener_free_list(smartlist_t *listeners, int mark_for_close)
         channel_listener_mark_for_close(curr);
       }
       channel_listener_force_xfree(curr);
-    } else channel_listener_free(curr);
-  } SMARTLIST_FOREACH_END(curr);
+    } else
+      channel_listener_free(curr);
+  } SMARTLIST_FOREACH_END (curr);
 }
 
 /**
@@ -2219,8 +2224,7 @@ channel_listener_free_list(smartlist_t *listeners, int mark_for_close)
 void
 channel_free_all(void)
 {
-  log_debug(LD_CHANNEL,
-            "Shutting down channels...");
+  log_debug(LD_CHANNEL, "Shutting down channels...");
 
   /* First, let's go for finished channels */
   if (finished_channels) {
@@ -2265,18 +2269,15 @@ channel_free_all(void)
   }
 
   /* Now free channel_identity_map */
-  log_debug(LD_CHANNEL,
-            "Freeing channel_identity_map");
+  log_debug(LD_CHANNEL, "Freeing channel_identity_map");
   /* Geez, anything still left over just won't die ... let it leak then */
   HT_CLEAR(channel_idmap, &channel_identity_map);
 
   /* Same with channel_gid_map */
-  log_debug(LD_CHANNEL,
-            "Freeing channel_gid_map");
+  log_debug(LD_CHANNEL, "Freeing channel_gid_map");
   HT_CLEAR(channel_gid_map, &channel_gid_map);
 
-  log_debug(LD_CHANNEL,
-            "Done cleaning up after channels");
+  log_debug(LD_CHANNEL, "Done cleaning up after channels");
 }
 
 /**
@@ -2290,8 +2291,7 @@ channel_free_all(void)
  * how to contact an OR.
  */
 channel_t *
-channel_connect(const tor_addr_t *addr, uint16_t port,
-                const char *id_digest,
+channel_connect(const tor_addr_t *addr, uint16_t port, const char *id_digest,
                 const ed25519_public_key_t *ed_id)
 {
   return channel_tls_connect(addr, port, id_digest, ed_id);
@@ -2326,13 +2326,17 @@ channel_is_better(channel_t *a, channel_t *b)
   a_is_canonical = channel_is_canonical(a);
   b_is_canonical = channel_is_canonical(b);
 
-  if (a_is_canonical && !b_is_canonical) return 1;
-  if (!a_is_canonical && b_is_canonical) return 0;
+  if (a_is_canonical && !b_is_canonical)
+    return 1;
+  if (!a_is_canonical && b_is_canonical)
+    return 0;
 
   /* Check if we suspect that one of the channels will be preferred
    * by the peer */
-  if (a->is_canonical_to_peer && !b->is_canonical_to_peer) return 1;
-  if (!a->is_canonical_to_peer && b->is_canonical_to_peer) return 0;
+  if (a->is_canonical_to_peer && !b->is_canonical_to_peer)
+    return 1;
+  if (!a->is_canonical_to_peer && b->is_canonical_to_peer)
+    return 0;
 
   /*
    * Okay, if we're here they tied on canonicity, the prefer the older
@@ -2350,11 +2354,15 @@ channel_is_better(channel_t *a, channel_t *b)
    *
    * We check channel_is_bad_for_new_circs() above here anyway, for safety.
    */
-  if (channel_when_created(a) < channel_when_created(b)) return 1;
-  else if (channel_when_created(a) > channel_when_created(b)) return 0;
+  if (channel_when_created(a) < channel_when_created(b))
+    return 1;
+  else if (channel_when_created(a) > channel_when_created(b))
+    return 0;
 
-  if (channel_num_circuits(a) > channel_num_circuits(b)) return 1;
-  else return 0;
+  if (channel_num_circuits(a) > channel_num_circuits(b))
+    return 1;
+  else
+    return 0;
 }
 
 /**
@@ -2370,8 +2378,7 @@ channel_is_better(channel_t *a, channel_t *b)
 channel_t *
 channel_get_for_extend(const char *rsa_id_digest,
                        const ed25519_public_key_t *ed_id,
-                       const tor_addr_t *target_addr,
-                       const char **msg_out,
+                       const tor_addr_t *target_addr, const char **msg_out,
                        int *launch_out)
 {
   channel_t *chan, *best = NULL;
@@ -2387,10 +2394,9 @@ channel_get_for_extend(const char *rsa_id_digest,
    * iteration.
    */
   for (; chan; chan = channel_next_with_rsa_identity(chan)) {
-    tor_assert(tor_memeq(chan->identity_digest,
-                         rsa_id_digest, DIGEST_LEN));
+    tor_assert(tor_memeq(chan->identity_digest, rsa_id_digest, DIGEST_LEN));
 
-   if (CHANNEL_CONDEMNED(chan))
+    if (CHANNEL_CONDEMNED(chan))
       continue;
 
     /* Never return a channel on which the other end appears to be
@@ -2433,7 +2439,7 @@ channel_get_for_extend(const char *rsa_id_digest,
      * tell us about the right address.)
      */
     if (!channel_is_canonical(chan) &&
-         channel_is_canonical_is_reliable(chan) &&
+        channel_is_canonical_is_reliable(chan) &&
         !channel_matches_target_addr_for_extend(chan, target_addr)) {
       ++n_noncanonical;
       continue;
@@ -2504,7 +2510,7 @@ channel_listener_describe_transport(channel_listener_t *chan_l)
  * Dump statistics for one channel to the log.
  */
 MOCK_IMPL(void,
-channel_dump_statistics, (channel_t *chan, int severity))
+channel_dump_statistics, (channel_t * chan, int severity))
 {
   double avg, interval, age;
   time_t now = time(NULL);
@@ -2517,33 +2523,31 @@ channel_dump_statistics, (channel_t *chan, int severity))
   age = (double)(now - chan->timestamp_created);
 
   tor_log(severity, LD_GENERAL,
-      "Channel %"PRIu64 " (at %p) with transport %s is in state "
-      "%s (%d)",
-      (chan->global_identifier), chan,
-      channel_describe_transport(chan),
-      channel_state_to_string(chan->state), chan->state);
+          "Channel %" PRIu64 " (at %p) with transport %s is in state "
+          "%s (%d)",
+          (chan->global_identifier), chan, channel_describe_transport(chan),
+          channel_state_to_string(chan->state), chan->state);
   tor_log(severity, LD_GENERAL,
-      " * Channel %"PRIu64 " was created at %"PRIu64
-      " (%"PRIu64 " seconds ago) "
-      "and last active at %"PRIu64 " (%"PRIu64 " seconds ago)",
-      (chan->global_identifier),
-      (uint64_t)(chan->timestamp_created),
-      (uint64_t)(now - chan->timestamp_created),
-      (uint64_t)(chan->timestamp_active),
-      (uint64_t)(now - chan->timestamp_active));
+          " * Channel %" PRIu64 " was created at %" PRIu64 " (%" PRIu64
+          " seconds ago) "
+          "and last active at %" PRIu64 " (%" PRIu64 " seconds ago)",
+          (chan->global_identifier), (uint64_t)(chan->timestamp_created),
+          (uint64_t)(now - chan->timestamp_created),
+          (uint64_t)(chan->timestamp_active),
+          (uint64_t)(now - chan->timestamp_active));
 
   /* Handle digest. */
   if (!tor_digest_is_zero(chan->identity_digest)) {
     tor_log(severity, LD_GENERAL,
-        " * Channel %"PRIu64 " says it is connected "
-        "to an OR with digest %s",
-        (chan->global_identifier),
-        hex_str(chan->identity_digest, DIGEST_LEN));
+            " * Channel %" PRIu64 " says it is connected "
+            "to an OR with digest %s",
+            (chan->global_identifier),
+            hex_str(chan->identity_digest, DIGEST_LEN));
   } else {
     tor_log(severity, LD_GENERAL,
-        " * Channel %"PRIu64 " does not know the digest"
-        " of the OR it is connected to",
-        (chan->global_identifier));
+            " * Channel %" PRIu64 " does not know the digest"
+            " of the OR it is connected to",
+            (chan->global_identifier));
   }
 
   /* Handle remote address and descriptions */
@@ -2552,130 +2556,116 @@ channel_dump_statistics, (channel_t *chan, int severity))
     char *actual = tor_strdup(channel_get_actual_remote_descr(chan));
     remote_addr_str = tor_addr_to_str_dup(&remote_addr);
     tor_log(severity, LD_GENERAL,
-        " * Channel %"PRIu64 " says its remote address"
-        " is %s, and gives a canonical description of \"%s\" and an "
-        "actual description of \"%s\"",
-        (chan->global_identifier),
-        safe_str(remote_addr_str),
-        safe_str(channel_get_canonical_remote_descr(chan)),
-        safe_str(actual));
+            " * Channel %" PRIu64 " says its remote address"
+            " is %s, and gives a canonical description of \"%s\" and an "
+            "actual description of \"%s\"",
+            (chan->global_identifier), safe_str(remote_addr_str),
+            safe_str(channel_get_canonical_remote_descr(chan)),
+            safe_str(actual));
     tor_free(remote_addr_str);
     tor_free(actual);
   } else {
     char *actual = tor_strdup(channel_get_actual_remote_descr(chan));
     tor_log(severity, LD_GENERAL,
-        " * Channel %"PRIu64 " does not know its remote "
-        "address, but gives a canonical description of \"%s\" and an "
-        "actual description of \"%s\"",
-        (chan->global_identifier),
-        channel_get_canonical_remote_descr(chan),
-        actual);
+            " * Channel %" PRIu64 " does not know its remote "
+            "address, but gives a canonical description of \"%s\" and an "
+            "actual description of \"%s\"",
+            (chan->global_identifier),
+            channel_get_canonical_remote_descr(chan), actual);
     tor_free(actual);
   }
 
   /* Handle marks */
   tor_log(severity, LD_GENERAL,
-      " * Channel %"PRIu64 " has these marks: %s %s %s "
-      "%s %s %s",
-      (chan->global_identifier),
-      channel_is_bad_for_new_circs(chan) ?
-        "bad_for_new_circs" : "!bad_for_new_circs",
-      channel_is_canonical(chan) ?
-        "canonical" : "!canonical",
-      channel_is_canonical_is_reliable(chan) ?
-        "is_canonical_is_reliable" :
-        "!is_canonical_is_reliable",
-      channel_is_client(chan) ?
-        "client" : "!client",
-      channel_is_local(chan) ?
-        "local" : "!local",
-      channel_is_incoming(chan) ?
-        "incoming" : "outgoing");
+          " * Channel %" PRIu64 " has these marks: %s %s %s "
+          "%s %s %s",
+          (chan->global_identifier),
+          channel_is_bad_for_new_circs(chan) ? "bad_for_new_circs"
+                                             : "!bad_for_new_circs",
+          channel_is_canonical(chan) ? "canonical" : "!canonical",
+          channel_is_canonical_is_reliable(chan) ? "is_canonical_is_reliable"
+                                                 : "!is_canonical_is_reliable",
+          channel_is_client(chan) ? "client" : "!client",
+          channel_is_local(chan) ? "local" : "!local",
+          channel_is_incoming(chan) ? "incoming" : "outgoing");
 
   /* Describe circuits */
   tor_log(severity, LD_GENERAL,
-      " * Channel %"PRIu64 " has %d active circuits out of"
-      " %d in total",
-      (chan->global_identifier),
-      (chan->cmux != NULL) ?
-         circuitmux_num_active_circuits(chan->cmux) : 0,
-      (chan->cmux != NULL) ?
-         circuitmux_num_circuits(chan->cmux) : 0);
+          " * Channel %" PRIu64 " has %d active circuits out of"
+          " %d in total",
+          (chan->global_identifier),
+          (chan->cmux != NULL) ? circuitmux_num_active_circuits(chan->cmux)
+                               : 0,
+          (chan->cmux != NULL) ? circuitmux_num_circuits(chan->cmux) : 0);
 
   /* Describe timestamps */
   tor_log(severity, LD_GENERAL,
-      " * Channel %"PRIu64 " was last used by a "
-      "client at %"PRIu64 " (%"PRIu64 " seconds ago)",
-      (chan->global_identifier),
-      (uint64_t)(chan->timestamp_client),
-      (uint64_t)(now - chan->timestamp_client));
+          " * Channel %" PRIu64 " was last used by a "
+          "client at %" PRIu64 " (%" PRIu64 " seconds ago)",
+          (chan->global_identifier), (uint64_t)(chan->timestamp_client),
+          (uint64_t)(now - chan->timestamp_client));
   tor_log(severity, LD_GENERAL,
-      " * Channel %"PRIu64 " last received a cell "
-      "at %"PRIu64 " (%"PRIu64 " seconds ago)",
-      (chan->global_identifier),
-      (uint64_t)(chan->timestamp_recv),
-      (uint64_t)(now - chan->timestamp_recv));
+          " * Channel %" PRIu64 " last received a cell "
+          "at %" PRIu64 " (%" PRIu64 " seconds ago)",
+          (chan->global_identifier), (uint64_t)(chan->timestamp_recv),
+          (uint64_t)(now - chan->timestamp_recv));
   tor_log(severity, LD_GENERAL,
-      " * Channel %"PRIu64 " last transmitted a cell "
-      "at %"PRIu64 " (%"PRIu64 " seconds ago)",
-      (chan->global_identifier),
-      (uint64_t)(chan->timestamp_xmit),
-      (uint64_t)(now - chan->timestamp_xmit));
+          " * Channel %" PRIu64 " last transmitted a cell "
+          "at %" PRIu64 " (%" PRIu64 " seconds ago)",
+          (chan->global_identifier), (uint64_t)(chan->timestamp_xmit),
+          (uint64_t)(now - chan->timestamp_xmit));
 
   /* Describe counters and rates */
   tor_log(severity, LD_GENERAL,
-      " * Channel %"PRIu64 " has received "
-      "%"PRIu64 " bytes in %"PRIu64 " cells and transmitted "
-      "%"PRIu64 " bytes in %"PRIu64 " cells",
-      (chan->global_identifier),
-      (chan->n_bytes_recved),
-      (chan->n_cells_recved),
-      (chan->n_bytes_xmitted),
-      (chan->n_cells_xmitted));
-  if (now > chan->timestamp_created &&
-      chan->timestamp_created > 0) {
+          " * Channel %" PRIu64 " has received "
+          "%" PRIu64 " bytes in %" PRIu64 " cells and transmitted "
+          "%" PRIu64 " bytes in %" PRIu64 " cells",
+          (chan->global_identifier), (chan->n_bytes_recved),
+          (chan->n_cells_recved), (chan->n_bytes_xmitted),
+          (chan->n_cells_xmitted));
+  if (now > chan->timestamp_created && chan->timestamp_created > 0) {
     if (chan->n_bytes_recved > 0) {
       avg = (double)(chan->n_bytes_recved) / age;
       tor_log(severity, LD_GENERAL,
-          " * Channel %"PRIu64 " has averaged %f "
-          "bytes received per second",
-          (chan->global_identifier), avg);
+              " * Channel %" PRIu64 " has averaged %f "
+              "bytes received per second",
+              (chan->global_identifier), avg);
     }
     if (chan->n_cells_recved > 0) {
       avg = (double)(chan->n_cells_recved) / age;
       if (avg >= 1.0) {
         tor_log(severity, LD_GENERAL,
-            " * Channel %"PRIu64 " has averaged %f "
-            "cells received per second",
-            (chan->global_identifier), avg);
+                " * Channel %" PRIu64 " has averaged %f "
+                "cells received per second",
+                (chan->global_identifier), avg);
       } else if (avg >= 0.0) {
         interval = 1.0 / avg;
         tor_log(severity, LD_GENERAL,
-            " * Channel %"PRIu64 " has averaged %f "
-            "seconds between received cells",
-            (chan->global_identifier), interval);
+                " * Channel %" PRIu64 " has averaged %f "
+                "seconds between received cells",
+                (chan->global_identifier), interval);
       }
     }
     if (chan->n_bytes_xmitted > 0) {
       avg = (double)(chan->n_bytes_xmitted) / age;
       tor_log(severity, LD_GENERAL,
-          " * Channel %"PRIu64 " has averaged %f "
-          "bytes transmitted per second",
-          (chan->global_identifier), avg);
+              " * Channel %" PRIu64 " has averaged %f "
+              "bytes transmitted per second",
+              (chan->global_identifier), avg);
     }
     if (chan->n_cells_xmitted > 0) {
       avg = (double)(chan->n_cells_xmitted) / age;
       if (avg >= 1.0) {
         tor_log(severity, LD_GENERAL,
-            " * Channel %"PRIu64 " has averaged %f "
-            "cells transmitted per second",
-            (chan->global_identifier), avg);
+                " * Channel %" PRIu64 " has averaged %f "
+                "cells transmitted per second",
+                (chan->global_identifier), avg);
       } else if (avg >= 0.0) {
         interval = 1.0 / avg;
         tor_log(severity, LD_GENERAL,
-            " * Channel %"PRIu64 " has averaged %f "
-            "seconds between transmitted cells",
-            (chan->global_identifier), interval);
+                " * Channel %" PRIu64 " has averaged %f "
+                "seconds between transmitted cells",
+                (chan->global_identifier), interval);
       }
     }
   }
@@ -2700,49 +2690,46 @@ channel_listener_dump_statistics(channel_listener_t *chan_l, int severity)
   age = (double)(now - chan_l->timestamp_created);
 
   tor_log(severity, LD_GENERAL,
-      "Channel listener %"PRIu64 " (at %p) with transport %s is in "
-      "state %s (%d)",
-      (chan_l->global_identifier), chan_l,
-      channel_listener_describe_transport(chan_l),
-      channel_listener_state_to_string(chan_l->state), chan_l->state);
+          "Channel listener %" PRIu64 " (at %p) with transport %s is in "
+          "state %s (%d)",
+          (chan_l->global_identifier), chan_l,
+          channel_listener_describe_transport(chan_l),
+          channel_listener_state_to_string(chan_l->state), chan_l->state);
   tor_log(severity, LD_GENERAL,
-      " * Channel listener %"PRIu64 " was created at %"PRIu64
-      " (%"PRIu64 " seconds ago) "
-      "and last active at %"PRIu64 " (%"PRIu64 " seconds ago)",
-      (chan_l->global_identifier),
-      (uint64_t)(chan_l->timestamp_created),
-      (uint64_t)(now - chan_l->timestamp_created),
-      (uint64_t)(chan_l->timestamp_active),
-      (uint64_t)(now - chan_l->timestamp_active));
+          " * Channel listener %" PRIu64 " was created at %" PRIu64
+          " (%" PRIu64 " seconds ago) "
+          "and last active at %" PRIu64 " (%" PRIu64 " seconds ago)",
+          (chan_l->global_identifier), (uint64_t)(chan_l->timestamp_created),
+          (uint64_t)(now - chan_l->timestamp_created),
+          (uint64_t)(chan_l->timestamp_active),
+          (uint64_t)(now - chan_l->timestamp_active));
 
   tor_log(severity, LD_GENERAL,
-      " * Channel listener %"PRIu64 " last accepted an incoming "
-        "channel at %"PRIu64 " (%"PRIu64 " seconds ago) "
-        "and has accepted %"PRIu64 " channels in total",
-        (chan_l->global_identifier),
-        (uint64_t)(chan_l->timestamp_accepted),
-        (uint64_t)(now - chan_l->timestamp_accepted),
-        (uint64_t)(chan_l->n_accepted));
+          " * Channel listener %" PRIu64 " last accepted an incoming "
+          "channel at %" PRIu64 " (%" PRIu64 " seconds ago) "
+          "and has accepted %" PRIu64 " channels in total",
+          (chan_l->global_identifier), (uint64_t)(chan_l->timestamp_accepted),
+          (uint64_t)(now - chan_l->timestamp_accepted),
+          (uint64_t)(chan_l->n_accepted));
 
   /*
    * If it's sensible to do so, get the rate of incoming channels on this
    * listener
    */
-  if (now > chan_l->timestamp_created &&
-      chan_l->timestamp_created > 0 &&
+  if (now > chan_l->timestamp_created && chan_l->timestamp_created > 0 &&
       chan_l->n_accepted > 0) {
     avg = (double)(chan_l->n_accepted) / age;
     if (avg >= 1.0) {
       tor_log(severity, LD_GENERAL,
-          " * Channel listener %"PRIu64 " has averaged %f incoming "
-          "channels per second",
-          (chan_l->global_identifier), avg);
+              " * Channel listener %" PRIu64 " has averaged %f incoming "
+              "channels per second",
+              (chan_l->global_identifier), avg);
     } else if (avg >= 0.0) {
       interval = 1.0 / avg;
       tor_log(severity, LD_GENERAL,
-          " * Channel listener %"PRIu64 " has averaged %f seconds "
-          "between incoming channels",
-          (chan_l->global_identifier), interval);
+              " * Channel listener %" PRIu64 " has averaged %f seconds "
+              "between incoming channels",
+              (chan_l->global_identifier), interval);
     }
   }
 
@@ -2760,7 +2747,8 @@ channel_dump_transport_statistics(channel_t *chan, int severity)
 {
   tor_assert(chan);
 
-  if (chan->dumpstats) chan->dumpstats(chan, severity);
+  if (chan->dumpstats)
+    chan->dumpstats(chan, severity);
 }
 
 /**
@@ -2774,7 +2762,8 @@ channel_listener_dump_transport_statistics(channel_listener_t *chan_l,
 {
   tor_assert(chan_l);
 
-  if (chan_l->dumpstats) chan_l->dumpstats(chan_l, severity);
+  if (chan_l->dumpstats)
+    chan_l->dumpstats(chan_l, severity);
 }
 
 /**
@@ -2807,7 +2796,7 @@ const char *
 channel_get_actual_remote_address(channel_t *chan)
 {
   /* Param 1 indicates the actual description */
-  return chan->get_remote_descr(chan, GRD_FLAG_ORIGINAL|GRD_FLAG_ADDR_ONLY);
+  return chan->get_remote_descr(chan, GRD_FLAG_ORIGINAL | GRD_FLAG_ADDR_ONLY);
 }
 
 /**
@@ -2838,7 +2827,8 @@ channel_get_canonical_remote_descr(channel_t *chan)
  * doesn't let us do this.
  */
 MOCK_IMPL(int,
-channel_get_addr_if_possible,(channel_t *chan, tor_addr_t *addr_out))
+channel_get_addr_if_possible,
+          (channel_t * chan, tor_addr_t *addr_out))
 {
   tor_assert(chan);
   tor_assert(addr_out);
@@ -2846,7 +2836,8 @@ channel_get_addr_if_possible,(channel_t *chan, tor_addr_t *addr_out))
   if (chan->get_remote_addr)
     return chan->get_remote_addr(chan, addr_out);
   /* Else no support, method not implemented */
-  else return 0;
+  else
+    return 0;
 }
 
 /**
@@ -3086,7 +3077,8 @@ channel_num_cells_writeable(channel_t *chan)
   if (chan->state == CHANNEL_STATE_OPEN) {
     /* Query lower layer */
     result = chan->num_cells_writeable(chan);
-    if (result < 0) result = 0;
+    if (result < 0)
+      result = 0;
   } else {
     /* No cells are writeable in any other state */
     result = 0;
@@ -3324,8 +3316,7 @@ channel_num_circuits(channel_t *chan)
 {
   tor_assert(chan);
 
-  return chan->num_n_circuits +
-         chan->num_p_circuits;
+  return chan->num_n_circuits + chan->num_p_circuits;
 }
 
 /**
@@ -3335,9 +3326,9 @@ channel_num_circuits(channel_t *chan)
  * connection_or_set_circid_type().
  */
 MOCK_IMPL(void,
-channel_set_circid_type,(channel_t *chan,
-                         crypto_pk_t *identity_rcvd,
-                         int consider_identity))
+channel_set_circid_type,
+          (channel_t * chan, crypto_pk_t *identity_rcvd,
+           int consider_identity))
 {
   int started_here;
   crypto_pk_t *our_identity;
@@ -3346,7 +3337,7 @@ channel_set_circid_type,(channel_t *chan,
 
   started_here = channel_is_outgoing(chan);
 
-  if (! consider_identity) {
+  if (!consider_identity) {
     if (started_here)
       chan->circ_id_type = CIRC_ID_TYPE_HIGHER;
     else
@@ -3354,8 +3345,8 @@ channel_set_circid_type,(channel_t *chan,
     return;
   }
 
-  our_identity = started_here ?
-    get_tlsclient_identity_key() : get_server_identity_key();
+  our_identity =
+      started_here ? get_tlsclient_identity_key() : get_server_identity_key();
 
   if (identity_rcvd) {
     if (crypto_pk_cmp_keys(our_identity, identity_rcvd) < 0) {
@@ -3371,10 +3362,8 @@ channel_set_circid_type,(channel_t *chan,
 static int
 channel_sort_by_ed25519_identity(const void **a_, const void **b_)
 {
-  const channel_t *a = *a_,
-                  *b = *b_;
-  return fast_memcmp(&a->ed25519_identity.pubkey,
-                     &b->ed25519_identity.pubkey,
+  const channel_t *a = *a_, *b = *b_;
+  return fast_memcmp(&a->ed25519_identity.pubkey, &b->ed25519_identity.pubkey,
                      sizeof(a->ed25519_identity.pubkey));
 }
 
@@ -3393,14 +3382,14 @@ channel_rsa_id_group_set_badness(struct channel_list_t *lst, int force)
 
   /* if there is only one channel, don't bother looping */
   if (PREDICT_LIKELY(!TOR_LIST_NEXT(chan, next_with_same_id))) {
-    connection_or_single_set_badness_(
-            time(NULL), BASE_CHAN_TO_TLS(chan)->conn, force);
+    connection_or_single_set_badness_(time(NULL), BASE_CHAN_TO_TLS(chan)->conn,
+                                      force);
     return;
   }
 
   smartlist_t *channels = smartlist_new();
 
-  TOR_LIST_FOREACH(chan, lst, next_with_same_id) {
+  TOR_LIST_FOREACH (chan, lst, next_with_same_id) {
     if (BASE_CHAN_TO_TLS(chan)->conn) {
       smartlist_add(channels, chan);
     }
@@ -3411,21 +3400,21 @@ channel_rsa_id_group_set_badness(struct channel_list_t *lst, int force)
   const ed25519_public_key_t *common_ed25519_identity = NULL;
   /* it would be more efficient to do a slice, but this case is rare */
   smartlist_t *or_conns = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(channels, channel_t *, channel) {
+  SMARTLIST_FOREACH_BEGIN (channels, channel_t *, channel) {
     tor_assert(channel); // Suppresses some compiler warnings.
 
     if (!common_ed25519_identity)
       common_ed25519_identity = &channel->ed25519_identity;
 
-    if (! ed25519_pubkey_eq(&channel->ed25519_identity,
-                            common_ed25519_identity)) {
-        connection_or_group_set_badness_(or_conns, force);
-        smartlist_clear(or_conns);
-        common_ed25519_identity = &channel->ed25519_identity;
+    if (!ed25519_pubkey_eq(&channel->ed25519_identity,
+                           common_ed25519_identity)) {
+      connection_or_group_set_badness_(or_conns, force);
+      smartlist_clear(or_conns);
+      common_ed25519_identity = &channel->ed25519_identity;
     }
 
     smartlist_add(or_conns, BASE_CHAN_TO_TLS(channel)->conn);
-  } SMARTLIST_FOREACH_END(channel);
+  } SMARTLIST_FOREACH_END (channel);
 
   connection_or_group_set_badness_(or_conns, force);
 
@@ -3458,7 +3447,7 @@ channel_update_bad_for_new_circs(const char *digest, int force)
 
   /* no digest; just look at everything. */
   channel_idmap_entry_t **iter;
-  HT_FOREACH(iter, channel_idmap, &channel_identity_map) {
+  HT_FOREACH (iter, channel_idmap, &channel_identity_map) {
     channel_rsa_id_group_set_badness(&(*iter)->channel_list, force);
   }
 }

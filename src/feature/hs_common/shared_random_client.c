@@ -67,9 +67,8 @@ get_start_time_of_current_round(void)
   /* Now roll back next_start by a voting interval to find the start time of
      the current round. */
   time_t curr_start = voting_schedule_get_start_of_next_interval(
-                                     next_start - voting_interval - 1,
-                                     voting_interval,
-                                     options->TestingV3AuthVotingStartOffset);
+      next_start - voting_interval - 1, voting_interval,
+      options->TestingV3AuthVotingStartOffset);
   return curr_start;
 }
 
@@ -90,11 +89,11 @@ sr_srv_encode(char *dst, size_t dst_len, const sr_srv_t *srv)
   tor_assert(srv);
   tor_assert(dst_len >= sizeof(buf));
 
-  ret = base64_encode(buf, sizeof(buf), (const char *) srv->value,
+  ret = base64_encode(buf, sizeof(buf), (const char *)srv->value,
                       sizeof(srv->value), 0);
   /* Always expect the full length without the NULL byte. */
   tor_assert(ret == (sizeof(buf) - 1));
-  tor_assert(ret <= (int) dst_len);
+  tor_assert(ret <= (int)dst_len);
   strlcpy(dst, buf, dst_len);
 }
 
@@ -198,8 +197,8 @@ sr_parse_srv(const smartlist_t *args)
   }
 
   /* First argument is the number of reveal values */
-  num_reveals = tor_parse_uint64(smartlist_get(args, 0),
-                                 10, 0, UINT64_MAX, &ok, NULL);
+  num_reveals =
+      tor_parse_uint64(smartlist_get(args, 0), 10, 0, UINT64_MAX, &ok, NULL);
   if (!ok) {
     goto end;
   }
@@ -214,14 +213,14 @@ sr_parse_srv(const smartlist_t *args)
   /* We subtract one byte from the srclen because the function ignores the
    * '=' character in the given buffer. This is broken but it's a documented
    * behavior of the implementation. */
-  ret = base64_decode((char *) srv->value, sizeof(srv->value), value,
+  ret = base64_decode((char *)srv->value, sizeof(srv->value), value,
                       SR_SRV_VALUE_BASE64_LEN - 1);
   if (ret != sizeof(srv->value)) {
     tor_free(srv);
     srv = NULL;
     goto end;
   }
- end:
+end:
   return srv;
 }
 
@@ -254,9 +253,11 @@ sr_state_get_start_time_of_current_protocol_run(void)
      protocol run */
   time_t time_elapsed_since_start_of_run = curr_round_slot * voting_interval;
 
-  log_debug(LD_GENERAL, "Current SRV proto run: Start of current round: %u. "
-            "Time elapsed: %u (%d)", (unsigned) beginning_of_curr_round,
-            (unsigned) time_elapsed_since_start_of_run, voting_interval);
+  log_debug(LD_GENERAL,
+            "Current SRV proto run: Start of current round: %u. "
+            "Time elapsed: %u (%d)",
+            (unsigned)beginning_of_curr_round,
+            (unsigned)time_elapsed_since_start_of_run, voting_interval);
 
   return beginning_of_curr_round - time_elapsed_since_start_of_run;
 }
@@ -267,7 +268,7 @@ time_t
 sr_state_get_start_time_of_previous_protocol_run(void)
 {
   time_t start_time_of_current_run =
-    sr_state_get_start_time_of_current_protocol_run();
+      sr_state_get_start_time_of_current_protocol_run();
 
   /* We get the start time of previous protocol run, by getting the start time
    * of current run and the subtracting a full protocol run from that. */

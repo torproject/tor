@@ -24,33 +24,33 @@
 #include <stdio.h>
 
 #ifdef HAVE_STRING_H
-#include <string.h>
+#  include <string.h>
 #endif
 
 #ifdef HAVE_ERRNO_H
-#include <errno.h>
+#  include <errno.h>
 #endif
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
 #ifdef HAVE_FCNTL_H
-#include <fcntl.h>
+#  include <fcntl.h>
 #endif
 
 #if defined(HAVE_SYS_PRCTL_H) && defined(__linux__)
-#include <sys/prctl.h>
+#  include <sys/prctl.h>
 #endif
 
 #if HAVE_SIGNAL_H
-#include <signal.h>
+#  include <signal.h>
 #endif
 
 #ifndef _WIN32
 
 /** Maximum number of file descriptors, if we cannot get it via sysconf() */
-#define DEFAULT_MAX_FD 256
+#  define DEFAULT_MAX_FD 256
 
 /** Internal state for Unix handles. */
 struct process_unix_handle_t {
@@ -103,7 +103,7 @@ process_unix_new(void)
 void
 process_unix_free_(process_unix_t *unix_process)
 {
-  if (! unix_process)
+  if (!unix_process)
     return;
 
   /* Clean up our waitpid callback. */
@@ -189,33 +189,33 @@ process_unix_exec(process_t *process)
     return PROCESS_STATUS_ERROR;
   }
 
-#ifdef _SC_OPEN_MAX
+#  ifdef _SC_OPEN_MAX
   if (-1 == max_fd) {
     max_fd = (int)sysconf(_SC_OPEN_MAX);
 
     if (max_fd == -1) {
       max_fd = DEFAULT_MAX_FD;
-      log_warn(LD_PROCESS,
-               "Cannot find maximum file descriptor, assuming: %d", max_fd);
+      log_warn(LD_PROCESS, "Cannot find maximum file descriptor, assuming: %d",
+               max_fd);
     }
   }
-#else /* !defined(_SC_OPEN_MAX) */
+#  else /* !defined(_SC_OPEN_MAX) */
   max_fd = DEFAULT_MAX_FD;
-#endif /* defined(_SC_OPEN_MAX) */
+#  endif /* defined(_SC_OPEN_MAX) */
 
   pid = fork();
 
   if (0 == pid) {
     /* This code is running in the child process context. */
 
-#if defined(HAVE_SYS_PRCTL_H) && defined(__linux__)
+#  if defined(HAVE_SYS_PRCTL_H) && defined(__linux__)
     /* Attempt to have the kernel issue a SIGTERM if the parent
      * goes away. Certain attributes of the binary being execve()ed
      * will clear this during the execve() call, but it's better
      * than nothing.
      */
     prctl(PR_SET_PDEATHSIG, SIGTERM);
-#endif /* defined(HAVE_SYS_PRCTL_H) && defined(__linux__) */
+#  endif /* defined(HAVE_SYS_PRCTL_H) && defined(__linux__) */
 
     /* Link process stdout to the write end of the pipe. */
     retval = dup2(stdout_pipe[1], STDOUT_FILENO);
@@ -259,15 +259,15 @@ process_unix_exec(process_t *process)
     tor_free(argv);
     process_environment_free(env);
 
- error:
+  error:
     fprintf(stderr, "Error from child process: %s", strerror(errno));
     _exit(1);
   }
 
   /* We are in the parent process. */
   if (-1 == pid) {
-    log_warn(LD_PROCESS,
-             "Failed to create child process: %s", strerror(errno));
+    log_warn(LD_PROCESS, "Failed to create child process: %s",
+             strerror(errno));
 
     /** Cleanup standard in pipe. */
     close(stdin_pipe[0]);
@@ -288,9 +288,8 @@ process_unix_exec(process_t *process)
   unix_process->pid = pid;
 
   /* Setup waitpid callbacks. */
-  unix_process->waitpid = set_waitpid_callback(pid,
-                                               process_unix_waitpid_callback,
-                                               process);
+  unix_process->waitpid =
+      set_waitpid_callback(pid, process_unix_waitpid_callback, process);
 
   /* Handle standard out. */
   unix_process->stdout_handle.fd = stdout_pipe[0];
@@ -321,20 +320,14 @@ process_unix_exec(process_t *process)
   }
 
   /* Setup our handles. */
-  process_unix_setup_handle(process,
-                            &unix_process->stdout_handle,
-                            EV_READ|EV_PERSIST,
-                            stdout_read_callback);
+  process_unix_setup_handle(process, &unix_process->stdout_handle,
+                            EV_READ | EV_PERSIST, stdout_read_callback);
 
-  process_unix_setup_handle(process,
-                            &unix_process->stderr_handle,
-                            EV_READ|EV_PERSIST,
-                            stderr_read_callback);
+  process_unix_setup_handle(process, &unix_process->stderr_handle,
+                            EV_READ | EV_PERSIST, stderr_read_callback);
 
-  process_unix_setup_handle(process,
-                            &unix_process->stdin_handle,
-                            EV_WRITE|EV_PERSIST,
-                            stdin_write_callback);
+  process_unix_setup_handle(process, &unix_process->stdin_handle,
+                            EV_WRITE | EV_PERSIST, stdin_write_callback);
 
   /* Start reading from standard out and standard error. */
   process_unix_start_reading(&unix_process->stdout_handle);
@@ -363,13 +356,12 @@ process_unix_terminate(process_t *process)
   ret = kill(unix_process->pid, SIGTERM);
 
   if (ret == -1) {
-    log_warn(LD_PROCESS, "Unable to terminate process: %s",
-             strerror(errno));
+    log_warn(LD_PROCESS, "Unable to terminate process: %s", strerror(errno));
     success = false;
   }
 
   /* Close all our FD's. */
-  if (! process_unix_close_file_descriptors(unix_process))
+  if (!process_unix_close_file_descriptors(unix_process))
     success = false;
 
   return success;
@@ -402,7 +394,7 @@ process_unix_write(process_t *process, buf_t *buffer)
    * currently getting file descriptor events from the kernel, we tell the
    * kernel to start notifying us about when we can write to our file
    * descriptor and return. */
-  if (buffer_flush_len > 0 && ! unix_process->stdin_handle.is_writing) {
+  if (buffer_flush_len > 0 && !unix_process->stdin_handle.is_writing) {
     process_unix_start_writing(&unix_process->stdin_handle);
     return 0;
   }
@@ -431,8 +423,7 @@ process_unix_read_stdout(process_t *process, buf_t *buffer)
 
   process_unix_t *unix_process = process_get_unix_process(process);
 
-  return process_unix_read_handle(process,
-                                  &unix_process->stdout_handle,
+  return process_unix_read_handle(process, &unix_process->stdout_handle,
                                   buffer);
 }
 
@@ -446,8 +437,7 @@ process_unix_read_stderr(process_t *process, buf_t *buffer)
 
   process_unix_t *unix_process = process_get_unix_process(process);
 
-  return process_unix_read_handle(process,
-                                  &unix_process->stderr_handle,
+  return process_unix_read_handle(process, &unix_process->stderr_handle,
                                   buffer);
 }
 
@@ -507,8 +497,7 @@ process_unix_start_reading(process_unix_handle_t *handle)
   tor_assert(handle);
 
   if (event_add(handle->event, NULL))
-    log_warn(LD_PROCESS,
-             "Unable to add libevent event for handle.");
+    log_warn(LD_PROCESS, "Unable to add libevent event for handle.");
 }
 
 /** This function tells libevent that we are no longer interested in receiving
@@ -522,8 +511,7 @@ process_unix_stop_reading(process_unix_handle_t *handle)
     return;
 
   if (event_del(handle->event))
-    log_warn(LD_PROCESS,
-             "Unable to delete libevent event for handle.");
+    log_warn(LD_PROCESS, "Unable to delete libevent event for handle.");
 }
 
 /** This function tells libevent that we are interested in receiving write
@@ -534,8 +522,7 @@ process_unix_start_writing(process_unix_handle_t *handle)
   tor_assert(handle);
 
   if (event_add(handle->event, NULL))
-    log_warn(LD_PROCESS,
-             "Unable to add libevent event for handle.");
+    log_warn(LD_PROCESS, "Unable to add libevent event for handle.");
 
   handle->is_writing = true;
 }
@@ -551,8 +538,7 @@ process_unix_stop_writing(process_unix_handle_t *handle)
     return;
 
   if (event_del(handle->event))
-    log_warn(LD_PROCESS,
-             "Unable to delete libevent event for handle.");
+    log_warn(LD_PROCESS, "Unable to delete libevent event for handle.");
 
   handle->is_writing = false;
 }
@@ -585,10 +571,8 @@ process_unix_waitpid_callback(int status, void *data)
  * to ensure that <b>callback</b> is called whenever we have events on the
  * given <b>handle</b>. */
 STATIC void
-process_unix_setup_handle(process_t *process,
-                          process_unix_handle_t *handle,
-                          short flags,
-                          event_callback_fn callback)
+process_unix_setup_handle(process_t *process, process_unix_handle_t *handle,
+                          short flags, event_callback_fn callback)
 {
   tor_assert(process);
   tor_assert(handle);
@@ -601,18 +585,14 @@ process_unix_setup_handle(process_t *process,
   }
 
   /* Setup libevent event. */
-  handle->event = tor_event_new(tor_libevent_get_base(),
-                                handle->fd,
-                                flags,
-                                callback,
-                                process);
+  handle->event = tor_event_new(tor_libevent_get_base(), handle->fd, flags,
+                                callback, process);
 }
 
 /** This function reads data from the given <b>handle</b> and puts it into
  * <b>buffer</b>. Returns the number of bytes read this way. */
 STATIC int
-process_unix_read_handle(process_t *process,
-                         process_unix_handle_t *handle,
+process_unix_read_handle(process_t *process, process_unix_handle_t *handle,
                          buf_t *buffer)
 {
   tor_assert(process);
@@ -623,15 +603,10 @@ process_unix_read_handle(process_t *process,
   int eof = 0;
   int error = 0;
 
-  ret = buf_read_from_pipe(buffer,
-                           handle->fd,
-                           PROCESS_MAX_READ,
-                           &eof,
-                           &error);
+  ret = buf_read_from_pipe(buffer, handle->fd, PROCESS_MAX_READ, &eof, &error);
 
   if (error)
-    log_warn(LD_PROCESS,
-             "Unable to read data: %s", strerror(error));
+    log_warn(LD_PROCESS, "Unable to read data: %s", strerror(error));
 
   if (eof) {
     handle->reached_eof = true;
@@ -653,10 +628,10 @@ process_unix_close_file_descriptors(process_unix_t *unix_process)
 
   /* Stop reading and writing before we close() our
    * file descriptors. */
-  if (! unix_process->stdout_handle.reached_eof)
+  if (!unix_process->stdout_handle.reached_eof)
     process_unix_stop_reading(&unix_process->stdout_handle);
 
-  if (! unix_process->stderr_handle.reached_eof)
+  if (!unix_process->stderr_handle.reached_eof)
     process_unix_stop_reading(&unix_process->stderr_handle);
 
   if (unix_process->stdin_handle.is_writing)

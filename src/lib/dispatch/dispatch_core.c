@@ -60,7 +60,7 @@ dispatch_free_(dispatch_t *d)
   size_t n_queues = d->n_queues;
   for (size_t i = 0; i < n_queues; ++i) {
     msg_t *m, *mtmp;
-    TOR_SIMPLEQ_FOREACH_SAFE(m, &d->queues[i].queue, next, mtmp) {
+    TOR_SIMPLEQ_FOREACH_SAFE (m, &d->queues[i].queue, next, mtmp) {
       dispatch_free_msg(d, m);
     }
   }
@@ -75,7 +75,7 @@ dispatch_free_(dispatch_t *d)
   tor_free(d->queues);
 
   // This is the only time we will treat d->cfg as non-const.
-  //dispatch_cfg_free_((dispatch_items_t *) d->cfg);
+  // dispatch_cfg_free_((dispatch_items_t *) d->cfg);
 
   tor_free(d);
 }
@@ -85,8 +85,8 @@ dispatch_free_(dispatch_t *d)
  * <b>chan</b> becomes nonempty.  Return 0 on success, -1 on error.
  **/
 int
-dispatch_set_alert_fn(dispatch_t *d, channel_id_t chan,
-                      dispatch_alertfn_t fn, void *userdata)
+dispatch_set_alert_fn(dispatch_t *d, channel_id_t chan, dispatch_alertfn_t fn,
+                      void *userdata)
 {
   if (BUG(chan >= d->n_queues))
     return -1;
@@ -108,12 +108,8 @@ dispatch_set_alert_fn(dispatch_t *d, channel_id_t chan,
  * consistency.
  **/
 int
-dispatch_send(dispatch_t *d,
-              subsys_id_t sender,
-              channel_id_t channel,
-              message_id_t msg,
-              msg_type_id_t type,
-              msg_aux_data_t auxdata)
+dispatch_send(dispatch_t *d, subsys_id_t sender, channel_id_t channel,
+              message_id_t msg, msg_type_id_t type, msg_aux_data_t auxdata)
 {
   if (!d->table[msg]) {
     /* Fast path: nobody wants this data. */
@@ -154,7 +150,7 @@ dispatch_send_msg(dispatch_t *d, msg_t *m)
   }
 
   return dispatch_send_msg_unchecked(d, m);
- err:
+err:
   /* Probably it isn't safe to free m, since type could be wrong. */
   return -1;
 }
@@ -183,11 +179,8 @@ dispatch_send_msg_unchecked(dispatch_t *d, msg_t *m)
 
   if (debug_logging_enabled()) {
     char *arg = dispatch_fmt_msg_data(d, m);
-    log_debug(LD_MESG,
-              "Queued: %s (%s) from %s, on %s.",
-              get_message_id_name(m->msg),
-              arg,
-              get_subsys_id_name(m->sender),
+    log_debug(LD_MESG, "Queued: %s (%s) from %s, on %s.",
+              get_message_id_name(m->msg), arg, get_subsys_id_name(m->sender),
               get_channel_id_name(m->channel));
     tor_free(arg);
   }
@@ -213,17 +206,14 @@ dispatcher_run_msg_cbs(const dispatch_t *d, msg_t *m)
 
   if (debug_logging_enabled()) {
     char *arg = dispatch_fmt_msg_data(d, m);
-    log_debug(LD_MESG,
-              "Delivering: %s (%s) from %s, on %s:",
-              get_message_id_name(m->msg),
-              arg,
-              get_subsys_id_name(m->sender),
+    log_debug(LD_MESG, "Delivering: %s (%s) from %s, on %s:",
+              get_message_id_name(m->msg), arg, get_subsys_id_name(m->sender),
               get_channel_id_name(m->channel));
     tor_free(arg);
   }
 
   int i;
-  for (i=0; i < n_fns; ++i) {
+  for (i = 0; i < n_fns; ++i) {
     if (ent->rcv[i].enabled) {
       log_debug(LD_MESG, "  Delivering to %s.",
                 get_subsys_id_name(ent->rcv[i].sys));

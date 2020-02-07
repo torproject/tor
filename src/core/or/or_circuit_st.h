@@ -50,7 +50,7 @@ struct or_circuit_t {
   struct or_circuit_t *rend_splice;
 
   /** Stores KH for the handshake. */
-  char rend_circ_nonce[DIGEST_LEN];/* KH in tor-spec.txt */
+  char rend_circ_nonce[DIGEST_LEN]; /* KH in tor-spec.txt */
 
   /** How many more relay_early cells can we send on this circuit, according
    * to the specification? */
@@ -83,4 +83,3 @@ struct or_circuit_t {
 };
 
 #endif /* !defined(OR_CIRCUIT_ST_H) */
-

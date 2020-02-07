@@ -17,9 +17,8 @@ mock_dump_desc__nodump(const char *desc, const char *type)
 }
 
 static int
-mock_router_produce_hash_final__nohash(char *digest,
-                                       const char *start, size_t len,
-                                       digest_algorithm_t alg)
+mock_router_produce_hash_final__nohash(char *digest, const char *start,
+                                       size_t len, digest_algorithm_t alg)
 {
   (void)start;
   (void)len;
@@ -51,11 +50,10 @@ int
 fuzz_main(const uint8_t *data, size_t sz)
 {
   extrainfo_t *ei;
-  const char *str = (const char*) data;
+  const char *str = (const char *)data;
   int again = 0;
-  ei = extrainfo_parse_entry_from_string((const char *)str,
-                                         str+sz,
-                                         0, NULL, &again);
+  ei = extrainfo_parse_entry_from_string((const char *)str, str + sz, 0, NULL,
+                                         &again);
   if (ei) {
     log_debug(LD_GENERAL, "Parsing okay");
     extrainfo_free(ei);
@@ -64,4 +62,3 @@ fuzz_main(const uint8_t *data, size_t sz)
   }
   return 0;
 }
-

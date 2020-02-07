@@ -14,10 +14,10 @@
 #include "lib/log/util_bug.h"
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #ifdef _WIN32
-#include <windows.h>
+#  include <windows.h>
 #endif
 
 #include <stdlib.h>
@@ -35,16 +35,16 @@ compute_num_cpus_impl(void)
   else
     return -1;
 #elif defined(HAVE_SYSCONF)
-#ifdef _SC_NPROCESSORS_CONF
+#  ifdef _SC_NPROCESSORS_CONF
   long cpus_conf = sysconf(_SC_NPROCESSORS_CONF);
-#else
+#  else
   long cpus_conf = -1;
-#endif
-#ifdef _SC_NPROCESSORS_ONLN
+#  endif
+#  ifdef _SC_NPROCESSORS_ONLN
   long cpus_onln = sysconf(_SC_NPROCESSORS_ONLN);
-#else
+#  else
   long cpus_onln = -1;
-#endif
+#  endif
   long cpus = -1;
 
   if (cpus_conf > 0 && cpus_onln < 0) {
@@ -53,7 +53,8 @@ compute_num_cpus_impl(void)
     cpus = cpus_onln;
   } else if (cpus_onln > 0 && cpus_conf > 0) {
     if (cpus_onln < cpus_conf) {
-      log_notice(LD_GENERAL, "I think we have %ld CPUS, but only %ld of them "
+      log_notice(LD_GENERAL,
+                 "I think we have %ld CPUS, but only %ld of them "
                  "are available. Telling Tor to only use %ld. You can over"
                  "ride this with the NumCPUs option",
                  cpus_conf, cpus_onln, cpus_onln);
@@ -86,7 +87,8 @@ compute_num_cpus(void)
     tor_assert(num_cpus != -2);
     if (num_cpus > MAX_DETECTABLE_CPUS) {
       /* LCOV_EXCL_START */
-      log_notice(LD_GENERAL, "Wow!  I detected that you have %d CPUs. I "
+      log_notice(LD_GENERAL,
+                 "Wow!  I detected that you have %d CPUs. I "
                  "will not autodetect any more than %d, though.  If you "
                  "want to configure more, set NumCPUs in your torrc",
                  num_cpus, MAX_DETECTABLE_CPUS);

@@ -32,11 +32,9 @@ int routerset_contains_bridge(const routerset_t *set,
 int routerset_contains_node(const routerset_t *set, const node_t *node);
 
 void routerset_get_all_nodes(smartlist_t *out, const routerset_t *routerset,
-                             const routerset_t *excludeset,
-                             int running_only);
+                             const routerset_t *excludeset, int running_only);
 int routerset_add_unknown_ccs(routerset_t **setp, int only_if_some_cc_set);
-void routerset_subtract_nodes(smartlist_t *out,
-                                const routerset_t *routerset);
+void routerset_subtract_nodes(smartlist_t *out, const routerset_t *routerset);
 
 char *routerset_to_string(const routerset_t *routerset);
 int routerset_equal(const routerset_t *old, const routerset_t *new);
@@ -49,13 +47,12 @@ extern const struct var_type_def_t ROUTERSET_type_defn;
 typedef routerset_t *config_decl_ROUTERSET;
 
 #ifdef ROUTERSET_PRIVATE
-#include "lib/container/bitarray.h"
+#  include "lib/container/bitarray.h"
 
-STATIC char * routerset_get_countryname(const char *c);
+STATIC char *routerset_get_countryname(const char *c);
 STATIC int routerset_contains(const routerset_t *set, const tor_addr_t *addr,
-                   uint16_t orport,
-                   const char *nickname, const char *id_digest,
-                   country_t country);
+                              uint16_t orport, const char *nickname,
+                              const char *id_digest, country_t country);
 
 /** A routerset specifies constraints on a set of possible routerinfos, based
  * on their names, identities, or addresses.  It is optimized for determining

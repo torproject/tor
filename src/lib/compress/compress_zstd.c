@@ -24,17 +24,17 @@
 /* This is a lie, but we make sure it doesn't get us in trouble by wrapping
  * all invocations of zstd's static-only functions in a check to make sure
  * that the compile-time version matches the run-time version. */
-#define ZSTD_STATIC_LINKING_ONLY
+#  define ZSTD_STATIC_LINKING_ONLY
 #endif /* defined(ENABLE_ZSTD_ADVANCED_APIS) */
 
 #ifdef HAVE_ZSTD
-#ifdef HAVE_CFLAG_WUNUSED_CONST_VARIABLE
+#  ifdef HAVE_CFLAG_WUNUSED_CONST_VARIABLE
 DISABLE_GCC_WARNING("-Wunused-const-variable")
-#endif
-#include <zstd.h>
-#ifdef HAVE_CFLAG_WUNUSED_CONST_VARIABLE
+#  endif
+#  include <zstd.h>
+#  ifdef HAVE_CFLAG_WUNUSED_CONST_VARIABLE
 ENABLE_GCC_WARNING("-Wunused-const-variable")
-#endif
+#  endif
 #endif /* defined(HAVE_ZSTD) */
 
 /** Total number of bytes allocated for Zstandard state. */
@@ -46,11 +46,14 @@ static int
 memory_level(compression_level_t level)
 {
   switch (level) {
-    default:
-    case BEST_COMPRESSION:
-    case HIGH_COMPRESSION: return 9;
-    case MEDIUM_COMPRESSION: return 8;
-    case LOW_COMPRESSION: return 7;
+  default:
+  case BEST_COMPRESSION:
+  case HIGH_COMPRESSION:
+    return 9;
+  case MEDIUM_COMPRESSION:
+    return 8;
+  case LOW_COMPRESSION:
+    return 7;
   }
 }
 #endif /* defined(HAVE_ZSTD) */
@@ -71,11 +74,8 @@ tor_zstd_method_supported(void)
 static void
 tor_zstd_format_version(char *buf, size_t buflen, unsigned version_number)
 {
-  tor_snprintf(buf, buflen,
-               "%u.%u.%u",
-               version_number / 10000 % 100,
-               version_number / 100 % 100,
-               version_number % 100);
+  tor_snprintf(buf, buflen, "%u.%u.%u", version_number / 10000 % 100,
+               version_number / 100 % 100, version_number % 100);
 }
 #endif /* defined(HAVE_ZSTD) */
 
@@ -119,11 +119,11 @@ int
 tor_zstd_can_use_static_apis(void)
 {
 #if defined(ZSTD_STATIC_LINKING_ONLY) && defined(HAVE_ZSTD)
-#ifdef TOR_UNIT_TESTS
+#  ifdef TOR_UNIT_TESTS
   if (static_apis_disable_for_testing) {
     return 0;
   }
-#endif
+#  endif
   return (ZSTD_VERSION_NUMBER == ZSTD_versionNumber());
 #else /* !(defined(ZSTD_STATIC_LINKING_ONLY) && defined(HAVE_ZSTD)) */
   return 0;
@@ -224,20 +224,20 @@ tor_zstd_state_size_precalc_fake(int compress, int preset)
 static size_t
 tor_zstd_state_size_precalc(int compress, int preset)
 {
-#ifdef ZSTD_STATIC_LINKING_ONLY
+#  ifdef ZSTD_STATIC_LINKING_ONLY
   if (tor_zstd_can_use_static_apis()) {
     if (compress) {
-#ifdef HAVE_ZSTD_ESTIMATECSTREAMSIZE
+#    ifdef HAVE_ZSTD_ESTIMATECSTREAMSIZE
       return ZSTD_estimateCStreamSize(preset);
-#endif
+#    endif
     } else {
-#ifdef HAVE_ZSTD_ESTIMATEDCTXSIZE
+#    ifdef HAVE_ZSTD_ESTIMATEDCTXSIZE
       /* Could use DStream, but that takes a windowSize. */
       return ZSTD_estimateDCtxSize();
-#endif
+#    endif
     }
   }
-#endif /* defined(ZSTD_STATIC_LINKING_ONLY) */
+#  endif /* defined(ZSTD_STATIC_LINKING_ONLY) */
   return tor_zstd_state_size_precalc_fake(compress, preset);
 }
 #endif /* defined(HAVE_ZSTD) */
@@ -246,8 +246,7 @@ tor_zstd_state_size_precalc(int compress, int preset)
  * <b>method</b>. If <b>compress</b>, it's for compression; otherwise it's for
  * decompression. */
 tor_zstd_compress_state_t *
-tor_zstd_compress_new(int compress,
-                      compress_method_t method,
+tor_zstd_compress_new(int compress, compress_method_t method,
                       compression_level_t level)
 {
   tor_assert(method == ZSTD_METHOD);
@@ -267,7 +266,7 @@ tor_zstd_compress_new(int compress,
     if (result->u.compress_stream == NULL) {
       // LCOV_EXCL_START
       log_warn(LD_GENERAL, "Error while creating Zstandard compression "
-               "stream");
+                           "stream");
       goto err;
       // LCOV_EXCL_STOP
     }
@@ -287,7 +286,7 @@ tor_zstd_compress_new(int compress,
     if (result->u.decompress_stream == NULL) {
       // LCOV_EXCL_START
       log_warn(LD_GENERAL, "Error while creating Zstandard decompression "
-               "stream");
+                           "stream");
       goto err;
       // LCOV_EXCL_STOP
     }
@@ -306,7 +305,7 @@ tor_zstd_compress_new(int compress,
   atomic_counter_add(&total_zstd_allocation, result->allocation);
   return result;
 
- err:
+err:
   // LCOV_EXCL_START
   if (compress) {
     ZSTD_freeCStream(result->u.compress_stream);
@@ -338,9 +337,8 @@ tor_zstd_compress_new(int compress,
  * Return TOR_COMPRESS_ERROR if the stream is corrupt.
  */
 tor_compress_output_t
-tor_zstd_compress_process(tor_zstd_compress_state_t *state,
-                          char **out, size_t *out_len,
-                          const char **in, size_t *in_len,
+tor_zstd_compress_process(tor_zstd_compress_state_t *state, char **out,
+                          size_t *out_len, const char **in, size_t *in_len,
                           int finish)
 {
 #ifdef HAVE_ZSTD
@@ -350,22 +348,21 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
   tor_assert(*in_len <= UINT_MAX);
   tor_assert(*out_len <= UINT_MAX);
 
-  ZSTD_inBuffer input = { *in, *in_len, 0 };
-  ZSTD_outBuffer output = { *out, *out_len, 0 };
+  ZSTD_inBuffer input = {*in, *in_len, 0};
+  ZSTD_outBuffer output = {*out, *out_len, 0};
 
   if (BUG(finish == 0 && state->have_called_end)) {
     finish = 1;
   }
 
   if (state->compress) {
-    if (! state->have_called_end)
-      retval = ZSTD_compressStream(state->u.compress_stream,
-                                   &output, &input);
+    if (!state->have_called_end)
+      retval = ZSTD_compressStream(state->u.compress_stream, &output, &input);
     else
       retval = 0;
   } else {
-    retval = ZSTD_decompressStream(state->u.decompress_stream,
-                                   &output, &input);
+    retval =
+        ZSTD_decompressStream(state->u.decompress_stream, &output, &input);
   }
 
   state->input_so_far += input.pos;
@@ -376,9 +373,8 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
   *in = (char *)input.src + input.pos;
   *in_len = input.size - input.pos;
 
-  if (! state->compress &&
-      tor_compress_is_compression_bomb(state->input_so_far,
-                                       state->output_so_far)) {
+  if (!state->compress && tor_compress_is_compression_bomb(
+                              state->input_so_far, state->output_so_far)) {
     log_warn(LD_DIR, "Possible compression bomb; abandoning stream.");
     return TOR_COMPRESS_ERROR;
   }
@@ -426,7 +422,8 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
     *out_len = output.size - output.pos;
 
     if (ZSTD_isError(retval)) {
-      log_warn(LD_GENERAL, "Zstandard compression unable to write "
+      log_warn(LD_GENERAL,
+               "Zstandard compression unable to write "
                "epilogue: %s.",
                ZSTD_getErrorName(retval));
       return TOR_COMPRESS_ERROR;
@@ -449,7 +446,7 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
     // Don't check out_len, it might have some space left if the next output
     // chunk is larger than the remaining space
     else if (*in_len > 0)
-      return  TOR_COMPRESS_BUFFER_FULL;
+      return TOR_COMPRESS_BUFFER_FULL;
     else
       return TOR_COMPRESS_OK;
   }
@@ -514,7 +511,7 @@ void
 tor_zstd_warn_if_version_mismatched(void)
 {
 #if defined(HAVE_ZSTD) && defined(ENABLE_ZSTD_ADVANCED_APIS)
-  if (! tor_zstd_can_use_static_apis()) {
+  if (!tor_zstd_can_use_static_apis()) {
     char header_version[VERSION_STR_MAX_LEN];
     char runtime_version[VERSION_STR_MAX_LEN];
     tor_zstd_format_version(header_version, sizeof(header_version),

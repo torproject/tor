@@ -37,10 +37,10 @@ static void
 mock_circuit_mark_for_close(circuit_t *circ, int reason, int line,
                             const char *file)
 {
-  (void) circ;
-  (void) reason;
-  (void) line;
-  (void) file;
+  (void)circ;
+  (void)reason;
+  (void)line;
+  (void)file;
   marked_for_close = 1;
   return;
 }
@@ -119,7 +119,7 @@ subtest_fourhop_circuit(struct timeval circ_start_time, int should_timeout)
   tt_int_op(get_circuit_build_times()->total_build_times, OP_EQ,
             !should_timeout);
 
- done:
+done:
   return or_circ;
 }
 
@@ -189,18 +189,17 @@ test_circuitstats_hoplen(void *arg)
   circuit_expire_building();
   tt_int_op(get_circuit_build_times()->total_build_times, OP_EQ, 1);
 
- done:
+done:
   UNMOCK(circuit_mark_for_close_);
   circuit_free_(TO_CIRCUIT(threehop));
   circuit_free_(TO_CIRCUIT(fourhop));
   circuit_build_times_free_timeouts(get_circuit_build_times_mutable());
 }
 
-#define TEST_CIRCUITSTATS(name, flags) \
-    { #name, test_##name, (flags), &helper_pubsub_setup, NULL }
+#define TEST_CIRCUITSTATS(name, flags)                      \
+  {                                                         \
+#    name, test_##name, (flags), &helper_pubsub_setup, NULL \
+  }
 
 struct testcase_t circuitstats_tests[] = {
-  TEST_CIRCUITSTATS(circuitstats_hoplen, TT_FORK),
-  END_OF_TESTCASES
-};
-
+    TEST_CIRCUITSTATS(circuitstats_hoplen, TT_FORK), END_OF_TESTCASES};

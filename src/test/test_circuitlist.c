@@ -36,7 +36,7 @@ static struct {
 
 static void
 circuitmux_attach_mock(circuitmux_t *cmux, circuit_t *circ,
-                         cell_direction_t dir)
+                       cell_direction_t dir)
 {
   ++cam.ncalls;
   cam.cmux = cmux;
@@ -58,19 +58,21 @@ circuitmux_detach_mock(circuitmux_t *cmux, circuit_t *circ)
   cdm.circ = circ;
 }
 
-#define GOT_CMUX_ATTACH(mux_, circ_, dir_) do {  \
-    tt_int_op(cam.ncalls, OP_EQ, 1);                \
-    tt_ptr_op(cam.cmux, OP_EQ, (mux_));             \
-    tt_ptr_op(cam.circ, OP_EQ, (circ_));            \
-    tt_int_op(cam.dir, OP_EQ, (dir_));              \
-    memset(&cam, 0, sizeof(cam));                \
+#define GOT_CMUX_ATTACH(mux_, circ_, dir_) \
+  do {                                     \
+    tt_int_op(cam.ncalls, OP_EQ, 1);       \
+    tt_ptr_op(cam.cmux, OP_EQ, (mux_));    \
+    tt_ptr_op(cam.circ, OP_EQ, (circ_));   \
+    tt_int_op(cam.dir, OP_EQ, (dir_));     \
+    memset(&cam, 0, sizeof(cam));          \
   } while (0)
 
-#define GOT_CMUX_DETACH(mux_, circ_) do {        \
-    tt_int_op(cdm.ncalls, OP_EQ, 1);                \
-    tt_ptr_op(cdm.cmux, OP_EQ, (mux_));             \
-    tt_ptr_op(cdm.circ, OP_EQ, (circ_));            \
-    memset(&cdm, 0, sizeof(cdm));                \
+#define GOT_CMUX_DETACH(mux_, circ_)     \
+  do {                                   \
+    tt_int_op(cdm.ncalls, OP_EQ, 1);     \
+    tt_ptr_op(cdm.cmux, OP_EQ, (mux_));  \
+    tt_ptr_op(cdm.circ, OP_EQ, (circ_)); \
+    memset(&cdm, 0, sizeof(cdm));        \
   } while (0)
 
 static void
@@ -79,9 +81,9 @@ test_clist_maps(void *arg)
   channel_t *ch1 = new_fake_channel();
   channel_t *ch2 = new_fake_channel();
   channel_t *ch3 = new_fake_channel();
-  or_circuit_t *or_c1=NULL, *or_c2=NULL;
+  or_circuit_t *or_c1 = NULL, *or_c2 = NULL;
 
-  (void) arg;
+  (void)arg;
 
   MOCK(circuitmux_attach_circuit, circuitmux_attach_mock);
   MOCK(circuitmux_detach_circuit, circuitmux_detach_mock);
@@ -120,18 +122,18 @@ test_clist_maps(void *arg)
   /* Try the same thing again, to test the "fast" path. */
   tt_ptr_op(circuit_get_by_circid_channel(100, ch2), OP_EQ, TO_CIRCUIT(or_c1));
   tt_assert(circuit_id_in_use_on_channel(100, ch2));
-  tt_assert(! circuit_id_in_use_on_channel(101, ch2));
+  tt_assert(!circuit_id_in_use_on_channel(101, ch2));
 
   /* Try changing the circuitid and channel of that circuit. */
   circuit_set_p_circid_chan(or_c1, 500, ch3);
   GOT_CMUX_DETACH(ch2->cmux, TO_CIRCUIT(or_c1));
   GOT_CMUX_ATTACH(ch3->cmux, TO_CIRCUIT(or_c1), CELL_DIRECTION_IN);
   tt_ptr_op(circuit_get_by_circid_channel(100, ch2), OP_EQ, NULL);
-  tt_assert(! circuit_id_in_use_on_channel(100, ch2));
+  tt_assert(!circuit_id_in_use_on_channel(100, ch2));
   tt_ptr_op(circuit_get_by_circid_channel(500, ch3), OP_EQ, TO_CIRCUIT(or_c1));
 
   /* Now let's see about destroy handling. */
-  tt_assert(! circuit_id_in_use_on_channel(205, ch2));
+  tt_assert(!circuit_id_in_use_on_channel(205, ch2));
   tt_assert(circuit_id_in_use_on_channel(200, ch2));
   channel_note_destroy_pending(ch2, 200);
   channel_note_destroy_pending(ch2, 205);
@@ -161,10 +163,10 @@ test_clist_maps(void *arg)
   tt_ptr_op(circuit_get_by_circid_channel(200, ch2), OP_EQ, NULL);
   channel_note_destroy_not_pending(ch1, 100);
   tt_ptr_op(circuit_get_by_circid_channel(100, ch1), OP_EQ, NULL);
-  tt_assert(! circuit_id_in_use_on_channel(200, ch2));
-  tt_assert(! circuit_id_in_use_on_channel(100, ch1));
+  tt_assert(!circuit_id_in_use_on_channel(200, ch2));
+  tt_assert(!circuit_id_in_use_on_channel(100, ch1));
 
- done:
+done:
   if (or_c1)
     circuit_free_(TO_CIRCUIT(or_c1));
   if (or_c2)
@@ -193,7 +195,7 @@ test_rend_token_maps(void *arg)
   /* -- Adapted from a quote by Fredrik Lundh. */
 
   (void)arg;
-  (void)tok1; //xxxx
+  (void)tok1; // xxxx
 
   hs_circuitmap_init();
 
@@ -204,9 +206,9 @@ test_rend_token_maps(void *arg)
   c5 = origin_circuit_new();
 
   /* Make sure we really filled up the tok* variables */
-  tt_int_op(tok1[REND_TOKEN_LEN-1], OP_EQ, 'y');
-  tt_int_op(tok2[REND_TOKEN_LEN-1], OP_EQ, ' ');
-  tt_int_op(tok3[REND_TOKEN_LEN-1], OP_EQ, '.');
+  tt_int_op(tok1[REND_TOKEN_LEN - 1], OP_EQ, 'y');
+  tt_int_op(tok2[REND_TOKEN_LEN - 1], OP_EQ, ' ');
+  tt_int_op(tok3[REND_TOKEN_LEN - 1], OP_EQ, '.');
 
   /* No maps; nothing there. */
   tt_ptr_op(NULL, OP_EQ, hs_circuitmap_get_rend_circ_relay_side(tok1));
@@ -279,7 +281,7 @@ test_rend_token_maps(void *arg)
   tt_ptr_op(c5, OP_EQ, hs_circuitmap_get_rend_circ_client_side(tok1));
   tt_ptr_op(NULL, OP_EQ, hs_circuitmap_get_rend_circ_client_side(tok2));
 
- done:
+done:
   if (c1)
     circuit_free_(TO_CIRCUIT(c1));
   if (c2)
@@ -306,7 +308,7 @@ test_pick_circid(void *arg)
   channel_t *chan1, *chan2;
   circid_t circid;
   int i;
-  (void) arg;
+  (void)arg;
 
   MOCK(channel_dump_statistics, mock_channel_dump_statistics);
 
@@ -321,8 +323,9 @@ test_pick_circid(void *arg)
   chan1->circ_id_type = CIRC_ID_TYPE_NEITHER;
   setup_full_capture_of_logs(LOG_WARN);
   tt_int_op(0, OP_EQ, get_unique_circ_id_by_chan(chan1));
-  expect_single_log_msg_containing("Trying to pick a circuit ID for a "
-                           "connection from a client with no identity.");
+  expect_single_log_msg_containing(
+      "Trying to pick a circuit ID for a "
+      "connection from a client with no identity.");
   teardown_capture_of_logs();
 
   /* Basic tests, with no collisions */
@@ -330,53 +333,53 @@ test_pick_circid(void *arg)
   for (i = 0; i < 50; ++i) {
     circid = get_unique_circ_id_by_chan(chan1);
     tt_uint_op(0, OP_LT, circid);
-    tt_uint_op(circid, OP_LT, (1<<15));
+    tt_uint_op(circid, OP_LT, (1 << 15));
   }
   chan1->circ_id_type = CIRC_ID_TYPE_HIGHER;
   for (i = 0; i < 50; ++i) {
     circid = get_unique_circ_id_by_chan(chan1);
-    tt_uint_op((1<<15), OP_LT, circid);
-    tt_uint_op(circid, OP_LT, (1<<16));
+    tt_uint_op((1 << 15), OP_LT, circid);
+    tt_uint_op(circid, OP_LT, (1 << 16));
   }
 
   chan2->circ_id_type = CIRC_ID_TYPE_LOWER;
   for (i = 0; i < 50; ++i) {
     circid = get_unique_circ_id_by_chan(chan2);
     tt_uint_op(0, OP_LT, circid);
-    tt_uint_op(circid, OP_LT, (1u<<31));
+    tt_uint_op(circid, OP_LT, (1u << 31));
   }
   chan2->circ_id_type = CIRC_ID_TYPE_HIGHER;
   for (i = 0; i < 50; ++i) {
     circid = get_unique_circ_id_by_chan(chan2);
-    tt_uint_op((1u<<31), OP_LT, circid);
+    tt_uint_op((1u << 31), OP_LT, circid);
   }
 
   /* Now make sure that we can behave well when we are full up on circuits */
   chan1->circ_id_type = CIRC_ID_TYPE_LOWER;
   chan2->circ_id_type = CIRC_ID_TYPE_LOWER;
   chan1->wide_circ_ids = chan2->wide_circ_ids = 0;
-  ba = bitarray_init_zero((1<<15));
-  for (i = 0; i < (1<<15); ++i) {
+  ba = bitarray_init_zero((1 << 15));
+  for (i = 0; i < (1 << 15); ++i) {
     circid = get_unique_circ_id_by_chan(chan1);
     if (circid == 0) {
-      tt_int_op(i, OP_GT, (1<<14));
+      tt_int_op(i, OP_GT, (1 << 14));
       break;
     }
-    tt_uint_op(circid, OP_LT, (1<<15));
-    tt_assert(! bitarray_is_set(ba, circid));
+    tt_uint_op(circid, OP_LT, (1 << 15));
+    tt_assert(!bitarray_is_set(ba, circid));
     bitarray_set(ba, circid);
     channel_mark_circid_unusable(chan1, circid);
   }
-  tt_int_op(i, OP_LT, (1<<15));
+  tt_int_op(i, OP_LT, (1 << 15));
   /* Make sure that being full on chan1 does not interfere with chan2 */
   for (i = 0; i < 100; ++i) {
     circid = get_unique_circ_id_by_chan(chan2);
     tt_uint_op(circid, OP_GT, 0);
-    tt_uint_op(circid, OP_LT, (1<<15));
+    tt_uint_op(circid, OP_LT, (1 << 15));
     channel_mark_circid_unusable(chan2, circid);
   }
 
- done:
+done:
   circuitmux_free(chan1->cmux);
   circuitmux_free(chan2->cmux);
   tor_free(chan1);
@@ -457,7 +460,7 @@ test_hs_circuitmap_isolation(void *arg)
               hs_circuitmap_get_intro_circ_v2_service_side(tok2));
   }
 
- done:
+done:
   circuit_free_(TO_CIRCUIT(circ1));
   circuit_free_(TO_CIRCUIT(circ2));
   circuit_free_(TO_CIRCUIT(circ3));
@@ -465,10 +468,9 @@ test_hs_circuitmap_isolation(void *arg)
 }
 
 struct testcase_t circuitlist_tests[] = {
-  { "maps", test_clist_maps, TT_FORK, NULL, NULL },
-  { "rend_token_maps", test_rend_token_maps, TT_FORK, NULL, NULL },
-  { "pick_circid", test_pick_circid, TT_FORK, NULL, NULL },
-  { "hs_circuitmap_isolation", test_hs_circuitmap_isolation,
-    TT_FORK, NULL, NULL },
-  END_OF_TESTCASES
-};
+    {"maps", test_clist_maps, TT_FORK, NULL, NULL},
+    {"rend_token_maps", test_rend_token_maps, TT_FORK, NULL, NULL},
+    {"pick_circid", test_pick_circid, TT_FORK, NULL, NULL},
+    {"hs_circuitmap_isolation", test_hs_circuitmap_isolation, TT_FORK, NULL,
+     NULL},
+    END_OF_TESTCASES};

@@ -34,7 +34,7 @@ int
 pubsub_pub_(const pub_binding_t *pub, msg_aux_data_t auxdata)
 {
   dispatch_t *d = pub->dispatch_ptr;
-  if (BUG(! d)) {
+  if (BUG(!d)) {
     /* Tried to publish a message before the dispatcher was configured. */
     /* (Without a dispatcher, we don't know how to free auxdata.) */
     return -1;
@@ -55,7 +55,7 @@ pubsub_pub_(const pub_binding_t *pub, msg_aux_data_t auxdata)
     // LCOV_EXCL_STOP
   }
 
-  if (! d->table[pub->msg_template.msg]) {
+  if (!d->table[pub->msg_template.msg]) {
     /* Fast path: nobody wants this data. */
 
     // XXXX Faster path: we could store this in the pub_binding_t.

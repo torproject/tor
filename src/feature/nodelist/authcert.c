@@ -47,9 +47,9 @@
 #include "feature/nodelist/node_st.h"
 
 DECLARE_TYPED_DIGESTMAP_FNS(dsmap, digest_ds_map_t, download_status_t)
-#define DSMAP_FOREACH(map, keyvar, valvar) \
-  DIGESTMAP_FOREACH(dsmap_to_digestmap(map), keyvar, download_status_t *, \
-                    valvar)
+#define DSMAP_FOREACH(map, keyvar, valvar)                                 \
+  DIGESTMAP_FOREACH (dsmap_to_digestmap(map), keyvar, download_status_t *, \
+                     valvar)
 #define dsmap_free(map, fn) MAP_FREE_AND_NULL(dsmap, (map), (fn))
 
 /* Forward declaration for cert_list_t */
@@ -134,8 +134,7 @@ download_status_reset_by_sk_in_cl(cert_list_t *cl, const char *digest)
  * to be re-attempted.
  */
 static int
-download_status_is_ready_by_sk_in_cl(cert_list_t *cl,
-                                     const char *digest,
+download_status_is_ready_by_sk_in_cl(cert_list_t *cl, const char *digest,
                                      time_t now)
 {
   int rv = 0;
@@ -202,8 +201,7 @@ list_authority_ids_with_downloads, (void))
   void *cl;
 
   if (trusted_dir_certs) {
-    for (i = digestmap_iter_init(trusted_dir_certs);
-         !(digestmap_iter_done(i));
+    for (i = digestmap_iter_init(trusted_dir_certs); !(digestmap_iter_done(i));
          i = digestmap_iter_next(trusted_dir_certs, i)) {
       /*
        * We always have at least dl_status_by_id to query, so no need to
@@ -224,7 +222,8 @@ list_authority_ids_with_downloads, (void))
  * status, or NULL if there is no such entry in trusted_dir_certs */
 
 MOCK_IMPL(download_status_t *,
-id_only_download_status_for_authority_id, (const char *digest))
+id_only_download_status_for_authority_id,
+          (const char *digest))
 {
   download_status_t *dl = NULL;
   cert_list_t *cl;
@@ -244,7 +243,8 @@ id_only_download_status_for_authority_id, (const char *digest))
  * authority ID digest is known. */
 
 MOCK_IMPL(smartlist_t *,
-list_sk_digests_for_authority_id, (const char *digest))
+list_sk_digests_for_authority_id,
+          (const char *digest))
 {
   smartlist_t *sks = NULL;
   cert_list_t *cl;
@@ -258,8 +258,7 @@ list_sk_digests_for_authority_id, (const char *digest))
     if (cl) {
       sks = smartlist_new();
       if (cl->dl_status_map) {
-        for (i = dsmap_iter_init(cl->dl_status_map);
-             !(dsmap_iter_done(i));
+        for (i = dsmap_iter_init(cl->dl_status_map); !(dsmap_iter_done(i));
              i = dsmap_iter_next(cl->dl_status_map, i)) {
           /* Pull the digest out and add it to the list */
           dsmap_iter_get(i, &sk_digest, &dl);
@@ -278,8 +277,8 @@ list_sk_digests_for_authority_id, (const char *digest))
  * download_status_t or NULL if none exists. */
 
 MOCK_IMPL(download_status_t *,
-download_status_for_authority_id_and_sk,(const char *id_digest,
-                                         const char *sk_digest))
+download_status_for_authority_id_and_sk,
+          (const char *id_digest, const char *sk_digest))
 {
   download_status_t *dl = NULL;
   cert_list_t *cl = NULL;
@@ -294,8 +293,7 @@ download_status_for_authority_id_and_sk,(const char *id_digest,
   return dl;
 }
 
-#define cert_list_free(val) \
-  FREE_AND_NULL(cert_list_t, cert_list_free_, (val))
+#define cert_list_free(val) FREE_AND_NULL(cert_list_t, cert_list_free_, (val))
 
 /** Release all space held by a cert_list_t */
 static void
@@ -333,8 +331,7 @@ trusted_dirs_reload_certs(void)
   if (!contents)
     return 0;
   r = trusted_dirs_load_certs_from_string(
-        contents,
-        TRUSTED_DIRS_CERTS_SRC_FROM_STORE, 1, NULL);
+      contents, TRUSTED_DIRS_CERTS_SRC_FROM_STORE, 1, NULL);
   tor_free(contents);
   return r;
 }
@@ -346,11 +343,9 @@ already_have_cert(authority_cert_t *cert)
 {
   cert_list_t *cl = get_cert_list(cert->cache_info.identity_digest);
 
-  SMARTLIST_FOREACH(cl->certs, authority_cert_t *, c,
-  {
+  SMARTLIST_FOREACH(cl->certs, authority_cert_t *, c, {
     if (tor_memeq(c->cache_info.signed_descriptor_digest,
-                cert->cache_info.signed_descriptor_digest,
-                DIGEST_LEN))
+                  cert->cache_info.signed_descriptor_digest, DIGEST_LEN))
       return 1;
   });
   return 0;
@@ -380,21 +375,22 @@ trusted_dirs_load_certs_from_string(const char *contents, int source,
   int added_trusted_cert = 0;
 
   for (s = contents; *s; s = eos) {
-    authority_cert_t *cert = authority_cert_parse_from_string(s, strlen(s),
-                                                              &eos);
+    authority_cert_t *cert =
+        authority_cert_parse_from_string(s, strlen(s), &eos);
     cert_list_t *cl;
     if (!cert) {
       failure_code = -1;
       break;
     }
     ds = trusteddirserver_get_by_v3_auth_digest(
-                                       cert->cache_info.identity_digest);
+        cert->cache_info.identity_digest);
     log_debug(LD_DIR, "Parsed certificate for %s",
               ds ? ds->nickname : "unknown authority");
 
     if (already_have_cert(cert)) {
       /* we already have this one. continue. */
-      log_info(LD_DIR, "Skipping %s certificate for %s that we "
+      log_info(LD_DIR,
+               "Skipping %s certificate for %s that we "
                "already have.",
                from_store ? "cached" : "downloaded",
                ds ? ds->nickname : "an old or new authority");
@@ -425,8 +421,8 @@ trusted_dirs_load_certs_from_string(const char *contents, int source,
          * twiddle the right bit in the download map.
          */
         if (source == TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST) {
-          authority_cert_dl_failed(cert->cache_info.identity_digest,
-                                   NULL, 404);
+          authority_cert_dl_failed(cert->cache_info.identity_digest, NULL,
+                                   404);
         } else if (source == TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_SK_DIGEST) {
           authority_cert_dl_failed(cert->cache_info.identity_digest,
                                    cert->signing_key_digest, 404);
@@ -439,16 +435,19 @@ trusted_dirs_load_certs_from_string(const char *contents, int source,
 
     if (ds) {
       added_trusted_cert = 1;
-      log_info(LD_DIR, "Adding %s certificate for directory authority %s with "
-               "signing key %s", from_store ? "cached" : "downloaded",
-               ds->nickname, hex_str(cert->signing_key_digest,DIGEST_LEN));
+      log_info(LD_DIR,
+               "Adding %s certificate for directory authority %s with "
+               "signing key %s",
+               from_store ? "cached" : "downloaded", ds->nickname,
+               hex_str(cert->signing_key_digest, DIGEST_LEN));
     } else {
       int adding = we_want_to_fetch_unknown_auth_certs(get_options());
-      log_info(LD_DIR, "%s %s certificate for unrecognized directory "
+      log_info(LD_DIR,
+               "%s %s certificate for unrecognized directory "
                "authority with signing key %s",
                adding ? "Adding" : "Not adding",
                from_store ? "cached" : "downloaded",
-               hex_str(cert->signing_key_digest,DIGEST_LEN));
+               hex_str(cert->signing_key_digest, DIGEST_LEN));
       if (!adding) {
         authority_cert_free(cert);
         continue;
@@ -461,13 +460,13 @@ trusted_dirs_load_certs_from_string(const char *contents, int source,
       /* Check to see whether we should update our view of the authority's
        * address. */
       if (cert->addr && cert->dir_port &&
-          (ds->addr != cert->addr ||
-           ds->dir_port != cert->dir_port)) {
+          (ds->addr != cert->addr || ds->dir_port != cert->dir_port)) {
         char *a = tor_dup_ip(cert->addr);
-        log_notice(LD_DIR, "Updating address for directory authority %s "
+        log_notice(LD_DIR,
+                   "Updating address for directory authority %s "
                    "from %s:%d to %s:%d based on certificate.",
-                   ds->nickname, ds->address, (int)ds->dir_port,
-                   a, cert->dir_port);
+                   ds->nickname, ds->address, (int)ds->dir_port, a,
+                   cert->dir_port);
         tor_free(a);
         ds->addr = cert->addr;
         ds->dir_port = cert->dir_port;
@@ -507,15 +506,15 @@ trusted_dirs_flush_certs_to_disk(void)
     return;
 
   chunks = smartlist_new();
-  DIGESTMAP_FOREACH(trusted_dir_certs, key, cert_list_t *, cl) {
-    SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
-          {
-            sized_chunk_t *c = tor_malloc(sizeof(sized_chunk_t));
-            c->bytes = cert->cache_info.signed_descriptor_body;
-            c->len = cert->cache_info.signed_descriptor_len;
-            smartlist_add(chunks, c);
-          });
-  } DIGESTMAP_FOREACH_END;
+  DIGESTMAP_FOREACH (trusted_dir_certs, key, cert_list_t *, cl) {
+    SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert, {
+      sized_chunk_t *c = tor_malloc(sizeof(sized_chunk_t));
+      c->bytes = cert->cache_info.signed_descriptor_body;
+      c->len = cert->cache_info.signed_descriptor_len;
+      smartlist_add(chunks, c);
+    });
+  }
+  DIGESTMAP_FOREACH_END;
 
   filename = get_cachedir_fname("cached-certs");
   if (write_chunks_to_file(filename, chunks, 0, 0)) {
@@ -531,11 +530,11 @@ trusted_dirs_flush_certs_to_disk(void)
 static int
 compare_certs_by_pubdates(const void **_a, const void **_b)
 {
-  const authority_cert_t *cert1 = *_a, *cert2=*_b;
+  const authority_cert_t *cert1 = *_a, *cert2 = *_b;
 
   if (cert1->cache_info.published_on < cert2->cache_info.published_on)
     return -1;
-  else if (cert1->cache_info.published_on >  cert2->cache_info.published_on)
+  else if (cert1->cache_info.published_on > cert2->cache_info.published_on)
     return 1;
   else
     return 0;
@@ -550,21 +549,21 @@ void
 trusted_dirs_remove_old_certs(void)
 {
   time_t now = time(NULL);
-#define DEAD_CERT_LIFETIME (2*24*60*60)
-#define SUPERSEDED_CERT_LIFETIME (2*24*60*60)
+#define DEAD_CERT_LIFETIME (2 * 24 * 60 * 60)
+#define SUPERSEDED_CERT_LIFETIME (2 * 24 * 60 * 60)
   if (!trusted_dir_certs)
     return;
 
-  DIGESTMAP_FOREACH(trusted_dir_certs, key, cert_list_t *, cl) {
+  DIGESTMAP_FOREACH (trusted_dir_certs, key, cert_list_t *, cl) {
     /* Sort the list from first-published to last-published */
     smartlist_sort(cl->certs, compare_certs_by_pubdates);
 
-    SMARTLIST_FOREACH_BEGIN(cl->certs, authority_cert_t *, cert) {
+    SMARTLIST_FOREACH_BEGIN (cl->certs, authority_cert_t *, cert) {
       if (cert_sl_idx == smartlist_len(cl->certs) - 1) {
         /* This is the most recently published cert.  Keep it. */
         continue;
       }
-      authority_cert_t *next_cert = smartlist_get(cl->certs, cert_sl_idx+1);
+      authority_cert_t *next_cert = smartlist_get(cl->certs, cert_sl_idx + 1);
       const time_t next_cert_published = next_cert->cache_info.published_on;
       if (next_cert_published > now) {
         /* All later certs are published in the future. Keep everything
@@ -587,9 +586,9 @@ trusted_dirs_remove_old_certs(void)
         authority_cert_free(cert);
         trusted_dir_servers_certs_changed = 1;
       }
-    } SMARTLIST_FOREACH_END(cert);
-
-  } DIGESTMAP_FOREACH_END;
+    } SMARTLIST_FOREACH_END (cert);
+  }
+  DIGESTMAP_FOREACH_END;
 #undef DEAD_CERT_LIFETIME
 #undef OLD_CERT_LIFETIME
 
@@ -608,8 +607,7 @@ authority_cert_get_newest_by_id(const char *id_digest)
       !(cl = digestmap_get(trusted_dir_certs, id_digest)))
     return NULL;
 
-  SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
-  {
+  SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert, {
     if (!best || cert->cache_info.published_on > best->cache_info.published_on)
       best = cert;
   });
@@ -633,13 +631,13 @@ authority_cert_get_by_sk_digest(const char *sk_digest)
       tor_memeq(c->signing_key_digest, sk_digest, DIGEST_LEN))
     return c;
 
-  DIGESTMAP_FOREACH(trusted_dir_certs, key, cert_list_t *, cl) {
-    SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
-    {
+  DIGESTMAP_FOREACH (trusted_dir_certs, key, cert_list_t *, cl) {
+    SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert, {
       if (tor_memeq(cert->signing_key_digest, sk_digest, DIGEST_LEN))
         return cert;
     });
-  } DIGESTMAP_FOREACH_END;
+  }
+  DIGESTMAP_FOREACH_END;
   return NULL;
 }
 
@@ -647,16 +645,15 @@ authority_cert_get_by_sk_digest(const char *sk_digest)
  * <b>sk_digest</b>, for the authority with identity digest <b>id_digest</b>.
  * Return NULL if no such authority is known. */
 authority_cert_t *
-authority_cert_get_by_digests(const char *id_digest,
-                              const char *sk_digest)
+authority_cert_get_by_digests(const char *id_digest, const char *sk_digest)
 {
   cert_list_t *cl;
   if (!trusted_dir_certs ||
       !(cl = digestmap_get(trusted_dir_certs, id_digest)))
     return NULL;
   SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
-    if (tor_memeq(cert->signing_key_digest, sk_digest, DIGEST_LEN))
-      return cert; );
+                    if (tor_memeq(cert->signing_key_digest, sk_digest,
+                                  DIGEST_LEN)) return cert;);
 
   return NULL;
 }
@@ -669,10 +666,11 @@ authority_cert_get_all(smartlist_t *certs_out)
   if (!trusted_dir_certs)
     return;
 
-  DIGESTMAP_FOREACH(trusted_dir_certs, key, cert_list_t *, cl) {
+  DIGESTMAP_FOREACH (trusted_dir_certs, key, cert_list_t *, cl) {
     SMARTLIST_FOREACH(cl->certs, authority_cert_t *, c,
                       smartlist_add(certs_out, c));
-  } DIGESTMAP_FOREACH_END;
+  }
+  DIGESTMAP_FOREACH_END;
 }
 
 /** Called when an attempt to download a certificate with the authority with
@@ -680,13 +678,13 @@ authority_cert_get_all(smartlist_t *certs_out)
  * fails with HTTP response code <b>status</b>: remember the failure, so we
  * don't try again immediately. */
 void
-authority_cert_dl_failed(const char *id_digest,
-                         const char *signing_key_digest, int status)
+authority_cert_dl_failed(const char *id_digest, const char *signing_key_digest,
+                         int status)
 {
   cert_list_t *cl;
   download_status_t *dlstatus = NULL;
-  char id_digest_str[2*DIGEST_LEN+1];
-  char sk_digest_str[2*DIGEST_LEN+1];
+  char id_digest_str[2 * DIGEST_LEN + 1];
+  char sk_digest_str[2 * DIGEST_LEN + 1];
 
   if (!trusted_dir_certs ||
       !(cl = digestmap_get(trusted_dir_certs, id_digest)))
@@ -713,10 +711,10 @@ authority_cert_dl_failed(const char *id_digest,
        * Do this rather than hex_str(), since hex_str clobbers
        * old results and we call twice in the param list.
        */
-      base16_encode(id_digest_str, sizeof(id_digest_str),
-                    id_digest, DIGEST_LEN);
-      base16_encode(sk_digest_str, sizeof(sk_digest_str),
-                    signing_key_digest, DIGEST_LEN);
+      base16_encode(id_digest_str, sizeof(id_digest_str), id_digest,
+                    DIGEST_LEN);
+      base16_encode(sk_digest_str, sizeof(sk_digest_str), signing_key_digest,
+                    DIGEST_LEN);
       log_warn(LD_BUG,
                "Got failure for cert fetch with (fp,sk) = (%s,%s), with "
                "status %d, but knew nothing about the download.",
@@ -726,17 +724,17 @@ authority_cert_dl_failed(const char *id_digest,
 }
 
 static const char *BAD_SIGNING_KEYS[] = {
-  "09CD84F751FD6E955E0F8ADB497D5401470D697E", // Expires 2015-01-11 16:26:31
-  "0E7E9C07F0969D0468AD741E172A6109DC289F3C", // Expires 2014-08-12 10:18:26
-  "57B85409891D3FB32137F642FDEDF8B7F8CDFDCD", // Expires 2015-02-11 17:19:09
-  "87326329007AF781F587AF5B594E540B2B6C7630", // Expires 2014-07-17 11:10:09
-  "98CC82342DE8D298CF99D3F1A396475901E0D38E", // Expires 2014-11-10 13:18:56
-  "9904B52336713A5ADCB13E4FB14DC919E0D45571", // Expires 2014-04-20 20:01:01
-  "9DCD8E3F1DD1597E2AD476BBA28A1A89F3095227", // Expires 2015-01-16 03:52:30
-  "A61682F34B9BB9694AC98491FE1ABBFE61923941", // Expires 2014-06-11 09:25:09
-  "B59F6E99C575113650C99F1C425BA7B20A8C071D", // Expires 2014-07-31 13:22:10
-  "D27178388FA75B96D37FA36E0B015227DDDBDA51", // Expires 2014-08-04 04:01:57
-  NULL,
+    "09CD84F751FD6E955E0F8ADB497D5401470D697E", // Expires 2015-01-11 16:26:31
+    "0E7E9C07F0969D0468AD741E172A6109DC289F3C", // Expires 2014-08-12 10:18:26
+    "57B85409891D3FB32137F642FDEDF8B7F8CDFDCD", // Expires 2015-02-11 17:19:09
+    "87326329007AF781F587AF5B594E540B2B6C7630", // Expires 2014-07-17 11:10:09
+    "98CC82342DE8D298CF99D3F1A396475901E0D38E", // Expires 2014-11-10 13:18:56
+    "9904B52336713A5ADCB13E4FB14DC919E0D45571", // Expires 2014-04-20 20:01:01
+    "9DCD8E3F1DD1597E2AD476BBA28A1A89F3095227", // Expires 2015-01-16 03:52:30
+    "A61682F34B9BB9694AC98491FE1ABBFE61923941", // Expires 2014-06-11 09:25:09
+    "B59F6E99C575113650C99F1C425BA7B20A8C071D", // Expires 2014-07-31 13:22:10
+    "D27178388FA75B96D37FA36E0B015227DDDBDA51", // Expires 2014-08-04 04:01:57
+    NULL,
 };
 
 /** Return true iff <b>cert</b> authenticates some atuhority signing key
@@ -745,10 +743,10 @@ static const char *BAD_SIGNING_KEYS[] = {
 int
 authority_cert_is_blacklisted(const authority_cert_t *cert)
 {
-  char hex_digest[HEX_DIGEST_LEN+1];
+  char hex_digest[HEX_DIGEST_LEN + 1];
   int i;
-  base16_encode(hex_digest, sizeof(hex_digest),
-                cert->signing_key_digest, sizeof(cert->signing_key_digest));
+  base16_encode(hex_digest, sizeof(hex_digest), cert->signing_key_digest,
+                sizeof(cert->signing_key_digest));
 
   for (i = 0; BAD_SIGNING_KEYS[i]; ++i) {
     if (!strcasecmp(hex_digest, BAD_SIGNING_KEYS[i])) {
@@ -780,14 +778,13 @@ authority_cert_dl_looks_uncertain(const char *id_digest)
  * using dir_hint as the fingerprint. Otherwise, if rs is not NULL, fetch from
  * rs. Otherwise, fetch from a random directory mirror. */
 static void
-authority_certs_fetch_resource_impl(const char *resource,
-                                    const char *dir_hint,
+authority_certs_fetch_resource_impl(const char *resource, const char *dir_hint,
                                     const node_t *node,
                                     const routerstatus_t *rs)
 {
   const or_options_t *options = get_options();
-  int get_via_tor = purpose_needs_anonymity(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
-                                            resource);
+  int get_via_tor =
+      purpose_needs_anonymity(DIR_PURPOSE_FETCH_CERTIFICATE, 0, resource);
 
   /* Make sure bridge clients never connect to anything but a bridge */
   if (options->UseBridges) {
@@ -800,8 +797,8 @@ authority_certs_fetch_resource_impl(const char *resource,
     }
   }
 
-  const dir_indirection_t indirection = get_via_tor ? DIRIND_ANONYMOUS
-                                                    : DIRIND_ONEHOP;
+  const dir_indirection_t indirection =
+      get_via_tor ? DIRIND_ANONYMOUS : DIRIND_ONEHOP;
 
   directory_request_t *req = NULL;
   /* If we've just downloaded a consensus from a bridge, re-use that
@@ -836,9 +833,8 @@ authority_certs_fetch_resource_impl(const char *resource,
 
   /* Otherwise, we want certs from a random fallback or directory
    * mirror, because they will almost always succeed. */
-  directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
-                               resource, PDS_RETRY_IF_NO_SERVERS,
-                               DL_WANT_ANY_DIRSERVER);
+  directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0, resource,
+                               PDS_RETRY_IF_NO_SERVERS, DL_WANT_ANY_DIRSERVER);
 }
 
 /** Try to download any v3 authority certificates that we may be missing.  If
@@ -874,8 +870,8 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
   const or_options_t *options = get_options();
   const int keep_unknown = we_want_to_fetch_unknown_auth_certs(options);
   fp_pair_t *fp_tmp = NULL;
-  char id_digest_str[2*DIGEST_LEN+1];
-  char sk_digest_str[2*DIGEST_LEN+1];
+  char id_digest_str[2 * DIGEST_LEN + 1];
+  char sk_digest_str[2 * DIGEST_LEN + 1];
 
   if (should_delay_dir_fetches(options, NULL))
     return;
@@ -889,24 +885,23 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
    * First, we get the lists of already pending downloads so we don't
    * duplicate effort.
    */
-  list_pending_downloads(pending_id, NULL,
-                         DIR_PURPOSE_FETCH_CERTIFICATE, "fp/");
+  list_pending_downloads(pending_id, NULL, DIR_PURPOSE_FETCH_CERTIFICATE,
+                         "fp/");
   list_pending_fpsk_downloads(pending_cert);
 
   /*
    * Now, we download any trusted authority certs we don't have by
    * identity digest only.  This gets the latest cert for that authority.
    */
-  SMARTLIST_FOREACH_BEGIN(router_get_trusted_dir_servers(),
-                          dir_server_t *, ds) {
+  SMARTLIST_FOREACH_BEGIN (router_get_trusted_dir_servers(), dir_server_t *,
+                           ds) {
     int found = 0;
     if (!(ds->type & V3_DIRINFO))
       continue;
-    if (smartlist_contains_digest(missing_id_digests,
-                                  ds->v3_identity_digest))
+    if (smartlist_contains_digest(missing_id_digests, ds->v3_identity_digest))
       continue;
     cl = get_cert_list(ds->v3_identity_digest);
-    SMARTLIST_FOREACH_BEGIN(cl->certs, authority_cert_t *, cert) {
+    SMARTLIST_FOREACH_BEGIN (cl->certs, authority_cert_t *, cert) {
       if (now < cert->expires) {
         /* It's not expired, and we weren't looking for something to
          * verify a consensus with.  Call it done. */
@@ -916,9 +911,8 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
         found = 1;
         break;
       }
-    } SMARTLIST_FOREACH_END(cert);
-    if (!found &&
-        download_status_is_ready(&(cl->dl_status_by_id), now) &&
+    } SMARTLIST_FOREACH_END (cert);
+    if (!found && download_status_is_ready(&(cl->dl_status_by_id), now) &&
         !digestmap_get(pending_id, ds->v3_identity_digest)) {
       log_info(LD_DIR,
                "No current certificate known for authority %s "
@@ -926,7 +920,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
                ds->nickname, hex_str(ds->v3_identity_digest, DIGEST_LEN));
       smartlist_add(missing_id_digests, ds->v3_identity_digest);
     }
-  } SMARTLIST_FOREACH_END(ds);
+  } SMARTLIST_FOREACH_END (ds);
 
   /*
    * Next, if we have a consensus, scan through it and look for anything
@@ -939,8 +933,8 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
    * redundantly.
    */
   if (status) {
-    SMARTLIST_FOREACH_BEGIN(status->voters, networkstatus_voter_info_t *,
-                            voter) {
+    SMARTLIST_FOREACH_BEGIN (status->voters, networkstatus_voter_info_t *,
+                             voter) {
       if (!smartlist_len(voter->sigs))
         continue; /* This authority never signed this consensus, so don't
                    * go looking for a cert with key digest 0000000000. */
@@ -971,19 +965,17 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
           continue;
       }
 
-      SMARTLIST_FOREACH_BEGIN(voter->sigs, document_signature_t *, sig) {
-        authority_cert_t *cert =
-          authority_cert_get_by_digests(voter->identity_digest,
-                                        sig->signing_key_digest);
+      SMARTLIST_FOREACH_BEGIN (voter->sigs, document_signature_t *, sig) {
+        authority_cert_t *cert = authority_cert_get_by_digests(
+            voter->identity_digest, sig->signing_key_digest);
         if (cert) {
           if (now < cert->expires)
             download_status_reset_by_sk_in_cl(cl, sig->signing_key_digest);
           continue;
         }
-        if (download_status_is_ready_by_sk_in_cl(
-              cl, sig->signing_key_digest, now) &&
-            !fp_pair_map_get_by_digests(pending_cert,
-                                        voter->identity_digest,
+        if (download_status_is_ready_by_sk_in_cl(cl, sig->signing_key_digest,
+                                                 now) &&
+            !fp_pair_map_get_by_digests(pending_cert, voter->identity_digest,
                                         sig->signing_key_digest)) {
           /*
            * Do this rather than hex_str(), since hex_str clobbers
@@ -1014,8 +1006,8 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
                  sizeof(fp_tmp->second));
           smartlist_add(missing_cert_digests, fp_tmp);
         }
-      } SMARTLIST_FOREACH_END(sig);
-    } SMARTLIST_FOREACH_END(voter);
+      } SMARTLIST_FOREACH_END (sig);
+    } SMARTLIST_FOREACH_END (voter);
   }
 
   /* Bridge clients look up the node for the dir_hint */
@@ -1043,15 +1035,16 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
     rs = router_get_consensus_status_by_id(dir_hint);
     if (!rs) {
       /* This will also find authorities */
-      const dir_server_t *ds = router_get_fallback_dirserver_by_digest(
-                                                                    dir_hint);
+      const dir_server_t *ds =
+          router_get_fallback_dirserver_by_digest(dir_hint);
       if (ds) {
         rs = &ds->fake_status;
       }
     }
 
     if (!node && !rs) {
-      log_warn(LD_BUG, "Directory %s delivered a consensus, but %s"
+      log_warn(LD_BUG,
+               "Directory %s delivered a consensus, but %s"
                "no routerstatus could be found for it.",
                options->UseBridges ? "no node and " : "",
                hex_str(dir_hint, DIGEST_LEN));
@@ -1065,14 +1058,13 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
 
     smartlist_add_strdup(fps, "fp/");
 
-    SMARTLIST_FOREACH_BEGIN(missing_id_digests, const char *, d) {
+    SMARTLIST_FOREACH_BEGIN (missing_id_digests, const char *, d) {
       char *fp = NULL;
 
       if (digestmap_get(pending_id, d))
         continue;
 
-      base16_encode(id_digest_str, sizeof(id_digest_str),
-                    d, DIGEST_LEN);
+      base16_encode(id_digest_str, sizeof(id_digest_str), d, DIGEST_LEN);
 
       if (need_plus) {
         tor_asprintf(&fp, "+%s", id_digest_str);
@@ -1083,7 +1075,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
       }
 
       smartlist_add(fps, fp);
-    } SMARTLIST_FOREACH_END(d);
+    } SMARTLIST_FOREACH_END (d);
 
     if (smartlist_len(fps) > 1) {
       resource = smartlist_join_strings(fps, "", 0, NULL);
@@ -1105,17 +1097,17 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
 
     smartlist_add_strdup(fp_pairs, "fp-sk/");
 
-    SMARTLIST_FOREACH_BEGIN(missing_cert_digests, const fp_pair_t *, d) {
+    SMARTLIST_FOREACH_BEGIN (missing_cert_digests, const fp_pair_t *, d) {
       char *fp_pair = NULL;
 
       if (fp_pair_map_get(pending_cert, d))
         continue;
 
       /* Construct string encodings of the digests */
-      base16_encode(id_digest_str, sizeof(id_digest_str),
-                    d->first, DIGEST_LEN);
-      base16_encode(sk_digest_str, sizeof(sk_digest_str),
-                    d->second, DIGEST_LEN);
+      base16_encode(id_digest_str, sizeof(id_digest_str), d->first,
+                    DIGEST_LEN);
+      base16_encode(sk_digest_str, sizeof(sk_digest_str), d->second,
+                    DIGEST_LEN);
 
       /* Now tor_asprintf() */
       if (need_plus) {
@@ -1128,7 +1120,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
 
       /* Add it to the list of pairs to request */
       smartlist_add(fp_pairs, fp_pair);
-    } SMARTLIST_FOREACH_END(d);
+    } SMARTLIST_FOREACH_END (d);
 
     if (smartlist_len(fp_pairs) > 1) {
       resource = smartlist_join_strings(fp_pairs, "", 0, NULL);
@@ -1189,21 +1181,20 @@ list_pending_fpsk_downloads(fp_pair_map_t *result)
   tmp = smartlist_new();
   conns = get_connection_array();
 
-  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
+  SMARTLIST_FOREACH_BEGIN (conns, connection_t *, conn) {
     if (conn->type == CONN_TYPE_DIR &&
         conn->purpose == DIR_PURPOSE_FETCH_CERTIFICATE &&
         !conn->marked_for_close) {
       resource = TO_DIR_CONN(conn)->requested_resource;
       if (!strcmpstart(resource, pfx))
-        dir_split_resource_into_fingerprint_pairs(resource + strlen(pfx),
-                                                  tmp);
+        dir_split_resource_into_fingerprint_pairs(resource + strlen(pfx), tmp);
     }
-  } SMARTLIST_FOREACH_END(conn);
+  } SMARTLIST_FOREACH_END (conn);
 
-  SMARTLIST_FOREACH_BEGIN(tmp, fp_pair_t *, fp) {
-    fp_pair_map_set(result, fp, (void*)1);
+  SMARTLIST_FOREACH_BEGIN (tmp, fp_pair_t *, fp) {
+    fp_pair_map_set(result, fp, (void *)1);
     tor_free(fp);
-  } SMARTLIST_FOREACH_END(fp);
+  } SMARTLIST_FOREACH_END (fp);
 
   smartlist_free(tmp);
 }

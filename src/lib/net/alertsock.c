@@ -20,19 +20,19 @@
 #include "lib/log/util_bug.h"
 
 #ifdef HAVE_SYS_EVENTFD_H
-#include <sys/eventfd.h>
+#  include <sys/eventfd.h>
 #endif
 #ifdef HAVE_FCNTL_H
-#include <fcntl.h>
+#  include <fcntl.h>
 #endif
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
+#  include <sys/socket.h>
 #endif
 #ifdef _WIN32
-#include <winsock2.h>
+#  include <winsock2.h>
 #endif
 
 #if defined(HAVE_EVENTFD) || defined(HAVE_PIPE)
@@ -42,8 +42,8 @@ static int
 write_ni(int fd, const void *buf, size_t n)
 {
   int r;
- again:
-  r = (int) write(fd, buf, n);
+again:
+  r = (int)write(fd, buf, n);
   if (r < 0) {
     if (errno == EINTR)
       goto again;
@@ -58,8 +58,8 @@ static int
 read_ni(int fd, void *buf, size_t n)
 {
   int r;
- again:
-  r = (int) read(fd, buf, n);
+again:
+  r = (int)read(fd, buf, n);
   if (r < 0) {
     if (errno == EINTR)
       goto again;
@@ -76,8 +76,8 @@ static int
 send_ni(int fd, const void *buf, size_t n, int flags)
 {
   int r;
- again:
-  r = (int) send(fd, buf, n, flags);
+again:
+  r = (int)send(fd, buf, n, flags);
   if (r < 0) {
     int error = tor_socket_errno(fd);
     if (ERRNO_IS_EINTR(error))
@@ -94,8 +94,8 @@ static int
 recv_ni(int fd, void *buf, size_t n, int flags)
 {
   int r;
- again:
-  r = (int) recv(fd, buf, n, flags);
+again:
+  r = (int)recv(fd, buf, n, flags);
   if (r < 0) {
     int error = tor_socket_errno(fd);
     if (ERRNO_IS_EINTR(error))
@@ -112,7 +112,7 @@ static int
 eventfd_alert(int fd)
 {
   uint64_t u = 1;
-  int r = write_ni(fd, (void*)&u, sizeof(u));
+  int r = write_ni(fd, (void *)&u, sizeof(u));
   if (r < 0 && -r != EAGAIN)
     return -1;
   return 0;
@@ -123,7 +123,7 @@ static int
 eventfd_drain(int fd)
 {
   uint64_t u = 0;
-  int r = read_ni(fd, (void*)&u, sizeof(u));
+  int r = read_ni(fd, (void *)&u, sizeof(u));
   if (r < 0 && -r != EAGAIN)
     return r;
   return 0;
@@ -190,17 +190,17 @@ sock_drain(tor_socket_t fd)
 int
 alert_sockets_create(alert_sockets_t *socks_out, uint32_t flags)
 {
-  tor_socket_t socks[2] = { TOR_INVALID_SOCKET, TOR_INVALID_SOCKET };
+  tor_socket_t socks[2] = {TOR_INVALID_SOCKET, TOR_INVALID_SOCKET};
 
 #ifdef HAVE_EVENTFD
   /* First, we try the Linux eventfd() syscall.  This gives a 64-bit counter
    * associated with a single file descriptor. */
-#if defined(EFD_CLOEXEC) && defined(EFD_NONBLOCK)
+#  if defined(EFD_CLOEXEC) && defined(EFD_NONBLOCK)
   if (!(flags & ASOCKS_NOEVENTFD2))
-    socks[0] = eventfd(0, EFD_CLOEXEC|EFD_NONBLOCK);
-#endif
+    socks[0] = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+#  endif
   if (socks[0] < 0 && !(flags & ASOCKS_NOEVENTFD)) {
-    socks[0] = eventfd(0,0);
+    socks[0] = eventfd(0, 0);
     if (socks[0] >= 0) {
       if (fcntl(socks[0], F_SETFD, FD_CLOEXEC) < 0 ||
           set_socket_nonblocking(socks[0]) < 0) {
@@ -223,8 +223,7 @@ alert_sockets_create(alert_sockets_t *socks_out, uint32_t flags)
 #ifdef HAVE_PIPE2
   /* Now we're going to try pipes. First type the pipe2() syscall, if we
    * have it, so we can save some calls... */
-  if (!(flags & ASOCKS_NOPIPE2) &&
-      pipe2(socks, O_NONBLOCK|O_CLOEXEC) == 0) {
+  if (!(flags & ASOCKS_NOPIPE2) && pipe2(socks, O_NONBLOCK | O_CLOEXEC) == 0) {
     socks_out->read_fd = socks[0];
     socks_out->write_fd = socks[1];
     socks_out->alert_fn = pipe_alert;
@@ -236,8 +235,7 @@ alert_sockets_create(alert_sockets_t *socks_out, uint32_t flags)
 #ifdef HAVE_PIPE
   /* Now try the regular pipe() syscall.  Pipes have a bit lower overhead than
    * socketpairs, fwict. */
-  if (!(flags & ASOCKS_NOPIPE) &&
-      pipe(socks) == 0) {
+  if (!(flags & ASOCKS_NOPIPE) && pipe(socks) == 0) {
     if (fcntl(socks[0], F_SETFD, FD_CLOEXEC) < 0 ||
         fcntl(socks[1], F_SETFD, FD_CLOEXEC) < 0 ||
         set_socket_nonblocking(socks[0]) < 0 ||

@@ -4,18 +4,18 @@
 #include "orconfig.h"
 #include <stdio.h>
 #ifdef _WIN32
-#define WINDOWS_LEAN_AND_MEAN
-#include <windows.h>
+#  define WINDOWS_LEAN_AND_MEAN
+#  include <windows.h>
 #else
-#include <unistd.h>
+#  include <unistd.h>
 #endif /* defined(_WIN32) */
 #include <string.h>
 #include <stdlib.h>
 
 #ifdef _WIN32
-#define SLEEP(sec) Sleep((sec)*1000)
+#  define SLEEP(sec) Sleep((sec)*1000)
 #else
-#define SLEEP(sec) sleep(sec)
+#  define SLEEP(sec) sleep(sec)
 #endif
 
 /* Trivial test program to test process_t. */

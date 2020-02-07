@@ -79,7 +79,7 @@ tor_mul_u64_nowrap(uint64_t a, uint64_t b)
   } else if (PREDICT_UNLIKELY(UINT64_MAX / a < b)) {
     return UINT64_MAX;
   } else {
-    return a*b;
+    return a * b;
   }
 }
 

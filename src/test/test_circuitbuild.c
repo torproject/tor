@@ -53,7 +53,7 @@ test_new_route_len_noexit(void *arg)
   r = new_route_len(CIRCUIT_PURPOSE_S_CONNECT_REND, NULL, &dummy_nodes);
   tt_int_op(DEFAULT_ROUTE_LEN, OP_EQ, r);
 
- done:
+done:
   UNMOCK(count_acceptable_nodes);
 }
 
@@ -79,7 +79,7 @@ test_new_route_len_unsafe_exit(void *arg)
   r = new_route_len(CIRCUIT_PURPOSE_S_CONNECT_REND, &dummy_ei, &dummy_nodes);
   tt_int_op(DEFAULT_ROUTE_LEN + 1, OP_EQ, r);
 
- done:
+done:
   UNMOCK(count_acceptable_nodes);
 }
 
@@ -102,7 +102,7 @@ test_new_route_len_safe_exit(void *arg)
   r = new_route_len(CIRCUIT_PURPOSE_TESTING, &dummy_ei, &dummy_nodes);
   tt_int_op(DEFAULT_ROUTE_LEN, OP_EQ, r);
 
- done:
+done:
   UNMOCK(count_acceptable_nodes);
 }
 
@@ -128,7 +128,7 @@ test_new_route_len_unhandled_exit(void *arg)
   teardown_capture_of_logs();
   tor_end_capture_bugs_();
 
- done:
+done:
   UNMOCK(count_acceptable_nodes);
 }
 
@@ -140,7 +140,7 @@ test_upgrade_from_guard_wait(void *arg)
   entry_guard_t *guard = NULL;
   smartlist_t *list = NULL;
 
-  (void) arg;
+  (void)arg;
 
   circ = dummy_origin_circuit_new(0);
   orig_circ = TO_ORIGIN_CIRCUIT(circ);
@@ -154,9 +154,8 @@ test_upgrade_from_guard_wait(void *arg)
   guard = tor_malloc_zero(sizeof(*guard));
   guard->in_selection = get_guard_selection_info();
 
-  orig_circ->guard_state =
-    circuit_guard_state_new(guard, GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD,
-                            NULL);
+  orig_circ->guard_state = circuit_guard_state_new(
+      guard, GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD, NULL);
 
   /* Mark the circuit for close. */
   circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
@@ -166,18 +165,17 @@ test_upgrade_from_guard_wait(void *arg)
   list = circuit_find_circuits_to_upgrade_from_guard_wait();
   tt_assert(!list);
 
- done:
+done:
   smartlist_free(list);
   circuit_free(circ);
   entry_guard_free_(guard);
 }
 
 struct testcase_t circuitbuild_tests[] = {
-  { "noexit", test_new_route_len_noexit, 0, NULL, NULL },
-  { "safe_exit", test_new_route_len_safe_exit, 0, NULL, NULL },
-  { "unsafe_exit", test_new_route_len_unsafe_exit, 0, NULL, NULL },
-  { "unhandled_exit", test_new_route_len_unhandled_exit, 0, NULL, NULL },
-  { "upgrade_from_guard_wait", test_upgrade_from_guard_wait, TT_FORK,
-    &helper_pubsub_setup, NULL },
-  END_OF_TESTCASES
-};
+    {"noexit", test_new_route_len_noexit, 0, NULL, NULL},
+    {"safe_exit", test_new_route_len_safe_exit, 0, NULL, NULL},
+    {"unsafe_exit", test_new_route_len_unsafe_exit, 0, NULL, NULL},
+    {"unhandled_exit", test_new_route_len_unhandled_exit, 0, NULL, NULL},
+    {"upgrade_from_guard_wait", test_upgrade_from_guard_wait, TT_FORK,
+     &helper_pubsub_setup, NULL},
+    END_OF_TESTCASES};

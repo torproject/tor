@@ -25,10 +25,8 @@ typedef struct namemap_t namemap_t;
 void namemap_init(namemap_t *map);
 const char *namemap_get_name(const namemap_t *map, unsigned id);
 const char *namemap_fmt_name(const namemap_t *map, unsigned id);
-unsigned namemap_get_id(const namemap_t *map,
-                        const char *name);
-unsigned namemap_get_or_create_id(namemap_t *map,
-                                  const char *name);
+unsigned namemap_get_id(const namemap_t *map, const char *name);
+unsigned namemap_get_or_create_id(namemap_t *map, const char *name);
 size_t namemap_get_size(const namemap_t *map);
 void namemap_clear(namemap_t *map);
 

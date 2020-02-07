@@ -30,18 +30,18 @@ typedef void (*channel_cell_handler_fn_ptr)(channel_t *, cell_t *);
  * channelpadding_decide_to_pad_channel().
  */
 typedef enum {
-    CHANNEL_USED_NOT_USED_FOR_FULL_CIRCS = 0,
-    CHANNEL_USED_FOR_FULL_CIRCS,
-    CHANNEL_USED_FOR_USER_TRAFFIC,
+  CHANNEL_USED_NOT_USED_FOR_FULL_CIRCS = 0,
+  CHANNEL_USED_FOR_FULL_CIRCS,
+  CHANNEL_USED_FOR_USER_TRAFFIC,
 } channel_usage_info_t;
 
 /** Possible rules for generating circuit IDs on an OR connection. */
 typedef enum {
-  CIRC_ID_TYPE_LOWER=0, /**< Pick from 0..1<<15-1. */
-  CIRC_ID_TYPE_HIGHER=1, /**< Pick from 1<<15..1<<16-1. */
+  CIRC_ID_TYPE_LOWER = 0, /**< Pick from 0..1<<15-1. */
+  CIRC_ID_TYPE_HIGHER = 1, /**< Pick from 1<<15..1<<16-1. */
   /** The other side of a connection is an OP: never create circuits to it,
    * and let it use any circuit ID it wants. */
-  CIRC_ID_TYPE_NEITHER=2
+  CIRC_ID_TYPE_NEITHER = 2
 } circ_id_type_t;
 #define circ_id_type_bitfield_t ENUM_BF(circ_id_type_t)
 
@@ -197,10 +197,10 @@ struct channel_t {
   uint64_t global_identifier;
 
   /** Should we expect to see this channel in the channel lists? */
-  unsigned char registered:1;
+  unsigned char registered : 1;
 
   /** has this channel ever been open? */
-  unsigned int has_been_open:1;
+  unsigned int has_been_open : 1;
 
   /**
    * This field indicates if the other side has enabled or disabled
@@ -211,17 +211,17 @@ struct channel_t {
    * disable or force padding to relays, but relays cannot override the
    * client's request.
    */
-  unsigned int padding_enabled:1;
+  unsigned int padding_enabled : 1;
 
   /** Cached value of our decision to pad (to avoid expensive
    * checks during critical path statistics counting). */
-  unsigned int currently_padding:1;
+  unsigned int currently_padding : 1;
 
   /** Is there a pending netflow padding callback? */
-  unsigned int pending_padding_callback:1;
+  unsigned int pending_padding_callback : 1;
 
   /** Is our peer likely to consider this channel canonical? */
-  unsigned int is_canonical_to_peer:1;
+  unsigned int is_canonical_to_peer : 1;
 
   /** Has this channel ever been used for non-directory traffic?
    * Used to decide what channels to pad, and when. */
@@ -314,7 +314,7 @@ struct channel_t {
   /** Close an open channel */
   void (*close)(channel_t *);
   /** Describe the transport subclass for this channel */
-  const char * (*describe_transport)(channel_t *);
+  const char *(*describe_transport)(channel_t *);
   /** Optional method to dump transport-specific statistics on the channel */
   void (*dumpstats)(channel_t *, int);
 
@@ -346,7 +346,7 @@ struct channel_t {
    * to/received from if it is.  If GRD_FLAG_ADDR_ONLY is set, we return only
    * the original address.
    */
-  const char * (*get_remote_descr)(channel_t *, int);
+  const char *(*get_remote_descr)(channel_t *, int);
   /** Check if the lower layer has queued writes */
   int (*has_queued_writes)(channel_t *);
   /**
@@ -407,9 +407,9 @@ struct channel_t {
    * When we send CREATE cells along this connection, which half of the
    * space should we use?
    */
-  circ_id_type_bitfield_t circ_id_type:2;
+  circ_id_type_bitfield_t circ_id_type : 2;
   /* DOCDOC */
-  unsigned wide_circ_ids:1;
+  unsigned wide_circ_ids : 1;
 
   /** For how many circuits are we n_chan?  What about p_chan? */
   unsigned int num_n_circuits, num_p_circuits;
@@ -421,22 +421,22 @@ struct channel_t {
    * for example, if a bad connection fails we shouldn't assume that the
    * router itself has a problem.
    */
-  unsigned int is_bad_for_new_circs:1;
+  unsigned int is_bad_for_new_circs : 1;
 
   /** True iff we have decided that the other end of this connection
    * is a client or bridge relay.  Connections with this flag set should never
    * be used to satisfy an EXTEND request. */
-  unsigned int is_client:1;
+  unsigned int is_client : 1;
 
   /** Set if the channel was initiated remotely (came from a listener) */
-  unsigned int is_incoming:1;
+  unsigned int is_incoming : 1;
 
   /** Set by lower layer if this is local; i.e., everything it communicates
    * with for this channel returns true for is_local_addr().  This is used
    * to decide whether to declare reachability when we receive something on
    * this channel in circuitbuild.c
    */
-  unsigned int is_local:1;
+  unsigned int is_local : 1;
 
   /** Have we logged a warning about circID exhaustion on this channel?
    * If so, when? */
@@ -473,7 +473,7 @@ struct channel_listener_t {
   uint64_t global_identifier;
 
   /** Should we expect to see this channel in the channel lists? */
-  unsigned char registered:1;
+  unsigned char registered : 1;
 
   /** Why did we close?
    */
@@ -495,7 +495,7 @@ struct channel_listener_t {
   /** Close an open channel */
   void (*close)(channel_listener_t *);
   /** Describe the transport subclass for this channel */
-  const char * (*describe_transport)(channel_listener_t *);
+  const char *(*describe_transport)(channel_listener_t *);
   /** Optional method to dump transport-specific statistics on the channel */
   void (*dumpstats)(channel_listener_t *, int);
 
@@ -521,9 +521,8 @@ int channel_state_can_transition(channel_state_t from, channel_state_t to);
 int channel_listener_state_can_transition(channel_listener_state_t from,
                                           channel_listener_state_t to);
 
-const char * channel_state_to_string(channel_state_t state);
-const char *
-channel_listener_state_to_string(channel_listener_state_t state);
+const char *channel_state_to_string(channel_state_t state);
+const char *channel_listener_state_to_string(channel_listener_state_t state);
 
 /* Abstract channel operations */
 
@@ -559,11 +558,11 @@ void channel_listener_dumpstats(int severity);
 
 #ifdef CHANNEL_OBJECT_PRIVATE
 
-#ifdef CHANNEL_FILE_PRIVATE
+#  ifdef CHANNEL_FILE_PRIVATE
 
 STATIC void channel_add_to_digest_map(channel_t *chan);
 
-#endif /* defined(CHANNEL_FILE_PRIVATE) */
+#  endif /* defined(CHANNEL_FILE_PRIVATE) */
 
 /* Channel operations for subclasses and internal use only */
 
@@ -589,10 +588,10 @@ void channel_closed(channel_t *chan);
 
 /* Free a channel */
 void channel_free_(channel_t *chan);
-#define channel_free(chan) FREE_AND_NULL(channel_t, channel_free_, (chan))
+#  define channel_free(chan) FREE_AND_NULL(channel_t, channel_free_, (chan))
 void channel_listener_free_(channel_listener_t *chan_l);
-#define channel_listener_free(chan_l) \
-  FREE_AND_NULL(channel_listener_t, channel_listener_free_, (chan_l))
+#  define channel_listener_free(chan_l) \
+    FREE_AND_NULL(channel_listener_t, channel_listener_free_, (chan_l))
 
 /* State/metadata setters */
 
@@ -604,9 +603,9 @@ void channel_mark_local(channel_t *chan);
 void channel_mark_incoming(channel_t *chan);
 void channel_mark_outgoing(channel_t *chan);
 void channel_mark_remote(channel_t *chan);
-void channel_set_identity_digest(channel_t *chan,
-                             const char *identity_digest,
-                             const struct ed25519_public_key_t *ed_identity);
+void
+channel_set_identity_digest(channel_t *chan, const char *identity_digest,
+                            const struct ed25519_public_key_t *ed_identity);
 
 void channel_listener_change_state(channel_listener_t *chan_l,
                                    channel_listener_state_t to_state);
@@ -631,10 +630,10 @@ void channel_process_cell(channel_t *chan, cell_t *cell);
 
 /* Request from lower layer for more cells if available */
 MOCK_DECL(ssize_t, channel_flush_some_cells,
-          (channel_t *chan, ssize_t num_cells));
+          (channel_t * chan, ssize_t num_cells));
 
 /* Query if data available on this channel */
-MOCK_DECL(int, channel_more_to_flush, (channel_t *chan));
+MOCK_DECL(int, channel_more_to_flush, (channel_t * chan));
 
 /* Notify flushed outgoing for dirreq handling */
 void channel_notify_flushed(channel_t *chan);
@@ -646,23 +645,21 @@ void channel_do_open_actions(channel_t *chan);
 
 /* Helper functions to perform operations on channels */
 
-int channel_send_destroy(circid_t circ_id, channel_t *chan,
-                         int reason);
+int channel_send_destroy(circid_t circ_id, channel_t *chan, int reason);
 
 /*
  * Outside abstract interfaces that should eventually get turned into
  * something transport/address format independent.
  */
 
-channel_t * channel_connect(const tor_addr_t *addr, uint16_t port,
-                            const char *rsa_id_digest,
-                            const struct ed25519_public_key_t *ed_id);
+channel_t *channel_connect(const tor_addr_t *addr, uint16_t port,
+                           const char *rsa_id_digest,
+                           const struct ed25519_public_key_t *ed_id);
 
-channel_t * channel_get_for_extend(const char *rsa_id_digest,
-                                   const struct ed25519_public_key_t *ed_id,
-                                   const tor_addr_t *target_addr,
-                                   const char **msg_out,
-                                   int *launch_out);
+channel_t *channel_get_for_extend(const char *rsa_id_digest,
+                                  const struct ed25519_public_key_t *ed_id,
+                                  const tor_addr_t *target_addr,
+                                  const char **msg_out, int *launch_out);
 
 /* Ask which of two channels is better for circuit-extension purposes */
 int channel_is_better(channel_t *a, channel_t *b);
@@ -670,41 +667,40 @@ int channel_is_better(channel_t *a, channel_t *b);
 /** Channel lookups
  */
 
-channel_t * channel_find_by_global_id(uint64_t global_identifier);
-channel_t * channel_find_by_remote_identity(const char *rsa_id_digest,
-                                    const struct ed25519_public_key_t *ed_id);
+channel_t *channel_find_by_global_id(uint64_t global_identifier);
+channel_t *
+channel_find_by_remote_identity(const char *rsa_id_digest,
+                                const struct ed25519_public_key_t *ed_id);
 
 /** For things returned by channel_find_by_remote_digest(), walk the list.
  * The RSA key will match for all returned elements; the Ed25519 key might not.
  */
-channel_t * channel_next_with_rsa_identity(channel_t *chan);
+channel_t *channel_next_with_rsa_identity(channel_t *chan);
 
 /*
  * Helper macros to lookup state of given channel.
  */
 
-#define CHANNEL_IS_CLOSED(chan) (channel_is_in_state((chan), \
-                                 CHANNEL_STATE_CLOSED))
-#define CHANNEL_IS_OPENING(chan) (channel_is_in_state((chan), \
-                                  CHANNEL_STATE_OPENING))
-#define CHANNEL_IS_OPEN(chan) (channel_is_in_state((chan), \
-                               CHANNEL_STATE_OPEN))
-#define CHANNEL_IS_MAINT(chan) (channel_is_in_state((chan), \
-                                CHANNEL_STATE_MAINT))
-#define CHANNEL_IS_CLOSING(chan) (channel_is_in_state((chan), \
-                                  CHANNEL_STATE_CLOSING))
-#define CHANNEL_IS_ERROR(chan) (channel_is_in_state((chan), \
-                                CHANNEL_STATE_ERROR))
+#define CHANNEL_IS_CLOSED(chan) \
+  (channel_is_in_state((chan), CHANNEL_STATE_CLOSED))
+#define CHANNEL_IS_OPENING(chan) \
+  (channel_is_in_state((chan), CHANNEL_STATE_OPENING))
+#define CHANNEL_IS_OPEN(chan) (channel_is_in_state((chan), CHANNEL_STATE_OPEN))
+#define CHANNEL_IS_MAINT(chan) \
+  (channel_is_in_state((chan), CHANNEL_STATE_MAINT))
+#define CHANNEL_IS_CLOSING(chan) \
+  (channel_is_in_state((chan), CHANNEL_STATE_CLOSING))
+#define CHANNEL_IS_ERROR(chan) \
+  (channel_is_in_state((chan), CHANNEL_STATE_ERROR))
 
-#define CHANNEL_FINISHED(chan) (CHANNEL_IS_CLOSED(chan) || \
-                                CHANNEL_IS_ERROR(chan))
+#define CHANNEL_FINISHED(chan) \
+  (CHANNEL_IS_CLOSED(chan) || CHANNEL_IS_ERROR(chan))
 
-#define CHANNEL_CONDEMNED(chan) (CHANNEL_IS_CLOSING(chan) || \
-                                 CHANNEL_FINISHED(chan))
+#define CHANNEL_CONDEMNED(chan) \
+  (CHANNEL_IS_CLOSING(chan) || CHANNEL_FINISHED(chan))
 
-#define CHANNEL_CAN_HANDLE_CELLS(chan) (CHANNEL_IS_OPENING(chan) || \
-                                        CHANNEL_IS_OPEN(chan) || \
-                                        CHANNEL_IS_MAINT(chan))
+#define CHANNEL_CAN_HANDLE_CELLS(chan) \
+  (CHANNEL_IS_OPENING(chan) || CHANNEL_IS_OPEN(chan) || CHANNEL_IS_MAINT(chan))
 
 static inline int
 channel_is_in_state(channel_t *chan, channel_state_t state)
@@ -716,14 +712,14 @@ channel_is_in_state(channel_t *chan, channel_state_t state)
  * Metadata queries/updates
  */
 
-const char * channel_describe_transport(channel_t *chan);
-MOCK_DECL(void, channel_dump_statistics, (channel_t *chan, int severity));
+const char *channel_describe_transport(channel_t *chan);
+MOCK_DECL(void, channel_dump_statistics, (channel_t * chan, int severity));
 void channel_dump_transport_statistics(channel_t *chan, int severity);
-const char * channel_get_actual_remote_descr(channel_t *chan);
-const char * channel_get_actual_remote_address(channel_t *chan);
-MOCK_DECL(int, channel_get_addr_if_possible, (channel_t *chan,
-                                              tor_addr_t *addr_out));
-const char * channel_get_canonical_remote_descr(channel_t *chan);
+const char *channel_get_actual_remote_descr(channel_t *chan);
+const char *channel_get_actual_remote_address(channel_t *chan);
+MOCK_DECL(int, channel_get_addr_if_possible,
+          (channel_t * chan, tor_addr_t *addr_out));
+const char *channel_get_canonical_remote_descr(channel_t *chan);
 int channel_has_queued_writes(channel_t *chan);
 int channel_is_bad_for_new_circs(channel_t *chan);
 void channel_mark_bad_for_new_circs(channel_t *chan);
@@ -739,12 +735,12 @@ int channel_matches_extend_info(channel_t *chan, extend_info_t *extend_info);
 int channel_matches_target_addr_for_extend(channel_t *chan,
                                            const tor_addr_t *target);
 unsigned int channel_num_circuits(channel_t *chan);
-MOCK_DECL(void,channel_set_circid_type,(channel_t *chan,
-                                        crypto_pk_t *identity_rcvd,
-                                        int consider_identity));
+MOCK_DECL(void, channel_set_circid_type,
+          (channel_t * chan, crypto_pk_t *identity_rcvd,
+           int consider_identity));
 void channel_timestamp_client(channel_t *chan);
 
-const char * channel_listener_describe_transport(channel_listener_t *chan_l);
+const char *channel_listener_describe_transport(channel_listener_t *chan_l);
 void channel_listener_dump_statistics(channel_listener_t *chan_l,
                                       int severity);
 void channel_listener_dump_transport_statistics(channel_listener_t *chan_l,
@@ -762,13 +758,12 @@ time_t channel_when_last_client(channel_t *chan);
 time_t channel_when_last_xmit(channel_t *chan);
 
 /* Counter queries */
-int packed_cell_is_destroy(channel_t *chan,
-                           const packed_cell_t *packed_cell,
+int packed_cell_is_destroy(channel_t *chan, const packed_cell_t *packed_cell,
                            circid_t *circid_out);
 
 /* Declare the handle helpers */
-HANDLE_DECL(channel, channel_t,)
-#define channel_handle_free(h)    \
+HANDLE_DECL(channel, channel_t, )
+#define channel_handle_free(h) \
   FREE_AND_NULL(channel_handle_t, channel_handle_free_, (h))
 #undef tor_timer_t
 

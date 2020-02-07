@@ -41,8 +41,8 @@ gen_vote_routerstatus_for_tests(const char *digest_in_hex, int is_guard)
 
     /* Fill in the fpr */
     tt_int_op(strlen(digest_in_hex), OP_EQ, HEX_DIGEST_LEN);
-    retval = base16_decode(digest_tmp, sizeof(digest_tmp),
-                           digest_in_hex, HEX_DIGEST_LEN);
+    retval = base16_decode(digest_tmp, sizeof(digest_tmp), digest_in_hex,
+                           HEX_DIGEST_LEN);
     tt_int_op(retval, OP_EQ, sizeof(digest_tmp));
     memcpy(rs->identity_digest, digest_tmp, DIGEST_LEN);
   }
@@ -62,7 +62,7 @@ gen_vote_routerstatus_for_tests(const char *digest_in_hex, int is_guard)
 
   return vrs;
 
- done:
+done:
   vote_routerstatus_free(vrs);
 
   return NULL;
@@ -76,7 +76,7 @@ test_parse_guardfraction_file_bad(void *arg)
   char *guardfraction_bad = NULL;
   const char *yesterday_date_str = get_yesterday_date_str();
 
-  (void) arg;
+  (void)arg;
 
   /* Start parsing all those corrupted guardfraction files! */
 
@@ -168,7 +168,7 @@ test_parse_guardfraction_file_bad(void *arg)
   retval = dirserv_read_guardfraction_file_from_str(guardfraction_bad, NULL);
   tt_int_op(retval, OP_EQ, 0);
 
- done:
+done:
   tor_free(guardfraction_bad);
 }
 
@@ -189,7 +189,7 @@ test_parse_guardfraction_file_good(void *arg)
   const char fpr_unlisted[] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
   const int guardfraction_value = 42;
 
-  (void) arg;
+  (void)arg;
 
   {
     /* Populate the smartlist with some fake routerstatuses, so that
@@ -212,8 +212,7 @@ test_parse_guardfraction_file_good(void *arg)
                "written-at %s\n"
                "n-inputs 420 3\n"
                "guard-seen %s %d 420\n",
-               yesterday_date_str,
-               fpr_guard, guardfraction_value);
+               yesterday_date_str, fpr_guard, guardfraction_value);
 
   /* Read the guardfraction file */
   retval = dirserv_read_guardfraction_file_from_str(guardfraction_good,
@@ -224,8 +223,7 @@ test_parse_guardfraction_file_good(void *arg)
 
     /* The guardfraction fields of the guard should be filled. */
     tt_assert(vrs_guard->status.has_guardfraction);
-    tt_int_op(vrs_guard->status.guardfraction_percentage,
-              OP_EQ,
+    tt_int_op(vrs_guard->status.guardfraction_percentage, OP_EQ,
               guardfraction_value);
 
     /* The guard that was not in the guardfraction file should not have
@@ -233,7 +231,7 @@ test_parse_guardfraction_file_good(void *arg)
     tt_assert(!vrs_dummy->status.has_guardfraction);
   }
 
- done:
+done:
   vote_routerstatus_free(vrs_guard);
   vote_routerstatus_free(vrs_dummy);
   smartlist_free(routerstatuses);
@@ -247,12 +245,11 @@ test_get_guardfraction_bandwidth(void *arg)
   guardfraction_bandwidth_t gf_bw;
   const int orig_bw = 1000;
 
-  (void) arg;
+  (void)arg;
 
   /* A guard with bandwidth 1000 and GuardFraction 0.25, should have
      bandwidth 250 as a guard and bandwidth 750 as a non-guard.  */
-  guard_get_guardfraction_bandwidth(&gf_bw,
-                                    orig_bw, 25);
+  guard_get_guardfraction_bandwidth(&gf_bw, orig_bw, 25);
 
   tt_int_op(gf_bw.guard_bw, OP_EQ, 250);
   tt_int_op(gf_bw.non_guard_bw, OP_EQ, 750);
@@ -261,8 +258,7 @@ test_get_guardfraction_bandwidth(void *arg)
    * invariant. */
   tt_int_op(gf_bw.non_guard_bw + gf_bw.guard_bw, OP_EQ, orig_bw);
 
- done:
-  ;
+done:;
 }
 
 /** Parse the GuardFraction element of the consensus, and make sure it
@@ -283,7 +279,7 @@ test_parse_guardfraction_consensus(void *arg)
   const char *guardfraction_str_bad2 = "GuardFraction=166"; /* no percentage */
   routerstatus_t rs_bad2;
 
-  (void) arg;
+  (void)arg;
 
   /* GuardFraction use is currently disabled by default. So we need to
      manually enable it. */
@@ -294,9 +290,8 @@ test_parse_guardfraction_consensus(void *arg)
     memset(&rs_good, 0, sizeof(routerstatus_t));
     rs_good.is_possible_guard = 1;
 
-    retval = routerstatus_parse_guardfraction(guardfraction_str_good,
-                                              NULL, NULL,
-                                              &rs_good);
+    retval = routerstatus_parse_guardfraction(guardfraction_str_good, NULL,
+                                              NULL, &rs_good);
     tt_int_op(retval, OP_EQ, 0);
     tt_assert(rs_good.has_guardfraction);
     tt_int_op(rs_good.guardfraction_percentage, OP_EQ, 66);
@@ -308,9 +303,8 @@ test_parse_guardfraction_consensus(void *arg)
     tt_assert(!rs_no_guard.is_possible_guard);
 
     setup_full_capture_of_logs(LOG_WARN);
-    retval = routerstatus_parse_guardfraction(guardfraction_str_good,
-                                              NULL, NULL,
-                                              &rs_no_guard);
+    retval = routerstatus_parse_guardfraction(guardfraction_str_good, NULL,
+                                              NULL, &rs_no_guard);
     tt_int_op(retval, OP_EQ, 0);
     tt_assert(!rs_no_guard.has_guardfraction);
     expect_single_log_msg_containing("Got GuardFraction for non-guard . "
@@ -322,9 +316,8 @@ test_parse_guardfraction_consensus(void *arg)
     memset(&rs_bad1, 0, sizeof(routerstatus_t));
     rs_bad1.is_possible_guard = 1;
 
-    retval = routerstatus_parse_guardfraction(guardfraction_str_bad1,
-                                              NULL, NULL,
-                                              &rs_bad1);
+    retval = routerstatus_parse_guardfraction(guardfraction_str_bad1, NULL,
+                                              NULL, &rs_bad1);
     tt_int_op(retval, OP_EQ, -1);
     tt_assert(!rs_bad1.has_guardfraction);
   }
@@ -333,14 +326,13 @@ test_parse_guardfraction_consensus(void *arg)
     memset(&rs_bad2, 0, sizeof(routerstatus_t));
     rs_bad2.is_possible_guard = 1;
 
-    retval = routerstatus_parse_guardfraction(guardfraction_str_bad2,
-                                              NULL, NULL,
-                                              &rs_bad2);
+    retval = routerstatus_parse_guardfraction(guardfraction_str_bad2, NULL,
+                                              NULL, &rs_bad2);
     tt_int_op(retval, OP_EQ, -1);
     tt_assert(!rs_bad2.has_guardfraction);
   }
 
- done:
+done:
   teardown_capture_of_logs();
 }
 
@@ -352,26 +344,25 @@ test_should_apply_guardfraction(void *arg)
   networkstatus_t vote_enabled, vote_disabled, vote_missing;
   or_options_t *options = get_options_mutable();
 
-  (void) arg;
+  (void)arg;
 
   { /* Fill the votes for later */
     /* This one suggests enabled GuardFraction. */
     memset(&vote_enabled, 0, sizeof(vote_enabled));
     vote_enabled.net_params = smartlist_new();
-    smartlist_split_string(vote_enabled.net_params,
-                           "UseGuardFraction=1", NULL, 0, 0);
+    smartlist_split_string(vote_enabled.net_params, "UseGuardFraction=1", NULL,
+                           0, 0);
 
     /* This one suggests disabled GuardFraction. */
     memset(&vote_disabled, 0, sizeof(vote_disabled));
     vote_disabled.net_params = smartlist_new();
-    smartlist_split_string(vote_disabled.net_params,
-                           "UseGuardFraction=0", NULL, 0, 0);
+    smartlist_split_string(vote_disabled.net_params, "UseGuardFraction=0",
+                           NULL, 0, 0);
 
     /* This one doesn't have GuardFraction at all. */
     memset(&vote_missing, 0, sizeof(vote_missing));
     vote_missing.net_params = smartlist_new();
-    smartlist_split_string(vote_missing.net_params,
-                           "leon=trout", NULL, 0, 0);
+    smartlist_split_string(vote_missing.net_params, "leon=trout", NULL, 0, 0);
   }
 
   /* If torrc option is set to yes, we should always use
@@ -399,7 +390,7 @@ test_should_apply_guardfraction(void *arg)
    * set, we should fallback to "no". */
   tt_int_op(should_apply_guardfraction(&vote_missing), OP_EQ, 0);
 
- done:
+done:
   SMARTLIST_FOREACH(vote_enabled.net_params, char *, cp, tor_free(cp));
   SMARTLIST_FOREACH(vote_disabled.net_params, char *, cp, tor_free(cp));
   SMARTLIST_FOREACH(vote_missing.net_params, char *, cp, tor_free(cp));
@@ -409,16 +400,15 @@ test_should_apply_guardfraction(void *arg)
 }
 
 struct testcase_t guardfraction_tests[] = {
-  { "parse_guardfraction_file_bad", test_parse_guardfraction_file_bad,
-    TT_FORK, NULL, NULL },
-  { "parse_guardfraction_file_good", test_parse_guardfraction_file_good,
-    TT_FORK, NULL, NULL },
-  { "parse_guardfraction_consensus", test_parse_guardfraction_consensus,
-    TT_FORK, NULL, NULL },
-  { "get_guardfraction_bandwidth", test_get_guardfraction_bandwidth,
-    TT_FORK, NULL, NULL },
-  { "should_apply_guardfraction", test_should_apply_guardfraction,
-    TT_FORK, NULL, NULL },
+    {"parse_guardfraction_file_bad", test_parse_guardfraction_file_bad,
+     TT_FORK, NULL, NULL},
+    {"parse_guardfraction_file_good", test_parse_guardfraction_file_good,
+     TT_FORK, NULL, NULL},
+    {"parse_guardfraction_consensus", test_parse_guardfraction_consensus,
+     TT_FORK, NULL, NULL},
+    {"get_guardfraction_bandwidth", test_get_guardfraction_bandwidth, TT_FORK,
+     NULL, NULL},
+    {"should_apply_guardfraction", test_should_apply_guardfraction, TT_FORK,
+     NULL, NULL},
 
-  END_OF_TESTCASES
-};
+    END_OF_TESTCASES};

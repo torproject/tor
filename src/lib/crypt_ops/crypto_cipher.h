@@ -41,17 +41,15 @@ void crypto_cipher_free_(crypto_cipher_t *env);
 /* symmetric crypto */
 const char *crypto_cipher_get_key(crypto_cipher_t *env);
 
-int crypto_cipher_encrypt(crypto_cipher_t *env, char *to,
-                          const char *from, size_t fromlen);
-int crypto_cipher_decrypt(crypto_cipher_t *env, char *to,
-                          const char *from, size_t fromlen);
+int crypto_cipher_encrypt(crypto_cipher_t *env, char *to, const char *from,
+                          size_t fromlen);
+int crypto_cipher_decrypt(crypto_cipher_t *env, char *to, const char *from,
+                          size_t fromlen);
 void crypto_cipher_crypt_inplace(crypto_cipher_t *env, char *d, size_t len);
 
-int crypto_cipher_encrypt_with_iv(const char *key,
-                                  char *to, size_t tolen,
+int crypto_cipher_encrypt_with_iv(const char *key, char *to, size_t tolen,
                                   const char *from, size_t fromlen);
-int crypto_cipher_decrypt_with_iv(const char *key,
-                                  char *to, size_t tolen,
+int crypto_cipher_decrypt_with_iv(const char *key, char *to, size_t tolen,
                                   const char *from, size_t fromlen);
 
 #endif /* !defined(TOR_CRYPTO_CIPHER_H) */

@@ -67,11 +67,11 @@ static smartlist_t *reachable_dir_addr_policy = NULL;
 
 /** Element of an exit policy summary */
 typedef struct policy_summary_item_t {
-    uint16_t prt_min; /**< Lowest port number to accept/reject. */
-    uint16_t prt_max; /**< Highest port number to accept/reject. */
-    uint64_t reject_count; /**< Number of IP-Addresses that are rejected to
-                                this port range. */
-    unsigned int accepted:1; /** Has this port already been accepted */
+  uint16_t prt_min; /**< Lowest port number to accept/reject. */
+  uint16_t prt_max; /**< Highest port number to accept/reject. */
+  uint64_t reject_count; /**< Number of IP-Addresses that are rejected to
+                              this port range. */
+  unsigned int accepted : 1; /** Has this port already been accepted */
 } policy_summary_item_t;
 
 /** Private networks.  This list is used in two places, once to expand the
@@ -81,23 +81,16 @@ typedef struct policy_summary_item_t {
  *  just change this without a proper migration plan and a proposal and stuff.
  */
 static const char *private_nets[] = {
-  "0.0.0.0/8", "169.254.0.0/16",
-  "127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12",
-  "[::]/8",
-  "[fc00::]/7", "[fe80::]/10", "[fec0::]/10", "[ff00::]/8", "[::]/127",
-  NULL
-};
+    "0.0.0.0/8",   "169.254.0.0/16", "127.0.0.0/8", "192.168.0.0/16",
+    "10.0.0.0/8",  "172.16.0.0/12",  "[::]/8",      "[fc00::]/7",
+    "[fe80::]/10", "[fec0::]/10",    "[ff00::]/8",  "[::]/127",
+    NULL};
 
 static int policies_parse_exit_policy_internal(
-                                      config_line_t *cfg,
-                                      smartlist_t **dest,
-                                      int ipv6_exit,
-                                      int rejectprivate,
-                                      const smartlist_t *configured_addresses,
-                                      int reject_interface_addresses,
-                                      int reject_configured_port_addresses,
-                                      int add_default_policy,
-                                      int add_reduced_policy);
+    config_line_t *cfg, smartlist_t **dest, int ipv6_exit, int rejectprivate,
+    const smartlist_t *configured_addresses, int reject_interface_addresses,
+    int reject_configured_port_addresses, int add_default_policy,
+    int add_reduced_policy);
 
 /** Replace all "private" entries in *<b>policy</b> with their expanded
  * equivalents. */
@@ -114,25 +107,25 @@ policy_expand_private(smartlist_t **policy)
 
   tmp = smartlist_new();
 
-  SMARTLIST_FOREACH_BEGIN(*policy, addr_policy_t *, p) {
-     if (! p->is_private) {
-       smartlist_add(tmp, p);
-       continue;
-     }
-     for (i = 0; private_nets[i]; ++i) {
-       addr_policy_t newpolicy;
-       memcpy(&newpolicy, p, sizeof(addr_policy_t));
-       newpolicy.is_private = 0;
-       newpolicy.is_canonical = 0;
-       if (tor_addr_parse_mask_ports(private_nets[i], 0,
-                               &newpolicy.addr,
-                               &newpolicy.maskbits, &port_min, &port_max)<0) {
-         tor_assert_unreached();
-       }
-       smartlist_add(tmp, addr_policy_get_canonical_entry(&newpolicy));
-     }
-     addr_policy_free(p);
-  } SMARTLIST_FOREACH_END(p);
+  SMARTLIST_FOREACH_BEGIN (*policy, addr_policy_t *, p) {
+    if (!p->is_private) {
+      smartlist_add(tmp, p);
+      continue;
+    }
+    for (i = 0; private_nets[i]; ++i) {
+      addr_policy_t newpolicy;
+      memcpy(&newpolicy, p, sizeof(addr_policy_t));
+      newpolicy.is_private = 0;
+      newpolicy.is_canonical = 0;
+      if (tor_addr_parse_mask_ports(private_nets[i], 0, &newpolicy.addr,
+                                    &newpolicy.maskbits, &port_min,
+                                    &port_max) < 0) {
+        tor_assert_unreached();
+      }
+      smartlist_add(tmp, addr_policy_get_canonical_entry(&newpolicy));
+    }
+    addr_policy_free(p);
+  } SMARTLIST_FOREACH_END (p);
 
   smartlist_free(*policy);
   *policy = tmp;
@@ -149,7 +142,7 @@ policy_expand_unspec(smartlist_t **policy)
     return;
 
   tmp = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(*policy, addr_policy_t *, p) {
+  SMARTLIST_FOREACH_BEGIN (*policy, addr_policy_t *, p) {
     sa_family_t family = tor_addr_family(&p->addr);
     if (family == AF_INET6 || family == AF_INET || p->is_private) {
       smartlist_add(tmp, p);
@@ -175,7 +168,7 @@ policy_expand_unspec(smartlist_t **policy)
       log_warn(LD_BUG, "Funny-looking address policy with family %d", family);
       smartlist_add(tmp, p);
     }
-  } SMARTLIST_FOREACH_END(p);
+  } SMARTLIST_FOREACH_END (p);
 
   smartlist_free(*policy);
   *policy = tmp;
@@ -191,8 +184,7 @@ policy_expand_unspec(smartlist_t **policy)
  * action.
  */
 static int
-parse_addr_policy(config_line_t *cfg, smartlist_t **dest,
-                  int assume_action)
+parse_addr_policy(config_line_t *cfg, smartlist_t **dest, int assume_action)
 {
   smartlist_t *result;
   smartlist_t *entries;
@@ -207,9 +199,9 @@ parse_addr_policy(config_line_t *cfg, smartlist_t **dest,
   entries = smartlist_new();
   for (; cfg; cfg = cfg->next) {
     smartlist_split_string(entries, cfg->value, ",",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-    SMARTLIST_FOREACH_BEGIN(entries, const char *, ent) {
-      log_debug(LD_CONFIG,"Adding new entry '%s'",ent);
+                           SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, 0);
+    SMARTLIST_FOREACH_BEGIN (entries, const char *, ent) {
+      log_debug(LD_CONFIG, "Adding new entry '%s'", ent);
       malformed_list = 0;
       item = router_parse_addr_policy_item_from_string(ent, assume_action,
                                                        &malformed_list);
@@ -217,17 +209,20 @@ parse_addr_policy(config_line_t *cfg, smartlist_t **dest,
         smartlist_add(result, item);
       } else if (malformed_list) {
         /* the error is so severe the entire list should be discarded */
-        log_warn(LD_CONFIG, "Malformed policy '%s'. Discarding entire policy "
-                 "list.", ent);
+        log_warn(LD_CONFIG,
+                 "Malformed policy '%s'. Discarding entire policy "
+                 "list.",
+                 ent);
         r = -1;
       } else {
         /* the error is minor: don't add the item, but keep processing the
          * rest of the policies in the list */
-        log_debug(LD_CONFIG, "Ignored policy '%s' due to non-fatal error. "
+        log_debug(LD_CONFIG,
+                  "Ignored policy '%s' due to non-fatal error. "
                   "The remainder of the policy list will be used.",
                   ent);
       }
-    } SMARTLIST_FOREACH_END(ent);
+    } SMARTLIST_FOREACH_END (ent);
     SMARTLIST_FOREACH(entries, char *, ent, tor_free(ent));
     smartlist_clear(entries);
   }
@@ -259,8 +254,7 @@ parse_reachable_addresses(void)
   const or_options_t *options = get_options();
   int ret = 0;
 
-  if (options->ReachableDirAddresses &&
-      options->ReachableORAddresses &&
+  if (options->ReachableDirAddresses && options->ReachableORAddresses &&
       options->ReachableAddresses) {
     log_warn(LD_CONFIG,
              "Both ReachableDirAddresses and ReachableORAddresses are set. "
@@ -269,14 +263,12 @@ parse_reachable_addresses(void)
   addr_policy_list_free(reachable_or_addr_policy);
   reachable_or_addr_policy = NULL;
   if (!options->ReachableORAddresses && options->ReachableAddresses)
-    log_info(LD_CONFIG,
-             "Using ReachableAddresses as ReachableORAddresses.");
-  if (parse_addr_policy(options->ReachableORAddresses ?
-                          options->ReachableORAddresses :
-                          options->ReachableAddresses,
+    log_info(LD_CONFIG, "Using ReachableAddresses as ReachableORAddresses.");
+  if (parse_addr_policy(options->ReachableORAddresses
+                            ? options->ReachableORAddresses
+                            : options->ReachableAddresses,
                         &reachable_or_addr_policy, ADDR_POLICY_ACCEPT)) {
-    log_warn(LD_CONFIG,
-             "Error parsing Reachable%sAddresses entry; ignoring.",
+    log_warn(LD_CONFIG, "Error parsing Reachable%sAddresses entry; ignoring.",
              options->ReachableORAddresses ? "OR" : "");
     ret = -1;
   }
@@ -284,11 +276,10 @@ parse_reachable_addresses(void)
   addr_policy_list_free(reachable_dir_addr_policy);
   reachable_dir_addr_policy = NULL;
   if (!options->ReachableDirAddresses && options->ReachableAddresses)
-    log_info(LD_CONFIG,
-             "Using ReachableAddresses as ReachableDirAddresses");
-  if (parse_addr_policy(options->ReachableDirAddresses ?
-                          options->ReachableDirAddresses :
-                          options->ReachableAddresses,
+    log_info(LD_CONFIG, "Using ReachableAddresses as ReachableDirAddresses");
+  if (parse_addr_policy(options->ReachableDirAddresses
+                            ? options->ReachableDirAddresses
+                            : options->ReachableAddresses,
                         &reachable_dir_addr_policy, ADDR_POLICY_ACCEPT)) {
     if (options->ReachableDirAddresses)
       log_warn(LD_CONFIG,
@@ -298,34 +289,36 @@ parse_reachable_addresses(void)
 
   /* We ignore ReachableAddresses for relays */
   if (!server_mode(options)) {
-    if (policy_is_reject_star(reachable_or_addr_policy, AF_UNSPEC, 0)
-        || policy_is_reject_star(reachable_dir_addr_policy, AF_UNSPEC,0)) {
-      log_warn(LD_CONFIG, "Tor cannot connect to the Internet if "
+    if (policy_is_reject_star(reachable_or_addr_policy, AF_UNSPEC, 0) ||
+        policy_is_reject_star(reachable_dir_addr_policy, AF_UNSPEC, 0)) {
+      log_warn(LD_CONFIG,
+               "Tor cannot connect to the Internet if "
                "ReachableAddresses, ReachableORAddresses, or "
                "ReachableDirAddresses reject all addresses. Please accept "
                "some addresses in these options.");
-    } else if (options->ClientUseIPv4 == 1
-       && (policy_is_reject_star(reachable_or_addr_policy, AF_INET, 0)
-           || policy_is_reject_star(reachable_dir_addr_policy, AF_INET, 0))) {
-          log_warn(LD_CONFIG, "You have set ClientUseIPv4 1, but "
-                   "ReachableAddresses, ReachableORAddresses, or "
-                   "ReachableDirAddresses reject all IPv4 addresses. "
-                   "Tor will not connect using IPv4.");
-    } else if (fascist_firewall_use_ipv6(options)
-       && (policy_is_reject_star(reachable_or_addr_policy, AF_INET6, 0)
-         || policy_is_reject_star(reachable_dir_addr_policy, AF_INET6, 0))) {
-          log_warn(LD_CONFIG, "You have configured tor to use or prefer IPv6 "
-                   "(or UseBridges 1), but "
-                   "ReachableAddresses, ReachableORAddresses, or "
-                   "ReachableDirAddresses reject all IPv6 addresses. "
-                   "Tor will not connect using IPv6.");
+    } else if (options->ClientUseIPv4 == 1 &&
+               (policy_is_reject_star(reachable_or_addr_policy, AF_INET, 0) ||
+                policy_is_reject_star(reachable_dir_addr_policy, AF_INET,
+                                      0))) {
+      log_warn(LD_CONFIG, "You have set ClientUseIPv4 1, but "
+                          "ReachableAddresses, ReachableORAddresses, or "
+                          "ReachableDirAddresses reject all IPv4 addresses. "
+                          "Tor will not connect using IPv4.");
+    } else if (fascist_firewall_use_ipv6(options) &&
+               (policy_is_reject_star(reachable_or_addr_policy, AF_INET6, 0) ||
+                policy_is_reject_star(reachable_dir_addr_policy, AF_INET6,
+                                      0))) {
+      log_warn(LD_CONFIG, "You have configured tor to use or prefer IPv6 "
+                          "(or UseBridges 1), but "
+                          "ReachableAddresses, ReachableORAddresses, or "
+                          "ReachableDirAddresses reject all IPv6 addresses. "
+                          "Tor will not connect using IPv6.");
     }
   }
 
   /* Append a reject *:* to reachable_(or|dir)_addr_policy */
   if (!ret && (options->ReachableDirAddresses ||
-               options->ReachableORAddresses ||
-               options->ReachableAddresses)) {
+               options->ReachableORAddresses || options->ReachableAddresses)) {
     append_exit_policy_string(&reachable_or_addr_policy, "reject *:*");
     append_exit_policy_string(&reachable_dir_addr_policy, "reject *:*");
   }
@@ -372,20 +365,20 @@ firewall_is_fascist_dir(void)
  */
 static int
 addr_policy_permits_tor_addr(const tor_addr_t *addr, uint16_t port,
-                            smartlist_t *policy)
+                             smartlist_t *policy)
 {
   addr_policy_result_t p;
   p = compare_tor_addr_to_addr_policy(addr, port, policy);
   switch (p) {
-    case ADDR_POLICY_PROBABLY_ACCEPTED:
-    case ADDR_POLICY_ACCEPTED:
-      return 1;
-    case ADDR_POLICY_PROBABLY_REJECTED:
-    case ADDR_POLICY_REJECTED:
-      return 0;
-    default:
-      log_warn(LD_BUG, "Unexpected result: %d", (int)p);
-      return 0;
+  case ADDR_POLICY_PROBABLY_ACCEPTED:
+  case ADDR_POLICY_ACCEPTED:
+    return 1;
+  case ADDR_POLICY_PROBABLY_REJECTED:
+  case ADDR_POLICY_REJECTED:
+    return 0;
+  default:
+    log_warn(LD_BUG, "Unexpected result: %d", (int)p);
+    return 0;
   }
 }
 
@@ -394,8 +387,7 @@ addr_policy_permits_tor_addr(const tor_addr_t *addr, uint16_t port,
  * order. */
 /* XXXX deprecate when possible. */
 static int
-addr_policy_permits_address(uint32_t addr, uint16_t port,
-                            smartlist_t *policy)
+addr_policy_permits_address(uint32_t addr, uint16_t port, smartlist_t *policy)
 {
   tor_addr_t a;
   tor_addr_from_ipv4h(&a, addr);
@@ -417,10 +409,9 @@ addr_policy_permits_address(uint32_t addr, uint16_t port,
  *
  * Return false if addr is NULL or tor_addr_is_null(), or if port is 0. */
 STATIC int
-fascist_firewall_allows_address(const tor_addr_t *addr,
-                                uint16_t port,
-                                smartlist_t *firewall_policy,
-                                int pref_only, int pref_ipv6)
+fascist_firewall_allows_address(const tor_addr_t *addr, uint16_t port,
+                                smartlist_t *firewall_policy, int pref_only,
+                                int pref_ipv6)
 {
   const or_options_t *options = get_options();
   const int client_mode = !server_mode(options);
@@ -444,8 +435,7 @@ fascist_firewall_allows_address(const tor_addr_t *addr,
     return 0;
   }
 
-  return addr_policy_permits_tor_addr(addr, port,
-                                      firewall_policy);
+  return addr_policy_permits_tor_addr(addr, port, firewall_policy);
 }
 
 /** Is this client configured to use IPv6?
@@ -559,16 +549,13 @@ fascist_firewall_allows_address_addr(const tor_addr_t *addr, uint16_t port,
                                      int pref_only, int pref_ipv6)
 {
   if (fw_connection == FIREWALL_OR_CONNECTION) {
-    return fascist_firewall_allows_address(addr, port,
-                               reachable_or_addr_policy,
-                               pref_only, pref_ipv6);
+    return fascist_firewall_allows_address(
+        addr, port, reachable_or_addr_policy, pref_only, pref_ipv6);
   } else if (fw_connection == FIREWALL_DIR_CONNECTION) {
-    return fascist_firewall_allows_address(addr, port,
-                               reachable_dir_addr_policy,
-                               pref_only, pref_ipv6);
+    return fascist_firewall_allows_address(
+        addr, port, reachable_dir_addr_policy, pref_only, pref_ipv6);
   } else {
-    log_warn(LD_BUG, "Bad firewall_connection_t value %d.",
-             fw_connection);
+    log_warn(LD_BUG, "Bad firewall_connection_t value %d.", fw_connection);
     return 0;
   }
 }
@@ -584,9 +571,8 @@ fascist_firewall_allows_address_ap(const tor_addr_port_t *ap,
                                    int pref_only, int pref_ipv6)
 {
   tor_assert(ap);
-  return fascist_firewall_allows_address_addr(&ap->addr, ap->port,
-                                              fw_connection, pref_only,
-                                              pref_ipv6);
+  return fascist_firewall_allows_address_addr(
+      &ap->addr, ap->port, fw_connection, pref_only, pref_ipv6);
 }
 
 /* Return true iff we think our firewall will let us make a connection to
@@ -597,15 +583,14 @@ fascist_firewall_allows_address_ap(const tor_addr_port_t *ap,
  */
 static int
 fascist_firewall_allows_address_ipv4h(uint32_t ipv4h_or_addr,
-                                          uint16_t ipv4_or_port,
-                                          firewall_connection_t fw_connection,
-                                          int pref_only, int pref_ipv6)
+                                      uint16_t ipv4_or_port,
+                                      firewall_connection_t fw_connection,
+                                      int pref_only, int pref_ipv6)
 {
   tor_addr_t ipv4_or_addr;
   tor_addr_from_ipv4h(&ipv4_or_addr, ipv4h_or_addr);
-  return fascist_firewall_allows_address_addr(&ipv4_or_addr, ipv4_or_port,
-                                              fw_connection, pref_only,
-                                              pref_ipv6);
+  return fascist_firewall_allows_address_addr(
+      &ipv4_or_addr, ipv4_or_port, fw_connection, pref_only, pref_ipv6);
 }
 
 /** Return true iff we think our firewall will let us make a connection to
@@ -622,21 +607,19 @@ fascist_firewall_allows_base(uint32_t ipv4h_addr, uint16_t ipv4_orport,
                              firewall_connection_t fw_connection,
                              int pref_only, int pref_ipv6)
 {
-  if (fascist_firewall_allows_address_ipv4h(ipv4h_addr,
-                                      (fw_connection == FIREWALL_OR_CONNECTION
-                                       ? ipv4_orport
-                                       : ipv4_dirport),
-                                      fw_connection,
-                                      pref_only, pref_ipv6)) {
+  if (fascist_firewall_allows_address_ipv4h(
+          ipv4h_addr,
+          (fw_connection == FIREWALL_OR_CONNECTION ? ipv4_orport
+                                                   : ipv4_dirport),
+          fw_connection, pref_only, pref_ipv6)) {
     return 1;
   }
 
-  if (fascist_firewall_allows_address_addr(ipv6_addr,
-                                      (fw_connection == FIREWALL_OR_CONNECTION
-                                       ? ipv6_orport
-                                       : ipv6_dirport),
-                                      fw_connection,
-                                      pref_only, pref_ipv6)) {
+  if (fascist_firewall_allows_address_addr(
+          ipv6_addr,
+          (fw_connection == FIREWALL_OR_CONNECTION ? ipv6_orport
+                                                   : ipv6_dirport),
+          fw_connection, pref_only, pref_ipv6)) {
     return 1;
   }
 
@@ -654,10 +637,9 @@ fascist_firewall_allows_ri_impl(const routerinfo_t *ri,
   }
 
   /* Assume IPv4 and IPv6 DirPorts are the same */
-  return fascist_firewall_allows_base(ri->addr, ri->or_port, ri->dir_port,
-                                      &ri->ipv6_addr, ri->ipv6_orport,
-                                      ri->dir_port, fw_connection, pref_only,
-                                      pref_ipv6);
+  return fascist_firewall_allows_base(
+      ri->addr, ri->or_port, ri->dir_port, &ri->ipv6_addr, ri->ipv6_orport,
+      ri->dir_port, fw_connection, pref_only, pref_ipv6);
 }
 
 /** Like fascist_firewall_allows_rs, but takes pref_ipv6. */
@@ -671,10 +653,9 @@ fascist_firewall_allows_rs_impl(const routerstatus_t *rs,
   }
 
   /* Assume IPv4 and IPv6 DirPorts are the same */
-  return fascist_firewall_allows_base(rs->addr, rs->or_port, rs->dir_port,
-                                      &rs->ipv6_addr, rs->ipv6_orport,
-                                      rs->dir_port, fw_connection, pref_only,
-                                      pref_ipv6);
+  return fascist_firewall_allows_base(
+      rs->addr, rs->or_port, rs->dir_port, &rs->ipv6_addr, rs->ipv6_orport,
+      rs->dir_port, fw_connection, pref_only, pref_ipv6);
 }
 
 /** Like fascist_firewall_allows_base(), but takes rs.
@@ -695,8 +676,8 @@ fascist_firewall_allows_rs(const routerstatus_t *rs,
    * generic IPv6 preference instead. */
   const or_options_t *options = get_options();
   int pref_ipv6 = (fw_connection == FIREWALL_OR_CONNECTION
-                   ? fascist_firewall_prefer_ipv6_orport(options)
-                   : fascist_firewall_prefer_ipv6_dirport(options));
+                       ? fascist_firewall_prefer_ipv6_orport(options)
+                       : fascist_firewall_prefer_ipv6_dirport(options));
 
   return fascist_firewall_allows_rs_impl(rs, fw_connection, pref_only,
                                          pref_ipv6);
@@ -722,9 +703,8 @@ fascist_firewall_allows_md_impl(const microdesc_t *md,
   }
 
   /* Also can't check IPv4, doesn't have that either */
-  return fascist_firewall_allows_address_addr(&md->ipv6_addr, md->ipv6_orport,
-                                              fw_connection, pref_only,
-                                              pref_ipv6);
+  return fascist_firewall_allows_address_addr(
+      &md->ipv6_addr, md->ipv6_orport, fw_connection, pref_only, pref_ipv6);
 }
 
 /** Like fascist_firewall_allows_base(), but takes node, and looks up pref_ipv6
@@ -741,23 +721,19 @@ fascist_firewall_allows_node(const node_t *node,
   node_assert_ok(node);
 
   const int pref_ipv6 = (fw_connection == FIREWALL_OR_CONNECTION
-                         ? node_ipv6_or_preferred(node)
-                         : node_ipv6_dir_preferred(node));
+                             ? node_ipv6_or_preferred(node)
+                             : node_ipv6_dir_preferred(node));
 
   /* Sometimes, the rs is missing the IPv6 address info, and we need to go
    * all the way to the md */
   if (node->ri && fascist_firewall_allows_ri_impl(node->ri, fw_connection,
                                                   pref_only, pref_ipv6)) {
     return 1;
-  } else if (node->rs && fascist_firewall_allows_rs_impl(node->rs,
-                                                         fw_connection,
-                                                         pref_only,
-                                                         pref_ipv6)) {
+  } else if (node->rs && fascist_firewall_allows_rs_impl(
+                             node->rs, fw_connection, pref_only, pref_ipv6)) {
     return 1;
-  } else if (node->md && fascist_firewall_allows_md_impl(node->md,
-                                                         fw_connection,
-                                                         pref_only,
-                                                         pref_ipv6)) {
+  } else if (node->md && fascist_firewall_allows_md_impl(
+                             node->md, fw_connection, pref_only, pref_ipv6)) {
     return 1;
   } else {
     /* If we know nothing, assume it's unreachable, we'll never get an address
@@ -792,8 +768,7 @@ fascist_firewall_allows_dir_server(const dir_server_t *ds,
  */
 static const tor_addr_port_t *
 fascist_firewall_choose_address_impl(const tor_addr_port_t *a,
-                                     const tor_addr_port_t *b,
-                                     int want_a,
+                                     const tor_addr_port_t *b, int want_a,
                                      firewall_connection_t fw_connection,
                                      int pref_only, int pref_ipv6)
 {
@@ -830,15 +805,12 @@ fascist_firewall_choose_address_impl(const tor_addr_port_t *a,
  * Otherwise, return NULL. */
 STATIC const tor_addr_port_t *
 fascist_firewall_choose_address(const tor_addr_port_t *a,
-                                const tor_addr_port_t *b,
-                                int want_a,
+                                const tor_addr_port_t *b, int want_a,
                                 firewall_connection_t fw_connection,
                                 int pref_only, int pref_ipv6)
 {
   const tor_addr_port_t *pref = fascist_firewall_choose_address_impl(
-                                                                a, b, want_a,
-                                                                fw_connection,
-                                                                1, pref_ipv6);
+      a, b, want_a, fw_connection, 1, pref_ipv6);
   if (pref_only || pref) {
     /* If there is a preferred address, use it. If we can only use preferred
      * addresses, and neither address is preferred, pref will be NULL, and we
@@ -847,8 +819,8 @@ fascist_firewall_choose_address(const tor_addr_port_t *a,
   } else {
     /* If there's no preferred address, and we can return addresses that are
      * not preferred, use an address that's allowed */
-    return fascist_firewall_choose_address_impl(a, b, want_a, fw_connection,
-                                                0, pref_ipv6);
+    return fascist_firewall_choose_address_impl(a, b, want_a, fw_connection, 0,
+                                                pref_ipv6);
   }
 }
 
@@ -862,16 +834,11 @@ fascist_firewall_choose_address(const tor_addr_port_t *a,
  * If both addresses could be chosen (they are both preferred or both allowed)
  * choose IPv6 if pref_ipv6 is true, otherwise choose IPv4. */
 static void
-fascist_firewall_choose_address_base(const tor_addr_t *ipv4_addr,
-                                     uint16_t ipv4_orport,
-                                     uint16_t ipv4_dirport,
-                                     const tor_addr_t *ipv6_addr,
-                                     uint16_t ipv6_orport,
-                                     uint16_t ipv6_dirport,
-                                     firewall_connection_t fw_connection,
-                                     int pref_only,
-                                     int pref_ipv6,
-                                     tor_addr_port_t* ap)
+fascist_firewall_choose_address_base(
+    const tor_addr_t *ipv4_addr, uint16_t ipv4_orport, uint16_t ipv4_dirport,
+    const tor_addr_t *ipv6_addr, uint16_t ipv6_orport, uint16_t ipv6_dirport,
+    firewall_connection_t fw_connection, int pref_only, int pref_ipv6,
+    tor_addr_port_t *ap)
 {
   const tor_addr_port_t *result = NULL;
   const int want_ipv4 = !pref_ipv6;
@@ -884,20 +851,16 @@ fascist_firewall_choose_address_base(const tor_addr_t *ipv4_addr,
 
   tor_addr_port_t ipv4_ap;
   tor_addr_copy(&ipv4_ap.addr, ipv4_addr);
-  ipv4_ap.port = (fw_connection == FIREWALL_OR_CONNECTION
-                  ? ipv4_orport
-                  : ipv4_dirport);
+  ipv4_ap.port =
+      (fw_connection == FIREWALL_OR_CONNECTION ? ipv4_orport : ipv4_dirport);
 
   tor_addr_port_t ipv6_ap;
   tor_addr_copy(&ipv6_ap.addr, ipv6_addr);
-  ipv6_ap.port = (fw_connection == FIREWALL_OR_CONNECTION
-                  ? ipv6_orport
-                  : ipv6_dirport);
+  ipv6_ap.port =
+      (fw_connection == FIREWALL_OR_CONNECTION ? ipv6_orport : ipv6_dirport);
 
-  result = fascist_firewall_choose_address(&ipv4_ap, &ipv6_ap,
-                                           want_ipv4,
-                                           fw_connection, pref_only,
-                                           pref_ipv6);
+  result = fascist_firewall_choose_address(
+      &ipv4_ap, &ipv6_ap, want_ipv4, fw_connection, pref_only, pref_ipv6);
 
   if (result) {
     tor_addr_copy(&ap->addr, &result->addr);
@@ -908,16 +871,11 @@ fascist_firewall_choose_address_base(const tor_addr_t *ipv4_addr,
 /** Like fascist_firewall_choose_address_base(), but takes a host-order IPv4
  * address as the first parameter. */
 static void
-fascist_firewall_choose_address_ipv4h(uint32_t ipv4h_addr,
-                                      uint16_t ipv4_orport,
-                                      uint16_t ipv4_dirport,
-                                      const tor_addr_t *ipv6_addr,
-                                      uint16_t ipv6_orport,
-                                      uint16_t ipv6_dirport,
-                                      firewall_connection_t fw_connection,
-                                      int pref_only,
-                                      int pref_ipv6,
-                                      tor_addr_port_t* ap)
+fascist_firewall_choose_address_ipv4h(
+    uint32_t ipv4h_addr, uint16_t ipv4_orport, uint16_t ipv4_dirport,
+    const tor_addr_t *ipv6_addr, uint16_t ipv6_orport, uint16_t ipv6_dirport,
+    firewall_connection_t fw_connection, int pref_only, int pref_ipv6,
+    tor_addr_port_t *ap)
 {
   tor_addr_t ipv4_addr;
   tor_addr_from_ipv4h(&ipv4_addr, ipv4h_addr);
@@ -926,11 +884,9 @@ fascist_firewall_choose_address_ipv4h(uint32_t ipv4h_addr,
   tor_addr_make_null(&ap->addr, AF_UNSPEC);
   ap->port = 0;
 
-  fascist_firewall_choose_address_base(&ipv4_addr, ipv4_orport,
-                                       ipv4_dirport, ipv6_addr,
-                                       ipv6_orport, ipv6_dirport,
-                                       fw_connection, pref_only,
-                                       pref_ipv6, ap);
+  fascist_firewall_choose_address_base(
+      &ipv4_addr, ipv4_orport, ipv4_dirport, ipv6_addr, ipv6_orport,
+      ipv6_dirport, fw_connection, pref_only, pref_ipv6, ap);
 }
 
 /** Like fascist_firewall_choose_address_base(), but takes <b>rs</b>.
@@ -941,7 +897,7 @@ fascist_firewall_choose_address_ipv4h(uint32_t ipv4h_addr,
 void
 fascist_firewall_choose_address_rs(const routerstatus_t *rs,
                                    firewall_connection_t fw_connection,
-                                   int pref_only, tor_addr_port_t* ap)
+                                   int pref_only, tor_addr_port_t *ap)
 {
   tor_assert(ap);
 
@@ -961,15 +917,14 @@ fascist_firewall_choose_address_rs(const routerstatus_t *rs,
     /* There's no node-specific IPv6 preference, so use the generic IPv6
      * preference instead. */
     int pref_ipv6 = (fw_connection == FIREWALL_OR_CONNECTION
-                     ? fascist_firewall_prefer_ipv6_orport(options)
-                     : fascist_firewall_prefer_ipv6_dirport(options));
+                         ? fascist_firewall_prefer_ipv6_orport(options)
+                         : fascist_firewall_prefer_ipv6_dirport(options));
 
     /* Assume IPv4 and IPv6 DirPorts are the same.
      * Assume the IPv6 OR and Dir addresses are the same. */
-    fascist_firewall_choose_address_ipv4h(rs->addr, rs->or_port, rs->dir_port,
-                                          &rs->ipv6_addr, rs->ipv6_orport,
-                                          rs->dir_port, fw_connection,
-                                          pref_only, pref_ipv6, ap);
+    fascist_firewall_choose_address_ipv4h(
+        rs->addr, rs->or_port, rs->dir_port, &rs->ipv6_addr, rs->ipv6_orport,
+        rs->dir_port, fw_connection, pref_only, pref_ipv6, ap);
   }
 }
 
@@ -979,8 +934,8 @@ fascist_firewall_choose_address_rs(const routerstatus_t *rs,
  * contain DirPorts.
  */
 void
-fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
-                                   int pref_only, tor_addr_port_t* ap)
+fascist_firewall_choose_address_ls(const smartlist_t *lspecs, int pref_only,
+                                   tor_addr_port_t *ap)
 {
   int have_v4 = 0, have_v6 = 0;
   uint16_t port_v4 = 0, port_v6 = 0;
@@ -1003,22 +958,24 @@ fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
   tor_addr_make_null(&addr_v4, AF_INET);
   tor_addr_make_null(&addr_v6, AF_INET6);
 
-  SMARTLIST_FOREACH_BEGIN(lspecs, const link_specifier_t *, ls) {
+  SMARTLIST_FOREACH_BEGIN (lspecs, const link_specifier_t *, ls) {
     switch (link_specifier_get_ls_type(ls)) {
     case LS_IPV4:
       /* Skip if we already seen a v4. */
-      if (have_v4) continue;
-      tor_addr_from_ipv4h(&addr_v4,
-                          link_specifier_get_un_ipv4_addr(ls));
+      if (have_v4)
+        continue;
+      tor_addr_from_ipv4h(&addr_v4, link_specifier_get_un_ipv4_addr(ls));
       port_v4 = link_specifier_get_un_ipv4_port(ls);
       have_v4 = 1;
       break;
     case LS_IPV6:
       /* Skip if we already seen a v6, or deliberately skip it if we're not a
        * direct connection. */
-      if (have_v6) continue;
-      tor_addr_from_ipv6_bytes(&addr_v6,
-          (const char *) link_specifier_getconstarray_un_ipv6_addr(ls));
+      if (have_v6)
+        continue;
+      tor_addr_from_ipv6_bytes(
+          &addr_v6,
+          (const char *)link_specifier_getconstarray_un_ipv6_addr(ls));
       port_v6 = link_specifier_get_un_ipv6_port(ls);
       have_v6 = 1;
       break;
@@ -1026,7 +983,7 @@ fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
       /* Ignore unknown. */
       break;
     }
-  } SMARTLIST_FOREACH_END(ls);
+  } SMARTLIST_FOREACH_END (ls);
 
   /* If we don't have IPv4 or IPv6 in link specifiers, log a bug and return. */
   if (!have_v4 && !have_v6) {
@@ -1043,11 +1000,9 @@ fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
   const or_options_t *options = get_options();
   int pref_ipv6 = fascist_firewall_prefer_ipv6_orport(options);
   /* Assume that the DirPorts are zero as link specifiers only use ORPorts. */
-  fascist_firewall_choose_address_base(&addr_v4, port_v4, 0,
-                                       &addr_v6, port_v6, 0,
-                                       FIREWALL_OR_CONNECTION,
-                                       pref_only, pref_ipv6,
-                                       ap);
+  fascist_firewall_choose_address_base(&addr_v4, port_v4, 0, &addr_v6, port_v6,
+                                       0, FIREWALL_OR_CONNECTION, pref_only,
+                                       pref_ipv6, ap);
 }
 
 /** Like fascist_firewall_choose_address_base(), but takes <b>node</b>, and
@@ -1070,8 +1025,8 @@ fascist_firewall_choose_address_node(const node_t *node,
   node_assert_ok(node);
 
   const int pref_ipv6_node = (fw_connection == FIREWALL_OR_CONNECTION
-                              ? node_ipv6_or_preferred(node)
-                              : node_ipv6_dir_preferred(node));
+                                  ? node_ipv6_or_preferred(node)
+                                  : node_ipv6_dir_preferred(node));
 
   tor_addr_port_t ipv4_or_ap;
   node_get_prim_orport(node, &ipv4_or_ap);
@@ -1084,19 +1039,17 @@ fascist_firewall_choose_address_node(const node_t *node,
   node_get_pref_ipv6_dirport(node, &ipv6_dir_ap);
 
   /* Assume the IPv6 OR and Dir addresses are the same. */
-  fascist_firewall_choose_address_base(&ipv4_or_ap.addr, ipv4_or_ap.port,
-                                       ipv4_dir_ap.port, &ipv6_or_ap.addr,
-                                       ipv6_or_ap.port, ipv6_dir_ap.port,
-                                       fw_connection, pref_only,
-                                       pref_ipv6_node, ap);
+  fascist_firewall_choose_address_base(
+      &ipv4_or_ap.addr, ipv4_or_ap.port, ipv4_dir_ap.port, &ipv6_or_ap.addr,
+      ipv6_or_ap.port, ipv6_dir_ap.port, fw_connection, pref_only,
+      pref_ipv6_node, ap);
 }
 
 /** Like fascist_firewall_choose_address_rs(), but takes <b>ds</b>. */
 void
 fascist_firewall_choose_address_dir_server(const dir_server_t *ds,
                                            firewall_connection_t fw_connection,
-                                           int pref_only,
-                                           tor_addr_port_t *ap)
+                                           int pref_only, tor_addr_port_t *ap)
 {
   tor_assert(ap);
 
@@ -1158,7 +1111,7 @@ addr_is_in_cc_list(uint32_t addr, const smartlist_t *cc_list)
 int
 authdir_policy_permits_address(uint32_t addr, uint16_t port)
 {
-  if (! addr_policy_permits_address(addr, port, authdir_reject_policy))
+  if (!addr_policy_permits_address(addr, port, authdir_reject_policy))
     return 0;
   return !addr_is_in_cc_list(addr, get_options()->AuthDirRejectCCs);
 }
@@ -1169,7 +1122,7 @@ authdir_policy_permits_address(uint32_t addr, uint16_t port)
 int
 authdir_policy_valid_address(uint32_t addr, uint16_t port)
 {
-  if (! addr_policy_permits_address(addr, port, authdir_invalid_policy))
+  if (!addr_policy_permits_address(addr, port, authdir_invalid_policy))
     return 0;
   return !addr_is_in_cc_list(addr, get_options()->AuthDirInvalidCCs);
 }
@@ -1180,13 +1133,16 @@ authdir_policy_valid_address(uint32_t addr, uint16_t port)
 int
 authdir_policy_badexit_address(uint32_t addr, uint16_t port)
 {
-  if (! addr_policy_permits_address(addr, port, authdir_badexit_policy))
+  if (!addr_policy_permits_address(addr, port, authdir_badexit_policy))
     return 1;
   return addr_is_in_cc_list(addr, get_options()->AuthDirBadExitCCs);
 }
 
-#define REJECT(arg) \
-  STMT_BEGIN *msg = tor_strdup(arg); goto err; STMT_END
+#define REJECT(arg)         \
+  STMT_BEGIN                \
+    *msg = tor_strdup(arg); \
+    goto err;               \
+  STMT_END
 
 /** Check <b>or_options</b> to determine whether or not we are using the
  * default options for exit policy. Return true if so, false otherwise. */
@@ -1206,10 +1162,11 @@ validate_addr_policies(const or_options_t *options, char **msg)
   /* XXXX Maybe merge this into parse_policies_from_options, to make sure
    * that the two can't go out of sync. */
 
-  smartlist_t *addr_policy=NULL;
+  smartlist_t *addr_policy = NULL;
   *msg = NULL;
 
-  if (policies_parse_exit_policy_from_options(options,0,NULL,&addr_policy)) {
+  if (policies_parse_exit_policy_from_options(options, 0, NULL,
+                                              &addr_policy)) {
     REJECT("Error in ExitPolicy entry.");
   }
 
@@ -1218,7 +1175,8 @@ validate_addr_policies(const or_options_t *options, char **msg)
   if (public_server_mode(options) && !warned_about_nonexit &&
       policy_using_default_exit_options(options)) {
     warned_about_nonexit = 1;
-    log_notice(LD_CONFIG, "By default, Tor does not run as an exit relay. "
+    log_notice(LD_CONFIG,
+               "By default, Tor does not run as an exit relay. "
                "If you want to be an exit relay, "
                "set ExitRelay to 1. To suppress this message in the future, "
                "set ExitRelay to 0.");
@@ -1250,7 +1208,7 @@ validate_addr_policies(const or_options_t *options, char **msg)
                         ADDR_POLICY_ACCEPT))
     REJECT("Error in ReachableDirAddresses entry.");
 
- err:
+err:
   addr_policy_list_free(addr_policy);
   return *msg ? -1 : 0;
 #undef REJECT
@@ -1262,8 +1220,7 @@ validate_addr_policies(const or_options_t *options, char **msg)
  */
 static int
 load_policy_from_option(config_line_t *config, const char *option_name,
-                        smartlist_t **policy,
-                        int assume_action)
+                        smartlist_t **policy, int assume_action)
 {
   int r;
   int killed_any_ports = 0;
@@ -1274,7 +1231,7 @@ load_policy_from_option(config_line_t *config, const char *option_name,
     return -1;
   }
   if (*policy) {
-    SMARTLIST_FOREACH_BEGIN(*policy, addr_policy_t *, n) {
+    SMARTLIST_FOREACH_BEGIN (*policy, addr_policy_t *, n) {
       /* ports aren't used in these. */
       if (n->prt_min > 1 || n->prt_max != 65535) {
         addr_policy_t newp, *c;
@@ -1287,7 +1244,7 @@ load_policy_from_option(config_line_t *config, const char *option_name,
         addr_policy_free(n);
         killed_any_ports = 1;
       }
-    } SMARTLIST_FOREACH_END(n);
+    } SMARTLIST_FOREACH_END (n);
   }
   if (killed_any_ports) {
     log_warn(LD_CONFIG, "Ignoring ports in %s option.", option_name);
@@ -1304,8 +1261,8 @@ policies_parse_from_options(const or_options_t *options)
   if (load_policy_from_option(options->SocksPolicy, "SocksPolicy",
                               &socks_policy, -1) < 0)
     ret = -1;
-  if (load_policy_from_option(options->DirPolicy, "DirPolicy",
-                              &dir_policy, -1) < 0)
+  if (load_policy_from_option(options->DirPolicy, "DirPolicy", &dir_policy,
+                              -1) < 0)
     ret = -1;
   if (load_policy_from_option(options->AuthDirReject, "AuthDirReject",
                               &authdir_reject_policy, ADDR_POLICY_REJECT) < 0)
@@ -1327,16 +1284,17 @@ static int
 single_addr_policy_eq(const addr_policy_t *a, const addr_policy_t *b)
 {
   int r;
-#define CMP_FIELD(field) do {                   \
-    if (a->field != b->field) {                 \
-      return 0;                                 \
-    }                                           \
+#define CMP_FIELD(field)        \
+  do {                          \
+    if (a->field != b->field) { \
+      return 0;                 \
+    }                           \
   } while (0)
   CMP_FIELD(policy_type);
   CMP_FIELD(is_private);
   /* refcnt and is_canonical are irrelevant to equality,
    * they are hash table implementation details */
-  if ((r=tor_addr_compare(&a->addr, &b->addr, CMP_EXACT)))
+  if ((r = tor_addr_compare(&a->addr, &b->addr, CMP_EXACT)))
     return 0;
   CMP_FIELD(maskbits);
   CMP_FIELD(prt_min);
@@ -1358,7 +1316,7 @@ addr_policies_eq(const smartlist_t *a, const smartlist_t *b)
     return 0;
 
   for (i = 0; i < len_a; ++i) {
-    if (! single_addr_policy_eq(smartlist_get(a, i), smartlist_get(b, i)))
+    if (!single_addr_policy_eq(smartlist_get(a, i), smartlist_get(b, i)))
       return 0;
   }
 
@@ -1401,13 +1359,12 @@ policy_hash(const policy_map_ent_t *ent)
     tor_addr_copy_tight(&aa.addr, &a->addr);
   }
 
-  return (unsigned) siphash24g(&aa, sizeof(aa));
+  return (unsigned)siphash24g(&aa, sizeof(aa));
 }
 
-HT_PROTOTYPE(policy_map, policy_map_ent_t, node, policy_hash,
-             policy_eq)
-HT_GENERATE2(policy_map, policy_map_ent_t, node, policy_hash,
-             policy_eq, 0.6, tor_reallocarray_, tor_free_)
+HT_PROTOTYPE(policy_map, policy_map_ent_t, node, policy_hash, policy_eq)
+HT_GENERATE2(policy_map, policy_map_ent_t, node, policy_hash, policy_eq, 0.6,
+             tor_reallocarray_, tor_free_)
 
 /** Given a pointer to an addr_policy_t, return a copy of the pointer to the
  * "canonical" copy of that addr_policy_t; the canonical copy is a single
@@ -1442,21 +1399,21 @@ compare_known_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
 {
   /* We know the address and port, and we know the policy, so we can just
    * compute an exact match. */
-  SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, tmpe) {
+  SMARTLIST_FOREACH_BEGIN (policy, addr_policy_t *, tmpe) {
     if (tmpe->addr.family == AF_UNSPEC) {
       log_warn(LD_BUG, "Policy contains an AF_UNSPEC address, which only "
-               "matches other AF_UNSPEC addresses.");
+                       "matches other AF_UNSPEC addresses.");
     }
     /* Address is known */
     if (!tor_addr_compare_masked(addr, &tmpe->addr, tmpe->maskbits,
                                  CMP_EXACT)) {
       if (port >= tmpe->prt_min && port <= tmpe->prt_max) {
         /* Exact match for the policy */
-        return tmpe->policy_type == ADDR_POLICY_ACCEPT ?
-          ADDR_POLICY_ACCEPTED : ADDR_POLICY_REJECTED;
+        return tmpe->policy_type == ADDR_POLICY_ACCEPT ? ADDR_POLICY_ACCEPTED
+                                                       : ADDR_POLICY_REJECTED;
       }
     }
-  } SMARTLIST_FOREACH_END(tmpe);
+  } SMARTLIST_FOREACH_END (tmpe);
 
   /* accept all by default. */
   return ADDR_POLICY_ACCEPTED;
@@ -1473,10 +1430,10 @@ compare_known_tor_addr_to_addr_policy_noport(const tor_addr_t *addr,
      something different. */
   int maybe_accept = 0, maybe_reject = 0;
 
-  SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, tmpe) {
+  SMARTLIST_FOREACH_BEGIN (policy, addr_policy_t *, tmpe) {
     if (tmpe->addr.family == AF_UNSPEC) {
       log_warn(LD_BUG, "Policy contains an AF_UNSPEC address, which only "
-               "matches other AF_UNSPEC addresses.");
+                       "matches other AF_UNSPEC addresses.");
     }
     if (!tor_addr_compare_masked(addr, &tmpe->addr, tmpe->maskbits,
                                  CMP_EXACT)) {
@@ -1485,11 +1442,11 @@ compare_known_tor_addr_to_addr_policy_noport(const tor_addr_t *addr,
         if (tmpe->policy_type == ADDR_POLICY_ACCEPT) {
           /* If we already hit a clause that might trigger a 'reject', than we
            * can't be sure of this certain 'accept'.*/
-          return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED :
-            ADDR_POLICY_ACCEPTED;
+          return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED
+                              : ADDR_POLICY_ACCEPTED;
         } else {
-          return maybe_accept ? ADDR_POLICY_PROBABLY_REJECTED :
-            ADDR_POLICY_REJECTED;
+          return maybe_accept ? ADDR_POLICY_PROBABLY_REJECTED
+                              : ADDR_POLICY_REJECTED;
         }
       } else {
         /* Might match. */
@@ -1499,7 +1456,7 @@ compare_known_tor_addr_to_addr_policy_noport(const tor_addr_t *addr,
           maybe_accept = 1;
       }
     }
-  } SMARTLIST_FOREACH_END(tmpe);
+  } SMARTLIST_FOREACH_END (tmpe);
 
   /* accept all by default. */
   return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED : ADDR_POLICY_ACCEPTED;
@@ -1516,10 +1473,10 @@ compare_unknown_tor_addr_to_addr_policy(uint16_t port,
      something different. */
   int maybe_accept = 0, maybe_reject = 0;
 
-  SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, tmpe) {
+  SMARTLIST_FOREACH_BEGIN (policy, addr_policy_t *, tmpe) {
     if (tmpe->addr.family == AF_UNSPEC) {
       log_warn(LD_BUG, "Policy contains an AF_UNSPEC address, which only "
-               "matches other AF_UNSPEC addresses.");
+                       "matches other AF_UNSPEC addresses.");
     }
     if (tmpe->prt_min <= port && port <= tmpe->prt_max) {
       if (tmpe->maskbits == 0) {
@@ -1527,11 +1484,11 @@ compare_unknown_tor_addr_to_addr_policy(uint16_t port,
         if (tmpe->policy_type == ADDR_POLICY_ACCEPT) {
           /* If we already hit a clause that might trigger a 'reject', than we
            * can't be sure of this certain 'accept'.*/
-          return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED :
-            ADDR_POLICY_ACCEPTED;
+          return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED
+                              : ADDR_POLICY_ACCEPTED;
         } else {
-          return maybe_accept ? ADDR_POLICY_PROBABLY_REJECTED :
-            ADDR_POLICY_REJECTED;
+          return maybe_accept ? ADDR_POLICY_PROBABLY_REJECTED
+                              : ADDR_POLICY_REJECTED;
         }
       } else {
         /* Might match. */
@@ -1541,7 +1498,7 @@ compare_unknown_tor_addr_to_addr_policy(uint16_t port,
           maybe_accept = 1;
       }
     }
-  } SMARTLIST_FOREACH_END(tmpe);
+  } SMARTLIST_FOREACH_END (tmpe);
 
   /* accept all by default. */
   return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED : ADDR_POLICY_ACCEPTED;
@@ -1559,8 +1516,8 @@ compare_unknown_tor_addr_to_addr_policy(uint16_t port,
  * addresses (127.0.0.1, and so on).  But we'll try this for now.
  */
 MOCK_IMPL(addr_policy_result_t,
-compare_tor_addr_to_addr_policy,(const tor_addr_t *addr, uint16_t port,
-                                 const smartlist_t *policy))
+compare_tor_addr_to_addr_policy,
+          (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy))
 {
   if (!policy) {
     /* no policy? accept all. */
@@ -1632,10 +1589,10 @@ append_exit_policy_string(smartlist_t **policy, const char *more)
   config_line_t tmp;
 
   tmp.key = NULL;
-  tmp.value = (char*) more;
+  tmp.value = (char *)more;
   tmp.next = NULL;
-  if (parse_addr_policy(&tmp, policy, -1)<0) {
-    log_warn(LD_BUG, "Unable to parse internally generated policy %s",more);
+  if (parse_addr_policy(&tmp, policy, -1) < 0) {
+    log_warn(LD_BUG, "Unable to parse internally generated policy %s", more);
   }
 }
 
@@ -1666,8 +1623,8 @@ addr_policy_append_reject_addr(smartlist_t **dest, const tor_addr_t *addr)
 static int
 tor_addr_is_public_for_reject(const tor_addr_t *addr)
 {
-  return (!tor_addr_is_null(addr) && !tor_addr_is_internal(addr, 0)
-          && !tor_addr_is_multicast(addr));
+  return (!tor_addr_is_null(addr) && !tor_addr_is_internal(addr, 0) &&
+          !tor_addr_is_multicast(addr));
 }
 
 /* Add "reject <b>addr</b>:*" to <b>dest</b>, creating the list as needed.
@@ -1677,8 +1634,7 @@ tor_addr_is_public_for_reject(const tor_addr_t *addr)
  */
 static void
 addr_policy_append_reject_addr_filter(smartlist_t **dest,
-                                      const tor_addr_t *addr,
-                                      int ipv4_rules,
+                                      const tor_addr_t *addr, int ipv4_rules,
                                       int ipv6_rules)
 {
   tor_assert(dest);
@@ -1686,7 +1642,6 @@ addr_policy_append_reject_addr_filter(smartlist_t **dest,
 
   /* Only reject IP addresses which are public */
   if (tor_addr_is_public_for_reject(addr)) {
-
     /* Reject IPv4 addresses and IPv6 addresses based on the filters */
     int is_ipv4 = tor_addr_is_v4(addr);
     if ((is_ipv4 && ipv4_rules) || (!is_ipv4 && ipv6_rules)) {
@@ -1696,7 +1651,7 @@ addr_policy_append_reject_addr_filter(smartlist_t **dest,
 }
 
 /** Add "reject addr:*" to <b>dest</b>, for each addr in addrs, creating the
-  * list as needed. */
+ * list as needed. */
 void
 addr_policy_append_reject_addr_list(smartlist_t **dest,
                                     const smartlist_t *addrs)
@@ -1704,9 +1659,9 @@ addr_policy_append_reject_addr_list(smartlist_t **dest,
   tor_assert(dest);
   tor_assert(addrs);
 
-  SMARTLIST_FOREACH_BEGIN(addrs, tor_addr_t *, addr) {
+  SMARTLIST_FOREACH_BEGIN (addrs, tor_addr_t *, addr) {
     addr_policy_append_reject_addr(dest, addr);
-  } SMARTLIST_FOREACH_END(addr);
+  } SMARTLIST_FOREACH_END (addr);
 }
 
 /** Add "reject addr:*" to <b>dest</b>, for each addr in addrs, creating the
@@ -1714,15 +1669,14 @@ addr_policy_append_reject_addr_list(smartlist_t **dest,
 static void
 addr_policy_append_reject_addr_list_filter(smartlist_t **dest,
                                            const smartlist_t *addrs,
-                                           int ipv4_rules,
-                                           int ipv6_rules)
+                                           int ipv4_rules, int ipv6_rules)
 {
   tor_assert(dest);
   tor_assert(addrs);
 
-  SMARTLIST_FOREACH_BEGIN(addrs, tor_addr_t *, addr) {
+  SMARTLIST_FOREACH_BEGIN (addrs, tor_addr_t *, addr) {
     addr_policy_append_reject_addr_filter(dest, addr, ipv4_rules, ipv6_rules);
-  } SMARTLIST_FOREACH_END(addr);
+  } SMARTLIST_FOREACH_END (addr);
 }
 
 /** Detect and excise "dead code" from the policy *<b>dest</b>. */
@@ -1735,13 +1689,12 @@ exit_policy_remove_redundancies(smartlist_t *dest)
   /* Step one: kill every ipv4 thing after *4:*, every IPv6 thing after *6:*
    */
   {
-    int kill_v4=0, kill_v6=0;
+    int kill_v4 = 0, kill_v6 = 0;
     for (i = 0; i < smartlist_len(dest); ++i) {
       sa_family_t family;
       ap = smartlist_get(dest, i);
       family = tor_addr_family(&ap->addr);
-      if ((family == AF_INET && kill_v4) ||
-          (family == AF_INET6 && kill_v6)) {
+      if ((family == AF_INET && kill_v4) || (family == AF_INET6 && kill_v6)) {
         smartlist_del_keeporder(dest, i--);
         addr_policy_free(ap);
         continue;
@@ -1760,17 +1713,19 @@ exit_policy_remove_redundancies(smartlist_t *dest)
 
   /* Step two: for every entry, see if there's a redundant entry
    * later on, and remove it. */
-  for (i = 0; i < smartlist_len(dest)-1; ++i) {
+  for (i = 0; i < smartlist_len(dest) - 1; ++i) {
     ap = smartlist_get(dest, i);
-    for (j = i+1; j < smartlist_len(dest); ++j) {
+    for (j = i + 1; j < smartlist_len(dest); ++j) {
       tmp = smartlist_get(dest, j);
       tor_assert(j > i);
       if (addr_policy_covers(ap, tmp)) {
         char p1[POLICY_BUF_LEN], p2[POLICY_BUF_LEN];
         policy_write_item(p1, sizeof(p1), tmp, 0);
         policy_write_item(p2, sizeof(p2), ap, 0);
-        log_debug(LD_CONFIG, "Removing exit policy %s (%d).  It is made "
-            "redundant by %s (%d).", p1, j, p2, i);
+        log_debug(LD_CONFIG,
+                  "Removing exit policy %s (%d).  It is made "
+                  "redundant by %s (%d).",
+                  p1, j, p2, i);
         smartlist_del_keeporder(dest, j--);
         addr_policy_free(tmp);
       }
@@ -1784,9 +1739,9 @@ exit_policy_remove_redundancies(smartlist_t *dest)
    *
    * Anybody want to double-check the logic here? XXX
    */
-  for (i = 0; i < smartlist_len(dest)-1; ++i) {
+  for (i = 0; i < smartlist_len(dest) - 1; ++i) {
     ap = smartlist_get(dest, i);
-    for (j = i+1; j < smartlist_len(dest); ++j) {
+    for (j = i + 1; j < smartlist_len(dest); ++j) {
       // tor_assert(j > i); // j starts out at i+1; j only increases; i only
       //                    // decreases.
       tmp = smartlist_get(dest, j);
@@ -1798,8 +1753,10 @@ exit_policy_remove_redundancies(smartlist_t *dest)
           char p1[POLICY_BUF_LEN], p2[POLICY_BUF_LEN];
           policy_write_item(p1, sizeof(p1), ap, 0);
           policy_write_item(p2, sizeof(p2), tmp, 0);
-          log_debug(LD_CONFIG, "Removing exit policy %s.  It is already "
-              "covered by %s.", p1, p2);
+          log_debug(LD_CONFIG,
+                    "Removing exit policy %s.  It is already "
+                    "covered by %s.",
+                    p1, p2);
           smartlist_del_keeporder(dest, i--);
           addr_policy_free(ap);
           break;
@@ -1830,31 +1787,27 @@ exit_policy_remove_redundancies(smartlist_t *dest)
  */
 void
 policies_parse_exit_policy_reject_private(
-                                      smartlist_t **dest,
-                                      int ipv6_exit,
-                                      const smartlist_t *configured_addresses,
-                                      int reject_interface_addresses,
-                                      int reject_configured_port_addresses)
+    smartlist_t **dest, int ipv6_exit, const smartlist_t *configured_addresses,
+    int reject_interface_addresses, int reject_configured_port_addresses)
 {
   tor_assert(dest);
 
   /* Reject configured addresses, if they are from public netblocks. */
   if (configured_addresses) {
-    addr_policy_append_reject_addr_list_filter(dest, configured_addresses,
-                                               1, ipv6_exit);
+    addr_policy_append_reject_addr_list_filter(dest, configured_addresses, 1,
+                                               ipv6_exit);
   }
 
   /* Reject configured port addresses, if they are from public netblocks. */
   if (reject_configured_port_addresses) {
     const smartlist_t *port_addrs = get_configured_ports();
 
-    SMARTLIST_FOREACH_BEGIN(port_addrs, port_cfg_t *, port) {
-
+    SMARTLIST_FOREACH_BEGIN (port_addrs, port_cfg_t *, port) {
       /* Only reject port IP addresses, not port unix sockets */
       if (!port->is_unix_addr) {
         addr_policy_append_reject_addr_filter(dest, &port->addr, 1, ipv6_exit);
       }
-    } SMARTLIST_FOREACH_END(port);
+    } SMARTLIST_FOREACH_END (port);
   }
 
   /* Reject local addresses from public netblocks on any interface. */
@@ -1891,7 +1844,7 @@ policies_log_first_redundant_entry(const smartlist_t *policy)
   int found_final_effective_entry = 0;
   int first_redundant_entry = 0;
   tor_assert(policy);
-  SMARTLIST_FOREACH_BEGIN(policy, const addr_policy_t *, p) {
+  SMARTLIST_FOREACH_BEGIN (policy, const addr_policy_t *, p) {
     sa_family_t family;
     int found_ipv4_wildcard = 0, found_ipv6_wildcard = 0;
     const int i = p_sl_idx;
@@ -1922,7 +1875,7 @@ policies_log_first_redundant_entry(const smartlist_t *policy)
       }
       break;
     }
-  } SMARTLIST_FOREACH_END(p);
+  } SMARTLIST_FOREACH_END (p);
 
   /* Work out if there are redundant trailing entries in the policy list */
   if (found_final_effective_entry && first_redundant_entry > 0) {
@@ -1937,7 +1890,8 @@ policies_log_first_redundant_entry(const smartlist_t *policy)
     /* since we've already parsed the policy into an addr_policy_t struct,
      * we might not log exactly what the user typed in */
     policy_write_item(line, TOR_ADDR_BUF_LEN + 32, p, 0);
-    log_warn(LD_DIR, "Exit policy '%s' and all following policies are "
+    log_warn(LD_DIR,
+             "Exit policy '%s' and all following policies are "
              "redundant, as it follows accept/reject *:* rules for both "
              "IPv4 and IPv6. They will be removed from the exit policy. (Use "
              "accept/reject *:* as the last entry in any exit policy.)",
@@ -1945,9 +1899,9 @@ policies_log_first_redundant_entry(const smartlist_t *policy)
   }
 }
 
-#define DEFAULT_EXIT_POLICY                                         \
-  "reject *:25,reject *:119,reject *:135-139,reject *:445,"         \
-  "reject *:563,reject *:1214,reject *:4661-4666,"                  \
+#define DEFAULT_EXIT_POLICY                                 \
+  "reject *:25,reject *:119,reject *:135-139,reject *:445," \
+  "reject *:563,reject *:1214,reject *:4661-4666,"          \
   "reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
 
 #define REDUCED_EXIT_POLICY                                                   \
@@ -1996,10 +1950,8 @@ policies_log_first_redundant_entry(const smartlist_t *policy)
  * see router_add_exit_policy.
  */
 static int
-policies_parse_exit_policy_internal(config_line_t *cfg,
-                                    smartlist_t **dest,
-                                    int ipv6_exit,
-                                    int rejectprivate,
+policies_parse_exit_policy_internal(config_line_t *cfg, smartlist_t **dest,
+                                    int ipv6_exit, int rejectprivate,
                                     const smartlist_t *configured_addresses,
                                     int reject_interface_addresses,
                                     int reject_configured_port_addresses,
@@ -2017,10 +1969,9 @@ policies_parse_exit_policy_internal(config_line_t *cfg,
   /* Consider rejecting IPv4 and IPv6 advertised relay addresses, outbound bind
    * addresses, publicly routable addresses, and configured port addresses
    * on this exit relay */
-  policies_parse_exit_policy_reject_private(dest, ipv6_exit,
-                                            configured_addresses,
-                                            reject_interface_addresses,
-                                            reject_configured_port_addresses);
+  policies_parse_exit_policy_reject_private(
+      dest, ipv6_exit, configured_addresses, reject_interface_addresses,
+      reject_configured_port_addresses);
 
   if (parse_addr_policy(cfg, dest, -1))
     return -1;
@@ -2071,17 +2022,14 @@ policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
   int ipv6_enabled = (options & EXIT_POLICY_IPV6_ENABLED) ? 1 : 0;
   int reject_private = (options & EXIT_POLICY_REJECT_PRIVATE) ? 1 : 0;
   int add_default = (options & EXIT_POLICY_ADD_DEFAULT) ? 1 : 0;
-  int reject_local_interfaces = (options &
-                                 EXIT_POLICY_REJECT_LOCAL_INTERFACES) ? 1 : 0;
+  int reject_local_interfaces =
+      (options & EXIT_POLICY_REJECT_LOCAL_INTERFACES) ? 1 : 0;
   int add_reduced = (options & EXIT_POLICY_ADD_REDUCED) ? 1 : 0;
 
-  return policies_parse_exit_policy_internal(cfg,dest,ipv6_enabled,
-                                             reject_private,
-                                             configured_addresses,
-                                             reject_local_interfaces,
-                                             reject_local_interfaces,
-                                             add_default,
-                                             add_reduced);
+  return policies_parse_exit_policy_internal(
+      cfg, dest, ipv6_enabled, reject_private, configured_addresses,
+      reject_local_interfaces, reject_local_interfaces, add_default,
+      add_reduced);
 }
 
 /** Helper function that adds a copy of addr to a smartlist as long as it is
@@ -2127,11 +2075,11 @@ policies_copy_outbound_addresses_to_smartlist(smartlist_t *addr_list,
                                               const or_options_t *or_options)
 {
   if (or_options) {
-    for (int i=0;i<OUTBOUND_ADDR_MAX;i++) {
-      for (int j=0;j<2;j++) {
+    for (int i = 0; i < OUTBOUND_ADDR_MAX; i++) {
+      for (int j = 0; j < 2; j++) {
         if (!tor_addr_is_null(&or_options->OutboundBindAddresses[i][j])) {
-          policies_copy_addr_to_smartlist(addr_list,
-                          &or_options->OutboundBindAddresses[i][j]);
+          policies_copy_addr_to_smartlist(
+              addr_list, &or_options->OutboundBindAddresses[i][j]);
         }
       }
     }
@@ -2249,7 +2197,7 @@ exit_policy_is_general_exit_helper(smartlist_t *policy, int port)
   char subnet_status[256];
 
   memset(subnet_status, 0, sizeof(subnet_status));
-  SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, p) {
+  SMARTLIST_FOREACH_BEGIN (policy, addr_policy_t *, p) {
     if (tor_addr_family(&p->addr) != AF_INET)
       continue; /* IPv4 only for now */
     if (p->prt_min > port || p->prt_max < port)
@@ -2258,16 +2206,16 @@ exit_policy_is_general_exit_helper(smartlist_t *policy, int port)
     tor_assert(p->maskbits <= 32);
 
     if (p->maskbits)
-      mask = UINT32_MAX<<(32-p->maskbits);
+      mask = UINT32_MAX << (32 - p->maskbits);
     ip = tor_addr_to_ipv4h(&p->addr);
 
     /* Calculate the first and last subnet that this exit policy touches
      * and set it as loop boundaries. */
-    for (i = ((mask & ip)>>24); i <= (~((mask & ip) ^ mask)>>24); ++i) {
+    for (i = ((mask & ip) >> 24); i <= (~((mask & ip) ^ mask) >> 24); ++i) {
       tor_addr_t addr;
       if (subnet_status[i] != 0)
         continue; /* We already reject some part of this /8 */
-      tor_addr_from_ipv4h(&addr, i<<24);
+      tor_addr_from_ipv4h(&addr, i << 24);
       if (tor_addr_is_internal(&addr, 0) &&
           !get_options()->DirAllowPrivateAddresses) {
         continue; /* Local or non-routable addresses */
@@ -2282,7 +2230,7 @@ exit_policy_is_general_exit_helper(smartlist_t *policy, int port)
         subnet_status[i] = 1;
       }
     }
-  } SMARTLIST_FOREACH_END(p);
+  } SMARTLIST_FOREACH_END (p);
   return 0;
 }
 
@@ -2309,19 +2257,18 @@ policy_is_reject_star(const smartlist_t *policy, sa_family_t family,
 {
   if (!policy)
     return default_reject;
-  SMARTLIST_FOREACH_BEGIN(policy, const addr_policy_t *, p) {
+  SMARTLIST_FOREACH_BEGIN (policy, const addr_policy_t *, p) {
     if (p->policy_type == ADDR_POLICY_ACCEPT &&
         (tor_addr_family(&p->addr) == family ||
          tor_addr_family(&p->addr) == AF_UNSPEC)) {
       return 0;
-    } else if (p->policy_type == ADDR_POLICY_REJECT &&
-               p->prt_min <= 1 && p->prt_max == 65535 &&
-               p->maskbits == 0 &&
+    } else if (p->policy_type == ADDR_POLICY_REJECT && p->prt_min <= 1 &&
+               p->prt_max == 65535 && p->maskbits == 0 &&
                (tor_addr_family(&p->addr) == family ||
                 tor_addr_family(&p->addr) == AF_UNSPEC)) {
       return 1;
     }
-  } SMARTLIST_FOREACH_END(p);
+  } SMARTLIST_FOREACH_END (p);
   return default_reject;
 }
 
@@ -2357,37 +2304,38 @@ policy_write_item(char *buf, size_t buflen, const addr_policy_t *policy,
     addrpart = addrbuf;
   }
 
-  result = tor_snprintf(buf, buflen, "%s%s %s",
-                        is_accept ? "accept" : "reject",
-                        (is_ip6&&format_for_desc)?"6":"",
-                        addrpart);
+  result =
+      tor_snprintf(buf, buflen, "%s%s %s", is_accept ? "accept" : "reject",
+                   (is_ip6 && format_for_desc) ? "6" : "", addrpart);
   if (result < 0)
     return -1;
   written += strlen(buf);
   /* If the maskbits is 32 (IPv4) or 128 (IPv6) we don't need to give it.  If
      the mask is 0, we already wrote "*". */
-  if (policy->maskbits < (is_ip6?128:32) && policy->maskbits > 0) {
-    if (tor_snprintf(buf+written, buflen-written, "/%d", policy->maskbits)<0)
+  if (policy->maskbits < (is_ip6 ? 128 : 32) && policy->maskbits > 0) {
+    if (tor_snprintf(buf + written, buflen - written, "/%d",
+                     policy->maskbits) < 0)
       return -1;
-    written += strlen(buf+written);
+    written += strlen(buf + written);
   }
   if (policy->prt_min <= 1 && policy->prt_max == 65535) {
     /* There is no port set; write ":*" */
-    if (written+4 > buflen)
+    if (written + 4 > buflen)
       return -1;
-    strlcat(buf+written, ":*", buflen-written);
+    strlcat(buf + written, ":*", buflen - written);
     written += 2;
   } else if (policy->prt_min == policy->prt_max) {
     /* There is only one port; write ":80". */
-    result = tor_snprintf(buf+written, buflen-written, ":%d", policy->prt_min);
-    if (result<0)
+    result =
+        tor_snprintf(buf + written, buflen - written, ":%d", policy->prt_min);
+    if (result < 0)
       return -1;
     written += result;
   } else {
     /* There is a range of ports; write ":79-80". */
-    result = tor_snprintf(buf+written, buflen-written, ":%d-%d",
+    result = tor_snprintf(buf + written, buflen - written, ":%d-%d",
                           policy->prt_min, policy->prt_max);
-    if (result<0)
+    if (result < 0)
       return -1;
     written += result;
   }
@@ -2407,7 +2355,7 @@ static smartlist_t *
 policy_summary_create(void)
 {
   smartlist_t *summary;
-  policy_summary_item_t* item;
+  policy_summary_item_t *item;
 
   item = tor_malloc_zero(sizeof(policy_summary_item_t));
   item->prt_min = 1;
@@ -2427,10 +2375,10 @@ policy_summary_create(void)
  * starts at new_starts and ends at the port where the original item
  * previously ended.
  */
-static policy_summary_item_t*
-policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts)
+static policy_summary_item_t *
+policy_summary_item_split(policy_summary_item_t *old, uint16_t new_starts)
 {
-  policy_summary_item_t* new;
+  policy_summary_item_t *new;
 
   new = tor_malloc_zero(sizeof(policy_summary_item_t));
   new->prt_min = new_starts;
@@ -2438,7 +2386,7 @@ policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts)
   new->reject_count = old->reject_count;
   new->accepted = old->accepted;
 
-  old->prt_max = new_starts-1;
+  old->prt_max = new_starts - 1;
 
   tor_assert(old->prt_min <= old->prt_max);
   tor_assert(new->prt_min <= new->prt_max);
@@ -2447,17 +2395,17 @@ policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts)
 
 /* XXXX Nick says I'm going to hell for this.  If he feels charitably towards
  * my immortal soul, he can clean it up himself. */
-#define AT(x) ((policy_summary_item_t*)smartlist_get(summary, x))
+#define AT(x) ((policy_summary_item_t *)smartlist_get(summary, x))
 
-#define IPV4_BITS                (32)
+#define IPV4_BITS (32)
 /* Every IPv4 address is counted as one rejection */
 #define REJECT_CUTOFF_SCALE_IPV4 (0)
 /* Ports are rejected in an IPv4 summary if they are rejected in more than two
  * IPv4 /8 address blocks */
-#define REJECT_CUTOFF_COUNT_IPV4 (UINT64_C(1) << \
-                                  (IPV4_BITS - REJECT_CUTOFF_SCALE_IPV4 - 7))
+#define REJECT_CUTOFF_COUNT_IPV4 \
+  (UINT64_C(1) << (IPV4_BITS - REJECT_CUTOFF_SCALE_IPV4 - 7))
 
-#define IPV6_BITS                (128)
+#define IPV6_BITS (128)
 /* IPv6 /64s are counted as one rejection, anything smaller is ignored */
 #define REJECT_CUTOFF_SCALE_IPV6 (64)
 /* Ports are rejected in an IPv6 summary if they are rejected in more than one
@@ -2466,15 +2414,14 @@ policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts)
  * some scattered smaller blocks) have been allocated to the RIRs.
  * Network providers are typically allocated one or more IPv6 /32s.
  */
-#define REJECT_CUTOFF_COUNT_IPV6 (UINT64_C(1) << \
-                                  (IPV6_BITS - REJECT_CUTOFF_SCALE_IPV6 - 16))
+#define REJECT_CUTOFF_COUNT_IPV6 \
+  (UINT64_C(1) << (IPV6_BITS - REJECT_CUTOFF_SCALE_IPV6 - 16))
 
 /** Split an exit policy summary so that prt_min and prt_max
  * fall at exactly the start and end of an item respectively.
  */
 static int
-policy_summary_split(smartlist_t *summary,
-                     uint16_t prt_min, uint16_t prt_max)
+policy_summary_split(smartlist_t *summary, uint16_t prt_min, uint16_t prt_max)
 {
   int start_at_index;
 
@@ -2483,9 +2430,9 @@ policy_summary_split(smartlist_t *summary,
   while (AT(i)->prt_max < prt_min)
     i++;
   if (AT(i)->prt_min != prt_min) {
-    policy_summary_item_t* new_item;
+    policy_summary_item_t *new_item;
     new_item = policy_summary_item_split(AT(i), prt_min);
-    smartlist_insert(summary, i+1, new_item);
+    smartlist_insert(summary, i + 1, new_item);
     i++;
   }
   start_at_index = i;
@@ -2493,9 +2440,9 @@ policy_summary_split(smartlist_t *summary,
   while (AT(i)->prt_max < prt_max)
     i++;
   if (AT(i)->prt_max != prt_max) {
-    policy_summary_item_t* new_item;
-    new_item = policy_summary_item_split(AT(i), prt_max+1);
-    smartlist_insert(summary, i+1, new_item);
+    policy_summary_item_t *new_item;
+    new_item = policy_summary_item_split(AT(i), prt_max + 1);
+    smartlist_insert(summary, i + 1, new_item);
   }
 
   return start_at_index;
@@ -2504,33 +2451,28 @@ policy_summary_split(smartlist_t *summary,
 /** Mark port ranges as accepted if they are below the reject_count for family
  */
 static void
-policy_summary_accept(smartlist_t *summary,
-                      uint16_t prt_min, uint16_t prt_max,
+policy_summary_accept(smartlist_t *summary, uint16_t prt_min, uint16_t prt_max,
                       sa_family_t family)
 {
   tor_assert_nonfatal_once(family == AF_INET || family == AF_INET6);
-  uint64_t family_reject_count = ((family == AF_INET) ?
-                                  REJECT_CUTOFF_COUNT_IPV4 :
-                                  REJECT_CUTOFF_COUNT_IPV6);
+  uint64_t family_reject_count =
+      ((family == AF_INET) ? REJECT_CUTOFF_COUNT_IPV4
+                           : REJECT_CUTOFF_COUNT_IPV6);
 
   int i = policy_summary_split(summary, prt_min, prt_max);
-  while (i < smartlist_len(summary) &&
-         AT(i)->prt_max <= prt_max) {
-    if (!AT(i)->accepted &&
-        AT(i)->reject_count <= family_reject_count)
+  while (i < smartlist_len(summary) && AT(i)->prt_max <= prt_max) {
+    if (!AT(i)->accepted && AT(i)->reject_count <= family_reject_count)
       AT(i)->accepted = 1;
     i++;
   }
-  tor_assert(i < smartlist_len(summary) || prt_max==65535);
+  tor_assert(i < smartlist_len(summary) || prt_max == 65535);
 }
 
 /** Count the number of addresses in a network in family with prefixlen
  * maskbits against the given portrange. */
 static void
-policy_summary_reject(smartlist_t *summary,
-                      maskbits_t maskbits,
-                      uint16_t prt_min, uint16_t prt_max,
-                      sa_family_t family)
+policy_summary_reject(smartlist_t *summary, maskbits_t maskbits,
+                      uint16_t prt_min, uint16_t prt_max, sa_family_t family)
 {
   tor_assert_nonfatal_once(family == AF_INET || family == AF_INET6);
 
@@ -2542,9 +2484,8 @@ policy_summary_reject(smartlist_t *summary,
 
   /* We divide IPv6 address counts by (1 << scale) to keep them in a uint64_t
    */
-  int scale = ((family == AF_INET) ?
-               REJECT_CUTOFF_SCALE_IPV4 :
-               REJECT_CUTOFF_SCALE_IPV6);
+  int scale = ((family == AF_INET) ? REJECT_CUTOFF_SCALE_IPV4
+                                   : REJECT_CUTOFF_SCALE_IPV6);
 
   tor_assert_nonfatal_once(addrbits >= scale);
   if (maskbits > (addrbits - scale)) {
@@ -2564,8 +2505,7 @@ policy_summary_reject(smartlist_t *summary,
     count = (UINT64_C(1) << (addrbits - scale - maskbits));
   }
   tor_assert_nonfatal_once(count > 0);
-  while (i < smartlist_len(summary) &&
-         AT(i)->prt_max <= prt_max) {
+  while (i < smartlist_len(summary) && AT(i)->prt_max <= prt_max) {
     if (AT(i)->reject_count <= UINT64_MAX - count) {
       AT(i)->reject_count += count;
     } else {
@@ -2579,7 +2519,7 @@ policy_summary_reject(smartlist_t *summary,
     }
     i++;
   }
-  tor_assert(i < smartlist_len(summary) || prt_max==65535);
+  tor_assert(i < smartlist_len(summary) || prt_max == 65535);
 }
 
 /** Add a single exit policy item to our summary:
@@ -2599,27 +2539,26 @@ policy_summary_add_item(smartlist_t *summary, addr_policy_t *p)
       policy_summary_accept(summary, p->prt_min, p->prt_max, p->addr.family);
     }
   } else if (p->policy_type == ADDR_POLICY_REJECT) {
+    int is_private = 0;
+    int i;
+    for (i = 0; private_nets[i]; ++i) {
+      tor_addr_t addr;
+      maskbits_t maskbits;
+      if (tor_addr_parse_mask_ports(private_nets[i], 0, &addr, &maskbits, NULL,
+                                    NULL) < 0) {
+        tor_assert(0);
+      }
+      if (tor_addr_compare(&p->addr, &addr, CMP_EXACT) == 0 &&
+          p->maskbits == maskbits) {
+        is_private = 1;
+        break;
+      }
+    }
 
-     int is_private = 0;
-     int i;
-     for (i = 0; private_nets[i]; ++i) {
-       tor_addr_t addr;
-       maskbits_t maskbits;
-       if (tor_addr_parse_mask_ports(private_nets[i], 0, &addr,
-                                     &maskbits, NULL, NULL)<0) {
-         tor_assert(0);
-       }
-       if (tor_addr_compare(&p->addr, &addr, CMP_EXACT) == 0 &&
-           p->maskbits == maskbits) {
-         is_private = 1;
-         break;
-       }
-     }
-
-     if (!is_private) {
-       policy_summary_reject(summary, p->maskbits, p->prt_min, p->prt_max,
-                             p->addr.family);
-     }
+    if (!is_private) {
+      policy_summary_reject(summary, p->maskbits, p->prt_min, p->prt_max,
+                            p->addr.family);
+    }
   } else
     tor_assert(0);
 }
@@ -2645,7 +2584,7 @@ policy_summarize(smartlist_t *policy, sa_family_t family)
   tor_assert(policy);
 
   /* Create the summary list */
-  SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, p) {
+  SMARTLIST_FOREACH_BEGIN (policy, addr_policy_t *, p) {
     sa_family_t f = tor_addr_family(&p->addr);
     if (f != AF_INET && f != AF_INET6) {
       log_warn(LD_BUG, "Weird family when summarizing address policy");
@@ -2653,7 +2592,7 @@ policy_summarize(smartlist_t *policy, sa_family_t family)
     if (f != family)
       continue;
     policy_summary_add_item(summary, p);
-  } SMARTLIST_FOREACH_END(p);
+  } SMARTLIST_FOREACH_END (p);
 
   /* Now create two lists of strings, one for accepted and one
    * for rejected ports.  We take care to merge ranges so that
@@ -2665,9 +2604,8 @@ policy_summarize(smartlist_t *policy, sa_family_t family)
   accepts = smartlist_new();
   rejects = smartlist_new();
   while (1) {
-    last = i == smartlist_len(summary)-1;
-    if (last ||
-        AT(i)->accepted != AT(i+1)->accepted) {
+    last = i == smartlist_len(summary) - 1;
+    if (last || AT(i)->accepted != AT(i + 1)->accepted) {
       char buf[POLICY_BUF_LEN];
 
       if (start_prt == AT(i)->prt_max)
@@ -2683,7 +2621,7 @@ policy_summarize(smartlist_t *policy, sa_family_t family)
       if (last)
         break;
 
-      start_prt = AT(i+1)->prt_min;
+      start_prt = AT(i + 1)->prt_min;
     };
     i++;
   };
@@ -2703,13 +2641,13 @@ policy_summarize(smartlist_t *policy, sa_family_t family)
   accepts_str = smartlist_join_strings(accepts, ",", 0, &accepts_len);
   rejects_str = smartlist_join_strings(rejects, ",", 0, &rejects_len);
 
-  if (rejects_len > MAX_EXITPOLICY_SUMMARY_LEN-strlen("reject")-1 &&
-      accepts_len > MAX_EXITPOLICY_SUMMARY_LEN-strlen("accept")-1) {
+  if (rejects_len > MAX_EXITPOLICY_SUMMARY_LEN - strlen("reject") - 1 &&
+      accepts_len > MAX_EXITPOLICY_SUMMARY_LEN - strlen("accept") - 1) {
     char *c;
     shorter_str = accepts_str;
     prefix = "accept";
 
-    c = shorter_str + (MAX_EXITPOLICY_SUMMARY_LEN-strlen(prefix)-1);
+    c = shorter_str + (MAX_EXITPOLICY_SUMMARY_LEN - strlen(prefix) - 1);
     while (*c != ',' && c >= shorter_str)
       c--;
     tor_assert(c >= shorter_str);
@@ -2726,7 +2664,7 @@ policy_summarize(smartlist_t *policy, sa_family_t family)
 
   tor_asprintf(&result, "%s %s", prefix, shorter_str);
 
- cleanup:
+cleanup:
   /* cleanup */
   SMARTLIST_FOREACH(summary, policy_summary_item_t *, s, tor_free(s));
   smartlist_free(summary);
@@ -2766,7 +2704,7 @@ parse_short_policy(const char *summary)
   }
 
   n_entries = 0;
-  for ( ; *summary; summary = next) {
+  for (; *summary; summary = next) {
     if (n_entries == MAX_EXITPOLICY_SUMMARY_LEN) {
       log_fn(LOG_PROTOCOL_WARN, LD_DIR, "Impossibly long policy summary %s",
              escaped(orig_summary));
@@ -2775,9 +2713,9 @@ parse_short_policy(const char *summary)
 
     unsigned low, high;
     int ok;
-    low = (unsigned) tor_parse_ulong(summary, 10, 1, 65535, &ok, &next);
+    low = (unsigned)tor_parse_ulong(summary, 10, 1, 65535, &ok, &next);
     if (!ok) {
-      if (! TOR_ISDIGIT(*summary) || *summary == ',') {
+      if (!TOR_ISDIGIT(*summary) || *summary == ',') {
         /* Unrecognized format: skip it. */
         goto skip_ent;
       } else {
@@ -2786,25 +2724,25 @@ parse_short_policy(const char *summary)
     }
 
     switch (*next) {
-      case ',':
-        ++next;
-        /* fall through */
-      case '\0':
-        high = low;
-        break;
-      case '-':
-        high = (unsigned) tor_parse_ulong(next+1, 10, low, 65535, &ok, &next);
-        if (!ok)
-          goto bad_ent;
-
-        if (*next == ',')
-          ++next;
-        else if (*next != '\0')
-          goto bad_ent;
-
-        break;
-      default:
+    case ',':
+      ++next;
+      /* fall through */
+    case '\0':
+      high = low;
+      break;
+    case '-':
+      high = (unsigned)tor_parse_ulong(next + 1, 10, low, 65535, &ok, &next);
+      if (!ok)
         goto bad_ent;
+
+      if (*next == ',')
+        ++next;
+      else if (*next != '\0')
+        goto bad_ent;
+
+      break;
+    default:
+      goto bad_ent;
     }
 
     entries[n_entries].min_port = low;
@@ -2827,19 +2765,20 @@ parse_short_policy(const char *summary)
 
   {
     size_t size = offsetof(short_policy_t, entries) +
-      sizeof(short_policy_entry_t)*(n_entries);
+                  sizeof(short_policy_entry_t) * (n_entries);
     result = tor_malloc_zero(size);
 
-    tor_assert( (char*)&result->entries[n_entries-1] < ((char*)result)+size);
+    tor_assert((char *)&result->entries[n_entries - 1] <
+               ((char *)result) + size);
   }
 
   result->is_accept = is_accept;
   result->n_entries = n_entries;
-  memcpy(result->entries, entries, sizeof(short_policy_entry_t)*n_entries);
+  memcpy(result->entries, entries, sizeof(short_policy_entry_t) * n_entries);
   return result;
 
- bad_ent:
-  log_fn(LOG_PROTOCOL_WARN, LD_DIR,"Found bad entry in policy summary %s",
+bad_ent:
+  log_fn(LOG_PROTOCOL_WARN, LD_DIR, "Found bad entry in policy summary %s",
          escaped(orig_summary));
   return NULL;
 }
@@ -2854,14 +2793,14 @@ write_short_policy(const short_policy_t *policy)
 
   smartlist_add_asprintf(sl, "%s", policy->is_accept ? "accept " : "reject ");
 
-  for (i=0; i < policy->n_entries; i++) {
+  for (i = 0; i < policy->n_entries; i++) {
     const short_policy_entry_t *e = &policy->entries[i];
     if (e->min_port == e->max_port) {
       smartlist_add_asprintf(sl, "%d", e->min_port);
     } else {
       smartlist_add_asprintf(sl, "%d-%d", e->min_port, e->max_port);
     }
-    if (i < policy->n_entries-1)
+    if (i < policy->n_entries - 1)
       smartlist_add_strdup(sl, ",");
   }
   answer = smartlist_join_strings(sl, "", 0, NULL);
@@ -2898,7 +2837,7 @@ compare_tor_addr_to_short_policy(const tor_addr_t *addr, uint16_t port,
       (tor_addr_is_internal(addr, 0) || tor_addr_is_loopback(addr)))
     return ADDR_POLICY_REJECTED;
 
-  for (i=0; i < policy->n_entries; ++i) {
+  for (i = 0; i < policy->n_entries; ++i) {
     const short_policy_entry_t *e = &policy->entries[i];
     if (e->min_port <= port && port <= e->max_port) {
       found_match = 1;
@@ -2909,7 +2848,7 @@ compare_tor_addr_to_short_policy(const tor_addr_t *addr, uint16_t port,
   if (found_match)
     accept_ = policy->is_accept;
   else
-    accept_ = ! policy->is_accept;
+    accept_ = !policy->is_accept;
 
   /* ???? are these right? -NM */
   /* We should be sure not to return ADDR_POLICY_ACCEPTED in the accept
@@ -2985,8 +2924,7 @@ compare_tor_addr_to_node_policy(const tor_addr_t *addr, uint16_t port,
  * If <b>include_ipv6</b> is true, include IPv6 entries.
  */
 char *
-policy_dump_to_string(const smartlist_t *policy_list,
-                      int include_ipv4,
+policy_dump_to_string(const smartlist_t *policy_list, int include_ipv4,
                       int include_ipv6)
 {
   smartlist_t *policy_string_list;
@@ -2994,7 +2932,7 @@ policy_dump_to_string(const smartlist_t *policy_list,
 
   policy_string_list = smartlist_new();
 
-  SMARTLIST_FOREACH_BEGIN(policy_list, addr_policy_t *, tmpe) {
+  SMARTLIST_FOREACH_BEGIN (policy_list, addr_policy_t *, tmpe) {
     char *pbuf;
     int bytes_written_to_pbuf;
     if ((tor_addr_family(&tmpe->addr) == AF_INET6) && (!include_ipv6)) {
@@ -3005,7 +2943,7 @@ policy_dump_to_string(const smartlist_t *policy_list,
     }
 
     pbuf = tor_malloc(POLICY_BUF_LEN);
-    bytes_written_to_pbuf = policy_write_item(pbuf,POLICY_BUF_LEN, tmpe, 1);
+    bytes_written_to_pbuf = policy_write_item(pbuf, POLICY_BUF_LEN, tmpe, 1);
 
     if (bytes_written_to_pbuf < 0) {
       log_warn(LD_BUG, "policy_dump_to_string ran out of room!");
@@ -3013,12 +2951,12 @@ policy_dump_to_string(const smartlist_t *policy_list,
       goto done;
     }
 
-    smartlist_add(policy_string_list,pbuf);
-  } SMARTLIST_FOREACH_END(tmpe);
+    smartlist_add(policy_string_list, pbuf);
+  } SMARTLIST_FOREACH_END (tmpe);
 
   policy_string = smartlist_join_strings(policy_string_list, "\n", 0, NULL);
 
- done:
+done:
   SMARTLIST_FOREACH(policy_string_list, char *, str, tor_free(str));
   smartlist_free(policy_string_list);
 
@@ -3028,12 +2966,11 @@ policy_dump_to_string(const smartlist_t *policy_list,
 /** Implementation for GETINFO control command: knows the answer for questions
  * about "exit-policy/..." */
 int
-getinfo_helper_policies(control_connection_t *conn,
-                        const char *question, char **answer,
-                        const char **errmsg)
+getinfo_helper_policies(control_connection_t *conn, const char *question,
+                        char **answer, const char **errmsg)
 {
-  (void) conn;
-  (void) errmsg;
+  (void)conn;
+  (void)errmsg;
   if (!strcmp(question, "exit-policy/default")) {
     *answer = tor_strdup(DEFAULT_EXIT_POLICY);
   } else if (!strcmp(question, "exit-policy/reject-private/default")) {
@@ -3049,8 +2986,7 @@ getinfo_helper_policies(control_connection_t *conn,
       priv++;
     }
 
-    *answer = smartlist_join_strings(private_policy_strings,
-                                     ",", 0, NULL);
+    *answer = smartlist_join_strings(private_policy_strings, ",", 0, NULL);
 
     SMARTLIST_FOREACH(private_policy_strings, char *, str, tor_free(str));
     smartlist_free(private_policy_strings);
@@ -3085,11 +3021,9 @@ getinfo_helper_policies(control_connection_t *conn,
     }
 
     policies_parse_exit_policy_reject_private(
-      &private_policy_list,
-      options->IPv6Exit,
-      configured_addresses,
-      options->ExitPolicyRejectLocalInterfaces,
-      options->ExitPolicyRejectLocalInterfaces);
+        &private_policy_list, options->IPv6Exit, configured_addresses,
+        options->ExitPolicyRejectLocalInterfaces,
+        options->ExitPolicyRejectLocalInterfaces);
     *answer = policy_dump_to_string(private_policy_list, 1, 1);
 
     addr_policy_list_free(private_policy_list);
@@ -3117,8 +3051,8 @@ getinfo_helper_policies(control_connection_t *conn,
       return 0; /* No such key. */
     }
 
-    *answer = router_dump_exit_policy_to_string(me,include_ipv4,
-                                                include_ipv6);
+    *answer =
+        router_dump_exit_policy_to_string(me, include_ipv4, include_ipv6);
   }
 
   return 0;
@@ -3184,11 +3118,11 @@ policies_free_all(void)
 
     /* Note the first 10 cached policies to try to figure out where they
      * might be coming from. */
-    HT_FOREACH(ent, policy_map, &policy_root) {
+    HT_FOREACH (ent, policy_map, &policy_root) {
       if (++n > 10)
         break;
       if (policy_write_item(buf, sizeof(buf), (*ent)->policy, 0) >= 0)
-        log_warn(LD_MM,"  %d [%d]: %s", n, (*ent)->policy->refcnt, buf);
+        log_warn(LD_MM, "  %d [%d]: %s", n, (*ent)->policy->refcnt, buf);
     }
   }
   HT_CLEAR(policy_map, &policy_root);

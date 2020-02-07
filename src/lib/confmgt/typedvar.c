@@ -41,7 +41,7 @@
  **/
 int
 typed_var_assign(void *target, const char *value, char **errmsg,
-                    const var_type_def_t *def)
+                 const var_type_def_t *def)
 {
   if (BUG(!def))
     return -1; // LCOV_EXCL_LINE
@@ -63,8 +63,8 @@ typed_var_assign(void *target, const char *value, char **errmsg,
  * only the first one is handled by this function.
  **/
 int
-typed_var_kvassign(void *target, const config_line_t *line,
-                      char **errmsg, const var_type_def_t *def)
+typed_var_kvassign(void *target, const config_line_t *line, char **errmsg,
+                   const var_type_def_t *def)
 {
   if (BUG(!def))
     return -1; // LCOV_EXCL_LINE
@@ -118,7 +118,7 @@ typed_var_encode(const void *value, const var_type_def_t *def)
  */
 config_line_t *
 typed_var_kvencode(const char *key, const void *value,
-                      const var_type_def_t *def)
+                   const var_type_def_t *def)
 {
   if (BUG(!def))
     return NULL; // LCOV_EXCL_LINE
@@ -162,7 +162,7 @@ typed_var_copy(void *dest, const void *src, const var_type_def_t *def)
   if (BUG(rv < 0)) {
     // LCOV_EXCL_START
     log_warn(LD_BUG, "Encoded value %s was not parseable as a %s: %s",
-             escaped(enc), def->name, err?err:"");
+             escaped(enc), def->name, err ? err : "");
     // LCOV_EXCL_STOP
   }
   tor_free(err);
@@ -188,7 +188,7 @@ typed_var_eq(const void *a, const void *b, const var_type_def_t *def)
   // Otherwise, encode the values and compare them.
   char *enc_a = typed_var_encode(a, def);
   char *enc_b = typed_var_encode(b, def);
-  bool eq = !strcmp_opt(enc_a,enc_b);
+  bool eq = !strcmp_opt(enc_a, enc_b);
   tor_free(enc_a);
   tor_free(enc_b);
   return eq;

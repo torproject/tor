@@ -17,7 +17,7 @@
 int
 directory_handle_command(dir_connection_t *conn)
 {
-  (void) conn;
+  (void)conn;
   tor_assert_nonfatal_unreached_once();
   return -1;
 }
@@ -25,7 +25,7 @@ directory_handle_command(dir_connection_t *conn)
 int
 connection_dirserv_flushed_some(dir_connection_t *conn)
 {
-  (void) conn;
+  (void)conn;
   tor_assert_nonfatal_unreached_once();
   return -1;
 }
@@ -44,8 +44,7 @@ consdiffmgr_enable_background_compression(void)
 }
 
 int
-consdiffmgr_add_consensus(const char *consensus,
-                          size_t consensus_len,
+consdiffmgr_add_consensus(const char *consensus, size_t consensus_len,
                           const networkstatus_t *as_parsed)
 {
   (void)consensus;

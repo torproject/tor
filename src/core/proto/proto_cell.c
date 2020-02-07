@@ -73,7 +73,7 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
     return 0;
 
   length = ntohs(get_uint16(hdr + circ_id_len + 1));
-  if (buf_datalen(buf) < (size_t)(header_len+length))
+  if (buf_datalen(buf) < (size_t)(header_len + length))
     return 1;
 
   result = var_cell_new(length);
@@ -84,7 +84,7 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
     result->circ_id = ntohs(get_uint16(hdr));
 
   buf_drain(buf, header_len);
-  buf_peek(buf, (char*) result->payload, length);
+  buf_peek(buf, (char *)result->payload, length);
   buf_drain(buf, length);
 
   *out = result;

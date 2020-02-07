@@ -6,7 +6,7 @@
 
 struct tor_addr_port_t;
 
-char *haproxy_format_proxy_header_line(
-                                    const struct tor_addr_port_t *addr_port);
+char *
+haproxy_format_proxy_header_line(const struct tor_addr_port_t *addr_port);
 
 #endif /* !defined(TOR_PROTO_HAPROXY_H) */

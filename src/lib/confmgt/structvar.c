@@ -36,9 +36,8 @@
 static inline bool
 magic_is_null(const struct_magic_decl_t *decl)
 {
-  return decl->typename == NULL &&
-    decl->magic_offset == 0 &&
-    decl->magic_val == 0;
+  return decl->typename == NULL && decl->magic_offset == 0 &&
+         decl->magic_val == 0;
 }
 
 /**
@@ -71,7 +70,7 @@ struct_check_magic(const void *object, const struct_magic_decl_t *decl)
   const uint32_t *ptr = STRUCT_VAR_P(object, decl->magic_offset);
   tor_assertf(*ptr == decl->magic_val,
               "Bad magic number on purported %s object. "
-              "Expected %"PRIu32"x but got %"PRIu32"x.",
+              "Expected %" PRIu32 "x but got %" PRIu32 "x.",
               decl->typename, decl->magic_val, *ptr);
 }
 
@@ -170,8 +169,7 @@ struct_var_ok(const void *object, const struct_member_t *member)
  **/
 int
 struct_var_kvassign(void *object, const struct config_line_t *line,
-                    char **errmsg,
-                    const struct_member_t *member)
+                    char **errmsg, const struct_member_t *member)
 {
   void *p = struct_get_mptr(object, member);
   const var_type_def_t *def = get_type_def(member);

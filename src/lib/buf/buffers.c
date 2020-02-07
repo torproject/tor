@@ -35,7 +35,7 @@
 #include "lib/time/compat_time.h"
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
 #include <stdlib.h>
@@ -46,9 +46,12 @@
 #ifdef PARANOIA
 /** Helper: If PARANOIA is defined, assert that the buffer in local variable
  * <b>buf</b> is well-formed. */
-#define check() STMT_BEGIN buf_assert_ok(buf); STMT_END
+#  define check()         \
+    STMT_BEGIN            \
+      buf_assert_ok(buf); \
+    STMT_END
 #else
-#define check() STMT_NIL
+#  define check() STMT_NIL
 #endif /* defined(PARANOIA) */
 
 /* Implementation notes:
@@ -76,9 +79,9 @@
 
 /* We leave this many NUL bytes at the end of the buffer. */
 #ifdef DISABLE_MEMORY_SENTINELS
-#define SENTINEL_LEN 0
+#  define SENTINEL_LEN 0
 #else
-#define SENTINEL_LEN 4
+#  define SENTINEL_LEN 4
 #endif
 
 /* Header size plus NUL bytes at the end */
@@ -89,27 +92,28 @@
 #define CHUNK_ALLOC_SIZE(memlen) (CHUNK_OVERHEAD + (memlen))
 /** Return the number of usable bytes in a chunk allocated with
  * malloc(<b>memlen</b>). */
-#define CHUNK_SIZE_WITH_ALLOC(memlen) ((memlen) - CHUNK_OVERHEAD)
+#define CHUNK_SIZE_WITH_ALLOC(memlen) ((memlen)-CHUNK_OVERHEAD)
 
 #define DEBUG_SENTINEL
 
 #if defined(DEBUG_SENTINEL) && !defined(DISABLE_MEMORY_SENTINELS)
-#define DBG_S(s) s
+#  define DBG_S(s) s
 #else
-#define DBG_S(s) (void)0
+#  define DBG_S(s) (void)0
 #endif
 
 #ifndef COCCI
-#ifdef DISABLE_MEMORY_SENTINELS
-#define CHUNK_SET_SENTINEL(chunk, alloclen) STMT_NIL
-#else
-#define CHUNK_SET_SENTINEL(chunk, alloclen) do {                        \
-    uint8_t *a = (uint8_t*) &(chunk)->mem[(chunk)->memlen];             \
-    DBG_S(uint8_t *b = &((uint8_t*)(chunk))[(alloclen)-SENTINEL_LEN]);  \
-    DBG_S(tor_assert(a == b));                                          \
-    memset(a,0,SENTINEL_LEN);                                           \
-  } while (0)
-#endif /* defined(DISABLE_MEMORY_SENTINELS) */
+#  ifdef DISABLE_MEMORY_SENTINELS
+#    define CHUNK_SET_SENTINEL(chunk, alloclen) STMT_NIL
+#  else
+#    define CHUNK_SET_SENTINEL(chunk, alloclen)                             \
+      do {                                                                  \
+        uint8_t *a = (uint8_t *)&(chunk)->mem[(chunk)->memlen];             \
+        DBG_S(uint8_t *b = &((uint8_t *)(chunk))[(alloclen)-SENTINEL_LEN]); \
+        DBG_S(tor_assert(a == b));                                          \
+        memset(a, 0, SENTINEL_LEN);                                         \
+      } while (0)
+#  endif /* defined(DISABLE_MEMORY_SENTINELS) */
 #endif /* !defined(COCCI) */
 
 /** Move all bytes stored in <b>chunk</b> to the front of <b>chunk</b>->mem,
@@ -568,7 +572,7 @@ void
 buf_add_printf(buf_t *buf, const char *format, ...)
 {
   va_list ap;
-  va_start(ap,format);
+  va_start(ap, format);
   buf_add_vprintf(buf, format, ap);
   va_end(ap);
 }
@@ -595,7 +599,7 @@ buf_extract(buf_t *buf, size_t *sz_out)
 
   size_t sz = buf_datalen(buf);
   char *result;
-  result = tor_malloc(sz+1);
+  result = tor_malloc(sz + 1);
   buf_peek(buf, result, sz);
   result[sz] = 0;
   if (sz_out)
@@ -713,8 +717,8 @@ buf_move_all(buf_t *buf_out, buf_t *buf_in)
 /** Internal structure: represents a position in a buffer. */
 typedef struct buf_pos_t {
   const chunk_t *chunk; /**< Which chunk are we pointing to? */
-  ptrdiff_t pos;/**< Which character inside the chunk's data are we pointing
-                 * to? */
+  ptrdiff_t pos; /**< Which character inside the chunk's data are we pointing
+                  * to? */
   size_t chunk_pos; /**< Total length of all previous chunks. */
 } buf_pos_t;
 
@@ -745,7 +749,7 @@ buf_find_pos_of_char(char ch, buf_pos_t *out)
   }
   pos = out->pos;
   for (chunk = out->chunk; chunk; chunk = chunk->next) {
-    char *cp = memchr(chunk->data+pos, ch, chunk->datalen - pos);
+    char *cp = memchr(chunk->data + pos, ch, chunk->datalen - pos);
     if (cp) {
       out->chunk = chunk;
       tor_assert(cp - chunk->data < INT_MAX);
@@ -797,7 +801,7 @@ buf_matches_at_pos(const buf_pos_t *pos, const char *s, size_t n)
      * string. */
     if (--n == 0)
       return 1;
-    if (buf_pos_inc(&p)<0)
+    if (buf_pos_inc(&p) < 0)
       return 0;
   }
 }
@@ -814,7 +818,7 @@ buf_find_string_offset(const buf_t *buf, const char *s, size_t n)
       tor_assert(pos.chunk_pos + pos.pos < INT_MAX);
       return (int)(pos.chunk_pos + pos.pos);
     } else {
-      if (buf_pos_inc(&pos)<0)
+      if (buf_pos_inc(&pos) < 0)
         return -1;
     }
   }
@@ -875,21 +879,20 @@ buf_get_line(buf_t *buf, char *data_out, size_t *data_len)
   offset = buf_find_offset_of_char(buf, '\n');
   if (offset < 0)
     return 0;
-  sz = (size_t) offset;
-  if (sz+2 > *data_len) {
+  sz = (size_t)offset;
+  if (sz + 2 > *data_len) {
     *data_len = sz + 2;
     return -1;
   }
-  buf_get_bytes(buf, data_out, sz+1);
-  data_out[sz+1] = '\0';
-  *data_len = sz+1;
+  buf_get_bytes(buf, data_out, sz + 1);
+  data_out[sz + 1] = '\0';
+  *data_len = sz + 1;
   return 1;
 }
 
 /** Set *<b>output</b> to contain a copy of the data in *<b>input</b> */
 int
-buf_set_to_copy(buf_t **output,
-                const buf_t *input)
+buf_set_to_copy(buf_t **output, const buf_t *input)
 {
   if (*output)
     buf_free(*output);
@@ -905,7 +908,7 @@ buf_assert_ok(buf_t *buf)
   tor_assert(buf);
   tor_assert(buf->magic == BUFFER_MAGIC);
 
-  if (! buf->head) {
+  if (!buf->head) {
     tor_assert(!buf->tail);
     tor_assert(buf->datalen == 0);
   } else {
@@ -917,17 +920,17 @@ buf_assert_ok(buf_t *buf)
       tor_assert(ch->datalen <= ch->memlen);
       tor_assert(ch->datalen < INT_MAX);
       tor_assert(ch->data >= &ch->mem[0]);
-      tor_assert(ch->data <= &ch->mem[0]+ch->memlen);
-      if (ch->data == &ch->mem[0]+ch->memlen) {
+      tor_assert(ch->data <= &ch->mem[0] + ch->memlen);
+      if (ch->data == &ch->mem[0] + ch->memlen) {
         /* LCOV_EXCL_START */
         static int warned = 0;
-        if (! warned) {
+        if (!warned) {
           log_warn(LD_BUG, "Invariant violation in buf.c related to #15083");
           warned = 1;
         }
         /* LCOV_EXCL_STOP */
       }
-      tor_assert(ch->data+ch->datalen <= &ch->mem[0] + ch->memlen);
+      tor_assert(ch->data + ch->datalen <= &ch->mem[0] + ch->memlen);
       if (!ch->next)
         tor_assert(ch == buf->tail);
     }

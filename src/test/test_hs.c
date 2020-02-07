@@ -33,19 +33,21 @@
 #include "test/test_helpers.h"
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
 /* mock ID digest and longname for node that's in nodelist */
-#define HSDIR_EXIST_ID "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA" \
-                       "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
+#define HSDIR_EXIST_ID                       \
+  "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA" \
+  "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
 #define STR_HSDIR_EXIST_LONGNAME \
-                       "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=TestDir"
+  "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=TestDir"
 /* mock ID digest and longname for node that's not in nodelist */
-#define HSDIR_NONE_EXIST_ID "\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB" \
-                            "\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB"
+#define HSDIR_NONE_EXIST_ID                  \
+  "\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB" \
+  "\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB\xBB"
 #define STR_HSDIR_NONE_EXIST_LONGNAME \
-                       "$BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+  "$BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
 
 /* DuckDuckGo descriptor as an example. This one has extra "\r" at the end so
  * the control port is happy. */
@@ -185,7 +187,7 @@ static char *received_msg = NULL;
 static void
 queue_control_event_string_replacement(uint16_t event, char *msg)
 {
-  (void) event;
+  (void)event;
   tor_free(received_msg);
   received_msg = msg;
 }
@@ -210,7 +212,7 @@ test_hs_parse_static_v2_desc(void *arg)
   int ret;
   rend_encoded_v2_service_descriptor_t desc;
 
-  (void) arg;
+  (void)arg;
 
   /* Test an obviously not parseable string */
   desc.desc_str = tor_strdup("ceci n'est pas un HS descriptor");
@@ -224,7 +226,7 @@ test_hs_parse_static_v2_desc(void *arg)
   tor_free(desc.desc_str);
   tt_int_op(ret, OP_EQ, 1);
 
- done: ;
+done:;
 }
 
 /** Make sure each hidden service descriptor async event generation
@@ -234,112 +236,109 @@ test_hs_parse_static_v2_desc(void *arg)
 static void
 test_hs_desc_event(void *arg)
 {
-  #define STR_HS_ADDR "ajhb7kljbiru65qo"
-  #define STR_HS_CONTENT_DESC_ID "g5ojobzupf275beh5ra72uyhb3dkpxwg"
-  #define STR_DESC_ID_BASE32 "hba3gmcgpfivzfhx5rtfqkfdhv65yrj3"
+#define STR_HS_ADDR "ajhb7kljbiru65qo"
+#define STR_HS_CONTENT_DESC_ID "g5ojobzupf275beh5ra72uyhb3dkpxwg"
+#define STR_DESC_ID_BASE32 "hba3gmcgpfivzfhx5rtfqkfdhv65yrj3"
 
   int ret;
   rend_data_v2_t rend_query;
   const char *expected_msg;
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
 
-  (void) arg;
-  MOCK(queue_control_event_string,
-       queue_control_event_string_replacement);
-  MOCK(node_describe_longname_by_id,
-       node_describe_longname_by_id_replacement);
+  (void)arg;
+  MOCK(queue_control_event_string, queue_control_event_string_replacement);
+  MOCK(node_describe_longname_by_id, node_describe_longname_by_id_replacement);
 
   /* setup rend_query struct */
   memset(&rend_query, 0, sizeof(rend_query));
   rend_query.base_.version = 2;
   strncpy(rend_query.onion_address, STR_HS_ADDR,
-          REND_SERVICE_ID_LEN_BASE32+1);
+          REND_SERVICE_ID_LEN_BASE32 + 1);
   rend_query.auth_type = REND_NO_AUTH;
   rend_query.base_.hsdirs_fp = smartlist_new();
-  smartlist_add(rend_query.base_.hsdirs_fp, tor_memdup(HSDIR_EXIST_ID,
-                                                       DIGEST_LEN));
+  smartlist_add(rend_query.base_.hsdirs_fp,
+                tor_memdup(HSDIR_EXIST_ID, DIGEST_LEN));
 
   /* Compute descriptor ID for replica 0, should be STR_DESC_ID_BASE32. */
   ret = rend_compute_v2_desc_id(rend_query.descriptor_id[0],
-                                rend_query.onion_address,
-                                NULL, 0, 0);
+                                rend_query.onion_address, NULL, 0, 0);
   tt_int_op(ret, OP_EQ, 0);
   base32_encode(desc_id_base32, sizeof(desc_id_base32),
                 rend_query.descriptor_id[0], DIGEST_LEN);
   /* Make sure rend_compute_v2_desc_id works properly. */
-  tt_mem_op(desc_id_base32, OP_EQ, STR_DESC_ID_BASE32,
-            sizeof(desc_id_base32));
+  tt_mem_op(desc_id_base32, OP_EQ, STR_DESC_ID_BASE32, sizeof(desc_id_base32));
 
   /* test request event */
   control_event_hs_descriptor_requested(rend_query.onion_address,
                                         rend_query.auth_type, HSDIR_EXIST_ID,
                                         STR_DESC_ID_BASE32, NULL);
-  expected_msg = "650 HS_DESC REQUESTED "STR_HS_ADDR" NO_AUTH "\
-                  STR_HSDIR_EXIST_LONGNAME " " STR_DESC_ID_BASE32 "\r\n";
+  expected_msg =
+      "650 HS_DESC REQUESTED " STR_HS_ADDR " NO_AUTH " STR_HSDIR_EXIST_LONGNAME
+      " " STR_DESC_ID_BASE32 "\r\n";
   tt_assert(received_msg);
-  tt_str_op(received_msg,OP_EQ, expected_msg);
+  tt_str_op(received_msg, OP_EQ, expected_msg);
   tor_free(received_msg);
 
   /* test received event */
   rend_query.auth_type = REND_BASIC_AUTH;
   control_event_hsv2_descriptor_received(rend_query.onion_address,
                                          &rend_query.base_, HSDIR_EXIST_ID);
-  expected_msg = "650 HS_DESC RECEIVED "STR_HS_ADDR" BASIC_AUTH "\
-                  STR_HSDIR_EXIST_LONGNAME " " STR_DESC_ID_BASE32"\r\n";
+  expected_msg =
+      "650 HS_DESC RECEIVED " STR_HS_ADDR
+      " BASIC_AUTH " STR_HSDIR_EXIST_LONGNAME " " STR_DESC_ID_BASE32 "\r\n";
   tt_assert(received_msg);
-  tt_str_op(received_msg,OP_EQ, expected_msg);
+  tt_str_op(received_msg, OP_EQ, expected_msg);
   tor_free(received_msg);
 
   /* test failed event */
   rend_query.auth_type = REND_STEALTH_AUTH;
-  control_event_hsv2_descriptor_failed(&rend_query.base_,
-                                     HSDIR_NONE_EXIST_ID,
-                                     "QUERY_REJECTED");
-  expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" STEALTH_AUTH "\
-                  STR_HSDIR_NONE_EXIST_LONGNAME" REASON=QUERY_REJECTED\r\n";
+  control_event_hsv2_descriptor_failed(&rend_query.base_, HSDIR_NONE_EXIST_ID,
+                                       "QUERY_REJECTED");
+  expected_msg = "650 HS_DESC FAILED " STR_HS_ADDR
+                 " STEALTH_AUTH " STR_HSDIR_NONE_EXIST_LONGNAME
+                 " REASON=QUERY_REJECTED\r\n";
   tt_assert(received_msg);
-  tt_str_op(received_msg,OP_EQ, expected_msg);
+  tt_str_op(received_msg, OP_EQ, expected_msg);
   tor_free(received_msg);
 
   /* test invalid auth type */
   rend_query.auth_type = 999;
-  control_event_hsv2_descriptor_failed(&rend_query.base_,
-                                     HSDIR_EXIST_ID,
-                                     "QUERY_REJECTED");
-  expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" UNKNOWN "\
-                  STR_HSDIR_EXIST_LONGNAME " " STR_DESC_ID_BASE32\
-                  " REASON=QUERY_REJECTED\r\n";
+  control_event_hsv2_descriptor_failed(&rend_query.base_, HSDIR_EXIST_ID,
+                                       "QUERY_REJECTED");
+  expected_msg =
+      "650 HS_DESC FAILED " STR_HS_ADDR " UNKNOWN " STR_HSDIR_EXIST_LONGNAME
+      " " STR_DESC_ID_BASE32 " REASON=QUERY_REJECTED\r\n";
   tt_assert(received_msg);
-  tt_str_op(received_msg,OP_EQ, expected_msg);
+  tt_str_op(received_msg, OP_EQ, expected_msg);
   tor_free(received_msg);
 
   /* test no HSDir fingerprint type */
   rend_query.auth_type = REND_NO_AUTH;
   control_event_hsv2_descriptor_failed(&rend_query.base_, NULL,
-                                     "QUERY_NO_HSDIR");
-  expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" NO_AUTH " \
+                                       "QUERY_NO_HSDIR");
+  expected_msg = "650 HS_DESC FAILED " STR_HS_ADDR " NO_AUTH "
                  "UNKNOWN REASON=QUERY_NO_HSDIR\r\n";
   tt_assert(received_msg);
-  tt_str_op(received_msg,OP_EQ, expected_msg);
+  tt_str_op(received_msg, OP_EQ, expected_msg);
   tor_free(received_msg);
 
   /* test HSDir rate limited */
   rend_query.auth_type = REND_NO_AUTH;
   control_event_hsv2_descriptor_failed(&rend_query.base_, NULL,
-                                     "QUERY_RATE_LIMITED");
-  expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" NO_AUTH " \
+                                       "QUERY_RATE_LIMITED");
+  expected_msg = "650 HS_DESC FAILED " STR_HS_ADDR " NO_AUTH "
                  "UNKNOWN REASON=QUERY_RATE_LIMITED\r\n";
   tt_assert(received_msg);
-  tt_str_op(received_msg,OP_EQ, expected_msg);
+  tt_str_op(received_msg, OP_EQ, expected_msg);
   tor_free(received_msg);
 
   /* Test invalid content with no HSDir fingerprint. */
   char *exp_msg;
   control_event_hs_descriptor_content(rend_query.onion_address,
                                       STR_HS_CONTENT_DESC_ID, NULL, NULL);
-  tor_asprintf(&exp_msg, "650+HS_DESC_CONTENT " STR_HS_ADDR " "\
-               STR_HS_CONTENT_DESC_ID " UNKNOWN" \
-               "\r\n\r\n.\r\n650 OK\r\n");
+  tor_asprintf(&exp_msg, "650+HS_DESC_CONTENT " STR_HS_ADDR
+                         " " STR_HS_CONTENT_DESC_ID " UNKNOWN"
+                         "\r\n\r\n.\r\n650 OK\r\n");
   tt_assert(received_msg);
   tt_str_op(received_msg, OP_EQ, exp_msg);
   tor_free(received_msg);
@@ -349,9 +348,10 @@ test_hs_desc_event(void *arg)
   control_event_hs_descriptor_content(rend_query.onion_address,
                                       STR_HS_CONTENT_DESC_ID, HSDIR_EXIST_ID,
                                       hs_desc_content_control);
-  tor_asprintf(&exp_msg, "650+HS_DESC_CONTENT " STR_HS_ADDR " "\
-               STR_HS_CONTENT_DESC_ID " " STR_HSDIR_EXIST_LONGNAME\
-               "\r\n%s\r\n.\r\n650 OK\r\n", hs_desc_content_control);
+  tor_asprintf(&exp_msg,
+               "650+HS_DESC_CONTENT " STR_HS_ADDR " " STR_HS_CONTENT_DESC_ID
+               " " STR_HSDIR_EXIST_LONGNAME "\r\n%s\r\n.\r\n650 OK\r\n",
+               hs_desc_content_control);
 
   tt_assert(received_msg);
   tt_str_op(received_msg, OP_EQ, exp_msg);
@@ -360,7 +360,7 @@ test_hs_desc_event(void *arg)
   SMARTLIST_FOREACH(rend_query.base_.hsdirs_fp, char *, d, tor_free(d));
   smartlist_free(rend_query.base_.hsdirs_fp);
 
- done:
+done:
   UNMOCK(queue_control_event_string);
   UNMOCK(node_describe_longname_by_id);
   tor_free(received_msg);
@@ -402,8 +402,7 @@ test_hs_rend_data(void *arg)
                                       client_v2->descriptor_cookie, now, rep);
     /* That shouldn't never fail. */
     tt_int_op(ret, OP_EQ, 0);
-    tt_mem_op(client_v2->descriptor_id[rep], OP_EQ, desc_id,
-              sizeof(desc_id));
+    tt_mem_op(client_v2->descriptor_id[rep], OP_EQ, desc_id, sizeof(desc_id));
   }
   /* The rest should be zeroed because this is a client request. */
   tt_int_op(tor_digest_is_zero(client_v2->rend_pk_digest), OP_EQ, 1);
@@ -449,7 +448,8 @@ test_hs_rend_data(void *arg)
   tt_int_op(strlen(client_v2->onion_address), OP_EQ, 0);
   tt_mem_op(client_v2->desc_id_fetch, OP_EQ, desc_id, sizeof(desc_id));
   tt_int_op(fast_mem_is_zero(client_v2->descriptor_cookie,
-                            sizeof(client_v2->descriptor_cookie)), OP_EQ, 1);
+                             sizeof(client_v2->descriptor_cookie)),
+            OP_EQ, 1);
   tt_assert(client->hsdirs_fp);
   tt_int_op(smartlist_len(client->hsdirs_fp), OP_EQ, 0);
   for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
@@ -467,8 +467,8 @@ test_hs_rend_data(void *arg)
   memset(rend_pk_digest, 'f', sizeof(rend_pk_digest));
   memset(rend_cookie, 'g', sizeof(rend_cookie));
 
-  service = rend_data_service_create(STR_HS_ADDR, rend_pk_digest,
-                                     rend_cookie, REND_NO_AUTH);
+  service = rend_data_service_create(STR_HS_ADDR, rend_pk_digest, rend_cookie,
+                                     REND_NO_AUTH);
   tt_assert(service);
   rend_data_v2_t *service_v2 = TO_REND_DATA_V2(service);
   tt_int_op(service_v2->auth_type, OP_EQ, REND_NO_AUTH);
@@ -504,7 +504,7 @@ test_hs_rend_data(void *arg)
   tt_int_op(tor_digest_is_zero(service_dup_v2->descriptor_cookie), OP_EQ, 1);
   tt_int_op(tor_digest_is_zero(service_dup_v2->desc_id_fetch), OP_EQ, 1);
 
- done:
+done:
   rend_data_free(service);
   rend_data_free(service_dup);
   rend_data_free(client);
@@ -515,7 +515,7 @@ test_hs_rend_data(void *arg)
 static void
 test_hs_auth_cookies(void *arg)
 {
-#define TEST_COOKIE_RAW ((const uint8_t *) "abcdefghijklmnop")
+#define TEST_COOKIE_RAW ((const uint8_t *)"abcdefghijklmnop")
 #define TEST_COOKIE_ENCODED "YWJjZGVmZ2hpamtsbW5vcA"
 #define TEST_COOKIE_ENCODED_STEALTH "YWJjZGVmZ2hpamtsbW5vcB"
 #define TEST_COOKIE_ENCODED_INVALID "YWJjZGVmZ2hpamtsbW5vcD"
@@ -568,7 +568,7 @@ test_hs_auth_cookies(void *arg)
   tt_assert(err_msg);
   tor_free(err_msg);
 
- done:
+done:
   tor_free(encoded_cookie);
   tor_free(err_msg);
 
@@ -597,8 +597,8 @@ mock_get_options(void)
 
 /* arg can't be 0 (the test fails) or 2 (the test is skipped) */
 #define CREATE_HS_DIR_NONE ((intptr_t)0x04)
-#define CREATE_HS_DIR1     ((intptr_t)0x08)
-#define CREATE_HS_DIR2     ((intptr_t)0x10)
+#define CREATE_HS_DIR1 ((intptr_t)0x08)
+#define CREATE_HS_DIR2 ((intptr_t)0x10)
 
 /* Test that single onion poisoning works. */
 static void
@@ -646,14 +646,14 @@ test_single_onion_poisoning(void *arg)
   /* Add port to service 1 */
   service_1->ports = smartlist_new();
   service_2->ports = smartlist_new();
-  rend_service_port_config_t *port1 = rend_service_parse_port_config("80", " ",
-                                                                     &err_msg);
+  rend_service_port_config_t *port1 =
+      rend_service_parse_port_config("80", " ", &err_msg);
   tt_assert(port1);
   tt_ptr_op(err_msg, OP_EQ, NULL);
   smartlist_add(service_1->ports, port1);
 
-  rend_service_port_config_t *port2 = rend_service_parse_port_config("90", " ",
-                                                                     &err_msg);
+  rend_service_port_config_t *port2 =
+      rend_service_parse_port_config("90", " ", &err_msg);
   /* Add port to service 2 */
   tt_assert(port2);
   tt_ptr_op(err_msg, OP_EQ, NULL);
@@ -838,7 +838,7 @@ test_single_onion_poisoning(void *arg)
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
   tt_int_op(ret, OP_EQ, 0);
 
- done:
+done:
   /* The test harness deletes the directories at exit */
   tor_free(poison_path);
   tor_free(dir1);
@@ -877,7 +877,7 @@ test_prune_services_on_reload(void *arg)
   rend_service_t *e1 = helper_create_rend_service(NULL);
   rend_service_t *e2 = helper_create_rend_service(NULL);
 
-  (void) arg;
+  (void)arg;
 
   {
     /* Add both services to the old list. */
@@ -972,7 +972,7 @@ test_prune_services_on_reload(void *arg)
     tt_int_op(smartlist_len(new), OP_EQ, 2);
   }
 
- done:
+done:
   rend_service_free(s1);
   rend_service_free(s2);
   rend_service_free(e1);
@@ -982,24 +982,20 @@ test_prune_services_on_reload(void *arg)
 }
 
 struct testcase_t hs_tests[] = {
-  { "hs_rend_data", test_hs_rend_data, TT_FORK,
-    NULL, NULL },
-  { "hs_parse_static_v2_desc", test_hs_parse_static_v2_desc, TT_FORK,
-    NULL, NULL },
-  { "hs_desc_event", test_hs_desc_event, TT_FORK,
-    NULL, NULL },
-  { "hs_auth_cookies", test_hs_auth_cookies, TT_FORK,
-    NULL, NULL },
-  { "single_onion_poisoning_create_dir_none", test_single_onion_poisoning,
-    TT_FORK, &passthrough_setup, (void*)(CREATE_HS_DIR_NONE) },
-  { "single_onion_poisoning_create_dir1", test_single_onion_poisoning,
-    TT_FORK, &passthrough_setup, (void*)(CREATE_HS_DIR1) },
-  { "single_onion_poisoning_create_dir2", test_single_onion_poisoning,
-    TT_FORK, &passthrough_setup, (void*)(CREATE_HS_DIR2) },
-  { "single_onion_poisoning_create_dir_both", test_single_onion_poisoning,
-    TT_FORK, &passthrough_setup, (void*)(CREATE_HS_DIR1 | CREATE_HS_DIR2) },
-  { "prune_services_on_reload", test_prune_services_on_reload, TT_FORK,
-    NULL, NULL },
+    {"hs_rend_data", test_hs_rend_data, TT_FORK, NULL, NULL},
+    {"hs_parse_static_v2_desc", test_hs_parse_static_v2_desc, TT_FORK, NULL,
+     NULL},
+    {"hs_desc_event", test_hs_desc_event, TT_FORK, NULL, NULL},
+    {"hs_auth_cookies", test_hs_auth_cookies, TT_FORK, NULL, NULL},
+    {"single_onion_poisoning_create_dir_none", test_single_onion_poisoning,
+     TT_FORK, &passthrough_setup, (void *)(CREATE_HS_DIR_NONE)},
+    {"single_onion_poisoning_create_dir1", test_single_onion_poisoning,
+     TT_FORK, &passthrough_setup, (void *)(CREATE_HS_DIR1)},
+    {"single_onion_poisoning_create_dir2", test_single_onion_poisoning,
+     TT_FORK, &passthrough_setup, (void *)(CREATE_HS_DIR2)},
+    {"single_onion_poisoning_create_dir_both", test_single_onion_poisoning,
+     TT_FORK, &passthrough_setup, (void *)(CREATE_HS_DIR1 | CREATE_HS_DIR2)},
+    {"prune_services_on_reload", test_prune_services_on_reload, TT_FORK, NULL,
+     NULL},
 
-  END_OF_TESTCASES
-};
+    END_OF_TESTCASES};

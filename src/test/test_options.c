@@ -35,7 +35,7 @@
 #include "lib/net/resolve.h"
 
 #ifdef HAVE_SYS_PARAM_H
-#include <sys/param.h>
+#  include <sys/param.h>
 #endif
 
 typedef struct {
@@ -75,13 +75,13 @@ dump_logs(void)
 {
   smartlist_t *msgs;
   char *out;
-  if (! messages)
+  if (!messages)
     return tor_strdup("");
   msgs = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(messages, logmsg_t *, x) {
-    smartlist_add_asprintf(msgs, "[%s] %s",
-                           log_level_to_string(x->severity), x->msg);
-  } SMARTLIST_FOREACH_END(x);
+  SMARTLIST_FOREACH_BEGIN (messages, logmsg_t *, x) {
+    smartlist_add_asprintf(msgs, "[%s] %s", log_level_to_string(x->severity),
+                           x->msg);
+  } SMARTLIST_FOREACH_END (x);
   out = smartlist_join_strings(msgs, "", 0, NULL);
   SMARTLIST_FOREACH(msgs, char *, cp, tor_free(cp));
   smartlist_free(msgs);
@@ -93,72 +93,74 @@ clear_log_messages(void)
 {
   if (!messages)
     return;
-  SMARTLIST_FOREACH(messages, logmsg_t *, m,
-                    { tor_free(m->msg); tor_free(m); });
+  SMARTLIST_FOREACH(messages, logmsg_t *, m, {
+    tor_free(m->msg);
+    tor_free(m);
+  });
   smartlist_free(messages);
   messages = NULL;
 }
 
-#define setup_options(opt)                   \
-  do {                                       \
-    opt = options_new();                     \
-    opt->command = CMD_RUN_TOR;              \
-    options_init(opt);                       \
+#define setup_options(opt)      \
+  do {                          \
+    opt = options_new();        \
+    opt->command = CMD_RUN_TOR; \
+    options_init(opt);          \
   } while (0)
 
 #ifdef COCCI
 
-#define ENABLE_AUTHORITY_MIN ""
-#define ENABLE_AUTHORITY_V3_MIN ""
-#define ENABLE_AUTHORITY_BRIDGE_MIN ""
-#define AUTHORITY_OPT_REQ_ ""
-#define ENABLE_AUTHORITY ""
-#define ENABLE_AUTHORITY_V3 ""
-#define ENABLE_AUTHORITY_BRIDGE ""
+#  define ENABLE_AUTHORITY_MIN ""
+#  define ENABLE_AUTHORITY_V3_MIN ""
+#  define ENABLE_AUTHORITY_BRIDGE_MIN ""
+#  define AUTHORITY_OPT_REQ_ ""
+#  define ENABLE_AUTHORITY ""
+#  define ENABLE_AUTHORITY_V3 ""
+#  define ENABLE_AUTHORITY_BRIDGE ""
 
 #else /* !defined(COCCI) */
 
-#define ENABLE_AUTHORITY_MIN \
-  "AuthoritativeDirectory 1\n"
+#  define ENABLE_AUTHORITY_MIN "AuthoritativeDirectory 1\n"
 
-#define ENABLE_AUTHORITY_V3_MIN \
-  ENABLE_AUTHORITY_MIN \
-  "V3AuthoritativeDir 1\n"
+#  define ENABLE_AUTHORITY_V3_MIN \
+    ENABLE_AUTHORITY_MIN          \
+    "V3AuthoritativeDir 1\n"
 
-#define ENABLE_AUTHORITY_BRIDGE_MIN \
-  ENABLE_AUTHORITY_MIN \
-  "BridgeAuthoritativeDir 1\n"
+#  define ENABLE_AUTHORITY_BRIDGE_MIN \
+    ENABLE_AUTHORITY_MIN              \
+    "BridgeAuthoritativeDir 1\n"
 
-#define AUTHORITY_OPT_REQ_ \
-  "Address 192.0.2.111\n" \
-  "ContactInfo a@example.org\n" \
-  "DirPort 1025\n" \
-  "ORPort 1026\n"
+#  define AUTHORITY_OPT_REQ_      \
+    "Address 192.0.2.111\n"       \
+    "ContactInfo a@example.org\n" \
+    "DirPort 1025\n"              \
+    "ORPort 1026\n"
 
 /* Not actually valid: requires v3 / bridge */
-#define ENABLE_AUTHORITY \
-  ENABLE_AUTHORITY_MIN \
-  AUTHORITY_OPT_REQ_
+#  define ENABLE_AUTHORITY \
+    ENABLE_AUTHORITY_MIN   \
+    AUTHORITY_OPT_REQ_
 
-#define ENABLE_AUTHORITY_V3 \
-  ENABLE_AUTHORITY_V3_MIN \
-  AUTHORITY_OPT_REQ_
+#  define ENABLE_AUTHORITY_V3 \
+    ENABLE_AUTHORITY_V3_MIN   \
+    AUTHORITY_OPT_REQ_
 
-#define ENABLE_AUTHORITY_BRIDGE \
-  ENABLE_AUTHORITY_BRIDGE_MIN \
-  AUTHORITY_OPT_REQ_
+#  define ENABLE_AUTHORITY_BRIDGE \
+    ENABLE_AUTHORITY_BRIDGE_MIN   \
+    AUTHORITY_OPT_REQ_
 
 #endif /* defined(COCCI) */
 
-#define VALID_DIR_AUTH "DirAuthority dizum orport=443 v3ident=E8A9C45"  \
+#define VALID_DIR_AUTH                                                  \
+  "DirAuthority dizum orport=443 v3ident=E8A9C45"                       \
   "EDE6D711294FADF8E7951F4DE6CA56B58 194.109.206.212:80 7EA6 EAD6 FD83" \
   " 083C 538F 4403 8BBF A077 587D D755\n"
-#define VALID_ALT_BRIDGE_AUTH \
+#define VALID_ALT_BRIDGE_AUTH                                           \
   "AlternateBridgeAuthority dizum orport=443 v3ident=E8A9C45"           \
   "EDE6D711294FADF8E7951F4DE6CA56B58 194.109.206.212:80 7EA6 EAD6 FD83" \
   " 083C 538F 4403 8BBF A077 587D D755\n"
-#define VALID_ALT_DIR_AUTH \
-  "AlternateDirAuthority dizum orport=443 v3ident=E8A9C45"           \
+#define VALID_ALT_DIR_AUTH                                              \
+  "AlternateDirAuthority dizum orport=443 v3ident=E8A9C45"              \
   "EDE6D711294FADF8E7951F4DE6CA56B58 194.109.206.212:80 7EA6 EAD6 FD83" \
   " 083C 538F 4403 8BBF A077 587D D755\n"
 
@@ -170,13 +172,12 @@ test_options_checklog(const char *configuration, int expect_log_severity,
   char *actual_log = NULL;
 
   if (messages) {
-    SMARTLIST_FOREACH_BEGIN(messages, logmsg_t *, m) {
-      if (m->severity == expect_log_severity &&
-          strstr(m->msg, expect_log)) {
+    SMARTLIST_FOREACH_BEGIN (messages, logmsg_t *, m) {
+      if (m->severity == expect_log_severity && strstr(m->msg, expect_log)) {
         found = 1;
         break;
       }
-    } SMARTLIST_FOREACH_END(m);
+    } SMARTLIST_FOREACH_END (m);
   }
   if (!found) {
     actual_log = dump_logs();
@@ -186,16 +187,14 @@ test_options_checklog(const char *configuration, int expect_log_severity,
   }
   ret = 0;
 
- done:
+done:
   tor_free(actual_log);
   return ret;
 }
 
 static int
-test_options_checkmsgs(const char *configuration,
-                       const char *expect_errmsg,
-                       int expect_log_severity,
-                       const char *expect_log,
+test_options_checkmsgs(const char *configuration, const char *expect_errmsg,
+                       int expect_log_severity, const char *expect_log,
                        char *msg)
 {
   if (expect_errmsg && !msg) {
@@ -205,8 +204,8 @@ test_options_checkmsgs(const char *configuration,
     TT_DIE(("Expected error message <%s> from <%s>, but got <%s>.",
             expect_errmsg, configuration, msg));
   } else if (!expect_errmsg && msg) {
-    TT_DIE(("Expected no error message from <%s> but got <%s>.",
-            configuration, msg));
+    TT_DIE(("Expected no error message from <%s> but got <%s>.", configuration,
+            msg));
   }
   if (expect_log) {
     return test_options_checklog(configuration, expect_log_severity,
@@ -214,7 +213,7 @@ test_options_checkmsgs(const char *configuration,
   }
   return 0;
 
- done:
+done:
   return -1;
 }
 
@@ -223,14 +222,12 @@ enum { PH_GETLINES, PH_ASSIGN, PH_VALIDATE };
 
 static void
 test_options_validate_impl(const char *configuration,
-                           const char *expect_errmsg,
-                           int expect_log_severity,
-                           const char *expect_log,
-                           int phase)
+                           const char *expect_errmsg, int expect_log_severity,
+                           const char *expect_log, int phase)
 {
-  or_options_t *opt=NULL;
-  config_line_t *cl=NULL;
-  char *msg=NULL;
+  or_options_t *opt = NULL;
+  config_line_t *cl = NULL;
+  char *msg = NULL;
   int r;
 
   setup_options(opt);
@@ -238,8 +235,7 @@ test_options_validate_impl(const char *configuration,
   r = config_get_lines(configuration, &cl, 1);
   if (phase == PH_GETLINES) {
     if (test_options_checkmsgs(configuration, expect_errmsg,
-                               expect_log_severity,
-                               expect_log, msg))
+                               expect_log_severity, expect_log, msg))
       goto done;
   }
   if (r)
@@ -248,8 +244,7 @@ test_options_validate_impl(const char *configuration,
   r = config_assign(get_options_mgr(), opt, cl, 0, &msg);
   if (phase == PH_ASSIGN) {
     if (test_options_checkmsgs(configuration, expect_errmsg,
-                               expect_log_severity,
-                               expect_log, msg))
+                               expect_log_severity, expect_log, msg))
       goto done;
   }
   tt_int_op((r == 0), OP_EQ, (msg == NULL));
@@ -259,13 +254,12 @@ test_options_validate_impl(const char *configuration,
   r = options_validate(NULL, opt, &msg);
   if (phase == PH_VALIDATE) {
     if (test_options_checkmsgs(configuration, expect_errmsg,
-                               expect_log_severity,
-                               expect_log, msg))
+                               expect_log_severity, expect_log, msg))
       goto done;
   }
   tt_int_op((r == 0), OP_EQ, (msg == NULL));
 
- done:
+done:
   escaped(NULL);
   policies_free_all();
   config_free_lines(cl);
@@ -274,13 +268,13 @@ test_options_validate_impl(const char *configuration,
   clear_log_messages();
 }
 
-#define WANT_ERR(config, msg, ph)                               \
+#define WANT_ERR(config, msg, ph) \
   test_options_validate_impl((config), (msg), 0, NULL, (ph))
-#define WANT_LOG(config, severity, msg, ph)                             \
+#define WANT_LOG(config, severity, msg, ph) \
   test_options_validate_impl((config), NULL, (severity), (msg), (ph))
-#define WANT_ERR_LOG(config, msg, severity, logmsg, ph)                 \
+#define WANT_ERR_LOG(config, msg, severity, logmsg, ph) \
   test_options_validate_impl((config), (msg), (severity), (logmsg), (ph))
-#define OK(config, ph)                                          \
+#define OK(config, ph) \
   test_options_validate_impl((config), NULL, 0, NULL, (ph))
 
 static void
@@ -294,13 +288,13 @@ test_options_validate(void *arg)
   WANT_ERR("ExtORPort 500000", "Invalid ExtORPort", PH_VALIDATE);
 
   WANT_ERR_LOG("ServerTransportOptions trebuchet",
-               "ServerTransportOptions did not parse",
-               LOG_WARN, "Too few arguments", PH_VALIDATE);
+               "ServerTransportOptions did not parse", LOG_WARN,
+               "Too few arguments", PH_VALIDATE);
   OK("ServerTransportOptions trebuchet sling=snappy", PH_VALIDATE);
   OK("ServerTransportOptions trebuchet sling=", PH_VALIDATE);
   WANT_ERR_LOG("ServerTransportOptions trebuchet slingsnappy",
-               "ServerTransportOptions did not parse",
-               LOG_WARN, "\"slingsnappy\" is not a k=v", PH_VALIDATE);
+               "ServerTransportOptions did not parse", LOG_WARN,
+               "\"slingsnappy\" is not a k=v", PH_VALIDATE);
 
   WANT_ERR("DirPort 8080\nDirCache 0",
            "DirPort configured but DirCache disabled.", PH_VALIDATE);
@@ -310,24 +304,22 @@ test_options_validate(void *arg)
   // XXXX We should replace this with a more full error message once #29211
   // XXXX is done.  It is truncated for now because at the current stage
   // XXXX of refactoring, we can't give a full error message like before.
-  WANT_ERR_LOG("HeartbeatPeriod 21 snarks",
-               "malformed or out of bounds", LOG_WARN,
-               "Unknown unit 'snarks'.",
-               PH_ASSIGN);
+  WANT_ERR_LOG("HeartbeatPeriod 21 snarks", "malformed or out of bounds",
+               LOG_WARN, "Unknown unit 'snarks'.", PH_ASSIGN);
   // XXXX As above.
-  WANT_ERR_LOG("LogTimeGranularity 21 snarks",
-               "malformed or out of bounds", LOG_WARN,
-               "Unknown unit 'snarks'.",
-               PH_ASSIGN);
+  WANT_ERR_LOG("LogTimeGranularity 21 snarks", "malformed or out of bounds",
+               LOG_WARN, "Unknown unit 'snarks'.", PH_ASSIGN);
   OK("HeartbeatPeriod 1 hour", PH_VALIDATE);
   OK("LogTimeGranularity 100 milliseconds", PH_VALIDATE);
 
   WANT_LOG("ControlSocket \"string with trailing garbage\" bogus", LOG_WARN,
            "Error while parsing configuration: "
-           "Excess data after quoted string", PH_GETLINES);
+           "Excess data after quoted string",
+           PH_GETLINES);
   WANT_LOG("ControlSocket \"bogus escape \\@\"", LOG_WARN,
            "Error while parsing configuration: "
-           "Invalid escape sequence in quoted string", PH_GETLINES);
+           "Invalid escape sequence in quoted string",
+           PH_GETLINES);
 
   close_temp_logs();
   clear_log_messages();
@@ -340,9 +332,9 @@ static void
 test_have_enough_mem_for_dircache(void *arg)
 {
   (void)arg;
-  or_options_t *opt=NULL;
-  config_line_t *cl=NULL;
-  char *msg=NULL;
+  or_options_t *opt = NULL;
+  config_line_t *cl = NULL;
+  char *msg = NULL;
   int r;
   const char *configuration = "ORPort 8080\nDirCache 1", *expect_errmsg;
 
@@ -370,7 +362,8 @@ test_have_enough_mem_for_dircache(void *arg)
   }
   tor_free(msg);
 
-  config_free_lines(cl); cl = NULL;
+  config_free_lines(cl);
+  cl = NULL;
   configuration = "ORPort 8080\nDirCache 1\nBridgeRelay 1";
   r = config_get_lines(configuration, &cl, 1);
   tt_int_op(r, OP_EQ, 0);
@@ -393,7 +386,8 @@ test_have_enough_mem_for_dircache(void *arg)
   }
   tor_free(msg);
 
-  config_free_lines(cl); cl = NULL;
+  config_free_lines(cl);
+  cl = NULL;
   configuration = "ORPort 8080\nDirCache 0";
   r = config_get_lines(configuration, &cl, 1);
   tt_int_op(r, OP_EQ, 0);
@@ -418,7 +412,7 @@ test_have_enough_mem_for_dircache(void *arg)
 
   clear_log_messages();
 
- done:
+done:
   if (msg)
     tor_free(msg);
   or_options_free(opt);
@@ -445,7 +439,7 @@ get_options_test_data(const char *conf)
 {
   int rv = -1;
   char *msg = NULL;
-  config_line_t *cl=NULL;
+  config_line_t *cl = NULL;
   options_test_data_t *result = tor_malloc(sizeof(options_test_data_t));
   result->opt = options_new();
 
@@ -465,7 +459,7 @@ get_options_test_data(const char *conf)
   rv = config_get_lines("", &cl, 1);
   tt_int_op(rv, OP_EQ, 0);
 
- done:
+done:
   config_free_lines(cl);
   if (rv != 0) {
     free_options_test_data(result);
@@ -480,7 +474,8 @@ get_options_test_data(const char *conf)
 static void
 free_options_test_data(options_test_data_t *td)
 {
-  if (!td) return;
+  if (!td)
+    return;
   or_options_free(td->opt);
   tor_free(td);
 }
@@ -497,32 +492,34 @@ test_options_validate__uname_for_server(void *ignored)
     unset_home_env = 1;
 #endif
 
-  options_test_data_t *tdata = get_options_test_data(
-                                      "ORPort 127.0.0.1:5555");
+  options_test_data_t *tdata = get_options_test_data("ORPort 127.0.0.1:5555");
   setup_capture_of_logs(LOG_WARN);
 
   MOCK(get_uname, fixed_get_uname);
   fixed_get_uname_result = "Windows 95";
   options_validate(NULL, tdata->opt, &msg);
-  expect_log_msg("Tor is running as a server, but you"
-           " are running Windows 95; this probably won't work. See https://www"
-           ".torproject.org/docs/faq.html#BestOSForRelay for details.\n");
+  expect_log_msg(
+      "Tor is running as a server, but you"
+      " are running Windows 95; this probably won't work. See https://www"
+      ".torproject.org/docs/faq.html#BestOSForRelay for details.\n");
   tor_free(msg);
 
   fixed_get_uname_result = "Windows 98";
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
-  expect_log_msg("Tor is running as a server, but you"
-           " are running Windows 98; this probably won't work. See https://www"
-           ".torproject.org/docs/faq.html#BestOSForRelay for details.\n");
+  expect_log_msg(
+      "Tor is running as a server, but you"
+      " are running Windows 98; this probably won't work. See https://www"
+      ".torproject.org/docs/faq.html#BestOSForRelay for details.\n");
   tor_free(msg);
 
   fixed_get_uname_result = "Windows Me";
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
-  expect_log_msg("Tor is running as a server, but you"
-           " are running Windows Me; this probably won't work. See https://www"
-           ".torproject.org/docs/faq.html#BestOSForRelay for details.\n");
+  expect_log_msg(
+      "Tor is running as a server, but you"
+      " are running Windows Me; this probably won't work. See https://www"
+      ".torproject.org/docs/faq.html#BestOSForRelay for details.\n");
   tor_free(msg);
 
   fixed_get_uname_result = "Windows 2000";
@@ -531,7 +528,7 @@ test_options_validate__uname_for_server(void *ignored)
   expect_no_log_msg("Tor is running as a server, but you ");
   tor_free(msg);
 
- done:
+done:
   UNMOCK(get_uname);
   free_options_test_data(tdata);
   tor_free(msg);
@@ -548,15 +545,16 @@ test_options_validate__outbound_addresses(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
-  options_test_data_t *tdata = get_options_test_data(
-                                    "OutboundBindAddress xxyy!!!sdfaf");
+  options_test_data_t *tdata =
+      get_options_test_data("OutboundBindAddress xxyy!!!sdfaf");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Multiple outbound bind addresses configured: "
-                        "xxyy!!!sdfaf");
+  tt_str_op(msg, OP_EQ,
+            "Multiple outbound bind addresses configured: "
+            "xxyy!!!sdfaf");
 
- done:
+done:
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -567,32 +565,32 @@ test_options_validate__data_directory(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
-  options_test_data_t *tdata = get_options_test_data(
-                                                "DataDirectory longreallyl"
-                                                "ongLONGLONGlongreallylong"
-                                                "LONGLONGlongreallylongLON"
-                                                "GLONGlongreallylongLONGLO"
-                                                "NGlongreallylongLONGLONGl"
-                                                "ongreallylongLONGLONGlong"
-                                                "reallylongLONGLONGlongrea"
-                                                "llylongLONGLONGlongreally"
-                                                "longLONGLONGlongreallylon"
-                                                "gLONGLONGlongreallylongLO"
-                                                "NGLONGlongreallylongLONGL"
-                                                "ONGlongreallylongLONGLONG"
-                                                "longreallylongLONGLONGlon"
-                                                "greallylongLONGLONGlongre"
-                                                "allylongLONGLONGlongreall"
-                                                "ylongLONGLONGlongreallylo"
-                                                "ngLONGLONGlongreallylongL"
-                                                "ONGLONGlongreallylongLONG"
-                                                "LONG"); // 440 characters
+  options_test_data_t *tdata =
+      get_options_test_data("DataDirectory longreallyl"
+                            "ongLONGLONGlongreallylong"
+                            "LONGLONGlongreallylongLON"
+                            "GLONGlongreallylongLONGLO"
+                            "NGlongreallylongLONGLONGl"
+                            "ongreallylongLONGLONGlong"
+                            "reallylongLONGLONGlongrea"
+                            "llylongLONGLONGlongreally"
+                            "longLONGLONGlongreallylon"
+                            "gLONGLONGlongreallylongLO"
+                            "NGLONGlongreallylongLONGL"
+                            "ONGlongreallylongLONGLONG"
+                            "longreallylongLONGLONGlon"
+                            "greallylongLONGLONGlongre"
+                            "allylongLONGLONGlongreall"
+                            "ylongLONGLONGlongreallylo"
+                            "ngLONGLONGlongreallylongL"
+                            "ONGLONGlongreallylongLONG"
+                            "LONG"); // 440 characters
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "Invalid DataDirectory");
 
- done:
+done:
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -603,8 +601,8 @@ test_options_validate__nickname(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
-  options_test_data_t *tdata = get_options_test_data(
-                                        "Nickname ThisNickNameIsABitTooLong");
+  options_test_data_t *tdata =
+      get_options_test_data("Nickname ThisNickNameIsABitTooLong");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -625,7 +623,7 @@ test_options_validate__nickname(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
 
- done:
+done:
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -636,17 +634,16 @@ test_options_validate__contactinfo(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
-  options_test_data_t *tdata = get_options_test_data(
-                                "ORPort 127.0.0.1:5555");
+  options_test_data_t *tdata = get_options_test_data("ORPort 127.0.0.1:5555");
   setup_capture_of_logs(LOG_DEBUG);
   tdata->opt->ContactInfo = NULL;
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg(
-            "Your ContactInfo config option is not"
-            " set. Please consider setting it, so we can contact you if your"
-            " server is misconfigured or something else goes wrong.\n");
+      "Your ContactInfo config option is not"
+      " set. Please consider setting it, so we can contact you if your"
+      " server is misconfigured or something else goes wrong.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -656,12 +653,12 @@ test_options_validate__contactinfo(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
-            "Your ContactInfo config option is not"
-            " set. Please consider setting it, so we can contact you if your"
-            " server is misconfigured or something else goes wrong.\n");
+      "Your ContactInfo config option is not"
+      " set. Please consider setting it, so we can contact you if your"
+      " server is misconfigured or something else goes wrong.\n");
   tor_free(msg);
 
- done:
+done:
   teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
@@ -730,14 +727,14 @@ test_options_validate__logs(void *ignored)
   free_options_test_data(tdata);
   tdata = get_options_test_data("");
   tdata->opt->RunAsDaemon = 0;
-  config_line_t *cl=NULL;
+  config_line_t *cl = NULL;
   config_get_lines("Log foo", &cl, 1);
   tdata->opt->Logs = cl;
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op((intptr_t)tdata->opt->Logs, OP_EQ, (intptr_t)cl);
   tt_int_op(ret, OP_EQ, -1);
 
- done:
+done:
   quiet_level = orig_quiet_level;
   free_options_test_data(tdata);
   tor_free(msg);
@@ -761,8 +758,7 @@ test_options_validate__authdir(void *ignored)
   char *msg;
   setup_capture_of_logs(LOG_INFO);
   options_test_data_t *tdata = get_options_test_data(
-                                 ENABLE_AUTHORITY_V3_MIN
-                                 "Address this.should.not!exist!.example.org");
+      ENABLE_AUTHORITY_V3_MIN "Address this.should.not!exist!.example.org");
   const dirauth_options_t *da_opt;
 
   sandbox_disable_getaddrinfo_cache();
@@ -771,25 +767,27 @@ test_options_validate__authdir(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   UNMOCK(tor_addr_lookup);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Failed to resolve/guess local address. See logs for"
+  tt_str_op(msg, OP_EQ,
+            "Failed to resolve/guess local address. See logs for"
             " details.");
   expect_log_msg("Could not resolve local Address "
-            "'this.should.not!exist!.example.org'. Failing.\n");
+                 "'this.should.not!exist!.example.org'. Failing.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3_MIN
-                                "Address 100.200.10.1");
+  tdata =
+      get_options_test_data(ENABLE_AUTHORITY_V3_MIN "Address 100.200.10.1");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Authoritative directory servers must set "
-                        "ContactInfo");
+  tt_str_op(msg, OP_EQ,
+            "Authoritative directory servers must set "
+            "ContactInfo");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3_MIN
-                                "Address 100.200.10.1\n");
+  tdata =
+      get_options_test_data(ENABLE_AUTHORITY_V3_MIN "Address 100.200.10.1\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -798,13 +796,13 @@ test_options_validate__authdir(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_MIN
-                                "Address 100.200.10.1\n"
-                                "TestingTorNetwork 1\n");
+  tdata = get_options_test_data(ENABLE_AUTHORITY_MIN "Address 100.200.10.1\n"
+                                                     "TestingTorNetwork 1\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "AuthoritativeDir is set, but none of (Bridge/V3)"
+  tt_str_op(msg, OP_EQ,
+            "AuthoritativeDir is set, but none of (Bridge/V3)"
             "AuthoritativeDir is set.");
   tor_free(msg);
 
@@ -813,7 +811,8 @@ test_options_validate__authdir(void *ignored)
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "AuthoritativeDir is set, but none of (Bridge/V3)"
+  tt_str_op(msg, OP_EQ,
+            "AuthoritativeDir is set, but none of (Bridge/V3)"
             "AuthoritativeDir is set.");
   tor_free(msg);
 
@@ -848,7 +847,8 @@ test_options_validate__authdir(void *ignored)
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
   da_opt = get_dirauth_options(tdata->opt);
-  tt_str_op(msg, OP_EQ, "AuthoritativeDir is set, but none of (Bridge/V3)"
+  tt_str_op(msg, OP_EQ,
+            "AuthoritativeDir is set, but none of (Bridge/V3)"
             "AuthoritativeDir is set.");
   tor_free(msg);
 
@@ -859,7 +859,8 @@ test_options_validate__authdir(void *ignored)
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
   da_opt = get_dirauth_options(tdata->opt);
-  tt_str_op(msg, OP_EQ, "Versioning authoritative dir servers must set "
+  tt_str_op(msg, OP_EQ,
+            "Versioning authoritative dir servers must set "
             "Recommended*Versions.");
   tor_free(msg);
 
@@ -870,28 +871,28 @@ test_options_validate__authdir(void *ignored)
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
   da_opt = get_dirauth_options(tdata->opt);
-  tt_str_op(msg, OP_EQ, "Versioning authoritative dir servers must set "
+  tt_str_op(msg, OP_EQ,
+            "Versioning authoritative dir servers must set "
             "Recommended*Versions.");
   tor_free(msg);
   da_opt = NULL;
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                "UseEntryGuards 1\n");
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 "UseEntryGuards 1\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
   expect_log_msg("Authoritative directory servers "
-            "can't set UseEntryGuards. Disabling.\n");
+                 "can't set UseEntryGuards. Disabling.\n");
   tt_int_op(tdata->opt->UseEntryGuards, OP_EQ, 0);
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                "DownloadExtraInfo 0\n");
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 "DownloadExtraInfo 0\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
-  expect_log_msg("Authoritative directories always try"
-            " to download extra-info documents. Setting DownloadExtraInfo.\n");
+  expect_log_msg(
+      "Authoritative directories always try"
+      " to download extra-info documents. Setting DownloadExtraInfo.\n");
   tt_int_op(tdata->opt->DownloadExtraInfo, OP_EQ, 1);
   tor_free(msg);
 
@@ -962,8 +963,7 @@ test_options_validate__authdir(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                "ClientOnly 1\n");
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 "ClientOnly 1\n");
   /* We have to call the dirauth-specific function, and fake port parsing,
    * to hit this case */
   tdata->opt->DirPort_set = 1;
@@ -971,13 +971,13 @@ test_options_validate__authdir(void *ignored)
   mock_clean_saved_logs();
   ret = options_validate_dirauth_mode(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Running as authoritative directory, "
+  tt_str_op(msg, OP_EQ,
+            "Running as authoritative directory, "
             "but ClientOnly also set.");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_BRIDGE
-                                "ClientOnly 1\n");
+  tdata = get_options_test_data(ENABLE_AUTHORITY_BRIDGE "ClientOnly 1\n");
   /* We have to call the dirauth-specific function, and fake port parsing,
    * to hit this case */
   tdata->opt->DirPort_set = 1;
@@ -985,11 +985,12 @@ test_options_validate__authdir(void *ignored)
   mock_clean_saved_logs();
   ret = options_validate_dirauth_mode(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Running as authoritative directory, "
+  tt_str_op(msg, OP_EQ,
+            "Running as authoritative directory, "
             "but ClientOnly also set.");
   tor_free(msg);
 
- done:
+done:
   teardown_capture_of_logs();
   //  sandbox_free_getaddrinfo_cache();
   free_options_test_data(tdata);
@@ -1003,22 +1004,21 @@ test_options_validate__relay_with_hidden_services(void *ignored)
   char *msg;
   int ret;
   setup_capture_of_logs(LOG_DEBUG);
-  options_test_data_t *tdata = get_options_test_data(
-                                  "ORPort 127.0.0.1:5555\n"
-                                  "HiddenServiceDir "
-                                  "/Library/Tor/var/lib/tor/hidden_service/\n"
-                                  "HiddenServicePort 80 127.0.0.1:8080\n"
-                                                     );
+  options_test_data_t *tdata =
+      get_options_test_data("ORPort 127.0.0.1:5555\n"
+                            "HiddenServiceDir "
+                            "/Library/Tor/var/lib/tor/hidden_service/\n"
+                            "HiddenServicePort 80 127.0.0.1:8080\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg(
-            "Tor is currently configured as a relay and a hidden service. "
-            "That's not very secure: you should probably run your hidden servi"
-            "ce in a separate Tor process, at least -- see "
-            "https://trac.torproject.org/8742\n");
+      "Tor is currently configured as a relay and a hidden service. "
+      "That's not very secure: you should probably run your hidden servi"
+      "ce in a separate Tor process, at least -- see "
+      "https://trac.torproject.org/8742\n");
 
- done:
+done:
   teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
@@ -1038,7 +1038,7 @@ test_options_validate__listen_ports(void *ignored)
                  "are all undefined, and there aren't any hidden services "
                  "configured. "
                  " Tor will still run, but probably won't do anything.\n");
- done:
+done:
   teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
@@ -1067,14 +1067,16 @@ test_options_validate__transproxy(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
 
-#if !defined(OpenBSD) && !defined(DARWIN)
-  tt_str_op(msg, OP_EQ,
-          "pf-divert is a OpenBSD-specific and OS X/Darwin-specific feature.");
-#else
+#  if !defined(OpenBSD) && !defined(DARWIN)
+  tt_str_op(
+      msg, OP_EQ,
+      "pf-divert is a OpenBSD-specific and OS X/Darwin-specific feature.");
+#  else
   tt_int_op(tdata->opt->TransProxyType_parsed, OP_EQ, TPT_PF_DIVERT);
-  tt_str_op(msg, OP_EQ, "Cannot use TransProxyType without "
+  tt_str_op(msg, OP_EQ,
+            "Cannot use TransProxyType without "
             "any valid TransPort.");
-#endif /* !defined(OpenBSD) && !defined(DARWIN) */
+#  endif /* !defined(OpenBSD) && !defined(DARWIN) */
   tor_free(msg);
 
   // Test tproxy trans proxy
@@ -1083,13 +1085,14 @@ test_options_validate__transproxy(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
 
-#if !defined(__linux__)
+#  if !defined(__linux__)
   tt_str_op(msg, OP_EQ, "TPROXY is a Linux-specific feature.");
-#else
+#  else
   tt_int_op(tdata->opt->TransProxyType_parsed, OP_EQ, TPT_TPROXY);
-  tt_str_op(msg, OP_EQ, "Cannot use TransProxyType without any valid "
+  tt_str_op(msg, OP_EQ,
+            "Cannot use TransProxyType without any valid "
             "TransPort.");
-#endif /* !defined(__linux__) */
+#  endif /* !defined(__linux__) */
   tor_free(msg);
 
   // Test ipfw trans proxy
@@ -1098,14 +1101,16 @@ test_options_validate__transproxy(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
 
-#ifndef KERNEL_MAY_SUPPORT_IPFW
-  tt_str_op(msg, OP_EQ, "ipfw is a FreeBSD-specific and OS X/Darwin-specific "
+#  ifndef KERNEL_MAY_SUPPORT_IPFW
+  tt_str_op(msg, OP_EQ,
+            "ipfw is a FreeBSD-specific and OS X/Darwin-specific "
             "feature.");
-#else
+#  else
   tt_int_op(tdata->opt->TransProxyType_parsed, OP_EQ, TPT_IPFW);
-  tt_str_op(msg, OP_EQ, "Cannot use TransProxyType without any valid "
+  tt_str_op(msg, OP_EQ,
+            "Cannot use TransProxyType without any valid "
             "TransPort.");
-#endif /* !defined(KERNEL_MAY_SUPPORT_IPFW) */
+#  endif /* !defined(KERNEL_MAY_SUPPORT_IPFW) */
   tor_free(msg);
 
   // Test unknown trans proxy
@@ -1120,30 +1125,30 @@ test_options_validate__transproxy(void *ignored)
   free_options_test_data(tdata);
   tdata = NULL;
 
-#if defined(__linux__)
+#  if defined(__linux__)
   tdata = get_options_test_data("TransProxyType tproxy\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
-#elif defined(KERNEL_MAY_SUPPORT_IPFW)
+#  elif defined(KERNEL_MAY_SUPPORT_IPFW)
   tdata = get_options_test_data("TransProxyType ipfw\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
-#elif defined(OpenBSD)
+#  elif defined(OpenBSD)
   tdata = get_options_test_data("TransProxyType pf-divert\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
-#elif defined(__NetBSD__)
+#  elif defined(__NetBSD__)
   tdata = get_options_test_data("TransProxyType default\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
-#endif /* defined(__linux__) || ... */
+#  endif /* defined(__linux__) || ... */
 
   // Assert that a test has run for some TransProxyType
   tt_assert(tdata);
@@ -1157,7 +1162,7 @@ test_options_validate__transproxy(void *ignored)
   tor_free(msg);
 #endif /* defined(USE_TRANSPARENT) */
 
- done:
+done:
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -1179,21 +1184,20 @@ test_options_validate__exclude_nodes(void *ignored)
 {
   (void)ignored;
 
-  MOCK(geoip_get_country,
-       opt_tests_geoip_get_country);
+  MOCK(geoip_get_country, opt_tests_geoip_get_country);
 
   int ret;
   char *msg;
   setup_capture_of_logs(LOG_WARN);
-  options_test_data_t *tdata = get_options_test_data(
-                                                  "ExcludeExitNodes {us}\n");
+  options_test_data_t *tdata =
+      get_options_test_data("ExcludeExitNodes {us}\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(smartlist_len(tdata->opt->ExcludeExitNodesUnion_->list), OP_EQ, 1);
-  tt_str_op((char *)
-            (smartlist_get(tdata->opt->ExcludeExitNodesUnion_->list, 0)),
-            OP_EQ, "{us}");
+  tt_str_op(
+      (char *)(smartlist_get(tdata->opt->ExcludeExitNodesUnion_->list, 0)),
+      OP_EQ, "{us}");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -1201,9 +1205,9 @@ test_options_validate__exclude_nodes(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(smartlist_len(tdata->opt->ExcludeExitNodesUnion_->list), OP_EQ, 1);
-  tt_str_op((char *)
-            (smartlist_get(tdata->opt->ExcludeExitNodesUnion_->list, 0)),
-            OP_EQ, "{cn}");
+  tt_str_op(
+      (char *)(smartlist_get(tdata->opt->ExcludeExitNodesUnion_->list, 0)),
+      OP_EQ, "{cn}");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -1212,12 +1216,12 @@ test_options_validate__exclude_nodes(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(smartlist_len(tdata->opt->ExcludeExitNodesUnion_->list), OP_EQ, 2);
-  tt_str_op((char *)
-            (smartlist_get(tdata->opt->ExcludeExitNodesUnion_->list, 0)),
-            OP_EQ, "{us} {cn}");
-  tt_str_op((char *)
-            (smartlist_get(tdata->opt->ExcludeExitNodesUnion_->list, 1)),
-            OP_EQ, "{cn}");
+  tt_str_op(
+      (char *)(smartlist_get(tdata->opt->ExcludeExitNodesUnion_->list, 0)),
+      OP_EQ, "{us} {cn}");
+  tt_str_op(
+      (char *)(smartlist_get(tdata->opt->ExcludeExitNodesUnion_->list, 1)),
+      OP_EQ, "{cn}");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -1226,10 +1230,9 @@ test_options_validate__exclude_nodes(void *ignored)
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg(
-            "You have asked to exclude certain relays from all positions "
-            "in your circuits. Expect hidden services and other Tor "
-            "features to be broken in unpredictable ways.\n");
+  expect_log_msg("You have asked to exclude certain relays from all positions "
+                 "in your circuits. Expect hidden services and other Tor "
+                 "features to be broken in unpredictable ways.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -1238,12 +1241,12 @@ test_options_validate__exclude_nodes(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
-            "You have asked to exclude certain relays from all positions "
-            "in your circuits. Expect hidden services and other Tor "
-            "features to be broken in unpredictable ways.\n");
+      "You have asked to exclude certain relays from all positions "
+      "in your circuits. Expect hidden services and other Tor "
+      "features to be broken in unpredictable ways.\n");
   tor_free(msg);
 
- done:
+done:
   UNMOCK(geoip_get_country);
   teardown_capture_of_logs();
   free_options_test_data(tdata);
@@ -1256,23 +1259,28 @@ test_options_validate__node_families(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
-  options_test_data_t *tdata = get_options_test_data(
-                                     "NodeFamily flux, flax\n"
-                                     "NodeFamily somewhere\n");
+  options_test_data_t *tdata = get_options_test_data("NodeFamily flux, flax\n"
+                                                     "NodeFamily somewhere\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_assert(tdata->opt->NodeFamilySets);
   tt_int_op(smartlist_len(tdata->opt->NodeFamilySets), OP_EQ, 2);
-  tt_str_op((char *)(smartlist_get(
-    ((routerset_t *)smartlist_get(tdata->opt->NodeFamilySets, 0))->list, 0)),
-            OP_EQ, "flux");
-  tt_str_op((char *)(smartlist_get(
-    ((routerset_t *)smartlist_get(tdata->opt->NodeFamilySets, 0))->list, 1)),
-            OP_EQ, "flax");
-  tt_str_op((char *)(smartlist_get(
-    ((routerset_t *)smartlist_get(tdata->opt->NodeFamilySets, 1))->list, 0)),
-            OP_EQ, "somewhere");
+  tt_str_op(
+      (char *)(smartlist_get(
+          ((routerset_t *)smartlist_get(tdata->opt->NodeFamilySets, 0))->list,
+          0)),
+      OP_EQ, "flux");
+  tt_str_op(
+      (char *)(smartlist_get(
+          ((routerset_t *)smartlist_get(tdata->opt->NodeFamilySets, 0))->list,
+          1)),
+      OP_EQ, "flax");
+  tt_str_op(
+      (char *)(smartlist_get(
+          ((routerset_t *)smartlist_get(tdata->opt->NodeFamilySets, 1))->list,
+          0)),
+      OP_EQ, "somewhere");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -1292,7 +1300,7 @@ test_options_validate__node_families(void *ignored)
   tt_int_op(smartlist_len(tdata->opt->NodeFamilySets), OP_EQ, 0);
   tor_free(msg);
 
- done:
+done:
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -1319,7 +1327,7 @@ test_options_validate__token_bucket(void *ignored)
             "TokenBucketRefillInterval must be between 1 and 1000 inclusive.");
   tor_free(msg);
 
- done:
+done:
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -1330,13 +1338,14 @@ test_options_validate__fetch_dir(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
-  options_test_data_t *tdata = get_options_test_data(
-                                            "FetchDirInfoExtraEarly 1\n"
-                                            "FetchDirInfoEarly 0\n");
+  options_test_data_t *tdata =
+      get_options_test_data("FetchDirInfoExtraEarly 1\n"
+                            "FetchDirInfoEarly 0\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "FetchDirInfoExtraEarly requires that you"
+  tt_str_op(msg, OP_EQ,
+            "FetchDirInfoExtraEarly requires that you"
             " also set FetchDirInfoEarly");
   tor_free(msg);
 
@@ -1348,7 +1357,7 @@ test_options_validate__fetch_dir(void *ignored)
   tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
- done:
+done:
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -1359,8 +1368,7 @@ test_options_validate__conn_limit(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
-  options_test_data_t *tdata = get_options_test_data(
-                                            "ConnLimit 0\n");
+  options_test_data_t *tdata = get_options_test_data("ConnLimit 0\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1374,7 +1382,7 @@ test_options_validate__conn_limit(void *ignored)
   tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
- done:
+done:
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -1393,8 +1401,8 @@ test_options_validate__paths_needed(void *ignored)
 #endif
 
   setup_capture_of_logs(LOG_WARN);
-  options_test_data_t *tdata = get_options_test_data(
-                                      "PathsNeededToBuildCircuits 0.1\n");
+  options_test_data_t *tdata =
+      get_options_test_data("PathsNeededToBuildCircuits 0.1\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1413,7 +1421,7 @@ test_options_validate__paths_needed(void *ignored)
   tt_assert(tdata->opt->PathsNeededToBuildCircuits > 0.94 &&
             tdata->opt->PathsNeededToBuildCircuits < 0.96);
   expect_log_msg("PathsNeededToBuildCircuits is "
-            "too high. Decreasing to 0.95\n");
+                 "too high. Decreasing to 0.95\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -1427,7 +1435,7 @@ test_options_validate__paths_needed(void *ignored)
   expect_no_log_msg_containing("PathsNeededToBuildCircuits");
   tor_free(msg);
 
- done:
+done:
   teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
@@ -1443,12 +1451,13 @@ test_options_validate__max_client_circuits(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
-  options_test_data_t *tdata = get_options_test_data(
-                                             "MaxClientCircuitsPending 0\n");
+  options_test_data_t *tdata =
+      get_options_test_data("MaxClientCircuitsPending 0\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "MaxClientCircuitsPending must be between 1 and 1024,"
+  tt_str_op(msg, OP_EQ,
+            "MaxClientCircuitsPending must be between 1 and 1024,"
             " but was set to 0");
   tor_free(msg);
 
@@ -1457,7 +1466,8 @@ test_options_validate__max_client_circuits(void *ignored)
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "MaxClientCircuitsPending must be between 1 and 1024,"
+  tt_str_op(msg, OP_EQ,
+            "MaxClientCircuitsPending must be between 1 and 1024,"
             " but was set to 1025");
   tor_free(msg);
 
@@ -1468,7 +1478,7 @@ test_options_validate__max_client_circuits(void *ignored)
   tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
- done:
+done:
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -1526,7 +1536,7 @@ test_options_validate__ports(void *ignored)
   tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
- done:
+done:
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -1543,10 +1553,10 @@ test_options_validate__reachable_addresses(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg("Converting FascistFirewall config "
-            "option to new format: \"ReachableDirAddresses *:80\"\n");
+                 "option to new format: \"ReachableDirAddresses *:80\"\n");
   tt_str_op(tdata->opt->ReachableDirAddresses->value, OP_EQ, "*:80");
   expect_log_msg("Converting FascistFirewall config "
-            "option to new format: \"ReachableORAddresses *:443\"\n");
+                 "option to new format: \"ReachableORAddresses *:443\"\n");
   tt_str_op(tdata->opt->ReachableORAddresses->value, OP_EQ, "*:443");
   tor_free(msg);
 
@@ -1577,8 +1587,8 @@ test_options_validate__reachable_addresses(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg("Converting FascistFirewall and "
-            "FirewallPorts config options to new format: "
-            "\"ReachableAddresses *:123\"\n");
+                 "FirewallPorts config options to new format: "
+                 "\"ReachableAddresses *:123\"\n");
   tt_str_op(tdata->opt->ReachableAddresses->value, OP_EQ, "*:123");
   tor_free(msg);
 
@@ -1609,7 +1619,8 @@ test_options_validate__reachable_addresses(void *ignored)
   tt_ptr_op(tdata->opt->ReachableAddresses->next, OP_EQ, NULL);
   tor_free(msg);
 
-#define SERVERS_REACHABLE_MSG "Servers must be able to freely connect to" \
+#define SERVERS_REACHABLE_MSG                                              \
+  "Servers must be able to freely connect to"                              \
   " the rest of the Internet, so they must not set Reachable*Addresses or" \
   " FascistFirewall or FirewallPorts or ClientUseIPv4 0."
 
@@ -1717,7 +1728,7 @@ test_options_validate__reachable_addresses(void *ignored)
   tt_int_op(ret, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
 
- done:
+done:
   teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
@@ -1729,14 +1740,15 @@ test_options_validate__use_bridges(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
-  options_test_data_t *tdata = get_options_test_data(
-                                   "UseBridges 1\n"
-                                   "ClientUseIPv4 1\n"
-                                   "ORPort 127.0.0.1:5555\n");
+  options_test_data_t *tdata =
+      get_options_test_data("UseBridges 1\n"
+                            "ClientUseIPv4 1\n"
+                            "ORPort 127.0.0.1:5555\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Servers must be able to freely connect to the rest of"
+  tt_str_op(msg, OP_EQ,
+            "Servers must be able to freely connect to the rest of"
             " the Internet, so they must not set UseBridges.");
   tor_free(msg);
 
@@ -1745,12 +1757,12 @@ test_options_validate__use_bridges(void *ignored)
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_NE, "Servers must be able to freely connect to the rest of"
+  tt_str_op(msg, OP_NE,
+            "Servers must be able to freely connect to the rest of"
             " the Internet, so they must not set UseBridges.");
   tor_free(msg);
 
-  MOCK(geoip_get_country,
-       opt_tests_geoip_get_country);
+  MOCK(geoip_get_country, opt_tests_geoip_get_country);
   free_options_test_data(tdata);
   tdata = get_options_test_data("UseBridges 1\n"
                                 "EntryNodes {cn}\n");
@@ -1772,8 +1784,7 @@ test_options_validate__use_bridges(void *ignored)
   free_options_test_data(tdata);
   tdata = get_options_test_data("UseBridges 1\n"
                                 "Bridge 10.0.0.1\n"
-                                "UseEntryGuards 0\n"
-                                );
+                                "UseEntryGuards 0\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1784,15 +1795,14 @@ test_options_validate__use_bridges(void *ignored)
   free_options_test_data(tdata);
   tdata = get_options_test_data("UseBridges 1\n"
                                 "Bridge 10.0.0.1\n"
-                                "Bridge !!!\n"
-                                );
+                                "Bridge !!!\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "Bridge line did not parse. See logs for details.");
   tor_free(msg);
 
- done:
+done:
   UNMOCK(geoip_get_country);
   policies_free_all();
   free_options_test_data(tdata);
@@ -1805,11 +1815,9 @@ test_options_validate__entry_nodes(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
-  MOCK(geoip_get_country,
-       opt_tests_geoip_get_country);
-  options_test_data_t *tdata = get_options_test_data(
-                                         "EntryNodes {cn}\n"
-                                         "UseEntryGuards 0\n");
+  MOCK(geoip_get_country, opt_tests_geoip_get_country);
+  options_test_data_t *tdata = get_options_test_data("EntryNodes {cn}\n"
+                                                     "UseEntryGuards 0\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -1825,7 +1833,7 @@ test_options_validate__entry_nodes(void *ignored)
   tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
- done:
+done:
   UNMOCK(geoip_get_country);
   free_options_test_data(tdata);
   tor_free(msg);
@@ -1876,7 +1884,7 @@ test_options_validate__safe_logging(void *ignored)
   tt_str_op(msg, OP_EQ, "Unrecognized value '\"stuffy\"' in SafeLogging");
   tor_free(msg);
 
- done:
+done:
   escaped(NULL); // This will free the leaking memory from the previous escaped
   free_options_test_data(tdata);
   tor_free(msg);
@@ -1889,8 +1897,8 @@ test_options_validate__publish_server_descriptor(void *ignored)
   int ret;
   char *msg;
   setup_capture_of_logs(LOG_WARN);
-  options_test_data_t *tdata = get_options_test_data(
-             "PublishServerDescriptor bridge\n");
+  options_test_data_t *tdata =
+      get_options_test_data("PublishServerDescriptor bridge\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -1909,7 +1917,8 @@ test_options_validate__publish_server_descriptor(void *ignored)
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Bridges are not supposed to publish router "
+  tt_str_op(msg, OP_EQ,
+            "Bridges are not supposed to publish router "
             "descriptors to the directory authorities. Please correct your "
             "PublishServerDescriptor line.");
   tor_free(msg);
@@ -1920,7 +1929,8 @@ test_options_validate__publish_server_descriptor(void *ignored)
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Bridges are not supposed to publish router "
+  tt_str_op(msg, OP_EQ,
+            "Bridges are not supposed to publish router "
             "descriptors to the directory authorities. Please correct your "
             "PublishServerDescriptor line.");
   tor_free(msg);
@@ -1930,7 +1940,8 @@ test_options_validate__publish_server_descriptor(void *ignored)
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_NE, "Bridges are not supposed to publish router "
+  tt_str_op(msg, OP_NE,
+            "Bridges are not supposed to publish router "
             "descriptors to the directory authorities. Please correct your "
             "PublishServerDescriptor line.");
   tor_free(msg);
@@ -1943,11 +1954,11 @@ test_options_validate__publish_server_descriptor(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   expect_log_msg("Can't set a DirPort on a bridge "
-            "relay; disabling DirPort\n");
+                 "relay; disabling DirPort\n");
   tt_assert(!tdata->opt->DirPort_lines);
   tt_assert(!tdata->opt->DirPort_set);
 
- done:
+done:
   teardown_capture_of_logs();
   policies_free_all();
   free_options_test_data(tdata);
@@ -1962,39 +1973,39 @@ test_options_validate__testing(void *ignored)
   char *msg;
   options_test_data_t *tdata = NULL;
 
-#define ENSURE_DEFAULT(varname, varval)                     \
-  STMT_BEGIN                                                \
-    free_options_test_data(tdata);                          \
-  tdata = get_options_test_data(#varname " " #varval "\n"); \
-  ret = options_validate(NULL, tdata->opt, &msg); \
-  tt_str_op(msg, OP_EQ, \
-            #varname " may only be changed in testing Tor networks!");  \
-  tt_int_op(ret, OP_EQ, -1);                                            \
-  tor_free(msg);                                                        \
-                                                \
-  free_options_test_data(tdata); \
-  tdata = get_options_test_data(#varname " " #varval "\n"               \
-                                VALID_DIR_AUTH                          \
-                                "TestingTorNetwork 1\n");               \
-                                                                        \
-  ret = options_validate(NULL, tdata->opt, &msg);             \
-  if (msg) { \
-    tt_str_op(msg, OP_NE, \
-              #varname " may only be changed in testing Tor networks!"); \
-    tor_free(msg); \
-  } \
-                                                                        \
-  free_options_test_data(tdata);          \
-  tdata = get_options_test_data(#varname " " #varval "\n"           \
-                                "___UsingTestNetworkDefaults 1\n"); \
-                                                                        \
-  ret = options_validate(NULL, tdata->opt, &msg);\
-  if (msg) { \
-    tt_str_op(msg, OP_NE, \
-              #varname " may only be changed in testing Tor networks!"); \
-    tor_free(msg); \
-  } \
-    STMT_END
+#define ENSURE_DEFAULT(varname, varval)                                    \
+  STMT_BEGIN                                                               \
+    free_options_test_data(tdata);                                         \
+    tdata = get_options_test_data(#varname " " #varval "\n");              \
+    ret = options_validate(NULL, tdata->opt, &msg);                        \
+    tt_str_op(msg, OP_EQ,                                                  \
+              #varname " may only be changed in testing Tor networks!");   \
+    tt_int_op(ret, OP_EQ, -1);                                             \
+    tor_free(msg);                                                         \
+                                                                           \
+    free_options_test_data(tdata);                                         \
+    tdata = get_options_test_data(#varname " " #varval "\n" VALID_DIR_AUTH \
+                                           "TestingTorNetwork 1\n");       \
+                                                                           \
+    ret = options_validate(NULL, tdata->opt, &msg);                        \
+    if (msg) {                                                             \
+      tt_str_op(msg, OP_NE,                                                \
+                #varname " may only be changed in testing Tor networks!"); \
+      tor_free(msg);                                                       \
+    }                                                                      \
+                                                                           \
+    free_options_test_data(tdata);                                         \
+    tdata =                                                                \
+        get_options_test_data(#varname " " #varval "\n"                    \
+                                       "___UsingTestNetworkDefaults 1\n"); \
+                                                                           \
+    ret = options_validate(NULL, tdata->opt, &msg);                        \
+    if (msg) {                                                             \
+      tt_str_op(msg, OP_NE,                                                \
+                #varname " may only be changed in testing Tor networks!"); \
+      tor_free(msg);                                                       \
+    }                                                                      \
+  STMT_END
 
   ENSURE_DEFAULT(TestingV3AuthInitialVotingInterval, 3600);
   ENSURE_DEFAULT(TestingV3AuthInitialVoteDelay, 3000);
@@ -2015,7 +2026,7 @@ test_options_validate__testing(void *ignored)
   ENSURE_DEFAULT(TestingAuthKeySlop, 3000);
   ENSURE_DEFAULT(TestingLinkKeySlop, 3000);
 
- done:
+done:
   escaped(NULL); // This will free the leaking memory from the previous escaped
   policies_free_all();
   free_options_test_data(tdata);
@@ -2033,26 +2044,26 @@ test_options_validate__hidserv(void *ignored)
   options_test_data_t *tdata = NULL;
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("RendPostPeriod 1\n" );
+  tdata = get_options_test_data("RendPostPeriod 1\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg("RendPostPeriod option is too short;"
-            " raising to 600 seconds.\n");
+                 " raising to 600 seconds.\n");
   tt_int_op(tdata->opt->RendPostPeriod, OP_EQ, 600);
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("RendPostPeriod 302401\n" );
+  tdata = get_options_test_data("RendPostPeriod 302401\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg("RendPostPeriod is too large; "
-            "clipping to 302400s.\n");
+                 "clipping to 302400s.\n");
   tt_int_op(tdata->opt->RendPostPeriod, OP_EQ, 302400);
   tor_free(msg);
 
- done:
+done:
   teardown_capture_of_logs();
   policies_free_all();
   free_options_test_data(tdata);
@@ -2066,8 +2077,8 @@ test_options_validate__path_bias(void *ignored)
   int ret;
   char *msg;
 
-  options_test_data_t *tdata = get_options_test_data(
-                                            "PathBiasNoticeRate 1.1\n");
+  options_test_data_t *tdata =
+      get_options_test_data("PathBiasNoticeRate 1.1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ,
@@ -2102,11 +2113,12 @@ test_options_validate__path_bias(void *ignored)
   tdata = get_options_test_data("PathBiasExtremeUseRate 1.1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ,
-           "PathBiasExtremeUseRate is too high. It must be between 0 and 1.0");
+  tt_str_op(
+      msg, OP_EQ,
+      "PathBiasExtremeUseRate is too high. It must be between 0 and 1.0");
   tor_free(msg);
 
- done:
+done:
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -2119,15 +2131,14 @@ test_options_validate__bandwidth(void *ignored)
   char *msg;
   options_test_data_t *tdata = NULL;
 
-#define ENSURE_BANDWIDTH_PARAM(p, EXTRA_OPT_STR) \
-  STMT_BEGIN \
-  free_options_test_data(tdata); \
-  tdata = get_options_test_data(EXTRA_OPT_STR \
-                                #p " 3Gb\n"); \
-  ret = options_validate(NULL, tdata->opt, &msg); \
-  tt_int_op(ret, OP_EQ, -1); \
-  tt_mem_op(msg, OP_EQ, #p " (3221225471) must be at most 2147483647", 40); \
-  tor_free(msg); \
+#define ENSURE_BANDWIDTH_PARAM(p, EXTRA_OPT_STR)                              \
+  STMT_BEGIN                                                                  \
+    free_options_test_data(tdata);                                            \
+    tdata = get_options_test_data(EXTRA_OPT_STR #p " 3Gb\n");                 \
+    ret = options_validate(NULL, tdata->opt, &msg);                           \
+    tt_int_op(ret, OP_EQ, -1);                                                \
+    tt_mem_op(msg, OP_EQ, #p " (3221225471) must be at most 2147483647", 40); \
+    tor_free(msg);                                                            \
   STMT_END
 
   ENSURE_BANDWIDTH_PARAM(BandwidthRate, "");
@@ -2179,7 +2190,8 @@ test_options_validate__bandwidth(void *ignored)
                                 "RelayBandwidthBurst 1000\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "RelayBandwidthBurst must be at least equal to "
+  tt_str_op(msg, OP_EQ,
+            "RelayBandwidthBurst must be at least equal to "
             "RelayBandwidthRate.");
   tor_free(msg);
 
@@ -2195,8 +2207,7 @@ test_options_validate__bandwidth(void *ignored)
   free_options_test_data(tdata);
   tdata = get_options_test_data("RelayBandwidthRate 1001\n"
                                 "BandwidthRate 1000\n"
-                                "BandwidthBurst 1000\n"
-                                );
+                                "BandwidthBurst 1000\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_u64_op(tdata->opt->BandwidthRate, OP_EQ, 1001);
@@ -2206,8 +2217,7 @@ test_options_validate__bandwidth(void *ignored)
   tdata = get_options_test_data("RelayBandwidthRate 1001\n"
                                 "BandwidthRate 1000\n"
                                 "RelayBandwidthBurst 1001\n"
-                                "BandwidthBurst 1000\n"
-                                );
+                                "BandwidthBurst 1000\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_u64_op(tdata->opt->BandwidthBurst, OP_EQ, 1001);
@@ -2215,22 +2225,22 @@ test_options_validate__bandwidth(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ORPort 127.0.0.1:5555\n"
-                                "BandwidthRate 1\n"
-                                );
+                                "BandwidthRate 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "BandwidthRate is set to 1 bytes/second. For servers,"
+  tt_str_op(msg, OP_EQ,
+            "BandwidthRate is set to 1 bytes/second. For servers,"
             " it must be at least 76800.");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 76800\n"
-                                "MaxAdvertisedBandwidth 30000\n"
-                                );
+                                "MaxAdvertisedBandwidth 30000\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "MaxAdvertisedBandwidth is set to 30000 bytes/second."
+  tt_str_op(msg, OP_EQ,
+            "MaxAdvertisedBandwidth is set to 30000 bytes/second."
             " For servers, it must be at least 38400.");
   tor_free(msg);
 
@@ -2238,11 +2248,11 @@ test_options_validate__bandwidth(void *ignored)
   tdata = get_options_test_data("ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 76800\n"
                                 "RelayBandwidthRate 1\n"
-                                "MaxAdvertisedBandwidth 38400\n"
-                                );
+                                "MaxAdvertisedBandwidth 38400\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "RelayBandwidthRate is set to 1 bytes/second. For "
+  tt_str_op(msg, OP_EQ,
+            "RelayBandwidthRate is set to 1 bytes/second. For "
             "servers, it must be at least 76800.");
   tor_free(msg);
 
@@ -2251,13 +2261,12 @@ test_options_validate__bandwidth(void *ignored)
                                 "BandwidthRate 76800\n"
                                 "BandwidthBurst 76800\n"
                                 "RelayBandwidthRate 76800\n"
-                                "MaxAdvertisedBandwidth 38400\n"
-                                );
+                                "MaxAdvertisedBandwidth 38400\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
- done:
+done:
   policies_free_all();
   free_options_test_data(tdata);
   tor_free(msg);
@@ -2275,7 +2284,7 @@ test_options_validate__circuits(void *ignored)
   tdata = get_options_test_data("MaxCircuitDirtiness 2592001\n");
   options_validate(NULL, tdata->opt, &msg);
   expect_log_msg("MaxCircuitDirtiness option is too "
-            "high; setting to 30 days.\n");
+                 "high; setting to 30 days.\n");
   tt_int_op(tdata->opt->MaxCircuitDirtiness, OP_EQ, 2592000);
   tor_free(msg);
 
@@ -2284,7 +2293,7 @@ test_options_validate__circuits(void *ignored)
   tdata = get_options_test_data("CircuitStreamTimeout 1\n");
   options_validate(NULL, tdata->opt, &msg);
   expect_log_msg("CircuitStreamTimeout option is too"
-            " short; raising to 10 seconds.\n");
+                 " short; raising to 10 seconds.\n");
   tt_int_op(tdata->opt->CircuitStreamTimeout, OP_EQ, 10);
   tor_free(msg);
 
@@ -2293,7 +2302,7 @@ test_options_validate__circuits(void *ignored)
   tdata = get_options_test_data("CircuitStreamTimeout 111\n");
   options_validate(NULL, tdata->opt, &msg);
   expect_no_log_msg("CircuitStreamTimeout option is too"
-            " short; raising to 10 seconds.\n");
+                    " short; raising to 10 seconds.\n");
   tt_int_op(tdata->opt->CircuitStreamTimeout, OP_EQ, 111);
   tor_free(msg);
 
@@ -2302,7 +2311,7 @@ test_options_validate__circuits(void *ignored)
   tdata = get_options_test_data("HeartbeatPeriod 1\n");
   options_validate(NULL, tdata->opt, &msg);
   expect_log_msg("HeartbeatPeriod option is too short;"
-            " raising to 1800 seconds.\n");
+                 " raising to 1800 seconds.\n");
   tt_int_op(tdata->opt->HeartbeatPeriod, OP_EQ, 1800);
   tor_free(msg);
 
@@ -2311,34 +2320,34 @@ test_options_validate__circuits(void *ignored)
   tdata = get_options_test_data("HeartbeatPeriod 1982\n");
   options_validate(NULL, tdata->opt, &msg);
   expect_no_log_msg("HeartbeatPeriod option is too short;"
-            " raising to 1800 seconds.\n");
+                    " raising to 1800 seconds.\n");
   tt_int_op(tdata->opt->HeartbeatPeriod, OP_EQ, 1982);
   tor_free(msg);
 
   free_options_test_data(tdata);
   mock_clean_saved_logs();
   tdata = get_options_test_data("LearnCircuitBuildTimeout 0\n"
-                                "CircuitBuildTimeout 1\n"
-                                );
+                                "CircuitBuildTimeout 1\n");
   options_validate(NULL, tdata->opt, &msg);
-  expect_log_msg("CircuitBuildTimeout is shorter (1"
-            " seconds) than the recommended minimum (10 seconds), and "
-            "LearnCircuitBuildTimeout is disabled.  If tor isn't working, "
-            "raise this value or enable LearnCircuitBuildTimeout.\n");
+  expect_log_msg(
+      "CircuitBuildTimeout is shorter (1"
+      " seconds) than the recommended minimum (10 seconds), and "
+      "LearnCircuitBuildTimeout is disabled.  If tor isn't working, "
+      "raise this value or enable LearnCircuitBuildTimeout.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
   mock_clean_saved_logs();
-  tdata = get_options_test_data("CircuitBuildTimeout 11\n"
-                                );
+  tdata = get_options_test_data("CircuitBuildTimeout 11\n");
   options_validate(NULL, tdata->opt, &msg);
-  expect_no_log_msg("CircuitBuildTimeout is shorter (1 "
-            "seconds) than the recommended minimum (10 seconds), and "
-            "LearnCircuitBuildTimeout is disabled.  If tor isn't working, "
-            "raise this value or enable LearnCircuitBuildTimeout.\n");
+  expect_no_log_msg(
+      "CircuitBuildTimeout is shorter (1 "
+      "seconds) than the recommended minimum (10 seconds), and "
+      "LearnCircuitBuildTimeout is disabled.  If tor isn't working, "
+      "raise this value or enable LearnCircuitBuildTimeout.\n");
   tor_free(msg);
 
- done:
+done:
   policies_free_all();
   teardown_capture_of_logs();
   free_options_test_data(tdata);
@@ -2356,33 +2365,33 @@ test_options_validate__rend(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(
-                 "UseEntryGuards 0\n"
-                 "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
-                 "HiddenServicePort 80 127.0.0.1:8080\n"
-                                );
+      "UseEntryGuards 0\n"
+      "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
+      "HiddenServicePort 80 127.0.0.1:8080\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg("UseEntryGuards is disabled, but you"
-            " have configured one or more hidden services on this Tor "
-            "instance.  Your hidden services will be very easy to locate using"
-            " a well-known attack -- see http://freehaven.net/anonbib/#hs-"
-            "attack06 for details.\n");
+  expect_log_msg(
+      "UseEntryGuards is disabled, but you"
+      " have configured one or more hidden services on this Tor "
+      "instance.  Your hidden services will be very easy to locate using"
+      " a well-known attack -- see http://freehaven.net/anonbib/#hs-"
+      "attack06 for details.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(
-            "UseEntryGuards 1\n"
-            "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
-            "HiddenServicePort 80 127.0.0.1:8080\n"
-                                );
+      "UseEntryGuards 1\n"
+      "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
+      "HiddenServicePort 80 127.0.0.1:8080\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  expect_no_log_msg("UseEntryGuards is disabled, but you"
-            " have configured one or more hidden services on this Tor "
-            "instance.  Your hidden services will be very easy to locate using"
-            " a well-known attack -- see http://freehaven.net/anonbib/#hs-"
-            "attack06 for details.\n");
+  expect_no_log_msg(
+      "UseEntryGuards is disabled, but you"
+      " have configured one or more hidden services on this Tor "
+      "instance.  Your hidden services will be very easy to locate using"
+      " a well-known attack -- see http://freehaven.net/anonbib/#hs-"
+      "attack06 for details.\n");
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("HiddenServicePort 80 127.0.0.1:8080\n");
@@ -2396,11 +2405,12 @@ test_options_validate__rend(void *ignored)
   tdata = get_options_test_data("HidServAuth failed\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Failed to configure client authorization for hidden "
+  tt_str_op(msg, OP_EQ,
+            "Failed to configure client authorization for hidden "
             "services. See logs for details.");
   tor_free(msg);
 
- done:
+done:
   policies_free_all();
   teardown_capture_of_logs();
   free_options_test_data(tdata);
@@ -2419,11 +2429,11 @@ test_options_validate__single_onion(void *ignored)
   /* Test that HiddenServiceSingleHopMode must come with
    * HiddenServiceNonAnonymousMode */
   tdata = get_options_test_data("SOCKSPort 0\n"
-                                "HiddenServiceSingleHopMode 1\n"
-                                );
+                                "HiddenServiceSingleHopMode 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "HiddenServiceSingleHopMode does not provide any "
+  tt_str_op(msg, OP_EQ,
+            "HiddenServiceSingleHopMode does not provide any "
             "server anonymity. It must be used with "
             "HiddenServiceNonAnonymousMode set to 1.");
   tor_free(msg);
@@ -2431,11 +2441,11 @@ test_options_validate__single_onion(void *ignored)
 
   tdata = get_options_test_data("SOCKSPort 0\n"
                                 "HiddenServiceSingleHopMode 1\n"
-                                "HiddenServiceNonAnonymousMode 0\n"
-                                );
+                                "HiddenServiceNonAnonymousMode 0\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "HiddenServiceSingleHopMode does not provide any "
+  tt_str_op(msg, OP_EQ,
+            "HiddenServiceSingleHopMode does not provide any "
             "server anonymity. It must be used with "
             "HiddenServiceNonAnonymousMode set to 1.");
   tor_free(msg);
@@ -2443,8 +2453,7 @@ test_options_validate__single_onion(void *ignored)
 
   tdata = get_options_test_data("SOCKSPort 0\n"
                                 "HiddenServiceSingleHopMode 1\n"
-                                "HiddenServiceNonAnonymousMode 1\n"
-                                );
+                                "HiddenServiceNonAnonymousMode 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
@@ -2453,11 +2462,11 @@ test_options_validate__single_onion(void *ignored)
   /* Test that SOCKSPort if HiddenServiceSingleHopMode is 1 */
   tdata = get_options_test_data("SOCKSPort 5000\n"
                                 "HiddenServiceSingleHopMode 1\n"
-                                "HiddenServiceNonAnonymousMode 1\n"
-                                );
+                                "HiddenServiceNonAnonymousMode 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "HiddenServiceNonAnonymousMode is incompatible with "
+  tt_str_op(msg, OP_EQ,
+            "HiddenServiceNonAnonymousMode is incompatible with "
             "using Tor as an anonymous client. Please set "
             "Socks/Trans/NATD/DNSPort to 0, or revert "
             "HiddenServiceNonAnonymousMode to 0.");
@@ -2466,16 +2475,14 @@ test_options_validate__single_onion(void *ignored)
 
   tdata = get_options_test_data("SOCKSPort 0\n"
                                 "HiddenServiceSingleHopMode 1\n"
-                                "HiddenServiceNonAnonymousMode 1\n"
-                                );
+                                "HiddenServiceNonAnonymousMode 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
   free_options_test_data(tdata);
 
   tdata = get_options_test_data("SOCKSPort 5000\n"
-                                "HiddenServiceSingleHopMode 0\n"
-                                );
+                                "HiddenServiceSingleHopMode 0\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
@@ -2483,50 +2490,47 @@ test_options_validate__single_onion(void *ignored)
 
   /* Test that a hidden service can't be run in non anonymous mode. */
   tdata = get_options_test_data(
-                  "HiddenServiceNonAnonymousMode 1\n"
-                  "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
-                  "HiddenServicePort 80 127.0.0.1:8080\n"
-                                );
+      "HiddenServiceNonAnonymousMode 1\n"
+      "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
+      "HiddenServicePort 80 127.0.0.1:8080\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "HiddenServiceNonAnonymousMode does not provide any "
+  tt_str_op(msg, OP_EQ,
+            "HiddenServiceNonAnonymousMode does not provide any "
+            "server anonymity. It must be used with "
+            "HiddenServiceSingleHopMode set to 1.");
+  tor_free(msg);
+  free_options_test_data(tdata);
+
+  tdata = get_options_test_data("HiddenServiceNonAnonymousMode 1\n");
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_str_op(msg, OP_EQ,
+            "HiddenServiceNonAnonymousMode does not provide any "
             "server anonymity. It must be used with "
             "HiddenServiceSingleHopMode set to 1.");
   tor_free(msg);
   free_options_test_data(tdata);
 
   tdata = get_options_test_data(
-                  "HiddenServiceNonAnonymousMode 1\n"
-                                );
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "HiddenServiceNonAnonymousMode does not provide any "
-            "server anonymity. It must be used with "
-            "HiddenServiceSingleHopMode set to 1.");
-  tor_free(msg);
-  free_options_test_data(tdata);
-
-  tdata = get_options_test_data(
-                  "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
-                  "HiddenServicePort 80 127.0.0.1:8080\n"
-                                );
+      "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
+      "HiddenServicePort 80 127.0.0.1:8080\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
   free_options_test_data(tdata);
 
   tdata = get_options_test_data(
-                  "HiddenServiceNonAnonymousMode 1\n"
-                  "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
-                  "HiddenServicePort 80 127.0.0.1:8080\n"
-                  "HiddenServiceSingleHopMode 1\n"
-                  "SOCKSPort 0\n"
-                                );
+      "HiddenServiceNonAnonymousMode 1\n"
+      "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
+      "HiddenServicePort 80 127.0.0.1:8080\n"
+      "HiddenServiceSingleHopMode 1\n"
+      "SOCKSPort 0\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
 
- done:
+done:
   policies_free_all();
   teardown_capture_of_logs();
   free_options_test_data(tdata);
@@ -2593,58 +2597,56 @@ test_options_validate__accounting(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(
-           "ORPort 127.0.0.1:5555\n"
-           "BandwidthRate 76800\n"
-           "BandwidthBurst 76800\n"
-           "MaxAdvertisedBandwidth 38400\n"
-           "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
-           "HiddenServicePort 80 127.0.0.1:8080\n"
-           "AccountingMax 10\n"
-                                );
+      "ORPort 127.0.0.1:5555\n"
+      "BandwidthRate 76800\n"
+      "BandwidthBurst 76800\n"
+      "MaxAdvertisedBandwidth 38400\n"
+      "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
+      "HiddenServicePort 80 127.0.0.1:8080\n"
+      "AccountingMax 10\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg("Using accounting with a hidden "
-            "service and an ORPort is risky: your hidden service(s) and "
-            "your public address will all turn off at the same time, "
-            "which may alert observers that they are being run by the "
-            "same party.\n");
+                 "service and an ORPort is risky: your hidden service(s) and "
+                 "your public address will all turn off at the same time, "
+                 "which may alert observers that they are being run by the "
+                 "same party.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(
-                "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
-                "HiddenServicePort 80 127.0.0.1:8080\n"
-                "AccountingMax 10\n"
-                                );
+      "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
+      "HiddenServicePort 80 127.0.0.1:8080\n"
+      "AccountingMax 10\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  expect_no_log_msg("Using accounting with a hidden "
-            "service and an ORPort is risky: your hidden service(s) and "
-            "your public address will all turn off at the same time, "
-            "which may alert observers that they are being run by the "
-            "same party.\n");
+  expect_no_log_msg(
+      "Using accounting with a hidden "
+      "service and an ORPort is risky: your hidden service(s) and "
+      "your public address will all turn off at the same time, "
+      "which may alert observers that they are being run by the "
+      "same party.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(
-             "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
-             "HiddenServicePort 80 127.0.0.1:8080\n"
-             "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service2/\n"
-             "HiddenServicePort 81 127.0.0.1:8081\n"
-             "AccountingMax 10\n"
-                                );
+      "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
+      "HiddenServicePort 80 127.0.0.1:8080\n"
+      "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service2/\n"
+      "HiddenServicePort 81 127.0.0.1:8081\n"
+      "AccountingMax 10\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg("Using accounting with multiple "
-            "hidden services is risky: they will all turn off at the same"
-            " time, which may alert observers that they are being run by "
-            "the same party.\n");
+                 "hidden services is risky: they will all turn off at the same"
+                 " time, which may alert observers that they are being run by "
+                 "the same party.\n");
   tor_free(msg);
 
- done:
+done:
   teardown_capture_of_logs();
   policies_free_all();
   free_options_test_data(tdata);
@@ -2697,8 +2699,7 @@ test_options_validate__proxy(void *ignored)
                                 "onetwothreonetwothreonetwothreonetwothreonetw"
                                 "othreonetwothreonetwothreonetwothreonetwothre"
                                 "onetwothreonetwothreonetwothreonetwothreonetw"
-                                "othreonetwothreeonetwothreeonetwothree"
-                                );
+                                "othreonetwothreeonetwothreeonetwothree");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "HTTPProxyAuthenticator is too long (>= 512 chars).");
@@ -2746,7 +2747,7 @@ test_options_validate__proxy(void *ignored)
                                 "onetwothreonetwothreonetwothreonetwothreonetw"
                                 "othreonetwothreeonetwothreeonetwothree"
 
-                                );
+  );
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "HTTPSProxyAuthenticator is too long (>= 512 chars).");
@@ -2802,11 +2803,11 @@ test_options_validate__proxy(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("Socks4Proxy 215.1.1.1\n"
-                                "Socks5Proxy 215.1.1.2\n"
-                                );
+                                "Socks5Proxy 215.1.1.2\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "You have configured more than one proxy type. "
+  tt_str_op(msg, OP_EQ,
+            "You have configured more than one proxy type. "
             "(Socks4Proxy|Socks5Proxy|HTTPSProxy|TCPProxy)");
   tor_free(msg);
 
@@ -2816,46 +2817,44 @@ test_options_validate__proxy(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg("HTTPProxy configured, but no SOCKS proxy, "
-            "HTTPS proxy, or any other TCP proxy configured. Watch out: "
-            "this configuration will proxy unencrypted directory "
-            "connections only.\n");
+                 "HTTPS proxy, or any other TCP proxy configured. Watch out: "
+                 "this configuration will proxy unencrypted directory "
+                 "connections only.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("HttpProxy 215.1.1.1\n"
-                                "Socks4Proxy 215.1.1.1\n"
-                                );
-  mock_clean_saved_logs();
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  expect_no_log_msg("HTTPProxy configured, but no SOCKS "
-            "proxy or HTTPS proxy configured. Watch out: this configuration "
-            "will proxy unencrypted directory connections only.\n");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("HttpProxy 215.1.1.1\n"
-                                "Socks5Proxy 215.1.1.1\n"
-                                );
-  mock_clean_saved_logs();
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  expect_no_log_msg("HTTPProxy configured, but no SOCKS "
-            "proxy or HTTPS proxy configured. Watch out: this configuration "
-            "will proxy unencrypted directory connections only.\n");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("HttpProxy 215.1.1.1\n"
-                                "HttpsProxy 215.1.1.1\n"
-                                );
+                                "Socks4Proxy 215.1.1.1\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
-            "HTTPProxy configured, but no SOCKS proxy or HTTPS proxy "
-            "configured. Watch out: this configuration will proxy "
-            "unencrypted directory connections only.\n");
+      "HTTPProxy configured, but no SOCKS "
+      "proxy or HTTPS proxy configured. Watch out: this configuration "
+      "will proxy unencrypted directory connections only.\n");
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data("HttpProxy 215.1.1.1\n"
+                                "Socks5Proxy 215.1.1.1\n");
+  mock_clean_saved_logs();
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  expect_no_log_msg(
+      "HTTPProxy configured, but no SOCKS "
+      "proxy or HTTPS proxy configured. Watch out: this configuration "
+      "will proxy unencrypted directory connections only.\n");
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data("HttpProxy 215.1.1.1\n"
+                                "HttpsProxy 215.1.1.1\n");
+  mock_clean_saved_logs();
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  expect_no_log_msg("HTTPProxy configured, but no SOCKS proxy or HTTPS proxy "
+                    "configured. Watch out: this configuration will proxy "
+                    "unencrypted directory connections only.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -2869,12 +2868,12 @@ test_options_validate__proxy(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("");
-  tdata->opt->Socks5ProxyUsername =
-    tor_strdup("ABCDEABCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789AB"
-               "CDEABCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789ABCD"
-               "EABCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789ABCDEA"
-               "BCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789ABCDEABC"
-               "DE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789");
+  tdata->opt->Socks5ProxyUsername = tor_strdup(
+      "ABCDEABCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789AB"
+      "CDEABCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789ABCD"
+      "EABCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789ABCDEA"
+      "BCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789ABCDEABC"
+      "DE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ,
@@ -2885,7 +2884,8 @@ test_options_validate__proxy(void *ignored)
   tdata = get_options_test_data("Socks5ProxyUsername hello_world\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Socks5ProxyPassword must be included with "
+  tt_str_op(msg, OP_EQ,
+            "Socks5ProxyPassword must be included with "
             "Socks5ProxyUsername.");
   tor_free(msg);
 
@@ -2900,12 +2900,12 @@ test_options_validate__proxy(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("Socks5ProxyUsername hello_world\n");
-  tdata->opt->Socks5ProxyPassword =
-    tor_strdup("ABCDEABCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789AB"
-               "CDEABCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789ABCD"
-               "EABCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789ABCDEA"
-               "BCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789ABCDEABC"
-               "DE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789");
+  tdata->opt->Socks5ProxyPassword = tor_strdup(
+      "ABCDEABCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789AB"
+      "CDEABCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789ABCD"
+      "EABCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789ABCDEA"
+      "BCDE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789ABCDEABC"
+      "DE0123456789ABCDEABCDE0123456789ABCDEABCDE0123456789");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ,
@@ -2923,11 +2923,12 @@ test_options_validate__proxy(void *ignored)
   tdata = get_options_test_data("Socks5ProxyPassword hello_world\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Socks5ProxyPassword must be included with "
+  tt_str_op(msg, OP_EQ,
+            "Socks5ProxyPassword must be included with "
             "Socks5ProxyUsername.");
   tor_free(msg);
 
- done:
+done:
   teardown_capture_of_logs();
   free_options_test_data(tdata);
   policies_free_all();
@@ -2946,8 +2947,7 @@ test_options_validate__control(void *ignored)
   setup_capture_of_logs(LOG_WARN);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(
-                         "HashedControlPassword something_incorrect\n");
+  tdata = get_options_test_data("HashedControlPassword something_incorrect\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ,
@@ -2956,103 +2956,95 @@ test_options_validate__control(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("HashedControlPassword 16:872860B76453A77D60CA"
-                                "2BB8C1A7042072093276A3D701AD684053EC4C\n"
-                                );
+                                "2BB8C1A7042072093276A3D701AD684053EC4C\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(
-                   "__HashedControlSessionPassword something_incorrect\n"
-                                );
+      "__HashedControlSessionPassword something_incorrect\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Bad HashedControlSessionPassword: wrong length or "
+  tt_str_op(msg, OP_EQ,
+            "Bad HashedControlSessionPassword: wrong length or "
             "bad encoding");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("__HashedControlSessionPassword 16:872860B7645"
                                 "3A77D60CA2BB8C1A7042072093276A3D701AD684053EC"
-                                "4C\n"
-                                );
+                                "4C\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(
-                           "__OwningControllerProcess something_incorrect\n"
-                                );
+  tdata =
+      get_options_test_data("__OwningControllerProcess something_incorrect\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "Bad OwningControllerProcess: invalid PID");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("__OwningControllerProcess 123\n"
-                                );
+  tdata = get_options_test_data("__OwningControllerProcess 123\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("ControlPort 127.0.0.1:1234\n"
-                                );
+  tdata = get_options_test_data("ControlPort 127.0.0.1:1234\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg(
-            "ControlPort is open, but no authentication method has been "
-            "configured.  This means that any program on your computer can "
-            "reconfigure your Tor.  That's bad!  You should upgrade your Tor"
-            " controller as soon as possible.\n");
+      "ControlPort is open, but no authentication method has been "
+      "configured.  This means that any program on your computer can "
+      "reconfigure your Tor.  That's bad!  You should upgrade your Tor"
+      " controller as soon as possible.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ControlPort 127.0.0.1:1234\n"
                                 "HashedControlPassword 16:872860B76453A77D60CA"
-                                "2BB8C1A7042072093276A3D701AD684053EC4C\n"
-                                );
+                                "2BB8C1A7042072093276A3D701AD684053EC4C\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
-            "ControlPort is open, but no authentication method has been "
-            "configured.  This means that any program on your computer can "
-            "reconfigure your Tor.  That's bad!  You should upgrade your Tor "
-            "controller as soon as possible.\n");
+      "ControlPort is open, but no authentication method has been "
+      "configured.  This means that any program on your computer can "
+      "reconfigure your Tor.  That's bad!  You should upgrade your Tor "
+      "controller as soon as possible.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ControlPort 127.0.0.1:1234\n"
                                 "__HashedControlSessionPassword 16:872860B7645"
                                 "3A77D60CA2BB8C1A7042072093276A3D701AD684053EC"
-                                "4C\n"
-                                );
+                                "4C\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
-            "ControlPort is open, but no authentication method has been "
-            "configured.  This means that any program on your computer can "
-            "reconfigure your Tor.  That's bad!  You should upgrade your Tor "
-            "controller as soon as possible.\n");
+      "ControlPort is open, but no authentication method has been "
+      "configured.  This means that any program on your computer can "
+      "reconfigure your Tor.  That's bad!  You should upgrade your Tor "
+      "controller as soon as possible.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ControlPort 127.0.0.1:1234\n"
-                                "CookieAuthentication 1\n"
-                                );
+                                "CookieAuthentication 1\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
-            "ControlPort is open, but no authentication method has been "
-            "configured.  This means that any program on your computer can "
-            "reconfigure your Tor.  That's bad!  You should upgrade your Tor "
-            "controller as soon as possible.\n");
+      "ControlPort is open, but no authentication method has been "
+      "configured.  This means that any program on your computer can "
+      "reconfigure your Tor.  That's bad!  You should upgrade your Tor "
+      "controller as soon as possible.\n");
   tor_free(msg);
 
 #ifdef HAVE_SYS_UN_H
@@ -3062,84 +3054,79 @@ test_options_validate__control(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg(
-            "ControlSocket is world writable, but no authentication method has"
-            " been configured.  This means that any program on your computer "
-            "can reconfigure your Tor.  That's bad!  You should upgrade your "
-            "Tor controller as soon as possible.\n");
+      "ControlSocket is world writable, but no authentication method has"
+      " been configured.  This means that any program on your computer "
+      "can reconfigure your Tor.  That's bad!  You should upgrade your "
+      "Tor controller as soon as possible.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ControlSocket unix:/tmp WorldWritable\n"
                                 "HashedControlPassword 16:872860B76453A77D60CA"
-                                "2BB8C1A7042072093276A3D701AD684053EC4C\n"
-                                );
+                                "2BB8C1A7042072093276A3D701AD684053EC4C\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
-            "ControlSocket is world writable, but no authentication method has"
-            " been configured.  This means that any program on your computer "
-            "can reconfigure your Tor.  That's bad!  You should upgrade your "
-            "Tor controller as soon as possible.\n");
+      "ControlSocket is world writable, but no authentication method has"
+      " been configured.  This means that any program on your computer "
+      "can reconfigure your Tor.  That's bad!  You should upgrade your "
+      "Tor controller as soon as possible.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ControlSocket unix:/tmp WorldWritable\n"
                                 "__HashedControlSessionPassword 16:872860B7645"
                                 "3A77D60CA2BB8C1A7042072093276A3D701AD684053EC"
-                                "4C\n"
-                                );
+                                "4C\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
-            "ControlSocket is world writable, but no authentication method has"
-            " been configured.  This means that any program on your computer "
-            "can reconfigure your Tor.  That's bad!  You should upgrade your "
-            "Tor controller as soon as possible.\n");
+      "ControlSocket is world writable, but no authentication method has"
+      " been configured.  This means that any program on your computer "
+      "can reconfigure your Tor.  That's bad!  You should upgrade your "
+      "Tor controller as soon as possible.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ControlSocket unix:/tmp WorldWritable\n"
-                                "CookieAuthentication 1\n"
-                                );
+                                "CookieAuthentication 1\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
-            "ControlSocket is world writable, but no authentication method has"
-            " been configured.  This means that any program on your computer "
-            "can reconfigure your Tor.  That's bad!  You should upgrade your "
-            "Tor controller as soon as possible.\n");
+      "ControlSocket is world writable, but no authentication method has"
+      " been configured.  This means that any program on your computer "
+      "can reconfigure your Tor.  That's bad!  You should upgrade your "
+      "Tor controller as soon as possible.\n");
   tor_free(msg);
 #endif /* defined(HAVE_SYS_UN_H) */
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("CookieAuthFileGroupReadable 1\n"
-                                );
+  tdata = get_options_test_data("CookieAuthFileGroupReadable 1\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg(
-            "CookieAuthFileGroupReadable is set, but will have no effect: you "
-            "must specify an explicit CookieAuthFile to have it "
-            "group-readable.\n");
+      "CookieAuthFileGroupReadable is set, but will have no effect: you "
+      "must specify an explicit CookieAuthFile to have it "
+      "group-readable.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("CookieAuthFileGroupReadable 1\n"
-                                "CookieAuthFile /tmp/somewhere\n"
-                                );
+                                "CookieAuthFile /tmp/somewhere\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
-            "CookieAuthFileGroupReadable is set, but will have no effect: you "
-            "must specify an explicit CookieAuthFile to have it "
-            "group-readable.\n");
+      "CookieAuthFileGroupReadable is set, but will have no effect: you "
+      "must specify an explicit CookieAuthFile to have it "
+      "group-readable.\n");
   tor_free(msg);
 
- done:
+done:
   teardown_capture_of_logs();
   policies_free_all();
   free_options_test_data(tdata);
@@ -3162,16 +3149,15 @@ test_options_validate__families(void *ignored)
                                 "BandwidthRate 51300\n"
                                 "BandwidthBurst 51300\n"
                                 "MaxAdvertisedBandwidth 25700\n"
-                                "DirCache 1\n"
-                                );
+                                "DirCache 1\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg(
-            "Listing a family for a bridge relay is not supported: it can "
-            "reveal bridge fingerprints to censors. You should also make sure "
-            "you aren't listing this bridge's fingerprint in any other "
-            "MyFamily.\n");
+      "Listing a family for a bridge relay is not supported: it can "
+      "reveal bridge fingerprints to censors. You should also make sure "
+      "you aren't listing this bridge's fingerprint in any other "
+      "MyFamily.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -3180,10 +3166,10 @@ test_options_validate__families(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
-            "Listing a family for a bridge relay is not supported: it can "
-            "reveal bridge fingerprints to censors. You should also make sure "
-            "you aren't listing this bridge's fingerprint in any other "
-            "MyFamily.\n");
+      "Listing a family for a bridge relay is not supported: it can "
+      "reveal bridge fingerprints to censors. You should also make sure "
+      "you aren't listing this bridge's fingerprint in any other "
+      "MyFamily.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -3203,7 +3189,7 @@ test_options_validate__families(void *ignored)
   tt_assert(!msg);
   tor_free(msg);
 
- done:
+done:
   teardown_capture_of_logs();
   policies_free_all();
   free_options_test_data(tdata);
@@ -3220,14 +3206,13 @@ test_options_validate__addr_policies(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ExitPolicy !!!\n"
-                                "ExitRelay 1\n"
-                                );
+                                "ExitRelay 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "Error in ExitPolicy entry.");
   tor_free(msg);
 
- done:
+done:
   policies_free_all();
   free_options_test_data(tdata);
   tor_free(msg);
@@ -3243,9 +3228,7 @@ test_options_validate__dir_auth(void *ignored)
   setup_capture_of_logs(LOG_WARN);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(VALID_DIR_AUTH
-                                VALID_ALT_DIR_AUTH
-                                );
+  tdata = get_options_test_data(VALID_DIR_AUTH VALID_ALT_DIR_AUTH);
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -3253,7 +3236,7 @@ test_options_validate__dir_auth(void *ignored)
             "Directory authority/fallback line did not parse. See logs for "
             "details.");
   expect_log_msg(
-            "You cannot set both DirAuthority and Alternate*Authority.\n");
+      "You cannot set both DirAuthority and Alternate*Authority.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -3267,17 +3250,13 @@ test_options_validate__dir_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(VALID_DIR_AUTH
-                                "TestingTorNetwork 1\n"
-                                );
+  tdata = get_options_test_data(VALID_DIR_AUTH "TestingTorNetwork 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("TestingTorNetwork 1\n"
-                                VALID_ALT_DIR_AUTH
-                                );
+  tdata = get_options_test_data("TestingTorNetwork 1\n" VALID_ALT_DIR_AUTH);
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ,
@@ -3287,26 +3266,23 @@ test_options_validate__dir_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("TestingTorNetwork 1\n"
-                                VALID_ALT_BRIDGE_AUTH
-                                );
+  tdata = get_options_test_data("TestingTorNetwork 1\n" VALID_ALT_BRIDGE_AUTH);
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "TestingTorNetwork may only be configured in "
+  tt_str_op(msg, OP_EQ,
+            "TestingTorNetwork may only be configured in "
             "combination with a non-default set of DirAuthority or both of "
             "AlternateDirAuthority and AlternateBridgeAuthority configured.");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(VALID_ALT_DIR_AUTH
-                                VALID_ALT_BRIDGE_AUTH
-                                "TestingTorNetwork 1\n"
-                                );
+  tdata = get_options_test_data(VALID_ALT_DIR_AUTH VALID_ALT_BRIDGE_AUTH
+                                "TestingTorNetwork 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
- done:
+done:
   policies_free_all();
   teardown_capture_of_logs();
   free_options_test_data(tdata);
@@ -3323,20 +3299,17 @@ test_options_validate__transport(void *ignored)
   setup_capture_of_logs(LOG_NOTICE);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("ClientTransportPlugin !!\n"
-                                );
+  tdata = get_options_test_data("ClientTransportPlugin !!\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ,
             "Invalid client transport line. See logs for details.");
-  expect_log_msg(
-            "Too few arguments on ClientTransportPlugin line.\n");
+  expect_log_msg("Too few arguments on ClientTransportPlugin line.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("ClientTransportPlugin foo exec bar\n"
-                                );
+  tdata = get_options_test_data("ClientTransportPlugin foo exec bar\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -3349,8 +3322,7 @@ test_options_validate__transport(void *ignored)
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ,
             "Invalid server transport line. See logs for details.");
-  expect_log_msg(
-            "Too few arguments on ServerTransportPlugin line.\n");
+  expect_log_msg("Too few arguments on ServerTransportPlugin line.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -3358,10 +3330,9 @@ test_options_validate__transport(void *ignored)
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg(
-            "Tor is not configured as a relay but you specified a "
-            "ServerTransportPlugin line (\"foo exec bar\"). The "
-            "ServerTransportPlugin line will be ignored.\n");
+  expect_log_msg("Tor is not configured as a relay but you specified a "
+                 "ServerTransportPlugin line (\"foo exec bar\"). The "
+                 "ServerTransportPlugin line will be ignored.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -3369,15 +3340,13 @@ test_options_validate__transport(void *ignored)
                                 "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 76900\n"
                                 "BandwidthBurst 76900\n"
-                                "MaxAdvertisedBandwidth 38500\n"
-                                );
+                                "MaxAdvertisedBandwidth 38500\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  expect_no_log_msg(
-            "Tor is not configured as a relay but you specified a "
-            "ServerTransportPlugin line (\"foo exec bar\"). The "
-            "ServerTransportPlugin line will be ignored.\n");
+  expect_no_log_msg("Tor is not configured as a relay but you specified a "
+                    "ServerTransportPlugin line (\"foo exec bar\"). The "
+                    "ServerTransportPlugin line will be ignored.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -3390,15 +3359,15 @@ test_options_validate__transport(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("ServerTransportListenAddr foo 127.0.0.42:55\n"
-                                );
+  tdata =
+      get_options_test_data("ServerTransportListenAddr foo 127.0.0.42:55\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg(
-            "You need at least a single managed-proxy to specify a transport "
-            "listen address. The ServerTransportListenAddr line will be "
-            "ignored.\n");
+      "You need at least a single managed-proxy to specify a transport "
+      "listen address. The ServerTransportListenAddr line will be "
+      "ignored.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -3407,17 +3376,16 @@ test_options_validate__transport(void *ignored)
                                 "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 76900\n"
                                 "BandwidthBurst 76900\n"
-                                "MaxAdvertisedBandwidth 38500\n"
-                                );
+                                "MaxAdvertisedBandwidth 38500\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
-            "You need at least a single managed-proxy to specify a transport "
-            "listen address. The ServerTransportListenAddr line will be "
-            "ignored.\n");
+      "You need at least a single managed-proxy to specify a transport "
+      "listen address. The ServerTransportListenAddr line will be "
+      "ignored.\n");
 
- done:
+done:
   escaped(NULL); // This will free the leaking memory from the previous escaped
   policies_free_all();
   teardown_capture_of_logs();
@@ -3436,34 +3404,34 @@ test_options_validate__constrained_sockets(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ConstrainedSockets 1\n"
-                                "ConstrainedSockSize 0\n"
-                                );
+                                "ConstrainedSockSize 0\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "ConstrainedSockSize is invalid.  Must be a value "
+  tt_str_op(msg, OP_EQ,
+            "ConstrainedSockSize is invalid.  Must be a value "
             "between 2048 and 262144 in 1024 byte increments.");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ConstrainedSockets 1\n"
-                                "ConstrainedSockSize 263168\n"
-                                );
+                                "ConstrainedSockSize 263168\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "ConstrainedSockSize is invalid.  Must be a value "
+  tt_str_op(msg, OP_EQ,
+            "ConstrainedSockSize is invalid.  Must be a value "
             "between 2048 and 262144 in 1024 byte increments.");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ConstrainedSockets 1\n"
-                                "ConstrainedSockSize 2047\n"
-                                );
+                                "ConstrainedSockSize 2047\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "ConstrainedSockSize is invalid.  Must be a value "
+  tt_str_op(msg, OP_EQ,
+            "ConstrainedSockSize is invalid.  Must be a value "
             "between 2048 and 262144 in 1024 byte increments.");
   tor_free(msg);
 
@@ -3471,32 +3439,31 @@ test_options_validate__constrained_sockets(void *ignored)
   tdata = get_options_test_data("ConstrainedSockets 1\n"
                                 "ConstrainedSockSize 2048\n"
                                 "DirPort 999\n"
-                                "DirCache 1\n"
-                                );
+                                "DirCache 1\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg("You have requested constrained "
-            "socket buffers while also serving directory entries via DirPort."
-            "  It is strongly suggested that you disable serving directory"
-            " requests when system TCP buffer resources are scarce.\n");
+  expect_log_msg(
+      "You have requested constrained "
+      "socket buffers while also serving directory entries via DirPort."
+      "  It is strongly suggested that you disable serving directory"
+      " requests when system TCP buffer resources are scarce.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ConstrainedSockets 1\n"
-                                "ConstrainedSockSize 2048\n"
-                                );
+                                "ConstrainedSockSize 2048\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
-            "You have requested constrained socket buffers while also serving"
-            " directory entries via DirPort.  It is strongly suggested that "
-            "you disable serving directory requests when system TCP buffer "
-            "resources are scarce.\n");
+      "You have requested constrained socket buffers while also serving"
+      " directory entries via DirPort.  It is strongly suggested that "
+      "you disable serving directory requests when system TCP buffer "
+      "resources are scarce.\n");
   tor_free(msg);
 
- done:
+done:
   policies_free_all();
   teardown_capture_of_logs();
   free_options_test_data(tdata);
@@ -3513,11 +3480,10 @@ test_options_validate__v3_auth(void *ignored)
   setup_capture_of_logs(LOG_WARN);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                "V3AuthVoteDelay 1000\n"
-                                "V3AuthDistDelay 1000\n"
-                                "V3AuthVotingInterval 1000\n"
-                                );
+  tdata =
+      get_options_test_data(ENABLE_AUTHORITY_V3 "V3AuthVoteDelay 1000\n"
+                                                "V3AuthDistDelay 1000\n"
+                                                "V3AuthVotingInterval 1000\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ,
@@ -3526,17 +3492,15 @@ test_options_validate__v3_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                "V3AuthVoteDelay 1\n");
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 "V3AuthVoteDelay 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "V3AuthVoteDelay is way too low.");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                "V3AuthVoteDelay 1\n"
-                                "TestingTorNetwork 1\n");
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 "V3AuthVoteDelay 1\n"
+                                                    "TestingTorNetwork 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "V3AuthVoteDelay is way too low.");
@@ -3547,18 +3511,15 @@ test_options_validate__v3_auth(void *ignored)
   // since they are the same
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                "V3AuthDistDelay 1\n");
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 "V3AuthDistDelay 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "V3AuthDistDelay is way too low.");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                "V3AuthDistDelay 1\n"
-                                "TestingTorNetwork 1\n"
-                                );
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 "V3AuthDistDelay 1\n"
+                                                    "TestingTorNetwork 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "V3AuthDistDelay is way too low.");
@@ -3569,46 +3530,40 @@ test_options_validate__v3_auth(void *ignored)
   // since they are the same
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                "V3AuthNIntervalsValid 1\n"
-                                );
+  tdata =
+      get_options_test_data(ENABLE_AUTHORITY_V3 "V3AuthNIntervalsValid 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "V3AuthNIntervalsValid must be at least 2.");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                "V3AuthVoteDelay 49\n"
-                                "V3AuthDistDelay 49\n"
-                                "V3AuthVotingInterval 200\n"
-                                );
+  tdata =
+      get_options_test_data(ENABLE_AUTHORITY_V3 "V3AuthVoteDelay 49\n"
+                                                "V3AuthDistDelay 49\n"
+                                                "V3AuthVotingInterval 200\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "V3AuthVotingInterval is insanely low.");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                VALID_DIR_AUTH
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 VALID_DIR_AUTH
                                 "TestingTorNetwork 1\n"
                                 "V3AuthVoteDelay 49\n"
                                 "V3AuthDistDelay 49\n"
-                                "V3AuthVotingInterval 200\n"
-                                );
+                                "V3AuthVotingInterval 200\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                VALID_DIR_AUTH
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 VALID_DIR_AUTH
                                 "TestingTorNetwork 1\n"
                                 "V3AuthVoteDelay 2\n"
                                 "V3AuthDistDelay 2\n"
-                                "V3AuthVotingInterval 9\n"
-                                );
+                                "V3AuthVotingInterval 9\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ,
@@ -3617,13 +3572,11 @@ test_options_validate__v3_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                VALID_DIR_AUTH
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 VALID_DIR_AUTH
                                 "TestingTorNetwork 1\n"
                                 "V3AuthVoteDelay 2\n"
                                 "V3AuthDistDelay 2\n"
-                                "V3AuthVotingInterval 10\n"
-                                );
+                                "V3AuthVotingInterval 10\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
@@ -3633,62 +3586,55 @@ test_options_validate__v3_auth(void *ignored)
   tdata = get_options_test_data(ENABLE_AUTHORITY_V3
                                 "V3AuthVoteDelay 49\n"
                                 "V3AuthDistDelay 49\n"
-                                "V3AuthVotingInterval 200000\n"
-                                );
+                                "V3AuthVotingInterval 200000\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "V3AuthVotingInterval is insanely high.");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                "V3AuthVoteDelay 49\n"
-                                "V3AuthDistDelay 49\n"
-                                "V3AuthVotingInterval 1441\n"
-                                );
+  tdata =
+      get_options_test_data(ENABLE_AUTHORITY_V3 "V3AuthVoteDelay 49\n"
+                                                "V3AuthDistDelay 49\n"
+                                                "V3AuthVotingInterval 1441\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg("V3AuthVotingInterval does not divide"
-            " evenly into 24 hours.\n");
+                 " evenly into 24 hours.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                "V3AuthVoteDelay 49\n"
-                                "V3AuthDistDelay 49\n"
-                                "V3AuthVotingInterval 1440\n"
-                                );
+  tdata =
+      get_options_test_data(ENABLE_AUTHORITY_V3 "V3AuthVoteDelay 49\n"
+                                                "V3AuthDistDelay 49\n"
+                                                "V3AuthVotingInterval 1440\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg("V3AuthVotingInterval does not divide"
-            " evenly into 24 hours.\n");
+                    " evenly into 24 hours.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(ENABLE_AUTHORITY_V3
                                 "V3AuthVoteDelay 49\n"
                                 "V3AuthDistDelay 49\n"
-                                "V3AuthVotingInterval 299\n"
-                                VALID_DIR_AUTH
-                                "TestingTorNetwork 1\n"
-                                );
+                                "V3AuthVotingInterval 299\n" VALID_DIR_AUTH
+                                "TestingTorNetwork 1\n");
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg("V3AuthVotingInterval is very low. "
-            "This may lead to failure to synchronise for a consensus.\n");
+                 "This may lead to failure to synchronise for a consensus.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(ENABLE_AUTHORITY_V3
                                 "V3AuthVoteDelay 1\n"
                                 "V3AuthDistDelay 1\n"
-                                "V3AuthVotingInterval 9\n"
-                                VALID_DIR_AUTH
-                                "TestingTorNetwork 1\n"
-                                );
+                                "V3AuthVotingInterval 9\n" VALID_DIR_AUTH
+                                "TestingTorNetwork 1\n");
   /* We have to call the dirauth-specific function to reach this case */
   ret = options_validate_dirauth_schedule(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -3696,44 +3642,37 @@ test_options_validate__v3_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                "TestingV3AuthInitialVoteDelay 1\n"
-                                VALID_DIR_AUTH
-                                "TestingTorNetwork 1\n"
-                                );
+  tdata = get_options_test_data(
+      ENABLE_AUTHORITY_V3 "TestingV3AuthInitialVoteDelay 1\n" VALID_DIR_AUTH
+                          "TestingTorNetwork 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "TestingV3AuthInitialVoteDelay is way too low.");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                "TestingV3AuthInitialDistDelay 1\n"
-                                VALID_DIR_AUTH
-                                "TestingTorNetwork 1\n"
-                                );
+  tdata = get_options_test_data(
+      ENABLE_AUTHORITY_V3 "TestingV3AuthInitialDistDelay 1\n" VALID_DIR_AUTH
+                          "TestingTorNetwork 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "TestingV3AuthInitialDistDelay is way too low.");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                VALID_DIR_AUTH
-                                "TestingTorNetwork 1\n"
-                                );
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 VALID_DIR_AUTH
+                                "TestingTorNetwork 1\n");
   tdata->opt->TestingV3AuthVotingStartOffset = 100000;
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "TestingV3AuthVotingStartOffset is higher than the "
+  tt_str_op(msg, OP_EQ,
+            "TestingV3AuthVotingStartOffset is higher than the "
             "voting interval.");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                VALID_DIR_AUTH
-                                "TestingTorNetwork 1\n"
-                                );
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 VALID_DIR_AUTH
+                                "TestingTorNetwork 1\n");
   tdata->opt->TestingV3AuthVotingStartOffset = -1;
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -3742,35 +3681,29 @@ test_options_validate__v3_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                VALID_DIR_AUTH
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 VALID_DIR_AUTH
                                 "TestingTorNetwork 1\n"
-                                "TestingV3AuthInitialVotingInterval 4\n"
-                                );
+                                "TestingV3AuthInitialVotingInterval 4\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "TestingV3AuthInitialVotingInterval is insanely low.");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                VALID_DIR_AUTH
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 VALID_DIR_AUTH
                                 "TestingTorNetwork 1\n"
                                 "TestingV3AuthInitialVoteDelay 2\n"
                                 "TestingV3AuthInitialDistDelay 2\n"
-                                "TestingV3AuthInitialVotingInterval 5\n"
-                                );
+                                "TestingV3AuthInitialVotingInterval 5\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                VALID_DIR_AUTH
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 VALID_DIR_AUTH
                                 "TestingTorNetwork 1\n"
-                                "TestingV3AuthInitialVotingInterval 7\n"
-                                );
+                                "TestingV3AuthInitialVotingInterval 7\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ,
@@ -3779,13 +3712,11 @@ test_options_validate__v3_auth(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3
-                                VALID_DIR_AUTH
+  tdata = get_options_test_data(ENABLE_AUTHORITY_V3 VALID_DIR_AUTH
                                 "TestingTorNetwork 1\n"
                                 "TestingV3AuthInitialVoteDelay 3\n"
                                 "TestingV3AuthInitialDistDelay 3\n"
-                                "TestingV3AuthInitialVotingInterval 5\n"
-                                );
+                                "TestingV3AuthInitialVotingInterval 5\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ,
@@ -3794,7 +3725,7 @@ test_options_validate__v3_auth(void *ignored)
             "TestingV3AuthInitialVotingInterval");
   tor_free(msg);
 
- done:
+done:
   policies_free_all();
   teardown_capture_of_logs();
   free_options_test_data(tdata);
@@ -3817,14 +3748,13 @@ test_options_validate__virtual_addr(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("VirtualAddrNetworkIPv6 !!"
-                                );
+  tdata = get_options_test_data("VirtualAddrNetworkIPv6 !!");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "Error parsing VirtualAddressNetworkIPv6 !!");
   tor_free(msg);
 
- done:
+done:
   escaped(NULL); // This will free the leaking memory from the previous escaped
   policies_free_all();
   free_options_test_data(tdata);
@@ -3840,32 +3770,28 @@ test_options_validate__testing_options(void *ignored)
   options_test_data_t *tdata = NULL;
   setup_capture_of_logs(LOG_WARN);
 
-#define TEST_TESTING_OPTION(name, accessor, \
-                            low_val, high_val, err_low, EXTRA_OPT_STR)  \
+#define TEST_TESTING_OPTION(name, accessor, low_val, high_val, err_low, \
+                            EXTRA_OPT_STR)                              \
   STMT_BEGIN                                                            \
     free_options_test_data(tdata);                                      \
-  tdata = get_options_test_data(EXTRA_OPT_STR                           \
-                                VALID_DIR_AUTH                          \
-                                "TestingTorNetwork 1\n"                 \
-                                );                                      \
-  accessor(tdata->opt)->name = low_val;                                 \
-  ret = options_validate(NULL, tdata->opt,  &msg);            \
-  tt_int_op(ret, OP_EQ, -1);                                            \
-  tt_str_op(msg, OP_EQ, #name " " err_low);                \
-  tor_free(msg); \
+    tdata = get_options_test_data(EXTRA_OPT_STR VALID_DIR_AUTH          \
+                                  "TestingTorNetwork 1\n");             \
+    accessor(tdata->opt)->name = low_val;                               \
+    ret = options_validate(NULL, tdata->opt, &msg);                     \
+    tt_int_op(ret, OP_EQ, -1);                                          \
+    tt_str_op(msg, OP_EQ, #name " " err_low);                           \
+    tor_free(msg);                                                      \
                                                                         \
-  free_options_test_data(tdata);                                        \
-  tdata = get_options_test_data(EXTRA_OPT_STR                           \
-                                VALID_DIR_AUTH                          \
-                                "TestingTorNetwork 1\n"                 \
-                                );                                      \
-  accessor(tdata->opt)->name = high_val;                                \
-  mock_clean_saved_logs();                                              \
-  ret = options_validate(NULL, tdata->opt,  &msg);            \
-  tt_int_op(ret, OP_EQ, 0);                                             \
-  tt_ptr_op(msg, OP_EQ, NULL);                                          \
-  expect_log_msg( #name " is insanely high.\n"); \
-  tor_free(msg); \
+    free_options_test_data(tdata);                                      \
+    tdata = get_options_test_data(EXTRA_OPT_STR VALID_DIR_AUTH          \
+                                  "TestingTorNetwork 1\n");             \
+    accessor(tdata->opt)->name = high_val;                              \
+    mock_clean_saved_logs();                                            \
+    ret = options_validate(NULL, tdata->opt, &msg);                     \
+    tt_int_op(ret, OP_EQ, 0);                                           \
+    tt_ptr_op(msg, OP_EQ, NULL);                                        \
+    expect_log_msg(#name " is insanely high.\n");                       \
+    tor_free(msg);                                                      \
   STMT_END
 
   TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, , -1, 3601,
@@ -3887,16 +3813,15 @@ test_options_validate__testing_options(void *ignored)
   tdata = get_options_test_data("TestingEnableConnBwEvent 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "TestingEnableConnBwEvent may only be changed in "
+  tt_str_op(msg, OP_EQ,
+            "TestingEnableConnBwEvent may only be changed in "
             "testing Tor networks!");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("TestingEnableConnBwEvent 1\n"
-                                VALID_DIR_AUTH
+  tdata = get_options_test_data("TestingEnableConnBwEvent 1\n" VALID_DIR_AUTH
                                 "TestingTorNetwork 1\n"
-                                "___UsingTestNetworkDefaults 0\n"
-                                );
+                                "___UsingTestNetworkDefaults 0\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -3904,11 +3829,9 @@ test_options_validate__testing_options(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("TestingEnableConnBwEvent 1\n"
-                                VALID_DIR_AUTH
+  tdata = get_options_test_data("TestingEnableConnBwEvent 1\n" VALID_DIR_AUTH
                                 "TestingTorNetwork 0\n"
-                                "___UsingTestNetworkDefaults 1\n"
-                                );
+                                "___UsingTestNetworkDefaults 1\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -3919,16 +3842,35 @@ test_options_validate__testing_options(void *ignored)
   tdata = get_options_test_data("TestingEnableCellStatsEvent 1\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "TestingEnableCellStatsEvent may only be changed in "
+  tt_str_op(msg, OP_EQ,
+            "TestingEnableCellStatsEvent may only be changed in "
             "testing Tor networks!");
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("TestingEnableCellStatsEvent 1\n"
-                                VALID_DIR_AUTH
+  tdata = get_options_test_data(
+      "TestingEnableCellStatsEvent 1\n" VALID_DIR_AUTH "TestingTorNetwork 1\n"
+      "___UsingTestNetworkDefaults 0\n");
+
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_assert(!msg);
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(
+      "TestingEnableCellStatsEvent 1\n" VALID_DIR_AUTH "TestingTorNetwork 0\n"
+      "___UsingTestNetworkDefaults 1\n");
+
+  ret = options_validate(NULL, tdata->opt, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_assert(!msg);
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data("TestingEnableTbEmptyEvent 1\n" VALID_DIR_AUTH
                                 "TestingTorNetwork 1\n"
-                                "___UsingTestNetworkDefaults 0\n"
-                                );
+                                "___UsingTestNetworkDefaults 0\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -3936,42 +3878,16 @@ test_options_validate__testing_options(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("TestingEnableCellStatsEvent 1\n"
-                                VALID_DIR_AUTH
+  tdata = get_options_test_data("TestingEnableTbEmptyEvent 1\n" VALID_DIR_AUTH
                                 "TestingTorNetwork 0\n"
-                                "___UsingTestNetworkDefaults 1\n"
-                                );
+                                "___UsingTestNetworkDefaults 1\n");
 
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_assert(!msg);
   tor_free(msg);
 
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("TestingEnableTbEmptyEvent 1\n"
-                                VALID_DIR_AUTH
-                                "TestingTorNetwork 1\n"
-                                "___UsingTestNetworkDefaults 0\n"
-                                );
-
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  tt_assert(!msg);
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("TestingEnableTbEmptyEvent 1\n"
-                                VALID_DIR_AUTH
-                                "TestingTorNetwork 0\n"
-                                "___UsingTestNetworkDefaults 1\n"
-                                );
-
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  tt_assert(!msg);
-  tor_free(msg);
-
- done:
+done:
   policies_free_all();
   teardown_capture_of_logs();
   free_options_test_data(tdata);
@@ -4016,7 +3932,7 @@ test_options_validate__accel(void *ignored)
   tt_int_op(ret, OP_EQ, 0);
   tor_free(msg);
 
- done:
+done:
   policies_free_all();
   free_options_test_data(tdata);
   tor_free(msg);
@@ -4035,7 +3951,7 @@ test_options_init_logs_granularity(void *arg)
 {
   options_test_data_t *tdata = get_options_test_data("");
   int rv;
-  (void) arg;
+  (void)arg;
 
   MOCK(set_log_time_granularity, mock_set_log_time_granularity);
 
@@ -4087,7 +4003,7 @@ test_options_init_logs_granularity(void *arg)
   tt_int_op(rv, OP_EQ, 0);
   tt_int_op(mocked_granularity, OP_EQ, 3600 * 1000);
 
- done:
+done:
   free_options_test_data(tdata);
   UNMOCK(set_log_time_granularity);
 }
@@ -4127,8 +4043,10 @@ mock_add_file_log(const log_severity_list_t *sev, const char *name, int fd)
 static void
 clear_added_logs(void)
 {
-  SMARTLIST_FOREACH(added_logs, added_log_t *, a,
-                    { tor_free(a->name); tor_free(a); });
+  SMARTLIST_FOREACH(added_logs, added_log_t *, a, {
+    tor_free(a->name);
+    tor_free(a);
+  });
   smartlist_clear(added_logs);
 }
 
@@ -4192,14 +4110,14 @@ test_options_init_logs_quiet(void *arg)
   tt_int_op(smartlist_len(added_logs), OP_EQ, 1);
   a = smartlist_get(added_logs, 0);
   tt_assert(a);
-  tt_assert(! a->stream);
+  tt_assert(!a->stream);
   tt_int_op(a->fd, OP_NE, fileno(stdout));
   tt_u64_op(a->sev.masks[SEVERITY_MASK_IDX(LOG_INFO)], OP_EQ, LD_ALL_DOMAINS);
   tt_u64_op(a->sev.masks[SEVERITY_MASK_IDX(LOG_NOTICE)], OP_EQ,
             LD_ALL_DOMAINS);
   tt_u64_op(a->sev.masks[SEVERITY_MASK_IDX(LOG_WARN)], OP_EQ, LD_ALL_DOMAINS);
 
- done:
+done:
   free_options_test_data(tdata);
   tor_free(fn1);
   tor_free(cfg);
@@ -4258,7 +4176,7 @@ test_options_trial_assign(void *arg)
   tt_int_op(r, OP_EQ, 0);
   v = options_trial_assign(lines, 0, &msg);
   tt_int_op(v, OP_EQ, SETOPT_ERR_TRANSITION);
-  tt_str_op(msg, OP_EQ,  "While Tor is running, changing User is not allowed");
+  tt_str_op(msg, OP_EQ, "While Tor is running, changing User is not allowed");
   tor_free(msg);
   config_free_lines(lines);
 
@@ -4283,7 +4201,7 @@ test_options_trial_assign(void *arg)
   // this didn't change.
   tt_str_op(get_options()->Nickname, OP_EQ, "Hemiramphinae");
 
- done:
+done:
   config_free_lines(lines);
   tor_free(msg);
   UNMOCK(options_act);
@@ -4291,59 +4209,60 @@ test_options_trial_assign(void *arg)
 }
 
 #ifndef COCCI
-#define LOCAL_VALIDATE_TEST(name) \
-  { "validate__" #name, test_options_validate__ ## name, TT_FORK, NULL, NULL }
+#  define LOCAL_VALIDATE_TEST(name)                                          \
+    {                                                                        \
+      "validate__" #name, test_options_validate__##name, TT_FORK, NULL, NULL \
+    }
 #endif
 
 struct testcase_t options_tests[] = {
-  { "validate", test_options_validate, TT_FORK, NULL, NULL },
-  { "mem_dircache", test_have_enough_mem_for_dircache, TT_FORK, NULL, NULL },
-  LOCAL_VALIDATE_TEST(uname_for_server),
-  LOCAL_VALIDATE_TEST(outbound_addresses),
-  LOCAL_VALIDATE_TEST(data_directory),
-  LOCAL_VALIDATE_TEST(nickname),
-  LOCAL_VALIDATE_TEST(contactinfo),
-  LOCAL_VALIDATE_TEST(logs),
-  LOCAL_VALIDATE_TEST(authdir),
-  LOCAL_VALIDATE_TEST(relay_with_hidden_services),
-  LOCAL_VALIDATE_TEST(listen_ports),
-  LOCAL_VALIDATE_TEST(transproxy),
-  LOCAL_VALIDATE_TEST(exclude_nodes),
-  LOCAL_VALIDATE_TEST(node_families),
-  LOCAL_VALIDATE_TEST(token_bucket),
-  LOCAL_VALIDATE_TEST(fetch_dir),
-  LOCAL_VALIDATE_TEST(conn_limit),
-  LOCAL_VALIDATE_TEST(paths_needed),
-  LOCAL_VALIDATE_TEST(max_client_circuits),
-  LOCAL_VALIDATE_TEST(ports),
-  LOCAL_VALIDATE_TEST(reachable_addresses),
-  LOCAL_VALIDATE_TEST(use_bridges),
-  LOCAL_VALIDATE_TEST(entry_nodes),
-  LOCAL_VALIDATE_TEST(safe_logging),
-  LOCAL_VALIDATE_TEST(publish_server_descriptor),
-  LOCAL_VALIDATE_TEST(testing),
-  LOCAL_VALIDATE_TEST(hidserv),
-  LOCAL_VALIDATE_TEST(path_bias),
-  LOCAL_VALIDATE_TEST(bandwidth),
-  LOCAL_VALIDATE_TEST(circuits),
-  LOCAL_VALIDATE_TEST(rend),
-  LOCAL_VALIDATE_TEST(single_onion),
-  LOCAL_VALIDATE_TEST(accounting),
-  LOCAL_VALIDATE_TEST(proxy),
-  LOCAL_VALIDATE_TEST(control),
-  LOCAL_VALIDATE_TEST(families),
-  LOCAL_VALIDATE_TEST(addr_policies),
-  LOCAL_VALIDATE_TEST(dir_auth),
-  LOCAL_VALIDATE_TEST(transport),
-  LOCAL_VALIDATE_TEST(constrained_sockets),
-  LOCAL_VALIDATE_TEST(v3_auth),
-  LOCAL_VALIDATE_TEST(virtual_addr),
-  LOCAL_VALIDATE_TEST(testing_options),
-  LOCAL_VALIDATE_TEST(accel),
-  { "init_logs/granularity", test_options_init_logs_granularity, TT_FORK,
-    NULL, NULL },
-  { "init_logs/quiet", test_options_init_logs_quiet, TT_FORK,
-    NULL, NULL },
-  { "trial_assign", test_options_trial_assign, TT_FORK, NULL, NULL },
-  END_OF_TESTCASES              /*  */
+    {"validate", test_options_validate, TT_FORK, NULL, NULL},
+    {"mem_dircache", test_have_enough_mem_for_dircache, TT_FORK, NULL, NULL},
+    LOCAL_VALIDATE_TEST(uname_for_server),
+    LOCAL_VALIDATE_TEST(outbound_addresses),
+    LOCAL_VALIDATE_TEST(data_directory),
+    LOCAL_VALIDATE_TEST(nickname),
+    LOCAL_VALIDATE_TEST(contactinfo),
+    LOCAL_VALIDATE_TEST(logs),
+    LOCAL_VALIDATE_TEST(authdir),
+    LOCAL_VALIDATE_TEST(relay_with_hidden_services),
+    LOCAL_VALIDATE_TEST(listen_ports),
+    LOCAL_VALIDATE_TEST(transproxy),
+    LOCAL_VALIDATE_TEST(exclude_nodes),
+    LOCAL_VALIDATE_TEST(node_families),
+    LOCAL_VALIDATE_TEST(token_bucket),
+    LOCAL_VALIDATE_TEST(fetch_dir),
+    LOCAL_VALIDATE_TEST(conn_limit),
+    LOCAL_VALIDATE_TEST(paths_needed),
+    LOCAL_VALIDATE_TEST(max_client_circuits),
+    LOCAL_VALIDATE_TEST(ports),
+    LOCAL_VALIDATE_TEST(reachable_addresses),
+    LOCAL_VALIDATE_TEST(use_bridges),
+    LOCAL_VALIDATE_TEST(entry_nodes),
+    LOCAL_VALIDATE_TEST(safe_logging),
+    LOCAL_VALIDATE_TEST(publish_server_descriptor),
+    LOCAL_VALIDATE_TEST(testing),
+    LOCAL_VALIDATE_TEST(hidserv),
+    LOCAL_VALIDATE_TEST(path_bias),
+    LOCAL_VALIDATE_TEST(bandwidth),
+    LOCAL_VALIDATE_TEST(circuits),
+    LOCAL_VALIDATE_TEST(rend),
+    LOCAL_VALIDATE_TEST(single_onion),
+    LOCAL_VALIDATE_TEST(accounting),
+    LOCAL_VALIDATE_TEST(proxy),
+    LOCAL_VALIDATE_TEST(control),
+    LOCAL_VALIDATE_TEST(families),
+    LOCAL_VALIDATE_TEST(addr_policies),
+    LOCAL_VALIDATE_TEST(dir_auth),
+    LOCAL_VALIDATE_TEST(transport),
+    LOCAL_VALIDATE_TEST(constrained_sockets),
+    LOCAL_VALIDATE_TEST(v3_auth),
+    LOCAL_VALIDATE_TEST(virtual_addr),
+    LOCAL_VALIDATE_TEST(testing_options),
+    LOCAL_VALIDATE_TEST(accel),
+    {"init_logs/granularity", test_options_init_logs_granularity, TT_FORK,
+     NULL, NULL},
+    {"init_logs/quiet", test_options_init_logs_quiet, TT_FORK, NULL, NULL},
+    {"trial_assign", test_options_trial_assign, TT_FORK, NULL, NULL},
+    END_OF_TESTCASES /*  */
 };

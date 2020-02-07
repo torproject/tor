@@ -23,10 +23,10 @@ int compare_vote_routerstatus_entries(const void **_a, const void **_b);
 
 int networkstatus_verify_bw_weights(networkstatus_t *ns, int);
 enum networkstatus_type_t;
-networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
-                                           size_t len,
-                                           const char **eos_out,
-                                           enum networkstatus_type_t ns_type);
+networkstatus_t *
+networkstatus_parse_vote_from_string(const char *s, size_t len,
+                                     const char **eos_out,
+                                     enum networkstatus_type_t ns_type);
 
 #ifdef NS_PARSE_PRIVATE
 STATIC int routerstatus_parse_guardfraction(const char *guardfraction_str,
@@ -35,13 +35,9 @@ STATIC int routerstatus_parse_guardfraction(const char *guardfraction_str,
                                             routerstatus_t *rs);
 struct memarea_t;
 STATIC routerstatus_t *routerstatus_parse_entry_from_string(
-                                     struct memarea_t *area,
-                                     const char **s, const char *eos,
-                                     smartlist_t *tokens,
-                                     networkstatus_t *vote,
-                                     vote_routerstatus_t *vote_rs,
-                                     int consensus_method,
-                                     consensus_flavor_t flav);
+    struct memarea_t *area, const char **s, const char *eos,
+    smartlist_t *tokens, networkstatus_t *vote, vote_routerstatus_t *vote_rs,
+    int consensus_method, consensus_flavor_t flav);
 #endif /* defined(NS_PARSE_PRIVATE) */
 
 #endif /* !defined(TOR_NS_PARSE_H) */

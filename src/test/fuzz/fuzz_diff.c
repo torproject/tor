@@ -41,7 +41,7 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
 #define SEP "=====\n"
 #define SEPLEN strlen(SEP)
   const uint8_t *separator = tor_memmem(stdin_buf, data_size, SEP, SEPLEN);
-  if (! separator)
+  if (!separator)
     return 0;
   size_t c1_len = separator - stdin_buf;
   const char *c1 = (const char *)stdin_buf;
@@ -62,9 +62,9 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
     char *c4 = consensus_diff_apply(c1, c1_len, c3, strlen(c3));
     tor_assert(c4);
     int equal = (c2_len == strlen(c4)) && fast_memeq(c2, c4, c2_len);
-    if (! equal) {
-      //printf("%s\n", escaped(c1));
-      //printf("%s\n", escaped(c2));
+    if (!equal) {
+      // printf("%s\n", escaped(c1));
+      // printf("%s\n", escaped(c2));
       printf("%s\n", escaped(c3));
       printf("%s\n", escaped(c4));
     }

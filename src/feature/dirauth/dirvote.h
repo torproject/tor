@@ -44,10 +44,10 @@
  * If clock desynchronisation is an issue, use an interval of at least:
  *   18 * drift in seconds, to allow for a clock slop factor */
 #define MIN_VOTE_INTERVAL_TESTING \
-                (((MIN_VOTE_SECONDS_TESTING)+(MIN_DIST_SECONDS_TESTING)+1)*2)
+  (((MIN_VOTE_SECONDS_TESTING) + (MIN_DIST_SECONDS_TESTING) + 1) * 2)
 
 #define MIN_VOTE_INTERVAL_TESTING_INITIAL \
-                ((MIN_VOTE_SECONDS_TESTING)+(MIN_DIST_SECONDS_TESTING)+1)
+  ((MIN_VOTE_SECONDS_TESTING) + (MIN_DIST_SECONDS_TESTING) + 1)
 
 /** The lowest consensus method that we currently support. */
 #define MIN_SUPPORTED_CONSENSUS_METHOD 28
@@ -93,12 +93,10 @@ void dirvote_dirreq_get_status_vote(const char *url, smartlist_t *items,
                                     smartlist_t *dir_items);
 
 /* Storing signatures and votes functions */
-struct pending_vote_t * dirvote_add_vote(const char *vote_body,
-                                         const char **msg_out,
-                                         int *status_out);
+struct pending_vote_t *dirvote_add_vote(const char *vote_body,
+                                        const char **msg_out, int *status_out);
 int dirvote_add_signatures(const char *detached_signatures_body,
-                           const char *source,
-                           const char **msg_out);
+                           const char *source, const char **msg_out);
 
 struct config_line_t;
 char *format_recommended_version_list(const struct config_line_t *line,
@@ -109,8 +107,8 @@ char *format_recommended_version_list(const struct config_line_t *line,
 static inline time_t
 dirvote_act(const or_options_t *options, time_t now)
 {
-  (void) options;
-  (void) now;
+  (void)options;
+  (void)now;
   return TIME_MAX;
 }
 
@@ -122,29 +120,29 @@ dirvote_free_all(void)
 static inline void
 dirvote_parse_sr_commits(networkstatus_t *ns, const smartlist_t *tokens)
 {
-  (void) ns;
-  (void) tokens;
+  (void)ns;
+  (void)tokens;
 }
 
 static inline void
 dirvote_clear_commits(networkstatus_t *ns)
 {
-  (void) ns;
+  (void)ns;
 }
 
 static inline void
 dirvote_dirreq_get_status_vote(const char *url, smartlist_t *items,
                                smartlist_t *dir_items)
 {
-  (void) url;
-  (void) items;
-  (void) dir_items;
+  (void)url;
+  (void)items;
+  (void)dir_items;
 }
 
 static inline struct pending_vote_t *
 dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
 {
-  (void) vote_body;
+  (void)vote_body;
   /* If the dirauth module is disabled, this should NEVER be called else we
    * failed to safeguard the dirauth module. */
   tor_assert_nonfatal_unreached();
@@ -157,12 +155,11 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
 
 static inline int
 dirvote_add_signatures(const char *detached_signatures_body,
-                       const char *source,
-                       const char **msg_out)
+                       const char *source, const char **msg_out)
 {
-  (void) detached_signatures_body;
-  (void) source;
-  (void) msg_out;
+  (void)detached_signatures_body;
+  (void)source;
+  (void)msg_out;
   /* If the dirauth module is disabled, this should NEVER be called else we
    * failed to safeguard the dirauth module. */
   tor_assert_nonfatal_unreached();
@@ -172,9 +169,9 @@ dirvote_add_signatures(const char *detached_signatures_body,
 #endif /* defined(HAVE_MODULE_DIRAUTH) */
 
 /* Item access */
-MOCK_DECL(const char*, dirvote_get_pending_consensus,
+MOCK_DECL(const char *, dirvote_get_pending_consensus,
           (consensus_flavor_t flav));
-MOCK_DECL(const char*, dirvote_get_pending_detached_signatures, (void));
+MOCK_DECL(const char *, dirvote_get_pending_detached_signatures, (void));
 const cached_dir_t *dirvote_get_vote(const char *fp, int flags);
 
 /*
@@ -185,9 +182,8 @@ networkstatus_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                                         authority_cert_t *cert);
 
-vote_microdesc_hash_t *dirvote_format_all_microdesc_vote_lines(
-                                        const routerinfo_t *ri,
-                                        time_t now,
+vote_microdesc_hash_t *
+dirvote_format_all_microdesc_vote_lines(const routerinfo_t *ri, time_t now,
                                         smartlist_t *microdescriptors_out);
 
 /*
@@ -198,32 +194,26 @@ vote_microdesc_hash_t *dirvote_format_all_microdesc_vote_lines(
 /* Cert manipulation */
 STATIC authority_cert_t *authority_cert_dup(authority_cert_t *cert);
 STATIC int32_t dirvote_get_intermediate_param_value(
-                                   const smartlist_t *param_list,
-                                   const char *keyword,
-                                   int32_t default_val);
+    const smartlist_t *param_list, const char *keyword, int32_t default_val);
 STATIC char *format_networkstatus_vote(crypto_pk_t *private_key,
-                                 networkstatus_t *v3_ns);
+                                       networkstatus_t *v3_ns);
 STATIC smartlist_t *dirvote_compute_params(smartlist_t *votes, int method,
-                             int total_authorities);
+                                           int total_authorities);
 STATIC char *compute_consensus_package_lines(smartlist_t *votes);
 STATIC char *make_consensus_method_list(int low, int high, const char *sep);
-STATIC int
-networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
-                                     int64_t M, int64_t E, int64_t D,
-                                     int64_t T, int64_t weight_scale);
+STATIC int networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
+                                                int64_t M, int64_t E,
+                                                int64_t D, int64_t T,
+                                                int64_t weight_scale);
 STATIC
-char *networkstatus_compute_consensus(smartlist_t *votes,
-                                      int total_authorities,
-                                      crypto_pk_t *identity_key,
-                                      crypto_pk_t *signing_key,
-                                      const char *legacy_identity_key_digest,
-                                      crypto_pk_t *legacy_signing_key,
-                                      consensus_flavor_t flavor);
+char *networkstatus_compute_consensus(
+    smartlist_t *votes, int total_authorities, crypto_pk_t *identity_key,
+    crypto_pk_t *signing_key, const char *legacy_identity_key_digest,
+    crypto_pk_t *legacy_signing_key, consensus_flavor_t flavor);
 STATIC
 int networkstatus_add_detached_signatures(networkstatus_t *target,
                                           ns_detached_signatures_t *sigs,
-                                          const char *source,
-                                          int severity,
+                                          const char *source, int severity,
                                           const char **msg_out);
 STATIC
 char *networkstatus_get_detached_signatures(smartlist_t *consensuses);

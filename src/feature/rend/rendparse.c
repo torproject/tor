@@ -23,37 +23,33 @@
 
 /** List of tokens recognized in rendezvous service descriptors */
 static token_rule_t desc_token_table[] = {
-  T1_START("rendezvous-service-descriptor", R_RENDEZVOUS_SERVICE_DESCRIPTOR,
-           EQ(1), NO_OBJ),
-  T1("version", R_VERSION, EQ(1), NO_OBJ),
-  T1("permanent-key", R_PERMANENT_KEY, NO_ARGS, NEED_KEY_1024),
-  T1("secret-id-part", R_SECRET_ID_PART, EQ(1), NO_OBJ),
-  T1("publication-time", R_PUBLICATION_TIME, CONCAT_ARGS, NO_OBJ),
-  T1("protocol-versions", R_PROTOCOL_VERSIONS, EQ(1), NO_OBJ),
-  T01("introduction-points", R_INTRODUCTION_POINTS, NO_ARGS, NEED_OBJ),
-  T1_END("signature", R_SIGNATURE, NO_ARGS, NEED_OBJ),
-  END_OF_TABLE
-};
+    T1_START("rendezvous-service-descriptor", R_RENDEZVOUS_SERVICE_DESCRIPTOR,
+             EQ(1), NO_OBJ),
+    T1("version", R_VERSION, EQ(1), NO_OBJ),
+    T1("permanent-key", R_PERMANENT_KEY, NO_ARGS, NEED_KEY_1024),
+    T1("secret-id-part", R_SECRET_ID_PART, EQ(1), NO_OBJ),
+    T1("publication-time", R_PUBLICATION_TIME, CONCAT_ARGS, NO_OBJ),
+    T1("protocol-versions", R_PROTOCOL_VERSIONS, EQ(1), NO_OBJ),
+    T01("introduction-points", R_INTRODUCTION_POINTS, NO_ARGS, NEED_OBJ),
+    T1_END("signature", R_SIGNATURE, NO_ARGS, NEED_OBJ),
+    END_OF_TABLE};
 
 /** List of tokens recognized in the (encrypted) list of introduction points of
  * rendezvous service descriptors */
 static token_rule_t ipo_token_table[] = {
-  T1_START("introduction-point", R_IPO_IDENTIFIER, EQ(1), NO_OBJ),
-  T1("ip-address", R_IPO_IP_ADDRESS, EQ(1), NO_OBJ),
-  T1("onion-port", R_IPO_ONION_PORT, EQ(1), NO_OBJ),
-  T1("onion-key", R_IPO_ONION_KEY, NO_ARGS, NEED_KEY_1024),
-  T1("service-key", R_IPO_SERVICE_KEY, NO_ARGS, NEED_KEY_1024),
-  END_OF_TABLE
-};
+    T1_START("introduction-point", R_IPO_IDENTIFIER, EQ(1), NO_OBJ),
+    T1("ip-address", R_IPO_IP_ADDRESS, EQ(1), NO_OBJ),
+    T1("onion-port", R_IPO_ONION_PORT, EQ(1), NO_OBJ),
+    T1("onion-key", R_IPO_ONION_KEY, NO_ARGS, NEED_KEY_1024),
+    T1("service-key", R_IPO_SERVICE_KEY, NO_ARGS, NEED_KEY_1024),
+    END_OF_TABLE};
 
 /** List of tokens recognized in the (possibly encrypted) list of introduction
  * points of rendezvous service descriptors */
 static token_rule_t client_keys_token_table[] = {
-  T1_START("client-name", C_CLIENT_NAME, CONCAT_ARGS, NO_OBJ),
-  T1("descriptor-cookie", C_DESCRIPTOR_COOKIE, EQ(1), NO_OBJ),
-  T01("client-key", C_CLIENT_KEY, NO_ARGS, NEED_SKEY_1024),
-  END_OF_TABLE
-};
+    T1_START("client-name", C_CLIENT_NAME, CONCAT_ARGS, NO_OBJ),
+    T1("descriptor-cookie", C_DESCRIPTOR_COOKIE, EQ(1), NO_OBJ),
+    T01("client-key", C_CLIENT_KEY, NO_ARGS, NEED_SKEY_1024), END_OF_TABLE};
 
 /** Parse and validate the ASCII-encoded v2 descriptor in <b>desc</b>,
  * write the parsed descriptor to the newly allocated *<b>parsed_out</b>, the
@@ -78,13 +74,13 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
                                  int as_hsdir)
 {
   rend_service_descriptor_t *result =
-                            tor_malloc_zero(sizeof(rend_service_descriptor_t));
+      tor_malloc_zero(sizeof(rend_service_descriptor_t));
   char desc_hash[DIGEST_LEN];
   const char *eos;
   smartlist_t *tokens = smartlist_new();
   directory_token_t *tok;
   char secret_id_part[DIGEST_LEN];
-  int i, version, num_ok=1;
+  int i, version, num_ok = 1;
   smartlist_t *versions;
   char public_key_hash[DIGEST_LEN];
   char test_desc_id[DIGEST_LEN];
@@ -99,8 +95,8 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   }
   /* Compute descriptor hash for later validation. */
   if (router_get_hash_impl(desc, strlen(desc), desc_hash,
-                           "rendezvous-service-descriptor ",
-                           "\nsignature", '\n', DIGEST_SHA1) < 0) {
+                           "rendezvous-service-descriptor ", "\nsignature",
+                           '\n', DIGEST_SHA1) < 0) {
     log_warn(LD_REND, "Couldn't compute descriptor hash.");
     goto err;
   }
@@ -111,12 +107,13 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   else
     eos = eos + 1;
   /* Check length. */
-  if (eos-desc > REND_DESC_MAX_SIZE) {
+  if (eos - desc > REND_DESC_MAX_SIZE) {
     /* XXXX+ If we are parsing this descriptor as a server, this
      * should be a protocol warning. */
-    log_warn(LD_REND, "Descriptor length is %d which exceeds "
+    log_warn(LD_REND,
+             "Descriptor length is %d which exceeds "
              "maximum rendezvous descriptor size of %d bytes.",
-             (int)(eos-desc), REND_DESC_MAX_SIZE);
+             (int)(eos - desc), REND_DESC_MAX_SIZE);
     goto err;
   }
   /* Tokenize descriptor. */
@@ -142,8 +139,8 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
     log_warn(LD_REND, "Invalid descriptor ID: '%s'", tok->args[0]);
     goto err;
   }
-  if (base32_decode(desc_id_out, DIGEST_LEN,
-                    tok->args[0], REND_DESC_ID_V2_LEN_BASE32) != DIGEST_LEN) {
+  if (base32_decode(desc_id_out, DIGEST_LEN, tok->args[0],
+                    REND_DESC_ID_V2_LEN_BASE32) != DIGEST_LEN) {
     log_warn(LD_REND,
              "Descriptor ID has wrong length or illegal characters: %s",
              tok->args[0]);
@@ -153,7 +150,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   tok = find_by_keyword(tokens, R_VERSION);
   tor_assert(tok->n_args == 1);
   result->version =
-    (int) tor_parse_long(tok->args[0], 10, 0, INT_MAX, &num_ok, NULL);
+      (int)tor_parse_long(tok->args[0], 10, 0, INT_MAX, &num_ok, NULL);
   if (result->version != 2 || !num_ok) {
     /* If it's <2, it shouldn't be under this format.  If the number
      * is greater than 2, we bumped it because we broke backward
@@ -186,8 +183,8 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
    * descriptor. */
   tok = find_by_keyword(tokens, R_PUBLICATION_TIME);
   tor_assert(tok->n_args == 1);
-  if (parse_iso_time_(tok->args[0], &result->timestamp,
-                      strict_time_fmt, 0) < 0) {
+  if (parse_iso_time_(tok->args[0], &result->timestamp, strict_time_fmt, 0) <
+      0) {
     log_warn(LD_REND, "Invalid publication time: '%s'", tok->args[0]);
     goto err;
   }
@@ -196,10 +193,10 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   tor_assert(tok->n_args == 1);
   versions = smartlist_new();
   smartlist_split_string(versions, tok->args[0], ",",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+                         SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, 0);
   for (i = 0; i < smartlist_len(versions); i++) {
-    version = (int) tor_parse_long(smartlist_get(versions, i),
-                                   10, 0, INT_MAX, &num_ok, NULL);
+    version = (int)tor_parse_long(smartlist_get(versions, i), 10, 0, INT_MAX,
+                                  &num_ok, NULL);
     if (!num_ok) /* It's a string; let's ignore it. */
       continue;
     if (version >= REND_PROTOCOL_VERSION_BITMASK_WIDTH)
@@ -214,11 +211,11 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   if (tok) {
     if (strcmp(tok->object_type, "MESSAGE")) {
       log_warn(LD_DIR, "Bad object type: introduction points should be of "
-               "type MESSAGE");
+                       "type MESSAGE");
       goto err;
     }
-    *intro_points_encrypted_out = tor_memdup(tok->object_body,
-                                             tok->object_size);
+    *intro_points_encrypted_out =
+        tor_memdup(tok->object_body, tok->object_size);
     *intro_points_encrypted_size_out = tok->object_size;
   } else {
     *intro_points_encrypted_out = NULL;
@@ -234,18 +231,17 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
     log_warn(LD_REND, "Unable to compute rend descriptor public key digest");
     goto err;
   }
-  rend_get_descriptor_id_bytes(test_desc_id, public_key_hash,
-                               secret_id_part);
+  rend_get_descriptor_id_bytes(test_desc_id, public_key_hash, secret_id_part);
   if (tor_memneq(desc_id_out, test_desc_id, DIGEST_LEN)) {
     log_warn(LD_REND, "Parsed descriptor ID does not match "
-             "computed descriptor ID.");
+                      "computed descriptor ID.");
     goto err;
   }
   goto done;
- err:
+err:
   rend_service_descriptor_free(result);
   result = NULL;
- done:
+done:
   if (tokens) {
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_free(tokens);
@@ -279,12 +275,12 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
   }
   if (ipos_encrypted[0] == (int)REND_BASIC_AUTH) {
     char iv[CIPHER_IV_LEN], client_id[REND_BASIC_AUTH_CLIENT_ID_LEN],
-         session_key[CIPHER_KEY_LEN], *dec;
+        session_key[CIPHER_KEY_LEN], *dec;
     int declen, client_blocks;
     size_t pos = 0, len, client_entries_len;
     crypto_digest_t *digest;
     crypto_cipher_t *cipher;
-    client_blocks = (int) ipos_encrypted[1];
+    client_blocks = (int)ipos_encrypted[1];
     client_entries_len = client_blocks * REND_BASIC_AUTH_CLIENT_MULTIPLE *
                          REND_BASIC_AUTH_CLIENT_ENTRY_LEN;
     if (ipos_encrypted_size < 2 + client_entries_len + CIPHER_IV_LEN + 1) {
@@ -296,17 +292,17 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
     digest = crypto_digest_new();
     crypto_digest_add_bytes(digest, descriptor_cookie, REND_DESC_COOKIE_LEN);
     crypto_digest_add_bytes(digest, iv, CIPHER_IV_LEN);
-    crypto_digest_get_digest(digest, client_id,
-                             REND_BASIC_AUTH_CLIENT_ID_LEN);
+    crypto_digest_get_digest(digest, client_id, REND_BASIC_AUTH_CLIENT_ID_LEN);
     crypto_digest_free(digest);
     for (pos = 2; pos < 2 + client_entries_len;
          pos += REND_BASIC_AUTH_CLIENT_ENTRY_LEN) {
       if (tor_memeq(ipos_encrypted + pos, client_id,
-                  REND_BASIC_AUTH_CLIENT_ID_LEN)) {
+                    REND_BASIC_AUTH_CLIENT_ID_LEN)) {
         /* Attempt to decrypt introduction points. */
         cipher = crypto_cipher_new(descriptor_cookie);
-        if (crypto_cipher_decrypt(cipher, session_key, ipos_encrypted
-                                  + pos + REND_BASIC_AUTH_CLIENT_ID_LEN,
+        if (crypto_cipher_decrypt(cipher, session_key,
+                                  ipos_encrypted + pos +
+                                      REND_BASIC_AUTH_CLIENT_ID_LEN,
                                   CIPHER_KEY_LEN) < 0) {
           log_warn(LD_REND, "Could not decrypt session key for client.");
           crypto_cipher_free(cipher);
@@ -316,8 +312,8 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
 
         len = ipos_encrypted_size - 2 - client_entries_len - CIPHER_IV_LEN;
         dec = tor_malloc_zero(len + 1);
-        declen = crypto_cipher_decrypt_with_iv(session_key, dec, len,
-            ipos_encrypted + 2 + client_entries_len,
+        declen = crypto_cipher_decrypt_with_iv(
+            session_key, dec, len, ipos_encrypted + 2 + client_entries_len,
             ipos_encrypted_size - 2 - client_entries_len);
 
         if (declen < 0) {
@@ -337,7 +333,7 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
       }
     }
     log_warn(LD_REND, "Could not decrypt introduction points. Please "
-             "check your authorization for this service!");
+                      "check your authorization for this service!");
     return -1;
   } else if (ipos_encrypted[0] == (int)REND_STEALTH_AUTH) {
     char *dec;
@@ -349,11 +345,9 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
     }
     dec = tor_malloc_zero(ipos_encrypted_size - CIPHER_IV_LEN - 1 + 1);
 
-    declen = crypto_cipher_decrypt_with_iv(descriptor_cookie, dec,
-                                           ipos_encrypted_size -
-                                               CIPHER_IV_LEN - 1,
-                                           ipos_encrypted + 1,
-                                           ipos_encrypted_size - 1);
+    declen = crypto_cipher_decrypt_with_iv(
+        descriptor_cookie, dec, ipos_encrypted_size - CIPHER_IV_LEN - 1,
+        ipos_encrypted + 1, ipos_encrypted_size - 1);
 
     if (declen < 0) {
       log_warn(LD_REND, "Decrypting introduction points failed!");
@@ -384,7 +378,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
   directory_token_t *tok;
   rend_intro_point_t *intro;
   extend_info_t *info;
-  int result, num_ok=1;
+  int result, num_ok = 1;
   memarea_t *area = NULL;
   tor_assert(parsed);
   /** Function may only be invoked once. */
@@ -400,16 +394,17 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
   parsed->intro_nodes = smartlist_new();
   area = memarea_new();
 
-  while (!fast_memcmpstart(current_ipo, end_of_intro_points-current_ipo,
-                      "introduction-point ")) {
+  while (!fast_memcmpstart(current_ipo, end_of_intro_points - current_ipo,
+                           "introduction-point ")) {
     /* Determine end of string. */
-    const char *eos = tor_memstr(current_ipo, end_of_intro_points-current_ipo,
-                                 "\nintroduction-point ");
+    const char *eos =
+        tor_memstr(current_ipo, end_of_intro_points - current_ipo,
+                   "\nintroduction-point ");
     if (!eos)
       eos = end_of_intro_points;
     else
-      eos = eos+1;
-    tor_assert(eos <= intro_points_encoded+intro_points_encoded_size);
+      eos = eos + 1;
+    tor_assert(eos <= intro_points_encoded + intro_points_encoded_size);
     /* Free tokens and clear token list. */
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_clear(tokens);
@@ -431,9 +426,8 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
     info = intro->extend_info = tor_malloc_zero(sizeof(extend_info_t));
     /* Parse identifier. */
     tok = find_by_keyword(tokens, R_IPO_IDENTIFIER);
-    if (base32_decode(info->identity_digest, DIGEST_LEN,
-                      tok->args[0], REND_INTRO_POINT_ID_LEN_BASE32) !=
-        DIGEST_LEN) {
+    if (base32_decode(info->identity_digest, DIGEST_LEN, tok->args[0],
+                      REND_INTRO_POINT_ID_LEN_BASE32) != DIGEST_LEN) {
       log_warn(LD_REND,
                "Identity digest has wrong length or illegal characters: %s",
                tok->args[0]);
@@ -446,7 +440,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
                   info->identity_digest, DIGEST_LEN);
     /* Parse IP address. */
     tok = find_by_keyword(tokens, R_IPO_IP_ADDRESS);
-    if (tor_addr_parse(&info->addr, tok->args[0])<0) {
+    if (tor_addr_parse(&info->addr, tok->args[0]) < 0) {
       log_warn(LD_REND, "Could not parse introduction point address.");
       rend_intro_point_free(intro);
       goto err;
@@ -459,8 +453,8 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
 
     /* Parse onion port. */
     tok = find_by_keyword(tokens, R_IPO_ONION_PORT);
-    info->port = (uint16_t) tor_parse_long(tok->args[0],10,1,65535,
-                                           &num_ok,NULL);
+    info->port =
+        (uint16_t)tor_parse_long(tok->args[0], 10, 1, 65535, &num_ok, NULL);
     if (!info->port || !num_ok) {
       log_warn(LD_REND, "Introduction point onion port %s is invalid",
                escaped(tok->args[0]));
@@ -480,8 +474,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
     /* Parse service key. */
     tok = find_by_keyword(tokens, R_IPO_SERVICE_KEY);
     if (!crypto_pk_public_exponent_ok(tok->key)) {
-      log_warn(LD_REND,
-               "Introduction point key had invalid exponent.");
+      log_warn(LD_REND, "Introduction point key had invalid exponent.");
       rend_intro_point_free(intro);
       goto err;
     }
@@ -493,10 +486,10 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
   result = smartlist_len(parsed->intro_nodes);
   goto done;
 
- err:
+err:
   result = -1;
 
- done:
+done:
   /* Free tokens and clear token list. */
   if (tokens) {
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
@@ -559,15 +552,19 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
     tor_assert(tok->n_args == 1);
 
     if (!rend_valid_client_name(tok->args[0])) {
-      log_warn(LD_CONFIG, "Illegal client name: %s. (Length must be "
+      log_warn(LD_CONFIG,
+               "Illegal client name: %s. (Length must be "
                "between 1 and %d, and valid characters are "
-               "[A-Za-z0-9+-_].)", tok->args[0], REND_CLIENTNAME_MAX_LEN);
+               "[A-Za-z0-9+-_].)",
+               tok->args[0], REND_CLIENTNAME_MAX_LEN);
       goto err;
     }
     /* Check if client name is duplicate. */
     if (strmap_get(parsed_clients, tok->args[0])) {
-      log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains a "
-               "duplicate client name: '%s'. Ignoring.", tok->args[0]);
+      log_warn(LD_CONFIG,
+               "HiddenServiceAuthorizeClient contains a "
+               "duplicate client name: '%s'. Ignoring.",
+               tok->args[0]);
       goto err;
     }
     parsed_entry = tor_malloc_zero(sizeof(rend_authorized_client_t));
@@ -593,9 +590,9 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
   }
   result = strmap_size(parsed_clients);
   goto done;
- err:
+err:
   result = -1;
- done:
+done:
   /* Free tokens and clear token list. */
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   smartlist_free(tokens);

@@ -43,7 +43,7 @@ create_descriptor(rend_service_descriptor_t **generated, char **service_id,
   crypto_pk_t *pk2 = NULL;
   int i;
 
-  *service_id = tor_malloc(REND_SERVICE_ID_LEN_BASE32+1);
+  *service_id = tor_malloc(REND_SERVICE_ID_LEN_BASE32 + 1);
   pk1 = pk_generate(0);
   pk2 = pk_generate(1);
 
@@ -87,8 +87,7 @@ mock_rend_data(const char *onion_address)
           sizeof(v2_data->onion_address));
   v2_data->auth_type = REND_NO_AUTH;
   rend_query->hsdirs_fp = smartlist_new();
-  smartlist_add(rend_query->hsdirs_fp, tor_memdup("aaaaaaaaaaaaaaaaaaaaaaaa",
-                                                 DIGEST_LEN));
+  smartlist_add(rend_query->hsdirs_fp,
+                tor_memdup("aaaaaaaaaaaaaaaaaaaaaaaa", DIGEST_LEN));
   return rend_query;
 }
-

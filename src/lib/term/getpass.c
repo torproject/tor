@@ -14,29 +14,30 @@
 #include "lib/malloc/malloc.h"
 
 #ifdef _WIN32
-#include <windows.h>
-#include <conio.h>
-#include <wchar.h>
+#  include <windows.h>
+#  include <conio.h>
+#  include <wchar.h>
 /* Some mingw headers lack these. :p */
-#if defined(HAVE_DECL__GETWCH) && !HAVE_DECL__GETWCH
+#  if defined(HAVE_DECL__GETWCH) && !HAVE_DECL__GETWCH
 wint_t _getwch(void);
-#endif
-#ifndef WEOF
-#define WEOF (wchar_t)(0xFFFF)
-#endif
-#if defined(HAVE_DECL_SECUREZEROMEMORY) && !HAVE_DECL_SECUREZEROMEMORY
+#  endif
+#  ifndef WEOF
+#    define WEOF (wchar_t)(0xFFFF)
+#  endif
+#  if defined(HAVE_DECL_SECUREZEROMEMORY) && !HAVE_DECL_SECUREZEROMEMORY
 static inline void
 SecureZeroMemory(PVOID ptr, SIZE_T cnt)
 {
-  volatile char *vcptr = (volatile char*)ptr;
+  volatile char *vcptr = (volatile char *)ptr;
   while (cnt--)
     *vcptr++ = 0;
 }
-#endif /* defined(HAVE_DECL_SECUREZEROMEMORY) && !HAVE_DECL_SECUREZEROMEMORY */
+#  endif /* defined(HAVE_DECL_SECUREZEROMEMORY) && \
+            !HAVE_DECL_SECUREZEROMEMORY */
 #elif defined(HAVE_READPASSPHRASE_H)
-#include <readpassphrase.h>
+#  include <readpassphrase.h>
 #else
-#include "ext/tor_readpassphrase.h"
+#  include "ext/tor_readpassphrase.h"
 #endif /* defined(_WIN32) || ... */
 
 #include <stdlib.h>
@@ -69,37 +70,34 @@ tor_getpass(const char *prompt, char *output, size_t buflen)
   while (ptr < lastch) {
     wint_t ch = _getwch();
     switch (ch) {
-      case '\r':
-      case '\n':
-      case WEOF:
-        goto done_reading;
-      case 3:
-        goto done; /* Can't actually read ctrl-c this way. */
-      case '\b':
-        if (ptr > buf)
-          --ptr;
-        continue;
-      case 0:
-      case 0xe0:
-        ch = _getwch(); /* Ignore; this is a function or arrow key */
-        break;
-      default:
-        *ptr++ = ch;
-        break;
+    case '\r':
+    case '\n':
+    case WEOF:
+      goto done_reading;
+    case 3:
+      goto done; /* Can't actually read ctrl-c this way. */
+    case '\b':
+      if (ptr > buf)
+        --ptr;
+      continue;
+    case 0:
+    case 0xe0:
+      ch = _getwch(); /* Ignore; this is a function or arrow key */
+      break;
+    default:
+      *ptr++ = ch;
+      break;
     }
   }
- done_reading:
-  ;
+done_reading:;
 
-#ifndef WC_ERR_INVALID_CHARS
-#define WC_ERR_INVALID_CHARS 0x80
-#endif
+#  ifndef WC_ERR_INVALID_CHARS
+#    define WC_ERR_INVALID_CHARS 0x80
+#  endif
 
   /* Now convert it to UTF-8 */
-  r = WideCharToMultiByte(CP_UTF8,
-                          WC_NO_BEST_FIT_CHARS|WC_ERR_INVALID_CHARS,
-                          buf, (int)(ptr-buf),
-                          output, (int)(buflen-1),
+  r = WideCharToMultiByte(CP_UTF8, WC_NO_BEST_FIT_CHARS | WC_ERR_INVALID_CHARS,
+                          buf, (int)(ptr - buf), output, (int)(buflen - 1),
                           NULL, NULL);
   if (r <= 0) {
     r = -1;
@@ -110,11 +108,11 @@ tor_getpass(const char *prompt, char *output, size_t buflen)
 
   output[r] = 0;
 
- done:
-  SecureZeroMemory(buf, sizeof(wchar_t)*buflen);
+done:
+  SecureZeroMemory(buf, sizeof(wchar_t) * buflen);
   tor_free(buf);
   return r;
 #else
-#error "No implementation for tor_getpass found!"
+#  error "No implementation for tor_getpass found!"
 #endif /* defined(HAVE_READPASSPHRASE) || ... */
 }

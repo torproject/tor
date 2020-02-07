@@ -19,10 +19,10 @@
  * has it.}
  **/
 #ifndef MAX
-#define MAX(a,b) ( ((a)<(b)) ? (b) : (a) )
+#  define MAX(a, b) (((a) < (b)) ? (b) : (a))
 #endif
 #ifndef MIN
-#define MIN(a,b) ( ((a)>(b)) ? (b) : (a) )
+#  define MIN(a, b) (((a) > (b)) ? (b) : (a))
 #endif
 
 /* Return <b>v</b> if it's between <b>min</b> and <b>max</b>.  Otherwise
@@ -31,12 +31,10 @@
  *
  * Requires that <b>min</b> is no more than <b>max</b>. May evaluate any of
  * its arguments more than once! */
-#define CLAMP(min,v,max)                        \
-  ( ((v) < (min)) ? (min) :                     \
-    ((v) > (max)) ? (max) :                     \
-    (v) )
+#define CLAMP(min, v, max) \
+  (((v) < (min)) ? (min) : ((v) > (max)) ? (max) : (v))
 
 /** Give the absolute value of <b>x</b>, independent of its type. */
-#define ABS(x) ( ((x)<0) ? -(x) : (x) )
+#define ABS(x) (((x) < 0) ? -(x) : (x))
 
 #endif /* !defined(TOR_INTMATH_CMP_H) */

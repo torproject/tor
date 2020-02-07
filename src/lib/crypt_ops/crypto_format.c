@@ -12,7 +12,7 @@
 
 #include "orconfig.h"
 #ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
+#  include <sys/stat.h>
 #endif
 #include "lib/container/smartlist.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
@@ -39,10 +39,8 @@
  * 24.
  **/
 int
-crypto_write_tagged_contents_to_file(const char *fname,
-                                     const char *typestring,
-                                     const char *tag,
-                                     const uint8_t *data,
+crypto_write_tagged_contents_to_file(const char *fname, const char *typestring,
+                                     const char *tag, const uint8_t *data,
                                      size_t datalen)
 {
   char header[32];
@@ -51,19 +49,19 @@ crypto_write_tagged_contents_to_file(const char *fname,
   int r = -1;
 
   memset(header, 0, sizeof(header));
-  if (tor_snprintf(header, sizeof(header),
-                   "== %s: %s ==", typestring, tag) < 0)
+  if (tor_snprintf(header, sizeof(header), "== %s: %s ==", typestring, tag) <
+      0)
     goto end;
   ch0.bytes = header;
   ch0.len = 32;
-  ch1.bytes = (const char*) data;
+  ch1.bytes = (const char *)data;
   ch1.len = datalen;
   smartlist_add(chunks, &ch0);
   smartlist_add(chunks, &ch1);
 
   r = write_chunks_to_file(fname, chunks, 1, 0);
 
- end:
+end:
   smartlist_free(chunks);
   return r;
 }
@@ -75,10 +73,8 @@ crypto_write_tagged_contents_to_file(const char *fname,
  * data on success.  Preserves the errno from reading the file. */
 ssize_t
 crypto_read_tagged_contents_from_file(const char *fname,
-                                      const char *typestring,
-                                      char **tag_out,
-                                      uint8_t *data_out,
-                                      ssize_t data_out_len)
+                                      const char *typestring, char **tag_out,
+                                      uint8_t *data_out, ssize_t data_out_len)
 {
   char prefix[33];
   char *content = NULL;
@@ -89,8 +85,8 @@ crypto_read_tagged_contents_from_file(const char *fname,
 
   *tag_out = NULL;
   st.st_size = 0;
-  content = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
-  if (! content) {
+  content = read_file_to_str(fname, RFTS_BIN | RFTS_IGNORE_MISSING, &st);
+  if (!content) {
     saved_errno = errno;
     goto end;
   }
@@ -104,25 +100,24 @@ crypto_read_tagged_contents_from_file(const char *fname,
   prefix[32] = 0;
   /* Check type, extract tag. */
   if (strcmpstart(prefix, "== ") || strcmpend(prefix, " ==") ||
-      ! fast_mem_is_zero(prefix+strlen(prefix), 32-strlen(prefix))) {
+      !fast_mem_is_zero(prefix + strlen(prefix), 32 - strlen(prefix))) {
     saved_errno = EINVAL;
     goto end;
   }
 
-  if (strcmpstart(prefix+3, typestring) ||
-      3+strlen(typestring) >= 32 ||
-      strcmpstart(prefix+3+strlen(typestring), ": ")) {
+  if (strcmpstart(prefix + 3, typestring) || 3 + strlen(typestring) >= 32 ||
+      strcmpstart(prefix + 3 + strlen(typestring), ": ")) {
     saved_errno = EINVAL;
     goto end;
   }
 
-  *tag_out = tor_strndup(prefix+5+strlen(typestring),
-                         strlen(prefix)-8-strlen(typestring));
+  *tag_out = tor_strndup(prefix + 5 + strlen(typestring),
+                         strlen(prefix) - 8 - strlen(typestring));
 
-  memcpy(data_out, content+32, st_size-32);
+  memcpy(data_out, content + 32, st_size - 32);
   r = st_size - 32;
 
- end:
+end:
   if (content)
     memwipe(content, 0, st_size);
   tor_free(content);
@@ -140,31 +135,28 @@ crypto_read_tagged_contents_from_file(const char *fname,
  * ED25519_BASE64_LEN.
  */
 void
-curve25519_public_to_base64(char *output,
-                            const curve25519_public_key_t *pkey)
+curve25519_public_to_base64(char *output, const curve25519_public_key_t *pkey)
 {
   char buf[128];
-  int n = base64_encode(buf, sizeof(buf),
-                        (const char*)pkey->public_key,
+  int n = base64_encode(buf, sizeof(buf), (const char *)pkey->public_key,
                         CURVE25519_PUBKEY_LEN, 0);
   /* These asserts should always succeed, unless there is a bug in
    * base64_encode(). */
   tor_assert(n == CURVE25519_BASE64_PADDED_LEN);
   tor_assert(buf[CURVE25519_BASE64_PADDED_LEN] == '\0');
-  memcpy(output, buf, CURVE25519_BASE64_PADDED_LEN+1);
+  memcpy(output, buf, CURVE25519_BASE64_PADDED_LEN + 1);
 }
 
 /** Try to decode a base64-encoded curve25519 public key from <b>input</b>
  * into the object at <b>pkey</b>. Return 0 on success, -1 on failure.
  * Accepts keys with or without a trailing "=". */
 int
-curve25519_public_from_base64(curve25519_public_key_t *pkey,
-                              const char *input)
+curve25519_public_from_base64(curve25519_public_key_t *pkey, const char *input)
 {
   size_t len = strlen(input);
   if (len == CURVE25519_BASE64_PADDED_LEN - 1) {
     /* not padded */
-    return digest256_from_base64((char*)pkey->public_key, input);
+    return digest256_from_base64((char *)pkey->public_key, input);
   } else if (len == CURVE25519_BASE64_PADDED_LEN) {
     char buf[128];
     if (base64_decode(buf, sizeof(buf), input, len) != CURVE25519_PUBKEY_LEN)
@@ -183,7 +175,7 @@ curve25519_public_from_base64(curve25519_public_key_t *pkey,
 const char *
 ed25519_fmt(const ed25519_public_key_t *pkey)
 {
-  static char formatted[ED25519_BASE64_LEN+1];
+  static char formatted[ED25519_BASE64_LEN + 1];
   if (pkey) {
     if (ed25519_public_key_is_zero(pkey)) {
       strlcpy(formatted, "<unset>", sizeof(formatted));
@@ -200,10 +192,9 @@ ed25519_fmt(const ed25519_public_key_t *pkey)
  * success, store the value in <b>pkey</b> and return 0. Otherwise return
  * -1. */
 int
-ed25519_public_from_base64(ed25519_public_key_t *pkey,
-                           const char *input)
+ed25519_public_from_base64(ed25519_public_key_t *pkey, const char *input)
 {
-  return digest256_from_base64((char*)pkey->pubkey, input);
+  return digest256_from_base64((char *)pkey->pubkey, input);
 }
 
 /** Encode the public key <b>pkey</b> into the buffer at <b>output</b>,
@@ -215,8 +206,7 @@ ed25519_public_from_base64(ed25519_public_key_t *pkey,
  * CURVE25519_BASE64_PADDED_LEN.
  */
 void
-ed25519_public_to_base64(char *output,
-                         const ed25519_public_key_t *pkey)
+ed25519_public_to_base64(char *output, const ed25519_public_key_t *pkey)
 {
   digest256_to_base64(output, (const char *)pkey->pubkey);
 }
@@ -227,8 +217,7 @@ ed25519_public_to_base64(char *output,
  * Can not fail.
  */
 void
-ed25519_signature_to_base64(char *output,
-                            const ed25519_signature_t *sig)
+ed25519_signature_to_base64(char *output, const ed25519_signature_t *sig)
 {
   char buf[256];
   int n = base64_encode_nopad(buf, sizeof(buf), sig->sig, ED25519_SIG_LEN);
@@ -236,21 +225,20 @@ ed25519_signature_to_base64(char *output,
    * base64_encode_nopad(). */
   tor_assert(n == ED25519_SIG_BASE64_LEN);
   tor_assert(buf[ED25519_SIG_BASE64_LEN] == '\0');
-  memcpy(output, buf, ED25519_SIG_BASE64_LEN+1);
+  memcpy(output, buf, ED25519_SIG_BASE64_LEN + 1);
 }
 
 /** Try to decode the string <b>input</b> into an ed25519 signature. On
  * success, store the value in <b>sig</b> and return 0. Otherwise return
  * -1. */
 int
-ed25519_signature_from_base64(ed25519_signature_t *sig,
-                              const char *input)
+ed25519_signature_from_base64(ed25519_signature_t *sig, const char *input)
 {
   if (strlen(input) != ED25519_SIG_BASE64_LEN)
     return -1;
   char decoded[128];
-  int n = base64_decode(decoded, sizeof(decoded), input,
-                        ED25519_SIG_BASE64_LEN);
+  int n =
+      base64_decode(decoded, sizeof(decoded), input, ED25519_SIG_BASE64_LEN);
   if (n < 0 || n != ED25519_SIG_LEN)
     return -1;
   memcpy(sig->sig, decoded, ED25519_SIG_LEN);
@@ -266,13 +254,13 @@ void
 digest_to_base64(char *d64, const char *digest)
 {
   char buf[256];
-  int n = base64_encode_nopad(buf, sizeof(buf),
-                              (const uint8_t *)digest, DIGEST_LEN);
+  int n = base64_encode_nopad(buf, sizeof(buf), (const uint8_t *)digest,
+                              DIGEST_LEN);
   /* These asserts should always succeed, unless there is a bug in
    * base64_encode_nopad(). */
   tor_assert(n == BASE64_DIGEST_LEN);
   tor_assert(buf[BASE64_DIGEST_LEN] == '\0');
-  memcpy(d64, buf, BASE64_DIGEST_LEN+1);
+  memcpy(d64, buf, BASE64_DIGEST_LEN + 1);
 }
 
 /** Given a base64 encoded, nul-terminated digest in <b>d64</b> (without
@@ -295,13 +283,13 @@ void
 digest256_to_base64(char *d64, const char *digest)
 {
   char buf[256];
-  int n = base64_encode_nopad(buf, sizeof(buf),
-                              (const uint8_t *)digest, DIGEST256_LEN);
+  int n = base64_encode_nopad(buf, sizeof(buf), (const uint8_t *)digest,
+                              DIGEST256_LEN);
   /* These asserts should always succeed, unless there is a bug in
    * base64_encode_nopad(). */
   tor_assert(n == BASE64_DIGEST256_LEN);
   tor_assert(buf[BASE64_DIGEST256_LEN] == '\0');
-  memcpy(d64, buf, BASE64_DIGEST256_LEN+1);
+  memcpy(d64, buf, BASE64_DIGEST256_LEN + 1);
 }
 
 /** Given a base64 encoded, nul-terminated digest in <b>d64</b> (without

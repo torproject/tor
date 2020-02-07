@@ -21,19 +21,19 @@
 #include "lib/err/torerr.h"
 
 #ifdef HAVE_EXECINFO_H
-#include <execinfo.h>
+#  include <execinfo.h>
 #endif
 #ifdef HAVE_FCNTL_H
-#include <fcntl.h>
+#  include <fcntl.h>
 #endif
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #ifdef HAVE_SIGNAL_H
-#include <signal.h>
+#  include <signal.h>
 #endif
 #ifdef HAVE_SYS_PARAM_H
-#include <sys/param.h>
+#  include <sys/param.h>
 #endif
 #include <errno.h>
 #include <stdlib.h>
@@ -41,15 +41,15 @@
 #include <stdio.h>
 
 #ifdef HAVE_CYGWIN_SIGNAL_H
-#include <cygwin/signal.h>
+#  include <cygwin/signal.h>
 #elif defined(HAVE_SYS_UCONTEXT_H)
-#include <sys/ucontext.h>
+#  include <sys/ucontext.h>
 #elif defined(HAVE_UCONTEXT_H)
-#include <ucontext.h>
+#  include <ucontext.h>
 #endif /* defined(HAVE_CYGWIN_SIGNAL_H) || ... */
 
 #ifdef HAVE_PTHREAD_H
-#include <pthread.h>
+#  include <pthread.h>
 #endif
 
 #include "lib/cc/ctassert.h"
@@ -57,14 +57,14 @@
 #define BACKTRACE_PRIVATE
 #include "lib/err/backtrace.h"
 
-#if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
-  defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION) && \
-  defined(HAVE_PTHREAD_H)
-#define USE_BACKTRACE
+#if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) &&           \
+    defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION) && \
+    defined(HAVE_PTHREAD_H)
+#  define USE_BACKTRACE
 #endif
 
 #if !defined(USE_BACKTRACE)
-#define NO_BACKTRACE_IMPL
+#  define NO_BACKTRACE_IMPL
 #endif
 
 // Redundant with util.h, but doing it here so we can avoid that dependency.
@@ -76,9 +76,9 @@ static char bt_version[128] = "";
 #ifdef USE_BACKTRACE
 
 /** Largest stack depth to try to dump. */
-#define MAX_DEPTH 256
+#  define MAX_DEPTH 256
 /** The size of the callback buffer, so we can clear it in unlock_cb_buf(). */
-#define SIZEOF_CB_BUF (MAX_DEPTH * sizeof(void *))
+#  define SIZEOF_CB_BUF (MAX_DEPTH * sizeof(void *))
 /** Protects cb_buf from concurrent access. Pthreads, since this code
  * is Unix-only, and since this code needs to be lowest-level. */
 static pthread_mutex_t cb_buf_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -118,24 +118,24 @@ unlock_cb_buf(void **cb_buf)
 void
 clean_backtrace(void **stack, size_t depth, const ucontext_t *ctx)
 {
-#ifdef PC_FROM_UCONTEXT
-#if defined(__linux__)
+#  ifdef PC_FROM_UCONTEXT
+#    if defined(__linux__)
   const size_t n = 1;
-#elif defined(__darwin__) || defined(__APPLE__) || defined(OpenBSD) \
-  || defined(__FreeBSD__)
+#    elif defined(__darwin__) || defined(__APPLE__) || defined(OpenBSD) || \
+        defined(__FreeBSD__)
   const size_t n = 2;
-#else
+#    else
   const size_t n = 1;
-#endif /* defined(__linux__) || ... */
+#    endif /* defined(__linux__) || ... */
   if (depth <= n)
     return;
 
-  stack[n] = (void*) ctx->PC_FROM_UCONTEXT;
-#else /* !defined(PC_FROM_UCONTEXT) */
-  (void) depth;
-  (void) ctx;
-  (void) stack;
-#endif /* defined(PC_FROM_UCONTEXT) */
+  stack[n] = (void *)ctx->PC_FROM_UCONTEXT;
+#  else /* !defined(PC_FROM_UCONTEXT) */
+  (void)depth;
+  (void)ctx;
+  (void)stack;
+#  endif /* defined(PC_FROM_UCONTEXT) */
 }
 
 /** Log a message <b>msg</b> at <b>severity</b> in <b>domain</b>, and follow
@@ -161,17 +161,17 @@ log_backtrace_impl(int severity, log_domain_mask_t domain, const char *msg,
     goto done;
     /* LCOV_EXCL_STOP */
   }
-  for (i=0; i < depth; ++i) {
+  for (i = 0; i < depth; ++i) {
     logger(severity, domain, "    %s", symbols[i]);
   }
   raw_free(symbols);
 
- done:
+done:
   unlock_cb_buf(cb_buf);
 }
 
 static void crash_handler(int sig, siginfo_t *si, void *ctx_)
-  __attribute__((noreturn));
+    __attribute__((noreturn));
 
 /** Signal handler: write a crash message with a stack trace, and die. */
 static void
@@ -179,13 +179,13 @@ crash_handler(int sig, siginfo_t *si, void *ctx_)
 {
   char buf[40];
   size_t depth;
-  ucontext_t *ctx = (ucontext_t *) ctx_;
+  ucontext_t *ctx = (ucontext_t *)ctx_;
   int n_fds, i;
   const int *fds = NULL;
 
   void **cb_buf = lock_cb_buf();
 
-  (void) si;
+  (void)si;
 
   depth = backtrace(cb_buf, MAX_DEPTH);
   /* Clean up the top stack frame so we get the real function
@@ -194,11 +194,10 @@ crash_handler(int sig, siginfo_t *si, void *ctx_)
 
   format_dec_number_sigsafe((unsigned)sig, buf, sizeof(buf));
 
-  tor_log_err_sigsafe(bt_version, " died: Caught signal ", buf, "\n",
-                      NULL);
+  tor_log_err_sigsafe(bt_version, " died: Caught signal ", buf, "\n", NULL);
 
   n_fds = tor_log_get_sigsafe_err_fds(&fds);
-  for (i=0; i < n_fds; ++i)
+  for (i = 0; i < n_fds; ++i)
     backtrace_symbols_fd(cb_buf, (int)depth, fds[i]);
 
   unlock_cb_buf(cb_buf);
@@ -219,22 +218,22 @@ dump_stack_symbols_to_error_fds(void)
   depth = backtrace(cb_buf, MAX_DEPTH);
 
   n_fds = tor_log_get_sigsafe_err_fds(&fds);
-  for (i=0; i < n_fds; ++i)
+  for (i = 0; i < n_fds; ++i)
     backtrace_symbols_fd(cb_buf, (int)depth, fds[i]);
 
   unlock_cb_buf(cb_buf);
 }
 
 /* The signals that we want our backtrace handler to trap */
-static int trap_signals[] = { SIGSEGV, SIGILL, SIGFPE, SIGBUS, SIGSYS,
-  SIGIO, -1 };
+static int trap_signals[] = {SIGSEGV, SIGILL, SIGFPE, SIGBUS,
+                             SIGSYS,  SIGIO,  -1};
 
 /** Install signal handlers as needed so that when we crash, we produce a
  * useful stack trace. Return 0 on success, -errno on failure. */
 static int
 install_bt_handler(void)
 {
-  int i, rv=0;
+  int i, rv = 0;
 
   struct sigaction sa;
 
@@ -258,7 +257,7 @@ install_bt_handler(void)
     char **symbols;
     void **cb_buf = lock_cb_buf();
     size_t depth = backtrace(cb_buf, MAX_DEPTH);
-    symbols = backtrace_symbols(cb_buf, (int) depth);
+    symbols = backtrace_symbols(cb_buf, (int)depth);
     if (symbols)
       raw_free(symbols);
     unlock_cb_buf(cb_buf);
@@ -296,8 +295,8 @@ void
 log_backtrace_impl(int severity, log_domain_mask_t domain, const char *msg,
                    tor_log_fn logger)
 {
-  logger(severity, domain, "%s: %s. (Stack trace not available)",
-         bt_version, msg);
+  logger(severity, domain, "%s: %s. (Stack trace not available)", bt_version,
+         msg);
 }
 
 static int

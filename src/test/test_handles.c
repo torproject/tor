@@ -15,7 +15,7 @@ typedef struct demo_t {
 } demo_t;
 
 HANDLE_DECL(demo, demo_t, static)
-#define demo_handle_free(h)    \
+#define demo_handle_free(h) \
   FREE_AND_NULL(demo_handle_t, demo_handle_free_, (h))
 HANDLE_IMPL(demo, demo_t, static)
 
@@ -39,7 +39,7 @@ demo_free(demo_t *d)
 static void
 test_handle_basic(void *arg)
 {
-  (void) arg;
+  (void)arg;
   demo_t *d1 = NULL, *d2 = NULL;
   demo_handle_t *wr1 = NULL, *wr2 = NULL, *wr3 = NULL, *wr4 = NULL;
 
@@ -80,7 +80,7 @@ test_handle_basic(void *arg)
 
   demo_handle_free(wr3);
   wr3 = NULL;
- done:
+done:
   demo_handle_free(wr1);
   demo_handle_free(wr2);
   demo_handle_free(wr3);
@@ -89,10 +89,9 @@ test_handle_basic(void *arg)
   demo_free(d2);
 }
 
-#define HANDLE_TEST(name, flags)                       \
-  { #name, test_handle_ ##name, (flags), NULL, NULL }
+#define HANDLE_TEST(name, flags)                   \
+  {                                                \
+#    name, test_handle_##name, (flags), NULL, NULL \
+  }
 
-struct testcase_t handle_tests[] = {
-  HANDLE_TEST(basic, 0),
-  END_OF_TESTCASES
-};
+struct testcase_t handle_tests[] = {HANDLE_TEST(basic, 0), END_OF_TESTCASES};

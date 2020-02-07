@@ -15,13 +15,12 @@
 static void
 test_protover_parse(void *arg)
 {
-  (void) arg;
+  (void)arg;
 #ifdef HAVE_RUST
   /** This test is disabled on rust builds, because it only exists to test
    * internal C functions. */
   tt_skip();
- done:
-  ;
+done:;
 #else /* !defined(HAVE_RUST) */
   char *re_encoded = NULL;
 
@@ -84,7 +83,7 @@ test_protover_parse(void *arg)
   tt_assert(re_encoded);
   tt_str_op(re_encoded, OP_EQ, orig);
 
- done:
+done:
   if (elts)
     SMARTLIST_FOREACH(elts, proto_entry_t *, ent, proto_entry_free(ent));
   smartlist_free(elts);
@@ -128,20 +127,20 @@ test_protover_parse_fail(void *arg)
   tt_ptr_op(elts, OP_EQ, NULL);
 
   /* Protocol name too long */
-  elts = parse_protocol_list("DoSaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-                           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-                           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  elts =
+      parse_protocol_list("DoSaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
   tt_ptr_op(elts, OP_EQ, NULL);
 
 #endif /* defined(HAVE_RUST) */
- done:
-  ;
+done:;
 }
 
 static void
 test_protover_vote(void *arg)
 {
-  (void) arg;
+  (void)arg;
 
   smartlist_t *lst = smartlist_new();
   char *result = protover_compute_vote(lst, 1);
@@ -149,12 +148,12 @@ test_protover_vote(void *arg)
   tt_str_op(result, OP_EQ, "");
   tor_free(result);
 
-  smartlist_add(lst, (void*) "Foo=1-10,500 Bar=1,3-7,8");
+  smartlist_add(lst, (void *)"Foo=1-10,500 Bar=1,3-7,8");
   result = protover_compute_vote(lst, 1);
   tt_str_op(result, OP_EQ, "Bar=1,3-8 Foo=1-10,500");
   tor_free(result);
 
-  smartlist_add(lst, (void*) "Quux=123-456,78 Bar=2-6,8 Foo=9");
+  smartlist_add(lst, (void *)"Quux=123-456,78 Bar=2-6,8 Foo=9");
   result = protover_compute_vote(lst, 1);
   tt_str_op(result, OP_EQ, "Bar=1-8 Foo=1-10,500 Quux=78,123-456");
   tor_free(result);
@@ -170,22 +169,22 @@ test_protover_vote(void *arg)
 
   /* Don't count double-voting. */
   smartlist_clear(lst);
-  smartlist_add(lst, (void*) "Foo=1 Foo=1");
-  smartlist_add(lst, (void*) "Bar=1-2,2-3");
+  smartlist_add(lst, (void *)"Foo=1 Foo=1");
+  smartlist_add(lst, (void *)"Bar=1-2,2-3");
   result = protover_compute_vote(lst, 2);
   tt_str_op(result, OP_EQ, "");
   tor_free(result);
 
   /* Bad votes: the result must be empty */
   smartlist_clear(lst);
-  smartlist_add(lst, (void*) "Faux=10-5");
+  smartlist_add(lst, (void *)"Faux=10-5");
   result = protover_compute_vote(lst, 1);
   tt_str_op(result, OP_EQ, "");
   tor_free(result);
 
   /* This fails, since "-0" is not valid. */
   smartlist_clear(lst);
-  smartlist_add(lst, (void*) "Faux=-0");
+  smartlist_add(lst, (void *)"Faux=-0");
   result = protover_compute_vote(lst, 1);
   tt_str_op(result, OP_EQ, "");
   tor_free(result);
@@ -194,14 +193,14 @@ test_protover_vote(void *arg)
 
   /* Just below the threshold: Rust */
   smartlist_clear(lst);
-  smartlist_add(lst, (void*) "Sleen=1-500");
+  smartlist_add(lst, (void *)"Sleen=1-500");
   result = protover_compute_vote(lst, 1);
   tt_str_op(result, OP_EQ, "Sleen=1-500");
   tor_free(result);
 
   /* Just below the threshold: C */
   smartlist_clear(lst);
-  smartlist_add(lst, (void*) "Sleen=1-65536");
+  smartlist_add(lst, (void *)"Sleen=1-65536");
   result = protover_compute_vote(lst, 1);
   tt_str_op(result, OP_EQ, "Sleen=1-65536");
   tor_free(result);
@@ -209,42 +208,43 @@ test_protover_vote(void *arg)
   /* Large protover lists that exceed the threshold */
 
   /* By adding two votes, C allows us to exceed the limit */
-  smartlist_add(lst, (void*) "Sleen=1-65536");
-  smartlist_add(lst, (void*) "Sleen=100000");
+  smartlist_add(lst, (void *)"Sleen=1-65536");
+  smartlist_add(lst, (void *)"Sleen=100000");
   result = protover_compute_vote(lst, 1);
   tt_str_op(result, OP_EQ, "Sleen=1-65536,100000");
   tor_free(result);
 
   /* Large integers */
   smartlist_clear(lst);
-  smartlist_add(lst, (void*) "Sleen=4294967294");
+  smartlist_add(lst, (void *)"Sleen=4294967294");
   result = protover_compute_vote(lst, 1);
   tt_str_op(result, OP_EQ, "Sleen=4294967294");
   tor_free(result);
 
   /* This parses, but fails at the vote stage */
   smartlist_clear(lst);
-  smartlist_add(lst, (void*) "Sleen=4294967295");
+  smartlist_add(lst, (void *)"Sleen=4294967295");
   result = protover_compute_vote(lst, 1);
   tt_str_op(result, OP_EQ, "");
   tor_free(result);
 
   smartlist_clear(lst);
-  smartlist_add(lst, (void*) "Sleen=4294967296");
+  smartlist_add(lst, (void *)"Sleen=4294967296");
   result = protover_compute_vote(lst, 1);
   tt_str_op(result, OP_EQ, "");
   tor_free(result);
 
   /* Protocol name too long */
   smartlist_clear(lst);
-  smartlist_add(lst, (void*) "DoSaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-                         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-                         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  smartlist_add(lst,
+                (void *)"DoSaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
   result = protover_compute_vote(lst, 1);
   tt_str_op(result, OP_EQ, "");
   tor_free(result);
 
- done:
+done:
   tor_free(result);
   smartlist_free(lst);
 }
@@ -268,44 +268,44 @@ test_protover_all_supported(void *arg)
   tt_ptr_op(msg, OP_EQ, NULL);
 
   // Some things we don't support
-  tt_assert(! protover_all_supported("Wombat=9", NULL));
-  tt_assert(! protover_all_supported("Wombat=9", &msg));
+  tt_assert(!protover_all_supported("Wombat=9", NULL));
+  tt_assert(!protover_all_supported("Wombat=9", &msg));
   tt_str_op(msg, OP_EQ, "Wombat=9");
   tor_free(msg);
-  tt_assert(! protover_all_supported("Link=999", &msg));
+  tt_assert(!protover_all_supported("Link=999", &msg));
   tt_str_op(msg, OP_EQ, "Link=999");
   tor_free(msg);
 
   // Mix of things we support and things we don't
-  tt_assert(! protover_all_supported("Link=3-4 Wombat=9", &msg));
+  tt_assert(!protover_all_supported("Link=3-4 Wombat=9", &msg));
   tt_str_op(msg, OP_EQ, "Wombat=9");
   tor_free(msg);
 
   /* Mix of things we support and don't support within a single protocol
    * which we do support */
-  tt_assert(! protover_all_supported("Link=3-999", &msg));
+  tt_assert(!protover_all_supported("Link=3-999", &msg));
   tt_str_op(msg, OP_EQ, "Link=6-999");
   tor_free(msg);
-  tt_assert(! protover_all_supported("Link=1-3,345-666", &msg));
+  tt_assert(!protover_all_supported("Link=1-3,345-666", &msg));
   tt_str_op(msg, OP_EQ, "Link=345-666");
   tor_free(msg);
-  tt_assert(! protover_all_supported("Link=1-3,5-12", &msg));
+  tt_assert(!protover_all_supported("Link=1-3,5-12", &msg));
   tt_str_op(msg, OP_EQ, "Link=6-12");
   tor_free(msg);
 
   /* Mix of protocols we do support and some we don't, where the protocols
    * we do support have some versions we don't support. */
-  tt_assert(! protover_all_supported("Link=1-3,5-12 Quokka=9000-9001", &msg));
+  tt_assert(!protover_all_supported("Link=1-3,5-12 Quokka=9000-9001", &msg));
   tt_str_op(msg, OP_EQ, "Link=6-12 Quokka=9000-9001");
   tor_free(msg);
 
   /* We shouldn't be able to DoS ourselves parsing a large range. */
-  tt_assert(! protover_all_supported("Sleen=1-2147483648", &msg));
+  tt_assert(!protover_all_supported("Sleen=1-2147483648", &msg));
   tt_str_op(msg, OP_EQ, "Sleen=1-2147483648");
   tor_free(msg);
 
   /* This case is allowed. */
-  tt_assert(! protover_all_supported("Sleen=1-4294967294", &msg));
+  tt_assert(!protover_all_supported("Sleen=1-4294967294", &msg));
   tt_str_op(msg, OP_EQ, "Sleen=1-4294967294");
   tor_free(msg);
 
@@ -329,15 +329,16 @@ test_protover_all_supported(void *arg)
   /* Protocol name too long */
 #ifndef HAVE_RUST // XXXXXX ?????
   tor_capture_bugs_(1);
-  tt_assert(protover_all_supported(
-                 "DoSaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-                 "aaaaaaaaaaaa=1-65536", &msg));
+  tt_assert(
+      protover_all_supported("DoSaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                             "aaaaaaaaaaaa=1-65536",
+                             &msg));
   tor_end_capture_bugs_();
 #endif /* !defined(HAVE_RUST) */
 
- done:
+done:
   tor_end_capture_bugs_();
   tor_free(msg);
 }
@@ -351,8 +352,7 @@ test_protover_list_supports_protocol_returns_true(void *arg)
   int is_supported = protocol_list_supports_protocol(protocols, PRT_LINK, 1);
   tt_int_op(is_supported, OP_EQ, 1);
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -364,8 +364,7 @@ test_protover_list_supports_protocol_for_unsupported_returns_false(void *arg)
   int is_supported = protocol_list_supports_protocol(protocols, PRT_LINK, 10);
   tt_int_op(is_supported, OP_EQ, 0);
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -379,22 +378,21 @@ test_protover_supports_version(void *arg)
   tt_assert(!protocol_list_supports_protocol("Link=3-6", PRT_LINKAUTH, 3));
 
   tt_assert(!protocol_list_supports_protocol("Link=4-6 LinkAuth=3",
-                                            PRT_LINKAUTH, 2));
-  tt_assert(protocol_list_supports_protocol("Link=4-6 LinkAuth=3",
-                                            PRT_LINKAUTH, 3));
+                                             PRT_LINKAUTH, 2));
+  tt_assert(
+      protocol_list_supports_protocol("Link=4-6 LinkAuth=3", PRT_LINKAUTH, 3));
   tt_assert(!protocol_list_supports_protocol("Link=4-6 LinkAuth=3",
                                              PRT_LINKAUTH, 4));
   tt_assert(!protocol_list_supports_protocol_or_later("Link=4-6 LinkAuth=3",
-                                             PRT_LINKAUTH, 4));
+                                                      PRT_LINKAUTH, 4));
   tt_assert(protocol_list_supports_protocol_or_later("Link=4-6 LinkAuth=3",
-                                             PRT_LINKAUTH, 3));
+                                                     PRT_LINKAUTH, 3));
   tt_assert(protocol_list_supports_protocol_or_later("Link=4-6 LinkAuth=3",
-                                             PRT_LINKAUTH, 2));
+                                                     PRT_LINKAUTH, 2));
 
   tt_assert(!protocol_list_supports_protocol_or_later("Link=4-6 LinkAuth=3",
                                                       PRT_DESC, 2));
- done:
- ;
+done:;
 }
 
 /* This could be MAX_PROTOCOLS_TO_EXPAND, but that's not exposed by protover */
@@ -443,171 +441,148 @@ test_protover_supported_protocols(void *arg)
 
   /* Test for new Link in the code, that hasn't been added to supported
    * protocols */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_LINK,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_LINK,
                                             MAX_LINK_PROTO));
   for (uint16_t i = 0; i < MAX_PROTOCOLS_TO_TEST; i++) {
     if (is_or_protocol_version_known(i)) {
-      tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                                PRT_LINK,
-                                                i));
+      tt_assert(
+          protocol_list_supports_protocol(supported_protocols, PRT_LINK, i));
     }
   }
 
 #ifdef HAVE_WORKING_TOR_TLS_GET_TLSSECRETS
   /* Legacy LinkAuth does not appear anywhere in the code. */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_LINKAUTH,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_LINKAUTH,
                                             PROTOVER_LINKAUTH_V1));
 #endif /* defined(HAVE_WORKING_TOR_TLS_GET_TLSSECRETS) */
   /* Latest LinkAuth is not exposed in the headers. */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_LINKAUTH,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_LINKAUTH,
                                             PROTOVER_LINKAUTH_V3));
   /* Is there any way to test for new LinkAuth? */
 
   /* Relay protovers do not appear anywhere in the code. */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_RELAY,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_RELAY,
                                             PROTOVER_RELAY_V1));
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_RELAY,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_RELAY,
                                             PROTOVER_RELAY_V2));
   /* Is there any way to test for new Relay? */
 
   /* We could test legacy HSIntro by calling rend_service_update_descriptor(),
    * and checking the protocols field. But that's unlikely to change, so
    * we just use a hard-coded value. */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_HSINTRO,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_HSINTRO,
                                             PROTOVER_HSINTRO_V2));
   /* Test for HSv3 HSIntro */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_HSINTRO,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_HSINTRO,
                                             PROTOVER_HS_INTRO_V3));
   /* Is there any way to test for new HSIntro? */
 
   /* Legacy HSRend does not appear anywhere in the code. */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_HSREND,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_HSREND,
                                             PROTOVER_HS_RENDEZVOUS_POINT_V2));
   /* Test for HSv3 HSRend */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_HSREND,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_HSREND,
                                             PROTOVER_HS_RENDEZVOUS_POINT_V3));
   /* Is there any way to test for new HSRend? */
 
   /* Legacy HSDir does not appear anywhere in the code. */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_HSDIR,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_HSDIR,
                                             PROTOVER_HSDIR_V2));
   /* Test for HSv3 HSDir */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_HSDIR,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_HSDIR,
                                             PROTOVER_HSDIR_V3));
   /* Is there any way to test for new HSDir? */
 
   /* No DirCache versions appear anywhere in the code. */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_DIRCACHE,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_DIRCACHE,
                                             PROTOVER_DIRCACHE_V1));
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_DIRCACHE,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_DIRCACHE,
                                             PROTOVER_DIRCACHE_V2));
   /* Is there any way to test for new DirCache? */
 
   /* No Desc versions appear anywhere in the code. */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_DESC,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_DESC,
                                             PROTOVER_DESC_V1));
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_DESC,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_DESC,
                                             PROTOVER_DESC_V2));
   /* Is there any way to test for new Desc? */
 
   /* No Microdesc versions appear anywhere in the code. */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_MICRODESC,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_MICRODESC,
                                             PROTOVER_MICRODESC_V1));
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_MICRODESC,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_MICRODESC,
                                             PROTOVER_MICRODESC_V2));
   /* Is there any way to test for new Microdesc? */
 
   /* No Cons versions appear anywhere in the code. */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_CONS,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_CONS,
                                             PROTOVER_CONS_V1));
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_CONS,
+  tt_assert(protocol_list_supports_protocol(supported_protocols, PRT_CONS,
                                             PROTOVER_CONS_V2));
   /* Is there any way to test for new Cons? */
 
- done:
- ;
+done:;
 }
 
 static void
 test_protover_vote_roundtrip(void *args)
 {
-  (void) args;
+  (void)args;
   static const struct {
     const char *input;
     const char *expected_output;
   } examples[] = {
-    { "Risqu\u00e9=1", NULL },
-    { ",,,=1", NULL },
-    { "\xc1=1", NULL },
-    { "Foo_Bar=1", NULL },
-    { "Fkrkljdsf", NULL },
-    { "Zn=4294967295", NULL },
-    { "Zn=4294967295-1", NULL },
-    { "Zn=4294967293-4294967295", NULL },
-    /* Will fail because of 4294967295. */
-    { "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=1,4294967295",
-       NULL },
-    { "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=1,4294967294",
-      "Bar=3 Foo=1,3 Quux=9-12,14-16,900 Zn=1,4294967294" },
-    { "Zu16=1,65536", "Zu16=1,65536" },
-    { "N-1=1,2", "N-1=1-2" },
-    { "-1=4294967295", NULL },
-    { "-1=3", "-1=3" },
-    /* junk. */
-    { "!!3@*", NULL },
-    /* Missing equals sign */
-    { "Link=4 Haprauxymatyve Desc=9", NULL },
-    { "Link=4 Haprauxymatyve=7 Desc=9",
-      "Desc=9 Haprauxymatyve=7 Link=4" },
-    { "=10-11", NULL },
-    { "X=10-11", "X=10-11" },
-    { "Link=4 =3 Desc=9", NULL },
-    { "Link=4 Z=3 Desc=9", "Desc=9 Link=4 Z=3" },
-    { "Link=fred", NULL },
-    { "Link=1,fred", NULL },
-    { "Link=1,fred,3", NULL },
-    { "Link=1,9-8,3", NULL },
-    { "Faux=-0", NULL },
-    { "Faux=0--0", NULL },
-    { "Faux=-1", NULL },
-    { "Faux=-1-3", NULL },
-    { "Faux=1--1", NULL },
-    { "Link=1-2-", NULL },
-    { "Link=1-2-3", NULL },
-    { "Faux=1-2-", NULL },
-    { "Faux=1-2-3", NULL },
-    { "Link=\t1,3", NULL },
-    { "Link=1\n,3", NULL },
-    { "Faux=1,\r3", NULL },
-    { "Faux=1,3\f", NULL },
-    /* Large integers */
-    { "Link=4294967296", NULL },
-    /* Large range */
-    { "Sleen=1-501", "Sleen=1-501" },
-    { "Sleen=1-65537", NULL },
-    /* Both C/Rust implementations should be able to handle this mild DoS. */
-    { "Sleen=1-2147483648", NULL },
-    /* Rust tests are built in debug mode, so ints are bounds-checked. */
-    { "Sleen=1-4294967295", NULL },
+      {"Risqu\u00e9=1", NULL},
+      {",,,=1", NULL},
+      {"\xc1=1", NULL},
+      {"Foo_Bar=1", NULL},
+      {"Fkrkljdsf", NULL},
+      {"Zn=4294967295", NULL},
+      {"Zn=4294967295-1", NULL},
+      {"Zn=4294967293-4294967295", NULL},
+      /* Will fail because of 4294967295. */
+      {"Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=1,4294967295", NULL},
+      {"Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=1,4294967294",
+       "Bar=3 Foo=1,3 Quux=9-12,14-16,900 Zn=1,4294967294"},
+      {"Zu16=1,65536", "Zu16=1,65536"},
+      {"N-1=1,2", "N-1=1-2"},
+      {"-1=4294967295", NULL},
+      {"-1=3", "-1=3"},
+      /* junk. */
+      {"!!3@*", NULL},
+      /* Missing equals sign */
+      {"Link=4 Haprauxymatyve Desc=9", NULL},
+      {"Link=4 Haprauxymatyve=7 Desc=9", "Desc=9 Haprauxymatyve=7 Link=4"},
+      {"=10-11", NULL},
+      {"X=10-11", "X=10-11"},
+      {"Link=4 =3 Desc=9", NULL},
+      {"Link=4 Z=3 Desc=9", "Desc=9 Link=4 Z=3"},
+      {"Link=fred", NULL},
+      {"Link=1,fred", NULL},
+      {"Link=1,fred,3", NULL},
+      {"Link=1,9-8,3", NULL},
+      {"Faux=-0", NULL},
+      {"Faux=0--0", NULL},
+      {"Faux=-1", NULL},
+      {"Faux=-1-3", NULL},
+      {"Faux=1--1", NULL},
+      {"Link=1-2-", NULL},
+      {"Link=1-2-3", NULL},
+      {"Faux=1-2-", NULL},
+      {"Faux=1-2-3", NULL},
+      {"Link=\t1,3", NULL},
+      {"Link=1\n,3", NULL},
+      {"Faux=1,\r3", NULL},
+      {"Faux=1,3\f", NULL},
+      /* Large integers */
+      {"Link=4294967296", NULL},
+      /* Large range */
+      {"Sleen=1-501", "Sleen=1-501"},
+      {"Sleen=1-65537", NULL},
+      /* Both C/Rust implementations should be able to handle this mild DoS. */
+      {"Sleen=1-2147483648", NULL},
+      /* Rust tests are built in debug mode, so ints are bounds-checked. */
+      {"Sleen=1-4294967295", NULL},
   };
   unsigned u;
   smartlist_t *votes = smartlist_new();
@@ -617,7 +592,7 @@ test_protover_vote_roundtrip(void *args)
     const char *input = examples[u].input;
     const char *expected_output = examples[u].expected_output;
 
-    smartlist_add(votes, (void*)input);
+    smartlist_add(votes, (void *)input);
     result = protover_compute_vote(votes, 1);
     if (expected_output != NULL) {
       tt_str_op(result, OP_EQ, expected_output);
@@ -629,23 +604,24 @@ test_protover_vote_roundtrip(void *args)
     tor_free(result);
   }
 
- done:
+done:
   smartlist_free(votes);
   tor_free(result);
 }
 
-#define PV_TEST(name, flags)                       \
-  { #name, test_protover_ ##name, (flags), NULL, NULL }
+#define PV_TEST(name, flags)                         \
+  {                                                  \
+#    name, test_protover_##name, (flags), NULL, NULL \
+  }
 
 struct testcase_t protover_tests[] = {
-  PV_TEST(parse, 0),
-  PV_TEST(parse_fail, 0),
-  PV_TEST(vote, 0),
-  PV_TEST(all_supported, 0),
-  PV_TEST(list_supports_protocol_for_unsupported_returns_false, 0),
-  PV_TEST(list_supports_protocol_returns_true, 0),
-  PV_TEST(supports_version, 0),
-  PV_TEST(supported_protocols, 0),
-  PV_TEST(vote_roundtrip, 0),
-  END_OF_TESTCASES
-};
+    PV_TEST(parse, 0),
+    PV_TEST(parse_fail, 0),
+    PV_TEST(vote, 0),
+    PV_TEST(all_supported, 0),
+    PV_TEST(list_supports_protocol_for_unsupported_returns_false, 0),
+    PV_TEST(list_supports_protocol_returns_true, 0),
+    PV_TEST(supports_version, 0),
+    PV_TEST(supported_protocols, 0),
+    PV_TEST(vote_roundtrip, 0),
+    END_OF_TESTCASES};

@@ -45,8 +45,7 @@ entryconn_rewrite_teardown(const struct testcase_t *tc, void *arg)
 }
 
 static struct testcase_setup_t test_rewrite_setup = {
-  entryconn_rewrite_setup, entryconn_rewrite_teardown
-};
+    entryconn_rewrite_setup, entryconn_rewrite_teardown};
 
 /* Simple rewrite: no changes needed */
 static void
@@ -70,8 +69,7 @@ test_entryconn_rewrite_basic(void *arg)
   tt_str_op(ec->socks_request->address, OP_EQ, "www.torproject.org");
   tt_str_op(ec->original_dest_address, OP_EQ, "www.torproject.org");
 
- done:
-  ;
+done:;
 }
 
 /* Rewrite but reject because of disallowed .exit */
@@ -90,8 +88,7 @@ test_entryconn_rewrite_bad_dotexit(void *arg)
   tt_int_op(rr.should_close, OP_EQ, 1);
   tt_int_op(rr.end_reason, OP_EQ, END_STREAM_REASON_TORPROTOCOL);
 
- done:
-  ;
+done:;
 }
 
 /* Automap on resolve, connect to automapped address, resolve again and get
@@ -100,7 +97,7 @@ static void
 test_entryconn_rewrite_automap_ipv4(void *arg)
 {
   entry_connection_t *ec = arg;
-  entry_connection_t *ec2=NULL, *ec3=NULL;
+  entry_connection_t *ec2 = NULL, *ec3 = NULL;
   rewrite_result_t rr;
   char *msg = NULL;
 
@@ -125,7 +122,7 @@ test_entryconn_rewrite_automap_ipv4(void *arg)
   tt_str_op(rr.orig_address, OP_EQ, "www.mit.edu");
   tt_str_op(ec->original_dest_address, OP_EQ, "www.mit.edu");
 
-  tt_assert(!strcmpstart(ec->socks_request->address,"127.202."));
+  tt_assert(!strcmpstart(ec->socks_request->address, "127.202."));
 
   /* Connect to it and make sure we get the original address back. */
   strlcpy(ec2->socks_request->address, ec->socks_request->address,
@@ -157,10 +154,9 @@ test_entryconn_rewrite_automap_ipv4(void *arg)
   tt_str_op(rr.orig_address, OP_EQ, "www.mit.edu");
   tt_str_op(ec3->original_dest_address, OP_EQ, "www.mit.edu");
 
-  tt_str_op(ec3->socks_request->address, OP_EQ,
-            ec->socks_request->address);
+  tt_str_op(ec3->socks_request->address, OP_EQ, ec->socks_request->address);
 
- done:
+done:
   connection_free_minimal(ENTRY_TO_CONN(ec2));
   connection_free_minimal(ENTRY_TO_CONN(ec3));
 }
@@ -171,8 +167,8 @@ static void
 test_entryconn_rewrite_automap_ipv6(void *arg)
 {
   (void)arg;
-  entry_connection_t *ec =NULL;
-  entry_connection_t *ec2=NULL, *ec3=NULL;
+  entry_connection_t *ec = NULL;
+  entry_connection_t *ec2 = NULL, *ec3 = NULL;
   rewrite_result_t rr;
   char *msg = NULL;
 
@@ -199,7 +195,7 @@ test_entryconn_rewrite_automap_ipv6(void *arg)
   tt_str_op(ec->original_dest_address, OP_EQ, "www.mit.edu");
 
   /* Yes, this [ should be here. */
-  tt_assert(!strcmpstart(ec->socks_request->address,"[fe80:"));
+  tt_assert(!strcmpstart(ec->socks_request->address, "[fe80:"));
 
   /* Connect to it and make sure we get the original address back. */
   strlcpy(ec2->socks_request->address, ec->socks_request->address,
@@ -231,10 +227,9 @@ test_entryconn_rewrite_automap_ipv6(void *arg)
   tt_str_op(rr.orig_address, OP_EQ, "www.mit.edu");
   tt_str_op(ec3->original_dest_address, OP_EQ, "www.mit.edu");
 
-  tt_str_op(ec3->socks_request->address, OP_EQ,
-            ec->socks_request->address);
+  tt_str_op(ec3->socks_request->address, OP_EQ, ec->socks_request->address);
 
- done:
+done:
   connection_free_minimal(ENTRY_TO_CONN(ec));
   connection_free_minimal(ENTRY_TO_CONN(ec2));
   connection_free_minimal(ENTRY_TO_CONN(ec3));
@@ -299,14 +294,12 @@ test_entryconn_rewrite_cached_dns_ipv4(void *arg)
   entry_connection_t *ec = arg;
   rewrite_result_t rr;
   time_t expires = time(NULL) + 3600;
-  entry_connection_t *ec2=NULL;
+  entry_connection_t *ec2 = NULL;
 
   ec2 = entry_connection_new(CONN_TYPE_AP, AF_INET);
 
   addressmap_register("www.friendly.example.com",
-                      tor_strdup("240.240.241.241"),
-                      expires,
-                      ADDRMAPSRC_DNS,
+                      tor_strdup("240.240.241.241"), expires, ADDRMAPSRC_DNS,
                       0, 0);
 
   strlcpy(ec->socks_request->address, "www.friendly.example.com",
@@ -337,7 +330,7 @@ test_entryconn_rewrite_cached_dns_ipv4(void *arg)
   tt_str_op(rr.orig_address, OP_EQ, "www.friendly.example.com");
   tt_str_op(ec2->socks_request->address, OP_EQ, "240.240.241.241");
 
- done:
+done:
   connection_free_minimal(ENTRY_TO_CONN(ec2));
 }
 
@@ -348,18 +341,15 @@ test_entryconn_rewrite_cached_dns_ipv6(void *arg)
   entry_connection_t *ec = NULL;
   rewrite_result_t rr;
   time_t expires = time(NULL) + 3600;
-  entry_connection_t *ec2=NULL;
+  entry_connection_t *ec2 = NULL;
 
   (void)arg;
 
-  ec  = entry_connection_new(CONN_TYPE_AP, AF_INET6);
+  ec = entry_connection_new(CONN_TYPE_AP, AF_INET6);
   ec2 = entry_connection_new(CONN_TYPE_AP, AF_INET6);
 
-  addressmap_register("www.friendly.example.com",
-                      tor_strdup("[::f00f]"),
-                      expires,
-                      ADDRMAPSRC_DNS,
-                      0, 0);
+  addressmap_register("www.friendly.example.com", tor_strdup("[::f00f]"),
+                      expires, ADDRMAPSRC_DNS, 0, 0);
 
   strlcpy(ec->socks_request->address, "www.friendly.example.com",
           sizeof(ec->socks_request->address));
@@ -389,7 +379,7 @@ test_entryconn_rewrite_cached_dns_ipv6(void *arg)
   tt_str_op(rr.orig_address, OP_EQ, "www.friendly.example.com");
   tt_str_op(ec2->socks_request->address, OP_EQ, "[::f00f]");
 
- done:
+done:
   connection_free_minimal(ENTRY_TO_CONN(ec));
   connection_free_minimal(ENTRY_TO_CONN(ec2));
 }
@@ -430,7 +420,7 @@ test_entryconn_rewrite_unmapped_virtual(void *arg)
   tt_i64_op(rr.map_expires, OP_EQ, TIME_MAX);
   tt_int_op(rr.exit_source, OP_EQ, ADDRMAPSRC_NONE);
 
- done:
+done:
   connection_free_minimal(ENTRY_TO_CONN(ec2));
 }
 
@@ -441,8 +431,8 @@ test_entryconn_rewrite_mapaddress(void *arg)
   entry_connection_t *ec = arg;
   rewrite_result_t rr;
 
-  config_line_append(&get_options_mutable()->AddressMap,
-                     "MapAddress", "meta metaobjects.example");
+  config_line_append(&get_options_mutable()->AddressMap, "MapAddress",
+                     "meta metaobjects.example");
   config_register_addressmaps(get_options());
 
   strlcpy(ec->socks_request->address, "meta",
@@ -457,8 +447,7 @@ test_entryconn_rewrite_mapaddress(void *arg)
   tt_int_op(rr.exit_source, OP_EQ, ADDRMAPSRC_NONE);
   tt_str_op(ec->socks_request->address, OP_EQ, "metaobjects.example");
 
- done:
-  ;
+done:;
 }
 
 /* Reject reverse lookups of internal address. */
@@ -474,14 +463,14 @@ test_entryconn_rewrite_reject_internal_reverse(void *arg)
   connection_ap_handshake_rewrite(ec, &rr);
 
   tt_int_op(rr.should_close, OP_EQ, 1);
-  tt_int_op(rr.end_reason, OP_EQ, END_STREAM_REASON_SOCKSPROTOCOL |
-            END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
+  tt_int_op(rr.end_reason, OP_EQ,
+            END_STREAM_REASON_SOCKSPROTOCOL |
+                END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
   tt_int_op(rr.automap, OP_EQ, 0);
   tt_i64_op(rr.map_expires, OP_EQ, TIME_MAX);
   tt_int_op(rr.exit_source, OP_EQ, ADDRMAPSRC_NONE);
 
- done:
-  ;
+done:;
 }
 
 /* Rewrite into .exit because of virtual address mapping.  */
@@ -489,14 +478,13 @@ static void
 test_entryconn_rewrite_automap_exit(void *arg)
 {
   entry_connection_t *ec = arg;
-  entry_connection_t *ec2=NULL;
+  entry_connection_t *ec2 = NULL;
   rewrite_result_t rr;
   char *msg = NULL;
 
   ec2 = entry_connection_new(CONN_TYPE_AP, AF_INET);
 
-  smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes,
-                ".EXIT");
+  smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes, ".EXIT");
   parse_virtual_addr_network("127.1.0.0/16", AF_INET, 0, &msg);
 
   /* Try to automap this on resolve. */
@@ -511,7 +499,7 @@ test_entryconn_rewrite_automap_exit(void *arg)
   tt_int_op(rr.should_close, OP_EQ, 1);
   tt_int_op(rr.end_reason, OP_EQ, END_STREAM_REASON_TORPROTOCOL);
 
- done:
+done:
   connection_free_minimal(ENTRY_TO_CONN(ec2));
 }
 
@@ -522,8 +510,8 @@ test_entryconn_rewrite_mapaddress_exit(void *arg)
   entry_connection_t *ec = arg;
   rewrite_result_t rr;
 
-  config_line_append(&get_options_mutable()->AddressMap,
-                     "MapAddress", "*.example.com  *.example.com.abc.exit");
+  config_line_append(&get_options_mutable()->AddressMap, "MapAddress",
+                     "*.example.com  *.example.com.abc.exit");
   config_register_addressmaps(get_options());
 
   /* Automap this on resolve. */
@@ -539,8 +527,7 @@ test_entryconn_rewrite_mapaddress_exit(void *arg)
   tt_int_op(rr.exit_source, OP_EQ, ADDRMAPSRC_TORRC);
   tt_str_op(rr.orig_address, OP_EQ, "abc.example.com");
   tt_str_op(ec->socks_request->address, OP_EQ, "abc.example.com.abc.exit");
- done:
-  ;
+done:;
 }
 
 /* Map foo.onion to longthing.onion, and also automap. */
@@ -559,11 +546,10 @@ test_entryconn_rewrite_mapaddress_automap_onion(void *arg)
   ec4 = entry_connection_new(CONN_TYPE_AP, AF_INET);
 
   get_options_mutable()->AutomapHostsOnResolve = 1;
-  smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes,
-                ".onion");
+  smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes, ".onion");
   parse_virtual_addr_network("192.168.0.0/16", AF_INET, 0, &msg);
-  config_line_append(&get_options_mutable()->AddressMap,
-                     "MapAddress", "foo.onion abcdefghijklmnop.onion");
+  config_line_append(&get_options_mutable()->AddressMap, "MapAddress",
+                     "foo.onion abcdefghijklmnop.onion");
   config_register_addressmaps(get_options());
 
   /* Connect to foo.onion. */
@@ -602,8 +588,8 @@ test_entryconn_rewrite_mapaddress_automap_onion(void *arg)
   tt_int_op(rr.automap, OP_EQ, 0);
   tt_int_op(rr.should_close, OP_EQ, 0);
   tt_int_op(rr.end_reason, OP_EQ, 0);
-  tt_assert(!strcmpstart(ec3->socks_request->address,
-                         "abcdefghijklmnop.onion"));
+  tt_assert(
+      !strcmpstart(ec3->socks_request->address, "abcdefghijklmnop.onion"));
 
   /* Now resolve abcefghijklmnop.onion. */
   strlcpy(ec4->socks_request->address, "abcdefghijklmnop.onion",
@@ -622,7 +608,7 @@ test_entryconn_rewrite_mapaddress_automap_onion(void *arg)
    tt_str_op(ec4->socks_request->address, OP_EQ, ec2->socks_request->address);
   */
 
- done:
+done:
   connection_free_minimal(ENTRY_TO_CONN(ec2));
   connection_free_minimal(ENTRY_TO_CONN(ec3));
   connection_free_minimal(ENTRY_TO_CONN(ec4));
@@ -679,10 +665,10 @@ test_entryconn_rewrite_mapaddress_automap_onion_common(entry_connection_t *ec,
   tt_int_op(rr.should_close, OP_EQ, 0);
   tt_int_op(rr.end_reason, OP_EQ, 0);
   if (map_to_onion)
-    tt_assert(!strcmpstart(ec3->socks_request->address,
-                           "abcdefghijklmnop.onion"));
+    tt_assert(
+        !strcmpstart(ec3->socks_request->address, "abcdefghijklmnop.onion"));
 
- done:
+done:
   connection_free_minimal(ENTRY_TO_CONN(ec2));
   connection_free_minimal(ENTRY_TO_CONN(ec3));
 }
@@ -694,11 +680,10 @@ test_entryconn_rewrite_mapaddress_automap_onion2(void *arg)
 {
   char *msg = NULL;
   get_options_mutable()->AutomapHostsOnResolve = 1;
-  smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes,
-                ".onion");
+  smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes, ".onion");
   parse_virtual_addr_network("192.168.0.0/16", AF_INET, 0, &msg);
-  config_line_append(&get_options_mutable()->AddressMap,
-                     "MapAddress", "irc.example.com abcdefghijklmnop.onion");
+  config_line_append(&get_options_mutable()->AddressMap, "MapAddress",
+                     "irc.example.com abcdefghijklmnop.onion");
   config_register_addressmaps(get_options());
 
   test_entryconn_rewrite_mapaddress_automap_onion_common(arg, 1, 1);
@@ -708,8 +693,8 @@ test_entryconn_rewrite_mapaddress_automap_onion2(void *arg)
 static void
 test_entryconn_rewrite_mapaddress_automap_onion3(void *arg)
 {
-  config_line_append(&get_options_mutable()->AddressMap,
-                     "MapAddress", "irc.example.com abcdefghijklmnop.onion");
+  config_line_append(&get_options_mutable()->AddressMap, "MapAddress",
+                     "irc.example.com abcdefghijklmnop.onion");
   config_register_addressmaps(get_options());
 
   test_entryconn_rewrite_mapaddress_automap_onion_common(arg, 1, 0);
@@ -721,8 +706,7 @@ test_entryconn_rewrite_mapaddress_automap_onion4(void *arg)
 {
   char *msg = NULL;
   get_options_mutable()->AutomapHostsOnResolve = 1;
-  smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes,
-                ".onion");
+  smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes, ".onion");
   parse_virtual_addr_network("192.168.0.0/16", AF_INET, 0, &msg);
 
   test_entryconn_rewrite_mapaddress_automap_onion_common(arg, 0, 1);
@@ -735,14 +719,13 @@ test_entryconn_rewrite_onion_v2(void *arg)
   int retval;
   entry_connection_t *conn = arg;
 
-  (void) arg;
+  (void)arg;
 
   rend_cache_init();
 
   /* Make a SOCKS request */
   conn->socks_request->command = SOCKS_COMMAND_CONNECT;
-  strlcpy(conn->socks_request->address,
-          "pqeed46efnwmfuid.onion",
+  strlcpy(conn->socks_request->address, "pqeed46efnwmfuid.onion",
           sizeof(conn->socks_request->address));
 
   /* Make an onion connection using the SOCKS request */
@@ -757,13 +740,12 @@ test_entryconn_rewrite_onion_v2(void *arg)
   /* Check connection state after rewrite */
   tt_int_op(ENTRY_TO_CONN(conn)->state, OP_EQ, AP_CONN_STATE_RENDDESC_WAIT);
   /* check that the address got rewritten */
-  tt_str_op(conn->socks_request->address, OP_EQ,
-            "pqeed46efnwmfuid");
+  tt_str_op(conn->socks_request->address, OP_EQ, "pqeed46efnwmfuid");
   /* check that HS information got attached to the connection */
   tt_assert(ENTRY_TO_EDGE_CONN(conn)->rend_data);
   tt_assert(!ENTRY_TO_EDGE_CONN(conn)->hs_ident);
 
- done:
+done:
   rend_cache_free_all();
   /* 'conn' is cleaned by handler */
 }
@@ -775,7 +757,7 @@ test_entryconn_rewrite_onion_v3(void *arg)
   int retval;
   entry_connection_t *conn = arg;
 
-  (void) arg;
+  (void)arg;
 
   hs_cache_init();
 
@@ -805,33 +787,28 @@ test_entryconn_rewrite_onion_v3(void *arg)
   tt_assert(ENTRY_TO_EDGE_CONN(conn)->hs_ident);
   tt_assert(!ENTRY_TO_EDGE_CONN(conn)->rend_data);
 
- done:
+done:
   hs_free_all();
   /* 'conn' is cleaned by handler */
 }
 
-#define REWRITE(name)                           \
-  { #name, test_entryconn_##name, TT_FORK, &test_rewrite_setup, NULL }
+#define REWRITE(name)                                                \
+  {                                                                  \
+#    name, test_entryconn_##name, TT_FORK, &test_rewrite_setup, NULL \
+  }
 
 struct testcase_t entryconn_tests[] = {
-  REWRITE(rewrite_basic),
-  REWRITE(rewrite_bad_dotexit),
-  REWRITE(rewrite_automap_ipv4),
-  REWRITE(rewrite_automap_ipv6),
-  // REWRITE(rewrite_automap_reverse),
-  REWRITE(rewrite_cached_dns_ipv4),
-  REWRITE(rewrite_cached_dns_ipv6),
-  REWRITE(rewrite_unmapped_virtual),
-  REWRITE(rewrite_mapaddress),
-  REWRITE(rewrite_reject_internal_reverse),
-  REWRITE(rewrite_automap_exit),
-  REWRITE(rewrite_mapaddress_exit),
-  REWRITE(rewrite_mapaddress_automap_onion),
-  REWRITE(rewrite_mapaddress_automap_onion2),
-  REWRITE(rewrite_mapaddress_automap_onion3),
-  REWRITE(rewrite_mapaddress_automap_onion4),
-  REWRITE(rewrite_onion_v2),
-  REWRITE(rewrite_onion_v3),
+    REWRITE(rewrite_basic), REWRITE(rewrite_bad_dotexit),
+    REWRITE(rewrite_automap_ipv4), REWRITE(rewrite_automap_ipv6),
+    // REWRITE(rewrite_automap_reverse),
+    REWRITE(rewrite_cached_dns_ipv4), REWRITE(rewrite_cached_dns_ipv6),
+    REWRITE(rewrite_unmapped_virtual), REWRITE(rewrite_mapaddress),
+    REWRITE(rewrite_reject_internal_reverse), REWRITE(rewrite_automap_exit),
+    REWRITE(rewrite_mapaddress_exit),
+    REWRITE(rewrite_mapaddress_automap_onion),
+    REWRITE(rewrite_mapaddress_automap_onion2),
+    REWRITE(rewrite_mapaddress_automap_onion3),
+    REWRITE(rewrite_mapaddress_automap_onion4), REWRITE(rewrite_onion_v2),
+    REWRITE(rewrite_onion_v3),
 
-  END_OF_TESTCASES
-};
+    END_OF_TESTCASES};

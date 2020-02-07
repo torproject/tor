@@ -29,7 +29,8 @@ static int
 have_work(void)
 {
   smartlist_t *cp = get_channels_pending();
-  IF_BUG_ONCE(!cp) {
+  IF_BUG_ONCE(!cp)
+  {
     return 0; // channels_pending doesn't exist so... no work?
   }
   return smartlist_len(cp) > 0;
@@ -63,10 +64,10 @@ vanilla_scheduler_run(void)
 
   while (smartlist_len(cp) > 0) {
     /* Pop off a channel */
-    chan = smartlist_pqueue_pop(cp,
-                                scheduler_compare_channels,
+    chan = smartlist_pqueue_pop(cp, scheduler_compare_channels,
                                 offsetof(channel_t, sched_heap_idx));
-    IF_BUG_ONCE(!chan) {
+    IF_BUG_ONCE(!chan)
+    {
       /* Some-freaking-how a NULL got into the channels_pending. That should
        * never happen, but it should be harmless to ignore it and keep looping.
        */
@@ -77,16 +78,16 @@ vanilla_scheduler_run(void)
     n_cells = channel_num_cells_writeable(chan);
     if (n_cells > 0) {
       log_debug(LD_SCHED,
-                "Scheduler saw pending channel %"PRIu64 " at %p with "
+                "Scheduler saw pending channel %" PRIu64 " at %p with "
                 "%d cells writeable",
                 (chan->global_identifier), chan, n_cells);
 
       flushed = 0;
       while (flushed < n_cells) {
-        flushed_this_time =
-          channel_flush_some_cells(chan,
-                        MIN(MAX_FLUSH_CELLS, (size_t) n_cells - flushed));
-        if (flushed_this_time <= 0) break;
+        flushed_this_time = channel_flush_some_cells(
+            chan, MIN(MAX_FLUSH_CELLS, (size_t)n_cells - flushed));
+        if (flushed_this_time <= 0)
+          break;
         flushed += flushed_this_time;
       }
 
@@ -96,16 +97,16 @@ vanilla_scheduler_run(void)
       } else {
         /* The channel may still have some cells */
         if (channel_more_to_flush(chan)) {
-        /* The channel goes to either pending or waiting_to_write */
+          /* The channel goes to either pending or waiting_to_write */
           if (channel_num_cells_writeable(chan) > 0) {
             /* Add it back to pending later */
-            if (!to_readd) to_readd = smartlist_new();
+            if (!to_readd)
+              to_readd = smartlist_new();
             smartlist_add(to_readd, chan);
             log_debug(LD_SCHED,
-                      "Channel %"PRIu64 " at %p "
+                      "Channel %" PRIu64 " at %p "
                       "is still pending",
-                      (chan->global_identifier),
-                      chan);
+                      (chan->global_identifier), chan);
           } else {
             /* It's waiting to be able to write more */
             scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_TO_WRITE);
@@ -130,12 +131,11 @@ vanilla_scheduler_run(void)
 
       log_debug(LD_SCHED,
                 "Scheduler flushed %d cells onto pending channel "
-                "%"PRIu64 " at %p",
-                (int)flushed, (chan->global_identifier),
-                chan);
+                "%" PRIu64 " at %p",
+                (int)flushed, (chan->global_identifier), chan);
     } else {
       log_info(LD_SCHED,
-               "Scheduler saw pending channel %"PRIu64 " at %p with "
+               "Scheduler saw pending channel %" PRIu64 " at %p with "
                "no cells writeable",
                (chan->global_identifier), chan);
       /* Put it back to WAITING_TO_WRITE */
@@ -145,13 +145,11 @@ vanilla_scheduler_run(void)
 
   /* Readd any channels we need to */
   if (to_readd) {
-    SMARTLIST_FOREACH_BEGIN(to_readd, channel_t *, readd_chan) {
+    SMARTLIST_FOREACH_BEGIN (to_readd, channel_t *, readd_chan) {
       scheduler_set_channel_state(readd_chan, SCHED_CHAN_PENDING);
-      smartlist_pqueue_add(cp,
-                           scheduler_compare_channels,
-                           offsetof(channel_t, sched_heap_idx),
-                           readd_chan);
-    } SMARTLIST_FOREACH_END(readd_chan);
+      smartlist_pqueue_add(cp, scheduler_compare_channels,
+                           offsetof(channel_t, sched_heap_idx), readd_chan);
+    } SMARTLIST_FOREACH_END (readd_chan);
     smartlist_free(to_readd);
   }
 
@@ -162,14 +160,14 @@ vanilla_scheduler_run(void)
 
 /* Stores the vanilla scheduler function pointers. */
 static scheduler_t vanilla_scheduler = {
-  .type = SCHEDULER_VANILLA,
-  .free_all = NULL,
-  .on_channel_free = NULL,
-  .init = NULL,
-  .on_new_consensus = NULL,
-  .schedule = vanilla_scheduler_schedule,
-  .run = vanilla_scheduler_run,
-  .on_new_options = NULL,
+    .type = SCHEDULER_VANILLA,
+    .free_all = NULL,
+    .on_channel_free = NULL,
+    .init = NULL,
+    .on_new_consensus = NULL,
+    .schedule = vanilla_scheduler_schedule,
+    .run = vanilla_scheduler_run,
+    .on_new_options = NULL,
 };
 
 scheduler_t *

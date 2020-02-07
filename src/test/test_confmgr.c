@@ -61,35 +61,21 @@ static alpaca_cfg_t alpaca_cfg_t_dummy;
   CONFIG_VAR_ETYPE(llama_cfg_t, #name, type, name, 0, dflt)
 #define AV(name, type, dflt) \
   CONFIG_VAR_ETYPE(alpaca_cfg_t, #name, type, name, 0, dflt)
-static const config_var_t pasture_vars[] = {
-  PV(address, STRING, NULL),
-  PV(opentopublic, BOOL, "1"),
-  END_OF_CONFIG_VARS
-};
-static const config_var_t llama_vars[] =
-{
-  LV(llamaname, STRING, NULL),
-  LV(eats_meat, BOOL, NULL),
-  LV(cuteness, POSINT, "100"),
-  END_OF_CONFIG_VARS
-};
-static const config_var_t alpaca_vars[] =
-{
-  AV(alpacaname, STRING, NULL),
-  AV(fuzziness, POSINT, "50"),
-  AV(n_wings, POSINT, "0"),
-  END_OF_CONFIG_VARS
-};
+static const config_var_t pasture_vars[] = {PV(address, STRING, NULL),
+                                            PV(opentopublic, BOOL, "1"),
+                                            END_OF_CONFIG_VARS};
+static const config_var_t llama_vars[] = {
+    LV(llamaname, STRING, NULL), LV(eats_meat, BOOL, NULL),
+    LV(cuteness, POSINT, "100"), END_OF_CONFIG_VARS};
+static const config_var_t alpaca_vars[] = {
+    AV(alpacaname, STRING, NULL), AV(fuzziness, POSINT, "50"),
+    AV(n_wings, POSINT, "0"), END_OF_CONFIG_VARS};
 
 static config_deprecation_t llama_deprecations[] = {
-  { "eats_meat", "Llamas are herbivores." },
-  {NULL,NULL}
-};
+    {"eats_meat", "Llamas are herbivores."}, {NULL, NULL}};
 
 static config_deprecation_t alpaca_deprecations[] = {
-  { "n_wings", "Alpacas are quadrupeds." },
-  {NULL,NULL}
-};
+    {"n_wings", "Alpacas are quadrupeds."}, {NULL, NULL}};
 
 static int clear_llama_cfg_called = 0;
 static void
@@ -102,9 +88,9 @@ clear_llama_cfg(const config_mgr_t *mgr, void *llamacfg)
 }
 
 static config_abbrev_t llama_abbrevs[] = {
-  { "gracia", "cuteness", 0, 0 },
-  { "gentillesse", "cuteness", 0, 0 },
-  { NULL, NULL, 0, 0 },
+    {"gracia", "cuteness", 0, 0},
+    {"gentillesse", "cuteness", 0, 0},
+    {NULL, NULL, 0, 0},
 };
 
 static int
@@ -132,7 +118,7 @@ validate_llama(const void *obj, char **msg_out)
   const llama_cfg_t *llama = obj;
   tor_assert(llama->magic == 0x11aa11);
 
-  if (! llama->llamaname || strlen(llama->llamaname) == 0) {
+  if (!llama->llamaname || strlen(llama->llamaname) == 0) {
     *msg_out = tor_strdup("A llama has no name!?");
     return -1;
   }
@@ -186,44 +172,32 @@ pre_normalize_alpaca(void *obj, char **msg_out)
 }
 
 static const config_format_t pasture_fmt = {
-  sizeof(pasture_cfg_t),
-  {
-    "pasture_cfg_t",
-    8989,
-    offsetof(pasture_cfg_t, magic)
-  },
-  .vars = pasture_vars,
-  .has_config_suite = true,
-  .config_suite_offset = offsetof(pasture_cfg_t, subobjs),
-  .legacy_validate_fn = legacy_validate_pasture,
+    sizeof(pasture_cfg_t),
+    {"pasture_cfg_t", 8989, offsetof(pasture_cfg_t, magic)},
+    .vars = pasture_vars,
+    .has_config_suite = true,
+    .config_suite_offset = offsetof(pasture_cfg_t, subobjs),
+    .legacy_validate_fn = legacy_validate_pasture,
 };
 
 static const config_format_t llama_fmt = {
-  sizeof(llama_cfg_t),
-  {
-    "llama_cfg_t",
-    0x11aa11,
-    offsetof(llama_cfg_t, magic)
-  },
-  .vars = llama_vars,
-  .deprecations = llama_deprecations,
-  .abbrevs = llama_abbrevs,
-  .clear_fn = clear_llama_cfg,
-  .validate_fn = validate_llama,
-  .post_normalize_fn = post_normalize_llama,
+    sizeof(llama_cfg_t),
+    {"llama_cfg_t", 0x11aa11, offsetof(llama_cfg_t, magic)},
+    .vars = llama_vars,
+    .deprecations = llama_deprecations,
+    .abbrevs = llama_abbrevs,
+    .clear_fn = clear_llama_cfg,
+    .validate_fn = validate_llama,
+    .post_normalize_fn = post_normalize_llama,
 };
 
 static const config_format_t alpaca_fmt = {
-  sizeof(alpaca_cfg_t),
-  {
-    "alpaca_cfg_t",
-    0xa15aca,
-    offsetof(alpaca_cfg_t, magic)
-  },
-  .vars = alpaca_vars,
-  .deprecations = alpaca_deprecations,
-  .pre_normalize_fn = pre_normalize_alpaca,
-  .check_transition_fn = check_transition_alpaca,
+    sizeof(alpaca_cfg_t),
+    {"alpaca_cfg_t", 0xa15aca, offsetof(alpaca_cfg_t, magic)},
+    .vars = alpaca_vars,
+    .deprecations = alpaca_deprecations,
+    .pre_normalize_fn = pre_normalize_alpaca,
+    .check_transition_fn = check_transition_alpaca,
 };
 
 #define LLAMA_IDX 0
@@ -239,7 +213,7 @@ get_mgr(bool freeze)
     config_mgr_freeze(mgr);
   return mgr;
 
- done:
+done:
   config_mgr_free(mgr);
   return NULL;
 }
@@ -269,7 +243,7 @@ test_confmgr_init(void *arg)
   tt_str_op("Alpacas are quadrupeds.", OP_EQ,
             config_find_deprecation(mgr, "N_WINGS"));
 
- done:
+done:
   smartlist_free(vars);
   config_mgr_free(mgr);
 }
@@ -303,7 +277,7 @@ test_confmgr_magic(void *args)
   // odds of a false positive are 1/2^-64.
   tt_assert((p1->magic != p2->magic) || (p2->magic != p3->magic));
 
- done:
+done:
   config_free(mgr1, p1);
   config_free(mgr2, p2);
   config_free(mgr3, p3);
@@ -313,11 +287,10 @@ test_confmgr_magic(void *args)
   config_mgr_free(mgr3);
 }
 
-static const char *simple_pasture =
-  "LLamaname hugo\n"
-  "Alpacaname daphne\n"
-  "gentillesse 42\n"
-  "address 123 Camelid ave\n";
+static const char *simple_pasture = "LLamaname hugo\n"
+                                    "Alpacaname daphne\n"
+                                    "gentillesse 42\n"
+                                    "address 123 Camelid ave\n";
 
 static void
 test_confmgr_parse(void *arg)
@@ -355,7 +328,7 @@ test_confmgr_parse(void *arg)
   config_free(mgr, p);
   tt_int_op(clear_llama_cfg_called, OP_EQ, 1);
 
- done:
+done:
   config_free_lines(lines);
   config_free(mgr, p);
   config_mgr_free(mgr);
@@ -385,9 +358,10 @@ test_confmgr_dump(void *arg)
   tt_str_op("address 123 Camelid ave\n"
             "alpacaname daphne\n"
             "cuteness 42\n"
-            "llamaname hugo\n", OP_EQ, s);
+            "llamaname hugo\n",
+            OP_EQ, s);
 
- done:
+done:
   config_free_lines(lines);
   config_free(mgr, p);
   config_free(mgr, defaults);
@@ -398,8 +372,8 @@ test_confmgr_dump(void *arg)
 }
 
 static pasture_cfg_t *
-parse_and_validate(config_mgr_t *mgr,
-                   const char *inp, const pasture_cfg_t *old, char **msg_out)
+parse_and_validate(config_mgr_t *mgr, const char *inp,
+                   const pasture_cfg_t *old, char **msg_out)
 {
   pasture_cfg_t *p = config_new(mgr);
   pasture_cfg_t *result = NULL;
@@ -418,7 +392,7 @@ parse_and_validate(config_mgr_t *mgr,
   tt_ptr_op(*msg_out, OP_EQ, NULL);
   result = p;
   p = NULL; // prevent free
- done:
+done:
   config_free(mgr, p);
   config_free_lines(lines);
   return result;
@@ -430,11 +404,13 @@ test_confmgr_validate(void *arg)
   (void)arg;
   char *msg = NULL;
   config_mgr_t *mgr = get_mgr(true);
-  pasture_cfg_t *p_orig, *p=NULL;
+  pasture_cfg_t *p_orig, *p = NULL;
 
-  p_orig = parse_and_validate(mgr, "Llamaname Quest\n"
-                                   "Address 99 camelid way\n"
-                                   "Fuzziness 8\n", NULL, &msg);
+  p_orig = parse_and_validate(mgr,
+                              "Llamaname Quest\n"
+                              "Address 99 camelid way\n"
+                              "Fuzziness 8\n",
+                              NULL, &msg);
   tt_assert(p_orig);
 
   // Make sure normalization code was run.
@@ -458,42 +434,45 @@ test_confmgr_validate(void *arg)
   tor_free(msg);
 
   // Verify that a transition to a less fuzzy alpaca fails.
-  p = parse_and_validate(mgr, "Llamaname Quest\n"
-                              "Address 99 camelid way\n"
-                              "Fuzziness 4\n", p_orig, &msg);
+  p = parse_and_validate(mgr,
+                         "Llamaname Quest\n"
+                         "Address 99 camelid way\n"
+                         "Fuzziness 4\n",
+                         p_orig, &msg);
   tt_assert(!p);
   tt_str_op(msg, OP_EQ, "An alpaca only becomes more fuzzy over time.");
   tor_free(msg);
 
   // Try a transition to a more fuzzy alpaca; it should work fine.
-  p = parse_and_validate(mgr, "Llamaname Mercutio\n"
-                              // the default fuzziness is 50
-                              "Address 99 camelid way\n", p_orig, &msg);
+  p = parse_and_validate(mgr,
+                         "Llamaname Mercutio\n"
+                         // the default fuzziness is 50
+                         "Address 99 camelid way\n",
+                         p_orig, &msg);
   tt_assert(p);
   config_free(mgr, p);
 
   // Verify that we can't move the pasture.
-  p = parse_and_validate(mgr, "Llamaname Montague\n"
-                              // the default fuzziness is 50
-                              "Address 99 ungulate st\n", p_orig, &msg);
+  p = parse_and_validate(mgr,
+                         "Llamaname Montague\n"
+                         // the default fuzziness is 50
+                         "Address 99 ungulate st\n",
+                         p_orig, &msg);
   tt_assert(!p);
   tt_str_op(msg, OP_EQ, "You can't move a pasture.");
 
- done:
+done:
   config_free(mgr, p);
   config_free(mgr, p_orig);
   config_mgr_free(mgr);
   tor_free(msg);
 }
 
-#define CONFMGR_TEST(name, flags)                       \
-  { #name, test_confmgr_ ## name, flags, NULL, NULL }
+#define CONFMGR_TEST(name, flags)                 \
+  {                                               \
+#    name, test_confmgr_##name, flags, NULL, NULL \
+  }
 
 struct testcase_t confmgr_tests[] = {
-  CONFMGR_TEST(init, 0),
-  CONFMGR_TEST(magic, 0),
-  CONFMGR_TEST(parse, 0),
-  CONFMGR_TEST(dump, 0),
-  CONFMGR_TEST(validate, 0),
-  END_OF_TESTCASES
-};
+    CONFMGR_TEST(init, 0), CONFMGR_TEST(magic, 0),    CONFMGR_TEST(parse, 0),
+    CONFMGR_TEST(dump, 0), CONFMGR_TEST(validate, 0), END_OF_TESTCASES};

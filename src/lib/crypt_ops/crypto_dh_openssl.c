@@ -60,7 +60,7 @@ crypto_validate_dh_params(const BIGNUM *p, const BIGNUM *g)
   /* Copy into a temporary DH object, just so that DH_check() can be called. */
   if (!(dh = DH_new()))
       goto out;
-#ifdef OPENSSL_1_1_API
+#  ifdef OPENSSL_1_1_API
   BIGNUM *dh_p, *dh_g;
   if (!(dh_p = BN_dup(p)))
     goto out;
@@ -68,12 +68,12 @@ crypto_validate_dh_params(const BIGNUM *p, const BIGNUM *g)
     goto out;
   if (!DH_set0_pqg(dh, dh_p, NULL, dh_g))
     goto out;
-#else /* !defined(OPENSSL_1_1_API) */
+#  else /* !defined(OPENSSL_1_1_API) */
   if (!(dh->p = BN_dup(p)))
     goto out;
   if (!(dh->g = BN_dup(g)))
     goto out;
-#endif /* defined(OPENSSL_1_1_API) */
+#  endif /* defined(OPENSSL_1_1_API) */
 
   /* Perform the validation. */
   int codes = 0;
@@ -241,9 +241,10 @@ new_openssl_dh_from_params(BIGNUM *p, BIGNUM *g)
 
   /* LCOV_EXCL_START
    * This error condition is only reached when an allocation fails */
- err:
+err:
   crypto_openssl_log_errors(LOG_WARN, "creating DH object");
-  if (res_dh) DH_free(res_dh); /* frees p and g too */
+  if (res_dh)
+    DH_free(res_dh); /* frees p and g too */
   return NULL;
   /* LCOV_EXCL_STOP */
 }
@@ -276,9 +277,9 @@ crypto_dh_get_bytes(crypto_dh_t *dh)
 int
 crypto_dh_generate_public(crypto_dh_t *dh)
 {
-#ifndef OPENSSL_1_1_API
- again:
-#endif
+#  ifndef OPENSSL_1_1_API
+again:
+#  endif
   if (!DH_generate_key(dh->dh)) {
     /* LCOV_EXCL_START
      * To test this we would need some way to tell openssl to break DH. */
@@ -286,23 +287,25 @@ crypto_dh_generate_public(crypto_dh_t *dh)
     return -1;
     /* LCOV_EXCL_STOP */
   }
-#ifdef OPENSSL_1_1_API
+#  ifdef OPENSSL_1_1_API
   /* OpenSSL 1.1.x doesn't appear to let you regenerate a DH key, without
    * recreating the DH object.  I have no idea what sort of aliasing madness
    * can occur here, so do the check, and just bail on failure.
    */
   const BIGNUM *pub_key, *priv_key;
   DH_get0_key(dh->dh, &pub_key, &priv_key);
-  if (tor_check_dh_key(LOG_WARN, pub_key)<0) {
-    log_warn(LD_CRYPTO, "Weird! Our own DH key was invalid.  I guess once-in-"
+  if (tor_check_dh_key(LOG_WARN, pub_key) < 0) {
+    log_warn(LD_CRYPTO,
+             "Weird! Our own DH key was invalid.  I guess once-in-"
              "the-universe chances really do happen.  Treating as a failure.");
     return -1;
   }
-#else /* !defined(OPENSSL_1_1_API) */
-  if (tor_check_dh_key(LOG_WARN, dh->dh->pub_key)<0) {
+#  else /* !defined(OPENSSL_1_1_API) */
+  if (tor_check_dh_key(LOG_WARN, dh->dh->pub_key) < 0) {
     /* LCOV_EXCL_START
      * If this happens, then openssl's DH implementation is busted. */
-    log_warn(LD_CRYPTO, "Weird! Our own DH key was invalid.  I guess once-in-"
+    log_warn(LD_CRYPTO,
+             "Weird! Our own DH key was invalid.  I guess once-in-"
              "the-universe chances really do happen.  Trying again.");
     /* Free and clear the keys, so OpenSSL will actually try again. */
     BN_clear_free(dh->dh->pub_key);
@@ -311,7 +314,7 @@ crypto_dh_generate_public(crypto_dh_t *dh)
     goto again;
     /* LCOV_EXCL_STOP */
   }
-#endif /* defined(OPENSSL_1_1_API) */
+#  endif /* defined(OPENSSL_1_1_API) */
   return 0;
 }
 
@@ -327,22 +330,22 @@ crypto_dh_get_public(crypto_dh_t *dh, char *pubkey, size_t pubkey_len)
 
   const BIGNUM *dh_pub;
 
-#ifdef OPENSSL_1_1_API
+#  ifdef OPENSSL_1_1_API
   const BIGNUM *dh_priv;
   DH_get0_key(dh->dh, &dh_pub, &dh_priv);
-#else
+#  else
   dh_pub = dh->dh->pub_key;
-#endif /* defined(OPENSSL_1_1_API) */
+#  endif /* defined(OPENSSL_1_1_API) */
 
   if (!dh_pub) {
-    if (crypto_dh_generate_public(dh)<0)
+    if (crypto_dh_generate_public(dh) < 0)
       return -1;
     else {
-#ifdef OPENSSL_1_1_API
+#  ifdef OPENSSL_1_1_API
       DH_get0_key(dh->dh, &dh_pub, &dh_priv);
-#else
+#  else
       dh_pub = dh->dh->pub_key;
-#endif
+#  endif
     }
   }
 
@@ -352,12 +355,12 @@ crypto_dh_get_public(crypto_dh_t *dh, char *pubkey, size_t pubkey_len)
   if (pubkey_len < (size_t)bytes) {
     log_warn(LD_CRYPTO,
              "Weird! pubkey_len (%d) was smaller than DH1024_KEY_LEN (%d)",
-             (int) pubkey_len, bytes);
+             (int)pubkey_len, bytes);
     return -1;
   }
 
   memset(pubkey, 0, pubkey_len);
-  BN_bn2bin(dh_pub, (unsigned char*)(pubkey+(pubkey_len-bytes)));
+  BN_bn2bin(dh_pub, (unsigned char *)(pubkey + (pubkey_len - bytes)));
 
   return 0;
 }
@@ -377,19 +380,19 @@ tor_check_dh_key(int severity, const BIGNUM *bn)
   if (BUG(!dh_param_p))
     crypto_dh_init(); //LCOV_EXCL_LINE we already checked whether we did this.
   BN_set_word(x, 1);
-  if (BN_cmp(bn,x)<=0) {
+  if (BN_cmp(bn, x) <= 0) {
     log_fn(severity, LD_CRYPTO, "DH key must be at least 2.");
     goto err;
   }
-  BN_copy(x,dh_param_p);
+  BN_copy(x, dh_param_p);
   BN_sub_word(x, 1);
-  if (BN_cmp(bn,x)>=0) {
+  if (BN_cmp(bn, x) >= 0) {
     log_fn(severity, LD_CRYPTO, "DH key must be at most p-2.");
     goto err;
   }
   BN_clear_free(x);
   return 0;
- err:
+err:
   BN_clear_free(x);
   s = BN_bn2hex(bn);
   log_fn(severity, LD_CRYPTO, "Rejecting insecure DH key [%s]", s);
@@ -406,41 +409,41 @@ tor_check_dh_key(int severity, const BIGNUM *bn)
  * This function MUST validate that g^y is actually in the group.
  */
 ssize_t
-crypto_dh_handshake(int severity, crypto_dh_t *dh,
-                    const char *pubkey, size_t pubkey_len,
-                    unsigned char *secret_out, size_t secret_bytes_out)
+crypto_dh_handshake(int severity, crypto_dh_t *dh, const char *pubkey,
+                    size_t pubkey_len, unsigned char *secret_out,
+                    size_t secret_bytes_out)
 {
   BIGNUM *pubkey_bn = NULL;
-  size_t secret_len=0;
-  int result=0;
+  size_t secret_len = 0;
+  int result = 0;
 
   tor_assert(dh);
-  tor_assert(secret_bytes_out/DIGEST_LEN <= 255);
+  tor_assert(secret_bytes_out / DIGEST_LEN <= 255);
   tor_assert(pubkey_len < INT_MAX);
 
   if (BUG(crypto_dh_get_bytes(dh) > (int)secret_bytes_out)) {
     goto error;
   }
 
-  if (!(pubkey_bn = BN_bin2bn((const unsigned char*)pubkey,
-                              (int)pubkey_len, NULL)))
+  if (!(pubkey_bn =
+            BN_bin2bn((const unsigned char *)pubkey, (int)pubkey_len, NULL)))
     goto error;
-  if (tor_check_dh_key(severity, pubkey_bn)<0) {
+  if (tor_check_dh_key(severity, pubkey_bn) < 0) {
     /* Check for invalid public keys. */
-    log_fn(severity, LD_CRYPTO,"Rejected invalid g^x");
+    log_fn(severity, LD_CRYPTO, "Rejected invalid g^x");
     goto error;
   }
   result = DH_compute_key(secret_out, pubkey_bn, dh->dh);
   if (result < 0) {
-    log_warn(LD_CRYPTO,"DH_compute_key() failed.");
+    log_warn(LD_CRYPTO, "DH_compute_key() failed.");
     goto error;
   }
   secret_len = result;
 
   goto done;
- error:
+error:
   result = -1;
- done:
+done:
   crypto_openssl_log_errors(LOG_WARN, "completing DH handshake");
   if (pubkey_bn)
     BN_clear_free(pubkey_bn);

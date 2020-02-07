@@ -75,7 +75,8 @@ static uint64_t num_single_hop_client_refused;
 /* Return true iff the circuit creation mitigation is enabled. We look at the
  * consensus for this else a default value is returned. */
 MOCK_IMPL(STATIC unsigned int,
-get_param_cc_enabled, (const networkstatus_t *ns))
+get_param_cc_enabled,
+          (const networkstatus_t *ns))
 {
   if (get_options()->DoSCircuitCreationEnabled != -1) {
     return get_options()->DoSCircuitCreationEnabled;
@@ -94,8 +95,8 @@ get_param_cc_min_concurrent_connection(const networkstatus_t *ns)
     return get_options()->DoSCircuitCreationMinConnections;
   }
   return networkstatus_get_param(ns, "DoSCircuitCreationMinConnections",
-                                 DOS_CC_MIN_CONCURRENT_CONN_DEFAULT,
-                                 1, INT32_MAX);
+                                 DOS_CC_MIN_CONCURRENT_CONN_DEFAULT, 1,
+                                 INT32_MAX);
 }
 
 /* Return the parameter for the time rate that is how many circuits over this
@@ -108,8 +109,7 @@ get_param_cc_circuit_rate(const networkstatus_t *ns)
     return get_options()->DoSCircuitCreationRate;
   }
   return networkstatus_get_param(ns, "DoSCircuitCreationRate",
-                                 DOS_CC_CIRCUIT_RATE_DEFAULT,
-                                 1, INT32_MAX);
+                                 DOS_CC_CIRCUIT_RATE_DEFAULT, 1, INT32_MAX);
 }
 
 /* Return the parameter for the maximum circuit count for the circuit time
@@ -121,8 +121,7 @@ get_param_cc_circuit_burst(const networkstatus_t *ns)
     return get_options()->DoSCircuitCreationBurst;
   }
   return networkstatus_get_param(ns, "DoSCircuitCreationBurst",
-                                 DOS_CC_CIRCUIT_BURST_DEFAULT,
-                                 1, INT32_MAX);
+                                 DOS_CC_CIRCUIT_BURST_DEFAULT, 1, INT32_MAX);
 }
 
 /* Return the consensus parameter of the circuit creation defense type. */
@@ -147,14 +146,15 @@ get_param_cc_defense_time_period(const networkstatus_t *ns)
     return get_options()->DoSCircuitCreationDefenseTimePeriod;
   }
   return networkstatus_get_param(ns, "DoSCircuitCreationDefenseTimePeriod",
-                                 DOS_CC_DEFENSE_TIME_PERIOD_DEFAULT,
-                                 0, INT32_MAX);
+                                 DOS_CC_DEFENSE_TIME_PERIOD_DEFAULT, 0,
+                                 INT32_MAX);
 }
 
 /* Return true iff connection mitigation is enabled. We look at the consensus
  * for this else a default value is returned. */
 MOCK_IMPL(STATIC unsigned int,
-get_param_conn_enabled, (const networkstatus_t *ns))
+get_param_conn_enabled,
+          (const networkstatus_t *ns))
 {
   if (get_options()->DoSConnectionEnabled != -1) {
     return get_options()->DoSConnectionEnabled;
@@ -172,8 +172,8 @@ get_param_conn_max_concurrent_count(const networkstatus_t *ns)
     return get_options()->DoSConnectionMaxConcurrentCount;
   }
   return networkstatus_get_param(ns, "DoSConnectionMaxConcurrentCount",
-                                 DOS_CONN_MAX_CONCURRENT_COUNT_DEFAULT,
-                                 1, INT32_MAX);
+                                 DOS_CONN_MAX_CONCURRENT_COUNT_DEFAULT, 1,
+                                 INT32_MAX);
 }
 
 /* Return the consensus parameter of the connection defense type. */
@@ -306,15 +306,15 @@ cc_stats_refill_bucket(cc_client_stats_t *stats, const tor_addr_t *addr)
    * are less than or equal to UINT32_MAX, and num_token is uint64_t. */
   num_token = elapsed_time_last_refill * circuit_rate;
 
- end:
+end:
   /* If the sum would overflow, use the maximum allowed value. */
   if (num_token > UINT32_MAX - stats->circuit_bucket) {
     new_circuit_bucket_count = dos_cc_circuit_burst;
   } else {
     /* We cap the bucket to the burst value else this could overflow uint32_t
      * over time. */
-    new_circuit_bucket_count = MIN(stats->circuit_bucket + (uint32_t)num_token,
-                                   dos_cc_circuit_burst);
+    new_circuit_bucket_count =
+        MIN(stats->circuit_bucket + (uint32_t)num_token, dos_cc_circuit_burst);
   }
 
   /* This function is not allowed to make the bucket count larger than the
@@ -326,16 +326,17 @@ cc_stats_refill_bucket(cc_client_stats_t *stats, const tor_addr_t *addr)
   tor_assert_nonfatal(new_circuit_bucket_count >= stats->circuit_bucket ||
                       new_circuit_bucket_count == dos_cc_circuit_burst);
 
-  log_debug(LD_DOS, "DoS address %s has its circuit bucket value: %" PRIu32
-                    ". Filling it to %" PRIu32 ". Circuit rate is %" PRIu64
-                    ". Elapsed time is %" PRIi64,
+  log_debug(LD_DOS,
+            "DoS address %s has its circuit bucket value: %" PRIu32
+            ". Filling it to %" PRIu32 ". Circuit rate is %" PRIu64
+            ". Elapsed time is %" PRIi64,
             fmt_addr(addr), stats->circuit_bucket, new_circuit_bucket_count,
             circuit_rate, (int64_t)elapsed_time_last_refill);
 
   stats->circuit_bucket = new_circuit_bucket_count;
   stats->last_circ_bucket_refill_ts = now;
 
- done:
+done:
   return;
 }
 
@@ -359,8 +360,8 @@ cc_mark_client(cc_client_stats_t *stats)
   /* We add a random offset of a maximum of half the defense time so it is
    * less predictable. */
   stats->marked_until_ts =
-    approx_time() + dos_cc_defense_time_period +
-    crypto_rand_int_range(1, dos_cc_defense_time_period / 2);
+      approx_time() + dos_cc_defense_time_period +
+      crypto_rand_int_range(1, dos_cc_defense_time_period / 2);
 }
 
 /* Return true iff the given channel address is marked as malicious. This is
@@ -397,7 +398,7 @@ cc_channel_addr_is_marked(channel_t *chan)
   now = approx_time();
   stats = &entry->dos_stats.cc_stats;
 
- end:
+end:
   return stats && stats->marked_until_ts >= now;
 }
 
@@ -495,7 +496,7 @@ dos_cc_new_create_cell(channel_t *chan)
     cc_mark_client(&entry->dos_stats.cc_stats);
   }
 
- end:
+end:
   return;
 }
 
@@ -521,7 +522,7 @@ dos_cc_get_defense_type(channel_t *chan)
     return dos_cc_defense_type;
   }
 
- end:
+end:
   return DOS_CC_DEFENSE_NONE;
 }
 
@@ -554,7 +555,7 @@ dos_conn_addr_get_defense_type(const tor_addr_t *addr)
     return dos_conn_defense_type;
   }
 
- end:
+end:
   return DOS_CONN_DEFENSE_NONE;
 }
 
@@ -581,7 +582,7 @@ dos_geoip_entry_about_to_free(const clientmap_entry_t *geoip_ent)
   /* For each connection matching the geoip entry address, we'll clear the
    * tracked flag because the entry is about to get removed from the geoip
    * cache. We do not try to decrement if the flag is not set. */
-  SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
+  SMARTLIST_FOREACH_BEGIN (get_connection_array(), connection_t *, conn) {
     if (conn->type == CONN_TYPE_OR) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
       if (!tor_addr_compare(&geoip_ent->addr, &or_conn->real_addr,
@@ -589,9 +590,9 @@ dos_geoip_entry_about_to_free(const clientmap_entry_t *geoip_ent)
         or_conn->tracked_for_dos_mitigation = 0;
       }
     }
-  } SMARTLIST_FOREACH_END(conn);
+  } SMARTLIST_FOREACH_END (conn);
 
- end:
+end:
   return;
 }
 
@@ -617,9 +618,8 @@ dos_should_refuse_single_hop_client(void)
     return get_options()->DoSRefuseSingleHopClientRendezvous;
   }
 
-  return (int) networkstatus_get_param(NULL,
-                                       "DoSRefuseSingleHopClientRendezvous",
-                                       0 /* default */, 0, 1);
+  return (int)networkstatus_get_param(
+      NULL, "DoSRefuseSingleHopClientRendezvous", 0 /* default */, 0, 1);
 }
 
 /* Log a heartbeat message with some statistics. */
@@ -645,8 +645,7 @@ dos_log_heartbeat(void)
   }
 
   if (dos_conn_enabled) {
-    tor_asprintf(&conn_msg,
-                 " %" PRIu64 " connections closed.",
+    tor_asprintf(&conn_msg, " %" PRIu64 " connections closed.",
                  conn_num_addr_rejected);
   }
 
@@ -657,14 +656,11 @@ dos_log_heartbeat(void)
   }
 
   /* HS DoS stats. */
-  tor_asprintf(&hs_dos_intro2_msg,
-               " %" PRIu64 " INTRODUCE2 rejected.",
+  tor_asprintf(&hs_dos_intro2_msg, " %" PRIu64 " INTRODUCE2 rejected.",
                hs_dos_get_intro2_rejected_count());
 
-  log_notice(LD_HEARTBEAT,
-             "DoS mitigation since startup:%s%s%s%s%s",
-             circ_stats_msg,
-             (cc_msg != NULL) ? cc_msg : " [cc not enabled]",
+  log_notice(LD_HEARTBEAT, "DoS mitigation since startup:%s%s%s%s%s",
+             circ_stats_msg, (cc_msg != NULL) ? cc_msg : " [cc not enabled]",
              (conn_msg != NULL) ? conn_msg : " [conn not enabled]",
              (single_hop_client_msg != NULL) ? single_hop_client_msg : "",
              (hs_dos_intro2_msg != NULL) ? hs_dos_intro2_msg : "");
@@ -701,8 +697,7 @@ dos_new_client_conn(or_connection_t *or_conn)
   }
 
   /* We are only interested in client connection from the geoip cache. */
-  entry = geoip_lookup_client(&or_conn->real_addr, NULL,
-                              GEOIP_CLIENT_CONNECT);
+  entry = geoip_lookup_client(&or_conn->real_addr, NULL, GEOIP_CLIENT_CONNECT);
   if (BUG(entry == NULL)) {
     /* Should never happen because we note down the address in the geoip
      * cache before this is called. */
@@ -712,10 +707,9 @@ dos_new_client_conn(or_connection_t *or_conn)
   entry->dos_stats.concurrent_count++;
   or_conn->tracked_for_dos_mitigation = 1;
   log_debug(LD_DOS, "Client address %s has now %u concurrent connections.",
-            fmt_addr(&or_conn->real_addr),
-            entry->dos_stats.concurrent_count);
+            fmt_addr(&or_conn->real_addr), entry->dos_stats.concurrent_count);
 
- end:
+end:
   return;
 }
 
@@ -735,8 +729,7 @@ dos_close_client_conn(const or_connection_t *or_conn)
   }
 
   /* We are only interested in client connection from the geoip cache. */
-  entry = geoip_lookup_client(&or_conn->real_addr, NULL,
-                              GEOIP_CLIENT_CONNECT);
+  entry = geoip_lookup_client(&or_conn->real_addr, NULL, GEOIP_CLIENT_CONNECT);
   if (entry == NULL) {
     /* This can happen because we can close a connection before the channel
      * got to be noted down in the geoip cache. */
@@ -751,12 +744,12 @@ dos_close_client_conn(const or_connection_t *or_conn)
   }
 
   entry->dos_stats.concurrent_count--;
-  log_debug(LD_DOS, "Client address %s has lost a connection. Concurrent "
-                    "connections are now at %u",
-            fmt_addr(&or_conn->real_addr),
-            entry->dos_stats.concurrent_count);
+  log_debug(LD_DOS,
+            "Client address %s has lost a connection. Concurrent "
+            "connections are now at %u",
+            fmt_addr(&or_conn->real_addr), entry->dos_stats.concurrent_count);
 
- end:
+end:
   return;
 }
 

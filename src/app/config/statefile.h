@@ -13,7 +13,7 @@
 #ifndef TOR_STATEFILE_H
 #define TOR_STATEFILE_H
 
-MOCK_DECL(or_state_t *,get_or_state,(void));
+MOCK_DECL(or_state_t *, get_or_state, (void));
 int did_last_state_file_write_fail(void);
 int or_state_save(time_t now);
 
@@ -26,10 +26,10 @@ void or_state_free_all(void);
 void or_state_mark_dirty(or_state_t *state, time_t when);
 
 #ifdef STATEFILE_PRIVATE
-STATIC struct config_line_t *get_transport_in_state_by_name(
-                                                 const char *transport);
+STATIC struct config_line_t *
+get_transport_in_state_by_name(const char *transport);
 STATIC void or_state_free_(or_state_t *state);
-#define or_state_free(st) FREE_AND_NULL(or_state_t, or_state_free_, (st))
+#  define or_state_free(st) FREE_AND_NULL(or_state_t, or_state_free_, (st))
 STATIC or_state_t *or_state_new(void);
 struct config_mgr_t;
 STATIC const struct config_mgr_t *get_state_mgr(void);

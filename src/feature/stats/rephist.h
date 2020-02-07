@@ -51,17 +51,17 @@ void rep_hist_note_exit_bytes(uint16_t port, size_t num_written,
 void rep_hist_note_exit_stream_opened(uint16_t port);
 
 void rep_hist_buffer_stats_init(time_t now);
-void rep_hist_buffer_stats_add_circ(circuit_t *circ,
-                                    time_t end_of_interval);
+void rep_hist_buffer_stats_add_circ(circuit_t *circ, time_t end_of_interval);
 time_t rep_hist_buffer_stats_write(time_t now);
 void rep_hist_buffer_stats_term(void);
 void rep_hist_add_buffer_stats(double mean_num_cells_in_queue,
-     double mean_time_cells_in_queue, uint32_t processed_cells);
+                               double mean_time_cells_in_queue,
+                               uint32_t processed_cells);
 char *rep_hist_format_buffer_stats(time_t now);
 void rep_hist_reset_buffer_stats(time_t now);
 
 void rep_hist_desc_stats_init(time_t now);
-void rep_hist_note_desc_served(const char * desc);
+void rep_hist_note_desc_served(const char *desc);
 void rep_hist_desc_stats_term(void);
 time_t rep_hist_desc_stats_write(time_t now);
 
@@ -93,8 +93,8 @@ void rep_hist_log_link_protocol_counts(void);
 extern uint64_t rephist_total_alloc;
 extern uint32_t rephist_total_num;
 #ifdef TOR_UNIT_TESTS
-extern int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1];
-extern int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1];
+extern int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE + 1];
+extern int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE + 1];
 extern struct bw_array_t *write_array;
 #endif
 
@@ -109,20 +109,20 @@ STATIC void advance_obs(bw_array_t *b);
  * Represents the type of a cell for padding accounting
  */
 typedef enum padding_type_t {
-    /** A RELAY_DROP cell */
-    PADDING_TYPE_DROP,
-    /** A CELL_PADDING cell */
-    PADDING_TYPE_CELL,
-    /** Total counts of padding and non-padding together */
-    PADDING_TYPE_TOTAL,
-    /** Total cell counts for all padding-enabled channels */
-    PADDING_TYPE_ENABLED_TOTAL,
-    /** CELL_PADDING counts for all padding-enabled channels */
-    PADDING_TYPE_ENABLED_CELL
+  /** A RELAY_DROP cell */
+  PADDING_TYPE_DROP,
+  /** A CELL_PADDING cell */
+  PADDING_TYPE_CELL,
+  /** Total counts of padding and non-padding together */
+  PADDING_TYPE_TOTAL,
+  /** Total cell counts for all padding-enabled channels */
+  PADDING_TYPE_ENABLED_TOTAL,
+  /** CELL_PADDING counts for all padding-enabled channels */
+  PADDING_TYPE_ENABLED_CELL
 } padding_type_t;
 
 /** The amount of time over which the padding cell counts were counted */
-#define REPHIST_CELL_PADDING_COUNTS_INTERVAL (24*60*60)
+#define REPHIST_CELL_PADDING_COUNTS_INTERVAL (24 * 60 * 60)
 void rep_hist_padding_count_read(padding_type_t type);
 void rep_hist_padding_count_write(padding_type_t type);
 char *rep_hist_get_padding_count_lines(void);

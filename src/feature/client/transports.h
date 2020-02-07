@@ -35,21 +35,19 @@ typedef struct transport_t {
 void mark_transport_list(void);
 void sweep_transport_list(void);
 MOCK_DECL(int, transport_add_from_config,
-          (const tor_addr_t *addr, uint16_t port,
-           const char *name, int socks_ver));
+          (const tor_addr_t *addr, uint16_t port, const char *name,
+           int socks_ver));
 void transport_free_(transport_t *transport);
 #define transport_free(tr) FREE_AND_NULL(transport_t, transport_free_, (tr))
 
-MOCK_DECL(transport_t*, transport_get_by_name, (const char *name));
+MOCK_DECL(transport_t *, transport_get_by_name, (const char *name));
 
 MOCK_DECL(void, pt_kickstart_proxy,
           (const smartlist_t *transport_list, char **proxy_argv,
            int is_server));
 
-#define pt_kickstart_client_proxy(tl, pa)  \
-  pt_kickstart_proxy(tl, pa, 0)
-#define pt_kickstart_server_proxy(tl, pa) \
-  pt_kickstart_proxy(tl, pa, 1)
+#define pt_kickstart_client_proxy(tl, pa) pt_kickstart_proxy(tl, pa, 0)
+#define pt_kickstart_server_proxy(tl, pa) pt_kickstart_proxy(tl, pa, 1)
 
 void pt_configure_remaining_proxies(void);
 
@@ -66,7 +64,7 @@ smartlist_t *get_transport_proxy_ports(void);
 char *pt_stringify_socks_args(const smartlist_t *socks_args);
 
 char *pt_get_socks_args_for_proxy_addrport(const tor_addr_t *addr,
-                                            uint16_t port);
+                                           uint16_t port);
 
 char *tor_escape_str_for_pt_args(const char *string,
                                  const char *chars_to_escape);
@@ -91,7 +89,7 @@ typedef struct {
   char **argv; /* the cli arguments of this proxy */
   int conf_protocol; /* the configuration protocol version used */
 
-  char *proxy_uri;  /* the outgoing proxy in TOR_PT_PROXY URI format */
+  char *proxy_uri; /* the outgoing proxy in TOR_PT_PROXY URI format */
   unsigned int proxy_supported : 1; /* the proxy honors TOR_PT_PROXY */
 
   int is_server; /* is it a server proxy? */
@@ -140,7 +138,7 @@ STATIC managed_proxy_t *managed_proxy_create(const smartlist_t *transport_list,
 
 STATIC int configure_proxy(managed_proxy_t *mp);
 
-STATIC char* get_pt_proxy_uri(void);
+STATIC char *get_pt_proxy_uri(void);
 
 STATIC void free_execve_args(char **arg);
 

@@ -16,8 +16,8 @@
 #include "lib/crypt_ops/crypto_rand.h"
 
 #ifdef _WIN32
-#include <windows.h>
-#include <wincrypt.h>
+#  include <windows.h>
+#  include <wincrypt.h>
 #endif /* defined(_WIN32) */
 
 #include "lib/container/smartlist.h"
@@ -39,47 +39,47 @@
 #include "lib/ctime/di_ops.h"
 
 #ifdef ENABLE_NSS
-#include "lib/crypt_ops/crypto_nss_mgt.h"
+#  include "lib/crypt_ops/crypto_nss_mgt.h"
 #endif
 
 #ifdef ENABLE_OPENSSL
 DISABLE_GCC_WARNING("-Wredundant-decls")
-#include <openssl/rand.h>
-#include <openssl/sha.h>
+#  include <openssl/rand.h>
+#  include <openssl/sha.h>
 ENABLE_GCC_WARNING("-Wredundant-decls")
 #endif /* defined(ENABLE_OPENSSL) */
 
 #ifdef ENABLE_NSS
-#include <pk11pub.h>
-#include <secerr.h>
-#include <prerror.h>
+#  include <pk11pub.h>
+#  include <secerr.h>
+#  include <prerror.h>
 #endif
 
 #if __GNUC__ && GCC_VERSION >= 402
-#if GCC_VERSION >= 406
-#pragma GCC diagnostic pop
-#else
-#pragma GCC diagnostic warning "-Wredundant-decls"
-#endif
+#  if GCC_VERSION >= 406
+#    pragma GCC diagnostic pop
+#  else
+#    pragma GCC diagnostic warning "-Wredundant-decls"
+#  endif
 #endif /* __GNUC__ && GCC_VERSION >= 402 */
 
 #ifdef HAVE_FCNTL_H
-#include <fcntl.h>
+#  include <fcntl.h>
 #endif
 #ifdef HAVE_SYS_FCNTL_H
-#include <sys/fcntl.h>
+#  include <sys/fcntl.h>
 #endif
 #ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
+#  include <sys/stat.h>
 #endif
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #ifdef HAVE_SYS_SYSCALL_H
-#include <sys/syscall.h>
+#  include <sys/syscall.h>
 #endif
 #ifdef HAVE_SYS_RANDOM_H
-#include <sys/random.h>
+#  include <sys/random.h>
 #endif
 
 #include <string.h>
@@ -110,7 +110,7 @@ void
 crypto_seed_weak_rng(tor_weak_rng_t *rng)
 {
   unsigned seed;
-  crypto_rand((void*)&seed, sizeof(seed));
+  crypto_rand((void *)&seed, sizeof(seed));
   tor_init_weak_random(rng, seed);
 }
 
@@ -186,7 +186,7 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
     const unsigned int flags = 0;
     do {
       ret = syscall(SYS_getrandom, out, out_len, flags);
-    } while (ret == -1 && ((errno == EINTR) ||(errno == EAGAIN)));
+    } while (ret == -1 && ((errno == EINTR) || (errno == EAGAIN)));
 
     if (PREDICT_UNLIKELY(ret == -1)) {
       /* LCOV_EXCL_START we can't actually make the syscall fail in testing. */
@@ -195,14 +195,16 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
 
       /* Useful log message for errno. */
       if (errno == ENOSYS) {
-        log_notice(LD_CRYPTO, "Can't get entropy from getrandom()."
+        log_notice(LD_CRYPTO,
+                   "Can't get entropy from getrandom()."
                    " You are running a version of Tor built to support"
                    " getrandom(), but the kernel doesn't implement this"
                    " function--probably because it is too old?"
                    " Trying fallback method instead.");
       } else {
-        log_notice(LD_CRYPTO, "Can't get entropy from getrandom(): %s."
-                              " Trying fallback method instead.",
+        log_notice(LD_CRYPTO,
+                   "Can't get entropy from getrandom(): %s."
+                   " Trying fallback method instead.",
                    strerror(errno));
       }
 
@@ -222,7 +224,7 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
    */
   return getentropy(out, out_len);
 #else
-  (void) out;
+  (void)out;
 #endif /* defined(_WIN32) || ... */
 
   /* This platform doesn't have a supported syscall based random. */
@@ -249,26 +251,25 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
   (void)out_len;
   return -1;
 #else /* !defined(_WIN32) */
-  static const char *filenames[] = {
-    "/dev/srandom", "/dev/urandom", "/dev/random", NULL
-  };
+  static const char *filenames[] = {"/dev/srandom", "/dev/urandom",
+                                    "/dev/random", NULL};
   int fd, i;
   size_t n;
 
   for (i = 0; filenames[i]; ++i) {
     log_debug(LD_FS, "Considering %s as entropy source", filenames[i]);
     fd = open(sandbox_intern_string(filenames[i]), O_RDONLY, 0);
-    if (fd<0) continue;
+    if (fd < 0)
+      continue;
     log_info(LD_CRYPTO, "Reading entropy from \"%s\"", filenames[i]);
-    n = read_all_from_fd(fd, (char*)out, out_len);
+    n = read_all_from_fd(fd, (char *)out, out_len);
     close(fd);
     if (n != out_len) {
       /* LCOV_EXCL_START
        * We can't make /dev/foorandom actually fail. */
       log_notice(LD_CRYPTO,
                  "Error reading from entropy source %s (read only %lu bytes).",
-                 filenames[i],
-                 (unsigned long)n);
+                 filenames[i], (unsigned long)n);
       return -1;
       /* LCOV_EXCL_STOP */
     }
@@ -315,7 +316,7 @@ crypto_strongest_rand_raw(uint8_t *out, size_t out_len)
       }
     }
 
-    if ((out_len < sanity_min_size) || !safe_mem_is_zero((char*)out, out_len))
+    if ((out_len < sanity_min_size) || !safe_mem_is_zero((char *)out, out_len))
       return 0;
   }
 
@@ -347,7 +348,7 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
  * storing it into <b>out</b>. (Mockable version.)
  **/
 MOCK_IMPL(void,
-crypto_strongest_rand_,(uint8_t *out, size_t out_len))
+crypto_strongest_rand_, (uint8_t * out, size_t out_len))
 {
 #define DLEN DIGEST512_LEN
 
@@ -355,7 +356,7 @@ crypto_strongest_rand_,(uint8_t *out, size_t out_len))
    * bytes from the PRNGs from our crypto librar(y/ies), in order to yield
    * DLEN bytes.
    */
-  uint8_t inp[DLEN*3];
+  uint8_t inp[DLEN * 3];
   uint8_t tmp[DLEN];
   tor_assert(out);
   while (out_len) {
@@ -364,22 +365,22 @@ crypto_strongest_rand_,(uint8_t *out, size_t out_len))
     RAND_bytes(inp, DLEN);
 #endif
 #ifdef ENABLE_NSS
-    PK11_GenerateRandom(inp+DLEN, DLEN);
+    PK11_GenerateRandom(inp + DLEN, DLEN);
 #endif
-    if (crypto_strongest_rand_raw(inp+DLEN*2, DLEN) < 0) {
+    if (crypto_strongest_rand_raw(inp + DLEN * 2, DLEN) < 0) {
       // LCOV_EXCL_START
       log_err(LD_CRYPTO, "Failed to load strong entropy when generating an "
-              "important key. Exiting.");
+                         "important key. Exiting.");
       /* Die with an assertion so we get a stack trace. */
       tor_assert(0);
       // LCOV_EXCL_STOP
     }
     if (out_len >= DLEN) {
-      crypto_digest512((char*)out, (char*)inp, sizeof(inp), DIGEST_SHA512);
+      crypto_digest512((char *)out, (char *)inp, sizeof(inp), DIGEST_SHA512);
       out += DLEN;
       out_len -= DLEN;
     } else {
-      crypto_digest512((char*)tmp, (char*)inp, sizeof(inp), DIGEST_SHA512);
+      crypto_digest512((char *)tmp, (char *)inp, sizeof(inp), DIGEST_SHA512);
       memcpy(out, tmp, out_len);
       break;
     }
@@ -496,7 +497,7 @@ crypto_rand_unmocked(char *to, size_t n)
   tor_assert(to);
 
 #ifdef ENABLE_NSS
-  SECStatus s = PK11_GenerateRandom((unsigned char*)to, (int)n);
+  SECStatus s = PK11_GenerateRandom((unsigned char *)to, (int)n);
   if (s != SECSuccess) {
     /* NSS rather sensibly might refuse to generate huge amounts of random
      * data at once.  Unfortunately, our unit test do this in a couple of
@@ -507,7 +508,7 @@ crypto_rand_unmocked(char *to, size_t n)
 
     /* This is longer than it needs to be; 1600 bits == 200 bytes is the
      * state-size of SHA3. */
-#define BUFLEN 512
+#  define BUFLEN 512
     tor_assert(PR_GetError() == SEC_ERROR_INVALID_ARGS && n > BUFLEN);
     unsigned char buf[BUFLEN];
     s = PK11_GenerateRandom(buf, BUFLEN);
@@ -518,10 +519,10 @@ crypto_rand_unmocked(char *to, size_t n)
     crypto_xof_free(xof);
     memwipe(buf, 0, BUFLEN);
 
-#undef BUFLEN
+#  undef BUFLEN
   }
 #else /* !defined(ENABLE_NSS) */
-  int r = RAND_bytes((unsigned char*)to, (int)n);
+  int r = RAND_bytes((unsigned char *)to, (int)n);
   /* We consider a PRNG failure non-survivable. Let's assert so that we get a
    * stack trace about where it happened.
    */
@@ -536,7 +537,7 @@ uint32_t
 crypto_rand_u32(void)
 {
   uint32_t rand;
-  crypto_rand((void*)&rand, sizeof(rand));
+  crypto_rand((void *)&rand, sizeof(rand));
   return rand;
 }
 
@@ -561,23 +562,24 @@ crypto_random_hostname(int min_rand_len, int max_rand_len, const char *prefix,
   if (min_rand_len > max_rand_len)
     min_rand_len = max_rand_len;
 
-  randlen = crypto_rand_int_range(min_rand_len, max_rand_len+1);
+  randlen = crypto_rand_int_range(min_rand_len, max_rand_len + 1);
 
   prefixlen = strlen(prefix);
   resultlen = prefixlen + strlen(suffix) + randlen + 16;
 
-  rand_bytes_len = ((randlen*5)+7)/8;
+  rand_bytes_len = ((randlen * 5) + 7) / 8;
   if (rand_bytes_len % 5)
-    rand_bytes_len += 5 - (rand_bytes_len%5);
+    rand_bytes_len += 5 - (rand_bytes_len % 5);
   rand_bytes = tor_malloc(rand_bytes_len);
   crypto_rand(rand_bytes, rand_bytes_len);
 
   result = tor_malloc(resultlen);
   memcpy(result, prefix, prefixlen);
-  base32_encode(result+prefixlen, resultlen-prefixlen,
-                rand_bytes, rand_bytes_len);
+  base32_encode(result + prefixlen, resultlen - prefixlen, rand_bytes,
+                rand_bytes_len);
   tor_free(rand_bytes);
-  strlcpy(result+prefixlen+randlen, suffix, resultlen-(prefixlen+randlen));
+  strlcpy(result + prefixlen + randlen, suffix,
+          resultlen - (prefixlen + randlen));
 
   return result;
 }
@@ -591,7 +593,7 @@ smartlist_choose(const smartlist_t *sl)
 {
   int len = smartlist_len(sl);
   if (len)
-    return smartlist_get(sl,crypto_rand_int(len));
+    return smartlist_get(sl, crypto_rand_int(len));
   return NULL; /* no elements to choose from */
 }
 
@@ -606,8 +608,8 @@ smartlist_shuffle(smartlist_t *sl)
      positions we haven't looked at yet, and swap that position into the
      current position.  Remember to give "no swap" the same probability as
      any other swap. */
-  for (i = smartlist_len(sl)-1; i > 0; --i) {
-    int j = crypto_rand_int(i+1);
+  for (i = smartlist_len(sl) - 1; i > 0; --i) {
+    int j = crypto_rand_int(i + 1);
     smartlist_swap(sl, i, j);
   }
 }
@@ -621,7 +623,8 @@ crypto_force_rand_ssleay(void)
   RAND_METHOD *default_method;
   default_method = RAND_OpenSSL();
   if (RAND_get_rand_method() != default_method) {
-    log_notice(LD_CRYPTO, "It appears that one of our engines has provided "
+    log_notice(LD_CRYPTO,
+               "It appears that one of our engines has provided "
                "a replacement the OpenSSL RNG. Resetting it to the default "
                "implementation.");
     RAND_set_rand_method(default_method);

@@ -64,7 +64,7 @@ note_user_activity(time_t now)
 {
   last_user_activity_seen = MAX(now, last_user_activity_seen);
 
-  if (! participating_on_network) {
+  if (!participating_on_network) {
     log_notice(LD_GENERAL, "Tor is no longer dormant.");
     set_network_participation(true);
     schedule_rescan_periodic_events();
@@ -118,7 +118,7 @@ is_participating_on_network(void)
 void
 netstatus_flush_to_state(mainloop_state_t *state, time_t now)
 {
-  state->Dormant = ! participating_on_network;
+  state->Dormant = !participating_on_network;
   if (participating_on_network) {
     time_t sec_since_activity = MAX(0, now - last_user_activity_seen);
     state->MinutesSinceUserActivity = (int)(sec_since_activity / 60);

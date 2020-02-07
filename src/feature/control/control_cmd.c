@@ -69,7 +69,7 @@ static int control_setconf_helper(control_connection_t *conn,
 void
 control_cmd_args_free_(control_cmd_args_t *args)
 {
-  if (! args)
+  if (!args)
     return;
 
   if (args->args) {
@@ -108,7 +108,7 @@ static bool
 string_array_contains_keyword(const char **array, const char *kwd)
 {
   for (unsigned i = 0; array[i]; ++i) {
-    if (! strcasecmp(array[i], kwd))
+    if (!strcasecmp(array[i], kwd))
       return true;
   }
   return false;
@@ -122,15 +122,14 @@ string_array_contains_keyword(const char **array, const char *kwd)
  **/
 static int
 kvline_check_keyword_args(const control_cmd_args_t *result,
-                          const control_cmd_syntax_t *syntax,
-                          char **error_out)
+                          const control_cmd_syntax_t *syntax, char **error_out)
 {
   if (result->kwargs == NULL) {
     tor_asprintf(error_out, "Cannot parse keyword argument(s)");
     return -1;
   }
 
-  if (! syntax->allowed_keywords) {
+  if (!syntax->allowed_keywords) {
     /* All keywords are permitted. */
     return 0;
   }
@@ -138,8 +137,7 @@ kvline_check_keyword_args(const control_cmd_args_t *result,
   /* Check for unpermitted arguments */
   const config_line_t *line;
   for (line = result->kwargs; line; line = line->next) {
-    if (! string_array_contains_keyword(syntax->allowed_keywords,
-                                        line->key)) {
+    if (!string_array_contains_keyword(syntax->allowed_keywords, line->key)) {
       tor_asprintf(error_out, "Unrecognized keyword argument %s",
                    escaped(line->key));
       return -1;
@@ -156,11 +154,8 @@ kvline_check_keyword_args(const control_cmd_args_t *result,
  * error string, and return NULL.
  **/
 STATIC control_cmd_args_t *
-control_cmd_parse_args(const char *command,
-                       const control_cmd_syntax_t *syntax,
-                       size_t body_len,
-                       const char *body,
-                       char **error_out)
+control_cmd_parse_args(const char *command, const control_cmd_syntax_t *syntax,
+                       size_t body_len, const char *body, char **error_out)
 {
   *error_out = NULL;
   control_cmd_args_t *result = tor_malloc_zero(sizeof(control_cmd_args_t));
@@ -177,17 +172,17 @@ control_cmd_parse_args(const char *command,
 
   const char *eol = memchr(body, '\n', body_len);
   if (syntax->want_cmddata) {
-    if (! eol || (eol+1) == body+body_len) {
+    if (!eol || (eol + 1) == body + body_len) {
       *error_out = tor_strdup("Empty body");
       goto err;
     }
-    cmdline_alloc = tor_memdup_nulterm(body, eol-body);
+    cmdline_alloc = tor_memdup_nulterm(body, eol - body);
     cmdline = cmdline_alloc;
     ++eol;
-    result->cmddata_len = read_escaped_data(eol, (body+body_len)-eol,
-                                           &result->cmddata);
+    result->cmddata_len =
+        read_escaped_data(eol, (body + body_len) - eol, &result->cmddata);
   } else {
-    if (eol && (eol+1) != body+body_len) {
+    if (eol && (eol + 1) != body + body_len) {
       *error_out = tor_strdup("Unexpected body");
       goto err;
     }
@@ -196,14 +191,13 @@ control_cmd_parse_args(const char *command,
 
   result->args = smartlist_new();
   smartlist_split_string(result->args, cmdline, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK,
-                         (int)(syntax->max_args+1));
+                         SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK,
+                         (int)(syntax->max_args + 1));
   size_t n_args = smartlist_len(result->args);
   if (n_args < syntax->min_args) {
-    tor_asprintf(error_out, "Need at least %u argument(s)",
-                 syntax->min_args);
+    tor_asprintf(error_out, "Need at least %u argument(s)", syntax->min_args);
     goto err;
-  } else if (n_args > syntax->max_args && ! syntax->accept_keywords) {
+  } else if (n_args > syntax->max_args && !syntax->accept_keywords) {
     tor_asprintf(error_out, "Cannot accept more than %u argument(s)",
                  syntax->max_args);
     goto err;
@@ -225,10 +219,10 @@ control_cmd_parse_args(const char *command,
 
   tor_assert_nonfatal(*error_out == NULL);
   goto done;
- err:
+err:
   tor_assert_nonfatal(*error_out != NULL);
   control_cmd_args_free(result);
- done:
+done:
   tor_free(cmdline_alloc);
   return result;
 }
@@ -245,9 +239,9 @@ config_lines_contain_flag(const config_line_t *lines, const char *flag)
 }
 
 static const control_cmd_syntax_t setconf_syntax = {
-  .max_args=0,
-  .accept_keywords=true,
-  .kvline_flags=KV_OMIT_VALS|KV_QUOTED,
+    .max_args = 0,
+    .accept_keywords = true,
+    .kvline_flags = KV_OMIT_VALS | KV_QUOTED,
 };
 
 /** Called when we receive a SETCONF message: parse the body and try
@@ -261,9 +255,9 @@ handle_control_setconf(control_connection_t *conn,
 }
 
 static const control_cmd_syntax_t resetconf_syntax = {
-  .max_args=0,
-  .accept_keywords=true,
-  .kvline_flags=KV_OMIT_VALS|KV_QUOTED,
+    .max_args = 0,
+    .accept_keywords = true,
+    .kvline_flags = KV_OMIT_VALS | KV_QUOTED,
 };
 
 /** Called when we receive a RESETCONF message: parse the body and try
@@ -276,9 +270,7 @@ handle_control_resetconf(control_connection_t *conn,
   return control_setconf_helper(conn, args, 1);
 }
 
-static const control_cmd_syntax_t getconf_syntax = {
-  .max_args=UINT_MAX
-};
+static const control_cmd_syntax_t getconf_syntax = {.max_args = UINT_MAX};
 
 /** Called when we receive a GETCONF message.  Parse the request, and
  * reply with a CONFVALUE or an ERROR message */
@@ -291,12 +283,12 @@ handle_control_getconf(control_connection_t *conn,
   smartlist_t *unrecognized = smartlist_new();
   const or_options_t *options = get_options();
 
-  SMARTLIST_FOREACH_BEGIN(questions, const char *, q) {
+  SMARTLIST_FOREACH_BEGIN (questions, const char *, q) {
     if (!option_is_recognized(q)) {
       control_reply_add_printf(unrecognized, 552,
                                "Unrecognized configuration key \"%s\"", q);
     } else {
-      config_line_t *answer = option_get_assignment(options,q);
+      config_line_t *answer = option_get_assignment(options, q);
       if (!answer) {
         const char *name = option_get_canonical_name(q);
         control_reply_add_one_kv(answers, 250, KV_OMIT_VALS, name, "");
@@ -313,7 +305,7 @@ handle_control_getconf(control_connection_t *conn,
         answer = next;
       }
     }
-  } SMARTLIST_FOREACH_END(q);
+  } SMARTLIST_FOREACH_END (q);
 
   if (smartlist_len(unrecognized)) {
     control_write_reply_lines(conn, unrecognized);
@@ -328,9 +320,7 @@ handle_control_getconf(control_connection_t *conn,
   return 0;
 }
 
-static const control_cmd_syntax_t loadconf_syntax = {
-  .want_cmddata = true
-};
+static const control_cmd_syntax_t loadconf_syntax = {.want_cmddata = true};
 
 /** Called when we get a +LOADCONF message. */
 static int
@@ -340,17 +330,16 @@ handle_control_loadconf(control_connection_t *conn,
   setopt_err_t retval;
   char *errstring = NULL;
 
-  retval = options_init_from_string(NULL, args->cmddata,
-                                    CMD_RUN_TOR, NULL, &errstring);
+  retval = options_init_from_string(NULL, args->cmddata, CMD_RUN_TOR, NULL,
+                                    &errstring);
 
   if (retval != SETOPT_OK)
     log_warn(LD_CONTROL,
              "Controller gave us config file that didn't validate: %s",
              errstring);
 
-#define SEND_ERRMSG(code, msg)                          \
-  control_printf_endreply(conn, code, msg "%s%s",       \
-                          errstring ? ": " : "",        \
+#define SEND_ERRMSG(code, msg)                                           \
+  control_printf_endreply(conn, code, msg "%s%s", errstring ? ": " : "", \
                           errstring ? errstring : "")
   switch (retval) {
   case SETOPT_ERR_PARSE:
@@ -375,9 +364,7 @@ handle_control_loadconf(control_connection_t *conn,
   return 0;
 }
 
-static const control_cmd_syntax_t setevents_syntax = {
-  .max_args = UINT_MAX
-};
+static const control_cmd_syntax_t setevents_syntax = {.max_args = UINT_MAX};
 
 /** Called when we get a SETEVENTS message: update conn->event_mask,
  * and reply with DONE or ERROR. */
@@ -389,32 +376,31 @@ handle_control_setevents(control_connection_t *conn,
   event_mask_t event_mask = 0;
   const smartlist_t *events = args->args;
 
-  SMARTLIST_FOREACH_BEGIN(events, const char *, ev)
-    {
-      if (!strcasecmp(ev, "EXTENDED") ||
-          !strcasecmp(ev, "AUTHDIR_NEWDESCS")) {
-        log_warn(LD_CONTROL, "The \"%s\" SETEVENTS argument is no longer "
-                 "supported.", ev);
-        continue;
-      } else {
-        int i;
-        event_code = -1;
+  SMARTLIST_FOREACH_BEGIN (events, const char *, ev) {
+    if (!strcasecmp(ev, "EXTENDED") || !strcasecmp(ev, "AUTHDIR_NEWDESCS")) {
+      log_warn(LD_CONTROL,
+               "The \"%s\" SETEVENTS argument is no longer "
+               "supported.",
+               ev);
+      continue;
+    } else {
+      int i;
+      event_code = -1;
 
-        for (i = 0; control_event_table[i].event_name != NULL; ++i) {
-          if (!strcasecmp(ev, control_event_table[i].event_name)) {
-            event_code = control_event_table[i].event_code;
-            break;
-          }
-        }
-
-        if (event_code == -1) {
-          control_printf_endreply(conn, 552, "Unrecognized event \"%s\"", ev);
-          return 0;
+      for (i = 0; control_event_table[i].event_name != NULL; ++i) {
+        if (!strcasecmp(ev, control_event_table[i].event_name)) {
+          event_code = control_event_table[i].event_code;
+          break;
         }
       }
-      event_mask |= (((event_mask_t)1) << event_code);
+
+      if (event_code == -1) {
+        control_printf_endreply(conn, 552, "Unrecognized event \"%s\"", ev);
+        return 0;
+      }
     }
-  SMARTLIST_FOREACH_END(ev);
+    event_mask |= (((event_mask_t)1) << event_code);
+  } SMARTLIST_FOREACH_END (ev);
 
   conn->event_mask = event_mask;
 
@@ -424,9 +410,9 @@ handle_control_setevents(control_connection_t *conn,
 }
 
 static const control_cmd_syntax_t saveconf_syntax = {
-  .max_args = 0,
-  .accept_keywords = true,
-  .kvline_flags=KV_OMIT_VALS,
+    .max_args = 0,
+    .accept_keywords = true,
+    .kvline_flags = KV_OMIT_VALS,
 };
 
 /** Called when we get a SAVECONF command. Try to flush the current options to
@@ -447,8 +433,8 @@ handle_control_saveconf(control_connection_t *conn,
 }
 
 static const control_cmd_syntax_t signal_syntax = {
-  .min_args = 1,
-  .max_args = 1,
+    .min_args = 1,
+    .max_args = 1,
 };
 
 /** Called when we get a SIGNAL command. React to the provided signal, and
@@ -487,7 +473,7 @@ handle_control_signal(control_connection_t *conn,
 }
 
 static const control_cmd_syntax_t takeownership_syntax = {
-  .max_args = UINT_MAX, // This should probably become zero. XXXXX
+    .max_args = UINT_MAX, // This should probably become zero. XXXXX
 };
 
 /** Called when we get a TAKEOWNERSHIP command.  Mark this connection
@@ -501,7 +487,8 @@ handle_control_takeownership(control_connection_t *conn,
 
   conn->is_owning_control_connection = 1;
 
-  log_info(LD_CONTROL, "Control connection %d has taken ownership of this "
+  log_info(LD_CONTROL,
+           "Control connection %d has taken ownership of this "
            "Tor instance.",
            (int)(conn->base_.s));
 
@@ -510,7 +497,7 @@ handle_control_takeownership(control_connection_t *conn,
 }
 
 static const control_cmd_syntax_t dropownership_syntax = {
-  .max_args = UINT_MAX, // This should probably become zero. XXXXX
+    .max_args = UINT_MAX, // This should probably become zero. XXXXX
 };
 
 /** Called when we get a DROPOWNERSHIP command.  Mark this connection
@@ -524,7 +511,8 @@ handle_control_dropownership(control_connection_t *conn,
 
   conn->is_owning_control_connection = 0;
 
-  log_info(LD_CONTROL, "Control connection %d has dropped ownership of this "
+  log_info(LD_CONTROL,
+           "Control connection %d has dropped ownership of this "
            "Tor instance.",
            (int)(conn->base_.s));
 
@@ -538,7 +526,7 @@ get_circ(const char *id)
 {
   uint32_t n_id;
   int ok;
-  n_id = (uint32_t) tor_parse_ulong(id, 10, 0, UINT32_MAX, &ok, NULL);
+  n_id = (uint32_t)tor_parse_ulong(id, 10, 0, UINT32_MAX, &ok, NULL);
   if (!ok)
     return NULL;
   return circuit_get_by_global_id(n_id);
@@ -566,40 +554,39 @@ get_stream(const char *id)
  */
 static int
 control_setconf_helper(control_connection_t *conn,
-                       const control_cmd_args_t *args,
-                       int use_defaults)
+                       const control_cmd_args_t *args, int use_defaults)
 {
   setopt_err_t opt_err;
   char *errstring = NULL;
   const unsigned flags =
-    CAL_CLEAR_FIRST | (use_defaults ? CAL_USE_DEFAULTS : 0);
+      CAL_CLEAR_FIRST | (use_defaults ? CAL_USE_DEFAULTS : 0);
 
   // We need a copy here, since confmgt.c wants to canonicalize cases.
   config_line_t *lines = config_lines_dup(args->kwargs);
 
   opt_err = options_trial_assign(lines, flags, &errstring);
   {
-#define SEND_ERRMSG(code, msg)                                  \
-    control_printf_endreply(conn, code, msg ": %s", errstring);
+#define SEND_ERRMSG(code, msg) \
+  control_printf_endreply(conn, code, msg ": %s", errstring);
 
     switch (opt_err) {
-      case SETOPT_ERR_MISC:
-        SEND_ERRMSG(552, "Unrecognized option");
-        break;
-      case SETOPT_ERR_PARSE:
-        SEND_ERRMSG(513, "Unacceptable option value");
-        break;
-      case SETOPT_ERR_TRANSITION:
-        SEND_ERRMSG(553, "Transition not allowed");
-        break;
-      case SETOPT_ERR_SETTING:
-      default:
-        SEND_ERRMSG(553, "Unable to set option");
-        break;
-      case SETOPT_OK:
-        config_free_lines(lines);
-        send_control_done(conn);
-        return 0;
+    case SETOPT_ERR_MISC:
+      SEND_ERRMSG(552, "Unrecognized option");
+      break;
+    case SETOPT_ERR_PARSE:
+      SEND_ERRMSG(513, "Unacceptable option value");
+      break;
+    case SETOPT_ERR_TRANSITION:
+      SEND_ERRMSG(553, "Transition not allowed");
+      break;
+    case SETOPT_ERR_SETTING:
+    default:
+      SEND_ERRMSG(553, "Unable to set option");
+      break;
+    case SETOPT_OK:
+      config_free_lines(lines);
+      send_control_done(conn);
+      return 0;
     }
 #undef SEND_ERRMSG
     log_warn(LD_CONTROL,
@@ -617,16 +604,16 @@ static int
 address_is_invalid_mapaddress_target(const char *addr)
 {
   if (!strcmpstart(addr, "*."))
-    return address_is_invalid_destination(addr+2, 1);
+    return address_is_invalid_destination(addr + 2, 1);
   else
     return address_is_invalid_destination(addr, 1);
 }
 
 static const control_cmd_syntax_t mapaddress_syntax = {
-  // no positional arguments are expected
-  .max_args=0,
-  // an arbitrary number of K=V entries are supported.
-  .accept_keywords=true,
+    // no positional arguments are expected
+    .max_args = 0,
+    // an arbitrary number of K=V entries are supported.
+    .accept_keywords = true,
 };
 
 /** Called when we get a MAPADDRESS command; try to bind all listed addresses,
@@ -646,20 +633,21 @@ handle_control_mapaddress(control_connection_t *conn,
     const char *to = line->value;
     {
       if (address_is_invalid_mapaddress_target(to)) {
-        smartlist_add_asprintf(reply,
-                     "512-syntax error: invalid address '%s'", to);
+        smartlist_add_asprintf(reply, "512-syntax error: invalid address '%s'",
+                               to);
         log_warn(LD_CONTROL,
                  "Skipping invalid argument '%s' in MapAddress msg", to);
       } else if (!strcmp(from, ".") || !strcmp(from, "0.0.0.0") ||
                  !strcmp(from, "::")) {
-        const char type =
-          !strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME :
-          (!strcmp(from, "0.0.0.0") ? RESOLVED_TYPE_IPV4 : RESOLVED_TYPE_IPV6);
-        const char *address = addressmap_register_virtual_address(
-                                                     type, tor_strdup(to));
+        const char type = !strcmp(from, ".") ? RESOLVED_TYPE_HOSTNAME
+                                             : (!strcmp(from, "0.0.0.0")
+                                                    ? RESOLVED_TYPE_IPV4
+                                                    : RESOLVED_TYPE_IPV6);
+        const char *address =
+            addressmap_register_virtual_address(type, tor_strdup(to));
         if (!address) {
-          smartlist_add_asprintf(reply,
-                   "451-resource exhausted: skipping '%s=%s'", from,to);
+          smartlist_add_asprintf(
+              reply, "451-resource exhausted: skipping '%s=%s'", from, to);
           log_warn(LD_CONTROL,
                    "Unable to allocate address for '%s' in MapAddress msg",
                    safe_str_client(to));
@@ -668,11 +656,12 @@ handle_control_mapaddress(control_connection_t *conn,
         }
       } else {
         const char *msg;
-        if (addressmap_register_auto(from, to, 1,
-                                     ADDRMAPSRC_CONTROLLER, &msg) < 0) {
+        if (addressmap_register_auto(from, to, 1, ADDRMAPSRC_CONTROLLER,
+                                     &msg) < 0) {
           smartlist_add_asprintf(reply,
                                  "512-syntax error: invalid address mapping "
-                                 " '%s=%s': %s", from, to, msg);
+                                 " '%s=%s': %s",
+                                 from, to, msg);
           log_warn(LD_CONTROL,
                    "Skipping invalid argument '%s=%s' in MapAddress msg: %s",
                    from, to, msg);
@@ -684,12 +673,13 @@ handle_control_mapaddress(control_connection_t *conn,
   }
 
   if (smartlist_len(reply)) {
-    ((char*)smartlist_get(reply,smartlist_len(reply)-1))[3] = ' ';
+    ((char *)smartlist_get(reply, smartlist_len(reply) - 1))[3] = ' ';
     r = smartlist_join_strings(reply, "\r\n", 1, &sz);
     connection_buf_add(r, sz, TO_CONN(conn));
     tor_free(r);
   } else {
-    control_write_endreply(conn, 512, "syntax error: "
+    control_write_endreply(conn, 512,
+                           "syntax error: "
                            "not enough arguments to mapaddress.");
   }
 
@@ -714,11 +704,10 @@ circuit_purpose_from_string(const char *string)
 }
 
 static const control_cmd_syntax_t extendcircuit_syntax = {
-  .min_args=1,
-  .max_args=1, // see note in function
-  .accept_keywords=true,
-  .kvline_flags=KV_OMIT_VALS
-};
+    .min_args = 1,
+    .max_args = 1, // see note in function
+    .accept_keywords = true,
+    .kvline_flags = KV_OMIT_VALS};
 
 /** Called when we get an EXTENDCIRCUIT message.  Try to extend the listed
  * circuit, and report success or failure. */
@@ -726,7 +715,7 @@ static int
 handle_control_extendcircuit(control_connection_t *conn,
                              const control_cmd_args_t *args)
 {
-  smartlist_t *router_nicknames=smartlist_new(), *nodes=NULL;
+  smartlist_t *router_nicknames = smartlist_new(), *nodes = NULL;
   origin_circuit_t *circ = NULL;
   uint8_t intended_purpose = CIRCUIT_PURPOSE_C_GENERAL;
   const config_line_t *kwargs = args->kwargs;
@@ -793,7 +782,7 @@ handle_control_extendcircuit(control_connection_t *conn,
 
   nodes = smartlist_new();
   bool first_node = zero_circ;
-  SMARTLIST_FOREACH_BEGIN(router_nicknames, const char *, n) {
+  SMARTLIST_FOREACH_BEGIN (router_nicknames, const char *, n) {
     const node_t *node = node_get_by_nickname(n, 0);
     if (!node) {
       control_printf_endreply(conn, 552, "No such router \"%s\"", n);
@@ -803,9 +792,9 @@ handle_control_extendcircuit(control_connection_t *conn,
       control_printf_endreply(conn, 552, "No descriptor for \"%s\"", n);
       goto done;
     }
-    smartlist_add(nodes, (void*)node);
+    smartlist_add(nodes, (void *)node);
     first_node = false;
-  } SMARTLIST_FOREACH_END(n);
+  } SMARTLIST_FOREACH_END (n);
 
   if (!smartlist_len(nodes)) {
     control_write_endreply(conn, 512, "No router names provided");
@@ -819,8 +808,7 @@ handle_control_extendcircuit(control_connection_t *conn,
 
   /* now circ refers to something that is ready to be extended */
   first_node = zero_circ;
-  SMARTLIST_FOREACH(nodes, const node_t *, node,
-  {
+  SMARTLIST_FOREACH(nodes, const node_t *, node, {
     extend_info_t *info = extend_info_from_node(node, first_node);
     if (!info) {
       tor_assert_nonfatal(first_node);
@@ -868,7 +856,7 @@ handle_control_extendcircuit(control_connection_t *conn,
                           (unsigned long)circ->global_identifier);
   if (zero_circ) /* send a 'launched' event, for completeness */
     circuit_event_status(circ, CIRC_EVENT_LAUNCHED, 0);
- done:
+done:
   SMARTLIST_FOREACH(router_nicknames, char *, n, tor_free(n));
   smartlist_free(router_nicknames);
   smartlist_free(nodes);
@@ -877,8 +865,8 @@ handle_control_extendcircuit(control_connection_t *conn,
 }
 
 static const control_cmd_syntax_t setcircuitpurpose_syntax = {
-  .max_args=1,
-  .accept_keywords=true,
+    .max_args = 1,
+    .accept_keywords = true,
 };
 
 /** Called when we get a SETCIRCUITPURPOSE message. If we can find the
@@ -889,7 +877,7 @@ handle_control_setcircuitpurpose(control_connection_t *conn,
 {
   origin_circuit_t *circ = NULL;
   uint8_t new_purpose;
-  const char *circ_id = smartlist_get(args->args,0);
+  const char *circ_id = smartlist_get(args->args, 0);
 
   if (!(circ = get_circ(circ_id))) {
     control_printf_endreply(conn, 552, "Unknown circuit \"%s\"", circ_id);
@@ -913,18 +901,16 @@ handle_control_setcircuitpurpose(control_connection_t *conn,
   circuit_change_purpose(TO_CIRCUIT(circ), new_purpose);
   send_control_done(conn);
 
- done:
+done:
   return 0;
 }
 
-static const char *attachstream_keywords[] = {
-  "HOP", NULL
-};
+static const char *attachstream_keywords[] = {"HOP", NULL};
 static const control_cmd_syntax_t attachstream_syntax = {
-  .min_args=2, .max_args=2,
-  .accept_keywords=true,
-  .allowed_keywords=attachstream_keywords
-};
+    .min_args = 2,
+    .max_args = 2,
+    .accept_keywords = true,
+    .allowed_keywords = attachstream_keywords};
 
 /** Called when we get an ATTACHSTREAM message.  Try to attach the requested
  * stream, and report success or failure. */
@@ -934,8 +920,8 @@ handle_control_attachstream(control_connection_t *conn,
 {
   entry_connection_t *ap_conn = NULL;
   origin_circuit_t *circ = NULL;
-  crypt_path_t *cpath=NULL;
-  int hop=0, hop_line_ok=1;
+  crypt_path_t *cpath = NULL;
+  int hop = 0, hop_line_ok = 1;
   const char *stream_id = smartlist_get(args->args, 0);
   const char *circ_id = smartlist_get(args->args, 1);
   int zero_circ = !strcmp(circ_id, "0");
@@ -949,11 +935,10 @@ handle_control_attachstream(control_connection_t *conn,
     return 0;
   } else if (circ) {
     if (hoparg) {
-      hop = (int) tor_parse_ulong(hoparg->value, 10, 0, INT_MAX,
-                                  &hop_line_ok, NULL);
+      hop = (int)tor_parse_ulong(hoparg->value, 10, 0, INT_MAX, &hop_line_ok,
+                                 NULL);
       if (!hop_line_ok) { /* broken hop line */
-        control_printf_endreply(conn, 552, "Bad value hop=%s",
-                                hoparg->value);
+        control_printf_endreply(conn, 552, "Bad value hop=%s", hoparg->value);
         return 0;
       }
     }
@@ -987,13 +972,13 @@ handle_control_attachstream(control_connection_t *conn,
     return 0;
   }
   /* Is this a single hop circuit? */
-  if (circ && (circuit_get_cpath_len(circ)<2 || hop==1)) {
+  if (circ && (circuit_get_cpath_len(circ) < 2 || hop == 1)) {
     control_write_endreply(conn, 551,
                            "Can't attach stream to this one-hop circuit.");
     return 0;
   }
 
-  if (circ && hop>0) {
+  if (circ && hop > 0) {
     /* find this hop in the circuit, and set cpath */
     cpath = circuit_get_cpath_hop(circ, hop);
     if (!cpath) {
@@ -1010,14 +995,16 @@ handle_control_attachstream(control_connection_t *conn,
 }
 
 static const char *postdescriptor_keywords[] = {
-  "cache", "purpose", NULL,
+    "cache",
+    "purpose",
+    NULL,
 };
 
 static const control_cmd_syntax_t postdescriptor_syntax = {
-  .max_args = 0,
-  .accept_keywords = true,
-  .allowed_keywords = postdescriptor_keywords,
-  .want_cmddata = true,
+    .max_args = 0,
+    .accept_keywords = true,
+    .allowed_keywords = postdescriptor_keywords,
+    .want_cmddata = true,
 };
 
 /** Called when we get a POSTDESCRIPTOR message.  Try to learn the provided
@@ -1026,7 +1013,7 @@ static int
 handle_control_postdescriptor(control_connection_t *conn,
                               const control_cmd_args_t *args)
 {
-  const char *msg=NULL;
+  const char *msg = NULL;
   uint8_t purpose = ROUTER_PURPOSE_GENERAL;
   int cache = 0; /* eventually, we may switch this to 1 */
   const config_line_t *line;
@@ -1055,11 +1042,13 @@ handle_control_postdescriptor(control_connection_t *conn,
 
   switch (router_load_single_router(args->cmddata, purpose, cache, &msg)) {
   case -1:
-    if (!msg) msg = "Could not parse descriptor";
+    if (!msg)
+      msg = "Could not parse descriptor";
     control_write_endreply(conn, 554, msg);
     break;
   case 0:
-    if (!msg) msg = "Descriptor not added";
+    if (!msg)
+      msg = "Descriptor not added";
     control_write_endreply(conn, 251, msg);
     break;
   case 1:
@@ -1067,13 +1056,13 @@ handle_control_postdescriptor(control_connection_t *conn,
     break;
   }
 
- done:
+done:
   return 0;
 }
 
 static const control_cmd_syntax_t redirectstream_syntax = {
-  .min_args = 2,
-  .max_args = UINT_MAX, // XXX should be 3.
+    .min_args = 2,
+    .max_args = UINT_MAX, // XXX should be 3.
 };
 
 /** Called when we receive a REDIRECTSTERAM command.  Try to change the target
@@ -1087,19 +1076,19 @@ handle_control_redirectstream(control_connection_t *conn,
   uint16_t new_port = 0;
   const smartlist_t *args = cmd_args->args;
 
-  if (!(ap_conn = get_stream(smartlist_get(args, 0)))
-           || !ap_conn->socks_request) {
+  if (!(ap_conn = get_stream(smartlist_get(args, 0))) ||
+      !ap_conn->socks_request) {
     control_printf_endreply(conn, 552, "Unknown stream \"%s\"",
-                            (char*)smartlist_get(args, 0));
+                            (char *)smartlist_get(args, 0));
   } else {
     int ok = 1;
     if (smartlist_len(args) > 2) { /* they included a port too */
-      new_port = (uint16_t) tor_parse_ulong(smartlist_get(args, 2),
-                                            10, 1, 65535, &ok, NULL);
+      new_port = (uint16_t)tor_parse_ulong(smartlist_get(args, 2), 10, 1,
+                                           65535, &ok, NULL);
     }
     if (!ok) {
       control_printf_endreply(conn, 512, "Cannot parse port \"%s\"",
-                              (char*)smartlist_get(args, 2));
+                              (char *)smartlist_get(args, 2));
     } else {
       new_addr = tor_strdup(smartlist_get(args, 1));
     }
@@ -1118,9 +1107,9 @@ handle_control_redirectstream(control_connection_t *conn,
 }
 
 static const control_cmd_syntax_t closestream_syntax = {
-  .min_args = 2,
-  .max_args = UINT_MAX, /* XXXX This is the original behavior, but
-                         * maybe we should change the spec. */
+    .min_args = 2,
+    .max_args = UINT_MAX, /* XXXX This is the original behavior, but
+                           * maybe we should change the spec. */
 };
 
 /** Called when we get a CLOSESTREAM command; try to close the named stream
@@ -1129,8 +1118,8 @@ static int
 handle_control_closestream(control_connection_t *conn,
                            const control_cmd_args_t *cmd_args)
 {
-  entry_connection_t *ap_conn=NULL;
-  uint8_t reason=0;
+  entry_connection_t *ap_conn = NULL;
+  uint8_t reason = 0;
   int ok;
   const smartlist_t *args = cmd_args->args;
 
@@ -1138,13 +1127,13 @@ handle_control_closestream(control_connection_t *conn,
 
   if (!(ap_conn = get_stream(smartlist_get(args, 0))))
     control_printf_endreply(conn, 552, "Unknown stream \"%s\"",
-                            (char*)smartlist_get(args, 0));
+                            (char *)smartlist_get(args, 0));
   else {
-    reason = (uint8_t) tor_parse_ulong(smartlist_get(args,1), 10, 0, 255,
-                                       &ok, NULL);
+    reason = (uint8_t)tor_parse_ulong(smartlist_get(args, 1), 10, 0, 255, &ok,
+                                      NULL);
     if (!ok) {
       control_printf_endreply(conn, 552, "Unrecognized reason \"%s\"",
-                              (char*)smartlist_get(args, 1));
+                              (char *)smartlist_get(args, 1));
       ap_conn = NULL;
     }
   }
@@ -1157,11 +1146,12 @@ handle_control_closestream(control_connection_t *conn,
 }
 
 static const control_cmd_syntax_t closecircuit_syntax = {
-  .min_args=1, .max_args=1,
-  .accept_keywords=true,
-  .kvline_flags=KV_OMIT_VALS,
-  // XXXX we might want to exclude unrecognized flags, but for now we
-  // XXXX just ignore them for backward compatibility.
+    .min_args = 1,
+    .max_args = 1,
+    .accept_keywords = true,
+    .kvline_flags = KV_OMIT_VALS,
+    // XXXX we might want to exclude unrecognized flags, but for now we
+    // XXXX just ignore them for backward compatibility.
 };
 
 /** Called when we get a CLOSECIRCUIT command; try to close the named circuit
@@ -1173,12 +1163,12 @@ handle_control_closecircuit(control_connection_t *conn,
   const char *circ_id = smartlist_get(args->args, 0);
   origin_circuit_t *circ = NULL;
 
-  if (!(circ=get_circ(circ_id))) {
+  if (!(circ = get_circ(circ_id))) {
     control_printf_endreply(conn, 552, "Unknown circuit \"%s\"", circ_id);
     return 0;
   }
 
-  bool safe =  config_lines_contain_flag(args->kwargs, "IfUnused");
+  bool safe = config_lines_contain_flag(args->kwargs, "IfUnused");
 
   if (!safe || !circ->p_streams) {
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_REQUESTED);
@@ -1189,9 +1179,9 @@ handle_control_closecircuit(control_connection_t *conn,
 }
 
 static const control_cmd_syntax_t resolve_syntax = {
-  .max_args=0,
-  .accept_keywords=true,
-  .kvline_flags=KV_OMIT_VALS,
+    .max_args = 0,
+    .accept_keywords = true,
+    .kvline_flags = KV_OMIT_VALS,
 };
 
 /** Called when we get a RESOLVE command: start trying to resolve
@@ -1203,8 +1193,9 @@ handle_control_resolve(control_connection_t *conn,
   smartlist_t *failed;
   int is_reverse = 0;
 
-  if (!(conn->event_mask & (((event_mask_t)1)<<EVENT_ADDRMAP))) {
-    log_warn(LD_CONTROL, "Controller asked us to resolve an address, but "
+  if (!(conn->event_mask & (((event_mask_t)1) << EVENT_ADDRMAP))) {
+    log_warn(LD_CONTROL,
+             "Controller asked us to resolve an address, but "
              "isn't listening for ADDRMAP events.  It probably won't see "
              "the answer.");
   }
@@ -1218,8 +1209,8 @@ handle_control_resolve(control_connection_t *conn,
   for (const config_line_t *line = args->kwargs; line; line = line->next) {
     if (!strlen(line->value)) {
       const char *addr = line->key;
-      if (dnsserv_launch_request(addr, is_reverse, conn)<0)
-        smartlist_add(failed, (char*)addr);
+      if (dnsserv_launch_request(addr, is_reverse, conn) < 0)
+        smartlist_add(failed, (char *)addr);
     } else {
       // XXXX arguably we should reject unrecognized keyword arguments,
       // XXXX but the old implementation didn't do that.
@@ -1228,17 +1219,14 @@ handle_control_resolve(control_connection_t *conn,
 
   send_control_done(conn);
   SMARTLIST_FOREACH(failed, const char *, arg, {
-      control_event_address_mapped(arg, arg, time(NULL),
-                                   "internal", 0);
+    control_event_address_mapped(arg, arg, time(NULL), "internal", 0);
   });
 
   smartlist_free(failed);
   return 0;
 }
 
-static const control_cmd_syntax_t protocolinfo_syntax = {
-  .max_args = UINT_MAX
-};
+static const control_cmd_syntax_t protocolinfo_syntax = {.max_args = UINT_MAX};
 
 /** Return a comma-separated list of authentication methods for
     handle_control_protocolinfo().  Caller must free this string. */
@@ -1252,13 +1240,13 @@ get_authmethods(const or_options_t *options)
   smartlist_t *mlist = smartlist_new();
 
   if (cookies) {
-    smartlist_add(mlist, (char*)"COOKIE");
-    smartlist_add(mlist, (char*)"SAFECOOKIE");
+    smartlist_add(mlist, (char *)"COOKIE");
+    smartlist_add(mlist, (char *)"SAFECOOKIE");
   }
   if (passwd)
-    smartlist_add(mlist, (char*)"HASHEDPASSWORD");
+    smartlist_add(mlist, (char *)"HASHEDPASSWORD");
   if (!cookies && !passwd)
-    smartlist_add(mlist, (char*)"NULL");
+    smartlist_add(mlist, (char *)"NULL");
   methods = smartlist_join_strings(mlist, ",", 0, NULL);
   smartlist_free(mlist);
 
@@ -1312,16 +1300,15 @@ handle_control_protocolinfo(control_connection_t *conn,
   conn->have_sent_protocolinfo = 1;
 
   SMARTLIST_FOREACH(args, const char *, arg, {
-      int ok;
-      tor_parse_long(arg, 10, 0, LONG_MAX, &ok, NULL);
-      if (!ok) {
-        bad_arg = arg;
-        break;
-      }
-    });
+    int ok;
+    tor_parse_long(arg, 10, 0, LONG_MAX, &ok, NULL);
+    if (!ok) {
+      bad_arg = arg;
+      break;
+    }
+  });
   if (bad_arg) {
-    control_printf_endreply(conn, 513, "No such version %s",
-                            escaped(bad_arg));
+    control_printf_endreply(conn, 513, "No such version %s", escaped(bad_arg));
     /* Don't tolerate bad arguments when not authenticated. */
     if (!STATE_IS_OPEN(TO_CONN(conn)->state))
       connection_mark_for_close(TO_CONN(conn));
@@ -1339,9 +1326,7 @@ handle_control_protocolinfo(control_connection_t *conn,
   return 0;
 }
 
-static const control_cmd_syntax_t usefeature_syntax = {
-  .max_args = UINT_MAX
-};
+static const control_cmd_syntax_t usefeature_syntax = {.max_args = UINT_MAX};
 
 /** Called when we get a USEFEATURE command: parse the feature list, and
  * set up the control_connection's options properly. */
@@ -1351,18 +1336,17 @@ handle_control_usefeature(control_connection_t *conn,
 {
   const smartlist_t *args = cmd_args->args;
   int bad = 0;
-  SMARTLIST_FOREACH_BEGIN(args, const char *, arg) {
-      if (!strcasecmp(arg, "VERBOSE_NAMES"))
-        ;
-      else if (!strcasecmp(arg, "EXTENDED_EVENTS"))
-        ;
-      else {
-        control_printf_endreply(conn, 552, "Unrecognized feature \"%s\"",
-                                arg);
-        bad = 1;
-        break;
-      }
-  } SMARTLIST_FOREACH_END(arg);
+  SMARTLIST_FOREACH_BEGIN (args, const char *, arg) {
+    if (!strcasecmp(arg, "VERBOSE_NAMES"))
+      ;
+    else if (!strcasecmp(arg, "EXTENDED_EVENTS"))
+      ;
+    else {
+      control_printf_endreply(conn, 552, "Unrecognized feature \"%s\"", arg);
+      bad = 1;
+      break;
+    }
+  } SMARTLIST_FOREACH_END (arg);
 
   if (!bad) {
     send_control_done(conn);
@@ -1372,7 +1356,7 @@ handle_control_usefeature(control_connection_t *conn,
 }
 
 static const control_cmd_syntax_t dropguards_syntax = {
-  .max_args = 0,
+    .max_args = 0,
 };
 
 /** Implementation for the DROPGUARDS command. */
@@ -1380,11 +1364,12 @@ static int
 handle_control_dropguards(control_connection_t *conn,
                           const control_cmd_args_t *args)
 {
-  (void) args; /* We don't take arguments. */
+  (void)args; /* We don't take arguments. */
 
   static int have_warned = 0;
-  if (! have_warned) {
-    log_warn(LD_CONTROL, "DROPGUARDS is dangerous; make sure you understand "
+  if (!have_warned) {
+    log_warn(LD_CONTROL,
+             "DROPGUARDS is dangerous; make sure you understand "
              "the risks before using it. It may be removed in a future "
              "version of Tor.");
     have_warned = 1;
@@ -1397,12 +1382,14 @@ handle_control_dropguards(control_connection_t *conn,
 }
 
 static const char *hsfetch_keywords[] = {
-  "SERVER", NULL,
+    "SERVER",
+    NULL,
 };
 static const control_cmd_syntax_t hsfetch_syntax = {
-  .min_args = 1, .max_args = 1,
-  .accept_keywords = true,
-  .allowed_keywords = hsfetch_keywords,
+    .min_args = 1,
+    .max_args = 1,
+    .accept_keywords = true,
+    .allowed_keywords = hsfetch_keywords,
 };
 
 /** Implementation for the HSFETCH command. */
@@ -1430,7 +1417,7 @@ handle_control_hsfetch(control_connection_t *conn,
              rend_valid_descriptor_id(arg1 + v2_str_len) &&
              base32_decode(digest, sizeof(digest), arg1 + v2_str_len,
                            REND_DESC_ID_V2_LEN_BASE32) ==
-                REND_DESC_ID_V2_LEN_BASE32) {
+                 REND_DESC_ID_V2_LEN_BASE32) {
     /* We have a well formed version 2 descriptor ID. Keep the decoded value
      * of the id. */
     desc_id = digest;
@@ -1465,8 +1452,8 @@ handle_control_hsfetch(control_connection_t *conn,
   }
 
   if (version == HS_VERSION_TWO) {
-    rend_query = rend_data_client_create(hsaddress, desc_id, NULL,
-                                         REND_NO_AUTH);
+    rend_query =
+        rend_data_client_create(hsaddress, desc_id, NULL, REND_NO_AUTH);
     if (rend_query == NULL) {
       control_write_endreply(conn, 551, "Error creating the HS query");
       goto done;
@@ -1494,22 +1481,20 @@ handle_control_hsfetch(control_connection_t *conn,
     hs_control_hsfetch_command(&v3_pk, hsdirs);
   }
 
- done:
+done:
   /* Contains data pointer that we don't own thus no cleanup. */
   smartlist_free(hsdirs);
   rend_data_free(rend_query);
   return 0;
 }
 
-static const char *hspost_keywords[] = {
-  "SERVER", "HSADDRESS", NULL
-};
-static const control_cmd_syntax_t hspost_syntax = {
-  .min_args = 0, .max_args = 0,
-  .accept_keywords = true,
-  .want_cmddata = true,
-  .allowed_keywords = hspost_keywords
-};
+static const char *hspost_keywords[] = {"SERVER", "HSADDRESS", NULL};
+static const control_cmd_syntax_t hspost_syntax = {.min_args = 0,
+                                                   .max_args = 0,
+                                                   .accept_keywords = true,
+                                                   .want_cmddata = true,
+                                                   .allowed_keywords =
+                                                       hspost_keywords};
 
 /** Implementation for the HSPOST command. */
 static int
@@ -1528,8 +1513,7 @@ handle_control_hspost(control_connection_t *conn,
       const node_t *node = node_get_by_hex_id(server, 0);
 
       if (!node || !node->rs) {
-        control_printf_endreply(conn, 552, "Server \"%s\" not found",
-                                server);
+        control_printf_endreply(conn, 552, "Server \"%s\" not found", server);
         goto done;
       }
       /* Valid server, add it to our local list. */
@@ -1571,10 +1555,10 @@ handle_control_hspost(control_connection_t *conn,
   size_t encoded_size;
   const char *next_desc;
   if (!rend_parse_v2_service_descriptor(&parsed, desc->desc_id, &intro_content,
-                                        &intro_size, &encoded_size,
-                                        &next_desc, desc->desc_str, 1)) {
+                                        &intro_size, &encoded_size, &next_desc,
+                                        desc->desc_str, 1)) {
     /* Post the descriptor. */
-    char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
+    char serviceid[REND_SERVICE_ID_LEN_BASE32 + 1];
     if (!rend_get_service_id(parsed->pk, serviceid)) {
       smartlist_t *descs = smartlist_new();
       smartlist_add(descs, desc);
@@ -1596,7 +1580,7 @@ handle_control_hspost(control_connection_t *conn,
 
   tor_free(intro_content);
   rend_encoded_v2_service_descriptor_free(desc);
- done:
+done:
   smartlist_free(hs_dirs); /* Contents belong to the rend service code. */
   return 0;
 }
@@ -1618,8 +1602,7 @@ handle_control_hspost(control_connection_t *conn,
  * containing the onion address without the .onion part. On error, address_out
  * is untouched. */
 static hs_service_add_ephemeral_status_t
-add_onion_helper_add_service(int hs_version,
-                             add_onion_secret_key_t *pk,
+add_onion_helper_add_service(int hs_version, add_onion_secret_key_t *pk,
                              smartlist_t *port_cfgs, int max_streams,
                              int max_streams_close_circuit, int auth_type,
                              smartlist_t *auth_clients, char **address_out)
@@ -1661,14 +1644,13 @@ get_detached_onion_services(void)
   return detached_onion_services;
 }
 
-static const char *add_onion_keywords[] = {
-   "Port", "Flags", "MaxStreams", "ClientAuth", NULL
-};
-static const control_cmd_syntax_t add_onion_syntax = {
-  .min_args = 1, .max_args = 1,
-  .accept_keywords = true,
-  .allowed_keywords = add_onion_keywords
-};
+static const char *add_onion_keywords[] = {"Port", "Flags", "MaxStreams",
+                                           "ClientAuth", NULL};
+static const control_cmd_syntax_t add_onion_syntax = {.min_args = 1,
+                                                      .max_args = 1,
+                                                      .accept_keywords = true,
+                                                      .allowed_keywords =
+                                                          add_onion_keywords};
 
 /** Called when we get a ADD_ONION command; parse the body, and set up
  * the new ephemeral Onion Service. */
@@ -1737,8 +1719,7 @@ handle_control_add_onion(control_connection_t *conn,
         control_write_endreply(conn, 512, "Invalid 'Flags' argument");
         bad = 1;
       }
-      SMARTLIST_FOREACH_BEGIN(flags, const char *, flag)
-      {
+      SMARTLIST_FOREACH_BEGIN (flags, const char *, flag) {
         if (!strcasecmp(flag, discard_flag)) {
           discard_pk = 1;
         } else if (!strcasecmp(flag, detach_flag)) {
@@ -1755,7 +1736,7 @@ handle_control_add_onion(control_connection_t *conn,
           bad = 1;
           break;
         }
-      } SMARTLIST_FOREACH_END(flag);
+      } SMARTLIST_FOREACH_END (flag);
       SMARTLIST_FOREACH(flags, char *, cp, tor_free(cp));
       smartlist_free(flags);
       if (bad)
@@ -1764,19 +1745,20 @@ handle_control_add_onion(control_connection_t *conn,
     } else if (!strcasecmp(arg->key, "ClientAuth")) {
       int created = 0;
       rend_authorized_client_t *client =
-        add_onion_helper_clientauth(arg->value, &created, conn);
+          add_onion_helper_clientauth(arg->value, &created, conn);
       if (!client) {
         goto out;
       }
 
       if (auth_clients != NULL) {
         int bad = 0;
-        SMARTLIST_FOREACH_BEGIN(auth_clients, rend_authorized_client_t *, ac) {
+        SMARTLIST_FOREACH_BEGIN (auth_clients, rend_authorized_client_t *,
+                                 ac) {
           if (strcmp(ac->client_name, client->client_name) == 0) {
             bad = 1;
             break;
           }
-        } SMARTLIST_FOREACH_END(ac);
+        } SMARTLIST_FOREACH_END (ac);
         if (bad) {
           control_write_endreply(conn, 512, "Duplicate name in ClientAuth");
           rend_authorized_client_free(client);
@@ -1810,8 +1792,8 @@ handle_control_add_onion(control_connection_t *conn,
               smartlist_len(auth_clients) > 16)) {
     control_write_endreply(conn, 512, "Too many auth clients");
     goto out;
-  } else if (non_anonymous != rend_service_non_anonymous_mode_enabled(
-                                                              get_options())) {
+  } else if (non_anonymous !=
+             rend_service_non_anonymous_mode_enabled(get_options())) {
     /* If we failed, and the non-anonymous flag is set, Tor must be in
      * anonymous hidden service mode.
      * The error message changes based on the current Tor config:
@@ -1820,21 +1802,21 @@ handle_control_add_onion(control_connection_t *conn,
      * (I've deliberately written them out in full here to aid searchability.)
      */
     control_printf_endreply(conn, 512,
-                            "Tor is in %sanonymous hidden service " "mode",
+                            "Tor is in %sanonymous hidden service "
+                            "mode",
                             non_anonymous ? "" : "non-");
     goto out;
   }
 
   /* Parse the "keytype:keyblob" argument. */
   int hs_version = 0;
-  add_onion_secret_key_t pk = { NULL };
+  add_onion_secret_key_t pk = {NULL};
   const char *key_new_alg = NULL;
   char *key_new_blob = NULL;
 
   const char *onionkey = smartlist_get(args->args, 0);
-  if (add_onion_helper_keyarg(onionkey, discard_pk,
-                              &key_new_alg, &key_new_blob, &pk, &hs_version,
-                              conn) < 0) {
+  if (add_onion_helper_keyarg(onionkey, discard_pk, &key_new_alg,
+                              &key_new_blob, &pk, &hs_version, conn) < 0) {
     goto out;
   }
 
@@ -1851,15 +1833,13 @@ handle_control_add_onion(control_connection_t *conn,
    * regardless of success/failure.
    */
   char *service_id = NULL;
-  int ret = add_onion_helper_add_service(hs_version, &pk, port_cfgs,
-                                         max_streams,
-                                         max_streams_close_circuit, auth_type,
-                                         auth_clients, &service_id);
+  int ret = add_onion_helper_add_service(
+      hs_version, &pk, port_cfgs, max_streams, max_streams_close_circuit,
+      auth_type, auth_clients, &service_id);
   port_cfgs = NULL; /* port_cfgs is now owned by the rendservice code. */
   auth_clients = NULL; /* so is auth_clients */
   switch (ret) {
-  case RSAE_OKAY:
-  {
+  case RSAE_OKAY: {
     if (detach) {
       if (!detached_onion_services)
         detached_onion_services = smartlist_new();
@@ -1874,16 +1854,16 @@ handle_control_add_onion(control_connection_t *conn,
     control_printf_midreply(conn, 250, "ServiceID=%s", service_id);
     if (key_new_alg) {
       tor_assert(key_new_blob);
-      control_printf_midreply(conn, 250, "PrivateKey=%s:%s",
-                              key_new_alg, key_new_blob);
+      control_printf_midreply(conn, 250, "PrivateKey=%s:%s", key_new_alg,
+                              key_new_blob);
     }
     if (auth_created_clients) {
       SMARTLIST_FOREACH(auth_created_clients, rend_authorized_client_t *, ac, {
-        char *encoded = rend_auth_encode_cookie(ac->descriptor_cookie,
-                                                auth_type);
+        char *encoded =
+            rend_auth_encode_cookie(ac->descriptor_cookie, auth_type);
         tor_assert(encoded);
-        control_printf_midreply(conn, 250, "ClientAuth=%s:%s",
-                                ac->client_name, encoded);
+        control_printf_midreply(conn, 250, "ClientAuth=%s:%s", ac->client_name,
+                                encoded);
         memwipe(encoded, 0, strlen(encoded));
         tor_free(encoded);
       });
@@ -1913,9 +1893,9 @@ handle_control_add_onion(control_connection_t *conn,
     tor_free(key_new_blob);
   }
 
- out:
+out:
   if (port_cfgs) {
-    SMARTLIST_FOREACH(port_cfgs, rend_service_port_config_t*, p,
+    SMARTLIST_FOREACH(port_cfgs, rend_service_port_config_t *, p,
                       rend_service_port_config_free(p));
     smartlist_free(port_cfgs);
   }
@@ -1979,7 +1959,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
       control_write_endreply(conn, 512, "Failed to decode RSA key");
       goto err;
     }
-    if (crypto_pk_num_bits(pk) != PK_BYTES*8) {
+    if (crypto_pk_num_bits(pk) != PK_BYTES * 8) {
       crypto_pk_free(pk);
       control_write_endreply(conn, 512, "Invalid RSA key size");
       goto err;
@@ -1990,7 +1970,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
     /* parsing of private ed25519 key */
     /* "ED25519-V3:<Base64 Blob>" - Loading a pre-existing ed25519 key. */
     ed25519_secret_key_t *sk = tor_malloc_zero(sizeof(*sk));
-    if (base64_decode((char *) sk->seckey, sizeof(sk->seckey), key_blob,
+    if (base64_decode((char *)sk->seckey, sizeof(sk->seckey), key_blob,
                       strlen(key_blob)) != sizeof(sk->seckey)) {
       tor_free(sk);
       control_write_endreply(conn, 512, "Failed to decode ED25519-V3 key");
@@ -2032,7 +2012,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
       if (!discard_pk) {
         ssize_t len = base64_encode_size(sizeof(sk->seckey), 0) + 1;
         key_new_blob = tor_malloc_zero(len);
-        if (base64_encode(key_new_blob, len, (const char *) sk->seckey,
+        if (base64_encode(key_new_blob, len, (const char *)sk->seckey,
                           sizeof(sk->seckey), 0) != (len - 1)) {
           tor_free(sk);
           tor_free(key_new_blob);
@@ -2056,7 +2036,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
   /* Succeeded in loading or generating a private key. */
   ret = 0;
 
- err:
+err:
   SMARTLIST_FOREACH(key_args, char *, cp, {
     memwipe(cp, 0, strlen(cp));
     tor_free(cp);
@@ -2092,7 +2072,7 @@ add_onion_helper_clientauth(const char *arg, int *created,
 
   smartlist_t *auth_args = smartlist_new();
   rend_authorized_client_t *client =
-    tor_malloc_zero(sizeof(rend_authorized_client_t));
+      tor_malloc_zero(sizeof(rend_authorized_client_t));
   smartlist_split_string(auth_args, arg, ":", 0, 0);
   if (smartlist_len(auth_args) < 1 || smartlist_len(auth_args) > 2) {
     control_write_endreply(conn, 512, "Invalid ClientAuth syntax");
@@ -2102,8 +2082,8 @@ add_onion_helper_clientauth(const char *arg, int *created,
   if (smartlist_len(auth_args) == 2) {
     char *decode_err_msg = NULL;
     if (rend_auth_decode_cookie(smartlist_get(auth_args, 1),
-                                client->descriptor_cookie,
-                                NULL, &decode_err_msg) < 0) {
+                                client->descriptor_cookie, NULL,
+                                &decode_err_msg) < 0) {
       tor_assert(decode_err_msg);
       control_write_endreply(conn, 512, decode_err_msg);
       tor_free(decode_err_msg);
@@ -2111,7 +2091,7 @@ add_onion_helper_clientauth(const char *arg, int *created,
     }
     *created = 0;
   } else {
-    crypto_rand((char *) client->descriptor_cookie, REND_DESC_COOKIE_LEN);
+    crypto_rand((char *)client->descriptor_cookie, REND_DESC_COOKIE_LEN);
     *created = 1;
   }
 
@@ -2121,7 +2101,7 @@ add_onion_helper_clientauth(const char *arg, int *created,
   }
 
   ok = 1;
- err:
+err:
   SMARTLIST_FOREACH(auth_args, char *, item, tor_free(item));
   smartlist_free(auth_args);
   if (!ok) {
@@ -2132,7 +2112,8 @@ add_onion_helper_clientauth(const char *arg, int *created,
 }
 
 static const control_cmd_syntax_t del_onion_syntax = {
-  .min_args = 1, .max_args = 1,
+    .min_args = 1,
+    .max_args = 1,
 };
 
 /** Called when we get a DEL_ONION command; parse the body, and remove
@@ -2161,10 +2142,8 @@ handle_control_del_onion(control_connection_t *conn,
    * explicitly belongs to a different control connection, and an error
    * should be returned.
    */
-  smartlist_t *services[2] = {
-    conn->ephemeral_onion_services,
-    detached_onion_services
-  };
+  smartlist_t *services[2] = {conn->ephemeral_onion_services,
+                              detached_onion_services};
   smartlist_t *onion_services = NULL;
   int idx = -1;
   for (size_t i = 0; i < ARRAY_LENGTH(services); i++) {
@@ -2208,13 +2187,11 @@ handle_control_del_onion(control_connection_t *conn,
     send_control_done(conn);
   }
 
- out:
+out:
   return 0;
 }
 
-static const control_cmd_syntax_t obsolete_syntax = {
-  .max_args = UINT_MAX
-};
+static const control_cmd_syntax_t obsolete_syntax = {.max_args = UINT_MAX};
 
 /**
  * Called when we get an obsolete command: tell the controller that it is
@@ -2235,8 +2212,8 @@ handle_control_obsolete(control_connection_t *conn,
 /**
  * Function pointer to a handler function for a controller command.
  **/
-typedef int (*handler_fn_t) (control_connection_t *conn,
-                             const control_cmd_args_t *args);
+typedef int (*handler_fn_t)(control_connection_t *conn,
+                            const control_cmd_args_t *args);
 
 /**
  * Definition for a controller command.
@@ -2264,80 +2241,72 @@ typedef struct control_cmd_def_t {
  * Indicates that the command's arguments are sensitive, and should be
  * memwiped after use.
  */
-#define CMD_FL_WIPE (1u<<0)
+#define CMD_FL_WIPE (1u << 0)
 
 #ifndef COCCI
 /** Macro: declare a command with a one-line argument, a given set of flags,
  * and a syntax definition.
  **/
-#define ONE_LINE(name, flags)                                   \
-  {                                                             \
-    (#name),                                                    \
-      handle_control_ ##name,                                   \
-      flags,                                                    \
-      &name##_syntax,                                           \
-   }
+#  define ONE_LINE(name, flags)                              \
+    {                                                        \
+      (#name), handle_control_##name, flags, &name##_syntax, \
+    }
 
 /**
  * Macro: declare a command with a multi-line argument and a given set of
  * flags.
  **/
-#define MULTLINE(name, flags)                                   \
-  { ("+"#name),                                                 \
-      handle_control_ ##name,                                   \
-      flags,                                                    \
-      &name##_syntax                                            \
-  }
+#  define MULTLINE(name, flags)                                 \
+    {                                                           \
+      ("+" #name), handle_control_##name, flags, &name##_syntax \
+    }
 
 /**
  * Macro: declare an obsolete command. (Obsolete commands give a different
  * error than non-existent ones.)
  **/
-#define OBSOLETE(name)                          \
-  { #name,                                      \
-      handle_control_obsolete,                  \
-      0,                                        \
-      &obsolete_syntax,                         \
-  }
+#  define OBSOLETE(name)                                   \
+    {                                                      \
+#      name, handle_control_obsolete, 0, &obsolete_syntax, \
+    }
 #endif /* !defined(COCCI) */
 
 /**
  * An array defining all the recognized controller commands.
  **/
-static const control_cmd_def_t CONTROL_COMMANDS[] =
-{
-  ONE_LINE(setconf, 0),
-  ONE_LINE(resetconf, 0),
-  ONE_LINE(getconf, 0),
-  MULTLINE(loadconf, 0),
-  ONE_LINE(setevents, 0),
-  ONE_LINE(authenticate, CMD_FL_WIPE),
-  ONE_LINE(saveconf, 0),
-  ONE_LINE(signal, 0),
-  ONE_LINE(takeownership, 0),
-  ONE_LINE(dropownership, 0),
-  ONE_LINE(mapaddress, 0),
-  ONE_LINE(getinfo, 0),
-  ONE_LINE(extendcircuit, 0),
-  ONE_LINE(setcircuitpurpose, 0),
-  OBSOLETE(setrouterpurpose),
-  ONE_LINE(attachstream, 0),
-  MULTLINE(postdescriptor, 0),
-  ONE_LINE(redirectstream, 0),
-  ONE_LINE(closestream, 0),
-  ONE_LINE(closecircuit, 0),
-  ONE_LINE(usefeature, 0),
-  ONE_LINE(resolve, 0),
-  ONE_LINE(protocolinfo, 0),
-  ONE_LINE(authchallenge, CMD_FL_WIPE),
-  ONE_LINE(dropguards, 0),
-  ONE_LINE(hsfetch, 0),
-  MULTLINE(hspost, 0),
-  ONE_LINE(add_onion, CMD_FL_WIPE),
-  ONE_LINE(del_onion, CMD_FL_WIPE),
-  ONE_LINE(onion_client_auth_add, CMD_FL_WIPE),
-  ONE_LINE(onion_client_auth_remove, 0),
-  ONE_LINE(onion_client_auth_view, 0),
+static const control_cmd_def_t CONTROL_COMMANDS[] = {
+    ONE_LINE(setconf, 0),
+    ONE_LINE(resetconf, 0),
+    ONE_LINE(getconf, 0),
+    MULTLINE(loadconf, 0),
+    ONE_LINE(setevents, 0),
+    ONE_LINE(authenticate, CMD_FL_WIPE),
+    ONE_LINE(saveconf, 0),
+    ONE_LINE(signal, 0),
+    ONE_LINE(takeownership, 0),
+    ONE_LINE(dropownership, 0),
+    ONE_LINE(mapaddress, 0),
+    ONE_LINE(getinfo, 0),
+    ONE_LINE(extendcircuit, 0),
+    ONE_LINE(setcircuitpurpose, 0),
+    OBSOLETE(setrouterpurpose),
+    ONE_LINE(attachstream, 0),
+    MULTLINE(postdescriptor, 0),
+    ONE_LINE(redirectstream, 0),
+    ONE_LINE(closestream, 0),
+    ONE_LINE(closecircuit, 0),
+    ONE_LINE(usefeature, 0),
+    ONE_LINE(resolve, 0),
+    ONE_LINE(protocolinfo, 0),
+    ONE_LINE(authchallenge, CMD_FL_WIPE),
+    ONE_LINE(dropguards, 0),
+    ONE_LINE(hsfetch, 0),
+    MULTLINE(hspost, 0),
+    ONE_LINE(add_onion, CMD_FL_WIPE),
+    ONE_LINE(del_onion, CMD_FL_WIPE),
+    ONE_LINE(onion_client_auth_add, CMD_FL_WIPE),
+    ONE_LINE(onion_client_auth_remove, 0),
+    ONE_LINE(onion_client_auth_view, 0),
 };
 
 /**
@@ -2352,21 +2321,18 @@ static const size_t N_CONTROL_COMMANDS = ARRAY_LENGTH(CONTROL_COMMANDS);
 static int
 handle_single_control_command(const control_cmd_def_t *def,
                               control_connection_t *conn,
-                              uint32_t cmd_data_len,
-                              char *args)
+                              uint32_t cmd_data_len, char *args)
 {
   int rv = 0;
 
   control_cmd_args_t *parsed_args;
-  char *err=NULL;
+  char *err = NULL;
   tor_assert(def->syntax);
-  parsed_args = control_cmd_parse_args(conn->current_cmd,
-                                       def->syntax,
-                                       cmd_data_len, args,
-                                       &err);
+  parsed_args = control_cmd_parse_args(conn->current_cmd, def->syntax,
+                                       cmd_data_len, args, &err);
   if (!parsed_args) {
     control_printf_endreply(conn, 512, "Bad arguments to %s: %s",
-                            conn->current_cmd, err?err:"");
+                            conn->current_cmd, err ? err : "");
     tor_free(err);
   } else {
     if (BUG(err))
@@ -2391,8 +2357,7 @@ handle_single_control_command(const control_cmd_def_t *def,
  * <b>conn</b>.
  */
 int
-handle_control_command(control_connection_t *conn,
-                       uint32_t cmd_data_len,
+handle_control_command(control_connection_t *conn, uint32_t cmd_data_len,
                        char *args)
 {
   tor_assert(conn);

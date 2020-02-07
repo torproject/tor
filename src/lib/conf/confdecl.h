@@ -56,18 +56,16 @@
 /**
  * Begin the definition of a configuration object called `name`.
  **/
-#define BEGIN_CONF_STRUCT(name) \
-  PASTE(BEGIN_CONF_STRUCT__, CONF_CONTEXT)(name)
+#define BEGIN_CONF_STRUCT(name) PASTE(BEGIN_CONF_STRUCT__, CONF_CONTEXT)(name)
 /**
  * End the definition of a configuration object called `name`.
  **/
-#define END_CONF_STRUCT(name) \
-  PASTE(END_CONF_STRUCT__, CONF_CONTEXT)(name)
+#define END_CONF_STRUCT(name) PASTE(END_CONF_STRUCT__, CONF_CONTEXT)(name)
 /**
  * Declare a single configuration field with name `varname`, type `vartype`,
  * flags `varflags`, and initial value `initval`.
  **/
-#define CONF_VAR(varname, vartype, varflags, initval)   \
+#define CONF_VAR(varname, vartype, varflags, initval) \
   PASTE(CONF_VAR__, CONF_CONTEXT)(varname, vartype, varflags, initval)
 
 #ifndef COCCI
@@ -76,13 +74,14 @@
  * Implementation helpers: the regular confdecl macros expand to these
  * when CONF_CONTEXT is defined to STRUCT.  Don't use them directly.
  * @{*/
-#define BEGIN_CONF_STRUCT__STRUCT(name)         \
-  struct name {                                 \
-  uint32_t magic;
-#define END_CONF_STRUCT__STRUCT(name)           \
-  };
-#define CONF_VAR__STRUCT(varname, vartype, varflags, initval)   \
-  config_decl_ ## vartype varname;
+#  define BEGIN_CONF_STRUCT__STRUCT(name) \
+    struct name {                         \
+      uint32_t magic;
+#  define END_CONF_STRUCT__STRUCT(name) \
+    }                                   \
+    ;
+#  define CONF_VAR__STRUCT(varname, vartype, varflags, initval) \
+    config_decl_##vartype varname;
 /** @} */
 
 /**
@@ -90,25 +89,27 @@
  * Implementation helpers: the regular confdecl macros expand to these
  * when CONF_CONTEXT is defined to TABLE.  Don't use them directly.
  * @{*/
-#define BEGIN_CONF_STRUCT__TABLE(structname)                            \
-  /* We use this typedef so we can refer to the config type */          \
-  /* without having its name as a macro argument to CONF_VAR. */        \
-  typedef struct structname config_var_reference__obj;  \
-  static const config_var_t structname##_vars[] = {
-#define END_CONF_STRUCT__TABLE(structname)      \
-  { .member = { .name = NULL } }                \
-    };
-#define CONF_VAR__TABLE(varname, vartype, varflags, initval)    \
-  {                                                             \
-   .member =                                                    \
-   { .name = #varname,                                          \
-     .type = CONFIG_TYPE_EXTENDED,                              \
-     .type_def = &vartype ## _type_defn,                        \
-     .offset=offsetof(config_var_reference__obj, varname),      \
-   },                                                           \
-   .flags = varflags,                                           \
-   .initvalue = initval                                         \
-  },
+#  define BEGIN_CONF_STRUCT__TABLE(structname)                     \
+    /* We use this typedef so we can refer to the config type */   \
+    /* without having its name as a macro argument to CONF_VAR. */ \
+    typedef struct structname config_var_reference__obj;           \
+    static const config_var_t structname##_vars[] = {
+#  define END_CONF_STRUCT__TABLE(structname) \
+    {                                        \
+      .member = {.name = NULL }              \
+    }                                        \
+    }                                        \
+    ;
+#  define CONF_VAR__TABLE(varname, vartype, varflags, initval)       \
+    {.member =                                                       \
+         {                                                           \
+             .name = #varname,                                       \
+             .type = CONFIG_TYPE_EXTENDED,                           \
+             .type_def = &vartype##_type_defn,                       \
+             .offset = offsetof(config_var_reference__obj, varname), \
+         },                                                          \
+     .flags = varflags,                                              \
+     .initvalue = initval},
 /**@}*/
 
 /**
@@ -116,24 +117,26 @@
  * Implementation helpers: the regular confdecl macros expand to these
  * when CONF_CONTEXT is defined to LL_TABLE.  Don't use them directly.
  * @{*/
-#define BEGIN_CONF_STRUCT__LL_TABLE(structname)                         \
-  /* We use this typedef so we can refer to the config type */          \
-  /* without having its name as a macro argument to CONF_VAR. */        \
-  typedef struct structname config_var_reference__obj;  \
-  static const config_var_t structname##_vars[] = {
-#define END_CONF_STRUCT__LL_TABLE(structname)   \
-  { .member = { .name = NULL } }                \
-    };
-#define CONF_VAR__LL_TABLE(varname, vartype, varflags, initval) \
-  {                                                             \
-   .member =                                                    \
-   { .name = #varname,                                          \
-     .type = CONFIG_TYPE_ ## vartype,                           \
-     .offset=offsetof(config_var_reference__obj, varname),      \
-   },                                                           \
-   .flags = varflags,                                           \
-   .initvalue = initval                                         \
-  },
+#  define BEGIN_CONF_STRUCT__LL_TABLE(structname)                  \
+    /* We use this typedef so we can refer to the config type */   \
+    /* without having its name as a macro argument to CONF_VAR. */ \
+    typedef struct structname config_var_reference__obj;           \
+    static const config_var_t structname##_vars[] = {
+#  define END_CONF_STRUCT__LL_TABLE(structname) \
+    {                                           \
+      .member = {.name = NULL }                 \
+    }                                           \
+    }                                           \
+    ;
+#  define CONF_VAR__LL_TABLE(varname, vartype, varflags, initval)    \
+    {.member =                                                       \
+         {                                                           \
+             .name = #varname,                                       \
+             .type = CONFIG_TYPE_##vartype,                          \
+             .offset = offsetof(config_var_reference__obj, varname), \
+         },                                                          \
+     .flags = varflags,                                              \
+     .initvalue = initval},
 /**@}*/
 
 /* @defgroup STUB_TABLE_MACROS Internal macros: stub table declarations,
@@ -141,20 +144,24 @@
  * Implementation helpers: the regular confdecl macros expand to these
  * when CONF_CONTEXT is defined to LL_TABLE.  Don't use them directly.
  * @{*/
-#define BEGIN_CONF_STRUCT__STUB_TABLE(structname)                       \
-  static const config_var_t structname##_vars[] = {
-#define END_CONF_STRUCT__STUB_TABLE(structname)   \
-  { .member = { .name = NULL } }                \
-    };
-#define CONF_VAR__STUB_TABLE(varname, vartype, varflags, initval)       \
-  {                                                             \
-   .member =                                                    \
-   { .name = #varname,                                          \
-     .type = CONFIG_TYPE_IGNORE,                                \
-     .offset = -1,                                              \
-   },                                                           \
-   .flags = CFLG_GROUP_DISABLED,                                \
-  },
+#  define BEGIN_CONF_STRUCT__STUB_TABLE(structname) \
+    static const config_var_t structname##_vars[] = {
+#  define END_CONF_STRUCT__STUB_TABLE(structname) \
+    {                                             \
+      .member = {.name = NULL }                   \
+    }                                             \
+    }                                             \
+    ;
+#  define CONF_VAR__STUB_TABLE(varname, vartype, varflags, initval) \
+    {                                                               \
+        .member =                                                   \
+            {                                                       \
+                .name = #varname,                                   \
+                .type = CONFIG_TYPE_IGNORE,                         \
+                .offset = -1,                                       \
+            },                                                      \
+        .flags = CFLG_GROUP_DISABLED,                               \
+    },
 /**@}*/
 
 #endif /* !defined(COCCI) */

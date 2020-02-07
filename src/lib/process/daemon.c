@@ -13,22 +13,22 @@
 
 #ifndef _WIN32
 
-#include "lib/fs/files.h"
-#include "lib/log/log.h"
-#include "lib/thread/threads.h"
+#  include "lib/fs/files.h"
+#  include "lib/log/log.h"
+#  include "lib/thread/threads.h"
 
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-#ifdef HAVE_FCNTL_H
-#include <fcntl.h>
-#endif
-#include <errno.h>
-#include <stdlib.h>
-#include <string.h>
+#  ifdef HAVE_SYS_TYPES_H
+#    include <sys/types.h>
+#  endif
+#  ifdef HAVE_UNISTD_H
+#    include <unistd.h>
+#  endif
+#  ifdef HAVE_FCNTL_H
+#    include <fcntl.h>
+#  endif
+#  include <errno.h>
+#  include <stdlib.h>
+#  include <string.h>
 
 /* Based on code contributed by christian grothoff */
 /** True iff we've called start_daemon(). */
@@ -65,18 +65,18 @@ start_daemon(void)
 
   if (pipe(daemon_filedes)) {
     /* LCOV_EXCL_START */
-    log_err(LD_GENERAL,"pipe failed; exiting. Error was %s", strerror(errno));
+    log_err(LD_GENERAL, "pipe failed; exiting. Error was %s", strerror(errno));
     exit(1); // exit ok: during daemonize, pipe failed.
     /* LCOV_EXCL_STOP */
   }
   pid = fork();
   if (pid < 0) {
     /* LCOV_EXCL_START */
-    log_err(LD_GENERAL,"fork failed. Exiting.");
+    log_err(LD_GENERAL, "fork failed. Exiting.");
     exit(1); // exit ok: during daemonize, fork failed
     /* LCOV_EXCL_STOP */
   }
-  if (pid) {  /* Parent */
+  if (pid) { /* Parent */
     int ok;
     char c;
 
@@ -95,7 +95,7 @@ start_daemon(void)
   } else { /* Child */
     close(daemon_filedes[0]); /* we only write */
 
-    (void) setsid(); /* Detach from controlling terminal */
+    (void)setsid(); /* Detach from controlling terminal */
     /*
      * Fork one more time, so the parent (the session group leader) can exit.
      * This means that we, as a non-session group leader, can never regain a
@@ -130,16 +130,16 @@ finish_daemon(const char *desired_cwd)
 
   if (!desired_cwd)
     desired_cwd = "/";
-   /* Don't hold the wrong FS mounted */
+  /* Don't hold the wrong FS mounted */
   if (chdir(desired_cwd) < 0) {
-    log_err(LD_GENERAL,"chdir to \"%s\" failed. Exiting.",desired_cwd);
+    log_err(LD_GENERAL, "chdir to \"%s\" failed. Exiting.", desired_cwd);
     exit(1); // exit ok: during daemonize, chdir failed.
   }
 
   nullfd = tor_open_cloexec("/dev/null", O_RDWR, 0);
   if (nullfd < 0) {
     /* LCOV_EXCL_START */
-    log_err(LD_GENERAL,"/dev/null can't be opened. Exiting.");
+    log_err(LD_GENERAL, "/dev/null can't be opened. Exiting.");
     exit(1); // exit ok: during daemonize, couldn't open /dev/null
     /* LCOV_EXCL_STOP */
   }
@@ -147,11 +147,9 @@ finish_daemon(const char *desired_cwd)
    * close usual incoming fds, but redirect them somewhere
    * useful so the fds don't get reallocated elsewhere.
    */
-  if (dup2(nullfd,0) < 0 ||
-      dup2(nullfd,1) < 0 ||
-      dup2(nullfd,2) < 0) {
+  if (dup2(nullfd, 0) < 0 || dup2(nullfd, 1) < 0 || dup2(nullfd, 2) < 0) {
     /* LCOV_EXCL_START */
-    log_err(LD_GENERAL,"dup2 failed. Exiting.");
+    log_err(LD_GENERAL, "dup2 failed. Exiting.");
     exit(1); // exit ok: during daemonize, dup2 failed.
     /* LCOV_EXCL_STOP */
   }
@@ -159,7 +157,7 @@ finish_daemon(const char *desired_cwd)
     close(nullfd);
   /* signal success */
   if (write(daemon_filedes[1], &c, sizeof(char)) != sizeof(char)) {
-    log_err(LD_GENERAL,"write failed. Exiting.");
+    log_err(LD_GENERAL, "write failed. Exiting.");
   }
   close(daemon_filedes[1]);
 

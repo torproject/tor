@@ -18,7 +18,7 @@
 #define CRYPTO_ED25519_PRIVATE
 #include "orconfig.h"
 #ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
+#  include <sys/stat.h>
 #endif
 
 #include "lib/ctime/di_ops.h"
@@ -50,8 +50,8 @@ typedef struct {
   int (*pubkey)(unsigned char *, const unsigned char *);
   int (*keygen)(unsigned char *, unsigned char *);
 
-  int (*open)(const unsigned char *, const unsigned char *, size_t, const
-              unsigned char *);
+  int (*open)(const unsigned char *, const unsigned char *, size_t,
+              const unsigned char *);
   int (*sign)(unsigned char *, const unsigned char *, size_t,
               const unsigned char *, const unsigned char *);
   int (*open_batch)(const unsigned char **, size_t *, const unsigned char **,
@@ -72,43 +72,43 @@ typedef struct {
 /** The Ref10 Ed25519 implementation. This one is pure C and lightly
  * optimized. */
 static const ed25519_impl_t impl_ref10 = {
-  NULL,
+    NULL,
 
-  ed25519_ref10_seckey,
-  ed25519_ref10_seckey_expand,
-  ed25519_ref10_pubkey,
-  ed25519_ref10_keygen,
+    ed25519_ref10_seckey,
+    ed25519_ref10_seckey_expand,
+    ed25519_ref10_pubkey,
+    ed25519_ref10_keygen,
 
-  ed25519_ref10_open,
-  ed25519_ref10_sign,
-  NULL,
+    ed25519_ref10_open,
+    ed25519_ref10_sign,
+    NULL,
 
-  ed25519_ref10_blind_secret_key,
-  ed25519_ref10_blind_public_key,
+    ed25519_ref10_blind_secret_key,
+    ed25519_ref10_blind_public_key,
 
-  ed25519_ref10_pubkey_from_curve25519_pubkey,
-  ed25519_ref10_scalarmult_with_group_order,
+    ed25519_ref10_pubkey_from_curve25519_pubkey,
+    ed25519_ref10_scalarmult_with_group_order,
 };
 
 /** The Ref10 Ed25519 implementation. This one is heavily optimized, but still
  * mostly C. The C still tends to be heavily platform-specific. */
 static const ed25519_impl_t impl_donna = {
-  ed25519_donna_selftest,
+    ed25519_donna_selftest,
 
-  ed25519_donna_seckey,
-  ed25519_donna_seckey_expand,
-  ed25519_donna_pubkey,
-  ed25519_donna_keygen,
+    ed25519_donna_seckey,
+    ed25519_donna_seckey_expand,
+    ed25519_donna_pubkey,
+    ed25519_donna_keygen,
 
-  ed25519_donna_open,
-  ed25519_donna_sign,
-  ed25519_sign_open_batch_donna,
+    ed25519_donna_open,
+    ed25519_donna_sign,
+    ed25519_sign_open_batch_donna,
 
-  ed25519_donna_blind_secret_key,
-  ed25519_donna_blind_public_key,
+    ed25519_donna_blind_secret_key,
+    ed25519_donna_blind_public_key,
 
-  ed25519_donna_pubkey_from_curve25519_pubkey,
-  ed25519_donna_scalarmult_with_group_order,
+    ed25519_donna_pubkey_from_curve25519_pubkey,
+    ed25519_donna_scalarmult_with_group_order,
 };
 
 /** Which Ed25519 implementation are we using?  NULL if we haven't decided
@@ -141,7 +141,7 @@ crypto_ed25519_testing_force_impl(const char *name)
 {
   tor_assert(saved_ed25519_impl == NULL);
   saved_ed25519_impl = ed25519_impl;
-  if (! strcmp(name, "donna")) {
+  if (!strcmp(name, "donna")) {
     ed25519_impl = &impl_donna;
   } else {
     tor_assert(!strcmp(name, "ref10"));
@@ -165,15 +165,14 @@ crypto_ed25519_testing_restore_impl(void)
  * system.  Return 0 on success, -1 on failure.
  */
 int
-ed25519_secret_key_generate(ed25519_secret_key_t *seckey_out,
-                        int extra_strong)
+ed25519_secret_key_generate(ed25519_secret_key_t *seckey_out, int extra_strong)
 {
   int r;
   uint8_t seed[32];
   if (extra_strong)
     crypto_strongest_rand(seed, sizeof(seed));
- else
-    crypto_rand((char*)seed, sizeof(seed));
+  else
+    crypto_rand((char *)seed, sizeof(seed));
 
   r = get_ed_impl()->seckey_expand(seckey_out->seckey, seed);
   memwipe(seed, 0, sizeof(seed));
@@ -190,7 +189,7 @@ ed25519_secret_key_from_seed(ed25519_secret_key_t *seckey_out,
                              const uint8_t *seed)
 {
   if (get_ed_impl()->seckey_expand(seckey_out->seckey, seed) < 0)
-     return -1;
+    return -1;
   return 0;
 }
 
@@ -200,7 +199,7 @@ ed25519_secret_key_from_seed(ed25519_secret_key_t *seckey_out,
  */
 int
 ed25519_public_key_generate(ed25519_public_key_t *pubkey_out,
-                        const ed25519_secret_key_t *seckey)
+                            const ed25519_secret_key_t *seckey)
 {
   if (get_ed_impl()->pubkey(pubkey_out->pubkey, seckey->seckey) < 0)
     return -1;
@@ -215,8 +214,8 @@ ed25519_keypair_generate(ed25519_keypair_t *keypair_out, int extra_strong)
 {
   if (ed25519_secret_key_generate(&keypair_out->seckey, extra_strong) < 0)
     return -1;
-  if (ed25519_public_key_generate(&keypair_out->pubkey,
-                                  &keypair_out->seckey)<0)
+  if (ed25519_public_key_generate(&keypair_out->pubkey, &keypair_out->seckey) <
+      0)
     return -1;
   return 0;
 }
@@ -226,7 +225,7 @@ ed25519_keypair_generate(ed25519_keypair_t *keypair_out, int extra_strong)
 int
 ed25519_public_key_is_zero(const ed25519_public_key_t *pubkey)
 {
-  return safe_mem_is_zero((char*)pubkey->pubkey, ED25519_PUBKEY_LEN);
+  return safe_mem_is_zero((char *)pubkey->pubkey, ED25519_PUBKEY_LEN);
 }
 
 /* Return a heap-allocated array that contains <b>msg</b> prefixed by the
@@ -234,8 +233,7 @@ ed25519_public_key_is_zero(const ed25519_public_key_t *pubkey)
  * final array. If an error occurred, return NULL. It's the responsibility of
  * the caller to free the returned array. */
 static uint8_t *
-get_prefixed_msg(const uint8_t *msg, size_t msg_len,
-                 const char *prefix_str,
+get_prefixed_msg(const uint8_t *msg, size_t msg_len, const char *prefix_str,
                  size_t *final_msg_len_out)
 {
   size_t prefixed_msg_len, prefix_len;
@@ -268,12 +266,10 @@ get_prefixed_msg(const uint8_t *msg, size_t msg_len,
  * Return 0 if we successfully signed the message, otherwise return -1.
  */
 int
-ed25519_sign(ed25519_signature_t *signature_out,
-             const uint8_t *msg, size_t len,
-             const ed25519_keypair_t *keypair)
+ed25519_sign(ed25519_signature_t *signature_out, const uint8_t *msg,
+             size_t len, const ed25519_keypair_t *keypair)
 {
-  if (get_ed_impl()->sign(signature_out->sig, msg, len,
-                          keypair->seckey.seckey,
+  if (get_ed_impl()->sign(signature_out->sig, msg, len, keypair->seckey.seckey,
                           keypair->pubkey.pubkey) < 0) {
     return -1;
   }
@@ -286,10 +282,10 @@ ed25519_sign(ed25519_signature_t *signature_out,
  * before signing. <b>prefix_str</b> must be a NUL-terminated string.
  */
 MOCK_IMPL(int,
-ed25519_sign_prefixed,(ed25519_signature_t *signature_out,
-                       const uint8_t *msg, size_t msg_len,
-                       const char *prefix_str,
-                       const ed25519_keypair_t *keypair))
+ed25519_sign_prefixed,
+          (ed25519_signature_t * signature_out, const uint8_t *msg,
+           size_t msg_len, const char *prefix_str,
+           const ed25519_keypair_t *keypair))
 {
   int retval;
   size_t prefixed_msg_len;
@@ -297,8 +293,7 @@ ed25519_sign_prefixed,(ed25519_signature_t *signature_out,
 
   tor_assert(prefix_str);
 
-  prefixed_msg = get_prefixed_msg(msg, msg_len, prefix_str,
-                                  &prefixed_msg_len);
+  prefixed_msg = get_prefixed_msg(msg, msg_len, prefix_str, &prefixed_msg_len);
   if (BUG(!prefixed_msg)) {
     /* LCOV_EXCL_START -- only possible when the message and prefix are
      * ridiculously huge */
@@ -307,9 +302,8 @@ ed25519_sign_prefixed,(ed25519_signature_t *signature_out,
     /* LCOV_EXCL_STOP */
   }
 
-  retval = ed25519_sign(signature_out,
-                        prefixed_msg, prefixed_msg_len,
-                        keypair);
+  retval =
+      ed25519_sign(signature_out, prefixed_msg, prefixed_msg_len, keypair);
   tor_free(prefixed_msg);
 
   return retval;
@@ -322,12 +316,12 @@ ed25519_sign_prefixed,(ed25519_signature_t *signature_out,
  * Return 0 if the signature is valid; -1 if it isn't.
  */
 MOCK_IMPL(int,
-ed25519_checksig,(const ed25519_signature_t *signature,
-                  const uint8_t *msg, size_t len,
-                  const ed25519_public_key_t *pubkey))
+ed25519_checksig,
+          (const ed25519_signature_t *signature, const uint8_t *msg,
+           size_t len, const ed25519_public_key_t *pubkey))
 {
-  return
-    get_ed_impl()->open(signature->sig, msg, len, pubkey->pubkey) < 0 ? -1 : 0;
+  return get_ed_impl()->open(signature->sig, msg, len, pubkey->pubkey) < 0 ? -1
+                                                                           : 0;
 }
 
 /**
@@ -345,8 +339,7 @@ ed25519_checksig_prefixed(const ed25519_signature_t *signature,
   size_t prefixed_msg_len;
   uint8_t *prefixed_msg;
 
-  prefixed_msg = get_prefixed_msg(msg, msg_len, prefix_str,
-                                  &prefixed_msg_len);
+  prefixed_msg = get_prefixed_msg(msg, msg_len, prefix_str, &prefixed_msg_len);
   if (BUG(!prefixed_msg)) {
     /* LCOV_EXCL_START -- only possible when the message and prefix are
      * ridiculously huge */
@@ -355,9 +348,7 @@ ed25519_checksig_prefixed(const ed25519_signature_t *signature,
     /* LCOV_EXCL_STOP */
   }
 
-  retval = ed25519_checksig(signature,
-                            prefixed_msg, prefixed_msg_len,
-                            pubkey);
+  retval = ed25519_checksig(signature, prefixed_msg, prefixed_msg_len, pubkey);
   tor_free(prefixed_msg);
 
   return retval;
@@ -371,9 +362,9 @@ ed25519_checksig_prefixed(const ed25519_signature_t *signature,
  * signatures.
  */
 MOCK_IMPL(int,
-ed25519_checksig_batch,(int *okay_out,
-                        const ed25519_checkable_t *checkable,
-                        int n_checkable))
+ed25519_checksig_batch,
+          (int *okay_out, const ed25519_checkable_t *checkable,
+           int n_checkable))
 {
   int i, res;
   const ed25519_impl_t *impl = get_ed_impl();
@@ -405,10 +396,10 @@ ed25519_checksig_batch,(int *okay_out,
     int *oks;
     int all_ok;
 
-    ms = tor_calloc(n_checkable, sizeof(uint8_t*));
+    ms = tor_calloc(n_checkable, sizeof(uint8_t *));
     lens = tor_calloc(n_checkable, sizeof(size_t));
-    pks = tor_calloc(n_checkable, sizeof(uint8_t*));
-    sigs = tor_calloc(n_checkable, sizeof(uint8_t*));
+    pks = tor_calloc(n_checkable, sizeof(uint8_t *));
+    sigs = tor_calloc(n_checkable, sizeof(uint8_t *));
     oks = okay_out ? okay_out : tor_calloc(n_checkable, sizeof(int));
 
     for (i = 0; i < n_checkable; ++i) {
@@ -435,7 +426,7 @@ ed25519_checksig_batch,(int *okay_out,
     tor_free(lens);
     tor_free(pks);
     tor_free(sigs);
-    if (! okay_out)
+    if (!okay_out)
       tor_free(oks);
   }
 
@@ -464,8 +455,8 @@ ed25519_keypair_from_curve25519_keypair(ed25519_keypair_t *out,
   memcpy(out->seckey.seckey, inp->seckey.secret_key, 32);
 
   ctx = crypto_digest512_new(DIGEST_SHA512);
-  crypto_digest_add_bytes(ctx, (const char*)out->seckey.seckey, 32);
-  crypto_digest_add_bytes(ctx, (const char*)string, sizeof(string));
+  crypto_digest_add_bytes(ctx, (const char *)out->seckey.seckey, 32);
+  crypto_digest_add_bytes(ctx, (const char *)string, sizeof(string));
   crypto_digest_get_digest(ctx, (char *)sha512_output, sizeof(sha512_output));
   crypto_digest_free(ctx);
   memcpy(out->seckey.seckey + 32, sha512_output, 32);
@@ -490,13 +481,12 @@ ed25519_keypair_from_curve25519_keypair(ed25519_keypair_t *out,
  * public key, generate the corresponding ed25519 public key.
  */
 int
-ed25519_public_key_from_curve25519_public_key(ed25519_public_key_t *pubkey,
-                                     const curve25519_public_key_t *pubkey_in,
-                                     int signbit)
+ed25519_public_key_from_curve25519_public_key(
+    ed25519_public_key_t *pubkey, const curve25519_public_key_t *pubkey_in,
+    int signbit)
 {
-  return get_ed_impl()->pubkey_from_curve25519_pubkey(pubkey->pubkey,
-                                                      pubkey_in->public_key,
-                                                      signbit);
+  return get_ed_impl()->pubkey_from_curve25519_pubkey(
+      pubkey->pubkey, pubkey_in->public_key, signbit);
 }
 
 /**
@@ -511,14 +501,13 @@ ed25519_public_key_from_curve25519_public_key(ed25519_public_key_t *pubkey,
  *
  * Return 0 if blinding was successful, else return -1. */
 int
-ed25519_keypair_blind(ed25519_keypair_t *out,
-                      const ed25519_keypair_t *inp,
+ed25519_keypair_blind(ed25519_keypair_t *out, const ed25519_keypair_t *inp,
                       const uint8_t *param)
 {
   ed25519_public_key_t pubkey_check;
 
-  get_ed_impl()->blind_secret_key(out->seckey.seckey,
-                                  inp->seckey.seckey, param);
+  get_ed_impl()->blind_secret_key(out->seckey.seckey, inp->seckey.seckey,
+                                  param);
 
   if (ed25519_public_blind(&pubkey_check, &inp->pubkey, param) < 0) {
     return -1;
@@ -539,8 +528,7 @@ ed25519_keypair_blind(ed25519_keypair_t *out,
  */
 int
 ed25519_public_blind(ed25519_public_key_t *out,
-                     const ed25519_public_key_t *inp,
-                     const uint8_t *param)
+                     const ed25519_public_key_t *inp, const uint8_t *param)
 {
   return get_ed_impl()->blind_public_key(out->pubkey, inp->pubkey, param);
 }
@@ -551,13 +539,10 @@ ed25519_public_blind(ed25519_public_key_t *out,
  */
 int
 ed25519_seckey_write_to_file(const ed25519_secret_key_t *seckey,
-                             const char *filename,
-                             const char *tag)
+                             const char *filename, const char *tag)
 {
-  return crypto_write_tagged_contents_to_file(filename,
-                                              "ed25519v1-secret",
-                                              tag,
-                                              seckey->seckey,
+  return crypto_write_tagged_contents_to_file(filename, "ed25519v1-secret",
+                                              tag, seckey->seckey,
                                               sizeof(seckey->seckey));
 }
 
@@ -567,8 +552,7 @@ ed25519_seckey_write_to_file(const ed25519_secret_key_t *seckey,
  * Return 0 on success, -1 on failure.
  */
 int
-ed25519_seckey_read_from_file(ed25519_secret_key_t *seckey_out,
-                              char **tag_out,
+ed25519_seckey_read_from_file(ed25519_secret_key_t *seckey_out, char **tag_out,
                               const char *filename)
 {
   ssize_t len;
@@ -592,13 +576,10 @@ ed25519_seckey_read_from_file(ed25519_secret_key_t *seckey_out,
  */
 int
 ed25519_pubkey_write_to_file(const ed25519_public_key_t *pubkey,
-                             const char *filename,
-                             const char *tag)
+                             const char *filename, const char *tag)
 {
-  return crypto_write_tagged_contents_to_file(filename,
-                                              "ed25519v1-public",
-                                              tag,
-                                              pubkey->pubkey,
+  return crypto_write_tagged_contents_to_file(filename, "ed25519v1-public",
+                                              tag, pubkey->pubkey,
                                               sizeof(pubkey->pubkey));
 }
 
@@ -607,8 +588,7 @@ ed25519_pubkey_write_to_file(const ed25519_public_key_t *pubkey,
  * Return 0 on success, -1 on failure.
  */
 int
-ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
-                              char **tag_out,
+ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out, char **tag_out,
                               const char *filename)
 {
   ssize_t len;
@@ -630,7 +610,7 @@ ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
 void
 ed25519_keypair_free_(ed25519_keypair_t *kp)
 {
-  if (! kp)
+  if (!kp)
     return;
 
   memwipe(kp, 0, sizeof(*kp));
@@ -662,31 +642,24 @@ ed25519_pubkey_copy(ed25519_public_key_t *dest,
 /** Check whether the given Ed25519 implementation seems to be working.
  * If so, return 0; otherwise return -1. */
 MOCK_IMPL(STATIC int,
-ed25519_impl_spot_check,(void))
+ed25519_impl_spot_check, (void))
 {
   static const uint8_t alicesk[32] = {
-    0xc5,0xaa,0x8d,0xf4,0x3f,0x9f,0x83,0x7b,
-    0xed,0xb7,0x44,0x2f,0x31,0xdc,0xb7,0xb1,
-    0x66,0xd3,0x85,0x35,0x07,0x6f,0x09,0x4b,
-    0x85,0xce,0x3a,0x2e,0x0b,0x44,0x58,0xf7
-  };
+      0xc5, 0xaa, 0x8d, 0xf4, 0x3f, 0x9f, 0x83, 0x7b, 0xed, 0xb7, 0x44,
+      0x2f, 0x31, 0xdc, 0xb7, 0xb1, 0x66, 0xd3, 0x85, 0x35, 0x07, 0x6f,
+      0x09, 0x4b, 0x85, 0xce, 0x3a, 0x2e, 0x0b, 0x44, 0x58, 0xf7};
   static const uint8_t alicepk[32] = {
-    0xfc,0x51,0xcd,0x8e,0x62,0x18,0xa1,0xa3,
-    0x8d,0xa4,0x7e,0xd0,0x02,0x30,0xf0,0x58,
-    0x08,0x16,0xed,0x13,0xba,0x33,0x03,0xac,
-    0x5d,0xeb,0x91,0x15,0x48,0x90,0x80,0x25
-  };
-  static const uint8_t alicemsg[2] = { 0xaf, 0x82 };
+      0xfc, 0x51, 0xcd, 0x8e, 0x62, 0x18, 0xa1, 0xa3, 0x8d, 0xa4, 0x7e,
+      0xd0, 0x02, 0x30, 0xf0, 0x58, 0x08, 0x16, 0xed, 0x13, 0xba, 0x33,
+      0x03, 0xac, 0x5d, 0xeb, 0x91, 0x15, 0x48, 0x90, 0x80, 0x25};
+  static const uint8_t alicemsg[2] = {0xaf, 0x82};
   static const uint8_t alicesig[64] = {
-    0x62,0x91,0xd6,0x57,0xde,0xec,0x24,0x02,
-    0x48,0x27,0xe6,0x9c,0x3a,0xbe,0x01,0xa3,
-    0x0c,0xe5,0x48,0xa2,0x84,0x74,0x3a,0x44,
-    0x5e,0x36,0x80,0xd7,0xdb,0x5a,0xc3,0xac,
-    0x18,0xff,0x9b,0x53,0x8d,0x16,0xf2,0x90,
-    0xae,0x67,0xf7,0x60,0x98,0x4d,0xc6,0x59,
-    0x4a,0x7c,0x15,0xe9,0x71,0x6e,0xd2,0x8d,
-    0xc0,0x27,0xbe,0xce,0xea,0x1e,0xc4,0x0a
-  };
+      0x62, 0x91, 0xd6, 0x57, 0xde, 0xec, 0x24, 0x02, 0x48, 0x27, 0xe6,
+      0x9c, 0x3a, 0xbe, 0x01, 0xa3, 0x0c, 0xe5, 0x48, 0xa2, 0x84, 0x74,
+      0x3a, 0x44, 0x5e, 0x36, 0x80, 0xd7, 0xdb, 0x5a, 0xc3, 0xac, 0x18,
+      0xff, 0x9b, 0x53, 0x8d, 0x16, 0xf2, 0x90, 0xae, 0x67, 0xf7, 0x60,
+      0x98, 0x4d, 0xc6, 0x59, 0x4a, 0x7c, 0x15, 0xe9, 0x71, 0x6e, 0xd2,
+      0x8d, 0xc0, 0x27, 0xbe, 0xce, 0xea, 0x1e, 0xc4, 0x0a};
   const ed25519_impl_t *impl = get_ed_impl();
   uint8_t sk[ED25519_SECKEY_LEN];
   uint8_t pk[ED25519_PUBKEY_LEN];
@@ -730,12 +703,12 @@ ed25519_impl_spot_check,(void))
    */
   goto end;
 
- // LCOV_EXCL_START -- We can only reach this if our ed25519 implementation is
- // broken.
- fail:
+// LCOV_EXCL_START -- We can only reach this if our ed25519 implementation is
+// broken.
+fail:
   r = -1;
- // LCOV_EXCL_STOP
- end:
+// LCOV_EXCL_STOP
+end:
   return r;
 }
 
@@ -763,7 +736,7 @@ pick_ed25519_impl(void)
   /* LCOV_EXCL_START
    * unreachable unless ed25519_donna is broken */
   log_warn(LD_CRYPTO, "The Ed25519-donna implementation seems broken; using "
-           "the ref10 implementation.");
+                      "the ref10 implementation.");
   ed25519_impl = &impl_ref10;
   /* LCOV_EXCL_STOP */
 }
@@ -782,10 +755,9 @@ ed25519_point_is_identity_element(const uint8_t *point)
 {
   /* The identity element in ed25159 is the point with coordinates (0,1). */
   static const uint8_t ed25519_identity[32] = {
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   tor_assert(sizeof(ed25519_identity) == ED25519_PUBKEY_LEN);
   return tor_memeq(point, ed25519_identity, sizeof(ed25519_identity));
 }

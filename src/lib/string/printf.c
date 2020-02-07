@@ -28,8 +28,8 @@ tor_snprintf(char *str, size_t size, const char *format, ...)
 {
   va_list ap;
   int r;
-  va_start(ap,format);
-  r = tor_vsnprintf(str,size,format,ap);
+  va_start(ap, format);
+  r = tor_vsnprintf(str, size, format, ap);
   va_end(ap);
   return r;
 }
@@ -50,7 +50,7 @@ tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
 #else
   r = vsnprintf(str, size, format, args);
 #endif
-  str[size-1] = '\0';
+  str[size - 1] = '\0';
   if (r < 0 || r >= (ssize_t)size)
     return -1;
   return r;
@@ -96,7 +96,7 @@ int
 tor_vasprintf(char **strp, const char *fmt, va_list args)
 {
   /* use a temporary variable in case *strp is in args. */
-  char *strp_tmp=NULL;
+  char *strp_tmp = NULL;
 #ifdef HAVE_VASPRINTF
   /* If the platform gives us one, use it. */
   int r = vasprintf(&strp_tmp, fmt, args);
@@ -118,7 +118,7 @@ tor_vasprintf(char **strp, const char *fmt, va_list args)
     return -1;
   }
   strp_tmp = tor_malloc((size_t)len + 1);
-  r = _vsnprintf(strp_tmp, (size_t)len+1, fmt, args);
+  r = _vsnprintf(strp_tmp, (size_t)len + 1, fmt, args);
   if (r != len) {
     tor_free(strp_tmp);
     *strp = NULL;
@@ -153,9 +153,9 @@ tor_vasprintf(char **strp, const char *fmt, va_list args)
     *strp = tor_strdup(buf);
     return len;
   }
-  strp_tmp = tor_malloc((size_t)len+1);
+  strp_tmp = tor_malloc((size_t)len + 1);
   /* use of tor_vsnprintf() will ensure string is null terminated */
-  r = tor_vsnprintf(strp_tmp, (size_t)len+1, fmt, args);
+  r = tor_vsnprintf(strp_tmp, (size_t)len + 1, fmt, args);
   if (r != len) {
     tor_free(strp_tmp);
     *strp = NULL;

@@ -53,28 +53,28 @@
 #include "app/config/or_state_st.h"
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
 /** A list of state-file "abbreviations," for compatibility. */
 static config_abbrev_t state_abbrevs_[] = {
-  { "AccountingBytesReadInterval", "AccountingBytesReadInInterval", 0, 0 },
-  { "HelperNode", "EntryGuard", 0, 0 },
-  { "HelperNodeDownSince", "EntryGuardDownSince", 0, 0 },
-  { "HelperNodeUnlistedSince", "EntryGuardUnlistedSince", 0, 0 },
-  { "EntryNode", "EntryGuard", 0, 0 },
-  { "EntryNodeDownSince", "EntryGuardDownSince", 0, 0 },
-  { "EntryNodeUnlistedSince", "EntryGuardUnlistedSince", 0, 0 },
-  { NULL, NULL, 0, 0},
+    {"AccountingBytesReadInterval", "AccountingBytesReadInInterval", 0, 0},
+    {"HelperNode", "EntryGuard", 0, 0},
+    {"HelperNodeDownSince", "EntryGuardDownSince", 0, 0},
+    {"HelperNodeUnlistedSince", "EntryGuardUnlistedSince", 0, 0},
+    {"EntryNode", "EntryGuard", 0, 0},
+    {"EntryNodeDownSince", "EntryGuardDownSince", 0, 0},
+    {"EntryNodeUnlistedSince", "EntryGuardUnlistedSince", 0, 0},
+    {NULL, NULL, 0, 0},
 };
 
 /** dummy instance of or_state_t, used for type-checking its
  * members with CONF_CHECK_VAR_TYPE. */
 DUMMY_TYPECHECK_INSTANCE(or_state_t);
 
-#define VAR(varname,conftype,member,initvalue)                          \
+#define VAR(varname, conftype, member, initvalue) \
   CONFIG_VAR_ETYPE(or_state_t, varname, conftype, member, 0, initvalue)
-#define V(member,conftype,initvalue)            \
+#define V(member, conftype, initvalue) \
   VAR(#member, conftype, member, initvalue)
 
 /** Array of "state" variables saved to the ~/.tor/state file. */
@@ -142,8 +142,8 @@ static const config_var_t state_vars_[] = {
 
 static int or_state_validate(or_state_t *state, char **msg);
 
-static int or_state_validate_cb(const void *old_options,
-                                void *options, char **msg);
+static int or_state_validate_cb(const void *old_options, void *options,
+                                char **msg);
 
 /** Magic value for or_state_t. */
 #define OR_STATE_MAGIC 0x57A73f57
@@ -151,25 +151,26 @@ static int or_state_validate_cb(const void *old_options,
 /** "Extra" variable in the state that receives lines we can't parse. This
  * lets us preserve options from versions of Tor newer than us. */
 static struct_member_t state_extra_var = {
-  .name = "__extra",
-  .type = CONFIG_TYPE_LINELIST,
-  .offset = offsetof(or_state_t, ExtraLines),
+    .name = "__extra",
+    .type = CONFIG_TYPE_LINELIST,
+    .offset = offsetof(or_state_t, ExtraLines),
 };
 
 /** Configuration format for or_state_t. */
 static const config_format_t state_format = {
-  .size = sizeof(or_state_t),
-  .magic = {
-   "or_state_t",
-   OR_STATE_MAGIC,
-   offsetof(or_state_t, magic_),
-  },
-  .abbrevs = state_abbrevs_,
-  .vars = state_vars_,
-  .legacy_validate_fn = or_state_validate_cb,
-  .extra = &state_extra_var,
-  .has_config_suite = true,
-  .config_suite_offset = offsetof(or_state_t, substates_),
+    .size = sizeof(or_state_t),
+    .magic =
+        {
+            "or_state_t",
+            OR_STATE_MAGIC,
+            offsetof(or_state_t, magic_),
+        },
+    .abbrevs = state_abbrevs_,
+    .vars = state_vars_,
+    .legacy_validate_fn = or_state_validate_cb,
+    .extra = &state_extra_var,
+    .has_config_suite = true,
+    .config_suite_offset = offsetof(or_state_t, substates_),
 };
 
 /* A global configuration manager for state-file objects */
@@ -188,8 +189,9 @@ get_state_mgr(void)
   return state_mgr;
 }
 
-#define CHECK_STATE_MAGIC(s) STMT_BEGIN                        \
-    config_check_toplevel_magic(get_state_mgr(), (s));         \
+#define CHECK_STATE_MAGIC(s)                           \
+  STMT_BEGIN                                           \
+    config_check_toplevel_magic(get_state_mgr(), (s)); \
   STMT_END
 
 /** Persistent serialized state. */
@@ -216,14 +218,14 @@ static int
 state_transport_line_is_valid(const char *line)
 {
   smartlist_t *items = NULL;
-  char *addrport=NULL;
+  char *addrport = NULL;
   tor_addr_t addr;
   uint16_t port = 0;
   int r;
 
   items = smartlist_new();
   smartlist_split_string(items, line, NULL,
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+                         SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, -1);
 
   if (smartlist_len(items) != 2) {
     log_warn(LD_CONFIG, "state: Not enough arguments in TransportProxy line.");
@@ -244,11 +246,11 @@ state_transport_line_is_valid(const char *line)
   r = 1;
   goto done;
 
- err:
+err:
   r = 0;
 
- done:
-  SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+done:
+  SMARTLIST_FOREACH(items, char *, s, tor_free(s));
   smartlist_free(items);
   return r;
 }
@@ -261,7 +263,7 @@ validate_transports_in_state(or_state_t *state)
   int broken = 0;
   config_line_t *line;
 
-  for (line = state->TransportProxies ; line ; line = line->next) {
+  for (line = state->TransportProxies; line; line = line->next) {
     tor_assert(!strcmp(line->key, "TransportProxy"));
     if (!state_transport_line_is_valid(line->value))
       broken = 1;
@@ -293,15 +295,15 @@ or_state_validate_cb(const void *old_state, void *state_, char **msg)
 {
   /* There is not a meaningful concept of a state-to-state transition,
    * since we do not reload the state after we start. */
-  (void) old_state;
+  (void)old_state;
   CHECK_STATE_MAGIC(state_);
 
   or_state_t *state = state_;
 
-  if (entry_guards_parse_state(state, 0, msg)<0)
+  if (entry_guards_parse_state(state, 0, msg) < 0)
     return -1;
 
-  if (validate_transports_in_state(state)<0)
+  if (validate_transports_in_state(state) < 0)
     return -1;
 
   return 0;
@@ -319,18 +321,18 @@ or_state_set(or_state_t *new_state)
   if (subsystems_set_state(get_state_mgr(), global_state) < 0) {
     ret = -1;
   }
-  if (entry_guards_parse_state(global_state, 1, &err)<0) {
-    log_warn(LD_GENERAL,"%s",err);
+  if (entry_guards_parse_state(global_state, 1, &err) < 0) {
+    log_warn(LD_GENERAL, "%s", err);
     tor_free(err);
     ret = -1;
   }
-  if (rep_hist_load_state(global_state, &err)<0) {
-    log_warn(LD_GENERAL,"Unparseable bandwidth history state: %s",err);
+  if (rep_hist_load_state(global_state, &err) < 0) {
+    log_warn(LD_GENERAL, "Unparseable bandwidth history state: %s", err);
     tor_free(err);
     ret = -1;
   }
-  if (circuit_build_times_parse_state(
-      get_circuit_build_times_mutable(),global_state) < 0) {
+  if (circuit_build_times_parse_state(get_circuit_build_times_mutable(),
+                                      global_state) < 0) {
     ret = -1;
   }
 
@@ -354,7 +356,8 @@ or_state_save_broken(char *fname)
     tor_free(fname2);
   }
   if (i == 100) {
-    log_warn(LD_BUG, "Unable to parse state in \"%s\"; too many saved bad "
+    log_warn(LD_BUG,
+             "Unable to parse state in \"%s\"; too many saved bad "
              "state files to move aside. Discarding the old state file.",
              fname);
     res = unlink(fname);
@@ -365,12 +368,16 @@ or_state_save_broken(char *fname)
                fname, strerror(errno));
     }
   } else {
-    log_warn(LD_BUG, "Unable to parse state in \"%s\". Moving it aside "
+    log_warn(LD_BUG,
+             "Unable to parse state in \"%s\". Moving it aside "
              "to \"%s\".  This could be a bug in Tor; please tell "
-             "the developers.", fname, fname2);
-    if (tor_rename(fname, fname2) < 0) {//XXXX sandbox prohibits
-      log_warn(LD_BUG, "Weirdly, I couldn't even move the state aside. The "
-               "OS gave an error of %s", strerror(errno));
+             "the developers.",
+             fname, fname2);
+    if (tor_rename(fname, fname2) < 0) { // XXXX sandbox prohibits
+      log_warn(LD_BUG,
+               "Weirdly, I couldn't even move the state aside. The "
+               "OS gave an error of %s",
+               strerror(errno));
     }
   }
   tor_free(fname2);
@@ -398,33 +405,33 @@ or_state_load(void)
 
   fname = get_datadir_fname("state");
   switch (file_status(fname)) {
-    case FN_FILE:
-      if (!(contents = read_file_to_str(fname, 0, NULL))) {
-        log_warn(LD_FS, "Unable to read state file \"%s\"", fname);
-        goto done;
-      }
-      break;
-    /* treat empty state files as if the file doesn't exist, and generate
-     * a new state file, overwriting the empty file in or_state_save() */
-    case FN_NOENT:
-    case FN_EMPTY:
-      break;
-    case FN_ERROR:
-    case FN_DIR:
-    default:
-      log_warn(LD_GENERAL,"State file \"%s\" is not a file? Failing.", fname);
+  case FN_FILE:
+    if (!(contents = read_file_to_str(fname, 0, NULL))) {
+      log_warn(LD_FS, "Unable to read state file \"%s\"", fname);
       goto done;
+    }
+    break;
+  /* treat empty state files as if the file doesn't exist, and generate
+   * a new state file, overwriting the empty file in or_state_save() */
+  case FN_NOENT:
+  case FN_EMPTY:
+    break;
+  case FN_ERROR:
+  case FN_DIR:
+  default:
+    log_warn(LD_GENERAL, "State file \"%s\" is not a file? Failing.", fname);
+    goto done;
   }
   new_state = or_state_new();
   if (contents) {
-    config_line_t *lines=NULL;
+    config_line_t *lines = NULL;
     int assign_retval;
-    if (config_get_lines(contents, &lines, 0)<0)
+    if (config_get_lines(contents, &lines, 0) < 0)
       goto done;
-    assign_retval = config_assign(get_state_mgr(), new_state,
-                                  lines, 0, &errmsg);
+    assign_retval =
+        config_assign(get_state_mgr(), new_state, lines, 0, &errmsg);
     config_free_lines(lines);
-    if (assign_retval<0)
+    if (assign_retval < 0)
       badstate = 1;
     if (errmsg) {
       log_warn(LD_GENERAL, "%s", errmsg);
@@ -442,7 +449,7 @@ or_state_load(void)
 
   if (badstate && !contents) {
     log_warn(LD_BUG, "Uh oh.  We couldn't even validate our own default state."
-             " This is a bug in Tor.");
+                     " This is a bug in Tor.");
     goto done;
   } else if (badstate && contents) {
     or_state_save_broken(fname);
@@ -477,7 +484,7 @@ or_state_load(void)
   }
   r = 0;
 
- done:
+done:
   tor_free(fname);
   tor_free(contents);
   if (new_state)
@@ -504,14 +511,14 @@ did_last_state_file_write_fail(void)
 /** If we're a relay, how often should we checkpoint our state file even
  * if nothing else dirties it? This will checkpoint ongoing stats like
  * bandwidth used, per-country user stats, etc. */
-#define STATE_RELAY_CHECKPOINT_INTERVAL (12*60*60)
+#define STATE_RELAY_CHECKPOINT_INTERVAL (12 * 60 * 60)
 
 /** Write the persistent state to disk. Return 0 for success, <0 on failure. */
 int
 or_state_save(time_t now)
 {
   char *state, *contents;
-  char tbuf[ISO_TIME_LEN+1];
+  char tbuf[ISO_TIME_LEN + 1];
   char *fname;
 
   tor_assert(global_state);
@@ -521,7 +528,7 @@ or_state_save(time_t now)
 
   /* Call everything else that might dirty the state even more, in order
    * to avoid redundant writes. */
-  (void) subsystems_flush_state(get_state_mgr(), global_state);
+  (void)subsystems_flush_state(get_state_mgr(), global_state);
   entry_guards_update_state(global_state);
   rep_hist_update_state(global_state);
   circuit_build_times_update_state(get_circuit_build_times(), global_state);
@@ -543,9 +550,11 @@ or_state_save(time_t now)
                tbuf, state);
   tor_free(state);
   fname = get_datadir_fname("state");
-  if (write_str_to_file(fname, contents, 0)<0) {
-    log_warn(LD_FS, "Unable to write state to file \"%s\"; "
-             "will try again later", fname);
+  if (write_str_to_file(fname, contents, 0) < 0) {
+    log_warn(LD_FS,
+             "Unable to write state to file \"%s\"; "
+             "will try again later",
+             fname);
     last_state_file_write_failed = 1;
     tor_free(fname);
     tor_free(contents);
@@ -578,12 +587,12 @@ get_transport_in_state_by_name(const char *transport)
   config_line_t *ret = NULL;
   smartlist_t *items = NULL;
 
-  for (line = or_state->TransportProxies ; line ; line = line->next) {
+  for (line = or_state->TransportProxies; line; line = line->next) {
     tor_assert(!strcmp(line->key, "TransportProxy"));
 
     items = smartlist_new();
     smartlist_split_string(items, line->value, NULL,
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+                           SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, -1);
     if (smartlist_len(items) != 2) /* broken state */
       goto done;
 
@@ -592,14 +601,14 @@ get_transport_in_state_by_name(const char *transport)
       goto done;
     }
 
-    SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+    SMARTLIST_FOREACH(items, char *, s, tor_free(s));
     smartlist_free(items);
     items = NULL;
   }
 
- done:
+done:
   if (items) {
-    SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+    SMARTLIST_FOREACH(items, char *, s, tor_free(s));
     smartlist_free(items);
   }
   return ret;
@@ -623,10 +632,10 @@ get_transport_bindaddr(const char *line, const char *transport)
       goto broken_state;
 
     tor_free(line_tmp);
-    return (line+strlen(transport)+1);
+    return (line + strlen(transport) + 1);
   }
 
- broken_state:
+broken_state:
   tor_free(line_tmp);
   return NULL;
 }
@@ -657,7 +666,7 @@ get_stored_bindaddr_for_server_transport(const char *transport)
   if (stored_bindaddr) /* found stored bindaddr in state file. */
     return tor_strdup(stored_bindaddr);
 
- no_bindaddr_found:
+no_bindaddr_found:
   /** If we didn't find references for this pluggable transport in the
       state file, we should instruct the pluggable transport proxy to
       listen on INADDR_ANY on a random ephemeral port. */
@@ -668,32 +677,32 @@ get_stored_bindaddr_for_server_transport(const char *transport)
 /** Save <b>transport</b> listening on <b>addr</b>:<b>port</b> to
     state */
 void
-save_transport_to_state(const char *transport,
-                        const tor_addr_t *addr, uint16_t port)
+save_transport_to_state(const char *transport, const tor_addr_t *addr,
+                        uint16_t port)
 {
   or_state_t *state = get_or_state();
 
-  char *transport_addrport=NULL;
+  char *transport_addrport = NULL;
 
   /** find where to write on the state */
   config_line_t **next, *line;
 
   /* see if this transport is already stored in state */
-  config_line_t *transport_line =
-    get_transport_in_state_by_name(transport);
+  config_line_t *transport_line = get_transport_in_state_by_name(transport);
 
   if (transport_line) { /* if transport already exists in state... */
     const char *prev_bindaddr = /* get its addrport... */
-      get_transport_bindaddr(transport_line->value, transport);
+        get_transport_bindaddr(transport_line->value, transport);
     transport_addrport = tor_strdup(fmt_addrport(addr, port));
 
     /* if transport in state has the same address as this one, life is good */
     if (!strcmp(prev_bindaddr, transport_addrport)) {
       log_info(LD_CONFIG, "Transport seems to have spawned on its usual "
-               "address:port.");
+                          "address:port.");
       goto done;
     } else { /* if addrport in state is different than the one we got */
-      log_info(LD_CONFIG, "Transport seems to have spawned on different "
+      log_info(LD_CONFIG,
+               "Transport seems to have spawned on different "
                "address:port. Let's update the state file with the new "
                "address:port");
       tor_free(transport_line->value); /* free the old line */
@@ -703,7 +712,7 @@ save_transport_to_state(const char *transport,
     }
   } else { /* never seen this one before; save it in state for next time */
     log_info(LD_CONFIG, "It's the first time we see this transport. "
-             "Let's save its address:port");
+                        "Let's save its address:port");
     next = &state->TransportProxies;
     /* find the last TransportProxy line in the state and point 'next'
        right after it  */
@@ -722,7 +731,7 @@ save_transport_to_state(const char *transport,
   if (!get_options()->AvoidDiskWrites)
     or_state_mark_dirty(state, 0);
 
- done:
+done:
   tor_free(transport_addrport);
 }
 

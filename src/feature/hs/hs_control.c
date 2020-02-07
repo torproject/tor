@@ -49,11 +49,9 @@ hs_control_desc_event_requested(const ed25519_public_key_t *onion_pk,
   hsdir_index = hsdir_node->hsdir_index.fetch;
 
   /* Trigger the event. */
-  control_event_hs_descriptor_requested(onion_address, REND_NO_AUTH,
-                                        hsdir_rs->identity_digest,
-                                        base64_blinded_pk,
-                                        hex_str((const char *) hsdir_index,
-                                                DIGEST256_LEN));
+  control_event_hs_descriptor_requested(
+      onion_address, REND_NO_AUTH, hsdir_rs->identity_digest,
+      base64_blinded_pk, hex_str((const char *)hsdir_index, DIGEST256_LEN));
   memwipe(onion_address, 0, sizeof(onion_address));
 }
 
@@ -63,8 +61,7 @@ hs_control_desc_event_requested(const ed25519_public_key_t *onion_pk,
  * reason for the failure. None can be NULL. */
 void
 hs_control_desc_event_failed(const hs_ident_dir_conn_t *ident,
-                             const char *hsdir_id_digest,
-                             const char *reason)
+                             const char *hsdir_id_digest, const char *reason)
 {
   char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
   char base64_blinded_pk[ED25519_BASE64_LEN + 1];
@@ -145,10 +142,9 @@ hs_control_desc_event_upload(const char *onion_address,
   /* Build base64 encoded blinded key. */
   ed25519_public_to_base64(base64_blinded_pk, blinded_pk);
 
-  control_event_hs_descriptor_upload(onion_address, hsdir_id_digest,
-                                     base64_blinded_pk,
-                                     hex_str((const char *) hsdir_index,
-                                             DIGEST256_LEN));
+  control_event_hs_descriptor_upload(
+      onion_address, hsdir_id_digest, base64_blinded_pk,
+      hex_str((const char *)hsdir_index, DIGEST256_LEN));
 }
 
 /** Send on the control port the "HS_DESC UPLOADED [...]" event.
@@ -176,8 +172,7 @@ hs_control_desc_event_uploaded(const hs_ident_dir_conn_t *ident,
  * can be NULL. */
 void
 hs_control_desc_event_content(const hs_ident_dir_conn_t *ident,
-                              const char *hsdir_id_digest,
-                              const char *body)
+                              const char *hsdir_id_digest, const char *body)
 {
   char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
   char base64_blinded_pk[ED25519_BASE64_LEN + 1];
@@ -236,13 +231,13 @@ hs_control_hspost_command(const char *body, const char *onion_address,
     hsdirs_rs = hsdirs;
   }
 
-  SMARTLIST_FOREACH_BEGIN(hsdirs_rs, const routerstatus_t *, rs) {
+  SMARTLIST_FOREACH_BEGIN (hsdirs_rs, const routerstatus_t *, rs) {
     hs_service_upload_desc_to_dir(body, plaintext.version, &identity_pk,
                                   &plaintext.blinded_pubkey, rs);
-  } SMARTLIST_FOREACH_END(rs);
+  } SMARTLIST_FOREACH_END (rs);
   ret = 0;
 
- done:
+done:
   /* We don't have ownership of the objects in this list. */
   smartlist_free(hsdirs);
   return ret;

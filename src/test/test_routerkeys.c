@@ -17,14 +17,14 @@
 
 #ifdef _WIN32
 /* For mkdir() */
-#include <direct.h>
+#  include <direct.h>
 #endif
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
+#  include <sys/stat.h>
 #endif
 
 static void
@@ -34,7 +34,7 @@ test_routerkeys_write_fingerprint(void *arg)
   or_options_t *options = get_options_mutable();
   const char *ddir = get_fname("write_fingerprint");
   char *cp = NULL, *cp2 = NULL;
-  char fp[FINGERPRINT_LEN+1];
+  char fp[FINGERPRINT_LEN + 1];
 
   (void)arg;
 
@@ -48,12 +48,11 @@ test_routerkeys_write_fingerprint(void *arg)
   set_client_identity_key(crypto_pk_dup_key(key));
 
   tt_int_op(0, OP_EQ, check_private_dir(ddir, CPD_CREATE, NULL));
-  tt_int_op(crypto_pk_cmp_keys(get_server_identity_key(),key),OP_EQ,0);
+  tt_int_op(crypto_pk_cmp_keys(get_server_identity_key(), key), OP_EQ, 0);
 
   /* Write fingerprint file */
   tt_int_op(0, OP_EQ, router_write_fingerprint(0));
-  cp = read_file_to_str(get_fname("write_fingerprint/fingerprint"),
-                        0, NULL);
+  cp = read_file_to_str(get_fname("write_fingerprint/fingerprint"), 0, NULL);
   crypto_pk_get_fingerprint(key, fp, 0);
   tor_asprintf(&cp2, "haflinger %s\n", fp);
   tt_str_op(cp, OP_EQ, cp2);
@@ -62,8 +61,8 @@ test_routerkeys_write_fingerprint(void *arg)
 
   /* Write hashed-fingerprint file */
   tt_int_op(0, OP_EQ, router_write_fingerprint(1));
-  cp = read_file_to_str(get_fname("write_fingerprint/hashed-fingerprint"),
-                        0, NULL);
+  cp = read_file_to_str(get_fname("write_fingerprint/hashed-fingerprint"), 0,
+                        NULL);
   crypto_pk_get_hashed_fingerprint(key, fp);
   tor_asprintf(&cp2, "haflinger %s\n", fp);
   tt_str_op(cp, OP_EQ, cp2);
@@ -74,15 +73,15 @@ test_routerkeys_write_fingerprint(void *arg)
   write_str_to_file(get_fname("write_fingerprint/hashed-fingerprint"),
                     "junk goes here", 0);
   tt_int_op(0, OP_EQ, router_write_fingerprint(1));
-  cp = read_file_to_str(get_fname("write_fingerprint/hashed-fingerprint"),
-                        0, NULL);
+  cp = read_file_to_str(get_fname("write_fingerprint/hashed-fingerprint"), 0,
+                        NULL);
   crypto_pk_get_hashed_fingerprint(key, fp);
   tor_asprintf(&cp2, "haflinger %s\n", fp);
   tt_str_op(cp, OP_EQ, cp2);
   tor_free(cp);
   tor_free(cp2);
 
- done:
+done:
   crypto_pk_free(key);
   set_client_identity_key(NULL);
   tor_free(cp);
@@ -100,8 +99,8 @@ test_routerkeys_ed_certs(void *args)
   uint8_t *junk = NULL;
   char *base64 = NULL;
 
-  tt_int_op(0,OP_EQ,ed25519_keypair_generate(&kp1, 0));
-  tt_int_op(0,OP_EQ,ed25519_keypair_generate(&kp2, 0));
+  tt_int_op(0, OP_EQ, ed25519_keypair_generate(&kp1, 0));
+  tt_int_op(0, OP_EQ, ed25519_keypair_generate(&kp2, 0));
 
   for (int i = 0; i <= 1; ++i) {
     uint32_t flags = i ? CERT_FLAG_INCLUDE_SIGNING_KEY : 0;
@@ -164,7 +163,7 @@ test_routerkeys_ed_certs(void *args)
 
   /* Now try some junky certs. */
   /* - Truncated */
-  nocert = tor_cert_parse(cert[0]->encoded, cert[0]->encoded_len-1);
+  nocert = tor_cert_parse(cert[0]->encoded, cert[0]->encoded_len - 1);
   tt_ptr_op(NULL, OP_EQ, nocert);
 
   /* - First byte modified */
@@ -176,7 +175,7 @@ test_routerkeys_ed_certs(void *args)
   /* - Extra byte at the end*/
   junk = tor_malloc_zero(cert[0]->encoded_len + 1);
   memcpy(junk, cert[0]->encoded, cert[0]->encoded_len);
-  nocert = tor_cert_parse(junk, cert[0]->encoded_len+1);
+  nocert = tor_cert_parse(junk, cert[0]->encoded_len + 1);
   tt_ptr_op(NULL, OP_EQ, nocert);
 
   /* - Multiple signing key instances */
@@ -193,7 +192,7 @@ test_routerkeys_ed_certs(void *args)
   nocert = tor_cert_parse(junk, 104 + 36 * 2);
   tt_ptr_op(NULL, OP_EQ, nocert);
 
- done:
+done:
   tor_cert_free(cert[0]);
   tor_cert_free(cert[1]);
   tor_cert_free(parsed_cert[0]);
@@ -221,18 +220,19 @@ test_routerkeys_ed_key_create(void *arg)
   tt_assert(cert);
   tt_mem_op(&cert->signed_key, OP_EQ, &kp2->pubkey,
             sizeof(ed25519_public_key_t));
-  tt_assert(! cert->signing_key_included);
+  tt_assert(!cert->signing_key_included);
 
   tt_int_op(cert->valid_until, OP_GE, now);
-  tt_int_op(cert->valid_until, OP_LE, now+7200);
+  tt_int_op(cert->valid_until, OP_LE, now + 7200);
 
   /* Create a new key-including certificate signed by kp1 */
   ed25519_keypair_free(kp2);
   tor_cert_free(cert);
-  cert = NULL; kp2 = NULL;
-  kp2 = ed_key_new(kp1, (INIT_ED_KEY_NEEDCERT|
-                         INIT_ED_KEY_INCLUDE_SIGNING_KEY_IN_CERT),
-                   now, 3600, 4, &cert);
+  cert = NULL;
+  kp2 = NULL;
+  kp2 = ed_key_new(
+      kp1, (INIT_ED_KEY_NEEDCERT | INIT_ED_KEY_INCLUDE_SIGNING_KEY_IN_CERT),
+      now, 3600, 4, &cert);
   tt_assert(kp2);
   tt_assert(cert);
   tt_assert(cert->signing_key_included);
@@ -241,7 +241,7 @@ test_routerkeys_ed_key_create(void *arg)
   tt_mem_op(&cert->signing_key, OP_EQ, &kp1->pubkey,
             sizeof(ed25519_public_key_t));
 
- done:
+done:
   ed25519_keypair_free(kp1);
   ed25519_keypair_free(kp2);
   tor_cert_free(cert);
@@ -250,7 +250,7 @@ test_routerkeys_ed_key_create(void *arg)
 static void
 test_routerkeys_ed_key_init_basic(void *arg)
 {
-  (void) arg;
+  (void)arg;
 
   tor_cert_t *cert = NULL, *cert2 = NULL;
   ed25519_keypair_t *kp1 = NULL, *kp2 = NULL, *kp3 = NULL;
@@ -263,47 +263,49 @@ test_routerkeys_ed_key_init_basic(void *arg)
   unlink(fname2);
 
   /* Fail to load a key that isn't there. */
-  kp1 = ed_key_init_from_file(fname1, 0, LOG_INFO, NULL, now, 0, 7, &cert,
-                              NULL);
+  kp1 =
+      ed_key_init_from_file(fname1, 0, LOG_INFO, NULL, now, 0, 7, &cert, NULL);
   tt_assert(kp1 == NULL);
   tt_assert(cert == NULL);
 
   /* Create the key if requested to do so. */
-  kp1 = ed_key_init_from_file(fname1, INIT_ED_KEY_CREATE, LOG_INFO,
-                              NULL, now, 0, 7, &cert, NULL);
+  kp1 = ed_key_init_from_file(fname1, INIT_ED_KEY_CREATE, LOG_INFO, NULL, now,
+                              0, 7, &cert, NULL);
   tt_assert(kp1 != NULL);
   tt_assert(cert == NULL);
   tt_int_op(stat(get_fname("test_ed_key_1_cert"), &st), OP_LT, 0);
   tt_int_op(stat(get_fname("test_ed_key_1_secret_key"), &st), OP_EQ, 0);
 
   /* Fail to load if we say we need a cert */
-  kp2 = ed_key_init_from_file(fname1, INIT_ED_KEY_NEEDCERT, LOG_INFO,
-                              NULL, now, 0, 7, &cert, NULL);
+  kp2 = ed_key_init_from_file(fname1, INIT_ED_KEY_NEEDCERT, LOG_INFO, NULL,
+                              now, 0, 7, &cert, NULL);
   tt_assert(kp2 == NULL);
 
   /* Fail to load if we say the wrong key type */
-  kp2 = ed_key_init_from_file(fname1, 0, LOG_INFO,
-                              NULL, now, 0, 6, &cert, NULL);
+  kp2 =
+      ed_key_init_from_file(fname1, 0, LOG_INFO, NULL, now, 0, 6, &cert, NULL);
   tt_assert(kp2 == NULL);
 
   /* Load successfully if we're not picky, whether we say "create" or not. */
-  kp2 = ed_key_init_from_file(fname1, INIT_ED_KEY_CREATE, LOG_INFO,
-                              NULL, now, 0, 7, &cert, NULL);
+  kp2 = ed_key_init_from_file(fname1, INIT_ED_KEY_CREATE, LOG_INFO, NULL, now,
+                              0, 7, &cert, NULL);
   tt_assert(kp2 != NULL);
   tt_assert(cert == NULL);
   tt_mem_op(kp1, OP_EQ, kp2, sizeof(*kp1));
-  ed25519_keypair_free(kp2); kp2 = NULL;
+  ed25519_keypair_free(kp2);
+  kp2 = NULL;
 
-  kp2 = ed_key_init_from_file(fname1, 0, LOG_INFO,
-                              NULL, now, 0, 7, &cert, NULL);
+  kp2 =
+      ed_key_init_from_file(fname1, 0, LOG_INFO, NULL, now, 0, 7, &cert, NULL);
   tt_assert(kp2 != NULL);
   tt_assert(cert == NULL);
   tt_mem_op(kp1, OP_EQ, kp2, sizeof(*kp1));
-  ed25519_keypair_free(kp2); kp2 = NULL;
+  ed25519_keypair_free(kp2);
+  kp2 = NULL;
 
   /* Now create a key with a cert. */
-  kp2 = ed_key_init_from_file(fname2, (INIT_ED_KEY_CREATE|
-                                       INIT_ED_KEY_NEEDCERT),
+  kp2 = ed_key_init_from_file(fname2,
+                              (INIT_ED_KEY_CREATE | INIT_ED_KEY_NEEDCERT),
                               LOG_INFO, kp1, now, 7200, 7, &cert, NULL);
   tt_assert(kp2 != NULL);
   tt_assert(cert != NULL);
@@ -315,35 +317,40 @@ test_routerkeys_ed_key_init_basic(void *arg)
   tt_mem_op(&cert->signed_key, OP_EQ, &kp2->pubkey, 32);
 
   /* Now verify we can load the cert... */
-  kp3 = ed_key_init_from_file(fname2, (INIT_ED_KEY_CREATE|
-                                       INIT_ED_KEY_NEEDCERT),
+  kp3 = ed_key_init_from_file(fname2,
+                              (INIT_ED_KEY_CREATE | INIT_ED_KEY_NEEDCERT),
                               LOG_INFO, kp1, now, 7200, 7, &cert2, NULL);
   tt_mem_op(kp2, OP_EQ, kp3, sizeof(*kp2));
   tt_mem_op(cert2->encoded, OP_EQ, cert->encoded, cert->encoded_len);
-  ed25519_keypair_free(kp3); kp3 = NULL;
-  tor_cert_free(cert2); cert2 = NULL;
+  ed25519_keypair_free(kp3);
+  kp3 = NULL;
+  tor_cert_free(cert2);
+  cert2 = NULL;
 
   /* ... even without create... */
-  kp3 = ed_key_init_from_file(fname2, INIT_ED_KEY_NEEDCERT,
-                              LOG_INFO, kp1, now, 7200, 7, &cert2, NULL);
+  kp3 = ed_key_init_from_file(fname2, INIT_ED_KEY_NEEDCERT, LOG_INFO, kp1, now,
+                              7200, 7, &cert2, NULL);
   tt_mem_op(kp2, OP_EQ, kp3, sizeof(*kp2));
   tt_mem_op(cert2->encoded, OP_EQ, cert->encoded, cert->encoded_len);
-  ed25519_keypair_free(kp3); kp3 = NULL;
-  tor_cert_free(cert2); cert2 = NULL;
+  ed25519_keypair_free(kp3);
+  kp3 = NULL;
+  tor_cert_free(cert2);
+  cert2 = NULL;
 
   /* ... but that we don't crash or anything if we say we don't want it. */
-  kp3 = ed_key_init_from_file(fname2, INIT_ED_KEY_NEEDCERT,
-                              LOG_INFO, kp1, now, 7200, 7, NULL, NULL);
+  kp3 = ed_key_init_from_file(fname2, INIT_ED_KEY_NEEDCERT, LOG_INFO, kp1, now,
+                              7200, 7, NULL, NULL);
   tt_mem_op(kp2, OP_EQ, kp3, sizeof(*kp2));
-  ed25519_keypair_free(kp3); kp3 = NULL;
+  ed25519_keypair_free(kp3);
+  kp3 = NULL;
 
   /* Fail if we're told the wrong signing key */
-  kp3 = ed_key_init_from_file(fname2, INIT_ED_KEY_NEEDCERT,
-                              LOG_INFO, kp2, now, 7200, 7, &cert2, NULL);
+  kp3 = ed_key_init_from_file(fname2, INIT_ED_KEY_NEEDCERT, LOG_INFO, kp2, now,
+                              7200, 7, &cert2, NULL);
   tt_assert(kp3 == NULL);
   tt_assert(cert2 == NULL);
 
- done:
+done:
   ed25519_keypair_free(kp1);
   ed25519_keypair_free(kp2);
   ed25519_keypair_free(kp3);
@@ -356,7 +363,7 @@ test_routerkeys_ed_key_init_basic(void *arg)
 static void
 test_routerkeys_ed_key_init_split(void *arg)
 {
-  (void) arg;
+  (void)arg;
 
   tor_cert_t *cert = NULL;
   ed25519_keypair_t *kp1 = NULL, *kp2 = NULL;
@@ -364,7 +371,7 @@ test_routerkeys_ed_key_init_split(void *arg)
   char *fname1 = tor_strdup(get_fname("test_ed_key_3"));
   char *fname2 = tor_strdup(get_fname("test_ed_key_4"));
   struct stat st;
-  const uint32_t flags = INIT_ED_KEY_SPLIT|INIT_ED_KEY_MISSING_SECRET_OK;
+  const uint32_t flags = INIT_ED_KEY_SPLIT | INIT_ED_KEY_MISSING_SECRET_OK;
 
   unlink(fname1);
   unlink(fname2);
@@ -376,8 +383,8 @@ test_routerkeys_ed_key_init_split(void *arg)
   tt_assert(cert == NULL);
 
   /* Create a split key */
-  kp1 = ed_key_init_from_file(fname1, flags|INIT_ED_KEY_CREATE,
-                              LOG_INFO, NULL, now, 0, 7, &cert, NULL);
+  kp1 = ed_key_init_from_file(fname1, flags | INIT_ED_KEY_CREATE, LOG_INFO,
+                              NULL, now, 0, 7, &cert, NULL);
   tt_assert(kp1 != NULL);
   tt_assert(cert == NULL);
   tt_int_op(stat(get_fname("test_ed_key_3_cert"), &st), OP_LT, 0);
@@ -385,40 +392,43 @@ test_routerkeys_ed_key_init_split(void *arg)
   tt_int_op(stat(get_fname("test_ed_key_3_public_key"), &st), OP_EQ, 0);
 
   /* Load it. */
-  kp2 = ed_key_init_from_file(fname1, flags|INIT_ED_KEY_CREATE,
-                              LOG_INFO, NULL, now, 0, 7, &cert, NULL);
+  kp2 = ed_key_init_from_file(fname1, flags | INIT_ED_KEY_CREATE, LOG_INFO,
+                              NULL, now, 0, 7, &cert, NULL);
   tt_assert(kp2 != NULL);
   tt_assert(cert == NULL);
   tt_mem_op(kp1, OP_EQ, kp2, sizeof(*kp2));
-  ed25519_keypair_free(kp2); kp2 = NULL;
+  ed25519_keypair_free(kp2);
+  kp2 = NULL;
 
   /* Okay, try killing the secret key and loading it. */
   unlink(get_fname("test_ed_key_3_secret_key"));
-  kp2 = ed_key_init_from_file(fname1, flags,
-                              LOG_INFO, NULL, now, 0, 7, &cert, NULL);
+  kp2 = ed_key_init_from_file(fname1, flags, LOG_INFO, NULL, now, 0, 7, &cert,
+                              NULL);
   tt_assert(kp2 != NULL);
   tt_assert(cert == NULL);
   tt_mem_op(&kp1->pubkey, OP_EQ, &kp2->pubkey, sizeof(kp2->pubkey));
-  tt_assert(fast_mem_is_zero((char*)kp2->seckey.seckey,
-                            sizeof(kp2->seckey.seckey)));
-  ed25519_keypair_free(kp2); kp2 = NULL;
+  tt_assert(fast_mem_is_zero((char *)kp2->seckey.seckey,
+                             sizeof(kp2->seckey.seckey)));
+  ed25519_keypair_free(kp2);
+  kp2 = NULL;
 
   /* Even when we're told to "create", don't create if there's a public key */
-  kp2 = ed_key_init_from_file(fname1, flags|INIT_ED_KEY_CREATE,
-                              LOG_INFO, NULL, now, 0, 7, &cert, NULL);
+  kp2 = ed_key_init_from_file(fname1, flags | INIT_ED_KEY_CREATE, LOG_INFO,
+                              NULL, now, 0, 7, &cert, NULL);
   tt_assert(kp2 != NULL);
   tt_assert(cert == NULL);
   tt_mem_op(&kp1->pubkey, OP_EQ, &kp2->pubkey, sizeof(kp2->pubkey));
-  tt_assert(fast_mem_is_zero((char*)kp2->seckey.seckey,
-                            sizeof(kp2->seckey.seckey)));
-  ed25519_keypair_free(kp2); kp2 = NULL;
+  tt_assert(fast_mem_is_zero((char *)kp2->seckey.seckey,
+                             sizeof(kp2->seckey.seckey)));
+  ed25519_keypair_free(kp2);
+  kp2 = NULL;
 
   /* Make sure we fail on a tag mismatch, though */
-  kp2 = ed_key_init_from_file(fname1, flags,
-                              LOG_INFO, NULL, now, 0, 99, &cert, NULL);
+  kp2 = ed_key_init_from_file(fname1, flags, LOG_INFO, NULL, now, 0, 99, &cert,
+                              NULL);
   tt_assert(kp2 == NULL);
 
- done:
+done:
   ed25519_keypair_free(kp1);
   ed25519_keypair_free(kp2);
   tor_cert_free(cert);
@@ -447,12 +457,12 @@ test_routerkeys_ed_keys_init_all(void *arg)
 
   router_initialize_tls_context();
 
-  options->SigningKeyLifetime = 30*86400;
-  options->TestingAuthKeyLifetime = 2*86400;
-  options->TestingLinkCertLifetime = 2*86400;
-  options->TestingSigningKeySlop = 2*86400;
-  options->TestingAuthKeySlop = 2*3600;
-  options->TestingLinkKeySlop = 2*3600;
+  options->SigningKeyLifetime = 30 * 86400;
+  options->TestingAuthKeyLifetime = 2 * 86400;
+  options->TestingLinkCertLifetime = 2 * 86400;
+  options->TestingSigningKeySlop = 2 * 86400;
+  options->TestingAuthKeySlop = 2 * 3600;
+  options->TestingLinkKeySlop = 2 * 3600;
 
 #ifdef _WIN32
   tt_int_op(0, OP_EQ, mkdir(dir));
@@ -503,11 +513,11 @@ test_routerkeys_ed_keys_init_all(void *arg)
   memcpy(&auth, get_current_auth_keypair(), sizeof(auth));
 
   /* Force a link/auth-key regeneration by advancing time. */
-  tt_int_op(0, OP_EQ, load_ed_keys(options, now+3*86400));
-  tt_int_op(0, OP_EQ, generate_ed_link_cert(options, now+3*86400, 0));
+  tt_int_op(0, OP_EQ, load_ed_keys(options, now + 3 * 86400));
+  tt_int_op(0, OP_EQ, generate_ed_link_cert(options, now + 3 * 86400, 0));
   tt_mem_op(&id, OP_EQ, get_master_identity_key(), sizeof(id));
   tt_mem_op(&sign, OP_EQ, get_master_signing_keypair(), sizeof(sign));
-  tt_assert(! tor_cert_eq(link_cert, get_current_link_cert_cert()));
+  tt_assert(!tor_cert_eq(link_cert, get_current_link_cert_cert()));
   tt_mem_op(&auth, OP_NE, get_current_auth_keypair(), sizeof(auth));
   tt_assert(get_master_signing_key_cert());
   tt_assert(get_current_link_cert_cert());
@@ -517,11 +527,11 @@ test_routerkeys_ed_keys_init_all(void *arg)
   memcpy(&auth, get_current_auth_keypair(), sizeof(auth));
 
   /* Force a signing-key regeneration by advancing time. */
-  tt_int_op(1, OP_EQ, load_ed_keys(options, now+100*86400));
-  tt_int_op(0, OP_EQ, generate_ed_link_cert(options, now+100*86400, 0));
+  tt_int_op(1, OP_EQ, load_ed_keys(options, now + 100 * 86400));
+  tt_int_op(0, OP_EQ, generate_ed_link_cert(options, now + 100 * 86400, 0));
   tt_mem_op(&id, OP_EQ, get_master_identity_key(), sizeof(id));
   tt_mem_op(&sign, OP_NE, get_master_signing_keypair(), sizeof(sign));
-  tt_assert(! tor_cert_eq(link_cert, get_current_link_cert_cert()));
+  tt_assert(!tor_cert_eq(link_cert, get_current_link_cert_cert()));
   tt_mem_op(&auth, OP_NE, get_current_auth_keypair(), sizeof(auth));
   tt_assert(get_master_signing_key_cert());
   tt_assert(get_current_link_cert_cert());
@@ -539,7 +549,7 @@ test_routerkeys_ed_keys_init_all(void *arg)
   tt_int_op(0, OP_EQ, generate_ed_link_cert(options, now, 0));
   tt_mem_op(&id, OP_EQ, get_master_identity_key(), sizeof(id));
   tt_mem_op(&sign, OP_EQ, get_master_signing_keypair(), sizeof(sign));
-  tt_assert(! tor_cert_eq(link_cert, get_current_link_cert_cert()));
+  tt_assert(!tor_cert_eq(link_cert, get_current_link_cert_cert()));
   tt_mem_op(&auth, OP_NE, get_current_auth_keypair(), sizeof(auth));
   tt_assert(get_master_signing_key_cert());
   tt_assert(get_current_link_cert_cert());
@@ -550,9 +560,9 @@ test_routerkeys_ed_keys_init_all(void *arg)
   log_global_min_severity_ = LOG_ERR; /* Suppress warnings.
                                        * XXX (better way to do this)? */
   routerkeys_free_all();
-  tt_int_op(-1, OP_EQ, load_ed_keys(options, now+200*86400));
+  tt_int_op(-1, OP_EQ, load_ed_keys(options, now + 200 * 86400));
 
- done:
+done:
   tor_free(dir);
   tor_free(keydir);
   tor_free(options);
@@ -563,7 +573,7 @@ test_routerkeys_ed_keys_init_all(void *arg)
 static void
 test_routerkeys_cross_certify_ntor(void *args)
 {
-  (void) args;
+  (void)args;
 
   tor_cert_t *cert = NULL;
   curve25519_keypair_t onion_keys;
@@ -572,22 +582,22 @@ test_routerkeys_cross_certify_ntor(void *args)
   time_t now = time(NULL);
   int sign;
 
-  tt_int_op(0, OP_EQ, ed25519_public_from_base64(&master_key,
-                               "IamwritingthesetestsOnARainyAfternoonin2014"));
+  tt_int_op(0, OP_EQ,
+            ed25519_public_from_base64(
+                &master_key, "IamwritingthesetestsOnARainyAfternoonin2014"));
   tt_int_op(0, OP_EQ, curve25519_keypair_generate(&onion_keys, 0));
-  cert = make_ntor_onion_key_crosscert(&onion_keys,
-                                       &master_key,
-                                       now, 10000,
+  cert = make_ntor_onion_key_crosscert(&onion_keys, &master_key, now, 10000,
                                        &sign);
   tt_assert(cert);
   tt_assert(sign == 0 || sign == 1);
   tt_int_op(cert->cert_type, OP_EQ, CERT_TYPE_ONION_ID);
   tt_int_op(1, OP_EQ, ed25519_pubkey_eq(&cert->signed_key, &master_key));
-  tt_int_op(0, OP_EQ, ed25519_public_key_from_curve25519_public_key(
-                               &onion_check_key, &onion_keys.pubkey, sign));
+  tt_int_op(0, OP_EQ,
+            ed25519_public_key_from_curve25519_public_key(
+                &onion_check_key, &onion_keys.pubkey, sign));
   tt_int_op(0, OP_EQ, tor_cert_checksig(cert, &onion_check_key, now));
 
- done:
+done:
   tor_cert_free(cert);
 }
 
@@ -603,28 +613,28 @@ test_routerkeys_cross_certify_tap(void *args)
   char buf[128];
   int n;
 
-  tt_int_op(0, OP_EQ, ed25519_public_from_base64(&master_key,
-                               "IAlreadyWroteTestsForRouterdescsUsingTheseX"));
+  tt_int_op(0, OP_EQ,
+            ed25519_public_from_base64(
+                &master_key, "IAlreadyWroteTestsForRouterdescsUsingTheseX"));
 
-  cc = make_tap_onion_key_crosscert(onion_key,
-                                    &master_key,
-                                    id_key, &cc_len);
+  cc = make_tap_onion_key_crosscert(onion_key, &master_key, id_key, &cc_len);
   tt_assert(cc);
   tt_assert(cc_len);
 
-  n = crypto_pk_public_checksig(onion_key, buf, sizeof(buf),
-                                (char*)cc, cc_len);
-  tt_int_op(n,OP_GT,0);
-  tt_int_op(n,OP_EQ,52);
+  n = crypto_pk_public_checksig(onion_key, buf, sizeof(buf), (char *)cc,
+                                cc_len);
+  tt_int_op(n, OP_GT, 0);
+  tt_int_op(n, OP_EQ, 52);
 
   crypto_pk_get_digest(id_key, digest);
-  tt_mem_op(buf,OP_EQ,digest,20);
-  tt_mem_op(buf+20,OP_EQ,master_key.pubkey,32);
+  tt_mem_op(buf, OP_EQ, digest, 20);
+  tt_mem_op(buf + 20, OP_EQ, master_key.pubkey, 32);
 
-  tt_int_op(0, OP_EQ, check_tap_onion_key_crosscert(cc, cc_len,
-                                    onion_key, &master_key, (uint8_t*)digest));
+  tt_int_op(0, OP_EQ,
+            check_tap_onion_key_crosscert(cc, cc_len, onion_key, &master_key,
+                                          (uint8_t *)digest));
 
- done:
+done:
   tor_free(cc);
   crypto_pk_free(id_key);
   crypto_pk_free(onion_key);
@@ -641,67 +651,70 @@ test_routerkeys_rsa_ed_crosscert(void *arg)
   ssize_t cc_len;
   time_t expires_in = 1470846177;
 
-  tt_int_op(0, OP_EQ, ed25519_public_from_base64(&ed,
-                        "ThisStringCanContainAnythingSoNoKeyHereNowX"));
+  tt_int_op(0, OP_EQ,
+            ed25519_public_from_base64(
+                &ed, "ThisStringCanContainAnythingSoNoKeyHereNowX"));
   cc_len = tor_make_rsa_ed25519_crosscert(&ed, rsa, expires_in, &cc);
 
   tt_int_op(cc_len, OP_GT, 0);
   tt_int_op(cc_len, OP_GT, 37); /* key, expires, siglen */
   tt_mem_op(cc, OP_EQ, ed.pubkey, 32);
-  time_t expires_out = 3600 * ntohl(get_uint32(cc+32));
+  time_t expires_out = 3600 * ntohl(get_uint32(cc + 32));
   tt_int_op(expires_out, OP_GE, expires_in);
   tt_int_op(expires_out, OP_LE, expires_in + 3600);
 
-  tt_int_op(cc_len, OP_EQ, 37 + get_uint8(cc+36));
+  tt_int_op(cc_len, OP_EQ, 37 + get_uint8(cc + 36));
 
-  tt_int_op(0, OP_EQ, rsa_ed25519_crosscert_check(cc, cc_len, rsa, &ed,
-                                                  expires_in - 10));
+  tt_int_op(
+      0, OP_EQ,
+      rsa_ed25519_crosscert_check(cc, cc_len, rsa, &ed, expires_in - 10));
 
   /* Now try after it has expired */
-  tt_int_op(-4, OP_EQ, rsa_ed25519_crosscert_check(cc, cc_len, rsa, &ed,
-                                                  expires_out + 1));
+  tt_int_op(
+      -4, OP_EQ,
+      rsa_ed25519_crosscert_check(cc, cc_len, rsa, &ed, expires_out + 1));
 
   /* Truncated object */
-  tt_int_op(-2, OP_EQ, rsa_ed25519_crosscert_check(cc, cc_len - 2, rsa, &ed,
-                                                  expires_in - 10));
+  tt_int_op(
+      -2, OP_EQ,
+      rsa_ed25519_crosscert_check(cc, cc_len - 2, rsa, &ed, expires_in - 10));
 
   /* Key not as expected */
   cc[0] ^= 3;
-  tt_int_op(-3, OP_EQ, rsa_ed25519_crosscert_check(cc, cc_len, rsa, &ed,
-                                                  expires_in - 10));
+  tt_int_op(
+      -3, OP_EQ,
+      rsa_ed25519_crosscert_check(cc, cc_len, rsa, &ed, expires_in - 10));
   cc[0] ^= 3;
 
   /* Bad signature */
   cc[40] ^= 3;
-  tt_int_op(-5, OP_EQ, rsa_ed25519_crosscert_check(cc, cc_len, rsa, &ed,
-                                                   expires_in - 10));
+  tt_int_op(
+      -5, OP_EQ,
+      rsa_ed25519_crosscert_check(cc, cc_len, rsa, &ed, expires_in - 10));
   cc[40] ^= 3;
 
   /* Signature of wrong data */
   cc[0] ^= 3;
   ed.pubkey[0] ^= 3;
-  tt_int_op(-6, OP_EQ, rsa_ed25519_crosscert_check(cc, cc_len, rsa, &ed,
-                                                  expires_in - 10));
+  tt_int_op(
+      -6, OP_EQ,
+      rsa_ed25519_crosscert_check(cc, cc_len, rsa, &ed, expires_in - 10));
   cc[0] ^= 3;
   ed.pubkey[0] ^= 3;
 
- done:
+done:
   crypto_pk_free(rsa);
   tor_free(cc);
 }
 
-#define TEST(name, flags)                                       \
-  { #name , test_routerkeys_ ## name, (flags), NULL, NULL }
+#define TEST(name, flags)                              \
+  {                                                    \
+#    name, test_routerkeys_##name, (flags), NULL, NULL \
+  }
 
 struct testcase_t routerkeys_tests[] = {
-  TEST(write_fingerprint, TT_FORK),
-  TEST(ed_certs, TT_FORK),
-  TEST(ed_key_create, TT_FORK),
-  TEST(ed_key_init_basic, TT_FORK),
-  TEST(ed_key_init_split, TT_FORK),
-  TEST(ed_keys_init_all, TT_FORK),
-  TEST(cross_certify_ntor, 0),
-  TEST(cross_certify_tap, 0),
-  TEST(rsa_ed_crosscert, 0),
-  END_OF_TESTCASES
-};
+    TEST(write_fingerprint, TT_FORK), TEST(ed_certs, TT_FORK),
+    TEST(ed_key_create, TT_FORK),     TEST(ed_key_init_basic, TT_FORK),
+    TEST(ed_key_init_split, TT_FORK), TEST(ed_keys_init_all, TT_FORK),
+    TEST(cross_certify_ntor, 0),      TEST(cross_certify_tap, 0),
+    TEST(rsa_ed_crosscert, 0),        END_OF_TESTCASES};

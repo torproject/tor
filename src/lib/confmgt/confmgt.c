@@ -158,8 +158,7 @@ config_mgr_new(const config_format_t *toplevel_fmt)
 
 /** Add a config_format_t to a manager, with a specified (unique) index. */
 static void
-config_mgr_register_fmt(config_mgr_t *mgr,
-                        const config_format_t *fmt,
+config_mgr_register_fmt(config_mgr_t *mgr, const config_format_t *fmt,
                         int object_idx)
 {
   int i;
@@ -169,8 +168,9 @@ config_mgr_register_fmt(config_mgr_t *mgr,
               "it had been frozen.");
 
   if (object_idx != IDX_TOPLEVEL) {
-    tor_assertf(! fmt->has_config_suite,
-          "Tried to register a toplevel format in a non-toplevel position");
+    tor_assertf(
+        !fmt->has_config_suite,
+        "Tried to register a toplevel format in a non-toplevel position");
   }
   if (fmt->config_suite_offset) {
     tor_assertf(fmt->has_config_suite,
@@ -178,7 +178,7 @@ config_mgr_register_fmt(config_mgr_t *mgr,
   }
 
   tor_assertf(fmt != mgr->toplevel &&
-              ! smartlist_contains(mgr->subconfigs, fmt),
+                  !smartlist_contains(mgr->subconfigs, fmt),
               "Tried to register an already-registered format.");
 
   /* register variables */
@@ -192,7 +192,7 @@ config_mgr_register_fmt(config_mgr_t *mgr,
   /* register abbrevs */
   if (fmt->abbrevs) {
     for (i = 0; fmt->abbrevs[i].abbreviated; ++i) {
-      smartlist_add(mgr->all_abbrevs, (void*)&fmt->abbrevs[i]);
+      smartlist_add(mgr->all_abbrevs, (void *)&fmt->abbrevs[i]);
     }
   }
 
@@ -200,7 +200,7 @@ config_mgr_register_fmt(config_mgr_t *mgr,
   if (fmt->deprecations) {
     const config_deprecation_t *d;
     for (d = fmt->deprecations; d->name; ++d) {
-      smartlist_add(mgr->all_deprecations, (void*)d);
+      smartlist_add(mgr->all_deprecations, (void *)d);
     }
   }
 }
@@ -213,8 +213,7 @@ config_mgr_register_fmt(config_mgr_t *mgr,
  * should not generally be used outside of this module.
  **/
 int
-config_mgr_add_format(config_mgr_t *mgr,
-                      const config_format_t *fmt)
+config_mgr_add_format(config_mgr_t *mgr, const config_format_t *fmt)
 {
   tor_assert(mgr);
   int idx = smartlist_len(mgr->subconfigs);
@@ -228,7 +227,7 @@ config_mgr_add_format(config_mgr_t *mgr,
 static inline config_suite_t **
 config_mgr_get_suite_ptr(const config_mgr_t *mgr, void *toplevel)
 {
-  if (! mgr->toplevel->has_config_suite)
+  if (!mgr->toplevel->has_config_suite)
     return NULL;
   return STRUCT_VAR_P(toplevel, mgr->toplevel->config_suite_offset);
 }
@@ -264,15 +263,15 @@ config_mgr_get_obj_mutable(const config_mgr_t *mgr, void *toplevel, int idx)
 const void *
 config_mgr_get_obj(const config_mgr_t *mgr, const void *toplevel, int idx)
 {
-  return config_mgr_get_obj_mutable(mgr, (void*)toplevel, idx);
+  return config_mgr_get_obj_mutable(mgr, (void *)toplevel, idx);
 }
 
 /** Sorting helper for smartlist of managed_var_t */
 static int
 managed_var_cmp(const void **a, const void **b)
 {
-  const managed_var_t *mv1 = *(const managed_var_t**)a;
-  const managed_var_t *mv2 = *(const managed_var_t**)b;
+  const managed_var_t *mv1 = *(const managed_var_t **)a;
+  const managed_var_t *mv2 = *(const managed_var_t **)b;
 
   return strcasecmp(mv1->cvar->member.name, mv2->cvar->member.name);
 }
@@ -289,11 +288,10 @@ config_mgr_freeze(config_mgr_t *mgr)
   smartlist_sort(mgr->all_vars, managed_var_cmp);
   memcpy(&mgr->toplevel_magic, &mgr->toplevel->magic,
          sizeof(struct_magic_decl_t));
-  uint64_t magic_input[3] = { mgr->toplevel_magic.magic_val,
-                              (uint64_t) (uintptr_t) mgr,
-                              ++mgr_count };
+  uint64_t magic_input[3] = {mgr->toplevel_magic.magic_val,
+                             (uint64_t)(uintptr_t)mgr, ++mgr_count};
   mgr->toplevel_magic.magic_val =
-    (uint32_t)siphash24g(magic_input, sizeof(magic_input));
+      (uint32_t)siphash24g(magic_input, sizeof(magic_input));
   mgr->frozen = true;
 }
 
@@ -321,7 +319,7 @@ config_mgr_list_vars(const config_mgr_t *mgr)
   smartlist_t *result = smartlist_new();
   tor_assert(mgr);
   SMARTLIST_FOREACH(mgr->all_vars, managed_var_t *, mv,
-                    smartlist_add(result, (void*) mv->cvar));
+                    smartlist_add(result, (void *)mv->cvar));
   return result;
 }
 
@@ -335,7 +333,7 @@ config_mgr_list_deprecated_vars(const config_mgr_t *mgr)
   smartlist_t *result = smartlist_new();
   tor_assert(mgr);
   SMARTLIST_FOREACH(mgr->all_deprecations, config_deprecation_t *, d,
-                    smartlist_add(result, (char*)d->name));
+                    smartlist_add(result, (char *)d->name));
   return result;
 }
 
@@ -344,8 +342,7 @@ config_mgr_list_deprecated_vars(const config_mgr_t *mgr)
  * object, created with <b>mgr</b>.  Exit with an assertion if it isn't.
  **/
 void
-config_check_toplevel_magic(const config_mgr_t *mgr,
-                            const void *object)
+config_check_toplevel_magic(const config_mgr_t *mgr, const void *object)
 {
   struct_check_magic(object, &mgr->toplevel_magic);
 }
@@ -353,15 +350,14 @@ config_check_toplevel_magic(const config_mgr_t *mgr,
 /** Assert that the magic fields in <b>options</b> and its subsidiary
  * objects are all okay. */
 static void
-config_mgr_assert_magic_ok(const config_mgr_t *mgr,
-                           const void *options)
+config_mgr_assert_magic_ok(const config_mgr_t *mgr, const void *options)
 {
   tor_assert(mgr);
   tor_assert(options);
   tor_assert(mgr->frozen);
   struct_check_magic(options, &mgr->toplevel_magic);
 
-  config_suite_t **suitep = config_mgr_get_suite_ptr(mgr, (void*)options);
+  config_suite_t **suitep = config_mgr_get_suite_ptr(mgr, (void *)options);
   if (suitep == NULL) {
     tor_assert(smartlist_len(mgr->subconfigs) == 0);
     return;
@@ -369,17 +365,18 @@ config_mgr_assert_magic_ok(const config_mgr_t *mgr,
 
   tor_assert(smartlist_len((*suitep)->configs) ==
              smartlist_len(mgr->subconfigs));
-  SMARTLIST_FOREACH_BEGIN(mgr->subconfigs, const config_format_t *, fmt) {
+  SMARTLIST_FOREACH_BEGIN (mgr->subconfigs, const config_format_t *, fmt) {
     void *obj = smartlist_get((*suitep)->configs, fmt_sl_idx);
     tor_assert(obj);
     struct_check_magic(obj, &fmt->magic);
-  } SMARTLIST_FOREACH_END(fmt);
+  } SMARTLIST_FOREACH_END (fmt);
 }
 
 /** Macro: assert that <b>cfg</b> has the right magic field for
  * <b>mgr</b>. */
-#define CONFIG_CHECK(mgr, cfg) STMT_BEGIN                               \
-    config_mgr_assert_magic_ok((mgr), (cfg));                           \
+#define CONFIG_CHECK(mgr, cfg)                \
+  STMT_BEGIN                                  \
+    config_mgr_assert_magic_ok((mgr), (cfg)); \
   STMT_END
 
 /** Allocate an empty configuration object of a given format type. */
@@ -392,11 +389,11 @@ config_new(const config_mgr_t *mgr)
   config_suite_t **suitep = config_mgr_get_suite_ptr(mgr, opts);
   if (suitep) {
     *suitep = config_suite_new();
-    SMARTLIST_FOREACH_BEGIN(mgr->subconfigs, const config_format_t *, fmt) {
+    SMARTLIST_FOREACH_BEGIN (mgr->subconfigs, const config_format_t *, fmt) {
       void *obj = tor_malloc_zero(fmt->size);
       struct_set_magic(obj, &fmt->magic);
       smartlist_add((*suitep)->configs, obj);
-    } SMARTLIST_FOREACH_END(fmt);
+    } SMARTLIST_FOREACH_END (fmt);
   }
   CONFIG_CHECK(mgr, opts);
   return opts;
@@ -415,7 +412,7 @@ const char *
 config_expand_abbrev(const config_mgr_t *mgr, const char *option,
                      int command_line, int warn_obsolete)
 {
-  SMARTLIST_FOREACH_BEGIN(mgr->all_abbrevs, const config_abbrev_t *, abbrev) {
+  SMARTLIST_FOREACH_BEGIN (mgr->all_abbrevs, const config_abbrev_t *, abbrev) {
     /* Abbreviations are case insensitive. */
     if (!strcasecmp(option, abbrev->abbreviated) &&
         (command_line || !abbrev->commandline_only)) {
@@ -423,15 +420,14 @@ config_expand_abbrev(const config_mgr_t *mgr, const char *option,
         log_warn(LD_CONFIG,
                  "The configuration option '%s' is deprecated; "
                  "use '%s' instead.",
-                 abbrev->abbreviated,
-                 abbrev->full);
+                 abbrev->abbreviated, abbrev->full);
       }
       /* Keep going through the list in case we want to rewrite it more.
        * (We could imagine recursing here, but I don't want to get the
        * user into an infinite loop if we craft our list wrong.) */
       option = abbrev->full;
     }
-  } SMARTLIST_FOREACH_END(abbrev);
+  } SMARTLIST_FOREACH_END (abbrev);
   return option;
 }
 
@@ -444,12 +440,12 @@ config_find_deprecation(const config_mgr_t *mgr, const char *key)
   if (BUG(mgr == NULL) || BUG(key == NULL))
     return NULL; // LCOV_EXCL_LINE
 
-  SMARTLIST_FOREACH_BEGIN(mgr->all_deprecations, const config_deprecation_t *,
-                          d) {
+  SMARTLIST_FOREACH_BEGIN (mgr->all_deprecations, const config_deprecation_t *,
+                           d) {
     if (!strcasecmp(d->name, key)) {
       return d->why_deprecated ? d->why_deprecated : "";
     }
-  } SMARTLIST_FOREACH_END(d);
+  } SMARTLIST_FOREACH_END (d);
   return NULL;
 }
 
@@ -465,8 +461,7 @@ config_find_deprecation(const config_mgr_t *mgr, const char *key)
  * not found.
  */
 static const managed_var_t *
-config_mgr_find_var(const config_mgr_t *mgr,
-                    const char *key,
+config_mgr_find_var(const config_mgr_t *mgr, const char *key,
                     bool allow_truncated, int *idx_out)
 {
   const size_t keylen = strlen(key);
@@ -477,28 +472,29 @@ config_mgr_find_var(const config_mgr_t *mgr,
     return NULL; /* if they say "--" on the command line, it's not an option */
 
   /* First, check for an exact (case-insensitive) match */
-  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, const managed_var_t *, mv) {
+  SMARTLIST_FOREACH_BEGIN (mgr->all_vars, const managed_var_t *, mv) {
     if (!strcasecmp(mv->cvar->member.name, key)) {
       if (idx_out)
         *idx_out = mv_sl_idx;
       return mv;
     }
-  } SMARTLIST_FOREACH_END(mv);
+  } SMARTLIST_FOREACH_END (mv);
 
   if (!allow_truncated)
     return NULL;
 
   /* If none, check for an abbreviated match */
-  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, const managed_var_t *, mv) {
+  SMARTLIST_FOREACH_BEGIN (mgr->all_vars, const managed_var_t *, mv) {
     if (!strncasecmp(key, mv->cvar->member.name, keylen)) {
-      log_warn(LD_CONFIG, "The abbreviation '%s' is deprecated. "
+      log_warn(LD_CONFIG,
+               "The abbreviation '%s' is deprecated. "
                "Please use '%s' instead",
                key, mv->cvar->member.name);
       if (idx_out)
         *idx_out = mv_sl_idx;
       return mv;
     }
-  } SMARTLIST_FOREACH_END(mv);
+  } SMARTLIST_FOREACH_END (mv);
 
   /* Okay, unrecognized option */
   return NULL;
@@ -547,7 +543,7 @@ config_var_has_flag(const config_var_t *var, uint32_t flag)
 static bool
 config_var_is_replaced_on_set(const config_var_t *var)
 {
-  return ! config_var_has_flag(var, CFLG_NOREPLACE);
+  return !config_var_has_flag(var, CFLG_NOREPLACE);
 }
 
 /**
@@ -557,7 +553,7 @@ config_var_is_replaced_on_set(const config_var_t *var)
 bool
 config_var_is_settable(const config_var_t *var)
 {
-  return ! config_var_has_flag(var, CFLG_NOSET);
+  return !config_var_has_flag(var, CFLG_NOSET);
 }
 
 /**
@@ -588,7 +584,7 @@ config_var_is_gettable(const config_var_t *var)
 static bool
 config_var_should_list_changes(const config_var_t *var)
 {
-  return ! config_var_has_flag(var, CFLG_NOCMP);
+  return !config_var_has_flag(var, CFLG_NOCMP);
 }
 
 /**
@@ -602,7 +598,7 @@ config_var_should_list_changes(const config_var_t *var)
 static bool
 config_var_needs_copy(const config_var_t *var)
 {
-  return ! config_var_has_flag(var, CFLG_NOCOPY);
+  return !config_var_has_flag(var, CFLG_NOCOPY);
 }
 
 /**
@@ -618,7 +614,7 @@ config_var_needs_copy(const config_var_t *var)
 bool
 config_var_is_listable(const config_var_t *var)
 {
-  return ! config_var_has_flag(var, CFLG_NOLIST);
+  return !config_var_has_flag(var, CFLG_NOLIST);
 }
 
 /**
@@ -632,7 +628,7 @@ config_var_is_listable(const config_var_t *var)
 static bool
 config_var_is_dumpable(const config_var_t *var)
 {
-  return ! config_var_has_flag(var, CFLG_NODUMP);
+  return !config_var_has_flag(var, CFLG_NODUMP);
 }
 
 /*
@@ -645,8 +641,8 @@ config_var_is_dumpable(const config_var_t *var)
  * Called from config_assign_line() and option_reset().
  */
 static int
-config_assign_value(const config_mgr_t *mgr, void *options,
-                    config_line_t *c, char **msg)
+config_assign_value(const config_mgr_t *mgr, void *options, config_line_t *c,
+                    char **msg)
 {
   const managed_var_t *var;
 
@@ -661,8 +657,10 @@ config_assign_value(const config_mgr_t *mgr, void *options,
     log_warn(LD_GENERAL, "Skipping obsolete configuration option \"%s\".",
              var->cvar->member.name);
   } else if (config_var_has_flag(var->cvar, CFLG_WARN_DISABLED)) {
-    log_warn(LD_GENERAL, "This copy of Tor was built without support for "
-             "the option \"%s\". Skipping.", var->cvar->member.name);
+    log_warn(LD_GENERAL,
+             "This copy of Tor was built without support for "
+             "the option \"%s\". Skipping.",
+             var->cvar->member.name);
   }
 
   return struct_var_kvassign(object, c, msg, &var->cvar->member);
@@ -676,10 +674,10 @@ config_mark_lists_fragile(const config_mgr_t *mgr, void *options)
   tor_assert(mgr);
   tor_assert(options);
 
-  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, const managed_var_t *, mv) {
+  SMARTLIST_FOREACH_BEGIN (mgr->all_vars, const managed_var_t *, mv) {
     void *object = config_mgr_get_obj_mutable(mgr, options, mv->object_idx);
     struct_var_mark_fragile(object, &mv->cvar->member);
-  } SMARTLIST_FOREACH_END(mv);
+  } SMARTLIST_FOREACH_END (mv);
 }
 
 /**
@@ -692,7 +690,8 @@ void
 warn_deprecated_option(const char *what, const char *why)
 {
   const char *space = (why && strlen(why)) ? " " : "";
-  log_warn(LD_CONFIG, "The %s option is deprecated, and will most likely "
+  log_warn(LD_CONFIG,
+           "The %s option is deprecated, and will most likely "
            "be removed in a future version of Tor.%s%s (If you think this is "
            "a mistake, please let us know!)",
            what, space, why);
@@ -708,9 +707,8 @@ warn_deprecated_option(const char *what, const char *why)
  * Called from config_assign().
  */
 static int
-config_assign_line(const config_mgr_t *mgr, void *options,
-                   config_line_t *c, unsigned flags,
-                   bitarray_t *options_seen, char **msg)
+config_assign_line(const config_mgr_t *mgr, void *options, config_line_t *c,
+                   unsigned flags, bitarray_t *options_seen, char **msg)
 {
   const unsigned use_defaults = flags & CAL_USE_DEFAULTS;
   const unsigned clear_first = flags & CAL_CLEAR_FIRST;
@@ -725,13 +723,12 @@ config_assign_line(const config_mgr_t *mgr, void *options,
     const config_format_t *fmt = mgr->toplevel;
     if (fmt->extra) {
       void *lvalue = STRUCT_VAR_P(options, fmt->extra->offset);
-      log_info(LD_CONFIG,
-               "Found unrecognized option '%s'; saving it.", c->key);
-      config_line_append((config_line_t**)lvalue, c->key, c->value);
+      log_info(LD_CONFIG, "Found unrecognized option '%s'; saving it.",
+               c->key);
+      config_line_append((config_line_t **)lvalue, c->key, c->value);
       return 0;
     } else {
-      tor_asprintf(msg,
-                "Unknown option '%s'.  Failing.", c->key);
+      tor_asprintf(msg, "Unknown option '%s'.  Failing.", c->key);
       return -1;
     }
   }
@@ -754,12 +751,12 @@ config_assign_line(const config_mgr_t *mgr, void *options,
   if (!strlen(c->value)) {
     /* reset or clear it, then return */
     if (!clear_first) {
-      if (! config_var_is_replaced_on_set(cvar) &&
+      if (!config_var_is_replaced_on_set(cvar) &&
           c->command != CONFIG_LINE_CLEAR) {
         /* We got an empty linelist from the torrc or command line.
            As a special case, call this an error. Warn and ignore. */
-        log_warn(LD_CONFIG,
-                 "Linelist option '%s' has no value. Skipping.", c->key);
+        log_warn(LD_CONFIG, "Linelist option '%s' has no value. Skipping.",
+                 c->key);
       } else { /* not already cleared */
         config_reset(mgr, options, mvar, use_defaults);
       }
@@ -781,8 +778,10 @@ config_assign_line(const config_mgr_t *mgr, void *options,
      * supposed to occur more than once. */
     tor_assert(var_index >= 0);
     if (bitarray_is_set(options_seen, var_index)) {
-      log_warn(LD_CONFIG, "Option '%s' used more than once; all but the last "
-               "value will be ignored.", cvar->member.name);
+      log_warn(LD_CONFIG,
+               "Option '%s' used more than once; all but the last "
+               "value will be ignored.",
+               cvar->member.name);
     }
     bitarray_set(options_seen, var_index);
   }
@@ -795,8 +794,8 @@ config_assign_line(const config_mgr_t *mgr, void *options,
 /** Restore the option named <b>key</b> in options to its default value.
  * Called from config_assign(). */
 STATIC void
-config_reset_line(const config_mgr_t *mgr, void *options,
-                  const char *key, int use_defaults)
+config_reset_line(const config_mgr_t *mgr, void *options, const char *key,
+                  int use_defaults)
 {
   const managed_var_t *var;
 
@@ -817,8 +816,7 @@ config_value_needs_escape(const char *value)
   if (*value == '\"')
     return 1;
   while (*value) {
-    switch (*value)
-    {
+    switch (*value) {
     case '\r':
     case '\n':
     case '#':
@@ -855,7 +853,7 @@ config_get_assigned_option(const config_mgr_t *mgr, const void *options,
     log_warn(LD_CONFIG, "Unknown option '%s'.  Failing.", key);
     return NULL;
   }
-  if (! config_var_is_gettable(var->cvar)) {
+  if (!config_var_is_gettable(var->cvar)) {
     log_warn(LD_CONFIG, "Option '%s' is obsolete or unfetchable. Failing.",
              key);
     return NULL;
@@ -948,7 +946,7 @@ config_assign(const config_mgr_t *mgr, void *options, config_line_t *list,
   /* pass 1: normalize keys */
   for (p = list; p; p = p->next) {
     const char *full = config_expand_abbrev(mgr, p->key, 0, 1);
-    if (strcmp(full,p->key)) {
+    if (strcmp(full, p->key)) {
       tor_free(p->key);
       p->key = tor_strdup(full);
     }
@@ -965,8 +963,8 @@ config_assign(const config_mgr_t *mgr, void *options, config_line_t *list,
   /* pass 3: assign. */
   while (list) {
     int r;
-    if ((r=config_assign_line(mgr, options, list, config_assign_flags,
-                              options_seen, msg))) {
+    if ((r = config_assign_line(mgr, options, list, config_assign_flags,
+                                options_seen, msg))) {
       bitarray_free(options_seen);
       return r;
     }
@@ -995,8 +993,8 @@ config_clear(const config_mgr_t *mgr, void *options, const managed_var_t *var)
  * <b>use_defaults</b>, set it to its default value.
  * Called by config_init() and option_reset_line() and option_assign_line(). */
 static void
-config_reset(const config_mgr_t *mgr, void *options,
-             const managed_var_t *var, int use_defaults)
+config_reset(const config_mgr_t *mgr, void *options, const managed_var_t *var,
+             int use_defaults)
 {
   config_line_t *c;
   char *msg = NULL;
@@ -1036,21 +1034,21 @@ config_free_(const config_mgr_t *mgr, void *options)
   if (suitep) {
     tor_assert(smartlist_len((*suitep)->configs) ==
                smartlist_len(mgr->subconfigs));
-    SMARTLIST_FOREACH_BEGIN(mgr->subconfigs, const config_format_t *, fmt) {
+    SMARTLIST_FOREACH_BEGIN (mgr->subconfigs, const config_format_t *, fmt) {
       void *obj = smartlist_get((*suitep)->configs, fmt_sl_idx);
       if (fmt->clear_fn) {
         fmt->clear_fn(mgr, obj);
       }
-    } SMARTLIST_FOREACH_END(fmt);
+    } SMARTLIST_FOREACH_END (fmt);
   }
 
-  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, const managed_var_t *, mv) {
+  SMARTLIST_FOREACH_BEGIN (mgr->all_vars, const managed_var_t *, mv) {
     config_clear(mgr, options, mv);
-  } SMARTLIST_FOREACH_END(mv);
+  } SMARTLIST_FOREACH_END (mv);
 
   if (mgr->toplevel->extra) {
-    config_line_t **linep = STRUCT_VAR_P(options,
-                                         mgr->toplevel->extra->offset);
+    config_line_t **linep =
+        STRUCT_VAR_P(options, mgr->toplevel->extra->offset);
     config_free_lines(*linep);
     *linep = NULL;
   }
@@ -1067,8 +1065,7 @@ config_free_(const config_mgr_t *mgr, void *options)
  * and <b>o2</b>.  Must not be called for LINELIST_S or OBSOLETE options.
  */
 int
-config_is_same(const config_mgr_t *mgr,
-               const void *o1, const void *o2,
+config_is_same(const config_mgr_t *mgr, const void *o1, const void *o2,
                const char *name)
 {
   CONFIG_CHECK(mgr, o1);
@@ -1093,13 +1090,13 @@ config_is_same(const config_mgr_t *mgr,
  * of the type managed by <b>mgr</b>.
  **/
 config_line_t *
-config_get_changes(const config_mgr_t *mgr,
-                   const void *options1, const void *options2)
+config_get_changes(const config_mgr_t *mgr, const void *options1,
+                   const void *options2)
 {
   config_line_t *result = NULL;
   config_line_t **next = &result;
-  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, managed_var_t *, mv) {
-    if (! config_var_should_list_changes(mv->cvar)) {
+  SMARTLIST_FOREACH_BEGIN (mgr->all_vars, managed_var_t *, mv) {
+    if (!config_var_should_list_changes(mv->cvar)) {
       /* something else will check this var, or it doesn't need checking */
       continue;
     }
@@ -1112,7 +1109,7 @@ config_get_changes(const config_mgr_t *mgr,
 
     const char *varname = mv->cvar->member.name;
     config_line_t *line =
-      config_get_assigned_option(mgr, options2, varname, 1);
+        config_get_assigned_option(mgr, options2, varname, 1);
 
     if (line) {
       *next = line;
@@ -1122,7 +1119,7 @@ config_get_changes(const config_mgr_t *mgr,
     }
     while (*next)
       next = &(*next)->next;
-  } SMARTLIST_FOREACH_END(mv);
+  } SMARTLIST_FOREACH_END (mv);
 
   return result;
 }
@@ -1134,8 +1131,8 @@ config_dup(const config_mgr_t *mgr, const void *old)
   void *newopts;
 
   newopts = config_new(mgr);
-  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, managed_var_t *, mv) {
-    if (! config_var_needs_copy(mv->cvar)) {
+  SMARTLIST_FOREACH_BEGIN (mgr->all_vars, managed_var_t *, mv) {
+    if (!config_var_needs_copy(mv->cvar)) {
       // Something else will copy this option, or it doesn't need copying.
       continue;
     }
@@ -1143,12 +1140,11 @@ config_dup(const config_mgr_t *mgr, const void *old)
     void *newobj = config_mgr_get_obj_mutable(mgr, newopts, mv->object_idx);
     if (struct_var_copy(newobj, oldobj, &mv->cvar->member) < 0) {
       // LCOV_EXCL_START
-      log_err(LD_BUG, "Unable to copy value for %s.",
-              mv->cvar->member.name);
+      log_err(LD_BUG, "Unable to copy value for %s.", mv->cvar->member.name);
       tor_assert_unreached();
       // LCOV_EXCL_STOP
     }
-  } SMARTLIST_FOREACH_END(mv);
+  } SMARTLIST_FOREACH_END (mv);
 
   return newopts;
 }
@@ -1159,11 +1155,11 @@ config_init(const config_mgr_t *mgr, void *options)
 {
   CONFIG_CHECK(mgr, options);
 
-  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, const managed_var_t *, mv) {
+  SMARTLIST_FOREACH_BEGIN (mgr->all_vars, const managed_var_t *, mv) {
     if (!mv->cvar->initvalue)
       continue; /* defaults to NULL or 0 */
     config_reset(mgr, options, mv, 1);
-  } SMARTLIST_FOREACH_END(mv);
+  } SMARTLIST_FOREACH_END (mv);
 }
 
 /**
@@ -1175,24 +1171,22 @@ config_init(const config_mgr_t *mgr, void *options)
  */
 static int
 config_check_immutable_flags(const config_format_t *fmt,
-                             const void *old_options,
-                             const void *new_options,
+                             const void *old_options, const void *new_options,
                              char **msg_out)
 {
   tor_assert(fmt);
   tor_assert(new_options);
-  if (BUG(! old_options))
+  if (BUG(!old_options))
     return 0;
 
   unsigned i;
   for (i = 0; fmt->vars[i].member.name; ++i) {
     const config_var_t *v = &fmt->vars[i];
-    if (! config_var_has_flag(v, CFLG_IMMUTABLE))
+    if (!config_var_has_flag(v, CFLG_IMMUTABLE))
       continue;
 
-    if (! struct_var_eq(old_options, new_options, &v->member)) {
-      tor_asprintf(msg_out,
-                   "While Tor is running, changing %s is not allowed",
+    if (!struct_var_eq(old_options, new_options, &v->member)) {
+      tor_asprintf(msg_out, "While Tor is running, changing %s is not allowed",
                    v->member.name);
       return -1;
     }
@@ -1212,9 +1206,8 @@ config_check_immutable_flags(const config_format_t *fmt,
  * to describe which step failed.
  **/
 static validation_status_t
-config_validate_single(const config_format_t *fmt,
-                       const void *old_options, void *options,
-                       char **msg_out)
+config_validate_single(const config_format_t *fmt, const void *old_options,
+                       void *options, char **msg_out)
 {
   tor_assert(fmt);
   tor_assert(options);
@@ -1269,9 +1262,8 @@ config_validate_single(const config_format_t *fmt,
  * to describe which step failed.
  **/
 validation_status_t
-config_validate(const config_mgr_t *mgr,
-                const void *old_options, void *options,
-                char **msg_out)
+config_validate(const config_mgr_t *mgr, const void *old_options,
+                void *options, char **msg_out)
 {
   validation_status_t rv;
   CONFIG_CHECK(mgr, options);
@@ -1282,20 +1274,20 @@ config_validate(const config_mgr_t *mgr,
   config_suite_t **suitep_new = config_mgr_get_suite_ptr(mgr, options);
   config_suite_t **suitep_old = NULL;
   if (old_options)
-    suitep_old = config_mgr_get_suite_ptr(mgr, (void*) old_options);
+    suitep_old = config_mgr_get_suite_ptr(mgr, (void *)old_options);
 
   /* Validate the sub-objects */
   if (suitep_new) {
-    SMARTLIST_FOREACH_BEGIN(mgr->subconfigs, const config_format_t *, fmt) {
+    SMARTLIST_FOREACH_BEGIN (mgr->subconfigs, const config_format_t *, fmt) {
       void *obj = smartlist_get((*suitep_new)->configs, fmt_sl_idx);
-      const void *obj_old=NULL;
+      const void *obj_old = NULL;
       if (suitep_old)
         obj_old = smartlist_get((*suitep_old)->configs, fmt_sl_idx);
 
       rv = config_validate_single(fmt, obj_old, obj, msg_out);
       if (rv < 0)
         return rv;
-    } SMARTLIST_FOREACH_END(fmt);
+    } SMARTLIST_FOREACH_END (fmt);
   }
 
   /* Validate the top-level object. */
@@ -1312,8 +1304,7 @@ config_validate(const config_mgr_t *mgr,
  */
 char *
 config_dump(const config_mgr_t *mgr, const void *default_options,
-            const void *options, int minimal,
-            int comment_defaults)
+            const void *options, int minimal, int comment_defaults)
 {
   const config_format_t *fmt = mgr->toplevel;
   smartlist_t *elements;
@@ -1340,20 +1331,18 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
   }
 
   elements = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, managed_var_t *, mv) {
+  SMARTLIST_FOREACH_BEGIN (mgr->all_vars, managed_var_t *, mv) {
     int comment_option = 0;
     /* Don't save 'hidden' control variables. */
-    if (! config_var_is_dumpable(mv->cvar))
+    if (!config_var_is_dumpable(mv->cvar))
       continue;
     const char *name = mv->cvar->member.name;
     if (minimal && config_is_same(mgr, options, defaults, name))
       continue;
-    else if (comment_defaults &&
-             config_is_same(mgr, options, defaults, name))
+    else if (comment_defaults && config_is_same(mgr, options, defaults, name))
       comment_option = 1;
 
-    line = assigned =
-      config_get_assigned_option(mgr, options, name, 1);
+    line = assigned = config_get_assigned_option(mgr, options, name, 1);
 
     for (; line; line = line->next) {
       if (!strcmpstart(line->key, "__")) {
@@ -1363,18 +1352,18 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
       }
       int value_exists = line->value && *(line->value);
       smartlist_add_asprintf(elements, "%s%s%s%s\n",
-                   comment_option ? "# " : "",
-                   line->key, value_exists ? " " : "", line->value);
+                             comment_option ? "# " : "", line->key,
+                             value_exists ? " " : "", line->value);
     }
     config_free_lines(assigned);
-  } SMARTLIST_FOREACH_END(mv);
+  } SMARTLIST_FOREACH_END (mv);
 
   if (fmt->extra) {
-    line = *(config_line_t**)STRUCT_VAR_P(options, fmt->extra->offset);
+    line = *(config_line_t **)STRUCT_VAR_P(options, fmt->extra->offset);
     for (; line; line = line->next) {
       int value_exists = line->value && *(line->value);
-      smartlist_add_asprintf(elements, "%s%s%s\n",
-                             line->key, value_exists ? " " : "", line->value);
+      smartlist_add_asprintf(elements, "%s%s%s\n", line->key,
+                             value_exists ? " " : "", line->value);
     }
   }
 
@@ -1394,13 +1383,12 @@ config_check_ok(const config_mgr_t *mgr, const void *options, int severity)
 {
   bool all_ok = true;
 
-  SMARTLIST_FOREACH_BEGIN(mgr->all_vars, const managed_var_t *, mv) {
+  SMARTLIST_FOREACH_BEGIN (mgr->all_vars, const managed_var_t *, mv) {
     if (!struct_var_ok(options, &mv->cvar->member)) {
-      log_fn(severity, LD_BUG, "Invalid value for %s",
-             mv->cvar->member.name);
+      log_fn(severity, LD_BUG, "Invalid value for %s", mv->cvar->member.name);
       all_ok = false;
     }
-  } SMARTLIST_FOREACH_END(mv);
+  } SMARTLIST_FOREACH_END (mv);
 
   return all_ok;
 }

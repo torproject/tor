@@ -38,8 +38,8 @@ fuzz_main(const uint8_t *data, size_t sz)
   size_t ipts_size, esize;
   const char *next;
   char *str = tor_memdup_nulterm(data, sz);
-  (void) rend_parse_v2_service_descriptor(&desc, desc_id, &ipts, &ipts_size,
-                                          &esize, &next, str, 1);
+  (void)rend_parse_v2_service_descriptor(&desc, desc_id, &ipts, &ipts_size,
+                                         &esize, &next, str, 1);
   if (desc) {
     log_debug(LD_GENERAL, "Parsing okay");
     rend_service_descriptor_free(desc);

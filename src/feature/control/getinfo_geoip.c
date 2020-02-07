@@ -16,9 +16,8 @@
 
 /** Helper used to implement GETINFO ip-to-country/... controller command. */
 int
-getinfo_helper_geoip(control_connection_t *control_conn,
-                     const char *question, char **answer,
-                     const char **errmsg)
+getinfo_helper_geoip(control_connection_t *control_conn, const char *question,
+                     char **answer, const char **errmsg)
 {
   (void)control_conn;
   if (!strcmpstart(question, "ip-to-country/")) {
@@ -31,7 +30,7 @@ getinfo_helper_geoip(control_connection_t *control_conn,
         !strcmp(question, "ipv6-available")) {
       family = !strcmp(question, "ipv4-available") ? AF_INET : AF_INET6;
       const int available = geoip_is_loaded(family);
-      tor_asprintf(answer, "%d", !! available);
+      tor_asprintf(answer, "%d", !!available);
       return 0;
     }
 
@@ -46,7 +45,7 @@ getinfo_helper_geoip(control_connection_t *control_conn,
     }
     if (family == AF_INET)
       c = geoip_get_country_by_ipv4(tor_addr_to_ipv4h(&addr));
-    else                      /* AF_INET6 */
+    else /* AF_INET6 */
       c = geoip_get_country_by_ipv6(tor_addr_to_in6(&addr));
     *answer = tor_strdup(geoip_get_country_name(c));
   }

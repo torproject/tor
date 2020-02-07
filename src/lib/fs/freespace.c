@@ -13,10 +13,10 @@
 #include "lib/cc/torint.h"
 
 #ifdef HAVE_SYS_STATVFS_H
-#include <sys/statvfs.h>
+#  include <sys/statvfs.h>
 #endif
 #ifdef _WIN32
-#include <windows.h>
+#  include <windows.h>
 #endif
 
 #include <errno.h>

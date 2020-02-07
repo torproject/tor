@@ -30,11 +30,10 @@ router_get_prim_orport(const routerinfo_t *router, tor_addr_port_t *ap_out)
 int
 router_has_orport(const routerinfo_t *router, const tor_addr_port_t *orport)
 {
-  return
-    (tor_addr_eq_ipv4h(&orport->addr, router->addr) &&
-     orport->port == router->or_port) ||
-    (tor_addr_eq(&orport->addr, &router->ipv6_addr) &&
-     orport->port == router->ipv6_orport);
+  return (tor_addr_eq_ipv4h(&orport->addr, router->addr) &&
+          orport->port == router->or_port) ||
+         (tor_addr_eq(&orport->addr, &router->ipv6_addr) &&
+          orport->port == router->ipv6_orport);
 }
 
 /** Return a smartlist of tor_addr_port_t's with all the OR ports of
@@ -58,14 +57,16 @@ router_get_all_orports(const routerinfo_t *ri)
 const char *
 router_purpose_to_string(uint8_t p)
 {
-  switch (p)
-    {
-    case ROUTER_PURPOSE_GENERAL: return "general";
-    case ROUTER_PURPOSE_BRIDGE: return "bridge";
-    case ROUTER_PURPOSE_CONTROLLER: return "controller";
-    default:
-      tor_assert(0);
-    }
+  switch (p) {
+  case ROUTER_PURPOSE_GENERAL:
+    return "general";
+  case ROUTER_PURPOSE_BRIDGE:
+    return "bridge";
+  case ROUTER_PURPOSE_CONTROLLER:
+    return "controller";
+  default:
+    tor_assert(0);
+  }
   return NULL;
 }
 

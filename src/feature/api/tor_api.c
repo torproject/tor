@@ -9,8 +9,8 @@
  **/
 
 #ifdef _WIN32
-#include <winsock2.h>
-#include <windows.h>
+#  include <winsock2.h>
+#  include <windows.h>
 #endif
 
 #include "feature/api/tor_api.h"
@@ -36,17 +36,17 @@
 #define raw_strdup strdup
 
 #ifdef _WIN32
-#include "lib/net/socketpair.h"
-#define raw_socketpair tor_ersatz_socketpair
-#define raw_closesocket closesocket
-#define snprintf _snprintf
+#  include "lib/net/socketpair.h"
+#  define raw_socketpair tor_ersatz_socketpair
+#  define raw_closesocket closesocket
+#  define snprintf _snprintf
 #else /* !defined(_WIN32) */
-#define raw_socketpair socketpair
-#define raw_closesocket close
+#  define raw_socketpair socketpair
+#  define raw_closesocket close
 #endif /* defined(_WIN32) */
 
 #ifdef HAVE_UNISTD_H
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 
 /**
@@ -58,8 +58,8 @@ cfg_add_owned_arg(tor_main_configuration_t *cfg, const char *arg)
 {
   /* We aren't using amortized realloc here, because libc should do it for us,
    * and because this function is not critical-path. */
-  char **new_argv = raw_realloc(cfg->argv_owned,
-                                sizeof(char*) * (cfg->argc_owned+1));
+  char **new_argv =
+      raw_realloc(cfg->argv_owned, sizeof(char *) * (cfg->argc_owned + 1));
   if (new_argv == NULL)
     return -1;
   cfg->argv_owned = new_argv;
@@ -72,7 +72,7 @@ cfg_add_owned_arg(tor_main_configuration_t *cfg, const char *arg)
 tor_main_configuration_t *
 tor_main_configuration_new(void)
 {
-  static const char *fake_argv[] = { "tor" };
+  static const char *fake_argv[] = {"tor"};
   tor_main_configuration_t *cfg = raw_malloc(sizeof(*cfg));
   if (cfg == NULL)
     return NULL;
@@ -80,7 +80,7 @@ tor_main_configuration_new(void)
   memset(cfg, 0, sizeof(*cfg));
 
   cfg->argc = 1;
-  cfg->argv = (char **) fake_argv;
+  cfg->argv = (char **)fake_argv;
 
   cfg->owning_controller_socket = TOR_INVALID_SOCKET;
 
@@ -109,7 +109,7 @@ tor_main_configuration_setup_control_socket(tor_main_configuration_t *cfg)
     return INVALID_TOR_CONTROL_SOCKET;
   }
   char buf[32];
-  snprintf(buf, sizeof(buf), "%"PRIu64, (uint64_t)fds[1]);
+  snprintf(buf, sizeof(buf), "%" PRIu64, (uint64_t)fds[1]);
 
   cfg_add_owned_arg(cfg, "__OwningControllerFD");
   cfg_add_owned_arg(cfg, buf);

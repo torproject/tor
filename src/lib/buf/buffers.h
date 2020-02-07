@@ -38,10 +38,9 @@ size_t buf_get_total_allocation(void);
 
 int buf_add(buf_t *buf, const char *string, size_t string_len);
 void buf_add_string(buf_t *buf, const char *string);
-void buf_add_printf(buf_t *buf, const char *format, ...)
-  CHECK_PRINTF(2, 3);
+void buf_add_printf(buf_t *buf, const char *format, ...) CHECK_PRINTF(2, 3);
 void buf_add_vprintf(buf_t *buf, const char *format, va_list args)
-  CHECK_PRINTF(2, 0);
+    CHECK_PRINTF(2, 0);
 int buf_move_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen);
 void buf_move_all(buf_t *buf_out, buf_t *buf_in);
 void buf_peek(const buf_t *buf, char *string, size_t string_len);
@@ -52,39 +51,38 @@ int buf_get_line(buf_t *buf, char *data_out, size_t *data_len);
 #define PEEK_BUF_STARTSWITH_MAX 16
 int buf_peek_startswith(const buf_t *buf, const char *cmd);
 
-int buf_set_to_copy(buf_t **output,
-                    const buf_t *input);
+int buf_set_to_copy(buf_t **output, const buf_t *input);
 
 void buf_assert_ok(buf_t *buf);
 
 int buf_find_string_offset(const buf_t *buf, const char *s, size_t n);
-void buf_pullup(buf_t *buf, size_t bytes,
-                const char **head_out, size_t *len_out);
+void buf_pullup(buf_t *buf, size_t bytes, const char **head_out,
+                size_t *len_out);
 char *buf_extract(buf_t *buf, size_t *sz_out);
 
 #ifdef BUFFERS_PRIVATE
-#ifdef TOR_UNIT_TESTS
+#  ifdef TOR_UNIT_TESTS
 buf_t *buf_new_with_data(const char *cp, size_t sz);
-#endif
+#  endif
 size_t buf_preferred_chunk_size(size_t target);
 
-#define DEBUG_CHUNK_ALLOC
+#  define DEBUG_CHUNK_ALLOC
 /** A single chunk on a buffer. */
 typedef struct chunk_t {
   struct chunk_t *next; /**< The next chunk on the buffer. */
   size_t datalen; /**< The number of bytes stored in this chunk */
   size_t memlen; /**< The number of usable bytes of storage in <b>mem</b>. */
-#ifdef DEBUG_CHUNK_ALLOC
+#  ifdef DEBUG_CHUNK_ALLOC
   size_t DBG_alloc;
-#endif
+#  endif
   char *data; /**< A pointer to the first byte of data stored in <b>mem</b>. */
   uint32_t inserted_time; /**< Timestamp when this chunk was inserted. */
   char mem[FLEXIBLE_ARRAY_MEMBER]; /**< The actual memory used for storage in
-                * this chunk. */
+                                    * this chunk. */
 } chunk_t;
 
 /** Magic value for buf_t.magic, to catch pointer errors. */
-#define BUFFER_MAGIC 0xB0FFF312u
+#  define BUFFER_MAGIC 0xB0FFF312u
 /** A resizeable buffer, optimized for reading and writing. */
 struct buf_t {
   uint32_t magic; /**< Magic cookie for debugging: Must be set to
@@ -99,7 +97,7 @@ struct buf_t {
 chunk_t *buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped);
 /** If a read onto the end of a chunk would be smaller than this number, then
  * just start a new chunk. */
-#define MIN_READ_LEN 8
+#  define MIN_READ_LEN 8
 
 /** Return the number of bytes that can be written onto <b>chunk</b> without
  * running out of space. */

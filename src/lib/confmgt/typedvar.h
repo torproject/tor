@@ -21,7 +21,7 @@ typedef struct var_type_fns_t var_type_fns_t;
 typedef struct var_type_def_t var_type_def_t;
 
 int typed_var_assign(void *target, const char *value, char **errmsg,
-                        const var_type_def_t *def);
+                     const var_type_def_t *def);
 void typed_var_free(void *target, const var_type_def_t *def);
 char *typed_var_encode(const void *value, const var_type_def_t *def);
 int typed_var_copy(void *dest, const void *src, const var_type_def_t *def);
@@ -29,9 +29,9 @@ bool typed_var_eq(const void *a, const void *b, const var_type_def_t *def);
 bool typed_var_ok(const void *value, const var_type_def_t *def);
 
 int typed_var_kvassign(void *target, const struct config_line_t *line,
-                           char **errmsg, const var_type_def_t *def);
+                       char **errmsg, const var_type_def_t *def);
 struct config_line_t *typed_var_kvencode(const char *key, const void *value,
-                                            const var_type_def_t *def);
+                                         const var_type_def_t *def);
 
 void typed_var_mark_fragile(void *value, const var_type_def_t *def);
 

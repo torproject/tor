@@ -23,31 +23,31 @@
 #include <string.h>
 
 #ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
+#  include <netinet/in.h>
 #endif
 #ifdef HAVE_ARPA_INET_H
-#include <arpa/inet.h>
+#  include <arpa/inet.h>
 #endif
 #ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
+#  include <sys/socket.h>
 #endif
 #ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h> /* Must be included before sys/stat.h for Ultrix */
+#  include <sys/types.h> /* Must be included before sys/stat.h for Ultrix */
 #endif
 #ifdef HAVE_ERRNO_H
-#include <errno.h>
+#  include <errno.h>
 #endif
 
 #ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
+#  include <winsock2.h>
+#  include <ws2tcpip.h>
 #endif
 
 #define RESPONSE_LEN_4 8
-#define log_sock_error(act, _s)                                         \
-  STMT_BEGIN                                                            \
-    log_fn(LOG_ERR, LD_NET, "Error while %s: %s", act,                  \
-    tor_socket_strerror(tor_socket_errno(_s)));                         \
+#define log_sock_error(act, _s)                        \
+  STMT_BEGIN                                           \
+    log_fn(LOG_ERR, LD_NET, "Error while %s: %s", act, \
+           tor_socket_strerror(tor_socket_errno(_s))); \
   STMT_END
 
 static void usage(void) ATTR_NORETURN;
@@ -58,8 +58,7 @@ static void usage(void) ATTR_NORETURN;
  * Return number of bytes in the buffer if succeeded or -1 if failed.
  */
 static ssize_t
-build_socks4a_resolve_request(uint8_t **out,
-                              const char *username,
+build_socks4a_resolve_request(uint8_t **out, const char *username,
                               const char *hostname)
 {
   tor_assert(out);
@@ -99,7 +98,7 @@ build_socks4a_resolve_request(uint8_t **out,
 
   *out = output;
 
- cleanup:
+cleanup:
   socks4_client_request_free(rq);
   if (errmsg) {
     log_err(LD_NET, "build_socks4a_resolve_request failed: %s", errmsg);
@@ -110,8 +109,8 @@ build_socks4a_resolve_request(uint8_t **out,
 }
 
 #define SOCKS5_ATYPE_HOSTNAME 0x03
-#define SOCKS5_ATYPE_IPV4     0x01
-#define SOCKS5_ATYPE_IPV6     0x04
+#define SOCKS5_ATYPE_IPV4 0x01
+#define SOCKS5_ATYPE_IPV6 0x04
 
 /**
  * Set <b>out</b> to pointer to newly allocated buffer containing
@@ -120,9 +119,7 @@ build_socks4a_resolve_request(uint8_t **out,
  * Return the number of bytes in the buffer if succeeded or -1 if failed.
  */
 static ssize_t
-build_socks5_resolve_request(uint8_t **out,
-                             const char *hostname,
-                             int reverse)
+build_socks5_resolve_request(uint8_t **out, const char *hostname, int reverse)
 {
   const char *errmsg = NULL;
   uint8_t *outbuf = NULL;
@@ -146,8 +143,8 @@ build_socks5_resolve_request(uint8_t **out,
 
   socks5_client_request_set_version(rq, 5);
   /* RESOLVE_PTR or RESOLVE */
-  socks5_client_request_set_command(rq, reverse ? CMD_RESOLVE_PTR :
-                                                  CMD_RESOLVE);
+  socks5_client_request_set_command(rq,
+                                    reverse ? CMD_RESOLVE_PTR : CMD_RESOLVE);
   socks5_client_request_set_reserved(rq, 0);
 
   uint8_t atype = SOCKS5_ATYPE_HOSTNAME;
@@ -157,38 +154,36 @@ build_socks5_resolve_request(uint8_t **out,
   socks5_client_request_set_atype(rq, atype);
 
   switch (atype) {
-    case SOCKS5_ATYPE_IPV4: {
-      socks5_client_request_set_dest_addr_ipv4(rq,
-                                        tor_addr_to_ipv4h(&addr));
-    } break;
-    case SOCKS5_ATYPE_IPV6: {
-      uint8_t *ipv6_array =
-        socks5_client_request_getarray_dest_addr_ipv6(rq);
+  case SOCKS5_ATYPE_IPV4: {
+    socks5_client_request_set_dest_addr_ipv4(rq, tor_addr_to_ipv4h(&addr));
+  } break;
+  case SOCKS5_ATYPE_IPV6: {
+    uint8_t *ipv6_array = socks5_client_request_getarray_dest_addr_ipv6(rq);
 
-      tor_assert(ipv6_array);
+    tor_assert(ipv6_array);
 
-      memcpy(ipv6_array, tor_addr_to_in6_addr8(&addr), 16);
-    } break;
+    memcpy(ipv6_array, tor_addr_to_in6_addr8(&addr), 16);
+  } break;
 
-    case SOCKS5_ATYPE_HOSTNAME: {
-      domainname_t *dn = domainname_new();
-      domainname_set_len(dn, addrlen - 1);
-      domainname_setlen_name(dn, addrlen - 1);
-      char *dn_buf = domainname_getarray_name(dn);
-      memcpy(dn_buf, hostname, addrlen - 1);
+  case SOCKS5_ATYPE_HOSTNAME: {
+    domainname_t *dn = domainname_new();
+    domainname_set_len(dn, addrlen - 1);
+    domainname_setlen_name(dn, addrlen - 1);
+    char *dn_buf = domainname_getarray_name(dn);
+    memcpy(dn_buf, hostname, addrlen - 1);
 
-      errmsg = domainname_check(dn);
+    errmsg = domainname_check(dn);
 
-      if (errmsg) {
-        domainname_free(dn);
-        goto cleanup;
-      } else {
-        socks5_client_request_set_dest_addr_domainname(rq, dn);
-      }
-    } break;
-    default:
-      tor_assert_unreached();
-      break;
+    if (errmsg) {
+      domainname_free(dn);
+      goto cleanup;
+    } else {
+      socks5_client_request_set_dest_addr_domainname(rq, dn);
+    }
+  } break;
+  default:
+    tor_assert_unreached();
+    break;
   }
 
   socks5_client_request_set_dest_port(rq, 0);
@@ -215,7 +210,7 @@ build_socks5_resolve_request(uint8_t **out,
 
   *out = outbuf;
 
- cleanup:
+cleanup:
   socks5_client_request_free(rq);
   if (errmsg) {
     tor_free(outbuf);
@@ -230,11 +225,8 @@ build_socks5_resolve_request(uint8_t **out,
  * <b>username</b> and <b>hostname</b> as provided.  Return the number
  * of bytes in the request. */
 static ssize_t
-build_socks_resolve_request(uint8_t **out,
-                            const char *username,
-                            const char *hostname,
-                            int reverse,
-                            int version)
+build_socks_resolve_request(uint8_t **out, const char *username,
+                            const char *hostname, int reverse, int version)
 {
   tor_assert(out);
   tor_assert(username);
@@ -256,11 +248,11 @@ static void
 onion_warning(const char *hostname)
 {
   log_warn(LD_NET,
-        "%s is a hidden service; those don't have IP addresses. "
-        "You can use the AutomapHostsOnResolve option to have Tor return a "
-        "fake address for hidden services.  Or you can have your "
-        "application send the address to Tor directly; we recommend an "
-        "application that uses SOCKS 5 with hostnames.",
+           "%s is a hidden service; those don't have IP addresses. "
+           "You can use the AutomapHostsOnResolve option to have Tor return a "
+           "fake address for hidden services.  Or you can have your "
+           "application send the address to Tor directly; we recommend an "
+           "application that uses SOCKS 5 with hostnames.",
            hostname);
 }
 
@@ -269,9 +261,8 @@ onion_warning(const char *hostname)
  * Return 0 on success, -1 on error.
  */
 static int
-parse_socks4a_resolve_response(const char *hostname,
-                               const char *response, size_t len,
-                               tor_addr_t *addr_out)
+parse_socks4a_resolve_response(const char *hostname, const char *response,
+                               size_t len, tor_addr_t *addr_out)
 {
   int result = 0;
   uint8_t status;
@@ -280,41 +271,47 @@ parse_socks4a_resolve_response(const char *hostname,
 
   socks4_server_reply_t *reply;
 
-  ssize_t parsed = socks4_server_reply_parse(&reply,
-                                             (const uint8_t *)response,
-                                             len);
+  ssize_t parsed =
+      socks4_server_reply_parse(&reply, (const uint8_t *)response, len);
 
   if (parsed == -1) {
     log_warn(LD_PROTOCOL, "Failed parsing SOCKS4a response");
-    result = -1; goto cleanup;
+    result = -1;
+    goto cleanup;
   }
 
   if (parsed == -2) {
-    log_warn(LD_PROTOCOL,"Truncated socks response.");
-    result = -1; goto cleanup;
+    log_warn(LD_PROTOCOL, "Truncated socks response.");
+    result = -1;
+    goto cleanup;
   }
 
   if (socks4_server_reply_get_version(reply) != 0) { /* version: 0 */
-    log_warn(LD_PROTOCOL,"Nonzero version in socks response: bad format.");
-    result = -1; goto cleanup;
+    log_warn(LD_PROTOCOL, "Nonzero version in socks response: bad format.");
+    result = -1;
+    goto cleanup;
   }
   if (socks4_server_reply_get_port(reply) != 0) { /* port: 0 */
-    log_warn(LD_PROTOCOL,"Nonzero port in socks response: bad format.");
-    result = -1; goto cleanup;
+    log_warn(LD_PROTOCOL, "Nonzero port in socks response: bad format.");
+    result = -1;
+    goto cleanup;
   }
   status = socks4_server_reply_get_status(reply);
   if (status != 90) {
-    log_warn(LD_NET,"Got status response '%d': socks request failed.", status);
+    log_warn(LD_NET, "Got status response '%d': socks request failed.",
+             status);
     if (!strcasecmpend(hostname, ".onion")) {
       onion_warning(hostname);
-      result = -1; goto cleanup;
+      result = -1;
+      goto cleanup;
     }
-    result = -1; goto cleanup;
+    result = -1;
+    goto cleanup;
   }
 
   tor_addr_from_ipv4h(addr_out, socks4_server_reply_get_addr(reply));
 
- cleanup:
+cleanup:
   socks4_server_reply_free(reply);
   return result;
 }
@@ -324,26 +321,26 @@ static const char *
 socks5_reason_to_string(char reason)
 {
   switch (reason) {
-    case SOCKS5_SUCCEEDED:
-      return "succeeded";
-    case SOCKS5_GENERAL_ERROR:
-      return "general error";
-    case SOCKS5_NOT_ALLOWED:
-      return "not allowed";
-    case SOCKS5_NET_UNREACHABLE:
-      return "network is unreachable";
-    case SOCKS5_HOST_UNREACHABLE:
-      return "host is unreachable";
-    case SOCKS5_CONNECTION_REFUSED:
-      return "connection refused";
-    case SOCKS5_TTL_EXPIRED:
-      return "ttl expired";
-    case SOCKS5_COMMAND_NOT_SUPPORTED:
-      return "command not supported";
-    case SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED:
-      return "address type not supported";
-    default:
-      return "unknown SOCKS5 code";
+  case SOCKS5_SUCCEEDED:
+    return "succeeded";
+  case SOCKS5_GENERAL_ERROR:
+    return "general error";
+  case SOCKS5_NOT_ALLOWED:
+    return "not allowed";
+  case SOCKS5_NET_UNREACHABLE:
+    return "network is unreachable";
+  case SOCKS5_HOST_UNREACHABLE:
+    return "host is unreachable";
+  case SOCKS5_CONNECTION_REFUSED:
+    return "connection refused";
+  case SOCKS5_TTL_EXPIRED:
+    return "ttl expired";
+  case SOCKS5_COMMAND_NOT_SUPPORTED:
+    return "command not supported";
+  case SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED:
+    return "address type not supported";
+  default:
+    return "unknown SOCKS5 code";
   }
 }
 
@@ -352,9 +349,8 @@ socks5_reason_to_string(char reason)
  * address (in host order) into *<b>result_addr</b>.
  */
 static int
-do_resolve(const char *hostname,
-           const tor_addr_t *sockshost, uint16_t socksport,
-           int reverse, int version,
+do_resolve(const char *hostname, const tor_addr_t *sockshost,
+           uint16_t socksport, int reverse, int version,
            tor_addr_t *result_addr, char **result_hostname)
 {
   int s = -1;
@@ -370,16 +366,16 @@ do_resolve(const char *hostname,
   tor_addr_make_unspec(result_addr);
   *result_hostname = NULL;
 
-  s = tor_open_socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
-  if (s<0) {
+  s = tor_open_socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if (s < 0) {
     log_sock_error("creating_socket", -1);
     return -1;
   }
 
-  socklen = tor_addr_to_sockaddr(sockshost, socksport,
-                                 (struct sockaddr *)&ss, sizeof(ss));
+  socklen = tor_addr_to_sockaddr(sockshost, socksport, (struct sockaddr *)&ss,
+                                 sizeof(ss));
 
-  if (connect(s, (struct sockaddr*)&ss, socklen)) {
+  if (connect(s, (struct sockaddr *)&ss, socklen)) {
     log_sock_error("connecting to SOCKS host", s);
     goto err;
   }
@@ -402,8 +398,8 @@ do_resolve(const char *hostname,
 
     socks5_client_version_free(v);
 
-    if (write_all_to_socket(s, (const char *)buf,
-                            encoded_len) != encoded_len) {
+    if (write_all_to_socket(s, (const char *)buf, encoded_len) !=
+        encoded_len) {
       log_err(LD_NET, "Error sending SOCKS5 method list.");
       tor_free(buf);
 
@@ -420,8 +416,8 @@ do_resolve(const char *hostname,
     }
 
     socks5_server_method_t *m;
-    ssize_t parsed = socks5_server_method_parse(&m, method_buf,
-                                                sizeof(method_buf));
+    ssize_t parsed =
+        socks5_server_method_parse(&m, method_buf, sizeof(method_buf));
 
     if (parsed < 2) {
       log_err(LD_NET, "Failed to parse SOCKS5 method selection "
@@ -442,8 +438,8 @@ do_resolve(const char *hostname,
   }
 
   if ((len = build_socks_resolve_request(&req, "", hostname, reverse,
-                                         version))<0) {
-    log_err(LD_BUG,"Error generating SOCKS request");
+                                         version)) < 0) {
+    log_err(LD_BUG, "Error generating SOCKS request");
     tor_assert(!req);
     goto err;
   }
@@ -460,22 +456,18 @@ do_resolve(const char *hostname,
       log_err(LD_NET, "Error reading SOCKS4 response.");
       goto err;
     }
-    if (parse_socks4a_resolve_response(hostname,
-                                       reply_buf, RESPONSE_LEN_4,
-                                       result_addr)<0) {
+    if (parse_socks4a_resolve_response(hostname, reply_buf, RESPONSE_LEN_4,
+                                       result_addr) < 0) {
       goto err;
     }
   } else {
     uint8_t reply_buf[512];
 
-    len = read_all_from_socket(s, (char *)reply_buf,
-                               sizeof(reply_buf));
+    len = read_all_from_socket(s, (char *)reply_buf, sizeof(reply_buf));
 
     socks5_server_reply_t *reply;
 
-    ssize_t parsed = socks5_server_reply_parse(&reply,
-                                               reply_buf,
-                                               len);
+    ssize_t parsed = socks5_server_reply_parse(&reply, reply_buf, len);
     if (parsed == -1) {
       log_err(LD_NET, "Failed parsing SOCKS5 response");
       goto err;
@@ -489,9 +481,8 @@ do_resolve(const char *hostname,
     /* Give a user some useful feedback about SOCKS5 errors */
     uint8_t reply_field = socks5_server_reply_get_reply(reply);
     if (reply_field != 0) {
-      log_warn(LD_NET,"Got SOCKS5 status response '%u': %s",
-               (unsigned)reply_field,
-               socks5_reason_to_string(reply_field));
+      log_warn(LD_NET, "Got SOCKS5 status response '%u': %s",
+               (unsigned)reply_field, socks5_reason_to_string(reply_field));
       if (reply_field == 4 && !strcasecmpend(hostname, ".onion")) {
         onion_warning(hostname);
       }
@@ -505,15 +496,15 @@ do_resolve(const char *hostname,
     if (atype == SOCKS5_ATYPE_IPV4) {
       /* IPv4 address */
       tor_addr_from_ipv4h(result_addr,
-        socks5_server_reply_get_bind_addr_ipv4(reply));
+                          socks5_server_reply_get_bind_addr_ipv4(reply));
     } else if (atype == SOCKS5_ATYPE_IPV6) {
       /* IPv6 address */
-      tor_addr_from_ipv6_bytes(result_addr,
-        (const char *)socks5_server_reply_getarray_bind_addr_ipv6(reply));
+      tor_addr_from_ipv6_bytes(
+          result_addr,
+          (const char *)socks5_server_reply_getarray_bind_addr_ipv6(reply));
     } else if (atype == SOCKS5_ATYPE_HOSTNAME) {
       /* Domain name */
-      domainname_t *dn =
-        socks5_server_reply_get_bind_addr_domainname(reply);
+      domainname_t *dn = socks5_server_reply_get_bind_addr_domainname(reply);
 
       *result_hostname = tor_strdup(domainname_getstr_name(dn));
     }
@@ -523,7 +514,7 @@ do_resolve(const char *hostname,
 
   tor_close_socket(s);
   return 0;
- err:
+err:
   tor_close_socket(s);
   return -1;
 }
@@ -553,13 +544,13 @@ main(int argc, char **argv)
   sandbox_disable_getaddrinfo_cache();
 
   arg = &argv[1];
-  n_args = argc-1;
+  n_args = argc - 1;
 
   if (!n_args)
     usage();
 
-  if (!strcmp(arg[0],"--version")) {
-    printf("Tor version %s.\n",VERSION);
+  if (!strcmp(arg[0], "--version")) {
+    printf("Tor version %s.\n", VERSION);
     return 0;
   }
   while (n_args && *arg[0] == '-') {
@@ -578,11 +569,11 @@ main(int argc, char **argv)
         usage();
       }
       p = atoi(arg[1]);
-      if (p<1 || p > 65535) {
+      if (p < 1 || p > 65535) {
         fprintf(stderr, "-p requires a number between 1 and 65535\n");
         usage();
       }
-      port_option = (uint16_t) p;
+      port_option = (uint16_t)p;
       ++arg; /* skip the port */
       --n_args;
     } else {
@@ -599,7 +590,7 @@ main(int argc, char **argv)
   }
 
   log_severity_list_t *severities =
-    tor_malloc_zero(sizeof(log_severity_list_t));
+      tor_malloc_zero(sizeof(log_severity_list_t));
   if (isVerbose)
     set_log_severity_config(LOG_DEBUG, LOG_ERR, severities);
   else
@@ -618,7 +609,7 @@ main(int argc, char **argv)
       socksport = 9050; /* 9050 */
     }
   } else if (n_args == 2) {
-    if (tor_addr_port_lookup(arg[1], &sockshost, &socksport)<0) {
+    if (tor_addr_port_lookup(arg[1], &sockshost, &socksport) < 0) {
       fprintf(stderr, "Couldn't parse/resolve address %s", arg[1]);
       return 1;
     }
@@ -635,14 +626,13 @@ main(int argc, char **argv)
     usage();
   }
 
-  if (network_init()<0) {
-    log_err(LD_BUG,"Error initializing network; exiting.");
+  if (network_init() < 0) {
+    log_err(LD_BUG, "Error initializing network; exiting.");
     return 1;
   }
 
-  if (do_resolve(arg[0], &sockshost, socksport, isReverse,
-                 isSocks4 ? 4 : 5, &result,
-                 &result_hostname))
+  if (do_resolve(arg[0], &sockshost, socksport, isReverse, isSocks4 ? 4 : 5,
+                 &result, &result_hostname))
     return 1;
 
   if (result_hostname) {

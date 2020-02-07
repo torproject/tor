@@ -48,12 +48,11 @@ ntor_handshake_state_free_(ntor_handshake_state_t *state)
  * a DIGEST256_LEN-byte digest at <b>out</b>, with the hash changing
  * depending on the value of <b>tweak</b>. */
 static void
-h_tweak(uint8_t *out,
-        const uint8_t *inp, size_t inp_len,
-        const char *tweak)
+h_tweak(uint8_t *out, const uint8_t *inp, size_t inp_len, const char *tweak)
 {
   size_t tweak_len = strlen(tweak);
-  crypto_hmac_sha256((char*)out, tweak, tweak_len, (const char*)inp, inp_len);
+  crypto_hmac_sha256((char *)out, tweak, tweak_len, (const char *)inp,
+                     inp_len);
 }
 
 /** Wrapper around a set of tweak-values for use with the ntor handshake. */
@@ -68,19 +67,18 @@ typedef struct tweakset_t {
 static const tweakset_t proto1_tweaks = {
 #define PROTOID "ntor-curve25519-sha256-1"
 #define PROTOID_LEN 24
-  PROTOID ":mac",
-  PROTOID ":key_extract",
-  PROTOID ":verify",
-  PROTOID ":key_expand"
-};
+    PROTOID ":mac", PROTOID ":key_extract", PROTOID ":verify",
+    PROTOID ":key_expand"};
 
 /** Convenience macro: copy <b>len</b> bytes from <b>inp</b> to <b>ptr</b>,
  * and advance <b>ptr</b> by the number of bytes copied. */
-#define APPEND(ptr, inp, len)                   \
-  STMT_BEGIN {                                  \
-    memcpy(ptr, (inp), (len));                  \
-    ptr += len;                                 \
-  } STMT_END
+#define APPEND(ptr, inp, len)    \
+  STMT_BEGIN                     \
+    {                            \
+      memcpy(ptr, (inp), (len)); \
+      ptr += len;                \
+    }                            \
+  STMT_END
 
 /**
  * Compute the first client-side step of the ntor handshake for communicating
@@ -127,12 +125,12 @@ onion_skin_ntor_create(const uint8_t *router_id,
 #define SERVER_STR "Server"
 #define SERVER_STR_LEN 6
 
-#define SECRET_INPUT_LEN (CURVE25519_PUBKEY_LEN * 3 +   \
-                          CURVE25519_OUTPUT_LEN * 2 +   \
-                          DIGEST_LEN + PROTOID_LEN)
-#define AUTH_INPUT_LEN (DIGEST256_LEN + DIGEST_LEN +    \
-                        CURVE25519_PUBKEY_LEN*3 +       \
-                        PROTOID_LEN + SERVER_STR_LEN)
+#define SECRET_INPUT_LEN                                                \
+  (CURVE25519_PUBKEY_LEN * 3 + CURVE25519_OUTPUT_LEN * 2 + DIGEST_LEN + \
+   PROTOID_LEN)
+#define AUTH_INPUT_LEN                                                    \
+  (DIGEST256_LEN + DIGEST_LEN + CURVE25519_PUBKEY_LEN * 3 + PROTOID_LEN + \
+   SERVER_STR_LEN)
 
 /**
  * Perform the server side of an ntor handshake. Given an
@@ -151,8 +149,7 @@ onion_skin_ntor_server_handshake(const uint8_t *onion_skin,
                                  const curve25519_keypair_t *junk_keys,
                                  const uint8_t *my_node_id,
                                  uint8_t *handshake_reply_out,
-                                 uint8_t *key_out,
-                                 size_t key_out_len)
+                                 uint8_t *key_out, size_t key_out_len)
 {
   const tweakset_t *T = &proto1_tweaks;
   /* Sensitive stack-allocated material. Kept in an anonymous struct to make
@@ -176,12 +173,12 @@ onion_skin_ntor_server_handshake(const uint8_t *onion_skin,
   /* Note that on key-not-found, we go through with this operation anyway,
    * using "junk_keys". This will result in failed authentication, but won't
    * leak whether we recognized the key. */
-  keypair_bB = dimap_search(private_keys, onion_skin + DIGEST_LEN,
-                            (void*)junk_keys);
+  keypair_bB =
+      dimap_search(private_keys, onion_skin + DIGEST_LEN, (void *)junk_keys);
   if (!keypair_bB)
     return -1;
 
-  memcpy(s.pubkey_X.public_key, onion_skin+DIGEST_LEN+DIGEST256_LEN,
+  memcpy(s.pubkey_X.public_key, onion_skin + DIGEST_LEN + DIGEST256_LEN,
          CURVE25519_PUBKEY_LEN);
 
   /* Make y, Y */
@@ -227,16 +224,14 @@ onion_skin_ntor_server_handshake(const uint8_t *onion_skin,
 
   /* Build the reply */
   memcpy(handshake_reply_out, s.pubkey_Y.public_key, CURVE25519_PUBKEY_LEN);
-  h_tweak(handshake_reply_out+CURVE25519_PUBKEY_LEN,
-          s.auth_input, sizeof(s.auth_input),
-          T->t_mac);
+  h_tweak(handshake_reply_out + CURVE25519_PUBKEY_LEN, s.auth_input,
+          sizeof(s.auth_input), T->t_mac);
 
   /* Generate the key material */
   crypto_expand_key_material_rfc5869_sha256(
-                           s.secret_input, sizeof(s.secret_input),
-                           (const uint8_t*)T->t_key, strlen(T->t_key),
-                           (const uint8_t*)T->m_expand, strlen(T->m_expand),
-                           key_out, key_out_len);
+      s.secret_input, sizeof(s.secret_input), (const uint8_t *)T->t_key,
+      strlen(T->t_key), (const uint8_t *)T->m_expand, strlen(T->m_expand),
+      key_out, key_out_len);
 
   /* Wipe all of our local state */
   memwipe(&s, 0, sizeof(s));
@@ -251,12 +246,10 @@ onion_skin_ntor_server_handshake(const uint8_t *onion_skin,
  * in <b>key_out</b>. Return 0 on success, -1 on failure.
  */
 int
-onion_skin_ntor_client_handshake(
-                             const ntor_handshake_state_t *handshake_state,
-                             const uint8_t *handshake_reply,
-                             uint8_t *key_out,
-                             size_t key_out_len,
-                             const char **msg_out)
+onion_skin_ntor_client_handshake(const ntor_handshake_state_t *handshake_state,
+                                 const uint8_t *handshake_reply,
+                                 uint8_t *key_out, size_t key_out_len,
+                                 const char **msg_out)
 {
   const tweakset_t *T = &proto1_tweaks;
   /* Sensitive stack-allocated material. Kept in an anonymous struct to make
@@ -314,10 +307,9 @@ onion_skin_ntor_client_handshake(
   bad |= (tor_memneq(s.auth, auth_candidate, DIGEST256_LEN) << 2);
 
   crypto_expand_key_material_rfc5869_sha256(
-                           s.secret_input, sizeof(s.secret_input),
-                           (const uint8_t*)T->t_key, strlen(T->t_key),
-                           (const uint8_t*)T->m_expand, strlen(T->m_expand),
-                           key_out, key_out_len);
+      s.secret_input, sizeof(s.secret_input), (const uint8_t *)T->t_key,
+      strlen(T->t_key), (const uint8_t *)T->m_expand, strlen(T->m_expand),
+      key_out, key_out_len);
 
   memwipe(&s, 0, sizeof(s));
 

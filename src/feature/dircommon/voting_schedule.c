@@ -30,7 +30,7 @@ voting_schedule_get_start_of_next_interval(time_t now, int interval,
                                            int offset)
 {
   struct tm tm;
-  time_t midnight_today=0;
+  time_t midnight_today = 0;
   time_t midnight_tomorrow;
   time_t next;
 
@@ -44,9 +44,9 @@ voting_schedule_get_start_of_next_interval(time_t now, int interval,
     log_warn(LD_BUG, "Ran into an invalid time when trying to find midnight.");
     // LCOV_EXCL_STOP
   }
-  midnight_tomorrow = midnight_today + (24*60*60);
+  midnight_tomorrow = midnight_today + (24 * 60 * 60);
 
-  next = midnight_today + ((now-midnight_today)/interval + 1)*interval;
+  next = midnight_today + ((now - midnight_today) / interval + 1) * interval;
 
   /* Intervals never cross midnight. */
   if (next > midnight_tomorrow)
@@ -54,7 +54,7 @@ voting_schedule_get_start_of_next_interval(time_t now, int interval,
 
   /* If the interval would only last half as long as it's supposed to, then
    * skip over to the next day. */
-  if (next + interval/2 > midnight_tomorrow)
+  if (next + interval / 2 > midnight_tomorrow)
     next = midnight_tomorrow;
 
   next += offset;
@@ -81,7 +81,7 @@ get_voting_schedule(const or_options_t *options, time_t now, int severity)
   consensus = networkstatus_get_live_consensus(now);
 
   if (consensus) {
-    interval = (int)( consensus->fresh_until - consensus->valid_after );
+    interval = (int)(consensus->fresh_until - consensus->valid_after);
     vote_delay = consensus->vote_seconds;
     dist_delay = consensus->dist_seconds;
 
@@ -96,29 +96,30 @@ get_voting_schedule(const or_options_t *options, time_t now, int severity)
 
   tor_assert(interval > 0);
 
-  if (vote_delay + dist_delay > interval/2)
+  if (vote_delay + dist_delay > interval / 2)
     vote_delay = dist_delay = interval / 4;
 
   start = new_voting_schedule->interval_starts =
-    voting_schedule_get_start_of_next_interval(now,interval,
-                                      options->TestingV3AuthVotingStartOffset);
-  end = voting_schedule_get_start_of_next_interval(start+1, interval,
-                                      options->TestingV3AuthVotingStartOffset);
+      voting_schedule_get_start_of_next_interval(
+          now, interval, options->TestingV3AuthVotingStartOffset);
+  end = voting_schedule_get_start_of_next_interval(
+      start + 1, interval, options->TestingV3AuthVotingStartOffset);
 
   tor_assert(end > start);
 
-  new_voting_schedule->fetch_missing_signatures = start - (dist_delay/2);
+  new_voting_schedule->fetch_missing_signatures = start - (dist_delay / 2);
   new_voting_schedule->voting_ends = start - dist_delay;
   new_voting_schedule->fetch_missing_votes =
-    start - dist_delay - (vote_delay/2);
+      start - dist_delay - (vote_delay / 2);
   new_voting_schedule->voting_starts = start - dist_delay - vote_delay;
 
   {
-    char tbuf[ISO_TIME_LEN+1];
+    char tbuf[ISO_TIME_LEN + 1];
     format_iso_time(tbuf, new_voting_schedule->interval_starts);
-    tor_log(severity, LD_DIR,"Choosing expected valid-after time as %s: "
+    tor_log(severity, LD_DIR,
+            "Choosing expected valid-after time as %s: "
             "consensus_set=%d, interval=%d",
-            tbuf, consensus?1:0, interval);
+            tbuf, consensus ? 1 : 0, interval);
   }
 
   return new_voting_schedule;
@@ -149,8 +150,8 @@ voting_schedule_get_next_valid_after_time(void)
   /* This is a safe guard in order to make sure that the voting schedule
    * static object is at least initialized. Using this function with a zeroed
    * voting schedule can lead to bugs. */
-  if (fast_mem_is_zero((const char *) &voting_schedule,
-                      sizeof(voting_schedule))) {
+  if (fast_mem_is_zero((const char *)&voting_schedule,
+                       sizeof(voting_schedule))) {
     need_to_recalculate_voting_schedule = true;
     goto done; /* no need for next check if we have to recalculate anyway */
   }
@@ -160,12 +161,12 @@ voting_schedule_get_next_valid_after_time(void)
   const networkstatus_t *ns = networkstatus_get_live_consensus(now);
   if (ns && ns->valid_after != voting_schedule.live_consensus_valid_after) {
     log_info(LD_DIR, "Voting schedule is outdated: recalculating (%d/%d)",
-             (int) ns->valid_after,
-             (int) voting_schedule.live_consensus_valid_after);
+             (int)ns->valid_after,
+             (int)voting_schedule.live_consensus_valid_after);
     need_to_recalculate_voting_schedule = true;
   }
 
- done:
+done:
   if (need_to_recalculate_voting_schedule) {
     voting_schedule_recalculate_timing(get_options(), approx_time());
     voting_schedule.created_on_demand = 1;
@@ -190,4 +191,3 @@ voting_schedule_recalculate_timing(const or_options_t *options, time_t now)
   memcpy(&voting_schedule, new_voting_schedule, sizeof(voting_schedule));
   voting_schedule_free(new_voting_schedule);
 }
-

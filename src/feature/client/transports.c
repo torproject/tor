@@ -145,9 +145,8 @@ static smartlist_t *transport_list = NULL;
     protocol <b>name</b> listening at <b>addr</b>:<b>port</b> using
     SOCKS version <b>socks_ver</b>. */
 STATIC transport_t *
-transport_new(const tor_addr_t *addr, uint16_t port,
-              const char *name, int socks_ver,
-              const char *extra_info_args)
+transport_new(const tor_addr_t *addr, uint16_t port, const char *name,
+              int socks_ver, const char *extra_info_args)
 {
   transport_t *t = tor_malloc_zero(sizeof(transport_t));
 
@@ -191,12 +190,12 @@ sweep_transport_list(void)
 {
   if (!transport_list)
     transport_list = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(transport_list, transport_t *, t) {
+  SMARTLIST_FOREACH_BEGIN (transport_list, transport_t *, t) {
     if (t->marked_for_removal) {
       SMARTLIST_DEL_CURRENT(transport_list, t);
       transport_free(t);
     }
-  } SMARTLIST_FOREACH_END(t);
+  } SMARTLIST_FOREACH_END (t);
 }
 
 /** Initialize the pluggable transports list to empty, creating it if
@@ -232,17 +231,17 @@ transport_copy(const transport_t *transport)
 /** Returns the transport in our transport list that has the name <b>name</b>.
  *  Else returns NULL. */
 MOCK_IMPL(transport_t *,
-transport_get_by_name,(const char *name))
+transport_get_by_name, (const char *name))
 {
   tor_assert(name);
 
   if (!transport_list)
     return NULL;
 
-  SMARTLIST_FOREACH_BEGIN(transport_list, transport_t *, transport) {
+  SMARTLIST_FOREACH_BEGIN (transport_list, transport_t *, transport) {
     if (!strcmp(transport->name, name))
       return transport;
-  } SMARTLIST_FOREACH_END(transport);
+  } SMARTLIST_FOREACH_END (transport);
 
   return NULL;
 }
@@ -281,20 +280,24 @@ transport_resolve_conflicts(const transport_t *t)
       return 1;
     } else { /* same name but different addrport */
       char *new_transport_addrport =
-        tor_strdup(fmt_addrport(&t->addr, t->port));
+          tor_strdup(fmt_addrport(&t->addr, t->port));
       if (t_tmp->marked_for_removal) { /* marked for removal */
-        log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s' "
+        log_notice(LD_GENERAL,
+                   "You tried to add transport '%s' at '%s' "
                    "but there was already a transport marked for deletion at "
                    "'%s'. We deleted the old transport and registered the "
-                   "new one.", t->name, new_transport_addrport,
+                   "new one.",
+                   t->name, new_transport_addrport,
                    fmt_addrport(&t_tmp->addr, t_tmp->port));
         smartlist_remove(transport_list, t_tmp);
         transport_free(t_tmp);
         tor_free(new_transport_addrport);
       } else { /* *not* marked for removal */
-        log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s' "
+        log_notice(LD_GENERAL,
+                   "You tried to add transport '%s' at '%s' "
                    "but the same transport already exists at '%s'. "
-                   "Skipping.", t->name, new_transport_addrport,
+                   "Skipping.",
+                   t->name, new_transport_addrport,
                    fmt_addrport(&t_tmp->addr, t_tmp->port));
         tor_free(new_transport_addrport);
         return -1;
@@ -334,8 +337,9 @@ transport_add(transport_t *t)
  *  <b>name</b> is set to the name of the protocol this proxy uses.
  *  <b>socks_ver</b> is set to the SOCKS version of the proxy. */
 MOCK_IMPL(int,
-transport_add_from_config, (const tor_addr_t *addr, uint16_t port,
-                            const char *name, int socks_ver))
+transport_add_from_config,
+          (const tor_addr_t *addr, uint16_t port, const char *name,
+           int socks_ver))
 {
   transport_t *t = transport_new(addr, port, name, socks_ver, NULL);
 
@@ -351,8 +355,8 @@ transport_add_from_config, (const tor_addr_t *addr, uint16_t port,
   case 1:
     log_info(LD_GENERAL, "Successfully registered transport %s at %s.",
              t->name, fmt_addrport(&t->addr, t->port));
-     transport_free(t); /* falling */
-     return 0;
+    transport_free(t); /* falling */
+    return 0;
   case 0:
     log_info(LD_GENERAL, "Successfully registered transport %s at %s.",
              t->name, fmt_addrport(&t->addr, t->port));
@@ -387,8 +391,8 @@ assert_unconfigured_count_ok(void)
   }
 
   SMARTLIST_FOREACH(managed_proxy_list, managed_proxy_t *, mp, {
-      if (mp->conf_state == PT_PROTO_COMPLETED)
-        ++n_completed;
+    if (mp->conf_state == PT_PROTO_COMPLETED)
+      ++n_completed;
   });
 
   tor_assert(n_completed + unconfigured_proxies_n ==
@@ -399,8 +403,8 @@ assert_unconfigured_count_ok(void)
 static int
 managed_proxy_has_argv(const managed_proxy_t *mp, char **proxy_argv)
 {
-  char **tmp1=proxy_argv;
-  char **tmp2=mp->argv;
+  char **tmp1 = proxy_argv;
+  char **tmp2 = mp->argv;
 
   tor_assert(tmp1);
   tor_assert(tmp2);
@@ -424,11 +428,10 @@ get_managed_proxy_by_argv_and_type(char **proxy_argv, int is_server)
   if (!managed_proxy_list)
     return NULL;
 
-  SMARTLIST_FOREACH_BEGIN(managed_proxy_list,  managed_proxy_t *, mp) {
-    if (managed_proxy_has_argv(mp, proxy_argv) &&
-        mp->is_server == is_server)
+  SMARTLIST_FOREACH_BEGIN (managed_proxy_list, managed_proxy_t *, mp) {
+    if (managed_proxy_has_argv(mp, proxy_argv) && mp->is_server == is_server)
       return mp;
-  } SMARTLIST_FOREACH_END(mp);
+  } SMARTLIST_FOREACH_END (mp);
 
   return NULL;
 }
@@ -449,7 +452,7 @@ static int
 proxy_needs_restart(const managed_proxy_t *mp)
 {
   int ret = 1;
-  char* proxy_uri;
+  char *proxy_uri;
 
   /* If the PT proxy config has changed, then all existing pluggable transports
    * should be restarted.
@@ -473,14 +476,13 @@ proxy_needs_restart(const managed_proxy_t *mp)
   if (smartlist_len(mp->transports_to_launch) != smartlist_len(mp->transports))
     goto needs_restart;
 
-  SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
+  SMARTLIST_FOREACH_BEGIN (mp->transports, const transport_t *, t) {
     if (!smartlist_contains_string(mp->transports_to_launch, t->name))
       goto needs_restart;
-
-  } SMARTLIST_FOREACH_END(t);
+  } SMARTLIST_FOREACH_END (t);
 
   ret = 0;
- needs_restart:
+needs_restart:
   tor_free(proxy_uri);
   return ret;
 }
@@ -501,11 +503,11 @@ proxy_prepare_for_restart(managed_proxy_t *mp)
 
   /* destroy all its registered transports, since we will no longer
      use them. */
-  SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
+  SMARTLIST_FOREACH_BEGIN (mp->transports, const transport_t *, t) {
     t_tmp = transport_get_by_name(t->name);
     if (t_tmp)
       t_tmp->marked_for_removal = 1;
-  } SMARTLIST_FOREACH_END(t);
+  } SMARTLIST_FOREACH_END (t);
   sweep_transport_list();
 
   /* free the transport in mp->transports */
@@ -577,7 +579,7 @@ pt_configure_remaining_proxies(void)
 
   assert_unconfigured_count_ok();
 
-  SMARTLIST_FOREACH_BEGIN(tmp,  managed_proxy_t *, mp) {
+  SMARTLIST_FOREACH_BEGIN (tmp, managed_proxy_t *, mp) {
     tor_assert(mp->conf_state != PT_PROTO_BROKEN &&
                mp->conf_state != PT_PROTO_FAILED_LAUNCH);
 
@@ -592,8 +594,10 @@ pt_configure_remaining_proxies(void)
                  mp->argv[0]);
         proxy_prepare_for_restart(mp);
       } else { /* it doesn't need to be restarted. */
-        log_info(LD_GENERAL, "Nothing changed for managed proxy '%s' after "
-                 "HUP: not restarting.", mp->argv[0]);
+        log_info(LD_GENERAL,
+                 "Nothing changed for managed proxy '%s' after "
+                 "HUP: not restarting.",
+                 mp->argv[0]);
       }
 
       continue;
@@ -604,8 +608,7 @@ pt_configure_remaining_proxies(void)
     if (!proxy_configuration_finished(mp))
       if (configure_proxy(mp) == 1)
         at_least_a_proxy_config_finished = 1;
-
-  } SMARTLIST_FOREACH_END(mp);
+  } SMARTLIST_FOREACH_END (mp);
 
   smartlist_free(tmp);
   check_if_restarts_needed = 0;
@@ -642,12 +645,12 @@ register_server_proxy(const managed_proxy_t *mp)
 {
   tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
 
-  SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
+  SMARTLIST_FOREACH_BEGIN (mp->transports, transport_t *, t) {
     save_transport_to_state(t->name, &t->addr, t->port);
-    log_notice(LD_GENERAL, "Registered server transport '%s' at '%s'",
-               t->name, fmt_addrport(&t->addr, t->port));
+    log_notice(LD_GENERAL, "Registered server transport '%s' at '%s'", t->name,
+               fmt_addrport(&t->addr, t->port));
     control_event_transport_launched("server", t->name, &t->addr, t->port);
-  } SMARTLIST_FOREACH_END(t);
+  } SMARTLIST_FOREACH_END (t);
 }
 
 /** Register all the transports supported by client managed proxy
@@ -659,7 +662,7 @@ register_client_proxy(const managed_proxy_t *mp)
 
   tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
 
-  SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
+  SMARTLIST_FOREACH_BEGIN (mp->transports, transport_t *, t) {
     transport_t *transport_tmp = transport_copy(t);
     r = transport_add(transport_tmp);
     switch (r) {
@@ -677,7 +680,7 @@ register_client_proxy(const managed_proxy_t *mp)
       transport_free(transport_tmp);
       break;
     }
-  } SMARTLIST_FOREACH_END(t);
+  } SMARTLIST_FOREACH_END (t);
 }
 
 /** Register the transports of managed proxy <b>mp</b>. */
@@ -692,8 +695,7 @@ register_proxy(const managed_proxy_t *mp)
 
 /** Free memory allocated by managed proxy <b>mp</b>. */
 STATIC void
-managed_proxy_destroy(managed_proxy_t *mp,
-                      int also_terminate_process)
+managed_proxy_destroy(managed_proxy_t *mp, int also_terminate_process)
 {
   SMARTLIST_FOREACH(mp->transports, transport_t *, t, transport_free(t));
 
@@ -739,7 +741,7 @@ get_pt_proxy_uri(void)
    * there isn't a standard URI scheme for some proxy protocols, such as
    * haproxy. */
   if (options->Socks4Proxy || options->Socks5Proxy || options->HTTPSProxy) {
-    char addr[TOR_ADDR_BUF_LEN+1];
+    char addr[TOR_ADDR_BUF_LEN + 1];
 
     if (options->Socks4Proxy) {
       tor_addr_to_str(addr, &options->Socks4ProxyAddr, sizeof(addr), 1);
@@ -749,10 +751,9 @@ get_pt_proxy_uri(void)
       if (!options->Socks5ProxyUsername && !options->Socks5ProxyPassword) {
         tor_asprintf(&uri, "socks5://%s:%d", addr, options->Socks5ProxyPort);
       } else {
-        tor_asprintf(&uri, "socks5://%s:%s@%s:%d",
-                     options->Socks5ProxyUsername,
-                     options->Socks5ProxyPassword,
-                     addr, options->Socks5ProxyPort);
+        tor_asprintf(
+            &uri, "socks5://%s:%s@%s:%d", options->Socks5ProxyUsername,
+            options->Socks5ProxyPassword, addr, options->Socks5ProxyPort);
       }
     } else if (options->HTTPSProxy) {
       tor_addr_to_str(addr, &options->HTTPSProxyAddr, sizeof(addr), 1);
@@ -781,7 +782,8 @@ handle_finished_proxy(managed_proxy_t *mp)
     break;
   case PT_PROTO_CONFIGURED: /* if configured correctly: */
     if (mp->proxy_uri && !mp->proxy_supported) {
-      log_warn(LD_CONFIG, "Managed proxy '%s' did not configure the "
+      log_warn(LD_CONFIG,
+               "Managed proxy '%s' did not configure the "
                "specified outgoing proxy and will be terminated.",
                mp->argv[0]);
       managed_proxy_destroy(mp, 1); /* annihilate it. */
@@ -820,13 +822,13 @@ handle_methods_done(const managed_proxy_t *mp)
   tor_assert(mp->transports);
 
   if (smartlist_len(mp->transports) == 0)
-    log_notice(LD_GENERAL, "Managed proxy '%s' was spawned successfully, "
+    log_notice(LD_GENERAL,
+               "Managed proxy '%s' was spawned successfully, "
                "but it didn't launch any pluggable transport listeners!",
                mp->argv[0]);
 
   log_info(LD_CONFIG, "%s managed proxy '%s' configuration completed!",
-           mp->is_server ? "Server" : "Client",
-           mp->argv[0]);
+           mp->is_server ? "Server" : "Client", mp->argv[0]);
 }
 
 /** Handle a configuration protocol <b>line</b> received from a
@@ -834,8 +836,8 @@ handle_methods_done(const managed_proxy_t *mp)
 STATIC void
 handle_proxy_line(const char *line, managed_proxy_t *mp)
 {
-  log_info(LD_GENERAL, "Got a line from managed proxy '%s': (%s)",
-           mp->argv[0], line);
+  log_info(LD_GENERAL, "Got a line from managed proxy '%s': (%s)", mp->argv[0],
+           line);
 
   if (!strcmpstart(line, PROTO_ENV_ERROR)) {
     if (mp->conf_state != PT_PROTO_LAUNCHED)
@@ -848,13 +850,13 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
       goto err;
 
     log_warn(LD_CONFIG, "Managed proxy could not pick a "
-             "configuration protocol version.");
+                        "configuration protocol version.");
     goto err;
   } else if (!strcmpstart(line, PROTO_NEG_SUCCESS)) {
     if (mp->conf_state != PT_PROTO_LAUNCHED)
       goto err;
 
-    if (parse_version(line,mp) < 0)
+    if (parse_version(line, mp) < 0)
       goto err;
 
     tor_assert(mp->conf_protocol != 0);
@@ -936,10 +938,12 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
   log_notice(LD_GENERAL, "Unknown line received by managed proxy (%s).", line);
   return;
 
- err:
+err:
   mp->conf_state = PT_PROTO_BROKEN;
-  log_warn(LD_CONFIG, "Managed proxy at '%s' failed the configuration protocol"
-           " and will be destroyed.", mp->argv[0]);
+  log_warn(LD_CONFIG,
+           "Managed proxy at '%s' failed the configuration protocol"
+           " and will be destroyed.",
+           mp->argv[0]);
 }
 
 /** Parses an ENV-ERROR <b>line</b> and warns the user accordingly. */
@@ -949,12 +953,15 @@ parse_env_error(const char *line)
   /* (Length of the protocol string) plus (a space) and (the first char of
      the error message) */
   if (strlen(line) < (strlen(PROTO_ENV_ERROR) + 2))
-    log_notice(LD_CONFIG, "Managed proxy sent us an %s without an error "
-               "message.", PROTO_ENV_ERROR);
+    log_notice(LD_CONFIG,
+               "Managed proxy sent us an %s without an error "
+               "message.",
+               PROTO_ENV_ERROR);
 
-  log_warn(LD_CONFIG, "Managed proxy couldn't understand the "
+  log_warn(LD_CONFIG,
+           "Managed proxy couldn't understand the "
            "pluggable transport environment variables. (%s)",
-           line+strlen(PROTO_ENV_ERROR)+1);
+           line + strlen(PROTO_ENV_ERROR) + 1);
 }
 
 /** Handles a VERSION <b>line</b>. Updates the configuration protocol
@@ -968,9 +975,11 @@ parse_version(const char *line, managed_proxy_t *mp)
     return -1;
   }
 
-  if (strcmp("1", line+strlen(PROTO_NEG_SUCCESS)+1)) { /* hardcoded temp */
-    log_warn(LD_CONFIG, "Managed proxy tried to negotiate on version '%s'. "
-             "We only support version '1'", line+strlen(PROTO_NEG_SUCCESS)+1);
+  if (strcmp("1", line + strlen(PROTO_NEG_SUCCESS) + 1)) { /* hardcoded temp */
+    log_warn(LD_CONFIG,
+             "Managed proxy tried to negotiate on version '%s'. "
+             "We only support version '1'",
+             line + strlen(PROTO_NEG_SUCCESS) + 1);
     return -1;
   }
 
@@ -984,18 +993,18 @@ parse_version(const char *line, managed_proxy_t *mp)
 static void
 parse_method_error(const char *line, int is_server)
 {
-  const char* error = is_server ?
-    PROTO_SMETHOD_ERROR : PROTO_CMETHOD_ERROR;
+  const char *error = is_server ? PROTO_SMETHOD_ERROR : PROTO_CMETHOD_ERROR;
 
   /* (Length of the protocol string) plus (a space) and (the first char of
      the error message) */
   if (strlen(line) < (strlen(error) + 2))
-    log_warn(LD_CONFIG, "Managed proxy sent us an %s without an error "
-             "message.", error);
+    log_warn(LD_CONFIG,
+             "Managed proxy sent us an %s without an error "
+             "message.",
+             error);
 
   log_warn(LD_CONFIG, "%s managed proxy encountered a method error. (%s)",
-           is_server ? "Server" : "Client",
-           line+strlen(error)+1);
+           is_server ? "Server" : "Client", line + strlen(error) + 1);
 }
 
 /** A helper for parse_{c,s}method_line(), bootstraps its
@@ -1003,39 +1012,39 @@ parse_method_error(const char *line, int is_server)
  *  the line to parse is a SMETHOD line otherwise it is a
  *  CMETHOD line*/
 static int
-parse_method_line_helper(const char *line,
-                         managed_proxy_t *mp,
-                         int is_smethod)
+parse_method_line_helper(const char *line, managed_proxy_t *mp, int is_smethod)
 {
   int item_index = 0;
   int r;
 
-  char *transport_name=NULL;
-  char *args_string=NULL;
-  char *addrport=NULL;
-  int socks_ver=PROXY_NONE;
-  char *address=NULL;
+  char *transport_name = NULL;
+  char *args_string = NULL;
+  char *addrport = NULL;
+  int socks_ver = PROXY_NONE;
+  char *address = NULL;
   uint16_t port = 0;
 
   const char *method_str = is_smethod ? PROTO_SMETHOD : PROTO_CMETHOD;
   const int min_args_count = is_smethod ? 3 : 4;
 
   tor_addr_t tor_addr;
-  transport_t *transport=NULL;
-  smartlist_t *items= smartlist_new();
+  transport_t *transport = NULL;
+  smartlist_t *items = smartlist_new();
 
   smartlist_split_string(items, line, NULL,
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+                         SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, -1);
   if (smartlist_len(items) < min_args_count) {
-    log_warn(LD_CONFIG, "Managed proxy sent us a %s line "
-             "with too few arguments.", method_str);
+    log_warn(LD_CONFIG,
+             "Managed proxy sent us a %s line "
+             "with too few arguments.",
+             method_str);
     goto err;
   }
 
-  tor_assert(!strcmp(smartlist_get(items, item_index),method_str));
+  tor_assert(!strcmp(smartlist_get(items, item_index), method_str));
   ++item_index;
 
-  transport_name = smartlist_get(items,item_index);
+  transport_name = smartlist_get(items, item_index);
   ++item_index;
   if (!string_is_C_identifier(transport_name)) {
     log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).",
@@ -1045,30 +1054,31 @@ parse_method_line_helper(const char *line,
 
   /** Check for the proxy method sent to us in CMETHOD line. */
   if (!is_smethod) {
-    const char *socks_ver_str = smartlist_get(items,item_index);
+    const char *socks_ver_str = smartlist_get(items, item_index);
     ++item_index;
 
-    if (!strcmp(socks_ver_str,"socks4")) {
+    if (!strcmp(socks_ver_str, "socks4")) {
       socks_ver = PROXY_SOCKS4;
-    } else if (!strcmp(socks_ver_str,"socks5")) {
+    } else if (!strcmp(socks_ver_str, "socks5")) {
       socks_ver = PROXY_SOCKS5;
     } else {
-      log_warn(LD_CONFIG, "Client managed proxy sent us a proxy protocol "
-               "we don't recognize. (%s)", socks_ver_str);
+      log_warn(LD_CONFIG,
+               "Client managed proxy sent us a proxy protocol "
+               "we don't recognize. (%s)",
+               socks_ver_str);
       goto err;
     }
   }
 
   addrport = smartlist_get(items, item_index);
   ++item_index;
-  if (tor_addr_port_split(LOG_WARN, addrport, &address, &port)<0) {
+  if (tor_addr_port_split(LOG_WARN, addrport, &address, &port) < 0) {
     log_warn(LD_CONFIG, "Error parsing transport address '%s'", addrport);
     goto err;
   }
 
   if (!port) {
-    log_warn(LD_CONFIG,
-             "Transport address '%s' has no port.", addrport);
+    log_warn(LD_CONFIG, "Transport address '%s' has no port.", addrport);
     goto err;
   }
 
@@ -1084,34 +1094,35 @@ parse_method_line_helper(const char *line,
     char *options_string = smartlist_get(items, item_index);
     log_debug(LD_CONFIG, "Got options_string: %s", options_string);
     if (!strcmpstart(options_string, "ARGS:")) {
-      args_string = options_string+strlen("ARGS:");
+      args_string = options_string + strlen("ARGS:");
       log_debug(LD_CONFIG, "Got ARGS: %s", args_string);
     }
   }
 
-  transport = transport_new(&tor_addr, port, transport_name,
-                            socks_ver, args_string);
+  transport =
+      transport_new(&tor_addr, port, transport_name, socks_ver, args_string);
 
   smartlist_add(mp->transports, transport);
 
   /** Logs info about line parsing success for client or server */
   if (is_smethod) {
-    log_info(LD_CONFIG, "Server transport %s at %s:%d.",
-             transport_name, address, (int)port);
+    log_info(LD_CONFIG, "Server transport %s at %s:%d.", transport_name,
+             address, (int)port);
   } else {
-    log_info(LD_CONFIG, "Transport %s at %s:%d with SOCKS %d. "
+    log_info(LD_CONFIG,
+             "Transport %s at %s:%d with SOCKS %d. "
              "Attached to managed proxy.",
              transport_name, address, (int)port, socks_ver);
   }
 
-  r=0;
+  r = 0;
   goto done;
 
- err:
+err:
   r = -1;
 
- done:
-  SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+done:
+  SMARTLIST_FOREACH(items, char *, s, tor_free(s));
   smartlist_free(items);
   tor_free(address);
   return r;
@@ -1144,12 +1155,15 @@ parse_proxy_error(const char *line)
   /* (Length of the protocol string) plus (a space) and (the first char of
      the error message) */
   if (strlen(line) < (strlen(PROTO_PROXY_ERROR) + 2))
-    log_notice(LD_CONFIG, "Managed proxy sent us an %s without an error "
-               "message.", PROTO_PROXY_ERROR);
+    log_notice(LD_CONFIG,
+               "Managed proxy sent us an %s without an error "
+               "message.",
+               PROTO_PROXY_ERROR);
 
-  log_warn(LD_CONFIG, "Managed proxy failed to configure the "
+  log_warn(LD_CONFIG,
+           "Managed proxy failed to configure the "
            "pluggable transport's outgoing proxy. (%s)",
-           line+strlen(PROTO_PROXY_ERROR)+1);
+           line + strlen(PROTO_PROXY_ERROR) + 1);
 }
 
 /** Parses a LOG <b>line</b> and emit log events accordingly. */
@@ -1163,15 +1177,17 @@ parse_log_line(const char *line, managed_proxy_t *mp)
   char *log_message = NULL;
 
   if (strlen(line) < (strlen(PROTO_LOG) + 1)) {
-    log_warn(LD_PT, "Managed proxy sent us a %s line "
-                    "with missing argument.", PROTO_LOG);
+    log_warn(LD_PT,
+             "Managed proxy sent us a %s line "
+             "with missing argument.",
+             PROTO_LOG);
     goto done;
   }
 
   const char *data = line + strlen(PROTO_LOG) + 1;
   values = kvline_parse(data, KV_QUOTED);
 
-  if (! values) {
+  if (!values) {
     log_warn(LD_PT, "Managed proxy \"%s\" wrote an invalid LOG message: %s",
              mp->argv[0], data);
     goto done;
@@ -1181,30 +1197,35 @@ parse_log_line(const char *line, managed_proxy_t *mp)
   const config_line_t *message = config_line_find(values, "MESSAGE");
 
   /* Check if we got a message. */
-  if (! message) {
-    log_warn(LD_PT, "Managed proxy \"%s\" wrote a LOG line without "
-                    "MESSAGE: %s", mp->argv[0], escaped(data));
+  if (!message) {
+    log_warn(LD_PT,
+             "Managed proxy \"%s\" wrote a LOG line without "
+             "MESSAGE: %s",
+             mp->argv[0], escaped(data));
     goto done;
   }
 
   /* Check if severity is there and whether it's valid. */
-  if (! severity) {
-    log_warn(LD_PT, "Managed proxy \"%s\" wrote a LOG line without "
-                    "SEVERITY: %s", mp->argv[0], escaped(data));
+  if (!severity) {
+    log_warn(LD_PT,
+             "Managed proxy \"%s\" wrote a LOG line without "
+             "SEVERITY: %s",
+             mp->argv[0], escaped(data));
     goto done;
   }
 
   int log_severity = managed_proxy_severity_parse(severity->value);
 
   if (log_severity == -1) {
-    log_warn(LD_PT, "Managed proxy \"%s\" wrote a LOG line with an "
-                    "invalid severity level: %s",
-                    mp->argv[0], severity->value);
+    log_warn(LD_PT,
+             "Managed proxy \"%s\" wrote a LOG line with an "
+             "invalid severity level: %s",
+             mp->argv[0], severity->value);
     goto done;
   }
 
-  tor_log(log_severity, LD_PT, "Managed proxy \"%s\": %s",
-          mp->argv[0], message->value);
+  tor_log(log_severity, LD_PT, "Managed proxy \"%s\": %s", mp->argv[0],
+          message->value);
 
   /* Prepend the PT name. */
   config_line_prepend(&values, "PT", mp->argv[0]);
@@ -1213,7 +1234,7 @@ parse_log_line(const char *line, managed_proxy_t *mp)
   /* Emit control port event. */
   control_event_pt_log(log_message);
 
- done:
+done:
   config_free_lines(values);
   tor_free(log_message);
 }
@@ -1229,8 +1250,10 @@ parse_status_line(const char *line, managed_proxy_t *mp)
   char *status_message = NULL;
 
   if (strlen(line) < (strlen(PROTO_STATUS) + 1)) {
-    log_warn(LD_PT, "Managed proxy sent us a %s line "
-                    "with missing argument.", PROTO_STATUS);
+    log_warn(LD_PT,
+             "Managed proxy sent us a %s line "
+             "with missing argument.",
+             PROTO_STATUS);
     goto done;
   }
 
@@ -1238,9 +1261,11 @@ parse_status_line(const char *line, managed_proxy_t *mp)
 
   values = kvline_parse(data, KV_QUOTED);
 
-  if (! values) {
-    log_warn(LD_PT, "Managed proxy \"%s\" wrote an invalid "
-             "STATUS message: %s", mp->argv[0], escaped(data));
+  if (!values) {
+    log_warn(LD_PT,
+             "Managed proxy \"%s\" wrote an invalid "
+             "STATUS message: %s",
+             mp->argv[0], escaped(data));
     goto done;
   }
 
@@ -1248,9 +1273,11 @@ parse_status_line(const char *line, managed_proxy_t *mp)
    * *required* value. */
   const config_line_t *type = config_line_find(values, "TRANSPORT");
 
-  if (! type) {
-    log_warn(LD_PT, "Managed proxy \"%s\" wrote a STATUS line without "
-                    "TRANSPORT: %s", mp->argv[0], escaped(data));
+  if (!type) {
+    log_warn(LD_PT,
+             "Managed proxy \"%s\" wrote a STATUS line without "
+             "TRANSPORT: %s",
+             mp->argv[0], escaped(data));
     goto done;
   }
 
@@ -1262,7 +1289,7 @@ parse_status_line(const char *line, managed_proxy_t *mp)
    * via the control port. */
   control_event_pt_status(status_message);
 
- done:
+done:
   config_free_lines(values);
   tor_free(status_message);
 }
@@ -1282,7 +1309,7 @@ get_transport_options_for_server_proxy(const managed_proxy_t *mp)
       any of them, format them appropriately and place them in our
       smartlist. Finally, join our smartlist to get the final
       string. */
-  SMARTLIST_FOREACH_BEGIN(mp->transports_to_launch, const char *, transport) {
+  SMARTLIST_FOREACH_BEGIN (mp->transports_to_launch, const char *, transport) {
     smartlist_t *options_tmp_sl = NULL;
     options_tmp_sl = pt_get_options_for_server_transport(transport);
     if (!options_tmp_sl)
@@ -1290,16 +1317,15 @@ get_transport_options_for_server_proxy(const managed_proxy_t *mp)
 
     /** Loop over the options of this transport, escape them, and
         place them in the smartlist. */
-    SMARTLIST_FOREACH_BEGIN(options_tmp_sl, const char *, options) {
+    SMARTLIST_FOREACH_BEGIN (options_tmp_sl, const char *, options) {
       char *escaped_opts = tor_escape_str_for_pt_args(options, ":;\\");
-      smartlist_add_asprintf(string_sl, "%s:%s",
-                             transport, escaped_opts);
+      smartlist_add_asprintf(string_sl, "%s:%s", transport, escaped_opts);
       tor_free(escaped_opts);
-    } SMARTLIST_FOREACH_END(options);
+    } SMARTLIST_FOREACH_END (options);
 
     SMARTLIST_FOREACH(options_tmp_sl, char *, c, tor_free(c));
     smartlist_free(options_tmp_sl);
-  } SMARTLIST_FOREACH_END(transport);
+  } SMARTLIST_FOREACH_END (transport);
 
   if (smartlist_len(string_sl)) {
     options_string = smartlist_join_strings(string_sl, ";", 0, NULL);
@@ -1324,13 +1350,13 @@ get_bindaddr_for_server_proxy(const managed_proxy_t *mp)
 
   tor_assert(mp->is_server);
 
-  SMARTLIST_FOREACH_BEGIN(mp->transports_to_launch, char *, t) {
+  SMARTLIST_FOREACH_BEGIN (mp->transports_to_launch, char *, t) {
     bindaddr_tmp = get_stored_bindaddr_for_server_transport(t);
 
     smartlist_add_asprintf(string_tmp, "%s-%s", t, bindaddr_tmp);
 
     tor_free(bindaddr_tmp);
-  } SMARTLIST_FOREACH_END(t);
+  } SMARTLIST_FOREACH_END (t);
 
   bindaddr_result = smartlist_join_strings(string_tmp, ",", 0, NULL);
 
@@ -1367,12 +1393,11 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
 
   {
     char *transports_to_launch =
-      smartlist_join_strings(mp->transports_to_launch, ",", 0, NULL);
+        smartlist_join_strings(mp->transports_to_launch, ",", 0, NULL);
 
     smartlist_add_asprintf(envs,
-                           mp->is_server ?
-                           "TOR_PT_SERVER_TRANSPORTS=%s" :
-                           "TOR_PT_CLIENT_TRANSPORTS=%s",
+                           mp->is_server ? "TOR_PT_SERVER_TRANSPORTS=%s"
+                                         : "TOR_PT_CLIENT_TRANSPORTS=%s",
                            transports_to_launch);
 
     tor_free(transports_to_launch);
@@ -1381,7 +1406,7 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
   if (mp->is_server) {
     {
       char *orport_tmp =
-        get_first_listener_addrport_string(CONN_TYPE_OR_LISTENER);
+          get_first_listener_addrport_string(CONN_TYPE_OR_LISTENER);
       if (orport_tmp) {
         smartlist_add_asprintf(envs, "TOR_PT_ORPORT=%s", orport_tmp);
         tor_free(orport_tmp);
@@ -1396,7 +1421,7 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
 
     {
       char *server_transport_options =
-        get_transport_options_for_server_proxy(mp);
+          get_transport_options_for_server_proxy(mp);
       if (server_transport_options) {
         smartlist_add_asprintf(envs, "TOR_PT_SERVER_TRANSPORT_OPTIONS=%s",
                                server_transport_options);
@@ -1413,7 +1438,7 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
 
     if (options->ExtORPort_lines) {
       char *ext_or_addrport_tmp =
-        get_first_listener_addrport_string(CONN_TYPE_EXT_OR_LISTENER);
+          get_first_listener_addrport_string(CONN_TYPE_EXT_OR_LISTENER);
       char *cookie_file_loc = get_ext_or_auth_cookie_file_name();
 
       if (ext_or_addrport_tmp) {
@@ -1444,10 +1469,10 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
    */
   smartlist_add_asprintf(envs, "TOR_PT_EXIT_ON_STDIN_CLOSE=1");
 
-  SMARTLIST_FOREACH_BEGIN(envs, const char *, env_var) {
-    set_environment_variable_in_smartlist(merged_env_vars, env_var,
-                                          tor_free_, 1);
-  } SMARTLIST_FOREACH_END(env_var);
+  SMARTLIST_FOREACH_BEGIN (envs, const char *, env_var) {
+    set_environment_variable_in_smartlist(merged_env_vars, env_var, tor_free_,
+                                          1);
+  } SMARTLIST_FOREACH_END (env_var);
 
   smartlist_free(envs);
 
@@ -1461,8 +1486,8 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
  *
  * Requires that proxy_argv have at least one element. */
 STATIC managed_proxy_t *
-managed_proxy_create(const smartlist_t *with_transport_list,
-                     char **proxy_argv, int is_server)
+managed_proxy_create(const smartlist_t *with_transport_list, char **proxy_argv,
+                     int is_server)
 {
   managed_proxy_t *mp = tor_malloc_zero(sizeof(managed_proxy_t));
   mp->conf_state = PT_PROTO_INFANT;
@@ -1497,10 +1522,11 @@ managed_proxy_create(const smartlist_t *with_transport_list,
  * elements, containing at least one element.
  **/
 MOCK_IMPL(void,
-pt_kickstart_proxy, (const smartlist_t *with_transport_list,
-                     char **proxy_argv, int is_server))
+pt_kickstart_proxy,
+          (const smartlist_t *with_transport_list, char **proxy_argv,
+           int is_server))
 {
-  managed_proxy_t *mp=NULL;
+  managed_proxy_t *mp = NULL;
   transport_t *old_transport = NULL;
 
   if (!proxy_argv || !proxy_argv[0]) {
@@ -1527,11 +1553,11 @@ pt_kickstart_proxy, (const smartlist_t *with_transport_list,
       /* For each new transport, check if the managed proxy used to
          support it before the SIGHUP. If that was the case, make sure
          it doesn't get removed because we might reuse it. */
-      SMARTLIST_FOREACH_BEGIN(with_transport_list, const char *, transport) {
+      SMARTLIST_FOREACH_BEGIN (with_transport_list, const char *, transport) {
         old_transport = transport_get_by_name(transport);
         if (old_transport)
           old_transport->marked_for_removal = 0;
-      } SMARTLIST_FOREACH_END(transport);
+      } SMARTLIST_FOREACH_END (transport);
     }
 
     SMARTLIST_FOREACH(with_transport_list, const char *, transport,
@@ -1564,7 +1590,7 @@ pt_prepare_proxy_list_for_config_read(void)
     return;
 
   assert_unconfigured_count_ok();
-  SMARTLIST_FOREACH_BEGIN(managed_proxy_list, managed_proxy_t *, mp) {
+  SMARTLIST_FOREACH_BEGIN (managed_proxy_list, managed_proxy_t *, mp) {
     /* Destroy unconfigured proxies. */
     if (mp->conf_state != PT_PROTO_COMPLETED) {
       SMARTLIST_DEL_CURRENT(managed_proxy_list, mp);
@@ -1581,7 +1607,7 @@ pt_prepare_proxy_list_for_config_read(void)
     mp->was_around_before_config_read = 1;
     SMARTLIST_FOREACH(mp->transports_to_launch, char *, t, tor_free(t));
     smartlist_clear(mp->transports_to_launch);
-  } SMARTLIST_FOREACH_END(mp);
+  } SMARTLIST_FOREACH_END (mp);
 
   assert_unconfigured_count_ok();
 
@@ -1600,17 +1626,17 @@ get_transport_proxy_ports(void)
 
   /** XXX assume that external proxy ports have been forwarded
       manually */
-  SMARTLIST_FOREACH_BEGIN(managed_proxy_list, const managed_proxy_t *, mp) {
+  SMARTLIST_FOREACH_BEGIN (managed_proxy_list, const managed_proxy_t *, mp) {
     if (!mp->is_server || mp->conf_state != PT_PROTO_COMPLETED)
       continue;
 
-    if (!sl) sl = smartlist_new();
+    if (!sl)
+      sl = smartlist_new();
 
     tor_assert(mp->transports);
     SMARTLIST_FOREACH(mp->transports, const transport_t *, t,
                       smartlist_add_asprintf(sl, "%u:%u", t->port, t->port));
-
-  } SMARTLIST_FOREACH_END(mp);
+  } SMARTLIST_FOREACH_END (mp);
 
   return sl;
 }
@@ -1632,13 +1658,13 @@ pt_get_extra_info_descriptor_string(void)
   string_chunks = smartlist_new();
 
   /* For each managed proxy, add its transports to the chunks list. */
-  SMARTLIST_FOREACH_BEGIN(managed_proxy_list,  const managed_proxy_t *, mp) {
+  SMARTLIST_FOREACH_BEGIN (managed_proxy_list, const managed_proxy_t *, mp) {
     if ((!mp->is_server) || (mp->conf_state != PT_PROTO_COMPLETED))
       continue;
 
     tor_assert(mp->transports);
 
-    SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
+    SMARTLIST_FOREACH_BEGIN (mp->transports, const transport_t *, t) {
       char *transport_args = NULL;
 
       /* If the transport proxy returned "0.0.0.0" as its address, and
@@ -1647,8 +1673,8 @@ pt_get_extra_info_descriptor_string(void)
       const char *addrport = NULL;
       uint32_t external_ip_address = 0;
       if (tor_addr_is_null(&t->addr) &&
-          router_pick_published_address(get_options(),
-                                        &external_ip_address, 0) >= 0) {
+          router_pick_published_address(get_options(), &external_ip_address,
+                                        0) >= 0) {
         tor_addr_t addr;
         tor_addr_from_ipv4h(&addr, external_ip_address);
         addrport = fmt_addrport(&addr, t->port);
@@ -1661,14 +1687,11 @@ pt_get_extra_info_descriptor_string(void)
       if (t->extra_info_args)
         tor_asprintf(&transport_args, " %s", t->extra_info_args);
 
-      smartlist_add_asprintf(string_chunks,
-                             "transport %s %s%s",
-                             t->name, addrport,
-                             transport_args ? transport_args : "");
+      smartlist_add_asprintf(string_chunks, "transport %s %s%s", t->name,
+                             addrport, transport_args ? transport_args : "");
       tor_free(transport_args);
-    } SMARTLIST_FOREACH_END(t);
-
-  } SMARTLIST_FOREACH_END(mp);
+    } SMARTLIST_FOREACH_END (t);
+  } SMARTLIST_FOREACH_END (mp);
 
   if (smartlist_len(string_chunks) == 0) {
     smartlist_free(string_chunks);
@@ -1701,18 +1724,18 @@ pt_stringify_socks_args(const smartlist_t *socks_args)
 
   sl_tmp = smartlist_new();
 
-  SMARTLIST_FOREACH_BEGIN(socks_args, const char *, s) {
+  SMARTLIST_FOREACH_BEGIN (socks_args, const char *, s) {
     /* Escape ';' and '\'. */
     escaped_string = tor_escape_str_for_pt_args(s, ";\\");
     if (!escaped_string)
       goto done;
 
     smartlist_add(sl_tmp, escaped_string);
-  } SMARTLIST_FOREACH_END(s);
+  } SMARTLIST_FOREACH_END (s);
 
   new_string = smartlist_join_strings(sl_tmp, ";", 0, NULL);
 
- done:
+done:
   SMARTLIST_FOREACH(sl_tmp, char *, s, tor_free(s));
   smartlist_free(sl_tmp);
 
@@ -1745,12 +1768,12 @@ sweep_proxy_list(void)
   if (!managed_proxy_list)
     return;
   assert_unconfigured_count_ok();
-  SMARTLIST_FOREACH_BEGIN(managed_proxy_list, managed_proxy_t *, mp) {
+  SMARTLIST_FOREACH_BEGIN (managed_proxy_list, managed_proxy_t *, mp) {
     if (mp->marked_for_removal) {
       SMARTLIST_DEL_CURRENT(managed_proxy_list, mp);
       managed_proxy_destroy(mp, 1);
     }
-  } SMARTLIST_FOREACH_END(mp);
+  } SMARTLIST_FOREACH_END (mp);
   assert_unconfigured_count_ok();
 }
 
@@ -1770,12 +1793,12 @@ pt_free_all(void)
        free them. Otherwise, it hasn't registered its transports yet
        and we should free them here. */
     SMARTLIST_FOREACH(managed_proxy_list, managed_proxy_t *, mp, {
-        SMARTLIST_DEL_CURRENT(managed_proxy_list, mp);
-        managed_proxy_destroy(mp, 1);
+      SMARTLIST_DEL_CURRENT(managed_proxy_list, mp);
+      managed_proxy_destroy(mp, 1);
     });
 
     smartlist_free(managed_proxy_list);
-    managed_proxy_list=NULL;
+    managed_proxy_list = NULL;
   }
 }
 
@@ -1796,7 +1819,7 @@ tor_escape_str_for_pt_args(const char *string, const char *chars_to_escape)
     return tor_strdup("");
   /* (new_length > SIZE_MAX) => ((length * 2) + 1 > SIZE_MAX) =>
      (length*2 > SIZE_MAX - 1) => (length > (SIZE_MAX - 1)/2) */
-  if (length > (SIZE_MAX - 1)/2) /* check for overflow */
+  if (length > (SIZE_MAX - 1) / 2) /* check for overflow */
     return NULL;
 
   /* this should be enough even if all characters must be escaped */
@@ -1820,8 +1843,7 @@ tor_escape_str_for_pt_args(const char *string, const char *chars_to_escape)
  * stdout. Our process can be found in <b>process</b>, the data can be found in
  * <b>line</b> and the length of our line is given in <b>size</b>. */
 STATIC void
-managed_proxy_stdout_callback(process_t *process,
-                              const char *line,
+managed_proxy_stdout_callback(process_t *process, const char *line,
                               size_t size)
 {
   tor_assert(process);
@@ -1844,8 +1866,7 @@ managed_proxy_stdout_callback(process_t *process,
  * stderr. Our process can be found in <b>process</b>, the data can be found in
  * <b>line</b> and the length of our line is given in <b>size</b>. */
 STATIC void
-managed_proxy_stderr_callback(process_t *process,
-                              const char *line,
+managed_proxy_stderr_callback(process_t *process, const char *line,
                               size_t size)
 {
   tor_assert(process);
@@ -1858,8 +1879,7 @@ managed_proxy_stderr_callback(process_t *process,
   if (BUG(mp == NULL))
     return;
 
-  log_info(LD_PT,
-           "Managed proxy at '%s' reported via standard error: %s",
+  log_info(LD_PT, "Managed proxy at '%s' reported via standard error: %s",
            mp->argv[0], line);
 }
 
@@ -1873,8 +1893,8 @@ managed_proxy_exit_callback(process_t *process, process_exit_code_t exit_code)
   tor_assert(process);
 
   log_warn(LD_PT,
-          "Pluggable Transport process terminated with status code %" PRIu64,
-          exit_code);
+           "Pluggable Transport process terminated with status code %" PRIu64,
+           exit_code);
 
   /* Returning true here means that the process subsystem will take care of
    * calling process_free() on our process_t. */
@@ -1890,19 +1910,19 @@ managed_proxy_severity_parse(const char *severity)
   tor_assert(severity);
 
   /* Slightly different than log.c's parse_log_level :-( */
-  if (! strcmp(severity, "debug"))
+  if (!strcmp(severity, "debug"))
     return LOG_DEBUG;
 
-  if (! strcmp(severity, "info"))
+  if (!strcmp(severity, "info"))
     return LOG_INFO;
 
-  if (! strcmp(severity, "notice"))
+  if (!strcmp(severity, "notice"))
     return LOG_NOTICE;
 
-  if (! strcmp(severity, "warning"))
+  if (!strcmp(severity, "warning"))
     return LOG_WARN;
 
-  if (! strcmp(severity, "error"))
+  if (!strcmp(severity, "error"))
     return LOG_ERR;
 
   return -1;

@@ -50,9 +50,9 @@
  * The meeting point/cookies and auth are zeroed out for now.
  */
 int
-onion_skin_TAP_create(crypto_pk_t *dest_router_key,
-                  crypto_dh_t **handshake_state_out,
-                  char *onion_skin_out) /* TAP_ONIONSKIN_CHALLENGE_LEN bytes */
+onion_skin_TAP_create(
+    crypto_pk_t *dest_router_key, crypto_dh_t **handshake_state_out,
+    char *onion_skin_out) /* TAP_ONIONSKIN_CHALLENGE_LEN bytes */
 {
   char challenge[DH1024_KEY_LEN];
   crypto_dh_t *dh = NULL;
@@ -68,7 +68,7 @@ onion_skin_TAP_create(crypto_pk_t *dest_router_key,
     goto err;
 
   dhbytes = crypto_dh_get_bytes(dh);
-  pkbytes = (int) crypto_pk_keysize(dest_router_key);
+  pkbytes = (int)crypto_pk_keysize(dest_router_key);
   tor_assert(dhbytes == 128);
   tor_assert(pkbytes == 128);
 
@@ -76,22 +76,22 @@ onion_skin_TAP_create(crypto_pk_t *dest_router_key,
     goto err;
 
   /* set meeting point, meeting cookie, etc here. Leave zero for now. */
-  if (crypto_pk_obsolete_public_hybrid_encrypt(dest_router_key, onion_skin_out,
-                                      TAP_ONIONSKIN_CHALLENGE_LEN,
-                                      challenge, DH1024_KEY_LEN,
-                                      PK_PKCS1_OAEP_PADDING, 1)<0)
+  if (crypto_pk_obsolete_public_hybrid_encrypt(
+          dest_router_key, onion_skin_out, TAP_ONIONSKIN_CHALLENGE_LEN,
+          challenge, DH1024_KEY_LEN, PK_PKCS1_OAEP_PADDING, 1) < 0)
     goto err;
 
   memwipe(challenge, 0, sizeof(challenge));
   *handshake_state_out = dh;
 
   return 0;
- err:
+err:
   /* LCOV_EXCL_START
    * We only get here if RSA encryption fails or DH keygen fails. Those
    * shouldn't be possible. */
   memwipe(challenge, 0, sizeof(challenge));
-  if (dh) crypto_dh_free(dh);
+  if (dh)
+    crypto_dh_free(dh);
   return -1;
   /* LCOV_EXCL_STOP */
 }
@@ -103,44 +103,38 @@ onion_skin_TAP_create(crypto_pk_t *dest_router_key,
  */
 int
 onion_skin_TAP_server_handshake(
-                            /*TAP_ONIONSKIN_CHALLENGE_LEN*/
-                            const char *onion_skin,
-                            crypto_pk_t *private_key,
-                            crypto_pk_t *prev_private_key,
-                            /*TAP_ONIONSKIN_REPLY_LEN*/
-                            char *handshake_reply_out,
-                            char *key_out,
-                            size_t key_out_len)
+    /*TAP_ONIONSKIN_CHALLENGE_LEN*/
+    const char *onion_skin, crypto_pk_t *private_key,
+    crypto_pk_t *prev_private_key,
+    /*TAP_ONIONSKIN_REPLY_LEN*/
+    char *handshake_reply_out, char *key_out, size_t key_out_len)
 {
   char challenge[TAP_ONIONSKIN_CHALLENGE_LEN];
   crypto_dh_t *dh = NULL;
   ssize_t len;
-  char *key_material=NULL;
-  size_t key_material_len=0;
+  char *key_material = NULL;
+  size_t key_material_len = 0;
   int i;
   crypto_pk_t *k;
 
   len = -1;
-  for (i=0;i<2;++i) {
-    k = i==0?private_key:prev_private_key;
+  for (i = 0; i < 2; ++i) {
+    k = i == 0 ? private_key : prev_private_key;
     if (!k)
       break;
-    len = crypto_pk_obsolete_private_hybrid_decrypt(k, challenge,
-                                           TAP_ONIONSKIN_CHALLENGE_LEN,
-                                           onion_skin,
-                                           TAP_ONIONSKIN_CHALLENGE_LEN,
-                                           PK_PKCS1_OAEP_PADDING,0);
-    if (len>0)
+    len = crypto_pk_obsolete_private_hybrid_decrypt(
+        k, challenge, TAP_ONIONSKIN_CHALLENGE_LEN, onion_skin,
+        TAP_ONIONSKIN_CHALLENGE_LEN, PK_PKCS1_OAEP_PADDING, 0);
+    if (len > 0)
       break;
   }
-  if (len<0) {
+  if (len < 0) {
     log_info(LD_PROTOCOL,
              "Couldn't decrypt onionskin: client may be using old onion key");
     goto err;
   } else if (len != DH1024_KEY_LEN) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Unexpected onionskin length after decryption: %ld",
-           (long)len);
+           "Unexpected onionskin length after decryption: %ld", (long)len);
     goto err;
   }
 
@@ -162,34 +156,35 @@ onion_skin_TAP_server_handshake(
     /* LCOV_EXCL_STOP */
   }
 
-  key_material_len = DIGEST_LEN+key_out_len;
+  key_material_len = DIGEST_LEN + key_out_len;
   key_material = tor_malloc(key_material_len);
-  len = crypto_dh_compute_secret(LOG_PROTOCOL_WARN, dh, challenge,
-                                 DH1024_KEY_LEN, key_material,
-                                 key_material_len);
+  len =
+      crypto_dh_compute_secret(LOG_PROTOCOL_WARN, dh, challenge,
+                               DH1024_KEY_LEN, key_material, key_material_len);
   if (len < 0) {
     log_info(LD_GENERAL, "crypto_dh_compute_secret failed.");
     goto err;
   }
 
   /* send back H(K|0) as proof that we learned K. */
-  memcpy(handshake_reply_out+DH1024_KEY_LEN, key_material, DIGEST_LEN);
+  memcpy(handshake_reply_out + DH1024_KEY_LEN, key_material, DIGEST_LEN);
 
   /* use the rest of the key material for our shared keys, digests, etc */
-  memcpy(key_out, key_material+DIGEST_LEN, key_out_len);
+  memcpy(key_out, key_material + DIGEST_LEN, key_out_len);
 
   memwipe(challenge, 0, sizeof(challenge));
   memwipe(key_material, 0, key_material_len);
   tor_free(key_material);
   crypto_dh_free(dh);
   return 0;
- err:
+err:
   memwipe(challenge, 0, sizeof(challenge));
   if (key_material) {
     memwipe(key_material, 0, key_material_len);
     tor_free(key_material);
   }
-  if (dh) crypto_dh_free(dh);
+  if (dh)
+    crypto_dh_free(dh);
 
   return -1;
 }
@@ -204,14 +199,13 @@ onion_skin_TAP_server_handshake(
  * After the invocation, call crypto_dh_free on handshake_state.
  */
 int
-onion_skin_TAP_client_handshake(crypto_dh_t *handshake_state,
-            const char *handshake_reply, /* TAP_ONIONSKIN_REPLY_LEN bytes */
-            char *key_out,
-            size_t key_out_len,
-            const char **msg_out)
+onion_skin_TAP_client_handshake(
+    crypto_dh_t *handshake_state,
+    const char *handshake_reply, /* TAP_ONIONSKIN_REPLY_LEN bytes */
+    char *key_out, size_t key_out_len, const char **msg_out)
 {
   ssize_t len;
-  char *key_material=NULL;
+  char *key_material = NULL;
   size_t key_material_len;
   tor_assert(crypto_dh_get_bytes(handshake_state) == DH1024_KEY_LEN);
 
@@ -226,7 +220,7 @@ onion_skin_TAP_client_handshake(crypto_dh_t *handshake_state,
     goto err;
   }
 
-  if (tor_memneq(key_material, handshake_reply+DH1024_KEY_LEN, DIGEST_LEN)) {
+  if (tor_memneq(key_material, handshake_reply + DH1024_KEY_LEN, DIGEST_LEN)) {
     /* H(K) does *not* match. Something fishy. */
     if (msg_out)
       *msg_out = "Digest DOES NOT MATCH on onion handshake. Bug or attack.";
@@ -234,12 +228,12 @@ onion_skin_TAP_client_handshake(crypto_dh_t *handshake_state,
   }
 
   /* use the rest of the key material for our shared keys, digests, etc */
-  memcpy(key_out, key_material+DIGEST_LEN, key_out_len);
+  memcpy(key_out, key_material + DIGEST_LEN, key_out_len);
 
   memwipe(key_material, 0, key_material_len);
   tor_free(key_material);
   return 0;
- err:
+err:
   memwipe(key_material, 0, key_material_len);
   tor_free(key_material);
   return -1;

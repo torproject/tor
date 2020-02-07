@@ -21,22 +21,22 @@
 
 #ifdef _WIN32
 /* We need these for struct stat to work */
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
-#endif
+#  ifdef HAVE_SYS_TYPES_H
+#    include <sys/types.h>
+#  endif
+#  ifdef HAVE_SYS_STAT_H
+#    include <sys/stat.h>
+#  endif
 #endif /* defined(_WIN32) */
 
 #ifndef O_BINARY
-#define O_BINARY 0
+#  define O_BINARY 0
 #endif
 #ifndef O_TEXT
-#define O_TEXT 0
+#  define O_TEXT 0
 #endif
 #ifndef O_NOFOLLOW
-#define O_NOFOLLOW 0
+#  define O_NOFOLLOW 0
 #endif
 
 struct stat;
@@ -48,7 +48,7 @@ int tor_rename(const char *path_old, const char *path_new);
 int replace_file(const char *from, const char *to);
 int touch_file(const char *fname);
 
-MOCK_DECL(int,tor_unlink,(const char *pathname));
+MOCK_DECL(int, tor_unlink, (const char *pathname));
 
 /** Return values from file_status(); see that function's documentation
  * for details. */
@@ -61,9 +61,9 @@ int64_t tor_get_avail_disk_space(const char *path);
 ssize_t write_all_to_fd(int fd, const char *buf, size_t count);
 ssize_t read_all_from_fd(int fd, char *buf, size_t count);
 
-#define OPEN_FLAGS_REPLACE (O_WRONLY|O_CREAT|O_TRUNC)
-#define OPEN_FLAGS_APPEND (O_WRONLY|O_CREAT|O_APPEND)
-#define OPEN_FLAGS_DONT_REPLACE (O_CREAT|O_EXCL|O_APPEND|O_WRONLY)
+#define OPEN_FLAGS_REPLACE (O_WRONLY | O_CREAT | O_TRUNC)
+#define OPEN_FLAGS_APPEND (O_WRONLY | O_CREAT | O_APPEND)
+#define OPEN_FLAGS_DONT_REPLACE (O_CREAT | O_EXCL | O_APPEND | O_WRONLY)
 typedef struct open_file_t open_file_t;
 int start_writing_to_file(const char *fname, int open_flags, int mode,
                           open_file_t **data_out);
@@ -72,10 +72,10 @@ FILE *start_writing_to_stdio_file(const char *fname, int open_flags, int mode,
 FILE *fdopen_file(open_file_t *file_data);
 int finish_writing_to_file(open_file_t *file_data);
 int abort_writing_to_file(open_file_t *file_data);
-MOCK_DECL(int, write_str_to_file,(const char *fname, const char *str,
-                                  int bin));
-MOCK_DECL(int, write_bytes_to_file,(const char *fname, const char *str,
-                                    size_t len,int bin));
+MOCK_DECL(int, write_str_to_file,
+          (const char *fname, const char *str, int bin));
+MOCK_DECL(int, write_bytes_to_file,
+          (const char *fname, const char *str, size_t len, int bin));
 
 /** An ad-hoc type to hold a string of characters and a count; used by
  * write_chunks_to_file. */
@@ -92,16 +92,15 @@ int write_bytes_to_new_file(const char *fname, const char *str, size_t len,
                             int bin);
 
 /** Flag for read_file_to_str: open the file in binary mode. */
-#define RFTS_BIN            1
+#define RFTS_BIN 1
 /** Flag for read_file_to_str: it's okay if the file doesn't exist. */
 #define RFTS_IGNORE_MISSING 2
 
-MOCK_DECL_ATTR(char *, read_file_to_str,(const char *filename, int flags,
-                                         struct stat *stat_out),
+MOCK_DECL_ATTR(char *, read_file_to_str,
+               (const char *filename, int flags, struct stat *stat_out),
                ATTR_MALLOC);
 char *read_file_to_str_until_eof(int fd, size_t max_bytes_to_read,
-                                 size_t *sz_out)
-  ATTR_MALLOC;
+                                 size_t *sz_out) ATTR_MALLOC;
 
 #if !defined(HAVE_GETDELIM) || defined(TOR_UNIT_TESTS)
 /** Internal back-end function to implement getdelim(): only exists when
@@ -121,11 +120,11 @@ ssize_t compat_getdelim_(char **lineptr, size_t *n, int delim, FILE *stream);
  * passed to this function must come from raw_malloc(), and must be freed by
  * raw_free() -- don't use tor_malloc() and tor_free() with this.
  */
-#define tor_getdelim(lineptr, n, delim, stream) \
-  getdelim((lineptr), (n), (delim), (stream))
+#  define tor_getdelim(lineptr, n, delim, stream) \
+    getdelim((lineptr), (n), (delim), (stream))
 #else /* !defined(HAVE_GETDELIM) */
-#define tor_getdelim(lineptr, n, delim, stream) \
-  compat_getdelim_((lineptr), (n), (delim), (stream))
+#  define tor_getdelim(lineptr, n, delim, stream) \
+    compat_getdelim_((lineptr), (n), (delim), (stream))
 #endif /* defined(HAVE_GETDELIM) */
 
 #ifdef HAVE_GETLINE
@@ -135,11 +134,10 @@ ssize_t compat_getdelim_(char **lineptr, size_t *n, int delim, FILE *stream);
  *
  * See tor_getdelim() for usage notes.
  */
-#define tor_getline(lineptr, n, stream) \
-  getline((lineptr), (n), (stream))
+#  define tor_getline(lineptr, n, stream) getline((lineptr), (n), (stream))
 #else /* !defined(HAVE_GETLINE) */
-#define tor_getline(lineptr, n, stream) \
-  tor_getdelim((lineptr), (n), '\n', (stream))
+#  define tor_getline(lineptr, n, stream) \
+    tor_getdelim((lineptr), (n), '\n', (stream))
 #endif /* defined(HAVE_GETLINE) */
 
 #endif /* !defined(TOR_FS_H) */

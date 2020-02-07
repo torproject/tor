@@ -17,12 +17,11 @@
 
 /** A shorter version of this Tor process's version, for export in our router
  *  descriptor.  (Does not include the git version, if any.) */
-static const char the_short_tor_version[] =
-  VERSION
+static const char the_short_tor_version[] = VERSION
 #ifdef TOR_BUILD_TAG
-  " ("TOR_BUILD_TAG")"
+    " (" TOR_BUILD_TAG ")"
 #endif
-  "";
+    "";
 
 /**
  * Longest possible version length. We make this a constant so that we
@@ -39,13 +38,13 @@ get_version(void)
 {
   if (the_tor_version[0] == 0) {
     if (strlen(tor_git_revision)) {
-      snprintf(the_tor_version, sizeof(the_tor_version),
-               "%s (git-%s)", the_short_tor_version, tor_git_revision);
+      snprintf(the_tor_version, sizeof(the_tor_version), "%s (git-%s)",
+               the_short_tor_version, tor_git_revision);
     } else {
-      snprintf(the_tor_version, sizeof(the_tor_version),
-               "%s", the_short_tor_version);
+      snprintf(the_tor_version, sizeof(the_tor_version), "%s",
+               the_short_tor_version);
     }
-    the_tor_version[sizeof(the_tor_version)-1] = 0;
+    the_tor_version[sizeof(the_tor_version) - 1] = 0;
   }
 
   return the_tor_version;

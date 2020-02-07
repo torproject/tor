@@ -30,11 +30,9 @@ typedef enum {
 /** Maximum allowable length of a version line in a networkstatus. */
 #define MAX_V_LINE_LEN 128
 
-char *routerstatus_format_entry(
-                              const routerstatus_t *rs,
-                              const char *version,
-                              const char *protocols,
-                              routerstatus_format_type_t format,
-                              const vote_routerstatus_t *vrs);
+char *routerstatus_format_entry(const routerstatus_t *rs, const char *version,
+                                const char *protocols,
+                                routerstatus_format_type_t format,
+                                const vote_routerstatus_t *vrs);
 
 #endif /* !defined(TOR_FMT_ROUTERSTATUS_H) */

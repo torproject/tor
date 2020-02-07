@@ -18,13 +18,13 @@
 #include "lib/log/util_bug.h"
 
 #ifdef ENABLE_OPENSSL
-#include <openssl/evp.h>
-#include <openssl/opensslv.h>
+#  include <openssl/evp.h>
+#  include <openssl/opensslv.h>
 
-#if defined(HAVE_ERR_LOAD_KDF_STRINGS)
-#include <openssl/kdf.h>
-#define HAVE_OPENSSL_HKDF 1
-#endif
+#  if defined(HAVE_ERR_LOAD_KDF_STRINGS)
+#    include <openssl/kdf.h>
+#    define HAVE_OPENSSL_HKDF 1
+#  endif
 #endif /* defined(ENABLE_OPENSSL) */
 
 #include <string.h>
@@ -44,24 +44,24 @@ crypto_expand_key_material_TAP(const uint8_t *key_in, size_t key_in_len,
                                uint8_t *key_out, size_t key_out_len)
 {
   int i, r = -1;
-  uint8_t *cp, *tmp = tor_malloc(key_in_len+1);
+  uint8_t *cp, *tmp = tor_malloc(key_in_len + 1);
   uint8_t digest[DIGEST_LEN];
 
   /* If we try to get more than this amount of key data, we'll repeat blocks.*/
-  tor_assert(key_out_len <= DIGEST_LEN*256);
+  tor_assert(key_out_len <= DIGEST_LEN * 256);
 
   memcpy(tmp, key_in, key_in_len);
-  for (cp = key_out, i=0; cp < key_out+key_out_len;
+  for (cp = key_out, i = 0; cp < key_out + key_out_len;
        ++i, cp += DIGEST_LEN) {
     tmp[key_in_len] = i;
-    if (crypto_digest((char*)digest, (const char *)tmp, key_in_len+1) < 0)
+    if (crypto_digest((char *)digest, (const char *)tmp, key_in_len + 1) < 0)
       goto exit;
-    memcpy(cp, digest, MIN(DIGEST_LEN, key_out_len-(cp-key_out)));
+    memcpy(cp, digest, MIN(DIGEST_LEN, key_out_len - (cp - key_out)));
   }
 
   r = 0;
- exit:
-  memwipe(tmp, 0, key_in_len+1);
+exit:
+  memwipe(tmp, 0, key_in_len + 1);
   tor_free(tmp);
   memwipe(digest, 0, sizeof(digest));
   return r;
@@ -76,10 +76,9 @@ crypto_expand_key_material_TAP(const uint8_t *key_in, size_t key_in_len,
  */
 static int
 crypto_expand_key_material_rfc5869_sha256_openssl(
-                                    const uint8_t *key_in, size_t key_in_len,
-                                    const uint8_t *salt_in, size_t salt_in_len,
-                                    const uint8_t *info_in, size_t info_in_len,
-                                    uint8_t *key_out, size_t key_out_len)
+    const uint8_t *key_in, size_t key_in_len, const uint8_t *salt_in,
+    size_t salt_in_len, const uint8_t *info_in, size_t info_in_len,
+    uint8_t *key_out, size_t key_out_len)
 {
   int r;
   EVP_PKEY_CTX *evp_pkey_ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
@@ -117,10 +116,9 @@ crypto_expand_key_material_rfc5869_sha256_openssl(
  */
 static int
 crypto_expand_key_material_rfc5869_sha256_legacy(
-                                    const uint8_t *key_in, size_t key_in_len,
-                                    const uint8_t *salt_in, size_t salt_in_len,
-                                    const uint8_t *info_in, size_t info_in_len,
-                                    uint8_t *key_out, size_t key_out_len)
+    const uint8_t *key_in, size_t key_in_len, const uint8_t *salt_in,
+    size_t salt_in_len, const uint8_t *info_in, size_t info_in_len,
+    uint8_t *key_out, size_t key_out_len)
 {
   uint8_t prk[DIGEST256_LEN];
   uint8_t tmp[DIGEST256_LEN + 128 + 1];
@@ -129,9 +127,8 @@ crypto_expand_key_material_rfc5869_sha256_legacy(
   uint8_t *outp;
   size_t tmp_len;
 
-  crypto_hmac_sha256((char*)prk,
-                     (const char*)salt_in, salt_in_len,
-                     (const char*)key_in, key_in_len);
+  crypto_hmac_sha256((char *)prk, (const char *)salt_in, salt_in_len,
+                     (const char *)key_in, key_in_len);
 
   /* If we try to get more than this amount of key data, we'll repeat blocks.*/
   tor_assert(key_out_len <= DIGEST256_LEN * 256);
@@ -144,17 +141,16 @@ crypto_expand_key_material_rfc5869_sha256_legacy(
     size_t n;
     if (i > 1) {
       memcpy(tmp, mac, DIGEST256_LEN);
-      memcpy(tmp+DIGEST256_LEN, info_in, info_in_len);
-      tmp[DIGEST256_LEN+info_in_len] = i;
+      memcpy(tmp + DIGEST256_LEN, info_in, info_in_len);
+      tmp[DIGEST256_LEN + info_in_len] = i;
       tmp_len = DIGEST256_LEN + info_in_len + 1;
     } else {
       memcpy(tmp, info_in, info_in_len);
       tmp[info_in_len] = i;
       tmp_len = info_in_len + 1;
     }
-    crypto_hmac_sha256((char*)mac,
-                       (const char*)prk, DIGEST256_LEN,
-                       (const char*)tmp, tmp_len);
+    crypto_hmac_sha256((char *)mac, (const char *)prk, DIGEST256_LEN,
+                       (const char *)tmp, tmp_len);
     n = key_out_len < DIGEST256_LEN ? key_out_len : DIGEST256_LEN;
     memcpy(outp, mac, n);
     key_out_len -= n;
@@ -177,25 +173,20 @@ crypto_expand_key_material_rfc5869_sha256_legacy(
  */
 int
 crypto_expand_key_material_rfc5869_sha256(
-                                    const uint8_t *key_in, size_t key_in_len,
-                                    const uint8_t *salt_in, size_t salt_in_len,
-                                    const uint8_t *info_in, size_t info_in_len,
-                                    uint8_t *key_out, size_t key_out_len)
+    const uint8_t *key_in, size_t key_in_len, const uint8_t *salt_in,
+    size_t salt_in_len, const uint8_t *info_in, size_t info_in_len,
+    uint8_t *key_out, size_t key_out_len)
 {
   tor_assert(key_in);
   tor_assert(key_in_len > 0);
 
 #ifdef HAVE_OPENSSL_HKDF
-  return crypto_expand_key_material_rfc5869_sha256_openssl(key_in,
-                                             key_in_len, salt_in,
-                                             salt_in_len, info_in,
-                                             info_in_len,
-                                             key_out, key_out_len);
+  return crypto_expand_key_material_rfc5869_sha256_openssl(
+      key_in, key_in_len, salt_in, salt_in_len, info_in, info_in_len, key_out,
+      key_out_len);
 #else /* !defined(HAVE_OPENSSL_HKDF) */
-  return crypto_expand_key_material_rfc5869_sha256_legacy(key_in,
-                                               key_in_len, salt_in,
-                                               salt_in_len, info_in,
-                                               info_in_len,
-                                               key_out, key_out_len);
+  return crypto_expand_key_material_rfc5869_sha256_legacy(
+      key_in, key_in_len, salt_in, salt_in_len, info_in, info_in_len, key_out,
+      key_out_len);
 #endif /* defined(HAVE_OPENSSL_HKDF) */
 }

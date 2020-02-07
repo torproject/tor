@@ -30,40 +30,40 @@
 
 #include "lib/cc/torint.h"
 #ifdef TOR_UNIT_TESTS
-#include "lib/conf/conftesting.h"
+#  include "lib/conf/conftesting.h"
 #endif
 
 #include <stddef.h>
 
 /** Enumeration of types which option values can take */
 typedef enum config_type_t {
-  CONFIG_TYPE_STRING = 0,   /**< An arbitrary string. */
-  CONFIG_TYPE_FILENAME,     /**< A filename: some prefixes get expanded. */
-  CONFIG_TYPE_POSINT,       /**< A non-negative integer less than MAX_INT */
-  CONFIG_TYPE_INT,          /**< Any integer. */
-  CONFIG_TYPE_UINT64,       /**< A value in range 0..UINT64_MAX */
-  CONFIG_TYPE_INTERVAL,     /**< A number of seconds, with optional units*/
-  CONFIG_TYPE_MSEC_INTERVAL,/**< A number of milliseconds, with optional
+  CONFIG_TYPE_STRING = 0, /**< An arbitrary string. */
+  CONFIG_TYPE_FILENAME, /**< A filename: some prefixes get expanded. */
+  CONFIG_TYPE_POSINT, /**< A non-negative integer less than MAX_INT */
+  CONFIG_TYPE_INT, /**< Any integer. */
+  CONFIG_TYPE_UINT64, /**< A value in range 0..UINT64_MAX */
+  CONFIG_TYPE_INTERVAL, /**< A number of seconds, with optional units*/
+  CONFIG_TYPE_MSEC_INTERVAL, /**< A number of milliseconds, with optional
                               * units */
-  CONFIG_TYPE_MEMUNIT,      /**< A number of bytes, with optional units*/
-  CONFIG_TYPE_DOUBLE,       /**< A floating-point value */
-  CONFIG_TYPE_BOOL,         /**< A boolean value, expressed as 0 or 1. */
-  CONFIG_TYPE_AUTOBOOL,     /**< A boolean+auto value, expressed 0 for false,
-                             * 1 for true, and -1 for auto  */
-  CONFIG_TYPE_ISOTIME,      /**< An ISO-formatted time relative to UTC. */
-  CONFIG_TYPE_CSV,          /**< A list of strings, separated by commas and
-                              * optional whitespace. */
+  CONFIG_TYPE_MEMUNIT, /**< A number of bytes, with optional units*/
+  CONFIG_TYPE_DOUBLE, /**< A floating-point value */
+  CONFIG_TYPE_BOOL, /**< A boolean value, expressed as 0 or 1. */
+  CONFIG_TYPE_AUTOBOOL, /**< A boolean+auto value, expressed 0 for false,
+                         * 1 for true, and -1 for auto  */
+  CONFIG_TYPE_ISOTIME, /**< An ISO-formatted time relative to UTC. */
+  CONFIG_TYPE_CSV, /**< A list of strings, separated by commas and
+                    * optional whitespace. */
   CONFIG_TYPE_CSV_INTERVAL, /**< A list of strings, separated by commas and
-                              * optional whitespace, representing intervals in
-                              * seconds, with optional units.  We allow
-                              * multiple values here for legacy reasons, but
-                              * ignore every value after the first. */
-  CONFIG_TYPE_LINELIST,     /**< Uninterpreted config lines */
-  CONFIG_TYPE_LINELIST_S,   /**< Uninterpreted, context-sensitive config lines,
-                             * mixed with other keywords. */
-  CONFIG_TYPE_LINELIST_V,   /**< Catch-all "virtual" option to summarize
-                             * context-sensitive config lines when fetching.
-                             */
+                             * optional whitespace, representing intervals in
+                             * seconds, with optional units.  We allow
+                             * multiple values here for legacy reasons, but
+                             * ignore every value after the first. */
+  CONFIG_TYPE_LINELIST, /**< Uninterpreted config lines */
+  CONFIG_TYPE_LINELIST_S, /**< Uninterpreted, context-sensitive config lines,
+                           * mixed with other keywords. */
+  CONFIG_TYPE_LINELIST_V, /**< Catch-all "virtual" option to summarize
+                           * context-sensitive config lines when fetching.
+                           */
   /** Ignored (obsolete) option. Uses no storage.
    *
    * Reported as "obsolete" when its type is queried.
@@ -151,20 +151,20 @@ typedef struct struct_magic_decl_t {
  *
  * For historical reasons its name is usually is prefixed with __.
  **/
-#define CFLG_NODUMP    (1u<<0)
+#define CFLG_NODUMP (1u << 0)
 /**
  * Flag to indicate that an option or type is "unlisted".
  *
  * We don't tell the controller about unlisted options when it asks for a
  * list of them.
  **/
-#define CFLG_NOLIST (1u<<1)
+#define CFLG_NOLIST (1u << 1)
 /**
  * Flag to indicate that an option or type is "unsettable".
  *
  * An unsettable option can never be set directly by name.
  **/
-#define CFLG_NOSET (1u<<2)
+#define CFLG_NOSET (1u << 2)
 /**
  * Flag to indicate that an option or type does not need to be copied when
  * copying the structure that contains it.
@@ -173,7 +173,7 @@ typedef struct struct_magic_decl_t {
  * no data, or the data that it does contain is completely contained within
  * another option.)
  **/
-#define CFLG_NOCOPY (1u<<3)
+#define CFLG_NOCOPY (1u << 3)
 /**
  * Flag to indicate that an option or type does not need to be compared
  * when telling the controller about the differences between two
@@ -183,7 +183,7 @@ typedef struct struct_magic_decl_t {
  * contains no data, or the data that it does contain is completely contained
  * within another option.)
  **/
-#define CFLG_NOCMP (1u<<4)
+#define CFLG_NOCMP (1u << 4)
 /**
  * Flag to indicate that an option or type should not be replaced when setting
  * it.
@@ -191,35 +191,35 @@ typedef struct struct_magic_decl_t {
  * For most options, setting them replaces their old value.  For some options,
  * however, setting them appends to their old value.
  */
-#define CFLG_NOREPLACE    (1u<<5)
+#define CFLG_NOREPLACE (1u << 5)
 /**
  * Flag to indicate that an option or type cannot be changed while Tor is
  * running.
  **/
-#define CFLG_IMMUTABLE (1u<<6)
+#define CFLG_IMMUTABLE (1u << 6)
 /**
  * Flag to indicate that we should warn that an option or type is obsolete
  * whenever the user tries to use it.
  **/
-#define CFLG_WARN_OBSOLETE (1u<<7)
+#define CFLG_WARN_OBSOLETE (1u << 7)
 /**
  * Flag to indicate that we should warn that an option applies only to
  * a disabled module, whenever the user tries to use it.
  **/
-#define CFLG_WARN_DISABLED (1u<<8)
+#define CFLG_WARN_DISABLED (1u << 8)
 
 /**
  * A group of flags that should be set on all obsolete options and types.
  **/
-#define CFLG_GROUP_OBSOLETE \
-  (CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP|CFLG_NOSET|CFLG_NOLIST|\
+#define CFLG_GROUP_OBSOLETE                                            \
+  (CFLG_NOCOPY | CFLG_NOCMP | CFLG_NODUMP | CFLG_NOSET | CFLG_NOLIST | \
    CFLG_WARN_OBSOLETE)
 
 /**
  * A group of fflags that should be set on all disabled options.
  **/
-#define CFLG_GROUP_DISABLED \
-  (CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP|CFLG_NOSET|CFLG_NOLIST|\
+#define CFLG_GROUP_DISABLED                                            \
+  (CFLG_NOCOPY | CFLG_NOCMP | CFLG_NODUMP | CFLG_NOSET | CFLG_NOLIST | \
    CFLG_WARN_DISABLED)
 
 /** A variable allowed in the configuration file or on the command line. */
@@ -269,7 +269,10 @@ typedef struct config_deprecation_t {
  * For example, to declare "NumCpu" as an abbreviation for "NumCPUs",
  * you can say PLURAL(NumCpu).
  **/
-#define PLURAL(tok) { (#tok), (#tok "s"), 0, 0 }
+#  define PLURAL(tok)          \
+    {                          \
+      (#tok), (#tok "s"), 0, 0 \
+    }
 #endif /* !defined(COCCI) */
 
 /**
@@ -323,8 +326,7 @@ typedef int (*post_normalize_fn_t)(void *value, char **msg_out);
  * On success, return 0.  On failure, set *<b>msg_out</b> to a newly allocated
  * error message, and return -1.
  */
-typedef int (*legacy_validate_fn_t)(const void *oldval,
-                                    void *newval,
+typedef int (*legacy_validate_fn_t)(const void *oldval, void *newval,
                                     char **msg_out);
 
 struct config_mgr_t;
@@ -348,7 +350,7 @@ typedef struct config_format_t {
   size_t size; /**< Size of the struct that everything gets parsed into. */
   struct_magic_decl_t magic; /**< Magic number info for this struct. */
   const config_abbrev_t *abbrevs; /**< List of abbreviations that we expand
-                             * when parsing this format. */
+                                   * when parsing this format. */
   const config_deprecation_t *deprecations; /** List of deprecated options */
   const config_var_t *vars; /**< List of variables we recognize, their default
                              * values, and where we stick them in the
@@ -358,7 +360,7 @@ typedef struct config_format_t {
   pre_normalize_fn_t pre_normalize_fn;
   /** Configuration validation function. Invoked by config_validate(). */
   validate_fn_t validate_fn;
-    /** Legacy validation function. Invoked by config_validate(). */
+  /** Legacy validation function. Invoked by config_validate(). */
   legacy_validate_fn_t legacy_validate_fn;
   /** Transition checking function. Invoked by config_validate(). */
   check_transition_fn_t check_transition_fn;

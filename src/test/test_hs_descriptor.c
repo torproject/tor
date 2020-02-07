@@ -43,17 +43,17 @@ test_cert_encoding(void *arg)
   ed25519_secret_key_t secret_key;
   tor_cert_t *cert = NULL;
 
-  (void) arg;
+  (void)arg;
 
   ret = ed25519_keypair_generate(&kp, 0);
-  tt_int_op(ret, == , 0);
+  tt_int_op(ret, ==, 0);
   ret = ed25519_secret_key_generate(&secret_key, 0);
-  tt_int_op(ret, == , 0);
+  tt_int_op(ret, ==, 0);
   ret = ed25519_public_key_generate(&signed_key, &secret_key);
-  tt_int_op(ret, == , 0);
+  tt_int_op(ret, ==, 0);
 
-  cert = tor_cert_create(&kp, CERT_TYPE_SIGNING_AUTH, &signed_key,
-                         now, 3600 * 2, CERT_FLAG_INCLUDE_SIGNING_KEY);
+  cert = tor_cert_create(&kp, CERT_TYPE_SIGNING_AUTH, &signed_key, now,
+                         3600 * 2, CERT_FLAG_INCLUDE_SIGNING_KEY);
   tt_assert(cert);
 
   /* Test the certificate encoding function. */
@@ -78,7 +78,7 @@ test_cert_encoding(void *arg)
     ret = base64_decode(buf, sizeof(buf), b64_cert, b64_cert_len);
     tt_int_op(ret, OP_GT, 0);
     /* Parseable? */
-    parsed_cert = tor_cert_parse((uint8_t *) buf, ret);
+    parsed_cert = tor_cert_parse((uint8_t *)buf, ret);
     tt_assert(parsed_cert);
     /* Signature is valid? */
     ret = tor_cert_checksig(parsed_cert, &kp.pubkey, now + 10);
@@ -86,7 +86,7 @@ test_cert_encoding(void *arg)
     ret = tor_cert_eq(cert, parsed_cert);
     tt_int_op(ret, OP_EQ, 1);
     /* The cert did have the signing key? */
-    ret= ed25519_pubkey_eq(&parsed_cert->signing_key, &kp.pubkey);
+    ret = ed25519_pubkey_eq(&parsed_cert->signing_key, &kp.pubkey);
     tt_int_op(ret, OP_EQ, 1);
     tor_cert_free(parsed_cert);
 
@@ -97,7 +97,7 @@ test_cert_encoding(void *arg)
     tt_str_op(pos, OP_EQ, "");
   }
 
- done:
+done:
   tor_cert_free(cert);
   tor_free(encoded);
 }
@@ -112,22 +112,23 @@ test_descriptor_padding(void *arg)
 
 /* Example: if l = 129, the ceiled division gives 2 and then multiplied by 128
  * to give 256. With l = 127, ceiled division gives 1 then times 128. */
-#define PADDING_EXPECTED_LEN(l) \
+#define PADDING_EXPECTED_LEN(l)                          \
   CEIL_DIV(l, HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE) * \
-  HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE
+      HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE
 
-  (void) arg;
+  (void)arg;
 
   { /* test #1: no padding */
     plaintext_len = HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE;
     plaintext = tor_malloc(plaintext_len);
-    padded_len = build_plaintext_padding(plaintext, plaintext_len,
-                                         &padded_plaintext);
+    padded_len =
+        build_plaintext_padding(plaintext, plaintext_len, &padded_plaintext);
     tt_assert(padded_plaintext);
     tor_free(plaintext);
     /* Make sure our padding has been zeroed. */
-    tt_int_op(fast_mem_is_zero((char *) padded_plaintext + plaintext_len,
-                              padded_len - plaintext_len), OP_EQ, 1);
+    tt_int_op(fast_mem_is_zero((char *)padded_plaintext + plaintext_len,
+                               padded_len - plaintext_len),
+              OP_EQ, 1);
     tor_free(padded_plaintext);
     /* Never never have a padded length smaller than the plaintext. */
     tt_int_op(padded_len, OP_GE, plaintext_len);
@@ -138,13 +139,14 @@ test_descriptor_padding(void *arg)
     plaintext_len = HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE - 1;
     plaintext = tor_malloc(plaintext_len);
     padded_plaintext = NULL;
-    padded_len = build_plaintext_padding(plaintext, plaintext_len,
-                                         &padded_plaintext);
+    padded_len =
+        build_plaintext_padding(plaintext, plaintext_len, &padded_plaintext);
     tt_assert(padded_plaintext);
     tor_free(plaintext);
     /* Make sure our padding has been zeroed. */
-    tt_int_op(fast_mem_is_zero((char *) padded_plaintext + plaintext_len,
-                              padded_len - plaintext_len), OP_EQ, 1);
+    tt_int_op(fast_mem_is_zero((char *)padded_plaintext + plaintext_len,
+                               padded_len - plaintext_len),
+              OP_EQ, 1);
     tor_free(padded_plaintext);
     /* Never never have a padded length smaller than the plaintext. */
     tt_int_op(padded_len, OP_GE, plaintext_len);
@@ -155,20 +157,21 @@ test_descriptor_padding(void *arg)
     plaintext_len = HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE + 1;
     plaintext = tor_malloc(plaintext_len);
     padded_plaintext = NULL;
-    padded_len = build_plaintext_padding(plaintext, plaintext_len,
-                                         &padded_plaintext);
+    padded_len =
+        build_plaintext_padding(plaintext, plaintext_len, &padded_plaintext);
     tt_assert(padded_plaintext);
     tor_free(plaintext);
     /* Make sure our padding has been zeroed. */
-    tt_int_op(fast_mem_is_zero((char *) padded_plaintext + plaintext_len,
-                              padded_len - plaintext_len), OP_EQ, 1);
+    tt_int_op(fast_mem_is_zero((char *)padded_plaintext + plaintext_len,
+                               padded_len - plaintext_len),
+              OP_EQ, 1);
     tor_free(padded_plaintext);
     /* Never never have a padded length smaller than the plaintext. */
     tt_int_op(padded_len, OP_GE, plaintext_len);
     tt_int_op(padded_len, OP_EQ, PADDING_EXPECTED_LEN(plaintext_len));
   }
 
- done:
+done:
   return;
 }
 
@@ -179,7 +182,7 @@ test_encode_descriptor(void *arg)
   ed25519_keypair_t signing_kp;
   hs_descriptor_t *desc = NULL;
 
-  (void) arg;
+  (void)arg;
 
   ret = ed25519_keypair_generate(&signing_kp, 0);
   tt_int_op(ret, OP_EQ, 0);
@@ -200,14 +203,14 @@ test_encode_descriptor(void *arg)
 
     crypto_strongest_rand(descriptor_cookie, sizeof(descriptor_cookie));
 
-    ret = hs_desc_encode_descriptor(desc, &signing_kp,
-                                   descriptor_cookie, &encoded);
+    ret = hs_desc_encode_descriptor(desc, &signing_kp, descriptor_cookie,
+                                    &encoded);
     tt_int_op(ret, OP_EQ, 0);
     tt_assert(encoded);
 
     tor_free(encoded);
   }
- done:
+done:
   hs_descriptor_free(desc);
 }
 
@@ -223,18 +226,17 @@ test_decode_descriptor(void *arg)
   hs_descriptor_t *desc_no_ip = NULL;
   uint8_t subcredential[DIGEST256_LEN];
 
-  (void) arg;
+  (void)arg;
 
   ret = ed25519_keypair_generate(&signing_kp, 0);
   tt_int_op(ret, OP_EQ, 0);
   desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
 
-  hs_helper_get_subcred_from_identity_keypair(&signing_kp,
-                                              subcredential);
+  hs_helper_get_subcred_from_identity_keypair(&signing_kp, subcredential);
 
   /* Give some bad stuff to the decoding function. */
-  ret = hs_desc_decode_descriptor("hladfjlkjadf", subcredential,
-                                  NULL, &decoded);
+  ret =
+      hs_desc_decode_descriptor("hladfjlkjadf", subcredential, NULL, &decoded);
   tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
 
   ret = hs_desc_encode_descriptor(desc, &signing_kp, NULL, &encoded);
@@ -257,8 +259,8 @@ test_decode_descriptor(void *arg)
     desc_no_ip = hs_helper_build_hs_desc_no_ip(&signing_kp_no_ip);
     tt_assert(desc_no_ip);
     tor_free(encoded);
-    ret = hs_desc_encode_descriptor(desc_no_ip, &signing_kp_no_ip,
-                                    NULL, &encoded);
+    ret = hs_desc_encode_descriptor(desc_no_ip, &signing_kp_no_ip, NULL,
+                                    &encoded);
     tt_int_op(ret, OP_EQ, 0);
     tt_assert(encoded);
     hs_descriptor_free(decoded);
@@ -285,22 +287,20 @@ test_decode_descriptor(void *arg)
     memcpy(&desc->superencrypted_data.auth_ephemeral_pubkey,
            &auth_ephemeral_kp.pubkey, CURVE25519_PUBKEY_LEN);
 
-    hs_helper_get_subcred_from_identity_keypair(&signing_kp,
-                                                subcredential);
+    hs_helper_get_subcred_from_identity_keypair(&signing_kp, subcredential);
 
     /* Build and add the auth client to the descriptor. */
     clients = desc->superencrypted_data.clients;
     if (!clients) {
       clients = smartlist_new();
     }
-    hs_desc_build_authorized_client(subcredential,
-                                    &client_kp.pubkey,
+    hs_desc_build_authorized_client(subcredential, &client_kp.pubkey,
                                     &auth_ephemeral_kp.seckey,
                                     descriptor_cookie, client);
     smartlist_add(clients, client);
 
     /* We need to add fake auth clients here. */
-    for (i=0; i < 15; ++i) {
+    for (i = 0; i < 15; ++i) {
       fake_client = hs_desc_build_fake_authorized_client();
       smartlist_add(clients, fake_client);
     }
@@ -308,15 +308,14 @@ test_decode_descriptor(void *arg)
 
     /* Test the encoding/decoding in the following lines. */
     tor_free(encoded);
-    ret = hs_desc_encode_descriptor(desc, &signing_kp,
-                                    descriptor_cookie, &encoded);
+    ret = hs_desc_encode_descriptor(desc, &signing_kp, descriptor_cookie,
+                                    &encoded);
     tt_int_op(ret, OP_EQ, 0);
     tt_assert(encoded);
 
     /* If we do not have the client secret key, the decoding must fail. */
     hs_descriptor_free(decoded);
-    ret = hs_desc_decode_descriptor(encoded, subcredential,
-                                    NULL, &decoded);
+    ret = hs_desc_decode_descriptor(encoded, subcredential, NULL, &decoded);
     tt_int_op(ret, OP_EQ, HS_DESC_DECODE_NEED_CLIENT_AUTH);
     tt_assert(!decoded);
 
@@ -329,15 +328,15 @@ test_decode_descriptor(void *arg)
 
     /* If we have the client secret key, the decoding must succeed and the
      * decoded descriptor must be correct. */
-    ret = hs_desc_decode_descriptor(encoded, subcredential,
-                                    &client_kp.seckey, &decoded);
+    ret = hs_desc_decode_descriptor(encoded, subcredential, &client_kp.seckey,
+                                    &decoded);
     tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
     tt_assert(decoded);
 
     hs_helper_desc_equal(desc, decoded);
   }
 
- done:
+done:
   hs_descriptor_free(desc);
   hs_descriptor_free(desc_no_ip);
   hs_descriptor_free(decoded);
@@ -349,7 +348,7 @@ test_supported_version(void *arg)
 {
   int ret;
 
-  (void) arg;
+  (void)arg;
 
   /* Unsupported. */
   ret = hs_desc_is_supported_version(42);
@@ -364,8 +363,7 @@ test_supported_version(void *arg)
   ret = hs_desc_is_supported_version(3);
   tt_int_op(ret, OP_EQ, 1);
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -374,7 +372,7 @@ test_encrypted_data_len(void *arg)
   int ret;
   size_t value;
 
-  (void) arg;
+  (void)arg;
 
   /* No length, error. */
   ret = encrypted_data_length_is_valid(0);
@@ -384,8 +382,7 @@ test_encrypted_data_len(void *arg)
   ret = encrypted_data_length_is_valid(value);
   tt_int_op(ret, OP_EQ, 1);
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -398,27 +395,27 @@ test_decode_invalid_intro_point(void *arg)
   ed25519_keypair_t signing_kp;
   hs_descriptor_t *desc = NULL;
 
-  (void) arg;
+  (void)arg;
 
   /* Separate pieces of a valid encoded introduction point. */
   const char *intro_point =
-    "introduction-point AQIUMDI5OUYyNjhGQ0E5RDU1Q0QxNTc=";
+      "introduction-point AQIUMDI5OUYyNjhGQ0E5RDU1Q0QxNTc=";
   const char *auth_key =
-    "auth-key\n"
-    "-----BEGIN ED25519 CERT-----\n"
-    "AQkACOhAAQW8ltYZMIWpyrfyE/b4Iyi8CNybCwYs6ADk7XfBaxsFAQAgBAD3/BE4\n"
-    "XojGE/N2bW/wgnS9r2qlrkydGyuCKIGayYx3haZ39LD4ZTmSMRxwmplMAqzG/XNP\n"
-    "0Kkpg4p2/VnLFJRdU1SMFo1lgQ4P0bqw7Tgx200fulZ4KUM5z5V7m+a/mgY=\n"
-    "-----END ED25519 CERT-----";
+      "auth-key\n"
+      "-----BEGIN ED25519 CERT-----\n"
+      "AQkACOhAAQW8ltYZMIWpyrfyE/b4Iyi8CNybCwYs6ADk7XfBaxsFAQAgBAD3/BE4\n"
+      "XojGE/N2bW/wgnS9r2qlrkydGyuCKIGayYx3haZ39LD4ZTmSMRxwmplMAqzG/XNP\n"
+      "0Kkpg4p2/VnLFJRdU1SMFo1lgQ4P0bqw7Tgx200fulZ4KUM5z5V7m+a/mgY=\n"
+      "-----END ED25519 CERT-----";
   const char *enc_key =
-    "enc-key ntor bpZKLsuhxP6woDQ3yVyjm5gUKSk7RjfAijT2qrzbQk0=";
+      "enc-key ntor bpZKLsuhxP6woDQ3yVyjm5gUKSk7RjfAijT2qrzbQk0=";
   const char *enc_key_cert =
-    "enc-key-cert\n"
-    "-----BEGIN ED25519 CERT-----\n"
-    "AQsACOhZAUpNvCZ1aJaaR49lS6MCdsVkhVGVrRqoj0Y2T4SzroAtAQAgBABFOcGg\n"
-    "lbTt1DF5nKTE/gU3Fr8ZtlCIOhu1A+F5LM7fqCUupfesg0KTHwyIZOYQbJuM5/he\n"
-    "/jDNyLy9woPJdjkxywaY2RPUxGjLYtMQV0E8PUxWyICV+7y52fTCYaKpYQw=\n"
-    "-----END ED25519 CERT-----";
+      "enc-key-cert\n"
+      "-----BEGIN ED25519 CERT-----\n"
+      "AQsACOhZAUpNvCZ1aJaaR49lS6MCdsVkhVGVrRqoj0Y2T4SzroAtAQAgBABFOcGg\n"
+      "lbTt1DF5nKTE/gU3Fr8ZtlCIOhu1A+F5LM7fqCUupfesg0KTHwyIZOYQbJuM5/he\n"
+      "/jDNyLy9woPJdjkxywaY2RPUxGjLYtMQV0E8PUxWyICV+7y52fTCYaKpYQw=\n"
+      "-----END ED25519 CERT-----";
 
   /* Try to decode a junk string. */
   {
@@ -438,10 +435,10 @@ test_decode_invalid_intro_point(void *arg)
   {
     smartlist_t *lines = smartlist_new();
     const char *bad_line = "introduction-point blah";
-    smartlist_add(lines, (char *) bad_line);
-    smartlist_add(lines, (char *) auth_key);
-    smartlist_add(lines, (char *) enc_key);
-    smartlist_add(lines, (char *) enc_key_cert);
+    smartlist_add(lines, (char *)bad_line);
+    smartlist_add(lines, (char *)auth_key);
+    smartlist_add(lines, (char *)enc_key);
+    smartlist_add(lines, (char *)enc_key_cert);
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
@@ -458,17 +455,17 @@ test_decode_invalid_intro_point(void *arg)
     /* Try to put a valid object that our tokenize function will be able to
      * parse but that has nothing to do with the auth_key. */
     const char *bad_line =
-      "auth-key\n"
-      "-----BEGIN UNICORN CERT-----\n"
-      "MIGJAoGBAO4bATcW8kW4h6RQQAKEgg+aXCpF4JwbcO6vGZtzXTDB+HdPVQzwqkbh\n"
-      "XzFM6VGArhYw4m31wcP1Z7IwULir7UMnAFd7Zi62aYfU6l+Y1yAoZ1wzu1XBaAMK\n"
-      "ejpwQinW9nzJn7c2f69fVke3pkhxpNdUZ+vplSA/l9iY+y+v+415AgMBAAE=\n"
-      "-----END UNICORN CERT-----";
+        "auth-key\n"
+        "-----BEGIN UNICORN CERT-----\n"
+        "MIGJAoGBAO4bATcW8kW4h6RQQAKEgg+aXCpF4JwbcO6vGZtzXTDB+HdPVQzwqkbh\n"
+        "XzFM6VGArhYw4m31wcP1Z7IwULir7UMnAFd7Zi62aYfU6l+Y1yAoZ1wzu1XBaAMK\n"
+        "ejpwQinW9nzJn7c2f69fVke3pkhxpNdUZ+vplSA/l9iY+y+v+415AgMBAAE=\n"
+        "-----END UNICORN CERT-----";
     /* Build intro point text. */
-    smartlist_add(lines, (char *) intro_point);
-    smartlist_add(lines, (char *) bad_line);
-    smartlist_add(lines, (char *) enc_key);
-    smartlist_add(lines, (char *) enc_key_cert);
+    smartlist_add(lines, (char *)intro_point);
+    smartlist_add(lines, (char *)bad_line);
+    smartlist_add(lines, (char *)enc_key);
+    smartlist_add(lines, (char *)enc_key_cert);
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
@@ -481,12 +478,12 @@ test_decode_invalid_intro_point(void *arg)
   {
     smartlist_t *lines = smartlist_new();
     const char *bad_line =
-      "enc-key unicorn bpZKLsuhxP6woDQ3yVyjm5gUKSk7RjfAijT2qrzbQk0=";
+        "enc-key unicorn bpZKLsuhxP6woDQ3yVyjm5gUKSk7RjfAijT2qrzbQk0=";
     /* Build intro point text. */
-    smartlist_add(lines, (char *) intro_point);
-    smartlist_add(lines, (char *) auth_key);
-    smartlist_add(lines, (char *) bad_line);
-    smartlist_add(lines, (char *) enc_key_cert);
+    smartlist_add(lines, (char *)intro_point);
+    smartlist_add(lines, (char *)auth_key);
+    smartlist_add(lines, (char *)bad_line);
+    smartlist_add(lines, (char *)enc_key_cert);
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
@@ -500,10 +497,10 @@ test_decode_invalid_intro_point(void *arg)
     smartlist_t *lines = smartlist_new();
     const char *bad_line = "enc-key ntor";
     /* Build intro point text. */
-    smartlist_add(lines, (char *) intro_point);
-    smartlist_add(lines, (char *) auth_key);
-    smartlist_add(lines, (char *) bad_line);
-    smartlist_add(lines, (char *) enc_key_cert);
+    smartlist_add(lines, (char *)intro_point);
+    smartlist_add(lines, (char *)auth_key);
+    smartlist_add(lines, (char *)bad_line);
+    smartlist_add(lines, (char *)enc_key_cert);
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
@@ -517,10 +514,10 @@ test_decode_invalid_intro_point(void *arg)
     smartlist_t *lines = smartlist_new();
     const char *bad_line = "enc-key ntor blah===";
     /* Build intro point text. */
-    smartlist_add(lines, (char *) intro_point);
-    smartlist_add(lines, (char *) auth_key);
-    smartlist_add(lines, (char *) bad_line);
-    smartlist_add(lines, (char *) enc_key_cert);
+    smartlist_add(lines, (char *)intro_point);
+    smartlist_add(lines, (char *)auth_key);
+    smartlist_add(lines, (char *)bad_line);
+    smartlist_add(lines, (char *)enc_key_cert);
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
@@ -534,10 +531,10 @@ test_decode_invalid_intro_point(void *arg)
     smartlist_t *lines = smartlist_new();
     const char *bad_line = "legacy-key blah===";
     /* Build intro point text. */
-    smartlist_add(lines, (char *) intro_point);
-    smartlist_add(lines, (char *) auth_key);
-    smartlist_add(lines, (char *) bad_line);
-    smartlist_add(lines, (char *) enc_key_cert);
+    smartlist_add(lines, (char *)intro_point);
+    smartlist_add(lines, (char *)auth_key);
+    smartlist_add(lines, (char *)bad_line);
+    smartlist_add(lines, (char *)enc_key_cert);
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
@@ -546,7 +543,7 @@ test_decode_invalid_intro_point(void *arg)
     smartlist_free(lines);
   }
 
- done:
+done:
   hs_descriptor_free(desc);
   hs_desc_intro_point_free(ip);
 }
@@ -558,7 +555,7 @@ test_decode_bad_signature(void *arg)
   hs_desc_plaintext_data_t desc_plaintext;
   int ret;
 
-  (void) arg;
+  (void)arg;
 
   memset(&desc_plaintext, 0, sizeof(desc_plaintext));
 
@@ -571,7 +568,7 @@ test_decode_bad_signature(void *arg)
   expect_log_msg_containing("Malformed signature line. Rejecting.");
   teardown_capture_of_logs();
 
- done:
+done:
   hs_desc_plaintext_data_free_contents(&desc_plaintext);
 }
 
@@ -582,24 +579,24 @@ test_decode_plaintext(void *arg)
   hs_desc_plaintext_data_t desc_plaintext;
   const char *bad_value = "unicorn";
 
-  (void) arg;
+  (void)arg;
 
-#define template \
-    "hs-descriptor %s\n" \
-    "descriptor-lifetime %s\n" \
-    "descriptor-signing-key-cert\n" \
-    "-----BEGIN ED25519 CERT-----\n" \
-    "AQgABjvPAQaG3g+dc6oV/oJV4ODAtkvx56uBnPtBT9mYVuHVOhn7AQAgBABUg3mQ\n" \
-    "myBr4bu5LCr53wUEbW2EXui01CbUgU7pfo9LvJG3AcXRojj6HlfsUs9BkzYzYdjF\n" \
-    "A69Apikgu0ewHYkFFASt7Il+gB3w6J8YstQJZT7dtbtl+doM7ug8B68Qdg8=\n" \
-    "-----END ED25519 CERT-----\n" \
-    "revision-counter %s\n" \
-    "encrypted\n" \
-    "-----BEGIN %s-----\n" \
-    "UNICORN\n" \
-    "-----END MESSAGE-----\n" \
-    "signature m20WJH5agqvwhq7QeuEZ1mYyPWQDO+eJOZUjLhAiKu8DbL17DsDfJE6kXbWy" \
-    "HimbNj2we0enV3cCOOAsmPOaAw\n"
+#define template                                                           \
+  "hs-descriptor %s\n"                                                     \
+  "descriptor-lifetime %s\n"                                               \
+  "descriptor-signing-key-cert\n"                                          \
+  "-----BEGIN ED25519 CERT-----\n"                                         \
+  "AQgABjvPAQaG3g+dc6oV/oJV4ODAtkvx56uBnPtBT9mYVuHVOhn7AQAgBABUg3mQ\n"     \
+  "myBr4bu5LCr53wUEbW2EXui01CbUgU7pfo9LvJG3AcXRojj6HlfsUs9BkzYzYdjF\n"     \
+  "A69Apikgu0ewHYkFFASt7Il+gB3w6J8YstQJZT7dtbtl+doM7ug8B68Qdg8=\n"         \
+  "-----END ED25519 CERT-----\n"                                           \
+  "revision-counter %s\n"                                                  \
+  "encrypted\n"                                                            \
+  "-----BEGIN %s-----\n"                                                   \
+  "UNICORN\n"                                                              \
+  "-----END MESSAGE-----\n"                                                \
+  "signature m20WJH5agqvwhq7QeuEZ1mYyPWQDO+eJOZUjLhAiKu8DbL17DsDfJE6kXbWy" \
+  "HimbNj2we0enV3cCOOAsmPOaAw\n"
 
   /* Invalid version. */
   {
@@ -666,8 +663,7 @@ test_decode_plaintext(void *arg)
     tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   }
 
- done:
-  ;
+done:;
 }
 
 static void
@@ -678,15 +674,14 @@ test_validate_cert(void *arg)
   ed25519_keypair_t kp;
   tor_cert_t *cert = NULL;
 
-  (void) arg;
+  (void)arg;
 
   ret = ed25519_keypair_generate(&kp, 0);
   tt_int_op(ret, OP_EQ, 0);
 
   /* Cert of type CERT_TYPE_AUTH_HS_IP_KEY. */
-  cert = tor_cert_create(&kp, CERT_TYPE_AUTH_HS_IP_KEY,
-                                     &kp.pubkey, now, 3600,
-                                     CERT_FLAG_INCLUDE_SIGNING_KEY);
+  cert = tor_cert_create(&kp, CERT_TYPE_AUTH_HS_IP_KEY, &kp.pubkey, now, 3600,
+                         CERT_FLAG_INCLUDE_SIGNING_KEY);
   tt_assert(cert);
   /* Test with empty certificate. */
   ret = cert_is_valid(NULL, CERT_TYPE_AUTH_HS_IP_KEY, "unicorn");
@@ -704,14 +699,14 @@ test_validate_cert(void *arg)
   tor_cert_free(cert);
 
   /* Try a cert without including the signing key. */
-  cert = tor_cert_create(&kp, CERT_TYPE_AUTH_HS_IP_KEY, &kp.pubkey, now,
-                         3600, 0);
+  cert =
+      tor_cert_create(&kp, CERT_TYPE_AUTH_HS_IP_KEY, &kp.pubkey, now, 3600, 0);
   tt_assert(cert);
   /* Test with a bad type. */
   ret = cert_is_valid(cert, CERT_TYPE_AUTH_HS_IP_KEY, "unicorn");
   tt_int_op(ret, OP_EQ, 0);
 
- done:
+done:
   tor_cert_free(cert);
 }
 
@@ -724,13 +719,13 @@ test_desc_signature(void *arg)
   ed25519_keypair_t kp;
   ed25519_signature_t sig;
 
-  (void) arg;
+  (void)arg;
 
   ed25519_keypair_generate(&kp, 0);
   /* Setup a phoony descriptor but with a valid signature token that is the
    * signature is verifiable. */
   tor_asprintf(&data, "This is a signed descriptor\n");
-  ret = ed25519_sign_prefixed(&sig, (const uint8_t *) data, strlen(data),
+  ret = ed25519_sign_prefixed(&sig, (const uint8_t *)data, strlen(data),
                               "Tor onion service descriptor sig v3", &kp);
   tt_int_op(ret, OP_EQ, 0);
   ed25519_signature_to_base64(sig_b64, &sig);
@@ -742,7 +737,7 @@ test_desc_signature(void *arg)
   ret = desc_sig_is_valid("JUNK", &kp.pubkey, desc, strlen(desc));
   tt_int_op(ret, OP_EQ, 0);
 
- done:
+done:
   tor_free(desc);
   tor_free(data);
 }
@@ -757,15 +752,14 @@ test_build_authorized_client(void *arg)
   curve25519_secret_key_t client_auth_sk;
   curve25519_public_key_t client_auth_pk;
   const char ephemeral_sk_b16[] =
-    "d023b674d993a5c8446bd2ca97e9961149b3c0e88c7dc14e8777744dd3468d6a";
-  const char descriptor_cookie_b16[] =
-    "07d087f1d8c68393721f6e70316d3b29";
+      "d023b674d993a5c8446bd2ca97e9961149b3c0e88c7dc14e8777744dd3468d6a";
+  const char descriptor_cookie_b16[] = "07d087f1d8c68393721f6e70316d3b29";
   const char client_pubkey_b16[] =
-    "8c1298fa6050e372f8598f6deca32e27b0ad457741422c2629ebb132cf7fae37";
+      "8c1298fa6050e372f8598f6deca32e27b0ad457741422c2629ebb132cf7fae37";
   uint8_t subcredential[DIGEST256_LEN];
-  char *mem_op_hex_tmp=NULL;
+  char *mem_op_hex_tmp = NULL;
 
-  (void) arg;
+  (void)arg;
 
   ret = curve25519_secret_key_generate(&auth_ephemeral_sk, 0);
   tt_int_op(ret, OP_EQ, 0);
@@ -778,70 +772,51 @@ test_build_authorized_client(void *arg)
 
   desc_client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
 
-  base16_decode((char *) &auth_ephemeral_sk,
-                sizeof(auth_ephemeral_sk),
-                ephemeral_sk_b16,
-                strlen(ephemeral_sk_b16));
+  base16_decode((char *)&auth_ephemeral_sk, sizeof(auth_ephemeral_sk),
+                ephemeral_sk_b16, strlen(ephemeral_sk_b16));
 
-  base16_decode((char *) descriptor_cookie,
-                sizeof(descriptor_cookie),
-                descriptor_cookie_b16,
-                strlen(descriptor_cookie_b16));
+  base16_decode((char *)descriptor_cookie, sizeof(descriptor_cookie),
+                descriptor_cookie_b16, strlen(descriptor_cookie_b16));
 
-  base16_decode((char *) &client_auth_pk,
-                sizeof(client_auth_pk),
-                client_pubkey_b16,
-                strlen(client_pubkey_b16));
+  base16_decode((char *)&client_auth_pk, sizeof(client_auth_pk),
+                client_pubkey_b16, strlen(client_pubkey_b16));
 
   testing_enable_prefilled_rng("\x01", 1);
 
-  hs_desc_build_authorized_client(subcredential,
-                                  &client_auth_pk, &auth_ephemeral_sk,
-                                  descriptor_cookie, desc_client);
+  hs_desc_build_authorized_client(subcredential, &client_auth_pk,
+                                  &auth_ephemeral_sk, descriptor_cookie,
+                                  desc_client);
 
-  test_memeq_hex((char *) desc_client->client_id,
-                 "EC19B7FF4D2DDA13");
-  test_memeq_hex((char *) desc_client->iv,
-                "01010101010101010101010101010101");
-  test_memeq_hex((char *) desc_client->encrypted_cookie,
-                "B21222BE13F385F355BD07B2381F9F29");
+  test_memeq_hex((char *)desc_client->client_id, "EC19B7FF4D2DDA13");
+  test_memeq_hex((char *)desc_client->iv, "01010101010101010101010101010101");
+  test_memeq_hex((char *)desc_client->encrypted_cookie,
+                 "B21222BE13F385F355BD07B2381F9F29");
 
- done:
+done:
   tor_free(desc_client);
   tor_free(mem_op_hex_tmp);
   testing_disable_prefilled_rng();
 }
 
 struct testcase_t hs_descriptor[] = {
-  /* Encoding tests. */
-  { "cert_encoding", test_cert_encoding, TT_FORK,
-    NULL, NULL },
-  { "encode_descriptor", test_encode_descriptor, TT_FORK,
-    NULL, NULL },
-  { "descriptor_padding", test_descriptor_padding, TT_FORK,
-    NULL, NULL },
+    /* Encoding tests. */
+    {"cert_encoding", test_cert_encoding, TT_FORK, NULL, NULL},
+    {"encode_descriptor", test_encode_descriptor, TT_FORK, NULL, NULL},
+    {"descriptor_padding", test_descriptor_padding, TT_FORK, NULL, NULL},
 
-  /* Decoding tests. */
-  { "decode_descriptor", test_decode_descriptor, TT_FORK,
-    NULL, NULL },
-  { "encrypted_data_len", test_encrypted_data_len, TT_FORK,
-    NULL, NULL },
-  { "decode_invalid_intro_point", test_decode_invalid_intro_point, TT_FORK,
-    NULL, NULL },
-  { "decode_plaintext", test_decode_plaintext, TT_FORK,
-    NULL, NULL },
-  { "decode_bad_signature", test_decode_bad_signature, TT_FORK,
-    NULL, NULL },
+    /* Decoding tests. */
+    {"decode_descriptor", test_decode_descriptor, TT_FORK, NULL, NULL},
+    {"encrypted_data_len", test_encrypted_data_len, TT_FORK, NULL, NULL},
+    {"decode_invalid_intro_point", test_decode_invalid_intro_point, TT_FORK,
+     NULL, NULL},
+    {"decode_plaintext", test_decode_plaintext, TT_FORK, NULL, NULL},
+    {"decode_bad_signature", test_decode_bad_signature, TT_FORK, NULL, NULL},
 
-  /* Misc. */
-  { "version", test_supported_version, TT_FORK,
-    NULL, NULL },
-  { "validate_cert", test_validate_cert, TT_FORK,
-    NULL, NULL },
-  { "desc_signature", test_desc_signature, TT_FORK,
-    NULL, NULL },
-  { "build_authorized_client", test_build_authorized_client, TT_FORK,
-    NULL, NULL },
+    /* Misc. */
+    {"version", test_supported_version, TT_FORK, NULL, NULL},
+    {"validate_cert", test_validate_cert, TT_FORK, NULL, NULL},
+    {"desc_signature", test_desc_signature, TT_FORK, NULL, NULL},
+    {"build_authorized_client", test_build_authorized_client, TT_FORK, NULL,
+     NULL},
 
-  END_OF_TESTCASES
-};
+    END_OF_TESTCASES};
