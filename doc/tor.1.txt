@@ -1737,7 +1737,8 @@ The following options are useful only for clients (that is, if
 // These options are in alphabetical order, with exceptions as noted.
 // Please keep them that way!
 
-The following options are useful for configuring timeouts:
+The following options are useful for configuring timeouts related
+to building Tor circuits and using them:
 
 [[CircuitsAvailableTimeout]] **CircuitsAvailableTimeout** __NUM__::
     Tor will attempt to keep at least one open, unused circuit available for
@@ -1776,8 +1777,8 @@ The following options are useful for configuring timeouts:
 // These options are in alphabetical order, with exceptions as noted.
 // Please keep them that way!
 
-The following options can be used to configure Tor
-when the client is running in dormant mode:
+Tor can enter dormant mode to conserve power and network bandwidth.
+The following options control when Tor enters and leaves dormant mode:
 
 [[DormantCanceledByStartup]] **DormantCanceledByStartup** **0**|**1**::
     By default, Tor starts in active mode if it was active the last time
