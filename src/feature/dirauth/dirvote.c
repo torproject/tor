@@ -4,6 +4,8 @@
 /* See LICENSE for licensing information */
 
 #define DIRVOTE_PRIVATE
+
+#include <netinet/in.h>
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "core/or/policies.h"
@@ -4211,13 +4213,34 @@ compare_routerinfo_by_ip_and_bw_(const void **a, const void **b)
   uint32_t bw_kb_first, bw_kb_second;
   const node_t *node_first, *node_second;
   int first_is_running, second_is_running;
+  printf("%d\n", 4);
+  tor_addr_t *first_ipv6 = &(first->ipv6_addr);
+  tor_addr_t *second_ipv6 = &(second->ipv6_addr);
+  sa_family_t first_family, second_family;
 
-  /* we return -1 if first should appear before second... that is,
-   * if first is a better router. */
-  if (first->addr < second->addr)
-    return -1;
-  else if (first->addr > second->addr)
+  /* the ipv6 router should appear before the ipv4 router
+   * because it is considered a better router */
+  first_family = tor_addr_family(first_ipv6);
+  second_family = tor_addr_family(second_ipv6);
+  if (first_family != second_family)
+    return first_family == AF_INET6 ? -1 : 1;
+  if (first_family == AF_INET6) {
+    const uint8_t *first_address = tor_addr_to_in6_addr8(first_ipv6);
+    const uint8_t *second_address = tor_addr_to_in6_addr8(second_ipv6);
+    for (int i = 0; i < 16; i++) {
+      if (first_address[i] < second_address[i])
+        return -1;
+    }
     return 1;
+    } else {
+      /* otherwise, both addresses are IPv4, fallback to previous behavior */
+      /* we return -1 if first should appear before second... that is,
+       * if first is a better router. */
+      if (first->addr < second->addr)
+        return -1;
+      else if (first->addr > second->addr)
+        return 1;
+    }
 
   /* Potentially, this next bit could cause k n lg n memeq calls.  But in
    * reality, we will almost never get here, since addresses will usually be
