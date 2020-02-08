@@ -1168,16 +1168,25 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     }
   }
 
+  // Reject the vote if any of the protocols lines are malformed.
   if ((tok = find_opt_by_keyword(tokens, K_RECOMMENDED_CLIENT_PROTOCOLS))) {
+    if (protover_contains_long_protocol_names(tok->args[0]))
+      goto err;
     ns->recommended_client_protocols = tor_strdup(tok->args[0]);
   }
   if ((tok = find_opt_by_keyword(tokens, K_RECOMMENDED_RELAY_PROTOCOLS))) {
+    if (protover_contains_long_protocol_names(tok->args[0]))
+      goto err;
     ns->recommended_relay_protocols = tor_strdup(tok->args[0]);
   }
   if ((tok = find_opt_by_keyword(tokens, K_REQUIRED_CLIENT_PROTOCOLS))) {
+    if (protover_contains_long_protocol_names(tok->args[0]))
+      goto err;
     ns->required_client_protocols = tor_strdup(tok->args[0]);
   }
   if ((tok = find_opt_by_keyword(tokens, K_REQUIRED_RELAY_PROTOCOLS))) {
+    if (protover_contains_long_protocol_names(tok->args[0]))
+      goto err;
     ns->required_relay_protocols = tor_strdup(tok->args[0]);
   }
 
