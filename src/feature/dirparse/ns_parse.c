@@ -1168,14 +1168,18 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     }
   }
 
-  if ((tok = find_opt_by_keyword(tokens, K_RECOMMENDED_CLIENT_PROTOCOLS)))
+  if ((tok = find_opt_by_keyword(tokens, K_RECOMMENDED_CLIENT_PROTOCOLS))) {
     ns->recommended_client_protocols = tor_strdup(tok->args[0]);
-  if ((tok = find_opt_by_keyword(tokens, K_RECOMMENDED_RELAY_PROTOCOLS)))
+  }
+  if ((tok = find_opt_by_keyword(tokens, K_RECOMMENDED_RELAY_PROTOCOLS))) {
     ns->recommended_relay_protocols = tor_strdup(tok->args[0]);
-  if ((tok = find_opt_by_keyword(tokens, K_REQUIRED_CLIENT_PROTOCOLS)))
+  }
+  if ((tok = find_opt_by_keyword(tokens, K_REQUIRED_CLIENT_PROTOCOLS))) {
     ns->required_client_protocols = tor_strdup(tok->args[0]);
-  if ((tok = find_opt_by_keyword(tokens, K_REQUIRED_RELAY_PROTOCOLS)))
+  }
+  if ((tok = find_opt_by_keyword(tokens, K_REQUIRED_RELAY_PROTOCOLS))) {
     ns->required_relay_protocols = tor_strdup(tok->args[0]);
+  }
 
   tok = find_by_keyword(tokens, K_VALID_AFTER);
   if (parse_iso_time(tok->args[0], &ns->valid_after))
