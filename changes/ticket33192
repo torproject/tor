@@ -1,0 +1,5 @@
+  o Minor feature (python):
+    - Stop assuming that /usr/bin/python exists. Instead of using a
+      hardcoded path in scripts that still use Python 2, use /usr/bin/env,
+      similarly to the scripts that use Python 3. Fixes bug 33192; bugfix
+      on 0.4.2.

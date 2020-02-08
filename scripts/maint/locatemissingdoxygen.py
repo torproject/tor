@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python2
 
 """
   This script parses the stderr output of doxygen and looks for undocumented

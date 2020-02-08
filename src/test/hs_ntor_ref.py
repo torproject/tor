@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright 2017-2019, The Tor Project, Inc
 # See LICENSE for licensing information
 
@@ -40,6 +40,8 @@ The whole logic and concept for this test suite was taken from ntor_ref.py.
 
                 *** DO NOT USE THIS IN PRODUCTION. ***
 """
+
+from __future__ import print_function
 
 import struct
 import os, sys

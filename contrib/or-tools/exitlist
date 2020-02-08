@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python2
 # Copyright 2005-2006 Nick Mathewson
 # See the LICENSE file in the Tor distribution for licensing information.
 

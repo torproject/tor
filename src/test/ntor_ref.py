@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright 2012-2019, The Tor Project, Inc
 # See LICENSE for licensing information
 
@@ -26,6 +26,8 @@ commands:
       src/test/test-ntor-cl; make sure we can.
 
 """
+
+from __future__ import print_function
 
 import binascii
 try:
