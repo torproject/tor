@@ -1432,6 +1432,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
         smartlist_add(ns->routerstatus_list, rs);
       } else {
         vote_routerstatus_free(rs);
+        goto err; // Malformed routerstatus, reject this vote.
       }
     } else {
       routerstatus_t *rs;
@@ -1441,6 +1442,8 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
                                                      flav))) {
         /* Use exponential-backoff scheduling when downloading microdescs */
         smartlist_add(ns->routerstatus_list, rs);
+      } else {
+        goto err; // Malformed routerstatus, reject this vote.
       }
     }
   }
