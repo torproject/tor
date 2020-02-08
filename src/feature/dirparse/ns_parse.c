@@ -13,6 +13,7 @@
 
 #include "core/or/or.h"
 #include "app/config/config.h"
+#include "core/or/protover.h"
 #include "core/or/versions.h"
 #include "feature/client/entrynodes.h"
 #include "feature/dirauth/dirvote.h"
@@ -451,6 +452,10 @@ routerstatus_parse_entry_from_string(memarea_t *area,
       }
     }
 
+    // If the protover line is malformed, reject this routerstatus.
+    if (protocols && protover_contains_long_protocol_names(protocols)) {
+      goto err;
+    }
     summarize_protover_flags(&rs->pv, protocols, version);
   }
 
