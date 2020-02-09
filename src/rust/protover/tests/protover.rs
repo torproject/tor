@@ -78,7 +78,7 @@ fn parse_protocol_unvalidated_with_empty() {
 #[test]
 #[should_panic]
 fn parse_protocol_validated_with_empty() {
-    let _: UnvalidatedProtoEntry = "".parse().unwrap();
+    let _: ProtoEntry = "".parse().unwrap();
 }
 
 #[test]
