@@ -34,16 +34,16 @@ env:
     ## Turn off tor's sandbox in chutney, until we fix sandbox errors that are
     ## triggered by Ubuntu Xenial and Bionic. See #32722.
     - CHUTNEY_TOR_SANDBOX="0"
-  jobs:
-    ## This jobs entry is required, but it doesn't actually create any jobs
+  matrix:
+    ## This matrix entry is required, but it doesn't actually create any jobs
     -
 
-jobs:
+matrix:
   ## include creates builds with gcc, linux, unless we override those defaults
   include:
     - name: Detect Python syntax errors
       language: python
-      python: 2.7
+      python: 3.6
       before_install: pip install --upgrade pip
       install: pip install flake8
       script: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
