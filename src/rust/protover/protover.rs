@@ -875,11 +875,6 @@ mod test {
     }
 
     #[test]
-    fn test_protoentry_from_str_() {
-        assert_protoentry_is_unparseable!("");
-    }
-
-    #[test]
     fn test_protoentry_all_supported_single_protocol_single_version() {
         let protocol: UnvalidatedProtoEntry = "Cons=1".parse().unwrap();
         let unsupported: Option<UnvalidatedProtoEntry> = protocol.all_supported();
