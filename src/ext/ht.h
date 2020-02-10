@@ -232,6 +232,10 @@ ht_string_hash(const char *s)
 #define HT_ASSERT_(x) (void)0
 #endif
 
+/* Macro put at the end of the end of a macro definition so that it
+ * consumes the following semicolon at file scope. Used only inside ht.h. */
+#define HT_EAT_SEMICOLON__ struct ht_semicolon_eater
+
 #define HT_PROTOTYPE(name, type, field, hashfn, eqfn)                   \
   int name##_HT_GROW(struct name *ht, unsigned min_capacity);           \
   void name##_HT_CLEAR(struct name *ht);                                \
@@ -413,7 +417,8 @@ ht_string_hash(const char *s)
       }                                                                 \
       return NULL;                                                      \
     }                                                                   \
-  }
+  }                                                                     \
+  HT_EAT_SEMICOLON__
 
 #define HT_GENERATE2(name, type, field, hashfn, eqfn, load, reallocarrayfn, \
                      freefn)                                            \
@@ -538,7 +543,8 @@ ht_string_hash(const char *s)
     if (n != head->hth_n_entries)                                       \
       return 6;                                                         \
     return 0;                                                           \
-  }
+  }                                                                     \
+  HT_EAT_SEMICOLON__
 
 #define HT_GENERATE(name, type, field, hashfn, eqfn, load, mallocfn,    \
                     reallocfn, freefn)                                  \
