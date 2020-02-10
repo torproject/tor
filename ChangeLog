@@ -4,10 +4,10 @@ Changes in version 0.4.3.2-alpha - 2020-02-10
   running the previous alpha should upgrade, and look for bugs in this
   one instead.
 
-  o Major bugfixes (Onion service client, authorization):
-    - On a NEWNYM signal, purge the ephemeral client authorization
-      cache. The permanent ones are kept. Fixes bug 33139; bugfix
-      on 0.4.3.1-alpha.
+  o Major bugfixes (onion service client, authorization):
+    - On a NEWNYM signal, purge entries from the ephemeral client
+      authorization cache. The permanent ones are kept. Fixes bug 33139;
+      bugfix on 0.4.3.1-alpha.
 
   o Minor features (best practices tracker):
     - Practracker now supports a --regen-overbroad option to regenerate
@@ -15,14 +15,15 @@ Changes in version 0.4.3.2-alpha - 2020-02-10
       tolerant of best-practices violations. Closes ticket 32372.
 
   o Minor features (continuous integration):
-    - Run Doxygen Makefile target on Travis. Closes ticket 32455.
+    - Run Doxygen Makefile target on Travis, so we can learn about
+      regressions in our internal documentation. Closes ticket 32455.
     - Stop allowing failures on the Travis CI stem tests job. It looks
       like all the stem hangs we were seeing before are now fixed.
       Closes ticket 33075.
 
   o Minor bugfixes (build system):
-    - Some configure options were either missing or incorrect in the
-      configure summary. Fixes bug 32230; bugfix on 0.4.3.1-alpha.
+    - Revise configure options that were either missing or incorrect in
+      the configure summary. Fixes bug 32230; bugfix on 0.4.3.1-alpha.
 
   o Minor bugfixes (controller protocol):
     - Fix a memory leak introduced by refactoring of control reply
@@ -30,8 +31,8 @@ Changes in version 0.4.3.2-alpha - 2020-02-10
     - Fix a memory leak in GETINFO responses. Fixes bug 33103; bugfix
       on 0.4.3.1-alpha.
     - When receiving "ACTIVE" or "DORMANT" signals on the control port,
-      report them as SIGNAL events. Fixes bug 33104; bugfix
-      on 0.4.0.1-alpha.
+      report them as SIGNAL events. Previously we would log a bug
+      warning. Fixes bug 33104; bugfix on 0.4.0.1-alpha.
 
   o Minor bugfixes (logging):
     - If we encounter a bug when flushing a buffer to a TLS connection,
@@ -40,32 +41,31 @@ Changes in version 0.4.3.2-alpha - 2020-02-10
       us to run out of disk space. Fixes bug 33093; bugfix
       on 0.3.2.2-alpha.
     - When logging a bug, do not say "Future instances of this warning
-      will be silenced" unless we are actually going to do so.
+      will be silenced" unless we are actually going to silence them.
       Previously we would say this whenever a BUG() check failed in the
       code. Fixes bug 33095; bugfix on 0.4.1.1-alpha.
 
   o Minor bugfixes (onion service v2):
-    - Move a series of warnings to protocol warning level because they
-      can all be triggered remotely by a malformed request. Fixes bug
-      32706; bugfix on 0.1.1.14-alpha.
+    - Move a series of v2 onion service warnings to protocol-warning
+      level because they can all be triggered remotely by a malformed
+      request. Fixes bug 32706; bugfix on 0.1.1.14-alpha.
 
   o Minor bugfixes (onion service v3, client authorization):
     - When removing client authorization credentials using the control
-      port, also remove the associated descriptor so they don't linger
-      and are still usable hence making the onion service behind client
-      authorization reachable. Fixes bug 33148; bugfix on 0.4.3.1-alpha.
+      port, also remove the associated descriptor, so the onion service
+      can still be contacted. Fixes bug 33148; bugfix on 0.4.3.1-alpha.
 
   o Minor bugfixes (pluggable transports):
     - Lower the log level of standard error messages from a PT from
       warning to info. Fixes bug 33005; bugfix on 0.4.0.1-alpha.
 
   o Minor bugfixes (rust, build):
-    - Fix a syntax warning given by newer versions of Rust, and creating
-      problems for our continuous integration. Fixes bug 33212; bugfix
-      on 0.3.5.1-alpha.
+    - Fix a syntax warning given by newer versions of Rust that was
+      creating problems for our continuous integration. Fixes bug 33212;
+      bugfix on 0.3.5.1-alpha.
 
   o Minor bugfixes (TLS bug handling):
-    - When encountering a bug in buf_read_freom_tls(), return a "MISC"
+    - When encountering a bug in buf_read_from_tls(), return a "MISC"
       error code rather than "WANTWRITE". This change might help avoid
       some CPU-wasting loops if the bug is ever triggered. Bug reported
       by opara. Fixes bug 32673; bugfix on 0.3.0.4-alpha.
@@ -75,7 +75,7 @@ Changes in version 0.4.3.2-alpha - 2020-02-10
       checks. Closes ticket 33091.
 
   o Documentation (manpage):
-    - Split Circuit Timeout options and Node Selection options into
+    - Split "Circuit Timeout" options and "Node Selection" options into
       their own sections of the tor manpage. Closes tickets 32928 and
       32929. Work by Swati Thacker as part of Google Season of Docs.
 
