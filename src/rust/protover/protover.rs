@@ -26,7 +26,7 @@ const FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS: &'static str = "0.2.9.3-alpha";
 /// before concluding that someone is trying to DoS us
 ///
 /// C_RUST_COUPLED: protover.c `MAX_PROTOCOLS_TO_EXPAND`
-const MAX_PROTOCOLS_TO_EXPAND: usize = (1 << 16);
+const MAX_PROTOCOLS_TO_EXPAND: usize = 1 << 16;
 
 /// The maximum size an `UnknownProtocol`'s name may be.
 pub(crate) const MAX_PROTOCOL_NAME_LENGTH: usize = 100;
