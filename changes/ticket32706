@@ -1,4 +1,0 @@
-  o Minor bugfixes (onion service v2):
-    - Move a series of warnings to protocol warning level because they can all
-      be triggered remotely by a malformed request. Fixes bug 32706; bugfix on
-      0.1.1.14-alpha.

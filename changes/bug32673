@@ -1,5 +1,0 @@
-  o Minor bugfixes (TLS bug handling):
-    - When encountering a bug in buf_read_freom_tls(), return a
-      "MISC" error code rather than "WANTWRITE".  This change might
-      help avoid some CPU-wasting loops if the bug is ever triggered.
-      Bug reported by opara.    Fixes bug 32673; bugfix on 0.3.0.4-alpha.

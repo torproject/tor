@@ -1,3 +1,0 @@
-  o Minor bugfixes (Onion service client, authorization):
-    - On a NEWNYM signal, purge the ephemeral client authorization cache. The
-      permanent ones are kept. Fixes bug 33139; bugfix on 0.4.3.1-alpha.

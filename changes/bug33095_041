@@ -1,5 +1,0 @@
-  o Minor bugfixes (logging, bug reporting):
-    - When logging a bug, do not say "Future instances of this warning
-      will be silenced" unless we are actually going to do
-      so. Previously we would say this whenever a BUG() check failed in
-      the code.  Fixes bug 33095; bugfix on 0.4.1.1-alpha.

@@ -1,2 +1,0 @@
-  o Minor features (continuous integration):
-    - Run Doxygen Makefile target on Travis. Closes ticket 32455.

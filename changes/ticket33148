@@ -1,5 +1,0 @@
-  o Minor bugfixes (onion service v3, client authorization):
-    - When removing client authorization credentials using the control port,
-      also remove the associated descriptor so they don't linger and are still
-      usable hence making the onion service behind client authorization
-      reachable. Fixes bug 33148; bugfix on 0.4.3.1-alpha.

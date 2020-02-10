@@ -1,3 +1,0 @@
-  o Minor bugfixes (control port):
-    - Fix a memory leak introduced by refactoring of control reply
-      formatting code.  Fixes bug 33039; bugfix on 0.4.3.1-alpha.
