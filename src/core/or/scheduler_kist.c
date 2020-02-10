@@ -56,9 +56,9 @@ typedef HT_HEAD(socket_table_s, socket_table_ent_t) socket_table_t;
 static socket_table_t socket_table = HT_INITIALIZER();
 
 HT_PROTOTYPE(socket_table_s, socket_table_ent_t, node, socket_table_ent_hash,
-             socket_table_ent_eq)
+             socket_table_ent_eq);
 HT_GENERATE2(socket_table_s, socket_table_ent_t, node, socket_table_ent_hash,
-             socket_table_ent_eq, 0.6, tor_reallocarray, tor_free_)
+             socket_table_ent_eq, 0.6, tor_reallocarray, tor_free_);
 
 /* outbuf_table hash table stuff. The outbuf_table keeps track of which
  * channels have data sitting in their outbuf so the kist scheduler can force
@@ -83,9 +83,9 @@ outbuf_table_ent_eq(const outbuf_table_ent_t *a, const outbuf_table_ent_t *b)
 }
 
 HT_PROTOTYPE(outbuf_table_s, outbuf_table_ent_t, node, outbuf_table_ent_hash,
-             outbuf_table_ent_eq)
+             outbuf_table_ent_eq);
 HT_GENERATE2(outbuf_table_s, outbuf_table_ent_t, node, outbuf_table_ent_hash,
-             outbuf_table_ent_eq, 0.6, tor_reallocarray, tor_free_)
+             outbuf_table_ent_eq, 0.6, tor_reallocarray, tor_free_);
 
 /*****************************************************************************
  * Other internal data

@@ -69,9 +69,9 @@ static HT_HEAD(nodefamily_map, nodefamily_t) the_node_families
   = HT_INITIALIZER();
 
 HT_PROTOTYPE(nodefamily_map, nodefamily_t, ht_ent, nodefamily_hash,
-             nodefamily_eq)
+             nodefamily_eq);
 HT_GENERATE2(nodefamily_map, nodefamily_t, ht_ent, nodefamily_hash,
-             node_family_eq, 0.6, tor_reallocarray_, tor_free_)
+             node_family_eq, 0.6, tor_reallocarray_, tor_free_);
 
 /**
  * Parse the family declaration in <b>s</b>, returning the canonical

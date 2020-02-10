@@ -218,9 +218,9 @@ cdm_diff_eq(const cdm_diff_t *diff1, const cdm_diff_t *diff2)
     diff1->compress_method == diff2->compress_method;
 }
 
-HT_PROTOTYPE(cdm_diff_ht, cdm_diff_t, node, cdm_diff_hash, cdm_diff_eq)
+HT_PROTOTYPE(cdm_diff_ht, cdm_diff_t, node, cdm_diff_hash, cdm_diff_eq);
 HT_GENERATE2(cdm_diff_ht, cdm_diff_t, node, cdm_diff_hash, cdm_diff_eq,
-             0.6, tor_reallocarray, tor_free_)
+             0.6, tor_reallocarray, tor_free_);
 
 #define cdm_diff_free(diff) \
   FREE_AND_NULL(cdm_diff_t, cdm_diff_free_, (diff))
