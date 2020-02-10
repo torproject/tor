@@ -1,0 +1,7 @@
+  o Documentation (manpage):
+    - Split Circuit Timeout options into their own section of the tor
+      manpage.  Closes ticket 32928.  Work by Swati Thacker as part of
+      Google Season of Docs.
+    - Split Node selection options into their own section of the tor
+      manpage.  Closes ticket 32929.  Work by Swati Thacker as part of
+      Google Season of Docs.
