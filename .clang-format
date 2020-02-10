@@ -149,14 +149,6 @@ MacroBlockBegin: "^STMT_BEGIN|TT_STMT_BEGIN$"
 MacroBlockEnd:   "^STMT_END|TT_STMT_END$"
 
 #
-# These macros don't need to have semicolons afterwards.
-#
-StatementMacros:
-   - HT_PROTOTYPE
-   - HT_GENERATE
-   - HT_GENERATE2
-
-#
 # These macros are interpreted as types.
 # (Not supported in my clang-format)
 #
