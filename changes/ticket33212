@@ -1,0 +1,4 @@
+  o Minor bugfixes (rust, build):
+    - Fix a syntax warning given by newer versions of Rust, and creating
+      problems for our continuous integration.
+      Fixes bug 33212; bugfix on 0.3.5.1-alpha.
