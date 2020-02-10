@@ -1122,7 +1122,7 @@ static bw_array_t *dir_read_array = NULL;
     directory protocol. */
 static bw_array_t *dir_write_array = NULL;
 
-/** Set up [dir-]read_array and [dir-]write_array, freeing them if they
+/** Set up [dir_]read_array and [dir_]write_array, freeing them if they
  * already exist. */
 static void
 bw_arrays_init(void)
