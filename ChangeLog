@@ -56,8 +56,9 @@ Changes in version 0.4.3.2-alpha - 2020-02-10
       can still be contacted. Fixes bug 33148; bugfix on 0.4.3.1-alpha.
 
   o Minor bugfixes (pluggable transports):
-    - Lower the log level of standard error messages from a PT from
-      warning to info. Fixes bug 33005; bugfix on 0.4.0.1-alpha.
+    - When receiving a message on standard error from a pluggable
+      transport, log it at info level, rather than as a warning. Fixes
+      bug 33005; bugfix on 0.4.0.1-alpha.
 
   o Minor bugfixes (rust, build):
     - Fix a syntax warning given by newer versions of Rust that was
