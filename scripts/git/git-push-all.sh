@@ -168,62 +168,41 @@ echo "Calling $GIT_PUSH" "$@" "<branches>"
 # Git upstream remote branches #
 ################################
 
+set -e
 DEFAULT_UPSTREAM_BRANCHES=
 if [ "$DEFAULT_UPSTREAM_REMOTE" != "$UPSTREAM_REMOTE" ]; then
-  DEFAULT_UPSTREAM_BRANCHES=$(echo \
-    "$DEFAULT_UPSTREAM_REMOTE"/master \
-    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.4.3 \
-    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.4.2 \
-    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.4.1 \
-    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.3.5 \
-    )
+    for br in $(git-list-tor-branches.sh -l); do
+        DEFAULT_UPSTREAM_BRANCHES="${DEFAULT_UPSTREAM_BRANCHES} ${DEFAULT_UPSTREAM_REMOTE}/${br}"
+    done
 fi
 
-UPSTREAM_BRANCHES=$(echo \
-  "$UPSTREAM_REMOTE"/master \
-  "$UPSTREAM_REMOTE"/{release,maint}-0.4.3 \
-  "$UPSTREAM_REMOTE"/{release,maint}-0.4.2 \
-  "$UPSTREAM_REMOTE"/{release,maint}-0.4.1 \
-  "$UPSTREAM_REMOTE"/{release,maint}-0.3.5 \
-  )
+UPSTREAM_BRANCHES=
+for br in $(git-list-tor-branches.sh -l); do
+    UPSTREAM_BRANCHES="${UPSTREAM_BRANCHES} ${UPSTREAM_REMOTE}/${br}"
+done
 
 ########################
 # Git branches to push #
 ########################
-
-PUSH_BRANCHES=$(echo \
-  master \
-  {release,maint}-0.4.3 \
-  {release,maint}-0.4.2 \
-  {release,maint}-0.4.1 \
-  {release,maint}-0.3.5 \
-  )
 
 if [ -z "$TEST_BRANCH_PREFIX" ]; then
 
   # maint/release push mode: push all branches.
   #
   # List of branches to push. Ordering is not important.
-  PUSH_BRANCHES=$(echo \
-    master \
-    {release,maint}-0.4.3 \
-    {release,maint}-0.4.2 \
-    {release,maint}-0.4.1 \
-    {release,maint}-0.3.5 \
-    )
+  PUSH_BRANCHES="$(git-list-tor-branches.sh -l)"
 else
 
   # Test branch push mode: push test branches, based on each maint branch.
   #
   # List of branches to push. Ordering is not important.
-  PUSH_BRANCHES=" \
-    ${TEST_BRANCH_PREFIX}_master \
-    ${TEST_BRANCH_PREFIX}_043 \
-    ${TEST_BRANCH_PREFIX}_042 \
-    ${TEST_BRANCH_PREFIX}_041 \
-    ${TEST_BRANCH_PREFIX}_035 \
-    "
+  PUSH_BRANCHES=""
+  for suffix in $(git-list-tor-branches.sh -s -R); do
+      PUSH_BRANCHES="${PUSH_BRANCHES} ${TEST_BRANCH_PREFIX}${suffix}"
+  done
 fi
+
+set +e
 
 ###############
 # Entry point #
