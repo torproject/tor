@@ -24,6 +24,13 @@
 
 #include <lttng/tracepoint.h>
 
+/*
+ * Circuit Purposes
+ *
+ * The following defines an enumeration of all possible circuit purpose so
+ * they appear in the trace with the define name (first parameter of
+ * ctf_enum_value) instead of the numerical value.
+ */
 TRACEPOINT_ENUM(tor_circuit, purpose,
   TP_ENUM_VALUES(
     /* Initializing. */
@@ -70,6 +77,13 @@ TRACEPOINT_ENUM(tor_circuit, purpose,
   )
 )
 
+/*
+ * Circuit End Reasons
+ *
+ * The following defines an enumeration of all possible circuit end reasons so
+ * they appear in the trace with the define name (first parameter of
+ * ctf_enum_value) instead of the numerical value.
+ */
 TRACEPOINT_ENUM(tor_circuit, end_reason,
   TP_ENUM_VALUES(
     /* Local reasons. */
@@ -120,6 +134,13 @@ TRACEPOINT_ENUM(tor_circuit, end_reason,
   )
 )
 
+/*
+ * Circuit State
+ *
+ * The following defines an enumeration of all possible circuit state so they
+ * appear in the trace with the define name (first parameter of
+ * ctf_enum_value) instead of the numerical value.
+ */
 TRACEPOINT_ENUM(tor_circuit, state,
   TP_ENUM_VALUES(
     ctf_enum_value("BUILDING", CIRCUIT_STATE_BUILDING)
@@ -130,6 +151,15 @@ TRACEPOINT_ENUM(tor_circuit, state,
   )
 )
 
+/*
+ * Event Class
+ *
+ * A tracepoint class is a class of tracepoints which share the same output
+ * event field definitions. They are then used by the
+ * TRACEPOINT_EVENT_INSTANCE() macro as a base field definition.
+ */
+
+/* Class for origin circuit. */
 TRACEPOINT_EVENT_CLASS(tor_circuit, origin_circuit_t_class,
   TP_ARGS(const origin_circuit_t *, circ),
   TP_FIELDS(
@@ -139,6 +169,7 @@ TRACEPOINT_EVENT_CLASS(tor_circuit, origin_circuit_t_class,
   )
 )
 
+/* Class for or circuit. */
 TRACEPOINT_EVENT_CLASS(tor_circuit, or_circuit_t_class,
   TP_ARGS(const or_circuit_t *, circ),
   TP_FIELDS(
@@ -149,32 +180,44 @@ TRACEPOINT_EVENT_CLASS(tor_circuit, or_circuit_t_class,
 
 /*
  * Origin circuit events.
+ *
+ * Tracepoint use the origin_circuit_t object.
  */
 
+/* Tracepoint emitted when a new origin circuit has been created. */
 TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, new_origin,
   TP_ARGS(const origin_circuit_t *, circ)
 )
 
+/* Tracepoint emitted when an origin circuit has opened. */
 TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, opened,
   TP_ARGS(const origin_circuit_t *, circ)
 )
 
+/* Tracepoint emitted when an origin circuit has established. */
 TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, establish,
   TP_ARGS(const origin_circuit_t *, circ)
 )
 
+/* Tracepoint emitted when an origin circuit has been cannibalized. */
 TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, cannibalized,
   TP_ARGS(const origin_circuit_t *, circ)
 )
 
+/* Tracepoint emitted when an origin circuit has timed out. This is called
+ * when circuit_expire_building() as selected the circuit and is about to
+ * close it for timeout. */
 TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, timeout,
   TP_ARGS(const origin_circuit_t *, circ)
 )
 
+/* Tracepoint emitted when an origin circuit has timed out due to idleness.
+ * This is when the circuit is closed after MaxCircuitDirtiness. */
 TRACEPOINT_EVENT_INSTANCE(tor_circuit, origin_circuit_t_class, idle_timeout,
   TP_ARGS(const origin_circuit_t *, circ)
 )
 
+/* Tracepoint emitted when an origin circuit sends out its first onion skin. */
 TRACEPOINT_EVENT(tor_circuit, first_onion_skin,
   TP_ARGS(const origin_circuit_t *, circ, const crypt_path_t *, hop),
   TP_FIELDS(
@@ -186,6 +229,8 @@ TRACEPOINT_EVENT(tor_circuit, first_onion_skin,
   )
 )
 
+/* Tracepoint emitted when an origin circuit sends out an intermediate onion
+ * skin. */
 TRACEPOINT_EVENT(tor_circuit, intermediate_onion_skin,
   TP_ARGS(const origin_circuit_t *, circ, const crypt_path_t *, hop),
   TP_FIELDS(
@@ -199,16 +244,22 @@ TRACEPOINT_EVENT(tor_circuit, intermediate_onion_skin,
 
 /*
  * OR circuit events.
+ *
+ * Tracepoint use the or_circuit_t object.
  */
 
+/* Tracepoint emitted when a new or circuit has been created. */
 TRACEPOINT_EVENT_INSTANCE(tor_circuit, or_circuit_t_class, new_or,
   TP_ARGS(const or_circuit_t *, circ)
 )
 
 /*
  * General circuit events.
+ *
+ * Tracepoint use the circuit_t object.
  */
 
+/* Tracepoint emitted when a circuit is freed. */
 TRACEPOINT_EVENT(tor_circuit, free,
   TP_ARGS(const circuit_t *, circ),
   TP_FIELDS(
@@ -220,6 +271,7 @@ TRACEPOINT_EVENT(tor_circuit, free,
   )
 )
 
+/* Tracepoint emitted when a circuit is marked for close. */
 TRACEPOINT_EVENT(tor_circuit, mark_for_close,
   TP_ARGS(const circuit_t *, circ),
   TP_FIELDS(
@@ -235,6 +287,7 @@ TRACEPOINT_EVENT(tor_circuit, mark_for_close,
   )
 )
 
+/* Tracepoint emitted when a circuit changes purpose. */
 TRACEPOINT_EVENT(tor_circuit, change_purpose,
   TP_ARGS(const circuit_t *, circ, int, old_purpose, int, new_purpose),
   TP_FIELDS(
@@ -247,6 +300,7 @@ TRACEPOINT_EVENT(tor_circuit, change_purpose,
   )
 )
 
+/* Tracepoint emitted when a circuit changes state. */
 TRACEPOINT_EVENT(tor_circuit, change_state,
   TP_ARGS(const circuit_t *, circ, int, old_state, int, new_state),
   TP_FIELDS(
@@ -261,7 +315,7 @@ TRACEPOINT_EVENT(tor_circuit, change_state,
 
 #endif /* TOR_TRACE_PROBES_CIRCUIT_H */
 
-/* Must be include after the probes declaration. */
+/* Must be included after the probes declaration. */
 #include <lttng/tracepoint-event.h>
 
 #endif /* USE_TRACING_INSTRUMENTATION_LTTNG */
