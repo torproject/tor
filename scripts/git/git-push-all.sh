@@ -172,18 +172,18 @@ DEFAULT_UPSTREAM_BRANCHES=
 if [ "$DEFAULT_UPSTREAM_REMOTE" != "$UPSTREAM_REMOTE" ]; then
   DEFAULT_UPSTREAM_BRANCHES=$(echo \
     "$DEFAULT_UPSTREAM_REMOTE"/master \
+    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.4.3 \
     "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.4.2 \
     "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.4.1 \
-    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.4.0 \
     "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.3.5 \
     )
 fi
 
 UPSTREAM_BRANCHES=$(echo \
   "$UPSTREAM_REMOTE"/master \
+  "$UPSTREAM_REMOTE"/{release,maint}-0.4.3 \
   "$UPSTREAM_REMOTE"/{release,maint}-0.4.2 \
   "$UPSTREAM_REMOTE"/{release,maint}-0.4.1 \
-  "$UPSTREAM_REMOTE"/{release,maint}-0.4.0 \
   "$UPSTREAM_REMOTE"/{release,maint}-0.3.5 \
   )
 
@@ -193,9 +193,9 @@ UPSTREAM_BRANCHES=$(echo \
 
 PUSH_BRANCHES=$(echo \
   master \
+  {release,maint}-0.4.3 \
   {release,maint}-0.4.2 \
   {release,maint}-0.4.1 \
-  {release,maint}-0.4.0 \
   {release,maint}-0.3.5 \
   )
 
@@ -206,9 +206,9 @@ if [ -z "$TEST_BRANCH_PREFIX" ]; then
   # List of branches to push. Ordering is not important.
   PUSH_BRANCHES=$(echo \
     master \
+    {release,maint}-0.4.3 \
     {release,maint}-0.4.2 \
     {release,maint}-0.4.1 \
-    {release,maint}-0.4.0 \
     {release,maint}-0.3.5 \
     )
 else
@@ -218,9 +218,9 @@ else
   # List of branches to push. Ordering is not important.
   PUSH_BRANCHES=" \
     ${TEST_BRANCH_PREFIX}_master \
+    ${TEST_BRANCH_PREFIX}_043 \
     ${TEST_BRANCH_PREFIX}_042 \
     ${TEST_BRANCH_PREFIX}_041 \
-    ${TEST_BRANCH_PREFIX}_040 \
     ${TEST_BRANCH_PREFIX}_035 \
     "
 fi
