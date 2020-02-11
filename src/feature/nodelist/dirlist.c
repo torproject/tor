@@ -66,8 +66,8 @@ add_trusted_dir_to_nodelist_addr_set(const dir_server_t *dir)
 
 /** Go over the trusted directory server list and add their address(es) to the
  * nodelist address set. This is called everytime a new consensus is set. */
-void
-dirlist_add_trusted_addresses(void)
+MOCK_IMPL(void,
+dirlist_add_trusted_addresses, (void))
 {
   if (!trusted_dir_servers) {
     return;
