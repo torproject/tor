@@ -59,15 +59,15 @@ TOR_WKT_NAME=${TOR_WKT_NAME:-"tor-wkt"}
 # First set of arrays are the maint-* branch and then the release-* branch.
 # New arrays need to be in the WORKTREE= array else they aren't considered.
 MAINT_035=( "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/maint-0.3.5" )
-MAINT_040=( "maint-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.0" )
 MAINT_041=( "maint-0.4.1" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.1" )
 MAINT_042=( "maint-0.4.2" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.2" )
+MAINT_043=( "maint-0.4.3" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.3" )
 MAINT_MASTER=( "master" "$GIT_PATH/$TOR_MASTER_NAME" )
 
 RELEASE_035=( "release-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/release-0.3.5" )
-RELEASE_040=( "release-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.0" )
 RELEASE_041=( "release-0.4.1" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.1" )
 RELEASE_042=( "release-0.4.2" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.2" )
+RELEASE_043=( "release-0.4.3" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.3" )
 
 # The master branch path has to be the main repository thus contains the
 # origin that will be used to fetch the updates. All the worktrees are created
@@ -77,14 +77,14 @@ ORIGIN_PATH="$GIT_PATH/$TOR_MASTER_NAME"
 # SC2034 -- shellcheck thinks that these are unused.  We know better.
 ACTUALLY_THESE_ARE_USED=<<EOF
 ${MAINT_035[0]}
-${MAINT_040[0]}
 ${MAINT_041[0]}
 ${MAINT_042[0]}
+${MAINT_043[0]}
 ${MAINT_MASTER[0]}
 ${RELEASE_035[0]}
-${RELEASE_040[0]}
 ${RELEASE_041[0]}
 ${RELEASE_042[0]}
+${RELEASE_043[0]}
 EOF
 
 ###########################
@@ -96,14 +96,14 @@ WORKTREE=(
   MAINT_035[@]
   RELEASE_035[@]
 
-  MAINT_040[@]
-  RELEASE_040[@]
-
   MAINT_041[@]
   RELEASE_041[@]
 
   MAINT_042[@]
   RELEASE_042[@]
+
+  MAINT_043[@]
+  RELEASE_043[@]
 
   MAINT_MASTER[@]
 )

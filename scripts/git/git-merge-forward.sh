@@ -94,19 +94,19 @@ TOR_WKT_NAME=${TOR_WKT_NAME:-"tor-wkt"}
 MAINT_035_TB=( "maint-0.3.5" "" "$GIT_PATH/$TOR_WKT_NAME/maint-0.3.5" \
     "_035" "")
 # Used in maint/release merge and test branch modes
-MAINT_040=( "maint-0.4.0" "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.0" \
-    "_040" "_035")
-MAINT_041=( "maint-0.4.1" "maint-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.1" \
-    "_041" "_040")
+MAINT_041=( "maint-0.4.1" "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.1" \
+    "_041" "_035")
 MAINT_042=( "maint-0.4.2" "maint-0.4.1" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.2" \
     "_042" "_041")
-MAINT_MASTER=( "master" "maint-0.4.2" "$GIT_PATH/$TOR_MASTER_NAME" \
-    "_master" "_042")
+MAINT_043=( "maint-0.4.3" "maint-0.4.2" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.3" \
+    "_043" "_042")
+MAINT_MASTER=( "master" "maint-0.4.3" "$GIT_PATH/$TOR_MASTER_NAME" \
+    "_master" "_043")
 
 RELEASE_035=( "release-0.3.5" "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/release-0.3.5" )
-RELEASE_040=( "release-0.4.0" "maint-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.0" )
 RELEASE_041=( "release-0.4.1" "maint-0.4.1" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.1" )
 RELEASE_042=( "release-0.4.2" "maint-0.4.2" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.2" )
+RELEASE_043=( "release-0.4.3" "maint-0.4.3" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.3" )
 
 # The master branch path has to be the main repository thus contains the
 # origin that will be used to fetch the updates. All the worktrees are created
@@ -116,14 +116,14 @@ ORIGIN_PATH="$GIT_PATH/$TOR_MASTER_NAME"
 # SC2034 -- shellcheck thinks that these are unused.  We know better.
 ACTUALLY_THESE_ARE_USED=<<EOF
 ${MAINT_035_TB[0]}
-${MAINT_040[0]}
 ${MAINT_041[0]}
 ${MAINT_042[0]}
+${MAINT_043[0]}
 ${MAINT_MASTER[0]}
 ${RELEASE_035[0]}
-${RELEASE_040[0]}
 ${RELEASE_041[0]}
 ${RELEASE_042[0]}
+${RELEASE_043[0]}
 EOF
 
 #######################
@@ -181,14 +181,14 @@ if [ -z "$TEST_BRANCH_PREFIX" ]; then
     # maint branch
     RELEASE_035[@]
 
-    MAINT_040[@]
-    RELEASE_040[@]
-
     MAINT_041[@]
     RELEASE_041[@]
 
     MAINT_042[@]
     RELEASE_042[@]
+
+    MAINT_043[@]
+    RELEASE_043[@]
 
     MAINT_MASTER[@]
   )
@@ -203,11 +203,11 @@ else
     # We want a test branch based on the earliest maint branch
     MAINT_035_TB[@]
 
-    MAINT_040[@]
-
     MAINT_041[@]
 
     MAINT_042[@]
+
+    MAINT_043[@]
 
     MAINT_MASTER[@]
   )
