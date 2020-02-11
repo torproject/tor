@@ -455,20 +455,41 @@ node_add_to_address_set(const node_t *node)
 
   if (node->rs) {
     if (node->rs->addr)
-      address_set_add_ipv4h(the_nodelist->node_addrs, node->rs->addr);
+      nodelist_add_addr4_to_address_set(node->rs->addr);
     if (!tor_addr_is_null(&node->rs->ipv6_addr))
-      address_set_add(the_nodelist->node_addrs, &node->rs->ipv6_addr);
+      nodelist_add_addr6_to_address_set(&node->rs->ipv6_addr);
   }
   if (node->ri) {
     if (node->ri->addr)
-      address_set_add_ipv4h(the_nodelist->node_addrs, node->ri->addr);
+      nodelist_add_addr4_to_address_set(node->ri->addr);
     if (!tor_addr_is_null(&node->ri->ipv6_addr))
-      address_set_add(the_nodelist->node_addrs, &node->ri->ipv6_addr);
+      nodelist_add_addr6_to_address_set(&node->ri->ipv6_addr);
   }
   if (node->md) {
     if (!tor_addr_is_null(&node->md->ipv6_addr))
-      address_set_add(the_nodelist->node_addrs, &node->md->ipv6_addr);
+      nodelist_add_addr6_to_address_set(&node->md->ipv6_addr);
   }
+}
+
+/** Add the given v4 address into the nodelist address set. */
+void
+nodelist_add_addr4_to_address_set(const uint32_t addr)
+{
+  if (!the_nodelist || !the_nodelist->node_addrs || addr == 0) {
+    return;
+  }
+  address_set_add_ipv4h(the_nodelist->node_addrs, addr);
+}
+
+/** Add the given v6 address into the nodelist address set. */
+void
+nodelist_add_addr6_to_address_set(const tor_addr_t *addr)
+{
+  if (BUG(!addr) || tor_addr_is_null(addr) || tor_addr_is_v4(addr) ||
+      !the_nodelist || !the_nodelist->node_addrs) {
+    return;
+  }
+  address_set_add(the_nodelist->node_addrs, addr);
 }
 
 /** Return true if <b>addr</b> is the address of some node in the nodelist.
@@ -612,9 +633,12 @@ nodelist_set_consensus(networkstatus_t *ns)
   SMARTLIST_FOREACH(the_nodelist->nodes, node_t *, node,
                     node->rs = NULL);
 
-  /* Conservatively estimate that every node will have 2 addresses. */
-  const int estimated_addresses = smartlist_len(ns->routerstatus_list) *
-                                  get_estimated_address_per_node();
+  /* Conservatively estimate that every node will have 2 addresses (v4 and
+   * v6). Then we add the number of configured trusted authorities we have. */
+  int estimated_addresses = smartlist_len(ns->routerstatus_list) *
+                            get_estimated_address_per_node();
+  estimated_addresses += (get_n_authorities(V3_DIRINFO & BRIDGE_DIRINFO) *
+                          get_estimated_address_per_node());
   address_set_free(the_nodelist->node_addrs);
   the_nodelist->node_addrs = address_set_new(estimated_addresses);
 
@@ -665,6 +689,9 @@ nodelist_set_consensus(networkstatus_t *ns)
   SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
     node_add_to_address_set(node);
   } SMARTLIST_FOREACH_END(node);
+  /* Then, add all trusted configured directories. Some might not be in the
+   * consensus so make sure we know them. */
+  dirlist_add_trusted_dir_addresses();
 
   if (! authdir) {
     SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {

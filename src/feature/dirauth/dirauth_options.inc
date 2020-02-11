@@ -95,4 +95,11 @@ CONF_VAR(TestingMinFastFlagThreshold, MEMUNIT, 0, "0")
  * versions? */
 CONF_VAR(VersioningAuthoritativeDirectory, BOOL, 0, "0")
 
+/** Boolean: Under bandwidth pressure, if set to 1, the authority will always
+ * answer directory requests from relays but will start sending 503 error code
+ * for the other connections. If set to 0, all connections are considered the
+ * same and the authority will try to answer them all regardless of bandwidth
+ * pressure or not. */
+CONF_VAR(AuthDirRejectRequestsUnderLoad, BOOL, 0, "1")
+
 END_CONF_STRUCT(dirauth_options_t)
