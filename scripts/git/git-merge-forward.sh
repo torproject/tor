@@ -91,40 +91,10 @@ TOR_WKT_NAME=${TOR_WKT_NAME:-"tor-wkt"}
 # But it's the earliest maint branch, so we don't merge forward into it.
 # Since we don't merge forward into it, the second and fifth items must be
 # blank ("").
-MAINT_035_TB=( "maint-0.3.5" "" "$GIT_PATH/$TOR_WKT_NAME/maint-0.3.5" \
-    "_035" "")
-# Used in maint/release merge and test branch modes
-MAINT_041=( "maint-0.4.1" "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.1" \
-    "_041" "_035")
-MAINT_042=( "maint-0.4.2" "maint-0.4.1" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.2" \
-    "_042" "_041")
-MAINT_043=( "maint-0.4.3" "maint-0.4.2" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.3" \
-    "_043" "_042")
-MAINT_MASTER=( "master" "maint-0.4.3" "$GIT_PATH/$TOR_MASTER_NAME" \
-    "_master" "_043")
 
-RELEASE_035=( "release-0.3.5" "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/release-0.3.5" )
-RELEASE_041=( "release-0.4.1" "maint-0.4.1" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.1" )
-RELEASE_042=( "release-0.4.2" "maint-0.4.2" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.2" )
-RELEASE_043=( "release-0.4.3" "maint-0.4.3" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.3" )
-
-# The master branch path has to be the main repository thus contains the
 # origin that will be used to fetch the updates. All the worktrees are created
 # from that repository.
 ORIGIN_PATH="$GIT_PATH/$TOR_MASTER_NAME"
-
-# SC2034 -- shellcheck thinks that these are unused.  We know better.
-ACTUALLY_THESE_ARE_USED=<<EOF
-${MAINT_035_TB[0]}
-${MAINT_041[0]}
-${MAINT_042[0]}
-${MAINT_043[0]}
-${MAINT_MASTER[0]}
-${RELEASE_035[0]}
-${RELEASE_041[0]}
-${RELEASE_042[0]}
-${RELEASE_043[0]}
-EOF
 
 #######################
 # Argument processing #
@@ -170,49 +140,16 @@ done
 # Git worktrees to manage #
 ###########################
 
+set -e
 if [ -z "$TEST_BRANCH_PREFIX" ]; then
-
   # maint/release merge mode
-  #
-  # List of all worktrees to merge forward into. All defined above.
-  # Ordering is important. Always the maint-* branch BEFORE the release-*.
-  WORKTREE=(
-    # We don't merge forward into MAINT_035_TB[@], because it's the earliest
-    # maint branch
-    RELEASE_035[@]
-
-    MAINT_041[@]
-    RELEASE_041[@]
-
-    MAINT_042[@]
-    RELEASE_042[@]
-
-    MAINT_043[@]
-    RELEASE_043[@]
-
-    MAINT_MASTER[@]
-  )
-
+  eval "$(git-list-tor-branches.sh -m)"
+  # Remove first element: we don't merge forward into it.
+  WORKTREE=( "${WORKTREE[@]:1}" )
 else
-
-  # Test branch mode: base test branches on maint branches only
-  #
-  # List of all worktrees to create test branches from. All defined above.
-  # Ordering is important. All maint-* branches, including the earliest one.
-  WORKTREE=(
-    # We want a test branch based on the earliest maint branch
-    MAINT_035_TB[@]
-
-    MAINT_041[@]
-
-    MAINT_042[@]
-
-    MAINT_043[@]
-
-    MAINT_MASTER[@]
-  )
-
+  eval "$(git-list-tor-branches.sh -m -R)"
 fi
+set +e
 
 COUNT=${#WORKTREE[@]}
 
