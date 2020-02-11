@@ -95,13 +95,13 @@ MAINT_035_TB=( "maint-0.3.5" "" "$GIT_PATH/$TOR_WKT_NAME/maint-0.3.5" \
     "_035" "")
 # Used in maint/release merge and test branch modes
 MAINT_041=( "maint-0.4.1" "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.1" \
-    "_041" "_040")
+    "_041" "_035")
 MAINT_042=( "maint-0.4.2" "maint-0.4.1" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.2" \
     "_042" "_041")
 MAINT_043=( "maint-0.4.3" "maint-0.4.2" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.3" \
-    "_042" "_041")
+    "_043" "_042")
 MAINT_MASTER=( "master" "maint-0.4.3" "$GIT_PATH/$TOR_MASTER_NAME" \
-    "_master" "_042")
+    "_master" "_043")
 
 RELEASE_035=( "release-0.3.5" "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/release-0.3.5" )
 RELEASE_041=( "release-0.4.1" "maint-0.4.1" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.1" )
