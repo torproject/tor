@@ -39,6 +39,7 @@
 #include "core/or/connection_edge.h"
 #include "core/or/extendinfo.h"
 #include "core/or/policies.h"
+#include "core/or/trace_probes_circuit.h"
 #include "feature/client/addressmap.h"
 #include "feature/client/bridges.h"
 #include "feature/client/circpathbias.h"
@@ -63,6 +64,7 @@
 #include "feature/stats/predict_ports.h"
 #include "lib/math/fp.h"
 #include "lib/time/tvdiff.h"
+#include "lib/trace/events.h"
 
 #include "core/or/cpath_build_state_st.h"
 #include "feature/dircommon/dir_connection_st.h"
@@ -1683,6 +1685,7 @@ circuit_testing_failed(origin_circuit_t *circ, int at_last_hop)
 void
 circuit_has_opened(origin_circuit_t *circ)
 {
+  tor_trace(circuit, opened, circ);
   circuit_event_status(circ, CIRC_EVENT_BUILT, 0);
 
   /* Remember that this circuit has finished building. Now if we start
