@@ -1008,6 +1008,13 @@ struct or_options_t {
    */
   uint64_t MaxUnparseableDescSizeToLog;
 
+  /** Bool (default: 1): Under bandwidth pressure, if set to 1, the authority
+   * will always answer directory requests from relays but will start sending
+   * 503 error code for the other connections. If set to 0, all connections
+   * are considered the same and the authority will try to answer them all
+   * regardless of bandwidth pressure or not. */
+  int AuthDirRejectRequestsUnderLoad;
+
   /** Bool (default: 1): Switch for the shared random protocol. Only
    * relevant to a directory authority. If off, the authority won't
    * participate in the protocol. If on (default), a flag is added to the
