@@ -5663,11 +5663,27 @@ test_config_check_bridge_distribution_setting_not_a_bridge(void *arg)
 static void
 test_config_check_bridge_distribution_setting_valid(void *arg)
 {
-  int ret = check_bridge_distribution_setting("https");
-
   (void)arg;
 
-  tt_int_op(ret, OP_EQ, 0);
+  // Check all the possible values we support right now.
+  tt_int_op(check_bridge_distribution_setting("none"), OP_EQ, 0);
+  tt_int_op(check_bridge_distribution_setting("any"), OP_EQ, 0);
+  tt_int_op(check_bridge_distribution_setting("https"), OP_EQ, 0);
+  tt_int_op(check_bridge_distribution_setting("email"), OP_EQ, 0);
+  tt_int_op(check_bridge_distribution_setting("moat"), OP_EQ, 0);
+
+  // Check all the possible values we support right now with weird casing.
+  tt_int_op(check_bridge_distribution_setting("NoNe"), OP_EQ, 0);
+  tt_int_op(check_bridge_distribution_setting("anY"), OP_EQ, 0);
+  tt_int_op(check_bridge_distribution_setting("hTTps"), OP_EQ, 0);
+  tt_int_op(check_bridge_distribution_setting("emAIl"), OP_EQ, 0);
+  tt_int_op(check_bridge_distribution_setting("moAt"), OP_EQ, 0);
+
+  // Invalid values.
+  tt_int_op(check_bridge_distribution_setting("x\rx"), OP_EQ, -1);
+  tt_int_op(check_bridge_distribution_setting("x\nx"), OP_EQ, -1);
+  tt_int_op(check_bridge_distribution_setting("\t\t\t"), OP_EQ, -1);
+
  done:
   return;
 }

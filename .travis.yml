@@ -95,8 +95,6 @@ matrix:
       os: osx
     - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
       os: osx
-    ## test-stem sometimes hangs on Travis
-    - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
 
 ## (Linux only) Use a recent Linux image (Ubuntu Bionic)
 dist: bionic
