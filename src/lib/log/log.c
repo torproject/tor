@@ -668,12 +668,8 @@ tor_log_update_sigsafe_err_fds(void)
 
   /* log_fds and err_fds contain matching entries: log_fds are the fds used by
    * the log module, and err_fds are the fds used by the err module.
-   * For stdio logs, the log_fd and err_fd values are identical,
-   * and the err module closes the fd on shutdown.
-   * For file logs, the err_fd is a dup() of the log_fd,
-   * and the log and err modules both close their respective fds on shutdown.
-   * (Once all fds representing a file are closed, the underlying file is
-   * closed.)
+   * For stdio logs, the log_fd and err_fd values are identical.
+   * For file logs, the err_fd is a dup() of the log_fd.
    */
   int log_fds[TOR_SIGSAFE_LOG_MAX_FDS];
   int err_fds[TOR_SIGSAFE_LOG_MAX_FDS];
@@ -704,12 +700,10 @@ tor_log_update_sigsafe_err_fds(void)
       log_fds[n_fds] = lf->fd;
       if (lf->needs_close) {
         /* File log fds are duplicated, because close_log() closes the log
-         * module's fd, and tor_log_close_sigsafe_err_fds() closes the err
          * module's fd. Both refer to the same file. */
         err_fds[n_fds] = dup(lf->fd);
       } else {
-        /* stdio log fds are not closed by the log module.
-         * tor_log_close_sigsafe_err_fds() closes stdio logs.  */
+        /* stdio log fds are not closed by the log module. */
         err_fds[n_fds] = lf->fd;
       }
       n_fds++;
@@ -836,30 +830,6 @@ logs_free_all(void)
    * If tor is re-initialized, log_mutex_initialized will still be 1. So we
    * won't trigger any undefined behaviour by trying to re-initialize the
    * log mutex. */
-}
-
-/** Close signal-safe log files.
- * Closing the log files makes the process and OS flush log buffers.
- *
- * This function is safe to call from a signal handler. It should only be
- * called when shutting down the log or err modules. It is currenly called
- * by the err module, when terminating the process on an abnormal condition.
- */
-void
-logs_close_sigsafe(void)
-{
-  logfile_t *victim, *next;
-  /* We can't LOCK_LOGS() in a signal handler, because it may call
-   * signal-unsafe functions. And we can't deallocate memory, either. */
-  next = logfiles;
-  logfiles = NULL;
-  while (next) {
-    victim = next;
-    next = next->next;
-    if (victim->needs_close) {
-      close_log_sigsafe(victim);
-    }
-  }
 }
 
 /** Remove and free the log entry <b>victim</b> from the linked-list
