@@ -665,24 +665,15 @@ tor_log_update_sigsafe_err_fds(void)
   const logfile_t *lf;
   int found_real_stderr = 0;
 
-  /* log_fds and err_fds contain matching entries: log_fds are the fds used by
-   * the log module, and err_fds are the fds used by the err module.
-   * For stdio logs, the log_fd and err_fd values are identical,
-   * and the err module closes the fd on shutdown.
-   * For file logs, the err_fd is a dup() of the log_fd,
-   * and the log and err modules both close their respective fds on shutdown.
-   * (Once all fds representing a file are closed, the underlying file is
-   * closed.)
-   */
-  int log_fds[TOR_SIGSAFE_LOG_MAX_FDS];
-  int err_fds[TOR_SIGSAFE_LOG_MAX_FDS];
+  /* The fds are the file descriptors of tor's stdout, stderr, and file
+   * logs. The log and err modules flush these fds during their shutdowns. */
+  int fds[TOR_SIGSAFE_LOG_MAX_FDS];
   int n_fds;
 
   LOCK_LOGS();
   /* Reserve the first one for stderr. This is safe because when we daemonize,
-   * we dup2 /dev/null to stderr.
-   * For stderr, log_fds and err_fds are the same. */
-  log_fds[0] = err_fds[0] = STDERR_FILENO;
+   * we dup2 /dev/null to stderr. */
+  fds[0] = STDERR_FILENO;
   n_fds = 1;
 
   for (lf = logfiles; lf; lf = lf->next) {
@@ -697,21 +688,11 @@ tor_log_update_sigsafe_err_fds(void)
         (LD_BUG|LD_GENERAL)) {
       if (lf->fd == STDERR_FILENO)
         found_real_stderr = 1;
-      /* Avoid duplicates by checking the log module fd against log_fds */
-      if (int_array_contains(log_fds, n_fds, lf->fd))
+      /* Avoid duplicates by checking the log module fd against fds */
+      if (int_array_contains(fds, n_fds, lf->fd))
         continue;
-      /* Update log_fds using the log module's fd */
-      log_fds[n_fds] = lf->fd;
-      if (lf->needs_close) {
-        /* File log fds are duplicated, because close_log() closes the log
-         * module's fd, and tor_log_close_sigsafe_err_fds() closes the err
-         * module's fd. Both refer to the same file. */
-        err_fds[n_fds] = dup(lf->fd);
-      } else {
-        /* stdio log fds are not closed by the log module.
-         * tor_log_close_sigsafe_err_fds() closes stdio logs.  */
-        err_fds[n_fds] = lf->fd;
-      }
+      /* Update fds using the log module's fd */
+      fds[n_fds] = lf->fd;
       n_fds++;
       if (n_fds == TOR_SIGSAFE_LOG_MAX_FDS)
         break;
@@ -719,20 +700,19 @@ tor_log_update_sigsafe_err_fds(void)
   }
 
   if (!found_real_stderr &&
-      int_array_contains(log_fds, n_fds, STDOUT_FILENO)) {
+      int_array_contains(fds, n_fds, STDOUT_FILENO)) {
     /* Don't use a virtual stderr when we're also logging to stdout.
      * If we reached max_fds logs, we'll now have (max_fds - 1) logs.
      * That's ok, max_fds is large enough that most tor instances don't exceed
      * it. */
     raw_assert(n_fds >= 2); /* Don't tor_assert inside log fns */
     --n_fds;
-    log_fds[0] = log_fds[n_fds];
-    err_fds[0] = err_fds[n_fds];
+    fds[0] = fds[n_fds];
   }
 
   UNLOCK_LOGS();
 
-  tor_log_set_sigsafe_err_fds(err_fds, n_fds);
+  tor_log_set_sigsafe_err_fds(fds, n_fds);
 }
 
 /** Add to <b>out</b> a copy of every currently configured log file name. Used
@@ -841,16 +821,16 @@ logs_free_all(void)
    * log mutex. */
 }
 
-/** Close signal-safe log files.
- * Closing the log files makes the process and OS flush log buffers.
+/** Flush the signal-safe log files.
  *
- * This function is safe to call from a signal handler. It should only be
- * called when shutting down the log or err modules. It is currenly called
- * by the err module, when terminating the process on an abnormal condition.
+ * This function is safe to call from a signal handler. It is currenly called
+ * by the BUG() macros, when terminating the process on an abnormal condition.
  */
 void
-logs_close_sigsafe(void)
+logs_flush_sigsafe(void)
 {
+  /* If we don't have fsync() in unistd.h, we can't flush the logs. */
+#ifdef HAVE_FSYNC
   logfile_t *victim, *next;
   /* We can't LOCK_LOGS() in a signal handler, because it may call
    * signal-unsafe functions. And we can't deallocate memory, either. */
@@ -860,9 +840,11 @@ logs_close_sigsafe(void)
     victim = next;
     next = next->next;
     if (victim->needs_close) {
-      close_log_sigsafe(victim);
+      /* We can't do anything useful if the flush fails. */
+      (void)fsync(victim->fd);
     }
   }
+#endif /* defined(HAVE_FSYNC) */
 }
 
 /** Remove and free the log entry <b>victim</b> from the linked-list
