@@ -844,7 +844,7 @@ logs_flush_sigsafe(void)
       (void)fsync(victim->fd);
     }
   }
-#endif
+#endif /* defined(HAVE_FSYNC) */
 }
 
 /** Remove and free the log entry <b>victim</b> from the linked-list

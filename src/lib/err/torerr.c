@@ -171,7 +171,7 @@ tor_log_flush_sigsafe_err_fds(void)
      * take any other action, if fsync() fails. */
     (void)fsync(fds[i]);
   }
-#endif
+#endif /* defined(HAVE_FSYNC) */
 }
 
 /**
