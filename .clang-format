@@ -1,3 +1,8 @@
+# DO NOT COMMIT OR MERGE CODE THAT IS RUN THROUGH THIS TOOL YET.
+#
+# WE ARE STILL DISCUSSING OUR DESIRED STYLE AND ITERATING ON IT.
+#     (12 Feb 2020)
+
 ---
 Language:        Cpp
 # Out of all supported styles, LLVM seems closest to our own.

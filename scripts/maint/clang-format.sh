@@ -2,6 +2,13 @@
 # Copyright 2020, The Tor Project, Inc.
 # See LICENSE for licensing information.
 
+#
+# DO NOT COMMIT OR MERGE CODE THAT IS RUN THROUGH THIS TOOL YET.
+#
+# WE ARE STILL DISCUSSING OUR DESIRED STYLE AND ITERATING ON IT.
+#     (12 Feb 2020)
+#
+
 # This script runs "clang-format" and "codetool" in sequence over each of
 # our source files, and replaces the original file only if it has changed.
 #

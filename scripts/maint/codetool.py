@@ -2,6 +2,14 @@
 # Copyright (c) 2020, The Tor Project, Inc.
 # See LICENSE for licensing information.
 
+#
+# DO NOT COMMIT OR MERGE CODE THAT IS RUN THROUGH THIS TOOL YET.
+#
+# WE ARE STILL DISCUSSING OUR DESIRED STYLE AND ITERATING ON IT,
+# ALONG WITH THE TOOLS THAT ACHIEVE IT.
+#     (12 Feb 2020)
+#
+
 """
    This program uses a set of plugable filters to inspect and transform
    our C code.
