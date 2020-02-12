@@ -40,8 +40,8 @@ static const struct {
   protocol_type_t protover_type;
   const char *name;
 /* If you add a new protocol here, you probably also want to add
- * parsing for it in routerstatus_parse_entry_from_string() so that
- * it is set in routerstatus_t */
+ * parsing for it in summarize_protover_flags(), so that it has a
+ * summary flag in routerstatus_t */
 } PROTOCOL_NAMES[] = {
   { PRT_LINK, "Link" },
   { PRT_LINKAUTH, "LinkAuth" },
