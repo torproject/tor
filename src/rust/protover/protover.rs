@@ -161,30 +161,30 @@ pub(crate) fn get_supported_protocols_cstr() -> &'static CStr {
             "Cons=1-2 \
              Desc=1-2 \
              DirCache=1-2 \
+             FlowCtrl=1 \
              HSDir=1-2 \
              HSIntro=3-4 \
              HSRend=1-2 \
              Link=1-5 \
              LinkAuth=3 \
              Microdesc=1-2 \
-             Relay=1-2 \
              Padding=2 \
-             FlowCtrl=1"
+             Relay=1-2"
         )
     } else {
         cstr!(
             "Cons=1-2 \
              Desc=1-2 \
              DirCache=1-2 \
+             FlowCtrl=1 \
              HSDir=1-2 \
              HSIntro=3-4 \
              HSRend=1-2 \
              Link=1-5 \
              LinkAuth=1,3 \
              Microdesc=1-2 \
-             Relay=1-2 \
              Padding=2 \
-             FlowCtrl=1"
+             Relay=1-2"
         )
     }
 }
