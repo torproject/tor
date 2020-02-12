@@ -238,12 +238,12 @@ STATIC microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri,
   "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 " \
   "Link=4 Microdesc=1-2 Relay=2"
 
-#define DIRVOTE_REQUIRE_CLIENT_PROTO \
-  "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 " \
-  "Link=4 Microdesc=1-2 Relay=2"
 #define DIRVOTE_REQUIRE_RELAY_PROTO \
   "Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 " \
   "Link=3-4 Microdesc=1 Relay=1-2"
+#define DIRVOTE_REQUIRE_CLIENT_PROTO \
+  "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 " \
+  "Link=4 Microdesc=1-2 Relay=2"
 
 #endif /* defined(DIRVOTE_PRIVATE) */
 

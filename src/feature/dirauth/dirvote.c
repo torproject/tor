@@ -4623,10 +4623,10 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   v3_out->recommended_client_protocols =
     tor_strdup(DIRVOTE_RECCOMEND_CLIENT_PROTO);
 
-  v3_out->required_client_protocols =
-    tor_strdup(DIRVOTE_REQUIRE_CLIENT_PROTO);
   v3_out->required_relay_protocols =
     tor_strdup(DIRVOTE_REQUIRE_RELAY_PROTO);
+  v3_out->required_client_protocols =
+    tor_strdup(DIRVOTE_REQUIRE_CLIENT_PROTO);
 
   /* We are not allowed to vote to require anything we don't have. */
   tor_assert(protover_all_supported(v3_out->required_relay_protocols, NULL));
