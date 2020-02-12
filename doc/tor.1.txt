@@ -2330,10 +2330,6 @@ is non-zero):
     level __notice__ message designed to help developers instrumenting Tor's
     main event loop. (Default: 0)
 
-[[MaxOnionQueueDelay]] **MaxOnionQueueDelay** __NUM__ [**msec**|**second**]::
-    If we have more onionskins queued for processing than we can process in
-    this amount of time, reject new ones. (Default: 1750 msec)
-
 [[MaxMemInQueues]] **MaxMemInQueues**  __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
     This option configures a threshold above which Tor will assume that it
     needs to stop queueing or buffering data because it's about to run out of
@@ -2343,6 +2339,10 @@ is non-zero):
     affects some queues, so the actual process size will be larger than
     this.  If this option is set to 0, Tor will try to pick a reasonable
     default based on your system's physical memory.  (Default: 0)
+
+[[MaxOnionQueueDelay]] **MaxOnionQueueDelay** __NUM__ [**msec**|**second**]::
+    If we have more onionskins queued for processing than we can process in
+    this amount of time, reject new ones. (Default: 1750 msec)
 
 [[MyFamily]] **MyFamily** __fingerprint__,__fingerprint__,...::
     Declare that this Tor relay is controlled or administered by a group or
@@ -2527,11 +2527,6 @@ is non-zero):
     whatever the authorities suggest in the consensus (and block if the consensus
     is quiet on the issue). (Default: auto)
 
-[[RephistTrackTime]] **RephistTrackTime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
-    Tells an authority, or other node tracking node reliability and history,
-    that fine-grained information about nodes can be discarded when it hasn't
-    changed for a given amount of time.  (Default: 24 hours)
-
 [[ServerDNSAllowBrokenConfig]] **ServerDNSAllowBrokenConfig** **0**|**1**::
     If this option is false, Tor exits immediately if there are problems
     parsing the system DNS configuration or connecting to nameservers.
@@ -2606,8 +2601,8 @@ is non-zero):
 // Please keep them that way!
 
 Relays publish most statistics in a document called the
-extra-info document. The following options describe the different
-types of statistics that Tor collects and writes:
+extra-info document. The following options affect the different
+types of statistics that Tor relays collect and publish:
 
 [[CellStatistics]] **CellStatistics** **0**|**1**::
     Relays only.
@@ -2680,6 +2675,11 @@ types of statistics that Tor collects and writes:
     information is important for load balancing decisions related to padding.
     If ExtraInfoStatistics is enabled, it will be published
     as a part of extra-info document. (Default: 1)
+
+[[RephistTrackTime]] **RephistTrackTime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
+    Tells an authority, or other node tracking node reliability and history,
+    that fine-grained information about nodes can be discarded when it hasn't
+    changed for a given amount of time.  (Default: 24 hours)
 
 == DIRECTORY SERVER OPTIONS
 
