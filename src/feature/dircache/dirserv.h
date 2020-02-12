@@ -93,7 +93,7 @@ void dirserv_set_cached_consensus_networkstatus(const char *consensus,
                                               const common_digests_t *digests,
                                               const uint8_t *sha3_as_signed,
                                               time_t published);
-#else
+#else /* !defined(HAVE_MODULE_DIRCACHE) */
 #define have_module_dircache() (0)
 #define directory_caches_unknown_auth_certs(opt) \
   ((void)(opt), 0)
@@ -112,7 +112,7 @@ void dirserv_set_cached_consensus_networkstatus(const char *consensus,
     (void)(e);                                                  \
     (void)(f);                                                  \
   } STMT_END
-#endif
+#endif /* defined(HAVE_MODULE_DIRCACHE) */
 
 void dirserv_clear_old_networkstatuses(time_t cutoff);
 int dirserv_get_routerdesc_spool(smartlist_t *spools_out, const char *key,

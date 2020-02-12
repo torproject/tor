@@ -1947,7 +1947,7 @@ test_util_expand_filename(void *arg)
  done:
   tor_free(str);
 }
-#endif /* !defined(_WIN32) */
+#endif /* !defined(DISABLE_PWDB_TESTS) */
 
 /** Test tor_escape_str_for_pt_args(). */
 static void
@@ -5763,7 +5763,7 @@ test_util_pwdb(void *arg)
   tor_free(dir);
   teardown_capture_of_logs();
 }
-#endif /* !(defined(_WIN32) || defined (__ANDROID__)) */
+#endif /* !defined(DISABLE_PWDB_TESTS) */
 
 static void
 test_util_calloc_check(void *arg)

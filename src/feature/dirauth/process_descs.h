@@ -15,7 +15,7 @@
 // for was_router_added_t.
 #include "feature/nodelist/routerlist.h"
 
-#include "src/lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 
 struct authdir_config_t;
 
@@ -47,7 +47,7 @@ typedef struct authdir_config_t {
 #define RTR_BADEXIT 16 /**< We'll tell clients not to use this as an exit. */
 /*                 32 Historically used to indicade Unnamed */
 
-#endif /* defined(TOR_UNIT_TESTS) */
+#endif /* defined(PROCESS_DESCS_PRIVATE) || defined(TOR_UNIT_TESTS) */
 
 #ifdef TOR_UNIT_TESTS
 
@@ -55,7 +55,7 @@ void authdir_init_fingerprint_list(void);
 
 authdir_config_t *authdir_return_fingerprint_list(void);
 
-#endif /* defined(PROCESS_DESCS_PRIVATE) || defined(TOR_UNIT_TESTS) */
+#endif /* defined(TOR_UNIT_TESTS) */
 
 void dirserv_free_fingerprint_list(void);
 
