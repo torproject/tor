@@ -794,6 +794,11 @@ forward slash (/) in the configuration file and on the command line.
     fetches by the relay (from authority or other relays), because that is considered
     "client" activity.  (Default: 0)
 
+[[RephistTrackTime]] **RephistTrackTime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
+    Tells an authority, or other node tracking node reliability and history,
+    that fine-grained information about nodes can be discarded when it hasn't
+    changed for a given amount of time.  (Default: 24 hours)
+
 [[RunAsDaemon]] **RunAsDaemon** **0**|**1**::
     If 1, Tor forks and daemonizes to the background. This option has no effect
     on Windows; instead you should use the --service command-line option.
@@ -2060,8 +2065,57 @@ different from other Tor clients:
 
 == SERVER OPTIONS
 
+// These options are in alphabetical order, with exceptions as noted.
+// Please keep them that way!
+
 The following options are useful only for servers (that is, if ORPort
 is non-zero):
+
+[[AccountingMax]] **AccountingMax** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
+    Limits the max number of bytes sent and received within a set time period
+    using a given calculation rule (see: AccountingStart, AccountingRule).
+    Useful if you need to stay under a specific bandwidth. By default, the
+    number used for calculation is the max of either the bytes sent or
+    received. For example, with AccountingMax set to 1 TByte, a server
+    could send 900 GBytes and receive 800 GBytes and continue running.
+    It will only hibernate once one of the two reaches 1 TByte. This can
+    be changed to use the sum of the both bytes received and sent by setting
+    the AccountingRule option to "sum" (total bandwidth in/out). When the
+    number of bytes remaining gets low, Tor will stop accepting new connections
+    and circuits. When the number of bytes is exhausted, Tor will hibernate
+    until some time in the next accounting period. To prevent all servers
+    from waking at the same time, Tor will also wait until a random point
+    in each period before waking up. If you have bandwidth cost issues,
+    enabling hibernation is preferable to setting a low bandwidth, since
+    it provides users with a collection of fast servers that are up some
+    of the time, which is more useful than a set of slow servers that are
+    always "available". +
+     +
+    Note that (as also described in the Bandwidth section) Tor uses
+    powers of two, not powers of ten: 1 GByte is 1024*1024*1024, not
+    one billion. Be careful: some internet service providers might count
+    GBytes differently.
+
+[[AccountingRule]] **AccountingRule** **sum**|**max**|**in**|**out**::
+    How we determine when our AccountingMax has been reached (when we
+    should hibernate) during a time interval. Set to "max" to calculate
+    using the higher of either the sent or received bytes (this is the
+    default functionality). Set to "sum" to calculate using the sent
+    plus received bytes. Set to "in" to calculate using only the
+    received bytes. Set to "out" to calculate using only the sent bytes.
+    (Default: max)
+
+[[AccountingStart]] **AccountingStart** **day**|**week**|**month** [__day__] __HH:MM__::
+    Specify how long accounting periods last. If **month** is given,
+    each accounting period runs from the time __HH:MM__ on the __dayth__ day of one
+    month to the same day and time of the next. The relay will go at full speed,
+    use all the quota you specify, then hibernate for the rest of the period. (The
+    day must be between 1 and 28.) If **week** is given, each accounting period
+    runs from the time __HH:MM__ of the __dayth__ day of one week to the same day
+    and time of the next week, with Monday as day 1 and Sunday as day 7. If **day**
+    is given, each accounting period runs from the time __HH:MM__ each day to the
+    same time on the next day. All times are local, and given in 24-hour time.
+    (Default: "month 1 0:00")
 
 [[Address]] **Address** __address__::
     The IPv4 address of this server, or a fully qualified domain name of
@@ -2088,6 +2142,15 @@ is non-zero):
     Note: make sure that no MyFamily lines are present in your torrc when
     relay is configured in bridge mode.
 
+//Out of order because it logically belongs after BridgeRelay.
+[[BridgeRecordUsageByCountry]] **BridgeRecordUsageByCountry** **0**|**1**::
+    When this option is enabled and BridgeRelay is also enabled, and we have
+    GeoIP data, Tor keeps a per-country count of how many client
+    addresses have contacted it so that it can help the bridge authority guess
+    which countries have blocked access to it. If ExtraInfoStatistics is
+    enabled, it will be published as part of extra-info document. (Default: 1)
+
+//Out of order because it logically belongs after BridgeRelay.
 [[BridgeDistribution]] **BridgeDistribution** __string__::
     If set along with BridgeRelay, Tor will include a new line in its
     bridge descriptor which indicates to the BridgeDB service how it
@@ -2108,21 +2171,11 @@ is non-zero):
     relay or bridge.  (Really, everybody running a relay or bridge should set
     it.)
 
-
-[[ExitRelay]] **ExitRelay** **0**|**1**|**auto**::
-    Tells Tor whether to run as an exit relay.  If Tor is running as a
-    non-bridge server, and ExitRelay is set to 1, then Tor allows traffic to
-    exit according to the ExitPolicy option, the ReducedExitPolicy option,
-    or the default ExitPolicy (if no other exit policy option is specified). +
-     +
-    If ExitRelay is set to 0, no traffic is allowed to exit, and the
-    ExitPolicy, ReducedExitPolicy, and IPv6Exit options are ignored. +
-     +
-    If ExitRelay is set to "auto", then Tor checks the ExitPolicy,
-    ReducedExitPolicy, and IPv6Exit options. If at least one of these options
-    is set, Tor behaves as if ExitRelay were set to 1. If none of these exit
-    policy options are set, Tor behaves as if ExitRelay were set to 0.
-    (Default: auto)
+[[DisableOOSCheck]] **DisableOOSCheck** **0**|**1**::
+    This option disables the code that closes connections when Tor notices
+    that it is running low on sockets. Right now, it is on by default,
+    since the existing out-of-sockets mechanism tends to kill OR connections
+    more than it should. (Default: 1)
 
 [[ExitPolicy]] **ExitPolicy** __policy__,__policy__,__...__::
     Set an exit policy for this server. Each policy is of the form
@@ -2205,12 +2258,6 @@ is non-zero):
     Since the default exit policy uses accept/reject *, it applies to both
     IPv4 and IPv6 addresses.
 
-[[ExitPolicyRejectPrivate]] **ExitPolicyRejectPrivate** **0**|**1**::
-    Reject all private (local) networks, along with the relay's advertised
-    public IPv4 and IPv6 addresses, at the beginning of your exit policy.
-    See above entry on ExitPolicy.
-    (Default: 1)
-
 [[ExitPolicyRejectLocalInterfaces]] **ExitPolicyRejectLocalInterfaces** **0**|**1**::
     Reject all IPv4 and IPv6 addresses that the relay knows about, at the
     beginning of your exit policy. This includes any OutboundBindAddress, the
@@ -2222,6 +2269,168 @@ is non-zero):
     addresses in the ExitPolicy, even those relay operators might prefer not
     to disclose.
     (Default: 0)
+
+[[ExitPolicyRejectPrivate]] **ExitPolicyRejectPrivate** **0**|**1**::
+    Reject all private (local) networks, along with the relay's advertised
+    public IPv4 and IPv6 addresses, at the beginning of your exit policy.
+    See above entry on ExitPolicy.
+    (Default: 1)
+
+[[ExitRelay]] **ExitRelay** **0**|**1**|**auto**::
+    Tells Tor whether to run as an exit relay.  If Tor is running as a
+    non-bridge server, and ExitRelay is set to 1, then Tor allows traffic to
+    exit according to the ExitPolicy option, the ReducedExitPolicy option,
+    or the default ExitPolicy (if no other exit policy option is specified). +
+     +
+    If ExitRelay is set to 0, no traffic is allowed to exit, and the
+    ExitPolicy, ReducedExitPolicy, and IPv6Exit options are ignored. +
+     +
+    If ExitRelay is set to "auto", then Tor checks the ExitPolicy,
+    ReducedExitPolicy, and IPv6Exit options. If at least one of these options
+    is set, Tor behaves as if ExitRelay were set to 1. If none of these exit
+    policy options are set, Tor behaves as if ExitRelay were set to 0.
+    (Default: auto)
+
+[[ExtendAllowPrivateAddresses]] **ExtendAllowPrivateAddresses** **0**|**1**::
+    When this option is enabled, Tor will connect to relays on localhost,
+    RFC1918 addresses, and so on. In particular, Tor will make direct OR
+    connections, and Tor routers allow EXTEND requests, to these private
+    addresses. (Tor will always allow connections to bridges, proxies, and
+    pluggable transports configured on private addresses.) Enabling this
+    option can create security issues; you should probably leave it off.
+    (Default: 0)
+
+[[GeoIPFile]] **GeoIPFile** __filename__::
+    A filename containing IPv4 GeoIP data, for use with by-country statistics.
+
+[[GeoIPv6File]] **GeoIPv6File** __filename__::
+    A filename containing IPv6 GeoIP data, for use with by-country statistics.
+
+[[HeartbeatPeriod]] **HeartbeatPeriod**  __N__ **minutes**|**hours**|**days**|**weeks**::
+    Log a heartbeat message every **HeartbeatPeriod** seconds. This is
+    a log level __notice__ message, designed to let you know your Tor
+    server is still alive and doing useful things. Settings this
+    to 0 will disable the heartbeat. Otherwise, it must be at least 30
+    minutes. (Default: 6 hours)
+
+[[IPv6Exit]] **IPv6Exit** **0**|**1**::
+    If set, and we are an exit node, allow clients to use us for IPv6 traffic.
+    When this option is set and ExitRelay is auto, we act as if ExitRelay
+    is 1. (Default: 0)
+
+[[KeyDirectory]] **KeyDirectory** __DIR__::
+    Store secret keys in DIR. Can not be changed while tor is
+    running.
+    (Default: the "keys" subdirectory of DataDirectory.)
+
+[[KeyDirectoryGroupReadable]] **KeyDirectoryGroupReadable** **0**|**1**|**auto**::
+    If this option is set to 0, don't allow the filesystem group to read the
+    KeyDirectory. If the option is set to 1, make the KeyDirectory readable
+    by the default GID. If the option is "auto", then we use the
+    setting for DataDirectoryGroupReadable when the KeyDirectory is the
+    same as the DataDirectory, and 0 otherwise. (Default: auto)
+
+[[MainloopStats]] **MainloopStats** **0**|**1**::
+    Log main loop statistics every **HeartbeatPeriod** seconds. This is a log
+    level __notice__ message designed to help developers instrumenting Tor's
+    main event loop. (Default: 0)
+
+[[MaxMemInQueues]] **MaxMemInQueues**  __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
+    This option configures a threshold above which Tor will assume that it
+    needs to stop queueing or buffering data because it's about to run out of
+    memory.  If it hits this threshold, it will begin killing circuits until
+    it has recovered at least 10% of this memory.  Do not set this option too
+    low, or your relay may be unreliable under load.  This option only
+    affects some queues, so the actual process size will be larger than
+    this.  If this option is set to 0, Tor will try to pick a reasonable
+    default based on your system's physical memory.  (Default: 0)
+
+[[MaxOnionQueueDelay]] **MaxOnionQueueDelay** __NUM__ [**msec**|**second**]::
+    If we have more onionskins queued for processing than we can process in
+    this amount of time, reject new ones. (Default: 1750 msec)
+
+[[MyFamily]] **MyFamily** __fingerprint__,__fingerprint__,...::
+    Declare that this Tor relay is controlled or administered by a group or
+    organization identical or similar to that of the other relays, defined by
+    their (possibly $-prefixed) identity fingerprints.
+    This option can be repeated many times, for
+    convenience in defining large families: all fingerprints in all MyFamily
+    lines are merged into one list.
+    When two relays both declare that they are in the
+    same \'family', Tor clients will not use them in the same circuit. (Each
+    relay only needs to list the other servers in its family; it doesn't need to
+    list itself, but it won't hurt if it does.) Do not list any bridge relay as it would
+    compromise its concealment. +
+     +
+    When listing a node, it's better to list it by fingerprint than by
+    nickname: fingerprints are more reliable. +
+     +
+    If you run more than one relay, the MyFamily option on each relay
+    **must** list all other relays, as described above. +
+     +
+    Note: do not use MyFamily when configuring your Tor instance as a
+    brigde.
+
+[[Nickname]] **Nickname** __name__::
+    Set the server's nickname to \'name'. Nicknames must be between 1 and 19
+    characters inclusive, and must contain only the characters [a-zA-Z0-9].
+    If not set, **Unnamed** will be used. Relays can always be uniquely identified
+    by their identity fingerprints.
+
+[[NumCPUs]] **NumCPUs** __num__::
+    How many processes to use at once for decrypting onionskins and other
+    parallelizable operations.  If this is set to 0, Tor will try to detect
+    how many CPUs you have, defaulting to 1 if it can't tell.  (Default: 0)
+
+[[OfflineMasterKey]] **OfflineMasterKey** **0**|**1**::
+    If non-zero, the Tor relay will never generate or load its master secret
+    key.  Instead, you'll have to use "tor --keygen" to manage the permanent
+    ed25519 master identity key, as well as the corresponding temporary
+    signing keys and certificates. (Default: 0)
+
+[[ORPort]] **ORPort** ['address'**:**]{empty}__PORT__|**auto** [_flags_]::
+    Advertise this port to listen for connections from Tor clients and
+    servers.  This option is required to be a Tor server.
+    Set it to "auto" to have Tor pick a port for you. Set it to 0 to not
+    run an ORPort at all. This option can occur more than once. (Default: 0) +
+     +
+    Tor recognizes these flags on each ORPort:
+    **NoAdvertise**;;
+        By default, we bind to a port and tell our users about it. If
+        NoAdvertise is specified, we don't advertise, but listen anyway.  This
+        can be useful if the port everybody will be connecting to (for
+        example, one that's opened on our firewall) is somewhere else.
+    **NoListen**;;
+        By default, we bind to a port and tell our users about it. If
+        NoListen is specified, we don't bind, but advertise anyway.  This
+        can be useful if something else  (for example, a firewall's port
+        forwarding configuration) is causing connections to reach us.
+    **IPv4Only**;;
+        If the address is absent, or resolves to both an IPv4 and an IPv6
+        address, only listen to the IPv4 address.
+    **IPv6Only**;;
+        If the address is absent, or resolves to both an IPv4 and an IPv6
+        address, only listen to the IPv6 address.
+
+// Anchor only for formatting, not visible in the man page.
+[[ORPortFlagsExclusive]]::
+    For obvious reasons, NoAdvertise and NoListen are mutually exclusive, and
+    IPv4Only and IPv6Only are mutually exclusive.
+
+[[PublishServerDescriptor]] **PublishServerDescriptor** **0**|**1**|**v3**|**bridge**,**...**::
+    This option specifies which descriptors Tor will publish when acting as
+    a relay. You can
+    choose multiple arguments, separated by commas. +
+     +
+    If this option is set to 0, Tor will not publish its
+    descriptors to any directories. (This is useful if you're testing
+    out your server, or if you're using a Tor controller that handles
+    directory publishing for you.) Otherwise, Tor will publish its
+    descriptors of all type(s) specified. The default is "1", which
+    means "if running as a relay or bridge, publish descriptors to the
+    appropriate authorities". Other possibilities are "v3", meaning
+    "publish as if you're a relay", and "bridge", meaning "publish as
+    if you're a bridge".
 
 [[ReducedExitPolicy]] **ReducedExitPolicy** **0**|**1**::
     If set, use a reduced exit policy rather than the default one. +
@@ -2316,161 +2525,6 @@ is non-zero):
 
     (Default: 0)
 
-[[IPv6Exit]] **IPv6Exit** **0**|**1**::
-    If set, and we are an exit node, allow clients to use us for IPv6 traffic.
-    When this option is set and ExitRelay is auto, we act as if ExitRelay
-    is 1. (Default: 0)
-
-[[MaxOnionQueueDelay]] **MaxOnionQueueDelay** __NUM__ [**msec**|**second**]::
-    If we have more onionskins queued for processing than we can process in
-    this amount of time, reject new ones. (Default: 1750 msec)
-
-[[MyFamily]] **MyFamily** __fingerprint__,__fingerprint__,...::
-    Declare that this Tor relay is controlled or administered by a group or
-    organization identical or similar to that of the other relays, defined by
-    their (possibly $-prefixed) identity fingerprints.
-    This option can be repeated many times, for
-    convenience in defining large families: all fingerprints in all MyFamily
-    lines are merged into one list.
-    When two relays both declare that they are in the
-    same \'family', Tor clients will not use them in the same circuit. (Each
-    relay only needs to list the other servers in its family; it doesn't need to
-    list itself, but it won't hurt if it does.) Do not list any bridge relay as it would
-    compromise its concealment. +
-     +
-    When listing a node, it's better to list it by fingerprint than by
-    nickname: fingerprints are more reliable. +
-     +
-    If you run more than one relay, the MyFamily option on each relay
-    **must** list all other relays, as described above. +
-     +
-    Note: do not use MyFamily when configuring your Tor instance as a
-    brigde.
-
-[[Nickname]] **Nickname** __name__::
-    Set the server's nickname to \'name'. Nicknames must be between 1 and 19
-    characters inclusive, and must contain only the characters [a-zA-Z0-9].
-    If not set, **Unnamed** will be used. Relays can always be uniquely identified
-    by their identity fingerprints.
-
-[[NumCPUs]] **NumCPUs** __num__::
-    How many processes to use at once for decrypting onionskins and other
-    parallelizable operations.  If this is set to 0, Tor will try to detect
-    how many CPUs you have, defaulting to 1 if it can't tell.  (Default: 0)
-
-[[ORPort]] **ORPort** ['address'**:**]{empty}__PORT__|**auto** [_flags_]::
-    Advertise this port to listen for connections from Tor clients and
-    servers.  This option is required to be a Tor server.
-    Set it to "auto" to have Tor pick a port for you. Set it to 0 to not
-    run an ORPort at all. This option can occur more than once. (Default: 0) +
-     +
-    Tor recognizes these flags on each ORPort:
-    **NoAdvertise**;;
-        By default, we bind to a port and tell our users about it. If
-        NoAdvertise is specified, we don't advertise, but listen anyway.  This
-        can be useful if the port everybody will be connecting to (for
-        example, one that's opened on our firewall) is somewhere else.
-    **NoListen**;;
-        By default, we bind to a port and tell our users about it. If
-        NoListen is specified, we don't bind, but advertise anyway.  This
-        can be useful if something else  (for example, a firewall's port
-        forwarding configuration) is causing connections to reach us.
-    **IPv4Only**;;
-        If the address is absent, or resolves to both an IPv4 and an IPv6
-        address, only listen to the IPv4 address.
-    **IPv6Only**;;
-        If the address is absent, or resolves to both an IPv4 and an IPv6
-        address, only listen to the IPv6 address.
-
-// Anchor only for formatting, not visible in the man page.
-[[ORPortFlagsExclusive]]::
-    For obvious reasons, NoAdvertise and NoListen are mutually exclusive, and
-    IPv4Only and IPv6Only are mutually exclusive.
-
-[[PublishServerDescriptor]] **PublishServerDescriptor** **0**|**1**|**v3**|**bridge**,**...**::
-    This option specifies which descriptors Tor will publish when acting as
-    a relay. You can
-    choose multiple arguments, separated by commas. +
-     +
-    If this option is set to 0, Tor will not publish its
-    descriptors to any directories. (This is useful if you're testing
-    out your server, or if you're using a Tor controller that handles
-    directory publishing for you.) Otherwise, Tor will publish its
-    descriptors of all type(s) specified. The default is "1", which
-    means "if running as a relay or bridge, publish descriptors to the
-    appropriate authorities". Other possibilities are "v3", meaning
-    "publish as if you're a relay", and "bridge", meaning "publish as
-    if you're a bridge".
-
-[[ShutdownWaitLength]] **ShutdownWaitLength** __NUM__::
-    When we get a SIGINT and we're a server, we begin shutting down:
-    we close listeners and start refusing new circuits. After **NUM**
-    seconds, we exit. If we get a second SIGINT, we exit immediately.
-    (Default: 30 seconds)
-
-[[SSLKeyLifetime]] **SSLKeyLifetime** __N__ **minutes**|**hours**|**days**|**weeks**::
-    When creating a link certificate for our outermost SSL handshake,
-    set its lifetime to this amount of time. If set to 0, Tor will choose
-    some reasonable random defaults. (Default: 0)
-
-[[HeartbeatPeriod]] **HeartbeatPeriod**  __N__ **minutes**|**hours**|**days**|**weeks**::
-    Log a heartbeat message every **HeartbeatPeriod** seconds. This is
-    a log level __notice__ message, designed to let you know your Tor
-    server is still alive and doing useful things. Settings this
-    to 0 will disable the heartbeat. Otherwise, it must be at least 30
-    minutes. (Default: 6 hours)
-
-[[MainloopStats]] **MainloopStats** **0**|**1**::
-    Log main loop statistics every **HeartbeatPeriod** seconds. This is a log
-    level __notice__ message designed to help developers instrumenting Tor's
-    main event loop. (Default: 0)
-
-[[AccountingMax]] **AccountingMax** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
-    Limits the max number of bytes sent and received within a set time period
-    using a given calculation rule (see: AccountingStart, AccountingRule).
-    Useful if you need to stay under a specific bandwidth. By default, the
-    number used for calculation is the max of either the bytes sent or
-    received. For example, with AccountingMax set to 1 TByte, a server
-    could send 900 GBytes and receive 800 GBytes and continue running.
-    It will only hibernate once one of the two reaches 1 TByte. This can
-    be changed to use the sum of the both bytes received and sent by setting
-    the AccountingRule option to "sum" (total bandwidth in/out). When the
-    number of bytes remaining gets low, Tor will stop accepting new connections
-    and circuits. When the number of bytes is exhausted, Tor will hibernate
-    until some time in the next accounting period. To prevent all servers
-    from waking at the same time, Tor will also wait until a random point
-    in each period before waking up. If you have bandwidth cost issues,
-    enabling hibernation is preferable to setting a low bandwidth, since
-    it provides users with a collection of fast servers that are up some
-    of the time, which is more useful than a set of slow servers that are
-    always "available". +
-     +
-    Note that (as also described in the Bandwidth section) Tor uses
-    powers of two, not powers of ten: 1 GByte is 1024*1024*1024, not
-    one billion. Be careful: some internet service providers might count
-    GBytes differently.
-
-[[AccountingRule]] **AccountingRule** **sum**|**max**|**in**|**out**::
-    How we determine when our AccountingMax has been reached (when we
-    should hibernate) during a time interval. Set to "max" to calculate
-    using the higher of either the sent or received bytes (this is the
-    default functionality). Set to "sum" to calculate using the sent
-    plus received bytes. Set to "in" to calculate using only the
-    received bytes. Set to "out" to calculate using only the sent bytes.
-    (Default: max)
-
-[[AccountingStart]] **AccountingStart** **day**|**week**|**month** [__day__] __HH:MM__::
-    Specify how long accounting periods last. If **month** is given,
-    each accounting period runs from the time __HH:MM__ on the __dayth__ day of one
-    month to the same day and time of the next. The relay will go at full speed,
-    use all the quota you specify, then hibernate for the rest of the period. (The
-    day must be between 1 and 28.) If **week** is given, each accounting period
-    runs from the time __HH:MM__ of the __dayth__ day of one week to the same day
-    and time of the next week, with Monday as day 1 and Sunday as day 7. If **day**
-    is given, each accounting period runs from the time __HH:MM__ each day to the
-    same time on the next day. All times are local, and given in 24-hour time.
-    (Default: "month 1 0:00")
-
 [[RefuseUnknownExits]] **RefuseUnknownExits** **0**|**1**|**auto**::
     Prevent nodes that don't appear in the consensus from exiting using this
     relay.  If the option is 1, we always block exit attempts from such
@@ -2478,40 +2532,11 @@ is non-zero):
     whatever the authorities suggest in the consensus (and block if the consensus
     is quiet on the issue). (Default: auto)
 
-[[ServerDNSResolvConfFile]] **ServerDNSResolvConfFile** __filename__::
-    Overrides the default DNS configuration with the configuration in
-    __filename__. The file format is the same as the standard Unix
-    "**resolv.conf**" file (7). This option, like all other ServerDNS options,
-    only affects name lookups that your server does on behalf of clients.
-    (Defaults to use the system DNS configuration or a localhost DNS service
-    in case no nameservers are found in a given configuration.)
-
 [[ServerDNSAllowBrokenConfig]] **ServerDNSAllowBrokenConfig** **0**|**1**::
     If this option is false, Tor exits immediately if there are problems
     parsing the system DNS configuration or connecting to nameservers.
     Otherwise, Tor continues to periodically retry the system nameservers until
     it eventually succeeds. (Default: 1)
-
-[[ServerDNSSearchDomains]] **ServerDNSSearchDomains** **0**|**1**::
-    If set to 1, then we will search for addresses in the local search domain.
-    For example, if this system is configured to believe it is in
-    "example.com", and a client tries to connect to "www", the client will be
-    connected to "www.example.com". This option only affects name lookups that
-    your server does on behalf of clients. (Default: 0)
-
-[[ServerDNSDetectHijacking]] **ServerDNSDetectHijacking** **0**|**1**::
-    When this option is set to 1, we will test periodically to determine
-    whether our local nameservers have been configured to hijack failing DNS
-    requests (usually to an advertising site). If they are, we will attempt to
-    correct this. This option only affects name lookups that your server does
-    on behalf of clients. (Default: 1)
-
-[[ServerDNSTestAddresses]] **ServerDNSTestAddresses** __hostname__,__hostname__,__...__::
-    When we're detecting DNS hijacking, make sure that these __valid__ addresses
-    aren't getting redirected. If they are, then our DNS is completely useless,
-    and we'll reset our exit policy to "reject \*:*". This option only affects
-    name lookups that your server does on behalf of clients. (Default:
-    "www.google.com, www.mit.edu, www.yahoo.com, www.slashdot.org")
 
 [[ServerDNSAllowNonRFC953Hostnames]] **ServerDNSAllowNonRFC953Hostnames** **0**|**1**::
     When this option is disabled, Tor does not try to resolve hostnames
@@ -2520,12 +2545,12 @@ is non-zero):
     URLs and so on. This option only affects name lookups that your server does
     on behalf of clients. (Default: 0)
 
-[[BridgeRecordUsageByCountry]] **BridgeRecordUsageByCountry** **0**|**1**::
-    When this option is enabled and BridgeRelay is also enabled, and we have
-    GeoIP data, Tor keeps a per-country count of how many client
-    addresses have contacted it so that it can help the bridge authority guess
-    which countries have blocked access to it. If ExtraInfoStatistics is
-    enabled, it will be published as part of extra-info document. (Default: 1)
+[[ServerDNSDetectHijacking]] **ServerDNSDetectHijacking** **0**|**1**::
+    When this option is set to 1, we will test periodically to determine
+    whether our local nameservers have been configured to hijack failing DNS
+    requests (usually to an advertising site). If they are, we will attempt to
+    correct this. This option only affects name lookups that your server does
+    on behalf of clients. (Default: 1)
 
 [[ServerDNSRandomizeCase]] **ServerDNSRandomizeCase** **0**|**1**::
     When this option is set, Tor sets the case of each character randomly in
@@ -2535,11 +2560,54 @@ is non-zero):
     0x20-Bit Encoding". This option only affects name lookups that your server
     does on behalf of clients. (Default: 1)
 
-[[GeoIPFile]] **GeoIPFile** __filename__::
-    A filename containing IPv4 GeoIP data, for use with by-country statistics.
+[[ServerDNSResolvConfFile]] **ServerDNSResolvConfFile** __filename__::
+    Overrides the default DNS configuration with the configuration in
+    __filename__. The file format is the same as the standard Unix
+    "**resolv.conf**" file (7). This option, like all other ServerDNS options,
+    only affects name lookups that your server does on behalf of clients.
+    (Defaults to use the system DNS configuration or a localhost DNS service
+    in case no nameservers are found in a given configuration.)
 
-[[GeoIPv6File]] **GeoIPv6File** __filename__::
-    A filename containing IPv6 GeoIP data, for use with by-country statistics.
+[[ServerDNSSearchDomains]] **ServerDNSSearchDomains** **0**|**1**::
+    If set to 1, then we will search for addresses in the local search domain.
+    For example, if this system is configured to believe it is in
+    "example.com", and a client tries to connect to "www", the client will be
+    connected to "www.example.com". This option only affects name lookups that
+    your server does on behalf of clients. (Default: 0)
+
+[[ServerDNSTestAddresses]] **ServerDNSTestAddresses** __hostname__,__hostname__,__...__::
+    When we're detecting DNS hijacking, make sure that these __valid__ addresses
+    aren't getting redirected. If they are, then our DNS is completely useless,
+    and we'll reset our exit policy to "reject \*:*". This option only affects
+    name lookups that your server does on behalf of clients. (Default:
+    "www.google.com, www.mit.edu, www.yahoo.com, www.slashdot.org")
+
+[[ShutdownWaitLength]] **ShutdownWaitLength** __NUM__::
+    When we get a SIGINT and we're a server, we begin shutting down:
+    we close listeners and start refusing new circuits. After **NUM**
+    seconds, we exit. If we get a second SIGINT, we exit immediately.
+    (Default: 30 seconds)
+
+[[SigningKeyLifetime]] **SigningKeyLifetime** __N__ **days**|**weeks**|**months**::
+    For how long should each Ed25519 signing key be valid?  Tor uses a
+    permanent master identity key that can be kept offline, and periodically
+    generates new "signing" keys that it uses online.  This option
+    configures their lifetime.
+    (Default: 30 days)
+
+[[SSLKeyLifetime]] **SSLKeyLifetime** __N__ **minutes**|**hours**|**days**|**weeks**::
+    When creating a link certificate for our outermost SSL handshake,
+    set its lifetime to this amount of time. If set to 0, Tor will choose
+    some reasonable random defaults. (Default: 0)
+
+== STATISTICS OPTIONS
+
+// These options are in alphabetical order, with exceptions as noted.
+// Please keep them that way!
+
+Relays publish most statistics in a document called the
+extra-info document. The following options affect the different
+types of statistics that Tor relays collect and publish:
 
 [[CellStatistics]] **CellStatistics** **0**|**1**::
     Relays only.
@@ -2551,14 +2619,14 @@ is non-zero):
     If ExtraInfoStatistics is enabled, it will published as part of
     extra-info document. (Default: 0)
 
-[[PaddingStatistics]] **PaddingStatistics** **0**|**1**::
-    Relays and bridges only.
-    When this option is enabled, Tor collects statistics for padding cells
-    sent and received by this relay, in addition to total cell counts.
-    These statistics are rounded, and omitted if traffic is low. This
-    information is important for load balancing decisions related to padding.
-    If ExtraInfoStatistics is enabled, it will be published
-    as a part of extra-info document. (Default: 1)
+[[ConnDirectionStatistics]] **ConnDirectionStatistics** **0**|**1**::
+    Relays only.
+    When this option is enabled, Tor writes statistics on the amounts of
+    traffic it passes between itself and other relays to disk every 24
+    hours. Enables relay operators to monitor how much their relay is
+    being used as middle node in the circuit. If ExtraInfoStatistics is
+    enabled, it will be published as part of extra-info document.
+    (Default: 0)
 
 [[DirReqStatistics]] **DirReqStatistics** **0**|**1**::
     Relays and bridges only.
@@ -2587,23 +2655,6 @@ is non-zero):
     is enabled, it will be published as part of extra-info document.
     (Default: 0)
 
-[[ConnDirectionStatistics]] **ConnDirectionStatistics** **0**|**1**::
-    Relays only.
-    When this option is enabled, Tor writes statistics on the amounts of
-    traffic it passes between itself and other relays to disk every 24
-    hours. Enables relay operators to monitor how much their relay is
-    being used as middle node in the circuit. If ExtraInfoStatistics is
-    enabled, it will be published as part of extra-info document.
-    (Default: 0)
-
-[[HiddenServiceStatistics]] **HiddenServiceStatistics** **0**|**1**::
-    Relays only.
-    When this option is enabled, a Tor relay writes obfuscated
-    statistics on its role as hidden-service directory, introduction
-    point, or rendezvous point to disk every 24 hours. If
-    ExtraInfoStatistics is also enabled, these statistics are further
-    published to the directory authorities. (Default: 1)
-
 [[ExtraInfoStatistics]] **ExtraInfoStatistics** **0**|**1**::
     When this option is enabled, Tor includes previously gathered statistics in
     its extra-info documents that it uploads to the directory authorities.
@@ -2613,61 +2664,22 @@ is non-zero):
     because they are required by BridgeDB.
     (Default: 1)
 
-[[ExtendAllowPrivateAddresses]] **ExtendAllowPrivateAddresses** **0**|**1**::
-    When this option is enabled, Tor will connect to relays on localhost,
-    RFC1918 addresses, and so on. In particular, Tor will make direct OR
-    connections, and Tor routers allow EXTEND requests, to these private
-    addresses. (Tor will always allow connections to bridges, proxies, and
-    pluggable transports configured on private addresses.) Enabling this
-    option can create security issues; you should probably leave it off.
-    (Default: 0)
+[[HiddenServiceStatistics]] **HiddenServiceStatistics** **0**|**1**::
+    Relays only.
+    When this option is enabled, a Tor relay writes obfuscated
+    statistics on its role as hidden-service directory, introduction
+    point, or rendezvous point to disk every 24 hours. If
+    ExtraInfoStatistics is also enabled, these statistics are further
+    published to the directory authorities. (Default: 1)
 
-[[MaxMemInQueues]] **MaxMemInQueues**  __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
-    This option configures a threshold above which Tor will assume that it
-    needs to stop queueing or buffering data because it's about to run out of
-    memory.  If it hits this threshold, it will begin killing circuits until
-    it has recovered at least 10% of this memory.  Do not set this option too
-    low, or your relay may be unreliable under load.  This option only
-    affects some queues, so the actual process size will be larger than
-    this.  If this option is set to 0, Tor will try to pick a reasonable
-    default based on your system's physical memory.  (Default: 0)
-
-[[DisableOOSCheck]] **DisableOOSCheck** **0**|**1**::
-    This option disables the code that closes connections when Tor notices
-    that it is running low on sockets. Right now, it is on by default,
-    since the existing out-of-sockets mechanism tends to kill OR connections
-    more than it should. (Default: 1)
-
-[[SigningKeyLifetime]] **SigningKeyLifetime** __N__ **days**|**weeks**|**months**::
-    For how long should each Ed25519 signing key be valid?  Tor uses a
-    permanent master identity key that can be kept offline, and periodically
-    generates new "signing" keys that it uses online.  This option
-    configures their lifetime.
-    (Default: 30 days)
-
-[[OfflineMasterKey]] **OfflineMasterKey** **0**|**1**::
-    If non-zero, the Tor relay will never generate or load its master secret
-    key.  Instead, you'll have to use "tor --keygen" to manage the permanent
-    ed25519 master identity key, as well as the corresponding temporary
-    signing keys and certificates. (Default: 0)
-
-[[KeyDirectory]] **KeyDirectory** __DIR__::
-    Store secret keys in DIR. Can not be changed while tor is
-    running.
-    (Default: the "keys" subdirectory of DataDirectory.)
-
-[[KeyDirectoryGroupReadable]] **KeyDirectoryGroupReadable** **0**|**1**|**auto**::
-    If this option is set to 0, don't allow the filesystem group to read the
-    KeyDirectory. If the option is set to 1, make the KeyDirectory readable
-    by the default GID. If the option is "auto", then we use the
-    setting for DataDirectoryGroupReadable when the KeyDirectory is the
-    same as the DataDirectory, and 0 otherwise. (Default: auto)
-
-[[RephistTrackTime]] **RephistTrackTime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
-    Tells an authority, or other node tracking node reliability and history,
-    that fine-grained information about nodes can be discarded when it hasn't
-    changed for a given amount of time.  (Default: 24 hours)
-
+[[PaddingStatistics]] **PaddingStatistics** **0**|**1**::
+    Relays and bridges only.
+    When this option is enabled, Tor collects statistics for padding cells
+    sent and received by this relay, in addition to total cell counts.
+    These statistics are rounded, and omitted if traffic is low. This
+    information is important for load balancing decisions related to padding.
+    If ExtraInfoStatistics is enabled, it will be published
+    as a part of extra-info document. (Default: 1)
 
 == DIRECTORY SERVER OPTIONS
 
@@ -2675,11 +2687,19 @@ The following options are useful only for directory servers. (Relays with
 enough bandwidth automatically become directory servers; see DirCache for
 details.)
 
-[[DirPortFrontPage]] **DirPortFrontPage** __FILENAME__::
-    When this option is set, it takes an HTML file and publishes it as "/" on
-    the DirPort. Now relay operators can provide a disclaimer without needing
-    to set up a separate webserver. There's a sample disclaimer in
-    contrib/operator-tools/tor-exit-notice.html.
+[[DirCache]] **DirCache** **0**|**1**::
+    When this option is set, Tor caches all current directory documents except
+    extra info documents, and accepts client requests for them. If
+    **DownloadExtraInfo** is set, cached extra info documents are also cached.
+    Setting **DirPort** is not required for **DirCache**, because clients
+    connect via the ORPort by default. Setting either DirPort or BridgeRelay
+    and setting DirCache to 0 is not supported.  (Default: 1)
+
+[[DirPolicy]] **DirPolicy** __policy__,__policy__,__...__::
+    Set an entrance policy for this server, to limit who can connect to the
+    directory ports. The policies have the same form as exit policies above,
+    except that port specifiers are ignored. Any address not matched by
+    some entry in the policy is accepted.
 
 [[DirPort]] **DirPort** ['address'**:**]{empty}__PORT__|**auto** [_flags_]::
     If this option is nonzero, advertise the directory service on this port.
@@ -2689,19 +2709,11 @@ details.)
      +
     The same flags are supported here as are supported by ORPort.
 
-[[DirPolicy]] **DirPolicy** __policy__,__policy__,__...__::
-    Set an entrance policy for this server, to limit who can connect to the
-    directory ports. The policies have the same form as exit policies above,
-    except that port specifiers are ignored. Any address not matched by
-    some entry in the policy is accepted.
-
-[[DirCache]] **DirCache** **0**|**1**::
-    When this option is set, Tor caches all current directory documents except
-    extra info documents, and accepts client requests for them. If
-    **DownloadExtraInfo** is set, cached extra info documents are also cached.
-    Setting **DirPort** is not required for **DirCache**, because clients
-    connect via the ORPort by default. Setting either DirPort or BridgeRelay
-    and setting DirCache to 0 is not supported.  (Default: 1)
+[[DirPortFrontPage]] **DirPortFrontPage** __FILENAME__::
+    When this option is set, it takes an HTML file and publishes it as "/" on
+    the DirPort. Now relay operators can provide a disclaimer without needing
+    to set up a separate webserver. There's a sample disclaimer in
+    contrib/operator-tools/tor-exit-notice.html.
 
 [[MaxConsensusAgeForDiffs]] **MaxConsensusAgeForDiffs**  __N__ **minutes**|**hours**|**days**|**weeks**::
     When this option is nonzero, Tor caches will not try to generate
