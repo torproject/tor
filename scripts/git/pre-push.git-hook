@@ -26,7 +26,11 @@ z40=0000000000000000000000000000000000000000
 
 upstream_name=${TOR_UPSTREAM_REMOTE_NAME:-"upstream"}
 
+# The working directory
 workdir=$(git rev-parse --show-toplevel)
+# The .git directory
+# If $workdir is a worktree, then $gitdir is not $workdir/.git
+gitdir=$(git rev-parse --git-dir)
 
 cd "$workdir" || exit 1
 
@@ -58,7 +62,8 @@ do
         fi
 
         # Call the pre-commit hook for the common checks, if it is executable
-        if [ -x scripts/git/pre-commit.git-hook ]; then
+        pre_commit=${gitdir}/hooks/pre-commit
+        if [ -x "$pre_commit" ]; then
             # Only check the files newly modified in this branch
             CHECK_FILTER="git diff --name-only --diff-filter=ACMR $range"
             # Use the appropriate owned tor source list to filter the changed
@@ -81,7 +86,7 @@ do
             # We want word splitting here, because file names are space
             # separated
             # shellcheck disable=SC2086
-            if ! scripts/git/pre-commit.git-hook $CHECK_FILES ; then
+            if ! "$pre_commit" $CHECK_FILES ; then
                 exit 1
             fi
         fi

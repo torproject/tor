@@ -1,0 +1,4 @@
+  o Minor bugfixes (git scripts):
+    - Stop executing the checked-out pre-commit hook from the pre-push hook.
+      Instead, execute the copy in the user's git dir. Fixes bug 33284; bugfix
+      on 0.4.1.1-alpha.
