@@ -1,0 +1,4 @@
+  o Minor features (diagnostic):
+    - Improve assertions and add some memory-poisoning code to try to track
+      down possible causes of a rare crash (32564) in the EWMA code.
+      Closes ticket 33290.
