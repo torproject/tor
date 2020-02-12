@@ -6801,7 +6801,7 @@ check_bridge_distribution_setting(const char *bd)
   };
   unsigned i;
   for (i = 0; i < ARRAY_LENGTH(RECOGNIZED); ++i) {
-    if (!strcmp(bd, RECOGNIZED[i]))
+    if (!strcasecmp(bd, RECOGNIZED[i]))
       return 0;
   }
 
