@@ -147,7 +147,9 @@ TO_EWMA_POL_DATA(circuitmux_policy_data_t *pol)
 {
   if (!pol) return NULL;
   else {
-    tor_assert(pol->magic == EWMA_POL_DATA_MAGIC);
+    tor_assertf(pol->magic == EWMA_POL_DATA_MAGIC,
+                "Mismatch: %"PRIu32" != %"PRIu32,
+                pol->magic, EWMA_POL_DATA_MAGIC);
     return DOWNCAST(ewma_policy_data_t, pol);
   }
 }
@@ -162,7 +164,9 @@ TO_EWMA_POL_CIRC_DATA(circuitmux_policy_circ_data_t *pol)
 {
   if (!pol) return NULL;
   else {
-    tor_assert(pol->magic == EWMA_POL_CIRC_DATA_MAGIC);
+    tor_assertf(pol->magic == EWMA_POL_CIRC_DATA_MAGIC,
+                "Mismatch: %"PRIu32" != %"PRIu32,
+                pol->magic, EWMA_POL_CIRC_DATA_MAGIC);
     return DOWNCAST(ewma_policy_circ_data_t, pol);
   }
 }
@@ -295,6 +299,7 @@ ewma_free_cmux_data(circuitmux_t *cmux,
   pol = TO_EWMA_POL_DATA(pol_data);
 
   smartlist_free(pol->active_circuit_pqueue);
+  pol->base_.magic = 0xDEAD901C;
   tor_free(pol);
 }
 
@@ -361,7 +366,7 @@ ewma_free_circ_data(circuitmux_t *cmux,
   if (!pol_circ_data) return;
 
   cdata = TO_EWMA_POL_CIRC_DATA(pol_circ_data);
-
+  cdata->base_.magic = 0xDEADC14C;
   tor_free(cdata);
 }
 
