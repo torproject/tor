@@ -4619,17 +4619,14 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   /* These are hardwired, to avoid disaster. */
   v3_out->recommended_relay_protocols =
-    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
-               "Link=4 Microdesc=1-2 Relay=2");
+    tor_strdup(DIRVOTE_RECCOMEND_RELAY_PROTO);
   v3_out->recommended_client_protocols =
-    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
-               "Link=4 Microdesc=1-2 Relay=2");
+    tor_strdup(DIRVOTE_RECCOMEND_CLIENT_PROTO);
+
   v3_out->required_client_protocols =
-    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
-               "Link=4 Microdesc=1-2 Relay=2");
+    tor_strdup(DIRVOTE_REQUIRE_CLIENT_PROTO);
   v3_out->required_relay_protocols =
-    tor_strdup("Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
-               "Link=3-4 Microdesc=1 Relay=1-2");
+    tor_strdup(DIRVOTE_REQUIRE_RELAY_PROTO);
 
   /* We are not allowed to vote to require anything we don't have. */
   tor_assert(protover_all_supported(v3_out->required_relay_protocols, NULL));

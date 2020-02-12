@@ -230,6 +230,21 @@ char *networkstatus_get_detached_signatures(smartlist_t *consensuses);
 STATIC microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri,
                                                    int consensus_method);
 
+/* These are hardwired, to avoid disaster. */
+#define DIRVOTE_RECCOMEND_RELAY_PROTO \
+  "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 " \
+  "Link=4 Microdesc=1-2 Relay=2"
+#define DIRVOTE_RECCOMEND_CLIENT_PROTO \
+  "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 " \
+  "Link=4 Microdesc=1-2 Relay=2"
+
+#define DIRVOTE_REQUIRE_CLIENT_PROTO \
+  "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 " \
+  "Link=4 Microdesc=1-2 Relay=2"
+#define DIRVOTE_REQUIRE_RELAY_PROTO \
+  "Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 " \
+  "Link=3-4 Microdesc=1 Relay=1-2"
+
 #endif /* defined(DIRVOTE_PRIVATE) */
 
 #endif /* !defined(TOR_DIRVOTE_H) */
