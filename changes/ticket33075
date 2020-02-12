@@ -1,0 +1,4 @@
+  o Testing:
+    - Stop allowing failures on the Travis CI stem tests job. It looks like all
+      the stem hangs we were seeing are now fixed, but let's make sure we see
+      them if they happen again. Closes ticket 33075.
