@@ -1,0 +1,4 @@
+  o Minor bugfixes (logging):
+    - Stop closing stderr and stdout during shutdown. Closing these file
+      descriptors can hide sanitiser logs.
+      Fixes bug 33087; bugfix on 0.4.1.6.
