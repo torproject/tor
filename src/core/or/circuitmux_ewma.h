@@ -106,7 +106,9 @@ TO_EWMA_POL_DATA(circuitmux_policy_data_t *pol)
 {
   if (!pol) return NULL;
   else {
-    tor_assert(pol->magic == EWMA_POL_DATA_MAGIC);
+    tor_assertf(pol->magic == EWMA_POL_DATA_MAGIC,
+                "Mismatch: %"PRIu32" != %"PRIu32,
+                pol->magic, EWMA_POL_DATA_MAGIC);
     return DOWNCAST(ewma_policy_data_t, pol);
   }
 }
@@ -121,7 +123,9 @@ TO_EWMA_POL_CIRC_DATA(circuitmux_policy_circ_data_t *pol)
 {
   if (!pol) return NULL;
   else {
-    tor_assert(pol->magic == EWMA_POL_CIRC_DATA_MAGIC);
+    tor_assertf(pol->magic == EWMA_POL_CIRC_DATA_MAGIC,
+                "Mismatch: %"PRIu32" != %"PRIu32,
+                pol->magic, EWMA_POL_CIRC_DATA_MAGIC);
     return DOWNCAST(ewma_policy_circ_data_t, pol);
   }
 }
@@ -132,4 +136,3 @@ STATIC void cell_ewma_initialize_ticks(void);
 #endif /* defined(CIRCUITMUX_EWMA_PRIVATE) */
 
 #endif /* !defined(TOR_CIRCUITMUX_EWMA_H) */
-
