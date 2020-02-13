@@ -33,7 +33,6 @@ LIBTOR_APP_A_SOURCES += 				\
 	src/core/or/scheduler_vanilla.c		\
 	src/core/or/sendme.c			\
 	src/core/or/status.c			\
-	src/core/or/trace_probes_circuit.c	\
 	src/core/or/versions.c
 
 # ADD_C_FILE: INSERT HEADERS HERE.
@@ -95,6 +94,12 @@ noinst_HEADERS +=					\
 	src/core/or/socks_request_st.h			\
 	src/core/or/status.h				\
 	src/core/or/tor_version_st.h			\
-	src/core/or/trace_probes_circuit.h		\
 	src/core/or/var_cell_st.h			\
 	src/core/or/versions.h
+
+if USE_TRACING_INSTRUMENTATION_LTTNG
+LIBTOR_APP_A_SOURCES += \
+	src/core/or/trace_probes_circuit.c
+noinst_HEADERS += \
+	src/core/or/trace_probes_circuit.h
+endif
