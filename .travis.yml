@@ -91,8 +91,10 @@ matrix:
     - env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
       compiler: clang
       os: osx
-    - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
-      os: osx
+    ## Since we're actively developing IPv6, we want to require the IPv6
+    ## chutney tests
+    #- env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
+    #  os: osx
 
 ## (Linux only) Use a recent Linux image (Ubuntu Bionic)
 dist: bionic
