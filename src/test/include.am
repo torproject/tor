@@ -64,7 +64,7 @@ TESTS += src/test/test src/test/test-slow src/test/test-memwipe \
 
 # run a quick test or two
 # this test only uses IPv4
-TEST_CHUTNEY_FLAVOR_QUICK = bridges+hs-v2
+TEST_CHUTNEY_FLAVOR_QUICK = bridges+hs-v23
 # only run if we can ping6 ::1 (localhost)
 TEST_CHUTNEY_FLAVOR_QUICK_IPV6 = client-ipv6-only-md
 

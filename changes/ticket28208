@@ -1,0 +1,4 @@
+  o Testing:
+    - Use the "bridges+hs-v23" chutney network flavor in "make test-network".
+      This test requires a recent version of chutney (mid-February 2020).
+      Closes ticket 28208.
