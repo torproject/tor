@@ -1,0 +1,4 @@
+  o Testing:
+    - Add test-network-ipv4 and test-network-ipv6 jobs to the Makefile.
+      These jobs run the IPv4-only and dual-stack chutney flavours from
+      test-network-all. Closes ticket 33280.

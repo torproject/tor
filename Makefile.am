@@ -293,42 +293,111 @@ test-network: need-chutney-path $(TESTING_TOR_BINARY) src/tools/tor-gencert
 	$(top_srcdir)/src/test/test-network.sh $(TEST_NETWORK_FLAGS)
 
 # Run all available tests using automake's test-driver
+.PHONY: test-network-all
+test-network-all:
+	@$(MAKE) test-network-mkdir
+	@$(MAKE) test-network-clean
+	@$(MAKE) test-network-ipv4-impl ipv4_flavors="$(TEST_CHUTNEY_FLAVORS)"
+	@$(MAKE) test-network-mixed-impl mixed_flavors="$(TEST_CHUTNEY_FLAVORS_MIXED)"
+	@$(MAKE) test-network-ipv6-impl ipv6_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6)"
+	@$(MAKE) test-network-results
+
+# Run IPv4 and mixed tests using automake's test-driver
+.PHONY: test-network-ipv4
+test-network-ipv4:
+	@$(MAKE) test-network-mkdir
+	@$(MAKE) test-network-clean
+	@$(MAKE) test-network-ipv4-impl ipv4_flavors="$(TEST_CHUTNEY_FLAVORS)"
+	@$(MAKE) test-network-mixed-impl mixed_flavors="$(TEST_CHUTNEY_FLAVORS_MIXED)"
+	@$(MAKE) test-network-results
+
+# Run IPv6 tests using automake's test-driver
+.PHONY: test-network-ipv6
+test-network-ipv6:
+	@$(MAKE) test-network-mkdir
+	@$(MAKE) test-network-clean
+	@$(MAKE) test-network-ipv6-impl ipv6_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6)"
+	@$(MAKE) test-network-results
+
+# Make the test network log directory, if it does not exist
+.PHONY: test-network-mkdir
+test-network-mkdir:
+	@mkdir -p $(TEST_NETWORK_ALL_LOG_DIR)
+
+# Clean the test network log directory
+.PHONY: test-network-clean
+test-network-clean:
+	rm -f $(TEST_NETWORK_ALL_LOG_DIR)/*.log $(TEST_NETWORK_ALL_LOG_DIR)/*.trs
+
+# Run the IPv4-only test flavors
+#   - $(ipv4_flavors) contains the tests to run
+.PHONY: test-network-ipv4-impl
+test-network-ipv4-impl:
+	@$(MAKE) test-network-run flavors="$(ipv4_flavors)" skip_flavors=""
+
+# Run the mixed tests in $(mixed_flavors), if a tor-stable binary is available
+#   - only run mixed tests if we have a tor-stable binary
+#   - $(mixed_flavors) contains the tests to run (or skip)
+.PHONY: test-network-mixed-impl
+test-network-mixed-impl:
+	@flavors=""; \
+	if command -v tor-stable >/dev/null 2>&1; then \
+		echo "tor-stable found, running mixed flavors: $(mixed_flavors)."; \
+		flavors="$$flavors $(mixed_flavors)"; \
+	else \
+		echo "tor-stable not found, skipping mixed flavors: $(mixed_flavors)."; \
+		skip_flavors="$$skip_flavors $(mixed_flavors)"; \
+	fi; \
+	$(MAKE) test-network-run flavors="$$flavors" skip_flavors="$$skip_flavors"
+
+# Run the IPv6 tests in $(ipv6_flavors), if IPv6 is available
 #   - only run IPv6 tests if we can ping6 or ping -6 ::1 (localhost)
 #     we try the syntax for BSD ping6, Linux ping6, and Linux ping -6,
 #     because they're incompatible
 #   - some IPv6 tests may fail without an IPv6 DNS server
 #     (see #16971 and #17011)
-#   - only run mixed tests if we have a tor-stable binary
+#   - $(ipv6_flavors) contains the tests to run (or skip)
+.PHONY: test-network-ipv6-impl
+test-network-ipv6-impl:
+	@flavors=""; \
+	if ping6 -q -c 1 -o   ::1 >/dev/null 2>&1 || \
+	   ping6 -q -c 1 -W 1 ::1 >/dev/null 2>&1 || \
+	   ping  -6 -c 1 -W 1 ::1 >/dev/null 2>&1; then \
+		echo "ping6 ::1 or ping ::1 succeeded, running IPv6 flavors: $(ipv6_flavors)."; \
+		flavors="$$flavors $(ipv6_flavors)"; \
+	else \
+		echo "ping6 ::1 and ping ::1 failed, skipping IPv6 flavors: $(ipv6_flavors)."; \
+		skip_flavors="$$skip_flavors $(ipv6_flavors)"; \
+	fi; \
+	$(MAKE) test-network-run flavors="$$flavors" skip_flavors="$$skip_flavors"
+
+# Run tests using automake's test-driver
+#   - $(flavors) contains the tests to run
+#   - $(skip_flavors) contains the tests to skip
+.PHONY: test-network-run
+test-network-run: need-chutney-path test-driver $(TESTING_TOR_BINARY) src/tools/tor-gencert
+	@for f in $(skip_flavors); do \
+		echo "SKIP: $$f"; \
+	done; \
+	for f in $(flavors); do \
+		$(SHELL) $(top_srcdir)/test-driver --test-name $$f \
+		  --log-file $(TEST_NETWORK_ALL_LOG_DIR)/$$f.log \
+		  --trs-file $(TEST_NETWORK_ALL_LOG_DIR)/$$f.trs \
+		  $(TEST_NETWORK_ALL_DRIVER_FLAGS) \
+		  $(top_srcdir)/src/test/test-network.sh \
+		    --flavor $$f $(TEST_NETWORK_FLAGS); \
+		$(top_srcdir)/src/test/test-network.sh \
+		  $(TEST_NETWORK_SHOW_WARNINGS_FOR_LAST_RUN_FLAGS); \
+	done
+
+# Print the results from automake's test-driver
 #   - show tor warnings on the console after each network run
 #     (otherwise, warnings go to the logs, and people don't see them unless
 #     there is a network failure)
-test-network-all: need-chutney-path test-driver $(TESTING_TOR_BINARY) src/tools/tor-gencert
-	mkdir -p $(TEST_NETWORK_ALL_LOG_DIR)
-	rm -f $(TEST_NETWORK_ALL_LOG_DIR)/*.log $(TEST_NETWORK_ALL_LOG_DIR)/*.trs
-	@flavors="$(TEST_CHUTNEY_FLAVORS)"; \
-	if ping6 -q -c 1 -o ::1 >/dev/null 2>&1 || ping6 -q -c 1 -W 1 ::1 >/dev/null 2>&1 || ping -6 -c 1 -W 1 ::1 >/dev/null 2>&1; then \
-		echo "ping6 ::1 or ping ::1 succeeded, running IPv6 flavors: $(TEST_CHUTNEY_FLAVORS_IPV6)."; \
-		flavors="$$flavors $(TEST_CHUTNEY_FLAVORS_IPV6)"; \
-	else \
-		echo "ping6 ::1 and ping ::1 failed, skipping IPv6 flavors: $(TEST_CHUTNEY_FLAVORS_IPV6)."; \
-		skip_flavors="$$skip_flavors $(TEST_CHUTNEY_FLAVORS_IPV6)"; \
-	fi; \
-	if command -v tor-stable >/dev/null 2>&1; then \
-		echo "tor-stable found, running mixed flavors: $(TEST_CHUTNEY_FLAVORS_MIXED)."; \
-		flavors="$$flavors $(TEST_CHUTNEY_FLAVORS_MIXED)"; \
-	else \
-		echo "tor-stable not found, skipping mixed flavors: $(TEST_CHUTNEY_FLAVORS_MIXED)."; \
-		skip_flavors="$$skip_flavors $(TEST_CHUTNEY_FLAVORS_MIXED)"; \
-	fi; \
-	for f in $$skip_flavors; do \
-		echo "SKIP: $$f"; \
-	done; \
-	for f in $$flavors; do \
-		$(SHELL) $(top_srcdir)/test-driver --test-name $$f --log-file $(TEST_NETWORK_ALL_LOG_DIR)/$$f.log --trs-file $(TEST_NETWORK_ALL_LOG_DIR)/$$f.trs $(TEST_NETWORK_ALL_DRIVER_FLAGS) $(top_srcdir)/src/test/test-network.sh --flavor $$f $(TEST_NETWORK_FLAGS); \
-		$(top_srcdir)/src/test/test-network.sh $(TEST_NETWORK_SHOW_WARNINGS_FOR_LAST_RUN_FLAGS); \
-	done; \
-	echo "Log and result files are available in $(TEST_NETWORK_ALL_LOG_DIR)."; \
-	! grep -q FAIL $(TEST_NETWORK_ALL_LOG_DIR)/*.trs
+.PHONY: test-network-results
+test-network-results:
+	@echo "Log and result files are available in $(TEST_NETWORK_ALL_LOG_DIR)."
+	@! grep -q FAIL $(TEST_NETWORK_ALL_LOG_DIR)/*.trs
 
 need-stem-path:
 	@if test ! -d "$$STEM_SOURCE_DIR"; then \
