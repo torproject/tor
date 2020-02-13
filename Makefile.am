@@ -275,6 +275,9 @@ check-local:					\
 	shellcheck				\
 	check-cocci
 
+# test-network requires a copy of Chutney in $CHUTNEY_PATH.
+# Chutney can be cloned from https://git.torproject.org/chutney.git .
+.PHONY: need-chutney-path
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
 		echo '$$CHUTNEY_PATH was not set.'; \
@@ -287,10 +290,14 @@ need-chutney-path:
 		fi \
 	fi
 
-# Note that test-network requires a copy of Chutney in $CHUTNEY_PATH.
-# Chutney can be cloned from https://git.torproject.org/chutney.git .
-test-network: need-chutney-path $(TESTING_TOR_BINARY) src/tools/tor-gencert
-	$(top_srcdir)/src/test/test-network.sh $(TEST_NETWORK_FLAGS)
+# Run some basic tests using automake's test-driver
+.PHONY: test-network
+test-network:
+	@$(MAKE) test-network-mkdir
+	@$(MAKE) test-network-clean
+	@$(MAKE) test-network-ipv4-impl ipv4_flavors="$(TEST_CHUTNEY_FLAVOR_QUICK)"
+	@$(MAKE) test-network-ipv6-impl ipv6_flavors="$(TEST_CHUTNEY_FLAVOR_QUICK_IPV6)"
+	@$(MAKE) test-network-results
 
 # Run all available tests using automake's test-driver
 .PHONY: test-network-all

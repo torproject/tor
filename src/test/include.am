@@ -61,11 +61,21 @@ TESTS += src/test/test src/test/test-slow src/test/test-memwipe \
 	$(TESTSCRIPTS)
 
 # These flavors are run using automake's test-driver and test-network.sh
+
+# run a quick test or two
+# this test only uses IPv4
+TEST_CHUTNEY_FLAVOR_QUICK = bridges+hs-v2
+# only run if we can ping6 ::1 (localhost)
+TEST_CHUTNEY_FLAVOR_QUICK_IPV6 = client-ipv6-only-md
+
+# run a basic set of tests, which only use IPv4
 TEST_CHUTNEY_FLAVORS = basic-min bridges-min hs-v2-min hs-v3-min \
 	single-onion-v23
+
 # only run if we can ping6 ::1 (localhost)
 TEST_CHUTNEY_FLAVORS_IPV6 = bridges+ipv6-min ipv6-exit-min hs-v23-ipv6-md \
 	single-onion-v23-ipv6-md
+
 # only run if we can find a stable (or simply another) version of tor
 TEST_CHUTNEY_FLAVORS_MIXED = mixed+hs-v2
 
