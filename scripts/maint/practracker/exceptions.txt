@@ -335,3 +335,4 @@ problem function-size /src/tools/tor-resolve.c:build_socks5_resolve_request() 10
 problem function-size /src/tools/tor-resolve.c:do_resolve() 171
 problem function-size /src/tools/tor-resolve.c:main() 112
 problem dependency-violation /src/core/or/trace_probes_circuit.c 1
+problem dependency-violation /src/core/or/trace_probes_circuit.h 1
