@@ -1,0 +1,2 @@
+  o Testing:
+    - Remove a redundant distcheck job. Closes ticket 33194.

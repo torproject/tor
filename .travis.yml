@@ -57,16 +57,12 @@ matrix:
     - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
       compiler: clang
     ## We check asciidoc with distcheck, to make sure we remove doc products
-    ## We use Linux clang, because there are no other Linux clang jobs
     - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
-      compiler: clang
     ## We include a single coverage build with the best options for coverage
     - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS="" TOR_TEST_RNG_SEED="636f766572616765"
     ## We run rust on Linux, because it's faster than rust on macOS
     ## We check rust offline
     - env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
-    ## We check asciidoc with distcheck, to make sure we remove doc products
-    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
     ## We check disable module relay
     - env: MODULES_OPTIONS="--disable-module-relay"
     ## We check disable module dirauth
