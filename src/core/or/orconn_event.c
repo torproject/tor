@@ -94,6 +94,6 @@ orconn_status_publish(orconn_status_msg_t *msg)
 const subsys_fns_t sys_orconn_event = {
   .name = "orconn_event",
   .supported = true,
-  .level = -33,
+  .level = 22,
   .add_pubsub = orconn_add_pubsub,
 };

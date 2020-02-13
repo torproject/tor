@@ -50,23 +50,23 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_logging,
 
   &sys_time,
-  &sys_network,
 
-  &sys_compress,
   &sys_crypto,
+  &sys_compress,
+  &sys_network,
   &sys_tortls,
   &sys_process,
-
-  &sys_orconn_event,
-  &sys_ocirc_event,
-  &sys_btrack,
 
   &sys_evloop,
 
   &sys_mainloop,
   &sys_or,
+  &sys_orconn_event,
+  &sys_ocirc_event,
 
   &sys_relay,
+
+  &sys_btrack,
 
   &sys_dirauth,
 };

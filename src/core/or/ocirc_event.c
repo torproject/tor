@@ -123,6 +123,6 @@ ocirc_cevent_publish(ocirc_cevent_msg_t *msg)
 const subsys_fns_t sys_ocirc_event = {
   .name = "ocirc_event",
   .supported = true,
-  .level = -32,
+  .level = 22,
   .add_pubsub = ocirc_add_pubsub,
 };
