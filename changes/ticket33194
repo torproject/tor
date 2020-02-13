@@ -1,2 +1,4 @@
   o Testing:
     - Remove a redundant distcheck job. Closes ticket 33194.
+    - Sort the Travis jobs in order of speed. Putting the slowest jobs first
+      takes full advantage of Travis job concurrency. Closes ticket 33194.
