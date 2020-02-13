@@ -2764,6 +2764,7 @@ your log at NOTICE level which looks like:
 The following options are useful only for a public relay. They control the
 Denial of Service mitigation subsystem described above.
 
+//Out of order because it logically belongs before the other DocCircuitCreation options.
 [[DoSCircuitCreationEnabled]] **DoSCircuitCreationEnabled** **0**|**1**|**auto**::
 
     Enable circuit creation DoS mitigation. If set to 1 (enabled), tor will
@@ -2773,6 +2774,34 @@ Denial of Service mitigation subsystem described above.
     for more details.  This is a client to relay detection only. "auto" means
     use the consensus parameter. If not defined in the consensus, the value is 0.
     (Default: auto)
+
+[[DoSCircuitCreationBurst]] **DoSCircuitCreationBurst** __NUM__::
+
+    The allowed circuit creation burst per client IP address. If the circuit
+    rate and the burst are reached, a client is marked as executing a circuit
+    creation DoS. "0" means use the consensus parameter. If not defined in the
+    consensus, the value is 90.
+    (Default: 0)
+
+[[DoSCircuitCreationDefenseTimePeriod]] **DoSCircuitCreationDefenseTimePeriod** __N__ **seconds**|**minutes**|**hours**::
+
+    The base time period in seconds that the DoS defense is activated for. The
+    actual value is selected randomly for each activation from N+1 to 3/2 * N.
+    "0" means use the consensus parameter. If not defined in the consensus,
+    the value is 3600 seconds (1 hour).
+    (Default: 0)
+
+[[DoSCircuitCreationDefenseType]] **DoSCircuitCreationDefenseType** __NUM__::
+
+    This is the type of defense applied to a detected client address. The
+    possible values are:
+     +
+      1: No defense.
+     +
+      2: Refuse circuit creation for the DoSCircuitCreationDefenseTimePeriod period of time.
+     +
+    "0" means use the consensus parameter. If not defined in the consensus, the value is 2.
+    (Default: 0)
 
 [[DoSCircuitCreationMinConnections]] **DoSCircuitCreationMinConnections** __NUM__::
 
@@ -2790,34 +2819,7 @@ Denial of Service mitigation subsystem described above.
     defined in the consensus, the value is 3.
     (Default: 0)
 
-[[DoSCircuitCreationBurst]] **DoSCircuitCreationBurst** __NUM__::
-
-    The allowed circuit creation burst per client IP address. If the circuit
-    rate and the burst are reached, a client is marked as executing a circuit
-    creation DoS. "0" means use the consensus parameter. If not defined in the
-    consensus, the value is 90.
-    (Default: 0)
-
-[[DoSCircuitCreationDefenseType]] **DoSCircuitCreationDefenseType** __NUM__::
-
-    This is the type of defense applied to a detected client address. The
-    possible values are:
-     +
-      1: No defense.
-     +
-      2: Refuse circuit creation for the DoSCircuitCreationDefenseTimePeriod period of time.
-     +
-    "0" means use the consensus parameter. If not defined in the consensus, the value is 2.
-    (Default: 0)
-
-[[DoSCircuitCreationDefenseTimePeriod]] **DoSCircuitCreationDefenseTimePeriod** __N__ **seconds**|**minutes**|**hours**::
-
-    The base time period in seconds that the DoS defense is activated for. The
-    actual value is selected randomly for each activation from N+1 to 3/2 * N.
-    "0" means use the consensus parameter. If not defined in the consensus,
-    the value is 3600 seconds (1 hour).
-    (Default: 0)
-
+//out of order because it logically belongs before the other DoSConnection options.
 [[DoSConnectionEnabled]] **DoSConnectionEnabled** **0**|**1**|**auto**::
 
     Enable the connection DoS mitigation. If set to 1 (enabled), for client
@@ -2825,14 +2827,6 @@ Denial of Service mitigation subsystem described above.
     concurrent connections made by a single IP address. "auto" means use the
     consensus parameter. If not defined in the consensus, the value is 0.
     (Default: auto)
-
-[[DoSConnectionMaxConcurrentCount]] **DoSConnectionMaxConcurrentCount** __NUM__::
-
-    The maximum threshold of concurrent connection from a client IP address.
-    Above this limit, a defense selected by DoSConnectionDefenseType is
-    applied. "0" means use the consensus parameter. If not defined in the
-    consensus, the value is 100.
-    (Default: 0)
 
 [[DoSConnectionDefenseType]] **DoSConnectionDefenseType** __NUM__::
 
@@ -2844,6 +2838,14 @@ Denial of Service mitigation subsystem described above.
       2: Immediately close new connections.
      +
     "0" means use the consensus parameter. If not defined in the consensus, the value is 2.
+    (Default: 0)
+
+[[DoSConnectionMaxConcurrentCount]] **DoSConnectionMaxConcurrentCount** __NUM__::
+
+    The maximum threshold of concurrent connection from a client IP address.
+    Above this limit, a defense selected by DoSConnectionDefenseType is
+    applied. "0" means use the consensus parameter. If not defined in the
+    consensus, the value is 100.
     (Default: 0)
 
 [[DoSRefuseSingleHopClientRendezvous]] **DoSRefuseSingleHopClientRendezvous** **0**|**1**|**auto**::
@@ -2869,59 +2871,18 @@ on the public Tor network.
     already have you listed as a trusted directory, you probably do not want
     to set this option.
 
-[[V3AuthoritativeDirectory]] **V3AuthoritativeDirectory** **0**|**1**::
-    When this option is set in addition to **AuthoritativeDirectory**, Tor
-    generates version 3 network statuses and serves descriptors, etc as
-    described in dir-spec.txt file of https://spec.torproject.org/[torspec]
-    (for Tor clients and servers running at least 0.2.0.x).
-
-[[VersioningAuthoritativeDirectory]] **VersioningAuthoritativeDirectory** **0**|**1**::
-    When this option is set to 1, Tor adds information on which versions of
-    Tor are still believed safe for use to the published directory. Each
-    version 1 authority is automatically a versioning authority; version 2
-    authorities provide this service optionally. See **RecommendedVersions**,
-    **RecommendedClientVersions**, and **RecommendedServerVersions**.
-
-[[RecommendedVersions]] **RecommendedVersions** __STRING__::
-    STRING is a comma-separated list of Tor versions currently believed to be
-    safe. The list is included in each directory, and nodes which pull down the
-    directory learn whether they need to upgrade. This option can appear
-    multiple times: the values from multiple lines are spliced together. When
-    this is set then **VersioningAuthoritativeDirectory** should be set too.
-
-[[RecommendedClientVersions]] **RecommendedClientVersions** __STRING__::
-    STRING is a comma-separated list of Tor versions currently believed to be
-    safe for clients to use. This information is included in version 2
-    directories. If this is not set then the value of **RecommendedVersions**
-    is used. When this is set then **VersioningAuthoritativeDirectory** should
-    be set too.
-
+//Out of order because it belongs with the AuthoritativeDirectory option.
 [[BridgeAuthoritativeDir]] **BridgeAuthoritativeDir** **0**|**1**::
     When this option is set in addition to **AuthoritativeDirectory**, Tor
     accepts and serves server descriptors, but it caches and serves the main
     networkstatus documents rather than generating its own. (Default: 0)
 
-[[MinUptimeHidServDirectoryV2]] **MinUptimeHidServDirectoryV2** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
-    Minimum uptime of a v2 hidden service directory to be accepted as such by
-    authoritative directories. (Default: 25 hours)
-
-[[RecommendedServerVersions]] **RecommendedServerVersions** __STRING__::
-    STRING is a comma-separated list of Tor versions currently believed to be
-    safe for servers to use. This information is included in version 2
-    directories. If this is not set then the value of **RecommendedVersions**
-    is used. When this is set then **VersioningAuthoritativeDirectory** should
-    be set too.
-
-[[ConsensusParams]] **ConsensusParams** __STRING__::
-    STRING is a space-separated list of key=value pairs that Tor will include
-    in the "params" line of its networkstatus vote.
-
-[[DirAllowPrivateAddresses]] **DirAllowPrivateAddresses** **0**|**1**::
-    If set to 1, Tor will accept server descriptors with arbitrary "Address"
-    elements. Otherwise, if the address is not an IP address or is a private IP
-    address, it will reject the server descriptor. Additionally, Tor
-    will allow exit policies for private networks to fulfill Exit flag
-    requirements. (Default: 0)
+//Out of order because it belongs with the AuthoritativeDirectory option.
+[[V3AuthoritativeDirectory]] **V3AuthoritativeDirectory** **0**|**1**::
+    When this option is set in addition to **AuthoritativeDirectory**, Tor
+    generates version 3 network statuses and serves descriptors, etc as
+    described in dir-spec.txt file of https://spec.torproject.org/[torspec]
+    (for Tor clients and servers running at least 0.2.0.x).
 
 [[AuthDirBadExit]] **AuthDirBadExit** __AddressPattern...__::
     Authoritative directories only. A set of address patterns for servers that
@@ -2932,38 +2893,6 @@ on the public Tor network.
     is the same as for exit policies, except that you don't need to say
     "accept" or "reject", and ports are not needed.)
 
-[[AuthDirInvalid]] **AuthDirInvalid** __AddressPattern...__::
-    Authoritative directories only. A set of address patterns for servers that
-    will never be listed as "valid" in any network status document that this
-    authority publishes.
-
-[[AuthDirReject]] **AuthDirReject** __AddressPattern__...::
-    Authoritative directories only. A set of address patterns for servers that
-    will never be listed at all in any network status document that this
-    authority publishes, or accepted as an OR address in any descriptor
-    submitted for publication by this authority.
-
-[[AuthDirBadExitCCs]] **AuthDirBadExitCCs** __CC__,... +
-
-[[AuthDirInvalidCCs]] **AuthDirInvalidCCs** __CC__,... +
-
-[[AuthDirRejectCCs]] **AuthDirRejectCCs** __CC__,...::
-    Authoritative directories only. These options contain a comma-separated
-    list of country codes such that any server in one of those country codes
-    will be marked as a bad exit/invalid for use, or rejected
-    entirely.
-
-[[AuthDirListBadExits]] **AuthDirListBadExits** **0**|**1**::
-    Authoritative directories only. If set to 1, this directory has some
-    opinion about which nodes are unsuitable as exit nodes. (Do not set this to
-    1 unless you plan to list non-functioning exits as bad; otherwise, you are
-    effectively voting in favor of every declared exit as an exit.)
-
-[[AuthDirMaxServersPerAddr]] **AuthDirMaxServersPerAddr** __NUM__::
-    Authoritative directories only. The maximum number of servers that we will
-    list as acceptable on a single IP address. Set this to "0" for "no limit".
-    (Default: 2)
-
 [[AuthDirFastGuarantee]] **AuthDirFastGuarantee** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     Authoritative directories only. If non-zero, always vote the
     Fast flag for any relay advertising this amount of capacity or
@@ -2973,79 +2902,6 @@ on the public Tor network.
     Authoritative directories only. If non-zero, this advertised capacity
     or more is always sufficient to satisfy the bandwidth requirement
     for the Guard flag. (Default: 2 MBytes)
-
-[[AuthDirPinKeys]] **AuthDirPinKeys** **0**|**1**::
-    Authoritative directories only. If non-zero, do not allow any relay to
-    publish a descriptor if any other relay has reserved its <Ed25519,RSA>
-    identity keypair. In all cases, Tor records every keypair it accepts
-    in a journal if it is new, or if it differs from the most recently
-    accepted pinning for one of the keys it contains. (Default: 1)
-
-[[AuthDirSharedRandomness]] **AuthDirSharedRandomness** **0**|**1**::
-    Authoritative directories only. Switch for the shared random protocol.
-    If zero, the authority won't participate in the protocol. If non-zero
-    (default), the flag "shared-rand-participate" is added to the authority
-    vote indicating participation in the protocol. (Default: 1)
-
-[[AuthDirTestEd25519LinkKeys]] **AuthDirTestEd25519LinkKeys**  **0**|**1**::
-    Authoritative directories only. If this option is set to 0, then we treat
-    relays as "Running" if their RSA key is correct when we probe them,
-    regardless of their Ed25519 key. We should only ever set this option to 0
-    if there is some major bug in Ed25519 link authentication that causes us
-    to label all the relays as not Running.  (Default: 1)
-
-[[BridgePassword]] **BridgePassword** __Password__::
-    If set, contains an HTTP authenticator that tells a bridge authority to
-    serve all requested bridge information. Used by the (only partially
-    implemented) "bridge community" design, where a community of bridge
-    relay operators all use an alternate bridge directory authority,
-    and their target user audience can periodically fetch the list of
-    available community bridges to stay up-to-date. (Default: not set)
-
-[[V3AuthVotingInterval]] **V3AuthVotingInterval** __N__ **minutes**|**hours**::
-    V3 authoritative directories only. Configures the server's preferred voting
-    interval. Note that voting will __actually__ happen at an interval chosen
-    by consensus from all the authorities' preferred intervals. This time
-    SHOULD divide evenly into a day. (Default: 1 hour)
-
-[[V3AuthVoteDelay]] **V3AuthVoteDelay** __N__ **minutes**|**hours**::
-    V3 authoritative directories only. Configures the server's preferred delay
-    between publishing its vote and assuming it has all the votes from all the
-    other authorities. Note that the actual time used is not the server's
-    preferred time, but the consensus of all preferences. (Default: 5 minutes)
-
-[[V3AuthDistDelay]] **V3AuthDistDelay** __N__ **minutes**|**hours**::
-    V3 authoritative directories only. Configures the server's preferred  delay
-    between publishing its consensus and signature and assuming  it has all the
-    signatures from all the other authorities. Note that the actual time used
-    is not the server's preferred time,  but the consensus of all preferences.
-    (Default: 5 minutes)
-
-[[V3AuthNIntervalsValid]] **V3AuthNIntervalsValid** __NUM__::
-    V3 authoritative directories only. Configures the number of VotingIntervals
-    for which each consensus should be valid for. Choosing high numbers
-    increases network partitioning risks; choosing low numbers increases
-    directory traffic. Note that the actual number of intervals used is not the
-    server's preferred number, but the consensus of all preferences. Must be at
-    least 2. (Default: 3)
-
-[[V3BandwidthsFile]] **V3BandwidthsFile** __FILENAME__::
-    V3 authoritative directories only. Configures the location of the
-    bandwidth-authority generated file storing information on relays' measured
-    bandwidth capacities. To avoid inconsistent reads, bandwidth data should
-    be written to temporary file, then renamed to the configured filename.
-    (Default: unset)
-
-[[GuardfractionFile]] **GuardfractionFile** __FILENAME__::
-    V3 authoritative directories only. Configures the location of the
-    guardfraction file which contains information about how long relays
-    have been guards. (Default: unset)
-
-[[V3AuthUseLegacyKey]] **V3AuthUseLegacyKey** **0**|**1**::
-    If set, the directory authority will sign consensuses not only with its
-    own signing key, but also with a "legacy" key and certificate with a
-    different identity.  This feature is used to migrate directory authority
-    keys in the event of a compromise.  (Default: 0)
 
 [[AuthDirHasIPv6Connectivity]] **AuthDirHasIPv6Connectivity** **0**|**1**::
     Authoritative directories only. When set to 0, OR ports with an
@@ -3073,11 +2929,161 @@ on the public Tor network.
       IPv6 ORPorts not Running, 75% of authorities must set
       AuthDirHasIPv6Connectivity 1.)
 
+[[AuthDirInvalid]] **AuthDirInvalid** __AddressPattern...__::
+    Authoritative directories only. A set of address patterns for servers that
+    will never be listed as "valid" in any network status document that this
+    authority publishes.
+
+[[AuthDirListBadExits]] **AuthDirListBadExits** **0**|**1**::
+    Authoritative directories only. If set to 1, this directory has some
+    opinion about which nodes are unsuitable as exit nodes. (Do not set this to
+    1 unless you plan to list non-functioning exits as bad; otherwise, you are
+    effectively voting in favor of every declared exit as an exit.)
+
+[[AuthDirMaxServersPerAddr]] **AuthDirMaxServersPerAddr** __NUM__::
+    Authoritative directories only. The maximum number of servers that we will
+    list as acceptable on a single IP address. Set this to "0" for "no limit".
+    (Default: 2)
+
+[[AuthDirPinKeys]] **AuthDirPinKeys** **0**|**1**::
+    Authoritative directories only. If non-zero, do not allow any relay to
+    publish a descriptor if any other relay has reserved its <Ed25519,RSA>
+    identity keypair. In all cases, Tor records every keypair it accepts
+    in a journal if it is new, or if it differs from the most recently
+    accepted pinning for one of the keys it contains. (Default: 1)
+
+[[AuthDirReject]] **AuthDirReject** __AddressPattern__...::
+    Authoritative directories only. A set of address patterns for servers that
+    will never be listed at all in any network status document that this
+    authority publishes, or accepted as an OR address in any descriptor
+    submitted for publication by this authority.
+
+[[AuthDirBadExitCCs]] **AuthDirBadExitCCs** __CC__,... +
+
+[[AuthDirInvalidCCs]] **AuthDirInvalidCCs** __CC__,... +
+
+[[AuthDirRejectCCs]] **AuthDirRejectCCs** __CC__,...::
+    Authoritative directories only. These options contain a comma-separated
+    list of country codes such that any server in one of those country codes
+    will be marked as a bad exit/invalid for use, or rejected
+    entirely.
+
+[[AuthDirSharedRandomness]] **AuthDirSharedRandomness** **0**|**1**::
+    Authoritative directories only. Switch for the shared random protocol.
+    If zero, the authority won't participate in the protocol. If non-zero
+    (default), the flag "shared-rand-participate" is added to the authority
+    vote indicating participation in the protocol. (Default: 1)
+
+[[AuthDirTestEd25519LinkKeys]] **AuthDirTestEd25519LinkKeys**  **0**|**1**::
+    Authoritative directories only. If this option is set to 0, then we treat
+    relays as "Running" if their RSA key is correct when we probe them,
+    regardless of their Ed25519 key. We should only ever set this option to 0
+    if there is some major bug in Ed25519 link authentication that causes us
+    to label all the relays as not Running.  (Default: 1)
+
+[[BridgePassword]] **BridgePassword** __Password__::
+    If set, contains an HTTP authenticator that tells a bridge authority to
+    serve all requested bridge information. Used by the (only partially
+    implemented) "bridge community" design, where a community of bridge
+    relay operators all use an alternate bridge directory authority,
+    and their target user audience can periodically fetch the list of
+    available community bridges to stay up-to-date. (Default: not set)
+
+[[ConsensusParams]] **ConsensusParams** __STRING__::
+    STRING is a space-separated list of key=value pairs that Tor will include
+    in the "params" line of its networkstatus vote.
+
+[[DirAllowPrivateAddresses]] **DirAllowPrivateAddresses** **0**|**1**::
+    If set to 1, Tor will accept server descriptors with arbitrary "Address"
+    elements. Otherwise, if the address is not an IP address or is a private IP
+    address, it will reject the server descriptor. Additionally, Tor
+    will allow exit policies for private networks to fulfill Exit flag
+    requirements. (Default: 0)
+
 [[MinMeasuredBWsForAuthToIgnoreAdvertised]] **MinMeasuredBWsForAuthToIgnoreAdvertised** __N__::
     A total value, in abstract bandwidth units, describing how much
     measured total bandwidth an authority should have observed on the network
     before it will treat advertised bandwidths as wholly
     unreliable. (Default: 500)
+
+[[MinUptimeHidServDirectoryV2]] **MinUptimeHidServDirectoryV2** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
+    Minimum uptime of a v2 hidden service directory to be accepted as such by
+    authoritative directories. (Default: 25 hours)
+
+[[RecommendedClientVersions]] **RecommendedClientVersions** __STRING__::
+    STRING is a comma-separated list of Tor versions currently believed to be
+    safe for clients to use. This information is included in version 2
+    directories. If this is not set then the value of **RecommendedVersions**
+    is used. When this is set then **VersioningAuthoritativeDirectory** should
+    be set too.
+
+[[RecommendedServerVersions]] **RecommendedServerVersions** __STRING__::
+    STRING is a comma-separated list of Tor versions currently believed to be
+    safe for servers to use. This information is included in version 2
+    directories. If this is not set then the value of **RecommendedVersions**
+    is used. When this is set then **VersioningAuthoritativeDirectory** should
+    be set too.
+
+[[RecommendedVersions]] **RecommendedVersions** __STRING__::
+    STRING is a comma-separated list of Tor versions currently believed to be
+    safe. The list is included in each directory, and nodes which pull down the
+    directory learn whether they need to upgrade. This option can appear
+    multiple times: the values from multiple lines are spliced together. When
+    this is set then **VersioningAuthoritativeDirectory** should be set too.
+
+[[VersioningAuthoritativeDirectory]] **VersioningAuthoritativeDirectory** **0**|**1**::
+    When this option is set to 1, Tor adds information on which versions of
+    Tor are still believed safe for use to the published directory. Each
+    version 1 authority is automatically a versioning authority; version 2
+    authorities provide this service optionally. See **RecommendedVersions**,
+    **RecommendedClientVersions**, and **RecommendedServerVersions**.
+
+[[V3AuthDistDelay]] **V3AuthDistDelay** __N__ **minutes**|**hours**::
+    V3 authoritative directories only. Configures the server's preferred  delay
+    between publishing its consensus and signature and assuming  it has all the
+    signatures from all the other authorities. Note that the actual time used
+    is not the server's preferred time,  but the consensus of all preferences.
+    (Default: 5 minutes)
+
+[[V3AuthNIntervalsValid]] **V3AuthNIntervalsValid** __NUM__::
+    V3 authoritative directories only. Configures the number of VotingIntervals
+    for which each consensus should be valid for. Choosing high numbers
+    increases network partitioning risks; choosing low numbers increases
+    directory traffic. Note that the actual number of intervals used is not the
+    server's preferred number, but the consensus of all preferences. Must be at
+    least 2. (Default: 3)
+
+[[V3AuthUseLegacyKey]] **V3AuthUseLegacyKey** **0**|**1**::
+    If set, the directory authority will sign consensuses not only with its
+    own signing key, but also with a "legacy" key and certificate with a
+    different identity.  This feature is used to migrate directory authority
+    keys in the event of a compromise.  (Default: 0)
+
+[[V3AuthVoteDelay]] **V3AuthVoteDelay** __N__ **minutes**|**hours**::
+    V3 authoritative directories only. Configures the server's preferred delay
+    between publishing its vote and assuming it has all the votes from all the
+    other authorities. Note that the actual time used is not the server's
+    preferred time, but the consensus of all preferences. (Default: 5 minutes)
+
+[[V3AuthVotingInterval]] **V3AuthVotingInterval** __N__ **minutes**|**hours**::
+    V3 authoritative directories only. Configures the server's preferred voting
+    interval. Note that voting will __actually__ happen at an interval chosen
+    by consensus from all the authorities' preferred intervals. This time
+    SHOULD divide evenly into a day. (Default: 1 hour)
+
+[[V3BandwidthsFile]] **V3BandwidthsFile** __FILENAME__::
+    V3 authoritative directories only. Configures the location of the
+    bandwidth-authority generated file storing information on relays' measured
+    bandwidth capacities. To avoid inconsistent reads, bandwidth data should
+    be written to temporary file, then renamed to the configured filename.
+    (Default: unset)
+
+//Out of order because it belongs with the other V3 authoritative directories options.
+[[GuardfractionFile]] **GuardfractionFile** __FILENAME__::
+    V3 authoritative directories only. Configures the location of the
+    guardfraction file which contains information about how long relays
+    have been guards. (Default: unset)
+
 
 == HIDDEN SERVICE OPTIONS
 
@@ -3089,33 +3095,11 @@ The next section describes the per service options that can only be set
 
 **PER SERVICE OPTIONS:**
 
-[[HiddenServiceDir]] **HiddenServiceDir** __DIRECTORY__::
-    Store data files for a hidden service in DIRECTORY. Every hidden service
-    must have a separate directory. You may use this option  multiple times to
-    specify multiple services. If DIRECTORY does not exist, Tor will create it.
-    Please note that you cannot add new Onion Service to already running Tor
-    instance if **Sandbox** is enabled.
-    (Note: in current versions of Tor, if DIRECTORY is a relative path,
-    it will be relative to the current
-    working directory of Tor instance, not to its DataDirectory.  Do not
-    rely on this behavior; it is not guaranteed to remain the same in future
-    versions.)
-
-[[HiddenServicePort]] **HiddenServicePort** __VIRTPORT__ [__TARGET__]::
-    Configure a virtual port VIRTPORT for a hidden service. You may use this
-    option multiple times; each time applies to the service using the most
-    recent HiddenServiceDir. By default, this option maps the virtual port to
-    the same port on 127.0.0.1 over TCP. You may override the target port,
-    address, or both by specifying a target of addr, port, addr:port, or
-    **unix:**__path__.  (You can specify an IPv6 target as [addr]:port. Unix
-    paths may be quoted, and may use standard C escapes.)
-    You may also have multiple lines with  the same VIRTPORT: when a user
-    connects to that VIRTPORT, one of the TARGETs from those lines will be
-    chosen at random. Note that address-port pairs have to be comma-separated.
-
-[[HiddenServiceVersion]] **HiddenServiceVersion** **2**|**3**::
-    A list of rendezvous service descriptor versions to publish for the hidden
-    service. Currently, versions 2 and 3 are supported. (Default: 3)
+[[HiddenServiceAllowUnknownPorts]] **HiddenServiceAllowUnknownPorts** **0**|**1**::
+   If set to 1, then connections to unrecognized ports do not cause the
+   current hidden service to close rendezvous circuits. (Setting this to 0 is
+   not an authorization mechanism; it is instead meant to be a mild
+   inconvenience to port-scanners.) (Default: 0)
 
 [[HiddenServiceAuthorizeClient]] **HiddenServiceAuthorizeClient** __auth-type__ __client-name__,__client-name__,__...__::
     If configured, the v2 hidden service is accessible for authorized clients
@@ -3131,11 +3115,47 @@ The next section describes the per service options that can only be set
     services; v3 services configure client authentication in a subdirectory of
     HiddenServiceDir instead (see the **Client Authorization** section).
 
-[[HiddenServiceAllowUnknownPorts]] **HiddenServiceAllowUnknownPorts** **0**|**1**::
-   If set to 1, then connections to unrecognized ports do not cause the
-   current hidden service to close rendezvous circuits. (Setting this to 0 is
-   not an authorization mechanism; it is instead meant to be a mild
-   inconvenience to port-scanners.) (Default: 0)
+[[HiddenServiceDir]] **HiddenServiceDir** __DIRECTORY__::
+    Store data files for a hidden service in DIRECTORY. Every hidden service
+    must have a separate directory. You may use this option  multiple times to
+    specify multiple services. If DIRECTORY does not exist, Tor will create it.
+    Please note that you cannot add new Onion Service to already running Tor
+    instance if **Sandbox** is enabled.
+    (Note: in current versions of Tor, if DIRECTORY is a relative path,
+    it will be relative to the current
+    working directory of Tor instance, not to its DataDirectory.  Do not
+    rely on this behavior; it is not guaranteed to remain the same in future
+    versions.)
+
+[[HiddenServiceDirGroupReadable]] **HiddenServiceDirGroupReadable** **0**|**1**::
+    If this option is set to 1, allow the filesystem group to read the
+    hidden service directory and hostname file. If the option is set to 0,
+    only owner is able to read the hidden service directory. (Default: 0)
+    Has no effect on Windows.
+
+[[HiddenServiceEnableIntroDoSDefense]] **HiddenServiceEnableIntroDoSDefense** **0**|**1**::
+    Enable DoS defense at the intropoint level. When this is enabled, the
+    rate and burst parameter (see below) will be sent to the intro point which
+    will then use them to apply rate limiting for introduction request to this
+    service.
+  +
+    The introduction point honors the consensus parameters except if this is
+    specifically set by the service operator using this option. The service
+    never looks at the consensus parameters in order to enable or disable this
+    defense. (Default: 0)
+
+//Out of order because it logically belongs after HiddenServiceEnableIntroDoSDefense.
+[[HiddenServiceEnableIntroDoSBurstPerSec]] **HiddenServiceEnableIntroDoSBurstPerSec** __NUM__::
+    The allowed client introduction burst per second at the introduction
+    point. If this option is 0, it is considered infinite and thus if
+    **HiddenServiceEnableIntroDoSDefense** is set, it then effectively
+    disables the defenses. (Default: 200)
+
+[[HiddenServiceEnableIntroDoSRatePerSec]] **HiddenServiceEnableIntroDoSRatePerSec** __NUM__::
+    The allowed client introduction rate per second at the introduction
+    point. If this option is 0, it is considered infinite and thus if
+    **HiddenServiceEnableIntroDoSDefense** is set, it then effectively
+    disables the defenses. (Default: 25)
 
 [[HiddenServiceExportCircuitID]] **HiddenServiceExportCircuitID** __protocol__::
    The onion service will use the given protocol to expose the global circuit
@@ -3174,6 +3194,26 @@ The next section describes the per service options that can only be set
    offending rendezvous circuit to be torn down, as opposed to stream creation
    requests that exceed the limit being silently ignored. (Default: 0)
 
+[[HiddenServiceNumIntroductionPoints]] **HiddenServiceNumIntroductionPoints** __NUM__::
+    Number of introduction points the hidden service will have. You can't
+    have more than 10 for v2 service and 20 for v3. (Default: 3)
+
+[[HiddenServicePort]] **HiddenServicePort** __VIRTPORT__ [__TARGET__]::
+    Configure a virtual port VIRTPORT for a hidden service. You may use this
+    option multiple times; each time applies to the service using the most
+    recent HiddenServiceDir. By default, this option maps the virtual port to
+    the same port on 127.0.0.1 over TCP. You may override the target port,
+    address, or both by specifying a target of addr, port, addr:port, or
+    **unix:**__path__.  (You can specify an IPv6 target as [addr]:port. Unix
+    paths may be quoted, and may use standard C escapes.)
+    You may also have multiple lines with  the same VIRTPORT: when a user
+    connects to that VIRTPORT, one of the TARGETs from those lines will be
+    chosen at random. Note that address-port pairs have to be comma-separated.
+
+[[HiddenServiceVersion]] **HiddenServiceVersion** **2**|**3**::
+    A list of rendezvous service descriptor versions to publish for the hidden
+    service. Currently, versions 2 and 3 are supported. (Default: 3)
+
 [[RendPostPeriod]] **RendPostPeriod** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
     Every time the specified period elapses, Tor uploads any rendezvous
     service descriptors to the directory servers. This information is also
@@ -3181,47 +3221,9 @@ The next section describes the per service options that can only be set
     maximum is 3.5 days. This option is only for v2 services.
     (Default: 1 hour)
 
-[[HiddenServiceDirGroupReadable]] **HiddenServiceDirGroupReadable** **0**|**1**::
-    If this option is set to 1, allow the filesystem group to read the
-    hidden service directory and hostname file. If the option is set to 0,
-    only owner is able to read the hidden service directory. (Default: 0)
-    Has no effect on Windows.
-
-[[HiddenServiceNumIntroductionPoints]] **HiddenServiceNumIntroductionPoints** __NUM__::
-    Number of introduction points the hidden service will have. You can't
-    have more than 10 for v2 service and 20 for v3. (Default: 3)
-
-[[HiddenServiceEnableIntroDoSDefense]] **HiddenServiceEnableIntroDoSDefense** **0**|**1**::
-    Enable DoS defense at the intropoint level. When this is enabled, the
-    rate and burst parameter (see below) will be sent to the intro point which
-    will then use them to apply rate limiting for introduction request to this
-    service.
-  +
-    The introduction point honors the consensus parameters except if this is
-    specifically set by the service operator using this option. The service
-    never looks at the consensus parameters in order to enable or disable this
-    defense. (Default: 0)
-
-[[HiddenServiceEnableIntroDoSRatePerSec]] **HiddenServiceEnableIntroDoSRatePerSec** __NUM__::
-    The allowed client introduction rate per second at the introduction
-    point. If this option is 0, it is considered infinite and thus if
-    **HiddenServiceEnableIntroDoSDefense** is set, it then effectively
-    disables the defenses. (Default: 25)
-
-[[HiddenServiceEnableIntroDoSBurstPerSec]] **HiddenServiceEnableIntroDoSBurstPerSec** __NUM__::
-    The allowed client introduction burst per second at the introduction
-    point. If this option is 0, it is considered infinite and thus if
-    **HiddenServiceEnableIntroDoSDefense** is set, it then effectively
-    disables the defenses. (Default: 200)
 
 
 **PER INSTANCE OPTIONS:**
-
-[[PublishHidServDescriptors]] **PublishHidServDescriptors** **0**|**1**::
-    If set to 0, Tor will run any hidden services you configure, but it won't
-    advertise them to the rendezvous directory. This option is only useful if
-    you're using a Tor controller that handles hidserv publishing for you.
-    (Default: 1)
 
 [[HiddenServiceSingleHopMode]] **HiddenServiceSingleHopMode** **0**|**1**::
     **Experimental - Non Anonymous** Hidden Services on a tor instance in
@@ -3249,6 +3251,7 @@ The next section describes the per service options that can only be set
     **HiddenServiceSingleHopMode**. Can not be changed while tor is running.
     (Default: 0)
 
+//Out of order because it belongs after HiddenServiceSingleHopMode.
 [[HiddenServiceNonAnonymousMode]] **HiddenServiceNonAnonymousMode** **0**|**1**::
     Makes hidden services non-anonymous on this tor instance. Allows the
     non-anonymous HiddenServiceSingleHopMode. Enables direct connections in the
@@ -3256,6 +3259,13 @@ The next section describes the per service options that can only be set
     you need to disable all client-side services on your Tor instance,
     including setting SOCKSPort to "0". Can not be changed while tor is
     running. (Default: 0)
+
+[[PublishHidServDescriptors]] **PublishHidServDescriptors** **0**|**1**::
+    If set to 0, Tor will run any hidden services you configure, but it won't
+    advertise them to the rendezvous directory. This option is only useful if
+    you're using a Tor controller that handles hidserv publishing for you.
+    (Default: 1)
+
 
 == Client Authorization
 
@@ -3342,70 +3352,41 @@ The following options are used for running a testing Tor network.
        TestingEnableConnBwEvent 1
        TestingEnableCellStatsEvent 1
 
-[[TestingV3AuthInitialVotingInterval]] **TestingV3AuthInitialVotingInterval** __N__ **minutes**|**hours**::
-    Like V3AuthVotingInterval, but for initial voting interval before the first
-    consensus has been created. Changing this requires that
-    **TestingTorNetwork** is set. (Default: 30 minutes)
-
-[[TestingV3AuthInitialVoteDelay]] **TestingV3AuthInitialVoteDelay** __N__ **minutes**|**hours**::
-    Like V3AuthVoteDelay, but for initial voting interval before
-    the first consensus has been created. Changing this requires that
-    **TestingTorNetwork** is set. (Default: 5 minutes)
-
-[[TestingV3AuthInitialDistDelay]] **TestingV3AuthInitialDistDelay** __N__ **minutes**|**hours**::
-    Like V3AuthDistDelay, but for initial voting interval before
-    the first consensus has been created. Changing this requires that
-    **TestingTorNetwork** is set. (Default: 5 minutes)
-
-[[TestingV3AuthVotingStartOffset]] **TestingV3AuthVotingStartOffset** __N__ **seconds**|**minutes**|**hours**::
-    Directory authorities offset voting start time by this much.
-    Changing this requires that **TestingTorNetwork** is set. (Default: 0)
-
 [[TestingAuthDirTimeToLearnReachability]] **TestingAuthDirTimeToLearnReachability** __N__ **minutes**|**hours**::
     After starting as an authority, do not make claims about whether routers
     are Running until this much time has passed. Changing this requires
     that **TestingTorNetwork** is set.  (Default: 30 minutes)
 
-[[TestingMinFastFlagThreshold]] **TestingMinFastFlagThreshold** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
-    Minimum value for the Fast flag.  Overrides the ordinary minimum taken
-    from the consensus when TestingTorNetwork is set. (Default: 0.)
+[[TestingAuthKeyLifetime]] **TestingAuthKeyLifetime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**|**months**::
+    Overrides the default lifetime for a signing Ed25519 TLS Link authentication
+    key.
+    (Default: 2 days)
 
-[[TestingServerDownloadInitialDelay]] **TestingServerDownloadInitialDelay** __N__::
-    Initial delay in seconds for when servers should download things in general. Changing this
-    requires that **TestingTorNetwork** is set. (Default: 0)
-
-[[TestingClientDownloadInitialDelay]] **TestingClientDownloadInitialDelay** __N__::
-    Initial delay in seconds for when clients should download things in general. Changing this
-    requires that **TestingTorNetwork** is set. (Default: 0)
-
-[[TestingServerConsensusDownloadInitialDelay]] **TestingServerConsensusDownloadInitialDelay** __N__::
-    Initial delay in seconds for when servers should download consensuses. Changing this
-    requires that **TestingTorNetwork** is set. (Default: 0)
-
-[[TestingClientConsensusDownloadInitialDelay]] **TestingClientConsensusDownloadInitialDelay** __N__::
-    Initial delay in seconds for when clients should download consensuses. Changing this
-    requires that **TestingTorNetwork** is set. (Default: 0)
-
-[[TestingBridgeDownloadInitialDelay]] **TestingBridgeDownloadInitialDelay** __N__::
-    Initial delay in seconds for when clients should download each bridge descriptor when they
-    know that one or more of their configured bridges are running. Changing
-    this requires that **TestingTorNetwork** is set. (Default: 10800)
+[[TestingAuthKeySlop]] **TestingAuthKeySlop** __N__ **seconds**|**minutes**|**hours** +
 
 [[TestingBridgeBootstrapDownloadInitialDelay]] **TestingBridgeBootstrapDownloadInitialDelay** __N__::
     Initial delay in seconds for when clients should download each bridge descriptor when they
     have just started, or when they can not contact any of their bridges.
     Changing this requires that **TestingTorNetwork** is set. (Default: 0)
 
+[[TestingBridgeDownloadInitialDelay]] **TestingBridgeDownloadInitialDelay** __N__::
+    Initial delay in seconds for when clients should download each bridge descriptor when they
+    know that one or more of their configured bridges are running. Changing
+    this requires that **TestingTorNetwork** is set. (Default: 10800)
+
+[[TestingClientConsensusDownloadInitialDelay]] **TestingClientConsensusDownloadInitialDelay** __N__::
+    Initial delay in seconds for when clients should download consensuses. Changing this
+    requires that **TestingTorNetwork** is set. (Default: 0)
+
+[[TestingClientDownloadInitialDelay]] **TestingClientDownloadInitialDelay** __N__::
+    Initial delay in seconds for when clients should download things in general. Changing this
+    requires that **TestingTorNetwork** is set. (Default: 0)
+
 [[TestingClientMaxIntervalWithoutRequest]] **TestingClientMaxIntervalWithoutRequest** __N__ **seconds**|**minutes**::
     When directory clients have only a few descriptors to request, they batch
     them until they have more, or until this amount of time has passed.
     Changing this requires that **TestingTorNetwork** is set. (Default: 10
     minutes)
-
-[[TestingDirConnectionMaxStall]] **TestingDirConnectionMaxStall** __N__ **seconds**|**minutes**::
-    Let a directory connection stall this long before expiring it.
-    Changing this requires that **TestingTorNetwork** is set. (Default:
-    5 minutes)
 
 [[TestingDirAuthVoteExit]] **TestingDirAuthVoteExit** __node__,__node__,__...__::
     A list of identity fingerprints, country codes, and
@@ -3457,39 +3438,69 @@ The following options are used for running a testing Tor network.
     In order for this option to have any effect, **TestingTorNetwork**
     has to be set.
 
-[[TestingEnableConnBwEvent]] **TestingEnableConnBwEvent** **0**|**1**::
-    If this option is set, then Tor controllers may register for CONN_BW
-    events.  Changing this requires that **TestingTorNetwork** is set.
-    (Default: 0)
+[[TestingDirConnectionMaxStall]] **TestingDirConnectionMaxStall** __N__ **seconds**|**minutes**::
+    Let a directory connection stall this long before expiring it.
+    Changing this requires that **TestingTorNetwork** is set. (Default:
+    5 minutes)
 
 [[TestingEnableCellStatsEvent]] **TestingEnableCellStatsEvent** **0**|**1**::
     If this option is set, then Tor controllers may register for CELL_STATS
     events.  Changing this requires that **TestingTorNetwork** is set.
     (Default: 0)
 
-[[TestingMinExitFlagThreshold]] **TestingMinExitFlagThreshold**  __N__ **KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
-    Sets a lower-bound for assigning an exit flag when running as an
-    authority on a testing network. Overrides the usual default lower bound
-    of 4 KBytes. (Default: 0)
+[[TestingEnableConnBwEvent]] **TestingEnableConnBwEvent** **0**|**1**::
+    If this option is set, then Tor controllers may register for CONN_BW
+    events.  Changing this requires that **TestingTorNetwork** is set.
+    (Default: 0)
 
 [[TestingLinkCertLifetime]] **TestingLinkCertLifetime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**|**months**::
     Overrides the default lifetime for the certificates used to authenticate
     our X509 link cert with our ed25519 signing key.
     (Default: 2 days)
 
-[[TestingAuthKeyLifetime]] **TestingAuthKeyLifetime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**|**months**::
-    Overrides the default lifetime for a signing Ed25519 TLS Link authentication
-    key.
-    (Default: 2 days)
-
 [[TestingLinkKeySlop]] **TestingLinkKeySlop** __N__ **seconds**|**minutes**|**hours** +
 
-[[TestingAuthKeySlop]] **TestingAuthKeySlop** __N__ **seconds**|**minutes**|**hours** +
+[[TestingMinExitFlagThreshold]] **TestingMinExitFlagThreshold**  __N__ **KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
+    Sets a lower-bound for assigning an exit flag when running as an
+    authority on a testing network. Overrides the usual default lower bound
+    of 4 KBytes. (Default: 0)
+
+[[TestingMinFastFlagThreshold]] **TestingMinFastFlagThreshold** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
+    Minimum value for the Fast flag.  Overrides the ordinary minimum taken
+    from the consensus when TestingTorNetwork is set. (Default: 0.)
+
+[[TestingServerConsensusDownloadInitialDelay]] **TestingServerConsensusDownloadInitialDelay** __N__::
+    Initial delay in seconds for when servers should download consensuses. Changing this
+    requires that **TestingTorNetwork** is set. (Default: 0)
+
+[[TestingServerDownloadInitialDelay]] **TestingServerDownloadInitialDelay** __N__::
+    Initial delay in seconds for when servers should download things in general. Changing this
+    requires that **TestingTorNetwork** is set. (Default: 0)
 
 [[TestingSigningKeySlop]] **TestingSigningKeySlop** __N__ **seconds**|**minutes**|**hours**::
     How early before the official expiration of a an Ed25519 signing key do
     we replace it and issue a new key?
     (Default: 3 hours for link and auth; 1 day for signing.)
+
+[[TestingV3AuthInitialDistDelay]] **TestingV3AuthInitialDistDelay** __N__ **minutes**|**hours**::
+    Like V3AuthDistDelay, but for initial voting interval before
+    the first consensus has been created. Changing this requires that
+    **TestingTorNetwork** is set. (Default: 5 minutes)
+
+[[TestingV3AuthInitialVoteDelay]] **TestingV3AuthInitialVoteDelay** __N__ **minutes**|**hours**::
+    Like V3AuthVoteDelay, but for initial voting interval before
+    the first consensus has been created. Changing this requires that
+    **TestingTorNetwork** is set. (Default: 5 minutes)
+
+[[TestingV3AuthInitialVotingInterval]] **TestingV3AuthInitialVotingInterval** __N__ **minutes**|**hours**::
+    Like V3AuthVotingInterval, but for initial voting interval before the first
+    consensus has been created. Changing this requires that
+    **TestingTorNetwork** is set. (Default: 30 minutes)
+
+[[TestingV3AuthVotingStartOffset]] **TestingV3AuthVotingStartOffset** __N__ **seconds**|**minutes**|**hours**::
+    Directory authorities offset voting start time by this much.
+    Changing this requires that **TestingTorNetwork** is set. (Default: 0)
+
 
 == NON-PERSISTENT OPTIONS
 
