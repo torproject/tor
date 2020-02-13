@@ -186,6 +186,8 @@ uptime-*.json
 /src/lib/libtor-geoip-testing.a
 /src/lib/libtor-intmath.a
 /src/lib/libtor-intmath-testing.a
+/src/lib/libtor-llharden.a
+/src/lib/libtor-llharden-testing.a
 /src/lib/libtor-lock.a
 /src/lib/libtor-lock-testing.a
 /src/lib/libtor-log.a

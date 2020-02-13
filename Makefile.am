@@ -70,6 +70,7 @@ TOR_UTIL_LIBS = \
 	src/lib/libtor-wallclock.a \
 	src/lib/libtor-err.a \
 	src/lib/libtor-version.a \
+	src/lib/libtor-llharden.a \
 	src/lib/libtor-intmath.a \
 	src/lib/libtor-ctime.a
 
@@ -104,6 +105,7 @@ TOR_UTIL_TESTING_LIBS = \
 	src/lib/libtor-wallclock-testing.a \
 	src/lib/libtor-err-testing.a \
 	src/lib/libtor-version-testing.a \
+	src/lib/libtor-llharden-testing.a \
 	src/lib/libtor-intmath.a \
 	src/lib/libtor-ctime-testing.a
 endif
