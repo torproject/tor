@@ -273,7 +273,7 @@ main(int c, const char **v)
   int loglevel = LOG_ERR;
   int accel_crypto = 0;
 
-  subsystems_init_upto(SUBSYS_LEVEL_LIBS);
+  subsystems_init();
 
   options = options_new();
 
