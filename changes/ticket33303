@@ -1,0 +1,4 @@
+  o Testing:
+    - Run the test-network-ipv6 Makefile target in the Travis CI IPv6 chutney
+      job. This job runs on macOS, so it's a bit slow.
+      Closes ticket 33303.
