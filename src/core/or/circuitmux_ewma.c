@@ -186,6 +186,7 @@ ewma_free_cmux_data(circuitmux_t *cmux,
   pol = TO_EWMA_POL_DATA(pol_data);
 
   smartlist_free(pol->active_circuit_pqueue);
+  pol->base_.magic = 0xDEAD901C;
   tor_free(pol);
 }
 
@@ -252,7 +253,7 @@ ewma_free_circ_data(circuitmux_t *cmux,
   if (!pol_circ_data) return;
 
   cdata = TO_EWMA_POL_CIRC_DATA(pol_circ_data);
-
+  cdata->base_.magic = 0xDEADC14C;
   tor_free(cdata);
 }
 

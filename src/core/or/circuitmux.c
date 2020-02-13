@@ -79,6 +79,8 @@
 
 #include "core/or/or_circuit_st.h"
 
+#include "lib/crypt_ops/crypto_util.h"
+
 /*
  * Private typedefs for circuitmux.c
  */
@@ -921,7 +923,10 @@ circuitmux_detach_circuit,(circuitmux_t *cmux, circuit_t *circ))
     /* Now remove it from the map */
     HT_REMOVE(chanid_circid_muxinfo_map, cmux->chanid_circid_map, hashent);
 
-    /* Free the hash entry */
+    /* Wipe and free the hash entry */
+    // This isn't sensitive, but we want to be sure to know if we're accessing
+    // this accidentally.
+    memwipe(hashent, 0xef, sizeof(hashent));
     tor_free(hashent);
   }
 }
@@ -1282,4 +1287,3 @@ circuitmux_compare_muxes, (circuitmux_t *cmux_1, circuitmux_t *cmux_2))
     return 0;
   }
 }
-
