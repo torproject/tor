@@ -7,6 +7,8 @@
  *        LTTng-UST probes are available.
  **/
 
+#ifndef COCCI
+
 #include "orconfig.h"
 
 /* We only build the following if LTTng instrumentation has been enabled. */
@@ -19,7 +21,8 @@
 #undef TRACEPOINT_INCLUDE
 #define TRACEPOINT_INCLUDE "./src/core/or/trace_probes_circuit.h"
 
-#if !defined(TOR_TRACE_PROBES_CIRCUIT_H) || defined(TRACEPOINT_HEADER_MULTI_READ)
+#if !defined(TOR_TRACE_PROBES_CIRCUIT_H) || \
+    defined(TRACEPOINT_HEADER_MULTI_READ)
 #define TOR_TRACE_PROBES_CIRCUIT_H
 
 #include <lttng/tracepoint.h>
@@ -319,3 +322,5 @@ TRACEPOINT_EVENT(tor_circuit, change_state,
 #include <lttng/tracepoint-event.h>
 
 #endif /* USE_TRACING_INSTRUMENTATION_LTTNG */
+
+#endif /* COCCI */
