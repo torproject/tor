@@ -39,28 +39,42 @@ env:
 matrix:
   ## include creates builds with gcc, linux, unless we override those defaults
   include:
-    ## We run basic tests on macOS
+    ## We run chutney on macOS, because macOS Travis has IPv6
+    - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
+      os: osx
+
+    ## We also run basic tests on macOS
     - compiler: clang
       os: osx
       ## Turn off some newer features, turn on clang's -Wtypedef-redefinition
       env: C_DIALECT_OPTIONS="-std=gnu99"
-    ## We check NSS
-    ## Use -std=gnu99 to turn off some newer features, and maybe turn on some
-    ## extra gcc warnings?
-    - env: NSS_OPTIONS="--enable-nss" C_DIALECT_OPTIONS="-std=gnu99"
+
     ## We run chutney on Linux, because it's faster than chutney on macOS
     ## Chutney is a fast job, clang is slower on Linux, so we do Chutney clang
     - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
       compiler: clang
+
     ## We check asciidoc with distcheck, to make sure we remove doc products
     - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
-    ## We include a single coverage build with the best options for coverage
-    - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
+
+    ## We check disable module dirauth
+    - env: MODULES_OPTIONS="--disable-module-dirauth"
+
     ## We run rust on Linux, because it's faster than rust on macOS
     ## We check rust offline
     - env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
-    ## We check disable module dirauth
-    - env: MODULES_OPTIONS="--disable-module-dirauth"
+
+    ## We check NSS
+    ## Use -std=gnu99 to turn off some newer features, and maybe turn on some
+    ## extra gcc warnings?
+    - env: NSS_OPTIONS="--enable-nss" C_DIALECT_OPTIONS="-std=gnu99"
+
+    ## We include a single coverage build with the best options for coverage
+    - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
+
+    ## We clone our stem repo and run `make test-stem`
+    - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
+
     ## macOS builds are very slow, and we have a limited number of
     ## concurrent macOS jobs. We're not actively developing Rust, so it is
     ## the lowest priority.
@@ -68,11 +82,6 @@ matrix:
     #- env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
     #  compiler: clang
     #  os: osx
-    ## We run chutney on macOS, because macOS Travis has IPv6
-    - env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
-      os: osx
-    ## We clone our stem repo and run `make test-stem`
-    - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
 
   ## Allow the build to report success (with non-required sub-builds
   ## continuing to run) if all required sub-builds have succeeded.
@@ -84,9 +93,13 @@ matrix:
     ## macOS rust and chutney are very slow, so we let the build finish before
     ## they are done.  We'd like to fast finish, but still eventually show
     ## any failures in the build status. But Travis doesn't have that ability.
-    - env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
-      compiler: clang
-      os: osx
+
+    ## Since this job is disabled, there's not much point having an exception
+    ## for it
+    #- env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
+    #  compiler: clang
+    #  os: osx
+
     ## Since we're actively developing IPv6, we want to require the IPv6
     ## chutney tests
     #- env: CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
