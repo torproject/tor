@@ -1,0 +1,5 @@
+  o Minor bugfixes (initialization):
+    - Initialize the subsystems in our code in an order more closely
+      corresponding to their dependencies, so that every system is
+      initialized before the ones that (theoretically) depend on it.
+      Fixes bug 33316; bugfix on 0.4.0.1-alpha.
