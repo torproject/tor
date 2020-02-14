@@ -317,6 +317,7 @@ crypto_set_options(void *arg)
 
 const struct subsys_fns_t sys_crypto = {
   .name = "crypto",
+  SUBSYS_DECLARE_LOCATION(),
   .supported = true,
   .level = -60,
   .initialize = subsys_crypto_initialize,

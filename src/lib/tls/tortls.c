@@ -456,6 +456,7 @@ subsys_tortls_shutdown(void)
 
 const subsys_fns_t sys_tortls = {
   .name = "tortls",
+  SUBSYS_DECLARE_LOCATION(),
   .level = -50,
   .shutdown = subsys_tortls_shutdown
 };

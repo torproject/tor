@@ -37,6 +37,7 @@ subsys_network_shutdown(void)
 
 const subsys_fns_t sys_network = {
   .name = "network",
+  SUBSYS_DECLARE_LOCATION(),
   /* Network depends on logging, and a lot of other modules depend on network.
    */
   .level = -55,

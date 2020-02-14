@@ -41,6 +41,7 @@ subsys_relay_shutdown(void)
 
 const struct subsys_fns_t sys_relay = {
   .name = "relay",
+  SUBSYS_DECLARE_LOCATION(),
   .supported = true,
   .level = RELAY_SUBSYS_LEVEL,
   .initialize = subsys_relay_initialize,

@@ -129,6 +129,7 @@ subsys_threads_initialize(void)
 
 const subsys_fns_t sys_threads = {
   .name = "threads",
+  SUBSYS_DECLARE_LOCATION(),
   .supported = true,
   .level = -89,
   .initialize = subsys_threads_initialize,

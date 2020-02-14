@@ -56,6 +56,7 @@ btrack_add_pubsub(pubsub_connector_t *connector)
 
 const subsys_fns_t sys_btrack = {
   .name = "btrack",
+  SUBSYS_DECLARE_LOCATION(),
   .supported = true,
   .level = 55,
   .initialize = btrack_init,

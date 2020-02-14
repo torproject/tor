@@ -47,6 +47,7 @@ subsys_or_add_pubsub(struct pubsub_connector_t *connector)
 
 const struct subsys_fns_t sys_or = {
   .name = "or",
+  SUBSYS_DECLARE_LOCATION(),
   .supported = true,
   .level = 20,
   .initialize = subsys_or_initialize,
