@@ -14,4 +14,8 @@
 
 extern const struct subsys_fns_t sys_or;
 
+struct pubsub_connector_t;
+int ocirc_add_pubsub(struct pubsub_connector_t *connector);
+int orconn_add_pubsub(struct pubsub_connector_t *connector);
+
 #endif /* !defined(TOR_CORE_OR_OR_SYS_H) */
