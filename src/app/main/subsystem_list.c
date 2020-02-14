@@ -53,9 +53,9 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_compress,
   &sys_network,
   &sys_tortls,
-  &sys_process,
 
   &sys_evloop,
+  &sys_process,
 
   &sys_mainloop,
   &sys_or,
