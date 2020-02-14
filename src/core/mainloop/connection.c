@@ -3345,8 +3345,17 @@ record_num_bytes_transferred_impl(connection_t *conn,
       rep_hist_note_dir_bytes_written(num_written, now);
   }
 
+  /* Linked connections and internal IPs aren't counted for statistics or
+   * accounting:
+   *  - counting linked connections would double-count BEGINDIR bytes, because
+   *    they are sent as Dir bytes on the linked connection, and OR bytes on
+   *    the OR connection;
+   *  - relays and clients don't connect to internal IPs, unless specifically
+   *    configured to do so. If they are configured that way, we don't count
+   *    internal bytes.
+   */
   if (!connection_is_rate_limited(conn))
-    return; /* local IPs are free */
+    return;
 
   if (conn->type == CONN_TYPE_OR)
     rep_hist_note_or_conn_bytes(conn->global_identifier, num_read,
