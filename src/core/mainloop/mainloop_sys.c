@@ -78,6 +78,7 @@ mainloop_flush_state(void *arg)
 
 const struct subsys_fns_t sys_mainloop = {
   .name = "mainloop",
+  SUBSYS_DECLARE_LOCATION(),
   .supported = true,
   .level = 5,
   .initialize = subsys_mainloop_initialize,
