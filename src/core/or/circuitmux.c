@@ -978,7 +978,7 @@ circuitmux_detach_circuit,(circuitmux_t *cmux, circuit_t *circ))
     /* Wipe and free the hash entry */
     // This isn't sensitive, but we want to be sure to know if we're accessing
     // this accidentally.
-    memwipe(hashent, 0xef, sizeof(hashent));
+    memwipe(hashent, 0xef, sizeof(*hashent));
     tor_free(hashent);
   }
 }
