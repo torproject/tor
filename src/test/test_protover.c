@@ -2,6 +2,7 @@
 /* See LICENSE for licensing information */
 
 #define PROTOVER_PRIVATE
+#define DIRVOTE_PRIVATE
 
 #include "orconfig.h"
 #include "test/test.h"
@@ -11,6 +12,8 @@
 #include "core/or/or.h"
 #include "core/or/connection_or.h"
 #include "lib/tls/tortls.h"
+
+#include "feature/dirauth/dirvote.h"
 
 static void
 test_protover_parse(void *arg)
@@ -634,6 +637,43 @@ test_protover_vote_roundtrip(void *args)
   tor_free(result);
 }
 
+static void
+test_protover_vote_roundtrip_ours(void *args)
+{
+  (void) args;
+  const char *examples[] = {
+    protover_get_supported_protocols(),
+    DIRVOTE_RECCOMEND_RELAY_PROTO,
+    DIRVOTE_RECCOMEND_CLIENT_PROTO,
+    DIRVOTE_REQUIRE_RELAY_PROTO,
+    DIRVOTE_REQUIRE_CLIENT_PROTO,
+  };
+  unsigned u;
+  smartlist_t *votes = smartlist_new();
+  char *result = NULL;
+
+  for (u = 0; u < ARRAY_LENGTH(examples); ++u) {
+    tt_assert(examples[u]);
+    const char *input = examples[u];
+    const char *expected_output = examples[u];
+
+    smartlist_add(votes, (void*)input);
+    result = protover_compute_vote(votes, 1);
+    if (expected_output != NULL) {
+      tt_str_op(result, OP_EQ, expected_output);
+    } else {
+      tt_str_op(result, OP_EQ, "");
+    }
+
+    smartlist_clear(votes);
+    tor_free(result);
+  }
+
+ done:
+  smartlist_free(votes);
+  tor_free(result);
+}
+
 #define PV_TEST(name, flags)                       \
   { #name, test_protover_ ##name, (flags), NULL, NULL }
 
@@ -647,5 +687,6 @@ struct testcase_t protover_tests[] = {
   PV_TEST(supports_version, 0),
   PV_TEST(supported_protocols, 0),
   PV_TEST(vote_roundtrip, 0),
+  PV_TEST(vote_roundtrip_ours, 0),
   END_OF_TESTCASES
 };

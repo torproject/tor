@@ -1,0 +1,3 @@
+  o Minor bugfixes (protocol versions):
+    - Sort tor's supported protocol version lists, as recommended by the
+      tor directory specification. Fixes bug 33285; bugfix on 0.4.0.1-alpha.

@@ -391,6 +391,7 @@ protover_get_supported_protocols(void)
     "Cons=1-2 "
     "Desc=1-2 "
     "DirCache=1-2 "
+    "FlowCtrl=1 "
     "HSDir=1-2 "
     "HSIntro=3-5 "
     "HSRend=1-2 "
@@ -401,9 +402,8 @@ protover_get_supported_protocols(void)
     "LinkAuth=3 "
 #endif
     "Microdesc=1-2 "
-    "Relay=1-2 "
     "Padding=2 "
-    "FlowCtrl=1";
+    "Relay=1-2";
 }
 
 /** The protocols from protover_get_supported_protocols(), as parsed into a
