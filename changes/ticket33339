@@ -1,0 +1,3 @@
+  o Minor feature (developer tools):
+    - Add a script to help check the alphabetical ordering of option
+      names in a manpage.  Closes ticket 33339.
