@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright 2014-2019, The Tor Project, Inc
 # See LICENSE for licensing information
 

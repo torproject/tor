@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # coding=utf-8
 # Copyright 2011-2019, The Tor Project, Inc
 # original version by Arturo Filastò
