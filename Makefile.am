@@ -297,61 +297,57 @@ need-chutney-path:
 
 # Run some basic tests using automake's test-driver
 .PHONY: test-network
-# Make prints all these recursive invocations by default, but those extra lines
-# break up the chutney flavor statuses
-.SILENT: test-network
+# Hide directory path logs from submakes using $(MAKE) -s
 test-network:
-	@$(MAKE) test-network-mkdir
-	@$(MAKE) test-network-clean
-	@$(MAKE) test-network-run \
+	@$(MAKE) -s test-network-mkdir
+	@$(MAKE) -s test-network-clean
+	@$(MAKE) -s test-network-run \
 	  ipv4_flavors="$(TEST_CHUTNEY_FLAVOR_QUICK)" \
 	  ipv6_flavors="$(TEST_CHUTNEY_FLAVOR_QUICK_IPV6)"
-	@$(MAKE) test-network-results
+	@$(MAKE) -s test-network-results
 
 # Run all available tests using automake's test-driver
 .PHONY: test-network-all
-.SILENT: test-network-all
+# Hide directory path logs from submakes using $(MAKE) -s
 test-network-all:
-	@$(MAKE) test-network-mkdir
-	@$(MAKE) test-network-clean
-	@$(MAKE) test-network-run \
+	@$(MAKE) -s test-network-mkdir
+	@$(MAKE) -s test-network-clean
+	@$(MAKE) -s test-network-run \
 	  ipv4_flavors="$(TEST_CHUTNEY_FLAVORS)" \
 	  mixed_flavors="$(TEST_CHUTNEY_FLAVORS_MIXED)" \
 	  ipv6_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6)" \
 	  ipv6_mixed_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6_MIXED)"
-	@$(MAKE) test-network-results
+	@$(MAKE) -s test-network-results
 
 # Run IPv4 and mixed tests using automake's test-driver
 .PHONY: test-network-ipv4
-.SILENT: test-network-ipv4
+# Hide directory path logs from submakes using $(MAKE) -s
 test-network-ipv4:
-	@$(MAKE) test-network-mkdir
-	@$(MAKE) test-network-clean
-	@$(MAKE) test-network-run \
+	@$(MAKE) -s test-network-mkdir
+	@$(MAKE) -s test-network-clean
+	@$(MAKE) -s test-network-run \
 	  ipv4_flavors="$(TEST_CHUTNEY_FLAVORS)" \
 	  mixed_flavors="$(TEST_CHUTNEY_FLAVORS_MIXED)"
-	@$(MAKE) test-network-results
+	@$(MAKE) -s test-network-results
 
 # Run IPv6 tests using automake's test-driver
 .PHONY: test-network-ipv6
-.SILENT: test-network-ipv6
+# Hide directory path logs from submakes using $(MAKE) -s
 test-network-ipv6:
-	@$(MAKE) test-network-mkdir
-	@$(MAKE) test-network-clean
-	@$(MAKE) test-network-run \
+	@$(MAKE) -s test-network-mkdir
+	@$(MAKE) -s test-network-clean
+	@$(MAKE) -s test-network-run \
 	  ipv6_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6)" \
 	  ipv6_mixed_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6_MIXED)"
-	@$(MAKE) test-network-results
+	@$(MAKE) -s test-network-results
 
 # Make the test network log directory, if it does not exist
 .PHONY: test-network-mkdir
-.SILENT: test-network-mkdir
 test-network-mkdir:
 	@mkdir -p "$(TEST_NETWORK_ALL_LOG_DIR)"
 
 # Clean the test network log directory
 .PHONY: test-network-clean
-# We don't silence clean: we want to see the rm command
 # We need to remove all matching files, so we can't quote the glob part of the
 # rm arguments
 test-network-clean:
@@ -375,7 +371,6 @@ test-network-clean:
 # Run the IPv6 mixed tests in $(ipv6_mixed_flavors), if IPv6 and mixed are run
 #   - see above for details about IPv6 and mixed
 .PHONY: test-network-run
-.SILENT: test-network-run
 # We need the word splitting in the "for" lines, so we can't quote
 # $(skip_flavors) or $(flavors)
 test-network-run: need-chutney-path test-driver $(TESTING_TOR_BINARY) src/tools/tor-gencert
@@ -454,7 +449,6 @@ test-network-run: need-chutney-path test-driver $(TESTING_TOR_BINARY) src/tools/
 #     (otherwise, warnings go to the logs, and people don't see them unless
 #     there is a network failure)
 .PHONY: test-network-results
-.SILENT: test-network-results
 # We need to grep all matching files, so we can't quote the glob part of the
 # grep arguments
 test-network-results:
