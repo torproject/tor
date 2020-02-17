@@ -2958,8 +2958,10 @@ on the public Tor network.
     authority publishes, or accepted as an OR address in any descriptor
     submitted for publication by this authority.
 
+//Out of order because it logically belongs with the other CCs options.
 [[AuthDirBadExitCCs]] **AuthDirBadExitCCs** __CC__,... +
 
+//Out of order because it logically belongs with the other CCs options.
 [[AuthDirInvalidCCs]] **AuthDirInvalidCCs** __CC__,... +
 
 [[AuthDirRejectCCs]] **AuthDirRejectCCs** __CC__,...::
@@ -3000,6 +3002,11 @@ on the public Tor network.
     will allow exit policies for private networks to fulfill Exit flag
     requirements. (Default: 0)
 
+[[GuardfractionFile]] **GuardfractionFile** __FILENAME__::
+    V3 authoritative directories only. Configures the location of the
+    guardfraction file which contains information about how long relays
+    have been guards. (Default: unset)
+
 [[MinMeasuredBWsForAuthToIgnoreAdvertised]] **MinMeasuredBWsForAuthToIgnoreAdvertised** __N__::
     A total value, in abstract bandwidth units, describing how much
     measured total bandwidth an authority should have observed on the network
@@ -3030,13 +3037,6 @@ on the public Tor network.
     directory learn whether they need to upgrade. This option can appear
     multiple times: the values from multiple lines are spliced together. When
     this is set then **VersioningAuthoritativeDirectory** should be set too.
-
-[[VersioningAuthoritativeDirectory]] **VersioningAuthoritativeDirectory** **0**|**1**::
-    When this option is set to 1, Tor adds information on which versions of
-    Tor are still believed safe for use to the published directory. Each
-    version 1 authority is automatically a versioning authority; version 2
-    authorities provide this service optionally. See **RecommendedVersions**,
-    **RecommendedClientVersions**, and **RecommendedServerVersions**.
 
 [[V3AuthDistDelay]] **V3AuthDistDelay** __N__ **minutes**|**hours**::
     V3 authoritative directories only. Configures the server's preferred  delay
@@ -3078,12 +3078,12 @@ on the public Tor network.
     be written to temporary file, then renamed to the configured filename.
     (Default: unset)
 
-//Out of order because it belongs with the other V3 authoritative directories options.
-[[GuardfractionFile]] **GuardfractionFile** __FILENAME__::
-    V3 authoritative directories only. Configures the location of the
-    guardfraction file which contains information about how long relays
-    have been guards. (Default: unset)
-
+[[VersioningAuthoritativeDirectory]] **VersioningAuthoritativeDirectory** **0**|**1**::
+    When this option is set to 1, Tor adds information on which versions of
+    Tor are still believed safe for use to the published directory. Each
+    version 1 authority is automatically a versioning authority; version 2
+    authorities provide this service optionally. See **RecommendedVersions**,
+    **RecommendedClientVersions**, and **RecommendedServerVersions**.
 
 == HIDDEN SERVICE OPTIONS
 
@@ -3312,6 +3312,7 @@ For more information, please see https://2019.www.torproject.org/docs/tor-onion-
 
 The following options are used for running a testing Tor network.
 
+//Out of order because it logically belongs first in this section.
 [[TestingTorNetwork]] **TestingTorNetwork** **0**|**1**::
     If set to 1, Tor adjusts default values of the configuration options below,
     so that it is easier to set up a testing Tor network. May only be set if
