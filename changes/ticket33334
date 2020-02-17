@@ -1,0 +1,5 @@
+  o Testing:
+    - Test v3 onion services to tor's mixed IPv4 chutney network. And add a
+      mixed IPv6 chutney network. These networks are used in the
+      test-network-all, test-network-ipv4, and test-network-ipv6 make targets.
+      Closes ticket 33334.

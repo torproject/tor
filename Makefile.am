@@ -317,7 +317,8 @@ test-network-all:
 	@$(MAKE) test-network-run \
 	  ipv4_flavors="$(TEST_CHUTNEY_FLAVORS)" \
 	  mixed_flavors="$(TEST_CHUTNEY_FLAVORS_MIXED)" \
-	  ipv6_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6)"
+	  ipv6_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6)" \
+	  ipv6_mixed_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6_MIXED)"
 	@$(MAKE) test-network-results
 
 # Run IPv4 and mixed tests using automake's test-driver
@@ -338,7 +339,8 @@ test-network-ipv6:
 	@$(MAKE) test-network-mkdir
 	@$(MAKE) test-network-clean
 	@$(MAKE) test-network-run \
-	  ipv6_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6)"
+	  ipv6_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6)" \
+	  ipv6_mixed_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6_MIXED)"
 	@$(MAKE) test-network-results
 
 # Make the test network log directory, if it does not exist
