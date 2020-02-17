@@ -102,7 +102,7 @@
 #include "feature/nodelist/routerlist_st.h"
 #include "feature/dirauth/vote_microdesc_hash_st.h"
 #include "feature/nodelist/vote_routerstatus_st.h"
-#include "routerstatus_st.h"
+#include "feature/nodelist/routerstatus_st.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>

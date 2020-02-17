@@ -238,6 +238,6 @@
 #define POSSIBLE(expr) ((expr) || getenv("STATIC_ANALYZER_DEADCODE_DUMMY_"))
 #else
 #define POSSIBLE(expr) (expr)
-#endif
+#endif /* defined(__COVERITY__) || defined(__clang_analyzer__) */
 
 #endif /* !defined(TOR_COMPAT_COMPILER_H) */

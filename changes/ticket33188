@@ -1,0 +1,5 @@
+  o Documentation (manpage):
+    - Alphabetize the Server and Directory server sections of the tor
+      manpage.  Also split Statistics options into their own section
+      of the manpage.  Closes ticket 33188.  Work by Swati Thacker as
+      part of Google Season of Docs.
