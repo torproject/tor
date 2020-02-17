@@ -303,9 +303,8 @@ need-chutney-path:
 test-network:
 	@$(MAKE) test-network-mkdir
 	@$(MAKE) test-network-clean
-	@$(MAKE) test-network-ipv4-impl \
-	  ipv4_flavors="$(TEST_CHUTNEY_FLAVOR_QUICK)"
-	@$(MAKE) test-network-ipv6-impl \
+	@$(MAKE) test-network-run \
+	  ipv4_flavors="$(TEST_CHUTNEY_FLAVOR_QUICK)" \
 	  ipv6_flavors="$(TEST_CHUTNEY_FLAVOR_QUICK_IPV6)"
 	@$(MAKE) test-network-results
 
@@ -315,11 +314,9 @@ test-network:
 test-network-all:
 	@$(MAKE) test-network-mkdir
 	@$(MAKE) test-network-clean
-	@$(MAKE) test-network-ipv4-impl \
-	  ipv4_flavors="$(TEST_CHUTNEY_FLAVORS)"
-	@$(MAKE) test-network-mixed-impl \
-	  mixed_flavors="$(TEST_CHUTNEY_FLAVORS_MIXED)"
-	@$(MAKE) test-network-ipv6-impl \
+	@$(MAKE) test-network-run \
+	  ipv4_flavors="$(TEST_CHUTNEY_FLAVORS)" \
+	  mixed_flavors="$(TEST_CHUTNEY_FLAVORS_MIXED)" \
 	  ipv6_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6)"
 	@$(MAKE) test-network-results
 
@@ -329,8 +326,8 @@ test-network-all:
 test-network-ipv4:
 	@$(MAKE) test-network-mkdir
 	@$(MAKE) test-network-clean
-	@$(MAKE) test-network-ipv4-impl ipv4_flavors="$(TEST_CHUTNEY_FLAVORS)"
-	@$(MAKE) test-network-mixed-impl \
+	@$(MAKE) test-network-run \
+	  ipv4_flavors="$(TEST_CHUTNEY_FLAVORS)" \
 	  mixed_flavors="$(TEST_CHUTNEY_FLAVORS_MIXED)"
 	@$(MAKE) test-network-results
 
@@ -340,7 +337,7 @@ test-network-ipv4:
 test-network-ipv6:
 	@$(MAKE) test-network-mkdir
 	@$(MAKE) test-network-clean
-	@$(MAKE) test-network-ipv6-impl \
+	@$(MAKE) test-network-run \
 	  ipv6_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6)"
 	@$(MAKE) test-network-results
 
@@ -359,69 +356,87 @@ test-network-clean:
 	rm -f "$(TEST_NETWORK_ALL_LOG_DIR)"/*.log \
 	      "$(TEST_NETWORK_ALL_LOG_DIR)"/*.trs
 
-# Run the IPv4-only test flavors
-#   - $(ipv4_flavors) contains the tests to run
-.PHONY: test-network-ipv4-impl
-.SILENT: test-network-ipv4-impl
-test-network-ipv4-impl:
-	@$(MAKE) test-network-run flavors="$(ipv4_flavors)" skip_flavors=""
-
-# Run the mixed tests in $(mixed_flavors), if a tor-stable binary is available
-#   - only run mixed tests if we have a tor-stable binary
-#   - $(mixed_flavors) contains the tests to run (or skip)
-.PHONY: test-network-mixed-impl
-.SILENT: test-network-mixed-impl
-test-network-mixed-impl:
-	@flavors=""; \
-	if command -v tor-stable >/dev/null 2>&1; then \
-		echo "tor-stable found, running mixed flavors:" \
-		  "$(mixed_flavors)."; \
-		flavors="$$flavors $(mixed_flavors)"; \
-	else \
-		echo "tor-stable not found, skipping mixed flavors:" \
-		  "$(mixed_flavors)."; \
-		skip_flavors="$$skip_flavors $(mixed_flavors)"; \
-	fi; \
-	$(MAKE) test-network-run flavors="$$flavors" \
-	                         skip_flavors="$$skip_flavors"
-
+# Run tests using automake's test-driver
+# When checking if a set of test can be run, log the type of test, and the
+# list of tests that will be run (or skipped).
+#
+# Run the IPv4 tests in $(ipv4_flavors), unconditionally
+#   - tor relays and directory authorities require IPv4.
 # Run the IPv6 tests in $(ipv6_flavors), if IPv6 is available
 #   - only run IPv6 tests if we can ping6 or ping -6 ::1 (localhost)
 #     we try the syntax for BSD ping6, Linux ping6, and Linux ping -6,
 #     because they're incompatible
 #   - some IPv6 tests may fail without an IPv6 DNS server
 #     (see #16971 and #17011)
-#   - $(ipv6_flavors) contains the tests to run (or skip)
-.PHONY: test-network-ipv6-impl
-.SILENT: test-network-ipv6-impl
-test-network-ipv6-impl:
-	@flavors=""; \
-	if ping6 -q -c 1 -o   ::1 >/dev/null 2>&1 || \
-	   ping6 -q -c 1 -W 1 ::1 >/dev/null 2>&1 || \
-	   ping  -6 -c 1 -W 1 ::1 >/dev/null 2>&1; then \
-		echo "ping6 ::1 or ping ::1 succeeded, running IPv6" \
-		  "flavors: $(ipv6_flavors)."; \
-		flavors="$$flavors $(ipv6_flavors)"; \
-	else \
-		echo "ping6 ::1 and ping ::1 failed, skipping IPv6 flavors:" \
-		  "$(ipv6_flavors)."; \
-		skip_flavors="$$skip_flavors $(ipv6_flavors)"; \
-	fi; \
-	$(MAKE) test-network-run flavors="$$flavors" \
-	                         skip_flavors="$$skip_flavors"
-
-# Run tests using automake's test-driver
-#   - $(flavors) contains the tests to run
-#   - $(skip_flavors) contains the tests to skip
+# Run the mixed tests in $(mixed_flavors), if a tor-stable binary is available
+#   - only run mixed tests if we have a tor-stable binary
+# Run the IPv6 mixed tests in $(ipv6_mixed_flavors), if IPv6 and mixed are run
+#   - see above for details about IPv6 and mixed
 .PHONY: test-network-run
 .SILENT: test-network-run
 # We need the word splitting in the "for" lines, so we can't quote
 # $(skip_flavors) or $(flavors)
 test-network-run: need-chutney-path test-driver $(TESTING_TOR_BINARY) src/tools/tor-gencert
-	@for f in $(skip_flavors); do \
+	@flavors=""; \
+	skip_flavors=""; \
+	if test -n "$(ipv4_flavors)"; then \
+		echo "Running IPv4 flavors: $(ipv4_flavors)."; \
+		flavors="$$flavors $(ipv4_flavors)"; \
+	fi; \
+	test_network_ipv6=false; \
+	if test -n "$(ipv6_flavors)" || \
+	   test -n "$(ipv6_mixed_flavors)"; then \
+		if ping6 -q -c 1 -o   ::1 >/dev/null 2>&1 || \
+		   ping6 -q -c 1 -W 1 ::1 >/dev/null 2>&1 || \
+		   ping  -6 -c 1 -W 1 ::1 >/dev/null 2>&1; then \
+			test_network_ipv6=true; \
+		fi; \
+	fi; \
+	if test -n "$(ipv6_flavors)"; then \
+		if test "$$test_network_ipv6" = "true"; then \
+			echo "ping6 ::1 or ping ::1 succeeded, running IPv6" \
+			  "flavors: $(ipv6_flavors)."; \
+			flavors="$$flavors $(ipv6_flavors)"; \
+		else \
+			echo "ping6 ::1 and ping ::1 failed, skipping IPv6" \
+			  "flavors: $(ipv6_flavors)."; \
+			skip_flavors="$$skip_flavors $(ipv6_flavors)"; \
+		fi; \
+	fi; \
+	test_network_mixed=false; \
+	if test -n "$(mixed_flavors)" || \
+	   test -n "$(ipv6_mixed_flavors)"; then \
+		if command -v tor-stable >/dev/null 2>&1; then \
+			test_network_mixed=true; \
+		fi; \
+	fi; \
+	if test -n "$(mixed_flavors)"; then \
+		if test "$$test_network_mixed" = "true"; then \
+			echo "tor-stable found, running mixed flavors:" \
+			  "$(mixed_flavors)."; \
+			flavors="$$flavors $(mixed_flavors)"; \
+		else \
+			echo "tor-stable not found, skipping mixed flavors:" \
+			  "$(mixed_flavors)."; \
+			skip_flavors="$$skip_flavors $(mixed_flavors)"; \
+		fi; \
+	fi; \
+	if test -n "$(ipv6_mixed_flavors)"; then \
+		if test "$$test_network_ipv6" = "true" && \
+		   test "$$test_network_mixed" = "true"; then \
+			echo "Running IPv6 mixed flavors:" \
+			  "$(ipv6_mixed_flavors)."; \
+			flavors="$$flavors $(ipv6_mixed_flavors)"; \
+		else \
+			echo "Skipping IPv6 mixed flavors:" \
+			  "$(ipv6_mixed_flavors)."; \
+			skip_flavors="$$skip_flavors $(ipv6_mixed_flavors)"; \
+		fi; \
+	fi; \
+	for f in $$skip_flavors; do \
 		echo "SKIP: $$f"; \
 	done; \
-	for f in $(flavors); do \
+	for f in $$flavors; do \
 		$(SHELL) "$(top_srcdir)/test-driver" --test-name "$$f" \
 		  --log-file "$(TEST_NETWORK_ALL_LOG_DIR)/$$f.log" \
 		  --trs-file "$(TEST_NETWORK_ALL_LOG_DIR)/$$f.trs" \
