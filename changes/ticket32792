@@ -1,0 +1,3 @@
+  o Testing:
+    - When a Travis chutney job fails, use chutney's new "diagnostics.sh" tool
+      to produce detailed diagnostic output. Closes ticket 32792.
