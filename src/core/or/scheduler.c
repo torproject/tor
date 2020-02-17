@@ -502,7 +502,12 @@ scheduler_free_all(void)
   the_scheduler = NULL;
 }
 
-/** Mark a channel as no longer ready to accept writes. */
+/** Mark a channel as no longer ready to accept writes.
+  *
+  * Possible state changes:
+  *  - SCHED_CHAN_PENDING -> SCHED_CHAN_WAITING_TO_WRITE
+  *  - SCHED_CHAN_WAITING_FOR_CELLS -> SCHED_CHAN_IDLE
+  */
 MOCK_IMPL(void,
 scheduler_channel_doesnt_want_writes,(channel_t *chan))
 {
@@ -513,31 +518,32 @@ scheduler_channel_doesnt_want_writes,(channel_t *chan))
     return;
   }
 
-  /* If it's already in pending, we can put it in waiting_to_write */
   if (chan->scheduler_state == SCHED_CHAN_PENDING) {
     /*
-     * It's in channels_pending, so it shouldn't be in any of
-     * the other lists.  It can't write any more, so it goes to
-     * channels_waiting_to_write.
+     * It has cells but no longer can write, so it becomes
+     * SCHED_CHAN_WAITING_TO_WRITE. It's in channels_pending, so we
+     * should remove it from the list.
      */
     smartlist_pqueue_remove(channels_pending,
                             scheduler_compare_channels,
                             offsetof(channel_t, sched_heap_idx),
                             chan);
     scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_TO_WRITE);
-  } else {
+  } else if (chan->scheduler_state == SCHED_CHAN_WAITING_FOR_CELLS) {
     /*
-     * It's not in pending, so it can't become waiting_to_write; it's
-     * either not in any of the lists (nothing to do) or it's already in
-     * waiting_for_cells (remove it, can't write any more).
+     * It does not have cells and no longer can write, so it becomes
+     * SCHED_CHAN_IDLE.
      */
-    if (chan->scheduler_state == SCHED_CHAN_WAITING_FOR_CELLS) {
-      scheduler_set_channel_state(chan, SCHED_CHAN_IDLE);
-    }
+    scheduler_set_channel_state(chan, SCHED_CHAN_IDLE);
   }
 }
 
-/** Mark a channel as having waiting cells. */
+/** Mark a channel as having waiting cells.
+  *
+  * Possible state changes:
+  *  - SCHED_CHAN_WAITING_FOR_CELLS -> SCHED_CHAN_PENDING
+  *  - SCHED_CHAN_IDLE -> SCHED_CHAN_WAITING_TO_WRITE
+  */
 MOCK_IMPL(void,
 scheduler_channel_has_waiting_cells,(channel_t *chan))
 {
@@ -548,12 +554,11 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
     return;
   }
 
-  /* First, check if it's also writeable */
   if (chan->scheduler_state == SCHED_CHAN_WAITING_FOR_CELLS) {
     /*
-     * It's in channels_waiting_for_cells, so it shouldn't be in any of
-     * the other lists.  It has waiting cells now, so it goes to
-     * channels_pending.
+     * It is able to write and now has cells, so it becomes
+     * SCHED_CHAN_PENDING. It must be added to the channels_pending
+     * list.
      */
     scheduler_set_channel_state(chan, SCHED_CHAN_PENDING);
     if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
@@ -565,16 +570,12 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
     /* If we made a channel pending, we potentially have scheduling work to
      * do. */
     the_scheduler->schedule();
-  } else {
+  } else if (chan->scheduler_state == SCHED_CHAN_IDLE) {
     /*
-     * It's not in waiting_for_cells, so it can't become pending; it's
-     * either not in any of the lists (we add it to waiting_to_write)
-     * or it's already in waiting_to_write or pending (we do nothing)
+     * It is not able to write but now has cells, so it becomes
+     * SCHED_CHAN_WAITING_TO_WRITE.
      */
-    if (!(chan->scheduler_state == SCHED_CHAN_WAITING_TO_WRITE ||
-          chan->scheduler_state == SCHED_CHAN_PENDING)) {
-      scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_TO_WRITE);
-    }
+    scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_TO_WRITE);
   }
 }
 
@@ -662,8 +663,12 @@ scheduler_release_channel,(channel_t *chan))
   scheduler_set_channel_state(chan, SCHED_CHAN_IDLE);
 }
 
-/** Mark a channel as ready to accept writes */
-
+/** Mark a channel as ready to accept writes.
+  * Possible state changes:
+  *
+  *  - SCHED_CHAN_WAITING_TO_WRITE -> SCHED_CHAN_PENDING
+  *  - SCHED_CHAN_IDLE -> SCHED_CHAN_WAITING_FOR_CELLS
+  */
 void
 scheduler_channel_wants_writes(channel_t *chan)
 {
@@ -674,10 +679,11 @@ scheduler_channel_wants_writes(channel_t *chan)
     return;
   }
 
-  /* If it's already in waiting_to_write, we can put it in pending */
   if (chan->scheduler_state == SCHED_CHAN_WAITING_TO_WRITE) {
     /*
-     * It can write now, so it goes to channels_pending.
+     * It has cells and can now write, so it becomes
+     * SCHED_CHAN_PENDING. It must be added to the channels_pending
+     * list.
      */
     scheduler_set_channel_state(chan, SCHED_CHAN_PENDING);
     if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
@@ -688,15 +694,12 @@ scheduler_channel_wants_writes(channel_t *chan)
     }
     /* We just made a channel pending, we have scheduling work to do. */
     the_scheduler->schedule();
-  } else {
+  } else if (chan->scheduler_state == SCHED_CHAN_IDLE) {
     /*
-     * It's not in SCHED_CHAN_WAITING_TO_WRITE, so it can't become pending;
-     * it's either idle and goes to WAITING_FOR_CELLS, or it's a no-op.
+     * It does not have cells but can now write, so it becomes
+     * SCHED_CHAN_WAITING_FOR_CELLS.
      */
-    if (!(chan->scheduler_state == SCHED_CHAN_WAITING_FOR_CELLS ||
-          chan->scheduler_state == SCHED_CHAN_PENDING)) {
-      scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
-    }
+    scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
   }
 }
 

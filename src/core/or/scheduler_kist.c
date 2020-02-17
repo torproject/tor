@@ -463,6 +463,13 @@ MOCK_IMPL(void, channel_write_to_kernel, (channel_t *chan))
   log_debug(LD_SCHED, "Writing %lu bytes to kernel for chan %" PRIu64,
             (unsigned long)channel_outbuf_length(chan),
             chan->global_identifier);
+  /* Note that 'connection_handle_write()' may change the scheduler state of
+   * the channel during the scheduling loop with
+   * 'connection_or_flushed_some()' -> 'scheduler_channel_wants_writes()'.
+   * This side-effect will only occur if the channel is currently in the
+   * 'SCHED_CHAN_WAITING_TO_WRITE' or 'SCHED_CHAN_IDLE' states, which KIST
+   * rarely uses, so it should be fine unless KIST begins using these states
+   * in the future. */
   connection_handle_write(TO_CONN(BASE_CHAN_TO_TLS(chan)->conn), 0);
 }
 
