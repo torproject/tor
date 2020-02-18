@@ -25,7 +25,12 @@ KNOWN_GROUPS = set([
     "Code simplification and refactoring",
     "Removed features",
     "Deprecated features",
-    "Directory authority changes"])
+    "Directory authority changes",
+
+    # These aren't preferred, but sortChanges knows how to clean them up.
+    "Code simplifications and refactoring",
+    "Code simplification and refactorings",
+    "Code simplifications and refactorings"])
 
 NEEDS_SUBCATEGORIES = set([
     "Minor bugfix",
