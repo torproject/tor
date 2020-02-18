@@ -66,11 +66,10 @@ TESTS += src/test/test src/test/test-slow src/test/test-memwipe \
 # this test only uses IPv4
 TEST_CHUTNEY_FLAVOR_QUICK = bridges+hs-v23
 # only run if we can ping6 ::1 (localhost)
-TEST_CHUTNEY_FLAVOR_QUICK_IPV6 = client-ipv6-only-md
+TEST_CHUTNEY_FLAVOR_QUICK_IPV6 = single-onion-v23-ipv6-md
 
 # run a basic set of tests, which only use IPv4
-TEST_CHUTNEY_FLAVORS = basic-min bridges-min hs-v2-min hs-v3-min \
-	single-onion-v23
+TEST_CHUTNEY_FLAVORS = basic-min bridges-min hs-v23-min single-onion-v23
 
 # only run if we can ping ::1 (localhost)
 TEST_CHUTNEY_FLAVORS_IPV6 = bridges+ipv6-min ipv6-exit-min hs-v23-ipv6-md \
