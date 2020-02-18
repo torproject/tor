@@ -31,6 +31,8 @@
 #define EXT_OR_CONN_STATE_FLUSHING 5
 #define EXT_OR_CONN_STATE_MAX_ 5
 
+#ifdef HAVE_MODULE_RELAY
+
 int connection_ext_or_start_auth(or_connection_t *or_conn);
 
 void connection_or_set_ext_or_identifier(or_connection_t *conn);
@@ -44,6 +46,41 @@ int connection_ext_or_process_inbuf(or_connection_t *or_conn);
 int init_ext_or_cookie_authentication(int is_enabled);
 char *get_ext_or_auth_cookie_file_name(void);
 void ext_orport_free_all(void);
+
+#else /* !defined(HAVE_MODULE_RELAY) */
+
+static inline int
+connection_ext_or_start_auth(or_connection_t *conn)
+{
+  (void)conn;
+  tor_assert_nonfatal_unreached();
+  return -1;
+}
+static inline int
+connection_ext_or_finished_flushing(or_connection_t *conn)
+{
+  (void)conn;
+  tor_assert_nonfatal_unreached();
+  return -1;
+}
+static inline int
+connection_ext_or_process_inbuf(or_connection_t *conn)
+{
+  (void)conn;
+  tor_assert_nonfatal_unreached();
+  return -1;
+}
+#define connection_or_set_ext_or_identifier(conn) \
+  ((void)(conn))
+#define connection_or_remove_from_ext_or_id_map(conn) \
+  ((void)(conn))
+#define connection_or_clear_ext_or_id_map() \
+  STMT_NIL
+
+#define get_ext_or_auth_cookie_file_name() \
+  (NULL)
+
+#endif /* defined(HAVE_MODULE_RELAY) */
 
 #ifdef EXT_ORPORT_PRIVATE
 STATIC int connection_write_ext_or_command(connection_t *conn,
