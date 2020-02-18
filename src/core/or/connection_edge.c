@@ -480,7 +480,7 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
       memcpy(payload+1, tor_addr_to_in6_addr8(&conn->base_.addr), 16);
       addrlen = 16;
     }
-    set_uint32(payload+1+addrlen, htonl(dns_clip_ttl(conn->address_ttl)));
+    set_uint32(payload+1+addrlen, htonl(clip_dns_ttl(conn->address_ttl)));
     payload_len += 4+addrlen;
   }
 
@@ -845,7 +845,7 @@ connected_cell_format_payload(uint8_t *payload_out,
     return -1;
   }
 
-  set_uint32(payload_out + connected_payload_len, htonl(dns_clip_ttl(ttl)));
+  set_uint32(payload_out + connected_payload_len, htonl(clip_dns_ttl(ttl)));
   connected_payload_len += 4;
 
   tor_assert(connected_payload_len <= MAX_CONNECTED_CELL_PAYLOAD_LEN);

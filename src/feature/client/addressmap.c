@@ -689,7 +689,7 @@ client_dns_set_addressmap_impl(entry_connection_t *for_conn,
   if (ttl<0)
     ttl = DEFAULT_DNS_TTL;
   else
-    ttl = dns_clip_ttl(ttl);
+    ttl = clip_dns_ttl(ttl);
 
   if (exitname) {
     /* XXXX fails to ever get attempts to get an exit address of

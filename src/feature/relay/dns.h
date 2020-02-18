@@ -13,9 +13,9 @@
 #define TOR_DNS_H
 
 /** Lowest value for DNS ttl that a server will give. */
-#define MIN_DNS_TTL_AT_EXIT (5*60)
+#define MIN_DNS_TTL (5*60)
 /** Highest value for DNS ttl that a server will give. */
-#define MAX_DNS_TTL_AT_EXIT (60*60)
+#define MAX_DNS_TTL (60*60)
 
 /** How long do we keep DNS cache entries before purging them (regardless of
  * their TTL)? */
@@ -27,7 +27,7 @@
 int dns_init(void);
 int has_dns_init_failed(void);
 void dns_free_all(void);
-uint32_t dns_clip_ttl(uint32_t ttl);
+uint32_t clip_dns_ttl(uint32_t ttl);
 int dns_reset(void);
 void connection_dns_remove(edge_connection_t *conn);
 void assert_connection_edge_not_dns_pending(edge_connection_t *conn);

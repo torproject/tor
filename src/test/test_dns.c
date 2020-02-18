@@ -80,11 +80,11 @@ test_dns_clip_ttl(void *arg)
 {
   (void)arg;
 
-  uint32_t ttl_mid = MIN_DNS_TTL_AT_EXIT / 2 + MAX_DNS_TTL_AT_EXIT / 2;
+  uint32_t ttl_mid = MIN_DNS_TTL / 2 + MAX_DNS_TTL / 2;
 
-  tt_int_op(dns_clip_ttl(MIN_DNS_TTL_AT_EXIT - 1),OP_EQ,MIN_DNS_TTL_AT_EXIT);
-  tt_int_op(dns_clip_ttl(ttl_mid),OP_EQ,MAX_DNS_TTL_AT_EXIT);
-  tt_int_op(dns_clip_ttl(MAX_DNS_TTL_AT_EXIT + 1),OP_EQ,MAX_DNS_TTL_AT_EXIT);
+  tt_int_op(clip_dns_ttl(MIN_DNS_TTL - 1),OP_EQ,MIN_DNS_TTL);
+  tt_int_op(clip_dns_ttl(ttl_mid),OP_EQ,MAX_DNS_TTL);
+  tt_int_op(clip_dns_ttl(MAX_DNS_TTL + 1),OP_EQ,MAX_DNS_TTL);
 
   done:
   return;
