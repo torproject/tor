@@ -2084,8 +2084,8 @@ test_dir_handle_get_status_vote_d(void* data)
 
   const char *msg_out = NULL;
   int status_out = 0;
-  struct pending_vote_t *pv = dirvote_add_vote(VOTE_BODY_V3, &msg_out,
-                                               &status_out);
+  struct pending_vote_t *pv = dirvote_add_vote(VOTE_BODY_V3, 0,
+                                               &msg_out, &status_out);
   tt_assert(pv);
 
   status_vote_current_d_test(&header, &body, &body_used);
@@ -2459,8 +2459,8 @@ test_dir_handle_get_status_vote_next_authority(void* data)
   time_t now = 1441223455 -1;
   voting_schedule_recalculate_timing(mock_options, now);
 
-  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, &msg_out,
-                                                 &status_out);
+  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, 0,
+                                                 &msg_out, &status_out);
   tt_assert(vote);
 
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
@@ -2619,8 +2619,8 @@ test_dir_handle_get_status_vote_current_authority(void* data)
   time_t now = 1441223455;
   voting_schedule_recalculate_timing(mock_options, now-1);
 
-  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, &msg_out,
-                                                 &status_out);
+  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, 0,
+                                                 &msg_out, &status_out);
   tt_assert(vote);
 
   // move the pending vote to previous vote
