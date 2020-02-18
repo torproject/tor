@@ -3433,10 +3433,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
-  if (server_mode(options) && !options->ContactInfo)
-    log_notice(LD_CONFIG, "Your ContactInfo config option is not set. "
-        "Please consider setting it, so we can contact you if your server is "
-        "misconfigured or something else goes wrong.");
+  if (server_mode(options) && !options->ContactInfo) {
+    log_warn(LD_CONFIG,
+             "Your ContactInfo config option is not set. Please strongly "
+             "consider setting it so we can contact you if your servers is "
+             "misconfigured, end-of-life or something else goes wrong. "
+             "It is also possible that your relay might get rejected from "
+             "the network due to a missing valid contact address.");
+  }
+
   const char *ContactInfo = options->ContactInfo;
   if (ContactInfo && !string_is_utf8(ContactInfo, strlen(ContactInfo)))
     REJECT("ContactInfo config option must be UTF-8.");
