@@ -12,6 +12,8 @@
 #ifndef TOR_DNS_H
 #define TOR_DNS_H
 
+#ifdef HAVE_MODULE_RELAY
+
 int dns_init(void);
 int has_dns_init_failed(void);
 void dns_free_all(void);
@@ -28,6 +30,43 @@ void dns_reset_correctness_checks(void);
 size_t dns_cache_total_allocation(void);
 void dump_dns_mem_usage(int severity);
 size_t dns_cache_handle_oom(time_t now, size_t min_remove_bytes);
+
+#else /* !defined(HAVE_MODULE_RELAY) */
+
+#define dns_init() (0)
+#define dns_seems_to_be_broken() (0)
+#define has_dns_init_failed() (0)
+#define dns_cache_total_allocation() (0)
+
+#define dns_reset_correctness_checks() STMT_NIL
+
+#define assert_connection_edge_not_dns_pending(conn) \
+  ((void)(conn))
+#define dump_dns_mem_usage(severity)\
+  ((void)(severity))
+#define dns_cache_handle_oom(now, bytes) \
+  ((void)(now), (void)(bytes), 0)
+
+#define connection_dns_remove(conn) \
+  STMT_BEGIN                        \
+  (void)(conn);                     \
+  tor_assert_nonfatal_unreached();  \
+  STMT_END
+
+static inline int
+dns_reset(void)
+{
+  return 0;
+}
+static inline int
+dns_resolve(edge_connection_t *exitconn)
+{
+  (void)exitconn;
+  tor_assert_nonfatal_unreached();
+  return -1;
+}
+
+#endif /* defined(HAVE_MODULE_RELAY) */
 
 #ifdef DNS_PRIVATE
 #include "feature/relay/dns_structs.h"
