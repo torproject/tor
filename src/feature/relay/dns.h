@@ -12,22 +12,9 @@
 #ifndef TOR_DNS_H
 #define TOR_DNS_H
 
-/** Lowest value for DNS ttl that a server will give. */
-#define MIN_DNS_TTL (5*60)
-/** Highest value for DNS ttl that a server will give. */
-#define MAX_DNS_TTL (60*60)
-
-/** How long do we keep DNS cache entries before purging them (regardless of
- * their TTL)? */
-#define MAX_DNS_ENTRY_AGE (3*60*60)
-/** How long do we cache/tell clients to cache DNS records when no TTL is
- * known? */
-#define DEFAULT_DNS_TTL (30*60)
-
 int dns_init(void);
 int has_dns_init_failed(void);
 void dns_free_all(void);
-uint32_t clip_dns_ttl(uint32_t ttl);
 int dns_reset(void);
 void connection_dns_remove(edge_connection_t *conn);
 void assert_connection_edge_not_dns_pending(edge_connection_t *conn);
@@ -74,4 +61,3 @@ launch_resolve,(cached_resolve_t *resolve));
 #endif /* defined(DNS_PRIVATE) */
 
 #endif /* !defined(TOR_DNS_H) */
-

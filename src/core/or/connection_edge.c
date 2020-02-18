@@ -432,6 +432,21 @@ warn_if_hs_unreachable(const edge_connection_t *conn, uint8_t reason)
   }
 }
 
+/** Given a TTL (in seconds) from a DNS response or from a relay, determine
+ * what TTL clients and relays should actually use for caching it. */
+uint32_t
+clip_dns_ttl(uint32_t ttl)
+{
+  /* This logic is a defense against "DefectTor" DNS-based traffic
+   * confirmation attacks, as in https://nymity.ch/tor-dns/tor-dns.pdf .
+   * We only give two values: a "low" value and a "high" value.
+   */
+  if (ttl < MIN_DNS_TTL)
+    return MIN_DNS_TTL;
+  else
+    return MAX_DNS_TTL;
+}
+
 /** Send a relay end cell from stream <b>conn</b> down conn's circuit, and
  * remember that we've done so.  If this is not a client connection, set the
  * relay end cell's reason for closing as <b>reason</b>.
