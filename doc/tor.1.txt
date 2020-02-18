@@ -2864,6 +2864,7 @@ control how Tor behaves as a directory authority.  You should not need
 to adjust any of them if you're running a regular relay or exit server
 on the public Tor network.
 
+// Out of order because it logically belongs first in this section
 [[AuthoritativeDirectory]] **AuthoritativeDirectory** **0**|**1**::
     When this option is set to 1, Tor operates as an authoritative directory
     server. Instead of caching the directory, it generates its own list of
