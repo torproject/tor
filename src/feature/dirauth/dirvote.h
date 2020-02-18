@@ -143,9 +143,13 @@ dirvote_dirreq_get_status_vote(const char *url, smartlist_t *items,
 }
 
 static inline struct pending_vote_t *
-dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
+dirvote_add_vote(const char *vote_body,
+                 time_t time_posted,
+                 const char **msg_out,
+                 int *status_out)
 {
   (void) vote_body;
+  (void) time_posted;
   /* If the dirauth module is disabled, this should NEVER be called else we
    * failed to safeguard the dirauth module. */
   tor_assert_nonfatal_unreached();
