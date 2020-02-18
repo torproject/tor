@@ -262,8 +262,8 @@ hs_ob_parse_config_file(hs_service_config_t *config)
   return ret;
 }
 
-/** Compute all possible subcredentials for every onion master key in the
- * given service config object. The subcredentials is allocated and set as an
+/** Compute all possible subcredentials for every onion master key in the given
+ * service config object. subcredentials_out is allocated and set as an
  * continous array containing all possible values.
  *
  * On success, return the number of subcredential put in the array which will
@@ -271,12 +271,12 @@ hs_ob_parse_config_file(hs_service_config_t *config)
  * length of a single subcredential.
  *
  * If the given configuration object has no OB master keys configured, 0 is
- * returned and subcredentials is set to NULL.
+ * returned and subcredentials_out is set to NULL.
  *
  * Otherwise, this can't fail. */
 STATIC size_t
 compute_subcredentials(const hs_service_t *service,
-                       hs_subcredential_t **subcredentials)
+                       hs_subcredential_t **subcredentials_out)
 {
   unsigned int num_pkeys, idx = 0;
   hs_subcredential_t *subcreds = NULL;
@@ -285,14 +285,17 @@ compute_subcredentials(const hs_service_t *service,
   const uint64_t tp = hs_get_time_period_num(0);
 
   tor_assert(service);
-  tor_assert(subcredentials);
+  tor_assert(subcredentials_out);
   /* Our caller has checked these too */
   tor_assert(service->desc_current);
   tor_assert(service->desc_next);
 
   /* Our caller made sure that we are an OB instance */
   num_pkeys = smartlist_len(service->config.ob_master_pubkeys);
-  tor_assert(num_pkeys > 0);
+  if (!num_pkeys) {
+    subcredentials_out = NULL;
+    return 0;
+  }
 
   /* Time to build all the subcredentials for each time period: two for each
    * instance descriptor plus three for the onionbalance frontend service: the
@@ -335,15 +338,15 @@ compute_subcredentials(const hs_service_t *service,
 
   /* And then in the end we add the two subcredentials of the current active
    * instance descriptors */
-  memcpy(&subcreds[idx++],
-         service->desc_current->desc->subcredential.subcred, SUBCRED_LEN);
-  memcpy(&subcreds[idx++],
-         service->desc_next->desc->subcredential.subcred, SUBCRED_LEN);
+  memcpy(&subcreds[idx++], &service->desc_current->desc->subcredential,
+         sizeof(hs_subcredential_t));
+  memcpy(&subcreds[idx++], &service->desc_next->desc->subcredential,
+         sizeof(hs_subcredential_t));
 
   log_info(LD_REND, "Refreshing %u onionbalance keys (TP #%d).",
              idx, (int)tp);
 
-  *subcredentials = subcreds;
+  *subcredentials_out = subcreds;
   return idx;
 }
 
@@ -384,7 +387,9 @@ hs_ob_refresh_keys(hs_service_t *service)
 
   /* Get a new set of subcreds */
   num_subcreds = compute_subcredentials(service, &ob_subcreds);
-  tor_assert(num_subcreds > 0);
+  if (BUG(!num_subcreds)) {
+    return;
+  }
 
   /* Delete old subcredentials if any */
   if (service->ob_subcreds) {

@@ -1837,8 +1837,7 @@ hs_client_decode_descriptor(const char *desc_str,
     uint64_t current_time_period = hs_get_time_period_num(0);
     hs_build_blinded_pubkey(service_identity_pk, NULL, 0, current_time_period,
                             &blinded_pubkey);
-    hs_get_subcredential(service_identity_pk, &blinded_pubkey, &
-                         subcredential);
+    hs_get_subcredential(service_identity_pk, &blinded_pubkey, &subcredential);
   }
 
   /* Parse descriptor */
