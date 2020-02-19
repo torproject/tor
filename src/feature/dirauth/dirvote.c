@@ -3223,9 +3223,11 @@ dirvote_add_vote(const char *vote_body, time_t time_posted,
     char tbuf1[ISO_TIME_LEN+1], tbuf2[ISO_TIME_LEN+1];
     format_iso_time(tbuf1, time_posted);
     format_iso_time(tbuf2, voting_schedule.fetch_missing_votes);
-    log_warn(LD_DIR, "Rejecting vote from %s received at %s; "
-             "our cutoff for received votes is %s", vi->address, tbuf1, tbuf2);
-    *msg_out = "Vote received too late, would be dangerous to count it";
+    log_warn(LD_DIR, "Rejecting posted vote from %s received at %s; "
+             "our cutoff for received votes is %s. Check your clock, "
+             "CPU load, and network load. Also check the authority that "
+             "posted the vote.", vi->address, tbuf1, tbuf2);
+    *msg_out = "Posted vote received too late, would be dangerous to count it";
     goto err;
   }
 
