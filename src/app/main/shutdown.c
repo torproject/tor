@@ -75,7 +75,8 @@ tor_cleanup(void)
     /* Remove Extended ORPort cookie authentication file */
     {
       char *cookie_fname = get_ext_or_auth_cookie_file_name();
-      tor_remove_file(cookie_fname);
+      if (cookie_fname)
+        tor_remove_file(cookie_fname);
       tor_free(cookie_fname);
     }
     if (accounting_is_enabled(options))

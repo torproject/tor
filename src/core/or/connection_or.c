@@ -109,10 +109,6 @@ TO_OR_CONN(connection_t *c)
   return DOWNCAST(or_connection_t, c);
 }
 
-/** Global map between Extended ORPort identifiers and OR
- *  connections. */
-static digestmap_t *orconn_ext_or_id_map = NULL;
-
 /** Clear clear conn->identity_digest and update other data
  * structures as appropriate.*/
 void
@@ -196,71 +192,6 @@ connection_or_set_identity_digest(or_connection_t *conn,
   /* Deal with channels */
   if (chan)
     channel_set_identity_digest(chan, rsa_digest, ed_id);
-}
-
-/** Remove the Extended ORPort identifier of <b>conn</b> from the
- *  global identifier list. Also, clear the identifier from the
- *  connection itself. */
-void
-connection_or_remove_from_ext_or_id_map(or_connection_t *conn)
-{
-  or_connection_t *tmp;
-  if (!orconn_ext_or_id_map)
-    return;
-  if (!conn->ext_or_conn_id)
-    return;
-
-  tmp = digestmap_remove(orconn_ext_or_id_map, conn->ext_or_conn_id);
-  if (!tor_digest_is_zero(conn->ext_or_conn_id))
-    tor_assert(tmp == conn);
-
-  memset(conn->ext_or_conn_id, 0, EXT_OR_CONN_ID_LEN);
-}
-
-/** Return the connection whose ext_or_id is <b>id</b>. Return NULL if no such
- * connection is found. */
-or_connection_t *
-connection_or_get_by_ext_or_id(const char *id)
-{
-  if (!orconn_ext_or_id_map)
-    return NULL;
-  return digestmap_get(orconn_ext_or_id_map, id);
-}
-
-/** Deallocate the global Extended ORPort identifier list */
-void
-connection_or_clear_ext_or_id_map(void)
-{
-  digestmap_free(orconn_ext_or_id_map, NULL);
-  orconn_ext_or_id_map = NULL;
-}
-
-/** Creates an Extended ORPort identifier for <b>conn</b> and deposits
- *  it into the global list of identifiers. */
-void
-connection_or_set_ext_or_identifier(or_connection_t *conn)
-{
-  char random_id[EXT_OR_CONN_ID_LEN];
-  or_connection_t *tmp;
-
-  if (!orconn_ext_or_id_map)
-    orconn_ext_or_id_map = digestmap_new();
-
-  /* Remove any previous identifiers: */
-  if (conn->ext_or_conn_id && !tor_digest_is_zero(conn->ext_or_conn_id))
-      connection_or_remove_from_ext_or_id_map(conn);
-
-  do {
-    crypto_rand(random_id, sizeof(random_id));
-  } while (digestmap_get(orconn_ext_or_id_map, random_id));
-
-  if (!conn->ext_or_conn_id)
-    conn->ext_or_conn_id = tor_malloc_zero(EXT_OR_CONN_ID_LEN);
-
-  memcpy(conn->ext_or_conn_id, random_id, EXT_OR_CONN_ID_LEN);
-
-  tmp = digestmap_set(orconn_ext_or_id_map, random_id, conn);
-  tor_assert(!tmp);
 }
 
 /**************************************************************/
