@@ -40,9 +40,10 @@ void connection_or_remove_from_ext_or_id_map(or_connection_t *conn);
 void connection_or_clear_ext_or_id_map(void);
 int connection_ext_or_finished_flushing(or_connection_t *conn);
 int connection_ext_or_process_inbuf(or_connection_t *or_conn);
-
-int init_ext_or_cookie_authentication(int is_enabled);
 char *get_ext_or_auth_cookie_file_name(void);
+
+/* (No stub needed for these: they are only called within feature/relay.) */
+int init_ext_or_cookie_authentication(int is_enabled);
 void ext_orport_free_all(void);
 
 #else /* !defined(HAVE_MODULE_RELAY) */
