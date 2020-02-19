@@ -971,25 +971,6 @@ assert_connection_edge_not_dns_pending(edge_connection_t *conn)
 #endif /* 1 */
 }
 
-/** Log an error and abort if any connection waiting for a DNS resolve is
- * corrupted. */
-void
-assert_all_pending_dns_resolves_ok(void)
-{
-  pending_connection_t *pend;
-  cached_resolve_t **resolve;
-
-  HT_FOREACH(resolve, cache_map, &cache_root) {
-    for (pend = (*resolve)->pending_connections;
-         pend;
-         pend = pend->next) {
-      assert_connection_ok(TO_CONN(pend->conn), 0);
-      tor_assert(!SOCKET_OK(pend->conn->base_.s));
-      tor_assert(!connection_in_array(TO_CONN(pend->conn)));
-    }
-  }
-}
-
 /** Remove <b>conn</b> from the list of connections waiting for conn-\>address.
  */
 void

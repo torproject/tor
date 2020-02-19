@@ -19,7 +19,6 @@ int has_dns_init_failed(void);
 int dns_reset(void);
 void connection_dns_remove(edge_connection_t *conn);
 void assert_connection_edge_not_dns_pending(edge_connection_t *conn);
-void assert_all_pending_dns_resolves_ok(void);
 MOCK_DECL(void,dns_cancel_pending_resolve,(const char *question));
 int dns_resolve(edge_connection_t *exitconn);
 int dns_seems_to_be_broken(void);
