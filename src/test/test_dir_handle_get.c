@@ -2750,7 +2750,7 @@ test_dir_handle_get_status_vote_too_late(void* data)
   tt_assert(!vote);
   tt_int_op(status_out, OP_EQ, 400);
   tt_str_op(msg_out, OP_EQ,
-            "Vote received too late, would be dangerous to count it");
+            "Posted vote received too late, would be dangerous to count it");
 
   /* Just after fetch missing */
   vote = dirvote_add_vote(VOTE_BODY_V3,
@@ -2759,7 +2759,7 @@ test_dir_handle_get_status_vote_too_late(void* data)
   tt_assert(!vote);
   tt_int_op(status_out, OP_EQ, 400);
   tt_str_op(msg_out, OP_EQ,
-            "Vote received too late, would be dangerous to count it");
+            "Posted vote received too late, would be dangerous to count it");
 
   /* On fetch missing */
   vote = dirvote_add_vote(VOTE_BODY_V3,
