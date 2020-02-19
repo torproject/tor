@@ -38,8 +38,6 @@ int connection_ext_or_start_auth(or_connection_t *or_conn);
 void connection_or_set_ext_or_identifier(or_connection_t *conn);
 void connection_or_remove_from_ext_or_id_map(or_connection_t *conn);
 void connection_or_clear_ext_or_id_map(void);
-or_connection_t *connection_or_get_by_ext_or_id(const char *id);
-
 int connection_ext_or_finished_flushing(or_connection_t *conn);
 int connection_ext_or_process_inbuf(or_connection_t *or_conn);
 
@@ -91,9 +89,11 @@ STATIC int handle_client_auth_nonce(const char *client_nonce,
                          size_t client_nonce_len,
                          char **client_hash_out,
                          char **reply_out, size_t *reply_len_out);
+
 #ifdef TOR_UNIT_TESTS
 extern uint8_t *ext_or_auth_cookie;
 extern int ext_or_auth_cookie_is_set;
+or_connection_t *connection_or_get_by_ext_or_id(const char *id);
 #endif
 #endif /* defined(EXT_ORPORT_PRIVATE) */
 

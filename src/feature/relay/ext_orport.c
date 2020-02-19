@@ -675,6 +675,7 @@ connection_or_remove_from_ext_or_id_map(or_connection_t *conn)
   memset(conn->ext_or_conn_id, 0, EXT_OR_CONN_ID_LEN);
 }
 
+#ifdef TOR_UNIT_TESTS
 /** Return the connection whose ext_or_id is <b>id</b>. Return NULL if no such
  * connection is found. */
 or_connection_t *
@@ -684,6 +685,7 @@ connection_or_get_by_ext_or_id(const char *id)
     return NULL;
   return digestmap_get(orconn_ext_or_id_map, id);
 }
+#endif
 
 /** Deallocate the global Extended ORPort identifier list */
 void
