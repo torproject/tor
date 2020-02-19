@@ -1,0 +1,3 @@
+  o Minor features (client-only compilation):
+    - Disable more of our self-testing code when support for relay mode is
+      disabled. Closes ticket 33370.
