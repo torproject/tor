@@ -3214,10 +3214,6 @@ dirvote_add_vote(const char *vote_body, time_t time_posted,
     goto err;
   }
 
-  if (!time_posted) { /* I imported this one myself */
-    log_notice(LD_DIR, "Retrieved vote from %s.", vi->address);
-  }
-
   /* Check if we received it, as a post, after the cutoff when we
    * start asking other dir auths for it. If we do, the best plan
    * is to discard it, because using it greatly increases the chances
