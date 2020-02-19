@@ -2764,7 +2764,7 @@ your log at NOTICE level which looks like:
 The following options are useful only for a public relay. They control the
 Denial of Service mitigation subsystem described above.
 
-//Out of order because it logically belongs before the other DocCircuitCreation options.
+//Out of order because it logically belongs before the other DoSCircuitCreation options.
 [[DoSCircuitCreationEnabled]] **DoSCircuitCreationEnabled** **0**|**1**|**auto**::
 
     Enable circuit creation DoS mitigation. If set to 1 (enabled), tor will
