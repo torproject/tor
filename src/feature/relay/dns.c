@@ -1028,7 +1028,7 @@ connection_dns_remove(edge_connection_t *conn)
  * the resolve for <b>address</b> itself, and remove any cached results for
  * <b>address</b> from the cache.
  */
-MOCK_IMPL(void,
+MOCK_IMPL(STATIC void,
 dns_cancel_pending_resolve,(const char *address))
 {
   pending_connection_t *pend;

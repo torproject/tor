@@ -19,7 +19,6 @@ int has_dns_init_failed(void);
 int dns_reset(void);
 void connection_dns_remove(edge_connection_t *conn);
 void assert_connection_edge_not_dns_pending(edge_connection_t *conn);
-MOCK_DECL(void,dns_cancel_pending_resolve,(const char *question));
 int dns_resolve(edge_connection_t *exitconn);
 int dns_seems_to_be_broken(void);
 int dns_seems_to_be_broken_for_ipv6(void);
@@ -78,6 +77,7 @@ size_t number_of_configured_nameservers(void);
 tor_addr_t *configured_nameserver_address(const size_t idx);
 #endif
 
+MOCK_DECL(STATIC void,dns_cancel_pending_resolve,(const char *question));
 MOCK_DECL(STATIC int,dns_resolve_impl,(edge_connection_t *exitconn,
 int is_resolve,or_circuit_t *oncirc, char **hostname_out,
 int *made_connection_pending_out, cached_resolve_t **resolve_out));
