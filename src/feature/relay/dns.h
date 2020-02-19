@@ -16,20 +16,23 @@
 
 int dns_init(void);
 int has_dns_init_failed(void);
-void dns_free_all(void);
 int dns_reset(void);
 void connection_dns_remove(edge_connection_t *conn);
 void assert_connection_edge_not_dns_pending(edge_connection_t *conn);
 void assert_all_pending_dns_resolves_ok(void);
 MOCK_DECL(void,dns_cancel_pending_resolve,(const char *question));
 int dns_resolve(edge_connection_t *exitconn);
-void dns_launch_correctness_checks(void);
 int dns_seems_to_be_broken(void);
 int dns_seems_to_be_broken_for_ipv6(void);
 void dns_reset_correctness_checks(void);
 size_t dns_cache_total_allocation(void);
 void dump_dns_mem_usage(int severity);
 size_t dns_cache_handle_oom(time_t now, size_t min_remove_bytes);
+
+/* These functions are only used within the feature/relay module, and don't
+ * need stubs. */
+void dns_free_all(void);
+void dns_launch_correctness_checks(void);
 
 #else /* !defined(HAVE_MODULE_RELAY) */
 
