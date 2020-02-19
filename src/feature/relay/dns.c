@@ -268,22 +268,6 @@ has_dns_init_failed(void)
   return nameserver_config_failed;
 }
 
-/** Helper: Given a TTL from a DNS response, determine what TTL to give the
- * OP that asked us to resolve it, and how long to cache that record
- * ourselves. */
-uint32_t
-dns_clip_ttl(uint32_t ttl)
-{
-  /* This logic is a defense against "DefectTor" DNS-based traffic
-   * confirmation attacks, as in https://nymity.ch/tor-dns/tor-dns.pdf .
-   * We only give two values: a "low" value and a "high" value.
-   */
-  if (ttl < MIN_DNS_TTL_AT_EXIT)
-    return MIN_DNS_TTL_AT_EXIT;
-  else
-    return MAX_DNS_TTL_AT_EXIT;
-}
-
 /** Helper: free storage held by an entry in the DNS cache. */
 static void
 free_cached_resolve_(cached_resolve_t *r)
@@ -521,7 +505,7 @@ send_resolved_cell,(edge_connection_t *conn, uint8_t answer_type,
   uint32_t ttl;
 
   buf[0] = answer_type;
-  ttl = dns_clip_ttl(conn->address_ttl);
+  ttl = clip_dns_ttl(conn->address_ttl);
 
   switch (answer_type)
     {
@@ -593,7 +577,7 @@ send_resolved_hostname_cell,(edge_connection_t *conn,
   size_t namelen = strlen(hostname);
 
   tor_assert(namelen < 256);
-  ttl = dns_clip_ttl(conn->address_ttl);
+  ttl = clip_dns_ttl(conn->address_ttl);
 
   buf[0] = RESOLVED_TYPE_HOSTNAME;
   buf[1] = (uint8_t)namelen;
@@ -987,25 +971,6 @@ assert_connection_edge_not_dns_pending(edge_connection_t *conn)
 #endif /* 1 */
 }
 
-/** Log an error and abort if any connection waiting for a DNS resolve is
- * corrupted. */
-void
-assert_all_pending_dns_resolves_ok(void)
-{
-  pending_connection_t *pend;
-  cached_resolve_t **resolve;
-
-  HT_FOREACH(resolve, cache_map, &cache_root) {
-    for (pend = (*resolve)->pending_connections;
-         pend;
-         pend = pend->next) {
-      assert_connection_ok(TO_CONN(pend->conn), 0);
-      tor_assert(!SOCKET_OK(pend->conn->base_.s));
-      tor_assert(!connection_in_array(TO_CONN(pend->conn)));
-    }
-  }
-}
-
 /** Remove <b>conn</b> from the list of connections waiting for conn-\>address.
  */
 void
@@ -1063,7 +1028,7 @@ connection_dns_remove(edge_connection_t *conn)
  * the resolve for <b>address</b> itself, and remove any cached results for
  * <b>address</b> from the cache.
  */
-MOCK_IMPL(void,
+MOCK_IMPL(STATIC void,
 dns_cancel_pending_resolve,(const char *address))
 {
   pending_connection_t *pend;
@@ -1338,7 +1303,7 @@ make_pending_resolve_cached(cached_resolve_t *resolve)
         resolve->ttl_hostname < ttl)
       ttl = resolve->ttl_hostname;
 
-    set_expiry(new_resolve, time(NULL) + dns_clip_ttl(ttl));
+    set_expiry(new_resolve, time(NULL) + clip_dns_ttl(ttl));
   }
 
   assert_cache_ok();
@@ -2188,7 +2153,7 @@ dns_cache_handle_oom(time_t now, size_t min_remove_bytes)
     total_bytes_removed += bytes_removed;
 
     /* Increase time_inc by a reasonable fraction. */
-    time_inc += (MAX_DNS_TTL_AT_EXIT / 4);
+    time_inc += (MAX_DNS_TTL / 4);
   } while (total_bytes_removed < min_remove_bytes);
 
   return total_bytes_removed;

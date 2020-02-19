@@ -966,7 +966,6 @@ conn_close_if_marked(int i)
     return 0; /* nothing to see here, move along */
   now = time(NULL);
   assert_connection_ok(conn, now);
-  /* assert_all_pending_dns_resolves_ok(); */
 
   log_debug(LD_NET,"Cleaning up connection (fd "TOR_SOCKET_T_FORMAT").",
             conn->s);
