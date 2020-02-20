@@ -22,4 +22,6 @@ smartlist_t *router_get_all_orports(const routerinfo_t *ri);
 const char *router_purpose_to_string(uint8_t p);
 uint8_t router_purpose_from_string(const char *s);
 
+crypto_pk_t *router_get_rsa_onion_pkey(const char *pkey, size_t pkey_len);
+
 #endif /* !defined(TOR_ROUTERINFO_H) */
