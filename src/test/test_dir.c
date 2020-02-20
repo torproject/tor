@@ -15,6 +15,7 @@
 #define DIRVOTE_PRIVATE
 #define DLSTATUS_PRIVATE
 #define HIBERNATE_PRIVATE
+#define MAKEDESC_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #define NS_PARSE_PRIVATE
 #define NODE_SELECT_PRIVATE
@@ -62,6 +63,7 @@
 #include "feature/dirparse/unparseable.h"
 #include "feature/nodelist/routerset.h"
 #include "feature/nodelist/torcert.h"
+#include "feature/relay/descmgr.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
 #include "feature/relay/routermode.h"

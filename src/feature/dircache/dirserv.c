@@ -13,6 +13,7 @@
 #include "feature/dircache/dirserv.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/routerlist.h"
+#include "feature/relay/descmgr.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 #include "feature/stats/predict_ports.h"

@@ -14,6 +14,7 @@
 
 #include "feature/relay/dns.h"
 #include "feature/relay/ext_orport.h"
+#include "feature/relay/descmgr.h"
 #include "feature/relay/onion_queue.h"
 #include "feature/relay/relay_periodic.h"
 #include "feature/relay/relay_sys.h"
@@ -36,6 +37,7 @@ subsys_relay_shutdown(void)
   ext_orport_free_all();
   clear_pending_onions();
   routerkeys_free_all();
+  makedesc_free_all();
   router_free_all();
 }
 

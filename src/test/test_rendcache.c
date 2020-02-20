@@ -7,7 +7,7 @@
 #include "test/test.h"
 #define RENDCACHE_PRIVATE
 #include "feature/rend/rendcache.h"
-#include "feature/relay/router.h"
+#include "feature/relay/descmgr.h"
 #include "feature/nodelist/routerlist.h"
 #include "app/config/config.h"
 #include "feature/hs/hs_common.h"

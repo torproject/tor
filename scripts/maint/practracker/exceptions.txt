@@ -275,12 +275,10 @@ problem function-size /src/feature/relay/dns.c:dns_resolve_impl() 131
 problem function-size /src/feature/relay/dns.c:configure_nameservers() 161
 problem function-size /src/feature/relay/dns.c:evdns_callback() 108
 problem function-size /src/feature/relay/relay_handshake.c:connection_or_compute_authenticate_cell_body() 231
-problem file-size /src/feature/relay/router.c 3520
-problem include-count /src/feature/relay/router.c 57
 problem function-size /src/feature/relay/router.c:init_keys() 252
-problem function-size /src/feature/relay/router.c:get_my_declared_family() 114
-problem function-size /src/feature/relay/router.c:router_build_fresh_unsigned_routerinfo() 136
-problem function-size /src/feature/relay/router.c:router_dump_router_to_string() 367
+problem function-size /src/feature/relay/descmgr.c:get_my_declared_family() 114
+problem function-size /src/feature/relay/descmgr.c:router_build_fresh_unsigned_routerinfo() 136
+problem function-size /src/feature/relay/descmgr.c:router_dump_router_to_string() 367
 problem function-size /src/feature/relay/routerkeys.c:load_ed_keys() 294
 problem function-size /src/feature/rend/rendcache.c:rend_cache_store_v2_desc_as_client() 190
 problem function-size /src/feature/rend/rendclient.c:rend_client_send_introduction() 219

@@ -25,6 +25,7 @@
 #include "core/or/circuitlist.h"
 #include "core/mainloop/mainloop.h"
 #include "feature/stats/rephist.h"
+#include "feature/relay/descmgr.h"
 #include "feature/hibernate/hibernate.h"
 #include "app/config/statefile.h"
 #include "feature/hs/hs_stats.h"

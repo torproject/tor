@@ -9,6 +9,7 @@
 
 #define CONFIG_PRIVATE
 #define ROUTER_PRIVATE
+#define MAKEDESC_PRIVATE
 
 #include "core/or/or.h"
 #include "app/config/config.h"
@@ -21,6 +22,7 @@
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerstatus_st.h"
+#include "feature/relay/descmgr.h"
 #include "feature/relay/router.h"
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_curve25519.h"

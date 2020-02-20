@@ -44,6 +44,7 @@
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/relay/dns.h"
 #include "feature/relay/routermode.h"
+#include "feature/relay/descmgr.h"
 
 /** Contents of most recently read DirPortFrontPage file. */
 static char *global_dirfrontpagecontents = NULL;

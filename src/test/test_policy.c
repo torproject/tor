@@ -11,6 +11,7 @@
 #include "feature/dirparse/policy_parse.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_descriptor.h"
+#include "feature/relay/descmgr.h"
 #include "feature/relay/router.h"
 #include "lib/encoding/confline.h"
 #include "test/test.h"

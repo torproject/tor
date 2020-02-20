@@ -14,6 +14,7 @@
 #include "feature/dirauth/voteflags.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/relay/router.h"
+#include "feature/relay/descmgr.h"
 #include "app/config/config.h"
 
 #include "feature/nodelist/routerinfo_st.h"

@@ -88,6 +88,7 @@
 #include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/routerset.h"
 #include "feature/nodelist/torcert.h"
+#include "feature/relay/descmgr.h"
 #include "feature/relay/routermode.h"
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_format.h"

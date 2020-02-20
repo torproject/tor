@@ -1,6 +1,7 @@
 
 # Legacy shared relay code: migrate to the relay module over time
 LIBTOR_APP_A_SOURCES += 			\
+	src/feature/relay/descmgr.c		\
 	src/feature/relay/onion_queue.c		\
 	src/feature/relay/router.c
 
@@ -21,6 +22,7 @@ MODULE_RELAY_SOURCES = 						\
 
 # ADD_C_FILE: INSERT HEADERS HERE.
 noinst_HEADERS +=					\
+	src/feature/relay/descmgr.h			\
 	src/feature/relay/dns.h				\
 	src/feature/relay/dns_structs.h			\
 	src/feature/relay/ext_orport.h			\
