@@ -21,6 +21,7 @@
 #include "feature/nodelist/networkstatus_st.h"
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerstatus_st.h"

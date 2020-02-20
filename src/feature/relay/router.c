@@ -1857,16 +1857,3 @@ router_set_rsa_onion_pkey(const crypto_pk_t *pk, char **onion_pkey_out,
  done:
   return;
 }
-
-/* From an ASN-1 encoded onion pkey, return a newly allocated RSA key object.
- * It is the caller responsability to free the returned object.
- *
- * Return NULL if the pkey is NULL, malformed or if the length is 0. */
-crypto_pk_t *
-router_get_rsa_onion_pkey(const char *pkey, size_t pkey_len)
-{
-  if (!pkey || pkey_len == 0) {
-    return NULL;
-  }
-  return crypto_pk_asn1_decode(pkey, pkey_len);
-}

@@ -22,7 +22,6 @@ int init_keys_client(void);
 void set_client_identity_key(crypto_pk_t *k);
 crypto_pk_t *get_tlsclient_identity_key(void);
 int client_identity_key_is_set(void);
-crypto_pk_t *router_get_rsa_onion_pkey(const char *pkey, size_t pkey_len);
 
 #ifdef HAVE_MODULE_RELAY
 

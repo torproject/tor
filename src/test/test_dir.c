@@ -56,6 +56,7 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nickname.h"
 #include "feature/nodelist/node_select.h"
+#include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/dirparse/authcert_parse.h"
 #include "feature/dirparse/ns_parse.h"

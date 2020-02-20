@@ -35,6 +35,7 @@
 #include "feature/nodelist/nickname.h"
 #include "feature/nodelist/nodefamily.h"
 #include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/torcert.h"
 #include "feature/relay/dns.h"

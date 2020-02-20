@@ -30,6 +30,7 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodefamily.h"
 #include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
