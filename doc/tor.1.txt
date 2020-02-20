@@ -9,11 +9,10 @@
 // attribute to make it easier to write names containing double underscores
 :dbl_: __
 = TOR(1)
-
+:toc:
 == NAME
 
 tor - The second-generation onion router
-
 
 == SYNOPSIS
 
@@ -158,7 +157,7 @@ The following options in this section are only recognized on the
     When generating a master key, you may want to use
     **`--DataDirectory`** to control where the keys and certificates
     will be stored, and **`--SigningKeyLifetime`** to control their
-    lifetimes.  See the server options section to learn more about the
+    lifetimes.  See <<server-options,SERVER OPTIONS>> to learn more about the
     behavior of these options.  You must have write access to the
     specified DataDirectory.
 +
@@ -427,7 +426,7 @@ forward slash (/) in the configuration file and on the command line.
 
 [[CookieAuthFile]] **CookieAuthFile** __Path__::
     If set, this option overrides the default location and file name
-    for Tor's cookie file. (See CookieAuthentication above.)
+    for Tor's cookie file. (See <<CookieAuthentication,CookieAuthentication>>.)
 
 [[CookieAuthFileGroupReadable]] **CookieAuthFileGroupReadable** **0**|**1**::
     If this option is set to 0, don't allow the filesystem group to read the
@@ -561,7 +560,7 @@ forward slash (/) in the configuration file and on the command line.
      +
     By default, the directory authorities are also FallbackDirs. Specifying a
     FallbackDir replaces Tor's default hard-coded FallbackDirs (if any).
-    (See the **DirAuthority** entry for an explanation of each flag.)
+    (See <<DirAuthority,DirAuthority>> for an explanation of each flag.)
 
 [[FetchDirInfoEarly]] **FetchDirInfoEarly** **0**|**1**::
     If set to 1, Tor will always fetch directory information like other
@@ -859,7 +858,7 @@ forward slash (/) in the configuration file and on the command line.
     **KIST**: Kernel-Informed Socket Transport. Tor will use TCP information
     from the kernel to make informed decisions regarding how much data to send
     and when to send it. KIST also handles traffic in batches (see
-    KISTSchedRunInterval) in order to improve traffic prioritization decisions.
+    <<KISTSchedRunInterval,KISTSchedRunInterval>>) in order to improve traffic prioritization decisions.
     As implemented, KIST will only work on Linux kernel version 2.6.39 or
     higher. +
      +
@@ -1140,7 +1139,7 @@ The following options are useful only for clients (that is, if
     doesn't handle arbitrary DNS request types. Set the port to "auto" to
     have Tor pick a port for
     you. This directive can be specified multiple times to bind to multiple
-    addresses/ports. See SocksPort for an explanation of isolation
+    addresses/ports. See <<SocksPort,SocksPort>> for an explanation of isolation
     flags. (Default: 0)
 
 [[DownloadExtraInfo]] **DownloadExtraInfo** **0**|**1**::
@@ -1156,7 +1155,7 @@ The following options are useful only for clients (that is, if
 
 [[FascistFirewall]] **FascistFirewall** **0**|**1**::
     If 1, Tor will only create outgoing connections to ORs running on ports
-    that your firewall allows (defaults to 80 and 443; see **FirewallPorts**).
+    that your firewall allows (defaults to 80 and 443; see <<FirewallPorts,FirewallPorts>>).
     This will allow you to run Tor as a client behind a firewall with
     restrictive policies, but will not allow you to run as a server behind such
     a firewall. If you prefer more fine-grained control, use
@@ -1185,7 +1184,7 @@ The following options are useful only for clients (that is, if
     specified multiple times to bind to multiple addresses/ports. If multiple
     entries of this option are present in your configuration file, Tor will
     perform stream isolation between listeners by default. See
-    SOCKSPort for an explanation of isolation flags. (Default: 0)
+    <<SocksPort,SocksPort>> for an explanation of isolation flags. (Default: 0)
 
 [[LongLivedPorts]] **LongLivedPorts** __PORTS__::
     A list of ports for services that tend to have long-running connections
@@ -1270,7 +1269,7 @@ The following options are useful only for clients (that is, if
     specified multiple times to bind to multiple addresses/ports.  If multiple
     entries of this option are present in your configuration file, Tor will
     perform stream isolation between listeners by default. See
-    SocksPort for an explanation of isolation flags. +
+    <<SocksPort,SocksPort>> for an explanation of isolation flags. +
      +
     This option is only for people who cannot use TransPort. (Default: 0)
 
@@ -1381,7 +1380,7 @@ The following options are useful only for clients (that is, if
      +
     The separation between **ReachableORAddresses** and
     **ReachableDirAddresses** is only interesting when you are connecting
-    through proxies (see **HTTPProxy** and **HTTPSProxy**). Most proxies limit
+    through proxies (see <<HTTPProxy,HTTPProxy>> and <<HTTPSProxy,HTTPSProxy>>). Most proxies limit
     TLS connections (which Tor uses to connect to Onion Routers) to port 443,
     and some limit HTTP GET requests (which Tor uses for fetching directory
     information) to port 80.
@@ -1397,7 +1396,7 @@ The following options are useful only for clients (that is, if
 [[TestSocks]] **TestSocks** **0**|**1**::
     When this option is enabled, Tor will make a notice-level log entry for
     each connection to the Socks port indicating whether the request used a
-    safe socks protocol or an unsafe one (see above entry on SafeSocks). This
+    safe socks protocol or an unsafe one (see <<SafeSocks,SafeSocks>>). This
     helps to determine whether an application using Tor is possibly leaking
     DNS requests. (Default: 0)
 
@@ -1627,7 +1626,7 @@ The following options are useful only for clients (that is, if
     specified multiple times to bind to multiple addresses/ports. If multiple
     entries of this option are present in your configuration file, Tor will
     perform stream isolation between listeners by default.  See
-    SOCKSPort for an explanation of isolation flags. +
+    <<SocksPort,SocksPort>> for an explanation of isolation flags. +
      +
     TransPort requires OS support for transparent proxies, such as BSDs' pf or
     Linux's IPTables. If you're planning to use Tor as a transparent proxy for
@@ -1842,7 +1841,7 @@ different from other Tor clients:
      +
     The ExcludeNodes option overrides this option: any node listed in both
     EntryNodes and ExcludeNodes is treated as excluded. See
-    the **ExcludeNodes** option for more information on how to specify nodes.
+    <<ExcludeNodes,ExcludeNodes>> for more information on how to specify nodes.
 
 [[ExcludeNodes]] **ExcludeNodes** __node__,__node__,__...__::
     A list of identity fingerprints, country codes, and address
@@ -1866,7 +1865,7 @@ different from other Tor clients:
      +
     Country codes are case-insensitive. The code "\{??}" refers to nodes whose
     country can't be identified. No country code, including \{??}, works if
-    no GeoIPFile can be loaded. See also the GeoIPExcludeUnknown option below.
+    no GeoIPFile can be loaded. See also the <<GeoIPExcludeUnknown,GeoIPExcludeUnknown>> option below.
 
 // Out of order because it logically belongs after the ExcludeNodes option
 [[ExcludeExitNodes]] **ExcludeExitNodes** __node__,__node__,__...__::
@@ -1875,14 +1874,14 @@ different from other Tor clients:
     node that delivers traffic for you *outside* the Tor network.   Note that any
     node listed in ExcludeNodes is automatically considered to be part of this
     list too.  See
-    the **ExcludeNodes** option for more information on how to specify
-    nodes. See also the caveats on the "ExitNodes" option below.
+    <<ExcludeNodes,ExcludeNodes>> for more information on how to specify
+    nodes. See also the caveats on the <<ExitNodes,ExitNodes>> option below.
 
 [[ExitNodes]] **ExitNodes** __node__,__node__,__...__::
     A list of identity fingerprints, country codes, and address
     patterns of nodes to use as exit node---that is, a
     node that delivers traffic for you *outside* the Tor network.  See
-    the **ExcludeNodes** option for more information on how to specify nodes. +
+    <<ExcludeNodes,ExcludeNodes>> for more information on how to specify nodes. +
      +
     Note that if you list too few nodes here, or if you exclude too many exit
     nodes with ExcludeExitNodes, you can degrade functionality.  For example,
@@ -1894,7 +1893,7 @@ different from other Tor clients:
     used to connect to hidden services, those that do directory fetches,
     those used for relay reachability self-tests, and so on) that end
     at a non-exit node.  To
-    keep a node from being used entirely, see ExcludeNodes and StrictNodes. +
+    keep a node from being used entirely, see <<ExcludeNodes,ExcludeNodes>> and <<StrictNodes,StrictNodes>>. +
      +
     The ExcludeNodes option overrides this option: any node listed in both
     ExitNodes and ExcludeNodes is treated as excluded. +
@@ -2038,7 +2037,7 @@ different from other Tor clients:
 +
     The ExcludeNodes option overrides this option: any node listed in both
     MiddleNodes and ExcludeNodes is treated as excluded. See
-    the **ExcludeNodes** option for more information on how to specify nodes.
+    the <<ExcludeNodes,ExcludeNodes>> for more information on how to specify nodes.
 
 [[NodeFamily]] **NodeFamily** __node__,__node__,__...__::
     The Tor servers, defined by their identity fingerprints,
@@ -2047,7 +2046,7 @@ different from other Tor clients:
     when a server doesn't list the family itself (with MyFamily). This option
     can be used multiple times; each instance defines a separate family.  In
     addition to nodes, you can also list IP address and ranges and country
-    codes in {curly braces}. See the **ExcludeNodes** option for more
+    codes in {curly braces}. See <<ExcludeNodes,ExcludeNodes>> for more
     information on how to specify nodes.
 
 [[StrictNodes]] **StrictNodes** **0**|**1**::
@@ -2063,6 +2062,7 @@ different from other Tor clients:
     fulfill a .exit request, upload directory information, or download
     directory information.  (Default: 0)
 
+[[server-options]]
 == SERVER OPTIONS
 
 // These options are in alphabetical order, with exceptions as noted.
@@ -2073,7 +2073,7 @@ is non-zero):
 
 [[AccountingMax]] **AccountingMax** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     Limits the max number of bytes sent and received within a set time period
-    using a given calculation rule (see: AccountingStart, AccountingRule).
+    using a given calculation rule (see <<AccountingStart,AccountingStart>> and <<AccountingRule,AccountingRule>>).
     Useful if you need to stay under a specific bandwidth. By default, the
     number used for calculation is the max of either the bytes sent or
     received. For example, with AccountingMax set to 1 TByte, a server
@@ -2219,7 +2219,7 @@ is non-zero):
     may also allow connections to your own computer that are addressed to its
     public (external) IP address. See RFC 1918 and RFC 3330 for more details
     about internal and reserved IP address space. See
-    ExitPolicyRejectLocalInterfaces if you want to block every address on the
+    <<ExitPolicyRejectLocalInterfaces,ExitPolicyRejectLocalInterfaces>> if you want to block every address on the
     relay, even those that aren't advertised in the descriptor. +
      +
     This directive can be specified multiple times so you don't have to put it
@@ -2264,7 +2264,7 @@ is non-zero):
     bind addresses of any port options, such as ControlPort or DNSPort, and any
     public IPv4 and IPv6 addresses on any interface on the relay. (If IPv6Exit
     is not set, all IPv6 addresses will be rejected anyway.)
-    See above entry on ExitPolicy.
+    See above entry on <<ExitPolicy,ExitPolicy>>.
     This option is off by default, because it lists all public relay IP
     addresses in the ExitPolicy, even those relay operators might prefer not
     to disclose.
@@ -2273,7 +2273,7 @@ is non-zero):
 [[ExitPolicyRejectPrivate]] **ExitPolicyRejectPrivate** **0**|**1**::
     Reject all private (local) networks, along with the relay's advertised
     public IPv4 and IPv6 addresses, at the beginning of your exit policy.
-    See above entry on ExitPolicy.
+    See above entry on <<ExitPolicy,ExitPolicy>>.
     (Default: 1)
 
 [[ExitRelay]] **ExitRelay** **0**|**1**|**auto**::
@@ -2684,7 +2684,7 @@ types of statistics that Tor relays collect and publish:
 == DIRECTORY SERVER OPTIONS
 
 The following options are useful only for directory servers. (Relays with
-enough bandwidth automatically become directory servers; see DirCache for
+enough bandwidth automatically become directory servers; see <<DirCache,DirCache>> for
 details.)
 
 [[DirCache]] **DirCache** **0**|**1**::
@@ -2740,9 +2740,11 @@ and are as follows:
      +
   2. If a single client IP address (v4 or v6) makes circuits too quickly
      (default values are more than 3 per second, with an allowed burst of 90,
-     see DoSCircuitCreationRate and DoSCircuitCreationBurst) while also having
+     see <<DoSCircuitCreationRate,DoSCircuitCreationRate>> and
+     <<DoSCircuitCreationBurst,DoSCircuitCreationBurst>>) while also having
      too many connections open (default is 3, see
-     DoSCircuitCreationMinConnections), tor will refuse any new circuit (CREATE
+     <<DoSCircuitCreationMinConnections,DoSCircuitCreationMinConnections>>),
+     tor will refuse any new circuit (CREATE
      cells) for the next while (random value between 1 and 2 hours).
      +
   3. If a client asks to establish a rendezvous point to you directly (ex:
@@ -2770,8 +2772,8 @@ Denial of Service mitigation subsystem described above.
     Enable circuit creation DoS mitigation. If set to 1 (enabled), tor will
     cache client IPs along with statistics in order to detect circuit DoS
     attacks. If an address is positively identified, tor will activate
-    defenses against the address. See the DoSCircuitCreationDefenseType option
-    for more details.  This is a client to relay detection only. "auto" means
+    defenses against the address. See <<DoSCircuitCreationDefenseType,DoSCircuitCreationDefenseType>>
+     option for more details.  This is a client to relay detection only. "auto" means
     use the consensus parameter. If not defined in the consensus, the value is 0.
     (Default: auto)
 
@@ -3083,8 +3085,8 @@ on the public Tor network.
     When this option is set to 1, Tor adds information on which versions of
     Tor are still believed safe for use to the published directory. Each
     version 1 authority is automatically a versioning authority; version 2
-    authorities provide this service optionally. See **RecommendedVersions**,
-    **RecommendedClientVersions**, and **RecommendedServerVersions**.
+    authorities provide this service optionally. See <<RecommendedVersions,RecommendedVersions>>,
+    <<RecommendedClientVersions,RecommendedClientVersions>>, and <<RecommendedServerVersions,RecommendedServerVersions>>.
 
 == HIDDEN SERVICE OPTIONS
 
@@ -3114,7 +3116,7 @@ The next section describes the per service options that can only be set
     found in the hostname file. Clients need to put this authorization data in
     their configuration file using **HidServAuth**. This option is only for v2
     services; v3 services configure client authentication in a subdirectory of
-    HiddenServiceDir instead (see the **Client Authorization** section).
+    HiddenServiceDir instead (see <<client-authorization,CLIENT AUTHORIZATION>>).
 
 [[HiddenServiceDir]] **HiddenServiceDir** __DIRECTORY__::
     Store data files for a hidden service in DIRECTORY. Every hidden service
@@ -3267,8 +3269,8 @@ The next section describes the per service options that can only be set
     you're using a Tor controller that handles hidserv publishing for you.
     (Default: 1)
 
-
-== Client Authorization
+[[client-authorization]]
+== CLIENT AUTHORIZATION
 
 (Version 3 only)
 
@@ -3393,11 +3395,11 @@ The following options are used for running a testing Tor network.
 [[TestingDirAuthVoteExit]] **TestingDirAuthVoteExit** __node__,__node__,__...__::
     A list of identity fingerprints, country codes, and
     address patterns of nodes to vote Exit for regardless of their
-    uptime, bandwidth, or exit policy. See the **ExcludeNodes**
-    option for more information on how to specify nodes. +
+    uptime, bandwidth, or exit policy. See <<ExcludeNodes,ExcludeNodes>>
+     for more information on how to specify nodes. +
      +
     In order for this option to have any effect, **TestingTorNetwork**
-    has to be set. See the **ExcludeNodes** option for more
+    has to be set. See <<ExcludeNodes,ExcludeNodes>> for more
     information on how to specify nodes.
 
 [[TestingDirAuthVoteExitIsStrict]] **TestingDirAuthVoteExitIsStrict** **0**|**1** ::
@@ -3411,7 +3413,7 @@ The following options are used for running a testing Tor network.
 [[TestingDirAuthVoteGuard]] **TestingDirAuthVoteGuard** __node__,__node__,__...__::
     A list of identity fingerprints and country codes and
     address patterns of nodes to vote Guard for regardless of their
-    uptime and bandwidth. See the **ExcludeNodes** option for more
+    uptime and bandwidth. See <<ExcludeNodes,ExcludeNodes>> for more
     information on how to specify nodes. +
      +
     In order for this option to have any effect, **TestingTorNetwork**
@@ -3427,7 +3429,7 @@ The following options are used for running a testing Tor network.
 [[TestingDirAuthVoteHSDir]] **TestingDirAuthVoteHSDir** __node__,__node__,__...__::
     A list of identity fingerprints and country codes and
     address patterns of nodes to vote HSDir for regardless of their
-    uptime and DirPort. See the **ExcludeNodes** option for more
+    uptime and DirPort. See <<ExcludeNodes,ExcludeNodes>> for more
     information on how to specify nodes. +
      +
     In order for this option to have any effect, **TestingTorNetwork**
@@ -3579,8 +3581,8 @@ __CacheDirectory__/**`cached-extrainfo`** and **`cached-extrainfo.new`**::
     Similar to **cached-descriptors**, but holds optionally-downloaded
     "extra-info" documents. Relays use these documents to send inessential
     information about statistics, bandwidth history, and network health to the
-    authorities. They aren't fetched by default. See the DownloadExtraInfo
-    option for more information.
+    authorities. They aren't fetched by default. See <<DownloadExtraInfo,DownloadExtraInfo>>
+     for more information.
 
 __CacheDirectory__/**`cached-microdescs`** and **`cached-microdescs.new`**::
     These files hold downloaded microdescriptors.  Lines beginning with
@@ -3647,11 +3649,11 @@ __KeyDirectory__/**`authority_signing_key`**::
 
 __KeyDirectory__/**`legacy_certificate`**::
     As authority_certificate; used only when `V3AuthUseLegacyKey` is set.  See
-    documentation for V3AuthUseLegacyKey.
+    documentation for <<V3AuthUseLegacyKey,V3AuthUseLegacyKey>>.
 
 __KeyDirectory__/**`legacy_signing_key`**::
     As authority_signing_key: used only when `V3AuthUseLegacyKey` is set.  See
-    documentation for V3AuthUseLegacyKey.
+    documentation for <<V3AuthUseLegacyKey,V3AuthUseLegacyKey>>.
 
 __KeyDirectory__/**`secret_id_key`**::
     A relay's RSA1024 permanent identity key, including private and public
