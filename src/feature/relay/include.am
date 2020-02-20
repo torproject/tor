@@ -1,8 +1,7 @@
 
 # Legacy shared relay code: migrate to the relay module over time
 LIBTOR_APP_A_SOURCES += 			\
-	src/feature/relay/onion_queue.c		\
-	src/feature/relay/router.c
+	src/feature/relay/onion_queue.c
 
 # The Relay module.
 
@@ -16,6 +15,7 @@ MODULE_RELAY_SOURCES = 						\
 	src/feature/relay/relay_handshake.c			\
 	src/feature/relay/relay_periodic.c			\
 	src/feature/relay/relay_sys.c				\
+	src/feature/relay/router.c				\
 	src/feature/relay/routerkeys.c				\
 	src/feature/relay/selftest.c				\
 	src/feature/relay/transport_config.c

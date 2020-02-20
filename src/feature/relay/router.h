@@ -25,20 +25,24 @@ struct ed25519_keypair_t;
 #define TOR_ROUTERINFO_ERROR_DESC_REBUILDING (-6)
 #define TOR_ROUTERINFO_ERROR_INTERNAL_BUG    (-7)
 
+int router_initialize_tls_context(void);
+int init_keys_client(void);
+void set_client_identity_key(crypto_pk_t *k);
+crypto_pk_t *get_tlsclient_identity_key(void);
+int client_identity_key_is_set(void);
+crypto_pk_t *router_get_rsa_onion_pkey(const char *pkey, size_t pkey_len);
+
+#ifdef HAVE_MODULE_RELAY
+
+int init_keys(void);
+
 MOCK_DECL(crypto_pk_t *,get_onion_key,(void));
 time_t get_onion_key_set_at(void);
 void set_server_identity_key(crypto_pk_t *k);
 /* Some compilers are clever enough to know that when relay mode is disabled,
  * this function never returns. */
-#ifdef HAVE_MODULE_RELAY
 MOCK_DECL(crypto_pk_t *,get_server_identity_key,(void));
-#else
-#define get_server_identity_key() (tor_abort_(),NULL)
-#endif
 int server_identity_key_is_set(void);
-void set_client_identity_key(crypto_pk_t *k);
-crypto_pk_t *get_tlsclient_identity_key(void);
-int client_identity_key_is_set(void);
 MOCK_DECL(authority_cert_t *, get_my_v3_authority_cert, (void));
 crypto_pk_t *get_my_v3_authority_signing_key(void);
 authority_cert_t *get_my_v3_legacy_cert(void);
@@ -50,7 +54,6 @@ void v3_authority_check_key_expiry(void);
 int get_onion_key_lifetime(void);
 int get_onion_key_grace_period(void);
 
-crypto_pk_t *router_get_rsa_onion_pkey(const char *pkey, size_t pkey_len);
 void router_set_rsa_onion_pkey(const crypto_pk_t *pk, char **onion_pkey_out,
                                size_t *onion_pkey_len);
 
@@ -58,10 +61,6 @@ di_digest256_map_t *construct_ntor_key_map(void);
 void ntor_key_map_free_(di_digest256_map_t *map);
 #define ntor_key_map_free(map) \
   FREE_AND_NULL(di_digest256_map_t, ntor_key_map_free_, (map))
-
-int router_initialize_tls_context(void);
-int init_keys(void);
-int init_keys_client(void);
 
 uint16_t router_get_active_listener_port_by_type_af(int listener_type,
                                                     sa_family_t family);
@@ -110,5 +109,88 @@ void set_server_identity_key_digest_testing(const uint8_t *digest);
 #endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(ROUTER_PRIVATE) */
+
+#else /* !defined(HAVE_RELAY_MODE) */
+
+#define IGNORE1(a)                              \
+  ((void)(a))
+#define IGNORE1_RET(a, r)                       \
+  (IGNORE1(a), (r))
+#define IGNORE2(a,b)                            \
+  ((void)(a), (void)(b))
+#define IGNORE2_RET(a,b, r)                     \
+  (IGNORE2((a),(b)), (r))
+#define IGNORE3(a,b,c)                          \
+  ((void)(a), (void)(b), (void)(c))
+#define IGNORE3_RET(a,b,c, r)                   \
+  (IGNORE3((a),(b),(c)), (r))
+
+#define get_server_identity_key()(tor_abort_(),NULL)
+#define dup_onion_keys(key,last) \
+  (*(key)=NULL, *(last)=NULL)
+#define expire_old_onion_keys() \
+  STMT_NIL
+#define rotate_onion_key() \
+  STMT_NIL
+
+#define construct_ntor_key_map() \
+  tor_malloc(1)
+#define ntor_key_map_free(map) \
+  tor_free(map)
+
+#define router_digest_is_me(digest) \
+  IGNORE1_RET((digest), 0)
+#define router_get_my_id_digest()               \
+  ("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"   \
+   "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0")
+#define router_extrainfo_digest_is_me(digest) \
+  IGNORE1_RET((digest), 0)
+#define router_is_me(r)                         \
+  IGNORE1_RET((r), 0)
+#define server_identity_key_is_set() \
+  (0)
+
+#define router_get_advertised_or_port(opts) \
+  IGNORE1_RET((opts), 0)
+#define router_get_advertised_or_port_by_af(opts, af) \
+  IGNORE2_RET((opts), (af), 0)
+#define router_get_advertised_dir_port(opts, port) \
+  IGNORE2_RET((opts), (port), 0)
+#define router_get_active_listener_port_by_type_af(lt,fam) \
+  IGNORE2_RET((lt), (fam), 0)
+
+#define router_compare_to_my_exit_policy(addr, port) \
+  IGNORE2_RET((addr), (port), -1)
+#define router_my_exit_policy_is_reject_star() \
+  (1)
+
+#define should_refuse_unknown_exits(opts) \
+  IGNORE1_RET((opts), 1)
+
+/* TODO: These should be disabled by v3auth mode, not relay mode. */
+#define get_my_v3_authority_cert()              \
+  NULL
+#define get_my_v3_authority_signing_key()       \
+  NULL
+#define get_my_v3_legacy_cert()                 \
+  NULL
+#define get_my_v3_legacy_signing_key()          \
+  NULL
+
+#define routerinfo_err_is_transient(e)          \
+  IGNORE1_RET((e), 0)
+#define routerinfo_err_to_string(e)             \
+  IGNORE1_RET((e), "Tor was compiled without relay support")
+
+#define router_pick_published_address(opt, addr, cache) \
+  IGNORE3_RET((opt), (addr), (cache), -1)
+
+#define router_new_address_suggestion(s, d) \
+  IGNORE2((s),(d))
+
+#define init_keys() \
+  init_keys_client()
+
+#endif /* defined(HAVE_RELAY_MODE) */
 
 #endif /* !defined(TOR_ROUTER_H) */
