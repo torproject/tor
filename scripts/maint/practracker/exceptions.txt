@@ -73,7 +73,7 @@ problem function-size /src/core/mainloop/connection.c:connection_handle_read_imp
 problem function-size /src/core/mainloop/connection.c:connection_buf_read_from_socket() 180
 problem function-size /src/core/mainloop/connection.c:connection_handle_write_impl() 241
 problem function-size /src/core/mainloop/connection.c:assert_connection_ok() 143
-problem dependency-violation /src/core/mainloop/connection.c 44
+problem dependency-violation /src/core/mainloop/connection.c 47
 problem dependency-violation /src/core/mainloop/cpuworker.c 12
 problem include-count /src/core/mainloop/mainloop.c 64
 problem function-size /src/core/mainloop/mainloop.c:conn_close_if_marked() 108

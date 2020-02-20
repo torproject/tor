@@ -4,6 +4,7 @@
 #include "core/or/or.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "core/or/address_set.h"
+#include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
@@ -29,6 +30,12 @@ mock_networkstatus_get_latest_consensus_by_flavor(consensus_flavor_t f)
 {
   tor_assert(f == FLAV_MICRODESC);
   return dummy_ns;
+}
+
+static void
+mock_dirlist_add_trusted_dir_addresses(void)
+{
+  return;
 }
 
 /* Number of address a single node_t can have. Default to the production
@@ -98,6 +105,8 @@ test_nodelist(void *arg)
        mock_networkstatus_get_latest_consensus_by_flavor);
   MOCK(get_estimated_address_per_node,
        mock_get_estimated_address_per_node);
+  MOCK(dirlist_add_trusted_dir_addresses,
+       mock_dirlist_add_trusted_dir_addresses);
 
   dummy_ns = tor_malloc_zero(sizeof(*dummy_ns));
   dummy_ns->flavor = FLAV_MICRODESC;
@@ -113,7 +122,10 @@ test_nodelist(void *arg)
    * (the_nodelist->node_addrs) so we will fail the contain test rarely. */
   addr_per_node = 1024;
 
-  /* No node no nothing. The lookups should be empty. */
+  /* No node no nothing. The lookups should be empty. We've mocked the
+   * dirlist_add_trusted_dir_addresses in order for _no_ authorities to be
+   * added to the filter else it makes this test to trigger many false
+   * positive. */
   nodelist_set_consensus(dummy_ns);
 
   /* The address set should be empty. */
@@ -167,6 +179,7 @@ test_nodelist(void *arg)
   UNMOCK(networkstatus_get_latest_consensus);
   UNMOCK(networkstatus_get_latest_consensus_by_flavor);
   UNMOCK(get_estimated_address_per_node);
+  UNMOCK(dirlist_add_trusted_dir_addresses);
 }
 
 struct testcase_t address_set_tests[] = {
