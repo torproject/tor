@@ -105,7 +105,7 @@ get_platform_str(char *platform, size_t len)
  * onion_key_lifetime(), get_options(), and we_are_hibernating(), and uses the
  * results to populate some fields in the descriptor.
  */
-char *
+STATIC char *
 router_dump_router_to_string(routerinfo_t *router,
                              const crypto_pk_t *ident_key,
                              const crypto_pk_t *tap_key,
@@ -786,7 +786,7 @@ extrainfo_dump_to_string_rsa_sig_helper(smartlist_t *chunks,
  * Always write pluggable transport lines.
  *
  * Return 0 on success, negative on failure. */
-int
+STATIC int
 extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
                          crypto_pk_t *ident_key,
                          const ed25519_keypair_t *signing_keypair)
