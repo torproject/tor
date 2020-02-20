@@ -2084,8 +2084,8 @@ test_dir_handle_get_status_vote_d(void* data)
 
   const char *msg_out = NULL;
   int status_out = 0;
-  struct pending_vote_t *pv = dirvote_add_vote(VOTE_BODY_V3, &msg_out,
-                                               &status_out);
+  struct pending_vote_t *pv = dirvote_add_vote(VOTE_BODY_V3, 0,
+                                               &msg_out, &status_out);
   tt_assert(pv);
 
   status_vote_current_d_test(&header, &body, &body_used);
@@ -2459,8 +2459,8 @@ test_dir_handle_get_status_vote_next_authority(void* data)
   time_t now = 1441223455 -1;
   voting_schedule_recalculate_timing(mock_options, now);
 
-  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, &msg_out,
-                                                 &status_out);
+  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, 0,
+                                                 &msg_out, &status_out);
   tt_assert(vote);
 
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
@@ -2619,11 +2619,188 @@ test_dir_handle_get_status_vote_current_authority(void* data)
   time_t now = 1441223455;
   voting_schedule_recalculate_timing(mock_options, now-1);
 
-  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, &msg_out,
-                                                 &status_out);
+  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, 0,
+                                                 &msg_out, &status_out);
   tt_assert(vote);
 
   // move the pending vote to previous vote
+  dirvote_act(mock_options, now+1);
+
+  MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
+  MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
+
+  conn = new_dir_conn();
+  tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
+    GET("/tor/status-vote/current/authority"), NULL, 0));
+
+  fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
+                      &body, &body_used, strlen(VOTE_BODY_V3)+1, 0);
+
+  tt_assert(header);
+  tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
+  tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
+  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
+  tt_assert(strstr(header, "Content-Length: 4135\r\n"));
+
+  tt_str_op(VOTE_BODY_V3, OP_EQ, body);
+
+  done:
+    UNMOCK(connection_write_to_buf_impl_);
+    UNMOCK(get_my_v3_authority_cert);
+    connection_free_minimal(TO_CONN(conn));
+    tor_free(header);
+    tor_free(body);
+    authority_cert_free(mock_cert); mock_cert = NULL;
+    or_options_free(mock_options); mock_options = NULL;
+
+    clear_dir_servers();
+    routerlist_free_all();
+    dirvote_free_all();
+}
+
+/* Test that a late vote is rejected, but an on-time vote is accepted. */
+static void
+test_dir_handle_get_status_vote_too_late(void* data)
+{
+  dir_connection_t *conn = NULL;
+  char *header = NULL, *body = NULL;
+  const char *msg_out = NULL;
+  int status_out = 0;
+  size_t body_used = 0;
+  const char digest[DIGEST_LEN] = "";
+
+  dir_server_t *ds = NULL;
+  const char* mode = (const char *)data;
+
+  clear_dir_servers();
+  routerlist_free_all();
+  dirvote_free_all();
+
+  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE,
+                                               strlen(TEST_CERTIFICATE),
+                                               NULL);
+
+  /* create a trusted ds */
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, NULL, digest,
+                              NULL, V3_DIRINFO, 1.0);
+  tt_assert(ds);
+  dir_server_add(ds);
+
+  /* ds v3_identity_digest is the certificate's identity_key */
+  base16_decode(ds->v3_identity_digest, DIGEST_LEN,
+                TEST_CERT_IDENT_KEY, HEX_DIGEST_LEN);
+
+  tt_int_op(0, OP_EQ, trusted_dirs_load_certs_from_string(TEST_CERTIFICATE,
+    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1, NULL));
+
+  init_mock_options();
+  mock_options->AuthoritativeDir = 1;
+  mock_options->V3AuthoritativeDir = 1;
+
+  int base_delay = 0;
+  int vote_interval = 0;
+  int start_offset = 0;
+
+  tt_assert(mode);
+  /* Set the required timings, see below for details */
+  if (strcmp(mode, "min") == 0) {
+    /* The minimum valid test network timing */
+    base_delay = 2;
+    vote_interval = 10;
+    start_offset = vote_interval - 5;
+  } else if (strcmp(mode, "chutney") == 0) {
+    /* The test network timing used by chutney */
+    base_delay = 4;
+    vote_interval = 20;
+    start_offset = vote_interval - 5;
+  } else if (strcmp(mode, "half-public") == 0) {
+    /* The short consensus failure timing used in the public network */
+    base_delay = 5*60;
+    vote_interval = 30*60;
+    start_offset = vote_interval - 9*60 - 5;
+  } else if (strcmp(mode, "public") == 0) {
+    /* The standard timing used in the public network */
+    base_delay = 5*60;
+    vote_interval = 60*60;
+    start_offset = vote_interval - 9*60 - 5;
+  }
+
+  tt_assert(base_delay > 0);
+  tt_assert(vote_interval > 0);
+  tt_assert(start_offset > 0);
+
+  /* Skew the time to fit the fixed time in the vote */
+  mock_options->TestingV3AuthVotingStartOffset = start_offset;
+  /* Calculate the rest of the timings */
+  mock_options->TestingV3AuthInitialVotingInterval = vote_interval;
+  mock_options->TestingV3AuthInitialVoteDelay = base_delay;
+  mock_options->TestingV3AuthInitialDistDelay = base_delay;
+
+  time_t now = 1441223455;
+  voting_schedule_recalculate_timing(mock_options, now-1);
+  const time_t voting_starts = voting_schedule.voting_starts;
+  const time_t fetch_missing = voting_schedule.fetch_missing_votes;
+
+  struct pending_vote_t *vote = NULL;
+
+  /* Next voting interval */
+  vote = dirvote_add_vote(VOTE_BODY_V3,
+                          fetch_missing + vote_interval,
+                          &msg_out, &status_out);
+  tt_assert(!vote);
+  tt_int_op(status_out, OP_EQ, 400);
+  tt_str_op(msg_out, OP_EQ,
+            "Posted vote received too late, would be dangerous to count it");
+
+  /* Just after fetch missing */
+  vote = dirvote_add_vote(VOTE_BODY_V3,
+                          fetch_missing + 1,
+                          &msg_out, &status_out);
+  tt_assert(!vote);
+  tt_int_op(status_out, OP_EQ, 400);
+  tt_str_op(msg_out, OP_EQ,
+            "Posted vote received too late, would be dangerous to count it");
+
+  /* On fetch missing */
+  vote = dirvote_add_vote(VOTE_BODY_V3,
+                          fetch_missing,
+                          &msg_out, &status_out);
+  tt_assert(vote);
+
+  /* Move the pending vote to previous vote */
+  dirvote_act(mock_options, now+1);
+  /* And reset the timing */
+  voting_schedule_recalculate_timing(mock_options, now-1);
+
+  /* Between voting starts and fetch missing */
+  vote = dirvote_add_vote(VOTE_BODY_V3,
+                          voting_starts + 1,
+                          &msg_out, &status_out);
+  tt_assert(vote);
+
+  /* Move the pending vote to previous vote */
+  dirvote_act(mock_options, now+1);
+  /* And reset the timing */
+  voting_schedule_recalculate_timing(mock_options, now-1);
+
+  /* On voting starts */
+  vote = dirvote_add_vote(VOTE_BODY_V3,
+                          voting_starts,
+                          &msg_out, &status_out);
+  tt_assert(vote);
+
+  /* Move the pending vote to previous vote */
+  dirvote_act(mock_options, now+1);
+  /* And reset the timing */
+  voting_schedule_recalculate_timing(mock_options, now-1);
+
+  /* Just before voting starts */
+  vote = dirvote_add_vote(VOTE_BODY_V3,
+                          voting_starts - 1,
+                          &msg_out, &status_out);
+  tt_assert(vote);
+
+  /* Move the pending vote to previous vote */
   dirvote_act(mock_options, now+1);
 
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
@@ -2708,6 +2885,16 @@ test_dir_handle_get_parse_accept_encoding(void *arg)
 #define DIR_HANDLE_CMD(name,flags) \
   { #name, test_dir_handle_get_##name, (flags), NULL, NULL }
 
+#ifdef COCCI
+/* Coccinelle doesn't like the stringification in this macro */
+#define DIR_HANDLE_CMD_ARG(name,flags,arg) \
+  DIR_HANDLE_CMD(name,flags)
+#else
+#define DIR_HANDLE_CMD_ARG(name,flags,arg) \
+  { #name "/" arg, test_dir_handle_get_##name, (flags), \
+    &passthrough_setup, (void *)(arg) }
+#endif /* defined(COCCI) */
+
 struct testcase_t dir_handle_get_tests[] = {
   DIR_HANDLE_CMD(not_found, 0),
   DIR_HANDLE_CMD(bad_request, 0),
@@ -2747,6 +2934,10 @@ struct testcase_t dir_handle_get_tests[] = {
   DIR_HANDLE_CMD(status_vote_next_not_found, 0),
   DIR_HANDLE_CMD(status_vote_current_authority_not_found, 0),
   DIR_HANDLE_CMD(status_vote_current_authority, 0),
+  DIR_HANDLE_CMD_ARG(status_vote_too_late, 0, "min"),
+  DIR_HANDLE_CMD_ARG(status_vote_too_late, 0, "chutney"),
+  DIR_HANDLE_CMD_ARG(status_vote_too_late, 0, "half-public"),
+  DIR_HANDLE_CMD_ARG(status_vote_too_late, 0, "public"),
   DIR_HANDLE_CMD(status_vote_next_authority_not_found, 0),
   DIR_HANDLE_CMD(status_vote_next_authority, 0),
   DIR_HANDLE_CMD(status_vote_next_bandwidth_not_found, 0),

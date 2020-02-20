@@ -2364,7 +2364,7 @@ handle_response_fetch_status_vote(dir_connection_t *conn,
              conn->base_.port, conn->requested_resource);
     return -1;
   }
-  dirvote_add_vote(body, &msg, &st);
+  dirvote_add_vote(body, 0, &msg, &st);
   if (st > 299) {
     log_warn(LD_DIR, "Error adding retrieved vote: %s", msg);
   } else {

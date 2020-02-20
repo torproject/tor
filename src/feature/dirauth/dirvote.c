@@ -2963,7 +2963,7 @@ dirvote_perform_vote(void)
   if (!contents)
     return -1;
 
-  pending_vote = dirvote_add_vote(contents, &msg, &status);
+  pending_vote = dirvote_add_vote(contents, 0, &msg, &status);
   tor_free(contents);
   if (!pending_vote) {
     log_warn(LD_DIR, "Couldn't store my own vote! (I told myself, '%s'.)",
@@ -3119,13 +3119,45 @@ list_v3_auth_ids(void)
   return keys;
 }
 
+/* Check the voter information <b>vi</b>, and  assert that at least one
+ * signature is good. Asserts on failure. */
+static void
+assert_any_sig_good(const networkstatus_voter_info_t *vi)
+{
+  int any_sig_good = 0;
+  SMARTLIST_FOREACH(vi->sigs, document_signature_t *, sig,
+                    if (sig->good_signature)
+                      any_sig_good = 1);
+  tor_assert(any_sig_good);
+}
+
+/* Add <b>cert</b> to our list of known authority certificates. */
+static void
+add_new_cert_if_needed(const struct authority_cert_t *cert)
+{
+  tor_assert(cert);
+  if (!authority_cert_get_by_digests(cert->cache_info.identity_digest,
+                                     cert->signing_key_digest)) {
+    /* Hey, it's a new cert! */
+    trusted_dirs_load_certs_from_string(
+                               cert->cache_info.signed_descriptor_body,
+                               TRUSTED_DIRS_CERTS_SRC_FROM_VOTE, 1 /*flush*/,
+                               NULL);
+    if (!authority_cert_get_by_digests(cert->cache_info.identity_digest,
+                                       cert->signing_key_digest)) {
+      log_warn(LD_BUG, "We added a cert, but still couldn't find it.");
+    }
+  }
+}
+
 /** Called when we have received a networkstatus vote in <b>vote_body</b>.
  * Parse and validate it, and on success store it as a pending vote (which we
  * then return).  Return NULL on failure.  Sets *<b>msg_out</b> and
  * *<b>status_out</b> to an HTTP response and status code.  (V3 authority
  * only) */
 pending_vote_t *
-dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
+dirvote_add_vote(const char *vote_body, time_t time_posted,
+                 const char **msg_out, int *status_out)
 {
   networkstatus_t *vote;
   networkstatus_voter_info_t *vi;
@@ -3156,13 +3188,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   }
   tor_assert(smartlist_len(vote->voters) == 1);
   vi = get_voter(vote);
-  {
-    int any_sig_good = 0;
-    SMARTLIST_FOREACH(vi->sigs, document_signature_t *, sig,
-                      if (sig->good_signature)
-                        any_sig_good = 1);
-    tor_assert(any_sig_good);
-  }
+  assert_any_sig_good(vi);
   ds = trusteddirserver_get_by_v3_auth_digest(vi->identity_digest);
   if (!ds) {
     char *keys = list_v3_auth_ids();
@@ -3175,19 +3201,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
     *msg_out = "Vote not from a recognized v3 authority";
     goto err;
   }
-  tor_assert(vote->cert);
-  if (!authority_cert_get_by_digests(vote->cert->cache_info.identity_digest,
-                                     vote->cert->signing_key_digest)) {
-    /* Hey, it's a new cert! */
-    trusted_dirs_load_certs_from_string(
-                               vote->cert->cache_info.signed_descriptor_body,
-                               TRUSTED_DIRS_CERTS_SRC_FROM_VOTE, 1 /*flush*/,
-                               NULL);
-    if (!authority_cert_get_by_digests(vote->cert->cache_info.identity_digest,
-                                       vote->cert->signing_key_digest)) {
-      log_warn(LD_BUG, "We added a cert, but still couldn't find it.");
-    }
-  }
+  add_new_cert_if_needed(vote->cert);
 
   /* Is it for the right period? */
   if (vote->valid_after != voting_schedule.interval_starts) {
@@ -3197,6 +3211,23 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
     log_warn(LD_DIR, "Rejecting vote from %s with valid-after time of %s; "
              "we were expecting %s", vi->address, tbuf1, tbuf2);
     *msg_out = "Bad valid-after time";
+    goto err;
+  }
+
+  /* Check if we received it, as a post, after the cutoff when we
+   * start asking other dir auths for it. If we do, the best plan
+   * is to discard it, because using it greatly increases the chances
+   * of a split vote for this round (some dir auths got it in time,
+   * some didn't). */
+  if (time_posted && time_posted > voting_schedule.fetch_missing_votes) {
+    char tbuf1[ISO_TIME_LEN+1], tbuf2[ISO_TIME_LEN+1];
+    format_iso_time(tbuf1, time_posted);
+    format_iso_time(tbuf2, voting_schedule.fetch_missing_votes);
+    log_warn(LD_DIR, "Rejecting posted vote from %s received at %s; "
+             "our cutoff for received votes is %s. Check your clock, "
+             "CPU load, and network load. Also check the authority that "
+             "posted the vote.", vi->address, tbuf1, tbuf2);
+    *msg_out = "Posted vote received too late, would be dangerous to count it";
     goto err;
   }
 
