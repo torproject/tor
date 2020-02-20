@@ -145,7 +145,6 @@ problem dependency-violation /src/core/or/connection_edge.h 1
 problem file-size /src/core/or/connection_or.c 3122
 problem function-size /src/core/or/connection_or.c:connection_or_group_set_badness_() 105
 problem function-size /src/core/or/connection_or.c:connection_or_client_learned_peer_id() 142
-problem function-size /src/core/or/relay_handshake.c:connection_or_compute_authenticate_cell_body() 231
 problem dependency-violation /src/core/or/connection_or.c 20
 problem dependency-violation /src/core/or/dos.c 6
 problem dependency-violation /src/core/or/onion.c 2
@@ -275,6 +274,7 @@ problem function-size /src/feature/nodelist/routerlist.c:update_extrainfo_downlo
 problem function-size /src/feature/relay/dns.c:dns_resolve_impl() 131
 problem function-size /src/feature/relay/dns.c:configure_nameservers() 161
 problem function-size /src/feature/relay/dns.c:evdns_callback() 108
+problem function-size /src/feature/relay/relay_handshake.c:connection_or_compute_authenticate_cell_body() 231
 problem file-size /src/feature/relay/router.c 3520
 problem include-count /src/feature/relay/router.c 57
 problem function-size /src/feature/relay/router.c:init_keys() 252
