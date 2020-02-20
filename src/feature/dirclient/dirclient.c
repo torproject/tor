@@ -1997,7 +1997,8 @@ dirclient_dump_total_dls(void)
                    bootstrapped?"not ":"");
         first_time = false;
       }
-      log_notice(LD_NET, "    %zu (%s)", n, dir_conn_purpose_to_string(i));
+      log_notice(LD_NET, "    %"PRIu64" (%s)",
+                 n, dir_conn_purpose_to_string(i));
     }
   }
 }
@@ -2035,7 +2036,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   received_bytes = connection_get_inbuf_len(TO_CONN(conn));
 
-  log_debug(LD_DIR, "Downloaded %zu bytes on connection of purpose "
+  log_debug(LD_DIR, "Downloaded %"TOR_PRIuSZ" bytes on connection of purpose "
              "%s; bootstrap %d%%",
              received_bytes,
              dir_conn_purpose_to_string(conn->base_.purpose),
