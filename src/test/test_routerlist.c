@@ -405,9 +405,6 @@ test_router_pick_directory_server_impl(void *arg)
   node_router3->rs->last_dir_503_at = 0;
 
   /* Fascists against OR and Dir */
-  policy_line = tor_malloc_zero(sizeof(config_line_t));
-  policy_line->key = tor_strdup("ReachableAddresses");
-  policy_line->value = tor_strdup("accept *:80, reject *:*");
   policies_parse_from_options(options);
   node_router1->rs->or_port = 442;
   node_router2->rs->or_port = 441;
