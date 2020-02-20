@@ -21,6 +21,8 @@ void router_do_reachability_checks(int test_or, int test_dir);
 void router_orport_found_reachable(void);
 void router_dirport_found_reachable(void);
 void router_perform_bandwidth_test(int num_circs, time_t now);
+void router_reset_reachability(void);
+
 #else /* !defined(HAVE_MODULE_RELAY) */
 
 #define check_whether_orport_reachable(opts) \
@@ -31,6 +33,8 @@ void router_perform_bandwidth_test(int num_circs, time_t now);
 #define router_orport_found_reachable() \
   STMT_NIL
 #define router_dirport_found_reachable() \
+  STMT_NIL
+#define router_reset_reachability() \
   STMT_NIL
 
 static inline void

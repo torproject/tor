@@ -117,7 +117,6 @@ const char *routerinfo_err_to_string(int err);
 int routerinfo_err_is_transient(int err);
 
 void router_reset_warnings(void);
-void router_reset_reachability(void);
 void router_free_all(void);
 
 #ifdef ROUTER_PRIVATE
