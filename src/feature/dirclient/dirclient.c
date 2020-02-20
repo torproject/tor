@@ -1981,19 +1981,22 @@ static uint64_t total_dl[DIR_PURPOSE_MAX_][2];
 void
 dirclient_dump_total_dls(void)
 {
-  log_notice(LD_NET,
-             "While bootstrapping, fetched this many bytes: ");
-  for (int i=0; i < DIR_PURPOSE_MAX_; ++i) {
-    uint64_t n = total_dl[i][0];
-    if (n) {
-      log_notice(LD_NET, "    %zu (%s)", n, dir_conn_purpose_to_string(i));
-    }
-  }
-  log_notice(LD_NET,
-             "While not bootsrapping, fetched this many bytes: ");
-  for (int i=0; i < DIR_PURPOSE_MAX_; ++i) {
-    uint64_t n = total_dl[i][1];
-    if (n) {
+  const or_options_t *options = get_options();
+  for (int bootstrapped = 0; bootstrapped < 2; ++bootstrapped) {
+    bool first_time = true;
+    for (int i=0; i < DIR_PURPOSE_MAX_; ++i) {
+      uint64_t n = total_dl[i][0];
+      if (n == 0)
+        continue;
+      if (options->SafeLogging_ != SAFELOG_SCRUB_NONE &&
+          purpose_needs_anonymity(i, ROUTER_PURPOSE_GENERAL, NULL))
+        continue;
+      if (first_time) {
+        log_notice(LD_NET,
+                   "While %sbootstrapping, fetched this many bytes: ",
+                   bootstrapped?"not ":"");
+        first_time = false;
+      }
       log_notice(LD_NET, "    %zu (%s)", n, dir_conn_purpose_to_string(i));
     }
   }
