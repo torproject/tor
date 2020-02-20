@@ -707,8 +707,8 @@ get_extend_info_from_intro_point(const hs_service_intro_point_t *ip,
 
 /** Return the number of introduction points that are established for the
  * given descriptor. */
-static unsigned int
-count_desc_circuit_established(const hs_service_descriptor_t *desc)
+MOCK_IMPL(STATIC unsigned int,
+count_desc_circuit_established, (const hs_service_descriptor_t *desc))
 {
   unsigned int count = 0;
 
@@ -3055,13 +3055,85 @@ service_desc_hsdirs_changed(const hs_service_t *service,
   return should_reupload;
 }
 
+/** These are all the reasons why a descriptor upload can't occur. We use
+ * those to log the reason properly with the right rate limiting and for the
+ * right descriptor. */
+typedef enum {
+  LOG_DESC_UPLOAD_REASON_MISSING_IPS = 0,
+  LOG_DESC_UPLOAD_REASON_IP_NOT_ESTABLISHED = 1,
+  LOG_DESC_UPLOAD_REASON_NOT_TIME = 2,
+  LOG_DESC_UPLOAD_REASON_NO_LIVE_CONSENSUS = 3,
+  LOG_DESC_UPLOAD_REASON_NO_DIRINFO = 4,
+} log_desc_upload_reason_t;
+
+/** Maximum number of reasons. This is used to allocate the static array of
+ * all rate limiting objects. */
+#define LOG_DESC_UPLOAD_REASON_MAX LOG_DESC_UPLOAD_REASON_NO_DIRINFO
+
+/** Log the reason why we can't upload the given descriptor for the given
+ * service. This takes a message string (allocated by the caller) and a
+ * reason.
+ *
+ * Depending on the reason and descriptor, different rate limit applies. This
+ * is done because this function will basically be called every second. Each
+ * descriptor for each reason uses its own log rate limit object in order to
+ * avoid message suppression for different reasons and descriptors. */
+static void
+log_cant_upload_desc(const hs_service_t *service,
+                     const hs_service_descriptor_t *desc, const char *msg,
+                     const log_desc_upload_reason_t reason)
+{
+  /* Writing the log every minute shouldn't be too annoying for log rate limit
+   * since this can be emitted every second for each descriptor.
+   *
+   * However, for one specific case, we increase it to 10 minutes because it
+   * is hit constantly, as an expected behavior, which is the reason
+   * indicating that it is not the time to upload. */
+  static ratelim_t limits[2][LOG_DESC_UPLOAD_REASON_MAX + 1] =
+    { { RATELIM_INIT(60), RATELIM_INIT(60), RATELIM_INIT(60 * 10),
+        RATELIM_INIT(60), RATELIM_INIT(60) },
+      { RATELIM_INIT(60), RATELIM_INIT(60), RATELIM_INIT(60 * 10),
+        RATELIM_INIT(60), RATELIM_INIT(60) },
+    };
+  bool is_next_desc = false;
+  unsigned int rlim_pos = 0;
+  ratelim_t *rlim = NULL;
+
+  tor_assert(service);
+  tor_assert(desc);
+  tor_assert(msg);
+
+  /* Make sure the reason value is valid. It should never happen because we
+   * control that value in the code flow but will be apparent during
+   * development if a reason is added but LOG_DESC_UPLOAD_REASON_NUM_ is not
+   * updated. */
+  if (BUG(reason > LOG_DESC_UPLOAD_REASON_MAX || reason < 0)) {
+    return;
+  }
+
+  /* Ease our life. Flag that tells us if the descriptor is the next one. */
+  is_next_desc = (service->desc_next == desc);
+
+  /* Current descriptor is the first element in the ratelimit object array.
+   * The next descriptor is the second element. */
+  rlim_pos = (is_next_desc ? 1 : 0);
+  /* Get the ratelimit object for the reason _and_ right descriptor. */
+  rlim = &limits[rlim_pos][reason];
+
+  log_fn_ratelim(rlim, LOG_INFO, LD_REND,
+                 "Service %s can't upload its %s descriptor: %s",
+                 safe_str_client(service->onion_address),
+                 (is_next_desc) ? "next" : "current", msg);
+}
+
 /** Return 1 if the given descriptor from the given service can be uploaded
  * else return 0 if it can not. */
 static int
 should_service_upload_descriptor(const hs_service_t *service,
                               const hs_service_descriptor_t *desc, time_t now)
 {
-  unsigned int num_intro_points;
+  char *msg = NULL;
+  unsigned int num_intro_points, count_ip_established;
 
   tor_assert(service);
   tor_assert(desc);
@@ -3081,34 +3153,54 @@ should_service_upload_descriptor(const hs_service_t *service,
    * upload descriptor in this case. We need at least one for the service to
    * be reachable. */
   if (desc->missing_intro_points && num_intro_points == 0) {
+    msg = tor_strdup("Missing intro points");
+    log_cant_upload_desc(service, desc, msg,
+                         LOG_DESC_UPLOAD_REASON_MISSING_IPS);
     goto cannot;
   }
 
   /* Check if all our introduction circuit have been established for all the
    * intro points we have selected. */
-  if (count_desc_circuit_established(desc) != num_intro_points) {
+  count_ip_established = count_desc_circuit_established(desc);
+  if (count_ip_established != num_intro_points) {
+    tor_asprintf(&msg, "Intro circuits aren't yet all established (%d/%d).",
+                 count_ip_established, num_intro_points);
+    log_cant_upload_desc(service, desc, msg,
+                         LOG_DESC_UPLOAD_REASON_IP_NOT_ESTABLISHED);
     goto cannot;
   }
 
   /* Is it the right time to upload? */
   if (desc->next_upload_time > now) {
+    tor_asprintf(&msg, "Next upload time is %ld, it is now %ld.",
+                 desc->next_upload_time, (long int) now);
+    log_cant_upload_desc(service, desc, msg,
+                         LOG_DESC_UPLOAD_REASON_NOT_TIME);
     goto cannot;
   }
 
   /* Don't upload desc if we don't have a live consensus */
   if (!networkstatus_get_live_consensus(now)) {
+    msg = tor_strdup("No live consensus");
+    log_cant_upload_desc(service, desc, msg,
+                         LOG_DESC_UPLOAD_REASON_NO_LIVE_CONSENSUS);
     goto cannot;
   }
 
   /* Do we know enough router descriptors to have adequate vision of the HSDir
      hash ring? */
   if (!router_have_minimum_dir_info()) {
+    msg = tor_strdup("Not enough directory information");
+    log_cant_upload_desc(service, desc, msg,
+                         LOG_DESC_UPLOAD_REASON_NO_DIRINFO);
     goto cannot;
   }
 
   /* Can upload! */
   return 1;
+
  cannot:
+  tor_free(msg);
   return 0;
 }
 
