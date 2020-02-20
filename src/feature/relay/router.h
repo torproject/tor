@@ -17,14 +17,6 @@
 struct curve25519_keypair_t;
 struct ed25519_keypair_t;
 
-#define TOR_ROUTERINFO_ERROR_NO_EXT_ADDR     (-1)
-#define TOR_ROUTERINFO_ERROR_CANNOT_PARSE    (-2)
-#define TOR_ROUTERINFO_ERROR_NOT_A_SERVER    (-3)
-#define TOR_ROUTERINFO_ERROR_DIGEST_FAILED   (-4)
-#define TOR_ROUTERINFO_ERROR_CANNOT_GENERATE (-5)
-#define TOR_ROUTERINFO_ERROR_DESC_REBUILDING (-6)
-#define TOR_ROUTERINFO_ERROR_INTERNAL_BUG    (-7)
-
 int router_initialize_tls_context(void);
 int init_keys_client(void);
 void set_client_identity_key(crypto_pk_t *k);
@@ -33,6 +25,14 @@ int client_identity_key_is_set(void);
 crypto_pk_t *router_get_rsa_onion_pkey(const char *pkey, size_t pkey_len);
 
 #ifdef HAVE_MODULE_RELAY
+
+#define TOR_ROUTERINFO_ERROR_NO_EXT_ADDR     (-1)
+#define TOR_ROUTERINFO_ERROR_CANNOT_PARSE    (-2)
+#define TOR_ROUTERINFO_ERROR_NOT_A_SERVER    (-3)
+#define TOR_ROUTERINFO_ERROR_DIGEST_FAILED   (-4)
+#define TOR_ROUTERINFO_ERROR_CANNOT_GENERATE (-5)
+#define TOR_ROUTERINFO_ERROR_DESC_REBUILDING (-6)
+#define TOR_ROUTERINFO_ERROR_INTERNAL_BUG    (-7)
 
 int init_keys(void);
 
