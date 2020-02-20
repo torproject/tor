@@ -11,7 +11,7 @@
 
 #include "lib/crypt_ops/crypto_ed25519.h"
 
-#ifndef DISABLE_MODULE_RELAY
+#ifdef HAVE_MODULE_RELAY
 
 const ed25519_public_key_t *get_master_identity_key(void);
 MOCK_DECL(const ed25519_keypair_t *, get_master_signing_keypair,(void));
@@ -45,7 +45,7 @@ int generate_ed_link_cert(const or_options_t *options, time_t now, int force);
 
 void routerkeys_free_all(void);
 
-#else /* defined(DISABLE_MODULE_RELAY) */
+#else /* !defined(HAVE_MODULE_RELAY) */
 
 #define router_ed25519_id_is_me(id) \
   ((void)(id), 0)
@@ -116,13 +116,13 @@ make_tap_onion_key_crosscert(const crypto_pk_t *onion_key,
 /* This calls is used outside of relay mode, but only to implement
  * CMD_KEY_EXPIRATION */
 #define log_cert_expiration()                                           \
-  (puts("Not available: Tor has been compiled without relay support"), 0);
+  (puts("Not available: Tor has been compiled without relay support"), 0)
 /* This calls is used outside of relay mode, but only to implement
  * CMD_KEYGEN. */
 #define load_ed_keys(x,y)                                                \
-  (puts("Not available: Tor has been compiled without relay support"), 0);
+  (puts("Not available: Tor has been compiled without relay support"), 0)
 
-#endif /* !defined(DISABLE_MODULE_RELAY) */
+#endif /* defined(HAVE_MODULE_RELAY) */
 
 #ifdef TOR_UNIT_TESTS
 const ed25519_keypair_t *get_master_identity_keypair(void);
