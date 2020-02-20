@@ -39,7 +39,7 @@
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_or.h"
-#include "core/or/relay_handshake.h"
+#include "feature/relay/relay_handshake.h"
 #include "feature/control/control_events.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/dirauth/reachability.h"

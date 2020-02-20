@@ -18,7 +18,7 @@
 #include "feature/relay/routerkeys.h"
 #include "core/or/scheduler.h"
 #include "feature/nodelist/torcert.h"
-#include "core/or/relay_handshake.h"
+#include "feature/relay/relay_handshake.h"
 
 #include "core/or/or_connection_st.h"
 #include "core/or/or_handshake_certs_st.h"
