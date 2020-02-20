@@ -55,6 +55,7 @@
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
+#include "feature/relay/descmgr.h"
 #include "feature/nodelist/dirlist.h"
 #include "core/or/scheduler.h"
 #include "feature/nodelist/torcert.h"

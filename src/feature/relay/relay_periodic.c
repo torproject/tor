@@ -20,6 +20,7 @@
 
 #include "feature/relay/dns.h"
 #include "feature/relay/relay_periodic.h"
+#include "feature/relay/descmgr.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
 #include "feature/relay/routermode.h"

@@ -101,6 +101,7 @@
 #include "feature/nodelist/routerlist.h"
 #include "feature/relay/dns.h"
 #include "feature/relay/ext_orport.h"
+#include "feature/relay/descmgr.h"
 #include "feature/relay/routermode.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"

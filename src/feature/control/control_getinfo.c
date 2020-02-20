@@ -44,6 +44,7 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerlist.h"
+#include "feature/relay/descmgr.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"

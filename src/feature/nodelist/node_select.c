@@ -29,6 +29,7 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"
+#include "feature/relay/descmgr.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 #include "lib/container/bitarray.h"
