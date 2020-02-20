@@ -130,7 +130,6 @@ ProtocolWarnings 1
 PublishHidServDescriptors 0
 PublishServerDescriptor 0
 ReachableAddresses 0.0.0.0, *:*
-ReachableDirAddresses 128.0.0.0/1
 ReachableORAddresses 128.0.0.0/8
 RejectPlaintextPorts 23
 RelayBandwidthBurst 10000
