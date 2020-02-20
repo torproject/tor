@@ -143,10 +143,9 @@ problem function-size /src/core/or/connection_edge.c:connection_exit_connect() 1
 problem dependency-violation /src/core/or/connection_edge.c 27
 problem dependency-violation /src/core/or/connection_edge.h 1
 problem file-size /src/core/or/connection_or.c 3122
-problem include-count /src/core/or/connection_or.c 51
 problem function-size /src/core/or/connection_or.c:connection_or_group_set_badness_() 105
 problem function-size /src/core/or/connection_or.c:connection_or_client_learned_peer_id() 142
-problem function-size /src/core/or/connection_or.c:connection_or_compute_authenticate_cell_body() 231
+problem function-size /src/core/or/relay_handshake.c:connection_or_compute_authenticate_cell_body() 231
 problem dependency-violation /src/core/or/connection_or.c 20
 problem dependency-violation /src/core/or/dos.c 6
 problem dependency-violation /src/core/or/onion.c 2
@@ -160,6 +159,7 @@ problem dependency-violation /src/core/or/policies.c 14
 problem function-size /src/core/or/protover.c:protover_all_supported() 117
 problem dependency-violation /src/core/or/reasons.c 2
 problem file-size /src/core/or/relay.c 3264
+problem dependency-violation /src/core/or/relay_handshake.c 5
 problem function-size /src/core/or/relay.c:circuit_receive_relay_cell() 127
 problem function-size /src/core/or/relay.c:relay_send_command_from_edge_() 109
 problem function-size /src/core/or/relay.c:connection_ap_process_end_not_open() 192

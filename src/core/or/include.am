@@ -3,6 +3,7 @@
 LIBTOR_APP_A_SOURCES += 				\
 	src/core/or/address_set.c		\
 	src/core/or/channel.c			\
+	src/core/or/relay_handshake.c		\
 	src/core/or/channelpadding.c		\
 	src/core/or/channeltls.c		\
 	src/core/or/circuitbuild.c		\
@@ -42,6 +43,7 @@ noinst_HEADERS +=					\
 	src/core/or/cell_queue_st.h			\
 	src/core/or/cell_st.h				\
 	src/core/or/channel.h				\
+	src/core/or/relay_handshake.h			\
 	src/core/or/channelpadding.h			\
 	src/core/or/channeltls.h			\
 	src/core/or/circuit_st.h			\
