@@ -685,7 +685,7 @@ connection_or_get_by_ext_or_id(const char *id)
     return NULL;
   return digestmap_get(orconn_ext_or_id_map, id);
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /** Deallocate the global Extended ORPort identifier list */
 void
