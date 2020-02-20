@@ -731,10 +731,13 @@ getinfo_helper_dir(control_connection_t *control_conn,
          * especially since the rules for using our own extrainfo (including
          * when it might be freed) are different from those for using one
          * we have downloaded. */
-        if (router_extrainfo_digest_is_me(d))
-          sd = &(router_get_my_extrainfo()->cache_info);
-        else
+        if (router_extrainfo_digest_is_me(d)) {
+          extrainfo_t *ei = router_get_my_extrainfo();
+          if (ei)
+            sd = &ei->cache_info;
+        } else {
           sd = extrainfo_get_by_descriptor_digest(d);
+        }
       }
       if (sd) {
         const char *body = signed_descriptor_get_body(sd);
