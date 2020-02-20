@@ -2965,6 +2965,13 @@ on the public Tor network.
 //Out of order because it logically belongs with the other CCs options.
 [[AuthDirInvalidCCs]] **AuthDirInvalidCCs** __CC__,... +
 
+
+[[AuthDirRejectRequestsUnderLoad]] **AuthDirRejectRequestsUnderLoad** **0**|**1**::
+    If set, the directory authority will start rejecting directory requests
+    from non relay connections by sending a 503 error code if it is under
+    bandwidth pressure (reaching the configured limit if any). Relays will
+    always tried to be answered even if this is on. (Default: 1)
+
 [[AuthDirRejectCCs]] **AuthDirRejectCCs** __CC__,...::
     Authoritative directories only. These options contain a comma-separated
     list of country codes such that any server in one of those country codes
@@ -3064,7 +3071,8 @@ on the public Tor network.
     V3 authoritative directories only. Configures the server's preferred delay
     between publishing its vote and assuming it has all the votes from all the
     other authorities. Note that the actual time used is not the server's
-    preferred time, but the consensus of all preferences. (Default: 5 minutes)
+    preferred time, but the consensus of all preferences. (Default: 5
+    minutes)
 
 [[V3AuthVotingInterval]] **V3AuthVotingInterval** __N__ **minutes**|**hours**::
     V3 authoritative directories only. Configures the server's preferred voting
