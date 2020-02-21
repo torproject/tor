@@ -40,6 +40,7 @@ hibernating, phase 2:
 #include "lib/defs/time.h"
 #include "feature/hibernate/hibernate.h"
 #include "core/mainloop/mainloop.h"
+#include "feature/relay/clientkey.h"
 #include "feature/relay/router.h"
 #include "app/config/statefile.h"
 #include "lib/evloop/compat_libevent.h"

@@ -13,6 +13,7 @@
 #include "core/or/or.h"
 
 #include "feature/relay/dns.h"
+#include "feature/relay/clientkey.h"
 #include "feature/relay/ext_orport.h"
 #include "feature/relay/descmgr.h"
 #include "feature/relay/onion_queue.h"
@@ -38,6 +39,7 @@ subsys_relay_shutdown(void)
   clear_pending_onions();
   routerkeys_free_all();
   makedesc_free_all();
+  clientkey_free_all();
   router_free_all();
 }
 

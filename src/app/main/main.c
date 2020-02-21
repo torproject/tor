@@ -49,6 +49,7 @@
 #include "feature/relay/dns.h"
 #include "feature/relay/ext_orport.h"
 #include "feature/relay/descmgr.h"
+#include "feature/relay/clientkey.h"
 #include "feature/relay/routerkeys.h"
 #include "feature/relay/routermode.h"
 #include "feature/rend/rendcache.h"
