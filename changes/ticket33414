@@ -1,0 +1,4 @@
+  o Minor features (client-only compilation mode):
+    - When building without relay mode enabled, do not compile code to
+      manage relay keys and build descriptors. Closes ticket 33414.
+
