@@ -3,6 +3,10 @@
 # WE ARE STILL DISCUSSING OUR DESIRED STYLE AND ITERATING ON IT.
 #     (12 Feb 2020)
 
+# This .clang-format configuration works with clang-format version 6.0
+# and later.  It is known known not to work with version 3.8 and
+# earlier.
+
 ---
 Language:        Cpp
 # Out of all supported styles, LLVM seems closest to our own.
