@@ -75,6 +75,7 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
+#include "feature/relay/clientkey.h"
 #include "feature/relay/router.h"
 #include "feature/rend/rendservice.h"
 #include "feature/stats/geoip_stats.h"

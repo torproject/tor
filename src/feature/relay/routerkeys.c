@@ -16,6 +16,7 @@
 
 #include "core/or/or.h"
 #include "app/config/config.h"
+#include "feature/relay/clientkey.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
 #include "feature/relay/routermode.h"

@@ -24,6 +24,7 @@
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
+#include "feature/relay/clientkey.h"
 #include "feature/relay/relay_config.h"
 #include "feature/relay/router.h"
 #include "feature/relay/descmgr.h"
@@ -32,9 +33,7 @@
 #include "feature/relay/selftest.h"
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_init.h"
-#include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "lib/tls/tortls.h"
 
 #include "feature/dirauth/authmode.h"
 
@@ -86,10 +85,6 @@ static curve25519_keypair_t last_curve25519_onion_key;
 static crypto_pk_t *server_identitykey=NULL;
 /** Digest of server_identitykey. */
 static char server_identitykey_digest[DIGEST_LEN];
-/** Private client "identity key": used to sign bridges' and clients'
- * outbound TLS certificates. Regenerated on startup and on IP address
- * change. */
-static crypto_pk_t *client_identitykey=NULL;
 /** Signing key used for v3 directory material; only set for authorities. */
 static crypto_pk_t *authority_signing_key = NULL;
 /** Key certificate to authenticate v3 directory material; only set for
@@ -328,25 +323,6 @@ set_server_identity_key_digest_testing(const uint8_t *digest)
 }
 #endif /* defined(TOR_UNIT_TESTS) */
 
-/** Make sure that we have set up our identity keys to match or not match as
- * appropriate, and die with an assertion if we have not. */
-static void
-assert_identity_keys_ok(void)
-{
-  if (1)
-    return;
-  tor_assert(client_identitykey);
-  if (public_server_mode(get_options())) {
-    /* assert that we have set the client and server keys to be equal */
-    tor_assert(server_identitykey);
-    tor_assert(crypto_pk_eq_keys(client_identitykey, server_identitykey));
-  } else {
-    /* assert that we have set the client and server keys to be unequal */
-    if (server_identitykey)
-      tor_assert(!crypto_pk_eq_keys(client_identitykey, server_identitykey));
-  }
-}
-
 #ifdef HAVE_MODULE_RELAY
 
 /** Returns the current server identity key; requires that the key has
@@ -357,7 +333,6 @@ get_server_identity_key,(void))
 {
   tor_assert(server_identitykey);
   tor_assert(server_mode(get_options()));
-  assert_identity_keys_ok();
   return server_identitykey;
 }
 
@@ -369,33 +344,6 @@ int
 server_identity_key_is_set(void)
 {
   return server_mode(get_options()) && server_identitykey != NULL;
-}
-
-/** Set the current client identity key to <b>k</b>.
- */
-void
-set_client_identity_key(crypto_pk_t *k)
-{
-  crypto_pk_free(client_identitykey);
-  client_identitykey = k;
-}
-
-/** Returns the current client identity key for use on outgoing TLS
- * connections; requires that the key has been set.
- */
-crypto_pk_t *
-get_tlsclient_identity_key(void)
-{
-  tor_assert(client_identitykey);
-  assert_identity_keys_ok();
-  return client_identitykey;
-}
-
-/** Return true iff the client identity key has been set. */
-int
-client_identity_key_is_set(void)
-{
-  return client_identitykey != NULL;
 }
 
 /** Return the key certificate for this v3 (voting) authority, or NULL
@@ -762,42 +710,6 @@ get_onion_key_grace_period(void)
   return grace_period*24*60*60;
 }
 
-/** Set up Tor's TLS contexts, based on our configuration and keys. Return 0
- * on success, and -1 on failure. */
-int
-router_initialize_tls_context(void)
-{
-  unsigned int flags = 0;
-  const or_options_t *options = get_options();
-  int lifetime = options->SSLKeyLifetime;
-  if (public_server_mode(options))
-    flags |= TOR_TLS_CTX_IS_PUBLIC_SERVER;
-  if (!lifetime) { /* we should guess a good ssl cert lifetime */
-
-    /* choose between 5 and 365 days, and round to the day */
-    unsigned int five_days = 5*24*3600;
-    unsigned int one_year = 365*24*3600;
-    lifetime = crypto_rand_int_range(five_days, one_year);
-    lifetime -= lifetime % (24*3600);
-
-    if (crypto_rand_int(2)) {
-      /* Half the time we expire at midnight, and half the time we expire
-       * one second before midnight. (Some CAs wobble their expiry times a
-       * bit in practice, perhaps to reduce collision attacks; see ticket
-       * 8443 for details about observed certs in the wild.) */
-      lifetime--;
-    }
-  }
-
-  /* It's ok to pass lifetime in as an unsigned int, since
-   * config_parse_interval() checked it. */
-  return tor_tls_context_init(flags,
-                              get_tlsclient_identity_key(),
-                              server_mode(options) ?
-                              get_server_identity_key() : NULL,
-                              (unsigned int)lifetime);
-}
-
 /** Compute fingerprint (or hashed fingerprint if hashed is 1) and write
  * it to 'fingerprint' (or 'hashed-fingerprint'). Return 0 on success, or
  * -1 if Tor should die,
@@ -855,34 +767,12 @@ router_write_fingerprint(int hashed)
   return result;
 }
 
-static int
+int
 init_keys_common(void)
 {
   if (!key_lock)
     key_lock = tor_mutex_new();
 
-  return 0;
-}
-
-int
-init_keys_client(void)
-{
-  crypto_pk_t *prkey;
-  if (init_keys_common() < 0)
-    return -1;
-
-  if (!(prkey = crypto_pk_new()))
-    return -1;
-  if (crypto_pk_generate_key(prkey)) {
-    crypto_pk_free(prkey);
-    return -1;
-  }
-  set_client_identity_key(prkey);
-  /* Create a TLS context. */
-  if (router_initialize_tls_context() < 0) {
-    log_err(LD_GENERAL,"Error creating TLS context for Tor client.");
-    return -1;
-  }
   return 0;
 }
 
@@ -1772,7 +1662,6 @@ router_free_all(void)
   crypto_pk_free(onionkey);
   crypto_pk_free(lastonionkey);
   crypto_pk_free(server_identitykey);
-  crypto_pk_free(client_identitykey);
 
   /* Destroying a locked mutex is undefined behaviour. This mutex may be
    * locked, because multiple threads can access it. But we need to destroy

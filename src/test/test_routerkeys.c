@@ -7,6 +7,7 @@
 #define ROUTER_PRIVATE
 #include "core/or/or.h"
 #include "app/config/config.h"
+#include "feature/relay/clientkey.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
 #include "lib/crypt_ops/crypto_cipher.h"

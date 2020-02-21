@@ -17,12 +17,6 @@
 struct curve25519_keypair_t;
 struct ed25519_keypair_t;
 
-int router_initialize_tls_context(void);
-int init_keys_client(void);
-void set_client_identity_key(crypto_pk_t *k);
-crypto_pk_t *get_tlsclient_identity_key(void);
-int client_identity_key_is_set(void);
-
 #ifdef HAVE_MODULE_RELAY
 
 #define TOR_ROUTERINFO_ERROR_NO_EXT_ADDR     (-1)
@@ -95,6 +89,7 @@ const char *routerinfo_err_to_string(int err);
 int routerinfo_err_is_transient(int err);
 
 void router_free_all(void);
+int init_keys_common(void);
 
 MOCK_DECL(const struct curve25519_keypair_t *,
                  get_current_curve25519_keypair,(void));
@@ -189,6 +184,9 @@ void set_server_identity_key_digest_testing(const uint8_t *digest);
 
 #define init_keys() \
   init_keys_client()
+
+#define init_keys_common() \
+  (0)
 
 #endif /* defined(HAVE_RELAY_MODE) */
 
