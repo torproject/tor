@@ -26,6 +26,9 @@ typedef struct {
   /** When do we publish the consensus? */
   time_t interval_starts;
 
+  /** Our computed dirauth interval */
+  int interval;
+
   /** True iff we have generated and distributed our vote. */
   int have_voted;
   /** True iff we've requested missing votes. */
@@ -57,6 +60,7 @@ void dirauth_sched_recalculate_timing(const or_options_t *options,
                                         time_t now);
 
 time_t dirauth_sched_get_next_valid_after_time(void);
+time_t dirauth_sched_get_cur_valid_after_time(void);
 int dirauth_sched_get_configured_interval(void);
 
 #endif /* !defined(TOR_VOTING_SCHEDULE_H) */

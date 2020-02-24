@@ -139,7 +139,7 @@ get_state_valid_until_time(time_t now)
 
   voting_interval = get_voting_interval();
   /* Find the time the current round started. */
-  beginning_of_current_round = get_start_time_of_current_round();
+  beginning_of_current_round = dirauth_sched_get_cur_valid_after_time();
 
   /* Find how many rounds are left till the end of the protocol run */
   current_round = (now / voting_interval) % total_rounds;

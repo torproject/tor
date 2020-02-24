@@ -51,6 +51,7 @@ create_voting_schedule(const or_options_t *options, time_t now, int severity)
   }
 
   tor_assert(interval > 0);
+  new_voting_schedule->interval = interval;
 
   if (vote_delay + dist_delay > interval/2)
     vote_delay = dist_delay = interval / 4;
@@ -141,6 +142,24 @@ time_t
 dirauth_sched_get_next_valid_after_time(void)
 {
   return dirauth_get_voting_schedule()->interval_starts;
+}
+
+/**
+ * Return our best idea of what the valid-after time for the _current_
+ * consensus, whether we have one or not.
+ *
+ * Dirauth only.
+ **/
+time_t
+dirauth_sched_get_cur_valid_after_time(void)
+{
+  const voting_schedule_t *sched = dirauth_get_voting_schedule();
+  time_t next_start = sched->interval_starts;
+  int interval = sched->interval;
+  int offset = get_options()->TestingV3AuthVotingStartOffset;
+  return voting_sched_get_start_of_interval_after(next_start - interval - 1,
+                                                  interval,
+                                                  offset);
 }
 
 /** Return the voting interval that we are configured to use.
