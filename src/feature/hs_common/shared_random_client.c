@@ -63,10 +63,10 @@ get_start_time_of_current_round(void)
   const or_options_t *options = get_options();
   int voting_interval = get_voting_interval();
   /* First, get the start time of the next round */
-  time_t next_start = voting_schedule_get_next_valid_after_time();
+  time_t next_start = dirauth_sched_get_next_valid_after_time();
   /* Now roll back next_start by a voting interval to find the start time of
      the current round. */
-  time_t curr_start = voting_schedule_get_start_of_next_interval(
+  time_t curr_start = voting_sched_get_start_of_interval_after(
                                      next_start - voting_interval - 1,
                                      voting_interval,
                                      options->TestingV3AuthVotingStartOffset);

@@ -12,7 +12,7 @@
 static void
 test_voting_schedule_interval_start(void *arg)
 {
-#define next_interval voting_schedule_get_start_of_next_interval
+#define next_interval voting_sched_get_start_of_interval_after
   (void)arg;
   char buf[ISO_TIME_LEN+1];
 

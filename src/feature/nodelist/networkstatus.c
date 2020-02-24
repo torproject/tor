@@ -2120,7 +2120,7 @@ networkstatus_set_current_consensus(const char *consensus,
      * the first thing we need to do is recalculate the voting schedule static
      * object so we can use the timings in there needed by some subsystems
      * such as hidden service and shared random. */
-    voting_schedule_recalculate_timing(options, now);
+    dirauth_sched_recalculate_timing(options, now);
     reschedule_dirvote(options);
 
     nodelist_set_consensus(c);
@@ -2772,7 +2772,7 @@ networkstatus_free_all(void)
  * truncated to less than half its size, it is rolled into the
  * previous interval. */
 time_t
-voting_schedule_get_start_of_next_interval(time_t now, int interval,
+voting_sched_get_start_of_interval_after(time_t now, int interval,
                                            int offset)
 {
   struct tm tm;

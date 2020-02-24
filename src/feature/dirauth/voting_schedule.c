@@ -56,9 +56,9 @@ get_voting_schedule(const or_options_t *options, time_t now, int severity)
     vote_delay = dist_delay = interval / 4;
 
   start = new_voting_schedule->interval_starts =
-    voting_schedule_get_start_of_next_interval(now,interval,
+    voting_sched_get_start_of_interval_after(now,interval,
                                       options->TestingV3AuthVotingStartOffset);
-  end = voting_schedule_get_start_of_next_interval(start+1, interval,
+  end = voting_sched_get_start_of_interval_after(start+1, interval,
                                       options->TestingV3AuthVotingStartOffset);
 
   tor_assert(end > start);
@@ -97,7 +97,7 @@ voting_schedule_t voting_schedule;
 
 /* Using the time <b>now</b>, return the next voting valid-after time. */
 time_t
-voting_schedule_get_next_valid_after_time(void)
+dirauth_sched_get_next_valid_after_time(void)
 {
   time_t now = approx_time();
   bool need_to_recalculate_voting_schedule = false;
@@ -123,7 +123,7 @@ voting_schedule_get_next_valid_after_time(void)
 
  done:
   if (need_to_recalculate_voting_schedule) {
-    voting_schedule_recalculate_timing(get_options(), approx_time());
+    dirauth_sched_recalculate_timing(get_options(), approx_time());
     voting_schedule.created_on_demand = 1;
   }
 
@@ -134,7 +134,7 @@ voting_schedule_get_next_valid_after_time(void)
  * doing. All type of tor do that because HS subsystem needs the timing as
  * well to function properly. */
 void
-voting_schedule_recalculate_timing(const or_options_t *options, time_t now)
+dirauth_sched_recalculate_timing(const or_options_t *options, time_t now)
 {
   voting_schedule_t *new_voting_schedule;
 

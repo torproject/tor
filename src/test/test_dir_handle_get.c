@@ -2080,7 +2080,7 @@ test_dir_handle_get_status_vote_d(void* data)
   mock_options->TestingV3AuthInitialDistDelay = 1;
 
   time_t now = 1441223455 -1;
-  voting_schedule_recalculate_timing(mock_options, now);
+  dirauth_sched_recalculate_timing(mock_options, now);
 
   const char *msg_out = NULL;
   int status_out = 0;
@@ -2457,7 +2457,7 @@ test_dir_handle_get_status_vote_next_authority(void* data)
   mock_options->TestingV3AuthInitialDistDelay = 1;
 
   time_t now = 1441223455 -1;
-  voting_schedule_recalculate_timing(mock_options, now);
+  dirauth_sched_recalculate_timing(mock_options, now);
 
   struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, 0,
                                                  &msg_out, &status_out);
@@ -2617,7 +2617,7 @@ test_dir_handle_get_status_vote_current_authority(void* data)
   mock_options->TestingV3AuthInitialDistDelay = 1;
 
   time_t now = 1441223455;
-  voting_schedule_recalculate_timing(mock_options, now-1);
+  dirauth_sched_recalculate_timing(mock_options, now-1);
 
   struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, 0,
                                                  &msg_out, &status_out);
@@ -2737,7 +2737,7 @@ test_dir_handle_get_status_vote_too_late(void* data)
   mock_options->TestingV3AuthInitialDistDelay = base_delay;
 
   time_t now = 1441223455;
-  voting_schedule_recalculate_timing(mock_options, now-1);
+  dirauth_sched_recalculate_timing(mock_options, now-1);
   const time_t voting_starts = voting_schedule.voting_starts;
   const time_t fetch_missing = voting_schedule.fetch_missing_votes;
 
@@ -2770,7 +2770,7 @@ test_dir_handle_get_status_vote_too_late(void* data)
   /* Move the pending vote to previous vote */
   dirvote_act(mock_options, now+1);
   /* And reset the timing */
-  voting_schedule_recalculate_timing(mock_options, now-1);
+  dirauth_sched_recalculate_timing(mock_options, now-1);
 
   /* Between voting starts and fetch missing */
   vote = dirvote_add_vote(VOTE_BODY_V3,
@@ -2781,7 +2781,7 @@ test_dir_handle_get_status_vote_too_late(void* data)
   /* Move the pending vote to previous vote */
   dirvote_act(mock_options, now+1);
   /* And reset the timing */
-  voting_schedule_recalculate_timing(mock_options, now-1);
+  dirauth_sched_recalculate_timing(mock_options, now-1);
 
   /* On voting starts */
   vote = dirvote_add_vote(VOTE_BODY_V3,
@@ -2792,7 +2792,7 @@ test_dir_handle_get_status_vote_too_late(void* data)
   /* Move the pending vote to previous vote */
   dirvote_act(mock_options, now+1);
   /* And reset the timing */
-  voting_schedule_recalculate_timing(mock_options, now-1);
+  dirauth_sched_recalculate_timing(mock_options, now-1);
 
   /* Just before voting starts */
   vote = dirvote_add_vote(VOTE_BODY_V3,
