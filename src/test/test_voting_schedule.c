@@ -4,7 +4,7 @@
 #include "orconfig.h"
 
 #include "core/or/or.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "test/test.h"
 

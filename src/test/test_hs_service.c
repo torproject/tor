@@ -44,7 +44,7 @@
 #include "core/or/versions.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/shared_random_state.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_client.h"

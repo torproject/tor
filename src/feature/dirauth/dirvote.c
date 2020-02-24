@@ -36,7 +36,7 @@
 #include "feature/stats/rephist.h"
 #include "feature/client/entrynodes.h" /* needed for guardfraction methods */
 #include "feature/nodelist/torcert.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/authmode.h"

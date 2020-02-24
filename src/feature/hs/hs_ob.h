@@ -9,7 +9,7 @@
 #ifndef TOR_HS_OB_H
 #define TOR_HS_OB_H
 
-#include "hs_service.h"
+#include "feature/hs/hs_service.h"
 
 bool hs_ob_service_is_instance(const hs_service_t *service);
 

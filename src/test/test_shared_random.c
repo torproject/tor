@@ -21,7 +21,7 @@
 #include "feature/nodelist/dirlist.h"
 #include "feature/dirparse/authcert_parse.h"
 #include "feature/hs_common/shared_random_client.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "feature/dirclient/dir_server_st.h"
 #include "feature/nodelist/networkstatus_st.h"

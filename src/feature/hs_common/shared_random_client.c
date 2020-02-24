@@ -11,7 +11,7 @@
 #include "feature/hs_common/shared_random_client.h"
 
 #include "app/config/config.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 #include "feature/nodelist/networkstatus.h"
 #include "lib/encoding/binascii.h"
 

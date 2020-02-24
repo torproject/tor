@@ -20,7 +20,7 @@
 #include "feature/dirauth/shared_random.h"
 #include "feature/hs_common/shared_random_client.h"
 #include "feature/dirauth/shared_random_state.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 #include "lib/encoding/confline.h"
 #include "lib/version/torversion.h"
 

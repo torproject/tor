@@ -99,7 +99,7 @@
 #include "feature/nodelist/dirlist.h"
 #include "feature/hs_common/shared_random_client.h"
 #include "feature/dirauth/shared_random_state.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/authmode.h"

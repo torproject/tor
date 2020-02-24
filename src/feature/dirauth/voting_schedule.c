@@ -8,7 +8,7 @@
  *        tor. The full feature is built as part of the dirauth module.
  **/
 
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "core/or/or.h"
 #include "app/config/config.h"

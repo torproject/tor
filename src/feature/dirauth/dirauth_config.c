@@ -21,7 +21,7 @@
 #include "core/or/or.h"
 #include "app/config/config.h"
 
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 #include "feature/stats/rephist.h"
 
 #include "feature/dirauth/authmode.h"

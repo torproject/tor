@@ -66,7 +66,7 @@
 #include "feature/dirclient/dirclient_modes.h"
 #include "feature/dirclient/dlstatus.h"
 #include "feature/dircommon/directory.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 #include "feature/dirparse/ns_parse.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_dos.h"

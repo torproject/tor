@@ -16,7 +16,7 @@
 #include "lib/confmgt/confmgt.h"
 #include "lib/encoding/confline.h"
 
-#include "hs_ob.h"
+#include "feature/hs/hs_ob.h"
 
 /* Options config magic number. */
 #define OB_OPTIONS_MAGIC 0x631DE7EA

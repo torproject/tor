@@ -47,7 +47,7 @@
 #include "feature/dirclient/dlstatus.h"
 #include "feature/dircommon/directory.h"
 #include "feature/dircommon/fp_pair.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"

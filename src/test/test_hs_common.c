@@ -32,7 +32,7 @@
 #include "app/config/statefile.h"
 #include "core/or/circuitlist.h"
 #include "feature/dirauth/shared_random.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/networkstatus_st.h"

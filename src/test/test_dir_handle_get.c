@@ -38,7 +38,7 @@
 #include "feature/dircache/dirserv.h"
 #include "feature/dirauth/dirvote.h"
 #include "test/log_test_helpers.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "feature/dircommon/dir_connection_st.h"
 #include "feature/dirclient/dir_server_st.h"
