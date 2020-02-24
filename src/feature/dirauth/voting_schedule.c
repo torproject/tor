@@ -20,50 +20,6 @@
  * Vote scheduling
  * ===== */
 
-/** Return the start of the next interval of size <b>interval</b> (in
- * seconds) after <b>now</b>, plus <b>offset</b>. Midnight always
- * starts a fresh interval, and if the last interval of a day would be
- * truncated to less than half its size, it is rolled into the
- * previous interval. */
-time_t
-voting_schedule_get_start_of_next_interval(time_t now, int interval,
-                                           int offset)
-{
-  struct tm tm;
-  time_t midnight_today=0;
-  time_t midnight_tomorrow;
-  time_t next;
-
-  tor_gmtime_r(&now, &tm);
-  tm.tm_hour = 0;
-  tm.tm_min = 0;
-  tm.tm_sec = 0;
-
-  if (tor_timegm(&tm, &midnight_today) < 0) {
-    // LCOV_EXCL_START
-    log_warn(LD_BUG, "Ran into an invalid time when trying to find midnight.");
-    // LCOV_EXCL_STOP
-  }
-  midnight_tomorrow = midnight_today + (24*60*60);
-
-  next = midnight_today + ((now-midnight_today)/interval + 1)*interval;
-
-  /* Intervals never cross midnight. */
-  if (next > midnight_tomorrow)
-    next = midnight_tomorrow;
-
-  /* If the interval would only last half as long as it's supposed to, then
-   * skip over to the next day. */
-  if (next + interval/2 > midnight_tomorrow)
-    next = midnight_tomorrow;
-
-  next += offset;
-  if (next - interval > now)
-    next -= interval;
-
-  return next;
-}
-
 /* Populate and return a new voting_schedule_t that can be used to schedule
  * voting. The object is allocated on the heap and it's the responsibility of
  * the caller to free it. Can't fail. */
@@ -190,4 +146,3 @@ voting_schedule_recalculate_timing(const or_options_t *options, time_t now)
   memcpy(&voting_schedule, new_voting_schedule, sizeof(voting_schedule));
   voting_schedule_free(new_voting_schedule);
 }
-

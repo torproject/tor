@@ -5,6 +5,7 @@
 
 #include "core/or/or.h"
 #include "feature/dirauth/voting_schedule.h"
+#include "feature/nodelist/networkstatus.h"
 
 #include "test/test.h"
 
@@ -61,4 +62,3 @@ struct testcase_t voting_schedule_tests[] = {
   VS(interval_start, 0),
   END_OF_TESTCASES
 };
-
