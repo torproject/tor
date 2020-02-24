@@ -171,6 +171,7 @@ test_get_subcredentials(void *arg)
   int ret;
   hs_service_t *service = NULL;
   hs_service_config_t config;
+  hs_subcredential_t *subcreds = NULL;
 
   (void) arg;
 
@@ -188,15 +189,23 @@ test_get_subcredentials(void *arg)
   config.ob_master_pubkeys = smartlist_new();
   tt_assert(config.ob_master_pubkeys);
 
-  /* Generate a keypair to add to the list. */
-  ed25519_keypair_generate(&onion_addr_kp_1, 0);
-  smartlist_add(config.ob_master_pubkeys, &onion_addr_kp_1.pubkey);
-
   /* Set up an instance */
   service = tor_malloc_zero(sizeof(hs_service_t));
   service->config = config;
+  /* Setup the service descriptors */
   service->desc_current = service_descriptor_new();
   service->desc_next = service_descriptor_new();
+
+  /* First try to compute subcredentials but with no OB keys. Make sure that
+   * subcreds get NULLed. To do this check we first poison subcreds. */
+  subcreds = (void*)999;
+  tt_ptr_op(subcreds, OP_NE, NULL);
+  size_t num = compute_subcredentials(service, &subcreds);
+  tt_ptr_op(subcreds, OP_EQ, NULL);
+
+  /* Generate a keypair to add to the OB keys list. */
+  ed25519_keypair_generate(&onion_addr_kp_1, 0);
+  smartlist_add(config.ob_master_pubkeys, &onion_addr_kp_1.pubkey);
 
   /* Set up the instance subcredentials */
   char current_subcred[SUBCRED_LEN];
@@ -208,10 +217,11 @@ test_get_subcredentials(void *arg)
   memcpy(service->desc_next->desc->subcredential.subcred, next_subcred,
          SUBCRED_LEN);
 
-  hs_subcredential_t *subcreds = NULL;
-  size_t num = compute_subcredentials(service, &subcreds);
+  /* See that subcreds are computed properly */
+  num = compute_subcredentials(service, &subcreds);
   /* 5 subcredentials: 3 for the frontend, 2 for the instance */
   tt_uint_op(num, OP_EQ, 5);
+  tt_ptr_op(subcreds, OP_NE, NULL);
 
   /* Validate the subcredentials we just got. We'll build them oursevles with
    * the right time period steps and compare. */

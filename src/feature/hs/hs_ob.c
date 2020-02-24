@@ -290,10 +290,10 @@ compute_subcredentials(const hs_service_t *service,
   tor_assert(service->desc_current);
   tor_assert(service->desc_next);
 
-  /* Our caller made sure that we are an OB instance */
+  /* Make sure we are an OB instance, or bail out. */
   num_pkeys = smartlist_len(service->config.ob_master_pubkeys);
   if (!num_pkeys) {
-    subcredentials_out = NULL;
+    *subcredentials_out = NULL;
     return 0;
   }
 
