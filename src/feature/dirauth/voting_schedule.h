@@ -57,5 +57,6 @@ void dirauth_sched_recalculate_timing(const or_options_t *options,
                                         time_t now);
 
 time_t dirauth_sched_get_next_valid_after_time(void);
+int dirauth_sched_get_configured_interval(void);
 
 #endif /* !defined(TOR_VOTING_SCHEDULE_H) */

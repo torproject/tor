@@ -143,6 +143,15 @@ dirauth_sched_get_next_valid_after_time(void)
   return dirauth_get_voting_schedule()->interval_starts;
 }
 
+/** Return the voting interval that we are configured to use.
+ *
+ * Dirauth only. */
+int
+dirauth_sched_get_configured_interval(void)
+{
+  return get_options()->V3AuthVotingInterval;
+}
+
 /** Set voting_schedule to hold the timing for the next vote we should be
  * doing. All type of tor do that because HS subsystem needs the timing as
  * well to function properly. */
