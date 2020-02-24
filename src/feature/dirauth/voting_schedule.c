@@ -24,7 +24,7 @@
  * voting. The object is allocated on the heap and it's the responsibility of
  * the caller to free it. Can't fail. */
 static voting_schedule_t *
-get_voting_schedule(const or_options_t *options, time_t now, int severity)
+create_voting_schedule(const or_options_t *options, time_t now, int severity)
 {
   int interval, vote_delay, dist_delay;
   time_t start;
@@ -95,9 +95,13 @@ voting_schedule_free_(voting_schedule_t *voting_schedule_to_free)
 
 voting_schedule_t voting_schedule;
 
-/* Using the time <b>now</b>, return the next voting valid-after time. */
-time_t
-dirauth_sched_get_next_valid_after_time(void)
+/**
+ * Return the current voting schedule, recreating it if necessary.
+ *
+ * Dirauth only.
+ **/
+static const voting_schedule_t *
+dirauth_get_voting_schedule(void)
 {
   time_t now = approx_time();
   bool need_to_recalculate_voting_schedule = false;
@@ -127,7 +131,16 @@ dirauth_sched_get_next_valid_after_time(void)
     voting_schedule.created_on_demand = 1;
   }
 
-  return voting_schedule.interval_starts;
+  return &voting_schedule;
+}
+
+/** Return the next voting valid-after time.
+ *
+ * Dirauth only. */
+time_t
+dirauth_sched_get_next_valid_after_time(void)
+{
+  return dirauth_get_voting_schedule()->interval_starts;
 }
 
 /** Set voting_schedule to hold the timing for the next vote we should be
@@ -139,7 +152,7 @@ dirauth_sched_recalculate_timing(const or_options_t *options, time_t now)
   voting_schedule_t *new_voting_schedule;
 
   /* get the new voting schedule */
-  new_voting_schedule = get_voting_schedule(options, now, LOG_INFO);
+  new_voting_schedule = create_voting_schedule(options, now, LOG_INFO);
   tor_assert(new_voting_schedule);
 
   /* Fill in the global static struct now */
