@@ -384,7 +384,7 @@ test_get_start_time_functions(void *arg)
   tt_assert(start_time_of_protocol_run);
 
   /* Check that the round start time of the beginning of the run, is itself */
-  tt_int_op(get_start_time_of_current_round(), OP_EQ,
+  tt_int_op(dirauth_sched_get_cur_valid_after_time(), OP_EQ,
             start_time_of_protocol_run);
 
  done:
