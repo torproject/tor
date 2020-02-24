@@ -370,7 +370,7 @@ test_hsdir_revision_counter_check(void *arg)
   hs_descriptor_t *published_desc = NULL;
   char *published_desc_str = NULL;
 
-  uint8_t subcredential[DIGEST256_LEN];
+  hs_subcredential_t subcredential;
   char *received_desc_str = NULL;
   hs_descriptor_t *received_desc = NULL;
 
@@ -407,11 +407,11 @@ test_hsdir_revision_counter_check(void *arg)
     const ed25519_public_key_t *blinded_key;
 
     blinded_key = &published_desc->plaintext_data.blinded_pubkey;
-    hs_get_subcredential(&signing_kp.pubkey, blinded_key, subcredential);
+    hs_get_subcredential(&signing_kp.pubkey, blinded_key, &subcredential);
     received_desc_str = helper_fetch_desc_from_hsdir(blinded_key);
 
     retval = hs_desc_decode_descriptor(received_desc_str,
-                                       subcredential, NULL, &received_desc);
+                                       &subcredential, NULL, &received_desc);
     tt_int_op(retval, OP_EQ, HS_DESC_DECODE_OK);
     tt_assert(received_desc);
 
@@ -444,7 +444,7 @@ test_hsdir_revision_counter_check(void *arg)
     received_desc_str = helper_fetch_desc_from_hsdir(blinded_key);
 
     retval = hs_desc_decode_descriptor(received_desc_str,
-                                       subcredential, NULL, &received_desc);
+                                       &subcredential, NULL, &received_desc);
     tt_int_op(retval, OP_EQ, HS_DESC_DECODE_OK);
     tt_assert(received_desc);
 
@@ -476,7 +476,7 @@ test_client_cache(void *arg)
   ed25519_keypair_t signing_kp;
   hs_descriptor_t *published_desc = NULL;
   char *published_desc_str = NULL;
-  uint8_t wanted_subcredential[DIGEST256_LEN];
+  hs_subcredential_t wanted_subcredential;
   response_handler_args_t *args = NULL;
   dir_connection_t *conn = NULL;
 
@@ -505,8 +505,10 @@ test_client_cache(void *arg)
     retval = hs_desc_encode_descriptor(published_desc, &signing_kp,
                                        NULL, &published_desc_str);
     tt_int_op(retval, OP_EQ, 0);
-    memcpy(wanted_subcredential, published_desc->subcredential, DIGEST256_LEN);
-    tt_assert(!fast_mem_is_zero((char*)wanted_subcredential, DIGEST256_LEN));
+    memcpy(&wanted_subcredential, &published_desc->subcredential,
+           sizeof(hs_subcredential_t));
+    tt_assert(!fast_mem_is_zero((char*)wanted_subcredential.subcred,
+                                DIGEST256_LEN));
   }
 
   /* Test handle_response_fetch_hsdesc_v3() */
@@ -540,8 +542,9 @@ test_client_cache(void *arg)
     const hs_descriptor_t *cached_desc = NULL;
     cached_desc = hs_cache_lookup_as_client(&signing_kp.pubkey);
     tt_assert(cached_desc);
-    tt_mem_op(cached_desc->subcredential, OP_EQ, wanted_subcredential,
-              DIGEST256_LEN);
+    tt_mem_op(cached_desc->subcredential.subcred,
+              OP_EQ, wanted_subcredential.subcred,
+              SUBCRED_LEN);
   }
 
   /* Progress time to next TP and check that desc was cleaned */

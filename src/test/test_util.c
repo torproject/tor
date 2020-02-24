@@ -4572,6 +4572,35 @@ test_util_di_ops(void *arg)
 }
 
 static void
+test_util_memcpy_iftrue_timei(void *arg)
+{
+  (void)arg;
+  char buf1[25];
+  char buf2[25];
+  char buf3[25];
+
+  for (int i = 0; i < 100; ++i) {
+    crypto_rand(buf1, sizeof(buf1));
+    crypto_rand(buf2, sizeof(buf2));
+    memcpy(buf3, buf1, sizeof(buf1));
+
+    /* We just copied buf1 into buf3.  Now we're going to copy buf2 into buf2,
+       iff our coin flip comes up heads. */
+    bool coinflip = crypto_rand_int(2) == 0;
+
+    memcpy_if_true_timei(coinflip, buf3, buf2, sizeof(buf3));
+
+    if (coinflip) {
+      tt_mem_op(buf3, OP_EQ, buf2, sizeof(buf2));
+    } else {
+      tt_mem_op(buf3, OP_EQ, buf1, sizeof(buf1));
+    }
+  }
+ done:
+  ;
+}
+
+static void
 test_util_di_map(void *arg)
 {
   (void)arg;
@@ -6386,6 +6415,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(path_is_relative),
   UTIL_LEGACY(strtok),
   UTIL_LEGACY(di_ops),
+  UTIL_TEST(memcpy_iftrue_timei, 0),
   UTIL_TEST(di_map, 0),
   UTIL_TEST(round_to_next_multiple_of, 0),
   UTIL_TEST(laplace, 0),

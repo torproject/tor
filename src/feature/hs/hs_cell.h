@@ -16,6 +16,8 @@
  * 3.2.2 of the specification). Below this value, the cell must be padded. */
 #define HS_CELL_INTRODUCE1_MIN_SIZE 246
 
+struct hs_subcredential_t;
+
 /** This data structure contains data that we need to build an INTRODUCE1 cell
  * used by the INTRODUCE1 build function. */
 typedef struct hs_cell_introduce1_data_t {
@@ -29,7 +31,7 @@ typedef struct hs_cell_introduce1_data_t {
   /** Introduction point encryption public key. */
   const curve25519_public_key_t *enc_pk;
   /** Subcredentials of the service. */
-  const uint8_t *subcredential;
+  const struct hs_subcredential_t *subcredential;
   /** Onion public key for the ntor handshake. */
   const curve25519_public_key_t *onion_pk;
   /** Rendezvous cookie. */
@@ -55,9 +57,14 @@ typedef struct hs_cell_introduce2_data_t {
      owned by the introduction point object through which we received the
      INTRO2 cell*/
   const curve25519_keypair_t *enc_kp;
-  /** Subcredentials of the service. Pointer owned by the descriptor that owns
-     the introduction point through which we received the INTRO2 cell. */
-  const uint8_t *subcredential;
+  /**
+   * Length of the subcredentials array below.
+   **/
+  size_t n_subcredentials;
+  /** Array of <b>n_subcredentials</b> subcredentials for the service. Pointer
+   * owned by the descriptor that owns the introduction point through which we
+   * received the INTRO2 cell. */
+  const struct hs_subcredential_t *subcredentials;
   /** Payload of the received encoded cell. */
   const uint8_t *payload;
   /** Size of the payload of the received encoded cell. */

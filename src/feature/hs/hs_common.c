@@ -22,6 +22,7 @@
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_dos.h"
+#include "feature/hs/hs_ob.h"
 #include "feature/hs/hs_ident.h"
 #include "feature/hs/hs_service.h"
 #include "feature/hs_common/shared_random_client.h"
@@ -808,12 +809,12 @@ hs_parse_address_impl(const char *address, ed25519_public_key_t *key_out,
 }
 
 /** Using the given identity public key and a blinded public key, compute the
- * subcredential and put it in subcred_out (must be of size DIGEST256_LEN).
+ * subcredential and put it in subcred_out.
  * This can't fail. */
 void
 hs_get_subcredential(const ed25519_public_key_t *identity_pk,
                      const ed25519_public_key_t *blinded_pk,
-                     uint8_t *subcred_out)
+                     hs_subcredential_t *subcred_out)
 {
   uint8_t credential[DIGEST256_LEN];
   crypto_digest_t *digest;
@@ -841,7 +842,8 @@ hs_get_subcredential(const ed25519_public_key_t *identity_pk,
                           sizeof(credential));
   crypto_digest_add_bytes(digest, (const char *) blinded_pk->pubkey,
                           ED25519_PUBKEY_LEN);
-  crypto_digest_get_digest(digest, (char *) subcred_out, DIGEST256_LEN);
+  crypto_digest_get_digest(digest, (char *) subcred_out->subcred,
+                           SUBCRED_LEN);
   crypto_digest_free(digest);
 
   memwipe(credential, 0, sizeof(credential));
@@ -909,30 +911,35 @@ hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn)
  * case the caller would want only one field. checksum_out MUST at least be 2
  * bytes long.
  *
- * Return 0 if parsing went well; return -1 in case of error. */
+ * Return 0 if parsing went well; return -1 in case of error and if errmsg is
+ * non NULL, a human readable string message is set. */
 int
-hs_parse_address(const char *address, ed25519_public_key_t *key_out,
-                 uint8_t *checksum_out, uint8_t *version_out)
+hs_parse_address_no_log(const char *address, ed25519_public_key_t *key_out,
+                        uint8_t *checksum_out, uint8_t *version_out,
+                        const char **errmsg)
 {
   char decoded[HS_SERVICE_ADDR_LEN];
 
   tor_assert(address);
 
+  if (errmsg) {
+    *errmsg = NULL;
+  }
+
   /* Obvious length check. */
   if (strlen(address) != HS_SERVICE_ADDR_LEN_BASE32) {
-    log_warn(LD_REND, "Service address %s has an invalid length. "
-                      "Expected %lu but got %lu.",
-             escaped_safe_str(address),
-             (unsigned long) HS_SERVICE_ADDR_LEN_BASE32,
-             (unsigned long) strlen(address));
+    if (errmsg) {
+      *errmsg = "Invalid length";
+    }
     goto invalid;
   }
 
   /* Decode address so we can extract needed fields. */
   if (base32_decode(decoded, sizeof(decoded), address, strlen(address))
       != sizeof(decoded)) {
-    log_warn(LD_REND, "Service address %s can't be decoded.",
-             escaped_safe_str(address));
+    if (errmsg) {
+      *errmsg = "Unable to base32 decode";
+    }
     goto invalid;
   }
 
@@ -942,6 +949,22 @@ hs_parse_address(const char *address, ed25519_public_key_t *key_out,
   return 0;
  invalid:
   return -1;
+}
+
+/** Same has hs_parse_address_no_log() but emits a log warning on parsing
+ * failure. */
+int
+hs_parse_address(const char *address, ed25519_public_key_t *key_out,
+                 uint8_t *checksum_out, uint8_t *version_out)
+{
+  const char *errmsg = NULL;
+  int ret = hs_parse_address_no_log(address, key_out, checksum_out,
+                                    version_out, &errmsg);
+  if (ret < 0) {
+    log_warn(LD_REND, "Service address %s failed to be parsed: %s",
+             escaped_safe_str(address), errmsg);
+  }
+  return ret;
 }
 
 /** Validate a given onion address. The length, the base32 decoding, and
@@ -1807,6 +1830,7 @@ hs_free_all(void)
   hs_service_free_all();
   hs_cache_free_all();
   hs_client_free_all();
+  hs_ob_free_all();
 }
 
 /** For the given origin circuit circ, decrement the number of rendezvous

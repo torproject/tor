@@ -13,6 +13,7 @@
 #include "feature/hs_common/replaycache.h"
 
 #include "feature/hs/hs_cell.h"
+#include "feature/hs/hs_ob.h"
 #include "core/crypto/hs_ntor.h"
 
 #include "core/or/origin_circuit_st.h"
@@ -67,14 +68,17 @@ compute_introduce_mac(const uint8_t *encoded_cell, size_t encoded_cell_len,
   memwipe(mac_msg, 0, sizeof(mac_msg));
 }
 
-/** From a set of keys, subcredential and the ENCRYPTED section of an
- * INTRODUCE2 cell, return a newly allocated intro cell keys structure.
- * Finally, the client public key is copied in client_pk. On error, return
- * NULL. */
+/**
+ * From a set of keys, a list of subcredentials, and the ENCRYPTED section of
+ * an INTRODUCE2 cell, return an array of newly allocated intro cell keys
+ * structures.  Finally, the client public key is copied in client_pk. On
+ * error, return NULL.
+ **/
 static hs_ntor_intro_cell_keys_t *
 get_introduce2_key_material(const ed25519_public_key_t *auth_key,
                             const curve25519_keypair_t *enc_key,
-                            const uint8_t *subcredential,
+                            size_t n_subcredentials,
+                            const hs_subcredential_t *subcredentials,
                             const uint8_t *encrypted_section,
                             curve25519_public_key_t *client_pk)
 {
@@ -82,17 +86,19 @@ get_introduce2_key_material(const ed25519_public_key_t *auth_key,
 
   tor_assert(auth_key);
   tor_assert(enc_key);
-  tor_assert(subcredential);
+  tor_assert(n_subcredentials > 0);
+  tor_assert(subcredentials);
   tor_assert(encrypted_section);
   tor_assert(client_pk);
 
-  keys = tor_malloc_zero(sizeof(*keys));
+  keys = tor_calloc(n_subcredentials, sizeof(hs_ntor_intro_cell_keys_t));
 
   /* First bytes of the ENCRYPTED section are the client public key. */
   memcpy(client_pk->public_key, encrypted_section, CURVE25519_PUBKEY_LEN);
 
-  if (hs_ntor_service_get_introduce1_keys(auth_key, enc_key, client_pk,
-                                          subcredential, keys) < 0) {
+  if (hs_ntor_service_get_introduce1_keys_multi(auth_key, enc_key, client_pk,
+                                                n_subcredentials,
+                                                subcredentials, keys) < 0) {
     /* Don't rely on the caller to wipe this on error. */
     memwipe(client_pk, 0, sizeof(curve25519_public_key_t));
     tor_free(keys);
@@ -747,6 +753,74 @@ hs_cell_parse_intro_established(const uint8_t *payload, size_t payload_len)
   return ret;
 }
 
+/** For the encrypted INTRO2 cell in <b>encrypted_section</b>, use the crypto
+ * material in <b>data</b> to compute the right ntor keys. Also validate the
+ * INTRO2 MAC to ensure that the keys are the right ones.
+ *
+ * Return NULL on failure to either produce the key material or on MAC
+ * valication. Else a newly allocated intro keys object. */
+static hs_ntor_intro_cell_keys_t *
+get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
+                                   const uint8_t *encrypted_section,
+                                   size_t encrypted_section_len)
+{
+  hs_ntor_intro_cell_keys_t *intro_keys = NULL;
+  hs_ntor_intro_cell_keys_t *intro_keys_result = NULL;
+
+  /* Build the key material out of the key material found in the cell. */
+  intro_keys = get_introduce2_key_material(data->auth_pk, data->enc_kp,
+                                           data->n_subcredentials,
+                                           data->subcredentials,
+                                           encrypted_section,
+                                           &data->client_pk);
+  if (intro_keys == NULL) {
+    log_info(LD_REND, "Invalid INTRODUCE2 encrypted data. Unable to "
+             "compute key material");
+    return NULL;
+  }
+
+  /* Make sure we are not about to underflow. */
+  if (BUG(encrypted_section_len < DIGEST256_LEN)) {
+    return NULL;
+  }
+
+  /* Validate MAC from the cell and our computed key material. The MAC field
+   * in the cell is at the end of the encrypted section. */
+  intro_keys_result = tor_malloc_zero(sizeof(*intro_keys_result));
+  for (unsigned i = 0; i < data->n_subcredentials; ++i) {
+    uint8_t mac[DIGEST256_LEN];
+
+    /* The MAC field is at the very end of the ENCRYPTED section. */
+    size_t mac_offset = encrypted_section_len - sizeof(mac);
+    /* Compute the MAC. Use the entire encoded payload with a length up to the
+     * ENCRYPTED section. */
+    compute_introduce_mac(data->payload,
+                          data->payload_len - encrypted_section_len,
+                          encrypted_section, encrypted_section_len,
+                          intro_keys[i].mac_key,
+                          sizeof(intro_keys[i].mac_key),
+                          mac, sizeof(mac));
+    /* Time-invariant conditional copy: if the MAC is what we expected, then
+     * set intro_keys_result to intro_keys[i]. Otherwise, don't: but don't
+     * leak which one it was! */
+    bool equal = tor_memeq(mac, encrypted_section + mac_offset, sizeof(mac));
+    memcpy_if_true_timei(equal, intro_keys_result, &intro_keys[i],
+                         sizeof(*intro_keys_result));
+  }
+
+  /* We no longer need intro_keys. */
+  memwipe(intro_keys, 0,
+          sizeof(hs_ntor_intro_cell_keys_t) * data->n_subcredentials);
+  tor_free(intro_keys);
+
+  if (safe_mem_is_zero(intro_keys_result, sizeof(*intro_keys_result))) {
+    log_info(LD_REND, "Invalid MAC validation for INTRODUCE2 cell");
+    tor_free(intro_keys_result); /* sets intro_keys_result to NULL */
+  }
+
+  return intro_keys_result;
+}
+
 /** Parse the INTRODUCE2 cell using data which contains everything we need to
  * do so and contains the destination buffers of information we extract and
  * compute from the cell. Return 0 on success else a negative value. The
@@ -795,45 +869,27 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
   /* Check our replay cache for this introduction point. */
   if (replaycache_add_test_and_elapsed(data->replay_cache, encrypted_section,
                                        encrypted_section_len, &elapsed)) {
-    log_warn(LD_REND, "Possible replay detected! An INTRODUCE2 cell with the"
+    log_warn(LD_REND, "Possible replay detected! An INTRODUCE2 cell with the "
                       "same ENCRYPTED section was seen %ld seconds ago. "
                       "Dropping cell.", (long int) elapsed);
     goto done;
   }
 
-  /* Build the key material out of the key material found in the cell. */
-  intro_keys = get_introduce2_key_material(data->auth_pk, data->enc_kp,
-                                           data->subcredential,
-                                           encrypted_section,
-                                           &data->client_pk);
-  if (intro_keys == NULL) {
-    log_info(LD_REND, "Invalid INTRODUCE2 encrypted data. Unable to "
-                      "compute key material on circuit %u for service %s",
-             TO_CIRCUIT(circ)->n_circ_id,
+  /* First bytes of the ENCRYPTED section are the client public key (they are
+   * guaranteed to exist because of the length check above). We are gonna use
+   * the client public key to compute the ntor keys and decrypt the payload:
+   */
+  memcpy(&data->client_pk.public_key, encrypted_section,
+         CURVE25519_PUBKEY_LEN);
+
+  /* Get the right INTRODUCE2 ntor keys and verify the cell MAC */
+  intro_keys = get_introduce2_keys_and_verify_mac(data, encrypted_section,
+                                                  encrypted_section_len);
+  if (!intro_keys) {
+    log_warn(LD_REND, "Could not get valid INTRO2 keys on circuit %u "
+             "for service %s", TO_CIRCUIT(circ)->n_circ_id,
              safe_str_client(service->onion_address));
     goto done;
-  }
-
-  /* Validate MAC from the cell and our computed key material. The MAC field
-   * in the cell is at the end of the encrypted section. */
-  {
-    uint8_t mac[DIGEST256_LEN];
-    /* The MAC field is at the very end of the ENCRYPTED section. */
-    size_t mac_offset = encrypted_section_len - sizeof(mac);
-    /* Compute the MAC. Use the entire encoded payload with a length up to the
-     * ENCRYPTED section. */
-    compute_introduce_mac(data->payload,
-                          data->payload_len - encrypted_section_len,
-                          encrypted_section, encrypted_section_len,
-                          intro_keys->mac_key, sizeof(intro_keys->mac_key),
-                          mac, sizeof(mac));
-    if (tor_memcmp(mac, encrypted_section + mac_offset, sizeof(mac))) {
-      log_info(LD_REND, "Invalid MAC validation for INTRODUCE2 cell on "
-                        "circuit %u for service %s",
-               TO_CIRCUIT(circ)->n_circ_id,
-               safe_str_client(service->onion_address));
-      goto done;
-    }
   }
 
   {

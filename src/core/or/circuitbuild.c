@@ -2819,8 +2819,8 @@ extend_info_dup(extend_info_t *info)
  * If there is no chosen exit, or if we don't know the node_t for
  * the chosen exit, return NULL.
  */
-const node_t *
-build_state_get_exit_node(cpath_build_state_t *state)
+MOCK_IMPL(const node_t *,
+build_state_get_exit_node,(cpath_build_state_t *state))
 {
   if (!state || !state->chosen_exit)
     return NULL;
