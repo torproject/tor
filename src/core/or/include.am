@@ -74,13 +74,11 @@ noinst_HEADERS +=					\
 	src/core/or/or_periodic.h			\
 	src/core/or/or_sys.h				\
 	src/core/or/orconn_event.h			\
-	src/core/or/orconn_event_sys.h			\
 	src/core/or/or_circuit_st.h			\
 	src/core/or/or_connection_st.h			\
 	src/core/or/or_handshake_certs_st.h		\
 	src/core/or/or_handshake_state_st.h		\
 	src/core/or/ocirc_event.h			\
-	src/core/or/ocirc_event_sys.h			\
 	src/core/or/origin_circuit_st.h			\
 	src/core/or/policies.h				\
 	src/core/or/port_cfg_st.h			\

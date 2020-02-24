@@ -19,6 +19,7 @@ include src/lib/fs/include.am
 include src/lib/geoip/include.am
 include src/lib/include.libdonna.am
 include src/lib/intmath/include.am
+include src/lib/llharden/include.am
 include src/lib/lock/include.am
 include src/lib/log/include.am
 include src/lib/math/include.am

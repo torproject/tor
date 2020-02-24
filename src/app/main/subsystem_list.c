@@ -14,9 +14,7 @@
 #include "lib/cc/torint.h"
 
 #include "core/mainloop/mainloop_sys.h"
-#include "core/or/ocirc_event_sys.h"
 #include "core/or/or_sys.h"
-#include "core/or/orconn_event_sys.h"
 #include "feature/control/btrack_sys.h"
 #include "lib/compress/compress_sys.h"
 #include "lib/crypt_ops/crypto_sys.h"
@@ -24,7 +22,7 @@
 #include "lib/log/log_sys.h"
 #include "lib/net/network_sys.h"
 #include "lib/process/process_sys.h"
-#include "lib/process/winprocess_sys.h"
+#include "lib/llharden/winprocess_sys.h"
 #include "lib/thread/thread_sys.h"
 #include "lib/time/time_sys.h"
 #include "lib/tls/tortls_sys.h"
@@ -46,27 +44,25 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_torerr,
 
   &sys_wallclock,
-  &sys_threads,
   &sys_logging,
+  &sys_threads,
 
   &sys_time,
-  &sys_network,
 
-  &sys_compress,
   &sys_crypto,
+  &sys_compress,
+  &sys_network,
   &sys_tortls,
-  &sys_process,
-
-  &sys_orconn_event,
-  &sys_ocirc_event,
-  &sys_btrack,
 
   &sys_evloop,
+  &sys_process,
 
   &sys_mainloop,
   &sys_or,
 
   &sys_relay,
+
+  &sys_btrack,
 
   &sys_dirauth,
 };

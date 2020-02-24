@@ -8,7 +8,7 @@
 
 #include "orconfig.h"
 #include "lib/subsys/subsys.h"
-#include "lib/process/winprocess_sys.h"
+#include "lib/llharden/winprocess_sys.h"
 
 #include <stdbool.h>
 #include <stddef.h>
