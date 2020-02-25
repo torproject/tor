@@ -17,6 +17,7 @@
 #include "core/or/or.h"
 #include "core/or/circuituse.h"
 #include "app/config/config.h"
+#include "feature/dirclient/dirclient.h"
 #include "core/or/status.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/relay.h"
@@ -145,6 +146,8 @@ log_heartbeat(time_t now)
          "circuits open. I've sent %s and received %s.%s",
          uptime, count_circuits(), bw_sent, bw_rcvd,
          hibernating?" We are currently hibernating.":"");
+
+  dirclient_dump_total_dls();
 
   if (server_mode(options) && accounting_is_enabled(options) && !hibernating) {
     log_accounting(now, options);

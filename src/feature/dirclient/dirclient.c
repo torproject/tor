@@ -21,6 +21,7 @@
 #include "feature/client/entrynodes.h"
 #include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
+#include "feature/dirclient/dirclient.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/shared_random.h"
 #include "feature/dircache/dirserv.h"
@@ -1964,6 +1965,44 @@ dir_client_decompress_response_body(char **bodyp, size_t *bodylenp,
   return rv;
 }
 
+/**
+ * Total number of bytes downloaded of each directory purpose, when
+ * bootstrapped, and when not bootstrapped.
+ *
+ * (For example, the number of bytes downloaded of purpose p while
+ * not fully bootstrapped is total_dl[p][false].)
+ **/
+static uint64_t total_dl[DIR_PURPOSE_MAX_][2];
+
+/**
+ * Heartbeat: dump a summary of how many bytes of which purpose we've
+ * downloaded, when bootstrapping and when not bootstrapping.
+ **/
+void
+dirclient_dump_total_dls(void)
+{
+  const or_options_t *options = get_options();
+  for (int bootstrapped = 0; bootstrapped < 2; ++bootstrapped) {
+    bool first_time = true;
+    for (int i=0; i < DIR_PURPOSE_MAX_; ++i) {
+      uint64_t n = total_dl[i][0];
+      if (n == 0)
+        continue;
+      if (options->SafeLogging_ != SAFELOG_SCRUB_NONE &&
+          purpose_needs_anonymity(i, ROUTER_PURPOSE_GENERAL, NULL))
+        continue;
+      if (first_time) {
+        log_notice(LD_NET,
+                   "While %sbootstrapping, fetched this many bytes: ",
+                   bootstrapped?"not ":"");
+        first_time = false;
+      }
+      log_notice(LD_NET, "    %"PRIu64" (%s)",
+                 n, dir_conn_purpose_to_string(i));
+    }
+  }
+}
+
 /** We are a client, and we've finished reading the server's
  * response. Parse it and act appropriately.
  *
@@ -1996,6 +2035,16 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                             conn->requested_resource);
 
   received_bytes = connection_get_inbuf_len(TO_CONN(conn));
+
+  log_debug(LD_DIR, "Downloaded %"TOR_PRIuSZ" bytes on connection of purpose "
+             "%s; bootstrap %d%%",
+             received_bytes,
+             dir_conn_purpose_to_string(conn->base_.purpose),
+             control_get_bootstrap_percent());
+  {
+    bool bootstrapped = control_get_bootstrap_percent() == 100;
+    total_dl[conn->base_.purpose][bootstrapped] += received_bytes;
+  }
 
   switch (connection_fetch_from_buf_http(TO_CONN(conn),
                               &headers, MAX_HEADERS_SIZE,
