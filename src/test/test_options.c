@@ -4276,7 +4276,8 @@ test_options_trial_assign(void *arg)
   tt_int_op(r, OP_EQ, 0);
   v = options_trial_assign(lines, 0, &msg);
   tt_int_op(v, OP_EQ, SETOPT_ERR_PARSE);
-  tt_str_op(msg, OP_EQ, "Unrecognized value ambidextrous.");
+  tt_str_op(msg, OP_EQ,
+            "Unrecognized value ambidextrous. Allowed values are 0 and 1.");
   tor_free(msg);
   config_free_lines(lines);
 
