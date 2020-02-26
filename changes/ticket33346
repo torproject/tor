@@ -1,0 +1,3 @@
+  o Minor features (linux seccomp2 sandbox):
+    - Permit the unlinkat() syscall, which some Libc implementations
+      use to implement unlink(). Closes ticket 33346.
