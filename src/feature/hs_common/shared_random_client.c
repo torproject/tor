@@ -42,7 +42,7 @@ srv_to_control_string(const sr_srv_t *srv)
 
 /* This is an unpleasing workaround for tests.  Our unit tests assume that we
  * are scheduling all of our shared random stuff as if we were a directory
- * authority, but they do not always
+ * authority, but they do not always set V3AuthoritativeDir.
  */
 #ifdef TOR_UNIT_TESTS
 #define ASSUME_AUTHORITY_SCHEDULING 1
