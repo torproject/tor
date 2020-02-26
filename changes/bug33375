@@ -1,0 +1,6 @@
+  o Minor bugfixes (coding best practices checks):
+    - Stop advertising an IPv6 exit policy when DNS is broken for IPv6 by
+      marking the relay descriptor dirty for 24 hours, not advertising an
+      IPv6 exit policy with a dirty descriptor, and then resetting the
+      IPv6 DNS broken count every 24 hours. Fixes bug 33375; bugfix on
+      0.2.9.14. Patch by Neel Chauhan.

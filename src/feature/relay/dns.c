@@ -109,6 +109,8 @@ static int answer_is_wildcarded(const char *ip);
 static int evdns_err_is_transient(int err);
 static void inform_pending_connections(cached_resolve_t *resolve);
 static void make_pending_resolve_cached(cached_resolve_t *cached);
+static void dns_launch_ipv6_broken_reset(void);
+static void dns_reset_ipv6_broken(evutil_socket_t fd, short event, void *args);
 
 #ifdef DEBUG_DNS_CACHE
 static void assert_cache_ok_(void);
@@ -127,6 +129,8 @@ static uint64_t n_ipv6_requests_made = 0;
 static uint64_t n_ipv6_timeouts = 0;
 /** Global: Do we think that IPv6 DNS is broken? */
 static int dns_is_broken_for_ipv6 = 0;
+/** Has IPv6 DNS failed ever? */
+static int dns_was_broken_for_ipv6 = 0;
 
 /** Function to compare hashed resolves on their addresses; used to
  * implement hash tables. */
@@ -1559,7 +1563,10 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
         log_notice(LD_EXIT, "More than half of our IPv6 requests seem to "
                    "have timed out. I'm going to assume I can't get AAAA "
                    "responses.");
+        mark_my_descriptor_dirty("IPv6 DNS is broken");
         dns_is_broken_for_ipv6 = 1;
+        dns_was_broken_for_ipv6 = 1;
+        dns_launch_ipv6_broken_reset();
       }
     }
   }
@@ -2026,6 +2033,26 @@ dns_launch_correctness_checks(void)
   }
 }
 
+/** If appropriate, if IPv6 DNS failed, reset the countner every 24 hours */
+static void
+dns_launch_ipv6_broken_reset(void)
+{
+  static struct event *launch_event = NULL;
+  struct timeval timeout;
+
+  if (dns_was_broken_for_ipv6)
+    return;
+
+  if (!launch_event)
+    launch_event = tor_evtimer_new(tor_libevent_get_base(),
+                                   dns_reset_ipv6_broken, NULL);
+  timeout.tv_sec = 24 * 60 * 60;
+  timeout.tv_usec = 0;
+  if (evtimer_add(launch_event, &timeout) < 0) {
+    log_warn(LD_BUG, "Couldn't add timer for reset ipv6 dns broken count");
+  }
+}
+
 /** Return true iff our DNS servers lie to us too much to be trusted. */
 int
 dns_seems_to_be_broken(void)
@@ -2038,6 +2065,17 @@ int
 dns_seems_to_be_broken_for_ipv6(void)
 {
   return dns_is_broken_for_ipv6;
+}
+
+/** Reset the counter that states that IPv6 DNS is broken. */
+static void
+dns_reset_ipv6_broken(evutil_socket_t fd, short event, void *args)
+{
+  (void)fd;
+  (void)event;
+  (void)args;
+
+  dns_is_broken_for_ipv6 = 0;
 }
 
 /** Forget what we've previously learned about our DNS servers' correctness. */
