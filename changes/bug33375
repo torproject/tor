@@ -1,0 +1,4 @@
+  o Minor bugfixes (coding best practices checks):
+    - Stop advertising an IPv6 exit policy when DNS is broken for IPv6 by
+      marking the relay descriptor dirty for 24 hours. Fixes bug 33375;
+      bugfix on 0.2.4.7-alpha. Patch by Neel Chauhan.

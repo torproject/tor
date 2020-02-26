@@ -83,6 +83,9 @@
  * that the resolver is wedged? */
 #define RESOLVE_MAX_TIMEOUT 300
 
+/** If IPv6 DNS fails, how long should we not advertise an IPv6 exit policy? */
+#define IPV6_FAILED_EXIT_POLICY_TIMEOUT 86400 /* 24 hours */
+
 /** Our evdns_base; this structure handles all our name lookups. */
 static struct evdns_base *the_evdns_base = NULL;
 
@@ -109,6 +112,8 @@ static int answer_is_wildcarded(const char *ip);
 static int evdns_err_is_transient(int err);
 static void inform_pending_connections(cached_resolve_t *resolve);
 static void make_pending_resolve_cached(cached_resolve_t *cached);
+static void dns_schedule_ipv6_broken_reset(void);
+static void dns_reset_ipv6_broken(evutil_socket_t fd, short event, void *args);
 
 #ifdef DEBUG_DNS_CACHE
 static void assert_cache_ok_(void);
@@ -1486,7 +1491,11 @@ configure_nameservers(int force)
   if (evdns_base_count_nameservers(the_evdns_base) == 1) {
     SET("max-timeouts:", "1000000");
   } else {
-    SET("max-timeouts:", "10");
+    if (options->TestingTorNetwork) {
+      SET("max-timeouts:", "1");
+    } else {
+      SET("max-timeouts:", "1000");
+    }
   }
 
   // Elongate the queue of maximum inflight dns requests, so if a bunch
@@ -1559,7 +1568,9 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
         log_notice(LD_EXIT, "More than half of our IPv6 requests seem to "
                    "have timed out. I'm going to assume I can't get AAAA "
                    "responses.");
+        mark_my_descriptor_dirty("IPv6 DNS is broken");
         dns_is_broken_for_ipv6 = 1;
+        dns_schedule_ipv6_broken_reset();
       }
     }
   }
@@ -2026,6 +2037,23 @@ dns_launch_correctness_checks(void)
   }
 }
 
+/** If appropriate, if IPv6 DNS failed, reset the countner every 24 hours */
+static void
+dns_schedule_ipv6_broken_reset(void)
+{
+  static struct event *launch_event = NULL;
+  struct timeval timeout;
+
+  if (!launch_event)
+    launch_event = tor_evtimer_new(tor_libevent_get_base(),
+                                   dns_reset_ipv6_broken, NULL);
+  timeout.tv_sec = IPV6_FAILED_EXIT_POLICY_TIMEOUT;
+  timeout.tv_usec = 0;
+  if (evtimer_add(launch_event, &timeout) < 0) {
+    log_warn(LD_BUG, "Couldn't add timer for reset ipv6 dns broken count");
+  }
+}
+
 /** Return true iff our DNS servers lie to us too much to be trusted. */
 int
 dns_seems_to_be_broken(void)
@@ -2038,6 +2066,17 @@ int
 dns_seems_to_be_broken_for_ipv6(void)
 {
   return dns_is_broken_for_ipv6;
+}
+
+/** Reset the counter that states that IPv6 DNS is broken. */
+static void
+dns_reset_ipv6_broken(evutil_socket_t fd, short event, void *args)
+{
+  (void)fd;
+  (void)event;
+  (void)args;
+
+  dns_is_broken_for_ipv6 = 0;
 }
 
 /** Forget what we've previously learned about our DNS servers' correctness. */

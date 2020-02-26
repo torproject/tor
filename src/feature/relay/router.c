@@ -1939,6 +1939,12 @@ get_my_declared_family(const or_options_t *options)
   return result;
 }
 
+#ifdef HAVE_MODULE_RELAY
+#define IPV6_DNS_NOT_BROKEN !dns_seems_to_be_broken_for_ipv6()
+#else
+#define IPV6_DNS_NOT_BROKEN 1
+#endif
+
 /** Allocate a fresh, unsigned routerinfo for this OR, without any of the
  * fields that depend on the corresponding extrainfo.
  *
@@ -2053,7 +2059,7 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
     policy_is_reject_star(ri->exit_policy, AF_INET, 1) &&
     policy_is_reject_star(ri->exit_policy, AF_INET6, 1);
 
-  if (options->IPv6Exit) {
+  if (options->IPv6Exit && IPV6_DNS_NOT_BROKEN) {
     char *p_tmp = policy_summarize(ri->exit_policy, AF_INET6);
     if (p_tmp)
       ri->ipv6_exit_policy = parse_short_policy(p_tmp);
