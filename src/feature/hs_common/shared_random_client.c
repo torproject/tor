@@ -233,8 +233,10 @@ sr_state_get_start_time_of_current_protocol_run(void)
   time_t beginning_of_curr_round;
 
   /* This function is not used for voting purposes, so if we have a live
-     consensus, use its valid-after as the beginning of the current round,
-     otherwise resort to the voting schedule which should always exist. */
+     consensus, use its valid-after as the beginning of the current round.
+     If we have no consensus but we're an authority, use our own
+     schedule. Otherwise, we have a bug somewhere, so we fall back to the
+     default voting interval. */
   networkstatus_t *ns = networkstatus_get_live_consensus(approx_time());
   if (ns) {
     beginning_of_curr_round = ns->valid_after;
