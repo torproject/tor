@@ -229,10 +229,16 @@ units_parse_u64(void *target, const char *value, char **errmsg,
   tor_assert(table);
   uint64_t *v = (uint64_t*)target;
   int ok=1;
-  *v = config_parse_units(value, table, &ok);
+  char *msg = NULL;
+  *v = config_parse_units(value, table, &ok, &msg);
   if (!ok) {
-    *errmsg = tor_strdup("Provided value is malformed or out of bounds.");
+    tor_asprintf(errmsg, "Provided value is malformed or out of bounds: %s",
+                 msg);
+    tor_free(msg);
     return -1;
+  }
+  if (BUG(msg)) {
+    tor_free(msg);
   }
   return 0;
 }
@@ -245,10 +251,16 @@ units_parse_int(void *target, const char *value, char **errmsg,
   tor_assert(table);
   int *v = (int*)target;
   int ok=1;
-  uint64_t u64 = config_parse_units(value, table, &ok);
+  char *msg = NULL;
+  uint64_t u64 = config_parse_units(value, table, &ok, &msg);
   if (!ok) {
-    *errmsg = tor_strdup("Provided value is malformed or out of bounds.");
+    tor_asprintf(errmsg, "Provided value is malformed or out of bounds: %s",
+                 msg);
+    tor_free(msg);
     return -1;
+  }
+  if (BUG(msg)) {
+    tor_free(msg);
   }
   if (u64 > INT_MAX) {
     tor_asprintf(errmsg, "Provided value %s is too large", value);
