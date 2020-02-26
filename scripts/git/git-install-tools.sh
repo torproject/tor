@@ -181,7 +181,7 @@ if [[ $INSTALL_ALIASES = 1 ]]; then
 
     note "Setting aliases"
     for tool in "${TOOL_NAMES[@]}"; do
-        $RUN git config --global "alias.$tool" "\!${TOR_DEVTOOLS_DIR}/git-${tool}.sh"
+        $RUN git config --global "alias.$tool" \!"${TOR_DEVTOOLS_DIR}/git-${tool}.sh"
     done
 
 fi
