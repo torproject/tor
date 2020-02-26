@@ -444,6 +444,12 @@ config_service_v3(const config_line_t *line_,
   return -1;
 }
 
+/**
+ * Header key indicating the start of a new hidden service configuration
+ * block.
+ **/
+static const char SECTION_HEADER[] = "HiddenServiceDir";
+
 /** Configure a service using the given options in line_ and options. This is
  * called for any service regardless of its version which means that all
  * directives in this function are generic to any service version. This
@@ -456,12 +462,11 @@ config_service_v3(const config_line_t *line_,
  *
  * Return 0 on success else -1. */
 static int
-config_generic_service(const config_line_t *line_,
+config_generic_service(const config_line_t *line,
                        const or_options_t *options,
                        hs_service_t *service)
 {
   int dir_seen = 0;
-  const config_line_t *line;
   hs_service_config_t *config;
   /* If this is set, we've seen a duplicate of this option. Keep the string
    * so we can log the directive. */
@@ -471,25 +476,23 @@ config_generic_service(const config_line_t *line_,
   int have_dir_group_read = 0, have_max_streams = 0;
   int have_max_streams_close = 0;
 
-  tor_assert(line_);
+  tor_assert(line);
   tor_assert(options);
   tor_assert(service);
 
   /* Makes thing easier. */
   config = &service->config;
 
+  if (BUG(strcasecmp(line->key, "HiddenServiceDir")))
+    return -1;
+
   /* The first line starts with HiddenServiceDir so we consider what's next is
    * the configuration of the service. */
-  for (line = line_; line ; line = line->next) {
+  for ( ; line ; line = line->next) {
     int ok = 0;
 
     /* This indicate that we have a new service to configure. */
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
-      /* This function only configures one service at a time so if we've
-       * already seen one, stop right now. */
-      if (dir_seen) {
-        break;
-      }
       /* Ok, we've seen one and we are about to configure it. */
       dir_seen = 1;
       config->directory_path = tor_strdup(line->value);
@@ -690,8 +693,8 @@ config_service(const config_line_t *line, const or_options_t *options,
 int
 hs_config_service_all(const or_options_t *options, int validate_only)
 {
-  int dir_option_seen = 0, ret = -1;
-  const config_line_t *line;
+  int ret = -1;
+  config_line_t *remaining = NULL;
   smartlist_t *new_service_list = NULL;
 
   tor_assert(options);
@@ -700,23 +703,24 @@ hs_config_service_all(const or_options_t *options, int validate_only)
    * validation and staging for >= v3. */
   new_service_list = smartlist_new();
 
-  for (line = options->RendConfigLines; line; line = line->next) {
-    /* Ignore all directives that aren't the start of a service. */
-    if (strcasecmp(line->key, "HiddenServiceDir")) {
-      if (!dir_option_seen) {
-        log_warn(LD_CONFIG, "%s with no preceding HiddenServiceDir directive",
-                 line->key);
-        goto err;
-      }
-      continue;
-    }
-    /* Flag that we've seen a directory directive and we'll use it to make
-     * sure that the torrc options ordering is actually valid. */
-    dir_option_seen = 1;
+  /* We need to start with a HiddenServiceDir line */
+  if (options->RendConfigLines &&
+      strcasecmp(options->RendConfigLines->key, SECTION_HEADER)) {
+    log_warn(LD_CONFIG, "%s with no preceding %s directive",
+             options->RendConfigLines->key, SECTION_HEADER);
+    goto err;
+  }
+
+  remaining = config_lines_dup(options->RendConfigLines);
+  while (remaining) {
+    config_line_t *section = remaining;
+    remaining = config_lines_partition(section, SECTION_HEADER);
 
     /* Try to configure this service now. On success, it will be added to the
      * list and validated against the service in that same list. */
-    if (config_service(line, options, new_service_list) < 0) {
+    int rv = config_service(section, options, new_service_list);
+    config_free_lines(section);
+    if (rv < 0) {
       goto err;
     }
   }
