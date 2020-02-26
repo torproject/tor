@@ -58,10 +58,20 @@ get_voting_interval(void)
   networkstatus_t *consensus = networkstatus_get_live_consensus(time(NULL));
 
   if (consensus) {
+    /* Ideally we have a live consensus and we can just use that. */
     interval = (int)(consensus->fresh_until - consensus->valid_after);
   } else if (authdir_mode(get_options()) || ASSUME_AUTHORITY_SCHEDULING) {
+    /* If we don't have a live consensus and we're an authority,
+     * we should believe our own view of what the schedule ought to be. */
     interval = dirauth_sched_get_configured_interval();
+  } else if ((consensus = networkstatus_get_latest_consensus())) {
+    /* If we're a client, then maybe a latest consensus is good enough?
+     * It's better than falling back to the non-consensus case. */
+    interval = (int)(consensus->fresh_until - consensus->valid_after);
   } else {
+    /* We should never be reaching this point, since a client should never
+     * call this code unless they have some kind of a consensus. All we can
+     * do is hope that this network is using the default voting interval. */
     tor_assert_nonfatal_unreached_once();
     interval = DEFAULT_NETWORK_VOTING_INTERVAL;
   }
@@ -235,15 +245,21 @@ sr_state_get_start_time_of_current_protocol_run(void)
   /* This function is not used for voting purposes, so if we have a live
      consensus, use its valid-after as the beginning of the current round.
      If we have no consensus but we're an authority, use our own
-     schedule. Otherwise, we have a bug somewhere, so we fall back to the
-     default voting interval. */
+     schedule.  Otherwise, try using our view of the voting interval
+     to figure out when the current round _should_ be starting.
+  */
   networkstatus_t *ns = networkstatus_get_live_consensus(approx_time());
   if (ns) {
     beginning_of_curr_round = ns->valid_after;
   } else if (authdir_mode(get_options()) || ASSUME_AUTHORITY_SCHEDULING) {
     beginning_of_curr_round = dirauth_sched_get_cur_valid_after_time();
   } else {
-    tor_assert_nonfatal_unreached_once();
+    /* voting_interval comes from get_voting_interval(), so if we're in
+     * this case as a client, we already tried to get the voting interval
+     * from the latest_consensus and gave a bug warning if we couldn't.
+     *
+     * We wouldn't want to look at the latest consensus's valid_after time,
+     * since that would be out of date. */
     beginning_of_curr_round = voting_sched_get_start_of_interval_after(
                                              approx_time() - voting_interval,
                                              voting_interval,
