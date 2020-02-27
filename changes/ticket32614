@@ -1,5 +1,6 @@
   o Major bugfixes (onion service):
     - If an rendevous point fails multiple times, we mark the intro point
-      as bad when cleaning up the circuit. This helps avoid buggy or
+      as bad when cleaning up the circuit. Previously, we kept rendevous
+      points even if they failed often. This change helps avoid buggy or
       malicious intro points. Fixes bug 32614; bugfix on 0.3.2.1-alpha;
       Patch by Neel Chauhan.
