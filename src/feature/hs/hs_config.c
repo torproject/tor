@@ -172,31 +172,18 @@ service_is_duplicate_in_list(const smartlist_t *service_list,
   return ret;
 }
 
-/** Helper function: Given an configuration option name, its value, a minimum
- * min and a maxium max, parse the value as a uint64_t. On success, ok is set
- * to 1 and ret is the parsed value. On error, ok is set to 0 and ret must be
- * ignored. This function logs both on error and success. */
-static uint64_t
-helper_parse_uint64(const char *opt, const char *value, uint64_t min,
-                    uint64_t max, int *ok)
+/** Check whether an integer <b>i</b> is out of bounds (not between <b>low</b>
+ * and <b>high</b> incusive).  If it is, then log a warning about the option
+ * <b>name</b>, and return true. Otherwise return false. */
+static bool
+check_value_oob(int i, const char *name, int low, int high)
 {
-  uint64_t ret = 0;
-
-  tor_assert(opt);
-  tor_assert(value);
-  tor_assert(ok);
-
-  *ok = 0;
-  ret = tor_parse_uint64(value, 10, min, max, ok, NULL);
-  if (!*ok) {
-    log_warn(LD_CONFIG, "%s must be between %" PRIu64 " and %"PRIu64
-                        ", not %s.",
-             opt, min, max, value);
-    goto err;
+  if (i < low || i > high) {
+    log_warn(LD_CONFIG, "%s must be between %d and %d, not %d.",
+             name, low, high, i);
+    return true;
   }
-  log_info(LD_CONFIG, "%s was parsed to %" PRIu64, opt, ret);
- err:
-  return ret;
+  return false;
 }
 
 /** Helper function: Given a configuration option and its value, parse the
@@ -359,126 +346,71 @@ config_validate_service(const hs_service_config_t *config)
   return -1;
 }
 
-/** Configuration funcion for a version 3 service. The line_ must be pointing
- * to the directive directly after a HiddenServiceDir. That way, when hitting
- * the next HiddenServiceDir line or reaching the end of the list of lines, we
- * know that we have to stop looking for more options. The given service
+/** Configuration funcion for a version 3 service. The given service
  * object must be already allocated and passed through
  * config_generic_service() prior to calling this function.
  *
  * Return 0 on success else a negative value. */
 static int
-config_service_v3(const config_line_t *line_,
+config_service_v3(const hs_opts_t *hs_opts,
                   hs_service_config_t *config)
 {
-  int have_num_ip = 0;
-  bool export_circuit_id = false; /* just to detect duplicate options */
-  bool dos_enabled = false, dos_rate_per_sec = false;
-  bool dos_burst_per_sec = false, ob_instance = false;
-  const char *dup_opt_seen = NULL;
-  const config_line_t *line;
-
   tor_assert(config);
+  tor_assert(hs_opts);
 
-  for (line = line_; line; line = line->next) {
-    int ok = 0;
-    if (!strcasecmp(line->key, "HiddenServiceDir")) {
-      /* We just hit the next hidden service, stop right now. */
-      break;
+  /* Number of introduction points. */
+  if (check_value_oob(hs_opts->HiddenServiceNumIntroductionPoints,
+                      "HiddenServiceNumIntroductionPoints",
+                      NUM_INTRO_POINTS_DEFAULT,
+                      HS_CONFIG_V3_MAX_INTRO_POINTS)) {
+    goto err;
+  }
+  config->num_intro_points = hs_opts->HiddenServiceNumIntroductionPoints;
+
+  /* Circuit ID export setting. */
+  if (hs_opts->HiddenServiceExportCircuitID) {
+    int ok;
+    config->circuit_id_protocol =
+      helper_parse_circuit_id_protocol("HiddenServcieExportCircuitID",
+                                       hs_opts->HiddenServiceExportCircuitID,
+                                       &ok);
+    if (!ok) {
+      goto err;
     }
-    /* Number of introduction points. */
-    if (!strcasecmp(line->key, "HiddenServiceNumIntroductionPoints")) {
-      config->num_intro_points =
-        (unsigned int) helper_parse_uint64(line->key, line->value,
-                                           NUM_INTRO_POINTS_DEFAULT,
-                                           HS_CONFIG_V3_MAX_INTRO_POINTS,
-                                           &ok);
-      if (!ok || have_num_ip) {
-        if (have_num_ip)
-          dup_opt_seen = line->key;
-        goto err;
-      }
-      have_num_ip = 1;
-      continue;
-    }
-    if (!strcasecmp(line->key, "HiddenServiceExportCircuitID")) {
-      config->circuit_id_protocol =
-        helper_parse_circuit_id_protocol(line->key, line->value, &ok);
-      if (!ok || export_circuit_id) {
-        if (export_circuit_id) {
-          dup_opt_seen = line->key;
-        }
-        goto err;
-      }
-      export_circuit_id = true;
-      continue;
-    }
-    if (!strcasecmp(line->key, "HiddenServiceEnableIntroDoSDefense")) {
-      config->has_dos_defense_enabled =
-        (unsigned int) helper_parse_uint64(line->key, line->value,
-                                           HS_CONFIG_V3_DOS_DEFENSE_DEFAULT,
-                                           1, &ok);
-      if (!ok || dos_enabled) {
-        if (dos_enabled) {
-          dup_opt_seen = line->key;
-        }
-        goto err;
-      }
-      dos_enabled = true;
-      continue;
-    }
-    if (!strcasecmp(line->key, "HiddenServiceEnableIntroDoSRatePerSec")) {
-      config->intro_dos_rate_per_sec =
-        (unsigned int) helper_parse_uint64(line->key, line->value,
-                              HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN,
-                              HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX, &ok);
-      if (!ok || dos_rate_per_sec) {
-        if (dos_rate_per_sec) {
-          dup_opt_seen = line->key;
-        }
-        goto err;
-      }
-      dos_rate_per_sec = true;
-      log_info(LD_REND, "Service INTRO2 DoS defenses rate set to: %" PRIu32,
-               config->intro_dos_rate_per_sec);
-      continue;
-    }
-    if (!strcasecmp(line->key, "HiddenServiceEnableIntroDoSBurstPerSec")) {
-      config->intro_dos_burst_per_sec =
-        (unsigned int) helper_parse_uint64(line->key, line->value,
-                              HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN,
-                              HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MAX, &ok);
-      if (!ok || dos_burst_per_sec) {
-        if (dos_burst_per_sec) {
-          dup_opt_seen = line->key;
-        }
-        goto err;
-      }
-      dos_burst_per_sec = true;
-      log_info(LD_REND, "Service INTRO2 DoS defenses burst set to: %" PRIu32,
-               config->intro_dos_burst_per_sec);
-      continue;
-    }
-    if (!strcasecmp(line->key, "HiddenServiceOnionBalanceInstance")) {
-      bool enabled = !!helper_parse_uint64(line->key, line->value,
-                                           0, 1, &ok);
-      if (!ok || ob_instance) {
-        if (ob_instance) {
-          dup_opt_seen = line->key;
-        }
-        goto err;
-      }
-      ob_instance = true;
-      if (!enabled) {
-        /* Skip if this is disabled. */
-        continue;
-      }
-      /* Option is enabled, parse config file. */
-      ok = hs_ob_parse_config_file(config);
-      if (!ok) {
-        goto err;
-      }
-      continue;
+  }
+
+  /* Is the DoS defense enabled? */
+  config->has_dos_defense_enabled =
+    hs_opts->HiddenServiceEnableIntroDoSDefense;
+
+  /* Rate for DoS defense */
+  if (check_value_oob(hs_opts->HiddenServiceEnableIntroDoSRatePerSec,
+                      "HiddenServiceEnableIntroDoSRatePerSec",
+                      HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN,
+                      HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX)) {
+    goto err;
+  }
+  config->intro_dos_rate_per_sec =
+    hs_opts->HiddenServiceEnableIntroDoSRatePerSec;
+  log_info(LD_REND, "Service INTRO2 DoS defenses rate set to: %" PRIu32,
+           config->intro_dos_rate_per_sec);
+
+  if (check_value_oob(hs_opts->HiddenServiceEnableIntroDoSBurstPerSec,
+                      "HiddenServiceEnableIntroDoSBurstPerSec",
+                      HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN,
+                      HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MAX)) {
+    goto err;
+  }
+  config->intro_dos_burst_per_sec =
+    hs_opts->HiddenServiceEnableIntroDoSBurstPerSec;
+  log_info(LD_REND, "Service INTRO2 DoS defenses burst set to: %" PRIu32,
+           config->intro_dos_burst_per_sec);
+
+  /* Is this an onionbalance instance? */
+  if (hs_opts->HiddenServiceOnionBalanceInstance) {
+    /* Option is enabled, parse config file. */
+    if (! hs_ob_parse_config_file(config)) {
+      goto err;
     }
   }
 
@@ -493,9 +425,6 @@ config_service_v3(const config_line_t *line_,
 
   return 0;
  err:
-  if (dup_opt_seen) {
-    log_warn(LD_CONFIG, "Duplicate directive %s.", dup_opt_seen);
-  }
   return -1;
 }
 
@@ -504,7 +433,7 @@ config_service_v3(const config_line_t *line_,
  **/
 static const char SECTION_HEADER[] = "HiddenServiceDir";
 
-/** Configure a service using the given options in line_ and options. This is
+/** Configure a service using the given options in hs_opts and options. This is
  * called for any service regardless of its version which means that all
  * directives in this function are generic to any service version. This
  * function will also check the validity of the service directory path.
@@ -516,129 +445,74 @@ static const char SECTION_HEADER[] = "HiddenServiceDir";
  *
  * Return 0 on success else -1. */
 static int
-config_generic_service(const config_line_t *line,
+config_generic_service(const hs_opts_t *hs_opts,
                        const or_options_t *options,
                        hs_service_t *service)
 {
-  int dir_seen = 0;
   hs_service_config_t *config;
-  /* If this is set, we've seen a duplicate of this option. Keep the string
-   * so we can log the directive. */
-  const char *dup_opt_seen = NULL;
-  /* These variables will tell us if we ever have duplicate. */
-  int have_version = 0, have_allow_unknown_ports = 0;
-  int have_dir_group_read = 0, have_max_streams = 0;
-  int have_max_streams_close = 0;
 
-  tor_assert(line);
+  tor_assert(hs_opts);
   tor_assert(options);
   tor_assert(service);
 
   /* Makes thing easier. */
   config = &service->config;
 
-  if (BUG(strcasecmp(line->key, "HiddenServiceDir")))
-    return -1;
+  /* Directory where the service's keys are stored. */
+  tor_assert(hs_opts->HiddenServiceDir);
+  config->directory_path = tor_strdup(hs_opts->HiddenServiceDir);
+  log_info(LD_CONFIG, "HiddenServiceDir=%s. Configuring...",
+           escaped(config->directory_path));
 
-  /* The first line starts with HiddenServiceDir so we consider what's next is
-   * the configuration of the service. */
-  for ( ; line ; line = line->next) {
-    int ok = 0;
+  /* Protocol version for the service. */
+  if (hs_opts->HiddenServiceVersion == -1) {
+    /* No value was set; stay with the default. */
+  } else if (check_value_oob(hs_opts->HiddenServiceVersion,
+                             "HiddenServiceVersion",
+                             HS_VERSION_MIN, HS_VERSION_MAX)) {
+    goto err;
+  } else {
+    config->hs_version_explicitly_set = 1;
+    config->version = hs_opts->HiddenServiceVersion;
+  }
 
-    /* This indicate that we have a new service to configure. */
-    if (!strcasecmp(line->key, "HiddenServiceDir")) {
-      /* Ok, we've seen one and we are about to configure it. */
-      dir_seen = 1;
-      config->directory_path = tor_strdup(line->value);
-      log_info(LD_CONFIG, "HiddenServiceDir=%s. Configuring...",
-               escaped(config->directory_path));
-      continue;
-    }
-    if (BUG(!dir_seen)) {
+  /* Virtual port. */
+  for (const config_line_t *portline = hs_opts->HiddenServicePort;
+       portline; portline = portline->next) {
+    char *err_msg = NULL;
+    /* XXX: Can we rename this? */
+    rend_service_port_config_t *portcfg =
+      rend_service_parse_port_config(portline->value, " ", &err_msg);
+    if (!portcfg) {
+      if (err_msg) {
+        log_warn(LD_CONFIG, "%s", err_msg);
+      }
+      tor_free(err_msg);
       goto err;
     }
-    /* Version of the service. */
-    if (!strcasecmp(line->key, "HiddenServiceVersion")) {
-      service->config.version =
-        (uint32_t) helper_parse_uint64(line->key, line->value, HS_VERSION_MIN,
-                                       HS_VERSION_MAX, &ok);
-      if (!ok || have_version) {
-        if (have_version)
-          dup_opt_seen = line->key;
-        goto err;
-      }
-      have_version = service->config.hs_version_explicitly_set = 1;
-      continue;
-    }
-    /* Virtual port. */
-    if (!strcasecmp(line->key, "HiddenServicePort")) {
-      char *err_msg = NULL;
-      /* XXX: Can we rename this? */
-      rend_service_port_config_t *portcfg =
-        rend_service_parse_port_config(line->value, " ", &err_msg);
-      if (!portcfg) {
-        if (err_msg) {
-          log_warn(LD_CONFIG, "%s", err_msg);
-        }
-        tor_free(err_msg);
-        goto err;
-      }
-      tor_assert(!err_msg);
-      smartlist_add(config->ports, portcfg);
-      log_info(LD_CONFIG, "HiddenServicePort=%s for %s",
-               line->value, escaped(config->directory_path));
-      continue;
-    }
-    /* Do we allow unknown ports. */
-    if (!strcasecmp(line->key, "HiddenServiceAllowUnknownPorts")) {
-      config->allow_unknown_ports =
-        (unsigned int) helper_parse_uint64(line->key, line->value, 0, 1, &ok);
-      if (!ok || have_allow_unknown_ports) {
-        if (have_allow_unknown_ports)
-          dup_opt_seen = line->key;
-        goto err;
-      }
-      have_allow_unknown_ports = 1;
-      continue;
-    }
-    /* Directory group readable. */
-    if (!strcasecmp(line->key, "HiddenServiceDirGroupReadable")) {
-      config->dir_group_readable =
-        (unsigned int) helper_parse_uint64(line->key, line->value, 0, 1, &ok);
-      if (!ok || have_dir_group_read) {
-        if (have_dir_group_read)
-          dup_opt_seen = line->key;
-        goto err;
-      }
-      have_dir_group_read = 1;
-      continue;
-    }
-    /* Maximum streams per circuit. */
-    if (!strcasecmp(line->key, "HiddenServiceMaxStreams")) {
-      config->max_streams_per_rdv_circuit =
-        helper_parse_uint64(line->key, line->value, 0,
-                            HS_CONFIG_MAX_STREAMS_PER_RDV_CIRCUIT, &ok);
-      if (!ok || have_max_streams) {
-        if (have_max_streams)
-          dup_opt_seen = line->key;
-        goto err;
-      }
-      have_max_streams = 1;
-      continue;
-    }
-    /* Maximum amount of streams before we close the circuit. */
-    if (!strcasecmp(line->key, "HiddenServiceMaxStreamsCloseCircuit")) {
-      config->max_streams_close_circuit =
-        (unsigned int) helper_parse_uint64(line->key, line->value, 0, 1, &ok);
-      if (!ok || have_max_streams_close) {
-        if (have_max_streams_close)
-          dup_opt_seen = line->key;
-        goto err;
-      }
-      have_max_streams_close = 1;
-      continue;
-    }
+    tor_assert(!err_msg);
+    smartlist_add(config->ports, portcfg);
+    log_info(LD_CONFIG, "HiddenServicePort=%s for %s",
+             portline->value, escaped(config->directory_path));
   }
+
+  /* Do we allow unknown ports? */
+  config->allow_unknown_ports = hs_opts->HiddenServiceAllowUnknownPorts;
+
+  /* Directory group readable. */
+  config->dir_group_readable = hs_opts->HiddenServiceDirGroupReadable;
+
+  /* Maximum streams per circuit. */
+  if (check_value_oob(hs_opts->HiddenServiceMaxStreams,
+                      "HiddenServiceMaxStreams", 0,
+                      HS_CONFIG_MAX_STREAMS_PER_RDV_CIRCUIT)) {
+    goto err;
+  }
+  config->max_streams_per_rdv_circuit = hs_opts->HiddenServiceMaxStreams;
+
+  /* Maximum amount of streams before we close the circuit. */
+  config->max_streams_close_circuit =
+    hs_opts->HiddenServiceMaxStreamsCloseCircuit;
 
   /* Check if we are configured in non anonymous mode meaning every service
    * becomes a single onion service. */
@@ -649,9 +523,6 @@ config_generic_service(const config_line_t *line,
   /* Success */
   return 0;
  err:
-  if (dup_opt_seen) {
-    log_warn(LD_CONFIG, "Duplicate directive %s.", dup_opt_seen);
-  }
   return -1;
 }
 
@@ -694,7 +565,7 @@ config_service(config_line_t *line, const or_options_t *options,
 
   /* We'll configure that service as a generic one and then pass it to a
    * specific function according to the configured version number. */
-  if (config_generic_service(line, options, service) < 0) {
+  if (config_generic_service(hs_opts, options, service) < 0) {
     goto err;
   }
 
@@ -729,10 +600,10 @@ config_service(config_line_t *line, const or_options_t *options,
    * directory line, the function knows that it has to stop parsing. */
   switch (service->config.version) {
   case HS_VERSION_TWO:
-    ret = rend_config_service(line->next, options, &service->config);
+    ret = rend_config_service(hs_opts, options, &service->config);
     break;
   case HS_VERSION_THREE:
-    ret = config_service_v3(line->next, &service->config);
+    ret = config_service_v3(hs_opts, &service->config);
     break;
   default:
     /* We do validate before if we support the parsed version. */
