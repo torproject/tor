@@ -19,8 +19,9 @@ BEGIN_CONF_STRUCT(hs_opts_t)
 
 CONF_VAR(HiddenServiceDir, FILENAME, 0, NULL)
 CONF_VAR(HiddenServiceDirGroupReadable, BOOL, 0, "0")
-CONF_VAR(HiddenServicePort, STRING, 0, NULL)
-CONF_VAR(HiddenServiceVersion, POSINT, 0, "3")
+CONF_VAR(HiddenServicePort, LINELIST, 0, NULL)
+// "-1" means "auto" here.
+CONF_VAR(HiddenServiceVersion, INT, 0, "-1")
 CONF_VAR(HiddenServiceAuthorizeClient, STRING, 0, NULL)
 CONF_VAR(HiddenServiceAllowUnknownPorts, BOOL, 0, "0")
 CONF_VAR(HiddenServiceMaxStreams, POSINT, 0, "0")
