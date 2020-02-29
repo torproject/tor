@@ -390,12 +390,13 @@ test_entry_guard_encode_for_state_minimal(void *arg)
   eg->confirmed_idx = -1;
 
   char *s = NULL;
-  s = entry_guard_encode_for_state(eg);
+  s = entry_guard_encode_for_state(eg, 0);
 
   tt_str_op(s, OP_EQ,
             "in=wubwub "
             "rsa_id=706C75727079666C75727079736C75727079646F "
             "sampled_on=2016-11-14T00:00:00 "
+            "sampled_idx=0 "
             "listed=0");
 
  done:
@@ -421,10 +422,11 @@ test_entry_guard_encode_for_state_maximal(void *arg)
   eg->currently_listed = 1;
   eg->confirmed_on_date = 1479081690;
   eg->confirmed_idx = 333;
+  eg->sampled_idx = 42;
   eg->extra_state_fields = tor_strdup("and the green grass grew all around");
 
   char *s = NULL;
-  s = entry_guard_encode_for_state(eg);
+  s = entry_guard_encode_for_state(eg, 0);
 
   tt_str_op(s, OP_EQ,
             "in=default "
@@ -432,6 +434,7 @@ test_entry_guard_encode_for_state_maximal(void *arg)
             "bridge_addr=8.8.4.4:9999 "
             "nickname=Fred "
             "sampled_on=2016-11-14T00:00:00 "
+            "sampled_idx=0 "
             "sampled_by=1.2.3 "
             "unlisted_since=2016-11-14T00:00:45 "
             "listed=1 "
@@ -621,39 +624,47 @@ test_entry_guard_parse_from_state_full(void *arg)
   const char STATE[] =
   "Guard in=default rsa_id=214F44BD5B638E8C817D47FF7C97397790BF0345 "
     "nickname=TotallyNinja sampled_on=2016-11-12T19:32:49 "
+    "sampled_idx=0 "
     "sampled_by=0.3.0.0-alpha-dev "
     "listed=1\n"
   "Guard in=default rsa_id=052900AB0EA3ED54BAB84AE8A99E74E8693CE2B2 "
     "nickname=5OfNovember sampled_on=2016-11-20T04:32:05 "
+    "sampled_idx=1 "
     "sampled_by=0.3.0.0-alpha-dev "
     "listed=1 confirmed_on=2016-11-22T08:13:28 confirmed_idx=0 "
     "pb_circ_attempts=4.000000 pb_circ_successes=2.000000 "
     "pb_successful_circuits_closed=2.000000\n"
   "Guard in=default rsa_id=7B700C0C207EBD0002E00F499BE265519AC3C25A "
     "nickname=dc6jgk11 sampled_on=2016-11-28T11:50:13 "
+    "sampled_idx=2 "
     "sampled_by=0.3.0.0-alpha-dev "
     "listed=1 confirmed_on=2016-11-24T08:45:30 confirmed_idx=4 "
     "pb_circ_attempts=5.000000 pb_circ_successes=5.000000 "
     "pb_successful_circuits_closed=5.000000\n"
   "Guard in=wobblesome rsa_id=7B700C0C207EBD0002E00F499BE265519AC3C25A "
     "nickname=dc6jgk11 sampled_on=2016-11-28T11:50:13 "
+    "sampled_idx=0 "
     "sampled_by=0.3.0.0-alpha-dev "
     "listed=1\n"
   "Guard in=default rsa_id=E9025AD60D86875D5F11548D536CC6AF60F0EF5E "
     "nickname=maibrunn sampled_on=2016-11-25T22:36:38 "
+    "sampled_idx=3 "
     "sampled_by=0.3.0.0-alpha-dev listed=1\n"
   "Guard in=default rsa_id=DCD30B90BA3A792DA75DC54A327EF353FB84C38E "
     "nickname=Unnamed sampled_on=2016-11-25T14:34:00 "
+    "sampled_idx=10 "
     "sampled_by=0.3.0.0-alpha-dev listed=1\n"
   "Guard in=bridges rsa_id=8FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF2E "
     "bridge_addr=24.1.1.1:443 sampled_on=2016-11-25T06:44:14 "
+    "sampled_idx=0 "
     "sampled_by=0.3.0.0-alpha-dev listed=1 "
     "confirmed_on=2016-11-29T10:36:06 confirmed_idx=0 "
     "pb_circ_attempts=8.000000 pb_circ_successes=8.000000 "
     "pb_successful_circuits_closed=13.000000\n"
   "Guard in=bridges rsa_id=5800000000000000000000000000000000000000 "
     "bridge_addr=37.218.246.143:28366 "
-    "sampled_on=2016-11-18T15:07:34 sampled_by=0.3.0.0-alpha-dev listed=1\n";
+    "sampled_on=2016-11-18T15:07:34 sampled_idx=1 "
+    "sampled_by=0.3.0.0-alpha-dev listed=1\n";
 
   config_line_t *lines = NULL;
   or_state_t *state = tor_malloc_zero(sizeof(or_state_t));
@@ -729,35 +740,42 @@ test_entry_guard_parse_from_state_full(void *arg)
   tt_str_op(joined, OP_EQ,
   "Guard in=default rsa_id=052900AB0EA3ED54BAB84AE8A99E74E8693CE2B2 "
     "nickname=5OfNovember sampled_on=2016-11-20T04:32:05 "
+    "sampled_idx=0 "
     "sampled_by=0.3.0.0-alpha-dev "
     "listed=1 confirmed_on=2016-11-22T08:13:28 confirmed_idx=0 "
     "pb_circ_attempts=4.000000 pb_circ_successes=2.000000 "
     "pb_successful_circuits_closed=2.000000\n"
   "Guard in=default rsa_id=7B700C0C207EBD0002E00F499BE265519AC3C25A "
     "nickname=dc6jgk11 sampled_on=2016-11-28T11:50:13 "
+    "sampled_idx=1 "
     "sampled_by=0.3.0.0-alpha-dev "
     "listed=1 confirmed_on=2016-11-24T08:45:30 confirmed_idx=1 "
     "pb_circ_attempts=5.000000 pb_circ_successes=5.000000 "
     "pb_successful_circuits_closed=5.000000\n"
   "Guard in=default rsa_id=E9025AD60D86875D5F11548D536CC6AF60F0EF5E "
     "nickname=maibrunn sampled_on=2016-11-25T22:36:38 "
+    "sampled_idx=2 "
     "sampled_by=0.3.0.0-alpha-dev listed=1\n"
   "Guard in=default rsa_id=DCD30B90BA3A792DA75DC54A327EF353FB84C38E "
     "nickname=Unnamed sampled_on=2016-11-25T14:34:00 "
+    "sampled_idx=3 "
     "sampled_by=0.3.0.0-alpha-dev listed=1\n"
   "Guard in=wobblesome rsa_id=7B700C0C207EBD0002E00F499BE265519AC3C25A "
     "nickname=dc6jgk11 sampled_on=2016-11-28T11:50:13 "
+    "sampled_idx=0 "
     "sampled_by=0.3.0.0-alpha-dev "
     "listed=1\n"
   "Guard in=bridges rsa_id=8FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF2E "
     "bridge_addr=24.1.1.1:443 sampled_on=2016-11-25T06:44:14 "
+    "sampled_idx=0 "
     "sampled_by=0.3.0.0-alpha-dev listed=1 "
     "confirmed_on=2016-11-29T10:36:06 confirmed_idx=0 "
     "pb_circ_attempts=8.000000 pb_circ_successes=8.000000 "
     "pb_successful_circuits_closed=13.000000\n"
   "Guard in=bridges rsa_id=5800000000000000000000000000000000000000 "
     "bridge_addr=37.218.246.143:28366 "
-    "sampled_on=2016-11-18T15:07:34 sampled_by=0.3.0.0-alpha-dev listed=1\n");
+    "sampled_on=2016-11-18T15:07:34 sampled_idx=1 "
+    "sampled_by=0.3.0.0-alpha-dev listed=1\n");
 
  done:
   config_free_lines(lines);
@@ -1461,8 +1479,8 @@ test_entry_guard_confirming_guards(void *arg)
   tt_i64_op(g1->confirmed_on_date, OP_EQ, start+10);
   tt_i64_op(g2->confirmed_on_date, OP_EQ, start);
   tt_i64_op(g3->confirmed_on_date, OP_EQ, start+10);
-  tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 0), OP_EQ, g2);
-  tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 1), OP_EQ, g1);
+  tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 0), OP_EQ, g1);
+  tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 1), OP_EQ, g2);
   tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 2), OP_EQ, g3);
 
   /* Now make sure we can regenerate the confirmed_entry_guards list. */
@@ -1474,8 +1492,8 @@ test_entry_guard_confirming_guards(void *arg)
   tt_int_op(g1->confirmed_idx, OP_EQ, 1);
   tt_int_op(g2->confirmed_idx, OP_EQ, 0);
   tt_int_op(g3->confirmed_idx, OP_EQ, 2);
-  tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 0), OP_EQ, g2);
-  tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 1), OP_EQ, g1);
+  tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 0), OP_EQ, g1);
+  tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 1), OP_EQ, g2);
   tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 2), OP_EQ, g3);
 
   /* Now make sure we can regenerate the confirmed_entry_guards list if
@@ -1510,9 +1528,6 @@ test_entry_guard_sample_reachable_filtered(void *arg)
   (void)arg;
   guard_selection_t *gs = guard_selection_new("default", GS_TYPE_NORMAL);
   entry_guards_expand_sample(gs);
-  const int N = 10000;
-  bitarray_t *selected = NULL;
-  int i, j;
 
   /* We've got a sampled list now; let's make one non-usable-filtered; some
    * confirmed, some primary, some pending.
@@ -1547,32 +1562,21 @@ test_entry_guard_sample_reachable_filtered(void *arg)
     { SAMPLE_EXCLUDE_PENDING, 0 },
     { -1, -1},
   };
-
+  int j;
   for (j = 0; tests[j].flag >= 0; ++j) {
-    selected = bitarray_init_zero(n_guards);
     const int excluded_flags = tests[j].flag;
     const int excluded_idx = tests[j].idx;
-    for (i = 0; i < N; ++i) {
-      g = sample_reachable_filtered_entry_guards(gs, NULL, excluded_flags);
-      tor_assert(g);
-      int pos = smartlist_pos(gs->sampled_entry_guards, g);
-      tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, n_guards);
-      tt_int_op(pos, OP_GE, 0);
-      tt_int_op(pos, OP_LT, n_guards);
-      bitarray_set(selected, pos);
-    }
-    for (i = 0; i < n_guards; ++i) {
-      const int should_be_set = (i != excluded_idx &&
-                                 i != 3); // filtered out.
-      tt_int_op(!!bitarray_is_set(selected, i), OP_EQ, should_be_set);
-    }
-    bitarray_free(selected);
-    selected = NULL;
+    g = first_reachable_filtered_entry_guard(gs, NULL, excluded_flags);
+    tor_assert(g);
+    int pos = smartlist_pos(gs->sampled_entry_guards, g);
+    tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, n_guards);
+    const int should_be_set = (pos != excluded_idx &&
+                                 pos != 3); // filtered out.
+    tt_int_op(1, OP_EQ, should_be_set);
   }
 
  done:
   guard_selection_free(gs);
-  bitarray_free(selected);
 }
 
 static void
@@ -1584,7 +1588,7 @@ test_entry_guard_sample_reachable_filtered_empty(void *arg)
   SMARTLIST_FOREACH(big_fake_net_nodes, node_t *, n,
                     n->is_possible_guard = 0);
 
-  entry_guard_t *g = sample_reachable_filtered_entry_guards(gs, NULL, 0);
+  entry_guard_t *g = first_reachable_filtered_entry_guard(gs, NULL, 0);
   tt_ptr_op(g, OP_EQ, NULL);
 
  done:
