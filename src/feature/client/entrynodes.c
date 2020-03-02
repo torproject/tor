@@ -3060,16 +3060,6 @@ entry_guard_parse_from_state(const char *s)
   /* Take sampled_by_version verbatim. */
   guard->sampled_by_version = sampled_by;
   sampled_by = NULL; /* prevent free */
-  if (sampled_idx) {
-    int ok = 1;
-    long idx = tor_parse_long(sampled_idx, 10, 0, INT_MAX, &ok, NULL);
-    if (!ok) {
-      log_warn(LD_GUARD, "Guard has invalid sampled_idx %s",
-          escaped(sampled_idx));
-    } else {
-      guard->sampled_idx = (int)idx;
-    }
-  }
   /* Listed is a boolean */
   if (listed && strcmp(listed, "0"))
     guard->currently_listed = 1;
@@ -3085,6 +3075,26 @@ entry_guard_parse_from_state(const char *s)
     } else {
       guard->confirmed_idx = (int)idx;
     }
+  }
+
+  if (sampled_idx) {
+    int ok = 1;
+    long idx = tor_parse_long(sampled_idx, 10, 0, INT_MAX, &ok, NULL);
+    if (!ok) {
+      log_warn(LD_GUARD, "Guard has invalid sampled_idx %s",
+          escaped(sampled_idx));
+    } else {
+      guard->sampled_idx = (int)idx;
+    }
+  } else if (confirmed_idx) {
+    /* This state has been written by an older Tor version which did not have
+     * sample ordering  */
+
+    guard->sampled_idx = guard->confirmed_idx;
+  } else {
+    log_warn(LD_GUARD, "The state file seems to be into a status that could"
+        " yield to weird entry node selection. It might be better to delete"
+        " it");
   }
 
   /* Anything we didn't recognize gets crammed together */
