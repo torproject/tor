@@ -527,7 +527,7 @@ MOCK_DECL(STATIC circuit_guard_state_t *,
 STATIC entry_guard_t *entry_guard_add_to_sample(guard_selection_t *gs,
                                                 const node_t *node);
 STATIC entry_guard_t *entry_guards_expand_sample(guard_selection_t *gs);
-STATIC char *entry_guard_encode_for_state(entry_guard_t *guard, int i);
+STATIC char *entry_guard_encode_for_state(entry_guard_t *guard, int dense_sampled_index);
 STATIC entry_guard_t *entry_guard_parse_from_state(const char *s);
 #define entry_guard_free(e) \
   FREE_AND_NULL(entry_guard_t, entry_guard_free_, (e))
