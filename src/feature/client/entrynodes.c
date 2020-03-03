@@ -1385,7 +1385,7 @@ sampled_guards_prune_obsolete_entries(guard_selection_t *gs,
 
     if (rmv) {
       ++n_changes;
-      SMARTLIST_DEL_CURRENT(gs->sampled_entry_guards, guard);
+      SMARTLIST_DEL_CURRENT_KEEPORDER(gs->sampled_entry_guards, guard);
       remove_guard_from_confirmed_and_primary_lists(gs, guard);
       entry_guard_free(guard);
     }
@@ -1773,7 +1773,6 @@ first_reachable_filtered_entry_guard(guard_selection_t *gs,
            flags, smartlist_len(reachable_filtered_sample));
 
   if (smartlist_len(reachable_filtered_sample)) {
-    smartlist_sort(reachable_filtered_sample, compare_guards_by_sampled_idx);
     result = smartlist_get(reachable_filtered_sample, 0);
     log_info(LD_GUARD, "  (Selected %s.)",
              result ? entry_guard_describe(result) : "<null>");
@@ -1869,6 +1868,8 @@ make_guard_confirmed(guard_selection_t *gs, entry_guard_t *guard)
 
   guard->confirmed_idx = gs->next_confirmed_idx++;
   smartlist_add(gs->confirmed_entry_guards, guard);
+  /** The confirmation ordering might not be the sample ording. We need to
+   * reorder */
   smartlist_sort(gs->confirmed_entry_guards, compare_guards_by_sampled_idx);
 
   // This confirmed guard might kick something else out of the primary
@@ -2072,11 +2073,6 @@ select_primary_guard_for_circuit(guard_selection_t *gs,
   int num_entry_guards = get_n_primary_guards_to_use(usage);
   smartlist_t *usable_primary_guards = smartlist_new();
 
-  /** Always takes the oldest ones first  -- I did not find guarantees that
-   * gs->primary_entry_guards has the same ordering after update of the list,
-   * even for the num_entry_guards same relays.
-   * */
-  smartlist_sort(gs->primary_entry_guards, compare_guards_by_sampled_idx);
   SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);
     if (!entry_guard_obeys_restriction(guard, rst)) {
@@ -3181,7 +3177,6 @@ entry_guards_update_guards_in_state(or_state_t *state)
 
   SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
     int i = 0;
-    smartlist_sort(gs->sampled_entry_guards, compare_guards_by_sampled_idx);
     SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
       if (guard->is_persistent == 0)
         continue;
@@ -3242,8 +3237,8 @@ entry_guards_load_guards_from_state(or_state_t *state, int set)
       tor_assert(gs);
       smartlist_add(gs->sampled_entry_guards, guard);
       guard->in_selection = gs;
-      /* Recompute the next_sampled_id from the state */
-      if (gs->next_sampled_idx < guard->sampled_idx) {
+      /* Recompute the next_sampled_id from the state  */
+      if (gs->next_sampled_idx <= guard->sampled_idx) {
         gs->next_sampled_idx = ++guard->sampled_idx;
       }
 
@@ -3254,6 +3249,10 @@ entry_guards_load_guards_from_state(or_state_t *state, int set)
 
   if (set) {
     SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
+      /** Guards should be in sample order within the file, but it is maybe
+       * better NOT to assume that. Let's order them before updating lists
+       */
+      smartlist_sort(gs->sampled_entry_guards, compare_guards_by_sampled_idx);
       entry_guards_update_all(gs);
     } SMARTLIST_FOREACH_END(gs);
   }
