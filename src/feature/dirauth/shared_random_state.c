@@ -20,7 +20,7 @@
 #include "feature/dirauth/shared_random.h"
 #include "feature/hs_common/shared_random_client.h"
 #include "feature/dirauth/shared_random_state.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 #include "lib/encoding/confline.h"
 #include "lib/version/torversion.h"
 
@@ -139,7 +139,7 @@ get_state_valid_until_time(time_t now)
 
   voting_interval = get_voting_interval();
   /* Find the time the current round started. */
-  beginning_of_current_round = get_start_time_of_current_round();
+  beginning_of_current_round = dirauth_sched_get_cur_valid_after_time();
 
   /* Find how many rounds are left till the end of the protocol run */
   current_round = (now / voting_interval) % total_rounds;
@@ -1330,7 +1330,7 @@ sr_state_init(int save_to_disk, int read_from_disk)
   /* We have a state in memory, let's make sure it's updated for the current
    * and next voting round. */
   {
-    time_t valid_after = voting_schedule_get_next_valid_after_time();
+    time_t valid_after = dirauth_sched_get_next_valid_after_time();
     sr_state_update(valid_after);
   }
   return 0;

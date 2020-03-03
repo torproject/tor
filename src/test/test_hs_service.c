@@ -44,7 +44,7 @@
 #include "core/or/versions.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/shared_random_state.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_client.h"
@@ -1365,7 +1365,7 @@ test_rotate_descriptors(void *arg)
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
+  dirauth_sched_recalculate_timing(get_options(), mock_ns.valid_after);
 
   update_approx_time(mock_ns.valid_after+1);
   now = mock_ns.valid_after+1;
@@ -1406,7 +1406,7 @@ test_rotate_descriptors(void *arg)
   ret = parse_rfc1123_time("Sat, 27 Oct 1985 02:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
+  dirauth_sched_recalculate_timing(get_options(), mock_ns.valid_after);
 
   update_approx_time(mock_ns.valid_after+1);
   now = mock_ns.valid_after+1;
@@ -1474,7 +1474,7 @@ test_build_update_descriptors(void *arg)
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 04:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
+  dirauth_sched_recalculate_timing(get_options(), mock_ns.valid_after);
 
   update_approx_time(mock_ns.valid_after+1);
 
@@ -1705,7 +1705,7 @@ test_build_descriptors(void *arg)
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 04:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
+  dirauth_sched_recalculate_timing(get_options(), mock_ns.valid_after);
 
   /* Generate a valid number of fake auth clients when a client authorization
    * is disabled. */
@@ -1806,7 +1806,7 @@ test_upload_descriptors(void *arg)
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
+  dirauth_sched_recalculate_timing(get_options(), mock_ns.valid_after);
 
   update_approx_time(mock_ns.valid_after+1);
   now = mock_ns.valid_after+1;

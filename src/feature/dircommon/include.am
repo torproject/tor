@@ -3,8 +3,7 @@
 LIBTOR_APP_A_SOURCES += 				\
 	src/feature/dircommon/consdiff.c	\
 	src/feature/dircommon/directory.c	\
-	src/feature/dircommon/fp_pair.c		\
-	src/feature/dircommon/voting_schedule.c
+	src/feature/dircommon/fp_pair.c
 
 # ADD_C_FILE: INSERT HEADERS HERE.
 noinst_HEADERS +=					\
@@ -12,5 +11,4 @@ noinst_HEADERS +=					\
 	src/feature/dircommon/dir_connection_st.h	\
 	src/feature/dircommon/directory.h		\
 	src/feature/dircommon/fp_pair.h			\
-	src/feature/dircommon/vote_timing_st.h		\
-	src/feature/dircommon/voting_schedule.h
+	src/feature/dircommon/vote_timing_st.h

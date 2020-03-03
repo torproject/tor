@@ -36,7 +36,7 @@
 #include "feature/stats/rephist.h"
 #include "feature/client/entrynodes.h" /* needed for guardfraction methods */
 #include "feature/nodelist/torcert.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/authmode.h"
@@ -2850,7 +2850,7 @@ dirvote_act(const or_options_t *options, time_t now)
                "Mine is %s.",
                keys, hex_str(c->cache_info.identity_digest, DIGEST_LEN));
     tor_free(keys);
-    voting_schedule_recalculate_timing(options, now);
+    dirauth_sched_recalculate_timing(options, now);
   }
 
 #define IF_TIME_FOR_NEXT_ACTION(when_field, done_field) \
@@ -2896,7 +2896,7 @@ dirvote_act(const or_options_t *options, time_t now)
                 networkstatus_get_latest_consensus_by_flavor(FLAV_NS));
     /* XXXX We will want to try again later if we haven't got enough
      * signatures yet.  Implement this if it turns out to ever happen. */
-    voting_schedule_recalculate_timing(options, now);
+    dirauth_sched_recalculate_timing(options, now);
     return voting_schedule.voting_starts;
   } ENDIF
 
@@ -4628,7 +4628,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     else
       last_consensus_interval = options->TestingV3AuthInitialVotingInterval;
     v3_out->valid_after =
-      voting_schedule_get_start_of_next_interval(now,
+      voting_sched_get_start_of_interval_after(now,
                                    (int)last_consensus_interval,
                                    options->TestingV3AuthVotingStartOffset);
     format_iso_time(tbuf, v3_out->valid_after);

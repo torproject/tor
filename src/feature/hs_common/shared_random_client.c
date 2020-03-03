@@ -11,7 +11,8 @@
 #include "feature/hs_common/shared_random_client.h"
 
 #include "app/config/config.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/authmode.h"
+#include "feature/dirauth/voting_schedule.h"
 #include "feature/nodelist/networkstatus.h"
 #include "lib/encoding/binascii.h"
 
@@ -31,6 +32,24 @@ srv_to_control_string(const sr_srv_t *srv)
   return srv_str;
 }
 
+/**
+ * If we have no consensus and we are not an authority, assume that this is
+ * the voting interval.  We should never actually use this: only authorities
+ * should be trying to figure out the schedule when they don't have a
+ * consensus.
+ **/
+#define DEFAULT_NETWORK_VOTING_INTERVAL (3600)
+
+/* This is an unpleasing workaround for tests.  Our unit tests assume that we
+ * are scheduling all of our shared random stuff as if we were a directory
+ * authority, but they do not always set V3AuthoritativeDir.
+ */
+#ifdef TOR_UNIT_TESTS
+#define ASSUME_AUTHORITY_SCHEDULING 1
+#else
+#define ASSUME_AUTHORITY_SCHEDULING 0
+#endif
+
 /** Return the voting interval of the tor vote subsystem. */
 int
 get_voting_interval(void)
@@ -39,38 +58,25 @@ get_voting_interval(void)
   networkstatus_t *consensus = networkstatus_get_live_consensus(time(NULL));
 
   if (consensus) {
+    /* Ideally we have a live consensus and we can just use that. */
+    interval = (int)(consensus->fresh_until - consensus->valid_after);
+  } else if (authdir_mode(get_options()) || ASSUME_AUTHORITY_SCHEDULING) {
+    /* If we don't have a live consensus and we're an authority,
+     * we should believe our own view of what the schedule ought to be. */
+    interval = dirauth_sched_get_configured_interval();
+  } else if ((consensus = networkstatus_get_latest_consensus())) {
+    /* If we're a client, then maybe a latest consensus is good enough?
+     * It's better than falling back to the non-consensus case. */
     interval = (int)(consensus->fresh_until - consensus->valid_after);
   } else {
-    /* Same for both a testing and real network. We voluntarily ignore the
-     * InitialVotingInterval since it complexifies things and it doesn't
-     * affect the SR protocol. */
-    interval = get_options()->V3AuthVotingInterval;
+    /* We should never be reaching this point, since a client should never
+     * call this code unless they have some kind of a consensus. All we can
+     * do is hope that this network is using the default voting interval. */
+    tor_assert_nonfatal_unreached_once();
+    interval = DEFAULT_NETWORK_VOTING_INTERVAL;
   }
   tor_assert(interval > 0);
   return interval;
-}
-
-/** Given the current consensus, return the start time of the current round of
- * the SR protocol. For example, if it's 23:47:08, the current round thus
- * started at 23:47:00 for a voting interval of 10 seconds.
- *
- * This function uses the consensus voting schedule to derive its results,
- * instead of the actual consensus we are currently using, so it should be used
- * for voting purposes. */
-time_t
-get_start_time_of_current_round(void)
-{
-  const or_options_t *options = get_options();
-  int voting_interval = get_voting_interval();
-  /* First, get the start time of the next round */
-  time_t next_start = voting_schedule_get_next_valid_after_time();
-  /* Now roll back next_start by a voting interval to find the start time of
-     the current round. */
-  time_t curr_start = voting_schedule_get_start_of_next_interval(
-                                     next_start - voting_interval - 1,
-                                     voting_interval,
-                                     options->TestingV3AuthVotingStartOffset);
-  return curr_start;
 }
 
 /*
@@ -237,13 +243,27 @@ sr_state_get_start_time_of_current_protocol_run(void)
   time_t beginning_of_curr_round;
 
   /* This function is not used for voting purposes, so if we have a live
-     consensus, use its valid-after as the beginning of the current round,
-     otherwise resort to the voting schedule which should always exist. */
+     consensus, use its valid-after as the beginning of the current round.
+     If we have no consensus but we're an authority, use our own
+     schedule.  Otherwise, try using our view of the voting interval
+     to figure out when the current round _should_ be starting.
+  */
   networkstatus_t *ns = networkstatus_get_live_consensus(approx_time());
   if (ns) {
     beginning_of_curr_round = ns->valid_after;
+  } else if (authdir_mode(get_options()) || ASSUME_AUTHORITY_SCHEDULING) {
+    beginning_of_curr_round = dirauth_sched_get_cur_valid_after_time();
   } else {
-    beginning_of_curr_round = get_start_time_of_current_round();
+    /* voting_interval comes from get_voting_interval(), so if we're in
+     * this case as a client, we already tried to get the voting interval
+     * from the latest_consensus and gave a bug warning if we couldn't.
+     *
+     * We wouldn't want to look at the latest consensus's valid_after time,
+     * since that would be out of date. */
+    beginning_of_curr_round = voting_sched_get_start_of_interval_after(
+                                             approx_time() - voting_interval,
+                                             voting_interval,
+                                             0);
   }
 
   /* Get current SR protocol round */

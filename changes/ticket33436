@@ -1,0 +1,4 @@
+  o Minor features (directory authority, shared random):
+    - Refactor more authority-only parts of the shared-random scheduling code
+      to reside in the dirauth module, and to be disabled when compiling with
+      --disable-module-dirauth.  Closes ticket 33436.

@@ -153,6 +153,9 @@ void vote_routerstatus_free_(vote_routerstatus_t *rs);
 void set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                       const node_t *node,
                                       const routerinfo_t *ri);
+time_t voting_sched_get_start_of_interval_after(time_t now,
+                                                  int interval,
+                                                  int offset);
 
 #ifdef NETWORKSTATUS_PRIVATE
 #ifdef TOR_UNIT_TESTS
