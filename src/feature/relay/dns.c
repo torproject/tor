@@ -1491,7 +1491,11 @@ configure_nameservers(int force)
   if (evdns_base_count_nameservers(the_evdns_base) == 1) {
     SET("max-timeouts:", "1000000");
   } else {
-    SET("max-timeouts:", "10");
+    if (options->TestingTorNetwork) {
+      SET("max-timeouts:", "1");
+    } else {
+      SET("max-timeouts:", "1000");
+    }
   }
 
   // Elongate the queue of maximum inflight dns requests, so if a bunch
