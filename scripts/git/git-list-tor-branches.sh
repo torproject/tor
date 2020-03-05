@@ -81,7 +81,7 @@ branch() {
         location="\$GIT_PATH/\$TOR_WKT_NAME/$brname"
         is_maint="yes"
     elif [[ "$brname" =~ ^release- ]]; then
-        suffix="_r${brname_nodots#release-}"
+        suffix="_${brname_nodots#release-}"
         location="\$GIT_PATH/\$TOR_WKT_NAME/$brname"
 
         if [[ "$skip_release_branches" = "yes" ]]; then
