@@ -24,6 +24,7 @@
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"
+#include "lib/string/printf.h"
 #include "lib/string/util_string.h"
 
 #include "lib/confmgt/var_type_def_st.h"
@@ -75,7 +76,15 @@ typed_var_kvassign(void *target, const config_line_t *line,
     return def->fns->kv_parse(target, line, errmsg, def->params);
   }
 
-  return typed_var_assign(target, line->value, errmsg, def);
+  int rv = typed_var_assign(target, line->value, errmsg, def);
+  if (rv < 0 && *errmsg != NULL) {
+    /* typed_var_assign() didn't know the line's keyword, but we do.
+     * Let's add it to the error message. */
+    char *oldmsg = *errmsg;
+    tor_asprintf(errmsg, "Could not parse %s: %s", line->key, oldmsg);
+    tor_free(oldmsg);
+  }
+  return rv;
 }
 
 /**
