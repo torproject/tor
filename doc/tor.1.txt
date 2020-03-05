@@ -2363,14 +2363,11 @@ is non-zero):
     list itself, but it won't hurt if it does.) Do not list any bridge relay as it would
     compromise its concealment. +
      +
-    When listing a node, it's better to list it by fingerprint than by
-    nickname: fingerprints are more reliable. +
-     +
     If you run more than one relay, the MyFamily option on each relay
     **must** list all other relays, as described above. +
      +
     Note: do not use MyFamily when configuring your Tor instance as a
-    brigde.
+    bridge.
 
 [[Nickname]] **Nickname** __name__::
     Set the server's nickname to \'name'. Nicknames must be between 1 and 19
