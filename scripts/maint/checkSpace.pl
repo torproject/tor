@@ -23,6 +23,25 @@ if ($ARGV[0] =~ /^-/) {
     $C = ($lang eq '-C');
 }
 
+# hashmap of things where we allow spaces between them and (.
+our %allow_space_after= map {$_, 1} qw{
+    if while for switch return int unsigned elsif WINAPI
+    void __attribute__ op size_t double uint64_t
+    bool ssize_t
+    workqueue_reply_t hs_desc_decode_status_t
+    PRStatus
+    SMARTLIST_FOREACH_BEGIN SMARTLIST_FOREACH_END
+    HT_FOREACH
+    DIGESTMAP_FOREACH_MODIFY DIGESTMAP_FOREACH
+    DIGEST256MAP_FOREACH_MODIFY DIGEST256MAP_FOREACH
+    STRMAP_FOREACH_MODIFY STRMAP_FOREACH
+    SDMAP_FOREACH EIMAP_FOREACH RIMAP_FOREACH
+    MAP_FOREACH_MODIFY MAP_FOREACH
+    TOR_SIMPLEQ_FOREACH TOR_SIMPLEQ_FOREACH_SAFE
+    TOR_LIST_FOREACH TOR_LIST_FOREACH_SAFE
+    TOR_SLIST_FOREACH TOR_SLIST_FOREACH_SAFE
+};
+
 our %basenames = ();
 
 our %guardnames = ();
@@ -58,9 +77,9 @@ for my $fn (@ARGV) {
         }
         ## Warn about labels that don't have a space in front of them
         #    (We indent every label at least one space)
-        if (/^[a-zA-Z_][a-zA-Z_0-9]*:/) {
-            msg "nosplabel:$fn:$.\n";
-        }
+        #if (/^[a-zA-Z_][a-zA-Z_0-9]*:/) {
+        #    msg "nosplabel:$fn:$.\n";
+        #}
         ## Warn about trailing whitespace.
         #    (We don't allow whitespace at the end of the line; make your
         #    editor highlight it for you so you can stop adding it in.)
@@ -111,7 +130,7 @@ for my $fn (@ARGV) {
         ## Terminals are still 80 columns wide in my world.  I refuse to
         ## accept double-line lines.
         #   (Don't make lines wider than 80 characters, including newline.)
-        if (/^.{80}/) {
+        if (/^.{80}/ and not /LCOV_EXCL/) {
             msg "Wide:$fn:$.\n";
         }
         ### Juju to skip over comments and strings, since the tests
@@ -128,12 +147,12 @@ for my $fn (@ARGV) {
 
             if ($isheader) {
                 if ($seenguard == 0) {
-                    if (/ifndef\s+(\S+)/) {
+                    if (/^\s*\#\s*ifndef\s+(\S+)/) {
                         ++$seenguard;
                         $guardname = $1;
                     }
                 } elsif ($seenguard == 1) {
-                    if (/^\#define (\S+)/) {
+                    if (/^\s*\#\s*define (\S+)/) {
                         ++$seenguard;
                         if ($1 ne $guardname) {
                             msg "GUARD:$fn:$.: Header guard macro mismatch.\n";
@@ -156,9 +175,8 @@ for my $fn (@ARGV) {
                 #    msg "//:$fn:$.\n";
                 s!//.*!!;
             }
-            ## Warn about unquoted braces preceded by non-space.
-            #   (No character except a space should come before a {)
-            if (/([^\s'])\{/) {
+            ## Warn about unquoted braces preceded by unexpected character.
+            if (/([^\s'\)\(\{])\{/) {
                 msg "$1\{:$fn:$.\n";
             }
             ## Warn about double semi-colons at the end of a line.
@@ -178,12 +196,7 @@ for my $fn (@ARGV) {
             #   (Don't put a space between the name of a function and its
             #   arguments.)
             if (/(\w+)\s\(([A-Z]*)/) {
-                if ($1 ne "if" and $1 ne "while" and $1 ne "for" and
-                    $1 ne "switch" and $1 ne "return" and $1 ne "int" and
-                    $1 ne "elsif" and $1 ne "WINAPI" and $2 ne "WINAPI" and
-                    $1 ne "void" and $1 ne "__attribute__" and $1 ne "op" and
-                    $1 ne "size_t" and $1 ne "double" and $1 ne "uint64_t" and
-                    $1 ne "workqueue_reply_t" and $1 ne "bool") {
+                if (! $allow_space_after{$1} && $2 ne 'WINAPI') {
                     msg "fn ():$fn:$.\n";
                 }
             }
@@ -194,8 +207,8 @@ for my $fn (@ARGV) {
             if ($in_func_head ||
                 ($fn !~ /\.h$/ && /^[a-zA-Z0-9_]/ &&
                  ! /^(?:const |static )*(?:typedef|struct|union)[^\(]*$/ &&
-                 ! /= *\{$/ && ! /;$/)) {
-                if (/.\{$/){
+                 ! /= *\{$/ && ! /;$/) && ! /^[a-zA-Z0-9_]+\s*:/) {
+                if (/[^,\s]\s*\{$/){
                     msg "fn() {:$fn:$.\n";
                     $in_func_head = 0;
                 } elsif (/^\S[^\(]* +\**[a-zA-Z0-9_]+\(/) {

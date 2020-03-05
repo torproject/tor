@@ -78,6 +78,7 @@ DUMMY_TYPECHECK_INSTANCE(or_state_t);
   VAR(#member, conftype, member, initvalue)
 
 /** Array of "state" variables saved to the ~/.tor/state file. */
+// clang-format off
 static const config_var_t state_vars_[] = {
   /* Remember to document these in state-contents.txt ! */
 
@@ -134,6 +135,7 @@ static const config_var_t state_vars_[] = {
 
   END_OF_CONFIG_VARS
 };
+// clang-format on
 
 #undef VAR
 #undef V

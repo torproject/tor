@@ -886,7 +886,7 @@ dirvote_get_intermediate_param_value(const smartlist_t *param_list,
       int ok;
       value = (int32_t)
         tor_parse_long(integer_str, 10, INT32_MIN, INT32_MAX, &ok, NULL);
-      if (BUG(! ok))
+      if (BUG(!ok))
         return default_val;
       ++n_found;
     }

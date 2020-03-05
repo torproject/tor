@@ -76,11 +76,11 @@ hs_circuit_hash_token(const circuit_t *circuit)
 HT_PROTOTYPE(hs_circuitmap_ht, // The name of the hashtable struct
              circuit_t,    // The name of the element struct,
              hs_circuitmap_node,        // The name of HT_ENTRY member
-             hs_circuit_hash_token, hs_circuits_have_same_token)
+             hs_circuit_hash_token, hs_circuits_have_same_token);
 
 HT_GENERATE2(hs_circuitmap_ht, circuit_t, hs_circuitmap_node,
              hs_circuit_hash_token, hs_circuits_have_same_token,
-             0.6, tor_reallocarray, tor_free_)
+             0.6, tor_reallocarray, tor_free_);
 
 #ifdef TOR_UNIT_TESTS
 

@@ -153,9 +153,9 @@ node_id_eq(const node_t *node1, const node_t *node2)
   return tor_memeq(node1->identity, node2->identity, DIGEST_LEN);
 }
 
-HT_PROTOTYPE(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq)
+HT_PROTOTYPE(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq);
 HT_GENERATE2(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq,
-             0.6, tor_reallocarray_, tor_free_)
+             0.6, tor_reallocarray_, tor_free_);
 
 static inline unsigned int
 node_ed_id_hash(const node_t *node)
@@ -170,9 +170,9 @@ node_ed_id_eq(const node_t *node1, const node_t *node2)
 }
 
 HT_PROTOTYPE(nodelist_ed_map, node_t, ed_ht_ent, node_ed_id_hash,
-             node_ed_id_eq)
+             node_ed_id_eq);
 HT_GENERATE2(nodelist_ed_map, node_t, ed_ht_ent, node_ed_id_hash,
-             node_ed_id_eq, 0.6, tor_reallocarray_, tor_free_)
+             node_ed_id_eq, 0.6, tor_reallocarray_, tor_free_);
 
 /** The global nodelist. */
 static nodelist_t *the_nodelist=NULL;

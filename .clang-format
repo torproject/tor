@@ -1,0 +1,163 @@
+# DO NOT COMMIT OR MERGE CODE THAT IS RUN THROUGH THIS TOOL YET.
+#
+# WE ARE STILL DISCUSSING OUR DESIRED STYLE AND ITERATING ON IT.
+#     (12 Feb 2020)
+
+---
+Language:        Cpp
+# Out of all supported styles, LLVM seems closest to our own.
+BasedOnStyle:    LLVM
+
+################
+#
+# Deviations from LLVM's style.
+#
+################
+
+# We prefer an indentation width of 4 columns; LLVM likes 2.
+## OVERRIDE FOR COMPARISON
+IndentWidth:     2
+
+## OVERRIDE FOR COMPARISON
+## for now i'm not sorting includes, since that makes every file get touched.
+SortIncludes: false
+
+# We prefer 79; llvm likes 80.
+ColumnLimit: 79
+
+# Where do we want to put backslashes on multiline macros?  Our choices are
+# "as far left as possible", "as far right as possible", and "make no changes."
+# LLVM defaults to right, but we don't dig that.
+AlignEscapedNewlines: Left
+
+# When we see a bunch of things in a row with comments after them, should we
+# try to align those comments?  Doing so makes some of our code pretty ugly.
+AlignTrailingComments: false
+
+# We use a function declaration style much closer to BSD KNF than to LLVM's.
+# We say:
+#      int foo(int x);
+#      int
+#      foo(int x)
+#      {
+#          ...
+#      }
+# whereas llvm prefers:
+#      int foo(int x);
+#      int foo(int x) {
+#          ...
+#      }
+# or even:
+#      int foo(int x) { ... }
+#
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction:   true
+AllowShortFunctionsOnASingleLine: None
+AlwaysBreakAfterReturnType: AllDefinitions
+
+# We don't like blocks to start with an empty line.
+#
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+################
+#
+# Tor-specific magic
+#
+################
+
+#
+# These comments are magical, and should not be changed.
+#
+CommentPragmas:  'LCOV_EXCL|COVERITY'
+
+#
+# Remove duplicate empty lines.
+#
+MaxEmptyLinesToKeep: 1
+
+#
+# Indent preprocessor directives, for clarity.
+#
+IndentPPDirectives: AfterHash
+
+#
+# These introduce an iteration, and work a bit like a for loop.
+#
+# Note that we can NOT include ones that don't work like "for".  For example,
+# if the body is an argument to the macro, we can't list it here.
+#
+ForEachMacros:
+  - MAP_FOREACH
+  - MAP_FOREACH_MODIFY
+  - TOR_SIMPLEQ_FOREACH
+  - TOR_SIMPLEQ_FOREACH_SAFE
+  - TOR_SLIST_FOREACH
+  - TOR_SLIST_FOREACH_SAFE
+  - TOR_LIST_FOREACH
+  - TOR_LIST_FOREACH_SAFE
+  - TOR_TAILQ_FOREACH
+  - TOR_TAILQ_FOREACH_SAFE
+  - TOR_TAILQ_FOREACH_REVERSE
+  - TOR_TAILQ_FOREACH_REVERSE_SAFE
+  - TOR_CIRCLEQ_FOREACH
+  - TOR_CIRCLEQ_FOREACH_SAFE
+  - TOR_CIRCLEQ_FOREACH_REVERSE
+  - TOR_CIRCLEQ_FOREACH_REVERSE_SAFE
+  - HT_FOREACH
+  - SMARTLIST_FOREACH_BEGIN
+  - DIGESTMAP_FOREACH
+  - DIGESTMAP_FOREACH_MODIFY
+  - DIGEST256MAP_FOREACH
+  - DIGEST256MAP_FOREACH_MODIFY
+  - SDMAP_FOREACH
+  - RIMAP_FOREACH
+  - EIMAP_FOREACH
+
+#
+# Omitting:
+#
+# - SMARTLIST_FOREACH, since the body of the loop is an argument.
+
+#
+# This explains how to sort our headers.
+#
+# This is more complex than it truly should be, but I've edited this till
+# compilation still mostly passes.
+#
+# I'm disabling this, however, since it's a distraction from the other
+# formatting issues. See SortIncludes above.
+#
+IncludeCategories:
+  - Regex:           '^"orconfig.h'
+    Priority:        -30
+  - Regex:           '^"ext/'
+    Priority:        -18
+  - Regex:           '^"lib/'
+    Priority:        -10
+  - Regex:           '^"core/or/or.h'
+    Priority:        -5
+  - Regex:           '^"core/'
+    Priority:        5
+  - Regex:           '^"feature/'
+    Priority:        10
+  - Regex:           '^"app/'
+    Priority:        20
+
+#
+# These macros should always cause indentation, as though they were { and }.
+#
+# Do NOT put macros here unless you want an extra level of indentation between
+# them whenever they appear.
+#
+MacroBlockBegin: "^STMT_BEGIN|TT_STMT_BEGIN$"
+MacroBlockEnd:   "^STMT_END|TT_STMT_END$"
+
+#
+# These macros are interpreted as types.
+# (Not supported in my clang-format)
+#
+# TypenameMacros:
+#    - "STACK_OF"
+
+...

@@ -1405,9 +1405,9 @@ policy_hash(const policy_map_ent_t *ent)
 }
 
 HT_PROTOTYPE(policy_map, policy_map_ent_t, node, policy_hash,
-             policy_eq)
+             policy_eq);
 HT_GENERATE2(policy_map, policy_map_ent_t, node, policy_hash,
-             policy_eq, 0.6, tor_reallocarray_, tor_free_)
+             policy_eq, 0.6, tor_reallocarray_, tor_free_);
 
 /** Given a pointer to an addr_policy_t, return a copy of the pointer to the
  * "canonical" copy of that addr_policy_t; the canonical copy is a single

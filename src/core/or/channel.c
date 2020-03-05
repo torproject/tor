@@ -119,10 +119,10 @@ channel_id_eq(const channel_t *a, const channel_t *b)
   return a->global_identifier == b->global_identifier;
 }
 HT_PROTOTYPE(channel_gid_map, channel_t, gidmap_node,
-             channel_id_hash, channel_id_eq)
+             channel_id_hash, channel_id_eq);
 HT_GENERATE2(channel_gid_map, channel_t, gidmap_node,
              channel_id_hash, channel_id_eq,
-             0.6, tor_reallocarray_, tor_free_)
+             0.6, tor_reallocarray_, tor_free_);
 
 HANDLE_IMPL(channel, channel_t,)
 
@@ -160,9 +160,9 @@ channel_idmap_eq(const channel_idmap_entry_t *a,
 }
 
 HT_PROTOTYPE(channel_idmap, channel_idmap_entry_t, node, channel_idmap_hash,
-             channel_idmap_eq)
+             channel_idmap_eq);
 HT_GENERATE2(channel_idmap, channel_idmap_entry_t, node, channel_idmap_hash,
-             channel_idmap_eq, 0.5,  tor_reallocarray_, tor_free_)
+             channel_idmap_eq, 0.5,  tor_reallocarray_, tor_free_);
 
 /* Functions to maintain the digest map */
 static void channel_remove_from_digest_map(channel_t *chan);

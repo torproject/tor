@@ -579,8 +579,10 @@ test_get_pt_proxy_uri(void *arg)
     tor_free(uri);
 }
 
+#ifndef COCCI
 #define PT_LEGACY(name)                                               \
-  { #name, test_pt_ ## name , 0, NULL, NULL }
+  { (#name), test_pt_ ## name , 0, NULL, NULL }
+#endif
 
 struct testcase_t pt_tests[] = {
   PT_LEGACY(parsing),

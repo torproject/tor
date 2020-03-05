@@ -57,10 +57,10 @@ fp_pair_map_entry_hash(const fp_pair_map_entry_t *a)
  */
 
 HT_PROTOTYPE(fp_pair_map_impl, fp_pair_map_entry_t, node,
-             fp_pair_map_entry_hash, fp_pair_map_entries_eq)
+             fp_pair_map_entry_hash, fp_pair_map_entries_eq);
 HT_GENERATE2(fp_pair_map_impl, fp_pair_map_entry_t, node,
              fp_pair_map_entry_hash, fp_pair_map_entries_eq,
-             0.6, tor_reallocarray_, tor_free_)
+             0.6, tor_reallocarray_, tor_free_);
 
 /** Constructor to create a new empty map from fp_pair_t to void *
  */
@@ -312,4 +312,3 @@ fp_pair_map_assert_ok(const fp_pair_map_t *map)
 {
   tor_assert(!fp_pair_map_impl_HT_REP_IS_BAD_(&(map->head)));
 }
-
