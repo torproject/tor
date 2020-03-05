@@ -1,6 +1,6 @@
 /* Copyright (c) 2003, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -10,6 +10,8 @@
 
 #ifndef TORTLS_INTERNAL_H
 #define TORTLS_INTERNAL_H
+
+#include "lib/tls/x509.h"
 
 int tor_errno_to_tls_error(int e);
 #ifdef ENABLE_OPENSSL

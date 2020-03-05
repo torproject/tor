@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "core/or/or.h"
@@ -701,35 +701,4 @@ dir_split_resource_into_fingerprints(const char *resource,
   smartlist_add_all(fp_out, fp_tmp);
   smartlist_free(fp_tmp);
   return 0;
-}
-
-/** As dir_split_resource_into_fingerprints, but instead fills
- * <b>spool_out</b> with a list of spoolable_resource_t for the resource
- * identified through <b>source</b>. */
-int
-dir_split_resource_into_spoolable(const char *resource,
-                                  dir_spool_source_t source,
-                                  smartlist_t *spool_out,
-                                  int *compressed_out,
-                                  int flags)
-{
-  smartlist_t *fingerprints = smartlist_new();
-
-  tor_assert(flags & (DSR_HEX|DSR_BASE64));
-  const size_t digest_len =
-    (flags & DSR_DIGEST256) ? DIGEST256_LEN : DIGEST_LEN;
-
-  int r = dir_split_resource_into_fingerprints(resource, fingerprints,
-                                               compressed_out, flags);
-  /* This is not a very efficient implementation XXXX */
-  SMARTLIST_FOREACH_BEGIN(fingerprints, uint8_t *, digest) {
-    spooled_resource_t *spooled =
-      spooled_resource_new(source, digest, digest_len);
-    if (spooled)
-      smartlist_add(spool_out, spooled);
-    tor_free(digest);
-  } SMARTLIST_FOREACH_END(digest);
-
-  smartlist_free(fingerprints);
-  return r;
 }

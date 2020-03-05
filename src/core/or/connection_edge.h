@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -181,6 +181,21 @@ void connection_edge_free_all(void);
 void connection_ap_warn_and_unmark_if_pending_circ(
                                              entry_connection_t *entry_conn,
                                              const char *where);
+
+/** Lowest value for DNS ttl that a server should give or a client should
+ * believe. */
+#define MIN_DNS_TTL (5*60)
+/** Highest value for DNS ttl that a server should give or a client should
+ * believe. */
+#define MAX_DNS_TTL (60*60)
+/** How long do we keep DNS cache entries before purging them (regardless of
+ * their TTL)? */
+#define MAX_DNS_ENTRY_AGE (3*60*60)
+/** How long do we cache/tell clients to cache DNS records when no TTL is
+ * known? */
+#define DEFAULT_DNS_TTL (30*60)
+
+uint32_t clip_dns_ttl(uint32_t ttl);
 
 int connection_half_edge_is_valid_data(const smartlist_t *half_conns,
                                        streamid_t stream_id);

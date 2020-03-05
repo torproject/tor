@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
@@ -13,7 +13,7 @@
 #include "feature/dirparse/authcert_parse.h"
 #include "feature/dirparse/ns_parse.h"
 #include "test/test_dir_common.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "feature/nodelist/authority_cert_st.h"
 #include "feature/nodelist/networkstatus_st.h"

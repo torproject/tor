@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -468,7 +468,6 @@ compute_publishserverdescriptor(or_options_t *options)
  * - "https"
  * - "email"
  * - "moat"
- * - "hyphae"
  *
  * If the option string is unrecognised, a warning will be logged and 0 is
  * returned.  If the option string contains an invalid character, -1 is
@@ -481,11 +480,11 @@ check_bridge_distribution_setting(const char *bd)
     return 0;
 
   const char *RECOGNIZED[] = {
-    "none", "any", "https", "email", "moat", "hyphae"
+    "none", "any", "https", "email", "moat"
   };
   unsigned i;
   for (i = 0; i < ARRAY_LENGTH(RECOGNIZED); ++i) {
-    if (!strcmp(bd, RECOGNIZED[i]))
+    if (!strcasecmp(bd, RECOGNIZED[i]))
       return 0;
   }
 

@@ -1,10 +1,10 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #define CIRCUITBUILD_PRIVATE
 #define CIRCUITSTATS_PRIVATE
 #define CIRCUITLIST_PRIVATE
-#define CHANNEL_PRIVATE_
+#define CHANNEL_FILE_PRIVATE
 
 #include "core/or/or.h"
 #include "test/test.h"

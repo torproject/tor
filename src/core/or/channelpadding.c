@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -9,9 +9,9 @@
  * @brief Link-level padding code.
  **/
 
-/* TOR_CHANNEL_INTERNAL_ define needed for an O(1) implementation of
+/* CHANNEL_OBJECT_PRIVATE define needed for an O(1) implementation of
  * channelpadding_channel_to_channelinfo() */
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 
 #include "core/or/or.h"
 #include "core/or/channel.h"

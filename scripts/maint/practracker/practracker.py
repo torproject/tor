@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 Best-practices tracker for Tor source code.
@@ -24,12 +24,13 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import os, sys
+import codecs, os, sys
 
 import metrics
 import util
 import problem
 import includes
+import shutil
 
 # The filename of the exceptions file (it should be placed in the practracker directory)
 EXCEPTIONS_FNAME = "./exceptions.txt"
@@ -62,12 +63,8 @@ TOR_TOPDIR = None
 
 #######################################################
 
-if sys.version_info[0] <= 2:
-    def open_file(fname):
-        return open(fname, 'r')
-else:
-    def open_file(fname):
-        return open(fname, 'r', encoding='utf-8')
+def open_file(fname):
+    return codecs.open(fname, 'r', encoding='utf-8')
 
 def consider_file_size(fname, f):
     """Consider the size of 'f' and yield an FileSizeItem for it.
@@ -185,6 +182,9 @@ def main(argv):
                         help="Regenerate the exceptions file")
     parser.add_argument("--list-overbroad", action="store_true",
                         help="List over-broad exceptions")
+    parser.add_argument("--regen-overbroad", action="store_true",
+                        help="Regenerate the exceptions file, "
+                             "removing over-broad exceptions.")
     parser.add_argument("--exceptions",
                         help="Override the location for the exceptions file")
     parser.add_argument("--strict", action="store_true",
@@ -227,8 +227,9 @@ def main(argv):
     filt.addThreshold(problem.DependencyViolationItem("*.c", int(args.max_dependency_violations)))
     filt.addThreshold(problem.DependencyViolationItem("*.h", int(args.max_dependency_violations)))
 
-    if args.list_overbroad and args.regen:
-        print("Cannot use --regen with --list-overbroad",
+    if args.list_overbroad + args.regen + args.regen_overbroad > 1:
+        print("Cannot use more than one of --regen, --list-overbroad, and "
+              "--regen-overbroad.",
               file=sys.stderr)
         sys.exit(1)
 
@@ -247,13 +248,15 @@ def main(argv):
         ProblemVault = problem.ProblemVault(exceptions_file)
         problem_file = sys.stdout
 
-    if args.list_overbroad:
-        # If we're listing overbroad exceptions, don't list problems.
+    if args.list_overbroad or args.regen_overbroad:
+        # If we're looking for overbroad exceptions, don't list problems
+        # immediately to the problem file.
         problem_file = util.NullFile()
 
     # 2.1) Adjust the exceptions so that we warn only about small problems,
     # and produce errors on big ones.
-    if not (args.regen or args.list_overbroad or args.strict):
+    if not (args.regen or args.list_overbroad or args.regen_overbroad or
+            args.strict):
         ProblemVault.set_tolerances(TOLERANCE_FNS)
 
     # 3) Go through all the files and report problems if they are not exceptions
@@ -269,7 +272,17 @@ def main(argv):
 
     if args.regen:
         tmpfile.close()
-        os.rename(tmpname, exceptions_file)
+        shutil.move(tmpname, exceptions_file)
+        sys.exit(0)
+
+    if args.regen_overbroad:
+        tmpname = exceptions_file + ".tmp"
+        tmpfile = open(tmpname, "w")
+        tmpfile.write(HEADER)
+        for item in ProblemVault.list_exceptions_without_overbroad():
+            print(item, file=tmpfile)
+        tmpfile.close()
+        shutil.move(tmpname, exceptions_file)
         sys.exit(0)
 
     # If new issues were found, try to give out some advice to the developer on how to resolve it.
@@ -296,9 +309,12 @@ variable.
             else:
                 print(ex, "->", p.metric_value)
 
+
     sys.exit(found_new_issues)
 
 if __name__ == '__main__':
     if os.environ.get("TOR_DISABLE_PRACTRACKER"):
+        print("TOR_DISABLE_PRACTRACKER is set, skipping practracker tests.",
+              file=sys.stderr)
         sys.exit(0)
     main(sys.argv)

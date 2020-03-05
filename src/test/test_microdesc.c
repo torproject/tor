@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2019, The Tor Project, Inc. */
+/* Copyright (c) 2010-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
@@ -491,7 +491,7 @@ test_md_generate(void *arg)
 }
 
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
-DISABLE_GCC_WARNING(overlength-strings)
+DISABLE_GCC_WARNING("-Woverlength-strings")
 /* We allow huge string constants in the unit tests, but not in the code
  * at large. */
 #endif
@@ -686,7 +686,7 @@ static const char MD_PARSE_TEST_DATA[] =
   "id rsa1024 2A8wYpHxnkKJ92orocvIQBzeHlE\n"
   ;
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
-ENABLE_GCC_WARNING(overlength-strings)
+ENABLE_GCC_WARNING("-Woverlength-strings")
 #endif
 
 /** More tests for parsing different kinds of microdescriptors, and getting

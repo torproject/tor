@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2019, The Tor Project, Inc. */
+/* Copyright (c) 2016-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -99,11 +99,13 @@
 #include "feature/nodelist/dirlist.h"
 #include "feature/hs_common/shared_random_client.h"
 #include "feature/dirauth/shared_random_state.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/authmode.h"
+#include "feature/dirauth/dirauth_sys.h"
 
+#include "feature/dirauth/dirauth_options_st.h"
 #include "feature/nodelist/authority_cert_st.h"
 #include "feature/nodelist/networkstatus_st.h"
 
@@ -1130,7 +1132,7 @@ sr_get_string_for_vote(void)
   char *vote_str = NULL;
   digestmap_t *state_commits;
   smartlist_t *chunks = smartlist_new();
-  const or_options_t *options = get_options();
+  const dirauth_options_t *options = dirauth_get_options();
 
   /* Are we participating in the protocol? */
   if (!options->AuthDirSharedRandomness) {
@@ -1195,7 +1197,7 @@ sr_get_string_for_consensus(const smartlist_t *votes,
                             int32_t num_srv_agreements)
 {
   char *srv_str;
-  const or_options_t *options = get_options();
+  const dirauth_options_t *options = dirauth_get_options();
 
   tor_assert(votes);
 
@@ -1259,7 +1261,7 @@ sr_act_post_consensus(const networkstatus_t *consensus)
   }
 
   /* Prepare our state so that it's ready for the next voting period. */
-  sr_state_update(voting_schedule_get_next_valid_after_time());
+  sr_state_update(dirauth_sched_get_next_valid_after_time());
 }
 
 /** Initialize shared random subsystem. This MUST be called early in the boot

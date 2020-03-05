@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -50,7 +50,7 @@
  * </ul>
  **/
 
-#define EXPOSE_ROUTERDESC_TOKEN_TABLE
+#define ROUTERDESC_TOKEN_TABLE_PRIVATE
 
 #include "core/or/or.h"
 #include "app/config/config.h"
@@ -81,6 +81,7 @@
 /****************************************************************************/
 
 /** List of tokens recognized in router descriptors */
+// clang-format off
 const token_rule_t routerdesc_token_table[] = {
   T0N("reject",              K_REJECT,              ARGS,    NO_OBJ ),
   T0N("accept",              K_ACCEPT,              ARGS,    NO_OBJ ),
@@ -123,8 +124,10 @@ const token_rule_t routerdesc_token_table[] = {
 
   END_OF_TABLE
 };
+// clang-format on
 
 /** List of tokens recognized in extra-info documents. */
+// clang-format off
 static token_rule_t extrainfo_token_table[] = {
   T1_END( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
@@ -162,6 +165,7 @@ static token_rule_t extrainfo_token_table[] = {
 
   END_OF_TABLE
 };
+// clang-format on
 
 #undef T
 

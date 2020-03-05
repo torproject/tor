@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -43,5 +43,7 @@ void dir_server_add(dir_server_t *ent);
 
 void clear_dir_servers(void);
 void dirlist_free_all(void);
+
+MOCK_DECL(void, dirlist_add_trusted_dir_addresses, (void));
 
 #endif /* !defined(TOR_DIRLIST_H) */

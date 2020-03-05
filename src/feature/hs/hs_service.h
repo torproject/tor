@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2019, The Tor Project, Inc. */
+/* Copyright (c) 2016-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -20,6 +20,8 @@
 
 /* Trunnel */
 #include "trunnel/hs/cell_establish_intro.h"
+
+#include "ext/ht.h"
 
 /** When loading and configuring a service, this is the default version it will
  * be configured for as it is possible that no HiddenServiceVersion is
@@ -246,10 +248,14 @@ typedef struct hs_service_config_t {
   /** Does this service export the circuit ID of its clients? */
   hs_circuit_id_protocol_t circuit_id_protocol;
 
-  /* DoS defenses. For the ESTABLISH_INTRO cell extension. */
+  /** DoS defenses. For the ESTABLISH_INTRO cell extension. */
   unsigned int has_dos_defense_enabled : 1;
   uint32_t intro_dos_rate_per_sec;
   uint32_t intro_dos_burst_per_sec;
+
+  /** If set, contains the Onion Balance master ed25519 public key (taken from
+   * an .onion addresses) that this tor instance serves as backend. */
+  smartlist_t *ob_master_pubkeys;
 } hs_service_config_t;
 
 /** Service state. */
@@ -299,8 +305,13 @@ typedef struct hs_service_t {
   /** Next descriptor. */
   hs_service_descriptor_t *desc_next;
 
-  /* XXX: Credential (client auth.) #20700. */
-
+  /* If this is an onionbalance instance, this is an array of subcredentials
+   * that should be used when decrypting an INTRO2 cell. If this is not an
+   * onionbalance instance, this is NULL.
+   * See [ONIONBALANCE] section in rend-spec-v3.txt for more details . */
+  hs_subcredential_t *ob_subcreds;
+  /* Number of OB subcredentials */
+  size_t n_ob_subcreds;
 } hs_service_t;
 
 /** For the service global hash map, we define a specific type for it which

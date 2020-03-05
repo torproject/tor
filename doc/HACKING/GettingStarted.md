@@ -11,8 +11,9 @@ whole Tor ecosystem.)
 
 
 If you are looking for a more bare-bones, less user-friendly information
-dump of important information, you might like reading the "torguts"
-documents linked to below. You should probably read it before you write
+dump of important information, you might like reading the
+doxygen output at https://src-ref.docs.torproject.org/tor/index.html .
+You should probably skim some of the topic headings there before you write
 your first patch.
 
 
@@ -49,14 +50,14 @@ Once you've reached this point, here's what you need to know.
      going to fix a bug that appears in a stable version, check out the
      appropriate "maint" branch, as in:
 
-         git checkout maint-0.2.7
+         git checkout maint-0.4.3
 
   2. Find your way around the source
 
-     Our overall code structure is explained in the "torguts" documents,
+     Our overall code structure is explained in our source documentation,
      currently at
 
-        git clone https://git.torproject.org/user/nickm/torguts.git
+         https://src-ref.docs.torproject.org/tor/index.html
 
      Find a part of the code that looks interesting to you, and start
      looking around it to see how it fits together!

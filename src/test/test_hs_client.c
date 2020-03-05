@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2019, The Tor Project, Inc. */
+/* Copyright (c) 2016-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -10,7 +10,7 @@
 #define CRYPTO_PRIVATE
 #define MAINLOOP_PRIVATE
 #define HS_CLIENT_PRIVATE
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 #define CIRCUITBUILD_PRIVATE
 #define CIRCUITLIST_PRIVATE
 #define CONNECTION_PRIVATE
@@ -77,6 +77,23 @@ mock_networkstatus_get_live_consensus(time_t now)
 {
   (void) now;
   return &mock_ns;
+}
+
+static int
+mock_write_str_to_file(const char *path, const char *str, int bin)
+{
+  (void) bin;
+  (void) path;
+  (void) str;
+  return 0;
+}
+
+static or_options_t mocked_options;
+
+static const or_options_t *
+mock_get_options(void)
+{
+  return &mocked_options;
 }
 
 static int
@@ -306,7 +323,7 @@ test_e2e_rend_circuit_setup(void *arg)
        mock_connection_ap_handshake_send_begin);
 
   /* Setup */
-  retval = helper_get_circ_and_stream_for_test( &or_circ, &conn, 0);
+  retval = helper_get_circ_and_stream_for_test(&or_circ, &conn, 0);
   tt_int_op(retval, OP_EQ, 0);
   tt_assert(or_circ);
   tt_assert(conn);
@@ -322,9 +339,8 @@ test_e2e_rend_circuit_setup(void *arg)
   /**********************************************/
 
   /* Setup the circuit */
-  retval = hs_circuit_setup_e2e_rend_circ(or_circ,
-                                          ntor_key_seed, sizeof(ntor_key_seed),
-                                          0);
+  retval = hs_circuit_setup_e2e_rend_circ(or_circ, ntor_key_seed,
+                                          sizeof(ntor_key_seed), 0);
   tt_int_op(retval, OP_EQ, 0);
 
   /**********************************************/
@@ -334,11 +350,9 @@ test_e2e_rend_circuit_setup(void *arg)
   tt_int_op(retval, OP_EQ, 1);
 
   /* Check that the crypt path has prop224 algorithm parameters */
-  tt_int_op(
-         crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.f_digest),
+  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.f_digest),
             OP_EQ, DIGEST_SHA3_256);
-  tt_int_op(
-         crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.b_digest),
+  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.b_digest),
             OP_EQ, DIGEST_SHA3_256);
   tt_assert(or_circ->cpath->pvt_crypto.f_crypto);
   tt_assert(or_circ->cpath->pvt_crypto.b_crypto);
@@ -419,9 +433,10 @@ test_client_pick_intro(void *arg)
     const hs_descriptor_t *fetched_desc =
       hs_cache_lookup_as_client(&service_kp.pubkey);
     tt_assert(fetched_desc);
-    tt_mem_op(fetched_desc->subcredential, OP_EQ, desc->subcredential,
-              DIGEST256_LEN);
-    tt_assert(!fast_mem_is_zero((char*)fetched_desc->subcredential,
+    tt_mem_op(fetched_desc->subcredential.subcred,
+              OP_EQ, desc->subcredential.subcred,
+              SUBCRED_LEN);
+    tt_assert(!fast_mem_is_zero((char*)fetched_desc->subcredential.subcred,
                                DIGEST256_LEN));
     tor_free(encoded);
   }
@@ -1333,6 +1348,85 @@ test_close_intro_circuit_failure(void *arg)
   hs_free_all();
 }
 
+static void
+test_purge_ephemeral_client_auth(void *arg)
+{
+  ed25519_keypair_t service_kp;
+  hs_client_service_authorization_t *auth = NULL;
+  hs_client_register_auth_status_t status;
+
+  (void) arg;
+
+  /* We will try to write on disk client credentials. */
+  MOCK(check_private_dir, mock_check_private_dir);
+  MOCK(get_options, mock_get_options);
+  MOCK(write_str_to_file, mock_write_str_to_file);
+
+  /* Boggus directory so when we try to write the permanent client
+   * authorization data to disk, we don't fail. See
+   * store_permanent_client_auth_credentials() for more details. */
+  mocked_options.ClientOnionAuthDir = tor_strdup("auth_dir");
+
+  hs_init();
+
+  /* Generate service keypair */
+  tt_int_op(0, OP_EQ, ed25519_keypair_generate(&service_kp, 0));
+
+  /* Generate a client authorization object. */
+  auth = tor_malloc_zero(sizeof(hs_client_service_authorization_t));
+
+  /* Set it up. No flags meaning it is ephemeral. */
+  curve25519_secret_key_generate(&auth->enc_seckey, 0);
+  hs_build_address(&service_kp.pubkey, HS_VERSION_THREE, auth->onion_address);
+  auth->flags = 0;
+
+  /* Confirm that there is nothing in the client auth map. It is unallocated
+   * until we add the first entry. */
+  tt_assert(!get_hs_client_auths_map());
+
+  /* Add an entry to the client auth list. We loose ownership of the auth
+   * object so nullify it. */
+  status = hs_client_register_auth_credentials(auth);
+  auth = NULL;
+  tt_int_op(status, OP_EQ, REGISTER_SUCCESS);
+
+  /* We should have the entry now. */
+  digest256map_t *client_auths = get_hs_client_auths_map();
+  tt_assert(client_auths);
+  tt_int_op(digest256map_size(client_auths), OP_EQ, 1);
+
+  /* Purge the cache that should remove all ephemeral values. */
+  purge_ephemeral_client_auth();
+  tt_int_op(digest256map_size(client_auths), OP_EQ, 0);
+
+  /* Now add a new authorization object but permanent. */
+  /* Generate a client authorization object. */
+  auth = tor_malloc_zero(sizeof(hs_client_service_authorization_t));
+  curve25519_secret_key_generate(&auth->enc_seckey, 0);
+  hs_build_address(&service_kp.pubkey, HS_VERSION_THREE, auth->onion_address);
+  auth->flags = CLIENT_AUTH_FLAG_IS_PERMANENT;
+
+  /* Add an entry to the client auth list. We loose ownership of the auth
+   * object so nullify it. */
+  status = hs_client_register_auth_credentials(auth);
+  auth = NULL;
+  tt_int_op(status, OP_EQ, REGISTER_SUCCESS);
+  tt_int_op(digest256map_size(client_auths), OP_EQ, 1);
+
+  /* Purge again, the entry should still be there. */
+  purge_ephemeral_client_auth();
+  tt_int_op(digest256map_size(client_auths), OP_EQ, 1);
+
+ done:
+  client_service_authorization_free(auth);
+  hs_free_all();
+  tor_free(mocked_options.ClientOnionAuthDir);
+
+  UNMOCK(check_private_dir);
+  UNMOCK(get_options);
+  UNMOCK(write_str_to_file);
+}
+
 struct testcase_t hs_client_tests[] = {
   { "e2e_rend_circuit_setup_legacy", test_e2e_rend_circuit_setup_legacy,
     TT_FORK, NULL, NULL },
@@ -1359,6 +1453,10 @@ struct testcase_t hs_client_tests[] = {
 
   /* SOCKS5 Extended Error Code. */
   { "socks_hs_errors", test_socks_hs_errors, TT_FORK, NULL, NULL },
+
+  /* Client authorization. */
+  { "purge_ephemeral_client_auth", test_purge_ephemeral_client_auth, TT_FORK,
+    NULL, NULL },
 
   END_OF_TESTCASES
 };

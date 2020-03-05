@@ -1,0 +1,3 @@
+  o Minor features (client-only compilation):
+    - Disable more code related to the ext_orport protocol when compiling
+      without support for relay mode. Closes ticket 33368.

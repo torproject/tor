@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -13,6 +13,8 @@
 
 typedef struct consensus_cache_entry_t consensus_cache_entry_t;
 typedef struct consensus_cache_t consensus_cache_t;
+
+struct config_line_t;
 
 HANDLE_DECL(consensus_cache_entry, consensus_cache_entry_t, )
 #define consensus_cache_entry_handle_free(h)    \

@@ -1,4 +1,4 @@
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 #define TOR_TIMERS_PRIVATE
 #define CIRCUITPADDING_PRIVATE
 #define CIRCUITPADDING_MACHINES_PRIVATE
@@ -27,7 +27,6 @@
 #include "core/crypto/relay_crypto.h"
 #include "core/or/protover.h"
 #include "feature/nodelist/nodelist.h"
-#include "lib/evloop/compat_libevent.h"
 #include "app/config/config.h"
 
 #include "feature/nodelist/routerstatus_st.h"

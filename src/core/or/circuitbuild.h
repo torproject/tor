@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -66,7 +66,8 @@ int circuit_can_use_tap(const origin_circuit_t *circ);
 int circuit_has_usable_onion_key(const origin_circuit_t *circ);
 int extend_info_has_preferred_onion_key(const extend_info_t* ei);
 const uint8_t *build_state_get_exit_rsa_id(cpath_build_state_t *state);
-const node_t *build_state_get_exit_node(cpath_build_state_t *state);
+MOCK_DECL(const node_t *,
+          build_state_get_exit_node,(cpath_build_state_t *state));
 const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
 struct circuit_guard_state_t;

@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Disable relay_sys when the relay module is disabled.
-      Closes ticket 32245.

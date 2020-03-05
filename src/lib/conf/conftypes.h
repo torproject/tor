@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -131,6 +131,9 @@ typedef struct struct_member_t {
  *
  * These 'magic numbers' are 32-bit values used to tag objects to make sure
  * that they have the correct type.
+ *
+ * If all fields in this structure are zero or 0, the magic-number check is
+ * not performed.
  */
 typedef struct struct_magic_decl_t {
   /** The name of the structure */
@@ -199,6 +202,11 @@ typedef struct struct_magic_decl_t {
  * whenever the user tries to use it.
  **/
 #define CFLG_WARN_OBSOLETE (1u<<7)
+/**
+ * Flag to indicate that we should warn that an option applies only to
+ * a disabled module, whenever the user tries to use it.
+ **/
+#define CFLG_WARN_DISABLED (1u<<8)
 
 /**
  * A group of flags that should be set on all obsolete options and types.
@@ -206,6 +214,13 @@ typedef struct struct_magic_decl_t {
 #define CFLG_GROUP_OBSOLETE \
   (CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP|CFLG_NOSET|CFLG_NOLIST|\
    CFLG_WARN_OBSOLETE)
+
+/**
+ * A group of fflags that should be set on all disabled options.
+ **/
+#define CFLG_GROUP_DISABLED \
+  (CFLG_NOCOPY|CFLG_NOCMP|CFLG_NODUMP|CFLG_NOSET|CFLG_NOLIST|\
+   CFLG_WARN_DISABLED)
 
 /** A variable allowed in the configuration file or on the command line. */
 typedef struct config_var_t {
@@ -245,6 +260,7 @@ typedef struct config_deprecation_t {
   const char *why_deprecated;
 } config_deprecation_t;
 
+#ifndef COCCI
 /**
  * Handy macro for declaring "In the config file or on the command line, you
  * can abbreviate <b>tok</b>s as <b>tok</b>". Used inside an array of
@@ -253,7 +269,8 @@ typedef struct config_deprecation_t {
  * For example, to declare "NumCpu" as an abbreviation for "NumCPUs",
  * you can say PLURAL(NumCpu).
  **/
-#define PLURAL(tok) { #tok, #tok "s", 0, 0 }
+#define PLURAL(tok) { (#tok), (#tok "s"), 0, 0 }
+#endif /* !defined(COCCI) */
 
 /**
  * Validation function: verify whether a configuation object is well-formed

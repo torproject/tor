@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -13,10 +13,10 @@
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "feature/nodelist/networkstatus.h"
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 #include "core/or/channel.h"
 #include "core/or/channeltls.h"
-#define SCHEDULER_PRIVATE_
+#define SCHEDULER_PRIVATE
 #include "core/or/scheduler.h"
 #include "lib/math/fp.h"
 
@@ -56,9 +56,9 @@ typedef HT_HEAD(socket_table_s, socket_table_ent_t) socket_table_t;
 static socket_table_t socket_table = HT_INITIALIZER();
 
 HT_PROTOTYPE(socket_table_s, socket_table_ent_t, node, socket_table_ent_hash,
-             socket_table_ent_eq)
+             socket_table_ent_eq);
 HT_GENERATE2(socket_table_s, socket_table_ent_t, node, socket_table_ent_hash,
-             socket_table_ent_eq, 0.6, tor_reallocarray, tor_free_)
+             socket_table_ent_eq, 0.6, tor_reallocarray, tor_free_);
 
 /* outbuf_table hash table stuff. The outbuf_table keeps track of which
  * channels have data sitting in their outbuf so the kist scheduler can force
@@ -83,9 +83,9 @@ outbuf_table_ent_eq(const outbuf_table_ent_t *a, const outbuf_table_ent_t *b)
 }
 
 HT_PROTOTYPE(outbuf_table_s, outbuf_table_ent_t, node, outbuf_table_ent_hash,
-             outbuf_table_ent_eq)
+             outbuf_table_ent_eq);
 HT_GENERATE2(outbuf_table_s, outbuf_table_ent_t, node, outbuf_table_ent_hash,
-             outbuf_table_ent_eq, 0.6, tor_reallocarray, tor_free_)
+             outbuf_table_ent_eq, 0.6, tor_reallocarray, tor_free_);
 
 /*****************************************************************************
  * Other internal data
@@ -463,6 +463,13 @@ MOCK_IMPL(void, channel_write_to_kernel, (channel_t *chan))
   log_debug(LD_SCHED, "Writing %lu bytes to kernel for chan %" PRIu64,
             (unsigned long)channel_outbuf_length(chan),
             chan->global_identifier);
+  /* Note that 'connection_handle_write()' may change the scheduler state of
+   * the channel during the scheduling loop with
+   * 'connection_or_flushed_some()' -> 'scheduler_channel_wants_writes()'.
+   * This side-effect will only occur if the channel is currently in the
+   * 'SCHED_CHAN_WAITING_TO_WRITE' or 'SCHED_CHAN_IDLE' states, which KIST
+   * rarely uses, so it should be fine unless KIST begins using these states
+   * in the future. */
   connection_handle_write(TO_CONN(BASE_CHAN_TO_TLS(chan)->conn), 0);
 }
 

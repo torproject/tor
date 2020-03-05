@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -12,10 +12,14 @@
 #ifndef TOR_FEATURE_RELAY_RELAY_SYS_H
 #define TOR_FEATURE_RELAY_RELAY_SYS_H
 
-#ifdef HAVE_MODULE_RELAY
-
 extern const struct subsys_fns_t sys_relay;
 
-#endif
+/**
+ * Subsystem level for the relay system.
+ *
+ * Defined here so that it can be shared between the real and stub
+ * definitions.
+ **/
+#define RELAY_SUBSYS_LEVEL 50
 
 #endif /* !defined(TOR_FEATURE_RELAY_RELAY_SYS_H) */

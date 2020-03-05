@@ -1,7 +1,7 @@
 /* Copyright (c) 2001, Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -9,8 +9,6 @@
  *
  * \brief Common cryptographic utilities.
  **/
-
-#define CRYPTO_UTIL_PRIVATE
 
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/cc/compat_compiler.h"
@@ -26,10 +24,10 @@
 #include <stdlib.h>
 
 #ifdef ENABLE_OPENSSL
-DISABLE_GCC_WARNING(redundant-decls)
+DISABLE_GCC_WARNING("-Wredundant-decls")
 #include <openssl/err.h>
 #include <openssl/crypto.h>
-ENABLE_GCC_WARNING(redundant-decls)
+ENABLE_GCC_WARNING("-Wredundant-decls")
 #endif /* defined(ENABLE_OPENSSL) */
 
 #include "lib/log/log.h"

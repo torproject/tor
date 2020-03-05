@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2019, The Tor Project, Inc. */
+/* Copyright (c) 2015-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #define CONTROL_CMD_PRIVATE
@@ -1957,6 +1957,161 @@ test_getinfo_md_all(void *arg)
   return;
 }
 
+static smartlist_t *reply_strs;
+
+static void
+mock_control_write_reply_list(control_connection_t *conn, int code, int c,
+                              const char *s)
+{
+  (void)conn;
+  /* To make matching easier, don't append "\r\n" */
+  smartlist_add_asprintf(reply_strs, "%03d%c%s", code, c, s);
+}
+
+static void
+test_control_reply(void *arg)
+{
+  (void)arg;
+  smartlist_t *lines = smartlist_new();
+
+  MOCK(control_write_reply, mock_control_write_reply);
+
+  tor_free(reply_str);
+  control_reply_clear(lines);
+  control_reply_add_str(lines, 250, "FOO");
+  control_write_reply_lines(NULL, lines);
+  tt_str_op(reply_str, OP_EQ, "FOO");
+
+  tor_free(reply_str);
+  control_reply_clear(lines);
+  control_reply_add_done(lines);
+  control_write_reply_lines(NULL, lines);
+  tt_str_op(reply_str, OP_EQ, "OK");
+
+  tor_free(reply_str);
+  control_reply_clear(lines);
+  UNMOCK(control_write_reply);
+  MOCK(control_write_reply, mock_control_write_reply_list);
+  reply_strs = smartlist_new();
+  control_reply_add_one_kv(lines, 250, 0, "A", "B");
+  control_reply_add_one_kv(lines, 250, 0, "C", "D");
+  control_write_reply_lines(NULL, lines);
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 2);
+  tt_str_op((char *)smartlist_get(reply_strs, 0), OP_EQ, "250-A=B");
+  tt_str_op((char *)smartlist_get(reply_strs, 1), OP_EQ, "250 C=D");
+
+  control_reply_clear(lines);
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_clear(reply_strs);
+  control_reply_add_printf(lines, 250, "PROTOCOLINFO %d", 1);
+  control_reply_add_one_kv(lines, 250, KV_OMIT_VALS|KV_RAW, "AUTH", "");
+  control_reply_append_kv(lines, "METHODS", "COOKIE");
+  control_reply_append_kv(lines, "COOKIEFILE", escaped("/tmp/cookie"));
+  control_reply_add_done(lines);
+  control_write_reply_lines(NULL, lines);
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 3);
+  tt_str_op((char *)smartlist_get(reply_strs, 0),
+            OP_EQ, "250-PROTOCOLINFO 1");
+  tt_str_op((char *)smartlist_get(reply_strs, 1),
+            OP_EQ, "250-AUTH METHODS=COOKIE COOKIEFILE=\"/tmp/cookie\"");
+  tt_str_op((char *)smartlist_get(reply_strs, 2),
+            OP_EQ, "250 OK");
+
+ done:
+  UNMOCK(control_write_reply);
+  tor_free(reply_str);
+  control_reply_free(lines);
+  if (reply_strs)
+    SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_free(reply_strs);
+  return;
+}
+
+static void
+test_control_getconf(void *arg)
+{
+  (void)arg;
+  control_connection_t conn;
+  char *args = NULL;
+  int r = -1;
+
+  memset(&conn, 0, sizeof(conn));
+  conn.current_cmd = tor_strdup("GETCONF");
+
+  MOCK(control_write_reply, mock_control_write_reply_list);
+  reply_strs = smartlist_new();
+
+  args = tor_strdup("");
+  r = handle_control_command(&conn, (uint32_t)strlen(args), args);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 1);
+  tt_str_op((char *)smartlist_get(reply_strs, 0), OP_EQ, "250 OK");
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_clear(reply_strs);
+  tor_free(args);
+
+  args = tor_strdup("NoSuch");
+  r = handle_control_command(&conn, (uint32_t)strlen(args), args);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 1);
+  tt_str_op((char *)smartlist_get(reply_strs, 0), OP_EQ,
+            "552 Unrecognized configuration key \"NoSuch\"");
+  tor_free(args);
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_clear(reply_strs);
+
+  args = tor_strdup("NoSuch1 NoSuch2");
+  r = handle_control_command(&conn, (uint32_t)strlen(args), args);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 2);
+  tt_str_op((char *)smartlist_get(reply_strs, 0), OP_EQ,
+            "552-Unrecognized configuration key \"NoSuch1\"");
+  tt_str_op((char *)smartlist_get(reply_strs, 1), OP_EQ,
+            "552 Unrecognized configuration key \"NoSuch2\"");
+  tor_free(args);
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_clear(reply_strs);
+
+  args = tor_strdup("ControlPort NoSuch");
+  r = handle_control_command(&conn, (uint32_t)strlen(args), args);
+  tt_int_op(r, OP_EQ, 0);
+  /* Valid keys ignored if there are any invalid ones */
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 1);
+  tt_str_op((char *)smartlist_get(reply_strs, 0), OP_EQ,
+            "552 Unrecognized configuration key \"NoSuch\"");
+  tor_free(args);
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_clear(reply_strs);
+
+  args = tor_strdup("ClientOnly");
+  r = handle_control_command(&conn, (uint32_t)strlen(args), args);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 1);
+  /* According to config.c, this is an exception for the unit tests */
+  tt_str_op((char *)smartlist_get(reply_strs, 0), OP_EQ, "250 ClientOnly=0");
+  tor_free(args);
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_clear(reply_strs);
+
+  args = tor_strdup("BridgeRelay ClientOnly");
+  r = handle_control_command(&conn, (uint32_t)strlen(args), args);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(reply_strs), OP_EQ, 2);
+  /* Change if config.c changes BridgeRelay default (unlikely) */
+  tt_str_op((char *)smartlist_get(reply_strs, 0), OP_EQ, "250-BridgeRelay=0");
+  tt_str_op((char *)smartlist_get(reply_strs, 1), OP_EQ, "250 ClientOnly=0");
+  tor_free(args);
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_clear(reply_strs);
+
+ done:
+  tor_free(conn.current_cmd);
+  tor_free(args);
+  UNMOCK(control_write_reply);
+  SMARTLIST_FOREACH(reply_strs, char *, p, tor_free(p));
+  smartlist_free(reply_strs);
+}
+
 #ifndef COCCI
 #define PARSER_TEST(type)                                             \
   { "parse/" #type, test_controller_parse_cmd, 0, &passthrough_setup, \
@@ -1989,5 +2144,7 @@ struct testcase_t controller_tests[] = {
   { "download_status_bridge", test_download_status_bridge, 0, NULL, NULL },
   { "current_time", test_current_time, 0, NULL, NULL },
   { "getinfo_md_all", test_getinfo_md_all, 0, NULL, NULL },
+  { "control_reply", test_control_reply, 0, NULL, NULL },
+  { "control_getconf", test_control_getconf, 0, NULL, NULL },
   END_OF_TESTCASES
 };

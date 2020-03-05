@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -23,7 +23,6 @@
 #include "app/config/config.h"
 #include "core/or/connection_edge.h"
 #include "feature/control/control_events.h"
-#include "feature/relay/dns.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerset.h"
 
@@ -689,7 +688,7 @@ client_dns_set_addressmap_impl(entry_connection_t *for_conn,
   if (ttl<0)
     ttl = DEFAULT_DNS_TTL;
   else
-    ttl = dns_clip_ttl(ttl);
+    ttl = clip_dns_ttl(ttl);
 
   if (exitname) {
     /* XXXX fails to ever get attempts to get an exit address of

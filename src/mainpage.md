@@ -29,6 +29,8 @@ Tor repository.
 
 @subpage intro
 
+@subpage arch_goals
+
 @subpage initialization
 
 @subpage dataflow

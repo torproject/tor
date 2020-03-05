@@ -1,0 +1,6 @@
+  o Minor bugfixes (directory authorities):
+    - Directory authorities reject votes that arrive too late. In particular,
+      once an authority has started fetching missing votes, it no longer
+      accepts new votes posted by other authorities. This change helps prevent
+      a consensus split, where only some authorities have the late vote.
+      Fixes bug 4631; bugfix on 0.2.0.5-alpha.

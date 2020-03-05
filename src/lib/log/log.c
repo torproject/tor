@@ -1,7 +1,7 @@
 /* Copyright (c) 2001, Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -523,7 +523,7 @@ logfile_deliver(logfile_t *lf, const char *buf, size_t msg_len,
      * pass them, and some very old ones do not detect overflow so well.
      * Regrettably, they call their maximum line length MAXLINE. */
 #if MAXLINE < 64
-#warning "MAXLINE is a very low number; it might not be from syslog.h."
+#warning "MAXLINE is very low; it might not be from syslog.h."
 #endif
     char *m = msg_after_prefix;
     if (msg_len >= MAXLINE)

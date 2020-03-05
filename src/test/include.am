@@ -61,13 +61,25 @@ TESTS += src/test/test src/test/test-slow src/test/test-memwipe \
 	$(TESTSCRIPTS)
 
 # These flavors are run using automake's test-driver and test-network.sh
-TEST_CHUTNEY_FLAVORS = basic-min bridges-min hs-v2-min hs-v3-min \
-	single-onion-v23
+
+# run a quick test or two
+# this test only uses IPv4
+TEST_CHUTNEY_FLAVOR_QUICK = bridges+hs-v23
 # only run if we can ping6 ::1 (localhost)
+TEST_CHUTNEY_FLAVOR_QUICK_IPV6 = single-onion-v23-ipv6-md
+
+# run a basic set of tests, which only use IPv4
+TEST_CHUTNEY_FLAVORS = basic-min bridges-min hs-v23-min single-onion-v23
+
+# only run if we can ping ::1 (localhost)
 TEST_CHUTNEY_FLAVORS_IPV6 = bridges+ipv6-min ipv6-exit-min hs-v23-ipv6-md \
 	single-onion-v23-ipv6-md
+
 # only run if we can find a stable (or simply another) version of tor
-TEST_CHUTNEY_FLAVORS_MIXED = mixed+hs-v2
+TEST_CHUTNEY_FLAVORS_MIXED = mixed+hs-v23
+
+# only run if IPv6 and mixed networks are run
+TEST_CHUTNEY_FLAVORS_IPV6_MIXED = mixed+hs-v23-ipv6
 
 ### This is a lovely feature, but it requires automake >= 1.12, and Tor
 ###  doesn't require that yet.
@@ -107,6 +119,7 @@ src_test_test_SOURCES += \
 	src/test/fakecircs.c \
 	src/test/log_test_helpers.c \
 	src/test/hs_test_helpers.c \
+	src/test/opts_test_helpers.c \
 	src/test/rend_test_helpers.c \
 	src/test/resolve_test_helpers.c \
 	src/test/rng_test_helpers.c \
@@ -166,6 +179,7 @@ src_test_test_SOURCES += \
 	src/test/test_hs_client.c  \
 	src/test/test_hs_intropoint.c \
 	src/test/test_hs_control.c \
+	src/test/test_hs_ob.c \
 	src/test/test_handles.c \
 	src/test/test_hs_cache.c \
 	src/test/test_hs_descriptor.c \
@@ -190,6 +204,7 @@ src_test_test_SOURCES += \
 	src/test/test_process_descs.c \
 	src/test/test_prob_distr.c \
 	src/test/test_procmon.c \
+	src/test/test_proto_haproxy.c \
 	src/test/test_proto_http.c \
 	src/test/test_proto_misc.c \
 	src/test/test_protover.c \
@@ -351,6 +366,7 @@ noinst_HEADERS+= \
 	src/test/fakecircs.h \
 	src/test/hs_test_helpers.h \
 	src/test/log_test_helpers.h \
+	src/test/opts_test_helpers.h \
 	src/test/rend_test_helpers.h \
 	src/test/resolve_test_helpers.h \
 	src/test/rng_test_helpers.h \

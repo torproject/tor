@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -198,7 +198,7 @@
   STMT_END
 #define BUG(cond)                                                       \
   (ASSERT_PREDICT_UNLIKELY_(cond) ?                                     \
-  (tor_bug_occurred_(SHORT_FILE__,__LINE__,__func__,"!("#cond")",1,NULL),1) \
+  (tor_bug_occurred_(SHORT_FILE__,__LINE__,__func__,"!("#cond")",0,NULL),1) \
    : 0)
 #endif /* defined(ALL_BUGS_ARE_FATAL) || ... */
 
@@ -247,10 +247,12 @@
 
 void tor_assertion_failed_(const char *fname, unsigned int line,
                            const char *func, const char *expr,
-                           const char *fmt, ...);
+                           const char *fmt, ...)
+    CHECK_PRINTF(5,6);
 void tor_bug_occurred_(const char *fname, unsigned int line,
                        const char *func, const char *expr,
-                       int once, const char *fmt, ...);
+                       int once, const char *fmt, ...)
+  CHECK_PRINTF(6,7);
 
 void tor_abort_(void) ATTR_NORETURN;
 

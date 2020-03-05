@@ -1,4 +1,0 @@
-  o Minor features (configuration):
-    - If the configured hardware crypto accelerator in AccelName
-      is prefixed with "!", Tor now exits when it cannot be found.
-      Closes ticket 32406.

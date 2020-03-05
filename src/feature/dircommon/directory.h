@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -108,12 +108,6 @@ void connection_dir_about_to_close(dir_connection_t *dir_conn);
 int dir_split_resource_into_fingerprints(const char *resource,
                                      smartlist_t *fp_out, int *compressed_out,
                                      int flags);
-enum dir_spool_source_t;
-int dir_split_resource_into_spoolable(const char *resource,
-                                      enum dir_spool_source_t source,
-                                      smartlist_t *spool_out,
-                                      int *compressed_out,
-                                      int flags);
 int dir_split_resource_into_fingerprint_pairs(const char *res,
                                               smartlist_t *pairs_out);
 char *directory_dump_request_log(void);

@@ -152,7 +152,7 @@ class SelfTest(unittest.TestCase):
         # Check that identities match
         assert(identity == identity2)
         # Check that identity is the point (0,1)
-        assert(identity == [0L,1L])
+        assert(identity == [0,1])
 
         # Check identity element: a*E = E, where a is a random scalar
         scalar = random_scalar(os.urandom)
@@ -186,22 +186,22 @@ BLINDING_PARAMS = [
 PREFIX = "ED25519_"
 
 def writeArray(name, array):
-    print "static const char *{prefix}{name}[] = {{".format(
-        prefix=PREFIX,name=name)
+    print("static const char *{prefix}{name}[] = {{".format(
+        prefix=PREFIX,name=name))
     for a in array:
         h = binascii.b2a_hex(a)
         if len(h) > 70:
             h1 = h[:70]
             h2 = h[70:]
-            print '  "{0}"\n      "{1}",'.format(h1,h2)
+            print('  "{0}"\n      "{1}",'.format(h1,h2))
         else:
-            print '  "{0}",'.format(h)
-    print "};\n"
+            print('  "{0}",'.format(h))
+    print("};\n")
 
 def comment(text, initial="/**"):
-    print initial
-    print textwrap.fill(text,initial_indent=" * ",subsequent_indent=" * ")
-    print " */"
+    print(initial)
+    print(textwrap.fill(text,initial_indent=" * ",subsequent_indent=" * "))
+    print(" */")
 
 def makeTestVectors():
     comment("""Test vectors for our ed25519 implementation and related
@@ -257,7 +257,7 @@ def makeTestVectors():
 if __name__ == '__main__':
     import sys
     if len(sys.argv) == 1 or sys.argv[1] not in ("SelfTest", "MakeVectors"):
-        print "You should specify one of 'SelfTest' or 'MakeVectors'"
+        print("You should specify one of 'SelfTest' or 'MakeVectors'")
         sys.exit(1)
     if sys.argv[1] == 'SelfTest':
         unittest.main()

@@ -1,5 +1,5 @@
 /* Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -169,6 +169,12 @@ control_event_bootstrap_core(int loglevel, bootstrap_status_t status,
                sizeof(last_sent_bootstrap_message),
                "NOTICE %s", buf);
   control_event_client_status(LOG_NOTICE, "%s", buf);
+}
+
+int
+control_get_bootstrap_percent(void)
+{
+  return bootstrap_percent;
 }
 
 /** Called when Tor has made progress at bootstrapping its directory

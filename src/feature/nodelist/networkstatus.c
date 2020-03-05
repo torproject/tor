@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -63,9 +63,10 @@
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dirclient/dirclient.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/dirclient/dlstatus.h"
 #include "feature/dircommon/directory.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 #include "feature/dirparse/ns_parse.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_dos.h"
@@ -101,6 +102,7 @@
 #include "feature/nodelist/routerlist_st.h"
 #include "feature/dirauth/vote_microdesc_hash_st.h"
 #include "feature/nodelist/vote_routerstatus_st.h"
+#include "feature/nodelist/routerstatus_st.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -1162,7 +1164,7 @@ update_consensus_networkstatus_fetch_time_impl(time_t now, int flav)
       }
     }
 
-    if (directory_fetches_dir_info_early(options)) {
+    if (dirclient_fetches_dir_info_early(options)) {
       /* We want to cache the next one at some point after this one
        * is no longer fresh... */
       start = (time_t)(c->fresh_until + min_sec_before_caching);
@@ -1184,7 +1186,7 @@ update_consensus_networkstatus_fetch_time_impl(time_t now, int flav)
 
       /* If we're a bridge user, make use of the numbers we just computed
        * to choose the rest of the interval *after* them. */
-      if (directory_fetches_dir_info_later(options)) {
+      if (dirclient_fetches_dir_info_later(options)) {
         /* Give all the *clients* enough time to download the consensus. */
         start = (time_t)(start + dl_interval + min_sec_before_caching);
         /* But try to get it before ours actually expires. */
@@ -1537,7 +1539,7 @@ networkstatus_consensus_can_use_extra_fallbacks,(const or_options_t *options))
              >= smartlist_len(router_get_trusted_dir_servers()));
   /* If we don't fetch from the authorities, and we have additional mirrors,
    * we can use them. */
-  return (!directory_fetches_from_authorities(options)
+  return (!dirclient_fetches_from_authorities(options)
           && (smartlist_len(router_get_fallback_dir_servers())
               > smartlist_len(router_get_trusted_dir_servers())));
 }
@@ -1577,36 +1579,16 @@ networkstatus_consensus_is_already_downloading(const char *resource)
   return answer;
 }
 
-/* Does the current, reasonably live consensus have IPv6 addresses?
- * Returns 1 if there is a reasonably live consensus and its consensus method
- * includes IPv6 addresses in the consensus.
- * Otherwise, if there is no consensus, or the method does not include IPv6
- * addresses, returns 0. */
-int
-networkstatus_consensus_has_ipv6(const or_options_t* options)
-{
-  const networkstatus_t *cons = networkstatus_get_reasonably_live_consensus(
-                                                    approx_time(),
-                                                    usable_consensus_flavor());
-
-  /* If we have no consensus, we have no IPv6 in it */
-  if (!cons) {
-    return 0;
-  }
-
-  /* Different flavours of consensus gained IPv6 at different times */
-  if (we_use_microdescriptors_for_circuits(options)) {
-    return
-       cons->consensus_method >= MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS;
-  } else {
-    return 1;
-  }
-}
-
-/** Given two router status entries for the same router identity, return 1 if
- * if the contents have changed between them. Otherwise, return 0. */
-static int
-routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
+/** Given two router status entries for the same router identity, return 1
+ * if the contents have changed between them. Otherwise, return 0.
+ * It only checks for fields that are output by control port.
+ * This should be kept in sync with the struct routerstatus_t
+ * and the printing function routerstatus_format_entry in
+ * NS_CONTROL_PORT mode.
+ **/
+STATIC int
+routerstatus_has_visibly_changed(const routerstatus_t *a,
+                                 const routerstatus_t *b)
 {
   tor_assert(tor_memeq(a->identity_digest, b->identity_digest, DIGEST_LEN));
 
@@ -1625,9 +1607,14 @@ routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
          a->is_valid != b->is_valid ||
          a->is_possible_guard != b->is_possible_guard ||
          a->is_bad_exit != b->is_bad_exit ||
-         a->is_hs_dir != b->is_hs_dir;
-  // XXXX this function needs a huge refactoring; it has gotten out
-  // XXXX of sync with routerstatus_t, and it will do so again.
+         a->is_hs_dir != b->is_hs_dir ||
+         a->is_staledesc != b->is_staledesc ||
+         a->has_bandwidth != b->has_bandwidth ||
+         a->published_on != b->published_on ||
+         a->ipv6_orport != b->ipv6_orport ||
+         a->is_v2_dir != b->is_v2_dir ||
+         a->bandwidth_kb != b->bandwidth_kb ||
+         tor_addr_compare(&a->ipv6_addr, &b->ipv6_addr, CMP_EXACT);
 }
 
 /** Notify controllers of any router status entries that changed between
@@ -1659,7 +1646,7 @@ notify_control_networkstatus_changed(const networkstatus_t *old_c,
                      tor_memcmp(rs_old->identity_digest,
                             rs_new->identity_digest, DIGEST_LEN),
                      smartlist_add(changed, (void*) rs_new)) {
-    if (routerstatus_has_changed(rs_old, rs_new))
+    if (routerstatus_has_visibly_changed(rs_old, rs_new))
       smartlist_add(changed, (void*)rs_new);
   } SMARTLIST_FOREACH_JOIN_END(rs_old, rs_new);
 
@@ -2133,7 +2120,7 @@ networkstatus_set_current_consensus(const char *consensus,
      * the first thing we need to do is recalculate the voting schedule static
      * object so we can use the timings in there needed by some subsystems
      * such as hidden service and shared random. */
-    voting_schedule_recalculate_timing(options, now);
+    dirauth_sched_recalculate_timing(options, now);
     reschedule_dirvote(options);
 
     nodelist_set_consensus(c);
@@ -2364,7 +2351,6 @@ char *
 networkstatus_getinfo_helper_single(const routerstatus_t *rs)
 {
   return routerstatus_format_entry(rs, NULL, NULL, NS_CONTROL_PORT,
-                                   ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD,
                                    NULL);
 }
 
@@ -2778,4 +2764,48 @@ networkstatus_free_all(void)
       waiting->consensus = NULL;
     }
   }
+}
+
+/** Return the start of the next interval of size <b>interval</b> (in
+ * seconds) after <b>now</b>, plus <b>offset</b>. Midnight always
+ * starts a fresh interval, and if the last interval of a day would be
+ * truncated to less than half its size, it is rolled into the
+ * previous interval. */
+time_t
+voting_sched_get_start_of_interval_after(time_t now, int interval,
+                                           int offset)
+{
+  struct tm tm;
+  time_t midnight_today=0;
+  time_t midnight_tomorrow;
+  time_t next;
+
+  tor_gmtime_r(&now, &tm);
+  tm.tm_hour = 0;
+  tm.tm_min = 0;
+  tm.tm_sec = 0;
+
+  if (tor_timegm(&tm, &midnight_today) < 0) {
+    // LCOV_EXCL_START
+    log_warn(LD_BUG, "Ran into an invalid time when trying to find midnight.");
+    // LCOV_EXCL_STOP
+  }
+  midnight_tomorrow = midnight_today + (24*60*60);
+
+  next = midnight_today + ((now-midnight_today)/interval + 1)*interval;
+
+  /* Intervals never cross midnight. */
+  if (next > midnight_tomorrow)
+    next = midnight_tomorrow;
+
+  /* If the interval would only last half as long as it's supposed to, then
+   * skip over to the next day. */
+  if (next + interval/2 > midnight_tomorrow)
+    next = midnight_tomorrow;
+
+  next += offset;
+  if (next - interval > now)
+    next -= interval;
+
+  return next;
 }

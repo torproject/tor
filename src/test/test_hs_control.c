@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -27,8 +27,6 @@
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerstatus_st.h"
 #include "lib/crypt_ops/crypto_format.h"
-
-#include "test/test_helpers.h"
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -219,6 +217,8 @@ test_hs_control_good_onion_client_auth_add(void *arg)
   char *args = NULL;
   char *cp1 = NULL;
   size_t sz;
+
+  hs_init();
 
   { /* Setup the control conn */
     memset(&conn, 0, sizeof(control_connection_t));
@@ -417,6 +417,8 @@ test_hs_control_bad_onion_client_auth_add(void *arg)
   size_t sz;
   char *args = NULL;
 
+  hs_init();
+
   { /* Setup the control conn */
     memset(&conn, 0, sizeof(control_connection_t));
     TO_CONN(&conn)->outbuf = buf_new();
@@ -494,6 +496,8 @@ test_hs_control_store_permanent_creds(void *arg)
   char *creds_fname = NULL;
 
   size_t sz;
+
+  hs_init();
 
   { /* Setup the control conn */
     memset(&conn, 0, sizeof(control_connection_t));

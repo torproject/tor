@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Tor Project, Inc. */
+/* Copyright (c) 2018-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information     */
 
 /**
@@ -549,8 +549,6 @@ test_bridges_get_transport_by_bridge_addrport_no_ptlist(void *arg)
   mark_bridge_list();
   sweep_bridge_list();
 }
-
-#define PT_PRIVATE
 
 /**
  * Calling get_transport_by_bridge_addrport() with the address and port of a

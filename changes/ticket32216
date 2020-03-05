@@ -1,9 +1,0 @@
-  o Minor features (git scripts):
-    - Make git-push-all.sh skip unchanged branches when pushing to upstream.
-      The script already skipped unchanged test branches.
-      Closes ticket 32216.
-  o Minor bugfixes (git scripts):
-    - Avoid sleeping before the last push in git-push-all.sh.
-      Closes ticket 32216.
-    - Forward all unrecognised arguments in git-push-all.sh to git push.
-      Closes ticket 32216.

@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -12,6 +12,7 @@
 #ifndef TOR_CONTROL_EVENTS_H
 #define TOR_CONTROL_EVENTS_H
 
+#include "lib/cc/ctassert.h"
 #include "core/or/ocirc_event.h"
 #include "core/or/orconn_event.h"
 
@@ -164,6 +165,7 @@ int control_event_buildtimeout_set(buildtimeout_set_event_t type,
 int control_event_signal(uintptr_t signal);
 
 void control_event_bootstrap(bootstrap_status_t status, int progress);
+int control_get_bootstrap_percent(void);
 MOCK_DECL(void, control_event_bootstrap_prob_or,(const char *warn,
                                                  int reason,
                                                  or_connection_t *or_conn));
@@ -287,10 +289,7 @@ typedef uint64_t event_mask_t;
 
 /* If EVENT_MAX_ ever hits 0x0040, we need to make the mask into a
  * different structure, as it can only handle a maximum left shift of 1<<63. */
-
-#if EVENT_MAX_ >= EVENT_CAPACITY_
-#error control_connection_t.event_mask has an event greater than its capacity
-#endif
+CTASSERT(EVENT_MAX_ < EVENT_CAPACITY_);
 
 #define EVENT_MASK_(e)               (((uint64_t)1)<<(e))
 

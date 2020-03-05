@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -24,7 +24,6 @@
 
 #include "lib/arch/bytes.h"
 #include "lib/cc/compat_compiler.h"
-#include "lib/cc/torint.h"
 #include "lib/container/map.h"
 #include "lib/buf/buffers.h"
 #include "lib/container/smartlist.h"
@@ -168,12 +167,13 @@ struct curve25519_public_key_t;
 #define PROXY_CONNECT 1
 #define PROXY_SOCKS4 2
 #define PROXY_SOCKS5 3
-/* !!!! If there is ever a PROXY_* type over 3, we must grow the proxy_type
+#define PROXY_HAPROXY 4
+/* !!!! If there is ever a PROXY_* type over 7, we must grow the proxy_type
  * field in or_connection_t */
 
 /* Pluggable transport proxy type. Don't use this in or_connection_t,
  * instead use the actual underlying proxy type (see above).  */
-#define PROXY_PLUGGABLE 4
+#define PROXY_PLUGGABLE 5
 
 /** How many circuits do we want simultaneously in-progress to handle
  * a given stream? */

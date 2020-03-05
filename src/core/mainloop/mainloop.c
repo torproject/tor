@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -77,7 +77,7 @@
 #include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dircache/consdiffmgr.h"
-#include "feature/dircache/dirserv.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/dircommon/directory.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_cache.h"
@@ -966,7 +966,6 @@ conn_close_if_marked(int i)
     return 0; /* nothing to see here, move along */
   now = time(NULL);
   assert_connection_ok(conn, now);
-  /* assert_all_pending_dns_resolves_ok(); */
 
   log_debug(LD_NET,"Cleaning up connection (fd "TOR_SOCKET_T_FORMAT").",
             conn->s);
@@ -1133,14 +1132,14 @@ directory_info_has_arrived(time_t now, int from_cache, int suppress_logs)
 
   if (!router_have_minimum_dir_info()) {
     int quiet = suppress_logs || from_cache ||
-                directory_too_idle_to_fetch_descriptors(options, now);
+                dirclient_too_idle_to_fetch_descriptors(options, now);
     tor_log(quiet ? LOG_INFO : LOG_NOTICE, LD_DIR,
         "I learned some more directory information, but not enough to "
         "build a circuit: %s", get_dir_info_status_string());
     update_all_descriptor_downloads(now);
     return;
   } else {
-    if (directory_fetches_from_authorities(options)) {
+    if (dirclient_fetches_from_authorities(options)) {
       update_all_descriptor_downloads(now);
     }
 
@@ -2069,7 +2068,7 @@ fetch_networkstatus_callback(time_t now, const or_options_t *options)
    * documents? */
   const int we_are_bootstrapping = networkstatus_consensus_is_bootstrapping(
                                                                         now);
-  const int prefer_mirrors = !directory_fetches_from_authorities(
+  const int prefer_mirrors = !dirclient_fetches_from_authorities(
                                                               get_options());
   int networkstatus_dl_check_interval = 60;
   /* check more often when testing, or when bootstrapping from mirrors
@@ -2273,18 +2272,23 @@ systemd_watchdog_callback(periodic_timer_t *timer, void *arg)
 
 #define UPTIME_CUTOFF_FOR_NEW_BANDWIDTH_TEST (6*60*60)
 
-/** Called when our IP address seems to have changed. <b>at_interface</b>
- * should be true if we detected a change in our interface, and false if we
- * detected a change in our published address. */
+/** Called when our IP address seems to have changed. <b>on_client_conn</b>
+ * should be true if:
+ *   - we detected a change in our interface address, using an outbound
+ *     connection, and therefore
+ *   - our client TLS keys need to be rotated.
+ * Otherwise, it should be false, and:
+ *   - we detected a change in our published address
+ *     (using some other method), and therefore
+ *   - the published addresses in our descriptor need to change.
+ */
 void
-ip_address_changed(int at_interface)
+ip_address_changed(int on_client_conn)
 {
   const or_options_t *options = get_options();
   int server = server_mode(options);
-  int exit_reject_interfaces = (server && options->ExitRelay
-                                && options->ExitPolicyRejectLocalInterfaces);
 
-  if (at_interface) {
+  if (on_client_conn) {
     if (! server) {
       /* Okay, change our keys. */
       if (init_keys_client() < 0)
@@ -2296,13 +2300,12 @@ ip_address_changed(int at_interface)
         reset_bandwidth_test();
       reset_uptime();
       router_reset_reachability();
+      /* All relays include their IP addresses as their ORPort addresses in
+       * their descriptor.
+       * Exit relays also incorporate interface addresses in their exit
+       * policies, when ExitPolicyRejectLocalInterfaces is set. */
+      mark_my_descriptor_dirty("IP address changed");
     }
-  }
-
-  /* Exit relays incorporate interface addresses in their exit policies when
-   * ExitPolicyRejectLocalInterfaces is set */
-  if (exit_reject_interfaces || (server && !at_interface)) {
-    mark_my_descriptor_dirty("IP address changed");
   }
 
   dns_servers_relaunch_checks();

@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2019, The Tor Project, Inc. */
+/* Copyright (c) 2016-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -145,7 +145,7 @@ static void
 cancel_descriptor_fetches(void)
 {
   smartlist_t *conns =
-    connection_list_by_type_state(CONN_TYPE_DIR, DIR_PURPOSE_FETCH_HSDESC);
+    connection_list_by_type_purpose(CONN_TYPE_DIR, DIR_PURPOSE_FETCH_HSDESC);
   SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     const hs_ident_dir_conn_t *ident = TO_DIR_CONN(conn)->hs_ident;
     if (BUG(ident == NULL)) {
@@ -633,15 +633,20 @@ send_introduce1(origin_circuit_t *intro_circ,
   /* We need to find which intro point in the descriptor we are connected to
    * on intro_circ. */
   ip = find_desc_intro_point_by_ident(intro_circ->hs_ident, desc);
-  if (BUG(ip == NULL)) {
-    /* If we can find a descriptor from this introduction circuit ident, we
-     * must have a valid intro point object. Permanent error. */
+  if (ip == NULL) {
+    /* The following is possible if the descriptor was changed while we had
+     * this introduction circuit open and waiting for the rendezvous circuit to
+     * be ready. Which results in this situation where we can't find the
+     * corresponding intro point within the descriptor of the service. */
+    log_info(LD_REND, "Unable to find introduction point for service %s "
+                      "while trying to send an INTRODUCE1 cell.",
+             safe_str_client(onion_address));
     goto perm_err;
   }
 
   /* Send the INTRODUCE1 cell. */
   if (hs_circ_send_introduce1(intro_circ, rend_circ, ip,
-                              desc->subcredential) < 0) {
+                              &desc->subcredential) < 0) {
     if (TO_CIRCUIT(intro_circ)->marked_for_close) {
       /* If the introduction circuit was closed, we were unable to send the
        * cell for some reasons. In any case, the intro circuit has to be
@@ -1249,6 +1254,26 @@ can_client_refetch_desc(const ed25519_public_key_t *identity_pk,
   return 0;
 }
 
+/** Purge the client authorization cache of all ephemeral entries that is the
+ * entries that are not flagged with CLIENT_AUTH_FLAG_IS_PERMANENT.
+ *
+ * This is called from the hs_client_purge_state() used by a SIGNEWNYM. */
+STATIC void
+purge_ephemeral_client_auth(void)
+{
+  DIGEST256MAP_FOREACH_MODIFY(client_auths, key,
+                              hs_client_service_authorization_t *, auth) {
+    /* Cleanup every entry that are _NOT_ permanent that is ephemeral. */
+    if (!(auth->flags & CLIENT_AUTH_FLAG_IS_PERMANENT)) {
+      MAP_DEL_CURRENT(key);
+      client_service_authorization_free(auth);
+    }
+  } DIGESTMAP_FOREACH_END;
+
+  log_info(LD_REND, "Client onion service ephemeral authorization "
+                    "cache has been purged.");
+}
+
 /** Return the client auth in the map using the service identity public key.
  * Return NULL if it does not exist in the map. */
 static hs_client_service_authorization_t *
@@ -1715,6 +1740,9 @@ hs_client_remove_auth_credentials(const char *hsaddress)
       find_and_remove_client_auth_creds_file(cred);
     }
 
+    /* Remove associated descriptor if any. */
+    hs_cache_remove_as_client(&service_identity_pk);
+
     client_service_authorization_free(cred);
     return REMOVAL_SUCCESS;
   }
@@ -1817,7 +1845,7 @@ hs_client_decode_descriptor(const char *desc_str,
                             hs_descriptor_t **desc)
 {
   hs_desc_decode_status_t ret;
-  uint8_t subcredential[DIGEST256_LEN];
+  hs_subcredential_t subcredential;
   ed25519_public_key_t blinded_pubkey;
   hs_client_service_authorization_t *client_auth = NULL;
   curve25519_secret_key_t *client_auht_sk = NULL;
@@ -1837,13 +1865,13 @@ hs_client_decode_descriptor(const char *desc_str,
     uint64_t current_time_period = hs_get_time_period_num(0);
     hs_build_blinded_pubkey(service_identity_pk, NULL, 0, current_time_period,
                             &blinded_pubkey);
-    hs_get_subcredential(service_identity_pk, &blinded_pubkey, subcredential);
+    hs_get_subcredential(service_identity_pk, &blinded_pubkey, &subcredential);
   }
 
   /* Parse descriptor */
-  ret = hs_desc_decode_descriptor(desc_str, subcredential,
+  ret = hs_desc_decode_descriptor(desc_str, &subcredential,
                                   client_auht_sk, desc);
-  memwipe(subcredential, 0, sizeof(subcredential));
+  memwipe(&subcredential, 0, sizeof(subcredential));
   if (ret != HS_DESC_DECODE_OK) {
     goto err;
   }
@@ -2433,6 +2461,8 @@ hs_client_purge_state(void)
   hs_cache_purge_as_client();
   /* Purge the last hidden service request cache. */
   hs_purge_last_hid_serv_requests();
+  /* Purge ephemeral client authorization. */
+  purge_ephemeral_client_auth();
 
   log_info(LD_REND, "Hidden service client state has been purged.");
 }
@@ -2456,4 +2486,3 @@ set_hs_client_auths_map(digest256map_t *map)
 }
 
 #endif /* defined(TOR_UNIT_TESTS) */
-

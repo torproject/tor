@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
@@ -9,9 +9,9 @@
 #define BWAUTH_PRIVATE
 #define CONFIG_PRIVATE
 #define CONTROL_GETINFO_PRIVATE
+#define DIRAUTH_SYS_PRIVATE
 #define DIRCACHE_PRIVATE
 #define DIRCLIENT_PRIVATE
-#define DIRSERV_PRIVATE
 #define DIRVOTE_PRIVATE
 #define DLSTATUS_PRIVATE
 #define HIBERNATE_PRIVATE
@@ -34,6 +34,7 @@
 #include "feature/client/entrynodes.h"
 #include "feature/control/control_getinfo.h"
 #include "feature/dirauth/bwauth.h"
+#include "feature/dirauth/dirauth_sys.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/dsigs_parse.h"
 #include "feature/dirauth/process_descs.h"
@@ -46,10 +47,11 @@
 #include "feature/dirclient/dlstatus.h"
 #include "feature/dircommon/directory.h"
 #include "feature/dircommon/fp_pair.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"
+#include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nickname.h"
 #include "feature/nodelist/node_select.h"
@@ -71,13 +73,16 @@
 #include "lib/memarea/memarea.h"
 #include "lib/osinfo/uname.h"
 #include "test/log_test_helpers.h"
+#include "test/opts_test_helpers.h"
 #include "test/test.h"
 #include "test/test_dir_common.h"
 
 #include "core/or/addr_policy_st.h"
+#include "feature/dirauth/dirauth_options_st.h"
 #include "feature/nodelist/authority_cert_st.h"
 #include "feature/nodelist/document_signature_st.h"
 #include "feature/nodelist/extrainfo_st.h"
+#include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/networkstatus_st.h"
 #include "feature/nodelist/networkstatus_voter_info_st.h"
 #include "feature/dirauth/ns_detached_signatures_st.h"
@@ -94,8 +99,6 @@
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-
-#define NS_MODULE dir
 
 static networkstatus_t *
 networkstatus_parse_vote_from_string_(const char *s,
@@ -3019,7 +3022,7 @@ test_dir_param_voting_lookup(void *arg)
             dirvote_get_intermediate_param_value(lst, "jack", -100));
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
   tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
-            "!(! ok)");
+            "!(!ok)");
   tor_end_capture_bugs_();
   /* electricity and opa aren't integers. */
   tor_capture_bugs_(1);
@@ -3027,7 +3030,7 @@ test_dir_param_voting_lookup(void *arg)
             dirvote_get_intermediate_param_value(lst, "electricity", -100));
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
   tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
-            "!(! ok)");
+            "!(!ok)");
   tor_end_capture_bugs_();
 
   tor_capture_bugs_(1);
@@ -3035,7 +3038,7 @@ test_dir_param_voting_lookup(void *arg)
             dirvote_get_intermediate_param_value(lst, "opa", -100));
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
   tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
-            "!(! ok)");
+            "!(!ok)");
   tor_end_capture_bugs_();
 
  done:
@@ -3607,7 +3610,7 @@ test_a_networkstatus(
   sign_skey_2 = crypto_pk_new();
   sign_skey_3 = crypto_pk_new();
   sign_skey_leg1 = pk_generate(4);
-  voting_schedule_recalculate_timing(get_options(), now);
+  dirauth_sched_recalculate_timing(get_options(), now);
   sr_state_init(0, 0);
 
   tt_assert(!crypto_pk_read_private_key_from_string(sign_skey_1,
@@ -4690,10 +4693,13 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   (void)arg;
 
   /* Init options */
+  dirauth_options_t *dirauth_options =
+    tor_malloc_zero(sizeof(dirauth_options_t));
+
   mock_options = tor_malloc(sizeof(or_options_t));
   reset_options(mock_options, &mock_get_options_calls);
-
   MOCK(get_options, mock_get_options);
+  dirauth_set_options(dirauth_options);
 
   /* Init routersets */
   routerset_t *routerset_all  = routerset_new();
@@ -4733,16 +4739,15 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   /* Check that "*" sets flags on all routers: Exit
    * Check the flags aren't being confused with each other */
   reset_options(mock_options, &mock_get_options_calls);
+  memset(dirauth_options, 0, sizeof(*dirauth_options));
   reset_routerstatus(rs_a, ROUTER_A_ID_STR, ROUTER_A_IPV4);
   reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
 
-  mock_options->TestingDirAuthVoteExit = routerset_all;
-  mock_options->TestingDirAuthVoteExitIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteExit = routerset_all;
+  dirauth_options->TestingDirAuthVoteExitIsStrict = 0;
 
   dirserv_set_routerstatus_testing(rs_a);
-  tt_int_op(mock_get_options_calls, OP_EQ, 1);
   dirserv_set_routerstatus_testing(rs_b);
-  tt_int_op(mock_get_options_calls, OP_EQ, 2);
 
   tt_uint_op(rs_a->is_exit, OP_EQ, 1);
   tt_uint_op(rs_b->is_exit, OP_EQ, 1);
@@ -4755,18 +4760,17 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   /* Check that "*" sets flags on all routers: Guard & HSDir
    * Cover the remaining flags in one test */
   reset_options(mock_options, &mock_get_options_calls);
+  memset(dirauth_options, 0, sizeof(*dirauth_options));
   reset_routerstatus(rs_a, ROUTER_A_ID_STR, ROUTER_A_IPV4);
   reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
 
-  mock_options->TestingDirAuthVoteGuard = routerset_all;
-  mock_options->TestingDirAuthVoteGuardIsStrict = 0;
-  mock_options->TestingDirAuthVoteHSDir = routerset_all;
-  mock_options->TestingDirAuthVoteHSDirIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteGuard = routerset_all;
+  dirauth_options->TestingDirAuthVoteGuardIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteHSDir = routerset_all;
+  dirauth_options->TestingDirAuthVoteHSDirIsStrict = 0;
 
   dirserv_set_routerstatus_testing(rs_a);
-  tt_int_op(mock_get_options_calls, OP_EQ, 1);
   dirserv_set_routerstatus_testing(rs_b);
-  tt_int_op(mock_get_options_calls, OP_EQ, 2);
 
   tt_uint_op(rs_a->is_possible_guard, OP_EQ, 1);
   tt_uint_op(rs_b->is_possible_guard, OP_EQ, 1);
@@ -4779,20 +4783,19 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   /* Check routerset A sets all flags on router A,
    * but leaves router B unmodified */
   reset_options(mock_options, &mock_get_options_calls);
+  memset(dirauth_options, 0, sizeof(*dirauth_options));
   reset_routerstatus(rs_a, ROUTER_A_ID_STR, ROUTER_A_IPV4);
   reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
 
-  mock_options->TestingDirAuthVoteExit = routerset_a;
-  mock_options->TestingDirAuthVoteExitIsStrict = 0;
-  mock_options->TestingDirAuthVoteGuard = routerset_a;
-  mock_options->TestingDirAuthVoteGuardIsStrict = 0;
-  mock_options->TestingDirAuthVoteHSDir = routerset_a;
-  mock_options->TestingDirAuthVoteHSDirIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteExit = routerset_a;
+  dirauth_options->TestingDirAuthVoteExitIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteGuard = routerset_a;
+  dirauth_options->TestingDirAuthVoteGuardIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteHSDir = routerset_a;
+  dirauth_options->TestingDirAuthVoteHSDirIsStrict = 0;
 
   dirserv_set_routerstatus_testing(rs_a);
-  tt_int_op(mock_get_options_calls, OP_EQ, 1);
   dirserv_set_routerstatus_testing(rs_b);
-  tt_int_op(mock_get_options_calls, OP_EQ, 2);
 
   tt_uint_op(rs_a->is_exit, OP_EQ, 1);
   tt_uint_op(rs_b->is_exit, OP_EQ, 0);
@@ -4803,21 +4806,21 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
 
   /* Check routerset A unsets all flags on router B when Strict is set */
   reset_options(mock_options, &mock_get_options_calls);
+  memset(dirauth_options, 0, sizeof(*dirauth_options));
   reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
 
-  mock_options->TestingDirAuthVoteExit = routerset_a;
-  mock_options->TestingDirAuthVoteExitIsStrict = 1;
-  mock_options->TestingDirAuthVoteGuard = routerset_a;
-  mock_options->TestingDirAuthVoteGuardIsStrict = 1;
-  mock_options->TestingDirAuthVoteHSDir = routerset_a;
-  mock_options->TestingDirAuthVoteHSDirIsStrict = 1;
+  dirauth_options->TestingDirAuthVoteExit = routerset_a;
+  dirauth_options->TestingDirAuthVoteExitIsStrict = 1;
+  dirauth_options->TestingDirAuthVoteGuard = routerset_a;
+  dirauth_options->TestingDirAuthVoteGuardIsStrict = 1;
+  dirauth_options->TestingDirAuthVoteHSDir = routerset_a;
+  dirauth_options->TestingDirAuthVoteHSDirIsStrict = 1;
 
   rs_b->is_exit = 1;
   rs_b->is_possible_guard = 1;
   rs_b->is_hs_dir = 1;
 
   dirserv_set_routerstatus_testing(rs_b);
-  tt_int_op(mock_get_options_calls, OP_EQ, 1);
 
   tt_uint_op(rs_b->is_exit, OP_EQ, 0);
   tt_uint_op(rs_b->is_possible_guard, OP_EQ, 0);
@@ -4825,21 +4828,21 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
 
   /* Check routerset A doesn't modify flags on router B without Strict set */
   reset_options(mock_options, &mock_get_options_calls);
+  memset(dirauth_options, 0, sizeof(*dirauth_options));
   reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
 
-  mock_options->TestingDirAuthVoteExit = routerset_a;
-  mock_options->TestingDirAuthVoteExitIsStrict = 0;
-  mock_options->TestingDirAuthVoteGuard = routerset_a;
-  mock_options->TestingDirAuthVoteGuardIsStrict = 0;
-  mock_options->TestingDirAuthVoteHSDir = routerset_a;
-  mock_options->TestingDirAuthVoteHSDirIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteExit = routerset_a;
+  dirauth_options->TestingDirAuthVoteExitIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteGuard = routerset_a;
+  dirauth_options->TestingDirAuthVoteGuardIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteHSDir = routerset_a;
+  dirauth_options->TestingDirAuthVoteHSDirIsStrict = 0;
 
   rs_b->is_exit = 1;
   rs_b->is_possible_guard = 1;
   rs_b->is_hs_dir = 1;
 
   dirserv_set_routerstatus_testing(rs_b);
-  tt_int_op(mock_get_options_calls, OP_EQ, 1);
 
   tt_uint_op(rs_b->is_exit, OP_EQ, 1);
   tt_uint_op(rs_b->is_possible_guard, OP_EQ, 1);
@@ -4848,21 +4851,21 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   /* Check the empty routerset zeroes all flags
    * on routers A & B with Strict set */
   reset_options(mock_options, &mock_get_options_calls);
+  memset(dirauth_options, 0, sizeof(*dirauth_options));
   reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
 
-  mock_options->TestingDirAuthVoteExit = routerset_none;
-  mock_options->TestingDirAuthVoteExitIsStrict = 1;
-  mock_options->TestingDirAuthVoteGuard = routerset_none;
-  mock_options->TestingDirAuthVoteGuardIsStrict = 1;
-  mock_options->TestingDirAuthVoteHSDir = routerset_none;
-  mock_options->TestingDirAuthVoteHSDirIsStrict = 1;
+  dirauth_options->TestingDirAuthVoteExit = routerset_none;
+  dirauth_options->TestingDirAuthVoteExitIsStrict = 1;
+  dirauth_options->TestingDirAuthVoteGuard = routerset_none;
+  dirauth_options->TestingDirAuthVoteGuardIsStrict = 1;
+  dirauth_options->TestingDirAuthVoteHSDir = routerset_none;
+  dirauth_options->TestingDirAuthVoteHSDirIsStrict = 1;
 
   rs_b->is_exit = 1;
   rs_b->is_possible_guard = 1;
   rs_b->is_hs_dir = 1;
 
   dirserv_set_routerstatus_testing(rs_b);
-  tt_int_op(mock_get_options_calls, OP_EQ, 1);
 
   tt_uint_op(rs_b->is_exit, OP_EQ, 0);
   tt_uint_op(rs_b->is_possible_guard, OP_EQ, 0);
@@ -4871,24 +4874,23 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   /* Check the empty routerset doesn't modify any flags
    * on A or B without Strict set */
   reset_options(mock_options, &mock_get_options_calls);
+  memset(dirauth_options, 0, sizeof(*dirauth_options));
   reset_routerstatus(rs_a, ROUTER_A_ID_STR, ROUTER_A_IPV4);
   reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
 
-  mock_options->TestingDirAuthVoteExit = routerset_none;
-  mock_options->TestingDirAuthVoteExitIsStrict = 0;
-  mock_options->TestingDirAuthVoteGuard = routerset_none;
-  mock_options->TestingDirAuthVoteGuardIsStrict = 0;
-  mock_options->TestingDirAuthVoteHSDir = routerset_none;
-  mock_options->TestingDirAuthVoteHSDirIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteExit = routerset_none;
+  dirauth_options->TestingDirAuthVoteExitIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteGuard = routerset_none;
+  dirauth_options->TestingDirAuthVoteGuardIsStrict = 0;
+  dirauth_options->TestingDirAuthVoteHSDir = routerset_none;
+  dirauth_options->TestingDirAuthVoteHSDirIsStrict = 0;
 
   rs_b->is_exit = 1;
   rs_b->is_possible_guard = 1;
   rs_b->is_hs_dir = 1;
 
   dirserv_set_routerstatus_testing(rs_a);
-  tt_int_op(mock_get_options_calls, OP_EQ, 1);
   dirserv_set_routerstatus_testing(rs_b);
-  tt_int_op(mock_get_options_calls, OP_EQ, 2);
 
   tt_uint_op(rs_a->is_exit, OP_EQ, 0);
   tt_uint_op(rs_a->is_possible_guard, OP_EQ, 0);
@@ -4899,6 +4901,7 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
 
  done:
   tor_free(mock_options);
+  tor_free(dirauth_options);
   mock_options = NULL;
 
   UNMOCK(get_options);
@@ -5473,15 +5476,15 @@ test_dir_conn_purpose_to_string(void *data)
   teardown_capture_of_logs();
 }
 
-NS_DECL(int,
-public_server_mode, (const or_options_t *options));
+static int dir_tests_public_server_mode(const or_options_t *options);
+ATTR_UNUSED static int dir_tests_public_server_mode_called = 0;
 
 static int
-NS(public_server_mode)(const or_options_t *options)
+dir_tests_public_server_mode(const or_options_t *options)
 {
   (void)options;
 
-  if (CALLED(public_server_mode)++ == 0) {
+  if (dir_tests_public_server_mode_called++ == 0) {
     return 1;
   }
 
@@ -5495,13 +5498,14 @@ test_dir_should_use_directory_guards(void *data)
   char *errmsg = NULL;
   (void)data;
 
-  NS_MOCK(public_server_mode);
+  MOCK(public_server_mode,
+       dir_tests_public_server_mode);
 
   options = options_new();
   options_init(options);
 
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 1);
+  tt_int_op(dir_tests_public_server_mode_called, OP_EQ, 1);
 
   options->UseEntryGuards = 1;
   options->DownloadExtraInfo = 0;
@@ -5509,41 +5513,41 @@ test_dir_should_use_directory_guards(void *data)
   options->FetchDirInfoExtraEarly = 0;
   options->FetchUselessDescriptors = 0;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 1);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 2);
+  tt_int_op(dir_tests_public_server_mode_called, OP_EQ, 2);
 
   options->UseEntryGuards = 0;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 3);
+  tt_int_op(dir_tests_public_server_mode_called, OP_EQ, 3);
   options->UseEntryGuards = 1;
 
   options->DownloadExtraInfo = 1;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 4);
+  tt_int_op(dir_tests_public_server_mode_called, OP_EQ, 4);
   options->DownloadExtraInfo = 0;
 
   options->FetchDirInfoEarly = 1;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 5);
+  tt_int_op(dir_tests_public_server_mode_called, OP_EQ, 5);
   options->FetchDirInfoEarly = 0;
 
   options->FetchDirInfoExtraEarly = 1;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 6);
+  tt_int_op(dir_tests_public_server_mode_called, OP_EQ, 6);
   options->FetchDirInfoExtraEarly = 0;
 
   options->FetchUselessDescriptors = 1;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 7);
+  tt_int_op(dir_tests_public_server_mode_called, OP_EQ, 7);
   options->FetchUselessDescriptors = 0;
 
   done:
-    NS_UNMOCK(public_server_mode);
+    UNMOCK(public_server_mode);
     or_options_free(options);
     tor_free(errmsg);
 }
 
-NS_DECL(void,
-directory_initiate_request, (directory_request_t *req));
+static void dir_tests_directory_initiate_request(directory_request_t *req);
+ATTR_UNUSED static int dir_tests_directory_initiate_request_called = 0;
 
 static void
 test_dir_should_not_init_request_to_ourselves(void *data)
@@ -5553,7 +5557,8 @@ test_dir_should_not_init_request_to_ourselves(void *data)
   crypto_pk_t *key = pk_generate(2);
   (void) data;
 
-  NS_MOCK(directory_initiate_request);
+  MOCK(directory_initiate_request,
+       dir_tests_directory_initiate_request);
 
   clear_dir_servers();
   routerlist_free_all();
@@ -5568,15 +5573,15 @@ test_dir_should_not_init_request_to_ourselves(void *data)
   dir_server_add(ourself);
 
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_STATUS_VOTE, 0, NULL);
-  tt_int_op(CALLED(directory_initiate_request), OP_EQ, 0);
+  tt_int_op(dir_tests_directory_initiate_request_called, OP_EQ, 0);
 
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0,
                                      NULL);
 
-  tt_int_op(CALLED(directory_initiate_request), OP_EQ, 0);
+  tt_int_op(dir_tests_directory_initiate_request_called, OP_EQ, 0);
 
   done:
-    NS_UNMOCK(directory_initiate_request);
+    UNMOCK(directory_initiate_request);
     clear_dir_servers();
     routerlist_free_all();
     crypto_pk_free(key);
@@ -5590,7 +5595,8 @@ test_dir_should_not_init_request_to_dir_auths_without_v3_info(void *data)
                                 | MICRODESC_DIRINFO;
   (void) data;
 
-  NS_MOCK(directory_initiate_request);
+  MOCK(directory_initiate_request,
+       dir_tests_directory_initiate_request);
 
   clear_dir_servers();
   routerlist_free_all();
@@ -5601,14 +5607,14 @@ test_dir_should_not_init_request_to_dir_auths_without_v3_info(void *data)
   dir_server_add(ds);
 
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_STATUS_VOTE, 0, NULL);
-  tt_int_op(CALLED(directory_initiate_request), OP_EQ, 0);
+  tt_int_op(dir_tests_directory_initiate_request_called, OP_EQ, 0);
 
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0,
                                      NULL);
-  tt_int_op(CALLED(directory_initiate_request), OP_EQ, 0);
+  tt_int_op(dir_tests_directory_initiate_request_called, OP_EQ, 0);
 
   done:
-    NS_UNMOCK(directory_initiate_request);
+    UNMOCK(directory_initiate_request);
     clear_dir_servers();
     routerlist_free_all();
 }
@@ -5619,7 +5625,8 @@ test_dir_should_init_request_to_dir_auths(void *data)
   dir_server_t *ds = NULL;
   (void) data;
 
-  NS_MOCK(directory_initiate_request);
+  MOCK(directory_initiate_request,
+       dir_tests_directory_initiate_request);
 
   clear_dir_servers();
   routerlist_free_all();
@@ -5630,23 +5637,23 @@ test_dir_should_init_request_to_dir_auths(void *data)
   dir_server_add(ds);
 
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_STATUS_VOTE, 0, NULL);
-  tt_int_op(CALLED(directory_initiate_request), OP_EQ, 1);
+  tt_int_op(dir_tests_directory_initiate_request_called, OP_EQ, 1);
 
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0,
                                      NULL);
-  tt_int_op(CALLED(directory_initiate_request), OP_EQ, 2);
+  tt_int_op(dir_tests_directory_initiate_request_called, OP_EQ, 2);
 
   done:
-    NS_UNMOCK(directory_initiate_request);
+    UNMOCK(directory_initiate_request);
     clear_dir_servers();
     routerlist_free_all();
 }
 
 void
-NS(directory_initiate_request)(directory_request_t *req)
+dir_tests_directory_initiate_request(directory_request_t *req)
 {
   (void)req;
-  CALLED(directory_initiate_request)++;
+  dir_tests_directory_initiate_request_called++;
 }
 
 static void
@@ -7066,98 +7073,6 @@ test_dir_platform_str(void *arg)
   ;
 }
 
-static networkstatus_t *mock_networkstatus;
-
-static networkstatus_t *
-mock_networkstatus_get_latest_consensus_by_flavor(consensus_flavor_t f)
-{
-  (void)f;
-  return mock_networkstatus;
-}
-
-static void
-test_dir_networkstatus_consensus_has_ipv6(void *arg)
-{
-  (void)arg;
-
-  int has_ipv6 = 0;
-
-  /* Init options and networkstatus */
-  or_options_t our_options;
-  mock_options = &our_options;
-  reset_options(mock_options, &mock_get_options_calls);
-  MOCK(get_options, mock_get_options);
-
-  networkstatus_t our_networkstatus;
-  mock_networkstatus = &our_networkstatus;
-  memset(mock_networkstatus, 0, sizeof(*mock_networkstatus));
-  MOCK(networkstatus_get_latest_consensus_by_flavor,
-       mock_networkstatus_get_latest_consensus_by_flavor);
-
-  /* A live consensus */
-  mock_networkstatus->valid_after = time(NULL) - 3600;
-  mock_networkstatus->valid_until = time(NULL) + 3600;
-
-  /* Test the bounds for A lines in the NS consensus */
-  mock_options->UseMicrodescriptors = 0;
-
-  mock_networkstatus->consensus_method = MIN_SUPPORTED_CONSENSUS_METHOD;
-  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(has_ipv6);
-
-  /* Test the bounds for A lines in the microdesc consensus */
-  mock_options->UseMicrodescriptors = 1;
-
-  mock_networkstatus->consensus_method =
-      MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS;
-  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(has_ipv6);
-
-  mock_networkstatus->consensus_method = MAX_SUPPORTED_CONSENSUS_METHOD + 20;
-  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(has_ipv6);
-
-  mock_networkstatus->consensus_method =
-      MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS + 1;
-  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(has_ipv6);
-
-  mock_networkstatus->consensus_method =
-      MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS + 20;
-  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(has_ipv6);
-
-  mock_networkstatus->consensus_method =
-      MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS - 1;
-  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(!has_ipv6);
-
-  /* Test the edge cases */
-  mock_options->UseMicrodescriptors = 1;
-  mock_networkstatus->consensus_method =
-      MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS;
-
-  /* Reasonably live */
-  mock_networkstatus->valid_until = approx_time() - 60;
-  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(has_ipv6);
-
-  /* Not reasonably live */
-  mock_networkstatus->valid_after = approx_time() - 24*60*60 - 3600;
-  mock_networkstatus->valid_until = approx_time() - 24*60*60 - 60;
-  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(!has_ipv6);
-
-  /* NULL consensus */
-  mock_networkstatus = NULL;
-  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(!has_ipv6);
-
- done:
-  UNMOCK(get_options);
-  UNMOCK(networkstatus_get_latest_consensus_by_flavor);
-}
-
 static void
 test_dir_format_versions_list(void *arg)
 {
@@ -7207,6 +7122,300 @@ test_dir_format_versions_list(void *arg)
   tor_free(s);
   config_free_lines(lines);
   teardown_capture_of_logs();
+}
+
+static void
+test_dir_add_fingerprint(void *arg)
+{
+  (void)arg;
+  authdir_config_t *list;
+  int ret;
+  ed25519_secret_key_t seckey;
+  ed25519_public_key_t pubkey_good, pubkey_bad;
+
+  authdir_init_fingerprint_list();
+  list = authdir_return_fingerprint_list();
+
+  setup_capture_of_logs(LOG_WARN);
+
+  /* RSA test - successful */
+  ret = add_rsa_fingerprint_to_dir("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                                   list, 0);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* RSA test - failure */
+  ret = add_rsa_fingerprint_to_dir("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+                                   list, 0);
+  tt_int_op(ret, OP_EQ, -1);
+
+  /* ed25519 test - successful */
+  ed25519_secret_key_generate(&seckey, 0);
+  ed25519_public_key_generate(&pubkey_good, &seckey);
+
+  ret = add_ed25519_to_dir(&pubkey_good, list, 0);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* ed25519 test - failure */
+  digest256_from_base64((char *) pubkey_bad.pubkey, "gibberish");
+
+  ret = add_ed25519_to_dir(&pubkey_bad, list, 0);
+  tt_int_op(ret, OP_EQ, -1);
+
+ done:
+  teardown_capture_of_logs();
+  dirserv_free_fingerprint_list();
+}
+
+static void
+test_dir_dirserv_load_fingerprint_file(void *arg)
+{
+  (void)arg;
+  char *fname = tor_strdup(get_fname("approved-routers"));
+
+  // Neither RSA nor ed25519
+  const char *router_lines_invalid =
+    "!badexit notafingerprint";
+  const char *router_lines_too_long =
+    "!badexit thisisareallylongstringthatislongerthanafingerprint\n";
+  const char *router_lines_bad_fmt_str =
+    "!badexit ABCDEFGH|%1$p|%2$p|%3$p|%4$p|%5$p|%6$p\n";
+  const char *router_lines_valid_rsa =
+    "!badexit AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+  const char *router_lines_invalid_rsa =
+    "!badexit ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ\n";
+  const char *router_lines_valid_ed25519 =
+    "!badexit wqfLzgfCtRfYNg88LsL1QpzxS0itapJ1aj6TbnByx/Q\n";
+  const char *router_lines_invalid_ed25519 =
+    "!badexit --fLzgfCtRfYNg88LsL1QpzxS0itapJ1aj6TbnByx--\n";
+
+  // Test: Invalid Fingerprint (not RSA or ed25519)
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_invalid, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+  // Test: Very long string (longer than RSA or ed25519 key)
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_too_long, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+  // Test: Formt string exploit
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_bad_fmt_str, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+  // Test: Valid RSA
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_valid_rsa, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  teardown_capture_of_logs();
+
+  // Test: Invalid RSA
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_invalid_rsa, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+  // Test: Valid ed25519
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_valid_ed25519, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  teardown_capture_of_logs();
+
+  // Test: Invalid ed25519
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_invalid_ed25519, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+ done:
+  tor_free(fname);
+  dirserv_free_fingerprint_list();
+}
+
+#define RESET_FP_LIST(list) STMT_BEGIN \
+    dirserv_free_fingerprint_list(); \
+    authdir_init_fingerprint_list(); \
+    list = authdir_return_fingerprint_list(); \
+  STMT_END
+
+static void
+test_dir_dirserv_router_get_status(void *arg)
+{
+  authdir_config_t *list;
+  routerinfo_t *ri = NULL;
+  ed25519_keypair_t kp1, kp2;
+  char d[DIGEST_LEN];
+  char fp[HEX_DIGEST_LEN+1];
+  int ret;
+  const char *msg;
+  time_t now = time(NULL);
+
+  (void)arg;
+
+  crypto_pk_t *pk = pk_generate(0);
+
+  authdir_init_fingerprint_list();
+  list = authdir_return_fingerprint_list();
+
+  /* Set up the routerinfo */
+  ri = tor_malloc_zero(sizeof(routerinfo_t));
+  ri->addr = 0xc0a80001u;
+  ri->or_port = 9001;
+  ri->platform = tor_strdup("0.4.0.1-alpha");
+  ri->nickname = tor_strdup("Jessica");
+  ri->identity_pkey = crypto_pk_dup_key(pk);
+
+  curve25519_keypair_t ri_onion_keypair;
+  curve25519_keypair_generate(&ri_onion_keypair, 0);
+  ri->onion_curve25519_pkey = tor_memdup(&ri_onion_keypair.pubkey,
+                                         sizeof(curve25519_public_key_t));
+
+  ed25519_secret_key_from_seed(&kp1.seckey,
+                          (const uint8_t*)"YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
+  ed25519_public_key_generate(&kp1.pubkey, &kp1.seckey);
+  ed25519_secret_key_from_seed(&kp2.seckey,
+                          (const uint8_t*)"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+  ed25519_public_key_generate(&kp2.pubkey, &kp2.seckey);
+  ri->cache_info.signing_key_cert = tor_cert_create(&kp1,
+                                         CERT_TYPE_ID_SIGNING,
+                                         &kp2.pubkey,
+                                         now, 86400,
+                                         CERT_FLAG_INCLUDE_SIGNING_KEY);
+
+  crypto_pk_get_digest(ri->identity_pkey, d);
+  base16_encode(fp, HEX_DIGEST_LEN + 1, d, DIGEST_LEN);
+
+  /* Try on an empty fingerprint list */
+  ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
+  tt_int_op(ret, OP_EQ, 0);
+  RESET_FP_LIST(list);
+
+  ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
+  tt_int_op(ret, OP_EQ, 0);
+  RESET_FP_LIST(list);
+
+  /* Try an accepted router */
+  add_rsa_fingerprint_to_dir(fp, list, 0);
+  ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
+  tt_int_op(ret, OP_EQ, 0);
+  RESET_FP_LIST(list);
+
+  add_ed25519_to_dir(&kp1.pubkey, list, 0);
+  ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
+  tt_int_op(ret, OP_EQ, 0);
+  RESET_FP_LIST(list);
+
+  /* Try a rejected router */
+  add_rsa_fingerprint_to_dir(fp, list, RTR_REJECT);
+  ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
+  tt_int_op(ret, OP_EQ, RTR_REJECT);
+  RESET_FP_LIST(list);
+
+  add_ed25519_to_dir(&kp1.pubkey, list, RTR_REJECT);
+  ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
+  tt_int_op(ret, OP_EQ, RTR_REJECT);
+  RESET_FP_LIST(list);
+
+ done:
+  dirserv_free_fingerprint_list();
+  routerinfo_free(ri);
+  crypto_pk_free(pk);
+}
+
+static void
+test_dir_dirserv_would_reject_router(void *arg)
+{
+  authdir_config_t *list;
+  routerstatus_t rs;
+  vote_routerstatus_t vrs;
+  ed25519_keypair_t kp;
+  char fp[HEX_DIGEST_LEN+1];
+
+  (void)arg;
+
+  authdir_init_fingerprint_list();
+  list = authdir_return_fingerprint_list();
+
+  /* Set up the routerstatus */
+  memset(&rs, 0, sizeof(rs));
+  rs.addr = 0xc0a80001u;
+  rs.or_port = 9001;
+  strlcpy(rs.nickname, "Nicole", sizeof(rs.nickname));
+  memcpy(rs.identity_digest, "Cloud nine is great ", DIGEST_LEN);
+
+  ed25519_secret_key_from_seed(&kp.seckey,
+                          (const uint8_t*)"YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
+  ed25519_public_key_generate(&kp.pubkey, &kp.seckey);
+
+  base16_encode(fp, HEX_DIGEST_LEN + 1, rs.identity_digest, DIGEST_LEN);
+
+  /* Setup the vote_routerstatus_t. */
+  memcpy(vrs.ed25519_id, &kp.pubkey, ED25519_PUBKEY_LEN);
+
+  /* Try an empty fingerprint list */
+  tt_assert(!dirserv_would_reject_router(&rs, &vrs));
+  RESET_FP_LIST(list);
+
+  tt_assert(!dirserv_would_reject_router(&rs, &vrs));
+  RESET_FP_LIST(list);
+
+  /* Try an accepted router */
+  add_rsa_fingerprint_to_dir(fp, list, 0);
+  tt_assert(!dirserv_would_reject_router(&rs, &vrs));
+  RESET_FP_LIST(list);
+
+  add_ed25519_to_dir(&kp.pubkey, list, 0);
+  tt_assert(!dirserv_would_reject_router(&rs, &vrs));
+  RESET_FP_LIST(list);
+
+  /* Try a rejected router */
+  add_rsa_fingerprint_to_dir(fp, list, RTR_REJECT);
+  tt_assert(dirserv_would_reject_router(&rs, &vrs));
+  RESET_FP_LIST(list);
+
+  add_ed25519_to_dir(&kp.pubkey, list, RTR_REJECT);
+  tt_assert(dirserv_would_reject_router(&rs, &vrs));
+  RESET_FP_LIST(list);
+
+ done:
+  dirserv_free_fingerprint_list();
+}
+
+static void
+test_dir_dirserv_add_own_fingerprint(void *arg)
+{
+  authdir_config_t *list;
+  char digest[DIGEST_LEN];
+  crypto_pk_t *pk = pk_generate(0);
+
+  (void)arg;
+
+  init_mock_ed_keys(pk);
+  authdir_init_fingerprint_list();
+  list = authdir_return_fingerprint_list();
+  dirserv_add_own_fingerprint(pk, get_master_identity_key());
+
+  /* Check if we have a RSA key. */
+  crypto_pk_get_digest(pk, digest);
+  tt_assert(digestmap_get(list->status_by_digest, digest));
+
+  /* Check if we have a ed25519 key. */
+  tt_assert(digest256map_get(list->status_by_digest256,
+                             get_master_identity_key()->pubkey));
+
+  RESET_FP_LIST(list);
+
+ done:
+  dirserv_free_fingerprint_list();
+  crypto_pk_free(pk);
 }
 
 #ifndef COCCI
@@ -7261,7 +7470,7 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(clip_unmeasured_bw_kb),
   DIR_LEGACY(clip_unmeasured_bw_kb_alt),
   DIR(fmt_control_ns, 0),
-  DIR(dirserv_set_routerstatus_testing, 0),
+  DIR(dirserv_set_routerstatus_testing, TT_FORK),
   DIR(http_handling, 0),
   DIR(purpose_needs_anonymity_returns_true_for_bridges, 0),
   DIR(purpose_needs_anonymity_returns_false_for_own_bridge_desc, 0),
@@ -7296,7 +7505,11 @@ struct testcase_t dir_tests[] = {
   DIR(matching_flags, 0),
   DIR(networkstatus_compute_bw_weights_v10, 0),
   DIR(platform_str, 0),
-  DIR(networkstatus_consensus_has_ipv6, TT_FORK),
   DIR(format_versions_list, TT_FORK),
+  DIR(add_fingerprint, TT_FORK),
+  DIR(dirserv_load_fingerprint_file, TT_FORK),
+  DIR(dirserv_router_get_status, TT_FORK),
+  DIR(dirserv_would_reject_router, TT_FORK),
+  DIR(dirserv_add_own_fingerprint, TT_FORK),
   END_OF_TESTCASES
 };

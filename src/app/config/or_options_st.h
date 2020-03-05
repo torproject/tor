@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -13,6 +13,7 @@
 #ifndef TOR_OR_OPTIONS_ST_H
 #define TOR_OR_OPTIONS_ST_H
 
+#include "core/or/or.h"
 #include "lib/cc/torint.h"
 #include "lib/net/address.h"
 #include "app/config/tor_cmdline_mode.h"
@@ -20,12 +21,19 @@
 struct smartlist_t;
 struct config_line_t;
 struct config_suite_t;
+struct routerset_t;
 
 /** Enumeration of outbound address configuration types:
  * Exit-only, OR-only, or both */
 typedef enum {OUTBOUND_ADDR_EXIT, OUTBOUND_ADDR_OR,
               OUTBOUND_ADDR_EXIT_AND_OR,
               OUTBOUND_ADDR_MAX} outbound_addr_t;
+
+/** Which protocol to use for TCPProxy. */
+typedef enum {
+  /** Use the HAProxy proxy protocol. */
+  TCP_PROXY_PROTOCOL_HAPROXY
+} tcp_proxy_protocol_t;
 
 /** Configuration options for a Tor process. */
 struct or_options_t {
@@ -66,28 +74,29 @@ struct or_options_t {
   char *Address; /**< OR only: configured address for this onion router. */
   char *PidFile; /**< Where to store PID of Tor process. */
 
-  routerset_t *ExitNodes; /**< Structure containing nicknames, digests,
+  struct routerset_t *ExitNodes; /**< Structure containing nicknames, digests,
                            * country codes and IP address patterns of ORs to
                            * consider as exits. */
-  routerset_t *MiddleNodes; /**< Structure containing nicknames, digests,
-                             * country codes and IP address patterns of ORs to
-                             * consider as middles. */
-  routerset_t *EntryNodes;/**< Structure containing nicknames, digests,
+  struct routerset_t *MiddleNodes; /**< Structure containing nicknames,
+                             * digests, country codes and IP address patterns
+                             * of ORs to consider as middles. */
+  struct routerset_t *EntryNodes;/**< Structure containing nicknames, digests,
                            * country codes and IP address patterns of ORs to
                            * consider as entry points. */
   int StrictNodes; /**< Boolean: When none of our EntryNodes or ExitNodes
                     * are up, or we need to access a node in ExcludeNodes,
                     * do we just fail instead? */
-  routerset_t *ExcludeNodes;/**< Structure containing nicknames, digests,
-                             * country codes and IP address patterns of ORs
-                             * not to use in circuits. But see StrictNodes
-                             * above. */
-  routerset_t *ExcludeExitNodes;/**< Structure containing nicknames, digests,
-                                 * country codes and IP address patterns of
-                                 * ORs not to consider as exits. */
+  struct routerset_t *ExcludeNodes;/**< Structure containing nicknames,
+                             * digests, country codes and IP address patterns
+                             * of ORs not to use in circuits. But see
+                             * StrictNodes above. */
+  struct routerset_t *ExcludeExitNodes;/**< Structure containing nicknames,
+                                 * digests, country codes and IP address
+                                 * patterns of ORs not to consider as
+                                 * exits. */
 
   /** Union of ExcludeNodes and ExcludeExitNodes */
-  routerset_t *ExcludeExitNodesUnion_;
+  struct routerset_t *ExcludeExitNodesUnion_;
 
   int DisableAllSwap; /**< Boolean: Attempt to call mlockall() on our
                        * process for all current and future memory. */
@@ -113,11 +122,6 @@ struct or_options_t {
    * [][0] is IPv4, [][1] is IPv6
    */
   tor_addr_t OutboundBindAddresses[OUTBOUND_ADDR_MAX][2];
-  /** Directory server only: which versions of
-   * Tor should we tell users to run? */
-  struct config_line_t *RecommendedVersions;
-  struct config_line_t *RecommendedClientVersions;
-  struct config_line_t *RecommendedServerVersions;
   /** Whether dirservers allow router descriptors with private IPs. */
   int DirAllowPrivateAddresses;
   /** Whether routers accept EXTEND cells to routers with private IPs. */
@@ -192,9 +196,6 @@ struct or_options_t {
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int V3AuthoritativeDir; /**< Boolean: is this an authoritative directory
                            * for version 3 directories? */
-  int VersioningAuthoritativeDir; /**< Boolean: is this an authoritative
-                                   * directory that's willing to recommend
-                                   * versions? */
   int BridgeAuthoritativeDir; /**< Boolean: is this an authoritative directory
                                * that aggregates bridge descriptors? */
 
@@ -265,20 +266,17 @@ struct or_options_t {
   int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
   int FetchHidServDescriptors; /**< and hidden service descriptors? */
 
-  int MinUptimeHidServDirectoryV2; /**< As directory authority, accept hidden
-                                    * service directories after what time? */
-
   int FetchUselessDescriptors; /**< Do we fetch non-running descriptors too? */
   int AllDirActionsPrivate; /**< Should every directory action be sent
                              * through a Tor circuit? */
 
   /** A routerset that should be used when picking middle nodes for HS
    *  circuits. */
-  routerset_t *HSLayer2Nodes;
+  struct routerset_t *HSLayer2Nodes;
 
   /** A routerset that should be used when picking third-hop nodes for HS
    *  circuits. */
-  routerset_t *HSLayer3Nodes;
+  struct routerset_t *HSLayer3Nodes;
 
   /** Onion Services in HiddenServiceSingleHopMode make one-hop (direct)
    * circuits between the onion service server, and the introduction and
@@ -419,6 +417,11 @@ struct or_options_t {
   char *Socks5ProxyUsername; /**< Username for SOCKS5 authentication, if any */
   char *Socks5ProxyPassword; /**< Password for SOCKS5 authentication, if any */
 
+  char *TCPProxy; /**< protocol and hostname:port to use as a proxy, if any. */
+  tcp_proxy_protocol_t TCPProxyProtocol; /**< Derived from TCPProxy. */
+  tor_addr_t TCPProxyAddr; /**< Derived from TCPProxy. */
+  uint16_t TCPProxyPort; /**< Derived from TCPProxy. */
+
   /** List of configuration lines for replacement directory authorities.
    * If you just want to replace one class of authority at a time,
    * use the "Alternate*Authority" options below instead. */
@@ -464,21 +467,6 @@ struct or_options_t {
   struct smartlist_t *AuthDirInvalidCCs;
   struct smartlist_t *AuthDirRejectCCs;
   /**@}*/
-
-  int AuthDirListBadExits; /**< True iff we should list bad exits,
-                            * and vote for all other exits as good. */
-  int AuthDirMaxServersPerAddr; /**< Do not permit more than this
-                                 * number of servers per IP address. */
-  int AuthDirHasIPv6Connectivity; /**< Boolean: are we on IPv6?  */
-  int AuthDirPinKeys; /**< Boolean: Do we enforce key-pinning? */
-
-  /** If non-zero, always vote the Fast flag for any relay advertising
-   * this amount of capacity or more. */
-  uint64_t AuthDirFastGuarantee;
-
-  /** If non-zero, this advertised capacity or more is always sufficient
-   * to satisfy the bandwidth requirement for the Guard flag. */
-  uint64_t AuthDirGuardBWGuarantee;
 
   char *AccountingStart; /**< How long is the accounting interval, and when
                           * does it start? */
@@ -696,14 +684,6 @@ struct or_options_t {
   /** Location of guardfraction file */
   char *GuardfractionFile;
 
-  /** Authority only: key=value pairs that we add to our networkstatus
-   * consensus vote on the 'params' line. */
-  char *ConsensusParams;
-
-  /** Authority only: minimum number of measured bandwidths we must see
-   * before we only believe measured bandwidths to assign flags. */
-  int MinMeasuredBWsForAuthToIgnoreAdvertised;
-
   /** The length of time that we think an initial consensus should be fresh.
    * Only altered on testing networks. */
   int TestingV3AuthInitialVotingInterval;
@@ -719,16 +699,6 @@ struct or_options_t {
   /** Offset in seconds added to the starting time for consensus
       voting. Only altered on testing networks. */
   int TestingV3AuthVotingStartOffset;
-
-  /** If an authority has been around for less than this amount of time, it
-   * does not believe its reachability information is accurate.  Only
-   * altered on testing networks. */
-  int TestingAuthDirTimeToLearnReachability;
-
-  /** Clients don't download any descriptor this recent, since it will
-   * probably not have propagated to enough caches.  Only altered on testing
-   * networks. */
-  int TestingEstimatedDescriptorPropagationTime;
 
   /** Schedule for when servers should download things in general.  Only
    * altered on testing networks. */
@@ -802,27 +772,6 @@ struct or_options_t {
    * couple of other configuration options and allow to change the values
    * of certain configuration options. */
   int TestingTorNetwork;
-
-  /** Minimum value for the Exit flag threshold on testing networks. */
-  uint64_t TestingMinExitFlagThreshold;
-
-  /** Minimum value for the Fast flag threshold on testing networks. */
-  uint64_t TestingMinFastFlagThreshold;
-
-  /** Relays in a testing network which should be voted Exit
-   * regardless of exit policy. */
-  routerset_t *TestingDirAuthVoteExit;
-  int TestingDirAuthVoteExitIsStrict;
-
-  /** Relays in a testing network which should be voted Guard
-   * regardless of uptime and bandwidth. */
-  routerset_t *TestingDirAuthVoteGuard;
-  int TestingDirAuthVoteGuardIsStrict;
-
-  /** Relays in a testing network which should be voted HSDir
-   * regardless of uptime and DirPort. */
-  routerset_t *TestingDirAuthVoteHSDir;
-  int TestingDirAuthVoteHSDirIsStrict;
 
   /** Enable CONN_BW events.  Only altered on testing networks. */
   int TestingEnableConnBwEvent;
@@ -1002,23 +951,12 @@ struct or_options_t {
    */
   uint64_t MaxUnparseableDescSizeToLog;
 
-  /** Bool (default: 1): Switch for the shared random protocol. Only
-   * relevant to a directory authority. If off, the authority won't
-   * participate in the protocol. If on (default), a flag is added to the
-   * vote indicating participation. */
-  int AuthDirSharedRandomness;
-
   /** If 1, we skip all OOS checks. */
   int DisableOOSCheck;
 
   /** Autobool: Should we include Ed25519 identities in extend2 cells?
    * If -1, we should do whatever the consensus parameter says. */
   int ExtendByEd25519ID;
-
-  /** Bool (default: 1): When testing routerinfos as a directory authority,
-   * do we enforce Ed25519 identity match? */
-  /* NOTE: remove this option someday. */
-  int AuthDirTestEd25519LinkKeys;
 
   /** Bool (default: 0): Tells if a %include was used on torrc */
   int IncludeUsed;

@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -89,6 +89,17 @@ setup_directory(void)
                  (int)getpid(), rnd32);
     r = mkdir(temp_dir);
   }
+#elif defined(__ANDROID__)
+  /* tor might not like the default perms, so create a subdir */
+  tor_snprintf(temp_dir, sizeof(temp_dir),
+               "/data/local/tmp/tor_%d_%d_%s",
+               (int) getuid(), (int) getpid(), rnd32);
+  r = mkdir(temp_dir, 0700);
+  if (r) {
+    fprintf(stderr, "Can't create directory %s:", temp_dir);
+    perror("");
+    exit(1);
+  }
 #else /* !defined(_WIN32) */
   tor_snprintf(temp_dir, sizeof(temp_dir), "/tmp/tor_test_%d_%s",
                (int) getpid(), rnd32);
@@ -97,7 +108,7 @@ setup_directory(void)
     /* undo sticky bit so tests don't get confused. */
     r = chown(temp_dir, getuid(), getgid());
   }
-#endif /* defined(_WIN32) */
+#endif /* defined(_WIN32) || ... */
   if (r) {
     fprintf(stderr, "Can't create directory %s:", temp_dir);
     perror("");
@@ -262,7 +273,7 @@ main(int c, const char **v)
   int loglevel = LOG_ERR;
   int accel_crypto = 0;
 
-  subsystems_init_upto(SUBSYS_LEVEL_LIBS);
+  subsystems_init();
 
   options = options_new();
 

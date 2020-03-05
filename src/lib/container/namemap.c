@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2018, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -35,9 +35,9 @@ mapped_name_hash(const mapped_name_t *a)
 }
 
 HT_PROTOTYPE(namemap_ht, mapped_name_t, node, mapped_name_hash,
-             mapped_name_eq)
+             mapped_name_eq);
 HT_GENERATE2(namemap_ht, mapped_name_t, node, mapped_name_hash,
-             mapped_name_eq, 0.6, tor_reallocarray_, tor_free_)
+             mapped_name_eq, 0.6, tor_reallocarray_, tor_free_);
 
 /** Set up an uninitialized <b>map</b>. */
 void

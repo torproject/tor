@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -17,6 +17,10 @@
 /** Contents of a single router entry in a network status object.
  */
 struct routerstatus_t {
+ /* This should be kept in sync with the function
+ * routerstatus_has_visibly_changed and the printing function
+ * routerstatus_format_entry in NS_CONTROL_PORT mode.
+ */
   time_t published_on; /**< When was this router published? */
   char nickname[MAX_NICKNAME_LEN+1]; /**< The nickname this router says it
                                       * has. */

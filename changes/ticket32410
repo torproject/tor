@@ -1,3 +1,0 @@
-  o Minor features (relay):
-    - When the relay module is disabled, change the default config so that
-      DirCache is 0, and ClientOnly is 1. Closes ticket 32410.

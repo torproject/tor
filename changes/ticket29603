@@ -1,3 +1,0 @@
-  o Minor features (git scripts):
-    - Add git-setup-dirs.sh, which sets up an upstream git repository and
-      worktrees for tor maintainers. Closes ticket 29603.

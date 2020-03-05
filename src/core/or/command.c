@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -215,23 +215,6 @@ command_process_cell(channel_t *chan, cell_t *cell)
              cell->command);
       break;
   }
-}
-
-/** Process an incoming var_cell from a channel; in the current protocol all
- * the var_cells are handshake-related and handled below the channel layer,
- * so this just logs a warning and drops the cell.
- */
-
-void
-command_process_var_cell(channel_t *chan, var_cell_t *var_cell)
-{
-  tor_assert(chan);
-  tor_assert(var_cell);
-
-  log_info(LD_PROTOCOL,
-           "Received unexpected var_cell above the channel layer of type %d"
-           "; dropping it.",
-           var_cell->command);
 }
 
 /** Process a 'create' <b>cell</b> that just arrived from <b>chan</b>. Make a
@@ -685,8 +668,7 @@ command_setup_channel(channel_t *chan)
   tor_assert(chan);
 
   channel_set_cell_handlers(chan,
-                            command_process_cell,
-                            command_process_var_cell);
+                            command_process_cell);
 }
 
 /** Given a listener, install the right handler to process incoming

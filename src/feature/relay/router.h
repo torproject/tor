@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -117,7 +117,6 @@ const char *routerinfo_err_to_string(int err);
 int routerinfo_err_is_transient(int err);
 
 void router_reset_warnings(void);
-void router_reset_reachability(void);
 void router_free_all(void);
 
 #ifdef ROUTER_PRIVATE

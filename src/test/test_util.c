@@ -1,14 +1,11 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#define COMPAT_PRIVATE
 #define COMPAT_TIME_PRIVATE
-#define UTIL_PRIVATE
 #define UTIL_MALLOC_PRIVATE
-#define SOCKET_PRIVATE
 #define PROCESS_WIN32_PRIVATE
 #include "lib/testsupport/testsupport.h"
 #include "core/or/or.h"
@@ -74,6 +71,11 @@
 #include <math.h>
 #include <ctype.h>
 #include <float.h>
+
+/* These platforms don't have meaningful pwdb or homedirs. */
+#if defined(_WIN32) || defined(__ANDROID__)
+#define DISABLE_PWDB_TESTS
+#endif
 
 #define INFINITY_DBL ((double)INFINITY)
 #define NAN_DBL ((double)NAN)
@@ -1848,7 +1850,7 @@ test_util_config_line_crlf(void *arg)
   tor_free(k); tor_free(v);
 }
 
-#ifndef _WIN32
+#ifndef DISABLE_PWDB_TESTS
 static void
 test_util_expand_filename(void *arg)
 {
@@ -1945,7 +1947,7 @@ test_util_expand_filename(void *arg)
  done:
   tor_free(str);
 }
-#endif /* !defined(_WIN32) */
+#endif /* !defined(DISABLE_PWDB_TESTS) */
 
 /** Test tor_escape_str_for_pt_args(). */
 static void
@@ -4107,9 +4109,42 @@ test_util_string_is_utf8(void *ptr)
   tt_int_op(0, OP_EQ, string_is_utf8("\xed\xbf\xbf", 3));
   tt_int_op(1, OP_EQ, string_is_utf8("\xee\x80\x80", 3));
 
-  // The maximum legal codepoint, 10FFFF.
+  // The minimum legal codepoint, 0x00.
+  tt_int_op(1, OP_EQ, string_is_utf8("\0", 1));
+
+  // The maximum legal codepoint, 0x10FFFF.
   tt_int_op(1, OP_EQ, string_is_utf8("\xf4\x8f\xbf\xbf", 4));
   tt_int_op(0, OP_EQ, string_is_utf8("\xf4\x90\x80\x80", 4));
+
+  /* Test cases that vary between programming languages /
+   * UTF-8 implementations.
+   * Source: POC||GTFO 19, page 43
+   * https://www.alchemistowl.org/pocorgtfo/
+   */
+
+  // Invalid (in most implementations)
+  // surrogate
+  tt_int_op(0, OP_EQ, string_is_utf8("\xed\xa0\x81", 3));
+  // nullsurrog
+  tt_int_op(0, OP_EQ, string_is_utf8("\x30\x00\xed\xa0\x81", 5));
+  // threehigh
+  tt_int_op(0, OP_EQ, string_is_utf8("\xed\xbf\xbf", 3));
+  // fourhigh
+  tt_int_op(0, OP_EQ, string_is_utf8("\xf4\x90\xbf\xbf", 4));
+  // fivebyte
+  tt_int_op(0, OP_EQ, string_is_utf8("\xfb\x80\x80\x80\x80", 5));
+  // sixbyte
+  tt_int_op(0, OP_EQ, string_is_utf8("\xfd\x80\x80\x80\x80", 5));
+  // sixhigh
+  tt_int_op(0, OP_EQ, string_is_utf8("\xfd\xbf\xbf\xbf\xbf", 5));
+
+  // Valid (in most implementations)
+  // fourbyte
+  tt_int_op(1, OP_EQ, string_is_utf8("\xf0\x90\x8d\x88", 4));
+  // fourbyte2
+  tt_int_op(1, OP_EQ, string_is_utf8("\xf0\xbf\xbf\xbf", 4));
+  // nullbyte
+  tt_int_op(1, OP_EQ, string_is_utf8("\x30\x31\x32\x00\x33", 5));
 
  done:
   ;
@@ -4532,6 +4567,35 @@ test_util_di_ops(void *arg)
   tt_int_op(1, OP_EQ, safe_mem_is_zero("\0\0\0\0\0\0\0\0a", 8));
   tt_int_op(0, OP_EQ, safe_mem_is_zero("\0\0\0\0\0\0\0\0a", 9));
 
+ done:
+  ;
+}
+
+static void
+test_util_memcpy_iftrue_timei(void *arg)
+{
+  (void)arg;
+  char buf1[25];
+  char buf2[25];
+  char buf3[25];
+
+  for (int i = 0; i < 100; ++i) {
+    crypto_rand(buf1, sizeof(buf1));
+    crypto_rand(buf2, sizeof(buf2));
+    memcpy(buf3, buf1, sizeof(buf1));
+
+    /* We just copied buf1 into buf3.  Now we're going to copy buf2 into buf2,
+       iff our coin flip comes up heads. */
+    bool coinflip = crypto_rand_int(2) == 0;
+
+    memcpy_if_true_timei(coinflip, buf3, buf2, sizeof(buf3));
+
+    if (coinflip) {
+      tt_mem_op(buf3, OP_EQ, buf2, sizeof(buf2));
+    } else {
+      tt_mem_op(buf3, OP_EQ, buf1, sizeof(buf1));
+    }
+  }
  done:
   ;
 }
@@ -5656,7 +5720,7 @@ test_util_touch_file(void *arg)
   ;
 }
 
-#ifndef _WIN32
+#ifndef DISABLE_PWDB_TESTS
 static void
 test_util_pwdb(void *arg)
 {
@@ -5728,7 +5792,7 @@ test_util_pwdb(void *arg)
   tor_free(dir);
   teardown_capture_of_logs();
 }
-#endif /* !defined(_WIN32) */
+#endif /* !defined(DISABLE_PWDB_TESTS) */
 
 static void
 test_util_calloc_check(void *arg)
@@ -6270,40 +6334,42 @@ test_util_map_anon_nofork(void *arg)
 
 #ifndef COCCI
 #define UTIL_LEGACY(name)                                               \
-  { #name, test_util_ ## name , 0, NULL, NULL }
+  { (#name), test_util_ ## name , 0, NULL, NULL }
 
 #define UTIL_TEST(name, flags)                          \
-  { #name, test_util_ ## name, flags, NULL, NULL }
+  { (#name), test_util_ ## name, flags, NULL, NULL }
 
 #define COMPRESS(name, identifier)              \
-  { "compress/" #name, test_util_compress, 0, &compress_setup,          \
+  { ("compress/" #name), test_util_compress, 0, &compress_setup,        \
     (char*)(identifier) }
 
 #define COMPRESS_CONCAT(name, identifier)                               \
-  { "compress_concat/" #name, test_util_decompress_concatenated, 0,     \
+  { ("compress_concat/" #name), test_util_decompress_concatenated, 0,   \
     &compress_setup,                                                    \
     (char*)(identifier) }
 
 #define COMPRESS_JUNK(name, identifier)                                 \
-  { "compress_junk/" #name, test_util_decompress_junk, 0,               \
+  { ("compress_junk/" #name), test_util_decompress_junk, 0,             \
     &compress_setup,                                                    \
     (char*)(identifier) }
 
 #define COMPRESS_DOS(name, identifier)                                  \
-  { "compress_dos/" #name, test_util_decompress_dos, 0,                 \
+  { ("compress_dos/" #name), test_util_decompress_dos, 0,               \
     &compress_setup,                                                    \
     (char*)(identifier) }
-#endif /* !defined(COCCI) */
 
 #ifdef _WIN32
-#define UTIL_TEST_NO_WIN(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
 #define UTIL_TEST_WIN_ONLY(n, f) UTIL_TEST(n, (f))
-#define UTIL_LEGACY_NO_WIN(n) UTIL_TEST_NO_WIN(n, 0)
 #else
-#define UTIL_TEST_NO_WIN(n, f) UTIL_TEST(n, (f))
-#define UTIL_TEST_WIN_ONLY(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
-#define UTIL_LEGACY_NO_WIN(n) UTIL_LEGACY(n)
-#endif /* defined(_WIN32) */
+#define UTIL_TEST_WIN_ONLY(n, f) { (#n), NULL, TT_SKIP, NULL, NULL }
+#endif
+
+#ifdef DISABLE_PWDB_TESTS
+#define UTIL_TEST_PWDB(n, f) { (#n), NULL, TT_SKIP, NULL, NULL }
+#else
+#define UTIL_TEST_PWDB(n, f) UTIL_TEST(n, (f))
+#endif
+#endif
 
 struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),
@@ -6313,7 +6379,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(config_line_comment_character),
   UTIL_LEGACY(config_line_escaped_content),
   UTIL_LEGACY(config_line_crlf),
-  UTIL_LEGACY_NO_WIN(expand_filename),
+  UTIL_TEST_PWDB(expand_filename, 0),
   UTIL_LEGACY(escape_string_socks),
   UTIL_LEGACY(string_is_key_value),
   UTIL_LEGACY(strmisc),
@@ -6349,6 +6415,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(path_is_relative),
   UTIL_LEGACY(strtok),
   UTIL_LEGACY(di_ops),
+  UTIL_TEST(memcpy_iftrue_timei, 0),
   UTIL_TEST(di_map, 0),
   UTIL_TEST(round_to_next_multiple_of, 0),
   UTIL_TEST(laplace, 0),
@@ -6398,7 +6465,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(writepid, 0),
   UTIL_TEST(get_avail_disk_space, 0),
   UTIL_TEST(touch_file, 0),
-  UTIL_TEST_NO_WIN(pwdb, TT_FORK),
+  UTIL_TEST_PWDB(pwdb, TT_FORK),
   UTIL_TEST(calloc_check, 0),
   UTIL_TEST(monotonic_time, 0),
   UTIL_TEST(monotonic_time_ratchet, TT_FORK),

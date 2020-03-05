@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -19,6 +19,7 @@
 #include "feature/client/circpathbias.h"
 #include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_circuit.h"
+#include "feature/hs/hs_ob.h"
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_ident.h"
@@ -367,10 +368,10 @@ get_service_anonymity_string(const hs_service_t *service)
  * success, a circuit identifier is attached to the circuit with the needed
  * data. This function will try to open a circuit for a maximum value of
  * MAX_REND_FAILURES then it will give up. */
-static void
-launch_rendezvous_point_circuit(const hs_service_t *service,
-                                const hs_service_intro_point_t *ip,
-                                const hs_cell_introduce2_data_t *data)
+MOCK_IMPL(STATIC void,
+launch_rendezvous_point_circuit,(const hs_service_t *service,
+                                 const hs_service_intro_point_t *ip,
+                                 const hs_cell_introduce2_data_t *data))
 {
   int circ_needs_uptime;
   time_t now = time(NULL);
@@ -578,7 +579,7 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
 static int
 setup_introduce1_data(const hs_desc_intro_point_t *ip,
                       const node_t *rp_node,
-                      const uint8_t *subcredential,
+                      const hs_subcredential_t *subcredential,
                       hs_cell_introduce1_data_t *intro1_data)
 {
   int ret = -1;
@@ -958,6 +959,42 @@ hs_circ_handle_intro_established(const hs_service_t *service,
   return ret;
 }
 
+/**
+ *  Go into <b>data</b> and add the right subcredential to be able to handle
+ *  this incoming cell.
+ *
+ *  <b>desc_subcred</b> is the subcredential of the descriptor that corresponds
+ *  to the intro point that received this intro request. This subcredential
+ *  should be used if we are not an onionbalance instance.
+ *
+ *  Return 0 if everything went well, or -1 in case of internal error.
+ */
+static int
+get_subcredential_for_handling_intro2_cell(const hs_service_t *service,
+                                        hs_cell_introduce2_data_t *data,
+                                        const hs_subcredential_t *desc_subcred)
+{
+  /* Handle the simple case first: We are not an onionbalance instance and we
+   * should just use the regular descriptor subcredential */
+  if (!hs_ob_service_is_instance(service)) {
+    data->n_subcredentials = 1;
+    data->subcredentials = desc_subcred;
+    return 0;
+  }
+
+  /* This should not happen since we should have made onionbalance
+   * subcredentials when we created our descriptors. */
+  if (BUG(!service->ob_subcreds)) {
+    return -1;
+  }
+
+  /* We are an onionbalance instance: */
+  data->n_subcredentials = service->n_ob_subcreds;
+  data->subcredentials = service->ob_subcreds;
+
+  return 0;
+}
+
 /** We just received an INTRODUCE2 cell on the established introduction circuit
  * circ.  Handle the INTRODUCE2 payload of size payload_len for the given
  * circuit and service. This cell is associated with the intro point object ip
@@ -966,7 +1003,7 @@ int
 hs_circ_handle_introduce2(const hs_service_t *service,
                           const origin_circuit_t *circ,
                           hs_service_intro_point_t *ip,
-                          const uint8_t *subcredential,
+                          const hs_subcredential_t *subcredential,
                           const uint8_t *payload, size_t payload_len)
 {
   int ret = -1;
@@ -983,11 +1020,15 @@ hs_circ_handle_introduce2(const hs_service_t *service,
    * parsed, decrypted and key material computed correctly. */
   data.auth_pk = &ip->auth_key_kp.pubkey;
   data.enc_kp = &ip->enc_key_kp;
-  data.subcredential = subcredential;
   data.payload = payload;
   data.payload_len = payload_len;
   data.link_specifiers = smartlist_new();
   data.replay_cache = ip->replay_cache;
+
+  if (get_subcredential_for_handling_intro2_cell(service,
+                                                 &data, subcredential)) {
+    goto done;
+  }
 
   if (hs_cell_parse_introduce2(&data, circ, service) < 0) {
     goto done;
@@ -1092,7 +1133,7 @@ int
 hs_circ_send_introduce1(origin_circuit_t *intro_circ,
                         origin_circuit_t *rend_circ,
                         const hs_desc_intro_point_t *ip,
-                        const uint8_t *subcredential)
+                        const hs_subcredential_t *subcredential)
 {
   int ret = -1;
   ssize_t payload_len;

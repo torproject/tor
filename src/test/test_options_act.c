@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #define CONFIG_PRIVATE
@@ -40,10 +40,10 @@ get_file_mode(const char *fname, unsigned *permissions_out)
     TT_DIE(("Bad mode %o on %s", mode_, (fn)));                  \
   }                                                              \
   STMT_END
-#else
+#else /* defined(_WIN32) */
 /* "group-readable" isn't meaningful on windows */
 #define assert_mode(fn,mask,expected) STMT_NIL
-#endif
+#endif /* !defined(_WIN32) */
 
 static or_options_t *mock_opts;
 static const or_options_t *

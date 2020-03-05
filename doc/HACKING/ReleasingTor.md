@@ -197,7 +197,7 @@ new Tor release:
 3. Email the packagers (cc'ing tor-team) that a new tarball is up.
    The current list of packagers is:
 
-       - {weasel,gk,mikeperry} at torproject dot org
+       - {weasel,sysrqb,mikeperry} at torproject dot org
        - {blueness} at gentoo dot org
        - {paul} at invizbox dot io
        - {vincent} at invizbox dot com

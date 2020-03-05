@@ -1,8 +1,8 @@
-/* Copyright (c) 2013-2019, The Tor Project, Inc. */
+/* Copyright (c) 2013-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#define TOR_CHANNEL_INTERNAL_
-#define CHANNEL_PRIVATE_
+#define CHANNEL_OBJECT_PRIVATE
+#define CHANNEL_FILE_PRIVATE
 #include "core/or/or.h"
 #include "core/or/channel.h"
 /* For channel_note_destroy_not_pending */
@@ -34,8 +34,6 @@
 static int test_chan_accept_cells = 0;
 static int test_chan_fixed_cells_recved = 0;
 static cell_t * test_chan_last_seen_fixed_cell_ptr = NULL;
-static int test_chan_var_cells_recved = 0;
-static var_cell_t * test_chan_last_seen_var_cell_ptr = NULL;
 static int test_cells_written = 0;
 static int test_doesnt_want_writes_count = 0;
 static int test_dumpstats_calls = 0;
@@ -108,24 +106,6 @@ chan_test_dumpstats(channel_t *ch, int severity)
   (void)severity;
 
   ++test_dumpstats_calls;
-
- done:
-  return;
-}
-
-/*
- * Handle an incoming variable-size cell for unit tests
- */
-
-static void
-chan_test_var_cell_handler(channel_t *ch,
-                           var_cell_t *var_cell)
-{
-  tt_assert(ch);
-  tt_assert(var_cell);
-
-  test_chan_last_seen_var_cell_ptr = var_cell;
-  ++test_chan_var_cells_recved;
 
  done:
   return;
@@ -492,11 +472,8 @@ test_channel_dumpstats(void *arg)
 
   /* Receive path */
   channel_set_cell_handlers(ch,
-                            chan_test_cell_handler,
-                            chan_test_var_cell_handler);
+                            chan_test_cell_handler);
   tt_ptr_op(channel_get_cell_handler(ch), OP_EQ, chan_test_cell_handler);
-  tt_ptr_op(channel_get_var_cell_handler(ch), OP_EQ,
-            chan_test_var_cell_handler);
   cell = tor_malloc_zero(sizeof(*cell));
   old_count = test_chan_fixed_cells_recved;
   channel_process_cell(ch, cell);
@@ -722,7 +699,7 @@ test_channel_inbound_cell(void *arg)
 
   /* Setup incoming cell handlers. We don't care about var cell, the channel
    * layers is not handling those. */
-  channel_set_cell_handlers(chan, chan_test_cell_handler, NULL);
+  channel_set_cell_handlers(chan, chan_test_cell_handler);
   tt_ptr_op(chan->cell_handler, OP_EQ, chan_test_cell_handler);
   /* Now process the cell, we should see it. */
   old_count = test_chan_fixed_cells_recved;

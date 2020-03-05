@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -957,7 +957,7 @@ handle_get_current_consensus(dir_connection_t *conn,
     goto done;
   }
 
-  if (global_write_bucket_low(TO_CONN(conn), size_guess, 2)) {
+  if (connection_dir_is_global_write_low(TO_CONN(conn), size_guess)) {
     log_debug(LD_DIRSERV,
               "Client asked for network status lists, but we've been "
               "writing too many bytes lately. Sending 503 Dir busy.");
@@ -1066,7 +1066,7 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
         }
       });
 
-    if (global_write_bucket_low(TO_CONN(conn), estimated_len, 2)) {
+    if (connection_dir_is_global_write_low(TO_CONN(conn), estimated_len)) {
       write_short_http_response(conn, 503, "Directory busy, try again later");
       goto vote_done;
     }
@@ -1125,7 +1125,7 @@ handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
       write_short_http_response(conn, 404, "Not found");
       goto done;
     }
-    if (global_write_bucket_low(TO_CONN(conn), size_guess, 2)) {
+    if (connection_dir_is_global_write_low(TO_CONN(conn), size_guess)) {
       log_info(LD_DIRSERV,
                "Client asked for server descriptors, but we've been "
                "writing too many bytes lately. Sending 503 Dir busy.");
@@ -1223,7 +1223,7 @@ handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
         msg = "Not found";
       write_short_http_response(conn, 404, msg);
     } else {
-      if (global_write_bucket_low(TO_CONN(conn), size_guess, 2)) {
+      if (connection_dir_is_global_write_low(TO_CONN(conn), size_guess)) {
         log_info(LD_DIRSERV,
                  "Client asked for server descriptors, but we've been "
                  "writing too many bytes lately. Sending 503 Dir busy.");
@@ -1319,9 +1319,8 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
     SMARTLIST_FOREACH(certs, authority_cert_t *, c,
                       len += c->cache_info.signed_descriptor_len);
 
-    if (global_write_bucket_low(TO_CONN(conn),
-                                compress_method != NO_METHOD ? len/2 : len,
-                                2)) {
+    if (connection_dir_is_global_write_low(TO_CONN(conn),
+                                compress_method != NO_METHOD ? len/2 : len)) {
       write_short_http_response(conn, 503, "Directory busy, try again later");
       goto keys_done;
     }
@@ -1696,7 +1695,7 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
       !strcmp(url,"/tor/post/vote")) { /* v3 networkstatus vote */
     const char *msg = "OK";
     int status;
-    if (dirvote_add_vote(body, &msg, &status)) {
+    if (dirvote_add_vote(body, approx_time(), &msg, &status)) {
       write_short_http_response(conn, status, "Vote stored");
     } else {
       tor_assert(msg);

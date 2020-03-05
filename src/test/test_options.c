@@ -1,20 +1,22 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #define CONFIG_PRIVATE
 #define RELAY_CONFIG_PRIVATE
 #define LOG_PRIVATE
+#define ROUTERSET_PRIVATE
 #include "core/or/or.h"
 #include "lib/confmgt/confmgt.h"
 #include "app/config/config.h"
 #include "feature/dirauth/dirauth_config.h"
+#include "feature/dirauth/dirauth_options_st.h"
+#include "feature/dirauth/dirauth_sys.h"
 #include "feature/relay/relay_config.h"
 #include "test/test.h"
 #include "lib/geoip/geoip.h"
 
-#define ROUTERSET_PRIVATE
 #include "feature/nodelist/routerset.h"
 #include "core/mainloop/mainloop.h"
 #include "app/main/subsysmgr.h"
@@ -29,13 +31,12 @@
 #include "lib/encoding/confline.h"
 #include "core/or/policies.h"
 #include "test/test_helpers.h"
+#include "test/opts_test_helpers.h"
 #include "lib/net/resolve.h"
 
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
-
-#define NS_MODULE test_options
 
 typedef struct {
   int severity;
@@ -306,18 +307,10 @@ test_options_validate(void *arg)
   WANT_ERR("BridgeRelay 1\nDirCache 0",
            "We're a bridge but DirCache is disabled.", PH_VALIDATE);
 
-  // XXXX We should replace this with a more full error message once #29211
-  // XXXX is done.  It is truncated for now because at the current stage
-  // XXXX of refactoring, we can't give a full error message like before.
-  WANT_ERR_LOG("HeartbeatPeriod 21 snarks",
-               "malformed or out of bounds", LOG_WARN,
-               "Unknown unit 'snarks'.",
-               PH_ASSIGN);
-  // XXXX As above.
-  WANT_ERR_LOG("LogTimeGranularity 21 snarks",
-               "malformed or out of bounds", LOG_WARN,
-               "Unknown unit 'snarks'.",
-               PH_ASSIGN);
+  WANT_ERR("HeartbeatPeriod 21 snarks",
+           "Unknown unit in 21 snarks", PH_ASSIGN);
+  WANT_ERR("LogTimeGranularity 21 snarks",
+           "Unknown unit in 21 snarks", PH_ASSIGN);
   OK("HeartbeatPeriod 1 hour", PH_VALIDATE);
   OK("LogTimeGranularity 100 milliseconds", PH_VALIDATE);
 
@@ -762,6 +755,7 @@ test_options_validate__authdir(void *ignored)
   options_test_data_t *tdata = get_options_test_data(
                                  ENABLE_AUTHORITY_V3_MIN
                                  "Address this.should.not!exist!.example.org");
+  const dirauth_options_t *da_opt;
 
   sandbox_disable_getaddrinfo_cache();
 
@@ -820,8 +814,9 @@ test_options_validate__authdir(void *ignored)
                                 "RecommendedVersions 1.2, 3.14\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
-  tt_str_op(tdata->opt->RecommendedClientVersions->value, OP_EQ, "1.2, 3.14");
-  tt_str_op(tdata->opt->RecommendedServerVersions->value, OP_EQ, "1.2, 3.14");
+  da_opt = get_dirauth_options(tdata->opt);
+  tt_str_op(da_opt->RecommendedClientVersions->value, OP_EQ, "1.2, 3.14");
+  tt_str_op(da_opt->RecommendedServerVersions->value, OP_EQ, "1.2, 3.14");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -831,8 +826,9 @@ test_options_validate__authdir(void *ignored)
                                 "RecommendedServerVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
-  tt_str_op(tdata->opt->RecommendedClientVersions->value, OP_EQ, "25");
-  tt_str_op(tdata->opt->RecommendedServerVersions->value, OP_EQ, "4.18");
+  da_opt = get_dirauth_options(tdata->opt);
+  tt_str_op(da_opt->RecommendedClientVersions->value, OP_EQ, "25");
+  tt_str_op(da_opt->RecommendedServerVersions->value, OP_EQ, "4.18");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -843,6 +839,7 @@ test_options_validate__authdir(void *ignored)
                                 "RecommendedServerVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
+  da_opt = get_dirauth_options(tdata->opt);
   tt_str_op(msg, OP_EQ, "AuthoritativeDir is set, but none of (Bridge/V3)"
             "AuthoritativeDir is set.");
   tor_free(msg);
@@ -853,6 +850,7 @@ test_options_validate__authdir(void *ignored)
                                 "RecommendedServerVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
+  da_opt = get_dirauth_options(tdata->opt);
   tt_str_op(msg, OP_EQ, "Versioning authoritative dir servers must set "
             "Recommended*Versions.");
   tor_free(msg);
@@ -863,9 +861,11 @@ test_options_validate__authdir(void *ignored)
                                 "RecommendedClientVersions 4.18\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, &msg);
+  da_opt = get_dirauth_options(tdata->opt);
   tt_str_op(msg, OP_EQ, "Versioning authoritative dir servers must set "
             "Recommended*Versions.");
   tor_free(msg);
+  da_opt = NULL;
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(ENABLE_AUTHORITY_V3
@@ -979,18 +979,6 @@ test_options_validate__authdir(void *ignored)
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "Running as authoritative directory, "
             "but ClientOnly also set.");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data(ENABLE_AUTHORITY_V3);
-  /* We have to set this value manually, because it won't parse */
-  tdata->opt->MinUptimeHidServDirectoryV2 = -1;
-  mock_clean_saved_logs();
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg("MinUptimeHidServDirectoryV2 "
-                 "option must be at least 0 seconds. Changing to 0.\n");
-  tt_int_op(tdata->opt->MinUptimeHidServDirectoryV2, OP_EQ, 0);
   tor_free(msg);
 
  done:
@@ -1166,13 +1154,14 @@ test_options_validate__transproxy(void *ignored)
   tor_free(msg);
 }
 
-NS_DECL(country_t, geoip_get_country, (const char *country));
+static country_t opt_tests_geoip_get_country(const char *country);
+ATTR_UNUSED static int opt_tests_geoip_get_country_called = 0;
 
 static country_t
-NS(geoip_get_country)(const char *countrycode)
+opt_tests_geoip_get_country(const char *countrycode)
 {
   (void)countrycode;
-  CALLED(geoip_get_country)++;
+  opt_tests_geoip_get_country_called++;
 
   return 1;
 }
@@ -1182,7 +1171,8 @@ test_options_validate__exclude_nodes(void *ignored)
 {
   (void)ignored;
 
-  NS_MOCK(geoip_get_country);
+  MOCK(geoip_get_country,
+       opt_tests_geoip_get_country);
 
   int ret;
   char *msg;
@@ -1246,7 +1236,7 @@ test_options_validate__exclude_nodes(void *ignored)
   tor_free(msg);
 
  done:
-  NS_UNMOCK(geoip_get_country);
+  UNMOCK(geoip_get_country);
   teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
@@ -1751,7 +1741,8 @@ test_options_validate__use_bridges(void *ignored)
             " the Internet, so they must not set UseBridges.");
   tor_free(msg);
 
-  NS_MOCK(geoip_get_country);
+  MOCK(geoip_get_country,
+       opt_tests_geoip_get_country);
   free_options_test_data(tdata);
   tdata = get_options_test_data("UseBridges 1\n"
                                 "EntryNodes {cn}\n");
@@ -1794,7 +1785,7 @@ test_options_validate__use_bridges(void *ignored)
   tor_free(msg);
 
  done:
-  NS_UNMOCK(geoip_get_country);
+  UNMOCK(geoip_get_country);
   policies_free_all();
   free_options_test_data(tdata);
   tor_free(msg);
@@ -1806,7 +1797,8 @@ test_options_validate__entry_nodes(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
-  NS_MOCK(geoip_get_country);
+  MOCK(geoip_get_country,
+       opt_tests_geoip_get_country);
   options_test_data_t *tdata = get_options_test_data(
                                          "EntryNodes {cn}\n"
                                          "UseEntryGuards 0\n");
@@ -1826,7 +1818,7 @@ test_options_validate__entry_nodes(void *ignored)
   tor_free(msg);
 
  done:
-  NS_UNMOCK(geoip_get_country);
+  UNMOCK(geoip_get_country);
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -2001,7 +1993,6 @@ test_options_validate__testing(void *ignored)
   ENSURE_DEFAULT(TestingV3AuthInitialDistDelay, 3000);
   ENSURE_DEFAULT(TestingV3AuthVotingStartOffset, 3000);
   ENSURE_DEFAULT(TestingAuthDirTimeToLearnReachability, 3000);
-  ENSURE_DEFAULT(TestingEstimatedDescriptorPropagationTime, 3000);
   ENSURE_DEFAULT(TestingServerDownloadInitialDelay, 3000);
   ENSURE_DEFAULT(TestingClientDownloadInitialDelay, 3000);
   ENSURE_DEFAULT(TestingServerConsensusDownloadInitialDelay, 3000);
@@ -2808,7 +2799,7 @@ test_options_validate__proxy(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "You have configured more than one proxy type. "
-            "(Socks4Proxy|Socks5Proxy|HTTPSProxy)");
+            "(Socks4Proxy|Socks5Proxy|HTTPSProxy|TCPProxy)");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -2816,9 +2807,10 @@ test_options_validate__proxy(void *ignored)
   mock_clean_saved_logs();
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg("HTTPProxy configured, but no SOCKS "
-            "proxy or HTTPS proxy configured. Watch out: this configuration "
-            "will proxy unencrypted directory connections only.\n");
+  expect_log_msg("HTTPProxy configured, but no SOCKS proxy, "
+            "HTTPS proxy, or any other TCP proxy configured. Watch out: "
+            "this configuration will proxy unencrypted directory "
+            "connections only.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -3840,14 +3832,15 @@ test_options_validate__testing_options(void *ignored)
   options_test_data_t *tdata = NULL;
   setup_capture_of_logs(LOG_WARN);
 
-#define TEST_TESTING_OPTION(name, low_val, high_val, err_low, EXTRA_OPT_STR) \
+#define TEST_TESTING_OPTION(name, accessor, \
+                            low_val, high_val, err_low, EXTRA_OPT_STR)  \
   STMT_BEGIN                                                            \
     free_options_test_data(tdata);                                      \
   tdata = get_options_test_data(EXTRA_OPT_STR                           \
                                 VALID_DIR_AUTH                          \
                                 "TestingTorNetwork 1\n"                 \
                                 );                                      \
-  tdata->opt-> name = low_val;                                       \
+  accessor(tdata->opt)->name = low_val;                                 \
   ret = options_validate(NULL, tdata->opt,  &msg);            \
   tt_int_op(ret, OP_EQ, -1);                                            \
   tt_str_op(msg, OP_EQ, #name " " err_low);                \
@@ -3858,7 +3851,7 @@ test_options_validate__testing_options(void *ignored)
                                 VALID_DIR_AUTH                          \
                                 "TestingTorNetwork 1\n"                 \
                                 );                                      \
-  tdata->opt->  name = high_val;                                      \
+  accessor(tdata->opt)->name = high_val;                                \
   mock_clean_saved_logs();                                              \
   ret = options_validate(NULL, tdata->opt,  &msg);            \
   tt_int_op(ret, OP_EQ, 0);                                             \
@@ -3867,30 +3860,19 @@ test_options_validate__testing_options(void *ignored)
   tor_free(msg); \
   STMT_END
 
-  TEST_TESTING_OPTION(TestingAuthDirTimeToLearnReachability, -1, 8000,
-                      "must be non-negative.", ENABLE_AUTHORITY_V3);
-  TEST_TESTING_OPTION(TestingAuthDirTimeToLearnReachability, -1, 8000,
-                      "must be non-negative.", ENABLE_AUTHORITY_BRIDGE);
-
-  TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, -1, 3601,
-                      "must be non-negative.", "");
-  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, -1, 3601,
+  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, , -1, 3601,
                       "is way too low.", "");
-  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
+  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, , 1, 3601,
                       "is way too low.", "");
 
-  TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, -1, 3601,
-                      "must be non-negative.", ENABLE_AUTHORITY_V3);
-  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, -1, 3601,
+  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, , -1, 3601,
                       "is way too low.", ENABLE_AUTHORITY_V3);
-  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
+  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, , 1, 3601,
                       "is way too low.", ENABLE_AUTHORITY_V3);
 
-  TEST_TESTING_OPTION(TestingEstimatedDescriptorPropagationTime, -1, 3601,
-                      "must be non-negative.", ENABLE_AUTHORITY_BRIDGE);
-  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, -1, 3601,
+  TEST_TESTING_OPTION(TestingClientMaxIntervalWithoutRequest, , -1, 3601,
                       "is way too low.", ENABLE_AUTHORITY_BRIDGE);
-  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
+  TEST_TESTING_OPTION(TestingDirConnectionMaxStall, , 1, 3601,
                       "is way too low.", ENABLE_AUTHORITY_BRIDGE);
 
   free_options_test_data(tdata);
@@ -3986,14 +3968,6 @@ test_options_validate__testing_options(void *ignored)
   teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
-}
-
-static crypto_options_t *
-get_crypto_options(or_options_t *opt)
-{
-  int idx = subsystems_get_options_idx(&sys_crypto);
-  tor_assert(idx >= 0);
-  return config_mgr_get_obj_mutable(get_options_mgr(), opt, idx);
 }
 
 static void
@@ -4294,7 +4268,9 @@ test_options_trial_assign(void *arg)
   tt_int_op(r, OP_EQ, 0);
   v = options_trial_assign(lines, 0, &msg);
   tt_int_op(v, OP_EQ, SETOPT_ERR_PARSE);
-  tt_str_op(msg, OP_EQ, "Unrecognized value ambidextrous.");
+  tt_str_op(msg, OP_EQ,
+            "Could not parse UseBridges: Unrecognized value ambidextrous. "
+            "Allowed values are 0 and 1.");
   tor_free(msg);
   config_free_lines(lines);
 

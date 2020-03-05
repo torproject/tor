@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -732,7 +732,7 @@ circuit_expire_building(void)
           circuit_build_times_enough_to_compute(get_circuit_build_times())) {
 
         log_info(LD_CIRC,
-                 "Deciding to count the timeout for circuit %"PRIu32"\n",
+                 "Deciding to count the timeout for circuit %"PRIu32,
                  TO_ORIGIN_CIRCUIT(victim)->global_identifier);
 
         /* Circuits are allowed to last longer for measurement.

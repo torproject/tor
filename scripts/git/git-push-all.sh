@@ -21,7 +21,7 @@ function usage()
   echo "   -r: push to remote-name, rather than the default upstream remote."
   echo "       (default: $DEFAULT_UPSTREAM_REMOTE, current: $UPSTREAM_REMOTE)"
   echo "   -t: test branch mode: push test branches to remote-name. Pushes"
-  echo "       branches prefix_029, prefix_035, ... , prefix_master."
+  echo "       branches prefix_035, prefix_040,  ... , prefix_master."
   echo "       (default: push maint-*, release-*, and master)"
   echo "   -s: push branches whose tips match upstream maint, release, or"
   echo "       master branches. The default is to skip these branches,"
@@ -97,9 +97,10 @@ PUSH_SAME=${TOR_PUSH_SAME:-0}
 # Argument processing #
 #######################
 
-# Controlled by the -t <test-branch-prefix> option. The test branch base
-# name option makes git-merge-forward.sh create new test branches:
-# <tbbn>_029, <tbbn>_035, ... , <tbbn>_master, and merge forward.
+# Controlled by the -t <test-branch-prefix> option. The test branch prefix
+# option makes git-merge-forward.sh create new test branches:
+# <tbp>_035, <tbp>_040, ... , <tbp>_master, and merge each branch forward into
+# the next one.
 TEST_BRANCH_PREFIX=
 
 while getopts ":hr:st:" opt; do
@@ -167,67 +168,41 @@ echo "Calling $GIT_PUSH" "$@" "<branches>"
 # Git upstream remote branches #
 ################################
 
+set -e
 DEFAULT_UPSTREAM_BRANCHES=
 if [ "$DEFAULT_UPSTREAM_REMOTE" != "$UPSTREAM_REMOTE" ]; then
-  DEFAULT_UPSTREAM_BRANCHES=$(echo \
-    "$DEFAULT_UPSTREAM_REMOTE"/master \
-    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.4.2 \
-    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.4.1 \
-    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.4.0 \
-    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.3.5 \
-    "$DEFAULT_UPSTREAM_REMOTE"/{release,maint}-0.2.9 \
-    )
+    for br in $(git-list-tor-branches.sh -l); do
+        DEFAULT_UPSTREAM_BRANCHES="${DEFAULT_UPSTREAM_BRANCHES} ${DEFAULT_UPSTREAM_REMOTE}/${br}"
+    done
 fi
 
-UPSTREAM_BRANCHES=$(echo \
-  "$UPSTREAM_REMOTE"/master \
-  "$UPSTREAM_REMOTE"/{release,maint}-0.4.2 \
-  "$UPSTREAM_REMOTE"/{release,maint}-0.4.1 \
-  "$UPSTREAM_REMOTE"/{release,maint}-0.4.0 \
-  "$UPSTREAM_REMOTE"/{release,maint}-0.3.5 \
-  "$UPSTREAM_REMOTE"/{release,maint}-0.2.9 \
-  )
+UPSTREAM_BRANCHES=
+for br in $(git-list-tor-branches.sh -l); do
+    UPSTREAM_BRANCHES="${UPSTREAM_BRANCHES} ${UPSTREAM_REMOTE}/${br}"
+done
 
 ########################
 # Git branches to push #
 ########################
 
-PUSH_BRANCHES=$(echo \
-  master \
-  {release,maint}-0.4.2 \
-  {release,maint}-0.4.1 \
-  {release,maint}-0.4.0 \
-  {release,maint}-0.3.5 \
-  {release,maint}-0.2.9 \
-  )
-
 if [ -z "$TEST_BRANCH_PREFIX" ]; then
 
-  # maint/release push mode
+  # maint/release push mode: push all branches.
   #
   # List of branches to push. Ordering is not important.
-  PUSH_BRANCHES=$(echo \
-    master \
-    {release,maint}-0.4.2 \
-    {release,maint}-0.4.1 \
-    {release,maint}-0.4.0 \
-    {release,maint}-0.3.5 \
-    {release,maint}-0.2.9 \
-    )
+  PUSH_BRANCHES="$(git-list-tor-branches.sh -l)"
 else
 
-  # Test branch mode: merge to maint only, and create a new branch for 0.2.9
+  # Test branch push mode: push test branches, based on each maint branch.
   #
   # List of branches to push. Ordering is not important.
-  PUSH_BRANCHES=" \
-    ${TEST_BRANCH_PREFIX}_master \
-    ${TEST_BRANCH_PREFIX}_042 \
-    ${TEST_BRANCH_PREFIX}_041 \
-    ${TEST_BRANCH_PREFIX}_040 \
-    ${TEST_BRANCH_PREFIX}_035 \
-    ${TEST_BRANCH_PREFIX}_029 \
-    "
+  PUSH_BRANCHES=""
+  for suffix in $(git-list-tor-branches.sh -s -R); do
+      PUSH_BRANCHES="${PUSH_BRANCHES} ${TEST_BRANCH_PREFIX}${suffix}"
+  done
 fi
+
+set +e
 
 ###############
 # Entry point #

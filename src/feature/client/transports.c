@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2019, The Tor Project, Inc. */
+/* Copyright (c) 2011-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -735,6 +735,9 @@ get_pt_proxy_uri(void)
   const or_options_t *options = get_options();
   char *uri = NULL;
 
+  /* XXX: Currently TCPProxy is not supported in TOR_PT_PROXY because
+   * there isn't a standard URI scheme for some proxy protocols, such as
+   * haproxy. */
   if (options->Socks4Proxy || options->Socks5Proxy || options->HTTPSProxy) {
     char addr[TOR_ADDR_BUF_LEN+1];
 
@@ -1417,8 +1420,10 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
         smartlist_add_asprintf(envs, "TOR_PT_EXTENDED_SERVER_PORT=%s",
                                ext_or_addrport_tmp);
       }
-      smartlist_add_asprintf(envs, "TOR_PT_AUTH_COOKIE_FILE=%s",
-                             cookie_file_loc);
+      if (cookie_file_loc) {
+        smartlist_add_asprintf(envs, "TOR_PT_AUTH_COOKIE_FILE=%s",
+                               cookie_file_loc);
+      }
 
       tor_free(ext_or_addrport_tmp);
       tor_free(cookie_file_loc);
@@ -1855,7 +1860,9 @@ managed_proxy_stderr_callback(process_t *process,
   if (BUG(mp == NULL))
     return;
 
-  log_warn(LD_PT, "Managed proxy at '%s' reported: %s", mp->argv[0], line);
+  log_info(LD_PT,
+           "Managed proxy at '%s' reported via standard error: %s",
+           mp->argv[0], line);
 }
 
 /** Callback function that is called when our PT process terminates. The

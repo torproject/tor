@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -22,10 +22,6 @@ int options_validate_dirauth_mode(const struct or_options_t *old_options,
                                   struct or_options_t *options,
                                   char **msg);
 
-int options_validate_dirauth_bandwidth(const struct or_options_t *old_options,
-                                       struct or_options_t *options,
-                                       char **msg);
-
 int options_validate_dirauth_schedule(const struct or_options_t *old_options,
                                       struct or_options_t *options,
                                       char **msg);
@@ -38,6 +34,10 @@ int options_act_dirauth(const struct or_options_t *old_options);
 int options_act_dirauth_mtbf(const struct or_options_t *old_options);
 int options_act_dirauth_stats(const struct or_options_t *old_options,
                               bool *print_notice_out);
+
+bool dirauth_should_reject_requests_under_load(void);
+
+extern const struct config_format_t dirauth_options_fmt;
 
 #else /* !defined(HAVE_MODULE_DIRAUTH) */
 
@@ -65,8 +65,6 @@ options_validate_dirauth_mode(const struct or_options_t *old_options,
   return 0;
 }
 
-#define options_validate_dirauth_bandwidth(old_options, options, msg) \
-  (((void)(old_options)),((void)(options)),((void)(msg)),0)
 #define options_validate_dirauth_schedule(old_options, options, msg) \
   (((void)(old_options)),((void)(options)),((void)(msg)),0)
 #define options_validate_dirauth_testing(old_options, options, msg) \
@@ -81,6 +79,8 @@ options_validate_dirauth_mode(const struct or_options_t *old_options,
 
 #define options_act_dirauth_stats(old_options, print_notice_out) \
   (((void)(old_options)),((void)(print_notice_out)),0)
+
+#define dirauth_should_reject_requests_under_load() (false)
 
 #endif /* defined(HAVE_MODULE_DIRAUTH) */
 

@@ -1,11 +1,11 @@
-/* Copyright (c) 2014-2019, The Tor Project, Inc. */
+/* Copyright (c) 2014-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
 
 #define CHANNELTLS_PRIVATE
 #define CONNECTION_PRIVATE
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 #define TORTLS_PRIVATE
 
 #include "core/or/or.h"
@@ -18,6 +18,7 @@
 #include "feature/relay/routerkeys.h"
 #include "core/or/scheduler.h"
 #include "feature/nodelist/torcert.h"
+#include "feature/relay/relay_handshake.h"
 
 #include "core/or/or_connection_st.h"
 #include "core/or/or_handshake_certs_st.h"

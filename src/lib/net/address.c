@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -97,7 +97,7 @@
  * work correctly. Bail out here if we've found a platform where AF_UNSPEC
  * isn't 0. */
 #if AF_UNSPEC != 0
-#error We rely on AF_UNSPEC being 0. Let us know about your platform, please!
+#error "We rely on AF_UNSPEC being 0. Yours isn't. Please tell us more!"
 #endif
 CTASSERT(AF_UNSPEC == 0);
 

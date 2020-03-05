@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -161,6 +161,8 @@ MOCK_DECL(STATIC hs_client_fetch_status_t,
           fetch_v3_desc, (const ed25519_public_key_t *onion_identity_pk));
 
 STATIC void retry_all_socks_conn_waiting_for_desc(void);
+
+STATIC void purge_ephemeral_client_auth(void);
 
 #ifdef TOR_UNIT_TESTS
 

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright (c) 2014-2019, The Tor Project, Inc.
 # See LICENSE for licensing information
 #
@@ -291,7 +291,7 @@ class ChangeLog(object):
             self.curgraf.append(line)
 
         else:
-            assert "This" is "unreachable"
+            assert "This" is "unreachable"  # noqa: F632
 
     def lint_head(self, line, head):
         m = re.match(r'^ *o ([^\(]+)((?:\([^\)]+\))?):', head)

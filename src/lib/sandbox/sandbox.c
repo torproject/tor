@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -82,7 +82,7 @@
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
 #define USE_BACKTRACE
-#define EXPOSE_CLEAN_BACKTRACE
+#define BACKTRACE_PRIVATE
 #include "lib/err/backtrace.h"
 #endif /* defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && ... */
 
@@ -143,6 +143,7 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(clock_gettime),
     SCMP_SYS(close),
     SCMP_SYS(clone),
+    SCMP_SYS(dup),
     SCMP_SYS(epoll_create),
     SCMP_SYS(epoll_wait),
 #ifdef __NR_epoll_pwait
@@ -491,24 +492,6 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     }
   }
 
-  rc = seccomp_rule_add_1(ctx, SCMP_ACT_ERRNO(EACCES), SCMP_SYS(open),
-                SCMP_CMP_MASKED(1, O_CLOEXEC|O_NONBLOCK|O_NOCTTY|O_NOFOLLOW,
-                                O_RDONLY));
-  if (rc != 0) {
-    log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
-        "error %d", rc);
-    return rc;
-  }
-
-  rc = seccomp_rule_add_1(ctx, SCMP_ACT_ERRNO(EACCES), SCMP_SYS(openat),
-                SCMP_CMP_MASKED(2, O_CLOEXEC|O_NONBLOCK|O_NOCTTY|O_NOFOLLOW,
-                                O_RDONLY));
-  if (rc != 0) {
-    log_err(LD_BUG,"(Sandbox) failed to add openat syscall, received "
-            "libseccomp error %d", rc);
-    return rc;
-  }
-
   return 0;
 }
 
@@ -557,23 +540,6 @@ sb_chown(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
         return rc;
       }
     }
-  }
-
-  return 0;
-}
-
-static int
-sb__sysctl(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
-{
-  int rc;
-  (void) filter;
-  (void) ctx;
-
-  rc = seccomp_rule_add_0(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(_sysctl));
-  if (rc != 0) {
-    log_err(LD_BUG,"(Sandbox) failed to add _sysctl syscall, "
-        "received libseccomp error %d", rc);
-    return rc;
   }
 
   return 0;
@@ -1147,7 +1113,6 @@ static sandbox_filter_func_t filter_func[] = {
     sb_chmod,
     sb_open,
     sb_openat,
-    sb__sysctl,
     sb_rename,
 #ifdef __NR_fcntl64
     sb_fcntl64,
@@ -1524,14 +1489,14 @@ install_syscall_filter(sandbox_cfg_t* cfg)
   int rc = 0;
   scmp_filter_ctx ctx;
 
-  ctx = seccomp_init(SCMP_ACT_TRAP);
+  ctx = seccomp_init(SCMP_ACT_ERRNO(EPERM));
   if (ctx == NULL) {
     log_err(LD_BUG,"(Sandbox) failed to initialise libseccomp context");
     rc = -1;
     goto end;
   }
 
-  // protectign sandbox parameter strings
+  // protecting sandbox parameter strings
   if ((rc = prot_strings(ctx, cfg))) {
     goto end;
   }

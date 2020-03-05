@@ -70,6 +70,7 @@ TOR_UTIL_LIBS = \
 	src/lib/libtor-wallclock.a \
 	src/lib/libtor-err.a \
 	src/lib/libtor-version.a \
+	src/lib/libtor-llharden.a \
 	src/lib/libtor-intmath.a \
 	src/lib/libtor-ctime.a
 
@@ -104,6 +105,7 @@ TOR_UTIL_TESTING_LIBS = \
 	src/lib/libtor-wallclock-testing.a \
 	src/lib/libtor-err-testing.a \
 	src/lib/libtor-version-testing.a \
+	src/lib/libtor-llharden-testing.a \
 	src/lib/libtor-intmath.a \
 	src/lib/libtor-ctime-testing.a
 endif
@@ -196,6 +198,8 @@ EXTRA_DIST+= \
 	scripts/maint/practracker/testdata/ex1-expected.txt		\
 	scripts/maint/practracker/testdata/ex1.txt			\
 	scripts/maint/practracker/testdata/ex1-overbroad-expected.txt	\
+	scripts/maint/practracker/testdata/ex1-regen-expected.txt	\
+	scripts/maint/practracker/testdata/ex1-regen-overbroad-expected.txt \
 	scripts/maint/practracker/testdata/ex.txt			\
 	scripts/maint/practracker/testdata/header.h			\
 	scripts/maint/practracker/testdata/not_c_file			\
@@ -273,60 +277,186 @@ check-local:					\
 	shellcheck				\
 	check-cocci
 
+# test-network requires a copy of Chutney in $CHUTNEY_PATH.
+# Chutney can be cloned from https://git.torproject.org/chutney.git .
+.PHONY: need-chutney-path
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
 		echo '$$CHUTNEY_PATH was not set.'; \
-		if test -d $(top_srcdir)/../chutney -a -x $(top_srcdir)/../chutney/chutney; then \
-			echo "Assuming test-network.sh will find" $(top_srcdir)/../chutney; \
+		if test -d "$(top_srcdir)/../chutney" && \
+		   test -x "$(top_srcdir)/../chutney/chutney"; then \
+			echo "Assuming test-network.sh will find" \
+			  "$(top_srcdir)/../chutney"; \
 		else \
 			echo; \
-			echo "To run these tests, git clone https://git.torproject.org/chutney.git ; export CHUTNEY_PATH=\`pwd\`/chutney"; \
+			echo "To run these tests," \
+			  "git clone" \
+			  "https://git.torproject.org/chutney.git ;" \
+			  "export CHUTNEY_PATH=\`pwd\`/chutney"; \
 			exit 1; \
 		fi \
 	fi
 
-# Note that test-network requires a copy of Chutney in $CHUTNEY_PATH.
-# Chutney can be cloned from https://git.torproject.org/chutney.git .
-test-network: need-chutney-path $(TESTING_TOR_BINARY) src/tools/tor-gencert
-	$(top_srcdir)/src/test/test-network.sh $(TEST_NETWORK_FLAGS)
+# Run some basic tests using automake's test-driver
+.PHONY: test-network
+# Hide directory path logs from submakes using $(MAKE) -s
+test-network:
+	@$(MAKE) -s test-network-mkdir
+	@$(MAKE) -s test-network-clean
+	@$(MAKE) -s test-network-run \
+	  ipv4_flavors="$(TEST_CHUTNEY_FLAVOR_QUICK)" \
+	  ipv6_flavors="$(TEST_CHUTNEY_FLAVOR_QUICK_IPV6)"
+	@$(MAKE) -s test-network-results
 
 # Run all available tests using automake's test-driver
+.PHONY: test-network-all
+# Hide directory path logs from submakes using $(MAKE) -s
+test-network-all:
+	@$(MAKE) -s test-network-mkdir
+	@$(MAKE) -s test-network-clean
+	@$(MAKE) -s test-network-run \
+	  ipv4_flavors="$(TEST_CHUTNEY_FLAVORS)" \
+	  mixed_flavors="$(TEST_CHUTNEY_FLAVORS_MIXED)" \
+	  ipv6_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6)" \
+	  ipv6_mixed_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6_MIXED)"
+	@$(MAKE) -s test-network-results
+
+# Run IPv4 and mixed tests using automake's test-driver
+.PHONY: test-network-ipv4
+# Hide directory path logs from submakes using $(MAKE) -s
+test-network-ipv4:
+	@$(MAKE) -s test-network-mkdir
+	@$(MAKE) -s test-network-clean
+	@$(MAKE) -s test-network-run \
+	  ipv4_flavors="$(TEST_CHUTNEY_FLAVORS)" \
+	  mixed_flavors="$(TEST_CHUTNEY_FLAVORS_MIXED)"
+	@$(MAKE) -s test-network-results
+
+# Run IPv6 tests using automake's test-driver
+.PHONY: test-network-ipv6
+# Hide directory path logs from submakes using $(MAKE) -s
+test-network-ipv6:
+	@$(MAKE) -s test-network-mkdir
+	@$(MAKE) -s test-network-clean
+	@$(MAKE) -s test-network-run \
+	  ipv6_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6)" \
+	  ipv6_mixed_flavors="$(TEST_CHUTNEY_FLAVORS_IPV6_MIXED)"
+	@$(MAKE) -s test-network-results
+
+# Make the test network log directory, if it does not exist
+.PHONY: test-network-mkdir
+test-network-mkdir:
+	@mkdir -p "$(TEST_NETWORK_ALL_LOG_DIR)"
+
+# Clean the test network log directory
+.PHONY: test-network-clean
+# We need to remove all matching files, so we can't quote the glob part of the
+# rm arguments
+test-network-clean:
+	rm -f "$(TEST_NETWORK_ALL_LOG_DIR)"/*.log \
+	      "$(TEST_NETWORK_ALL_LOG_DIR)"/*.trs
+
+# Run tests using automake's test-driver
+# When checking if a set of test can be run, log the type of test, and the
+# list of tests that will be run (or skipped).
+#
+# Run the IPv4 tests in $(ipv4_flavors), unconditionally
+#   - tor relays and directory authorities require IPv4.
+# Run the IPv6 tests in $(ipv6_flavors), if IPv6 is available
 #   - only run IPv6 tests if we can ping6 or ping -6 ::1 (localhost)
 #     we try the syntax for BSD ping6, Linux ping6, and Linux ping -6,
 #     because they're incompatible
 #   - some IPv6 tests may fail without an IPv6 DNS server
 #     (see #16971 and #17011)
+# Run the mixed tests in $(mixed_flavors), if a tor-stable binary is available
 #   - only run mixed tests if we have a tor-stable binary
-#   - show tor warnings on the console after each network run
-#     (otherwise, warnings go to the logs, and people don't see them unless
-#     there is a network failure)
-test-network-all: need-chutney-path test-driver $(TESTING_TOR_BINARY) src/tools/tor-gencert
-	mkdir -p $(TEST_NETWORK_ALL_LOG_DIR)
-	rm -f $(TEST_NETWORK_ALL_LOG_DIR)/*.log $(TEST_NETWORK_ALL_LOG_DIR)/*.trs
-	@flavors="$(TEST_CHUTNEY_FLAVORS)"; \
-	if ping6 -q -c 1 -o ::1 >/dev/null 2>&1 || ping6 -q -c 1 -W 1 ::1 >/dev/null 2>&1 || ping -6 -c 1 -W 1 ::1 >/dev/null 2>&1; then \
-		echo "ping6 ::1 or ping ::1 succeeded, running IPv6 flavors: $(TEST_CHUTNEY_FLAVORS_IPV6)."; \
-		flavors="$$flavors $(TEST_CHUTNEY_FLAVORS_IPV6)"; \
-	else \
-		echo "ping6 ::1 and ping ::1 failed, skipping IPv6 flavors: $(TEST_CHUTNEY_FLAVORS_IPV6)."; \
-		skip_flavors="$$skip_flavors $(TEST_CHUTNEY_FLAVORS_IPV6)"; \
+# Run the IPv6 mixed tests in $(ipv6_mixed_flavors), if IPv6 and mixed are run
+#   - see above for details about IPv6 and mixed
+.PHONY: test-network-run
+# We need the word splitting in the "for" lines, so we can't quote
+# $(skip_flavors) or $(flavors)
+test-network-run: need-chutney-path test-driver $(TESTING_TOR_BINARY) src/tools/tor-gencert
+	@flavors=""; \
+	skip_flavors=""; \
+	if test -n "$(ipv4_flavors)"; then \
+		echo "Running IPv4 flavors: $(ipv4_flavors)."; \
+		flavors="$$flavors $(ipv4_flavors)"; \
 	fi; \
-	if command -v tor-stable >/dev/null 2>&1; then \
-		echo "tor-stable found, running mixed flavors: $(TEST_CHUTNEY_FLAVORS_MIXED)."; \
-		flavors="$$flavors $(TEST_CHUTNEY_FLAVORS_MIXED)"; \
-	else \
-		echo "tor-stable not found, skipping mixed flavors: $(TEST_CHUTNEY_FLAVORS_MIXED)."; \
-		skip_flavors="$$skip_flavors $(TEST_CHUTNEY_FLAVORS_MIXED)"; \
+	test_network_ipv6=false; \
+	if test -n "$(ipv6_flavors)" || \
+	   test -n "$(ipv6_mixed_flavors)"; then \
+		if ping6 -q -c 1 -o   ::1 >/dev/null 2>&1 || \
+		   ping6 -q -c 1 -W 1 ::1 >/dev/null 2>&1 || \
+		   ping  -6 -c 1 -W 1 ::1 >/dev/null 2>&1; then \
+			test_network_ipv6=true; \
+		fi; \
+	fi; \
+	if test -n "$(ipv6_flavors)"; then \
+		if test "$$test_network_ipv6" = "true"; then \
+			echo "ping6 ::1 or ping ::1 succeeded, running IPv6" \
+			  "flavors: $(ipv6_flavors)."; \
+			flavors="$$flavors $(ipv6_flavors)"; \
+		else \
+			echo "ping6 ::1 and ping ::1 failed, skipping IPv6" \
+			  "flavors: $(ipv6_flavors)."; \
+			skip_flavors="$$skip_flavors $(ipv6_flavors)"; \
+		fi; \
+	fi; \
+	test_network_mixed=false; \
+	if test -n "$(mixed_flavors)" || \
+	   test -n "$(ipv6_mixed_flavors)"; then \
+		if command -v tor-stable >/dev/null 2>&1; then \
+			test_network_mixed=true; \
+		fi; \
+	fi; \
+	if test -n "$(mixed_flavors)"; then \
+		if test "$$test_network_mixed" = "true"; then \
+			echo "tor-stable found, running mixed flavors:" \
+			  "$(mixed_flavors)."; \
+			flavors="$$flavors $(mixed_flavors)"; \
+		else \
+			echo "tor-stable not found, skipping mixed flavors:" \
+			  "$(mixed_flavors)."; \
+			skip_flavors="$$skip_flavors $(mixed_flavors)"; \
+		fi; \
+	fi; \
+	if test -n "$(ipv6_mixed_flavors)"; then \
+		if test "$$test_network_ipv6" = "true" && \
+		   test "$$test_network_mixed" = "true"; then \
+			echo "Running IPv6 mixed flavors:" \
+			  "$(ipv6_mixed_flavors)."; \
+			flavors="$$flavors $(ipv6_mixed_flavors)"; \
+		else \
+			echo "Skipping IPv6 mixed flavors:" \
+			  "$(ipv6_mixed_flavors)."; \
+			skip_flavors="$$skip_flavors $(ipv6_mixed_flavors)"; \
+		fi; \
 	fi; \
 	for f in $$skip_flavors; do \
 		echo "SKIP: $$f"; \
 	done; \
 	for f in $$flavors; do \
-		$(SHELL) $(top_srcdir)/test-driver --test-name $$f --log-file $(TEST_NETWORK_ALL_LOG_DIR)/$$f.log --trs-file $(TEST_NETWORK_ALL_LOG_DIR)/$$f.trs $(TEST_NETWORK_ALL_DRIVER_FLAGS) $(top_srcdir)/src/test/test-network.sh --flavor $$f $(TEST_NETWORK_FLAGS); \
-		$(top_srcdir)/src/test/test-network.sh $(TEST_NETWORK_SHOW_WARNINGS_FOR_LAST_RUN_FLAGS); \
-	done; \
-	echo "Log and result files are available in $(TEST_NETWORK_ALL_LOG_DIR)."; \
-	! grep -q FAIL $(TEST_NETWORK_ALL_LOG_DIR)/*.trs
+		$(SHELL) "$(top_srcdir)/test-driver" --test-name "$$f" \
+		  --log-file "$(TEST_NETWORK_ALL_LOG_DIR)/$$f.log" \
+		  --trs-file "$(TEST_NETWORK_ALL_LOG_DIR)/$$f.trs" \
+		  $(TEST_NETWORK_ALL_DRIVER_FLAGS) \
+		  "$(top_srcdir)/src/test/test-network.sh" \
+		    --flavor "$$f" $(TEST_NETWORK_FLAGS); \
+		"$(top_srcdir)/src/test/test-network.sh" \
+		  $(TEST_NETWORK_SHOW_WARNINGS_FOR_LAST_RUN_FLAGS); \
+	done
+
+# Print the results from automake's test-driver
+#   - show tor warnings on the console after each network run
+#     (otherwise, warnings go to the logs, and people don't see them unless
+#     there is a network failure)
+.PHONY: test-network-results
+# We need to grep all matching files, so we can't quote the glob part of the
+# grep arguments
+test-network-results:
+	@echo \
+	  "Log and result files are available in $(TEST_NETWORK_ALL_LOG_DIR)."
+	@! grep -q FAIL "$(TEST_NETWORK_ALL_LOG_DIR)"/*.trs
 
 need-stem-path:
 	@if test ! -d "$$STEM_SOURCE_DIR"; then \
@@ -389,6 +519,10 @@ coverage-html-full: all
 	genhtml --branch-coverage -o "$(HTML_COVER_DIR)" "$(HTML_COVER_DIR)/lcov.info"
 
 # For scripts: avoid src/ext and src/trunnel.
+# Keep these lists consistent:
+#   - OWNED_TOR_C_FILES in Makefile.am
+#   - CHECK_FILES in pre-commit.git-hook and pre-push.git-hook
+#   - try_parse in check_cocci_parse.sh
 OWNED_TOR_C_FILES=\
 		$(top_srcdir)/src/lib/*/*.[ch] \
 		$(top_srcdir)/src/core/*/*.[ch] \

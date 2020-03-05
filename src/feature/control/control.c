@@ -1,5 +1,5 @@
 /* Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -158,6 +158,10 @@ control_ports_write_to_file(void)
 }
 
 const struct signal_name_t signal_table[] = {
+  /* NOTE: this table is used for handling SIGNAL commands and generating
+   * SIGNAL events.  Order is significant: if there are two entries for the
+   * same numeric signal, the first one is the canonical name generated
+   * for the events. */
   { SIGHUP, "RELOAD" },
   { SIGHUP, "HUP" },
   { SIGINT, "SHUTDOWN" },

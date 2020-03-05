@@ -1,5 +1,5 @@
 
-/* * Copyright (c) 2012-2019, The Tor Project, Inc. */
+/* * Copyright (c) 2012-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -52,10 +52,10 @@
  * Define this so channel.h gives us things only channel_t subclasses
  * should touch.
  */
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 
 /* This one's for stuff only channel.c and the test suite should see */
-#define CHANNEL_PRIVATE_
+#define CHANNEL_FILE_PRIVATE
 
 #include "core/or/or.h"
 #include "app/config/config.h"
@@ -119,10 +119,10 @@ channel_id_eq(const channel_t *a, const channel_t *b)
   return a->global_identifier == b->global_identifier;
 }
 HT_PROTOTYPE(channel_gid_map, channel_t, gidmap_node,
-             channel_id_hash, channel_id_eq)
+             channel_id_hash, channel_id_eq);
 HT_GENERATE2(channel_gid_map, channel_t, gidmap_node,
              channel_id_hash, channel_id_eq,
-             0.6, tor_reallocarray_, tor_free_)
+             0.6, tor_reallocarray_, tor_free_);
 
 HANDLE_IMPL(channel, channel_t,)
 
@@ -160,9 +160,9 @@ channel_idmap_eq(const channel_idmap_entry_t *a,
 }
 
 HT_PROTOTYPE(channel_idmap, channel_idmap_entry_t, node, channel_idmap_hash,
-             channel_idmap_eq)
+             channel_idmap_eq);
 HT_GENERATE2(channel_idmap, channel_idmap_entry_t, node, channel_idmap_hash,
-             channel_idmap_eq, 0.5,  tor_reallocarray_, tor_free_)
+             channel_idmap_eq, 0.5,  tor_reallocarray_, tor_free_);
 
 /* Functions to maintain the digest map */
 static void channel_remove_from_digest_map(channel_t *chan);
@@ -1067,23 +1067,6 @@ channel_get_cell_handler(channel_t *chan)
 }
 
 /**
- * Return the variable-length cell handler for a channel.
- *
- * This function gets the handler for incoming variable-length cells
- * installed on a channel.
- */
-channel_var_cell_handler_fn_ptr
-channel_get_var_cell_handler(channel_t *chan)
-{
-  tor_assert(chan);
-
-  if (CHANNEL_CAN_HANDLE_CELLS(chan))
-    return chan->var_cell_handler;
-
-  return NULL;
-}
-
-/**
  * Set both cell handlers for a channel.
  *
  * This function sets both the fixed-length and variable length cell handlers
@@ -1091,9 +1074,7 @@ channel_get_var_cell_handler(channel_t *chan)
  */
 void
 channel_set_cell_handlers(channel_t *chan,
-                          channel_cell_handler_fn_ptr cell_handler,
-                          channel_var_cell_handler_fn_ptr
-                            var_cell_handler)
+                          channel_cell_handler_fn_ptr cell_handler)
 {
   tor_assert(chan);
   tor_assert(CHANNEL_CAN_HANDLE_CELLS(chan));
@@ -1101,13 +1082,9 @@ channel_set_cell_handlers(channel_t *chan,
   log_debug(LD_CHANNEL,
            "Setting cell_handler callback for channel %p to %p",
            chan, cell_handler);
-  log_debug(LD_CHANNEL,
-           "Setting var_cell_handler callback for channel %p to %p",
-           chan, var_cell_handler);
 
   /* Change them */
   chan->cell_handler = cell_handler;
-  chan->var_cell_handler = var_cell_handler;
 }
 
 /*

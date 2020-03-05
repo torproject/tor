@@ -17,7 +17,6 @@
 { "TestingV3AuthInitialVoteDelay", "20 seconds" },
 { "TestingV3AuthInitialDistDelay", "20 seconds" },
 { "TestingAuthDirTimeToLearnReachability", "0 minutes" },
-{ "TestingEstimatedDescriptorPropagationTime", "0 minutes" },
 { "MinUptimeHidServDirectoryV2", "0 minutes" },
 { "TestingServerDownloadInitialDelay", "0" },
 { "TestingClientDownloadInitialDelay", "0" },

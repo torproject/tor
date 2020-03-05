@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -2819,8 +2819,8 @@ extend_info_dup(extend_info_t *info)
  * If there is no chosen exit, or if we don't know the node_t for
  * the chosen exit, return NULL.
  */
-const node_t *
-build_state_get_exit_node(cpath_build_state_t *state)
+MOCK_IMPL(const node_t *,
+build_state_get_exit_node,(cpath_build_state_t *state))
 {
   if (!state || !state->chosen_exit)
     return NULL;

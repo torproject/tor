@@ -1,4 +1,4 @@
-/* * Copyright (c) 2012-2019, The Tor Project, Inc. */
+/* * Copyright (c) 2012-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -78,6 +78,8 @@
 #include "core/or/relay.h"
 
 #include "core/or/or_circuit_st.h"
+
+#include "lib/crypt_ops/crypto_util.h"
 
 /*
  * Private typedefs for circuitmux.c
@@ -174,10 +176,10 @@ chanid_circid_entry_hash(chanid_circid_muxinfo_t *a)
 
 /* Emit a bunch of hash table stuff */
 HT_PROTOTYPE(chanid_circid_muxinfo_map, chanid_circid_muxinfo_t, node,
-             chanid_circid_entry_hash, chanid_circid_entries_eq)
+             chanid_circid_entry_hash, chanid_circid_entries_eq);
 HT_GENERATE2(chanid_circid_muxinfo_map, chanid_circid_muxinfo_t, node,
              chanid_circid_entry_hash, chanid_circid_entries_eq, 0.6,
-             tor_reallocarray_, tor_free_)
+             tor_reallocarray_, tor_free_);
 
 /*
  * Circuitmux alloc/free functions
@@ -921,7 +923,10 @@ circuitmux_detach_circuit,(circuitmux_t *cmux, circuit_t *circ))
     /* Now remove it from the map */
     HT_REMOVE(chanid_circid_muxinfo_map, cmux->chanid_circid_map, hashent);
 
-    /* Free the hash entry */
+    /* Wipe and free the hash entry */
+    // This isn't sensitive, but we want to be sure to know if we're accessing
+    // this accidentally.
+    memwipe(hashent, 0xef, sizeof(*hashent));
     tor_free(hashent);
   }
 }
@@ -1282,4 +1287,3 @@ circuitmux_compare_muxes, (circuitmux_t *cmux_1, circuitmux_t *cmux_2))
     return 0;
   }
 }
-

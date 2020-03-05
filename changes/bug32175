@@ -1,6 +1,0 @@
-  o Minor bugfixes (tests):
-    - Our option-validation tests no longer depend on specially configured
-      non-default, non-passing set of options.  Previously, the tests had
-      been written to assume that options would _not_ be set to their
-      defaults, which led to needless complexity and verbosity.
-      Fixes bug 32175; bugfix on 0.2.8.1-alpha.

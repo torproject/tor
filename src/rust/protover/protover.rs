@@ -26,7 +26,7 @@ const FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS: &'static str = "0.2.9.3-alpha";
 /// before concluding that someone is trying to DoS us
 ///
 /// C_RUST_COUPLED: protover.c `MAX_PROTOCOLS_TO_EXPAND`
-const MAX_PROTOCOLS_TO_EXPAND: usize = (1 << 16);
+const MAX_PROTOCOLS_TO_EXPAND: usize = 1 << 16;
 
 /// The maximum size an `UnknownProtocol`'s name may be.
 pub(crate) const MAX_PROTOCOL_NAME_LENGTH: usize = 100;
@@ -161,30 +161,30 @@ pub(crate) fn get_supported_protocols_cstr() -> &'static CStr {
             "Cons=1-2 \
              Desc=1-2 \
              DirCache=1-2 \
+             FlowCtrl=1 \
              HSDir=1-2 \
              HSIntro=3-4 \
              HSRend=1-2 \
              Link=1-5 \
              LinkAuth=3 \
              Microdesc=1-2 \
-             Relay=1-2 \
              Padding=2 \
-             FlowCtrl=1"
+             Relay=1-2"
         )
     } else {
         cstr!(
             "Cons=1-2 \
              Desc=1-2 \
              DirCache=1-2 \
+             FlowCtrl=1 \
              HSDir=1-2 \
              HSIntro=3-4 \
              HSRend=1-2 \
              Link=1-5 \
              LinkAuth=1,3 \
              Microdesc=1-2 \
-             Relay=1-2 \
              Padding=2 \
-             FlowCtrl=1"
+             Relay=1-2"
         )
     }
 }

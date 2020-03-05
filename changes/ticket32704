@@ -1,3 +1,0 @@
-  o Minor features (release tools):
-    - Port our changelog formatting and sorting tools to Python 3.
-      Closes ticket 32704.

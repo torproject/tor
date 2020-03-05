@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Remove the last remaining HAVE_MODULE_DIRAUTH inside a function.
-      Closes ticket 32163.

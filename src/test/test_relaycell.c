@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2019, The Tor Project, Inc. */
+/* Copyright (c) 2014-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /* Unit tests for handling different kinds of relay cell */
@@ -30,7 +30,6 @@
 #include "core/or/half_edge_st.h"
 
 #include "feature/client/circpathbias.h"
-#include "core/or/connection_edge.h"
 
 static int srm_ncalls;
 static entry_connection_t *srm_conn;

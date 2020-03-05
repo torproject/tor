@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2019, The Tor Project, Inc. */
+/* Copyright (c) 2016-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -845,6 +845,42 @@ hs_cache_store_as_client(const char *desc_str,
  err:
   cache_client_desc_free(client_desc);
   return ret;
+}
+
+/** Remove and free a client cache descriptor entry for the given onion
+ * service ed25519 public key. If the descriptor is decoded, the intro
+ * circuits are closed if any.
+ *
+ * This does nothing if no descriptor exists for the given key. */
+void
+hs_cache_remove_as_client(const ed25519_public_key_t *key)
+{
+  hs_cache_client_descriptor_t *cached_desc = NULL;
+
+  tor_assert(key);
+
+  cached_desc = lookup_v3_desc_as_client(key->pubkey);
+  if (!cached_desc) {
+    return;
+  }
+  /* If we have a decrypted/decoded descriptor, attempt to close its
+   * introduction circuit(s). We shouldn't have circuit(s) without a
+   * descriptor else it will lead to a failure. */
+  if (cached_desc->desc) {
+    hs_client_close_intro_circuits_from_desc(cached_desc->desc);
+  }
+  /* Remove and free. */
+  remove_v3_desc_as_client(cached_desc);
+  cache_client_desc_free(cached_desc);
+
+  /* Logging. */
+  {
+    char key_b64[BASE64_DIGEST256_LEN + 1];
+    digest256_to_base64(key_b64, (const char *) key);
+    log_info(LD_REND, "Onion service v3 descriptor '%s' removed "
+                      "from client cache",
+             safe_str_client(key_b64));
+  }
 }
 
 /** Clean all client caches using the current time now. */

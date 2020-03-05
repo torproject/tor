@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2019, The Tor Project, Inc. */
+/* Copyright (c) 2016-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -40,8 +40,8 @@ static const struct {
   protocol_type_t protover_type;
   const char *name;
 /* If you add a new protocol here, you probably also want to add
- * parsing for it in routerstatus_parse_entry_from_string() so that
- * it is set in routerstatus_t */
+ * parsing for it in summarize_protover_flags(), so that it has a
+ * summary flag in routerstatus_t */
 } PROTOCOL_NAMES[] = {
   { PRT_LINK, "Link" },
   { PRT_LINKAUTH, "LinkAuth" },
@@ -391,6 +391,7 @@ protover_get_supported_protocols(void)
     "Cons=1-2 "
     "Desc=1-2 "
     "DirCache=1-2 "
+    "FlowCtrl=1 "
     "HSDir=1-2 "
     "HSIntro=3-5 "
     "HSRend=1-2 "
@@ -401,9 +402,8 @@ protover_get_supported_protocols(void)
     "LinkAuth=3 "
 #endif
     "Microdesc=1-2 "
-    "Relay=1-2 "
     "Padding=2 "
-    "FlowCtrl=1";
+    "Relay=1-2";
 }
 
 /** The protocols from protover_get_supported_protocols(), as parsed into a

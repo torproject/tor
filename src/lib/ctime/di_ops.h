@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -72,5 +72,7 @@ void *dimap_search(const di_digest256_map_t *map, const uint8_t *key,
 int select_array_member_cumulative_timei(const uint64_t *entries,
                                          int n_entries,
                                          uint64_t total, uint64_t rand_val);
+
+void memcpy_if_true_timei(bool s, void *dest, const void *src, size_t n);
 
 #endif /* !defined(TOR_DI_OPS_H) */

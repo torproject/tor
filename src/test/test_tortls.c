@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2019, The Tor Project, Inc. */
+/* Copyright (c) 2010-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #define TORTLS_PRIVATE
@@ -214,7 +214,7 @@ test_tortls_tor_tls_get_error(void *data)
 
  done:
   UNMOCK(tor_tls_cert_matches_key);
-  NS_UNMOCK(logv);
+  UNMOCK(logv);
   crypto_pk_free(key1);
   crypto_pk_free(key2);
   tor_tls_free(tls);

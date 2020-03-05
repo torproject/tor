@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Move and rename some configuration-related code for clarity.
-      Closes ticket 32304.

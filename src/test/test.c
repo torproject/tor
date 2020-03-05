@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -721,6 +721,7 @@ struct testgroup_t testgroups[] = {
   { "hs_dos/", hs_dos_tests },
   { "hs_intropoint/", hs_intropoint_tests },
   { "hs_ntor/", hs_ntor_tests },
+  { "hs_ob/", hs_ob_tests },
   { "hs_service/", hs_service_tests },
   { "introduce/", introduce_tests },
   { "keypin/", keypin_tests },
@@ -739,6 +740,7 @@ struct testgroup_t testgroups[] = {
   { "prob_distr/", prob_distr_tests },
   { "procmon/", procmon_tests },
   { "process/", process_tests },
+  { "proto/haproxy/", proto_haproxy_tests },
   { "proto/http/", proto_http_tests },
   { "proto/misc/", proto_misc_tests },
   { "protover/", protover_tests },

@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -51,6 +51,7 @@
 
 #undef CONF_CONTEXT
 #include "lib/cc/tokpaste.h"
+#include "lib/cc/torint.h"
 
 /**
  * Begin the definition of a configuration object called `name`.
@@ -134,6 +135,28 @@
    .initvalue = initval                                         \
   },
 /**@}*/
+
+/* @defgroup STUB_TABLE_MACROS Internal macros: stub table declarations,
+ * for use when a module is disabled.
+ * Implementation helpers: the regular confdecl macros expand to these
+ * when CONF_CONTEXT is defined to LL_TABLE.  Don't use them directly.
+ * @{*/
+#define BEGIN_CONF_STRUCT__STUB_TABLE(structname)                       \
+  static const config_var_t structname##_vars[] = {
+#define END_CONF_STRUCT__STUB_TABLE(structname)   \
+  { .member = { .name = NULL } }                \
+    };
+#define CONF_VAR__STUB_TABLE(varname, vartype, varflags, initval)       \
+  {                                                             \
+   .member =                                                    \
+   { .name = #varname,                                          \
+     .type = CONFIG_TYPE_IGNORE,                                \
+     .offset = -1,                                              \
+   },                                                           \
+   .flags = CFLG_GROUP_DISABLED,                                \
+  },
+/**@}*/
+
 #endif /* !defined(COCCI) */
 
 /** Type aliases for the "commonly used" configuration types.

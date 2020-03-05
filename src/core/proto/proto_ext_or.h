@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -23,5 +23,12 @@ struct ext_or_cmd_t {
 
 int fetch_ext_or_command_from_buf(struct buf_t *buf,
                                   struct ext_or_cmd_t **out);
+
+ext_or_cmd_t *ext_or_cmd_new(uint16_t len);
+
+#define ext_or_cmd_free(cmd)                            \
+  FREE_AND_NULL(ext_or_cmd_t, ext_or_cmd_free_, (cmd))
+
+void ext_or_cmd_free_(ext_or_cmd_t *cmd);
 
 #endif /* !defined(TOR_PROTO_EXT_OR_H) */

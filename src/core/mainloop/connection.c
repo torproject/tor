@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -65,8 +65,7 @@
  * Define this so we get channel internal functions, since we're implementing
  * part of a subclass (channel_tls_t).
  */
-#define TOR_CHANNEL_INTERNAL_
-#define CONNECTION_PRIVATE
+#define CHANNEL_OBJECT_PRIVATE
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"
@@ -83,6 +82,7 @@
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
 #include "core/or/crypt_path.h"
+#include "core/proto/proto_haproxy.h"
 #include "core/proto/proto_http.h"
 #include "core/proto/proto_socks.h"
 #include "feature/client/dnsserv.h"
@@ -91,6 +91,7 @@
 #include "feature/control/control.h"
 #include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
+#include "feature/dirauth/dirauth_config.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dircommon/directory.h"
 #include "feature/hibernate/hibernate.h"
@@ -107,6 +108,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/geoip/geoip.h"
 
+#include "lib/cc/ctassert.h"
 #include "lib/sandbox/sandbox.h"
 #include "lib/net/buffers_net.h"
 #include "lib/tls/tortls.h"
@@ -718,11 +720,7 @@ connection_free_minimal(connection_t *conn)
     tor_free(dir_conn->requested_resource);
 
     tor_compress_free(dir_conn->compress_state);
-    if (dir_conn->spool) {
-      SMARTLIST_FOREACH(dir_conn->spool, spooled_resource_t *, spooled,
-                        spooled_resource_free(spooled));
-      smartlist_free(dir_conn->spool);
-    }
+    dir_conn_clear_spool(dir_conn);
 
     rend_data_free(dir_conn->rend_data);
     hs_ident_dir_conn_free(dir_conn->hs_ident);
@@ -1519,7 +1517,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   if (type != CONN_TYPE_AP_LISTENER) {
     lis_conn->entry_cfg.ipv4_traffic = 1;
     lis_conn->entry_cfg.ipv6_traffic = 1;
-    lis_conn->entry_cfg.prefer_ipv6 = 0;
+    lis_conn->entry_cfg.prefer_ipv6 = 1;
   }
 
   if (connection_add(conn) < 0) { /* no space, forget it */
@@ -2284,8 +2282,11 @@ connection_proxy_state_to_string(int state)
     "PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929",
     "PROXY_SOCKS5_WANT_AUTH_RFC1929_OK",
     "PROXY_SOCKS5_WANT_CONNECT_OK",
+    "PROXY_HAPROXY_WAIT_FOR_FLUSH",
     "PROXY_CONNECTED",
   };
+
+  CTASSERT(ARRAY_LENGTH(states) == PROXY_CONNECTED+1);
 
   if (state < PROXY_NONE || state > PROXY_CONNECTED)
     return unknown;
@@ -2319,7 +2320,11 @@ conn_get_proxy_type(const connection_t *conn)
     return PROXY_SOCKS4;
   else if (options->Socks5Proxy)
     return PROXY_SOCKS5;
-  else
+  else if (options->TCPProxy) {
+    /* The only supported protocol in TCPProxy is haproxy. */
+    tor_assert(options->TCPProxyProtocol == TCP_PROXY_PROTOCOL_HAPROXY);
+    return PROXY_HAPROXY;
+  } else
     return PROXY_NONE;
 }
 
@@ -2328,10 +2333,202 @@ conn_get_proxy_type(const connection_t *conn)
    username NUL: */
 #define SOCKS4_STANDARD_BUFFER_SIZE (1 + 1 + 2 + 4 + 1)
 
-/** Write a proxy request of <b>type</b> (socks4, socks5, https) to conn
- * for conn->addr:conn->port, authenticating with the auth details given
- * in the configuration (if available). SOCKS 5 and HTTP CONNECT proxies
- * support authentication.
+/** Write a proxy request of https to conn for conn->addr:conn->port,
+ * authenticating with the auth details given in the configuration
+ * (if available).
+ *
+ * Returns -1 if conn->addr is incompatible with the proxy protocol, and
+ * 0 otherwise.
+ */
+static int
+connection_https_proxy_connect(connection_t *conn)
+{
+  tor_assert(conn);
+
+  const or_options_t *options = get_options();
+  char buf[1024];
+  char *base64_authenticator = NULL;
+  const char *authenticator = options->HTTPSProxyAuthenticator;
+
+  /* Send HTTP CONNECT and authentication (if available) in
+   * one request */
+
+  if (authenticator) {
+    base64_authenticator = alloc_http_authenticator(authenticator);
+    if (!base64_authenticator)
+      log_warn(LD_OR, "Encoding https authenticator failed");
+  }
+
+  if (base64_authenticator) {
+    const char *addrport = fmt_addrport(&conn->addr, conn->port);
+    tor_snprintf(buf, sizeof(buf), "CONNECT %s HTTP/1.1\r\n"
+        "Host: %s\r\n"
+        "Proxy-Authorization: Basic %s\r\n\r\n",
+        addrport,
+        addrport,
+        base64_authenticator);
+    tor_free(base64_authenticator);
+  } else {
+    tor_snprintf(buf, sizeof(buf), "CONNECT %s HTTP/1.0\r\n\r\n",
+        fmt_addrport(&conn->addr, conn->port));
+  }
+
+  connection_buf_add(buf, strlen(buf), conn);
+  conn->proxy_state = PROXY_HTTPS_WANT_CONNECT_OK;
+
+  return 0;
+}
+
+/** Write a proxy request of socks4 to conn for conn->addr:conn->port.
+ *
+ * Returns -1 if conn->addr is incompatible with the proxy protocol, and
+ * 0 otherwise.
+ */
+static int
+connection_socks4_proxy_connect(connection_t *conn)
+{
+  tor_assert(conn);
+
+  unsigned char *buf;
+  uint16_t portn;
+  uint32_t ip4addr;
+  size_t buf_size = 0;
+  char *socks_args_string = NULL;
+
+  /* Send a SOCKS4 connect request */
+
+  if (tor_addr_family(&conn->addr) != AF_INET) {
+    log_warn(LD_NET, "SOCKS4 client is incompatible with IPv6");
+    return -1;
+  }
+
+  { /* If we are here because we are trying to connect to a
+       pluggable transport proxy, check if we have any SOCKS
+       arguments to transmit. If we do, compress all arguments to
+       a single string in 'socks_args_string': */
+
+    if (conn_get_proxy_type(conn) == PROXY_PLUGGABLE) {
+      socks_args_string =
+        pt_get_socks_args_for_proxy_addrport(&conn->addr, conn->port);
+      if (socks_args_string)
+        log_debug(LD_NET, "Sending out '%s' as our SOCKS argument string.",
+            socks_args_string);
+    }
+  }
+
+  { /* Figure out the buffer size we need for the SOCKS message: */
+
+    buf_size = SOCKS4_STANDARD_BUFFER_SIZE;
+
+    /* If we have a SOCKS argument string, consider its size when
+       calculating the buffer size: */
+    if (socks_args_string)
+      buf_size += strlen(socks_args_string);
+  }
+
+  buf = tor_malloc_zero(buf_size);
+
+  ip4addr = tor_addr_to_ipv4n(&conn->addr);
+  portn = htons(conn->port);
+
+  buf[0] = 4; /* version */
+  buf[1] = SOCKS_COMMAND_CONNECT; /* command */
+  memcpy(buf + 2, &portn, 2); /* port */
+  memcpy(buf + 4, &ip4addr, 4); /* addr */
+
+  /* Next packet field is the userid. If we have pluggable
+     transport SOCKS arguments, we have to embed them
+     there. Otherwise, we use an empty userid.  */
+  if (socks_args_string) { /* place the SOCKS args string: */
+    tor_assert(strlen(socks_args_string) > 0);
+    tor_assert(buf_size >=
+        SOCKS4_STANDARD_BUFFER_SIZE + strlen(socks_args_string));
+    strlcpy((char *)buf + 8, socks_args_string, buf_size - 8);
+    tor_free(socks_args_string);
+  } else {
+    buf[8] = 0; /* no userid */
+  }
+
+  connection_buf_add((char *)buf, buf_size, conn);
+  tor_free(buf);
+
+  conn->proxy_state = PROXY_SOCKS4_WANT_CONNECT_OK;
+  return 0;
+}
+
+/** Write a proxy request of socks5 to conn for conn->addr:conn->port,
+ * authenticating with the auth details given in the configuration
+ * (if available).
+ *
+ * Returns -1 if conn->addr is incompatible with the proxy protocol, and
+ * 0 otherwise.
+ */
+static int
+connection_socks5_proxy_connect(connection_t *conn)
+{
+  tor_assert(conn);
+
+  const or_options_t *options = get_options();
+  unsigned char buf[4]; /* fields: vers, num methods, method list */
+
+  /* Send a SOCKS5 greeting (connect request must wait) */
+
+  buf[0] = 5; /* version */
+
+  /* We have to use SOCKS5 authentication, if we have a
+     Socks5ProxyUsername or if we want to pass arguments to our
+     pluggable transport proxy: */
+  if ((options->Socks5ProxyUsername) ||
+      (conn_get_proxy_type(conn) == PROXY_PLUGGABLE &&
+       (get_socks_args_by_bridge_addrport(&conn->addr, conn->port)))) {
+  /* number of auth methods */
+    buf[1] = 2;
+    buf[2] = 0x00; /* no authentication */
+    buf[3] = 0x02; /* rfc1929 Username/Passwd auth */
+    conn->proxy_state = PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929;
+  } else {
+    buf[1] = 1;
+    buf[2] = 0x00; /* no authentication */
+    conn->proxy_state = PROXY_SOCKS5_WANT_AUTH_METHOD_NONE;
+  }
+
+  connection_buf_add((char *)buf, 2 + buf[1], conn);
+  return 0;
+}
+
+/** Write a proxy request of haproxy to conn for conn->addr:conn->port.
+ *
+ * Returns -1 if conn->addr is incompatible with the proxy protocol, and
+ * 0 otherwise.
+ */
+static int
+connection_haproxy_proxy_connect(connection_t *conn)
+{
+  int ret = 0;
+  tor_addr_port_t *addr_port = tor_addr_port_new(&conn->addr, conn->port);
+  char *buf = haproxy_format_proxy_header_line(addr_port);
+
+  if (buf == NULL) {
+    ret = -1;
+    goto done;
+  }
+
+  connection_buf_add(buf, strlen(buf), conn);
+  /* In haproxy, we don't have to wait for the response, but we wait for ack.
+   * So we can set the state to be PROXY_HAPROXY_WAIT_FOR_FLUSH. */
+  conn->proxy_state = PROXY_HAPROXY_WAIT_FOR_FLUSH;
+
+  ret = 0;
+ done:
+  tor_free(buf);
+  tor_free(addr_port);
+  return ret;
+}
+
+/** Write a proxy request of <b>type</b> (socks4, socks5, https, haproxy)
+ * to conn for conn->addr:conn->port, authenticating with the auth details
+ * given in the configuration (if available). SOCKS 5 and HTTP CONNECT
+ * proxies support authentication.
  *
  * Returns -1 if conn->addr is incompatible with the proxy protocol, and
  * 0 otherwise.
@@ -2341,152 +2538,40 @@ conn_get_proxy_type(const connection_t *conn)
 int
 connection_proxy_connect(connection_t *conn, int type)
 {
-  const or_options_t *options;
+  int ret = 0;
 
   tor_assert(conn);
 
-  options = get_options();
-
   switch (type) {
-    case PROXY_CONNECT: {
-      char buf[1024];
-      char *base64_authenticator=NULL;
-      const char *authenticator = options->HTTPSProxyAuthenticator;
-
-      /* Send HTTP CONNECT and authentication (if available) in
-       * one request */
-
-      if (authenticator) {
-        base64_authenticator = alloc_http_authenticator(authenticator);
-        if (!base64_authenticator)
-          log_warn(LD_OR, "Encoding https authenticator failed");
-      }
-
-      if (base64_authenticator) {
-        const char *addrport = fmt_addrport(&conn->addr, conn->port);
-        tor_snprintf(buf, sizeof(buf), "CONNECT %s HTTP/1.1\r\n"
-                     "Host: %s\r\n"
-                     "Proxy-Authorization: Basic %s\r\n\r\n",
-                     addrport,
-                     addrport,
-                     base64_authenticator);
-        tor_free(base64_authenticator);
-      } else {
-        tor_snprintf(buf, sizeof(buf), "CONNECT %s HTTP/1.0\r\n\r\n",
-                     fmt_addrport(&conn->addr, conn->port));
-      }
-
-      connection_buf_add(buf, strlen(buf), conn);
-      conn->proxy_state = PROXY_HTTPS_WANT_CONNECT_OK;
+    case PROXY_CONNECT:
+      ret = connection_https_proxy_connect(conn);
       break;
-    }
 
-    case PROXY_SOCKS4: {
-      unsigned char *buf;
-      uint16_t portn;
-      uint32_t ip4addr;
-      size_t buf_size = 0;
-      char *socks_args_string = NULL;
-
-      /* Send a SOCKS4 connect request */
-
-      if (tor_addr_family(&conn->addr) != AF_INET) {
-        log_warn(LD_NET, "SOCKS4 client is incompatible with IPv6");
-        return -1;
-      }
-
-      { /* If we are here because we are trying to connect to a
-           pluggable transport proxy, check if we have any SOCKS
-           arguments to transmit. If we do, compress all arguments to
-           a single string in 'socks_args_string': */
-
-        if (conn_get_proxy_type(conn) == PROXY_PLUGGABLE) {
-          socks_args_string =
-            pt_get_socks_args_for_proxy_addrport(&conn->addr, conn->port);
-          if (socks_args_string)
-            log_debug(LD_NET, "Sending out '%s' as our SOCKS argument string.",
-                      socks_args_string);
-        }
-      }
-
-      { /* Figure out the buffer size we need for the SOCKS message: */
-
-        buf_size = SOCKS4_STANDARD_BUFFER_SIZE;
-
-        /* If we have a SOCKS argument string, consider its size when
-           calculating the buffer size: */
-        if (socks_args_string)
-          buf_size += strlen(socks_args_string);
-      }
-
-      buf = tor_malloc_zero(buf_size);
-
-      ip4addr = tor_addr_to_ipv4n(&conn->addr);
-      portn = htons(conn->port);
-
-      buf[0] = 4; /* version */
-      buf[1] = SOCKS_COMMAND_CONNECT; /* command */
-      memcpy(buf + 2, &portn, 2); /* port */
-      memcpy(buf + 4, &ip4addr, 4); /* addr */
-
-      /* Next packet field is the userid. If we have pluggable
-         transport SOCKS arguments, we have to embed them
-         there. Otherwise, we use an empty userid.  */
-      if (socks_args_string) { /* place the SOCKS args string: */
-        tor_assert(strlen(socks_args_string) > 0);
-        tor_assert(buf_size >=
-                   SOCKS4_STANDARD_BUFFER_SIZE + strlen(socks_args_string));
-        strlcpy((char *)buf + 8, socks_args_string, buf_size - 8);
-        tor_free(socks_args_string);
-      } else {
-        buf[8] = 0; /* no userid */
-      }
-
-      connection_buf_add((char *)buf, buf_size, conn);
-      tor_free(buf);
-
-      conn->proxy_state = PROXY_SOCKS4_WANT_CONNECT_OK;
+    case PROXY_SOCKS4:
+      ret = connection_socks4_proxy_connect(conn);
       break;
-    }
 
-    case PROXY_SOCKS5: {
-      unsigned char buf[4]; /* fields: vers, num methods, method list */
-
-      /* Send a SOCKS5 greeting (connect request must wait) */
-
-      buf[0] = 5; /* version */
-
-      /* We have to use SOCKS5 authentication, if we have a
-         Socks5ProxyUsername or if we want to pass arguments to our
-         pluggable transport proxy: */
-      if ((options->Socks5ProxyUsername) ||
-          (conn_get_proxy_type(conn) == PROXY_PLUGGABLE &&
-           (get_socks_args_by_bridge_addrport(&conn->addr, conn->port)))) {
-      /* number of auth methods */
-        buf[1] = 2;
-        buf[2] = 0x00; /* no authentication */
-        buf[3] = 0x02; /* rfc1929 Username/Passwd auth */
-        conn->proxy_state = PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929;
-      } else {
-        buf[1] = 1;
-        buf[2] = 0x00; /* no authentication */
-        conn->proxy_state = PROXY_SOCKS5_WANT_AUTH_METHOD_NONE;
-      }
-
-      connection_buf_add((char *)buf, 2 + buf[1], conn);
+    case PROXY_SOCKS5:
+      ret = connection_socks5_proxy_connect(conn);
       break;
-    }
+
+    case PROXY_HAPROXY:
+      ret = connection_haproxy_proxy_connect(conn);
+      break;
 
     default:
       log_err(LD_BUG, "Invalid proxy protocol, %d", type);
       tor_fragile_assert();
-      return -1;
+      ret = -1;
+      break;
   }
 
-  log_debug(LD_NET, "set state %s",
-            connection_proxy_state_to_string(conn->proxy_state));
+  if (ret == 0) {
+    log_debug(LD_NET, "set state %s",
+              connection_proxy_state_to_string(conn->proxy_state));
+  }
 
-  return 0;
+  return ret;
 }
 
 /** Read conn's inbuf. If the http response from the proxy is all
@@ -3053,7 +3138,7 @@ connection_mark_all_noncontrol_connections(void)
  * uses pluggable transports, since we should then limit it even if it
  * comes from an internal IP address. */
 static int
-connection_is_rate_limited(connection_t *conn)
+connection_is_rate_limited(const connection_t *conn)
 {
   const or_options_t *options = get_options();
   if (conn->linked)
@@ -3188,14 +3273,14 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
                                      global_bucket_val, conn_bucket);
 }
 
-/** Return 1 if the global write buckets are low enough that we
+/** Return true iff the global write buckets are low enough that we
  * shouldn't send <b>attempt</b> bytes of low-priority directory stuff
- * out to <b>conn</b>. Else return 0.
-
- * Priority was 1 for v1 requests (directories and running-routers),
- * and 2 for v2 requests and later (statuses and descriptors).
+ * out to <b>conn</b>.
  *
- * There are a lot of parameters we could use here:
+ * If we are a directory authority, always answer dir requests thus true is
+ * always returned.
+ *
+ * Note: There are a lot of parameters we could use here:
  * - global_relayed_write_bucket. Low is bad.
  * - global_write_bucket. Low is bad.
  * - bandwidthrate. Low is bad.
@@ -3207,39 +3292,40 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
  *   mean is "total directory bytes added to outbufs recently", but
  *   that's harder to quantify and harder to keep track of.
  */
-int
-global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
+bool
+connection_dir_is_global_write_low(const connection_t *conn, size_t attempt)
 {
   size_t smaller_bucket =
     MIN(token_bucket_rw_get_write(&global_bucket),
         token_bucket_rw_get_write(&global_relayed_bucket));
-  if (authdir_mode(get_options()) && priority>1)
-    return 0; /* there's always room to answer v2 if we're an auth dir */
+
+  /* Special case for authorities (directory only). */
+  if (authdir_mode_v3(get_options())) {
+    /* Are we configured to possibly reject requests under load? */
+    if (!dirauth_should_reject_requests_under_load()) {
+      /* Answer request no matter what. */
+      return false;
+    }
+    /* Always answer requests from a known relay which includes the other
+     * authorities. The following looks up the addresses for relays that we
+     * have their descriptor _and_ any configured trusted directories. */
+    if (nodelist_probably_contains_address(&conn->addr)) {
+      return false;
+    }
+  }
 
   if (!connection_is_rate_limited(conn))
-    return 0; /* local conns don't get limited */
+    return false; /* local conns don't get limited */
 
   if (smaller_bucket < attempt)
-    return 1; /* not enough space no matter the priority */
+    return true; /* not enough space. */
 
   {
     const time_t diff = approx_time() - write_buckets_last_empty_at;
     if (diff <= 1)
-      return 1; /* we're already hitting our limits, no more please */
+      return true; /* we're already hitting our limits, no more please */
   }
-
-  if (priority == 1) { /* old-style v1 query */
-    /* Could we handle *two* of these requests within the next two seconds? */
-    const or_options_t *options = get_options();
-    size_t can_write = (size_t) (smaller_bucket
-      + 2*(options->RelayBandwidthRate ? options->RelayBandwidthRate :
-           options->BandwidthRate));
-    if (can_write < 2*attempt)
-      return 1;
-  } else { /* v2 query */
-    /* no further constraints yet */
-  }
-  return 0;
+  return false;
 }
 
 /** When did we last tell the accounting subsystem about transmitted
@@ -3261,8 +3347,17 @@ record_num_bytes_transferred_impl(connection_t *conn,
       rep_hist_note_dir_bytes_written(num_written, now);
   }
 
+  /* Linked connections and internal IPs aren't counted for statistics or
+   * accounting:
+   *  - counting linked connections would double-count BEGINDIR bytes, because
+   *    they are sent as Dir bytes on the linked connection, and OR bytes on
+   *    the OR connection;
+   *  - relays and clients don't connect to internal IPs, unless specifically
+   *    configured to do so. If they are configured that way, we don't count
+   *    internal bytes.
+   */
   if (!connection_is_rate_limited(conn))
-    return; /* local IPs are free */
+    return;
 
   if (conn->type == CONN_TYPE_OR)
     rep_hist_note_or_conn_bytes(conn->global_identifier, num_read,
@@ -4886,10 +4981,10 @@ connection_finished_flushing(connection_t *conn)
   }
 }
 
-/** Called when our attempt to connect() to another server has just
- * succeeded.
+/** Called when our attempt to connect() to a server has just succeeded.
  *
- * This function just passes conn to the connection-specific
+ * This function checks if the interface address has changed (clients only),
+ * and then passes conn to the connection-specific
  * connection_*_finished_connecting() function.
  */
 static int
@@ -5453,6 +5548,13 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
     *port = options->Socks5ProxyPort;
     *proxy_type = PROXY_SOCKS5;
     return 0;
+  } else if (options->TCPProxy) {
+    tor_addr_copy(addr, &options->TCPProxyAddr);
+    *port = options->TCPProxyPort;
+    /* The only supported protocol in TCPProxy is haproxy. */
+    tor_assert(options->TCPProxyProtocol == TCP_PROXY_PROTOCOL_HAPROXY);
+    *proxy_type = PROXY_HAPROXY;
+    return 0;
   }
 
   tor_addr_make_unspec(addr);
@@ -5490,6 +5592,7 @@ proxy_type_to_string(int proxy_type)
   case PROXY_CONNECT:   return "HTTP";
   case PROXY_SOCKS4:    return "SOCKS4";
   case PROXY_SOCKS5:    return "SOCKS5";
+  case PROXY_HAPROXY:   return "HAPROXY";
   case PROXY_PLUGGABLE: return "pluggable transports SOCKS";
   case PROXY_NONE:      return "NULL";
   default:              tor_assert(0);

@@ -1,0 +1,3 @@
+  o Testing:
+    - Add a basic IPv6 test to "make test-network". This test only runs when
+      the local machine has an IPv6 stack. Closes ticket 33300.

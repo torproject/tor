@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -46,7 +46,7 @@
 #include "feature/nodelist/networkstatus_voter_info_st.h"
 #include "feature/nodelist/node_st.h"
 
-DECLARE_TYPED_DIGESTMAP_FNS(dsmap_, digest_ds_map_t, download_status_t)
+DECLARE_TYPED_DIGESTMAP_FNS(dsmap, digest_ds_map_t, download_status_t)
 #define DSMAP_FOREACH(map, keyvar, valvar) \
   DIGESTMAP_FOREACH(dsmap_to_digestmap(map), keyvar, download_status_t *, \
                     valvar)

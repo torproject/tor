@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Instead of keeping a list of configuration options to check for
-      relative paths, check all the options whose type is "FILENAME".
-      Solves part of ticket 32339.

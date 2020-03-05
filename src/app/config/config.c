@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -88,7 +88,7 @@
 #include "feature/control/control.h"
 #include "feature/control/control_auth.h"
 #include "feature/control/control_events.h"
-#include "feature/dircache/dirserv.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_config.h"
 #include "feature/nodelist/dirlist.h"
@@ -182,7 +182,7 @@ static const char unix_q_socket_prefix[] = "unix:\"";
  * *DowloadInitialDelay . */
 #ifndef COCCI
 #define DOWNLOAD_SCHEDULE(name) \
-  { #name "DownloadSchedule", #name "DownloadInitialDelay", 0, 1 }
+  { (#name "DownloadSchedule"), (#name "DownloadInitialDelay"), 0, 1 }
 #else
 #define DOWNLOAD_SCHEDULE(name) { NULL, NULL, 0, 1 }
 #endif /* !defined(COCCI) */
@@ -329,17 +329,11 @@ static const config_var_t option_vars_[] = {
   V(AuthDirBadExitCCs,           CSV,      ""),
   V(AuthDirInvalid,              LINELIST, NULL),
   V(AuthDirInvalidCCs,           CSV,      ""),
-  V(AuthDirFastGuarantee,        MEMUNIT,  "100 KB"),
-  V(AuthDirGuardBWGuarantee,     MEMUNIT,  "2 MB"),
-  V(AuthDirPinKeys,              BOOL,     "1"),
   V(AuthDirReject,               LINELIST, NULL),
   V(AuthDirRejectCCs,            CSV,      ""),
   OBSOLETE("AuthDirRejectUnlisted"),
   OBSOLETE("AuthDirListBadDirs"),
-  V(AuthDirListBadExits,         BOOL,     "0"),
-  V(AuthDirMaxServersPerAddr,    POSINT,     "2"),
   OBSOLETE("AuthDirMaxServersPerAuthAddr"),
-  V(AuthDirHasIPv6Connectivity,  BOOL,     "0"),
   VAR("AuthoritativeDirectory",  BOOL, AuthoritativeDir,    "0"),
   V(AutomapHostsOnResolve,       BOOL,     "0"),
   V(AutomapHostsSuffixes,        CSV,      ".onion,.exit"),
@@ -377,7 +371,6 @@ static const config_var_t option_vars_[] = {
   V(ClientTransportPlugin,       LINELIST, NULL),
   V(ClientUseIPv6,               BOOL,     "0"),
   V(ClientUseIPv4,               BOOL,     "1"),
-  V(ConsensusParams,             STRING,   NULL),
   V(ConnLimit,                   POSINT,     "1000"),
   V(ConnDirectionStatistics,     BOOL,     "0"),
   V(ConstrainedSockets,          BOOL,     "0"),
@@ -399,7 +392,6 @@ static const config_var_t option_vars_[] = {
   V(DisableOOSCheck,             BOOL,     "1"),
   V(DisableNetwork,              BOOL,     "0"),
   V(DirAllowPrivateAddresses,    BOOL,     "0"),
-  V(TestingAuthDirTimeToLearnReachability, INTERVAL, "30 minutes"),
   OBSOLETE("DirListenAddress"),
   V(DirPolicy,                   LINELIST, NULL),
   VPORT(DirPort),
@@ -452,7 +444,7 @@ static const config_var_t option_vars_[] = {
   V(EnforceDistinctSubnets,      BOOL,     "1"),
   V_D(EntryNodes,                ROUTERSET,   NULL),
   V(EntryStatistics,             BOOL,     "0"),
-  V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "10 minutes"),
+  OBSOLETE("TestingEstimatedDescriptorPropagationTime"),
   V_D(ExcludeNodes,              ROUTERSET, NULL),
   V_D(ExcludeExitNodes,          ROUTERSET, NULL),
   OBSOLETE("ExcludeSingleHopRelays"),
@@ -518,6 +510,8 @@ static const config_var_t option_vars_[] = {
       LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceEnableIntroDoSBurstPerSec",
       LINELIST_S, RendConfigLines, NULL),
+  VAR("HiddenServiceOnionBalanceInstance",
+      LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceStatistics", BOOL, HiddenServiceStatistics_option, "1"),
   V(HidServAuth,                 LINELIST, NULL),
   V(ClientOnionAuthDir,          FILENAME, NULL),
@@ -539,6 +533,7 @@ static const config_var_t option_vars_[] = {
   V(Socks5Proxy,                 STRING,   NULL),
   V(Socks5ProxyUsername,         STRING,   NULL),
   V(Socks5ProxyPassword,         STRING,   NULL),
+  V(TCPProxy,                    STRING,   NULL),
   VAR_IMMUTABLE("KeyDirectory",  FILENAME, KeyDirectory_option, NULL),
   V(KeyDirectoryGroupReadable,   AUTOBOOL, "auto"),
   VAR_D("HSLayer2Nodes",         ROUTERSET,  HSLayer2Nodes,  NULL),
@@ -562,7 +557,6 @@ static const config_var_t option_vars_[] = {
   OBSOLETE("MaxOnionsPending"),
   V(MaxOnionQueueDelay,          MSEC_INTERVAL, "1750 msec"),
   V(MaxUnparseableDescSizeToLog, MEMUNIT, "10 MB"),
-  V(MinMeasuredBWsForAuthToIgnoreAdvertised, INT, "500"),
   VAR("MyFamily",                LINELIST, MyFamily_lines,       NULL),
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
   OBSOLETE("NamingAuthoritativeDirectory"),
@@ -605,8 +599,6 @@ static const config_var_t option_vars_[] = {
   V(PerConnBWRate,               MEMUNIT,  "0"),
   V_IMMUTABLE(PidFile,           FILENAME,   NULL),
   V_IMMUTABLE(TestingTorNetwork, BOOL,     "0"),
-  V(TestingMinExitFlagThreshold, MEMUNIT,  "0"),
-  V(TestingMinFastFlagThreshold, MEMUNIT,  "0"),
 
   V(TestingLinkCertLifetime,          INTERVAL, "2 days"),
   V(TestingAuthKeyLifetime,          INTERVAL, "2 days"),
@@ -624,9 +616,6 @@ static const config_var_t option_vars_[] = {
   V(ReachableAddresses,          LINELIST, NULL),
   V(ReachableDirAddresses,       LINELIST, NULL),
   V(ReachableORAddresses,        LINELIST, NULL),
-  V(RecommendedVersions,         LINELIST, NULL),
-  V(RecommendedClientVersions,   LINELIST, NULL),
-  V(RecommendedServerVersions,   LINELIST, NULL),
   OBSOLETE("RecommendedPackages"),
   V(ReducedConnectionPadding,    BOOL,     "0"),
   V(ConnectionPadding,           AUTOBOOL, "auto"),
@@ -688,8 +677,6 @@ static const config_var_t option_vars_[] = {
   OBSOLETE("UseNTorHandshake"),
   V_IMMUTABLE(User,              STRING,   NULL),
   OBSOLETE("UserspaceIOCPBuffers"),
-  V(AuthDirSharedRandomness,     BOOL,     "1"),
-  V(AuthDirTestEd25519LinkKeys,  BOOL,     "1"),
   OBSOLETE("V1AuthoritativeDirectory"),
   OBSOLETE("V2AuthoritativeDirectory"),
   VAR("V3AuthoritativeDirectory",BOOL, V3AuthoritativeDir,   "0"),
@@ -704,7 +691,6 @@ static const config_var_t option_vars_[] = {
   V(V3AuthUseLegacyKey,          BOOL,     "0"),
   V(V3BandwidthsFile,            FILENAME, NULL),
   V(GuardfractionFile,           FILENAME, NULL),
-  VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   OBSOLETE("VoteOnHidServDirectoriesV2"),
   V(VirtualAddrNetworkIPv4,      STRING,   "127.192.0.0/10"),
   V(VirtualAddrNetworkIPv6,      STRING,   "[FE80::]/10"),
@@ -724,7 +710,6 @@ static const config_var_t option_vars_[] = {
                        OwningControllerProcess, NULL),
   VAR_NODUMP_IMMUTABLE("__OwningControllerFD", UINT64, OwningControllerFD,
              UINT64_MAX_STRING),
-  V(MinUptimeHidServDirectoryV2, INTERVAL, "96 hours"),
   V(TestingServerDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(TestingClientDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(TestingServerConsensusDownloadInitialDelay, CSV_INTERVAL, "0"),
@@ -770,12 +755,6 @@ static const config_var_t option_vars_[] = {
   OBSOLETE("TestingDescriptorMaxDownloadTries"),
   OBSOLETE("TestingMicrodescMaxDownloadTries"),
   OBSOLETE("TestingCertMaxDownloadTries"),
-  V_D(TestingDirAuthVoteExit, ROUTERSET, NULL),
-  V(TestingDirAuthVoteExitIsStrict,  BOOL,     "0"),
-  V_D(TestingDirAuthVoteGuard, ROUTERSET, NULL),
-  V(TestingDirAuthVoteGuardIsStrict,  BOOL,     "0"),
-  V_D(TestingDirAuthVoteHSDir, ROUTERSET, NULL),
-  V(TestingDirAuthVoteHSDirIsStrict,  BOOL,     "0"),
   VAR_INVIS("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_,
             "0"),
 
@@ -830,6 +809,11 @@ static const config_deprecation_t option_deprecation_notes_[] = {
   { "ClientPreferIPv6DirPort", "It has no effect on relays, and has had no "
     "effect on clients since 0.2.8." },
   /* End of options deprecated since 0.3.2.2-alpha. */
+
+  /* Options deprecated since 0.4.3.1-alpha. */
+  { "ClientAutoIPv6ORPort", "This option is unreliable if a connection isn't "
+    "reliably dual-stack."},
+  /* End of options deprecated since 0.4.3.1-alpha. */
 
   { NULL, NULL }
 };
@@ -2419,10 +2403,10 @@ options_act,(const or_options_t *old_options))
 
   /* We may need to reschedule some directory stuff if our status changed. */
   if (old_options) {
-    if (!bool_eq(directory_fetches_dir_info_early(options),
-                 directory_fetches_dir_info_early(old_options)) ||
-        !bool_eq(directory_fetches_dir_info_later(options),
-                 directory_fetches_dir_info_later(old_options)) ||
+    if (!bool_eq(dirclient_fetches_dir_info_early(options),
+                 dirclient_fetches_dir_info_early(old_options)) ||
+        !bool_eq(dirclient_fetches_dir_info_later(options),
+                 dirclient_fetches_dir_info_later(old_options)) ||
         !config_lines_eq(old_options->Bridges, options->Bridges)) {
       /* Make sure update_router_have_minimum_dir_info() gets called. */
       router_dir_info_changed();
@@ -2691,7 +2675,7 @@ print_usage(void)
   printf(
 "Copyright (c) 2001-2004, Roger Dingledine\n"
 "Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson\n"
-"Copyright (c) 2007-2019, The Tor Project, Inc.\n\n"
+"Copyright (c) 2007-2020, The Tor Project, Inc.\n\n"
 "tor -f <torrc> [args]\n"
 "See man page for options, or https://www.torproject.org/ for "
 "documentation.\n");
@@ -2733,6 +2717,9 @@ list_enabled_modules(void)
 {
   printf("%s: %s\n", "relay", have_module_relay() ? "yes" : "no");
   printf("%s: %s\n", "dirauth", have_module_dirauth() ? "yes" : "no");
+  // We don't list dircache, because it cannot be enabled or disabled
+  // independently from relay.  Listing it here would proliferate
+  // test variants in test_parseconf.sh to no useful purpose.
 }
 
 /** Last value actually set by resolve_my_address. */
@@ -3881,8 +3868,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
 
   if (options_validate_relay_bandwidth(old_options, options, msg) < 0)
     return -1;
-  if (options_validate_dirauth_bandwidth(old_options, options, msg) < 0)
-    return -1;
 
   if (options->BandwidthRate > options->BandwidthBurst)
     REJECT("BandwidthBurst must be at least equal to BandwidthRate.");
@@ -3941,19 +3926,28 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
     }
   }
 
+  if (options->TCPProxy) {
+    int res = parse_tcp_proxy_line(options->TCPProxy, options, msg);
+    if (res < 0) {
+      return res;
+    }
+  }
+
   /* Check if more than one exclusive proxy type has been enabled. */
   if (!!options->Socks4Proxy + !!options->Socks5Proxy +
-      !!options->HTTPSProxy > 1)
+      !!options->HTTPSProxy + !!options->TCPProxy > 1)
     REJECT("You have configured more than one proxy type. "
-           "(Socks4Proxy|Socks5Proxy|HTTPSProxy)");
+           "(Socks4Proxy|Socks5Proxy|HTTPSProxy|TCPProxy)");
 
   /* Check if the proxies will give surprising behavior. */
   if (options->HTTPProxy && !(options->Socks4Proxy ||
                               options->Socks5Proxy ||
-                              options->HTTPSProxy)) {
-    log_warn(LD_CONFIG, "HTTPProxy configured, but no SOCKS proxy or "
-             "HTTPS proxy configured. Watch out: this configuration will "
-             "proxy unencrypted directory connections only.");
+                              options->HTTPSProxy ||
+                              options->TCPProxy)) {
+    log_warn(LD_CONFIG, "HTTPProxy configured, but no SOCKS proxy, "
+             "HTTPS proxy, or any other TCP proxy configured. Watch out: "
+             "this configuration will proxy unencrypted directory "
+             "connections only.");
   }
 
   if (options->Socks5ProxyUsername) {
@@ -4124,7 +4118,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
     CHECK_DEFAULT(TestingV3AuthInitialDistDelay);
     CHECK_DEFAULT(TestingV3AuthVotingStartOffset);
     CHECK_DEFAULT(TestingAuthDirTimeToLearnReachability);
-    CHECK_DEFAULT(TestingEstimatedDescriptorPropagationTime);
     CHECK_DEFAULT(TestingServerDownloadInitialDelay);
     CHECK_DEFAULT(TestingClientDownloadInitialDelay);
     CHECK_DEFAULT(TestingServerConsensusDownloadInitialDelay);
@@ -4151,12 +4144,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
     return -1;
   if (options_validate_dirauth_testing(old_options, options, msg) < 0)
     return -1;
-
-  if (options->TestingEstimatedDescriptorPropagationTime < 0) {
-    REJECT("TestingEstimatedDescriptorPropagationTime must be non-negative.");
-  } else if (options->TestingEstimatedDescriptorPropagationTime > 60*60) {
-    COMPLAIN("TestingEstimatedDescriptorPropagationTime is insanely high.");
-  }
 
   if (options->TestingClientMaxIntervalWithoutRequest < 1) {
     REJECT("TestingClientMaxIntervalWithoutRequest is way too low.");
@@ -5356,6 +5343,68 @@ parse_bridge_line(const char *line)
   return bridge_line;
 }
 
+/** Parse the contents of a TCPProxy line from <b>line</b> and put it
+ * in <b>options</b>. Return 0 if the line is well-formed, and -1 if it
+ * isn't.
+ *
+ * This will mutate only options->TCPProxyProtocol, options->TCPProxyAddr,
+ * and options->TCPProxyPort.
+ *
+ * On error, tor_strdup an error explanation into *<b>msg</b>.
+ */
+STATIC int
+parse_tcp_proxy_line(const char *line, or_options_t *options, char **msg)
+{
+  int ret = 0;
+  tor_assert(line);
+  tor_assert(options);
+  tor_assert(msg);
+
+  smartlist_t *sl = smartlist_new();
+  /* Split between the protocol and the address/port. */
+  smartlist_split_string(sl, line, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
+
+  /* The address/port is not specified. */
+  if (smartlist_len(sl) < 2) {
+    *msg = tor_strdup("TCPProxy has no address/port. Please fix.");
+    goto err;
+  }
+
+  char *protocol_string = smartlist_get(sl, 0);
+  char *addrport_string = smartlist_get(sl, 1);
+
+  /* The only currently supported protocol is 'haproxy'. */
+  if (strcasecmp(protocol_string, "haproxy")) {
+    *msg = tor_strdup("TCPProxy protocol is not supported. Currently "
+                      "the only supported protocol is 'haproxy'. "
+                      "Please fix.");
+    goto err;
+  } else {
+    /* Otherwise, set the correct protocol. */
+    options->TCPProxyProtocol = TCP_PROXY_PROTOCOL_HAPROXY;
+  }
+
+  /* Parse the address/port. */
+  if (tor_addr_port_lookup(addrport_string, &options->TCPProxyAddr,
+                           &options->TCPProxyPort) < 0) {
+    *msg = tor_strdup("TCPProxy address/port failed to parse or resolve. "
+                      "Please fix.");
+    goto err;
+  }
+
+  /* Success. */
+  ret = 0;
+  goto end;
+
+ err:
+  ret = -1;
+ end:
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_free(sl);
+  return ret;
+}
+
 /** Read the contents of a ClientTransportPlugin or ServerTransportPlugin
  * line from <b>line</b>, depending on the value of <b>server</b>. Return 0
  * if the line is well-formed, and -1 if it isn't.
@@ -5503,9 +5552,10 @@ pt_parse_transport_line(const or_options_t *options,
 
     /* ClientTransportPlugins connecting through a proxy is managed only. */
     if (!server && (options->Socks4Proxy || options->Socks5Proxy ||
-                    options->HTTPSProxy)) {
+                    options->HTTPSProxy || options->TCPProxy)) {
       log_warn(LD_CONFIG, "You have configured an external proxy with another "
-                          "proxy type. (Socks4Proxy|Socks5Proxy|HTTPSProxy)");
+                          "proxy type. (Socks4Proxy|Socks5Proxy|HTTPSProxy|"
+                          "TCPProxy)");
       goto err;
     }
 
@@ -5838,6 +5888,7 @@ port_cfg_new(size_t namelen)
   port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t) + namelen + 1);
   cfg->entry_cfg.ipv4_traffic = 1;
   cfg->entry_cfg.ipv6_traffic = 1;
+  cfg->entry_cfg.prefer_ipv6 = 1;
   cfg->entry_cfg.dns_request = 1;
   cfg->entry_cfg.onion_traffic = 1;
   cfg->entry_cfg.prefer_ipv6_virtaddr = 1;
@@ -6085,7 +6136,7 @@ port_parse_config(smartlist_t *out,
     /* This must be kept in sync with port_cfg_new's defaults */
     int no_listen = 0, no_advertise = 0, all_addrs = 0,
       bind_ipv4_only = 0, bind_ipv6_only = 0,
-      ipv4_traffic = 1, ipv6_traffic = 1, prefer_ipv6 = 0, dns_request = 1,
+      ipv4_traffic = 1, ipv6_traffic = 1, prefer_ipv6 = 1, dns_request = 1,
       onion_traffic = 1,
       cache_ipv4 = 0, use_cached_ipv4 = 0,
       cache_ipv6 = 0, use_cached_ipv6 = 0,

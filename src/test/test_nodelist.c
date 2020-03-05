@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2019, The Tor Project, Inc. */
+/* Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -7,6 +7,7 @@
  **/
 
 #define NODELIST_PRIVATE
+#define NETWORKSTATUS_PRIVATE
 
 #include "core/or/or.h"
 #include "lib/crypt_ops/crypto_rand.h"
@@ -17,6 +18,8 @@
 #include "feature/nodelist/torcert.h"
 
 #include "core/or/extend_info_st.h"
+#include "feature/dirauth/dirvote.h"
+#include "feature/nodelist/fmt_routerstatus.h"
 #include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/networkstatus_st.h"
 #include "feature/nodelist/node_st.h"
@@ -1246,6 +1249,167 @@ test_nodelist_router_get_verbose_nickname(void *arg)
   return;
 }
 
+static void
+test_nodelist_routerstatus_has_visibly_changed(void *arg)
+{
+  (void)arg;
+  routerstatus_t rs_orig, rs;
+  char *fmt_orig = NULL, *fmt = NULL;
+  memset(&rs_orig, 0, sizeof(rs_orig));
+  strlcpy(rs_orig.nickname, "friendly", sizeof(rs_orig.nickname));
+  memcpy(rs_orig.identity_digest, "abcdefghijklmnopqrst", 20);
+  memcpy(rs_orig.descriptor_digest, "abcdefghijklmnopqrst", 20);
+  rs_orig.addr = 0x7f000001;
+  rs_orig.or_port = 3;
+  rs_orig.published_on = time(NULL);
+  rs_orig.has_bandwidth = 1;
+  rs_orig.bandwidth_kb = 20;
+
+#define COPY() memcpy(&rs, &rs_orig, sizeof(rs))
+#define FORMAT() \
+  STMT_BEGIN \
+    tor_free(fmt_orig);                                                   \
+    tor_free(fmt);                                                        \
+    fmt_orig = routerstatus_format_entry(&rs_orig, NULL, NULL,            \
+                          NS_CONTROL_PORT,                                \
+                          NULL);                                          \
+    fmt = routerstatus_format_entry(&rs, NULL, NULL, NS_CONTROL_PORT,     \
+                          NULL);                                          \
+    tt_assert(fmt_orig);                                                  \
+    tt_assert(fmt);                                                       \
+  STMT_END
+#define ASSERT_SAME() \
+  STMT_BEGIN                                                    \
+    tt_assert(! routerstatus_has_visibly_changed(&rs_orig, &rs));       \
+    FORMAT();                                                   \
+    tt_str_op(fmt_orig, OP_EQ, fmt);                            \
+    COPY();                                                     \
+  STMT_END
+#define ASSERT_CHANGED() \
+  STMT_BEGIN                                                    \
+    tt_assert(routerstatus_has_visibly_changed(&rs_orig, &rs));         \
+    FORMAT();                                                   \
+    tt_str_op(fmt_orig, OP_NE, fmt);                            \
+    COPY();                                                     \
+  STMT_END
+#define ASSERT_CHANGED_NO_FORMAT() \
+  STMT_BEGIN                                                    \
+    tt_assert(routerstatus_has_visibly_changed(&rs_orig, &rs));         \
+    COPY();                                                     \
+  STMT_END
+
+  COPY();
+  ASSERT_SAME();
+
+  rs.addr = 0x7f000002;
+  ASSERT_CHANGED();
+
+  strlcpy(rs.descriptor_digest, "hello world", sizeof(rs.descriptor_digest));
+  ASSERT_CHANGED();
+
+  strlcpy(rs.nickname, "fr1end1y", sizeof(rs.nickname));
+  ASSERT_CHANGED();
+
+  rs.published_on += 3600;
+  ASSERT_CHANGED();
+
+  rs.or_port = 55;
+  ASSERT_CHANGED();
+
+  rs.dir_port = 9999;
+  ASSERT_CHANGED();
+
+  tor_addr_parse(&rs.ipv6_addr, "1234::56");
+  ASSERT_CHANGED();
+
+  tor_addr_parse(&rs_orig.ipv6_addr, "1234::56");
+  rs_orig.ipv6_orport = 99;
+  COPY();
+  rs.ipv6_orport = 22;
+  ASSERT_CHANGED();
+
+  rs.is_authority = 1;
+  ASSERT_CHANGED();
+
+  rs.is_exit = 1;
+  ASSERT_CHANGED();
+
+  rs.is_stable = 1;
+  ASSERT_CHANGED();
+
+  rs.is_fast = 1;
+  ASSERT_CHANGED();
+
+  rs.is_flagged_running = 1;
+  ASSERT_CHANGED();
+
+  // This option is obsolete and not actually formatted.
+  rs.is_named = 1;
+  ASSERT_CHANGED_NO_FORMAT();
+
+  // This option is obsolete and not actually formatted.
+  rs.is_unnamed = 1;
+  ASSERT_CHANGED_NO_FORMAT();
+
+  rs.is_valid = 1;
+  ASSERT_CHANGED();
+
+  rs.is_possible_guard = 1;
+  ASSERT_CHANGED();
+
+  rs.is_bad_exit = 1;
+  ASSERT_CHANGED();
+
+  rs.is_hs_dir = 1;
+  ASSERT_CHANGED();
+
+  rs.is_v2_dir = 1;
+  ASSERT_CHANGED();
+
+  rs.is_staledesc = 1;
+  ASSERT_CHANGED();
+
+  // Setting this to zero crashes us with an assertion failure in
+  // routerstatus_format_entry() if we don't have a descriptor.
+  rs.has_bandwidth = 0;
+  ASSERT_CHANGED_NO_FORMAT();
+
+  // Does not actually matter; not visible to controller.
+  rs.has_exitsummary = 1;
+  ASSERT_SAME();
+
+  // Does not actually matter; not visible to the controller.
+  rs.bw_is_unmeasured = 1;
+  ASSERT_SAME();
+
+  rs.bandwidth_kb = 2000;
+  ASSERT_CHANGED();
+
+  // not visible to the controller.
+  rs.has_guardfraction = 1;
+  rs.guardfraction_percentage = 22;
+  ASSERT_SAME();
+
+  // not visible to the controller.
+  rs_orig.has_guardfraction = 1;
+  rs_orig.guardfraction_percentage = 20;
+  COPY();
+  rs.guardfraction_percentage = 25;
+  ASSERT_SAME();
+
+  // not visible to the controller.
+  rs.exitsummary = (char*)"accept 1-2";
+  ASSERT_SAME();
+
+ done:
+#undef COPY
+#undef ASSERT_SAME
+#undef ASSERT_CHANGED
+  tor_free(fmt_orig);
+  tor_free(fmt);
+  return;
+}
+
 #define NODE(name, flags) \
   { #name, test_nodelist_##name, (flags), NULL, NULL }
 
@@ -1266,5 +1430,6 @@ struct testcase_t nodelist_tests[] = {
   NODE(routerstatus_describe, 0),
   NODE(extend_info_describe, 0),
   NODE(router_get_verbose_nickname, 0),
+  NODE(routerstatus_has_visibly_changed, 0),
   END_OF_TESTCASES
 };

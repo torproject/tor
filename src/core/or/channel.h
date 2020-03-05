@@ -1,4 +1,4 @@
-/* * Copyright (c) 2012-2019, The Tor Project, Inc. */
+/* * Copyright (c) 2012-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -14,6 +14,7 @@
 #include "lib/container/handles.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
+#include "ext/ht.h"
 #include "tor_queue.h"
 
 #define tor_timer_t timeout
@@ -22,7 +23,6 @@ struct tor_timer_t;
 /* Channel handler function pointer typedefs */
 typedef void (*channel_listener_fn_ptr)(channel_listener_t *, channel_t *);
 typedef void (*channel_cell_handler_fn_ptr)(channel_t *, cell_t *);
-typedef void (*channel_var_cell_handler_fn_ptr)(channel_t *, var_cell_t *);
 
 /**
  * This enum is used by channelpadding to decide when to pad channels.
@@ -320,7 +320,6 @@ struct channel_t {
 
   /** Registered handlers for incoming cells */
   channel_cell_handler_fn_ptr cell_handler;
-  channel_var_cell_handler_fn_ptr var_cell_handler;
 
   /* Methods implemented by the lower layer */
 
@@ -542,13 +541,8 @@ void channel_listener_set_listener_fn(channel_listener_t *chan,
 /* Incoming cell callbacks */
 channel_cell_handler_fn_ptr channel_get_cell_handler(channel_t *chan);
 
-channel_var_cell_handler_fn_ptr
-channel_get_var_cell_handler(channel_t *chan);
-
 void channel_set_cell_handlers(channel_t *chan,
-                               channel_cell_handler_fn_ptr cell_handler,
-                               channel_var_cell_handler_fn_ptr
-                                 var_cell_handler);
+                               channel_cell_handler_fn_ptr cell_handler);
 
 /* Clean up closed channels and channel listeners periodically; these are
  * called from run_scheduled_events() in main.c.
@@ -563,13 +557,13 @@ void channel_free_all(void);
 void channel_dumpstats(int severity);
 void channel_listener_dumpstats(int severity);
 
-#ifdef TOR_CHANNEL_INTERNAL_
+#ifdef CHANNEL_OBJECT_PRIVATE
 
-#ifdef CHANNEL_PRIVATE_
+#ifdef CHANNEL_FILE_PRIVATE
 
 STATIC void channel_add_to_digest_map(channel_t *chan);
 
-#endif /* defined(CHANNEL_PRIVATE_) */
+#endif /* defined(CHANNEL_FILE_PRIVATE) */
 
 /* Channel operations for subclasses and internal use only */
 
@@ -648,7 +642,7 @@ void channel_notify_flushed(channel_t *chan);
 /* Handle stuff we need to do on open like notifying circuits */
 void channel_do_open_actions(channel_t *chan);
 
-#endif /* defined(TOR_CHANNEL_INTERNAL_) */
+#endif /* defined(CHANNEL_OBJECT_PRIVATE) */
 
 /* Helper functions to perform operations on channels */
 

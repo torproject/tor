@@ -1,4 +1,4 @@
-/* Copyright (c) 2019, The Tor Project, Inc. */
+/* Copyright (c) 2019-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -6,7 +6,6 @@
  * \brief Fake circuits API for unit test.
  **/
 
-#define CHANNEL_PRIVATE
 #define CIRCUITBUILD_PRIVATE
 #define CIRCUITLIST_PRIVATE
 #define CRYPT_PATH_PRIVATE
@@ -22,7 +21,7 @@
 #include "core/or/relay.h"
 #include "core/or/relay_crypto_st.h"
 
-#include "fakecircs.h"
+#include "test/fakecircs.h"
 
 /** Return newly allocated OR circuit using the given nchan and pchan. It must
  * be freed with the free_fake_orcirc(). */

@@ -1,3 +1,0 @@
-  o Minor feature (heartbeat, onion service):
-    - Add the DoS INTRODUCE2 defenses counter to the heartbeat DoS message.
-      Closes ticket 31371.

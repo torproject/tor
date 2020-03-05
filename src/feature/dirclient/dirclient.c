@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -21,10 +21,12 @@
 #include "feature/client/entrynodes.h"
 #include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
+#include "feature/dirclient/dirclient.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/shared_random.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dirclient/dirclient.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/dirclient/dlstatus.h"
 #include "feature/dircommon/consdiff.h"
 #include "feature/dircommon/directory.h"
@@ -50,6 +52,7 @@
 #include "feature/rend/rendservice.h"
 #include "feature/stats/predict_ports.h"
 
+#include "lib/cc/ctassert.h"
 #include "lib/compress/compress.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_util.h"
@@ -453,7 +456,7 @@ directory_get_from_dirserver,(
 {
   const routerstatus_t *rs = NULL;
   const or_options_t *options = get_options();
-  int prefer_authority = (directory_fetches_from_authorities(options)
+  int prefer_authority = (dirclient_fetches_from_authorities(options)
                           || want_authority == DL_WANT_AUTHORITY);
   int require_authority = 0;
   int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose,
@@ -672,7 +675,7 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
   if (indirection == DIRIND_DIRECT_CONN ||
       indirection == DIRIND_ANON_DIRPORT ||
       (indirection == DIRIND_ONEHOP
-       && !directory_must_use_begindir(options))) {
+       && !dirclient_must_use_begindir(options))) {
     fascist_firewall_choose_address_rs(status, FIREWALL_DIR_CONNECTION, 0,
                                        use_dir_ap);
     have_dir = tor_addr_port_is_valid_ap(use_dir_ap, 0);
@@ -871,16 +874,6 @@ connection_dir_download_cert_failed(dir_connection_t *conn, int status)
   update_certificate_downloads(time(NULL));
 }
 
-/* Should this tor instance only use begindir for all its directory requests?
- */
-int
-directory_must_use_begindir(const or_options_t *options)
-{
-  /* Clients, onion services, and bridges must use begindir,
-   * relays and authorities do not have to */
-  return !public_server_mode(options);
-}
-
 /** Evaluate the situation and decide if we should use an encrypted
  * "begindir-style" connection for this directory request.
  * 0) If there is no DirPort, yes.
@@ -932,7 +925,7 @@ directory_command_should_use_begindir(const or_options_t *options,
   }
   /* Reasons why we want to avoid using begindir */
   if (indirection == DIRIND_ONEHOP) {
-    if (!directory_must_use_begindir(options)) {
+    if (!dirclient_must_use_begindir(options)) {
       *reason = "in relay mode";
       return 0;
     }
@@ -1294,7 +1287,7 @@ directory_initiate_request,(directory_request_t *request))
 
   /* use encrypted begindir connections for everything except relays
    * this provides better protection for directory fetches */
-  if (!use_begindir && directory_must_use_begindir(options)) {
+  if (!use_begindir && dirclient_must_use_begindir(options)) {
     log_warn(LD_BUG, "Client could not use begindir connection: %s",
              begindir_reason ? begindir_reason : "(NULL)");
     return;
@@ -1452,9 +1445,7 @@ compare_strs_(const void **a, const void **b)
 }
 
 #define CONDITIONAL_CONSENSUS_FPR_LEN 3
-#if (CONDITIONAL_CONSENSUS_FPR_LEN > DIGEST_LEN)
-#error "conditional consensus fingerprint length is larger than digest length"
-#endif
+CTASSERT(CONDITIONAL_CONSENSUS_FPR_LEN <= DIGEST_LEN);
 
 /** Return the URL we should use for a consensus download.
  *
@@ -1973,6 +1964,44 @@ dir_client_decompress_response_body(char **bodyp, size_t *bodylenp,
   return rv;
 }
 
+/**
+ * Total number of bytes downloaded of each directory purpose, when
+ * bootstrapped, and when not bootstrapped.
+ *
+ * (For example, the number of bytes downloaded of purpose p while
+ * not fully bootstrapped is total_dl[p][false].)
+ **/
+static uint64_t total_dl[DIR_PURPOSE_MAX_][2];
+
+/**
+ * Heartbeat: dump a summary of how many bytes of which purpose we've
+ * downloaded, when bootstrapping and when not bootstrapping.
+ **/
+void
+dirclient_dump_total_dls(void)
+{
+  const or_options_t *options = get_options();
+  for (int bootstrapped = 0; bootstrapped < 2; ++bootstrapped) {
+    bool first_time = true;
+    for (int i=0; i < DIR_PURPOSE_MAX_; ++i) {
+      uint64_t n = total_dl[i][0];
+      if (n == 0)
+        continue;
+      if (options->SafeLogging_ != SAFELOG_SCRUB_NONE &&
+          purpose_needs_anonymity(i, ROUTER_PURPOSE_GENERAL, NULL))
+        continue;
+      if (first_time) {
+        log_notice(LD_NET,
+                   "While %sbootstrapping, fetched this many bytes: ",
+                   bootstrapped?"not ":"");
+        first_time = false;
+      }
+      log_notice(LD_NET, "    %"PRIu64" (%s)",
+                 n, dir_conn_purpose_to_string(i));
+    }
+  }
+}
+
 /** We are a client, and we've finished reading the server's
  * response. Parse it and act appropriately.
  *
@@ -2005,6 +2034,16 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                             conn->requested_resource);
 
   received_bytes = connection_get_inbuf_len(TO_CONN(conn));
+
+  log_debug(LD_DIR, "Downloaded %"TOR_PRIuSZ" bytes on connection of purpose "
+             "%s; bootstrap %d%%",
+             received_bytes,
+             dir_conn_purpose_to_string(conn->base_.purpose),
+             control_get_bootstrap_percent());
+  {
+    bool bootstrapped = control_get_bootstrap_percent() == 100;
+    total_dl[conn->base_.purpose][bootstrapped] += received_bytes;
+  }
 
   switch (connection_fetch_from_buf_http(TO_CONN(conn),
                               &headers, MAX_HEADERS_SIZE,
@@ -2373,7 +2412,7 @@ handle_response_fetch_status_vote(dir_connection_t *conn,
              conn->base_.port, conn->requested_resource);
     return -1;
   }
-  dirvote_add_vote(body, &msg, &st);
+  dirvote_add_vote(body, 0, &msg, &st);
   if (st > 299) {
     log_warn(LD_DIR, "Error adding retrieved vote: %s", msg);
   } else {
@@ -3093,7 +3132,7 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
 {
   char digest[DIGEST_LEN];
   time_t now = time(NULL);
-  int server = directory_fetches_from_authorities(get_options());
+  int server = dirclient_fetches_from_authorities(get_options());
   if (!was_descriptor_digests) {
     if (router_purpose == ROUTER_PURPOSE_BRIDGE) {
       tor_assert(!was_extrainfo);
@@ -3138,7 +3177,7 @@ dir_microdesc_download_failed(smartlist_t *failed,
   routerstatus_t *rs;
   download_status_t *dls;
   time_t now = time(NULL);
-  int server = directory_fetches_from_authorities(get_options());
+  int server = dirclient_fetches_from_authorities(get_options());
 
   if (! consensus)
     return;

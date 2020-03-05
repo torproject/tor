@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -32,7 +32,7 @@
 #include "app/config/statefile.h"
 #include "core/or/circuitlist.h"
 #include "feature/dirauth/shared_random.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/networkstatus_st.h"
@@ -53,14 +53,14 @@ test_validate_address(void *arg)
   setup_full_capture_of_logs(LOG_WARN);
   ret = hs_address_is_valid("blah");
   tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg_containing("has an invalid length");
+  expect_log_msg_containing("Invalid length");
   teardown_capture_of_logs();
 
   setup_full_capture_of_logs(LOG_WARN);
   ret = hs_address_is_valid(
            "p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnadb");
   tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg_containing("has an invalid length");
+  expect_log_msg_containing("Invalid length");
   teardown_capture_of_logs();
 
   /* Invalid checksum (taken from prop224) */
@@ -83,7 +83,7 @@ test_validate_address(void *arg)
   ret = hs_address_is_valid(
            "????????????????????????????????????????????????????????");
   tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg_containing("can't be decoded");
+  expect_log_msg_containing("Unable to base32 decode");
   teardown_capture_of_logs();
 
   /* Valid address. */
@@ -853,7 +853,7 @@ test_time_between_tp_and_srv(void *arg)
   tt_int_op(ret, OP_EQ, 0);
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 01:00:00 UTC", &ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  voting_schedule_recalculate_timing(get_options(), ns.valid_after);
+  dirauth_sched_recalculate_timing(get_options(), ns.valid_after);
   ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 0);
 
@@ -861,7 +861,7 @@ test_time_between_tp_and_srv(void *arg)
   tt_int_op(ret, OP_EQ, 0);
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 12:00:00 UTC", &ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  voting_schedule_recalculate_timing(get_options(), ns.valid_after);
+  dirauth_sched_recalculate_timing(get_options(), ns.valid_after);
   ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 0);
 
@@ -869,7 +869,7 @@ test_time_between_tp_and_srv(void *arg)
   tt_int_op(ret, OP_EQ, 0);
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC", &ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  voting_schedule_recalculate_timing(get_options(), ns.valid_after);
+  dirauth_sched_recalculate_timing(get_options(), ns.valid_after);
   ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 1);
 
@@ -877,7 +877,7 @@ test_time_between_tp_and_srv(void *arg)
   tt_int_op(ret, OP_EQ, 0);
   ret = parse_rfc1123_time("Sat, 27 Oct 1985 00:00:00 UTC", &ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  voting_schedule_recalculate_timing(get_options(), ns.valid_after);
+  dirauth_sched_recalculate_timing(get_options(), ns.valid_after);
   ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 1);
 
@@ -885,7 +885,7 @@ test_time_between_tp_and_srv(void *arg)
   tt_int_op(ret, OP_EQ, 0);
   ret = parse_rfc1123_time("Sat, 27 Oct 1985 01:00:00 UTC", &ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  voting_schedule_recalculate_timing(get_options(), ns.valid_after);
+  dirauth_sched_recalculate_timing(get_options(), ns.valid_after);
   ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 0);
 
@@ -1372,7 +1372,7 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
                       &mock_service_ns->valid_until);
   set_consensus_times(cfg->service_valid_until,
                       &mock_service_ns->fresh_until);
-  voting_schedule_recalculate_timing(get_options(),
+  dirauth_sched_recalculate_timing(get_options(),
                                      mock_service_ns->valid_after);
   /* Check that service is in the right time period point */
   tt_int_op(hs_in_period_between_tp_and_srv(mock_service_ns, 0), OP_EQ,
@@ -1385,7 +1385,7 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
                       &mock_client_ns->valid_until);
   set_consensus_times(cfg->client_valid_until,
                       &mock_client_ns->fresh_until);
-  voting_schedule_recalculate_timing(get_options(),
+  dirauth_sched_recalculate_timing(get_options(),
                                      mock_client_ns->valid_after);
   /* Check that client is in the right time period point */
   tt_int_op(hs_in_period_between_tp_and_srv(mock_client_ns, 0), OP_EQ,
@@ -1608,7 +1608,7 @@ helper_set_consensus_and_system_time(networkstatus_t *ns, int position)
   } else {
     tt_assert(0);
   }
-  voting_schedule_recalculate_timing(get_options(), ns->valid_after);
+  dirauth_sched_recalculate_timing(get_options(), ns->valid_after);
 
   /* Set system time: pretend to be just 2 minutes before consensus expiry */
   real_time = ns->valid_until - 120;

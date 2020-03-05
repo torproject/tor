@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -78,6 +78,7 @@ DUMMY_TYPECHECK_INSTANCE(or_state_t);
   VAR(#member, conftype, member, initvalue)
 
 /** Array of "state" variables saved to the ~/.tor/state file. */
+// clang-format off
 static const config_var_t state_vars_[] = {
   /* Remember to document these in state-contents.txt ! */
 
@@ -134,6 +135,7 @@ static const config_var_t state_vars_[] = {
 
   END_OF_CONFIG_VARS
 };
+// clang-format on
 
 #undef VAR
 #undef V

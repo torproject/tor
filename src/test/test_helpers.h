@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #ifndef TOR_TEST_HELPERS_H
@@ -26,6 +26,9 @@ char *buf_get_contents(buf_t *buf, size_t *sz_out);
 int mock_tor_addr_lookup__fail_on_bad_addrs(const char *name,
                                             uint16_t family, tor_addr_t *out);
 
+void mock_connection_or_change_state(or_connection_t *conn, uint8_t state);
+
+or_connection_t *test_conn_get_proxy_or_connection(unsigned int proxy_type);
 connection_t *test_conn_get_connection(uint8_t state,
                                        uint8_t type, uint8_t purpose);
 or_options_t *helper_parse_options(const char *conf);

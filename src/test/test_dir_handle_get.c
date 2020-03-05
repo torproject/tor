@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #define RENDCOMMON_PRIVATE
@@ -38,7 +38,7 @@
 #include "feature/dircache/dirserv.h"
 #include "feature/dirauth/dirvote.h"
 #include "test/log_test_helpers.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "feature/dircommon/dir_connection_st.h"
 #include "feature/dirclient/dir_server_st.h"
@@ -55,16 +55,14 @@
 #endif /* defined(_WIN32) */
 
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
-DISABLE_GCC_WARNING(overlength-strings)
+DISABLE_GCC_WARNING("-Woverlength-strings")
 /* We allow huge string constants in the unit tests, but not in the code
  * at large. */
 #endif
 #include "vote_descriptors.inc"
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
-ENABLE_GCC_WARNING(overlength-strings)
+ENABLE_GCC_WARNING("-Woverlength-strings")
 #endif
-
-#define NS_MODULE dir_handle_get
 
 #define NOT_FOUND "HTTP/1.0 404 Not found\r\n\r\n"
 #define BAD_REQUEST "HTTP/1.0 400 Bad request\r\n\r\n"
@@ -258,7 +256,7 @@ test_dir_handle_get_rendezvous2_not_found_if_not_encrypted(void *data)
   conn = new_dir_conn();
 
   // connection is not encrypted
-  tt_assert(!connection_dir_is_encrypted(conn))
+  tt_assert(!connection_dir_is_encrypted(conn));
 
   tt_int_op(directory_handle_command_get(conn, RENDEZVOUS2_GET(), NULL, 0),
             OP_EQ, 0);
@@ -364,12 +362,13 @@ test_dir_handle_get_rendezvous2_not_found(void *data)
     rend_cache_free_all();
 }
 
-NS_DECL(const routerinfo_t *, router_get_my_routerinfo, (void));
+static const routerinfo_t * dhg_tests_router_get_my_routerinfo(void);
+ATTR_UNUSED static int dhg_tests_router_get_my_routerinfo_called = 0;
 
 static routerinfo_t *mock_routerinfo;
 
 static const routerinfo_t *
-NS(router_get_my_routerinfo)(void)
+dhg_tests_router_get_my_routerinfo(void)
 {
   if (!mock_routerinfo) {
     mock_routerinfo = tor_malloc_zero(sizeof(routerinfo_t));
@@ -394,7 +393,8 @@ test_dir_handle_get_rendezvous2_on_encrypted_conn_success(void *data)
   (void) data;
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
-  NS_MOCK(router_get_my_routerinfo);
+  MOCK(router_get_my_routerinfo,
+       dhg_tests_router_get_my_routerinfo);
 
   rend_cache_init();
 
@@ -437,7 +437,7 @@ test_dir_handle_get_rendezvous2_on_encrypted_conn_success(void *data)
 
   done:
     UNMOCK(connection_write_to_buf_impl_);
-    NS_UNMOCK(router_get_my_routerinfo);
+    UNMOCK(router_get_my_routerinfo);
 
     connection_free_minimal(TO_CONN(conn));
     tor_free(header);
@@ -769,7 +769,8 @@ test_dir_handle_get_server_descriptors_all(void* data)
   helper_setup_fake_routerlist();
 
   //TODO: change to router_get_my_extrainfo when testing "extra" path
-  NS_MOCK(router_get_my_routerinfo);
+  MOCK(router_get_my_routerinfo,
+       dhg_tests_router_get_my_routerinfo);
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
   // We are one of the routers
@@ -811,7 +812,7 @@ test_dir_handle_get_server_descriptors_all(void* data)
   tt_ptr_op(conn->spool, OP_EQ, NULL);
 
   done:
-    NS_UNMOCK(router_get_my_routerinfo);
+    UNMOCK(router_get_my_routerinfo);
     UNMOCK(connection_write_to_buf_impl_);
     connection_free_minimal(TO_CONN(conn));
     tor_free(header);
@@ -868,7 +869,8 @@ test_dir_handle_get_server_descriptors_authority(void* data)
   crypto_pk_t *identity_pkey = pk_generate(0);
   (void) data;
 
-  NS_MOCK(router_get_my_routerinfo);
+  MOCK(router_get_my_routerinfo,
+       dhg_tests_router_get_my_routerinfo);
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
   /* init mock */
@@ -913,7 +915,7 @@ test_dir_handle_get_server_descriptors_authority(void* data)
   tt_ptr_op(conn->spool, OP_EQ, NULL);
 
   done:
-    NS_UNMOCK(router_get_my_routerinfo);
+    UNMOCK(router_get_my_routerinfo);
     UNMOCK(connection_write_to_buf_impl_);
     tor_free(mock_routerinfo->cache_info.signed_descriptor_body);
     tor_free(mock_routerinfo);
@@ -933,7 +935,8 @@ test_dir_handle_get_server_descriptors_fp(void* data)
   crypto_pk_t *identity_pkey = pk_generate(0);
   (void) data;
 
-  NS_MOCK(router_get_my_routerinfo);
+  MOCK(router_get_my_routerinfo,
+       dhg_tests_router_get_my_routerinfo);
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
   /* init mock */
@@ -985,7 +988,7 @@ test_dir_handle_get_server_descriptors_fp(void* data)
   tt_ptr_op(conn->spool, OP_EQ, NULL);
 
   done:
-    NS_UNMOCK(router_get_my_routerinfo);
+    UNMOCK(router_get_my_routerinfo);
     UNMOCK(connection_write_to_buf_impl_);
     tor_free(mock_routerinfo->cache_info.signed_descriptor_body);
     tor_free(mock_routerinfo);
@@ -1789,13 +1792,14 @@ test_dir_handle_get_status_vote_current_consensus_too_old(void *data)
     or_options_free(mock_options); mock_options = NULL;
 }
 
-NS_DECL(int, geoip_get_country_by_addr, (const tor_addr_t *addr));
+static int dhg_tests_geoip_get_country_by_addr(const tor_addr_t *addr);
+ATTR_UNUSED static int dhg_tests_geoip_get_country_by_addr_called = 0;
 
 int
-NS(geoip_get_country_by_addr)(const tor_addr_t *addr)
+dhg_tests_geoip_get_country_by_addr(const tor_addr_t *addr)
 {
   (void)addr;
-  CALLED(geoip_get_country_by_addr)++;
+  dhg_tests_geoip_get_country_by_addr_called++;
   return 1;
 }
 
@@ -1859,7 +1863,8 @@ test_dir_handle_get_status_vote_current_consensus_ns(void* data)
   dirserv_free_all();
   clear_geoip_db();
 
-  NS_MOCK(geoip_get_country_by_addr);
+  MOCK(geoip_get_country_by_addr,
+       dhg_tests_geoip_get_country_by_addr);
   MOCK(get_options, mock_get_options);
 
   init_mock_options();
@@ -1896,7 +1901,7 @@ test_dir_handle_get_status_vote_current_consensus_ns(void* data)
   tt_str_op("ab=8", OP_EQ, hist);
 
   done:
-    NS_UNMOCK(geoip_get_country_by_addr);
+    UNMOCK(geoip_get_country_by_addr);
     UNMOCK(get_options);
     tor_free(header);
     tor_free(comp_body);
@@ -2075,12 +2080,12 @@ test_dir_handle_get_status_vote_d(void* data)
   mock_options->TestingV3AuthInitialDistDelay = 1;
 
   time_t now = 1441223455 -1;
-  voting_schedule_recalculate_timing(mock_options, now);
+  dirauth_sched_recalculate_timing(mock_options, now);
 
   const char *msg_out = NULL;
   int status_out = 0;
-  struct pending_vote_t *pv = dirvote_add_vote(VOTE_BODY_V3, &msg_out,
-                                               &status_out);
+  struct pending_vote_t *pv = dirvote_add_vote(VOTE_BODY_V3, 0,
+                                               &msg_out, &status_out);
   tt_assert(pv);
 
   status_vote_current_d_test(&header, &body, &body_used);
@@ -2248,11 +2253,11 @@ test_dir_handle_get_status_vote_next_bandwidth_not_found(void* data)
     tor_free(header);
 }
 
-NS_DECL(const char*,
-dirvote_get_pending_consensus, (consensus_flavor_t flav));
+static const char* dhg_tests_dirvote_get_pending_consensus(
+                                           consensus_flavor_t flav);
 
 const char*
-NS(dirvote_get_pending_consensus)(consensus_flavor_t flav)
+dhg_tests_dirvote_get_pending_consensus(consensus_flavor_t flav)
 {
   (void)flav;
   return "pending consensus";
@@ -2265,7 +2270,8 @@ test_dir_handle_get_status_vote_next_consensus(void* data)
   size_t body_used = 0;
   (void) data;
 
-  NS_MOCK(dirvote_get_pending_consensus);
+  MOCK(dirvote_get_pending_consensus,
+       dhg_tests_dirvote_get_pending_consensus);
 
   status_vote_next_consensus_test(&header, &body, &body_used);
   tt_assert(header);
@@ -2278,7 +2284,7 @@ test_dir_handle_get_status_vote_next_consensus(void* data)
   tt_str_op("pending consensus", OP_EQ, body);
 
   done:
-    NS_UNMOCK(dirvote_get_pending_consensus);
+    UNMOCK(dirvote_get_pending_consensus);
     tor_free(header);
     tor_free(body);
 }
@@ -2291,7 +2297,8 @@ test_dir_handle_get_status_vote_next_consensus_busy(void* data)
   (void) data;
 
   MOCK(get_options, mock_get_options);
-  NS_MOCK(dirvote_get_pending_consensus);
+  MOCK(dirvote_get_pending_consensus,
+       dhg_tests_dirvote_get_pending_consensus);
 
   //Make it busy
   init_mock_options();
@@ -2303,7 +2310,7 @@ test_dir_handle_get_status_vote_next_consensus_busy(void* data)
   tt_str_op(SERVER_BUSY, OP_EQ, header);
 
   done:
-    NS_UNMOCK(dirvote_get_pending_consensus);
+    UNMOCK(dirvote_get_pending_consensus);
     UNMOCK(get_options);
     tor_free(header);
     tor_free(body);
@@ -2347,11 +2354,10 @@ test_dir_handle_get_status_vote_next_consensus_signatures_not_found(void* data)
     tor_free(body);
 }
 
-NS_DECL(const char*,
-dirvote_get_pending_detached_signatures, (void));
+static const char* dhg_tests_dirvote_get_pending_detached_signatures(void);
 
 const char*
-NS(dirvote_get_pending_detached_signatures)(void)
+dhg_tests_dirvote_get_pending_detached_signatures(void)
 {
   return "pending detached sigs";
 }
@@ -2363,7 +2369,8 @@ test_dir_handle_get_status_vote_next_consensus_signatures(void* data)
   size_t body_used = 0;
   (void) data;
 
-  NS_MOCK(dirvote_get_pending_detached_signatures);
+  MOCK(dirvote_get_pending_detached_signatures,
+       dhg_tests_dirvote_get_pending_detached_signatures);
 
   status_vote_next_consensus_signatures_test(&header, &body, &body_used);
   tt_assert(header);
@@ -2376,7 +2383,7 @@ test_dir_handle_get_status_vote_next_consensus_signatures(void* data)
   tt_str_op("pending detached sigs", OP_EQ, body);
 
   done:
-    NS_UNMOCK(dirvote_get_pending_detached_signatures);
+    UNMOCK(dirvote_get_pending_detached_signatures);
     tor_free(header);
     tor_free(body);
 }
@@ -2388,7 +2395,8 @@ test_dir_handle_get_status_vote_next_consensus_signatures_busy(void* data)
   size_t body_used;
   (void) data;
 
-  NS_MOCK(dirvote_get_pending_detached_signatures);
+  MOCK(dirvote_get_pending_detached_signatures,
+       dhg_tests_dirvote_get_pending_detached_signatures);
   MOCK(get_options, mock_get_options);
 
   //Make it busy
@@ -2402,7 +2410,7 @@ test_dir_handle_get_status_vote_next_consensus_signatures_busy(void* data)
 
   done:
     UNMOCK(get_options);
-    NS_UNMOCK(dirvote_get_pending_detached_signatures);
+    UNMOCK(dirvote_get_pending_detached_signatures);
     tor_free(header);
     tor_free(body);
     or_options_free(mock_options); mock_options = NULL;
@@ -2449,10 +2457,10 @@ test_dir_handle_get_status_vote_next_authority(void* data)
   mock_options->TestingV3AuthInitialDistDelay = 1;
 
   time_t now = 1441223455 -1;
-  voting_schedule_recalculate_timing(mock_options, now);
+  dirauth_sched_recalculate_timing(mock_options, now);
 
-  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, &msg_out,
-                                                 &status_out);
+  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, 0,
+                                                 &msg_out, &status_out);
   tt_assert(vote);
 
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
@@ -2609,13 +2617,190 @@ test_dir_handle_get_status_vote_current_authority(void* data)
   mock_options->TestingV3AuthInitialDistDelay = 1;
 
   time_t now = 1441223455;
-  voting_schedule_recalculate_timing(mock_options, now-1);
+  dirauth_sched_recalculate_timing(mock_options, now-1);
 
-  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, &msg_out,
-                                                 &status_out);
+  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, 0,
+                                                 &msg_out, &status_out);
   tt_assert(vote);
 
   // move the pending vote to previous vote
+  dirvote_act(mock_options, now+1);
+
+  MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
+  MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
+
+  conn = new_dir_conn();
+  tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
+    GET("/tor/status-vote/current/authority"), NULL, 0));
+
+  fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
+                      &body, &body_used, strlen(VOTE_BODY_V3)+1, 0);
+
+  tt_assert(header);
+  tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
+  tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
+  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
+  tt_assert(strstr(header, "Content-Length: 4135\r\n"));
+
+  tt_str_op(VOTE_BODY_V3, OP_EQ, body);
+
+  done:
+    UNMOCK(connection_write_to_buf_impl_);
+    UNMOCK(get_my_v3_authority_cert);
+    connection_free_minimal(TO_CONN(conn));
+    tor_free(header);
+    tor_free(body);
+    authority_cert_free(mock_cert); mock_cert = NULL;
+    or_options_free(mock_options); mock_options = NULL;
+
+    clear_dir_servers();
+    routerlist_free_all();
+    dirvote_free_all();
+}
+
+/* Test that a late vote is rejected, but an on-time vote is accepted. */
+static void
+test_dir_handle_get_status_vote_too_late(void* data)
+{
+  dir_connection_t *conn = NULL;
+  char *header = NULL, *body = NULL;
+  const char *msg_out = NULL;
+  int status_out = 0;
+  size_t body_used = 0;
+  const char digest[DIGEST_LEN] = "";
+
+  dir_server_t *ds = NULL;
+  const char* mode = (const char *)data;
+
+  clear_dir_servers();
+  routerlist_free_all();
+  dirvote_free_all();
+
+  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE,
+                                               strlen(TEST_CERTIFICATE),
+                                               NULL);
+
+  /* create a trusted ds */
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, NULL, digest,
+                              NULL, V3_DIRINFO, 1.0);
+  tt_assert(ds);
+  dir_server_add(ds);
+
+  /* ds v3_identity_digest is the certificate's identity_key */
+  base16_decode(ds->v3_identity_digest, DIGEST_LEN,
+                TEST_CERT_IDENT_KEY, HEX_DIGEST_LEN);
+
+  tt_int_op(0, OP_EQ, trusted_dirs_load_certs_from_string(TEST_CERTIFICATE,
+    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1, NULL));
+
+  init_mock_options();
+  mock_options->AuthoritativeDir = 1;
+  mock_options->V3AuthoritativeDir = 1;
+
+  int base_delay = 0;
+  int vote_interval = 0;
+  int start_offset = 0;
+
+  tt_assert(mode);
+  /* Set the required timings, see below for details */
+  if (strcmp(mode, "min") == 0) {
+    /* The minimum valid test network timing */
+    base_delay = 2;
+    vote_interval = 10;
+    start_offset = vote_interval - 5;
+  } else if (strcmp(mode, "chutney") == 0) {
+    /* The test network timing used by chutney */
+    base_delay = 4;
+    vote_interval = 20;
+    start_offset = vote_interval - 5;
+  } else if (strcmp(mode, "half-public") == 0) {
+    /* The short consensus failure timing used in the public network */
+    base_delay = 5*60;
+    vote_interval = 30*60;
+    start_offset = vote_interval - 9*60 - 5;
+  } else if (strcmp(mode, "public") == 0) {
+    /* The standard timing used in the public network */
+    base_delay = 5*60;
+    vote_interval = 60*60;
+    start_offset = vote_interval - 9*60 - 5;
+  }
+
+  tt_assert(base_delay > 0);
+  tt_assert(vote_interval > 0);
+  tt_assert(start_offset > 0);
+
+  /* Skew the time to fit the fixed time in the vote */
+  mock_options->TestingV3AuthVotingStartOffset = start_offset;
+  /* Calculate the rest of the timings */
+  mock_options->TestingV3AuthInitialVotingInterval = vote_interval;
+  mock_options->TestingV3AuthInitialVoteDelay = base_delay;
+  mock_options->TestingV3AuthInitialDistDelay = base_delay;
+
+  time_t now = 1441223455;
+  dirauth_sched_recalculate_timing(mock_options, now-1);
+  const time_t voting_starts = voting_schedule.voting_starts;
+  const time_t fetch_missing = voting_schedule.fetch_missing_votes;
+
+  struct pending_vote_t *vote = NULL;
+
+  /* Next voting interval */
+  vote = dirvote_add_vote(VOTE_BODY_V3,
+                          fetch_missing + vote_interval,
+                          &msg_out, &status_out);
+  tt_assert(!vote);
+  tt_int_op(status_out, OP_EQ, 400);
+  tt_str_op(msg_out, OP_EQ,
+            "Posted vote received too late, would be dangerous to count it");
+
+  /* Just after fetch missing */
+  vote = dirvote_add_vote(VOTE_BODY_V3,
+                          fetch_missing + 1,
+                          &msg_out, &status_out);
+  tt_assert(!vote);
+  tt_int_op(status_out, OP_EQ, 400);
+  tt_str_op(msg_out, OP_EQ,
+            "Posted vote received too late, would be dangerous to count it");
+
+  /* On fetch missing */
+  vote = dirvote_add_vote(VOTE_BODY_V3,
+                          fetch_missing,
+                          &msg_out, &status_out);
+  tt_assert(vote);
+
+  /* Move the pending vote to previous vote */
+  dirvote_act(mock_options, now+1);
+  /* And reset the timing */
+  dirauth_sched_recalculate_timing(mock_options, now-1);
+
+  /* Between voting starts and fetch missing */
+  vote = dirvote_add_vote(VOTE_BODY_V3,
+                          voting_starts + 1,
+                          &msg_out, &status_out);
+  tt_assert(vote);
+
+  /* Move the pending vote to previous vote */
+  dirvote_act(mock_options, now+1);
+  /* And reset the timing */
+  dirauth_sched_recalculate_timing(mock_options, now-1);
+
+  /* On voting starts */
+  vote = dirvote_add_vote(VOTE_BODY_V3,
+                          voting_starts,
+                          &msg_out, &status_out);
+  tt_assert(vote);
+
+  /* Move the pending vote to previous vote */
+  dirvote_act(mock_options, now+1);
+  /* And reset the timing */
+  dirauth_sched_recalculate_timing(mock_options, now-1);
+
+  /* Just before voting starts */
+  vote = dirvote_add_vote(VOTE_BODY_V3,
+                          voting_starts - 1,
+                          &msg_out, &status_out);
+  tt_assert(vote);
+
+  /* Move the pending vote to previous vote */
   dirvote_act(mock_options, now+1);
 
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
@@ -2700,6 +2885,16 @@ test_dir_handle_get_parse_accept_encoding(void *arg)
 #define DIR_HANDLE_CMD(name,flags) \
   { #name, test_dir_handle_get_##name, (flags), NULL, NULL }
 
+#ifdef COCCI
+/* Coccinelle doesn't like the stringification in this macro */
+#define DIR_HANDLE_CMD_ARG(name,flags,arg) \
+  DIR_HANDLE_CMD(name,flags)
+#else
+#define DIR_HANDLE_CMD_ARG(name,flags,arg) \
+  { #name "/" arg, test_dir_handle_get_##name, (flags), \
+    &passthrough_setup, (void *)(arg) }
+#endif /* defined(COCCI) */
+
 struct testcase_t dir_handle_get_tests[] = {
   DIR_HANDLE_CMD(not_found, 0),
   DIR_HANDLE_CMD(bad_request, 0),
@@ -2739,6 +2934,10 @@ struct testcase_t dir_handle_get_tests[] = {
   DIR_HANDLE_CMD(status_vote_next_not_found, 0),
   DIR_HANDLE_CMD(status_vote_current_authority_not_found, 0),
   DIR_HANDLE_CMD(status_vote_current_authority, 0),
+  DIR_HANDLE_CMD_ARG(status_vote_too_late, 0, "min"),
+  DIR_HANDLE_CMD_ARG(status_vote_too_late, 0, "chutney"),
+  DIR_HANDLE_CMD_ARG(status_vote_too_late, 0, "half-public"),
+  DIR_HANDLE_CMD_ARG(status_vote_too_late, 0, "public"),
   DIR_HANDLE_CMD(status_vote_next_authority_not_found, 0),
   DIR_HANDLE_CMD(status_vote_next_authority, 0),
   DIR_HANDLE_CMD(status_vote_next_bandwidth_not_found, 0),

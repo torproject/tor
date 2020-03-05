@@ -1,7 +1,7 @@
 /* Copyright (c) 2001, Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -645,7 +645,7 @@ crypto_pk_asn1_decode(const char *str, size_t len)
   return result;
 }
 
-DISABLE_GCC_WARNING(unused-parameter)
+DISABLE_GCC_WARNING("-Wunused-parameter")
 
 /** Given a crypto_pk_t <b>pk</b>, allocate a new buffer containing the Base64
  * encoding of the DER representation of the private key into the

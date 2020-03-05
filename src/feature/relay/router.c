@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #define ROUTER_PRIVATE
@@ -1074,8 +1074,10 @@ init_keys(void)
   if (authdir_mode_v3(options)) {
     const char *m = NULL;
     routerinfo_t *ri;
-    /* We need to add our own fingerprint so it gets recognized. */
-    if (dirserv_add_own_fingerprint(get_server_identity_key())) {
+    /* We need to add our own fingerprint and ed25519 key so it gets
+     * recognized. */
+    if (dirserv_add_own_fingerprint(get_server_identity_key(),
+                                    get_master_identity_key())) {
       log_err(LD_GENERAL,"Error adding own fingerprint to set of relays");
       return -1;
     }
@@ -1396,7 +1398,7 @@ consider_publishable_server(int force)
 }
 
 /** Return the port of the first active listener of type
- *  <b>listener_type</b>. */
+ *  <b>listener_type</b>. Returns 0 if no port is found. */
 /** XXX not a very good interface. it's not reliable when there are
     multiple listeners. */
 uint16_t
@@ -1418,8 +1420,7 @@ router_get_active_listener_port_by_type_af(int listener_type,
 
 /** Return the port that we should advertise as our ORPort; this is either
  * the one configured in the ORPort option, or the one we actually bound to
- * if ORPort is "auto".
- */
+ * if ORPort is "auto". Returns 0 if no port is found. */
 uint16_t
 router_get_advertised_or_port(const or_options_t *options)
 {
@@ -2907,15 +2908,20 @@ router_dump_router_to_string(routerinfo_t *router,
   }
 
   if (options->BridgeRelay) {
-    const char *bd;
+    char *bd = NULL;
+
     if (options->BridgeDistribution && strlen(options->BridgeDistribution)) {
-      bd = options->BridgeDistribution;
+      bd = tor_strdup(options->BridgeDistribution);
     } else {
-      bd = "any";
+      bd = tor_strdup("any");
     }
-    if (strchr(bd, '\n') || strchr(bd, '\r'))
-      bd = escaped(bd);
+
+    // Make sure our value is lowercased in the descriptor instead of just
+    // forwarding what the user wrote in their torrc directly.
+    tor_strlower(bd);
+
     smartlist_add_asprintf(chunks, "bridge-distribution-request %s\n", bd);
+    tor_free(bd);
   }
 
   if (router->onion_curve25519_pkey) {

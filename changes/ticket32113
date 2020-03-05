@@ -1,3 +1,0 @@
-  o Minor features (doxygen):
-    - "make doxygen" now works with out-of-tree builds. Closes ticket
-      32113.

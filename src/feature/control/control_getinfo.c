@@ -1,5 +1,5 @@
 /* Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -34,6 +34,7 @@
 #include "feature/dircache/dirserv.h"
 #include "feature/dirclient/dirclient.h"
 #include "feature/dirclient/dlstatus.h"
+#include "feature/dircommon/directory.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_cache.h"
 #include "feature/hs_common/shared_random_client.h"
@@ -50,6 +51,7 @@
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
 #include "lib/version/torversion.h"
+#include "lib/encoding/kvline.h"
 
 #include "core/or/entry_connection_st.h"
 #include "core/or/or_connection_st.h"
@@ -360,6 +362,86 @@ getinfo_helper_current_consensus(consensus_flavor_t flavor,
   return 0;
 }
 
+/** Helper for getinfo_helper_dir.
+ *
+ * Add a signed_descriptor_t to <b>descs_out</b> for each router matching
+ * <b>key</b>.  The key should be either
+ *   - "/tor/server/authority" for our own routerinfo;
+ *   - "/tor/server/all" for all the routerinfos we have, concatenated;
+ *   - "/tor/server/fp/FP" where FP is a plus-separated sequence of
+ *     hex identity digests; or
+ *   - "/tor/server/d/D" where D is a plus-separated sequence
+ *     of server descriptor digests, in hex.
+ *
+ * Return 0 if we found some matching descriptors, or -1 if we do not
+ * have any descriptors, no matching descriptors, or if we did not
+ * recognize the key (URL).
+ * If -1 is returned *<b>msg</b> will be set to an appropriate error
+ * message.
+ */
+static int
+controller_get_routerdescs(smartlist_t *descs_out, const char *key,
+                        const char **msg)
+{
+  *msg = NULL;
+
+  if (!strcmp(key, "/tor/server/all")) {
+    routerlist_t *rl = router_get_routerlist();
+    SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
+                      smartlist_add(descs_out, &(r->cache_info)));
+  } else if (!strcmp(key, "/tor/server/authority")) {
+    const routerinfo_t *ri = router_get_my_routerinfo();
+    if (ri)
+      smartlist_add(descs_out, (void*) &(ri->cache_info));
+  } else if (!strcmpstart(key, "/tor/server/d/")) {
+    smartlist_t *digests = smartlist_new();
+    key += strlen("/tor/server/d/");
+    dir_split_resource_into_fingerprints(key, digests, NULL,
+                                         DSR_HEX|DSR_SORT_UNIQ);
+    SMARTLIST_FOREACH(digests, const char *, d,
+       {
+         signed_descriptor_t *sd = router_get_by_descriptor_digest(d);
+         if (sd)
+           smartlist_add(descs_out,sd);
+       });
+    SMARTLIST_FOREACH(digests, char *, d, tor_free(d));
+    smartlist_free(digests);
+  } else if (!strcmpstart(key, "/tor/server/fp/")) {
+    smartlist_t *digests = smartlist_new();
+    time_t cutoff = time(NULL) - ROUTER_MAX_AGE_TO_PUBLISH;
+    key += strlen("/tor/server/fp/");
+    dir_split_resource_into_fingerprints(key, digests, NULL,
+                                         DSR_HEX|DSR_SORT_UNIQ);
+    SMARTLIST_FOREACH_BEGIN(digests, const char *, d) {
+         if (router_digest_is_me(d)) {
+           /* calling router_get_my_routerinfo() to make sure it exists */
+           const routerinfo_t *ri = router_get_my_routerinfo();
+           if (ri)
+             smartlist_add(descs_out, (void*) &(ri->cache_info));
+         } else {
+           const routerinfo_t *ri = router_get_by_id_digest(d);
+           /* Don't actually serve a descriptor that everyone will think is
+            * expired.  This is an (ugly) workaround to keep buggy 0.1.1.10
+            * Tors from downloading descriptors that they will throw away.
+            */
+           if (ri && ri->cache_info.published_on > cutoff)
+             smartlist_add(descs_out, (void*) &(ri->cache_info));
+         }
+    } SMARTLIST_FOREACH_END(d);
+    SMARTLIST_FOREACH(digests, char *, d, tor_free(d));
+    smartlist_free(digests);
+  } else {
+    *msg = "Key not recognized";
+    return -1;
+  }
+
+  if (!smartlist_len(descs_out)) {
+    *msg = "Servers unavailable";
+    return -1;
+  }
+  return 0;
+}
+
 /** Implementation helper for GETINFO: knows the answers for questions about
  * directory information. */
 STATIC int
@@ -589,7 +671,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     int res;
     char *cp;
     tor_asprintf(&url, "/tor/%s", question+4);
-    res = dirserv_get_routerdescs(descs, url, &msg);
+    res = controller_get_routerdescs(descs, url, &msg);
     if (res) {
       log_warn(LD_CONTROL, "getinfo '%s': %s", question, msg);
       smartlist_free(descs);
@@ -1632,7 +1714,6 @@ handle_control_getinfo(control_connection_t *conn,
   smartlist_t *answers = smartlist_new();
   smartlist_t *unrecognized = smartlist_new();
   char *ans = NULL;
-  int i;
 
   SMARTLIST_FOREACH_BEGIN(questions, const char *, q) {
     const char *errmsg = NULL;
@@ -1644,43 +1725,33 @@ handle_control_getinfo(control_connection_t *conn,
       goto done;
     }
     if (!ans) {
-      if (errmsg) /* use provided error message */
-        smartlist_add_strdup(unrecognized, errmsg);
-      else /* use default error message */
-        smartlist_add_asprintf(unrecognized, "Unrecognized key \"%s\"", q);
+      if (errmsg) {
+        /* use provided error message */
+        control_reply_add_str(unrecognized, 552, errmsg);
+      } else {
+        /* use default error message */
+        control_reply_add_printf(unrecognized, 552,
+                                 "Unrecognized key \"%s\"", q);
+      }
     } else {
-      smartlist_add_strdup(answers, q);
-      smartlist_add(answers, ans);
+      control_reply_add_one_kv(answers, 250, KV_RAW, q, ans);
+      tor_free(ans);
     }
   } SMARTLIST_FOREACH_END(q);
 
-  if (smartlist_len(unrecognized)) {
-    /* control-spec section 2.3, mid-reply '-' or end of reply ' ' */
-    for (i=0; i < smartlist_len(unrecognized)-1; ++i)
-      control_write_midreply(conn, 552,
-                             (char *)smartlist_get(unrecognized, i));
+  control_reply_add_done(answers);
 
-    control_write_endreply(conn, 552, (char *)smartlist_get(unrecognized, i));
+  if (smartlist_len(unrecognized)) {
+    control_write_reply_lines(conn, unrecognized);
+    /* If there were any unrecognized queries, don't write real answers */
     goto done;
   }
 
-  for (i = 0; i < smartlist_len(answers); i += 2) {
-    char *k = smartlist_get(answers, i);
-    char *v = smartlist_get(answers, i+1);
-    if (!strchr(v, '\n') && !strchr(v, '\r')) {
-      control_printf_midreply(conn, 250, "%s=%s", k, v);
-    } else {
-      control_printf_datareply(conn, 250, "%s=", k);
-      control_write_data(conn, v);
-    }
-  }
-  send_control_done(conn);
+  control_write_reply_lines(conn, answers);
 
  done:
-  SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
-  smartlist_free(answers);
-  SMARTLIST_FOREACH(unrecognized, char *, cp, tor_free(cp));
-  smartlist_free(unrecognized);
+  control_reply_free(answers);
+  control_reply_free(unrecognized);
 
   return 0;
 }

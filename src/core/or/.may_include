@@ -36,3 +36,5 @@ core/mainloop/*.h
 core/proto/*.h
 core/crypto/*.h
 core/or/*.h
+
+ext/*.h

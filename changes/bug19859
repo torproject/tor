@@ -1,2 +1,0 @@
-  o Minor features (controller):
-    - Add stream isolation data to STREAM event. Closes ticket 19859.

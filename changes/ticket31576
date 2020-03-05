@@ -1,0 +1,3 @@
+  o Removed features:
+    - Stop shipping contrib/dist/rc.subr file, as it is not being used on
+      FreeBSD anymore. Closes issue 31576.

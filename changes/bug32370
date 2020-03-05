@@ -1,3 +1,0 @@
-  o Minor bugfixes (build):
-    - Fix "make autostyle" for out-of-tree builds.
-      Fixes bug 32370; bugfix on 0.4.1.2-alpha.

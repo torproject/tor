@@ -1,3 +1,0 @@
-  o Minor bugfixes (developer tools):
-    - Allow paths starting with ./ in scripts/add_c_file.py. Fixes bug 
-      31336; bugfix on 0.4.1.2-alpha.

@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -432,6 +432,21 @@ warn_if_hs_unreachable(const edge_connection_t *conn, uint8_t reason)
   }
 }
 
+/** Given a TTL (in seconds) from a DNS response or from a relay, determine
+ * what TTL clients and relays should actually use for caching it. */
+uint32_t
+clip_dns_ttl(uint32_t ttl)
+{
+  /* This logic is a defense against "DefectTor" DNS-based traffic
+   * confirmation attacks, as in https://nymity.ch/tor-dns/tor-dns.pdf .
+   * We only give two values: a "low" value and a "high" value.
+   */
+  if (ttl < MIN_DNS_TTL)
+    return MIN_DNS_TTL;
+  else
+    return MAX_DNS_TTL;
+}
+
 /** Send a relay end cell from stream <b>conn</b> down conn's circuit, and
  * remember that we've done so.  If this is not a client connection, set the
  * relay end cell's reason for closing as <b>reason</b>.
@@ -480,7 +495,7 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
       memcpy(payload+1, tor_addr_to_in6_addr8(&conn->base_.addr), 16);
       addrlen = 16;
     }
-    set_uint32(payload+1+addrlen, htonl(dns_clip_ttl(conn->address_ttl)));
+    set_uint32(payload+1+addrlen, htonl(clip_dns_ttl(conn->address_ttl)));
     payload_len += 4+addrlen;
   }
 
@@ -845,7 +860,7 @@ connected_cell_format_payload(uint8_t *payload_out,
     return -1;
   }
 
-  set_uint32(payload_out + connected_payload_len, htonl(dns_clip_ttl(ttl)));
+  set_uint32(payload_out + connected_payload_len, htonl(clip_dns_ttl(ttl)));
   connected_payload_len += 4;
 
   tor_assert(connected_payload_len <= MAX_CONNECTED_CELL_PAYLOAD_LEN);

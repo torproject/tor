@@ -1,9 +1,0 @@
-  o Minor features (developer tools):
-    - Add some scripts in "scripts/coccinelle" to invoke the Coccinelle
-      semantic patching tool with the correct flags.  These flags are fairly
-      easy to forget, and these scripts should help us use Coccinelle more
-      effectively in the future. Closes ticket 31705.
-
-  o Code simplification and refactoring:
-    - Fix some parts of our code that were difficult for Coccinelle to parse.
-      Related to ticket 31705.

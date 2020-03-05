@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -17,6 +17,7 @@
 #include "core/or/channeltls.h"
 #include "core/or/command.h"
 #include "feature/dirauth/authmode.h"
+#include "feature/dirauth/dirauth_sys.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerinfo.h"
@@ -24,6 +25,7 @@
 #include "feature/nodelist/torcert.h"
 #include "feature/stats/rephist.h"
 
+#include "feature/dirauth/dirauth_options_st.h"
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerlist_st.h"
@@ -53,7 +55,7 @@ dirserv_orconn_tls_done(const tor_addr_t *addr,
 
   ri = node->ri;
 
-  if (get_options()->AuthDirTestEd25519LinkKeys &&
+  if (dirauth_get_options()->AuthDirTestEd25519LinkKeys &&
       node_supports_ed25519_link_authentication(node, 1) &&
       ri->cache_info.signing_key_cert) {
     /* We allow the node to have an ed25519 key if we haven't been told one in
@@ -125,7 +127,7 @@ dirserv_should_launch_reachability_test(const routerinfo_t *ri,
 void
 dirserv_single_reachability_test(time_t now, routerinfo_t *router)
 {
-  const or_options_t *options = get_options();
+  const dirauth_options_t *dirauth_options = dirauth_get_options();
   channel_t *chan = NULL;
   const node_t *node = NULL;
   tor_addr_t router_addr;
@@ -136,7 +138,7 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
   node = node_get_by_id(router->cache_info.identity_digest);
   tor_assert(node);
 
-  if (options->AuthDirTestEd25519LinkKeys &&
+  if (dirauth_options->AuthDirTestEd25519LinkKeys &&
       node_supports_ed25519_link_authentication(node, 1) &&
       router->cache_info.signing_key_cert) {
     ed_id_key = &router->cache_info.signing_key_cert->signing_key;
@@ -154,7 +156,7 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
   if (chan) command_setup_channel(chan);
 
   /* Possible IPv6. */
-  if (get_options()->AuthDirHasIPv6Connectivity == 1 &&
+  if (dirauth_get_options()->AuthDirHasIPv6Connectivity == 1 &&
       !tor_addr_is_null(&router->ipv6_addr)) {
     char addrstr[TOR_ADDR_BUF_LEN];
     log_debug(LD_OR, "Testing reachability of %s at %s:%u.",

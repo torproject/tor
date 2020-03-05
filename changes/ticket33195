@@ -1,0 +1,4 @@
+  o Testing:
+    - Stop allowing the Chutney IPv6 Travis job to fail. This job was
+      previously configured to fast_finish (which requires allow_failure), to
+      speed up the build. Closes ticket 33195.

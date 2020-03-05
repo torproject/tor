@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -35,6 +35,8 @@ node_t *nodelist_add_microdesc(microdesc_t *md);
 void nodelist_set_consensus(networkstatus_t *ns);
 void nodelist_ensure_freshness(networkstatus_t *ns);
 int nodelist_probably_contains_address(const tor_addr_t *addr);
+void nodelist_add_addr4_to_address_set(const uint32_t addr);
+void nodelist_add_addr6_to_address_set(const tor_addr_t *addr);
 
 void nodelist_remove_microdesc(const char *identity_digest, microdesc_t *md);
 void nodelist_remove_routerinfo(routerinfo_t *ri);
@@ -78,8 +80,8 @@ int node_supports_ed25519_hs_intro(const node_t *node);
 int node_supports_v3_rendezvous_point(const node_t *node);
 int node_supports_establish_intro_dos_extension(const node_t *node);
 const uint8_t *node_get_rsa_id_digest(const node_t *node);
-smartlist_t *node_get_link_specifier_smartlist(const node_t *node,
-                                               bool direct_conn);
+MOCK_DECL(smartlist_t *,node_get_link_specifier_smartlist,(const node_t *node,
+                                                           bool direct_conn));
 void link_specifier_smartlist_free_(smartlist_t *ls_list);
 #define link_specifier_smartlist_free(ls_list) \
   FREE_AND_NULL(smartlist_t, link_specifier_smartlist_free_, (ls_list))

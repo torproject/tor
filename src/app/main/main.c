@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -67,7 +67,6 @@
 #include "lib/osinfo/uname.h"
 #include "lib/sandbox/sandbox.h"
 #include "lib/fs/lockfile.h"
-#include "lib/net/resolve.h"
 #include "lib/tls/tortls.h"
 #include "lib/evloop/compat_libevent.h"
 #include "lib/encoding/confline.h"
@@ -1192,7 +1191,7 @@ run_tor_main_loop(void)
 }
 
 /** Install the publish/subscribe relationships for all the subsystems. */
-static void
+void
 pubsub_install(void)
 {
     pubsub_builder_t *builder = pubsub_builder_new();
@@ -1204,7 +1203,7 @@ pubsub_install(void)
 
 /** Connect the mainloop to its publish/subscribe message delivery events if
  * appropriate, and configure the global channels appropriately. */
-static void
+void
 pubsub_connect(void)
 {
   if (get_options()->command == CMD_RUN_TOR) {
@@ -1239,15 +1238,10 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
     memcpy(argv + tor_cfg->argc, tor_cfg->argv_owned,
            tor_cfg->argc_owned*sizeof(char*));
 
-#ifdef NT_SERVICE
-  {
-     int done = 0;
-     result = nt_service_parse_options(argc, argv, &done);
-     if (done) {
-       goto done;
-     }
-  }
-#endif /* defined(NT_SERVICE) */
+  int done = 0;
+  result = nt_service_parse_options(argc, argv, &done);
+  if (POSSIBLE(done))
+    goto done;
 
   pubsub_install();
 
@@ -1282,9 +1276,7 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
 
   switch (get_options()->command) {
   case CMD_RUN_TOR:
-#ifdef NT_SERVICE
     nt_service_set_state(SERVICE_RUNNING);
-#endif
     result = run_tor_main_loop();
     break;
   case CMD_KEYGEN:

@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -19,6 +19,7 @@
 #include "core/or/reasons.h"
 #include "feature/client/entrynodes.h"
 #include "feature/dirclient/dirclient.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/dirlist.h"
@@ -322,7 +323,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
 
   const int skip_or_fw = router_skip_or_reachability(options, try_ip_pref);
   const int skip_dir_fw = router_skip_dir_reachability(options, try_ip_pref);
-  const int must_have_or = directory_must_use_begindir(options);
+  const int must_have_or = dirclient_must_use_begindir(options);
 
   /* Find all the running dirservers we know about. */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
@@ -541,6 +542,51 @@ bridge_get_advertised_bandwidth_bounded(routerinfo_t *router)
   return result;
 }
 
+/**
+ * We have found an instance of bug 32868: log our best guess about where the
+ * routerstatus was found.
+ **/
+static void
+log_buggy_rs_source(const routerstatus_t *rs)
+{
+  static ratelim_t buggy_rs_ratelim = RATELIM_INIT(1200);
+  char *m;
+  if ((m = rate_limit_log(&buggy_rs_ratelim, approx_time()))) {
+    log_warn(LD_BUG,
+             "Found a routerstatus %p with has_guardfraction=%u "
+             " and guardfraction_percentage=%u, but is_possible_guard=%u.%s",
+             rs,
+             rs->has_guardfraction,
+             rs->guardfraction_percentage,
+             rs->is_possible_guard,
+             m);
+    tor_free(m);
+    networkstatus_t *ns;
+    int in_ns_count = 0;
+    if ((ns = networkstatus_get_latest_consensus_by_flavor(FLAV_NS))) {
+      int pos = smartlist_pos(ns->routerstatus_list, rs);
+      if (pos >= 0) {
+        ++in_ns_count;
+        log_warn(LD_BUG, "Found the routerstatus at position %d of the "
+                 "NS consensus.", pos);
+      }
+    }
+    if ((ns = networkstatus_get_latest_consensus_by_flavor(FLAV_MICRODESC))) {
+      int pos = smartlist_pos(ns->routerstatus_list, rs);
+      if (pos >= 0) {
+        ++in_ns_count;
+        log_warn(LD_BUG, "Found the routerstatus at position %d of the "
+                 "MD consensus.", pos);
+      }
+    }
+    if (in_ns_count == 0) {
+      log_warn(LD_BUG, "Could not find the routerstatus in any "
+               "latest consensus.");
+    }
+    tor_assert_nonfatal_unreached();
+  }
+}
+
 /** Given a list of routers and a weighting rule as in
  * smartlist_choose_node_by_bandwidth_weights, compute weighted bandwidth
  * values for each node and store them in a freshly allocated
@@ -717,10 +763,11 @@ compute_weighted_bandwidths(const smartlist_t *sl,
      *    choose N proportionally to F*Wpf*B + (1-F)*Wpn*B.
      */
     if (node->rs && node->rs->has_guardfraction && rule != WEIGHT_FOR_GUARD) {
-      /* XXX The assert should actually check for is_guard. However,
-       * that crashes dirauths because of #13297. This should be
-       * equivalent: */
-      tor_assert(node->rs->is_possible_guard);
+      /* We should only have guardfraction set if the node has the Guard
+         flag. */
+      if (! node->rs->is_possible_guard) {
+        log_buggy_rs_source(node->rs);
+      }
 
       guard_get_guardfraction_bandwidth(&guardfraction_bw,
                                         this_bw,
@@ -1075,7 +1122,7 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
 
   const int skip_or_fw = router_skip_or_reachability(options, try_ip_pref);
   const int skip_dir_fw = router_skip_dir_reachability(options, try_ip_pref);
-  const int must_have_or = directory_must_use_begindir(options);
+  const int must_have_or = dirclient_must_use_begindir(options);
 
   SMARTLIST_FOREACH_BEGIN(sourcelist, const dir_server_t *, d)
     {

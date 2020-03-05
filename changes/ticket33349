@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Updated comments in 'scheduler.c' to reflect old code changes,
+      and simplified the scheduler channel state change code. Closes
+      ticket 33349.
