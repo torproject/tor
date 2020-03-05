@@ -2016,12 +2016,12 @@ dns_launch_correctness_checks(void)
 
   /* Wait a while before launching requests for test addresses, so we can
    * get the results from checking for wildcarding. */
-  if (! launch_event)
+  if (!launch_event)
     launch_event = tor_evtimer_new(tor_libevent_get_base(),
                                    launch_test_addresses, NULL);
   timeout.tv_sec = 30;
   timeout.tv_usec = 0;
-  if (evtimer_add(launch_event, &timeout)<0) {
+  if (evtimer_add(launch_event, &timeout) < 0) {
     log_warn(LD_BUG, "Couldn't add timer for checking for dns hijacking");
   }
 }
