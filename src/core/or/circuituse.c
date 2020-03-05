@@ -732,7 +732,7 @@ circuit_expire_building(void)
           circuit_build_times_enough_to_compute(get_circuit_build_times())) {
 
         log_info(LD_CIRC,
-                 "Deciding to count the timeout for circuit %"PRIu32"\n",
+                 "Deciding to count the timeout for circuit %"PRIu32,
                  TO_ORIGIN_CIRCUIT(victim)->global_identifier);
 
         /* Circuits are allowed to last longer for measurement.
