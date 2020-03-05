@@ -236,7 +236,7 @@ options_validate_server_transport(const or_options_t *old_options,
     int rv = tor_addr_port_parse(LOG_WARN, bindaddr, &tor_addr, &tor_port, 0);
     if (rv < 0) {
         log_notice(LD_CONFIG, "Your ServerTransportListenAddr failed to parse "
-                              "as a Tor address; check your configuration.");
+                   "as an IPv4 or IPv6 address; check your configuration.");
     }
     if (rv == 0 &&
         tor_addr_is_internal(&tor_addr, 0) &&
