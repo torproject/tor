@@ -4989,6 +4989,10 @@ test_dir_purpose_needs_anonymity_returns_true_by_default(void *arg)
 {
   (void)arg;
 
+#ifdef ALL_BUGS_ARE_FATAL
+  tt_skip();
+#endif
+
   tor_capture_bugs_(1);
   setup_full_capture_of_logs(LOG_WARN);
   tt_int_op(1, OP_EQ, purpose_needs_anonymity(0, 0, NULL));
