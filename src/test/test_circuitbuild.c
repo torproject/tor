@@ -114,6 +114,10 @@ test_new_route_len_unhandled_exit(void *arg)
   int r;
 
   (void)arg;
+#ifdef ALL_BUGS_ARE_FATAL
+  tt_skip();
+#endif
+
   MOCK(count_acceptable_nodes, mock_count_acceptable_nodes);
 
   tor_capture_bugs_(1);
