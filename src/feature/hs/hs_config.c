@@ -45,7 +45,7 @@
 /** Magic number for hs_opts_t. */
 #define HS_OPTS_MAGIC 0x6f6e796e
 
-const config_format_t hs_opts_fmt = {
+static const config_format_t hs_opts_fmt = {
   .size = sizeof(hs_opts_t),
   .magic = { "hs_opts_t",
              HS_OPTS_MAGIC,
