@@ -232,6 +232,12 @@ config_learn_service_version(hs_service_t *service)
   return version;
 }
 
+/**
+ * Header key indicating the start of a new hidden service configuration
+ * block.
+ **/
+static const char SECTION_HEADER[] = "HiddenServiceDir";
+
 /** Return true iff the given options starting at line_ for a hidden service
  * contains at least one invalid option. Each hidden service option don't
  * apply to all versions so this function can find out. The line_ MUST start
@@ -286,8 +292,11 @@ config_has_invalid_options(const config_line_t *line_,
   for (int i = 0; optlist[i]; i++) {
     const char *opt = optlist[i];
     for (line = line_; line; line = line->next) {
-      if (!strcasecmp(line->key, "HiddenServiceDir")) {
-        /* We just hit the next hidden service, stop right now. */
+      if (!strcasecmp(line->key, SECTION_HEADER)) {
+        /* We just hit the next hidden service, stop right now.
+         * (This shouldn't be possible, now that we have partitioned the list
+         * into sections.) */
+        tor_assert_nonfatal_unreached();
         goto end;
       }
       if (!strcasecmp(line->key, opt)) {
@@ -428,12 +437,6 @@ config_service_v3(const hs_opts_t *hs_opts,
   return -1;
 }
 
-/**
- * Header key indicating the start of a new hidden service configuration
- * block.
- **/
-static const char SECTION_HEADER[] = "HiddenServiceDir";
-
 /** Configure a service using the given options in hs_opts and options. This is
  * called for any service regardless of its version which means that all
  * directives in this function are generic to any service version. This
@@ -462,8 +465,8 @@ config_generic_service(const hs_opts_t *hs_opts,
   /* Directory where the service's keys are stored. */
   tor_assert(hs_opts->HiddenServiceDir);
   config->directory_path = tor_strdup(hs_opts->HiddenServiceDir);
-  log_info(LD_CONFIG, "HiddenServiceDir=%s. Configuring...",
-           escaped(config->directory_path));
+  log_info(LD_CONFIG, "%s=%s. Configuring...",
+           SECTION_HEADER, escaped(config->directory_path));
 
   /* Protocol version for the service. */
   if (hs_opts->HiddenServiceVersion == -1) {
