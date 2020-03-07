@@ -429,7 +429,8 @@ config_service_v3(const hs_opts_t *hs_opts,
 }
 
 /**
- * DOCDOC
+ * Header key indicating the start of a new hidden service configuration
+ * block.
  **/
 static const char SECTION_HEADER[] = "HiddenServiceDir";
 
