@@ -15,7 +15,6 @@ CellStatistics 1
 CircuitBuildTimeout 200
 CircuitsAvailableTimeout 10
 CircuitStreamTimeout 20
-ClientAutoIPv6ORPort 1
 ClientOnly 1
 ClientPreferIPv6DirPort 1
 ClientPreferIPv6ORPort 1
