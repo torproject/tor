@@ -186,6 +186,13 @@ check_value_oob(int i, const char *name, int low, int high)
   return false;
 }
 
+/**
+ * Helper: check whether the integer value called <b>name</b> in <b>opts</b>
+ * is out-of-bounds.
+ **/
+#define CHECK_OOB(opts, name, low, high)      \
+  check_value_oob((opts)->name, #name, (low), (high))
+
 /** Helper function: Given a configuration option and its value, parse the
  * value as a hs_circuit_id_protocol_t. On success, ok is set to 1 and ret is
  * the parse value. On error, ok is set to 0 and the "none"
@@ -368,10 +375,9 @@ config_service_v3(const hs_opts_t *hs_opts,
   tor_assert(hs_opts);
 
   /* Number of introduction points. */
-  if (check_value_oob(hs_opts->HiddenServiceNumIntroductionPoints,
-                      "HiddenServiceNumIntroductionPoints",
-                      NUM_INTRO_POINTS_DEFAULT,
-                      HS_CONFIG_V3_MAX_INTRO_POINTS)) {
+  if (CHECK_OOB(hs_opts, HiddenServiceNumIntroductionPoints,
+                NUM_INTRO_POINTS_DEFAULT,
+                HS_CONFIG_V3_MAX_INTRO_POINTS)) {
     goto err;
   }
   config->num_intro_points = hs_opts->HiddenServiceNumIntroductionPoints;
@@ -393,10 +399,9 @@ config_service_v3(const hs_opts_t *hs_opts,
     hs_opts->HiddenServiceEnableIntroDoSDefense;
 
   /* Rate for DoS defense */
-  if (check_value_oob(hs_opts->HiddenServiceEnableIntroDoSRatePerSec,
-                      "HiddenServiceEnableIntroDoSRatePerSec",
-                      HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN,
-                      HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX)) {
+  if (CHECK_OOB(hs_opts, HiddenServiceEnableIntroDoSRatePerSec,
+                 HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN,
+                 HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX)) {
     goto err;
   }
   config->intro_dos_rate_per_sec =
@@ -404,10 +409,9 @@ config_service_v3(const hs_opts_t *hs_opts,
   log_info(LD_REND, "Service INTRO2 DoS defenses rate set to: %" PRIu32,
            config->intro_dos_rate_per_sec);
 
-  if (check_value_oob(hs_opts->HiddenServiceEnableIntroDoSBurstPerSec,
-                      "HiddenServiceEnableIntroDoSBurstPerSec",
-                      HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN,
-                      HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MAX)) {
+  if (CHECK_OOB(hs_opts, HiddenServiceEnableIntroDoSBurstPerSec,
+                HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN,
+                HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MAX)) {
     goto err;
   }
   config->intro_dos_burst_per_sec =
@@ -471,9 +475,8 @@ config_generic_service(const hs_opts_t *hs_opts,
   /* Protocol version for the service. */
   if (hs_opts->HiddenServiceVersion == -1) {
     /* No value was set; stay with the default. */
-  } else if (check_value_oob(hs_opts->HiddenServiceVersion,
-                             "HiddenServiceVersion",
-                             HS_VERSION_MIN, HS_VERSION_MAX)) {
+  } else if (CHECK_OOB(hs_opts, HiddenServiceVersion,
+                       HS_VERSION_MIN, HS_VERSION_MAX)) {
     goto err;
   } else {
     config->hs_version_explicitly_set = 1;
@@ -507,9 +510,8 @@ config_generic_service(const hs_opts_t *hs_opts,
   config->dir_group_readable = hs_opts->HiddenServiceDirGroupReadable;
 
   /* Maximum streams per circuit. */
-  if (check_value_oob(hs_opts->HiddenServiceMaxStreams,
-                      "HiddenServiceMaxStreams", 0,
-                      HS_CONFIG_MAX_STREAMS_PER_RDV_CIRCUIT)) {
+  if (CHECK_OOB(hs_opts, HiddenServiceMaxStreams,
+                0, HS_CONFIG_MAX_STREAMS_PER_RDV_CIRCUIT)) {
     goto err;
   }
   config->max_streams_per_rdv_circuit = hs_opts->HiddenServiceMaxStreams;
