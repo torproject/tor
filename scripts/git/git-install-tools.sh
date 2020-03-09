@@ -3,7 +3,7 @@
 SCRIPT_NAME=$(basename "$0")
 SCRIPTS_DIR=$(dirname "$0")
 
-TOOL_NAMES=(push-all pull-all merge-forward)
+TOOL_NAMES=(push-all pull-all merge-forward list-tor-branches)
 
 function usage()
 {
