@@ -62,8 +62,8 @@ test_policy_summary_helper_family_flags(const char *policy_str,
   short_policy_t *short_policy = NULL;
   int success = 0;
 
-  line.key = (char*)"foo";
-  line.value = (char *)policy_str;
+  line.key = (char *) "foo";
+  line.value = (char *) policy_str;
   line.next = NULL;
 
   r = policies_parse_exit_policy(&line, &policy,
