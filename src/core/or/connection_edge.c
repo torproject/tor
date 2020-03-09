@@ -908,26 +908,19 @@ export_hs_client_circuit_id(edge_connection_t *edge_conn,
   tor_free(buf);
 }
 
-/** Connected handler for exit connections: start writing pending
- * data, deliver 'CONNECTED' relay cells as appropriate, and check
- * any pending data that may have been received. */
-int
-connection_edge_finished_connecting(edge_connection_t *edge_conn)
+/** Called by connection_edge_finished_connecting() and
+ * connection_exit_connect() when the connection state is
+ * EXIT_CONN_STATE_OPEN */
+static int
+connection_exit_set_state_open(edge_connection_t *edge_conn,
+                              int zero_payload_cleanup)
 {
   connection_t *conn;
 
   tor_assert(edge_conn);
-  tor_assert(edge_conn->base_.type == CONN_TYPE_EXIT);
   conn = TO_CONN(edge_conn);
-  tor_assert(conn->state == EXIT_CONN_STATE_CONNECTING);
-
-  log_info(LD_EXIT,"Exit connection to %s:%u (%s) established.",
-           escaped_safe_str(conn->address), conn->port,
-           safe_str(fmt_and_decorate_addr(&conn->addr)));
-
-  rep_hist_note_exit_stream_opened(conn->port);
-
   conn->state = EXIT_CONN_STATE_OPEN;
+  tor_assert(conn->state == EXIT_CONN_STATE_OPEN);
 
   connection_watch_events(conn, READ_EVENT); /* stop writing, keep reading */
   if (connection_get_outbuf_len(conn)) /* in case there are any queued relay
@@ -943,14 +936,49 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
     int connected_payload_len =
       connected_cell_format_payload(connected_payload, &conn->addr,
                                     edge_conn->address_ttl);
-    if (connected_payload_len < 0)
+    if (connected_payload_len < 0) {
+      if (zero_payload_cleanup) {
+        connection_edge_end(edge_conn, END_STREAM_REASON_INTERNAL);
+        circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);
+        connection_free(conn);
+      }
+
       return -1;
+    }
 
     if (connection_edge_send_command(edge_conn,
                         RELAY_COMMAND_CONNECTED,
                         (char*)connected_payload, connected_payload_len) < 0)
       return 0; /* circuit is closed, don't continue */
   }
+
+  return 1;
+}
+
+/** Connected handler for exit connections: start writing pending
+ * data, deliver 'CONNECTED' relay cells as appropriate, and check
+ * any pending data that may have been received. */
+int
+connection_edge_finished_connecting(edge_connection_t *edge_conn)
+{
+  connection_t *conn;
+  int ret;
+
+  tor_assert(edge_conn);
+  tor_assert(edge_conn->base_.type == CONN_TYPE_EXIT);
+  conn = TO_CONN(edge_conn);
+  tor_assert(conn->state == EXIT_CONN_STATE_CONNECTING);
+
+  log_info(LD_EXIT,"Exit connection to %s:%u (%s) established.",
+           escaped_safe_str(conn->address), conn->port,
+           safe_str(fmt_and_decorate_addr(&conn->addr)));
+
+  rep_hist_note_exit_stream_opened(conn->port);
+
+  if ((ret = connection_exit_set_state_open(edge_conn, 0)) < 1) {
+    return ret;
+  }
+
   tor_assert(edge_conn->package_window > 0);
   /* in case the server has written anything */
   return connection_edge_process_inbuf(edge_conn, 1);
@@ -4241,37 +4269,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
     /* case 1: fall through */
   }
 
-  conn->state = EXIT_CONN_STATE_OPEN;
-  if (connection_get_outbuf_len(conn)) {
-    /* in case there are any queued data cells, from e.g. optimistic data */
-    connection_watch_events(conn, READ_EVENT|WRITE_EVENT);
-  } else {
-    connection_watch_events(conn, READ_EVENT);
-  }
-
-  /* also, deliver a 'connected' cell back through the circuit. */
-  if (connection_edge_is_rendezvous_stream(edge_conn)) {
-    /* don't send an address back! */
-    connection_edge_send_command(edge_conn,
-                                 RELAY_COMMAND_CONNECTED,
-                                 NULL, 0);
-  } else { /* normal stream */
-    uint8_t connected_payload[MAX_CONNECTED_CELL_PAYLOAD_LEN];
-    int connected_payload_len =
-      connected_cell_format_payload(connected_payload, &conn->addr,
-                                    edge_conn->address_ttl);
-    if (connected_payload_len < 0) {
-      connection_edge_end(edge_conn, END_STREAM_REASON_INTERNAL);
-      circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);
-      connection_free(conn);
-      return;
-    }
-
-    connection_edge_send_command(edge_conn,
-                                 RELAY_COMMAND_CONNECTED,
-                                 (char*)connected_payload,
-                                 connected_payload_len);
-  }
+  connection_exit_set_state_open(edge_conn, 1);
 }
 
 /** Given an exit conn that should attach to us as a directory server, open a
