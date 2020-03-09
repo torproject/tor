@@ -2,6 +2,7 @@
 /* See LICENSE for licensing information */
 
 #define CONFIG_PRIVATE
+#define ROUTER_PRIVATE
 #define POLICIES_PRIVATE
 
 #include "core/or/or.h"
@@ -11,6 +12,8 @@
 #include "feature/dirparse/policy_parse.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_descriptor.h"
+#include "feature/nodelist/routerlist.h"
+#include "feature/relay/dns.h"
 #include "feature/relay/router.h"
 #include "lib/encoding/confline.h"
 #include "test/test.h"
@@ -2661,6 +2664,91 @@ test_policies_fascist_firewall_choose_address(void *arg)
   UNMOCK(get_options);
 }
 
+static crypto_pk_t *mocked_onionkey = NULL;
+
+/* Returns mocked_onionkey with no checks. */
+static crypto_pk_t *
+mock_get_onion_key(void)
+{
+  return mocked_onionkey;
+}
+
+static curve25519_keypair_t mocked_curve25519_onion_key;
+
+/* Returns mocked_curve25519_onion_key with no checks. */
+static const curve25519_keypair_t *
+mock_get_current_curve25519_keypair(void)
+{
+  return &mocked_curve25519_onion_key;
+}
+
+static crypto_pk_t *mocked_server_identitykey = NULL;
+
+/* Returns mocked_server_identitykey with no checks. */
+static crypto_pk_t *
+mock_get_server_identity_key(void)
+{
+  return mocked_server_identitykey;
+}
+
+static tor_cert_t *
+mock_tor_cert_dup_null(const tor_cert_t *cert)
+{
+  (void)cert;
+  return NULL;
+}
+
+/** Run unit tests on an exit's failed IPv6 DNS resolver if
+ * we have the relay module. */
+static void
+test_policies_reject_failed_ipv6_dns(void *arg)
+{
+  routerinfo_t *ri = NULL;
+  config_line_t line;
+  (void)arg;
+
+  memset(&mock_options, 0, sizeof(or_options_t));
+  MOCK(get_options, mock_get_options);
+  MOCK(get_onion_key, mock_get_onion_key);
+  MOCK(get_current_curve25519_keypair, mock_get_current_curve25519_keypair);
+  MOCK(get_server_identity_key, mock_get_server_identity_key);
+  MOCK(tor_cert_dup, mock_tor_cert_dup_null);
+
+  line.key = (char *) "ExitPolicy";
+  line.value = (char *) "accept *:*";
+  line.next = NULL;
+  mock_options.ExitPolicy = &line;
+
+  mock_options.ORPort_set = 1;
+  mock_options.Nickname = tor_strdup("Marina");
+  mock_options.ExitRelay = 1;
+  mock_options.IPv6Exit = 1;
+  mock_options.Address = tor_strdup("1.1.1.1");
+
+  mocked_server_identitykey = pk_generate(0);
+  mocked_onionkey = pk_generate(1);
+  curve25519_keypair_generate(&mocked_curve25519_onion_key, 0);
+
+  dns_set_is_broken_for_ipv6(0);
+  router_build_fresh_unsigned_routerinfo(&ri);
+  tt_assert(ri->ipv6_exit_policy != NULL);
+  routerinfo_free(ri);
+
+  dns_set_is_broken_for_ipv6(1);
+  router_build_fresh_unsigned_routerinfo(&ri);
+  tt_assert(ri->ipv6_exit_policy == NULL);
+ done:
+  dns_set_is_broken_for_ipv6(0);
+  crypto_pk_free(mocked_onionkey);
+  crypto_pk_free(mocked_server_identitykey);
+  routerinfo_free(ri);
+  UNMOCK(get_options);
+  UNMOCK(get_onion_key);
+  UNMOCK(get_current_curve25519_keypair);
+  UNMOCK(get_server_identity_key);
+  UNMOCK(tor_cert_dup);
+}
+
 #undef TEST_IPV4_ADDR_STR
 #undef TEST_IPV6_ADDR_STR
 #undef TEST_IPV4_OR_PORT
@@ -2686,5 +2774,7 @@ struct testcase_t policy_tests[] = {
     test_policies_fascist_firewall_allows_address, 0, NULL, NULL },
   { "fascist_firewall_choose_address",
     test_policies_fascist_firewall_choose_address, 0, NULL, NULL },
+  { "reject_failed_ipv6_dns", test_policies_reject_failed_ipv6_dns,
+    0, NULL, NULL },
   END_OF_TESTCASES
 };

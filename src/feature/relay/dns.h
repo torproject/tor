@@ -32,6 +32,10 @@ size_t dns_cache_handle_oom(time_t now, size_t min_remove_bytes);
 void dns_free_all(void);
 void dns_launch_correctness_checks(void);
 
+#ifdef TOR_UNIT_TESTS
+void dns_set_is_broken_for_ipv6(int val);
+#endif /* defined(TOR_UNIT_TESTS) */
+
 #else /* !defined(HAVE_MODULE_RELAY) */
 
 #define dns_init() (0)
