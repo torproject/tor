@@ -2748,10 +2748,15 @@ mock_tor_cert_dup_null(const tor_cert_t *cert)
   return NULL;
 }
 
-/** Run unit tests on an exit's failed IPv6 DNS resolver. */
+/** Run unit tests on an exit's failed IPv6 DNS resolver if
+ * we have the relay module. */
 static void
 test_policies_reject_failed_ipv6_dns(void *arg)
 {
+#ifndef HAVE_MODULE_RELAY
+  tt_skip();
+ done:
+#else /* defined(HAVE_MODULE_RELAY) */
   routerinfo_t *ri = tor_malloc(sizeof(routerinfo_t));
   config_line_t line;
   (void)arg;
@@ -2768,23 +2773,22 @@ test_policies_reject_failed_ipv6_dns(void *arg)
   line.next = NULL;
   mock_options.ExitPolicy = &line;
 
-  mocked_server_identitykey = pk_generate(0);
-
   mock_options.ORPort_set = 1;
   mock_options.Nickname = tor_strdup("Marina");
   mock_options.ExitRelay = 1;
   mock_options.IPv6Exit = 1;
 
+  mocked_server_identitykey = pk_generate(0);
   mocked_onionkey = pk_generate(1);
   curve25519_keypair_generate(&mocked_curve25519_onion_key, 0);
 
   dns_set_is_broken_for_ipv6(0);
   router_build_fresh_unsigned_routerinfo(&ri);
-  tt_assert(ri->ipv6_exit_policy);
+  tt_assert(ri->ipv6_exit_policy != NULL);
 
   dns_set_is_broken_for_ipv6(1);
   router_build_fresh_unsigned_routerinfo(&ri);
-  tt_assert(!ri->ipv6_exit_policy);
+  tt_assert(ri->ipv6_exit_policy == NULL);
  done:
   dns_set_is_broken_for_ipv6(0);
   crypto_pk_free(mocked_onionkey);
@@ -2795,6 +2799,7 @@ test_policies_reject_failed_ipv6_dns(void *arg)
   UNMOCK(get_current_curve25519_keypair);
   UNMOCK(get_server_identity_key);
   UNMOCK(tor_cert_dup);
+#endif /* !defined(HAVE_MODULE_RELAY) */
 }
 
 #undef TEST_IPV4_ADDR_STR

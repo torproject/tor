@@ -1941,9 +1941,9 @@ get_my_declared_family(const or_options_t *options)
 
 #ifdef HAVE_MODULE_RELAY
 #define IPV6_DNS_NOT_BROKEN !dns_seems_to_be_broken_for_ipv6()
-#else
+#else /* !defined(HAVE_MODULE_RELAY) */
 #define IPV6_DNS_NOT_BROKEN 1
-#endif
+#endif /* defined(HAVE_MODULE_RELAY) */
 
 /** Allocate a fresh, unsigned routerinfo for this OR, without any of the
  * fields that depend on the corresponding extrainfo.
