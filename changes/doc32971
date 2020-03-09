@@ -1,0 +1,3 @@
+  o Documentation (manpage):
+    - Document __OwningControllerProcess torrc option and specify polling
+      interval. Resolves issue 32971.
