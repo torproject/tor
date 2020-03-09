@@ -2082,11 +2082,11 @@ dns_reset_ipv6_broken(evutil_socket_t fd, short event, void *args)
 #ifdef TOR_UNIT_TESTS
 /** Set dns_is_broken_for_ipv6 to the value in val for unit test. */
 void
-dns_set_is_broken_for_ipv6(int val) {
+dns_set_is_broken_for_ipv6(int val)
+{
   dns_is_broken_for_ipv6 = val;
 }
 #endif /* defined(TOR_UNIT_TESTS) */
-
 
 /** Forget what we've previously learned about our DNS servers' correctness. */
 void
