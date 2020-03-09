@@ -760,7 +760,7 @@ forward slash (/) in the configuration file and on the command line.
     This setting will be ignored for connections to the loopback
     addresses (127.0.0.0/8 and ::1).
 
-[[OwningControllerProcess]] **$$__$$OwningControllerProcess** __PID__::
+[[OwningControllerProcess]] **{dbl_}OwningControllerProcess** __PID__::
     Make Tor instance periodically check for presence of a controller process
     with given PID and terminate itself if this process is no longer alive.
     Polling interval is 15 seconds.
