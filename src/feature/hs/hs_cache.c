@@ -743,8 +743,11 @@ cache_clean_v3_as_client(time_t now)
     /* We just removed an old descriptor. We need to close all intro circuits
      * so we don't have leftovers that can be selected while lacking a
      * descriptor. We leave the rendezvous circuits opened because they could
-     * be in use. */
-    hs_client_close_intro_circuits_from_desc(entry->desc);
+     * be in use. It might be an encrypted descriptor and thus the decrypted
+     * version doesn't exists. */
+    if (entry->desc) {
+      hs_client_close_intro_circuits_from_desc(entry->desc);
+    }
     /* Entry is not in the cache anymore, destroy it. */
     cache_client_desc_free(entry);
     /* Update our OOM. We didn't use the remove() function because we are in
