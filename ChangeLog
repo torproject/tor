@@ -28,8 +28,9 @@ Changes in version 0.4.3.3-alpha - 2020-03-??
       on 0.3.2.2-alpha.
 
   o Minor bugfixes (onion service v3, client):
-    - Remove a BUG() that is causing a stacktrace for a situation that
-      very rarely happens but still can. Fixes bug 28992; bugfix
+    - Remove a BUG() warning that would cause a stack trace if an onion
+      service descriptor was freed while we were waiting for a
+      rendezvous circuit to complete. Fixes bug 28992; bugfix
       on 0.3.2.1-alpha.
 
   o Documentation (manpage):
