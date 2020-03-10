@@ -3173,7 +3173,7 @@ should_service_upload_descriptor(const hs_service_t *service,
   /* Is it the right time to upload? */
   if (desc->next_upload_time > now) {
     tor_asprintf(&msg, "Next upload time is %ld, it is now %ld.",
-                 desc->next_upload_time, (long int) now);
+                 (long int) desc->next_upload_time, (long int) now);
     log_cant_upload_desc(service, desc, msg,
                          LOG_DESC_UPLOAD_REASON_NOT_TIME);
     goto cannot;
