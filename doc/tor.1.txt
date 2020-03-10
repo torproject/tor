@@ -760,6 +760,11 @@ forward slash (/) in the configuration file and on the command line.
     This setting will be ignored for connections to the loopback
     addresses (127.0.0.0/8 and ::1).
 
+[[OwningControllerProcess]] **{dbl_}OwningControllerProcess** __PID__::
+    Make Tor instance periodically check for presence of a controller process
+    with given PID and terminate itself if this process is no longer alive.
+    Polling interval is 15 seconds.
+
 [[PerConnBWBurst]] **PerConnBWBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     If this option is set manually, or via the "perconnbwburst" consensus
     field, Tor will use it for separate rate limiting for each connection
