@@ -403,8 +403,8 @@ options_validate_relay_info(const or_options_t *old_options,
   if (server_mode(options) && !options->ContactInfo) {
     log_warn(LD_CONFIG,
              "Your ContactInfo config option is not set. Please strongly "
-             "consider setting it so we can contact you if your servers is "
-             "misconfigured, end-of-life or something else goes wrong. "
+             "consider setting it, so we can contact you if your relay is "
+             "misconfigured, end-of-life, or something else goes wrong. "
              "It is also possible that your relay might get rejected from "
              "the network due to a missing valid contact address.");
   }
