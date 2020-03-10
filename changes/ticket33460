@@ -1,4 +1,0 @@
-  o Minor features (usability):
-    - Include more information when failing to parse a configuration value.
-      This should make it easier to tell what's going wrong when a
-      configuration file doesn't parse.  Closes ticket 33460.
