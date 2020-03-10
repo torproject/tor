@@ -27,6 +27,21 @@
 static int cached_client_descriptor_has_expired(time_t now,
            const hs_cache_client_descriptor_t *cached_desc);
 
+/** Helper function: Return true iff the cache entry has a decrypted
+ * descriptor.
+ *
+ * A NULL desc object in the entry means that we were not able to decrypt the
+ * descriptor because we are likely lacking client authorization.  It is still
+ * a valid entry but some operations can't be done without the decrypted
+ * descriptor thus this function MUST be used to safe guard access to the
+ * decrypted desc object. */
+static inline bool
+entry_has_decrypted_descriptor(const hs_cache_client_descriptor_t *entry)
+{
+  tor_assert(entry);
+  return (entry->desc != NULL);
+}
+
 /********************** Directory HS cache ******************/
 
 /** Directory descriptor cache. Map indexed by blinded key. */
@@ -341,8 +356,23 @@ static digest256map_t *hs_cache_client_intro_state;
 static size_t
 cache_get_client_entry_size(const hs_cache_client_descriptor_t *entry)
 {
-  return sizeof(*entry) +
-         strlen(entry->encoded_desc) + hs_desc_obj_size(entry->desc);
+  size_t size = 0;
+
+  if (entry == NULL) {
+    goto end;
+  }
+  size += sizeof(*entry);
+
+  if (entry->encoded_desc) {
+    size += strlen(entry->encoded_desc);
+  }
+
+  if (entry_has_decrypted_descriptor(entry)) {
+    size += hs_desc_obj_size(entry->desc);
+  }
+
+ end:
+  return size;
 }
 
 /** Remove a given descriptor from our cache. */
@@ -659,13 +689,19 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
    * client authorization. */
   cache_entry = lookup_v3_desc_as_client(client_desc->key.pubkey);
   if (cache_entry != NULL) {
-    /* Signalling an undecrypted descriptor. We'll always replace the one we
-     * have with the new one just fetched. */
-    if (cache_entry->desc == NULL) {
+    /* If the current or the new cache entry don't have a decrypted descriptor
+     * (missing client authorization), we always replace the current one with
+     * the new one. Reason is that we can't inspect the revision counter
+     * within the plaintext data so we blindly replace. */
+    if (!entry_has_decrypted_descriptor(cache_entry) ||
+        !entry_has_decrypted_descriptor(client_desc)) {
       remove_v3_desc_as_client(cache_entry);
       cache_client_desc_free(cache_entry);
       goto store;
     }
+
+    /* From this point on, we know that the decrypted descriptor is in the
+     * current entry and new object thus safe to access. */
 
     /* If we have an entry in our cache that has a revision counter greater
      * than the one we just fetched, discard the one we fetched. */
@@ -740,11 +776,15 @@ cache_clean_v3_as_client(time_t now)
     MAP_DEL_CURRENT(key);
     entry_size = cache_get_client_entry_size(entry);
     bytes_removed += entry_size;
+
     /* We just removed an old descriptor. We need to close all intro circuits
-     * so we don't have leftovers that can be selected while lacking a
-     * descriptor. We leave the rendezvous circuits opened because they could
-     * be in use. */
-    hs_client_close_intro_circuits_from_desc(entry->desc);
+     * if the descriptor is decrypted so we don't have leftovers that can be
+     * selected while lacking a descriptor. Circuits are selected by intro
+     * authentication key thus we need the descriptor. We leave the rendezvous
+     * circuits opened because they could be in use. */
+    if (entry_has_decrypted_descriptor(entry)) {
+      hs_client_close_intro_circuits_from_desc(entry->desc);
+    }
     /* Entry is not in the cache anymore, destroy it. */
     cache_client_desc_free(entry);
     /* Update our OOM. We didn't use the remove() function because we are in
@@ -793,7 +833,7 @@ hs_cache_lookup_as_client(const ed25519_public_key_t *key)
   tor_assert(key);
 
   cached_desc = lookup_v3_desc_as_client(key->pubkey);
-  if (cached_desc && cached_desc->desc) {
+  if (cached_desc && entry_has_decrypted_descriptor(cached_desc)) {
     return cached_desc->desc;
   }
 
@@ -866,7 +906,7 @@ hs_cache_remove_as_client(const ed25519_public_key_t *key)
   /* If we have a decrypted/decoded descriptor, attempt to close its
    * introduction circuit(s). We shouldn't have circuit(s) without a
    * descriptor else it will lead to a failure. */
-  if (cached_desc->desc) {
+  if (entry_has_decrypted_descriptor(cached_desc)) {
     hs_client_close_intro_circuits_from_desc(cached_desc->desc);
   }
   /* Remove and free. */
@@ -995,7 +1035,7 @@ hs_cache_client_new_auth_parse(const ed25519_public_key_t *service_pk)
   }
 
   cached_desc = lookup_v3_desc_as_client(service_pk->pubkey);
-  if (cached_desc == NULL || cached_desc->desc != NULL) {
+  if (cached_desc == NULL || entry_has_decrypted_descriptor(cached_desc)) {
     /* No entry for that service or the descriptor is already decoded. */
     goto end;
   }
