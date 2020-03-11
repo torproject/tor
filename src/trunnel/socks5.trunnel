@@ -86,7 +86,7 @@ struct socks4_client_request {
 }
 
 struct socks4_server_reply {
-   u8 version IN [4];
+   u8 version IN [0,4];
    u8 status;
    u16 port;
    u32 addr;

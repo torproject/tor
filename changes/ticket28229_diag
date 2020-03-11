@@ -1,3 +1,0 @@
-  o Testing:
-    - Increase logging and tag all log entries with timestamps
-      in test_rebind.py. Provides diagnostics for issue 28229.

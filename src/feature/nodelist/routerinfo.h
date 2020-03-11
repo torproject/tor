@@ -24,4 +24,4 @@ smartlist_t *router_get_all_orports(const routerinfo_t *ri);
 const char *router_purpose_to_string(uint8_t p);
 uint8_t router_purpose_from_string(const char *s);
 
-#endif
+#endif /* !defined(TOR_ROUTERINFO_H) */

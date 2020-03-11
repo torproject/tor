@@ -1,3 +1,0 @@
-  o Minor features (compile-time modules):
-    - Add a --list-modules command to print a list of which compile-time
-      modules are enabled. Closes ticket 30452.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (directory authority):
-    - Move the "bandwidth-file-headers" line in directory authority votes
-      so that it conforms to dir-spec.txt. Fixes bug 30316; bugfix on
-      0.3.5.1-alpha.

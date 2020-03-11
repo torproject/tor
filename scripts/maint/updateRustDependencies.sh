@@ -20,26 +20,26 @@
 
 set -e
 
-HERE=`dirname $(realpath $0)`
-TOPLEVEL=`dirname $(dirname $HERE)`
+HERE=$(dirname "$(realpath "$0")")
+TOPLEVEL=$(dirname "$(dirname "$HERE")")
 TOML="$TOPLEVEL/src/rust/Cargo.toml"
 VENDORED="$TOPLEVEL/src/ext/rust/crates"
-CARGO=`which cargo`
+CARGO=$(command -v cargo)
 
 if ! test -f "$TOML"  ; then
-    printf "Error: Couldn't find workspace Cargo.toml in expected location: %s\n" "$TOML"
+    printf "Error: Couldn't find workspace Cargo.toml in expected location: %s\\n" "$TOML"
 fi
 
 if ! test -d "$VENDORED" ; then
-    printf "Error: Couldn't find directory for Rust dependencies! Expected location: %s\n" "$VENDORED"
+    printf "Error: Couldn't find directory for Rust dependencies! Expected location: %s\\n" "$VENDORED"
 fi
 
 if test -z "$CARGO" ; then
-    printf "Error: cargo must be installed and in your \$PATH\n"
+    printf "Error: cargo must be installed and in your \$PATH\\n"
 fi
 
-if test -z `cargo --list | grep vendor` ; then
-    printf "Error: cargo-vendor not installed\n"
+if test -z "$(cargo --list | grep vendor)" ; then
+    printf "Error: cargo-vendor not installed\\n"
 fi
 
-$CARGO vendor -v --locked --explicit-version --no-delete --sync $TOML $VENDORED
+$CARGO vendor -v --locked --explicit-version --no-delete --sync "$TOML" "$VENDORED"

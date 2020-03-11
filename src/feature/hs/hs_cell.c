@@ -758,7 +758,14 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
        idx < trn_cell_introduce_encrypted_get_nspec(enc_cell); idx++) {
     link_specifier_t *lspec =
       trn_cell_introduce_encrypted_get_nspecs(enc_cell, idx);
-    smartlist_add(data->link_specifiers, hs_link_specifier_dup(lspec));
+    if (BUG(!lspec)) {
+      goto done;
+    }
+    link_specifier_t *lspec_dup = link_specifier_dup(lspec);
+    if (BUG(!lspec_dup)) {
+      goto done;
+    }
+    smartlist_add(data->link_specifiers, lspec_dup);
   }
 
   /* Success. */

@@ -1,3 +1,0 @@
-  o Minor bugfixes (protover, rust):
-    - Reject extra commas in version string. Fixes bug 27197; bugfix on
-      0.3.3.3-alpha.

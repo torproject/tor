@@ -39,7 +39,7 @@ test_gen_establish_intro_cell(void *arg)
      attempt to parse it. */
   {
     /* We only need the auth key pair here. */
-    hs_service_intro_point_t *ip = service_intro_point_new(NULL, 0, 0);
+    hs_service_intro_point_t *ip = service_intro_point_new(NULL);
     /* Auth key pair is generated in the constructor so we are all set for
      * using this IP object. */
     ret = hs_cell_build_establish_intro(circ_nonce, ip, buf);
@@ -107,7 +107,7 @@ test_gen_establish_intro_cell_bad(void *arg)
      ed25519_sign_prefixed() function and make it fail. */
   cell = trn_cell_establish_intro_new();
   tt_assert(cell);
-  ip = service_intro_point_new(NULL, 0, 0);
+  ip = service_intro_point_new(NULL);
   cell_len = hs_cell_build_establish_intro(circ_nonce, ip, NULL);
   service_intro_point_free(ip);
   expect_log_msg_containing("Unable to make signature for "

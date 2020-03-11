@@ -22,4 +22,4 @@ const char *node_describe(const struct node_t *node);
 const char *router_describe(const struct routerinfo_t *ri);
 const char *routerstatus_describe(const struct routerstatus_t *ri);
 
-#endif
+#endif /* !defined(TOR_DESCRIBE_H) */

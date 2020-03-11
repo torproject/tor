@@ -49,7 +49,7 @@
 #include "core/or/dos.h"
 #include "core/or/onion.h"
 #include "core/or/relay.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/nodelist.h"

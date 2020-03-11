@@ -1,0 +1,11 @@
+  o Minor bugfixes (circuit padding negotiation):
+    - Bump circuit padding protover to explicitly signify that the hs setup
+      machine support is finalized in 0.4.1.x-stable. This also means that
+      0.4.1.x-alpha clients will not negotiate padding with 0.4.1.x-stable
+      relays, and 0.4.1.x-stable clients will not negotiate padding with
+      0.4.1.x-alpha relays (or 0.4.0.x relays). Fixes bug 31356;
+      bugfix on 0.4.1.1-alpha.
+  o Minor features (circuit padding logging):
+    - Demote noisy client-side warn log to a protocol warning. Add additional
+      log messages and circuit id fields to help with fixing bug 30992 and any
+      other future issues.

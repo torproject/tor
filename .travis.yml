@@ -57,7 +57,7 @@ matrix:
     - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
       compiler: clang
     ## We include a single coverage build with the best options for coverage
-    - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
+    - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS="" TOR_TEST_RNG_SEED="636f766572616765"
     ## We run rust on Linux, because it's faster than rust on macOS
     ## We check rust offline
     - env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
@@ -114,6 +114,7 @@ addons:
       - libscrypt-dev
       - libseccomp-dev
       - libzstd-dev
+      - shellcheck
       ## Conditional build dependencies
       ## Always installed, so we don't need sudo
       - asciidoc
@@ -142,6 +143,7 @@ addons:
       - pkg-config
       ## Optional build dependencies
       - ccache
+      - shellcheck
       ## Conditional build dependencies
       ## Always installed, because manual brew installs are hard to get right
       - asciidoc

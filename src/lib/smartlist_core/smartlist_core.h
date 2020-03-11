@@ -43,6 +43,7 @@ void smartlist_clear(smartlist_t *sl);
 void smartlist_add(smartlist_t *sl, void *element);
 void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2);
 void smartlist_add_strdup(struct smartlist_t *sl, const char *string);
+void smartlist_grow(smartlist_t *sl, size_t new_size);
 
 void smartlist_remove(smartlist_t *sl, const void *element);
 void smartlist_remove_keeporder(smartlist_t *sl, const void *element);
@@ -97,4 +98,4 @@ void smartlist_del(smartlist_t *sl, int idx);
 void smartlist_del_keeporder(smartlist_t *sl, int idx);
 void smartlist_insert(smartlist_t *sl, int idx, void *val);
 
-#endif /* !defined(TOR_CONTAINER_H) */
+#endif /* !defined(TOR_SMARTLIST_CORE_H) */

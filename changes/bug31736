@@ -1,0 +1,3 @@
+  o Minor bugfixes (multithreading):
+    - Avoid some undefined behaviour when freeing mutexes.
+      Fixes bug 31736; bugfix on 0.0.7.

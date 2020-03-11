@@ -1,3 +1,0 @@
-  o Documentation (hidden service manpage):
-    - Improve HSv3 client authorization by making some options more explicit
-      and detailed. Closes ticket 28026. Patch by "mtigas".

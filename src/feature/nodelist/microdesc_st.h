@@ -9,6 +9,7 @@
 
 struct curve25519_public_key_t;
 struct ed25519_public_key_t;
+struct nodefamily_t;
 struct short_policy_t;
 
 /** A microdescriptor is the smallest amount of information needed to build a
@@ -69,12 +70,12 @@ struct microdesc_t {
   tor_addr_t ipv6_addr;
   /** As routerinfo_t.ipv6_orport */
   uint16_t ipv6_orport;
-  /** As routerinfo_t.family */
-  smartlist_t *family;
+  /** As routerinfo_t.family, with readable members parsed. */
+  struct nodefamily_t *family;
   /** IPv4 exit policy summary */
   struct short_policy_t *exit_policy;
   /** IPv6 exit policy summary */
   struct short_policy_t *ipv6_exit_policy;
 };
 
-#endif
+#endif /* !defined(MICRODESC_ST_H) */

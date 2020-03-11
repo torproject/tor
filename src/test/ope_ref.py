@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # Copyright 2018-2019, The Tor Project, Inc. See LICENSE for licensing info.
 
 # Reference implementation for our rudimentary OPE code, used to

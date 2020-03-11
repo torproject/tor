@@ -1,0 +1,3 @@
+  o Minor bugfixes (windows service):
+    - Initialize publish/subscribe system when running as a windows service.
+      Fixes bug 32778; bugfix on 0.4.1.1-alpha.

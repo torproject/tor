@@ -11,6 +11,7 @@
 #include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nodefamily.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/torcert.h"
 
@@ -70,6 +71,7 @@ test_md_cache(void *data)
   const char *test_md3_noannotation = strchr(test_md3, '\n')+1;
   time_t time1, time2, time3;
   char *fn = NULL, *s = NULL;
+  char *encoded_family = NULL;
   (void)data;
 
   options = get_options_mutable();
@@ -172,8 +174,9 @@ test_md_cache(void *data)
 
   tt_ptr_op(md1->family, OP_EQ, NULL);
   tt_ptr_op(md3->family, OP_NE, NULL);
-  tt_int_op(smartlist_len(md3->family), OP_EQ, 3);
-  tt_str_op(smartlist_get(md3->family, 0), OP_EQ, "nodeX");
+
+  encoded_family = nodefamily_format(md3->family);
+  tt_str_op(encoded_family, OP_EQ, "nodex nodey nodez");
 
   /* Now rebuild the cache! */
   tt_int_op(microdesc_cache_rebuild(mc, 1), OP_EQ, 0);
@@ -254,6 +257,7 @@ test_md_cache(void *data)
   smartlist_free(wanted);
   tor_free(s);
   tor_free(fn);
+  tor_free(encoded_family);
 }
 
 static const char truncated_md[] =
@@ -417,6 +421,28 @@ static const char test_md2_21[] =
   "ntor-onion-key hbxdRnfVUJJY7+KcT4E3Rs7/zuClbN3hJrjSBiEGMgI=\n"
   "id ed25519 wqfLzgfCtRfYNg88LsL1QpzxS0itapJ1aj6TbnByx/Q\n";
 
+static const char test_md2_withfamily_28[] =
+  "onion-key\n"
+  "-----BEGIN RSA PUBLIC KEY-----\n"
+  "MIGJAoGBAL2R8EfubUcahxha4u02P4VAR0llQIMwFAmrHPjzcK7apcQgDOf2ovOA\n"
+  "+YQnJFxlpBmCoCZC6ssCi+9G0mqo650lFuTMP5I90BdtjotfzESfTykHLiChyvhd\n"
+  "l0dlqclb2SU/GKem/fLRXH16aNi72CdSUu/1slKs/70ILi34QixRAgMBAAE=\n"
+  "-----END RSA PUBLIC KEY-----\n"
+  "ntor-onion-key hbxdRnfVUJJY7+KcT4E3Rs7/zuClbN3hJrjSBiEGMgI=\n"
+  "family OtherNode !Strange\n"
+  "id ed25519 wqfLzgfCtRfYNg88LsL1QpzxS0itapJ1aj6TbnByx/Q\n";
+
+static const char test_md2_withfamily_29[] =
+  "onion-key\n"
+  "-----BEGIN RSA PUBLIC KEY-----\n"
+  "MIGJAoGBAL2R8EfubUcahxha4u02P4VAR0llQIMwFAmrHPjzcK7apcQgDOf2ovOA\n"
+  "+YQnJFxlpBmCoCZC6ssCi+9G0mqo650lFuTMP5I90BdtjotfzESfTykHLiChyvhd\n"
+  "l0dlqclb2SU/GKem/fLRXH16aNi72CdSUu/1slKs/70ILi34QixRAgMBAAE=\n"
+  "-----END RSA PUBLIC KEY-----\n"
+  "ntor-onion-key hbxdRnfVUJJY7+KcT4E3Rs7/zuClbN3hJrjSBiEGMgI=\n"
+  "family !Strange $B7E27F104213C36F13E7E9829182845E495997A0 othernode\n"
+  "id ed25519 wqfLzgfCtRfYNg88LsL1QpzxS0itapJ1aj6TbnByx/Q\n";
+
 static void
 test_md_generate(void *arg)
 {
@@ -446,6 +472,17 @@ test_md_generate(void *arg)
   tt_str_op(md->body, OP_EQ, test_md2_21);
   tt_assert(ed25519_pubkey_eq(md->ed25519_identity_pkey,
                               &ri->cache_info.signing_key_cert->signing_key));
+
+  // Try family encoding.
+  microdesc_free(md);
+  ri->declared_family = smartlist_new();
+  smartlist_add_strdup(ri->declared_family, "OtherNode !Strange");
+  md = dirvote_create_microdescriptor(ri, 28);
+  tt_str_op(md->body, OP_EQ, test_md2_withfamily_28);
+
+  microdesc_free(md);
+  md = dirvote_create_microdescriptor(ri, 29);
+  tt_str_op(md->body, OP_EQ, test_md2_withfamily_29);
 
  done:
   microdesc_free(md);

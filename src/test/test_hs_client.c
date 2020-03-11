@@ -14,6 +14,7 @@
 #define CIRCUITBUILD_PRIVATE
 #define CIRCUITLIST_PRIVATE
 #define CONNECTION_PRIVATE
+#define CRYPT_PATH_PRIVATE
 
 #include "test/test.h"
 #include "test/test_helpers.h"
@@ -44,6 +45,7 @@
 
 #include "core/or/cpath_build_state_st.h"
 #include "core/or/crypt_path_st.h"
+#include "core/or/crypt_path.h"
 #include "feature/dircommon/dir_connection_st.h"
 #include "core/or/entry_connection_st.h"
 #include "core/or/extend_info_st.h"
@@ -241,12 +243,14 @@ test_e2e_rend_circuit_setup_legacy(void *arg)
   tt_int_op(retval, OP_EQ, 1);
 
   /* Check the digest algo */
-  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->crypto.f_digest),
+  tt_int_op(
+         crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.f_digest),
             OP_EQ, DIGEST_SHA1);
-  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->crypto.b_digest),
+  tt_int_op(
+         crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.b_digest),
             OP_EQ, DIGEST_SHA1);
-  tt_assert(or_circ->cpath->crypto.f_crypto);
-  tt_assert(or_circ->cpath->crypto.b_crypto);
+  tt_assert(or_circ->cpath->pvt_crypto.f_crypto);
+  tt_assert(or_circ->cpath->pvt_crypto.b_crypto);
 
   /* Ensure that circ purpose was changed */
   tt_int_op(or_circ->base_.purpose, OP_EQ, CIRCUIT_PURPOSE_C_REND_JOINED);
@@ -311,12 +315,14 @@ test_e2e_rend_circuit_setup(void *arg)
   tt_int_op(retval, OP_EQ, 1);
 
   /* Check that the crypt path has prop224 algorithm parameters */
-  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->crypto.f_digest),
+  tt_int_op(
+         crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.f_digest),
             OP_EQ, DIGEST_SHA3_256);
-  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->crypto.b_digest),
+  tt_int_op(
+         crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.b_digest),
             OP_EQ, DIGEST_SHA3_256);
-  tt_assert(or_circ->cpath->crypto.f_crypto);
-  tt_assert(or_circ->cpath->crypto.b_crypto);
+  tt_assert(or_circ->cpath->pvt_crypto.f_crypto);
+  tt_assert(or_circ->cpath->pvt_crypto.b_crypto);
 
   /* Ensure that circ purpose was changed */
   tt_int_op(or_circ->base_.purpose, OP_EQ, CIRCUIT_PURPOSE_C_REND_JOINED);
@@ -395,7 +401,7 @@ test_client_pick_intro(void *arg)
     tt_assert(fetched_desc);
     tt_mem_op(fetched_desc->subcredential, OP_EQ, desc->subcredential,
               DIGEST256_LEN);
-    tt_assert(!tor_mem_is_zero((char*)fetched_desc->subcredential,
+    tt_assert(!fast_mem_is_zero((char*)fetched_desc->subcredential,
                                DIGEST256_LEN));
     tor_free(encoded);
   }
@@ -403,6 +409,9 @@ test_client_pick_intro(void *arg)
   /* 2) Mark all intro points except _the chosen one_ as failed. Then query the
    *   desc and get a random intro: check that we got _the chosen one_. */
   {
+    /* Tell hs_get_extend_info_from_lspecs() to skip the private address check.
+     */
+    get_options_mutable()->ExtendAllowPrivateAddresses = 1;
     /* Pick the chosen intro point and get its ei */
     hs_desc_intro_point_t *chosen_intro_point =
       smartlist_get(desc->encrypted_data.intro_points, 0);
@@ -430,7 +439,7 @@ test_client_pick_intro(void *arg)
     for (int i = 0; i < 64; ++i) {
       extend_info_t *ip = client_get_random_intro(&service_kp.pubkey);
       tor_assert(ip);
-      tt_assert(!tor_mem_is_zero((char*)ip->identity_digest, DIGEST_LEN));
+      tt_assert(!fast_mem_is_zero((char*)ip->identity_digest, DIGEST_LEN));
       tt_mem_op(ip->identity_digest, OP_EQ, chosen_intro_ei->identity_digest,
                 DIGEST_LEN);
       extend_info_free(ip);
@@ -476,6 +485,18 @@ test_client_pick_intro(void *arg)
     SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
                             hs_desc_intro_point_t *, ip) {
       extend_info_t *intro_ei = desc_intro_point_to_extend_info(ip);
+      /* desc_intro_point_to_extend_info() doesn't return IPv6 intro points
+       * yet, because we can't extend to them. See #24404, #24451, and #24181.
+       */
+      if (intro_ei == NULL) {
+        /* Pretend we're making a direct connection, and that we can use IPv6
+         */
+        get_options_mutable()->ClientUseIPv6 = 1;
+        intro_ei = hs_get_extend_info_from_lspecs(ip->link_specifiers,
+                                                  &ip->onion_key, 1);
+        tt_assert(tor_addr_family(&intro_ei->addr) == AF_INET6);
+      }
+      tt_assert(intro_ei);
       if (intro_ei) {
         const char *ptr;
         char ip_addr[TOR_ADDR_BUF_LEN];

@@ -1,4 +1,0 @@
-  o Minor bugfixes (stats):
-    - When ExtraInfoStatistics is 0, stop including PaddingStatistics in
-      relay and bridge extra-info documents. Fixes bug 29017;
-      bugfix on 0.3.1.1-alpha.
