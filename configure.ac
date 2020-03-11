@@ -273,8 +273,8 @@ if test "x$enable_tracing_instrumentation_lttng" = "xyes"; then
                                   On Debian, apt install liblttng-ust-dev"])], [])
   AC_DEFINE([USE_TRACING_INSTRUMENTATION_LTTNG], [1], [Using LTTng instrumentation])
   TOR_TRACE_LIBS="-llttng-ust -ldl"
+  have_tracing=1
 fi
-
 
 dnl USDT instrumentation option.
 AC_ARG_ENABLE(tracing-instrumentation-usdt,
@@ -291,6 +291,7 @@ if test "x$enable_tracing_instrumentation_usdt" = "xyes"; then
   dnl --with-sdt. There is unfortunately no way to check that so we always
   dnl build the USDT probes even though LTTng instrumentation was requested.
   AC_DEFINE([USE_TRACING_INSTRUMENTATION_USDT], [1], [Using USDT instrumentation])
+  have_tracing=1
 fi
 
 dnl Tracepoints event to debug logs.
@@ -301,6 +302,9 @@ AC_ARG_ENABLE(tracing-instrumentation-log-debug,
                [Tracepoints to log debug]), [])
 AM_CONDITIONAL([USE_TRACING_INSTRUMENTATION_LOG_DEBUG],
                [test "x$enable_tracing_instrumentation_log_debug" = "xyes"])
+if test "x$enable_tracing_instrumentation_log_debug" = "xyes"; then
+  have_tracing=1
+fi
 
 dnl Define that tracing is supported if any instrumentation is used.
 AM_COND_IF([USE_TRACING_INSTRUMENTATION_LOG_DEBUG],
@@ -309,6 +313,7 @@ AM_COND_IF([USE_TRACING_INSTRUMENTATION_USDT],
            AC_DEFINE([HAVE_TRACING], [1], [Compiled with tracing support]))
 AM_COND_IF([USE_TRACING_INSTRUMENTATION_LTTNG],
            AC_DEFINE([HAVE_TRACING], [1], [Compiled with tracing support]))
+AM_CONDITIONAL([USE_TRACING], [test "x$have_tracing" = x1 ])
 
 dnl Finally, define the trace libs.
 AC_SUBST([TOR_TRACE_LIBS])

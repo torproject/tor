@@ -11,4 +11,12 @@
 
 extern const struct subsys_fns_t sys_tracing;
 
+/**
+ * Subsystem level for the tracing system.
+ *
+ * Defined here so that it can be shared between the real and stub
+ * definitions.
+ **/
+#define TRACE_SUBSYS_LEVEL (-85)
+
 #endif /* !defined(TOR_TRACE_SYS_H) */

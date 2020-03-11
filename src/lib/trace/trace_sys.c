@@ -25,9 +25,12 @@ subsys_tracing_shutdown(void)
 }
 
 const subsys_fns_t sys_tracing = {
+  SUBSYS_DECLARE_LOCATION(),
+
   .name = "tracing",
   .supported = true,
-  .level = -85,
+  .level = TRACE_SUBSYS_LEVEL,
+
   .initialize = subsys_tracing_initialize,
   .shutdown = subsys_tracing_shutdown,
 };
