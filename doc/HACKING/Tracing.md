@@ -4,7 +4,25 @@ This document describes how the event tracing subsystem works in tor so
 developers can add events to the code base but also hook them to an event
 tracing framework (i.e. tracer).
 
-## Basics
+## WARNING ##
+
+Tracing the tor daemon **always** generates sensitive data if used in
+production (on the public network).
+
+It **is** ethical for researchers to use tracing for their own tor client (for
+example: building paths, timings, or performance).
+
+It is **NOT** ethical to archive, publish or keep data containing other users'
+activity such as relay data or anything that handles users' traffic. This
+of course includes any logs below notice level.
+
+Publishing analysis of tracing data containing user traffic is **NOT** safe
+either.
+
+In other words, tracing data that contains other users's activity is **NOT**
+safe to publish in any form.
+
+## Basics ###
 
 Tracing is separated in two different concepts. The tracing API and the
 tracing probes.
