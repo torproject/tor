@@ -1,0 +1,4 @@
+  o Minor bugfixes (onion services v3):
+    - Relax severity of a log message that can appear naturally when decoding
+      onion service descriptors as a relay. Also add some diagnostics to debug
+      any future bugs in that area. Fixes bug 31669; bugfix on 0.3.0.1-alpha.
