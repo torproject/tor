@@ -28,7 +28,13 @@ static int cached_client_descriptor_has_expired(time_t now,
            const hs_cache_client_descriptor_t *cached_desc);
 
 /** Helper function: Return true iff the cache entry has a decrypted
- * descriptor. */
+ * descriptor.
+ *
+ * A NULL desc object in the entry means that we were not able to decrypt the
+ * descriptor because we are likely lacking client authorization.  It is still
+ * a valid entry but some operations can't be done without the decrypted
+ * descriptor thus this function MUST be used to safe guard access to the
+ * decrypted desc object. */
 static inline bool
 entry_has_decrypted_descriptor(const hs_cache_client_descriptor_t *entry)
 {
@@ -683,10 +689,12 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
    * client authorization. */
   cache_entry = lookup_v3_desc_as_client(client_desc->key.pubkey);
   if (cache_entry != NULL) {
-    /* Without a decrypted descriptor, we'll always replace the one we have
-     * with the new one we just fetched because we can't inspect the revision
-     * counter in the plaintext data. */
-    if (!entry_has_decrypted_descriptor(client_desc)) {
+    /* For both cache entry or the new descriptor, without a decrypted
+     * descriptor, we'll always replace the one we have with the new one we
+     * just fetched because we can't inspect the revision counter in the
+     * plaintext data. */
+    if (!entry_has_decrypted_descriptor(cache_entry) ||
+        !entry_has_decrypted_descriptor(client_desc)) {
       remove_v3_desc_as_client(cache_entry);
       cache_client_desc_free(cache_entry);
       goto store;
