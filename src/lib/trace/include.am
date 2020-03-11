@@ -26,6 +26,10 @@ if USE_TRACING_INSTRUMENTATION_LTTNG
 include src/lib/trace/lttng/include.am
 endif
 
+if USE_TRACING
 src_lib_libtor_trace_a_SOURCES = $(LIBTOR_TRACE_A_SOURCES)
+else
+src_lib_libtor_trace_a_SOURCES = src/lib/trace/trace_stub.c
+endif
 
 noinst_HEADERS+= $(TRACEHEADERS)
