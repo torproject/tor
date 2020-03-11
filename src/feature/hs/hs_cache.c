@@ -659,9 +659,10 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
    * client authorization. */
   cache_entry = lookup_v3_desc_as_client(client_desc->key.pubkey);
   if (cache_entry != NULL) {
-    /* Signalling an undecrypted descriptor. We'll always replace the one we
-     * have with the new one just fetched. */
-    if (cache_entry->desc == NULL) {
+    /* Either the cache entry or the new entry is without a decrypted
+     * descriptor, we replace it regardless. We can't inspect the plaintext
+     * data for the revision counter. */
+    if (cache_entry->desc == NULL || client_desc->desc == NULL) {
       remove_v3_desc_as_client(cache_entry);
       cache_client_desc_free(cache_entry);
       goto store;
