@@ -9,6 +9,8 @@
 #ifndef TOR_LIB_TRACE_EVENTS_H
 #define TOR_LIB_TRACE_EVENTS_H
 
+#include "orconfig.h"
+
 /*
  * A tracepoint signature is defined as follow:
  *
@@ -34,13 +36,22 @@
  *  enabling this instrumentation provides both probes.
  */
 
+/** Helper to disambiguate these identifiers in the code base. They should
+ * only be used with tor_trace() like so:
+ *
+ *    tor_trace(TR_SUBSYS(circuit), TR_EV(opened), ...);
+ */
+
+#define TR_SUBSYS(name) tor_ ## name
+#define TR_EV(name) name
+
 #ifdef HAVE_TRACING
 
 #define tor_trace(subsystem, event_name, ...)                       \
   do {                                                              \
-    TOR_TRACE_LOG_DEBUG(tor_ ## subsystem, event_name);             \
-    TOR_TRACE_USDT(tor_ ## subsystem, event_name, ## __VA_ARGS__);  \
-    TOR_TRACE_LTTNG(tor_ ## subsystem, event_name, ## __VA_ARGS__); \
+    TOR_TRACE_LOG_DEBUG(subsystem, event_name);             \
+    TOR_TRACE_USDT(subsystem, event_name, ## __VA_ARGS__);  \
+    TOR_TRACE_LTTNG(subsystem, event_name, ## __VA_ARGS__); \
   } while (0)
 
 /* This corresponds to the --enable-tracing-instrumentation-log-debug

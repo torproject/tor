@@ -10,7 +10,7 @@
 #ifndef TOR_TRACE_PROBES_CIRCUIT_H
 #define TOR_TRACE_PROBES_CIRCUIT_H
 
-#include "orconfig.h"
+#include "lib/trace/events.h"
 
 /* We only build the following if LTTng instrumentation has been enabled. */
 #ifdef USE_TRACING_INSTRUMENTATION_LTTNG

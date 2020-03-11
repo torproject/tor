@@ -503,7 +503,7 @@ circuit_establish_circuit(uint8_t purpose, extend_info_t *exit_ei, int flags)
     return NULL;
   }
 
-  tor_trace(circuit, establish, circ);
+  tor_trace(TR_SUBSYS(circuit), TR_EV(establish), circ);
   return circ;
 }
 
@@ -1020,7 +1020,7 @@ circuit_send_first_onion_skin(origin_circuit_t *circ)
 
   if (circuit_deliver_create_cell(TO_CIRCUIT(circ), &cc, 0) < 0)
     return - END_CIRC_REASON_RESOURCELIMIT;
-  tor_trace(circuit, first_onion_skin, circ, circ->cpath);
+  tor_trace(TR_SUBSYS(circuit), TR_EV(first_onion_skin), circ, circ->cpath);
 
   circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
   circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_BUILDING);
@@ -1167,7 +1167,7 @@ circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
       return 0; /* circuit is closed */
   }
   hop->state = CPATH_STATE_AWAITING_KEYS;
-  tor_trace(circuit, intermediate_onion_skin, circ, hop);
+  tor_trace(TR_SUBSYS(circuit), TR_EV(intermediate_onion_skin), circ, hop);
   return 0;
 }
 
