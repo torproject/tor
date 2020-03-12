@@ -99,9 +99,11 @@ test_cert_encoding(void *arg)
     pos += strlen("-----END ED25519 CERT-----");
     tt_str_op(pos, OP_EQ, "");
 
-    /* Check that certificate expiry works properly and emits the right log message */
+    /* Check that certificate expiry works properly and emits the right log
+       message */
     const char *msg = "fire";
-    /* Move us forward 4 hours so that the the certificate is definitely expired */
+    /* Move us forward 4 hours so that the the certificate is definitely
+       expired */
     update_approx_time(approx_time() + 3600*4);
     setup_full_capture_of_logs(LOG_PROTOCOL_WARN);
     ret = cert_is_valid(parsed_cert, CERT_TYPE_SIGNING_AUTH, msg);
@@ -110,7 +112,8 @@ test_cert_encoding(void *arg)
      * 20:08", and the expiration date of the cert was two hours, the Tor code
      * will ceiling that and make it 23:00. Make sure that the right log
      * message is emitted */
-    expect_log_msg_containing("Invalid signature for fire: expired (2290-02-01 23:00:00)");
+    expect_log_msg_containing("Invalid signature for fire: expired"
+                              " (2290-02-01 23:00:00)");
     teardown_capture_of_logs();
 
     tor_cert_free(parsed_cert);
