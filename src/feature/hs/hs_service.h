@@ -384,6 +384,9 @@ STATIC hs_service_t *get_first_service(void);
 STATIC hs_service_intro_point_t *service_intro_point_find_by_ident(
                                          const hs_service_t *service,
                                          const hs_ident_circuit_t *ident);
+
+MOCK_DECL(STATIC unsigned int, count_desc_circuit_established,
+          (const hs_service_descriptor_t *desc));
 #endif /* defined(TOR_UNIT_TESTS) */
 
 /* Service accessors. */

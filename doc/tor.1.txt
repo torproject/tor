@@ -760,6 +760,11 @@ forward slash (/) in the configuration file and on the command line.
     This setting will be ignored for connections to the loopback
     addresses (127.0.0.0/8 and ::1).
 
+[[OwningControllerProcess]] **{dbl_}OwningControllerProcess** __PID__::
+    Make Tor instance periodically check for presence of a controller process
+    with given PID and terminate itself if this process is no longer alive.
+    Polling interval is 15 seconds.
+
 [[PerConnBWBurst]] **PerConnBWBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     If this option is set manually, or via the "perconnbwburst" consensus
     field, Tor will use it for separate rate limiting for each connection
@@ -1017,13 +1022,6 @@ The following options are useful only for clients (that is, if
     overhead. Only clients may set this option. This option should be offered
     via the UI to mobile users for use where bandwidth may be expensive.
     (Default: 0)
-
-[[ClientAutoIPv6ORPort]] **ClientAutoIPv6ORPort** **0**|**1**::
-    If this option is set to 1, Tor clients randomly prefer a node's IPv4 or
-    IPv6 ORPort. The random preference is set every time a node is loaded
-    from a new consensus or bridge config. When this option is set to 1,
-    **ClientPreferIPv6ORPort** is ignored. (Default: 0) (DEPRECATED: This
-    option is unreliable if a connection isn't reliably dual-stack.)
 
 [[ClientBootstrapConsensusAuthorityDownloadInitialDelay]] **ClientBootstrapConsensusAuthorityDownloadInitialDelay** __N__::
     Initial delay in seconds for when clients should download consensuses from authorities
