@@ -68,9 +68,9 @@ buf_read_from_tls(buf_t *buf, tor_tls_t *tls, size_t at_most)
 
   check_no_tls_errors();
 
-  IF_BUG_ONCE(buf->datalen > INT_MAX - 1)
+  IF_BUG_ONCE(buf->datalen > BUF_MAX_LEN)
     return -1;
-  IF_BUG_ONCE(buf->datalen > INT_MAX - 1 - at_most)
+  IF_BUG_ONCE(buf->datalen > BUF_MAX_LEN - at_most)
     return -1;
 
   while (at_most > total_read) {
@@ -90,7 +90,7 @@ buf_read_from_tls(buf_t *buf, tor_tls_t *tls, size_t at_most)
     r = read_to_chunk_tls(buf, chunk, tls, readlen);
     if (r < 0)
       return r; /* Error */
-    tor_assert(total_read+r <= INT_MAX - 1);
+    tor_assert(total_read+r <= BUF_MAX_LEN);
     total_read += r;
     if ((size_t)r < readlen) /* eof, block, or no more to read. */
       break;
@@ -177,6 +177,6 @@ buf_flush_to_tls(buf_t *buf, tor_tls_t *tls, size_t flushlen,
     if (r == 0) /* Can't flush any more now. */
       break;
   } while (sz > 0);
-  tor_assert(flushed <= INT_MAX - 1);
+  tor_assert(flushed <= BUF_MAX_LEN);
   return (int)flushed;
 }
