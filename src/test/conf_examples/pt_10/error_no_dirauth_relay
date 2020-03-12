@@ -1,0 +1,1 @@
+This tor was built with relay mode disabled. It can not be configured with an ORPort, a DirPort, DirCache 1, or BridgeRelay 1.
