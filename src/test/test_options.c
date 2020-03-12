@@ -485,7 +485,8 @@ test_options_validate__uname_for_server(void *ignored)
 #endif
 
   options_test_data_t *tdata = get_options_test_data(
-                                      "ORPort 127.0.0.1:5555");
+                                      "ORPort 127.0.0.1:5555\n"
+                                      "ContactInfo nobody@example.com");
   setup_capture_of_logs(LOG_WARN);
 
   MOCK(get_uname, fixed_get_uname);
@@ -633,9 +634,11 @@ test_options_validate__contactinfo(void *ignored)
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
   expect_log_msg(
-            "Your ContactInfo config option is not"
-            " set. Please consider setting it, so we can contact you if your"
-            " server is misconfigured or something else goes wrong.\n");
+           "Your ContactInfo config option is not set. Please strongly "
+           "consider setting it, so we can contact you if your relay is "
+           "misconfigured, end-of-life, or something else goes wrong. It "
+           "is also possible that your relay might get rejected from the "
+           "network due to a missing valid contact address.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -645,9 +648,11 @@ test_options_validate__contactinfo(void *ignored)
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
   expect_no_log_msg(
-            "Your ContactInfo config option is not"
-            " set. Please consider setting it, so we can contact you if your"
-            " server is misconfigured or something else goes wrong.\n");
+           "Your ContactInfo config option is not set. Please strongly "
+           "consider setting it, so we can contact you if your relay is "
+           "misconfigured, end-of-life, or something else goes wrong. It "
+           "is also possible that your relay might get rejected from the "
+           "network due to a missing valid contact address.\n");
   tor_free(msg);
 
  done:
