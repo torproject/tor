@@ -689,10 +689,10 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
    * client authorization. */
   cache_entry = lookup_v3_desc_as_client(client_desc->key.pubkey);
   if (cache_entry != NULL) {
-    /* For both cache entry or the new descriptor, without a decrypted
-     * descriptor, we'll always replace the one we have with the new one we
-     * just fetched because we can't inspect the revision counter in the
-     * plaintext data. */
+    /* If the current or the new cache entry don't have a decrypted descriptor
+     * (missing client authorization), we always replace the current one with
+     * the new one. Reason is that we can't inspect the revision counter
+     * within the plaintext data so we blindly replace. */
     if (!entry_has_decrypted_descriptor(cache_entry) ||
         !entry_has_decrypted_descriptor(client_desc)) {
       remove_v3_desc_as_client(cache_entry);
@@ -701,7 +701,7 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
     }
 
     /* From this point on, we know that the decrypted descriptor is in the
-     * entry object thus safe to access. */
+     * current entry and new object thus safe to access. */
 
     /* If we have an entry in our cache that has a revision counter greater
      * than the one we just fetched, discard the one we fetched. */
