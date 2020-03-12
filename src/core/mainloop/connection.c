@@ -3684,8 +3684,8 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
     at_most = connection_bucket_read_limit(conn, approx_time());
   }
 
-  /* Do not allow inbuf to grow past INT_MAX - 1. */
-  const ssize_t maximum = INT_MAX - 1 - buf_datalen(conn->inbuf);
+  /* Do not allow inbuf to grow past BUF_MAX_LEN. */
+  const ssize_t maximum = BUF_MAX_LEN - buf_datalen(conn->inbuf);
   if (at_most > maximum) {
     log_debug(LD_NET, "%d: inbuf_datalen=%"TOR_PRIuSZ", adding %"
               TOR_PRIdSZ" might overflow.",
