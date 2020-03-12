@@ -63,7 +63,7 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, tor_socket_t fd, size_t at_most,
     chunk->datalen += read_result;
     log_debug(LD_NET,"Read %ld bytes. %d on inbuf.", (long)read_result,
               (int)buf->datalen);
-    tor_assert(read_result < INT_MAX);
+    tor_assert(read_result <= INT_MAX - 1);
     return (int)read_result;
   }
 }
@@ -89,9 +89,9 @@ buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
   tor_assert(reached_eof);
   tor_assert(SOCKET_OK(s));
 
-  if (BUG(buf->datalen >= INT_MAX))
+  if (BUG(buf->datalen > INT_MAX - 1))
     return -1;
-  if (BUG(buf->datalen >= INT_MAX - at_most))
+  if (BUG(buf->datalen > INT_MAX - 1 - at_most))
     return -1;
 
   while (at_most > total_read) {
@@ -112,7 +112,7 @@ buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
     check();
     if (r < 0)
       return r; /* Error */
-    tor_assert(total_read+r < INT_MAX);
+    tor_assert(total_read+r <= INT_MAX - 1);
     total_read += r;
     if ((size_t)r < readlen) { /* eof, block, or no more to read. */
       break;
@@ -150,7 +150,7 @@ flush_chunk(tor_socket_t s, buf_t *buf, chunk_t *chunk, size_t sz,
   } else {
     *buf_flushlen -= write_result;
     buf_drain(buf, write_result);
-    tor_assert(write_result < INT_MAX);
+    tor_assert(write_result <= INT_MAX - 1);
     return (int)write_result;
   }
 }
@@ -197,6 +197,6 @@ buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
     if (r == 0 || (size_t)r < flushlen0) /* can't flush any more now. */
       break;
   }
-  tor_assert(flushed < INT_MAX);
+  tor_assert(flushed <= INT_MAX - 1);
   return (int)flushed;
 }
