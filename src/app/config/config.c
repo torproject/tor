@@ -6105,13 +6105,12 @@ port_parse_config(smartlist_t *out,
   const unsigned is_unix_socket = flags & CL_PORT_IS_UNIXSOCKET;
   int got_zero_port=0, got_nonzero_port=0;
   char *unix_socket_path = NULL;
-  port_cfg_t *cfg_def = NULL;
+  port_cfg_t *cfg = NULL;
 
   /* If there's no FooPort, then maybe make a default one. */
   if (! ports) {
     if (defaultport && defaultaddr && out) {
-       port_cfg_t
-       *cfg = port_cfg_new(is_unix_socket ? strlen(defaultaddr) : 0);
+       cfg = port_cfg_new(is_unix_socket ? strlen(defaultaddr) : 0);
        cfg->type = listener_type;
        if (is_unix_socket) {
          tor_addr_make_unspec(&cfg->addr);
@@ -6121,8 +6120,6 @@ port_parse_config(smartlist_t *out,
          cfg->port = defaultport;
          tor_addr_parse(&cfg->addr, defaultaddr);
        }
-       cfg->entry_cfg.session_group = SESSION_GROUP_UNSET;
-       cfg->entry_cfg.isolation_flags = ISO_DEFAULT;
        smartlist_add(out, cfg);
     }
     return 0;
@@ -6152,9 +6149,6 @@ port_parse_config(smartlist_t *out,
       log_warn(LD_CONFIG, "Invalid %sPort line with no address", portname);
       goto err;
     }
-
-    /* Initializing the new config with defaults */
-    cfg_def = port_cfg_new( addrport ? strlen(addrport) : 0);
 
     /* Split the remainder... */
     smartlist_split_string(elts, rest_of_line, NULL,
@@ -6220,17 +6214,20 @@ port_parse_config(smartlist_t *out,
       }
     }
 
+    /* Default port_cfg_t object initialization */
+    cfg = port_cfg_new(unix_socket_path ? strlen(unix_socket_path) : 0);
+
     if (unix_socket_path && default_to_group_writable)
-      cfg_def->is_group_writable = 1;
+      cfg->is_group_writable = 1;
 
     /* Now parse the rest of the options, if any. */
     if (use_server_options) {
       /* This is a server port; parse advertising options */
       SMARTLIST_FOREACH_BEGIN(elts, char *, elt) {
         if (!strcasecmp(elt, "NoAdvertise")) {
-          cfg_def->server_cfg.no_advertise = 1;
+          cfg->server_cfg.no_advertise = 1;
         } else if (!strcasecmp(elt, "NoListen")) {
-          cfg_def->server_cfg.no_listen = 1;
+          cfg->server_cfg.no_listen = 1;
 #if 0
         /* not implemented yet. */
         } else if (!strcasecmp(elt, "AllAddrs")) {
@@ -6238,35 +6235,35 @@ port_parse_config(smartlist_t *out,
           all_addrs = 1;
 #endif /* 0 */
         } else if (!strcasecmp(elt, "IPv4Only")) {
-          cfg_def->server_cfg.bind_ipv4_only = 1;
+          cfg->server_cfg.bind_ipv4_only = 1;
         } else if (!strcasecmp(elt, "IPv6Only")) {
-          cfg_def->server_cfg.bind_ipv6_only = 1;
+          cfg->server_cfg.bind_ipv6_only = 1;
         } else {
           log_warn(LD_CONFIG, "Unrecognized %sPort option '%s'",
                    portname, escaped(elt));
         }
       } SMARTLIST_FOREACH_END(elt);
 
-      if (cfg_def->server_cfg.no_advertise && cfg_def->server_cfg.no_listen) {
+      if (cfg->server_cfg.no_advertise && cfg->server_cfg.no_listen) {
         log_warn(LD_CONFIG, "Tried to set both NoListen and NoAdvertise "
                  "on %sPort line '%s'",
                  portname, escaped(ports->value));
         goto err;
       }
-      if (cfg_def->server_cfg.bind_ipv4_only &&
-          cfg_def->server_cfg.bind_ipv6_only) {
+      if (cfg->server_cfg.bind_ipv4_only &&
+          cfg->server_cfg.bind_ipv6_only) {
         log_warn(LD_CONFIG, "Tried to set both IPv4Only and IPv6Only "
                  "on %sPort line '%s'",
                  portname, escaped(ports->value));
         goto err;
       }
-      if (cfg_def->server_cfg.bind_ipv4_only &&
+      if (cfg->server_cfg.bind_ipv4_only &&
           tor_addr_family(&addr) != AF_INET) {
         log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv4",
                  portname);
         goto err;
       }
-      if (cfg_def->server_cfg.bind_ipv6_only &&
+      if (cfg->server_cfg.bind_ipv6_only &&
           tor_addr_family(&addr) != AF_INET6) {
         log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv6",
                  portname);
@@ -6286,12 +6283,12 @@ port_parse_config(smartlist_t *out,
                      portname, escaped(elt));
             goto err;
           }
-          if (cfg_def->entry_cfg.session_group >= 0) {
+          if (cfg->entry_cfg.session_group >= 0) {
             log_warn(LD_CONFIG, "Multiple SessionGroup options on %sPort",
                      portname);
             goto err;
           }
-          cfg_def->entry_cfg.session_group = group;
+          cfg->entry_cfg.session_group = group;
           continue;
         }
 
@@ -6301,15 +6298,15 @@ port_parse_config(smartlist_t *out,
         }
 
         if (!strcasecmp(elt, "GroupWritable")) {
-          cfg_def->is_group_writable = !no;
+          cfg->is_group_writable = !no;
           has_used_unix_socket_only_option = 1;
           continue;
         } else if (!strcasecmp(elt, "WorldWritable")) {
-          cfg_def->is_world_writable = !no;
+          cfg->is_world_writable = !no;
           has_used_unix_socket_only_option = 1;
           continue;
         } else if (!strcasecmp(elt, "RelaxDirModeCheck")) {
-          cfg_def->relax_dirmode_check = !no;
+          cfg->relax_dirmode_check = !no;
           has_used_unix_socket_only_option = 1;
           continue;
         }
@@ -6322,19 +6319,19 @@ port_parse_config(smartlist_t *out,
 
         if (takes_hostnames) {
           if (!strcasecmp(elt, "IPv4Traffic")) {
-            cfg_def->entry_cfg.ipv4_traffic = ! no;
+            cfg->entry_cfg.ipv4_traffic = ! no;
             continue;
           } else if (!strcasecmp(elt, "IPv6Traffic")) {
-            cfg_def->entry_cfg.ipv6_traffic = ! no;
+            cfg->entry_cfg.ipv6_traffic = ! no;
             continue;
           } else if (!strcasecmp(elt, "PreferIPv6")) {
-            cfg_def->entry_cfg.prefer_ipv6 = ! no;
+            cfg->entry_cfg.prefer_ipv6 = ! no;
             continue;
           } else if (!strcasecmp(elt, "DNSRequest")) {
-            cfg_def->entry_cfg.dns_request = ! no;
+            cfg->entry_cfg.dns_request = ! no;
             continue;
           } else if (!strcasecmp(elt, "OnionTraffic")) {
-            cfg_def->entry_cfg.onion_traffic = ! no;
+            cfg->entry_cfg.onion_traffic = ! no;
             continue;
           } else if (!strcasecmp(elt, "OnionTrafficOnly")) {
             /* Only connect to .onion addresses.  Equivalent to
@@ -6345,50 +6342,50 @@ port_parse_config(smartlist_t *out,
                        "DNSRequest, IPv4Traffic, and/or IPv6Traffic instead.",
                        portname, escaped(elt));
             } else {
-              cfg_def->entry_cfg.ipv4_traffic = 0;
-              cfg_def->entry_cfg.ipv6_traffic = 0;
-              cfg_def->entry_cfg.dns_request = 0;
+              cfg->entry_cfg.ipv4_traffic = 0;
+              cfg->entry_cfg.ipv6_traffic = 0;
+              cfg->entry_cfg.dns_request = 0;
             }
             continue;
           }
         }
         if (!strcasecmp(elt, "CacheIPv4DNS")) {
           warn_client_dns_cache(elt, no); // since 0.2.9.2-alpha
-          cfg_def->entry_cfg.cache_ipv4_answers = ! no;
+          cfg->entry_cfg.cache_ipv4_answers = ! no;
           continue;
         } else if (!strcasecmp(elt, "CacheIPv6DNS")) {
           warn_client_dns_cache(elt, no); // since 0.2.9.2-alpha
-          cfg_def->entry_cfg.cache_ipv6_answers = ! no;
+          cfg->entry_cfg.cache_ipv6_answers = ! no;
           continue;
         } else if (!strcasecmp(elt, "CacheDNS")) {
           warn_client_dns_cache(elt, no); // since 0.2.9.2-alpha
-          cfg_def->entry_cfg.cache_ipv4_answers = ! no;
-          cfg_def->entry_cfg.cache_ipv6_answers = ! no;
+          cfg->entry_cfg.cache_ipv4_answers = ! no;
+          cfg->entry_cfg.cache_ipv6_answers = ! no;
           continue;
         } else if (!strcasecmp(elt, "UseIPv4Cache")) {
           warn_client_dns_cache(elt, no); // since 0.2.9.2-alpha
-          cfg_def->entry_cfg.use_cached_ipv4_answers = ! no;
+          cfg->entry_cfg.use_cached_ipv4_answers = ! no;
           continue;
         } else if (!strcasecmp(elt, "UseIPv6Cache")) {
           warn_client_dns_cache(elt, no); // since 0.2.9.2-alpha
-          cfg_def->entry_cfg.use_cached_ipv6_answers = ! no;
+          cfg->entry_cfg.use_cached_ipv6_answers = ! no;
           continue;
         } else if (!strcasecmp(elt, "UseDNSCache")) {
           warn_client_dns_cache(elt, no); // since 0.2.9.2-alpha
-          cfg_def->entry_cfg.use_cached_ipv4_answers = ! no;
-          cfg_def->entry_cfg.use_cached_ipv6_answers = ! no;
+          cfg->entry_cfg.use_cached_ipv4_answers = ! no;
+          cfg->entry_cfg.use_cached_ipv6_answers = ! no;
           continue;
         } else if (!strcasecmp(elt, "PreferIPv6Automap")) {
-          cfg_def->entry_cfg.prefer_ipv6_virtaddr = ! no;
+          cfg->entry_cfg.prefer_ipv6_virtaddr = ! no;
           continue;
         } else if (!strcasecmp(elt, "PreferSOCKSNoAuth")) {
-          cfg_def->entry_cfg.socks_prefer_no_auth = ! no;
+          cfg->entry_cfg.socks_prefer_no_auth = ! no;
           continue;
         } else if (!strcasecmp(elt, "KeepAliveIsolateSOCKSAuth")) {
-          cfg_def->entry_cfg.socks_iso_keep_alive = ! no;
+          cfg->entry_cfg.socks_iso_keep_alive = ! no;
           continue;
         } else if (!strcasecmp(elt, "ExtendedErrors")) {
-          cfg_def->entry_cfg.extended_socks5_codes = ! no;
+          cfg->entry_cfg.extended_socks5_codes = ! no;
           continue;
         }
 
@@ -6411,9 +6408,9 @@ port_parse_config(smartlist_t *out,
         }
 
         if (no) {
-          cfg_def->entry_cfg.isolation_flags &= ~isoflag;
+          cfg->entry_cfg.isolation_flags &= ~isoflag;
         } else {
-          cfg_def->entry_cfg.isolation_flags |= isoflag;
+          cfg->entry_cfg.isolation_flags |= isoflag;
         }
       } SMARTLIST_FOREACH_END(elt);
     }
@@ -6421,23 +6418,23 @@ port_parse_config(smartlist_t *out,
     if (port) got_nonzero_port = 1;
     else got_zero_port = 1;
 
-    if (cfg_def->entry_cfg.dns_request == 0 &&
+    if (cfg->entry_cfg.dns_request == 0 &&
         listener_type == CONN_TYPE_AP_DNS_LISTENER) {
       log_warn(LD_CONFIG, "You have a %sPort entry with DNS disabled; that "
                "won't work.", portname);
       goto err;
     }
-    if (cfg_def->entry_cfg.ipv4_traffic == 0 &&
-        cfg_def->entry_cfg.ipv6_traffic == 0 &&
-        cfg_def->entry_cfg.onion_traffic == 0 &&
+    if (cfg->entry_cfg.ipv4_traffic == 0 &&
+        cfg->entry_cfg.ipv6_traffic == 0 &&
+        cfg->entry_cfg.onion_traffic == 0 &&
         listener_type != CONN_TYPE_AP_DNS_LISTENER) {
       log_warn(LD_CONFIG, "You have a %sPort entry with all of IPv4 and "
                "IPv6 and .onion disabled; that won't work.", portname);
       goto err;
     }
-    if (cfg_def->entry_cfg.dns_request == 1 &&
-        cfg_def->entry_cfg.ipv4_traffic == 0 &&
-        cfg_def->entry_cfg.ipv6_traffic == 0 &&
+    if (cfg->entry_cfg.dns_request == 1 &&
+        cfg->entry_cfg.ipv4_traffic == 0 &&
+        cfg->entry_cfg.ipv6_traffic == 0 &&
         listener_type != CONN_TYPE_AP_DNS_LISTENER) {
       log_warn(LD_CONFIG, "You have a %sPort entry with DNSRequest enabled, "
                "but IPv4 and IPv6 disabled; DNS-based sites won't work.",
@@ -6450,23 +6447,22 @@ port_parse_config(smartlist_t *out,
                "unix socket.", portname);
       goto err;
     }
-    if (!(cfg_def->entry_cfg.isolation_flags & ISO_SOCKSAUTH) &&
-        cfg_def->entry_cfg.socks_iso_keep_alive) {
+    if (!(cfg->entry_cfg.isolation_flags & ISO_SOCKSAUTH) &&
+        cfg->entry_cfg.socks_iso_keep_alive) {
       log_warn(LD_CONFIG, "You have a %sPort entry with both "
                "NoIsolateSOCKSAuth and KeepAliveIsolateSOCKSAuth set.",
                portname);
       goto err;
     }
     if (unix_socket_path &&
-        (cfg_def->entry_cfg.isolation_flags & ISO_CLIENTADDR)) {
+        (cfg->entry_cfg.isolation_flags & ISO_CLIENTADDR)) {
       /* `IsolateClientAddr` is nonsensical in the context of AF_LOCAL.
        * just silently remove the isolation flag.
        */
-      cfg_def->entry_cfg.isolation_flags &= ~ISO_CLIENTADDR;
+      cfg->entry_cfg.isolation_flags &= ~ISO_CLIENTADDR;
     }
     if (out && port) {
       size_t namelen = unix_socket_path ? strlen(unix_socket_path) : 0;
-      port_cfg_t *cfg = port_cfg_new(namelen);
       if (unix_socket_path) {
         tor_addr_make_unspec(&cfg->addr);
         memcpy(cfg->unix_addr, unix_socket_path, namelen + 1);
@@ -6477,46 +6473,15 @@ port_parse_config(smartlist_t *out,
         cfg->port = port;
       }
       cfg->type = listener_type;
-      cfg->is_world_writable = cfg_def->is_world_writable;
-      cfg->is_group_writable = cfg_def->is_group_writable;
-      cfg->relax_dirmode_check = cfg_def->relax_dirmode_check;
-      cfg->entry_cfg.isolation_flags = cfg_def->entry_cfg.isolation_flags;
-      cfg->entry_cfg.session_group = cfg_def->entry_cfg.session_group;
-      cfg->server_cfg.no_advertise = cfg_def->server_cfg.no_advertise;
-      cfg->server_cfg.no_listen = cfg_def->server_cfg.no_listen;
-      cfg->server_cfg.all_addrs = cfg_def->server_cfg.all_addrs;
-      cfg->server_cfg.bind_ipv4_only = cfg_def->server_cfg.bind_ipv4_only;
-      cfg->server_cfg.bind_ipv6_only = cfg_def->server_cfg.bind_ipv6_only;
-      cfg->entry_cfg.ipv4_traffic = cfg_def->entry_cfg.ipv4_traffic;
-      cfg->entry_cfg.ipv6_traffic = cfg_def->entry_cfg.ipv6_traffic;
-      cfg->entry_cfg.prefer_ipv6 = cfg_def->entry_cfg.prefer_ipv6;
-      cfg->entry_cfg.dns_request = cfg_def->entry_cfg.dns_request;
-      cfg->entry_cfg.onion_traffic = cfg_def->entry_cfg.onion_traffic;
-      cfg->entry_cfg.cache_ipv4_answers = \
-         cfg_def->entry_cfg.cache_ipv4_answers;
-      cfg->entry_cfg.cache_ipv6_answers = \
-        cfg_def->entry_cfg.cache_ipv6_answers;
-      cfg->entry_cfg.use_cached_ipv4_answers = \
-        cfg_def->entry_cfg.use_cached_ipv4_answers;
-      cfg->entry_cfg.use_cached_ipv6_answers = \
-        cfg_def->entry_cfg.use_cached_ipv6_answers;
-      cfg->entry_cfg.prefer_ipv6_virtaddr = \
-        cfg_def->entry_cfg.prefer_ipv6_virtaddr;
-      cfg->entry_cfg.socks_iso_keep_alive = \
-        cfg_def->entry_cfg.socks_iso_keep_alive;
-      cfg->entry_cfg.extended_socks5_codes = \
-        cfg_def->entry_cfg.extended_socks5_codes;
-      cfg->entry_cfg.socks_prefer_no_auth = \
-        cfg_def->entry_cfg.socks_prefer_no_auth;
       if (! (cfg->entry_cfg.isolation_flags & ISO_SOCKSAUTH))
         cfg->entry_cfg.socks_prefer_no_auth = 1;
-      tor_free(cfg_def);
       smartlist_add(out, cfg);
+    } else {
+      tor_free(cfg);
     }
     SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
     smartlist_clear(elts);
     tor_free(addrport);
-    tor_free(cfg_def);
     tor_free(unix_socket_path);
   }
 
@@ -6541,7 +6506,6 @@ err:
   SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
   smartlist_free(elts);
   tor_free(unix_socket_path);
-  tor_free(cfg_def);
   tor_free(addrport);
   return retval;
 }
