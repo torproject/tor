@@ -6498,11 +6498,15 @@ port_parse_config(smartlist_t *out,
     log_warn(LD_CONFIG, "You specified a nonzero %sPort along with '%sPort 0' "
              "in the same configuration. Did you mean to disable %sPort or "
              "not?", portname, portname, portname);
-    goto err;
+    goto err0;
   }
 
   retval = 0;
 err:
+  if (retval == -1) {
+    tor_free(cfg);
+  }
+err0:
   SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
   smartlist_free(elts);
   tor_free(unix_socket_path);
