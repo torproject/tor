@@ -146,10 +146,10 @@ buf_flush_to_tls(buf_t *buf, tor_tls_t *tls, size_t flushlen,
   size_t flushed = 0;
   ssize_t sz;
   tor_assert(buf_flushlen);
-  if (BUG(*buf_flushlen > buf->datalen)) {
+  IF_BUG_ONCE(*buf_flushlen > buf->datalen) {
     *buf_flushlen = buf->datalen;
   }
-  if (BUG(flushlen > *buf_flushlen)) {
+  IF_BUG_ONCE(flushlen > *buf_flushlen) {
     flushlen = *buf_flushlen;
   }
   sz = (ssize_t) flushlen;
