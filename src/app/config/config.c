@@ -5880,7 +5880,11 @@ parse_dir_fallback_line(const char *line,
   return r;
 }
 
-/** Allocate and return a new port_cfg_t with reasonable defaults. */
+/** Allocate and return a new port_cfg_t with reasonable defaults.
+ *
+ * <b>namelen</b> is the length of the unix socket name
+ * (typically the filesystem path), not including the trailing NUL.
+ * It should be 0 for ports that are not zunix sockets. */
 port_cfg_t *
 port_cfg_new(size_t namelen)
 {
@@ -6000,7 +6004,7 @@ port_cfg_line_extract_addrport(const char *line,
     size_t sz;
     *is_unix_out = 1;
     *addrport_out = NULL;
-    line += strlen(unix_socket_prefix); /*No q: Keep the quote */
+    line += strlen(unix_socket_prefix); /* No 'unix:', but keep the quote */
     *rest_out = unescape_string(line, addrport_out, &sz);
     if (!*rest_out || (*addrport_out && sz != strlen(*addrport_out))) {
       tor_free(*addrport_out);
