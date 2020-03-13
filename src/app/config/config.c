@@ -671,6 +671,7 @@ static const config_var_t option_vars_[] = {
   OBSOLETE("UseNTorHandshake"),
   V(User,                        STRING,   NULL),
   OBSOLETE("UserspaceIOCPBuffers"),
+  V(AuthDirRejectRequestsUnderLoad, BOOL,  "1"),
   V(AuthDirSharedRandomness,     BOOL,     "1"),
   V(AuthDirTestEd25519LinkKeys,  BOOL,     "1"),
   OBSOLETE("V1AuthoritativeDirectory"),
