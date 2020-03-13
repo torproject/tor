@@ -6415,8 +6415,10 @@ port_parse_config(smartlist_t *out,
       } SMARTLIST_FOREACH_END(elt);
     }
 
-    if (port) got_nonzero_port = 1;
-    else got_zero_port = 1;
+    if (port)
+      got_nonzero_port = 1;
+    else
+      got_zero_port = 1;
 
     if (cfg->entry_cfg.dns_request == 0 &&
         listener_type == CONN_TYPE_AP_DNS_LISTENER) {
