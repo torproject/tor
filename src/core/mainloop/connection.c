@@ -3051,7 +3051,7 @@ connection_mark_all_noncontrol_connections(void)
  * uses pluggable transports, since we should then limit it even if it
  * comes from an internal IP address. */
 static int
-connection_is_rate_limited(connection_t *conn)
+connection_is_rate_limited(const connection_t *conn)
 {
   const or_options_t *options = get_options();
   if (conn->linked)
@@ -3186,14 +3186,14 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
                                      global_bucket_val, conn_bucket);
 }
 
-/** Return 1 if the global write buckets are low enough that we
+/** Return true iff the global write buckets are low enough that we
  * shouldn't send <b>attempt</b> bytes of low-priority directory stuff
- * out to <b>conn</b>. Else return 0.
-
- * Priority was 1 for v1 requests (directories and running-routers),
- * and 2 for v2 requests and later (statuses and descriptors).
+ * out to <b>conn</b>.
  *
- * There are a lot of parameters we could use here:
+ * If we are a directory authority, always answer dir requests thus true is
+ * always returned.
+ *
+ * Note: There are a lot of parameters we could use here:
  * - global_relayed_write_bucket. Low is bad.
  * - global_write_bucket. Low is bad.
  * - bandwidthrate. Low is bad.
@@ -3205,39 +3205,40 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
  *   mean is "total directory bytes added to outbufs recently", but
  *   that's harder to quantify and harder to keep track of.
  */
-int
-global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
+bool
+connection_dir_is_global_write_low(const connection_t *conn, size_t attempt)
 {
   size_t smaller_bucket =
     MIN(token_bucket_rw_get_write(&global_bucket),
         token_bucket_rw_get_write(&global_relayed_bucket));
-  if (authdir_mode(get_options()) && priority>1)
-    return 0; /* there's always room to answer v2 if we're an auth dir */
+
+  /* Special case for authorities (directory only). */
+  if (authdir_mode_v3(get_options())) {
+    /* Are we configured to possibly reject requests under load? */
+    if (!get_options()->AuthDirRejectRequestsUnderLoad) {
+      /* Answer request no matter what. */
+      return false;
+    }
+    /* Always answer requests from a known relay which includes the other
+     * authorities. The following looks up the addresses for relays that we
+     * have their descriptor _and_ any configured trusted directories. */
+    if (nodelist_probably_contains_address(&conn->addr)) {
+      return false;
+    }
+  }
 
   if (!connection_is_rate_limited(conn))
-    return 0; /* local conns don't get limited */
+    return false; /* local conns don't get limited */
 
   if (smaller_bucket < attempt)
-    return 1; /* not enough space no matter the priority */
+    return true; /* not enough space. */
 
   {
     const time_t diff = approx_time() - write_buckets_last_empty_at;
     if (diff <= 1)
-      return 1; /* we're already hitting our limits, no more please */
+      return true; /* we're already hitting our limits, no more please */
   }
-
-  if (priority == 1) { /* old-style v1 query */
-    /* Could we handle *two* of these requests within the next two seconds? */
-    const or_options_t *options = get_options();
-    size_t can_write = (size_t) (smaller_bucket
-      + 2*(options->RelayBandwidthRate ? options->RelayBandwidthRate :
-           options->BandwidthRate));
-    if (can_write < 2*attempt)
-      return 1;
-  } else { /* v2 query */
-    /* no further constraints yet */
-  }
-  return 0;
+  return false;
 }
 
 /** When did we last tell the accounting subsystem about transmitted
