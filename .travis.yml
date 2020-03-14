@@ -52,7 +52,7 @@ matrix:
     - compiler: clang
       os: osx
       ## Turn off some newer features, turn on clang's -Wtypedef-redefinition
-      ## Also, disable ALL_BUGS_FATAL macro.
+      ## Also, disable ALL_BUGS_ARE_FATAL macro.
       env: C_DIALECT_OPTIONS="-std=gnu99" HARDENING_OPTIONS="--enable-expensive-hardening"
 
     ## We run chutney on Linux, because it's faster than chutney on macOS
