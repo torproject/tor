@@ -23,7 +23,7 @@ environment:
     compiler_path: mingw64
     mingw_prefix: mingw-w64-x86_64
     # hardening doesn't work with mingw-w64-x86_64-gcc, because it's gcc 8
-    hardening: --disable-gcc-hardening
+    hardening: --enable-all-bugs-are-fatal --disable-gcc-hardening
 
 matrix:
   # Don't keep building failing jobs
