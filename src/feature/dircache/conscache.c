@@ -132,14 +132,18 @@ consensus_cache_may_overallocate(consensus_cache_t *cache)
 #endif
 }
 
+// HACK: GCC on Appveyor hates that we may assert before returning. Work around
+// the error.
+#ifdef _WIN32
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Werror=suggest-attribute=noreturn"
+#endif
+
 /**
  * Tell the sandbox (if any) configured by <b>cfg</b> to allow the
  * operations that <b>cache</b> will need.
  */
 int
-#ifdef MUST_UNMAP_TO_UNLINK
-__attribute__((noreturn))
-#endif /* defined(MUST_UNMAP_TO_UNLINK) */
 consensus_cache_register_with_sandbox(consensus_cache_t *cache,
                                       struct sandbox_cfg_elem_t **cfg)
 {
@@ -158,6 +162,10 @@ consensus_cache_register_with_sandbox(consensus_cache_t *cache,
 #endif /* defined(MUST_UNMAP_TO_UNLINK) */
   return storage_dir_register_with_sandbox(cache->dir, cfg);
 }
+
+#ifdef _WIN32
+#pragma GCC diagnostic pop
+#endif
 
 /**
  * Helper: clear all entries from <b>cache</b> (but do not delete
