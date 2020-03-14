@@ -136,7 +136,7 @@ consensus_cache_may_overallocate(consensus_cache_t *cache)
 // the error.
 #ifdef _WIN32
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Werror=suggest-attribute=noreturn"
+#pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
 #endif
 
 /**
