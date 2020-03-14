@@ -152,6 +152,7 @@ consensus_cache_register_with_sandbox(consensus_cache_t *cache,
    * conditional.
    */
   tor_assert_nonfatal_unreached();
+  return -1;
 #endif /* defined(MUST_UNMAP_TO_UNLINK) */
   return storage_dir_register_with_sandbox(cache->dir, cfg);
 }
