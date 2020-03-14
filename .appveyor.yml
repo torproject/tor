@@ -18,12 +18,12 @@ environment:
   - target: i686-w64-mingw32
     compiler_path: mingw32
     mingw_prefix: mingw-w64-i686
-    hardening:
+    hardening: --enable-all-bugs-are-fatal
   - target: x86_64-w64-mingw32
     compiler_path: mingw64
     mingw_prefix: mingw-w64-x86_64
     # hardening doesn't work with mingw-w64-x86_64-gcc, because it's gcc 8
-    hardening: --enable-all-bugs-are-fatal --disable-gcc-hardening
+    hardening: --disable-gcc-hardening
 
 matrix:
   # Don't keep building failing jobs
