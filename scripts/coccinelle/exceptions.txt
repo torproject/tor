@@ -22,3 +22,4 @@ src/feature/nodelist/networkstatus.c
 src/test/test_address.c
 src/test/test_hs_cache.c
 src/test/test_hs_descriptor.c
+src/feature/dircache/conscache.c
