@@ -584,8 +584,13 @@ crypto_pk_asn1_decode_private(const char *str, size_t len, int max_bits)
     crypto_openssl_log_errors(LOG_WARN,"decoding private key");
     return NULL;
   }
+#ifdef OPENSSL_1_1_API
   if (max_bits >= 0 && RSA_bits(rsa) > max_bits) {
+#else
+  if (max_bits >= 0 && rsa->n && BN_num_bits(rsa->n) > max_bits) {
+#endif
     log_info(LD_CRYPTO, "Private key longer than expected.");
+    RSA_free(rsa);
     return NULL;
   }
   crypto_pk_t *result = crypto_new_pk_from_openssl_rsa_(rsa);
