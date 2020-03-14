@@ -6478,6 +6478,8 @@ port_parse_config(smartlist_t *out,
       if (! (cfg->entry_cfg.isolation_flags & ISO_SOCKSAUTH))
         cfg->entry_cfg.socks_prefer_no_auth = 1;
       smartlist_add(out, cfg);
+      /* out owns cfg now, don't re-use or free it */
+      cfg = NULL;
     } else {
       tor_free(cfg);
     }
@@ -6500,19 +6502,27 @@ port_parse_config(smartlist_t *out,
     log_warn(LD_CONFIG, "You specified a nonzero %sPort along with '%sPort 0' "
              "in the same configuration. Did you mean to disable %sPort or "
              "not?", portname, portname, portname);
-    goto err0;
+    goto err;
   }
 
   retval = 0;
-err:
-  if (retval == -1) {
-    tor_free(cfg);
-  }
-err0:
+ err:
+  /* There are two ways we can error out:
+   *  1. part way through the loop: cfg needs to be freed;
+   *  2. ending the loop normally: cfg is always NULL.
+   *     In this case, cfg has either been:
+   *     - added to out, then set to NULL, or
+   *     - freed and set to NULL (because out is NULL, or port is 0).
+   */
+  tor_free(cfg);
+
+  /* Free the other variables from the loop.
+   * elts is always non-NULL here, but it may or may not be empty. */
   SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
   smartlist_free(elts);
   tor_free(unix_socket_path);
   tor_free(addrport);
+
   return retval;
 }
 
