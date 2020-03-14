@@ -137,7 +137,9 @@ consensus_cache_may_overallocate(consensus_cache_t *cache)
  * operations that <b>cache</b> will need.
  */
 int
+#ifdef MUST_UNMAP_TO_UNLINK
 __attribute__((noreturn))
+#endif /* defined(MUST_UNMAP_TO_UNLINK) */
 consensus_cache_register_with_sandbox(consensus_cache_t *cache,
                                       struct sandbox_cfg_elem_t **cfg)
 {
