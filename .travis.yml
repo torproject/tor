@@ -26,7 +26,7 @@ env:
     - MAKEFLAGS="-k -j 2"
     ## We turn on hardening by default
     ## Also known as --enable-fragile-hardening in 0.3.0.3-alpha and later
-    - HARDENING_OPTIONS="--enable-expensive-hardening"
+    - HARDENING_OPTIONS="--enable-all-bugs-are-fatal --enable-expensive-hardening"
     ## We turn off asciidoc by default, because it's slow
     - ASCIIDOC_OPTIONS="--disable-asciidoc"
     ## Our default rust version is the minimum supported version
@@ -52,7 +52,8 @@ matrix:
     - compiler: clang
       os: osx
       ## Turn off some newer features, turn on clang's -Wtypedef-redefinition
-      env: C_DIALECT_OPTIONS="-std=gnu99"
+      ## Also, disable ALL_BUGS_FATAL macro.
+      env: C_DIALECT_OPTIONS="-std=gnu99" HARDENING_OPTIONS="--enable-expensive-hardening"
 
     ## We run chutney on Linux, because it's faster than chutney on macOS
     ## Chutney is a fast job, clang is slower on Linux, so we do Chutney clang
@@ -63,9 +64,9 @@ matrix:
     - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
 
     ## We check disable module relay
-    - env: MODULES_OPTIONS="--disable-module-relay"
+    - env: MODULES_OPTIONS="--disable-module-relay" HARDENING_OPTIONS="--enable-expensive-hardening"
     ## We check disable module dirauth
-    - env: MODULES_OPTIONS="--disable-module-dirauth"
+    - env: MODULES_OPTIONS="--disable-module-dirauth" HARDENING_OPTIONS="--enable-expensive-hardening"
 
     ## We run rust on Linux, because it's faster than rust on macOS
     ## We check rust offline
@@ -74,7 +75,7 @@ matrix:
     ## We check NSS
     ## Use -std=gnu99 to turn off some newer features, and maybe turn on some
     ## extra gcc warnings?
-    - env: NSS_OPTIONS="--enable-nss" C_DIALECT_OPTIONS="-std=gnu99"
+    - env: NSS_OPTIONS="--enable-nss" C_DIALECT_OPTIONS="-std=gnu99" HARDENING_OPTIONS="--enable-expensive-hardening"
 
     ## We include a single coverage build with the best options for coverage
     - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS="" TOR_TEST_RNG_SEED="636f766572616765"
@@ -92,10 +93,6 @@ matrix:
     #- env: RUST_VERSION="nightly" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
     #  compiler: clang
     #  os: osx
-
-    - env: HARDENING_OPTIONS="--enable-assert-fatalism"
-    - env: HARDENING_OPTIONS="--enable-assert-fatalism" SKIP_MAKE_CHECK="yes" CHUTNEY="yes"
-    - env: HARDENING_OPTIONS="--enable-assert-fatalism" SKIP_MAKE_CHECK="yes" TEST_STEM="yes"
 
   ## Allow the build to report success (with non-required sub-builds
   ## continuing to run) if all required sub-builds have succeeded.
@@ -118,9 +115,6 @@ matrix:
     ## chutney tests
     #- env: CHUTNEY_MAKE="test-network-ipv6" CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
     #  os: osx
-    - env: HARDENING_OPTIONS="--enable-assert-fatalism"
-    - env: HARDENING_OPTIONS="--enable-assert-fatalism" SKIP_MAKE_CHECK="yes" CHUTNEY="yes"
-    - env: HARDENING_OPTIONS="--enable-assert-fatalism" SKIP_MAKE_CHECK="yes" TEST_STEM="yes"
 
 ## (Linux only) Use a recent Linux image (Ubuntu Bionic)
 dist: bionic
