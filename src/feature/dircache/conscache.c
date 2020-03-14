@@ -139,6 +139,7 @@ consensus_cache_may_overallocate(consensus_cache_t *cache)
 int
 consensus_cache_register_with_sandbox(consensus_cache_t *cache,
                                       struct sandbox_cfg_elem_t **cfg)
+                                     __attribute__((noreturn))
 {
 #ifdef MUST_UNMAP_TO_UNLINK
   /* Our Linux sandbox doesn't support huge file lists like the one that would
@@ -152,7 +153,6 @@ consensus_cache_register_with_sandbox(consensus_cache_t *cache,
    * conditional.
    */
   tor_assert_nonfatal_unreached();
-  return -1;
 #endif /* defined(MUST_UNMAP_TO_UNLINK) */
   return storage_dir_register_with_sandbox(cache->dir, cfg);
 }
