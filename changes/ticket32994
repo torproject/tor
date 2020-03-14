@@ -1,0 +1,8 @@
+  o Code simplification and refactoring:
+    - port_new_cfg() returns default object with reasonable values.
+    - port_parse_config() uses this default object instead of 
+      temporary variables.
+    - Files changed -> src/app/config/config.c
+    - Functions changed -> port_new_cfg() and port_parse_config()
+    - Closes ticket 32994.
+    - Patch by MrSquanchee
