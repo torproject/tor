@@ -259,7 +259,7 @@ after_failure:
   ## `make distcheck` puts it somewhere different.
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-core || echo "make failed"; fi
-  - if [[ "$CHUTNEY" != "" ]]; then ls test_network_log || echo "ls failed"; cat test_network_log/* || echo "cat failed"; fi
+  - if [[ "$CHUTNEY" != "" ]]; then "$CHUTNEY_PATH/tools/diagnostics.sh" || echo "diagnostics failed"; ls test_network_log || echo "ls failed"; cat test_network_log/* || echo "cat failed"; fi
   - if [[ "$TEST_STEM" != "" ]]; then tail -1000 "$STEM_SOURCE_DIR"/test/data/tor_log || echo "tail failed"; fi
   - if [[ "$TEST_STEM" != "" ]]; then grep -v "SocketClosed" stem.log | tail -1000 || echo "grep | tail failed"; fi
 
