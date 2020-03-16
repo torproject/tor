@@ -1,0 +1,4 @@
+  o Minor features (directory authorities):
+    - Directory authorities now reject descriptors from relays running Tor
+      versions from the 0.2.9 and 0.4.0 series, but still allow the 0.3.5
+      series. Resolves ticket 32672. Patch by Neel Chauhan.
