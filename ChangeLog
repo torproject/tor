@@ -1,6 +1,12 @@
 Changes in version 0.4.3.3-alpha - 2020-03-??
   blurb here.
 
+  o Major bugfixes (circuit padding, memory leak):
+    - Avoid a remotely triggered memory leak in the case that a circuit
+      padding machine is somehow negotiated twice on the same circuit.
+      Fixes bug 33619; bugfix on 0.4.0.1-alpha. Found by Tobias Pulls.
+      This is also tracked as TROVE-2020-004.
+
   o Major bugfixes (directory authority):
     - Directory authorities will now send a 503 (not enough bandwidth)
       code to clients when under bandwidth pressure. Known relays and
@@ -11,6 +17,11 @@ Changes in version 0.4.3.3-alpha - 2020-03-??
     - Improve assertions and add some memory-poisoning code to try to
       track down possible causes of a rare crash (32564) in the EWMA
       code. Closes ticket 33290.
+
+  o Minor features (directory authorities):
+    - Directory authorities now reject descriptors from relays running
+      Tor versions from the 0.2.9 and 0.4.0 series. The 0.3.5 series is
+      still allowed. Resolves ticket 32672. Patch by Neel Chauhan.
 
   o Minor features (usability):
     - Include more information when failing to parse a configuration
@@ -32,6 +43,12 @@ Changes in version 0.4.3.3-alpha - 2020-03-??
   o Minor bugfixes (continuous integration):
     - Remove the buggy and unused mirroring job. Fixes bug 33213; bugfix
       on 0.3.2.2-alpha.
+
+  o Minor bugfixes (hidden services v3):
+    - Fix an assertion failure that could result from a corrupted
+      ADD_ONION control port command. Found by Saibato. Fixes bug 33137;
+      bugfix on 0.3.3.1-alpha. This issue is also tracked
+      as TROVE-2020-003.
 
   o Minor bugfixes (onion service v3, client):
     - Remove a BUG() warning that would cause a stack trace if an onion
@@ -55,6 +72,8 @@ Changes in version 0.4.3.3-alpha - 2020-03-??
     - Stop allowing the Chutney IPv6 Travis job to fail. This job was
       previously configured to fast_finish (which requires
       allow_failure), to speed up the build. Closes ticket 33195.
+    - When a Travis chutney job fails, use chutney's new "diagnostics.sh"
+      tool to produce detailed diagnostic output. Closes ticket 32792.
 
 
 Changes in version 0.4.3.2-alpha - 2020-02-10
