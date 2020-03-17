@@ -1505,6 +1505,21 @@ test_crypto_pk_bad_size(void *arg)
   pk2 = crypto_pk_asn1_decode_private(buf, n, 1020);
   tt_assert(! pk2);
 
+  /* Set the max bit count one bit smaller: we should refuse to decode the
+     key.*/
+  pk2 = crypto_pk_asn1_decode_private(buf, n, 1023);
+  tt_assert(! pk2);
+
+  /* Correct size: should work. */
+  pk2 = crypto_pk_asn1_decode_private(buf, n, 1024);
+  tt_assert(pk2);
+  crypto_pk_free(pk2);
+
+  /* One bit larger: should work. */
+  pk2 = crypto_pk_asn1_decode_private(buf, n, 1025);
+  tt_assert(pk2);
+  crypto_pk_free(pk2);
+
   /* Set the max bit count larger: it should decode fine. */
   pk2 = crypto_pk_asn1_decode_private(buf, n, 2048);
   tt_assert(pk2);
