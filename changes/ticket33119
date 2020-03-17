@@ -1,0 +1,8 @@
+  o Major bugfixes (security, denial-of-service):
+    - Fix a denial-of-service bug that could be used by anyone to consume a
+      bunch of CPU on any Tor relay or authority, or by directories to
+      consume a bunch of CPU on clients or hidden services. Because
+      of the potential for CPU consumption to introduce observable
+      timing patterns, we are treating this as a high-severity security
+      issue.  Fixes bug 33119; bugfix on 0.2.1.5-alpha. We are also tracking
+      this issue as TROVE-2020-002.
