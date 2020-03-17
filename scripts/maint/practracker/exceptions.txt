@@ -47,7 +47,7 @@ problem function-size /src/app/config/config.c:parse_dir_authority_line() 150
 problem function-size /src/app/config/config.c:parse_dir_fallback_line() 101
 problem function-size /src/app/config/config.c:port_parse_config() 450
 problem function-size /src/app/config/config.c:parse_ports() 132
-problem file-size /src/app/config/or_options_st.h 1053
+problem file-size /src/app/config/or_options_st.h 1050
 problem include-count /src/app/main/main.c 68
 problem function-size /src/app/main/main.c:dumpstats() 102
 problem function-size /src/app/main/main.c:tor_init() 101
@@ -74,7 +74,7 @@ problem function-size /src/core/mainloop/connection.c:assert_connection_ok() 143
 problem dependency-violation /src/core/mainloop/connection.c 47
 problem dependency-violation /src/core/mainloop/cpuworker.c 12
 problem include-count /src/core/mainloop/mainloop.c 64
-problem function-size /src/core/mainloop/mainloop.c:conn_close_if_marked() 108
+problem function-size /src/core/mainloop/mainloop.c:conn_close_if_marked() 107
 problem function-size /src/core/mainloop/mainloop.c:run_connection_housekeeping() 123
 problem dependency-violation /src/core/mainloop/mainloop.c 50
 problem dependency-violation /src/core/mainloop/mainloop_pubsub.c 1
@@ -142,7 +142,6 @@ problem function-size /src/core/or/connection_edge.c:connection_exit_begin_conn(
 problem function-size /src/core/or/connection_edge.c:connection_exit_connect() 102
 problem dependency-violation /src/core/or/connection_edge.c 27
 problem dependency-violation /src/core/or/connection_edge.h 1
-problem file-size /src/core/or/connection_or.c 3122
 problem function-size /src/core/or/connection_or.c:connection_or_group_set_badness_() 105
 problem function-size /src/core/or/connection_or.c:connection_or_client_learned_peer_id() 142
 problem dependency-violation /src/core/or/connection_or.c 20
@@ -152,13 +151,12 @@ problem file-size /src/core/or/or.h 1107
 problem include-count /src/core/or/or.h 48
 problem dependency-violation /src/core/or/or.h 1
 problem dependency-violation /src/core/or/or_periodic.c 1
-problem file-size /src/core/or/policies.c 3195
+problem file-size /src/core/or/policies.c 3182
 problem function-size /src/core/or/policies.c:policy_summarize() 107
 problem dependency-violation /src/core/or/policies.c 14
 problem function-size /src/core/or/protover.c:protover_all_supported() 117
 problem dependency-violation /src/core/or/reasons.c 2
 problem file-size /src/core/or/relay.c 3264
-problem dependency-violation /src/core/or/relay_handshake.c 5
 problem function-size /src/core/or/relay.c:circuit_receive_relay_cell() 127
 problem function-size /src/core/or/relay.c:relay_send_command_from_edge_() 109
 problem function-size /src/core/or/relay.c:connection_ap_process_end_not_open() 192
@@ -182,7 +180,7 @@ problem dependency-violation /src/core/proto/proto_http.c 1
 problem function-size /src/core/proto/proto_socks.c:parse_socks_client() 110
 problem dependency-violation /src/core/proto/proto_socks.c 8
 problem function-size /src/feature/client/addressmap.c:addressmap_rewrite() 109
-problem function-size /src/feature/client/bridges.c:rewrite_node_address_for_bridge() 126
+problem function-size /src/feature/client/bridges.c:rewrite_node_address_for_bridge() 125
 problem function-size /src/feature/client/circpathbias.c:pathbias_measure_close_rate() 108
 problem function-size /src/feature/client/dnsserv.c:evdns_server_callback() 153
 problem file-size /src/feature/client/entrynodes.c 3825
@@ -209,7 +207,7 @@ problem function-size /src/feature/dirauth/dirvote.c:format_networkstatus_vote()
 problem function-size /src/feature/dirauth/dirvote.c:networkstatus_compute_bw_weights_v10() 233
 problem function-size /src/feature/dirauth/dirvote.c:networkstatus_compute_consensus() 952
 problem function-size /src/feature/dirauth/dirvote.c:networkstatus_add_detached_signatures() 119
-problem function-size /src/feature/dirauth/dirvote.c:dirvote_add_vote() 162
+problem function-size /src/feature/dirauth/dirvote.c:dirvote_add_vote() 161
 problem function-size /src/feature/dirauth/dirvote.c:dirvote_compute_consensuses() 164
 problem function-size /src/feature/dirauth/dirvote.c:dirserv_generate_networkstatus_vote_obj() 281
 problem function-size /src/feature/dirauth/dsigs_parse.c:networkstatus_parse_detached_signatures() 196
@@ -242,12 +240,11 @@ problem function-size /src/feature/dirparse/routerparse.c:router_parse_entry_fro
 problem function-size /src/feature/dirparse/routerparse.c:extrainfo_parse_entry_from_string() 208
 problem function-size /src/feature/hibernate/hibernate.c:accounting_parse_options() 109
 problem function-size /src/feature/hs/hs_cell.c:hs_cell_build_establish_intro() 115
-problem function-size /src/feature/hs/hs_cell.c:hs_cell_parse_introduce2() 152
+problem function-size /src/feature/hs/hs_cell.c:hs_cell_parse_introduce2() 134
 problem function-size /src/feature/hs/hs_client.c:send_introduce1() 103
 problem function-size /src/feature/hs/hs_common.c:hs_get_responsible_hsdirs() 102
 problem function-size /src/feature/hs/hs_config.c:config_service_v3() 128
 problem function-size /src/feature/hs/hs_config.c:config_generic_service() 138
-problem function-size /src/feature/hs/hs_descriptor.c:desc_encode_v3() 101
 problem function-size /src/feature/hs/hs_descriptor.c:decrypt_desc_layer() 111
 problem function-size /src/feature/hs/hs_descriptor.c:decode_introduction_point() 122
 problem function-size /src/feature/hs/hs_descriptor.c:desc_decode_superencrypted_v3() 107
@@ -315,7 +312,6 @@ problem function-size /src/lib/net/address.c:tor_addr_parse_mask_ports() 194
 problem function-size /src/lib/net/address.c:tor_addr_compare_masked() 110
 problem function-size /src/lib/net/inaddr.c:tor_inet_pton() 107
 problem function-size /src/lib/net/socketpair.c:tor_ersatz_socketpair() 102
-problem function-size /src/lib/osinfo/uname.c:get_uname() 116
 problem function-size /src/lib/process/process_unix.c:process_unix_exec() 213
 problem function-size /src/lib/process/process_win32.c:process_win32_exec() 151
 problem function-size /src/lib/process/process_win32.c:process_win32_create_pipe() 109
