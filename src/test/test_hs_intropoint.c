@@ -757,12 +757,15 @@ test_introduce1_validation(void *arg)
   cell = helper_create_introduce1_cell();
   tt_assert(cell);
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* It should NOT be a legacy cell which will trigger a BUG(). */
   memset(cell->legacy_key_id, 'a', sizeof(cell->legacy_key_id));
   tor_capture_bugs_(1);
   ret = validate_introduce1_parsed_cell(cell);
   tor_end_capture_bugs_();
   tt_int_op(ret, OP_EQ, -1);
+#endif
+
   /* Reset legacy ID and make sure it's correct. */
   memset(cell->legacy_key_id, 0, sizeof(cell->legacy_key_id));
   ret = validate_introduce1_parsed_cell(cell);

@@ -317,6 +317,7 @@ test_protover_all_supported(void *arg)
   tt_assert(protover_all_supported("Fribble=", &msg));
   tt_ptr_op(msg, OP_EQ, NULL);
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* If we get a completely unparseable list, protover_all_supported should
    * hit a fatal assertion for BUG(entries == NULL). */
   tor_capture_bugs_(1);
@@ -328,9 +329,10 @@ test_protover_all_supported(void *arg)
   tor_capture_bugs_(1);
   tt_assert(protover_all_supported("Sleen=1-4294967295", &msg));
   tor_end_capture_bugs_();
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* Protocol name too long */
-#ifndef HAVE_RUST // XXXXXX ?????
+#if !defined(HAVE_RUST) && !defined(ALL_BUGS_ARE_FATAL)
   tor_capture_bugs_(1);
   tt_assert(protover_all_supported(
                  "DoSaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -338,7 +340,7 @@ test_protover_all_supported(void *arg)
                  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                  "aaaaaaaaaaaa=1-65536", &msg));
   tor_end_capture_bugs_();
-#endif /* !defined(HAVE_RUST) */
+#endif /* !defined(HAVE_RUST) && !defined(ALL_BUGS_ARE_FATAL) */
 
  done:
   tor_end_capture_bugs_();
