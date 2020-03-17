@@ -11,7 +11,7 @@ Changes in version 0.4.1.9 - 2020-03-??
     - Lowercase the configured value of BridgeDistribution before adding
       it to the descriptor. Fixes bug 32753; bugfix on 0.3.2.3-alpha.
 
-  o Minor bugfixes (hidden services v3, backport from 0.4.3.3-alpha):
+  o Minor bugfixes (onion services v3, backport from 0.4.3.3-alpha):
     - Fix an assertion failure that could result from a corrupted
       ADD_ONION control port command. Found by Saibato. Fixes bug 33137;
       bugfix on 0.3.3.1-alpha. This issue is also tracked
@@ -25,9 +25,6 @@ Changes in version 0.4.1.9 - 2020-03-??
       on 0.3.2.2-alpha.
 
   o Minor bugfixes (rust, build, backport from 0.4.3.2-alpha):
-    - Fix a syntax warning given by newer versions of Rust that was
-      creating problems for our continuous integration. Fixes bug 33212;
-      bugfix on 0.3.5.1-alpha.
     - Fix a syntax warning given by newer versions of Rust that was
       creating problems for our continuous integration. Fixes bug 33212;
       bugfix on 0.3.5.1-alpha.
