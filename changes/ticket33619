@@ -1,0 +1,5 @@
+  o Major bugfixes (circuit padding, memory leaks):
+    - Avoid a remotely triggered memory leak in the case that a circuit
+      padding machine is somehow negotiated twice on the same circuit. Fixes
+      bug 33619; bugfix on 0.4.0.1-alpha.  Found by Tobias Pulls.  This is
+      also tracked as TROVE-2020-004.
