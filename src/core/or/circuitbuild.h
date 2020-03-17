@@ -29,7 +29,6 @@ struct circuit_guard_state_t *origin_circuit_get_guard_state(
 int circuit_handle_first_hop(origin_circuit_t *circ);
 void circuit_n_chan_done(channel_t *chan, int status,
                          int close_origin_circuits);
-int inform_testing_reachability(void);
 int circuit_timeout_want_to_count_circ(const origin_circuit_t *circ);
 int circuit_send_next_onion_skin(origin_circuit_t *circ);
 void circuit_note_clock_jumped(int64_t seconds_elapsed, bool was_idle);

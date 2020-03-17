@@ -213,6 +213,40 @@ router_do_reachability_checks(int test_or, int test_dir)
   }
 }
 
+/** We've decided to start our reachability testing. If all
+ * is set, log this to the user. Return 1 if we did, or 0 if
+ * we chose not to log anything. */
+int
+inform_testing_reachability(void)
+{
+  char dirbuf[128];
+  char *address;
+  const routerinfo_t *me = router_get_my_routerinfo();
+  if (!me)
+    return 0;
+  address = tor_dup_ip(me->addr);
+  control_event_server_status(LOG_NOTICE,
+                              "CHECKING_REACHABILITY ORADDRESS=%s:%d",
+                              address, me->or_port);
+  if (me->dir_port) {
+    tor_snprintf(dirbuf, sizeof(dirbuf), " and DirPort %s:%d",
+                 address, me->dir_port);
+    control_event_server_status(LOG_NOTICE,
+                                "CHECKING_REACHABILITY DIRADDRESS=%s:%d",
+                                address, me->dir_port);
+  }
+  log_notice(LD_OR, "Now checking whether ORPort %s:%d%s %s reachable... "
+                         "(this may take up to %d minutes -- look for log "
+                         "messages indicating success)",
+      address, me->or_port,
+      me->dir_port ? dirbuf : "",
+      me->dir_port ? "are" : "is",
+      TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT/60);
+
+  tor_free(address);
+  return 1;
+}
+
 /** Annotate that we found our ORPort reachable. */
 void
 router_orport_found_reachable(void)

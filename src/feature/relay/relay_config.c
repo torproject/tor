@@ -29,7 +29,6 @@
 #include "core/mainloop/connection.h"
 #include "core/mainloop/cpuworker.h"
 #include "core/mainloop/mainloop.h"
-#include "core/or/circuitbuild.h"
 #include "core/or/connection_or.h"
 #include "core/or/port_cfg_st.h"
 
@@ -44,6 +43,7 @@
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/relay/dns.h"
 #include "feature/relay/routermode.h"
+#include "feature/relay/selftest.h"
 
 /** Contents of most recently read DirPortFrontPage file. */
 static char *global_dirfrontpagecontents = NULL;
