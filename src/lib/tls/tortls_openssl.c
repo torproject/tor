@@ -52,6 +52,7 @@ DISABLE_GCC_WARNING("-Wredundant-decls")
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
 #include <openssl/bn.h>
+#include <openssl/dh.h>
 #include <openssl/rsa.h>
 
 ENABLE_GCC_WARNING("-Wredundant-decls")

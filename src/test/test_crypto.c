@@ -30,6 +30,7 @@
 #if defined(ENABLE_OPENSSL)
 #include "lib/crypt_ops/compat_openssl.h"
 DISABLE_GCC_WARNING("-Wredundant-decls")
+#include <openssl/bn.h>
 #include <openssl/dh.h>
 ENABLE_GCC_WARNING("-Wredundant-decls")
 #endif /* defined(ENABLE_OPENSSL) */
