@@ -1,11 +1,35 @@
 Changes in version 0.4.3.3-alpha - 2020-03-??
-  blurb here.
+  Tor 0.4.3.3-alpha fixes several bugs in previous releases, including
+  TROVE-2020-002, a major denial-of-service vulnerability that affected
+  all released Tor instances since 0.2.1.5-alpha. Using this
+  vulnerability, an attacker could cause Tor instances to consume a huge
+  amount of CPU, disrupting their operations for several seconds or
+  minutes. This attack could be launched by anybody against a relay, or
+  by a directory cache against any client that had connected to it. The
+  attacker could launch this attack as much as they wanted, thereby
+  disrupting service or creating patterns that could aid in traffic
+  analysis. This issue was found by OSS-Fuzz, and is also tracked
+  as CVE-2020-10592.
+
+  We do not have reason to believe that this attack is currently being
+  exploited in the wild, but nonetheless we advise everyone to upgrade
+  as soon as packages are available.
+
+  o Major bugfixes (security, denial-of-service):
+    - Fix a denial-of-service bug that could be used by anyone to
+      consume a bunch of CPU on any Tor relay or authority, or by
+      directories to consume a bunch of CPU on clients or hidden
+      services. Because of the potential for CPU consumption to
+      introduce observable timing patterns, we are treating this as a
+      high-severity security issue. Fixes bug 33119; bugfix on
+      0.2.1.5-alpha. Found by OSS-Fuzz. We are also tracking this issue
+      as TROVE-2020-002 and CVE-2020-10592.
 
   o Major bugfixes (circuit padding, memory leak):
     - Avoid a remotely triggered memory leak in the case that a circuit
       padding machine is somehow negotiated twice on the same circuit.
       Fixes bug 33619; bugfix on 0.4.0.1-alpha. Found by Tobias Pulls.
-      This is also tracked as TROVE-2020-004.
+      This is also tracked as TROVE-2020-004 and CVE-2020-10593.
 
   o Major bugfixes (directory authority):
     - Directory authorities will now send a 503 (not enough bandwidth)
@@ -44,17 +68,17 @@ Changes in version 0.4.3.3-alpha - 2020-03-??
     - Remove the buggy and unused mirroring job. Fixes bug 33213; bugfix
       on 0.3.2.2-alpha.
 
-  o Minor bugfixes (onion services v3):
-    - Fix an assertion failure that could result from a corrupted
-      ADD_ONION control port command. Found by Saibato. Fixes bug 33137;
-      bugfix on 0.3.3.1-alpha. This issue is also tracked
-      as TROVE-2020-003.
-
   o Minor bugfixes (onion service v3, client):
     - Remove a BUG() warning that would cause a stack trace if an onion
       service descriptor was freed while we were waiting for a
       rendezvous circuit to complete. Fixes bug 28992; bugfix
       on 0.3.2.1-alpha.
+
+  o Minor bugfixes (onion services v3):
+    - Fix an assertion failure that could result from a corrupted
+      ADD_ONION control port command. Found by Saibato. Fixes bug 33137;
+      bugfix on 0.3.3.1-alpha. This issue is also tracked
+      as TROVE-2020-003.
 
   o Documentation (manpage):
     - Alphabetize the Server and Directory server sections of the tor
