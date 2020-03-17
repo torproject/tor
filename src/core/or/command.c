@@ -54,6 +54,7 @@
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
+#include "feature/relay/circuitbuild_relay.h"
 #include "feature/relay/routermode.h"
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_util.h"
