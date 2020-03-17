@@ -44,7 +44,7 @@ Changes in version 0.4.3.3-alpha - 2020-03-??
     - Remove the buggy and unused mirroring job. Fixes bug 33213; bugfix
       on 0.3.2.2-alpha.
 
-  o Minor bugfixes (hidden services v3):
+  o Minor bugfixes (onion services v3):
     - Fix an assertion failure that could result from a corrupted
       ADD_ONION control port command. Found by Saibato. Fixes bug 33137;
       bugfix on 0.3.3.1-alpha. This issue is also tracked
