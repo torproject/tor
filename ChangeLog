@@ -1,5 +1,29 @@
 Changes in version 0.3.5.10 - 2020-03-??
-  blurb.
+  Tor 0.3.5.10 backports many fixes from later Tor releases, including a
+  fix for TROVE-2020-002, a major denial-of-service vulnerability that
+  affected all released Tor instances since 0.2.1.5-alpha. Using this
+  vulnerability, an attacker could cause Tor instances to consume a huge
+  amount of CPU, disrupting their operations for several seconds or
+  minutes. This attack could be launched by anybody against a relay, or
+  by a directory cache against any client that had connected to it. The
+  attacker could launch this attack as much as they wanted, thereby
+  disrupting service or creating patterns that could aid in traffic
+  analysis. This issue was found by OSS-Fuzz, and is also tracked
+  as CVE-2020-10592.
+
+  We do not have reason to believe that this attack is currently being
+  exploited in the wild, but nonetheless we advise everyone to upgrade
+  as soon as packages are available.
+
+  o Major bugfixes (security, denial-of-service, backport from 0.4.3.3-alpha):
+    - Fix a denial-of-service bug that could be used by anyone to
+      consume a bunch of CPU on any Tor relay or authority, or by
+      directories to consume a bunch of CPU on clients or hidden
+      services. Because of the potential for CPU consumption to
+      introduce observable timing patterns, we are treating this as a
+      high-severity security issue. Fixes bug 33119; bugfix on
+      0.2.1.5-alpha. Found by OSS-Fuzz. We are also tracking this issue
+      as TROVE-2020-002 and CVE-2020-10592.
 
   o Major bugfixes (linux seccomp sandbox, backport from 0.4.3.1-alpha):
     - Correct how we use libseccomp. Particularly, stop assuming that
