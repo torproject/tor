@@ -2444,9 +2444,12 @@ circpad_setup_machine_on_circ(circuit_t *on_circ,
     return;
   }
 
-  tor_assert_nonfatal(on_circ->padding_machine[machine->machine_index]
-                      == NULL);
-  tor_assert_nonfatal(on_circ->padding_info[machine->machine_index] == NULL);
+  IF_BUG_ONCE(on_circ->padding_machine[machine->machine_index] != NULL) {
+    return;
+  }
+  IF_BUG_ONCE(on_circ->padding_info[machine->machine_index] != NULL) {
+    return;
+  }
 
   /* Log message */
   if (CIRCUIT_IS_ORIGIN(on_circ)) {
