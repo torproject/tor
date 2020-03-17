@@ -661,8 +661,10 @@ test_hs_control_add_onion_with_bad_pubkey(void *arg)
     conn.current_cmd = tor_strdup("ADD_ONION");
   }
 
-  args = tor_strdup("ED25519-V3:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA Port=9735,127.0.0.1 Flags=DiscardPK");
+  args = tor_strdup("ED25519-V3:AAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                    "AAAAAAAAAAAAAAAAAAAAAAA"
+                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA "
+                    "Port=9735,127.0.0.1 Flags=DiscardPK");
 
   retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
   tt_int_op(retval, OP_EQ, 0);
