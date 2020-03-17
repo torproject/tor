@@ -41,7 +41,7 @@ int onionskin_answer(struct or_circuit_t *circ,
                      const char *keys, size_t keys_len,
                      const uint8_t *rend_circ_nonce);
 
-#else
+#else /* !defined(HAVE_MODULE_RELAY) */
 
 static inline int
 circuit_extend(struct cell_t *cell, struct circuit_t *circ)
@@ -67,7 +67,7 @@ onionskin_answer(struct or_circuit_t *circ,
   return -1;
 }
 
-#endif
+#endif /* defined(HAVE_MODULE_RELAY) */
 
 #ifdef TOR_UNIT_TESTS
 
@@ -79,6 +79,6 @@ STATIC void circuit_open_connection_for_extend(const struct extend_cell_t *ec,
                                                struct circuit_t *circ,
                                                int should_launch);
 
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* !defined(TOR_FEATURE_RELAY_CIRCUITBUILD_RELAY_H) */
