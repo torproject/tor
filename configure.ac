@@ -39,7 +39,7 @@ else
     pkg_config_user_action="check the PKG_CONFIG_PATH environment variable"
 fi
 
-if test "x$PKG_CONFIG_PATH" = "x" && test "x$prefix" != "xNONE" && test "$host" != "$build"; then
+if test "x$PKG_CONFIG_PATH" = "x" && test "x$prefix" != "xNONE" && test "x$host" != "x$build"; then
    export PKG_CONFIG_PATH=$prefix/lib/pkgconfig
    AC_MSG_NOTICE([set PKG_CONFIG_PATH=$PKG_CONFIG_PATH to support cross-compiling])
 fi
@@ -84,10 +84,10 @@ AC_ARG_ENABLE(pic,
 AC_ARG_ENABLE(missing-doc-warnings,
    AS_HELP_STRING(--enable-missing-doc-warnings, [Tell doxygen to warn about missing documentation. Makes doxygen warnings nonfatal.]))
 
-if test "$enable_missing_doc_warnings" = "yes"; then
+if test "x$enable_missing_doc_warnings" = "xyes"; then
    DOXYGEN_FATAL_WARNINGS=NO
    DOXYGEN_WARN_ON_MISSING=YES
-elif test "$enable_fatal_warnings" = "yes"; then
+elif test "x$enable_fatal_warnings" = "xyes"; then
    # Fatal warnings from doxygen are nice, but not if we're warning about
    # missing documentation.
    DOXYGEN_FATAL_WARNINGS=YES
@@ -120,19 +120,19 @@ else
             [Defined if we're building with OpenSSL or LibreSSL])
 fi
 
-if test "$enable_static_tor" = "yes"; then
+if test "x$enable_static_tor" = "xyes"; then
   enable_static_libevent="yes";
   enable_static_openssl="yes";
   enable_static_zlib="yes";
   CFLAGS="$CFLAGS -static"
 fi
 
-if test "$enable_system_torrc" = "no"; then
+if test "x$enable_system_torrc" = "xno"; then
   AC_DEFINE(DISABLE_SYSTEM_TORRC, 1,
             [Defined if we're not going to look for a torrc in SYSCONF])
 fi
 
-if test "$enable_memory_sentinels" = "no"; then
+if test "x$enable_memory_sentinels" = "xno"; then
   AC_DEFINE(DISABLE_MEMORY_SENTINELS, 1,
            [Defined if we're turning off memory safety code to look for bugs])
 fi
@@ -160,12 +160,12 @@ AC_ARG_ENABLE(systemd,
         * ) AC_MSG_ERROR(bad value for --enable-systemd) ;;
       esac], [systemd=auto])
 
-if test "$enable_restart_debugging" = "yes"; then
+if test "x$enable_restart_debugging" = "xyes"; then
   AC_DEFINE(ENABLE_RESTART_DEBUGGING, 1,
             [Defined if we're building with support for in-process restart debugging.])
 fi
 
-if test "$enable_zstd_advanced_apis" != "no"; then
+if test "x$enable_zstd_advanced_apis" != "xno"; then
    AC_DEFINE(ENABLE_ZSTD_ADVANCED_APIS, 1,
              [Defined if we're going to try to use zstd's "static-only" APIs.])
 fi
@@ -242,7 +242,7 @@ AC_ARG_ENABLE(linker-hardening,
 
 AC_ARG_ENABLE(local-appdata,
    AS_HELP_STRING(--enable-local-appdata, [default to host local application data paths on Windows]))
-if test "$enable_local_appdata" = "yes"; then
+if test "x$enable_local_appdata" = "xyes"; then
   AC_DEFINE(ENABLE_LOCAL_APPDATA, 1,
             [Defined if we default to host local appdata paths on Windows])
 fi
@@ -261,7 +261,7 @@ AC_ARG_ENABLE(event-tracing-debug,
      AS_HELP_STRING(--enable-event-tracing-debug, [build with event tracing to debug log]))
 AM_CONDITIONAL([USE_EVENT_TRACING_DEBUG], [test "x$enable_event_tracing_debug" = "xyes"])
 
-if test x$enable_event_tracing_debug = xyes; then
+if test "x$enable_event_tracing_debug" = "xyes"; then
   AC_DEFINE([USE_EVENT_TRACING_DEBUG], [1], [Tracing framework to log debug])
   AC_DEFINE([TOR_EVENT_TRACING_ENABLED], [1], [Compile the event tracing instrumentation])
 fi
@@ -341,7 +341,7 @@ dnl cross-compiling.
 if test "x$enable_tool_name_check" != "xno"; then
     if test "x$ac_tool_warned" = "xyes"; then
         AC_MSG_ERROR([We are cross compiling but could not find a properly named toolchain. Do you have your cross-compiling toolchain in PATH? (You can --disable-tool-name-check to ignore this.)])
-	elif test "x$ac_ct_AR" != "x" -a "x$cross_compiling" = "xmaybe"; then
+    elif test "x$ac_ct_AR" != "x" -a "x$cross_compiling" = "xmaybe"; then
 		AC_MSG_ERROR([We think we are cross compiling but could not find a properly named toolchain. Do you have your cross-compiling toolchain in PATH? (You can --disable-tool-name-check to ignore this.)])
 	fi
 fi
@@ -405,7 +405,7 @@ AC_C_FLEXIBLE_ARRAY_MEMBER
 ]),
   [tor_cv_c_flexarray=yes],
   [tor_cv_c_flexarray=no])])
- if test "$tor_cv_flexarray" = "yes"; then
+ if test "x$tor_cv_flexarray" = "xyes"; then
    AC_DEFINE([FLEXIBLE_ARRAY_MEMBER], [], [Define to nothing if C supports flexible array members, and to 1 if it does not.])
  else
    AC_DEFINE([FLEXIBLE_ARRAY_MEMBER], [1], [Define to nothing if C supports flexible array members, and to 1 if it does not.])
@@ -418,7 +418,7 @@ AC_CACHE_CHECK([for working C99 mid-block declaration syntax],
          [AC_LANG_PROGRAM([], [int x; x = 3; int y; y = 4 + x;])],
 	 [tor_cv_c_c99_decl=yes],
 	 [tor_cv_c_c99_decl=no] )])
-if test "$tor_cv_c_c99_decl" != "yes"; then
+if test "x$tor_cv_c_c99_decl" != "xyes"; then
   AC_MSG_ERROR([Your compiler doesn't support c99 mid-block declarations. This is required as of Tor 0.2.6.x])
 fi
 
@@ -430,7 +430,7 @@ AC_CACHE_CHECK([for working C99 designated initializers],
 	 [tor_cv_c_c99_designated_init=yes],
 	 [tor_cv_c_c99_designated_init=no] )])
 
-if test "$tor_cv_c_c99_designated_init" != "yes"; then
+if test "x$tor_cv_c_c99_designated_init" != "xyes"; then
   AC_MSG_ERROR([Your compiler doesn't support c99 designated initializers. This is required as of Tor 0.2.6.x])
 fi
 
@@ -472,7 +472,7 @@ bwin32=false; AC_MSG_RESULT([no]),
 bwin32=cross; AC_MSG_RESULT([cross])
 )
 
-if test "$bwin32" = "cross"; then
+if test "x$bwin32" = "xcross"; then
 AC_MSG_CHECKING([for win32 (cross)])
 AC_COMPILE_IFELSE([AC_LANG_SOURCE([
 #ifdef _WIN32
@@ -520,7 +520,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM(, [
 bmipspro=false; AC_MSG_RESULT(no),
 bmipspro=true; AC_MSG_RESULT(yes))
 
-if test "$bmipspro" = "true"; then
+if test "x$bmipspro" = "xtrue"; then
   CFLAGS="$CFLAGS -c99"
 fi
 
@@ -583,7 +583,7 @@ if test "x$enable_rust" = "xyes"; then
 
   dnl For now both MSVC and MinGW rust libraries will output static libs with
   dnl the MSVC naming convention.
-  if test "$bwin32" = "true"; then
+  if test "x$bwin32" = "xtrue"; then
     tor_rust_static_name=tor_rust.lib
   else
     tor_rust_static_name=libtor_rust.a
@@ -592,13 +592,13 @@ if test "x$enable_rust" = "xyes"; then
   AC_CANONICAL_BUILD
 
   if test -n "$TOR_RUST_TARGET"; then
-    if test "$host" = "$build"; then
+    if test "x$host" = "x$build"; then
       AC_MSG_ERROR([HOST = BUILD is invalid if TOR_RUST_TARGET is specified, see configure --help for more information.])
     fi
     RUST_TARGET_PROP="target = '$TOR_RUST_TARGET'"
     TOR_RUST_LIB_PATH="src/rust/target/$TOR_RUST_TARGET/release/$tor_rust_static_name"
   else
-    if test "$host" != "$build"; then
+    if test "x$host" != "x$build"; then
       AC_MSG_ERROR([TOR_RUST_TARGET must be specified when cross-compiling with Rust enabled.])
     fi
     RUST_TARGET_PROP=
@@ -619,7 +619,7 @@ if test "x$enable_rust" = "xyes"; then
   if test "x$RUSTC_VERSION_MAJOR" = "x" -o "x$RUSTC_VERSION_MINOR" = "x"; then
     AC_MSG_ERROR([rustc version couldn't be identified])
   fi
-  if test "$RUSTC_VERSION_MAJOR" -lt 2 -a "$RUSTC_VERSION_MINOR" -lt 31; then
+  if test "x$RUSTC_VERSION_MAJOR" -lt 2 -a "x$RUSTC_VERSION_MINOR" -lt 31; then
     AC_MSG_ERROR([rustc must be at least version 1.31.0])
   fi
   AC_MSG_RESULT([$RUSTC_VERSION])
@@ -632,18 +632,18 @@ AC_SEARCH_LIBS(inet_aton, [resolv])
 AC_SEARCH_LIBS(backtrace, [execinfo])
 saved_LIBS="$LIBS"
 AC_SEARCH_LIBS([clock_gettime], [rt])
-if test "$LIBS" != "$saved_LIBS"; then
+if test "x$LIBS" != "x$saved_LIBS"; then
    # Looks like we need -lrt for clock_gettime().
    have_rt=yes
 fi
 
-if test "$bwin32" = "false"; then
+if test "x$bwin32" = "xfalse"; then
   AC_SEARCH_LIBS(pthread_create, [pthread])
   AC_SEARCH_LIBS(pthread_detach, [pthread])
 fi
 
-AM_CONDITIONAL(THREADS_WIN32, test "$bwin32" = "true")
-AM_CONDITIONAL(THREADS_PTHREADS, test "$bwin32" = "false")
+AM_CONDITIONAL(THREADS_WIN32, test "x$bwin32" = "xtrue")
+AM_CONDITIONAL(THREADS_PTHREADS, test "x$bwin32" = "xfalse")
 
 AC_CHECK_FUNCS(
 	_NSGetEnviron \
@@ -728,7 +728,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
    [on_macos_pre_10_10=no ; AC_MSG_RESULT([no])],
    [on_macos_pre_10_10=yes; AC_MSG_RESULT([yes])])
 
-if test "$on_macos_pre_10_10" = "no"; then
+if test "x$on_macos_pre_10_10" = "xno"; then
   AC_CHECK_FUNCS(
         mach_approximate_time \
   )
@@ -753,20 +753,20 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
    [on_macos_pre_10_12=no ; AC_MSG_RESULT([no])],
    [on_macos_pre_10_12=yes; AC_MSG_RESULT([yes])])
 
-if test "$on_macos_pre_10_12" = "no"; then
+if test "x$on_macos_pre_10_12" = "xno"; then
   AC_CHECK_FUNCS(
         clock_gettime \
         getentropy \
   )
 fi
 
-if test "$bwin32" != "true"; then
+if test "x$bwin32" != "xtrue"; then
   AC_CHECK_HEADERS(pthread.h)
   AC_CHECK_FUNCS(pthread_create)
   AC_CHECK_FUNCS(pthread_condattr_setclock)
 fi
 
-if test "$bwin32" = "true"; then
+if test "x$bwin32" = "xtrue"; then
   AC_CHECK_DECLS([SecureZeroMemory, _getwch], , , [
 #include <windows.h>
 #include <conio.h>
@@ -775,7 +775,7 @@ if test "$bwin32" = "true"; then
 fi
 
 AM_CONDITIONAL(BUILD_READPASSPHRASE_C,
-  test "x$ac_cv_func_readpassphrase" = "xno" && test "$bwin32" = "false")
+  test "x$ac_cv_func_readpassphrase" = "xno" && test "x$bwin32" = "xfalse")
 
 AC_MSG_CHECKING([whether free(NULL) works])
 AC_RUN_IFELSE([AC_LANG_PROGRAM([
@@ -788,14 +788,14 @@ free(p);
 [free_null_ok=false; AC_MSG_RESULT(no)],
 [free_null_ok=cross; AC_MSG_RESULT(cross)])
 
-if test "$free_null_ok" = "false"; then
+if test "x$free_null_ok" = "xfalse"; then
    AC_MSG_ERROR([Your libc implementation doesn't allow free(NULL), as required by C99.])
 fi
 
 dnl ------------------------------------------------------
 dnl Where do you live, libevent?  And how do we call you?
 
-if test "$bwin32" = "true"; then
+if test "x$bwin32" = "xtrue"; then
   TOR_LIB_WS32=-lws2_32
   TOR_LIB_IPHLPAPI=-liphlpapi
   # Some of the cargo-cults recommend -lwsock32 as well, but I don't
@@ -820,8 +820,8 @@ tor_libevent_devpkg_debian="libevent-dev"
 dnl On Gnu/Linux or any place we require it, we'll add librt to the Libevent
 dnl linking for static builds.
 STATIC_LIBEVENT_FLAGS=""
-if test "$enable_static_libevent" = "yes"; then
-    if test "$have_rt" = "yes"; then
+if test "x$enable_static_libevent" = "xyes"; then
+    if test "x$have_rt" = "xyes"; then
       STATIC_LIBEVENT_FLAGS=" -lrt "
     fi
 fi
@@ -857,8 +857,8 @@ CPPFLAGS="$TOR_CPPFLAGS_libevent $CPPFLAGS"
 
 AC_CHECK_HEADERS(event2/event.h event2/dns.h event2/bufferevent_ssl.h)
 
-if test "$enable_static_libevent" = "yes"; then
-   if test "$tor_cv_library_libevent_dir" = "(system)"; then
+if test "x$enable_static_libevent" = "xyes"; then
+   if test "x$tor_cv_library_libevent_dir" = "x(system)"; then
      AC_MSG_ERROR("You must specify an explicit --with-libevent-dir=x option when using --enable-static-libevent")
    else
      TOR_LIBEVENT_LIBS="$TOR_LIBDIR_libevent/libevent.a $STATIC_LIBEVENT_FLAGS"
@@ -868,10 +868,10 @@ else
        AC_SEARCH_LIBS(event_new, [event event_core], , AC_MSG_ERROR("libevent2 is installed but linking it failed while searching for event_new"))
        AC_SEARCH_LIBS(evdns_base_new, [event event_extra], , AC_MSG_ERROR("libevent2 is installed but linking it failed while searching for evdns_base_new"))
 
-       if test "$ac_cv_search_event_new" != "none required"; then
+       if test "x$ac_cv_search_event_new" != "xnone required"; then
          TOR_LIBEVENT_LIBS="$ac_cv_search_event_new"
        fi
-       if test "$ac_cv_search_evdns_base_new" != "none required"; then
+       if test "x$ac_cv_search_evdns_base_new" != "xnone required"; then
          TOR_LIBEVENT_LIBS="$ac_cv_search_evdns_base_new $TOR_LIBEVENT_LIBS"
        fi
      else
@@ -920,7 +920,7 @@ dnl part of libroot. In which case don't link against lm
 TOR_LIB_MATH=""
 save_LIBS="$LIBS"
 AC_SEARCH_LIBS(pow, [m], , AC_MSG_ERROR([Could not find pow in libm or libc.]))
-if test "$ac_cv_search_pow" != "none required"; then
+if test "x$ac_cv_search_pow" != "xnone required"; then
     TOR_LIB_MATH="$ac_cv_search_pow"
 fi
 LIBS="$save_LIBS"
@@ -974,8 +974,8 @@ TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $TOR_LIB_GDI $TOR_LIB_WS
 
 dnl XXXX check for OPENSSL_VERSION_NUMBER == SSLeay()
 
-if test "$enable_static_openssl" = "yes"; then
-   if test "$tor_cv_library_openssl_dir" = "(system)"; then
+if test "x$enable_static_openssl" = "xyes"; then
+   if test "x$tor_cv_library_openssl_dir" = "x(system)"; then
      AC_MSG_ERROR("You must specify an explicit --with-openssl-dir=x option when using --enable-static-openssl")
    else
      TOR_OPENSSL_LIBS="$TOR_LIBDIR_openssl/libssl.a $TOR_LIBDIR_openssl/libcrypto.a"
@@ -1106,8 +1106,8 @@ TOR_SEARCH_LIBRARY(zlib, $tryzlibdir, [-lz],
     [zlibVersion();], [--with-zlib-dir],
     [/opt/zlib])
 
-if test "$enable_static_zlib" = "yes"; then
-   if test "$tor_cv_library_zlib_dir" = "(system)"; then
+if test "x$enable_static_zlib" = "xyes"; then
+   if test "x$tor_cv_library_zlib_dir" = "x(system)"; then
      AC_MSG_ERROR("You must specify an explicit --with-zlib-dir=x option when
  using --enable-static-zlib")
    else
@@ -1247,8 +1247,8 @@ m4_ifdef([AS_VAR_IF],[
     AS_VAR_POPDEF([can_compile])
     TOR_CHECK_CFLAGS(-Wstack-protector)
     TOR_CHECK_CFLAGS(--param ssp-buffer-size=1)
-    if test "$bwin32" = "false" && test "$enable_libfuzzer" != "yes" && test "$enable_oss_fuzz" != "yes"; then
-       if test "$enable_pic" != "yes"; then
+    if test "x$bwin32" = "xfalse" && test "x$enable_libfuzzer" != "xyes" && test "x$enable_oss_fuzz" != "xyes"; then
+       if test "x$enable_pic" != "xyes"; then
            # If we have already enabled -fPIC, then we don't also need to
            # compile with -fPIE...
            TOR_CHECK_CFLAGS(-fPIE)
@@ -1271,28 +1271,28 @@ m4_ifdef([AS_VAR_IF],[
         [AC_MSG_RESULT([cross])])
 fi
 
-if test "$fragile_hardening" = "yes"; then
+if test "x$fragile_hardening" = "xyes"; then
     TOR_TRY_COMPILE_WITH_CFLAGS(-ftrapv, also_link, CFLAGS_FTRAPV="-ftrapv", true)
-   if test "$tor_cv_cflags__ftrapv" = "yes" && test "$tor_can_link__ftrapv" != "yes"; then
+   if test "x$tor_cv_cflags__ftrapv" = "xyes" && test "x$tor_can_link__ftrapv" != "xyes"; then
       AC_MSG_WARN([The compiler supports -ftrapv, but for some reason I was not able to link with -ftrapv. Are you missing run-time support? Run-time hardening will not work as well as it should.])
    fi
 
-   if test "$tor_cv_cflags__ftrapv" != "yes"; then
+   if test "x$tor_cv_cflags__ftrapv" != "xyes"; then
      AC_MSG_ERROR([You requested fragile hardening, but the compiler does not seem to support -ftrapv.])
    fi
 
    TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=address], also_link, CFLAGS_ASAN="-fsanitize=address", true)
-    if test "$tor_cv_cflags__fsanitize_address" = "yes" && test "$tor_can_link__fsanitize_address" != "yes"; then
+    if test "x$tor_cv_cflags__fsanitize_address" = "xyes" && test "x$tor_can_link__fsanitize_address" != "xyes"; then
       AC_MSG_ERROR([The compiler supports -fsanitize=address, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libubsan.*, and with Clang you need libclang_rt.ubsan*])
     fi
 
    TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=undefined], also_link, CFLAGS_UBSAN="-fsanitize=undefined", true)
-    if test "$tor_cv_cflags__fsanitize_address" = "yes" && test "$tor_can_link__fsanitize_address" != "yes"; then
+    if test "x$tor_cv_cflags__fsanitize_address" = "xyes" && test "x$tor_can_link__fsanitize_address" != "xyes"; then
       AC_MSG_ERROR([The compiler supports -fsanitize=undefined, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libasan.*, and with Clang you need libclang_rt.ubsan*])
     fi
 
    TOR_TRY_COMPILE_WITH_CFLAGS([-fno-sanitize=float-divide-by-zero], also_link, CFLAGS_UBSAN="-fno-sanitize=float-divide-by-zero", true)
-    if test "$tor_cv_cflags__fno_sanitize_float_divide_by_zero" = "yes" && test "$tor_can_link__fno_sanitize_float_divide_by_zero" != "yes"; then
+    if test "x$tor_cv_cflags__fno_sanitize_float_divide_by_zero" = "xyes" && test "x$tor_can_link__fno_sanitize_float_divide_by_zero" != "xyes"; then
       AC_MSG_ERROR([The compiler supports -fno-sanitize=float-divide-by-zero, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libasan.*, and with Clang you need libclang_rt.ubsan*])
     fi
 
@@ -1330,7 +1330,7 @@ CFLAGS_BUGTRAP="$CFLAGS_FTRAPV $CFLAGS_ASAN $CFLAGS_UBSAN"
 CFLAGS_CONSTTIME="$CFLAGS_FWRAPV"
 
 mulodi_fixes_ftrapv=no
-if test "$have_clang" = "yes"; then
+if test "x$have_clang" = "xyes"; then
   saved_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS $CFLAGS_FTRAPV"
   AC_MSG_CHECKING([whether clang -ftrapv can link a 64-bit int multiply])
@@ -1346,7 +1346,7 @@ if test "$have_clang" = "yes"; then
 	  } ]])],
 	  [ftrapv_can_link=yes; AC_MSG_RESULT([yes])],
 	  [ftrapv_can_link=no; AC_MSG_RESULT([no])])
-  if test "$ftrapv_can_link" = "no"; then
+  if test "x$ftrapv_can_link" = "xno"; then
     AC_MSG_CHECKING([whether defining __mulodi4 fixes that])
     AC_LINK_IFELSE([
       AC_LANG_SOURCE([[
@@ -1368,7 +1368,7 @@ if test "$have_clang" = "yes"; then
   CFLAGS="$saved_CFLAGS"
 fi
 
-AM_CONDITIONAL(ADD_MULODI4, test "$mulodi_fixes_ftrapv" = "yes")
+AM_CONDITIONAL(ADD_MULODI4, test "x$mulodi_fixes_ftrapv" = "xyes")
 
 dnl These cflags add bunches of branches, and we haven't been able to
 dnl persuade ourselves that they're suitable for code that needs to be
@@ -1391,8 +1391,8 @@ dnl Now see if we have a -fomit-frame-pointer compiler option.
 saved_CFLAGS="$CFLAGS"
 TOR_CHECK_CFLAGS(-fomit-frame-pointer)
 F_OMIT_FRAME_POINTER=''
-if test "$saved_CFLAGS" != "$CFLAGS"; then
-  if test "$fragile_hardening" = "yes"; then
+if test "x$saved_CFLAGS" != "x$CFLAGS"; then
+  if test "x$fragile_hardening" = "xyes"; then
     F_OMIT_FRAME_POINTER='-fomit-frame-pointer'
   fi
 fi
@@ -1767,7 +1767,7 @@ AX_CHECK_SIGN([time_t],
 #endif
 ])
 
-if test "$ax_cv_decl_time_t_signed" = "no"; then
+if test "x$ax_cv_decl_time_t_signed" = "xno"; then
   AC_MSG_ERROR([You have an unsigned time_t; Tor does not support that. Please tell the Tor developers about your interesting platform.])
 fi
 
@@ -1779,7 +1779,7 @@ AX_CHECK_SIGN([size_t],
 #endif
 ])
 
-if test "$ax_cv_decl_size_t_signed" = "yes"; then
+if test "x$ax_cv_decl_size_t_signed" = "xyes"; then
   AC_MSG_ERROR([You have a signed size_t; that's grossly nonconformant.])
 fi
 
@@ -1813,9 +1813,9 @@ void try_atomic_init(struct x *xx)
 }
 ]])], [tor_cv_stdatomic_works=yes], [tor_cv_stdatomic_works=no])])
 
-if test "$tor_cv_stdatomic_works" = "yes"; then
+if test "x$tor_cv_stdatomic_works" = "xyes"; then
    AC_DEFINE(STDATOMIC_WORKS, 1, [Set to 1 if we can compile a simple stdatomic example.])
-elif test "$ac_cv_header_stdatomic_h" = "yes"; then
+elif test "x$ac_cv_header_stdatomic_h" = "xyes"; then
    AC_MSG_WARN([Your compiler provides the stdatomic.h header, but it doesn't seem to work.  I'll pretend it isn't there. If you are using Clang on Debian, maybe this is because of https://bugs.debian.org/903709 ])
 fi
 
@@ -1834,12 +1834,12 @@ return memcmp(&p1,&p2,sizeof(char*))?1:0; }]])],
        [tor_cv_null_is_zero=no],
        [tor_cv_null_is_zero=cross])])
 
-if test "$tor_cv_null_is_zero" = "cross"; then
+if test "x$tor_cv_null_is_zero" = "xcross"; then
   # Cross-compiling; let's hope that the target isn't raving mad.
   AC_MSG_NOTICE([Cross-compiling: we'll assume that NULL is represented as a sequence of 0-valued bytes.])
 fi
 
-if test "$tor_cv_null_is_zero" != "no"; then
+if test "x$tor_cv_null_is_zero" != "xno"; then
   AC_DEFINE([NULL_REP_IS_ZERO_BYTES], 1,
             [Define to 1 iff memset(0) sets pointers to NULL])
 fi
@@ -1858,12 +1858,12 @@ return memcmp(&d1,&d2,sizeof(d1))?1:0; }]])],
        [tor_cv_dbl0_is_zero=no],
        [tor_cv_dbl0_is_zero=cross])])
 
-if test "$tor_cv_dbl0_is_zero" = "cross"; then
+if test "x$tor_cv_dbl0_is_zero" = "xcross"; then
   # Cross-compiling; let's hope that the target isn't raving mad.
   AC_MSG_NOTICE([Cross-compiling: we'll assume that 0.0 can be represented as a sequence of 0-valued bytes.])
 fi
 
-if test "$tor_cv_dbl0_is_zero" != "no"; then
+if test "x$tor_cv_dbl0_is_zero" != "xno"; then
   AC_DEFINE([DOUBLE_0_REP_IS_ZERO_BYTES], 1,
             [Define to 1 iff memset(0) sets doubles to 0.0])
 fi
@@ -1882,12 +1882,12 @@ int main () { return malloc(0)?0:1; }]])],
        [tor_cv_malloc_zero_works=no],
        [tor_cv_malloc_zero_works=cross])])
 
-if test "$tor_cv_malloc_zero_works" = "cross"; then
+if test "x$tor_cv_malloc_zero_works" = "xcross"; then
   # Cross-compiling; let's hope that the target isn't raving mad.
   AC_MSG_NOTICE([Cross-compiling: we'll assume that we need to check malloc() arguments for 0.])
 fi
 
-if test "$tor_cv_malloc_zero_works" = "yes"; then
+if test "x$tor_cv_malloc_zero_works" = "xyes"; then
   AC_DEFINE([MALLOC_ZERO_WORKS], 1,
             [Define to 1 iff malloc(0) returns a pointer])
 fi
@@ -1901,12 +1901,12 @@ return problem ? 1 : 0; }]])],
        [tor_cv_twos_complement=no],
        [tor_cv_twos_complement=cross])])
 
-if test "$tor_cv_twos_complement" = "cross"; then
+if test "x$tor_cv_twos_complement" = "xcross"; then
   # Cross-compiling; let's hope that the target isn't raving mad.
   AC_MSG_NOTICE([Cross-compiling: we'll assume that negative integers are represented with two's complement.])
 fi
 
-if test "$tor_cv_twos_complement" != "no"; then
+if test "x$tor_cv_twos_complement" != "xno"; then
   AC_DEFINE([USING_TWOS_COMPLEMENT], 1,
             [Define to 1 iff we represent negative integers with
              two's complement])
@@ -1920,12 +1920,12 @@ AC_CACHE_CHECK([whether right-shift on negative values does sign-extension], tor
        [tor_cv_sign_extend=no],
        [tor_cv_sign_extend=cross])])
 
-if test "$tor_cv_sign_extend" = "cross"; then
+if test "x$tor_cv_sign_extend" = "xcross"; then
   # Cross-compiling; let's hope that the target isn't raving mad.
   AC_MSG_NOTICE([Cross-compiling: we'll assume that right-shifting negative integers causes sign-extension])
 fi
 
-if test "$tor_cv_sign_extend" != "no"; then
+if test "x$tor_cv_sign_extend" != "xno"; then
   AC_DEFINE([RSHIFT_DOES_SIGN_EXTEND], 1,
             [Define to 1 iff right-shifting a negative value performs sign-extension])
 fi
@@ -1940,11 +1940,11 @@ unsigned char c;]])],
        [tor_cv_uint8_uchar=no],
        [tor_cv_uint8_uchar=cross])])
 
-if test "$tor_cv_uint8_uchar" = "cross"; then
+if test "x$tor_cv_uint8_uchar" = "xcross"; then
   AC_MSG_NOTICE([Cross-compiling: we'll assume that uint8_t is the same type as unsigned char])
 fi
 
-if test "$tor_cv_uint8_uchar" = "no"; then
+if test "x$tor_cv_uint8_uchar" = "xno"; then
   AC_MSG_ERROR([We assume that uint8_t is the same type as unsigned char, but your compiler disagrees.])
 fi
 
@@ -2013,11 +2013,11 @@ AS_CASE([$malloc],
 
 AM_CONDITIONAL(USE_OPENBSD_MALLOC, test "x$enable_openbsd_malloc" = "xyes")
 
-if test "$malloc" != "system"; then
+if test "x$malloc" != "xsystem"; then
   # Tell the C compiler not to use the system allocator functions.
   TOR_CHECK_CFLAGS([-fno-builtin-malloc -fno-builtin-realloc -fno-builtin-calloc -fno-builtin-free])
 fi
-if test "$using_custom_malloc" = "yes"; then
+if test "x$using_custom_malloc" = "xyes"; then
   # Tell the C compiler not to use the system allocator functions.
   TOR_CHECK_CFLAGS([-fno-builtin-malloc -fno-builtin-realloc -fno-builtin-calloc -fno-builtin-free])
 fi
@@ -2132,20 +2132,20 @@ int main(int c, char **v) { char **t = environ; }])],
   tor_cv_have_environ_declared=yes,
   tor_cv_have_environ_declared=no))
 
-if test "$tor_cv_have_func_macro" = "yes"; then
+if test "x$tor_cv_have_func_macro" = "xyes"; then
   AC_DEFINE(HAVE_MACRO__func__, 1, [Defined if the compiler supports __func__])
 fi
 
-if test "$tor_cv_have_FUNC_macro" = "yes"; then
+if test "x$tor_cv_have_FUNC_macro" = "xyes"; then
   AC_DEFINE(HAVE_MACRO__FUNC__, 1, [Defined if the compiler supports __FUNC__])
 fi
 
-if test "$tor_cv_have_FUNCTION_macro" = "yes"; then
+if test "x$tor_cv_have_FUNCTION_macro" = "xyes"; then
   AC_DEFINE(HAVE_MACRO__FUNCTION__, 1,
            [Defined if the compiler supports __FUNCTION__])
 fi
 
-if test "$tor_cv_have_environ_declared" = "yes"; then
+if test "x$tor_cv_have_environ_declared" = "xyes"; then
   AC_DEFINE(HAVE_EXTERN_ENVIRON_DECLARED, 1,
            [Defined if we have extern char **environ already declared])
 fi
@@ -2187,7 +2187,7 @@ AC_SUBST(BINDIR)
 LOCALSTATEDIR=`eval echo $localstatedir`
 AC_SUBST(LOCALSTATEDIR)
 
-if test "$bwin32" = "true"; then
+if test "x$bwin32" = "xtrue"; then
   # Test if the linker supports the --nxcompat and --dynamicbase options
   # for Windows
   save_LDFLAGS="$LDFLAGS"
@@ -2203,7 +2203,7 @@ fi
 
 # Set CFLAGS _after_ all the above checks, since our warnings are stricter
 # than autoconf's macros like.
-if test "$GCC" = "yes"; then
+if test "x$GCC" = "xyes"; then
   # Disable GCC's strict aliasing checks.  They are an hours-to-debug
   # accident waiting to happen.
   CFLAGS="$CFLAGS -Wall -fno-strict-aliasing"
@@ -2215,7 +2215,7 @@ else
 fi
 
 # Warnings implies advisory-warnings and -Werror.
-if test "$enable_gcc_warnings" = "yes"; then
+if test "x$enable_gcc_warnings" = "xyes"; then
   enable_gcc_warnings_advisory=yes
   enable_fatal_warnings=yes
 fi
@@ -2496,13 +2496,13 @@ dnl     -Wthread-safety-precise
   TOR_WARNING_FLAGS="$TOR_WARNING_FLAGS $W_FLAGS"
   CFLAGS="$CFLAGS $W_FLAGS"
 
-  if test "$tor_cv_cflags__Wnull_dereference" = "yes"; then
+  if test "x$tor_cv_cflags__Wnull_dereference" = "xyes"; then
     AC_DEFINE([HAVE_CFLAG_WNULL_DEREFERENCE], 1, [True if we have -Wnull-dereference])
   fi
-  if test "$tor_cv_cflags__Woverlength_strings" = "yes"; then
+  if test "x$tor_cv_cflags__Woverlength_strings" = "xyes"; then
     AC_DEFINE([HAVE_CFLAG_WOVERLENGTH_STRINGS], 1, [True if we have -Woverlength-strings])
   fi
-  if test "$tor_cv_cflags__warn_unused_const_variable_2" = "yes"; then
+  if test "x$tor_cv_cflags__warn_unused_const_variable_2" = "xyes"; then
     AC_DEFINE([HAVE_CFLAG_WUNUSED_CONST_VARIABLE], 1, [True if we have -Wunused-const-variable])
   fi
 
@@ -2524,7 +2524,7 @@ TOR_TRY_COMPILE_WITH_CFLAGS([@warning_flags], [],
                             CFLAGS="$CFLAGS @warning_flags",
                             CFLAGS="$CFLAGS $TOR_WARNING_FLAGS")
 
-if test "$enable_coverage" = "yes" && test "$have_clang" = "no"; then
+if test "x$enable_coverage" = "xyes" && test "x$have_clang" = "xno"; then
    case "$host_os" in
     darwin*)
       AC_MSG_WARN([Tried to enable coverage on OSX without using the clang compiler. This might not work! If coverage fails, use CC=clang when configuring with --enable-coverage.])
@@ -2546,7 +2546,7 @@ AC_CONFIG_FILES([
         warning_flags
 ])
 
-if test "x$asciidoc" = "xtrue" && test "$ASCIIDOC" = "none"; then
+if test "x$asciidoc" = "xtrue" && test "x$ASCIIDOC" = "xnone"; then
   regular_mans="doc/tor doc/tor-gencert doc/tor-resolve doc/torify"
   for file in $regular_mans ; do
     if ! [[ -f "$srcdir/$file.1.in" ]] || ! [[ -f "$srcdir/$file.html.in" ]] ; then
@@ -2564,7 +2564,7 @@ if test "x$asciidoc" = "xtrue" && test "$ASCIIDOC" = "none"; then
   done
 fi
 
-if test "$fragile_hardening" = "yes"; then
+if test "x$fragile_hardening" = "xyes"; then
   AC_MSG_WARN([
 
 ============
