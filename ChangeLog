@@ -1,3 +1,72 @@
+Changes in version 0.3.5.10 - 2020-03-??
+  blurb.
+
+  o Major bugfixes (linux seccomp sandbox, backport from 0.4.3.1-alpha):
+    - Correct how we use libseccomp. Particularly, stop assuming that
+      rules are applied in a particular order or that more rules are
+      processed after the first match. Neither is the case! In
+      libseccomp <2.4.0 this lead to some rules having no effect.
+      libseccomp 2.4.0 changed how rules are generated, leading to a
+      different ordering, which in turn led to a fatal crash during
+      startup. Fixes bug 29819; bugfix on 0.2.5.1-alpha. Patch by
+      Peter Gerber.
+
+  o Minor features (continuous integration, backport from 0.4.3.2-alpha):
+    - Stop allowing failures on the Travis CI stem tests job. It looks
+      like all the stem hangs we were seeing before are now fixed.
+      Closes ticket 33075.
+
+  o Minor bugfixes (bridges, backport from 0.4.3.1-alpha):
+    - Lowercase the configured value of BridgeDistribution before adding
+      it to the descriptor. Fixes bug 32753; bugfix on 0.3.2.3-alpha.
+
+  o Minor bugfixes (crash, backport from 0.4.2.4-rc):
+    - When running Tor with an option like --verify-config or
+      --dump-config that does not start the event loop, avoid crashing
+      if we try to exit early because of an error. Fixes bug 32407;
+      bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (logging, backport from 0.4.3.2-alpha):
+    - If we encounter a bug when flushing a buffer to a TLS connection,
+      only log the bug once per invocation of the Tor process.
+      Previously we would log with every occurrence, which could cause
+      us to run out of disk space. Fixes bug 33093; bugfix
+      on 0.3.2.2-alpha.
+
+  o Minor bugfixes (onion services v3, backport from 0.4.3.3-alpha):
+    - Fix an assertion failure that could result from a corrupted
+      ADD_ONION control port command. Found by Saibato. Fixes bug 33137;
+      bugfix on 0.3.3.1-alpha. This issue is also tracked
+      as TROVE-2020-003.
+
+  o Minor bugfixes (rust, build, backport from 0.4.3.2-alpha):
+    - Fix a syntax warning given by newer versions of Rust that was
+      creating problems for our continuous integration. Fixes bug 33212;
+      bugfix on 0.3.5.1-alpha.
+
+  o Testing (backport from 0.4.3.1-alpha):
+    - Re-enable the Travis CI macOS Chutney build, but don't let it
+      prevent the Travis job from finishing. (The Travis macOS jobs are
+      slow, so we don't want to have it delay the whole CI process.)
+      Closes ticket 32629.
+    - Turn off Tor's Sandbox in Chutney jobs, and run those jobs on
+      Ubuntu Bionic. Turning off the Sandbox is a work-around, until we
+      fix the sandbox errors in 32722. Closes ticket 32240.
+
+  o Testing (continuous integration, backport from 0.4.3.1-alpha):
+    - Use zstd in our Travis Linux builds. Closes ticket 32242.
+
+  o Testing (Travis CI, backport from 0.4.3.3-alpha):
+    - Remove a redundant distcheck job. Closes ticket 33194.
+    - Sort the Travis jobs in order of speed: putting the slowest jobs
+      first takes full advantage of Travis job concurrency. Closes
+      ticket 33194.
+    - Stop allowing the Chutney IPv6 Travis job to fail. This job was
+      previously configured to fast_finish (which requires
+    - When a Travis chutney job fails, use chutney's new "diagnostics.sh"
+      tool to produce detailed diagnostic output. Closes ticket 32792.
+
+
 Changes in version 0.3.5.9 - 2019-12-09
   Tor 0.3.5.9 backports serveral fixes from later releases, including
   several that affect bridge users, relay stability, onion services,
