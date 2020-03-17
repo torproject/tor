@@ -193,8 +193,24 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
   return 0;
 }
 
-/** Given a response payload and keys, initialize, then send a created
- * cell back.
+/** On a relay, accept a create cell, initialise a circuit, and send a
+ * created cell back.
+ *
+ * Given:
+ *   - a response payload consisting of:
+ *     - the <b>created_cell</b> and
+ *     - an optional <b>rend_circ_nonce</b>, and
+ *   - <b>keys</b> of length <b>keys_len</b>, which must be
+ *     CPATH_KEY_MATERIAL_LEN;
+ * then:
+ *   - initialize the circuit <b>circ</b>'s cryptographic material,
+ *   - set the circuit's state to open, and
+ *   - send a created cell back on that circuit.
+ *
+ * If we haven't found our ORPorts reachable yet, and the channel meets the
+ * necessary conditions, mark the relevant ORPorts as reachable.
+ *
+ * Returns -1 if cell or circuit initialisation fails.
  */
 int
 onionskin_answer(struct or_circuit_t *circ,
