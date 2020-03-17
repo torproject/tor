@@ -13,14 +13,17 @@
 #define TOR_SELFTEST_H
 
 #ifdef HAVE_MODULE_RELAY
+
 struct or_options_t;
 int check_whether_orport_reachable(const struct or_options_t *options);
 int check_whether_dirport_reachable(const struct or_options_t *options);
 
 void router_do_reachability_checks(int test_or, int test_dir);
+void router_perform_bandwidth_test(int num_circs, time_t now);
+
 void router_orport_found_reachable(void);
 void router_dirport_found_reachable(void);
-void router_perform_bandwidth_test(int num_circs, time_t now);
+
 void router_reset_reachability(void);
 
 #else /* !defined(HAVE_MODULE_RELAY) */
@@ -29,13 +32,6 @@ void router_reset_reachability(void);
   ((void)(opts), 0)
 #define check_whether_dirport_reachable(opts) \
   ((void)(opts), 0)
-
-#define router_orport_found_reachable() \
-  STMT_NIL
-#define router_dirport_found_reachable() \
-  STMT_NIL
-#define router_reset_reachability() \
-  STMT_NIL
 
 static inline void
 router_do_reachability_checks(int test_or, int test_dir)
@@ -51,6 +47,14 @@ router_perform_bandwidth_test(int num_circs, time_t now)
   (void)now;
   tor_assert_nonfatal_unreached();
 }
+
+#define router_orport_found_reachable() \
+  STMT_NIL
+#define router_dirport_found_reachable() \
+  STMT_NIL
+
+#define router_reset_reachability() \
+  STMT_NIL
 
 #endif /* defined(HAVE_MODULE_RELAY) */
 
