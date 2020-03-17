@@ -861,7 +861,8 @@ if test "x$enable_static_libevent" = "xyes"; then
    if test "x$tor_cv_library_libevent_dir" = "x(system)"; then
      AC_MSG_ERROR("You must specify an explicit --with-libevent-dir=x option when using --enable-static-libevent")
    else
-     TOR_LIBEVENT_LIBS="$TOR_LIBDIR_libevent/libevent.a $STATIC_LIBEVENT_FLAGS"
+     dnl If libevent was _not_ installed, the library is in .libs/.
+     TOR_LIBEVENT_LIBS="$TOR_LIBDIR_libevent/libevent.a $TOR_LIBDIR_libevent/.libs/libevent.a $STATIC_LIBEVENT_FLAGS"
    fi
 else
      if test "x$ac_cv_header_event2_event_h" = "xyes"; then
