@@ -3565,6 +3565,12 @@ hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
     goto err;
   }
 
+  if (ed25519_validate_pubkey(&service->keys.identity_pk) < 0) {
+    log_warn(LD_CONFIG, "Bad ed25519 private key was provided");
+    ret = RSAE_BADPRIVKEY;
+    goto err;
+  }
+
   /* Make sure we have at least one port. */
   if (smartlist_len(service->config.ports) == 0) {
     log_warn(LD_CONFIG, "At least one VIRTPORT/TARGET must be specified "
