@@ -4170,8 +4170,8 @@ dirvote_dirreq_get_status_vote(const char *url, smartlist_t *items,
 
 /** Get the best estimate of a router's bandwidth for dirauth purposes,
  * preferring measured to advertised values if available. */
-static uint32_t
-dirserv_get_bandwidth_for_router_kb(const routerinfo_t *ri)
+MOCK_IMPL(uint32_t,dirserv_get_bandwidth_for_router_kb,
+        (const routerinfo_t *ri))
 {
   uint32_t bw_kb = 0;
   /*
@@ -4205,7 +4205,7 @@ dirserv_get_bandwidth_for_router_kb(const routerinfo_t *ri)
  * non-authority; a running router is more useful than a non-running router;
  * and a router with more bandwidth is more useful than one with less.)
  **/
-static int
+int
 compare_routerinfo_by_ip_and_bw_(const void **a, const void **b)
 {
   routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
@@ -4213,18 +4213,17 @@ compare_routerinfo_by_ip_and_bw_(const void **a, const void **b)
   uint32_t bw_kb_first, bw_kb_second;
   const node_t *node_first, *node_second;
   int first_is_running, second_is_running;
-  printf("%d\n", 4);
   tor_addr_t *first_ipv6 = &(first->ipv6_addr);
   tor_addr_t *second_ipv6 = &(second->ipv6_addr);
   sa_family_t first_family, second_family;
-
-  /* the ipv6 router should appear before the ipv4 router
-   * because it is considered a better router */
   first_family = tor_addr_family(first_ipv6);
   second_family = tor_addr_family(second_ipv6);
+  /* the ipv6 router should appear before the ipv4 router
+   * because it is considered a better router */
   if (first_family != second_family)
     return first_family == AF_INET6 ? -1 : 1;
   if (first_family == AF_INET6) {
+    // both are ipv6, return -1 if first has smaller address than second
     const uint8_t *first_address = tor_addr_to_in6_addr8(first_ipv6);
     const uint8_t *second_address = tor_addr_to_in6_addr8(second_ipv6);
     for (int i = 0; i < 16; i++) {
@@ -4233,9 +4232,7 @@ compare_routerinfo_by_ip_and_bw_(const void **a, const void **b)
     }
     return 1;
     } else {
-      /* otherwise, both addresses are IPv4, fallback to previous behavior */
-      /* we return -1 if first should appear before second... that is,
-       * if first is a better router. */
+    // both are ipv4, return -1 if first has smaller address than second
       if (first->addr < second->addr)
         return -1;
       else if (first->addr > second->addr)
@@ -4245,7 +4242,6 @@ compare_routerinfo_by_ip_and_bw_(const void **a, const void **b)
   /* Potentially, this next bit could cause k n lg n memeq calls.  But in
    * reality, we will almost never get here, since addresses will usually be
    * different. */
-
   first_is_auth =
     router_digest_is_trusted_dir(first->cache_info.identity_digest);
   second_is_auth =
@@ -4260,7 +4256,6 @@ compare_routerinfo_by_ip_and_bw_(const void **a, const void **b)
   node_second = node_get_by_id(second->cache_info.identity_digest);
   first_is_running = node_first && node_first->is_running;
   second_is_running = node_second && node_second->is_running;
-
   if (first_is_running && !second_is_running)
     return -1;
   else if (!first_is_running && second_is_running)

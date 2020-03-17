@@ -179,6 +179,8 @@ dirvote_add_signatures(const char *detached_signatures_body,
 /* Item access */
 MOCK_DECL(const char*, dirvote_get_pending_consensus,
           (consensus_flavor_t flav));
+MOCK_DECL(uint32_t,dirserv_get_bandwidth_for_router_kb,
+        (const routerinfo_t *ri));
 MOCK_DECL(const char*, dirvote_get_pending_detached_signatures, (void));
 const cached_dir_t *dirvote_get_vote(const char *fp, int flags);
 
