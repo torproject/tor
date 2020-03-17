@@ -1,5 +1,0 @@
-  o Minor bugfixes (logging):
-    - If we encounter a bug when flushing a buffer to a TLS connection,
-      only log the bug once per invocation of the Tor process.  Previously we
-      would log with every occurrence, which could cause us to run out of
-      disk space.  Fixes bug 33093; bugfix on 0.3.2.2-alpha.
