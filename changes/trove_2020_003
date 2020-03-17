@@ -1,4 +1,0 @@
-  o Minor bugfixes (onion services v3):
-  - Fix assertion failure that could result from a corrupted ADD_ONION control
-    port command. Found by Saibato. Fixes bug 33137; bugfix on
-    0.3.3.1-alpha. This issue is also being tracked as TROVE-2020-003.
