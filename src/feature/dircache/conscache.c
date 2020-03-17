@@ -135,8 +135,10 @@ consensus_cache_may_overallocate(consensus_cache_t *cache)
 // HACK: GCC on Appveyor hates that we may assert before returning. Work around
 // the error.
 #ifdef _WIN32
+#ifndef COCCI
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
+#endif
 #endif
 
 /**
@@ -164,7 +166,9 @@ consensus_cache_register_with_sandbox(consensus_cache_t *cache,
 }
 
 #ifdef _WIN32
+#ifndef COCCI
 #pragma GCC diagnostic pop
+#endif
 #endif
 
 /**
