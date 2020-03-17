@@ -1336,6 +1336,44 @@ test_crypto_pk_pem_encrypted(void *arg)
 }
 
 static void
+test_crypto_pk_bad_size(void *arg)
+{
+  (void)arg;
+  crypto_pk_t *pk1 = pk_generate(0);
+  crypto_pk_t *pk2 = NULL;
+  char buf[2048];
+  int n = crypto_pk_asn1_encode_private(pk1, buf, sizeof(buf));
+  tt_int_op(n, OP_GT, 0);
+
+  /* Set the max bit count smaller: we should refuse to decode the key.*/
+  pk2 = crypto_pk_asn1_decode_private(buf, n, 1020);
+  tt_assert(! pk2);
+
+  /* Set the max bit count one bit smaller: we should refuse to decode the
+     key.*/
+  pk2 = crypto_pk_asn1_decode_private(buf, n, 1023);
+  tt_assert(! pk2);
+
+  /* Correct size: should work. */
+  pk2 = crypto_pk_asn1_decode_private(buf, n, 1024);
+  tt_assert(pk2);
+  crypto_pk_free(pk2);
+
+  /* One bit larger: should work. */
+  pk2 = crypto_pk_asn1_decode_private(buf, n, 1025);
+  tt_assert(pk2);
+  crypto_pk_free(pk2);
+
+  /* Set the max bit count larger: it should decode fine. */
+  pk2 = crypto_pk_asn1_decode_private(buf, n, 2048);
+  tt_assert(pk2);
+
+ done:
+  crypto_pk_free(pk1);
+  crypto_pk_free(pk2);
+}
+
+static void
 test_crypto_pk_invalid_private_key(void *arg)
 {
   (void)arg;
@@ -2998,6 +3036,7 @@ struct testcase_t crypto_tests[] = {
   { "pk_fingerprints", test_crypto_pk_fingerprints, TT_FORK, NULL, NULL },
   { "pk_base64", test_crypto_pk_base64, TT_FORK, NULL, NULL },
   { "pk_pem_encrypted", test_crypto_pk_pem_encrypted, TT_FORK, NULL, NULL },
+  { "pk_bad_size", test_crypto_pk_bad_size, 0, NULL, NULL },
   { "pk_invalid_private_key", test_crypto_pk_invalid_private_key, 0,
     NULL, NULL },
   CRYPTO_LEGACY(digests),
