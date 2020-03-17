@@ -59,7 +59,7 @@ static struct {
    {  0,  0, NULL,                        NULL }
    // clang-format on
 };
-#endif
+#endif /* defined(_WIN32) */
 
 /** Return a pointer to a description of our platform.
  */
