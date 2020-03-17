@@ -33,6 +33,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "lib/encoding/binascii.h"
 
 #include <string.h>
+#include <stdbool.h>
 
 /** Declaration for crypto_pk_t structure. */
 struct crypto_pk_t
@@ -564,6 +565,56 @@ crypto_pk_asn1_encode_private(const crypto_pk_t *pk, char *dest,
   return len;
 }
 
+/** Check whether any component of a private key is too large in a way that
+ * seems likely to make verification too expensive. Return true if it's too
+ * long, and false otherwise. */
+static bool
+rsa_private_key_too_long(RSA *rsa, int max_bits)
+{
+  const BIGNUM *n, *e, *p, *q, *d, *dmp1, *dmq1, *iqmp;
+#ifdef OPENSSL_1_1_API
+  n = RSA_get0_n(rsa);
+  e = RSA_get0_e(rsa);
+  p = RSA_get0_p(rsa);
+  q = RSA_get0_q(rsa);
+  d = RSA_get0_d(rsa);
+  dmp1 = RSA_get0_dmp1(rsa);
+  dmq1 = RSA_get0_dmq1(rsa);
+  iqmp = RSA_get0_iqmp(rsa);
+
+  if (RSA_bits(rsa) > max_bits)
+    return true;
+#else
+  n = rsa->n;
+  e = rsa->e;
+  p = rsa->p;
+  q = rsa->q;
+  d = rsa->d;
+  dmp1 = rsa->dmp1;
+  dmq1 = rsa->dmq1;
+  iqmp = rsa->iqmp;
+#endif
+
+  if (n && BN_num_bits(n) > max_bits)
+    return true;
+  if (e && BN_num_bits(e) > max_bits)
+    return true;
+  if (p && BN_num_bits(p) > max_bits)
+    return true;
+  if (q && BN_num_bits(q) > max_bits)
+    return true;
+  if (d && BN_num_bits(d) > max_bits)
+    return true;
+  if (dmp1 && BN_num_bits(dmp1) > max_bits)
+    return true;
+  if (dmq1 && BN_num_bits(dmq1) > max_bits)
+    return true;
+  if (iqmp && BN_num_bits(iqmp) > max_bits)
+    return true;
+
+  return false;
+}
+
 /** Decode an ASN.1-encoded private key from <b>str</b>; return the result on
  * success and NULL on failure.
  *
@@ -584,11 +635,7 @@ crypto_pk_asn1_decode_private(const char *str, size_t len, int max_bits)
     crypto_openssl_log_errors(LOG_WARN,"decoding private key");
     return NULL;
   }
-#ifdef OPENSSL_1_1_API
-  if (max_bits >= 0 && RSA_bits(rsa) > max_bits) {
-#else
-  if (max_bits >= 0 && rsa->n && BN_num_bits(rsa->n) > max_bits) {
-#endif
+  if (max_bits >= 0 && rsa_private_key_too_long(rsa, max_bits)) {
     log_info(LD_CRYPTO, "Private key longer than expected.");
     RSA_free(rsa);
     return NULL;

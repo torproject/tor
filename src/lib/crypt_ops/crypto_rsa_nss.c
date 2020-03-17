@@ -736,7 +736,7 @@ crypto_pk_asn1_decode_private(const char *str, size_t len, int max_bits)
 
   if (output) {
     const int bits = SECKEY_PublicKeyStrengthInBits(output->pubkey);
-    if (max_bits > 0 && bits > max_bits) {
+    if (max_bits >= 0 && bits > max_bits) {
       log_info(LD_CRYPTO, "Private key longer than expected.");
       crypto_pk_free(output);
       output = NULL;
