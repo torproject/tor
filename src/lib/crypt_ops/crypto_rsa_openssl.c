@@ -573,6 +573,8 @@ rsa_private_key_too_long(RSA *rsa, int max_bits)
 {
   const BIGNUM *n, *e, *p, *q, *d, *dmp1, *dmq1, *iqmp;
 #ifdef OPENSSL_1_1_API
+
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,1)
   n = RSA_get0_n(rsa);
   e = RSA_get0_e(rsa);
   p = RSA_get0_p(rsa);
@@ -581,6 +583,11 @@ rsa_private_key_too_long(RSA *rsa, int max_bits)
   dmp1 = RSA_get0_dmp1(rsa);
   dmq1 = RSA_get0_dmq1(rsa);
   iqmp = RSA_get0_iqmp(rsa);
+#else
+  /* The accessors above did not exist in openssl 1.1.0. */
+  p = q = dmp1 = dmq1 = iqmp = NULL;
+  RSA_get0_key(rsa, &n, &e, &d);
+#endif
 
   if (RSA_bits(rsa) > max_bits)
     return true;
