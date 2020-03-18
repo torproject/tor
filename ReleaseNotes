@@ -2,6 +2,108 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.3.3-alpha - 2020-03-18
+  Tor 0.4.3.3-alpha fixes several bugs in previous releases, including
+  TROVE-2020-002, a major denial-of-service vulnerability that affected
+  all released Tor instances since 0.2.1.5-alpha. Using this
+  vulnerability, an attacker could cause Tor instances to consume a huge
+  amount of CPU, disrupting their operations for several seconds or
+  minutes. This attack could be launched by anybody against a relay, or
+  by a directory cache against any client that had connected to it. The
+  attacker could launch this attack as much as they wanted, thereby
+  disrupting service or creating patterns that could aid in traffic
+  analysis. This issue was found by OSS-Fuzz, and is also tracked
+  as CVE-2020-10592.
+
+  We do not have reason to believe that this attack is currently being
+  exploited in the wild, but nonetheless we advise everyone to upgrade
+  as soon as packages are available.
+
+  o Major bugfixes (security, denial-of-service):
+    - Fix a denial-of-service bug that could be used by anyone to
+      consume a bunch of CPU on any Tor relay or authority, or by
+      directories to consume a bunch of CPU on clients or hidden
+      services. Because of the potential for CPU consumption to
+      introduce observable timing patterns, we are treating this as a
+      high-severity security issue. Fixes bug 33119; bugfix on
+      0.2.1.5-alpha. Found by OSS-Fuzz. We are also tracking this issue
+      as TROVE-2020-002 and CVE-2020-10592.
+
+  o Major bugfixes (circuit padding, memory leak):
+    - Avoid a remotely triggered memory leak in the case that a circuit
+      padding machine is somehow negotiated twice on the same circuit.
+      Fixes bug 33619; bugfix on 0.4.0.1-alpha. Found by Tobias Pulls.
+      This is also tracked as TROVE-2020-004 and CVE-2020-10593.
+
+  o Major bugfixes (directory authority):
+    - Directory authorities will now send a 503 (not enough bandwidth)
+      code to clients when under bandwidth pressure. Known relays and
+      other authorities will always be answered regardless of the
+      bandwidth situation. Fixes bug 33029; bugfix on 0.1.2.5-alpha.
+
+  o Minor features (diagnostic):
+    - Improve assertions and add some memory-poisoning code to try to
+      track down possible causes of a rare crash (32564) in the EWMA
+      code. Closes ticket 33290.
+
+  o Minor features (directory authorities):
+    - Directory authorities now reject descriptors from relays running
+      Tor versions from the 0.2.9 and 0.4.0 series. The 0.3.5 series is
+      still allowed. Resolves ticket 32672. Patch by Neel Chauhan.
+
+  o Minor features (usability):
+    - Include more information when failing to parse a configuration
+      value. This should make it easier to tell what's going wrong when
+      a configuration file doesn't parse. Closes ticket 33460.
+
+  o Minor bugfix (relay, configuration):
+    - Warn if the ContactInfo field is not set, and tell the relay
+      operator that not having a ContactInfo field set might cause their
+      relay to get rejected in the future. Fixes bug 33361; bugfix
+      on 0.1.1.10-alpha.
+
+  o Minor bugfixes (coding best practices checks):
+    - Allow the "practracker" script to read unicode files when using
+      Python 2. We made the script use unicode literals in 0.4.3.1-alpha,
+      but didn't change the codec for opening files. Fixes bug 33374;
+      bugfix on 0.4.3.1-alpha.
+
+  o Minor bugfixes (continuous integration):
+    - Remove the buggy and unused mirroring job. Fixes bug 33213; bugfix
+      on 0.3.2.2-alpha.
+
+  o Minor bugfixes (onion service v3, client):
+    - Remove a BUG() warning that would cause a stack trace if an onion
+      service descriptor was freed while we were waiting for a
+      rendezvous circuit to complete. Fixes bug 28992; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor bugfixes (onion services v3):
+    - Fix an assertion failure that could result from a corrupted
+      ADD_ONION control port command. Found by Saibato. Fixes bug 33137;
+      bugfix on 0.3.3.1-alpha. This issue is also tracked
+      as TROVE-2020-003.
+
+  o Documentation (manpage):
+    - Alphabetize the Server and Directory server sections of the tor
+      manpage. Also split Statistics options into their own section of
+      the manpage. Closes ticket 33188. Work by Swati Thacker as part of
+      Google Season of Docs.
+    - Document the __OwningControllerProcess torrc option and specify
+      its polling interval. Resolves issue 32971.
+
+  o Testing (Travis CI):
+    - Remove a redundant distcheck job. Closes ticket 33194.
+    - Sort the Travis jobs in order of speed: putting the slowest jobs
+      first takes full advantage of Travis job concurrency. Closes
+      ticket 33194.
+    - Stop allowing the Chutney IPv6 Travis job to fail. This job was
+      previously configured to fast_finish (which requires
+      allow_failure), to speed up the build. Closes ticket 33195.
+    - When a Travis chutney job fails, use chutney's new "diagnostics.sh"
+      tool to produce detailed diagnostic output. Closes ticket 32792.
+
+
 Changes in version 0.4.2.6 - 2020-01-30
   This is the second stable release in the 0.4.2.x series. It backports
   several bugfixes from 0.4.3.1-alpha, including some that had affected

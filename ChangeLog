@@ -1,4 +1,4 @@
-Changes in version 0.4.3.3-alpha - 2020-03-??
+Changes in version 0.4.3.3-alpha - 2020-03-18
   Tor 0.4.3.3-alpha fixes several bugs in previous releases, including
   TROVE-2020-002, a major denial-of-service vulnerability that affected
   all released Tor instances since 0.2.1.5-alpha. Using this
