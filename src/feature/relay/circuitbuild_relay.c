@@ -67,6 +67,96 @@ circuit_extend_state_valid_helper(const struct circuit_t *circ)
   return 0;
 }
 
+/* Make sure the extend cell <b>ec</b> has an ed25519 link specifier.
+ *
+ * First, check that the RSA node id is valid.
+ * If the node id is valid, add the ed25519 link specifier (if required),
+ * and return 0.
+ *
+ * Otherwise, if the node id is invalid, log a protocol warning,
+ * and return -1.(And do not modify the extend cell.)
+ *
+ * Must be called before circuit_extend_lspec_valid_helper().
+ */
+static int
+circuit_extend_add_ed25519_helper(extend_cell_t *ec)
+{
+  /* Check if they asked us for 0000..0000. We support using
+   * an empty fingerprint for the first hop (e.g. for a bridge relay),
+   * but we don't want to let clients send us extend cells for empty
+   * fingerprints -- a) because it opens the user up to a mitm attack,
+   * and b) because it lets an attacker force the relay to hold open a
+   * new TLS connection for each extend request. */
+  if (tor_digest_is_zero((const char*)ec->node_id)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Client asked me to extend without specifying an id_digest.");
+    return -1;
+  }
+
+  /* Fill in ed_pubkey if it was not provided and we can infer it from
+   * our networkstatus */
+  if (ed25519_public_key_is_zero(&ec->ed_pubkey)) {
+    const node_t *node = node_get_by_id((const char*)ec->node_id);
+    const ed25519_public_key_t *node_ed_id = NULL;
+    if (node &&
+        node_supports_ed25519_link_authentication(node, 1) &&
+        (node_ed_id = node_get_ed25519_id(node))) {
+      ed25519_pubkey_copy(&ec->ed_pubkey, node_ed_id);
+    }
+  }
+
+  return 0;
+}
+
+/* Before replying to an extend cell, check the link specifiers in the extend
+ * cell <b>ec</b>, which was received on the circuit <b>circ</b>.
+ *
+ * If they are valid, return 0.
+ * Otherwise, if they are invalid, log a protocol warning, and return -1.
+ *
+ * Must be called after circuit_extend_add_ed25519_helper().
+ */
+static int
+circuit_extend_lspec_valid_helper(const extend_cell_t *ec,
+                                  const struct circuit_t *circ)
+{
+  if (!ec->orport_ipv4.port || tor_addr_is_null(&ec->orport_ipv4.addr)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Client asked me to extend to zero destination port or addr.");
+    return -1;
+  }
+
+  if (tor_addr_is_internal(&ec->orport_ipv4.addr, 0) &&
+      !get_options()->ExtendAllowPrivateAddresses) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Client asked me to extend to a private address");
+    return -1;
+  }
+
+  /* Next, check if we're being asked to connect to the hop that the
+   * extend cell came from. There isn't any reason for that, and it can
+   * assist circular-path attacks. */
+  if (tor_memeq(ec->node_id,
+                CONST_TO_OR_CIRCUIT(circ)->p_chan->identity_digest,
+                DIGEST_LEN)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Client asked me to extend back to the previous hop.");
+    return -1;
+  }
+
+  /* Check the previous hop Ed25519 ID too */
+  if (! ed25519_public_key_is_zero(&ec->ed_pubkey) &&
+      ed25519_pubkey_eq(&ec->ed_pubkey,
+                      &CONST_TO_OR_CIRCUIT(circ)->p_chan->ed25519_identity)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Client asked me to extend back to the previous hop "
+           "(by Ed25519 ID).");
+    return -1;
+  }
+
+  return 0;
+}
+
 /** Take the 'extend' <b>cell</b>, pull out addr/port plus the onion
  * skin and identity digest for the next hop. If we're already connected,
  * pass the onion skin to the next hop using a create cell; otherwise
@@ -97,63 +187,11 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
     return -1;
   }
 
-  if (!ec.orport_ipv4.port || tor_addr_is_null(&ec.orport_ipv4.addr)) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Client asked me to extend to zero destination port or addr.");
+  if (circuit_extend_add_ed25519_helper(&ec) < 0)
     return -1;
-  }
 
-  if (tor_addr_is_internal(&ec.orport_ipv4.addr, 0) &&
-      !get_options()->ExtendAllowPrivateAddresses) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Client asked me to extend to a private address");
+  if (circuit_extend_lspec_valid_helper(&ec, circ) < 0)
     return -1;
-  }
-
-  /* Check if they asked us for 0000..0000. We support using
-   * an empty fingerprint for the first hop (e.g. for a bridge relay),
-   * but we don't want to let clients send us extend cells for empty
-   * fingerprints -- a) because it opens the user up to a mitm attack,
-   * and b) because it lets an attacker force the relay to hold open a
-   * new TLS connection for each extend request. */
-  if (tor_digest_is_zero((const char*)ec.node_id)) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Client asked me to extend without specifying an id_digest.");
-    return -1;
-  }
-
-  /* Fill in ed_pubkey if it was not provided and we can infer it from
-   * our networkstatus */
-  if (ed25519_public_key_is_zero(&ec.ed_pubkey)) {
-    const node_t *node = node_get_by_id((const char*)ec.node_id);
-    const ed25519_public_key_t *node_ed_id = NULL;
-    if (node &&
-        node_supports_ed25519_link_authentication(node, 1) &&
-        (node_ed_id = node_get_ed25519_id(node))) {
-      ed25519_pubkey_copy(&ec.ed_pubkey, node_ed_id);
-    }
-  }
-
-  /* Next, check if we're being asked to connect to the hop that the
-   * extend cell came from. There isn't any reason for that, and it can
-   * assist circular-path attacks. */
-  if (tor_memeq(ec.node_id,
-                TO_OR_CIRCUIT(circ)->p_chan->identity_digest,
-                DIGEST_LEN)) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Client asked me to extend back to the previous hop.");
-    return -1;
-  }
-
-  /* Check the previous hop Ed25519 ID too */
-  if (! ed25519_public_key_is_zero(&ec.ed_pubkey) &&
-      ed25519_pubkey_eq(&ec.ed_pubkey,
-                        &TO_OR_CIRCUIT(circ)->p_chan->ed25519_identity)) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Client asked me to extend back to the previous hop "
-           "(by Ed25519 ID).");
-    return -1;
-  }
 
   n_chan = channel_get_for_extend((const char*)ec.node_id,
                                   &ec.ed_pubkey,
