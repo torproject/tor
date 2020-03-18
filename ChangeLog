@@ -1,4 +1,4 @@
-Changes in version 0.4.2.7 - 2020-03-??
+Changes in version 0.4.2.7 - 2020-03-18
   This is the third stable release in the 0.4.2.x series. It backports
   numerous fixes from later releases, including a fix for TROVE-2020-
   002, a major denial-of-service vulnerability that affected all

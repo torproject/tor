@@ -2,6 +2,84 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.2.7 - 2020-03-18
+  This is the third stable release in the 0.4.2.x series. It backports
+  numerous fixes from later releases, including a fix for TROVE-2020-
+  002, a major denial-of-service vulnerability that affected all
+  released Tor instances since 0.2.1.5-alpha. Using this vulnerability,
+  an attacker could cause Tor instances to consume a huge amount of CPU,
+  disrupting their operations for several seconds or minutes. This
+  attack could be launched by anybody against a relay, or by a directory
+  cache against any client that had connected to it. The attacker could
+  launch this attack as much as they wanted, thereby disrupting service
+  or creating patterns that could aid in traffic analysis. This issue
+  was found by OSS-Fuzz, and is also tracked as CVE-2020-10592.
+
+  We do not have reason to believe that this attack is currently being
+  exploited in the wild, but nonetheless we advise everyone to upgrade
+  as soon as packages are available.
+
+  o Major bugfixes (security, denial-of-service, backport from 0.4.3.3-alpha):
+    - Fix a denial-of-service bug that could be used by anyone to
+      consume a bunch of CPU on any Tor relay or authority, or by
+      directories to consume a bunch of CPU on clients or hidden
+      services. Because of the potential for CPU consumption to
+      introduce observable timing patterns, we are treating this as a
+      high-severity security issue. Fixes bug 33119; bugfix on
+      0.2.1.5-alpha. Found by OSS-Fuzz. We are also tracking this issue
+      as TROVE-2020-002 and CVE-2020-10592.
+
+  o Major bugfixes (circuit padding, memory leak, backport from 0.4.3.3-alpha):
+    - Avoid a remotely triggered memory leak in the case that a circuit
+      padding machine is somehow negotiated twice on the same circuit.
+      Fixes bug 33619; bugfix on 0.4.0.1-alpha. Found by Tobias Pulls.
+      This is also tracked as TROVE-2020-004 and CVE-2020-10593.
+
+  o Major bugfixes (directory authority, backport from 0.4.3.3-alpha):
+    - Directory authorities will now send a 503 (not enough bandwidth)
+      code to clients when under bandwidth pressure. Known relays and
+      other authorities will always be answered regardless of the
+      bandwidth situation. Fixes bug 33029; bugfix on 0.1.2.5-alpha.
+
+  o Minor features (continuous integration, backport from 0.4.3.2-alpha):
+    - Stop allowing failures on the Travis CI stem tests job. It looks
+      like all the stem hangs we were seeing before are now fixed.
+      Closes ticket 33075.
+
+  o Minor bugfixes (bridges, backport from 0.4.3.1-alpha):
+    - Lowercase the configured value of BridgeDistribution before adding
+      it to the descriptor. Fixes bug 32753; bugfix on 0.3.2.3-alpha.
+
+  o Minor bugfixes (logging, backport from 0.4.3.2-alpha):
+    - If we encounter a bug when flushing a buffer to a TLS connection,
+      only log the bug once per invocation of the Tor process.
+      Previously we would log with every occurrence, which could cause
+      us to run out of disk space. Fixes bug 33093; bugfix
+      on 0.3.2.2-alpha.
+
+  o Minor bugfixes (onion services v3, backport from 0.4.3.3-alpha):
+    - Fix an assertion failure that could result from a corrupted
+      ADD_ONION control port command. Found by Saibato. Fixes bug 33137;
+      bugfix on 0.3.3.1-alpha. This issue is also tracked
+      as TROVE-2020-003.
+
+  o Minor bugfixes (rust, build, backport from 0.4.3.2-alpha):
+    - Fix a syntax warning given by newer versions of Rust that was
+      creating problems for our continuous integration. Fixes bug 33212;
+      bugfix on 0.3.5.1-alpha.
+
+  o Testing (Travis CI, backport from 0.4.3.3-alpha):
+    - Remove a redundant distcheck job. Closes ticket 33194.
+    - Sort the Travis jobs in order of speed: putting the slowest jobs
+      first takes full advantage of Travis job concurrency. Closes
+      ticket 33194.
+    - Stop allowing the Chutney IPv6 Travis job to fail. This job was
+      previously configured to fast_finish (which requires
+      allow_failure), to speed up the build. Closes ticket 33195.
+    - When a Travis chutney job fails, use chutney's new "diagnostics.sh"
+      tool to produce detailed diagnostic output. Closes ticket 32792.
+
+
 Changes in version 0.4.2.6 - 2020-01-30
   This is the second stable release in the 0.4.2.x series. It backports
   several bugfixes from 0.4.3.1-alpha, including some that had affected
