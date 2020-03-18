@@ -133,12 +133,12 @@ circuit_extend_lspec_valid_helper(const extend_cell_t *ec,
     return -1;
   }
 
+  const channel_t *p_chan = CONST_TO_OR_CIRCUIT(circ)->p_chan;
+
   /* Next, check if we're being asked to connect to the hop that the
    * extend cell came from. There isn't any reason for that, and it can
    * assist circular-path attacks. */
-  if (tor_memeq(ec->node_id,
-                CONST_TO_OR_CIRCUIT(circ)->p_chan->identity_digest,
-                DIGEST_LEN)) {
+  if (tor_memeq(ec->node_id, p_chan->identity_digest, DIGEST_LEN)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Client asked me to extend back to the previous hop.");
     return -1;
@@ -146,8 +146,7 @@ circuit_extend_lspec_valid_helper(const extend_cell_t *ec,
 
   /* Check the previous hop Ed25519 ID too */
   if (! ed25519_public_key_is_zero(&ec->ed_pubkey) &&
-      ed25519_pubkey_eq(&ec->ed_pubkey,
-                      &CONST_TO_OR_CIRCUIT(circ)->p_chan->ed25519_identity)) {
+      ed25519_pubkey_eq(&ec->ed_pubkey, &p_chan->ed25519_identity)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Client asked me to extend back to the previous hop "
            "(by Ed25519 ID).");
