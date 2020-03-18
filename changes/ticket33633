@@ -1,0 +1,6 @@
+  o Code simplification and refactoring:
+    - Move the circuit extend code to the relay module.
+      Split the circuit extend function into smaller functions.
+      Closes ticket 33633.
+    - Move LOG_PROTOCOL_WARN to app/config.c. Resolves a dependency inversion.
+      Closes ticket 33633.
