@@ -156,6 +156,47 @@ circuit_extend_lspec_valid_helper(const extend_cell_t *ec,
   return 0;
 }
 
+/* When there is no open channel for an extend cell <b>ec</b>, set up the
+ * circuit <b>circ</b> to wait for a new connection. If <b>should_launch</b>
+ * is true, open a new connection. (Otherwise, we are already waiting for a
+ * new connection to the same relay.)
+ *
+ * Always returns 0.
+ */
+static int
+circuit_open_connection_for_extend(const extend_cell_t *ec,
+                                   struct circuit_t *circ,
+                                   int should_launch)
+{
+  circ->n_hop = extend_info_new(NULL /*nickname*/,
+                                (const char*)ec->node_id,
+                                &ec->ed_pubkey,
+                                NULL, /*onion_key*/
+                                NULL, /*curve25519_key*/
+                                &ec->orport_ipv4.addr,
+                                ec->orport_ipv4.port);
+
+  circ->n_chan_create_cell = tor_memdup(&ec->create_cell,
+                                        sizeof(ec->create_cell));
+
+  circuit_set_state(circ, CIRCUIT_STATE_CHAN_WAIT);
+
+  if (should_launch) {
+    /* we should try to open a connection */
+    channel_t *n_chan = channel_connect_for_circuit(&ec->orport_ipv4.addr,
+                                                    ec->orport_ipv4.port,
+                                                    (const char*)ec->node_id,
+                                                    &ec->ed_pubkey);
+    if (!n_chan) {
+      log_info(LD_CIRC,"Launching n_chan failed. Closing circuit.");
+      circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
+      return 0;
+    }
+    log_debug(LD_CIRC,"connecting in progress (or finished). Good.");
+  }
+  return 0;
+}
+
 /** Take the 'extend' <b>cell</b>, pull out addr/port plus the onion
  * skin and identity digest for the next hop. If we're already connected,
  * pass the onion skin to the next hop using a create cell; otherwise
@@ -203,32 +244,8 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
               fmt_addrport(&ec.orport_ipv4.addr,ec.orport_ipv4.port),
               msg?msg:"????");
 
-    circ->n_hop = extend_info_new(NULL /*nickname*/,
-                                  (const char*)ec.node_id,
-                                  &ec.ed_pubkey,
-                                  NULL, /*onion_key*/
-                                  NULL, /*curve25519_key*/
-                                  &ec.orport_ipv4.addr,
-                                  ec.orport_ipv4.port);
+    circuit_open_connection_for_extend(&ec, circ, should_launch);
 
-    circ->n_chan_create_cell = tor_memdup(&ec.create_cell,
-                                          sizeof(ec.create_cell));
-
-    circuit_set_state(circ, CIRCUIT_STATE_CHAN_WAIT);
-
-    if (should_launch) {
-      /* we should try to open a connection */
-      n_chan = channel_connect_for_circuit(&ec.orport_ipv4.addr,
-                                           ec.orport_ipv4.port,
-                                           (const char*)ec.node_id,
-                                           &ec.ed_pubkey);
-      if (!n_chan) {
-        log_info(LD_CIRC,"Launching n_chan failed. Closing circuit.");
-        circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
-        return 0;
-      }
-      log_debug(LD_CIRC,"connecting in progress (or finished). Good.");
-    }
     /* return success. The onion/circuit/etc will be taken care of
      * automatically (may already have been) whenever n_chan reaches
      * OR_CONN_STATE_OPEN.
