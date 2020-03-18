@@ -13,12 +13,23 @@
 #define TOR_FEATURE_RELAY_CIRCUITBUILD_RELAY_H
 
 #include "lib/cc/torint.h"
+#include "lib/log/log.h"
+
+#include "app/config/config.h"
 
 struct cell_t;
 struct created_cell_t;
 
 struct circuit_t;
 struct or_circuit_t;
+
+/* Log a protocol warning about getting an extend cell on a client. */
+static inline void
+circuitbuild_warn_client_extend(void)
+{
+  log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+         "Got an extend cell, but running as a client. Closing.");
+}
 
 #ifdef HAVE_MODULE_RELAY
 
@@ -36,7 +47,7 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
 {
   (void)cell;
   (void)circ;
-  tor_assert_nonfatal_unreached();
+  circuitbuild_warn_client_extend();
   return -1;
 }
 

@@ -39,11 +39,8 @@
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
 
-/** Take the 'extend' <b>cell</b>, pull out addr/port plus the onion
- * skin and identity digest for the next hop. If we're already connected,
- * pass the onion skin to the next hop using a create cell; otherwise
- * launch a new OR connection, and <b>circ</b> will notice when the
- * connection succeeds or fails.
+/* Before replying to an extend cell, check the state of the circuit
+ * <b>circ</b>, and the configured tor mode.
  *
  * Return -1 if we want to warn and tear down the circuit, else return 0.
  */
@@ -56,6 +53,11 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
   const char *msg = NULL;
   int should_launch = 0;
 
+  if (!server_mode(get_options())) {
+    circuitbuild_warn_client_extend();
+    return -1;
+  }
+
   if (circ->n_chan) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "n_chan already set. Bug/attack. Closing.");
@@ -64,12 +66,6 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
   if (circ->n_hop) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "conn to next hop already launched. Bug/attack. Closing.");
-    return -1;
-  }
-
-  if (!server_mode(get_options())) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Got an extend cell, but running as a client. Closing.");
     return -1;
   }
 
