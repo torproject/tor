@@ -115,12 +115,12 @@ test_dirvote_compare_routerinfo_by_ip_and_bw_(void *arg)
 
   // Give same address but different auth status
   for (size_t i = 0; i < 16; i++) {
-    second_ipv6.addr.in6_addr.s6_addr[i] = 0xF;
+    first_ipv6.addr.in6_addr.s6_addr[i] = 0xF;
   }
-  second->ipv6_addr = second_ipv6;
+  first->ipv6_addr = first_ipv6;
   signed_descriptor_t first_cache_info, second_cache_info;
-  strlcpy(first_cache_info.identity_digest, "first", 5);
-  strlcpy(second_cache_info.identity_digest, "second", 6);
+  strlcpy(first_cache_info.identity_digest, "first", 6);
+  strlcpy(second_cache_info.identity_digest, "second", 7);
   first->cache_info = first_cache_info;
   second->cache_info = second_cache_info;
   first_status.is_auth = 1;

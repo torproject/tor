@@ -4229,15 +4229,17 @@ compare_routerinfo_by_ip_and_bw_(const void **a, const void **b)
     for (int i = 0; i < 16; i++) {
       if (first_address[i] < second_address[i])
         return -1;
+      if (first_address[i] > second_address[i])
+        return 1;
     }
-    return 1;
-    } else {
+  } else {
     // both are ipv4, return -1 if first has smaller address than second
       if (first->addr < second->addr)
         return -1;
       else if (first->addr > second->addr)
         return 1;
-    }
+  }
+  // If addresses are equal, use other comparison criterions
 
   /* Potentially, this next bit could cause k n lg n memeq calls.  But in
    * reality, we will almost never get here, since addresses will usually be
