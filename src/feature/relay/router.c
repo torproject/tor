@@ -3204,9 +3204,9 @@ extrainfo_dump_to_string_stats_helper(smartlist_t *chunks,
 
   if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
     log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");
-    /* Bandwidth usage stats don't have their own option */
-    {
-      contents = rep_hist_get_bandwidth_lines();
+    if (options->BandwidthStatistics &&
+          load_stats_file("stats"PATH_SEPARATOR"bandwidth-stats",
+                          "write-history",now,&contents)) {
       smartlist_add(chunks, contents);
     }
     /* geoip hashes aren't useful unless we are publishing other stats */

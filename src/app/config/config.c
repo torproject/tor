@@ -463,6 +463,7 @@ static const config_var_t option_vars_[] = {
   V(ExtORPortCookieAuthFile,     FILENAME,   NULL),
   V(ExtORPortCookieAuthFileGroupReadable, BOOL, "0"),
   V(ExtraInfoStatistics,         BOOL,     "1"),
+  V(BandwidthStatistics,         BOOL,     "1"),
   V(ExtendByEd25519ID,           AUTOBOOL, "auto"),
   V(FallbackDir,                 LINELIST, NULL),
 

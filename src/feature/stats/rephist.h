@@ -27,6 +27,7 @@ char *rep_hist_get_bandwidth_lines(void);
 void rep_hist_update_state(or_state_t *state);
 int rep_hist_load_state(or_state_t *state, char **err);
 void rep_history_clean(time_t before);
+time_t rep_hist_bw_stats_write(time_t now);
 
 void rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
                                     const uint16_t at_port, time_t when);

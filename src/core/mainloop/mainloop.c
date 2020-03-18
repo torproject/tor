@@ -1959,6 +1959,11 @@ write_stats_file_callback(time_t now, const or_options_t *options)
     if (next_write && next_write < next_time_to_write_stats_files)
       next_time_to_write_stats_files = next_write;
   }
+  if (options->BandwidthStatistics) {
+    time_t next_write = rep_hist_bw_stats_write(now);
+    if (next_write && next_write < next_time_to_write_stats_files)
+      next_time_to_write_stats_files = next_write;
+  }
 
   return safe_timer_diff(now, next_time_to_write_stats_files);
 }
