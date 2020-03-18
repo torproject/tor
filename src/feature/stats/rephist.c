@@ -973,7 +973,6 @@ rep_hist_load_mtbf_data(time_t now)
   return r;
 }
 
-
   /** Bandwidth Statistics **/
 
 /** For how many seconds do we keep track of individual per-second bandwidth
@@ -1541,16 +1540,19 @@ rep_hist_load_state(or_state_t *state, char **err)
  * Increases the start_of_bw_stats_interval by 24 hours for the next write.
  * Returns next write period or 0 if we never want to write*/
 time_t
-rep_hist_bw_stats_write(time_t now) {
+rep_hist_bw_stats_write(time_t now)
+{
   char *str = NULL;
+
   if (!start_of_bw_stats_interval)
-    return 0;
+    return 0; /* Not initialized. */
   if (start_of_bw_stats_interval + WRITE_STATS_INTERVAL > now)
-    goto done;
+    goto done; /* Not ready to write. */
   str = rep_hist_get_bandwidth_lines();
   log_info(LD_HIST, "Writing exit port statistics to disk.");
   if (!check_or_create_data_subdir("stats")) {
-      write_to_data_subdir("stats", "bandwidth-stats", str, "bandwidth statistics");
+      write_to_data_subdir("stats", "bandwidth-stats", str,
+                            "bandwidth statistics");
   }
   start_of_bw_stats_interval += WRITE_STATS_INTERVAL;
  done:
