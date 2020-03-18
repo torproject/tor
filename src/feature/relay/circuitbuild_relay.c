@@ -160,10 +160,8 @@ circuit_extend_lspec_valid_helper(const extend_cell_t *ec,
  * circuit <b>circ</b> to wait for a new connection. If <b>should_launch</b>
  * is true, open a new connection. (Otherwise, we are already waiting for a
  * new connection to the same relay.)
- *
- * Always returns 0.
  */
-static int
+static void
 circuit_open_connection_for_extend(const extend_cell_t *ec,
                                    struct circuit_t *circ,
                                    int should_launch)
@@ -190,11 +188,10 @@ circuit_open_connection_for_extend(const extend_cell_t *ec,
     if (!n_chan) {
       log_info(LD_CIRC,"Launching n_chan failed. Closing circuit.");
       circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
-      return 0;
+      return;
     }
     log_debug(LD_CIRC,"connecting in progress (or finished). Good.");
   }
-  return 0;
 }
 
 /** Take the 'extend' <b>cell</b>, pull out addr/port plus the onion
