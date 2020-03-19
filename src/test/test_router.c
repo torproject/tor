@@ -253,28 +253,49 @@ test_router_get_advertised_or_port(void *arg)
   char *msg=NULL;
   or_options_t *opts = options_new();
   listener_connection_t *listener = NULL;
+  tor_addr_port_t ipv6;
+
+  // Test one failing case of router_get_advertised_ipv6_or_ap().
+  router_get_advertised_ipv6_or_ap(opts, &ipv6);
+  tt_str_op(fmt_addrport(&ipv6.addr, ipv6.port), OP_EQ, "[::]:0");
+
+  // And one failing case of router_get_advertised_or_port().
+  tt_int_op(0, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET));
+  tt_int_op(0, OP_EQ, router_get_advertised_or_port(opts));
 
   // Set up a couple of configured ports.
-  config_line_append(&opts->ORPort_lines, "ORPort", "[1234::5678]:9999");
-  config_line_append(&opts->ORPort_lines, "ORPort", "5.6.7.8:auto");
+  config_line_append(&opts->ORPort_lines, "ORPort", "[1234::5678]:auto");
+  config_line_append(&opts->ORPort_lines, "ORPort", "5.6.7.8:9999");
   r = parse_ports(opts, 0, &msg, &n, &w);
   tt_assert(r == 0);
 
   // There are no listeners, so the "auto" case will turn up no results.
-  tt_int_op(0, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET));
+  tt_int_op(0, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET6));
+  router_get_advertised_ipv6_or_ap(opts, &ipv6);
+  tt_str_op(fmt_addrport(&ipv6.addr, ipv6.port), OP_EQ, "[::]:0");
 
   // This will return the matching value from the configured port.
-  tt_int_op(9999, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET6));
+  tt_int_op(9999, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET));
+  tt_int_op(9999, OP_EQ, router_get_advertised_or_port(opts));
 
   // Now set up a dummy listener.
   MOCK(get_connection_array, mock_get_connection_array);
   fake_connection_array = smartlist_new();
-  listener = listener_connection_new(CONN_TYPE_OR_LISTENER, AF_INET);
+  listener = listener_connection_new(CONN_TYPE_OR_LISTENER, AF_INET6);
   TO_CONN(listener)->port = 54321;
   smartlist_add(fake_connection_array, TO_CONN(listener));
 
   // We should get a port this time.
-  tt_int_op(54321, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET));
+  tt_int_op(54321, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET6));
+
+  // Test one succeeding case of router_get_advertised_ipv6_or_ap().
+  router_get_advertised_ipv6_or_ap(opts, &ipv6);
+  tt_str_op(fmt_addrport(&ipv6.addr, ipv6.port), OP_EQ,
+            "[1234::5678]:54321");
+
+  // This will return the matching value from the configured port.
+  tt_int_op(9999, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET));
+  tt_int_op(9999, OP_EQ, router_get_advertised_or_port(opts));
 
  done:
   or_options_free(opts);
