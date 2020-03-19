@@ -2153,7 +2153,8 @@ is non-zero):
     GeoIP data, Tor keeps a per-country count of how many client
     addresses have contacted it so that it can help the bridge authority guess
     which countries have blocked access to it. If ExtraInfoStatistics is
-    enabled, it will be published as part of extra-info document. (Default: 1)
+    enabled, it will be published as part of the extra-info document.
+    (Default: 1)
 
 //Out of order because it logically belongs after BridgeRelay.
 [[BridgeDistribution]] **BridgeDistribution** __string__::
@@ -2622,7 +2623,7 @@ types of statistics that Tor relays collect and publish:
     circuit) and writes them into disk every 24 hours. Onion router
     operators may use the statistics for performance monitoring.
     If ExtraInfoStatistics is enabled, it will published as part of
-    extra-info document. (Default: 0)
+    the extra-info document. (Default: 0)
 
 [[ConnDirectionStatistics]] **ConnDirectionStatistics** **0**|**1**::
     Relays only.
@@ -2630,7 +2631,7 @@ types of statistics that Tor relays collect and publish:
     traffic it passes between itself and other relays to disk every 24
     hours. Enables relay operators to monitor how much their relay is
     being used as middle node in the circuit. If ExtraInfoStatistics is
-    enabled, it will be published as part of extra-info document.
+    enabled, it will be published as part of the extra-info document.
     (Default: 0)
 
 [[DirReqStatistics]] **DirReqStatistics** **0**|**1**::
@@ -2640,7 +2641,7 @@ types of statistics that Tor relays collect and publish:
     hours. Enables relay and bridge operators to monitor how much their
     server is being used by clients to learn about Tor network.
     If ExtraInfoStatistics is enabled, it will published as part of
-    extra-info document. (Default: 1)
+    the extra-info document. (Default: 1)
 
 [[EntryStatistics]] **EntryStatistics** **0**|**1**::
     Relays only.
@@ -2649,7 +2650,7 @@ types of statistics that Tor relays collect and publish:
     operators to monitor how much inbound traffic that originates from
     Tor clients passes through their server to go further down the
     Tor network. If ExtraInfoStatistics is enabled, it will be published
-    as part of extra-info document. (Default: 0)
+    as part of the extra-info document. (Default: 0)
 
 [[ExitPortStatistics]] **ExitPortStatistics** **0**|**1**::
     Exit relays only.
@@ -2657,7 +2658,7 @@ types of statistics that Tor relays collect and publish:
     relayed bytes and opened stream per exit port to disk every 24 hours.
     Enables exit relay operators to measure and monitor amounts of traffic
     that leaves Tor network through their exit node. If ExtraInfoStatistics
-    is enabled, it will be published as part of extra-info document.
+    is enabled, it will be published as part of the extra-info document.
     (Default: 0)
 
 [[ExtraInfoStatistics]] **ExtraInfoStatistics** **0**|**1**::
@@ -2673,9 +2674,9 @@ types of statistics that Tor relays collect and publish:
     Relays only.
     When this option is enabled, a Tor relay writes obfuscated
     statistics on its role as hidden-service directory, introduction
-    point, or rendezvous point to disk every 24 hours. If
-    ExtraInfoStatistics is also enabled, these statistics are further
-    published to the directory authorities. (Default: 1)
+    point, or rendezvous point to disk every 24 hours.  If ExtraInfoStatistics
+    is enabled, it will be published as part of the extra-info document.
+    (Default: 1)
 
 [[PaddingStatistics]] **PaddingStatistics** **0**|**1**::
     Relays and bridges only.
@@ -2684,7 +2685,7 @@ types of statistics that Tor relays collect and publish:
     These statistics are rounded, and omitted if traffic is low. This
     information is important for load balancing decisions related to padding.
     If ExtraInfoStatistics is enabled, it will be published
-    as a part of extra-info document. (Default: 1)
+    as a part of the extra-info document. (Default: 1)
 
 == DIRECTORY SERVER OPTIONS
 
