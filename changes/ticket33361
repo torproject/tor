@@ -1,3 +1,0 @@
-  o Minor bugfix (relay, configuration):
-    - Now warn if the ContactInfo field is not set and mention that the relay
-      might get rejected if so. Fixes bug 33361; bugfix on 0.1.1.10-alpha.

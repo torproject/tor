@@ -1,5 +1,0 @@
-  o Minor bugfixes (coding best practices checks):
-    - Allow the "practracker" coding best practices checking script to read
-      unicode files, when using Python 2. We made the script use unicode
-      literals in 0.4.3.1-alpha, but didn't change the codec for opening files.
-      Fixes bug 33374; bugfix on 0.4.3.1-alpha.
