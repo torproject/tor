@@ -100,6 +100,8 @@
 #include "feature/relay/dns.h"
 #include "feature/relay/ext_orport.h"
 #include "feature/relay/routermode.h"
+#include "feature/relay/router.h"
+#include "feature/nodelist/routerinfo_st.h"
 #include "feature/relay/relay_config.h"
 #include "feature/relay/transport_config.h"
 #include "feature/rend/rendclient.h"
@@ -2996,8 +2998,10 @@ resolve_my_address(int warn_severity, const or_options_t *options,
 MOCK_IMPL(int,
 is_local_addr, (const tor_addr_t *addr))
 {
+  /* Check for an internal IPv4 or IPv6 address */
   if (tor_addr_is_internal(addr, 0))
     return 1;
+
   /* Check whether ip is on the same /24 as we are. */
   if (get_options()->EnforceDistinctSubnets == 0)
     return 0;
@@ -3014,6 +3018,14 @@ is_local_addr, (const tor_addr_t *addr))
     if ((last_resolved_addr & (uint32_t)0xffffff00ul)
         == (ip & (uint32_t)0xffffff00ul))
       return 1;
+  }
+
+  /* Check for the same IPv6 /48 as the directory server */
+  if (tor_addr_family(addr) == AF_INET6) {
+    if (router_get_my_routerinfo() && tor_addr_is_valid(&(router_get_my_routerinfo()->ipv6_addr), true)) {
+      return tor_addr_compare_masked(addr, &(router_get_my_routerinfo()->ipv6_addr), 48, CMP_EXACT);
+    }
+
   }
   return 0;
 }
