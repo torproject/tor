@@ -1,0 +1,5 @@
+  o Minor features (testing):
+    - The unit tests now support a "TOR_SKIP_TESTCASES" environment variable
+      to specify a list of space-separated test cases that should not be
+      executed. We will use this to disable certain tests that are failing on
+      Appveyor because of mismatched OpenSSL libraries. Part of ticket 33643.
