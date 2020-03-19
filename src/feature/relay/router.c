@@ -833,7 +833,7 @@ router_write_fingerprint(int hashed, int ed25519_identity)
 {
   char *keydir = NULL, *cp = NULL;
   const char *fname = hashed ? "hashed-fingerprint" :
-                      (ed25519_identity ? "ed25519_identity" : "fingerprint");
+                      (ed25519_identity ? "ed25519-identity" : "fingerprint");
   char fingerprint[FINGERPRINT_LEN+1];
   const or_options_t *options = get_options();
   char *fingerprint_line = NULL;
