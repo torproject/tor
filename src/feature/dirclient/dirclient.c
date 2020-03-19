@@ -1984,7 +1984,7 @@ dirclient_dump_total_dls(void)
   for (int bootstrapped = 0; bootstrapped < 2; ++bootstrapped) {
     bool first_time = true;
     for (int i=0; i < DIR_PURPOSE_MAX_; ++i) {
-      uint64_t n = total_dl[i][0];
+      uint64_t n = total_dl[i][bootstrapped];
       if (n == 0)
         continue;
       if (options->SafeLogging_ != SAFELOG_SCRUB_NONE &&
