@@ -343,6 +343,21 @@ main(int c, const char **v)
 
   atexit(remove_directory);
 
+  /* Look for TOR_SKIP_TESTCASES: a space-separated list of tests to skip. */
+  const char *skip_tests = getenv("TOR_SKIP_TESTCASES");
+  if (skip_tests) {
+    smartlist_t *skip = smartlist_new();
+    smartlist_split_string(skip, skip_tests, NULL,
+                           SPLIT_IGNORE_BLANK, -1);
+    int n = 0;
+    SMARTLIST_FOREACH_BEGIN(skip, char *, cp) {
+      n += tinytest_skip(testgroups, cp);
+      tor_free(cp);
+    } SMARTLIST_FOREACH_END(cp);
+    printf("Skipping %d testcases.\n", n);
+    smartlist_free(skip);
+  }
+
   int have_failed = (tinytest_main(c, v, testgroups) != 0);
 
   free_pregenerated_keys();
