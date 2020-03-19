@@ -2782,6 +2782,7 @@ test_policies_reject_failed_ipv6_dns(void *arg)
   dns_set_is_broken_for_ipv6(0);
   router_build_fresh_unsigned_routerinfo(&ri);
   tt_assert(ri->ipv6_exit_policy != NULL);
+  routerinfo_free(ri);
 
   dns_set_is_broken_for_ipv6(1);
   router_build_fresh_unsigned_routerinfo(&ri);
