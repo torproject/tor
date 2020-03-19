@@ -4992,7 +4992,11 @@ test_dir_purpose_needs_anonymity_returns_true_by_default(void *arg)
   (void)arg;
 
 #ifdef ALL_BUGS_ARE_FATAL
+  /* Coverity (and maybe clang analyser) complain that the code following
+   * tt_skip() is unconditionally unreachable. */
+#if !defined(__COVERITY__) && !defined(__clang_analyzer__)
   tt_skip();
+#endif
 #endif
 
   tor_capture_bugs_(1);
