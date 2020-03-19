@@ -1549,7 +1549,7 @@ rep_hist_bw_stats_write(time_t now)
   if (start_of_bw_stats_interval + WRITE_STATS_INTERVAL > now)
     goto done; /* Not ready to write. */
   str = rep_hist_get_bandwidth_lines();
-  log_info(LD_HIST, "Writing exit port statistics to disk.");
+  log_info(LD_HIST, "Writing bandwidth statistics to disk.");
   if (!check_or_create_data_subdir("stats")) {
       write_to_data_subdir("stats", "bandwidth-stats", str,
                             "bandwidth statistics");

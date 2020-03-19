@@ -1,3 +1,4 @@
 
-ORPort
+ORPort 1
 BandwidthStatistics 0
+ContactInfo tor_parse_test@example.com

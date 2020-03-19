@@ -1030,6 +1030,7 @@ sandbox_init_filter(void)
     OPEN_DATADIR2_SUFFIX("stats", "buffer-stats", ".tmp");
     OPEN_DATADIR2_SUFFIX("stats", "conn-stats", ".tmp");
     OPEN_DATADIR2_SUFFIX("stats", "hidserv-stats", ".tmp");
+    OPEN_DATADIR2_SUFFIX("stats", "bandwidth-stats", ".tmp");
 
     OPEN_DATADIR("approved-routers");
     OPEN_DATADIR_SUFFIX("fingerprint", ".tmp");
@@ -1050,6 +1051,7 @@ sandbox_init_filter(void)
     RENAME_SUFFIX2("stats", "dirreq-stats", ".tmp");
     RENAME_SUFFIX2("stats", "entry-stats", ".tmp");
     RENAME_SUFFIX2("stats", "exit-stats", ".tmp");
+    RENAME_SUFFIX2("stats", "bandwidth-stats", ".tmp");
     RENAME_SUFFIX2("stats", "buffer-stats", ".tmp");
     RENAME_SUFFIX2("stats", "conn-stats", ".tmp");
     RENAME_SUFFIX2("stats", "hidserv-stats", ".tmp");
