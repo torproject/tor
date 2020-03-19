@@ -2753,7 +2753,7 @@ mock_tor_cert_dup_null(const tor_cert_t *cert)
 static void
 test_policies_reject_failed_ipv6_dns(void *arg)
 {
-  routerinfo_t *ri = tor_malloc(sizeof(routerinfo_t));
+  routerinfo_t *ri = NULL;
   config_line_t line;
   (void)arg;
 
