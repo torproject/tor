@@ -253,6 +253,11 @@ test_router_get_advertised_or_port(void *arg)
   char *msg=NULL;
   or_options_t *opts = options_new();
   listener_connection_t *listener = NULL;
+  tor_addr_port_t ipv6;
+
+  // Test one failing case of router_get_advertised_ipv6_or_ap().
+  router_get_advertised_ipv6_or_ap(opts, &ipv6);
+  tt_str_op(fmt_addrport(&ipv6.addr, ipv6.port), OP_EQ, "[::]:0");
 
   // Set up a couple of configured ports.
   config_line_append(&opts->ORPort_lines, "ORPort", "[1234::5678]:9999");
@@ -275,6 +280,11 @@ test_router_get_advertised_or_port(void *arg)
 
   // We should get a port this time.
   tt_int_op(54321, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET));
+
+  // Test one succeeding case of router_get_advertised_ipv6_or_ap().
+  router_get_advertised_ipv6_or_ap(opts, &ipv6);
+  tt_str_op(fmt_addrport(&ipv6.addr, ipv6.port), OP_EQ,
+            "[1234::5678]:9999");
 
  done:
   or_options_free(opts);
