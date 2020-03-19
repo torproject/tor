@@ -118,7 +118,7 @@ test_routerkeys_write_ed25519_identity(void *arg)
 
   /* Write fingerprint file */
   tt_int_op(0, OP_EQ, router_write_fingerprint(0, 1));
-  cp = read_file_to_str(get_fname("write_fingerprint/ed25519_identity"),
+  cp = read_file_to_str(get_fname("write_fingerprint/ed25519-identity"),
                         0, NULL);
   digest256_to_base64(ed25519_id, (const char *)
                                   get_master_identity_key()->pubkey);
