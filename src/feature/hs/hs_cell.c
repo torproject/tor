@@ -758,7 +758,7 @@ hs_cell_parse_intro_established(const uint8_t *payload, size_t payload_len)
  * INTRO2 MAC to ensure that the keys are the right ones.
  *
  * Return NULL on failure to either produce the key material or on MAC
- * valication. Else a newly allocated intro keys object. */
+ * validation. Else return a newly allocated intro keys object. */
 static hs_ntor_intro_cell_keys_t *
 get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
                                    const uint8_t *encrypted_section,
