@@ -248,7 +248,6 @@ static void
 test_router_get_advertised_or_port(void *arg)
 {
   (void)arg;
-  //  uint16_t port;
   int r, w=0, n=0;
   char *msg=NULL;
   or_options_t *opts = options_new();
@@ -294,6 +293,38 @@ test_router_get_advertised_or_port(void *arg)
   UNMOCK(get_connection_array);
 }
 
+static void
+test_router_get_advertised_or_port_localhost(void *arg)
+{
+  (void)arg;
+  int r, w=0, n=0;
+  char *msg=NULL;
+  or_options_t *opts = options_new();
+  tor_addr_port_t ipv6;
+
+  // Set up a couple of configured ports on localhost.
+  config_line_append(&opts->ORPort_lines, "ORPort", "[::1]:9999");
+  config_line_append(&opts->ORPort_lines, "ORPort", "127.0.0.1:8888");
+  r = parse_ports(opts, 0, &msg, &n, &w);
+  tt_assert(r == 0);
+
+  // We should refuse to advertise them, since we have default dirauths.
+  router_get_advertised_ipv6_or_ap(opts, &ipv6);
+  tt_str_op(fmt_addrport(&ipv6.addr, ipv6.port), OP_EQ, "[::]:0");
+
+  // Now try with a fake authority set up.
+  config_line_append(&opts->DirAuthorities, "DirAuthority",
+                     "127.0.0.1:1066 "
+                     "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+
+  router_get_advertised_ipv6_or_ap(opts, &ipv6);
+  tt_str_op(fmt_addrport(&ipv6.addr, ipv6.port), OP_EQ, "[::1]:9999");
+
+ done:
+  or_options_free(opts);
+  config_free_all();
+}
+
 #define ROUTER_TEST(name, flags)                          \
   { #name, test_router_ ## name, flags, NULL, NULL }
 
@@ -301,5 +332,6 @@ struct testcase_t router_tests[] = {
   ROUTER_TEST(check_descriptor_bandwidth_changed, TT_FORK),
   ROUTER_TEST(dump_router_to_string_no_bridge_distribution_method, TT_FORK),
   ROUTER_TEST(get_advertised_or_port, TT_FORK),
+  ROUTER_TEST(get_advertised_or_port_localhost, TT_FORK),
   END_OF_TESTCASES
 };
