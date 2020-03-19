@@ -48,7 +48,7 @@ void sendme_record_sending_cell_digest(circuit_t *circ, crypt_path_t *cpath);
 #define SENDME_MAX_SUPPORTED_VERSION 1
 
 /* The cell version constants for when emitting a cell. */
-#define SENDME_EMIT_MIN_VERSION_DEFAULT 0
+#define SENDME_EMIT_MIN_VERSION_DEFAULT 1
 #define SENDME_EMIT_MIN_VERSION_MIN 0
 #define SENDME_EMIT_MIN_VERSION_MAX UINT8_MAX
 

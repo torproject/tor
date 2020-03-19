@@ -2656,7 +2656,7 @@ types of statistics that Tor relays collect and publish:
     its extra-info documents that it uploads to the directory authorities.
     Disabling this option also removes bandwidth usage statistics, and
     GeoIPFile and GeoIPv6File hashes from the extra-info file. Bridge
-    ServerTransportPlugin lines are always includes in the extra-info file,
+    ServerTransportPlugin lines are always included in the extra-info file,
     because they are required by BridgeDB.
     (Default: 1)
 
