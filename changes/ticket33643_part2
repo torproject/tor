@@ -1,0 +1,3 @@
+  o Testing (CI):
+    - On appveyor, skip the crypto/openssl_version test, which is failing
+      because of a mismatched library installation. Fix for 33643.
