@@ -423,7 +423,7 @@ ewma_cmp_cmux(circuitmux_t *cmux_1, circuitmux_policy_data_t *pol_data_1,
       /* Pick whichever one has the better best circuit */
       return compare_cell_ewma_counts(ce1, ce2);
     } else {
-      if (ce1 != NULL ) {
+      if (ce1 != NULL) {
         /* We only have a circuit on cmux_1, so prefer it */
         return -1;
       } else if (ce2 != NULL) {
@@ -609,7 +609,7 @@ cmux_ewma_set_options(const or_options_t *options,
   /* convert halflife into halflife-per-tick. */
   halflife /= EWMA_TICK_LEN;
   /* compute per-tick scale factor. */
-  ewma_scale_factor = exp( LOG_ONEHALF / halflife );
+  ewma_scale_factor = exp(LOG_ONEHALF / halflife);
   log_info(LD_OR,
            "Enabled cell_ewma algorithm because of value in %s; "
            "scale factor is %f per %d seconds",
