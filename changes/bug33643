@@ -1,0 +1,6 @@
+  o Testing:
+    - In our Appveyor Windows CI, set PKG_CONFIG_PATH before running
+      configure. And copy required DLLs to test and app, before running tor's
+      tests. This ensures that tor.exe and test*.exe use the correct version
+      of each DLL. Fixes OpenSSL version test failures.
+      Fixes bug 33643; bugfix on 0.3.4.2-alpha.
