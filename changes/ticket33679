@@ -1,0 +1,3 @@
+  o Minor features (IPv6 Support):
+    - Adds IPv6 support to tor_addr_is_valid() when for_listening
+      is true. Closes ticket 33679. Patch by MrSquanchee.

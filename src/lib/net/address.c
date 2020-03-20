@@ -833,6 +833,11 @@ tor_addr_is_valid(const tor_addr_t *addr, int for_listening)
     return 1;
   }
 
+  /* Only allow IPv6 :: if for_listening is true. */
+  if (for_listening && addr->family == AF_INET6) {
+    return 1; /* At this point it doesn't matter if IPv6 is :: or not. */
+  }
+
   /* Otherwise, the address is valid if it's not tor_addr_is_null() */
   return !tor_addr_is_null(addr);
 }
