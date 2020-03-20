@@ -115,6 +115,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/confline.h"
 #include "lib/net/resolve.h"
+#include "lib/net/address.h"
 #include "lib/sandbox/sandbox.h"
 #include "lib/version/torversion.h"
 
@@ -3022,7 +3023,7 @@ is_local_addr, (const tor_addr_t *addr))
 
   /* Check for the same IPv6 /48 as the directory server */
   if (tor_addr_family(addr) == AF_INET6) {
-    if (router_get_my_routerinfo() && tor_addr_is_valid(&(router_get_my_routerinfo()->ipv6_addr), true)) {
+    if (router_get_my_routerinfo() && tor_addr_ipv6_is_valid(&(router_get_my_routerinfo()->ipv6_addr))) {
       return tor_addr_compare_masked(addr, &(router_get_my_routerinfo()->ipv6_addr), 48, CMP_EXACT);
     }
 

@@ -308,6 +308,7 @@ int tor_addr_is_null(const tor_addr_t *addr);
 int tor_addr_is_loopback(const tor_addr_t *addr);
 
 int tor_addr_is_valid(const tor_addr_t *addr, int for_listening);
+int tor_addr_ipv6_is_valid(const tor_addr_t *addr);
 int tor_addr_is_valid_ipv4n(uint32_t v4n_addr, int for_listening);
 #define tor_addr_is_valid_ipv4h(v4h_addr, for_listening) \
         tor_addr_is_valid_ipv4n(htonl(v4h_addr), (for_listening))
