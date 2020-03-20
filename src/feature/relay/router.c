@@ -1446,6 +1446,50 @@ router_get_advertised_or_port_by_af(const or_options_t *options,
   return port;
 }
 
+/** As router_get_advertised_or_port(), but returns the IPv6 address and
+ *  port in ipv6_ap_out, which must not be NULL. Returns a null address and
+ * zero port, if no ORPort is found. */
+void
+router_get_advertised_ipv6_or_ap(const or_options_t *options,
+                                 tor_addr_port_t *ipv6_ap_out)
+{
+  /* Bug in calling function, we can't return a sensible result, and it
+   * shouldn't use the NULL pointer once we return. */
+  tor_assert(ipv6_ap_out);
+
+  /* If there is no valid IPv6 ORPort, return a null address and port. */
+  tor_addr_make_null(&ipv6_ap_out->addr, AF_INET6);
+  ipv6_ap_out->port = 0;
+
+  const tor_addr_t *addr = get_first_advertised_addr_by_type_af(
+                                                      CONN_TYPE_OR_LISTENER,
+                                                      AF_INET6);
+  const uint16_t port = router_get_advertised_or_port_by_af(
+                                                      options,
+                                                      AF_INET6);
+
+  if (!addr || port == 0) {
+    log_info(LD_CONFIG, "There is no advertised IPv6 ORPort.");
+    return;
+  }
+
+  /* If the relay is configured using the default authorities, disallow
+   * internal IPs. Otherwise, allow them. For IPv4 ORPorts and DirPorts,
+   * this check is done in resolve_my_address(). See #33681. */
+  const int default_auth = using_default_dir_authorities(options);
+  if (tor_addr_is_internal(addr, 0) && default_auth) {
+    log_warn(LD_CONFIG,
+             "Unable to use configured IPv6 ORPort \"%s\" in a "
+             "descriptor. Skipping it. "
+             "Try specifying a globally reachable address explicitly.",
+             fmt_addrport(addr, port));
+    return;
+  }
+
+  tor_addr_copy(&ipv6_ap_out->addr, addr);
+  ipv6_ap_out->port = port;
+}
+
 /** Return the port that we should advertise as our DirPort;
  * this is one of three possibilities:
  * The one that is passed as <b>dirport</b> if the DirPort option is 0, or
@@ -1990,34 +2034,11 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
                sizeof(curve25519_public_key_t));
 
   /* For now, at most one IPv6 or-address is being advertised. */
-  {
-    const port_cfg_t *ipv6_orport = NULL;
-    SMARTLIST_FOREACH_BEGIN(get_configured_ports(), const port_cfg_t *, p) {
-      if (p->type == CONN_TYPE_OR_LISTENER &&
-          ! p->server_cfg.no_advertise &&
-          ! p->server_cfg.bind_ipv4_only &&
-          tor_addr_family(&p->addr) == AF_INET6) {
-        /* Like IPv4, if the relay is configured using the default
-         * authorities, disallow internal IPs. Otherwise, allow them. */
-        const int default_auth = using_default_dir_authorities(options);
-        if (! tor_addr_is_internal(&p->addr, 0) || ! default_auth) {
-          ipv6_orport = p;
-          break;
-        } else {
-          char addrbuf[TOR_ADDR_BUF_LEN];
-          log_warn(LD_CONFIG,
-                   "Unable to use configured IPv6 address \"%s\" in a "
-                   "descriptor. Skipping it. "
-                   "Try specifying a globally reachable address explicitly.",
-                   tor_addr_to_str(addrbuf, &p->addr, sizeof(addrbuf), 1));
-        }
-      }
-    } SMARTLIST_FOREACH_END(p);
-    if (ipv6_orport) {
-      tor_addr_copy(&ri->ipv6_addr, &ipv6_orport->addr);
-      ri->ipv6_orport = ipv6_orport->port;
-    }
-  }
+  tor_addr_port_t ipv6_orport;
+  router_get_advertised_ipv6_or_ap(options, &ipv6_orport);
+  /* If there is no valud IPv6 ORPort, the address and port are null. */
+  tor_addr_copy(&ri->ipv6_addr, &ipv6_orport.addr);
+  ri->ipv6_orport = ipv6_orport.port;
 
   ri->identity_pkey = crypto_pk_dup_key(get_server_identity_key());
   if (BUG(crypto_pk_get_digest(ri->identity_pkey,
