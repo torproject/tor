@@ -42,6 +42,7 @@ void dns_set_is_broken_for_ipv6(int val);
 #define dns_seems_to_be_broken() (0)
 #define has_dns_init_failed() (0)
 #define dns_cache_total_allocation() (0)
+#define dns_seems_to_be_broken_for_ipv6() (0)
 
 #define dns_reset_correctness_checks() STMT_NIL
 

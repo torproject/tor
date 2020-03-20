@@ -86,6 +86,9 @@
 /** If IPv6 DNS fails, how long should we not advertise an IPv6 exit policy? */
 #define IPV6_FAILED_EXIT_POLICY_TIMEOUT 86400 /* 24 hours */
 
+/** How many timeouts until we stop advertising an IPv6 exit policy? */
+#define IPV6_DNS_MAX_TIMEOUTS 1000
+
 /** Our evdns_base; this structure handles all our name lookups. */
 static struct evdns_base *the_evdns_base = NULL;
 
@@ -1491,11 +1494,7 @@ configure_nameservers(int force)
   if (evdns_base_count_nameservers(the_evdns_base) == 1) {
     SET("max-timeouts:", "1000000");
   } else {
-    if (options->TestingTorNetwork) {
-      SET("max-timeouts:", "1");
-    } else {
-      SET("max-timeouts:", "1000");
-    }
+    SET("max-timeouts:", "10");
   }
 
   // Elongate the queue of maximum inflight dns requests, so if a bunch
@@ -1562,8 +1561,9 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
       ++n_ipv6_timeouts;
     }
 
-    if (n_ipv6_timeouts > 10 &&
-        n_ipv6_timeouts > n_ipv6_requests_made / 2) {
+    if ((n_ipv6_timeouts > IPV6_DNS_MAX_TIMEOUTS &&
+         n_ipv6_timeouts > n_ipv6_requests_made / 2) ||
+        (get_options()->TestingTorNetwork && n_ipv6_timeouts > 1)) {
       if (! dns_is_broken_for_ipv6) {
         log_notice(LD_EXIT, "More than half of our IPv6 requests seem to "
                    "have timed out. I'm going to assume I can't get AAAA "
