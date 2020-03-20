@@ -2905,7 +2905,8 @@ resolve_my_address(int warn_severity, const or_options_t *options,
     /* make sure we're ok with publishing an internal IP */
     if (using_default_dir_authorities(options)) {
       /* if they are using the default authorities, disallow internal IPs
-       * always. */
+       * always. For IPv6 ORPorts, this check is done in
+       * router_get_advertised_ipv6_or_ap(). See #33681. */
       log_fn(warn_severity, LD_CONFIG,
              "Address '%s' resolves to private IP address '%s'. "
              "Tor servers that use the default DirAuthorities must have "
