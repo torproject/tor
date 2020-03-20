@@ -817,7 +817,8 @@ tor_addr_is_loopback(const tor_addr_t *addr)
 
 /* Is addr valid?
  * Checks that addr is non-NULL and not tor_addr_is_null().
- * If for_listening is true, IPv4 addr 0.0.0.0 is allowed.
+ * If for_listening is true, addr is allowed in either case if
+ * addr is 0.0.0.0 (for IPv4) or :: (for IPv6).
  * It means "bind to all addresses on the local machine". */
 int
 tor_addr_is_valid(const tor_addr_t *addr, int for_listening)
@@ -830,6 +831,10 @@ tor_addr_is_valid(const tor_addr_t *addr, int for_listening)
   /* Only allow IPv4 0.0.0.0 for_listening. */
   if (for_listening && addr->family == AF_INET
       && tor_addr_to_ipv4h(addr) == 0) {
+    return 1;
+  }
+
+  if (for_listening && addr->family == AF_INET6) {
     return 1;
   }
 

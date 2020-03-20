@@ -1671,6 +1671,138 @@ test_addr_octal(void *arg)
   ;
 }
 
+#define get_ipv4(test_addr, str, iprv) STMT_BEGIN               \
+    test_addr = tor_malloc(sizeof(tor_addr_t));                 \
+    test_addr->family = AF_INET;                                \
+    iprv = tor_inet_aton(str, &test_addr->addr.in_addr);        \
+    tor_assert(iprv);                                           \
+  STMT_END;
+
+#define get_ipv6(test_addr, str, iprv) STMT_BEGIN                       \
+    test_addr = tor_malloc(sizeof(tor_addr_t));                         \
+    test_addr->family = AF_INET6;                                       \
+    iprv = tor_inet_pton(AF_INET6, str, &test_addr->addr.in6_addr);     \
+    tor_assert(iprv);                                                   \
+  STMT_END;
+
+#define get_af_unix(test_addr) STMT_BEGIN                       \
+    test_addr = tor_malloc_zero(sizeof(tor_addr_t));            \
+    test_addr->family = AF_UNIX;                                \
+  STMT_END;
+
+#define get_af_unspec(test_addr) STMT_BEGIN                     \
+    test_addr = tor_malloc_zero(sizeof(tor_addr_t));            \
+    test_addr->family = AF_UNSPEC;                              \
+  STMT_END;
+
+#define TEST_ADDR_VALIDITY(a, lis, rv) STMT_BEGIN               \
+    tor_assert(a);                                              \
+    tt_int_op(tor_addr_is_valid(a, lis), OP_EQ, rv);            \
+  STMT_END;
+
+/* Here we can change the addresses we are testing for. */
+#define IP4_TEST_ADDR "123.98.45.1"
+#define IP6_TEST_ADDR "2001:0DB8:AC10:FE01::"
+
+static void
+test_addr_is_valid(void *arg)
+{
+  (void)arg;
+  tor_addr_t *test_addr;
+  int iprv;
+
+  /* Tests for IPv4 addresses. */
+
+  /* Test for null IPv4 address. */
+  get_ipv4(test_addr, "0.0.0.0", iprv);
+  TEST_ADDR_VALIDITY(test_addr, 0, 0);
+  TEST_ADDR_VALIDITY(test_addr, 1, 1);
+  tor_free(test_addr);
+
+  /* Test for non-null IPv4 address. */
+  get_ipv4(test_addr, IP4_TEST_ADDR, iprv);
+  TEST_ADDR_VALIDITY(test_addr, 0, 1);
+  TEST_ADDR_VALIDITY(test_addr, 1, 1);
+  tor_free(test_addr);
+
+  /* Tests for IPv6 addresses. */
+
+  /* Test for null IPv6 address. */
+  get_ipv6(test_addr, "::", iprv);
+  TEST_ADDR_VALIDITY(test_addr, 0, 0);
+  TEST_ADDR_VALIDITY(test_addr, 1, 1);
+  tor_free(test_addr);
+
+  /* Test for non-null IPv6 address. */
+  get_ipv6(test_addr, IP6_TEST_ADDR, iprv);
+  TEST_ADDR_VALIDITY(test_addr, 0, 1);
+  TEST_ADDR_VALIDITY(test_addr, 1, 1);
+  tor_free(test_addr);
+
+  /* Test for address of type AF_UNIX. */
+
+  get_af_unix(test_addr);
+  TEST_ADDR_VALIDITY(test_addr, 0, 0);
+  TEST_ADDR_VALIDITY(test_addr, 1, 0);
+  tor_free(test_addr);
+
+  /* Test for address of type AF_UNSPEC. */
+
+  get_af_unspec(test_addr);
+  TEST_ADDR_VALIDITY(test_addr, 0, 0);
+  TEST_ADDR_VALIDITY(test_addr, 1, 0);
+  tor_free(test_addr);
+
+ done:
+  ;
+}
+
+#define TEST_ADDR_IS_NULL(a, rv) STMT_BEGIN                 \
+    tor_assert(a);                                          \
+    tt_int_op(tor_addr_is_null(a), OP_EQ, rv);              \
+  STMT_END;
+
+static void
+test_addr_is_null(void *arg)
+{
+  (void)arg;
+  tor_addr_t *test_addr;
+  int iprv;
+
+  /* Test for null IPv4. */
+  get_ipv4(test_addr, "0.0.0.0", iprv);
+  TEST_ADDR_IS_NULL(test_addr, 1);
+  tor_free(test_addr);
+
+  /* Test for non-null IPv4. */
+  get_ipv4(test_addr, IP4_TEST_ADDR, iprv);
+  TEST_ADDR_IS_NULL(test_addr, 0);
+  tor_free(test_addr);
+
+  /* Test for null IPv6. */
+  get_ipv6(test_addr, "::", iprv);
+  TEST_ADDR_IS_NULL(test_addr, 1);
+  tor_free(test_addr);
+
+  /* Test for non-null IPv6. */
+  get_ipv6(test_addr, IP6_TEST_ADDR, iprv);
+  TEST_ADDR_IS_NULL(test_addr, 0);
+  tor_free(test_addr);
+
+  /* Test for address family AF_UNIX. */
+  get_af_unix(test_addr);
+  TEST_ADDR_IS_NULL(test_addr, 1);
+  tor_free(test_addr);
+
+  /* Test for address family AF_UNSPEC. */
+  get_af_unspec(test_addr);
+  TEST_ADDR_IS_NULL(test_addr, 1);
+  tor_free(test_addr);
+
+ done:
+  ;
+}
+
 #ifndef COCCI
 #define ADDR_LEGACY(name)                                               \
   { #name, test_addr_ ## name , 0, NULL, NULL }
@@ -1690,5 +1822,7 @@ struct testcase_t addr_tests[] = {
   { "make_null", test_addr_make_null, 0, NULL, NULL },
   { "rfc6598", test_addr_rfc6598, 0, NULL, NULL },
   { "octal", test_addr_octal, 0, NULL, NULL },
+  { "address_validity", test_addr_is_valid, 0, NULL, NULL },
+  { "address_is_null", test_addr_is_null, 0, NULL, NULL },
   END_OF_TESTCASES
 };
