@@ -75,8 +75,14 @@ options_validate_dirauth_mode(const struct or_options_t *old_options,
 #define options_act_dirauth_mtbf(old_options) \
   (((void)(old_options)),0)
 
-#define options_act_dirauth_stats(old_options, print_notice_out) \
-  (((void)(old_options)),((void)(print_notice_out)),0)
+static inline int
+options_act_dirauth_stats(const struct or_options_t *old_options,
+                          bool *print_notice_out)
+{
+  (void)old_options;
+  *print_notice_out = 0;
+  return 0;
+}
 
 #define dirauth_should_reject_requests_under_load() (false)
 

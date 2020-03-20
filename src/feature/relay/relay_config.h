@@ -125,6 +125,20 @@ options_validate_relay_mode(const struct or_options_t *old_options,
   return 0;
 }
 
+static inline int
+port_parse_ports_relay(or_options_t *options,
+                       char **msg,
+                       smartlist_t *ports_out,
+                       int *have_low_ports_out)
+{
+  (void)options;
+  (void)msg;
+  (void)ports_out;
+  if (*have_low_ports_out < 0)
+    *have_low_ports_out = 0;
+  return 0;
+}
+
 #define relay_get_dirportfrontpage() \
   (NULL)
 #define relay_config_free_all() \
@@ -138,9 +152,6 @@ options_validate_relay_mode(const struct or_options_t *old_options,
 #define port_warn_nonlocal_ext_orports(ports, portname) \
   (((void)(ports)),((void)(portname)))
 
-#define port_parse_ports_relay(options, msg, ports_out, have_low_ports_out) \
-  (((void)(options)),((void)(msg)),((void)(ports_out)), \
-   ((void)(have_low_ports_out)),0)
 #define port_update_port_set_relay(options, ports) \
   (((void)(options)),((void)(ports)))
 

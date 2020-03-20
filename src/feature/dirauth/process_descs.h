@@ -98,7 +98,7 @@ dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
   (void)desclen;
   (void)purpose;
   (void)source;
-  (void)msg;
+  *msg = "No directory authority support";
   return (enum was_router_added_t)0;
 }
 static inline enum was_router_added_t
@@ -107,8 +107,8 @@ dirserv_add_descriptor(routerinfo_t *ri,
                        const char *source)
 {
   (void)ri;
-  (void)msg;
   (void)source;
+  *msg = "No directory authority support";
   return (enum was_router_added_t)0;
 }
 static inline int
@@ -125,9 +125,9 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
                                int *valid_out)
 {
   (void)ri;
-  (void)msg;
   (void)complain;
-  (void)valid_out;
+  *msg = "No directory authority support";
+  *valid_out = 0;
   return 0;
 }
 static inline int
@@ -143,8 +143,9 @@ dirserv_router_get_status(const routerinfo_t *router,
                           int severity)
 {
   (void)router;
-  (void)msg;
   (void)severity;
+  if (msg)
+    *msg = "No directory authority support";
   return 0;
 }
 static inline void
