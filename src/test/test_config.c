@@ -4878,6 +4878,13 @@ test_config_get_first_advertised(void *data)
                                               AF_INET);
   tt_ptr_op(addr, OP_EQ, NULL);
 
+  port = get_first_advertised_port_by_type_af(CONN_TYPE_OR_LISTENER,
+                                              AF_INET6);
+  tt_int_op(port, OP_EQ, 0);
+  addr = get_first_advertised_addr_by_type_af(CONN_TYPE_OR_LISTENER,
+                                              AF_INET6);
+  tt_ptr_op(addr, OP_EQ, NULL);
+
   config_line_append(&opts->ORPort_lines, "ORPort", "[1234::5678]:8080");
   config_line_append(&opts->ORPort_lines, "ORPort",
                      "1.2.3.4:9999 noadvertise");
