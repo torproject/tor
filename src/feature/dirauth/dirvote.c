@@ -2527,9 +2527,12 @@ compute_consensus_package_lines(smartlist_t *votes)
  * any new signatures in <b>src_voter_list</b> that should be added to
  * <b>target</b>. (A signature should be added if we have no signature for that
  * voter in <b>target</b> yet, or if we have no verifiable signature and the
- * new signature is verifiable.)  Return the number of signatures added or
- * changed, or -1 if the document signed by <b>sigs</b> isn't the same
- * document as <b>target</b>. */
+ * new signature is verifiable.)
+ *
+ * Return the number of signatures added or changed, or -1 if the document
+ * signatures are invalid. Sets *<b>msg_out</b> to a string constant
+ * describing the signature status.
+ */
 STATIC int
 networkstatus_add_detached_signatures(networkstatus_t *target,
                                       ns_detached_signatures_t *sigs,
@@ -3564,6 +3567,14 @@ dirvote_add_signatures_to_pending_consensus(
   return r;
 }
 
+/** Helper: we just got the <b>detached_signatures_body</b> sent to us as
+ * signatures on the currently pending consensus.  Add them to the pending
+ * consensus (if we have one).
+ *
+ * Set *<b>msg</b> to a string constant describing the status, regardless of
+ * success or failure.
+ *
+ * Return negative on failure, nonnegative on success. */
 static int
 dirvote_add_signatures_to_all_pending_consensuses(
                        const char *detached_signatures_body,
@@ -3626,7 +3637,12 @@ dirvote_add_signatures_to_all_pending_consensuses(
 /** Helper: we just got the <b>detached_signatures_body</b> sent to us as
  * signatures on the currently pending consensus.  Add them to the pending
  * consensus (if we have one); otherwise queue them until we have a
- * consensus.  Return negative on failure, nonnegative on success. */
+ * consensus.
+ *
+ * Set *<b>msg</b> to a string constant describing the status, regardless of
+ * success or failure.
+ *
+ * Return negative on failure, nonnegative on success. */
 int
 dirvote_add_signatures(const char *detached_signatures_body,
                        const char *source,

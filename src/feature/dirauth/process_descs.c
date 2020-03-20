@@ -285,7 +285,7 @@ dirserv_load_fingerprint_file(void)
  * Return the appropriate router status.
  *
  * If the status is 'RTR_REJECT' and <b>msg</b> is provided, set
- * *<b>msg</b> to an explanation of why. */
+ * *<b>msg</b> to a string constant explaining why. */
 uint32_t
 dirserv_router_get_status(const routerinfo_t *router, const char **msg,
                           int severity)
@@ -563,7 +563,8 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
 /** Check whether we, as a directory server, want to accept <b>ri</b>.  If so,
  * set its is_valid,running fields and return 0.  Otherwise, return -1.
  *
- * If the router is rejected, set *<b>msg</b> to an explanation of why.
+ * If the router is rejected, set *<b>msg</b> to a string constant explining
+ * why.
  *
  * If <b>complain</b> then explain at log-level 'notice' why we refused
  * a descriptor; else explain at log-level 'info'.
@@ -729,7 +730,8 @@ dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
  * That means the caller must not access <b>ri</b> after this function
  * returns, since it might have been freed.
  *
- * Return the status of the operation.
+ * Return the status of the operation, and set *<b>msg</b> to a string
+ * constant describing the status.
  *
  * This function is only called when fresh descriptors are posted, not when
  * we re-load the cache.

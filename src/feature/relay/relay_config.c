@@ -231,8 +231,8 @@ check_server_ports(const smartlist_t *ports,
 }
 
 /** Parse all relay ports from <b>options</b>. On success, add parsed ports to
- * <b>ports</b>, and return 0.  On failure, set *<b>msg</b> to a description
- * of the problem and return -1.
+ * <b>ports</b>, and return 0.  On failure, set *<b>msg</b> to a newly
+ * allocated string describing the problem, and return -1.
  **/
 int
 port_parse_ports_relay(or_options_t *options,
@@ -334,7 +334,8 @@ port_update_port_set_relay(or_options_t *options,
  * Legacy validation function, which checks that the current OS is usable in
  * relay mode, if options is set to a relay mode.
  *
- * Warns about OSes with potential issues. Always returns 0.
+ * Warns about OSes with potential issues. Does not set *<b>msg</b>.
+ * Always returns 0.
  */
 int
 options_validate_relay_os(const or_options_t *old_options,
