@@ -201,7 +201,7 @@ problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_misc
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_dir() 297
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_events() 234
 problem function-size /src/feature/dirauth/bwauth.c:dirserv_read_measured_bandwidths() 121
-problem file-size /src/feature/dirauth/dirvote.c 4718
+problem file-size /src/feature/dirauth/dirvote.c 4734
 problem include-count /src/feature/dirauth/dirvote.c 55
 problem function-size /src/feature/dirauth/dirvote.c:format_networkstatus_vote() 230
 problem function-size /src/feature/dirauth/dirvote.c:networkstatus_compute_bw_weights_v10() 233
