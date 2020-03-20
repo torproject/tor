@@ -322,14 +322,26 @@ test_router_get_advertised_or_port_localhost(void *arg)
   // We should refuse to advertise them, since we have default dirauths.
   router_get_advertised_ipv6_or_ap(opts, &ipv6);
   tt_str_op(fmt_addrport(&ipv6.addr, ipv6.port), OP_EQ, "[::]:0");
+  // But the lower-level function should still report the correct value
+  tt_int_op(9999, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET6));
+
+  // The IPv4 checks are done in resolve_my_address(), which doesn't use
+  // ORPorts so we can't test them here. (See #33681.) Both these lower-level
+  // functions should still report the correct value.
+  tt_int_op(8888, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET));
+  tt_int_op(8888, OP_EQ, router_get_advertised_or_port(opts));
 
   // Now try with a fake authority set up.
   config_line_append(&opts->DirAuthorities, "DirAuthority",
                      "127.0.0.1:1066 "
                      "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 
+  tt_int_op(9999, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET6));
   router_get_advertised_ipv6_or_ap(opts, &ipv6);
   tt_str_op(fmt_addrport(&ipv6.addr, ipv6.port), OP_EQ, "[::1]:9999");
+
+  tt_int_op(8888, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET));
+  tt_int_op(8888, OP_EQ, router_get_advertised_or_port(opts));
 
  done:
   or_options_free(opts);

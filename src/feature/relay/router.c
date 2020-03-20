@@ -1460,8 +1460,9 @@ router_get_advertised_ipv6_or_ap(const or_options_t *options,
     return;
   }
 
-  /* Like IPv4, if the relay is configured using the default
-   * authorities, disallow internal IPs. Otherwise, allow them. */
+  /* If the relay is configured using the default authorities, disallow
+   * internal IPs. Otherwise, allow them. For IPv4 ORPorts and DirPorts,
+   * this check is done in resolve_my_address(). See #33681. */
   const int default_auth = using_default_dir_authorities(options);
   if (tor_addr_is_internal(addr, 0) && default_auth) {
     log_warn(LD_CONFIG,
