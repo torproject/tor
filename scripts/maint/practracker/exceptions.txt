@@ -33,10 +33,10 @@
 #
 # Remember: It is better to fix the problem than to add a new exception!
 
-problem file-size /src/app/config/config.c 7529
+problem file-size /src/app/config/config.c 7527
 problem include-count /src/app/config/config.c 80
 problem function-size /src/app/config/config.c:options_act() 381
-problem function-size /src/app/config/config.c:resolve_my_address() 190
+problem function-size /src/app/config/config.c:resolve_my_address() 191
 problem function-size /src/app/config/config.c:options_validate_cb() 794
 problem function-size /src/app/config/config.c:options_init_from_torrc() 188
 problem function-size /src/app/config/config.c:options_init_from_string() 103
@@ -272,11 +272,11 @@ problem function-size /src/feature/relay/dns.c:dns_resolve_impl() 131
 problem function-size /src/feature/relay/dns.c:configure_nameservers() 161
 problem function-size /src/feature/relay/dns.c:evdns_callback() 108
 problem function-size /src/feature/relay/relay_handshake.c:connection_or_compute_authenticate_cell_body() 231
-problem file-size /src/feature/relay/router.c 3526
+problem file-size /src/feature/relay/router.c 3600
 problem include-count /src/feature/relay/router.c 57
 problem function-size /src/feature/relay/router.c:init_keys() 254
 problem function-size /src/feature/relay/router.c:get_my_declared_family() 114
-problem function-size /src/feature/relay/router.c:router_build_fresh_unsigned_routerinfo() 136
+problem function-size /src/feature/relay/router.c:router_build_fresh_unsigned_routerinfo() 113
 problem function-size /src/feature/relay/router.c:router_dump_router_to_string() 372
 problem function-size /src/feature/relay/routerkeys.c:load_ed_keys() 294
 problem function-size /src/feature/rend/rendcache.c:rend_cache_store_v2_desc_as_client() 190
