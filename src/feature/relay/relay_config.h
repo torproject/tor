@@ -134,7 +134,6 @@ port_parse_ports_relay(or_options_t *options,
   (void)options;
   (void)msg;
   (void)ports_out;
-  (void)msg;
   if (*have_low_ports_out < 0)
     *have_low_ports_out = 0;
   return 0;
