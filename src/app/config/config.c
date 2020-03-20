@@ -823,9 +823,6 @@ static char *get_windows_conf_root(void);
 static int options_check_transition_cb(const void *old,
                                        const void *new,
                                        char **msg);
-static int parse_ports(or_options_t *options, int validate_only,
-                              char **msg_out, int *n_ports_out,
-                              int *world_writable_control_socket);
 static int validate_data_directories(or_options_t *options);
 static int write_configuration_file(const char *fname,
                                     const or_options_t *options);
@@ -6557,7 +6554,7 @@ port_count_real_listeners(const smartlist_t *ports, int listenertype,
  * If <b>validate_only</b> is false, set configured_client_ports to the
  * new list of ports parsed from <b>options</b>.
  **/
-static int
+STATIC int
 parse_ports(or_options_t *options, int validate_only,
             char **msg, int *n_ports_out,
             int *world_writable_control_socket)
