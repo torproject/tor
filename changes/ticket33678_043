@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Disable our coding standards best practices tracker in our git hooks.
+      (0.4.3 branches only.) Closes ticket 33678.
