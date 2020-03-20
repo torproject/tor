@@ -69,8 +69,6 @@ options_validate_dirauth_mode(const struct or_options_t *old_options,
   (((void)(old_options)),((void)(options)),((void)(msg)),0)
 #define options_validate_dirauth_testing(old_options, options, msg) \
   (((void)(old_options)),((void)(options)),((void)(msg)),0)
-#define options_validate_dirauth_testing(old_options, options, msg) \
-  (((void)(old_options)),((void)(options)),((void)(msg)),0)
 
 #define options_act_dirauth(old_options) \
   (((void)(old_options)),0)
