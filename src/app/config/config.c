@@ -3023,10 +3023,10 @@ is_local_addr, (const tor_addr_t *addr))
 
   /* Check for the same IPv6 /48 as the directory server */
   if (tor_addr_family(addr) == AF_INET6) {
-    if (router_get_my_routerinfo() && tor_addr_ipv6_is_valid(&(router_get_my_routerinfo()->ipv6_addr))) {
-      return tor_addr_compare_masked(addr, &(router_get_my_routerinfo()->ipv6_addr), 48, CMP_EXACT);
-    }
-
+    if (router_get_my_routerinfo() &&
+        tor_addr_ipv6_is_valid(&(router_get_my_routerinfo()->ipv6_addr)))
+      return tor_addr_compare_masked(addr,
+        &(router_get_my_routerinfo()->ipv6_addr), 48, CMP_EXACT);
   }
   return 0;
 }
