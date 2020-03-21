@@ -818,7 +818,8 @@ tor_addr_is_loopback(const tor_addr_t *addr)
 /* Is addr valid?
  * Checks that addr is non-NULL and not tor_addr_is_null().
  * If for_listening is true, IPv4 addr 0.0.0.0 is allowed.
- * It means "bind to all addresses on the local machine". */
+ * It means "bind to all addresses on the local machine".
+ * Supports checking IPv6 adresses. */
 int
 tor_addr_is_valid(const tor_addr_t *addr, int for_listening)
 {
@@ -850,24 +851,6 @@ tor_addr_is_valid_ipv4n(uint32_t v4n_addr, int for_listening)
 
   /* Otherwise, zero addresses are invalid. */
   return v4n_addr != 0;
-}
-
-/* IPv6 equivalent for tor_addr_is_valid() */
-int
-tor_addr_ipv6_is_valid(const tor_addr_t *addr)
-{
-  sa_family_t family = tor_addr_family(addr);
-  if (family != AF_INET6)
-    return 0;
-  const uint32_t *a32 = tor_addr_to_in6_addr32(addr);
-  uint32_t iph6[4];
-  iph6[0] = ntohl(a32[0]);
-  iph6[1] = ntohl(a32[1]);
-  iph6[2] = ntohl(a32[2]);
-  iph6[3] = ntohl(a32[3]);
-  if (!iph6[0] && !iph6[1] && !iph6[2] && !iph6[3]) /* :: */
-    return 0;
-  return 1;
 }
 
 /* Is port valid?
