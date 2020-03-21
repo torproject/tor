@@ -1671,8 +1671,53 @@ test_addr_octal(void *arg)
   ;
 }
 
+#define TEST_ADDR_VALIDITY(a, lis, rv) STMT_BEGIN \
+    tt_int_op(tor_addr_is_valid(a, lis), OP_EQ, rv); \
+  STMT_END;
+
+static void
+test_addr_is_valid(void *arg)
+{
+  (void)arg;
+  tor_addr_t *test_addr = tor_malloc(sizeof(tor_addr_t));
+  /* Tests for IPv4 addresses. */
+  test_addr->family = AF_INET;
+
+  /* Obtain 0.0.0.0 . */
+  tor_inet_pton(test_addr->family, "0.0.0.0",
+                                    &test_addr->addr.in_addr);
+  TEST_ADDR_VALIDITY(test_addr, 0, 0);
+  TEST_ADDR_VALIDITY(test_addr, 1, 1);
+
+  /* Obtain 123.90.1.1. */
+  tor_inet_pton(test_addr->family, "123.90.1.1",
+                                    &test_addr->addr.in_addr);
+  TEST_ADDR_VALIDITY(test_addr, 0, 1);
+  TEST_ADDR_VALIDITY(test_addr, 1, 1);
+
+  tor_free(test_addr);
+
+  /* Tests for IPv6 addresses. */
+  test_addr = tor_malloc(sizeof(tor_addr_t));
+  test_addr->family = AF_INET6;
+
+  /* Obtain 2000::1a00::1000:fc098 . */
+  tor_inet_pton(test_addr->family, "2000::1a00::1000:fc098",
+                                      &test_addr->addr.in6_addr);
+  TEST_ADDR_VALIDITY(test_addr, 0, 1);
+  TEST_ADDR_VALIDITY(test_addr, 1, 1);
+
+  /* Obtain :: . */
+  tor_inet_pton(test_addr->family, "::",
+                                      &test_addr->addr.in6_addr);
+  TEST_ADDR_VALIDITY(test_addr, 0, 0);
+  TEST_ADDR_VALIDITY(test_addr, 1, 1);
+  done:
+  tor_free(test_addr);
+}
+
 #ifndef COCCI
-#define ADDR_LEGACY(name)                                               \
+#define ADDR_LEGACY(name) \
   { #name, test_addr_ ## name , 0, NULL, NULL }
 #endif
 
@@ -1690,5 +1735,6 @@ struct testcase_t addr_tests[] = {
   { "make_null", test_addr_make_null, 0, NULL, NULL },
   { "rfc6598", test_addr_rfc6598, 0, NULL, NULL },
   { "octal", test_addr_octal, 0, NULL, NULL },
+  { "address_validity", test_addr_is_valid, 0, NULL, NULL },
   END_OF_TESTCASES
 };
