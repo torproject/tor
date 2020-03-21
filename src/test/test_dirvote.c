@@ -42,8 +42,7 @@ const node_t *mock_node_get_by_id(const char *identity_digest);
 const node_t *
 mock_node_get_by_id(const char *identity_digest)
 {
-  node_t *node_running;
-  node_running = tor_malloc(sizeof(node_t * ));
+  node_t *node_running = tor_malloc(sizeof(node_t *));
   if (strcmp(identity_digest, "first") == 0) {
     node_running->is_running = first_status.is_running;
   } else {
@@ -78,7 +77,7 @@ test_dirvote_compare_routerinfo_by_ip_and_bw_(void *arg)
   routerinfo_t *first = tor_malloc(sizeof(routerinfo_t));
   routerinfo_t *second = tor_malloc(sizeof(routerinfo_t));
 
-  // Give different IP versions_
+  // Give different IP versions
   first->ipv6_addr.family = AF_INET6;
   second->ipv6_addr.family = AF_INET;
   int a = compare_routerinfo_by_ip_and_bw_((const void **) &first,
@@ -98,11 +97,7 @@ test_dirvote_compare_routerinfo_by_ip_and_bw_(void *arg)
   // Both have IPv6 addresses
   tor_addr_t first_ipv6, second_ipv6;
   first_ipv6.family = AF_INET6;
-  int addr_size = sizeof(uint8_t) * 16;
-  struct in6_addr my_address;
-  memcpy(my_address.__in6_u.__u6_addr8, tor_malloc(addr_size), addr_size);
-  first_ipv6.addr.in6_addr = my_address;
-  memcpy(&second_ipv6, &first_ipv6, sizeof(first_ipv6));
+  second_ipv6.family = AF_INET6;
   for (size_t i = 0; i < 16; i++) {
     first_ipv6.addr.in6_addr.s6_addr[i] = 1;
     second_ipv6.addr.in6_addr.s6_addr[i] = 0xF;
