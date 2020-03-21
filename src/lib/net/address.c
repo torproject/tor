@@ -817,7 +817,8 @@ tor_addr_is_loopback(const tor_addr_t *addr)
 
 /* Is addr valid?
  * Checks that addr is non-NULL and not tor_addr_is_null().
- * If for_listening is true, IPv4 addr 0.0.0.0 is allowed.
+ * If for_listening is true, addr is allowed in either case if
+ * addr is 0.0.0.0 (for IPv4) or :: (for IPv6).
  * It means "bind to all addresses on the local machine". */
 int
 tor_addr_is_valid(const tor_addr_t *addr, int for_listening)
@@ -827,34 +828,11 @@ tor_addr_is_valid(const tor_addr_t *addr, int for_listening)
     return 0;
   }
 
-  /* Only allow IPv4 0.0.0.0 for_listening. */
-  if (for_listening && addr->family == AF_INET
-      && tor_addr_to_ipv4h(addr) == 0) {
-    return 1;
-  }
-
-  /* Only allow IPv6 :: if for_listening is true. */
-  if (for_listening && addr->family == AF_INET6) {
-    return 1; /* At this point it doesn't matter if IPv6 is :: or not. */
-  }
-
-  /* Otherwise, the address is valid if it's not tor_addr_is_null() */
-  return !tor_addr_is_null(addr);
-}
-
-/* Is the network-order IPv4 address v4n_addr valid?
- * Checks that addr is not zero.
- * Except if for_listening is true, where IPv4 addr 0.0.0.0 is allowed. */
-int
-tor_addr_is_valid_ipv4n(uint32_t v4n_addr, int for_listening)
-{
-  /* Any IPv4 address is valid with for_listening. */
-  if (for_listening) {
-    return 1;
-  }
-
-  /* Otherwise, zero addresses are invalid. */
-  return v4n_addr != 0;
+  /* For the case of IPv4 it doesn't matter if it is in network order
+   * or host order because we are testing it against 0 for validity.
+   * If for_listening is true i.e. 1 then it doesn't matter if addr
+   * is null or not i.e. 0.0.0.0 for IPv4 and :: for IPv6. */
+  return for_listening || !tor_addr_is_null(addr);
 }
 
 /* Is port valid?
@@ -864,13 +842,9 @@ tor_addr_is_valid_ipv4n(uint32_t v4n_addr, int for_listening)
 int
 tor_port_is_valid(uint16_t port, int for_listening)
 {
-  /* Any port value is valid with for_listening. */
-  if (for_listening) {
-    return 1;
-  }
-
-  /* Otherwise, zero ports are invalid. */
-  return port != 0;
+/* If for_listening is 1 any port is valid.
+ * Otherwise, zero ports are invalid. */
+  return for_listening || port != 0;
 }
 
 /** Set <b>dest</b> to equal the IPv4 address in <b>v4addr</b> (given in
