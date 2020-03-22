@@ -2610,9 +2610,10 @@ types of statistics that Tor relays collect and publish:
     When this option is enabled, Tor collects statistics about bandwidth
     used each 24 hours for the last 5 days (if available). Reports
     bandwidth statistics for OR and directory reads and writes,
-    and writes them to disk every 24 hours. Enables relay and bridge operators
-    to monitor bandwidth used by Tor. If ExtraInfoStatistics is enabled,
-    it will be published as part of the extra-info document. (Default: 1)
+    and writes them to disk every 24 hours. Enables relay and bridge
+    operators to monitor bandwidth used by Tor. If ExtraInfoStatistics
+    and the corresponding consensus parameter is enabled, it will be
+    published as part of the extra-info document. (Default: auto)
 
 [[CellStatistics]] **CellStatistics** **0**|**1**::
     Relays only.

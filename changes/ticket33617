@@ -1,0 +1,3 @@
+  o Minor features (torrc option, consensus parameter):
+    - Added BandwidthStatistics torrc option and consensus parameter.
+      Closes ticket 33617. Patch by MrSquanchee.
