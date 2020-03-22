@@ -34,14 +34,13 @@ Did you remember...
 
 If you are submitting a major patch or new feature, or want to in the future...
 
-   - Set up Chutney and Stem, see HACKING/WritingTests.md
+   - Set up Chutney and Stem, see `.../doc/HACKING/WritingTests.md`
    - Run `make test-full` to test against all unit and integration tests.
 
 If you have changed build system components:
    - Please run `make distcheck`
    - For example, if you have changed Makefiles, autoconf files, or anything
      else that affects the build system.
-
 
 License issues
 ==============
@@ -57,7 +56,6 @@ Some compatible licenses include:
   - 3-clause BSD
   - 2-clause BSD
   - CC0 Public Domain Dedication
-
 
 How we use Git branches
 =======================
@@ -90,7 +88,6 @@ from release branches. Doing so will likely produce a nightmare of merge
 conflicts in the ChangeLog when it comes time to merge your branch into Tor.
 Best advice: don't try to keep an independent branch forked for more than 6
 months and expect it to merge cleanly. Try to merge pieces early and often.
-
 
 How we log changes
 ==================
@@ -250,7 +247,6 @@ available containers in `src/lib/containers/*.h`.  You should probably
 familiarize yourself with these modules before you write too much code, or
 else you'll wind up reinventing the wheel.
 
-
 We don't use `strcat` or `strcpy` or `sprintf` of any of those notoriously
 broken old C functions.  We also avoid `strncat` and `strncpy`. Use
 `strlcat`, `strlcpy`, or `tor_snprintf/tor_asprintf` instead.
@@ -280,7 +276,6 @@ Don't use any of these functions: they aren't portable. Use the
 version prefixed with `tor_` instead: strtok_r, memmem, memstr,
 asprintf, localtime_r, gmtime_r, inet_aton, inet_ntop, inet_pton,
 getpass, ntohll, htonll.  (This list is incomplete.)
-
 
 What code can use what other code?
 ----------------------------------
@@ -424,7 +419,7 @@ do your own profiling to determine otherwise.
 Log conventions
 ---------------
 
-`https://www.torproject.org/docs/faq#LogLevel`
+[FAQ - Log Levels](https://www.torproject.org/docs/faq#LogLevel)
 
 No error or warning messages should be expected during normal OR or OP
 operation.

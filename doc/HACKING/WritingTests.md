@@ -126,7 +126,6 @@ unreached lines with 'x', and excluded reached lines with '!!!'.
 Note: you should never do this unless the line is meant to 100%
 unreachable by actual code.
 
-
 What kinds of test should I write?
 ----------------------------------
 
@@ -269,7 +268,6 @@ it's supposed to do, and fail otherwise.  Try to design your tests so
 that they check for the code's intended and documented functionality
 as much as possible.
 
-
 ### Mock functions for testing in isolation
 
 Often we want to test that a function works right, but the function to
@@ -382,7 +380,6 @@ Based on the implementation, we now see three more edge cases to test:
    * Removing an element from the end of the list
    * Removing an element from a position other than the end of the list.
 
-
 ### What should my tests NOT do?
 
 Tests shouldn't require a network connection.
@@ -401,7 +398,6 @@ When possible, tests should not be over-fit to the implementation.  That is,
 the test should verify that the documented behavior is implemented, but
 should not break if other permissible behavior is later implemented.
 
-
 ### Advanced techniques: Namespaces
 
 Sometimes, when you're doing a lot of mocking at once, it's convenient to
@@ -413,7 +409,6 @@ We have some macros defined for this purpose in `src/test/test.h`.  To use
 them, you define `NS_MODULE` to a prefix to be used for your identifiers, and
 then use other macros in place of identifier names.  See `src/test/test.h` for
 more documentation.
-
 
 Integration tests: Calling Tor from the outside
 -----------------------------------------------

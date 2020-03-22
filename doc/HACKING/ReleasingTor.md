@@ -1,4 +1,3 @@
-
 Putting out a new release
 -------------------------
 
@@ -51,9 +50,7 @@ new Tor release:
       libevent and openssl, so using valgrind will sometimes find extra
       memory leaks.)
 
-
 ### II. Write a changelog
-
 
 1a. (Alpha release variant)
 
@@ -138,7 +135,6 @@ new Tor release:
    to start sorting and condensing entries.  (Generally, we don't edit the
    text of existing entries, though.)
 
-
 ### III. Making the source release.
 
 1. In `maint-0.?.x`, bump the version number in `configure.ac` and run
@@ -214,7 +210,6 @@ new Tor release:
    Mention where to download the tarball (https://dist.torproject.org).
 
    Include a link to the changelog.
-
 
 4. Add the version number to Trac.  To do this, go to Trac, log in,
     select "Admin" near the top of the screen, then select "Versions" from
