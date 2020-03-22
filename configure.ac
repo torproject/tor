@@ -1590,7 +1590,6 @@ AC_CHECK_HEADERS([errno.h \
 		  sys/statvfs.h \
 		  sys/syscall.h \
 		  sys/sysctl.h \
-		  sys/syslimits.h \
 		  sys/time.h \
 		  sys/types.h \
 		  sys/un.h \
