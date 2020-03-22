@@ -1533,6 +1533,25 @@ rep_hist_load_state(or_state_t *state, char **err)
   return 0;
 }
 
+/** Collects BandwidthStatistics parameter from consensus.
+ *  Returns 0 iff BandwidthStatistics is 0 or
+ *  the consensus param is 0. */
+bool
+get_bandwidth_stats_param(void)
+{
+  int bandwidth_stats = get_options()->BandwidthStatistics;
+  switch (bandwidth_stats) {
+    case 0:
+    case 1:
+      return bandwidth_stats;
+  }
+  bandwidth_stats = networkstatus_get_param(NULL,
+                      "BandwidthStatistics", bandwidth_stats, 0, 1);
+  if (bandwidth_stats)
+    return 1;
+  return 0;
+}
+
 /** If 24 hours have passed since the beginning of the current bandwidth
  * stats period, write bandwidth stats to $DATADIR/stats/bandwidth-stats
  * (possibly overwriting an existing file).  It doesn't reset the bandwidth

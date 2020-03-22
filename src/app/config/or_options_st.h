@@ -634,7 +634,8 @@ struct or_options_t {
   /** If true, include statistics file contents in extra-info documents. */
   int ExtraInfoStatistics;
 
-  /** If true, activate reporting of all bandwidth statistics. */
+  /** If true, activate reporting of all bandwidth statistics.
+   *  Defaults to auto. */
   int BandwidthStatistics;
 
   /** If true, do not believe anybody who tells us that a domain resolves
