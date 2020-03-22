@@ -679,7 +679,6 @@ AC_CHECK_FUNCS(
 	getdelim \
 	getifaddrs \
 	getline \
-	getpass \
 	getrlimit \
 	gettimeofday \
 	gmtime_r \
