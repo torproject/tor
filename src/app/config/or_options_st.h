@@ -635,7 +635,9 @@ struct or_options_t {
   int ExtraInfoStatistics;
 
   /** If true, activate reporting of all bandwidth statistics.
-   *  Defaults to auto. */
+   *  Defaults to auto which let's the consensus decide the reporting part.
+   *  If it is true and the consenus decides otherwise than the statistics
+   *  are written to disks but are not reported. */
   int BandwidthStatistics;
 
   /** If true, do not believe anybody who tells us that a domain resolves

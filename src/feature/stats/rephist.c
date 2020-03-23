@@ -973,7 +973,7 @@ rep_hist_load_mtbf_data(time_t now)
   return r;
 }
 
-  /** Bandwidth Statistics **/
+/** Bandwidth Statistics **/
 
 /** For how many seconds do we keep track of individual per-second bandwidth
  * totals? */
@@ -985,7 +985,7 @@ rep_hist_load_mtbf_data(time_t now)
 /** How many bandwidth usage intervals do we remember? (derived) */
 #define NUM_TOTALS (NUM_SECS_BW_SUM_IS_VALID/NUM_SECS_BW_SUM_INTERVAL)
 /** Start time of bandwidth stats or 0 if we are not collecting the stats*/
-static time_t start_of_bw_stats_interval;
+static time_t start_of_bw_stats_interval = 0;
 
 /** Structure to track bandwidth use, and remember the maxima for a given
  * time period.
@@ -1533,23 +1533,20 @@ rep_hist_load_state(or_state_t *state, char **err)
   return 0;
 }
 
-/** Collects BandwidthStatistics parameter from consensus.
- *  Returns 0 iff BandwidthStatistics is 0 or
- *  the consensus param is 0. */
+/** Checks the consensus parameter if BandwidthStatistics is auto,
+ *  and returns 1 if the parameter returned is 1 or not known.
+ *  If BandwidthStatistics is set to true (obviously in torrc) then return 1.
+ *  Otherwise, returns 0. */
 bool
 get_bandwidth_stats_param(void)
 {
   int bandwidth_stats = get_options()->BandwidthStatistics;
-  switch (bandwidth_stats) {
-    case 0:
-    case 1:
-      return bandwidth_stats;
-  }
-  bandwidth_stats = networkstatus_get_param(NULL,
-                      "BandwidthStatistics", bandwidth_stats, 0, 1);
-  if (bandwidth_stats)
-    return 1;
-  return 0;
+  /* If bandwidth_stats is auto check the consensus parameter. */
+  if (bandwidth_stats == -1)
+    bandwidth_stats = networkstatus_get_param(NULL,
+                      "BandwidthStatistics", -1, 0, 1);
+  /* If bandwidth_stats is still auto, it defaults to true. */
+  return !!bandwidth_stats;
 }
 
 /** If 24 hours have passed since the beginning of the current bandwidth

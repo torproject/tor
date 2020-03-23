@@ -2605,7 +2605,7 @@ Relays publish most statistics in a document called the
 extra-info document. The following options affect the different
 types of statistics that Tor relays collect and publish:
 
-[[BandwidthStatistics]] **BandwidthStatistics** **0**|**1**::
+[[BandwidthStatistics]] **BandwidthStatistics** **0**|**1**|**auto**::
     Relays and bridges only.
     When this option is enabled, Tor collects statistics about bandwidth
     used each 24 hours for the last 5 days (if available). Reports
@@ -3780,8 +3780,8 @@ __DataDirectory__/**`stats/conn-stats`**::
     history (number of active connections over time).
 
 __DataDirectory__/**`stats/bandwidth-stats`**::
-    Only used by servers.This file is used collect information about
-    bandwidth used in OR and directory read and write operations.
+    Only used by relays and bridges. This file is used to collect information
+    about bandwidth used in OR and directory read and write operations.
 
 __DataDirectory__/**`stats/hidserv-stats`**::
     Only used by servers. This file is used to collect approximate counts
