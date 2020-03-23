@@ -3813,6 +3813,12 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
     at_most = connection_bucket_read_limit(conn, approx_time());
   }
 
+  /* Do not allow inbuf to grow past BUF_MAX_LEN. */
+  const ssize_t maximum = BUF_MAX_LEN - buf_datalen(conn->inbuf);
+  if (at_most > maximum) {
+    at_most = maximum;
+  }
+
   slack_in_buf = buf_slack(conn->inbuf);
  again:
   if ((size_t)at_most > slack_in_buf && slack_in_buf >= 1024) {
