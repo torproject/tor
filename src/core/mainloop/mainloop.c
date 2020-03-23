@@ -1962,7 +1962,8 @@ write_stats_file_callback(time_t now, const or_options_t *options)
   /* Writes bandwidth statistics to disk if either it is set to 1
    * or auto (-1). It doesn't check the consensus parameter here
    * for it can change temporarily and we do not want to lose the stats.
-   * If BandwidthStatistics is exclusively set to 0 then don't write to disk. */
+   * If BandwidthStatistics is exclusively set to 0 then don't write to
+   * disk. */
   if ( !!options->BandwidthStatistics) {
     time_t next_write = rep_hist_bw_stats_write(now);
     if (next_write && next_write < next_time_to_write_stats_files)
