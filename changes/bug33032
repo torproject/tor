@@ -1,0 +1,6 @@
+  o Minor bugfixes (key portability):
+    - When reading PEM-encoded key data, tolerate CRLF line-endings even if
+      we are not running on Windows. Previously, non-Windows hosts
+      would reject these line-endings in certain positions, making
+      certain key files hard to move from one host to another.
+      Fixes bug 33032; bugfix on 0.3.5.1-alpha.
