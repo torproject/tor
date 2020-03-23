@@ -4,28 +4,30 @@ End of Life on an old release series
 ------------------------------------
 
 Here are the steps that the maintainer should take when an old Tor release
-series reaches End of Life.  Note that they are _only_ for entire series that
-has reached its planned EOL: they do not apply to security-related
+series reaches End of Life.  Note that they are _only_ for an entire series
+that has reached its planned EOL: they do not apply to security-related
 deprecations of individual versions.
 
-### 0. Preliminaries
+### 1. Preliminaries
 
-0. A few months before End of Life:
+1. A few months before End of Life:
    Write a deprecation announcement.
    Send the announcement out with every new release announcement.
 
-1. A month before End of Life:
+2. A month before End of Life:
    Send the announcement to tor-announce, tor-talk, tor-relays, and the
    packagers.
 
-### 1. On the day
+### 2. On the day
 
 1. Open tickets to remove the release from:
    - the jenkins builds
    - tor's Travis CI cron jobs
-   - chutney's Travis CI tests (#)
-   - stem's Travis CI tests (#)
-   - tor's scripts/git/* scripts
+   - chutney's Travis CI tests
+   - sbws' Travis CI tests
+   - stem's Travis CI tests (but see
+     https://github.com/torproject/stem/issues/51)
+   - tor's scripts/git/gist-list-tor-branches.sh script
 
 2. Close the milestone in Trac. To do this, go to Trac, log in,
    select "Admin" near the top of the screen, then select "Milestones" from
@@ -51,22 +53,28 @@ deprecations of individual versions.
 
 7. Update the CoreTorReleases wiki page.
 
-8. Update the git/hooks
-
-9. Finally, make sure this document is up to date with our latest
-   process.
-
-10. Open a ticket (if there is not one already) for authorities to
+8. Open a ticket (if there is not one already) for authorities to
     start rejecting relays that are running that release series.
     This ticket should be targeted for at least a month or two
     after the series is officially EOL, unless there is an important
     reason to un-list relays early.
 
-11. Open a ticket (if appropriate) for updates to the set of
-    required and recommended subprotocol versions.
+9. (LTS end-of-life only) Open a ticket (if appropriate) for updates to the
+    set of required and recommended subprotocol versions.  (For the process
+    here, see proposal 303.)
 
-Starting a new release series.
-------------------------------
+10. (LTS end-of-life only) Open a ticket to remove no-longer-needed
+    consensus methods. (For the process here, see proposal 290.)
+
+11. (All EOL) Open a ticket to grep for obsolete series names (e.g., "0.2.9"
+    and "029") in tor, chutney, sbws, fallback-scripts, and so on. These
+    should be updated or removed.
+
+12. Finally, make sure this document is up to date with our latest
+   process.
+
+
+### 3. Starting a new release series.
 
 (Ideally, do this immediately after a release.)
 
@@ -83,15 +91,10 @@ Starting a new release series.
    and master.
 
 4. Open tickets for connecting the new branches to various other
-   places, including:
-
-    - Jenkins CI
-    - travis cronjobs
-    - chutney travis configuration
-    - Tor's scripts/git scripts.
+   places.  See section 2 above for a list of affected locations.
 
 5. Remove "check-best-practices" from the check-local Makefile
-   target in maint-x.y.z branch only. Merge to release-0.xy.z but do
+   target in maint-x.y.z branch only. Merge to release-0.x.y.z but do
    not forward-port to master.
 
 6. Finally, make sure this document is up to date with our latest
