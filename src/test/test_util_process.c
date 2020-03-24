@@ -73,7 +73,7 @@ test_util_process_clear_waitpid_callback(void *ignored)
 #else
 #define TEST(name) { (#name), NULL, TT_SKIP, NULL, NULL }
 #endif
-#endif
+#endif /* !defined(COCCI) */
 
 struct testcase_t util_process_tests[] = {
   TEST(set_waitpid_callback),

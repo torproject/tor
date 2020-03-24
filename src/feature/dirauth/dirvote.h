@@ -167,7 +167,7 @@ dirvote_add_signatures(const char *detached_signatures_body,
 {
   (void) detached_signatures_body;
   (void) source;
-  (void) msg_out;
+  *msg_out = "No directory authority support";
   /* If the dirauth module is disabled, this should NEVER be called else we
    * failed to safeguard the dirauth module. */
   tor_assert_nonfatal_unreached();

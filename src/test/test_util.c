@@ -6369,7 +6369,7 @@ test_util_map_anon_nofork(void *arg)
 #else
 #define UTIL_TEST_PWDB(n, f) UTIL_TEST(n, (f))
 #endif
-#endif
+#endif /* !defined(COCCI) */
 
 struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),

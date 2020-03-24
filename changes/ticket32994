@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Rewrite port_parse_config() to use the default port flags from
+      port_cfg_new(). Closes ticket 32994. Patch by MrSquanchee.

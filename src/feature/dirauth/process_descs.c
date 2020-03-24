@@ -285,7 +285,7 @@ dirserv_load_fingerprint_file(void)
  * Return the appropriate router status.
  *
  * If the status is 'RTR_REJECT' and <b>msg</b> is provided, set
- * *<b>msg</b> to an explanation of why. */
+ * *<b>msg</b> to a string constant explaining why. */
 uint32_t
 dirserv_router_get_status(const routerinfo_t *router, const char **msg,
                           int severity)
@@ -399,22 +399,21 @@ dirserv_rejects_tor_version(const char *platform,
   static const char please_upgrade_string[] =
     "Tor version is insecure or unsupported. Please upgrade!";
 
-  /* Versions before Tor 0.2.9 are unsupported. Versions between 0.2.9.0 and
-   * 0.2.9.4 suffer from bug #20499, where relays don't keep their consensus
-   * up to date */
-  if (!tor_version_as_new_as(platform,"0.2.9.5-alpha")) {
+  /* Versions before Tor 0.3.5 are unsupported.
+   *
+   * Also, reject unstable versions of 0.3.5, since (as of this writing)
+   * they are almost none of the network. */
+  if (!tor_version_as_new_as(platform,"0.3.5.7")) {
     if (msg)
       *msg = please_upgrade_string;
     return true;
   }
 
-  /* Series between Tor 0.3.0 and 0.3.4 inclusive are unsupported, and some
-   * have bug #27841, which makes them broken as intro points. Reject them.
-   *
-   * Also reject unstable versions of 0.3.5, since (as of this writing)
-   * they are almost none of the network. */
-  if (tor_version_as_new_as(platform,"0.3.0.0-alpha-dev") &&
-      !tor_version_as_new_as(platform,"0.3.5.7")) {
+  /* Series between Tor 0.3.6 and 0.4.1.4-rc inclusive are unsupported.
+   * Reject them. 0.3.6.0-alpha-dev only existed for a short time, before
+   * it was renamed to 0.4.0.0-alpha-dev. */
+  if (tor_version_as_new_as(platform,"0.3.6.0-alpha-dev") &&
+      !tor_version_as_new_as(platform,"0.4.1.5")) {
     if (msg) {
       *msg = please_upgrade_string;
     }
@@ -564,7 +563,8 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
 /** Check whether we, as a directory server, want to accept <b>ri</b>.  If so,
  * set its is_valid,running fields and return 0.  Otherwise, return -1.
  *
- * If the router is rejected, set *<b>msg</b> to an explanation of why.
+ * If the router is rejected, set *<b>msg</b> to a string constant explining
+ * why.
  *
  * If <b>complain</b> then explain at log-level 'notice' why we refused
  * a descriptor; else explain at log-level 'info'.
@@ -730,7 +730,8 @@ dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
  * That means the caller must not access <b>ri</b> after this function
  * returns, since it might have been freed.
  *
- * Return the status of the operation.
+ * Return the status of the operation, and set *<b>msg</b> to a string
+ * constant describing the status.
  *
  * This function is only called when fresh descriptors are posted, not when
  * we re-load the cache.

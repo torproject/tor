@@ -114,6 +114,14 @@ test_new_route_len_unhandled_exit(void *arg)
   int r;
 
   (void)arg;
+#ifdef ALL_BUGS_ARE_FATAL
+  /* Coverity (and maybe clang analyser) complain that the code following
+   * tt_skip() is unconditionally unreachable. */
+#if !defined(__COVERITY__) && !defined(__clang_analyzer__)
+  tt_skip();
+#endif
+#endif
+
   MOCK(count_acceptable_nodes, mock_count_acceptable_nodes);
 
   tor_capture_bugs_(1);

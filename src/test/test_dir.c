@@ -3005,6 +3005,7 @@ test_dir_param_voting_lookup(void *arg)
   tt_int_op(99, OP_EQ,
             dirvote_get_intermediate_param_value(lst, "abcd", 1000));
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* moomin appears twice. That's a bug. */
   tor_capture_bugs_(1);
   tt_int_op(-100, OP_EQ,
@@ -3040,6 +3041,7 @@ test_dir_param_voting_lookup(void *arg)
   tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
             "!(!ok)");
   tor_end_capture_bugs_();
+#endif
 
  done:
   SMARTLIST_FOREACH(lst, char *, cp, tor_free(cp));
@@ -4988,6 +4990,14 @@ static void
 test_dir_purpose_needs_anonymity_returns_true_by_default(void *arg)
 {
   (void)arg;
+
+#ifdef ALL_BUGS_ARE_FATAL
+  /* Coverity (and maybe clang analyser) complain that the code following
+   * tt_skip() is unconditionally unreachable. */
+#if !defined(__COVERITY__) && !defined(__clang_analyzer__)
+  tt_skip();
+#endif
+#endif
 
   tor_capture_bugs_(1);
   setup_full_capture_of_logs(LOG_WARN);

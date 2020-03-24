@@ -95,7 +95,7 @@ make_ntor_onion_key_crosscert(const curve25519_keypair_t *onion_key,
   (void)master_id_key;
   (void)now;
   (void)lifetime;
-  (void)sign_out;
+  *sign_out = 0;
   tor_assert_nonfatal_unreached();
   return NULL;
 }
@@ -108,7 +108,7 @@ make_tap_onion_key_crosscert(const crypto_pk_t *onion_key,
   (void)onion_key;
   (void)master_id_key;
   (void)rsa_id_key;
-  (void)len_out;
+  *len_out = 0;
   tor_assert_nonfatal_unreached();
   return NULL;
 }
