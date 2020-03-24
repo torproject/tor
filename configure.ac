@@ -1550,8 +1550,6 @@ AC_CHECK_HEADERS([errno.h \
 		  mach/vm_inherit.h \
 		  machine/limits.h \
 		  malloc.h \
-		  malloc/malloc.h \
-		  malloc_np.h \
 		  netdb.h \
 		  netinet/in.h \
 		  netinet/in6.h \
