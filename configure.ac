@@ -1024,7 +1024,6 @@ dnl to them.
 AC_CHECK_FUNCS([ \
 		ERR_load_KDF_strings \
 		EVP_PBE_scrypt \
-		EVP_sha3_256 \
 		SSL_CIPHER_find \
 		SSL_CTX_set1_groups_list \
 		SSL_CTX_set_security_level \
