@@ -683,7 +683,6 @@ AC_CHECK_FUNCS(
 	gettimeofday \
 	gmtime_r \
 	gnu_get_libc_version \
-	htonll \
 	inet_aton \
 	ioctl \
 	issetugid \
