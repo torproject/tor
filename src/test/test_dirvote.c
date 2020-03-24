@@ -37,18 +37,24 @@ mock_router_digest_is_trusted(const char *digest, dirinfo_type_t type)
   }
 }
 
+// Use of global variable is justified by its use in nodelist.c
+// and is necessary to avoid memory leaks when mocking the
+// function node_get_by_id
+node_t  *first_node;
+node_t *second_node;
+
 const node_t *mock_node_get_by_id(const char *identity_digest);
 
 const node_t *
 mock_node_get_by_id(const char *identity_digest)
 {
-  node_t *node_running = tor_malloc(sizeof(node_t *));
   if (strcmp(identity_digest, "first") == 0) {
-    node_running->is_running = first_status.is_running;
+    first_node->is_running = first_status.is_running;
+    return first_node;
   } else {
-    node_running->is_running = second_status.is_running;
+    second_node->is_running = second_status.is_running;
+    return second_node;
   }
-  return node_running;
 }
 
 uint32_t mock_dirserv_get_bw(const routerinfo_t *ri);
@@ -76,6 +82,10 @@ test_dirvote_compare_routerinfo_by_ip_and_bw_(void *arg)
   (void) arg;
   routerinfo_t *first = tor_malloc(sizeof(routerinfo_t));
   routerinfo_t *second = tor_malloc(sizeof(routerinfo_t));
+
+  // Allocate memory to nodes
+  first_node = malloc(sizeof(node_t));
+  second_node = malloc(sizeof(node_t));
 
   // Give different IP versions
   first->ipv6_addr.family = AF_INET6;
@@ -151,6 +161,8 @@ test_dirvote_compare_routerinfo_by_ip_and_bw_(void *arg)
   UNMOCK(dirserv_get_bandwidth_for_router_kb);
   tor_free(first);
   tor_free(second);
+  tor_free(first_node);
+  tor_free(second_node);
   return;
 }
 
